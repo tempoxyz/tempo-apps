@@ -93,6 +93,7 @@ interface NetworkInfo {
 const NETWORKS: Record<string, NetworkInfo> = {
 	'4217': { chainId: '4217', key: 'mainnet', name: 'Mainnet' },
 	'42431': { chainId: '42431', key: 'moderato', name: 'Moderato' },
+	'31318': { chainId: '31318', key: 'devnet', name: 'Devnet' },
 }
 
 const DEFAULT_CHAIN_ID = '4217'
@@ -245,7 +246,7 @@ function getNetworkInfo(chainId: string): NetworkInfo {
 }
 
 function compareChainIds(a: string, b: string): number {
-	const order = [DEFAULT_CHAIN_ID, '42431']
+	const order = [DEFAULT_CHAIN_ID, '42431', '31318']
 	const aIndex = order.indexOf(a)
 	const bIndex = order.indexOf(b)
 
@@ -656,9 +657,10 @@ async function getSnapshots(env: Env): Promise<Snapshot[]> {
 	return snapshots
 }
 
-const CACHE_KEY_FULL = 'https://snapshots.tempoxyz.dev/cache/v2/full'
-const CACHE_KEY_API = 'https://snapshots.tempoxyz.dev/cache/v2/api'
-const CACHE_KEY_UI_HTML = 'https://snapshots.tempoxyz.dev/cache/v2/ui-html'
+const CACHE_VERSION = 'v18'
+const CACHE_KEY_FULL = `https://snapshots.tempoxyz.dev/cache/${CACHE_VERSION}/full`
+const CACHE_KEY_API = `https://snapshots.tempoxyz.dev/cache/${CACHE_VERSION}/api`
+const CACHE_KEY_UI_HTML = `https://snapshots.tempoxyz.dev/cache/${CACHE_VERSION}/ui-html`
 const CACHE_TTL = 3600 // 1 hour — snapshots change at most once per day
 let snapshotRefreshPromise: Promise<Snapshot[]> | undefined
 
@@ -878,15 +880,15 @@ async function handleUI(_req: Request, env: Env) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tempo Snapshots</title>
-  <meta name="description" content="Configure your own node with our modular snapshots. Download individual components or full archives.">
-  <meta property="og:title" content="Tempo Snapshots">
-  <meta property="og:description" content="Configure your own node with our modular snapshots.">
+  <title>Snapshots - Tempo</title>
+  <meta name="description" content="Download Tempo snapshots. Select a network, snapshot, and data profile for the tempo download CLI.">
+  <meta property="og:title" content="Snapshots - Tempo">
+  <meta property="og:description" content="Download Tempo snapshots with network-aware profiles and generated tempo download commands.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://snapshots.tempoxyz.dev">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Tempo Snapshots">
-  <meta name="twitter:description" content="Configure your own node with our modular snapshots.">
+  <meta name="twitter:title" content="Snapshots - Tempo">
+  <meta name="twitter:description" content="Download Tempo snapshots with network-aware profiles and generated tempo download commands.">
   <link rel="icon" type="image/x-icon" href="https://tempo.xyz/favicon.ico">
   <meta property="og:image" content="https://tempo.xyz/favicon.ico">
   <meta name="twitter:image" content="https://tempo.xyz/favicon.ico">
@@ -895,98 +897,99 @@ async function handleUI(_req: Request, env: Env) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --tempo-50: oklch(0.97 0.01 250);
-      --tempo-100: oklch(0.94 0.02 250);
-      --tempo-200: oklch(0.88 0.04 250);
-      --tempo-300: oklch(0.80 0.08 250);
-      --tempo-400: oklch(0.70 0.12 250);
-      --tempo-500: oklch(0.60 0.16 250);
-      --tempo-600: oklch(0.50 0.16 250);
-      --tempo-700: oklch(0.42 0.14 250);
-      --tempo-800: oklch(0.35 0.12 250);
-      --tempo-900: oklch(0.28 0.10 250);
-      --tempo-950: oklch(0.18 0.06 250);
       --ease: cubic-bezier(0.22, 1, 0.36, 1);
       --duration: 250ms;
-      --radius: 0;
+      --radius: 8px;
+      color-scheme: light;
     }
 
     :root, .light {
-      --bg: #fff;
-      --fg: #000;
-      --muted: #666;
-      --muted-bg: #f5f5f5;
-      --border: #ddd;
-      --accent: #000;
-      --accent-dim: #333;
-      --surface: #fff;
-      --surface-hover: #f5f5f5;
-      --th-bg: #f5f5f5;
-      --row-border: #eee;
+      --bg: #fafafa;
+      --fg: #0a0a0a;
+      --secondary: #6e6e6e;
+      --muted: #a1a1a1;
+      --muted-bg: #f9f9f9;
+      --border: #e5e5e5;
+      --border-subtle: #f0f0f0;
+      --accent: #3b82f6;
+      --accent-muted: rgba(59, 130, 246, 0.1);
+      --accent-dim: #3b82f6;
+      --accent-strong: #2563eb;
+      --surface: #ffffff;
+      --surface-raised: #f9f9f9;
+      --surface-hover: #f0f0f0;
+      --th-bg: #f9f9f9;
+      --row-border: #f0f0f0;
       --hero-glow-1: transparent;
       --hero-glow-2: transparent;
       --cmd-copy-hover-bg: #f0f0f0;
-      --cmd-border: #ccc;
+      --cmd-border: #e5e5e5;
       --option-bg: #fff;
       --badge-chain-bg: #f0f0f0;
-      --badge-chain-fg: #333;
-      --badge-profile-bg: oklch(0.92 0.08 280);
-      --badge-profile-fg: oklch(0.35 0.15 280);
-      --badge-channel-bg: oklch(0.92 0.08 155);
-      --badge-channel-fg: oklch(0.35 0.15 155);
-      --badge-edge-bg: oklch(0.92 0.08 55);
-      --badge-edge-fg: oklch(0.35 0.15 55);
-      --btn-primary-bg: oklch(0.45 0.2 260);
-      --btn-primary-hover: oklch(0.40 0.22 260);
-      --size-fg: #333;
+      --badge-chain-fg: #6e6e6e;
+      --badge-profile-bg: rgba(59, 130, 246, 0.1);
+      --badge-profile-fg: #2563eb;
+      --badge-channel-bg: rgba(22, 163, 74, 0.1);
+      --badge-channel-fg: #15803d;
+      --badge-edge-bg: rgba(202, 138, 4, 0.12);
+      --badge-edge-fg: #a16207;
+      --btn-primary-bg: #3b82f6;
+      --btn-primary-hover: #2563eb;
+      --size-fg: #0a0a0a;
       --count-badge-fg: #fff;
-      --disk-state:    oklch(0.50 0.25 260);
-      --disk-headers:  oklch(0.55 0.25 290);
-      --disk-txs:      oklch(0.60 0.22 155);
-      --disk-tx-send:  oklch(0.62 0.20 140);
-      --disk-receipts: oklch(0.65 0.22 80);
-      --disk-acc-cs:   oklch(0.58 0.22 30);
-      --disk-sto-cs:   oklch(0.55 0.22 330);
-      --disk-indices:  oklch(0.50 0.20 200);
+      --disk-state:    #2563eb;
+      --disk-headers:  #3b82f6;
+      --disk-txs:      #60a5fa;
+      --disk-tx-send:  #93c5fd;
+      --disk-receipts: #bfdbfe;
+      --disk-acc-cs:   #dbeafe;
+      --disk-sto-cs:   #e0f2fe;
+      --disk-indices:  #e5e7eb;
     }
 
     .dark {
-      --bg: #050505;
-      --fg: #f5f5f5;
-      --muted: #9ca3af;
-      --muted-bg: #111111;
-      --border: #262626;
-      --accent: #e5e5e5;
-      --accent-dim: #404040;
-      --surface: #0c0c0c;
-      --surface-hover: #1a1a1a;
-      --th-bg: #0a0a0a;
-      --row-border: #1a1a1a;
-      --hero-glow-1: oklch(0.35 0.10 260 / 0.20);
-      --hero-glow-2: oklch(0.40 0.12 280 / 0.10);
-      --cmd-copy-hover-bg: #1a1a1a;
-      --cmd-border: #262626;
-      --option-bg: #0a0a0a;
-      --badge-chain-bg: #1a1a1a;
-      --badge-chain-fg: #d4d4d4;
-      --badge-profile-bg: oklch(0.22 0.04 300);
-      --badge-profile-fg: oklch(0.82 0.10 300);
-      --badge-channel-bg: oklch(0.22 0.04 155);
-      --badge-channel-fg: oklch(0.82 0.12 155);
-      --badge-edge-bg: oklch(0.22 0.04 55);
-      --badge-edge-fg: oklch(0.82 0.12 55);
-      --btn-primary-bg: #f5f5f5;
-      --btn-primary-hover: #ffffff;
+      color-scheme: dark;
+      --bg: #111111;
+      --fg: #ffffff;
+      --secondary: #b0b0b0;
+      --muted: #888888;
+      --muted-bg: #1a1a1a;
+      --border: #232323;
+      --border-subtle: #1c1c1c;
+      --accent: #60a5fa;
+      --accent-muted: rgba(96, 165, 250, 0.1);
+      --accent-dim: #60a5fa;
+      --accent-strong: #93c5fd;
+      --surface: #191919;
+      --surface-raised: #1a1a1a;
+      --surface-hover: #222222;
+      --th-bg: #1a1a1a;
+      --row-border: #232323;
+      --hero-glow-1: transparent;
+      --hero-glow-2: transparent;
+      --cmd-copy-hover-bg: #222222;
+      --cmd-border: #232323;
+      --option-bg: #191919;
+      --badge-chain-bg: #222222;
+      --badge-chain-fg: #b0b0b0;
+      --badge-profile-bg: rgba(96, 165, 250, 0.1);
+      --badge-profile-fg: #93c5fd;
+      --badge-channel-bg: rgba(48, 164, 108, 0.12);
+      --badge-channel-fg: #30a46c;
+      --badge-edge-bg: rgba(226, 163, 54, 0.12);
+      --badge-edge-fg: #e2a336;
+      --btn-primary-bg: #60a5fa;
+      --btn-primary-hover: #93c5fd;
       --size-fg: #d4d4d4;
-      --count-badge-fg: #050505;
-      --disk-state:    oklch(0.60 0.20 260);
-      --disk-headers:  oklch(0.65 0.18 290);
-      --disk-txs:      oklch(0.72 0.17 165);
-      --disk-tx-send:  oklch(0.68 0.15 150);
-      --disk-receipts: oklch(0.75 0.16 85);
-      --disk-acc-cs:   oklch(0.70 0.18 35);
-      --disk-sto-cs:   oklch(0.65 0.18 340);
-      --disk-indices:  oklch(0.60 0.15 210);
+      --count-badge-fg: #111111;
+      --disk-state:    #93c5fd;
+      --disk-headers:  #60a5fa;
+      --disk-txs:      #3b82f6;
+      --disk-tx-send:  #2563eb;
+      --disk-receipts: #1d4ed8;
+      --disk-acc-cs:   #1e40af;
+      --disk-sto-cs:   #1e3a8a;
+      --disk-indices:  #172554;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -997,11 +1000,46 @@ async function handleUI(_req: Request, env: Env) {
       color: var(--fg);
       line-height: 1.6;
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .site-shell {
+      max-width: 1200px;
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 1rem 1.5rem 0;
+    }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding: 2rem 0;
+    }
+
+    .wordmark {
+      display: inline-flex;
+      align-items: center;
+      color: var(--fg);
+      text-decoration: none;
+    }
+
+    .wordmark svg {
+      width: auto;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .hero {
       position: relative;
-      padding: 4rem 2rem 3rem;
+      padding: 1rem 0 1.5rem;
       overflow: hidden;
     }
 
@@ -1017,34 +1055,15 @@ async function handleUI(_req: Request, env: Env) {
 
     .hero-inner {
       position: relative;
-      max-width: 1400px;
-      margin: 0 auto;
+      max-width: 40rem;
     }
 
     .hero h1 {
-      font-size: 3rem;
+      font-size: 1.75rem;
       font-weight: 700;
-      letter-spacing: -0.03em;
+      letter-spacing: 0;
       line-height: 1.1;
-      background: linear-gradient(135deg, var(--fg) 0%, var(--muted) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      display: flex;
-      align-items: center;
-      gap: 0.625rem;
-    }
-
-    .hero-logo {
-      width: 36px;
-      height: 36px;
-      -webkit-text-fill-color: initial;
-    }
-
-    .hero-sub {
-      margin-top: 0.75rem;
-      color: var(--muted);
-      font-size: 1.1rem;
+      color: var(--fg);
     }
 
     .cmd-box {
@@ -1084,7 +1103,7 @@ async function handleUI(_req: Request, env: Env) {
       color: var(--muted);
       cursor: pointer;
       padding: 0.25rem;
-      border-radius: 0;
+      border-radius: var(--radius);
       transition: color var(--duration) var(--ease), background var(--duration) var(--ease);
       display: flex;
       align-items: center;
@@ -1098,9 +1117,9 @@ async function handleUI(_req: Request, env: Env) {
     .cmd-copy.copied { color: oklch(0.72 0.17 155); }
 
     .main {
-      max-width: 1400px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 0 2rem 4rem;
+      padding: 0 0 4rem;
     }
 
     .filters {
@@ -1120,12 +1139,18 @@ async function handleUI(_req: Request, env: Env) {
       max-width: 220px;
     }
 
+    .filter-group.snapshot-filter {
+      flex: 1.35;
+      min-width: 330px;
+      max-width: 400px;
+    }
+
     .filter-group label {
       font-size: 0.7rem;
       font-weight: 600;
       color: var(--muted);
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
     }
 
     input, select {
@@ -1134,7 +1159,7 @@ async function handleUI(_req: Request, env: Env) {
       border: 1px solid var(--border);
       color: var(--fg);
       padding: 0.5rem 0.875rem;
-      border-radius: 0;
+      border-radius: var(--radius);
       font-size: 0.875rem;
       transition: border-color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
       width: 100%;
@@ -1193,7 +1218,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       color: var(--muted);
     }
 
@@ -1219,7 +1244,7 @@ async function handleUI(_req: Request, env: Env) {
       font-weight: 600;
       text-transform: uppercase;
       font-size: 0.675rem;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       color: var(--muted);
       background: var(--th-bg);
       border-bottom: 1px solid var(--border);
@@ -1255,10 +1280,10 @@ async function handleUI(_req: Request, env: Env) {
       display: inline-flex;
       align-items: center;
       padding: 0.2rem 0.5rem;
-      border-radius: 0;
+      border-radius: var(--radius);
       font-size: 0.7rem;
       font-weight: 600;
-      letter-spacing: 0.02em;
+      letter-spacing: 0;
       font-family: 'JetBrains Mono', monospace;
     }
 
@@ -1359,7 +1384,7 @@ async function handleUI(_req: Request, env: Env) {
       align-items: center;
       gap: 0.375rem;
       padding: 0.375rem 0.75rem;
-      border-radius: 0;
+      border-radius: var(--radius);
       font-size: 0.8rem;
       font-weight: 500;
       text-decoration: none;
@@ -1396,7 +1421,7 @@ async function handleUI(_req: Request, env: Env) {
     .btn-ghost:hover {
       background: var(--surface-hover);
       color: var(--fg);
-      border-color: var(--tempo-700);
+      border-color: var(--accent);
     }
 
     .btn-ghost.copied {
@@ -1439,8 +1464,8 @@ async function handleUI(_req: Request, env: Env) {
       justify-content: center;
       min-width: 1.5rem;
       padding: 0.125rem 0.5rem;
-      border-radius: 0;
-      background: var(--accent-dim);
+      border-radius: var(--radius);
+      background: var(--accent);
       color: white;
       font-size: 0.75rem;
       font-weight: 600;
@@ -1460,16 +1485,18 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.8rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0;
       color: var(--muted);
       display: flex;
       align-items: center;
     }
 
     @media (max-width: 768px) {
-      .hero { padding: 2.5rem 1.25rem 2rem; }
-      .hero h1 { font-size: 2rem; }
-      .main { padding: 0 1.25rem 3rem; }
+      .site-shell { padding: 1rem 1.25rem 0; }
+      .site-header { align-items: flex-start; flex-direction: column; gap: 1rem; padding: 1.5rem 0; }
+      .hero { padding: 0.5rem 0 1.25rem; }
+      .hero h1 { font-size: 1.65rem; }
+      .main { padding: 0 0 3rem; }
       .filters { gap: 0.5rem; }
       .filter-group { max-width: none; min-width: 140px; }
       .stats-bar { gap: 1rem; }
@@ -1482,7 +1509,7 @@ async function handleUI(_req: Request, env: Env) {
     }
 
     .fade-in {
-      animation: fadeIn 0.5s var(--ease) both;
+      animation: none;
     }
 
     .tabs {
@@ -1491,14 +1518,14 @@ async function handleUI(_req: Request, env: Env) {
       margin-bottom: 2rem;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 0;
+      border-radius: var(--radius);
       padding: 0.25rem;
       width: fit-content;
     }
 
     .tab {
       padding: 0.5rem 1.25rem;
-      border-radius: 0;
+      border-radius: calc(var(--radius) - 2px);
       border: none;
       background: transparent;
       color: var(--muted);
@@ -1517,18 +1544,18 @@ async function handleUI(_req: Request, env: Env) {
     }
 
     .tab.active {
-      background: var(--accent-dim);
-      color: white;
+      background: var(--accent-muted);
+      color: var(--accent);
     }
 
     .tab-badge {
       font-size: 0.6rem;
       font-weight: 700;
       padding: 0.1rem 0.375rem;
-      border-radius: 0;
+      border-radius: calc(var(--radius) - 2px);
       background: oklch(0.72 0.17 155);
       color: white;
-      letter-spacing: 0.03em;
+      letter-spacing: 0;
     }
 
     .tab.active .tab-badge {
@@ -1567,7 +1594,7 @@ async function handleUI(_req: Request, env: Env) {
     .cmd-toggle {
       display: flex;
       gap: 0;
-      margin-bottom: 0.25rem;
+      margin-bottom: 0.875rem;
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.7rem;
     }
@@ -1585,11 +1612,16 @@ async function handleUI(_req: Request, env: Env) {
 
     .cmd-toggle button:first-child {
       border-right: none;
+      border-bottom-left-radius: var(--radius);
+    }
+
+    .cmd-toggle button:last-child {
+      border-bottom-right-radius: var(--radius);
     }
 
     .cmd-toggle button.active {
-      color: var(--fg);
-      background: var(--surface);
+      color: var(--accent);
+      background: var(--accent-muted);
     }
 
     .tab-content {
@@ -1598,37 +1630,45 @@ async function handleUI(_req: Request, env: Env) {
 
     .tab-content.active {
       display: block;
-      animation: fadeIn 0.3s var(--ease) both;
+      animation: none;
     }
 
     .presets {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 0;
+      gap: 0.75rem;
       margin-bottom: 2.5rem;
-      border: 1px solid var(--border);
     }
 
     .preset {
+      position: relative;
       padding: 1.5rem;
       cursor: pointer;
-      border: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       background: var(--surface);
       text-align: left;
       font-family: 'Inter', sans-serif;
-      transition: background var(--duration) var(--ease);
-      border-right: 1px solid var(--border);
+      transition:
+        background var(--duration) var(--ease),
+        border-color var(--duration) var(--ease),
+        box-shadow var(--duration) var(--ease);
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
     }
 
-    .preset:last-child {
-      border-right: none;
-    }
-
     .preset:hover {
       background: var(--surface-hover);
+    }
+
+    .preset:focus {
+      outline: none;
+    }
+
+    .preset:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
     }
 
     .preset:disabled {
@@ -1641,15 +1681,17 @@ async function handleUI(_req: Request, env: Env) {
     }
 
     .preset.active {
-      background: var(--surface-hover);
+      background: var(--accent-muted);
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px var(--accent);
+      z-index: 1;
     }
 
     .preset.modified {
-      background: var(--surface-hover);
+      background: var(--accent-muted);
       border-color: var(--accent);
       box-shadow: inset 0 0 0 1px var(--accent);
+      z-index: 1;
     }
 
     .preset.modified .preset-radio {
@@ -1669,7 +1711,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.65rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0;
       color: var(--muted);
       margin-left: 0.375rem;
     }
@@ -1710,7 +1752,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 1rem;
       font-weight: 700;
       color: var(--fg);
-      letter-spacing: -0.01em;
+      letter-spacing: 0;
       flex: 1;
     }
 
@@ -1755,7 +1797,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       color: var(--muted);
     }
 
@@ -1772,6 +1814,7 @@ async function handleUI(_req: Request, env: Env) {
       display: flex;
       overflow: visible;
       border: 1px solid var(--border);
+      border-radius: var(--radius);
     }
 
     .disk-segment {
@@ -1807,18 +1850,19 @@ async function handleUI(_req: Request, env: Env) {
       align-items: center;
       gap: 0.375rem;
       font-size: 0.75rem;
-      color: var(--muted);
+      color: var(--fg);
       padding: 0.4rem 0.375rem 0.2rem;
       border-bottom: 1px solid transparent;
       cursor: default;
     }
 
-    .disk-legend-item.unchecked {
-      opacity: 0.4;
+    .disk-legend-item.highlight {
+      border-bottom-color: var(--fg);
     }
 
-    .disk-legend-item.highlight {
-      border-bottom: 1px solid var(--fg);
+    .disk-legend-item.not-selected {
+      color: var(--muted);
+      opacity: 0.45;
     }
 
     .disk-legend-swatch {
@@ -1845,6 +1889,8 @@ async function handleUI(_req: Request, env: Env) {
 
     .checklist {
       border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
       margin-bottom: 2.5rem;
     }
 
@@ -1879,7 +1925,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.675rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       color: var(--muted);
     }
 
@@ -1920,6 +1966,10 @@ async function handleUI(_req: Request, env: Env) {
       cursor: default;
     }
 
+    .checklist-row.disabled:hover {
+      background: var(--surface);
+    }
+
     .checklist-row.disabled .checklist-check input[type="checkbox"] {
       cursor: default;
     }
@@ -1932,7 +1982,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0;
       color: var(--muted);
       margin-bottom: 0.625rem;
     }
@@ -1950,6 +2000,7 @@ async function handleUI(_req: Request, env: Env) {
       font-size: 0.75rem;
       padding: 0.375rem 0.75rem;
       border: 1px solid var(--border);
+      border-radius: var(--radius);
       color: var(--fg);
       background: var(--surface);
     }
@@ -1966,6 +2017,7 @@ async function handleUI(_req: Request, env: Env) {
 
     .modular-cmd {
       border: 1px solid var(--border);
+      border-radius: var(--radius);
       padding: 1rem 1.25rem;
       display: flex;
       align-items: center;
@@ -1999,13 +2051,6 @@ async function handleUI(_req: Request, env: Env) {
       .presets {
         grid-template-columns: 1fr;
       }
-      .preset {
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-      }
-      .preset:last-child {
-        border-bottom: none;
-      }
       .checklist-row, .checklist-head {
         grid-template-columns: 2.5rem 1fr 1fr;
       }
@@ -2015,12 +2060,9 @@ async function handleUI(_req: Request, env: Env) {
     }
 
     .theme-toggle {
-      position: absolute;
-      top: 0;
-      right: 0;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 0;
+      border-radius: var(--radius);
       padding: 0.5rem;
       cursor: pointer;
       color: var(--muted);
@@ -2047,13 +2089,13 @@ async function handleUI(_req: Request, env: Env) {
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      padding: 2rem;
-      color: var(--muted);
+      padding: 2rem 0;
+      color: var(--secondary);
       font-size: 0.8rem;
     }
 
     .footer a {
-      color: var(--muted);
+      color: var(--secondary);
       text-decoration: none;
       transition: color var(--duration) var(--ease);
     }
@@ -2080,19 +2122,28 @@ async function handleUI(_req: Request, env: Env) {
   </script>
 </head>
 <body>
-  <div class="hero">
-    <div class="hero-inner fade-in">
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
-        <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
-        <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-      </button>
-      <h1><img src="https://tempo.xyz/favicon.ico" alt="Tempo" class="hero-logo">Tempo Snapshots</h1>
-      <p class="hero-sub">Configure your own node with our modular snapshots.</p>
-    </div>
-  </div>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="wordmark" href="https://tempo.xyz" target="_blank" rel="noopener" aria-label="Tempo">
+        <svg viewBox="0 0 107 25" role="img" aria-hidden="true"><path d="M8.10464 23.7163H1.82475L7.64513 5.79356H0.201172L1.82475 0.540352H22.5637L20.9401 5.79356H13.8944L8.10464 23.7163Z"></path><path d="M31.474 23.7163H16.5861L24.0607 0.540352H38.8873L37.4782 4.95923H28.8701L27.3078 9.93433H35.6402L34.231 14.2914H25.8681L24.3057 19.2974H32.8525L31.474 23.7163Z"></path><path d="M38.2124 23.7163H33.2192L40.7244 0.540352H49.0567L48.781 13.0245L56.8989 0.540352H66.0277L58.5531 23.7163H52.3039L57.3584 7.86395L46.9736 23.7163H43.267L43.4201 7.80214L38.2124 23.7163Z"></path><path d="M73.057 4.83563L70.6369 12.3137H71.3108C72.8425 12.3137 74.1189 11.9532 75.14 11.2322C76.1612 10.4906 76.8249 9.43991 77.1312 8.08025C77.3967 6.90601 77.2538 6.07167 76.7023 5.57725C76.1509 5.08284 75.2319 4.83563 73.9453 4.83563H73.057ZM66.9915 23.7163H60.7116L68.1862 0.540352H75.814C77.5703 0.540352 79.0816 0.828764 80.3478 1.40559C81.6344 1.96181 82.5738 2.76524 83.166 3.81588C83.7787 4.84592 83.9829 6.05107 83.7787 7.43133C83.5132 9.2442 82.8189 10.8408 81.6956 12.221C80.5724 13.6013 79.1122 14.6725 77.315 15.4347C75.5383 16.1764 73.5471 16.5472 71.3415 16.5472H69.289L66.9915 23.7163Z"></path><path d="M98.747 22.233C96.664 23.4691 94.4481 24.0871 92.0996 24.0871H92.0383C89.9552 24.0871 88.1989 23.6236 86.7693 22.6965C85.3602 21.7489 84.3493 20.4717 83.7366 18.8648C83.1443 17.2579 83.0014 15.4966 83.3077 13.5807C83.6957 11.1704 84.5841 8.94549 85.9728 6.90601C87.3616 4.86653 89.0975 3.23906 91.1805 2.02361C93.2636 0.808164 95.4897 0.200439 97.8587 0.200439H97.9199C100.085 0.200439 101.872 0.663958 103.281 1.591C104.71 2.51803 105.701 3.78498 106.252 5.39185C106.824 6.97811 106.947 8.76008 106.62 10.7378C106.232 13.0657 105.343 15.2596 103.955 17.3197C102.566 19.3592 100.83 20.997 98.747 22.233ZM90.0777 18.2468C90.6292 19.2974 91.589 19.8227 92.9573 19.8227H93.0186C94.1418 19.8227 95.1833 19.4004 96.1432 18.5558C97.1235 17.6905 97.9506 16.5369 98.6245 15.0948C99.3189 13.6528 99.8294 12.0459 100.156 10.2742C100.463 8.54377 100.34 7.15322 99.7886 6.10257C99.2372 5.03133 98.2875 4.49571 96.9397 4.49571H96.8784C95.8369 4.49571 94.826 4.92833 93.8457 5.79356C92.8858 6.6588 92.0485 7.82274 91.3337 9.2854C90.6189 10.7481 90.0982 12.3343 89.7714 14.0442C89.4446 15.7747 89.5468 17.1755 90.0777 18.2468Z"></path></svg>
+      </a>
 
-  <div class="main">
-    <div class="fade-in" style="animation-delay: 0.1s">
+      <div class="header-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-inner fade-in">
+        <h1>Snapshots</h1>
+      </div>
+    </section>
+
+    <main class="main">
+      <div class="fade-in" style="animation-delay: 0.1s">
       <div class="snapshot-indicator" id="snapshotIndicator" style="display:none">
         <span class="snapshot-indicator-text" id="snapshotIndicatorText"></span>
         <button class="snapshot-indicator-reset" id="snapshotIndicatorReset" onclick="configureSnapshot(latestModularSnapshotId)">Use latest</button>
@@ -2103,7 +2154,7 @@ async function handleUI(_req: Request, env: Env) {
           <label for="networkSelect">Network</label>
           <select id="networkSelect"></select>
         </div>
-        <div class="filter-group">
+        <div class="filter-group snapshot-filter">
           <label for="snapshotSelect">Snapshot</label>
           <select id="snapshotSelect"></select>
         </div>
@@ -2130,8 +2181,8 @@ async function handleUI(_req: Request, env: Env) {
             <span class="preset-name">Minimal<span class="preset-modified-tag">(modified)</span></span>
             <span class="preset-size" id="preset-minimal-size"></span>
           </div>
-          <span class="preset-desc">State and headers with minimal history. Limited historical RPC.</span>
-          <span class="preset-ideal">Ideal for validators and constrained environments</span>
+          <span class="preset-desc">Tempo state and headers with minimal history. Limited historical RPC.</span>
+          <span class="preset-ideal">Best for validators and constrained infrastructure</span>
         </button>
         <button class="preset" id="preset-full" disabled>
           <div class="preset-header">
@@ -2139,8 +2190,8 @@ async function handleUI(_req: Request, env: Env) {
             <span class="preset-name">Full<span class="preset-modified-tag">(modified)</span></span>
             <span class="preset-size" id="preset-full-size"></span>
           </div>
-          <span class="preset-desc">Full transaction history with recent receipts and state history.</span>
-          <span class="preset-ideal">Ideal for dApp backends and personal nodes</span>
+          <span class="preset-desc">Transaction history with recent receipts and state history.</span>
+          <span class="preset-ideal">Best for service backends and personal nodes</span>
         </button>
         <button class="preset active" onclick="selectPreset('archive')" id="preset-archive">
           <div class="preset-header">
@@ -2148,8 +2199,8 @@ async function handleUI(_req: Request, env: Env) {
             <span class="preset-name">Archive<span class="preset-modified-tag">(modified)</span></span>
             <span class="preset-size" id="preset-archive-size"></span>
           </div>
-          <span class="preset-desc">Complete history. Includes all transactions, senders, and indices.</span>
-          <span class="preset-ideal">Ideal for RPC providers, indexers, and researchers</span>
+          <span class="preset-desc">Complete Tempo history with transactions, senders, and indices.</span>
+          <span class="preset-ideal">Best for RPC providers, indexers, and analysis</span>
         </button>
       </div>
 
@@ -2160,7 +2211,7 @@ async function handleUI(_req: Request, env: Env) {
         </div>
         <div class="disk-bar" id="diskBar"></div>
         <div class="disk-legend" id="diskLegend"></div>
-        <div class="disk-note">Download sizes are compressed. On-disk usage will be larger after extraction.</div>
+        <div class="disk-note">Download sizes are compressed. Extracted node data will be larger on disk.</div>
       </div>
 
       <div class="capabilities-section" id="capabilitiesSection">
@@ -2178,16 +2229,19 @@ async function handleUI(_req: Request, env: Env) {
         <div id="checklistBody"></div>
       </div>
 
-    </div>
-  </div>
+      </div>
+    </main>
 
-  <footer class="footer">
-    <span id="footerStatus">Latest snapshot: block ${latestModular ? latestModular.block.toLocaleString() : '—'} · ${latestModular ? new Date(parseInt(latestModular.timestamp, 10) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
-    <span class="footer-sep">&middot;</span>
-    <a href="https://docs.tempo.xyz/guide/node" target="_blank" rel="noopener">Node docs</a>
-    <span class="footer-sep">&middot;</span>
-    <a href="https://github.com/tempoxyz/tempo" target="_blank" rel="noopener">GitHub</a>
-  </footer>
+    <footer class="footer">
+      <span id="footerStatus">Latest snapshot: block ${latestModular ? latestModular.block.toLocaleString() : '—'} · ${latestModular ? new Date(parseInt(latestModular.timestamp, 10) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+      <span class="footer-sep">&middot;</span>
+      <a href="https://tempo.xyz" target="_blank" rel="noopener">About</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="https://docs.tempo.xyz" target="_blank" rel="noopener">Docs</a>
+      <span class="footer-sep">&middot;</span>
+      <a href="https://github.com/tempoxyz/tempo" target="_blank" rel="noopener">GitHub</a>
+    </footer>
+  </div>
 
   <script>
     var EMPTY_PRESET_SIZES = ${safeJsonForInlineScript(defaultPresetSizes)};
@@ -2199,14 +2253,14 @@ async function handleUI(_req: Request, env: Env) {
     var activeChainId = ${safeJsonForInlineScript(selectedChainId)};
     var latestModularSnapshotId = ${safeJsonForInlineScript(latestModular?.snapshotId || null)};
     var COMPONENTS = [
-      { id: 'state',     name: 'state',              desc: 'MDBX database',                      color: 'var(--disk-state)',     required: true },
-      { id: 'headers',   name: 'headers',            desc: 'Block header static files',           color: 'var(--disk-headers)',   required: true },
-      { id: 'txs',       name: 'transactions',       desc: 'Transaction static files',            color: 'var(--disk-txs)',       required: false },
-      { id: 'tx_send',   name: 'senders',              desc: 'Transaction sender static files',    color: 'var(--disk-tx-send)',   required: false },
-      { id: 'receipts',  name: 'receipts',           desc: 'Receipt static files',                color: 'var(--disk-receipts)',  required: false },
-      { id: 'acc_cs',    name: 'state history',        desc: 'Account & storage changeset static files', color: 'var(--disk-acc-cs)',    required: false, group: ['acc_cs', 'sto_cs'] },
-      { id: 'sto_cs',    name: 'storage changesets',  desc: 'Storage changeset static files',     color: 'var(--disk-sto-cs)',    required: false, groupedUnder: 'acc_cs' },
-      { id: 'indices',   name: 'indices',             desc: 'Archive node RocksDB indices (transaction lookup, account/storage history)', color: 'var(--disk-indices)',   required: false }
+      { id: 'state',     name: 'state',              desc: 'Tempo MDBX state database',           color: 'var(--disk-state)',     required: true },
+      { id: 'headers',   name: 'headers',            desc: 'Tempo block headers',                 color: 'var(--disk-headers)',   required: true },
+      { id: 'txs',       name: 'transactions',       desc: 'Tempo transaction history',           color: 'var(--disk-txs)',       required: false },
+      { id: 'tx_send',   name: 'senders',            desc: 'Recovered transaction sender data',   color: 'var(--disk-tx-send)',   required: false },
+      { id: 'receipts',  name: 'receipts',           desc: 'Transaction receipts and logs',       color: 'var(--disk-receipts)',  required: false },
+      { id: 'acc_cs',    name: 'state history',      desc: 'Account and storage changesets',      color: 'var(--disk-acc-cs)',    required: false, group: ['acc_cs', 'sto_cs'] },
+      { id: 'sto_cs',    name: 'storage changesets', desc: 'Storage changeset history',           color: 'var(--disk-sto-cs)',    required: false, groupedUnder: 'acc_cs' },
+      { id: 'indices',   name: 'indices',            desc: 'Archive indices for lookup and history', color: 'var(--disk-indices)', required: false }
     ];
 
     var COMPONENT_SIZE_KEYS = {
@@ -2225,6 +2279,7 @@ async function handleUI(_req: Request, env: Env) {
     var presetBaseComponents = new Set(PRESETS.archive.checked);
     var activeSnapshotId = latestModularSnapshotId;
     var activeSnapshotUrl = null;
+    var CUSTOM_COMPONENT_SELECTION_ENABLED = false;
 
     function getComponentSizeGB(componentId) {
       var key = COMPONENT_SIZE_KEYS[componentId];
@@ -2244,6 +2299,11 @@ async function handleUI(_req: Request, env: Env) {
       if (gb >= 1000) return (gb / 1000).toFixed(1).replace(/\\.0$/, '') + ' TB';
       if (gb < 1) return Math.round(gb * 1000) + ' MB';
       return Math.round(gb) + ' GB';
+    }
+
+    function fmtPresetSize(gb) {
+      if (gb >= 1000) return (gb / 1000).toFixed(2) + ' TB';
+      return gb.toFixed(2) + ' GB';
     }
 
     function getSnapshotsForActiveNetwork() {
@@ -2294,7 +2354,7 @@ async function handleUI(_req: Request, env: Env) {
       body.innerHTML = COMPONENTS.filter(function(c) { return !c.groupedUnder; }).map(function(c) {
         var isChecked = checkedComponents.has(c.id);
         var isRequired = c.required;
-        var isDisabled = isRequired || (c.id === 'indices' && !isIndicesAvailable()) || (c.id === 'tx_send' && !isSendersAvailable());
+        var isDisabled = !CUSTOM_COMPONENT_SELECTION_ENABLED || isRequired || (c.id === 'indices' && !isIndicesAvailable()) || (c.id === 'tx_send' && !isSendersAvailable());
         var sizeGB = isChecked ? getComponentSizeGB(c.id) : getMinimalSizeGB(c.id);
         if (c.group) {
           c.group.forEach(function(gid) {
@@ -2361,8 +2421,8 @@ async function handleUI(_req: Request, env: Env) {
         barHtml += '</div>';
 
         var sizeLabel = activeSize > 0 ? fmtSize(activeSize) : fmtSize(archiveSize);
-        var unc = activeSize > 0 ? '' : ' unchecked';
-        legendHtml += '<div class="disk-legend-item' + unc + '" data-comp="' + c.id + '" onmouseenter="highlightSegment(\\'' + c.id + '\\')" onmouseleave="clearHighlight()">' +
+        var selectedClass = isChecked ? '' : ' not-selected';
+        legendHtml += '<div class="disk-legend-item' + selectedClass + '" data-comp="' + c.id + '" onmouseenter="highlightSegment(\\'' + c.id + '\\')" onmouseleave="clearHighlight()">' +
           '<div class="disk-legend-swatch" style="background:' + c.color + '"></div>' +
           '<span>' + c.name + '</span>' +
           '<span class="disk-legend-size">' + sizeLabel + '</span>' +
@@ -2537,7 +2597,7 @@ async function handleUI(_req: Request, env: Env) {
       var snapshots = getSnapshotsForActiveNetwork();
 
       if (!snapshots.length) {
-        select.innerHTML = '<option value="">No v2 manifests yet</option>';
+        select.innerHTML = '<option value="">No modular snapshots yet</option>';
         select.disabled = true;
         return;
       }
@@ -2574,7 +2634,7 @@ async function handleUI(_req: Request, env: Env) {
       }
 
       if (latestSnapshot) {
-        status.textContent = 'No v2 manifest is available for ' + networkName + ' yet. The command above falls back to the latest legacy archive from ' + latestSnapshot.date + '.';
+        status.textContent = 'No modular snapshot is available for ' + networkName + ' yet. The command above falls back to the latest archive from ' + latestSnapshot.date + '.';
         return;
       }
 
@@ -2641,6 +2701,7 @@ async function handleUI(_req: Request, env: Env) {
 
     function selectPreset(name) {
       if (!hasActiveModularSnapshot()) return;
+      if (name !== 'archive') return;
       activePreset = name;
       checkedComponents = new Set(PRESETS[name].checked);
       presetBaseComponents = new Set(PRESETS[name].checked);
@@ -2649,6 +2710,7 @@ async function handleUI(_req: Request, env: Env) {
     }
 
     function toggleComponent(id) {
+      if (!CUSTOM_COMPONENT_SELECTION_ENABLED) return;
       if (!hasActiveModularSnapshot()) return;
       var comp = COMPONENTS.find(function(c) { return c.id === id; });
       if (comp && comp.required) return;
@@ -2682,7 +2744,7 @@ async function handleUI(_req: Request, env: Env) {
           return a + (sizes[key] || 0);
         }, 0);
         var el = document.getElementById('preset-' + p + '-size');
-        if (el) el.textContent = total > 0 ? '~' + fmtSize(total) : '';
+        if (el) el.textContent = total > 0 ? '~' + fmtPresetSize(total) : '';
       });
     }
 
