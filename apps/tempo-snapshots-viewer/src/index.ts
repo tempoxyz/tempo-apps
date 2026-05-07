@@ -658,9 +658,10 @@ async function getSnapshots(env: Env): Promise<Snapshot[]> {
 }
 
 const CACHE_VERSION = 'v18'
-const CACHE_KEY_FULL = `https://snapshots.tempoxyz.dev/cache/${CACHE_VERSION}/full`
-const CACHE_KEY_API = `https://snapshots.tempoxyz.dev/cache/${CACHE_VERSION}/api`
-const CACHE_KEY_UI_HTML = `https://snapshots.tempoxyz.dev/cache/${CACHE_VERSION}/ui-html`
+const VIEWER_ORIGIN = 'https://snapshots.tempo.xyz'
+const CACHE_KEY_FULL = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/full`
+const CACHE_KEY_API = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/api`
+const CACHE_KEY_UI_HTML = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/ui-html`
 const CACHE_TTL = 3600 // 1 hour — snapshots change at most once per day
 let snapshotRefreshPromise: Promise<Snapshot[]> | undefined
 
@@ -885,7 +886,7 @@ async function handleUI(_req: Request, env: Env) {
   <meta property="og:title" content="Snapshots - Tempo">
   <meta property="og:description" content="Download Tempo snapshots with network-aware profiles and generated tempo download commands.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://snapshots.tempoxyz.dev">
+  <meta property="og:url" content="${VIEWER_ORIGIN}">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Snapshots - Tempo">
   <meta name="twitter:description" content="Download Tempo snapshots with network-aware profiles and generated tempo download commands.">
