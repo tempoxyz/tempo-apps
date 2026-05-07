@@ -30,6 +30,10 @@
 		{
 			"pattern": "snapshots.tempoxyz.dev",
 			"custom_domain": true
+		},
+		{
+			"pattern": "snapshots.tempo.xyz",
+			"custom_domain": true
 		}
 	],
 	"triggers": {
