@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { getRequestURL, hasIndexSupply } from '#lib/env'
+import { getRequestURL } from '#lib/env'
 import {
 	MAX_LIMIT,
 	RequestParametersSchema,
@@ -28,17 +28,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (!hasIndexSupply())
-					return Response.json({
-						limit: 0,
-						total: 0,
-						offset: 0,
-						hasMore: false,
-						countCapped: false,
-						transactions: [],
-						error: null,
-					} satisfies HistoryResponse)
-
 				try {
 					const url = getRequestURL()
 					const address = zAddress().parse(params.address)

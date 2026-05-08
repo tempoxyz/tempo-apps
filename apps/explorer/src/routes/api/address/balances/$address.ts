@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getChainId } from 'wagmi/actions'
-import { getRequestURL, hasIndexSupply } from '#lib/env'
+import { getRequestURL } from '#lib/env'
 import type { BalancesResponse } from '#lib/address-balances'
 import {
 	MAX_TOKENS,
@@ -16,9 +16,6 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (!hasIndexSupply())
-					return Response.json({ balances: [] } satisfies BalancesResponse)
-
 				try {
 					const url = getRequestURL()
 					const isCsvExport = url.searchParams.get('format') === 'csv'

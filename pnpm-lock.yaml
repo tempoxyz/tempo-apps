@@ -455,9 +455,6 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.12.14
-      idxs:
-        specifier: 'catalog:'
-        version: 0.0.6(typescript@6.0.2)
       midcut:
         specifier: 'catalog:'
         version: 0.2.0(react@19.2.5)
