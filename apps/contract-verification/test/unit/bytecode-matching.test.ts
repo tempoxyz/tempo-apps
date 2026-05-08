@@ -14,10 +14,9 @@ import {
 	extractConstructorArgumentsTransformation,
 	extractAuxdataTransformation,
 	matchBytecode,
-	type LinkReferences,
-	type ImmutableReferences,
 	type CborAuxdataPositions,
 } from '#lib/bytecode-matching.ts'
+import type { ImmutableReferences, LinkReferences } from '#schema.ts'
 
 function keccakString(str: string): `0x${string}` {
 	return Hash.keccak256(Hex.fromString(str))
@@ -41,6 +40,15 @@ describe('getVyperAuxdataStyle', () => {
 		expect(getVyperAuxdataStyle('0.4.0')).toBe(AuxdataStyle.VYPER)
 		expect(getVyperAuxdataStyle('0.4.1')).toBe(AuxdataStyle.VYPER)
 		expect(getVyperAuxdataStyle('1.0.0')).toBe(AuxdataStyle.VYPER)
+	})
+
+	it('handles prefixed versions and build metadata', () => {
+		expect(getVyperAuxdataStyle('v0.3.4+commit.abc123')).toBe(
+			AuxdataStyle.VYPER_LT_0_3_5,
+		)
+		expect(getVyperAuxdataStyle('vyper-0.3.9')).toBe(
+			AuxdataStyle.VYPER_LT_0_3_10,
+		)
 	})
 
 	it('returns VYPER for invalid versions', () => {

@@ -59,7 +59,7 @@ app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
 app.use(async (context, next) => {
 	await withContext(
 		{
-			requestId: context.get('requestId') as string | undefined,
+			requestId: context.get('requestId'),
 			method: context.req.method,
 			path: context.req.path,
 		},

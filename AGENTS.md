@@ -185,3 +185,12 @@ take_screenshot(filePath="/tmp/frame_01.png")
 ```
 
 Then sequential screenshots for frames 02-10, combine, and upload.
+
+## Learned User Preferences
+
+* Verify before proposing. Don't hedge with "likely" — run the command, read the source, or fetch the docs to confirm the root cause before suggesting a fix.
+* When a check fires (security policy, install failure, deploy validation), investigate why the offending condition exists and whether it can be removed before considering any workaround that weakens or bypasses the check.
+
+## Learned Workspace Facts
+
+* Cloudflare Workers docs pages can be fetched as markdown by appending `.md` to the URL (e.g., `https://developers.cloudflare.com/workers/observability/index.md`). Useful for pulling a specific page into context without the full `llms.txt` / `llms-full.txt`.

@@ -3,7 +3,7 @@ import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestUrl } from '@tanstack/react-start/server'
 
 const clientEnvSchema = z.object({
-	CONTRACT_VERIFICATION_API_BASE_URL: z.prefault(
+	VITE_CONTRACT_VERIFICATION_API_BASE_URL: z.prefault(
 		z.url(),
 		'https://contracts.tempo.xyz',
 	),
