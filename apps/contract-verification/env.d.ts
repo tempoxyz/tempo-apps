@@ -26,6 +26,18 @@ interface EnvironmentVariables {
 	readonly CHAINS_CONFIG_AUTH_TOKEN?: string
 }
 
+// Augment the wrangler-generated `Cloudflare.Env` with the optional
+// Secrets Store binding for the chain registry auth token. The binding is
+// not always present (e.g. local dev or in environments where it has not
+// been provisioned) so it is typed as optional and we still want to
+// runtime-check for it in code.
+declare namespace Cloudflare {
+	interface Env {
+		readonly CHAINS_CONFIG_AUTH_TOKEN?: string
+		readonly CHAINS_CONFIG_AUTH_TOKEN_SECRET?: SecretsStoreSecret
+	}
+}
+
 // Node.js `process.env` auto-completion
 declare namespace NodeJS {
 	interface ProcessEnv extends EnvironmentVariables {}
