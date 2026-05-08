@@ -677,9 +677,9 @@ importers:
 
   apps/key-manager:
     dependencies:
-      tempo.ts:
+      accounts:
         specifier: 'catalog:'
-        version: 0.14.2(typescript@6.0.2)(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(zod@4.3.6)
+        version: 0.8.5(@types/react@19.2.14)(@wagmi/core@3.4.8)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.6.9)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
