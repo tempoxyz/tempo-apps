@@ -1,6 +1,10 @@
 import { Address } from 'ox'
 import * as z from 'zod/mini'
-import { tempoDevnet, tempoMainnet, tempoTestnet } from '@wagmi/core/chains'
+import {
+	tempoDevnet,
+	tempo as tempoMainnet,
+	tempoModerato as tempoTestnet,
+} from '@wagmi/core/chains'
 
 const verifierUrl =
 	import.meta.env?.VITE_VERIFIER_URL ?? 'https://contracts.tempo.xyz'
@@ -20,37 +24,18 @@ export const tempoTestnetExtended = tempoTestnet.extend({
 	feeToken: '0x20c0000000000000000000000000000000000001',
 })
 
-export const chainIds = [
-	tempoDevnet.id,
-	tempoTestnet.id,
-	tempoMainnet.id,
-] as const
-export type ChainId = (typeof chainIds)[number]
-export const chains = [
+/** Static Tempo chains -- always available, cannot be overridden by dynamic config. */
+export const staticChains = [
 	tempoDevnetExtended,
 	tempoTestnetExtended,
 	tempoMainnetExtended,
 ] as const
+
 export const chainFeeTokens = {
 	[tempoDevnet.id]: tempoDevnetExtended.feeToken,
 	[tempoTestnet.id]: tempoTestnetExtended.feeToken,
 	[tempoMainnet.id]: tempoMainnetExtended.feeToken,
 } as const
-
-export const sourcifyChains = chains.map((chain) => {
-	const returnValue = {
-		name: chain.name,
-		title: chain.name,
-		chainId: chain.id,
-		rpc: [chain.rpcUrls.default.http, chain.rpcUrls.default.webSocket].flat(),
-		supported: true,
-		etherscanAPI: false,
-		_extra: {},
-	}
-	if (chain?.blockExplorers)
-		returnValue._extra = { blockExplorer: chain?.blockExplorers.default }
-	return returnValue
-})
 
 export const zAddress = (opts?: { lowercase?: boolean }) =>
 	z.pipe(
