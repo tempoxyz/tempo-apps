@@ -712,6 +712,8 @@ async function fetchAddressMetadata(address: Address.Address) {
 		holdersCount?: number | null
 		lastActivityTimestamp: number | null
 		createdTimestamp: number | null
+		createdTxHash?: string | null
+		createdBy?: string | null
 	}>
 }
 
@@ -793,7 +795,8 @@ function AccountCardWithTimestamps(props: {
 
 	const resolvedAccountType = addressMetadata?.accountType ?? initialAccountType
 	const isContract = resolvedAccountType === 'contract'
-	const missingCreated = !addressMetadata?.createdTimestamp
+	const missingCreated =
+		!addressMetadata?.createdTxHash || !addressMetadata?.createdBy
 
 	// For contracts without a createdTimestamp from metadata (0-tx contracts),
 	// fall back to binary-search contract creation lookup
