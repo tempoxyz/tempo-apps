@@ -4,7 +4,6 @@ import { VirtualAddress } from 'ox/tempo'
 import { getCode } from 'viem/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
-import { hasIndexSupply } from '#lib/env'
 import {
 	fetchAddressTxAggregate,
 	fetchTokenHoldersCountRows,
@@ -37,8 +36,6 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					chainId: 0,
 					accountType: 'empty',
 				}
-
-				if (!hasIndexSupply()) return Response.json(fallback)
 
 				try {
 					const address = zAddress().parse(params.address)
