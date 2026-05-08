@@ -1,5 +1,8 @@
 export function parseTimestamp(value: unknown): number | undefined {
 	if (typeof value === 'number' && Number.isFinite(value)) return value
+	// Unix seconds fit comfortably within Number.MAX_SAFE_INTEGER (~285,000 years
+	// from epoch), so the bigint -> number cast is safe for timestamp inputs.
+	if (typeof value === 'bigint') return Number(value)
 	if (typeof value !== 'string') return undefined
 
 	const parsedNumber = Number(value)

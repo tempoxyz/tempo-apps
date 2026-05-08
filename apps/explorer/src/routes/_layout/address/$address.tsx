@@ -793,24 +793,34 @@ function AccountCardWithTimestamps(props: {
 
 	const resolvedAccountType = addressMetadata?.accountType ?? initialAccountType
 	const isContract = resolvedAccountType === 'contract'
-	const missingCreated = !addressMetadata?.createdTimestamp
+	const missingCreated = addressMetadata?.createdTimestamp == null
+	const isTip20 = Tip20.isTip20Address(address)
 
-	// For contracts without a createdTimestamp from metadata (0-tx contracts),
-	// fall back to binary-search contract creation lookup
+	// Fall back to binary-search contract creation lookup when metadata has no
+	// timestamp, and cross-check TIP-20 tokens whose first transfer can be later
+	// than their creation block.
 	const { data: contractCreation } = useQuery({
 		queryKey: ['contract-creation', address],
 		queryFn: () => fetchContractCreation(address),
-		enabled: isContract && missingCreated,
+		enabled: isContract && (missingCreated || isTip20),
 		staleTime: 60_000,
 	})
 
-	const createdTimestamp = addressMetadata?.createdTimestamp
-		? BigInt(addressMetadata.createdTimestamp)
-		: contractCreation?.creation?.timestamp
+	const metadataCreatedTimestamp =
+		addressMetadata?.createdTimestamp != null
+			? BigInt(addressMetadata.createdTimestamp)
+			: undefined
+	const contractCreatedTimestamp =
+		contractCreation?.creation?.timestamp != null
 			? BigInt(contractCreation.creation.timestamp)
 			: undefined
+	const createdTimestamp =
+		metadataCreatedTimestamp != null && contractCreatedTimestamp != null
+			? metadataCreatedTimestamp <= contractCreatedTimestamp
+				? metadataCreatedTimestamp
+				: contractCreatedTimestamp
+			: (metadataCreatedTimestamp ?? contractCreatedTimestamp)
 
-	const isTip20 = Tip20.isTip20Address(address)
 	const virtualAddressParts = getVirtualAddressParts(address)
 	const { isTokenListed } = useTokenListMembership()
 	const totalValue = React.useMemo(
