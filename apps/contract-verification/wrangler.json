@@ -13,13 +13,14 @@
 		"CHAINS_CONFIG_URL": "",
 		"CHAINS_CONFIG_AUTH_TOKEN": ""
 	},
-	"secrets_store_secrets": [
-		{
-			"binding": "CHAINS_CONFIG_AUTH_TOKEN_SECRET",
-			"store_id": "",
-			"secret_name": "CHAINS_CONFIG_AUTH_TOKEN"
-		}
-	],
+	// Uncomment and add the 'store_id' when using this
+	// "secrets_store_secrets": [
+	// 	{
+	// 		"binding": "CHAINS_CONFIG_AUTH_TOKEN_SECRET",
+	// 		"store_id": "",
+	// 		"secret_name": "CHAINS_CONFIG_AUTH_TOKEN"
+	// 	}
+	// ],
 	"ratelimits": [
 		{
 			"name": "RATE_LIMITER",
