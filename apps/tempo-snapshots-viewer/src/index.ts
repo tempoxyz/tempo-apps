@@ -67,6 +67,12 @@ interface Snapshot {
 	rawManifest?: SnapshotManifest
 }
 
+interface SnapshotIndex {
+	version: number
+	generatedAt: string
+	snapshots: Snapshot[]
+}
+
 interface SnapshotComponent {
 	name: string
 	displayName: string
@@ -97,6 +103,11 @@ const NETWORKS: Record<string, NetworkInfo> = {
 }
 
 const DEFAULT_CHAIN_ID = '4217'
+const SNAPSHOT_INDEX_KEY = '_index.json'
+const SNAPSHOT_INDEX_VERSION = 2
+const RECENT_SNAPSHOTS_PER_NETWORK = 5
+const SNAPSHOT_HISTORY_PAGE_SIZE = 5
+const SNAPSHOT_HISTORY_MAX_PAGE_SIZE = 25
 
 interface ComponentSizes {
 	state: number
@@ -297,6 +308,9 @@ async function withR2Retry<T>(label: string, fn: () => Promise<T>): Promise<T> {
 
 const app = new Hono<{ Bindings: Env }>()
 
+app.get('/api/snapshots/history', (context) =>
+	handleSnapshotHistory(context.req.raw, context.env),
+)
 app.get('/api/snapshots', (context) => handleAPI(context.req.raw, context.env))
 app.get('/latest.txt', (context) => serveLatest({}, context.env))
 app.get('/:chainId/latest.txt', (context) =>
@@ -325,6 +339,7 @@ export default {
 
 async function refreshSnapshotCaches(env: Env): Promise<void> {
 	const snapshots = await getSnapshots(env)
+	await writeSnapshotIndex(env, snapshots)
 	const cache = caches.default
 	await populateSnapshotCaches(cache, snapshots)
 	await cache.delete(new Request(CACHE_KEY_UI_HTML, { method: 'GET' }))
@@ -443,6 +458,26 @@ async function listRoot(
 	return { dirs, objects }
 }
 
+async function listSnapshotDirs(
+	bucket: R2Bucket,
+	prefix: string,
+): Promise<string[]> {
+	const dirs: string[] = []
+	let cursor: string | undefined
+	while (true) {
+		const res = await withR2Retry(
+			`listing snapshot prefixes for ${prefix}`,
+			() => bucket.list({ cursor, delimiter: '/', prefix }),
+		)
+		if (res.delimitedPrefixes) {
+			dirs.push(...res.delimitedPrefixes)
+		}
+		if (!res.truncated) break
+		cursor = res.cursor
+	}
+	return dirs
+}
+
 const SNAPSHOT_FETCH_CONCURRENCY = 8
 
 async function mapWithConcurrency<T, U>(
@@ -469,6 +504,96 @@ async function mapWithConcurrency<T, U>(
 	await Promise.all(workers)
 
 	return results
+}
+
+interface SnapshotDirInfo {
+	dir: string
+	chainId: string
+	block: number
+	timestamp: number
+}
+
+interface LegacyMetadataInfo {
+	object: R2Object
+	chainId: string
+	block: number
+	timestamp: number
+}
+
+function parseSnapshotDirInfo(dir: string): SnapshotDirInfo | null {
+	const normalized = dir.replace(/\/$/, '')
+	const match = /^tempo-(\d+)-(\d+)-(\d+)$/.exec(normalized)
+	if (!match) return null
+
+	return {
+		dir: normalized,
+		chainId: match[1] || '',
+		block: Number.parseInt(match[2] || '0', 10),
+		timestamp: Number.parseInt(match[3] || '0', 10),
+	}
+}
+
+function parseLegacyMetadataInfo(object: R2Object): LegacyMetadataInfo | null {
+	const match = /^tempo-(\d+)-(\d+)-(\d+)\.json$/.exec(object.key)
+	if (!match) return null
+
+	return {
+		object,
+		chainId: match[1] || '',
+		block: Number.parseInt(match[2] || '0', 10),
+		timestamp: Number.parseInt(match[3] || '0', 10),
+	}
+}
+
+function compareSnapshotInfoDesc(
+	a: SnapshotDirInfo | LegacyMetadataInfo,
+	b: SnapshotDirInfo | LegacyMetadataInfo,
+): number {
+	return b.block - a.block || b.timestamp - a.timestamp
+}
+
+function selectRecentSnapshotDirsByNetwork(
+	dirs: string[],
+	limit: number,
+): string[] {
+	const byChain = new Map<string, SnapshotDirInfo[]>()
+	for (const dir of dirs) {
+		const info = parseSnapshotDirInfo(dir)
+		if (!info) continue
+
+		const chainSnapshots = byChain.get(info.chainId) || []
+		chainSnapshots.push(info)
+		byChain.set(info.chainId, chainSnapshots)
+	}
+
+	return [...byChain.values()].flatMap((snapshots) =>
+		snapshots
+			.sort(compareSnapshotInfoDesc)
+			.slice(0, limit)
+			.map((s) => s.dir),
+	)
+}
+
+function selectRecentLegacyMetadataFilesByNetwork(
+	objects: R2Object[],
+	limit: number,
+): R2Object[] {
+	const byChain = new Map<string, LegacyMetadataInfo[]>()
+	for (const object of objects) {
+		const info = parseLegacyMetadataInfo(object)
+		if (!info) continue
+
+		const chainSnapshots = byChain.get(info.chainId) || []
+		chainSnapshots.push(info)
+		byChain.set(info.chainId, chainSnapshots)
+	}
+
+	return [...byChain.values()].flatMap((snapshots) =>
+		snapshots
+			.sort(compareSnapshotInfoDesc)
+			.slice(0, limit)
+			.map((s) => s.object),
+	)
 }
 
 function getComponentTerminalObjectKey(
@@ -504,166 +629,225 @@ async function isManifestLikelyComplete(
 	return heads.every(Boolean)
 }
 
-// Fetch and parse all snapshots from R2
+function manifestToSnapshot(
+	env: Env,
+	dirName: string,
+	manifest: SnapshotManifest,
+	manifestKey: string,
+): Snapshot {
+	const chainId = String(manifest.chain_id)
+	const network = getNetworkInfo(chainId)
+	const baseUrl = `${env.R2_PUBLIC_URL}/${dirName}`
+
+	const date = new Date(manifest.timestamp * 1000).toISOString().split('T')[0]
+
+	const components: SnapshotComponent[] = []
+	let totalSize = 0
+
+	for (const [name, comp] of Object.entries(manifest.components)) {
+		const displayName = COMPONENT_DISPLAY_NAMES[name] || name
+		const size = getComponentSize(comp)
+		components.push({ name, displayName, size })
+		totalSize += size
+	}
+
+	const manifestUrl = `${baseUrl}/manifest.json`
+	return {
+		snapshotId: manifestUrl,
+		chainId,
+		networkKey: network.key,
+		networkName: network.name,
+		block: manifest.block,
+		timestamp: String(manifest.timestamp),
+		date,
+		image:
+			manifest.tempo_version ||
+			manifest.reth_version ||
+			manifest.image ||
+			'unknown',
+		archiveUrl: manifestUrl,
+		archiveFile: manifestKey,
+		metadataUrl: `${env.R2_PUBLIC_URL}/${manifestKey}`,
+		size: totalSize,
+		isModular: true,
+		components,
+		manifestUrl,
+		manifestKey,
+		presetSizes: getPresetSizesFromManifest(manifest),
+	}
+}
+
+async function loadModularSnapshot(
+	env: Env,
+	dir: string,
+): Promise<Snapshot | null> {
+	const dirName = dir.replace(/\/$/, '')
+	const manifestKey = `${dirName}/manifest.json`
+
+	try {
+		const obj = await withR2Retry(`fetching manifest ${manifestKey}`, () =>
+			env.SNAPSHOTS.get(manifestKey),
+		)
+		if (!obj) return null
+
+		const manifest: SnapshotManifest = await obj.json()
+
+		if (!(await isManifestLikelyComplete(env.SNAPSHOTS, manifest, dirName))) {
+			console.warn(`Skipping incomplete snapshot: ${manifestKey}`)
+			return null
+		}
+
+		return manifestToSnapshot(env, dirName, manifest, manifestKey)
+	} catch (err) {
+		console.error(`Failed to parse manifest ${manifestKey}:`, err)
+		return null
+	}
+}
+
+async function loadLegacySnapshot(
+	env: Env,
+	file: R2Object,
+): Promise<Snapshot | null> {
+	try {
+		const obj = await withR2Retry(`fetching legacy metadata ${file.key}`, () =>
+			env.SNAPSHOTS.get(file.key),
+		)
+		if (!obj) return null
+
+		const metadata: LegacyMetadata = await obj.json()
+		const chainId = String(metadata.chain_id)
+		const network = getNetworkInfo(chainId)
+
+		const archiveUrl = `${env.R2_PUBLIC_URL}/${metadata.archive}`
+		const metadataUrl = `${env.R2_PUBLIC_URL}/${file.key}`
+
+		const date = new Date(parseInt(metadata.timestamp, 10) * 1000)
+			.toISOString()
+			.split('T')[0]
+
+		const archiveHead = await withR2Retry(
+			`checking archive ${metadata.archive}`,
+			() => env.SNAPSHOTS.head(metadata.archive),
+		)
+		if (!archiveHead) {
+			console.warn(
+				`Skipping legacy snapshot with missing archive: ${metadata.archive}`,
+			)
+			return null
+		}
+
+		return {
+			snapshotId: metadataUrl,
+			chainId,
+			networkKey: network.key,
+			networkName: network.name,
+			block: metadata.block,
+			timestamp: metadata.timestamp,
+			date,
+			image: metadata.image || 'legacy',
+			archiveUrl,
+			archiveFile: metadata.archive,
+			metadataUrl,
+			size: archiveHead.size,
+			isModular: false,
+		}
+	} catch (err) {
+		console.error(`Failed to parse ${file.key}:`, err)
+		return null
+	}
+}
+
+function sortSnapshotsByTimestampDesc(snapshots: Snapshot[]): Snapshot[] {
+	return snapshots.sort(
+		(a, b) => parseInt(b.timestamp, 10) - parseInt(a.timestamp, 10),
+	)
+}
+
+// Build the recent index from R2. The request path reads the persisted index
+// instead of doing this scan unless the index is missing.
 async function getSnapshots(env: Env): Promise<Snapshot[]> {
-	// Step 1: List top-level directories and root files using delimiter (paginated)
-	// This is O(dirs) instead of O(all_objects) — much faster
 	const { dirs, objects: rootObjects } = await listRoot(env.SNAPSHOTS)
-
-	// Step 2: Identify legacy metadata files at root level
-	const legacyMetadataFiles = rootObjects.filter((obj) =>
-		obj.key.endsWith('.json'),
-	)
-
-	// Fetch manifests in bounded parallelism. Keep this request path compact:
-	// listing every chunk in every snapshot can exceed Worker CPU limits.
-	const manifestResults = await mapWithConcurrency(
+	const recentDirs = selectRecentSnapshotDirsByNetwork(
 		dirs,
-		SNAPSHOT_FETCH_CONCURRENCY,
-		async (dir): Promise<Snapshot | null> => {
-			const dirName = dir.replace(/\/$/, '')
-			const manifestKey = `${dirName}/manifest.json`
-
-			try {
-				const obj = await withR2Retry(`fetching manifest ${manifestKey}`, () =>
-					env.SNAPSHOTS.get(manifestKey),
-				)
-				if (!obj) return null
-
-				const manifest: SnapshotManifest = await obj.json()
-
-				if (
-					!(await isManifestLikelyComplete(env.SNAPSHOTS, manifest, dirName))
-				) {
-					console.warn(`Skipping incomplete snapshot: ${manifestKey}`)
-					return null
-				}
-
-				const chainId = String(manifest.chain_id)
-				const network = getNetworkInfo(chainId)
-				const baseUrl = `${env.R2_PUBLIC_URL}/${dirName}`
-
-				const date = new Date(manifest.timestamp * 1000)
-					.toISOString()
-					.split('T')[0]
-
-				const components: SnapshotComponent[] = []
-				let totalSize = 0
-
-				for (const [name, comp] of Object.entries(manifest.components)) {
-					const displayName = COMPONENT_DISPLAY_NAMES[name] || name
-					const size = getComponentSize(comp)
-					components.push({ name, displayName, size })
-					totalSize += size
-				}
-
-				const manifestUrl = `${baseUrl}/manifest.json`
-				return {
-					snapshotId: manifestUrl,
-					chainId,
-					networkKey: network.key,
-					networkName: network.name,
-					block: manifest.block,
-					timestamp: String(manifest.timestamp),
-					date,
-					image:
-						manifest.tempo_version ||
-						manifest.reth_version ||
-						manifest.image ||
-						'unknown',
-					archiveUrl: manifestUrl,
-					archiveFile: manifestKey,
-					metadataUrl: `${env.R2_PUBLIC_URL}/${manifestKey}`,
-					size: totalSize,
-					isModular: true,
-					components,
-					manifestUrl,
-					manifestKey,
-					presetSizes: getPresetSizesFromManifest(manifest),
-				}
-			} catch (err) {
-				console.error(`Failed to parse manifest ${manifestKey}:`, err)
-				return null
-			}
-		},
+		RECENT_SNAPSHOTS_PER_NETWORK,
+	)
+	const legacyMetadataFiles = selectRecentLegacyMetadataFilesByNetwork(
+		rootObjects,
+		RECENT_SNAPSHOTS_PER_NETWORK,
 	)
 
-	// Fetch legacy metadata in bounded parallelism.
+	const manifestResults = await mapWithConcurrency(
+		recentDirs,
+		SNAPSHOT_FETCH_CONCURRENCY,
+		(dir) => loadModularSnapshot(env, dir),
+	)
+
 	const legacyResults = await mapWithConcurrency(
 		legacyMetadataFiles,
 		SNAPSHOT_FETCH_CONCURRENCY,
-		async (file): Promise<Snapshot | null> => {
-			try {
-				const obj = await withR2Retry(
-					`fetching legacy metadata ${file.key}`,
-					() => env.SNAPSHOTS.get(file.key),
-				)
-				if (!obj) return null
-
-				const metadata: LegacyMetadata = await obj.json()
-				const network = getNetworkInfo(metadata.chain_id)
-
-				const archiveUrl = `${env.R2_PUBLIC_URL}/${metadata.archive}`
-				const metadataUrl = `${env.R2_PUBLIC_URL}/${file.key}`
-
-				const date = new Date(parseInt(metadata.timestamp, 10) * 1000)
-					.toISOString()
-					.split('T')[0]
-
-				// Look up archive size — skip if archive is missing
-				const archiveHead = await withR2Retry(
-					`checking archive ${metadata.archive}`,
-					() => env.SNAPSHOTS.head(metadata.archive),
-				)
-				if (!archiveHead) {
-					console.warn(
-						`Skipping legacy snapshot with missing archive: ${metadata.archive}`,
-					)
-					return null
-				}
-				const archiveSize = archiveHead.size
-
-				return {
-					snapshotId: metadataUrl,
-					chainId: metadata.chain_id,
-					networkKey: network.key,
-					networkName: network.name,
-					block: metadata.block,
-					timestamp: metadata.timestamp,
-					date,
-					image: metadata.image || 'legacy',
-					archiveUrl,
-					archiveFile: metadata.archive,
-					metadataUrl,
-					size: archiveSize,
-					isModular: false,
-				}
-			} catch (err) {
-				console.error(`Failed to parse ${file.key}:`, err)
-				return null
-			}
-		},
+		(file) => loadLegacySnapshot(env, file),
 	)
 
-	const snapshots = [
+	return sortSnapshotsByTimestampDesc([
 		...manifestResults.filter((s): s is Snapshot => s !== null),
 		...legacyResults.filter((s): s is Snapshot => s !== null),
-	]
-
-	snapshots.sort(
-		(a, b) => parseInt(b.timestamp, 10) - parseInt(a.timestamp, 10),
-	)
-
-	return snapshots
+	])
 }
 
-const CACHE_VERSION = 'v18'
+const CACHE_VERSION = 'v21'
 const VIEWER_ORIGIN = 'https://snapshots.tempo.xyz'
 const CACHE_KEY_FULL = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/full`
 const CACHE_KEY_API = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/api`
 const CACHE_KEY_UI_HTML = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/ui-html`
 const CACHE_TTL = 3600 // 1 hour — snapshots change at most once per day
 let snapshotRefreshPromise: Promise<Snapshot[]> | undefined
+
+function isSnapshotIndex(value: unknown): value is SnapshotIndex {
+	if (!value || typeof value !== 'object') return false
+	const candidate = value as Partial<SnapshotIndex>
+	return (
+		candidate.version === SNAPSHOT_INDEX_VERSION &&
+		typeof candidate.generatedAt === 'string' &&
+		Array.isArray(candidate.snapshots)
+	)
+}
+
+async function readSnapshotIndex(env: Env): Promise<Snapshot[] | null> {
+	const obj = await withR2Retry(`fetching ${SNAPSHOT_INDEX_KEY}`, () =>
+		env.SNAPSHOTS.get(SNAPSHOT_INDEX_KEY),
+	)
+	if (!obj) return null
+
+	try {
+		const index: unknown = await obj.json()
+		if (!isSnapshotIndex(index)) {
+			console.warn(`Ignoring invalid ${SNAPSHOT_INDEX_KEY}`)
+			return null
+		}
+
+		return sortSnapshotsByTimestampDesc(index.snapshots)
+	} catch (err) {
+		console.warn(`Failed to parse ${SNAPSHOT_INDEX_KEY}:`, err)
+		return null
+	}
+}
+
+async function writeSnapshotIndex(
+	env: Env,
+	snapshots: Snapshot[],
+): Promise<void> {
+	const index: SnapshotIndex = {
+		version: SNAPSHOT_INDEX_VERSION,
+		generatedAt: new Date().toISOString(),
+		snapshots,
+	}
+
+	await withR2Retry(`writing ${SNAPSHOT_INDEX_KEY}`, () =>
+		env.SNAPSHOTS.put(SNAPSHOT_INDEX_KEY, JSON.stringify(index), {
+			httpMetadata: { contentType: 'application/json' },
+		}),
+	)
+}
 
 // Strip UI-only fields from snapshots for API responses.
 function stripSnapshotInternals(snapshots: Snapshot[]): Snapshot[] {
@@ -704,8 +888,15 @@ async function getFullSnapshots(env: Env): Promise<Snapshot[]> {
 		return cached.json()
 	}
 
+	const indexedSnapshots = await readSnapshotIndex(env)
+	if (indexedSnapshots) {
+		await populateSnapshotCaches(cache, indexedSnapshots)
+		return indexedSnapshots
+	}
+
 	snapshotRefreshPromise ??= getSnapshots(env)
 		.then(async (snapshots) => {
+			await writeSnapshotIndex(env, snapshots)
 			await populateSnapshotCaches(cache, snapshots)
 			return snapshots
 		})
@@ -743,6 +934,85 @@ async function handleAPI(_req: Request, env: Env): Promise<Response> {
 			'Cache-Control': `public, max-age=${CACHE_TTL}`,
 		},
 	})
+}
+
+function clampHistoryLimit(value: string | null): number {
+	const limit = Number.parseInt(value || '', 10)
+	if (!Number.isFinite(limit)) return SNAPSHOT_HISTORY_PAGE_SIZE
+	return Math.min(Math.max(limit, 1), SNAPSHOT_HISTORY_MAX_PAGE_SIZE)
+}
+
+function stripSnapshotHistoryInternals(snapshots: Snapshot[]): Snapshot[] {
+	return snapshots.map(({ rawManifest, ...rest }) => rest)
+}
+
+async function getSnapshotHistoryPage(
+	env: Env,
+	chainId: string,
+	beforeBlock: number,
+	limit: number,
+): Promise<{ snapshots: Snapshot[]; hasMore: boolean }> {
+	const dirs = await listSnapshotDirs(env.SNAPSHOTS, `tempo-${chainId}-`)
+	const candidates = dirs
+		.map(parseSnapshotDirInfo)
+		.filter(
+			(info): info is SnapshotDirInfo =>
+				info !== null && info.chainId === chainId && info.block < beforeBlock,
+		)
+		.sort(compareSnapshotInfoDesc)
+
+	const selected = candidates.slice(0, limit)
+	const results = await mapWithConcurrency(
+		selected.map((info) => info.dir),
+		SNAPSHOT_FETCH_CONCURRENCY,
+		(dir) => loadModularSnapshot(env, dir),
+	)
+
+	return {
+		snapshots: sortSnapshotsByTimestampDesc(
+			results.filter((snapshot): snapshot is Snapshot => snapshot !== null),
+		),
+		hasMore: candidates.length > selected.length,
+	}
+}
+
+async function handleSnapshotHistory(
+	req: Request,
+	env: Env,
+): Promise<Response> {
+	const url = new URL(req.url)
+	const chainId = url.searchParams.get('chainId') || DEFAULT_CHAIN_ID
+	if (!/^\d+$/.test(chainId)) {
+		return error(400, 'Invalid chainId')
+	}
+
+	const beforeBlock = Number.parseInt(
+		url.searchParams.get('beforeBlock') || '',
+		10,
+	)
+	if (!Number.isFinite(beforeBlock)) {
+		return error(400, 'Invalid beforeBlock')
+	}
+
+	const page = await getSnapshotHistoryPage(
+		env,
+		chainId,
+		beforeBlock,
+		clampHistoryLimit(url.searchParams.get('limit')),
+	)
+
+	return new Response(
+		JSON.stringify({
+			snapshots: stripSnapshotHistoryInternals(page.snapshots),
+			hasMore: page.hasMore,
+		}),
+		{
+			headers: {
+				'Content-Type': 'application/json',
+				'Cache-Control': `public, max-age=${CACHE_TTL}`,
+			},
+		},
+	)
 }
 
 // Serve HTML UI with server-side rendered data
@@ -1143,7 +1413,7 @@ async function handleUI(_req: Request, env: Env) {
     .filter-group.snapshot-filter {
       flex: 1.35;
       min-width: 330px;
-      max-width: 400px;
+      max-width: 520px;
     }
 
     .filter-group label {
@@ -1193,6 +1463,43 @@ async function handleUI(_req: Request, env: Env) {
     select option {
       background: var(--option-bg);
       color: var(--fg);
+    }
+
+    .snapshot-control-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .snapshot-control-row select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .snapshot-history-button {
+      align-self: stretch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--muted);
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.45rem 0.75rem;
+      white-space: nowrap;
+      transition: color var(--duration) var(--ease), border-color var(--duration) var(--ease), background var(--duration) var(--ease);
+    }
+
+    .snapshot-history-button:hover:not(:disabled) {
+      border-color: var(--accent-dim);
+      color: var(--fg);
+    }
+
+    .snapshot-history-button:disabled {
+      cursor: default;
+      opacity: 0.6;
     }
 
     .stats-bar {
@@ -2157,7 +2464,10 @@ async function handleUI(_req: Request, env: Env) {
         </div>
         <div class="filter-group snapshot-filter">
           <label for="snapshotSelect">Snapshot</label>
-          <select id="snapshotSelect"></select>
+          <div class="snapshot-control-row">
+            <select id="snapshotSelect"></select>
+            <button class="snapshot-history-button" id="loadOlderSnapshots" type="button" onclick="loadOlderSnapshots()" style="display:none">Load older</button>
+          </div>
         </div>
       </div>
 
@@ -2251,6 +2561,12 @@ async function handleUI(_req: Request, env: Env) {
     var NETWORK_OPTIONS = ${safeJsonForInlineScript(networkOptions)};
     var NETWORK_SNAPSHOTS = ${safeJsonForInlineScript(modularSnapshotOptionsByChain)};
     var LATEST_SNAPSHOTS_BY_NETWORK = ${safeJsonForInlineScript(latestSnapshotsByChain)};
+    var SNAPSHOT_HISTORY_PAGE_SIZE = ${SNAPSHOT_HISTORY_PAGE_SIZE};
+    var SNAPSHOT_HISTORY_HAS_MORE = {};
+    Object.keys(NETWORK_SNAPSHOTS).forEach(function(chainId) {
+      SNAPSHOT_HISTORY_HAS_MORE[chainId] = (NETWORK_SNAPSHOTS[chainId] || []).length >= SNAPSHOT_HISTORY_PAGE_SIZE;
+    });
+    var snapshotHistoryLoadingChainId = null;
     var activeChainId = ${safeJsonForInlineScript(selectedChainId)};
     var latestModularSnapshotId = ${safeJsonForInlineScript(latestModular?.snapshotId || null)};
     var COMPONENTS = [
@@ -2593,6 +2909,77 @@ async function handleUI(_req: Request, env: Env) {
       });
     }
 
+    function updateHistoryButton() {
+      var button = document.getElementById('loadOlderSnapshots');
+      if (!button) return;
+
+      var snapshots = getSnapshotsForActiveNetwork();
+      var loading = snapshotHistoryLoadingChainId === activeChainId;
+      var hasMore = !!SNAPSHOT_HISTORY_HAS_MORE[activeChainId];
+      button.style.display = snapshots.length && (hasMore || loading) ? '' : 'none';
+      button.disabled = loading || !hasMore;
+      button.textContent = loading ? 'Loading...' : 'Load older';
+    }
+
+    function appendLoadedSnapshots(chainId, snapshots) {
+      if (!NETWORK_SNAPSHOTS[chainId]) NETWORK_SNAPSHOTS[chainId] = [];
+      var existing = new Set(NETWORK_SNAPSHOTS[chainId].map(function(snapshot) {
+        return snapshot.snapshotId;
+      }));
+
+      snapshots.forEach(function(snapshot) {
+        if (snapshot.presetSizes) {
+          SNAPSHOT_PRESET_SIZES[snapshot.snapshotId] = snapshot.presetSizes;
+          delete snapshot.presetSizes;
+        }
+        if (!existing.has(snapshot.snapshotId)) {
+          NETWORK_SNAPSHOTS[chainId].push(snapshot);
+          existing.add(snapshot.snapshotId);
+        }
+      });
+
+      NETWORK_SNAPSHOTS[chainId].sort(function(a, b) {
+        return b.block - a.block || parseInt(b.timestamp, 10) - parseInt(a.timestamp, 10);
+      });
+    }
+
+    async function loadOlderSnapshots() {
+      if (snapshotHistoryLoadingChainId) return;
+
+      var chainId = activeChainId;
+      var snapshots = NETWORK_SNAPSHOTS[chainId] || [];
+      var lastSnapshot = snapshots[snapshots.length - 1];
+      if (!lastSnapshot || !SNAPSHOT_HISTORY_HAS_MORE[chainId]) return;
+
+      snapshotHistoryLoadingChainId = chainId;
+      updateHistoryButton();
+
+      try {
+        var params = new URLSearchParams({
+          chainId: chainId,
+          beforeBlock: String(lastSnapshot.block),
+          limit: String(SNAPSHOT_HISTORY_PAGE_SIZE)
+        });
+        var response = await fetch('/api/snapshots/history?' + params.toString());
+        if (!response.ok) throw new Error('Failed to load snapshot history');
+
+        var data = await response.json();
+        var nextSnapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+        appendLoadedSnapshots(chainId, nextSnapshots);
+        SNAPSHOT_HISTORY_HAS_MORE[chainId] = !!data.hasMore && nextSnapshots.length > 0;
+
+        if (chainId === activeChainId) {
+          updateSnapshotOptions();
+          configureSnapshot(activeSnapshotId, { preserveScroll: true });
+        }
+      } catch (_err) {
+        SNAPSHOT_HISTORY_HAS_MORE[chainId] = true;
+      } finally {
+        snapshotHistoryLoadingChainId = null;
+        updateHistoryButton();
+      }
+    }
+
     function updateSnapshotOptions() {
       var select = document.getElementById('snapshotSelect');
       var snapshots = getSnapshotsForActiveNetwork();
@@ -2600,6 +2987,7 @@ async function handleUI(_req: Request, env: Env) {
       if (!snapshots.length) {
         select.innerHTML = '<option value="">No modular snapshots yet</option>';
         select.disabled = true;
+        updateHistoryButton();
         return;
       }
 
@@ -2608,6 +2996,7 @@ async function handleUI(_req: Request, env: Env) {
         var selected = snapshot.snapshotId === activeSnapshotId ? ' selected' : '';
         return '<option value="' + snapshot.snapshotId + '"' + selected + '>' + formatSnapshotOption(snapshot, index) + '</option>';
       }).join('');
+      updateHistoryButton();
     }
 
     function updateSnapshotIndicator(snapshot, latestSnapshot) {
