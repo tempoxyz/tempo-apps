@@ -2,11 +2,11 @@
   "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
   "name": "Tempo Mainnet (Presto)",
   "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-  "timestamp": "2026-05-06T19:33:19Z",
+  "timestamp": "2026-05-08T18:42:44Z",
   "version": {
     "major": 1,
     "minor": 2,
-    "patch": 19
+    "patch": 20
   },
   "tokens": [
     {
@@ -311,6 +311,24 @@
         }
       },
       "dateAdded": "2026-05-06T19:33:19Z"
+    },
+    {
+      "name": "Coinbase Wrapped BTC",
+      "symbol": "cbBTC",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c000000000000000000000c412ec89d0c08be5",
+      "logoURI": "https://static-assets.coinbase.com/marketing/wrapped-assets/cbbtc.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "cbBTC",
+        "coingeckoId": "coinbase-wrapped-btc",
+        "bridgeInfo": {
+          "sourceChainId": 8453,
+          "sourceAddress": "0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf"
+        }
+      },
+      "dateAdded": "2026-05-08T18:42:44Z"
     }
   ]
 }
