@@ -4,12 +4,20 @@ import { VirtualAddress } from 'ox/tempo'
 import { getCode } from 'viem/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
+import { fetchContractCreationData } from '#lib/server/contract-creation'
 import {
 	fetchAddressTxAggregate,
+	fetchContractCreationReceipt,
+	fetchTokenCreatedMetadata,
 	fetchTokenHoldersCountRows,
 	fetchTokenTransferAggregate,
 	fetchVirtualAddressTransferAggregate,
 } from '#lib/server/tempo-queries'
+import {
+	buildAddressTxMetadata,
+	pickTip20CreatedTimestamp,
+	pickTokenCreatedTimestamp,
+} from '#lib/server/address-metadata'
 import { parseTimestamp } from '#lib/timestamp'
 import { zAddress } from '#lib/zod'
 import { getBatchedClient, getTempoChain } from '#wagmi.config.ts'
@@ -72,40 +80,51 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							createdTimestamp: parseTimestamp(result.oldestTimestamp),
 						}
 					} else if (isTip20) {
-						const [bytecode, result, holdersRows] = await Promise.all([
-							bytecodePromise,
-							fetchTokenTransferAggregate(address, chainId).catch(() => ({
-								oldestTimestamp: undefined,
-								latestTimestamp: undefined,
-							})),
-							fetchTokenHoldersCountRows([address], chainId, 10_000).catch(
-								() => [],
-							),
-						])
+						const [bytecode, result, holdersRows, createdRows] =
+							await Promise.all([
+								bytecodePromise,
+								fetchTokenTransferAggregate(address, chainId).catch(() => ({
+									oldestTimestamp: undefined,
+									latestTimestamp: undefined,
+								})),
+								fetchTokenHoldersCountRows([address], chainId, 10_000).catch(
+									() => [],
+								),
+								fetchTokenCreatedMetadata(chainId, [address]).catch(() => []),
+							])
+						const tokenCreatedTimestamp = pickTokenCreatedTimestamp(createdRows)
+						const contractCreation =
+							tokenCreatedTimestamp == null
+								? await fetchContractCreationData(address).catch(() => null)
+								: null
+
 						response = {
 							address,
 							chainId,
 							accountType: getAccountType(bytecode),
 							holdersCount: holdersRows[0]?.count ?? 0,
 							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
-							createdTimestamp: parseTimestamp(result.oldestTimestamp),
+							createdTimestamp: pickTip20CreatedTimestamp({
+								createdRows,
+								firstTransferTimestamp: result.oldestTimestamp,
+								contractCreationTimestamp: contractCreation?.timestamp,
+							}),
 						}
 					} else {
-						const [bytecode, result] = await Promise.all([
+						const [bytecode, result, creation] = await Promise.all([
 							bytecodePromise,
 							fetchAddressTxAggregate(address, chainId),
+							fetchContractCreationReceipt(address, chainId).catch(
+								() => undefined,
+							),
 						])
+						const metadata = buildAddressTxMetadata(result, creation)
+
 						response = {
 							address,
 							chainId,
 							accountType: getAccountType(bytecode),
-							txCount: result.count ?? 0,
-							lastActivityTimestamp: parseTimestamp(
-								result.latestTxsBlockTimestamp,
-							),
-							createdTimestamp: parseTimestamp(result.oldestTxsBlockTimestamp),
-							createdTxHash: result.oldestTxHash,
-							createdBy: result.oldestTxFrom,
+							...metadata,
 						}
 					}
 

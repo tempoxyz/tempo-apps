@@ -1511,6 +1511,25 @@ export async function fetchAddressTxAggregate(
 	}
 }
 
+export type ContractCreationReceiptRow = {
+	tx_hash: Hex.Hex
+	from: string
+	block_timestamp: string | number | bigint | null
+}
+
+export async function fetchContractCreationReceipt(
+	address: Address.Address,
+	chainId: number,
+): Promise<ContractCreationReceiptRow | undefined> {
+	return (await QB(chainId)
+		.selectFrom('receipts')
+		.select(['tx_hash', 'from', 'block_timestamp'])
+		.where('contract_address', '=', address)
+		.orderBy('block_num', 'asc')
+		.limit(1)
+		.executeTakeFirst()) as ContractCreationReceiptRow | undefined
+}
+
 export async function fetchAddressTxCounts(
 	address: Address.Address,
 	chainId: number,
@@ -1603,15 +1622,7 @@ export async function fetchAddressOgMeta(
 
 	// Check receipts for contract creation (deployments have to=null,
 	// so they won't appear in the from/to aggregate)
-	type CreationRow = {
-		block_timestamp: string | number | bigint | null
-	}
-	const creation = (await QB(chainId)
-		.selectFrom('receipts')
-		.select(['block_timestamp'])
-		.where('contract_address', '=', address)
-		.limit(1)
-		.executeTakeFirst()) as CreationRow | undefined
+	const creation = await fetchContractCreationReceipt(address, chainId)
 
 	if (creation) {
 		txCount += 1
