@@ -31,6 +31,9 @@ const METRIC_NAMES = [
 	'txgen_transactions_sent_total',
 	'txgen_transactions_success_total',
 	'txgen_transactions_failed_total',
+	'txgen_blocks_sent_total',
+	'txgen_blocks_success_total',
+	'txgen_blocks_failed_total',
 	'txgen_transactions_inflight',
 	// Txpool
 	'reth_transaction_pool_pending_pool_transactions',
@@ -267,7 +270,26 @@ function RunDetailPage(): React.JSX.Element {
 	const txgenSentSeries = findSeries(m, 'txgen_transactions_sent_total')
 	const txgenSuccessSeries = findSeries(m, 'txgen_transactions_success_total')
 	const txgenFailedSeries = findSeries(m, 'txgen_transactions_failed_total')
+	const txgenBlocksSentSeries = findSeries(m, 'txgen_blocks_sent_total')
+	const txgenBlocksSuccessSeries = findSeries(m, 'txgen_blocks_success_total')
+	const txgenBlocksFailedSeries = findSeries(m, 'txgen_blocks_failed_total')
 	const txgenInflightSeries = findSeries(m, 'txgen_transactions_inflight')
+	const hasTxgenTransactionCounters = [
+		txgenSentSeries,
+		txgenSuccessSeries,
+		txgenFailedSeries,
+	].some(hasSamples)
+	const txgenCounterSeries = hasTxgenTransactionCounters
+		? {
+				sent: txgenSentSeries,
+				success: txgenSuccessSeries,
+				failed: txgenFailedSeries,
+			}
+		: {
+				sent: txgenBlocksSentSeries,
+				success: txgenBlocksSuccessSeries,
+				failed: txgenBlocksFailedSeries,
+			}
 
 	// Txpool
 	const pendingSeries = findSeries(
@@ -334,8 +356,22 @@ function RunDetailPage(): React.JSX.Element {
 	const residentSeries = findSeries(m, 'reth_jemalloc_resident')
 	const allocatedSeries = findSeries(m, 'reth_jemalloc_allocated')
 
+	const blockRows = blocks ?? []
+	const hasEngineApiTimings = blockRows.some(
+		(b) =>
+			b.newPayloadMs != null ||
+			b.forkchoiceUpdatedMs != null ||
+			b.newPayloadServerLatencyUs != null,
+	)
+	const hasServerWaitTimings = blockRows.some(
+		(b) =>
+			b.persistenceWaitUs != null ||
+			b.executionCacheWaitUs != null ||
+			b.sparseTrieWaitUs != null,
+	)
+
 	// Gas limit breakdown (derived from block gas limit)
-	const refGasLimit = blocks?.[0]?.gasLimit ?? 0
+	const refGasLimit = blockRows[0]?.gasLimit ?? 0
 	const sharedGasLimit = Math.floor(refGasLimit / 10)
 	const generalGasLimit = 30_000_000
 	const paymentGasLimit = refGasLimit - sharedGasLimit - generalGasLimit
@@ -475,7 +511,7 @@ function RunDetailPage(): React.JSX.Element {
 				/>
 			</section>
 
-			{blocks && blocks.length > 0 && (
+			{blockRows.length > 0 && (
 				<section className="mb-10">
 					<SectionHeader
 						title="Blocks"
@@ -490,7 +526,7 @@ function RunDetailPage(): React.JSX.Element {
 								{
 									label: 'Tx Count',
 									color: COLORS.blue,
-									data: blocks.map((b) => ({
+									data: blockRows.map((b) => ({
 										x: b.index,
 										y: b.txCount,
 									})),
@@ -507,7 +543,7 @@ function RunDetailPage(): React.JSX.Element {
 								{
 									label: 'Gas Used',
 									color: COLORS.green,
-									data: blocks.map((b) => ({
+									data: blockRows.map((b) => ({
 										x: b.index,
 										y: b.gasUsed,
 									})),
@@ -548,7 +584,7 @@ function RunDetailPage(): React.JSX.Element {
 								{
 									label: 'Fill %',
 									color: COLORS.blue,
-									data: blocks
+									data: blockRows
 										.filter((b) => b.gasLimit > 0)
 										.map((b) => ({
 											x: b.index,
@@ -609,6 +645,98 @@ function RunDetailPage(): React.JSX.Element {
 								},
 							]}
 						/>
+					</div>
+				</section>
+			)}
+
+			{(hasEngineApiTimings || hasServerWaitTimings) && (
+				<section className="mb-10">
+					<SectionHeader
+						title="Engine API Timing"
+						tooltip="Per-block timings reported by txgen for Engine API calls and server-side waits."
+					/>
+					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+						{hasEngineApiTimings && (
+							<TimeSeriesChart
+								title="Engine API Calls"
+								tooltip="Per-block Engine API client timings. Server latency is reported by the server and converted from microseconds to milliseconds."
+								showMean
+								series={[
+									{
+										label: 'New Payload',
+										color: COLORS.blue,
+										data: blockPoints(blockRows, (b) => b.newPayloadMs),
+									},
+									{
+										label: 'Forkchoice Updated',
+										color: COLORS.green,
+										data: blockPoints(blockRows, (b) => b.forkchoiceUpdatedMs),
+									},
+									{
+										label: 'Total Client Time',
+										color: COLORS.orange,
+										data: blockPoints(blockRows, (b) => {
+											if (
+												b.newPayloadMs == null ||
+												b.forkchoiceUpdatedMs == null
+											) {
+												return null
+											}
+											return b.newPayloadMs + b.forkchoiceUpdatedMs
+										}),
+									},
+									{
+										label: 'Server Latency',
+										color: COLORS.purple,
+										data: blockPoints(
+											blockRows,
+											(b) => b.newPayloadServerLatencyUs,
+											(us) => us / 1000,
+										),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(2)} ms`}
+								xFormat="block"
+							/>
+						)}
+						{hasServerWaitTimings && (
+							<TimeSeriesChart
+								title="Server Wait Timings"
+								tooltip="Server-side wait timings reported by the Engine API server, converted from microseconds to milliseconds."
+								showMean
+								series={[
+									{
+										label: 'Persistence Wait',
+										color: COLORS.blue,
+										data: blockPoints(
+											blockRows,
+											(b) => b.persistenceWaitUs,
+											(us) => us / 1000,
+										),
+									},
+									{
+										label: 'Execution Cache Wait',
+										color: COLORS.green,
+										data: blockPoints(
+											blockRows,
+											(b) => b.executionCacheWaitUs,
+											(us) => us / 1000,
+										),
+									},
+									{
+										label: 'Sparse Trie Wait',
+										color: COLORS.orange,
+										data: blockPoints(
+											blockRows,
+											(b) => b.sparseTrieWaitUs,
+											(us) => us / 1000,
+										),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(2)} ms`}
+								xFormat="block"
+							/>
+						)}
 					</div>
 				</section>
 			)}
@@ -722,12 +850,10 @@ function RunDetailPage(): React.JSX.Element {
 							{
 								label: 'Gas/s',
 								color: COLORS.blue,
-								data: (blocks ?? [])
-									.filter((b) => b.blockTimeMs > 0)
-									.map((b) => ({
-										x: b.index,
-										y: (b.gasUsed * 1000) / b.blockTimeMs / 1e9,
-									})),
+								data: blockPoints(blockRows, (b) => {
+									if (b.blockTimeMs == null || b.blockTimeMs <= 0) return null
+									return (b.gasUsed * 1000) / b.blockTimeMs / 1e9
+								}),
 							},
 						]}
 						formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
@@ -756,24 +882,32 @@ function RunDetailPage(): React.JSX.Element {
 				/>
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<TimeSeriesChart
-						title="Send Rate"
-						tooltip="Rate of transactions sent, confirmed as successful, or failed per second."
+						title={
+							hasTxgenTransactionCounters
+								? 'Transaction Send Rate'
+								: 'Block Send/Success/Failure Rates'
+						}
+						tooltip={
+							hasTxgenTransactionCounters
+								? 'Rate of transactions sent, confirmed as successful, or failed per second.'
+								: 'Rate of blocks sent, confirmed as successful, or failed per second.'
+						}
 						showMean
 						series={[
 							{
 								label: 'Sent',
 								color: COLORS.blue,
-								data: counterRate(txgenSentSeries),
+								data: counterRate(txgenCounterSeries.sent),
 							},
 							{
 								label: 'Success',
 								color: COLORS.green,
-								data: counterRate(txgenSuccessSeries),
+								data: counterRate(txgenCounterSeries.success),
 							},
 							{
 								label: 'Failed',
 								color: COLORS.red,
-								data: counterRate(txgenFailedSeries),
+								data: counterRate(txgenCounterSeries.failed),
 							},
 						]}
 						formatValue={(v) => `${Math.round(v).toLocaleString()}/s`}
@@ -927,6 +1061,10 @@ type ChartSeries = {
 	data: Array<ChartPoint>
 }
 
+function hasSamples(series: MetricSeries | undefined): boolean {
+	return (series?.samples.length ?? 0) > 0
+}
+
 function transformSamples(
 	series: MetricSeries | undefined,
 	transform?: (v: number) => number,
@@ -936,6 +1074,23 @@ function transformSamples(
 		x: s.offsetMs / 1000,
 		y: transform ? transform(s.value) : s.value,
 	}))
+}
+
+function blockPoints<T extends { index: number }>(
+	blocks: Array<T>,
+	getValue: (block: T) => number | null | undefined,
+	transform?: (v: number) => number,
+): Array<ChartPoint> {
+	return blocks.flatMap((block) => {
+		const value = getValue(block)
+		if (value == null) return []
+		return [
+			{
+				x: block.index,
+				y: transform ? transform(value) : value,
+			},
+		]
+	})
 }
 
 function formatBytes(bytes: number): string {
