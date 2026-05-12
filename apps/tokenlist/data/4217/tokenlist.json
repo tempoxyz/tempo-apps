@@ -2,11 +2,11 @@
   "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
   "name": "Tempo Mainnet (Presto)",
   "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-  "timestamp": "2026-05-08T18:42:44Z",
+  "timestamp": "2026-05-12T02:30:31Z",
   "version": {
     "major": 1,
     "minor": 2,
-    "patch": 20
+    "patch": 21
   },
   "tokens": [
     {
@@ -329,6 +329,19 @@
         }
       },
       "dateAdded": "2026-05-08T18:42:44Z"
+    },
+    {
+      "name": "USDBridge",
+      "symbol": "USDB",
+      "address": "0x20c0000000000000000000003158081efd85bfc2",
+      "decimals": 6,
+      "chainId": 4217,
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000003158081efd85bfc2.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "USDB"
+      },
+      "dateAdded": "2026-05-12T02:30:31Z"
     }
   ]
 }
