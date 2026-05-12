@@ -25,6 +25,7 @@ import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
+import { ReceivePoliciesTab } from '#comps/ReceivePoliciesTab'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Pagination } from '#comps/Pagination'
@@ -122,6 +123,7 @@ const allTabs = [
 	'transfers',
 	'holders',
 	'token',
+	'policies',
 	'contract',
 	'interact',
 ] as const
@@ -546,6 +548,7 @@ function RouteComponent() {
 
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
+	const virtualAddressParts = getVirtualAddressParts(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = ['transactions']
 		if (!isTip20) {
@@ -557,11 +560,14 @@ function RouteComponent() {
 		if (isTip20) {
 			tabs.push('token')
 		}
+		if (!isTip20 && !virtualAddressParts) {
+			tabs.push('policies')
+		}
 		if (isContract) {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract])
+	}, [isToken, isTip20, isContract, virtualAddressParts])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -1635,6 +1641,13 @@ function SectionsWrapper(props: {
 					totalItems: 0,
 					itemsLabel: 'items',
 					content: <Tip20TokenTabContent address={address} />,
+				}
+			case 'policies':
+				return {
+					title: 'Policies',
+					totalItems: 0,
+					itemsLabel: 'items',
+					content: <ReceivePoliciesTab address={address} />,
 				}
 			case 'contract':
 				return {
