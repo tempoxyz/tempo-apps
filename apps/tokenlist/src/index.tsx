@@ -16,7 +16,7 @@ const staticAssetBindingError =
 app
 	.get('/', (context) => context.redirect('/docs'))
 	.get('/health', (_context) => new Response('ok'))
-	.get('/docs', async (context) => context.html(<Docs />))
+	.get('/docs', Docs)
 	.get('/version', async (context) =>
 		context.json({
 			timestamp: Date.now(),
