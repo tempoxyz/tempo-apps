@@ -1,14 +1,22 @@
-import { Scalar } from '@scalar/hono-api-reference'
+import { renderApiReference } from '@scalar/client-side-rendering'
 
-export const Docs = Scalar({
+const html = renderApiReference({
 	pageTitle: 'Tokenlist API',
-	url: '/schema/openapi.json',
-	hideModels: true,
-	hideClientButton: true,
-	showDeveloperTools: 'never',
-	documentDownloadType: 'json',
-	operationTitleSource: 'path',
-	slug: 'tokenlist',
-	proxyUrl: 'https://proxy.scalar.com',
-	favicon: 'https://explore.tempo.xyz/favicon.ico',
+	config: {
+		url: '/schema/openapi.json',
+		hideModels: true,
+		hideClientButton: true,
+		showDeveloperTools: 'never',
+		documentDownloadType: 'json',
+		operationTitleSource: 'path',
+		slug: 'tokenlist',
+		proxyUrl: 'https://proxy.scalar.com',
+		favicon: 'https://explore.tempo.xyz/favicon.ico',
+		_integration: 'hono',
+	},
 })
+
+export const Docs = () =>
+	new Response(html, {
+		headers: { 'content-type': 'text/html; charset=utf-8' },
+	})

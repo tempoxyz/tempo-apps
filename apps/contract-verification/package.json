@@ -38,7 +38,7 @@
 		"@logtape/logtape": "catalog:",
 		"@logtape/pretty": "catalog:",
 		"@logtape/redaction": "catalog:",
-		"@scalar/hono-api-reference": "catalog:",
+		"@scalar/client-side-rendering": "catalog:",
 		"@wagmi/core": "catalog:",
 		"cbor-x": "^1.6.4",
 		"drizzle-orm": "^0.45.2",

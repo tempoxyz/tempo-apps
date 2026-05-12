@@ -45,9 +45,9 @@ catalogs:
     '@logtape/redaction':
       specifier: ^2.0.4
       version: 2.0.4
-    '@scalar/hono-api-reference':
-      specifier: ^0.10.14
-      version: 0.10.14
+    '@scalar/client-side-rendering':
+      specifier: ^0.1.7
+      version: 0.1.7
     '@sentry/cloudflare':
       specifier: ^10.44.0
       version: 10.45.0
@@ -313,9 +313,9 @@ importers:
       '@logtape/redaction':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
-      '@scalar/hono-api-reference':
+      '@scalar/client-side-rendering':
         specifier: 'catalog:'
-        version: 0.10.14(hono@4.12.14)
+        version: 0.1.7
       '@wagmi/core':
         specifier: 'catalog:'
         version: 3.4.8(@tanstack/query-core@5.96.2)(@types/react@19.2.14)(accounts@0.8.5)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
@@ -352,7 +352,7 @@ importers:
         version: 2.4.10
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.30.3(patch_hash=e06eefb6e9635561829ac5e497cea44db1c8cfe738d2336f3f1de75842284333)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(workerd@1.20260405.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260408.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.30.3(patch_hash=e06eefb6e9635561829ac5e497cea44db1c8cfe738d2336f3f1de75842284333)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(workerd@1.20260329.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260408.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
         version: 0.13.5(@cloudflare/workers-types@4.20260408.1)(@vitest/runner@4.1.0)(@vitest/snapshot@4.1.0)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vitest@4.1.0)
@@ -494,7 +494,7 @@ importers:
         version: 1.0.6(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.30.3(patch_hash=e06eefb6e9635561829ac5e497cea44db1c8cfe738d2336f3f1de75842284333)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(workerd@1.20260329.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260408.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.30.3(patch_hash=e06eefb6e9635561829ac5e497cea44db1c8cfe738d2336f3f1de75842284333)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(workerd@1.20260405.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260408.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
         version: 0.13.5(@cloudflare/workers-types@4.20260408.1)(@vitest/runner@4.1.0)(@vitest/snapshot@4.1.0)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vitest@4.1.0)
@@ -856,9 +856,9 @@ importers:
 
   apps/tokenlist:
     dependencies:
-      '@scalar/hono-api-reference':
+      '@scalar/client-side-rendering':
         specifier: 'catalog:'
-        version: 0.10.14(hono@4.12.14)
+        version: 0.1.7
       hono:
         specifier: 'catalog:'
         version: 4.12.14
@@ -2719,12 +2719,6 @@ packages:
   '@scalar/helpers@0.6.0':
     resolution: {integrity: sha512-pfSamAgBxqFeE8IpEG6uGkHlnPhY1CLeOTttV9+vKQbrBk5b7vvyTsUXv0Hz4kNU1TFrxcTTPE+Akn5S+jlTtQ==}
     engines: {node: '>=22'}
-
-  '@scalar/hono-api-reference@0.10.14':
-    resolution: {integrity: sha512-LCIT4ul3c4MyD7shhxsWcvvOABt0fEHNQID2n+2TPeItc/MR2qCjjp/QfqD+JoQ7zbc0nnzh1kwRR06MVBmnUA==}
-    engines: {node: '>=22'}
-    peerDependencies:
-      hono: ^4.12.5
 
   '@scalar/types@0.9.6':
     resolution: {integrity: sha512-UaCQQcscFTJdxZREE8KhUdSJgaDlc44TZbmWcZffs4m1hzqOvEI7lEBS13iBpLq7/cxUXFgyJdecywvNqJ0PkA==}
@@ -7512,11 +7506,6 @@ snapshots:
 
   '@scalar/helpers@0.6.0': {}
 
-  '@scalar/hono-api-reference@0.10.14(hono@4.12.14)':
-    dependencies:
-      '@scalar/client-side-rendering': 0.1.7
-      hono: 4.12.14
-
   '@scalar/types@0.9.6':
     dependencies:
       '@scalar/helpers': 0.6.0
@@ -8484,6 +8473,22 @@ snapshots:
     optionalDependencies:
       accounts: 0.8.5(@types/react@19.2.14)(@wagmi/core@3.4.8)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.6.9)
       typescript: 6.0.2
+
+  '@wagmi/core@3.4.8(@tanstack/query-core@5.96.2)(@types/react@19.2.14)(accounts@0.8.5)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.4.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@6.0.2)
+      viem: 2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)
+      zustand: 5.0.0(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.4.0(react@19.2.5))
+    optionalDependencies:
+      '@tanstack/query-core': 5.96.2
+      accounts: 0.8.5(@types/react@19.2.14)(@wagmi/core@3.4.8)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.6.9)
+      typescript: 6.0.2
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
 
   '@wagmi/core@3.4.8(@tanstack/query-core@5.96.2)(@types/react@19.2.14)(accounts@0.8.5)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))':
     dependencies:
@@ -10916,7 +10921,7 @@ snapshots:
     dependencies:
       '@tanstack/react-query': 5.96.2(react@19.2.5)
       '@wagmi/connectors': 8.0.9(@wagmi/core@3.4.8)(accounts@0.8.5)(typescript@6.0.2)(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
-      '@wagmi/core': 3.4.8(@tanstack/query-core@5.96.2)(@types/react@19.2.14)(accounts@0.8.5)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
+      '@wagmi/core': 3.4.8(@tanstack/query-core@5.96.2)(@types/react@19.2.14)(accounts@0.8.5)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.4.0(react@19.2.5))(viem@2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
       react: 19.2.5
       use-sync-external-store: 1.4.0(react@19.2.5)
       viem: 2.48.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)
@@ -11142,6 +11147,12 @@ snapshots:
   zod@3.25.76: {}
 
   zod@4.3.6: {}
+
+  zustand@5.0.0(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.4.0(react@19.2.5)):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.5
+      use-sync-external-store: 1.4.0(react@19.2.5)
 
   zustand@5.0.0(@types/react@19.2.14)(react@19.2.5)(use-sync-external-store@1.6.0(react@19.2.5)):
     optionalDependencies:

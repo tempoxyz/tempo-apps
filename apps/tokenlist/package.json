@@ -26,7 +26,7 @@
 		"postinstall": "pnpm gen:types"
 	},
 	"dependencies": {
-		"@scalar/hono-api-reference": "catalog:",
+		"@scalar/client-side-rendering": "catalog:",
 		"hono": "catalog:",
 		"svgo": "^4.0.1",
 		"viem": "catalog:"

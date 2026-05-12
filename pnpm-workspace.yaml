@@ -17,7 +17,7 @@ catalog:
   '@logtape/logtape': ^2.0.4
   '@logtape/pretty': ^2.0.4
   '@logtape/redaction': ^2.0.4
-  '@scalar/hono-api-reference': ^0.10.14
+  '@scalar/client-side-rendering': ^0.1.7
   '@sentry/cloudflare': ^10.44.0
   '@sentry/react': ^10.44.0
   '@sentry/vite-plugin': ^5.1.1
