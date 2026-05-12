@@ -2,11 +2,11 @@
   "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
   "name": "Tempo Mainnet (Presto)",
   "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-  "timestamp": "2026-05-12T02:30:31Z",
+  "timestamp": "2026-05-12T15:17:32Z",
   "version": {
     "major": 1,
     "minor": 2,
-    "patch": 21
+    "patch": 22
   },
   "tokens": [
     {
@@ -342,6 +342,19 @@
         "label": "USDB"
       },
       "dateAdded": "2026-05-12T02:30:31Z"
+    },
+    {
+      "name": "USD1",
+      "symbol": "USD1",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c000000000000000000000111111111e910f0f",
+      "logoURI": "https://static.worldlibertyfinancial.com/assets/brand/usd1.svg",
+      "extensions": {
+        "chain": "tempo",
+        "coingeckoId": "usd1-wlfi"
+      },
+      "dateAdded": "2026-05-12T15:17:32Z"
     }
   ]
 }
