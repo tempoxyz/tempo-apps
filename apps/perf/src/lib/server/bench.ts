@@ -12,6 +12,7 @@ export type BenchRun = {
 	scenarioId: string
 	commit: string
 	ref: string
+	mode: string
 	startedAt: string
 	finishedAt: string
 	config: Record<string, string>
@@ -91,6 +92,7 @@ type RunRow = {
 	finished_at: string
 	git_sha: string
 	git_ref: string
+	mode: string
 	scenario_name: string
 	config_keys: Array<string>
 	config_values: Array<string>
@@ -119,6 +121,7 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 		scenarioId,
 		commit: row.git_sha?.slice(0, 7) || '',
 		ref: row.git_ref || '',
+		mode: row.mode || '',
 		startedAt: row.started_at,
 		finishedAt: row.finished_at,
 		config,
@@ -138,6 +141,7 @@ function buildRunsQuery(scenarioName: string): string {
 			r.finished_at,
 			r.git_sha,
 			r.git_ref,
+			r.mode,
 			r.scenario_name,
 			r.config.keys AS config_keys,
 			r.config.values AS config_values,
@@ -208,6 +212,7 @@ export const fetchRun = createServerFn({ method: 'POST' })
 				r.finished_at,
 				r.git_sha,
 				r.git_ref,
+				r.mode,
 				r.scenario_name,
 				r.config.keys AS config_keys,
 				r.config.values AS config_values,
@@ -285,6 +290,14 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 		return Array.from(seriesMap.values())
 	})
 
+function nullableNumber(
+	value: string | number | null | undefined,
+): number | null {
+	if (value == null || value === '') return null
+	const number = Number(value)
+	return Number.isFinite(number) ? number : null
+}
+
 /** Fetch block-level data for a run. */
 export const fetchBlocks = createServerFn({ method: 'POST' })
 	.inputValidator((input: string) => input)
@@ -292,12 +305,32 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 		const rows = await queryClickHouse<{
 			block_index: string
 			block_number: string
+			chain_timestamp_ms: string | null
 			tx_count: string
 			gas_used: string
 			gas_limit: string
-			block_time_ms: string
+			block_time_ms: string | null
+			new_payload_ms: string | null
+			forkchoice_updated_ms: string | null
+			new_payload_server_latency_us: string | null
+			persistence_wait_us: string | null
+			execution_cache_wait_us: string | null
+			sparse_trie_wait_us: string | null
 		}>(`
-			SELECT block_index, block_number, tx_count, gas_used, gas_limit, block_time_ms
+			SELECT
+				block_index,
+				block_number,
+				chain_timestamp_ms,
+				tx_count,
+				gas_used,
+				gas_limit,
+				block_time_ms,
+				new_payload_ms,
+				forkchoice_updated_ms,
+				new_payload_server_latency_us,
+				persistence_wait_us,
+				execution_cache_wait_us,
+				sparse_trie_wait_us
 			FROM txgen_blocks
 			WHERE run_id = '${runId}'
 			ORDER BY block_index
@@ -306,9 +339,18 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 		return rows.map((row) => ({
 			index: Number(row.block_index),
 			number: Number(row.block_number),
+			chainTimestampMs: nullableNumber(row.chain_timestamp_ms),
 			txCount: Number(row.tx_count),
 			gasUsed: Number(row.gas_used),
 			gasLimit: Number(row.gas_limit),
-			blockTimeMs: Number(row.block_time_ms),
+			blockTimeMs: nullableNumber(row.block_time_ms),
+			newPayloadMs: nullableNumber(row.new_payload_ms),
+			forkchoiceUpdatedMs: nullableNumber(row.forkchoice_updated_ms),
+			newPayloadServerLatencyUs: nullableNumber(
+				row.new_payload_server_latency_us,
+			),
+			persistenceWaitUs: nullableNumber(row.persistence_wait_us),
+			executionCacheWaitUs: nullableNumber(row.execution_cache_wait_us),
+			sparseTrieWaitUs: nullableNumber(row.sparse_trie_wait_us),
 		}))
 	})
