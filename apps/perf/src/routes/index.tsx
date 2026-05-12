@@ -63,12 +63,7 @@ function DashboardPage(): React.JSX.Element {
 		return latestRuns.find((r) => r.scenarioId === scenarioId)
 	}
 
-	const runsWithData = latestRuns.filter((r) => r.peakGasPerSecond > 0)
-	const peakRun = runsWithData.length > 0
-		? runsWithData.reduce((best, r) =>
-				r.peakGasPerSecond > best.peakGasPerSecond ? r : best,
-			)
-		: null
+	const runsWithData = latestRuns.filter((r) => r.avgTps > 0)
 	const peakTpsRun = runsWithData.length > 0
 		? runsWithData.reduce((best, r) =>
 				r.avgTps > best.avgTps ? r : best,
@@ -80,22 +75,27 @@ function DashboardPage(): React.JSX.Element {
 
 	return (
 		<div>
-			{/* Hero — peak throughput headline */}
-			<section className="mb-14 pt-4">
+			<p className="pt-4 pb-8 max-w-xl text-[14px] leading-relaxed text-secondary">
+				Real-time benchmarks measuring Tempo&apos;s throughput and latency
+				under production-representative workloads.
+			</p>
+
+			{/* Hero — peak TPS headline */}
+			<section className="mb-14">
 				<p className="text-[13px] font-medium uppercase tracking-wider text-tertiary">
-					Peak Throughput
+					Peak TPS
 				</p>
-				{peakRun ? (
+				{peakTpsRun ? (
 					<>
 						<h2 className="mt-2 font-mono text-[56px] font-bold leading-none tracking-tight text-accent">
-							{formatGas(peakRun.peakGasPerSecond)}
+							{formatTps(peakTpsRun.avgTps)} <span className="text-[28px] font-semibold text-tertiary">TPS</span>
 						</h2>
 						<div className="mt-5 flex flex-wrap items-center gap-6">
-							<HeroStat label="Peak TPS" value={peakTpsRun ? formatTps(peakTpsRun.avgTps) : '—'} />
-							<HeroStat label="Block Time" value={formatMs(peakRun.avgBlockTimeMs)} />
+							<HeroStat label="Throughput" value={formatGas(peakTpsRun.peakGasPerSecond)} />
+							<HeroStat label="Block Time" value={formatMs(peakTpsRun.avgBlockTimeMs)} />
 							<HeroStat
 								label="Workload"
-								value={scenarios.find((s) => s.id === peakRun.scenarioId)?.label ?? peakRun.scenarioId}
+								value={scenarios.find((s) => s.id === peakTpsRun.scenarioId)?.label ?? peakTpsRun.scenarioId}
 							/>
 						</div>
 					</>
@@ -104,27 +104,23 @@ function DashboardPage(): React.JSX.Element {
 						—
 					</h2>
 				)}
-				<p className="mt-6 max-w-lg text-[14px] leading-relaxed text-secondary">
-					Real-time benchmarks measuring Tempo&apos;s throughput and latency
-					under production-representative workloads.
-				</p>
 			</section>
 
 			{/* Throughput comparison — visual bar chart */}
 			{runsWithData.length > 0 && (
 				<section className="mb-14">
-					<SectionHeader title="Throughput Comparison" />
+					<SectionHeader title="TPS Comparison" />
 					<div className="card p-6">
 						<div className="flex items-end gap-4 h-52">
 							{scenarios.map((scenario) => {
 								const latest = getLatestRun(scenario.id)
 								if (!latest) return null
-								const maxGas = Math.max(
+								const maxTps = Math.max(
 									...scenarios.map(
-										(s) => getLatestRun(s.id)?.peakGasPerSecond ?? 0,
+										(s) => getLatestRun(s.id)?.avgTps ?? 0,
 									),
 								)
-								const height = (latest.peakGasPerSecond / maxGas) * 100
+								const height = (latest.avgTps / maxTps) * 100
 								const isMix = scenario.id.startsWith('mix-')
 								return (
 									<Link
@@ -134,7 +130,7 @@ function DashboardPage(): React.JSX.Element {
 										className="flex flex-1 flex-col items-center gap-2 group"
 									>
 										<span className="font-mono text-[12px] font-medium text-accent">
-											{formatGas(latest.peakGasPerSecond)}
+											{formatTps(latest.avgTps)}
 										</span>
 										<div
 											className="w-full flex items-end"
@@ -203,16 +199,14 @@ function DashboardPage(): React.JSX.Element {
 							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
 								<th className="px-4.5 py-3 font-normal">Workload</th>
 								<th className="px-4.5 py-3 font-normal">Version</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									Peak
-								</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									Avg Throughput
-								</th>
 								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
 								<th className="px-4.5 py-3 font-normal text-right">
 									Block Time
 								</th>
+								<th className="px-4.5 py-3 font-normal text-right">
+									Throughput
+								</th>
+								<th className="px-4.5 py-3 font-normal text-right">Peak</th>
 								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
 						</thead>
@@ -238,16 +232,16 @@ function DashboardPage(): React.JSX.Element {
 											<VersionLink run={latest} />
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono font-medium text-accent">
-											{formatGas(latest.peakGasPerSecond)}
+											{formatTps(latest.avgTps)}
+										</td>
+										<td className="px-4.5 py-3 text-right font-mono text-primary">
+											{formatMs(latest.avgBlockTimeMs)}
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-primary">
 											{formatGas(latest.avgGasPerSecond)}
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatTps(latest.avgTps)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatMs(latest.avgBlockTimeMs)}
+											{formatGas(latest.peakGasPerSecond)}
 										</td>
 										<td className="px-4.5 py-3 text-right text-tertiary">
 											{formatDate(latest.startedAt)}
@@ -302,18 +296,18 @@ function ScenarioCard(props: {
 				<div className="mt-auto border-t border-border px-5 pt-4 pb-5">
 					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
 						<Stat
-							label="Peak"
-							value={formatGas(run.peakGasPerSecond)}
+							label="TPS"
+							value={formatTps(run.avgTps)}
 							highlight
 						/>
 						<Stat
-							label="Avg Throughput"
-							value={formatGas(run.avgGasPerSecond)}
-						/>
-						<Stat label="Avg TPS" value={formatTps(run.avgTps)} />
-						<Stat
 							label="Block Time"
 							value={formatMs(run.avgBlockTimeMs)}
+						/>
+						<Stat label="Throughput" value={formatGas(run.avgGasPerSecond)} />
+						<Stat
+							label="Peak"
+							value={formatGas(run.peakGasPerSecond)}
 						/>
 					</div>
 				</div>
