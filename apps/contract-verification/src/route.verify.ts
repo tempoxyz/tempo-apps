@@ -12,6 +12,7 @@ import {
 	formatError,
 	sourcifyError,
 	normalizeSourcePath,
+	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
 import {
@@ -1091,8 +1092,24 @@ async function runVerificationJob(
 			.limit(1)
 
 		let compilationId: string
+		let shouldReplaceExistingSources = false
 		if (existingCompilation.length > 0 && existingCompilation[0]) {
 			compilationId = existingCompilation[0].id
+
+			if (isExactMatch) {
+				const existingVerificationMatches = await db
+					.select({
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					})
+					.from(verifiedContractsTable)
+					.where(eq(verifiedContractsTable.compilationId, compilationId))
+
+				shouldReplaceExistingSources =
+					existingVerificationMatches.length > 0 &&
+					existingVerificationMatches.every(
+						(match) => match.runtimeMetadataMatch !== true,
+					)
+			}
 		} else {
 			compilationId = globalThis.crypto.randomUUID()
 
@@ -1134,40 +1151,53 @@ async function runVerificationJob(
 			})
 		}
 
-		// Insert sources and link them to the compilation
-		for (const [sourcePath, sourceData] of Object.entries(
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
 			stdJsonInput.sources,
-		)) {
-			const content = sourceData.content
-			const contentBytes = new TextEncoder().encode(content)
-			const sourceHashSha256 = new Uint8Array(
-				await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
-			)
-			const sourceHashKeccak = Hex.toBytes(
-				keccak256(Hex.fromBytes(contentBytes)),
-			)
+			compiledContract.metadata,
+		)
+		const shouldInsertSources =
+			existingCompilation.length === 0 || shouldReplaceExistingSources
 
+		if (shouldReplaceExistingSources && filteredSourceEntries.length > 0) {
 			await db
-				.insert(sourcesTable)
-				.values({
-					sourceHash: sourceHashSha256,
-					sourceHashKeccak: sourceHashKeccak,
-					content: content,
-					createdBy: auditUser,
-					updatedBy: auditUser,
-				})
-				.onConflictDoNothing()
+				.delete(compiledContractsSourcesTable)
+				.where(eq(compiledContractsSourcesTable.compilationId, compilationId))
+		}
 
-			const normalizedPath = normalizeSourcePath(sourcePath)
-			await db
-				.insert(compiledContractsSourcesTable)
-				.values({
-					id: globalThis.crypto.randomUUID(),
-					compilationId: compilationId,
-					sourceHash: sourceHashSha256,
-					path: normalizedPath,
-				})
-				.onConflictDoNothing()
+		// Insert sources referenced by the compiler metadata and link them to the compilation.
+		if (shouldInsertSources) {
+			for (const [sourcePath, sourceData] of filteredSourceEntries) {
+				const content = sourceData.content
+				const contentBytes = new TextEncoder().encode(content)
+				const sourceHashSha256 = new Uint8Array(
+					await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
+				)
+				const sourceHashKeccak = Hex.toBytes(
+					keccak256(Hex.fromBytes(contentBytes)),
+				)
+
+				await db
+					.insert(sourcesTable)
+					.values({
+						sourceHash: sourceHashSha256,
+						sourceHashKeccak: sourceHashKeccak,
+						content: content,
+						createdBy: auditUser,
+						updatedBy: auditUser,
+					})
+					.onConflictDoNothing()
+
+				const normalizedPath = normalizeSourcePath(sourcePath)
+				await db
+					.insert(compiledContractsSourcesTable)
+					.values({
+						id: globalThis.crypto.randomUUID(),
+						compilationId: compilationId,
+						sourceHash: sourceHashSha256,
+						path: normalizedPath,
+					})
+					.onConflictDoNothing()
+			}
 		}
 
 		// Extract and batch-insert signatures from ABI

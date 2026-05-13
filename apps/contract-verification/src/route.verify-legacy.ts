@@ -10,6 +10,7 @@ import {
 	formatError,
 	sourcifyError,
 	normalizeSourcePath,
+	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
 import {
@@ -471,8 +472,24 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			.limit(1)
 
 		let compilationId: string
+		let shouldReplaceExistingSources = false
 		if (existingCompilation.length > 0 && existingCompilation[0]) {
 			compilationId = existingCompilation[0].id
+
+			if (isExactMatch) {
+				const existingVerificationMatches = await db
+					.select({
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					})
+					.from(verifiedContractsTable)
+					.where(eq(verifiedContractsTable.compilationId, compilationId))
+
+				shouldReplaceExistingSources =
+					existingVerificationMatches.length > 0 &&
+					existingVerificationMatches.every(
+						(match) => match.runtimeMetadataMatch !== true,
+					)
+			}
 		} else {
 			compilationId = globalThis.crypto.randomUUID()
 
@@ -509,38 +526,53 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
-		// ast-grep-ignore-start: Sequential DB operations are intentional
-		// Insert sources
-		for (const [sourcePath, sourceContent] of Object.entries(files)) {
-			const contentBytes = new TextEncoder().encode(sourceContent)
-			const sourceHashSha256 = new Uint8Array(
-				await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
-			)
-			const sourceHashKeccak = Hex.toBytes(
-				keccak256(Hex.fromBytes(contentBytes)),
-			)
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
+			files,
+			compiledContract.metadata,
+		)
+		const shouldInsertSources =
+			existingCompilation.length === 0 || shouldReplaceExistingSources
 
-			const sourceInsert: typeof sourcesTable.$inferInsert = {
-				sourceHash: sourceHashSha256,
-				sourceHashKeccak: sourceHashKeccak,
-				content: sourceContent,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			}
-
-			await db.insert(sourcesTable).values(sourceInsert).onConflictDoNothing()
-
-			// Normalize path (convert absolute to relative)
-			const normalizedPath = normalizeSourcePath(sourcePath)
+		if (shouldReplaceExistingSources && filteredSourceEntries.length > 0) {
 			await db
-				.insert(compiledContractsSourcesTable)
-				.values({
-					id: globalThis.crypto.randomUUID(),
-					compilationId: compilationId,
+				.delete(compiledContractsSourcesTable)
+				.where(eq(compiledContractsSourcesTable.compilationId, compilationId))
+		}
+
+		// ast-grep-ignore-start: Sequential DB operations are intentional
+		// Insert sources referenced by the compiler metadata
+		if (shouldInsertSources) {
+			for (const [sourcePath, sourceContent] of filteredSourceEntries) {
+				const contentBytes = new TextEncoder().encode(sourceContent)
+				const sourceHashSha256 = new Uint8Array(
+					await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
+				)
+				const sourceHashKeccak = Hex.toBytes(
+					keccak256(Hex.fromBytes(contentBytes)),
+				)
+
+				const sourceInsert: typeof sourcesTable.$inferInsert = {
 					sourceHash: sourceHashSha256,
-					path: normalizedPath,
-				})
-				.onConflictDoNothing()
+					sourceHashKeccak: sourceHashKeccak,
+					content: sourceContent,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				}
+
+				await db.insert(sourcesTable).values(sourceInsert).onConflictDoNothing()
+
+				// Normalize path (convert absolute to relative)
+				const normalizedPath = normalizeSourcePath(sourcePath)
+				await db
+					.insert(compiledContractsSourcesTable)
+					.values({
+						id: globalThis.crypto.randomUUID(),
+						compilationId: compilationId,
+						sourceHash: sourceHashSha256,
+						path: normalizedPath,
+					})
+					.onConflictDoNothing()
+			}
 		}
 
 		// Extract and insert signatures from ABI
