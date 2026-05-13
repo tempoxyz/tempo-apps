@@ -45,6 +45,29 @@ function changeSolidityMetadataHash(bytecode: `0x${string}`): `0x${string}` {
 	)}` as `0x${string}`
 }
 
+function solcOutputWithRuntimeBytecode(bytecode: `0x${string}`): unknown {
+	return {
+		...counterFixture.solcOutput,
+		contracts: {
+			...counterFixture.solcOutput.contracts,
+			'Counter.sol': {
+				...counterFixture.solcOutput.contracts['Counter.sol'],
+				Counter: {
+					...counterFixture.solcOutput.contracts['Counter.sol'].Counter,
+					evm: {
+						...counterFixture.solcOutput.contracts['Counter.sol'].Counter.evm,
+						deployedBytecode: {
+							...counterFixture.solcOutput.contracts['Counter.sol'].Counter.evm
+								.deployedBytecode,
+							object: bytecode.slice(2),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 describe('full verification flow', () => {
 	type VerifyRequestBody = Parameters<typeof runVerificationJob>[4]
 
@@ -121,14 +144,17 @@ describe('full verification flow', () => {
 		address: `0x${string}`
 		body?: VerifyRequestBody
 		onchainRuntimeBytecode?: `0x${string}`
+		compileOutput?: unknown
+		jobId?: string
 	}) {
 		const body = options.body ?? verifyRequestBody
 		const onchainRuntimeBytecode =
 			options.onchainRuntimeBytecode ?? counterFixture.onchainRuntimeBytecode
+		const compileOutput = options.compileOutput ?? counterFixture.solcOutput
 
 		await runVerificationJob(
 			env,
-			globalThis.crypto.randomUUID(),
+			options.jobId ?? globalThis.crypto.randomUUID(),
 			counterFixture.chainId,
 			options.address,
 			body,
@@ -141,7 +167,7 @@ describe('full verification flow', () => {
 					fetch: async (request) => {
 						const url = new URL(request.url)
 						if (request.method === 'POST' && url.pathname === '/compile') {
-							return Response.json(counterFixture.solcOutput, { status: 200 })
+							return Response.json(compileOutput, { status: 200 })
 						}
 
 						throw new Error(
@@ -320,6 +346,72 @@ describe('full verification flow', () => {
 		expect(linkedSources).toStrictEqual([
 			{ path: 'Counter.sol', content: counterSource },
 		])
+	})
+
+	it('allows exact verification to supersede an existing partial match for the same contract', async () => {
+		const partialBody = {
+			...verifyRequestBody,
+			stdJsonInput: {
+				...verifyRequestBody.stdJsonInput,
+				sources: {
+					'Counter.sol': { content: 'contract Counter { }' },
+				},
+			},
+		}
+
+		await runVerificationForAddress({
+			address: counterFixture.address,
+			body: partialBody,
+			compileOutput: solcOutputWithRuntimeBytecode(
+				changeSolidityMetadataHash(counterFixture.onchainRuntimeBytecode),
+			),
+		})
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const partialVerified = await db.select().from(DB.verifiedContractsTable)
+		expect(partialVerified).toHaveLength(1)
+		expect(
+			getFirst(partialVerified, 'partial verified').runtimeMetadataMatch,
+		).toBe(false)
+		const contractSchema = z.object({
+			runtimeMatch: z.string(),
+			sources: z.record(z.string(), z.object({ content: z.string() })),
+		})
+
+		const partialLookupResponse = await exports.default.fetch(
+			new Request(
+				`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources`,
+			),
+		)
+		expect(partialLookupResponse.status).toBe(200)
+		const partialContract = z.parse(
+			contractSchema,
+			await partialLookupResponse.json(),
+		)
+		expect(partialContract.runtimeMatch).toBe('match')
+		expect(partialContract.sources['Counter.sol']?.content).toBe(
+			'contract Counter { }',
+		)
+
+		const exactVerificationId = await createVerificationJob()
+		await runVerificationForAddress({
+			address: counterFixture.address,
+			jobId: exactVerificationId,
+		})
+
+		const verified = await db.select().from(DB.verifiedContractsTable)
+		expect(verified).toHaveLength(1)
+		expect(getFirst(verified, 'verified').runtimeMetadataMatch).toBe(true)
+
+		const lookupResponse = await exports.default.fetch(
+			new Request(
+				`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources`,
+			),
+		)
+		expect(lookupResponse.status).toBe(200)
+		const contract = z.parse(contractSchema, await lookupResponse.json())
+		expect(contract.runtimeMatch).toBe('exact_match')
+		expect(contract.sources['Counter.sol']?.content).toBe(counterSource)
 	})
 
 	it('strips prototype pollution keys from persisted compiler settings', async () => {

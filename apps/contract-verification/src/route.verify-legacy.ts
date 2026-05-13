@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
@@ -142,13 +142,16 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			)
 		}
 
-		// Check if already verified
+		// Exact verifications are terminal, but partial matches must not block
+		// a later exact verification from replacing them.
 		const db = getDb(context.env.CONTRACTS_DB)
 		const addressBytes = Hex.toBytes(address)
 
-		const existingVerification = await db
+		const existingExactVerificationRows = await db
 			.select({
 				matchId: verifiedContractsTable.id,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
 			.from(verifiedContractsTable)
 			.innerJoin(
@@ -159,11 +162,15 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				and(
 					eq(contractDeploymentsTable.chainId, chainId),
 					eq(contractDeploymentsTable.address, addressBytes),
+					or(
+						eq(verifiedContractsTable.runtimeMetadataMatch, true),
+						eq(verifiedContractsTable.creationMetadataMatch, true),
+					),
 				),
 			)
 			.limit(1)
 
-		if (existingVerification.length > 0) {
+		if (existingExactVerificationRows.length > 0) {
 			return context.json({
 				result: [{ address, chainId: chain, status: 'perfect' }],
 			})
@@ -425,7 +432,11 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 
 		// Get or create deployment
 		const existingDeployment = await db
-			.select({ id: contractDeploymentsTable.id })
+			.select({
+				id: contractDeploymentsTable.id,
+				contractId: contractDeploymentsTable.contractId,
+				transactionHash: contractDeploymentsTable.transactionHash,
+			})
 			.from(contractDeploymentsTable)
 			.where(
 				and(
@@ -438,6 +449,36 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		let deploymentId: string
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			const deploymentUpdates: Partial<
+				typeof contractDeploymentsTable.$inferInsert
+			> = {}
+
+			if (
+				creationTransactionMetadata &&
+				existingDeployment[0].transactionHash === null
+			) {
+				Object.assign(deploymentUpdates, {
+					transactionHash: creationTransactionMetadata.transactionHash,
+					blockNumber: creationTransactionMetadata.blockNumber,
+					transactionIndex: creationTransactionMetadata.transactionIndex,
+					deployer: creationTransactionMetadata.deployer,
+				})
+			}
+
+			if (isExactMatch && existingDeployment[0].contractId !== contractId) {
+				deploymentUpdates.contractId = contractId
+			}
+
+			if (Object.keys(deploymentUpdates).length > 0) {
+				await db
+					.update(contractDeploymentsTable)
+					.set({
+						...deploymentUpdates,
+						updatedAt: new Date().toISOString(),
+						updatedBy: auditUser,
+					})
+					.where(eq(contractDeploymentsTable.id, deploymentId))
+			}
 		} else {
 			deploymentId = globalThis.crypto.randomUUID()
 			await db.insert(contractDeploymentsTable).values({
@@ -608,27 +649,73 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 		// ast-grep-ignore-end
 
-		// Insert verified contract
-		await db
-			.insert(verifiedContractsTable)
-			.values({
-				deploymentId,
-				compilationId,
-				creationMatch: false,
-				runtimeMatch: true,
-				runtimeMetadataMatch: isExactMatch,
-				runtimeValues:
-					Object.keys(runtimeMatchResult.transformationValues).length > 0
-						? JSON.stringify(runtimeMatchResult.transformationValues)
-						: null,
-				runtimeTransformations:
-					runtimeMatchResult.transformations.length > 0
-						? JSON.stringify(runtimeMatchResult.transformations)
-						: null,
-				createdBy: auditUser,
-				updatedBy: auditUser,
+		const runtimeValues =
+			Object.keys(runtimeMatchResult.transformationValues).length > 0
+				? JSON.stringify(runtimeMatchResult.transformationValues)
+				: null
+		const runtimeTransformations =
+			runtimeMatchResult.transformations.length > 0
+				? JSON.stringify(runtimeMatchResult.transformations)
+				: null
+
+		const existingVerifiedContracts = await db
+			.select({
+				id: verifiedContractsTable.id,
+				compilationId: verifiedContractsTable.compilationId,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
-			.onConflictDoNothing()
+			.from(verifiedContractsTable)
+			.where(eq(verifiedContractsTable.deploymentId, deploymentId))
+
+		const existingExactVerifiedContract = existingVerifiedContracts.find(
+			(verification) =>
+				verification.runtimeMetadataMatch === true ||
+				verification.creationMetadataMatch === true,
+		)
+		const existingSameCompilationVerification = existingVerifiedContracts.find(
+			(verification) => verification.compilationId === compilationId,
+		)
+		const existingVerification =
+			existingSameCompilationVerification ?? existingVerifiedContracts.at(0)
+
+		if (
+			!existingExactVerifiedContract &&
+			existingVerification &&
+			isExactMatch
+		) {
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					compilationId,
+					creationMatch: false,
+					creationValues: null,
+					creationTransformations: null,
+					creationMetadataMatch: null,
+					runtimeMatch: true,
+					runtimeMetadataMatch: true,
+					runtimeValues,
+					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+		} else if (!existingExactVerifiedContract && !existingVerification) {
+			await db
+				.insert(verifiedContractsTable)
+				.values({
+					deploymentId,
+					compilationId,
+					creationMatch: false,
+					runtimeMatch: true,
+					runtimeMetadataMatch: isExactMatch,
+					runtimeValues,
+					runtimeTransformations,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+		}
 
 		// Return legacy Sourcify format
 		return context.json({
