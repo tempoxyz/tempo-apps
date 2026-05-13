@@ -135,15 +135,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isBlockedNestedKey(key: string): boolean {
+	return key === '__proto__' || key === 'constructor' || key === 'prototype'
+}
+
+function hasBlockedNestedKey(keys: string[]): boolean {
+	return keys.some(isBlockedNestedKey)
+}
+
+const objectHasOwnProperty = Object.prototype.hasOwnProperty
+
+function hasOwnNestedKey(
+	source: Record<string, unknown>,
+	key: string,
+): boolean {
+	return objectHasOwnProperty.call(source, key)
+}
+
 function getNestedValue(
 	source: Record<string, unknown>,
 	path: string,
 ): { found: boolean; value?: unknown } {
 	const keys = path.split('.').filter(Boolean)
+	if (hasBlockedNestedKey(keys)) return { found: false }
+
 	let current: unknown = source
 
 	for (const key of keys) {
-		if (!isRecord(current) || !(key in current)) {
+		if (!isRecord(current) || !hasOwnNestedKey(current, key)) {
 			return { found: false }
 		}
 		current = current[key]
@@ -158,13 +177,14 @@ function setNestedValue(
 	value: unknown,
 ): void {
 	const keys = path.split('.').filter(Boolean)
+	if (hasBlockedNestedKey(keys)) return
 	if (keys.length === 0) return
 
 	let current = target
 	for (const key of keys.slice(0, -1)) {
 		const nextValue = current[key]
 		if (!isRecord(nextValue)) {
-			current[key] = {}
+			current[key] = Object.create(null) as Record<string, unknown>
 		}
 		current = current[key] as Record<string, unknown>
 	}
@@ -179,6 +199,7 @@ function deleteNestedValue(
 	path: string,
 ): void {
 	const keys = path.split('.').filter(Boolean)
+	if (hasBlockedNestedKey(keys)) return
 	if (keys.length === 0) return
 
 	const deleteAt = (
@@ -186,7 +207,7 @@ function deleteNestedValue(
 		remaining: string[],
 	): void => {
 		const [key, ...rest] = remaining
-		if (!key || !(key in current)) return
+		if (!key || !hasOwnNestedKey(current, key)) return
 
 		if (rest.length === 0) {
 			delete current[key]

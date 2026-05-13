@@ -53,6 +53,41 @@ function timestampToMs(value: string): number {
 	return new Date(normalized).getTime()
 }
 
+function isBlockedObjectKey(key: string): boolean {
+	return key === '__proto__' || key === 'constructor' || key === 'prototype'
+}
+
+function sanitizeJsonValue(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(sanitizeJsonValue)
+
+	if (typeof value === 'object' && value !== null) {
+		const sanitized: Record<string, unknown> = {}
+		for (const [key, nestedValue] of Object.entries(value)) {
+			if (isBlockedObjectKey(key)) continue
+			sanitized[key] = sanitizeJsonValue(nestedValue)
+		}
+		return sanitized
+	}
+
+	return value
+}
+
+function sanitizeCompilerSettings(settings: object): object {
+	return sanitizeJsonValue(settings) as object
+}
+
+function sanitizeVerificationInput(
+	input: VerificationInput,
+): VerificationInput {
+	return {
+		...input,
+		stdJsonInput: {
+			...input.stdJsonInput,
+			settings: sanitizeCompilerSettings(input.stdJsonInput.settings),
+		},
+	}
+}
+
 /**
  * TODO:
  * - handle different solc versions
@@ -302,6 +337,10 @@ verifyRoute
 				return context.json({ verificationId: firstJob.id }, 202)
 			}
 
+			const verificationInput = sanitizeVerificationInput(
+				parsedBody.data as VerificationInput,
+			)
+
 			// Dispatch verification to a per-job Durable Object for durable background execution
 			const doId = context.env.VERIFICATION_JOB_RUNNER.idFromName(jobId)
 			const runner = context.env.VERIFICATION_JOB_RUNNER.get(doId)
@@ -310,7 +349,7 @@ verifyRoute
 					jobId,
 					chainId,
 					address,
-					body: parsedBody.data as VerificationInput,
+					body: verificationInput,
 				})
 			} catch (enqueueError) {
 				logger.error('job_enqueue_failed', {
@@ -676,7 +715,8 @@ async function runVerificationJob(
 	const addressBytes = Hex.toBytes(address)
 	const startTime = Date.now()
 
-	const { stdJsonInput, compilerVersion, contractIdentifier } = body
+	const sanitizedBody = sanitizeVerificationInput(body)
+	const { stdJsonInput, compilerVersion, contractIdentifier } = sanitizedBody
 	const language = stdJsonInput.language?.toLowerCase() ?? 'solidity'
 	const isVyper = language === 'vyper'
 
@@ -696,9 +736,9 @@ async function runVerificationJob(
 			transport: http(rpcUrl),
 		})
 
-		const creationTransactionMetadata = body.creationTransactionHash
+		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
 			? await getCreationTransactionMetadata({
-					creationTransactionHash: body.creationTransactionHash,
+					creationTransactionHash: sanitizedBody.creationTransactionHash,
 					address,
 					chainId,
 					client,
@@ -1045,7 +1085,7 @@ async function runVerificationJob(
 				and(
 					eq(compiledContractsTable.runtimeCodeHash, runtimeCodeHashSha256),
 					eq(compiledContractsTable.compiler, compilerName),
-					eq(compiledContractsTable.version, body.compilerVersion),
+					eq(compiledContractsTable.version, compilerVersion),
 				),
 			)
 			.limit(1)
@@ -1079,7 +1119,7 @@ async function runVerificationJob(
 			await db.insert(compiledContractsTable).values({
 				id: compilationId,
 				compiler: compilerName,
-				version: body.compilerVersion,
+				version: compilerVersion,
 				language: stdJsonInput.language,
 				name: contractName,
 				fullyQualifiedName: contractIdentifier,

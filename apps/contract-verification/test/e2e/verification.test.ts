@@ -34,14 +34,18 @@ const getFirst = <T>(items: T[], label: string) => {
 }
 
 describe('full verification flow', () => {
-	async function createVerificationJob(): Promise<string> {
+	type VerifyRequestBody = Parameters<typeof runVerificationJob>[4]
+
+	async function createVerificationJob(
+		body: VerifyRequestBody = verifyRequestBody,
+	): Promise<string> {
 		const verifyResponse = await exports.default.fetch(
 			new Request(
 				`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(verifyRequestBody),
+					body: JSON.stringify(body),
 				},
 			),
 		)
@@ -55,15 +59,17 @@ describe('full verification flow', () => {
 		return z.parse(VerificationIdSchema, verificationIdJson).verificationId
 	}
 
-	async function runSuccessfulVerification(): Promise<string> {
-		const verificationId = await createVerificationJob()
+	async function runSuccessfulVerification(
+		body: VerifyRequestBody = verifyRequestBody,
+	): Promise<string> {
+		const verificationId = await createVerificationJob(body)
 
 		await runVerificationJob(
 			env,
 			verificationId,
 			counterFixture.chainId,
 			counterFixture.address,
-			verifyRequestBody,
+			body,
 			ChainRegistry.fromStatic(staticChains),
 			{
 				createPublicClient: () => ({
@@ -197,6 +203,33 @@ describe('full verification flow', () => {
 		const job = getFirst(jobs, 'jobs')
 		expect(job.completedAt).not.toBeNull()
 		expect(job.verifiedContractId).toBe(verifiedContract.id)
+	})
+
+	it('strips prototype pollution keys from persisted compiler settings', async () => {
+		const body = {
+			...verifyRequestBody,
+			stdJsonInput: {
+				...verifyRequestBody.stdJsonInput,
+				settings: JSON.parse(
+					'{"optimizer":{"enabled":true,"runs":200},"nested":{"constructor":{"polluted":true}},"__proto__":{"polluted":true},"prototype":{"polluted":true}}',
+				) as Record<string, unknown>,
+			},
+		}
+
+		await runSuccessfulVerification(body)
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const compiled = await db.select().from(DB.compiledContractsTable)
+		const compiledContract = getFirst(compiled, 'compiled')
+		const compilerSettings = JSON.parse(
+			compiledContract.compilerSettings,
+		) as Record<string, unknown>
+		const nested = compilerSettings.nested as Record<string, unknown>
+
+		expect(Object.hasOwn(compilerSettings, '__proto__')).toBe(false)
+		expect(Object.hasOwn(compilerSettings, 'prototype')).toBe(false)
+		expect(Object.hasOwn(nested, 'constructor')).toBe(false)
+		expect(compilerSettings.optimizer).toEqual({ enabled: true, runs: 200 })
 	})
 
 	it('returns 409 for already verified contract', async () => {
