@@ -49,6 +49,44 @@ export function normalizeSourcePath(absolutePath: string) {
 	return parts.at(-1) ?? absolutePath
 }
 
+export function getCompilerMetadataSourcePaths(
+	metadata: string | undefined,
+): Set<string> {
+	if (!metadata) return new Set()
+
+	let parsedMetadata: unknown
+	try {
+		parsedMetadata = JSON.parse(metadata)
+	} catch {
+		return new Set()
+	}
+
+	if (typeof parsedMetadata !== 'object' || parsedMetadata === null) {
+		return new Set()
+	}
+
+	const sources = (parsedMetadata as { sources?: unknown }).sources
+	if (
+		typeof sources !== 'object' ||
+		sources === null ||
+		Array.isArray(sources)
+	) {
+		return new Set()
+	}
+
+	return new Set(Object.keys(sources))
+}
+
+export function filterSourcesByCompilerMetadata<T>(
+	sources: Record<string, T>,
+	metadata: string | undefined,
+): Array<[string, T]> {
+	const metadataSourcePaths = getCompilerMetadataSourcePaths(metadata)
+	return Object.entries(sources).filter(([sourcePath]) =>
+		metadataSourcePaths.has(sourcePath),
+	)
+}
+
 export function sourcifyError(
 	context: Context,
 	status: ContentfulStatusCode,

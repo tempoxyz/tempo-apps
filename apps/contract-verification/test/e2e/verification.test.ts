@@ -8,7 +8,7 @@ import * as DB from '#database/schema.ts'
 import { runVerificationJob } from '#route.verify.ts'
 import { staticChains } from '#wagmi.config.ts'
 import { ChainRegistry } from '#lib/chain-registry.ts'
-import { counterFixture } from '../fixtures/counter.fixture.ts'
+import { counterFixture, counterSource } from '../fixtures/counter.fixture.ts'
 
 const VerificationIdSchema = z.object({ verificationId: z.string() })
 const VerificationStatusSchema = z.object({
@@ -31,6 +31,18 @@ const getFirst = <T>(items: T[], label: string) => {
 	const value = items.at(0)
 	if (!value) throw new Error(`Expected ${label} to have at least one item`)
 	return value
+}
+
+function changeSolidityMetadataHash(bytecode: `0x${string}`): `0x${string}` {
+	const metadataHashMarker = 'a2646970667358221220'
+	const markerIndex = bytecode.lastIndexOf(metadataHashMarker)
+	if (markerIndex === -1) throw new Error('Expected Solidity metadata hash')
+
+	const hashStart = markerIndex + metadataHashMarker.length
+	const replacement = bytecode[hashStart] === 'f' ? 'e' : 'f'
+	return `${bytecode.slice(0, hashStart)}${replacement}${bytecode.slice(
+		hashStart + 1,
+	)}` as `0x${string}`
 }
 
 describe('full verification flow', () => {
@@ -103,6 +115,59 @@ describe('full verification flow', () => {
 		expect(status.error).toBeUndefined()
 
 		return verificationId
+	}
+
+	async function runVerificationForAddress(options: {
+		address: `0x${string}`
+		body?: VerifyRequestBody
+		onchainRuntimeBytecode?: `0x${string}`
+	}) {
+		const body = options.body ?? verifyRequestBody
+		const onchainRuntimeBytecode =
+			options.onchainRuntimeBytecode ?? counterFixture.onchainRuntimeBytecode
+
+		await runVerificationJob(
+			env,
+			globalThis.crypto.randomUUID(),
+			counterFixture.chainId,
+			options.address,
+			body,
+			ChainRegistry.fromStatic(staticChains),
+			{
+				createPublicClient: () => ({
+					getCode: async () => onchainRuntimeBytecode,
+				}),
+				getContainer: () => ({
+					fetch: async (request) => {
+						const url = new URL(request.url)
+						if (request.method === 'POST' && url.pathname === '/compile') {
+							return Response.json(counterFixture.solcOutput, { status: 200 })
+						}
+
+						throw new Error(
+							`Unexpected container request: ${request.method} ${request.url}`,
+						)
+					},
+				}),
+			},
+		)
+	}
+
+	async function getLinkedSources() {
+		const db = drizzle(env.CONTRACTS_DB)
+		return db
+			.select({
+				path: DB.compiledContractsSourcesTable.path,
+				content: DB.sourcesTable.content,
+			})
+			.from(DB.compiledContractsSourcesTable)
+			.innerJoin(
+				DB.sourcesTable,
+				eq(
+					DB.compiledContractsSourcesTable.sourceHash,
+					DB.sourcesTable.sourceHash,
+				),
+			)
 	}
 
 	it('verifies a simple contract and persists to database', async () => {
@@ -203,6 +268,58 @@ describe('full verification flow', () => {
 		const job = getFirst(jobs, 'jobs')
 		expect(job.completedAt).not.toBeNull()
 		expect(job.verifiedContractId).toBe(verifiedContract.id)
+	})
+
+	it('does not append unreferenced sources when reusing a compilation', async () => {
+		const injectedBody = {
+			...verifyRequestBody,
+			stdJsonInput: {
+				...verifyRequestBody.stdJsonInput,
+				sources: {
+					...verifyRequestBody.stdJsonInput.sources,
+					'Injected.sol': { content: 'contract Injected {}' },
+				},
+			},
+		}
+
+		await runVerificationForAddress({ address: counterFixture.address })
+		await runVerificationForAddress({
+			address: '0x2222222222222222222222222222222222222222',
+			body: injectedBody,
+		})
+
+		const linkedSources = await getLinkedSources()
+		expect(linkedSources).toStrictEqual([
+			{ path: 'Counter.sol', content: counterSource },
+		])
+	})
+
+	it('allows exact verification to replace sources from a partial compilation', async () => {
+		const partialBody = {
+			...verifyRequestBody,
+			stdJsonInput: {
+				...verifyRequestBody.stdJsonInput,
+				sources: {
+					'Counter.sol': { content: 'contract Counter { }' },
+				},
+			},
+		}
+
+		await runVerificationForAddress({
+			address: '0x2222222222222222222222222222222222222222',
+			body: partialBody,
+			onchainRuntimeBytecode: changeSolidityMetadataHash(
+				counterFixture.onchainRuntimeBytecode,
+			),
+		})
+		await runVerificationForAddress({
+			address: '0x3333333333333333333333333333333333333333',
+		})
+
+		const linkedSources = await getLinkedSources()
+		expect(linkedSources).toStrictEqual([
+			{ path: 'Counter.sol', content: counterSource },
+		])
 	})
 
 	it('strips prototype pollution keys from persisted compiler settings', async () => {
