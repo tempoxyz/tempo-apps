@@ -14,13 +14,30 @@ function MethodologyPage(): React.JSX.Element {
 			<div className="space-y-8 text-[14px] leading-relaxed text-secondary">
 				<Section title="Workload Composition">
 					<p>
-						Current benchmarks use 100% TIP-20 token transfers (ERC-20
-						equivalent) at varying target TPS levels.
+						Benchmarks run two workload types at varying target TPS levels
+						(10K, 20K, 40K):
 					</p>
-					<p className="mt-3">
-						A canonical mixed workload combining TIP-20 transfers, multi-party
-						payments, and stablecoin DEX swaps is in development.
-					</p>
+					<div className="mt-3 card">
+						<div className="divide-y divide-dashed divide-border">
+							<div className="flex items-center gap-4 px-4.5 py-3">
+								<span className="shrink-0 text-[13px] font-medium text-primary w-28">
+									TIP-20
+								</span>
+								<span className="text-[13px] text-secondary">
+									100% TIP-20 token transfers (ERC-20 equivalent).
+								</span>
+							</div>
+							<div className="flex items-center gap-4 px-4.5 py-3">
+								<span className="shrink-0 text-[13px] font-medium text-primary w-28">
+									Mixed
+								</span>
+								<span className="text-[13px] text-secondary">
+									80% TIP-20 transfers, 20% MPP (multi-party payment) channel
+									operations (approve → open → close).
+								</span>
+							</div>
+						</div>
+					</div>
 				</Section>
 
 				<Section title="Hardware">
@@ -84,14 +101,14 @@ function MethodologyPage(): React.JSX.Element {
 					<p>
 						Benchmark results are produced by{' '}
 						<a
-							href="https://github.com/tempoxyz/tempo/blob/main/bin/tempo-bench/README.md"
+							href="https://github.com/tempoxyz/txgen"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-accent hover:underline"
 						>
-							tempo-bench
-						</a>
-						.
+							txgen
+						</a>{' '}
+						and uploaded to ClickHouse for visualization.
 					</p>
 				</Section>
 			</div>
