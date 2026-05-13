@@ -1,45 +1,11 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import {
 	getScenarios,
 	fetchAllLatestRuns,
 	type BenchRun,
 } from '#lib/server/bench'
-import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
-
-const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
-
-function isTag(ref: string): boolean {
-	return /^v\d/.test(ref)
-}
-
-function VersionLink(props: { run: BenchRun }): React.JSX.Element {
-	const { run } = props
-	if (run.ref && isTag(run.ref)) {
-		return (
-			<a
-				href={`${TEMPO_REPO}/releases/tag/${run.ref}`}
-				target="_blank"
-				rel="noopener noreferrer"
-				className="hover:underline"
-				onClick={(e) => e.stopPropagation()}
-			>
-				{run.ref}
-			</a>
-		)
-	}
-	return (
-		<a
-			href={`${TEMPO_REPO}/commit/${run.commit}`}
-			target="_blank"
-			rel="noopener noreferrer"
-			className="hover:underline"
-			onClick={(e) => e.stopPropagation()}
-		>
-			{run.ref ? `${run.ref} (${run.commit})` : run.commit}
-		</a>
-	)
-}
+import { formatGas, formatTps, formatMs } from '#lib/format'
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
@@ -52,7 +18,6 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardPage(): React.JSX.Element {
-	const navigate = useNavigate()
 	const scenarios = getScenarios()
 	const { data: latestRuns } = useSuspenseQuery({
 		queryKey: ['latestRuns'],
@@ -190,69 +155,6 @@ function DashboardPage(): React.JSX.Element {
 				</div>
 			</section>
 
-			{/* Latest runs table */}
-			<section className="mb-14">
-				<SectionHeader title="Latest Results" />
-				<div className="card">
-					<table className="w-full text-[13px]">
-						<thead>
-							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
-								<th className="px-4.5 py-3 font-normal">Workload</th>
-								<th className="px-4.5 py-3 font-normal">Version</th>
-								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									Block Time
-								</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									Throughput
-								</th>
-								<th className="px-4.5 py-3 font-normal text-right">Peak</th>
-								<th className="px-4.5 py-3 font-normal text-right">Date</th>
-							</tr>
-						</thead>
-						<tbody>
-							{scenarios.map((scenario) => {
-								const latest = getLatestRun(scenario.id)
-								if (!latest) return null
-								return (
-									<tr
-										key={latest.id}
-										className="border-b border-dashed border-border last:border-0 transition-colors hover:bg-surface-hover cursor-pointer"
-										onClick={() =>
-											navigate({
-												to: '/benchmark/$id',
-												params: { id: latest.id },
-											})
-										}
-									>
-										<td className="px-4.5 py-3 font-medium text-primary">
-											{scenario.label}
-										</td>
-										<td className="px-4.5 py-3 font-mono text-accent">
-											<VersionLink run={latest} />
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono font-medium text-accent">
-											{formatTps(latest.avgTps)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatMs(latest.avgBlockTimeMs)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatGas(latest.avgGasPerSecond)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatGas(latest.peakGasPerSecond)}
-										</td>
-										<td className="px-4.5 py-3 text-right text-tertiary">
-											{formatDate(latest.startedAt)}
-										</td>
-									</tr>
-								)
-							})}
-						</tbody>
-					</table>
-				</div>
-			</section>
 		</div>
 	)
 }
