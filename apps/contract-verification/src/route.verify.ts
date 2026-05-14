@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, or } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 
 import { getRandom } from '@cloudflare/containers'
@@ -221,12 +221,13 @@ verifyRoute
 			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
-			// Check if already verified
-			const existingVerification = await db
+			// Exact verifications are terminal, but partial matches must not block
+			// a later exact verification from replacing them.
+			const existingExactVerification = await db
 				.select({
 					matchId: verifiedContractsTable.id,
-					runtimeMatch: verifiedContractsTable.runtimeMatch,
-					creationMatch: verifiedContractsTable.creationMatch,
+					runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 				})
 				.from(verifiedContractsTable)
 				.innerJoin(
@@ -237,14 +238,20 @@ verifyRoute
 					and(
 						eq(contractDeploymentsTable.chainId, chainId),
 						eq(contractDeploymentsTable.address, addressBytes),
+						or(
+							eq(verifiedContractsTable.runtimeMetadataMatch, true),
+							eq(verifiedContractsTable.creationMetadataMatch, true),
+						),
 					),
 				)
 				.limit(1)
 
-			if (existingVerification.length > 0) {
-				const existing = existingVerification.at(0)
-				const runtimeMatch = existing?.runtimeMatch ? 'exact matches' : 'match'
-				const creationMatch = existing?.creationMatch
+			if (existingExactVerification.length > 0) {
+				const existing = existingExactVerification.at(0)
+				const runtimeMatch = existing?.runtimeMetadataMatch
+					? 'exact matches'
+					: 'match'
+				const creationMatch = existing?.creationMetadataMatch
 					? 'exact matches'
 					: 'match'
 				return sourcifyError(
@@ -1016,6 +1023,7 @@ async function runVerificationJob(
 		const existingDeployment = await db
 			.select({
 				id: contractDeploymentsTable.id,
+				contractId: contractDeploymentsTable.contractId,
 				transactionHash: contractDeploymentsTable.transactionHash,
 			})
 			.from(contractDeploymentsTable)
@@ -1029,17 +1037,32 @@ async function runVerificationJob(
 
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			const deploymentUpdates: Partial<
+				typeof contractDeploymentsTable.$inferInsert
+			> = {}
+
 			if (
 				creationTransactionMetadata &&
 				existingDeployment[0].transactionHash === null
 			) {
+				Object.assign(deploymentUpdates, {
+					transactionHash: creationTransactionMetadata.transactionHash,
+					blockNumber: creationTransactionMetadata.blockNumber,
+					transactionIndex: creationTransactionMetadata.transactionIndex,
+					deployer: creationTransactionMetadata.deployer,
+				})
+			}
+
+			if (isExactMatch && existingDeployment[0].contractId !== contractId) {
+				deploymentUpdates.contractId = contractId
+			}
+
+			if (Object.keys(deploymentUpdates).length > 0) {
 				await db
 					.update(contractDeploymentsTable)
 					.set({
-						transactionHash: creationTransactionMetadata.transactionHash,
-						blockNumber: creationTransactionMetadata.blockNumber,
-						transactionIndex: creationTransactionMetadata.transactionIndex,
-						deployer: creationTransactionMetadata.deployer,
+						...deploymentUpdates,
+						updatedAt: new Date().toISOString(),
 						updatedBy: auditUser,
 					})
 					.where(eq(contractDeploymentsTable.id, deploymentId))
@@ -1261,35 +1284,89 @@ async function runVerificationJob(
 			)
 		}
 
-		// Insert verified contract with transformation data
-		await db
-			.insert(verifiedContractsTable)
-			.values({
-				deploymentId,
-				compilationId,
-				creationMatch: false,
-				runtimeMatch: true,
-				runtimeMetadataMatch: isExactMatch,
-				runtimeValues:
-					Object.keys(runtimeMatchResult.transformationValues).length > 0
-						? JSON.stringify(runtimeMatchResult.transformationValues)
-						: null,
-				runtimeTransformations:
-					runtimeMatchResult.transformations.length > 0
-						? JSON.stringify(runtimeMatchResult.transformations)
-						: null,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			})
-			.onConflictDoNothing()
+		const runtimeValues =
+			Object.keys(runtimeMatchResult.transformationValues).length > 0
+				? JSON.stringify(runtimeMatchResult.transformationValues)
+				: null
+		const runtimeTransformations =
+			runtimeMatchResult.transformations.length > 0
+				? JSON.stringify(runtimeMatchResult.transformations)
+				: null
 
-		const verificationResult = await db
-			.select({ id: verifiedContractsTable.id })
+		const existingVerifiedContracts = await db
+			.select({
+				id: verifiedContractsTable.id,
+				compilationId: verifiedContractsTable.compilationId,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+			})
 			.from(verifiedContractsTable)
 			.where(eq(verifiedContractsTable.deploymentId, deploymentId))
-			.limit(1)
 
-		const verifiedContractId = verificationResult.at(0)?.id ?? null
+		const existingExactVerification = existingVerifiedContracts.find(
+			(verification) =>
+				verification.runtimeMetadataMatch === true ||
+				verification.creationMetadataMatch === true,
+		)
+		const existingSameCompilationVerification = existingVerifiedContracts.find(
+			(verification) => verification.compilationId === compilationId,
+		)
+		const existingVerification =
+			existingSameCompilationVerification ?? existingVerifiedContracts.at(0)
+
+		let verifiedContractId: number | null = null
+
+		if (existingExactVerification) {
+			verifiedContractId = existingExactVerification.id
+		} else if (existingVerification && isExactMatch) {
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					compilationId,
+					creationMatch: false,
+					creationValues: null,
+					creationTransformations: null,
+					creationMetadataMatch: null,
+					runtimeMatch: true,
+					runtimeMetadataMatch: true,
+					runtimeValues,
+					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+			verifiedContractId = existingVerification.id
+		} else if (existingVerification) {
+			verifiedContractId = existingVerification.id
+		} else {
+			await db
+				.insert(verifiedContractsTable)
+				.values({
+					deploymentId,
+					compilationId,
+					creationMatch: false,
+					runtimeMatch: true,
+					runtimeMetadataMatch: isExactMatch,
+					runtimeValues,
+					runtimeTransformations,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			const verificationResult = await db
+				.select({ id: verifiedContractsTable.id })
+				.from(verifiedContractsTable)
+				.where(
+					and(
+						eq(verifiedContractsTable.deploymentId, deploymentId),
+						eq(verifiedContractsTable.compilationId, compilationId),
+					),
+				)
+				.limit(1)
+
+			verifiedContractId = verificationResult.at(0)?.id ?? null
+		}
 
 		// Mark job as completed (clear any stale timeout/error fields)
 		await db

@@ -317,19 +317,45 @@ export function getVyperImmutableReferences(
 
 /**
  * Check if bytecode has CBOR auxdata with a content hash.
- * We don't fully decode CBOR, just check for presence of IPFS/bzzr markers.
+ * Solidity stores content hashes under ipfs/bzzr keys. Newer Vyper versions
+ * store an integrity hash as the first CBOR array entry.
  */
-export function hasContentHash(bytecode: string): boolean {
-	const { auxdata } = splitAuxdata(bytecode)
+export function hasContentHash(
+	bytecode: string,
+	auxdataStyle: AuxdataStyle = AuxdataStyle.SOLIDITY,
+): boolean {
+	const { auxdata } = splitAuxdata(bytecode, auxdataStyle)
 	if (!auxdata) return false
 
-	// Look for IPFS marker: "ipfs" in CBOR = 64697066735822 (text string with length)
-	// Look for bzzr0/bzzr1 markers
+	try {
+		const decoded = CBOR.decode(Hex.toBytes(`0x${auxdata}`)) as unknown
+		if (decoded instanceof Map) {
+			return decoded.has('ipfs') || decoded.has('bzzr0') || decoded.has('bzzr1')
+		}
+		if (typeof decoded === 'object' && decoded !== null) {
+			if (Array.isArray(decoded)) {
+				return (
+					auxdataStyle === AuxdataStyle.VYPER && typeof decoded[0] === 'string'
+				)
+			}
+
+			return (
+				Object.hasOwn(decoded, 'ipfs') ||
+				Object.hasOwn(decoded, 'bzzr0') ||
+				Object.hasOwn(decoded, 'bzzr1')
+			)
+		}
+	} catch {
+		// Fall back to marker checks below.
+	}
+
+	// Look for IPFS marker: "ipfs" in CBOR = 6469706673.
+	// Look for bzzr0/bzzr1 markers by their ASCII hex encodings.
 	const lower = auxdata.toLowerCase()
 	return (
 		lower.includes('6970667358') || // ipfs
-		lower.includes('62zzr0') || // bzzr0
-		lower.includes('62zzr1') // bzzr1
+		lower.includes('627a7a7230') || // bzzr0
+		lower.includes('627a7a7231') // bzzr1
 	)
 }
 
@@ -842,7 +868,7 @@ export function matchBytecode(
 
 	if (doBytecodesMatch) {
 		// Check if this is a "perfect" match (has valid content hash) or "partial" (no hash)
-		const isPerfect = hasContentHash(recompiledBytecode)
+		const isPerfect = hasContentHash(recompiledBytecode, auxdataStyle)
 
 		// For creation bytecode, also extract constructor arguments
 		if (isCreation && abi) {

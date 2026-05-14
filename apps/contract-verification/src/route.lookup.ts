@@ -267,13 +267,23 @@ function applyFieldSelection(
 function buildVerifiedMinimalResponse(row: {
 	matchId: number
 	runtimeMatch: boolean
+	runtimeMetadataMatch: boolean | null
 	creationMatch: boolean
+	creationMetadataMatch: boolean | null
 	chainId: number
 	address: ArrayBuffer
 	verifiedAt: string
 }): MinimalLookupResponse {
-	const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
-	const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
+	const runtimeMatchStatus = row.runtimeMatch
+		? row.runtimeMetadataMatch
+			? 'exact_match'
+			: 'match'
+		: 'match'
+	const creationMatchStatus = row.creationMatch
+		? row.creationMetadataMatch
+			? 'exact_match'
+			: 'match'
+		: 'match'
 	const matchStatus =
 		runtimeMatchStatus === 'exact_match' ||
 		creationMatchStatus === 'exact_match'
@@ -532,7 +542,9 @@ lookupRoute
 						matchId: verifiedContractsTable.id,
 						verifiedAt: verifiedContractsTable.createdAt,
 						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 						creationMatch: verifiedContractsTable.creationMatch,
+						creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 						chainId: contractDeploymentsTable.chainId,
 						address: contractDeploymentsTable.address,
 					})
@@ -569,7 +581,9 @@ lookupRoute
 						buildVerifiedMinimalResponse({
 							matchId: row.matchId,
 							runtimeMatch: row.runtimeMatch,
+							runtimeMetadataMatch: row.runtimeMetadataMatch,
 							creationMatch: row.creationMatch,
+							creationMetadataMatch: row.creationMetadataMatch,
 							chainId: row.chainId,
 							address: row.address as ArrayBuffer,
 							verifiedAt: row.verifiedAt,
@@ -729,7 +743,9 @@ lookupRoute
 			const minimalResponse = buildVerifiedMinimalResponse({
 				matchId: row.matchId,
 				runtimeMatch: row.runtimeMatch,
+				runtimeMetadataMatch: row.runtimeMetadataMatch,
 				creationMatch: row.creationMatch,
+				creationMetadataMatch: row.creationMetadataMatch,
 				chainId: row.chainId,
 				address: row.address as ArrayBuffer,
 				verifiedAt: row.verifiedAt,
@@ -1054,7 +1070,9 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 						address: contractDeploymentsTable.address,
 						verifiedAt: verifiedContractsTable.createdAt,
 						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 						creationMatch: verifiedContractsTable.creationMatch,
+						creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 					})
 					.from(verifiedContractsTable)
 					.innerJoin(
@@ -1106,7 +1124,9 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 			buildVerifiedMinimalResponse({
 				matchId: row.matchId,
 				runtimeMatch: row.runtimeMatch,
+				runtimeMetadataMatch: row.runtimeMetadataMatch,
 				creationMatch: row.creationMatch,
+				creationMetadataMatch: row.creationMetadataMatch,
 				chainId: row.chainId,
 				address: row.address as ArrayBuffer,
 				verifiedAt: row.verifiedAt,
