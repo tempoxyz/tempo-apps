@@ -59,6 +59,17 @@ jobs:
       app: key-manager
       environments: '[""]'
 
+  deploy-perf:
+    name: Deploy Perf
+    needs: verify
+    uses: ./.github/workflows/deploy.yml
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    with:
+      app: perf
+      environments: '[""]'
+
   deploy-og:
     name: Deploy OG
     needs: verify
