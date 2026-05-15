@@ -89,7 +89,13 @@ const SCENARIOS: Array<{
 // contain enough raw block/metric samples to exceed Cloudflare Worker memory
 // limits when serialized as JSON, so fetch queries aggregate samples into this
 // many buckets before returning them to the app.
-const CHART_POINT_TARGET = 750
+const CHART_POINT_TARGET = 300
+
+// Maximum total rows returned from metric sample queries.  With many label
+// combinations (quantile buckets, node labels, etc.) the cartesian product of
+// series × points can blow past the Worker memory limit even after time-
+// bucketing.  This hard cap keeps the response well within the 128 MB ceiling.
+const MAX_METRIC_ROWS = 15_000
 
 function sqlString(value: string): string {
 	return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
@@ -352,6 +358,7 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
 			)
 			ORDER BY metric_name, labels_json, offset_ms
+			LIMIT ${MAX_METRIC_ROWS}
 		`)
 
 		const seriesMap = new Map<string, MetricSeries>()
