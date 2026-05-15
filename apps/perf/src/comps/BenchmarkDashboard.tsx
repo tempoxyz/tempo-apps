@@ -141,7 +141,7 @@ export function BenchmarkDashboard(
 							</div>
 							<div className="flex items-center gap-1.5">
 								<span className="inline-block h-2.5 w-2.5 rounded-full bg-positive/50" />
-								<span className="text-[11px] text-tertiary">Mix (MPP)</span>
+								<span className="text-[11px] text-tertiary">Mixed Workload</span>
 							</div>
 						</div>
 					</div>
@@ -165,11 +165,11 @@ export function BenchmarkDashboard(
 				</div>
 			</section>
 
-			{/* Mix (MPP) workloads */}
+			{/* Mix workloads */}
 			<section className="mb-14">
 				<SectionHeader
 					title="Mixed Workloads"
-					subtitle="80% TIP-20 Transfers, 20% MPP Channels"
+					subtitle="70% TIP-20, 10% MPP, 10% DEX, 10% ERC-20"
 				/>
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{mixScenarios.map((scenario) => (

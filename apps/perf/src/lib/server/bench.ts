@@ -60,28 +60,16 @@ const SCENARIOS: Array<{
 		scenarioName: 'tip20-20k',
 	},
 	{
-		id: 'tip20-40k',
-		label: 'TIP-20 — 40K TPS',
-		workload: '100% TIP-20 Transfers',
-		scenarioName: 'tip20-40k',
-	},
-	{
 		id: 'mix-10k',
 		label: 'Mix — 10K TPS',
-		workload: '80% TIP-20 Transfers, 20% MPP Channels',
+		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-10k',
 	},
 	{
 		id: 'mix-20k',
 		label: 'Mix — 20K TPS',
-		workload: '80% TIP-20 Transfers, 20% MPP Channels',
+		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-20k',
-	},
-	{
-		id: 'mix-40k',
-		label: 'Mix — 40K TPS',
-		workload: '80% TIP-20 Transfers, 20% MPP Channels',
-		scenarioName: 'mix-40k',
 	},
 ]
 
