@@ -34,9 +34,7 @@ export function generateKey(): string {
 }
 
 /** Look up an API key record from KV. Returns `null` on miss or inactive key. */
-export async function getApiKey(
-	key: string,
-): Promise<ApiKeyRecord | null> {
+export async function getApiKey(key: string): Promise<ApiKeyRecord | null> {
 	const raw = await env.ApiKeyStore.get(kvKey(key))
 	if (!raw) return null
 	const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
@@ -62,7 +60,12 @@ export async function createApiKey(
 /** Update an existing API key record. */
 export async function updateApiKey(
 	key: string,
-	updates: Partial<Pick<ApiKeyRecord, 'label' | 'dailyLimitUsd' | 'allowedDestinations' | 'active'>>,
+	updates: Partial<
+		Pick<
+			ApiKeyRecord,
+			'label' | 'dailyLimitUsd' | 'allowedDestinations' | 'active'
+		>
+	>,
 ): Promise<boolean> {
 	const existing = await env.ApiKeyStore.get(kvKey(key))
 	if (!existing) return false
@@ -79,9 +82,10 @@ export async function revokeApiKey(key: string): Promise<boolean> {
 }
 
 /** List all API keys (paginated via KV list). Returns key + record pairs. */
-export async function listApiKeys(
-	cursor?: string,
-): Promise<{ keys: Array<{ key: string; record: ApiKeyRecord }>; cursor: string | null }> {
+export async function listApiKeys(cursor?: string): Promise<{
+	keys: Array<{ key: string; record: ApiKeyRecord }>
+	cursor: string | null
+}> {
 	const list = await env.ApiKeyStore.list({
 		prefix: KV_PREFIX,
 		cursor: cursor ?? undefined,

@@ -6,7 +6,10 @@ const MICRODOLLAR_DECIMALS = 6
 const ATTODOLLARS_PER_MICRODOLLAR = 10n ** 12n
 
 function attodollarToMicrodollar(attodollars: bigint) {
-	return (attodollars + ATTODOLLARS_PER_MICRODOLLAR - 1n) / ATTODOLLARS_PER_MICRODOLLAR
+	return (
+		(attodollars + ATTODOLLARS_PER_MICRODOLLAR - 1n) /
+		ATTODOLLARS_PER_MICRODOLLAR
+	)
 }
 
 function spendKvKey(apiKey: string) {

@@ -70,10 +70,7 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 			const apiKey = c.get('apiKey') as string | undefined
 			const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
 			if (apiKey && apiKeyRecord) {
-				if (
-					apiKeyRecord.allowedDestinations.length > 0 &&
-					transaction.to
-				) {
+				if (apiKeyRecord.allowedDestinations.length > 0 && transaction.to) {
 					const dest = transaction.to.toLowerCase()
 					const allowed = apiKeyRecord.allowedDestinations.some(
 						(a) => a.toLowerCase() === dest,
