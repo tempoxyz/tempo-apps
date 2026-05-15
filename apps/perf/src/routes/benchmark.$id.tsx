@@ -552,6 +552,25 @@ function RunDetailPage(): React.JSX.Element {
 							xFormat="block"
 						/>
 						<TimeSeriesChart
+							title="Block Time"
+							tooltip="Wall-clock time for each block in milliseconds."
+							showMean
+							series={[
+								{
+									label: 'Block Time',
+									color: COLORS.orange,
+									data: blockRows
+										.filter((b) => b.blockTimeMs != null)
+										.map((b) => ({
+											x: b.index,
+											y: b.blockTimeMs as number,
+										})),
+								},
+							]}
+							formatValue={(v) => formatMs(v)}
+							xFormat="block"
+						/>
+						<TimeSeriesChart
 							title="Gas Used per Block"
 							tooltip="Total gas consumed by all transactions in each block."
 							showMean
