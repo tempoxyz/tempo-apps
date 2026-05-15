@@ -144,8 +144,8 @@ function normalizeRunFeed(feed: unknown): RunFeed {
 
 function runFeedWhereClause(feed: RunFeed): string {
 	return feed === 'release'
-		? "AND startsWith(r.git_ref, 'v')"
-		: "AND NOT startsWith(r.git_ref, 'v')"
+		? "AND r.metadata['run_type'] = 'release'"
+		: "AND r.metadata['run_type'] != 'release'"
 }
 
 function buildRunsQuery(
