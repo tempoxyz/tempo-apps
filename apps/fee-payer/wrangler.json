@@ -46,12 +46,6 @@
 				"TEMPO_ENV": "moderato",
 				"POSTHOG_API_KEY": ""
 			},
-			"kv_namespaces": [
-				{
-					"binding": "ApiKeyStore",
-					"id": "PLACEHOLDER_KV_NAMESPACE_ID"
-				}
-			],
 			"ratelimits": [
 				{
 					"name": "AddressRateLimiter",
@@ -79,12 +73,6 @@
 				"TEMPO_ENV": "devnet",
 				"POSTHOG_API_KEY": ""
 			},
-			"kv_namespaces": [
-				{
-					"binding": "ApiKeyStore",
-					"id": "PLACEHOLDER_KV_NAMESPACE_ID"
-				}
-			],
 			"ratelimits": [
 				{
 					"name": "AddressRateLimiter",
@@ -117,12 +105,6 @@
 				"TEMPO_ENV": "moderato",
 				"POSTHOG_API_KEY": ""
 			},
-			"kv_namespaces": [
-				{
-					"binding": "ApiKeyStore",
-					"id": "PLACEHOLDER_KV_NAMESPACE_ID"
-				}
-			],
 			"ratelimits": [
 				{
 					"name": "AddressRateLimiter",
