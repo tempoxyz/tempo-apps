@@ -4,12 +4,18 @@ import { cloneRawRequest } from 'hono/request'
 import { Hex, RpcRequest } from 'ox'
 import { Transaction } from 'viem/tempo'
 import * as z from 'zod/mini'
+import type { ApiKeyRecord } from './api-keys.js'
+import { checkBudget, recordSpend } from './api-key-budget.js'
 
 /**
  * Middleware that rate limits requests based on the transaction's `from` address.
  * Extracts the transaction from the RPC request and checks against the rate limiter.
  * Fails closed: rejects requests when the binding is missing, the sender cannot
  * be identified, or the request body is malformed.
+ *
+ * When an API key is present (set by apiKeyMiddleware), also enforces:
+ *  - Per-key daily spend budget
+ *  - Allowed destination addresses
  *
  * Only applies to requests carrying a serialized 0x76 Tempo transaction.
  * Non-transaction RPC calls (e.g. eth_chainId) pass through to the handler.
@@ -44,6 +50,9 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 				return c.json({ error: 'Bad request' }, 400)
 			const transaction = Transaction.deserialize(serialized) as {
 				from?: string
+				to?: string
+				gas?: bigint
+				maxFeePerGas?: bigint
 			}
 			const from = transaction.from
 
@@ -56,6 +65,44 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 
 			const { success } = await env.AddressRateLimiter.limit({ key: from })
 			if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
+
+			// API-key-scoped checks: destination allowlist + daily budget.
+			const apiKey = c.get('apiKey') as string | undefined
+			const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
+			if (apiKey && apiKeyRecord) {
+				if (
+					apiKeyRecord.allowedDestinations.length > 0 &&
+					transaction.to
+				) {
+					const dest = transaction.to.toLowerCase()
+					const allowed = apiKeyRecord.allowedDestinations.some(
+						(a) => a.toLowerCase() === dest,
+					)
+					if (!allowed) {
+						return c.json(
+							{ error: 'Destination address not allowed for this API key' },
+							403,
+						)
+					}
+				}
+
+				if (transaction.gas && transaction.maxFeePerGas) {
+					const budget = await checkBudget(
+						apiKey,
+						apiKeyRecord,
+						transaction.gas,
+						transaction.maxFeePerGas,
+					)
+					if (!budget.allowed) {
+						return c.json({ error: budget.reason }, 429)
+					}
+
+					// Record spend after request completes successfully.
+					c.executionCtx.waitUntil(
+						recordSpend(apiKey, transaction.gas, transaction.maxFeePerGas),
+					)
+				}
+			}
 		}
 	} catch (error) {
 		console.error('Rate limit middleware error:', error)

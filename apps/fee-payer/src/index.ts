@@ -9,6 +9,8 @@ import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { Chain } from 'viem/chains'
 import * as z from 'zod'
+import { admin } from './lib/admin.js'
+import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import { tempoChain } from './lib/chain.js'
 import {
 	FeePayerEvents,
@@ -37,11 +39,13 @@ app.use(
 			if (origin && env.ALLOWED_ORIGINS.includes(origin)) return origin
 			return null
 		},
-		allowMethods: ['GET', 'POST', 'OPTIONS'],
+		allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		allowHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 86400,
 	}),
 )
+
+app.route('/admin', admin)
 
 app.get(
 	'/usage',
@@ -87,8 +91,9 @@ app.get(
 	},
 )
 
-app.all('*', rateLimitMiddleware, async (c) => {
+app.all('*', apiKeyMiddleware, rateLimitMiddleware, async (c) => {
 	const requestContext = getRequestContext(c.req.raw)
+	const apiKeyLabel = c.get('apiKeyRecord')?.label
 
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
@@ -99,11 +104,12 @@ app.all('*', rateLimitMiddleware, async (c) => {
 			console.info(`Sponsoring transaction: ${request.method}`)
 			c.executionCtx.waitUntil(
 				captureEvent({
-					distinctId: requestContext.origin ?? 'unknown',
+					distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
 					event: FeePayerEvents.SPONSORSHIP_REQUEST,
 					properties: {
 						...requestContext,
 						rpcMethod: request.method,
+						...(apiKeyLabel ? { apiKeyLabel } : {}),
 					},
 				}),
 			)
