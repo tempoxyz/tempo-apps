@@ -119,9 +119,9 @@ async function feePayerHandler(c: Context) {
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
-app.all('/:key', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
+app.all('/:key{tp_.+}', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
 
 // Open path: https://sponsor.tempo.xyz/
-app.all('*', rateLimitMiddleware, feePayerHandler)
+app.all('/', rateLimitMiddleware, feePayerHandler)
 
 export default app
