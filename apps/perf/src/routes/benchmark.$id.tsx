@@ -262,12 +262,6 @@ function RunDetailPage(): React.JSX.Element {
 		{ quantile: '0.5' },
 	)
 
-	// Throughput
-	const txsPerBlockSeries = findSeries(
-		m,
-		'reth_tempo_payload_builder_total_transactions_last',
-	)
-
 	// Block headroom
 	const rlpSizeSeries = findSeries(
 		m,
