@@ -85,6 +85,16 @@ const SCENARIOS: Array<{
 	},
 ]
 
+// Target maximum number of points returned per chart series. Large runs can
+// contain enough raw block/metric samples to exceed Cloudflare Worker memory
+// limits when serialized as JSON, so fetch queries aggregate samples into this
+// many buckets before returning them to the app.
+const CHART_POINT_TARGET = 750
+
+function sqlString(value: string): string {
+	return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
+}
+
 export function getScenarios(): Array<Scenario> {
 	return SCENARIOS.map(({ scenarioName: _, ...s }) => s)
 }
@@ -150,8 +160,32 @@ function runFeedWhereClause(feed: RunFeed): string {
 		: "AND NOT startsWith(r.git_ref, 'v')"
 }
 
-function buildRunsQuery(scenarioName: string, feed: RunFeed): string {
+function buildRunsQuery(
+	scenarioName: string,
+	feed: RunFeed,
+	limit = 50,
+): string {
+	const scenario = sqlString(scenarioName)
+	const candidateLimit = Math.max(50, limit * 2)
+
 	return `
+		WITH candidate_runs AS (
+			SELECT
+				r.run_id,
+				r.started_at,
+				r.finished_at,
+				r.git_sha,
+				r.git_ref,
+				r.mode,
+				r.scenario_name,
+				r.config.keys AS config_keys,
+				r.config.values AS config_values
+			FROM txgen_runs r
+			WHERE r.scenario_name = ${scenario}
+				${runFeedWhereClause(feed)}
+			ORDER BY r.started_at DESC
+			LIMIT ${candidateLimit}
+		)
 		SELECT
 			r.run_id,
 			r.started_at,
@@ -160,15 +194,15 @@ function buildRunsQuery(scenarioName: string, feed: RunFeed): string {
 			r.git_ref,
 			r.mode,
 			r.scenario_name,
-			r.config.keys AS config_keys,
-			r.config.values AS config_values,
+			r.config_keys,
+			r.config_values,
 			b.avg_tps,
 			b.avg_block_time_ms,
 			b.total_gas_used,
 			b.run_duration_secs,
 			b.peak_gas_per_second,
 			b.block_count
-		FROM txgen_runs r
+		FROM candidate_runs r
 		LEFT JOIN (
 			SELECT
 				run_id,
@@ -180,32 +214,29 @@ function buildRunsQuery(scenarioName: string, feed: RunFeed): string {
 				count() AS block_count
 			FROM txgen_blocks
 			WHERE block_time_ms > 0
+				AND run_id IN (SELECT run_id FROM candidate_runs)
 			GROUP BY run_id
 		) b ON r.run_id = b.run_id
-		WHERE r.scenario_name = '${scenarioName}'
-			AND b.total_gas_used > 0
-			${runFeedWhereClause(feed)}
+		WHERE b.total_gas_used > 0
 		ORDER BY r.started_at DESC
-		LIMIT 50
+		LIMIT ${limit}
 	`
 }
 
 export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
 	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
 	.handler(async ({ data: feed }) => {
-		const results: Array<BenchRun> = []
+		const latestRuns = await Promise.all(
+			SCENARIOS.map(async (scenario) => {
+				const rows = await queryClickHouse<RunRow>(
+					buildRunsQuery(scenario.scenarioName, feed, 1),
+				)
+				const latest = rows[0]
+				return latest ? toRun(latest, scenario.id) : null
+			}),
+		)
 
-		for (const scenario of SCENARIOS) {
-			const rows = await queryClickHouse<RunRow>(
-				buildRunsQuery(scenario.scenarioName, feed),
-			)
-			const latest = rows[0]
-			if (latest) {
-				results.push(toRun(latest, scenario.id))
-			}
-		}
-
-		return results
+		return latestRuns.filter((run): run is BenchRun => run !== null)
 	})
 
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
@@ -226,6 +257,7 @@ export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 export const fetchRun = createServerFn({ method: 'POST' })
 	.inputValidator((input: string) => input)
 	.handler(async ({ data: runId }) => {
+		const run = sqlString(runId)
 		const runRows = await queryClickHouse<RunRow & { scenario_name: string }>(`
 			SELECT
 				r.run_id,
@@ -255,9 +287,10 @@ export const fetchRun = createServerFn({ method: 'POST' })
 					count() AS block_count
 				FROM txgen_blocks
 				WHERE block_time_ms > 0
+					AND run_id = ${run}
 				GROUP BY run_id
 			) b ON r.run_id = b.run_id
-			WHERE r.run_id = '${runId}'
+			WHERE r.run_id = ${run}
 			LIMIT 1
 		`)
 
@@ -276,17 +309,48 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 	.handler(async ({ data: { runId, metrics } }) => {
 		if (metrics.length === 0) return []
 
-		const metricList = metrics.map((m) => `'${m}'`).join(', ')
+		const run = sqlString(runId)
+		const metricList = metrics.map(sqlString).join(', ')
 		const rows = await queryClickHouse<{
 			metric_name: string
 			labels_json: string
 			offset_ms: string
 			value: string
 		}>(`
-			SELECT metric_name, labels_json, offset_ms, value
-			FROM txgen_metric_samples
-			WHERE run_id = '${runId}'
-				AND metric_name IN (${metricList})
+			WITH
+				${run} AS selected_run_id,
+				(
+					SELECT min(offset_ms)
+					FROM txgen_metric_samples
+					WHERE run_id = selected_run_id
+						AND metric_name IN (${metricList})
+				) AS min_offset,
+				(
+					SELECT max(offset_ms)
+					FROM txgen_metric_samples
+					WHERE run_id = selected_run_id
+						AND metric_name IN (${metricList})
+				) AS max_offset,
+				greatest(1, toUInt64(ceil((max_offset - min_offset) / ${CHART_POINT_TARGET}.0))) AS bucket_ms
+			SELECT
+				metric_name,
+				labels_json,
+				bucket_offset_ms AS offset_ms,
+				bucket_value AS value
+			FROM (
+				SELECT
+					metric_name,
+					labels_json,
+					min(offset_ms) AS bucket_offset_ms,
+					avg(value) AS bucket_value
+				FROM txgen_metric_samples
+				WHERE run_id = selected_run_id
+					AND metric_name IN (${metricList})
+				GROUP BY
+					metric_name,
+					labels_json,
+					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
+			)
 			ORDER BY metric_name, labels_json, offset_ms
 		`)
 
@@ -323,6 +387,7 @@ function nullableNumber(
 export const fetchBlocks = createServerFn({ method: 'POST' })
 	.inputValidator((input: string) => input)
 	.handler(async ({ data: runId }) => {
+		const run = sqlString(runId)
 		const rows = await queryClickHouse<{
 			block_index: string
 			block_number: string
@@ -338,10 +403,18 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 			execution_cache_wait_us: string | null
 			sparse_trie_wait_us: string | null
 		}>(`
+			WITH
+				${run} AS selected_run_id,
+				(
+					SELECT count()
+					FROM txgen_blocks
+					WHERE run_id = selected_run_id
+				) AS total_rows,
+				greatest(1, toUInt64(ceil(total_rows / ${CHART_POINT_TARGET}.0))) AS bucket_size
 			SELECT
-				block_index,
-				block_number,
-				chain_timestamp_ms,
+				bucket_block_index AS block_index,
+				bucket_block_number AS block_number,
+				bucket_chain_timestamp_ms AS chain_timestamp_ms,
 				tx_count,
 				gas_used,
 				gas_limit,
@@ -352,8 +425,25 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 				persistence_wait_us,
 				execution_cache_wait_us,
 				sparse_trie_wait_us
-			FROM txgen_blocks
-			WHERE run_id = '${runId}'
+			FROM (
+				SELECT
+					min(block_index) AS bucket_block_index,
+					min(block_number) AS bucket_block_number,
+					min(chain_timestamp_ms) AS bucket_chain_timestamp_ms,
+					avg(tx_count) AS tx_count,
+					avg(gas_used) AS gas_used,
+					any(gas_limit) AS gas_limit,
+					avg(block_time_ms) AS block_time_ms,
+					avg(new_payload_ms) AS new_payload_ms,
+					avg(forkchoice_updated_ms) AS forkchoice_updated_ms,
+					avg(new_payload_server_latency_us) AS new_payload_server_latency_us,
+					avg(persistence_wait_us) AS persistence_wait_us,
+					avg(execution_cache_wait_us) AS execution_cache_wait_us,
+					avg(sparse_trie_wait_us) AS sparse_trie_wait_us
+				FROM txgen_blocks
+				WHERE run_id = selected_run_id
+				GROUP BY intDiv(toUInt64(block_index), bucket_size)
+			)
 			ORDER BY block_index
 		`)
 
