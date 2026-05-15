@@ -69,8 +69,8 @@ function MethodologyPage(): React.JSX.Element {
 
 				<Section title="Node Configuration">
 					<p>
-						Benchmarks run in single-node dev mode on a dedicated bare-metal
-						server.
+						Benchmarks run two local validators in consensus on a dedicated
+						bare-metal server with 100 GiB pre-bloated state.
 					</p>
 				</Section>
 
