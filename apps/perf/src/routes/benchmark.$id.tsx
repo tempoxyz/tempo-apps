@@ -181,13 +181,13 @@ function RunDetailPage(): React.JSX.Element {
 		enabled: !!run?.scenarioId,
 	})
 
-	const { data: metrics } = useQuery({
+	const { data: metrics, isLoading: metricsLoading } = useQuery({
 		queryKey: ['metrics', id],
 		queryFn: () => fetchMetrics({ data: { runId: id, metrics: METRIC_NAMES } }),
 		enabled: !!run,
 	})
 
-	const { data: blocks } = useQuery({
+	const { data: blocks, isLoading: blocksLoading } = useQuery({
 		queryKey: ['blocks', id],
 		queryFn: () => fetchBlocks({ data: id }),
 		enabled: !!run,
@@ -643,6 +643,7 @@ function RunDetailPage(): React.JSX.Element {
 						<TimeSeriesChart
 							title="RLP Block Size"
 							tooltip="RLP-encoded size of each block in kilobytes."
+							loading={metricsLoading}
 							showMean
 							series={[
 								{
@@ -763,6 +764,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Total wall-clock time to build each block payload, from start to sealed block."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					showMean
 					series={[
 						{
@@ -786,6 +788,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Top-level disjoint phases of block building. These sum to approximately the total payload build duration."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					stacked
 					showMean
 					series={[
@@ -830,6 +833,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Internal timings from block finalization. Hashed Post State converts raw state changes into a hashed representation. State Root (sync) computes the root synchronously and is near zero when the trie is precomputed in the background."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					showMean
 					series={[
 						{
@@ -861,6 +865,7 @@ function RunDetailPage(): React.JSX.Element {
 					<TimeSeriesChart
 						title="Gas Throughput"
 						tooltip="Gas processed per second for each block, based on gas usage and block time."
+						loading={blocksLoading}
 						showMean
 						series={[
 							{
@@ -878,6 +883,7 @@ function RunDetailPage(): React.JSX.Element {
 					<TimeSeriesChart
 						title="Txs per Block"
 						tooltip="Number of user transactions included in each block as reported by the builder."
+						loading={metricsLoading}
 						showMean
 						series={[
 							{
@@ -908,6 +914,7 @@ function RunDetailPage(): React.JSX.Element {
 								? 'Rate of transactions sent, confirmed as successful, or failed per second.'
 								: 'Rate of blocks sent, confirmed as successful, or failed per second.'
 						}
+						loading={metricsLoading}
 						showMean
 						series={[
 							{
@@ -931,6 +938,7 @@ function RunDetailPage(): React.JSX.Element {
 					<TimeSeriesChart
 						title="Inflight"
 						tooltip="Number of transactions submitted but not yet included in a block."
+						loading={metricsLoading}
 						series={[
 							{
 								label: 'Inflight',
@@ -949,6 +957,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Transaction pool state: pending (ready to execute), queued (future nonce), and basefee (underpaying current base fee). Includes AA 2D pending/queued gauges when present."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					stacked
 					showMean
 					series={[
@@ -978,6 +987,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Transactions skipped during block building due to nonce conflicts, validation failures, or sender mismatches. Shown as rate per second."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					series={[
 						{
 							label: 'Nonce Too Low',
@@ -1005,6 +1015,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Time spent writing block state and trie updates to the database after each block is built."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					series={[
 						{
 							label: 'Write State',
@@ -1027,6 +1038,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Percentage of account and storage lookups served from the in-memory cache rather than disk."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					series={[
 						{
 							label: 'Account Cache',
@@ -1050,6 +1062,7 @@ function RunDetailPage(): React.JSX.Element {
 					tooltip="Process memory usage reported by jemalloc. Resident = physical RAM used; Allocated = bytes actively allocated by the application."
 				/>
 				<TimeSeriesChart
+					loading={metricsLoading}
 					series={[
 						{
 							label: 'Resident',
@@ -1262,6 +1275,7 @@ function TimeSeriesChart(props: {
 	xFormat?: 'time' | 'block' | undefined
 	yMax?: number | undefined
 	referenceBands?: Array<ReferenceBand> | undefined
+	loading?: boolean | undefined
 }): React.JSX.Element {
 	const plotRef = React.useRef<HTMLDivElement>(null)
 	const [hoverX, setHoverX] = React.useState<number | null>(null)
@@ -1272,12 +1286,40 @@ function TimeSeriesChart(props: {
 	if (allPoints.length === 0) {
 		return (
 			<div className="card flex h-52 items-center justify-center p-5 text-[13px] text-tertiary">
-				{props.title && (
-					<span className="mr-1 font-medium text-secondary">
-						{props.title}:
-					</span>
-				)}{' '}
-				No data
+				{props.loading ? (
+					<div className="flex items-center gap-2">
+						<svg
+							className="h-4 w-4 animate-spin text-secondary"
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<circle
+								className="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								strokeWidth="4"
+							/>
+							<path
+								className="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+							/>
+						</svg>
+						<span>Loading…</span>
+					</div>
+				) : (
+					<>
+						{props.title && (
+							<span className="mr-1 font-medium text-secondary">
+								{props.title}:
+							</span>
+						)}{' '}
+						No data
+					</>
+				)}
 			</div>
 		)
 	}
