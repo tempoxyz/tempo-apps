@@ -115,13 +115,19 @@ async function feePayerHandler(c: Context) {
 			)
 		},
 	})
-	return handler.fetch(c.req.raw)
+	const raw = c.req.raw
+	const url = new URL(raw.url)
+	if (url.pathname !== '/') {
+		url.pathname = '/'
+		return handler.fetch(new Request(url, raw))
+	}
+	return handler.fetch(raw)
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
-app.all('/:key', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
+app.all('/:key{tp_.+}', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
 
 // Open path: https://sponsor.tempo.xyz/
-app.all('*', rateLimitMiddleware, feePayerHandler)
+app.all('/', rateLimitMiddleware, feePayerHandler)
 
 export default app

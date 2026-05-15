@@ -6,7 +6,10 @@ const MICRODOLLAR_DECIMALS = 6
 const ATTODOLLARS_PER_MICRODOLLAR = 10n ** 12n
 
 function attodollarToMicrodollar(attodollars: bigint) {
-	return (attodollars + ATTODOLLARS_PER_MICRODOLLAR - 1n) / ATTODOLLARS_PER_MICRODOLLAR
+	return (
+		(attodollars + ATTODOLLARS_PER_MICRODOLLAR - 1n) /
+		ATTODOLLARS_PER_MICRODOLLAR
+	)
 }
 
 function spendKvKey(apiKey: string) {
@@ -16,7 +19,7 @@ function spendKvKey(apiKey: string) {
 
 /** Read the current daily spend for an API key from KV. */
 async function getDailySpend(apiKey: string): Promise<bigint> {
-	const raw = await env.ApiKeyStore.get(spendKvKey(apiKey))
+	const raw = await env.SponsorApiKeyStore!.get(spendKvKey(apiKey))
 	if (!raw) return 0n
 	return BigInt(raw)
 }
@@ -30,7 +33,7 @@ export async function recordSpend(
 	const fee = attodollarToMicrodollar(gasUsed * effectiveGasPrice)
 	const key = spendKvKey(apiKey)
 	const current = await getDailySpend(apiKey)
-	await env.ApiKeyStore.put(key, (current + fee).toString(), {
+	await env.SponsorApiKeyStore!.put(key, (current + fee).toString(), {
 		expirationTtl: 86_400,
 	})
 }

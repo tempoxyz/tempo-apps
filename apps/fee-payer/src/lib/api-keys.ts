@@ -33,11 +33,10 @@ export function generateKey(): string {
 	return `tp_${raw}`
 }
 
-/** Look up an API key record from KV. Returns `null` on miss or inactive key. */
-export async function getApiKey(
-	key: string,
-): Promise<ApiKeyRecord | null> {
-	const raw = await env.ApiKeyStore.get(kvKey(key))
+/** Look up an API key record from KV. Returns `null` on miss, inactive key, or when KV is not bound. */
+export async function getApiKey(key: string): Promise<ApiKeyRecord | null> {
+	if (!env.SponsorApiKeyStore) return null
+	const raw = await env.SponsorApiKeyStore.get(kvKey(key))
 	if (!raw) return null
 	const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
 	if (!parsed.success) return null
@@ -55,21 +54,26 @@ export async function createApiKey(
 		createdAt: new Date().toISOString(),
 		active: true,
 	}
-	await env.ApiKeyStore.put(kvKey(key), JSON.stringify(full))
+	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(full))
 	return key
 }
 
 /** Update an existing API key record. */
 export async function updateApiKey(
 	key: string,
-	updates: Partial<Pick<ApiKeyRecord, 'label' | 'dailyLimitUsd' | 'allowedDestinations' | 'active'>>,
+	updates: Partial<
+		Pick<
+			ApiKeyRecord,
+			'label' | 'dailyLimitUsd' | 'allowedDestinations' | 'active'
+		>
+	>,
 ): Promise<boolean> {
-	const existing = await env.ApiKeyStore.get(kvKey(key))
+	const existing = await env.SponsorApiKeyStore!.get(kvKey(key))
 	if (!existing) return false
 	const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
 	if (!parsed.success) return false
 	const updated = { ...parsed.data, ...updates }
-	await env.ApiKeyStore.put(kvKey(key), JSON.stringify(updated))
+	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(updated))
 	return true
 }
 
@@ -79,16 +83,17 @@ export async function revokeApiKey(key: string): Promise<boolean> {
 }
 
 /** List all API keys (paginated via KV list). Returns key + record pairs. */
-export async function listApiKeys(
-	cursor?: string,
-): Promise<{ keys: Array<{ key: string; record: ApiKeyRecord }>; cursor: string | null }> {
-	const list = await env.ApiKeyStore.list({
+export async function listApiKeys(cursor?: string): Promise<{
+	keys: Array<{ key: string; record: ApiKeyRecord }>
+	cursor: string | null
+}> {
+	const list = await env.SponsorApiKeyStore!.list({
 		prefix: KV_PREFIX,
 		cursor: cursor ?? undefined,
 	})
 	const keys: Array<{ key: string; record: ApiKeyRecord }> = []
 	for (const item of list.keys) {
-		const raw = await env.ApiKeyStore.get(item.name)
+		const raw = await env.SponsorApiKeyStore!.get(item.name)
 		if (!raw) continue
 		const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
 		if (!parsed.success) continue
