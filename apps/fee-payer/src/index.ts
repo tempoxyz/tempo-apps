@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
-import { Hono } from 'hono'
+import { type Context, Hono } from 'hono'
 import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
@@ -91,7 +91,7 @@ app.get(
 	},
 )
 
-app.all('*', apiKeyMiddleware, rateLimitMiddleware, async (c) => {
+async function feePayerHandler(c: Context) {
 	const requestContext = getRequestContext(c.req.raw)
 	const apiKeyLabel = c.get('apiKeyRecord')?.label
 
@@ -116,6 +116,12 @@ app.all('*', apiKeyMiddleware, rateLimitMiddleware, async (c) => {
 		},
 	})
 	return handler.fetch(c.req.raw)
-})
+}
+
+// Keyed path: https://sponsor.tempo.xyz/tp_abc123
+app.all('/:key', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
+
+// Open path: https://sponsor.tempo.xyz/
+app.all('*', rateLimitMiddleware, feePayerHandler)
 
 export default app

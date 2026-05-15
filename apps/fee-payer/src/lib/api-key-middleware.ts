@@ -9,24 +9,20 @@ declare module 'hono' {
 }
 
 /**
- * Middleware that authenticates requests via `Authorization: Bearer <key>`.
- * When a valid API key is present, sets `apiKey` and `apiKeyRecord` on context.
+ * Middleware that authenticates requests via a `tp_`-prefixed path segment.
+ * e.g. `https://sponsor.tempo.xyz/tp_abc123`
  *
- * If no `Authorization` header is present the request passes through
- * unauthenticated (preserving the existing open-access behaviour).
+ * When a valid API key is present, sets `apiKey` and `apiKeyRecord` on context.
+ * Requests to `/` (no key) pass through unauthenticated (preserving open access).
  */
 export async function apiKeyMiddleware(c: Context, next: Next) {
-	const auth = c.req.header('Authorization')
-	if (!auth) return next()
+	const keyParam = c.req.param('key')
+	if (!keyParam) return next()
 
-	const match = auth.match(/^Bearer\s+(.+)$/i)
-	if (!match) return c.json({ error: 'Invalid Authorization header' }, 401)
-
-	const key = match[1]
-	const record = await getApiKey(key)
+	const record = await getApiKey(keyParam)
 	if (!record) return c.json({ error: 'Invalid or revoked API key' }, 401)
 
-	c.set('apiKey', key)
+	c.set('apiKey', keyParam)
 	c.set('apiKeyRecord', record)
 
 	await next()
