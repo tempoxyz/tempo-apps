@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
-import { type Context, Hono } from 'hono'
+import { Hono } from 'hono'
 import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
@@ -9,8 +9,6 @@ import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import type { Chain } from 'viem/chains'
 import * as z from 'zod'
-import { admin } from './lib/admin.js'
-import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import { tempoChain } from './lib/chain.js'
 import {
 	FeePayerEvents,
@@ -39,13 +37,11 @@ app.use(
 			if (origin && env.ALLOWED_ORIGINS.includes(origin)) return origin
 			return null
 		},
-		allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+		allowMethods: ['GET', 'POST', 'OPTIONS'],
 		allowHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 86400,
 	}),
 )
-
-app.route('/admin', admin)
 
 app.get(
 	'/usage',
@@ -91,9 +87,8 @@ app.get(
 	},
 )
 
-async function feePayerHandler(c: Context) {
+app.all('*', rateLimitMiddleware, async (c) => {
 	const requestContext = getRequestContext(c.req.raw)
-	const apiKeyLabel = c.get('apiKeyRecord')?.label
 
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
@@ -104,24 +99,17 @@ async function feePayerHandler(c: Context) {
 			console.info(`Sponsoring transaction: ${request.method}`)
 			c.executionCtx.waitUntil(
 				captureEvent({
-					distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
+					distinctId: requestContext.origin ?? 'unknown',
 					event: FeePayerEvents.SPONSORSHIP_REQUEST,
 					properties: {
 						...requestContext,
 						rpcMethod: request.method,
-						...(apiKeyLabel ? { apiKeyLabel } : {}),
 					},
 				}),
 			)
 		},
 	})
 	return handler.fetch(c.req.raw)
-}
-
-// Keyed path: https://sponsor.tempo.xyz/tp_abc123
-app.all('/:key', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
-
-// Open path: https://sponsor.tempo.xyz/
-app.all('*', rateLimitMiddleware, feePayerHandler)
+})
 
 export default app

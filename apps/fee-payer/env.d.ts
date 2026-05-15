@@ -3,7 +3,6 @@ interface EnvironmentVariables {
 	readonly TEMPO_RPC_URL: string
 	readonly ALLOWED_ORIGINS: string
 	readonly POSTHOG_API_KEY?: string
-	readonly ADMIN_SECRET?: string
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

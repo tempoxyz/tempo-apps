@@ -14,12 +14,6 @@
 	],
 	"preview_urls": true,
 	"keep_vars": true,
-	"kv_namespaces": [
-		{
-			"binding": "ApiKeyStore",
-			"id": "PLACEHOLDER_KV_NAMESPACE_ID"
-		}
-	],
 	"observability": {
 		"enabled": true,
 		"logs": {
