@@ -123,11 +123,16 @@ export namespace Amount {
 
 		const rawFormatted = Value.format(value, decimals)
 		const fullFormatted = PriceFormatter.formatAmount(rawFormatted)
-		const formatted = short
-			? PriceFormatter.formatAmountShort(rawFormatted, {
-					maximumFractionDigits: shortMaximumFractionDigits,
-				})
-			: fullFormatted
+		const numericValue = Number(rawFormatted)
+		const isCurrencySmall =
+			prefix === '$' && numericValue > 0 && numericValue < 0.01
+		const formatted = isCurrencySmall
+			? '<0.01'
+			: short
+				? PriceFormatter.formatAmountShort(rawFormatted, {
+						maximumFractionDigits: shortMaximumFractionDigits,
+					})
+				: fullFormatted
 		const isSmall = formatted.startsWith('<')
 
 		return (
