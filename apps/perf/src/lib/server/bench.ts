@@ -48,10 +48,22 @@ const SCENARIOS: Array<{
 	scenarioName: string
 }> = [
 	{
+		id: 'tip20-10k',
+		label: 'TIP-20 — 10K TPS',
+		workload: '100% TIP-20 Transfers',
+		scenarioName: 'tip20-10k',
+	},
+	{
 		id: 'tip20-20k',
 		label: 'TIP-20 — 20K TPS',
 		workload: '100% TIP-20 Transfers',
 		scenarioName: 'tip20-20k',
+	},
+	{
+		id: 'mix-10k',
+		label: 'Mix — 10K TPS',
+		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
+		scenarioName: 'mix-10k',
 	},
 	{
 		id: 'mix-20k',
