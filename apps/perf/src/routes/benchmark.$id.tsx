@@ -57,7 +57,7 @@ const METRIC_NAMES = [
 const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
 
 function isTag(ref: string): boolean {
-	return /^v\d/.test(ref)
+	return ref.startsWith('v')
 }
 
 function commitUrl(commit: string): string {
@@ -137,9 +137,11 @@ export const Route = createFileRoute('/benchmark/$id')({
 		})
 
 		if (run?.scenarioId) {
+			const feed = isTag(run.ref) ? 'release' : 'nightly'
 			await context.queryClient.ensureQueryData({
-				queryKey: ['scenarioRuns', run.scenarioId],
-				queryFn: () => fetchRunsForScenario({ data: run.scenarioId }),
+				queryKey: ['scenarioRuns', run.scenarioId, feed],
+				queryFn: () =>
+					fetchRunsForScenario({ data: { scenarioId: run.scenarioId, feed } }),
 			})
 		}
 	},
@@ -167,9 +169,13 @@ function RunDetailPage(): React.JSX.Element {
 		queryFn: () => fetchRun({ data: id }),
 	})
 
+	const runFeed = run && isTag(run.ref) ? 'release' : 'nightly'
 	const { data: scenarioRuns } = useQuery({
-		queryKey: ['scenarioRuns', run?.scenarioId ?? ''],
-		queryFn: () => fetchRunsForScenario({ data: run?.scenarioId ?? '' }),
+		queryKey: ['scenarioRuns', run?.scenarioId ?? '', runFeed],
+		queryFn: () =>
+			fetchRunsForScenario({
+				data: { scenarioId: run?.scenarioId ?? '', feed: runFeed },
+			}),
 		enabled: !!run?.scenarioId,
 	})
 

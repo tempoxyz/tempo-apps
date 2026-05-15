@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as NightlyRouteImport } from './routes/nightly'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BenchmarkIdRouteImport } from './routes/benchmark.$id'
 
+const NightlyRoute = NightlyRouteImport.update({
+  id: '/nightly',
+  path: '/nightly',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
@@ -32,35 +38,46 @@ const BenchmarkIdRoute = BenchmarkIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/methodology': typeof MethodologyRoute
+  '/nightly': typeof NightlyRoute
   '/benchmark/$id': typeof BenchmarkIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/methodology': typeof MethodologyRoute
+  '/nightly': typeof NightlyRoute
   '/benchmark/$id': typeof BenchmarkIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/methodology': typeof MethodologyRoute
+  '/nightly': typeof NightlyRoute
   '/benchmark/$id': typeof BenchmarkIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/methodology' | '/benchmark/$id'
+  fullPaths: '/' | '/methodology' | '/nightly' | '/benchmark/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/methodology' | '/benchmark/$id'
-  id: '__root__' | '/' | '/methodology' | '/benchmark/$id'
+  to: '/' | '/methodology' | '/nightly' | '/benchmark/$id'
+  id: '__root__' | '/' | '/methodology' | '/nightly' | '/benchmark/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MethodologyRoute: typeof MethodologyRoute
+  NightlyRoute: typeof NightlyRoute
   BenchmarkIdRoute: typeof BenchmarkIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/nightly': {
+      id: '/nightly'
+      path: '/nightly'
+      fullPath: '/nightly'
+      preLoaderRoute: typeof NightlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/methodology': {
       id: '/methodology'
       path: '/methodology'
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MethodologyRoute: MethodologyRoute,
+  NightlyRoute: NightlyRoute,
   BenchmarkIdRoute: BenchmarkIdRoute,
 }
 export const routeTree = rootRouteImport

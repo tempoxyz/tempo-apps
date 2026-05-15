@@ -23,6 +23,13 @@ export type BenchRun = {
 	blockCount: number
 }
 
+export type RunFeed = 'release' | 'nightly'
+
+export type RunsForScenarioInput = {
+	scenarioId: string
+	feed?: RunFeed | undefined
+}
+
 export type MetricSample = {
 	offsetMs: number
 	value: number
@@ -133,7 +140,17 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 	}
 }
 
-function buildRunsQuery(scenarioName: string): string {
+function normalizeRunFeed(feed: unknown): RunFeed {
+	return feed === 'nightly' ? 'nightly' : 'release'
+}
+
+function runFeedWhereClause(feed: RunFeed): string {
+	return feed === 'release'
+		? "AND startsWith(r.git_ref, 'v')"
+		: "AND NOT startsWith(r.git_ref, 'v')"
+}
+
+function buildRunsQuery(scenarioName: string, feed: RunFeed): string {
 	return `
 		SELECT
 			r.run_id,
@@ -167,18 +184,20 @@ function buildRunsQuery(scenarioName: string): string {
 		) b ON r.run_id = b.run_id
 		WHERE r.scenario_name = '${scenarioName}'
 			AND b.total_gas_used > 0
+			${runFeedWhereClause(feed)}
 		ORDER BY r.started_at DESC
 		LIMIT 50
 	`
 }
 
-export const fetchAllLatestRuns = createServerFn({ method: 'GET' }).handler(
-	async () => {
+export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
+	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
+	.handler(async ({ data: feed }) => {
 		const results: Array<BenchRun> = []
 
 		for (const scenario of SCENARIOS) {
 			const rows = await queryClickHouse<RunRow>(
-				buildRunsQuery(scenario.scenarioName),
+				buildRunsQuery(scenario.scenarioName, feed),
 			)
 			const latest = rows[0]
 			if (latest) {
@@ -187,17 +206,19 @@ export const fetchAllLatestRuns = createServerFn({ method: 'GET' }).handler(
 		}
 
 		return results
-	},
-)
+	})
 
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
-	.inputValidator((input: string) => input)
-	.handler(async ({ data: scenarioId }) => {
+	.inputValidator((input: RunsForScenarioInput) => ({
+		scenarioId: input.scenarioId,
+		feed: normalizeRunFeed(input.feed),
+	}))
+	.handler(async ({ data: { scenarioId, feed } }) => {
 		const config = SCENARIOS.find((s) => s.id === scenarioId)
 		if (!config) return []
 
 		const rows = await queryClickHouse<RunRow>(
-			buildRunsQuery(config.scenarioName),
+			buildRunsQuery(config.scenarioName, feed),
 		)
 		return rows.map((row) => toRun(row, scenarioId))
 	})
