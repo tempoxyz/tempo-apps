@@ -115,7 +115,13 @@ async function feePayerHandler(c: Context) {
 			)
 		},
 	})
-	return handler.fetch(c.req.raw)
+	const raw = c.req.raw
+	const url = new URL(raw.url)
+	if (url.pathname !== '/') {
+		url.pathname = '/'
+		return handler.fetch(new Request(url, raw))
+	}
+	return handler.fetch(raw)
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
