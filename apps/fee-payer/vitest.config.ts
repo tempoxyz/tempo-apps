@@ -62,7 +62,7 @@ export default defineConfig({
 					INDEXSUPPLY_API_KEY: 'test-key',
 					ADMIN_SECRET: 'test-admin-secret',
 				},
-				kvNamespaces: ['ApiKeyStore'],
+				kvNamespaces: ['SponsorApiKeyStore'],
 			},
 		}),
 	],

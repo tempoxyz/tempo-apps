@@ -35,8 +35,8 @@ export function generateKey(): string {
 
 /** Look up an API key record from KV. Returns `null` on miss, inactive key, or when KV is not bound. */
 export async function getApiKey(key: string): Promise<ApiKeyRecord | null> {
-	if (!env.ApiKeyStore) return null
-	const raw = await env.ApiKeyStore.get(kvKey(key))
+	if (!env.SponsorApiKeyStore) return null
+	const raw = await env.SponsorApiKeyStore.get(kvKey(key))
 	if (!raw) return null
 	const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
 	if (!parsed.success) return null
@@ -54,7 +54,7 @@ export async function createApiKey(
 		createdAt: new Date().toISOString(),
 		active: true,
 	}
-	await env.ApiKeyStore!.put(kvKey(key), JSON.stringify(full))
+	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(full))
 	return key
 }
 
@@ -68,12 +68,12 @@ export async function updateApiKey(
 		>
 	>,
 ): Promise<boolean> {
-	const existing = await env.ApiKeyStore!.get(kvKey(key))
+	const existing = await env.SponsorApiKeyStore!.get(kvKey(key))
 	if (!existing) return false
 	const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
 	if (!parsed.success) return false
 	const updated = { ...parsed.data, ...updates }
-	await env.ApiKeyStore!.put(kvKey(key), JSON.stringify(updated))
+	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(updated))
 	return true
 }
 
@@ -87,13 +87,13 @@ export async function listApiKeys(cursor?: string): Promise<{
 	keys: Array<{ key: string; record: ApiKeyRecord }>
 	cursor: string | null
 }> {
-	const list = await env.ApiKeyStore!.list({
+	const list = await env.SponsorApiKeyStore!.list({
 		prefix: KV_PREFIX,
 		cursor: cursor ?? undefined,
 	})
 	const keys: Array<{ key: string; record: ApiKeyRecord }> = []
 	for (const item of list.keys) {
-		const raw = await env.ApiKeyStore!.get(item.name)
+		const raw = await env.SponsorApiKeyStore!.get(item.name)
 		if (!raw) continue
 		const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
 		if (!parsed.success) continue

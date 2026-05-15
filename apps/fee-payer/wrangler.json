@@ -16,7 +16,7 @@
 	"keep_vars": true,
 	"kv_namespaces": [
 		{
-			"binding": "ApiKeyStore",
+			"binding": "SponsorApiKeyStore",
 			"id": "PLACEHOLDER_KV_NAMESPACE_ID"
 		}
 	],
@@ -133,8 +133,8 @@
 			},
 			"kv_namespaces": [
 				{
-					"binding": "ApiKeyStore",
-					"id": "PLACEHOLDER_KV_NAMESPACE_ID"
+					"binding": "SponsorApiKeyStore",
+					"id": "08ce4ce226fe4dd3869ca91d5e3dd700"
 				}
 			],
 			"ratelimits": [
