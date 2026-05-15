@@ -19,6 +19,10 @@ import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
+import {
+	MicroPrecisionProvider,
+	useMicroPrecision,
+} from '#comps/MicroPrecision.tsx'
 import { AddressCsvExportButton } from '#comps/AddressCsvExportButton'
 import { WalletActions } from '#comps/WalletActions'
 import { AddressCell } from '#comps/AddressCell'
@@ -100,6 +104,7 @@ import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
+import MicroscopeIcon from '~icons/lucide/microscope'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -910,6 +915,7 @@ function SectionsWrapper(props: {
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const { voucher } = Route.useSearch()
+	const [microPrecision, setMicroPrecision] = React.useState(false)
 
 	const after = React.useMemo(() => {
 		if (period === '24h') return Math.floor(Date.now() / 1000) - 86400
@@ -1317,6 +1323,12 @@ function SectionsWrapper(props: {
 					itemsLabel: 'transactions',
 					contextual: (
 						<div className="flex items-center justify-end gap-[8px]">
+							<MicroPrecisionToggle
+								enabled={microPrecision}
+								onToggle={() =>
+									setMicroPrecision((prev) => !prev)
+								}
+							/>
 							<TransactionFilters
 								status={status}
 								period={period}
@@ -1334,6 +1346,7 @@ function SectionsWrapper(props: {
 						</div>
 					),
 					content: transactionsError ?? (
+						<MicroPrecisionProvider value={microPrecision}>
 						<DataGrid
 							columns={{
 								stacked: transactionsColumns,
@@ -1413,6 +1426,7 @@ function SectionsWrapper(props: {
 									: 'No transactions found.'
 							}
 						/>
+						</MicroPrecisionProvider>
 					),
 				}
 			case 'holdings': {
@@ -1764,16 +1778,23 @@ function TransactionFeeCell(props: {
 	effectiveGasPrice: string
 }) {
 	const { isTokenListed } = useTokenListMembership()
+	const microPrecision = useMicroPrecision()
 	const fee =
 		Hex.toBigInt(props.gasUsed as Hex.Hex) *
 		Hex.toBigInt(props.effectiveGasPrice as Hex.Hex)
 	const feeRaw = formatUnits(fee, 18)
+	const feeNumber = Number(feeRaw)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
 	const feeDisplay = showUsdPrefix
-		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
-		: PriceFormatter.formatAmountShort(feeRaw)
+		? microPrecision && feeNumber > 0 && feeNumber < 0.01
+			? `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 5 }).format(feeNumber)}`
+			: PriceFormatter.format(fee, { decimals: 18, format: 'short' })
+		: PriceFormatter.formatAmountShort(
+				feeRaw,
+				microPrecision ? { maximumFractionDigits: 5 } : undefined,
+			)
 	return <span className="text-tertiary">{feeDisplay}</span>
 }
 
@@ -2028,6 +2049,32 @@ function HoldingsFooter(props: {
 				</div>
 			)}
 		</div>
+	)
+}
+
+function MicroPrecisionToggle(props: {
+	enabled: boolean
+	onToggle: () => void
+}) {
+	const { enabled, onToggle } = props
+	return (
+		<button
+			type="button"
+			onClick={onToggle}
+			title={
+				enabled
+					? 'Hide micro amounts'
+					: 'Show micro amounts (5 decimals)'
+			}
+			className={cx(
+				'flex items-center gap-[6px] border rounded-[6px] px-[8px] py-[4px] text-[12px] cursor-pointer transition-colors',
+				enabled
+					? 'border-accent/20 text-accent bg-accent/5'
+					: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
+			)}
+		>
+			<MicroscopeIcon className="w-[14px] h-[14px]" />
+		</button>
 	)
 }
 

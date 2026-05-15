@@ -6,6 +6,7 @@ import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { GetBlockReturnType } from 'wagmi/actions'
 import { Amount } from '#comps/Amount'
+import { useMicroPrecision } from '#comps/MicroPrecision.tsx'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -51,13 +52,20 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 
 	if (!receipt) return <span className="text-tertiary">…</span>
 
+	const microPrecision = useMicroPrecision()
 	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
+	const feeNumber = Number(feeRaw)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
 	const feeDisplay = showUsdPrefix
-		? PriceFormatter.format(Number(feeRaw))
-		: PriceFormatter.formatAmountShort(feeRaw)
+		? microPrecision && feeNumber > 0 && feeNumber < 0.01
+			? `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 5 }).format(feeNumber)}`
+			: PriceFormatter.format(feeNumber)
+		: PriceFormatter.formatAmountShort(
+				feeRaw,
+				microPrecision ? { maximumFractionDigits: 5 } : undefined,
+			)
 
 	return <span className="text-tertiary">{feeDisplay}</span>
 }

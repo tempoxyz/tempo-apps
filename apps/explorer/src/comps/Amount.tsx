@@ -5,6 +5,7 @@ import { maxUint256 } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useReadContracts } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
+import { useMicroPrecision } from '#comps/MicroPrecision.tsx'
 import { TokenIcon } from '#comps/TokenIcon.tsx'
 import { ellipsis } from '#lib/chars'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -121,16 +122,21 @@ export namespace Amount {
 				</span>
 			)
 
+		const microPrecision = useMicroPrecision()
 		const rawFormatted = Value.format(value, decimals)
 		const fullFormatted = PriceFormatter.formatAmount(rawFormatted)
 		const numericValue = Number(rawFormatted)
+		const smallThreshold = microPrecision ? 0.00001 : 0.01
+		const smallLabel = microPrecision ? '<0.00001' : '<0.01'
 		const isCurrencySmall =
-			prefix === '$' && numericValue > 0 && numericValue < 0.01
+			prefix === '$' && numericValue > 0 && numericValue < smallThreshold
+		const resolvedShortDigits =
+			shortMaximumFractionDigits ?? (microPrecision ? 5 : undefined)
 		const formatted = isCurrencySmall
-			? '<0.01'
+			? smallLabel
 			: short
 				? PriceFormatter.formatAmountShort(rawFormatted, {
-						maximumFractionDigits: shortMaximumFractionDigits,
+						maximumFractionDigits: resolvedShortDigits,
 					})
 				: fullFormatted
 		const isSmall = formatted.startsWith('<')
