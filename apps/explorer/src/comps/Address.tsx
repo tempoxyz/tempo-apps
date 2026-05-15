@@ -3,12 +3,28 @@ import type { Address as AddressType } from 'ox'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from 'midcut'
 import { cx } from '#lib/css'
+import { getContractInfo } from '#lib/domain/contracts'
 
 export function Address(props: Address.Props) {
-	const { address, align, chars = 3, className, search, self, title } = props
+	const {
+		address,
+		align,
+		chars = 3,
+		className,
+		search,
+		self,
+		title,
+		hideLabel,
+	} = props
 	const { isHighlighted, handlers } = useAddressHighlight(address)
+	const contractInfo = hideLabel ? undefined : getContractInfo(address)
 	return (
 		<>
+			{contractInfo && (
+				<span className="text-[11px] px-[6px] py-[2px] rounded bg-base-alt/65 text-tertiary whitespace-nowrap mr-[4px]">
+					{contractInfo.name}
+				</span>
+			)}
 			<Link
 				to="/address/$address"
 				params={{ address }}
@@ -38,5 +54,7 @@ export namespace Address {
 		search?: Record<string, unknown>
 		self?: boolean
 		title?: string
+		/** When true, suppress the auto-detected contract label */
+		hideLabel?: boolean
 	}
 }

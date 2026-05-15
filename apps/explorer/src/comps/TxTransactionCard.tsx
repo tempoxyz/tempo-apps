@@ -4,6 +4,7 @@ import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from 'midcut'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#lib/css'
+import { getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -79,30 +80,12 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 				},
 				{
 					label: 'From',
-					value: (
-						<Link
-							to="/address/$address"
-							params={{ address: from }}
-							className="text-[13px] text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
-							title={from}
-						>
-							<Midcut value={from} prefix="0x" min={4} align="end" />
-						</Link>
-					),
+					value: <AddressWithLabel address={from} />,
 				},
 				to
 					? {
 							label: 'To',
-							value: (
-								<Link
-									to="/address/$address"
-									params={{ address: to }}
-									className="text-[13px] text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
-									title={to}
-								>
-									<Midcut value={to} prefix="0x" min={4} align="end" />
-								</Link>
-							),
+							value: <AddressWithLabel address={to} />,
 						}
 					: {
 							label: 'To',
@@ -125,6 +108,28 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 				</Link>,
 			]}
 		/>
+	)
+}
+
+function AddressWithLabel(props: { address: Address.Address }) {
+	const { address } = props
+	const contractInfo = getContractInfo(address)
+	return (
+		<span className="inline-flex items-center gap-[4px] w-full justify-end max-w-[50ch]">
+			{contractInfo && (
+				<span className="text-[11px] px-[6px] py-[2px] rounded bg-base-alt/65 text-tertiary whitespace-nowrap">
+					{contractInfo.name}
+				</span>
+			)}
+			<Link
+				to="/address/$address"
+				params={{ address }}
+				className="text-[13px] text-accent hover:underline press-down font-mono"
+				title={address}
+			>
+				<Midcut value={address} prefix="0x" min={4} align="end" />
+			</Link>
+		</span>
 	)
 }
 
