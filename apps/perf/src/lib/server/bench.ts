@@ -335,15 +335,22 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 			SELECT
 				metric_name,
 				labels_json,
-				min(offset_ms) AS offset_ms,
-				avg(value) AS value
-			FROM txgen_metric_samples
-			WHERE run_id = selected_run_id
-				AND metric_name IN (${metricList})
-			GROUP BY
-				metric_name,
-				labels_json,
-				intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
+				bucket_offset_ms AS offset_ms,
+				bucket_value AS value
+			FROM (
+				SELECT
+					metric_name,
+					labels_json,
+					min(offset_ms) AS bucket_offset_ms,
+					avg(value) AS bucket_value
+				FROM txgen_metric_samples
+				WHERE run_id = selected_run_id
+					AND metric_name IN (${metricList})
+				GROUP BY
+					metric_name,
+					labels_json,
+					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
+			)
 			ORDER BY metric_name, labels_json, offset_ms
 		`)
 
@@ -405,22 +412,38 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 				) AS total_rows,
 				greatest(1, toUInt64(ceil(total_rows / ${CHART_POINT_TARGET}.0))) AS bucket_size
 			SELECT
-				min(block_index) AS block_index,
-				min(block_number) AS block_number,
-				min(chain_timestamp_ms) AS chain_timestamp_ms,
-				avg(tx_count) AS tx_count,
-				avg(gas_used) AS gas_used,
-				any(gas_limit) AS gas_limit,
-				avg(block_time_ms) AS block_time_ms,
-				avg(new_payload_ms) AS new_payload_ms,
-				avg(forkchoice_updated_ms) AS forkchoice_updated_ms,
-				avg(new_payload_server_latency_us) AS new_payload_server_latency_us,
-				avg(persistence_wait_us) AS persistence_wait_us,
-				avg(execution_cache_wait_us) AS execution_cache_wait_us,
-				avg(sparse_trie_wait_us) AS sparse_trie_wait_us
-			FROM txgen_blocks
-			WHERE run_id = selected_run_id
-			GROUP BY intDiv(toUInt64(block_index), bucket_size)
+				bucket_block_index AS block_index,
+				bucket_block_number AS block_number,
+				bucket_chain_timestamp_ms AS chain_timestamp_ms,
+				tx_count,
+				gas_used,
+				gas_limit,
+				block_time_ms,
+				new_payload_ms,
+				forkchoice_updated_ms,
+				new_payload_server_latency_us,
+				persistence_wait_us,
+				execution_cache_wait_us,
+				sparse_trie_wait_us
+			FROM (
+				SELECT
+					min(block_index) AS bucket_block_index,
+					min(block_number) AS bucket_block_number,
+					min(chain_timestamp_ms) AS bucket_chain_timestamp_ms,
+					avg(tx_count) AS tx_count,
+					avg(gas_used) AS gas_used,
+					any(gas_limit) AS gas_limit,
+					avg(block_time_ms) AS block_time_ms,
+					avg(new_payload_ms) AS new_payload_ms,
+					avg(forkchoice_updated_ms) AS forkchoice_updated_ms,
+					avg(new_payload_server_latency_us) AS new_payload_server_latency_us,
+					avg(persistence_wait_us) AS persistence_wait_us,
+					avg(execution_cache_wait_us) AS execution_cache_wait_us,
+					avg(sparse_trie_wait_us) AS sparse_trie_wait_us
+				FROM txgen_blocks
+				WHERE run_id = selected_run_id
+				GROUP BY intDiv(toUInt64(block_index), bucket_size)
+			)
 			ORDER BY block_index
 		`)
 
