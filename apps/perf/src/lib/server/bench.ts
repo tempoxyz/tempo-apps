@@ -85,6 +85,10 @@ const SCENARIOS: Array<{
 	},
 ]
 
+// Target maximum number of points returned per chart series. Large runs can
+// contain enough raw block/metric samples to exceed Cloudflare Worker memory
+// limits when serialized as JSON, so fetch queries aggregate samples into this
+// many buckets before returning them to the app.
 const CHART_POINT_TARGET = 750
 
 function sqlString(value: string): string {
