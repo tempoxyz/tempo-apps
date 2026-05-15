@@ -205,8 +205,8 @@ describe('API key sponsorship integration', () => {
 		)
 		const { key } = (await createRes.json()) as { key: string }
 
-		// eth_chainId will get a MethodNotSupported from the fee payer handler
-		// (not a 401/403), proving the key middleware passed.
+		// eth_chainId should be proxied successfully (not a 401/403),
+		// proving the API key middleware passed.
 		const response = await exports.default.fetch(
 			feePayerRequest(`/${key}`, {
 				jsonrpc: '2.0',
@@ -216,9 +216,9 @@ describe('API key sponsorship integration', () => {
 		)
 		expect(response.status).toBe(200)
 		const data = (await response.json()) as {
-			error?: { name: string }
+			result?: string
 		}
-		expect(data.error?.name).toBe('RpcResponse.MethodNotSupportedError')
+		expect(data.result).toBeDefined()
 	})
 
 	it('open access still works without API key', async () => {

@@ -116,7 +116,7 @@ beforeAll(async () => {
 
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
-		it('returns error for unsupported method', async () => {
+		it('proxies eth_chainId', async () => {
 			const response = await exports.default.fetch(
 				new Request('https://fee-payer.test/', {
 					method: 'POST',
@@ -131,10 +131,9 @@ describe('fee-payer integration', () => {
 
 			expect(response.status).toBe(200)
 			const data = (await response.json()) as {
-				error?: { code: number; name: string }
+				result?: string
 			}
-			expect(data.error).toBeDefined()
-			expect(data.error?.name).toBe('RpcResponse.MethodNotSupportedError')
+			expect(data.result).toBeDefined()
 		})
 
 		it('rejects eth_signTransaction', async () => {
