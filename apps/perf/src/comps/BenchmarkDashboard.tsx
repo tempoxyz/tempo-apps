@@ -154,7 +154,7 @@ export function BenchmarkDashboard(
 					title="TIP-20 Transfers"
 					subtitle="100% TIP-20 token transfers"
 				/>
-				<div className="grid gap-4 sm:grid-cols-2">
+				<div className={cx('grid gap-4 sm:grid-cols-2', tip20Scenarios.length >= 3 && 'lg:grid-cols-3')}>
 					{tip20Scenarios.map((scenario) => (
 						<ScenarioCard
 							key={scenario.id}
@@ -171,7 +171,7 @@ export function BenchmarkDashboard(
 					title="Mixed Workloads"
 					subtitle="70% TIP-20, 10% MPP, 10% DEX, 10% ERC-20"
 				/>
-				<div className="grid gap-4 sm:grid-cols-2">
+				<div className={cx('grid gap-4 sm:grid-cols-2', mixScenarios.length >= 3 && 'lg:grid-cols-3')}>
 					{mixScenarios.map((scenario) => (
 						<ScenarioCard
 							key={scenario.id}
