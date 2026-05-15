@@ -39,6 +39,8 @@ const METRIC_NAMES = [
 	'reth_transaction_pool_pending_pool_transactions',
 	'reth_transaction_pool_basefee_pool_transactions',
 	'reth_transaction_pool_queued_pool_transactions',
+	'reth_transaction_pool_aa_2d_pending_transactions',
+	'reth_transaction_pool_aa_2d_queued_transactions',
 	// Skipped txs
 	'reth_tempo_payload_builder_pool_transactions_skipped_total',
 	// Persistence
@@ -309,6 +311,14 @@ function RunDetailPage(): React.JSX.Element {
 	const queuedSeries = findSeries(
 		m,
 		'reth_transaction_pool_queued_pool_transactions',
+	)
+	const aa2dPendingSeries = findSeries(
+		m,
+		'reth_transaction_pool_aa_2d_pending_transactions',
+	)
+	const aa2dQueuedSeries = findSeries(
+		m,
+		'reth_transaction_pool_aa_2d_queued_transactions',
 	)
 
 	// Skipped txs
@@ -936,7 +946,7 @@ function RunDetailPage(): React.JSX.Element {
 			<section className="mb-10">
 				<SectionHeader
 					title="Txpool"
-					tooltip="Transaction pool state: pending (ready to execute), queued (future nonce), and basefee (underpaying current base fee)."
+					tooltip="Transaction pool state: pending (ready to execute), queued (future nonce), and basefee (underpaying current base fee). Includes AA 2D pending/queued gauges when present."
 				/>
 				<TimeSeriesChart
 					stacked
@@ -950,12 +960,12 @@ function RunDetailPage(): React.JSX.Element {
 						{
 							label: 'Queued',
 							color: COLORS.purple,
-							data: transformSamples(queuedSeries),
+							data: combineSamples([queuedSeries, aa2dQueuedSeries]),
 						},
 						{
 							label: 'Pending',
 							color: COLORS.blue,
-							data: transformSamples(pendingSeries),
+							data: combineSamples([pendingSeries, aa2dPendingSeries]),
 						},
 					]}
 					formatValue={(v) => `${Math.round(v).toLocaleString()} txs`}
@@ -1069,6 +1079,32 @@ type ChartSeries = {
 
 function hasSamples(series: MetricSeries | undefined): boolean {
 	return (series?.samples.length ?? 0) > 0
+}
+
+function combineSamples(
+	series: Array<MetricSeries | undefined>,
+	transform?: (v: number) => number,
+): Array<ChartPoint> {
+	const populated = series.filter((s): s is MetricSeries => hasSamples(s))
+	if (populated.length === 0) return []
+	if (populated.length === 1) return transformSamples(populated[0], transform)
+
+	const valuesByOffset = new Map<number, number>()
+	for (const s of populated) {
+		for (const sample of s.samples) {
+			valuesByOffset.set(
+				sample.offsetMs,
+				(valuesByOffset.get(sample.offsetMs) ?? 0) + sample.value,
+			)
+		}
+	}
+
+	return Array.from(valuesByOffset.entries())
+		.sort(([a], [b]) => a - b)
+		.map(([offsetMs, value]) => ({
+			x: offsetMs / 1000,
+			y: transform ? transform(value) : value,
+		}))
 }
 
 function transformSamples(
