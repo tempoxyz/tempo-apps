@@ -56,7 +56,7 @@ const SCENARIOS: Array<{
 	{
 		id: 'mix-20k',
 		label: 'Mix — 20K TPS',
-		workload: '70% TIP-20 Transfers, 10% ERC-20 Transfers, 10% MPP Channels, 10% DEX Swaps',
+		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-20k',
 	},
 ]

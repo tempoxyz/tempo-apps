@@ -169,7 +169,7 @@ export function BenchmarkDashboard(
 			<section className="mb-14">
 				<SectionHeader
 					title="Mixed Workloads"
-					subtitle="70% TIP-20, 10% ERC-20, 10% MPP, 10% DEX"
+					subtitle="70% TIP-20, 10% MPP, 10% DEX, 10% ERC-20"
 				/>
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{mixScenarios.map((scenario) => (
