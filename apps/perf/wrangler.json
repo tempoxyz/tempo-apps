@@ -7,6 +7,13 @@
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
+	"routes": [
+		{
+			"pattern": "perf.tempo.xyz",
+			"zone_name": "tempo.xyz",
+			"custom_domain": true
+		}
+	],
 	"observability": {
 		"enabled": true,
 		"logs": {
