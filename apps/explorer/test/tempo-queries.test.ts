@@ -844,18 +844,13 @@ describe('tempo-queries', () => {
 
 	it('fetchTokenHolderBalances aggregates holders from raw transfer rows', async () => {
 		mockQueryBuilder.setResponses([
+			// received query (GROUP BY to)
 			[
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0xaaaa',
-					tokens: '10',
-				},
-				{
-					from: '0xaaaa',
-					to: '0xbbbb',
-					tokens: '4',
-				},
+				{ holder: '0xaaaa', tokens: '10' },
+				{ holder: '0xbbbb', tokens: '4' },
 			],
+			// sent query (GROUP BY from)
+			[{ holder: '0xaaaa', tokens: '4' }],
 		])
 
 		await expect(
@@ -868,23 +863,13 @@ describe('tempo-queries', () => {
 
 	it('fetchTokenHolderBalances aggregates incoming and outgoing balances', async () => {
 		mockQueryBuilder.setResponses([
+			// received query (GROUP BY to)
 			[
-				{
-					from: '0x1111',
-					to: '0x0000000000000000000000000000000000000000',
-					tokens: '5',
-				},
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0x1111',
-					tokens: '10',
-				},
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0x2222',
-					tokens: '3',
-				},
+				{ holder: '0x1111', tokens: '10' },
+				{ holder: '0x2222', tokens: '3' },
 			],
+			// sent query (GROUP BY from)
+			[{ holder: '0x1111', tokens: '5' }],
 		])
 
 		const balances = await fetchTokenHolderBalances(
