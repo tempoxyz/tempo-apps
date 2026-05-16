@@ -22,6 +22,13 @@ type QueryWithWhere<TQuery> = TQuery & {
 
 export type TokenHolderBalance = { address: string; balance: bigint }
 
+function topicToAddress(
+	topic: string | null | undefined,
+): Address.Address | null {
+	if (!topic) return null
+	return `0x${topic.slice(-40)}` as Address.Address
+}
+
 type TokenHolderAggregationRow = {
 	from: string
 	to: string
@@ -65,19 +72,78 @@ export async function fetchTokenHolderBalances(
 	address: Address.Address,
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = (await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('from').as('from'),
-			eb.ref('to').as('to'),
-			eb.fn.sum('tokens').as('tokens'),
-		])
-		.where('address', '=', address)
-		.groupBy(['from', 'to'])
-		.execute()) as TokenHolderAggregationRow[]
+	const [incoming, outgoing] = await Promise.all([
+		QB(chainId)
+			.withSignatures([TRANSFER_SIGNATURE])
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.where('to', '!=', zeroAddress)
+			.groupBy('to')
+			.execute(),
+		QB(chainId)
+			.withSignatures([TRANSFER_SIGNATURE])
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.where('from', '!=', zeroAddress)
+			.groupBy('from')
+			.execute(),
+	])
 
-	return aggregateTokenHolderBalances(transfers)
+	const balances = new Map<string, bigint>()
+
+	for (const row of incoming) {
+		const holder = String(row.holder)
+		balances.set(holder, (balances.get(holder) ?? 0n) + BigInt(row.tokens ?? 0))
+	}
+
+	for (const row of outgoing) {
+		const holder = String(row.holder)
+		balances.set(holder, (balances.get(holder) ?? 0n) - BigInt(row.tokens ?? 0))
+	}
+
+	return sortTokenHolderBalances(balances)
+}
+
+export async function fetchTokenRecentTransferParticipants(
+	address: Address.Address,
+	chainId: number,
+	limit: number,
+): Promise<Address.Address[]> {
+	const rows = await QB(chainId)
+		.selectFrom('logs')
+		.select(['topic1', 'topic2'])
+		.where('address', '=', address)
+		.where('topic0', '=', TRANSFER_TOPIC0)
+		.orderBy('block_num', 'desc')
+		.orderBy('log_idx', 'desc')
+		.limit(limit)
+		.execute()
+
+	const participants: Address.Address[] = []
+	const seen = new Set<string>()
+	for (const row of rows) {
+		for (const participant of [
+			topicToAddress(row.topic1),
+			topicToAddress(row.topic2),
+		]) {
+			if (!participant) continue
+			if (participant.toLowerCase() === zeroAddress) continue
+			const key = participant.toLowerCase()
+			if (seen.has(key)) continue
+			seen.add(key)
+			participants.push(participant)
+		}
+	}
+
+	return participants
 }
 
 export async function fetchTokenHoldersCountRows(
