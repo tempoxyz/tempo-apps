@@ -1,6 +1,7 @@
 import { waapi } from 'animejs'
 import { useEffect, useRef } from 'react'
 import { springLazy } from '#lib/animation'
+import { useTheme } from '#lib/theme'
 
 export function Sphere(props: Sphere.Props) {
 	const { animate } = props
@@ -23,7 +24,7 @@ export function Sphere(props: Sphere.Props) {
 	}, [])
 
 	return (
-		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[300px] z-0 print:hidden hidden sm:block">
+		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[300px] z-0 print:hidden hidden sm:block opacity-20">
 			<div
 				ref={containerRef}
 				className="absolute top-0 z-0 w-full flex justify-center pointer-events-none"
@@ -41,16 +42,20 @@ export namespace Sphere {
 	}
 
 	export function Artwork(): React.JSX.Element {
+		const { resolved } = useTheme()
+		const src =
+			resolved === 'light' ? '/landing-orb-light.svg' : '/landing-orb-dark.svg'
+
 		return (
 			<img
-				src="/landing-circles.png"
+				src={src}
 				alt=""
 				aria-hidden="true"
 				decoding="async"
 				loading="lazy"
-				width={656}
-				height={285}
-				className="w-[656px] max-w-[120vw] h-auto"
+				width={1066}
+				height={926}
+				className="w-[820px] max-w-[140vw] h-auto"
 				draggable={false}
 			/>
 		)
