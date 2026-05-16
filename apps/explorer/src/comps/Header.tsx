@@ -10,6 +10,7 @@ import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { getTempoEnv, isTestnet } from '#lib/env'
 import SquareSquare from '~icons/lucide/square-square'
+import { ThemeToggle } from '#comps/ThemeToggle'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
@@ -32,6 +33,7 @@ export function Header(): React.JSX.Element {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
+					<ThemeToggle />
 					<Header.BlockNumber />
 				</div>
 			</div>

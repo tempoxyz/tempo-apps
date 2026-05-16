@@ -15,6 +15,7 @@ import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
+import { ThemeProvider } from '#lib/theme'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
@@ -109,24 +110,54 @@ export const Route = createRootRouteWithContext<{
 			{
 				rel: 'icon',
 				type: 'image/svg+xml',
+				href: '/favicon-light.svg',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/svg+xml',
 				href: '/favicon-dark.svg',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '32x32',
+				href: '/favicon-32x32-light.png',
+				media: '(prefers-color-scheme: dark)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/png',
 				sizes: '32x32',
 				href: '/favicon-32x32-dark.png',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '16x16',
+				href: '/favicon-16x16-light.png',
+				media: '(prefers-color-scheme: dark)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/png',
 				sizes: '16x16',
 				href: '/favicon-16x16-dark.png',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'apple-touch-icon',
+				sizes: '180x180',
+				href: '/favicon-light.png',
+				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'apple-touch-icon',
 				sizes: '180x180',
 				href: '/favicon-dark.png',
+				media: '(prefers-color-scheme: dark)',
 			},
 		],
 	}),
@@ -367,7 +398,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html lang="en" className="scrollbar-gutter-stable">
+		<html lang="en" className="scheme-light-dark scrollbar-gutter-stable">
 			<head>
 				<HeadContent />
 			</head>
@@ -382,7 +413,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<TokenListMembershipProvider>
 							<BreadcrumbsProvider>
 								<AddressHighlightProvider>
-									<IntroSeenProvider>{children}</IntroSeenProvider>
+									<IntroSeenProvider>
+										<ThemeProvider>{children}</ThemeProvider>
+									</IntroSeenProvider>
 								</AddressHighlightProvider>
 							</BreadcrumbsProvider>
 						</TokenListMembershipProvider>
