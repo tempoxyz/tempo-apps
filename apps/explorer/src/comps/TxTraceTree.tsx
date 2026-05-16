@@ -20,14 +20,15 @@ import WrapIcon from '~icons/lucide/corner-down-left'
 import ReturnIcon from '~icons/lucide/corner-down-right'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
-	const { trace } = props
+	const { trace, tree: treeProp } = props
 	const [raw, setRaw] = useState(false)
 	const [wrap, setWrap] = useState(true)
 	const copy = useCopy()
 
-	const tree = useTraceTree(trace)
+	const builtTree = useTraceTree(treeProp ? null : trace)
+	const tree = treeProp ?? builtTree
 
-	if (!trace || !tree) return null
+	if (!tree) return null
 
 	const handleCopy = () => {
 		copy.copy(TxTraceTree.toAscii(tree, { raw }))
@@ -78,7 +79,7 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	)
 }
 
-function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
+export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 	const { addresses, selectors } = useMemo(() => {
 		if (!trace)
 			return { addresses: [] as `0x${string}`[], selectors: [] as Hex[] }
@@ -229,6 +230,7 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 export namespace TxTraceTree {
 	export interface Props {
 		trace: CallTrace | null
+		tree?: Node | null | undefined
 	}
 
 	export interface Node {
