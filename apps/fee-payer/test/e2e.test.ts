@@ -3,7 +3,7 @@ import { Mnemonic } from 'ox'
 import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
-import { Account, Actions, withFeePayer } from 'viem/tempo'
+import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 const tempoChain = (() => {
@@ -190,7 +190,7 @@ describe('fee-payer integration', () => {
 			const client = createClient({
 				account: userAccount,
 				chain: tempoChain,
-				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+				transport: withRelay(createTempoTransport(), feePayerTransport, {
 					policy: 'sign-only',
 				}),
 			})
@@ -228,7 +228,7 @@ describe('fee-payer integration', () => {
 			const client = createClient({
 				account: userAccount,
 				chain: tempoChain,
-				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+				transport: withRelay(createTempoTransport(), feePayerTransport, {
 					policy: 'sign-and-broadcast',
 				}),
 			})

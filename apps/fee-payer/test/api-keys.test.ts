@@ -3,7 +3,7 @@ import { Mnemonic } from 'ox'
 import { createClient, custom } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
-import { Account, withFeePayer } from 'viem/tempo'
+import { Account, withRelay } from 'viem/tempo'
 import { describe, expect, it } from 'vitest'
 
 const ADMIN_SECRET = 'test-admin-secret'
@@ -309,7 +309,7 @@ describe('API key sponsorship integration', () => {
 		const client = createClient({
 			account: userAccount,
 			chain: tempoChain,
-			transport: withFeePayer(tempoTransport(), feePayerTransport(`/${key}`), {
+			transport: withRelay(tempoTransport(), feePayerTransport(`/${key}`), {
 				policy: 'sign-and-broadcast',
 			}),
 		})
