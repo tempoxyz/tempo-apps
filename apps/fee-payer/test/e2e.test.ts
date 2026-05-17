@@ -206,6 +206,11 @@ describe('fee-payer integration', () => {
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			// Regression: the broadcast envelope must carry a feeToken the
+			// chain can charge. Without it the chain falls back to the
+			// sender's default account token and the tx reverts at
+			// validation with `insufficient liquidity in FeeAMM pool`.
+			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter(
@@ -241,6 +246,11 @@ describe('fee-payer integration', () => {
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
+			// Regression: the broadcast envelope must carry a feeToken the
+			// chain can charge. Without it the chain falls back to the
+			// sender's default account token and the tx reverts at
+			// validation with `insufficient liquidity in FeeAMM pool`.
+			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter(
