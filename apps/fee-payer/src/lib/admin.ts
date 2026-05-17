@@ -14,7 +14,10 @@ const admin = new Hono()
 /** Reject early if the KV binding is not configured (non-mainnet envs). */
 admin.use('*', async (c, next) => {
 	if (!env.SponsorApiKeyStore) {
-		return c.json({ error: 'API key management not available in this environment' }, 503)
+		return c.json(
+			{ error: 'API key management not available in this environment' },
+			503,
+		)
 	}
 	const auth = c.req.header('Authorization')
 	if (!auth || auth !== `Bearer ${env.ADMIN_SECRET}`) {

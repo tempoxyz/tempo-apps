@@ -1,5 +1,7 @@
-import { exports } from 'cloudflare:workers'
+import { env, exports } from 'cloudflare:workers'
+import { sendTransactionSync } from 'viem/actions'
 import { describe, expect, it } from 'vitest'
+import { buildSponsorClient, sponsorAddress, userAccount } from './helpers.js'
 
 const ADMIN_SECRET = 'test-admin-secret'
 
@@ -205,8 +207,8 @@ describe('API key sponsorship integration', () => {
 		)
 		const { key } = (await createRes.json()) as { key: string }
 
-		// eth_chainId will get a MethodNotSupported from the fee payer handler
-		// (not a 401/403), proving the key middleware passed.
+		// eth_chainId should be proxied successfully (not a 401/403),
+		// proving the API key middleware passed.
 		const response = await exports.default.fetch(
 			feePayerRequest(`/${key}`, {
 				jsonrpc: '2.0',
@@ -216,9 +218,9 @@ describe('API key sponsorship integration', () => {
 		)
 		expect(response.status).toBe(200)
 		const data = (await response.json()) as {
-			error?: { name: string }
+			result?: string
 		}
-		expect(data.error?.name).toBe('RpcResponse.MethodNotSupportedError')
+		expect(data.result).toBeDefined()
 	})
 
 	it('open access still works without API key', async () => {
@@ -231,5 +233,117 @@ describe('API key sponsorship integration', () => {
 		)
 		// Should reach the handler, not be rejected.
 		expect(response.status).toBe(200)
+	})
+
+	it('allows a sponsored transaction when destination is in allowedDestinations', async () => {
+		const to = '0x0000000000000000000000000000000000000002' as const
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', {
+				label: 'Allowlist Match',
+				allowedDestinations: [to],
+			}),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		const receipt = await sendTransactionSync(buildSponsorClient(key), {
+			feePayer: true,
+			to,
+			value: 0n,
+		})
+
+		expect(receipt.status).toBe('success')
+		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+	})
+
+	it('rejects a sponsored transaction when destination is not in allowedDestinations', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', {
+				label: 'Allowlist Mismatch',
+				allowedDestinations: ['0x0000000000000000000000000000000000000abc'],
+			}),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		await expect(
+			sendTransactionSync(buildSponsorClient(key), {
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			}),
+		).rejects.toThrow(/Destination address not allowed/)
+	})
+
+	it('rejects a sponsored transaction when dailyLimitUsd is exceeded', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', {
+				label: 'Budget Exceeded',
+				dailyLimitUsd: '0.000001',
+			}),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		// Pre-seed today's spend above the limit.
+		const today = new Date().toISOString().slice(0, 10)
+		await env.SponsorApiKeyStore.put(`spend:${key}:${today}`, '1000000')
+
+		await expect(
+			sendTransactionSync(buildSponsorClient(key), {
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			}),
+		).rejects.toThrow(/Daily spend limit exceeded/)
+	})
+
+	it('records spend after a sponsored transaction under dailyLimitUsd', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', {
+				label: 'Budget Under',
+				dailyLimitUsd: '100.00',
+			}),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		const receipt = await sendTransactionSync(buildSponsorClient(key), {
+			feePayer: true,
+			to: '0x0000000000000000000000000000000000000002',
+			value: 0n,
+		})
+		expect(receipt.status).toBe('success')
+
+		// recordSpend runs via ctx.waitUntil; poll briefly until it lands.
+		const today = new Date().toISOString().slice(0, 10)
+		let spend: string | null = null
+		for (let i = 0; i < 20; i++) {
+			spend = await env.SponsorApiKeyStore.get(`spend:${key}:${today}`)
+			if (spend) break
+			await new Promise((r) => setTimeout(r, 100))
+		}
+		expect(spend).not.toBeNull()
+		expect(BigInt(spend ?? '0')).toBeGreaterThan(0n)
+	})
+
+	it('sponsors a transaction routed through an API key path', async () => {
+		// Create a valid API key.
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Sponsorship Test' }),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		// Build a withRelay client whose relay transport hits the
+		// fee-payer Worker via the /tp_* API key path. This exercises the
+		// full middleware chain (apiKey + rateLimit) on a real sponsored
+		// fill + sign + broadcast.
+		const receipt = await sendTransactionSync(buildSponsorClient(key), {
+			feePayer: true,
+			to: '0x0000000000000000000000000000000000000002',
+			value: 0n,
+		})
+
+		expect(receipt.transactionHash).toBeDefined()
+		expect(receipt.status).toBe('success')
+		expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+		expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 	})
 })

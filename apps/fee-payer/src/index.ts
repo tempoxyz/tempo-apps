@@ -1,17 +1,16 @@
 import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
+import { Handler } from 'accounts/server'
 import { type Context, Hono } from 'hono'
 import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
-import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import type { Chain } from 'viem/chains'
+import { tempo, tempoDevnet, tempoModerato } from 'viem/chains'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
-import { tempoChain } from './lib/chain.js'
 import {
 	FeePayerEvents,
 	captureEvent,
@@ -91,37 +90,49 @@ app.get(
 	},
 )
 
+const sponsorAccount = privateKeyToAccount(
+	env.SPONSOR_PRIVATE_KEY as `0x${string}`,
+)
+
+const relayHandler = Handler.relay({
+	cors: false,
+	features: 'all',
+	feePayer: {
+		account: sponsorAccount,
+		name: 'Tempo Sponsor',
+		url: 'https://sponsor.tempo.xyz',
+	},
+	transports: {
+		[tempo.id]: http(env.TEMPO_RPC_URL ?? tempo.rpcUrls.default.http[0]),
+		[tempoModerato.id]: http(tempoModerato.rpcUrls.default.http[0]),
+		[tempoDevnet.id]: http(tempoDevnet.rpcUrls.default.http[0]),
+	},
+})
+
 async function feePayerHandler(c: Context) {
 	const requestContext = getRequestContext(c.req.raw)
 	const apiKeyLabel = c.get('apiKeyRecord')?.label
+	const rpcMethod = c.get('rpcMethod') as string | undefined
 
-	const handler = Handler.feePayer({
-		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
-		chain: tempoChain as Chain,
-		transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
-		async onRequest(request) {
-			// ast-grep-ignore: no-console-log
-			console.info(`Sponsoring transaction: ${request.method}`)
-			c.executionCtx.waitUntil(
-				captureEvent({
-					distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
-					event: FeePayerEvents.SPONSORSHIP_REQUEST,
-					properties: {
-						...requestContext,
-						rpcMethod: request.method,
-						...(apiKeyLabel ? { apiKeyLabel } : {}),
-					},
-				}),
-			)
-		},
-	})
+	if (rpcMethod) {
+		c.executionCtx.waitUntil(
+			captureEvent({
+				distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
+				event: FeePayerEvents.SPONSORSHIP_REQUEST,
+				properties: {
+					...requestContext,
+					rpcMethod,
+					...(apiKeyLabel ? { apiKeyLabel } : {}),
+				},
+			}),
+		)
+	}
+
 	const raw = c.req.raw
 	const url = new URL(raw.url)
-	if (url.pathname !== '/') {
-		url.pathname = '/'
-		return handler.fetch(new Request(url, raw))
-	}
-	return handler.fetch(raw)
+	const target =
+		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
+	return relayHandler.fetch(target)
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123

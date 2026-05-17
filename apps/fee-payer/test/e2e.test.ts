@@ -2,29 +2,15 @@ import { env, exports } from 'cloudflare:workers'
 import { Mnemonic } from 'ox'
 import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
-import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
-import { Account, Actions, withFeePayer } from 'viem/tempo'
+import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
-
-const tempoChain = (() => {
-	const tempoEnv = env.TEMPO_ENV ?? 'localnet'
-	if (tempoEnv === 'moderato' || tempoEnv === 'testnet') return tempoModerato
-	if (tempoEnv === 'mainnet') return tempo
-	if (tempoEnv === 'devnet') return tempoDevnet
-	return tempoLocalnet
-})()
-
-const testMnemonic =
-	'test test test test test test test test test test test junk'
-
-const sponsorAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
-
-const userAccount = Account.fromSecp256k1(
-	Mnemonic.toPrivateKey(testMnemonic, {
-		as: 'Hex',
-		path: Mnemonic.path({ account: 9 }),
-	}),
-)
+import {
+	sponsorAddress,
+	tempoChain,
+	tempoTransport,
+	testMnemonic,
+	userAccount,
+} from './helpers.js'
 
 function createFeePayerTransportWithSpy() {
 	const requests: Array<{ method: string; params: unknown }> = []
@@ -59,31 +45,6 @@ function createFeePayerTransportWithSpy() {
 	return { transport, requests }
 }
 
-function createTempoTransport() {
-	return custom({
-		async request({ method, params }) {
-			const response = await fetch(env.TEMPO_RPC_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method,
-					params,
-				}),
-			})
-			const data = (await response.json()) as {
-				result?: unknown
-				error?: { code: number; message: string }
-			}
-			if (data.error) {
-				throw new Error(data.error.message || 'RPC Error')
-			}
-			return data.result
-		},
-	})
-}
-
 // Mint liquidity for fee tokens.
 beforeAll(async () => {
 	const sponsorAccount = Account.fromSecp256k1(
@@ -116,7 +77,7 @@ beforeAll(async () => {
 
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
-		it('returns error for unsupported method', async () => {
+		it('proxies eth_chainId', async () => {
 			const response = await exports.default.fetch(
 				new Request('https://fee-payer.test/', {
 					method: 'POST',
@@ -131,10 +92,9 @@ describe('fee-payer integration', () => {
 
 			expect(response.status).toBe(200)
 			const data = (await response.json()) as {
-				error?: { code: number; name: string }
+				result?: string
 			}
-			expect(data.error).toBeDefined()
-			expect(data.error?.name).toBe('RpcResponse.MethodNotSupportedError')
+			expect(data.result).toBeDefined()
 		})
 
 		it('rejects eth_signTransaction', async () => {
@@ -191,7 +151,7 @@ describe('fee-payer integration', () => {
 			const client = createClient({
 				account: userAccount,
 				chain: tempoChain,
-				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+				transport: withRelay(tempoTransport(), feePayerTransport, {
 					policy: 'sign-only',
 				}),
 			})
@@ -207,6 +167,11 @@ describe('fee-payer integration', () => {
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			// Regression: the broadcast envelope must carry a feeToken the
+			// chain can charge. Without it the chain falls back to the
+			// sender's default account token and the tx reverts at
+			// validation with `insufficient liquidity in FeeAMM pool`.
+			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter(
@@ -224,7 +189,7 @@ describe('fee-payer integration', () => {
 			const client = createClient({
 				account: userAccount,
 				chain: tempoChain,
-				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+				transport: withRelay(tempoTransport(), feePayerTransport, {
 					policy: 'sign-and-broadcast',
 				}),
 			})
@@ -242,6 +207,11 @@ describe('fee-payer integration', () => {
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
+			// Regression: the broadcast envelope must carry a feeToken the
+			// chain can charge. Without it the chain falls back to the
+			// sender's default account token and the tx reverts at
+			// validation with `insufficient liquidity in FeeAMM pool`.
+			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter(
