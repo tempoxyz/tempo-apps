@@ -1,7 +1,69 @@
-import { exports } from 'cloudflare:workers'
+import { env, exports } from 'cloudflare:workers'
+import { Mnemonic } from 'ox'
+import { createClient, custom } from 'viem'
+import { sendTransactionSync } from 'viem/actions'
+import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
+import { Account, withFeePayer } from 'viem/tempo'
 import { describe, expect, it } from 'vitest'
 
 const ADMIN_SECRET = 'test-admin-secret'
+
+const tempoChain = (() => {
+	const tempoEnv = env.TEMPO_ENV ?? 'localnet'
+	if (tempoEnv === 'moderato' || tempoEnv === 'testnet') return tempoModerato
+	if (tempoEnv === 'mainnet') return tempo
+	if (tempoEnv === 'devnet') return tempoDevnet
+	return tempoLocalnet
+})()
+
+const userAccount = Account.fromSecp256k1(
+	Mnemonic.toPrivateKey(
+		'test test test test test test test test test test test junk',
+		{ as: 'Hex', path: Mnemonic.path({ account: 9 }) },
+	),
+)
+
+const sponsorAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+
+/** Routes RPC calls through the in-process fee-payer Worker at `path`. */
+function feePayerTransport(path: string) {
+	return custom({
+		async request({ method, params }) {
+			const response = await exports.default.fetch(
+				new Request(`https://fee-payer.test${path}`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+				}),
+			)
+			const data = (await response.json()) as {
+				result?: unknown
+				error?: { message: string }
+			}
+			if (data.error) throw new Error(data.error.message || 'RPC Error')
+			return data.result
+		},
+	})
+}
+
+/** Routes RPC calls directly to the configured Tempo node. */
+function tempoTransport() {
+	return custom({
+		async request({ method, params }) {
+			const response = await fetch(env.TEMPO_RPC_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+			})
+			const data = (await response.json()) as {
+				result?: unknown
+				error?: { message: string }
+			}
+			if (data.error) throw new Error(data.error.message || 'RPC Error')
+			return data.result
+		},
+	})
+}
 
 function adminRequest(method: string, path: string, body?: unknown): Request {
 	return new Request(`https://fee-payer.test/admin${path}`, {
@@ -231,5 +293,37 @@ describe('API key sponsorship integration', () => {
 		)
 		// Should reach the handler, not be rejected.
 		expect(response.status).toBe(200)
+	})
+
+	it('sponsors a transaction routed through an API key path', async () => {
+		// Create a valid API key.
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Sponsorship Test' }),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		// Build a withRelay client whose relay transport hits the
+		// fee-payer Worker via the /tp_* API key path. This exercises the
+		// full middleware chain (apiKey + rateLimit) on a real sponsored
+		// fill + sign + broadcast.
+		const client = createClient({
+			account: userAccount,
+			chain: tempoChain,
+			transport: withFeePayer(tempoTransport(), feePayerTransport(`/${key}`), {
+				policy: 'sign-and-broadcast',
+			}),
+		})
+
+		const receipt = await sendTransactionSync(client, {
+			feePayer: true,
+			to: '0x0000000000000000000000000000000000000002',
+			value: 0n,
+		})
+
+		expect(receipt.transactionHash).toBeDefined()
+		expect(receipt.status).toBe('success')
+		expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+		expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 	})
 })
