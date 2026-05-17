@@ -90,11 +90,15 @@ app.get(
 	},
 )
 
+const sponsorAccount = privateKeyToAccount(
+	env.SPONSOR_PRIVATE_KEY as `0x${string}`,
+)
+
 const relayHandler = Handler.relay({
 	cors: false,
 	features: 'all',
 	feePayer: {
-		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
+		account: sponsorAccount,
 		name: 'Tempo Sponsor',
 		url: 'https://sponsor.tempo.xyz',
 	},
@@ -102,10 +106,6 @@ const relayHandler = Handler.relay({
 		[tempo.id]: http(env.TEMPO_RPC_URL ?? tempo.rpcUrls.default.http[0]),
 		[tempoModerato.id]: http(tempoModerato.rpcUrls.default.http[0]),
 		[tempoDevnet.id]: http(tempoDevnet.rpcUrls.default.http[0]),
-	},
-	async onRequest(request) {
-		// ast-grep-ignore: no-console-log
-		console.info(`Sponsoring transaction: ${request.method}`)
 	},
 })
 
@@ -130,11 +130,9 @@ async function feePayerHandler(c: Context) {
 
 	const raw = c.req.raw
 	const url = new URL(raw.url)
-	if (url.pathname !== '/') {
-		url.pathname = '/'
-		return relayHandler.fetch(new Request(url, raw))
-	}
-	return relayHandler.fetch(raw)
+	const target =
+		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
+	return relayHandler.fetch(target)
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
