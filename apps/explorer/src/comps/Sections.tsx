@@ -35,7 +35,7 @@ export function Sections(props: Sections.Props) {
 
 						return (
 							<section
-								key={section.title}
+								key={section.title ?? index}
 								className={cx(
 									'flex flex-col font-sans w-full overflow-hidden',
 									'rounded-[10px] border border-card-border bg-card-header',
@@ -51,11 +51,12 @@ export function Sections(props: Sections.Props) {
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
-										<h1 className="text-[13px] font-medium text-primary font-sans">
-											{section.title}
-										</h1>
-										<div className="flex items-center gap-[12px]">
-											{isCollapsed && Boolean(section.totalItems) && (
+										{section.title ? (
+											<h1 className="text-[13px] font-medium text-primary font-sans">
+												{section.title}
+											</h1>
+										) : (
+											Boolean(section.totalItems) && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems}{' '}
 													{Pagination.pluralize(
@@ -63,7 +64,20 @@ export function Sections(props: Sections.Props) {
 														itemsLabel,
 													)}
 												</span>
-											)}
+											)
+										)}
+										<div className="flex items-center gap-[12px]">
+											{section.title &&
+												isCollapsed &&
+												Boolean(section.totalItems) && (
+													<span className="text-[13px] text-tertiary">
+														{section.totalItems}{' '}
+														{Pagination.pluralize(
+															section.totalItems ?? 0,
+															itemsLabel,
+														)}
+													</span>
+												)}
 											<div
 												className={cx(
 													'accent text-[16px] font-mono',
@@ -76,9 +90,21 @@ export function Sections(props: Sections.Props) {
 									</button>
 								) : (
 									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
-										<h1 className="text-[13px] font-medium text-primary font-sans">
-											{section.title}
-										</h1>
+										{section.title ? (
+											<h1 className="text-[13px] font-medium text-primary font-sans">
+												{section.title}
+											</h1>
+										) : (
+											Boolean(section.totalItems) && (
+												<span className="text-[13px] text-tertiary">
+													{section.totalItems}{' '}
+													{Pagination.pluralize(
+														section.totalItems ?? 0,
+														itemsLabel,
+													)}
+												</span>
+											)
+										)}
 									</div>
 								)}
 
@@ -108,11 +134,18 @@ export function Sections(props: Sections.Props) {
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				)}
 			>
-				<div className="h-9 flex items-center justify-between">
-					<div className="flex items-center h-full font-sans">
+				<div className="h-9 flex items-stretch justify-between min-w-0">
+					<div
+						className={cx(
+							'flex items-center h-full font-sans min-w-0 flex-1 overflow-x-auto scrollbar-none',
+							'[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]',
+						)}
+					>
 						{sections.length === 1 ? (
-							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">
-								<span className="text-primary">{sections[0].title}</span>
+							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans whitespace-nowrap">
+								{sections[0].title && (
+									<span className="text-primary">{sections[0].title}</span>
+								)}
 								{Boolean(sections[0].totalItems) && (
 									<span className="text-tertiary">
 										({sections[0].totalItems})
@@ -122,14 +155,14 @@ export function Sections(props: Sections.Props) {
 						) : (
 							sections.map((section, index) => (
 								<button
-									key={section.title}
+									key={section.title ?? index}
 									type="button"
 									onPointerDown={() => {
 										if (activeSection === index) return
 										onSectionChange?.(index)
 									}}
 									className={cx(
-										'h-full flex items-center text-[13px] font-medium font-sans',
+										'h-full flex items-center text-[13px] font-medium font-sans whitespace-nowrap shrink-0',
 										'focus-visible:-outline-offset-2! cursor-pointer',
 										index === 0
 											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
@@ -149,8 +182,11 @@ export function Sections(props: Sections.Props) {
 					</div>
 					{sections.map((section, index) => (
 						<div
-							key={section.title}
-							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
+							key={section.title ?? index}
+							className={cx(
+								'flex items-center pr-[18px] shrink-0',
+								activeSection !== index && 'hidden',
+							)}
 						>
 							{section.contextual}
 						</div>
@@ -159,7 +195,7 @@ export function Sections(props: Sections.Props) {
 
 				{sections.map((section, index) => (
 					<div
-						key={section.title}
+						key={section.title ?? index}
 						className={cx(
 							'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
 							activeSection !== index && 'hidden',
@@ -188,7 +224,7 @@ export namespace Sections {
 		content: React.ReactNode
 		contextual?: React.ReactNode
 		itemsLabel?: string
-		title: string
+		title?: string
 		totalItems?: number | string
 		visible?: boolean
 	}

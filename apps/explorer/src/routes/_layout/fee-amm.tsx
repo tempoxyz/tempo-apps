@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import type * as React from 'react'
-import { Addresses } from 'viem/tempo'
 import { Amount } from '#comps/Amount'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
@@ -79,28 +78,19 @@ function FeeAmmPage(): React.JSX.Element {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
-			<div className="flex flex-col gap-2">
-				<h1 className="text-[32px] leading-none tracking-[-0.02em] font-semibold text-primary">
+		<div className="flex flex-col gap-6 px-4 pt-8 pb-16 max-w-[1200px] mx-auto w-full">
+			<div className="flex flex-col gap-2 ml-2">
+				<h1 className="font-heading text-[32px] leading-none tracking-[-0.02em] font-normal text-primary">
 					Fee AMM
 				</h1>
-				<p className="text-sm text-secondary max-w-[720px]">
-					Liquidity pools discovered from FeeAMM mint activity on{' '}
-					<Link
-						to="/address/$address"
-						params={{ address: Addresses.feeManager }}
-						className="text-accent hover:underline font-mono"
-					>
-						{Addresses.feeManager}
-					</Link>
-					.
+				<p className="text-sm text-tertiary">
+					Liquidity pools from FeeAMM mint activity.
 				</p>
 			</div>
 			<Sections
 				mode={mode}
 				sections={[
 					{
-						title: 'Pools',
 						totalItems: `${pools.length}`,
 						itemsLabel: 'pools',
 						autoCollapse: false,

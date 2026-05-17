@@ -60,12 +60,12 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<button
 							type="button"
 							onClick={cycleTimeFormat}
-							className="text-tertiary cursor-pointer inline-flex items-center gap-2 group"
+							className="text-tertiary cursor-pointer inline-flex items-center gap-1 group"
 							title={`Showing ${formatLabel} time - click to change`}
 						>
 							<span>Time</span>
-							<span className="bg-base-alt text-primary px-2 py-[2px] rounded-[6px] text-[11px] font-sans capitalize transition-colors group-hover:bg-base-alt/80">
-								{formatLabel}
+							<span className="text-secondary/70 capitalize group-hover:text-secondary transition-colors">
+								· {formatLabel}
 							</span>
 						</button>
 					),

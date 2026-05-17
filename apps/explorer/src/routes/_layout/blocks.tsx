@@ -217,13 +217,21 @@ function RouteComponent() {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-300 mx-auto w-full">
+		<div className="flex flex-col gap-6 px-4 pt-8 pb-16 max-w-300 mx-auto w-full">
+			<div className="flex flex-col gap-2 ml-2">
+				<h1 className="font-heading text-[32px] leading-none tracking-[-0.02em] font-normal text-primary">
+					Blocks
+				</h1>
+				<p className="text-sm text-tertiary">
+					View the latest blocks on Tempo.
+				</p>
+			</div>
 			<Sections
 				mode="tabs"
 				sections={[
 					{
-						title: 'Blocks',
 						totalItems: totalBlocks || undefined,
+						itemsLabel: 'blocks',
 						autoCollapse: false,
 						contextual: (
 							<Link

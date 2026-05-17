@@ -1,9 +1,102 @@
-/* Satoshi Variable Font */
+/* Pilat (sans-serif) */
 @font-face {
-	font-family: "Satoshi";
-	src: url("/fonts/satoshi/Satoshi-Variable.woff2") format("woff2");
-	font-weight: 300 900;
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Thin.woff2") format("woff2");
+	font-weight: 100;
 	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Light.woff2") format("woff2");
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Book.woff2") format("woff2");
+	font-weight: 350;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Regular.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Demi.woff2") format("woff2");
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Bold.woff2") format("woff2");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Heavy.woff2") format("woff2");
+	font-weight: 800;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Black.woff2") format("woff2");
+	font-weight: 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* HB Set (headings) */
+@font-face {
+	font-family: "HB Set";
+	src: url("/fonts/hb-set/HBSetv0.96-Light.woff2") format("woff2");
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "HB Set";
+	src: url("/fonts/hb-set/HBSetv0.96-LightItalic.woff2") format("woff2");
+	font-weight: 300;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: "HB Set";
+	src: url("/fonts/hb-set/HBSetv0.96-Regular2.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "HB Set";
+	src: url("/fonts/hb-set/HBSetv0.96-Regular2Italic.woff2") format("woff2");
+	font-weight: 400;
+	font-style: italic;
+	font-display: swap;
+}
+@font-face {
+	font-family: "HB Set";
+	src: url("/fonts/hb-set/HBSetv0.96-Medium.woff2") format("woff2");
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: "HB Set";
+	src: url("/fonts/hb-set/HBSetv0.96-MediumItalic.woff2") format("woff2");
+	font-weight: 500;
+	font-style: italic;
 	font-display: swap;
 }
 

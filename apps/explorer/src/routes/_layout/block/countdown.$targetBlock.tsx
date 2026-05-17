@@ -91,7 +91,7 @@ function RouteComponent() {
 		<div
 			className={cx(
 				'flex flex-col items-center justify-center gap-8 w-full min-h-[calc(100vh-200px)]',
-				'pt-20 pb-16 px-4',
+				'pt-8 pb-16 px-4',
 			)}
 		>
 			<CountdownCard
@@ -134,7 +134,7 @@ function CountdownCard(props: {
 	return (
 		<div className="flex flex-col items-center gap-6 w-full max-w-[600px]">
 			<div className="text-center">
-				<h1 className="text-2xl font-semibold text-primary mb-2">
+				<h1 className="text-2xl font-normal text-primary mb-2">
 					Block Countdown
 				</h1>
 				<p className="text-secondary text-sm">

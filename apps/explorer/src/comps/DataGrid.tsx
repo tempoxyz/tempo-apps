@@ -100,17 +100,17 @@ export function DataGrid(props: DataGrid.Props) {
 								<div
 									key={key}
 									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px]',
+										'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px] min-w-0 overflow-hidden',
 										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}
 								>
-									<span className="inline-flex items-center gap-[4px]">
+									<span className="inline-flex items-center gap-[4px] min-w-0 truncate">
 										{label}
 										{hasSort && (
 											<ChevronDownIcon
 												className={cx(
-													'size-[12px] text-tertiary',
+													'size-[12px] text-tertiary shrink-0',
 													sortDir === 'asc' && 'rotate-180',
 												)}
 											/>

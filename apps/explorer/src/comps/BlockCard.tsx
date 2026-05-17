@@ -127,9 +127,8 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							{/* the 15px font size needs to match the block number wrapper font size to make sure they align */}
-							{/* 22 chars/line * (1ch + 1px tracking) */}
-							<div className="text-[15px] font-mono font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
+							{/* 33 chars/line fits the 66-char hash in exactly 2 lines */}
+							<div className="text-[13px] font-mono font-normal leading-[16px] tracking-[0.5px] text-primary break-all max-w-[calc(33ch+16px)]">
 								{hash}
 							</div>
 						</button>
@@ -263,17 +262,20 @@ export namespace BlockCard {
 		const str = String(value).padStart(15, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			// the 15px font size is used to set the same width as the block hash
-			<div className="text-[15px] max-w-[calc(22ch+22px)] font-mono">
+			<div className="text-[13px] max-w-[calc(33ch+16px)] font-mono">
 				<span className="flex justify-between gap-px text-[22px] text-tertiary select-none">
-					{str.split('').map((char, index) => (
-						<span
-							key={`${index}-${char}`}
-							className={index >= zerosEnd ? 'text-primary' : undefined}
-						>
-							{char}
-						</span>
-					))}
+					{str.split('').map((char, index) => {
+						const isNonZero = index >= zerosEnd
+						return (
+							<BlockCard.LottoDigit
+								key={`${index}-${char}`}
+								char={char}
+								animate={isNonZero}
+								delayMs={isNonZero ? (index - zerosEnd) * 40 : 0}
+								className={isNonZero ? 'text-primary' : undefined}
+							/>
+						)
+					})}
 				</span>
 			</div>
 		)
@@ -282,6 +284,56 @@ export namespace BlockCard {
 	export namespace BlockNumber {
 		export interface Props {
 			value: bigint
+		}
+	}
+
+	export function LottoDigit(props: LottoDigit.Props) {
+		const { char, animate, delayMs = 0, className } = props
+		const ref = React.useRef<HTMLSpanElement>(null)
+
+		React.useEffect(() => {
+			if (!animate) return
+			const el = ref.current
+			if (!el) return
+
+			// ~500ms roll: 60ms per scramble tick, then settle on the final char.
+			const scrambleMs = 500
+			const tickMs = 60
+			const ticks = Math.floor(scrambleMs / tickMs)
+			let tickCount = 0
+			let intervalId: ReturnType<typeof setInterval> | null = null
+
+			const startTimer = setTimeout(() => {
+				intervalId = setInterval(() => {
+					if (tickCount >= ticks) {
+						el.textContent = char
+						if (intervalId) clearInterval(intervalId)
+						return
+					}
+					el.textContent = String(Math.floor(Math.random() * 10))
+					tickCount += 1
+				}, tickMs)
+			}, delayMs)
+
+			return () => {
+				clearTimeout(startTimer)
+				if (intervalId) clearInterval(intervalId)
+			}
+		}, [animate, char, delayMs])
+
+		return (
+			<span ref={ref} className={className}>
+				{animate ? '0' : char}
+			</span>
+		)
+	}
+
+	export namespace LottoDigit {
+		export interface Props {
+			char: string
+			animate: boolean
+			delayMs?: number
+			className?: string | undefined
 		}
 	}
 

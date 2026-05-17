@@ -10,7 +10,7 @@ export function NotFound({
 	return (
 		<section className="flex flex-1 size-full items-center justify-center relative pt-[80px]">
 			<div className="flex flex-col items-center gap-[8px] z-1 px-[16px] w-full max-w-[600px]">
-				<h1 className="text-[32px] lg:text-[40px] font-medium text-base-content">
+				<h1 className="text-[32px] lg:text-[40px] font-normal text-base-content">
 					{title}
 				</h1>
 				<p className="text-base-content-secondary text-[15px] lg:text-[18px] text-center">

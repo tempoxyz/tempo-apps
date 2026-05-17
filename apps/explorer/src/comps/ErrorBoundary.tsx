@@ -46,7 +46,7 @@ export class ErrorBoundary extends React.Component<
 				<Header />
 				<section className="flex flex-1 flex-col size-full items-center justify-center px-[16px] max-w-[600px] gap-[16px] m-auto">
 					<div className="flex flex-col items-center gap-[8px]">
-						<h1 className="text-[24px] lg:text-[40px] font-medium text-base-content">
+						<h1 className="text-[24px] lg:text-[40px] font-normal text-base-content">
 							Something went wrong
 						</h1>
 						<p className="text-base-content-secondary text-[15px] lg:text-[18px] text-center">

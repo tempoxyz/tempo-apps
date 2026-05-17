@@ -24,7 +24,7 @@ function Component() {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+		<div className="flex flex-col gap-6 px-4 pt-8 pb-16 max-w-[1200px] mx-auto w-full">
 			<Sections
 				mode={mode}
 				sections={[
