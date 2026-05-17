@@ -40,6 +40,7 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 		if (!rawBody.success) return c.json({ error: 'Bad request' }, 400)
 
 		const request = RpcRequest.from(rawBody.data)
+		c.set('rpcMethod', request.method)
 		const serialized = request.params?.[0]
 
 		if (

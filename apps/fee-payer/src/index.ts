@@ -112,17 +112,21 @@ const relayHandler = Handler.relay({
 async function feePayerHandler(c: Context) {
 	const requestContext = getRequestContext(c.req.raw)
 	const apiKeyLabel = c.get('apiKeyRecord')?.label
+	const rpcMethod = c.get('rpcMethod') as string | undefined
 
-	c.executionCtx.waitUntil(
-		captureEvent({
-			distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
-			event: FeePayerEvents.SPONSORSHIP_REQUEST,
-			properties: {
-				...requestContext,
-				...(apiKeyLabel ? { apiKeyLabel } : {}),
-			},
-		}),
-	)
+	if (rpcMethod) {
+		c.executionCtx.waitUntil(
+			captureEvent({
+				distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
+				event: FeePayerEvents.SPONSORSHIP_REQUEST,
+				properties: {
+					...requestContext,
+					rpcMethod,
+					...(apiKeyLabel ? { apiKeyLabel } : {}),
+				},
+			}),
+		)
+	}
 
 	const raw = c.req.raw
 	const url = new URL(raw.url)
