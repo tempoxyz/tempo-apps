@@ -51,10 +51,14 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 			const transaction = Transaction.deserialize(serialized) as {
 				from?: string
 				to?: string
+				calls?: Array<{ to?: string }>
 				gas?: bigint
 				maxFeePerGas?: bigint
 			}
 			const from = transaction.from
+			// Tempo envelopes nest the destination under `calls[0].to`; legacy
+			// envelopes use top-level `to`.
+			const to = transaction.calls?.[0]?.to ?? transaction.to
 
 			if (!from) {
 				return c.json(
@@ -70,8 +74,8 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 			const apiKey = c.get('apiKey') as string | undefined
 			const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
 			if (apiKey && apiKeyRecord) {
-				if (apiKeyRecord.allowedDestinations.length > 0 && transaction.to) {
-					const dest = transaction.to.toLowerCase()
+				if (apiKeyRecord.allowedDestinations.length > 0 && to) {
+					const dest = to.toLowerCase()
 					const allowed = apiKeyRecord.allowedDestinations.some(
 						(a) => a.toLowerCase() === dest,
 					)
