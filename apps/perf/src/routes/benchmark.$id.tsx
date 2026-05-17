@@ -262,12 +262,6 @@ function RunDetailPage(): React.JSX.Element {
 		{ quantile: '0.5' },
 	)
 
-	// Throughput
-	const txsPerBlockSeries = findSeries(
-		m,
-		'reth_tempo_payload_builder_total_transactions_last',
-	)
-
 	// Block headroom
 	const rlpSizeSeries = findSeries(
 		m,
@@ -534,6 +528,59 @@ function RunDetailPage(): React.JSX.Element {
 						tooltip="Per-block metrics from the benchmark run."
 					/>
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+						<TimeSeriesChart
+							title="TPS"
+							tooltip="Transactions per second for each block, based on transaction count and block time."
+							showMean
+							series={[
+								{
+									label: 'TPS',
+									color: COLORS.purple,
+									data: blockPoints(blockRows, (b) => {
+										if (b.blockTimeMs == null || b.blockTimeMs <= 0) return null
+										return (b.txCount * 1000) / b.blockTimeMs
+									}),
+								},
+							]}
+							formatValue={(v) => formatTps(v)}
+							xFormat="block"
+						/>
+						<TimeSeriesChart
+							title="Block Time"
+							tooltip="Wall-clock time for each block in milliseconds."
+							showMean
+							series={[
+								{
+									label: 'Block Time',
+									color: COLORS.orange,
+									data: blockRows
+										.filter((b) => b.blockTimeMs != null)
+										.map((b) => ({
+											x: b.index,
+											y: b.blockTimeMs as number,
+										})),
+								},
+							]}
+							formatValue={(v) => formatMs(v)}
+							xFormat="block"
+						/>
+						<TimeSeriesChart
+							title="Gas Throughput"
+							tooltip="Gas processed per second for each block, based on gas usage and block time."
+							showMean
+							series={[
+								{
+									label: 'Gas/s',
+									color: COLORS.blue,
+									data: blockPoints(blockRows, (b) => {
+										if (b.blockTimeMs == null || b.blockTimeMs <= 0) return null
+										return (b.gasUsed * 1000) / b.blockTimeMs / 1e9
+									}),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
+							xFormat="block"
+						/>
 						<TimeSeriesChart
 							title="Transactions per Block"
 							tooltip="Number of transactions included in each block."
@@ -852,44 +899,7 @@ function RunDetailPage(): React.JSX.Element {
 				/>
 			</section>
 
-			<section className="mb-10">
-				<SectionHeader
-					title="Throughput"
-					tooltip="Gas and transaction processing rates per block."
-				/>
-				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-					<TimeSeriesChart
-						title="Gas Throughput"
-						tooltip="Gas processed per second for each block, based on gas usage and block time."
-						showMean
-						series={[
-							{
-								label: 'Gas/s',
-								color: COLORS.blue,
-								data: blockPoints(blockRows, (b) => {
-									if (b.blockTimeMs == null || b.blockTimeMs <= 0) return null
-									return (b.gasUsed * 1000) / b.blockTimeMs / 1e9
-								}),
-							},
-						]}
-						formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
-						xFormat="block"
-					/>
-					<TimeSeriesChart
-						title="Txs per Block"
-						tooltip="Number of user transactions included in each block as reported by the builder."
-						showMean
-						series={[
-							{
-								label: 'Txs',
-								color: COLORS.green,
-								data: transformSamples(txsPerBlockSeries),
-							},
-						]}
-						formatValue={(v) => `${Math.round(v).toLocaleString()}`}
-					/>
-				</div>
-			</section>
+
 
 			<section className="mb-10">
 				<SectionHeader
