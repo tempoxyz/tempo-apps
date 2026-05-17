@@ -45,7 +45,7 @@ catalog:
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
   '@wagmi/core': ^3.4.8
-  accounts: ~0.8.1
+  accounts: ~0.12.1
   abitype: ^1.2.4
   animejs: ^4.3.6
   cva: ^1.0.0-beta.4
@@ -74,7 +74,7 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
-  viem: ^2.48.4
+  viem: ^2.49.3
   vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
@@ -112,6 +112,7 @@ workspaceConcurrency: -1
 
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
+  - 'accounts'
   - 'ox'
   - 'viem'
   - 'wagmi'
