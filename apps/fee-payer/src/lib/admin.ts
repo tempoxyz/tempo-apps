@@ -3,6 +3,11 @@ import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import * as z from 'zod'
 import {
+	formatMicrodollarUsd,
+	getDailySpend,
+	getLifetimeSpend,
+} from './api-key-budget.js'
+import {
 	createApiKey,
 	listApiKeys,
 	revokeApiKey,
@@ -48,11 +53,19 @@ admin.post(
 	},
 )
 
-/** GET /admin/keys — list all API keys. */
+/** GET /admin/keys — list all API keys with daily + lifetime spend in USD. */
 admin.get('/keys', async (c) => {
 	const cursor = c.req.query('cursor') ?? undefined
 	const result = await listApiKeys(cursor)
-	return c.json(result)
+	const keys = await Promise.all(
+		result.keys.map(async ({ key, record }) => ({
+			key,
+			record,
+			dailySpentUsd: formatMicrodollarUsd(await getDailySpend(key)),
+			lifetimeSpentUsd: formatMicrodollarUsd(await getLifetimeSpend(key)),
+		})),
+	)
+	return c.json({ keys, cursor: result.cursor })
 })
 
 /** PATCH /admin/keys/:key — update an API key. */

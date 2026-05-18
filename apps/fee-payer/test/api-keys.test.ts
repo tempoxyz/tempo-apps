@@ -101,6 +101,31 @@ describe('admin API key management', () => {
 			expect(found).toBe(true)
 		})
 
+		it('returns daily + lifetime spend in USD on list', async () => {
+			const createRes = await exports.default.fetch(
+				adminRequest('POST', '/keys', { label: 'Spend Display' }),
+			)
+			const { key } = (await createRes.json()) as { key: string }
+
+			// Seed both counters: 1.5 microdollars daily, 4.25 microdollars lifetime.
+			const today = new Date().toISOString().slice(0, 10)
+			await env.SponsorApiKeyStore.put(`spend:${key}:${today}`, '1500000')
+			await env.SponsorApiKeyStore.put(`spend:${key}:lifetime`, '4250000')
+
+			const response = await exports.default.fetch(adminRequest('GET', '/keys'))
+			expect(response.status).toBe(200)
+			const data = (await response.json()) as {
+				keys: Array<{
+					key: string
+					dailySpentUsd: string
+					lifetimeSpentUsd: string
+				}>
+			}
+			const entry = data.keys.find((k) => k.key === key)
+			expect(entry?.dailySpentUsd).toBe('1.5')
+			expect(entry?.lifetimeSpentUsd).toBe('4.25')
+		})
+
 		it('updates a key', async () => {
 			const createRes = await exports.default.fetch(
 				adminRequest('POST', '/keys', { label: 'Update Me' }),
@@ -321,6 +346,12 @@ describe('API key sponsorship integration', () => {
 		}
 		expect(spend).not.toBeNull()
 		expect(BigInt(spend ?? '0')).toBeGreaterThan(0n)
+
+		// Lifetime spend is written alongside the daily counter and matches it
+		// when only one sponsored transaction has been recorded for this key.
+		const lifetime = await env.SponsorApiKeyStore.get(`spend:${key}:lifetime`)
+		expect(lifetime).not.toBeNull()
+		expect(BigInt(lifetime ?? '0')).toBe(BigInt(spend ?? '0'))
 	})
 
 	it('sponsors a transaction routed through an API key path', async () => {
