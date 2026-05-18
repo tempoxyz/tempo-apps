@@ -26,19 +26,27 @@ function httpsPost(
 }
 
 export async function queryClickHouse<T>(query: string): Promise<Array<T>> {
+	const bindings = env as CloudflareBindings & { CLICKHOUSE_URL?: string }
 	const {
 		CLICKHOUSE_HOST,
+		CLICKHOUSE_URL,
 		CLICKHOUSE_USER,
 		CLICKHOUSE_PASSWORD,
 		CLICKHOUSE_DATABASE,
-	} = env
+	} = bindings
+	const clickhouseEndpoint = CLICKHOUSE_URL || CLICKHOUSE_HOST
 
-	if (!CLICKHOUSE_HOST || !CLICKHOUSE_USER || !CLICKHOUSE_PASSWORD) {
+	if (!clickhouseEndpoint || !CLICKHOUSE_USER || !CLICKHOUSE_PASSWORD) {
 		console.warn('[clickhouse] missing credentials, returning empty')
 		return []
 	}
 
-	const url = new URL(`https://${CLICKHOUSE_HOST}/?default_format=JSON`)
+	const url = new URL(
+		clickhouseEndpoint.startsWith('http')
+			? clickhouseEndpoint
+			: `https://${clickhouseEndpoint}`,
+	)
+	url.searchParams.set('default_format', 'JSON')
 	if (CLICKHOUSE_DATABASE) {
 		url.searchParams.set('database', CLICKHOUSE_DATABASE)
 	}

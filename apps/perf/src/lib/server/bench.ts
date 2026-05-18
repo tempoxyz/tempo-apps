@@ -21,6 +21,10 @@ export type BenchRun = {
 	peakGasPerSecond: number
 	avgBlockTimeMs: number
 	blockCount: number
+	engineApiLatencyMeanMs: number | null
+	engineApiLatencyP50Ms: number | null
+	engineApiLatencyP90Ms: number | null
+	engineApiLatencyP99Ms: number | null
 }
 
 export type RunFeed = 'release' | 'nightly'
@@ -39,6 +43,11 @@ export type MetricSeries = {
 	name: string
 	labels: string
 	samples: Array<MetricSample>
+}
+
+export type ScenarioRunHistory = {
+	scenario: Scenario
+	runs: Array<BenchRun>
 }
 
 const SCENARIOS: Array<{
@@ -62,13 +71,15 @@ const SCENARIOS: Array<{
 	{
 		id: 'mix-10k',
 		label: 'Mix — 10K TPS',
-		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
+		workload:
+			'70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-10k',
 	},
 	{
 		id: 'mix-20k',
 		label: 'Mix — 20K TPS',
-		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
+		workload:
+			'70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-20k',
 	},
 ]
@@ -107,6 +118,10 @@ type RunRow = {
 	run_duration_secs: string
 	peak_gas_per_second: string
 	block_count: string
+	engine_api_latency_mean_ms: string | null
+	engine_api_latency_p50_ms: string | null
+	engine_api_latency_p90_ms: string | null
+	engine_api_latency_p99_ms: string | null
 }
 
 function toRun(row: RunRow, scenarioId: string): BenchRun {
@@ -135,6 +150,10 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 		peakGasPerSecond: Math.round(Number(row.peak_gas_per_second)),
 		avgBlockTimeMs,
 		blockCount: Number(row.block_count),
+		engineApiLatencyMeanMs: nullableNumber(row.engine_api_latency_mean_ms),
+		engineApiLatencyP50Ms: nullableNumber(row.engine_api_latency_p50_ms),
+		engineApiLatencyP90Ms: nullableNumber(row.engine_api_latency_p90_ms),
+		engineApiLatencyP99Ms: nullableNumber(row.engine_api_latency_p99_ms),
 	}
 }
 
@@ -142,10 +161,33 @@ function normalizeRunFeed(feed: unknown): RunFeed {
 	return feed === 'nightly' ? 'nightly' : 'release'
 }
 
+function runDayKey(run: BenchRun): string {
+	return new Date(run.startedAt).toISOString().slice(0, 10)
+}
+
+function latestRunForDay(current: BenchRun, candidate: BenchRun): BenchRun {
+	return new Date(candidate.startedAt).getTime() >
+		new Date(current.startedAt).getTime()
+		? candidate
+		: current
+}
+
+function latestRunPerDay(runs: Array<BenchRun>): Array<BenchRun> {
+	const byDay = new Map<string, BenchRun>()
+	for (const run of runs) {
+		const day = runDayKey(run)
+		const existing = byDay.get(day)
+		byDay.set(day, existing ? latestRunForDay(existing, run) : run)
+	}
+	return Array.from(byDay.values()).sort(
+		(a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+	)
+}
+
 function runFeedWhereClause(feed: RunFeed): string {
 	return feed === 'release'
 		? "AND r.metadata['run_type'] = 'release'"
-		: "AND r.metadata['run_type'] != 'release'"
+		: "AND r.metadata['run_type'] = 'nightly'"
 }
 
 function buildRunsQuery(
@@ -175,21 +217,25 @@ function buildRunsQuery(
 			LIMIT ${candidateLimit}
 		)
 		SELECT
-			r.run_id,
-			r.started_at,
-			r.finished_at,
-			r.git_sha,
-			r.git_ref,
-			r.mode,
-			r.scenario_name,
-			r.config_keys,
-			r.config_values,
+			r.run_id AS run_id,
+			r.started_at AS started_at,
+			r.finished_at AS finished_at,
+			r.git_sha AS git_sha,
+			r.git_ref AS git_ref,
+			r.mode AS mode,
+			r.scenario_name AS scenario_name,
+			r.config_keys AS config_keys,
+			r.config_values AS config_values,
 			b.avg_tps,
 			b.avg_block_time_ms,
 			b.total_gas_used,
 			b.run_duration_secs,
 			b.peak_gas_per_second,
-			b.block_count
+			b.block_count,
+			e.engine_api_latency_mean_ms,
+			e.engine_api_latency_p50_ms,
+			e.engine_api_latency_p90_ms,
+			e.engine_api_latency_p99_ms
 		FROM candidate_runs r
 		LEFT JOIN (
 			SELECT
@@ -205,6 +251,55 @@ function buildRunsQuery(
 				AND run_id IN (SELECT run_id FROM candidate_runs)
 			GROUP BY run_id
 		) b ON r.run_id = b.run_id
+		LEFT JOIN (
+			SELECT
+				q.run_id,
+				m.mean_seconds * 1000 AS engine_api_latency_mean_ms,
+				nullIf(q.p50_seconds, 0) * 1000 AS engine_api_latency_p50_ms,
+				nullIf(q.p90_seconds, 0) * 1000 AS engine_api_latency_p90_ms,
+				nullIf(q.p99_seconds, 0) * 1000 AS engine_api_latency_p99_ms
+			FROM (
+				SELECT
+					run_id,
+					avgIf(value, JSONExtractString(labels_json, 'quantile') = '0.5') AS p50_seconds,
+					avgIf(value, JSONExtractString(labels_json, 'quantile') = '0.9') AS p90_seconds,
+					avgIf(value, JSONExtractString(labels_json, 'quantile') = '0.99') AS p99_seconds
+				FROM txgen_metric_samples
+				WHERE metric_name = 'reth_consensus_engine_beacon_new_payload_latency'
+					AND JSONExtractString(labels_json, 'quantile') IN ('0.5', '0.9', '0.99')
+					AND value > 0
+					AND run_id IN (SELECT run_id FROM candidate_runs)
+				GROUP BY run_id
+			) q
+			LEFT JOIN (
+				SELECT
+					run_id,
+					if(sum(count_delta) > 0, sum(sum_delta) / sum(count_delta), NULL) AS mean_seconds
+				FROM (
+					SELECT
+						run_id,
+						labels_json,
+						greatest(
+							0,
+							maxIf(value, metric_name = 'reth_consensus_engine_beacon_new_payload_latency_sum') -
+							minIf(value, metric_name = 'reth_consensus_engine_beacon_new_payload_latency_sum')
+						) AS sum_delta,
+						greatest(
+							0,
+							maxIf(value, metric_name = 'reth_consensus_engine_beacon_new_payload_latency_count') -
+							minIf(value, metric_name = 'reth_consensus_engine_beacon_new_payload_latency_count')
+						) AS count_delta
+					FROM txgen_metric_samples
+					WHERE metric_name IN (
+						'reth_consensus_engine_beacon_new_payload_latency_sum',
+						'reth_consensus_engine_beacon_new_payload_latency_count'
+					)
+						AND run_id IN (SELECT run_id FROM candidate_runs)
+					GROUP BY run_id, labels_json
+				)
+				GROUP BY run_id
+			) m ON q.run_id = m.run_id
+		) e ON r.run_id = e.run_id
 		WHERE b.total_gas_used > 0
 		ORDER BY r.started_at DESC
 		LIMIT ${limit}
@@ -225,6 +320,30 @@ export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
 		)
 
 		return latestRuns.filter((run): run is BenchRun => run !== null)
+	})
+
+export const fetchTrendRuns = createServerFn({ method: 'GET' })
+	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
+	.handler(async ({ data: feed }) => {
+		const histories = await Promise.all(
+			SCENARIOS.map(async (scenario) => {
+				const rows = await queryClickHouse<RunRow>(
+					buildRunsQuery(scenario.scenarioName, feed, 365),
+				)
+				const runs = latestRunPerDay(rows.map((row) => toRun(row, scenario.id)))
+
+				return {
+					scenario: {
+						id: scenario.id,
+						label: scenario.label,
+						workload: scenario.workload,
+					},
+					runs,
+				}
+			}),
+		)
+
+		return histories satisfies Array<ScenarioRunHistory>
 	})
 
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
@@ -248,13 +367,13 @@ export const fetchRun = createServerFn({ method: 'POST' })
 		const run = sqlString(runId)
 		const runRows = await queryClickHouse<RunRow & { scenario_name: string }>(`
 			SELECT
-				r.run_id,
-				r.started_at,
-				r.finished_at,
-				r.git_sha,
-				r.git_ref,
-				r.mode,
-				r.scenario_name,
+				r.run_id AS run_id,
+				r.started_at AS started_at,
+				r.finished_at AS finished_at,
+				r.git_sha AS git_sha,
+				r.git_ref AS git_ref,
+				r.mode AS mode,
+				r.scenario_name AS scenario_name,
 				r.config.keys AS config_keys,
 				r.config.values AS config_values,
 				b.avg_tps,
