@@ -111,8 +111,11 @@ const relayHandler = Handler.relay({
 
 async function feePayerHandler(c: Context) {
 	const requestContext = getRequestContext(c.req.raw)
-	const apiKeyLabel = c.get('apiKeyRecord')?.label
+	const apiKey = c.get('apiKey') as string | undefined
+	const apiKeyRecord = c.get('apiKeyRecord')
+	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
+	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
 
 	if (rpcMethod) {
 		c.executionCtx.waitUntil(
@@ -122,7 +125,13 @@ async function feePayerHandler(c: Context) {
 				properties: {
 					...requestContext,
 					rpcMethod,
+					keyedRoute: Boolean(apiKey),
+					...(apiKey ? { apiKey } : {}),
 					...(apiKeyLabel ? { apiKeyLabel } : {}),
+					...(apiKeyRecord?.dailyLimitUsd
+						? { dailyLimitUsd: apiKeyRecord.dailyLimitUsd }
+						: {}),
+					...(estimatedFeeUsd !== undefined ? { estimatedFeeUsd } : {}),
 				},
 			}),
 		)

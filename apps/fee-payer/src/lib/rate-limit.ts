@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import type { Context, Next } from 'hono'
 import { cloneRawRequest } from 'hono/request'
 import { Hex, RpcRequest } from 'ox'
+import { formatUnits } from 'viem'
 import { Transaction } from 'viem/tempo'
 import * as z from 'zod/mini'
 import type { ApiKeyRecord } from './api-keys.js'
@@ -81,6 +82,14 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 				const { success } = await limiter.limit({ key: from })
 				if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
+
+				// Expose an upper-bound fee estimate for analytics. This is
+				// `gasLimit * maxFeePerGas` (the user's authorized ceiling),
+				// not the actual fee paid — see dashboard note.
+				if (transaction.gas && transaction.maxFeePerGas) {
+					const feeAtto = transaction.gas * transaction.maxFeePerGas
+					c.set('estimatedFeeUsd', Number(formatUnits(feeAtto, 18)))
+				}
 
 				// API-key-scoped checks: [REDACTED:api-key] allowlist + daily budget.
 				const apiKey = c.get('apiKey') as string | undefined
