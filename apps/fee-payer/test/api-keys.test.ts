@@ -354,6 +354,50 @@ describe('API key sponsorship integration', () => {
 		expect(BigInt(lifetime ?? '0')).toBe(BigInt(spend ?? '0'))
 	})
 
+	it('accumulates lifetime spend across multiple sponsored transactions', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', {
+				label: 'Lifetime Accumulation',
+				dailyLimitUsd: '100.00',
+			}),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		async function waitForLifetime(prev: bigint): Promise<bigint> {
+			for (let i = 0; i < 30; i++) {
+				const raw = await env.SponsorApiKeyStore.get(`spend:${key}:lifetime`)
+				if (raw && BigInt(raw) > prev) return BigInt(raw)
+				await new Promise((r) => setTimeout(r, 100))
+			}
+			throw new Error('lifetime spend never advanced')
+		}
+
+		// First sponsored tx — lifetime starts from 0.
+		const r1 = await sendTransactionSync(buildSponsorClient(key), {
+			feePayer: true,
+			to: '0x0000000000000000000000000000000000000002',
+			value: 0n,
+		})
+		expect(r1.status).toBe('success')
+		const afterFirst = await waitForLifetime(0n)
+
+		// Second sponsored tx — lifetime should strictly increase, not be
+		// overwritten with the second-tx-only fee.
+		const r2 = await sendTransactionSync(buildSponsorClient(key), {
+			feePayer: true,
+			to: '0x0000000000000000000000000000000000000002',
+			value: 0n,
+		})
+		expect(r2.status).toBe('success')
+		const afterSecond = await waitForLifetime(afterFirst)
+
+		expect(afterSecond).toBeGreaterThan(afterFirst)
+		// Lifetime should approximate the sum of the two individual fees; for
+		// identical no-op txs the second fee is ~equal to the first, so the
+		// total should be at least ~1.5× the first (allow slack for KV race).
+		expect(afterSecond).toBeGreaterThanOrEqual((afterFirst * 3n) / 2n)
+	})
+
 	it('sponsors a transaction routed through an API key path', async () => {
 		// Create a valid API key.
 		const createRes = await exports.default.fetch(
