@@ -126,7 +126,6 @@ async function feePayerHandler(c: Context) {
 					...requestContext,
 					rpcMethod,
 					keyedRoute: Boolean(apiKey),
-					...(apiKey ? { apiKey } : {}),
 					...(apiKeyLabel ? { apiKeyLabel } : {}),
 					...(apiKeyRecord?.dailyLimitUsd
 						? { dailyLimitUsd: apiKeyRecord.dailyLimitUsd }
