@@ -6,6 +6,7 @@ import {
 	Link,
 	Outlet,
 	Scripts,
+	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
 import SunIcon from '~icons/lucide/sun'
@@ -81,6 +82,11 @@ function RootDocument() {
 }
 
 function Header(): React.JSX.Element {
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	})
+	const isMethodology = pathname === '/methodology'
+
 	return (
 		<header className="flex items-center justify-between py-8">
 			<Link to="/">
@@ -88,10 +94,12 @@ function Header(): React.JSX.Element {
 			</Link>
 			<div className="flex items-center gap-2">
 				<nav className="flex items-center gap-1 text-[14px] font-medium leading-[140%]">
-					<NavLink to="/" exact>
+					<NavLink to="/" active={!isMethodology}>
 						Dashboard
 					</NavLink>
-					<NavLink to="/methodology">Methodology</NavLink>
+					<NavLink to="/methodology" active={isMethodology}>
+						Methodology
+					</NavLink>
 				</nav>
 				<div className="mx-2 h-5 w-px bg-border" />
 				<ThemeToggle />
@@ -141,17 +149,17 @@ function Footer(): React.JSX.Element {
 
 function NavLink(props: {
 	to: string
-	exact?: boolean
+	active: boolean
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
 		<Link
 			to={props.to}
-			className="rounded-lg px-3 py-1.5 text-secondary transition-colors hover:text-primary"
-			activeProps={{
-				className: 'rounded-lg px-3 py-1.5 bg-accent-muted text-accent',
-			}}
-			activeOptions={props.exact ? { exact: true } : undefined}
+			className={
+				props.active
+					? 'rounded-lg bg-accent-muted px-3 py-1.5 text-accent transition-colors'
+					: 'rounded-lg px-3 py-1.5 text-secondary transition-colors hover:text-primary'
+			}
 		>
 			{props.children}
 		</Link>

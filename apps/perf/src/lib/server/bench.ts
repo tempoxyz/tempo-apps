@@ -229,79 +229,25 @@ export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
 		return latestRuns.filter((run): run is BenchRun => run !== null)
 	})
 
-function buildLatestRunQuery(feed: RunFeed, limit = 50): string {
-	const scenarioNames = SCENARIOS.map((s) => sqlString(s.scenarioName)).join(
-		', ',
-	)
-	const candidateLimit = Math.max(50, limit)
-
-	return `
-		WITH candidate_runs AS (
-			SELECT
-				r.run_id,
-				r.started_at,
-				r.finished_at,
-				r.git_sha,
-				r.git_ref,
-				r.mode,
-				r.scenario_name,
-				r.config.keys AS config_keys,
-				r.config.values AS config_values
-			FROM txgen_runs r
-			WHERE r.scenario_name IN (${scenarioNames})
-				${runFeedWhereClause(feed)}
-			ORDER BY r.started_at DESC
-			LIMIT ${candidateLimit}
+export const fetchReleaseRuns = createServerFn({ method: 'GET' }).handler(
+	async () => {
+		const runsByScenario = await Promise.all(
+			SCENARIOS.map(async (scenario) => {
+				const rows = await queryClickHouse<RunRow>(
+					buildRunsQuery(scenario.scenarioName, 'release'),
+				)
+				return rows.map((row) => toRun(row, scenario.id))
+			}),
 		)
-		SELECT
-			r.run_id,
-			r.started_at,
-			r.finished_at,
-			r.git_sha,
-			r.git_ref,
-			r.mode,
-			r.scenario_name,
-			r.config_keys,
-			r.config_values,
-			b.avg_tps,
-			b.avg_block_time_ms,
-			b.total_gas_used,
-			b.run_duration_secs,
-			b.peak_gas_per_second,
-			b.block_count
-		FROM candidate_runs r
-		LEFT JOIN (
-			SELECT
-				run_id,
-				avg(tx_count * 1000.0 / block_time_ms) AS avg_tps,
-				avg(block_time_ms) AS avg_block_time_ms,
-				sum(gas_used) AS total_gas_used,
-				sum(block_time_ms) / 1000.0 AS run_duration_secs,
-				max(gas_used * 1000.0 / block_time_ms) AS peak_gas_per_second,
-				count() AS block_count
-			FROM txgen_blocks
-			WHERE block_time_ms > 0
-				AND run_id IN (SELECT run_id FROM candidate_runs)
-			GROUP BY run_id
-		) b ON r.run_id = b.run_id
-		WHERE b.total_gas_used > 0
-		ORDER BY r.started_at DESC
-		LIMIT 1
-	`
-}
 
-export const fetchLatestRun = createServerFn({ method: 'GET' })
-	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
-	.handler(async ({ data: feed }) => {
-		const rows = await queryClickHouse<RunRow>(buildLatestRunQuery(feed))
-		const latest = rows[0]
-		if (!latest) return null
-
-		const scenarioId =
-			SCENARIOS.find((s) => s.scenarioName === latest.scenario_name)?.id ?? ''
-
-		return toRun(latest, scenarioId)
-	})
+		return runsByScenario
+			.flat()
+			.sort(
+				(a, b) =>
+					new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+			)
+	},
+)
 
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 	.inputValidator((input: RunsForScenarioInput) => ({

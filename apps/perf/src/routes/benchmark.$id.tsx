@@ -171,6 +171,8 @@ export declare namespace BenchmarkRunDetail {
 	type Props = {
 		id: string
 		showBackLink?: boolean | undefined
+		headerControls?: React.ReactNode | undefined
+		showRunSelect?: boolean | undefined
 	}
 }
 
@@ -459,33 +461,37 @@ export function BenchmarkRunDetail(
 							{scenario && ` · ${scenario.workload}`}
 						</p>
 					</div>
-					<div className="flex flex-col gap-2 sm:items-end">
-						<label htmlFor={runSelectId} className="sr-only">
-							Benchmark run
-						</label>
-						<select
-							id={runSelectId}
-							value={run.id}
-							disabled={runs.length <= 1}
-							onChange={(event) =>
-								navigate({
-									to: '/benchmark/$id',
-									params: { id: event.currentTarget.value },
-								})
-							}
-							className="w-full max-w-48 rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent disabled:cursor-not-allowed disabled:text-tertiary sm:w-44"
-						>
-							{runs.length > 0 ? (
-								runs.map((option) => (
-									<option key={option.id} value={option.id}>
-										{runOptionLabel(option)}
-									</option>
-								))
-							) : (
-								<option value={run.id}>{runOptionLabel(run)}</option>
+					{props.headerControls
+						? props.headerControls
+						: props.showRunSelect !== false && (
+								<div className="flex flex-col gap-2 sm:items-end">
+									<label htmlFor={runSelectId} className="sr-only">
+										Benchmark run
+									</label>
+									<select
+										id={runSelectId}
+										value={run.id}
+										disabled={runs.length <= 1}
+										onChange={(event) =>
+											navigate({
+												to: '/benchmark/$id',
+												params: { id: event.currentTarget.value },
+											})
+										}
+										className="w-full max-w-48 rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent disabled:cursor-not-allowed disabled:text-tertiary sm:w-44"
+									>
+										{runs.length > 0 ? (
+											runs.map((option) => (
+												<option key={option.id} value={option.id}>
+													{runOptionLabel(option)}
+												</option>
+											))
+										) : (
+											<option value={run.id}>{runOptionLabel(run)}</option>
+										)}
+									</select>
+								</div>
 							)}
-						</select>
-					</div>
 				</div>
 			</section>
 
