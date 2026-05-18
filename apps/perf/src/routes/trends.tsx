@@ -58,7 +58,10 @@ function TrendsPage(): React.JSX.Element {
 				maxTimestamp,
 			] as const)
 		: null
-	const hasRuns = allRuns.length > 0
+	const historiesWithData = histories.filter(
+		(history) => history.runs.length > 0,
+	)
+	const hasRuns = historiesWithData.length > 0
 
 	return (
 		<div>
@@ -93,7 +96,7 @@ function TrendsPage(): React.JSX.Element {
 
 			{hasRuns && xDomain ? (
 				<section className="space-y-12">
-					{histories.map((history) => (
+					{historiesWithData.map((history) => (
 						<TrendRow
 							key={history.scenario.id}
 							history={history}
@@ -314,6 +317,14 @@ function ScatterChart(props: {
 	const hoverPct = hovered ? (sx(hovered.x) / SVG_W) * 100 : 0
 	const tooltipNearRight = hoverPct > 70
 	const rightMetric = populatedMetrics.find((metric) => metric.axis === 'right')
+	const metricPaths = populatedMetrics.map((metric) => ({
+		metric,
+		points: points.flatMap((point) => {
+			const value = metric.getValue(point.run)
+			if (value == null) return []
+			return `${sx(point.x)},${sy(value, metric.axis)}`
+		}),
+	}))
 
 	return (
 		<div className="rounded-lg border border-border-subtle p-4">
@@ -386,6 +397,22 @@ function ScatterChart(props: {
 							vectorEffect="non-scaling-stroke"
 							strokeWidth={0.5}
 						/>
+
+						{metricPaths.map(
+							({ metric, points: pathPoints }) =>
+								pathPoints.length > 1 && (
+									<polyline
+										key={metric.key}
+										fill="none"
+										stroke={metric.color}
+										vectorEffect="non-scaling-stroke"
+										strokeWidth={1.5}
+										strokeLinejoin="round"
+										strokeLinecap="round"
+										points={pathPoints.join(' ')}
+									/>
+								),
+						)}
 
 						{hovered && (
 							<line
