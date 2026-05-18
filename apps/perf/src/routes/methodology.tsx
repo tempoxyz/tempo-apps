@@ -14,8 +14,8 @@ function MethodologyPage(): React.JSX.Element {
 			<div className="space-y-8 text-[14px] leading-relaxed text-secondary">
 				<Section title="Workload Composition">
 					<p>
-						Benchmarks run two workload types at varying target TPS levels
-						(10K, 20K, 40K):
+						Benchmarks run two workload types at varying target TPS levels (10K,
+						20K, 40K):
 					</p>
 					<div className="mt-3 card">
 						<div className="divide-y divide-dashed divide-border">

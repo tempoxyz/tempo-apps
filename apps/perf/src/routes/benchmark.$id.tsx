@@ -164,11 +164,24 @@ function findSeries(
 
 function RunDetailPage(): React.JSX.Element {
 	const { id } = Route.useParams()
+	return <BenchmarkRunDetail id={id} showBackLink />
+}
+
+export declare namespace BenchmarkRunDetail {
+	type Props = {
+		id: string
+		showBackLink?: boolean | undefined
+	}
+}
+
+export function BenchmarkRunDetail(
+	props: BenchmarkRunDetail.Props,
+): React.JSX.Element {
 	const navigate = useNavigate()
 	const runSelectId = React.useId()
 	const { data: run } = useSuspenseQuery({
-		queryKey: ['run', id],
-		queryFn: () => fetchRun({ data: id }),
+		queryKey: ['run', props.id],
+		queryFn: () => fetchRun({ data: props.id }),
 	})
 
 	const runFeed = run && isTag(run.ref) ? 'release' : 'nightly'
@@ -182,14 +195,15 @@ function RunDetailPage(): React.JSX.Element {
 	})
 
 	const { data: metrics } = useQuery({
-		queryKey: ['metrics', id],
-		queryFn: () => fetchMetrics({ data: { runId: id, metrics: METRIC_NAMES } }),
+		queryKey: ['metrics', props.id],
+		queryFn: () =>
+			fetchMetrics({ data: { runId: props.id, metrics: METRIC_NAMES } }),
 		enabled: !!run,
 	})
 
 	const { data: blocks } = useQuery({
-		queryKey: ['blocks', id],
-		queryFn: () => fetchBlocks({ data: id }),
+		queryKey: ['blocks', props.id],
+		queryFn: () => fetchBlocks({ data: props.id }),
 		enabled: !!run,
 	})
 
@@ -394,14 +408,16 @@ function RunDetailPage(): React.JSX.Element {
 
 	return (
 		<div>
-			<div className="mb-4">
-				<Link
-					to="/"
-					className="text-[13px] text-tertiary transition-colors hover:text-primary"
-				>
-					← Dashboard
-				</Link>
-			</div>
+			{props.showBackLink && (
+				<div className="mb-4">
+					<Link
+						to="/"
+						className="text-[13px] text-tertiary transition-colors hover:text-primary"
+					>
+						← Dashboard
+					</Link>
+				</div>
+			)}
 
 			<section className="mb-8">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

@@ -23,7 +23,7 @@ export function BenchmarkDashboard(
 	}
 
 	const runsWithData = latestRuns.filter((r) => r.avgTps > 0)
-	const peakTpsRun =
+	const averageTpsRun =
 		runsWithData.length > 0
 			? runsWithData.reduce((best, r) => (r.avgTps > best.avgTps ? r : best))
 			: null
@@ -51,15 +51,15 @@ export function BenchmarkDashboard(
 				</div>
 			)}
 
-			{/* Hero — peak TPS headline */}
+			{/* Hero — average TPS headline */}
 			<section className="mb-14">
 				<p className="text-[13px] font-medium uppercase tracking-wider text-tertiary">
-					Peak TPS
+					Average TPS
 				</p>
-				{peakTpsRun ? (
+				{averageTpsRun ? (
 					<>
 						<h2 className="mt-2 font-mono text-[56px] font-bold leading-none tracking-tight text-accent">
-							{formatTps(peakTpsRun.avgTps)}{' '}
+							{formatTps(averageTpsRun.avgTps)}{' '}
 							<span className="text-[28px] font-semibold text-tertiary">
 								TPS
 							</span>
@@ -67,17 +67,17 @@ export function BenchmarkDashboard(
 						<div className="mt-5 flex flex-wrap items-center gap-6">
 							<HeroStat
 								label="Throughput"
-								value={formatGas(peakTpsRun.peakGasPerSecond)}
+								value={formatGas(averageTpsRun.avgGasPerSecond)}
 							/>
 							<HeroStat
 								label="Block Time"
-								value={formatMs(peakTpsRun.avgBlockTimeMs)}
+								value={formatMs(averageTpsRun.avgBlockTimeMs)}
 							/>
 							<HeroStat
 								label="Workload"
 								value={
-									scenarios.find((s) => s.id === peakTpsRun.scenarioId)
-										?.label ?? peakTpsRun.scenarioId
+									scenarios.find((s) => s.id === averageTpsRun.scenarioId)
+										?.label ?? averageTpsRun.scenarioId
 								}
 							/>
 						</div>
@@ -141,7 +141,9 @@ export function BenchmarkDashboard(
 							</div>
 							<div className="flex items-center gap-1.5">
 								<span className="inline-block h-2.5 w-2.5 rounded-full bg-positive/50" />
-								<span className="text-[11px] text-tertiary">Mixed Workload</span>
+								<span className="text-[11px] text-tertiary">
+									Mixed Workload
+								</span>
 							</div>
 						</div>
 					</div>
@@ -154,7 +156,12 @@ export function BenchmarkDashboard(
 					title="TIP-20 Transfers"
 					subtitle="100% TIP-20 token transfers"
 				/>
-				<div className={cx('grid gap-4 sm:grid-cols-2', tip20Scenarios.length >= 3 && 'lg:grid-cols-3')}>
+				<div
+					className={cx(
+						'grid gap-4 sm:grid-cols-2',
+						tip20Scenarios.length >= 3 && 'lg:grid-cols-3',
+					)}
+				>
 					{tip20Scenarios.map((scenario) => (
 						<ScenarioCard
 							key={scenario.id}
@@ -171,7 +178,12 @@ export function BenchmarkDashboard(
 					title="Mixed Workloads"
 					subtitle="70% TIP-20, 10% MPP, 10% DEX, 10% ERC-20"
 				/>
-				<div className={cx('grid gap-4 sm:grid-cols-2', mixScenarios.length >= 3 && 'lg:grid-cols-3')}>
+				<div
+					className={cx(
+						'grid gap-4 sm:grid-cols-2',
+						mixScenarios.length >= 3 && 'lg:grid-cols-3',
+					)}
+				>
 					{mixScenarios.map((scenario) => (
 						<ScenarioCard
 							key={scenario.id}
