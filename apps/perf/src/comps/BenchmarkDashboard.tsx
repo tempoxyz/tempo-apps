@@ -28,8 +28,11 @@ export function BenchmarkDashboard(
 			? runsWithData.reduce((best, r) => (r.avgTps > best.avgTps ? r : best))
 			: null
 
-	const tip20Scenarios = scenarios.filter((s) => s.id.startsWith('tip20-'))
-	const mixScenarios = scenarios.filter((s) => s.id.startsWith('mix-'))
+	const scenariosWithRuns = scenarios.filter((s) => getLatestRun(s.id))
+	const tip20Scenarios = scenariosWithRuns.filter((s) =>
+		s.id.startsWith('tip20-'),
+	)
+	const mixScenarios = scenariosWithRuns.filter((s) => s.id.startsWith('mix-'))
 	const isNightly = props.feed === 'nightly'
 
 	return (
@@ -95,11 +98,13 @@ export function BenchmarkDashboard(
 					<SectionHeader title="TPS Comparison" />
 					<div className="card p-6">
 						<div className="flex items-end gap-4 h-52">
-							{scenarios.map((scenario) => {
+							{scenariosWithRuns.map((scenario) => {
 								const latest = getLatestRun(scenario.id)
 								if (!latest) return null
 								const maxTps = Math.max(
-									...scenarios.map((s) => getLatestRun(s.id)?.avgTps ?? 0),
+									...scenariosWithRuns.map(
+										(s) => getLatestRun(s.id)?.avgTps ?? 0,
+									),
 								)
 								const height = (latest.avgTps / maxTps) * 100
 								const isMix = scenario.id.startsWith('mix-')
@@ -141,46 +146,60 @@ export function BenchmarkDashboard(
 							</div>
 							<div className="flex items-center gap-1.5">
 								<span className="inline-block h-2.5 w-2.5 rounded-full bg-positive/50" />
-								<span className="text-[11px] text-tertiary">Mixed Workload</span>
+								<span className="text-[11px] text-tertiary">
+									Mixed Workload
+								</span>
 							</div>
 						</div>
 					</div>
 				</section>
 			)}
 
-			{/* TIP-20 workloads */}
-			<section className="mb-14">
-				<SectionHeader
-					title="TIP-20 Transfers"
-					subtitle="100% TIP-20 token transfers"
-				/>
-				<div className={cx('grid gap-4 sm:grid-cols-2', tip20Scenarios.length >= 3 && 'lg:grid-cols-3')}>
-					{tip20Scenarios.map((scenario) => (
-						<ScenarioCard
-							key={scenario.id}
-							scenario={scenario}
-							run={getLatestRun(scenario.id)}
-						/>
-					))}
-				</div>
-			</section>
+			{tip20Scenarios.length > 0 && (
+				<section className="mb-14">
+					<SectionHeader
+						title="TIP-20 Transfers"
+						subtitle="100% TIP-20 token transfers"
+					/>
+					<div
+						className={cx(
+							'grid gap-4 sm:grid-cols-2',
+							tip20Scenarios.length >= 3 && 'lg:grid-cols-3',
+						)}
+					>
+						{tip20Scenarios.map((scenario) => (
+							<ScenarioCard
+								key={scenario.id}
+								scenario={scenario}
+								run={getLatestRun(scenario.id)}
+							/>
+						))}
+					</div>
+				</section>
+			)}
 
-			{/* Mix workloads */}
-			<section className="mb-14">
-				<SectionHeader
-					title="Mixed Workloads"
-					subtitle="70% TIP-20, 10% MPP, 10% DEX, 10% ERC-20"
-				/>
-				<div className={cx('grid gap-4 sm:grid-cols-2', mixScenarios.length >= 3 && 'lg:grid-cols-3')}>
-					{mixScenarios.map((scenario) => (
-						<ScenarioCard
-							key={scenario.id}
-							scenario={scenario}
-							run={getLatestRun(scenario.id)}
-						/>
-					))}
-				</div>
-			</section>
+			{mixScenarios.length > 0 && (
+				<section className="mb-14">
+					<SectionHeader
+						title="Mixed Workloads"
+						subtitle="70% TIP-20, 10% MPP, 10% DEX, 10% ERC-20"
+					/>
+					<div
+						className={cx(
+							'grid gap-4 sm:grid-cols-2',
+							mixScenarios.length >= 3 && 'lg:grid-cols-3',
+						)}
+					>
+						{mixScenarios.map((scenario) => (
+							<ScenarioCard
+								key={scenario.id}
+								scenario={scenario}
+								run={getLatestRun(scenario.id)}
+							/>
+						))}
+					</div>
+				</section>
+			)}
 		</div>
 	)
 }
