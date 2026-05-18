@@ -78,6 +78,13 @@ const COLORS = {
 	purple: '#a78bfa',
 }
 
+const KIB_PER_MIB = 1024
+const RLPX_HARD_CAP_KIB = 16 * KIB_PER_MIB
+const EIP_7934_MAX_BLOCK_SIZE_KIB = 10 * KIB_PER_MIB
+const EIP_7934_SAFETY_MARGIN_KIB = 2 * KIB_PER_MIB
+const EIP_7934_MAX_RLP_BLOCK_SIZE_KIB =
+	EIP_7934_MAX_BLOCK_SIZE_KIB - EIP_7934_SAFETY_MARGIN_KIB
+
 const NOISE_THRESHOLD = 0.02
 
 function Delta(props: {
@@ -654,9 +661,21 @@ function RunDetailPage(): React.JSX.Element {
 							formatValue={(v) => `${v.toFixed(0)} KB`}
 							referenceBands={[
 								{
+									label: 'EIP-7934 RLP cap (8 MiB)',
+									from: EIP_7934_MAX_RLP_BLOCK_SIZE_KIB,
+									to: EIP_7934_MAX_RLP_BLOCK_SIZE_KIB * 1.05,
+									color: COLORS.orange,
+								},
+								{
+									label: 'EIP-7934 block cap (10 MiB)',
+									from: EIP_7934_MAX_BLOCK_SIZE_KIB,
+									to: EIP_7934_MAX_BLOCK_SIZE_KIB * 1.05,
+									color: COLORS.purple,
+								},
+								{
 									label: 'RLPx hard cap (16 MiB)',
-									from: 16 * 1024,
-									to: 16 * 1024 * 1.05,
+									from: RLPX_HARD_CAP_KIB,
+									to: RLPX_HARD_CAP_KIB * 1.05,
 									color: COLORS.red,
 								},
 							]}
