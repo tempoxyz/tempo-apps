@@ -15,7 +15,6 @@ declare namespace NodeJS {
 declare namespace Cloudflare {
 	interface Env {
 		CLICKHOUSE_HOST: string
-		CLICKHOUSE_URL: string
 		CLICKHOUSE_USER: string
 		CLICKHOUSE_PASSWORD: string
 		CLICKHOUSE_DATABASE: string
