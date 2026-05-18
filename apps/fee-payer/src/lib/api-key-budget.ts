@@ -44,9 +44,13 @@ export function formatMicrodollarUsd(microdollars: bigint): string {
  * Increment the daily and lifetime spend counters for an API key.
  *
  * The daily key has a 24h TTL so it rolls over automatically; the lifetime key
- * has no TTL. The read-modify-write is not atomic — two concurrent
- * sponsorships for the same key can drop one increment. PostHog
- * `SPONSORSHIP_REQUEST` events remain the source of truth for audit.
+ * has no TTL. Reads and writes are parallelized — invoked from
+ * `ctx.waitUntil` so it does not block the response, but parallelism keeps the
+ * background work cheap.
+ *
+ * The read-modify-write is not atomic — two concurrent sponsorships for the
+ * same key can drop one increment. PostHog `SPONSORSHIP_REQUEST` events
+ * remain the source of truth for audit.
  */
 export async function recordSpend(
 	apiKey: string,
@@ -55,18 +59,22 @@ export async function recordSpend(
 ): Promise<void> {
 	const fee = attodollarToMicrodollar(gasUsed * effectiveGasPrice)
 
-	const dailyKey = dailySpendKvKey(apiKey)
-	const currentDaily = await getDailySpend(apiKey)
-	await env.SponsorApiKeyStore!.put(dailyKey, (currentDaily + fee).toString(), {
-		expirationTtl: 86_400,
-	})
+	const [currentDaily, currentLifetime] = await Promise.all([
+		getDailySpend(apiKey),
+		getLifetimeSpend(apiKey),
+	])
 
-	const lifetimeKey = lifetimeSpendKvKey(apiKey)
-	const currentLifetime = await getLifetimeSpend(apiKey)
-	await env.SponsorApiKeyStore!.put(
-		lifetimeKey,
-		(currentLifetime + fee).toString(),
-	)
+	await Promise.all([
+		env.SponsorApiKeyStore!.put(
+			dailySpendKvKey(apiKey),
+			(currentDaily + fee).toString(),
+			{ expirationTtl: 86_400 },
+		),
+		env.SponsorApiKeyStore!.put(
+			lifetimeSpendKvKey(apiKey),
+			(currentLifetime + fee).toString(),
+		),
+	])
 }
 
 /**

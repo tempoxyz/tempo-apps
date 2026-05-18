@@ -107,7 +107,8 @@ describe('admin API key management', () => {
 			)
 			const { key } = (await createRes.json()) as { key: string }
 
-			// Seed both counters: 1.5 microdollars daily, 4.25 microdollars lifetime.
+			// Seed both counters: $1.50 daily (1.5M microdollars), $4.25 lifetime
+			// (4.25M microdollars).
 			const today = new Date().toISOString().slice(0, 10)
 			await env.SponsorApiKeyStore.put(`spend:${key}:${today}`, '1500000')
 			await env.SponsorApiKeyStore.put(`spend:${key}:lifetime`, '4250000')
