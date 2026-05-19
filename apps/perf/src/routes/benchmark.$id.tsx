@@ -5,6 +5,7 @@ import {
 	getScenario,
 	fetchRun,
 	fetchMetrics,
+	fetchMetricRates,
 	fetchBlocks,
 	fetchRunsForScenario,
 	type BenchRun,
@@ -54,6 +55,15 @@ const METRIC_NAMES = [
 	// Memory
 	'reth_jemalloc_resident',
 	'reth_jemalloc_allocated',
+]
+
+const PRIMARY_TPS_METRIC_NAMES = [
+	'txgen_transactions_sent_total',
+	'txgen_transactions_success_total',
+	'txgen_transactions_failed_total',
+	'txgen_blocks_sent_total',
+	'txgen_blocks_success_total',
+	'txgen_blocks_failed_total',
 ]
 
 const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
@@ -165,6 +175,7 @@ export function BenchmarkRunDetail(
 ): React.JSX.Element {
 	const navigate = useNavigate()
 	const runSelectId = React.useId()
+	const [showDetails, setShowDetails] = React.useState(false)
 	const { data: run } = useSuspenseQuery({
 		queryKey: ['run', props.id],
 		queryFn: () => fetchRun({ data: props.id }),
@@ -180,11 +191,20 @@ export function BenchmarkRunDetail(
 		enabled: !!run?.scenarioId,
 	})
 
-	const { data: metrics } = useQuery({
-		queryKey: ['metrics', props.id],
+	const { data: primaryMetrics } = useQuery({
+		queryKey: ['metricRates', props.id, 'primary-tps'],
+		queryFn: () =>
+			fetchMetricRates({
+				data: { runId: props.id, metrics: PRIMARY_TPS_METRIC_NAMES },
+			}),
+		enabled: !!run,
+	})
+
+	const { data: detailMetrics } = useQuery({
+		queryKey: ['metrics', props.id, 'details'],
 		queryFn: () =>
 			fetchMetrics({ data: { runId: props.id, metrics: METRIC_NAMES } }),
-		enabled: !!run,
+		enabled: !!run && showDetails,
 	})
 
 	const { data: blocks } = useQuery({
@@ -203,7 +223,8 @@ export function BenchmarkRunDetail(
 
 	const scenario = getScenario(run.scenarioId)
 	const runs = scenarioRuns ?? []
-	const m = metrics ?? []
+	const m = detailMetrics ?? []
+	const primaryM = primaryMetrics ?? []
 
 	// Builder phases (p50)
 	const buildDurP50 = findSeries(
@@ -293,6 +314,30 @@ export function BenchmarkRunDetail(
 				success: txgenBlocksSuccessSeries,
 				failed: txgenBlocksFailedSeries,
 			}
+	const primaryTxgenSentSeries = findSeries(
+		primaryM,
+		'txgen_transactions_sent_total',
+	)
+	const primaryTxgenSuccessSeries = findSeries(
+		primaryM,
+		'txgen_transactions_success_total',
+	)
+	const primaryTxgenFailedSeries = findSeries(
+		primaryM,
+		'txgen_transactions_failed_total',
+	)
+	const primaryTxgenBlocksSentSeries = findSeries(
+		primaryM,
+		'txgen_blocks_sent_total',
+	)
+	const hasPrimaryTxgenTransactionCounters = [
+		primaryTxgenSentSeries,
+		primaryTxgenSuccessSeries,
+		primaryTxgenFailedSeries,
+	].some(hasSamples)
+	const primarySubmittedSeries = hasPrimaryTxgenTransactionCounters
+		? primaryTxgenSentSeries
+		: primaryTxgenBlocksSentSeries
 
 	// Txpool
 	const pendingSeries = findSeries(
@@ -386,8 +431,9 @@ export function BenchmarkRunDetail(
 	const sharedGasLimit = Math.floor(refGasLimit / 10)
 	const generalGasLimit = 30_000_000
 	const paymentGasLimit = refGasLimit - sharedGasLimit - generalGasLimit
-	const hasLoadedPrimarySeries = metrics !== undefined && blocks !== undefined
-	const ingressTpsPoints = counterRate(txgenCounterSeries.sent)
+	const hasLoadedSubmittedSeries = primaryMetrics !== undefined
+	const hasLoadedSettledSeries = blocks !== undefined
+	const ingressTpsPoints = transformSamples(primarySubmittedSeries)
 	const settledTpsPoints = settledTps(blockRows)
 	const ingressEgressYMax = sharedYMax([ingressTpsPoints, settledTpsPoints])
 
@@ -509,8 +555,8 @@ export function BenchmarkRunDetail(
 					title="Submitted / Settled TPS"
 					tooltip="Submitted transaction load compared with transactions settled into blocks."
 				/>
-				{hasLoadedPrimarySeries ? (
-					<div className="grid grid-cols-1 gap-3">
+				<div className="grid grid-cols-1 gap-3">
+					{hasLoadedSubmittedSeries ? (
 						<TimeSeriesChart
 							title="Submitted TPS"
 							tooltip="Rate of transactions submitted by the load generator. This shows the input pulse."
@@ -525,6 +571,10 @@ export function BenchmarkRunDetail(
 							formatValue={(v) => `${formatTps(v)}/s`}
 							yMax={ingressEgressYMax}
 						/>
+					) : (
+						<ChartLoadingCard title="Submitted TPS" />
+					)}
+					{hasLoadedSettledSeries ? (
 						<TimeSeriesChart
 							title="Settled TPS"
 							tooltip="Rate of transactions included in blocks, derived from per-block transaction count and block time."
@@ -539,16 +589,18 @@ export function BenchmarkRunDetail(
 							formatValue={(v) => `${formatTps(v)}/s`}
 							yMax={ingressEgressYMax}
 						/>
-					</div>
-				) : (
-					<div className="grid grid-cols-1 gap-3">
-						<ChartLoadingCard title="Submitted TPS" />
+					) : (
 						<ChartLoadingCard title="Settled TPS" />
-					</div>
-				)}
+					)}
+				</div>
 			</section>
 
-			<details className="group/details mb-14">
+			<details
+				className="group/details mb-14"
+				onToggle={(event) => {
+					setShowDetails(event.currentTarget.open)
+				}}
+			>
 				<summary className="mb-5 flex cursor-pointer list-none items-center gap-3 transition-colors marker:hidden">
 					<h3 className="shrink-0 text-[13px] font-normal tracking-wider text-tertiary uppercase group-hover/details:text-primary">
 						Detailed charts

@@ -41,6 +41,13 @@ export type MetricSeries = {
 	samples: Array<MetricSample>
 }
 
+type MetricRow = {
+	metric_name: string
+	labels_json: string
+	offset_ms: string
+	value: string
+}
+
 const SCENARIOS: Array<{
 	id: string
 	label: string
@@ -356,6 +363,101 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 				FROM txgen_metric_samples
 				WHERE run_id = selected_run_id
 					AND metric_name IN (${metricList})
+				GROUP BY
+					metric_name,
+					labels_json,
+					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
+			)
+			ORDER BY metric_name, labels_json, offset_ms
+		`)
+
+		const seriesMap = new Map<string, MetricSeries>()
+		for (const row of rows) {
+			const key = `${row.metric_name}::${row.labels_json}`
+			let series = seriesMap.get(key)
+			if (!series) {
+				series = {
+					name: row.metric_name,
+					labels: row.labels_json,
+					samples: [],
+				}
+				seriesMap.set(key, series)
+			}
+			series.samples.push({
+				offsetMs: Number(row.offset_ms),
+				value: Number(row.value),
+			})
+		}
+
+		return Array.from(seriesMap.values())
+	})
+
+/** Fetch per-second rates for cumulative counter metrics. */
+export const fetchMetricRates = createServerFn({ method: 'POST' })
+	.inputValidator((input: { runId: string; metrics: Array<string> }) => input)
+	.handler(async ({ data: { runId, metrics } }) => {
+		if (metrics.length === 0) return []
+
+		const run = sqlString(runId)
+		const metricList = metrics.map(sqlString).join(', ')
+		const rows = await queryClickHouse<MetricRow>(`
+			WITH
+				${run} AS selected_run_id,
+				(
+					SELECT min(offset_ms)
+					FROM txgen_metric_samples
+					WHERE run_id = selected_run_id
+						AND metric_name IN (${metricList})
+				) AS min_offset,
+				(
+					SELECT max(offset_ms)
+					FROM txgen_metric_samples
+					WHERE run_id = selected_run_id
+						AND metric_name IN (${metricList})
+				) AS max_offset,
+				greatest(1, toUInt64(ceil((max_offset - min_offset) / ${CHART_POINT_TARGET}.0))) AS bucket_ms
+			SELECT
+				metric_name,
+				labels_json,
+				bucket_offset_ms AS offset_ms,
+				bucket_value AS value
+			FROM (
+				SELECT
+					metric_name,
+					labels_json,
+					min(offset_ms) AS bucket_offset_ms,
+					avg(rate) AS bucket_value
+				FROM (
+					SELECT
+						metric_name,
+						labels_json,
+						offset_ms,
+						if(
+							prev_offset_ms IS NOT NULL
+								AND offset_ms > prev_offset_ms
+								AND value >= prev_value,
+							(value - prev_value) * 1000.0 / (offset_ms - prev_offset_ms),
+							NULL
+						) AS rate
+					FROM (
+						SELECT
+							metric_name,
+							labels_json,
+							offset_ms,
+							value,
+							lagInFrame(toNullable(offset_ms), 1, NULL) OVER series_window AS prev_offset_ms,
+							lagInFrame(toNullable(value), 1, NULL) OVER series_window AS prev_value
+						FROM txgen_metric_samples
+						WHERE run_id = selected_run_id
+							AND metric_name IN (${metricList})
+						WINDOW series_window AS (
+							PARTITION BY metric_name, labels_json
+							ORDER BY offset_ms
+							ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+						)
+					)
+				)
+				WHERE rate IS NOT NULL
 				GROUP BY
 					metric_name,
 					labels_json,
