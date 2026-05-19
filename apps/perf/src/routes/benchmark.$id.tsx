@@ -8,12 +8,12 @@ import {
 	fetchBlocks,
 	fetchRunsForScenario,
 	type BenchRun,
+	type MetricQuery,
 	type MetricSeries,
 } from '#lib/server/bench'
 import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
 
-const METRIC_NAMES = [
-	// Builder phases (p50)
+const BUILDER_QUANTILE_METRIC_NAMES = [
 	'reth_tempo_payload_builder_payload_build_duration_seconds',
 	'reth_tempo_payload_builder_pool_fetch_duration_seconds',
 	'reth_tempo_payload_builder_total_transaction_execution_duration_seconds',
@@ -23,6 +23,13 @@ const METRIC_NAMES = [
 	'reth_tempo_payload_builder_hashed_post_state_duration_seconds',
 	'reth_tempo_payload_builder_prepare_system_transactions_duration_seconds',
 	'reth_tempo_payload_builder_system_transactions_execution_duration_seconds',
+] as const
+
+const METRIC_QUERIES = [
+	...BUILDER_QUANTILE_METRIC_NAMES.map((name) => ({
+		name,
+		labels: { quantile: ['0.5', '0.95'] },
+	})),
 	// Throughput
 	'reth_tempo_payload_builder_total_transactions_last',
 	// Block headroom
@@ -42,10 +49,21 @@ const METRIC_NAMES = [
 	'reth_transaction_pool_aa_2d_pending_transactions',
 	'reth_transaction_pool_aa_2d_queued_transactions',
 	// Skipped txs
-	'reth_tempo_payload_builder_pool_transactions_skipped_total',
+	{
+		name: 'reth_tempo_payload_builder_pool_transactions_skipped_total',
+		labels: {
+			reason: ['nonce_too_low', 'invalid_tx', 'sender_address_mismatch'],
+		},
+	},
 	// Persistence
-	'reth_storage_providers_database_save_blocks_write_state',
-	'reth_storage_providers_database_save_blocks_write_trie_updates',
+	{
+		name: 'reth_storage_providers_database_save_blocks_write_state',
+		labels: { quantile: '0.5' },
+	},
+	{
+		name: 'reth_storage_providers_database_save_blocks_write_trie_updates',
+		labels: { quantile: '0.5' },
+	},
 	// Cache
 	'reth_sync_caching_account_cache_hits',
 	'reth_sync_caching_account_cache_misses',
@@ -54,7 +72,7 @@ const METRIC_NAMES = [
 	// Memory
 	'reth_jemalloc_resident',
 	'reth_jemalloc_allocated',
-]
+] satisfies Array<string | MetricQuery>
 
 const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
 
@@ -183,7 +201,9 @@ export function BenchmarkRunDetail(
 	const { data: metrics } = useQuery({
 		queryKey: ['metrics', props.id],
 		queryFn: () =>
-			fetchMetrics({ data: { runId: props.id, metrics: METRIC_NAMES } }),
+			fetchMetrics({
+				data: { runId: props.id, metrics: METRIC_QUERIES },
+			}),
 		enabled: !!run,
 	})
 

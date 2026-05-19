@@ -41,6 +41,11 @@ export type MetricSeries = {
 	samples: Array<MetricSample>
 }
 
+export type MetricQuery = {
+	name: string
+	labels?: Record<string, string | Array<string> | undefined> | undefined
+}
+
 const SCENARIOS: Array<{
 	id: string
 	label: string
@@ -142,6 +147,52 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 
 function normalizeRunFeed(feed: unknown): RunFeed {
 	return feed === 'nightly' ? 'nightly' : 'release'
+}
+
+function normalizeMetricQuery(metric: string | MetricQuery): MetricQuery {
+	return typeof metric === 'string' ? { name: metric } : metric
+}
+
+function metricWhereClause(metrics: Array<MetricQuery>): string {
+	const unfilteredMetrics = metrics.filter((metric) => !metric.labels)
+	const filteredMetrics = metrics.filter((metric) => metric.labels)
+	const clauses: Array<string> = []
+
+	if (unfilteredMetrics.length > 0) {
+		clauses.push(
+			`metric_name IN (${unfilteredMetrics.map((m) => sqlString(m.name)).join(', ')})`,
+		)
+	}
+
+	for (const metric of filteredMetrics) {
+		const labelClauses = Object.entries(metric.labels ?? {}).flatMap(
+			([key, value]) => {
+				if (value == null) return []
+				const values = Array.isArray(value) ? value : [value]
+				return [
+					`JSONExtractString(labels_json, ${sqlString(key)}) IN (${values.map(sqlString).join(', ')})`,
+				]
+			},
+		)
+
+		clauses.push(
+			`(metric_name = ${sqlString(metric.name)} AND ${labelClauses.join(' AND ')})`,
+		)
+	}
+
+	return clauses.join('\n\t\t\t\t\tOR ')
+}
+
+function compactLabels(row: {
+	node: string
+	quantile: string
+	reason: string
+}): string {
+	const labels: Record<string, string> = {}
+	if (row.node) labels.node = row.node
+	if (row.quantile) labels.quantile = row.quantile
+	if (row.reason) labels.reason = row.reason
+	return JSON.stringify(labels)
 }
 
 function runFeedWhereClause(feed: RunFeed): string {
@@ -315,15 +366,31 @@ export const fetchRun = createServerFn({ method: 'POST' })
 
 /** Fetch metric time-series for a run, filtered by metric names. */
 export const fetchMetrics = createServerFn({ method: 'POST' })
-	.inputValidator((input: { runId: string; metrics: Array<string> }) => input)
-	.handler(async ({ data: { runId, metrics } }) => {
+	.inputValidator(
+		(input: {
+			runId: string
+			metrics: Array<string | MetricQuery>
+			pointTarget?: number | undefined
+		}) => input,
+	)
+	.handler(async ({ data: { runId, metrics, pointTarget } }) => {
 		if (metrics.length === 0) return []
 
 		const run = sqlString(runId)
-		const metricList = metrics.map(sqlString).join(', ')
+		const normalizedMetrics = metrics.map(normalizeMetricQuery)
+		const metricsWhere = metricWhereClause(normalizedMetrics)
+		const target = Math.max(
+			50,
+			Math.min(
+				CHART_POINT_TARGET,
+				Math.floor(pointTarget ?? CHART_POINT_TARGET),
+			),
+		)
 		const rows = await queryClickHouse<{
 			metric_name: string
-			labels_json: string
+			node: string
+			quantile: string
+			reason: string
 			offset_ms: string
 			value: string
 		}>(`
@@ -333,45 +400,52 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 					SELECT min(offset_ms)
 					FROM txgen_metric_samples
 					WHERE run_id = selected_run_id
-						AND metric_name IN (${metricList})
+						AND (${metricsWhere})
 				) AS min_offset,
 				(
 					SELECT max(offset_ms)
 					FROM txgen_metric_samples
 					WHERE run_id = selected_run_id
-						AND metric_name IN (${metricList})
+						AND (${metricsWhere})
 				) AS max_offset,
-				greatest(1, toUInt64(ceil((max_offset - min_offset) / ${CHART_POINT_TARGET}.0))) AS bucket_ms
+				greatest(1, toUInt64(ceil(ifNull(max_offset - min_offset, 0) / ${target}.0))) AS bucket_ms
 			SELECT
 				metric_name,
-				labels_json,
+				node,
+				quantile,
+				reason,
 				bucket_offset_ms AS offset_ms,
 				bucket_value AS value
 			FROM (
 				SELECT
 					metric_name,
-					labels_json,
+					JSONExtractString(labels_json, 'node') AS node,
+					JSONExtractString(labels_json, 'quantile') AS quantile,
+					JSONExtractString(labels_json, 'reason') AS reason,
 					min(offset_ms) AS bucket_offset_ms,
 					avg(value) AS bucket_value
 				FROM txgen_metric_samples
 				WHERE run_id = selected_run_id
-					AND metric_name IN (${metricList})
+					AND (${metricsWhere})
 				GROUP BY
 					metric_name,
-					labels_json,
+					node,
+					quantile,
+					reason,
 					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
 			)
-			ORDER BY metric_name, labels_json, offset_ms
+			ORDER BY metric_name, node, quantile, reason, offset_ms
 		`)
 
 		const seriesMap = new Map<string, MetricSeries>()
 		for (const row of rows) {
-			const key = `${row.metric_name}::${row.labels_json}`
+			const labels = compactLabels(row)
+			const key = `${row.metric_name}::${labels}`
 			let series = seriesMap.get(key)
 			if (!series) {
 				series = {
 					name: row.metric_name,
-					labels: row.labels_json,
+					labels,
 					samples: [],
 				}
 				seriesMap.set(key, series)
