@@ -11,12 +11,12 @@ import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import {
-	getPerspectiveEvent,
 	TransactionFee,
 	TransactionTimestamp,
 	TransactionTotal,
 } from '#comps/TxTransactionRow'
 import { cx } from '#lib/css'
+import { getPerspectiveEvent } from '#lib/domain/perspective-events'
 import {
 	accountAddress,
 	adminAddress,

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import * as Address from 'ox/Address'
+import type * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import * as React from 'react'
@@ -10,6 +10,7 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { getPerspectiveEvent } from '#lib/domain/perspective-events'
 import {
 	calculateKnownEventsTotal,
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
@@ -82,29 +83,6 @@ export function TransactionDescription(props: {
 			transformEvent={transformEvent}
 		/>
 	)
-}
-
-export function getPerspectiveEvent(
-	event: KnownEvent,
-	accountAddress?: Address.Address,
-) {
-	if (!accountAddress) return event
-	if (event.type !== 'send') return event
-	const toMatches =
-		event.meta?.to && Address.isEqual(event.meta.to, accountAddress)
-	const fromMatches =
-		event.meta?.from && Address.isEqual(event.meta.from, accountAddress)
-	if (!toMatches || fromMatches) return event
-
-	const sender = event.meta?.from
-	const updatedParts = event.parts.map((part) => {
-		if (part.type === 'action') return { ...part, value: 'Received' }
-		if (part.type === 'text' && part.value.toLowerCase() === 'to')
-			return { ...part, value: 'from' }
-		if (part.type === 'account' && sender) return { ...part, value: sender }
-		return part
-	})
-	return { ...event, parts: updatedParts }
 }
 
 export function TransactionTimestamp(props: {
