@@ -111,8 +111,11 @@ const relayHandler = Handler.relay({
 
 async function feePayerHandler(c: Context) {
 	const requestContext = getRequestContext(c.req.raw)
-	const apiKeyLabel = c.get('apiKeyRecord')?.label
+	const apiKey = c.get('apiKey') as string | undefined
+	const apiKeyRecord = c.get('apiKeyRecord')
+	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
+	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
 
 	if (rpcMethod) {
 		c.executionCtx.waitUntil(
@@ -122,7 +125,12 @@ async function feePayerHandler(c: Context) {
 				properties: {
 					...requestContext,
 					rpcMethod,
+					keyedRoute: Boolean(apiKey),
 					...(apiKeyLabel ? { apiKeyLabel } : {}),
+					...(apiKeyRecord?.dailyLimitUsd
+						? { dailyLimitUsd: apiKeyRecord.dailyLimitUsd }
+						: {}),
+					...(estimatedFeeUsd !== undefined ? { estimatedFeeUsd } : {}),
 				},
 			}),
 		)
@@ -136,9 +144,14 @@ async function feePayerHandler(c: Context) {
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
-app.all('/:key{tp_.+}', apiKeyMiddleware, rateLimitMiddleware, feePayerHandler)
+app.all(
+	'/:key{tp_.+}',
+	apiKeyMiddleware,
+	rateLimitMiddleware({ keyed: true }),
+	feePayerHandler,
+)
 
 // Open path: https://sponsor.tempo.xyz/
-app.all('/', rateLimitMiddleware, feePayerHandler)
+app.all('/', rateLimitMiddleware({ keyed: false }), feePayerHandler)
 
 export default app
