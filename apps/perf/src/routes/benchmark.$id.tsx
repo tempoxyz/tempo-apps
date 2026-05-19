@@ -141,11 +141,10 @@ export const Route = createFileRoute('/benchmark/$id')({
 		})
 
 		if (run?.scenarioId) {
-			const feed = isTag(run.ref) ? 'release' : 'nightly'
 			await context.queryClient.ensureQueryData({
-				queryKey: ['scenarioRuns', run.scenarioId, feed],
+				queryKey: ['scenarioRuns', run.scenarioId],
 				queryFn: () =>
-					fetchRunsForScenario({ data: { scenarioId: run.scenarioId, feed } }),
+					fetchRunsForScenario({ data: { scenarioId: run.scenarioId } }),
 			})
 		}
 	},
@@ -188,12 +187,11 @@ export function BenchmarkRunDetail(
 		queryFn: () => fetchRun({ data: props.id }),
 	})
 
-	const runFeed = run && isTag(run.ref) ? 'release' : 'nightly'
 	const { data: scenarioRuns } = useQuery({
-		queryKey: ['scenarioRuns', run?.scenarioId ?? '', runFeed],
+		queryKey: ['scenarioRuns', run?.scenarioId ?? ''],
 		queryFn: () =>
 			fetchRunsForScenario({
-				data: { scenarioId: run?.scenarioId ?? '', feed: runFeed },
+				data: { scenarioId: run?.scenarioId ?? '' },
 			}),
 		enabled: !!run?.scenarioId,
 	})

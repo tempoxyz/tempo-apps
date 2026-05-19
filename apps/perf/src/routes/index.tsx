@@ -36,10 +36,10 @@ export const Route = createFileRoute('/')({
 
 		if (selectedRun.scenarioId) {
 			await context.queryClient.ensureQueryData({
-				queryKey: ['scenarioRuns', selectedRun.scenarioId, 'release'],
+				queryKey: ['scenarioRuns', selectedRun.scenarioId],
 				queryFn: () =>
 					fetchRunsForScenario({
-						data: { scenarioId: selectedRun.scenarioId, feed: 'release' },
+						data: { scenarioId: selectedRun.scenarioId },
 					}),
 			})
 		}

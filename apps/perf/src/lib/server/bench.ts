@@ -23,11 +23,8 @@ export type BenchRun = {
 	blockCount: number
 }
 
-export type RunFeed = 'release' | 'nightly'
-
 export type RunsForScenarioInput = {
 	scenarioId: string
-	feed?: RunFeed | undefined
 }
 
 export type MetricSample = {
@@ -145,10 +142,6 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 	}
 }
 
-function normalizeRunFeed(feed: unknown): RunFeed {
-	return feed === 'nightly' ? 'nightly' : 'release'
-}
-
 function normalizeMetricQuery(metric: string | MetricQuery): MetricQuery {
 	return typeof metric === 'string' ? { name: metric } : metric
 }
@@ -195,17 +188,7 @@ function compactLabels(row: {
 	return JSON.stringify(labels)
 }
 
-function runFeedWhereClause(feed: RunFeed): string {
-	return feed === 'release'
-		? "AND r.metadata['run_type'] = 'release'"
-		: "AND r.metadata['run_type'] != 'release'"
-}
-
-function buildRunsQuery(
-	scenarioName: string,
-	feed: RunFeed,
-	limit = 50,
-): string {
+function buildRunsQuery(scenarioName: string, limit = 50): string {
 	const scenario = sqlString(scenarioName)
 	const candidateLimit = Math.max(50, limit * 2)
 
@@ -223,7 +206,7 @@ function buildRunsQuery(
 				r.config.values AS config_values
 			FROM txgen_runs r
 			WHERE r.scenario_name = ${scenario}
-				${runFeedWhereClause(feed)}
+				AND r.metadata['run_type'] = 'release'
 			ORDER BY r.started_at DESC
 			LIMIT ${candidateLimit}
 		)
@@ -264,28 +247,12 @@ function buildRunsQuery(
 	`
 }
 
-export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
-	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
-	.handler(async ({ data: feed }) => {
-		const latestRuns = await Promise.all(
-			SCENARIOS.map(async (scenario) => {
-				const rows = await queryClickHouse<RunRow>(
-					buildRunsQuery(scenario.scenarioName, feed, 1),
-				)
-				const latest = rows[0]
-				return latest ? toRun(latest, scenario.id) : null
-			}),
-		)
-
-		return latestRuns.filter((run): run is BenchRun => run !== null)
-	})
-
 export const fetchReleaseRuns = createServerFn({ method: 'GET' }).handler(
 	async () => {
 		const runsByScenario = await Promise.all(
 			SCENARIOS.map(async (scenario) => {
 				const rows = await queryClickHouse<RunRow>(
-					buildRunsQuery(scenario.scenarioName, 'release'),
+					buildRunsQuery(scenario.scenarioName),
 				)
 				return rows.map((row) => toRun(row, scenario.id))
 			}),
@@ -303,14 +270,13 @@ export const fetchReleaseRuns = createServerFn({ method: 'GET' }).handler(
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 	.inputValidator((input: RunsForScenarioInput) => ({
 		scenarioId: input.scenarioId,
-		feed: normalizeRunFeed(input.feed),
 	}))
-	.handler(async ({ data: { scenarioId, feed } }) => {
+	.handler(async ({ data: { scenarioId } }) => {
 		const config = SCENARIOS.find((s) => s.id === scenarioId)
 		if (!config) return []
 
 		const rows = await queryClickHouse<RunRow>(
-			buildRunsQuery(config.scenarioName, feed),
+			buildRunsQuery(config.scenarioName),
 		)
 		return rows.map((row) => toRun(row, scenarioId))
 	})
@@ -352,6 +318,7 @@ export const fetchRun = createServerFn({ method: 'POST' })
 				GROUP BY run_id
 			) b ON r.run_id = b.run_id
 			WHERE r.run_id = ${run}
+				AND r.metadata['run_type'] = 'release'
 			LIMIT 1
 		`)
 
@@ -397,15 +364,23 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 			WITH
 				${run} AS selected_run_id,
 				(
+					SELECT count()
+					FROM txgen_runs
+					WHERE run_id = selected_run_id
+						AND metadata['run_type'] = 'release'
+				) AS release_run_exists,
+				(
 					SELECT min(offset_ms)
 					FROM txgen_metric_samples
 					WHERE run_id = selected_run_id
+						AND release_run_exists > 0
 						AND (${metricsWhere})
 				) AS min_offset,
 				(
 					SELECT max(offset_ms)
 					FROM txgen_metric_samples
 					WHERE run_id = selected_run_id
+						AND release_run_exists > 0
 						AND (${metricsWhere})
 				) AS max_offset,
 				greatest(1, toUInt64(ceil(ifNull(max_offset - min_offset, 0) / ${target}.0))) AS bucket_ms
@@ -426,6 +401,7 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 					avg(value) AS bucket_value
 				FROM txgen_metric_samples
 				WHERE run_id = selected_run_id
+					AND release_run_exists > 0
 					AND (${metricsWhere})
 				GROUP BY
 					metric_name,
@@ -491,8 +467,15 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 				${run} AS selected_run_id,
 				(
 					SELECT count()
+					FROM txgen_runs
+					WHERE run_id = selected_run_id
+						AND metadata['run_type'] = 'release'
+				) AS release_run_exists,
+				(
+					SELECT count()
 					FROM txgen_blocks
 					WHERE run_id = selected_run_id
+						AND release_run_exists > 0
 				) AS total_rows,
 				greatest(1, toUInt64(ceil(total_rows / ${CHART_POINT_TARGET}.0))) AS bucket_size
 			SELECT
@@ -526,6 +509,7 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 					avg(sparse_trie_wait_us) AS sparse_trie_wait_us
 				FROM txgen_blocks
 				WHERE run_id = selected_run_id
+					AND release_run_exists > 0
 				GROUP BY intDiv(toUInt64(block_index), bucket_size)
 			)
 			ORDER BY block_index
