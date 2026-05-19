@@ -242,7 +242,7 @@ function ScenarioCard(props: {
 						<Stat label="TPS" value={formatTps(run.avgTps)} highlight />
 						<Stat label="Block Time" value={formatMs(run.avgBlockTimeMs)} />
 						<Stat label="Throughput" value={formatGas(run.avgGasPerSecond)} />
-						<Stat label="Peak" value={formatGas(run.peakGasPerSecond)} />
+						<Stat label="Peak Gas" value={formatGas(run.peakGasPerSecond)} />
 					</div>
 				</div>
 			) : (
