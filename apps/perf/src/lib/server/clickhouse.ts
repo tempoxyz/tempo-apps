@@ -25,6 +25,16 @@ function httpsPost(
 	})
 }
 
+function clickHouseUrl(host: string): URL {
+	const trimmedHost = host.trim()
+	const url = /^https?:\/\//i.test(trimmedHost)
+		? new URL(trimmedHost)
+		: new URL(`https://${trimmedHost}`)
+
+	url.searchParams.set('default_format', 'JSON')
+	return url
+}
+
 export async function queryClickHouse<T>(query: string): Promise<Array<T>> {
 	const {
 		CLICKHOUSE_HOST,
@@ -38,7 +48,7 @@ export async function queryClickHouse<T>(query: string): Promise<Array<T>> {
 		return []
 	}
 
-	const url = new URL(`https://${CLICKHOUSE_HOST}/?default_format=JSON`)
+	const url = clickHouseUrl(CLICKHOUSE_HOST)
 	if (CLICKHOUSE_DATABASE) {
 		url.searchParams.set('database', CLICKHOUSE_DATABASE)
 	}

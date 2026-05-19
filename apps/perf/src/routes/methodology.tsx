@@ -14,8 +14,8 @@ function MethodologyPage(): React.JSX.Element {
 			<div className="space-y-8 text-[14px] leading-relaxed text-secondary">
 				<Section title="Workload Composition">
 					<p>
-						Benchmarks run two workload types at varying target TPS levels
-						(10K, 20K, 40K):
+						Benchmarks run a TIP-20 transfer workload at varying target TPS
+						levels.
 					</p>
 					<div className="mt-3 card">
 						<div className="divide-y divide-dashed divide-border">
@@ -25,15 +25,6 @@ function MethodologyPage(): React.JSX.Element {
 								</span>
 								<span className="text-[13px] text-secondary">
 									100% TIP-20 token transfers (ERC-20 equivalent).
-								</span>
-							</div>
-							<div className="flex items-center gap-4 px-4.5 py-3">
-								<span className="shrink-0 text-[13px] font-medium text-primary w-28">
-									Mixed
-								</span>
-								<span className="text-[13px] text-secondary">
-									80% TIP-20 transfers, 20% MPP (multi-party payment) channel
-									operations (approve → open → close).
 								</span>
 							</div>
 						</div>

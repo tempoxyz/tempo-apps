@@ -62,13 +62,15 @@ const SCENARIOS: Array<{
 	{
 		id: 'mix-10k',
 		label: 'Mix — 10K TPS',
-		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
+		workload:
+			'70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-10k',
 	},
 	{
 		id: 'mix-20k',
 		label: 'Mix — 20K TPS',
-		workload: '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
+		workload:
+			'70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-20k',
 	},
 ]
@@ -226,6 +228,26 @@ export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
 
 		return latestRuns.filter((run): run is BenchRun => run !== null)
 	})
+
+export const fetchReleaseRuns = createServerFn({ method: 'GET' }).handler(
+	async () => {
+		const runsByScenario = await Promise.all(
+			SCENARIOS.map(async (scenario) => {
+				const rows = await queryClickHouse<RunRow>(
+					buildRunsQuery(scenario.scenarioName, 'release'),
+				)
+				return rows.map((row) => toRun(row, scenario.id))
+			}),
+		)
+
+		return runsByScenario
+			.flat()
+			.sort(
+				(a, b) =>
+					new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+			)
+	},
+)
 
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 	.inputValidator((input: RunsForScenarioInput) => ({
