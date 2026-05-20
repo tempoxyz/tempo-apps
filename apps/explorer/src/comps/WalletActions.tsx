@@ -98,6 +98,7 @@ export function WalletActions(
 								connectors={supported}
 								symbol={props.symbol}
 								decimals={props.decimals}
+								image={props.image}
 							/>,
 							<SetAsFeeToken
 								key="fee"
@@ -133,5 +134,6 @@ export declare namespace WalletActions {
 		address: Address.Address
 		symbol?: string | undefined
 		decimals?: number | undefined
+		image?: string | undefined
 	}
 }

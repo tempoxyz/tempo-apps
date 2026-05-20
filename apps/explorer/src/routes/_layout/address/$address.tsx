@@ -254,6 +254,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					.catch(() => null),
 				QUERY_TIMEOUT_MS,
 			)
+			const tokenLogoURIPromise = isKnownTokenAddress
+				? timeout(
+						Tip20.fetchLogoURI(config as Config, address as Address.Address),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(undefined)
 
 			const historySources = historySourcesForAddress(
 				address as Address.Address,
@@ -319,12 +325,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				transactionsData,
 				balancesResult,
 				tokenMetadata,
+				tokenLogoURI,
 				ogMeta,
 			] = await Promise.all([
 				contractBytecodePromise,
 				transactionsPromise,
 				balancesPromise,
 				tokenMetadataPromise,
+				tokenLogoURIPromise,
 				ogMetaPromise,
 			])
 
@@ -349,6 +357,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				accountType,
 				isToken,
 				tokenMetadata,
+				tokenLogoURI,
 				contractInfo,
 				contractSource,
 				transactionsData,
@@ -498,6 +507,7 @@ function RouteComponent() {
 		accountType,
 		isToken,
 		tokenMetadata,
+		tokenLogoURI,
 		account,
 		contractInfo,
 		contractSource,
@@ -673,6 +683,7 @@ function RouteComponent() {
 				addressMetadata={addressMetadata}
 				isToken={isToken}
 				tokenMetadata={tokenMetadata}
+				tokenLogoURI={tokenLogoURI}
 			/>
 			<SectionsWrapper
 				address={address}
@@ -780,6 +791,7 @@ function AccountCardWithTimestamps(props: {
 	accountType?: AccountType
 	addressMetadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
 	isToken?: boolean
+	tokenLogoURI?: string | undefined
 	tokenMetadata?: TokenMetadata | null
 }) {
 	const {
@@ -788,6 +800,7 @@ function AccountCardWithTimestamps(props: {
 		accountType: initialAccountType,
 		addressMetadata,
 		isToken,
+		tokenLogoURI,
 		tokenMetadata,
 	} = props
 
@@ -846,6 +859,7 @@ function AccountCardWithTimestamps(props: {
 				hideHoldings={isTip20}
 				accountType={resolvedAccountType}
 				isToken={isToken}
+				tokenLogoURI={tokenLogoURI}
 				tokenName={tokenMetadata?.name}
 				virtualAddressParts={virtualAddressParts}
 			/>
@@ -855,6 +869,7 @@ function AccountCardWithTimestamps(props: {
 						address={address}
 						symbol={tokenMetadata?.symbol}
 						decimals={tokenMetadata?.decimals}
+						image={Tip20.resolveLogoURI(tokenLogoURI)}
 					/>
 				</ClientOnly>
 			)}
