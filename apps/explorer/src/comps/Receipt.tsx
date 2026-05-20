@@ -4,6 +4,7 @@ import * as Value from 'ox/Value'
 import { useState } from 'react'
 import { Amount } from '#comps/Amount'
 import { Midcut } from 'midcut'
+import { MemoText } from '#comps/MemoText'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -209,7 +210,7 @@ export function Receipt(props: Receipt.Props) {
 																className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
 																title={event.note}
 															>
-																{event.note}
+																<MemoText value={event.note} />
 															</span>
 														) : (
 															<div className="flex flex-col gap-1 text-secondary text-[13px]">
@@ -232,9 +233,15 @@ export function Receipt(props: Receipt.Props) {
 																				part.value === ''
 																			) && (
 																				<div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-																					<TxEventDescription.Part
-																						part={part}
-																					/>
+																					{part.type === 'text' ? (
+																						<span className="text-tertiary">
+																							<MemoText value={part.value} />
+																						</span>
+																					) : (
+																						<TxEventDescription.Part
+																							part={part}
+																						/>
+																					)}
 																				</div>
 																			)}
 																		</div>
