@@ -9,7 +9,7 @@ import {
 } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
-import { streamChannelAbi } from './known-events.ts'
+import { stablecoinDexAbi, streamChannelAbi } from './known-events.ts'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -256,7 +256,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'Stablecoin Exchange',
 			code: '0xef',
 			description: 'Enshrined DEX for stablecoin swaps',
-			abi: Abis.stablecoinDex,
+			abi: stablecoinDexAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
 			address: Addresses.stablecoinDex,

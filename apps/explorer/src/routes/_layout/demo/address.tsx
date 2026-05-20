@@ -39,7 +39,11 @@ import {
 	userTokenAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
-import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
+import {
+	type KnownEvent,
+	parseKnownEvents,
+	stablecoinDexAbi,
+} from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -330,7 +334,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinDex,
+						abi: stablecoinDexAbi,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 123n,
@@ -746,7 +750,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinDex,
+						abi: stablecoinDexAbi,
 						eventName: 'OrderPlaced',
 						args: {
 							orderId: 456n,
@@ -765,7 +769,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinDex,
+						abi: stablecoinDexAbi,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 456n,
@@ -775,6 +779,30 @@ function createMockTransactions(): MockTransactionData[] {
 					data: encodeAbiParameters(
 						[{ type: 'uint128' }, { type: 'bool' }],
 						[2500000n, false],
+					),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: exchangeAddress,
+					topics: encodeEventTopics({
+						abi: stablecoinDexAbi,
+						eventName: 'OrderFlipped',
+						args: {
+							orderId: 456n,
+							maker: accountAddress,
+							token: baseTokenAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[
+							{ type: 'uint128' },
+							{ type: 'bool' },
+							{ type: 'int16' },
+							{ type: 'int16' },
+						],
+						[5000000n, false, 99, 101],
 					),
 				},
 				hash,

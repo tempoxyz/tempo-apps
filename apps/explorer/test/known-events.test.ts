@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
+import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis, Addresses } from 'viem/tempo'
 import {
 	accountAddress,
 	getTokenMetadata,
@@ -10,7 +11,7 @@ import {
 	recipientAddress,
 	userTokenAddress,
 } from '#lib/demo'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { parseKnownEvents, stablecoinDexAbi } from '#lib/domain/known-events'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
@@ -55,6 +56,96 @@ const depositMadeAbi = [
 ] as const
 
 describe('parseKnownEvents', () => {
+	it('decodes stablecoin DEX OrderFlipped buy and sell events', () => {
+		const hash = `0x${'6'.repeat(64)}` as const
+		const amount = 1_000_000n
+		const token = Address.checksum(userTokenAddress)
+		const logs = [
+			mockLog(
+				{
+					address: Addresses.stablecoinDex,
+					topics: encodeEventTopics({
+						abi: stablecoinDexAbi,
+						eventName: 'OrderFlipped',
+						args: {
+							orderId: 123n,
+							maker: accountAddress,
+							token,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[
+							{ type: 'uint128' },
+							{ type: 'bool' },
+							{ type: 'int16' },
+							{ type: 'int16' },
+						],
+						[amount, true, 100, 98],
+					),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: Addresses.stablecoinDex,
+					topics: encodeEventTopics({
+						abi: stablecoinDexAbi,
+						eventName: 'OrderFlipped',
+						args: {
+							orderId: 124n,
+							maker: accountAddress,
+							token,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[
+							{ type: 'uint128' },
+							{ type: 'bool' },
+							{ type: 'int16' },
+							{ type: 'int16' },
+						],
+						[amount, false, 98, 100],
+					),
+				},
+				hash,
+			),
+		]
+
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const knownEvents = parseKnownEvents(receipt, { getTokenMetadata })
+
+		expect(knownEvents).toHaveLength(2)
+		expect(knownEvents[0]).toMatchObject({
+			type: 'order flipped',
+			parts: [
+				{ type: 'action', value: 'Flip Buy' },
+				{
+					type: 'amount',
+					value: {
+						token,
+						value: amount,
+						symbol: 'USDC',
+					},
+				},
+				{ type: 'text', value: 'at tick' },
+				{ type: 'tick', value: 100 },
+			],
+			note: [
+				['Flip Tick', { type: 'tick', value: 98 }],
+				['Order ID', { type: 'number', value: 123n }],
+			],
+		})
+		expect(knownEvents[1]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Flip Sell',
+		})
+		expect(knownEvents[1]?.parts[3]).toEqual({ type: 'tick', value: 98 })
+		expect(knownEvents[1]?.note).toEqual([
+			['Flip Tick', { type: 'tick', value: 100 }],
+			['Order ID', { type: 'number', value: 124n }],
+		])
+	})
+
 	it('preserves tip20 approvals for zone portals', () => {
 		const hash = `0x${'4'.repeat(64)}` as const
 		const amount = 500_000n

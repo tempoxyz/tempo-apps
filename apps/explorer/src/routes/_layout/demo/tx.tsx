@@ -31,7 +31,7 @@ import {
 	validatorAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { parseKnownEvents, stablecoinDexAbi } from '#lib/domain/known-events'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -400,7 +400,7 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinDex,
+					abi: stablecoinDexAbi,
 					eventName: 'PairCreated',
 					args: {
 						key: Hex.padLeft('0xabc', 32),
@@ -412,7 +412,7 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinDex,
+					abi: stablecoinDexAbi,
 					eventName: 'OrderPlaced',
 					args: {
 						orderId: 123n,
@@ -429,7 +429,7 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinDex,
+					abi: stablecoinDexAbi,
 					eventName: 'OrderFilled',
 					args: {
 						orderId: 123n,
@@ -444,7 +444,28 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinDex,
+					abi: stablecoinDexAbi,
+					eventName: 'OrderFlipped',
+					args: {
+						orderId: 123n,
+						maker: makerAddress,
+						token: baseTokenAddress,
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters(
+					[
+						{ type: 'uint128' },
+						{ type: 'bool' },
+						{ type: 'int16' },
+						{ type: 'int16' },
+					],
+					[1000000n, false, 95, 100],
+				),
+			}),
+			mockLog({
+				address: exchangeAddress,
+				topics: encodeEventTopics({
+					abi: stablecoinDexAbi,
 					eventName: 'OrderCancelled',
 					args: {
 						orderId: 124n,

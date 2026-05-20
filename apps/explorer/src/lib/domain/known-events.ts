@@ -228,8 +228,32 @@ const zoneFactoryAbi = [
 	},
 ] as const
 
+const stablecoinDexTip1056Abi = [
+	{
+		type: 'event',
+		name: 'OrderFlipped',
+		inputs: [
+			{ indexed: true, name: 'orderId', type: 'uint128' },
+			{ indexed: true, name: 'maker', type: 'address' },
+			{ indexed: true, name: 'token', type: 'address' },
+			{ indexed: false, name: 'amount', type: 'uint128' },
+			{ indexed: false, name: 'isBid', type: 'bool' },
+			{ indexed: false, name: 'tick', type: 'int16' },
+			{ indexed: false, name: 'flipTick', type: 'int16' },
+		],
+		anonymous: false,
+	},
+] as const
+
+// TODO: Remove this local TIP-1056 ABI item once viem/tempo exports OrderFlipped in Abis.stablecoinDex.
+export const stablecoinDexAbi = [
+	...Abis.stablecoinDex,
+	...stablecoinDexTip1056Abi,
+] as const
+
 const abi = [
 	...Object.values(Abis).flat(),
+	...stablecoinDexTip1056Abi,
 	...streamChannelAbi,
 	...zonePortalAbi,
 	...zoneFactoryAbi,
@@ -859,6 +883,27 @@ function createDetectors(
 					],
 				}
 			}
+
+			if (eventName === 'OrderFlipped')
+				return {
+					type: 'order flipped',
+					parts: [
+						{
+							type: 'action',
+							value: `Flip ${args.isBid ? 'Buy' : 'Sell'}`,
+						},
+						{
+							type: 'amount',
+							value: createAmount(args.amount, args.token),
+						},
+						{ type: 'text', value: 'at tick' },
+						{ type: 'tick', value: args.tick },
+					],
+					note: [
+						['Flip Tick', { type: 'tick', value: args.flipTick }],
+						['Order ID', { type: 'number', value: args.orderId }],
+					],
+				}
 
 			if (eventName === 'OrderFilled')
 				return {
