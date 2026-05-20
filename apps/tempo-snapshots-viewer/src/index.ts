@@ -2486,7 +2486,7 @@ async function handleUI(_req: Request, env: Env) {
       <div class="snapshot-status-note" id="snapshotStatusNote"></div>
 
       <div class="presets" id="presets">
-        <button class="preset" id="preset-minimal" disabled>
+        <button class="preset" onclick="selectPreset('minimal')" id="preset-minimal">
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Minimal<span class="preset-modified-tag">(modified)</span></span>
@@ -3091,7 +3091,7 @@ async function handleUI(_req: Request, env: Env) {
 
     function selectPreset(name) {
       if (!hasActiveModularSnapshot()) return;
-      if (name !== 'archive') return;
+      if (name !== 'minimal' && name !== 'archive') return;
       activePreset = name;
       checkedComponents = new Set(PRESETS[name].checked);
       presetBaseComponents = new Set(PRESETS[name].checked);
