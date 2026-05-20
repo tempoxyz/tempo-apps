@@ -82,6 +82,37 @@ const SCENARIOS: Array<{
 // limits when serialized as JSON, so fetch queries aggregate samples into this
 // many buckets before returning them to the app.
 const CHART_POINT_TARGET = 750
+const RUN_LIST_CACHE_TTL_MS = 60_000
+
+type CacheEntry<T> = {
+	expiresAt: number
+	value: T
+}
+
+const releaseRunsCache = new Map<string, CacheEntry<Array<BenchRun>>>()
+const scenarioRunsCache = new Map<string, CacheEntry<Array<BenchRun>>>()
+
+function getCached<T>(
+	cache: Map<string, CacheEntry<T>>,
+	key: string,
+): T | undefined {
+	const entry = cache.get(key)
+	if (!entry) return undefined
+	if (Date.now() > entry.expiresAt) {
+		cache.delete(key)
+		return undefined
+	}
+	return entry.value
+}
+
+function setCached<T>(
+	cache: Map<string, CacheEntry<T>>,
+	key: string,
+	value: T,
+): T {
+	cache.set(key, { value, expiresAt: Date.now() + RUN_LIST_CACHE_TTL_MS })
+	return value
+}
 
 function sqlString(value: string): string {
 	return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
@@ -249,21 +280,29 @@ function buildRunsQuery(scenarioName: string, limit = 50): string {
 
 export const fetchReleaseRuns = createServerFn({ method: 'GET' }).handler(
 	async () => {
+		const cached = getCached(releaseRunsCache, 'all')
+		if (cached) return cached
+
 		const runsByScenario = await Promise.all(
 			SCENARIOS.map(async (scenario) => {
 				const rows = await queryClickHouse<RunRow>(
 					buildRunsQuery(scenario.scenarioName),
+					`release-runs:${scenario.scenarioName}`,
 				)
 				return rows.map((row) => toRun(row, scenario.id))
 			}),
 		)
 
-		return runsByScenario
-			.flat()
-			.sort(
-				(a, b) =>
-					new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-			)
+		return setCached(
+			releaseRunsCache,
+			'all',
+			runsByScenario
+				.flat()
+				.sort(
+					(a, b) =>
+						new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+				),
+		)
 	},
 )
 
@@ -274,18 +313,26 @@ export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 	.handler(async ({ data: { scenarioId } }) => {
 		const config = SCENARIOS.find((s) => s.id === scenarioId)
 		if (!config) return []
+		const cached = getCached(scenarioRunsCache, scenarioId)
+		if (cached) return cached
 
 		const rows = await queryClickHouse<RunRow>(
 			buildRunsQuery(config.scenarioName),
+			`scenario-runs:${config.scenarioName}`,
 		)
-		return rows.map((row) => toRun(row, scenarioId))
+		return setCached(
+			scenarioRunsCache,
+			scenarioId,
+			rows.map((row) => toRun(row, scenarioId)),
+		)
 	})
 
 export const fetchRun = createServerFn({ method: 'POST' })
 	.inputValidator((input: string) => input)
 	.handler(async ({ data: runId }) => {
 		const run = sqlString(runId)
-		const runRows = await queryClickHouse<RunRow & { scenario_name: string }>(`
+		const runRows = await queryClickHouse<RunRow & { scenario_name: string }>(
+			`
 			SELECT
 				r.run_id,
 				r.started_at,
@@ -320,7 +367,9 @@ export const fetchRun = createServerFn({ method: 'POST' })
 			WHERE r.run_id = ${run}
 				AND r.metadata['run_type'] = 'release'
 			LIMIT 1
-		`)
+		`,
+			`run:${runId}`,
+		)
 
 		const runRow = runRows[0]
 		if (!runRow) return null
@@ -360,7 +409,8 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 			reason: string
 			offset_ms: string
 			value: string
-		}>(`
+		}>(
+			`
 			WITH
 				${run} AS selected_run_id,
 				(
@@ -411,7 +461,9 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
 			)
 			ORDER BY metric_name, node, quantile, reason, offset_ms
-		`)
+		`,
+			`metrics:${runId}`,
+		)
 
 		const seriesMap = new Map<string, MetricSeries>()
 		for (const row of rows) {
@@ -462,7 +514,8 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 			persistence_wait_us: string | null
 			execution_cache_wait_us: string | null
 			sparse_trie_wait_us: string | null
-		}>(`
+		}>(
+			`
 			WITH
 				${run} AS selected_run_id,
 				(
@@ -513,7 +566,9 @@ export const fetchBlocks = createServerFn({ method: 'POST' })
 				GROUP BY intDiv(toUInt64(block_index), bucket_size)
 			)
 			ORDER BY block_index
-		`)
+		`,
+			`blocks:${runId}`,
+		)
 
 		return rows.map((row) => ({
 			index: Number(row.block_index),
