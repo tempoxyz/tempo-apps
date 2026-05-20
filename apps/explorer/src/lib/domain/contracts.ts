@@ -9,7 +9,12 @@ import {
 } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
-import { stablecoinDexAbi, streamChannelAbi } from './known-events.ts'
+import {
+	stablecoinDexAbi,
+	streamChannelAbi,
+	tip20ChannelEscrowAbi,
+	tip20ChannelEscrowAddress,
+} from './known-events.ts'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -306,6 +311,18 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: Abis.accountKeychain,
 			category: 'system',
 			address: Addresses.accountKeychain,
+		},
+	],
+	[
+		tip20ChannelEscrowAddress,
+		{
+			name: 'TIP-20 Channel Escrow',
+			code: '0xef',
+			description: 'Native TIP-20 payment channel escrow precompile',
+			abi: tip20ChannelEscrowAbi,
+			category: 'system',
+			docsUrl: 'https://tips.sh/1034-1',
+			address: tip20ChannelEscrowAddress,
 		},
 	],
 	[
@@ -886,6 +903,9 @@ export async function autoloadAbi(
 	address: Address.Address,
 	options: AutoloadAbiOptions = {},
 ): Promise<Abi | null> {
+	const knownAbi = getContractAbi(address)
+	if (knownAbi && knownAbi.length > 0) return knownAbi
+
 	const { followProxies = true, includeSourceVerified = true } = options
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
