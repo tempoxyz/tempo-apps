@@ -407,7 +407,7 @@ export function BenchmarkRunDetail(
 	const hasLoadedPrimarySeries = metrics !== undefined && blocks !== undefined
 	const ingressTpsPoints = counterRate(txgenCounterSeries.sent)
 	const settledTpsPoints = settledTps(blockRows)
-	const ingressEgressYMax = sharedYMax([ingressTpsPoints, settledTpsPoints])
+	const ingressEgressXMax = sharedXMax([ingressTpsPoints, settledTpsPoints])
 
 	return (
 		<div>
@@ -541,7 +541,8 @@ export function BenchmarkRunDetail(
 								},
 							]}
 							formatValue={(v) => `${formatTps(v)}/s`}
-							yMax={ingressEgressYMax}
+							xMin={0}
+							xMax={ingressEgressXMax}
 						/>
 						<TimeSeriesChart
 							title="Settled TPS"
@@ -555,7 +556,8 @@ export function BenchmarkRunDetail(
 								},
 							]}
 							formatValue={(v) => `${formatTps(v)}/s`}
-							yMax={ingressEgressYMax}
+							xMin={0}
+							xMax={ingressEgressXMax}
 						/>
 					</div>
 				) : (
@@ -1225,10 +1227,10 @@ function settledTps(
 	})
 }
 
-function sharedYMax(series: Array<Array<ChartPoint>>): number | undefined {
-	const max = Math.max(...series.flat().map((point) => point.y))
+function sharedXMax(series: Array<Array<ChartPoint>>): number | undefined {
+	const max = Math.max(...series.flat().map((point) => point.x))
 	if (!Number.isFinite(max) || max <= 0) return undefined
-	return max * 1.1
+	return max
 }
 
 function formatBytes(bytes: number): string {
@@ -1391,6 +1393,8 @@ function TimeSeriesChart(props: {
 	showMean?: boolean | undefined
 	formatValue?: ((v: number) => string) | undefined
 	xFormat?: 'time' | 'block' | undefined
+	xMin?: number | undefined
+	xMax?: number | undefined
 	yMax?: number | undefined
 	referenceBands?: Array<ReferenceBand> | undefined
 }): React.JSX.Element {
@@ -1417,8 +1421,8 @@ function TimeSeriesChart(props: {
 		(a, b) => (b.data.length > a.data.length ? b : a),
 		props.series[0],
 	)
-	const xMin = refSeries.data[0]?.x ?? 0
-	const xMax = refSeries.data.at(-1)?.x ?? 1
+	const xMin = props.xMin ?? refSeries.data[0]?.x ?? 0
+	const xMax = props.xMax ?? refSeries.data.at(-1)?.x ?? 1
 	const xRange = xMax - xMin || 1
 
 	const refBandMax = props.referenceBands?.length
