@@ -5,7 +5,7 @@ import type { RpcTransaction } from 'viem'
 import { getBlockNumber, getCode, getTransactionReceipt } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { getRequestURL, hasIndexSupply } from '#lib/env'
+import { getRequestURL } from '#lib/env'
 import {
 	fetchAddressDirectTxHashes,
 	fetchAddressTransferEmittedHashes,
@@ -62,7 +62,7 @@ async function findCreationBlock(
  * Strategy:
  * 1. Check if address has code (is a contract)
  * 2. Binary search to find the exact creation block using historical eth_getCode
- * 3. Query IndexSupply for creation txs at that specific block
+ * 3. Query indexed data for creation txs at that specific block
  */
 async function findContractCreationTx(
 	address: Address.Address,
@@ -82,7 +82,7 @@ async function findContractCreationTx(
 	const creationBlock = await findCreationBlock(client, address, latestBlock)
 	if (!creationBlock) return null
 
-	// Query IndexSupply for contract creation txs at the creation block
+	// Query indexed data for contract creation txs at the creation block
 	const creationTxs = await fetchContractCreationTxCandidates(
 		chainId,
 		creationBlock,
@@ -126,16 +126,6 @@ export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (!hasIndexSupply())
-					return Response.json({
-						limit: 0,
-						total: 0,
-						offset: 0,
-						hasMore: false,
-						transactions: [],
-						error: null,
-					})
-
 				try {
 					const url = getRequestURL()
 					const address = zAddress().parse(params.address)

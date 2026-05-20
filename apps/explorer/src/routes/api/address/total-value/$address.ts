@@ -3,7 +3,6 @@ import * as Address from 'ox/Address'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
 import { getChainId, readContracts } from 'wagmi/actions'
-import { hasIndexSupply } from '#lib/env'
 import { getTokenListAddresses } from '#lib/server/tokens'
 import { fetchAddressTransfersForValue } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
@@ -13,8 +12,6 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (!hasIndexSupply()) return Response.json({ totalValue: 0 })
-
 				try {
 					const address = zAddress().parse(params.address)
 					const chainId = getChainId(getWagmiConfig())

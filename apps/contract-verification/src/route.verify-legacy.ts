@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, or } from 'drizzle-orm'
 import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
@@ -10,6 +10,7 @@ import {
 	formatError,
 	sourcifyError,
 	normalizeSourcePath,
+	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
 import {
@@ -31,7 +32,7 @@ import {
 	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
-import { chains, chainIds } from '#wagmi.config.ts'
+import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
@@ -54,7 +55,7 @@ const LegacyVyperRequestSchema = z.object({
 	creatorTxHash: z.optional(z.string()),
 })
 
-const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const legacyVerifyRoute = new Hono<AppEnv>()
 
 // POST /verify/vyper - Legacy Sourcify Vyper verification (used by Foundry)
 legacyVerifyRoute.post('/vyper', async (context) => {
@@ -104,7 +105,8 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		} = body
 
 		const chainId = Number(chain)
-		if (!chainIds.includes(chainId)) {
+		const registry = context.get('chainRegistry')
+		if (!registry.isSupported(chainId)) {
 			return sourcifyError(
 				context,
 				400,
@@ -140,13 +142,16 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			)
 		}
 
-		// Check if already verified
+		// Exact verifications are terminal, but partial matches must not block
+		// a later exact verification from replacing them.
 		const db = getDb(context.env.CONTRACTS_DB)
 		const addressBytes = Hex.toBytes(address)
 
-		const existingVerification = await db
+		const existingExactVerificationRows = await db
 			.select({
 				matchId: verifiedContractsTable.id,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
 			.from(verifiedContractsTable)
 			.innerJoin(
@@ -157,17 +162,21 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				and(
 					eq(contractDeploymentsTable.chainId, chainId),
 					eq(contractDeploymentsTable.address, addressBytes),
+					or(
+						eq(verifiedContractsTable.runtimeMetadataMatch, true),
+						eq(verifiedContractsTable.creationMetadataMatch, true),
+					),
 				),
 			)
 			.limit(1)
 
-		if (existingVerification.length > 0) {
+		if (existingExactVerificationRows.length > 0) {
 			return context.json({
 				result: [{ address, chainId: chain, status: 'perfect' }],
 			})
 		}
 
-		const chainConfig = chains.find((chain) => chain.id === chainId)
+		const chainConfig = registry.getChain(chainId)
 		if (!chainConfig) {
 			return sourcifyError(
 				context,
@@ -423,7 +432,11 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 
 		// Get or create deployment
 		const existingDeployment = await db
-			.select({ id: contractDeploymentsTable.id })
+			.select({
+				id: contractDeploymentsTable.id,
+				contractId: contractDeploymentsTable.contractId,
+				transactionHash: contractDeploymentsTable.transactionHash,
+			})
 			.from(contractDeploymentsTable)
 			.where(
 				and(
@@ -436,6 +449,36 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		let deploymentId: string
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			const deploymentUpdates: Partial<
+				typeof contractDeploymentsTable.$inferInsert
+			> = {}
+
+			if (
+				creationTransactionMetadata &&
+				existingDeployment[0].transactionHash === null
+			) {
+				Object.assign(deploymentUpdates, {
+					transactionHash: creationTransactionMetadata.transactionHash,
+					blockNumber: creationTransactionMetadata.blockNumber,
+					transactionIndex: creationTransactionMetadata.transactionIndex,
+					deployer: creationTransactionMetadata.deployer,
+				})
+			}
+
+			if (isExactMatch && existingDeployment[0].contractId !== contractId) {
+				deploymentUpdates.contractId = contractId
+			}
+
+			if (Object.keys(deploymentUpdates).length > 0) {
+				await db
+					.update(contractDeploymentsTable)
+					.set({
+						...deploymentUpdates,
+						updatedAt: new Date().toISOString(),
+						updatedBy: auditUser,
+					})
+					.where(eq(contractDeploymentsTable.id, deploymentId))
+			}
 		} else {
 			deploymentId = globalThis.crypto.randomUUID()
 			await db.insert(contractDeploymentsTable).values({
@@ -470,8 +513,24 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			.limit(1)
 
 		let compilationId: string
+		let shouldReplaceExistingSources = false
 		if (existingCompilation.length > 0 && existingCompilation[0]) {
 			compilationId = existingCompilation[0].id
+
+			if (isExactMatch) {
+				const existingVerificationMatches = await db
+					.select({
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					})
+					.from(verifiedContractsTable)
+					.where(eq(verifiedContractsTable.compilationId, compilationId))
+
+				shouldReplaceExistingSources =
+					existingVerificationMatches.length > 0 &&
+					existingVerificationMatches.every(
+						(match) => match.runtimeMetadataMatch !== true,
+					)
+			}
 		} else {
 			compilationId = globalThis.crypto.randomUUID()
 
@@ -508,38 +567,53 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
-		// ast-grep-ignore-start: Sequential DB operations are intentional
-		// Insert sources
-		for (const [sourcePath, sourceContent] of Object.entries(files)) {
-			const contentBytes = new TextEncoder().encode(sourceContent)
-			const sourceHashSha256 = new Uint8Array(
-				await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
-			)
-			const sourceHashKeccak = Hex.toBytes(
-				keccak256(Hex.fromBytes(contentBytes)),
-			)
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
+			files,
+			compiledContract.metadata,
+		)
+		const shouldInsertSources =
+			existingCompilation.length === 0 || shouldReplaceExistingSources
 
-			const sourceInsert: typeof sourcesTable.$inferInsert = {
-				sourceHash: sourceHashSha256,
-				sourceHashKeccak: sourceHashKeccak,
-				content: sourceContent,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			}
-
-			await db.insert(sourcesTable).values(sourceInsert).onConflictDoNothing()
-
-			// Normalize path (convert absolute to relative)
-			const normalizedPath = normalizeSourcePath(sourcePath)
+		if (shouldReplaceExistingSources && filteredSourceEntries.length > 0) {
 			await db
-				.insert(compiledContractsSourcesTable)
-				.values({
-					id: globalThis.crypto.randomUUID(),
-					compilationId: compilationId,
+				.delete(compiledContractsSourcesTable)
+				.where(eq(compiledContractsSourcesTable.compilationId, compilationId))
+		}
+
+		// ast-grep-ignore-start: Sequential DB operations are intentional
+		// Insert sources referenced by the compiler metadata
+		if (shouldInsertSources) {
+			for (const [sourcePath, sourceContent] of filteredSourceEntries) {
+				const contentBytes = new TextEncoder().encode(sourceContent)
+				const sourceHashSha256 = new Uint8Array(
+					await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
+				)
+				const sourceHashKeccak = Hex.toBytes(
+					keccak256(Hex.fromBytes(contentBytes)),
+				)
+
+				const sourceInsert: typeof sourcesTable.$inferInsert = {
 					sourceHash: sourceHashSha256,
-					path: normalizedPath,
-				})
-				.onConflictDoNothing()
+					sourceHashKeccak: sourceHashKeccak,
+					content: sourceContent,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				}
+
+				await db.insert(sourcesTable).values(sourceInsert).onConflictDoNothing()
+
+				// Normalize path (convert absolute to relative)
+				const normalizedPath = normalizeSourcePath(sourcePath)
+				await db
+					.insert(compiledContractsSourcesTable)
+					.values({
+						id: globalThis.crypto.randomUUID(),
+						compilationId: compilationId,
+						sourceHash: sourceHashSha256,
+						path: normalizedPath,
+					})
+					.onConflictDoNothing()
+			}
 		}
 
 		// Extract and insert signatures from ABI
@@ -575,27 +649,73 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 		// ast-grep-ignore-end
 
-		// Insert verified contract
-		await db
-			.insert(verifiedContractsTable)
-			.values({
-				deploymentId,
-				compilationId,
-				creationMatch: false,
-				runtimeMatch: true,
-				runtimeMetadataMatch: isExactMatch,
-				runtimeValues:
-					Object.keys(runtimeMatchResult.transformationValues).length > 0
-						? JSON.stringify(runtimeMatchResult.transformationValues)
-						: null,
-				runtimeTransformations:
-					runtimeMatchResult.transformations.length > 0
-						? JSON.stringify(runtimeMatchResult.transformations)
-						: null,
-				createdBy: auditUser,
-				updatedBy: auditUser,
+		const runtimeValues =
+			Object.keys(runtimeMatchResult.transformationValues).length > 0
+				? JSON.stringify(runtimeMatchResult.transformationValues)
+				: null
+		const runtimeTransformations =
+			runtimeMatchResult.transformations.length > 0
+				? JSON.stringify(runtimeMatchResult.transformations)
+				: null
+
+		const existingVerifiedContracts = await db
+			.select({
+				id: verifiedContractsTable.id,
+				compilationId: verifiedContractsTable.compilationId,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
-			.onConflictDoNothing()
+			.from(verifiedContractsTable)
+			.where(eq(verifiedContractsTable.deploymentId, deploymentId))
+
+		const existingExactVerifiedContract = existingVerifiedContracts.find(
+			(verification) =>
+				verification.runtimeMetadataMatch === true ||
+				verification.creationMetadataMatch === true,
+		)
+		const existingSameCompilationVerification = existingVerifiedContracts.find(
+			(verification) => verification.compilationId === compilationId,
+		)
+		const existingVerification =
+			existingSameCompilationVerification ?? existingVerifiedContracts.at(0)
+
+		if (
+			!existingExactVerifiedContract &&
+			existingVerification &&
+			isExactMatch
+		) {
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					compilationId,
+					creationMatch: false,
+					creationValues: null,
+					creationTransformations: null,
+					creationMetadataMatch: null,
+					runtimeMatch: true,
+					runtimeMetadataMatch: true,
+					runtimeValues,
+					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+		} else if (!existingExactVerifiedContract && !existingVerification) {
+			await db
+				.insert(verifiedContractsTable)
+				.values({
+					deploymentId,
+					compilationId,
+					creationMatch: false,
+					runtimeMatch: true,
+					runtimeMetadataMatch: isExactMatch,
+					runtimeValues,
+					runtimeTransformations,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+		}
 
 		// Return legacy Sourcify format
 		return context.json({

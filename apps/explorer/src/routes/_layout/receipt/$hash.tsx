@@ -456,7 +456,7 @@ function Component() {
 		streamingTotal !== undefined
 			? streamingTotal
 			: eventsTotalDisplayValue !== undefined
-				? eventsTotalDisplayValue
+				? eventsTotalDisplayValue + fee
 				: previousTotal !== undefined
 					? previousTotal - previousFee + fee
 					: fee
@@ -477,7 +477,7 @@ function Component() {
 		streamingTotal !== undefined
 			? streamingTotal
 			: eventsTotalDisplayValue !== undefined
-				? eventsTotalDisplayValue
+				? eventsTotalDisplayValue + fee
 				: previousTotal !== undefined
 					? previousTotal
 					: total

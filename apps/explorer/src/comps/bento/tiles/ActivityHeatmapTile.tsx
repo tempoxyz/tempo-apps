@@ -32,10 +32,7 @@ function gridShape(totalBuckets: number): { cols: number; rows: number } {
 	// Wide GitHub-graph layout: cols ≈ 5 × rows so the heatmap fills the
 	// wide tile horizontally with plenty of cells.
 	const targetRatio = 5
-	const rows = Math.max(
-		4,
-		Math.round(Math.sqrt(totalBuckets / targetRatio)),
-	)
+	const rows = Math.max(4, Math.round(Math.sqrt(totalBuckets / targetRatio)))
 	const cols = Math.ceil(totalBuckets / rows)
 	return { cols, rows }
 }

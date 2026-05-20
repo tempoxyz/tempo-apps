@@ -6,7 +6,7 @@ import { LandingBento } from '#comps/bento/LandingBento'
 import { LiveStatus } from '#comps/bento/LiveStatus'
 import { HeroSection } from '#comps/HeroSection'
 import { cx } from '#lib/css'
-import { getTempoEnv, hasIndexSupply } from '#lib/env'
+import { getTempoEnv } from '#lib/env'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -69,17 +69,15 @@ function Component() {
 					<SpotlightLinks />
 				</div>
 			</div>
-			{hasIndexSupply() ? (
-				<section className="relative z-10 mx-auto w-full max-w-[1240px] px-4 pt-4 pb-20 motion-safe:animate-[fadeIn_600ms_ease-out_both]">
-					<header className="mb-4 flex items-center justify-between">
-						<h2 className="text-[13px] font-medium text-tertiary tracking-[0.02em]">
-							Network at a glance
-						</h2>
-						<LiveStatus />
-					</header>
-					<LandingBento />
-				</section>
-			) : null}
+			<section className="relative z-10 mx-auto w-full max-w-[1240px] px-4 pt-4 pb-20 motion-safe:animate-[fadeIn_600ms_ease-out_both]">
+				<header className="mb-4 flex items-center justify-between">
+					<h2 className="text-[13px] font-medium text-tertiary tracking-[0.02em]">
+						Network at a glance
+					</h2>
+					<LiveStatus />
+				</header>
+				<LandingBento />
+			</section>
 		</div>
 	)
 }

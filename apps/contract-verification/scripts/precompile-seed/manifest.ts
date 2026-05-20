@@ -1,7 +1,10 @@
 import type { Abi } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
 
-import { chainIds, type ChainId } from '#wagmi.config.ts'
+import { staticChains } from '#wagmi.config.ts'
+
+const chainIds = staticChains.map((c) => c.id)
+type ChainId = (typeof chainIds)[number]
 
 export type NativeContractRuntimeType =
 	| 'precompile'

@@ -5,11 +5,7 @@ import MonitorIcon from '~icons/lucide/monitor'
 import MoonIcon from '~icons/lucide/moon'
 import SunIcon from '~icons/lucide/sun'
 
-const NEXT: Record<ThemePreference, ThemePreference> = {
-	system: 'light',
-	light: 'dark',
-	dark: 'system',
-}
+const ORDER: ReadonlyArray<ThemePreference> = ['system', 'light', 'dark']
 
 const ICONS: Record<ThemePreference, typeof SunIcon> = {
 	system: MonitorIcon,
@@ -18,31 +14,57 @@ const ICONS: Record<ThemePreference, typeof SunIcon> = {
 }
 
 const LABELS: Record<ThemePreference, string> = {
-	system: 'Theme: follow system',
-	light: 'Theme: light',
-	dark: 'Theme: dark',
+	system: 'System',
+	light: 'Light',
+	dark: 'Dark',
 }
+
+const SEGMENT_SIZE = 24
 
 export function ThemeToggle(props: ThemeToggle.Props): React.JSX.Element {
 	const { className } = props
 	const { preference, setPreference } = useTheme()
-	const next = NEXT[preference]
-	const Icon = ICONS[preference]
-	const label = `${LABELS[preference]} (click for ${LABELS[next].toLowerCase().replace('theme: ', '')})`
+	const activeIndex = ORDER.indexOf(preference)
 
 	return (
-		<button
-			type="button"
-			onClick={() => setPreference(next)}
-			aria-label={label}
-			title={label}
+		<div
 			className={cx(
-				'inline-flex items-center justify-center size-[28px] rounded-[8px] text-secondary hover:text-primary press-down transition-colors outline-none focus-visible:text-accent',
+				'relative inline-flex items-center rounded-full border border-distinct bg-base-plane p-[2px]',
 				className,
 			)}
+			style={{ height: SEGMENT_SIZE + 4 }}
 		>
-			<Icon className="size-[16px]" />
-		</button>
+			<span
+				aria-hidden
+				className="absolute top-[2px] left-[2px] rounded-full bg-base-alt shadow-[0_1px_0_color-mix(in_oklch,var(--color-base-content)_6%,transparent)] transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform"
+				style={{
+					width: SEGMENT_SIZE,
+					height: SEGMENT_SIZE,
+					transform: `translateX(${activeIndex * SEGMENT_SIZE}px)`,
+				}}
+			/>
+			{ORDER.map((option) => {
+				const Icon = ICONS[option]
+				const isActive = option === preference
+				return (
+					<button
+						key={option}
+						type="button"
+						aria-pressed={isActive}
+						aria-label={`Theme: ${LABELS[option].toLowerCase()}`}
+						title={LABELS[option]}
+						onClick={() => setPreference(option)}
+						className={cx(
+							'relative inline-flex items-center justify-center transition-colors outline-none focus-visible:text-accent',
+							isActive ? 'text-primary' : 'text-tertiary hover:text-secondary',
+						)}
+						style={{ width: SEGMENT_SIZE, height: SEGMENT_SIZE }}
+					>
+						<Icon className="size-[14px]" />
+					</button>
+				)
+			})}
+		</div>
 	)
 }
 

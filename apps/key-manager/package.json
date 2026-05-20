@@ -11,7 +11,7 @@
 		"gen:types": "wrangler types --env-interface='CloudflareBindings'"
 	},
 	"dependencies": {
-		"tempo.ts": "catalog:"
+		"accounts": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:",

@@ -7,8 +7,10 @@ import { describe, it, expect } from 'vitest'
 
 import { app } from '#index.tsx'
 import * as DB from '#database/schema.ts'
-import { chainIds } from '#wagmi.config.ts'
+import { staticChains } from '#wagmi.config.ts'
 import { validatorConfigV2Manifest } from '../../scripts/precompile-seed/manifest.ts'
+
+const staticChainIds = staticChains.map((c) => c.id)
 
 async function insertNativePrecompileFixture(): Promise<{
 	nativeContractId: string
@@ -23,7 +25,7 @@ async function insertNativePrecompileFixture(): Promise<{
 	sourceIds: Record<string, string>
 }> {
 	const db = drizzle(env.CONTRACTS_DB)
-	const chainId = chainIds.includes(4217) ? 4217 : chainIds[0]
+	const chainId = staticChainIds.includes(4217) ? 4217 : staticChainIds[0]
 	if (!chainId) {
 		throw new Error('expected at least one configured chain ID')
 	}
@@ -147,7 +149,7 @@ describe('gET /v2/contract/all-chains/:address', () => {
 
 	it('returns verified contracts for a valid address', async () => {
 		const db = drizzle(env.CONTRACTS_DB)
-		const chainId = chainIds[0]
+		const chainId = staticChains[0].id
 		const address = '0x1111111111111111111111111111111111111111'
 		const addressBytes = Hex.toBytes(address)
 		const runtimeHash = new Uint8Array(32).fill(1)
@@ -277,6 +279,98 @@ describe('gET /v2/contract/:chainId/:address', () => {
 		const response = await app.request('/v2/contract/1/not-an-address', {}, env)
 
 		expect(response.status).toBe(400)
+	})
+
+	it('does not traverse prototype keys in fields or omit filters', async () => {
+		const db = drizzle(env.CONTRACTS_DB)
+		const chainId = staticChains[0].id
+		const address = '0x2222222222222222222222222222222222222222'
+		const addressBytes = Hex.toBytes(address)
+		const runtimeHash = new Uint8Array(32).fill(1)
+		const creationHash = new Uint8Array(32).fill(2)
+		const codeHashKeccak = new Uint8Array(32).fill(3)
+		const originalToStringDescriptor = Object.getOwnPropertyDescriptor(
+			Object.prototype,
+			'toString',
+		)
+
+		await db.insert(DB.codeTable).values([
+			{ codeHash: runtimeHash, codeHashKeccak, code: new Uint8Array([1]) },
+			{ codeHash: creationHash, codeHashKeccak, code: new Uint8Array([2]) },
+		])
+
+		const contractId = crypto.randomUUID()
+		await db.insert(DB.contractsTable).values({
+			id: contractId,
+			creationCodeHash: creationHash,
+			runtimeCodeHash: runtimeHash,
+		})
+
+		const deploymentId = crypto.randomUUID()
+		await db.insert(DB.contractDeploymentsTable).values({
+			id: deploymentId,
+			chainId,
+			address: addressBytes,
+			contractId,
+		})
+
+		const compilationId = crypto.randomUUID()
+		await db.insert(DB.compiledContractsTable).values({
+			id: compilationId,
+			compiler: 'solc',
+			version: '0.8.20',
+			language: 'Solidity',
+			name: 'Token',
+			fullyQualifiedName: 'Token.sol:Token',
+			compilerSettings:
+				'{"optimizer":{"enabled":true},"__proto__":{"isAdmin":true}}',
+			compilationArtifacts: '{}',
+			creationCodeHash: creationHash,
+			creationCodeArtifacts: '{}',
+			runtimeCodeHash: runtimeHash,
+			runtimeCodeArtifacts: '{}',
+		})
+
+		await db.insert(DB.verifiedContractsTable).values({
+			deploymentId,
+			compilationId,
+			creationMatch: true,
+			runtimeMatch: true,
+			creationMetadataMatch: true,
+			runtimeMetadataMatch: true,
+		})
+
+		try {
+			const fieldsResponse = await app.request(
+				`/v2/contract/${chainId}/${address}?fields=compilerSettings.__proto__.isAdmin`,
+				{},
+				env,
+			)
+			expect(fieldsResponse.status).toBe(200)
+			expect(await fieldsResponse.json()).not.toHaveProperty(
+				'compilerSettings.__proto__.isAdmin',
+			)
+			expect(Object.hasOwn(Object.prototype, 'isAdmin')).toBe(false)
+
+			const omitResponse = await app.request(
+				`/v2/contract/${chainId}/${address}?omit=__proto__.toString`,
+				{},
+				env,
+			)
+			expect(omitResponse.status).toBe(200)
+			expect(
+				Object.getOwnPropertyDescriptor(Object.prototype, 'toString'),
+			).toEqual(originalToStringDescriptor)
+		} finally {
+			Reflect.deleteProperty(Object.prototype, 'isAdmin')
+			if (originalToStringDescriptor) {
+				Object.defineProperty(
+					Object.prototype,
+					'toString',
+					originalToStringDescriptor,
+				)
+			}
+		}
 	})
 
 	it('returns Tempo native source data under extensions.tempo.nativeSource', async () => {

@@ -1,281 +1,301 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import * as React from 'react'
 import {
+	fetchReleaseRuns,
+	fetchRunsForScenario,
 	getScenarios,
-	fetchAllLatestRuns,
 	type BenchRun,
+	type Scenario,
 } from '#lib/server/bench'
-import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
+import { BenchmarkRunDetail } from '#routes/benchmark.$id'
 
-const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
-
-function isTag(ref: string): boolean {
-	return /^v\d/.test(ref)
-}
-
-function VersionLink(props: { run: BenchRun }): React.JSX.Element {
-	const { run } = props
-	if (run.ref && isTag(run.ref)) {
-		return (
-			<a
-				href={`${TEMPO_REPO}/releases/tag/${run.ref}`}
-				target="_blank"
-				rel="noopener noreferrer"
-				className="hover:underline"
-				onClick={(e) => e.stopPropagation()}
-			>
-				{run.ref}
-			</a>
-		)
-	}
-	return (
-		<a
-			href={`${TEMPO_REPO}/commit/${run.commit}`}
-			target="_blank"
-			rel="noopener noreferrer"
-			className="hover:underline"
-			onClick={(e) => e.stopPropagation()}
-		>
-			{run.ref ? `${run.ref} (${run.commit})` : run.commit}
-		</a>
-	)
+type DashboardSearch = {
+	release?: string | undefined
+	scenario?: string | undefined
 }
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
-	loader: ({ context }) => {
-		context.queryClient.ensureQueryData({
-			queryKey: ['latestRuns'],
-			queryFn: () => fetchAllLatestRuns(),
+	validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
+		release: optionalSearchString(search.release),
+		scenario: optionalSearchString(search.scenario),
+	}),
+	loaderDeps: ({ search }) => search,
+	loader: async ({ context, deps }) => {
+		const releaseRuns = await context.queryClient.ensureQueryData({
+			queryKey: ['releaseRuns'],
+			queryFn: () => fetchReleaseRuns(),
 		})
+
+		const selected = selectBenchmarkRun(releaseRuns, deps)
+		const selectedRun = selected.run
+		if (!selectedRun) return
+
+		context.queryClient.setQueryData(['run', selectedRun.id], selectedRun)
+
+		if (selectedRun.scenarioId) {
+			await context.queryClient.ensureQueryData({
+				queryKey: ['scenarioRuns', selectedRun.scenarioId],
+				queryFn: () =>
+					fetchRunsForScenario({
+						data: { scenarioId: selectedRun.scenarioId },
+					}),
+			})
+		}
 	},
 })
 
 function DashboardPage(): React.JSX.Element {
 	const navigate = useNavigate()
+	const search = Route.useSearch()
 	const scenarios = getScenarios()
-	const { data: latestRuns } = useSuspenseQuery({
-		queryKey: ['latestRuns'],
-		queryFn: () => fetchAllLatestRuns(),
+	const { data: releaseRuns } = useSuspenseQuery({
+		queryKey: ['releaseRuns'],
+		queryFn: () => fetchReleaseRuns(),
 	})
 
-	function getLatestRun(scenarioId: string) {
-		return latestRuns.find((r) => r.scenarioId === scenarioId)
+	const releaseOptions = React.useMemo(
+		() => getReleaseOptions(releaseRuns),
+		[releaseRuns],
+	)
+	const selected = selectBenchmarkRun(releaseRuns, search)
+
+	if (!selected.run || !selected.release) {
+		return (
+			<div className="py-20 text-center text-secondary">
+				No release benchmarks found.
+			</div>
+		)
+	}
+
+	const scenarioOptions = getScenarioOptions(selected.runsForRelease, scenarios)
+
+	function setRelease(release: string) {
+		const nextRuns = getRunsForRelease(releaseRuns, release)
+		const nextScenario = nextRuns.some(
+			(run) => run.scenarioId === selected.scenario,
+		)
+			? selected.scenario
+			: nextRuns[0]?.scenarioId
+
+		navigate({
+			to: '/',
+			search: { release, scenario: nextScenario },
+			resetScroll: false,
+		})
+	}
+
+	function setScenario(scenario: string) {
+		navigate({
+			to: '/',
+			search: { release: selected.release, scenario },
+			resetScroll: false,
+		})
 	}
 
 	return (
-		<div>
-			{/* Hero */}
-			<section className="mb-12 pt-4">
-				<h2 className="text-[28px] font-bold tracking-tight text-primary">
-					Performance Dashboard
-				</h2>
-				<p className="mt-2 max-w-xl text-[15px] leading-relaxed text-secondary">
-					Real-time benchmarks measuring Tempo&apos;s throughput and latency
-					under production-representative workloads.
-				</p>
-			</section>
-
-			{/* Scenario cards */}
-			<section className="mb-14">
-				<div className="mb-5 flex items-center gap-3">
-					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
-						Workloads
-					</h3>
-					<div className="h-px flex-1 bg-border" />
-				</div>
-
-				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-					{scenarios.map((scenario) => {
-						const latest = getLatestRun(scenario.id)
-						const content = (
-							<>
-								<div className="p-5 pb-4">
-									<h4 className="text-[15px] font-semibold text-primary">
-										{scenario.label}
-									</h4>
-									<p className="mt-1 text-[12px] text-tertiary">
-										{scenario.workload}
-									</p>
-								</div>
-
-								{latest ? (
-									<div className="mt-auto border-t border-border px-5 pt-4 pb-5">
-										<div className="grid grid-cols-2 gap-x-4 gap-y-3">
-											<Stat
-												label="Throughput"
-												value={formatGas(latest.avgGasPerSecond)}
-												highlight
-											/>
-											<Stat
-												label="Peak"
-												value={formatGas(latest.peakGasPerSecond)}
-											/>
-											<Stat label="Avg TPS" value={formatTps(latest.avgTps)} />
-											<Stat
-												label="Block Time"
-												value={formatMs(latest.avgBlockTimeMs)}
-											/>
-										</div>
-									</div>
-								) : (
-									<div className="mt-auto border-t border-border px-5 py-4">
-										<p className="text-[12px] text-tertiary italic">
-											No runs yet
-										</p>
-									</div>
-								)}
-							</>
-						)
-
-						return latest ? (
-							<Link
-								key={scenario.id}
-								to="/benchmark/$id"
-								params={{ id: latest.id }}
-								className="card-interactive flex flex-col"
-							>
-								{content}
-							</Link>
-						) : (
-							<div key={scenario.id} className="card flex flex-col">
-								{content}
-							</div>
-						)
-					})}
-				</div>
-			</section>
-
-			{/* Throughput comparison */}
-			<section className="mb-14">
-				<div className="mb-5 flex items-center gap-3">
-					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
-						Throughput Comparison
-					</h3>
-					<div className="h-px flex-1 bg-border" />
-				</div>
-				<div className="card p-6">
-					<div className="flex items-end gap-6 h-52">
-						{scenarios.map((scenario) => {
-							const latest = getLatestRun(scenario.id)
-							if (!latest) return null
-							const maxGas = Math.max(
-								...scenarios.map(
-									(s) => getLatestRun(s.id)?.avgGasPerSecond ?? 0,
-								),
-							)
-							const height = (latest.avgGasPerSecond / maxGas) * 100
-							return (
-								<div
-									key={scenario.id}
-									className="flex flex-1 flex-col items-center gap-2"
-								>
-									<span className="font-mono text-[12px] font-medium text-accent">
-										{formatGas(latest.avgGasPerSecond)}
-									</span>
-									<div
-										className="w-full flex items-end"
-										style={{ height: '160px' }}
-									>
-										<div
-											className="w-full rounded-t bg-accent/50"
-											style={{ height: `${height}%` }}
-										/>
-									</div>
-									<span className="text-[11px] text-tertiary text-center leading-tight">
-										{scenario.label}
-									</span>
-								</div>
-							)
-						})}
-					</div>
-				</div>
-			</section>
-
-			{/* Latest runs table */}
-			<section className="mb-14">
-				<div className="mb-5 flex items-center gap-3">
-					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
-						Latest Results
-					</h3>
-					<div className="h-px flex-1 bg-border" />
-				</div>
-
-				<div className="card">
-					<table className="w-full text-[13px]">
-						<thead>
-							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
-								<th className="px-4.5 py-3 font-normal">Workload</th>
-								<th className="px-4.5 py-3 font-normal">Version</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									Throughput
-								</th>
-								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									Block Time
-								</th>
-								<th className="px-4.5 py-3 font-normal text-right">Date</th>
-							</tr>
-						</thead>
-						<tbody>
-							{scenarios.map((scenario) => {
-								const latest = getLatestRun(scenario.id)
-								if (!latest) return null
-								return (
-									<tr
-										key={latest.id}
-										className="border-b border-dashed border-border last:border-0 transition-colors hover:bg-surface-hover cursor-pointer"
-										onClick={() =>
-											navigate({
-												to: '/benchmark/$id',
-												params: { id: latest.id },
-											})
-										}
-									>
-										<td className="px-4.5 py-3 font-medium text-primary">
-											{scenario.label}
-										</td>
-										<td className="px-4.5 py-3 font-mono text-accent">
-											<VersionLink run={latest} />
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-accent">
-											{formatGas(latest.avgGasPerSecond)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatTps(latest.avgTps)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatMs(latest.avgBlockTimeMs)}
-										</td>
-										<td className="px-4.5 py-3 text-right text-tertiary">
-											{formatDate(latest.startedAt)}
-										</td>
-									</tr>
-								)
-							})}
-						</tbody>
-					</table>
-				</div>
-			</section>
-		</div>
+		<BenchmarkRunDetail
+			id={selected.run.id}
+			headerControls={
+				<BenchmarkSelectors
+					releases={releaseOptions}
+					scenarios={scenarioOptions}
+					selectedRelease={selected.release}
+					selectedScenario={selected.scenario}
+					onReleaseChange={setRelease}
+					onScenarioChange={setScenario}
+				/>
+			}
+		/>
 	)
 }
 
-function Stat(props: {
-	label: string
+function optionalSearchString(value: unknown): string | undefined {
+	return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+function isTagRef(ref: string): boolean {
+	return ref.startsWith('v')
+}
+
+function isCommitRef(ref: string): boolean {
+	return /^[0-9a-f]{7,40}$/i.test(ref)
+}
+
+function getReleaseKey(run: BenchRun): string {
+	if (run.commit) return run.commit
+	if (run.ref && isCommitRef(run.ref)) return run.ref.slice(0, 7)
+	return run.ref || run.id
+}
+
+function getReleaseLabel(run: BenchRun): string {
+	if (run.ref && isTagRef(run.ref)) return run.ref
+	if (run.ref && !isCommitRef(run.ref)) return run.ref
+	return run.commit || run.ref || run.id
+}
+
+function shouldReplaceReleaseLabel(current: string, next: string): boolean {
+	if (isTagRef(current)) return false
+	if (isTagRef(next)) return true
+	return isCommitRef(current) && !isCommitRef(next)
+}
+
+type ReleaseOption = {
 	value: string
-	highlight?: boolean | undefined
+	label: string
+	startedAt: string
+}
+
+function getReleaseOptions(runs: Array<BenchRun>): Array<ReleaseOption> {
+	const releases = new Map<string, ReleaseOption>()
+
+	for (const run of runs) {
+		const value = getReleaseKey(run)
+		const label = getReleaseLabel(run)
+		const current = releases.get(value)
+
+		if (!current) {
+			releases.set(value, { value, label, startedAt: run.startedAt })
+			continue
+		}
+
+		releases.set(value, {
+			value,
+			label: shouldReplaceReleaseLabel(current.label, label)
+				? label
+				: current.label,
+			startedAt:
+				new Date(run.startedAt) > new Date(current.startedAt)
+					? run.startedAt
+					: current.startedAt,
+		})
+	}
+
+	return Array.from(releases.values()).sort(
+		(a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+	)
+}
+
+function getRunsForRelease(
+	runs: Array<BenchRun>,
+	release: string,
+): Array<BenchRun> {
+	return runs
+		.filter((run) => getReleaseKey(run) === release)
+		.sort(
+			(a, b) =>
+				new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+		)
+}
+
+function selectBenchmarkRun(
+	runs: Array<BenchRun>,
+	search: DashboardSearch,
+): {
+	release: string | undefined
+	scenario: string | undefined
+	run: BenchRun | undefined
+	runsForRelease: Array<BenchRun>
+} {
+	const releaseOptions = getReleaseOptions(runs)
+	const selectedRelease = releaseOptions.find(
+		(option) =>
+			option.value === search.release || option.label === search.release,
+	)
+	const release = selectedRelease?.value ?? releaseOptions[0]?.value
+	if (!release) {
+		return {
+			release: undefined,
+			scenario: undefined,
+			run: undefined,
+			runsForRelease: [],
+		}
+	}
+
+	const runsForRelease = getRunsForRelease(runs, release)
+	const scenario = runsForRelease.some(
+		(run) => run.scenarioId === search.scenario,
+	)
+		? search.scenario
+		: runsForRelease[0]?.scenarioId
+
+	return {
+		release,
+		scenario,
+		run: runsForRelease.find((run) => run.scenarioId === scenario),
+		runsForRelease,
+	}
+}
+
+function getScenarioOptions(
+	runsForRelease: Array<BenchRun>,
+	scenarios: Array<Scenario>,
+): Array<Scenario> {
+	const availableScenarioIds = new Set(
+		runsForRelease.map((run) => run.scenarioId),
+	)
+	const knownScenarios = scenarios.filter((scenario) =>
+		availableScenarioIds.has(scenario.id),
+	)
+	const knownScenarioIds = new Set(
+		knownScenarios.map((scenario) => scenario.id),
+	)
+	const unknownScenarios = runsForRelease
+		.filter((run) => !knownScenarioIds.has(run.scenarioId))
+		.map((run) => ({
+			id: run.scenarioId,
+			label: run.scenarioId,
+			workload: run.scenarioId,
+		}))
+
+	return [...knownScenarios, ...unknownScenarios]
+}
+
+function BenchmarkSelectors(props: {
+	releases: Array<ReleaseOption>
+	scenarios: Array<Scenario>
+	selectedRelease: string
+	selectedScenario: string | undefined
+	onReleaseChange: (release: string) => void
+	onScenarioChange: (scenario: string) => void
 }): React.JSX.Element {
 	return (
-		<div>
-			<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
-				{props.label}
-			</p>
-			<p
-				className={`mt-0.5 font-mono text-[14px] font-medium ${props.highlight ? 'text-accent' : 'text-primary'}`}
-			>
-				{props.value}
-			</p>
+		<div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+			<label className="flex flex-col gap-1">
+				<span className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
+					Release
+				</span>
+				<select
+					value={props.selectedRelease}
+					onChange={(event) => props.onReleaseChange(event.currentTarget.value)}
+					className="w-full rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent sm:w-40"
+				>
+					{props.releases.map((release) => (
+						<option key={release.value} value={release.value}>
+							{release.label}
+						</option>
+					))}
+				</select>
+			</label>
+			<label className="flex flex-col gap-1">
+				<span className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
+					Scenario
+				</span>
+				<select
+					value={props.selectedScenario ?? ''}
+					onChange={(event) =>
+						props.onScenarioChange(event.currentTarget.value)
+					}
+					className="w-full rounded-md border border-border bg-surface px-3 py-2 text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent sm:w-48"
+				>
+					{props.scenarios.map((scenario) => (
+						<option key={scenario.id} value={scenario.id}>
+							{scenario.label}
+						</option>
+					))}
+				</select>
+			</label>
 		</div>
 	)
 }

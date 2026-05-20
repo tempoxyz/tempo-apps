@@ -12,6 +12,7 @@ export type BenchRun = {
 	scenarioId: string
 	commit: string
 	ref: string
+	mode: string
 	startedAt: string
 	finishedAt: string
 	config: Record<string, string>
@@ -20,6 +21,10 @@ export type BenchRun = {
 	peakGasPerSecond: number
 	avgBlockTimeMs: number
 	blockCount: number
+}
+
+export type RunsForScenarioInput = {
+	scenarioId: string
 }
 
 export type MetricSample = {
@@ -31,6 +36,11 @@ export type MetricSeries = {
 	name: string
 	labels: string
 	samples: Array<MetricSample>
+}
+
+export type MetricQuery = {
+	name: string
+	labels?: Record<string, string | Array<string> | undefined> | undefined
 }
 
 const SCENARIOS: Array<{
@@ -52,30 +62,30 @@ const SCENARIOS: Array<{
 		scenarioName: 'tip20-20k',
 	},
 	{
-		id: 'tip20-40k',
-		label: 'TIP-20 — 40K TPS',
-		workload: '100% TIP-20 Transfers',
-		scenarioName: 'tip20-40k',
-	},
-	{
 		id: 'mix-10k',
 		label: 'Mix — 10K TPS',
-		workload: '80% TIP-20 Transfers, 20% MPP Channels',
+		workload:
+			'70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-10k',
 	},
 	{
 		id: 'mix-20k',
 		label: 'Mix — 20K TPS',
-		workload: '80% TIP-20 Transfers, 20% MPP Channels',
+		workload:
+			'70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers',
 		scenarioName: 'mix-20k',
 	},
-	{
-		id: 'mix-40k',
-		label: 'Mix — 40K TPS',
-		workload: '80% TIP-20 Transfers, 20% MPP Channels',
-		scenarioName: 'mix-40k',
-	},
 ]
+
+// Target maximum number of points returned per chart series. Large runs can
+// contain enough raw block/metric samples to exceed Cloudflare Worker memory
+// limits when serialized as JSON, so fetch queries aggregate samples into this
+// many buckets before returning them to the app.
+const CHART_POINT_TARGET = 750
+
+function sqlString(value: string): string {
+	return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'")}'`
+}
 
 export function getScenarios(): Array<Scenario> {
 	return SCENARIOS.map(({ scenarioName: _, ...s }) => s)
@@ -91,6 +101,7 @@ type RunRow = {
 	finished_at: string
 	git_sha: string
 	git_ref: string
+	mode: string
 	scenario_name: string
 	config_keys: Array<string>
 	config_values: Array<string>
@@ -119,6 +130,7 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 		scenarioId,
 		commit: row.git_sha?.slice(0, 7) || '',
 		ref: row.git_ref || '',
+		mode: row.mode || '',
 		startedAt: row.started_at,
 		finishedAt: row.finished_at,
 		config,
@@ -130,24 +142,91 @@ function toRun(row: RunRow, scenarioId: string): BenchRun {
 	}
 }
 
-function buildRunsQuery(scenarioName: string): string {
+function normalizeMetricQuery(metric: string | MetricQuery): MetricQuery {
+	return typeof metric === 'string' ? { name: metric } : metric
+}
+
+function metricWhereClause(metrics: Array<MetricQuery>): string {
+	const unfilteredMetrics = metrics.filter((metric) => !metric.labels)
+	const filteredMetrics = metrics.filter((metric) => metric.labels)
+	const clauses: Array<string> = []
+
+	if (unfilteredMetrics.length > 0) {
+		clauses.push(
+			`metric_name IN (${unfilteredMetrics.map((m) => sqlString(m.name)).join(', ')})`,
+		)
+	}
+
+	for (const metric of filteredMetrics) {
+		const labelClauses = Object.entries(metric.labels ?? {}).flatMap(
+			([key, value]) => {
+				if (value == null) return []
+				const values = Array.isArray(value) ? value : [value]
+				return [
+					`JSONExtractString(labels_json, ${sqlString(key)}) IN (${values.map(sqlString).join(', ')})`,
+				]
+			},
+		)
+
+		clauses.push(
+			`(metric_name = ${sqlString(metric.name)} AND ${labelClauses.join(' AND ')})`,
+		)
+	}
+
+	return clauses.join('\n\t\t\t\t\tOR ')
+}
+
+function compactLabels(row: {
+	node: string
+	quantile: string
+	reason: string
+}): string {
+	const labels: Record<string, string> = {}
+	if (row.node) labels.node = row.node
+	if (row.quantile) labels.quantile = row.quantile
+	if (row.reason) labels.reason = row.reason
+	return JSON.stringify(labels)
+}
+
+function buildRunsQuery(scenarioName: string, limit = 50): string {
+	const scenario = sqlString(scenarioName)
+	const candidateLimit = Math.max(50, limit * 2)
+
 	return `
+		WITH candidate_runs AS (
+			SELECT
+				r.run_id,
+				r.started_at,
+				r.finished_at,
+				r.git_sha,
+				r.git_ref,
+				r.mode,
+				r.scenario_name,
+				r.config.keys AS config_keys,
+				r.config.values AS config_values
+			FROM txgen_runs r
+			WHERE r.scenario_name = ${scenario}
+				AND r.metadata['run_type'] = 'release'
+			ORDER BY r.started_at DESC
+			LIMIT ${candidateLimit}
+		)
 		SELECT
 			r.run_id,
 			r.started_at,
 			r.finished_at,
 			r.git_sha,
 			r.git_ref,
+			r.mode,
 			r.scenario_name,
-			r.config.keys AS config_keys,
-			r.config.values AS config_values,
+			r.config_keys,
+			r.config_values,
 			b.avg_tps,
 			b.avg_block_time_ms,
 			b.total_gas_used,
 			b.run_duration_secs,
 			b.peak_gas_per_second,
 			b.block_count
-		FROM txgen_runs r
+		FROM candidate_runs r
 		LEFT JOIN (
 			SELECT
 				run_id,
@@ -159,36 +238,40 @@ function buildRunsQuery(scenarioName: string): string {
 				count() AS block_count
 			FROM txgen_blocks
 			WHERE block_time_ms > 0
+				AND run_id IN (SELECT run_id FROM candidate_runs)
 			GROUP BY run_id
 		) b ON r.run_id = b.run_id
-		WHERE r.scenario_name = '${scenarioName}'
-			AND b.total_gas_used > 0
+		WHERE b.total_gas_used > 0
 		ORDER BY r.started_at DESC
-		LIMIT 50
+		LIMIT ${limit}
 	`
 }
 
-export const fetchAllLatestRuns = createServerFn({ method: 'GET' }).handler(
+export const fetchReleaseRuns = createServerFn({ method: 'GET' }).handler(
 	async () => {
-		const results: Array<BenchRun> = []
+		const runsByScenario = await Promise.all(
+			SCENARIOS.map(async (scenario) => {
+				const rows = await queryClickHouse<RunRow>(
+					buildRunsQuery(scenario.scenarioName),
+				)
+				return rows.map((row) => toRun(row, scenario.id))
+			}),
+		)
 
-		for (const scenario of SCENARIOS) {
-			const rows = await queryClickHouse<RunRow>(
-				buildRunsQuery(scenario.scenarioName),
+		return runsByScenario
+			.flat()
+			.sort(
+				(a, b) =>
+					new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
 			)
-			const latest = rows[0]
-			if (latest) {
-				results.push(toRun(latest, scenario.id))
-			}
-		}
-
-		return results
 	},
 )
 
 export const fetchRunsForScenario = createServerFn({ method: 'POST' })
-	.inputValidator((input: string) => input)
-	.handler(async ({ data: scenarioId }) => {
+	.inputValidator((input: RunsForScenarioInput) => ({
+		scenarioId: input.scenarioId,
+	}))
+	.handler(async ({ data: { scenarioId } }) => {
 		const config = SCENARIOS.find((s) => s.id === scenarioId)
 		if (!config) return []
 
@@ -201,6 +284,7 @@ export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 export const fetchRun = createServerFn({ method: 'POST' })
 	.inputValidator((input: string) => input)
 	.handler(async ({ data: runId }) => {
+		const run = sqlString(runId)
 		const runRows = await queryClickHouse<RunRow & { scenario_name: string }>(`
 			SELECT
 				r.run_id,
@@ -208,6 +292,7 @@ export const fetchRun = createServerFn({ method: 'POST' })
 				r.finished_at,
 				r.git_sha,
 				r.git_ref,
+				r.mode,
 				r.scenario_name,
 				r.config.keys AS config_keys,
 				r.config.values AS config_values,
@@ -229,9 +314,11 @@ export const fetchRun = createServerFn({ method: 'POST' })
 					count() AS block_count
 				FROM txgen_blocks
 				WHERE block_time_ms > 0
+					AND run_id = ${run}
 				GROUP BY run_id
 			) b ON r.run_id = b.run_id
-			WHERE r.run_id = '${runId}'
+			WHERE r.run_id = ${run}
+				AND r.metadata['run_type'] = 'release'
 			LIMIT 1
 		`)
 
@@ -246,32 +333,95 @@ export const fetchRun = createServerFn({ method: 'POST' })
 
 /** Fetch metric time-series for a run, filtered by metric names. */
 export const fetchMetrics = createServerFn({ method: 'POST' })
-	.inputValidator((input: { runId: string; metrics: Array<string> }) => input)
-	.handler(async ({ data: { runId, metrics } }) => {
+	.inputValidator(
+		(input: {
+			runId: string
+			metrics: Array<string | MetricQuery>
+			pointTarget?: number | undefined
+		}) => input,
+	)
+	.handler(async ({ data: { runId, metrics, pointTarget } }) => {
 		if (metrics.length === 0) return []
 
-		const metricList = metrics.map((m) => `'${m}'`).join(', ')
+		const run = sqlString(runId)
+		const normalizedMetrics = metrics.map(normalizeMetricQuery)
+		const metricsWhere = metricWhereClause(normalizedMetrics)
+		const target = Math.max(
+			50,
+			Math.min(
+				CHART_POINT_TARGET,
+				Math.floor(pointTarget ?? CHART_POINT_TARGET),
+			),
+		)
 		const rows = await queryClickHouse<{
 			metric_name: string
-			labels_json: string
+			node: string
+			quantile: string
+			reason: string
 			offset_ms: string
 			value: string
 		}>(`
-			SELECT metric_name, labels_json, offset_ms, value
-			FROM txgen_metric_samples
-			WHERE run_id = '${runId}'
-				AND metric_name IN (${metricList})
-			ORDER BY metric_name, labels_json, offset_ms
+			WITH
+				${run} AS selected_run_id,
+				(
+					SELECT count()
+					FROM txgen_runs
+					WHERE run_id = selected_run_id
+						AND metadata['run_type'] = 'release'
+				) AS release_run_exists,
+				(
+					SELECT min(offset_ms)
+					FROM txgen_metric_samples
+					WHERE run_id = selected_run_id
+						AND release_run_exists > 0
+						AND (${metricsWhere})
+				) AS min_offset,
+				(
+					SELECT max(offset_ms)
+					FROM txgen_metric_samples
+					WHERE run_id = selected_run_id
+						AND release_run_exists > 0
+						AND (${metricsWhere})
+				) AS max_offset,
+				greatest(1, toUInt64(ceil(ifNull(max_offset - min_offset, 0) / ${target}.0))) AS bucket_ms
+			SELECT
+				metric_name,
+				node,
+				quantile,
+				reason,
+				bucket_offset_ms AS offset_ms,
+				bucket_value AS value
+			FROM (
+				SELECT
+					metric_name,
+					JSONExtractString(labels_json, 'node') AS node,
+					JSONExtractString(labels_json, 'quantile') AS quantile,
+					JSONExtractString(labels_json, 'reason') AS reason,
+					min(offset_ms) AS bucket_offset_ms,
+					avg(value) AS bucket_value
+				FROM txgen_metric_samples
+				WHERE run_id = selected_run_id
+					AND release_run_exists > 0
+					AND (${metricsWhere})
+				GROUP BY
+					metric_name,
+					node,
+					quantile,
+					reason,
+					intDiv(toUInt64(offset_ms - min_offset), bucket_ms)
+			)
+			ORDER BY metric_name, node, quantile, reason, offset_ms
 		`)
 
 		const seriesMap = new Map<string, MetricSeries>()
 		for (const row of rows) {
-			const key = `${row.metric_name}::${row.labels_json}`
+			const labels = compactLabels(row)
+			const key = `${row.metric_name}::${labels}`
 			let series = seriesMap.get(key)
 			if (!series) {
 				series = {
 					name: row.metric_name,
-					labels: row.labels_json,
+					labels,
 					samples: [],
 				}
 				seriesMap.set(key, series)
@@ -285,30 +435,101 @@ export const fetchMetrics = createServerFn({ method: 'POST' })
 		return Array.from(seriesMap.values())
 	})
 
+function nullableNumber(
+	value: string | number | null | undefined,
+): number | null {
+	if (value == null || value === '') return null
+	const number = Number(value)
+	return Number.isFinite(number) ? number : null
+}
+
 /** Fetch block-level data for a run. */
 export const fetchBlocks = createServerFn({ method: 'POST' })
 	.inputValidator((input: string) => input)
 	.handler(async ({ data: runId }) => {
+		const run = sqlString(runId)
 		const rows = await queryClickHouse<{
 			block_index: string
 			block_number: string
+			chain_timestamp_ms: string | null
 			tx_count: string
 			gas_used: string
 			gas_limit: string
-			block_time_ms: string
+			block_time_ms: string | null
+			new_payload_ms: string | null
+			forkchoice_updated_ms: string | null
+			new_payload_server_latency_us: string | null
+			persistence_wait_us: string | null
+			execution_cache_wait_us: string | null
+			sparse_trie_wait_us: string | null
 		}>(`
-			SELECT block_index, block_number, tx_count, gas_used, gas_limit, block_time_ms
-			FROM txgen_blocks
-			WHERE run_id = '${runId}'
+			WITH
+				${run} AS selected_run_id,
+				(
+					SELECT count()
+					FROM txgen_runs
+					WHERE run_id = selected_run_id
+						AND metadata['run_type'] = 'release'
+				) AS release_run_exists,
+				(
+					SELECT count()
+					FROM txgen_blocks
+					WHERE run_id = selected_run_id
+						AND release_run_exists > 0
+				) AS total_rows,
+				greatest(1, toUInt64(ceil(total_rows / ${CHART_POINT_TARGET}.0))) AS bucket_size
+			SELECT
+				bucket_block_index AS block_index,
+				bucket_block_number AS block_number,
+				bucket_chain_timestamp_ms AS chain_timestamp_ms,
+				tx_count,
+				gas_used,
+				gas_limit,
+				block_time_ms,
+				new_payload_ms,
+				forkchoice_updated_ms,
+				new_payload_server_latency_us,
+				persistence_wait_us,
+				execution_cache_wait_us,
+				sparse_trie_wait_us
+			FROM (
+				SELECT
+					min(block_index) AS bucket_block_index,
+					min(block_number) AS bucket_block_number,
+					min(chain_timestamp_ms) AS bucket_chain_timestamp_ms,
+					avg(tx_count) AS tx_count,
+					avg(gas_used) AS gas_used,
+					any(gas_limit) AS gas_limit,
+					avg(block_time_ms) AS block_time_ms,
+					avg(new_payload_ms) AS new_payload_ms,
+					avg(forkchoice_updated_ms) AS forkchoice_updated_ms,
+					avg(new_payload_server_latency_us) AS new_payload_server_latency_us,
+					avg(persistence_wait_us) AS persistence_wait_us,
+					avg(execution_cache_wait_us) AS execution_cache_wait_us,
+					avg(sparse_trie_wait_us) AS sparse_trie_wait_us
+				FROM txgen_blocks
+				WHERE run_id = selected_run_id
+					AND release_run_exists > 0
+				GROUP BY intDiv(toUInt64(block_index), bucket_size)
+			)
 			ORDER BY block_index
 		`)
 
 		return rows.map((row) => ({
 			index: Number(row.block_index),
 			number: Number(row.block_number),
+			chainTimestampMs: nullableNumber(row.chain_timestamp_ms),
 			txCount: Number(row.tx_count),
 			gasUsed: Number(row.gas_used),
 			gasLimit: Number(row.gas_limit),
-			blockTimeMs: Number(row.block_time_ms),
+			blockTimeMs: nullableNumber(row.block_time_ms),
+			newPayloadMs: nullableNumber(row.new_payload_ms),
+			forkchoiceUpdatedMs: nullableNumber(row.forkchoice_updated_ms),
+			newPayloadServerLatencyUs: nullableNumber(
+				row.new_payload_server_latency_us,
+			),
+			persistenceWaitUs: nullableNumber(row.persistence_wait_us),
+			executionCacheWaitUs: nullableNumber(row.execution_cache_wait_us),
+			sparseTrieWaitUs: nullableNumber(row.sparse_trie_wait_us),
 		}))
 	})

@@ -16,8 +16,8 @@ import {
 	compiledContractsSignaturesTable,
 	nativeContractRevisionSourcesTable,
 } from '#database/schema.ts'
+import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
-import { chainIds } from '#wagmi.config.ts'
 import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -135,15 +135,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function isBlockedNestedKey(key: string): boolean {
+	return key === '__proto__' || key === 'constructor' || key === 'prototype'
+}
+
+function hasBlockedNestedKey(keys: string[]): boolean {
+	return keys.some(isBlockedNestedKey)
+}
+
+const objectHasOwnProperty = Object.prototype.hasOwnProperty
+
+function hasOwnNestedKey(
+	source: Record<string, unknown>,
+	key: string,
+): boolean {
+	return objectHasOwnProperty.call(source, key)
+}
+
 function getNestedValue(
 	source: Record<string, unknown>,
 	path: string,
 ): { found: boolean; value?: unknown } {
 	const keys = path.split('.').filter(Boolean)
+	if (hasBlockedNestedKey(keys)) return { found: false }
+
 	let current: unknown = source
 
 	for (const key of keys) {
-		if (!isRecord(current) || !(key in current)) {
+		if (!isRecord(current) || !hasOwnNestedKey(current, key)) {
 			return { found: false }
 		}
 		current = current[key]
@@ -158,13 +177,14 @@ function setNestedValue(
 	value: unknown,
 ): void {
 	const keys = path.split('.').filter(Boolean)
+	if (hasBlockedNestedKey(keys)) return
 	if (keys.length === 0) return
 
 	let current = target
 	for (const key of keys.slice(0, -1)) {
 		const nextValue = current[key]
 		if (!isRecord(nextValue)) {
-			current[key] = {}
+			current[key] = Object.create(null) as Record<string, unknown>
 		}
 		current = current[key] as Record<string, unknown>
 	}
@@ -179,6 +199,7 @@ function deleteNestedValue(
 	path: string,
 ): void {
 	const keys = path.split('.').filter(Boolean)
+	if (hasBlockedNestedKey(keys)) return
 	if (keys.length === 0) return
 
 	const deleteAt = (
@@ -186,7 +207,7 @@ function deleteNestedValue(
 		remaining: string[],
 	): void => {
 		const [key, ...rest] = remaining
-		if (!key || !(key in current)) return
+		if (!key || !hasOwnNestedKey(current, key)) return
 
 		if (rest.length === 0) {
 			delete current[key]
@@ -246,13 +267,23 @@ function applyFieldSelection(
 function buildVerifiedMinimalResponse(row: {
 	matchId: number
 	runtimeMatch: boolean
+	runtimeMetadataMatch: boolean | null
 	creationMatch: boolean
+	creationMetadataMatch: boolean | null
 	chainId: number
 	address: ArrayBuffer
 	verifiedAt: string
 }): MinimalLookupResponse {
-	const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
-	const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
+	const runtimeMatchStatus = row.runtimeMatch
+		? row.runtimeMetadataMatch
+			? 'exact_match'
+			: 'match'
+		: 'match'
+	const creationMatchStatus = row.creationMatch
+		? row.creationMetadataMatch
+			? 'exact_match'
+			: 'match'
+		: 'match'
 	const matchStatus =
 		runtimeMatchStatus === 'exact_match' ||
 		creationMatchStatus === 'exact_match'
@@ -484,8 +515,8 @@ async function getNativeLookupResponse(
  * GET /v2/contracts/{chainId}
  */
 
-const lookupRoute = new Hono<{ Bindings: Cloudflare.Env }>()
-const lookupAllChainContractsRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const lookupRoute = new Hono<AppEnv>()
+const lookupAllChainContractsRoute = new Hono<AppEnv>()
 
 // GET /v2/contract/all-chains/:address - Get verified contract at an address on all chains
 // Note: This route must be defined before /:chainId/:address to avoid matching conflicts
@@ -511,7 +542,9 @@ lookupRoute
 						matchId: verifiedContractsTable.id,
 						verifiedAt: verifiedContractsTable.createdAt,
 						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 						creationMatch: verifiedContractsTable.creationMatch,
+						creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 						chainId: contractDeploymentsTable.chainId,
 						address: contractDeploymentsTable.address,
 					})
@@ -538,24 +571,33 @@ lookupRoute
 					.where(eq(nativeContractsTable.address, addressBytes)),
 			])
 
+			const registry = context.get('chainRegistry')
+
+			// Filter out results for hidden chains to prevent leaking chain IDs
 			const contracts = [
-				...verifiedResults.map((row) =>
-					buildVerifiedMinimalResponse({
-						matchId: row.matchId,
-						runtimeMatch: row.runtimeMatch,
-						creationMatch: row.creationMatch,
-						chainId: row.chainId,
-						address: row.address as ArrayBuffer,
-						verifiedAt: row.verifiedAt,
-					}),
-				),
-				...nativeResults.map((row) =>
-					buildNativeMinimalResponse({
-						id: row.id,
-						chainId: row.chainId,
-						address: row.address as ArrayBuffer,
-					}),
-				),
+				...verifiedResults
+					.filter((row) => !registry.isHidden(row.chainId))
+					.map((row) =>
+						buildVerifiedMinimalResponse({
+							matchId: row.matchId,
+							runtimeMatch: row.runtimeMatch,
+							runtimeMetadataMatch: row.runtimeMetadataMatch,
+							creationMatch: row.creationMatch,
+							creationMetadataMatch: row.creationMetadataMatch,
+							chainId: row.chainId,
+							address: row.address as ArrayBuffer,
+							verifiedAt: row.verifiedAt,
+						}),
+					),
+				...nativeResults
+					.filter((row) => !registry.isHidden(row.chainId))
+					.map((row) =>
+						buildNativeMinimalResponse({
+							id: row.id,
+							chainId: row.chainId,
+							address: row.address as ArrayBuffer,
+						}),
+					),
 			].toSorted(
 				(a, b) =>
 					Number(a.chainId) - Number(b.chainId) ||
@@ -592,7 +634,7 @@ lookupRoute
 					'invalid_chain_id',
 					`Invalid chainId format: ${chainId}`,
 				)
-			if (!chainIds.includes(chainIdNumber))
+			if (!context.get('chainRegistry').isSupported(chainIdNumber))
 				return sourcifyError(
 					context,
 					400,
@@ -701,7 +743,9 @@ lookupRoute
 			const minimalResponse = buildVerifiedMinimalResponse({
 				matchId: row.matchId,
 				runtimeMatch: row.runtimeMatch,
+				runtimeMetadataMatch: row.runtimeMetadataMatch,
 				creationMatch: row.creationMatch,
+				creationMetadataMatch: row.creationMetadataMatch,
 				chainId: row.chainId,
 				address: row.address as ArrayBuffer,
 				verifiedAt: row.verifiedAt,
@@ -981,7 +1025,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 				'invalid_chain_id',
 				`Invalid chainId format: ${chainId}`,
 			)
-		if (!chainIds.includes(chainIdNumber))
+		if (!context.get('chainRegistry').isSupported(chainIdNumber))
 			return sourcifyError(
 				context,
 				400,
@@ -1026,7 +1070,9 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 						address: contractDeploymentsTable.address,
 						verifiedAt: verifiedContractsTable.createdAt,
 						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 						creationMatch: verifiedContractsTable.creationMatch,
+						creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 					})
 					.from(verifiedContractsTable)
 					.innerJoin(
@@ -1078,7 +1124,9 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 			buildVerifiedMinimalResponse({
 				matchId: row.matchId,
 				runtimeMatch: row.runtimeMatch,
+				runtimeMetadataMatch: row.runtimeMetadataMatch,
 				creationMatch: row.creationMatch,
+				creationMetadataMatch: row.creationMetadataMatch,
 				chainId: row.chainId,
 				address: row.address as ArrayBuffer,
 				verifiedAt: row.verifiedAt,

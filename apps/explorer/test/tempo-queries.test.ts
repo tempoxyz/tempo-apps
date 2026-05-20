@@ -142,6 +142,7 @@ import {
 	fetchAddressTxAggregate,
 	fetchAddressTxCounts,
 	fetchBasicTxDataByHashes,
+	fetchContractCreationReceipt,
 	fetchContractCreationTxCandidates,
 	fetchLatestBlockNumber,
 	fetchTokenCreatedCount,
@@ -791,6 +792,7 @@ describe('tempo-queries', () => {
 				{
 					topic1,
 					data,
+					block_timestamp: '123',
 				},
 			],
 		])
@@ -801,6 +803,7 @@ describe('tempo-queries', () => {
 				name: 'Token',
 				symbol: 'TOK',
 				currency: 'USD',
+				block_timestamp: '123',
 			},
 		])
 	})
@@ -1564,6 +1567,32 @@ describe('tempo-queries', () => {
 			oldestTxHash: '0xoldest',
 			oldestTxFrom: '0xCreator',
 		})
+	})
+
+	it('fetchContractCreationReceipt returns the creation receipt row', async () => {
+		mockQueryBuilder.setResponses([
+			{
+				tx_hash: '0xcreated',
+				from: '0xCreator',
+				block_timestamp: '123',
+			},
+		])
+
+		await expect(
+			fetchContractCreationReceipt('0x1111' as Address.Address, 1),
+		).resolves.toEqual({
+			tx_hash: '0xcreated',
+			from: '0xCreator',
+			block_timestamp: '123',
+		})
+	})
+
+	it('fetchContractCreationReceipt returns undefined when missing', async () => {
+		mockQueryBuilder.setResponses([undefined])
+
+		await expect(
+			fetchContractCreationReceipt('0x1111' as Address.Address, 1),
+		).resolves.toBeUndefined()
 	})
 
 	it('fetchAddressTxCounts returns sent and received counts', async () => {

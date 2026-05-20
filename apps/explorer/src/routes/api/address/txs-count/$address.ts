@@ -3,7 +3,6 @@ import * as Address from 'ox/Address'
 import { getBlockNumber, getCode } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { hasIndexSupply } from '#lib/env'
 import { fetchAddressTxCounts } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
@@ -71,8 +70,6 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (!hasIndexSupply()) return Response.json({ data: 0, error: null })
-
 				try {
 					const address = zAddress().parse(params.address)
 					Address.assert(address)

@@ -1,15 +1,16 @@
 import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
-import { Hono } from 'hono'
+import { Handler } from 'accounts/server'
+import { type Context, Hono } from 'hono'
 import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
-import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import type { Chain } from 'viem/chains'
+import { tempo, tempoDevnet, tempoModerato } from 'viem/chains'
 import * as z from 'zod'
-import { tempoChain } from './lib/chain.js'
+import { admin } from './lib/admin.js'
+import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import {
 	FeePayerEvents,
 	captureEvent,
@@ -37,11 +38,13 @@ app.use(
 			if (origin && env.ALLOWED_ORIGINS.includes(origin)) return origin
 			return null
 		},
-		allowMethods: ['GET', 'POST', 'OPTIONS'],
+		allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		allowHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 86400,
 	}),
 )
+
+app.route('/admin', admin)
 
 app.get(
 	'/usage',
@@ -87,29 +90,68 @@ app.get(
 	},
 )
 
-app.all('*', rateLimitMiddleware, async (c) => {
-	const requestContext = getRequestContext(c.req.raw)
+const sponsorAccount = privateKeyToAccount(
+	env.SPONSOR_PRIVATE_KEY as `0x${string}`,
+)
 
-	const handler = Handler.feePayer({
-		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
-		chain: tempoChain as Chain,
-		transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
-		async onRequest(request) {
-			// ast-grep-ignore: no-console-log
-			console.info(`Sponsoring transaction: ${request.method}`)
-			c.executionCtx.waitUntil(
-				captureEvent({
-					distinctId: requestContext.origin ?? 'unknown',
-					event: FeePayerEvents.SPONSORSHIP_REQUEST,
-					properties: {
-						...requestContext,
-						rpcMethod: request.method,
-					},
-				}),
-			)
-		},
-	})
-	return handler.fetch(c.req.raw)
+const relayHandler = Handler.relay({
+	cors: false,
+	features: 'all',
+	feePayer: {
+		account: sponsorAccount,
+		name: 'Tempo Sponsor',
+		url: 'https://sponsor.tempo.xyz',
+	},
+	transports: {
+		[tempo.id]: http(env.TEMPO_RPC_URL ?? tempo.rpcUrls.default.http[0]),
+		[tempoModerato.id]: http(tempoModerato.rpcUrls.default.http[0]),
+		[tempoDevnet.id]: http(tempoDevnet.rpcUrls.default.http[0]),
+	},
 })
+
+async function feePayerHandler(c: Context) {
+	const requestContext = getRequestContext(c.req.raw)
+	const apiKey = c.get('apiKey') as string | undefined
+	const apiKeyRecord = c.get('apiKeyRecord')
+	const apiKeyLabel = apiKeyRecord?.label
+	const rpcMethod = c.get('rpcMethod') as string | undefined
+	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
+
+	if (rpcMethod) {
+		c.executionCtx.waitUntil(
+			captureEvent({
+				distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
+				event: FeePayerEvents.SPONSORSHIP_REQUEST,
+				properties: {
+					...requestContext,
+					rpcMethod,
+					keyedRoute: Boolean(apiKey),
+					...(apiKeyLabel ? { apiKeyLabel } : {}),
+					...(apiKeyRecord?.dailyLimitUsd
+						? { dailyLimitUsd: apiKeyRecord.dailyLimitUsd }
+						: {}),
+					...(estimatedFeeUsd !== undefined ? { estimatedFeeUsd } : {}),
+				},
+			}),
+		)
+	}
+
+	const raw = c.req.raw
+	const url = new URL(raw.url)
+	const target =
+		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
+	return relayHandler.fetch(target)
+}
+
+// Keyed path: https://sponsor.tempo.xyz/tp_abc123
+app.all(
+	'/:key{tp_.+}',
+	apiKeyMiddleware,
+	rateLimitMiddleware({ keyed: true }),
+	feePayerHandler,
+)
+
+// Open path: https://sponsor.tempo.xyz/
+app.all('/', rateLimitMiddleware({ keyed: false }), feePayerHandler)
 
 export default app

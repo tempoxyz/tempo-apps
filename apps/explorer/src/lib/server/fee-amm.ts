@@ -5,7 +5,6 @@ import { Abis, Addresses } from 'viem/tempo'
 import type { Config } from 'wagmi'
 import { getChainId, readContracts } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
-import { hasIndexSupply } from '#lib/env'
 import { getWagmiConfig } from '#wagmi.config'
 
 export type FeeAmmPoolRow = {
@@ -89,8 +88,6 @@ async function fetchTokenMetadata(
 
 export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
 	async (): Promise<FeeAmmPool[]> => {
-		if (!hasIndexSupply()) return []
-
 		try {
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)

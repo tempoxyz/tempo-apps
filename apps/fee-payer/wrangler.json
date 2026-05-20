@@ -14,6 +14,12 @@
 	],
 	"preview_urls": true,
 	"keep_vars": true,
+	"kv_namespaces": [
+		{
+			"binding": "SponsorApiKeyStore",
+			"id": "PLACEHOLDER_KV_NAMESPACE_ID"
+		}
+	],
 	"observability": {
 		"enabled": true,
 		"logs": {
@@ -125,10 +131,24 @@
 				"TEMPO_ENV": "mainnet",
 				"POSTHOG_API_KEY": ""
 			},
+			"kv_namespaces": [
+				{
+					"binding": "SponsorApiKeyStore",
+					"id": "08ce4ce226fe4dd3869ca91d5e3dd700"
+				}
+			],
 			"ratelimits": [
 				{
 					"name": "AddressRateLimiter",
 					"namespace_id": "888",
+					"simple": {
+						"limit": 30,
+						"period": 60
+					}
+				},
+				{
+					"name": "KeyedAddressRateLimiter",
+					"namespace_id": "889",
 					"simple": {
 						"limit": 1000,
 						"period": 60

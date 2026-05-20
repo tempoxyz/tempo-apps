@@ -323,12 +323,16 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 
 /**
  * Known contract registry mapping addresses to their metadata and ABIs.
+ * Keys are normalized to lowercase so that getContractInfo's case-insensitive
+ * lookup always matches, even when source constants use checksummed casing.
  */
-export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
-	...precompileRegistry.entries(),
-	...systemContractRegistry.entries(),
-	...tip20ContractRegistry.entries(),
-])
+export const contractRegistry = new Map<Address.Address, ContractInfo>(
+	[
+		...precompileRegistry.entries(),
+		...systemContractRegistry.entries(),
+		...tip20ContractRegistry.entries(),
+	].map(([k, v]) => [k.toLowerCase() as Address.Address, v]),
+)
 
 /**
  * detect if an address is a system address (i.e., not a token)

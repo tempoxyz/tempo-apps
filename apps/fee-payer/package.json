@@ -32,7 +32,7 @@
 		"idxs": "catalog:",
 		"kysely": "catalog:",
 		"ox": "catalog:",
-		"tempo.ts": "catalog:",
+		"accounts": "catalog:",
 		"viem": "catalog:",
 		"zod": "catalog:"
 	},

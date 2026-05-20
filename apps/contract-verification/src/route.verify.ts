@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, or } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 
 import { getRandom } from '@cloudflare/containers'
@@ -12,6 +12,7 @@ import {
 	formatError,
 	sourcifyError,
 	normalizeSourcePath,
+	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
 import {
@@ -35,7 +36,8 @@ import {
 	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
-import { chains, chainIds } from '#wagmi.config.ts'
+import type { AppEnv } from '#index.tsx'
+import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
@@ -50,6 +52,41 @@ const CONTAINER_INSTANCE_COUNT =
 function timestampToMs(value: string): number {
 	const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
 	return new Date(normalized).getTime()
+}
+
+function isBlockedObjectKey(key: string): boolean {
+	return key === '__proto__' || key === 'constructor' || key === 'prototype'
+}
+
+function sanitizeJsonValue(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(sanitizeJsonValue)
+
+	if (typeof value === 'object' && value !== null) {
+		const sanitized: Record<string, unknown> = {}
+		for (const [key, nestedValue] of Object.entries(value)) {
+			if (isBlockedObjectKey(key)) continue
+			sanitized[key] = sanitizeJsonValue(nestedValue)
+		}
+		return sanitized
+	}
+
+	return value
+}
+
+function sanitizeCompilerSettings(settings: object): object {
+	return sanitizeJsonValue(settings) as object
+}
+
+function sanitizeVerificationInput(
+	input: VerificationInput,
+): VerificationInput {
+	return {
+		...input,
+		stdJsonInput: {
+			...input.stdJsonInput,
+			settings: sanitizeCompilerSettings(input.stdJsonInput.settings),
+		},
+	}
 }
 
 /**
@@ -77,7 +114,7 @@ function timestampToMs(value: string): number {
  * POST /verify/solc-json
  */
 
-const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const verifyRoute = new Hono<AppEnv>()
 
 // POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
 verifyRoute
@@ -149,7 +186,8 @@ verifyRoute
 			}
 
 			const chainId = Number(_chainId)
-			if (!chainIds.includes(chainId)) {
+			const registry = context.get('chainRegistry')
+			if (!registry.isSupported(chainId)) {
 				return sourcifyError(
 					context,
 					400,
@@ -183,12 +221,13 @@ verifyRoute
 			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
-			// Check if already verified
-			const existingVerification = await db
+			// Exact verifications are terminal, but partial matches must not block
+			// a later exact verification from replacing them.
+			const existingExactVerification = await db
 				.select({
 					matchId: verifiedContractsTable.id,
-					runtimeMatch: verifiedContractsTable.runtimeMatch,
-					creationMatch: verifiedContractsTable.creationMatch,
+					runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 				})
 				.from(verifiedContractsTable)
 				.innerJoin(
@@ -199,14 +238,20 @@ verifyRoute
 					and(
 						eq(contractDeploymentsTable.chainId, chainId),
 						eq(contractDeploymentsTable.address, addressBytes),
+						or(
+							eq(verifiedContractsTable.runtimeMetadataMatch, true),
+							eq(verifiedContractsTable.creationMetadataMatch, true),
+						),
 					),
 				)
 				.limit(1)
 
-			if (existingVerification.length > 0) {
-				const existing = existingVerification.at(0)
-				const runtimeMatch = existing?.runtimeMatch ? 'exact matches' : 'match'
-				const creationMatch = existing?.creationMatch
+			if (existingExactVerification.length > 0) {
+				const existing = existingExactVerification.at(0)
+				const runtimeMatch = existing?.runtimeMetadataMatch
+					? 'exact matches'
+					: 'match'
+				const creationMatch = existing?.creationMetadataMatch
 					? 'exact matches'
 					: 'match'
 				return sourcifyError(
@@ -300,6 +345,10 @@ verifyRoute
 				return context.json({ verificationId: firstJob.id }, 202)
 			}
 
+			const verificationInput = sanitizeVerificationInput(
+				parsedBody.data as VerificationInput,
+			)
+
 			// Dispatch verification to a per-job Durable Object for durable background execution
 			const doId = context.env.VERIFICATION_JOB_RUNNER.idFromName(jobId)
 			const runner = context.env.VERIFICATION_JOB_RUNNER.get(doId)
@@ -308,7 +357,7 @@ verifyRoute
 					jobId,
 					chainId,
 					address,
-					body: parsedBody.data as VerificationInput,
+					body: verificationInput,
 				})
 			} catch (enqueueError) {
 				logger.error('job_enqueue_failed', {
@@ -617,7 +666,7 @@ type VerificationDeps = {
 		name: string,
 	) => ContainerLike
 	createPublicClient?: (params: {
-		chain: (typeof chains)[keyof typeof chains]
+		chain: import('viem').Chain
 		transport: ReturnType<typeof http>
 	}) => PublicClientLike
 }
@@ -666,6 +715,7 @@ async function runVerificationJob(
 	chainId: number,
 	address: string,
 	body: VerificationInput,
+	chainRegistry: ChainRegistry,
 	deps?: VerificationDeps,
 ): Promise<void> {
 	const db = getDb(env.CONTRACTS_DB)
@@ -673,7 +723,8 @@ async function runVerificationJob(
 	const addressBytes = Hex.toBytes(address)
 	const startTime = Date.now()
 
-	const { stdJsonInput, compilerVersion, contractIdentifier } = body
+	const sanitizedBody = sanitizeVerificationInput(body)
+	const { stdJsonInput, compilerVersion, contractIdentifier } = sanitizedBody
 	const language = stdJsonInput.language?.toLowerCase() ?? 'solidity'
 	const isVyper = language === 'vyper'
 
@@ -682,7 +733,7 @@ async function runVerificationJob(
 	const contractName = contractIdentifier.slice(lastColonIndex + 1)
 
 	try {
-		const chain = chains.find((chain) => chain.id === chainId)
+		const chain = chainRegistry.getChain(chainId)
 		if (!chain) {
 			throw new Error(`Chain ${chainId} is not supported`)
 		}
@@ -693,9 +744,9 @@ async function runVerificationJob(
 			transport: http(rpcUrl),
 		})
 
-		const creationTransactionMetadata = body.creationTransactionHash
+		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
 			? await getCreationTransactionMetadata({
-					creationTransactionHash: body.creationTransactionHash,
+					creationTransactionHash: sanitizedBody.creationTransactionHash,
 					address,
 					chainId,
 					client,
@@ -972,6 +1023,7 @@ async function runVerificationJob(
 		const existingDeployment = await db
 			.select({
 				id: contractDeploymentsTable.id,
+				contractId: contractDeploymentsTable.contractId,
 				transactionHash: contractDeploymentsTable.transactionHash,
 			})
 			.from(contractDeploymentsTable)
@@ -985,17 +1037,32 @@ async function runVerificationJob(
 
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			const deploymentUpdates: Partial<
+				typeof contractDeploymentsTable.$inferInsert
+			> = {}
+
 			if (
 				creationTransactionMetadata &&
 				existingDeployment[0].transactionHash === null
 			) {
+				Object.assign(deploymentUpdates, {
+					transactionHash: creationTransactionMetadata.transactionHash,
+					blockNumber: creationTransactionMetadata.blockNumber,
+					transactionIndex: creationTransactionMetadata.transactionIndex,
+					deployer: creationTransactionMetadata.deployer,
+				})
+			}
+
+			if (isExactMatch && existingDeployment[0].contractId !== contractId) {
+				deploymentUpdates.contractId = contractId
+			}
+
+			if (Object.keys(deploymentUpdates).length > 0) {
 				await db
 					.update(contractDeploymentsTable)
 					.set({
-						transactionHash: creationTransactionMetadata.transactionHash,
-						blockNumber: creationTransactionMetadata.blockNumber,
-						transactionIndex: creationTransactionMetadata.transactionIndex,
-						deployer: creationTransactionMetadata.deployer,
+						...deploymentUpdates,
+						updatedAt: new Date().toISOString(),
 						updatedBy: auditUser,
 					})
 					.where(eq(contractDeploymentsTable.id, deploymentId))
@@ -1042,14 +1109,30 @@ async function runVerificationJob(
 				and(
 					eq(compiledContractsTable.runtimeCodeHash, runtimeCodeHashSha256),
 					eq(compiledContractsTable.compiler, compilerName),
-					eq(compiledContractsTable.version, body.compilerVersion),
+					eq(compiledContractsTable.version, compilerVersion),
 				),
 			)
 			.limit(1)
 
 		let compilationId: string
+		let shouldReplaceExistingSources = false
 		if (existingCompilation.length > 0 && existingCompilation[0]) {
 			compilationId = existingCompilation[0].id
+
+			if (isExactMatch) {
+				const existingVerificationMatches = await db
+					.select({
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					})
+					.from(verifiedContractsTable)
+					.where(eq(verifiedContractsTable.compilationId, compilationId))
+
+				shouldReplaceExistingSources =
+					existingVerificationMatches.length > 0 &&
+					existingVerificationMatches.every(
+						(match) => match.runtimeMetadataMatch !== true,
+					)
+			}
 		} else {
 			compilationId = globalThis.crypto.randomUUID()
 
@@ -1076,7 +1159,7 @@ async function runVerificationJob(
 			await db.insert(compiledContractsTable).values({
 				id: compilationId,
 				compiler: compilerName,
-				version: body.compilerVersion,
+				version: compilerVersion,
 				language: stdJsonInput.language,
 				name: contractName,
 				fullyQualifiedName: contractIdentifier,
@@ -1091,40 +1174,53 @@ async function runVerificationJob(
 			})
 		}
 
-		// Insert sources and link them to the compilation
-		for (const [sourcePath, sourceData] of Object.entries(
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
 			stdJsonInput.sources,
-		)) {
-			const content = sourceData.content
-			const contentBytes = new TextEncoder().encode(content)
-			const sourceHashSha256 = new Uint8Array(
-				await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
-			)
-			const sourceHashKeccak = Hex.toBytes(
-				keccak256(Hex.fromBytes(contentBytes)),
-			)
+			compiledContract.metadata,
+		)
+		const shouldInsertSources =
+			existingCompilation.length === 0 || shouldReplaceExistingSources
 
+		if (shouldReplaceExistingSources && filteredSourceEntries.length > 0) {
 			await db
-				.insert(sourcesTable)
-				.values({
-					sourceHash: sourceHashSha256,
-					sourceHashKeccak: sourceHashKeccak,
-					content: content,
-					createdBy: auditUser,
-					updatedBy: auditUser,
-				})
-				.onConflictDoNothing()
+				.delete(compiledContractsSourcesTable)
+				.where(eq(compiledContractsSourcesTable.compilationId, compilationId))
+		}
 
-			const normalizedPath = normalizeSourcePath(sourcePath)
-			await db
-				.insert(compiledContractsSourcesTable)
-				.values({
-					id: globalThis.crypto.randomUUID(),
-					compilationId: compilationId,
-					sourceHash: sourceHashSha256,
-					path: normalizedPath,
-				})
-				.onConflictDoNothing()
+		// Insert sources referenced by the compiler metadata and link them to the compilation.
+		if (shouldInsertSources) {
+			for (const [sourcePath, sourceData] of filteredSourceEntries) {
+				const content = sourceData.content
+				const contentBytes = new TextEncoder().encode(content)
+				const sourceHashSha256 = new Uint8Array(
+					await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
+				)
+				const sourceHashKeccak = Hex.toBytes(
+					keccak256(Hex.fromBytes(contentBytes)),
+				)
+
+				await db
+					.insert(sourcesTable)
+					.values({
+						sourceHash: sourceHashSha256,
+						sourceHashKeccak: sourceHashKeccak,
+						content: content,
+						createdBy: auditUser,
+						updatedBy: auditUser,
+					})
+					.onConflictDoNothing()
+
+				const normalizedPath = normalizeSourcePath(sourcePath)
+				await db
+					.insert(compiledContractsSourcesTable)
+					.values({
+						id: globalThis.crypto.randomUUID(),
+						compilationId: compilationId,
+						sourceHash: sourceHashSha256,
+						path: normalizedPath,
+					})
+					.onConflictDoNothing()
+			}
 		}
 
 		// Extract and batch-insert signatures from ABI
@@ -1188,35 +1284,89 @@ async function runVerificationJob(
 			)
 		}
 
-		// Insert verified contract with transformation data
-		await db
-			.insert(verifiedContractsTable)
-			.values({
-				deploymentId,
-				compilationId,
-				creationMatch: false,
-				runtimeMatch: true,
-				runtimeMetadataMatch: isExactMatch,
-				runtimeValues:
-					Object.keys(runtimeMatchResult.transformationValues).length > 0
-						? JSON.stringify(runtimeMatchResult.transformationValues)
-						: null,
-				runtimeTransformations:
-					runtimeMatchResult.transformations.length > 0
-						? JSON.stringify(runtimeMatchResult.transformations)
-						: null,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			})
-			.onConflictDoNothing()
+		const runtimeValues =
+			Object.keys(runtimeMatchResult.transformationValues).length > 0
+				? JSON.stringify(runtimeMatchResult.transformationValues)
+				: null
+		const runtimeTransformations =
+			runtimeMatchResult.transformations.length > 0
+				? JSON.stringify(runtimeMatchResult.transformations)
+				: null
 
-		const verificationResult = await db
-			.select({ id: verifiedContractsTable.id })
+		const existingVerifiedContracts = await db
+			.select({
+				id: verifiedContractsTable.id,
+				compilationId: verifiedContractsTable.compilationId,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+			})
 			.from(verifiedContractsTable)
 			.where(eq(verifiedContractsTable.deploymentId, deploymentId))
-			.limit(1)
 
-		const verifiedContractId = verificationResult.at(0)?.id ?? null
+		const existingExactVerification = existingVerifiedContracts.find(
+			(verification) =>
+				verification.runtimeMetadataMatch === true ||
+				verification.creationMetadataMatch === true,
+		)
+		const existingSameCompilationVerification = existingVerifiedContracts.find(
+			(verification) => verification.compilationId === compilationId,
+		)
+		const existingVerification =
+			existingSameCompilationVerification ?? existingVerifiedContracts.at(0)
+
+		let verifiedContractId: number | null = null
+
+		if (existingExactVerification) {
+			verifiedContractId = existingExactVerification.id
+		} else if (existingVerification && isExactMatch) {
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					compilationId,
+					creationMatch: false,
+					creationValues: null,
+					creationTransformations: null,
+					creationMetadataMatch: null,
+					runtimeMatch: true,
+					runtimeMetadataMatch: true,
+					runtimeValues,
+					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+			verifiedContractId = existingVerification.id
+		} else if (existingVerification) {
+			verifiedContractId = existingVerification.id
+		} else {
+			await db
+				.insert(verifiedContractsTable)
+				.values({
+					deploymentId,
+					compilationId,
+					creationMatch: false,
+					runtimeMatch: true,
+					runtimeMetadataMatch: isExactMatch,
+					runtimeValues,
+					runtimeTransformations,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			const verificationResult = await db
+				.select({ id: verifiedContractsTable.id })
+				.from(verifiedContractsTable)
+				.where(
+					and(
+						eq(verifiedContractsTable.deploymentId, deploymentId),
+						eq(verifiedContractsTable.compilationId, compilationId),
+					),
+				)
+				.limit(1)
+
+			verifiedContractId = verificationResult.at(0)?.id ?? null
+		}
 
 		// Mark job as completed (clear any stale timeout/error fields)
 		await db

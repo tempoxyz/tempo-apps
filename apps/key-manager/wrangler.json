@@ -7,6 +7,10 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"keep_vars": true,
+	"vars": {
+		"ALLOWED_ORIGINS": "https://tempo.xyz,https://www.tempo.xyz,https://docs.tempo.xyz,https://explorer.tempo.xyz,https://explorer.testnet.tempo.xyz",
+		"RP_ID": "tempo.xyz"
+	},
 	"observability": {
 		"enabled": true,
 		"logs": {

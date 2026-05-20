@@ -3,6 +3,8 @@ import { DurableObject } from 'cloudflare:workers'
 import { getLogger } from '#lib/logger.ts'
 import { formatError } from '#lib/utilities.ts'
 import { runVerificationJob } from '#route.verify.ts'
+import { staticChains } from '#wagmi.config.ts'
+import { ChainRegistry, resolveAuthToken } from '#lib/chain-registry.ts'
 
 const logger = getLogger(['tempo', 'job-runner'])
 
@@ -48,12 +50,22 @@ export class VerificationJobRunner extends DurableObject<Cloudflare.Env> {
 		})
 
 		try {
+			const authToken = await resolveAuthToken(
+				this.env.CHAINS_CONFIG_AUTH_TOKEN_SECRET ||
+					this.env.CHAINS_CONFIG_AUTH_TOKEN,
+			)
+			const url = this.env.CHAINS_CONFIG_URL || undefined
+			const registry = url
+				? await ChainRegistry.fromUrl({ url, authToken, staticChains })
+				: ChainRegistry.fromStatic(staticChains)
+
 			await runVerificationJob(
 				this.env,
 				job.jobId,
 				job.chainId,
 				job.address,
 				job.body,
+				registry,
 			)
 			logger.info('job_finished', { jobId: job.jobId })
 		} catch (error) {

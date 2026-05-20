@@ -8,12 +8,12 @@ import {
 	fetchBlocks,
 	fetchRunsForScenario,
 	type BenchRun,
+	type MetricQuery,
 	type MetricSeries,
 } from '#lib/server/bench'
 import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
 
-const METRIC_NAMES = [
-	// Builder phases (p50)
+const BUILDER_QUANTILE_METRIC_NAMES = [
 	'reth_tempo_payload_builder_payload_build_duration_seconds',
 	'reth_tempo_payload_builder_pool_fetch_duration_seconds',
 	'reth_tempo_payload_builder_total_transaction_execution_duration_seconds',
@@ -23,6 +23,13 @@ const METRIC_NAMES = [
 	'reth_tempo_payload_builder_hashed_post_state_duration_seconds',
 	'reth_tempo_payload_builder_prepare_system_transactions_duration_seconds',
 	'reth_tempo_payload_builder_system_transactions_execution_duration_seconds',
+] as const
+
+const METRIC_QUERIES = [
+	...BUILDER_QUANTILE_METRIC_NAMES.map((name) => ({
+		name,
+		labels: { quantile: ['0.5', '0.95'] },
+	})),
 	// Throughput
 	'reth_tempo_payload_builder_total_transactions_last',
 	// Block headroom
@@ -31,16 +38,32 @@ const METRIC_NAMES = [
 	'txgen_transactions_sent_total',
 	'txgen_transactions_success_total',
 	'txgen_transactions_failed_total',
+	'txgen_blocks_sent_total',
+	'txgen_blocks_success_total',
+	'txgen_blocks_failed_total',
 	'txgen_transactions_inflight',
 	// Txpool
 	'reth_transaction_pool_pending_pool_transactions',
 	'reth_transaction_pool_basefee_pool_transactions',
 	'reth_transaction_pool_queued_pool_transactions',
+	'reth_transaction_pool_aa_2d_pending_transactions',
+	'reth_transaction_pool_aa_2d_queued_transactions',
 	// Skipped txs
-	'reth_tempo_payload_builder_pool_transactions_skipped_total',
+	{
+		name: 'reth_tempo_payload_builder_pool_transactions_skipped_total',
+		labels: {
+			reason: ['nonce_too_low', 'invalid_tx', 'sender_address_mismatch'],
+		},
+	},
 	// Persistence
-	'reth_storage_providers_database_save_blocks_write_state',
-	'reth_storage_providers_database_save_blocks_write_trie_updates',
+	{
+		name: 'reth_storage_providers_database_save_blocks_write_state',
+		labels: { quantile: '0.5' },
+	},
+	{
+		name: 'reth_storage_providers_database_save_blocks_write_trie_updates',
+		labels: { quantile: '0.5' },
+	},
 	// Cache
 	'reth_sync_caching_account_cache_hits',
 	'reth_sync_caching_account_cache_misses',
@@ -49,12 +72,12 @@ const METRIC_NAMES = [
 	// Memory
 	'reth_jemalloc_resident',
 	'reth_jemalloc_allocated',
-]
+] satisfies Array<string | MetricQuery>
 
 const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
 
 function isTag(ref: string): boolean {
-	return /^v\d/.test(ref)
+	return ref.startsWith('v')
 }
 
 function commitUrl(commit: string): string {
@@ -73,28 +96,12 @@ const COLORS = {
 	purple: '#a78bfa',
 }
 
-const NOISE_THRESHOLD = 0.02
-
-function Delta(props: {
-	current: number
-	previous: number
-	lowerIsBetter?: boolean | undefined
-}): React.JSX.Element | null {
-	if (props.previous === 0) return null
-	const ratio = (props.current - props.previous) / props.previous
-	if (Math.abs(ratio) < NOISE_THRESHOLD) {
-		return <span className="ml-1.5 text-[11px] text-tertiary">=</span>
-	}
-	const up = ratio > 0
-	const improved = props.lowerIsBetter ? !up : up
-	return (
-		<span
-			className={`ml-1.5 text-[11px] ${improved ? 'text-positive' : 'text-negative'}`}
-		>
-			{up ? '▲' : '▼'} {(Math.abs(ratio) * 100).toFixed(1)}%
-		</span>
-	)
-}
+const KIB_PER_MIB = 1024
+const RLPX_HARD_CAP_KIB = 16 * KIB_PER_MIB
+const EIP_7934_MAX_BLOCK_SIZE_KIB = 10 * KIB_PER_MIB
+const EIP_7934_SAFETY_MARGIN_KIB = 2 * KIB_PER_MIB
+const EIP_7934_MAX_RLP_BLOCK_SIZE_KIB =
+	EIP_7934_MAX_BLOCK_SIZE_KIB - EIP_7934_SAFETY_MARGIN_KIB
 
 function runOptionLabel(run: BenchRun): string {
 	const version =
@@ -136,7 +143,8 @@ export const Route = createFileRoute('/benchmark/$id')({
 		if (run?.scenarioId) {
 			await context.queryClient.ensureQueryData({
 				queryKey: ['scenarioRuns', run.scenarioId],
-				queryFn: () => fetchRunsForScenario({ data: run.scenarioId }),
+				queryFn: () =>
+					fetchRunsForScenario({ data: { scenarioId: run.scenarioId } }),
 			})
 		}
 	},
@@ -157,28 +165,49 @@ function findSeries(
 
 function RunDetailPage(): React.JSX.Element {
 	const { id } = Route.useParams()
+	return <BenchmarkRunDetail id={id} showBackLink />
+}
+
+export declare namespace BenchmarkRunDetail {
+	type Props = {
+		id: string
+		showBackLink?: boolean | undefined
+		headerControls?: React.ReactNode | undefined
+		showRunSelect?: boolean | undefined
+	}
+}
+
+export function BenchmarkRunDetail(
+	props: BenchmarkRunDetail.Props,
+): React.JSX.Element {
 	const navigate = useNavigate()
 	const runSelectId = React.useId()
 	const { data: run } = useSuspenseQuery({
-		queryKey: ['run', id],
-		queryFn: () => fetchRun({ data: id }),
+		queryKey: ['run', props.id],
+		queryFn: () => fetchRun({ data: props.id }),
 	})
 
 	const { data: scenarioRuns } = useQuery({
 		queryKey: ['scenarioRuns', run?.scenarioId ?? ''],
-		queryFn: () => fetchRunsForScenario({ data: run?.scenarioId ?? '' }),
+		queryFn: () =>
+			fetchRunsForScenario({
+				data: { scenarioId: run?.scenarioId ?? '' },
+			}),
 		enabled: !!run?.scenarioId,
 	})
 
 	const { data: metrics } = useQuery({
-		queryKey: ['metrics', id],
-		queryFn: () => fetchMetrics({ data: { runId: id, metrics: METRIC_NAMES } }),
+		queryKey: ['metrics', props.id],
+		queryFn: () =>
+			fetchMetrics({
+				data: { runId: props.id, metrics: METRIC_QUERIES },
+			}),
 		enabled: !!run,
 	})
 
 	const { data: blocks } = useQuery({
-		queryKey: ['blocks', id],
-		queryFn: () => fetchBlocks({ data: id }),
+		queryKey: ['blocks', props.id],
+		queryFn: () => fetchBlocks({ data: props.id }),
 		enabled: !!run,
 	})
 
@@ -192,11 +221,6 @@ function RunDetailPage(): React.JSX.Element {
 
 	const scenario = getScenario(run.scenarioId)
 	const runs = scenarioRuns ?? []
-	const currentRunIndex = runs.findIndex(
-		(scenarioRun) => scenarioRun.id === run.id,
-	)
-	const previousRun =
-		currentRunIndex >= 0 ? runs[currentRunIndex + 1] : undefined
 	const m = metrics ?? []
 
 	// Builder phases (p50)
@@ -267,7 +291,26 @@ function RunDetailPage(): React.JSX.Element {
 	const txgenSentSeries = findSeries(m, 'txgen_transactions_sent_total')
 	const txgenSuccessSeries = findSeries(m, 'txgen_transactions_success_total')
 	const txgenFailedSeries = findSeries(m, 'txgen_transactions_failed_total')
+	const txgenBlocksSentSeries = findSeries(m, 'txgen_blocks_sent_total')
+	const txgenBlocksSuccessSeries = findSeries(m, 'txgen_blocks_success_total')
+	const txgenBlocksFailedSeries = findSeries(m, 'txgen_blocks_failed_total')
 	const txgenInflightSeries = findSeries(m, 'txgen_transactions_inflight')
+	const hasTxgenTransactionCounters = [
+		txgenSentSeries,
+		txgenSuccessSeries,
+		txgenFailedSeries,
+	].some(hasSamples)
+	const txgenCounterSeries = hasTxgenTransactionCounters
+		? {
+				sent: txgenSentSeries,
+				success: txgenSuccessSeries,
+				failed: txgenFailedSeries,
+			}
+		: {
+				sent: txgenBlocksSentSeries,
+				success: txgenBlocksSuccessSeries,
+				failed: txgenBlocksFailedSeries,
+			}
 
 	// Txpool
 	const pendingSeries = findSeries(
@@ -281,6 +324,14 @@ function RunDetailPage(): React.JSX.Element {
 	const queuedSeries = findSeries(
 		m,
 		'reth_transaction_pool_queued_pool_transactions',
+	)
+	const aa2dPendingSeries = findSeries(
+		m,
+		'reth_transaction_pool_aa_2d_pending_transactions',
+	)
+	const aa2dQueuedSeries = findSeries(
+		m,
+		'reth_transaction_pool_aa_2d_queued_transactions',
 	)
 
 	// Skipped txs
@@ -334,22 +385,42 @@ function RunDetailPage(): React.JSX.Element {
 	const residentSeries = findSeries(m, 'reth_jemalloc_resident')
 	const allocatedSeries = findSeries(m, 'reth_jemalloc_allocated')
 
+	const blockRows = blocks ?? []
+	const hasEngineApiTimings = blockRows.some(
+		(b) =>
+			b.newPayloadMs != null ||
+			b.forkchoiceUpdatedMs != null ||
+			b.newPayloadServerLatencyUs != null,
+	)
+	const hasServerWaitTimings = blockRows.some(
+		(b) =>
+			b.persistenceWaitUs != null ||
+			b.executionCacheWaitUs != null ||
+			b.sparseTrieWaitUs != null,
+	)
+
 	// Gas limit breakdown (derived from block gas limit)
-	const refGasLimit = blocks?.[0]?.gasLimit ?? 0
+	const refGasLimit = blockRows[0]?.gasLimit ?? 0
 	const sharedGasLimit = Math.floor(refGasLimit / 10)
 	const generalGasLimit = 30_000_000
 	const paymentGasLimit = refGasLimit - sharedGasLimit - generalGasLimit
+	const hasLoadedPrimarySeries = metrics !== undefined && blocks !== undefined
+	const ingressTpsPoints = counterRate(txgenCounterSeries.sent)
+	const settledTpsPoints = settledTps(blockRows)
+	const ingressEgressYMax = sharedYMax([ingressTpsPoints, settledTpsPoints])
 
 	return (
 		<div>
-			<div className="mb-4">
-				<Link
-					to="/"
-					className="text-[13px] text-tertiary transition-colors hover:text-primary"
-				>
-					← Dashboard
-				</Link>
-			</div>
+			{props.showBackLink && (
+				<div className="mb-4">
+					<Link
+						to="/"
+						className="text-[13px] text-tertiary transition-colors hover:text-primary"
+					>
+						← Dashboard
+					</Link>
+				</div>
+			)}
 
 			<section className="mb-8">
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -391,530 +462,683 @@ function RunDetailPage(): React.JSX.Element {
 							{scenario && ` · ${scenario.workload}`}
 						</p>
 					</div>
-					<div className="flex flex-col gap-2 sm:items-end">
-						<label htmlFor={runSelectId} className="sr-only">
-							Benchmark run
-						</label>
-						<select
-							id={runSelectId}
-							value={run.id}
-							disabled={runs.length <= 1}
-							onChange={(event) =>
-								navigate({
-									to: '/benchmark/$id',
-									params: { id: event.currentTarget.value },
-								})
-							}
-							className="w-full max-w-48 rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent disabled:cursor-not-allowed disabled:text-tertiary sm:w-44"
-						>
-							{runs.length > 0 ? (
-								runs.map((option) => (
-									<option key={option.id} value={option.id}>
-										{runOptionLabel(option)}
-									</option>
-								))
-							) : (
-								<option value={run.id}>{runOptionLabel(run)}</option>
+					{props.headerControls
+						? props.headerControls
+						: props.showRunSelect !== false && (
+								<div className="flex flex-col gap-2 sm:items-end">
+									<label htmlFor={runSelectId} className="sr-only">
+										Benchmark run
+									</label>
+									<select
+										id={runSelectId}
+										value={run.id}
+										disabled={runs.length <= 1}
+										onChange={(event) =>
+											navigate({
+												to: '/benchmark/$id',
+												params: { id: event.currentTarget.value },
+											})
+										}
+										className="w-full max-w-48 rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent disabled:cursor-not-allowed disabled:text-tertiary sm:w-44"
+									>
+										{runs.length > 0 ? (
+											runs.map((option) => (
+												<option key={option.id} value={option.id}>
+													{runOptionLabel(option)}
+												</option>
+											))
+										) : (
+											<option value={run.id}>{runOptionLabel(run)}</option>
+										)}
+									</select>
+								</div>
 							)}
-						</select>
-					</div>
 				</div>
 			</section>
 
-			<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<MetricCard
-					label="Throughput"
-					value={formatGas(run.avgGasPerSecond)}
-					tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
-					delta={
-						previousRun && (
-							<Delta
-								current={run.avgGasPerSecond}
-								previous={previousRun.avgGasPerSecond}
-							/>
-						)
-					}
-					accent
-				/>
-				<MetricCard
-					label="Peak"
-					value={formatGas(run.peakGasPerSecond)}
-					tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
-					delta={
-						previousRun && (
-							<Delta
-								current={run.peakGasPerSecond}
-								previous={previousRun.peakGasPerSecond}
-							/>
-						)
-					}
-				/>
-				<MetricCard
-					label="Avg TPS"
-					value={formatTps(run.avgTps)}
-					tooltip="Average transactions per second across all blocks, based on transaction count and block time."
-					delta={
-						previousRun && (
-							<Delta current={run.avgTps} previous={previousRun.avgTps} />
-						)
-					}
-				/>
-				<MetricCard
-					label="Block Time"
-					value={formatMs(run.avgBlockTimeMs)}
-					tooltip="Average wall-clock time between consecutive blocks."
-					delta={
-						previousRun && (
-							<Delta
-								current={run.avgBlockTimeMs}
-								previous={previousRun.avgBlockTimeMs}
-								lowerIsBetter
-							/>
-						)
-					}
-				/>
+			<section className="mb-10 grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+				<PerformanceSummary run={run} />
+				<div className="grid grid-cols-2 gap-3">
+					<MetricCard
+						label="Blocks"
+						value={run.blockCount.toLocaleString()}
+						tooltip="Number of blocks produced during the benchmark run."
+					/>
+					<MetricCard
+						label="Block Time"
+						value={formatMs(run.avgBlockTimeMs)}
+						tooltip="Average wall-clock time between consecutive blocks."
+					/>
+					<MetricCard
+						label="Avg Gas/s"
+						value={formatGas(run.avgGasPerSecond, false)}
+						tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
+					/>
+					<MetricCard
+						label="Peak Gas/s"
+						value={formatGas(run.peakGasPerSecond, false)}
+						tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
+					/>
+				</div>
 			</section>
 
-			{blocks && blocks.length > 0 && (
-				<section className="mb-10">
-					<SectionHeader
-						title="Blocks"
-						tooltip="Per-block metrics from the benchmark run."
-					/>
-					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+			<section className="mb-10">
+				<SectionHeader
+					title="Submitted / Settled TPS"
+					tooltip="Submitted transaction load compared with transactions settled into blocks."
+				/>
+				{hasLoadedPrimarySeries ? (
+					<div className="grid grid-cols-1 gap-3">
 						<TimeSeriesChart
-							title="Transactions per Block"
-							tooltip="Number of transactions included in each block."
+							title="Submitted TPS"
+							tooltip="Rate of transactions submitted by the load generator. This shows the input pulse."
 							showMean
 							series={[
 								{
-									label: 'Tx Count',
+									label: 'Submitted',
 									color: COLORS.blue,
-									data: blocks.map((b) => ({
-										x: b.index,
-										y: b.txCount,
-									})),
+									data: ingressTpsPoints,
+								},
+							]}
+							formatValue={(v) => `${formatTps(v)}/s`}
+							yMax={ingressEgressYMax}
+						/>
+						<TimeSeriesChart
+							title="Settled TPS"
+							tooltip="Rate of transactions included in blocks, derived from per-block transaction count and block time."
+							showMean
+							series={[
+								{
+									label: 'Settled',
+									color: COLORS.green,
+									data: settledTpsPoints,
+								},
+							]}
+							formatValue={(v) => `${formatTps(v)}/s`}
+							yMax={ingressEgressYMax}
+						/>
+					</div>
+				) : (
+					<div className="grid grid-cols-1 gap-3">
+						<ChartLoadingCard title="Submitted TPS" />
+						<ChartLoadingCard title="Settled TPS" />
+					</div>
+				)}
+			</section>
+
+			<details className="group/details mb-14">
+				<summary className="mb-5 flex cursor-pointer list-none items-center gap-3 transition-colors marker:hidden">
+					<h3 className="shrink-0 text-[13px] font-normal tracking-wider text-tertiary uppercase group-hover/details:text-primary">
+						Detailed charts
+					</h3>
+					<div className="h-px flex-1 bg-border" />
+					<span className="rounded-md border border-border bg-surface px-3 py-1.5 text-[12px] text-secondary transition-colors group-hover/details:border-accent/50 group-hover/details:text-primary">
+						<span className="group-open/details:hidden">Show</span>
+						<span className="hidden group-open/details:inline">Hide</span>
+					</span>
+				</summary>
+				<div>
+					{blockRows.length > 0 && (
+						<section className="mb-10">
+							<SectionHeader
+								title="Blocks"
+								tooltip="Per-block metrics from the benchmark run."
+							/>
+							<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+								<TimeSeriesChart
+									title="Transactions per Block"
+									tooltip="Number of transactions included in each block."
+									showMean
+									series={[
+										{
+											label: 'Tx Count',
+											color: COLORS.blue,
+											data: blockRows.map((b) => ({
+												x: b.index,
+												y: b.txCount,
+											})),
+										},
+									]}
+									formatValue={(v) => `${Math.round(v).toLocaleString()} txs`}
+									xFormat="block"
+								/>
+								<TimeSeriesChart
+									title="Gas Used per Block"
+									tooltip="Total gas consumed by all transactions in each block."
+									showMean
+									series={[
+										{
+											label: 'Gas Used',
+											color: COLORS.green,
+											data: blockRows.map((b) => ({
+												x: b.index,
+												y: b.gasUsed,
+											})),
+										},
+									]}
+									formatValue={(v) => formatGas(v, false)}
+									xFormat="block"
+									referenceBands={
+										refGasLimit > 0
+											? [
+													{
+														label: `General (${formatGas(generalGasLimit, false)})`,
+														from: 0,
+														to: generalGasLimit,
+														color: COLORS.blue,
+													},
+													{
+														label: `Payment (${formatGas(paymentGasLimit, false)})`,
+														from: generalGasLimit,
+														to: generalGasLimit + paymentGasLimit,
+														color: COLORS.orange,
+													},
+													{
+														label: `Shared (${formatGas(sharedGasLimit, false)})`,
+														from: generalGasLimit + paymentGasLimit,
+														to: refGasLimit,
+														color: COLORS.purple,
+													},
+												]
+											: undefined
+									}
+								/>
+								<TimeSeriesChart
+									title="Gas Fill %"
+									tooltip="Percentage of the block gas limit that was used."
+									showMean
+									series={[
+										{
+											label: 'Fill %',
+											color: COLORS.blue,
+											data: blockRows
+												.filter((b) => b.gasLimit > 0)
+												.map((b) => ({
+													x: b.index,
+													y: (b.gasUsed / b.gasLimit) * 100,
+												})),
+										},
+									]}
+									formatValue={(v) => `${v.toFixed(1)}%`}
+									yMax={100}
+									xFormat="block"
+									referenceBands={
+										refGasLimit > 0
+											? [
+													{
+														label: `General (${((generalGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
+														from: 0,
+														to: (generalGasLimit / refGasLimit) * 100,
+														color: COLORS.blue,
+													},
+													{
+														label: `Payment (${((paymentGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
+														from: (generalGasLimit / refGasLimit) * 100,
+														to:
+															((generalGasLimit + paymentGasLimit) /
+																refGasLimit) *
+															100,
+														color: COLORS.orange,
+													},
+													{
+														label: `Shared (${((sharedGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
+														from:
+															((generalGasLimit + paymentGasLimit) /
+																refGasLimit) *
+															100,
+														to: 100,
+														color: COLORS.purple,
+													},
+												]
+											: undefined
+									}
+								/>
+								<TimeSeriesChart
+									title="RLP Block Size"
+									tooltip="RLP-encoded size of each block in kilobytes."
+									showMean
+									series={[
+										{
+											label: 'Size',
+											color: COLORS.green,
+											data: transformSamples(rlpSizeSeries, (v) => v / 1024),
+										},
+									]}
+									formatValue={(v) => `${v.toFixed(0)} KB`}
+									referenceBands={[
+										{
+											label: 'EIP-7934 RLP cap (8 MiB)',
+											from: EIP_7934_MAX_RLP_BLOCK_SIZE_KIB,
+											to: EIP_7934_MAX_RLP_BLOCK_SIZE_KIB * 1.05,
+											color: COLORS.orange,
+										},
+										{
+											label: 'EIP-7934 block cap (10 MiB)',
+											from: EIP_7934_MAX_BLOCK_SIZE_KIB,
+											to: EIP_7934_MAX_BLOCK_SIZE_KIB * 1.05,
+											color: COLORS.purple,
+										},
+										{
+											label: 'RLPx hard cap (16 MiB)',
+											from: RLPX_HARD_CAP_KIB,
+											to: RLPX_HARD_CAP_KIB * 1.05,
+											color: COLORS.red,
+										},
+									]}
+								/>
+							</div>
+						</section>
+					)}
+
+					{(hasEngineApiTimings || hasServerWaitTimings) && (
+						<section className="mb-10">
+							<SectionHeader
+								title="Engine API Timing"
+								tooltip="Per-block timings reported by txgen for Engine API calls and server-side waits."
+							/>
+							<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+								{hasEngineApiTimings && (
+									<TimeSeriesChart
+										title="Engine API Calls"
+										tooltip="Per-block Engine API client timings. Server latency is reported by the server and converted from microseconds to milliseconds."
+										showMean
+										series={[
+											{
+												label: 'New Payload',
+												color: COLORS.blue,
+												data: blockPoints(blockRows, (b) => b.newPayloadMs),
+											},
+											{
+												label: 'Forkchoice Updated',
+												color: COLORS.green,
+												data: blockPoints(
+													blockRows,
+													(b) => b.forkchoiceUpdatedMs,
+												),
+											},
+											{
+												label: 'Total Client Time',
+												color: COLORS.orange,
+												data: blockPoints(blockRows, (b) => {
+													if (
+														b.newPayloadMs == null ||
+														b.forkchoiceUpdatedMs == null
+													) {
+														return null
+													}
+													return b.newPayloadMs + b.forkchoiceUpdatedMs
+												}),
+											},
+											{
+												label: 'Server Latency',
+												color: COLORS.purple,
+												data: blockPoints(
+													blockRows,
+													(b) => b.newPayloadServerLatencyUs,
+													(us) => us / 1000,
+												),
+											},
+										]}
+										formatValue={(v) => `${v.toFixed(2)} ms`}
+										xFormat="block"
+									/>
+								)}
+								{hasServerWaitTimings && (
+									<TimeSeriesChart
+										title="Server Wait Timings"
+										tooltip="Server-side wait timings reported by the Engine API server, converted from microseconds to milliseconds."
+										showMean
+										series={[
+											{
+												label: 'Persistence Wait',
+												color: COLORS.blue,
+												data: blockPoints(
+													blockRows,
+													(b) => b.persistenceWaitUs,
+													(us) => us / 1000,
+												),
+											},
+											{
+												label: 'Execution Cache Wait',
+												color: COLORS.green,
+												data: blockPoints(
+													blockRows,
+													(b) => b.executionCacheWaitUs,
+													(us) => us / 1000,
+												),
+											},
+											{
+												label: 'Sparse Trie Wait',
+												color: COLORS.orange,
+												data: blockPoints(
+													blockRows,
+													(b) => b.sparseTrieWaitUs,
+													(us) => us / 1000,
+												),
+											},
+										]}
+										formatValue={(v) => `${v.toFixed(2)} ms`}
+										xFormat="block"
+									/>
+								)}
+							</div>
+						</section>
+					)}
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Payload Build Duration"
+							tooltip="Total wall-clock time to build each block payload, from start to sealed block."
+						/>
+						<TimeSeriesChart
+							showMean
+							series={[
+								{
+									label: 'p50',
+									color: COLORS.blue,
+									data: transformSamples(buildDurP50, (v) => v * 1000),
+								},
+								{
+									label: 'p95',
+									color: COLORS.orange,
+									data: transformSamples(buildDurP95, (v) => v * 1000),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(1)} ms`}
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Build Phases (p50)"
+							tooltip="Top-level disjoint phases of block building. These sum to approximately the total payload build duration."
+						/>
+						<TimeSeriesChart
+							stacked
+							showMean
+							series={[
+								{
+									label: 'State Setup',
+									color: COLORS.purple,
+									data: transformSamples(stateSetupSeries, (v) => v * 1000),
+								},
+								{
+									label: 'System Tx Prep',
+									color: COLORS.red,
+									data: transformSamples(sysTxPrepSeries, (v) => v * 1000),
+								},
+								{
+									label: 'System Tx Exec',
+									color: COLORS.orange,
+									data: transformSamples(sysTxExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Pool Fetch',
+									color: COLORS.green,
+									data: transformSamples(poolFetchSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Tx Execution',
+									color: COLORS.blue,
+									data: transformSamples(txExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Finalization',
+									color: COLORS.orange,
+									data: transformSamples(finalizationSeries, (v) => v * 1000),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(1)} ms`}
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Finalization Internals (p50)"
+							tooltip="Internal timings from block finalization. Hashed Post State converts raw state changes into a hashed representation. State Root (sync) computes the root synchronously and is near zero when the trie is precomputed in the background."
+						/>
+						<TimeSeriesChart
+							showMean
+							series={[
+								{
+									label: 'Finalization',
+									color: COLORS.orange,
+									data: transformSamples(finalizationSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Hashed Post State',
+									color: COLORS.purple,
+									data: transformSamples(
+										hashedPostStateSeries,
+										(v) => v * 1000,
+									),
+								},
+								{
+									label: 'State Root (sync)',
+									color: COLORS.green,
+									data: transformSamples(stateRootSeries, (v) => v * 1000),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(1)} ms`}
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Throughput"
+							tooltip="Gas and transaction processing rates per block."
+						/>
+						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+							<TimeSeriesChart
+								title="Gas Throughput"
+								tooltip="Gas processed per second for each block, based on gas usage and block time."
+								showMean
+								series={[
+									{
+										label: 'Gas/s',
+										color: COLORS.blue,
+										data: blockPoints(blockRows, (b) => {
+											if (b.blockTimeMs == null || b.blockTimeMs <= 0)
+												return null
+											return (b.gasUsed * 1000) / b.blockTimeMs / 1e9
+										}),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
+								xFormat="block"
+							/>
+							<TimeSeriesChart
+								title="Txs per Block"
+								tooltip="Number of user transactions included in each block as reported by the builder."
+								showMean
+								series={[
+									{
+										label: 'Txs',
+										color: COLORS.green,
+										data: transformSamples(txsPerBlockSeries),
+									},
+								]}
+								formatValue={(v) => `${Math.round(v).toLocaleString()}`}
+							/>
+						</div>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Txgen"
+							tooltip="Transaction generator metrics — the load driver that submits transactions to the node."
+						/>
+						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+							<TimeSeriesChart
+								title={
+									hasTxgenTransactionCounters
+										? 'Transaction Send Rate'
+										: 'Block Send/Success/Failure Rates'
+								}
+								tooltip={
+									hasTxgenTransactionCounters
+										? 'Rate of transactions sent, confirmed as successful, or failed per second.'
+										: 'Rate of blocks sent, confirmed as successful, or failed per second.'
+								}
+								showMean
+								series={[
+									{
+										label: 'Sent',
+										color: COLORS.blue,
+										data: counterRate(txgenCounterSeries.sent),
+									},
+									{
+										label: 'Success',
+										color: COLORS.green,
+										data: counterRate(txgenCounterSeries.success),
+									},
+									{
+										label: 'Failed',
+										color: COLORS.red,
+										data: counterRate(txgenCounterSeries.failed),
+									},
+								]}
+								formatValue={(v) => `${Math.round(v).toLocaleString()}/s`}
+							/>
+							<TimeSeriesChart
+								title="Inflight"
+								tooltip="Number of transactions submitted but not yet included in a block."
+								series={[
+									{
+										label: 'Inflight',
+										color: COLORS.purple,
+										data: transformSamples(txgenInflightSeries),
+									},
+								]}
+								formatValue={(v) => Math.round(v).toLocaleString()}
+							/>
+						</div>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Txpool"
+							tooltip="Transaction pool state: pending (ready to execute), queued (future nonce), and basefee (underpaying current base fee). Includes AA 2D pending/queued gauges when present."
+						/>
+						<TimeSeriesChart
+							stacked
+							showMean
+							series={[
+								{
+									label: 'Basefee',
+									color: COLORS.orange,
+									data: transformSamples(basefeeSeries),
+								},
+								{
+									label: 'Queued',
+									color: COLORS.purple,
+									data: combineSamples([queuedSeries, aa2dQueuedSeries]),
+								},
+								{
+									label: 'Pending',
+									color: COLORS.blue,
+									data: combineSamples([pendingSeries, aa2dPendingSeries]),
 								},
 							]}
 							formatValue={(v) => `${Math.round(v).toLocaleString()} txs`}
-							xFormat="block"
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Skipped Transactions"
+							tooltip="Transactions skipped during block building due to nonce conflicts, validation failures, or sender mismatches. Shown as rate per second."
 						/>
 						<TimeSeriesChart
-							title="Gas Used per Block"
-							tooltip="Total gas consumed by all transactions in each block."
-							showMean
 							series={[
 								{
-									label: 'Gas Used',
-									color: COLORS.green,
-									data: blocks.map((b) => ({
-										x: b.index,
-										y: b.gasUsed,
-									})),
+									label: 'Nonce Too Low',
+									color: COLORS.orange,
+									data: counterRate(skippedNonceSeries),
+								},
+								{
+									label: 'Invalid Tx',
+									color: COLORS.red,
+									data: counterRate(skippedInvalidSeries),
+								},
+								{
+									label: 'Sender Mismatch',
+									color: COLORS.purple,
+									data: counterRate(skippedSenderSeries),
 								},
 							]}
-							formatValue={(v) => formatGas(v, false)}
-							xFormat="block"
-							referenceBands={
-								refGasLimit > 0
-									? [
-											{
-												label: `General (${formatGas(generalGasLimit, false)})`,
-												from: 0,
-												to: generalGasLimit,
-												color: COLORS.blue,
-											},
-											{
-												label: `Payment (${formatGas(paymentGasLimit, false)})`,
-												from: generalGasLimit,
-												to: generalGasLimit + paymentGasLimit,
-												color: COLORS.orange,
-											},
-											{
-												label: `Shared (${formatGas(sharedGasLimit, false)})`,
-												from: generalGasLimit + paymentGasLimit,
-												to: refGasLimit,
-												color: COLORS.purple,
-											},
-										]
-									: undefined
-							}
+							formatValue={(v) => `${Math.round(v).toLocaleString()}/s`}
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Persistence (p50)"
+							tooltip="Time spent writing block state and trie updates to the database after each block is built."
 						/>
 						<TimeSeriesChart
-							title="Gas Fill %"
-							tooltip="Percentage of the block gas limit that was used."
-							showMean
 							series={[
 								{
-									label: 'Fill %',
+									label: 'Write State',
 									color: COLORS.blue,
-									data: blocks
-										.filter((b) => b.gasLimit > 0)
-										.map((b) => ({
-											x: b.index,
-											y: (b.gasUsed / b.gasLimit) * 100,
-										})),
+									data: transformSamples(writeStateSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Write Trie Updates',
+									color: COLORS.green,
+									data: transformSamples(writeTrieSeries, (v) => v * 1000),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(2)} ms`}
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Cache Hit Rates"
+							tooltip="Percentage of account and storage lookups served from the in-memory cache rather than disk."
+						/>
+						<TimeSeriesChart
+							series={[
+								{
+									label: 'Account Cache',
+									color: COLORS.blue,
+									data: cacheHitRate(accountHitsSeries, accountMissesSeries),
+								},
+								{
+									label: 'Storage Cache',
+									color: COLORS.green,
+									data: cacheHitRate(storageHitsSeries, storageMissesSeries),
 								},
 							]}
 							formatValue={(v) => `${v.toFixed(1)}%`}
 							yMax={100}
-							xFormat="block"
-							referenceBands={
-								refGasLimit > 0
-									? [
-											{
-												label: `General (${((generalGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
-												from: 0,
-												to: (generalGasLimit / refGasLimit) * 100,
-												color: COLORS.blue,
-											},
-											{
-												label: `Payment (${((paymentGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
-												from: (generalGasLimit / refGasLimit) * 100,
-												to:
-													((generalGasLimit + paymentGasLimit) / refGasLimit) *
-													100,
-												color: COLORS.orange,
-											},
-											{
-												label: `Shared (${((sharedGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
-												from:
-													((generalGasLimit + paymentGasLimit) / refGasLimit) *
-													100,
-												to: 100,
-												color: COLORS.purple,
-											},
-										]
-									: undefined
-							}
+						/>
+					</section>
+
+					<section className="mb-14">
+						<SectionHeader
+							title="Memory"
+							tooltip="Process memory usage reported by jemalloc. Resident = physical RAM used; Allocated = bytes actively allocated by the application."
 						/>
 						<TimeSeriesChart
-							title="RLP Block Size"
-							tooltip="RLP-encoded size of each block in kilobytes."
-							showMean
 							series={[
 								{
-									label: 'Size',
-									color: COLORS.green,
-									data: transformSamples(rlpSizeSeries, (v) => v / 1024),
+									label: 'Resident',
+									color: COLORS.blue,
+									data: transformSamples(residentSeries),
 								},
-							]}
-							formatValue={(v) => `${v.toFixed(0)} KB`}
-							referenceBands={[
 								{
-									label: 'RLPx hard cap (16 MiB)',
-									from: 16 * 1024,
-									to: 16 * 1024 * 1.05,
-									color: COLORS.red,
+									label: 'Allocated',
+									color: COLORS.green,
+									data: transformSamples(allocatedSeries),
 								},
 							]}
+							formatValue={formatBytes}
 						/>
-					</div>
-				</section>
-			)}
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Payload Build Duration"
-					tooltip="Total wall-clock time to build each block payload, from start to sealed block."
-				/>
-				<TimeSeriesChart
-					showMean
-					series={[
-						{
-							label: 'p50',
-							color: COLORS.blue,
-							data: transformSamples(buildDurP50, (v) => v * 1000),
-						},
-						{
-							label: 'p95',
-							color: COLORS.orange,
-							data: transformSamples(buildDurP95, (v) => v * 1000),
-						},
-					]}
-					formatValue={(v) => `${v.toFixed(1)} ms`}
-				/>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Build Phases (p50)"
-					tooltip="Top-level disjoint phases of block building. These sum to approximately the total payload build duration."
-				/>
-				<TimeSeriesChart
-					stacked
-					showMean
-					series={[
-						{
-							label: 'State Setup',
-							color: COLORS.purple,
-							data: transformSamples(stateSetupSeries, (v) => v * 1000),
-						},
-						{
-							label: 'System Tx Prep',
-							color: COLORS.red,
-							data: transformSamples(sysTxPrepSeries, (v) => v * 1000),
-						},
-						{
-							label: 'System Tx Exec',
-							color: COLORS.orange,
-							data: transformSamples(sysTxExecSeries, (v) => v * 1000),
-						},
-						{
-							label: 'Pool Fetch',
-							color: COLORS.green,
-							data: transformSamples(poolFetchSeries, (v) => v * 1000),
-						},
-						{
-							label: 'Tx Execution',
-							color: COLORS.blue,
-							data: transformSamples(txExecSeries, (v) => v * 1000),
-						},
-						{
-							label: 'Finalization',
-							color: COLORS.orange,
-							data: transformSamples(finalizationSeries, (v) => v * 1000),
-						},
-					]}
-					formatValue={(v) => `${v.toFixed(1)} ms`}
-				/>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Finalization Internals (p50)"
-					tooltip="Internal timings from block finalization. Hashed Post State converts raw state changes into a hashed representation. State Root (sync) computes the root synchronously and is near zero when the trie is precomputed in the background."
-				/>
-				<TimeSeriesChart
-					showMean
-					series={[
-						{
-							label: 'Finalization',
-							color: COLORS.orange,
-							data: transformSamples(finalizationSeries, (v) => v * 1000),
-						},
-						{
-							label: 'Hashed Post State',
-							color: COLORS.purple,
-							data: transformSamples(hashedPostStateSeries, (v) => v * 1000),
-						},
-						{
-							label: 'State Root (sync)',
-							color: COLORS.green,
-							data: transformSamples(stateRootSeries, (v) => v * 1000),
-						},
-					]}
-					formatValue={(v) => `${v.toFixed(1)} ms`}
-				/>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Throughput"
-					tooltip="Gas and transaction processing rates per block."
-				/>
-				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-					<TimeSeriesChart
-						title="Gas Throughput"
-						tooltip="Gas processed per second for each block, based on gas usage and block time."
-						showMean
-						series={[
-							{
-								label: 'Gas/s',
-								color: COLORS.blue,
-								data: (blocks ?? [])
-									.filter((b) => b.blockTimeMs > 0)
-									.map((b) => ({
-										x: b.index,
-										y: (b.gasUsed * 1000) / b.blockTimeMs / 1e9,
-									})),
-							},
-						]}
-						formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
-						xFormat="block"
-					/>
-					<TimeSeriesChart
-						title="Txs per Block"
-						tooltip="Number of user transactions included in each block as reported by the builder."
-						showMean
-						series={[
-							{
-								label: 'Txs',
-								color: COLORS.green,
-								data: transformSamples(txsPerBlockSeries),
-							},
-						]}
-						formatValue={(v) => `${Math.round(v).toLocaleString()}`}
-					/>
+					</section>
 				</div>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Txgen"
-					tooltip="Transaction generator metrics — the load driver that submits transactions to the node."
-				/>
-				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-					<TimeSeriesChart
-						title="Send Rate"
-						tooltip="Rate of transactions sent, confirmed as successful, or failed per second."
-						showMean
-						series={[
-							{
-								label: 'Sent',
-								color: COLORS.blue,
-								data: counterRate(txgenSentSeries),
-							},
-							{
-								label: 'Success',
-								color: COLORS.green,
-								data: counterRate(txgenSuccessSeries),
-							},
-							{
-								label: 'Failed',
-								color: COLORS.red,
-								data: counterRate(txgenFailedSeries),
-							},
-						]}
-						formatValue={(v) => `${Math.round(v).toLocaleString()}/s`}
-					/>
-					<TimeSeriesChart
-						title="Inflight"
-						tooltip="Number of transactions submitted but not yet included in a block."
-						series={[
-							{
-								label: 'Inflight',
-								color: COLORS.purple,
-								data: transformSamples(txgenInflightSeries),
-							},
-						]}
-						formatValue={(v) => Math.round(v).toLocaleString()}
-					/>
-				</div>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Txpool"
-					tooltip="Transaction pool state: pending (ready to execute), queued (future nonce), and basefee (underpaying current base fee)."
-				/>
-				<TimeSeriesChart
-					stacked
-					showMean
-					series={[
-						{
-							label: 'Basefee',
-							color: COLORS.orange,
-							data: transformSamples(basefeeSeries),
-						},
-						{
-							label: 'Queued',
-							color: COLORS.purple,
-							data: transformSamples(queuedSeries),
-						},
-						{
-							label: 'Pending',
-							color: COLORS.blue,
-							data: transformSamples(pendingSeries),
-						},
-					]}
-					formatValue={(v) => `${Math.round(v).toLocaleString()} txs`}
-				/>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Skipped Transactions"
-					tooltip="Transactions skipped during block building due to nonce conflicts, validation failures, or sender mismatches. Shown as rate per second."
-				/>
-				<TimeSeriesChart
-					series={[
-						{
-							label: 'Nonce Too Low',
-							color: COLORS.orange,
-							data: counterRate(skippedNonceSeries),
-						},
-						{
-							label: 'Invalid Tx',
-							color: COLORS.red,
-							data: counterRate(skippedInvalidSeries),
-						},
-						{
-							label: 'Sender Mismatch',
-							color: COLORS.purple,
-							data: counterRate(skippedSenderSeries),
-						},
-					]}
-					formatValue={(v) => `${Math.round(v).toLocaleString()}/s`}
-				/>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Persistence (p50)"
-					tooltip="Time spent writing block state and trie updates to the database after each block is built."
-				/>
-				<TimeSeriesChart
-					series={[
-						{
-							label: 'Write State',
-							color: COLORS.blue,
-							data: transformSamples(writeStateSeries, (v) => v * 1000),
-						},
-						{
-							label: 'Write Trie Updates',
-							color: COLORS.green,
-							data: transformSamples(writeTrieSeries, (v) => v * 1000),
-						},
-					]}
-					formatValue={(v) => `${v.toFixed(2)} ms`}
-				/>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Cache Hit Rates"
-					tooltip="Percentage of account and storage lookups served from the in-memory cache rather than disk."
-				/>
-				<TimeSeriesChart
-					series={[
-						{
-							label: 'Account Cache',
-							color: COLORS.blue,
-							data: cacheHitRate(accountHitsSeries, accountMissesSeries),
-						},
-						{
-							label: 'Storage Cache',
-							color: COLORS.green,
-							data: cacheHitRate(storageHitsSeries, storageMissesSeries),
-						},
-					]}
-					formatValue={(v) => `${v.toFixed(1)}%`}
-					yMax={100}
-				/>
-			</section>
-
-			<section className="mb-14">
-				<SectionHeader
-					title="Memory"
-					tooltip="Process memory usage reported by jemalloc. Resident = physical RAM used; Allocated = bytes actively allocated by the application."
-				/>
-				<TimeSeriesChart
-					series={[
-						{
-							label: 'Resident',
-							color: COLORS.blue,
-							data: transformSamples(residentSeries),
-						},
-						{
-							label: 'Allocated',
-							color: COLORS.green,
-							data: transformSamples(allocatedSeries),
-						},
-					]}
-					formatValue={formatBytes}
-				/>
-			</section>
+			</details>
 		</div>
 	)
 }
@@ -927,6 +1151,36 @@ type ChartSeries = {
 	data: Array<ChartPoint>
 }
 
+function hasSamples(series: MetricSeries | undefined): boolean {
+	return (series?.samples.length ?? 0) > 0
+}
+
+function combineSamples(
+	series: Array<MetricSeries | undefined>,
+	transform?: (v: number) => number,
+): Array<ChartPoint> {
+	const populated = series.filter((s): s is MetricSeries => hasSamples(s))
+	if (populated.length === 0) return []
+	if (populated.length === 1) return transformSamples(populated[0], transform)
+
+	const valuesByOffset = new Map<number, number>()
+	for (const s of populated) {
+		for (const sample of s.samples) {
+			valuesByOffset.set(
+				sample.offsetMs,
+				(valuesByOffset.get(sample.offsetMs) ?? 0) + sample.value,
+			)
+		}
+	}
+
+	return Array.from(valuesByOffset.entries())
+		.sort(([a], [b]) => a - b)
+		.map(([offsetMs, value]) => ({
+			x: offsetMs / 1000,
+			y: transform ? transform(value) : value,
+		}))
+}
+
 function transformSamples(
 	series: MetricSeries | undefined,
 	transform?: (v: number) => number,
@@ -936,6 +1190,45 @@ function transformSamples(
 		x: s.offsetMs / 1000,
 		y: transform ? transform(s.value) : s.value,
 	}))
+}
+
+function blockPoints<T extends { index: number }>(
+	blocks: Array<T>,
+	getValue: (block: T) => number | null | undefined,
+	transform?: (v: number) => number,
+): Array<ChartPoint> {
+	return blocks.flatMap((block) => {
+		const value = getValue(block)
+		if (value == null) return []
+		return [
+			{
+				x: block.index,
+				y: transform ? transform(value) : value,
+			},
+		]
+	})
+}
+
+function settledTps(
+	blocks: Array<{ txCount: number; blockTimeMs: number | null }>,
+): Array<ChartPoint> {
+	let elapsedMs = 0
+	return blocks.flatMap((block) => {
+		if (block.blockTimeMs == null || block.blockTimeMs <= 0) return []
+		elapsedMs += block.blockTimeMs
+		return [
+			{
+				x: elapsedMs / 1000,
+				y: (block.txCount * 1000) / block.blockTimeMs,
+			},
+		]
+	})
+}
+
+function sharedYMax(series: Array<Array<ChartPoint>>): number | undefined {
+	const max = Math.max(...series.flat().map((point) => point.y))
+	if (!Number.isFinite(max) || max <= 0) return undefined
+	return max * 1.1
 }
 
 function formatBytes(bytes: number): string {
@@ -1015,7 +1308,6 @@ function MetricCard(props: {
 	value: string
 	accent?: boolean | undefined
 	tooltip?: string | undefined
-	delta?: React.ReactNode | undefined
 }): React.JSX.Element {
 	return (
 		<div className="card overflow-visible p-4">
@@ -1027,8 +1319,44 @@ function MetricCard(props: {
 				className={`mt-1 font-mono text-[18px] font-semibold ${props.accent ? 'text-accent' : 'text-primary'}`}
 			>
 				{props.value}
-				{props.delta}
 			</p>
+		</div>
+	)
+}
+
+function PerformanceSummary(props: { run: BenchRun }): React.JSX.Element {
+	return (
+		<div className="card overflow-visible p-5 sm:p-6">
+			<div>
+				<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
+					Settled TPS
+					<InfoPill text="Average transactions per second that landed in blocks for this benchmark run." />
+				</p>
+				<div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+					<span className="font-mono text-[42px] leading-none font-semibold text-accent sm:text-[52px]">
+						{formatTps(props.run.avgTps)}
+					</span>
+					<span className="pb-1.5 text-[15px] font-medium text-secondary sm:text-[17px]">
+						TPS
+					</span>
+				</div>
+			</div>
+			<p className="mt-5 text-[13px] text-secondary">
+				Average settled throughput across{' '}
+				{props.run.blockCount.toLocaleString()} blocks over{' '}
+				{formatDuration(props.run.startedAt, props.run.finishedAt)}.
+			</p>
+		</div>
+	)
+}
+
+function ChartLoadingCard(props: { title: string }): React.JSX.Element {
+	return (
+		<div className="card flex h-52 flex-col p-5">
+			<p className="text-[12px] font-medium text-secondary">{props.title}</p>
+			<div className="flex flex-1 items-center justify-center text-[13px] text-tertiary">
+				Loading series...
+			</div>
 		</div>
 	)
 }

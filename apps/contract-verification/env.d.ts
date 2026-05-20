@@ -19,6 +19,11 @@ interface EnvironmentVariables {
 	readonly CLOUDFLARE_DATABASE_ID: string
 	readonly CLOUDFLARE_D1_TOKEN: string
 	readonly CLOUDFLARE_D1_ENVIRONMENT: 'local' | (string & {})
+
+	/** URL to fetch dynamic chain configs from (optional). */
+	readonly CHAINS_CONFIG_URL?: string
+	/** Bearer token for authenticating with the chain config endpoint (optional). */
+	readonly CHAINS_CONFIG_AUTH_TOKEN?: string
 }
 
 // Node.js `process.env` auto-completion

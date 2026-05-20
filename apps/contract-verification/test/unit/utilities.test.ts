@@ -11,7 +11,9 @@ import {
 import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
 import {
 	AppError,
+	filterSourcesByCompilerMetadata,
 	formatError,
+	getCompilerMetadataSourcePaths,
 	handleError,
 	normalizeSourcePath,
 	sourcifyError,
@@ -81,6 +83,45 @@ describe('normalizeSourcePath', () => {
 
 	it('handles path with only root', () => {
 		expect(normalizeSourcePath('/File.sol')).toBe('File.sol')
+	})
+})
+
+describe('compiler metadata source filtering', () => {
+	it('extracts source paths from compiler metadata', () => {
+		const metadata = JSON.stringify({
+			sources: {
+				'contracts/Token.sol': { keccak256: '0x1234' },
+				'contracts/Library.sol': { keccak256: '0xabcd' },
+			},
+		})
+
+		expect(getCompilerMetadataSourcePaths(metadata)).toStrictEqual(
+			new Set(['contracts/Token.sol', 'contracts/Library.sol']),
+		)
+	})
+
+	it('returns no paths when metadata is missing or invalid', () => {
+		expect(getCompilerMetadataSourcePaths(undefined)).toStrictEqual(new Set())
+		expect(getCompilerMetadataSourcePaths('{not json')).toStrictEqual(new Set())
+		expect(
+			getCompilerMetadataSourcePaths(JSON.stringify({ sources: [] })),
+		).toStrictEqual(new Set())
+	})
+
+	it('keeps only sources referenced by compiler metadata', () => {
+		const metadata = JSON.stringify({
+			sources: {
+				'contracts/Token.sol': {},
+			},
+		})
+		const sources = {
+			'contracts/Token.sol': { content: 'contract Token {}' },
+			'contracts/Injected.sol': { content: 'contract Injected {}' },
+		}
+
+		expect(filterSourcesByCompilerMetadata(sources, metadata)).toStrictEqual([
+			['contracts/Token.sol', { content: 'contract Token {}' }],
+		])
 	})
 })
 

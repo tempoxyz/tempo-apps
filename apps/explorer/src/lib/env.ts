@@ -103,17 +103,3 @@ export const getTempoEnv = createIsomorphicFn()
 export const isTestnet = createIsomorphicFn()
 	.client(() => getTempoEnv() === 'testnet')
 	.server(() => getTempoEnv() === 'testnet')
-
-export const hasIndexSupply = createIsomorphicFn()
-	.client(
-		() =>
-			getTempoEnv() === 'testnet' ||
-			getTempoEnv() === 'mainnet' ||
-			getTempoEnv() === 'devnet',
-	)
-	.server(
-		() =>
-			getTempoEnv() === 'testnet' ||
-			getTempoEnv() === 'mainnet' ||
-			getTempoEnv() === 'devnet',
-	)
