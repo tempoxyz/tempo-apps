@@ -51,7 +51,7 @@ export const Route = createRootRouteWithContext<{
 	}),
 	scripts: () => [
 		{
-			children: `(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.style.colorScheme=t}})()`,
+			children: `(function(){var t=localStorage.getItem('theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'}document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t})()`,
 			type: 'text/javascript',
 		},
 	],
@@ -173,11 +173,14 @@ function ThemeToggle(): React.JSX.Element {
 		const stored = localStorage.getItem('theme')
 		if (stored === 'light' || stored === 'dark') {
 			setTheme(stored)
+			applyTheme(stored)
 		} else {
-			const prefersDark = window.matchMedia(
-				'(prefers-color-scheme: dark)',
+			const prefersLight = window.matchMedia(
+				'(prefers-color-scheme: light)',
 			).matches
-			setTheme(prefersDark ? 'dark' : 'light')
+			const next = prefersLight ? 'light' : 'dark'
+			setTheme(next)
+			applyTheme(next)
 		}
 	}, [])
 
@@ -185,14 +188,14 @@ function ThemeToggle(): React.JSX.Element {
 		const next = theme === 'dark' ? 'light' : 'dark'
 		setTheme(next)
 		localStorage.setItem('theme', next)
-		document.documentElement.style.colorScheme = next
+		applyTheme(next)
 	}
 
 	return (
 		<button
 			type="button"
 			onClick={toggle}
-			className="rounded-lg p-2 text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
+			className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-1.5 text-[14px] font-medium text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
 			aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
 		>
 			{theme === 'dark' ? (
@@ -200,8 +203,14 @@ function ThemeToggle(): React.JSX.Element {
 			) : (
 				<MoonIcon className="size-4" />
 			)}
+			<span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
 		</button>
 	)
+}
+
+function applyTheme(theme: 'light' | 'dark') {
+	document.documentElement.dataset.theme = theme
+	document.documentElement.style.colorScheme = theme
 }
 
 function TempoWordmark(): React.JSX.Element {
