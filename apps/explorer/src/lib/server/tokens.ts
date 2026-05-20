@@ -4,6 +4,7 @@ import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getAccountTag } from '#lib/account'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { fetchLogoURIs } from '#lib/domain/tip20'
 import {
 	fetchGenesisBlockTimestamp,
 	fetchTokenCreatedMetadata,
@@ -19,6 +20,7 @@ export type Token = {
 	symbol: string
 	name: string
 	currency: string
+	logoURI?: string | undefined
 	createdAt?: number | undefined
 	holdersCount?: number
 	holdersCountCapped?: boolean
@@ -142,7 +144,13 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const tokenMetadata = new Map<
 			string,
-			{ name: string; symbol: string; currency: string; createdAt?: number }
+			{
+				name: string
+				symbol: string
+				currency: string
+				logoURI?: string | undefined
+				createdAt?: number
+			}
 		>()
 		const createdAtByAddress = new Map<string, number>()
 		let genesisCreatedAt: number | undefined
@@ -150,42 +158,47 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		const holdersCounts = new Map<string, { count: number; capped: boolean }>()
 
 		if (pageAddresses.length > 0) {
-			const [metadataResult, genesisTimestampResult, perTokenResults] =
-				await Promise.all([
-					fetchTokenCreatedMetadata(chainId, pageAddresses).catch((error) => {
-						console.error('Failed to fetch token metadata:', error)
-						return []
-					}),
-					hasGenesisTokens
-						? fetchGenesisBlockTimestamp(chainId).catch((error) => {
-								console.error('Failed to fetch genesis block timestamp:', error)
-								return null
-							})
-						: Promise.resolve(null),
-					Promise.allSettled(
-						pageAddresses.map(async (address) => ({
+			const [
+				metadataResult,
+				genesisTimestampResult,
+				logoURIs,
+				perTokenResults,
+			] = await Promise.all([
+				fetchTokenCreatedMetadata(chainId, pageAddresses).catch((error) => {
+					console.error('Failed to fetch token metadata:', error)
+					return []
+				}),
+				hasGenesisTokens
+					? fetchGenesisBlockTimestamp(chainId).catch((error) => {
+							console.error('Failed to fetch genesis block timestamp:', error)
+							return null
+						})
+					: Promise.resolve(null),
+				fetchLogoURIs(config, pageAddresses),
+				Promise.allSettled(
+					pageAddresses.map(async (address) => ({
+						address,
+						transferAggregate: await fetchTokenTransferAggregate(
 							address,
-							transferAggregate: await fetchTokenTransferAggregate(
-								address,
-								chainId,
-							).catch((error) => {
-								console.error(
-									`Failed to fetch transfer aggregate for ${address}:`,
-									error,
-								)
-								return {
-									oldestTimestamp: undefined,
-									latestTimestamp: undefined,
-								}
-							}),
-							holdersCount: await fetchTokenHoldersCount(
-								address,
-								chainId,
-								TOKEN_COUNT_MAX,
-							),
-						})),
-					),
-				])
+							chainId,
+						).catch((error) => {
+							console.error(
+								`Failed to fetch transfer aggregate for ${address}:`,
+								error,
+							)
+							return {
+								oldestTimestamp: undefined,
+								latestTimestamp: undefined,
+							}
+						}),
+						holdersCount: await fetchTokenHoldersCount(
+							address,
+							chainId,
+							TOKEN_COUNT_MAX,
+						),
+					})),
+				),
+			])
 
 			genesisCreatedAt = parseTimestamp(
 				genesisTimestampResult == null
@@ -220,6 +233,20 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				}
 
 				holdersCounts.set(addressKey, result.value.holdersCount)
+				const logoURI = logoURIs.get(addressKey)
+				if (logoURI) {
+					const metadata = tokenMetadata.get(addressKey)
+					if (metadata) {
+						metadata.logoURI = logoURI
+					} else {
+						tokenMetadata.set(addressKey, {
+							name: '',
+							symbol: '',
+							currency: '',
+							logoURI,
+						})
+					}
+				}
 			}
 		}
 
@@ -237,6 +264,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 					symbol: metadata?.symbol || entry.symbol,
 					name: metadata?.name || entry.name,
 					currency: metadata?.currency || inferTokenCurrency(entry),
+					logoURI: metadata?.logoURI,
 					createdAt:
 						createdAtByAddress.get(addressKey) ??
 						metadata?.createdAt ??

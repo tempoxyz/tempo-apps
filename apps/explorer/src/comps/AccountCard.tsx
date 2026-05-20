@@ -21,6 +21,7 @@ export function AccountCard(props: AccountCard.Props) {
 		hideHoldings,
 		accountType,
 		isToken,
+		tokenLogoURI,
 		tokenName,
 		virtualAddressParts,
 	} = props
@@ -48,6 +49,7 @@ export function AccountCard(props: AccountCard.Props) {
 									address={address as Address.Address}
 									name={tokenName}
 									className="size-4"
+									logoURI={tokenLogoURI}
 								/>
 								<span className="text-primary">{tokenName}</span>
 							</>
@@ -187,6 +189,7 @@ export declare namespace AccountCard {
 		hideHoldings?: boolean | undefined
 		accountType?: AccountType | undefined
 		isToken?: boolean | undefined
+		tokenLogoURI?: string | undefined
 		tokenName?: string | undefined
 		virtualAddressParts?:
 			| {
