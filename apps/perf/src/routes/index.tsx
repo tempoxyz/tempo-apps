@@ -97,6 +97,7 @@ function DashboardPage(): React.JSX.Element {
 	return (
 		<BenchmarkRunDetail
 			id={selected.run.id}
+			showPeakGasSummary={false}
 			headerControls={
 				<BenchmarkSelectors
 					releases={releaseOptions}

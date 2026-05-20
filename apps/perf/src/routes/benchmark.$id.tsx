@@ -174,6 +174,7 @@ export declare namespace BenchmarkRunDetail {
 		showBackLink?: boolean | undefined
 		headerControls?: React.ReactNode | undefined
 		showRunSelect?: boolean | undefined
+		showPeakGasSummary?: boolean | undefined
 	}
 }
 
@@ -514,11 +515,13 @@ export function BenchmarkRunDetail(
 						value={formatGas(run.avgGasPerSecond, false)}
 						tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
 					/>
-					<MetricCard
-						label="Peak Gas/s"
-						value={formatGas(run.peakGasPerSecond, false)}
-						tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
-					/>
+					{props.showPeakGasSummary !== false && (
+						<MetricCard
+							label="Peak Gas/s"
+							value={formatGas(run.peakGasPerSecond, false)}
+							tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
+						/>
+					)}
 				</div>
 			</section>
 
