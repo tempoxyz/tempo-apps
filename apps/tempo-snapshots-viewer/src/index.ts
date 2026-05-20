@@ -794,8 +794,10 @@ async function getSnapshots(env: Env): Promise<Snapshot[]> {
 	])
 }
 
-const CACHE_VERSION = 'v21'
+const CACHE_VERSION = 'v30'
 const VIEWER_ORIGIN = 'https://snapshots.tempo.xyz'
+const SNAPSHOT_DOCS_URL =
+	'https://docs.tempo.xyz/cli/download#validator-migration-guidance'
 const CACHE_KEY_FULL = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/full`
 const CACHE_KEY_API = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/api`
 const CACHE_KEY_UI_HTML = `${VIEWER_ORIGIN}/cache/${CACHE_VERSION}/ui-html`
@@ -1177,8 +1179,8 @@ async function handleUI(_req: Request, env: Env) {
     :root, .light {
       --bg: #fafafa;
       --fg: #0a0a0a;
-      --secondary: #6e6e6e;
-      --muted: #a1a1a1;
+      --secondary: #525252;
+      --muted: #5f5f5f;
       --muted-bg: #f9f9f9;
       --border: #e5e5e5;
       --border-subtle: #f0f0f0;
@@ -1197,7 +1199,7 @@ async function handleUI(_req: Request, env: Env) {
       --cmd-border: #e5e5e5;
       --option-bg: #fff;
       --badge-chain-bg: #f0f0f0;
-      --badge-chain-fg: #6e6e6e;
+      --badge-chain-fg: #525252;
       --badge-profile-bg: rgba(59, 130, 246, 0.1);
       --badge-profile-fg: #2563eb;
       --badge-channel-bg: rgba(22, 163, 74, 0.1);
@@ -1306,6 +1308,46 @@ async function handleUI(_req: Request, env: Env) {
       display: flex;
       align-items: center;
       gap: 0.5rem;
+    }
+
+    .header-docs-button {
+      font-size: 0.8rem;
+      font-weight: 600;
+      height: 2.25rem;
+      padding: 0 0.75rem;
+      position: relative;
+      text-decoration: none;
+    }
+
+    .header-docs-button:hover {
+      text-decoration: none;
+    }
+
+    .header-docs-button::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      z-index: 20;
+      padding: 0.35rem 0.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--fg);
+      font-size: 0.72rem;
+      font-weight: 500;
+      line-height: 1.2;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-2px);
+      transition: opacity var(--duration) var(--ease), transform var(--duration) var(--ease);
+    }
+
+    .header-docs-button:hover::after,
+    .header-docs-button:focus-visible::after {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .hero {
@@ -2090,6 +2132,40 @@ async function handleUI(_req: Request, env: Env) {
       font-style: italic;
     }
 
+    .preset-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+      padding: 0.55rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      font-size: 0.73rem;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .preset-note-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 999px;
+      background: var(--accent-muted);
+      color: var(--accent);
+      font-size: 0.65rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .preset-note code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--fg);
+    }
+
     .disk-bar-section {
       margin-bottom: 2.5rem;
     }
@@ -2437,6 +2513,7 @@ async function handleUI(_req: Request, env: Env) {
       </a>
 
       <div class="header-actions">
+        <a class="theme-toggle header-docs-button" href="${SNAPSHOT_DOCS_URL}" target="_blank" rel="noopener" data-tooltip="Migration guidance" aria-label="Docs: migration guidance">Docs</a>
         <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
           <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -2486,7 +2563,7 @@ async function handleUI(_req: Request, env: Env) {
       <div class="snapshot-status-note" id="snapshotStatusNote"></div>
 
       <div class="presets" id="presets">
-        <button class="preset" id="preset-minimal" disabled>
+        <button class="preset active" onclick="selectPreset('minimal')" id="preset-minimal">
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Minimal<span class="preset-modified-tag">(modified)</span></span>
@@ -2494,8 +2571,9 @@ async function handleUI(_req: Request, env: Env) {
           </div>
           <span class="preset-desc">Tempo state and headers with minimal history. Limited historical RPC.</span>
           <span class="preset-ideal">Best for validators and constrained infrastructure</span>
+          <span class="preset-note"><span class="preset-note-icon" aria-hidden="true">!</span><span>First-time Minimal migration? Add <code>--force</code> to replace old snapshot data while preserving node identity files.</span></span>
         </button>
-        <button class="preset" id="preset-full" disabled>
+        <button class="preset" onclick="selectPreset('full')" id="preset-full">
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Full<span class="preset-modified-tag">(modified)</span></span>
@@ -2504,7 +2582,7 @@ async function handleUI(_req: Request, env: Env) {
           <span class="preset-desc">Transaction history with recent receipts and state history.</span>
           <span class="preset-ideal">Best for service backends and personal nodes</span>
         </button>
-        <button class="preset active" onclick="selectPreset('archive')" id="preset-archive">
+        <button class="preset" onclick="selectPreset('archive')" id="preset-archive">
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Archive<span class="preset-modified-tag">(modified)</span></span>
@@ -2548,7 +2626,7 @@ async function handleUI(_req: Request, env: Env) {
       <span class="footer-sep">&middot;</span>
       <a href="https://tempo.xyz" target="_blank" rel="noopener">About</a>
       <span class="footer-sep">&middot;</span>
-      <a href="https://docs.tempo.xyz" target="_blank" rel="noopener">Docs</a>
+      <a href="${SNAPSHOT_DOCS_URL}" target="_blank" rel="noopener">Docs</a>
       <span class="footer-sep">&middot;</span>
       <a href="https://github.com/tempoxyz/tempo" target="_blank" rel="noopener">GitHub</a>
     </footer>
@@ -2591,9 +2669,9 @@ async function handleUI(_req: Request, env: Env) {
       archive:  { checked: ['state', 'headers', 'txs', 'tx_send', 'receipts', 'acc_cs', 'sto_cs', 'indices'] }
     };
 
-    var checkedComponents = new Set(PRESETS.archive.checked);
-    var activePreset = 'archive';
-    var presetBaseComponents = new Set(PRESETS.archive.checked);
+    var checkedComponents = new Set(PRESETS.minimal.checked);
+    var activePreset = 'minimal';
+    var presetBaseComponents = new Set(PRESETS.minimal.checked);
     var activeSnapshotId = latestModularSnapshotId;
     var activeSnapshotUrl = null;
     var CUSTOM_COMPONENT_SELECTION_ENABLED = false;
@@ -3091,7 +3169,7 @@ async function handleUI(_req: Request, env: Env) {
 
     function selectPreset(name) {
       if (!hasActiveModularSnapshot()) return;
-      if (name !== 'archive') return;
+      if (name !== 'minimal' && name !== 'full' && name !== 'archive') return;
       activePreset = name;
       checkedComponents = new Set(PRESETS[name].checked);
       presetBaseComponents = new Set(PRESETS[name].checked);
