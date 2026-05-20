@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Abis, Addresses } from 'viem/tempo'
+import { Addresses } from 'viem/tempo'
+import { Abis, stablecoinDexAbi } from '#lib/abis'
 import {
 	accountAddress,
 	getTokenMetadata,
@@ -11,7 +12,7 @@ import {
 	recipientAddress,
 	userTokenAddress,
 } from '#lib/demo'
-import { parseKnownEvents, stablecoinDexAbi } from '#lib/domain/known-events'
+import { parseKnownEvents } from '#lib/domain/known-events'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const

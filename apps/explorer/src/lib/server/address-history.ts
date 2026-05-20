@@ -3,7 +3,7 @@ import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { Log, TransactionReceipt } from 'viem'
 import { parseEventLogs } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 

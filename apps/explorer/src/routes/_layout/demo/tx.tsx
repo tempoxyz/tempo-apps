@@ -6,7 +6,7 @@ import {
 	zeroAddress,
 	zeroHash,
 } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { Receipt } from '#comps/Receipt'
 import {
 	accountAddress,
@@ -31,7 +31,7 @@ import {
 	validatorAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
-import { parseKnownEvents, stablecoinDexAbi } from '#lib/domain/known-events'
+import { parseKnownEvents } from '#lib/domain/known-events'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()

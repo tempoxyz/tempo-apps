@@ -3,7 +3,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from 'midcut'
@@ -39,11 +39,7 @@ import {
 	userTokenAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
-import {
-	type KnownEvent,
-	parseKnownEvents,
-	stablecoinDexAbi,
-} from '#lib/domain/known-events'
+import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 

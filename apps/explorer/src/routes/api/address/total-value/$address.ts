@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { formatUnits } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import { getChainId, readContracts } from 'wagmi/actions'
 import { getTokenListAddresses } from '#lib/server/tokens'
 import { fetchAddressTransfersForValue } from '#lib/server/tempo-queries'

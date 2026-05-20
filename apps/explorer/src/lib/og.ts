@@ -1,6 +1,6 @@
 import type * as Address from 'ox/Address'
 import * as Value from 'ox/Value'
-import { Abis } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import type { Config } from 'wagmi'
 import {
 	getBlock,

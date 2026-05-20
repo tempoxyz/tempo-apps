@@ -95,6 +95,36 @@
 	},
 	"overrides": [
 		{
+			"includes": ["apps/explorer/**/*.ts", "apps/explorer/**/*.tsx"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": {
+							"level": "error",
+							"options": {
+								"paths": {
+									"viem/tempo": {
+										"importNames": ["Abis"],
+										"message": "Import Explorer ABIs from #lib/abis so ABI extensions stay centralized."
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"includes": ["apps/explorer/src/lib/abis.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["**/env.d.ts", "**/worker-configuration.d.ts"],
 			"linter": {
 				"rules": {

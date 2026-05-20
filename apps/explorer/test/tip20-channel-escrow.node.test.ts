@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { decodeFunctionData, encodeFunctionData, getAbiItem } from 'viem'
+import { tip20ChannelEscrowAbi, tip20ChannelEscrowAddress } from '#lib/abis'
 import { autoloadAbi, getContractInfo } from '#lib/domain/contracts'
-import {
-	tip20ChannelEscrowAbi,
-	tip20ChannelEscrowAddress,
-} from '#lib/domain/known-events'
 
 describe('TIP-20 channel escrow ABI', () => {
 	it('registers the TIP-1034 precompile address for ABI rendering', () => {

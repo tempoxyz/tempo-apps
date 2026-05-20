@@ -7,14 +7,15 @@ import {
 	stringify,
 	toFunctionSelector,
 } from 'viem'
-import { Abis, Addresses } from 'viem/tempo'
-import { getChainId, getPublicClient } from 'wagmi/actions'
+import { Addresses } from 'viem/tempo'
 import {
+	Abis,
 	stablecoinDexAbi,
 	streamChannelAbi,
 	tip20ChannelEscrowAbi,
 	tip20ChannelEscrowAddress,
-} from './known-events.ts'
+} from '#lib/abis'
+import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 

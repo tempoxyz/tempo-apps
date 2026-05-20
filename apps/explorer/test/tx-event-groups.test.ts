@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type * as Hex from 'ox/Hex'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import {
 	accountAddress,
 	mockLog,

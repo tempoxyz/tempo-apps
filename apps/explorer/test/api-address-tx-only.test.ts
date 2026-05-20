@@ -1,6 +1,6 @@
 import type { Address, Hex } from 'ox'
 import { encodeFunctionData } from 'viem'
-import { Abis } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import { describe, expect, it, vi } from 'vitest'
 import { buildTxOnlyTransactions } from '#lib/server/build-tx-only-transactions'
 
