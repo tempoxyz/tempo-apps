@@ -118,6 +118,7 @@
 		},
 		"mainnet": {
 			"name": "fee-payer-mainnet",
+			"placement": { "mode": "smart" },
 			"routes": [
 				{
 					"pattern": "sponsor.tempo.xyz",
