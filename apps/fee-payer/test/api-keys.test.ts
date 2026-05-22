@@ -1,7 +1,12 @@
 import { env, exports } from 'cloudflare:workers'
 import { sendTransactionSync } from 'viem/actions'
 import { describe, expect, it } from 'vitest'
-import { buildSponsorClient, sponsorAddress, userAccount } from './helpers.js'
+import {
+	buildSponsorClient,
+	buildSponsorClientWithAuthorization,
+	sponsorAddress,
+	userAccount,
+} from './helpers.js'
 
 const ADMIN_SECRET = 'test-admin-secret'
 
@@ -16,12 +21,34 @@ function adminRequest(method: string, path: string, body?: unknown): Request {
 	})
 }
 
-function feePayerRequest(path: string, rpcBody: unknown): Request {
+function feePayerRequest(
+	path: string,
+	rpcBody: unknown,
+	headers: Record<string, string> = {},
+): Request {
 	return new Request(`https://fee-payer.test${path}`, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
+		headers: { 'Content-Type': 'application/json', ...headers },
 		body: JSON.stringify(rpcBody),
 	})
+}
+
+function fillTransactionBody(
+	transaction: Record<string, unknown>,
+): Record<string, unknown> {
+	return {
+		jsonrpc: '2.0',
+		id: 1,
+		method: 'eth_fillTransaction',
+		params: [
+			{
+				from: userAccount.address,
+				to: '0x0000000000000000000000000000000000000002',
+				value: '0x0',
+				...transaction,
+			},
+		],
+	}
 }
 
 describe('admin API key management', () => {
@@ -249,6 +276,75 @@ describe('API key sponsorship integration', () => {
 		expect(data.result).toBeDefined()
 	})
 
+	it('passes through with valid Authorization bearer API key', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Valid Bearer Key' }),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		const response = await exports.default.fetch(
+			feePayerRequest(
+				'/',
+				{
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_chainId',
+				},
+				{ Authorization: `Bearer ${key}` },
+			),
+		)
+		expect(response.status).toBe(200)
+		const data = (await response.json()) as {
+			result?: string
+		}
+		expect(data.result).toBeDefined()
+	})
+
+	it('rejects requests with invalid Authorization bearer API key', async () => {
+		const response = await exports.default.fetch(
+			feePayerRequest(
+				'/',
+				{
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_chainId',
+				},
+				{ Authorization: 'Bearer tp_invalid_key_12345678' },
+			),
+		)
+		expect(response.status).toBe(401)
+		const data = (await response.json()) as { error: string }
+		expect(data.error).toBe('Invalid or revoked API key')
+	})
+
+	it('rejects requests with conflicting path and bearer API keys', async () => {
+		const firstCreateRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Path Key' }),
+		)
+		const { key: pathKey } = (await firstCreateRes.json()) as { key: string }
+		const secondCreateRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Bearer Key' }),
+		)
+		const { key: bearerKey } = (await secondCreateRes.json()) as {
+			key: string
+		}
+
+		const response = await exports.default.fetch(
+			feePayerRequest(
+				`/${pathKey}`,
+				{
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_chainId',
+				},
+				{ Authorization: `Bearer ${bearerKey}` },
+			),
+		)
+		expect(response.status).toBe(401)
+		const data = (await response.json()) as { error: string }
+		expect(data.error).toBe('Conflicting API keys')
+	})
+
 	it('open access still works without API key', async () => {
 		const response = await exports.default.fetch(
 			feePayerRequest('/', {
@@ -259,6 +355,63 @@ describe('API key sponsorship integration', () => {
 		)
 		// Should reach the handler, not be rejected.
 		expect(response.status).toBe(200)
+	})
+
+	it('rejects fill requests with invalid gas fields', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Invalid Gas' }),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		for (const { transaction, error } of [
+			{ transaction: { gas: '-1' }, error: 'Invalid gas' },
+			{ transaction: { gas: 'not-a-number' }, error: 'Invalid gas' },
+			{
+				transaction: { gas: '0x5208', maxFeePerGas: '0x0' },
+				error: 'Invalid maxFeePerGas',
+			},
+		]) {
+			const response = await exports.default.fetch(
+				feePayerRequest('/', fillTransactionBody(transaction), {
+					Authorization: `Bearer ${key}`,
+				}),
+			)
+			expect(response.status).toBe(400)
+			const data = (await response.json()) as { error: string }
+			expect(data.error).toBe(error)
+		}
+	})
+
+	it('does not record spend when a keyed fill request fails', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', {
+				label: 'Failed Fill Spend',
+				dailyLimitUsd: '100.00',
+			}),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		const response = await exports.default.fetch(
+			feePayerRequest(
+				'/',
+				fillTransactionBody({
+					to: 'not-an-address',
+					gas: '0x5208',
+					maxFeePerGas: '0x1',
+				}),
+				{ Authorization: `Bearer ${key}` },
+			),
+		)
+		expect(await response.text()).toMatch(/error|invalid|bad/i)
+
+		const today = new Date().toISOString().slice(0, 10)
+		for (let i = 0; i < 5; i++) {
+			await new Promise((r) => setTimeout(r, 100))
+			expect(
+				await env.SponsorApiKeyStore.get(`spend:${key}:${today}`),
+			).toBeNull()
+		}
+		expect(await env.SponsorApiKeyStore.get(`spend:${key}:lifetime`)).toBeNull()
 	})
 
 	it('allows a sponsored transaction when destination is in allowedDestinations', async () => {
@@ -376,7 +529,7 @@ describe('API key sponsorship integration', () => {
 		// First sponsored tx — lifetime starts from 0.
 		const r1 = await sendTransactionSync(buildSponsorClient(key), {
 			feePayer: true,
-			to: '0x0000000000000000000000000000000000000002',
+			to: '0x0000000000000000000000000000000000000003',
 			value: 0n,
 		})
 		expect(r1.status).toBe('success')
@@ -386,7 +539,7 @@ describe('API key sponsorship integration', () => {
 		// overwritten with the second-tx-only fee.
 		const r2 = await sendTransactionSync(buildSponsorClient(key), {
 			feePayer: true,
-			to: '0x0000000000000000000000000000000000000002',
+			to: '0x0000000000000000000000000000000000000004',
 			value: 0n,
 		})
 		expect(r2.status).toBe('success')
@@ -415,6 +568,28 @@ describe('API key sponsorship integration', () => {
 			to: '0x0000000000000000000000000000000000000002',
 			value: 0n,
 		})
+
+		expect(receipt.transactionHash).toBeDefined()
+		expect(receipt.status).toBe('success')
+		expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+		expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+	})
+
+	it('sponsors a transaction routed through an Authorization bearer API key', async () => {
+		const createRes = await exports.default.fetch(
+			adminRequest('POST', '/keys', { label: 'Bearer Sponsorship Test' }),
+		)
+		const { key } = (await createRes.json()) as { key: string }
+
+		const receipt = await sendTransactionSync(
+			buildSponsorClientWithAuthorization(key),
+			{
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			},
+		)
 
 		expect(receipt.transactionHash).toBeDefined()
 		expect(receipt.status).toBe('success')

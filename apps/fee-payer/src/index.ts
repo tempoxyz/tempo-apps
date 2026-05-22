@@ -113,6 +113,7 @@ async function feePayerHandler(c: Context) {
 	const requestContext = getRequestContext(c.req.raw)
 	const apiKey = c.get('apiKey') as string | undefined
 	const apiKeyRecord = c.get('apiKeyRecord')
+	const apiKeySource = c.get('apiKeySource') as string | undefined
 	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
 	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
@@ -126,6 +127,7 @@ async function feePayerHandler(c: Context) {
 					...requestContext,
 					rpcMethod,
 					keyedRoute: Boolean(apiKey),
+					...(apiKeySource ? { apiKeySource } : {}),
 					...(apiKeyLabel ? { apiKeyLabel } : {}),
 					...(apiKeyRecord?.dailyLimitUsd
 						? { dailyLimitUsd: apiKeyRecord.dailyLimitUsd }
@@ -152,6 +154,11 @@ app.all(
 )
 
 // Open path: https://sponsor.tempo.xyz/
-app.all('/', rateLimitMiddleware({ keyed: false }), feePayerHandler)
+app.all(
+	'/',
+	apiKeyMiddleware,
+	rateLimitMiddleware({ keyed: false }),
+	feePayerHandler,
+)
 
 export default app
