@@ -29,13 +29,16 @@ export function createTestAccount(): typeof userAccount {
 }
 
 /** Routes RPC calls through the in-process fee-payer Worker at `path`. */
-export function feePayerTransport(path: string) {
+export function feePayerTransport(
+	path: string,
+	headers: Record<string, string> = {},
+) {
 	return custom({
 		async request({ method, params }) {
 			const response = await exports.default.fetch(
 				new Request(`https://fee-payer.test${path}`, {
 					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
+					headers: { 'Content-Type': 'application/json', ...headers },
 					body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
 				}),
 			)
@@ -85,5 +88,23 @@ export function buildSponsorClient(
 		transport: withRelay(tempoTransport(), feePayerTransport(`/${key}`), {
 			policy: 'sign-and-broadcast',
 		}),
+	})
+}
+
+/** Build a sponsorship client routed through `/` with an Authorization bearer key. */
+export function buildSponsorClientWithAuthorization(
+	key: string,
+	account: typeof userAccount = userAccount,
+) {
+	return createClient({
+		account,
+		chain: tempoChain,
+		transport: withRelay(
+			tempoTransport(),
+			feePayerTransport('/', { Authorization: `Bearer ${key}` }),
+			{
+				policy: 'sign-and-broadcast',
+			},
+		),
 	})
 }

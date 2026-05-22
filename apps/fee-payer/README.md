@@ -29,4 +29,5 @@ Environment variables:
 | Method | Route | Params |
 |--------|-------|--------|
 | GET | `/usage` | - optional: `blockTimestampFrom` (epoch seconds)<br>- optional: `blockTimestampTo` (epoch seconds) |
-| POST | `*` | JSON-RPC request body for fee sponsorship<br>Supported methods: `eth_signTransaction`, `eth_signRawTransaction`, `eth_sendRawTransaction`, `eth_sendRawTransactionSync` |
+| POST | `/` | JSON-RPC request body for fee sponsorship<br>Optional API key: `Authorization: Bearer tp_...`<br>Supported methods: `eth_signTransaction`, `eth_signRawTransaction`, `eth_sendRawTransaction`, `eth_sendRawTransactionSync` |
+| POST | `/:key` | JSON-RPC request body for fee sponsorship with an API key path, e.g. `/tp_...` |

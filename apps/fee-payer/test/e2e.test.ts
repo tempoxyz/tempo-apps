@@ -144,7 +144,7 @@ describe('fee-payer integration', () => {
 	})
 
 	describe('transaction sponsorship', () => {
-		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
+		it('sponsors transaction (sign-only via eth_fillTransaction)', async () => {
 			const { transport: feePayerTransport, requests: feePayerRequests } =
 				createFeePayerTransportWithSpy()
 			const account = createTestAccount()
@@ -174,12 +174,14 @@ describe('fee-payer integration', () => {
 			// validation with `insufficient liquidity in FeeAMM pool`.
 			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
-			// Assert RPC methods sent to fee-payer service
+			// Assert RPC method sent to fee-payer service. Current viem relay
+			// flow co-signs during fill, so no later raw transaction RPC is sent
+			// to the relay.
 			const sponsorshipRequests = feePayerRequests.filter(
-				(request) => request.method !== 'eth_fillTransaction',
+				(request) => request.method === 'eth_fillTransaction',
 			)
 			expect(sponsorshipRequests).toHaveLength(1)
-			expect(sponsorshipRequests[0].method).toBe('eth_signRawTransaction')
+			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 
@@ -215,12 +217,14 @@ describe('fee-payer integration', () => {
 			// validation with `insufficient liquidity in FeeAMM pool`.
 			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
-			// Assert RPC methods sent to fee-payer service
+			// Assert RPC method sent to fee-payer service. Current viem relay
+			// flow co-signs during fill, so no later raw transaction RPC is sent
+			// to the relay.
 			const sponsorshipRequests = feePayerRequests.filter(
-				(request) => request.method !== 'eth_fillTransaction',
+				(request) => request.method === 'eth_fillTransaction',
 			)
 			expect(sponsorshipRequests).toHaveLength(1)
-			expect(sponsorshipRequests[0].method).toBe('eth_sendRawTransactionSync')
+			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 	})
