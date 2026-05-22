@@ -43,8 +43,7 @@
 			"vars": {
 				"TEMPO_RPC_URL": "https://rpc.moderato.tempo.xyz",
 				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "moderato",
-				"POSTHOG_API_KEY": ""
+				"TEMPO_ENV": "moderato"
 			},
 			"ratelimits": [
 				{
@@ -70,8 +69,7 @@
 			"vars": {
 				"TEMPO_RPC_URL": "https://rpc.devnet.tempoxyz.dev",
 				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "devnet",
-				"POSTHOG_API_KEY": ""
+				"TEMPO_ENV": "devnet"
 			},
 			"ratelimits": [
 				{
@@ -102,8 +100,7 @@
 			"vars": {
 				"TEMPO_RPC_URL": "https://rpc.moderato.tempo.xyz",
 				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "moderato",
-				"POSTHOG_API_KEY": ""
+				"TEMPO_ENV": "moderato"
 			},
 			"ratelimits": [
 				{
@@ -129,8 +126,7 @@
 			"workers_dev": false,
 			"vars": {
 				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "mainnet",
-				"POSTHOG_API_KEY": ""
+				"TEMPO_ENV": "mainnet"
 			},
 			"kv_namespaces": [
 				{
