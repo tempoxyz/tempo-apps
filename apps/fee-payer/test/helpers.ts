@@ -1,5 +1,5 @@
 import { env, exports } from 'cloudflare:workers'
-import { Mnemonic } from 'ox'
+import { Mnemonic, Secp256k1 } from 'ox'
 import { createClient, custom } from 'viem'
 import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
 import { Account, withRelay } from 'viem/tempo'
@@ -23,6 +23,10 @@ export const userAccount = Account.fromSecp256k1(
 		path: Mnemonic.path({ account: 9 }),
 	}),
 )
+
+export function createTestAccount(): typeof userAccount {
+	return Account.fromSecp256k1(Secp256k1.randomPrivateKey())
+}
 
 /** Routes RPC calls through the in-process fee-payer Worker at `path`. */
 export function feePayerTransport(path: string) {
@@ -71,9 +75,12 @@ export function tempoTransport() {
 }
 
 /** Build a sponsorship client routed through `/${key}`. */
-export function buildSponsorClient(key: string) {
+export function buildSponsorClient(
+	key: string,
+	account: typeof userAccount = userAccount,
+) {
 	return createClient({
-		account: userAccount,
+		account,
 		chain: tempoChain,
 		transport: withRelay(tempoTransport(), feePayerTransport(`/${key}`), {
 			policy: 'sign-and-broadcast',

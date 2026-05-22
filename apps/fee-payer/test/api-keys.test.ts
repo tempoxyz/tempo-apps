@@ -1,7 +1,11 @@
 import { env, exports } from 'cloudflare:workers'
 import { sendTransactionSync } from 'viem/actions'
 import { describe, expect, it } from 'vitest'
-import { buildSponsorClient, sponsorAddress, userAccount } from './helpers.js'
+import {
+	buildSponsorClient,
+	createTestAccount,
+	sponsorAddress,
+} from './helpers.js'
 
 const ADMIN_SECRET = 'test-admin-secret'
 
@@ -270,12 +274,16 @@ describe('API key sponsorship integration', () => {
 			}),
 		)
 		const { key } = (await createRes.json()) as { key: string }
+		const account = createTestAccount()
 
-		const receipt = await sendTransactionSync(buildSponsorClient(key), {
-			feePayer: true,
-			to,
-			value: 0n,
-		})
+		const receipt = await sendTransactionSync(
+			buildSponsorClient(key, account),
+			{
+				feePayer: true,
+				to,
+				value: 0n,
+			},
+		)
 
 		expect(receipt.status).toBe('success')
 		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
@@ -289,9 +297,10 @@ describe('API key sponsorship integration', () => {
 			}),
 		)
 		const { key } = (await createRes.json()) as { key: string }
+		const account = createTestAccount()
 
 		await expect(
-			sendTransactionSync(buildSponsorClient(key), {
+			sendTransactionSync(buildSponsorClient(key, account), {
 				feePayer: true,
 				to: '0x0000000000000000000000000000000000000002',
 				value: 0n,
@@ -311,9 +320,10 @@ describe('API key sponsorship integration', () => {
 		// Pre-seed today's spend above the limit.
 		const today = new Date().toISOString().slice(0, 10)
 		await env.SponsorApiKeyStore.put(`spend:${key}:${today}`, '1000000')
+		const account = createTestAccount()
 
 		await expect(
-			sendTransactionSync(buildSponsorClient(key), {
+			sendTransactionSync(buildSponsorClient(key, account), {
 				feePayer: true,
 				to: '0x0000000000000000000000000000000000000002',
 				value: 0n,
@@ -329,12 +339,16 @@ describe('API key sponsorship integration', () => {
 			}),
 		)
 		const { key } = (await createRes.json()) as { key: string }
+		const account = createTestAccount()
 
-		const receipt = await sendTransactionSync(buildSponsorClient(key), {
-			feePayer: true,
-			to: '0x0000000000000000000000000000000000000002',
-			value: 0n,
-		})
+		const receipt = await sendTransactionSync(
+			buildSponsorClient(key, account),
+			{
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			},
+		)
 		expect(receipt.status).toBe('success')
 
 		// recordSpend runs via ctx.waitUntil; poll briefly until it lands.
@@ -374,21 +388,27 @@ describe('API key sponsorship integration', () => {
 		}
 
 		// First sponsored tx — lifetime starts from 0.
-		const r1 = await sendTransactionSync(buildSponsorClient(key), {
-			feePayer: true,
-			to: '0x0000000000000000000000000000000000000002',
-			value: 0n,
-		})
+		const r1 = await sendTransactionSync(
+			buildSponsorClient(key, createTestAccount()),
+			{
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			},
+		)
 		expect(r1.status).toBe('success')
 		const afterFirst = await waitForLifetime(0n)
 
 		// Second sponsored tx — lifetime should strictly increase, not be
 		// overwritten with the second-tx-only fee.
-		const r2 = await sendTransactionSync(buildSponsorClient(key), {
-			feePayer: true,
-			to: '0x0000000000000000000000000000000000000002',
-			value: 0n,
-		})
+		const r2 = await sendTransactionSync(
+			buildSponsorClient(key, createTestAccount()),
+			{
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			},
+		)
 		expect(r2.status).toBe('success')
 		const afterSecond = await waitForLifetime(afterFirst)
 
@@ -405,20 +425,24 @@ describe('API key sponsorship integration', () => {
 			adminRequest('POST', '/keys', { label: 'Sponsorship Test' }),
 		)
 		const { key } = (await createRes.json()) as { key: string }
+		const account = createTestAccount()
 
 		// Build a withRelay client whose relay transport hits the
 		// fee-payer Worker via the /tp_* API key path. This exercises the
 		// full middleware chain (apiKey + rateLimit) on a real sponsored
 		// fill + sign + broadcast.
-		const receipt = await sendTransactionSync(buildSponsorClient(key), {
-			feePayer: true,
-			to: '0x0000000000000000000000000000000000000002',
-			value: 0n,
-		})
+		const receipt = await sendTransactionSync(
+			buildSponsorClient(key, account),
+			{
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			},
+		)
 
 		expect(receipt.transactionHash).toBeDefined()
 		expect(receipt.status).toBe('success')
-		expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+		expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 		expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 	})
