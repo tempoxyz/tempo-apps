@@ -32,6 +32,7 @@ function clickHouseUrl(host: string): URL {
 		: new URL(`https://${trimmedHost}`)
 
 	url.searchParams.set('default_format', 'JSON')
+	url.searchParams.set('max_result_bytes', '0')
 	return url
 }
 
