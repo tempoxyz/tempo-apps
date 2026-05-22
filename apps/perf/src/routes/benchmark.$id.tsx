@@ -98,6 +98,11 @@ const COLORS = {
 	orange: '#e2a336',
 	red: '#e5484d',
 	purple: '#a78bfa',
+	cyan: '#38bdf8',
+	pink: '#f472b6',
+	teal: '#2dd4bf',
+	yellow: '#facc15',
+	gray: '#94a3b8',
 }
 
 const KIB_PER_MIB = 1024
@@ -876,8 +881,8 @@ export function BenchmarkRunDetail(
 
 					<section className="mb-10">
 						<SectionHeader
-							title="Build Phases (p50)"
-							tooltip="Top-level block building phases. Included Tx Exec uses the current Tempo aggregate for normal included, subblock, and system tx execution; fill idle/overhead, invalid tx execution, and builder.finish are split out separately."
+							title="Overall Payload Building (p50)"
+							tooltip="Stacked p50 payload-building timings from setup through transaction fill, system transactions, state-root work, and builder.finish."
 						/>
 						<TimeSeriesChart
 							stacked
@@ -910,13 +915,39 @@ export function BenchmarkRunDetail(
 								},
 								{
 									label: 'Fill Idle',
-									color: COLORS.purple,
+									color: COLORS.cyan,
 									data: transformSamples(fillIdleSeries, (v) => v * 1000),
 								},
 								{
 									label: 'Fill Overhead',
-									color: COLORS.green,
+									color: COLORS.pink,
 									data: transformSamples(fillOverheadSeries, (v) => v * 1000),
+								},
+								{
+									label: 'System Tx Exec',
+									color: COLORS.teal,
+									data: transformSamples(sysTxExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Hashed Post State',
+									color: COLORS.yellow,
+									data: transformSamples(
+										hashedPostStateSeries,
+										(v) => v * 1000,
+									),
+								},
+								{
+									label: 'State Root Wait',
+									color: COLORS.gray,
+									data: transformSamples(
+										sparseTrieStateRootWaitSeries,
+										(v) => v * 1000,
+									),
+								},
+								{
+									label: 'State Root (sync)',
+									color: COLORS.green,
+									data: transformSamples(stateRootSeries, (v) => v * 1000),
 								},
 								{
 									label: 'Builder Finish',
