@@ -21,6 +21,8 @@ const BUILDER_QUANTILE_METRIC_NAMES = [
 	'reth_tempo_payload_builder_normal_transaction_fill_idle_duration_seconds',
 	'reth_tempo_payload_builder_normal_transaction_fill_overhead_duration_seconds',
 	'reth_tempo_payload_builder_state_root_with_updates_duration_seconds',
+	'reth_tempo_payload_builder_sparse_trie_state_root_wait_duration_seconds',
+	'reth_tempo_payload_builder_builder_finish_duration_seconds',
 	'reth_tempo_payload_builder_payload_finalization_duration_seconds',
 	'reth_tempo_payload_builder_state_setup_duration_seconds',
 	'reth_tempo_payload_builder_hashed_post_state_duration_seconds',
@@ -265,6 +267,16 @@ export function BenchmarkRunDetail(
 	const stateRootSeries = findSeries(
 		m,
 		'reth_tempo_payload_builder_state_root_with_updates_duration_seconds',
+		{ quantile: '0.5' },
+	)
+	const sparseTrieStateRootWaitSeries = findSeries(
+		m,
+		'reth_tempo_payload_builder_sparse_trie_state_root_wait_duration_seconds',
+		{ quantile: '0.5' },
+	)
+	const builderFinishSeries = findSeries(
+		m,
+		'reth_tempo_payload_builder_builder_finish_duration_seconds',
 		{ quantile: '0.5' },
 	)
 	const finalizationSeries = findSeries(
@@ -871,7 +883,7 @@ export function BenchmarkRunDetail(
 					<section className="mb-10">
 						<SectionHeader
 							title="Build Phases (p50)"
-							tooltip="Top-level block building phases. Included Tx Exec uses the current Tempo aggregate for normal included, subblock, and system tx execution; fill idle/overhead and invalid tx execution are split out separately."
+							tooltip="Top-level block building phases. Included Tx Exec uses the current Tempo aggregate for normal included, subblock, and system tx execution; fill idle/overhead, invalid tx execution, and builder.finish are split out separately."
 						/>
 						<TimeSeriesChart
 							stacked
@@ -913,9 +925,9 @@ export function BenchmarkRunDetail(
 									data: transformSamples(fillOverheadSeries, (v) => v * 1000),
 								},
 								{
-									label: 'Finalization',
+									label: 'Builder Finish',
 									color: COLORS.orange,
-									data: transformSamples(finalizationSeries, (v) => v * 1000),
+									data: transformSamples(builderFinishSeries, (v) => v * 1000),
 								},
 							]}
 							formatValue={(v) => `${v.toFixed(1)} ms`}
@@ -963,14 +975,19 @@ export function BenchmarkRunDetail(
 					<section className="mb-10">
 						<SectionHeader
 							title="Finalization Internals (p50)"
-							tooltip="Internal timings from block finalization. Hashed Post State converts raw state changes into a hashed representation. State Root (sync) computes the root synchronously and is near zero when the trie is precomputed in the background."
+							tooltip="Internal timings from block finalization. Builder Finish is wall-clock time spent in builder.finish. State Root Wait is time spent waiting for the shared sparse trie state root. State Root (sync) computes the root synchronously and is near zero when the trie is precomputed in the background."
 						/>
 						<TimeSeriesChart
 							showMean
 							series={[
 								{
-									label: 'Finalization',
+									label: 'Builder Finish',
 									color: COLORS.orange,
+									data: transformSamples(builderFinishSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Finalization',
+									color: COLORS.blue,
 									data: transformSamples(finalizationSeries, (v) => v * 1000),
 								},
 								{
@@ -978,6 +995,14 @@ export function BenchmarkRunDetail(
 									color: COLORS.purple,
 									data: transformSamples(
 										hashedPostStateSeries,
+										(v) => v * 1000,
+									),
+								},
+								{
+									label: 'State Root Wait',
+									color: COLORS.red,
+									data: transformSamples(
+										sparseTrieStateRootWaitSeries,
 										(v) => v * 1000,
 									),
 								},
