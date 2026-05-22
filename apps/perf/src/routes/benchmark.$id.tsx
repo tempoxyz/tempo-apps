@@ -28,13 +28,23 @@ const BUILDER_QUANTILE_METRIC_NAMES = [
 	'reth_tempo_payload_builder_system_transactions_execution_duration_seconds',
 ] as const
 
+const VALIDATION_QUANTILE_METRIC_NAMES = [
+	'reth_consensus_engine_beacon_new_payload_latency',
+	'reth_sync_block_validation_state_root_histogram',
+] as const
+
 const METRIC_QUERIES = [
 	...BUILDER_QUANTILE_METRIC_NAMES.map((name) => ({
 		name,
 		labels: { quantile: ['0.5', '0.95'] },
 	})),
+	...VALIDATION_QUANTILE_METRIC_NAMES.map((name) => ({
+		name,
+		labels: { quantile: ['0.5', '0.95', '0.99'] },
+	})),
 	// Throughput
 	'reth_tempo_payload_builder_total_transactions_last',
+	'reth_consensus_engine_beacon_new_payload_gas_per_second_last',
 	// Block headroom
 	'reth_tempo_payload_builder_rlp_block_size_bytes_last',
 	// Txgen
@@ -291,6 +301,42 @@ export function BenchmarkRunDetail(
 		m,
 		'reth_tempo_payload_builder_system_transactions_execution_duration_seconds',
 		{ quantile: '0.5' },
+	)
+
+	// Validation
+	const newPayloadValidationP50 = findSeries(
+		m,
+		'reth_consensus_engine_beacon_new_payload_latency',
+		{ quantile: '0.5' },
+	)
+	const newPayloadValidationP95 = findSeries(
+		m,
+		'reth_consensus_engine_beacon_new_payload_latency',
+		{ quantile: '0.95' },
+	)
+	const newPayloadValidationP99 = findSeries(
+		m,
+		'reth_consensus_engine_beacon_new_payload_latency',
+		{ quantile: '0.99' },
+	)
+	const validationGasSeries = findSeries(
+		m,
+		'reth_consensus_engine_beacon_new_payload_gas_per_second_last',
+	)
+	const validationStateRootP50 = findSeries(
+		m,
+		'reth_sync_block_validation_state_root_histogram',
+		{ quantile: '0.5' },
+	)
+	const validationStateRootP95 = findSeries(
+		m,
+		'reth_sync_block_validation_state_root_histogram',
+		{ quantile: '0.95' },
+	)
+	const validationStateRootP99 = findSeries(
+		m,
+		'reth_sync_block_validation_state_root_histogram',
+		{ quantile: '0.99' },
 	)
 
 	// Throughput
@@ -844,6 +890,115 @@ export function BenchmarkRunDetail(
 							</div>
 						</section>
 					)}
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Block Validation"
+							tooltip="Execution-layer validation metrics captured during benchmark runs, centered on Engine API newPayload processing."
+						/>
+						<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+							<TimeSeriesChart
+								title="New Payload Validation Latency"
+								tooltip="Latency percentiles reported by the consensus engine while validating newPayload requests."
+								showMean
+								series={[
+									{
+										label: 'p50',
+										color: COLORS.blue,
+										data: transformSamples(
+											newPayloadValidationP50,
+											(v) => v * 1000,
+										),
+									},
+									{
+										label: 'p95',
+										color: COLORS.orange,
+										data: transformSamples(
+											newPayloadValidationP95,
+											(v) => v * 1000,
+										),
+									},
+									{
+										label: 'p99',
+										color: COLORS.red,
+										data: transformSamples(
+											newPayloadValidationP99,
+											(v) => v * 1000,
+										),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(1)} ms`}
+							/>
+							<TimeSeriesChart
+								title="Validation Gas Throughput"
+								tooltip="Gas per second observed on the newPayload validation path."
+								showMean
+								series={[
+									{
+										label: 'Gas/s',
+										color: COLORS.green,
+										data: transformSamples(validationGasSeries, (v) => v / 1e9),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
+							/>
+							<TimeSeriesChart
+								title="State Root Validation"
+								tooltip="State root validation cost during block validation."
+								showMean
+								series={[
+									{
+										label: 'p50',
+										color: COLORS.blue,
+										data: transformSamples(
+											validationStateRootP50,
+											(v) => v * 1000,
+										),
+									},
+									{
+										label: 'p95',
+										color: COLORS.orange,
+										data: transformSamples(
+											validationStateRootP95,
+											(v) => v * 1000,
+										),
+									},
+									{
+										label: 'p99',
+										color: COLORS.red,
+										data: transformSamples(
+											validationStateRootP99,
+											(v) => v * 1000,
+										),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(1)} ms`}
+							/>
+							<TimeSeriesChart
+								title="Block Validation Outcomes"
+								tooltip="Rate of blocks sent by txgen and reported as successful or failed."
+								showMean
+								series={[
+									{
+										label: 'Sent',
+										color: COLORS.blue,
+										data: counterRate(txgenBlocksSentSeries),
+									},
+									{
+										label: 'Success',
+										color: COLORS.green,
+										data: counterRate(txgenBlocksSuccessSeries),
+									},
+									{
+										label: 'Failed',
+										color: COLORS.red,
+										data: counterRate(txgenBlocksFailedSeries),
+									},
+								]}
+								formatValue={(v) => `${v.toFixed(2)}/s`}
+							/>
+						</div>
+					</section>
 
 					<section className="mb-10">
 						<SectionHeader
