@@ -6,10 +6,10 @@ import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
 	sponsorAddress,
+	createTestAccount,
 	tempoChain,
 	tempoTransport,
 	testMnemonic,
-	userAccount,
 } from './helpers.js'
 
 function createFeePayerTransportWithSpy() {
@@ -147,9 +147,10 @@ describe('fee-payer integration', () => {
 		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
 			const { transport: feePayerTransport, requests: feePayerRequests } =
 				createFeePayerTransportWithSpy()
+			const account = createTestAccount()
 
 			const client = createClient({
-				account: userAccount,
+				account,
 				chain: tempoChain,
 				transport: withRelay(tempoTransport(), feePayerTransport, {
 					policy: 'sign-only',
@@ -165,7 +166,7 @@ describe('fee-payer integration', () => {
 			console.log(`Transaction hash: ${receipt.transactionHash}`)
 
 			expect(receipt.transactionHash).toBeDefined()
-			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			// Regression: the broadcast envelope must carry a feeToken the
 			// chain can charge. Without it the chain falls back to the
@@ -185,9 +186,10 @@ describe('fee-payer integration', () => {
 		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
 			const { transport: feePayerTransport, requests: feePayerRequests } =
 				createFeePayerTransportWithSpy()
+			const account = createTestAccount()
 
 			const client = createClient({
-				account: userAccount,
+				account,
 				chain: tempoChain,
 				transport: withRelay(tempoTransport(), feePayerTransport, {
 					policy: 'sign-and-broadcast',
@@ -204,7 +206,7 @@ describe('fee-payer integration', () => {
 
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.blockNumber).toBeGreaterThan(0n)
-			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
 			// Regression: the broadcast envelope must carry a feeToken the
