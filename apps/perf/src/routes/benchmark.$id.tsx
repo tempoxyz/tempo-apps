@@ -23,7 +23,6 @@ const BUILDER_QUANTILE_METRIC_NAMES = [
 	'reth_tempo_payload_builder_state_root_with_updates_duration_seconds',
 	'reth_tempo_payload_builder_sparse_trie_state_root_wait_duration_seconds',
 	'reth_tempo_payload_builder_builder_finish_duration_seconds',
-	'reth_tempo_payload_builder_payload_finalization_duration_seconds',
 	'reth_tempo_payload_builder_state_setup_duration_seconds',
 	'reth_tempo_payload_builder_hashed_post_state_duration_seconds',
 	'reth_tempo_payload_builder_prepare_system_transactions_duration_seconds',
@@ -277,11 +276,6 @@ export function BenchmarkRunDetail(
 	const builderFinishSeries = findSeries(
 		m,
 		'reth_tempo_payload_builder_builder_finish_duration_seconds',
-		{ quantile: '0.5' },
-	)
-	const finalizationSeries = findSeries(
-		m,
-		'reth_tempo_payload_builder_payload_finalization_duration_seconds',
 		{ quantile: '0.5' },
 	)
 	const stateSetupSeries = findSeries(
@@ -986,13 +980,8 @@ export function BenchmarkRunDetail(
 									data: transformSamples(builderFinishSeries, (v) => v * 1000),
 								},
 								{
-									label: 'Finalization',
-									color: COLORS.blue,
-									data: transformSamples(finalizationSeries, (v) => v * 1000),
-								},
-								{
 									label: 'Hashed Post State',
-									color: COLORS.purple,
+									color: COLORS.blue,
 									data: transformSamples(
 										hashedPostStateSeries,
 										(v) => v * 1000,
