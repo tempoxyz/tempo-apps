@@ -29,7 +29,7 @@ const SPOTLIGHT_DATA: Record<
 		accountAddress: '0xdf25f88aa6cde9937fdcfcf10fa349528c79dbf9',
 		contractAddress: '0x20c000000000000000000000b9537d11c60e8b50',
 		receiptHash:
-			'0xa26f2dc8ed22d65ad5e5b3acc40295d89c331fd1e79d34b13baa3f6f47b136dc',
+			'0x334d04f62d5e48cee0171396adc95b7f36cef999f95be9e96c5ee42877a057e5',
 	},
 }
 
