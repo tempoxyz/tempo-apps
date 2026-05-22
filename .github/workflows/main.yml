@@ -70,6 +70,59 @@ jobs:
       app: perf
       environments: '[""]'
 
+  deploy-perf-internal:
+    name: Deploy Perf Internal
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for relevant changes
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/perf/|pnpm-lock.yaml|packages/)"; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          else
+            echo "relevant=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.changes.outputs.relevant == 'true'
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
+
+      - name: Log in to GHCR
+        if: steps.changes.outputs.relevant == 'true'
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build and push image
+        if: steps.changes.outputs.relevant == 'true'
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83
+        with:
+          context: .
+          file: apps/perf/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/tempoxyz/tempo-apps-internal-perf:latest
+            ghcr.io/tempoxyz/tempo-apps-internal-perf:${{ github.sha }}
+
   deploy-og:
     name: Deploy OG
     needs: verify
