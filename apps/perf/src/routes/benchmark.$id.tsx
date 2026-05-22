@@ -16,7 +16,10 @@ import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
 const BUILDER_QUANTILE_METRIC_NAMES = [
 	'reth_tempo_payload_builder_payload_build_duration_seconds',
 	'reth_tempo_payload_builder_pool_fetch_duration_seconds',
-	'reth_tempo_payload_builder_total_transaction_execution_duration_seconds',
+	'reth_tempo_payload_builder_total_normal_included_transaction_execution_duration_seconds',
+	'reth_tempo_payload_builder_total_normal_invalid_transaction_execution_duration_seconds',
+	'reth_tempo_payload_builder_normal_transaction_fill_idle_duration_seconds',
+	'reth_tempo_payload_builder_normal_transaction_fill_overhead_duration_seconds',
 	'reth_tempo_payload_builder_state_root_with_updates_duration_seconds',
 	'reth_tempo_payload_builder_payload_finalization_duration_seconds',
 	'reth_tempo_payload_builder_state_setup_duration_seconds',
@@ -239,9 +242,24 @@ export function BenchmarkRunDetail(
 		'reth_tempo_payload_builder_pool_fetch_duration_seconds',
 		{ quantile: '0.5' },
 	)
-	const txExecSeries = findSeries(
+	const includedTxExecSeries = findSeries(
 		m,
-		'reth_tempo_payload_builder_total_transaction_execution_duration_seconds',
+		'reth_tempo_payload_builder_total_normal_included_transaction_execution_duration_seconds',
+		{ quantile: '0.5' },
+	)
+	const invalidTxExecSeries = findSeries(
+		m,
+		'reth_tempo_payload_builder_total_normal_invalid_transaction_execution_duration_seconds',
+		{ quantile: '0.5' },
+	)
+	const fillIdleSeries = findSeries(
+		m,
+		'reth_tempo_payload_builder_normal_transaction_fill_idle_duration_seconds',
+		{ quantile: '0.5' },
+	)
+	const fillOverheadSeries = findSeries(
+		m,
+		'reth_tempo_payload_builder_normal_transaction_fill_overhead_duration_seconds',
 		{ quantile: '0.5' },
 	)
 	const stateRootSeries = findSeries(
@@ -853,7 +871,7 @@ export function BenchmarkRunDetail(
 					<section className="mb-10">
 						<SectionHeader
 							title="Build Phases (p50)"
-							tooltip="Top-level disjoint phases of block building. These sum to approximately the total payload build duration."
+							tooltip="Top-level block building phases. Included Tx Exec uses the current Tempo aggregate for normal included, subblock, and system tx execution; fill idle/overhead and invalid tx execution are split out separately."
 						/>
 						<TimeSeriesChart
 							stacked
@@ -870,24 +888,72 @@ export function BenchmarkRunDetail(
 									data: transformSamples(sysTxPrepSeries, (v) => v * 1000),
 								},
 								{
-									label: 'System Tx Exec',
-									color: COLORS.orange,
-									data: transformSamples(sysTxExecSeries, (v) => v * 1000),
-								},
-								{
 									label: 'Pool Fetch',
 									color: COLORS.green,
 									data: transformSamples(poolFetchSeries, (v) => v * 1000),
 								},
 								{
-									label: 'Tx Execution',
+									label: 'Included Tx Exec',
 									color: COLORS.blue,
-									data: transformSamples(txExecSeries, (v) => v * 1000),
+									data: transformSamples(includedTxExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Invalid Tx Exec',
+									color: COLORS.red,
+									data: transformSamples(invalidTxExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Fill Idle',
+									color: COLORS.purple,
+									data: transformSamples(fillIdleSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Fill Overhead',
+									color: COLORS.green,
+									data: transformSamples(fillOverheadSeries, (v) => v * 1000),
 								},
 								{
 									label: 'Finalization',
 									color: COLORS.orange,
 									data: transformSamples(finalizationSeries, (v) => v * 1000),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(1)} ms`}
+						/>
+					</section>
+
+					<section className="mb-10">
+						<SectionHeader
+							title="Tx Execution Split (p50)"
+							tooltip="Current Tempo builder tx execution metrics after the split: included execution, invalid execution attempts, idle waiting for fill, fill overhead, and system tx execution."
+						/>
+						<TimeSeriesChart
+							showMean
+							series={[
+								{
+									label: 'Included Tx Exec',
+									color: COLORS.blue,
+									data: transformSamples(includedTxExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Invalid Tx Exec',
+									color: COLORS.red,
+									data: transformSamples(invalidTxExecSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Fill Idle',
+									color: COLORS.purple,
+									data: transformSamples(fillIdleSeries, (v) => v * 1000),
+								},
+								{
+									label: 'Fill Overhead',
+									color: COLORS.green,
+									data: transformSamples(fillOverheadSeries, (v) => v * 1000),
+								},
+								{
+									label: 'System Tx Exec',
+									color: COLORS.orange,
+									data: transformSamples(sysTxExecSeries, (v) => v * 1000),
 								},
 							]}
 							formatValue={(v) => `${v.toFixed(1)} ms`}
