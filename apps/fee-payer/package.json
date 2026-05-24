@@ -33,6 +33,7 @@
 		"kysely": "catalog:",
 		"ox": "catalog:",
 		"accounts": "catalog:",
+		"cloudflare-worker-metrics": "catalog:",
 		"viem": "catalog:",
 		"zod": "catalog:"
 	},

@@ -17,3 +17,5 @@ declare namespace NodeJS {
 		readonly NODE_ENV: 'development' | 'production' | 'test'
 	}
 }
+
+declare const __BUILD_VERSION__: string
