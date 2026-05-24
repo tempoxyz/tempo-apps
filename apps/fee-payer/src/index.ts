@@ -7,10 +7,11 @@ import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { tempo, tempoDevnet, tempoModerato } from 'viem/chains'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
+import { tempoChain } from './lib/chain.js'
+import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
 	FeePayerEvents,
 	captureEvent,
@@ -29,6 +30,8 @@ app.onError((error, c) => {
 	console.error('Unexpected error:', error)
 	return c.text('Internal Server Error', 500)
 })
+
+app.use('*', httpMetrics())
 
 app.use(
 	'*',
@@ -96,6 +99,7 @@ const sponsorAccount = privateKeyToAccount(
 
 const relayHandler = Handler.relay({
 	cors: false,
+	chains: [tempoChain],
 	features: 'all',
 	feePayer: {
 		account: sponsorAccount,
@@ -103,9 +107,9 @@ const relayHandler = Handler.relay({
 		url: 'https://sponsor.tempo.xyz',
 	},
 	transports: {
-		[tempo.id]: http(env.TEMPO_RPC_URL ?? tempo.rpcUrls.default.http[0]),
-		[tempoModerato.id]: http(tempoModerato.rpcUrls.default.http[0]),
-		[tempoDevnet.id]: http(tempoDevnet.rpcUrls.default.http[0]),
+		[tempoChain.id]: http(
+			env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0],
+		),
 	},
 })
 
@@ -140,18 +144,25 @@ async function feePayerHandler(c: Context) {
 	const url = new URL(raw.url)
 	const target =
 		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
+
 	return relayHandler.fetch(target)
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
 app.all(
 	'/:key{tp_.+}',
+	rpcMetrics({ keyed: true }),
 	apiKeyMiddleware,
 	rateLimitMiddleware({ keyed: true }),
 	feePayerHandler,
 )
 
 // Open path: https://sponsor.tempo.xyz/
-app.all('/', rateLimitMiddleware({ keyed: false }), feePayerHandler)
+app.all(
+	'/',
+	rpcMetrics({ keyed: false }),
+	rateLimitMiddleware({ keyed: false }),
+	feePayerHandler,
+)
 
 export default app
