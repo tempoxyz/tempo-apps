@@ -11,8 +11,7 @@ import { tempo, tempoDevnet, tempoModerato } from 'viem/chains'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
-import { metrics } from './lib/observability/metrics.js'
-import { httpMetrics } from './lib/observability/middleware.js'
+import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
 	FeePayerEvents,
 	captureEvent,
@@ -122,17 +121,9 @@ async function feePayerHandler(c: Context) {
 	const apiKeyRecord = c.get('apiKeyRecord')
 	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
-	const rpcChainId =
-		(c.get('rpcChainId') as number | undefined) ?? DEFAULT_RELAY_CHAIN_ID
 	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
-	const keyedRoute = String(Boolean(apiKey))
 
 	if (rpcMethod) {
-		metrics.count('fee_payer_rpc_request_count', 1, {
-			rpc_method: rpcMethod,
-			keyed_route: keyedRoute,
-			chain_id: String(rpcChainId),
-		})
 		c.executionCtx.waitUntil(
 			captureEvent({
 				distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
@@ -156,58 +147,24 @@ async function feePayerHandler(c: Context) {
 	const target =
 		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
 
-	try {
-		const response = await relayHandler.fetch(target)
-		if (rpcMethod) {
-			metrics.count('fee_payer_sponsorship_response_count', 1, {
-				rpc_method: rpcMethod,
-				keyed_route: keyedRoute,
-				status: await sponsorshipResponseStatus(response),
-			})
-		}
-		return response
-	} catch (error) {
-		if (rpcMethod) {
-			metrics.count('fee_payer_sponsorship_response_count', 1, {
-				rpc_method: rpcMethod,
-				keyed_route: keyedRoute,
-				status: 'error',
-			})
-		}
-		throw error
-	}
-}
-
-async function sponsorshipResponseStatus(
-	response: Response,
-): Promise<'success' | 'error'> {
-	if (!response.ok) return 'error'
-
-	try {
-		const body: unknown = await response.clone().json()
-		if (Array.isArray(body))
-			return body.some(hasJsonRpcError) ? 'error' : 'success'
-		return hasJsonRpcError(body) ? 'error' : 'success'
-	} catch {
-		return 'success'
-	}
-}
-
-function hasJsonRpcError(value: unknown): boolean {
-	if (!value || typeof value !== 'object') return false
-	if (!('error' in value)) return false
-	return (value as { error?: unknown }).error != null
+	return relayHandler.fetch(target)
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
 app.all(
 	'/:key{tp_.+}',
+	rpcMetrics({ defaultChainId: DEFAULT_RELAY_CHAIN_ID, keyed: true }),
 	apiKeyMiddleware,
 	rateLimitMiddleware({ keyed: true }),
 	feePayerHandler,
 )
 
 // Open path: https://sponsor.tempo.xyz/
-app.all('/', rateLimitMiddleware({ keyed: false }), feePayerHandler)
+app.all(
+	'/',
+	rpcMetrics({ defaultChainId: DEFAULT_RELAY_CHAIN_ID, keyed: false }),
+	rateLimitMiddleware({ keyed: false }),
+	feePayerHandler,
+)
 
 export default app

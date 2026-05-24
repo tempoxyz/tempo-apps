@@ -53,8 +53,6 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 			const request = RpcRequest.from(rawBody.data)
 			c.set('rpcMethod', request.method)
-			const requestChainId = resolveRequestChainId(request.params?.[0])
-			if (requestChainId !== undefined) c.set('rpcChainId', requestChainId)
 			const serialized = request.params?.[0]
 
 			if (
@@ -67,13 +65,9 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 					from?: string
 					to?: string
 					calls?: Array<{ to?: string }>
-					chainId?: unknown
 					gas?: bigint
 					maxFeePerGas?: bigint
 				}
-				const transactionChainId = resolveChainId(transaction.chainId)
-				if (transactionChainId !== undefined)
-					c.set('rpcChainId', transactionChainId)
 				const from = transaction.from
 				// Tempo envelopes nest the destination under `calls[0].to`; legacy
 				// envelopes use top-level `to`.
@@ -139,20 +133,4 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 		await next()
 	}
-}
-
-function resolveRequestChainId(params: unknown): number | undefined {
-	if (!params || typeof params !== 'object') return undefined
-	return resolveChainId((params as { chainId?: unknown }).chainId)
-}
-
-function resolveChainId(value: unknown): number | undefined {
-	if (typeof value === 'number') return value
-	if (typeof value === 'bigint') return Number(value)
-	if (typeof value === 'string') {
-		if (Hex.validate(value)) return Hex.toNumber(value)
-		const n = Number(value)
-		if (Number.isFinite(n)) return n
-	}
-	return undefined
 }
