@@ -20,6 +20,6 @@ export type MetricRegistry = {
 	fee_payer_sponsorship_response_count: {
 		rpc_method: string
 		keyed_route: string
-		status: number
+		status: string
 	}
 }

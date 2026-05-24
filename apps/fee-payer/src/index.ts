@@ -11,7 +11,6 @@ import { tempo, tempoDevnet, tempoModerato } from 'viem/chains'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
-import { tempoChain } from './lib/chain.js'
 import { metrics } from './lib/observability/metrics.js'
 import { httpMetrics } from './lib/observability/middleware.js'
 import {
@@ -98,9 +97,12 @@ app.get(
 const sponsorAccount = privateKeyToAccount(
 	env.SPONSOR_PRIVATE_KEY as `0x${string}`,
 )
+const relayChains = [tempo, tempoModerato, tempoDevnet] as const
+const DEFAULT_RELAY_CHAIN_ID = relayChains[0].id
 
 const relayHandler = Handler.relay({
 	cors: false,
+	chains: relayChains,
 	features: 'all',
 	feePayer: {
 		account: sponsorAccount,
@@ -120,6 +122,8 @@ async function feePayerHandler(c: Context) {
 	const apiKeyRecord = c.get('apiKeyRecord')
 	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
+	const rpcChainId =
+		(c.get('rpcChainId') as number | undefined) ?? DEFAULT_RELAY_CHAIN_ID
 	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
 	const keyedRoute = String(Boolean(apiKey))
 
@@ -127,7 +131,7 @@ async function feePayerHandler(c: Context) {
 		metrics.count('fee_payer_rpc_request_count', 1, {
 			rpc_method: rpcMethod,
 			keyed_route: keyedRoute,
-			chain_id: String(tempoChain.id),
+			chain_id: String(rpcChainId),
 		})
 		c.executionCtx.waitUntil(
 			captureEvent({
@@ -158,7 +162,7 @@ async function feePayerHandler(c: Context) {
 			metrics.count('fee_payer_sponsorship_response_count', 1, {
 				rpc_method: rpcMethod,
 				keyed_route: keyedRoute,
-				status: response.status,
+				status: await sponsorshipResponseStatus(response),
 			})
 		}
 		return response
@@ -167,11 +171,32 @@ async function feePayerHandler(c: Context) {
 			metrics.count('fee_payer_sponsorship_response_count', 1, {
 				rpc_method: rpcMethod,
 				keyed_route: keyedRoute,
-				status: 500,
+				status: 'error',
 			})
 		}
 		throw error
 	}
+}
+
+async function sponsorshipResponseStatus(
+	response: Response,
+): Promise<'success' | 'error'> {
+	if (!response.ok) return 'error'
+
+	try {
+		const body: unknown = await response.clone().json()
+		if (Array.isArray(body))
+			return body.some(hasJsonRpcError) ? 'error' : 'success'
+		return hasJsonRpcError(body) ? 'error' : 'success'
+	} catch {
+		return 'success'
+	}
+}
+
+function hasJsonRpcError(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false
+	if (!('error' in value)) return false
+	return (value as { error?: unknown }).error != null
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
