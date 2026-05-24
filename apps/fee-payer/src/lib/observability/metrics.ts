@@ -38,11 +38,9 @@ function createFeePayerMetrics(): FeePayerMetrics {
 	return {
 		count(name, value, tags) {
 			instance.count(name, value, tags)
-			instance.flush()
 		},
 		histogram(name, value, tags) {
 			instance.histogram(name, value, tags)
-			instance.flush()
 		},
 		flush() {
 			instance.flush()

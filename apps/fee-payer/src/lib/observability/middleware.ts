@@ -18,8 +18,11 @@ export function httpMetrics(): MiddlewareHandler {
 				method: c.req.method,
 				route: resolveRoute(c),
 			}
-			const errorType = thrown ? errorTypeOf(thrown) : undefined
-			const status = c.res?.status ?? statusFromError(thrown)
+			const error = thrown ?? c.error
+			const hasError = error !== undefined
+			const status = hasError
+				? statusFromError(error, c.res.status)
+				: c.res.status
 
 			metrics.count('http_request_count', 1, tags)
 			metrics.histogram(
@@ -30,7 +33,7 @@ export function httpMetrics(): MiddlewareHandler {
 			metrics.count('http_response_count', 1, {
 				...tags,
 				status,
-				...(errorType ? { error_type: errorType } : {}),
+				...(hasError ? { error_type: errorTypeOf(error) } : {}),
 			})
 			metrics.flush()
 		}
@@ -40,11 +43,13 @@ export function httpMetrics(): MiddlewareHandler {
 function resolveRoute(c: Context): string {
 	const routePath = c.req.routePath
 	if (routePath && routePath !== '/*') return routePath
+	if (routePath === '/*') return 'unmatched'
 	return new URL(c.req.url).pathname
 }
 
-function statusFromError(error: unknown): number {
+function statusFromError(error: unknown, responseStatus: number): number {
 	if (error instanceof HTTPException) return error.status
+	if (responseStatus >= 400) return responseStatus
 	return 500
 }
 
