@@ -1,4 +1,3 @@
-import { env } from 'cloudflare:workers'
 import { createMetrics } from 'cloudflare-worker-metrics'
 import type { MetricRegistry } from './metric-registry.js'
 
@@ -11,10 +10,6 @@ const noop: FeePayerMetrics = {
 	count() {},
 	histogram() {},
 	flush() {},
-}
-
-function getFeePayerEnvironment(): 'mainnet' | 'testnet' {
-	return env.TEMPO_ENV === 'mainnet' ? 'mainnet' : 'testnet'
 }
 
 function metricsEnabled(): boolean {
@@ -31,7 +26,6 @@ function createFeePayerMetrics(): FeePayerMetrics {
 	const instance = createMetrics<MetricRegistry>({
 		globalTags: {
 			build_version: getBuildVersion(),
-			fee_payer_env: getFeePayerEnvironment(),
 		},
 	})
 
