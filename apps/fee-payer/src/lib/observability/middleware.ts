@@ -5,6 +5,7 @@ import { cloneRawRequest } from 'hono/request'
 import { Hex, RpcRequest } from 'ox'
 import { Transaction } from 'viem/tempo'
 import * as z from 'zod/mini'
+import { tempoChain } from '../chain.js'
 import { metrics } from './metrics.js'
 
 export function httpMetrics(): MiddlewareHandler {
@@ -44,17 +45,13 @@ export function httpMetrics(): MiddlewareHandler {
 	})
 }
 
-export function rpcMetrics(opts: {
-	defaultChainId: number
-	keyed: boolean
-}): MiddlewareHandler {
+export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 	return createMiddleware(async (c, next) => {
-		const rpc = await resolveRpcContext(c, opts.defaultChainId)
+		const rpc = await resolveRpcContext(c)
 		let thrown: unknown
 
 		if (rpc) {
 			c.set('rpcMethod', rpc.method)
-			c.set('rpcChainId', rpc.chainId)
 			metrics.count('fee_payer_rpc_request_count', 1, {
 				rpc_method: rpc.method,
 				keyed_route: String(opts.keyed),
@@ -85,8 +82,12 @@ export function rpcMetrics(opts: {
 function resolveRoute(c: Context): string {
 	const routePath = c.req.routePath
 	if (routePath && routePath !== '/*') return routePath
+	const path = new URL(c.req.url).pathname
+	if (path === '/') return '/'
+	if (path.startsWith('/tp_') && path.length > '/tp_'.length)
+		return '/:key{tp_.+}'
 	if (routePath === '/*') return 'unmatched'
-	return new URL(c.req.url).pathname
+	return path
 }
 
 function statusFromError(error: unknown, responseStatus: number): number {
@@ -108,7 +109,6 @@ type RpcMetricsContext = {
 
 async function resolveRpcContext(
 	c: Context,
-	defaultChainId: number,
 ): Promise<RpcMetricsContext | undefined> {
 	try {
 		const clonedRequest = await cloneRawRequest(c.req)
@@ -125,7 +125,7 @@ async function resolveRpcContext(
 
 		const request = RpcRequest.from(rawBody.data)
 		return {
-			chainId: resolveRpcChainId(request.params?.[0]) ?? defaultChainId,
+			chainId: resolveRpcChainId(request.params?.[0]) ?? tempoChain.id,
 			method: request.method,
 		}
 	} catch {
