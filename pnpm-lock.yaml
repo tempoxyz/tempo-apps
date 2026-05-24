@@ -138,6 +138,9 @@ catalogs:
     animejs:
       specifier: ^4.3.6
       version: 4.3.6
+    cloudflare-worker-metrics:
+      specifier: ^1.4.0
+      version: 1.4.0
     cva:
       specifier: ^1.0.0-beta.4
       version: 1.0.0-beta.4
@@ -579,6 +582,9 @@ importers:
       accounts:
         specifier: 'catalog:'
         version: 0.12.1(@types/react@19.2.14)(@wagmi/core@3.4.8)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.50.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.6.9)
+      cloudflare-worker-metrics:
+        specifier: 'catalog:'
+        version: 1.4.0
       hono:
         specifier: 'catalog:'
         version: 4.12.14
@@ -3965,6 +3971,10 @@ packages:
   clone@1.0.4:
     resolution: {integrity: sha512-JQHZ2QMW6l3aH/j6xCqQThY/9OH4D/9ls34cgkUBiEeocRTU04tHfKPBsUK1PqZCUQM7GiA0IIXJSuXHI64Kbg==}
     engines: {node: '>=0.8'}
+
+  cloudflare-worker-metrics@1.4.0:
+    resolution: {integrity: sha512-3QQucTpcWp98xlfImAcKiaoRCGUb4v3a7ZVWwJrqgRFWVbTinngfVCjMK9OlYLvls7FKcXNUOKKqC2qHrimUHg==}
+    engines: {node: '>=18'}
 
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
@@ -9148,6 +9158,8 @@ snapshots:
 
   clone@1.0.4:
     optional: true
+
+  cloudflare-worker-metrics@1.4.0: {}
 
   clsx@2.1.1: {}
 

@@ -11,6 +11,9 @@ import { tempo, tempoDevnet, tempoModerato } from 'viem/chains'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
+import { tempoChain } from './lib/chain.js'
+import { metrics } from './lib/observability/metrics.js'
+import { httpMetrics } from './lib/observability/middleware.js'
 import {
 	FeePayerEvents,
 	captureEvent,
@@ -29,6 +32,8 @@ app.onError((error, c) => {
 	console.error('Unexpected error:', error)
 	return c.text('Internal Server Error', 500)
 })
+
+app.use('*', httpMetrics())
 
 app.use(
 	'*',
@@ -117,8 +122,14 @@ async function feePayerHandler(c: Context) {
 	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
 	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
+	const keyedRoute = String(Boolean(apiKey))
 
 	if (rpcMethod) {
+		metrics.count('fee_payer_rpc_request_count', 1, {
+			rpc_method: rpcMethod,
+			keyed_route: keyedRoute,
+			chain_id: String(tempoChain.id),
+		})
 		c.executionCtx.waitUntil(
 			captureEvent({
 				distinctId: apiKeyLabel ?? requestContext.origin ?? 'unknown',
@@ -142,7 +153,27 @@ async function feePayerHandler(c: Context) {
 	const url = new URL(raw.url)
 	const target =
 		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
-	return relayHandler.fetch(target)
+
+	try {
+		const response = await relayHandler.fetch(target)
+		if (rpcMethod) {
+			metrics.count('fee_payer_sponsorship_response_count', 1, {
+				rpc_method: rpcMethod,
+				keyed_route: keyedRoute,
+				status: response.status,
+			})
+		}
+		return response
+	} catch (error) {
+		if (rpcMethod) {
+			metrics.count('fee_payer_sponsorship_response_count', 1, {
+				rpc_method: rpcMethod,
+				keyed_route: keyedRoute,
+				status: 500,
+			})
+		}
+		throw error
+	}
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
