@@ -69,6 +69,7 @@ export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 				metrics.count('fee_payer_sponsorship_response_count', 1, {
 					rpc_method: rpc.method,
 					keyed_route: String(opts.keyed),
+					chain_id: String(rpc.chainId),
 					status:
 						thrown || c.error
 							? 'error'
