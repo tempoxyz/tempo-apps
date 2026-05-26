@@ -29,4 +29,4 @@ Environment variables:
 | Method | Route | Params |
 |--------|-------|--------|
 | GET | `/usage` | - optional: `blockTimestampFrom` (epoch seconds)<br>- optional: `blockTimestampTo` (epoch seconds) |
-| POST | `*` | JSON-RPC request body for fee sponsorship<br>Supported methods: `eth_signTransaction`, `eth_signRawTransaction`, `eth_sendRawTransaction`, `eth_sendRawTransactionSync` |
+| POST | `*` | JSON-RPC request body for fee sponsorship<br>Supported sponsorship methods: `eth_signRawTransaction`, `eth_sendRawTransactionSync` (other JSON-RPC methods may be proxied, e.g. `eth_chainId`) |
