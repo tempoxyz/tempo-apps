@@ -70,7 +70,6 @@ jobs:
             env: moderato
           #### other (single-env-apps)
           - app: og
-          - app: perf
           - app: reth-snapshots-viewer
           - app: tempo-snapshots-viewer
           - app: tokenlist
