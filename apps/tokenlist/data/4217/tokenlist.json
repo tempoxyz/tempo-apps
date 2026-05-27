@@ -355,6 +355,19 @@
         "coingeckoId": "usd1-wlfi"
       },
       "dateAdded": "2026-05-12T15:17:32Z"
+    },
+    {
+      "name": "TempoSwap Token",
+      "symbol": "TST",
+      "decimals": 18,
+      "chainId": 4217,
+      "address": "0xe11a6D9FeD6E8D6DE383E7554059EEdD513eBFaf",
+      "logoURI": "https://temposwap.app/tokens/tst.png",
+      "extensions": {
+        "chain": "tempo",
+        "label": "TST"
+      },
+      "dateAdded": "2026-05-27T08:00:00Z"
     }
   ]
 }
