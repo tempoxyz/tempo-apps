@@ -126,6 +126,8 @@ html,
 @layer base {
 	html {
 		color-scheme: dark;
+		overflow-y: scroll;
+		scrollbar-gutter: stable;
 	}
 }
 
