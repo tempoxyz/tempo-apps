@@ -132,6 +132,12 @@ function formatDuration(startedAt: string, finishedAt: string): string {
 	return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
 }
 
+function targetTpsLabel(run: BenchRun): string | undefined {
+	const targetTps = Number(run.config.target_tps ?? run.config.tps)
+	if (!Number.isFinite(targetTps) || targetTps <= 0) return undefined
+	return `Target TPS: ${formatTps(targetTps)}`
+}
+
 export const Route = createFileRoute('/benchmark/$id')({
 	component: RunDetailPage,
 	loader: async ({ params, context }) => {
@@ -408,6 +414,7 @@ export function BenchmarkRunDetail(
 	const ingressTpsPoints = counterRate(txgenCounterSeries.sent)
 	const settledTpsPoints = settledTps(blockRows)
 	const ingressEgressXMax = sharedXMax([ingressTpsPoints, settledTpsPoints])
+	const targetTps = targetTpsLabel(run)
 
 	return (
 		<div>
@@ -459,6 +466,7 @@ export function BenchmarkRunDetail(
 						<p className="mt-2 text-[14px] text-secondary">
 							{formatDate(run.startedAt)} · {run.blockCount} blocks ·{' '}
 							{formatDuration(run.startedAt, run.finishedAt)}
+							{targetTps && ` · ${targetTps}`}
 							{scenario && ` · ${scenario.workload}`}
 						</p>
 					</div>
