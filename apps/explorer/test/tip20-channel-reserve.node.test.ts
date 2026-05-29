@@ -1,14 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { decodeFunctionData, encodeFunctionData, getAbiItem } from 'viem'
-import { tip20ChannelEscrowAbi, tip20ChannelEscrowAddress } from '#lib/abis'
+import {
+	Abis,
+	tip20ChannelReserveAbi,
+	tip20ChannelReserveAddress,
+} from '#lib/abis'
 import { autoloadAbi, getContractInfo } from '#lib/domain/contracts'
 
-describe('TIP-20 channel escrow ABI', () => {
-	it('registers the TIP-1034 precompile address for ABI rendering', () => {
-		const info = getContractInfo(tip20ChannelEscrowAddress)
+describe('TIP-20 channel reserve ABI', () => {
+	it('uses the Viem TIP-20 channel reserve ABI', () => {
+		expect(tip20ChannelReserveAbi).toBe(Abis.tip20ChannelReserve)
+		expect('tip20ChannelEscrow' in Abis).toBe(false)
+	})
 
-		expect(info?.name).toBe('TIP-20 Channel Escrow')
-		expect(info?.abi).toBe(tip20ChannelEscrowAbi)
+	it('registers the TIP-1034 precompile address for ABI rendering', () => {
+		const info = getContractInfo(tip20ChannelReserveAddress)
+
+		expect(info?.name).toBe('TIP-20 Channel Reserve')
+		expect(info?.abi).toBe(tip20ChannelReserveAbi)
 		expect(
 			getAbiItem({
 				abi: info?.abi ?? [],
@@ -29,13 +38,13 @@ describe('TIP-20 channel escrow ABI', () => {
 		} as const
 
 		const data = encodeFunctionData({
-			abi: tip20ChannelEscrowAbi,
+			abi: tip20ChannelReserveAbi,
 			functionName: 'close',
 			args: [descriptor, 100n, 90n, '0x1234'],
 		})
 
 		const decoded = decodeFunctionData({
-			abi: tip20ChannelEscrowAbi,
+			abi: tip20ChannelReserveAbi,
 			data,
 		})
 
@@ -49,8 +58,8 @@ describe('TIP-20 channel escrow ABI', () => {
 	})
 
 	it('returns known registry ABIs from autoload before network lookup', async () => {
-		await expect(autoloadAbi(tip20ChannelEscrowAddress)).resolves.toBe(
-			tip20ChannelEscrowAbi,
+		await expect(autoloadAbi(tip20ChannelReserveAddress)).resolves.toBe(
+			tip20ChannelReserveAbi,
 		)
 	})
 })

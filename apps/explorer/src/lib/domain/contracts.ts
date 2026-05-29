@@ -12,8 +12,8 @@ import {
 	Abis,
 	stablecoinDexAbi,
 	streamChannelAbi,
-	tip20ChannelEscrowAbi,
-	tip20ChannelEscrowAddress,
+	tip20ChannelReserveAbi,
+	tip20ChannelReserveAddress,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -315,15 +315,15 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		tip20ChannelEscrowAddress,
+		tip20ChannelReserveAddress,
 		{
-			name: 'TIP-20 Channel Escrow',
+			name: 'TIP-20 Channel Reserve',
 			code: '0xef',
-			description: 'Native TIP-20 payment channel escrow precompile',
-			abi: tip20ChannelEscrowAbi,
+			description: 'Native TIP-20 payment channel reserve precompile',
+			abi: tip20ChannelReserveAbi,
 			category: 'system',
 			docsUrl: 'https://tips.sh/1034-1',
-			address: tip20ChannelEscrowAddress,
+			address: tip20ChannelReserveAddress,
 		},
 	],
 	[
