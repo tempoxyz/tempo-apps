@@ -104,6 +104,7 @@ export const metadataMap = new Map([
 		{
 			currency: 'USD',
 			decimals: 2,
+			logoURI: '',
 			symbol: 'TEST2',
 			name: 'Test Token 2',
 			totalSupply: 1000000n,
@@ -114,6 +115,7 @@ export const metadataMap = new Map([
 		{
 			currency: 'USD',
 			decimals: 6,
+			logoURI: '',
 			symbol: 'USDC',
 			name: 'USD Coin',
 			totalSupply: 1000000000000n,
@@ -124,6 +126,7 @@ export const metadataMap = new Map([
 		{
 			currency: 'USD',
 			decimals: 6,
+			logoURI: '',
 			symbol: 'LINK',
 			name: 'Chainlink',
 			totalSupply: 1000000000000n,
@@ -134,6 +137,7 @@ export const metadataMap = new Map([
 		{
 			currency: 'USD',
 			decimals: 6,
+			logoURI: '',
 			symbol: 'DAI',
 			name: 'Dai Stablecoin',
 			totalSupply: 1000000000000n,
@@ -144,6 +148,7 @@ export const metadataMap = new Map([
 		{
 			currency: 'USD',
 			decimals: 6,
+			logoURI: '',
 			symbol: 'USDT',
 			name: 'Tether USD',
 			totalSupply: 1000000000000n,
