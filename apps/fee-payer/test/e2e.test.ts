@@ -175,11 +175,13 @@ describe('fee-payer integration', () => {
 			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
-			const sponsorshipRequests = feePayerRequests.filter(
-				(request) => request.method !== 'eth_fillTransaction',
+			const sponsorshipRequests = feePayerRequests.filter((request) =>
+				['eth_fillTransaction', 'eth_signRawTransaction'].includes(
+					request.method,
+				),
 			)
 			expect(sponsorshipRequests).toHaveLength(1)
-			expect(sponsorshipRequests[0].method).toBe('eth_signRawTransaction')
+			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 
@@ -216,11 +218,13 @@ describe('fee-payer integration', () => {
 			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
-			const sponsorshipRequests = feePayerRequests.filter(
-				(request) => request.method !== 'eth_fillTransaction',
+			const sponsorshipRequests = feePayerRequests.filter((request) =>
+				['eth_fillTransaction', 'eth_sendRawTransactionSync'].includes(
+					request.method,
+				),
 			)
 			expect(sponsorshipRequests).toHaveLength(1)
-			expect(sponsorshipRequests[0].method).toBe('eth_sendRawTransactionSync')
+			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 	})
