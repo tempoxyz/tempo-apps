@@ -280,7 +280,7 @@ async function readPage(
 				}
 			: { path },
 		githubToken,
-	)
+	).catch(() => null)
 	const text = JSON.stringify(result, null, 2)
 	if (extractResults(result, source).length > 0 || text.length > 50) return text
 
@@ -381,21 +381,28 @@ async function searchMarkdownIndex(
 
 	if (!haystack) return []
 
-	const sections = haystack
-		.split(/\n(?=#{1,3}\s)/g)
-		.map((section) => section.trim())
-		.filter(Boolean)
+	const entries = markdownEntries(source, haystack)
+	const searchableEntries =
+		entries.length > 0
+			? entries
+			: haystack
+					.split(/\n(?=#{1,3}\s)/g)
+					.map((section) => ({
+						title: section.match(/^#{1,3}\s+(.+)$/m)?.[1] ?? source.name,
+						path: undefined,
+						url: section.match(/https?:\/\/[^\s)]+/)?.[0],
+						text: section.trim(),
+					}))
+					.filter((entry) => entry.text.length > 0)
 
-	return sections
+	return searchableEntries
 		.map((section) => {
-			const lower = section.toLowerCase()
+			const lower = section.text.toLowerCase()
 			const score = queryTerms.reduce(
 				(total, term) => total + (lower.includes(term) ? 1 : 0),
 				0,
 			)
-			const title = section.match(/^#{1,3}\s+(.+)$/m)?.[1] ?? source.name
-			const url = section.match(/https?:\/\/[^\s)]+/)?.[0]
-			return { section, score, title, url }
+			return { ...section, score }
 		})
 		.filter((match) => match.score > 0)
 		.sort((left, right) => right.score - left.score)
@@ -404,8 +411,32 @@ async function searchMarkdownIndex(
 			source: source.id,
 			title: match.title,
 			url: match.url,
-			snippet: match.section.slice(0, 1_000),
+			path: match.path,
+			snippet: match.text.slice(0, 1_000),
 		}))
+}
+
+function markdownEntries(
+	source: McpSource,
+	markdown: string,
+): Array<{ title: string; path?: string; url?: string; text: string }> {
+	const origin = new URL(source.url).origin
+	return markdown
+		.split('\n')
+		.map((line) => {
+			const match = line.match(/^\s*-\s+\[([^\]]+)\]\(([^)]+)\)(?::\s*(.*))?/)
+			if (!match) return null
+			const [, title = source.name, href = '', description = ''] = match
+			const url = href.startsWith('http') ? href : `${origin}${href}`
+			const path = href.startsWith('http') ? new URL(href).pathname : href
+			return {
+				title,
+				path,
+				url,
+				text: [title, path, description].filter(Boolean).join('\n'),
+			}
+		})
+		.filter((entry): entry is NonNullable<typeof entry> => entry !== null)
 }
 
 async function readMarkdownPage(

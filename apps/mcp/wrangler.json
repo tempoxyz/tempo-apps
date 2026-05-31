@@ -8,7 +8,7 @@
 	"preview_urls": true,
 	"keep_vars": true,
 	"vars": {
-		"TEMPO_MCP_SOURCES": "[{\"id\":\"tempo-docs\",\"name\":\"Tempo Docs\",\"url\":\"https://docs.tempo.xyz/api/mcp\",\"description\":\"Tempo protocol, app integration, MPP, accounts, fee sponsorship, and source navigation\"},{\"id\":\"viem\",\"name\":\"Viem\",\"url\":\"https://viem.sh/api/mcp\",\"description\":\"Viem TypeScript Ethereum interface docs and examples\"}]"
+		"TEMPO_MCP_SOURCES": "[{\"id\":\"tempo-docs\",\"name\":\"Tempo Docs\",\"url\":\"https://docs.tempo.xyz/api/mcp\",\"description\":\"Tempo protocol, app integration, MPP, accounts, fee sponsorship, and source navigation\"},{\"id\":\"viem\",\"name\":\"Viem\",\"url\":\"https://viem.sh/api/mcp\",\"description\":\"Viem TypeScript Ethereum interface docs and examples\"},{\"id\":\"wagmi\",\"name\":\"Wagmi\",\"url\":\"https://docs.wagmi.com/api/mcp\",\"description\":\"Wagmi React and Core docs for wallet connectors, config, hooks, and examples\"},{\"id\":\"alloy\",\"name\":\"Alloy\",\"url\":\"https://alloy.rs/api/mcp\",\"description\":\"Alloy Rust Ethereum toolkit docs and examples\"},{\"id\":\"foundry\",\"name\":\"Foundry\",\"url\":\"https://www.getfoundry.sh/api/mcp\",\"description\":\"Foundry, Forge, Cast, Anvil, Chisel, and Solidity testing docs\"},{\"id\":\"reth\",\"name\":\"Reth\",\"url\":\"https://reth.rs/api/mcp\",\"description\":\"Reth node, RPC, SDK, and operational docs\"}]"
 	},
 	"observability": {
 		"enabled": true,
