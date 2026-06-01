@@ -25,9 +25,8 @@
 	"kv_namespaces": [
 		{
 			// Stores per-source ETag and last-synced timestamp.
-			// Create with: wrangler kv namespace create ETAG_CACHE
 			"binding": "ETAG_CACHE",
-			"id": "REPLACE_WITH_KV_NAMESPACE_ID"
+			"id": "09bb5cc86f9e48b58ab6593c395f47da"
 		}
 	],
 	"vars": {
