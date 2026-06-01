@@ -299,24 +299,19 @@ export function Receipt(props: Receipt.Props) {
 														</span>
 													)}
 												</span>
-												<div className="flex items-center gap-1">
-													{isSponsored && item.payer && (
+												<div className="flex items-center gap-2">
+													{isSponsored ? (
 														<>
-															<Link
-																to="/address/$address"
-																params={{ address: item.payer }}
-																className="text-accent press-down"
-															>
-																<Midcut
-																	value={item.payer}
-																	prefix="0x"
-																	min={4}
-																/>
-															</Link>
-															<span className="text-tertiary">paid</span>
+															<span className="text-tertiary line-through">
+																{formattedAmount}
+															</span>
+															<span className="text-base-content-positive">
+																Sponsored
+															</span>
 														</>
+													) : (
+														<span>{formattedAmount}</span>
 													)}
-													<span>{formattedAmount}</span>
 												</div>
 											</div>
 										)

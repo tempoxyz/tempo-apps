@@ -596,7 +596,7 @@ namespace TextRenderer {
 					format: 'short',
 				})
 				lines.push(leftRight(label.toUpperCase(), amount))
-				if (item.payer) lines.push(`${indent}Paid by: ${item.payer}`)
+				if (item.payer) lines.push(`${indent}Sponsored fee`)
 			}
 
 			lines.push('')
