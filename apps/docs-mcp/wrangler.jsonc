@@ -37,6 +37,17 @@
 	"vars": {
 		// AI Search instance id within the namespace. Must already exist and
 		// be created after 2026-04-16 to have built-in storage support.
-		"AI_SEARCH_INSTANCE_ID": "tempo-global"
-	}
+		"AI_SEARCH_INSTANCE_ID": "tempo-global",
+		// Public MCP endpoint URL for the AI Search instance above. We
+		// transparently proxy mcp.tempo.xyz -> this upstream so clients
+		// connect to a stable branded URL instead of the opaque hostname.
+		"AI_SEARCH_MCP_URL": "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp"
+	},
+	"routes": [
+		{
+			"pattern": "mcp.tempo.xyz",
+			"zone_name": "tempo.xyz",
+			"custom_domain": true
+		}
+	]
 }
