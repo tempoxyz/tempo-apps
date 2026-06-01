@@ -17,4 +17,5 @@ export const SOURCES: readonly Source[] = [
 	{ id: 'viem', base: 'https://viem.sh' },
 	{ id: 'wagmi', base: 'https://wagmi.sh' },
 	{ id: 'vocs', base: 'https://vocs.sh' },
+	{ id: 'mpp', base: 'https://mpp.dev' },
 ]

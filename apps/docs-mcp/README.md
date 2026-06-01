@@ -1,7 +1,7 @@
 # docs-mcp
 
-Resolver Worker that ingests external doc sites (viem, wagmi, vocs) into the
-shared **Cloudflare AI Search** instance `tempo-global`. The AI Search
+Resolver Worker that ingests external doc sites (viem, wagmi, vocs, mpp) into
+the shared **Cloudflare AI Search** instance `tempo-global`. The AI Search
 instance owns the docs.tempo.xyz crawl directly; this Worker handles the
 non-owned sources by uploading their canonical Markdown pages into the
 instance's **built-in storage**, tagged with a `source` metadata field for
