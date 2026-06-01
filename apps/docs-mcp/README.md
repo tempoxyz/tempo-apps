@@ -7,9 +7,15 @@ non-owned sources by uploading their canonical Markdown pages into the
 instance's **built-in storage**, tagged with a `source` metadata field for
 filtering at query time.
 
-The MCP endpoint is exposed by AI Search itself
-(`https://<instance-id>.search.ai.cloudflare.com/mcp`) — this Worker is the
-ingest plane, not the query plane.
+The MCP endpoint is exposed by AI Search itself. This Worker also serves as
+a thin transparent proxy on `mcp.tempo.xyz` → the AI Search MCP upstream, so
+clients connect to a stable branded URL instead of the opaque
+`<instance-id>.search.ai.cloudflare.com` hostname.
+
+```
+MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ AI Search MCP (proxied 1:1)
+Cron ──▶ docs-mcp Worker ──▶ AI Search items.upload() (ingest plane)
+```
 
 ## How it works
 
@@ -20,7 +26,7 @@ ingest plane, not the query plane.
                                 2. parse → page URLs
                                 3. for each page: GET <page>.md with
                                    If-None-Match (per-page ETag)
-                                4. 304 → skip; 200 → uploadAndPoll,
+                                4. 304 → skip; 200 → items.upload(),
                                    record { item id, etag } in KV
                                 5. diff against last sync, delete items
                                    that fell out of llms.txt
@@ -139,7 +145,7 @@ the auto-crawled `docs.tempo.xyz` entries.
 Query the MCP endpoint to confirm cross-source ranking works:
 
 ```bash
-curl https://<INSTANCE_ID>.search.ai.cloudflare.com/mcp \
+curl https://mcp.tempo.xyz/ \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{
@@ -148,11 +154,11 @@ curl https://<INSTANCE_ID>.search.ai.cloudflare.com/mcp \
   }'
 ```
 
+Streamable HTTP MCP responses are server-sent events; strip the wrapper with
+`sed -n 's/^data: //p' | jq` if you want to pipe them into `jq`.
+
 ## Known limitations
 
-- **`uploadAndPoll` is sequential within a batch.** Page fetches are
-  concurrent (8 at a time), but indexing happens per page. For sources with
-  hundreds of changed pages, a forced sync may take several seconds.
 - **No backfill for orphaned items.** If KV is wiped, the next sync re-uploads
   every page but loses track of items that AI Search still has from previous
   runs. Recovery: re-run a forced sync, then prune from the AI Search dashboard
