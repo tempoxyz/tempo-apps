@@ -1,49 +1,30 @@
 /**
- * Parse a Vocs / vitepress-plugin-llms `llms.txt` file into a list of
- * absolute page URLs scoped to a base origin.
+ * Parse an `llms.txt` (Vocs or vitepress-plugin-llms) into a list of absolute
+ * same-origin page URLs.
  *
- * llms.txt format example:
- *   # Tempo Docs
- *   > Documentation for Tempo
- *
- *   ## Quickstart
- *   - [Integrate Tempo](https://docs.tempo.xyz/quickstart/integrate-tempo): one-liner
- *   - [Faucet](/quickstart/faucet): description
- *
- * Links may be absolute (https://...) or root-relative (/path). We accept
- * both, normalize to absolute URLs, and drop any link that points off-origin.
+ * Links may be absolute (`https://...`) or root-relative (`/path`). Off-origin
+ * links and fragments are dropped.
  */
 export function parseLlmsTxt(body: string, base: string): string[] {
-	const baseOrigin = new URL(base).origin
+	const origin = new URL(base).origin
 	const urls = new Set<string>()
-
-	for (const match of body.matchAll(/\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g)) {
-		const raw = match[1]
-		if (!raw) continue
-		let url: URL
+	for (const m of body.matchAll(/\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g)) {
 		try {
-			url = new URL(raw, baseOrigin)
+			const u = new URL(m[1]!, origin)
+			if (u.origin !== origin) continue
+			u.hash = ''
+			u.search = ''
+			urls.add(u.toString())
 		} catch {
-			continue
+			// skip invalid URLs
 		}
-		if (url.origin !== baseOrigin) continue
-		// Drop fragments and queries — we want the canonical page.
-		url.hash = ''
-		url.search = ''
-		urls.add(url.toString())
 	}
-
 	return [...urls]
 }
 
-/**
- * Convert a page URL like `https://viem.sh/docs/getting-started` to its
- * raw-Markdown variant `https://viem.sh/docs/getting-started.md`. Vocs and
- * vitepress-plugin-llms both serve this for every page.
- */
+/** `https://viem.sh/docs/foo` → `https://viem.sh/docs/foo.md`. */
 export function toMarkdownUrl(pageUrl: string): string {
 	const u = new URL(pageUrl)
-	// Strip trailing slash, then append .md
 	u.pathname = `${u.pathname.replace(/\/$/, '')}.md`
 	return u.toString()
 }

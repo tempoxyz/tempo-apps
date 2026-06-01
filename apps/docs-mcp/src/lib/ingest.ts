@@ -1,78 +1,53 @@
 import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
 import type { Source } from './sources.js'
 
-export type SyncReport = {
-	source: string
-	status: 'unchanged' | 'synced' | 'error'
-	pages_indexed?: number
-	pages_failed?: number
-	error?: string
-}
+export type SyncReport =
+	| { source: string; status: 'unchanged' }
+	| { source: string; status: 'synced'; pages: number }
+	| { source: string; status: 'error'; error: string }
 
-/** Cap on parallel page fetches per source to stay within fetch subrequest budgets. */
+/** Concurrent page fetches per source. Tuned to stay well under Workers' 50-subrequest budget. */
 const CONCURRENCY = 8
-/** Skip any page Markdown larger than ~3.5MB — AI Search's per-file cap is 4MB. */
+/** Skip pages larger than AI Search's 4MB per-file cap (with margin). */
 const MAX_PAGE_BYTES = 3_500_000
 
 export async function syncSource(args: {
 	source: Source
-	aiSearch: AiSearchNamespace
-	instanceId: string
+	instance: AiSearchInstance
 	etagCache: KVNamespace
 }): Promise<SyncReport> {
-	const { source, aiSearch, instanceId, etagCache } = args
+	const { source, instance, etagCache } = args
 	const etagKey = `etag:${source.id}`
 
 	try {
-		const prevEtag = await etagCache.get(etagKey)
-		const indexUrl = `${source.base}/llms.txt`
-		const indexRes = await fetch(indexUrl, {
-			headers: prevEtag ? { 'If-None-Match': prevEtag } : {},
+		const prev = await etagCache.get(etagKey)
+		const res = await fetch(`${source.base}/llms.txt`, {
+			headers: prev ? { 'If-None-Match': prev } : {},
 			cf: { cacheTtl: 60 },
 		})
-
-		if (indexRes.status === 304) {
-			return { source: source.id, status: 'unchanged' }
-		}
-		if (!indexRes.ok) {
+		if (res.status === 304) return { source: source.id, status: 'unchanged' }
+		if (!res.ok) {
 			return {
 				source: source.id,
 				status: 'error',
-				error: `index fetch ${indexRes.status}`,
+				error: `index ${res.status}`,
 			}
 		}
 
-		const newEtag = indexRes.headers.get('etag') ?? ''
-		const body = await indexRes.text()
-		const pageUrls = parseLlmsTxt(body, source.base)
-
-		const instance = aiSearch.get(instanceId)
-		let indexed = 0
-		let failed = 0
-
-		// Simple semaphore via batches.
+		const pageUrls = parseLlmsTxt(await res.text(), source.base)
+		let pages = 0
 		for (let i = 0; i < pageUrls.length; i += CONCURRENCY) {
 			const batch = pageUrls.slice(i, i + CONCURRENCY)
 			const results = await Promise.allSettled(
-				batch.map((pageUrl) => uploadOne({ pageUrl, source, instance })),
+				batch.map((url) => uploadPage(url, source, instance)),
 			)
-			for (const r of results) {
-				if (r.status === 'fulfilled' && r.value === 'uploaded') indexed++
-				else if (r.status === 'fulfilled' && r.value === 'skipped') {
-					// no-op
-				} else failed++
-			}
+			pages += results.filter((r) => r.status === 'fulfilled' && r.value).length
 		}
 
-		if (newEtag) await etagCache.put(etagKey, newEtag)
+		const etag = res.headers.get('etag')
+		if (etag) await etagCache.put(etagKey, etag)
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
-
-		return {
-			source: source.id,
-			status: 'synced',
-			pages_indexed: indexed,
-			pages_failed: failed,
-		}
+		return { source: source.id, status: 'synced', pages }
 	} catch (err) {
 		return {
 			source: source.id,
@@ -82,45 +57,19 @@ export async function syncSource(args: {
 	}
 }
 
-async function uploadOne(args: {
-	pageUrl: string
-	source: Source
-	instance: AiSearchInstance
-}): Promise<'uploaded' | 'skipped'> {
-	const { pageUrl, source, instance } = args
-	const mdUrl = toMarkdownUrl(pageUrl)
-	const res = await fetch(mdUrl, { cf: { cacheTtl: 60 } })
-	if (!res.ok) return 'skipped'
-
+async function uploadPage(
+	pageUrl: string,
+	source: Source,
+	instance: AiSearchInstance,
+): Promise<boolean> {
+	const res = await fetch(toMarkdownUrl(pageUrl), { cf: { cacheTtl: 60 } })
+	if (!res.ok) return false
 	const content = await res.text()
-	if (content.length === 0) return 'skipped'
-	if (content.length > MAX_PAGE_BYTES) return 'skipped'
-
+	if (!content || content.length > MAX_PAGE_BYTES) return false
 	const path = new URL(pageUrl).pathname.replace(/^\/+|\/+$/g, '') || 'index'
 	const key = `${source.id}/${path.replace(/\//g, '_')}.md`
-	const title = extractTitle(content) ?? path
-
 	await instance.items.uploadAndPoll(key, content, {
-		metadata: {
-			source: source.id,
-			source_description: source.description,
-			url: pageUrl,
-			title,
-			fetched_at: new Date().toISOString(),
-		},
+		metadata: { source: source.id, url: pageUrl },
 	})
-	return 'uploaded'
-}
-
-function extractTitle(markdown: string): string | undefined {
-	// Try YAML frontmatter `title:` first.
-	const fm = markdown.match(/^---\n([\s\S]*?)\n---/)
-	if (fm?.[1]) {
-		const t = fm[1].match(/^title:\s*(.+)$/m)
-		if (t?.[1]) return t[1].trim().replace(/^["']|["']$/g, '')
-	}
-	// Fall back to first H1.
-	const h1 = markdown.match(/^#\s+(.+)$/m)
-	if (h1?.[1]) return h1[1].trim()
-	return undefined
+	return true
 }

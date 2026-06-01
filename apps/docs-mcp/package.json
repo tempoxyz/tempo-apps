@@ -11,7 +11,9 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail",
-		"sync": "curl -X POST http://localhost:8787/sync"
+		"sync": "curl -X POST http://localhost:8787/sync",
+		"test": "vitest --run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
@@ -23,6 +25,7 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",
+		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	}
 }

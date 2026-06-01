@@ -27,12 +27,12 @@ ingest plane, not the query plane.
 
 Manual triggers via HTTP:
 
-| Route               | Description                       |
-| ------------------- | --------------------------------- |
-| `GET /`             | Service info + configured sources |
-| `GET /status`       | Per-source last sync + ETag       |
-| `POST /sync`        | Sync all configured sources       |
-| `POST /sync/:source`| Sync a single source              |
+| Route                       | Description                       |
+| --------------------------- | --------------------------------- |
+| `GET /`                     | Service info + configured sources |
+| `GET /status`               | Per-source last sync + ETag       |
+| `POST /sync`                | Sync all configured sources       |
+| `POST /sync?source=<id>`    | Sync a single source              |
 
 ## Bindings (wrangler.jsonc)
 
@@ -43,8 +43,9 @@ Manual triggers via HTTP:
 
 - `AI_SEARCH_INSTANCE_ID` (default `tempo-global`) — instance must exist and
   have been created after 2026-04-16 (when built-in storage shipped).
-- `SOURCES` (default `viem,wagmi,vocs`) — comma-separated list of source ids
-  defined in `src/lib/sources.ts`.
+
+The set of sources is fixed in `src/lib/sources.ts`. To add a source, edit
+that file.
 
 ## Setup
 
@@ -60,7 +61,15 @@ pnpm --filter docs-mcp gen:types
 
 # Verify
 pnpm --filter docs-mcp check
-pnpm --filter docs-mcp check:types
+pnpm --filter docs-mcp test
+```
+
+## Tests
+
+Unit tests use Vitest with mocked `fetch` / AI Search / KV bindings:
+
+```bash
+pnpm --filter docs-mcp test
 ```
 
 ## Deploy

@@ -32,10 +32,7 @@
 	"vars": {
 		// AI Search instance id within the namespace. Must already exist and
 		// be created after 2026-04-16 to have built-in storage support.
-		"AI_SEARCH_INSTANCE_ID": "tempo-global",
-		// Comma-separated list of source ids to sync. Each must be defined in
-		// src/lib/sources.ts.
-		"SOURCES": "viem,wagmi,vocs"
+		"AI_SEARCH_INSTANCE_ID": "tempo-global"
 	},
 	"routes": [
 		{
