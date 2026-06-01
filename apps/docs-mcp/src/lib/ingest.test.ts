@@ -23,17 +23,13 @@ function fakeInstance(opts?: { deleteFails?: Set<string> }): {
 	const deletes: string[] = []
 	const instance = {
 		items: {
-			uploadAndPoll: async (
+			upload: async (
 				key: string,
 				content: string,
 				options?: { metadata?: Record<string, unknown> },
 			) => {
 				uploads.push({ key, content, metadata: options?.metadata })
-				return {
-					id: `item-${key}`,
-					key,
-					status: 'completed',
-				}
+				return { id: `item-${key}`, key }
 			},
 			delete: async (id: string) => {
 				if (opts?.deleteFails?.has(id)) throw new Error(`boom: ${id}`)

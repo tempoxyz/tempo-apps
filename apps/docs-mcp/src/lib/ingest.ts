@@ -203,7 +203,11 @@ async function syncPage(args: {
 			return { key, outcome: 'failed', entry: prev }
 		}
 
-		const item = await instance.items.uploadAndPoll(key, content, {
+		// Use upload() not uploadAndPoll(): we don't need to block on indexing
+		// completion (AI Search indexes in the background). Polling per page
+		// serializes with our 8-way concurrency and trips the internal poll
+		// timeout, causing whole batches to fail.
+		const item = await instance.items.upload(key, content, {
 			metadata: { source: source.id, url },
 		})
 		const etag = res.headers.get('etag') ?? undefined
