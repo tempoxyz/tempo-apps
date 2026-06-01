@@ -20,25 +20,19 @@ import { tempoWallet } from 'wagmi/connectors'
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 
+const resolveTempoChain = () => {
+	const env = getTempoEnv()
+
+	if (env === 'mainnet') return tempoMainnet
+	if (env === 'devnet') return tempoDevnet
+	if (env === 'testnet') return tempoTestnet
+
+	return tempoMainnet
+}
+
 export const getTempoChain = createIsomorphicFn()
-	.client(() =>
-		getTempoEnv() === 'mainnet'
-			? tempoMainnet
-			: getTempoEnv() === 'devnet'
-				? tempoDevnet
-				: getTempoEnv() === 'testnet'
-					? tempoTestnet
-					: tempoMainnet,
-	)
-	.server(() =>
-		getTempoEnv() === 'mainnet'
-			? tempoMainnet
-			: getTempoEnv() === 'devnet'
-				? tempoDevnet
-				: getTempoEnv() === 'testnet'
-					? tempoTestnet
-					: tempoMainnet,
-	)
+	.client(resolveTempoChain)
+	.server(resolveTempoChain)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
 
