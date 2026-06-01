@@ -166,6 +166,31 @@ describe('syncSource', () => {
 		expect(uploads.map((u) => u.key).sort()).toEqual(['viem/a.md', 'viem/c.md'])
 	})
 
+	it('does NOT advance the cached ETag when any page failed', async () => {
+		const uploads: UploadCall[] = []
+		const { kv, store } = fakeKv()
+
+		const llmsTxt = '- [A](/a)\n- [B](/b)'
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: llmsTxt, etag: 'W/"v2"' })
+			}
+			if (url === 'https://viem.sh/b.md') {
+				return mockResponse({ status: 500 })
+			}
+			return mockResponse({ body: '# page' })
+		})
+
+		await syncSource({
+			source: SOURCE,
+			instance: fakeInstance(uploads),
+			etagCache: kv,
+		})
+
+		expect(store.get('etag:viem')).toBeUndefined()
+		expect(store.get('last_sync:viem')).toBeTruthy()
+	})
+
 	it('returns `error` when the llms.txt index itself errors', async () => {
 		const uploads: UploadCall[] = []
 		const { kv } = fakeKv()

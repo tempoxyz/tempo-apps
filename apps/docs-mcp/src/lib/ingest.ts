@@ -60,8 +60,11 @@ export async function syncSource(args: {
 			}
 		}
 
+		// Only advance the cached ETag when every page uploaded successfully.
+		// Otherwise the next run could see a 304 on llms.txt and skip
+		// re-trying transiently-failed pages until upstream changes again.
 		const etag = res.headers.get('etag')
-		if (etag) await etagCache.put(etagKey, etag)
+		if (etag && failed === 0) await etagCache.put(etagKey, etag)
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		return {
 			source: source.id,
