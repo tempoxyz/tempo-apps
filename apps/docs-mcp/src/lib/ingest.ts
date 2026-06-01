@@ -2,13 +2,20 @@ import { log } from './log.js'
 import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
 import type { Source } from './sources.js'
 
+/** Recorded state for one AI Search item, persisted to KV per source. */
+type IndexEntry = { id: string; etag?: string }
+/** Per-source map of AI Search item key → {item id, last-seen ETag}. */
+type SourceIndex = Record<string, IndexEntry>
+
 export type SyncReport =
 	| { source: string; status: 'unchanged'; duration_ms: number }
 	| {
 			source: string
 			status: 'synced'
 			pages: number
+			unchanged: number
 			failed: number
+			deleted: number
 			duration_ms: number
 	  }
 	| { source: string; status: 'error'; error: string; duration_ms: number }
@@ -22,16 +29,19 @@ export async function syncSource(args: {
 	source: Source
 	instance: AiSearchInstance
 	etagCache: KVNamespace
+	/** When true, bypass both the per-source and per-page ETag caches. */
+	force?: boolean
 }): Promise<SyncReport> {
-	const { source, instance, etagCache } = args
+	const { source, instance, etagCache, force = false } = args
+	const indexKey = `index:${source.id}`
 	const etagKey = `etag:${source.id}`
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 
 	try {
-		const prev = await etagCache.get(etagKey)
+		const prevSourceEtag = force ? null : await etagCache.get(etagKey)
 		const res = await fetch(`${source.base}/llms.txt`, {
-			headers: prev ? { 'If-None-Match': prev } : {},
+			headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
 			cf: { cacheTtl: 60 },
 		})
 		if (res.status === 304) {
@@ -47,30 +57,70 @@ export async function syncSource(args: {
 		}
 
 		const pageUrls = parseLlmsTxt(await res.text(), source.base)
+		const prevIndex = await loadIndex(etagCache, indexKey)
+		const next: SourceIndex = {}
 		let pages = 0
+		let unchanged = 0
 		let failed = 0
+
 		for (let i = 0; i < pageUrls.length; i += CONCURRENCY) {
 			const batch = pageUrls.slice(i, i + CONCURRENCY)
 			const results = await Promise.allSettled(
-				batch.map((url) => uploadPage(url, source, instance)),
+				batch.map((url) =>
+					syncPage({ url, source, instance, prevIndex, force }),
+				),
 			)
 			for (const r of results) {
-				if (r.status === 'fulfilled' && r.value) pages++
+				if (r.status !== 'fulfilled') {
+					failed++
+					continue
+				}
+				const out = r.value
+				if (out.entry) next[out.key] = out.entry
+				if (out.outcome === 'uploaded') pages++
+				else if (out.outcome === 'unchanged') unchanged++
 				else failed++
 			}
 		}
 
-		// Only advance the cached ETag when every page uploaded successfully.
-		// Otherwise the next run could see a 304 on llms.txt and skip
-		// re-trying transiently-failed pages until upstream changes again.
-		const etag = res.headers.get('etag')
-		if (etag && failed === 0) await etagCache.put(etagKey, etag)
+		// Delete items that disappeared from llms.txt. Only safe to run when
+		// every intended page was accounted for — otherwise a transient page
+		// failure would look like a removal.
+		let deleted = 0
+		if (failed === 0) {
+			for (const [key, entry] of Object.entries(prevIndex)) {
+				if (next[key]) continue
+				try {
+					await instance.items.delete(entry.id)
+					deleted++
+				} catch (err) {
+					log.warn('page.delete_failed', {
+						source: source.id,
+						key,
+						item_id: entry.id,
+						error: err instanceof Error ? err.message : String(err),
+					})
+					failed++
+				}
+			}
+		}
+
+		// Only advance ETag + persisted index after a fully clean sync. Otherwise
+		// the next 304 on llms.txt would mask retries for failed pages, and a
+		// partial index could re-delete items on the following run.
+		if (failed === 0) {
+			const etag = res.headers.get('etag')
+			if (etag) await etagCache.put(etagKey, etag)
+			await etagCache.put(indexKey, JSON.stringify(next))
+		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		return {
 			source: source.id,
 			status: 'synced',
 			pages,
+			unchanged,
 			failed,
+			deleted,
 			duration_ms: elapsed(),
 		}
 	} catch (err) {
@@ -83,46 +133,97 @@ export async function syncSource(args: {
 	}
 }
 
-async function uploadPage(
-	pageUrl: string,
-	source: Source,
-	instance: AiSearchInstance,
-): Promise<boolean> {
+async function loadIndex(kv: KVNamespace, key: string): Promise<SourceIndex> {
+	const raw = await kv.get(key)
+	if (!raw) return {}
 	try {
-		const res = await fetch(toMarkdownUrl(pageUrl), { cf: { cacheTtl: 60 } })
+		const parsed = JSON.parse(raw) as unknown
+		if (parsed && typeof parsed === 'object') return parsed as SourceIndex
+	} catch (err) {
+		log.warn('index.parse_failed', {
+			key,
+			error: err instanceof Error ? err.message : String(err),
+		})
+	}
+	return {}
+}
+
+type PageOutcome = 'uploaded' | 'unchanged' | 'failed'
+type SyncPageResult = {
+	key: string
+	outcome: PageOutcome
+	/** Entry to record for next sync. Undefined for hard failures. */
+	entry?: IndexEntry
+}
+
+async function syncPage(args: {
+	url: string
+	source: Source
+	instance: AiSearchInstance
+	prevIndex: SourceIndex
+	force: boolean
+}): Promise<SyncPageResult> {
+	const { url, source, instance, prevIndex, force } = args
+	const key = pageKey(url, source.id)
+	const prev = prevIndex[key]
+
+	try {
+		const headers: Record<string, string> = {}
+		if (prev?.etag && !force) headers['If-None-Match'] = prev.etag
+
+		const res = await fetch(toMarkdownUrl(url), {
+			headers,
+			cf: { cacheTtl: 60 },
+		})
+
+		if (res.status === 304 && prev) {
+			return { key, outcome: 'unchanged', entry: prev }
+		}
 		if (!res.ok) {
 			log.warn('page.fetch_failed', {
 				source: source.id,
-				url: pageUrl,
+				url,
 				status: res.status,
 			})
-			return false
+			// Keep the old entry so the page is not treated as removed.
+			return { key, outcome: 'failed', entry: prev }
 		}
+
 		const content = await res.text()
 		if (!content) {
-			log.warn('page.empty', { source: source.id, url: pageUrl })
-			return false
+			log.warn('page.empty', { source: source.id, url })
+			return { key, outcome: 'failed', entry: prev }
 		}
 		if (content.length > MAX_PAGE_BYTES) {
 			log.warn('page.too_large', {
 				source: source.id,
-				url: pageUrl,
+				url,
 				bytes: content.length,
 			})
-			return false
+			return { key, outcome: 'failed', entry: prev }
 		}
-		const path = new URL(pageUrl).pathname.replace(/^\/+|\/+$/g, '') || 'index'
-		const key = `${source.id}/${path.replace(/\//g, '_')}.md`
-		await instance.items.uploadAndPoll(key, content, {
-			metadata: { source: source.id, url: pageUrl },
+
+		const item = await instance.items.uploadAndPoll(key, content, {
+			metadata: { source: source.id, url },
 		})
-		return true
+		const etag = res.headers.get('etag') ?? undefined
+		return {
+			key,
+			outcome: 'uploaded',
+			entry: { id: item.id, etag },
+		}
 	} catch (err) {
 		log.error('page.upload_failed', {
 			source: source.id,
-			url: pageUrl,
+			url,
 			error: err instanceof Error ? err.message : String(err),
 		})
-		return false
+		return { key, outcome: 'failed', entry: prev }
 	}
+}
+
+/** Derive a stable AI Search item key from a page URL and source id. */
+function pageKey(url: string, sourceId: string): string {
+	const path = new URL(url).pathname.replace(/^\/+|\/+$/g, '') || 'index'
+	return `${sourceId}/${path.replace(/\//g, '_')}.md`
 }
