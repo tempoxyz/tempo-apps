@@ -5,7 +5,7 @@ import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import { decodeFunctionData, parseEventLogs, zeroAddress } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis, allAbis } from '#lib/abis'
-import { decodeMemoForDisplay } from '#lib/domain/memo'
+import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
@@ -349,6 +349,7 @@ function createDetectors(
 				const isFeeTransfer =
 					Address.isEqual(args.to, FEE_MANAGER) &&
 					!Address.isEqual(args.from, zeroAddress)
+				const isMppPayment = 'memo' in args && isMppAttributionMemo(args.memo)
 
 				if (isFeeTransfer) {
 					// When viewer mode is active, let feePayer detector handle fee transfers
@@ -369,7 +370,11 @@ function createDetectors(
 					parts: [
 						{
 							type: 'action',
-							value: VirtualAddress.validate(args.from) ? 'Forwarded' : 'Send',
+							value: isMppPayment
+								? 'MPP Payment'
+								: VirtualAddress.validate(args.from)
+									? 'Forwarded'
+									: 'Send',
 						},
 						{
 							type: 'amount',

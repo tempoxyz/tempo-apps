@@ -2,6 +2,7 @@ import type * as Hex from 'ox/Hex'
 import * as OxHex from 'ox/Hex'
 
 const decoder = new TextDecoder('utf-8', { fatal: true })
+const mppAttributionPrefix = '0xef1ed712'
 
 function hasControlCharacter(value: string): boolean {
 	for (let index = 0; index < value.length; index += 1) {
@@ -18,6 +19,8 @@ function hasControlCharacter(value: string): boolean {
  * Returns undefined for empty/binary payloads to avoid rendering gibberish.
  */
 export function decodeMemoForDisplay(memo: Hex.Hex): string | undefined {
+	if (isMppAttributionMemo(memo)) return undefined
+
 	const bytes = OxHex.toBytes(memo)
 
 	let start = 0
@@ -41,4 +44,12 @@ export function decodeMemoForDisplay(memo: Hex.Hex): string | undefined {
 	if (hasControlCharacter(normalized)) return undefined
 
 	return normalized
+}
+
+/** Returns true when a memo uses the MPP attribution memo format. */
+export function isMppAttributionMemo(memo: Hex.Hex): boolean {
+	return (
+		OxHex.size(memo) === 32 &&
+		memo.toLowerCase().startsWith(mppAttributionPrefix)
+	)
 }
