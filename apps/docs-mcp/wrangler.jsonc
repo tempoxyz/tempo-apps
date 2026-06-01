@@ -1,0 +1,48 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "docs-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": false,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"triggers": {
+		// Hourly resolver pass: re-pulls llms.txt for each source and uploads
+		// any changed pages to AI Search built-in storage.
+		"crons": ["0 * * * *"]
+	},
+	"ai_search_namespaces": [
+		{
+			"binding": "AI_SEARCH",
+			"namespace": "default"
+		}
+	],
+	"kv_namespaces": [
+		{
+			// Stores per-source ETag and last-synced timestamp.
+			// Create with: wrangler kv namespace create ETAG_CACHE
+			"binding": "ETAG_CACHE",
+			"id": "REPLACE_WITH_KV_NAMESPACE_ID"
+		}
+	],
+	"vars": {
+		// AI Search instance id within the namespace. Must already exist and
+		// be created after 2026-04-16 to have built-in storage support.
+		"AI_SEARCH_INSTANCE_ID": "tempo-global",
+		// Comma-separated list of source ids to sync. Each must be defined in
+		// src/lib/sources.ts.
+		"SOURCES": "viem,wagmi,vocs"
+	},
+	"routes": [
+		{
+			"pattern": "docs-mcp.tempo.xyz",
+			"zone_name": "tempo.xyz",
+			"custom_domain": true
+		}
+	]
+}
