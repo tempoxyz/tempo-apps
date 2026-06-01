@@ -43,10 +43,14 @@ const fetchMock = vi.fn()
 beforeEach(() => {
 	fetchMock.mockReset()
 	vi.stubGlobal('fetch', fetchMock)
+	vi.spyOn(console, 'info').mockImplementation(() => {})
+	vi.spyOn(console, 'warn').mockImplementation(() => {})
+	vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 afterEach(() => {
 	vi.unstubAllGlobals()
+	vi.restoreAllMocks()
 })
 
 function mockResponse(init: {
@@ -80,7 +84,8 @@ describe('syncSource', () => {
 			etagCache: kv,
 		})
 
-		expect(report).toEqual({ source: 'viem', status: 'unchanged' })
+		expect(report).toMatchObject({ source: 'viem', status: 'unchanged' })
+		expect(report).toHaveProperty('duration_ms')
 		expect(uploads).toHaveLength(0)
 		expect(fetchMock).toHaveBeenCalledTimes(1)
 		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
@@ -112,7 +117,12 @@ describe('syncSource', () => {
 			etagCache: kv,
 		})
 
-		expect(report).toEqual({ source: 'viem', status: 'synced', pages: 2 })
+		expect(report).toMatchObject({
+			source: 'viem',
+			status: 'synced',
+			pages: 2,
+			failed: 0,
+		})
 		expect(uploads).toHaveLength(2)
 		expect(uploads.map((u) => u.key).sort()).toEqual([
 			'viem/docs_bar.md',
@@ -147,7 +157,12 @@ describe('syncSource', () => {
 			etagCache: kv,
 		})
 
-		expect(report).toEqual({ source: 'viem', status: 'synced', pages: 2 })
+		expect(report).toMatchObject({
+			source: 'viem',
+			status: 'synced',
+			pages: 2,
+			failed: 1,
+		})
 		expect(uploads.map((u) => u.key).sort()).toEqual(['viem/a.md', 'viem/c.md'])
 	})
 
@@ -163,7 +178,7 @@ describe('syncSource', () => {
 			etagCache: kv,
 		})
 
-		expect(report).toEqual({
+		expect(report).toMatchObject({
 			source: 'viem',
 			status: 'error',
 			error: 'index 500',
@@ -183,7 +198,7 @@ describe('syncSource', () => {
 			etagCache: kv,
 		})
 
-		expect(report).toEqual({
+		expect(report).toMatchObject({
 			source: 'viem',
 			status: 'error',
 			error: 'network down',

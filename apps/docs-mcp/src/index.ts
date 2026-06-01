@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { syncSource } from './lib/ingest.js'
+import { log } from './lib/log.js'
 import { SOURCES } from './lib/sources.js'
 
 export default {
@@ -8,18 +9,40 @@ export default {
 			headers: { 'content-type': 'text/plain' },
 		})
 	},
-	async scheduled(_event, _env, ctx) {
-		const instance = env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID)
+	async scheduled(event, _env, ctx) {
+		const startedAt = performance.now()
+		log.info('cron.start', {
+			cron: event.cron,
+			scheduled_time: new Date(event.scheduledTime).toISOString(),
+			instance: env.AI_SEARCH_INSTANCE_ID,
+			sources: SOURCES.length,
+		})
+
 		ctx.waitUntil(
 			(async () => {
+				const instance = env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID)
+				const reports = []
 				for (const source of SOURCES) {
 					const report = await syncSource({
 						source,
 						instance,
 						etagCache: env.ETAG_CACHE,
 					})
-					console.log(`[cron] ${source.id}:`, JSON.stringify(report))
+					if (report.status === 'error') {
+						log.error('source.failed', report)
+					} else {
+						log.info('source.complete', report)
+					}
+					reports.push(report)
 				}
+				log.info('cron.complete', {
+					cron: event.cron,
+					duration_ms: Math.round(performance.now() - startedAt),
+					sources: reports.length,
+					synced: reports.filter((r) => r.status === 'synced').length,
+					unchanged: reports.filter((r) => r.status === 'unchanged').length,
+					errors: reports.filter((r) => r.status === 'error').length,
+				})
 			})(),
 		)
 	},

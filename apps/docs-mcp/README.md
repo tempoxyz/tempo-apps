@@ -71,6 +71,32 @@ Unit tests use Vitest with mocked `fetch` / AI Search / KV bindings:
 pnpm --filter docs-mcp test
 ```
 
+## Observability
+
+Cloudflare Workers Logs is enabled in `wrangler.jsonc` (`observability.logs`
+with `invocation_logs: true`). Every cron run emits structured JSON lines via
+`src/lib/log.ts`:
+
+| Event                | When                                | Useful fields                                              |
+| -------------------- | ----------------------------------- | ---------------------------------------------------------- |
+| `cron.start`         | scheduled handler invoked           | `cron`, `scheduled_time`, `instance`, `sources`            |
+| `source.complete`    | source synced or 304-unchanged      | `source`, `status`, `pages`, `failed`, `duration_ms`       |
+| `source.failed`      | source threw or llms.txt non-OK     | `source`, `error`, `duration_ms`                           |
+| `cron.complete`      | all sources processed               | `duration_ms`, `sources`, `synced`, `unchanged`, `errors`  |
+| `page.fetch_failed`  | per-page `<page>.md` GET non-OK     | `source`, `url`, `status`                                  |
+| `page.empty`         | empty markdown body                 | `source`, `url`                                            |
+| `page.too_large`     | page exceeds 3.5MB upload cap       | `source`, `url`, `bytes`                                   |
+| `page.upload_failed` | `uploadAndPoll` threw               | `source`, `url`, `error`                                   |
+
+Tail logs locally during a manual cron:
+
+```bash
+pnpm --filter docs-mcp tail --format json
+```
+
+Query historical runs in the Cloudflare dashboard → Workers → `docs-mcp` →
+Logs, e.g. `$.event = "source.failed"` to surface broken sources.
+
 ## Deploy
 
 ```bash
