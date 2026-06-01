@@ -43,7 +43,11 @@ export function Receipt(props: Receipt.Props) {
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
-	const showFeeBreakdown = feeBreakdown.length > 0
+	const visibleFeeBreakdown = feeBreakdown.filter(
+		(item) => !item.payer || item.payer.toLowerCase() === sender.toLowerCase(),
+	)
+	const showFeeBreakdown = visibleFeeBreakdown.length > 0
+	const showSingleFee = feeBreakdown.length === 0 && hasFee
 	const showUsdFeePrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
@@ -252,12 +256,12 @@ export function Receipt(props: Receipt.Props) {
 						</div>
 					</>
 				)}
-				{(showFeeBreakdown || hasFee || hasTotal) && (
+				{(showFeeBreakdown || showSingleFee || hasTotal) && (
 					<>
 						<div className="border-t border-dashed border-base-border" />
 						<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
 							{showFeeBreakdown
-								? feeBreakdown.map((item, index) => {
+								? visibleFeeBreakdown.map((item, index) => {
 										const showUsdPrefix = hasTokenAmount(item)
 											? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
 											: showUsdFeePrefix
@@ -269,9 +273,6 @@ export function Receipt(props: Receipt.Props) {
 											: PriceFormatter.formatAmountShort(
 													Value.format(item.amount, item.decimals),
 												)
-										const isSponsored =
-											item.payer &&
-											item.payer.toLowerCase() !== sender.toLowerCase()
 										return (
 											<div
 												key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
@@ -300,23 +301,12 @@ export function Receipt(props: Receipt.Props) {
 													)}
 												</span>
 												<div className="flex items-center gap-2">
-													{isSponsored ? (
-														<>
-															<span className="text-tertiary line-through">
-																{formattedAmount}
-															</span>
-															<span className="text-base-content-positive">
-																Sponsored
-															</span>
-														</>
-													) : (
-														<span>{formattedAmount}</span>
-													)}
+													<span>{formattedAmount}</span>
 												</div>
 											</div>
 										)
 									})
-								: hasFee && (
+								: showSingleFee && (
 										<div className="flex justify-between items-center">
 											<span className="text-tertiary">Fee</span>
 											<span className="text-right">

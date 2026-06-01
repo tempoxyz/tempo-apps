@@ -589,17 +589,23 @@ namespace TextRenderer {
 
 		// Fee breakdown
 		if (lineItems.feeBreakdown?.length) {
+			let hasVisibleFee = false
 			for (const item of lineItems.feeBreakdown) {
+				if (
+					item.payer &&
+					item.payer.toLowerCase() !== receipt.from.toLowerCase()
+				)
+					continue
+				hasVisibleFee = true
 				const label = item.symbol ? `Fee (${item.symbol})` : 'Fee'
 				const amount = PriceFormatter.format(item.amount, {
 					decimals: item.decimals,
 					format: 'short',
 				})
 				lines.push(leftRight(label.toUpperCase(), amount))
-				if (item.payer) lines.push(`${indent}Sponsored fee`)
 			}
 
-			lines.push('')
+			if (hasVisibleFee) lines.push('')
 		}
 
 		// Fee totals
