@@ -8,7 +8,7 @@ catalog:
   '@cloudflare/puppeteer': ^1.0.6
   '@cloudflare/vite-plugin': 1.30.3
   '@cloudflare/vitest-pool-workers': ^0.13.5
-  '@cloudflare/workers-types': ^4.20260408.1
+  '@cloudflare/workers-types': ^4.20260531.1
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.460
   '@logtape/config': ^2.0.4
@@ -80,7 +80,7 @@ catalog:
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
   wagmi: ^3.6.9
-  wrangler: 4.79.0
+  wrangler: ^4.95.0
   zod: ^4.3.6
 
 catalogMode: strict

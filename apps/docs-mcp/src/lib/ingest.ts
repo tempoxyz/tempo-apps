@@ -16,7 +16,7 @@ const MAX_PAGE_BYTES = 3_500_000
 
 export async function syncSource(args: {
 	source: Source
-	aiSearch: AiSearchAccountService
+	aiSearch: AiSearchNamespace
 	instanceId: string
 	etagCache: KVNamespace
 }): Promise<SyncReport> {
@@ -85,7 +85,7 @@ export async function syncSource(args: {
 async function uploadOne(args: {
 	pageUrl: string
 	source: Source
-	instance: AiSearchInstanceService
+	instance: AiSearchInstance
 }): Promise<'uploaded' | 'skipped'> {
 	const { pageUrl, source, instance } = args
 	const mdUrl = toMarkdownUrl(pageUrl)
