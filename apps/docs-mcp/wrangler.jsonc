@@ -33,12 +33,5 @@
 		// AI Search instance id within the namespace. Must already exist and
 		// be created after 2026-04-16 to have built-in storage support.
 		"AI_SEARCH_INSTANCE_ID": "tempo-global"
-	},
-	"routes": [
-		{
-			"pattern": "docs-mcp.tempo.xyz",
-			"zone_name": "tempo.xyz",
-			"custom_domain": true
-		}
-	]
+	}
 }

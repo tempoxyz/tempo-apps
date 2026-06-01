@@ -400,16 +400,6 @@ importers:
         version: 4.95.0(@cloudflare/workers-types@4.20260531.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   apps/docs-mcp:
-    dependencies:
-      '@hono/zod-validator':
-        specifier: 'catalog:'
-        version: 0.7.6(hono@4.12.14)(zod@4.3.6)
-      hono:
-        specifier: 'catalog:'
-        version: 4.12.14
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'

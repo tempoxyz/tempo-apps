@@ -25,14 +25,13 @@ ingest plane, not the query plane.
                                 5. save new ETag to KV
 ```
 
-Manual triggers via HTTP:
+The Worker has **no public HTTP surface** beyond a trivial `GET /` health
+string — sync only runs on the scheduled cron. To trigger an out-of-band
+sync, use `wrangler` from an operator's machine:
 
-| Route                       | Description                       |
-| --------------------------- | --------------------------------- |
-| `GET /`                     | Service info + configured sources |
-| `GET /status`               | Per-source last sync + ETag       |
-| `POST /sync`                | Sync all configured sources       |
-| `POST /sync?source=<id>`    | Sync a single source              |
+```bash
+pnpm --filter docs-mcp exec wrangler triggers cron --once "0 * * * *"
+```
 
 ## Bindings (wrangler.jsonc)
 
@@ -78,12 +77,11 @@ pnpm --filter docs-mcp test
 pnpm --filter docs-mcp deploy
 ```
 
-The Worker is bound to `docs-mcp.tempo.xyz` (custom domain). Cron runs hourly.
-To trigger an immediate sync after deploy:
+Cron runs hourly. The Worker is not bound to a public route — `workers_dev`
+is disabled in `wrangler.jsonc`. Tail logs to confirm the cron is firing:
 
 ```bash
-curl -X POST https://docs-mcp.tempo.xyz/sync
-curl https://docs-mcp.tempo.xyz/status
+pnpm --filter docs-mcp tail
 ```
 
 ## Verifying the result
