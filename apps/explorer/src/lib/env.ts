@@ -11,7 +11,7 @@ const clientEnvSchema = z.object({
 
 export const clientEnv = clientEnvSchema.parse(import.meta.env)
 
-export type TempoEnv = 'testnet' | 'mainnet' | 'devnet'
+export type TempoEnv = 'testnet' | 'mainnet' | 'devnet' | 'nextfork'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -27,6 +27,15 @@ export function inferTempoEnvFromHostname(
 		host.includes('explore.4217.')
 	) {
 		return 'mainnet'
+	}
+
+	if (
+		host.includes('explorer-nextfork') ||
+		host.includes('explore.nextfork.') ||
+		host.includes('explore-nextfork.') ||
+		host.includes('nextfork.devnet.')
+	) {
+		return 'nextfork'
 	}
 
 	if (
@@ -50,7 +59,9 @@ export function inferTempoEnvFromHostname(
 }
 
 function normalizeTempoEnv(value: string | undefined): TempoEnv {
-	return value === 'mainnet' || value === 'devnet' ? value : 'testnet'
+	return value === 'mainnet' || value === 'devnet' || value === 'nextfork'
+		? value
+		: 'testnet'
 }
 
 function getRequestUrlIfAvailable(): URL | undefined {

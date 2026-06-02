@@ -3,7 +3,7 @@ import { serverEnv } from './env'
 
 const tidx = Tidx.create({
 	basicAuth: serverEnv.TIDX_BASIC_AUTH,
-	baseUrl: 'https://tidx.tempo.xyz',
+	baseUrl: serverEnv.TIDX_BASE_URL,
 })
 
 tidx.on('response', (res) => {

@@ -14,7 +14,13 @@ import SquareSquare from '~icons/lucide/square-square'
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
 	const networkBadgeLabel =
-		tempoEnv === 'mainnet' ? null : tempoEnv === 'devnet' ? 'Devnet' : 'Testnet'
+		tempoEnv === 'mainnet'
+			? null
+			: tempoEnv === 'nextfork'
+				? 'Nextfork'
+				: tempoEnv === 'devnet'
+					? 'Devnet'
+					: 'Testnet'
 
 	return (
 		<header className="@container relative z-1">
@@ -239,7 +245,7 @@ export namespace Header {
 
 	export namespace NetworkBadge {
 		export interface Props {
-			label: 'Devnet' | 'Testnet'
+			label: 'Devnet' | 'Nextfork' | 'Testnet'
 		}
 	}
 }

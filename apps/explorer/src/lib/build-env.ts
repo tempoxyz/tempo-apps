@@ -4,6 +4,7 @@ const enabledSchema = z.stringbool()
 
 const canonicalTempoEnvSchema = z.union([
 	z.literal('devnet'),
+	z.literal('nextfork'),
 	z.literal('testnet'),
 	z.literal('mainnet'),
 ])

@@ -4,7 +4,7 @@ import { createPublicClient } from 'viem'
 import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
-import { tempoMainnet, tempoTestnet } from './lib/chains'
+import { tempoMainnet, tempoNextfork, tempoTestnet } from './lib/chains'
 import { getTempoEnv } from './lib/env'
 import { serverEnv } from './lib/server/env'
 import {
@@ -24,20 +24,24 @@ export const getTempoChain = createIsomorphicFn()
 	.client(() =>
 		getTempoEnv() === 'mainnet'
 			? tempoMainnet
-			: getTempoEnv() === 'devnet'
-				? tempoDevnet
-				: getTempoEnv() === 'testnet'
-					? tempoTestnet
-					: tempoMainnet,
+			: getTempoEnv() === 'nextfork'
+				? tempoNextfork
+				: getTempoEnv() === 'devnet'
+					? tempoDevnet
+					: getTempoEnv() === 'testnet'
+						? tempoTestnet
+						: tempoMainnet,
 	)
 	.server(() =>
 		getTempoEnv() === 'mainnet'
 			? tempoMainnet
-			: getTempoEnv() === 'devnet'
-				? tempoDevnet
-				: getTempoEnv() === 'testnet'
-					? tempoTestnet
-					: tempoMainnet,
+			: getTempoEnv() === 'nextfork'
+				? tempoNextfork
+				: getTempoEnv() === 'devnet'
+					? tempoDevnet
+					: getTempoEnv() === 'testnet'
+						? tempoTestnet
+						: tempoMainnet,
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
