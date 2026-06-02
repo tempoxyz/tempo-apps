@@ -104,8 +104,6 @@ const RawContractVerificationLookupSchema = z.object({
 
 const VerifiedContractSourceSchema = z.object({
 	kind: z.literal('verified'),
-	chainId: z.coerce.number(),
-	address: z.string(),
 	match: NullableStringSchema,
 	runtimeMatch: NullableStringSchema,
 	verifiedAt: NullableStringSchema,
@@ -116,8 +114,6 @@ const VerifiedContractSourceSchema = z.object({
 
 const NativeContractSourceSchema = z.object({
 	kind: z.literal('native'),
-	chainId: z.coerce.number(),
-	address: z.string(),
 	match: NullableStringSchema,
 	runtimeMatch: NullableStringSchema,
 	verifiedAt: NullableStringSchema,
@@ -142,8 +138,6 @@ export function normalizeContractSourceResponse(
 	if (data.stdJsonInput && data.compilation) {
 		return {
 			kind: 'verified',
-			chainId: data.chainId,
-			address: data.address,
 			match: data.match,
 			runtimeMatch: data.runtimeMatch,
 			verifiedAt: data.verifiedAt,
@@ -157,8 +151,6 @@ export function normalizeContractSourceResponse(
 	if (data.name && data.sources && nativeSource) {
 		return {
 			kind: 'native',
-			chainId: data.chainId,
-			address: data.address,
 			match: data.match,
 			runtimeMatch: data.runtimeMatch,
 			verifiedAt: data.verifiedAt,

@@ -36,6 +36,8 @@ describe('contract-source parsing', () => {
 
 		expect(source.kind).toBe('verified')
 		if (source.kind !== 'verified') return
+		expect('chainId' in source).toBe(false)
+		expect('address' in source).toBe(false)
 		expect(source.compilation.name).toBe('Foo')
 		expect(source.stdJsonInput.sources['contracts/Foo.sol']?.content).toContain(
 			'Foo',
@@ -84,6 +86,8 @@ describe('contract-source parsing', () => {
 
 		expect(source.kind).toBe('native')
 		if (source.kind !== 'native') return
+		expect('chainId' in source).toBe(false)
+		expect('address' in source).toBe(false)
 		expect(source.nativeSource.kind).toBe('precompile')
 		expect(
 			source.sources['crates/precompiles/src/validator_config_v2/mod.rs'],
