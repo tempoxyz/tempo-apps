@@ -21,6 +21,35 @@ import {
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
 
+export function TxEventMemoLine(
+	props: TxEventMemoLine.Props,
+): React.JSX.Element {
+	const { memo, className } = props
+	return (
+		<div
+			className={cx(
+				'flex min-w-0 items-center gap-2 text-[13px] text-secondary',
+				className,
+			)}
+		>
+			<span className="text-tertiary shrink-0">Memo:</span>
+			<span
+				className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+				title={memo}
+			>
+				{memo}
+			</span>
+		</div>
+	)
+}
+
+export declare namespace TxEventMemoLine {
+	type Props = {
+		memo: string
+		className?: string | undefined
+	}
+}
+
 /**
  * Renders a contract call with decoded function name.
  * Fetches ABI from registry or extracts from bytecode using whatsabi.
