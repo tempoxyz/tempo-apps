@@ -967,6 +967,11 @@ function SectionsWrapper(props: {
 
 	const resolvedAbi =
 		resolvedContractSource?.abi ?? contractInfo?.abi ?? extractedAbiQuery.data
+	const isLoadingContractInfo =
+		isMounted &&
+		isContract &&
+		!resolvedAbi &&
+		(contractSourceQuery.isFetching || extractedAbiQuery.isFetching)
 
 	// Only auto-refresh on page 1 when transactions tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
@@ -1665,6 +1670,7 @@ function SectionsWrapper(props: {
 									? resolvedContractSource.docsUrl
 									: contractInfo?.docsUrl
 							}
+							isLoadingContractInfo={isLoadingContractInfo}
 							source={resolvedContractSource}
 						/>
 					),
@@ -1683,6 +1689,7 @@ function SectionsWrapper(props: {
 									? resolvedContractSource.docsUrl
 									: contractInfo?.docsUrl
 							}
+							isLoadingContractInfo={isLoadingContractInfo}
 						/>
 					),
 				}
