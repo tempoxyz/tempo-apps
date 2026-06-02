@@ -60,6 +60,8 @@ jobs:
           - app: explorer
             env: devnet
           - app: explorer
+            env: nextfork
+          - app: explorer
             env: mainnet
           #### fee-payer
           - app: fee-payer
