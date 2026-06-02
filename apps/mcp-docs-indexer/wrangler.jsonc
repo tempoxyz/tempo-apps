@@ -27,6 +27,11 @@
 			"namespace": "default"
 		}
 	],
+	// Sandbox runtime for the /codemode MCP endpoint. Spins up an isolated
+	// Worker per code-tool invocation; LLM-generated JS runs there with
+	// `fetch`/`connect` blocked by default. Requires
+	// compatibility_date >= 2025-06-01.
+	"worker_loaders": [{ "binding": "LOADER" }],
 	"kv_namespaces": [
 		{
 			// Stores per-source ETag and last-synced timestamp.

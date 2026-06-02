@@ -12,10 +12,28 @@ a thin transparent proxy on `mcp.tempo.xyz` → the AI Search MCP upstream, so
 clients connect to a stable branded URL instead of the opaque
 `<instance-id>.search.ai.cloudflare.com` hostname.
 
+In addition, `mcp.tempo.xyz/codemode` exposes the same tool surface
+wrapped in [Cloudflare Code Mode](https://github.com/cloudflare/agents/tree/main/packages/codemode):
+agents that prefer to chain many tool calls into a single sandboxed JS
+snippet hit this route instead of `/mcp`.
+
 ```
-MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ AI Search MCP (proxied 1:1)
+MCP clients      ──▶ https://mcp.tempo.xyz/         ──▶ AI Search MCP (proxied 1:1)
+Codemode agents  ──▶ https://mcp.tempo.xyz/codemode ──▶ codeMcpServer → sandboxed JS
 Cron ──▶ mcp-docs-indexer Worker ──▶ AI Search items.upload() (ingest plane)
 ```
+
+### Codemode
+
+The `/codemode` route discovers the upstream AI Search tools, generates
+TypeScript declarations for each one, and registers a single `code` tool
+whose argument is a JS snippet. The snippet runs in an isolated Worker via
+the `LOADER` (`worker_loaders`) binding with `fetch`/`connect` blocked by
+default — tool calls flow back to this host worker via Workers RPC and out
+to AI Search.
+
+This collapses multi-step research ("search for X, then look at Y, then
+filter by Z") into a single round-trip and a single LLM tool call.
 
 ## How it works
 
@@ -61,6 +79,9 @@ pnpm --filter mcp-docs-indexer exec wrangler triggers cron --once "0 * * * *"
 
 - `AI_SEARCH` — `ai_search_namespaces` binding to the `default` namespace.
 - `ETAG_CACHE` — KV namespace tracking per-source ETag and last-sync timestamp.
+- `LOADER` — `worker_loaders` binding used by `/codemode` to spin up an
+  isolated sandbox Worker per code-tool invocation. Requires
+  `compatibility_date >= 2025-06-01`.
 
 ## Vars
 
