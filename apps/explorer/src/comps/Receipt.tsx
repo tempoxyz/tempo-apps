@@ -6,7 +6,7 @@ import { Amount } from '#comps/Amount'
 import { Midcut } from 'midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
-import { TxEventDescription } from '#comps/TxEventDescription'
+import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
@@ -205,17 +205,15 @@ export function Receipt(props: Receipt.Props) {
 													)}
 												</div>
 											</div>
-											{event.note && (
-												<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-													<div className="border-l border-base-border pl-[10px] w-full">
-														{typeof event.note === 'string' ? (
-															<span
-																className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-																title={event.note}
-															>
-																{event.note}
-															</span>
-														) : (
+											{event.note &&
+												(typeof event.note === 'string' ? (
+													<TxEventMemoLine
+														memo={event.note}
+														className="pl-[24px]"
+													/>
+												) : (
+													<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
+														<div className="border-l border-base-border pl-[10px] w-full">
 															<div className="flex flex-col gap-1 text-secondary text-[13px]">
 																{event.note.map(([label, part], index) => {
 																	const key = `${label}${index}`
@@ -245,10 +243,9 @@ export function Receipt(props: Receipt.Props) {
 																	)
 																})}
 															</div>
-														)}
+														</div>
 													</div>
-												</div>
-											)}
+												))}
 										</div>
 									</div>
 								)

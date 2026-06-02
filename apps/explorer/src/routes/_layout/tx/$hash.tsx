@@ -25,7 +25,7 @@ import { TokenIcon } from '#comps/TokenIcon'
 import { TxBalanceChanges } from '#comps/TxBalanceChanges'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
-import { TxEventDescription } from '#comps/TxEventDescription'
+import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceTree } from '#comps/TxTraceTree'
@@ -350,15 +350,10 @@ function OverviewSection(props: {
 					<div className="flex flex-col gap-[6px]">
 						<TxEventDescription.ExpandGroup events={knownEvents} />
 						{memos.length > 0 && (
-							<div className="flex flex-row items-center gap-[11px] overflow-hidden">
-								<div className="border-l border-base-border pl-[10px] w-full">
-									<span
-										className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-										title={memos[0]}
-									>
-										{memos[0]}
-									</span>
-								</div>
+							<div className="flex flex-col gap-[4px] min-w-0">
+								{memos.map((memo, index) => (
+									<TxEventMemoLine key={`${memo}-${index}`} memo={memo} />
+								))}
 							</div>
 						)}
 					</div>
