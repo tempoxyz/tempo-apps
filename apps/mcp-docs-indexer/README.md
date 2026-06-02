@@ -1,4 +1,4 @@
-# docs-mcp
+# mcp-docs-indexer
 
 Resolver Worker that ingests external doc sites (viem, wagmi, vocs, mpp) into
 the shared **Cloudflare AI Search** instance `tempo-global`. The AI Search
@@ -14,7 +14,7 @@ clients connect to a stable branded URL instead of the opaque
 
 ```
 MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ AI Search MCP (proxied 1:1)
-Cron ──▶ docs-mcp Worker ──▶ AI Search items.upload() (ingest plane)
+Cron ──▶ mcp-docs-indexer Worker ──▶ AI Search items.upload() (ingest plane)
 ```
 
 ## How it works
@@ -54,7 +54,7 @@ string — sync only runs on the scheduled cron. To trigger an out-of-band
 sync, use `wrangler` from an operator's machine:
 
 ```bash
-pnpm --filter docs-mcp exec wrangler triggers cron --once "0 * * * *"
+pnpm --filter mcp-docs-indexer exec wrangler triggers cron --once "0 * * * *"
 ```
 
 ## Bindings (wrangler.jsonc)
@@ -77,14 +77,14 @@ that file.
 pnpm install
 
 # Create the KV namespace (one time) and copy the id into wrangler.jsonc
-pnpm --filter docs-mcp exec wrangler kv namespace create ETAG_CACHE
+pnpm --filter mcp-docs-indexer exec wrangler kv namespace create ETAG_CACHE
 
 # Generate Worker types
-pnpm --filter docs-mcp gen:types
+pnpm --filter mcp-docs-indexer gen:types
 
 # Verify
-pnpm --filter docs-mcp check
-pnpm --filter docs-mcp test
+pnpm --filter mcp-docs-indexer check
+pnpm --filter mcp-docs-indexer test
 ```
 
 ## Tests
@@ -92,7 +92,7 @@ pnpm --filter docs-mcp test
 Unit tests use Vitest with mocked `fetch` / AI Search / KV bindings:
 
 ```bash
-pnpm --filter docs-mcp test
+pnpm --filter mcp-docs-indexer test
 ```
 
 ## Observability
@@ -117,23 +117,23 @@ with `invocation_logs: true`). Every cron run emits structured JSON lines via
 Tail logs locally during a manual cron:
 
 ```bash
-pnpm --filter docs-mcp tail --format json
+pnpm --filter mcp-docs-indexer tail --format json
 ```
 
-Query historical runs in the Cloudflare dashboard → Workers → `docs-mcp` →
+Query historical runs in the Cloudflare dashboard → Workers → `mcp-docs-indexer` →
 Logs, e.g. `$.event = "source.failed"` to surface broken sources.
 
 ## Deploy
 
 ```bash
-pnpm --filter docs-mcp deploy
+pnpm --filter mcp-docs-indexer deploy
 ```
 
 Cron runs hourly. The Worker is not bound to a public route — `workers_dev`
 is disabled in `wrangler.jsonc`. Tail logs to confirm the cron is firing:
 
 ```bash
-pnpm --filter docs-mcp tail
+pnpm --filter mcp-docs-indexer tail
 ```
 
 ## Verifying the result

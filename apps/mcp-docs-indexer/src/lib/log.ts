@@ -16,7 +16,7 @@ function emit(
 	const line = JSON.stringify({
 		timestamp: new Date().toISOString(),
 		level,
-		logger: 'docs-mcp',
+		logger: 'mcp-docs-indexer',
 		event,
 		...props,
 	})

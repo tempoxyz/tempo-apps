@@ -28,7 +28,7 @@ describe('log', () => {
 		const line = parseLine(infoSpy)
 		expect(line).toMatchObject({
 			level: 'info',
-			logger: 'docs-mcp',
+			logger: 'mcp-docs-indexer',
 			event: 'cron.start',
 			sources: 4,
 		})

@@ -1,5 +1,5 @@
 {
-	"name": "docs-mcp",
+	"name": "mcp-docs-indexer",
 	"private": true,
 	"type": "module",
 	"scripts": {
