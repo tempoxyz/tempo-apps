@@ -1,10 +1,15 @@
 /**
- * Structured JSON logger. Each call emits a single JSON line that lands in
- * Cloudflare Workers Logs (observability.logs in wrangler.jsonc). Matches the
- * shape used in other apps in this repo (see contract-verification/src/lib/logger.ts).
+ * Structured logger for Cloudflare Workers Logs.
  *
- * Use `event` as a stable machine-friendly key (e.g. `cron.start`, `source.sync`)
- * and put variable values into `props`.
+ * Each call passes two args to console.*:
+ *   1. the event name as a plain string — Workers Logs displays this inline
+ *      in the timeline summary, so logs are scannable without expanding each
+ *      row.
+ *   2. an object with the structured fields — Workers Logs indexes these as
+ *      searchable properties under the log row.
+ *
+ * Use `event` as a stable machine-friendly key (e.g. `cron.start`,
+ * `source.sync`) and put variable values into `props`.
  */
 export type LogProps = Record<string, unknown>
 
@@ -13,16 +18,16 @@ function emit(
 	event: string,
 	props?: LogProps,
 ): void {
-	const line = JSON.stringify({
+	const payload = {
 		timestamp: new Date().toISOString(),
 		level,
 		logger: 'mcp-docs-indexer',
 		event,
 		...props,
-	})
-	if (level === 'error') console.error(line)
-	else if (level === 'warn') console.warn(line)
-	else console.info(line)
+	}
+	if (level === 'error') console.error(event, payload)
+	else if (level === 'warn') console.warn(event, payload)
+	else console.info(event, payload)
 }
 
 export const log = {
