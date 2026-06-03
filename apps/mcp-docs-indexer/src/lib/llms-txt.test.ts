@@ -22,6 +22,18 @@ describe('parseLlmsTxt', () => {
 		])
 	})
 
+	it('extracts bare markdown paths from bullet lists', () => {
+		const body = `
+- /index.md: Introduction
+- /installation.md: Installation
+- /agents.txt: non-markdown alias
+`
+		expect(parseLlmsTxt(body, 'https://regen.tempo.xyz')).toEqual([
+			'https://regen.tempo.xyz/index.md',
+			'https://regen.tempo.xyz/installation.md',
+		])
+	})
+
 	it('drops off-origin links', () => {
 		const body = '- [In](/in)\n- [Out](https://other.example.com/out)'
 		expect(parseLlmsTxt(body, 'https://viem.sh')).toEqual([
@@ -74,5 +86,11 @@ describe('toMarkdownUrl', () => {
 
 	it('handles the root path', () => {
 		expect(toMarkdownUrl('https://viem.sh/')).toBe('https://viem.sh/.md')
+	})
+
+	it('does not append .md to a URL that already points at markdown', () => {
+		expect(toMarkdownUrl('https://regen.tempo.xyz/installation.md')).toBe(
+			'https://regen.tempo.xyz/installation.md',
+		)
 	})
 })
