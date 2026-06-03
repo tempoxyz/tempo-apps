@@ -61,6 +61,15 @@ function createZoneWithdrawalTransferKey(params: {
 	return `zone-withdrawal:${params.portal.toLowerCase()}:${params.recipient.toLowerCase()}:${params.token.toLowerCase()}:${params.amount}`
 }
 
+function createTransferWithMemoPreferenceKey(params: {
+	token: Address.Address
+	from: Address.Address
+	to: Address.Address
+	amount: bigint
+}): string {
+	return `transfer-with-memo:${params.token.toLowerCase()}:${params.from.toLowerCase()}:${params.to.toLowerCase()}:${params.amount}`
+}
+
 export type Authorization = {
 	address: Address.Address
 	chainId: number
@@ -1383,8 +1392,13 @@ export function parseKnownEvents(
 		// `TransferWithMemo` and `Transfer` events are paired with each other,
 		// we will need to take preference on `TransferWithMemo` for those instances.
 		if (event.eventName === 'TransferWithMemo') {
-			const [_, from, to] = event.topics
-			key = `${from}${to}`
+			const { from, to, amount } = event.args as TransferEventArgs
+			key = createTransferWithMemoPreferenceKey({
+				token: event.address,
+				from,
+				to,
+				amount,
+			})
 		}
 
 		// `Mint` and `Transfer`/`TransferWithMemo` events are paired with each other,
@@ -1518,8 +1532,13 @@ export function parseKnownEvents(
 		if (event.eventName === 'Transfer') {
 			{
 				// Check TransferWithMemo dedup
-				const [_, from, to] = event.topics
-				const key = `${from}${to}`
+				const { from, to, amount } = event.args as TransferEventArgs
+				const key = createTransferWithMemoPreferenceKey({
+					token: event.address,
+					from,
+					to,
+					amount,
+				})
 				if (preferenceMap.get(key)?.includes('TransferWithMemo'))
 					include = false
 			}

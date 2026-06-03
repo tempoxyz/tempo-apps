@@ -86,6 +86,18 @@ export namespace LineItems {
 		////////////////////////////////////////////////////////////
 
 		const preferenceMap = new Map<string, string>()
+		const transferWithMemoPreferenceKey = ({
+			token,
+			from,
+			to,
+			amount,
+		}: {
+			token: Address.Address
+			from: Address.Address
+			to: Address.Address
+			amount: bigint
+		}) =>
+			`transfer-with-memo:${token.toLowerCase()}:${from.toLowerCase()}:${to.toLowerCase()}:${amount}`
 
 		for (const event of events) {
 			let key: string | undefined
@@ -93,8 +105,13 @@ export namespace LineItems {
 			// `TransferWithMemo` and `Transfer` events are paired with each other,
 			// we will need to take preference on `TransferWithMemo` for those instances.
 			if (event.eventName === 'TransferWithMemo') {
-				const [_, from, to] = event.topics
-				key = `${from}${to}`
+				const { from, to, amount } = event.args
+				key = transferWithMemoPreferenceKey({
+					token: event.address,
+					from,
+					to,
+					amount,
+				})
 			}
 
 			// `Mint` and `Transfer` events are paired with each other,
@@ -120,8 +137,13 @@ export namespace LineItems {
 			if (event.eventName === 'Transfer') {
 				{
 					// Check TransferWithMemo dedup
-					const [_, from, to] = event.topics
-					const key = `${from}${to}`
+					const { from, to, amount } = event.args
+					const key = transferWithMemoPreferenceKey({
+						token: event.address,
+						from,
+						to,
+						amount,
+					})
 					if (preferenceMap.get(key)?.includes('TransferWithMemo'))
 						include = false
 				}

@@ -225,6 +225,56 @@ describe('parseKnownEvents', () => {
 		})
 	})
 
+	it('only deduplicates TransferWithMemo against Transfer with the same amount', () => {
+		const hash = `0x${'7'.repeat(64)}` as const
+		const memoAmount = 950_000n
+		const plainAmount = 17_426n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'TransferWithMemo',
+						args: {
+							from: accountAddress,
+							to: recipientAddress,
+							memo: zeroHash,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [memoAmount]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: {
+							from: accountAddress,
+							to: recipientAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [plainAmount]),
+				},
+				hash,
+			),
+		]
+
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const knownEvents = parseKnownEvents(receipt, { getTokenMetadata })
+
+		expect(knownEvents).toHaveLength(2)
+		expect(
+			knownEvents.map((event) => {
+				const amountPart = event.parts.find((part) => part.type === 'amount')
+				return amountPart?.type === 'amount' ? amountPart.value.value : null
+			}),
+		).toEqual([memoAmount, plainAmount])
+	})
+
 	it('deduplicates bounce-back transfers against BounceBack events', () => {
 		const hash = `0x${'2'.repeat(64)}` as const
 		const amount = 1_000_000n
