@@ -14,6 +14,7 @@ export type FeeBreakdownItem = {
 	amount: bigint
 	currency: string
 	decimals: number
+	quoteToken?: Address.Address
 	symbol?: string
 	token?: Address.Address
 	payer?: Address.Address
@@ -47,12 +48,13 @@ export function getFeeBreakdown(
 		const metadata = getTokenMetadata(token)
 		if (!metadata) continue
 
-		const { currency, decimals, symbol } = metadata
+		const { currency, decimals, quoteToken, symbol } = metadata
 
 		feeBreakdown.push({
 			amount,
 			currency,
 			decimals,
+			quoteToken,
 			symbol,
 			token,
 			payer: Address.checksum(from),
@@ -189,7 +191,7 @@ export namespace LineItems {
 							break
 						}
 
-						const { currency, decimals, symbol } = metadata
+						const { currency, decimals, quoteToken, symbol } = metadata
 
 						const isSelf = Address.isEqual(from, sender)
 
@@ -201,6 +203,7 @@ export namespace LineItems {
 											amount,
 											currency,
 											decimals,
+											quoteToken,
 											symbol,
 											token: event.address,
 										}
@@ -320,7 +323,7 @@ export namespace LineItems {
 					const isMppPayment =
 						'memo' in event.args && isMppAttributionMemo(event.args.memo)
 
-					const { currency, decimals, symbol } = metadata
+					const { currency, decimals, quoteToken, symbol } = metadata
 
 					const isFee =
 						Address.isEqual(to, Addresses.feeManager) &&
@@ -336,6 +339,7 @@ export namespace LineItems {
 								amount,
 								currency,
 								decimals,
+								quoteToken,
 								symbol,
 								token,
 							},
@@ -349,6 +353,7 @@ export namespace LineItems {
 							amount,
 							currency,
 							decimals,
+							quoteToken,
 							symbol,
 							token,
 							payer: Address.checksum(from),
@@ -363,6 +368,7 @@ export namespace LineItems {
 								amount: isCredit ? -amount : amount,
 								currency,
 								decimals,
+								quoteToken,
 								symbol,
 								token,
 							},
@@ -403,7 +409,7 @@ export namespace LineItems {
 			const { price } = item
 			if (!price) continue
 
-			const { amount, currency, decimals, symbol, token } = price
+			const { amount, currency, decimals, quoteToken, symbol, token } = price
 			if (!currency) continue
 			if (!decimals) continue
 			if (!symbol) continue
@@ -417,7 +423,14 @@ export namespace LineItems {
 
 			const existing = currencyMap.tokens.get(symbol)
 			if (existing) existing.amount += amount
-			else currencyMap.tokens.set(symbol, { amount, currency, decimals, token })
+			else
+				currencyMap.tokens.set(symbol, {
+					amount,
+					currency,
+					decimals,
+					quoteToken,
+					token,
+				})
 
 			currencyMap.amount += amount
 
@@ -567,6 +580,10 @@ export namespace LineItem {
 					 */
 					decimals: number
 					/**
+					 * Quote token used for this token's denomination.
+					 */
+					quoteToken?: Address.Address | undefined
+					/**
 					 * Symbol of the token.
 					 */
 					symbol?: string | undefined
@@ -610,6 +627,7 @@ export namespace LineItem {
 		amount: bigint
 		currency: string
 		decimals: number
+		quoteToken?: Address.Address
 		symbol?: string
 		token?: Address.Address
 		payer?: Address.Address

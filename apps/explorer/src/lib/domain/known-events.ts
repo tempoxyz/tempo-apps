@@ -1154,6 +1154,7 @@ function isTransferEvent(
 type Amount = {
 	currency?: string
 	decimals?: number
+	quoteToken?: Address.Address
 	symbol?: string
 	token: Address.Address
 	value: bigint
@@ -1233,6 +1234,7 @@ export function parseKnownEvent(
 		if (metadata) {
 			amount.currency = metadata.currency
 			amount.decimals = metadata.decimals
+			amount.quoteToken = metadata.quoteToken
 			amount.symbol = metadata.symbol
 		}
 		return amount
@@ -1332,6 +1334,7 @@ export function parseKnownEvents(
 		if (metadata) {
 			amount.currency = metadata.currency
 			amount.decimals = metadata.decimals
+			amount.quoteToken = metadata.quoteToken
 			amount.symbol = metadata.symbol
 		}
 		return amount
