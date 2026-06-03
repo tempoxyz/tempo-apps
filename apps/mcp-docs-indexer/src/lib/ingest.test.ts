@@ -196,6 +196,41 @@ describe('syncSource — page uploads', () => {
 			id: 'item-viem/docs_bar.md',
 		})
 	})
+
+	it('fetches existing bare .md pages without double-suffixing item keys', async () => {
+		const source: Source = { id: 'regen', base: 'https://regen.tempo.xyz' }
+		const { instance, uploads } = fakeInstance()
+		const { kv, store } = fakeKv()
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://regen.tempo.xyz/llms.txt') {
+				return mockResponse({
+					body: '- /otp.md: One-time passcode fields\n- /agents.txt: alias',
+				})
+			}
+			if (url === 'https://regen.tempo.xyz/otp.md') {
+				return mockResponse({ body: '# OTP' })
+			}
+			throw new Error(`unexpected: ${url}`)
+		})
+
+		const report = await syncSource({ source, instance, etagCache: kv })
+
+		expect(report).toMatchObject({
+			source: 'regen',
+			status: 'synced',
+			pages: 1,
+			failed: 0,
+		})
+		expect(uploads.map((u) => u.key)).toEqual(['regen/otp.md'])
+		expect(fetchMock).toHaveBeenCalledWith(
+			'https://regen.tempo.xyz/otp.md',
+			expect.any(Object),
+		)
+		expect(Object.keys(JSON.parse(store.get('index:regen') ?? '{}'))).toEqual([
+			'regen/otp.md',
+		])
+	})
 })
 
 describe('syncSource — per-page conditional fetch', () => {

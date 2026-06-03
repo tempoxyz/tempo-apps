@@ -3,7 +3,7 @@ import { syncSource } from './lib/ingest.js'
 import { log } from './lib/log.js'
 import { proxyMcp } from './lib/proxy.js'
 import { isForcedHour } from './lib/schedule.js'
-import { SOURCES } from './lib/sources.js'
+import { parseSources } from './lib/sources.js'
 
 export default {
 	async fetch(req) {
@@ -14,17 +14,18 @@ export default {
 		// Once per UTC day, bypass all ETag caches as a backstop for sources
 		// whose llms.txt ETag doesn't track page changes correctly.
 		const force = isForcedHour(event.scheduledTime)
+		const sources = parseSources(env.SOURCES)
 		log.info('cron.start', {
 			cron: event.cron,
 			scheduled_time: new Date(event.scheduledTime).toISOString(),
 			instance: env.AI_SEARCH_INSTANCE_ID,
-			sources: SOURCES.length,
+			sources: sources.length,
 			force,
 		})
 
 		const instance = env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID)
 		const reports = []
-		for (const source of SOURCES) {
+		for (const source of sources) {
 			const report = await syncSource({
 				source,
 				instance,
