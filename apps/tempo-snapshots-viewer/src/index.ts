@@ -108,7 +108,7 @@ const SNAPSHOT_INDEX_VERSION = 2
 const RECENT_SNAPSHOTS_PER_NETWORK = 5
 const SNAPSHOT_HISTORY_PAGE_SIZE = 5
 const SNAPSHOT_HISTORY_MAX_PAGE_SIZE = 25
-const MINIMAL_BODY_HISTORY_DISTANCE_BLOCKS = 86_401
+const MINIMAL_BODIES_HISTORY_DISTANCE_BLOCKS = 86_401
 
 interface ComponentSizes {
 	state: number
@@ -179,7 +179,7 @@ function getPresetDistances(
 		minimal: {
 			state: all,
 			headers: all,
-			transactions: d(MINIMAL_BODY_HISTORY_DISTANCE_BLOCKS),
+			transactions: d(MINIMAL_BODIES_HISTORY_DISTANCE_BLOCKS),
 			receipts: d(64),
 			account_changesets: d(10064),
 			storage_changesets: d(10064),
