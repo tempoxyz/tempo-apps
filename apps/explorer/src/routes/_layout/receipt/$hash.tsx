@@ -327,14 +327,20 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			search.set('date', ogTimestamp.date)
 			search.set('time', ogTimestamp.time)
 
-			const gasUsed = BigInt(loaderData.receipt.gasUsed ?? 0)
-			const gasPrice = BigInt(
-				loaderData.receipt.effectiveGasPrice ??
-					loaderData.transaction.gasPrice ??
-					0,
-			)
-			const feeAmount = gasUsed * gasPrice
-			const fee = Number(Value.format(feeAmount, 18))
+			const feePrice = loaderData.lineItems.feeTotals?.[0]?.price
+			const fee = feePrice
+				? Number(Value.format(feePrice.amount, feePrice.decimals))
+				: Number(
+						Value.format(
+							BigInt(loaderData.receipt.gasUsed ?? 0) *
+								BigInt(
+									loaderData.receipt.effectiveGasPrice ??
+										loaderData.transaction.gasPrice ??
+										0,
+								),
+							18,
+						),
+					)
 			const feeDisplay = PriceFormatter.format(fee)
 			search.set('fee', feeDisplay)
 
@@ -415,10 +421,10 @@ function Component() {
 		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
 		: undefined
 
-	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
-	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
-	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
-	const feeRaw = Value.format(feeAmount, 18)
+	const fallbackFeeAmount = receipt.effectiveGasPrice * receipt.gasUsed
+	const feeRaw = feePrice
+		? Value.format(feePrice.amount, feePrice.decimals)
+		: Value.format(fallbackFeeAmount, 18)
 	const fee = Number(feeRaw)
 	const feeTokens = feeBreakdown.filter(hasTokenAmount)
 	const showUsdFeePrefix =

@@ -8,6 +8,7 @@ import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import {
@@ -165,6 +166,14 @@ export function Receipt(props: Receipt.Props) {
 										: TEMPO_FEE_TOKEN
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
+								const sideAmount =
+									displayTotalAmount ??
+									(event.type === 'swap' && firstAmountPart?.type === 'amount'
+										? firstAmountPart.value
+										: amountParts.length === 1 &&
+												firstAmountPart?.type === 'amount'
+											? firstAmountPart.value
+											: undefined)
 								const totalAmountBigInt = displayTotalAmount
 									? displayTotalAmount.value
 									: event.type === 'swap' && amountParts.length > 0
@@ -177,10 +186,12 @@ export function Receipt(props: Receipt.Props) {
 												return sum
 											}, 0n)
 								const decimals = displayTotalAmount
-									? (displayTotalAmount.decimals ?? 6)
+									? (displayTotalAmount.decimals ??
+										DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
 									: firstAmountPart?.type === 'amount'
-										? (firstAmountPart.value.decimals ?? 6)
-										: 6
+										? (firstAmountPart.value.decimals ??
+											DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
+										: DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS
 
 								return (
 									<div
@@ -194,7 +205,14 @@ export function Receipt(props: Receipt.Props) {
 													<TxEventDescription event={event} />
 												</div>
 												<div className="flex items-start justify-end shrink leading-[24px]">
-													{totalAmountBigInt > 0n && (
+													{sideAmount && sideAmount.value > 0n ? (
+														<Amount
+															{...sideAmount}
+															infinite={null}
+															prefix={showUsdPrefix ? '$' : undefined}
+															short
+														/>
+													) : totalAmountBigInt > 0n ? (
 														<Amount.Base
 															decimals={decimals}
 															infinite={null}
@@ -202,7 +220,7 @@ export function Receipt(props: Receipt.Props) {
 															short
 															value={totalAmountBigInt}
 														/>
-													)}
+													) : null}
 												</div>
 											</div>
 											{event.note &&

@@ -18,6 +18,7 @@ import {
 	parseKnownEvents,
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
+import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import {
@@ -78,7 +79,10 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 		let amount = ''
 		if (amountPart?.type === 'amount') {
 			const val = Number(
-				Value.format(amountPart.value.value, amountPart.value.decimals ?? 6),
+				Value.format(
+					amountPart.value.value,
+					amountPart.value.decimals ?? DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS,
+				),
 			)
 			amount = val > 0 && val < 0.01 ? '<$0.01' : `$${val.toFixed(0)}`
 		}
@@ -105,7 +109,7 @@ function formatPartForOgClient(part: KnownEventPart): string {
 		case 'text':
 			return part.value
 		case 'amount':
-			return `${Value.format(part.value.value, part.value.decimals ?? 6)} ${part.value.symbol || ''}`
+			return `${Value.format(part.value.value, part.value.decimals ?? DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)} ${part.value.symbol || ''}`
 		case 'account':
 			return HexFormatter.truncate(part.value)
 		case 'token':
