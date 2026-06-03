@@ -1,6 +1,6 @@
 {
 	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
-	"name": "Tempo Testnet (Moderato)",
+	"name": "Tempo Testnet",
 	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
 	"timestamp": "2026-03-30T16:28:11Z",
 	"version": {
