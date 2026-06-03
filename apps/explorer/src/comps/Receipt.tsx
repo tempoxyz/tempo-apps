@@ -8,6 +8,7 @@ import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import {
@@ -177,10 +178,12 @@ export function Receipt(props: Receipt.Props) {
 												return sum
 											}, 0n)
 								const decimals = displayTotalAmount
-									? (displayTotalAmount.decimals ?? 6)
+									? (displayTotalAmount.decimals ??
+										DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
 									: firstAmountPart?.type === 'amount'
-										? (firstAmountPart.value.decimals ?? 6)
-										: 6
+										? (firstAmountPart.value.decimals ??
+											DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
+										: DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS
 
 								return (
 									<div
