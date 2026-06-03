@@ -199,12 +199,12 @@ export function Receipt(props: Receipt.Props) {
 										className="[counter-increment:event]"
 									>
 										<div className="flex flex-col gap-[8px]">
-											<div className="grid grid-cols-[1fr_minmax(0,30%)] gap-[10px]">
+											<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-[10px]">
 												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
 													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
 													<TxEventDescription event={event} />
 												</div>
-												<div className="flex items-start justify-end shrink leading-[24px]">
+												<div className="flex items-start justify-end min-w-0 leading-[24px]">
 													{sideAmount && sideAmount.value > 0n ? (
 														<Amount
 															{...sideAmount}
