@@ -237,6 +237,6 @@ async function syncPage(args: {
 
 /** Derive a stable AI Search item key from a page URL and source id. */
 function pageKey(url: string, sourceId: string): string {
-	const path = new URL(url).pathname.replace(/^\/+|\/+$/g, '') || 'index'
-	return `${sourceId}/${path.replace(/\//g, '_')}.md`
+	const path = new URL(toMarkdownUrl(url)).pathname.replace(/^\/+|\/+$/g, '')
+	return `${sourceId}/${path.replace(/\//g, '_')}`
 }

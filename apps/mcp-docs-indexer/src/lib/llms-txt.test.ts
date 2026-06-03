@@ -25,8 +25,9 @@ describe('parseLlmsTxt', () => {
 	it('extracts bare markdown paths from bullet lists', () => {
 		const body = `
 - /index.md: Introduction
-- /installation.md: Installation
+- /installation.md?ref=llms#setup: Installation
 - /agents.txt: non-markdown alias
+- /sitemap.xml: sitemap
 `
 		expect(parseLlmsTxt(body, 'https://regen.tempo.xyz')).toEqual([
 			'https://regen.tempo.xyz/index.md',
@@ -59,6 +60,14 @@ describe('parseLlmsTxt', () => {
 		])
 	})
 
+	it('drops linked non-page file aliases', () => {
+		const body =
+			'- [Agent text](/agents.txt)\n- [Sitemap](/sitemap.xml)\n- [Page](/page)'
+		expect(parseLlmsTxt(body, 'https://regen.tempo.xyz')).toEqual([
+			'https://regen.tempo.xyz/page',
+		])
+	})
+
 	it('ignores malformed parenthesized strings without crashing', () => {
 		const body = '- [Bad](not a url)\n- [Good](/good)'
 		expect(parseLlmsTxt(body, 'https://viem.sh')).toEqual([
@@ -84,13 +93,13 @@ describe('toMarkdownUrl', () => {
 		)
 	})
 
-	it('handles the root path', () => {
-		expect(toMarkdownUrl('https://viem.sh/')).toBe('https://viem.sh/.md')
+	it('maps the root path to index.md', () => {
+		expect(toMarkdownUrl('https://viem.sh/')).toBe('https://viem.sh/index.md')
 	})
 
 	it('does not append .md to a URL that already points at markdown', () => {
-		expect(toMarkdownUrl('https://regen.tempo.xyz/installation.md')).toBe(
-			'https://regen.tempo.xyz/installation.md',
-		)
+		expect(
+			toMarkdownUrl('https://regen.tempo.xyz/installation.md?x=1#setup'),
+		).toBe('https://regen.tempo.xyz/installation.md')
 	})
 })
