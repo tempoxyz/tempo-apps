@@ -2,8 +2,6 @@ import type { Address } from 'ox'
 
 type TokenAmountCandidate = {
 	currency?: string | undefined
-	quoteToken?: Address.Address | undefined
-	symbol?: string | undefined
 	token?: Address.Address | undefined
 }
 
@@ -27,12 +25,7 @@ export function isUsdPricedToken(
 	amount: TokenAmount,
 	isTokenListed: IsTokenListed,
 ): boolean {
-	return (
-		amount.currency === 'USD' &&
-		isTokenListed(chainId, amount.token) &&
-		(!amount.quoteToken ||
-			amount.quoteToken.toLowerCase() === amount.token.toLowerCase())
-	)
+	return amount.currency === 'USD' && isTokenListed(chainId, amount.token)
 }
 
 export function areUsdPricedTokens(
