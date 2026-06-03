@@ -41,7 +41,36 @@
 		// Public MCP endpoint URL for the AI Search instance above. We
 		// transparently proxy mcp.tempo.xyz -> this upstream so clients
 		// connect to a stable branded URL instead of the opaque hostname.
-		"AI_SEARCH_MCP_URL": "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp"
+		"AI_SEARCH_MCP_URL": "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp",
+		// Docs sources to sync. Add sources here instead of changing Worker code.
+		// `indexPath` defaults to `/llms.txt`.
+		"SOURCES": [
+			{
+				"id": "viem",
+				"base": "https://viem.sh",
+				"description": "TypeScript interface for Ethereum / Tempo"
+			},
+			{
+				"id": "wagmi",
+				"base": "https://wagmi.sh",
+				"description": "React Hooks for Ethereum / Tempo"
+			},
+			{
+				"id": "vocs",
+				"base": "https://vocs.sh",
+				"description": "Documentation framework"
+			},
+			{
+				"id": "mpp",
+				"base": "https://mpp.dev",
+				"description": "Machine Payments Protocol documentation"
+			},
+			{
+				"id": "regen",
+				"base": "https://regen.tempo.xyz",
+				"description": "Tempo Regen UI component documentation"
+			}
+		]
 	},
 	"routes": [
 		{

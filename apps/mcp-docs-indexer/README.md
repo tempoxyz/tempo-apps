@@ -1,6 +1,6 @@
 # mcp-docs-indexer
 
-Resolver Worker that ingests external doc sites (viem, wagmi, vocs, mpp) into
+Resolver Worker that ingests configured external doc sites into
 the shared **Cloudflare AI Search** instance `tempo-global`. The AI Search
 instance owns the docs.tempo.xyz crawl directly; this Worker handles the
 non-owned sources by uploading their canonical Markdown pages into the
@@ -22,10 +22,10 @@ Cron ──▶ mcp-docs-indexer Worker ──▶ AI Search items.upload() (inges
 ```
 ┌─────────────────────────┐
 │ Cron (hourly) ──────────┼─▶ for each source in SOURCES:
-└─────────────────────────┘     1. GET <base>/llms.txt with If-None-Match
+└─────────────────────────┘     1. GET <base><indexPath> with If-None-Match
                                 2. parse → page URLs
-                                3. for each page: GET <page>.md with
-                                   If-None-Match (per-page ETag)
+                                3. for each page: GET <page>.md, or the listed
+                                   .md URL, with If-None-Match (per-page ETag)
                                 4. 304 → skip; 200 → items.upload(),
                                    record { item id, etag } in KV
                                 5. diff against last sync, delete items
@@ -49,13 +49,9 @@ roll over when individual pages change.
 `etag` and `index` after a fully clean sync — partial failures don't update
 state, so they retry on the next run instead of permanently desyncing.
 
-The Worker has **no public HTTP surface** beyond a trivial `GET /` health
-string — sync only runs on the scheduled cron. To trigger an out-of-band
-sync, use `wrangler` from an operator's machine:
-
-```bash
-pnpm --filter mcp-docs-indexer exec wrangler triggers cron --once "0 * * * *"
-```
+The Worker exposes the MCP proxy only. It has **no public sync or ingest
+endpoint**: source ingestion runs exclusively from the scheduled cron handler
+inside Cloudflare Workers.
 
 ## Bindings (wrangler.jsonc)
 
@@ -66,9 +62,12 @@ pnpm --filter mcp-docs-indexer exec wrangler triggers cron --once "0 * * * *"
 
 - `AI_SEARCH_INSTANCE_ID` (default `tempo-global`) — instance must exist and
   have been created after 2026-04-16 (when built-in storage shipped).
+- `SOURCES` — JSON array configured in `wrangler.jsonc`. Each entry has `id`,
+  `base`, optional `description`, and optional `indexPath` (defaults to
+  `/llms.txt`). Adding a docs source should be a config-only change.
 
-The set of sources is fixed in `src/lib/sources.ts`. To add a source, edit
-that file.
+`docs.tempo.xyz` is intentionally not listed in `SOURCES` — it's the AI Search
+instance's external website data source and is auto-crawled.
 
 ## Setup
 
@@ -114,7 +113,7 @@ with `invocation_logs: true`). Every cron run emits structured JSON lines via
 | `page.delete_failed` | `items.delete` threw on stale page  | `source`, `key`, `item_id`, `error`                                        |
 | `index.parse_failed` | corrupt JSON in `index:<source>` KV | `key`, `error`                                                             |
 
-Tail logs locally during a manual cron:
+Tail logs to inspect cron runs:
 
 ```bash
 pnpm --filter mcp-docs-indexer tail --format json
@@ -139,8 +138,9 @@ pnpm --filter mcp-docs-indexer tail
 ## Verifying the result
 
 After a sync, open the AI Search dashboard → `tempo-global` → **Items** tab.
-You should see entries keyed `viem/...`, `wagmi/...`, `vocs/...` alongside
-the auto-crawled `docs.tempo.xyz` entries.
+You should see entries keyed by configured source id, such as `viem/...`,
+`wagmi/...`, `vocs/...`, `mpp/...`, and `regen/...`, alongside the
+auto-crawled `docs.tempo.xyz` entries.
 
 Query the MCP endpoint to confirm cross-source ranking works:
 

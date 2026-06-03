@@ -40,10 +40,13 @@ export async function syncSource(args: {
 
 	try {
 		const prevSourceEtag = force ? null : await etagCache.get(etagKey)
-		const res = await fetch(`${source.base}/llms.txt`, {
-			headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
-			cf: { cacheTtl: 60 },
-		})
+		const res = await fetch(
+			new URL(source.indexPath ?? '/llms.txt', source.base).toString(),
+			{
+				headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
+				cf: { cacheTtl: 60 },
+			},
+		)
 		if (res.status === 304) {
 			return { source: source.id, status: 'unchanged', duration_ms: elapsed() }
 		}
@@ -208,7 +211,13 @@ async function syncPage(args: {
 		// serializes with our 8-way concurrency and trips the internal poll
 		// timeout, causing whole batches to fail.
 		const item = await instance.items.upload(key, content, {
-			metadata: { source: source.id, url },
+			metadata: {
+				source: source.id,
+				url,
+				...(source.description
+					? { source_description: source.description }
+					: {}),
+			},
 		})
 		const etag = res.headers.get('etag') ?? undefined
 		return {
