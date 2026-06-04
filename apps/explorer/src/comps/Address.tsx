@@ -2,11 +2,13 @@ import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from 'midcut'
+import { useAddressBookLabel } from '#lib/address-book'
 import { cx } from '#lib/css'
 
 export function Address(props: Address.Props) {
 	const { address, align, chars = 3, className, search, self, title } = props
 	const { isHighlighted, handlers } = useAddressHighlight(address)
+	const addressBookLabel = useAddressBookLabel(address)
 	return (
 		<>
 			<Link
@@ -22,7 +24,9 @@ export function Address(props: Address.Props) {
 				)}
 				{...handlers}
 			>
-				<Midcut align={align} min={chars} prefix="0x" value={address} />
+				{addressBookLabel ?? (
+					<Midcut align={align} min={chars} prefix="0x" value={address} />
+				)}
 			</Link>
 			{self && <span className="text-tertiary"> (self)</span>}
 		</>

@@ -4,6 +4,7 @@ import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
 import { TokenIcon } from '#comps/TokenIcon'
 import type { AccountType } from '#lib/account'
+import { useAddressBookLabel } from '#lib/address-book'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
@@ -27,6 +28,7 @@ export function AccountCard(props: AccountCard.Props) {
 	} = props
 
 	const { copy, notifying } = useCopy()
+	const addressBookLabel = useAddressBookLabel(address as Address.Address)
 
 	const titleLabel = virtualAddressParts
 		? 'Virtual Address'
@@ -83,6 +85,11 @@ export function AccountCard(props: AccountCard.Props) {
 					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[21ch] font-mono">
 						{address}
 					</p>
+					{addressBookLabel && (
+						<p className="mt-[6px] text-[13px] font-normal leading-[16px] text-accent">
+							{addressBookLabel}
+						</p>
+					)}
 				</button>,
 				...(virtualAddressParts
 					? [
