@@ -14,6 +14,7 @@ import {
 import { Actions } from 'viem/tempo'
 import { Hooks } from 'wagmi/tempo'
 import { useTokenListMembership } from '#comps/TokenListMembership'
+import { useAddressBookLabel } from '#lib/address-book'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
@@ -162,6 +163,7 @@ function ConnectWalletInner({
 function ConnectedAddress() {
 	const { address } = useConnection()
 	const { isTokenListed } = useTokenListMembership()
+	const addressBookLabel = useAddressBookLabel(address)
 
 	const { data: balanceData } = useQuery({
 		queryKey: ['connected-balance', address],
@@ -225,10 +227,16 @@ function ConnectedAddress() {
 				title={address}
 				className="text-accent press-down hover:underline font-mono flex min-w-0"
 			>
-				<span className="overflow-hidden text-ellipsis">
-					{address.slice(0, -10)}
-				</span>
-				<span className="shrink-0">{address.slice(-10)}</span>
+				{addressBookLabel ? (
+					<span className="overflow-hidden text-ellipsis">{addressBookLabel}</span>
+				) : (
+					<>
+						<span className="overflow-hidden text-ellipsis">
+							{address.slice(0, -10)}
+						</span>
+						<span className="shrink-0">{address.slice(-10)}</span>
+					</>
+				)}
 			</Link>
 			{totalUsd !== null && (
 				<span className="text-tertiary">
