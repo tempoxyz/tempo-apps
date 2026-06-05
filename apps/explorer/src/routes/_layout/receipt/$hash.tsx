@@ -7,6 +7,7 @@ import {
 	rootRouteId,
 	useNavigate,
 } from '@tanstack/react-router'
+import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
@@ -38,6 +39,9 @@ import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
+const RECEIVE_POLICY_GUARD = Address.from(
+	'0xB10C000000000000000000000000000000000000',
+)
 
 function getKnownEventAmounts(
 	events: readonly KnownEvent[],
@@ -410,6 +414,9 @@ function Component() {
 	const { isTokenListed } = useTokenListMembership()
 
 	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
+	const hasBlockedTransfer = knownEvents.some(
+		(event) => event.type === 'transfer blocked',
+	)
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -437,16 +444,29 @@ function Component() {
 		? PriceFormatter.format(fee)
 		: PriceFormatter.formatAmountShort(feeRaw)
 
-	// Inject a streaming payment event when voucher params are present
-	const displayEvents: KnownEvent[] = voucherData
-		? [
-				buildStreamedPaymentEvent(
-					voucherData.packetSize,
-					voucherData.packetCount,
-				),
-				...knownEvents,
-			]
-		: knownEvents
+	// Inject a streaming payment event when voucher params are present.
+	// For TIP-1028 blocked transfers, the TIP-20 receipt also contains the
+	// mechanical Transfer to ReceivePolicyGuard. Hide that implementation detail
+	// from the human receipt so the blocked transfer is not shown or totaled twice.
+	const displayEvents: KnownEvent[] = (
+		voucherData
+			? [
+					buildStreamedPaymentEvent(
+						voucherData.packetSize,
+						voucherData.packetCount,
+					),
+					...knownEvents,
+				]
+			: knownEvents
+	)
+		.filter(
+			(event) =>
+				!hasBlockedTransfer ||
+				event.type !== 'send' ||
+				!event.meta?.to ||
+				!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
+		)
+
 
 	// When a voucher is present, show the streaming total as the receipt total
 	const streamingTotal = voucherData

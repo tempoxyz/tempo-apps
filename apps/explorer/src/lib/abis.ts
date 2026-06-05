@@ -1,3 +1,4 @@
+import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
@@ -226,8 +227,15 @@ const zoneFactoryAbi = [
 
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
 
+export const receivePolicyGuardAbi = parseAbi([
+	'event TransferBlocked(address indexed token, address indexed receiver, uint64 indexed blockedNonce, uint256 amount, uint8 receiptVersion, bytes receipt)',
+	'event ReceiptClaimed(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, address to, uint256 amount)',
+	'event ReceiptBurned(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, uint256 amount)',
+])
+
 export const Abis = {
 	...ViemTempoAbis,
+	receivePolicyGuard: receivePolicyGuardAbi,
 	stablecoinDex: stablecoinDexAbi,
 	streamChannel: streamChannelAbi,
 	zonePortal: zonePortalAbi,

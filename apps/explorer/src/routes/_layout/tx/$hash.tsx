@@ -8,6 +8,7 @@ import {
 	useNavigate,
 } from '@tanstack/react-router'
 import type { Address as OxAddress, Hex } from 'ox'
+import * as OxAddressUtil from 'ox/Address'
 import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
@@ -60,6 +61,10 @@ const defaultSearchValues = {
 	tab: 'overview',
 	page: 1,
 } as const
+
+const RECEIVE_POLICY_GUARD = OxAddressUtil.from(
+	'0xB10C000000000000000000000000000000000000',
+)
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
@@ -167,6 +172,16 @@ function RouteComponent() {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+	const hasBlockedTransfer = knownEvents.some(
+		(event) => event.type === 'transfer blocked',
+	)
+	const displayKnownEvents = knownEvents.filter(
+		(event) =>
+			!hasBlockedTransfer ||
+			event.type !== 'send' ||
+			!event.meta?.to ||
+			!OxAddressUtil.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
+	)
 
 	useKeyboardShortcut({
 		t: () =>
@@ -207,7 +222,7 @@ function RouteComponent() {
 				receipt={receipt}
 				transaction={transaction}
 				block={block}
-				knownEvents={knownEvents}
+				knownEvents={displayKnownEvents}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
