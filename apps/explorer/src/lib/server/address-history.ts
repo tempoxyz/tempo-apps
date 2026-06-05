@@ -294,7 +294,10 @@ export async function fetchAddressHistoryData(params: {
 			limit,
 			countCap: HISTORY_COUNT_MAX,
 			statusFilter,
-			after,
+			// TIDX rejects the optimized joined tx-only query when the timestamp
+			// predicate is pushed into the paged subquery. Filter after enrichment
+			// below, matching the mixed-source history path.
+			after: undefined,
 		})
 
 		hasMore = txOnlyPageResult.hasMore
@@ -475,13 +478,15 @@ export async function fetchAddressHistoryData(params: {
 		const finalTransactions = after
 			? transactions.filter((transaction) => transaction.timestamp >= after)
 			: transactions
+		const hasFilteredTransactions =
+			finalTransactions.length < transactions.length
 
 		return {
 			transactions: finalTransactions,
 			total: after ? finalTransactions.length : totalCount,
 			offset,
 			limit,
-			hasMore: after ? false : hasMore,
+			hasMore: after ? hasMore && !hasFilteredTransactions : hasMore,
 			countCapped: after ? false : countCapped,
 			error: null,
 		}
@@ -500,13 +505,19 @@ export async function fetchAddressHistoryData(params: {
 			logRows: txOnlyPageResult.logRows,
 		})
 
+		const finalTransactions = after
+			? transactions.filter((transaction) => transaction.timestamp >= after)
+			: transactions
+		const hasFilteredTransactions =
+			finalTransactions.length < transactions.length
+
 		return {
-			transactions,
-			total: totalCount,
+			transactions: finalTransactions,
+			total: after ? finalTransactions.length : totalCount,
 			offset,
 			limit,
-			hasMore,
-			countCapped,
+			hasMore: after ? hasMore && !hasFilteredTransactions : hasMore,
+			countCapped: after ? false : countCapped,
 			error: null,
 		}
 	}
