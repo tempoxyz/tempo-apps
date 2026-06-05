@@ -20,6 +20,7 @@ import {
 	type HistoryHashEntry,
 } from '#lib/server/build-tx-only-transactions'
 import {
+	fetchAddressDirectTxCount,
 	fetchAddressDirectTxHistoryRows,
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressLogRowsByTxHashes,
@@ -284,29 +285,68 @@ export async function fetchAddressHistoryData(params: {
 	> | null = null
 
 	if (isTxOnlySource) {
-		txOnlyPageResult = await fetchAddressTxOnlyHistoryPageWithJoins({
-			address,
-			chainId,
-			includeSent,
-			includeReceived,
-			sortDirection,
-			offset,
-			limit,
-			countCap: HISTORY_COUNT_MAX,
-			statusFilter,
-			after,
-		})
+		if (after) {
+			const directRows = await fetchAddressDirectTxHistoryRows({
+				address,
+				chainId,
+				includeSent,
+				includeReceived,
+				sortDirection,
+				offset,
+				limit: fetchSize,
+				statusFilter,
+				after,
+			})
+			hasMore = directRows.length > limit
+			const rows = hasMore ? directRows.slice(0, limit) : directRows
+			finalHashes = rows.map((row) => ({
+				hash: row.hash,
+				block_num: row.block_num,
+				from: row.from,
+				to: row.to,
+				value: row.value,
+			}))
 
-		hasMore = txOnlyPageResult.hasMore
-		totalCount = txOnlyPageResult.total
-		countCapped = txOnlyPageResult.countCapped
-		finalHashes = txOnlyPageResult.hashes.map((row) => ({
-			hash: row.hash,
-			block_num: row.block_num,
-			from: row.from,
-			to: row.to,
-			value: row.value,
-		}))
+			if (hasMore) {
+				totalCount = await fetchAddressDirectTxCount({
+					address,
+					chainId,
+					includeSent,
+					includeReceived,
+					countCap: HISTORY_COUNT_MAX,
+					statusFilter,
+					after,
+				})
+				countCapped = totalCount >= HISTORY_COUNT_MAX
+			} else {
+				totalCount = Math.min(offset + rows.length, HISTORY_COUNT_MAX)
+				countCapped = offset + rows.length >= HISTORY_COUNT_MAX
+			}
+		} else {
+			txOnlyPageResult = await fetchAddressTxOnlyHistoryPageWithJoins({
+				address,
+				chainId,
+				includeSent,
+				includeReceived,
+				sortDirection,
+				offset,
+				limit,
+				countCap: HISTORY_COUNT_MAX,
+				statusFilter,
+				after,
+			})
+
+			hasMore = txOnlyPageResult.hasMore
+			totalCount = txOnlyPageResult.total
+			countCapped = txOnlyPageResult.countCapped
+			finalHashes = txOnlyPageResult.hashes.map((row) => ({
+				hash: row.hash,
+				block_num: row.block_num,
+				from: row.from,
+				to: row.to,
+				value: row.value,
+			}))
+		}
 	} else {
 		const emptyDirect: DirectRow[] = []
 		const emptyTransfer: TransferRow[] = []

@@ -48,6 +48,10 @@ const mockQueryBuilder = vi.hoisted(() => {
 			return this
 		}
 
+		innerJoin(): this {
+			return this
+		}
+
 		select(): this {
 			return this
 		}
@@ -946,6 +950,42 @@ describe('tempo-queries', () => {
 				includeReceived: false,
 				sortDirection: 'desc',
 				limit: 5,
+			}),
+		).resolves.toEqual([
+			{
+				hash: '0xabc',
+				block_num: 12n,
+				from: '0x1111',
+				to: '0x2222',
+				value: 50n,
+			},
+		])
+	})
+
+	it('fetchAddressDirectTxHistoryRows supports timestamp and status filters', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					hash: '0xabc' as Hex.Hex,
+					block_num: 12n,
+					from: '0x1111',
+					to: '0x2222',
+					value: 50n,
+				},
+			],
+		])
+
+		await expect(
+			fetchAddressDirectTxHistoryRows({
+				address: '0x1111' as Address.Address,
+				chainId: 1,
+				includeSent: true,
+				includeReceived: true,
+				sortDirection: 'desc',
+				limit: 5,
+				offset: 0,
+				statusFilter: 'success',
+				after: 100,
 			}),
 		).resolves.toEqual([
 			{

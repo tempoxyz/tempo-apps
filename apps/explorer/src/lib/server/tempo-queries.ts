@@ -528,6 +528,8 @@ export async function fetchAddressDirectTxHistoryRows(
 		sortDirection: SortDirection
 		limit: number
 		offset?: number
+		statusFilter?: 'success' | 'reverted'
+		after?: number
 	},
 ): Promise<DirectTxHistoryRow[]> {
 	let directQuery = QB(params.chainId)
@@ -535,6 +537,21 @@ export async function fetchAddressDirectTxHistoryRows(
 		.select(['hash', 'block_num', 'from', 'to', 'value'])
 
 	directQuery = applyAddressDirectionFilter(directQuery, params)
+
+	if (params.statusFilter) {
+		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
+		directQuery = directQuery
+			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
+			.where('receipts.status', '=', statusValue) as typeof directQuery
+	}
+
+	if (params.after) {
+		directQuery = directQuery.where(
+			'block_timestamp',
+			'>=',
+			params.after,
+		) as typeof directQuery
+	}
 
 	return directQuery
 		.orderBy('block_num', params.sortDirection)
