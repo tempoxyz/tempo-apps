@@ -235,6 +235,22 @@ export function Receipt(props: Receipt.Props) {
 															<div className="flex flex-col gap-1 text-secondary text-[13px]">
 																{event.note.map(([label, part], index) => {
 																	const key = `${label}${index}`
+																	if (
+																		(label === 'from' || label === 'to') &&
+																		part.type === 'account'
+																	) {
+																		return (
+																			<div key={key} className="min-w-0">
+																				<TxEventDescription
+																					event={{
+																						type: 'blocked transfer address',
+																						parts: [{ type: 'text', value: label }, part],
+																					}}
+																				/>
+																			</div>
+																		)
+																	}
+
 																	return (
 																		<div
 																			key={key}
