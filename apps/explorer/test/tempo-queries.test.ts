@@ -116,11 +116,48 @@ const mockQueryBuilder = vi.hoisted(() => {
 	return new MockQueryBuilder()
 })
 
+const mockTidx = vi.hoisted(() => {
+	class MockTidx {
+		private requests: unknown[] = []
+		private responses: unknown[] = []
+
+		setResponses(responses: unknown[]): void {
+			this.responses = [...responses]
+		}
+
+		reset(): void {
+			this.requests = []
+			this.responses = []
+		}
+
+		getRequests(): unknown[] {
+			return this.requests
+		}
+
+		async fetch(options: unknown): Promise<{ rows: unknown }> {
+			this.requests.push(options)
+			if (this.responses.length === 0) {
+				throw new Error('No mock tidx responses queued')
+			}
+			const response = this.responses.shift()
+			if (response instanceof Error) throw response
+			return { rows: response }
+		}
+	}
+
+	return new MockTidx()
+})
+
 vi.mock('cloudflare:workers', () => ({ env: mockCloudflareEnv }))
 
 vi.mock('#lib/server/tempo-queries-provider', () => ({
+	tidx: mockTidx,
 	tempoQueryBuilder: () => mockQueryBuilder,
 	tempoFastLookupQueryBuilder: () => mockQueryBuilder,
+}))
+
+vi.mock('#wagmi.config', () => ({
+	getWagmiConfig: () => ({}),
 }))
 
 import {
@@ -159,10 +196,12 @@ import {
 	clearFeeAmmPoolRowsCache,
 	fetchFeeAmmPoolRows,
 } from '#lib/server/fee-amm-pool-rows'
+import { fetchAddressHistoryData } from '#lib/server/address-history'
 
 describe('tempo-queries', () => {
 	beforeEach(() => {
 		mockQueryBuilder.reset()
+		mockTidx.reset()
 		clearFeeAmmPoolRowsCache()
 		delete mockCloudflareEnv.EXPLORER_FEE_AMM_CACHE
 	})
@@ -1011,7 +1050,7 @@ describe('tempo-queries', () => {
 	})
 
 	it('fetchAddressDirectTxCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 2 }])
+		mockTidx.setResponses([[{ count: 2 }]])
 
 		await expect(
 			fetchAddressDirectTxCount({
@@ -1051,7 +1090,8 @@ describe('tempo-queries', () => {
 	})
 
 	it('fetchAddressHistoryDistinctCount sums counts and caps', async () => {
-		mockQueryBuilder.setResponses([{ count: 5 }, { count: 4 }, { count: 3 }])
+		mockTidx.setResponses([[{ count: 5 }]])
+		mockQueryBuilder.setResponses([{ count: 4 }, { count: 3 }])
 
 		await expect(
 			fetchAddressHistoryDistinctCount({
@@ -1183,7 +1223,7 @@ describe('tempo-queries', () => {
 	})
 
 	it('fetchAddressTxOnlyHistoryPageWithJoins uses a single query pipeline', async () => {
-		mockQueryBuilder.setResponses([
+		mockTidx.setResponses([
 			[
 				{
 					tx_hash: '0xbbb' as Hex.Hex,
@@ -1264,7 +1304,7 @@ describe('tempo-queries', () => {
 					log_data: null,
 				},
 			],
-			{ count: '2' },
+			[{ count: '2' }],
 		])
 
 		const result = await fetchAddressTxOnlyHistoryPageWithJoins({
@@ -1278,7 +1318,7 @@ describe('tempo-queries', () => {
 			countCap: 10_000,
 		})
 
-		expect(mockQueryBuilder.getExecuteCallCount()).toBe(2)
+		expect(mockTidx.getRequests()).toHaveLength(2)
 		expect(result.total).toBe(2)
 		expect(result.countCapped).toBe(false)
 		expect(result.hasMore).toBe(true)
@@ -1327,6 +1367,7 @@ describe('tempo-queries', () => {
 				topic2: null,
 				topic3: null,
 				data: '0x11',
+				is_virtual_forward: false,
 			},
 			{
 				tx_hash: '0xbbb',
@@ -1339,12 +1380,13 @@ describe('tempo-queries', () => {
 				topic2: null,
 				topic3: null,
 				data: '0x22',
+				is_virtual_forward: false,
 			},
 		])
 	})
 
 	it('fetchAddressTxOnlyHistoryPageWithJoins caps total count', async () => {
-		mockQueryBuilder.setResponses([
+		mockTidx.setResponses([
 			[
 				{
 					tx_hash: '0xbbb' as Hex.Hex,
@@ -1399,7 +1441,7 @@ describe('tempo-queries', () => {
 					log_data: null,
 				},
 			],
-			{ count: '10000' },
+			[{ count: '10000' }],
 		])
 
 		const result = await fetchAddressTxOnlyHistoryPageWithJoins({
@@ -1416,6 +1458,74 @@ describe('tempo-queries', () => {
 		expect(result.total).toBe(10_000)
 		expect(result.countCapped).toBe(true)
 		expect(result.hasMore).toBe(true)
+	})
+
+	it('fetchAddressHistoryData uses union tx-only query with timestamp filter', async () => {
+		const address =
+			'0x20c0000000000000000000000000000000000000' as Address.Address
+		const sender =
+			'0x1111111111111111111111111111111111111111' as Address.Address
+		const recentHash = `0x${'b'.repeat(64)}` as Hex.Hex
+
+		mockTidx.setResponses([
+			[
+				{
+					tx_hash: recentHash,
+					tx_block_num: 12n,
+					tx_block_timestamp: 120,
+					tx_from: sender,
+					tx_to: address,
+					tx_value: 7n,
+					tx_input: '0x00' as Hex.Hex,
+					tx_calls: null,
+					receipt_block_num: 12n,
+					receipt_block_timestamp: 120,
+					receipt_from: sender,
+					receipt_to: address,
+					receipt_status: 1,
+					receipt_gas_used: 21000n,
+					receipt_effective_gas_price: 2n,
+					receipt_contract_address: null,
+					log_block_num: null,
+					log_tx_idx: null,
+					log_idx: null,
+					log_address: null,
+					log_topic0: null,
+					log_topic1: null,
+					log_topic2: null,
+					log_topic3: null,
+					log_data: null,
+					log_is_virtual_forward: null,
+				},
+			],
+		])
+
+		const result = await fetchAddressHistoryData({
+			address,
+			chainId: 1,
+			searchParams: {
+				offset: 0,
+				limit: 2,
+				sort: 'desc',
+				include: 'all',
+				sources: 'txs',
+				after: 100,
+			},
+			includeKnownEvents: false,
+		})
+
+		const request = mockTidx.getRequests()[0] as { query: string }
+
+		expect(request.query).toContain('UNION')
+		expect(request.query).toContain(
+			"txs.block_timestamp >= '1970-01-01T00:01:40.000Z'",
+		)
+		expect(request.query).not.toContain(' OR ')
+		expect(result.error).toBe(null)
+		expect(result.transactions.map((tx) => tx.hash)).toEqual([recentHash])
+		expect(result.total).toBe(1)
+		expect(result.hasMore).toBe(false)
+		expect(result.countCapped).toBe(false)
 	})
 
 	it('fetchTxDataByHashes returns empty when no hashes provided', async () => {
@@ -1548,14 +1658,26 @@ describe('tempo-queries', () => {
 	it('fetchAddressTxAggregate returns aggregate values', async () => {
 		mockQueryBuilder.setResponses([
 			{
-				count: '5',
-				latestTxsBlockTimestamp: '10',
-				oldestTxsBlockTimestamp: '1',
+				count: '3',
 			},
 			{
-				hash: '0xoldest',
-				sender: '0xCreator',
+				count: '2',
 			},
+			{
+				count: '0',
+			},
+			{
+				hash: '0xlatest',
+				from: '0xSender',
+				block_timestamp: '10',
+			},
+			undefined,
+			{
+				hash: '0xoldest',
+				from: '0xCreator',
+				block_timestamp: '1',
+			},
+			undefined,
 		])
 
 		await expect(

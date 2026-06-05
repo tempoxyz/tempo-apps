@@ -4,7 +4,7 @@ import * as OxHex from 'ox/Hex'
 import { Tidx } from 'tidx.ts'
 import { decodeAbiParameters, zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
-import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import { tempoQueryBuilder, tidx } from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
@@ -156,6 +156,33 @@ function isTidxQueryTooExpensiveError(error: unknown): boolean {
 	if (error instanceof Error && error.cause)
 		return isTidxQueryTooExpensiveError(error.cause)
 	return false
+}
+
+function toSqlTimestamp(seconds: number): string {
+	return new Date(seconds * 1000).toISOString()
+}
+
+function toNullableBigInt(value: unknown): bigint | null {
+	if (typeof value === 'bigint') return value
+	if (typeof value === 'number' && Number.isFinite(value))
+		return BigInt(Math.trunc(value))
+	if (typeof value === 'string') {
+		try {
+			return BigInt(value)
+		} catch {}
+	}
+	return null
+}
+
+function toNullableNumber(value: unknown): number | null {
+	if (typeof value === 'number' && Number.isFinite(value)) return value
+	if (typeof value === 'bigint') return Number(value)
+	if (typeof value === 'string') {
+		const parsed = Number(value)
+		if (Number.isFinite(parsed)) return parsed
+		return parseTimestamp(value) ?? null
+	}
+	return null
 }
 
 export async function fetchTokenHoldersCount(
@@ -592,32 +619,41 @@ export async function fetchAddressDirectTxCount(
 		after?: number
 	},
 ): Promise<number> {
-	const qb = QB(params.chainId)
-	let subquery = qb.selectFrom('txs').select((eb) => eb.lit(1).as('x'))
-
-	subquery = applyAddressDirectionFilter(subquery, params)
-
+	const statusJoin = params.statusFilter
+		? 'INNER JOIN receipts status_receipts ON status_receipts.tx_hash = txs.hash'
+		: ''
+	const filters: string[] = []
 	if (params.statusFilter) {
 		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
-		subquery = subquery
-			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
-			.where('receipts.status', '=', statusValue) as typeof subquery
+		filters.push(`status_receipts.status = ${statusValue}`)
 	}
+	if (params.after)
+		filters.push(`txs.block_timestamp >= '${toSqlTimestamp(params.after)}'`)
 
-	if (params.after) {
-		subquery = subquery.where(
-			'block_timestamp',
-			'>=',
-			params.after,
-		) as typeof subquery
-	}
+	const whereForSide = (side: 'from' | 'to') =>
+		[`txs."${side}" = '${params.address}'`, ...filters].join(' AND ')
+	const sideQuery = (side: 'from' | 'to') =>
+		`(SELECT txs.hash FROM txs ${statusJoin} WHERE ${whereForSide(side)} LIMIT ${params.countCap})`
+	const matchesQuery =
+		params.includeSent && params.includeReceived
+			? `${sideQuery('from')} UNION ${sideQuery('to')}`
+			: params.includeSent
+				? sideQuery('from')
+				: sideQuery('to')
 
-	const result = await qb
-		.selectFrom(subquery.limit(params.countCap).as('subquery'))
-		.select((eb) => eb.fn.count('x').as('count'))
-		.executeTakeFirst()
+	const result = await tidx.fetch({
+		chainId: params.chainId,
+		query: `
+			SELECT count(*) AS count
+			FROM (
+				SELECT hash
+				FROM (${matchesQuery}) AS matches
+				LIMIT ${params.countCap}
+			) AS capped
+		` as string,
+	})
 
-	return Number(result?.count ?? 0)
+	return Number(result.rows[0]?.count ?? 0)
 }
 
 export async function fetchAddressTransferDistinctCount(
@@ -935,99 +971,109 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 	},
 ): Promise<AddressTxOnlyHistoryPageWithJoinsResult> {
 	const fetchSize = params.limit + 1
-
-	let filteredQuery = QB(params.chainId)
-		.selectFrom('txs')
-		.select([
-			'hash',
-			'block_num',
-			'block_timestamp',
-			'from',
-			'to',
-			'value',
-			'input',
-			'calls',
-		])
-
-	filteredQuery = applyAddressDirectionFilter(filteredQuery, params)
+	const offset = Math.max(0, params.offset)
+	const sortDirection = params.sortDirection.toUpperCase()
+	const statusJoin = params.statusFilter
+		? 'INNER JOIN receipts status_receipts ON status_receipts.tx_hash = txs.hash'
+		: ''
+	const filters: string[] = []
 
 	if (params.statusFilter) {
-		// Join with receipts to filter by status before pagination
-		// status=1 means success, status=0 means reverted
 		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
-		filteredQuery = filteredQuery
-			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
-			.where('receipts.status', '=', statusValue) as typeof filteredQuery
+		filters.push(`status_receipts.status = ${statusValue}`)
 	}
+	if (params.after)
+		filters.push(`txs.block_timestamp >= '${toSqlTimestamp(params.after)}'`)
 
-	if (params.after) {
-		filteredQuery = filteredQuery.where(
-			'block_timestamp',
-			'>=',
-			params.after,
-		) as typeof filteredQuery
-	}
+	const columns = [
+		'txs.hash',
+		'txs.block_num',
+		'txs.block_timestamp',
+		'txs."from"',
+		'txs."to"',
+		'txs.value',
+		'txs.input',
+		'txs.calls',
+	].join(', ')
+	const whereForSide = (side: 'from' | 'to') =>
+		[`txs."${side}" = '${params.address}'`, ...filters].join(' AND ')
+	const sideQuery = (side: 'from' | 'to', limit: number) =>
+		`(SELECT ${columns} FROM txs ${statusJoin} WHERE ${whereForSide(side)} ORDER BY txs.block_num ${sortDirection}, txs.hash ${sortDirection} LIMIT ${limit})`
+	const singleSideQuery = (side: 'from' | 'to') =>
+		`SELECT ${columns} FROM txs ${statusJoin} WHERE ${whereForSide(side)} ORDER BY txs.block_num ${sortDirection}, txs.hash ${sortDirection} OFFSET ${offset} LIMIT ${fetchSize}`
 
-	const pagedQuery = filteredQuery
-		.orderBy('block_num', params.sortDirection)
-		.orderBy('hash', params.sortDirection)
-		.offset(Math.max(0, params.offset))
-		.limit(fetchSize)
+	const pagedQuery =
+		params.includeSent && params.includeReceived
+			? `
+				${sideQuery('from', offset + fetchSize)}
+				UNION
+				${sideQuery('to', offset + fetchSize)}
+				ORDER BY block_num ${sortDirection}, hash ${sortDirection}
+				OFFSET ${offset}
+				LIMIT ${fetchSize}
+			`
+			: params.includeSent
+				? singleSideQuery('from')
+				: singleSideQuery('to')
 
-	const rows = (await QB(params.chainId)
-		.selectFrom(pagedQuery.as('paged'))
-		.leftJoin('receipts', 'receipts.tx_hash', 'paged.hash')
-		.leftJoin('logs', 'logs.tx_hash', 'paged.hash')
-		.select([
-			'paged.hash as tx_hash',
-			'paged.block_num as tx_block_num',
-			'paged.block_timestamp as tx_block_timestamp',
-			'paged.from as tx_from',
-			'paged.to as tx_to',
-			'paged.value as tx_value',
-			'paged.input as tx_input',
-			'paged.calls as tx_calls',
-			'receipts.block_num as receipt_block_num',
-			'receipts.block_timestamp as receipt_block_timestamp',
-			'receipts.from as receipt_from',
-			'receipts.to as receipt_to',
-			'receipts.status as receipt_status',
-			'receipts.gas_used as receipt_gas_used',
-			'receipts.effective_gas_price as receipt_effective_gas_price',
-			'receipts.contract_address as receipt_contract_address',
-			'logs.block_num as log_block_num',
-			'logs.tx_idx as log_tx_idx',
-			'logs.log_idx as log_idx',
-			'logs.address as log_address',
-			'logs.topic0 as log_topic0',
-			'logs.topic1 as log_topic1',
-			'logs.topic2 as log_topic2',
-			'logs.topic3 as log_topic3',
-			'logs.data as log_data',
-			'logs.is_virtual_forward as log_is_virtual_forward',
-		])
-		.orderBy('paged.block_num', params.sortDirection)
-		.orderBy('paged.hash', params.sortDirection)
-		.orderBy('logs.log_idx', 'asc')
-		.execute()) as AddressTxOnlyHistoryJoinedQueryRow[]
+	const result = await tidx.fetch({
+		chainId: params.chainId,
+		query: `
+			SELECT
+				paged.hash AS tx_hash,
+				paged.block_num AS tx_block_num,
+				paged.block_timestamp AS tx_block_timestamp,
+				paged."from" AS tx_from,
+				paged."to" AS tx_to,
+				paged.value AS tx_value,
+				paged.input AS tx_input,
+				paged.calls AS tx_calls,
+				receipts.block_num AS receipt_block_num,
+				receipts.block_timestamp AS receipt_block_timestamp,
+				receipts."from" AS receipt_from,
+				receipts."to" AS receipt_to,
+				receipts.status AS receipt_status,
+				receipts.gas_used AS receipt_gas_used,
+				receipts.effective_gas_price AS receipt_effective_gas_price,
+				receipts.contract_address AS receipt_contract_address,
+				logs.block_num AS log_block_num,
+				logs.tx_idx AS log_tx_idx,
+				logs.log_idx AS log_idx,
+				logs.address AS log_address,
+				logs.topic0 AS log_topic0,
+				logs.topic1 AS log_topic1,
+				logs.topic2 AS log_topic2,
+				logs.topic3 AS log_topic3,
+				logs.data AS log_data,
+				logs.is_virtual_forward AS log_is_virtual_forward
+			FROM (${pagedQuery}) AS paged
+			LEFT JOIN receipts ON receipts.tx_hash = paged.hash
+			LEFT JOIN logs ON logs.tx_hash = paged.hash
+			ORDER BY paged.block_num ${sortDirection}, paged.hash ${sortDirection}, logs.log_idx ASC
+		` as string,
+	})
+	const rows = result.rows as AddressTxOnlyHistoryJoinedQueryRow[]
 
 	const orderedHashMap = new Map<Hex.Hex, AddressTxOnlyHistoryPageHash>()
 	for (const row of rows) {
+		const txBlockNum = toNullableBigInt(row.tx_block_num)
+		const txValue = toNullableBigInt(row.tx_value)
+
 		if (
 			!row.tx_hash ||
-			row.tx_block_num === null ||
+			txBlockNum === null ||
 			row.tx_from === null ||
-			row.tx_value === null
+			txValue === null
 		)
 			continue
 
 		if (!orderedHashMap.has(row.tx_hash)) {
 			orderedHashMap.set(row.tx_hash, {
 				hash: row.tx_hash,
-				block_num: row.tx_block_num,
+				block_num: txBlockNum,
 				from: row.tx_from,
 				to: row.tx_to,
-				value: row.tx_value,
+				value: txValue,
 			})
 		}
 	}
@@ -1066,70 +1112,86 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 	for (const row of rows) {
 		if (!row.tx_hash || !selectedHashes.has(row.tx_hash)) continue
 
+		const txBlockNum = toNullableBigInt(row.tx_block_num)
+		const txTimestamp = toNullableNumber(row.tx_block_timestamp)
+		const txValue = toNullableBigInt(row.tx_value)
 		if (
 			!txMap.has(row.tx_hash) &&
-			row.tx_block_num !== null &&
-			row.tx_block_timestamp !== null &&
+			txBlockNum !== null &&
+			txTimestamp !== null &&
 			row.tx_from !== null &&
-			row.tx_value !== null &&
+			txValue !== null &&
 			row.tx_input !== null
 		) {
 			txMap.set(row.tx_hash, {
 				hash: row.tx_hash,
-				block_num: row.tx_block_num,
-				block_timestamp: row.tx_block_timestamp,
+				block_num: txBlockNum,
+				block_timestamp: txTimestamp,
 				from: row.tx_from,
 				to: row.tx_to,
-				value: row.tx_value,
+				value: txValue,
 				input: row.tx_input,
 				calls: row.tx_calls,
 			})
 		}
 
+		const receiptBlockNum = toNullableBigInt(row.receipt_block_num)
+		const receiptTimestamp = toNullableNumber(row.receipt_block_timestamp)
+		const receiptGasUsed = toNullableBigInt(row.receipt_gas_used)
+		const receiptEffectiveGasPrice = toNullableBigInt(
+			row.receipt_effective_gas_price,
+		)
+		const receiptStatus = toNullableNumber(row.receipt_status)
 		if (
 			!receiptMap.has(row.tx_hash) &&
-			row.receipt_block_num !== null &&
-			row.receipt_block_timestamp !== null &&
+			receiptBlockNum !== null &&
+			receiptTimestamp !== null &&
 			row.receipt_from !== null &&
-			row.receipt_gas_used !== null
+			receiptGasUsed !== null
 		) {
 			receiptMap.set(row.tx_hash, {
 				tx_hash: row.tx_hash,
-				block_num: row.receipt_block_num,
-				block_timestamp: row.receipt_block_timestamp,
+				block_num: receiptBlockNum,
+				block_timestamp: receiptTimestamp,
 				from: row.receipt_from,
 				to: row.receipt_to,
-				status: row.receipt_status,
-				gas_used: row.receipt_gas_used,
-				effective_gas_price: row.receipt_effective_gas_price,
+				status: receiptStatus,
+				gas_used: receiptGasUsed,
+				effective_gas_price: receiptEffectiveGasPrice,
 				contract_address: row.receipt_contract_address,
 			})
 		}
 
+		const logIdx = toNullableNumber(row.log_idx)
+		const logBlockNum = toNullableBigInt(row.log_block_num)
+		const logTxIdx = toNullableNumber(row.log_tx_idx)
+		const isVirtualForward =
+			row.log_is_virtual_forward === true ||
+			String(row.log_is_virtual_forward) === 'true'
 		if (
-			row.log_idx != null &&
-			row.log_block_num != null &&
-			row.log_tx_idx != null &&
+			logIdx !== null &&
+			logBlockNum !== null &&
+			logTxIdx !== null &&
 			row.log_address != null &&
 			row.log_data != null &&
-			row.log_is_virtual_forward !== true
+			!isVirtualForward
 		) {
-			const logKey = `${row.tx_hash}:${row.log_idx}`
+			const logKey = `${row.tx_hash}:${logIdx}`
 			if (!seenLogKeys.has(logKey)) {
 				seenLogKeys.add(logKey)
 
 				logRows.push({
 					tx_hash: row.tx_hash,
-					block_num: row.log_block_num,
-					tx_idx: row.log_tx_idx,
-					log_idx: row.log_idx,
+					block_num: logBlockNum,
+					tx_idx: logTxIdx,
+					log_idx: logIdx,
 					address: row.log_address,
 					topic0: row.log_topic0,
 					topic1: row.log_topic1,
 					topic2: row.log_topic2,
 					topic3: row.log_topic3,
 					data: row.log_data,
-					is_virtual_forward: row.log_is_virtual_forward ?? false,
+					is_virtual_forward: false,
 				})
 			}
 		}
