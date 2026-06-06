@@ -156,4 +156,66 @@ describe('buildTxOnlyTransactions', () => {
 			value: 'Mint to Recipient',
 		})
 	})
+
+	it('does not decode failed TIP-20 calldata as settled activity', async () => {
+		const account =
+			'0x1111111111111111111111111111111111111111' as Address.Address
+		const recipient =
+			'0x2222222222222222222222222222222222222222' as Address.Address
+		const token =
+			'0x20c0000000000000000000000000000000000000' as Address.Address
+		const txHash = `0x${'c'.repeat(64)}` as Hex.Hex
+
+		const result = await buildTxOnlyTransactions({
+			address: account,
+			hashes: [
+				{
+					hash: txHash,
+					block_num: 13n,
+					from: account,
+					to: token,
+					value: 0n,
+				},
+			],
+			txRows: [
+				{
+					hash: txHash,
+					block_num: 13n,
+					block_timestamp: 130,
+					from: account,
+					to: token,
+					value: 0n,
+					input: encodeFunctionData({
+						abi: Abis.tip20,
+						functionName: 'transfer',
+						args: [recipient, 5n],
+					}),
+					calls: null,
+				},
+			],
+			receiptRows: [
+				{
+					tx_hash: txHash,
+					block_num: 13n,
+					block_timestamp: 130,
+					from: account,
+					to: token,
+					status: 0,
+					gas_used: 21_000n,
+					effective_gas_price: 2n,
+				},
+			],
+			logRows: [],
+		})
+
+		expect(result).toHaveLength(1)
+		expect(result[0]?.status).toBe('reverted')
+		expect(result[0]?.knownEvents).toHaveLength(1)
+		expect(result[0]?.knownEvents[0]?.type).toBe('contract call')
+		expect(
+			result[0]?.knownEvents.some((event) =>
+				event.parts.some((part) => part.type === 'amount'),
+			),
+		).toBe(false)
+	})
 })

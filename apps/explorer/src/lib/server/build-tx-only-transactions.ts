@@ -295,8 +295,9 @@ export async function buildTxOnlyTransactions(params: {
 		})()
 
 		if (
-			knownEvents.length === 0 ||
-			(knownEvents.length === 1 && knownEvents[0]?.type === 'contract call')
+			status === 'success' &&
+			(knownEvents.length === 0 ||
+				(knownEvents.length === 1 && knownEvents[0]?.type === 'contract call'))
 		) {
 			const callEvent = decodeTip20CallEvent(tx, fromSource as Address.Address)
 			if (callEvent) knownEvents = [callEvent]
