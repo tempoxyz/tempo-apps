@@ -14,6 +14,7 @@ import {
 	EXPLORER_NETWORK_OPTIONS,
 	getActiveExplorerNetworkOption,
 } from '#lib/explorer-network'
+import { useIsNotFoundPage } from '#lib/not-found'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import SquareSquare from '~icons/lucide/square-square'
 
@@ -165,6 +166,7 @@ export namespace Header {
 		const menuId = React.useId()
 		const rootRef = React.useRef<HTMLDivElement>(null)
 		const activeOption = getActiveExplorerNetworkOption(tempoEnv)
+		const isNotFoundPage = useIsNotFoundPage()
 		const currentPath = useRouterState({
 			select: (state) => {
 				const location = state.resolvedLocation ?? state.location
@@ -226,7 +228,9 @@ export namespace Header {
 							return (
 								<a
 									key={option.env}
-									href={buildExplorerNetworkHref(option.host, currentPath)}
+									href={buildExplorerNetworkHref(option.host, currentPath, {
+										fallbackToHome: isNotFoundPage,
+									})}
 									role="menuitemradio"
 									aria-checked={isActive}
 									aria-current={isActive ? 'page' : undefined}

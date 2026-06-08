@@ -26,6 +26,17 @@ export function getActiveExplorerNetworkOption(tempoEnv: TempoEnv) {
 	}
 }
 
-export function buildExplorerNetworkHref(host: string, path: string): string {
-	return `${host}${path.startsWith('/') ? path : `/${path}`}`
+export function buildExplorerNetworkHref(
+	host: string,
+	path: string,
+	options?: buildExplorerNetworkHref.Options,
+): string {
+	const targetPath = options?.fallbackToHome ? '/' : path
+	return `${host}${targetPath.startsWith('/') ? targetPath : `/${targetPath}`}`
+}
+
+export namespace buildExplorerNetworkHref {
+	export interface Options {
+		fallbackToHome?: boolean
+	}
 }

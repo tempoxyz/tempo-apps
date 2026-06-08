@@ -40,4 +40,21 @@ describe('explorer network switcher hrefs', () => {
 			`${TESTNET_HOST}/blocks`,
 		)
 	})
+
+	it('links to the target network homepage from not-found pages', () => {
+		expect(
+			buildExplorerNetworkHref(TESTNET_HOST, `/receipt/${SAMPLE_HASH}`, {
+				fallbackToHome: true,
+			}),
+		).toBe(`${TESTNET_HOST}/`)
+		expect(
+			buildExplorerNetworkHref(
+				MAINNET_HOST,
+				`/tx/${SAMPLE_HASH}?tab=logs#top`,
+				{
+					fallbackToHome: true,
+				},
+			),
+		).toBe(`${MAINNET_HOST}/`)
+	})
 })
