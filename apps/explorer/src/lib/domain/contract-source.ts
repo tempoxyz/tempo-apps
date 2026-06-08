@@ -243,7 +243,7 @@ export async function fetchContractSource(params: {
 
 		const response = await fetch(url, { signal })
 
-		if (response.status === 404) return null
+		if (response.status === 204 || response.status === 404) return null
 
 		if (!response.ok) {
 			console.error('Failed to fetch contract sources:', await response.text())
