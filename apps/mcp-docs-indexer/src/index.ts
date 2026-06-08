@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers'
+import { handleCodemodeRequest } from './lib/codemode.js'
 import { syncSource } from './lib/ingest.js'
 import { log } from './lib/log.js'
 import { proxyMcp } from './lib/proxy.js'
@@ -7,6 +8,16 @@ import { parseSources } from './lib/sources.js'
 
 export default {
 	async fetch(req) {
+		const { pathname } = new URL(req.url)
+		// /codemode wraps the AI Search MCP tools in a single sandboxed
+		// `code` tool. Everything else is proxied 1:1 to the upstream
+		// AI Search MCP endpoint.
+		if (pathname === '/codemode') {
+			return handleCodemodeRequest(req, {
+				upstreamUrl: env.AI_SEARCH_MCP_URL,
+				loader: env.LOADER,
+			})
+		}
 		return proxyMcp(req, env.AI_SEARCH_MCP_URL)
 	},
 	async scheduled(event) {
