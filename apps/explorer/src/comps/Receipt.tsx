@@ -244,7 +244,10 @@ export function Receipt(props: Receipt.Props) {
 																				<TxEventDescription
 																					event={{
 																						type: 'blocked transfer address',
-																						parts: [{ type: 'text', value: label }, part],
+																						parts: [
+																							{ type: 'text', value: label },
+																							part,
+																						],
 																					}}
 																				/>
 																			</div>

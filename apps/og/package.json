@@ -17,7 +17,6 @@
 		"@takumi-rs/wasm": "^0.73.1",
 		"hono": "catalog:",
 		"ox": "catalog:",
-		"viem": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

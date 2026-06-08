@@ -458,15 +458,13 @@ function Component() {
 					...knownEvents,
 				]
 			: knownEvents
+	).filter(
+		(event) =>
+			!hasBlockedTransfer ||
+			event.type !== 'send' ||
+			!event.meta?.to ||
+			!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
 	)
-		.filter(
-			(event) =>
-				!hasBlockedTransfer ||
-				event.type !== 'send' ||
-				!event.meta?.to ||
-				!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
-		)
-
 
 	// When a voucher is present, show the streaming total as the receipt total
 	const streamingTotal = voucherData
