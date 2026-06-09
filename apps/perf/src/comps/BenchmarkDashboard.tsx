@@ -27,6 +27,9 @@ export function BenchmarkDashboard(
 		runsWithData.length > 0
 			? runsWithData.reduce((best, r) => (r.avgTps > best.avgTps ? r : best))
 			: null
+	const chartMaxTps = niceTpsCeiling(
+		Math.max(...scenarios.map((s) => getLatestRun(s.id)?.avgTps ?? 0)),
+	)
 
 	const tip20Scenarios = scenarios.filter((s) => s.id.startsWith('tip20-'))
 	const mixScenarios = scenarios.filter((s) => s.id.startsWith('mix-'))
@@ -94,14 +97,14 @@ export function BenchmarkDashboard(
 				<section className="mb-14">
 					<SectionHeader title="TPS Comparison" />
 					<div className="card p-6">
+						<div className="mb-3 flex justify-end font-mono text-[10px] text-tertiary">
+							{formatTps(chartMaxTps)} TPS
+						</div>
 						<div className="flex items-end gap-4 h-52">
 							{scenarios.map((scenario) => {
 								const latest = getLatestRun(scenario.id)
 								if (!latest) return null
-								const maxTps = Math.max(
-									...scenarios.map((s) => getLatestRun(s.id)?.avgTps ?? 0),
-								)
-								const height = (latest.avgTps / maxTps) * 100
+								const height = (latest.avgTps / chartMaxTps) * 100
 								const isMix = scenario.id.startsWith('mix-')
 								return (
 									<Link
@@ -201,6 +204,15 @@ export declare namespace BenchmarkDashboard {
 	type Props = {
 		feed: RunFeed
 	}
+}
+
+function niceTpsCeiling(maxTps: number): number {
+	if (!Number.isFinite(maxTps) || maxTps <= 0) return 1
+	const magnitude = 10 ** Math.floor(Math.log10(maxTps))
+	const normalized = maxTps / magnitude
+	const niceNormalized =
+		normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
+	return niceNormalized * magnitude
 }
 
 function SectionHeader(props: {
