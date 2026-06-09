@@ -50,12 +50,11 @@ export type ScenarioRunHistory = {
 	runs: Array<BenchRun>
 }
 
-const SCENARIOS: Array<{
-	id: string
-	label: string
-	workload: string
+type ScenarioConfig = Scenario & {
 	scenarioName: string
-}> = [
+}
+
+const STATIC_SCENARIOS: Array<ScenarioConfig> = [
 	{
 		id: 'tip20-10k',
 		label: 'TIP-20 — 10K TPS',
@@ -95,11 +94,97 @@ function sqlString(value: string): string {
 }
 
 export function getScenarios(): Array<Scenario> {
-	return SCENARIOS.map(({ scenarioName: _, ...s }) => s)
+	return STATIC_SCENARIOS.map(({ scenarioName: _, ...s }) => s)
 }
 
 export function getScenario(id: string): Scenario | undefined {
-	return SCENARIOS.find((s) => s.id === id)
+	const { scenarioName: _, ...scenario } = scenarioConfigFromName(id)
+	return scenario
+}
+
+function scenarioFromConfig({
+	scenarioName: _,
+	...scenario
+}: ScenarioConfig): Scenario {
+	return scenario
+}
+
+function scenarioConfigFromName(scenarioName: string): ScenarioConfig {
+	const known = STATIC_SCENARIOS.find((s) => s.scenarioName === scenarioName)
+	if (known) return known
+
+	const match = scenarioName.match(/^(.+?)-(\d+)(k)?$/i)
+	const rawWorkload = match?.[1] ?? scenarioName
+	const target = match ? Number(match[2]) * (match[3] ? 1_000 : 1) : null
+	const workloadLabel = formatWorkloadLabel(rawWorkload)
+
+	return {
+		id: scenarioName,
+		label: target
+			? `${workloadLabel} — ${formatTargetTps(target)} TPS`
+			: workloadLabel,
+		workload: formatWorkloadDescription(rawWorkload),
+		scenarioName,
+	}
+}
+
+function formatWorkloadLabel(value: string): string {
+	if (value === 'tip20') return 'TIP-20'
+	if (value === 'mix') return 'Mix'
+	return value
+		.split(/[-_]/)
+		.filter(Boolean)
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(' ')
+}
+
+function formatWorkloadDescription(value: string): string {
+	if (value === 'tip20') return '100% TIP-20 Transfers'
+	if (value === 'mix') {
+		return '70% TIP-20 Transfers, 10% MPP Channels, 10% DEX Swaps, 10% ERC-20 Transfers'
+	}
+	return formatWorkloadLabel(value)
+}
+
+function formatTargetTps(target: number): string {
+	return target >= 1_000 ? `${target / 1_000}K` : target.toLocaleString()
+}
+
+function scenarioSortKey(scenario: ScenarioConfig): [string, number, string] {
+	const match = scenario.scenarioName.match(/^(.+?)-(\d+)(k)?$/i)
+	const workload = match?.[1] ?? scenario.scenarioName
+	const target = match ? Number(match[2]) * (match[3] ? 1_000 : 1) : 0
+	return [workload, target, scenario.scenarioName]
+}
+
+function sortScenarios(scenarios: Array<ScenarioConfig>): Array<ScenarioConfig> {
+	return [...scenarios].sort((a, b) => {
+		const [aWorkload, aTarget, aName] = scenarioSortKey(a)
+		const [bWorkload, bTarget, bName] = scenarioSortKey(b)
+		return (
+			aWorkload.localeCompare(bWorkload) ||
+			aTarget - bTarget ||
+			aName.localeCompare(bName)
+		)
+	})
+}
+
+async function fetchScenarioConfigs(feed: RunFeed): Promise<Array<ScenarioConfig>> {
+	const rows = await queryClickHouse<{ scenario_name: string }>(`
+		SELECT DISTINCT r.scenario_name AS scenario_name
+		FROM txgen_runs r
+		WHERE r.scenario_name != ''
+			${runFeedWhereClause(feed)}
+			AND r.run_id IN (
+				SELECT run_id
+				FROM txgen_blocks
+				WHERE block_time_ms > 0
+				GROUP BY run_id
+				HAVING sum(gas_used) > 0
+			)
+	`)
+	const discovered = rows.map((row) => scenarioConfigFromName(row.scenario_name))
+	return sortScenarios(discovered.length > 0 ? discovered : STATIC_SCENARIOS)
 }
 
 type RunRow = {
@@ -309,8 +394,9 @@ function buildRunsQuery(
 export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
 	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
 	.handler(async ({ data: feed }) => {
+		const scenarios = await fetchScenarioConfigs(feed)
 		const latestRuns = await Promise.all(
-			SCENARIOS.map(async (scenario) => {
+			scenarios.map(async (scenario) => {
 				const rows = await queryClickHouse<RunRow>(
 					buildRunsQuery(scenario.scenarioName, feed, 1),
 				)
@@ -322,11 +408,18 @@ export const fetchAllLatestRuns = createServerFn({ method: 'GET' })
 		return latestRuns.filter((run): run is BenchRun => run !== null)
 	})
 
+export const fetchScenarios = createServerFn({ method: 'GET' })
+	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
+	.handler(async ({ data: feed }) =>
+		(await fetchScenarioConfigs(feed)).map(scenarioFromConfig),
+	)
+
 export const fetchTrendRuns = createServerFn({ method: 'GET' })
 	.inputValidator((input: RunFeed | undefined) => normalizeRunFeed(input))
 	.handler(async ({ data: feed }) => {
+		const scenarios = await fetchScenarioConfigs(feed)
 		const histories = await Promise.all(
-			SCENARIOS.map(async (scenario) => {
+			scenarios.map(async (scenario) => {
 				const rows = await queryClickHouse<RunRow>(
 					buildRunsQuery(scenario.scenarioName, feed, 365),
 				)
@@ -352,8 +445,7 @@ export const fetchRunsForScenario = createServerFn({ method: 'POST' })
 		feed: normalizeRunFeed(input.feed),
 	}))
 	.handler(async ({ data: { scenarioId, feed } }) => {
-		const config = SCENARIOS.find((s) => s.id === scenarioId)
-		if (!config) return []
+		const config = scenarioConfigFromName(scenarioId)
 
 		const rows = await queryClickHouse<RunRow>(
 			buildRunsQuery(config.scenarioName, feed),
@@ -404,8 +496,7 @@ export const fetchRun = createServerFn({ method: 'POST' })
 		const runRow = runRows[0]
 		if (!runRow) return null
 
-		const scenarioId =
-			SCENARIOS.find((s) => s.scenarioName === runRow.scenario_name)?.id ?? ''
+		const scenarioId = scenarioConfigFromName(runRow.scenario_name).id
 
 		return toRun(runRow, scenarioId)
 	})

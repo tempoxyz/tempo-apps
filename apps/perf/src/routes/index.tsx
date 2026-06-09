@@ -1,10 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { BenchmarkDashboard } from '#comps/BenchmarkDashboard'
-import { fetchAllLatestRuns } from '#lib/server/bench'
+import { fetchAllLatestRuns, fetchScenarios } from '#lib/server/bench'
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
 	loader: ({ context }) => {
+		context.queryClient.ensureQueryData({
+			queryKey: ['scenarios', 'release'],
+			queryFn: () => fetchScenarios({ data: 'release' }),
+		})
 		context.queryClient.ensureQueryData({
 			queryKey: ['latestRuns', 'release'],
 			queryFn: () => fetchAllLatestRuns({ data: 'release' }),

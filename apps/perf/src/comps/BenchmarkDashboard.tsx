@@ -2,9 +2,10 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
 	fetchAllLatestRuns,
-	getScenarios,
+	fetchScenarios,
 	type BenchRun,
 	type RunFeed,
+	type Scenario,
 } from '#lib/server/bench'
 import { cx } from '#lib/css'
 import { formatGas, formatMs, formatTps } from '#lib/format'
@@ -12,7 +13,10 @@ import { formatGas, formatMs, formatTps } from '#lib/format'
 export function BenchmarkDashboard(
 	props: BenchmarkDashboard.Props,
 ): React.JSX.Element {
-	const scenarios = getScenarios()
+	const { data: scenarios } = useSuspenseQuery({
+		queryKey: ['scenarios', props.feed],
+		queryFn: () => fetchScenarios({ data: props.feed }),
+	})
 	const { data: latestRuns } = useSuspenseQuery({
 		queryKey: ['latestRuns', props.feed],
 		queryFn: () => fetchAllLatestRuns({ data: props.feed }),
@@ -211,7 +215,7 @@ function SectionHeader(props: {
 }
 
 function ScenarioCard(props: {
-	scenario: { id: string; label: string; workload: string }
+	scenario: Scenario
 	run: BenchRun | undefined
 }): React.JSX.Element {
 	const { scenario, run } = props
