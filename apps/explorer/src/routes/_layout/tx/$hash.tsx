@@ -29,7 +29,8 @@ import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxStateDiff } from '#comps/TxStateDiff'
-import { TxTraceTree } from '#comps/TxTraceTree'
+import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
+import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
@@ -51,7 +52,11 @@ import {
 	txQueryOptions,
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
-import { traceQueryOptions } from '#lib/queries/trace'
+import {
+	type CallTrace,
+	type PrestateDiff,
+	traceQueryOptions,
+} from '#lib/queries/trace'
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
@@ -263,16 +268,13 @@ function RouteComponent() {
 			title: 'Trace',
 			itemsLabel: 'views',
 			content: (
-				<div className="flex flex-col">
-					<TxTraceTree trace={traceData.trace} />
-					<TxStateDiff
-						prestate={traceData.prestate}
-						trace={traceData.trace}
-						receipt={{ from: receipt.from, to: receipt.to }}
-						logs={receipt.logs}
-						tokenMetadata={balanceChangesData.tokenMetadata}
-					/>
-				</div>
+				<TraceSection
+					trace={traceData.trace}
+					prestate={traceData.prestate}
+					receipt={receipt}
+					logs={receipt.logs}
+					tokenMetadata={balanceChangesData.tokenMetadata}
+				/>
 			),
 		})
 	}
@@ -599,6 +601,31 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					</Link>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function TraceSection(props: {
+	trace: CallTrace | null
+	prestate: PrestateDiff | null
+	receipt: TransactionReceipt
+	logs: Log[]
+	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
+}): React.JSX.Element {
+	const { trace, prestate, receipt, logs, tokenMetadata } = props
+	const tree = useTraceTree(trace)
+
+	return (
+		<div className="flex flex-col">
+			<TxTraceTree trace={trace} tree={tree} />
+			<TxStateDiff
+				prestate={prestate}
+				trace={trace}
+				receipt={{ from: receipt.from, to: receipt.to }}
+				logs={logs}
+				tokenMetadata={tokenMetadata}
+			/>
+			<TxTraceFlamegraph tree={tree} prestate={prestate} />
 		</div>
 	)
 }
