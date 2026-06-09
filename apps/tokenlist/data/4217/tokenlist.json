@@ -205,6 +205,21 @@
 			"dateAdded": "2026-04-02T18:36:11Z"
 		},
 		{
+			"name": "AllUnity CHF",
+			"symbol": "CHFAU",
+			"decimals": 6,
+			"chainId": 4217,
+			"address": "0x20c00000000000000000000042109aef2f8b28e1",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000042109aef2f8b28e1.png",
+			"extensions": {
+				"chain": "tempo",
+				"label": "CHFAU",
+				"currency": "CHF",
+				"coingeckoId": "allunity-chf"
+			},
+			"dateAdded": "2026-06-09T14:44:13Z"
+		},
+		{
 			"name": "Re Protocol reUSD",
 			"symbol": "reUSD",
 			"decimals": 6,
