@@ -65,7 +65,9 @@ export const Route = createFileRoute('/api/tip20-roles')({
 			GET: async ({ request }) => {
 				try {
 					const url = new URL(request.url)
-					const address = zAddress().parse(url.searchParams.get('address'))
+					const address = zAddress({ lowercase: true }).parse(
+						url.searchParams.get('address'),
+					)
 					const chainIdParam = url.searchParams.get('chainId')
 					const config = getWagmiConfig()
 					const chainId = chainIdParam

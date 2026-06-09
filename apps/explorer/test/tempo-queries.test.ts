@@ -14,6 +14,7 @@ const mockQueryBuilder = vi.hoisted(() => {
 	class MockQueryBuilder {
 		private responses: unknown[] = []
 		private executeCallCount = 0
+		private whereCalls: unknown[][] = []
 
 		setResponses(responses: unknown[]): void {
 			this.responses = [...responses]
@@ -22,10 +23,15 @@ const mockQueryBuilder = vi.hoisted(() => {
 		reset(): void {
 			this.responses = []
 			this.executeCallCount = 0
+			this.whereCalls = []
 		}
 
 		getExecuteCallCount(): number {
 			return this.executeCallCount
+		}
+
+		getWhereCalls(): unknown[][] {
+			return this.whereCalls
 		}
 
 		withSignatures(): this {
@@ -52,7 +58,8 @@ const mockQueryBuilder = vi.hoisted(() => {
 			return this
 		}
 
-		where(): this {
+		where(...args: unknown[]): this {
+			this.whereCalls.push(args)
 			return this
 		}
 
@@ -1691,6 +1698,34 @@ describe('tempo-queries', () => {
 		})
 	})
 
+	it('fetchAddressTxAggregate lowercases checksum addresses before indexed comparisons', async () => {
+		mockQueryBuilder.setResponses([
+			{ count: '0' },
+			{ count: '0' },
+			{ count: '0' },
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+		])
+
+		await fetchAddressTxAggregate(
+			'0x73b5d86dEae56497f852FD79dd6fe68C7270FB6B' as Address.Address,
+			1,
+		)
+
+		expect(mockQueryBuilder.getWhereCalls()).toContainEqual([
+			'from',
+			'=',
+			'0x73b5d86deae56497f852fd79dd6fe68c7270fb6b',
+		])
+		expect(mockQueryBuilder.getWhereCalls()).toContainEqual([
+			'to',
+			'=',
+			'0x73b5d86deae56497f852fd79dd6fe68c7270fb6b',
+		])
+	})
+
 	it('fetchContractCreationReceipt returns the creation receipt row', async () => {
 		mockQueryBuilder.setResponses([
 			{
@@ -1707,6 +1742,21 @@ describe('tempo-queries', () => {
 			from: '0xCreator',
 			block_timestamp: '123',
 		})
+	})
+
+	it('fetchContractCreationReceipt lowercases checksum addresses before indexed comparisons', async () => {
+		mockQueryBuilder.setResponses([undefined])
+
+		await fetchContractCreationReceipt(
+			'0x73b5d86dEae56497f852FD79dd6fe68C7270FB6B' as Address.Address,
+			1,
+		)
+
+		expect(mockQueryBuilder.getWhereCalls()).toContainEqual([
+			'contract_address',
+			'=',
+			'0x73b5d86deae56497f852fd79dd6fe68c7270fb6b',
+		])
 	})
 
 	it('fetchContractCreationReceipt returns undefined when missing', async () => {

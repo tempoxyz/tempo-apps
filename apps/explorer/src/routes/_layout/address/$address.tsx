@@ -364,15 +364,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				balancesData,
 				ogMeta,
 			}
-		}),
+	}),
 	head: async ({ params, loaderData }) => {
+		const address = params.address as Address.Address
+		const ogMeta =
+			loaderData?.ogMeta ??
+			(await fetchAddressMetadata(address).catch(() => undefined))
 		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
 		// since 'empty' is the correct type for regular EOAs
 		let accountType = loaderData?.accountType ?? 'empty'
-		if (
-			accountType === 'empty' &&
-			loaderData?.ogMeta?.accountType === 'contract'
-		) {
+		if (accountType === 'empty' && ogMeta?.accountType === 'contract') {
 			accountType = 'contract'
 		}
 		const isToken = loaderData?.isToken ?? false
@@ -408,9 +409,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const chainId = getTempoChain().id
 
 			let created: string | undefined
-			if (loaderData?.ogMeta?.createdTimestamp) {
+			if (ogMeta?.createdTimestamp) {
 				created = DateFormatter.formatTimestampForOg(
-					BigInt(loaderData.ogMeta.createdTimestamp),
+					BigInt(ogMeta.createdTimestamp),
 				).date
 			}
 
@@ -427,11 +428,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				symbol: tokenMeta.symbol,
 				supply,
 				currency: tokenMeta.currency ?? undefined,
-				holders: loaderData?.ogMeta?.holdersCount ?? undefined,
+				holders: ogMeta?.holdersCount ?? undefined,
 				created,
 			})
 		} else {
-			const txCount = loaderData?.ogMeta?.txCount ?? 0
+			const txCount = ogMeta?.txCount ?? 0
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
@@ -452,15 +453,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				}
 			}
 
-			if (loaderData?.ogMeta?.lastActivityTimestamp) {
+			if (ogMeta?.lastActivityTimestamp) {
 				lastActive = DateFormatter.formatTimestampForOg(
-					BigInt(loaderData.ogMeta.lastActivityTimestamp),
+					BigInt(ogMeta.lastActivityTimestamp),
 				).date
 			}
 
-			if (loaderData?.ogMeta?.createdTimestamp) {
+			if (ogMeta?.createdTimestamp) {
 				created = DateFormatter.formatTimestampForOg(
-					BigInt(loaderData.ogMeta.createdTimestamp),
+					BigInt(ogMeta.createdTimestamp),
 				).date
 			}
 

@@ -20,6 +20,14 @@ type QueryWithWhere<TQuery> = TQuery & {
 	where: (...args: unknown[]) => TQuery
 }
 
+function indexedAddress(address: Address.Address): Address.Address {
+	return address.toLowerCase() as Address.Address
+}
+
+function indexedAddresses(addresses: Address.Address[]): Address.Address[] {
+	return addresses.map(indexedAddress)
+}
+
 export type TokenHolderBalance = { address: string; balance: bigint }
 
 type TokenHolderAggregationRow = {
@@ -65,6 +73,7 @@ export async function fetchTokenHolderBalances(
 	address: Address.Address,
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
+	const tokenAddress = indexedAddress(address)
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 	const transfers = (await qb
 		.selectFrom('transfer')
@@ -73,7 +82,7 @@ export async function fetchTokenHolderBalances(
 			eb.ref('to').as('to'),
 			eb.fn.sum('tokens').as('tokens'),
 		])
-		.where('address', '=', address)
+		.where('address', '=', tokenAddress)
 		.groupBy(['from', 'to'])
 		.execute()) as TokenHolderAggregationRow[]
 
@@ -87,6 +96,7 @@ export async function fetchTokenHoldersCountRows(
 ): Promise<TokenHoldersCountRow[]> {
 	if (addresses.length === 0) return []
 
+	const tokenAddresses = indexedAddresses(addresses)
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 	const transfers = (await qb
 		.selectFrom('transfer')
@@ -96,7 +106,7 @@ export async function fetchTokenHoldersCountRows(
 			eb.ref('to').as('to'),
 			eb.fn.sum('tokens').as('tokens'),
 		])
-		.where('address', 'in', addresses)
+		.where('address', 'in', tokenAddresses)
 		.groupBy(['address', 'from', 'to'])
 		.execute()) as Array<{
 		address: string
@@ -126,7 +136,7 @@ export async function fetchTokenHoldersCountRows(
 		}
 	}
 
-	return addresses.map((address) => {
+	return tokenAddresses.map((address) => {
 		const token = address.toLowerCase()
 		const tokenBalances = balancesByToken.get(token)
 		const rawCount = tokenBalances
@@ -191,6 +201,7 @@ export async function fetchTokenHoldersCount(
 	countCap: number,
 ): Promise<{ count: number; capped: boolean }> {
 	try {
+		const tokenAddress = indexedAddress(address)
 		const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 		const transfers = (await qb
 			.selectFrom('transfer')
@@ -199,7 +210,7 @@ export async function fetchTokenHoldersCount(
 				eb.ref('to').as('to'),
 				eb.fn.sum('tokens').as('tokens'),
 			])
-			.where('address', '=', address)
+			.where('address', '=', tokenAddress)
 			.groupBy(['from', 'to'])
 			.execute()) as TokenHolderAggregationRow[]
 
@@ -236,12 +247,13 @@ export async function fetchTokenFirstTransferTimestamp(
 	address: Address.Address,
 	chainId: number,
 ): Promise<number | null> {
+	const tokenAddress = indexedAddress(address)
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 
 	const firstTransfer = await qb
 		.selectFrom('transfer')
 		.select(['block_timestamp'])
-		.where('address', '=', address)
+		.where('address', '=', tokenAddress)
 		.orderBy('block_num', 'asc')
 		.limit(1)
 		.executeTakeFirst()
@@ -268,6 +280,8 @@ export async function fetchTokenTransfers(
 	offset: number,
 	account?: Address.Address,
 ): Promise<TokenTransferRow[]> {
+	const tokenAddress = indexedAddress(address)
+	const accountAddress = account ? indexedAddress(account) : undefined
 	let query = QB(chainId)
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
@@ -280,11 +294,11 @@ export async function fetchTokenTransfers(
 			'log_idx',
 			'block_timestamp',
 		])
-		.where('address', '=', address)
+		.where('address', '=', tokenAddress)
 
-	if (account) {
+	if (accountAddress) {
 		query = query.where((eb) =>
-			eb.or([eb('from', '=', account), eb('to', '=', account)]),
+			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
 		)
 	}
 
@@ -312,16 +326,18 @@ export async function fetchTokenTransferCount(
 	countCap: number,
 	account?: Address.Address,
 ): Promise<{ count: number; capped: boolean }> {
+	const tokenAddress = indexedAddress(address)
+	const accountAddress = account ? indexedAddress(account) : undefined
 	const qb = QB(chainId)
 	let subquery = qb
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select((eb) => eb.lit(1).as('x'))
-		.where('address', '=', address)
+		.where('address', '=', tokenAddress)
 
-	if (account) {
+	if (accountAddress) {
 		subquery = subquery.where((eb) =>
-			eb.or([eb('from', '=', account), eb('to', '=', account)]),
+			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
 		)
 	}
 
@@ -508,7 +524,8 @@ function applyAddressDirectionFilter<TQuery>(
 	query: QueryWithWhere<TQuery>,
 	params: AddressDirectionParams,
 ): TQuery {
-	const { address, includeSent, includeReceived } = params
+	const { includeSent, includeReceived } = params
+	const address = indexedAddress(params.address)
 	if (includeSent && includeReceived) {
 		return query.where(
 			// @ts-expect-error
@@ -600,12 +617,13 @@ export async function fetchAddressTransferEmittedHashes(params: {
 	sortDirection: SortDirection
 	limit: number
 }): Promise<TransferHashRow[]> {
+	const address = indexedAddress(params.address)
 	return QB(params.chainId)
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['tx_hash', 'block_num'])
 		.distinct()
-		.where('address', '=', params.address)
+		.where('address', '=', address)
 		.orderBy('block_num', params.sortDirection)
 		.orderBy('tx_hash', params.sortDirection)
 		.limit(params.limit)
@@ -619,6 +637,7 @@ export async function fetchAddressDirectTxCount(
 		after?: number
 	},
 ): Promise<number> {
+	const address = indexedAddress(params.address)
 	const statusJoin = params.statusFilter
 		? 'INNER JOIN receipts status_receipts ON status_receipts.tx_hash = txs.hash'
 		: ''
@@ -631,7 +650,7 @@ export async function fetchAddressDirectTxCount(
 		filters.push(`txs.block_timestamp >= '${toSqlTimestamp(params.after)}'`)
 
 	const whereForSide = (side: 'from' | 'to') =>
-		[`txs."${side}" = '${params.address}'`, ...filters].join(' AND ')
+		[`txs."${side}" = '${address}'`, ...filters].join(' AND ')
 	const sideQuery = (side: 'from' | 'to') =>
 		`(SELECT txs.hash FROM txs ${statusJoin} WHERE ${whereForSide(side)} LIMIT ${params.countCap})`
 	const matchesQuery =
@@ -681,13 +700,14 @@ export async function fetchAddressTransferEmittedDistinctCount(params: {
 	chainId: number
 	countCap: number
 }): Promise<number> {
+	const address = indexedAddress(params.address)
 	const qb = QB(params.chainId)
 	const subquery = qb
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select('tx_hash')
 		.distinct()
-		.where('address', '=', params.address)
+		.where('address', '=', address)
 
 	const result = await qb
 		.selectFrom(subquery.limit(params.countCap).as('subquery'))
@@ -1273,6 +1293,7 @@ export async function fetchAddressTransferBalances(
 ): Promise<
 	Array<{ token: string; received: string | number; sent: string | number }>
 > {
+	const accountAddress = indexedAddress(address)
 	const [incoming, outgoing] = await Promise.all([
 		QB(chainId)
 			.withSignatures([TRANSFER_SIGNATURE])
@@ -1281,7 +1302,7 @@ export async function fetchAddressTransferBalances(
 				eb.ref('address').as('token'),
 				eb.fn.sum('tokens').as('received'),
 			])
-			.where('to', '=', address)
+			.where('to', '=', accountAddress)
 			.groupBy('address')
 			.execute()
 			.catch((e) => {
@@ -1295,7 +1316,7 @@ export async function fetchAddressTransferBalances(
 				eb.ref('address').as('token'),
 				eb.fn.sum('tokens').as('sent'),
 			])
-			.where('from', '=', address)
+			.where('from', '=', accountAddress)
 			.groupBy('address')
 			.execute()
 			.catch((e) => {
@@ -1346,11 +1367,14 @@ export async function fetchAddressTransfersForValue(
 ): Promise<
 	Array<{ address: string; from: string; to: string; tokens: string | number }>
 > {
+	const accountAddress = indexedAddress(address)
 	const result = await QB(chainId)
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['address', 'from', 'to', 'tokens'])
-		.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
+		.where((eb) =>
+			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
+		)
 		.limit(limit)
 		.execute()
 
@@ -1444,6 +1468,7 @@ export async function fetchTokenTransferAggregate(
 	oldestTimestamp?: unknown
 	latestTimestamp?: unknown
 }> {
+	const tokenAddress = indexedAddress(address)
 	// Use raw logs instead of the Transfer CTE here. Production tidx currently
 	// errors on aggregate queries over event CTEs, while the raw logs aggregate
 	// is fast and keeps TIDX credentials server-side.
@@ -1453,7 +1478,7 @@ export async function fetchTokenTransferAggregate(
 			sb.fn.min('block_timestamp').as('oldestTimestamp'),
 			sb.fn.max('block_timestamp').as('latestTimestamp'),
 		])
-		.where('address', '=', address)
+		.where('address', '=', tokenAddress)
 		.where('topic0', '=', TRANSFER_TOPIC0)
 		.executeTakeFirst()
 
@@ -1473,6 +1498,7 @@ export async function fetchAddressTxAggregate(
 	oldestTxHash?: string
 	oldestTxFrom?: string
 }> {
+	const accountAddress = indexedAddress(address)
 	type AddressTxBoundaryRow = {
 		hash: Hex.Hex
 		from: string
@@ -1487,7 +1513,7 @@ export async function fetchAddressTxAggregate(
 		const result = (await QB(chainId)
 			.selectFrom('txs')
 			.select((eb) => eb.fn.count('hash').as('count'))
-			.where(field, '=', address)
+			.where(field, '=', accountAddress)
 			.executeTakeFirst()) as AddressTxCountRow | undefined
 
 		return Number(result?.count ?? 0)
@@ -1500,7 +1526,7 @@ export async function fetchAddressTxAggregate(
 		(await QB(chainId)
 			.selectFrom('txs')
 			.select(['hash', 'from', 'block_timestamp'])
-			.where(field, '=', address)
+			.where(field, '=', accountAddress)
 			.orderBy('block_timestamp', sortDirection)
 			.orderBy('hash', sortDirection)
 			.limit(1)
@@ -1549,8 +1575,8 @@ export async function fetchAddressTxAggregate(
 		QB(chainId)
 			.selectFrom('txs')
 			.select((eb) => eb.fn.count('hash').as('count'))
-			.where('from', '=', address)
-			.where('to', '=', address)
+			.where('from', '=', accountAddress)
+			.where('to', '=', accountAddress)
 			.executeTakeFirst()
 			.then((result) =>
 				Number((result as AddressTxCountRow | undefined)?.count ?? 0),
@@ -1583,10 +1609,11 @@ export async function fetchContractCreationReceipt(
 	address: Address.Address,
 	chainId: number,
 ): Promise<ContractCreationReceiptRow | undefined> {
+	const contractAddress = indexedAddress(address)
 	return (await QB(chainId)
 		.selectFrom('receipts')
 		.select(['tx_hash', 'from', 'block_timestamp'])
-		.where('contract_address', '=', address)
+		.where('contract_address', '=', contractAddress)
 		.orderBy('block_num', 'asc')
 		.limit(1)
 		.executeTakeFirst()) as ContractCreationReceiptRow | undefined
@@ -1596,17 +1623,18 @@ export async function fetchAddressTxCounts(
 	address: Address.Address,
 	chainId: number,
 ): Promise<{ sent: number; received: number }> {
+	const accountAddress = indexedAddress(address)
 	const qb = QB(chainId)
 	const [txSentResult, txReceivedResult] = await Promise.all([
 		qb
 			.selectFrom('txs')
 			.select((eb) => eb.fn.count('hash').as('cnt'))
-			.where('from', '=', address)
+			.where('from', '=', accountAddress)
 			.executeTakeFirst(),
 		qb
 			.selectFrom('txs')
 			.select((eb) => eb.fn.count('hash').as('cnt'))
-			.where('to', '=', address)
+			.where('to', '=', accountAddress)
 			.executeTakeFirst(),
 	])
 
@@ -1631,19 +1659,20 @@ export async function fetchAddressTransferActivity(
 		block_timestamp: string | number
 	}>
 }> {
+	const accountAddress = indexedAddress(address)
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 
 	const [incoming, outgoing] = await Promise.all([
 		qb
 			.selectFrom('transfer')
 			.select(['tokens', 'address', 'block_timestamp'])
-			.where('to', '=', address)
+			.where('to', '=', accountAddress)
 			.orderBy('block_timestamp', 'desc')
 			.execute(),
 		qb
 			.selectFrom('transfer')
 			.select(['tokens', 'address', 'block_timestamp'])
-			.where('from', '=', address)
+			.where('from', '=', accountAddress)
 			.orderBy('block_timestamp', 'desc')
 			.execute(),
 	])

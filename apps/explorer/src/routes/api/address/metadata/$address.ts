@@ -46,7 +46,7 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 				}
 
 				try {
-					const address = zAddress().parse(params.address)
+					const address = zAddress({ lowercase: true }).parse(params.address)
 					Address.assert(address)
 
 					const client = getBatchedClient()
@@ -111,19 +111,26 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							}),
 						}
 					} else {
-						const [bytecode, result, creation] = await Promise.all([
+						const [bytecode, result, indexedCreation] = await Promise.all([
 							bytecodePromise,
 							fetchAddressTxAggregate(address, chainId),
 							fetchContractCreationReceipt(address, chainId).catch(
 								() => undefined,
 							),
 						])
+						const accountType = getAccountType(bytecode)
+						const creation =
+							indexedCreation ??
+							(accountType === 'contract'
+								? await fetchContractCreationData(address).catch(() => null)
+								: undefined) ??
+							undefined
 						const metadata = buildAddressTxMetadata(result, creation)
 
 						response = {
 							address,
 							chainId,
-							accountType: getAccountType(bytecode),
+							accountType,
 							...metadata,
 						}
 					}

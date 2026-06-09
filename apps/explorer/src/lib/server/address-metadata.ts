@@ -1,5 +1,6 @@
 import type { ContractCreationReceiptRow } from '#lib/server/tempo-queries'
 import { parseTimestamp } from '#lib/timestamp'
+import type { ContractCreationData } from '#lib/server/contract-creation'
 
 type AddressTxAggregate = {
 	count?: number
@@ -44,7 +45,7 @@ export function pickTip20CreatedTimestamp(params: {
 
 export function buildAddressTxMetadata(
 	aggregate: AddressTxAggregate,
-	creation: ContractCreationReceiptRow | undefined,
+	creation: ContractCreationReceiptRow | ContractCreationData | undefined,
 ): {
 	txCount: number
 	lastActivityTimestamp?: number
@@ -53,7 +54,11 @@ export function buildAddressTxMetadata(
 	createdBy?: string
 } {
 	const oldestTimestamp = parseTimestamp(aggregate.oldestTxsBlockTimestamp)
-	const creationTimestamp = parseTimestamp(creation?.block_timestamp)
+	const creationTimestamp = parseTimestamp(
+		creation && 'block_timestamp' in creation
+			? creation.block_timestamp
+			: creation?.timestamp,
+	)
 	const useCreation =
 		creationTimestamp != null &&
 		(oldestTimestamp == null || creationTimestamp <= oldestTimestamp)
@@ -66,7 +71,12 @@ export function buildAddressTxMetadata(
 				? creationTimestamp
 				: oldestTimestamp,
 		createdTxHash:
-			useCreation && creation ? creation.tx_hash : aggregate.oldestTxHash,
-		createdBy: useCreation && creation ? creation.from : aggregate.oldestTxFrom,
+			useCreation && creation
+				? 'tx_hash' in creation
+					? creation.tx_hash
+					: (creation.hash ?? undefined)
+				: aggregate.oldestTxHash,
+		createdBy:
+			useCreation && creation ? (creation.from ?? undefined) : aggregate.oldestTxFrom,
 	}
 }
