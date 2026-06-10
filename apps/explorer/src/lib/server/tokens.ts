@@ -38,7 +38,7 @@ export type TokensApiResponse = {
 	total: number
 }
 
-type TokenListEntry = {
+export type TokenListEntry = {
 	address: string
 	name: string
 	symbol: string
@@ -97,6 +97,12 @@ export async function getTokenListAddresses(
 	chainId: number,
 ): Promise<Set<string>> {
 	return (await getTokenList(chainId)).addresses
+}
+
+export async function getTokenListEntries(
+	chainId: number,
+): Promise<TokenListEntry[]> {
+	return (await getTokenList(chainId)).entries
 }
 
 function getAddressKey(address: string): string {

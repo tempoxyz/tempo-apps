@@ -13,6 +13,21 @@ app.use('*', cors())
 const staticAssetBindingError =
 	'Static assets binding "ASSETS" is not configured.'
 
+const tokenIconExtensions = ['svg', 'png'] as const
+const tokenIconContentTypes = {
+	svg: 'image/svg+xml',
+	png: 'image/png',
+} satisfies Record<(typeof tokenIconExtensions)[number], string>
+
+function getTokenIconBaseName(address: string): string {
+	const lowercased = address.toLowerCase()
+	for (const extension of tokenIconExtensions) {
+		const suffix = `.${extension}`
+		if (lowercased.endsWith(suffix)) return lowercased.slice(0, -suffix.length)
+	}
+	return lowercased
+}
+
 app
 	.get('/', (context) => context.redirect('/docs'))
 	.get('/health', (_context) => new Response('ok'))
@@ -66,20 +81,30 @@ app.get('/icon/:chain_id/:address', async (context) => {
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
 
-	const assetUrl = new URL(
-		`/${chainId}/icons/${address.toLowerCase().replace('.svg', '')}.svg`,
-		'http://assets',
-	)
-	let assetResponse = await assets.fetch(assetUrl)
+	const iconBaseName = getTokenIconBaseName(address)
+	let assetResponse: Response | undefined
+	let contentType = 'image/svg+xml'
+	for (const extension of tokenIconExtensions) {
+		const assetUrl = new URL(
+			`/${chainId}/icons/${iconBaseName}.${extension}`,
+			'http://assets',
+		)
+		const response = await assets.fetch(assetUrl)
+		if (response.status === 200) {
+			assetResponse = response
+			contentType = tokenIconContentTypes[extension]
+			break
+		}
+	}
 
-	if (assetResponse.status !== 200)
+	if (!assetResponse)
 		assetResponse = await assets.fetch(
 			new URL(`/${chainId}/icons/fallback.svg`, 'http://assets'),
 		)
 
 	// Let CF set correct headers; override only when missing
 	const headers = new Headers(assetResponse.headers)
-	if (!headers.has('Content-Type')) headers.set('Content-Type', 'image/svg+xml')
+	if (!headers.has('Content-Type')) headers.set('Content-Type', contentType)
 
 	return new Response(assetResponse.body, {
 		status: assetResponse.status,
