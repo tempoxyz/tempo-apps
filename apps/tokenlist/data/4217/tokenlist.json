@@ -2,11 +2,11 @@
   "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
   "name": "Tempo Mainnet",
   "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-  "timestamp": "2026-06-10T15:22:01Z",
+  "timestamp": "2026-06-10T16:18:45Z",
   "version": {
     "major": 1,
     "minor": 2,
-    "patch": 24
+    "patch": 25
   },
   "tokens": [
     {
@@ -398,6 +398,21 @@
         "coingeckoId": "brla-digital-brla"
       },
       "dateAdded": "2026-06-10T15:22:01Z"
+    },
+    {
+      "name": "Agant GBP",
+      "symbol": "GBPA",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000000a6da882d075a4c3",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000a6da882d075a4c3.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "GBPA",
+        "currency": "GBP",
+        "coingeckoId": "agant-gbp"
+      },
+      "dateAdded": "2026-06-10T16:18:45Z"
     }
   ]
 }
