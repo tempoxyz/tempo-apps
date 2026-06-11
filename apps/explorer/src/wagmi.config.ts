@@ -69,6 +69,12 @@ const getFallbackUrls = createIsomorphicFn()
 	}))
 	.server(() => {
 		const chain = getTempoChain()
+		if (getTempoEnv() === 'nextfork' && serverEnv.TEMPO_NEXTFORK_RPC_URL) {
+			return {
+				http: [serverEnv.TEMPO_NEXTFORK_RPC_URL],
+			}
+		}
+
 		const key = serverEnv.TEMPO_RPC_KEY
 		return {
 			http: chain.rpcUrls.default.http.map((url) =>
@@ -92,10 +98,13 @@ const getTempoTransport = createIsomorphicFn()
 	.server(() => {
 		const proxy = getRpcProxyUrl()
 		const fallbackUrls = getFallbackUrls()
-		return loadBalance([
-			http(proxy.http),
-			...fallbackUrls.http.map((url) => http(url)),
-		])
+		const useNextforkRpcOverride =
+			getTempoEnv() === 'nextfork' && serverEnv.TEMPO_NEXTFORK_RPC_URL
+		const transports = useNextforkRpcOverride
+			? fallbackUrls.http.map((url) => http(url))
+			: [http(proxy.http), ...fallbackUrls.http.map((url) => http(url))]
+
+		return loadBalance(transports)
 	})
 
 export function getWagmiConfig() {

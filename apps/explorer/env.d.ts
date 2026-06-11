@@ -13,6 +13,7 @@ interface EnvironmentVariables {
 	readonly VITE_TEMPO_ENV: 'testnet' | 'devnet' | 'nextfork' | 'mainnet'
 
 	readonly TEMPO_RPC_KEY: string
+	readonly TEMPO_NEXTFORK_RPC_URL: string | undefined
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

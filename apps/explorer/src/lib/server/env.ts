@@ -10,6 +10,7 @@ import * as z from 'zod/mini'
  */
 export const serverEnvSchema = z.object({
 	TEMPO_RPC_KEY: z.optional(z.string()),
+	TEMPO_NEXTFORK_RPC_URL: z.optional(z.url()),
 	TIDX_BASIC_AUTH: z.optional(z.string()),
 	TIDX_BASE_URL: z.prefault(z.url(), 'https://tidx.tempo.xyz'),
 })
