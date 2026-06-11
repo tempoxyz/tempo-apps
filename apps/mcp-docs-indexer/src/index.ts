@@ -1,12 +1,22 @@
 import { env } from 'cloudflare:workers'
 import { syncSource } from './lib/ingest.js'
 import { log } from './lib/log.js'
+import { handleMcp } from './lib/mcp.js'
 import { proxyMcp } from './lib/proxy.js'
 import { isForcedHour } from './lib/schedule.js'
 import { parseSources } from './lib/sources.js'
+import type { Source } from './lib/sources.js'
+
+let cachedSourcesKey: string | undefined
+let cachedSources: Source[] | undefined
 
 export default {
 	async fetch(req) {
+		const response = await handleMcp(req, {
+			instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
+			sources: sourcesFor(env.SOURCES),
+		})
+		if (response) return response
 		return proxyMcp(req, env.AI_SEARCH_MCP_URL)
 	},
 	async scheduled(event) {
@@ -47,3 +57,11 @@ export default {
 		})
 	},
 } satisfies ExportedHandler<Env>
+
+function sourcesFor(config: Env['SOURCES']): Source[] {
+	const key = typeof config === 'string' ? config : JSON.stringify(config)
+	if (cachedSources && cachedSourcesKey === key) return cachedSources
+	cachedSourcesKey = key
+	cachedSources = parseSources(config)
+	return cachedSources
+}

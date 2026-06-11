@@ -3,7 +3,7 @@ import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
 import type { Source } from './sources.js'
 
 /** Recorded state for one AI Search item, persisted to KV per source. */
-type IndexEntry = { id: string; etag?: string }
+type IndexEntry = { id: string; etag?: string; content_hash?: string }
 /** Per-source map of AI Search item key → {item id, last-seen ETag}. */
 type SourceIndex = Record<string, IndexEntry>
 
@@ -192,7 +192,7 @@ async function syncPage(args: {
 			return { key, outcome: 'failed', entry: prev }
 		}
 
-		const content = await res.text()
+		const content = preparePageContent(await res.text())
 		if (!content) {
 			log.warn('page.empty', { source: source.id, url })
 			return { key, outcome: 'failed', entry: prev }
@@ -204,6 +204,19 @@ async function syncPage(args: {
 				bytes: content.length,
 			})
 			return { key, outcome: 'failed', entry: prev }
+		}
+		const contentHash = await sha256(content)
+		if (prev?.content_hash === contentHash && !force) {
+			const etag = res.headers.get('etag') ?? prev.etag
+			return {
+				key,
+				outcome: 'unchanged',
+				entry: {
+					...prev,
+					...(etag ? { etag } : {}),
+					content_hash: contentHash,
+				},
+			}
 		}
 
 		// Use upload() not uploadAndPoll(): we don't need to block on indexing
@@ -223,7 +236,7 @@ async function syncPage(args: {
 		return {
 			key,
 			outcome: 'uploaded',
-			entry: { id: item.id, etag },
+			entry: { id: item.id, etag, content_hash: contentHash },
 		}
 	} catch (err) {
 		log.error('page.upload_failed', {
@@ -233,6 +246,46 @@ async function syncPage(args: {
 		})
 		return { key, outcome: 'failed', entry: prev }
 	}
+}
+
+async function sha256(content: string): Promise<string> {
+	const bytes = new TextEncoder().encode(content)
+	const digest = await crypto.subtle.digest('SHA-256', bytes)
+	return [...new Uint8Array(digest)]
+		.map((byte) => byte.toString(16).padStart(2, '0'))
+		.join('')
+}
+
+function preparePageContent(content: string): string {
+	return stripSitemapComment(content)
+		.split('\n')
+		.map((line) => line.trimEnd())
+		.filter((line) => !isDocsChromeLine(line))
+		.join('\n')
+		.replace(/\n{3,}/g, '\n\n')
+		.trim()
+}
+
+function stripSitemapComment(content: string): string {
+	return content
+		.replace(/\r\n/g, '\n')
+		.replace(/^<!--\nSitemap:\n[\s\S]*?\n-->\n*/, '')
+}
+
+function isDocsChromeLine(line: string): boolean {
+	return [
+		/^skip to content$/i,
+		/^\[skip to content\]\(/i,
+		/^search\.\.\.$/i,
+		/^\[\]\(\/\)$/i,
+		/^⌘$/i,
+		/^k$/i,
+		/^i$/i,
+		/^was this helpful\?$/i,
+		/^copy page for ai$/i,
+		/^ask ai\.\.\.$/i,
+		/^suggest changes to this page$/i,
+	].some((pattern) => pattern.test(line.trim()))
 }
 
 /** Derive a stable AI Search item key from a page URL and source id. */
