@@ -45,7 +45,7 @@ catalog:
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
   '@wagmi/core': ^3.4.8
-  accounts: ~0.14.6
+  accounts: ~0.14.9
   abitype: ^1.2.4
   animejs: ^4.3.6
   cloudflare-worker-metrics: ^1.4.0
