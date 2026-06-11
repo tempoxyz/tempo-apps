@@ -4,6 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"configure:metadata": "tsx scripts/configure-ai-search-metadata.ts",
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"check": "pnpm check:biome && pnpm check:types",

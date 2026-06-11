@@ -66,6 +66,30 @@ inside Cloudflare Workers.
   `base`, optional `description`, and optional `indexPath` (defaults to
   `/llms.txt`). Adding a docs source should be a config-only change.
 
+## AI Search metadata
+
+Custom metadata fields must be defined on the AI Search instance before MCP
+queries can filter on uploaded metadata. The checked-in schema lives at
+`ai-search-custom-metadata.json` and matches the metadata attached by the
+ingestor:
+
+| Field                | Type   | Purpose                                  |
+| -------------------- | ------ | ---------------------------------------- |
+| `source`             | `text` | Filter results to one configured source  |
+| `url`                | `text` | Return the canonical source page URL     |
+| `source_description` | `text` | Describe the upstream docs source        |
+
+Apply it with:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<account-id> \
+CLOUDFLARE_API_TOKEN=<api-token-with-ai-search-edit> \
+pnpm --filter mcp-docs-indexer configure:metadata
+```
+
+Changing AI Search custom metadata triggers a full re-index. Re-run a forced
+sync afterward if existing built-in-storage items need the new schema applied.
+
 `docs.tempo.xyz` is intentionally not listed in `SOURCES` — it's the AI Search
 instance's external website data source and is auto-crawled.
 
@@ -80,6 +104,10 @@ pnpm --filter mcp-docs-indexer exec wrangler kv namespace create ETAG_CACHE
 
 # Generate Worker types
 pnpm --filter mcp-docs-indexer gen:types
+
+# Configure AI Search custom metadata so MCP queries can filter by source.
+# Requires Cloudflare auth with AI Search:Edit permissions.
+pnpm --filter mcp-docs-indexer configure:metadata
 
 # Verify
 pnpm --filter mcp-docs-indexer check
