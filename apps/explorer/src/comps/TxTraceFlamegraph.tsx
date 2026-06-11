@@ -7,15 +7,20 @@ import DatabaseIcon from '~icons/lucide/database'
 const BAR_HEIGHT = 32
 const MIN_WIDTH_PX = 6
 
-// Warm flame palette: depth 0 = hottest (orange-red), deeper = cooler (yellow → teal)
+// Standard flamegraph palettes stay in the warm red/orange/yellow range.
 const FLAME_COLORS = [
-	{ bg: 'rgba(234, 88, 12, 0.8)', hover: 'rgba(234, 88, 12, 1)' }, // orange-600
-	{ bg: 'rgba(217, 119, 6, 0.75)', hover: 'rgba(217, 119, 6, 0.95)' }, // amber-600
-	{ bg: 'rgba(202, 138, 4, 0.7)', hover: 'rgba(202, 138, 4, 0.9)' }, // yellow-600
-	{ bg: 'rgba(101, 163, 13, 0.6)', hover: 'rgba(101, 163, 13, 0.8)' }, // lime-600
-	{ bg: 'rgba(13, 148, 136, 0.55)', hover: 'rgba(13, 148, 136, 0.75)' }, // teal-600
-	{ bg: 'rgba(59, 130, 246, 0.5)', hover: 'rgba(59, 130, 246, 0.7)' }, // blue-500
+	{ bg: 'rgb(180, 38, 28)', hover: 'rgb(218, 52, 38)' },
+	{ bg: 'rgb(202, 66, 25)', hover: 'rgb(236, 84, 35)' },
+	{ bg: 'rgb(220, 94, 24)', hover: 'rgb(249, 115, 22)' },
+	{ bg: 'rgb(225, 128, 24)', hover: 'rgb(251, 146, 60)' },
+	{ bg: 'rgb(218, 161, 32)', hover: 'rgb(245, 184, 53)' },
+	{ bg: 'rgb(197, 142, 23)', hover: 'rgb(234, 179, 8)' },
 ] as const
+
+const ERROR_COLOR = {
+	bg: 'rgb(190, 38, 38)',
+	hover: 'rgb(239, 68, 68)',
+} as const
 
 function getFlameColor(depth: number) {
 	return FLAME_COLORS[Math.min(depth, FLAME_COLORS.length - 1)]
@@ -221,16 +226,14 @@ export namespace TxTraceFlamegraph {
 		const hasStorage =
 			storageSlots && (storageSlots.reads > 0 || storageSlots.writes > 0)
 
-		const color = node.hasError
-			? { bg: 'rgba(239, 68, 68, 0.7)', hover: 'rgba(239, 68, 68, 0.9)' }
-			: getFlameColor(depth)
+		const color = node.hasError ? ERROR_COLOR : getFlameColor(depth)
 
 		return (
 			// biome-ignore lint/a11y/noStaticElementInteractions: hover drives the details panel below
 			<div
 				className={cx(
-					'absolute top-0 h-full rounded-[3px] text-[11px] font-mono overflow-hidden transition-colors border border-transparent',
-					hovered && 'border-white/40 z-10',
+					'absolute top-0 h-full rounded-[3px] text-[11px] font-mono overflow-hidden transition-colors border border-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]',
+					hovered && 'border-white/50 z-10',
 				)}
 				style={{
 					left: `${leftPct}%`,
