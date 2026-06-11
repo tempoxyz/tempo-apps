@@ -30,6 +30,15 @@ export function calculateKnownEventsTotal(
 ): bigint {
 	let fallbackTotal = 0n
 	const flowsByToken = new Map<string, Map<string, Flow>>()
+	const countPricedOnly = events.some((event) => {
+		if (event.type === 'approval') return false
+		const amounts = event.totalAmount
+			? [event.totalAmount]
+			: event.parts
+					.filter((part): part is AmountPart => part.type === 'amount')
+					.map((part) => part.value)
+		return amounts.some((amount) => Boolean(amount.currency))
+	})
 
 	for (const event of events) {
 		// Approvals grant spending permission rather than moving value, and
@@ -44,18 +53,23 @@ export function calculateKnownEventsTotal(
 					.map((part) => part.value)
 		if (amounts.length === 0) continue
 
+		const totalableAmounts = countPricedOnly
+			? amounts.filter((amount) => Boolean(amount.currency))
+			: amounts
+		if (totalableAmounts.length === 0) continue
+
 		const from = event.meta?.from?.toLowerCase()
 		const to = event.meta?.to?.toLowerCase()
 
 		if (!from || !to) {
-			fallbackTotal += amounts.reduce((max, amountValue) => {
+			fallbackTotal += totalableAmounts.reduce((max, amountValue) => {
 				const amount = normalizeAmount(amountValue)
 				return amount > max ? amount : max
 			}, 0n)
 			continue
 		}
 
-		for (const amountValue of amounts) {
+		for (const amountValue of totalableAmounts) {
 			const token = amountValue.token.toLowerCase()
 			const amount = normalizeAmount(amountValue)
 			let flows = flowsByToken.get(token)
