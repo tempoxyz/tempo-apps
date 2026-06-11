@@ -61,8 +61,7 @@ export class VerificationJobRunner extends DurableObject<Cloudflare.Env> {
 
 		try {
 			const authToken = await resolveAuthToken(
-				this.env.CHAINS_CONFIG_AUTH_TOKEN_SECRET ||
-					this.env.CHAINS_CONFIG_AUTH_TOKEN,
+				this.env.CHAINS_CONFIG_AUTH_TOKEN,
 			)
 			const url = this.env.CHAINS_CONFIG_URL || undefined
 			const registry = url
