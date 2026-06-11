@@ -46,6 +46,11 @@
 		// `indexPath` defaults to `/llms.txt`.
 		"SOURCES": [
 			{
+				"id": "tempo",
+				"base": "https://docs.tempo.xyz",
+				"description": "Tempo network, protocol, and integration documentation"
+			},
+			{
 				"id": "viem",
 				"base": "https://viem.sh",
 				"description": "TypeScript interface for Ethereum / Tempo"
