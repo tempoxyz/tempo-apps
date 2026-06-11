@@ -691,6 +691,55 @@ importers:
         specifier: 'catalog:'
         version: 4.95.0(@cloudflare/workers-types@4.20260531.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
+  apps/native-multisig-relay:
+    dependencies:
+      accounts:
+        specifier: 'catalog:'
+        version: 0.14.6(@types/react@19.2.14)(@wagmi/core@3.4.8)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.6.9)
+      hono:
+        specifier: 'catalog:'
+        version: 4.12.14
+      viem:
+        specifier: 'catalog:'
+        version: 2.52.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: 'catalog:'
+        version: 1.30.3(patch_hash=e06eefb6e9635561829ac5e497cea44db1c8cfe738d2336f3f1de75842284333)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))(workerd@1.20260526.1)(wrangler@4.95.0(@cloudflare/workers-types@4.20260531.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      '@cloudflare/vitest-pool-workers':
+        specifier: 'catalog:'
+        version: 0.13.5(@cloudflare/workers-types@4.20260531.1)(@vitest/runner@4.1.0)(@vitest/snapshot@4.1.0)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vitest@4.1.0)
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20260531.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.5.2
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.3.1
+      ox:
+        specifier: 'catalog:'
+        version: 0.14.20(typescript@6.0.2)(zod@4.3.6)
+      prool:
+        specifier: 'catalog:'
+        version: 0.2.4(testcontainers@11.13.0)
+      testcontainers:
+        specifier: 'catalog:'
+        version: 11.13.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/ui@4.1.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.95.0(@cloudflare/workers-types@4.20260531.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
   apps/og:
     dependencies:
       '@hono/zod-validator':

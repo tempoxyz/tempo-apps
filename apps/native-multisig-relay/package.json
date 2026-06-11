@@ -1,0 +1,44 @@
+{
+	"name": "native-multisig-relay",
+	"type": "module",
+	"private": true,
+	"imports": {
+		"#*": "./src/*",
+		"#package.json": "./package.json",
+		"#wrangler.json": "./wrangler.json"
+	},
+	"scripts": {
+		"build": "vite build",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"dev": "vite dev",
+		"deploy": "wrangler deploy",
+		"format": "biome format --write .",
+		"gen:types": "CLOUDFLARE_ENV= wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
+		"tail": "wrangler tail",
+		"test": "vitest --run",
+		"test:e2e": "./scripts/test-e2e.sh",
+		"test:watch": "vitest",
+		"postinstall": "pnpm gen:types"
+	},
+	"dependencies": {
+		"accounts": "catalog:",
+		"hono": "catalog:",
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"dotenv": "catalog:",
+		"ox": "catalog:",
+		"prool": "catalog:",
+		"testcontainers": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
