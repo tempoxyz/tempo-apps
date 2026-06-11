@@ -182,7 +182,10 @@ describe('syncSource — page uploads', () => {
 			'viem/docs_foo.md',
 		])
 		for (const u of uploads) {
-			expect(u.metadata).toMatchObject({ source: 'viem' })
+			expect(u.metadata).toEqual({
+				source: 'viem',
+				url: expect.any(String),
+			})
 		}
 		expect(store.get('etag:viem')).toBe('W/"new"')
 		expect(store.get('last_sync:viem')).toBeTruthy()
