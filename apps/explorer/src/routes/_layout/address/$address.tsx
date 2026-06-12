@@ -22,7 +22,7 @@ import { AccountCard } from '#comps/AccountCard'
 import { AddressCsvExportButton } from '#comps/AddressCsvExportButton'
 import { WalletActions } from '#comps/WalletActions'
 import { AddressCell } from '#comps/AddressCell'
-import { AmountCell, BalanceCell } from '#comps/AmountCell'
+import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
@@ -83,12 +83,12 @@ import {
 	buildTokenOgImageUrl,
 } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
+import { type HistoryResponse, historyQueryOptions } from '#lib/queries/account'
 import {
-	type HistoryResponse,
-	historySourcesForAddress,
-	historyQueryOptions,
-} from '#lib/queries/account'
-import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
+	accountTransfersQueryOptions,
+	holdersQueryOptions,
+	transfersQueryOptions,
+} from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/tokenlist'
@@ -165,7 +165,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		limit: z.prefault(
 			z.pipe(
 				z.number(),
-				z.transform((val) => Math.min(100, val)),
+				z.transform((val) => Math.min(100, Math.max(5, val))),
 			),
 			defaultSearchValues.limit,
 		),
@@ -261,10 +261,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const historySources = historySourcesForAddress(
-				address as Address.Address,
-			)
-
 			let after: number | undefined
 			if (period === '24h') after = Math.floor(Date.now() / 1000) - 86400
 			else if (period === '7d')
@@ -274,8 +270,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				address,
 				page,
 				limit,
-				offset,
-				sources: historySources,
 				status,
 				include:
 					dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
@@ -314,9 +308,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					: Promise.resolve(undefined)
 
 			// Fetch address metadata through the API route so TIDX credentials stay
-			// server-side when loaders run in the browser.
+			// server-side when loaders run in the browser. Goes through the query
+			// cache (shared with the component query) so paging within the same
+			// address reuses the entry instead of re-running the slow count query
+			// on every navigation.
 			const ogMetaPromise = timeout(
-				fetchAddressMetadata(address).catch(() => undefined),
+				context.queryClient
+					.ensureQueryData(addressMetadataQueryOptions(address))
+					.catch(() => undefined),
 				QUERY_TIMEOUT_MS,
 			)
 
@@ -364,7 +363,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				balancesData,
 				ogMeta,
 			}
-	}),
+		}),
 	head: async ({ params, loaderData }) => {
 		const address = params.address as Address.Address
 		const ogMeta =
@@ -518,11 +517,9 @@ function RouteComponent() {
 
 	Address.assert(address)
 
-	const { data: addressMetadata } = useQuery({
-		queryKey: ['address-metadata', address],
-		queryFn: () => fetchAddressMetadata(address),
-		staleTime: 30_000,
-	})
+	const { data: addressMetadata } = useQuery(
+		addressMetadataQueryOptions(address),
+	)
 
 	const hash = location.hash
 
@@ -560,7 +557,7 @@ function RouteComponent() {
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = ['transactions']
 		if (!isTip20) {
-			tabs.push('holdings')
+			tabs.push('transfers', 'holdings')
 		}
 		if (isToken) {
 			tabs.push('transfers', 'holders')
@@ -618,11 +615,6 @@ function RouteComponent() {
 		balancesData,
 		!isToken && (isHoldingsTabActive || balancesData !== undefined),
 	)
-	const historySources = React.useMemo(
-		() => historySourcesForAddress(address),
-		[address],
-	)
-
 	// Prefetch non-active tabs' data after a delay to avoid TIDX query storms
 	const queryClient = useQueryClient()
 	const prefetchedRef = React.useRef<string | null>(null)
@@ -637,8 +629,6 @@ function RouteComponent() {
 						address,
 						page: 1,
 						limit,
-						offset: 0,
-						sources: historySources,
 						status,
 						include:
 							dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
@@ -657,17 +647,7 @@ function RouteComponent() {
 		}, 2_000)
 
 		return () => clearTimeout(timer)
-	}, [
-		address,
-		tab,
-		limit,
-		queryClient,
-		isToken,
-		historySources,
-		status,
-		dir,
-		period,
-	])
+	}, [address, tab, limit, queryClient, isToken, status, dir, period])
 
 	return (
 		<div
@@ -725,6 +705,19 @@ async function fetchAddressMetadata(address: Address.Address) {
 		lastActivityTimestamp: number | null
 		createdTimestamp: number | null
 	}>
+}
+
+/**
+ * Shared by the route loader (OG meta) and the header component: one cache
+ * entry per address, so search-param navigations (paging, tab switches)
+ * never block on the slow metadata counts.
+ */
+function addressMetadataQueryOptions(address: Address.Address) {
+	return {
+		queryKey: ['address-metadata', address] as const,
+		queryFn: () => fetchAddressMetadata(address),
+		staleTime: 30_000,
+	}
 }
 
 type ContractCreationResponse = {
@@ -979,10 +972,6 @@ function SectionsWrapper(props: {
 
 	// Only auto-refresh on page 1 when transactions tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
-	const historySources = React.useMemo(
-		() => historySourcesForAddress(address),
-		[address],
-	)
 
 	const {
 		data: historyQueryData,
@@ -994,8 +983,6 @@ function SectionsWrapper(props: {
 			address,
 			page,
 			limit,
-			offset: (page - 1) * limit,
-			sources: historySources,
 			status,
 			include,
 			after,
@@ -1083,10 +1070,24 @@ function SectionsWrapper(props: {
 			address,
 			page: transfersPage,
 			limit,
-			offset: isTransfersTabActive ? (page - 1) * limit : 0,
 			account,
 		}),
 		enabled: isMounted && isToken && isTransfersTabActive,
+	})
+
+	// Account-scoped transfers query (non-token addresses): the D2 split moved
+	// transfer-touched rows out of the transactions feed into this view.
+	const {
+		data: accountTransfersData,
+		isPending: isAccountTransfersPending,
+		isFetching: isAccountTransfersFetching,
+	} = useQuery({
+		...accountTransfersQueryOptions({
+			account: address,
+			page: transfersPage,
+			limit,
+		}),
+		enabled: isMounted && !isToken && isTransfersTabActive,
 	})
 
 	const {
@@ -1106,7 +1107,6 @@ function SectionsWrapper(props: {
 			address,
 			page: holdersPage,
 			limit,
-			offset: isHoldersTabActive ? (page - 1) * limit : 0,
 		}),
 		enabled: isMounted && isToken && isHoldersTabActive,
 	})
@@ -1125,10 +1125,13 @@ function SectionsWrapper(props: {
 		isTransactionsTabActive && !error && (isHistoryPending || !historyData)
 	const isTransactionsFetching =
 		isTransactionsTabActive && isHistoryFetching && !isTransactionsLoading
-	const isTransfersLoading =
-		isTransfersTabActive && (isTransfersPending || !transfersData)
-	const isTransfersFetchingNext =
-		isTransfersTabActive && isTransfersFetching && !isTransfersLoading
+	const isTransfersLoading = isToken
+		? isTransfersTabActive && (isTransfersPending || !transfersData)
+		: isTransfersTabActive &&
+			(isAccountTransfersPending || !accountTransfersData)
+	const isTransfersFetchingNext = isToken
+		? isTransfersTabActive && isTransfersFetching && !isTransfersLoading
+		: isTransfersTabActive && isAccountTransfersFetching && !isTransfersLoading
 	const isHoldersLoading =
 		isHoldersTabActive && (isHoldersPending || !holdersData)
 	const isHoldersFetchingNext =
@@ -1152,8 +1155,6 @@ function SectionsWrapper(props: {
 					address,
 					page: nextPage,
 					limit,
-					offset: (nextPage - 1) * limit,
-					sources: historySources,
 					status,
 					include,
 					after,
@@ -1165,7 +1166,6 @@ function SectionsWrapper(props: {
 		after,
 		countCapped,
 		hasMore,
-		historySources,
 		include,
 		isTransactionsTabActive,
 		limit,
@@ -1189,7 +1189,6 @@ function SectionsWrapper(props: {
 					address,
 					page: nextPage,
 					limit,
-					offset: (nextPage - 1) * limit,
 					account,
 				}),
 			)
@@ -1220,7 +1219,6 @@ function SectionsWrapper(props: {
 					address,
 					page: nextPage,
 					limit,
-					offset: (nextPage - 1) * limit,
 				}),
 			)
 			.catch(() => {})
@@ -1289,6 +1287,12 @@ function SectionsWrapper(props: {
 		{ label: 'Amount', align: 'end', minWidth: 100 },
 	]
 
+	const accountTransfersColumns: DataGrid.Column[] = [
+		...transfersColumns.slice(0, 4),
+		{ label: 'Asset', align: 'start', minWidth: 90 },
+		{ label: 'Amount', align: 'end', minWidth: 100 },
+	]
+
 	const holdersColumns: DataGrid.Column[] = [
 		{ label: 'Address', align: 'start', minWidth: 140 },
 		{ label: 'Balance', align: 'end', minWidth: 120 },
@@ -1298,6 +1302,10 @@ function SectionsWrapper(props: {
 	// Holdings uses local pagination state (decoupled from URL `page` param)
 	const [holdingsPage, setHoldingsPage] = React.useState(1)
 	const [showAllHoldings, setShowAllHoldings] = React.useState(false)
+	// Account transfers amount column: currency display ($1.23) vs token amount.
+	const [transferAmountDisplay, setTransferAmountDisplay] = React.useState<
+		'currency' | 'token'
+	>('currency')
 	const prevAddressRef = React.useRef(address)
 	if (prevAddressRef.current !== address) {
 		prevAddressRef.current = address
@@ -1353,7 +1361,6 @@ function SectionsWrapper(props: {
 								status={status}
 								include={include}
 								after={after}
-								sources={historySources}
 							/>
 						</div>
 					),
@@ -1521,7 +1528,119 @@ function SectionsWrapper(props: {
 					),
 				}
 			}
-			case 'transfers':
+			case 'transfers': {
+				if (!isToken) {
+					// Account-scoped view: rows span multiple tokens, so amounts
+					// carry per-row token metadata.
+					const accountTransfers = accountTransfersData?.transfers ?? []
+					const accountTotal = accountTransfersData?.total ?? 0
+					const accountTotalCapped = accountTransfersData?.totalCapped ?? false
+					return {
+						title: 'Transfers',
+						totalItems:
+							accountTransfersData &&
+							(accountTotalCapped ? '10k+' : accountTotal),
+						itemsLabel: 'transfers',
+						content: (
+							<DataGrid
+								columns={{
+									stacked: accountTransfersColumns,
+									tabs: accountTransfersColumns,
+								}}
+								items={() => {
+									const validTransfers = accountTransfers.flatMap(
+										(transfer) => {
+											const timestamp = parseTimestampBigInt(transfer.timestamp)
+											const value = parseOptionalBigInt(transfer.value)
+											if (timestamp === null || value === null) return []
+
+											return [{ transfer, timestamp, value }]
+										},
+									)
+
+									return validTransfers.map(
+										({ transfer, timestamp, value }) => {
+											const isSender = Address.isEqual(transfer.from, address)
+											const isRecipient = Address.isEqual(transfer.to, address)
+											const direction =
+												isSender && isRecipient
+													? ('self' as const)
+													: isSender
+														? ('out' as const)
+														: ('in' as const)
+
+											return {
+												cells: [
+													<TimestampCell
+														key="time"
+														timestamp={timestamp}
+														link={`/receipt/${transfer.transactionHash}`}
+														format={timeFormat}
+													/>,
+													<TransactionCell
+														key="tx"
+														hash={transfer.transactionHash}
+													/>,
+													<AddressCell
+														key="from"
+														address={transfer.from}
+														label="From"
+													/>,
+													<AddressCell
+														key="to"
+														address={transfer.to}
+														label="To"
+													/>,
+													<Link
+														key="asset"
+														to="/address/$address"
+														params={{ address: transfer.token.address }}
+														title={transfer.token.address}
+														className="flex items-center gap-[6px] text-[12px] text-primary hover:text-accent transition-colors press-down"
+													>
+														<TokenIcon address={transfer.token.address} />
+														<span>
+															{transfer.token.symbol ??
+																`${transfer.token.address.slice(0, 6)}…${transfer.token.address.slice(-4)}`}
+														</span>
+													</Link>,
+													<TransferAmountCell
+														key="amount"
+														value={value}
+														direction={direction}
+														display={transferAmountDisplay}
+														onToggleDisplay={() =>
+															setTransferAmountDisplay((previous) =>
+																previous === 'currency' ? 'token' : 'currency',
+															)
+														}
+														decimals={transfer.token.decimals}
+														symbol={transfer.token.symbol}
+														currency={transfer.token.currency}
+													/>,
+												],
+												link: {
+													href: `/receipt/${transfer.transactionHash}`,
+													title: `View receipt ${transfer.transactionHash}`,
+												},
+											}
+										},
+									)
+								}}
+								totalItems={accountTotal}
+								displayCount={accountTotal}
+								displayCountCapped={accountTotalCapped}
+								page={page}
+								fetching={isTransfersFetchingNext}
+								loading={isTransfersLoading}
+								itemsLabel="transfers"
+								itemsPerPage={limit}
+								pagination="simple"
+								emptyState="No transfers found."
+							/>
+						),
+					}
+				}
 				return {
 					title: 'Transfers',
 					totalItems:
@@ -1563,11 +1682,18 @@ function SectionsWrapper(props: {
 											label="From"
 										/>,
 										<AddressCell key="to" address={transfer.to} label="To" />,
-										<AmountCell
+										<TransferAmountCell
 											key="amount"
 											value={value}
+											display={transferAmountDisplay}
+											onToggleDisplay={() =>
+												setTransferAmountDisplay((previous) =>
+													previous === 'currency' ? 'token' : 'currency',
+												)
+											}
 											decimals={tokenMetadata?.decimals}
 											symbol={tokenMetadata?.symbol}
+											currency={tokenMetadata?.currency}
 										/>,
 									],
 									link: {
@@ -1590,6 +1716,7 @@ function SectionsWrapper(props: {
 						/>
 					),
 				}
+			}
 			case 'holders':
 				return {
 					title: 'Holders',

@@ -1,18 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import * as React from 'react'
-import { TOKENLIST_BASE_URL } from '#lib/tokenlist'
-
-const TOKENLIST_ALL_URL = `${TOKENLIST_BASE_URL}/lists/all`
-
-type TokenListAsset = {
-	address?: string
-	chainId?: number
-}
-
-type TokenListResponse = Array<{
-	tokens?: TokenListAsset[]
-}>
+import type { VerifiedTokensApiResponse } from '#routes/api/verified-tokens'
 
 type TokenListMembershipMap = Map<number, Set<string>>
 
@@ -34,35 +23,20 @@ const TokenListMembershipContext =
 	})
 
 async function fetchTokenListMembershipMap(): Promise<TokenListMembershipMap> {
-	const response = await fetch(TOKENLIST_ALL_URL)
-	if (!response.ok) throw new Error('Failed to fetch token lists')
+	const response = await fetch('/api/verified-tokens')
+	if (!response.ok) throw new Error('Failed to fetch verified tokens')
 
-	const lists = (await response.json()) as TokenListResponse
-	const membershipMap = new Map<number, Set<string>>()
+	const { chainId, addresses } =
+		(await response.json()) as VerifiedTokensApiResponse
 
-	for (const list of lists) {
-		for (const token of list.tokens ?? []) {
-			if (typeof token.chainId !== 'number') continue
-			if (typeof token.address !== 'string') continue
-
-			const normalizedAddress = token.address.toLowerCase()
-			let set = membershipMap.get(token.chainId)
-			if (!set) {
-				set = new Set<string>()
-				membershipMap.set(token.chainId, set)
-			}
-			set.add(normalizedAddress)
-		}
-	}
-
-	return membershipMap
+	return new Map([[chainId, new Set(addresses)]])
 }
 
 export function TokenListMembershipProvider(props: {
 	children: React.ReactNode
 }) {
 	const { data, isLoading } = useQuery({
-		queryKey: ['tokenlist-membership'],
+		queryKey: ['verified-token-membership'],
 		queryFn: fetchTokenListMembershipMap,
 		staleTime: 1000 * 60 * 10,
 		gcTime: 1000 * 60 * 60,

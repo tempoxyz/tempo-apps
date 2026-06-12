@@ -1,1467 +1,51 @@
 import type { Address, Hex } from 'ox'
-import * as OxHash from 'ox/Hash'
-import * as OxHex from 'ox/Hex'
-import { Tidx } from 'tidx.ts'
-import { decodeAbiParameters, zeroAddress } from 'viem'
-import * as ABIS from '#lib/abis'
 import { tempoQueryBuilder, tidx } from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
 
-const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 const TRANSFER_TOPIC0 =
 	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
 type SortDirection = 'asc' | 'desc'
 
-type QueryWithWhere<TQuery> = TQuery & {
-	where: (...args: unknown[]) => TQuery
-}
-
 function indexedAddress(address: Address.Address): Address.Address {
 	return address.toLowerCase() as Address.Address
 }
 
-function indexedAddresses(addresses: Address.Address[]): Address.Address[] {
-	return addresses.map(indexedAddress)
-}
-
-export type TokenHolderBalance = { address: string; balance: bigint }
-
-type TokenHolderAggregationRow = {
-	from: string
-	to: string
-	tokens: string | number | bigint
-}
-
-export type TokenHoldersCountRow = {
-	token: string
-	count: number
-	capped: boolean
-}
-
-function sortTokenHolderBalances(
-	balances: Map<string, bigint>,
-): TokenHolderBalance[] {
-	return Array.from(balances.entries())
-		.filter(([, balance]) => balance > 0n)
-		.map(([holder, balance]) => ({ address: holder, balance }))
-		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
-}
-
-function aggregateTokenHolderBalances(
-	rows: TokenHolderAggregationRow[],
-): TokenHolderBalance[] {
-	const balances = new Map<string, bigint>()
-
-	for (const row of rows) {
-		const tokens = BigInt(row.tokens)
-		if (row.to !== zeroAddress) {
-			balances.set(row.to, (balances.get(row.to) ?? 0n) + tokens)
-		}
-		if (row.from !== zeroAddress) {
-			balances.set(row.from, (balances.get(row.from) ?? 0n) - tokens)
-		}
-	}
-
-	return sortTokenHolderBalances(balances)
-}
-
-export async function fetchTokenHolderBalances(
-	address: Address.Address,
-	chainId: number,
-): Promise<TokenHolderBalance[]> {
-	const tokenAddress = indexedAddress(address)
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = (await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('from').as('from'),
-			eb.ref('to').as('to'),
-			eb.fn.sum('tokens').as('tokens'),
-		])
-		.where('address', '=', tokenAddress)
-		.groupBy(['from', 'to'])
-		.execute()) as TokenHolderAggregationRow[]
-
-	return aggregateTokenHolderBalances(transfers)
-}
-
-export async function fetchTokenHoldersCountRows(
-	addresses: Address.Address[],
-	chainId: number,
-	countCap: number,
-): Promise<TokenHoldersCountRow[]> {
-	if (addresses.length === 0) return []
-
-	const tokenAddresses = indexedAddresses(addresses)
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = (await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('address').as('address'),
-			eb.ref('from').as('from'),
-			eb.ref('to').as('to'),
-			eb.fn.sum('tokens').as('tokens'),
-		])
-		.where('address', 'in', tokenAddresses)
-		.groupBy(['address', 'from', 'to'])
-		.execute()) as Array<{
-		address: string
-		from: string
-		to: string
-		tokens: string | number | bigint
-	}>
-
-	const balancesByToken = new Map<string, Map<string, bigint>>()
-
-	for (const row of transfers) {
-		const token = row.address.toLowerCase()
-		let tokenBalances = balancesByToken.get(token)
-		if (!tokenBalances) {
-			tokenBalances = new Map<string, bigint>()
-			balancesByToken.set(token, tokenBalances)
-		}
-
-		const tokens = BigInt(row.tokens)
-		if (row.to !== zeroAddress) {
-			const to = row.to.toLowerCase()
-			tokenBalances.set(to, (tokenBalances.get(to) ?? 0n) + tokens)
-		}
-		if (row.from !== zeroAddress) {
-			const from = row.from.toLowerCase()
-			tokenBalances.set(from, (tokenBalances.get(from) ?? 0n) - tokens)
-		}
-	}
-
-	return tokenAddresses.map((address) => {
-		const token = address.toLowerCase()
-		const tokenBalances = balancesByToken.get(token)
-		const rawCount = tokenBalances
-			? Array.from(tokenBalances.values()).reduce(
-					(acc, balance) => (balance > 0n ? acc + 1 : acc),
-					0,
-				)
-			: 0
-		const capped = rawCount >= countCap
-		return {
-			token,
-			count: capped ? countCap : rawCount,
-			capped,
-		}
-	})
-}
-
-/**
- * The tidx server silently caps query results at this many rows.
- * Queries that would return more get truncated without any error or metadata.
- */
-const TIDX_SERVER_ROW_LIMIT = 10_000
-
-function isTidxQueryTooExpensiveError(error: unknown): boolean {
-	if (error instanceof Tidx.FetchRequestError && error.status === 422)
-		return true
-	if (error instanceof Error && error.cause)
-		return isTidxQueryTooExpensiveError(error.cause)
-	return false
-}
-
-function toSqlTimestamp(seconds: number): string {
-	return new Date(seconds * 1000).toISOString()
-}
-
-function toNullableBigInt(value: unknown): bigint | null {
-	if (typeof value === 'bigint') return value
-	if (typeof value === 'number' && Number.isFinite(value))
-		return BigInt(Math.trunc(value))
-	if (typeof value === 'string') {
-		try {
-			return BigInt(value)
-		} catch {}
-	}
-	return null
-}
-
-function toNullableNumber(value: unknown): number | null {
-	if (typeof value === 'number' && Number.isFinite(value)) return value
-	if (typeof value === 'bigint') return Number(value)
-	if (typeof value === 'string') {
-		const parsed = Number(value)
-		if (Number.isFinite(parsed)) return parsed
-		return parseTimestamp(value) ?? null
-	}
-	return null
-}
-
-export async function fetchTokenHoldersCount(
-	address: Address.Address,
-	chainId: number,
-	countCap: number,
-): Promise<{ count: number; capped: boolean }> {
-	try {
-		const tokenAddress = indexedAddress(address)
-		const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-		const transfers = (await qb
-			.selectFrom('transfer')
-			.select((eb) => [
-				eb.ref('from').as('from'),
-				eb.ref('to').as('to'),
-				eb.fn.sum('tokens').as('tokens'),
-			])
-			.where('address', '=', tokenAddress)
-			.groupBy(['from', 'to'])
-			.execute()) as TokenHolderAggregationRow[]
-
-		// The tidx server caps results at 10,000 rows. If we hit that ceiling,
-		// the data is truncated and the in-memory aggregation would be incorrect.
-		// Return a capped count instead of computing from incomplete data.
-		if (transfers.length >= TIDX_SERVER_ROW_LIMIT) {
-			return { count: countCap, capped: true }
-		}
-
-		const holders = aggregateTokenHolderBalances(transfers)
-		const rawCount = holders.length
-		const capped = rawCount >= countCap
-
-		return {
-			count: capped ? countCap : rawCount,
-			capped,
-		}
-	} catch (error) {
-		// Only return a capped fallback for 422 (query too expensive, i.e. too many holders).
-		// For other errors (auth, network, 5xx), re-throw so callers handle them normally.
-		if (isTidxQueryTooExpensiveError(error)) {
-			console.error(
-				`[tidx] holders count query failed for ${address} (422), returning capped`,
-			)
-			return { count: countCap, capped: true }
-		}
-
-		throw error
-	}
-}
-
-export async function fetchTokenFirstTransferTimestamp(
-	address: Address.Address,
-	chainId: number,
-): Promise<number | null> {
-	const tokenAddress = indexedAddress(address)
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-
-	const firstTransfer = await qb
-		.selectFrom('transfer')
-		.select(['block_timestamp'])
-		.where('address', '=', tokenAddress)
-		.orderBy('block_num', 'asc')
-		.limit(1)
-		.executeTakeFirst()
-
-	return firstTransfer?.block_timestamp
-		? Number(firstTransfer.block_timestamp)
-		: null
-}
-
-export type TokenTransferRow = {
-	from: Address.Address
-	to: Address.Address
-	tokens: bigint
-	tx_hash: Hex.Hex
-	block_num: bigint
-	log_idx: number
-	block_timestamp: string | number | null
-}
-
-export async function fetchTokenTransfers(
-	address: Address.Address,
-	chainId: number,
-	limit: number,
-	offset: number,
-	account?: Address.Address,
-): Promise<TokenTransferRow[]> {
-	const tokenAddress = indexedAddress(address)
-	const accountAddress = account ? indexedAddress(account) : undefined
-	let query = QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select([
-			'from',
-			'to',
-			'tokens',
-			'tx_hash',
-			'block_num',
-			'log_idx',
-			'block_timestamp',
-		])
-		.where('address', '=', tokenAddress)
-
-	if (accountAddress) {
-		query = query.where((eb) =>
-			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
-		)
-	}
-
-	const result = await query
-		.orderBy('block_num', 'desc')
-		.orderBy('log_idx', 'desc')
-		.limit(limit)
-		.offset(offset)
-		.execute()
-
-	return result.map((row) => ({
-		from: row.from,
-		to: row.to,
-		tokens: BigInt(row.tokens),
-		tx_hash: row.tx_hash,
-		block_num: row.block_num,
-		log_idx: Number(row.log_idx),
-		block_timestamp: row.block_timestamp ?? null,
-	}))
-}
-
-export async function fetchTokenTransferCount(
-	address: Address.Address,
-	chainId: number,
-	countCap: number,
-	account?: Address.Address,
-): Promise<{ count: number; capped: boolean }> {
-	const tokenAddress = indexedAddress(address)
-	const accountAddress = account ? indexedAddress(account) : undefined
-	const qb = QB(chainId)
-	let subquery = qb
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select((eb) => eb.lit(1).as('x'))
-		.where('address', '=', tokenAddress)
-
-	if (accountAddress) {
-		subquery = subquery.where((eb) =>
-			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
-		)
-	}
-
-	const result = await qb
-		.selectFrom(subquery.limit(countCap).as('subquery'))
-		.select((eb) => eb.fn.count('x').as('count'))
-		.executeTakeFirst()
-
-	const count = Number(result?.count ?? 0)
-	const capped = count >= countCap
-
-	return { count, capped }
-}
-
-export type TokenCreatedRow = {
-	token: Address.Address
-	symbol: string
-	name: string
-	currency: string
-	block_timestamp: string | number
-}
-
-export async function fetchTokenCreatedRows(
-	chainId: number,
-	limit: number,
-	offset: number,
-): Promise<TokenCreatedRow[]> {
-	const eventSignature = ABIS.getTokenCreatedEvent(chainId)
-
-	return QB(chainId)
-		.withSignatures([eventSignature])
-		.selectFrom('tokencreated')
-		.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
-		.orderBy('block_num', 'desc')
-		.limit(limit)
-		.offset(offset)
-		.execute()
-}
-
-export async function fetchTokenCreatedCount(
-	chainId: number,
-	countLimit: number,
-): Promise<number> {
-	const eventSignature = ABIS.getTokenCreatedEvent(chainId)
-	const qb = QB(chainId)
-
-	const result = await qb
-		.selectFrom(
-			qb
-				.withSignatures([eventSignature])
-				.selectFrom('tokencreated')
-				.select((eb) => eb.lit(1).as('x'))
-				.limit(countLimit)
-				.as('subquery'),
-		)
-		.select((eb) => eb.fn.count('x').as('count'))
-		.executeTakeFirst()
-
-	return Number(result?.count ?? 0)
-}
-
-export async function fetchTokenCreatedMetadata(
-	chainId: number,
-	tokens: Address.Address[],
-): Promise<
-	Array<{
-		token: string
-		name: string
-		symbol: string
-		currency: string
-		block_timestamp: string | number | null
-	}>
-> {
-	if (tokens.length === 0) return []
-
-	const tokenCreatedSignature = ABIS.getTokenCreatedEvent(chainId)
-	const topic0 = OxHash.keccak256(
-		OxHex.fromString(tokenCreatedSignature.replace(/^event /, '')),
-	)
-
-	const tokenTopics = tokens.map(
-		(token) =>
-			`0x${token.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex,
-	)
-
-	const rows = await QB(chainId)
-		.selectFrom('logs')
-		.select(['topic1', 'data', 'block_timestamp'])
-		.where('topic0', '=', topic0)
-		.where('topic1', 'in', tokenTopics as never)
-		.execute()
-
-	const dataParams = [
-		{ name: 'name', type: 'string' },
-		{ name: 'symbol', type: 'string' },
-		{ name: 'currency', type: 'string' },
-		{ name: 'quoteToken', type: 'address' },
-		{ name: 'admin', type: 'address' },
-		{ name: 'salt', type: 'bytes32' },
-	] as const
-
-	const results: Array<{
-		token: string
-		name: string
-		symbol: string
-		currency: string
-		block_timestamp: string | number | null
-	}> = []
-
-	for (const row of rows) {
-		if (!row.topic1 || !row.data) continue
-
-		try {
-			const decoded = decodeAbiParameters(dataParams, row.data as Hex.Hex)
-			results.push({
-				token: `0x${(row.topic1 as string).slice(-40)}`,
-				name: decoded[0] as string,
-				symbol: decoded[1] as string,
-				currency: decoded[2] as string,
-				block_timestamp:
-					typeof row.block_timestamp === 'number' ||
-					typeof row.block_timestamp === 'string'
-						? row.block_timestamp
-						: null,
-			})
-		} catch {}
-	}
-
-	return results
-}
-export async function fetchTransactionTimestamp(
-	chainId: number,
-	hash: Hex.Hex,
-): Promise<number | undefined> {
-	const result = await QB(chainId)
-		.selectFrom('txs')
-		.select(['block_timestamp'])
-		.where('hash', '=', hash)
-		.limit(1)
-		.executeTakeFirst()
-
-	return result?.block_timestamp ? Number(result.block_timestamp) : undefined
-}
-
-export async function fetchLatestBlockNumber(chainId: number): Promise<bigint> {
-	const result = await QB(chainId)
-		.selectFrom('blocks')
-		.select('num')
-		.orderBy('num', 'desc')
-		.limit(1)
-		.executeTakeFirstOrThrow()
-
-	return BigInt(result.num)
-}
-
-export async function fetchGenesisBlockTimestamp(
-	chainId: number,
-): Promise<string | number | bigint | null> {
-	const result = await QB(chainId)
-		.selectFrom('blocks')
-		.select('timestamp')
-		.orderBy('num', 'asc')
-		.limit(1)
-		.executeTakeFirst()
-
-	return result?.timestamp ?? null
-}
-
-type AddressDirectionParams = {
-	address: Address.Address
-	chainId: number
-	includeSent: boolean
-	includeReceived: boolean
-}
-
-type AddressHistoryCountParams = AddressDirectionParams & {
-	includeTxs: boolean
-	includeTransfers: boolean
-	includeEmitted: boolean
-	countCap: number
-}
-
-function applyAddressDirectionFilter<TQuery>(
-	query: QueryWithWhere<TQuery>,
-	params: AddressDirectionParams,
-): TQuery {
-	const { includeSent, includeReceived } = params
-	const address = indexedAddress(params.address)
-	if (includeSent && includeReceived) {
-		return query.where(
-			// @ts-expect-error
-			(eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]),
-		) as TQuery
-	}
-	if (includeSent) {
-		return query.where('from', '=', address) as TQuery
-	}
-	return query.where('to', '=', address) as TQuery
-}
-
-export type DirectTxHashRow = { hash: Hex.Hex; block_num: bigint }
-
-export async function fetchAddressDirectTxHashes(
-	params: AddressDirectionParams & {
-		sortDirection: SortDirection
-		limit: number
-	},
-): Promise<DirectTxHashRow[]> {
-	let directQuery = QB(params.chainId)
-		.selectFrom('txs')
-		.select(['hash', 'block_num'])
-
-	directQuery = applyAddressDirectionFilter(directQuery, params)
-
-	return directQuery
-		.orderBy('block_num', params.sortDirection)
-		.orderBy('hash', params.sortDirection)
-		.limit(params.limit)
-		.execute()
-}
-
-export type DirectTxHistoryRow = {
-	hash: Hex.Hex
-	block_num: bigint
-	from: string
-	to: string | null
-	value: bigint
-}
-
-export async function fetchAddressDirectTxHistoryRows(
-	params: AddressDirectionParams & {
-		sortDirection: SortDirection
-		limit: number
-		offset?: number
-	},
-): Promise<DirectTxHistoryRow[]> {
-	let directQuery = QB(params.chainId)
-		.selectFrom('txs')
-		.select(['hash', 'block_num', 'from', 'to', 'value'])
-
-	directQuery = applyAddressDirectionFilter(directQuery, params)
-
-	return directQuery
-		.orderBy('block_num', params.sortDirection)
-		.orderBy('hash', params.sortDirection)
-		.offset(Math.max(0, params.offset ?? 0))
-		.limit(params.limit)
-		.execute()
-}
-
-export type TransferHashRow = { tx_hash: Hex.Hex; block_num: bigint }
-
-export async function fetchAddressTransferHashes(
-	params: AddressDirectionParams & {
-		sortDirection: SortDirection
-		limit: number
-	},
-): Promise<TransferHashRow[]> {
-	let transferQuery = QB(params.chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select(['tx_hash', 'block_num'])
-		.distinct()
-
-	transferQuery = applyAddressDirectionFilter(transferQuery, params)
-
-	return transferQuery
-		.orderBy('block_num', params.sortDirection)
-		.orderBy('tx_hash', params.sortDirection)
-		.limit(params.limit)
-		.execute()
-}
-
-export async function fetchAddressTransferEmittedHashes(params: {
-	address: Address.Address
-	chainId: number
-	sortDirection: SortDirection
-	limit: number
-}): Promise<TransferHashRow[]> {
-	const address = indexedAddress(params.address)
-	return QB(params.chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select(['tx_hash', 'block_num'])
-		.distinct()
-		.where('address', '=', address)
-		.orderBy('block_num', params.sortDirection)
-		.orderBy('tx_hash', params.sortDirection)
-		.limit(params.limit)
-		.execute()
-}
-
-export async function fetchAddressDirectTxCount(
-	params: AddressDirectionParams & {
-		countCap: number
-		statusFilter?: 'success' | 'reverted'
-		after?: number
-	},
-): Promise<number> {
-	const address = indexedAddress(params.address)
-	const statusJoin = params.statusFilter
-		? 'INNER JOIN receipts status_receipts ON status_receipts.tx_hash = txs.hash'
-		: ''
-	const filters: string[] = []
-	if (params.statusFilter) {
-		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
-		filters.push(`status_receipts.status = ${statusValue}`)
-	}
-	if (params.after)
-		filters.push(`txs.block_timestamp >= '${toSqlTimestamp(params.after)}'`)
-
-	const whereForSide = (side: 'from' | 'to') =>
-		[`txs."${side}" = '${address}'`, ...filters].join(' AND ')
-	const sideQuery = (side: 'from' | 'to') =>
-		`(SELECT txs.hash FROM txs ${statusJoin} WHERE ${whereForSide(side)} LIMIT ${params.countCap})`
-	const matchesQuery =
-		params.includeSent && params.includeReceived
-			? `${sideQuery('from')} UNION ${sideQuery('to')}`
-			: params.includeSent
-				? sideQuery('from')
-				: sideQuery('to')
-
-	const result = await tidx.fetch({
-		chainId: params.chainId,
-		query: `
-			SELECT count(*) AS count
-			FROM (
-				SELECT hash
-				FROM (${matchesQuery}) AS matches
-				LIMIT ${params.countCap}
-			) AS capped
-		` as string,
-	})
-
-	return Number(result.rows[0]?.count ?? 0)
-}
-
-export async function fetchAddressTransferDistinctCount(
-	params: AddressDirectionParams & { countCap: number },
-): Promise<number> {
-	const qb = QB(params.chainId)
-	let subquery = qb
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select('tx_hash')
-		.distinct()
-
-	subquery = applyAddressDirectionFilter(subquery, params)
-
-	const result = await qb
-		.selectFrom(subquery.limit(params.countCap).as('subquery'))
-		.select((eb) => eb.fn.count('tx_hash').as('count'))
-		.executeTakeFirst()
-
-	return Number(result?.count ?? 0)
-}
-
-export async function fetchAddressTransferEmittedDistinctCount(params: {
-	address: Address.Address
-	chainId: number
-	countCap: number
-}): Promise<number> {
-	const address = indexedAddress(params.address)
-	const qb = QB(params.chainId)
-	const subquery = qb
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select('tx_hash')
-		.distinct()
-		.where('address', '=', address)
-
-	const result = await qb
-		.selectFrom(subquery.limit(params.countCap).as('subquery'))
-		.select((eb) => eb.fn.count('tx_hash').as('count'))
-		.executeTakeFirst()
-
-	return Number(result?.count ?? 0)
-}
-
-export async function fetchAddressHistoryDistinctCount(
-	params: AddressHistoryCountParams,
-): Promise<{ count: number; capped: boolean }> {
-	const [directCount, transferCount, emittedCount] = await Promise.all([
-		params.includeTxs
-			? fetchAddressDirectTxCount({
-					address: params.address,
-					chainId: params.chainId,
-					includeSent: params.includeSent,
-					includeReceived: params.includeReceived,
-					countCap: params.countCap,
-				})
-			: 0,
-		params.includeTransfers
-			? fetchAddressTransferDistinctCount({
-					address: params.address,
-					chainId: params.chainId,
-					includeSent: params.includeSent,
-					includeReceived: params.includeReceived,
-					countCap: params.countCap,
-				}).catch((error) => {
-					console.error('[tidx] transfer count query failed:', error)
-					return 0
-				})
-			: 0,
-		params.includeEmitted
-			? fetchAddressTransferEmittedDistinctCount({
-					address: params.address,
-					chainId: params.chainId,
-					countCap: params.countCap,
-				}).catch((error) => {
-					console.error('[tidx] emitted count query failed:', error)
-					return 0
-				})
-			: 0,
-	])
-
-	const total = Math.min(
-		directCount + transferCount + emittedCount,
-		params.countCap,
-	)
-	const capped =
-		total >= params.countCap ||
-		directCount >= params.countCap ||
-		transferCount >= params.countCap ||
-		emittedCount >= params.countCap
-
-	return { count: total, capped }
-}
-
-export type TxDataRow = {
-	hash: Hex.Hex
-	block_num: bigint
-	from: string
-	to: string | null
-	value: bigint
-	input: Hex.Hex
-	nonce: bigint
-	gas: bigint
-	gas_price: bigint
-	type: bigint
-}
-
-export async function fetchTxDataByHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<TxDataRow[]> {
-	if (hashes.length === 0) return []
-
-	const result = await QB(chainId)
-		.selectFrom('txs')
-		.select([
-			'hash',
-			'block_num',
-			'from',
-			'to',
-			'value',
-			'input',
-			'nonce',
-			'gas_limit',
-			'max_fee_per_gas',
-			'type',
-		])
-		.where('hash', 'in', hashes)
-		.execute()
-
-	return result.map((row) => ({
-		hash: row.hash,
-		block_num: row.block_num,
-		from: row.from,
-		to: row.to,
-		value: row.value,
-		input: row.input,
-		nonce: row.nonce,
-		gas: row.gas_limit,
-		gas_price: row.max_fee_per_gas,
-		type: BigInt(row.type),
-	}))
-}
-
-export type BasicTxRow = {
-	hash: Hex.Hex
-	from: string
-	to: string | null
-	value: bigint
-}
-
-export type AddressHistoryTxDetailsRow = {
-	hash: Hex.Hex
-	block_num: bigint
-	block_timestamp: number
-	from: string
-	to: string | null
-	value: bigint
-	input: Hex.Hex
-	calls: unknown
-}
-
-export async function fetchAddressHistoryTxDetailsByHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryTxDetailsRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('txs')
-		.select([
-			'hash',
-			'block_num',
-			'block_timestamp',
-			'from',
-			'to',
-			'value',
-			'input',
-			'calls',
-		])
-		.where('hash', 'in', hashes)
-		.execute()
-}
-
-export type AddressHistoryReceiptRow = {
-	tx_hash: Hex.Hex
-	block_num: bigint
-	block_timestamp: number
-	from: string
-	to: string | null
-	status: number | null
-	gas_used: bigint
-	effective_gas_price: bigint | null
-	contract_address: string | null
-}
-
-export async function fetchAddressReceiptRowsByHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryReceiptRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('receipts')
-		.select([
-			'tx_hash',
-			'block_num',
-			'block_timestamp',
-			'from',
-			'to',
-			'status',
-			'gas_used',
-			'effective_gas_price',
-			'contract_address',
-		])
-		.where('tx_hash', 'in', hashes)
-		.execute()
-}
-
-export type AddressHistoryLogRow = {
-	tx_hash: Hex.Hex
-	block_num: bigint
-	tx_idx: number
-	log_idx: number
-	address: Address.Address
-	topic0: Hex.Hex | null
-	topic1: Hex.Hex | null
-	topic2: Hex.Hex | null
-	topic3: Hex.Hex | null
-	data: Hex.Hex
-	is_virtual_forward: boolean
-}
-
-export async function fetchAddressLogRowsByTxHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryLogRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('logs')
-		.select([
-			'tx_hash',
-			'block_num',
-			'tx_idx',
-			'log_idx',
-			'address',
-			'topic0',
-			'topic1',
-			'topic2',
-			'topic3',
-			'data',
-			'is_virtual_forward',
-		])
-		.where('tx_hash', 'in', hashes)
-		.orderBy('tx_hash', 'asc')
-		.orderBy('log_idx', 'asc')
-		.execute()
-}
-
-type AddressTxOnlyHistoryJoinedQueryRow = {
-	tx_hash: Hex.Hex | null
-	tx_block_num: bigint | null
-	tx_block_timestamp: number | null
-	tx_from: string | null
-	tx_to: string | null
-	tx_value: bigint | null
-	tx_input: Hex.Hex | null
-	tx_calls: unknown
-	receipt_block_num: bigint | null
-	receipt_block_timestamp: number | null
-	receipt_from: string | null
-	receipt_to: string | null
-	receipt_status: number | null
-	receipt_gas_used: bigint | null
-	receipt_effective_gas_price: bigint | null
-	receipt_contract_address: string | null
-	log_block_num: bigint | null
-	log_tx_idx: number | null
-	log_idx: number | null
-	log_address: Address.Address | null
-	log_topic0: Hex.Hex | null
-	log_topic1: Hex.Hex | null
-	log_topic2: Hex.Hex | null
-	log_topic3: Hex.Hex | null
-	log_data: Hex.Hex | null
-	log_is_virtual_forward: boolean | null
-}
-
-export type AddressTxOnlyHistoryPageHash = {
-	hash: Hex.Hex
-	block_num: bigint
-	from: string
-	to: string | null
-	value: bigint
-}
-
-export type AddressTxOnlyHistoryPageWithJoinsResult = {
-	hashes: AddressTxOnlyHistoryPageHash[]
-	txRows: AddressHistoryTxDetailsRow[]
-	receiptRows: AddressHistoryReceiptRow[]
-	logRows: AddressHistoryLogRow[]
-	total: number
-	countCapped: boolean
-	hasMore: boolean
-}
-
-export async function fetchAddressTxOnlyHistoryPageWithJoins(
-	params: AddressDirectionParams & {
-		sortDirection: SortDirection
-		offset: number
-		limit: number
-		countCap: number
-		statusFilter?: 'success' | 'reverted'
-		after?: number
-	},
-): Promise<AddressTxOnlyHistoryPageWithJoinsResult> {
-	const fetchSize = params.limit + 1
-	const offset = Math.max(0, params.offset)
-	const sortDirection = params.sortDirection.toUpperCase()
-	const statusJoin = params.statusFilter
-		? 'INNER JOIN receipts status_receipts ON status_receipts.tx_hash = txs.hash'
-		: ''
-	const filters: string[] = []
-
-	if (params.statusFilter) {
-		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
-		filters.push(`status_receipts.status = ${statusValue}`)
-	}
-	if (params.after)
-		filters.push(`txs.block_timestamp >= '${toSqlTimestamp(params.after)}'`)
-
-	const columns = [
-		'txs.hash',
-		'txs.block_num',
-		'txs.block_timestamp',
-		'txs."from"',
-		'txs."to"',
-		'txs.value',
-		'txs.input',
-		'txs.calls',
-	].join(', ')
-	const whereForSide = (side: 'from' | 'to') =>
-		[`txs."${side}" = '${params.address}'`, ...filters].join(' AND ')
-	const sideQuery = (side: 'from' | 'to', limit: number) =>
-		`(SELECT ${columns} FROM txs ${statusJoin} WHERE ${whereForSide(side)} ORDER BY txs.block_num ${sortDirection}, txs.hash ${sortDirection} LIMIT ${limit})`
-	const singleSideQuery = (side: 'from' | 'to') =>
-		`SELECT ${columns} FROM txs ${statusJoin} WHERE ${whereForSide(side)} ORDER BY txs.block_num ${sortDirection}, txs.hash ${sortDirection} OFFSET ${offset} LIMIT ${fetchSize}`
-
-	const pagedQuery =
-		params.includeSent && params.includeReceived
-			? `
-				${sideQuery('from', offset + fetchSize)}
-				UNION
-				${sideQuery('to', offset + fetchSize)}
-				ORDER BY block_num ${sortDirection}, hash ${sortDirection}
-				OFFSET ${offset}
-				LIMIT ${fetchSize}
-			`
-			: params.includeSent
-				? singleSideQuery('from')
-				: singleSideQuery('to')
-
-	const result = await tidx.fetch({
-		chainId: params.chainId,
-		query: `
-			SELECT
-				paged.hash AS tx_hash,
-				paged.block_num AS tx_block_num,
-				paged.block_timestamp AS tx_block_timestamp,
-				paged."from" AS tx_from,
-				paged."to" AS tx_to,
-				paged.value AS tx_value,
-				paged.input AS tx_input,
-				paged.calls AS tx_calls,
-				receipts.block_num AS receipt_block_num,
-				receipts.block_timestamp AS receipt_block_timestamp,
-				receipts."from" AS receipt_from,
-				receipts."to" AS receipt_to,
-				receipts.status AS receipt_status,
-				receipts.gas_used AS receipt_gas_used,
-				receipts.effective_gas_price AS receipt_effective_gas_price,
-				receipts.contract_address AS receipt_contract_address,
-				logs.block_num AS log_block_num,
-				logs.tx_idx AS log_tx_idx,
-				logs.log_idx AS log_idx,
-				logs.address AS log_address,
-				logs.topic0 AS log_topic0,
-				logs.topic1 AS log_topic1,
-				logs.topic2 AS log_topic2,
-				logs.topic3 AS log_topic3,
-				logs.data AS log_data,
-				logs.is_virtual_forward AS log_is_virtual_forward
-			FROM (${pagedQuery}) AS paged
-			LEFT JOIN receipts ON receipts.tx_hash = paged.hash
-			LEFT JOIN logs ON logs.tx_hash = paged.hash
-			ORDER BY paged.block_num ${sortDirection}, paged.hash ${sortDirection}, logs.log_idx ASC
-		` as string,
-	})
-	const rows = result.rows as AddressTxOnlyHistoryJoinedQueryRow[]
-
-	const orderedHashMap = new Map<Hex.Hex, AddressTxOnlyHistoryPageHash>()
-	for (const row of rows) {
-		const txBlockNum = toNullableBigInt(row.tx_block_num)
-		const txValue = toNullableBigInt(row.tx_value)
-
-		if (
-			!row.tx_hash ||
-			txBlockNum === null ||
-			row.tx_from === null ||
-			txValue === null
-		)
-			continue
-
-		if (!orderedHashMap.has(row.tx_hash)) {
-			orderedHashMap.set(row.tx_hash, {
-				hash: row.tx_hash,
-				block_num: txBlockNum,
-				from: row.tx_from,
-				to: row.tx_to,
-				value: txValue,
-			})
-		}
-	}
-
-	const orderedHashes = [...orderedHashMap.values()]
-	const hasMore = orderedHashes.length > params.limit
-	const hashes = hasMore ? orderedHashes.slice(0, params.limit) : orderedHashes
-	const selectedHashes = new Set(hashes.map((entry) => entry.hash))
-
-	let total = 0
-	let countCapped = false
-
-	if (hasMore) {
-		const directCount = await fetchAddressDirectTxCount({
-			address: params.address,
-			chainId: params.chainId,
-			includeSent: params.includeSent,
-			includeReceived: params.includeReceived,
-			countCap: params.countCap,
-			statusFilter: params.statusFilter,
-			after: params.after,
-		})
-		total = directCount
-		countCapped = directCount >= params.countCap
-	} else {
-		const exactCount = params.offset + hashes.length
-		total = Math.min(exactCount, params.countCap)
-		countCapped = exactCount >= params.countCap
-	}
-
-	const txMap = new Map<Hex.Hex, AddressHistoryTxDetailsRow>()
-	const receiptMap = new Map<Hex.Hex, AddressHistoryReceiptRow>()
-	const logRows: AddressHistoryLogRow[] = []
-	const seenLogKeys = new Set<string>()
-
-	for (const row of rows) {
-		if (!row.tx_hash || !selectedHashes.has(row.tx_hash)) continue
-
-		const txBlockNum = toNullableBigInt(row.tx_block_num)
-		const txTimestamp = toNullableNumber(row.tx_block_timestamp)
-		const txValue = toNullableBigInt(row.tx_value)
-		if (
-			!txMap.has(row.tx_hash) &&
-			txBlockNum !== null &&
-			txTimestamp !== null &&
-			row.tx_from !== null &&
-			txValue !== null &&
-			row.tx_input !== null
-		) {
-			txMap.set(row.tx_hash, {
-				hash: row.tx_hash,
-				block_num: txBlockNum,
-				block_timestamp: txTimestamp,
-				from: row.tx_from,
-				to: row.tx_to,
-				value: txValue,
-				input: row.tx_input,
-				calls: row.tx_calls,
-			})
-		}
-
-		const receiptBlockNum = toNullableBigInt(row.receipt_block_num)
-		const receiptTimestamp = toNullableNumber(row.receipt_block_timestamp)
-		const receiptGasUsed = toNullableBigInt(row.receipt_gas_used)
-		const receiptEffectiveGasPrice = toNullableBigInt(
-			row.receipt_effective_gas_price,
-		)
-		const receiptStatus = toNullableNumber(row.receipt_status)
-		if (
-			!receiptMap.has(row.tx_hash) &&
-			receiptBlockNum !== null &&
-			receiptTimestamp !== null &&
-			row.receipt_from !== null &&
-			receiptGasUsed !== null
-		) {
-			receiptMap.set(row.tx_hash, {
-				tx_hash: row.tx_hash,
-				block_num: receiptBlockNum,
-				block_timestamp: receiptTimestamp,
-				from: row.receipt_from,
-				to: row.receipt_to,
-				status: receiptStatus,
-				gas_used: receiptGasUsed,
-				effective_gas_price: receiptEffectiveGasPrice,
-				contract_address: row.receipt_contract_address,
-			})
-		}
-
-		const logIdx = toNullableNumber(row.log_idx)
-		const logBlockNum = toNullableBigInt(row.log_block_num)
-		const logTxIdx = toNullableNumber(row.log_tx_idx)
-		const isVirtualForward =
-			row.log_is_virtual_forward === true ||
-			String(row.log_is_virtual_forward) === 'true'
-		if (
-			logIdx !== null &&
-			logBlockNum !== null &&
-			logTxIdx !== null &&
-			row.log_address != null &&
-			row.log_data != null &&
-			!isVirtualForward
-		) {
-			const logKey = `${row.tx_hash}:${logIdx}`
-			if (!seenLogKeys.has(logKey)) {
-				seenLogKeys.add(logKey)
-
-				logRows.push({
-					tx_hash: row.tx_hash,
-					block_num: logBlockNum,
-					tx_idx: logTxIdx,
-					log_idx: logIdx,
-					address: row.log_address,
-					topic0: row.log_topic0,
-					topic1: row.log_topic1,
-					topic2: row.log_topic2,
-					topic3: row.log_topic3,
-					data: row.log_data,
-					is_virtual_forward: false,
-				})
-			}
-		}
-	}
-
-	return {
-		hashes,
-		txRows: [...txMap.values()],
-		receiptRows: [...receiptMap.values()],
-		logRows,
-		total,
-		countCapped,
-		hasMore,
-	}
-}
-
-export type AddressHistoryTransferRow = {
-	tx_hash: Hex.Hex
-	block_num: bigint
-	log_idx: number
-	address: Address.Address
-	from: Address.Address
-	to: Address.Address
-	tokens: bigint
-}
-
-export async function fetchAddressTransferRowsByTxHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryTransferRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select([
-			'tx_hash',
-			'block_num',
-			'log_idx',
-			'address',
-			'from',
-			'to',
-			'tokens',
-		])
-		.where('tx_hash', 'in', hashes)
-		.orderBy('tx_hash', 'asc')
-		.orderBy('log_idx', 'asc')
-		.execute()
-}
-
-export async function fetchBasicTxDataByHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<BasicTxRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('txs')
-		.select(['hash', 'from', 'to', 'value'])
-		.where('hash', 'in', hashes)
-		.execute()
-}
-
-export async function fetchContractCreationTxCandidates(
-	chainId: number,
-	creationBlock: bigint,
-): Promise<Array<{ hash: Hex.Hex; block_num: bigint }>> {
-	return QB(chainId)
-		.selectFrom('txs')
-		.select(['hash', 'block_num'])
-		.where('to', '=', zeroAddress)
-		.where('block_num', '=', creationBlock)
-		.execute()
-}
-
-export async function fetchAddressTransferBalances(
-	address: Address.Address,
-	chainId: number,
-): Promise<
-	Array<{ token: string; received: string | number; sent: string | number }>
-> {
-	const accountAddress = indexedAddress(address)
-	const [incoming, outgoing] = await Promise.all([
-		QB(chainId)
-			.withSignatures([TRANSFER_SIGNATURE])
-			.selectFrom('transfer')
-			.select((eb) => [
-				eb.ref('address').as('token'),
-				eb.fn.sum('tokens').as('received'),
-			])
-			.where('to', '=', accountAddress)
-			.groupBy('address')
-			.execute()
-			.catch((e) => {
-				console.error('[tidx] transfer incoming query failed:', e)
-				return []
-			}),
-		QB(chainId)
-			.withSignatures([TRANSFER_SIGNATURE])
-			.selectFrom('transfer')
-			.select((eb) => [
-				eb.ref('address').as('token'),
-				eb.fn.sum('tokens').as('sent'),
-			])
-			.where('from', '=', accountAddress)
-			.groupBy('address')
-			.execute()
-			.catch((e) => {
-				console.error('[tidx] transfer outgoing query failed:', e)
-				return []
-			}),
-	])
-
-	const merged = new Map<
-		string,
-		{ token: string; received: bigint; sent: bigint }
-	>()
-
-	for (const row of incoming) {
-		const token = String(row.token).toLowerCase()
-		merged.set(token, {
-			token: row.token,
-			received: BigInt(row.received ?? 0),
-			sent: 0n,
-		})
-	}
-
-	for (const row of outgoing) {
-		const token = String(row.token).toLowerCase()
-		const existing = merged.get(token)
-		if (existing) {
-			existing.sent = BigInt(row.sent ?? 0)
-		} else {
-			merged.set(token, {
-				token: row.token,
-				received: 0n,
-				sent: BigInt(row.sent ?? 0),
-			})
-		}
-	}
-
-	return [...merged.values()].map((row) => ({
-		token: row.token,
-		received: row.received.toString(),
-		sent: row.sent.toString(),
-	}))
-}
-
-export async function fetchAddressTransfersForValue(
-	address: Address.Address,
-	chainId: number,
-	limit: number,
-): Promise<
-	Array<{ address: string; from: string; to: string; tokens: string | number }>
-> {
-	const accountAddress = indexedAddress(address)
-	const result = await QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select(['address', 'from', 'to', 'tokens'])
-		.where((eb) =>
-			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
-		)
-		.limit(limit)
-		.execute()
-
-	return result.map((row) => ({
-		...row,
-		tokens: row.tokens as unknown as string | number,
-	}))
-}
-
-export async function fetchVirtualAddressTransferAggregate(
+export async function fetchVirtualAddressTransferStats(
 	address: Address.Address,
 	chainId: number,
 ): Promise<{
-	count?: number
+	count: number
 	oldestTimestamp?: unknown
 	latestTimestamp?: unknown
 }> {
 	const topicAddress =
 		`0x${address.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
 
-	const fetchBoundary = async (
-		column: 'topic1' | 'topic2',
-		direction: SortDirection,
-	) =>
-		QB(chainId)
-			.selectFrom('logs')
-			.select(['block_timestamp'])
-			.where('topic0', '=', TRANSFER_TOPIC0)
-			.where(column, '=', topicAddress)
-			.orderBy('block_num', direction)
-			.orderBy('log_idx', direction)
-			.limit(1)
-			.executeTakeFirst()
-
-	const fetchTransferCount = async () => {
-		const qb = QB(chainId)
-		const subquery = qb
-			.selectFrom('logs')
-			.select('tx_hash')
-			.distinct()
-			.where('topic0', '=', TRANSFER_TOPIC0)
-			.where((eb) =>
-				eb.or([
-					eb('topic1', '=', topicAddress),
-					eb('topic2', '=', topicAddress),
-				]),
-			)
-
-		const result = await qb
-			.selectFrom(subquery.limit(TIDX_SERVER_ROW_LIMIT).as('subquery'))
-			.select((eb) => eb.fn.count('tx_hash').as('count'))
-			.executeTakeFirst()
-
-		return Number(result?.count ?? 0)
-	}
-
-	const [oldestFrom, oldestTo, latestFrom, latestTo, countResult] =
-		await Promise.all([
-			fetchBoundary('topic1', 'asc'),
-			fetchBoundary('topic2', 'asc'),
-			fetchBoundary('topic1', 'desc'),
-			fetchBoundary('topic2', 'desc'),
-			fetchTransferCount().catch(() => 0),
+	const result = await QB(chainId)
+		.selectFrom('logs')
+		.select((eb) => [
+			eb.fn.count('tx_hash').distinct().as('count'),
+			eb.fn.min('block_timestamp').as('oldestTimestamp'),
+			eb.fn.max('block_timestamp').as('latestTimestamp'),
 		])
-
-	const oldestTimestamp = [
-		oldestFrom?.block_timestamp,
-		oldestTo?.block_timestamp,
-	]
-		.filter((value): value is NonNullable<typeof value> => value != null)
-		.sort()[0]
-	const latestTimestamp = [
-		latestFrom?.block_timestamp,
-		latestTo?.block_timestamp,
-	]
-		.filter((value): value is NonNullable<typeof value> => value != null)
-		.sort()
-		.at(-1)
+		.where('topic0', '=', TRANSFER_TOPIC0)
+		.where((eb) =>
+			eb.or([eb('topic1', '=', topicAddress), eb('topic2', '=', topicAddress)]),
+		)
+		.executeTakeFirst()
 
 	return {
-		count: countResult,
-		oldestTimestamp,
-		latestTimestamp,
+		count: Number(result?.count ?? 0),
+		oldestTimestamp: result?.oldestTimestamp,
+		latestTimestamp: result?.latestTimestamp,
 	}
 }
 
-export async function fetchTokenTransferAggregate(
+/** First/last `Transfer` timestamps for a token, in one raw-logs aggregate. */
+export async function fetchTokenTransferBoundaries(
 	address: Address.Address,
 	chainId: number,
 ): Promise<{
@@ -1469,14 +53,13 @@ export async function fetchTokenTransferAggregate(
 	latestTimestamp?: unknown
 }> {
 	const tokenAddress = indexedAddress(address)
-	// Use raw logs instead of the Transfer CTE here. Production tidx currently
-	// errors on aggregate queries over event CTEs, while the raw logs aggregate
-	// is fast and keeps TIDX credentials server-side.
+	// Raw logs instead of the Transfer CTE: production tidx errors on
+	// aggregate queries over event CTEs, while this aggregate is fast.
 	const result = await QB(chainId)
 		.selectFrom('logs')
-		.select((sb) => [
-			sb.fn.min('block_timestamp').as('oldestTimestamp'),
-			sb.fn.max('block_timestamp').as('latestTimestamp'),
+		.select((eb) => [
+			eb.fn.min('block_timestamp').as('oldestTimestamp'),
+			eb.fn.max('block_timestamp').as('latestTimestamp'),
 		])
 		.where('address', '=', tokenAddress)
 		.where('topic0', '=', TRANSFER_TOPIC0)
@@ -1488,115 +71,69 @@ export async function fetchTokenTransferAggregate(
 	}
 }
 
-export async function fetchAddressTxAggregate(
+/**
+ * Header stats for an EOA/contract in one aggregate: exact distinct tx count
+ * (sender or recipient — self-sends counted once) plus first/last activity.
+ */
+export async function fetchAddressTxStats(
 	address: Address.Address,
 	chainId: number,
 ): Promise<{
-	count?: number
-	latestTxsBlockTimestamp?: unknown
-	oldestTxsBlockTimestamp?: unknown
-	oldestTxHash?: string
-	oldestTxFrom?: string
+	count: number
+	oldestTimestamp?: unknown
+	latestTimestamp?: unknown
 }> {
 	const accountAddress = indexedAddress(address)
-	type AddressTxBoundaryRow = {
-		hash: Hex.Hex
-		from: string
-		block_timestamp: string | number | bigint | null
+	const result = await QB(chainId)
+		.selectFrom('txs')
+		.select((eb) => [
+			eb.fn.count('hash').distinct().as('count'),
+			eb.fn.min('block_timestamp').as('oldestTimestamp'),
+			eb.fn.max('block_timestamp').as('latestTimestamp'),
+		])
+		.where((eb) =>
+			eb.or([eb('from', '=', accountAddress), eb('to', '=', accountAddress)]),
+		)
+		.executeTakeFirst()
+
+	return {
+		count: Number(result?.count ?? 0),
+		oldestTimestamp: result?.oldestTimestamp,
+		latestTimestamp: result?.latestTimestamp,
 	}
+}
 
-	type AddressTxCountRow = {
-		count: string | number | bigint
-	}
+/**
+ * The address's first transaction (hash + sender for the "created by" stat).
+ * Two single-row reads merged here — tidx rejects `OR` filters combined with
+ * `ORDER BY`/`LIMIT` in one query.
+ */
+export async function fetchAddressOldestTx(
+	address: Address.Address,
+	chainId: number,
+): Promise<
+	{ hash: Hex.Hex; from: string; block_timestamp: unknown } | undefined
+> {
+	const accountAddress = indexedAddress(address)
 
-	const countByField = async (field: 'from' | 'to'): Promise<number> => {
-		const result = (await QB(chainId)
-			.selectFrom('txs')
-			.select((eb) => eb.fn.count('hash').as('count'))
-			.where(field, '=', accountAddress)
-			.executeTakeFirst()) as AddressTxCountRow | undefined
-
-		return Number(result?.count ?? 0)
-	}
-
-	const fetchBoundaryByField = async (
-		field: 'from' | 'to',
-		sortDirection: SortDirection,
-	): Promise<AddressTxBoundaryRow | undefined> =>
-		(await QB(chainId)
+	const oldestBy = (field: 'from' | 'to') =>
+		QB(chainId)
 			.selectFrom('txs')
 			.select(['hash', 'from', 'block_timestamp'])
 			.where(field, '=', accountAddress)
-			.orderBy('block_timestamp', sortDirection)
-			.orderBy('hash', sortDirection)
+			.orderBy('block_timestamp', 'asc')
+			.orderBy('hash', 'asc')
 			.limit(1)
-			.executeTakeFirst()) as AddressTxBoundaryRow | undefined
+			.executeTakeFirst() as Promise<
+			{ hash: Hex.Hex; from: string; block_timestamp: unknown } | undefined
+		>
 
-	const toComparableTimestamp = (value: unknown): number => {
-		if (typeof value === 'bigint') return Number(value)
-		return parseTimestamp(value) ?? Number.NaN
-	}
-
-	const pickBoundary = (
-		sortDirection: SortDirection,
-		rows: Array<AddressTxBoundaryRow | undefined>,
-	): AddressTxBoundaryRow | undefined => {
-		const presentRows = rows.filter((row) => row !== undefined)
-		if (presentRows.length === 0) return undefined
-
-		presentRows.sort((left, right) => {
-			const leftTimestamp = toComparableTimestamp(left.block_timestamp)
-			const rightTimestamp = toComparableTimestamp(right.block_timestamp)
-			const timestampDiff =
-				sortDirection === 'asc'
-					? leftTimestamp - rightTimestamp
-					: rightTimestamp - leftTimestamp
-			if (timestampDiff !== 0) return timestampDiff
-
-			return sortDirection === 'asc'
-				? left.hash.localeCompare(right.hash)
-				: right.hash.localeCompare(left.hash)
-		})
-
-		return presentRows[0]
-	}
-
-	const [
-		sentCount,
-		receivedCount,
-		selfCount,
-		latestSent,
-		latestReceived,
-		oldestSent,
-		oldestReceived,
-	] = await Promise.all([
-		countByField('from'),
-		countByField('to'),
-		QB(chainId)
-			.selectFrom('txs')
-			.select((eb) => eb.fn.count('hash').as('count'))
-			.where('from', '=', accountAddress)
-			.where('to', '=', accountAddress)
-			.executeTakeFirst()
-			.then((result) =>
-				Number((result as AddressTxCountRow | undefined)?.count ?? 0),
-			),
-		fetchBoundaryByField('from', 'desc'),
-		fetchBoundaryByField('to', 'desc'),
-		fetchBoundaryByField('from', 'asc'),
-		fetchBoundaryByField('to', 'asc'),
-	])
-
-	const latest = pickBoundary('desc', [latestSent, latestReceived])
-	const oldest = pickBoundary('asc', [oldestSent, oldestReceived])
-
-	return {
-		count: sentCount + receivedCount - selfCount,
-		latestTxsBlockTimestamp: latest?.block_timestamp,
-		oldestTxsBlockTimestamp: oldest?.block_timestamp,
-		oldestTxHash: oldest?.hash as string | undefined,
-		oldestTxFrom: oldest?.from as string | undefined,
-	}
+	const [sent, received] = await Promise.all([oldestBy('from'), oldestBy('to')])
+	if (!sent || !received) return sent ?? received
+	const sentAt = parseTimestamp(sent.block_timestamp) ?? Number.MAX_VALUE
+	const receivedAt =
+		parseTimestamp(received.block_timestamp) ?? Number.MAX_VALUE
+	return sentAt <= receivedAt ? sent : received
 }
 
 export type ContractCreationReceiptRow = {
@@ -1619,116 +156,65 @@ export async function fetchContractCreationReceipt(
 		.executeTakeFirst()) as ContractCreationReceiptRow | undefined
 }
 
-export async function fetchAddressTxCounts(
-	address: Address.Address,
-	chainId: number,
-): Promise<{ sent: number; received: number }> {
-	const accountAddress = indexedAddress(address)
-	const qb = QB(chainId)
-	const [txSentResult, txReceivedResult] = await Promise.all([
-		qb
-			.selectFrom('txs')
-			.select((eb) => eb.fn.count('hash').as('cnt'))
-			.where('from', '=', accountAddress)
-			.executeTakeFirst(),
-		qb
-			.selectFrom('txs')
-			.select((eb) => eb.fn.count('hash').as('cnt'))
-			.where('to', '=', accountAddress)
-			.executeTakeFirst(),
-	])
-
-	return {
-		sent: Number(txSentResult?.cnt ?? 0),
-		received: Number(txReceivedResult?.cnt ?? 0),
-	}
+export type AddressTxExportRow = {
+	hash: Hex.Hex
+	from: string
+	to: string | null
+	value: unknown
+	block_num: unknown
+	block_timestamp: unknown
+	status: number | null
+	gas_used: unknown
+	effective_gas_price: unknown
 }
 
-export async function fetchAddressTransferActivity(
-	address: Address.Address,
-	chainId: number,
-): Promise<{
-	incoming: Array<{
-		tokens: string | number
-		address: string
-		block_timestamp: string | number
-	}>
-	outgoing: Array<{
-		tokens: string | number
-		address: string
-		block_timestamp: string | number
-	}>
-}> {
-	const accountAddress = indexedAddress(address)
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+/**
+ * Bulk transaction rows (with receipt status/gas joined) for the CSV export,
+ * in one round-trip. Sent/received ride separate `UNION ALL` branches because
+ * tidx rejects `OR` filters combined with `ORDER BY`/`LIMIT`; `DISTINCT`
+ * collapses self-sends that match both branches.
+ */
+export async function fetchAddressTxExportRows(params: {
+	address: Address.Address
+	chainId: number
+	includeSent: boolean
+	includeReceived: boolean
+	status?: 'success' | 'reverted' | undefined
+	after?: number | undefined
+	sortDirection: SortDirection
+	limit: number
+}): Promise<AddressTxExportRow[]> {
+	const address = indexedAddress(params.address)
+	const direction = params.sortDirection === 'asc' ? 'ASC' : 'DESC'
+	const limit = Math.floor(params.limit)
 
-	const [incoming, outgoing] = await Promise.all([
-		qb
-			.selectFrom('transfer')
-			.select(['tokens', 'address', 'block_timestamp'])
-			.where('to', '=', accountAddress)
-			.orderBy('block_timestamp', 'desc')
-			.execute(),
-		qb
-			.selectFrom('transfer')
-			.select(['tokens', 'address', 'block_timestamp'])
-			.where('from', '=', accountAddress)
-			.orderBy('block_timestamp', 'desc')
-			.execute(),
-	])
+	const conditions: string[] = []
+	if (params.status !== undefined)
+		conditions.push(`r.status = ${params.status === 'reverted' ? 0 : 1}`)
+	if (params.after !== undefined)
+		conditions.push(
+			`t.block_timestamp >= '${new Date(params.after * 1000).toISOString()}'`,
+		)
+	const extra = conditions.length > 0 ? ` AND ${conditions.join(' AND ')}` : ''
 
-	return {
-		incoming: incoming.map((row) => ({
-			...row,
-			tokens: row.tokens as unknown as string | number,
-		})),
-		outgoing: outgoing.map((row) => ({
-			...row,
-			tokens: row.tokens as unknown as string | number,
-		})),
-	}
+	const select = `SELECT t.hash, t."from", t."to", t.value, t.block_num, t.block_timestamp, r.status, r.gas_used, r.effective_gas_price
+		FROM txs t LEFT JOIN receipts r ON r.tx_hash = t.hash`
+	const branch = (field: 'from' | 'to') =>
+		`(${select} WHERE t."${field}" = '${address}'${extra} ORDER BY t.block_num ${direction} LIMIT ${limit})`
+
+	const branches: string[] = []
+	if (params.includeSent) branches.push(branch('from'))
+	if (params.includeReceived) branches.push(branch('to'))
+	if (branches.length === 0) return []
+
+	const query =
+		branches.length === 1
+			? branches[0].slice(1, -1)
+			: `SELECT DISTINCT * FROM (${branches.join(' UNION ALL ')}) combined
+				ORDER BY block_num ${direction} LIMIT ${limit}`
+
+	const result = await tidx.fetch({ chainId: params.chainId, query })
+	return result.rows as unknown as AddressTxExportRow[]
 }
 
 export type { SortDirection }
-
-/**
- * Fetches OG metadata for an address: tx count (including contract creation)
- * and the contract creation timestamp from the receipts table.
- */
-export async function fetchAddressOgMeta(
-	address: Address.Address,
-	chainId: number,
-): Promise<{
-	txCount: number
-	createdTimestamp: number | undefined
-	lastActivityTimestamp: number | undefined
-	accountType: 'contract' | 'account' | undefined
-}> {
-	const aggregate = await fetchAddressTxAggregate(address, chainId)
-	let txCount = aggregate.count ?? 0
-	const lastActivityTimestamp = parseTimestamp(
-		aggregate.latestTxsBlockTimestamp,
-	)
-	let createdTimestamp = parseTimestamp(aggregate.oldestTxsBlockTimestamp)
-
-	// Check receipts for contract creation (deployments have to=null,
-	// so they won't appear in the from/to aggregate)
-	const creation = await fetchContractCreationReceipt(address, chainId)
-
-	if (creation) {
-		txCount += 1
-		const ts = parseTimestamp(creation.block_timestamp)
-		if (ts && (!createdTimestamp || ts < createdTimestamp)) {
-			createdTimestamp = ts
-		}
-	}
-
-	// Derive accountType from TIDX data when bytecode check is unavailable
-	const accountType = creation
-		? ('contract' as const)
-		: txCount > 0
-			? ('account' as const)
-			: undefined
-
-	return { txCount, createdTimestamp, lastActivityTimestamp, accountType }
-}

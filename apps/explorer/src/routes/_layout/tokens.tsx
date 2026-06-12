@@ -79,8 +79,7 @@ function TokensPage() {
 	const formatHoldersCount = React.useCallback(
 		(token: Token) => {
 			if (token.holdersCount === undefined) return '0'
-			const formatted = holdersCountFormatter.format(token.holdersCount)
-			return token.holdersCountCapped ? `> ${formatted}` : formatted
+			return holdersCountFormatter.format(token.holdersCount)
 		},
 		[holdersCountFormatter],
 	)

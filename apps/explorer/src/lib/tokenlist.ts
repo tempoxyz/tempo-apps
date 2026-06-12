@@ -1,10 +1,9 @@
+/**
+ * Token data now comes from Cadent's curated verified list (`#lib/server/tokens`);
+ * the tokenlist service only serves the by-address icon CDN fallback in
+ * `TokenIcon` (no Cadent equivalent yet).
+ */
 export const TOKENLIST_BASE_URL = 'https://tokenlist.tempo.xyz'
-
-export const TOKENLIST_URLS: Record<number, string> = {
-	4217: `${TOKENLIST_BASE_URL}/list/4217`,
-	42431: `${TOKENLIST_BASE_URL}/list/42431`,
-	31318: `${TOKENLIST_BASE_URL}/list/31318`,
-}
 
 const FEE_TOKEN_BY_CHAIN_ID: Record<number, `0x${string}`> = {
 	4217: '0x20c0000000000000000000000000000000000000',

@@ -6,17 +6,16 @@ import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
 import { fetchContractCreationData } from '#lib/server/contract-creation'
 import {
-	fetchAddressTxAggregate,
+	fetchAddressOldestTx,
+	fetchAddressTxStats,
 	fetchContractCreationReceipt,
-	fetchTokenCreatedMetadata,
-	fetchTokenHoldersCountRows,
-	fetchTokenTransferAggregate,
-	fetchVirtualAddressTransferAggregate,
+	fetchTokenTransferBoundaries,
+	fetchVirtualAddressTransferStats,
 } from '#lib/server/tempo-queries'
 import {
 	buildAddressTxMetadata,
+	fetchTokenHeaderStats,
 	pickTip20CreatedTimestamp,
-	pickTokenCreatedTimestamp,
 } from '#lib/server/address-metadata'
 import { parseTimestamp } from '#lib/timestamp'
 import { zAddress } from '#lib/zod'
@@ -61,40 +60,36 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					let response: AddressMetadataResponse
 
 					if (isVirtual) {
-						const [bytecode, result] = await Promise.all([
+						// One aggregate: exact distinct transfer-tx count + boundaries.
+						const [bytecode, stats] = await Promise.all([
 							bytecodePromise,
-							fetchVirtualAddressTransferAggregate(address, chainId).catch(
-								() => ({
-									count: 0,
-									oldestTimestamp: undefined,
-									latestTimestamp: undefined,
-								}),
-							),
+							fetchVirtualAddressTransferStats(address, chainId).catch(() => ({
+								count: 0,
+								oldestTimestamp: undefined,
+								latestTimestamp: undefined,
+							})),
 						])
 						response = {
 							address,
 							chainId,
 							accountType: getAccountType(bytecode),
-							txCount: result.count ?? 0,
-							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
-							createdTimestamp: parseTimestamp(result.oldestTimestamp),
+							txCount: stats.count,
+							lastActivityTimestamp: parseTimestamp(stats.latestTimestamp),
+							createdTimestamp: parseTimestamp(stats.oldestTimestamp),
 						}
 					} else if (isTip20) {
-						const [bytecode, result, holdersRows, createdRows] =
-							await Promise.all([
-								bytecodePromise,
-								fetchTokenTransferAggregate(address, chainId).catch(() => ({
-									oldestTimestamp: undefined,
-									latestTimestamp: undefined,
-								})),
-								fetchTokenHoldersCountRows([address], chainId, 10_000).catch(
-									() => [],
-								),
-								fetchTokenCreatedMetadata(chainId, [address]).catch(() => []),
-							])
-						const tokenCreatedTimestamp = pickTokenCreatedTimestamp(createdRows)
+						// Exact holder count + TokenCreated timestamp from Cadent;
+						// transfer boundaries in one raw-logs aggregate.
+						const [bytecode, stats, boundaries] = await Promise.all([
+							bytecodePromise,
+							fetchTokenHeaderStats(chainId, address),
+							fetchTokenTransferBoundaries(address, chainId).catch(() => ({
+								oldestTimestamp: undefined,
+								latestTimestamp: undefined,
+							})),
+						])
 						const contractCreation =
-							tokenCreatedTimestamp == null
+							stats?.createdAt == null
 								? await fetchContractCreationData(address).catch(() => null)
 								: null
 
@@ -102,22 +97,27 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							address,
 							chainId,
 							accountType: getAccountType(bytecode),
-							holdersCount: holdersRows[0]?.count ?? 0,
-							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
+							holdersCount: stats?.holderCount ?? 0,
+							lastActivityTimestamp: parseTimestamp(boundaries.latestTimestamp),
 							createdTimestamp: pickTip20CreatedTimestamp({
-								createdRows,
-								firstTransferTimestamp: result.oldestTimestamp,
+								tokenCreatedTimestamp: stats?.createdAt,
+								firstTransferTimestamp: boundaries.oldestTimestamp,
 								contractCreationTimestamp: contractCreation?.timestamp,
 							}),
 						}
 					} else {
-						const [bytecode, result, indexedCreation] = await Promise.all([
-							bytecodePromise,
-							fetchAddressTxAggregate(address, chainId),
-							fetchContractCreationReceipt(address, chainId).catch(
-								() => undefined,
-							),
-						])
+						// One aggregate (exact distinct count + boundaries) + the oldest
+						// tx row for the "created by" stat. Creation receipt stays on
+						// the SQL lane (D4.1) with the existing RPC bisection fallback.
+						const [bytecode, stats, oldestTx, indexedCreation] =
+							await Promise.all([
+								bytecodePromise,
+								fetchAddressTxStats(address, chainId),
+								fetchAddressOldestTx(address, chainId).catch(() => undefined),
+								fetchContractCreationReceipt(address, chainId).catch(
+									() => undefined,
+								),
+							])
 						const accountType = getAccountType(bytecode)
 						const creation =
 							indexedCreation ??
@@ -125,7 +125,16 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 								? await fetchContractCreationData(address).catch(() => null)
 								: undefined) ??
 							undefined
-						const metadata = buildAddressTxMetadata(result, creation)
+						const metadata = buildAddressTxMetadata(
+							{
+								count: stats.count,
+								latestTxsBlockTimestamp: stats.latestTimestamp,
+								oldestTxsBlockTimestamp: stats.oldestTimestamp,
+								oldestTxHash: oldestTx?.hash,
+								oldestTxFrom: oldestTx?.from,
+							},
+							creation,
+						)
 
 						response = {
 							address,

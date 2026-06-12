@@ -1,7 +1,7 @@
 import type { Address } from 'ox'
 import type { Log } from 'viem'
 import { parseEventLogs } from 'viem'
-import { readContract, readContracts } from 'wagmi/actions'
+import { readContract } from 'wagmi/actions'
 import { Abis } from '#lib/abis'
 import { Actions } from 'wagmi/tempo'
 import type { Config } from 'wagmi'
@@ -56,30 +56,6 @@ export async function fetchLogoURI(
 	}).catch(() => undefined)
 
 	return typeof logoURI === 'string' ? logoURI : undefined
-}
-
-export async function fetchLogoURIs(
-	config: Config,
-	tokens: Address.Address[],
-): Promise<Map<string, string>> {
-	if (tokens.length === 0) return new Map()
-
-	const results = await readContracts(config, {
-		contracts: tokens.map((token) => ({
-			address: token,
-			abi: logoUriAbi,
-			functionName: 'logoURI',
-		})),
-	}).catch(() => [])
-
-	const logoURIs = new Map<string, string>()
-	for (const [index, result] of results.entries()) {
-		const logoURI = result.result
-		if (typeof logoURI === 'string' && logoURI.trim()) {
-			logoURIs.set(tokens[index].toLowerCase(), logoURI)
-		}
-	}
-	return logoURIs
 }
 
 export async function metadataFromLogs(
