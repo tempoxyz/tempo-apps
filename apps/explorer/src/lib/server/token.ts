@@ -79,17 +79,18 @@ async function getTokenDetails(
  */
 export function resolveTotal(options: {
 	exactCount: number | undefined
+	exactCountCapped?: boolean | undefined
 	page: number
 	limit: number
 	rows: number
 	exhausted: boolean
 }): { total: number; totalCapped: boolean } {
-	const { exactCount, page, limit, rows, exhausted } = options
+	const { exactCount, exactCountCapped, page, limit, rows, exhausted } = options
 	const maxRows = Math.floor(COUNT_CAP / limit) * limit
 	if (exactCount !== undefined)
 		return {
 			total: Math.min(exactCount, maxRows),
-			totalCapped: exactCount > maxRows,
+			totalCapped: Boolean(exactCountCapped) || exactCount > maxRows,
 		}
 	if (exhausted)
 		return {
@@ -312,6 +313,7 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 						address: data.account,
 						limit: String(data.limit),
 						page: String(data.page),
+						include: 'totalCount',
 					},
 				}),
 			)
@@ -342,7 +344,8 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 					}
 				}),
 				...resolveTotal({
-					exactCount: undefined,
+					exactCount: page.meta?.totalCount,
+					exactCountCapped: page.meta?.totalCountCapped,
 					page: data.page,
 					limit: data.limit,
 					rows: page.data.length,
@@ -371,7 +374,9 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 							chainId: String(chainId),
 							limit: String(data.limit),
 							page: String(data.page),
-							...(data.account ? { address: data.account } : {}),
+							...(data.account
+								? { address: data.account, include: 'totalCount' }
+								: {}),
 						},
 					}),
 				),
@@ -387,8 +392,12 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 					timestamp: transfer.timestamp ?? null,
 				})),
 				...resolveTotal({
-					// The exact lifetime count only applies to the unfiltered feed.
-					exactCount: data.account ? undefined : details?.transferStats?.count,
+					exactCount: data.account
+						? page.meta?.totalCount
+						: details?.transferStats?.count,
+					exactCountCapped: data.account
+						? page.meta?.totalCountCapped
+						: undefined,
 					page: data.page,
 					limit: data.limit,
 					rows: page.data.length,

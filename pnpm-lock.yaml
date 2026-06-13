@@ -511,8 +511,8 @@ importers:
         specifier: 'catalog:'
         version: 6.0.1(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
       cadent:
-        specifier: https://pkg.pr.new/tempoxyz/cadent@7f2fd01
-        version: https://pkg.pr.new/tempoxyz/cadent@7f2fd01(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(typescript@6.0.2)(utf-8-validate@5.0.10)
+        specifier: https://pkg.pr.new/tempoxyz/cadent@57613c4
+        version: https://pkg.pr.new/tempoxyz/cadent@57613c4(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(typescript@6.0.2)(utf-8-validate@5.0.10)
       eruda:
         specifier: 'catalog:'
         version: 3.4.3
@@ -3932,8 +3932,8 @@ packages:
     resolution: {integrity: sha512-s6webAy+R4SR8XVuJWt2V2rGvhnrhxN+9S15GNuTK3wKPOXFF6RNc+8ug2XhH+2s4f+uudG4kUVYmYOQWL2g0Q==}
     engines: {node: '>=0.10.0'}
 
-  cadent@https://pkg.pr.new/tempoxyz/cadent@7f2fd01:
-    resolution: {integrity: sha512-8px/Hv018UnJ2YsFqGDzwCzwBkzXNO6KOnS94bNgBmnRQeBQ4xOd4wfeBt9tVkmJixTrhsnBBm9iuzb0/9HEWA==, tarball: https://pkg.pr.new/tempoxyz/cadent@7f2fd01}
+  cadent@https://pkg.pr.new/tempoxyz/cadent@57613c4:
+    resolution: {integrity: sha512-GWcsC1+sAAUqmumOJ0JSgPXuJrU/tA6tKJ1kRi8sl7sShad4i1qblGVDGboEsDriek7h/+1rrHyPcjbWtlSXqg==, tarball: https://pkg.pr.new/tempoxyz/cadent@57613c4}
     version: 0.0.0
 
   call-bind-apply-helpers@1.0.2:
@@ -9183,7 +9183,7 @@ snapshots:
 
   byline@5.0.0: {}
 
-  cadent@https://pkg.pr.new/tempoxyz/cadent@7f2fd01(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(typescript@6.0.2)(utf-8-validate@5.0.10):
+  cadent@https://pkg.pr.new/tempoxyz/cadent@57613c4(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(typescript@6.0.2)(utf-8-validate@5.0.10):
     dependencies:
       '@hono/node-server': 2.0.4(hono@4.12.25)
       '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.25)

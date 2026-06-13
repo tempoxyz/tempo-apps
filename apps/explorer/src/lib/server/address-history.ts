@@ -245,7 +245,7 @@ export async function fetchAddressHistoryData(params: {
 				order: searchParams.sort,
 				limit: String(limit),
 				...(page > 1 ? { page: String(page) } : {}),
-				include: 'receipt',
+				include: 'receipt,totalCount',
 			},
 		}),
 	)
@@ -259,7 +259,8 @@ export async function fetchAddressHistoryData(params: {
 	)
 
 	const { total, totalCapped } = resolveTotal({
-		exactCount: undefined,
+		exactCount: result.meta?.totalCount,
+		exactCountCapped: result.meta?.totalCountCapped,
 		page,
 		limit,
 		rows: transactions.length,

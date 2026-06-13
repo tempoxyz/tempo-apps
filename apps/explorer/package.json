@@ -80,7 +80,7 @@
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
-		"cadent": "https://pkg.pr.new/tempoxyz/cadent@7f2fd01",
+		"cadent": "https://pkg.pr.new/tempoxyz/cadent@57613c4",
 		"eruda": "catalog:",
 		"rollup-plugin-visualizer": "catalog:",
 		"shiki": "catalog:",
