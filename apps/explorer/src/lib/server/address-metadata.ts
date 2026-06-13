@@ -1,6 +1,35 @@
+import { type InferResponseType, parseResponse } from 'hono/client'
+import type { Address } from 'ox'
+import type { ContractCreationData } from '#lib/server/contract-creation'
+import { api } from '#lib/server/tempo-api'
 import type { ContractCreationReceiptRow } from '#lib/server/tempo-queries'
 import { parseTimestamp } from '#lib/timestamp'
-import type { ContractCreationData } from '#lib/server/contract-creation'
+
+/**
+ * Token header stats: exact `holderCount` and the `TokenCreated` timestamp.
+ * Transfer boundaries stay on the SQL lane (`fetchTokenTransferBoundaries`) —
+ * Cadent's `include=transferStats` aggregates are silently omitted upstream
+ * for the largest tokens.
+ */
+export async function fetchTokenHeaderStats(
+	chainId: number,
+	token: Address.Address,
+): Promise<
+	InferResponseType<(typeof api.v1.tokens)[':token']['$get'], 200> | undefined
+> {
+	return parseResponse(
+		api.v1.tokens[':token'].$get({
+			param: { token },
+			query: {
+				chainId: String(chainId),
+				include: 'createdAt,holderCount',
+			},
+		}),
+	).catch((error) => {
+		console.error(`Failed to fetch token header stats for ${token}:`, error)
+		return undefined
+	})
+}
 
 type AddressTxAggregate = {
 	count?: number
@@ -10,25 +39,12 @@ type AddressTxAggregate = {
 	oldestTxFrom?: string
 }
 
-type TokenCreatedTimestampRow = {
-	block_timestamp: unknown
-}
-
-export function pickTokenCreatedTimestamp(
-	createdRows: TokenCreatedTimestampRow[],
-): number | undefined {
-	return createdRows
-		.map((row) => parseTimestamp(row.block_timestamp))
-		.filter((value): value is number => value != null)
-		.sort((left, right) => left - right)[0]
-}
-
 export function pickTip20CreatedTimestamp(params: {
-	createdRows: TokenCreatedTimestampRow[]
+	tokenCreatedTimestamp: unknown
 	firstTransferTimestamp: unknown
 	contractCreationTimestamp?: unknown
 }): number | undefined {
-	const tokenCreatedTimestamp = pickTokenCreatedTimestamp(params.createdRows)
+	const tokenCreatedTimestamp = parseTimestamp(params.tokenCreatedTimestamp)
 	const firstTransferTimestamp = parseTimestamp(params.firstTransferTimestamp)
 	const contractCreationTimestamp = parseTimestamp(
 		params.contractCreationTimestamp,
@@ -77,6 +93,8 @@ export function buildAddressTxMetadata(
 					: (creation.hash ?? undefined)
 				: aggregate.oldestTxHash,
 		createdBy:
-			useCreation && creation ? (creation.from ?? undefined) : aggregate.oldestTxFrom,
+			useCreation && creation
+				? (creation.from ?? undefined)
+				: aggregate.oldestTxFrom,
 	}
 }

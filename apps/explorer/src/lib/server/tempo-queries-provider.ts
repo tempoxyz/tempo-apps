@@ -2,8 +2,7 @@ import { QB, Tidx } from 'tidx.ts'
 import { serverEnv } from './env'
 
 const tidx = Tidx.create({
-	basicAuth: serverEnv.TIDX_BASIC_AUTH,
-	baseUrl: serverEnv.TIDX_BASE_URL,
+	baseUrl: `${serverEnv.TEMPO_API_URL.replace(/\/$/, '')}/v1/indexer`,
 })
 
 tidx.on('response', (res) => {
@@ -16,17 +15,12 @@ tidx.on('response', (res) => {
 					`[tidx:${res.status}]`,
 					decodeURIComponent(res.url),
 					body,
-					`(auth=${serverEnv.TIDX_BASIC_AUTH ? 'set' : 'missing'})`,
 				),
 			)
 })
 
 export function tempoQueryBuilder(chainId: number) {
 	return QB.from({ ...tidx, chainId })
-}
-
-export function tempoFastLookupQueryBuilder(chainId: number) {
-	return QB.from({ ...tidx, chainId, engine: 'clickhouse' })
 }
 
 export { tidx }

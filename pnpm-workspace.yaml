@@ -54,7 +54,7 @@ catalog:
   eruda: ^3.4.3
   esbuild: ^0.28.0
   globals: ^17.4.0
-  hono: ^4.12.14
+  hono: ^4.12.22
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
@@ -90,6 +90,10 @@ enablePrePostScripts: true
 ignoredBuiltDependencies:
   - '@sentry/cli'
   - bufferutil
+  # cadent's pkg.pr.new tarball ships the repo's `postinstall: pnpm dev`
+  # watch script; `dist/` is prebuilt, so never run it. Remove when cadent
+  # is published to npm without dev scripts.
+  - cadent
   - cbor-extract
   - cpu-features
   - protobufjs

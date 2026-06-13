@@ -1,5 +1,4 @@
 interface EnvironmentVariables {
-	readonly TIDX_BASIC_AUTH: string | undefined
 	readonly SENTRY_AUTH_TOKEN: string | undefined
 	readonly SENTRY_ORG: string | undefined
 	readonly SENTRY_PROJECT: string | undefined
@@ -11,8 +10,6 @@ interface EnvironmentVariables {
 	readonly VITE_CONTRACT_VERIFICATION_API_BASE_URL: string
 
 	readonly VITE_TEMPO_ENV: 'testnet' | 'devnet' | 'nextfork' | 'mainnet'
-
-	readonly TEMPO_RPC_KEY: string
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

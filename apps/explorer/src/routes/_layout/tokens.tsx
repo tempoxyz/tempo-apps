@@ -11,6 +11,7 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
+import { PREFETCH_PAGE_COUNT } from '#lib/constants'
 import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
@@ -79,24 +80,26 @@ function TokensPage() {
 	const formatHoldersCount = React.useCallback(
 		(token: Token) => {
 			if (token.holdersCount === undefined) return '0'
-			const formatted = holdersCountFormatter.format(token.holdersCount)
-			return token.holdersCountCapped ? `> ${formatted}` : formatted
+			return holdersCountFormatter.format(token.holdersCount)
 		},
 		[holdersCountFormatter],
 	)
 
 	const prefetchNextPage = React.useCallback(() => {
-		const nextPage = page + 1
-		if (nextPage > Math.ceil(total / TOKENS_PER_PAGE)) return
+		const lastPage = Math.ceil(total / TOKENS_PER_PAGE)
+		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
+			const nextPage = page + i
+			if (nextPage > lastPage) break
 
-		void queryClient
-			.prefetchQuery(
-				tokensListQueryOptions({
-					page: nextPage,
-					limit: TOKENS_PER_PAGE,
-				}),
-			)
-			.catch(() => {})
+			void queryClient
+				.prefetchQuery(
+					tokensListQueryOptions({
+						page: nextPage,
+						limit: TOKENS_PER_PAGE,
+					}),
+				)
+				.catch(() => {})
+		}
 	}, [total, page, queryClient])
 
 	const columns: DataGrid.Column[] = [

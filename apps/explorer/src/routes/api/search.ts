@@ -1,21 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import { getChainId } from 'wagmi/actions'
-import tokensIndex31318 from '#data/tokens-index-31318.json' with {
-	type: 'json',
-}
-import tokensIndex42431 from '#data/tokens-index-42431.json' with {
-	type: 'json',
-}
-import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
+import {
+	getBlock,
+	getBlockNumber,
+	getChainId,
+	getTransaction,
+} from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20'
 import { normalizeSearchInput } from '#lib/tempo-address'
-import {
-	fetchLatestBlockNumber,
-	fetchTransactionTimestamp,
-} from '#lib/server/tempo-queries'
-import { getTokenListEntries, type TokenListEntry } from '#lib/server/tokens'
+import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type SearchResult =
@@ -54,8 +48,6 @@ export type TransactionSearchResult = Extract<
 >
 export type BlockSearchResult = Extract<SearchResult, { type: 'block' }>
 
-type Token = [address: Address.Address, symbol: string, name: string]
-
 type IndexedToken = {
 	address: Address.Address
 	symbol: string
@@ -63,16 +55,14 @@ type IndexedToken = {
 	searchKey: string
 }
 
-function indexTokens(tokens: Token[]): IndexedToken[] {
-	return tokens.map(([address, symbol, name]) => ({
-		address,
-		symbol,
-		name,
-		searchKey: `${symbol.toLowerCase()}|${name.toLowerCase()}|${address}`,
-	}))
+/** The slice of a verified-token row that token search matches against. */
+export type SearchTokenEntry = {
+	address: string
+	symbol: string
+	name: string
 }
 
-function indexTokenListEntries(tokens: TokenListEntry[]): IndexedToken[] {
+function indexSearchTokenEntries(tokens: SearchTokenEntry[]): IndexedToken[] {
 	return tokens.map((token) => ({
 		address: token.address.toLowerCase() as Address.Address,
 		symbol: token.symbol,
@@ -89,32 +79,24 @@ function mergeIndexedTokens(tokens: IndexedToken[]): IndexedToken[] {
 	return [...tokensByAddress.values()]
 }
 
-const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
-	31318: indexTokens(tokensIndex31318 as Token[]),
-	42431: indexTokens(tokensIndex42431 as Token[]),
-	4217: indexTokens(tokensIndex4217 as Token[]),
-}
-
 export function searchTokens(
 	query: string,
-	chainId: number,
-	tokenListEntries: TokenListEntry[],
+	verifiedTokens: SearchTokenEntry[],
 ): TokenSearchResult[] {
 	query = query.toLowerCase()
-	const tokenListAddresses = new Set(
-		tokenListEntries.map((token) => token.address.toLowerCase()),
+	const verifiedAddresses = new Set(
+		verifiedTokens.map((token) => token.address.toLowerCase()),
 	)
-	const indexedTokens = mergeIndexedTokens([
-		...(INDEXED_TOKENS[chainId] ?? []),
-		...indexTokenListEntries(tokenListEntries),
-	])
+	const indexedTokens = mergeIndexedTokens(
+		indexSearchTokenEntries(verifiedTokens),
+	)
 	const isAddressQuery = query.startsWith('0x')
 
 	// filter using search keys
 	const matches = indexedTokens.filter((token) => {
 		if (isAddressQuery) return token.address.startsWith(query)
-		// for name/symbol queries, only match verified tokenlist tokens
-		if (tokenListAddresses.size > 0 && !tokenListAddresses.has(token.address))
+		// for name/symbol queries, only match verified tokens
+		if (verifiedAddresses.size > 0 && !verifiedAddresses.has(token.address))
 			return false
 		return token.searchKey.includes(query)
 	})
@@ -167,8 +149,9 @@ export const Route = createFileRoute('/api/search')({
 						query: rawQuery,
 					} satisfies SearchApiResponse)
 
-				const chainId = getChainId(getWagmiConfig())
-				const tokenListEntries = await getTokenListEntries(chainId)
+				const config = getWagmiConfig()
+				const chainId = getChainId(config)
+				const verifiedTokens = await getVerifiedTokens(chainId)
 				const results: SearchResult[] = []
 
 				// block number (plain digits or #-prefixed)
@@ -182,11 +165,11 @@ export const Route = createFileRoute('/api/search')({
 					blockNumber >= 0
 				) {
 					try {
-						const latestBlock = await fetchLatestBlockNumber(chainId)
+						const latestBlock = await getBlockNumber(config)
 						if (blockNumber <= Number(latestBlock))
 							results.push({ type: 'block', blockNumber })
 					} catch {
-						// index unavailable — skip block result
+						// node unavailable — skip block result
 					}
 				}
 
@@ -202,24 +185,23 @@ export const Route = createFileRoute('/api/search')({
 
 				// hash
 				if (isHash) {
+					let timestamp: number | undefined
 					try {
-						const timestamp = await fetchTransactionTimestamp(chainId, query)
-
-						results.push({
-							type: 'transaction',
-							hash: query,
-							timestamp,
-						})
+						const transaction = await getTransaction(config, { hash: query })
+						if (transaction.blockNumber) {
+							const block = await getBlock(config, {
+								blockNumber: transaction.blockNumber,
+							})
+							timestamp = Number(block.timestamp)
+						}
 					} catch {
-						results.push({
-							type: 'transaction',
-							hash: query,
-							timestamp: undefined,
-						})
+						// unknown or pending — return the hash without a timestamp
 					}
+
+					results.push({ type: 'transaction', hash: query, timestamp })
 				} else {
 					// search for token matches (even if an address was found)
-					results.push(...searchTokens(query, chainId, tokenListEntries))
+					results.push(...searchTokens(query, verifiedTokens))
 				}
 
 				return Response.json(

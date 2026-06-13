@@ -8,6 +8,7 @@ export function TransactionCell(props: { hash: Hex.Hex }) {
 		<Link
 			to="/receipt/$hash"
 			params={{ hash }}
+			preload="intent"
 			className="text-[13px] text-tertiary press-down w-full"
 		>
 			<Midcut value={hash} prefix="0x" />

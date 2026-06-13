@@ -1,6 +1,9 @@
 import type { Address, Hex } from 'ox'
 import { describe, expect, it } from 'vitest'
-import { buildAddressTxMetadata } from '#lib/server/address-metadata'
+import {
+	buildAddressTxMetadata,
+	pickTip20CreatedTimestamp,
+} from '#lib/server/address-metadata'
 import type { ContractCreationData } from '#lib/server/contract-creation'
 
 describe('address metadata', () => {
@@ -66,5 +69,43 @@ describe('address metadata', () => {
 			createdTxHash: '0xold',
 			createdBy: '0xsender',
 		})
+	})
+})
+
+describe('pickTip20CreatedTimestamp', () => {
+	it('prefers the TokenCreated timestamp when present', () => {
+		expect(
+			pickTip20CreatedTimestamp({
+				tokenCreatedTimestamp: '2026-01-02T00:00:00.000Z',
+				firstTransferTimestamp: '2026-01-01T00:00:00.000Z',
+				contractCreationTimestamp: 100,
+			}),
+		).toBe(Date.parse('2026-01-02T00:00:00.000Z') / 1000)
+	})
+
+	it('uses the contract creation when older than the first transfer', () => {
+		expect(
+			pickTip20CreatedTimestamp({
+				tokenCreatedTimestamp: undefined,
+				firstTransferTimestamp: 200,
+				contractCreationTimestamp: 100,
+			}),
+		).toBe(100)
+	})
+
+	it('falls back to the first transfer timestamp', () => {
+		expect(
+			pickTip20CreatedTimestamp({
+				tokenCreatedTimestamp: undefined,
+				firstTransferTimestamp: 200,
+				contractCreationTimestamp: undefined,
+			}),
+		).toBe(200)
+		expect(
+			pickTip20CreatedTimestamp({
+				tokenCreatedTimestamp: null,
+				firstTransferTimestamp: null,
+			}),
+		).toBeUndefined()
 	})
 })

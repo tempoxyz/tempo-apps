@@ -14,12 +14,8 @@ import {
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
-export {
-	buildTxOnlyTransactions,
-	type EnrichedTransaction,
-	type HistoryHashEntry,
-} from '#lib/server/build-tx-only-transactions'
 export type {
+	EnrichedTransaction,
 	HistoryRequestParameters,
 	HistoryResponse,
 } from '#lib/server/address-history'

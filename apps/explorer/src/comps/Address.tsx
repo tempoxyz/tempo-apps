@@ -14,6 +14,7 @@ export function Address(props: Address.Props) {
 				params={{ address }}
 				search={search}
 				title={title}
+				preload="intent"
 				className={cx(
 					'text-accent press-down hover:underline font-mono inline-flex min-w-0',
 					align === 'end' && 'w-full justify-end',
