@@ -77,6 +77,8 @@ export function buildAddressTxMetadata(
 					: (creation.hash ?? undefined)
 				: aggregate.oldestTxHash,
 		createdBy:
-			useCreation && creation ? (creation.from ?? undefined) : aggregate.oldestTxFrom,
+			useCreation && creation
+				? (creation.from ?? undefined)
+				: aggregate.oldestTxFrom,
 	}
 }
