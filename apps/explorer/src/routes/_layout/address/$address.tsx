@@ -220,7 +220,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			// Tab-aware loading: only fetch data needed for the active tab
 			const isTransactionsTab = tab === 'transactions'
-			const isHoldingsTab = tab === 'holdings'
 			const knownContractInfo = getContractInfo(address)
 			const isKnownTokenAddress =
 				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
@@ -300,18 +299,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const balancesPromise =
-				isHoldingsTab && !isKnownTokenAddress
-					? timeout(
-							context.queryClient
-								.ensureQueryData(balancesQueryOptions(address))
-								.catch((error) => {
-									console.error('Fetch balances error:', error)
-									return undefined
-								}),
-							QUERY_TIMEOUT_MS,
-						)
-					: Promise.resolve(undefined)
+			const shouldFetchBalances = !isKnownTokenAddress
+			const balancesPromise = shouldFetchBalances
+				? timeout(
+						context.queryClient
+							.ensureQueryData(balancesQueryOptions(address))
+							.catch((error) => {
+								console.error('Fetch balances error:', error)
+								return undefined
+							}),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(undefined)
 
 			// Fetch address metadata through the API route so TIDX credentials stay
 			// server-side when loaders run in the browser.
@@ -364,7 +363,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				balancesData,
 				ogMeta,
 			}
-	}),
+		}),
 	head: async ({ params, loaderData }) => {
 		const address = params.address as Address.Address
 		const ogMeta =
@@ -432,7 +431,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				created,
 			})
 		} else {
-			const txCount = ogMeta?.txCount ?? 0
+			const txCount =
+				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
