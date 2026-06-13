@@ -117,7 +117,7 @@ export function TransactionTimestamp(props: {
 	return (
 		<div className="text-nowrap">
 			{link ? (
-				<Link to={link} className="text-tertiary">
+				<Link to={link} preload="intent" className="text-tertiary">
 					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (

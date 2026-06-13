@@ -332,6 +332,7 @@ export function PoolTokenLink(props: PoolTokenLink.Props): React.JSX.Element {
 		<Link
 			to={to}
 			params={{ address }}
+			preload="intent"
 			className="text-accent hover:underline truncate"
 			title={address}
 		>
@@ -470,6 +471,7 @@ function TokenCell(props: {
 			<Link
 				to={to}
 				params={{ address }}
+				preload="intent"
 				className="text-accent hover:underline truncate"
 				title={address}
 			>
@@ -595,6 +597,7 @@ function RoutesCell(props: { routes: TokenRoute[] }): React.JSX.Element {
 						<Link
 							to={to}
 							params={{ address: route.address }}
+							preload="intent"
 							className="text-accent hover:underline text-sm"
 							title={route.address}
 						>

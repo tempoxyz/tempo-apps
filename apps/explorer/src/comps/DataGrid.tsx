@@ -150,6 +150,7 @@ export function DataGrid(props: DataGrid.Props) {
 										to={item.link.href}
 										search={item.link.search}
 										title={item.link.title}
+										preload="intent"
 										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
 									/>
 								)}

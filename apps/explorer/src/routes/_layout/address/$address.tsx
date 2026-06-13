@@ -63,6 +63,7 @@ import {
 	normalizeSearchInput,
 } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
+import { PREFETCH_PAGE_COUNT } from '#lib/constants'
 import {
 	type ContractSource,
 	useContractSourceQueryOptions,
@@ -615,16 +616,25 @@ function RouteComponent() {
 		balancesData,
 		!isToken && (isHoldingsTabActive || balancesData !== undefined),
 	)
-	// Prefetch non-active tabs' data after a delay to avoid TIDX query storms
+	// Warm the first page of every non-active tab once the active tab has had a
+	// moment to start loading, so switching tabs is instant. Runs once per
+	// address; the short delay keeps it from competing with the active request.
 	const queryClient = useQueryClient()
 	const prefetchedRef = React.useRef<string | null>(null)
 	React.useEffect(() => {
 		if (prefetchedRef.current === address) return
 		prefetchedRef.current = address
 
+		const after =
+			period === '24h'
+				? Math.floor(Date.now() / 1000) - 86400
+				: period === '7d'
+					? Math.floor(Date.now() / 1000) - 7 * 86400
+					: undefined
+
 		const timer = setTimeout(() => {
-			if (tab !== 'transactions') {
-				queryClient.prefetchQuery(
+			if (tab !== 'transactions')
+				void queryClient.prefetchQuery(
 					historyQueryOptions({
 						address,
 						page: 1,
@@ -632,22 +642,43 @@ function RouteComponent() {
 						status,
 						include:
 							dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
-						after:
-							period === '24h'
-								? Math.floor(Date.now() / 1000) - 86400
-								: period === '7d'
-									? Math.floor(Date.now() / 1000) - 7 * 86400
-									: undefined,
+						after,
 					}),
 				)
+
+			if (visibleTabs.includes('transfers') && tab !== 'transfers') {
+				if (isToken)
+					void queryClient.prefetchQuery(
+						transfersQueryOptions({ address, page: 1, limit, account }),
+					)
+				else
+					void queryClient.prefetchQuery(
+						accountTransfersQueryOptions({ account: address, page: 1, limit }),
+					)
 			}
-			if (tab !== 'holdings' && !isToken) {
-				queryClient.prefetchQuery(balancesQueryOptions(address))
-			}
-		}, 2_000)
+
+			if (isToken && tab !== 'holders')
+				void queryClient.prefetchQuery(
+					holdersQueryOptions({ address, page: 1, limit }),
+				)
+
+			if (!isToken && tab !== 'holdings')
+				void queryClient.prefetchQuery(balancesQueryOptions(address))
+		}, 500)
 
 		return () => clearTimeout(timer)
-	}, [address, tab, limit, queryClient, isToken, status, dir, period])
+	}, [
+		account,
+		address,
+		dir,
+		isToken,
+		limit,
+		period,
+		queryClient,
+		status,
+		tab,
+		visibleTabs,
+	])
 
 	return (
 		<div
@@ -1096,6 +1127,11 @@ function SectionsWrapper(props: {
 		totalCapped: transfersTotalCapped = false,
 	} = transfersData ?? {}
 
+	const {
+		total: accountTransfersTotal = 0,
+		totalCapped: accountTransfersTotalCapped = false,
+	} = accountTransfersData ?? {}
+
 	// Token holders query
 	const holdersPage = isHoldersTabActive ? page : 1
 	const {
@@ -1142,25 +1178,32 @@ function SectionsWrapper(props: {
 	const prefetchTransactionsNextPage = React.useCallback(() => {
 		if (!isTransactionsTabActive) return
 
-		const nextPage = page + 1
-		const hasNextPage =
+		const lastPage =
 			totalTrxCount === undefined || countCapped
-				? hasMore
-				: nextPage <= Math.ceil(totalTrxCount / limit)
-		if (!hasNextPage) return
+				? undefined
+				: Math.ceil(totalTrxCount / limit)
+		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
+			const nextPage = page + i
+			// Unknown/capped total: only `hasMore` (page+1 exists) is certain;
+			// pages beyond are speculative — the server fn returns empty if past
+			// the window, so warming them is harmless.
+			const hasNextPage =
+				lastPage === undefined ? hasMore : nextPage <= lastPage
+			if (!hasNextPage) break
 
-		void queryClient
-			.prefetchQuery(
-				historyQueryOptions({
-					address,
-					page: nextPage,
-					limit,
-					status,
-					include,
-					after,
-				}),
-			)
-			.catch(() => {})
+			void queryClient
+				.prefetchQuery(
+					historyQueryOptions({
+						address,
+						page: nextPage,
+						limit,
+						status,
+						include,
+						after,
+					}),
+				)
+				.catch(() => {})
+		}
 	}, [
 		address,
 		after,
@@ -1178,21 +1221,23 @@ function SectionsWrapper(props: {
 	const prefetchTransfersNextPage = React.useCallback(() => {
 		if (!isToken || !isTransfersTabActive) return
 
-		const nextPage = page + 1
-		const hasNextPage =
-			transfersTotalCapped || nextPage <= Math.ceil(transfersTotal / limit)
-		if (!hasNextPage) return
+		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
+			const nextPage = page + i
+			const hasNextPage =
+				transfersTotalCapped || nextPage <= Math.ceil(transfersTotal / limit)
+			if (!hasNextPage) break
 
-		void queryClient
-			.prefetchQuery(
-				transfersQueryOptions({
-					address,
-					page: nextPage,
-					limit,
-					account,
-				}),
-			)
-			.catch(() => {})
+			void queryClient
+				.prefetchQuery(
+					transfersQueryOptions({
+						address,
+						page: nextPage,
+						limit,
+						account,
+					}),
+				)
+				.catch(() => {})
+		}
 	}, [
 		account,
 		address,
@@ -1205,23 +1250,56 @@ function SectionsWrapper(props: {
 		transfersTotalCapped,
 	])
 
+	const prefetchAccountTransfersNextPage = React.useCallback(() => {
+		if (isToken || !isTransfersTabActive) return
+
+		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
+			const nextPage = page + i
+			const hasNextPage =
+				accountTransfersTotalCapped ||
+				nextPage <= Math.ceil(accountTransfersTotal / limit)
+			if (!hasNextPage) break
+
+			void queryClient
+				.prefetchQuery(
+					accountTransfersQueryOptions({
+						account: address,
+						page: nextPage,
+						limit,
+					}),
+				)
+				.catch(() => {})
+		}
+	}, [
+		accountTransfersTotal,
+		accountTransfersTotalCapped,
+		address,
+		isToken,
+		isTransfersTabActive,
+		limit,
+		page,
+		queryClient,
+	])
+
 	const prefetchHoldersNextPage = React.useCallback(() => {
 		if (!isToken || !isHoldersTabActive) return
 
-		const nextPage = page + 1
-		const hasNextPage =
-			holdersTotalCapped || nextPage <= Math.ceil(holdersTotal / limit)
-		if (!hasNextPage) return
+		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
+			const nextPage = page + i
+			const hasNextPage =
+				holdersTotalCapped || nextPage <= Math.ceil(holdersTotal / limit)
+			if (!hasNextPage) break
 
-		void queryClient
-			.prefetchQuery(
-				holdersQueryOptions({
-					address,
-					page: nextPage,
-					limit,
-				}),
-			)
-			.catch(() => {})
+			void queryClient
+				.prefetchQuery(
+					holdersQueryOptions({
+						address,
+						page: nextPage,
+						limit,
+					}),
+				)
+				.catch(() => {})
+		}
 	}, [
 		address,
 		holdersTotal,
@@ -1596,6 +1674,7 @@ function SectionsWrapper(props: {
 														to="/address/$address"
 														params={{ address: transfer.token.address }}
 														title={transfer.token.address}
+														preload="intent"
 														className="flex items-center gap-[6px] text-[12px] text-primary hover:text-accent transition-colors press-down"
 													>
 														<TokenIcon address={transfer.token.address} />
@@ -1636,6 +1715,7 @@ function SectionsWrapper(props: {
 								itemsLabel="transfers"
 								itemsPerPage={limit}
 								pagination="simple"
+								onPrefetchNextPage={prefetchAccountTransfersNextPage}
 								emptyState="No transfers found."
 							/>
 						),
