@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { FindableMidcut } from '#comps/Address'
 import { useAddressHighlight } from '#comps/AddressHighlight'
+import { FindableMidcut } from '#comps/FindableMidcut'
 import { cx } from '#lib/css'
 
 export function AddressCell(props: {

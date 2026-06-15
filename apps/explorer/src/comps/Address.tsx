@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
 import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from 'midcut'
+import { FindableMidcut } from '#comps/FindableMidcut'
 import { cx } from '#lib/css'
 
 export function Address(props: Address.Props) {
@@ -29,30 +29,10 @@ export function Address(props: Address.Props) {
 	)
 }
 
-export function FindableMidcut(props: Midcut.Props) {
-	const { align, value = '' } = props
-
-	return (
-		<span className="relative inline-flex min-w-0 w-full">
-			<span aria-hidden="true" className="inline-flex min-w-0 w-full">
-				<Midcut {...props} />
-			</span>
-			<span
-				className={cx(
-					'absolute inset-0 overflow-hidden whitespace-nowrap text-transparent pointer-events-none',
-					align === 'end' && 'text-right',
-				)}
-			>
-				{value}
-			</span>
-		</span>
-	)
-}
-
 export namespace Address {
 	export interface Props {
 		address: AddressType.Address
-		align?: Midcut.Props['align']
+		align?: 'start' | 'end'
 		chars?: number
 		className?: string
 		search?: Record<string, unknown>
