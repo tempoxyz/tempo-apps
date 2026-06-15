@@ -56,6 +56,7 @@ import {
 	type AssetData,
 	balancesQueryOptions,
 	calculateTotalHoldings,
+	fetchAddressBalances,
 	useBalancesData,
 } from '#lib/address-balances'
 import {
@@ -433,13 +434,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		} else {
 			const txCount =
 				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
+			const balancesData =
+				loaderData?.balancesData ??
+				(await fetchAddressBalances(address).catch(() => undefined))
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
 
-			if (loaderData?.balancesData?.balances) {
+			if (balancesData?.balances) {
 				const totalValue = calculateTotalHoldings(
-					loaderData.balancesData.balances.map((b) => ({
+					balancesData.balances.map((b) => ({
 						address: b.token,
 						metadata: {
 							decimals: b.decimals,

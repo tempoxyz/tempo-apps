@@ -27,7 +27,7 @@ export type AssetData = {
 	balance: bigint | undefined
 }
 
-async function fetchAddressBalances(
+export async function fetchAddressBalances(
 	address: Address.Address,
 ): Promise<BalancesResponse> {
 	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
