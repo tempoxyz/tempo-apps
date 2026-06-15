@@ -479,8 +479,6 @@ export async function fetchTransactionTimestamp(
 		.limit(1)
 		.executeTakeFirst()
 
-	if (!result) throw new Error(`Transaction not found: ${hash}`)
-
 	return result?.block_timestamp ? Number(result.block_timestamp) : undefined
 }
 

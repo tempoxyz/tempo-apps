@@ -1,6 +1,6 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import * as Address from 'ox/Address'
-import type * as Hex from 'ox/Hex'
+import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import { Midcut } from 'midcut'
 import { useMountAnim } from '#lib/animation'
@@ -62,6 +62,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const isValidInput =
 		query.length > 0 &&
 		(Address.validate(normalizedQuery) ||
+			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
 			parseBlockInput(normalizedQuery) !== null)
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
@@ -228,8 +229,13 @@ export function ExploreInput(props: ExploreInput.Props) {
 							return
 						}
 
-						const firstSuggestion = flatSuggestions[0]
-						if (firstSuggestion) handleSelect(firstSuggestion)
+						if (
+							Hex.validate(normalizedFormValue) &&
+							Hex.size(normalizedFormValue) === 32
+						) {
+							onActivate?.({ type: 'hash', value: normalizedFormValue })
+							return
+						}
 					}}
 					className="relative w-full"
 				>

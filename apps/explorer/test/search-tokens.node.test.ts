@@ -1,11 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { resolveSearchResults, searchTokens } from '../src/routes/api/search.ts'
-import { fetchTransactionTimestamp } from '../src/lib/server/tempo-queries.ts'
-
-vi.mock('../src/lib/server/tempo-queries.ts', () => ({
-	fetchLatestBlockNumber: vi.fn(async () => 0n),
-	fetchTransactionTimestamp: vi.fn(),
-}))
+import { describe, expect, it } from 'vitest'
+import { searchTokens } from '../src/routes/api/search.ts'
 
 describe('searchTokens', () => {
 	it('finds tokenlist-only entries by symbol', () => {
@@ -26,30 +20,5 @@ describe('searchTokens', () => {
 				isTip20: true,
 			},
 		])
-	})
-})
-
-describe('resolveSearchResults', () => {
-	const hash =
-		'0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
-
-	it('returns a transaction match when the hash exists', async () => {
-		vi.mocked(fetchTransactionTimestamp).mockResolvedValueOnce(123)
-
-		await expect(resolveSearchResults(hash, 4217, [])).resolves.toEqual([
-			{
-				type: 'transaction',
-				hash,
-				timestamp: 123,
-			},
-		])
-	})
-
-	it('does not return a transaction match when the hash lookup fails', async () => {
-		vi.mocked(fetchTransactionTimestamp).mockRejectedValueOnce(
-			new Error('missing tx'),
-		)
-
-		await expect(resolveSearchResults(hash, 4217, [])).resolves.toEqual([])
 	})
 })

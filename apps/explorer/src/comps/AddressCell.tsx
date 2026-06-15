@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
+import { FindableMidcut } from '#comps/Address'
 import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from 'midcut'
 import { cx } from '#lib/css'
 
 export function AddressCell(props: {
@@ -23,7 +23,7 @@ export function AddressCell(props: {
 				title={title}
 				{...handlers}
 			>
-				<Midcut value={address} prefix="0x" />
+				<FindableMidcut value={address} prefix="0x" />
 			</span>
 		)
 
@@ -38,7 +38,7 @@ export function AddressCell(props: {
 			title={title}
 			{...handlers}
 		>
-			<Midcut value={address} prefix="0x" />
+			<FindableMidcut value={address} prefix="0x" />
 		</Link>
 	)
 }

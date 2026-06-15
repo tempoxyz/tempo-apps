@@ -152,6 +152,12 @@ export const Route = createFileRoute('/search')({
 				params: { address: normalizedQuery },
 			})
 
+		if (Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32)
+			throw redirect({
+				to: '/tx/$hash',
+				params: { hash: normalizedQuery },
+			})
+
 		let uniqueMatch: SearchMatch | null = null
 		try {
 			uniqueMatch = await fetchUniqueSearchMatch(normalizedQuery)
