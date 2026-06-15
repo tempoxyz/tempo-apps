@@ -56,7 +56,6 @@ import {
 	type AssetData,
 	balancesQueryOptions,
 	calculateTotalHoldings,
-	fetchAddressBalances,
 	useBalancesData,
 } from '#lib/address-balances'
 import {
@@ -92,6 +91,15 @@ import {
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { areUsdPricedTokens } from '#lib/pricing'
+import {
+	fetchAddressBalancesData,
+	MAX_TOKENS,
+} from '#lib/server/address-balances'
+import { buildAddressTxMetadata } from '#lib/server/address-metadata'
+import {
+	fetchAddressTxAggregate,
+	fetchContractCreationReceipt,
+} from '#lib/server/tempo-queries'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
@@ -104,6 +112,13 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
+type AddressOgMetadata = {
+	accountType?: AccountType
+	txCount?: number | null
+	holdersCount?: number | null
+	lastActivityTimestamp?: number | null
+	createdTimestamp?: number | null
+}
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -369,7 +384,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const address = params.address as Address.Address
 		const ogMeta =
 			loaderData?.ogMeta ??
-			(await fetchAddressMetadata(address).catch(() => undefined))
+			(await fetchAddressOgMetadata(address).catch(() => undefined))
 		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
 		// since 'empty' is the correct type for regular EOAs
 		let accountType = loaderData?.accountType ?? 'empty'
@@ -436,7 +451,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
 			const balancesData =
 				loaderData?.balancesData ??
-				(await fetchAddressBalances(address).catch(() => undefined))
+				(await fetchAddressOgBalances(address).catch(() => undefined))
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
@@ -722,13 +737,29 @@ async function fetchAddressMetadata(address: Address.Address) {
 		headers: { 'Content-Type': 'application/json' },
 	})
 	if (!response.ok) throw new Error('Failed to fetch address metadata')
-	return response.json() as Promise<{
-		accountType: AccountType
-		txCount: number | null
-		holdersCount?: number | null
-		lastActivityTimestamp: number | null
-		createdTimestamp: number | null
-	}>
+	return response.json() as Promise<AddressOgMetadata>
+}
+
+async function fetchAddressOgMetadata(
+	address: Address.Address,
+): Promise<AddressOgMetadata> {
+	const { id: chainId } = getTempoChain()
+	const result = await fetchAddressTxAggregate(address, chainId)
+	const indexedCreation = await fetchContractCreationReceipt(
+		address,
+		chainId,
+	).catch(() => undefined)
+	return buildAddressTxMetadata(result, indexedCreation)
+}
+
+async function fetchAddressOgBalances(address: Address.Address) {
+	const config = getWagmiConfig()
+	return fetchAddressBalancesData({
+		address,
+		chainId: getTempoChain().id,
+		config,
+		maxTokens: MAX_TOKENS,
+	})
 }
 
 type ContractCreationResponse = {
