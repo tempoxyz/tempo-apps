@@ -72,10 +72,17 @@ export function Midcut({
 			<span
 				style={{
 					position: 'absolute',
-					inset: 0,
+					top: 0,
+					left: align === 'end' ? undefined : 0,
+					right: align === 'end' ? 0 : undefined,
+					display: 'block',
+					width: 'max-content',
+					maxWidth: '100%',
 					overflow: 'hidden',
 					whiteSpace: 'nowrap',
 					color: 'transparent',
+					font: 'inherit',
+					lineHeight: 'inherit',
 					pointerEvents: 'none',
 					textAlign: align === 'end' ? 'right' : undefined,
 				}}
