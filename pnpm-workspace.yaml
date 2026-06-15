@@ -58,7 +58,7 @@ catalog:
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
-  midcut: ^0.2.0
+  midcut: github:tempoxyz/midcut#centaur/findable-midcut
   ox: ^0.14.20
   prool: ^0.2.4
   react: ^19.2.5
@@ -103,6 +103,7 @@ onlyBuiltDependencies:
   - '@j178/prek'
   - '@sentry/cli'
   - esbuild
+  - midcut
   - simple-git-hooks
   - utf-8-validate
   - workerd

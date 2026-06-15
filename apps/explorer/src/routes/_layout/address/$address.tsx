@@ -27,7 +27,6 @@ import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
-import { FindableMidcut } from '#comps/FindableMidcut'
 import { Pagination } from '#comps/Pagination'
 import { Midcut } from 'midcut'
 import { NotFound } from '#comps/NotFound'
@@ -1418,7 +1417,7 @@ function SectionsWrapper(props: {
 												transaction={transaction}
 												accountAddress={address}
 											/>,
-											<FindableMidcut
+											<Midcut
 												key="hash"
 												value={transaction.hash}
 												prefix="0x"
