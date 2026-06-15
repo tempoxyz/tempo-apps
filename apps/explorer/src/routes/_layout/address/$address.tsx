@@ -91,6 +91,15 @@ import {
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { areUsdPricedTokens } from '#lib/pricing'
+import {
+	fetchAddressBalancesData,
+	MAX_TOKENS,
+} from '#lib/server/address-balances'
+import { buildAddressTxMetadata } from '#lib/server/address-metadata'
+import {
+	fetchAddressTxAggregate,
+	fetchContractCreationReceipt,
+} from '#lib/server/tempo-queries'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
@@ -103,6 +112,13 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
+type AddressOgMetadata = {
+	accountType?: AccountType
+	txCount?: number | null
+	holdersCount?: number | null
+	lastActivityTimestamp?: number | null
+	createdTimestamp?: number | null
+}
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -220,7 +236,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			// Tab-aware loading: only fetch data needed for the active tab
 			const isTransactionsTab = tab === 'transactions'
-			const isHoldingsTab = tab === 'holdings'
 			const knownContractInfo = getContractInfo(address)
 			const isKnownTokenAddress =
 				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
@@ -300,18 +315,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const balancesPromise =
-				isHoldingsTab && !isKnownTokenAddress
-					? timeout(
-							context.queryClient
-								.ensureQueryData(balancesQueryOptions(address))
-								.catch((error) => {
-									console.error('Fetch balances error:', error)
-									return undefined
-								}),
-							QUERY_TIMEOUT_MS,
-						)
-					: Promise.resolve(undefined)
+			const shouldFetchBalances = !isKnownTokenAddress
+			const balancesPromise = shouldFetchBalances
+				? timeout(
+						context.queryClient
+							.ensureQueryData(balancesQueryOptions(address))
+							.catch((error) => {
+								console.error('Fetch balances error:', error)
+								return undefined
+							}),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(undefined)
 
 			// Fetch address metadata through the API route so TIDX credentials stay
 			// server-side when loaders run in the browser.
@@ -364,12 +379,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				balancesData,
 				ogMeta,
 			}
-	}),
+		}),
 	head: async ({ params, loaderData }) => {
 		const address = params.address as Address.Address
 		const ogMeta =
 			loaderData?.ogMeta ??
-			(await fetchAddressMetadata(address).catch(() => undefined))
+			(await fetchAddressOgMetadata(address).catch(() => undefined))
 		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
 		// since 'empty' is the correct type for regular EOAs
 		let accountType = loaderData?.accountType ?? 'empty'
@@ -432,14 +447,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				created,
 			})
 		} else {
-			const txCount = ogMeta?.txCount ?? 0
+			const txCount =
+				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
+			const balancesData =
+				loaderData?.balancesData ??
+				(await fetchAddressOgBalances(address).catch(() => undefined))
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
 
-			if (loaderData?.balancesData?.balances) {
+			if (balancesData?.balances) {
 				const totalValue = calculateTotalHoldings(
-					loaderData.balancesData.balances.map((b) => ({
+					balancesData.balances.map((b) => ({
 						address: b.token,
 						metadata: {
 							decimals: b.decimals,
@@ -718,13 +737,29 @@ async function fetchAddressMetadata(address: Address.Address) {
 		headers: { 'Content-Type': 'application/json' },
 	})
 	if (!response.ok) throw new Error('Failed to fetch address metadata')
-	return response.json() as Promise<{
-		accountType: AccountType
-		txCount: number | null
-		holdersCount?: number | null
-		lastActivityTimestamp: number | null
-		createdTimestamp: number | null
-	}>
+	return response.json() as Promise<AddressOgMetadata>
+}
+
+async function fetchAddressOgMetadata(
+	address: Address.Address,
+): Promise<AddressOgMetadata> {
+	const { id: chainId } = getTempoChain()
+	const result = await fetchAddressTxAggregate(address, chainId)
+	const indexedCreation = await fetchContractCreationReceipt(
+		address,
+		chainId,
+	).catch(() => undefined)
+	return buildAddressTxMetadata(result, indexedCreation)
+}
+
+async function fetchAddressOgBalances(address: Address.Address) {
+	const config = getWagmiConfig()
+	return fetchAddressBalancesData({
+		address,
+		chainId: getTempoChain().id,
+		config,
+		maxTokens: MAX_TOKENS,
+	})
 }
 
 type ContractCreationResponse = {
