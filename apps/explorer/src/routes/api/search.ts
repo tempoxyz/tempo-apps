@@ -153,6 +153,58 @@ export function searchTokens(
 	}))
 }
 
+export async function resolveSearchResults(
+	query: string,
+	chainId: number,
+	tokenListEntries: TokenListEntry[],
+): Promise<SearchResult[]> {
+	const results: SearchResult[] = []
+
+	// block number (plain digits or #-prefixed)
+	const blockQuery = query.startsWith('#') ? query.slice(1).trim() : query
+	const blockNumber = /^\d+$/.test(blockQuery) ? Number(blockQuery) : Number.NaN
+	if (
+		Number.isFinite(blockNumber) &&
+		Number.isSafeInteger(blockNumber) &&
+		blockNumber >= 0
+	) {
+		try {
+			const latestBlock = await fetchLatestBlockNumber(chainId)
+			if (blockNumber <= Number(latestBlock))
+				results.push({ type: 'block', blockNumber })
+		} catch {
+			// index unavailable - skip block result
+		}
+	}
+
+	// address
+	if (Address.validate(query))
+		results.push({
+			type: 'address',
+			address: query,
+			isTip20: isTip20Address(query),
+		})
+
+	const isHash = Hex.validate(query) && Hex.size(query) === 32
+
+	// hash
+	if (isHash) {
+		try {
+			const timestamp = await fetchTransactionTimestamp(chainId, query)
+			results.push({
+				type: 'transaction',
+				hash: query,
+				timestamp,
+			})
+		} catch {}
+	} else {
+		// search for token matches (even if an address was found)
+		results.push(...searchTokens(query, chainId, tokenListEntries))
+	}
+
+	return results
+}
+
 export const Route = createFileRoute('/api/search')({
 	server: {
 		handlers: {
@@ -169,58 +221,11 @@ export const Route = createFileRoute('/api/search')({
 
 				const chainId = getChainId(getWagmiConfig())
 				const tokenListEntries = await getTokenListEntries(chainId)
-				const results: SearchResult[] = []
-
-				// block number (plain digits or #-prefixed)
-				const blockQuery = query.startsWith('#') ? query.slice(1).trim() : query
-				const blockNumber = /^\d+$/.test(blockQuery)
-					? Number(blockQuery)
-					: Number.NaN
-				if (
-					Number.isFinite(blockNumber) &&
-					Number.isSafeInteger(blockNumber) &&
-					blockNumber >= 0
-				) {
-					try {
-						const latestBlock = await fetchLatestBlockNumber(chainId)
-						if (blockNumber <= Number(latestBlock))
-							results.push({ type: 'block', blockNumber })
-					} catch {
-						// index unavailable — skip block result
-					}
-				}
-
-				// address
-				if (Address.validate(query))
-					results.push({
-						type: 'address',
-						address: query,
-						isTip20: isTip20Address(query),
-					})
-
-				const isHash = Hex.validate(query) && Hex.size(query) === 32
-
-				// hash
-				if (isHash) {
-					try {
-						const timestamp = await fetchTransactionTimestamp(chainId, query)
-
-						results.push({
-							type: 'transaction',
-							hash: query,
-							timestamp,
-						})
-					} catch {
-						results.push({
-							type: 'transaction',
-							hash: query,
-							timestamp: undefined,
-						})
-					}
-				} else {
-					// search for token matches (even if an address was found)
-					results.push(...searchTokens(query, chainId, tokenListEntries))
-				}
+				const results = await resolveSearchResults(
+					query,
+					chainId,
+					tokenListEntries,
+				)
 
 				return Response.json(
 					{ results, query: rawQuery } satisfies SearchApiResponse,
