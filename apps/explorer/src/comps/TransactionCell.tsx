@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 
 export function TransactionCell(props: { hash: Hex.Hex }) {
 	const { hash } = props

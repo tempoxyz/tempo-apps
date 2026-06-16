@@ -74,6 +74,17 @@
 				"description": "Machine Payments Protocol documentation"
 			},
 			{
+				"id": "accounts",
+				"base": "https://accounts.tempo.xyz",
+				"description": "Tempo Accounts SDK documentation"
+			},
+			{
+				"id": "tips",
+				"base": "https://tips.sh",
+				"indexPath": "/",
+				"description": "Tempo Improvement Proposals"
+			},
+			{
 				"id": "regen",
 				"base": "https://regen.tempo.xyz",
 				"description": "Tempo Regen UI component documentation"

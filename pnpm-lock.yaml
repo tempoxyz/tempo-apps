@@ -258,7 +258,7 @@ importers:
         version: 0.3.6
       '@tempoxyz/lints':
         specifier: github:tempoxyz/lints
-        version: https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84
+        version: https://codeload.github.com/tempoxyz/lints/tar.gz/03cac25d02c1aaa0c6ca87860183879069abb921
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20260319.1
         version: 7.0.0-dev.20260408.1
@@ -2006,8 +2006,8 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hono/node-server@2.0.4':
-    resolution: {integrity: sha512-Ut3y0dMMPWy6bZ2kVfx25EOVbZlm15dhF4mOsezMlhpNHy+4MkU1qN9Y6lnruYi4wPmFzimGX2X7LF/FwHli4A==}
+  '@hono/node-server@2.0.5':
+    resolution: {integrity: sha512-yQFvDmyDo3y6rEOJZDUYPJ49DIKTPpIk4kGvm40xx4Ejne0Pu9a1+exxPN+C1UppWK/WGZX9F++/Xs231tE86g==}
     engines: {node: '>=20'}
     peerDependencies:
       hono: ^4
@@ -3391,8 +3391,8 @@ packages:
     engines: {node: '>=20.19'}
     hasBin: true
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84':
-    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84}
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/03cac25d02c1aaa0c6ca87860183879069abb921':
+    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/03cac25d02c1aaa0c6ca87860183879069abb921}
     version: 0.1.1
     engines: {node: '>=18'}
     hasBin: true
@@ -4730,6 +4730,11 @@ packages:
 
   incur@0.3.25:
     resolution: {integrity: sha512-jrSkzauM42ilbQJ6THVkAY6dTulkyVW0sZpVHdA8gfiBwrLrLnLUf8U3bAOegAKBIMSOFgk1idchgu9xm9HMng==}
+    engines: {node: '>=22'}
+    hasBin: true
+
+  incur@0.4.5:
+    resolution: {integrity: sha512-4WFlqm5e+IKNoX+lDIjjpebO8ResPx3vPUBChxNfnNo3oGp0ooo6piiiTspOMub2dq2mcG/AmlUq0ejuGfKobg==}
     engines: {node: '>=22'}
     hasBin: true
 
@@ -7189,7 +7194,7 @@ snapshots:
     dependencies:
       hono: 4.12.25
 
-  '@hono/node-server@2.0.4(hono@4.12.25)':
+  '@hono/node-server@2.0.5(hono@4.12.25)':
     dependencies:
       hono: 4.12.25
 
@@ -8441,7 +8446,7 @@ snapshots:
 
   '@tanstack/virtual-file-routes@1.161.7': {}
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84':
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/03cac25d02c1aaa0c6ca87860183879069abb921':
     dependencies:
       '@ast-grep/cli': 0.40.5
       commander: 12.1.0
@@ -9185,7 +9190,7 @@ snapshots:
 
   cadent@https://pkg.pr.new/tempoxyz/cadent@57613c4(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod@4.3.6))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.3.6))(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(bufferutil@4.1.0)(openapi-types@12.1.3)(typescript@6.0.2)(utf-8-validate@5.0.10):
     dependencies:
-      '@hono/node-server': 2.0.4(hono@4.12.25)
+      '@hono/node-server': 2.0.5(hono@4.12.25)
       '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.25)
       '@scalar/hono-api-reference': 0.10.20(hono@4.12.25)
       hono: 4.12.25
@@ -10068,6 +10073,15 @@ snapshots:
       zod: 4.4.3
     optional: true
 
+  incur@0.4.5:
+    dependencies:
+      '@cfworker/json-schema': 4.1.1
+      '@modelcontextprotocol/server': 2.0.0-alpha.2(@cfworker/json-schema@4.1.1)
+      '@toon-format/toon': 2.2.0
+      tokenx: 1.3.0
+      yaml: 2.8.3
+      zod: 4.4.3
+
   incur@0.4.8:
     dependencies:
       '@cfworker/json-schema': 4.1.1
@@ -10408,7 +10422,7 @@ snapshots:
 
   mppx@0.6.28(hono@4.12.25)(typescript@6.0.2)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)):
     dependencies:
-      incur: 0.4.8
+      incur: 0.4.5
       ox: 0.14.22(typescript@6.0.2)(zod@4.4.3)
       viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)
       zod: 4.4.3
@@ -10419,7 +10433,7 @@ snapshots:
 
   mppx@0.6.28(hono@4.12.25)(typescript@6.0.2)(viem@2.52.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.4.3)):
     dependencies:
-      incur: 0.4.8
+      incur: 0.4.5
       ox: 0.14.22(typescript@6.0.2)(zod@4.4.3)
       viem: 2.52.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.4.3)
       zod: 4.4.3
