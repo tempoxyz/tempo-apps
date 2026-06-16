@@ -42,6 +42,9 @@
 		// transparently proxy mcp.tempo.xyz -> this upstream so clients
 		// connect to a stable branded URL instead of the opaque hostname.
 		"AI_SEARCH_MCP_URL": "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp",
+		// PostHog host for MCP analytics. Set POSTHOG_PROJECT_API_KEY as a
+		// Worker secret to enable event capture.
+		"POSTHOG_HOST": "https://us.i.posthog.com",
 		// Docs sources to sync. Add sources here instead of changing Worker code.
 		// `indexPath` defaults to `/llms.txt`.
 		"SOURCES": [

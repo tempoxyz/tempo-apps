@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { handleMcp } from './mcp.js'
+import { captureMcpAnalytics, parseJsonRpcRequest } from './posthog-mcp.js'
 import type { Source } from './sources.js'
 
 function instance(
@@ -1489,6 +1490,94 @@ Was this helpful?`,
 		)
 
 		expect(res).toBeUndefined()
+	})
+})
+
+describe('captureMcpAnalytics', () => {
+	it('does nothing without a PostHog project key', async () => {
+		const fetch = vi.fn()
+		vi.stubGlobal('fetch', fetch)
+		const ctx = { waitUntil: vi.fn() } as unknown as ExecutionContext
+		const req = new Request('https://mcp.tempo.xyz/', {
+			method: 'POST',
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'tools/list',
+			}),
+		})
+		const body = await parseJsonRpcRequest(req)
+
+		captureMcpAnalytics(
+			req,
+			body,
+			new Response(JSON.stringify({ jsonrpc: '2.0', id: 1, result: {} })),
+			{},
+			ctx,
+		)
+
+		expect(ctx.waitUntil).not.toHaveBeenCalled()
+		expect(fetch).not.toHaveBeenCalled()
+	})
+
+	it('captures redacted tool-call analytics when configured', async () => {
+		const fetch = vi.fn().mockResolvedValue(new Response('{}'))
+		vi.stubGlobal('fetch', fetch)
+		const waitUntil = vi.fn((promise: Promise<unknown>) => promise)
+		const ctx = { waitUntil } as unknown as ExecutionContext
+		const req = new Request('https://mcp.tempo.xyz/', {
+			method: 'POST',
+			headers: { 'mcp-session-id': 'session-1' },
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 2,
+				method: 'tools/call',
+				params: {
+					name: 'search',
+					arguments: {
+						query: 'tempo docs',
+						api_key: 'secret',
+					},
+				},
+			}),
+		})
+		const body = await parseJsonRpcRequest(req)
+
+		captureMcpAnalytics(
+			req,
+			body,
+			new Response(
+				JSON.stringify({
+					jsonrpc: '2.0',
+					id: 2,
+					result: { content: [{ type: 'text', text: 'ok' }] },
+				}),
+			),
+			{ POSTHOG_PROJECT_API_KEY: 'phc_test' },
+			ctx,
+		)
+
+		await waitUntil.mock.calls[0][0]
+		expect(fetch).toHaveBeenCalledWith(
+			'https://us.i.posthog.com/capture/',
+			expect.objectContaining({
+				method: 'POST',
+			}),
+		)
+		const payload = JSON.parse(fetch.mock.calls[0][1].body)
+		expect(payload).toMatchObject({
+			api_key: 'phc_test',
+			event: '$mcp_tool_call',
+			distinct_id: 'session-1',
+		})
+		expect(payload.properties).toMatchObject({
+			$session_id: 'session-1',
+			$mcp_tool_name: 'search',
+			$mcp_parameters: {
+				query: 'tempo docs',
+				api_key: '[redacted]',
+			},
+		})
 	})
 })
 
