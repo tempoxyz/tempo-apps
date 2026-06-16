@@ -13,23 +13,4 @@ export const serverEnvSchema = z.object({
 	TEMPO_API_URL: z.url(),
 })
 
-type ServerEnv = z.infer<typeof serverEnvSchema>
-
-/**
- * Lazily validated server env. The parse must NOT run at module load: this
- * module is pulled into the client bundle via `wagmi.config.ts` (its
- * `.server()` closures reference `serverEnv`), and an eager top-level
- * `parse(process.env)` throws a `ZodError` in the browser — where
- * `TEMPO_API_URL` is undefined — crashing hydration before any query fires.
- *
- * The Proxy defers validation to first property access, which only happens in
- * server-only code paths (the `.server()` closures are stripped from the
- * client build), so the browser never triggers it.
- */
-let cachedServerEnv: ServerEnv | undefined
-export const serverEnv = new Proxy({} as ServerEnv, {
-	get(_target, prop: string) {
-		cachedServerEnv ??= serverEnvSchema.parse(process.env)
-		return cachedServerEnv[prop as keyof ServerEnv]
-	},
-})
+export const serverEnv = serverEnvSchema.parse(process.env)
