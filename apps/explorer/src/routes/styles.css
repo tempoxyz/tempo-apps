@@ -259,6 +259,43 @@ input[type="number"] {
 	scrollbar-gutter: stable;
 }
 
+.midcut {
+	display: inline-flex;
+	width: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-decoration: inherit;
+}
+
+.midcut[data-align="end"] {
+	justify-content: flex-end;
+}
+
+.midcut__ellipsis {
+	display: none;
+	flex: 0 0 auto;
+}
+
+.midcut__ellipsis::before {
+	content: attr(data-ellipsis);
+}
+
+.midcut[data-cut="true"] .midcut__ellipsis {
+	display: inline;
+}
+
+.midcut[data-cut="true"] .midcut__part {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.midcut[data-cut="true"] .midcut__part--end {
+	display: inline-flex;
+	justify-content: flex-end;
+}
+
 @keyframes progressline {
 	0% {
 		width: 0%;
