@@ -54,6 +54,7 @@ import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
 	type AssetData,
+	type BalancesResponse,
 	balancesQueryOptions,
 	calculateTotalHoldings,
 	useBalancesData,
@@ -92,16 +93,6 @@ import {
 } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { areUsdPricedTokens } from '#lib/pricing'
-import {
-	fetchAddressBalancesData,
-	MAX_TOKENS,
-} from '#lib/server/address-balances'
-import { buildAddressTxMetadata } from '#lib/server/address-metadata'
-import {
-	fetchAddressOldestTx,
-	fetchAddressTxStats,
-	fetchContractCreationReceipt,
-} from '#lib/server/tempo-queries'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
@@ -385,7 +376,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const address = params.address as Address.Address
 		const ogMeta =
 			loaderData?.ogMeta ??
-			(await fetchAddressOgMetadata(address).catch(() => undefined))
+			(await fetchAddressMetadata(address).catch(() => undefined))
 		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
 		// since 'empty' is the correct type for regular EOAs
 		let accountType = loaderData?.accountType ?? 'empty'
@@ -581,7 +572,8 @@ function RouteComponent() {
 			tabs.push('transfers', 'holdings')
 		}
 		if (isToken) {
-			tabs.push('transfers', 'holders')
+			if (!tabs.includes('transfers')) tabs.push('transfers')
+			tabs.push('holders')
 		}
 		if (isTip20) {
 			tabs.push('token')
@@ -643,7 +635,6 @@ function RouteComponent() {
 	const prefetchedRef = React.useRef<string | null>(null)
 	React.useEffect(() => {
 		if (prefetchedRef.current === address) return
-		prefetchedRef.current = address
 
 		const after =
 			period === '24h'
@@ -653,6 +644,8 @@ function RouteComponent() {
 					: undefined
 
 		const timer = setTimeout(() => {
+			prefetchedRef.current = address
+
 			if (tab !== 'transactions')
 				void queryClient.prefetchQuery(
 					historyQueryOptions({
@@ -752,33 +745,14 @@ async function fetchAddressMetadata(address: Address.Address) {
 	return response.json() as Promise<AddressOgMetadata>
 }
 
-async function fetchAddressOgMetadata(
+async function fetchAddressOgBalances(
 	address: Address.Address,
-): Promise<AddressOgMetadata> {
-	const { id: chainId } = getTempoChain()
-	const [stats, oldestTx, indexedCreation] = await Promise.all([
-		fetchAddressTxStats(address, chainId),
-		fetchAddressOldestTx(address, chainId).catch(() => undefined),
-		fetchContractCreationReceipt(address, chainId).catch(() => undefined),
-	])
-	return buildAddressTxMetadata(
-		{
-			count: stats.count,
-			latestTxsBlockTimestamp: stats.latestTimestamp,
-			oldestTxsBlockTimestamp: stats.oldestTimestamp,
-			oldestTxHash: oldestTx?.hash,
-			oldestTxFrom: oldestTx?.from,
-		},
-		indexedCreation,
-	)
-}
-
-async function fetchAddressOgBalances(address: Address.Address) {
-	return fetchAddressBalancesData({
-		address,
-		chainId: getTempoChain().id,
-		maxTokens: MAX_TOKENS,
+): Promise<BalancesResponse> {
+	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
+		headers: { 'Content-Type': 'application/json' },
 	})
+	if (!response.ok) throw new Error('Failed to fetch address balances')
+	return response.json() as Promise<BalancesResponse>
 }
 
 /**
@@ -1543,14 +1517,9 @@ function SectionsWrapper(props: {
 								})
 							}
 							totalItems={totalTrxCount ?? transactions.length}
-							pages={
-								countCapped || totalTrxCount === undefined
-									? { hasMore }
-									: undefined
-							}
+							pages={totalTrxCount === undefined ? { hasMore } : undefined}
 							displayCount={totalTrxCount}
 							displayCountCapped={countCapped}
-							disableLastPage={countCapped}
 							page={page}
 							fetching={isTransactionsFetching}
 							loading={isTransactionsLoading}

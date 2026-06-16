@@ -43,12 +43,18 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		// One verified-list call carries everything the page renders: Cadent
 		// resolves logos (curated icon → on-chain `logoURI`), currencies, and
 		// the requested per-token enrichments.
+		//
+		// `createdAt` is intentionally omitted: for the hyper-active genesis
+		// tokens it makes Cadent scan for a (nonexistent) `TokenCreated` event,
+		// adding ~5s to the blocking loader while returning null. Creation time
+		// is derived from `transferStats.firstAt` (fast) with a genesis-block
+		// fallback below.
 		const tokens = await parseResponse(
 			api.v1.tokens.$get({
 				query: {
 					chainId: String(chainId),
 					verified: 'true',
-					include: 'createdAt,holderCount,transferStats',
+					include: 'holderCount,transferStats',
 				},
 			}),
 		)

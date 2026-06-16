@@ -216,6 +216,7 @@ export function DataGrid(props: DataGrid.Props) {
 							<Pagination.Simple
 								page={page}
 								pages={pages}
+								pagesCapped={displayCountCapped}
 								fetching={fetching && !effectiveLoading}
 								countLoading={countLoading}
 								disableLastPage={disableLastPage}
