@@ -42,11 +42,8 @@ const tokenDetailsCache = new Map<
 
 /**
  * Cached token detail lookup shared by the holders / transfers server fns:
- * exact `holderCount`, `totalSupply`, and lifetime `transferStats`.
- *
- * `createdAt` is intentionally omitted: for hyper-active genesis tokens it
- * makes Cadent scan for a (nonexistent) `TokenCreated` event, adding ~5s to
- * the request while returning null — and no caller reads it.
+ * exact `holderCount`, `totalSupply`, the `TokenCreated` timestamp, and
+ * lifetime `transferStats`.
  */
 async function getTokenDetails(
 	chainId: number,
@@ -61,7 +58,7 @@ async function getTokenDetails(
 			param: { token: address },
 			query: {
 				chainId: String(chainId),
-				include: 'holderCount,transferStats',
+				include: 'createdAt,holderCount,transferStats',
 			},
 		}),
 	).catch((error) => {
