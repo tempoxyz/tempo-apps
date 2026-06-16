@@ -68,7 +68,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="shrink-0">
 						<ReceiptMark />
 					</div>
-					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
+					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1 min-w-0">
 						<div className="flex justify-between items-end">
 							<span className="text-tertiary">Block</span>
 							<Link

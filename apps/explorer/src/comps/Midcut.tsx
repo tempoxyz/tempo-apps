@@ -47,21 +47,6 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 		}
 	}, [value])
 
-	if (body.length <= 2) {
-		return (
-			<span
-				ref={ref}
-				className="midcut"
-				data-align={align}
-				data-cut="false"
-				title={value}
-				style={{ minWidth: `${minWidth}ch` }}
-			>
-				{value}
-			</span>
-		)
-	}
-
 	const cutAt = 1 + Math.ceil((body.length - 1) / 2)
 	const leading = `${prefix}${body[0] ?? ''}`
 	const start = body.slice(1, cutAt)
@@ -77,15 +62,17 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 			title={value}
 			style={{ minWidth: `${minWidth}ch` }}
 		>
-			<span>{leading}</span>
-			<span className="midcut__part">{start}</span>
-			<span
-				aria-hidden="true"
-				className="midcut__ellipsis"
-				data-ellipsis={ellipsis}
-			/>
-			<span className="midcut__part midcut__part--end">{end}</span>
-			<span>{trailing}</span>
+			<span className="midcut__findable">{value}</span>
+			<span aria-hidden="true" className="midcut__visual">
+				<span className="midcut__text" data-text={leading} />
+				<span className="midcut__text midcut__part" data-text={start} />
+				<span className="midcut__text midcut__ellipsis" data-text={ellipsis} />
+				<span
+					className="midcut__text midcut__part midcut__part--end"
+					data-text={end}
+				/>
+				<span className="midcut__text" data-text={trailing} />
+			</span>
 		</span>
 	)
 }
