@@ -90,9 +90,6 @@ enablePrePostScripts: true
 ignoredBuiltDependencies:
   - '@sentry/cli'
   - bufferutil
-  # cadent's pkg.pr.new tarball ships the repo's `postinstall: pnpm dev`
-  # watch script; `dist/` is prebuilt, so never run it. Remove when cadent
-  # is published to npm without dev scripts.
   - cadent
   - cbor-extract
   - cpu-features
