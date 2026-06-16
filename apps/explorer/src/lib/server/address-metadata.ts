@@ -8,7 +8,7 @@ import { parseTimestamp } from '#lib/timestamp'
 /**
  * Token header stats: exact `holderCount` and the `TokenCreated` timestamp.
  * Transfer boundaries stay on the SQL lane (`fetchTokenTransferBoundaries`) —
- * Cadent's `include=transferStats` aggregates are silently omitted upstream
+ * the API's `include=transferStats` aggregates are silently omitted upstream
  * for the largest tokens.
  */
 export async function fetchTokenHeaderStats(

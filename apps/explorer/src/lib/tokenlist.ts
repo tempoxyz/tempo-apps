@@ -1,7 +1,7 @@
 /**
- * Token data now comes from Cadent's curated verified list (`#lib/server/tokens`);
+ * Token data now comes from the API's curated verified list (`#lib/server/tokens`);
  * the tokenlist service only serves the by-address icon CDN fallback in
- * `TokenIcon` (no Cadent equivalent yet).
+ * `TokenIcon` (no API equivalent yet).
  */
 export const TOKENLIST_BASE_URL = 'https://tokenlist.tempo.xyz'
 

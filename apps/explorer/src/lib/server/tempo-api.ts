@@ -3,10 +3,10 @@ import { hc } from 'hono/client'
 import { serverEnv } from './env.ts'
 
 /**
- * Typed client for the Tempo API (cadent). Server-side only.
+ * Typed client for the Tempo API. Server-side only.
  *
- * Built with hono's `hc` + cadent's `App` type (instead of cadent's
- * `Client.create`) so cadent stays a type-only import: its runtime barrel
+ * Built with hono's `hc` + the API's `App` type (instead of its
+ * `Client.create`) so the package stays a type-only import: its runtime barrel
  * pulls the whole API server, including Node-only transitive dependencies
  * that can't load in the Workers runtime.
  *

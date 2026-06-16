@@ -10,7 +10,7 @@ export type VerifiedTokensApiResponse = {
 }
 
 /**
- * The chain's curated verified-token addresses (from Cadent), consumed by the
+ * The chain's curated verified-token addresses (from the API), consumed by the
  * client-side listed-token membership checks.
  */
 export const Route = createFileRoute('/api/verified-tokens')({

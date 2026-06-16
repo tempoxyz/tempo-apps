@@ -20,7 +20,7 @@ import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
-/** Cadent's positional-pagination window: `page × limit` must stay within. */
+/** The API's positional-pagination window: `page × limit` must stay within. */
 const HISTORY_COUNT_MAX = 10_000
 const CSV_EXPORT_LIMIT = HISTORY_COUNT_MAX
 
@@ -131,7 +131,7 @@ async function buildTokenMetadataLookup(
 	return (address) => metadataByToken.get(address.toLowerCase())
 }
 
-/** Maps a Cadent transaction row (+ embedded receipt) to the UI contract. */
+/** Maps an API transaction row (+ embedded receipt) to the UI contract. */
 export function toEnrichedTransaction(
 	row: TransactionRow,
 	options: {
@@ -217,7 +217,7 @@ export async function fetchAddressHistoryData(params: {
 		countCapped: false,
 		error: null,
 	}
-	// Beyond Cadent's positional window — callers can't reach this via the UI
+	// Beyond the API's positional window — callers can't reach this via the UI
 	// (totals are clamped page-aligned below), but guard direct requests.
 	if (page * limit > HISTORY_COUNT_MAX) return emptyResponse
 

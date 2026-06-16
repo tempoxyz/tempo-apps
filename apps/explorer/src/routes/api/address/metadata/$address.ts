@@ -78,7 +78,7 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							createdTimestamp: parseTimestamp(stats.oldestTimestamp),
 						}
 					} else if (isTip20) {
-						// Exact holder count + TokenCreated timestamp from Cadent;
+						// Exact holder count + TokenCreated timestamp from the API;
 						// transfer boundaries in one raw-logs aggregate.
 						const [bytecode, stats, boundaries] = await Promise.all([
 							bytecodePromise,

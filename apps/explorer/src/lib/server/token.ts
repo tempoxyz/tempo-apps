@@ -74,7 +74,7 @@ async function getTokenDetails(
  * Resolves `total`/`totalCapped` for the numbered-pagination UI: prefer the
  * exact count when the API provides one, otherwise infer from the fetched
  * page (exact when the feed ends inside it). Totals are clamped to the
- * largest page-aligned row count inside Cadent's positional window so every
+ * largest page-aligned row count inside the API's positional window so every
  * page the UI offers stays requestable.
  */
 export function resolveTotal(options: {
@@ -243,7 +243,7 @@ const transferTokenMetaCache = new Map<string, CacheEntry<TransferTokenMeta>>()
 /**
  * Display metadata (symbol/decimals) for transfer-row tokens: the cached
  * verified list covers nearly every row for free; unknown tokens fall back to
- * one RPC metadata read each, memoized. (Cadent's `include=token` does the
+ * one RPC metadata read each, memoized. (The API's `include=token` does the
  * same upstream but adds ~5s per page — resolve locally instead.)
  */
 async function getTransferTokenMeta(

@@ -8,7 +8,7 @@ import { api } from '#lib/server/tempo-api'
  * into the browser, where the env parse throws and kills hydration).
  */
 
-/** A row of Cadent's curated verified-token list (the token registry). */
+/** A row of the API's curated verified-token list (the token registry). */
 export type VerifiedToken = InferResponseType<
 	typeof api.v1.tokens.$get,
 	200
@@ -19,7 +19,7 @@ type CachedVerifiedTokens = { tokens: VerifiedToken[]; ts: number }
 const verifiedTokensCache = new Map<number, CachedVerifiedTokens>()
 
 /**
- * The chain's curated verified-token list from Cadent (5-min memo). Serves
+ * The chain's curated verified-token list from the API (5-min memo). Serves
  * search and the listed-token spam filters; falls back to the last good
  * snapshot when the API is unreachable.
  */
