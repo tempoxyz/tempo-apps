@@ -98,7 +98,8 @@ import {
 } from '#lib/server/address-balances'
 import { buildAddressTxMetadata } from '#lib/server/address-metadata'
 import {
-	fetchAddressTxAggregate,
+	fetchAddressOldestTx,
+	fetchAddressTxStats,
 	fetchContractCreationReceipt,
 } from '#lib/server/tempo-queries'
 import { getFeeTokenForChain } from '#lib/tokenlist'
@@ -755,20 +756,27 @@ async function fetchAddressOgMetadata(
 	address: Address.Address,
 ): Promise<AddressOgMetadata> {
 	const { id: chainId } = getTempoChain()
-	const result = await fetchAddressTxAggregate(address, chainId)
-	const indexedCreation = await fetchContractCreationReceipt(
-		address,
-		chainId,
-	).catch(() => undefined)
-	return buildAddressTxMetadata(result, indexedCreation)
+	const [stats, oldestTx, indexedCreation] = await Promise.all([
+		fetchAddressTxStats(address, chainId),
+		fetchAddressOldestTx(address, chainId).catch(() => undefined),
+		fetchContractCreationReceipt(address, chainId).catch(() => undefined),
+	])
+	return buildAddressTxMetadata(
+		{
+			count: stats.count,
+			latestTxsBlockTimestamp: stats.latestTimestamp,
+			oldestTxsBlockTimestamp: stats.oldestTimestamp,
+			oldestTxHash: oldestTx?.hash,
+			oldestTxFrom: oldestTx?.from,
+		},
+		indexedCreation,
+	)
 }
 
 async function fetchAddressOgBalances(address: Address.Address) {
-	const config = getWagmiConfig()
 	return fetchAddressBalancesData({
 		address,
 		chainId: getTempoChain().id,
-		config,
 		maxTokens: MAX_TOKENS,
 	})
 }
