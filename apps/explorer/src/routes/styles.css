@@ -275,6 +275,7 @@ input[type="number"] {
 .midcut__findable,
 .midcut__visual {
 	grid-area: content;
+	justify-self: stretch;
 	min-width: 0;
 	max-width: 100%;
 	overflow: hidden;
@@ -302,6 +303,7 @@ input[type="number"] {
 
 .midcut[data-cut="true"] .midcut__visual {
 	display: inline-flex;
+	justify-content: flex-start;
 	width: 100%;
 	color: inherit;
 }

@@ -23,6 +23,7 @@ describe('Midcut', () => {
 
 		expect(textContentFromMarkup(markup)).toBe(value)
 		expect(markup).toContain(`>${value}<`)
+		expect(markup).not.toContain('<style')
 		expect(markup).toContain('data-text="0x3"')
 		expect(markup).toContain('data-text="d789254740b87080b5bb61d2a2f907b9"')
 	})
