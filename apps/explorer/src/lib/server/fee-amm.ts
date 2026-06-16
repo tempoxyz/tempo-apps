@@ -30,6 +30,9 @@ type PoolsResponse = InferResponseType<
 	200
 >
 
+/** Max number of pools the page shows (API bounds to the same limit). */
+const POOL_LIMIT = 50
+
 /**
  * Maps API pools (token metadata + live reserves included) into the page's
  * shape, sorted pathUSD-validator pools first, then by liquidity, then by
@@ -73,6 +76,7 @@ export function mapFeeAmmPools(pools: PoolsResponse['data']): FeeAmmPool[] {
 			const bTimestamp = b.latestMintAt ?? b.createdAt ?? 0
 			return bTimestamp - aTimestamp
 		})
+		.slice(0, POOL_LIMIT)
 }
 
 export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
