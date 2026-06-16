@@ -15,6 +15,8 @@ export function parseLlmsTxt(body: string, base: string): string[] {
 		const match = line.match(/^\s*[-*]\s+(https?:\/\/\S+|\/\S+)/)
 		const raw = match?.[1]?.replace(/:$/, '')
 		addUrl(urls, raw, origin)
+		const tip = line.match(/^\s*[-*]\s+\*\*TIP-(\d{4}(?:-\d+)?)\*\*:/)
+		addUrl(urls, tip ? `/${tip[1]}.md` : undefined, origin)
 	}
 	return [...urls]
 }
