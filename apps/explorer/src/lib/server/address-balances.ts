@@ -1,8 +1,6 @@
-import { createServerFn } from '@tanstack/react-start'
 import { type InferResponseType, parseResponse } from 'hono/client'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
-import { getChainId } from 'wagmi/actions'
 
 import type { BalancesResponse, TokenBalance } from '#lib/address-balances'
 import {
@@ -11,8 +9,6 @@ import {
 	createTimestampedCsvFilename,
 } from '#lib/server/csv'
 import { api } from '#lib/server/tempo-api'
-import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
 
 export const TIP20_DECIMALS = 6
 export const MAX_TOKENS = 50
@@ -115,22 +111,3 @@ export async function fetchAddressBalancesData(params: {
 
 	return { balances: mapBalances(data) }
 }
-
-/**
- * Server function for the address balances query. Runs the cadent read
- * directly during SSR (no worker self-subrequest, which Cloudflare rejects
- * with error 1042 on workers.dev) and via Start RPC from the browser, keeping
- * the API key server-side.
- */
-export const fetchAddressBalances = createServerFn({ method: 'POST' })
-	.inputValidator((input: { address: string }) => ({
-		address: zAddress({ lowercase: true }).parse(input.address),
-	}))
-	.handler(async ({ data }): Promise<BalancesResponse> => {
-		const chainId = getChainId(getWagmiConfig())
-		return fetchAddressBalancesData({
-			address: data.address,
-			chainId,
-			maxTokens: MAX_TOKENS,
-		})
-	})

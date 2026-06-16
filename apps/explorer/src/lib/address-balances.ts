@@ -3,7 +3,7 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import { formatUnits } from 'viem'
 
-import { fetchAddressBalances } from '#lib/server/address-balances'
+import { getApiUrl } from '#lib/env.ts'
 
 export type TokenBalance = {
 	token: Address.Address
@@ -27,10 +27,19 @@ export type AssetData = {
 	balance: bigint | undefined
 }
 
+async function fetchAddressBalances(
+	address: Address.Address,
+): Promise<BalancesResponse> {
+	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
+		headers: { 'Content-Type': 'application/json' },
+	})
+	return response.json() as Promise<BalancesResponse>
+}
+
 export function balancesQueryOptions(address: Address.Address) {
 	return {
 		queryKey: ['address-balances', address],
-		queryFn: () => fetchAddressBalances({ data: { address } }),
+		queryFn: () => fetchAddressBalances(address),
 		staleTime: 60_000,
 	}
 }
