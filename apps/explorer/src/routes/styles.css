@@ -259,6 +259,74 @@ input[type="number"] {
 	scrollbar-gutter: stable;
 }
 
+.midcut {
+	display: inline-grid;
+	grid-template-areas: "content";
+	grid-template-columns: minmax(0, 1fr);
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-decoration: inherit;
+	vertical-align: bottom;
+}
+
+.midcut__findable,
+.midcut__visual {
+	grid-area: content;
+	justify-self: stretch;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
+	white-space: nowrap;
+	text-decoration: inherit;
+}
+
+.midcut__findable {
+	color: inherit;
+}
+
+.midcut[data-align="end"] .midcut__findable {
+	text-align: end;
+}
+
+.midcut[data-cut="true"] .midcut__findable {
+	color: transparent;
+	text-align: start;
+}
+
+.midcut__visual {
+	display: none;
+	pointer-events: none;
+}
+
+.midcut[data-cut="true"] .midcut__visual {
+	display: inline-flex;
+	justify-content: flex-start;
+	width: 100%;
+	color: inherit;
+}
+
+.midcut__text::before {
+	content: attr(data-text);
+}
+
+.midcut__ellipsis {
+	flex: 0 0 auto;
+}
+
+.midcut[data-cut="true"] .midcut__part {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.midcut[data-cut="true"] .midcut__part--end {
+	display: inline-flex;
+	justify-content: flex-end;
+}
+
 @keyframes progressline {
 	0% {
 		width: 0%;

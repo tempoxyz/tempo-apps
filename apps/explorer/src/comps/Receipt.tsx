@@ -3,7 +3,7 @@ import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
 import { useState } from 'react'
 import { Amount } from '#comps/Amount'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
@@ -68,7 +68,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="shrink-0">
 						<ReceiptMark />
 					</div>
-					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
+					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1 min-w-0">
 						<div className="flex justify-between items-end">
 							<span className="text-tertiary">Block</span>
 							<Link
