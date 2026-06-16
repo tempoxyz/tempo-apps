@@ -90,13 +90,16 @@ import {
 	holdersQueryOptions,
 	transfersQueryOptions,
 } from '#lib/queries/tokens'
-import { getApiUrl } from '#lib/env.ts'
+
 import { areUsdPricedTokens } from '#lib/pricing'
 import {
 	fetchAddressBalancesData,
 	MAX_TOKENS,
 } from '#lib/server/address-balances'
-import { buildAddressTxMetadata } from '#lib/server/address-metadata'
+import {
+	buildAddressTxMetadata,
+	fetchAddressMetadata,
+} from '#lib/server/address-metadata'
 import {
 	fetchAddressOldestTx,
 	fetchAddressTxStats,
@@ -744,14 +747,6 @@ function RouteComponent() {
 	)
 }
 
-async function fetchAddressMetadata(address: Address.Address) {
-	const response = await fetch(getApiUrl(`/api/address/metadata/${address}`), {
-		headers: { 'Content-Type': 'application/json' },
-	})
-	if (!response.ok) throw new Error('Failed to fetch address metadata')
-	return response.json() as Promise<AddressOgMetadata>
-}
-
 async function fetchAddressOgMetadata(
 	address: Address.Address,
 ): Promise<AddressOgMetadata> {
@@ -789,7 +784,7 @@ async function fetchAddressOgBalances(address: Address.Address) {
 function addressMetadataQueryOptions(address: Address.Address) {
 	return {
 		queryKey: ['address-metadata', address] as const,
-		queryFn: () => fetchAddressMetadata(address),
+		queryFn: () => fetchAddressMetadata({ data: { address } }),
 		staleTime: 30_000,
 	}
 }
