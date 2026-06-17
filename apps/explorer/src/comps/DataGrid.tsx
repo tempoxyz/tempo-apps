@@ -136,7 +136,7 @@ export function DataGrid(props: DataGrid.Props) {
 						}
 						return (
 							<div
-								key={`row-${rowIndex}-${page}`}
+								key={item.key ?? `row-${rowIndex}-${page}`}
 								className={cx(
 									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
 									item.link &&
@@ -266,6 +266,8 @@ export namespace DataGrid {
 	export type Cell = React.ReactNode | React.ReactNode[]
 
 	export interface Row {
+		/** Stable identity for the row; falls back to the row index when omitted. */
+		key?: string
 		cells: Cell[]
 		link?: RowLink
 		expanded?: boolean | React.ReactNode

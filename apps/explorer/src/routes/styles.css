@@ -340,6 +340,25 @@ input[type="number"] {
 	}
 }
 
+/* Newest live block row: a positive-tinted flash that fades out. Starting at
+   peak tint and decaying keeps it smooth when a new block interrupts it. */
+@keyframes block-row-shimmer {
+	from {
+		background-color: color-mix(
+			in oklab,
+			var(--color-positive) 16%,
+			transparent
+		);
+	}
+	to {
+		background-color: transparent;
+	}
+}
+
+.block-row-shimmer {
+	animation: block-row-shimmer 0.5s ease-out 1;
+}
+
 /* pre.shiki, div.shiki {
 	counter-reset: codeblock-line;
 
