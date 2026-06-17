@@ -5,6 +5,9 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.tsx",
 	"keep_vars": true,
+	"vars": {
+		"TEMPO_API_URL": "https://cadent.tempo.xyz"
+	},
 	"workers_dev": true,
 	"preview_urls": true,
 	"assets": {

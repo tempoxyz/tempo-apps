@@ -4,7 +4,6 @@ import { Docs } from '#docs.tsx'
 
 import { CHAIN_IDS } from '#chains.ts'
 import { OpenAPISpec, TokenList } from '#schema.ts'
-import type { TokenListSchema } from '#tokenlist.types.ts'
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
@@ -12,6 +11,56 @@ app.use('*', cors())
 
 const staticAssetBindingError =
 	'Static assets binding "ASSETS" is not configured.'
+
+type TokenInfo = {
+	chainId: number
+	address: string
+	decimals: number
+	name: string
+	symbol: string
+	logoURI?: string
+}
+
+type TempoToken = {
+	address: string
+	decimals: number
+	name: string
+	symbol: string
+	logoUri?: string
+}
+
+/**
+ * Fetches the chain's verified tokens from the Tempo API. Returns `null` when
+ * the chain is unsupported or the request fails (callers map this to 404).
+ */
+async function fetchTokens(
+	env: Cloudflare.Env,
+	chainId: number,
+): Promise<TokenInfo[] | null> {
+	const url = new URL('/v1/tokens', env.TEMPO_API_URL)
+	url.searchParams.set('chainId', String(chainId))
+	url.searchParams.set('verified', 'true')
+	url.searchParams.set('limit', String(200))
+
+	const response = await fetch(url, {
+		headers: env.TEMPO_API_KEY
+			? { 'tempo-api-key': env.TEMPO_API_KEY }
+			: undefined,
+	})
+	if (!response.ok) return null
+
+	const body = (await response.json()) as { data?: TempoToken[] }
+	if (!body.data) return null
+
+	return body.data.map((token) => ({
+		chainId,
+		address: token.address,
+		decimals: token.decimals,
+		name: token.name,
+		symbol: token.symbol,
+		logoURI: token.logoUri,
+	}))
+}
 
 const tokenIconExtensions = ['svg', 'png'] as const
 const tokenIconContentTypes = {
@@ -113,42 +162,26 @@ app.get('/icon/:chain_id/:address', async (context) => {
 })
 
 app.get('/list/:chain_id', async (context) => {
-	const chainId = context.req.param('chain_id')
-	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
+	const chainId = Number(context.req.param('chain_id'))
+	if (!CHAIN_IDS.includes(chainId)) return context.notFound()
 
-	const assets = context.env.ASSETS
-	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
+	const tokens = await fetchTokens(context.env, chainId)
+	if (!tokens) return context.notFound()
 
-	const assetUrl = new URL(`/${chainId}/tokenlist.json`, 'http://assets')
-	const assetResponse = await assets.fetch(assetUrl)
-
-	if (assetResponse.status === 404) return context.notFound()
-
-	const list = await assetResponse.json()
-	if (!list) return context.notFound()
-
-	return context.json(list)
+	return context.json({ tokens })
 })
 
 // id could be symbol or address
 app.get('/asset/:chain_id/:id', async (context) => {
 	const id = context.req.param('id')
-	const chainId = context.req.param('chain_id')
+	const chainId = Number(context.req.param('chain_id'))
 
-	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
+	if (!CHAIN_IDS.includes(chainId)) return context.notFound()
 
-	const assets = context.env.ASSETS
-	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
+	const tokens = await fetchTokens(context.env, chainId)
+	if (!tokens) return context.notFound()
 
-	const assetUrl = new URL(`/${chainId}/tokenlist.json`, 'http://assets')
-	const assetResponse = await assets.fetch(assetUrl)
-
-	if (assetResponse.status === 404) return context.notFound()
-
-	const list = (await assetResponse.json()) as TokenListSchema
-	if (!list) return context.notFound()
-
-	const asset = list.tokens?.find(
+	const asset = tokens.find(
 		(token) =>
 			token.symbol?.toLowerCase() === id.toLowerCase() ||
 			token.address?.toLowerCase() === id.toLowerCase(),
@@ -160,26 +193,18 @@ app.get('/asset/:chain_id/:id', async (context) => {
 })
 
 app.get('/lists/all', async (context) => {
-	const assets = context.env.ASSETS
-	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
-
 	const responses = await Promise.allSettled(
-		CHAIN_IDS.map((chainId) =>
-			assets
-				.fetch(new URL(`/${chainId}/tokenlist.json`, 'http://assets'))
-				.then((response: Response) => response.json())
-				.then((list) => list as unknown as TokenListSchema)
-				.then((list) => ({ chainId, list })),
-		),
+		CHAIN_IDS.map((chainId) => fetchTokens(context.env, chainId)),
 	)
 
-	const fulfilled = responses
+	const lists = responses
 		.map((response) =>
-			response.status === 'fulfilled' ? response.value.list : null,
+			response.status === 'fulfilled' ? response.value : null,
 		)
-		.filter((list): list is TokenListSchema => list !== null)
+		.filter((tokens): tokens is TokenInfo[] => tokens !== null)
+		.map((tokens) => ({ tokens }))
 
-	return context.json(fulfilled)
+	return context.json(lists)
 })
 
 export default app satisfies ExportedHandler<Cloudflare.Env>
