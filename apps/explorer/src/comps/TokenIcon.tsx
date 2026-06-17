@@ -2,14 +2,10 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import { cx } from '#lib/css'
 import { resolveLogoURI } from '#lib/domain/tip20'
-import { TOKENLIST_BASE_URL } from '#lib/tokenlist'
-import { getTempoChain } from '#wagmi.config'
-
-const TOKEN_ICON_BASE_URL = `${TOKENLIST_BASE_URL}/icon/${getTempoChain().id}`
 
 export function TokenIcon(props: TokenIcon.Props) {
 	const { address, className, logoURI } = props
-	const fallbackSrc = `${TOKEN_ICON_BASE_URL}/${address}`
+	const fallbackSrc = `/api/token/logo/${address}`
 	const primarySrc = resolveLogoURI(logoURI)
 	const [src, setSrc] = React.useState(primarySrc ?? fallbackSrc)
 

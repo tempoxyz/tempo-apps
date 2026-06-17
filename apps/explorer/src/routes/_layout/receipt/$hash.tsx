@@ -34,7 +34,7 @@ import {
 } from '#lib/og'
 import { areUsdPricedTokens, hasTokenAmount } from '#lib/pricing'
 import { withLoaderTiming } from '#lib/profiling'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id

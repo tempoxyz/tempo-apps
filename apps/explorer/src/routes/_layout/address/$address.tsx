@@ -93,7 +93,7 @@ import {
 } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { areUsdPricedTokens } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import ChevronFirst from '~icons/lucide/chevron-first'

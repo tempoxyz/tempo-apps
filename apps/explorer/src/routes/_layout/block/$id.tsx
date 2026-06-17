@@ -36,7 +36,7 @@ import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
 import { areUsdPricedTokens } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import {
 	type BlockIdentifier,
 	type BlockTransaction,

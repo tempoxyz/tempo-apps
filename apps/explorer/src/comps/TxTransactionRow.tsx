@@ -16,7 +16,7 @@ import {
 } from '#lib/domain/known-event-totals'
 import { PriceFormatter } from '#lib/formatting'
 import { areUsdPricedTokens } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
