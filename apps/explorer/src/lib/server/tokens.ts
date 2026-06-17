@@ -32,6 +32,14 @@ function isGenesisTokenAddress(address: Address.Address): boolean {
 	return getAccountTag(address)?.id.startsWith('genesis-token:') ?? false
 }
 
+/**
+ * Max page size accepted by the Tempo API's list endpoints. The curated
+ * verified-token list is small enough to fetch in one call, so request the
+ * whole list at once and paginate locally. (Without an explicit `limit` the
+ * API defaults to 10, which silently truncated the page to a single page.)
+ */
+const VERIFIED_TOKENS_MAX_LIMIT = 200
+
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
@@ -55,6 +63,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 					chainId: String(chainId),
 					verified: 'true',
 					include: 'holderCount,transferStats',
+					limit: String(VERIFIED_TOKENS_MAX_LIMIT),
 				},
 			}),
 		)
