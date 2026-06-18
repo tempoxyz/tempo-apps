@@ -1096,9 +1096,8 @@ describe('tempo-queries', () => {
 		).resolves.toBe(2)
 	})
 
-	it('fetchAddressHistoryDistinctCount sums counts and caps', async () => {
-		mockTidx.setResponses([[{ count: 5 }]])
-		mockQueryBuilder.setResponses([{ count: 4 }, { count: 3 }])
+	it('fetchAddressHistoryDistinctCount counts the capped distinct hash union', async () => {
+		mockTidx.setResponses([[{ count: 10 }]])
 
 		await expect(
 			fetchAddressHistoryDistinctCount({
@@ -1112,6 +1111,11 @@ describe('tempo-queries', () => {
 				countCap: 10,
 			}),
 		).resolves.toEqual({ count: 10, capped: true })
+
+		const request = mockTidx.getRequests()[0] as { query: string }
+		expect(request.query).toContain('SELECT DISTINCT tx_hash')
+		expect(request.query).toContain('UNION ALL')
+		expect(request.query).toContain('LIMIT 10')
 	})
 
 	it('fetchAddressHistoryDistinctCount returns zero when no sources selected', async () => {
@@ -1532,6 +1536,73 @@ describe('tempo-queries', () => {
 		expect(result.transactions.map((tx) => tx.hash)).toEqual([recentHash])
 		expect(result.total).toBe(1)
 		expect(result.hasMore).toBe(false)
+		expect(result.countCapped).toBe(false)
+	})
+
+	it('fetchAddressHistoryData counts truncated mixed-source history exactly', async () => {
+		const address =
+			'0x20c0000000000000000000000000000000000000' as Address.Address
+		const sender =
+			'0x1111111111111111111111111111111111111111' as Address.Address
+		const hashes = Array.from(
+			{ length: 7 },
+			(_, index) => `0x${String(index + 1).repeat(64)}` as Hex.Hex,
+		)
+
+		mockTidx.setResponses([[{ count: 25 }]])
+		mockQueryBuilder.setResponses([
+			[
+				{
+					hash: hashes[0],
+					block_num: 106n,
+					from: sender,
+					to: address,
+					value: 5n,
+				},
+			],
+			hashes.slice(1).map((hash, index) => ({
+				tx_hash: hash,
+				block_num: BigInt(105 - index),
+			})),
+			hashes.slice(0, 2).map((hash, index) => ({
+				tx_hash: hash,
+				block_num: BigInt(106 - index),
+				block_timestamp: 206 - index,
+				from: sender,
+				to: address,
+				status: 1,
+				gas_used: 21000n,
+				effective_gas_price: 2n,
+				contract_address: null,
+			})),
+			hashes.slice(0, 2).map((hash, index) => ({
+				hash,
+				block_num: BigInt(106 - index),
+				block_timestamp: 206 - index,
+				from: sender,
+				to: address,
+				value: 5n,
+				input: '0x00' as Hex.Hex,
+				calls: null,
+			})),
+		])
+
+		const result = await fetchAddressHistoryData({
+			address,
+			chainId: 1,
+			searchParams: {
+				offset: 0,
+				limit: 2,
+				sort: 'desc',
+				include: 'all',
+				sources: 'txs,transfers',
+			},
+			includeKnownEvents: false,
+		})
+
+		expect(result.transactions.map((tx) => tx.hash)).toEqual(hashes.slice(0, 2))
+		expect(result.total).toBe(25)
+		expect(result.hasMore).toBe(true)
 		expect(result.countCapped).toBe(false)
 	})
 

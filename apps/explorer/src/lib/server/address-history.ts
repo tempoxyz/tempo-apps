@@ -21,6 +21,7 @@ import {
 } from '#lib/server/build-tx-only-transactions'
 import {
 	fetchAddressDirectTxHistoryRows,
+	fetchAddressHistoryDistinctCount,
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressLogRowsByTxHashes,
 	fetchAddressReceiptRowsByHashes,
@@ -372,7 +373,25 @@ export async function fetchAddressHistoryData(params: {
 			transferResult.length >= bufferSize ||
 			emittedResult.length >= bufferSize
 
-		const countResult = {
+		const shouldFetchDistinctCount =
+			anySourceHitLimit && !statusFilter && after == null
+		const distinctCountResult = shouldFetchDistinctCount
+			? await fetchAddressHistoryDistinctCount({
+					address,
+					chainId,
+					includeSent,
+					includeReceived,
+					includeTxs: sources.txs,
+					includeTransfers: sources.transfers,
+					includeEmitted: sources.emitted,
+					countCap: HISTORY_COUNT_MAX,
+				}).catch((error) => {
+					console.error('[history] failed to fetch distinct count:', error)
+					return null
+				})
+			: null
+
+		const countResult = distinctCountResult ?? {
 			count: allHashes.size,
 			capped: anySourceHitLimit,
 		}
@@ -404,7 +423,11 @@ export async function fetchAddressHistoryData(params: {
 		}
 
 		const paginatedHashes = sortedHashes.slice(offset, offset + fetchSize)
-		hasMore = paginatedHashes.length > limit
+		hasMore = distinctCountResult
+			? distinctCountResult.capped ||
+				distinctCountResult.count >
+					offset + Math.min(limit, paginatedHashes.length)
+			: paginatedHashes.length > limit
 		finalHashes = hasMore ? paginatedHashes.slice(0, limit) : paginatedHashes
 
 		if (statusFilter) {

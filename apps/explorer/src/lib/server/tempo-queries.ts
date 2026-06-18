@@ -28,6 +28,10 @@ function indexedAddresses(addresses: Address.Address[]): Address.Address[] {
 	return addresses.map(indexedAddress)
 }
 
+function indexedAddressTopic(address: Address.Address): Hex.Hex {
+	return `0x${address.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
+}
+
 export type TokenHolderBalance = { address: string; balance: bigint }
 
 type TokenHolderAggregationRow = {
@@ -720,51 +724,74 @@ export async function fetchAddressTransferEmittedDistinctCount(params: {
 export async function fetchAddressHistoryDistinctCount(
 	params: AddressHistoryCountParams,
 ): Promise<{ count: number; capped: boolean }> {
-	const [directCount, transferCount, emittedCount] = await Promise.all([
-		params.includeTxs
-			? fetchAddressDirectTxCount({
-					address: params.address,
-					chainId: params.chainId,
-					includeSent: params.includeSent,
-					includeReceived: params.includeReceived,
-					countCap: params.countCap,
-				})
-			: 0,
-		params.includeTransfers
-			? fetchAddressTransferDistinctCount({
-					address: params.address,
-					chainId: params.chainId,
-					includeSent: params.includeSent,
-					includeReceived: params.includeReceived,
-					countCap: params.countCap,
-				}).catch((error) => {
-					console.error('[tidx] transfer count query failed:', error)
-					return 0
-				})
-			: 0,
-		params.includeEmitted
-			? fetchAddressTransferEmittedDistinctCount({
-					address: params.address,
-					chainId: params.chainId,
-					countCap: params.countCap,
-				}).catch((error) => {
-					console.error('[tidx] emitted count query failed:', error)
-					return 0
-				})
-			: 0,
-	])
+	const address = indexedAddress(params.address)
+	const addressTopic = indexedAddressTopic(params.address)
+	const sourceQueries: string[] = []
 
-	const total = Math.min(
-		directCount + transferCount + emittedCount,
-		params.countCap,
-	)
-	const capped =
-		total >= params.countCap ||
-		directCount >= params.countCap ||
-		transferCount >= params.countCap ||
-		emittedCount >= params.countCap
+	if (params.includeTxs) {
+		const directFilters =
+			params.includeSent && params.includeReceived
+				? [`(txs."from" = '${address}' OR txs."to" = '${address}')`]
+				: params.includeSent
+					? [`txs."from" = '${address}'`]
+					: [`txs."to" = '${address}'`]
 
-	return { count: total, capped }
+		sourceQueries.push(`
+			SELECT txs.hash AS tx_hash
+			FROM txs
+			WHERE ${directFilters.join(' AND ')}
+		`)
+	}
+
+	if (params.includeTransfers) {
+		const transferFilters = [`logs.topic0 = '${TRANSFER_TOPIC0}'`]
+		if (params.includeSent && params.includeReceived) {
+			transferFilters.push(
+				`(logs.topic1 = '${addressTopic}' OR logs.topic2 = '${addressTopic}')`,
+			)
+		} else if (params.includeSent) {
+			transferFilters.push(`logs.topic1 = '${addressTopic}'`)
+		} else {
+			transferFilters.push(`logs.topic2 = '${addressTopic}'`)
+		}
+
+		sourceQueries.push(`
+			SELECT logs.tx_hash AS tx_hash
+			FROM logs
+			WHERE ${transferFilters.join(' AND ')}
+		`)
+	}
+
+	if (params.includeEmitted) {
+		sourceQueries.push(`
+			SELECT logs.tx_hash AS tx_hash
+			FROM logs
+			WHERE logs.topic0 = '${TRANSFER_TOPIC0}'
+				AND logs.address = '${address}'
+		`)
+	}
+
+	if (sourceQueries.length === 0) return { count: 0, capped: false }
+
+	const result = await tidx.fetch({
+		chainId: params.chainId,
+		query: `
+			SELECT count(*) AS count
+			FROM (
+				SELECT DISTINCT tx_hash
+				FROM (
+					${sourceQueries.join('\nUNION ALL\n')}
+				) AS matches
+				LIMIT ${params.countCap}
+			) AS capped
+		` as string,
+	})
+
+	const count = Number(result.rows[0]?.count ?? 0)
+	return {
+		count,
+		capped: count >= params.countCap,
+	}
 }
 
 export type TxDataRow = {
@@ -1392,8 +1419,7 @@ export async function fetchVirtualAddressTransferAggregate(
 	oldestTimestamp?: unknown
 	latestTimestamp?: unknown
 }> {
-	const topicAddress =
-		`0x${address.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
+	const topicAddress = indexedAddressTopic(address)
 
 	const fetchBoundary = async (
 		column: 'topic1' | 'topic2',
