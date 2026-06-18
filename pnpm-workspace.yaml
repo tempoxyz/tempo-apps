@@ -9,6 +9,7 @@ catalog:
   '@cloudflare/vite-plugin': 1.30.3
   '@cloudflare/vitest-pool-workers': ^0.13.5
   '@cloudflare/workers-types': ^4.20260531.1
+  '@datadog/browser-rum-slim': ^7.2.0
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.460
   '@logtape/config': ^2.0.4

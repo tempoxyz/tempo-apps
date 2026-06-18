@@ -26,6 +26,7 @@ import {
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
+import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
@@ -268,6 +269,12 @@ function useAppBoot() {
 	}, [])
 }
 
+function useDatadogRum() {
+	React.useEffect(() => {
+		void initDatadogRum().catch(() => {})
+	}, [])
+}
+
 function useLoaderTiming() {
 	const matches = useMatches()
 	const reportedRef = React.useRef<Set<string>>(new Set())
@@ -351,6 +358,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	useFirstDrawTiming()
 	useErrorTracking()
 	useAppBoot()
+	useDatadogRum()
 
 	const { queryClient } = Route.useRouteContext()
 	const [config] = React.useState(() => getWagmiConfig())
