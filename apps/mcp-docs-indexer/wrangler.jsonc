@@ -4,6 +4,7 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
+	"worker_loaders": [{ "binding": "LOADER" }],
 	"workers_dev": false,
 	"preview_urls": true,
 	"keep_vars": true,

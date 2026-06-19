@@ -1,3 +1,14 @@
+import { codeMcpServer } from '@cloudflare/codemode/mcp'
+import type { Executor } from '@cloudflare/codemode'
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import {
+	CallToolRequestSchema,
+	type CallToolResult,
+	ListToolsRequestSchema,
+	type Tool,
+} from '@modelcontextprotocol/sdk/types.js'
 import { toMarkdownUrl } from './llms-txt.js'
 import type { Source } from './sources.js'
 
@@ -62,8 +73,11 @@ type LegacySearchOptions = {
 type McpContext = {
 	instance: AiSearchInstance
 	sources?: Source[]
+	executor?: Executor
 }
 
+const CODE_TOOL_NAME = 'code'
+const CODEMODE_TOOL_NAMES = new Set(['search', 'find_pages', 'read_page'])
 const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_MATCH_THRESHOLD = 0.45
 const DEFAULT_MAX_CHARS_PER_CHUNK = 1200
@@ -165,7 +179,11 @@ export async function handleMcp(
 	}
 
 	if (body.method === 'tools/list') {
-		return jsonRpc(req, body.id, { tools: toolSchemas(context.sources ?? []) })
+		const tools = toolSchemas(context.sources ?? [])
+		const executor = context.executor
+		if (!executor) return jsonRpc(req, body.id, { tools })
+		const codeTools = await listCodeTools(tools, { ...context, executor })
+		return jsonRpc(req, body.id, { tools: [...tools, ...codeTools] })
 	}
 
 	if (body.method === 'resources/list') {
@@ -194,6 +212,21 @@ export async function handleMcp(
 
 	if (body.method !== 'tools/call') {
 		return undefined
+	}
+	if (body.params?.name === CODE_TOOL_NAME) {
+		const executor = context.executor
+		if (!executor) {
+			return jsonRpcError(req, body.id, -32601, 'code tool is not available')
+		}
+		const codeServer = await createCodeServer(
+			toolSchemas(context.sources ?? []),
+			{ ...context, executor },
+		)
+		const result = await callServerTool(codeServer, {
+			name: CODE_TOOL_NAME,
+			arguments: body.params.arguments as Record<string, unknown> | undefined,
+		})
+		return jsonRpc(req, body.id, result)
 	}
 	if (body.params?.name === 'read_page') {
 		return handleReadPage(req, body, context.sources ?? [])
@@ -248,6 +281,120 @@ export async function handleMcp(
 			],
 			isError: true,
 		})
+	}
+}
+
+async function createCodeServer(
+	tools: Tool[],
+	context: McpContext & { executor: Executor },
+): Promise<McpServer> {
+	return codeMcpServer({
+		server: createReadOnlyDocsServer(tools, context),
+		executor: context.executor,
+		description: `Execute JavaScript to perform multi-step Tempo docs lookups.
+
+Available read-only docs tools:
+{{types}}
+
+Write an async arrow function in JavaScript that returns the result.
+Do not use TypeScript syntax, type annotations, interfaces, or generics.
+Do not define a named function and then call it.
+
+{{example}}`,
+	})
+}
+
+function createReadOnlyDocsServer(
+	tools: Tool[],
+	context: McpContext,
+): McpServer {
+	const docsTools = tools.filter((tool) => CODEMODE_TOOL_NAMES.has(tool.name))
+	const server = new McpServer(
+		{
+			name: 'tempo-docs-readonly',
+			version: '1.0.0',
+		},
+		{ capabilities: { tools: {} } },
+	)
+	server.server.setRequestHandler(ListToolsRequestSchema, () => ({
+		tools: docsTools,
+	}))
+	server.server.setRequestHandler(CallToolRequestSchema, (request) =>
+		callLocalDocsTool(context, request.params.name, request.params.arguments),
+	)
+	return server
+}
+
+async function callLocalDocsTool(
+	context: McpContext,
+	name: string,
+	args: Record<string, unknown> | undefined,
+): Promise<CallToolResult> {
+	if (!CODEMODE_TOOL_NAMES.has(name))
+		return toolCallError(`unknown tool: ${name}`)
+	const response = await handleMcp(
+		new Request('https://mcp.tempo.xyz/', {
+			method: 'POST',
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'tools/call',
+				params: { name, arguments: args },
+			}),
+		}),
+		context,
+	)
+	if (!response) return toolCallError(`unknown tool: ${name}`)
+	const payload = (await response.json()) as {
+		result?: CallToolResult
+		error?: { message?: string }
+	}
+	if (payload.error)
+		return toolCallError(payload.error.message ?? 'tool failed')
+	return payload.result ?? toolCallError('tool returned no result')
+}
+
+async function listCodeTools(
+	tools: Tool[],
+	context: McpContext & { executor: Executor },
+): Promise<Tool[]> {
+	const codeServer = await createCodeServer(tools, context)
+	return withMcpClient(codeServer, async (client) => {
+		const result = await client.listTools()
+		return result.tools
+	})
+}
+
+async function callServerTool(
+	server: McpServer,
+	params: { name: string; arguments: Record<string, unknown> | undefined },
+): Promise<CallToolResult> {
+	return (await withMcpClient(server, (client) =>
+		client.callTool(params),
+	)) as CallToolResult
+}
+
+async function withMcpClient<T>(
+	server: McpServer,
+	callback: (client: Client) => Promise<T>,
+): Promise<T> {
+	const [clientTransport, serverTransport] =
+		InMemoryTransport.createLinkedPair()
+	const client = new Client({ name: 'tempo-docs-proxy', version: '1.0.0' })
+	await server.connect(serverTransport)
+	await client.connect(clientTransport)
+	try {
+		return await callback(client)
+	} finally {
+		await client.close()
+		await server.close()
+	}
+}
+
+function toolCallError(message: string): CallToolResult {
+	return {
+		content: [{ type: 'text', text: message }],
+		isError: true,
 	}
 }
 
@@ -1198,7 +1345,7 @@ function mcpResponse(req: Request, payload: string): Response {
 	})
 }
 
-function toolSchemas(sources: Source[]) {
+function toolSchemas(sources: Source[]): Tool[] {
 	const sourceIds = sources.map((source) => source.id)
 	return [
 		{
@@ -1331,7 +1478,7 @@ function toolSchemas(sources: Source[]) {
 			},
 			execution: { taskSupport: 'forbidden' },
 		},
-	] as const
+	] as Tool[]
 }
 
 function pageTextFor(

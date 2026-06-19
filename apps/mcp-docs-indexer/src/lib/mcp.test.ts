@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { Executor } from '@cloudflare/codemode'
 import { handleMcp } from './mcp.js'
 import { captureMcpAnalytics, parseJsonRpcRequest } from './posthog-mcp.js'
 import type { Source } from './sources.js'
@@ -7,6 +8,12 @@ function instance(
 	search: (params: AiSearchSearchRequest) => Promise<AiSearchSearchResponse>,
 ) {
 	return { search } as unknown as AiSearchInstance
+}
+
+function fakeExecutor(): Executor {
+	return {
+		execute: vi.fn(async () => ({ result: null })),
+	} as unknown as Executor
 }
 
 const sources: Source[] = [
@@ -67,6 +74,30 @@ describe('handleMcp', () => {
 			'viem',
 			'wagmi',
 		])
+	})
+
+	it('adds the codemode code tool when an executor is configured', async () => {
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/list',
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources,
+				executor: fakeExecutor(),
+			},
+		)
+
+		const body = await res?.json()
+		expect(
+			body.result.tools.map((tool: { name: string }) => tool.name),
+		).toEqual(['search', 'find_pages', 'read_page', 'code'])
+		expect(body.result.tools[3].description).toContain('codemode.search')
 	})
 
 	it('normalizes simple source and result controls into retrieval options', async () => {
@@ -208,6 +239,107 @@ describe('handleMcp', () => {
 		expect(seen?.ai_search_options?.cache).toEqual({
 			enabled: false,
 			cache_threshold: 'close_enough',
+		})
+	})
+
+	it('executes codemode against read-only local docs tools', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('# Account keys\n\nKey docs')),
+		)
+		const execute = vi.fn<Executor['execute']>(async (_code, providers) => {
+			const docs = providers[0]?.fns ?? {}
+			const search = await docs.search({
+				query: 'account keys',
+				response_format: 'structured',
+			})
+			const page = await docs.read_page({
+				source: 'viem',
+				path: '/account-keys',
+				response_format: 'structured',
+			})
+			return { result: { search, page } }
+		})
+
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 31,
+					method: 'tools/call',
+					params: {
+						name: 'code',
+						arguments: {
+							code: 'async () => codemode.search({ query: "account keys" })',
+						},
+					},
+				}),
+			}),
+			{
+				instance: instance(async () => ({
+					search_query: 'account keys',
+					chunks: [
+						{
+							id: '1',
+							type: 'text',
+							score: 1,
+							text: 'account key docs',
+							item: { key: 'viem/account_keys' },
+						},
+					],
+				})),
+				sources,
+				executor: { execute } as unknown as Executor,
+			},
+		)
+
+		expect(execute).toHaveBeenCalledWith(
+			'async () => codemode.search({ query: "account keys" })',
+			[
+				{
+					name: 'codemode',
+					fns: expect.objectContaining({
+						search: expect.any(Function),
+						find_pages: expect.any(Function),
+						read_page: expect.any(Function),
+					}),
+				},
+			],
+		)
+		const body = await res?.json()
+		const result = JSON.parse(body.result.content[0].text)
+		expect(result.search.success).toBe(true)
+		expect(result.page.result.text).toBe('# Account keys\n\nKey docs')
+	})
+
+	it('returns codemode executor errors as MCP tool errors', async () => {
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 32,
+					method: 'tools/call',
+					params: {
+						name: 'code',
+						arguments: { code: 'async () => "ok"' },
+					},
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources,
+				executor: {
+					execute: vi.fn(async () => ({ result: null, error: 'boom' })),
+				} as unknown as Executor,
+			},
+		)
+
+		const body = await res?.json()
+		expect(body.result).toMatchObject({
+			isError: true,
+			content: [{ type: 'text', text: 'Error: boom' }],
 		})
 	})
 
