@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	buildExplorerNetworkHref,
 	EXPLORER_NETWORK_OPTIONS,
+	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network.ts'
 
 const MAINNET_HOST = 'https://explore.tempo.xyz'
@@ -41,20 +42,29 @@ describe('explorer network switcher hrefs', () => {
 		)
 	})
 
-	it('links to the target network homepage from not-found pages', () => {
+	it('preserves resource paths even when the current route rendered not found', () => {
+		expect(isExplorerNetworkPathPreservable(`/receipt/${SAMPLE_HASH}`)).toBe(
+			true,
+		)
 		expect(
-			buildExplorerNetworkHref(TESTNET_HOST, `/receipt/${SAMPLE_HASH}`, {
+			isExplorerNetworkPathPreservable(`/tx/${SAMPLE_HASH}?tab=logs#top`),
+		).toBe(true)
+		expect(
+			buildExplorerNetworkHref(TESTNET_HOST, `/receipt/${SAMPLE_HASH}`),
+		).toBe(`${TESTNET_HOST}/receipt/${SAMPLE_HASH}`)
+		expect(
+			buildExplorerNetworkHref(MAINNET_HOST, `/tx/${SAMPLE_HASH}?tab=logs#top`),
+		).toBe(`${MAINNET_HOST}/tx/${SAMPLE_HASH}?tab=logs#top`)
+	})
+
+	it('still links unknown not-found routes to the target network homepage', () => {
+		expect(isExplorerNetworkPathPreservable('/definitely-not-a-route')).toBe(
+			false,
+		)
+		expect(
+			buildExplorerNetworkHref(TESTNET_HOST, '/definitely-not-a-route', {
 				fallbackToHome: true,
 			}),
 		).toBe(`${TESTNET_HOST}/`)
-		expect(
-			buildExplorerNetworkHref(
-				MAINNET_HOST,
-				`/tx/${SAMPLE_HASH}?tab=logs#top`,
-				{
-					fallbackToHome: true,
-				},
-			),
-		).toBe(`${MAINNET_HOST}/`)
 	})
 })

@@ -13,6 +13,7 @@ import {
 	buildExplorerNetworkHref,
 	EXPLORER_NETWORK_OPTIONS,
 	getActiveExplorerNetworkOption,
+	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -229,7 +230,9 @@ export namespace Header {
 								<a
 									key={option.env}
 									href={buildExplorerNetworkHref(option.host, currentPath, {
-										fallbackToHome: isNotFoundPage,
+										fallbackToHome:
+											isNotFoundPage &&
+											!isExplorerNetworkPathPreservable(currentPath),
 									})}
 									role="menuitemradio"
 									aria-checked={isActive}
