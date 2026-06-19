@@ -235,7 +235,7 @@ export namespace Header {
 									aria-checked={isActive}
 									aria-current={isActive ? 'page' : undefined}
 									className={cx(
-										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[13px] font-medium text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
+										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
 										isActive && 'bg-surface text-primary',
 									)}
 									onClick={() => setIsOpen(false)}

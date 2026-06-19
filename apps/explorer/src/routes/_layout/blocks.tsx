@@ -289,14 +289,16 @@ function RouteComponent() {
 												cells: [
 													<span
 														key="number"
-														className="tabular-nums text-accent font-medium"
+														className="font-mono tabular-nums text-accent font-medium"
 													>
 														#{blockNumber}
 													</span>,
-													<Midcut key="hash" value={blockHash} prefix="0x" />,
+													<span key="hash" className="font-mono w-full min-w-0">
+														<Midcut value={blockHash} prefix="0x" />
+													</span>,
 													<span
 														key="time"
-														className="text-secondary tabular-nums whitespace-nowrap"
+														className="font-mono text-secondary tabular-nums whitespace-nowrap"
 													>
 														<FormattedTimestamp
 															timestamp={block.timestamp}
@@ -305,7 +307,7 @@ function RouteComponent() {
 													</span>,
 													<span
 														key="txns"
-														className="text-secondary tabular-nums"
+														className="font-mono text-secondary tabular-nums"
 													>
 														{txCount}
 													</span>,
