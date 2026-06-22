@@ -1,0 +1,30 @@
+{
+	"name": "mpp-flow-diagrams",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsx scripts/build.ts",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "pnpm gen:types && tsgo --project tsconfig.json --noEmit",
+		"deploy": "pnpm build && wrangler deploy",
+		"dev": "pnpm build && wrangler dev",
+		"gen:types": "CLOUDFLARE_ENV= wrangler types",
+		"postinstall": "pnpm gen:types",
+		"tail": "wrangler tail"
+	},
+	"dependencies": {
+		"accounts": "catalog:",
+		"hono": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"esbuild": "catalog:",
+		"tsx": "^4.21.0",
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

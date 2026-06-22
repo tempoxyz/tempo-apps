@@ -1,0 +1,310 @@
+:root {
+	color: #151515;
+	background: #f5f3ee;
+	font-family:
+		Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	min-width: 320px;
+}
+
+button,
+input,
+textarea {
+	font: inherit;
+}
+
+.surface {
+	display: grid;
+	grid-template-columns: 280px minmax(520px, 1fr) 320px;
+	min-height: 100vh;
+}
+
+.sidebar,
+.inspector {
+	padding: 18px;
+	background: #faf9f5;
+	border-color: #ddd8cc;
+}
+
+.sidebar {
+	border-right: 1px solid #ddd8cc;
+}
+
+.inspector {
+	border-left: 1px solid #ddd8cc;
+}
+
+.brand-row {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	margin-bottom: 18px;
+}
+
+.mark {
+	width: 32px;
+	height: 32px;
+	background:
+		linear-gradient(90deg, transparent 43%, #111 43% 57%, transparent 57%),
+		linear-gradient(0deg, transparent 43%, #111 43% 57%, transparent 57%),
+		#7ee0b8;
+	border: 1px solid #111;
+}
+
+h1,
+h2,
+p {
+	margin: 0;
+}
+
+h1 {
+	font-size: 18px;
+	line-height: 1.1;
+}
+
+h2 {
+	margin-top: 3px;
+	font-size: 20px;
+	font-weight: 650;
+}
+
+p,
+small,
+.section-label,
+.status {
+	color: #69665f;
+}
+
+.section-label {
+	margin: 16px 0 8px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.toolbar {
+	display: flex;
+	gap: 8px;
+}
+
+button,
+.file-button {
+	border: 1px solid #1f1f1f;
+	background: #fff;
+	color: #151515;
+	padding: 8px 10px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.file-button input {
+	display: none;
+}
+
+.service-list {
+	display: grid;
+	gap: 8px;
+}
+
+.service-card {
+	display: grid;
+	width: 100%;
+	gap: 4px;
+	text-align: left;
+	border-color: #d1cab9;
+}
+
+.service-card span {
+	font-weight: 650;
+}
+
+.board-wrap {
+	display: grid;
+	grid-template-rows: auto 1fr;
+	min-width: 0;
+}
+
+.board-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 18px 22px;
+	border-bottom: 1px solid #ddd8cc;
+	background: #fffdfa;
+}
+
+.board {
+	position: relative;
+	overflow: auto;
+	min-height: 720px;
+	background:
+		linear-gradient(#ded8ca 1px, transparent 1px),
+		linear-gradient(90deg, #ded8ca 1px, transparent 1px), #f5f3ee;
+	background-size: 32px 32px;
+}
+
+.connections {
+	position: absolute;
+	inset: 0;
+	width: 1800px;
+	height: 1200px;
+	pointer-events: none;
+}
+
+.connections path {
+	fill: none;
+	stroke: #237b59;
+	stroke-width: 2.5;
+}
+
+.node {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 260px;
+	background: #fffdfa;
+	border: 1px solid #151515;
+	border-radius: 8px;
+	box-shadow: 4px 4px 0 #151515;
+	touch-action: none;
+}
+
+.node.selected {
+	outline: 3px solid #7ee0b8;
+}
+
+.node header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 12px;
+	border-bottom: 1px solid #ddd8cc;
+}
+
+.node header button {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+}
+
+.ports {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	padding: 12px;
+}
+
+.ports > div {
+	display: grid;
+	gap: 7px;
+}
+
+.port {
+	position: relative;
+	width: 100%;
+	min-height: 30px;
+	padding: 6px 8px;
+	border-color: #d1cab9;
+	box-shadow: none;
+	font-size: 12px;
+}
+
+.port.input::before,
+.port.output::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	width: 9px;
+	height: 9px;
+	background: #7ee0b8;
+	border: 1px solid #151515;
+	transform: translateY(-50%);
+}
+
+.port.input::before {
+	left: -17px;
+}
+
+.port.output::after {
+	right: -17px;
+}
+
+.port.active {
+	background: #d7fff0;
+}
+
+label {
+	display: grid;
+	gap: 8px;
+	margin-bottom: 14px;
+	font-size: 12px;
+	font-weight: 700;
+}
+
+input,
+textarea {
+	width: 100%;
+	border: 1px solid #d1cab9;
+	border-radius: 6px;
+	padding: 9px;
+	background: #fff;
+	color: #151515;
+}
+
+textarea {
+	min-height: 220px;
+	resize: vertical;
+	font-family: "SFMono-Regular", Consolas, monospace;
+	font-size: 12px;
+	line-height: 1.45;
+}
+
+.io-list {
+	display: grid;
+	gap: 8px;
+}
+
+.io-list span {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px;
+	border: 1px solid #ddd8cc;
+	border-radius: 6px;
+	background: #fffdfa;
+}
+
+.empty {
+	padding: 14px;
+	border: 1px solid #ddd8cc;
+	border-radius: 8px;
+	color: #69665f;
+	background: #fffdfa;
+}
+
+@media (max-width: 980px) {
+	.surface {
+		grid-template-columns: 1fr;
+	}
+
+	.sidebar,
+	.inspector {
+		border: 0;
+		border-bottom: 1px solid #ddd8cc;
+	}
+
+	.board {
+		min-height: 620px;
+	}
+}
