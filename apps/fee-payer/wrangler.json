@@ -134,6 +134,14 @@
 					"id": "08ce4ce226fe4dd3869ca91d5e3dd700"
 				}
 			],
+			"queues": {
+				"producers": [
+					{
+						"binding": "BILLING_QUEUE",
+						"queue": "billing-events"
+					}
+				]
+			},
 			"ratelimits": [
 				{
 					"name": "AddressRateLimiter",
