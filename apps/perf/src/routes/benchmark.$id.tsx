@@ -391,6 +391,23 @@ function RunDetailPage(): React.JSX.Element {
 	const sharedGasLimit = Math.floor(refGasLimit / 10)
 	const generalGasLimit = 30_000_000
 	const paymentGasLimit = refGasLimit - sharedGasLimit - generalGasLimit
+	const gasThroughputPoints = blockPoints(blockRows, (b) => {
+		if (b.blockTimeMs == null || b.blockTimeMs <= 0) return null
+		return (b.gasUsed * 1000) / b.blockTimeMs / 1e9
+	})
+	const gasThroughputValues = gasThroughputPoints.map((p) => p.y)
+	const gasThroughputMin =
+		gasThroughputValues.length > 0 ? Math.min(...gasThroughputValues) : 0
+	const gasThroughputMax =
+		gasThroughputValues.length > 0 ? Math.max(...gasThroughputValues) : 0
+	const gasThroughputPad =
+		gasThroughputValues.length > 0
+			? Math.max(
+					(gasThroughputMax - gasThroughputMin) * 0.1,
+					gasThroughputMax * 0.02,
+					0.01,
+				)
+			: 0
 
 	return (
 		<div>
@@ -866,13 +883,20 @@ function RunDetailPage(): React.JSX.Element {
 							{
 								label: 'Gas/s',
 								color: COLORS.blue,
-								data: blockPoints(blockRows, (b) => {
-									if (b.blockTimeMs == null || b.blockTimeMs <= 0) return null
-									return (b.gasUsed * 1000) / b.blockTimeMs / 1e9
-								}),
+								data: gasThroughputPoints,
 							},
 						]}
 						formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
+						yMin={
+							gasThroughputValues.length > 0
+								? Math.max(0, gasThroughputMin - gasThroughputPad)
+								: undefined
+						}
+						yMax={
+							gasThroughputValues.length > 0
+								? gasThroughputMax + gasThroughputPad
+								: undefined
+						}
 						xFormat="block"
 					/>
 					<TimeSeriesChart
@@ -1260,6 +1284,7 @@ function TimeSeriesChart(props: {
 	showMean?: boolean | undefined
 	formatValue?: ((v: number) => string) | undefined
 	xFormat?: 'time' | 'block' | undefined
+	yMin?: number | undefined
 	yMax?: number | undefined
 	referenceBands?: Array<ReferenceBand> | undefined
 }): React.JSX.Element {
@@ -1311,7 +1336,7 @@ function TimeSeriesChart(props: {
 			refBandMax * 1.05,
 		)
 	}
-	const yMin = 0
+	const yMin = props.yMin ?? 0
 	const yRange = yMax - yMin || 1
 
 	function sx(x: number): number {
