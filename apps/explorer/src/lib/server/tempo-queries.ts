@@ -1042,8 +1042,11 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 		'txs.input',
 		'txs.calls',
 	].join(', ')
+	// Addresses are stored lowercased in the index; normalize the checksummed
+	// input before comparing or every mixed-case address matches zero rows.
+	const address = indexedAddress(params.address)
 	const whereForSide = (side: 'from' | 'to') =>
-		[`txs."${side}" = '${params.address}'`, ...filters].join(' AND ')
+		[`txs."${side}" = '${address}'`, ...filters].join(' AND ')
 	const sideQuery = (side: 'from' | 'to', limit: number) =>
 		`(SELECT ${columns} FROM txs ${statusJoin} WHERE ${whereForSide(side)} ORDER BY txs.block_num ${sortDirection}, txs.hash ${sortDirection} LIMIT ${limit})`
 	const singleSideQuery = (side: 'from' | 'to') =>
