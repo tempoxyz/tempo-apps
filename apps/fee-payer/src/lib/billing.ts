@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { Bytes, Hash, Hex } from 'ox'
-import { type TempoAddress, TxEnvelopeTempo } from 'ox/tempo'
+import { type TempoAddress, Transaction, TxEnvelopeTempo } from 'ox/tempo'
 
 type JsonRpcRequest = {
 	method: string
@@ -160,12 +160,11 @@ function sponsorshipDetailsFromFill(
 		numberValue(tx.chainId) ??
 		numberValue(requestTx?.chainId) ??
 		fallbackChainId
-	const envelope = TxEnvelopeTempo.from({
-		...requestTx,
-		...tx,
+	const envelope = buildFeePayerEnvelope({
 		chainId,
-		calls: tx.calls ?? requestTx?.calls ?? callsFromLegacyRequest(requestTx),
-	} as never)
+		requestTx,
+		tx,
+	})
 
 	return {
 		chainId,
@@ -174,6 +173,48 @@ function sponsorshipDetailsFromFill(
 		}),
 		feePayerSignature: tx.feePayerSignature,
 	}
+}
+
+function buildFeePayerEnvelope(options: {
+	chainId: number
+	requestTx: Record<string, unknown> | undefined
+	tx: Record<string, unknown>
+}) {
+	const merged = { ...options.requestTx, ...options.tx }
+	const transaction = { ...merged }
+	delete transaction.data
+	delete transaction.input
+	delete transaction.to
+	delete transaction.value
+
+	return TxEnvelopeTempo.from(
+		Transaction.fromRpc({
+			...transaction,
+			calls: mergeCalls(options.requestTx, options.tx),
+			chainId: Hex.fromNumber(options.chainId),
+			nonceKey: emptyHexAsUndefined(transaction.nonceKey),
+			type: '0x76',
+			validAfter: emptyHexAsUndefined(transaction.validAfter),
+			validBefore: emptyHexAsUndefined(transaction.validBefore),
+		} as never) as never,
+	)
+}
+
+function mergeCalls(
+	requestTx: Record<string, unknown> | undefined,
+	tx: Record<string, unknown>,
+) {
+	const fallbackCalls =
+		recordArrayValue(requestTx?.calls) ??
+		recordArrayValue(callsFromLegacyRequest(requestTx))
+	const responseCalls = recordArrayValue(tx.calls)
+
+	if (!responseCalls) return fallbackCalls
+
+	return responseCalls.map((call, index) => ({
+		...fallbackCalls?.[index],
+		...call,
+	}))
 }
 
 function parseRpcRequest(value: unknown): JsonRpcRequest | null {
@@ -238,9 +279,18 @@ function numberValue(value: unknown): number | undefined {
 	if (typeof value === 'bigint') return Number(value)
 	if (typeof value !== 'string') return undefined
 
-	const parsed = value.startsWith('0x') ? Number(BigInt(value)) : Number(value)
+	const parsed =
+		value === '0x'
+			? 0
+			: Hex.validate(value)
+				? Hex.toNumber(value)
+				: Number(value)
 	if (!Number.isFinite(parsed)) return undefined
 	return parsed
+}
+
+function emptyHexAsUndefined(value: unknown): unknown {
+	return value === '0x' ? undefined : value
 }
 
 function stringValue(value: unknown): string | undefined {
@@ -251,4 +301,14 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
 	if (!value || typeof value !== 'object' || Array.isArray(value))
 		return undefined
 	return value as Record<string, unknown>
+}
+
+function recordArrayValue(
+	value: unknown,
+): Array<Record<string, unknown>> | undefined {
+	if (!Array.isArray(value)) return undefined
+	return value.flatMap((item) => {
+		const record = asRecord(item)
+		return record ? [record] : []
+	})
 }

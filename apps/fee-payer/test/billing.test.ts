@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { TxEnvelopeTempo } from 'ox/tempo'
 import {
 	buildSponsorshipIntentMessage,
 	hashApiKey,
@@ -142,6 +143,55 @@ describe('billing sponsorship intents', () => {
 		expect(differentPayload?.event.idempotencyKey).not.toBe(
 			first?.event.idempotencyKey,
 		)
+	})
+
+	it('normalizes fill RPC quantities before hashing the fee-payer payload', () => {
+		const chainId = `0x${tempoChain.id.toString(16)}`
+		const nonceKey =
+			'0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+		const validBefore = '0x6a39d553'
+		const message = buildSponsorshipIntentMessage({
+			apiKey,
+			fallbackChainId: tempoChain.id,
+			requestBody: fillRequest({
+				chainId,
+				calls: [{ to: target, value: '0x', data: '0x' }],
+				nonce: '0x0',
+				nonceKey,
+				type: '0x76',
+				validBefore,
+			}),
+			responseBody: fillResponse({
+				chainId,
+				calls: [{ to: target, data: '0x' }],
+				gas: '0xd492',
+				maxFeePerGas: '0x4a817c800',
+				maxPriorityFeePerGas: '0x0',
+				nonce: '0x0',
+				validBefore,
+			}),
+			signedAt,
+			sponsorAddress,
+		})
+		const equivalentMinedEnvelope = TxEnvelopeTempo.from({
+			accessList: [],
+			authorizationList: [],
+			calls: [{ to: target, value: 0n, data: '0x' }],
+			chainId: tempoChain.id,
+			feeToken,
+			gas: 0xd492n,
+			maxFeePerGas: 0x4a817c800n,
+			maxPriorityFeePerGas: 0n,
+			nonce: 0n,
+			nonceKey: BigInt(nonceKey),
+			validBefore: Number(BigInt(validBefore)),
+		})
+		const expectedHash = TxEnvelopeTempo.getFeePayerSignPayload(
+			equivalentMinedEnvelope,
+			{ sender },
+		)
+
+		expect(message?.event.feePayerPayloadHash).toBe(expectedHash)
 	})
 
 	it('does not build a message for failed or unsigned responses', () => {
