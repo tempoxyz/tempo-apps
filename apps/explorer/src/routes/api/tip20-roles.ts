@@ -70,20 +70,29 @@ export const Route = createFileRoute('/api/tip20-roles')({
 					)
 					const chainIdParam = url.searchParams.get('chainId')
 					const config = getWagmiConfig()
-					const chainId = chainIdParam
-						? Number(chainIdParam)
-						: getChainId(config)
+					let chainId = getChainId(config)
+					if (chainIdParam !== null) {
+						const parsed = Number(chainIdParam)
+						if (!Number.isInteger(parsed) || parsed <= 0)
+							return Response.json(
+								{ error: 'Invalid chainId' },
+								{ status: 400 },
+							)
+						chainId = parsed
+					}
 
-					// Fetch TIP-20 config via server-side RPC (authenticated)
+					// Fetch TIP-20 config via server-side RPC (authenticated). Pin every
+					// read to `chainId` so the config and the role logs below
+					// (tempoQueryBuilder(chainId)) come from the same chain.
 					const contractResults = await readContracts(config, {
 						contracts: [
-							{ address, abi: Abis.tip20, functionName: 'supplyCap' },
-							{ address, abi: Abis.tip20, functionName: 'currency' },
-							{ address, abi: Abis.tip20, functionName: 'transferPolicyId' },
-							{ address, abi: Abis.tip20, functionName: 'paused' },
-							{ address, abi: Abis.tip20, functionName: 'decimals' },
-							{ address, abi: Abis.tip20, functionName: 'symbol' },
-							{ address, abi: Abis.tip20, functionName: 'totalSupply' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'supplyCap' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'currency' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'transferPolicyId' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'paused' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'decimals' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'symbol' },
+							{ chainId, address, abi: Abis.tip20, functionName: 'totalSupply' },
 						],
 					})
 
