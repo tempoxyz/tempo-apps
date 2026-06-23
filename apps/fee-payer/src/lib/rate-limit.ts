@@ -95,11 +95,16 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 				const apiKey = c.get('apiKey') as string | undefined
 				const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
 				if (apiKey && apiKeyRecord) {
-					if (apiKeyRecord.allowedDestinations.length > 0 && to) {
-						const dest = to.toLowerCase()
-						const allowed = apiKeyRecord.allowedDestinations.some(
-							(a) => a.toLowerCase() === dest,
-						)
+					if (apiKeyRecord.allowedDestinations.length > 0) {
+						// Fail closed: a key restricted to specific destinations must not
+						// sponsor a transaction whose destination cannot be determined
+						// (e.g. contract creation, or an envelope with no `to`).
+						const dest = to?.toLowerCase()
+						const allowed =
+							dest !== undefined &&
+							apiKeyRecord.allowedDestinations.some(
+								(a) => a.toLowerCase() === dest,
+							)
 						if (!allowed) {
 							return c.json(
 								{ error: 'Destination address not allowed for this API key' },
