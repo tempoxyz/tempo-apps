@@ -291,7 +291,14 @@ export const Route = createFileRoute('/api/address/$address')({
 							})
 					}
 
-					const nextOffset = offset + transactions.length
+					// Advance the cursor by the number of hashes consumed from the
+					// sorted page, not by how many tx rows came back. Some hashes
+					// originate from transfer/log sources that have no row in the
+					// `txs` table, so `transactions.length` can be smaller than the
+					// page size — using it would re-select the skipped hashes next
+					// page (duplicates) or, if a whole page is missing tx data,
+					// never advance at all.
+					const nextOffset = offset + finalHashes.length
 
 					return Response.json({
 						transactions,
