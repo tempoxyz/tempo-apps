@@ -13,6 +13,7 @@ import {
 	buildExplorerNetworkHref,
 	EXPLORER_NETWORK_OPTIONS,
 	getActiveExplorerNetworkOption,
+	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -229,13 +230,15 @@ export namespace Header {
 								<a
 									key={option.env}
 									href={buildExplorerNetworkHref(option.host, currentPath, {
-										fallbackToHome: isNotFoundPage,
+										fallbackToHome:
+											isNotFoundPage &&
+											!isExplorerNetworkPathPreservable(currentPath),
 									})}
 									role="menuitemradio"
 									aria-checked={isActive}
 									aria-current={isActive ? 'page' : undefined}
 									className={cx(
-										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[13px] font-medium text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
+										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
 										isActive && 'bg-surface text-primary',
 									)}
 									onClick={() => setIsOpen(false)}

@@ -18,7 +18,12 @@
 		"test": "vitest --run",
 		"test:watch": "vitest"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@cloudflare/codemode": "catalog:",
+		"@modelcontextprotocol/sdk": "catalog:",
+		"ai": "catalog:",
+		"zod": "catalog:"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/workers-types": "catalog:",

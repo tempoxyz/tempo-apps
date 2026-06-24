@@ -5,10 +5,12 @@ packages:
 
 catalog:
   '@biomejs/biome': ^2.4.10
+  '@cloudflare/codemode': ^0.4.1
   '@cloudflare/puppeteer': ^1.0.6
   '@cloudflare/vite-plugin': 1.30.3
   '@cloudflare/vitest-pool-workers': ^0.13.5
   '@cloudflare/workers-types': ^4.20260531.1
+  '@datadog/browser-rum-slim': ^7.2.0
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.460
   '@logtape/config': ^2.0.4
@@ -45,8 +47,10 @@ catalog:
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
   '@wagmi/core': ^3.4.8
+  '@modelcontextprotocol/sdk': 1.29.0
   accounts: ~0.14.9
   abitype: ^1.2.4
+  ai: 6.0.202
   animejs: ^4.3.6
   cloudflare-worker-metrics: ^1.4.0
   cva: ^1.0.0-beta.4

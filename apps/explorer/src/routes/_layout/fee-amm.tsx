@@ -188,7 +188,7 @@ function FeeAmmPage(): React.JSX.Element {
 														[
 															<span
 																key="supply"
-																className="text-secondary tabular-nums"
+																className="font-mono text-secondary tabular-nums"
 																title={PriceFormatter.format(pool.liquidityUsd)}
 															>
 																{PriceFormatter.format(pool.liquidityUsd, {
@@ -238,7 +238,7 @@ function renderTimestamp(
 		<FormattedTimestamp
 			timestamp={BigInt(timestamp)}
 			format={format}
-			className="text-secondary whitespace-nowrap"
+			className="font-mono text-secondary whitespace-nowrap"
 		/>
 	)
 }

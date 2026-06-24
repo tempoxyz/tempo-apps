@@ -109,6 +109,7 @@
 	--color-warning-background: light-dark(#fdf5c2, #252018);
 
 	--font-display: "Satoshi", ui-sans-serif, sans-serif;
+	--font-sans: var(--font-display);
 	--font-mono: "Geist Mono", ui-monospace, monospace;
 }
 

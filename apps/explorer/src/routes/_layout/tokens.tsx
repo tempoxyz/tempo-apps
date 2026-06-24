@@ -177,7 +177,7 @@ function TokensPage() {
 											<span key="currency" className="text-secondary">
 												{token.currency}
 											</span>,
-											<span key="holders" className="text-secondary">
+											<span key="holders" className="font-mono text-secondary">
 												{formatHoldersCount(token)}
 											</span>,
 											<Address
@@ -188,7 +188,7 @@ function TokensPage() {
 											token.createdAt == null ? (
 												<span
 													key="created"
-													className="text-secondary whitespace-nowrap"
+													className="font-mono text-secondary whitespace-nowrap"
 												>
 													-
 												</span>
@@ -197,7 +197,7 @@ function TokensPage() {
 													key="created"
 													timestamp={BigInt(token.createdAt)}
 													format={timeFormat}
-													className="text-secondary whitespace-nowrap"
+													className="font-mono text-secondary whitespace-nowrap"
 												/>
 											),
 										],

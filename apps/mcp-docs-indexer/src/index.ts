@@ -1,3 +1,4 @@
+import { DynamicWorkerExecutor } from '@cloudflare/codemode'
 import { env } from 'cloudflare:workers'
 import { syncSource } from './lib/ingest.js'
 import { log } from './lib/log.js'
@@ -14,10 +15,18 @@ let cachedSources: Source[] | undefined
 export default {
 	async fetch(req, env, ctx) {
 		const jsonRpcRequest = await parseJsonRpcRequest(req)
-		const response = await handleMcp(req, {
-			instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
-			sources: sourcesFor(env.SOURCES),
-		})
+		let response: Response | undefined
+		try {
+			response = await handleMcp(req, {
+				instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
+				sources: sourcesFor(env.SOURCES),
+				executor: new DynamicWorkerExecutor({ loader: env.LOADER }),
+			})
+		} catch (error) {
+			log.error('mcp.local_failed', {
+				error: error instanceof Error ? error.message : String(error),
+			})
+		}
 		if (response) {
 			captureMcpAnalytics(req, jsonRpcRequest, response, env, ctx)
 			return response

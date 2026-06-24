@@ -1,0 +1,60 @@
+# Tempo Explorer
+
+> The official block explorer for the Tempo blockchain. View blocks, transactions, receipts, addresses, contracts, tokens, Fee AMM pools, and network activity.
+
+For a full reference, see [`/llms-full.txt`](/llms-full.txt).
+
+## What You Can Do
+
+- Search by address, transaction hash, block number, or token.
+- Inspect transaction receipts, events, balance changes, calls, traces, and raw transaction data.
+- Browse recent blocks and inspect a block's transactions.
+- Inspect addresses, balances, transaction history, contracts, and token activity.
+- View TIP20 token metadata, transfers, and holders.
+- Read verified contracts and interact with contract functions when an ABI is available.
+- Browse Fee AMM pools, reserves, liquidity, and routes.
+- Export address transactions and balances as CSV.
+
+## URL Templates
+
+- Home/search: `/`
+- Search API: `/api/search?q={query}`
+- Address: `/address/{address}`
+  - Tabs: `?tab=transactions`, `?tab=holdings`, `?tab=transfers`, `?tab=holders`, `?tab=token`, `?tab=contract`, `?tab=interact`
+  - Filters: `?status=success|reverted`, `?period=24h|7d`, `?dir=sent|received`
+- Token: `/token/{address}` redirects to `/address/{address}?tab=transfers`
+- Transaction: `/tx/{hash}`
+  - Tabs: `?tab=overview`, `?tab=balances`, `?tab=calls`, `?tab=events`, `?tab=trace`, `?tab=raw`
+- Receipt: `/receipt/{hash}`
+- Blocks list: `/blocks`
+  - Pagination: `?from={blockNumber}`
+  - Live mode: `?live=true|false`
+- Block detail: `/block/{numberOrHash}`
+- Latest block: `/block/latest`
+- Block countdown: `/block/countdown/{targetBlock}`
+- Tokens list: `/tokens`
+- Fee AMM: `/fee-amm`
+
+## Networks
+
+Tempo Explorer supports separate deployments for mainnet, testnet, devnet, and nextfork. Use the network switcher in the header when available.
+
+## Example Queries
+
+| User question | Explorer URL |
+| --- | --- |
+| Show address `0xabc...` | `/address/0xabc...` |
+| Show this transaction hash | `/tx/{hash}` |
+| Show the receipt | `/receipt/{hash}` |
+| Show block 12345 | `/block/12345` |
+| Show latest blocks | `/blocks` |
+| Show all tokens | `/tokens` |
+| Show Fee AMM pools | `/fee-amm` |
+| Show token holders | `/address/{tokenAddress}?tab=holders` |
+| Read a contract | `/address/{contractAddress}?tab=contract` |
+| Interact with a contract | `/address/{contractAddress}?tab=interact` |
+
+## Public APIs
+
+- Search: `/api/search?q={query}`
+- Health: `/api/health`
