@@ -13,6 +13,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  * primary source of truth for everything else.
  */
 const CLIENT_AND_BINDING_VARS = [
+	'DATADOG_APPLICATION_ID',
+	'DATADOG_CLIENT_TOKEN',
+	'DATADOG_SITE',
 	'SENTRY_DSN',
 	'SENTRY_TRACES_SAMPLE_RATE',
 	'VITE_CONTRACT_VERIFICATION_API_BASE_URL',
