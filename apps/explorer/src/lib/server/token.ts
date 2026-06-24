@@ -86,12 +86,12 @@ export function resolveTotal(options: {
 	exhausted: boolean
 }): { total: number; totalCapped: boolean } {
 	const { exactCount, exactCountCapped, page, limit, rows, exhausted } = options
-	const maxNavigableRows = Math.floor((COUNT_CAP - 1) / limit) * limit
+	const maxNavigableRows = Math.floor(COUNT_CAP / limit) * limit
 	if (exactCount !== undefined) {
 		const totalCapped =
 			Boolean(exactCountCapped) || exactCount > maxNavigableRows
 		return {
-			total: totalCapped ? COUNT_CAP : exactCount,
+			total: totalCapped ? maxNavigableRows : exactCount,
 			totalCapped,
 		}
 	}
@@ -100,7 +100,7 @@ export function resolveTotal(options: {
 			total: Math.min((page - 1) * limit + rows, maxNavigableRows),
 			totalCapped: false,
 		}
-	return { total: COUNT_CAP, totalCapped: true }
+	return { total: maxNavigableRows, totalCapped: true }
 }
 
 const FetchTokenHoldersInputSchema = z.object({
