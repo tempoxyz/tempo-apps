@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
-import { serverEnv } from '#lib/server/env'
+import { serverEnv, tempoApiUrl } from '#lib/server/env'
 import { getTempoChain } from '#wagmi.config.ts'
 
 /**
@@ -17,8 +17,7 @@ export const Route = createFileRoute('/api/token/logo/$address')({
 				const address = params.address.toLowerCase()
 
 				const { id: chainId } = getTempoChain()
-				const base = serverEnv.TEMPO_API_URL.replace(/\/$/, '')
-				const url = `${base}/v1/tokens/${address}/logo?chainId=${chainId}`
+				const url = `${tempoApiUrl}/v1/tokens/${address}/logo?chainId=${chainId}`
 
 				const upstream = await fetch(url, {
 					headers: serverEnv.TEMPO_API_KEY

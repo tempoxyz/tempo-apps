@@ -1,8 +1,8 @@
 import { QB, Tidx } from 'tidx.ts'
-import { serverEnv } from './env'
+import { tempoApiUrl } from './env'
 
 const tidx = Tidx.create({
-	baseUrl: `${serverEnv.TEMPO_API_URL.replace(/\/$/, '')}/v1/indexer`,
+	baseUrl: `${tempoApiUrl}/v1/indexer`,
 })
 
 tidx.on('response', (res) => {

@@ -6,7 +6,7 @@ import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoMainnet, tempoNextfork, tempoTestnet } from './lib/chains'
 import { getTempoEnv } from './lib/env'
-import { serverEnv } from './lib/server/env'
+import { serverEnv, tempoApiUrl } from './lib/server/env'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -86,10 +86,9 @@ const getTempoTransport = createIsomorphicFn()
 			apiKey &&
 			(chain.id === tempoMainnet.id || chain.id === tempoTestnet.id)
 		)
-			return http(
-				`${serverEnv.TEMPO_API_URL.replace(/\/$/, '')}/v1/rpc?chainId=${chain.id}`,
-				{ fetchOptions: { headers: { 'tempo-api-key': apiKey } } },
-			)
+			return http(`${tempoApiUrl}/v1/rpc?chainId=${chain.id}`, {
+				fetchOptions: { headers: { 'tempo-api-key': apiKey } },
+			})
 
 		const proxy = getRpcProxyUrl()
 		const fallbackUrls = getFallbackUrls()

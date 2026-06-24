@@ -6,8 +6,5 @@ export default defineConfig({
 	},
 	test: {
 		include: ['test/**/*.node.test.ts'],
-		env: {
-			TEMPO_API_URL: 'https://tempo-api.test',
-		},
 	},
 })

@@ -1,6 +1,6 @@
 import type * as cadent from 'cadent'
 import { hc } from 'hono/client'
-import { serverEnv } from './env.ts'
+import { serverEnv, tempoApiUrl } from './env.ts'
 
 /**
  * Typed client for the Tempo API. Server-side only.
@@ -16,7 +16,7 @@ import { serverEnv } from './env.ts'
  * Anonymous requests are rate-limited; deployments set `TEMPO_API_KEY`
  * (scopes: `data:read`, `indexer:query`).
  */
-export const api = hc<cadent.App.App>(serverEnv.TEMPO_API_URL, {
+export const api = hc<cadent.App.App>(tempoApiUrl, {
 	headers: serverEnv.TEMPO_API_KEY
 		? { 'tempo-api-key': serverEnv.TEMPO_API_KEY }
 		: undefined,

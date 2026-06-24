@@ -14,9 +14,6 @@ export default defineConfig({
 	plugins: [
 		cloudflareTest({
 			miniflare: {
-				bindings: {
-					TEMPO_API_URL: 'https://tempo-api.test',
-				},
 				compatibilityFlags: [
 					...wranglerJSON.compatibility_flags,
 					'enable_nodejs_fs_module',

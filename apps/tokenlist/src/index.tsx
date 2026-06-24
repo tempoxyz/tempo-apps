@@ -12,6 +12,9 @@ app.use('*', cors())
 const staticAssetBindingError =
 	'Static assets binding "ASSETS" is not configured.'
 
+/** Base URL for the Tempo API. */
+const tempoApiUrl = 'https://api.tempo.xyz'
+
 type TokenInfo = {
 	chainId: number
 	address: string
@@ -37,7 +40,7 @@ async function fetchTokens(
 	env: Cloudflare.Env,
 	chainId: number,
 ): Promise<TokenInfo[] | null> {
-	const url = new URL('/v1/tokens', env.TEMPO_API_URL)
+	const url = new URL('/v1/tokens', tempoApiUrl)
 	url.searchParams.set('chainId', String(chainId))
 	url.searchParams.set('verified', 'true')
 	url.searchParams.set('limit', String(200))
