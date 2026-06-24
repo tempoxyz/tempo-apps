@@ -86,7 +86,7 @@ const getTempoTransport = createIsomorphicFn()
 			apiKey &&
 			(chain.id === tempoMainnet.id || chain.id === tempoTestnet.id)
 		)
-			return http(`${tempoApiUrl}/v1/rpc?chainId=${chain.id}`, {
+			return http(`${tempoApiUrl}/rpc?chainId=${chain.id}`, {
 				fetchOptions: { headers: { 'tempo-api-key': apiKey } },
 			})
 
