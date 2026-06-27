@@ -7,6 +7,10 @@ import { Transaction } from 'viem/tempo'
 import * as z from 'zod/mini'
 import type { ApiKeyRecord } from './api-keys.js'
 import { checkBudget, recordSpend } from './api-key-budget.js'
+import {
+	isTip20ChannelOpen,
+	reserveChannelOpenSponsorship,
+} from './channel-open-limit.js'
 
 /**
  * Middleware that rate limits requests based on the transaction's `from` address.
@@ -64,7 +68,9 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 				const transaction = Transaction.deserialize(serialized) as {
 					from?: string
 					to?: string
-					calls?: Array<{ to?: string }>
+					input?: string
+					data?: string
+					calls?: Array<{ to?: string; input?: string; data?: string }>
 					gas?: bigint
 					maxFeePerGas?: bigint
 				}
@@ -82,6 +88,8 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 				const { success } = await limiter.limit({ key: from })
 				if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
+
+				const isChannelOpen = isTip20ChannelOpen(transaction)
 
 				// Expose an upper-bound fee estimate for analytics. This is
 				// `gasLimit * maxFeePerGas` (the user's authorized ceiling),
@@ -122,6 +130,18 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 						// Record spend after request completes successfully.
 						c.executionCtx.waitUntil(
 							recordSpend(apiKey, transaction.gas, transaction.maxFeePerGas),
+						)
+					}
+				}
+
+				if (isChannelOpen) {
+					const reservation = await reserveChannelOpenSponsorship(from)
+					if (!reservation.allowed) {
+						return c.json(
+							{
+								error: `Daily sponsored channel open limit exceeded (${reservation.limit}/day)`,
+							},
+							429,
 						)
 					}
 				}
