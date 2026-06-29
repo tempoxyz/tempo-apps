@@ -84,7 +84,7 @@ export function ContractTabContent(props: {
 					<span className="whitespace-nowrap">TIP-20 Native Precompile</span>
 					<span className="text-tertiary">·</span>
 					<a
-						href="https://docs.tempo.xyz/protocol/tip20/spec#tip20-1"
+						href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-accent hover:underline whitespace-nowrap"
