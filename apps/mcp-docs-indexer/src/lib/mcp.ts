@@ -290,16 +290,7 @@ export async function handleMcp(
 				'search complete',
 			)
 		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err)
-			return jsonRpc(req, body.id, {
-				content: [
-					{
-						type: 'text',
-						text: JSON.stringify({ success: false, error: message }),
-					},
-				],
-				isError: true,
-			})
+			return toolErrorResponse(req, body.id, err)
 		}
 	})
 }
@@ -460,16 +451,7 @@ async function handleFindPages(
 			'page candidates found',
 		)
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err)
-		return jsonRpc(req, body.id, {
-			content: [
-				{
-					type: 'text',
-					text: JSON.stringify({ success: false, error: message }),
-				},
-			],
-			isError: true,
-		})
+		return toolErrorResponse(req, body.id, err)
 	}
 }
 
@@ -508,16 +490,7 @@ async function handleReadPage(
 			'page read complete',
 		)
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err)
-		return jsonRpc(req, body.id, {
-			content: [
-				{
-					type: 'text',
-					text: JSON.stringify({ success: false, error: message }),
-				},
-			],
-			isError: true,
-		})
+		return toolErrorResponse(req, body.id, err)
 	}
 }
 
@@ -1363,6 +1336,23 @@ function toolResult(
 				text: JSON.stringify({ success: true, result }),
 			},
 		],
+	})
+}
+
+function toolErrorResponse(
+	req: Request,
+	id: JsonRpcRequest['id'],
+	err: unknown,
+): Response {
+	const message = err instanceof Error ? err.message : String(err)
+	return jsonRpc(req, id, {
+		content: [
+			{
+				type: 'text',
+				text: JSON.stringify({ success: false, error: message }),
+			},
+		],
+		isError: true,
 	})
 }
 
