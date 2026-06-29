@@ -1,3 +1,5 @@
+import { recordProxyFallback } from './metrics.js'
+
 /**
  * Transparent proxy from this worker (mcp.tempo.xyz) to the Cloudflare AI
  * Search MCP endpoint. AI Search assigns each instance an opaque hostname
@@ -13,6 +15,7 @@ export async function proxyMcp(
 	req: Request,
 	upstreamBase: string,
 ): Promise<Response> {
+	const startedAt = performance.now()
 	const incoming = new URL(req.url)
 	const upstream = new URL(upstreamBase)
 	// Keep upstream base path if it has one (e.g. ".../mcp"); otherwise
@@ -45,5 +48,15 @@ export async function proxyMcp(
 		init.body = req.body
 	}
 
-	return fetch(target.toString(), init)
+	try {
+		const response = await fetch(target.toString(), init)
+		recordProxyFallback(
+			response.status,
+			Math.round(performance.now() - startedAt),
+		)
+		return response
+	} catch (error) {
+		recordProxyFallback(500, Math.round(performance.now() - startedAt))
+		throw error
+	}
 }

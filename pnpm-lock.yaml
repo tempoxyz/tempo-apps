@@ -702,6 +702,9 @@ importers:
       ai:
         specifier: 'catalog:'
         version: 6.0.202(zod@4.3.6)
+      cloudflare-worker-metrics:
+        specifier: 'catalog:'
+        version: 1.4.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
