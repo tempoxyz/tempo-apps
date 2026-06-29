@@ -10,6 +10,11 @@ import {
 	type Tool,
 } from '@modelcontextprotocol/sdk/types.js'
 import { toMarkdownUrl } from './llms-txt.js'
+import {
+	recordAiSearchRequest,
+	recordJsonRpcError,
+	recordToolCall,
+} from './metrics.js'
 import type { Source } from './sources.js'
 
 type JsonRpcRequest = {
@@ -201,11 +206,11 @@ export async function handleMcp(
 	if (body.method === 'resources/read') {
 		const uri = (body.params as { uri?: unknown } | undefined)?.uri
 		if (typeof uri !== 'string') {
-			return jsonRpcError(req, body.id, -32602, 'uri must be a string')
+			return jsonRpcErrorFor(req, body, -32602, 'uri must be a string')
 		}
 		const contents = await readResource(uri, context.sources ?? [])
 		if (!contents) {
-			return jsonRpcError(req, body.id, -32002, `resource not found: ${uri}`)
+			return jsonRpcErrorFor(req, body, -32002, `resource not found: ${uri}`)
 		}
 		return jsonRpc(req, body.id, { contents })
 	}
@@ -214,74 +219,89 @@ export async function handleMcp(
 		return undefined
 	}
 	if (body.params?.name === CODE_TOOL_NAME) {
-		const executor = context.executor
-		if (!executor) {
-			return jsonRpcError(req, body.id, -32601, 'code tool is not available')
-		}
-		const codeServer = await createCodeServer(
-			toolSchemas(context.sources ?? []),
-			{ ...context, executor },
-		)
-		const result = await callServerTool(codeServer, {
-			name: CODE_TOOL_NAME,
-			arguments: body.params.arguments as Record<string, unknown> | undefined,
+		return trackToolCall(CODE_TOOL_NAME, async () => {
+			const executor = context.executor
+			if (!executor) {
+				return jsonRpcErrorFor(req, body, -32601, 'code tool is not available')
+			}
+			const codeServer = await createCodeServer(
+				toolSchemas(context.sources ?? []),
+				{ ...context, executor },
+			)
+			const result = await callServerTool(codeServer, {
+				name: CODE_TOOL_NAME,
+				arguments: body.params?.arguments as
+					| Record<string, unknown>
+					| undefined,
+			})
+			return jsonRpc(req, body.id, result)
 		})
-		return jsonRpc(req, body.id, result)
 	}
 	if (body.params?.name === 'read_page') {
-		return handleReadPage(req, body, context.sources ?? [])
+		return trackToolCall('read_page', () =>
+			handleReadPage(req, body, context.sources ?? []),
+		)
 	}
 	if (body.params?.name === 'find_pages') {
-		return handleFindPages(req, body, context.sources ?? [])
+		return trackToolCall('find_pages', () =>
+			handleFindPages(req, body, context.sources ?? []),
+		)
 	}
 	if (body.params?.name !== 'search') return undefined
+	const args = body.params.arguments
 
-	const query = body.params.arguments?.query
-	if (typeof query !== 'string' || query.trim().length === 0) {
-		return jsonRpcError(
-			req,
-			body.id,
-			-32602,
-			'query must be a non-empty string',
-		)
-	}
+	return trackToolCall('search', async () => {
+		const query = args?.query
+		if (typeof query !== 'string' || query.trim().length === 0) {
+			return jsonRpcErrorFor(
+				req,
+				body,
+				-32602,
+				'query must be a non-empty string',
+			)
+		}
 
-	const sourceError = validateSources(
-		body.params.arguments,
-		context.sources ?? [],
-	)
-	if (sourceError) {
-		return jsonRpcError(req, body.id, -32602, sourceError)
-	}
+		const sourceError = validateSources(args, context.sources ?? [])
+		if (sourceError) return jsonRpcErrorFor(req, body, -32602, sourceError)
 
-	try {
-		const args = body.params.arguments
-		const effectiveArgs = argsWithInferredSource(
-			query.trim(),
-			args,
-			context.sources ?? [],
-		)
-		const result = await cachedSearch(
-			query.trim(),
-			effectiveArgs,
-			context.instance,
-			context.sources ?? [],
-		)
-		const formatted = formatResult(result, effectiveArgs, context.sources ?? [])
+		try {
+			const effectiveArgs = argsWithInferredSource(
+				query.trim(),
+				args,
+				context.sources ?? [],
+			)
+			const result = await cachedSearch(
+				query.trim(),
+				effectiveArgs,
+				context.instance,
+				context.sources ?? [],
+			)
+			const formatted = formatResult(
+				result,
+				effectiveArgs,
+				context.sources ?? [],
+			)
 
-		return toolResult(req, body.id, effectiveArgs, formatted, 'search complete')
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err)
-		return jsonRpc(req, body.id, {
-			content: [
-				{
-					type: 'text',
-					text: JSON.stringify({ success: false, error: message }),
-				},
-			],
-			isError: true,
-		})
-	}
+			return toolResult(
+				req,
+				body.id,
+				effectiveArgs,
+				formatted,
+				'search complete',
+			)
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			return jsonRpc(req, body.id, {
+				content: [
+					{
+						type: 'text',
+						text: JSON.stringify({ success: false, error: message }),
+					},
+				],
+				isError: true,
+			})
+		}
+	})
 }
 
 async function createCodeServer(
@@ -407,13 +427,13 @@ async function handleFindPages(
 	const sourceId = typeof args?.source === 'string' ? args.source.trim() : ''
 	const source = sources.find((entry) => entry.id === sourceId)
 	if (!source) {
-		return jsonRpcError(req, body.id, -32602, `unknown source: ${sourceId}`)
+		return jsonRpcErrorFor(req, body, -32602, `unknown source: ${sourceId}`)
 	}
 	const query = typeof args?.query === 'string' ? args.query.trim() : ''
 	if (!query) {
-		return jsonRpcError(
+		return jsonRpcErrorFor(
 			req,
-			body.id,
+			body,
 			-32602,
 			'query must be a non-empty string',
 		)
@@ -462,12 +482,12 @@ async function handleReadPage(
 	const sourceId = typeof args?.source === 'string' ? args.source.trim() : ''
 	const source = sources.find((entry) => entry.id === sourceId)
 	if (!source) {
-		return jsonRpcError(req, body.id, -32602, `unknown source: ${sourceId}`)
+		return jsonRpcErrorFor(req, body, -32602, `unknown source: ${sourceId}`)
 	}
 
 	const pageUrl = resolvePageUrl(args, source)
 	if (!pageUrl) {
-		return jsonRpcError(req, body.id, -32602, 'path or url must be provided')
+		return jsonRpcErrorFor(req, body, -32602, 'path or url must be provided')
 	}
 
 	try {
@@ -603,14 +623,20 @@ async function runSearch(
 ): Promise<AiSearchSearchResponse> {
 	const wantedSources = selectedSources(args)
 	const skipSourceFilter = shouldSkipSourceFilter(wantedSources)
-	let result = await instance.search({
-		query,
-		ai_search_options: normalizeOptions(args, {
-			includeSourceFilter: !skipSourceFilter,
-			maxResults: upstreamMaxResultsFor(args),
-			...(skipSourceFilter ? { maxResults: fallbackMaxResultsFor(args) } : {}),
-		}),
-	})
+	let result = await searchWithMetrics(
+		instance,
+		{
+			query,
+			ai_search_options: normalizeOptions(args, {
+				includeSourceFilter: !skipSourceFilter,
+				maxResults: upstreamMaxResultsFor(args),
+				...(skipSourceFilter
+					? { maxResults: fallbackMaxResultsFor(args) }
+					: {}),
+			}),
+		},
+		{ path: 'primary', sourceCount: wantedSources.length },
+	)
 	if (skipSourceFilter) {
 		result = filterSourceChunks(
 			result,
@@ -619,13 +645,17 @@ async function runSearch(
 		)
 	} else if (result.chunks.length === 0 && wantedSources.length > 0) {
 		rememberStaleSourceFilters(wantedSources)
-		const fallback = await instance.search({
-			query,
-			ai_search_options: normalizeOptions(args, {
-				includeSourceFilter: false,
-				maxResults: fallbackMaxResultsFor(args),
-			}),
-		})
+		const fallback = await searchWithMetrics(
+			instance,
+			{
+				query,
+				ai_search_options: normalizeOptions(args, {
+					includeSourceFilter: false,
+					maxResults: fallbackMaxResultsFor(args),
+				}),
+			},
+			{ path: 'unfiltered_fallback', sourceCount: wantedSources.length },
+		)
 		const filtered = filterSourceChunks(
 			fallback,
 			wantedSources,
@@ -642,6 +672,22 @@ async function runSearch(
 			result,
 		)
 	}
+	return result
+}
+
+async function searchWithMetrics(
+	instance: AiSearchInstance,
+	request: AiSearchSearchRequest,
+	tags: { path: string; sourceCount: number },
+): Promise<AiSearchSearchResponse> {
+	const startedAt = performance.now()
+	const result = await instance.search(request)
+	recordAiSearchRequest({
+		chunks: result.chunks.length,
+		durationMs: Math.round(performance.now() - startedAt),
+		path: tags.path,
+		sourceCount: tags.sourceCount,
+	})
 	return result
 }
 
@@ -1320,12 +1366,26 @@ function toolResult(
 	})
 }
 
+function jsonRpcErrorFor(
+	req: Request,
+	body: JsonRpcRequest,
+	code: number,
+	message: string,
+): Response {
+	return jsonRpcError(req, body.id, code, message, {
+		method: body.method,
+		toolName: body.params?.name,
+	})
+}
+
 function jsonRpcError(
 	req: Request,
 	id: JsonRpcRequest['id'],
 	code: number,
 	message: string,
+	metrics?: { method?: unknown; toolName?: unknown },
 ): Response {
+	recordJsonRpcError(metrics?.method, code, metrics?.toolName)
 	const payload = JSON.stringify({
 		jsonrpc: '2.0',
 		id: id ?? null,
@@ -1343,6 +1403,44 @@ function mcpResponse(req: Request, payload: string): Response {
 	return new Response(payload, {
 		headers: { 'content-type': 'application/json' },
 	})
+}
+
+async function trackToolCall(
+	toolName: string,
+	handler: () => Promise<Response>,
+): Promise<Response> {
+	const startedAt = performance.now()
+	try {
+		const response = await handler()
+		recordToolCall(
+			toolName,
+			(await responseIsError(response)) ? 'error' : 'success',
+			Math.round(performance.now() - startedAt),
+		)
+		return response
+	} catch (error) {
+		recordToolCall(toolName, 'error', Math.round(performance.now() - startedAt))
+		throw error
+	}
+}
+
+async function responseIsError(response: Response): Promise<boolean> {
+	if (!response.ok) return true
+	try {
+		const text = await response.clone().text()
+		const payload = JSON.parse(sseData(text) ?? text) as {
+			error?: unknown
+			result?: { isError?: unknown }
+		}
+		return Boolean(payload.error) || payload.result?.isError === true
+	} catch {
+		return false
+	}
+}
+
+function sseData(text: string): string | undefined {
+	const line = text.split('\n').find((entry) => entry.startsWith('data: '))
+	return line?.slice('data: '.length)
 }
 
 function toolSchemas(sources: Source[]): Tool[] {

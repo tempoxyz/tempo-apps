@@ -290,6 +290,30 @@ pnpm --filter mcp-docs-indexer tail --format json
 Query historical runs in the Cloudflare dashboard → Workers → `mcp-docs-indexer` →
 Logs, e.g. `$.event = "source.failed"` to surface broken sources.
 
+The Worker also emits `cloudflare-worker-metrics` lines for the existing
+Cloudflare Logpush → metrics exporter → Datadog path. Metric names use the
+`tempo_docs_mcp_` prefix and global tags `repository:tempo-apps`,
+`component:docs_mcp`, and `service:tempo-docs-mcp`.
+
+Important metrics:
+
+- `tempo_docs_mcp_health_ok`
+- `tempo_docs_mcp_health_check_ok`
+- `tempo_docs_mcp_http_request_count`
+- `tempo_docs_mcp_http_response_duration_ms`
+- `tempo_docs_mcp_http_error_count`
+- `tempo_docs_mcp_jsonrpc_error_count`
+- `tempo_docs_mcp_tool_call_count`
+- `tempo_docs_mcp_tool_duration_ms`
+- `tempo_docs_mcp_ai_search_request_count`
+- `tempo_docs_mcp_ai_search_duration_ms`
+- `tempo_docs_mcp_ai_search_empty_result_count`
+- `tempo_docs_mcp_proxy_fallback_count`
+- `tempo_docs_mcp_ingest_ok`
+- `tempo_docs_mcp_ingest_duration_ms`
+- `tempo_docs_mcp_source_sync_count`
+- `tempo_docs_mcp_source_pages_failed`
+
 ## Deploy
 
 ```bash

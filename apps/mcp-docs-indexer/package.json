@@ -22,6 +22,7 @@
 		"@cloudflare/codemode": "catalog:",
 		"@modelcontextprotocol/sdk": "catalog:",
 		"ai": "catalog:",
+		"cloudflare-worker-metrics": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
