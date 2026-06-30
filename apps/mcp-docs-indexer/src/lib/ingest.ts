@@ -219,6 +219,8 @@ async function syncPage(args: {
 			}
 		}
 
+		const title = extractTitle(content)
+
 		// Use upload() not uploadAndPoll(): we don't need to block on indexing
 		// completion (AI Search indexes in the background). Polling per page
 		// serializes with our 8-way concurrency and trips the internal poll
@@ -230,6 +232,7 @@ async function syncPage(args: {
 				...(source.description
 					? { source_description: source.description }
 					: {}),
+				...(title ? { title } : {}),
 			},
 		})
 		const etag = res.headers.get('etag') ?? undefined
@@ -254,6 +257,15 @@ async function sha256(content: string): Promise<string> {
 	return [...new Uint8Array(digest)]
 		.map((byte) => byte.toString(16).padStart(2, '0'))
 		.join('')
+}
+
+/** First markdown H1 (`# Title`) becomes the canonical page title. */
+function extractTitle(content: string): string | undefined {
+	for (const line of content.split('\n')) {
+		const match = /^#\s+(.+?)\s*$/.exec(line.trim())
+		if (match) return match[1]
+	}
+	return undefined
 }
 
 function preparePageContent(content: string): string {

@@ -10,5 +10,9 @@
 	{
 		"field_name": "source_description",
 		"data_type": "text"
+	},
+	{
+		"field_name": "title",
+		"data_type": "text"
 	}
 ]

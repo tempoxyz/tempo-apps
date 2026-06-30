@@ -185,6 +185,7 @@ describe('syncSource — page uploads', () => {
 			expect(u.metadata).toEqual({
 				source: 'viem',
 				url: expect.any(String),
+				title: expect.any(String),
 			})
 		}
 		expect(store.get('etag:viem')).toBe('W/"new"')
@@ -273,6 +274,40 @@ Copy page for AI`,
 		expect(uploads[0]?.content).toBe(
 			'# MCP Server\n\nExpose your docs and source code to AI assistants.',
 		)
+	})
+
+	it('sets title metadata from the first markdown H1', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [Foo](/foo)' })
+			}
+			return mockResponse({
+				body: '# Connect To Wallets\n\nBody text here.',
+			})
+		})
+
+		await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(uploads[0]?.metadata).toMatchObject({ title: 'Connect To Wallets' })
+	})
+
+	it('omits title metadata when the page has no H1', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [Foo](/foo)' })
+			}
+			return mockResponse({ body: '## Subheading only\n\nBody text.' })
+		})
+
+		await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(uploads[0]?.metadata).not.toHaveProperty('title')
 	})
 })
 
