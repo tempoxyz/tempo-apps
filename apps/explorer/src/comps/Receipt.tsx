@@ -39,6 +39,7 @@ export function Receipt(props: Receipt.Props) {
 		feeDisplay,
 		totalDisplay,
 		feeBreakdown = [],
+		exportSearch = '',
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const copyHash = useCopy()
@@ -63,7 +64,10 @@ export function Receipt(props: Receipt.Props) {
 			event.type !== 'nonce incremented',
 	)
 	const handleShare = async () => {
-		const url = new URL(`/receipt/${hash}`, window.location.origin).toString()
+		const url = new URL(
+			`/receipt/${hash}${exportSearch}`,
+			window.location.origin,
+		).toString()
 		if (navigator.share) {
 			try {
 				await navigator.share({ title: 'Tempo receipt', url })
@@ -399,9 +403,21 @@ export function Receipt(props: Receipt.Props) {
 							<ShareIcon className="size-[13px]" />
 							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
 						</button>
-						<Receipt.ExportLink hash={hash} format="pdf" />
-						<Receipt.ExportLink hash={hash} format="txt" />
-						<Receipt.ExportLink hash={hash} format="json" />
+						<Receipt.ExportLink
+							hash={hash}
+							format="pdf"
+							exportSearch={exportSearch}
+						/>
+						<Receipt.ExportLink
+							hash={hash}
+							format="txt"
+							exportSearch={exportSearch}
+						/>
+						<Receipt.ExportLink
+							hash={hash}
+							format="json"
+							exportSearch={exportSearch}
+						/>
 					</div>
 					<Link
 						to="/tx/$hash"
@@ -430,6 +446,7 @@ export namespace Receipt {
 		total?: number
 		totalDisplay?: string
 		feeBreakdown?: FeeBreakdownItem[]
+		exportSearch?: string | undefined
 	}
 
 	export interface FeeBreakdownItem {
@@ -442,7 +459,7 @@ export namespace Receipt {
 	}
 
 	export function ExportLink(props: ExportLink.Props): React.JSX.Element {
-		const { hash, format } = props
+		const { hash, format, exportSearch = '' } = props
 		const icon =
 			format === 'pdf' ? (
 				<DownloadIcon className="size-[13px]" />
@@ -454,7 +471,7 @@ export namespace Receipt {
 
 		return (
 			<a
-				href={`/receipt/${hash}.${format}`}
+				href={`/receipt/${hash}.${format}${exportSearch}`}
 				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border uppercase transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
 			>
 				{icon}
@@ -467,6 +484,7 @@ export namespace Receipt {
 		export interface Props {
 			hash: Hex.Hex
 			format: 'pdf' | 'txt' | 'json'
+			exportSearch?: string | undefined
 		}
 	}
 }

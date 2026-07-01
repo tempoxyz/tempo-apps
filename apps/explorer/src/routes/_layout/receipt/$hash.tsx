@@ -5,6 +5,7 @@ import {
 	createFileRoute,
 	notFound,
 	rootRouteId,
+	useLocation,
 	useNavigate,
 } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
@@ -413,6 +414,7 @@ function parseVoucherParam(
 function Component() {
 	const { hash } = Route.useParams()
 	const { voucher: voucherRaw } = Route.useSearch()
+	const location = useLocation()
 	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
@@ -541,6 +543,7 @@ function Component() {
 				timestamp={block.timestamp}
 				total={total}
 				totalDisplay={totalDisplay}
+				exportSearch={location.searchStr}
 			/>
 		</div>
 	)

@@ -183,18 +183,21 @@ function buildInsufficientBalanceSummary(params: {
 function findDeepestFailedTrace(trace: CallTrace | null): CallTrace | null {
 	if (!trace) return null
 
-	let failed: CallTrace | null =
-		trace.error || trace.revertReason ? trace : null
-	const stack = [...(trace.calls ?? [])]
+	let failed: { trace: CallTrace; depth: number } | null = null
+	const stack = [{ trace, depth: 0 }]
 
 	while (stack.length > 0) {
 		const current = stack.pop()
 		if (!current) continue
-		if (current.error || current.revertReason) failed = current
-		if (current.calls) stack.push(...current.calls)
+		if (current.trace.error || current.trace.revertReason) {
+			if (!failed || current.depth > failed.depth) failed = current
+		}
+		for (const call of current.trace.calls ?? []) {
+			stack.push({ trace: call, depth: current.depth + 1 })
+		}
 	}
 
-	return failed
+	return failed?.trace ?? null
 }
 
 function decodeTraceError(trace: CallTrace): DecodedTraceError | null {
