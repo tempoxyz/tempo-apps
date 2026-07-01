@@ -654,9 +654,15 @@ export namespace ExploreInput {
 				type="button"
 				role="option"
 				aria-selected={isSelected}
-				onClick={() => onSelect(suggestion)}
+				onMouseDown={(event) => {
+					event.preventDefault()
+					onSelect(suggestion)
+				}}
+				onClick={(event) => {
+					if (event.detail === 0) onSelect(suggestion)
+				}}
 				className={cx(
-					'w-full flex items-center justify-between gap-[10px]',
+					'w-full flex items-center justify-between gap-[10px] overflow-hidden',
 					'text-left cursor-pointer px-[12px] py-[6px] press-down hover:bg-base-alt/25',
 					isSelected && 'bg-base-alt/25',
 				)}
@@ -686,14 +692,14 @@ export namespace ExploreInput {
 				)}
 				{suggestion.type === 'address' && (
 					<>
-						<div className="flex flex-col min-w-0">
-							<div className="flex items-center gap-[8px] min-w-0">
+						<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+							<div className="flex min-w-0 max-w-full items-center gap-[8px]">
 								{suggestion.label ? (
-									<span className="text-[15px] font-medium text-base-content truncate">
+									<span className="min-w-0 truncate text-[15px] font-medium text-base-content">
 										{suggestion.label}
 									</span>
 								) : (
-									<span className="text-[13px] font-mono text-accent truncate">
+									<span className="block min-w-0 flex-1 overflow-hidden text-[13px] font-mono text-accent">
 										<Midcut value={suggestion.address} prefix="0x" />
 									</span>
 								)}
@@ -708,13 +714,13 @@ export namespace ExploreInput {
 								) : null}
 							</div>
 							{suggestion.label && (
-								<span className="text-[13px] font-mono text-accent truncate">
+								<span className="block min-w-0 max-w-full overflow-hidden text-[13px] font-mono text-accent">
 									<Midcut value={suggestion.address} prefix="0x" />
 								</span>
 							)}
 						</div>
 						{suggestion.description && (
-							<span className="hidden sm:block text-[12px] text-tertiary truncate max-w-[45%]">
+							<span className="hidden w-[44%] shrink-0 text-right text-[13px] leading-[1.25] text-secondary sm:block">
 								{suggestion.description}
 							</span>
 						)}
