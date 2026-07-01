@@ -35,6 +35,7 @@ import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { buildTxSummary, type TxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
 	groupRelatedEvents,
@@ -60,7 +61,11 @@ import {
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
+import BracesIcon from '~icons/lucide/braces'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
+import DownloadIcon from '~icons/lucide/download'
+import FileTextIcon from '~icons/lucide/file-text'
+import ReceiptIcon from '~icons/lucide/receipt'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -205,6 +210,16 @@ function RouteComponent() {
 				}>)
 			: undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
+	const summary = React.useMemo(
+		() =>
+			buildTxSummary({
+				receipt,
+				knownEvents,
+				trace: traceData.trace,
+				balanceChangesData,
+			}),
+		[receipt, knownEvents, traceData.trace, balanceChangesData],
+	)
 
 	const setActiveSection = (newIndex: number) => {
 		navigate({
@@ -307,13 +322,98 @@ function RouteComponent() {
 				to={receipt.to}
 				className="self-start"
 			/>
-			<Sections
-				mode={mode}
-				sections={sections}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-			/>
+			<div className="flex min-w-0 flex-col gap-[14px]">
+				<TxSummaryCard hash={receipt.transactionHash} summary={summary} />
+				<Sections
+					mode={mode}
+					sections={sections}
+					activeSection={activeSection}
+					onSectionChange={setActiveSection}
+				/>
+			</div>
 		</div>
+	)
+}
+
+function TxSummaryCard(props: {
+	hash: Hex.Hex
+	summary: TxSummary
+}): React.JSX.Element {
+	const { hash, summary } = props
+	const isFailure = summary.tone === 'failure'
+
+	return (
+		<section
+			className={cx(
+				'rounded-[10px] border px-[18px] py-[16px] flex flex-col gap-[12px] bg-card',
+				isFailure ? 'border-negative/40' : 'border-card-border',
+			)}
+		>
+			<div className="flex flex-col gap-[6px]">
+				<div
+					className={cx(
+						'text-[12px] font-medium uppercase',
+						isFailure ? 'text-negative' : 'text-tertiary',
+					)}
+				>
+					Summary
+				</div>
+				<div className="text-[16px] leading-[22px] font-medium text-primary">
+					{summary.headline}
+				</div>
+				{summary.details.length > 0 && (
+					<div className="flex flex-col gap-[4px] text-[13px] leading-[18px] text-secondary">
+						{summary.details.map((detail) => (
+							<div key={detail} className="break-words">
+								{detail}
+							</div>
+						))}
+					</div>
+				)}
+			</div>
+			<div className="flex flex-wrap gap-[8px] text-[12px]">
+				<Link
+					to="/receipt/$hash"
+					params={{ hash }}
+					className="inline-flex items-center gap-[6px] rounded-[8px] border border-base-border bg-base-plane-interactive px-[10px] py-[6px] text-secondary transition-colors press-down hover:bg-surface hover:text-primary"
+				>
+					<ReceiptIcon className="size-[13px]" />
+					<span>Receipt</span>
+				</Link>
+				<TxSummaryExportLink hash={hash} format="pdf" />
+				<TxSummaryExportLink hash={hash} format="txt" />
+				<TxSummaryExportLink hash={hash} format="json" />
+			</div>
+		</section>
+	)
+}
+
+type TxSummaryExportLinkProps = {
+	hash: Hex.Hex
+	format: 'pdf' | 'txt' | 'json'
+}
+
+function TxSummaryExportLink(
+	props: TxSummaryExportLinkProps,
+): React.JSX.Element {
+	const { hash, format } = props
+	const icon =
+		format === 'pdf' ? (
+			<DownloadIcon className="size-[13px]" />
+		) : format === 'txt' ? (
+			<FileTextIcon className="size-[13px]" />
+		) : (
+			<BracesIcon className="size-[13px]" />
+		)
+
+	return (
+		<a
+			href={`/receipt/${hash}.${format}`}
+			className="inline-flex items-center gap-[6px] rounded-[8px] border border-base-border bg-base-plane-interactive px-[10px] py-[6px] uppercase text-secondary transition-colors press-down hover:bg-surface hover:text-primary"
+		>
+			{icon}
+			<span>{format}</span>
+		</a>
 	)
 }
 

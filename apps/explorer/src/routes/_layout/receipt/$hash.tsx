@@ -24,6 +24,7 @@ import {
 } from '#lib/domain/known-events'
 import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
+import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
@@ -248,12 +249,28 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				if (type === 'application/json') {
 					if (!hash)
 						return Response.json({ error: 'Not found' }, { status: 404 })
-					const { lineItems, receipt } = await fetchReceiptData({
+					const data = await fetchReceiptData({
 						hash,
 						rpcUrl,
 					})
+					const summary = buildTxSummary({
+						receipt: data.receipt,
+						knownEvents: data.knownEvents,
+						trace: null,
+					})
 					return Response.json(
-						JSON.parse(Json.stringify({ lineItems, receipt })),
+						JSON.parse(
+							Json.stringify({
+								version: 1,
+								summary,
+								block: data.block,
+								transaction: data.transaction,
+								receipt: data.receipt,
+								knownEvents: data.knownEvents,
+								feeBreakdown: data.feeBreakdown,
+								lineItems: data.lineItems,
+							}),
+						),
 					)
 				}
 
@@ -575,7 +592,12 @@ namespace TextRenderer {
 	const indent = '  '
 
 	export function render(data: Awaited<ReturnType<typeof fetchReceiptData>>) {
-		const { lineItems, receipt, timestampFormatted } = data
+		const { knownEvents, lineItems, receipt, timestampFormatted } = data
+		const summary = buildTxSummary({
+			receipt,
+			knownEvents,
+			trace: null,
+		})
 
 		const lines: string[] = []
 
@@ -588,6 +610,7 @@ namespace TextRenderer {
 		lines.push(`Date: ${timestampFormatted}`)
 		lines.push(`Block: ${receipt.blockNumber.toString()}`)
 		lines.push(`Sender: ${receipt.from}`)
+		lines.push(`Summary: ${summary.headline}`)
 		lines.push('')
 		lines.push('-'.repeat(width))
 		lines.push('')
