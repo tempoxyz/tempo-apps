@@ -7,6 +7,12 @@ import {
 	getChainId,
 	getTransaction,
 } from 'wagmi/actions'
+import { getAccountTag } from '#lib/account'
+import {
+	contractRegistry,
+	getContractInfo,
+	type ContractInfo,
+} from '#lib/domain/contracts'
 import { isTip20Address } from '#lib/domain/tip20'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { getVerifiedTokens } from '#lib/server/verified-tokens'
@@ -24,6 +30,9 @@ export type SearchResult =
 			type: 'address'
 			address: Address.Address
 			isTip20: boolean
+			label?: string
+			description?: string
+			category?: ContractInfo['category']
 	  }
 	| {
 			type: 'transaction'
@@ -77,6 +86,80 @@ function mergeIndexedTokens(tokens: IndexedToken[]): IndexedToken[] {
 		tokensByAddress.set(token.address.toLowerCase(), token)
 	}
 	return [...tokensByAddress.values()]
+}
+
+function buildAddressResult(address: Address.Address): AddressSearchResult {
+	const contractInfo = getContractInfo(address)
+	const accountTag = getAccountTag(address)
+
+	return {
+		type: 'address',
+		address,
+		isTip20: isTip20Address(address),
+		label: accountTag?.label ?? contractInfo?.name,
+		description: contractInfo?.description,
+		category: contractInfo?.category,
+	}
+}
+
+function searchKnownContracts(query: string): AddressSearchResult[] {
+	const normalizedQuery = query.toLowerCase()
+	if (normalizedQuery.length < 2) return []
+
+	const matches = [...contractRegistry.values()].filter((contract) => {
+		const address = contract.address.toLowerCase()
+		const name = contract.name.toLowerCase()
+		const description = contract.description?.toLowerCase() ?? ''
+		const category = contract.category.toLowerCase()
+
+		return (
+			address.startsWith(normalizedQuery) ||
+			name.includes(normalizedQuery) ||
+			description.includes(normalizedQuery) ||
+			category.includes(normalizedQuery)
+		)
+	})
+
+	matches.sort((a, b) => {
+		const aAddress = a.address.toLowerCase()
+		const bAddress = b.address.toLowerCase()
+		const aName = a.name.toLowerCase()
+		const bName = b.name.toLowerCase()
+
+		if (aName === normalizedQuery && bName !== normalizedQuery) return -1
+		if (bName === normalizedQuery && aName !== normalizedQuery) return 1
+
+		if (aName.startsWith(normalizedQuery) && !bName.startsWith(normalizedQuery))
+			return -1
+		if (bName.startsWith(normalizedQuery) && !aName.startsWith(normalizedQuery))
+			return 1
+
+		if (
+			aAddress.startsWith(normalizedQuery) &&
+			!bAddress.startsWith(normalizedQuery)
+		)
+			return -1
+		if (
+			bAddress.startsWith(normalizedQuery) &&
+			!aAddress.startsWith(normalizedQuery)
+		)
+			return 1
+
+		return aName.localeCompare(bName)
+	})
+
+	const addresses = new Set<string>()
+	const results: AddressSearchResult[] = []
+	for (const contract of matches) {
+		const address = Address.checksum(contract.address)
+		const key = address.toLowerCase()
+		if (addresses.has(key)) continue
+		addresses.add(key)
+		results.push(buildAddressResult(address))
+		if (results.length === 5) break
+	}
+
+	return results
 }
 
 export function searchTokens(
@@ -174,12 +257,7 @@ export const Route = createFileRoute('/api/search')({
 				}
 
 				// address
-				if (Address.validate(query))
-					results.push({
-						type: 'address',
-						address: query,
-						isTip20: isTip20Address(query),
-					})
+				if (Address.validate(query)) results.push(buildAddressResult(query))
 
 				const isHash = Hex.validate(query) && Hex.size(query) === 32
 
@@ -200,6 +278,9 @@ export const Route = createFileRoute('/api/search')({
 
 					results.push({ type: 'transaction', hash: query, timestamp })
 				} else {
+					if (!Address.validate(query))
+						results.push(...searchKnownContracts(query))
+
 					// search for token matches (even if an address was found)
 					results.push(...searchTokens(query, verifiedTokens))
 				}
