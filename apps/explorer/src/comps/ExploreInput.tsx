@@ -159,6 +159,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		autoFocus,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
+	const rootRef = React.useRef<HTMLDivElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
 
 	const internalInputRef = React.useRef<HTMLInputElement>(null)
@@ -251,6 +252,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 		[groupedSuggestions],
 	)
 
+	const closeResults = React.useCallback(() => {
+		setHasFocus(false)
+		setShowResults(false)
+		setSelectedIndex(-1)
+	}, [])
+
 	React.useEffect(() => {
 		setRecentSearches(loadRecentSearches())
 	}, [])
@@ -285,14 +292,26 @@ export function ExploreInput(props: ExploreInput.Props) {
 				inputRef.current &&
 				!inputRef.current.contains(event.target as Node)
 			) {
-				setHasFocus(false)
-				setShowResults(false)
-				setSelectedIndex(-1)
+				closeResults()
 			}
 		}
 		document.addEventListener('mousedown', onMouseDown)
 		return () => document.removeEventListener('mousedown', onMouseDown)
-	}, [showResults, inputRef])
+	}, [showResults, inputRef, closeResults])
+
+	React.useEffect(() => {
+		const root = rootRef.current
+		if (!root) return
+
+		const onFocusOut = (event: FocusEvent) => {
+			const nextTarget = event.relatedTarget
+			if (nextTarget && root.contains(nextTarget as Node)) return
+			closeResults()
+		}
+
+		root.addEventListener('focusout', onFocusOut)
+		return () => root.removeEventListener('focusout', onFocusOut)
+	}, [closeResults])
 
 	// cmd+k shortcut
 	React.useEffect(() => {
@@ -329,19 +348,17 @@ export function ExploreInput(props: ExploreInput.Props) {
 		(data: ManualActivation) => {
 			rememberSearch(toManualSearchResult(data))
 			submittingRef.current = true
-			setShowResults(false)
-			setSelectedIndex(-1)
+			closeResults()
 			onActivate?.(data)
 		},
-		[onActivate, rememberSearch],
+		[onActivate, rememberSearch, closeResults],
 	)
 
 	const handleSelect = React.useCallback(
 		(result: SearchResult) => {
 			rememberSearch(result)
 			submittingRef.current = true
-			setShowResults(false)
-			setSelectedIndex(-1)
+			closeResults()
 
 			if (result.type === 'block') {
 				const id = String(result.blockNumber)
@@ -368,11 +385,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 				return
 			}
 		},
-		[onChange, onActivate, rememberSearch],
+		[onChange, onActivate, rememberSearch, closeResults],
 	)
 
 	return (
-		<div className={cx('relative z-10 w-full', !wide && 'max-w-md')}>
+		<div
+			ref={rootRef}
+			className={cx('relative z-10 w-full', !wide && 'max-w-md')}
+		>
 			<div ref={externalWrapperRef} className="overflow-hidden">
 				<form
 					ref={formRef}

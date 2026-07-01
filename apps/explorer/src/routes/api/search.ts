@@ -218,6 +218,43 @@ export function searchTokens(
 	}))
 }
 
+function searchResultAddressKey(result: SearchResult): string | undefined {
+	if (result.type !== 'address' && result.type !== 'token') return undefined
+	return result.address.toLowerCase()
+}
+
+function shouldReplaceSearchResult(
+	current: SearchResult,
+	next: SearchResult,
+): boolean {
+	return current.type === 'address' && next.type === 'token'
+}
+
+function dedupeSearchResults(results: SearchResult[]): SearchResult[] {
+	const resultIndexByAddress = new Map<string, number>()
+	const deduped: SearchResult[] = []
+
+	for (const result of results) {
+		const addressKey = searchResultAddressKey(result)
+		if (!addressKey) {
+			deduped.push(result)
+			continue
+		}
+
+		const existingIndex = resultIndexByAddress.get(addressKey)
+		if (existingIndex === undefined) {
+			resultIndexByAddress.set(addressKey, deduped.length)
+			deduped.push(result)
+			continue
+		}
+
+		if (shouldReplaceSearchResult(deduped[existingIndex], result))
+			deduped[existingIndex] = result
+	}
+
+	return deduped
+}
+
 export const Route = createFileRoute('/api/search')({
 	server: {
 		handlers: {
@@ -286,7 +323,10 @@ export const Route = createFileRoute('/api/search')({
 				}
 
 				return Response.json(
-					{ results, query: rawQuery } satisfies SearchApiResponse,
+					{
+						results: dedupeSearchResults(results),
+						query: rawQuery,
+					} satisfies SearchApiResponse,
 					{
 						headers: { 'Cache-Control': 'public, max-age=30' },
 					},
