@@ -1,7 +1,8 @@
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
+import type * as Address from 'ox/Address'
 import type { TransactionReceipt } from 'viem'
-import { decodeErrorResult, decodeFunctionData } from 'viem'
+import { decodeErrorResult, decodeFunctionData, parseAbi } from 'viem'
 import { allAbis } from '#lib/abis'
 import { getContractInfo } from '#lib/domain/contracts'
 import {
@@ -18,6 +19,7 @@ export type TxSummary = {
 	tone: 'success' | 'failure' | 'neutral'
 	headline: string
 	details: string[]
+	error?: string
 	rawReason?: string
 }
 
@@ -26,16 +28,31 @@ type DecodedTraceError = {
 	args: readonly unknown[]
 }
 
+const fallbackErrorAbi = parseAbi(['error UnknownFunctionSelector(bytes4)'])
+
+type SummaryTransaction = {
+	input?: Hex.Hex | undefined
+	data?: Hex.Hex | undefined
+	to?: Address.Address | null | undefined
+}
+
 export function buildTxSummary(params: {
 	receipt: TransactionReceipt
 	knownEvents: KnownEvent[]
 	trace: CallTrace | null
+	transaction?: SummaryTransaction
 	balanceChangesData?: BalanceChangesData
 }): TxSummary {
-	const { receipt, knownEvents, trace, balanceChangesData } = params
+	const { receipt, knownEvents, trace, transaction, balanceChangesData } =
+		params
 
 	if (receipt.status === 'reverted') {
-		return buildFailureSummary({ trace, balanceChangesData })
+		return buildFailureSummary({
+			trace,
+			transaction,
+			knownEvents,
+			balanceChangesData,
+		})
 	}
 
 	const event = knownEvents.find(preferredEventsFilter) ?? knownEvents[0]
@@ -62,6 +79,8 @@ export function buildTxSummary(params: {
 
 function buildFailureSummary(params: {
 	trace: CallTrace | null
+	transaction?: SummaryTransaction
+	knownEvents: KnownEvent[]
 	balanceChangesData?: BalanceChangesData
 }): TxSummary {
 	const failedTrace = findDeepestFailedTrace(params.trace)
@@ -77,15 +96,19 @@ function buildFailureSummary(params: {
 	})
 	if (insufficientBalance) return insufficientBalance
 
-	const functionName = failedTrace ? decodeTraceFunctionName(failedTrace) : null
-	const contractName = failedTrace?.to
-		? getContractInfo(failedTrace.to)?.name
+	const functionName =
+		(failedTrace ? decodeTraceFunctionName(failedTrace) : null) ??
+		decodeTransactionFunctionName(params.transaction) ??
+		decodeKnownEventFunctionName(params.knownEvents)
+	const contractAddress = failedTrace?.to ?? params.transaction?.to
+	const contractName = contractAddress
+		? getContractInfo(contractAddress)?.name
 		: undefined
 	const action = functionName
 		? `${sentenceCase(functionName)} failed`
-		: 'Transaction failed'
+		: (failureActionFromKnownEvents(params.knownEvents) ?? 'Transaction failed')
 	const reason = decodedError?.errorName
-		? humanizeIdentifier(decodedError.errorName)
+		? humanizeErrorName(decodedError.errorName)
 		: humanizeRawReason(rawReason)
 
 	const details: string[] = []
@@ -99,8 +122,9 @@ function buildFailureSummary(params: {
 
 	return {
 		tone: 'failure',
-		headline: reason ? `${action}: ${reason}.` : `${action}.`,
+		headline: `${action}.`,
 		details,
+		...(reason ? { error: reason } : {}),
 		rawReason,
 	}
 }
@@ -151,6 +175,7 @@ function buildInsufficientBalanceSummary(params: {
 		tone: 'failure',
 		headline: `Transfer failed: insufficient ${balanceLabel}.${amountDetail}`,
 		details,
+		error: `insufficient ${balanceLabel}`,
 		rawReason,
 	}
 }
@@ -183,19 +208,68 @@ function decodeTraceError(trace: CallTrace): DecodedTraceError | null {
 			args: decoded.args ?? [],
 		}
 	} catch {
-		return null
+		try {
+			const decoded = decodeErrorResult({ abi: fallbackErrorAbi, data })
+			return {
+				errorName: decoded.errorName,
+				args: decoded.args ?? [],
+			}
+		} catch {
+			return null
+		}
 	}
 }
 
 function decodeTraceFunctionName(trace: CallTrace): string | null {
-	if (!trace.input || trace.input === '0x') return null
+	return decodeInputFunctionName(trace.input)
+}
+
+function decodeTransactionFunctionName(
+	transaction: SummaryTransaction | undefined,
+): string | null {
+	return decodeInputFunctionName(transaction?.input ?? transaction?.data)
+}
+
+function decodeKnownEventFunctionName(
+	events: readonly KnownEvent[],
+): string | null {
+	for (const event of events) {
+		for (const part of event.parts) {
+			if (part.type !== 'contractCall') continue
+			const functionName = decodeInputFunctionName(part.value.input)
+			if (functionName) return functionName
+		}
+	}
+
+	return null
+}
+
+function decodeInputFunctionName(input: Hex.Hex | undefined): string | null {
+	if (!input || input === '0x') return null
 
 	try {
-		const decoded = decodeFunctionData({ abi: allAbis, data: trace.input })
+		const decoded = decodeFunctionData({ abi: allAbis, data: input })
 		return decoded.functionName
 	} catch {
 		return null
 	}
+}
+
+function failureActionFromKnownEvents(
+	events: readonly KnownEvent[],
+): string | undefined {
+	const event = events.find(preferredEventsFilter) ?? events[0]
+	if (!event) return undefined
+
+	const contractCall = event.parts.find((part) => part.type === 'contractCall')
+	if (contractCall) {
+		return 'Contract call failed'
+	}
+
+	const action = formatKnownEvent(event)
+	if (!action) return undefined
+
+	return `${sentenceCase(action)} failed`
 }
 
 function getRevertData(trace: CallTrace): Hex.Hex | null {
@@ -269,6 +343,12 @@ function humanizeIdentifier(value: string): string {
 		.replace(/[_-]+/g, ' ')
 		.replace(/^tip 20\s+/i, 'TIP-20 ')
 		.toLowerCase()
+}
+
+function humanizeErrorName(value: string): string {
+	if (value === 'UnknownFunctionSelector')
+		return 'unsupported function selector'
+	return humanizeIdentifier(value)
 }
 
 function humanizeRawReason(value: string | undefined): string | undefined {

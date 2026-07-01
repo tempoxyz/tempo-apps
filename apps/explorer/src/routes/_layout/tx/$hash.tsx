@@ -18,7 +18,6 @@ import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
-import { InfoCard } from '#comps/InfoCard'
 import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -36,7 +35,7 @@ import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { buildTxSummary, type TxSummary } from '#lib/domain/tx-summary'
+import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
 	groupRelatedEvents,
@@ -211,11 +210,12 @@ function RouteComponent() {
 		() =>
 			buildTxSummary({
 				receipt,
+				transaction,
 				knownEvents,
 				trace: traceData.trace,
 				balanceChangesData,
 			}),
-		[receipt, knownEvents, traceData.trace, balanceChangesData],
+		[receipt, knownEvents, traceData.trace, balanceChangesData, transaction],
 	)
 
 	const setActiveSection = (newIndex: number) => {
@@ -313,6 +313,7 @@ function RouteComponent() {
 			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
+				error={summary.error}
 				blockNumber={receipt.blockNumber}
 				timestamp={block.timestamp}
 				from={receipt.from}
@@ -320,7 +321,6 @@ function RouteComponent() {
 				className="self-start"
 			/>
 			<div className="flex min-w-0 flex-col gap-[14px]">
-				<TxSummaryCard summary={summary} />
 				<Sections
 					mode={mode}
 					sections={sections}
@@ -329,32 +329,6 @@ function RouteComponent() {
 				/>
 			</div>
 		</div>
-	)
-}
-
-function TxSummaryCard(props: { summary: TxSummary }): React.JSX.Element {
-	const { summary } = props
-	const isFailure = summary.tone === 'failure'
-
-	return (
-		<InfoCard
-			title={<InfoCard.Title>Summary</InfoCard.Title>}
-			className={cx(
-				'min-[1240px]:w-full',
-				isFailure ? 'border-negative/40' : 'border-card-border',
-			)}
-			sections={[
-				<div
-					key="headline"
-					className={cx(
-						'text-[16px] leading-[22px] font-medium text-primary',
-						isFailure && 'text-negative',
-					)}
-				>
-					{summary.headline.replace(/\.$/, '')}
-				</div>,
-			]}
-		/>
 	)
 }
 

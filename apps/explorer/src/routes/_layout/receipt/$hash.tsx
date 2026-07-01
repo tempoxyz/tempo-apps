@@ -255,6 +255,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 					})
 					const summary = buildTxSummary({
 						receipt: data.receipt,
+						transaction: data.transaction,
 						knownEvents: data.knownEvents,
 						trace: null,
 					})
@@ -592,9 +593,11 @@ namespace TextRenderer {
 	const indent = '  '
 
 	export function render(data: Awaited<ReturnType<typeof fetchReceiptData>>) {
-		const { knownEvents, lineItems, receipt, timestampFormatted } = data
+		const { knownEvents, lineItems, receipt, timestampFormatted, transaction } =
+			data
 		const summary = buildTxSummary({
 			receipt,
+			transaction,
 			knownEvents,
 			trace: null,
 		})
