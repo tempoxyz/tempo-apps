@@ -79,7 +79,7 @@ export function Receipt(props: Receipt.Props) {
 		<>
 			<div
 				data-receipt
-				className="flex flex-col w-[360px] bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				className="flex w-[min(480px,calc(100vw_-_32px))] flex-col bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
 			>
 				<div className="flex items-start gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
@@ -389,7 +389,7 @@ export function Receipt(props: Receipt.Props) {
 			</div>
 
 			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
-				<div className="max-w-[360px] w-full">
+				<div className="w-[min(480px,calc(100vw_-_32px))]">
 					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive text-[12px] text-tertiary">
 						<button
 							type="button"
