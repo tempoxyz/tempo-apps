@@ -203,7 +203,7 @@ export namespace Header {
 					aria-controls={isOpen ? menuId : undefined}
 					aria-expanded={isOpen}
 					aria-haspopup="menu"
-					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-[8px] border border-[#2C2C2F] bg-[#1A1A1A] px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none press-down"
+					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none press-down"
 					title={`Network: ${activeOption.label}`}
 					onClick={() => setIsOpen((value) => !value)}
 				>

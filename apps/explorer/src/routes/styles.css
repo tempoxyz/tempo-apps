@@ -6,9 +6,9 @@
 	/* Background Colors */
 	--color-background-inverse: light-dark(#202020, #fcfcfc);
 	--background-color-inverse: var(--color-background-inverse);
-	--color-background-primary: light-dark(#191919, #191919);
+	--color-background-primary: light-dark(#ffffff, #191919);
 	--background-color-primary: var(--color-background-primary);
-	--color-background-surface: light-dark(#1a1a1a, #1a1a1a);
+	--color-background-surface: light-dark(#ffffff, #1a1a1a);
 	--background-color-surface: var(--color-background-surface);
 	--color-background-alt: light-dark(#fcfcfc, #161616);
 	--background-alt: var(--color-background-alt);
@@ -23,11 +23,11 @@
 	--color-frame: var(--color-frame-background);
 
 	/* Content/Text Colors */
-	--color-content-primary: light-dark(#ffffff, #ffffff);
+	--color-content-primary: light-dark(#151515, #ffffff);
 	--content-primary: var(--color-content-primary);
-	--color-content-secondary: light-dark(#6e6e6e, #6e6e6e);
+	--color-content-secondary: light-dark(#525252, #6e6e6e);
 	--content-secondary: var(--color-content-secondary);
-	--color-content-tertiary: light-dark(#6e6e6e, #6e6e6e);
+	--color-content-tertiary: light-dark(#737373, #6e6e6e);
 	--content-tertiary: var(--color-content-tertiary);
 	--color-content-positive: light-dark(#16a34a, #22c55e);
 	--content-positive: var(--color-content-positive);
@@ -55,11 +55,11 @@
 	--color-focus: var(--color-accent);
 
 	/* Border Colors */
-	--color-border-primary: light-dark(#232323, #232323);
+	--color-border-primary: light-dark(#e5e5e5, #232323);
 	--border-primary: var(--color-border-primary);
-	--color-border-secondary: light-dark(#232323, #232323);
+	--color-border-secondary: light-dark(#e5e5e5, #232323);
 	--border-secondary: var(--color-border-secondary);
-	--color-border-tertiary: light-dark(#232323, #232323);
+	--color-border-tertiary: light-dark(#eeeeee, #232323);
 	--border-tertiary: var(--color-border-tertiary);
 	--color-border-negative: light-dark(#dc2626, #ef4444);
 	--border-negative: var(--color-border-negative);
@@ -91,20 +91,20 @@
 	/* Card */
 	--color-card: light-dark(#f9f9f9, #222222);
 	--color-card-header: light-dark(#f9f9f9, #191919);
-	--color-card-border: light-dark(#232323, #232323);
+	--color-card-border: light-dark(#e5e5e5, #232323);
 
 	/* Other Colors */
-	--color-base-background: light-dark(#191919, #191919);
-	--color-base-plane: light-dark(#1a1a1a, #1a1a1a);
-	--color-base-plane-background: light-dark(#1a1a1a, #1a1a1a);
+	--color-base-background: light-dark(#ffffff, #191919);
+	--color-base-plane: light-dark(#ffffff, #1a1a1a);
+	--color-base-plane-background: light-dark(#ffffff, #1a1a1a);
 	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
-	--color-base-alt: light-dark(#232323, #232323);
-	--color-base-border: light-dark(#232323, #232323);
-	--color-base-content: light-dark(#ffffff, #ffffff);
-	--color-base-content-secondary: light-dark(#6e6e6e, #6e6e6e);
+	--color-base-alt: light-dark(#f5f5f5, #232323);
+	--color-base-border: light-dark(#e5e5e5, #232323);
+	--color-base-content: light-dark(#151515, #ffffff);
+	--color-base-content-secondary: light-dark(#525252, #6e6e6e);
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
 	--color-base-content-negative: light-dark(#e5484d, #e5484d);
-	--color-distinct: light-dark(#e8e8e8, #313131);
+	--color-distinct: light-dark(#ececec, #313131);
 	--color-warning: light-dark(#e2a336, #8f6424);
 	--color-warning-background: light-dark(#fdf5c2, #252018);
 
@@ -128,6 +128,14 @@ html,
 	html {
 		color-scheme: dark;
 	}
+}
+
+html[data-theme="light"] {
+	color-scheme: light;
+}
+
+html[data-theme="dark"] {
+	color-scheme: dark;
 }
 
 body {
@@ -162,7 +170,7 @@ input[type="number"] {
 }
 
 @utility text-ui-meta {
-	color: #fff;
+	color: var(--color-primary);
 	text-align: center;
 	leading-trim: both;
 	text-edge: cap;
@@ -175,7 +183,7 @@ input[type="number"] {
 }
 
 @utility text-search-input {
-	color: #6e6e6e;
+	color: light-dark(var(--color-primary), #6e6e6e);
 	font-family: "Satoshi", ui-sans-serif, sans-serif;
 	font-size: 16px;
 	font-style: normal;
