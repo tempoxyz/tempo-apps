@@ -1,6 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
-import type { Block, Log, TransactionReceipt } from 'viem'
+import {
+	formatBlock,
+	type Block,
+	type Log,
+	type TransactionReceipt,
+} from 'viem'
 import { getBlock } from 'wagmi/actions'
 import type { Actions } from 'wagmi/tempo'
 import {
@@ -9,6 +14,7 @@ import {
 	parseKnownEvents,
 } from '#lib/domain/known-events'
 import { isTip20Address } from '#lib/domain/tip20.ts'
+import { getLocalnetRpcUrl, getTempoEnv } from '#lib/env'
 import { getBatchedClient, getWagmiConfig } from '#wagmi.config.ts'
 
 export const BLOCKS_PER_PAGE = 12
@@ -19,6 +25,58 @@ export type BlockIdentifier =
 
 export type BlockWithTransactions = Block<bigint, true>
 export type BlockTransaction = BlockWithTransactions['transactions'][number]
+
+const LOCALNET_BLOCK_RPC_TIMEOUT_MS = 5_000
+
+async function fetchLocalnetBlockWithTransactions(
+	blockRef: BlockIdentifier,
+): Promise<BlockWithTransactions> {
+	const controller = new AbortController()
+	const timeout = setTimeout(
+		() => controller.abort(),
+		LOCALNET_BLOCK_RPC_TIMEOUT_MS,
+	)
+
+	try {
+		const params =
+			blockRef.kind === 'hash'
+				? [blockRef.blockHash, true]
+				: [`0x${blockRef.blockNumber.toString(16)}`, true]
+		const response = await fetch(getLocalnetRpcUrl(), {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 1,
+				method:
+					blockRef.kind === 'hash'
+						? 'eth_getBlockByHash'
+						: 'eth_getBlockByNumber',
+				params,
+			}),
+			signal: controller.signal,
+		})
+
+		if (!response.ok) {
+			throw new Error(`localnet block RPC failed with ${response.status}`)
+		}
+
+		const payload = (await response.json()) as {
+			error?: { message?: string }
+			result?: unknown
+		}
+		if (payload.error) {
+			throw new Error(payload.error.message ?? 'localnet block RPC failed')
+		}
+		if (!payload.result) throw new Error('Block not found')
+
+		return formatBlock(
+			payload.result as Parameters<typeof formatBlock>[0],
+		) as BlockWithTransactions
+	} finally {
+		clearTimeout(timeout)
+	}
+}
 
 export function blocksQueryOptions(start?: number) {
 	return queryOptions({
@@ -57,6 +115,13 @@ export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 	return queryOptions({
 		queryKey: ['block-detail', blockRef],
 		queryFn: async () => {
+			if (getTempoEnv() === 'localnet') {
+				return {
+					blockRef,
+					block: await fetchLocalnetBlockWithTransactions(blockRef),
+				}
+			}
+
 			const config = getWagmiConfig()
 			const block = await getBlock(config, {
 				includeTransactions: true,

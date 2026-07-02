@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import { getChainId } from 'wagmi/actions'
+import { getBlockNumber, getChainId } from 'wagmi/actions'
 import tokensIndex31318 from '#data/tokens-index-31318.json' with {
 	type: 'json',
 }
@@ -10,9 +10,11 @@ import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 }
 import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import {
 	fetchLatestBlockNumber,
+	fetchTokenCreatedRows,
 	fetchTransactionTimestamp,
 } from '#lib/server/tempo-queries'
 import { getTokenListAddresses } from '#lib/server/tokens'
@@ -63,12 +65,14 @@ type IndexedToken = {
 	searchKey: string
 }
 
+const LOCALNET_TOKEN_SEARCH_LIMIT = 500
+
 function indexTokens(tokens: Token[]): IndexedToken[] {
 	return tokens.map(([address, symbol, name]) => ({
 		address,
 		symbol,
 		name,
-		searchKey: `${symbol.toLowerCase()}|${name.toLowerCase()}|${address}`,
+		searchKey: `${symbol.toLowerCase()}|${name.toLowerCase()}|${address.toLowerCase()}`,
 	}))
 }
 
@@ -78,18 +82,38 @@ const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
 	4217: indexTokens(tokensIndex4217 as Token[]),
 }
 
-function searchTokens(
+async function getSearchableTokens(chainId: number): Promise<IndexedToken[]> {
+	if (getTempoEnv() !== 'localnet') return INDEXED_TOKENS[chainId] ?? []
+
+	const rows = await fetchTokenCreatedRows(
+		chainId,
+		LOCALNET_TOKEN_SEARCH_LIMIT,
+		0,
+	).catch((error) => {
+		console.error('[search] localnet token search failed:', error)
+		return []
+	})
+
+	return rows.map((row) => ({
+		address: row.token,
+		symbol: row.symbol,
+		name: row.name,
+		searchKey: `${row.symbol.toLowerCase()}|${row.name.toLowerCase()}|${row.token.toLowerCase()}`,
+	}))
+}
+
+async function searchTokens(
 	query: string,
 	chainId: number,
 	verifiedAddresses: Set<string>,
-): TokenSearchResult[] {
+): Promise<TokenSearchResult[]> {
 	query = query.toLowerCase()
-	const indexedTokens = INDEXED_TOKENS[chainId] ?? []
+	const indexedTokens = await getSearchableTokens(chainId)
 	const isAddressQuery = query.startsWith('0x')
 
 	// filter using search keys
 	const matches = indexedTokens.filter((token) => {
-		if (isAddressQuery) return token.address.startsWith(query)
+		if (isAddressQuery) return token.address.toLowerCase().startsWith(query)
 		// for name/symbol queries, only match verified tokenlist tokens
 		if (verifiedAddresses.size > 0 && !verifiedAddresses.has(token.address))
 			return false
@@ -144,8 +168,13 @@ export const Route = createFileRoute('/api/search')({
 						query: rawQuery,
 					} satisfies SearchApiResponse)
 
-				const chainId = getChainId(getWagmiConfig())
-				const verifiedAddresses = await getTokenListAddresses(chainId)
+				const config = getWagmiConfig()
+				const chainId = getChainId(config)
+				const tempoEnv = getTempoEnv()
+				const verifiedAddresses =
+					tempoEnv === 'localnet'
+						? new Set<string>()
+						: await getTokenListAddresses(chainId)
 				const results: SearchResult[] = []
 
 				// block number (plain digits or #-prefixed)
@@ -159,7 +188,10 @@ export const Route = createFileRoute('/api/search')({
 					blockNumber >= 0
 				) {
 					try {
-						const latestBlock = await fetchLatestBlockNumber(chainId)
+						const latestBlock =
+							getTempoEnv() === 'localnet'
+								? await getBlockNumber(config)
+								: await fetchLatestBlockNumber(chainId)
 						if (blockNumber <= Number(latestBlock))
 							results.push({ type: 'block', blockNumber })
 					} catch {
@@ -196,13 +228,18 @@ export const Route = createFileRoute('/api/search')({
 					}
 				} else {
 					// search for token matches (even if an address was found)
-					results.push(...searchTokens(query, chainId, verifiedAddresses))
+					results.push(
+						...(await searchTokens(query, chainId, verifiedAddresses)),
+					)
 				}
 
 				return Response.json(
 					{ results, query: rawQuery } satisfies SearchApiResponse,
 					{
-						headers: { 'Cache-Control': 'public, max-age=30' },
+						headers: {
+							'Cache-Control':
+								tempoEnv === 'localnet' ? 'no-store' : 'public, max-age=30',
+						},
 					},
 				)
 			},

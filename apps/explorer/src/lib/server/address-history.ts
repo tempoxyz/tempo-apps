@@ -9,6 +9,7 @@ import * as z from 'zod/mini'
 
 import { parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
 import {
 	buildCsv,
 	createCsvDownloadResponse,
@@ -28,9 +29,12 @@ import {
 	fetchAddressTransferRowsByTxHashes,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
+	type AddressHistoryLogRow,
+	type AddressHistoryReceiptRow,
+	type AddressHistoryTxDetailsRow,
 	type SortDirection,
 } from '#lib/server/tempo-queries'
-import { getWagmiConfig } from '#wagmi.config'
+import { getBatchedClient, getWagmiConfig } from '#wagmi.config'
 
 const abi = Object.values(Abis).flat()
 
@@ -38,6 +42,8 @@ export const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
 const HISTORY_COUNT_MAX = 10_000
 const CSV_EXPORT_LIMIT = HISTORY_COUNT_MAX
 const CSV_EXPORT_PAGE_SIZE = MAX_LIMIT
+const LOCALNET_HISTORY_BLOCK_BATCH_SIZE = 64
+const LOCALNET_HISTORY_BLOCK_SCAN_LIMIT = 10_000
 const TRANSFER_EVENT_TOPIC0 =
 	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
@@ -101,6 +107,39 @@ function toUint256Data(value: bigint): Hex.Hex {
 	return `0x${value.toString(16).padStart(64, '0')}` as Hex.Hex
 }
 
+function topicToAddress(topic: Hex.Hex | undefined): string | null {
+	if (!topic) return null
+	return `0x${topic.slice(-40)}`.toLowerCase()
+}
+
+function logMatchesTransferDirection(
+	log: Pick<Log, 'topics'>,
+	addressKey: string,
+	includeSent: boolean,
+	includeReceived: boolean,
+): boolean {
+	const [topic0, fromTopic, toTopic] = log.topics
+	if (topic0?.toLowerCase() !== TRANSFER_EVENT_TOPIC0) return false
+
+	const from = topicToAddress(fromTopic)
+	const to = topicToAddress(toTopic)
+
+	return (
+		(includeSent && from === addressKey) ||
+		(includeReceived && to === addressKey)
+	)
+}
+
+function logIsTransferEmittedByAddress(
+	log: Pick<Log, 'address' | 'topics'>,
+	addressKey: string,
+): boolean {
+	return (
+		log.address.toLowerCase() === addressKey &&
+		log.topics[0]?.toLowerCase() === TRANSFER_EVENT_TOPIC0
+	)
+}
+
 export type HistoryResponse = {
 	transactions: EnrichedTransaction[]
 	total: number
@@ -112,6 +151,37 @@ export type HistoryResponse = {
 }
 
 type Sources = { txs: boolean; transfers: boolean; emitted: boolean }
+
+type LocalnetHistoryRecord = {
+	hash: Hex.Hex
+	blockNumber: bigint
+	blockTimestamp: number
+	transactionIndex: number
+	transaction: {
+		hash: Hex.Hex
+		from: Address.Address
+		to: Address.Address | null
+		value?: bigint
+		input?: Hex.Hex
+		data?: Hex.Hex
+		calls?: unknown
+	}
+	receipt: TransactionReceipt
+}
+
+type LocalnetAddressHistoryParams = {
+	address: Address.Address
+	searchParams: HistoryRequestParameters
+	includeKnownEvents: boolean
+	includeSent: boolean
+	includeReceived: boolean
+	sortDirection: SortDirection
+	offset: number
+	limit: number
+	after?: number | undefined
+	sources: Sources
+	statusFilter?: 'success' | 'reverted' | undefined
+}
 
 function parseSources(val: string | undefined): Sources {
 	if (!val) return { txs: true, transfers: true, emitted: false }
@@ -209,6 +279,524 @@ export function createTransactionsCsvResponse(params: {
 	})
 }
 
+async function formatLocalnetAddressHistoryData(
+	params: LocalnetAddressHistoryParams,
+	records: LocalnetHistoryRecord[],
+	scanLimitReached: boolean,
+): Promise<HistoryResponse> {
+	const sortedRecords = [...records].sort((a, b) => {
+		if (a.blockNumber !== b.blockNumber) {
+			return params.sortDirection === 'desc'
+				? Number(b.blockNumber - a.blockNumber)
+				: Number(a.blockNumber - b.blockNumber)
+		}
+		if (a.transactionIndex !== b.transactionIndex) {
+			return params.sortDirection === 'desc'
+				? b.transactionIndex - a.transactionIndex
+				: a.transactionIndex - b.transactionIndex
+		}
+		return params.sortDirection === 'desc'
+			? b.hash.localeCompare(a.hash)
+			: a.hash.localeCompare(b.hash)
+	})
+	const countCapped =
+		sortedRecords.length > HISTORY_COUNT_MAX || scanLimitReached
+	const cappedRecords = countCapped
+		? sortedRecords.slice(0, HISTORY_COUNT_MAX)
+		: sortedRecords
+	const paginatedRecords = cappedRecords.slice(
+		params.offset,
+		params.offset + params.limit + 1,
+	)
+	const hasMore = paginatedRecords.length > params.limit
+	const finalRecords = hasMore
+		? paginatedRecords.slice(0, params.limit)
+		: paginatedRecords
+
+	if (finalRecords.length === 0) {
+		return {
+			transactions: [],
+			total: cappedRecords.length,
+			offset: params.offset,
+			limit: params.limit,
+			hasMore: false,
+			countCapped,
+			error: null,
+		}
+	}
+
+	const hashes: HistoryHashEntry[] = finalRecords.map((record) => ({
+		hash: record.hash,
+		block_num: record.blockNumber,
+		from: record.transaction.from,
+		to: record.transaction.to,
+		value: record.transaction.value ?? 0n,
+	}))
+	const txRows: AddressHistoryTxDetailsRow[] = finalRecords.map((record) => ({
+		hash: record.hash,
+		block_num: record.blockNumber,
+		block_timestamp: record.blockTimestamp,
+		from: record.transaction.from,
+		to: record.transaction.to,
+		value: record.transaction.value ?? 0n,
+		input: record.transaction.input ?? record.transaction.data ?? '0x',
+		calls: record.transaction.calls ?? null,
+	}))
+	const receiptRows: AddressHistoryReceiptRow[] = finalRecords.map(
+		(record) => ({
+			tx_hash: record.hash,
+			block_num: record.blockNumber,
+			block_timestamp: record.blockTimestamp,
+			from: record.receipt.from,
+			to: record.receipt.to,
+			status: record.receipt.status === 'reverted' ? 0 : 1,
+			gas_used: record.receipt.gasUsed,
+			effective_gas_price: record.receipt.effectiveGasPrice,
+			contract_address: record.receipt.contractAddress ?? null,
+		}),
+	)
+	const logRows: AddressHistoryLogRow[] = finalRecords.flatMap((record) =>
+		record.receipt.logs.map((log) => ({
+			tx_hash: record.hash,
+			block_num: record.blockNumber,
+			tx_idx: record.transactionIndex,
+			log_idx: log.logIndex,
+			address: log.address as Address.Address,
+			topic0: log.topics[0] ?? null,
+			topic1: log.topics[1] ?? null,
+			topic2: log.topics[2] ?? null,
+			topic3: log.topics[3] ?? null,
+			data: log.data,
+			is_virtual_forward: false,
+		})),
+	)
+
+	const transactions = params.includeKnownEvents
+		? await buildTxOnlyTransactions({
+				address: params.address,
+				hashes,
+				txRows,
+				receiptRows,
+				logRows,
+			})
+		: hashes.map((hashEntry) => {
+				const receipt = receiptRows.find(
+					(row) => row.tx_hash === hashEntry.hash,
+				)
+				const tx = txRows.find((row) => row.hash === hashEntry.hash)
+				const fromSource = tx?.from ?? receipt?.from ?? params.address
+				const toSource = tx?.to ?? receipt?.to ?? null
+
+				return {
+					hash: hashEntry.hash,
+					blockNumber: toHexQuantity(tx?.block_num ?? receipt?.block_num),
+					timestamp: toFiniteTimestamp(
+						tx?.block_timestamp ?? receipt?.block_timestamp,
+					),
+					from: Address.checksum(fromSource as Address.Address),
+					to: toSource ? Address.checksum(toSource as Address.Address) : null,
+					value: toHexQuantity(tx?.value ?? hashEntry.value),
+					status: toHistoryStatus(receipt?.status),
+					gasUsed: toHexQuantity(receipt?.gas_used),
+					effectiveGasPrice: toHexQuantity(receipt?.effective_gas_price),
+					knownEvents: [],
+				}
+			})
+
+	return {
+		transactions,
+		total: cappedRecords.length,
+		offset: params.offset,
+		limit: params.limit,
+		hasMore,
+		countCapped,
+		error: null,
+	}
+}
+
+type OtsSearchTransactionsResult = {
+	txs?: OtsTransaction[]
+	receipts?: OtsReceipt[]
+	lastPage?: boolean
+}
+
+type OtsTransaction = {
+	hash?: unknown
+	from?: unknown
+	to?: unknown
+	value?: unknown
+	input?: unknown
+	data?: unknown
+	calls?: unknown
+	blockNumber?: unknown
+	blockTimestamp?: unknown
+	transactionIndex?: unknown
+}
+
+type OtsReceipt = {
+	transactionHash?: unknown
+	from?: unknown
+	to?: unknown
+	status?: unknown
+	gasUsed?: unknown
+	effectiveGasPrice?: unknown
+	contractAddress?: unknown
+	logs?: OtsLog[]
+	blockNumber?: unknown
+	blockTimestamp?: unknown
+	transactionIndex?: unknown
+}
+
+type OtsLog = {
+	address?: unknown
+	data?: unknown
+	topics?: unknown
+	blockNumber?: unknown
+	transactionHash?: unknown
+	transactionIndex?: unknown
+	logIndex?: unknown
+	removed?: unknown
+}
+
+function parseHex(value: unknown): Hex.Hex | null {
+	return typeof value === 'string' && /^0x[0-9a-fA-F]*$/.test(value)
+		? (value as Hex.Hex)
+		: null
+}
+
+function parseAddress(value: unknown): Address.Address | null {
+	return typeof value === 'string' && Address.validate(value)
+		? (value as Address.Address)
+		: null
+}
+
+function parseQuantity(value: unknown): bigint {
+	if (typeof value === 'bigint') return value
+	if (typeof value === 'number' && Number.isFinite(value)) return BigInt(value)
+	if (typeof value === 'string') {
+		try {
+			return BigInt(value)
+		} catch {
+			return 0n
+		}
+	}
+	return 0n
+}
+
+function parseQuantityAsNumber(value: unknown): number {
+	const parsed = parseQuantity(value)
+	return parsed <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(parsed) : 0
+}
+
+function normalizeOtsLog(
+	log: OtsLog,
+	fallback: {
+		blockNumber: bigint
+		transactionHash: Hex.Hex
+		transactionIndex: number
+	},
+): Log | null {
+	const address = parseAddress(log.address)
+	if (!address) return null
+
+	return {
+		address,
+		data: parseHex(log.data) ?? '0x',
+		topics: Array.isArray(log.topics)
+			? log.topics.flatMap((topic) => {
+					const parsed = parseHex(topic)
+					return parsed ? [parsed] : []
+				})
+			: [],
+		blockNumber: parseQuantity(log.blockNumber) || fallback.blockNumber,
+		transactionHash: parseHex(log.transactionHash) ?? fallback.transactionHash,
+		transactionIndex:
+			parseQuantityAsNumber(log.transactionIndex) || fallback.transactionIndex,
+		logIndex: parseQuantityAsNumber(log.logIndex),
+		removed: log.removed === true,
+	} as Log
+}
+
+function otsTransactionToRecord(
+	transaction: OtsTransaction,
+	receipt: OtsReceipt | undefined,
+): LocalnetHistoryRecord | null {
+	const hash = parseHex(transaction.hash)
+	const from = parseAddress(transaction.from)
+	if (!hash || !from) return null
+
+	const blockNumber = parseQuantity(
+		transaction.blockNumber ?? receipt?.blockNumber,
+	)
+	const transactionIndex = parseQuantityAsNumber(
+		transaction.transactionIndex ?? receipt?.transactionIndex,
+	)
+	const blockTimestamp = parseQuantityAsNumber(
+		transaction.blockTimestamp ?? receipt?.blockTimestamp,
+	)
+	const to = parseAddress(transaction.to)
+	const receiptFrom = parseAddress(receipt?.from) ?? from
+	const receiptTo = parseAddress(receipt?.to) ?? to
+	const contractAddress = parseAddress(receipt?.contractAddress)
+	const status = parseQuantity(receipt?.status) === 0n ? 'reverted' : 'success'
+	const normalizedLogs = (receipt?.logs ?? []).flatMap((log) => {
+		const normalized = normalizeOtsLog(log, {
+			blockNumber,
+			transactionHash: hash,
+			transactionIndex,
+		})
+		return normalized ? [normalized] : []
+	})
+
+	return {
+		hash,
+		blockNumber,
+		blockTimestamp,
+		transactionIndex,
+		transaction: {
+			hash,
+			from,
+			to,
+			value: parseQuantity(transaction.value),
+			input: parseHex(transaction.input) ?? undefined,
+			data: parseHex(transaction.data) ?? undefined,
+			calls: transaction.calls,
+		},
+		receipt: {
+			transactionHash: hash,
+			from: receiptFrom,
+			to: receiptTo,
+			status,
+			gasUsed: parseQuantity(receipt?.gasUsed),
+			effectiveGasPrice: parseQuantity(receipt?.effectiveGasPrice),
+			contractAddress,
+			logs: normalizedLogs,
+		} as TransactionReceipt,
+	}
+}
+
+async function fetchLocalnetAddressHistoryDataFromOts(
+	params: LocalnetAddressHistoryParams,
+): Promise<HistoryResponse | null> {
+	if (params.sortDirection !== 'desc') return null
+
+	const client = getBatchedClient()
+	const latestBlock = await client.getBlockNumber()
+	if (latestBlock >= BigInt(Number.MAX_SAFE_INTEGER - 1)) return null
+
+	const requestSize = Math.min(
+		Math.max(params.offset + params.limit + 1, params.limit * 5),
+		HISTORY_COUNT_MAX + 1,
+	)
+	const result = (await client.request({
+		method: 'ots_searchTransactionsBefore',
+		params: [params.address, Number(latestBlock + 1n), requestSize],
+	} as Parameters<typeof client.request>[0])) as OtsSearchTransactionsResult
+
+	const receiptsByHash = new Map(
+		(result.receipts ?? []).flatMap((receipt) => {
+			const hash = parseHex(receipt.transactionHash)
+			return hash ? [[hash.toLowerCase(), receipt] as const] : []
+		}),
+	)
+	const addressKey = params.address.toLowerCase()
+	const records = (result.txs ?? []).flatMap((transaction) => {
+		const hash = parseHex(transaction.hash)
+		if (!hash) return []
+
+		const record = otsTransactionToRecord(
+			transaction,
+			receiptsByHash.get(hash.toLowerCase()),
+		)
+		if (!record) return []
+
+		const directMatch =
+			params.sources.txs &&
+			((params.includeSent &&
+				record.transaction.from.toLowerCase() === addressKey) ||
+				(params.includeReceived &&
+					record.transaction.to?.toLowerCase() === addressKey) ||
+				(params.includeReceived &&
+					record.receipt.contractAddress?.toLowerCase() === addressKey))
+		const transferMatch =
+			params.sources.transfers &&
+			record.receipt.logs.some((log) =>
+				logMatchesTransferDirection(
+					log,
+					addressKey,
+					params.includeSent,
+					params.includeReceived,
+				),
+			)
+		const emittedMatch =
+			params.sources.emitted &&
+			record.receipt.logs.some((log) =>
+				logIsTransferEmittedByAddress(log, addressKey),
+			)
+
+		if (!directMatch && !transferMatch && !emittedMatch) return []
+		if (
+			params.statusFilter &&
+			record.receipt.status !==
+				(params.statusFilter === 'reverted' ? 'reverted' : 'success')
+		) {
+			return []
+		}
+		if (params.after && record.blockTimestamp < params.after) return []
+
+		return [record]
+	})
+
+	return formatLocalnetAddressHistoryData(
+		params,
+		records,
+		result.lastPage !== true || (result.txs?.length ?? 0) >= HISTORY_COUNT_MAX,
+	)
+}
+
+async function fetchLocalnetAddressHistoryData(
+	params: LocalnetAddressHistoryParams,
+): Promise<HistoryResponse> {
+	try {
+		const otsHistory = await fetchLocalnetAddressHistoryDataFromOts(params)
+		if (otsHistory) return otsHistory
+	} catch (error) {
+		console.warn('[history] localnet ots history unavailable:', error)
+	}
+
+	return fetchLocalnetAddressHistoryDataFromScan(params)
+}
+
+async function fetchLocalnetAddressHistoryDataFromScan(
+	params: LocalnetAddressHistoryParams,
+): Promise<HistoryResponse> {
+	const client = getBatchedClient()
+	const latestBlock = await client.getBlockNumber()
+	const addressKey = params.address.toLowerCase()
+	const records: LocalnetHistoryRecord[] = []
+	const countCap = HISTORY_COUNT_MAX + 1
+	let scannedBlocks = 0
+	let scanLimitReached = false
+
+	let batchEnd = latestBlock
+	while (batchEnd >= 0n && scannedBlocks < LOCALNET_HISTORY_BLOCK_SCAN_LIMIT) {
+		const remainingScanBudget =
+			LOCALNET_HISTORY_BLOCK_SCAN_LIMIT - scannedBlocks
+		const batchSize = Math.min(
+			LOCALNET_HISTORY_BLOCK_BATCH_SIZE,
+			remainingScanBudget,
+		)
+		const batchSpan = BigInt(batchSize - 1)
+		const batchStart = batchEnd > batchSpan ? batchEnd - batchSpan : 0n
+		const blockNumbers: bigint[] = []
+		for (
+			let blockNumber = batchEnd;
+			blockNumber >= batchStart;
+			blockNumber -= 1n
+		) {
+			blockNumbers.push(blockNumber)
+			if (blockNumber === 0n) break
+		}
+		scannedBlocks += blockNumbers.length
+
+		const blocks = await Promise.all(
+			blockNumbers.map((blockNumber) =>
+				client.getBlock({
+					blockNumber,
+					includeTransactions: true,
+				}),
+			),
+		)
+
+		let shouldStop = false
+		for (const block of blocks) {
+			const blockTimestamp = Number(block.timestamp)
+
+			if (params.after && blockTimestamp < params.after) {
+				shouldStop = true
+				break
+			}
+
+			const transactions = block.transactions.filter(
+				(transaction) => typeof transaction !== 'string',
+			)
+
+			for (const transaction of transactions) {
+				const receipt = await client.getTransactionReceipt({
+					hash: transaction.hash,
+				})
+
+				const directMatch =
+					params.sources.txs &&
+					((params.includeSent &&
+						transaction.from.toLowerCase() === addressKey) ||
+						(params.includeReceived &&
+							transaction.to?.toLowerCase() === addressKey) ||
+						(params.includeReceived &&
+							receipt.contractAddress?.toLowerCase() === addressKey))
+				const transferMatch =
+					params.sources.transfers &&
+					receipt.logs.some((log) =>
+						logMatchesTransferDirection(
+							log,
+							addressKey,
+							params.includeSent,
+							params.includeReceived,
+						),
+					)
+				const emittedMatch =
+					params.sources.emitted &&
+					receipt.logs.some((log) =>
+						logIsTransferEmittedByAddress(log, addressKey),
+					)
+
+				if (!directMatch && !transferMatch && !emittedMatch) continue
+
+				if (
+					params.statusFilter &&
+					receipt.status !==
+						(params.statusFilter === 'reverted' ? 'reverted' : 'success')
+				) {
+					continue
+				}
+
+				records.push({
+					hash: transaction.hash,
+					blockNumber: block.number,
+					blockTimestamp,
+					transactionIndex: receipt.transactionIndex,
+					transaction: transaction as LocalnetHistoryRecord['transaction'],
+					receipt,
+				})
+
+				if (records.length >= countCap) {
+					shouldStop = true
+					break
+				}
+			}
+
+			if (shouldStop) break
+		}
+
+		if (shouldStop || batchStart === 0n) break
+		if (scannedBlocks >= LOCALNET_HISTORY_BLOCK_SCAN_LIMIT) {
+			scanLimitReached = true
+			break
+		}
+		batchEnd = batchStart - 1n
+	}
+
+	if (scannedBlocks >= LOCALNET_HISTORY_BLOCK_SCAN_LIMIT) {
+		const oldestScannedBlock =
+			latestBlock >= BigInt(scannedBlocks - 1)
+				? latestBlock - BigInt(scannedBlocks - 1)
+				: 0n
+		scanLimitReached = oldestScannedBlock > 0n
+	}
+
+	return formatLocalnetAddressHistoryData(params, records, scanLimitReached)
+}
+
 export async function fetchAddressHistoryData(params: {
 	address: Address.Address
 	chainId: number
@@ -251,6 +839,22 @@ export async function fetchAddressHistoryData(params: {
 
 	const fetchSize = limit + 1
 	const isTxOnlySource = sources.txs && !sources.transfers && !sources.emitted
+
+	if (getTempoEnv() === 'localnet') {
+		return fetchLocalnetAddressHistoryData({
+			address,
+			searchParams,
+			includeKnownEvents,
+			includeSent,
+			includeReceived,
+			sortDirection,
+			offset,
+			limit,
+			after,
+			sources,
+			statusFilter,
+		})
+	}
 
 	const bufferSize = Math.min(
 		Math.max(offset + fetchSize, limit * 3),

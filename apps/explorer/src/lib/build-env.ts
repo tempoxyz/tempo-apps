@@ -4,6 +4,7 @@ const enabledSchema = z.stringbool()
 
 const canonicalTempoEnvSchema = z.union([
 	z.literal('devnet'),
+	z.literal('localnet'),
 	z.literal('testnet'),
 	z.literal('mainnet'),
 ])
@@ -44,5 +45,7 @@ export const buildEnvSchema = z.object({
 	SENTRY_PROJECT: z.optional(z.string()),
 	VITE_BASE_URL: z.prefault(z.string(), ''),
 	VITE_ENABLE_DEVTOOLS: z.prefault(enabledSchema, 'false'),
+	VITE_TEMPO_CHAIN_ID: z.prefault(z.coerce.number(), 31_337),
 	VITE_TEMPO_ENV: tempoEnvSchema,
+	VITE_TEMPO_RPC_URL: z.prefault(z.string(), 'http://127.0.0.1:8545'),
 })

@@ -4,6 +4,8 @@ import { VirtualAddress } from 'ox/tempo'
 import { getCode } from 'viem/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
+import { fetchAddressHistoryData } from '#lib/server/address-history'
 import { fetchContractCreationData } from '#lib/server/contract-creation'
 import {
 	fetchAddressTxAggregate,
@@ -111,26 +113,75 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							}),
 						}
 					} else {
-						const [bytecode, result, creation] = await Promise.all([
-							bytecodePromise,
-							fetchAddressTxAggregate(address, chainId),
-							fetchContractCreationReceipt(address, chainId).catch(
-								() => undefined,
-							),
-						])
-						const metadata = buildAddressTxMetadata(result, creation)
+						if (getTempoEnv() === 'localnet') {
+							const [bytecode, latest, oldest, creation] = await Promise.all([
+								bytecodePromise,
+								fetchAddressHistoryData({
+									address,
+									chainId,
+									searchParams: {
+										offset: 0,
+										limit: 1,
+										sort: 'desc',
+										include: 'all',
+										sources: 'txs,transfers',
+									},
+									includeKnownEvents: false,
+								}),
+								fetchAddressHistoryData({
+									address,
+									chainId,
+									searchParams: {
+										offset: 0,
+										limit: 1,
+										sort: 'asc',
+										include: 'all',
+										sources: 'txs,transfers',
+									},
+									includeKnownEvents: false,
+								}),
+								fetchContractCreationData(address).catch(() => null),
+							])
+							response = {
+								address,
+								chainId,
+								accountType: getAccountType(bytecode),
+								txCount: latest.total,
+								lastActivityTimestamp: latest.transactions[0]?.timestamp,
+								createdTimestamp:
+									creation?.timestamp !== undefined
+										? Number(creation.timestamp)
+										: oldest.transactions[0]?.timestamp,
+								createdTxHash: creation?.hash ?? undefined,
+								createdBy: creation?.from ?? undefined,
+							}
+						} else {
+							const [bytecode, result, creation] = await Promise.all([
+								bytecodePromise,
+								fetchAddressTxAggregate(address, chainId),
+								fetchContractCreationReceipt(address, chainId).catch(
+									() => undefined,
+								),
+							])
+							const metadata = buildAddressTxMetadata(result, creation)
 
-						response = {
-							address,
-							chainId,
-							accountType: getAccountType(bytecode),
-							...metadata,
+							response = {
+								address,
+								chainId,
+								accountType: getAccountType(bytecode),
+								...metadata,
+							}
 						}
 					}
 
+					const cacheControl =
+						getTempoEnv() === 'localnet'
+							? 'no-store'
+							: 's-maxage=30, stale-while-revalidate=60'
+
 					return Response.json(response, {
 						headers: {
-							'Cache-Control': 's-maxage=30, stale-while-revalidate=60',
+							'Cache-Control': cacheControl,
 						},
 					})
 				} catch (error) {

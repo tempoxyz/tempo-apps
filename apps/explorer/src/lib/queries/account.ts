@@ -23,6 +23,26 @@ type TransactionsApiResponse = {
 	error: null | string
 }
 
+async function readJsonResponse(response: Response): Promise<unknown> {
+	const text = await response.text()
+	let json: unknown
+	try {
+		json = text ? JSON.parse(text) : null
+	} catch {
+		const message =
+			text.trim() || response.statusText || 'Invalid JSON response'
+		throw new Error(message)
+	}
+
+	if (!response.ok) {
+		const parsedError = z.safeParse(HistoryErrorResponseSchema, json)
+		if (parsedError.success) throw new Error(parsedError.data.error)
+		throw new Error(response.statusText || `Request failed: ${response.status}`)
+	}
+
+	return json
+}
+
 const HistoryResponseSchema = z.object({
 	transactions: z.array(z.any()),
 	total: z.number(),
@@ -65,7 +85,7 @@ export function transactionsQueryOptions(
 		queryFn: async ({ signal }): Promise<TransactionsApiResponse> => {
 			const url = getApiUrl(`/api/address/${params.address}`, searchParams)
 			const response = await fetch(url, { signal })
-			const data = await response.json()
+			const data = await readJsonResponse(response)
 			return data as TransactionsApiResponse
 		},
 		// Prevent immediate refetch on hydration - let SSR data be used
@@ -138,7 +158,7 @@ export function historyQueryOptions(params: {
 				searchParams,
 			)
 			const response = await fetch(url, { signal })
-			const json = await response.json()
+			const json = await readJsonResponse(response)
 
 			const parsed = z.safeParse(HistoryResponseSchema, json)
 			if (parsed.success) return parsed.data

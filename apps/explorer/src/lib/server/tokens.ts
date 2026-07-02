@@ -5,9 +5,12 @@ import * as z from 'zod/mini'
 import { getAccountTag } from '#lib/account'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { fetchLogoURIs } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
 import {
 	fetchGenesisBlockTimestamp,
+	fetchTokenCreatedCount,
 	fetchTokenCreatedMetadata,
+	fetchTokenCreatedRows,
 	fetchTokenHoldersCount,
 	fetchTokenTransferAggregate,
 } from '#lib/server/tempo-queries'
@@ -132,6 +135,65 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
+
+		if (getTempoEnv() === 'localnet') {
+			const [createdRows, total] = await Promise.all([
+				fetchTokenCreatedRows(chainId, limit, offset),
+				fetchTokenCreatedCount(chainId, TOKEN_COUNT_MAX),
+			])
+			const pageAddresses = createdRows.map((row) => row.token)
+			const [logoURIs, holdersResults] = await Promise.all([
+				fetchLogoURIs(config, pageAddresses),
+				Promise.allSettled(
+					pageAddresses.map(async (address) => ({
+						address,
+						holdersCount: await fetchTokenHoldersCount(
+							address,
+							chainId,
+							TOKEN_COUNT_MAX,
+						),
+					})),
+				),
+			])
+			const holdersCounts = new Map<
+				string,
+				{ count: number; capped: boolean }
+			>()
+
+			for (const result of holdersResults) {
+				if (result.status !== 'fulfilled') {
+					console.error(
+						'Failed to fetch localnet token holders:',
+						result.reason,
+					)
+					continue
+				}
+				holdersCounts.set(
+					getAddressKey(result.value.address),
+					result.value.holdersCount,
+				)
+			}
+
+			return {
+				offset,
+				limit,
+				total,
+				tokens: createdRows.map((row) => {
+					const addressKey = getAddressKey(row.token)
+					return {
+						address: row.token,
+						symbol: row.symbol,
+						name: row.name,
+						currency: row.currency,
+						logoURI: logoURIs.get(addressKey),
+						createdAt: parseTimestamp(row.block_timestamp),
+						holdersCount: holdersCounts.get(addressKey)?.count,
+						holdersCountCapped: holdersCounts.get(addressKey)?.capped,
+					}
+				}),
+			}
+		}
+
 		const { entries: tokenListEntries } = await getTokenList(chainId)
 		const total = tokenListEntries.length
 		const pageEntries = tokenListEntries.slice(offset, offset + limit)

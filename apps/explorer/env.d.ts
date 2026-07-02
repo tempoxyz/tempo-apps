@@ -10,7 +10,9 @@ interface EnvironmentVariables {
 
 	readonly VITE_CONTRACT_VERIFICATION_API_BASE_URL: string
 
-	readonly VITE_TEMPO_ENV: 'testnet' | 'devnet' | 'mainnet'
+	readonly VITE_TEMPO_CHAIN_ID: string
+	readonly VITE_TEMPO_ENV: 'testnet' | 'devnet' | 'localnet' | 'mainnet'
+	readonly VITE_TEMPO_RPC_URL: string
 
 	readonly TEMPO_RPC_KEY: string
 }

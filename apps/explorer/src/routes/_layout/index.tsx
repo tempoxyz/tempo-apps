@@ -1,10 +1,11 @@
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
-import { getTempoEnv } from '#lib/env'
+import { getApiUrl, getTempoEnv } from '#lib/env'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -33,8 +34,42 @@ const SPOTLIGHT_DATA: Record<
 	},
 }
 
+const LOCALNET_SPOTLIGHT_DATA = {
+	accountAddress: '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+	contractAddress: '0x20FC000000000000000000000000000000000000',
+} satisfies {
+	accountAddress: Address.Address
+	contractAddress: Address.Address
+}
+
 function getSpotlightData() {
 	return SPOTLIGHT_DATA[getTempoEnv()]
+}
+
+function parseTxHash(value: unknown): Hex.Hex | null {
+	return typeof value === 'string' && /^0x[0-9a-fA-F]{64}$/.test(value)
+		? (value as Hex.Hex)
+		: null
+}
+
+async function fetchLatestLocalnetReceiptHash(): Promise<Hex.Hex | null> {
+	const response = await fetch(
+		getApiUrl(
+			`/api/address/history/${LOCALNET_SPOTLIGHT_DATA.accountAddress}`,
+			new URLSearchParams({
+				limit: '1',
+				offset: '0',
+				sources: 'txs,transfers',
+			}),
+		),
+		{ cache: 'no-store' },
+	)
+	if (!response.ok) return null
+
+	const json = (await response.json()) as {
+		transactions?: Array<{ hash?: unknown }>
+	}
+	return parseTxHash(json.transactions?.[0]?.hash)
 }
 
 export const Route = createFileRoute('/_layout/')({
@@ -109,39 +144,66 @@ function Component() {
 }
 
 function SpotlightLinks() {
+	const tempoEnv = getTempoEnv()
+	const isLocalnet = tempoEnv === 'localnet'
 	const spotlightData = getSpotlightData()
+	const localnetReceiptQuery = useQuery({
+		queryKey: ['localnet-spotlight-receipt'],
+		queryFn: fetchLatestLocalnetReceiptHash,
+		enabled: isLocalnet && typeof window !== 'undefined',
+		refetchInterval: isLocalnet ? 4_000 : false,
+		staleTime: 4_000,
+		retry: false,
+	})
+	const accountAddress =
+		spotlightData?.accountAddress ??
+		(isLocalnet ? LOCALNET_SPOTLIGHT_DATA.accountAddress : undefined)
+	const contractAddress =
+		spotlightData?.contractAddress ??
+		(isLocalnet ? LOCALNET_SPOTLIGHT_DATA.contractAddress : undefined)
+	const receiptHash = spotlightData?.receiptHash ?? localnetReceiptQuery.data
 
 	return (
 		<section className="text-center max-w-[500px] px-4">
 			<div className="group/pills flex items-center gap-2 text-[13px] flex-wrap justify-center">
-				{spotlightData && (
-					<>
-						<SpotlightPill
-							to="/address/$address"
-							params={{ address: spotlightData.accountAddress }}
-							icon={<UserIcon className="size-[14px] text-accent" />}
-						>
-							Account
-						</SpotlightPill>
-						<SpotlightPill
-							to="/address/$address"
-							params={{
-								address: spotlightData.contractAddress,
-							}}
-							search={{ tab: 'contract' }}
-							icon={<FileIcon className="size-[14px] text-accent" />}
-						>
-							Contract
-						</SpotlightPill>
+				{accountAddress && (
+					<SpotlightPill
+						to="/address/$address"
+						params={{ address: accountAddress }}
+						icon={<UserIcon className="size-[14px] text-accent" />}
+					>
+						Account
+					</SpotlightPill>
+				)}
+				{contractAddress && (
+					<SpotlightPill
+						to="/address/$address"
+						params={{
+							address: contractAddress,
+						}}
+						search={{ tab: 'contract' }}
+						icon={<FileIcon className="size-[14px] text-accent" />}
+					>
+						Contract
+					</SpotlightPill>
+				)}
+				{accountAddress &&
+					(receiptHash ? (
 						<SpotlightPill
 							to="/receipt/$hash"
-							params={{ hash: spotlightData.receiptHash }}
+							params={{ hash: receiptHash }}
 							icon={<ReceiptIcon className="size-[14px] text-accent" />}
 						>
 							Receipt
 						</SpotlightPill>
-					</>
-				)}
+					) : (
+						<DisabledSpotlightPill
+							icon={<ReceiptIcon className="size-[14px] text-accent" />}
+							title="No localnet receipts yet"
+						>
+							Receipt
+						</DisabledSpotlightPill>
+					))}
 				<SpotlightPill
 					to="/blocks"
 					icon={<BoxIcon className="size-[14px] text-accent" />}
@@ -159,6 +221,9 @@ function SpotlightLinks() {
 	)
 }
 
+const spotlightPillClassName =
+	'flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none border-base-border'
+
 function SpotlightPill(props: {
 	className?: string
 	to: string
@@ -173,14 +238,32 @@ function SpotlightPill(props: {
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
-			className={cx(
-				'flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none border-base-border',
-				className,
-			)}
+			className={cx(spotlightPillClassName, className)}
 		>
 			{icon}
 			<span>{children}</span>
 		</Link>
+	)
+}
+
+function DisabledSpotlightPill(props: {
+	title: string
+	icon: React.ReactNode
+	children: React.ReactNode
+}) {
+	return (
+		<button
+			type="button"
+			disabled
+			title={props.title}
+			className={cx(
+				spotlightPillClassName,
+				'opacity-60 cursor-not-allowed hover:text-base-content-secondary hover:border-base-border',
+			)}
+		>
+			{props.icon}
+			<span>{props.children}</span>
+		</button>
 	)
 }
 

@@ -40,7 +40,7 @@ import {
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
-import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
+import { useKeyboardShortcut } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
@@ -50,7 +50,7 @@ import {
 	txQueryOptions,
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
-import { traceQueryOptions } from '#lib/queries/trace'
+import { traceQueryOptions, type TraceData } from '#lib/queries/trace'
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
@@ -165,9 +165,6 @@ function RouteComponent() {
 		transaction,
 	} = Route.useLoaderData()
 
-	const isMobile = useMediaQuery('(max-width: 799px)')
-	const mode = isMobile ? 'stacked' : 'tabs'
-
 	useKeyboardShortcut({
 		t: () =>
 			navigate({
@@ -242,25 +239,19 @@ function RouteComponent() {
 		),
 	})
 
-	if (traceData.trace || traceData.prestate) {
-		tabs.push('trace')
-		sections.push({
-			title: 'Trace',
-			itemsLabel: 'views',
-			content: (
-				<div className="flex flex-col">
-					<TxTraceTree trace={traceData.trace} />
-					<TxStateDiff
-						prestate={traceData.prestate}
-						trace={traceData.trace}
-						receipt={{ from: receipt.from, to: receipt.to }}
-						logs={receipt.logs}
-						tokenMetadata={balanceChangesData.tokenMetadata}
-					/>
-				</div>
-			),
-		})
-	}
+	tabs.push('trace')
+	sections.push({
+		title: 'Trace',
+		itemsLabel: 'views',
+		content: (
+			<TraceSection
+				traceData={traceData}
+				receipt={receipt}
+				logs={receipt.logs}
+				tokenMetadata={balanceChangesData.tokenMetadata}
+			/>
+		),
+	})
 
 	tabs.push('raw')
 	sections.push({
@@ -291,10 +282,40 @@ function RouteComponent() {
 				className="self-start"
 			/>
 			<Sections
-				mode={mode}
+				mode="tabs"
 				sections={sections}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
+			/>
+		</div>
+	)
+}
+
+function TraceSection(props: {
+	traceData: TraceData
+	receipt: Pick<TransactionReceipt, 'from' | 'to'>
+	logs: Log[]
+	tokenMetadata: BalanceChangesData['tokenMetadata']
+}) {
+	const { traceData, receipt, logs, tokenMetadata } = props
+
+	if (!traceData.trace && !traceData.prestate) {
+		return (
+			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+				Trace data is not available for this transaction.
+			</div>
+		)
+	}
+
+	return (
+		<div className="flex flex-col">
+			<TxTraceTree trace={traceData.trace} />
+			<TxStateDiff
+				prestate={traceData.prestate}
+				trace={traceData.trace}
+				receipt={receipt}
+				logs={logs}
+				tokenMetadata={tokenMetadata}
 			/>
 		</div>
 	)
@@ -483,7 +504,7 @@ function InputDataRow(props: {
 					Input Data
 				</span>
 				<div className="flex-1">
-					<TxDecodedCalldata address={to} data={input} />
+					<TxDecodedCalldata address={to} data={input} decode={Boolean(to)} />
 				</div>
 			</div>
 		</div>

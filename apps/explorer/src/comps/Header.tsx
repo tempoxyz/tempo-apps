@@ -8,13 +8,19 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
-import { getTempoEnv, isTestnet } from '#lib/env'
+import { getTempoEnv } from '#lib/env'
 import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
 	const networkBadgeLabel =
-		tempoEnv === 'mainnet' ? null : tempoEnv === 'devnet' ? 'Devnet' : 'Testnet'
+		tempoEnv === 'mainnet'
+			? null
+			: tempoEnv === 'devnet'
+				? 'Devnet'
+				: tempoEnv === 'localnet'
+					? 'Localnet'
+					: 'Testnet'
 
 	return (
 		<header className="@container relative z-1">
@@ -168,10 +174,11 @@ export namespace Header {
 		const blockNumber =
 			resolvedPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
 		const isReady = blockNumber != null
+		const canLinkBlock = getTempoEnv() !== 'mainnet'
 
 		return (
 			<Link
-				disabled={!isTestnet()}
+				disabled={!canLinkBlock}
 				to="/block/$id"
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
@@ -239,7 +246,7 @@ export namespace Header {
 
 	export namespace NetworkBadge {
 		export interface Props {
-			label: 'Devnet' | 'Testnet'
+			label: 'Devnet' | 'Localnet' | 'Testnet'
 		}
 	}
 }

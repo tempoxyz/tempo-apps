@@ -11,6 +11,8 @@
 		"build": "pnpm --recursive --parallel --stream --reporter='append-only' build",
 		"deploy": "pnpm --recursive --parallel --stream --reporter='append-only' deploy",
 		"dev:explorer": "pnpm --filter explorer dev",
+		"dev:explorer:anvil": "pnpm --filter explorer dev:anvil",
+		"dev:explorer:localnet": "pnpm --filter explorer dev:localnet",
 		"dev:sponsor": "pnpm --filter fee-payer dev",
 		"check": "pnpm --recursive --parallel --stream --reporter='append-only' check:biome",
 		"postcheck": "pnpm check:types",

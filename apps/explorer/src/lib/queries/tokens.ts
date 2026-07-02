@@ -6,6 +6,7 @@ import {
 	fetchTransfers,
 } from '#lib/server/token.ts'
 import { fetchTokens } from '#lib/server/tokens.ts'
+import { getTempoEnv } from '#lib/env'
 
 export const TOKENS_PER_PAGE = 12
 
@@ -85,8 +86,9 @@ export function tokensListQueryOptions(params: {
 	limit: number
 }) {
 	const offset = (params.page - 1) * params.limit
+	const tempoEnv = getTempoEnv()
 	return queryOptions({
-		queryKey: ['tokens', params.page, params.limit],
+		queryKey: ['tokens', tempoEnv, params.page, params.limit],
 		queryFn: () =>
 			fetchTokens({
 				data: {

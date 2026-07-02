@@ -8,7 +8,7 @@ import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
-	const { address, data } = props
+	const { address, data, decode = true } = props
 	const selector = slice(data, 0, 4)
 	const copySignature = useCopy()
 	const copyRaw = useCopy()
@@ -66,6 +66,30 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 		}
 		return { args: undefined }
 	}, [abiItem, rawArgs])
+
+	if (!decode)
+		return (
+			<div className="bg-distinct rounded-[6px] overflow-hidden">
+				<div className="relative px-[10px] py-[8px]">
+					<pre className="text-[12px] text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
+						{data}
+					</pre>
+					<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
+						{copyRaw.notifying && (
+							<span className="text-[11px] select-none">copied</span>
+						)}
+						<button
+							type="button"
+							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							onClick={() => copyRaw.copy(data)}
+							title="Copy raw data"
+						>
+							<CopyIcon className="size-[14px]" />
+						</button>
+					</div>
+				</div>
+			</div>
+		)
 
 	if (!isFetched || !abiItem)
 		return (
@@ -178,6 +202,7 @@ export namespace TxDecodedCalldata {
 	export interface Props {
 		address?: Address | null
 		data: Hex
+		decode?: boolean
 	}
 
 	export function ArgumentRow(props: ArgumentRow.Props) {

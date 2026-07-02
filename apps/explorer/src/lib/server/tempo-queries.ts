@@ -2,17 +2,34 @@ import type { Address, Hex } from 'ox'
 import * as OxHash from 'ox/Hash'
 import * as OxHex from 'ox/Hex'
 import { Tidx } from 'tidx.ts'
-import { decodeAbiParameters, zeroAddress } from 'viem'
+import {
+	type AbiEvent,
+	decodeAbiParameters,
+	parseAbiItem,
+	zeroAddress,
+} from 'viem'
+import { Addresses } from 'viem/tempo'
 import * as ABIS from '#lib/abis'
+import { getTempoEnv } from '#lib/env'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
+import { getBatchedClient } from '#wagmi.config'
 
 const QB = tempoQueryBuilder
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+const TRANSFER_EVENT = parseAbiItem(TRANSFER_SIGNATURE)
 const TRANSFER_TOPIC0 =
 	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
+const TOKEN_CREATED_DATA_PARAMS = [
+	{ name: 'name', type: 'string' },
+	{ name: 'symbol', type: 'string' },
+	{ name: 'currency', type: 'string' },
+	{ name: 'quoteToken', type: 'address' },
+	{ name: 'admin', type: 'address' },
+	{ name: 'salt', type: 'bytes32' },
+] as const
 
 type SortDirection = 'asc' | 'desc'
 
@@ -32,6 +49,145 @@ export type TokenHoldersCountRow = {
 	token: string
 	count: number
 	capped: boolean
+}
+
+async function fetchLocalnetTokenTransfers(
+	address: Address.Address,
+	account?: Address.Address,
+): Promise<TokenTransferRow[]> {
+	const client = getBatchedClient()
+	const accountKey = account?.toLowerCase()
+
+	const logs = await client.getLogs({
+		address: address as `0x${string}`,
+		event: TRANSFER_EVENT,
+		fromBlock: 0n,
+		toBlock: 'latest',
+	})
+
+	const rows = logs.flatMap((log): TokenTransferRow[] => {
+		const { from, to, tokens } = log.args
+		if (
+			!from ||
+			!to ||
+			tokens === undefined ||
+			!log.transactionHash ||
+			log.blockNumber === null ||
+			log.logIndex === null
+		) {
+			return []
+		}
+
+		if (
+			accountKey &&
+			from.toLowerCase() !== accountKey &&
+			to.toLowerCase() !== accountKey
+		) {
+			return []
+		}
+
+		return [
+			{
+				from: from as Address.Address,
+				to: to as Address.Address,
+				tokens,
+				tx_hash: log.transactionHash as Hex.Hex,
+				block_num: log.blockNumber,
+				log_idx: Number(log.logIndex),
+				block_timestamp: null,
+			},
+		]
+	})
+
+	const blockNumbers = Array.from(
+		new Set(rows.map((row) => row.block_num.toString())),
+	).map((blockNumber) => BigInt(blockNumber))
+
+	const timestampEntries = await Promise.all(
+		blockNumbers.map(async (blockNumber) => {
+			try {
+				const block = await client.getBlock({ blockNumber })
+				return [blockNumber.toString(), Number(block.timestamp)] as const
+			} catch {
+				return [blockNumber.toString(), null] as const
+			}
+		}),
+	)
+	const timestampByBlock = new Map(timestampEntries)
+
+	return rows
+		.map((row) => ({
+			...row,
+			block_timestamp: timestampByBlock.get(row.block_num.toString()) ?? null,
+		}))
+		.sort((a, b) => {
+			if (a.block_num !== b.block_num) return a.block_num > b.block_num ? -1 : 1
+			return b.log_idx - a.log_idx
+		})
+}
+
+async function fetchLocalnetAddressTransferBalances(
+	address: Address.Address,
+): Promise<
+	Array<{ token: string; received: string | number; sent: string | number }>
+> {
+	const client = getBatchedClient()
+	const account = address as `0x${string}`
+	const [incomingLogs, outgoingLogs] = await Promise.all([
+		client.getLogs({
+			event: TRANSFER_EVENT,
+			args: { to: account },
+			fromBlock: 0n,
+			toBlock: 'latest',
+		}),
+		client.getLogs({
+			event: TRANSFER_EVENT,
+			args: { from: account },
+			fromBlock: 0n,
+			toBlock: 'latest',
+		}),
+	])
+
+	const merged = new Map<
+		string,
+		{ token: string; received: bigint; sent: bigint }
+	>()
+
+	for (const log of incomingLogs) {
+		const tokens = log.args.tokens
+		if (tokens === undefined) continue
+
+		const token = log.address.toLowerCase()
+		const existing = merged.get(token) ?? {
+			token: log.address,
+			received: 0n,
+			sent: 0n,
+		}
+		existing.received += tokens
+		merged.set(token, existing)
+	}
+
+	for (const log of outgoingLogs) {
+		const tokens = log.args.tokens
+		if (tokens === undefined) continue
+
+		const token = log.address.toLowerCase()
+		const existing = merged.get(token) ?? {
+			token: log.address,
+			received: 0n,
+			sent: 0n,
+		}
+		existing.sent += tokens
+		merged.set(token, existing)
+	}
+
+	return Array.from(merged.values())
+		.map((row) => ({
+			token: row.token,
+			received: row.received.toString(),
+			sent: row.sent.toString(),
+		}))
+		.sort((a, b) => a.token.localeCompare(b.token))
 }
 
 function sortTokenHolderBalances(
@@ -65,6 +221,11 @@ export async function fetchTokenHolderBalances(
 	address: Address.Address,
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
+	if (getTempoEnv() === 'localnet') {
+		const transfers = await fetchLocalnetTokenTransfers(address)
+		return aggregateTokenHolderBalances(transfers)
+	}
+
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 	const transfers = (await qb
 		.selectFrom('transfer')
@@ -86,6 +247,19 @@ export async function fetchTokenHoldersCountRows(
 	countCap: number,
 ): Promise<TokenHoldersCountRow[]> {
 	if (addresses.length === 0) return []
+
+	if (getTempoEnv() === 'localnet') {
+		return Promise.all(
+			addresses.map(async (address) => {
+				const { count, capped } = await fetchTokenHoldersCount(
+					address,
+					chainId,
+					countCap,
+				)
+				return { token: address, count, capped }
+			}),
+		)
+	}
 
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 	const transfers = (await qb
@@ -163,6 +337,18 @@ export async function fetchTokenHoldersCount(
 	chainId: number,
 	countCap: number,
 ): Promise<{ count: number; capped: boolean }> {
+	if (getTempoEnv() === 'localnet') {
+		const transfers = await fetchLocalnetTokenTransfers(address)
+		const holders = aggregateTokenHolderBalances(transfers)
+		const rawCount = holders.length
+		const capped = rawCount >= countCap
+
+		return {
+			count: capped ? countCap : rawCount,
+			capped,
+		}
+	}
+
 	try {
 		const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 		const transfers = (await qb
@@ -209,6 +395,15 @@ export async function fetchTokenFirstTransferTimestamp(
 	address: Address.Address,
 	chainId: number,
 ): Promise<number | null> {
+	if (getTempoEnv() === 'localnet') {
+		const transfers = await fetchLocalnetTokenTransfers(address)
+		const first = transfers
+			.filter((transfer) => transfer.block_timestamp !== null)
+			.sort((a, b) => Number(a.block_num - b.block_num))[0]
+
+		return first?.block_timestamp ? Number(first.block_timestamp) : null
+	}
+
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 
 	const firstTransfer = await qb
@@ -241,6 +436,11 @@ export async function fetchTokenTransfers(
 	offset: number,
 	account?: Address.Address,
 ): Promise<TokenTransferRow[]> {
+	if (getTempoEnv() === 'localnet') {
+		const transfers = await fetchLocalnetTokenTransfers(address, account)
+		return transfers.slice(offset, offset + limit)
+	}
+
 	let query = QB(chainId)
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
@@ -285,6 +485,13 @@ export async function fetchTokenTransferCount(
 	countCap: number,
 	account?: Address.Address,
 ): Promise<{ count: number; capped: boolean }> {
+	if (getTempoEnv() === 'localnet') {
+		const transfers = await fetchLocalnetTokenTransfers(address, account)
+		const count = Math.min(transfers.length, countCap)
+		const capped = transfers.length >= countCap
+		return { count, capped }
+	}
+
 	const qb = QB(chainId)
 	let subquery = qb
 		.withSignatures([TRANSFER_SIGNATURE])
@@ -317,11 +524,99 @@ export type TokenCreatedRow = {
 	block_timestamp: string | number
 }
 
+async function fetchLocalnetTokenCreatedRows(
+	chainId: number,
+	limit?: number,
+	offset = 0,
+): Promise<TokenCreatedRow[]> {
+	const client = getBatchedClient()
+	const event = parseAbiItem(ABIS.getTokenCreatedEvent(chainId)) as AbiEvent
+	const logs = await client.getLogs({
+		address: Addresses.tip20Factory,
+		event,
+		fromBlock: 0n,
+		toBlock: 'latest',
+	})
+
+	const parsedRows = logs.flatMap((log) => {
+		const args = (
+			log as typeof log & {
+				args?: {
+					token?: unknown
+					name?: unknown
+					symbol?: unknown
+					currency?: unknown
+				}
+			}
+		).args
+		if (!args) return []
+
+		const { token, name, symbol, currency } = args
+		if (
+			typeof token !== 'string' ||
+			typeof name !== 'string' ||
+			typeof symbol !== 'string' ||
+			typeof currency !== 'string' ||
+			log.blockNumber === null ||
+			log.logIndex === null
+		) {
+			return []
+		}
+
+		return [
+			{
+				token: token as Address.Address,
+				name,
+				symbol,
+				currency,
+				blockNumber: log.blockNumber,
+				logIndex: Number(log.logIndex),
+			},
+		]
+	})
+
+	const blockNumbers = Array.from(
+		new Set(parsedRows.map((row) => row.blockNumber.toString())),
+	).map((blockNumber) => BigInt(blockNumber))
+	const timestampEntries = await Promise.all(
+		blockNumbers.map(async (blockNumber) => {
+			try {
+				const block = await client.getBlock({ blockNumber })
+				return [blockNumber.toString(), Number(block.timestamp)] as const
+			} catch {
+				return [blockNumber.toString(), null] as const
+			}
+		}),
+	)
+	const timestampByBlock = new Map(timestampEntries)
+
+	const rows = parsedRows
+		.sort((a, b) => {
+			if (a.blockNumber !== b.blockNumber) {
+				return a.blockNumber > b.blockNumber ? -1 : 1
+			}
+			return b.logIndex - a.logIndex
+		})
+		.map((row) => ({
+			token: row.token,
+			name: row.name,
+			symbol: row.symbol,
+			currency: row.currency,
+			block_timestamp: timestampByBlock.get(row.blockNumber.toString()) ?? 0,
+		}))
+
+	return limit == null ? rows : rows.slice(offset, offset + limit)
+}
+
 export async function fetchTokenCreatedRows(
 	chainId: number,
 	limit: number,
 	offset: number,
 ): Promise<TokenCreatedRow[]> {
+	if (getTempoEnv() === 'localnet') {
+		return fetchLocalnetTokenCreatedRows(chainId, limit, offset)
+	}
+
 	const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 
 	return QB(chainId)
@@ -338,6 +633,11 @@ export async function fetchTokenCreatedCount(
 	chainId: number,
 	countLimit: number,
 ): Promise<number> {
+	if (getTempoEnv() === 'localnet') {
+		const rows = await fetchLocalnetTokenCreatedRows(chainId)
+		return Math.min(rows.length, countLimit)
+	}
+
 	const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 	const qb = QB(chainId)
 
@@ -370,6 +670,19 @@ export async function fetchTokenCreatedMetadata(
 > {
 	if (tokens.length === 0) return []
 
+	if (getTempoEnv() === 'localnet') {
+		const tokenKeys = new Set(tokens.map((token) => token.toLowerCase()))
+		return (await fetchLocalnetTokenCreatedRows(chainId))
+			.filter((row) => tokenKeys.has(row.token.toLowerCase()))
+			.map((row) => ({
+				token: row.token,
+				name: row.name,
+				symbol: row.symbol,
+				currency: row.currency,
+				block_timestamp: row.block_timestamp,
+			}))
+	}
+
 	const tokenCreatedSignature = ABIS.getTokenCreatedEvent(chainId)
 	const topic0 = OxHash.keccak256(
 		OxHex.fromString(tokenCreatedSignature.replace(/^event /, '')),
@@ -387,15 +700,6 @@ export async function fetchTokenCreatedMetadata(
 		.where('topic1', 'in', tokenTopics as never)
 		.execute()
 
-	const dataParams = [
-		{ name: 'name', type: 'string' },
-		{ name: 'symbol', type: 'string' },
-		{ name: 'currency', type: 'string' },
-		{ name: 'quoteToken', type: 'address' },
-		{ name: 'admin', type: 'address' },
-		{ name: 'salt', type: 'bytes32' },
-	] as const
-
 	const results: Array<{
 		token: string
 		name: string
@@ -408,7 +712,10 @@ export async function fetchTokenCreatedMetadata(
 		if (!row.topic1 || !row.data) continue
 
 		try {
-			const decoded = decodeAbiParameters(dataParams, row.data as Hex.Hex)
+			const decoded = decodeAbiParameters(
+				TOKEN_CREATED_DATA_PARAMS,
+				row.data as Hex.Hex,
+			)
 			results.push({
 				token: `0x${(row.topic1 as string).slice(-40)}`,
 				name: decoded[0] as string,
@@ -1211,6 +1518,10 @@ export async function fetchAddressTransferBalances(
 ): Promise<
 	Array<{ token: string; received: string | number; sent: string | number }>
 > {
+	if (getTempoEnv() === 'localnet') {
+		return fetchLocalnetAddressTransferBalances(address)
+	}
+
 	const [incoming, outgoing] = await Promise.all([
 		QB(chainId)
 			.withSignatures([TRANSFER_SIGNATURE])
@@ -1382,6 +1693,19 @@ export async function fetchTokenTransferAggregate(
 	oldestTimestamp?: unknown
 	latestTimestamp?: unknown
 }> {
+	if (getTempoEnv() === 'localnet') {
+		const transfers = await fetchLocalnetTokenTransfers(address)
+		const timestamps = transfers
+			.map((transfer) => transfer.block_timestamp)
+			.filter((timestamp): timestamp is number => timestamp !== null)
+			.sort((a, b) => a - b)
+
+		return {
+			oldestTimestamp: timestamps[0],
+			latestTimestamp: timestamps.at(-1),
+		}
+	}
+
 	// Use raw logs instead of the Transfer CTE here. Production tidx currently
 	// errors on aggregate queries over event CTEs, while the raw logs aggregate
 	// is fast and keeps TIDX credentials server-side.
