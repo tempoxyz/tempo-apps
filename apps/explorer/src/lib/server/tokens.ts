@@ -4,6 +4,12 @@ import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getAccountTag } from '#lib/account'
+import { getTempoEnv } from '#lib/env'
+import {
+	aggregateLocalnetHolders,
+	fetchLocalnetTokenCreatedRows,
+	fetchLocalnetTokenTransfers,
+} from '#lib/server/localnet'
 import { api } from '#lib/server/tempo-api'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -47,6 +53,32 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		const offset = (page - 1) * limit
 
 		const chainId = getChainId(getWagmiConfig())
+
+		if (getTempoEnv() === 'localnet') {
+			const tokens = await fetchLocalnetTokenCreatedRows(chainId)
+			const pageTokens = tokens.slice(offset, offset + limit)
+			const holderEntries = await Promise.all(
+				pageTokens.map(async (token) => {
+					const holders = aggregateLocalnetHolders(
+						await fetchLocalnetTokenTransfers({ token: token.address }),
+					)
+					return [token.address.toLowerCase(), holders.length] as const
+				}),
+			)
+			const holdersByToken = new Map(holderEntries)
+
+			return {
+				total: tokens.length,
+				tokens: pageTokens.map((token) => ({
+					address: token.address,
+					symbol: token.symbol,
+					name: token.name,
+					currency: token.currency,
+					createdAt: token.createdAt ?? undefined,
+					holdersCount: holdersByToken.get(token.address.toLowerCase()),
+				})),
+			}
+		}
 
 		// One verified-list call carries everything the page renders: the API
 		// resolves logos (curated icon → on-chain `logoURI`), currencies, and

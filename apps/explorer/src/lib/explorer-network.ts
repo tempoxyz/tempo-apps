@@ -21,7 +21,12 @@ export function getActiveExplorerNetworkOption(tempoEnv: TempoEnv) {
 
 	return {
 		env: tempoEnv,
-		label: tempoEnv === 'nextfork' ? 'Nextfork' : 'Devnet',
+		label:
+			tempoEnv === 'nextfork'
+				? 'Nextfork'
+				: tempoEnv === 'localnet'
+					? 'Localnet'
+					: 'Devnet',
 		dotClassName: 'bg-amber-400',
 	}
 }

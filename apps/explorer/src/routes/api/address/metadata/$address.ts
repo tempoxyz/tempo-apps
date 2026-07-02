@@ -4,7 +4,14 @@ import { VirtualAddress } from 'ox/tempo'
 import { getCode } from 'viem/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
 import { fetchContractCreationData } from '#lib/server/contract-creation'
+import {
+	aggregateLocalnetHolders,
+	fetchLocalnetAddressHistoryRecords,
+	fetchLocalnetTokenCreatedRows,
+	fetchLocalnetTokenTransfers,
+} from '#lib/server/localnet'
 import {
 	fetchAddressOldestTx,
 	fetchAddressTxStats,
@@ -58,6 +65,72 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					)
 
 					let response: AddressMetadataResponse
+
+					if (getTempoEnv() === 'localnet') {
+						const bytecode = await bytecodePromise
+						const accountType = getAccountType(bytecode)
+
+						if (isTip20) {
+							const [createdRows, transfers] = await Promise.all([
+								fetchLocalnetTokenCreatedRows(chainId).catch(() => []),
+								fetchLocalnetTokenTransfers({ token: address }).catch(() => []),
+							])
+							const created = createdRows.find((row) =>
+								Address.isEqual(row.address, address),
+							)
+							const holders = aggregateLocalnetHolders(transfers)
+							const transferTimestamps = transfers.flatMap((transfer) =>
+								transfer.timestamp == null ? [] : [transfer.timestamp],
+							)
+
+							response = {
+								address,
+								chainId,
+								accountType,
+								holdersCount: holders.length,
+								lastActivityTimestamp:
+									transferTimestamps.length > 0
+										? Math.max(...transferTimestamps)
+										: undefined,
+								createdTimestamp:
+									created?.createdAt ??
+									(transferTimestamps.length > 0
+										? Math.min(...transferTimestamps)
+										: undefined),
+							}
+						} else {
+							const { records, countCapped } =
+								await fetchLocalnetAddressHistoryRecords({
+									address,
+									include: 'all',
+								})
+							const sorted = [...records].sort((a, b) => {
+								if (a.blockNumber !== b.blockNumber) {
+									return a.blockNumber > b.blockNumber ? 1 : -1
+								}
+								return a.transactionIndex - b.transactionIndex
+							})
+							const oldest = sorted[0]
+							const latest = sorted.at(-1)
+
+							response = {
+								address,
+								chainId,
+								accountType,
+								txCount: countCapped ? 10_000 : records.length,
+								lastActivityTimestamp: latest?.blockTimestamp,
+								createdTimestamp: oldest?.blockTimestamp,
+								createdTxHash: oldest?.transaction.hash,
+								createdBy: oldest?.transaction.from,
+							}
+						}
+
+						return Response.json(response, {
+							headers: {
+								'Cache-Control': 'no-store',
+							},
+						})
+					}
 
 					if (isVirtual) {
 						// One aggregate: exact distinct transfer-tx count + boundaries.

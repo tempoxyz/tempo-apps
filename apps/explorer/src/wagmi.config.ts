@@ -5,7 +5,7 @@ import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoMainnet, tempoNextfork, tempoTestnet } from './lib/chains'
-import { getTempoEnv } from './lib/env'
+import { getLocalnetChainId, getLocalnetRpcUrl, getTempoEnv } from './lib/env'
 import { serverEnv, tempoApiUrl } from './lib/server/env'
 import {
 	cookieStorage,
@@ -20,6 +20,19 @@ import { tempoWallet } from 'wagmi/connectors'
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 
+function getTempoLocalnet() {
+	const rpcUrl = getLocalnetRpcUrl()
+
+	return tempoLocalnet.extend({
+		id: getLocalnetChainId(),
+		rpcUrls: {
+			default: { http: [rpcUrl] },
+			public: { http: [rpcUrl] },
+		},
+		feeToken: '0x20c0000000000000000000000000000000000002',
+	})
+}
+
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
 		getTempoEnv() === 'mainnet'
@@ -28,9 +41,11 @@ export const getTempoChain = createIsomorphicFn()
 				? tempoNextfork
 				: getTempoEnv() === 'devnet'
 					? tempoDevnet
-					: getTempoEnv() === 'testnet'
-						? tempoTestnet
-						: tempoMainnet,
+					: getTempoEnv() === 'localnet'
+						? getTempoLocalnet()
+						: getTempoEnv() === 'testnet'
+							? tempoTestnet
+							: tempoMainnet,
 	)
 	.server(() =>
 		getTempoEnv() === 'mainnet'
@@ -39,12 +54,15 @@ export const getTempoChain = createIsomorphicFn()
 				? tempoNextfork
 				: getTempoEnv() === 'devnet'
 					? tempoDevnet
-					: getTempoEnv() === 'testnet'
-						? tempoTestnet
-						: tempoMainnet,
+					: getTempoEnv() === 'localnet'
+						? getTempoLocalnet()
+						: getTempoEnv() === 'testnet'
+							? tempoTestnet
+							: tempoMainnet,
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
+const LOCALNET_RPC_TIMEOUT_MS = 5_000
 
 function getRpcProxyUrl() {
 	const chain = getTempoChain()
@@ -67,6 +85,12 @@ const getFallbackUrls = createIsomorphicFn()
 
 const getTempoTransport = createIsomorphicFn()
 	.client(() => {
+		if (getTempoEnv() === 'localnet') {
+			return http(getLocalnetRpcUrl(), {
+				timeout: LOCALNET_RPC_TIMEOUT_MS,
+			})
+		}
+
 		const proxy = getRpcProxyUrl()
 
 		// Browser traffic should only hit the RPC proxy. Direct chain RPC endpoints
@@ -79,6 +103,12 @@ const getTempoTransport = createIsomorphicFn()
 	})
 	.server(() => {
 		const chain = getTempoChain()
+
+		if (getTempoEnv() === 'localnet') {
+			return http(getLocalnetRpcUrl(), {
+				timeout: LOCALNET_RPC_TIMEOUT_MS,
+			})
+		}
 
 		// Tempo API RPC passthrough (mainnet + testnet; requires an API key).
 		const apiKey = serverEnv.TEMPO_API_KEY
@@ -102,16 +132,21 @@ export function getWagmiConfig() {
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
 	const chain = getTempoChain()
 	const transport = getTempoTransport()
+	const extraChains = chain.id === tempoLocalnet.id ? [] : [tempoLocalnet]
+	const extraTransports =
+		chain.id === tempoLocalnet.id
+			? {}
+			: { [tempoLocalnet.id]: http(undefined, { batch: true }) }
 
 	wagmiConfigSingleton = createConfig({
 		ssr: true,
 		multiInjectedProviderDiscovery: true,
-		chains: [chain, tempoLocalnet],
+		chains: [chain, ...extraChains],
 		connectors: [tempoWallet()],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[chain.id]: transport,
-			[tempoLocalnet.id]: http(undefined, { batch: true }),
+			...extraTransports,
 		} as never,
 	})
 

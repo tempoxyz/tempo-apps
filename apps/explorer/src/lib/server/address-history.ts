@@ -1,18 +1,23 @@
 import { type InferResponseType, parseResponse } from 'hono/client'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import type { Log, TransactionReceipt } from 'viem'
+import { type Log, type TransactionReceipt, zeroAddress } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
 import {
 	buildCsv,
 	createCsvDownloadResponse,
 	createTimestampedCsvFilename,
 } from '#lib/server/csv'
+import {
+	fetchLocalnetAddressHistoryRecords,
+	type LocalnetHistoryRecord,
+} from '#lib/server/localnet'
 import { api } from '#lib/server/tempo-api'
 import { fetchAddressTxExportRows } from '#lib/server/tempo-queries'
 import { resolveTotal } from '#lib/server/token'
@@ -187,6 +192,64 @@ export function toEnrichedTransaction(
 	}
 }
 
+function localnetRecordToTransactionRow(
+	record: LocalnetHistoryRecord,
+): TransactionRow {
+	return {
+		blockHash: record.transaction.blockHash ?? record.receipt.blockHash ?? null,
+		blockNumber: Number(record.blockNumber),
+		gas: Number(record.transaction.gas ?? 0n),
+		hash: record.transaction.hash,
+		input: record.transaction.input ?? '0x',
+		nonce: record.transaction.nonce,
+		recipient: record.transaction.to,
+		sender: record.transaction.from,
+		timestamp: new Date(record.blockTimestamp * 1000).toISOString(),
+		transactionIndex: record.transactionIndex,
+		type: record.transaction.type,
+		value: record.transaction.value?.toString() ?? '0',
+		meta: {
+			receipt: {
+				blockHash: record.receipt.blockHash ?? null,
+				blockNumber: Number(record.receipt.blockNumber ?? record.blockNumber),
+				contractAddress: record.receipt.contractAddress ?? null,
+				cumulativeGasUsed: Number(record.receipt.cumulativeGasUsed ?? 0n),
+				effectiveGasPrice: record.receipt.effectiveGasPrice.toString(),
+				feeAmount: '0',
+				feePayer: record.receipt.from,
+				feeToken: zeroAddress,
+				gasUsed: Number(record.receipt.gasUsed),
+				logs: record.receipt.logs as never,
+				meta: {},
+				sender: record.receipt.from,
+				recipient: record.receipt.to,
+				status: record.receipt.status,
+				timestamp: new Date(record.blockTimestamp * 1000).toISOString(),
+				transactionHash: record.transaction.hash,
+				transactionIndex: record.transactionIndex,
+				type: record.receipt.type,
+			} as unknown as NonNullable<TransactionRow['meta']['receipt']>,
+			rpc: {
+				blockHash:
+					record.transaction.blockHash ?? record.receipt.blockHash ?? null,
+				blockNumber: toHexQuantity(record.blockNumber),
+				calls:
+					'calls' in record.transaction
+						? (record.transaction.calls as unknown)
+						: undefined,
+				from: record.transaction.from,
+				gas: toHexQuantity(record.transaction.gas),
+				hash: record.transaction.hash,
+				input: record.transaction.input ?? '0x',
+				nonce: toHexQuantity(record.transaction.nonce),
+				to: record.transaction.to,
+				transactionIndex: toHexQuantity(record.transactionIndex),
+				value: toHexQuantity(record.transaction.value),
+			} as unknown as TransactionRow['meta']['rpc'],
+		},
+	} as TransactionRow
+}
+
 export async function fetchAddressHistoryData(params: {
 	address: Address.Address
 	chainId: number
@@ -220,6 +283,46 @@ export async function fetchAddressHistoryData(params: {
 	// Beyond the API's positional window — callers can't reach this via the UI
 	// (totals are clamped page-aligned below), but guard direct requests.
 	if (page * limit > HISTORY_COUNT_MAX) return emptyResponse
+
+	if (getTempoEnv() === 'localnet') {
+		const { records, countCapped } = await fetchLocalnetAddressHistoryRecords({
+			address,
+			include: searchParams.include,
+			status: searchParams.status,
+			after: searchParams.after,
+		})
+		const sortedRecords = [...records].sort((a, b) => {
+			if (a.blockNumber !== b.blockNumber) {
+				const order = a.blockNumber > b.blockNumber ? 1 : -1
+				return searchParams.sort === 'asc' ? order : -order
+			}
+			if (a.transactionIndex !== b.transactionIndex) {
+				const order = a.transactionIndex - b.transactionIndex
+				return searchParams.sort === 'asc' ? order : -order
+			}
+			return searchParams.sort === 'asc'
+				? a.transaction.hash.localeCompare(b.transaction.hash)
+				: b.transaction.hash.localeCompare(a.transaction.hash)
+		})
+		const total = Math.min(sortedRecords.length, HISTORY_COUNT_MAX)
+		const pageRows = sortedRecords.slice((page - 1) * limit, page * limit)
+		const rows = pageRows.map(localnetRecordToTransactionRow)
+		const getTokenMetadata = includeKnownEvents
+			? await buildTokenMetadataLookup(rows)
+			: () => undefined
+
+		return {
+			transactions: rows.map((row) =>
+				toEnrichedTransaction(row, { includeKnownEvents, getTokenMetadata }),
+			),
+			total,
+			page,
+			limit,
+			hasMore: page * limit < total,
+			countCapped: countCapped || sortedRecords.length > HISTORY_COUNT_MAX,
+			error: null,
+		}
+	}
 
 	// `include=sent|received` narrows the side; `all` matches either side.
 	const sideFilter =
@@ -288,6 +391,33 @@ export async function fetchAddressHistoryExportRows(params: {
 	searchParams: HistoryRequestParameters
 }): Promise<ReadonlyArray<EnrichedTransaction>> {
 	const { searchParams } = params
+
+	if (getTempoEnv() === 'localnet') {
+		const { records } = await fetchLocalnetAddressHistoryRecords({
+			address: params.address,
+			include: searchParams.include,
+			status: searchParams.status,
+			after: searchParams.after,
+		})
+		const sortedRecords = [...records]
+			.sort((a, b) => {
+				if (a.blockNumber !== b.blockNumber) {
+					const order = a.blockNumber > b.blockNumber ? 1 : -1
+					return searchParams.sort === 'asc' ? order : -order
+				}
+				return searchParams.sort === 'asc'
+					? a.transactionIndex - b.transactionIndex
+					: b.transactionIndex - a.transactionIndex
+			})
+			.slice(0, CSV_EXPORT_LIMIT)
+
+		return sortedRecords.map((record) =>
+			toEnrichedTransaction(localnetRecordToTransactionRow(record), {
+				includeKnownEvents: false,
+				getTokenMetadata: () => undefined,
+			}),
+		)
+	}
 
 	const rows = await fetchAddressTxExportRows({
 		address: params.address,

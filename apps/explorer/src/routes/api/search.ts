@@ -14,6 +14,7 @@ import {
 	type ContractInfo,
 } from '#lib/domain/contracts'
 import { isTip20Address } from '#lib/domain/tip20'
+import { getTempoEnv } from '#lib/env'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -328,7 +329,12 @@ export const Route = createFileRoute('/api/search')({
 						query: rawQuery,
 					} satisfies SearchApiResponse,
 					{
-						headers: { 'Cache-Control': 'public, max-age=30' },
+						headers: {
+							'Cache-Control':
+								getTempoEnv() === 'localnet'
+									? 'no-store'
+									: 'public, max-age=30',
+						},
 					},
 				)
 			},

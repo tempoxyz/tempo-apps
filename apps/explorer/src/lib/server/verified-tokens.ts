@@ -1,4 +1,6 @@
 import { type InferResponseType, parseResponse } from 'hono/client'
+import { getTempoEnv } from '#lib/env'
+import { fetchLocalnetTokenCreatedRows } from '#lib/server/localnet'
 import { api } from '#lib/server/tempo-api'
 
 /**
@@ -26,6 +28,20 @@ const verifiedTokensCache = new Map<number, CachedVerifiedTokens>()
 export async function getVerifiedTokens(
 	chainId: number,
 ): Promise<VerifiedToken[]> {
+	if (getTempoEnv() === 'localnet') {
+		return (await fetchLocalnetTokenCreatedRows(chainId)).map((token) => ({
+			address: token.address,
+			name: token.name,
+			symbol: token.symbol,
+			currency: token.currency,
+			decimals: 6,
+			logoUri: undefined,
+			createdAt: token.createdAt
+				? new Date(token.createdAt * 1000).toISOString()
+				: null,
+		})) as VerifiedToken[]
+	}
+
 	const now = Date.now()
 	const cached = verifiedTokensCache.get(chainId)
 	if (cached && now - cached.ts < 5 * 60_000) return cached.tokens

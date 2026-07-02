@@ -6,6 +6,13 @@ import { getChainId } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { getTempoEnv } from '#lib/env'
+import {
+	aggregateLocalnetHolders,
+	fetchLocalnetAccountTransfers,
+	fetchLocalnetTokenMetadata,
+	fetchLocalnetTokenTransfers,
+} from '#lib/server/localnet'
 import { api } from '#lib/server/tempo-api'
 import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { zAddress } from '#lib/zod'
@@ -136,6 +143,35 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 		try {
 			if (data.page * data.limit > COUNT_CAP) return EMPTY_HOLDERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
+
+			if (getTempoEnv() === 'localnet') {
+				const holders = aggregateLocalnetHolders(
+					await fetchLocalnetTokenTransfers({ token: data.address }),
+				)
+				const pageHolders = holders.slice(
+					(data.page - 1) * data.limit,
+					data.page * data.limit,
+				)
+				const totalBalance = holders.reduce(
+					(total, holder) => total + holder.balance,
+					0n,
+				)
+
+				return {
+					holders: pageHolders.map((holder) => ({
+						address: holder.address,
+						balance: holder.balance.toString(),
+					})),
+					...resolveTotal({
+						exactCount: holders.length,
+						page: data.page,
+						limit: data.limit,
+						rows: pageHolders.length,
+						exhausted: data.page * data.limit >= holders.length,
+					}),
+					totalBalance: totalBalance.toString(),
+				}
+			}
 
 			const [details, page] = await Promise.all([
 				getTokenDetails(chainId, data.address),
@@ -309,6 +345,53 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 				return EMPTY_ACCOUNT_TRANSFERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
 
+			if (getTempoEnv() === 'localnet') {
+				const transfers = await fetchLocalnetAccountTransfers(data.account)
+				const pageTransfers = transfers.slice(
+					(data.page - 1) * data.limit,
+					data.page * data.limit,
+				)
+				const metadataEntries = await Promise.all(
+					[...new Set(pageTransfers.map((transfer) => transfer.token))].map(
+						async (token) =>
+							[
+								token.toLowerCase(),
+								await fetchLocalnetTokenMetadata(token),
+							] as const,
+					),
+				)
+				const metadataByToken = new Map(metadataEntries)
+
+				return {
+					transfers: pageTransfers.map((transfer) => {
+						const meta = metadataByToken.get(transfer.token.toLowerCase())
+						return {
+							from: transfer.from,
+							to: transfer.to,
+							value: transfer.value.toString(),
+							transactionHash: transfer.transactionHash,
+							blockNumber: transfer.blockNumber.toString(),
+							timestamp: transfer.timestamp
+								? new Date(transfer.timestamp * 1000).toISOString()
+								: null,
+							token: {
+								address: transfer.token,
+								symbol: meta?.symbol,
+								decimals: meta?.decimals,
+								currency: meta?.currency,
+							},
+						}
+					}),
+					...resolveTotal({
+						exactCount: transfers.length,
+						page: data.page,
+						limit: data.limit,
+						rows: pageTransfers.length,
+						exhausted: data.page * data.limit >= transfers.length,
+					}),
+				}
+			}
+
 			const page = await parseResponse(
 				api.v1.transfers.$get({
 					query: {
@@ -367,6 +450,37 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 		try {
 			if (data.page * data.limit > COUNT_CAP) return EMPTY_TRANSFERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
+
+			if (getTempoEnv() === 'localnet') {
+				const transfers = await fetchLocalnetTokenTransfers({
+					token: data.address,
+					account: data.account,
+				})
+				const pageTransfers = transfers.slice(
+					(data.page - 1) * data.limit,
+					data.page * data.limit,
+				)
+
+				return {
+					transfers: pageTransfers.map((transfer) => ({
+						from: transfer.from,
+						to: transfer.to,
+						value: transfer.value.toString(),
+						transactionHash: transfer.transactionHash,
+						blockNumber: transfer.blockNumber.toString(),
+						timestamp: transfer.timestamp
+							? new Date(transfer.timestamp * 1000).toISOString()
+							: null,
+					})),
+					...resolveTotal({
+						exactCount: transfers.length,
+						page: data.page,
+						limit: data.limit,
+						rows: pageTransfers.length,
+						exhausted: data.page * data.limit >= transfers.length,
+					}),
+				}
+			}
 
 			const [details, page] = await Promise.all([
 				getTokenDetails(chainId, data.address),

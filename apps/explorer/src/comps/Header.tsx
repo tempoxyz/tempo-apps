@@ -8,7 +8,7 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
-import { type TempoEnv, getTempoEnv, isTestnet } from '#lib/env'
+import { type TempoEnv, getTempoEnv, isLocalnet, isTestnet } from '#lib/env'
 import {
 	buildExplorerNetworkHref,
 	EXPLORER_NETWORK_OPTIONS,
@@ -274,7 +274,7 @@ export namespace Header {
 
 		return (
 			<Link
-				disabled={!isTestnet()}
+				disabled={!isTestnet() && !isLocalnet()}
 				to="/block/$id"
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(

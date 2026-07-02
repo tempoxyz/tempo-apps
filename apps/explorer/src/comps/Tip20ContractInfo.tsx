@@ -6,7 +6,7 @@ import { useChainId } from 'wagmi'
 import { Address as AddressComp } from '#comps/Address.tsx'
 import { CollapsibleSection } from '#comps/Contract.tsx'
 import { getContractInfo } from '#lib/domain/contracts.ts'
-import { getApiUrl } from '#lib/env.ts'
+import { getApiUrl, getTempoEnv } from '#lib/env.ts'
 import ArrowUpRightIcon from '~icons/lucide/arrow-up-right'
 
 function formatDate(timestamp: number): string {
@@ -63,14 +63,17 @@ export function Tip20TokenTabContent(
 	}>({
 		queryKey: ['tip20-data', address, chainId],
 		queryFn: async () => {
-			const url = getApiUrl(
-				'/api/tip20-roles',
-				new URLSearchParams({
-					address,
-					chainId: String(chainId),
-				}),
-			)
-			const response = await fetch(url)
+			const isLocalnet = getTempoEnv() === 'localnet'
+			const searchParams = new URLSearchParams({
+				address,
+				chainId: String(chainId),
+			})
+			if (isLocalnet) searchParams.set('_', String(Date.now()))
+
+			const url = getApiUrl('/api/tip20-roles', searchParams)
+			const response = await fetch(url, {
+				cache: isLocalnet ? 'no-store' : 'default',
+			})
 			if (!response.ok)
 				return {
 					roles: [],

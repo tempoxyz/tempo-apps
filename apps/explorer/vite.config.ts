@@ -27,7 +27,8 @@ export default defineConfig((config) => {
 	} = buildEnvSchema.safeParse({ ...env, ...process.env })
 	if (!success) throw new Error(z.prettifyError(error))
 
-	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV].vars
+	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV]
+		.vars as Record<string, string | undefined>
 	const datadogEnv = {
 		VITE_DATADOG_ALLOWED_TRACING_URLS:
 			wranglerVars.VITE_DATADOG_ALLOWED_TRACING_URLS ??
@@ -185,6 +186,12 @@ export default defineConfig((config) => {
 			),
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				wranglerVars.VITE_TEMPO_ENV || envConfig.VITE_TEMPO_ENV,
+			),
+			'import.meta.env.VITE_TEMPO_RPC_URL': JSON.stringify(
+				envConfig.VITE_TEMPO_RPC_URL || wranglerVars.VITE_TEMPO_RPC_URL,
+			),
+			'import.meta.env.VITE_TEMPO_CHAIN_ID': JSON.stringify(
+				envConfig.VITE_TEMPO_CHAIN_ID || wranglerVars.VITE_TEMPO_CHAIN_ID,
 			),
 			__BASE_URL__: JSON.stringify(
 				envConfig.VITE_BASE_URL

@@ -11,7 +11,12 @@ const clientEnvSchema = z.object({
 
 export const clientEnv = clientEnvSchema.parse(import.meta.env)
 
-export type TempoEnv = 'testnet' | 'mainnet' | 'devnet' | 'nextfork'
+export type TempoEnv =
+	| 'testnet'
+	| 'mainnet'
+	| 'devnet'
+	| 'localnet'
+	| 'nextfork'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -40,6 +45,14 @@ export function inferTempoEnvFromHostname(
 	}
 
 	if (
+		host.includes('explorer-localnet') ||
+		host.includes('explore.localnet.') ||
+		host.includes('explore.31337.')
+	) {
+		return 'localnet'
+	}
+
+	if (
 		host.includes('explorer-devnet') ||
 		host.includes('explore.devnet.') ||
 		host.includes('explore.31318.')
@@ -60,9 +73,21 @@ export function inferTempoEnvFromHostname(
 }
 
 function normalizeTempoEnv(value: string | undefined): TempoEnv {
-	return value === 'mainnet' || value === 'devnet' || value === 'nextfork'
+	return value === 'mainnet' ||
+		value === 'devnet' ||
+		value === 'localnet' ||
+		value === 'nextfork'
 		? value
 		: 'testnet'
+}
+
+export function getLocalnetRpcUrl(): string {
+	return import.meta.env.VITE_TEMPO_RPC_URL || 'http://127.0.0.1:8545'
+}
+
+export function getLocalnetChainId(): number {
+	const chainId = Number(import.meta.env.VITE_TEMPO_CHAIN_ID || 31_337)
+	return Number.isSafeInteger(chainId) && chainId > 0 ? chainId : 31_337
 }
 
 function getRequestUrlIfAvailable(): URL | undefined {
@@ -115,3 +140,7 @@ export const getTempoEnv = createIsomorphicFn()
 export const isTestnet = createIsomorphicFn()
 	.client(() => getTempoEnv() === 'testnet')
 	.server(() => getTempoEnv() === 'testnet')
+
+export const isLocalnet = createIsomorphicFn()
+	.client(() => getTempoEnv() === 'localnet')
+	.server(() => getTempoEnv() === 'localnet')

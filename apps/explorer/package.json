@@ -11,6 +11,8 @@
 		"postinstall": "pnpm gen:types",
 		"dev": "pnpm dev:testnet",
 		"dev:devnet": "VITE_TEMPO_ENV='devnet' vite dev --port 3000",
+		"dev:localnet": "VITE_TEMPO_ENV='localnet' vite dev --port 3000",
+		"dev:anvil": "bash scripts/dev-anvil.sh",
 		"dev:nextfork": "VITE_TEMPO_ENV='nextfork' vite dev --port 3000",
 		"dev:testnet": "VITE_TEMPO_ENV='testnet' vite dev --port 3000",
 		"dev:mainnet": "VITE_TEMPO_ENV='mainnet' vite dev --port 3000",

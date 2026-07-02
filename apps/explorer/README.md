@@ -15,6 +15,24 @@ To run `devnet` chain:
 pnpm dev:devnet
 ```
 
+To run against a local anvil node:
+
+```sh
+pnpm dev:anvil
+```
+
+This starts `anvil --network tempo --block-time 1 --chain-id 31337` on
+`http://127.0.0.1:8545`, then launches a local explorer instance pointed at
+that RPC URL. Override defaults with `ANVIL_BLOCK_TIME`, `ANVIL_CHAIN_ID`,
+`ANVIL_NETWORK`, `ANVIL_PORT`, `EXPLORER_HOST`, `EXPLORER_PORT`,
+`EXPLORER_PUBLIC_HOST`, or `VITE_BASE_URL`.
+
+If an anvil-compatible node is already running:
+
+```sh
+VITE_TEMPO_RPC_URL=http://127.0.0.1:8545 VITE_TEMPO_CHAIN_ID=31337 pnpm dev:localnet
+```
+
 ### Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com) for styling.

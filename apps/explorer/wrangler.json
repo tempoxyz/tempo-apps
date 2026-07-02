@@ -143,6 +143,38 @@
 				}
 			}
 		},
+		"localnet": {
+			"name": "explorer-localnet",
+			"routes": [],
+			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "false",
+				"VITE_DATADOG_ENV": "localnet",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "0",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "0",
+				"VITE_TEMPO_ENV": "localnet",
+				"VITE_TEMPO_RPC_URL": "http://127.0.0.1:8545",
+				"VITE_TEMPO_CHAIN_ID": "31337",
+				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
+			},
+			"workers_dev": true,
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
 		"mainnet": {
 			"name": "explorer-mainnet",
 			"routes": [

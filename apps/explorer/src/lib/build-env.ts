@@ -4,6 +4,7 @@ const enabledSchema = z.stringbool()
 
 const canonicalTempoEnvSchema = z.union([
 	z.literal('devnet'),
+	z.literal('localnet'),
 	z.literal('nextfork'),
 	z.literal('testnet'),
 	z.literal('mainnet'),
@@ -52,5 +53,7 @@ export const buildEnvSchema = z.object({
 	VITE_DATADOG_SESSION_SAMPLE_RATE: z.prefault(z.string(), '100'),
 	VITE_DATADOG_TRACE_SAMPLE_RATE: z.prefault(z.string(), '20'),
 	VITE_ENABLE_DEVTOOLS: z.prefault(enabledSchema, 'false'),
+	VITE_TEMPO_CHAIN_ID: z.prefault(z.coerce.number(), 31_337),
 	VITE_TEMPO_ENV: tempoEnvSchema,
+	VITE_TEMPO_RPC_URL: z.prefault(z.string(), 'http://127.0.0.1:8545'),
 })

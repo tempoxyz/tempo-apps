@@ -3,11 +3,13 @@ import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 
 import type { BalancesResponse, TokenBalance } from '#lib/address-balances'
+import { getTempoEnv } from '#lib/env'
 import {
 	buildCsv,
 	createCsvDownloadResponse,
 	createTimestampedCsvFilename,
 } from '#lib/server/csv'
+import { fetchLocalnetAddressBalances } from '#lib/server/localnet'
 import { api } from '#lib/server/tempo-api'
 
 export const TIP20_DECIMALS = 6
@@ -101,6 +103,20 @@ export async function fetchAddressBalancesData(params: {
 }): Promise<BalancesResponse> {
 	const { address, chainId } = params
 	const maxTokens = params.maxTokens ?? MAX_TOKENS
+
+	if (getTempoEnv() === 'localnet') {
+		const balances = await fetchLocalnetAddressBalances(address)
+		return {
+			balances: balances.slice(0, maxTokens).map((row) => ({
+				token: row.token,
+				balance: row.balance.toString(),
+				name: row.metadata.name ?? row.token,
+				symbol: row.metadata.symbol ?? 'TIP20',
+				currency: row.metadata.currency ?? '',
+				decimals: row.metadata.decimals ?? TIP20_DECIMALS,
+			})),
+		}
+	}
 
 	const { data } = await parseResponse(
 		api.v1.addresses[':address'].balances.$get({

@@ -4,7 +4,8 @@ import * as Hash from 'ox/Hash'
 import * as Hex from 'ox/Hex'
 import { formatUnits } from 'viem'
 import { Abis } from '#lib/abis'
-import { getChainId, readContracts } from 'wagmi/actions'
+import { getTempoEnv } from '#lib/env'
+import { getChainId, getPublicClient, readContracts } from 'wagmi/actions'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
@@ -37,6 +38,60 @@ function parseTimestamp(value: unknown): number | null {
 		if (Number.isFinite(parsedDate)) return Math.floor(parsedDate / 1000)
 	}
 	return null
+}
+
+async function fetchLocalnetRoleLogs(
+	address: Address.Address,
+	config: ReturnType<typeof getWagmiConfig>,
+) {
+	const client = getPublicClient(config)
+	if (!client) return []
+
+	const logs = await client.getLogs({
+		address,
+		fromBlock: 0n,
+		toBlock: 'latest',
+	})
+
+	const blockNumbers = Array.from(
+		new Set(
+			logs
+				.map((log) => log.blockNumber)
+				.filter((blockNumber): blockNumber is bigint => blockNumber !== null)
+				.map((blockNumber) => blockNumber.toString()),
+		),
+	).map((blockNumber) => BigInt(blockNumber))
+
+	const timestampEntries = await Promise.all(
+		blockNumbers.map(async (blockNumber) => {
+			try {
+				const block = await client.getBlock({ blockNumber })
+				return [blockNumber.toString(), Number(block.timestamp)] as const
+			} catch {
+				return [blockNumber.toString(), null] as const
+			}
+		}),
+	)
+	const timestampByBlock = new Map(timestampEntries)
+
+	return logs
+		.map((log) => ({
+			topic0: log.topics[0] ?? null,
+			topic1: log.topics[1] ?? null,
+			topic2: log.topics[2] ?? null,
+			data: log.data,
+			block_timestamp:
+				log.blockNumber === null
+					? null
+					: (timestampByBlock.get(log.blockNumber.toString()) ?? null),
+			tx_hash: log.transactionHash ?? null,
+			block_num: log.blockNumber ?? 0n,
+			log_idx: log.logIndex ?? 0,
+		}))
+		.sort((a, b) => {
+			if (a.block_num !== b.block_num) return a.block_num < b.block_num ? -1 : 1
+			return Number(a.log_idx) - Number(b.log_idx)
+		})
 }
 
 export type RoleHolder = {
@@ -127,23 +182,26 @@ export const Route = createFileRoute('/api/tip20-roles')({
 							Hex.fromString(ROLE_MEMBERSHIP_UPDATED_SELECTOR_SIGNATURE),
 						)
 
-						const roleLogs = await tempoQueryBuilder(chainId)
-							.selectFrom('logs')
-							.select([
-								'topic0',
-								'topic1',
-								'topic2',
-								'data',
-								'block_timestamp',
-								'tx_hash',
-								'block_num',
-								'log_idx',
-							])
-							.where('address', '=', address)
-							.orderBy('block_num', 'asc')
-							.orderBy('log_idx', 'asc')
-							.limit(ROLE_LOG_SCAN_LIMIT)
-							.execute()
+						const roleLogs =
+							getTempoEnv() === 'localnet'
+								? await fetchLocalnetRoleLogs(address, config)
+								: await tempoQueryBuilder(chainId)
+										.selectFrom('logs')
+										.select([
+											'topic0',
+											'topic1',
+											'topic2',
+											'data',
+											'block_timestamp',
+											'tx_hash',
+											'block_num',
+											'log_idx',
+										])
+										.where('address', '=', address)
+										.orderBy('block_num', 'asc')
+										.orderBy('log_idx', 'asc')
+										.limit(ROLE_LOG_SCAN_LIMIT)
+										.execute()
 
 						const holders = new Map<string, boolean>()
 						const grantMeta = new Map<
@@ -199,11 +257,14 @@ export const Route = createFileRoute('/api/tip20-roles')({
 						console.error('[tip20-roles] failed to fetch role logs:', error)
 					}
 
+					const cacheControl =
+						getTempoEnv() === 'localnet' ? 'no-store' : 'public, max-age=300'
+
 					return Response.json(
 						{ roles, config: tip20Config } satisfies Tip20RolesResponse,
 						{
 							headers: {
-								'Cache-Control': 'public, max-age=300',
+								'Cache-Control': cacheControl,
 							},
 						},
 					)
