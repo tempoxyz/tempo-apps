@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { toEnrichedTransaction } from '#lib/server/address-history'
+import {
+	toEnrichedTransaction,
+	toTransferTransaction,
+} from '#lib/server/address-history'
 
 const SENDER = '0x286ad6cfc7279c8a6d86d15dcefcb77a65aa7e92'
 const RECIPIENT = '0x20c0000000000000000000000000000000000003'
@@ -88,5 +91,37 @@ describe('toEnrichedTransaction', () => {
 		)
 
 		expect(result.status).toBe('reverted')
+	})
+})
+
+describe('toTransferTransaction', () => {
+	it('maps an account transfer row to an event-backed transaction row', () => {
+		const result = toTransferTransaction({
+			blockNumber: 21_900_000,
+			recipient: RECIPIENT,
+			sender: SENDER,
+			sourceToken: {
+				address: '0x20c0000000000000000000000000000000000000',
+				amount: '12345',
+			},
+			timestamp: '2026-06-24T12:00:00.000Z',
+			transactionHash: HASH,
+		} as never)
+
+		expect(result.hash).toBe(HASH)
+		expect(result.timestamp).toBe(Date.parse('2026-06-24T12:00:00.000Z') / 1000)
+		expect(result.from).toBe('0x286ad6cfc7279C8a6D86D15dcEFcB77A65Aa7E92')
+		expect(result.to).toBe('0x20C0000000000000000000000000000000000003')
+		expect(result.knownEvents[0]).toMatchObject({
+			type: 'send',
+			meta: { from: result.from, to: result.to },
+		})
+		expect(result.knownEvents[0]?.parts[1]).toEqual({
+			type: 'amount',
+			value: {
+				token: '0x20c0000000000000000000000000000000000000',
+				value: '12345',
+			},
+		})
 	})
 })
