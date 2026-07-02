@@ -6,11 +6,22 @@ ANVIL_PORT="${ANVIL_PORT:-8545}"
 ANVIL_CHAIN_ID="${ANVIL_CHAIN_ID:-31337}"
 ANVIL_BLOCK_TIME="${ANVIL_BLOCK_TIME:-1}"
 ANVIL_NETWORK="${ANVIL_NETWORK:-tempo}"
+EXPLORER_HOST="${EXPLORER_HOST:-127.0.0.1}"
 EXPLORER_PORT="${EXPLORER_PORT:-3000}"
+EXPLORER_PUBLIC_HOST="${EXPLORER_PUBLIC_HOST:-${EXPLORER_HOST}}"
+
+if [ "${EXPLORER_PUBLIC_HOST}" = "0.0.0.0" ] || [ "${EXPLORER_PUBLIC_HOST}" = "::" ]; then
+	EXPLORER_PUBLIC_HOST="127.0.0.1"
+fi
+
+if [[ "${EXPLORER_PUBLIC_HOST}" == *:* ]] && [[ "${EXPLORER_PUBLIC_HOST}" != \[*\] ]]; then
+	EXPLORER_PUBLIC_HOST="[${EXPLORER_PUBLIC_HOST}]"
+fi
 
 export VITE_TEMPO_ENV="localnet"
 export VITE_TEMPO_RPC_URL="${VITE_TEMPO_RPC_URL:-http://${ANVIL_HOST}:${ANVIL_PORT}}"
 export VITE_TEMPO_CHAIN_ID="${VITE_TEMPO_CHAIN_ID:-${ANVIL_CHAIN_ID}}"
+export VITE_BASE_URL="${VITE_BASE_URL:-http://${EXPLORER_PUBLIC_HOST}:${EXPLORER_PORT}}"
 
 anvil_pid=""
 
@@ -69,5 +80,5 @@ fi
 
 wait_for_anvil
 
-echo "Starting explorer on port ${EXPLORER_PORT}"
-pnpm exec vite dev --port "${EXPLORER_PORT}"
+echo "Starting explorer at ${VITE_BASE_URL}"
+pnpm exec vite dev --host "${EXPLORER_HOST}" --port "${EXPLORER_PORT}"
