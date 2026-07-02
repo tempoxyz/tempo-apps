@@ -11,3 +11,12 @@ export const tempoTestnet = tempoModerato.extend({
 export const tempoDevnet = tempoDevnet_.extend({
 	feeToken: '0x20c0000000000000000000000000000000000002',
 })
+
+export const tempoNextfork = tempoDevnet_.extend({
+	feeToken: '0x20c0000000000000000000000000000000000002',
+	rpcUrls: {
+		default: {
+			http: ['https://rpc-nextfork.devnet.tempoxyz.dev'],
+		},
+	},
+})

@@ -9,24 +9,10 @@
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
-	"kv_namespaces": [
-		{
-			"binding": "EXPLORER_FEE_AMM_CACHE",
-			"id": "c512895cab024808bce152ddd9aa3122",
-			"preview_id": "0211859b856e40d095ab4e2a5329a22d"
-		}
-	],
 	"browser": { "binding": "BROWSER" },
 	"env": {
 		"testnet": {
 			"name": "explorer-testnet",
-			"kv_namespaces": [
-				{
-					"binding": "EXPLORER_FEE_AMM_CACHE",
-					"id": "c512895cab024808bce152ddd9aa3122",
-					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
-				}
-			],
 			"routes": [
 				{
 					"custom_domain": true,
@@ -45,6 +31,14 @@
 				}
 			],
 			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "true",
+				"VITE_DATADOG_ENV": "testnet",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "testnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
@@ -68,13 +62,6 @@
 		},
 		"devnet": {
 			"name": "explorer-devnet",
-			"kv_namespaces": [
-				{
-					"binding": "EXPLORER_FEE_AMM_CACHE",
-					"id": "c512895cab024808bce152ddd9aa3122",
-					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
-				}
-			],
 			"routes": [
 				{
 					"custom_domain": true,
@@ -88,7 +75,54 @@
 				}
 			],
 			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "true",
+				"VITE_DATADOG_ENV": "devnet",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "devnet",
+				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
+			},
+			"workers_dev": true,
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
+		"nextfork": {
+			"name": "explorer-nextfork",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.nextfork.devnet.tempo.xyz"
+				}
+			],
+			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "true",
+				"VITE_DATADOG_ENV": "nextfork",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
+				"VITE_TEMPO_ENV": "nextfork",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
@@ -111,15 +145,16 @@
 		},
 		"localnet": {
 			"name": "explorer-localnet",
-			"kv_namespaces": [
-				{
-					"binding": "EXPLORER_FEE_AMM_CACHE",
-					"id": "c512895cab024808bce152ddd9aa3122",
-					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
-				}
-			],
 			"routes": [],
 			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "false",
+				"VITE_DATADOG_ENV": "localnet",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "0",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "0",
 				"VITE_TEMPO_ENV": "localnet",
 				"VITE_TEMPO_RPC_URL": "http://127.0.0.1:8545",
 				"VITE_TEMPO_CHAIN_ID": "31337",
@@ -142,13 +177,6 @@
 		},
 		"mainnet": {
 			"name": "explorer-mainnet",
-			"kv_namespaces": [
-				{
-					"binding": "EXPLORER_FEE_AMM_CACHE",
-					"id": "c512895cab024808bce152ddd9aa3122",
-					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
-				}
-			],
 			"routes": [
 				{
 					"custom_domain": true,
@@ -172,6 +200,14 @@
 				}
 			],
 			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "true",
+				"VITE_DATADOG_ENV": "mainnet",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "mainnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",

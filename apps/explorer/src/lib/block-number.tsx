@@ -1,12 +1,13 @@
 import * as React from 'react'
+import { createPublicClient, webSocket } from 'viem'
+import { watchBlocks } from 'viem/actions'
 import { getBlockNumber } from 'wagmi/actions'
-import { getWagmiConfig } from '#wagmi.config'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config'
 
 type Listener = () => void
 
+// Fallback poll interval for chains without a WebSocket RPC endpoint.
 const BLOCK_NUMBER_POLL_INTERVAL_MS = 2_000
-const BLOCK_NUMBER_ANIMATION_INTERVAL_MS = 500
-const BLOCK_NUMBER_SKEW_SNAP_THRESHOLD = 12n
 
 let confirmedBlockNumber: bigint | null = null
 let displayedBlockNumber: bigint | null = null
@@ -42,16 +43,12 @@ const setConfirmedBlockNumber = (next: bigint) => {
 		notifyConfirmed()
 	}
 
-	if (displayedBlockNumber == null) {
+	// Displayed tracks confirmed in real time so the counter ticks once per
+	// incoming block (driven by the WebSocket head subscription below).
+	if (displayedBlockNumber == null || next > displayedBlockNumber) {
 		displayedBlockNumber = next
 		notifyDisplayed()
 	}
-}
-
-const setDisplayedBlockNumber = (next: bigint) => {
-	if (displayedBlockNumber === next) return
-	displayedBlockNumber = next
-	notifyDisplayed()
 }
 
 export function syncBlockNumberAtLeast(next: bigint) {
@@ -86,21 +83,6 @@ export function BlockNumberProvider(
 	const { initial, children } = props
 	const config = React.useMemo(() => getWagmiConfig(), [])
 	const initialized = React.useRef(false)
-	const pollerRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
-	const animatorRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
-	const isPollingRef = React.useRef(false)
-
-	const pollBlockNumber = React.useCallback(async () => {
-		if (isPollingRef.current) return
-		isPollingRef.current = true
-		try {
-			const latest = await getBlockNumber(config)
-			setConfirmedBlockNumber(latest)
-		} catch {
-		} finally {
-			isPollingRef.current = false
-		}
-	}, [config])
 
 	React.useEffect(() => {
 		if (initialized.current) return
@@ -108,53 +90,43 @@ export function BlockNumberProvider(
 		if (initial != null) setConfirmedBlockNumber(initial)
 	}, [initial])
 
+	// Track the chain head in real time. Prefer a WebSocket head subscription so
+	// the block number ticks the instant a block is produced; fall back to a poll
+	// for chains without a WS endpoint.
 	React.useEffect(() => {
-		void pollBlockNumber()
-		pollerRef.current = setInterval(
-			pollBlockNumber,
-			BLOCK_NUMBER_POLL_INTERVAL_MS,
-		)
-		return () => {
-			if (pollerRef.current) {
-				clearInterval(pollerRef.current)
-				pollerRef.current = null
+		const chain = getTempoChain()
+		const wsUrl = (chain.rpcUrls.default as { webSocket?: readonly string[] })
+			.webSocket?.[0]
+
+		if (wsUrl) {
+			const client = createPublicClient({ chain, transport: webSocket(wsUrl) })
+			return watchBlocks(client, {
+				onBlock: (block) => {
+					if (block.number != null) setConfirmedBlockNumber(block.number)
+				},
+			})
+		}
+
+		let cancelled = false
+		let inFlight = false
+		const poll = async () => {
+			if (inFlight) return
+			inFlight = true
+			try {
+				const latest = await getBlockNumber(config)
+				if (!cancelled) setConfirmedBlockNumber(latest)
+			} catch {
+			} finally {
+				inFlight = false
 			}
 		}
-	}, [pollBlockNumber])
-
-	React.useEffect(() => {
-		animatorRef.current = setInterval(() => {
-			const confirmed = confirmedBlockNumber
-			const displayed = displayedBlockNumber
-
-			if (confirmed == null) return
-			if (displayed == null) {
-				setDisplayedBlockNumber(confirmed)
-				return
-			}
-
-			if (displayed > confirmed) {
-				setDisplayedBlockNumber(confirmed)
-				return
-			}
-
-			if (displayed === confirmed) return
-
-			if (confirmed - displayed > BLOCK_NUMBER_SKEW_SNAP_THRESHOLD) {
-				setDisplayedBlockNumber(confirmed)
-				return
-			}
-
-			setDisplayedBlockNumber(displayed + 1n)
-		}, BLOCK_NUMBER_ANIMATION_INTERVAL_MS)
-
+		void poll()
+		const id = setInterval(poll, BLOCK_NUMBER_POLL_INTERVAL_MS)
 		return () => {
-			if (animatorRef.current) {
-				clearInterval(animatorRef.current)
-				animatorRef.current = null
-			}
+			cancelled = true
+			clearInterval(id)
 		}
-	}, [])
+	}, [config])
 
 	return <>{children}</>
 }

@@ -3,6 +3,7 @@ import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { Sphere } from '#comps/Sphere'
 import { BlockNumberProvider } from '#lib/block-number'
+import { NotFoundProvider } from '#lib/not-found'
 import { useMatchRoute, useRouterState } from '@tanstack/react-router'
 
 export function Layout(props: Layout.Props) {
@@ -14,21 +15,23 @@ export function Layout(props: Layout.Props) {
 			(state.resolvedLocation?.pathname ?? state.location.pathname) === '/',
 	})
 	return (
-		<BlockNumberProvider>
-			<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-				<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
-					<Header />
+		<NotFoundProvider>
+			<BlockNumberProvider>
+				<div className="flex min-h-dvh flex-col print:block print:min-h-0">
+					<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
+						<Header />
+					</div>
+					<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
+						<BreadcrumbsPortal />
+						{children}
+					</main>
+					<div className="w-full mt-6 relative z-1 print:hidden">
+						<Footer />
+					</div>
+					{isLanding && <Sphere />}
 				</div>
-				<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
-					<BreadcrumbsPortal />
-					{children}
-				</main>
-				<div className="w-full mt-6 relative z-1 print:hidden">
-					<Footer />
-				</div>
-				{isLanding && <Sphere />}
-			</div>
-		</BlockNumberProvider>
+			</BlockNumberProvider>
+		</NotFoundProvider>
 	)
 }
 

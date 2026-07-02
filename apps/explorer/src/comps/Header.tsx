@@ -8,33 +8,31 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
-import { getTempoEnv } from '#lib/env'
+import { type TempoEnv, getTempoEnv, isLocalnet, isTestnet } from '#lib/env'
+import {
+	buildExplorerNetworkHref,
+	EXPLORER_NETWORK_OPTIONS,
+	getActiveExplorerNetworkOption,
+	isExplorerNetworkPathPreservable,
+} from '#lib/explorer-network'
+import { useIsNotFoundPage } from '#lib/not-found'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
-	const networkBadgeLabel =
-		tempoEnv === 'mainnet'
-			? null
-			: tempoEnv === 'devnet'
-				? 'Devnet'
-				: tempoEnv === 'localnet'
-					? 'Localnet'
-					: 'Testnet'
 
 	return (
 		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-1 print:justify-center">
+			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-20 print:justify-center">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link
 						to="/"
 						className="flex items-center gap-[12px] press-down py-[4px]"
 					>
 						<Header.TempoWordmark />
-						{networkBadgeLabel && (
-							<Header.NetworkBadge label={networkBadgeLabel} />
-						)}
 					</Link>
+					<Header.NetworkBadge tempoEnv={tempoEnv} />
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
@@ -163,6 +161,105 @@ export namespace Header {
 		)
 	}
 
+	export function NetworkBadge(props: NetworkBadge.Props): React.JSX.Element {
+		const { tempoEnv } = props
+		const [isOpen, setIsOpen] = React.useState(false)
+		const menuId = React.useId()
+		const rootRef = React.useRef<HTMLDivElement>(null)
+		const activeOption = getActiveExplorerNetworkOption(tempoEnv)
+		const isNotFoundPage = useIsNotFoundPage()
+		const currentPath = useRouterState({
+			select: (state) => {
+				const location = state.resolvedLocation ?? state.location
+				const hash = location.hash ? `#${location.hash.replace(/^#/, '')}` : ''
+				return `${location.pathname}${location.searchStr}${hash}`
+			},
+		})
+
+		React.useEffect(() => {
+			if (!isOpen) return
+
+			function handlePointerDown(event: PointerEvent) {
+				if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false)
+			}
+
+			function handleKeyDown(event: KeyboardEvent) {
+				if (event.key === 'Escape') setIsOpen(false)
+			}
+
+			window.addEventListener('pointerdown', handlePointerDown)
+			window.addEventListener('keydown', handleKeyDown)
+
+			return () => {
+				window.removeEventListener('pointerdown', handlePointerDown)
+				window.removeEventListener('keydown', handleKeyDown)
+			}
+		}, [isOpen])
+
+		return (
+			<div ref={rootRef} className="relative">
+				<button
+					type="button"
+					aria-controls={isOpen ? menuId : undefined}
+					aria-expanded={isOpen}
+					aria-haspopup="menu"
+					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none press-down"
+					title={`Network: ${activeOption.label}`}
+					onClick={() => setIsOpen((value) => !value)}
+				>
+					<Header.NetworkStatusDot className={activeOption.dotClassName} />
+					<span>{activeOption.label}</span>
+					<ChevronDownIcon
+						className={cx(
+							'size-[12px] text-tertiary transition-transform duration-100',
+							isOpen && 'rotate-180',
+						)}
+					/>
+				</button>
+				{isOpen && (
+					<div
+						id={menuId}
+						role="menu"
+						aria-label="Tempo network"
+						className="absolute left-0 top-[calc(100%+8px)] z-50 w-[156px] overflow-hidden rounded-[10px] border border-base-border bg-base-background/95 p-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur"
+					>
+						{EXPLORER_NETWORK_OPTIONS.map((option) => {
+							const isActive = option.env === activeOption.env
+
+							return (
+								<a
+									key={option.env}
+									href={buildExplorerNetworkHref(option.host, currentPath, {
+										fallbackToHome:
+											isNotFoundPage &&
+											!isExplorerNetworkPathPreservable(currentPath),
+									})}
+									role="menuitemradio"
+									aria-checked={isActive}
+									aria-current={isActive ? 'page' : undefined}
+									className={cx(
+										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
+										isActive && 'bg-surface text-primary',
+									)}
+									onClick={() => setIsOpen(false)}
+								>
+									<Header.NetworkStatusDot className={option.dotClassName} />
+									<span>{option.label}</span>
+								</a>
+							)
+						})}
+					</div>
+				)}
+			</div>
+		)
+	}
+
+	export namespace NetworkBadge {
+		export interface Props {
+			tempoEnv: TempoEnv
+		}
+	}
+
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial, className } = props
 		const resolvedPathname = useRouterState({
@@ -174,11 +271,10 @@ export namespace Header {
 		const blockNumber =
 			resolvedPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
 		const isReady = blockNumber != null
-		const canLinkBlock = getTempoEnv() !== 'mainnet'
 
 		return (
 			<Link
-				disabled={!canLinkBlock}
+				disabled={!isTestnet() && !isLocalnet()}
 				to="/block/$id"
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
@@ -233,20 +329,31 @@ export namespace Header {
 		}
 	}
 
-	export function NetworkBadge(props: NetworkBadge.Props) {
-		const { label } = props
-
+	export function NetworkStatusDot(
+		props: NetworkStatusDot.Props,
+	): React.JSX.Element {
+		const { className } = props
 		return (
-			<span className="flex h-[28px] shrink-0 items-center justify-center gap-[4px] rounded-[8px] border border-[#2C2C2F] bg-[#1A1A1A] px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary">
-				<span aria-hidden className="size-[6px] rounded-full bg-amber-400" />
-				{label}
+			<span aria-hidden className="relative flex size-[6px] shrink-0">
+				<span
+					className={cx(
+						'absolute inline-flex size-full animate-ping rounded-full opacity-60',
+						className,
+					)}
+				/>
+				<span
+					className={cx(
+						'relative inline-flex size-[6px] rounded-full',
+						className,
+					)}
+				/>
 			</span>
 		)
 	}
 
-	export namespace NetworkBadge {
+	export namespace NetworkStatusDot {
 		export interface Props {
-			label: 'Devnet' | 'Localnet' | 'Testnet'
+			className: string
 		}
 	}
 }

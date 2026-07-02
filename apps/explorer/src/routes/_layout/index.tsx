@@ -115,7 +115,7 @@ function Component() {
 							}
 							if (data.type === 'hash') {
 								navigate({
-									to: '/tx/$hash',
+									to: '/receipt/$hash',
 									params: { hash: data.value },
 								})
 								return

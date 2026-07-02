@@ -1,6 +1,7 @@
 import type { KnownEvent } from '#lib/domain/known-events'
 
 export const NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS = 18
+export const DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS = 18
 
 type Amount = NonNullable<KnownEvent['totalAmount']>
 type AmountPart = KnownEvent['parts'][number] & { type: 'amount' }
@@ -15,7 +16,7 @@ function toBigInt(value: bigint | string | number): bigint {
 }
 
 function normalizeAmount(amountValue: Amount): bigint {
-	const decimals = amountValue.decimals ?? 6
+	const decimals = amountValue.decimals ?? DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS
 	const value = toBigInt(amountValue.value as bigint | string | number)
 	const decimalDelta = NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS - decimals
 

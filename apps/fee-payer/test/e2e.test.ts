@@ -125,11 +125,16 @@ describe('fee-payer integration', () => {
 					headers: {
 						Origin: 'https://example.com',
 						'Access-Control-Request-Method': 'POST',
+						'Access-Control-Request-Headers':
+							'Content-Type, X-Tempo-Attribution-Key',
 					},
 				}),
 			)
 
 			expect([200, 204]).toContain(response.status)
+			expect(response.headers.get('Access-Control-Allow-Headers')).toContain(
+				'x-tempo-attribution-key',
+			)
 		})
 
 		it('handles health check / root path', async () => {
@@ -175,11 +180,13 @@ describe('fee-payer integration', () => {
 			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
-			const sponsorshipRequests = feePayerRequests.filter(
-				(request) => request.method !== 'eth_fillTransaction',
+			const sponsorshipRequests = feePayerRequests.filter((request) =>
+				['eth_fillTransaction', 'eth_signRawTransaction'].includes(
+					request.method,
+				),
 			)
 			expect(sponsorshipRequests).toHaveLength(1)
-			expect(sponsorshipRequests[0].method).toBe('eth_signRawTransaction')
+			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 
@@ -216,11 +223,13 @@ describe('fee-payer integration', () => {
 			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
 
 			// Assert RPC methods sent to fee-payer service
-			const sponsorshipRequests = feePayerRequests.filter(
-				(request) => request.method !== 'eth_fillTransaction',
+			const sponsorshipRequests = feePayerRequests.filter((request) =>
+				['eth_fillTransaction', 'eth_sendRawTransactionSync'].includes(
+					request.method,
+				),
 			)
 			expect(sponsorshipRequests).toHaveLength(1)
-			expect(sponsorshipRequests[0].method).toBe('eth_sendRawTransactionSync')
+			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 	})

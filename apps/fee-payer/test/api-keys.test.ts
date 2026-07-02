@@ -5,6 +5,7 @@ import {
 	buildSponsorClient,
 	createTestAccount,
 	sponsorAddress,
+	tempoChain,
 } from './helpers.js'
 
 const ADMIN_SECRET = 'test-admin-secret'
@@ -25,6 +26,26 @@ function feePayerRequest(path: string, rpcBody: unknown): Request {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(rpcBody),
+	})
+}
+
+async function sponsoredTransactionRequest(key: string, to: `0x${string}`) {
+	const account = createTestAccount()
+	const serialized = await account.signTransaction({
+		chainId: tempoChain.id,
+		feePayer: true,
+		gas: 50_000n,
+		maxFeePerGas: 20_000_000_000n,
+		nonce: 0,
+		to,
+		value: 0n,
+	})
+
+	return feePayerRequest(`/${key}`, {
+		jsonrpc: '2.0',
+		id: 1,
+		method: 'eth_sendRawTransactionSync',
+		params: [serialized],
 	})
 }
 
@@ -73,11 +94,19 @@ describe('admin API key management', () => {
 					label: 'Full Key',
 					dailyLimitUsd: '10.00',
 					allowedDestinations: ['0x0000000000000000000000000000000000000001'],
+					billable: true,
 				}),
 			)
 			expect(response.status).toBe(201)
 			const data = (await response.json()) as { key: string }
 			expect(data.key).toMatch(/^tp_/)
+
+			const listRes = await exports.default.fetch(adminRequest('GET', '/keys'))
+			const list = (await listRes.json()) as {
+				keys: Array<{ key: string; record: { billable: boolean } }>
+			}
+			const entry = list.keys.find((k) => k.key === data.key)
+			expect(entry?.record.billable).toBe(true)
 		})
 
 		it('rejects create with missing label', async () => {
@@ -85,6 +114,37 @@ describe('admin API key management', () => {
 				adminRequest('POST', '/keys', {}),
 			)
 			expect(response.status).toBe(400)
+		})
+
+		it('defaults new and legacy keys to non-billable', async () => {
+			const createRes = await exports.default.fetch(
+				adminRequest('POST', '/keys', { label: 'Non-Billable Default' }),
+			)
+			const { key } = (await createRes.json()) as { key: string }
+
+			const legacyKey = 'tp_legacy_non_billable_default'
+			await env.SponsorApiKeyStore.put(
+				`api-key:${legacyKey}`,
+				JSON.stringify({
+					label: 'Legacy Non-Billable Default',
+					dailyLimitUsd: null,
+					allowedDestinations: [],
+					createdAt: '2026-06-20T12:00:00.000Z',
+					active: true,
+				}),
+			)
+
+			const response = await exports.default.fetch(adminRequest('GET', '/keys'))
+			expect(response.status).toBe(200)
+			const data = (await response.json()) as {
+				keys: Array<{ key: string; record: { billable: boolean } }>
+			}
+			expect(
+				data.keys.find((entry) => entry.key === key)?.record.billable,
+			).toBe(false)
+			expect(
+				data.keys.find((entry) => entry.key === legacyKey)?.record.billable,
+			).toBe(false)
 		})
 
 		it('lists keys', async () => {
@@ -141,6 +201,7 @@ describe('admin API key management', () => {
 				adminRequest('PATCH', `/keys/${key}`, {
 					label: 'Updated',
 					dailyLimitUsd: '5.00',
+					billable: true,
 				}),
 			)
 			expect(updateRes.status).toBe(200)
@@ -150,12 +211,17 @@ describe('admin API key management', () => {
 			const data = (await listRes.json()) as {
 				keys: Array<{
 					key: string
-					record: { label: string; dailyLimitUsd: string | null }
+					record: {
+						label: string
+						dailyLimitUsd: string | null
+						billable: boolean
+					}
 				}>
 			}
 			const updated = data.keys.find((k) => k.key === key)
 			expect(updated?.record.label).toBe('Updated')
 			expect(updated?.record.dailyLimitUsd).toBe('5.00')
+			expect(updated?.record.billable).toBe(true)
 		})
 
 		it('returns 404 for updating nonexistent key', async () => {
@@ -274,19 +340,12 @@ describe('API key sponsorship integration', () => {
 			}),
 		)
 		const { key } = (await createRes.json()) as { key: string }
-		const account = createTestAccount()
 
-		const receipt = await sendTransactionSync(
-			buildSponsorClient(key, account),
-			{
-				feePayer: true,
-				to,
-				value: 0n,
-			},
+		const response = await exports.default.fetch(
+			await sponsoredTransactionRequest(key, to),
 		)
 
-		expect(receipt.status).toBe('success')
-		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+		expect(response.status).toBe(200)
 	})
 
 	it('rejects a sponsored transaction when destination is not in allowedDestinations', async () => {
@@ -297,15 +356,18 @@ describe('API key sponsorship integration', () => {
 			}),
 		)
 		const { key } = (await createRes.json()) as { key: string }
-		const account = createTestAccount()
 
-		await expect(
-			sendTransactionSync(buildSponsorClient(key, account), {
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000002',
-				value: 0n,
-			}),
-		).rejects.toThrow(/Destination address not allowed/)
+		const response = await exports.default.fetch(
+			await sponsoredTransactionRequest(
+				key,
+				'0x0000000000000000000000000000000000000002',
+			),
+		)
+
+		expect(response.status).toBe(403)
+		await expect(response.json()).resolves.toMatchObject({
+			error: expect.stringMatching(/Destination address not allowed/),
+		})
 	})
 
 	it('rejects a sponsored transaction when dailyLimitUsd is exceeded', async () => {
@@ -320,15 +382,18 @@ describe('API key sponsorship integration', () => {
 		// Pre-seed today's spend above the limit.
 		const today = new Date().toISOString().slice(0, 10)
 		await env.SponsorApiKeyStore.put(`spend:${key}:${today}`, '1000000')
-		const account = createTestAccount()
 
-		await expect(
-			sendTransactionSync(buildSponsorClient(key, account), {
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000002',
-				value: 0n,
-			}),
-		).rejects.toThrow(/Daily spend limit exceeded/)
+		const response = await exports.default.fetch(
+			await sponsoredTransactionRequest(
+				key,
+				'0x0000000000000000000000000000000000000002',
+			),
+		)
+
+		expect(response.status).toBe(429)
+		await expect(response.json()).resolves.toMatchObject({
+			error: expect.stringMatching(/Daily spend limit exceeded/),
+		})
 	})
 
 	it('records spend after a sponsored transaction under dailyLimitUsd', async () => {
@@ -339,17 +404,13 @@ describe('API key sponsorship integration', () => {
 			}),
 		)
 		const { key } = (await createRes.json()) as { key: string }
-		const account = createTestAccount()
 
-		const receipt = await sendTransactionSync(
-			buildSponsorClient(key, account),
-			{
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000002',
-				value: 0n,
-			},
+		await exports.default.fetch(
+			await sponsoredTransactionRequest(
+				key,
+				'0x0000000000000000000000000000000000000002',
+			),
 		)
-		expect(receipt.status).toBe('success')
 
 		// recordSpend runs via ctx.waitUntil; poll briefly until it lands.
 		const today = new Date().toISOString().slice(0, 10)
@@ -388,28 +449,22 @@ describe('API key sponsorship integration', () => {
 		}
 
 		// First sponsored tx — lifetime starts from 0.
-		const r1 = await sendTransactionSync(
-			buildSponsorClient(key, createTestAccount()),
-			{
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000002',
-				value: 0n,
-			},
+		await exports.default.fetch(
+			await sponsoredTransactionRequest(
+				key,
+				'0x0000000000000000000000000000000000000002',
+			),
 		)
-		expect(r1.status).toBe('success')
 		const afterFirst = await waitForLifetime(0n)
 
 		// Second sponsored tx — lifetime should strictly increase, not be
 		// overwritten with the second-tx-only fee.
-		const r2 = await sendTransactionSync(
-			buildSponsorClient(key, createTestAccount()),
-			{
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000002',
-				value: 0n,
-			},
+		await exports.default.fetch(
+			await sponsoredTransactionRequest(
+				key,
+				'0x0000000000000000000000000000000000000002',
+			),
 		)
-		expect(r2.status).toBe('success')
 		const afterSecond = await waitForLifetime(afterFirst)
 
 		expect(afterSecond).toBeGreaterThan(afterFirst)

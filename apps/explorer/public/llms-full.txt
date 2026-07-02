@@ -1,0 +1,385 @@
+# Tempo Explorer — Full LLM Reference
+
+> Comprehensive reference for agents and AI systems using Tempo Explorer.
+
+Tempo Explorer is a blockchain explorer for the Tempo network. It helps users inspect blocks, transactions, receipts, addresses, contracts, tokens, balances, Fee AMM pools, and on-chain events.
+
+For a shorter overview, see [`/llms.txt`](/llms.txt).
+
+## Page Routes
+
+### Home
+
+- `/`
+
+Displays the main search experience.
+
+Search accepts:
+
+- Tempo address
+- Transaction hash
+- Block number
+- Token symbol, name, or address
+
+The search UI groups results by entity type:
+
+- Blocks
+- Addresses
+- Tokens
+- Transactions
+
+Search supports keyboard navigation and `Cmd/Ctrl + K`.
+
+### Search API
+
+- `/api/search?q={query}`
+
+Returns JSON search results. Use this endpoint when the input type is unknown.
+
+```ts
+type SearchResult =
+  | { type: 'token'; address: string; symbol: string; name: string; isTip20: boolean }
+  | { type: 'address'; address: string; isTip20: boolean }
+  | { type: 'transaction'; hash: string; timestamp?: number }
+  | { type: 'block'; blockNumber: number }
+```
+
+Route based on result type:
+
+- `block` → `/block/{blockNumber}`
+- `address` → `/address/{address}`
+- `token` → `/address/{address}?tab=transfers`
+- `transaction` → `/tx/{hash}` or `/receipt/{hash}`
+
+### Address Pages
+
+- `/address/{address}`
+
+Default tab:
+
+- `transactions`
+
+Supported tabs:
+
+- `?tab=transactions` — transaction history
+- `?tab=holdings` — current token balances
+- `?tab=transfers` — TIP20 token transfer history, when the address is a token
+- `?tab=holders` — TIP20 token holders, when the address is a token
+- `?tab=token` — TIP20 token metadata, when the address is a token
+- `?tab=contract` — contract ABI, bytecode, and source when available
+- `?tab=interact` — read and write contract functions when ABI is available
+
+Transaction filters:
+
+- `?status=success`
+- `?status=reverted`
+- `?period=24h`
+- `?period=7d`
+- `?dir=sent`
+- `?dir=received`
+
+Pagination:
+
+- `?page={number}`
+- `?limit={number}`
+
+Address pages show account type, transaction count, holdings, and creation or last-activity metadata when available. Balances and transactions can be exported as CSV.
+
+Examples:
+
+```txt
+/address/0xabc...
+/address/0xabc...?tab=holdings
+/address/0xabc...?tab=transactions&status=success&period=7d
+/address/0xtoken...?tab=holders
+/address/0xcontract...?tab=contract
+/address/0xcontract...?tab=interact
+```
+
+### Token Pages
+
+- `/token/{address}`
+
+Token pages redirect to address pages because TIP20 tokens are represented by contract addresses.
+
+Tab mapping:
+
+- `/token/{address}` → `/address/{address}?tab=transfers`
+- `/token/{address}?tab=holders` → `/address/{address}?tab=holders`
+- `/token/{address}?tab=contract` → `/address/{address}?tab=contract`
+
+### Transaction Pages
+
+- `/tx/{hash}`
+
+Shows transaction details.
+
+Supported tabs:
+
+- `?tab=overview` — high-level receipt and transaction summary
+- `?tab=balances` — balance changes
+- `?tab=calls` — structured call data, when available
+- `?tab=events` — raw and decoded logs/events
+- `?tab=trace` — call trace and prestate diff, when available
+- `?tab=raw` — raw transaction and receipt JSON
+
+Pagination:
+
+- `?page={number}` for paginated sections where applicable
+
+Examples:
+
+```txt
+/tx/0xabc...
+/tx/0xabc...?tab=events
+/tx/0xabc...?tab=trace
+/tx/0xabc...?tab=raw
+```
+
+### Receipt Pages
+
+- `/receipt/{hash}`
+
+Shows receipt-oriented transaction details. Use this page when the user asks what happened in a transaction or wants the canonical receipt view.
+
+### Blocks List
+
+- `/blocks`
+
+Shows recent blocks.
+
+Query parameters:
+
+- `?from={blockNumber}` — paginate from a block number
+- `?live=true` — live-updating latest blocks
+- `?live=false` — paused or static block list
+
+Columns include:
+
+- Block number
+- Block hash
+- Time
+- Transaction count
+
+Examples:
+
+```txt
+/blocks
+/blocks?live=true
+/blocks?from=123456
+```
+
+### Block Detail
+
+- `/block/{id}`
+
+`id` may be:
+
+- Block number
+- Block hash
+- `latest`
+
+Shows:
+
+- Block hash
+- Block number
+- Timestamp
+- Gas usage
+- Miner or proposer address when available
+- Parent hash
+- Transaction list
+- Known event summaries for transactions
+
+Pagination:
+
+- `?page={number}`
+
+Examples:
+
+```txt
+/block/latest
+/block/123456
+/block/0xabc...
+```
+
+### Block Countdown
+
+- `/block/countdown/{targetBlock}`
+
+Shows estimated time until a future block. Use this page when the user asks when a target block will happen.
+
+### Tokens List
+
+- `/tokens`
+
+Shows discovered TIP20 tokens.
+
+Columns include:
+
+- Symbol
+- Name
+- Currency
+- Holders
+- Address
+- Creation time
+
+Pagination:
+
+- `?page={number}`
+
+Examples:
+
+```txt
+/tokens
+/tokens?page=2
+```
+
+### Fee AMM
+
+- `/fee-amm`
+
+Shows Fee AMM liquidity discovered from Fee AMM mint activity.
+
+Sections:
+
+- Tokens
+- Pools
+
+Pool information includes:
+
+- Pool pair
+- Reserves
+- Liquidity
+- Creation time
+- Latest mint time
+- Mint count
+
+Use this page for questions about fee-token routing, validator-token liquidity, or Fee AMM pools.
+
+## Public API Routes
+
+### Health
+
+- `/api/health`
+
+Returns service health.
+
+### Search
+
+- `/api/search?q={query}`
+
+Searches for blocks, addresses, transactions, and tokens.
+
+### Address APIs
+
+- `/api/address/{address}`
+- `/api/address/balances/{address}`
+- `/api/address/history/{address}`
+- `/api/address/metadata/{address}`
+- `/api/address/total-value/{address}`
+- `/api/address/txs-count/{address}`
+
+### Contract APIs
+
+- `/api/contract/creation/{address}`
+- `/api/abi/batch`
+- `/api/code`
+
+### Transaction APIs
+
+- `/api/tx/balance-changes/{hash}`
+- `/api/tx/trace/{hash}`
+
+### Token APIs
+
+- `/api/tokens/count`
+- `/api/tip20-roles`
+
+## Common Tasks
+
+### Find an unknown input
+
+Use:
+
+```txt
+/api/search?q={input}
+```
+
+Then route based on result type:
+
+- `block` → `/block/{blockNumber}`
+- `address` → `/address/{address}`
+- `token` → `/address/{address}?tab=transfers`
+- `transaction` → `/tx/{hash}` or `/receipt/{hash}`
+
+### Show an address's balance
+
+Use:
+
+```txt
+/address/{address}?tab=holdings
+```
+
+### Show an address's recent activity
+
+Use:
+
+```txt
+/address/{address}?tab=transactions
+```
+
+Optional filters:
+
+```txt
+/address/{address}?tab=transactions&status=success
+/address/{address}?tab=transactions&period=24h
+/address/{address}?tab=transactions&dir=sent
+```
+
+### Show a token's holders
+
+Use:
+
+```txt
+/address/{tokenAddress}?tab=holders
+```
+
+### Show a token's transfers
+
+Use:
+
+```txt
+/address/{tokenAddress}?tab=transfers
+```
+
+### Show a contract's source or ABI
+
+Use:
+
+```txt
+/address/{contractAddress}?tab=contract
+```
+
+### Interact with a contract
+
+Use:
+
+```txt
+/address/{contractAddress}?tab=interact
+```
+
+### Show transaction internals
+
+Use:
+
+```txt
+/tx/{hash}?tab=overview
+/tx/{hash}?tab=balances
+/tx/{hash}?tab=events
+/tx/{hash}?tab=trace
+/tx/{hash}?tab=raw
+```
+
+## Current Limitations
+
+Tempo Explorer currently does not expose top-level network analytics, a top-level transaction list, validator or staking explorer pages, a public token/address verification workflow, or historical contract source diffs.

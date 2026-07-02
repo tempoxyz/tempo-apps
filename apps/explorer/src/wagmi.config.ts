@@ -4,9 +4,9 @@ import { createPublicClient } from 'viem'
 import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
-import { tempoMainnet, tempoTestnet } from './lib/chains'
+import { tempoMainnet, tempoNextfork, tempoTestnet } from './lib/chains'
 import { getLocalnetChainId, getLocalnetRpcUrl, getTempoEnv } from './lib/env'
-import { serverEnv } from './lib/server/env'
+import { serverEnv, tempoApiUrl } from './lib/server/env'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -37,44 +37,39 @@ export const getTempoChain = createIsomorphicFn()
 	.client(() =>
 		getTempoEnv() === 'mainnet'
 			? tempoMainnet
-			: getTempoEnv() === 'devnet'
-				? tempoDevnet
-				: getTempoEnv() === 'localnet'
-					? getTempoLocalnet()
-					: getTempoEnv() === 'testnet'
-						? tempoTestnet
-						: tempoMainnet,
+			: getTempoEnv() === 'nextfork'
+				? tempoNextfork
+				: getTempoEnv() === 'devnet'
+					? tempoDevnet
+					: getTempoEnv() === 'localnet'
+						? getTempoLocalnet()
+						: getTempoEnv() === 'testnet'
+							? tempoTestnet
+							: tempoMainnet,
 	)
 	.server(() =>
 		getTempoEnv() === 'mainnet'
 			? tempoMainnet
-			: getTempoEnv() === 'devnet'
-				? tempoDevnet
-				: getTempoEnv() === 'localnet'
-					? getTempoLocalnet()
-					: getTempoEnv() === 'testnet'
-						? tempoTestnet
-						: tempoMainnet,
+			: getTempoEnv() === 'nextfork'
+				? tempoNextfork
+				: getTempoEnv() === 'devnet'
+					? tempoDevnet
+					: getTempoEnv() === 'localnet'
+						? getTempoLocalnet()
+						: getTempoEnv() === 'testnet'
+							? tempoTestnet
+							: tempoMainnet,
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
 const LOCALNET_RPC_TIMEOUT_MS = 5_000
 
-const getRpcProxyUrl = createIsomorphicFn()
-	.client(() => {
-		const chain = getTempoChain()
-		return {
-			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
-		}
-	})
-	.server(() => {
-		const chain = getTempoChain()
-		const key = serverEnv.TEMPO_RPC_KEY
-		const keyParam = key ? `?key=${key}` : ''
-		return {
-			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
-		}
-	})
+function getRpcProxyUrl() {
+	const chain = getTempoChain()
+	return {
+		http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
+	}
+}
 
 const getFallbackUrls = createIsomorphicFn()
 	.client(() => ({
@@ -83,11 +78,8 @@ const getFallbackUrls = createIsomorphicFn()
 	}))
 	.server(() => {
 		const chain = getTempoChain()
-		const key = serverEnv.TEMPO_RPC_KEY
 		return {
-			http: chain.rpcUrls.default.http.map((url) =>
-				key ? `${url}/${key}` : url,
-			),
+			http: [...chain.rpcUrls.default.http],
 		}
 	})
 
@@ -110,11 +102,23 @@ const getTempoTransport = createIsomorphicFn()
 		])
 	})
 	.server(() => {
+		const chain = getTempoChain()
+
 		if (getTempoEnv() === 'localnet') {
 			return http(getLocalnetRpcUrl(), {
 				timeout: LOCALNET_RPC_TIMEOUT_MS,
 			})
 		}
+
+		// Tempo API RPC passthrough (mainnet + testnet; requires an API key).
+		const apiKey = serverEnv.TEMPO_API_KEY
+		if (
+			apiKey &&
+			(chain.id === tempoMainnet.id || chain.id === tempoTestnet.id)
+		)
+			return http(`${tempoApiUrl}/rpc?chainId=${chain.id}`, {
+				fetchOptions: { headers: { 'tempo-api-key': apiKey } },
+			})
 
 		const proxy = getRpcProxyUrl()
 		const fallbackUrls = getFallbackUrls()

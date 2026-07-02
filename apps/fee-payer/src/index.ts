@@ -10,6 +10,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
+import { enqueueSponsorshipIntent } from './lib/billing.js'
 import { tempoChain } from './lib/chain.js'
 import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
@@ -21,6 +22,7 @@ import { rateLimitMiddleware } from './lib/rate-limit.js'
 import { getUsage } from './lib/usage.js'
 
 const USAGE_CACHE_TTL = 60
+const ATTRIBUTION_KEY_HEADER = 'x-tempo-attribution-key'
 
 const app = new Hono()
 
@@ -42,7 +44,7 @@ app.use(
 			return null
 		},
 		allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-		allowHeaders: ['Content-Type', 'Authorization'],
+		allowHeaders: ['Content-Type', 'Authorization', ATTRIBUTION_KEY_HEADER],
 		maxAge: 86400,
 	}),
 )
@@ -120,6 +122,8 @@ async function feePayerHandler(c: Context) {
 	const apiKeyLabel = apiKeyRecord?.label
 	const rpcMethod = c.get('rpcMethod') as string | undefined
 	const estimatedFeeUsd = c.get('estimatedFeeUsd') as number | undefined
+	const attributionKey =
+		c.req.header(ATTRIBUTION_KEY_HEADER)?.trim() || undefined
 
 	if (rpcMethod) {
 		c.executionCtx.waitUntil(
@@ -141,11 +145,29 @@ async function feePayerHandler(c: Context) {
 	}
 
 	const raw = c.req.raw
+	const billingRequest =
+		apiKey && apiKeyRecord?.billable ? raw.clone() : undefined
+	const billingSignedAt = billingRequest ? new Date().toISOString() : undefined
 	const url = new URL(raw.url)
 	const target =
 		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
 
-	return relayHandler.fetch(target)
+	const response = await relayHandler.fetch(target)
+	if (apiKey && billingRequest && apiKeyRecord?.billable) {
+		c.executionCtx.waitUntil(
+			enqueueSponsorshipIntent({
+				apiKey,
+				attributionKey,
+				fallbackChainId: tempoChain.id,
+				request: billingRequest,
+				response: response.clone(),
+				signedAt: billingSignedAt,
+				sponsorAddress: sponsorAccount.address,
+			}),
+		)
+	}
+
+	return response
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123

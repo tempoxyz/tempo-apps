@@ -1,0 +1,36 @@
+{
+	"name": "mcp-docs-indexer",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"benchmark": "tsx scripts/benchmark-mcp.ts",
+		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"configure:metadata": "tsx scripts/configure-ai-search-metadata.ts",
+		"eval": "tsx scripts/eval-mcp.ts",
+		"eval:promptfoo": "tsx scripts/run-promptfoo.ts",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "pnpm gen:types && tsgo --project tsconfig.json --noEmit",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"tail": "wrangler tail",
+		"test": "vitest --run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@cloudflare/codemode": "catalog:",
+		"@modelcontextprotocol/sdk": "catalog:",
+		"ai": "catalog:",
+		"cloudflare-worker-metrics": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

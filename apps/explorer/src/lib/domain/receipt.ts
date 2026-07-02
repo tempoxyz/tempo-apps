@@ -4,7 +4,7 @@ import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import { parseEventLogs, zeroAddress } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
-import { decodeMemoForDisplay } from '#lib/domain/memo'
+import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import type * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 
@@ -295,6 +295,8 @@ export namespace LineItems {
 						'memo' in event.args
 							? decodeMemoForDisplay(event.args.memo)
 							: undefined
+					const isMppPayment =
+						'memo' in event.args && isMppAttributionMemo(event.args.memo)
 
 					const { currency, decimals, symbol } = metadata
 
@@ -344,7 +346,7 @@ export namespace LineItems {
 							},
 							ui: {
 								bottom: [...(memo ? [{ left: `Memo: ${memo}` }] : [])],
-								left: `Send ${symbol} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
+								left: `${isMppPayment ? 'MPP Payment' : `Send ${symbol}`} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
 								right: decimals
 									? PriceFormatter.format(isCredit ? -amount : amount, decimals)
 									: '-',

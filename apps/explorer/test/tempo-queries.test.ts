@@ -1,19 +1,11 @@
-import type { Address, Hex } from 'ox'
-import { Tidx } from 'tidx.ts'
-import { encodeAbiParameters, keccak256, toEventSelector } from 'viem'
+import type { Address } from 'ox'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-const mockCloudflareEnv = vi.hoisted(
-	() =>
-		({}) as {
-			EXPLORER_FEE_AMM_CACHE?: { get: typeof vi.fn; put: typeof vi.fn }
-		},
-)
 
 const mockQueryBuilder = vi.hoisted(() => {
 	class MockQueryBuilder {
 		private responses: unknown[] = []
 		private executeCallCount = 0
+		private whereCalls: unknown[][] = []
 
 		setResponses(responses: unknown[]): void {
 			this.responses = [...responses]
@@ -22,10 +14,15 @@ const mockQueryBuilder = vi.hoisted(() => {
 		reset(): void {
 			this.responses = []
 			this.executeCallCount = 0
+			this.whereCalls = []
 		}
 
 		getExecuteCallCount(): number {
 			return this.executeCallCount
+		}
+
+		getWhereCalls(): unknown[][] {
+			return this.whereCalls
 		}
 
 		withSignatures(): this {
@@ -52,7 +49,8 @@ const mockQueryBuilder = vi.hoisted(() => {
 			return this
 		}
 
-		where(): this {
+		where(...args: unknown[]): this {
+			this.whereCalls.push(args)
 			return this
 		}
 
@@ -116,1457 +114,127 @@ const mockQueryBuilder = vi.hoisted(() => {
 	return new MockQueryBuilder()
 })
 
-vi.mock('cloudflare:workers', () => ({ env: mockCloudflareEnv }))
+const mockTidx = vi.hoisted(() => {
+	class MockTidx {
+		private requests: unknown[] = []
+		private responses: unknown[] = []
+
+		setResponses(responses: unknown[]): void {
+			this.responses = [...responses]
+		}
+
+		reset(): void {
+			this.requests = []
+			this.responses = []
+		}
+
+		getRequests(): unknown[] {
+			return this.requests
+		}
+
+		async fetch(options: unknown): Promise<{ rows: unknown }> {
+			this.requests.push(options)
+			if (this.responses.length === 0) {
+				throw new Error('No mock tidx responses queued')
+			}
+			const response = this.responses.shift()
+			if (response instanceof Error) throw response
+			return { rows: response }
+		}
+	}
+
+	return new MockTidx()
+})
 
 vi.mock('#lib/server/tempo-queries-provider', () => ({
+	tidx: mockTidx,
 	tempoQueryBuilder: () => mockQueryBuilder,
-	tempoFastLookupQueryBuilder: () => mockQueryBuilder,
+}))
+
+vi.mock('#wagmi.config', () => ({
+	getWagmiConfig: () => ({}),
 }))
 
 import {
-	fetchAddressDirectTxCount,
-	fetchAddressDirectTxHashes,
-	fetchAddressHistoryDistinctCount,
-	fetchAddressHistoryTxDetailsByHashes,
-	fetchAddressDirectTxHistoryRows,
-	fetchAddressLogRowsByTxHashes,
-	fetchAddressReceiptRowsByHashes,
-	fetchAddressTransferActivity,
-	fetchAddressTransferBalances,
-	fetchAddressTransferDistinctCount,
-	fetchAddressTransferEmittedDistinctCount,
-	fetchAddressTransferEmittedHashes,
-	fetchAddressTransferHashes,
-	fetchAddressTxOnlyHistoryPageWithJoins,
-	fetchAddressTransfersForValue,
-	fetchAddressTxAggregate,
-	fetchAddressTxCounts,
-	fetchBasicTxDataByHashes,
+	fetchAddressOldestTx,
+	fetchAddressTxStats,
 	fetchContractCreationReceipt,
-	fetchContractCreationTxCandidates,
-	fetchLatestBlockNumber,
-	fetchTokenCreatedCount,
-	fetchTokenCreatedMetadata,
-	fetchTokenCreatedRows,
-	fetchTokenFirstTransferTimestamp,
-	fetchTokenHolderBalances,
-	fetchTokenTransferCount,
-	fetchTokenTransfers,
-	fetchTransactionTimestamp,
-	fetchTxDataByHashes,
+	fetchTokenTransferBoundaries,
+	fetchVirtualAddressTransferStats,
 } from '#lib/server/tempo-queries.ts'
-import {
-	clearFeeAmmPoolRowsCache,
-	fetchFeeAmmPoolRows,
-} from '#lib/server/fee-amm-pool-rows'
 
 describe('tempo-queries', () => {
 	beforeEach(() => {
 		mockQueryBuilder.reset()
-		clearFeeAmmPoolRowsCache()
-		delete mockCloudflareEnv.EXPLORER_FEE_AMM_CACHE
+		mockTidx.reset()
 	})
 
-	it('fetchTokenFirstTransferTimestamp returns a timestamp', async () => {
+	it('fetchVirtualAddressTransferStats aggregates count and boundaries', async () => {
 		mockQueryBuilder.setResponses([
-			{
-				block_timestamp: '123',
-			},
+			{ count: '7', oldestTimestamp: '10', latestTimestamp: '90' },
 		])
 
 		await expect(
-			fetchTokenFirstTransferTimestamp('0xToken' as Address.Address, 1),
-		).resolves.toBe(123)
-	})
-
-	it('fetchTokenFirstTransferTimestamp returns null when missing', async () => {
-		mockQueryBuilder.setResponses([null])
-
-		await expect(
-			fetchTokenFirstTransferTimestamp('0xToken' as Address.Address, 1),
-		).resolves.toBeNull()
-	})
-
-	it('fetchTokenTransfers maps transfer rows into typed results', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					from: '0x1111',
-					to: '0x2222',
-					tokens: '10',
-					tx_hash: '0xabc' as Hex.Hex,
-					block_num: 5,
-					log_idx: 1,
-					block_timestamp: '123',
-				},
-			],
-		])
-
-		const transfers = await fetchTokenTransfers(
-			'0xToken' as Address.Address,
-			1,
-			1,
-			0,
-		)
-
-		expect(transfers).toEqual([
-			{
-				from: '0x1111',
-				to: '0x2222',
-				tokens: 10n,
-				tx_hash: '0xabc',
-				block_num: 5,
-				log_idx: 1,
-				block_timestamp: '123',
-			},
-		])
-	})
-
-	it('fetchTokenTransferCount flags when the count is capped', async () => {
-		mockQueryBuilder.setResponses([
-			{
-				count: 3,
-			},
-		])
-
-		await expect(
-			fetchTokenTransferCount('0xToken' as Address.Address, 1, 2),
-		).resolves.toEqual({ count: 3, capped: true })
-	})
-
-	it('fetchTokenCreatedRows returns the token creation rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					token: '0xToken' as Address.Address,
-					symbol: 'TOK',
-					name: 'Token',
-					currency: 'USD',
-					block_timestamp: '999',
-				},
-			],
-		])
-
-		await expect(fetchTokenCreatedRows(1, 1, 0)).resolves.toEqual([
-			{
-				token: '0xToken',
-				symbol: 'TOK',
-				name: 'Token',
-				currency: 'USD',
-				block_timestamp: '999',
-			},
-		])
-	})
-
-	it('fetchTokenCreatedCount returns the counted total', async () => {
-		mockQueryBuilder.setResponses([{ count: 42 }])
-
-		await expect(fetchTokenCreatedCount(1, 100)).resolves.toBe(42)
-	})
-
-	it('fetchFeeAmmPoolRows discovers pools from current and legacy mint events', async () => {
-		const currentMintTopic = toEventSelector(
-			'event Mint(address sender, address indexed to, address indexed userToken, address indexed validatorToken, uint256 amountValidatorToken, uint256 liquidity)',
-		)
-		const legacyMintTopic = toEventSelector(
-			'event Mint(address indexed sender, address indexed userToken, address indexed validatorToken, uint256 amountUserToken, uint256 amountValidatorToken, uint256 liquidity)',
-		)
-
-		mockQueryBuilder.setResponses([
-			{ num: 12n },
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xaaa' as Hex.Hex,
-					block_timestamp: '100',
-					block_num: 10n,
-					log_idx: 1,
-				},
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xbbb' as Hex.Hex,
-					block_timestamp: '150',
-					block_num: 11n,
-					log_idx: 0,
-				},
-				{
-					userToken: '0x20c0000000000000000000000000000000000003',
-					validatorToken: '0x20c0000000000000000000000000000000000004',
-					tx_hash: '0xccc' as Hex.Hex,
-					block_timestamp: '200',
-					block_num: 12n,
-					log_idx: 2,
-				},
-			],
-		])
-
-		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000001',
-							'0x20c0000000000000000000000000000000000002',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000001',
-				validatorToken: '0x20c0000000000000000000000000000000000002',
-				createdAt: 100,
-				createdTxHash: '0xaaa',
-				latestMintAt: 150,
-				latestMintTxHash: '0xbbb',
-				mintCount: 2,
-			},
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000003',
-							'0x20c0000000000000000000000000000000000004',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000003',
-				validatorToken: '0x20c0000000000000000000000000000000000004',
-				createdAt: 200,
-				createdTxHash: '0xccc',
-				latestMintAt: 200,
-				latestMintTxHash: '0xccc',
-				mintCount: 1,
-			},
-		])
-
-		expect(currentMintTopic).not.toEqual(legacyMintTopic)
-	})
-
-	it('fetchFeeAmmPoolRows reuses cached rows within the ttl', async () => {
-		mockQueryBuilder.setResponses([
-			{ num: 12n },
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xaaa' as Hex.Hex,
-					block_timestamp: '100',
-					block_num: 10n,
-					log_idx: 1,
-				},
-			],
-		])
-
-		const first = await fetchFeeAmmPoolRows(1)
-		const second = await fetchFeeAmmPoolRows(1)
-
-		expect(second).toEqual(first)
-		expect(mockQueryBuilder.getExecuteCallCount()).toBe(2)
-	})
-
-	it('fetchFeeAmmPoolRows only merges new rows after the cache expires', async () => {
-		vi.useFakeTimers()
-		vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
-
-		try {
-			mockQueryBuilder.setResponses([
-				{ num: 12n },
-				[
-					{
-						userToken: '0x20c0000000000000000000000000000000000001',
-						validatorToken: '0x20c0000000000000000000000000000000000002',
-						tx_hash: '0xaaa' as Hex.Hex,
-						block_timestamp: '100',
-						block_num: 10n,
-						log_idx: 1,
-					},
-				],
-				{ num: 15n },
-				[
-					{
-						userToken: '0x20c0000000000000000000000000000000000001',
-						validatorToken: '0x20c0000000000000000000000000000000000002',
-						tx_hash: '0xbbb' as Hex.Hex,
-						block_timestamp: '150',
-						block_num: 13n,
-						log_idx: 0,
-					},
-					{
-						userToken: '0x20c0000000000000000000000000000000000003',
-						validatorToken: '0x20c0000000000000000000000000000000000004',
-						tx_hash: '0xccc' as Hex.Hex,
-						block_timestamp: '200',
-						block_num: 14n,
-						log_idx: 2,
-					},
-				],
-			])
-
-			await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
-				{
-					poolId: keccak256(
-						encodeAbiParameters(
-							[{ type: 'address' }, { type: 'address' }],
-							[
-								'0x20c0000000000000000000000000000000000001',
-								'0x20c0000000000000000000000000000000000002',
-							],
-						),
-					),
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					createdAt: 100,
-					createdTxHash: '0xaaa',
-					latestMintAt: 100,
-					latestMintTxHash: '0xaaa',
-					mintCount: 1,
-				},
-			])
-
-			vi.advanceTimersByTime(5 * 60_000 + 1)
-
-			await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
-				{
-					poolId: keccak256(
-						encodeAbiParameters(
-							[{ type: 'address' }, { type: 'address' }],
-							[
-								'0x20c0000000000000000000000000000000000001',
-								'0x20c0000000000000000000000000000000000002',
-							],
-						),
-					),
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					createdAt: 100,
-					createdTxHash: '0xaaa',
-					latestMintAt: 150,
-					latestMintTxHash: '0xbbb',
-					mintCount: 2,
-				},
-				{
-					poolId: keccak256(
-						encodeAbiParameters(
-							[{ type: 'address' }, { type: 'address' }],
-							[
-								'0x20c0000000000000000000000000000000000003',
-								'0x20c0000000000000000000000000000000000004',
-							],
-						),
-					),
-					userToken: '0x20c0000000000000000000000000000000000003',
-					validatorToken: '0x20c0000000000000000000000000000000000004',
-					createdAt: 200,
-					createdTxHash: '0xccc',
-					latestMintAt: 200,
-					latestMintTxHash: '0xccc',
-					mintCount: 1,
-				},
-			])
-		} finally {
-			vi.useRealTimers()
-		}
-	})
-
-	it('fetchFeeAmmPoolRows resumes from KV state on cold start', async () => {
-		const kvGet = vi.fn(async () => ({
-			lastBlock: '12',
-			pools: [
-				{
-					poolId: keccak256(
-						encodeAbiParameters(
-							[{ type: 'address' }, { type: 'address' }],
-							[
-								'0x20c0000000000000000000000000000000000001',
-								'0x20c0000000000000000000000000000000000002',
-							],
-						),
-					),
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					createdAt: 100,
-					createdTxHash: '0xaaa',
-					latestMintAt: 100,
-					latestMintTxHash: '0xaaa',
-					mintCount: 1,
-				},
-			],
-		}))
-		const kvPut = vi.fn(async () => undefined)
-		mockCloudflareEnv.EXPLORER_FEE_AMM_CACHE = {
-			get: kvGet,
-			put: kvPut,
-		}
-
-		mockQueryBuilder.setResponses([
-			{ num: 15n },
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xbbb' as Hex.Hex,
-					block_timestamp: '150',
-					block_num: 13n,
-					log_idx: 0,
-				},
-				{
-					userToken: '0x20c0000000000000000000000000000000000003',
-					validatorToken: '0x20c0000000000000000000000000000000000004',
-					tx_hash: '0xccc' as Hex.Hex,
-					block_timestamp: '200',
-					block_num: 14n,
-					log_idx: 2,
-				},
-			],
-		])
-
-		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000001',
-							'0x20c0000000000000000000000000000000000002',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000001',
-				validatorToken: '0x20c0000000000000000000000000000000000002',
-				createdAt: 100,
-				createdTxHash: '0xaaa',
-				latestMintAt: 150,
-				latestMintTxHash: '0xbbb',
-				mintCount: 2,
-			},
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000003',
-							'0x20c0000000000000000000000000000000000004',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000003',
-				validatorToken: '0x20c0000000000000000000000000000000000004',
-				createdAt: 200,
-				createdTxHash: '0xccc',
-				latestMintAt: 200,
-				latestMintTxHash: '0xccc',
-				mintCount: 1,
-			},
-		])
-
-		expect(kvGet).toHaveBeenCalledWith('fee-amm-pools:1', 'json')
-		expect(kvPut).toHaveBeenCalledWith(
-			'fee-amm-pools:1',
-			JSON.stringify({
-				lastBlock: '15',
-				pools: [
-					{
-						poolId: keccak256(
-							encodeAbiParameters(
-								[{ type: 'address' }, { type: 'address' }],
-								[
-									'0x20c0000000000000000000000000000000000001',
-									'0x20c0000000000000000000000000000000000002',
-								],
-							),
-						),
-						userToken: '0x20c0000000000000000000000000000000000001',
-						validatorToken: '0x20c0000000000000000000000000000000000002',
-						createdAt: 100,
-						createdTxHash: '0xaaa',
-						latestMintAt: 150,
-						latestMintTxHash: '0xbbb',
-						mintCount: 2,
-					},
-					{
-						poolId: keccak256(
-							encodeAbiParameters(
-								[{ type: 'address' }, { type: 'address' }],
-								[
-									'0x20c0000000000000000000000000000000000003',
-									'0x20c0000000000000000000000000000000000004',
-								],
-							),
-						),
-						userToken: '0x20c0000000000000000000000000000000000003',
-						validatorToken: '0x20c0000000000000000000000000000000000004',
-						createdAt: 200,
-						createdTxHash: '0xccc',
-						latestMintAt: 200,
-						latestMintTxHash: '0xccc',
-						mintCount: 1,
-					},
-				],
-			}),
-		)
-	})
-
-	it('fetchFeeAmmPoolRows scans history in 1000 block chunks', async () => {
-		mockQueryBuilder.setResponses([
-			{ num: 2500n },
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xaaa' as Hex.Hex,
-					block_timestamp: '100',
-					block_num: 900n,
-					log_idx: 1,
-				},
-			],
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xbbb' as Hex.Hex,
-					block_timestamp: '150',
-					block_num: 1500n,
-					log_idx: 2,
-				},
-			],
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000003',
-					validatorToken: '0x20c0000000000000000000000000000000000004',
-					tx_hash: '0xccc' as Hex.Hex,
-					block_timestamp: '200',
-					block_num: 2400n,
-					log_idx: 3,
-				},
-			],
-		])
-
-		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000001',
-							'0x20c0000000000000000000000000000000000002',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000001',
-				validatorToken: '0x20c0000000000000000000000000000000000002',
-				createdAt: 100,
-				createdTxHash: '0xaaa',
-				latestMintAt: 150,
-				latestMintTxHash: '0xbbb',
-				mintCount: 2,
-			},
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000003',
-							'0x20c0000000000000000000000000000000000004',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000003',
-				validatorToken: '0x20c0000000000000000000000000000000000004',
-				createdAt: 200,
-				createdTxHash: '0xccc',
-				latestMintAt: 200,
-				latestMintTxHash: '0xccc',
-				mintCount: 1,
-			},
-		])
-
-		expect(mockQueryBuilder.getExecuteCallCount()).toBe(4)
-	})
-
-	it('fetchFeeAmmPoolRows retries smaller ranges when TIDX rejects a broad scan', async () => {
-		const response = new Response(
-			'{"ok":false,"error":"Query error: db error"}',
-			{
-				status: 422,
-				headers: { 'content-type': 'application/json' },
-			},
-		)
-
-		mockQueryBuilder.setResponses([
-			{ num: 8n },
-			new Tidx.FetchRequestError('Query error: db error', response),
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000001',
-					validatorToken: '0x20c0000000000000000000000000000000000002',
-					tx_hash: '0xaaa' as Hex.Hex,
-					block_timestamp: '100',
-					block_num: 2n,
-					log_idx: 1,
-				},
-			],
-			[
-				{
-					userToken: '0x20c0000000000000000000000000000000000003',
-					validatorToken: '0x20c0000000000000000000000000000000000004',
-					tx_hash: '0xbbb' as Hex.Hex,
-					block_timestamp: '200',
-					block_num: 6n,
-					log_idx: 2,
-				},
-			],
-		])
-
-		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000001',
-							'0x20c0000000000000000000000000000000000002',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000001',
-				validatorToken: '0x20c0000000000000000000000000000000000002',
-				createdAt: 100,
-				createdTxHash: '0xaaa',
-				latestMintAt: 100,
-				latestMintTxHash: '0xaaa',
-				mintCount: 1,
-			},
-			{
-				poolId: keccak256(
-					encodeAbiParameters(
-						[{ type: 'address' }, { type: 'address' }],
-						[
-							'0x20c0000000000000000000000000000000000003',
-							'0x20c0000000000000000000000000000000000004',
-						],
-					),
-				),
-				userToken: '0x20c0000000000000000000000000000000000003',
-				validatorToken: '0x20c0000000000000000000000000000000000004',
-				createdAt: 200,
-				createdTxHash: '0xbbb',
-				latestMintAt: 200,
-				latestMintTxHash: '0xbbb',
-				mintCount: 1,
-			},
-		])
-	})
-
-	it('fetchTokenCreatedMetadata returns empty when no tokens are provided', async () => {
-		await expect(fetchTokenCreatedMetadata(1, [])).resolves.toEqual([])
-	})
-
-	it('fetchTokenCreatedMetadata returns metadata rows', async () => {
-		const token =
-			'0x1111111111111111111111111111111111111111' as Address.Address
-		const topic1 =
-			`0x${token.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
-		const data = encodeAbiParameters(
-			[
-				{ name: 'name', type: 'string' },
-				{ name: 'symbol', type: 'string' },
-				{ name: 'currency', type: 'string' },
-				{ name: 'quoteToken', type: 'address' },
-				{ name: 'admin', type: 'address' },
-				{ name: 'salt', type: 'bytes32' },
-			] as const,
-			[
-				'Token',
-				'TOK',
-				'USD',
-				'0x0000000000000000000000000000000000000000',
-				'0x0000000000000000000000000000000000000001',
-				`0x${'0'.repeat(64)}`,
-			],
-		)
-
-		mockQueryBuilder.setResponses([
-			[
-				{
-					topic1,
-					data,
-					block_timestamp: '123',
-				},
-			],
-		])
-
-		await expect(fetchTokenCreatedMetadata(1, [token])).resolves.toEqual([
-			{
-				token,
-				name: 'Token',
-				symbol: 'TOK',
-				currency: 'USD',
-				block_timestamp: '123',
-			},
-		])
-	})
-
-	it('fetchTransactionTimestamp returns a timestamp when present', async () => {
-		mockQueryBuilder.setResponses([
-			{
-				block_timestamp: '456',
-			},
-		])
-
-		await expect(
-			fetchTransactionTimestamp(1, '0xHash' as Hex.Hex),
-		).resolves.toBe(456)
-	})
-
-	it('fetchTransactionTimestamp returns undefined when missing', async () => {
-		mockQueryBuilder.setResponses([null])
-
-		await expect(
-			fetchTransactionTimestamp(1, '0xHash' as Hex.Hex),
-		).resolves.toBeUndefined()
-	})
-
-	it('fetchLatestBlockNumber returns a bigint from the latest block row', async () => {
-		mockQueryBuilder.setResponses([{ num: 123 }])
-
-		await expect(fetchLatestBlockNumber(1)).resolves.toBe(123n)
-	})
-
-	it('fetchLatestBlockNumber throws when no rows are returned', async () => {
-		mockQueryBuilder.setResponses([null])
-
-		await expect(fetchLatestBlockNumber(1)).rejects.toThrow(
-			'Missing mock response',
-		)
-	})
-
-	it('fetchTokenHolderBalances aggregates holders from raw transfer rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0xaaaa',
-					tokens: '10',
-				},
-				{
-					from: '0xaaaa',
-					to: '0xbbbb',
-					tokens: '4',
-				},
-			],
-		])
-
-		await expect(
-			fetchTokenHolderBalances('0xToken' as Address.Address, 1),
-		).resolves.toEqual([
-			{ address: '0xaaaa', balance: 6n },
-			{ address: '0xbbbb', balance: 4n },
-		])
-	})
-
-	it('fetchTokenHolderBalances aggregates incoming and outgoing balances', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					from: '0x1111',
-					to: '0x0000000000000000000000000000000000000000',
-					tokens: '5',
-				},
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0x1111',
-					tokens: '10',
-				},
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0x2222',
-					tokens: '3',
-				},
-			],
-		])
-
-		const balances = await fetchTokenHolderBalances(
-			'0xToken' as Address.Address,
-			1,
-		)
-
-		expect(balances).toEqual([
-			{ address: '0x1111', balance: 5n },
-			{ address: '0x2222', balance: 3n },
-		])
-	})
-
-	it('fetchAddressDirectTxHashes returns hash rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					block_num: 12n,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressDirectTxHashes({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: true,
-				sortDirection: 'desc',
-				limit: 5,
-			}),
-		).resolves.toEqual([
-			{
-				hash: '0xabc',
-				block_num: 12n,
-			},
-		])
-	})
-
-	it('fetchAddressDirectTxHistoryRows returns history rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					block_num: 12n,
-					from: '0x1111',
-					to: '0x2222',
-					value: 50n,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressDirectTxHistoryRows({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: false,
-				sortDirection: 'desc',
-				limit: 5,
-			}),
-		).resolves.toEqual([
-			{
-				hash: '0xabc',
-				block_num: 12n,
-				from: '0x1111',
-				to: '0x2222',
-				value: 50n,
-			},
-		])
-	})
-
-	it('fetchAddressTransferHashes returns transfer hashes', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xabc' as Hex.Hex,
-					block_num: 10n,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressTransferHashes({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: true,
-				sortDirection: 'asc',
-				limit: 2,
-			}),
-		).resolves.toEqual([
-			{
-				tx_hash: '0xabc',
-				block_num: 10n,
-			},
-		])
-	})
-
-	it('fetchAddressTransferEmittedHashes returns emitted hashes', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xdef' as Hex.Hex,
-					block_num: 11n,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressTransferEmittedHashes({
-				address: '0xToken' as Address.Address,
-				chainId: 1,
-				sortDirection: 'desc',
-				limit: 1,
-			}),
-		).resolves.toEqual([
-			{
-				tx_hash: '0xdef',
-				block_num: 11n,
-			},
-		])
-	})
-
-	it('fetchAddressDirectTxCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 2 }])
-
-		await expect(
-			fetchAddressDirectTxCount({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: false,
-				includeReceived: true,
-				countCap: 10,
-			}),
-		).resolves.toBe(2)
-	})
-
-	it('fetchAddressTransferDistinctCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 1 }])
-
-		await expect(
-			fetchAddressTransferDistinctCount({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: false,
-				countCap: 10,
-			}),
-		).resolves.toBe(1)
-	})
-
-	it('fetchAddressTransferEmittedDistinctCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 2 }])
-
-		await expect(
-			fetchAddressTransferEmittedDistinctCount({
-				address: '0xToken' as Address.Address,
-				chainId: 1,
-				countCap: 3,
-			}),
-		).resolves.toBe(2)
-	})
-
-	it('fetchAddressHistoryDistinctCount sums counts and caps', async () => {
-		mockQueryBuilder.setResponses([{ count: 5 }, { count: 4 }, { count: 3 }])
-
-		await expect(
-			fetchAddressHistoryDistinctCount({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: true,
-				includeTxs: true,
-				includeTransfers: true,
-				includeEmitted: true,
-				countCap: 10,
-			}),
-		).resolves.toEqual({ count: 10, capped: true })
-	})
-
-	it('fetchAddressHistoryDistinctCount returns zero when no sources selected', async () => {
-		await expect(
-			fetchAddressHistoryDistinctCount({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: true,
-				includeTxs: false,
-				includeTransfers: false,
-				includeEmitted: false,
-				countCap: 10,
-			}),
-		).resolves.toEqual({ count: 0, capped: false })
-	})
-
-	it('fetchAddressHistoryTxDetailsByHashes returns tx detail rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					block_num: 3n,
-					block_timestamp: 123,
-					from: '0x1111',
-					to: '0x2222',
-					value: 9n,
-					input: '0x00' as Hex.Hex,
-					calls: null,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressHistoryTxDetailsByHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				hash: '0xabc',
-				block_num: 3n,
-				block_timestamp: 123,
-				from: '0x1111',
-				to: '0x2222',
-				value: 9n,
-				input: '0x00',
-				calls: null,
-			},
-		])
-	})
-
-	it('fetchAddressReceiptRowsByHashes returns receipt rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xabc' as Hex.Hex,
-					block_num: 3n,
-					block_timestamp: 123,
-					from: '0x1111',
-					to: '0x2222',
-					status: 1,
-					gas_used: 21000n,
-					effective_gas_price: 2n,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressReceiptRowsByHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				tx_hash: '0xabc',
-				block_num: 3n,
-				block_timestamp: 123,
-				from: '0x1111',
-				to: '0x2222',
-				status: 1,
-				gas_used: 21000n,
-				effective_gas_price: 2n,
-			},
-		])
-	})
-
-	it('fetchAddressLogRowsByTxHashes returns ordered log rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xabc' as Hex.Hex,
-					block_num: 3n,
-					tx_idx: 1,
-					log_idx: 2,
-					address: '0xToken',
-					topic0: '0x01',
-					topic1: null,
-					topic2: null,
-					topic3: null,
-					data: '0x00',
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressLogRowsByTxHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				tx_hash: '0xabc',
-				block_num: 3n,
-				tx_idx: 1,
-				log_idx: 2,
-				address: '0xToken',
-				topic0: '0x01',
-				topic1: null,
-				topic2: null,
-				topic3: null,
-				data: '0x00',
-			},
-		])
-	})
-
-	it('fetchAddressTxOnlyHistoryPageWithJoins uses a single query pipeline', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xbbb' as Hex.Hex,
-					tx_block_num: 12n,
-					tx_block_timestamp: 112,
-					tx_from: '0x3333',
-					tx_to: '0x4444',
-					tx_value: 7n,
-					tx_input: '0x01' as Hex.Hex,
-					tx_calls: null,
-					receipt_block_num: 12n,
-					receipt_block_timestamp: 112,
-					receipt_from: '0x3333',
-					receipt_to: '0x4444',
-					receipt_status: 1,
-					receipt_gas_used: 21000n,
-					receipt_effective_gas_price: 2n,
-					log_block_num: 12n,
-					log_tx_idx: 1,
-					log_idx: 0,
-					log_address: '0xToken',
-					log_topic0: '0x01',
-					log_topic1: null,
-					log_topic2: null,
-					log_topic3: null,
-					log_data: '0x11',
-				},
-				{
-					tx_hash: '0xbbb' as Hex.Hex,
-					tx_block_num: 12n,
-					tx_block_timestamp: 112,
-					tx_from: '0x3333',
-					tx_to: '0x4444',
-					tx_value: 7n,
-					tx_input: '0x01' as Hex.Hex,
-					tx_calls: null,
-					receipt_block_num: 12n,
-					receipt_block_timestamp: 112,
-					receipt_from: '0x3333',
-					receipt_to: '0x4444',
-					receipt_status: 1,
-					receipt_gas_used: 21000n,
-					receipt_effective_gas_price: 2n,
-					log_block_num: 12n,
-					log_tx_idx: 1,
-					log_idx: 1,
-					log_address: '0xToken',
-					log_topic0: '0x02',
-					log_topic1: null,
-					log_topic2: null,
-					log_topic3: null,
-					log_data: '0x22',
-				},
-				{
-					tx_hash: '0xaaa' as Hex.Hex,
-					tx_block_num: 11n,
-					tx_block_timestamp: 111,
-					tx_from: '0x1111',
-					tx_to: '0x2222',
-					tx_value: 5n,
-					tx_input: '0x00' as Hex.Hex,
-					tx_calls: null,
-					receipt_block_num: 11n,
-					receipt_block_timestamp: 111,
-					receipt_from: '0x1111',
-					receipt_to: '0x2222',
-					receipt_status: 1,
-					receipt_gas_used: 21000n,
-					receipt_effective_gas_price: 2n,
-					log_block_num: null,
-					log_tx_idx: null,
-					log_idx: null,
-					log_address: null,
-					log_topic0: null,
-					log_topic1: null,
-					log_topic2: null,
-					log_topic3: null,
-					log_data: null,
-				},
-			],
-			{ count: '2' },
-		])
-
-		const result = await fetchAddressTxOnlyHistoryPageWithJoins({
-			address: '0x1111' as Address.Address,
-			chainId: 1,
-			includeSent: true,
-			includeReceived: true,
-			sortDirection: 'desc',
-			offset: 0,
-			limit: 1,
-			countCap: 10_000,
+			fetchVirtualAddressTransferStats('0x1111' as Address.Address, 1),
+		).resolves.toEqual({
+			count: 7,
+			oldestTimestamp: '10',
+			latestTimestamp: '90',
 		})
-
-		expect(mockQueryBuilder.getExecuteCallCount()).toBe(2)
-		expect(result.total).toBe(2)
-		expect(result.countCapped).toBe(false)
-		expect(result.hasMore).toBe(true)
-		expect(result.hashes).toEqual([
-			{
-				hash: '0xbbb',
-				block_num: 12n,
-				from: '0x3333',
-				to: '0x4444',
-				value: 7n,
-			},
-		])
-		expect(result.txRows).toEqual([
-			{
-				hash: '0xbbb',
-				block_num: 12n,
-				block_timestamp: 112,
-				from: '0x3333',
-				to: '0x4444',
-				value: 7n,
-				input: '0x01',
-				calls: null,
-			},
-		])
-		expect(result.receiptRows).toEqual([
-			{
-				tx_hash: '0xbbb',
-				block_num: 12n,
-				block_timestamp: 112,
-				from: '0x3333',
-				to: '0x4444',
-				status: 1,
-				gas_used: 21000n,
-				effective_gas_price: 2n,
-			},
-		])
-		expect(result.logRows).toEqual([
-			{
-				tx_hash: '0xbbb',
-				block_num: 12n,
-				tx_idx: 1,
-				log_idx: 0,
-				address: '0xToken',
-				topic0: '0x01',
-				topic1: null,
-				topic2: null,
-				topic3: null,
-				data: '0x11',
-			},
-			{
-				tx_hash: '0xbbb',
-				block_num: 12n,
-				tx_idx: 1,
-				log_idx: 1,
-				address: '0xToken',
-				topic0: '0x02',
-				topic1: null,
-				topic2: null,
-				topic3: null,
-				data: '0x22',
-			},
-		])
 	})
 
-	it('fetchAddressTxOnlyHistoryPageWithJoins caps total count', async () => {
+	it('fetchAddressTxStats aggregates count and boundaries', async () => {
 		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xbbb' as Hex.Hex,
-					tx_block_num: 12n,
-					tx_block_timestamp: 112,
-					tx_from: '0x3333',
-					tx_to: '0x4444',
-					tx_value: 7n,
-					tx_input: '0x01' as Hex.Hex,
-					tx_calls: null,
-					receipt_block_num: 12n,
-					receipt_block_timestamp: 112,
-					receipt_from: '0x3333',
-					receipt_to: '0x4444',
-					receipt_status: 1,
-					receipt_gas_used: 21000n,
-					receipt_effective_gas_price: 2n,
-					log_block_num: null,
-					log_tx_idx: null,
-					log_idx: null,
-					log_address: null,
-					log_topic0: null,
-					log_topic1: null,
-					log_topic2: null,
-					log_topic3: null,
-					log_data: null,
-				},
-				{
-					tx_hash: '0xaaa' as Hex.Hex,
-					tx_block_num: 11n,
-					tx_block_timestamp: 111,
-					tx_from: '0x1111',
-					tx_to: '0x2222',
-					tx_value: 5n,
-					tx_input: '0x00' as Hex.Hex,
-					tx_calls: null,
-					receipt_block_num: 11n,
-					receipt_block_timestamp: 111,
-					receipt_from: '0x1111',
-					receipt_to: '0x2222',
-					receipt_status: 1,
-					receipt_gas_used: 21000n,
-					receipt_effective_gas_price: 2n,
-					log_block_num: null,
-					log_tx_idx: null,
-					log_idx: null,
-					log_address: null,
-					log_topic0: null,
-					log_topic1: null,
-					log_topic2: null,
-					log_topic3: null,
-					log_data: null,
-				},
-			],
-			{ count: '10000' },
-		])
-
-		const result = await fetchAddressTxOnlyHistoryPageWithJoins({
-			address: '0x1111' as Address.Address,
-			chainId: 1,
-			includeSent: true,
-			includeReceived: true,
-			sortDirection: 'desc',
-			offset: 0,
-			limit: 1,
-			countCap: 10_000,
-		})
-
-		expect(result.total).toBe(10_000)
-		expect(result.countCapped).toBe(true)
-		expect(result.hasMore).toBe(true)
-	})
-
-	it('fetchTxDataByHashes returns empty when no hashes provided', async () => {
-		await expect(fetchTxDataByHashes(1, [])).resolves.toEqual([])
-	})
-
-	it('fetchTxDataByHashes returns tx rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					block_num: 1n,
-					from: '0x1111',
-					to: '0x2222',
-					value: 5n,
-					input: '0x00' as Hex.Hex,
-					nonce: 1n,
-					gas_limit: 21000n,
-					max_fee_per_gas: 1n,
-					type: 0n,
-				},
-			],
-		])
-
-		await expect(fetchTxDataByHashes(1, ['0xabc' as Hex.Hex])).resolves.toEqual(
-			[
-				{
-					hash: '0xabc',
-					block_num: 1n,
-					from: '0x1111',
-					to: '0x2222',
-					value: 5n,
-					input: '0x00',
-					nonce: 1n,
-					gas: 21000n,
-					gas_price: 1n,
-					type: 0n,
-				},
-			],
-		)
-	})
-
-	it('fetchBasicTxDataByHashes returns empty when no hashes provided', async () => {
-		await expect(fetchBasicTxDataByHashes(1, [])).resolves.toEqual([])
-	})
-
-	it('fetchBasicTxDataByHashes returns basic tx rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					from: '0x1111',
-					to: '0x2222',
-					value: 8n,
-				},
-			],
+			{ count: 5, oldestTimestamp: '1', latestTimestamp: '9' },
 		])
 
 		await expect(
-			fetchBasicTxDataByHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				hash: '0xabc',
-				from: '0x1111',
-				to: '0x2222',
-				value: 8n,
-			},
-		])
-	})
-
-	it('fetchContractCreationTxCandidates returns candidate rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					block_num: 99n,
-				},
-			],
-		])
-
-		await expect(fetchContractCreationTxCandidates(1, 99n)).resolves.toEqual([
-			{
-				hash: '0xabc',
-				block_num: 99n,
-			},
-		])
-	})
-
-	it('fetchAddressTransferBalances returns aggregated balances', async () => {
-		mockQueryBuilder.setResponses([
-			[{ token: '0xToken', received: '10' }],
-			[{ token: '0xToken', sent: '2' }],
-		])
-
-		await expect(
-			fetchAddressTransferBalances('0x1111' as Address.Address, 1),
-		).resolves.toEqual([
-			{
-				token: '0xToken',
-				received: '10',
-				sent: '2',
-			},
-		])
-	})
-
-	it('fetchAddressTransfersForValue returns transfers', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					address: '0xToken',
-					from: '0x1111',
-					to: '0x2222',
-					tokens: '5',
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressTransfersForValue('0x1111' as Address.Address, 1, 1),
-		).resolves.toEqual([
-			{
-				address: '0xToken',
-				from: '0x1111',
-				to: '0x2222',
-				tokens: '5',
-			},
-		])
-	})
-
-	it('fetchAddressTxAggregate returns aggregate values', async () => {
-		mockQueryBuilder.setResponses([
-			{
-				count: '5',
-				latestTxsBlockTimestamp: '10',
-				oldestTxsBlockTimestamp: '1',
-			},
-			{
-				hash: '0xoldest',
-				sender: '0xCreator',
-			},
-		])
-
-		await expect(
-			fetchAddressTxAggregate('0x1111' as Address.Address, 1),
+			fetchAddressTxStats('0x1111' as Address.Address, 1),
 		).resolves.toEqual({
 			count: 5,
-			latestTxsBlockTimestamp: '10',
-			oldestTxsBlockTimestamp: '1',
-			oldestTxHash: '0xoldest',
-			oldestTxFrom: '0xCreator',
+			oldestTimestamp: '1',
+			latestTimestamp: '9',
 		})
+	})
+
+	it('fetchAddressOldestTx picks the older of sent/received rows', async () => {
+		mockQueryBuilder.setResponses([
+			{ hash: '0xsent', from: '0x1111', block_timestamp: 200 },
+			{ hash: '0xreceived', from: '0xother', block_timestamp: 100 },
+		])
+
+		await expect(
+			fetchAddressOldestTx('0x1111' as Address.Address, 1),
+		).resolves.toEqual({
+			hash: '0xreceived',
+			from: '0xother',
+			block_timestamp: 100,
+		})
+	})
+
+	it('fetchAddressOldestTx falls back to the only present row', async () => {
+		mockQueryBuilder.setResponses([
+			undefined,
+			{ hash: '0xreceived', from: '0xother', block_timestamp: 100 },
+		])
+
+		await expect(
+			fetchAddressOldestTx('0x1111' as Address.Address, 1),
+		).resolves.toEqual({
+			hash: '0xreceived',
+			from: '0xother',
+			block_timestamp: 100,
+		})
+	})
+
+	it('fetchTokenTransferBoundaries returns min/max timestamps', async () => {
+		mockQueryBuilder.setResponses([
+			{ oldestTimestamp: '10', latestTimestamp: '20' },
+		])
+
+		await expect(
+			fetchTokenTransferBoundaries('0x1111' as Address.Address, 1),
+		).resolves.toEqual({ oldestTimestamp: '10', latestTimestamp: '20' })
 	})
 
 	it('fetchContractCreationReceipt returns the creation receipt row', async () => {
@@ -1587,64 +255,26 @@ describe('tempo-queries', () => {
 		})
 	})
 
+	it('fetchContractCreationReceipt lowercases checksum addresses before indexed comparisons', async () => {
+		mockQueryBuilder.setResponses([undefined])
+
+		await fetchContractCreationReceipt(
+			'0x73b5d86dEae56497f852FD79dd6fe68C7270FB6B' as Address.Address,
+			1,
+		)
+
+		expect(mockQueryBuilder.getWhereCalls()).toContainEqual([
+			'contract_address',
+			'=',
+			'0x73b5d86deae56497f852fd79dd6fe68c7270fb6b',
+		])
+	})
+
 	it('fetchContractCreationReceipt returns undefined when missing', async () => {
 		mockQueryBuilder.setResponses([undefined])
 
 		await expect(
 			fetchContractCreationReceipt('0x1111' as Address.Address, 1),
 		).resolves.toBeUndefined()
-	})
-
-	it('fetchAddressTxCounts returns sent and received counts', async () => {
-		mockQueryBuilder.setResponses([
-			{
-				cnt: '2',
-			},
-			{
-				cnt: 3,
-			},
-		])
-
-		await expect(
-			fetchAddressTxCounts('0x1111' as Address.Address, 1),
-		).resolves.toEqual({ sent: 2, received: 3 })
-	})
-
-	it('fetchAddressTransferActivity returns incoming and outgoing', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tokens: '4',
-					address: '0xToken',
-					block_timestamp: '100',
-				},
-			],
-			[
-				{
-					tokens: '1',
-					address: '0xToken',
-					block_timestamp: '90',
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressTransferActivity('0x1111' as Address.Address, 1),
-		).resolves.toEqual({
-			incoming: [
-				{
-					tokens: '4',
-					address: '0xToken',
-					block_timestamp: '100',
-				},
-			],
-			outgoing: [
-				{
-					tokens: '1',
-					address: '0xToken',
-					block_timestamp: '90',
-				},
-			],
-		})
 	})
 })

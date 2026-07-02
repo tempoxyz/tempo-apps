@@ -5,8 +5,10 @@ import {
 	createFileRoute,
 	notFound,
 	rootRouteId,
+	useLocation,
 	useNavigate,
 } from '@tanstack/react-router'
+import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
@@ -23,6 +25,7 @@ import {
 } from '#lib/domain/known-events'
 import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
+import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
@@ -33,11 +36,14 @@ import {
 } from '#lib/og'
 import { areUsdPricedTokens, hasTokenAmount } from '#lib/pricing'
 import { withLoaderTiming } from '#lib/profiling'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
+const RECEIVE_POLICY_GUARD = Address.from(
+	'0xB10C000000000000000000000000000000000000',
+)
 
 function getKnownEventAmounts(
 	events: readonly KnownEvent[],
@@ -244,12 +250,29 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				if (type === 'application/json') {
 					if (!hash)
 						return Response.json({ error: 'Not found' }, { status: 404 })
-					const { lineItems, receipt } = await fetchReceiptData({
+					const data = await fetchReceiptData({
 						hash,
 						rpcUrl,
 					})
+					const summary = buildTxSummary({
+						receipt: data.receipt,
+						transaction: data.transaction,
+						knownEvents: data.knownEvents,
+						trace: null,
+					})
 					return Response.json(
-						JSON.parse(Json.stringify({ lineItems, receipt })),
+						JSON.parse(
+							Json.stringify({
+								version: 1,
+								summary,
+								block: data.block,
+								transaction: data.transaction,
+								receipt: data.receipt,
+								knownEvents: data.knownEvents,
+								feeBreakdown: data.feeBreakdown,
+								lineItems: data.lineItems,
+							}),
+						),
 					)
 				}
 
@@ -327,14 +350,20 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			search.set('date', ogTimestamp.date)
 			search.set('time', ogTimestamp.time)
 
-			const gasUsed = BigInt(loaderData.receipt.gasUsed ?? 0)
-			const gasPrice = BigInt(
-				loaderData.receipt.effectiveGasPrice ??
-					loaderData.transaction.gasPrice ??
-					0,
-			)
-			const feeAmount = gasUsed * gasPrice
-			const fee = Number(Value.format(feeAmount, 18))
+			const feePrice = loaderData.lineItems.feeTotals?.[0]?.price
+			const fee = feePrice
+				? Number(Value.format(feePrice.amount, feePrice.decimals))
+				: Number(
+						Value.format(
+							BigInt(loaderData.receipt.gasUsed ?? 0) *
+								BigInt(
+									loaderData.receipt.effectiveGasPrice ??
+										loaderData.transaction.gasPrice ??
+										0,
+								),
+							18,
+						),
+					)
 			const feeDisplay = PriceFormatter.format(fee)
 			search.set('fee', feeDisplay)
 
@@ -385,6 +414,7 @@ function parseVoucherParam(
 function Component() {
 	const { hash } = Route.useParams()
 	const { voucher: voucherRaw } = Route.useSearch()
+	const location = useLocation()
 	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
@@ -404,6 +434,9 @@ function Component() {
 	const { isTokenListed } = useTokenListMembership()
 
 	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
+	const hasBlockedTransfer = knownEvents.some(
+		(event) => event.type === 'transfer blocked',
+	)
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -415,10 +448,10 @@ function Component() {
 		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
 		: undefined
 
-	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
-	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
-	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
-	const feeRaw = Value.format(feeAmount, 18)
+	const fallbackFeeAmount = receipt.effectiveGasPrice * receipt.gasUsed
+	const feeRaw = feePrice
+		? Value.format(feePrice.amount, feePrice.decimals)
+		: Value.format(fallbackFeeAmount, 18)
 	const fee = Number(feeRaw)
 	const feeTokens = feeBreakdown.filter(hasTokenAmount)
 	const showUsdFeePrefix =
@@ -431,16 +464,27 @@ function Component() {
 		? PriceFormatter.format(fee)
 		: PriceFormatter.formatAmountShort(feeRaw)
 
-	// Inject a streaming payment event when voucher params are present
-	const displayEvents: KnownEvent[] = voucherData
-		? [
-				buildStreamedPaymentEvent(
-					voucherData.packetSize,
-					voucherData.packetCount,
-				),
-				...knownEvents,
-			]
-		: knownEvents
+	// Inject a streaming payment event when voucher params are present.
+	// For TIP-1028 blocked transfers, the TIP-20 receipt also contains the
+	// mechanical Transfer to ReceivePolicyGuard. Hide that implementation detail
+	// from the human receipt so the blocked transfer is not shown or totaled twice.
+	const displayEvents: KnownEvent[] = (
+		voucherData
+			? [
+					buildStreamedPaymentEvent(
+						voucherData.packetSize,
+						voucherData.packetCount,
+					),
+					...knownEvents,
+				]
+			: knownEvents
+	).filter(
+		(event) =>
+			!hasBlockedTransfer ||
+			event.type !== 'send' ||
+			!event.meta?.to ||
+			!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
+	)
 
 	// When a voucher is present, show the streaming total as the receipt total
 	const streamingTotal = voucherData
@@ -499,6 +543,7 @@ function Component() {
 				timestamp={block.timestamp}
 				total={total}
 				totalDisplay={totalDisplay}
+				exportSearch={location.searchStr}
 			/>
 		</div>
 	)
@@ -551,7 +596,14 @@ namespace TextRenderer {
 	const indent = '  '
 
 	export function render(data: Awaited<ReturnType<typeof fetchReceiptData>>) {
-		const { lineItems, receipt, timestampFormatted } = data
+		const { knownEvents, lineItems, receipt, timestampFormatted, transaction } =
+			data
+		const summary = buildTxSummary({
+			receipt,
+			transaction,
+			knownEvents,
+			trace: null,
+		})
 
 		const lines: string[] = []
 
@@ -564,6 +616,7 @@ namespace TextRenderer {
 		lines.push(`Date: ${timestampFormatted}`)
 		lines.push(`Block: ${receipt.blockNumber.toString()}`)
 		lines.push(`Sender: ${receipt.from}`)
+		lines.push(`Summary: ${summary.headline}`)
 		lines.push('')
 		lines.push('-'.repeat(width))
 		lines.push('')
@@ -589,17 +642,23 @@ namespace TextRenderer {
 
 		// Fee breakdown
 		if (lineItems.feeBreakdown?.length) {
+			let hasVisibleFee = false
 			for (const item of lineItems.feeBreakdown) {
+				if (
+					item.payer &&
+					item.payer.toLowerCase() !== receipt.from.toLowerCase()
+				)
+					continue
+				hasVisibleFee = true
 				const label = item.symbol ? `Fee (${item.symbol})` : 'Fee'
 				const amount = PriceFormatter.format(item.amount, {
 					decimals: item.decimals,
 					format: 'short',
 				})
 				lines.push(leftRight(label.toUpperCase(), amount))
-				if (item.payer) lines.push(`${indent}Paid by: ${item.payer}`)
 			}
 
-			lines.push('')
+			if (hasVisibleFee) lines.push('')
 		}
 
 		// Fee totals

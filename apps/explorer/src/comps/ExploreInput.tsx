@@ -2,11 +2,12 @@ import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as React from 'react'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { useMountAnim } from '#lib/animation'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#lib/css'
+import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import type {
@@ -18,6 +19,14 @@ import type {
 } from '#routes/api/search'
 import ArrowRight from '~icons/lucide/arrow-right'
 
+const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
+const recentSearchesLimit = 6
+
+type ManualActivation =
+	| { value: Address.Address; type: 'address' }
+	| { value: Hex.Hex; type: 'hash' }
+	| { value: string; type: 'block' }
+
 function parseBlockInput(raw: string): string | null {
 	const trimmed = raw.trim()
 	const withoutHash = trimmed.startsWith('#')
@@ -27,6 +36,113 @@ function parseBlockInput(raw: string): string | null {
 	const n = Number(withoutHash)
 	if (!Number.isFinite(n) || !Number.isSafeInteger(n) || n < 0) return null
 	return String(n)
+}
+
+function getSearchResultKey(result: SearchResult): string {
+	if (result.type === 'block') return `block-${result.blockNumber}`
+	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
+	return `${result.type}-${result.address.toLowerCase()}`
+}
+
+function isPersistedSearchResult(value: unknown): value is SearchResult {
+	if (typeof value !== 'object' || value == null) return false
+
+	const result = value as Record<string, unknown>
+	if (
+		result.type === 'block' &&
+		typeof result.blockNumber === 'number' &&
+		Number.isSafeInteger(result.blockNumber) &&
+		result.blockNumber >= 0
+	)
+		return true
+
+	if (
+		result.type === 'transaction' &&
+		typeof result.hash === 'string' &&
+		Hex.validate(result.hash) &&
+		Hex.size(result.hash) === 32 &&
+		(result.timestamp === undefined || typeof result.timestamp === 'number')
+	)
+		return true
+
+	const validCategory =
+		result.category === undefined ||
+		result.category === 'token' ||
+		result.category === 'system' ||
+		result.category === 'utility' ||
+		result.category === 'account' ||
+		result.category === 'precompile'
+	const validAddressMetadata =
+		(result.label === undefined || typeof result.label === 'string') &&
+		(result.description === undefined ||
+			typeof result.description === 'string') &&
+		validCategory
+
+	if (
+		result.type === 'address' &&
+		typeof result.address === 'string' &&
+		Address.validate(result.address) &&
+		typeof result.isTip20 === 'boolean' &&
+		validAddressMetadata
+	)
+		return true
+
+	if (
+		result.type === 'token' &&
+		typeof result.address === 'string' &&
+		Address.validate(result.address) &&
+		typeof result.name === 'string' &&
+		typeof result.symbol === 'string' &&
+		typeof result.isTip20 === 'boolean'
+	)
+		return true
+
+	return false
+}
+
+function loadRecentSearches(): SearchResult[] {
+	if (typeof window === 'undefined') return []
+
+	try {
+		const rawValue = window.localStorage.getItem(recentSearchesStorageKey)
+		if (!rawValue) return []
+		const parsedValue = JSON.parse(rawValue)
+		if (!Array.isArray(parsedValue)) return []
+		return parsedValue
+			.filter(isPersistedSearchResult)
+			.slice(0, recentSearchesLimit)
+	} catch {
+		return []
+	}
+}
+
+function persistRecentSearches(results: SearchResult[]): void {
+	if (typeof window === 'undefined') return
+
+	try {
+		if (results.length === 0) {
+			window.localStorage.removeItem(recentSearchesStorageKey)
+			return
+		}
+
+		window.localStorage.setItem(
+			recentSearchesStorageKey,
+			JSON.stringify(results.slice(0, recentSearchesLimit)),
+		)
+	} catch {}
+}
+
+function toManualSearchResult(data: ManualActivation): SearchResult {
+	if (data.type === 'block')
+		return { type: 'block', blockNumber: Number(data.value) }
+
+	if (data.type === 'hash') return { type: 'transaction', hash: data.value }
+
+	return {
+		type: 'address',
+		address: data.value,
+		isTip20: isTip20Address(data.value),
+	}
 }
 
 export function ExploreInput(props: ExploreInput.Props) {
@@ -43,6 +159,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		autoFocus,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
+	const rootRef = React.useRef<HTMLDivElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
 
 	const internalInputRef = React.useRef<HTMLInputElement>(null)
@@ -50,6 +167,8 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 	const [showResults, setShowResults] = React.useState(false)
 	const [selectedIndex, setSelectedIndex] = React.useState(-1)
+	const [recentSearches, setRecentSearches] = React.useState<SearchResult[]>([])
+	const [hasFocus, setHasFocus] = React.useState(false)
 	const menuMounted = useMountAnim(showResults, resultsRef)
 	const resultsId = React.useId()
 
@@ -86,6 +205,15 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const groupedSuggestions = React.useMemo<
 		ExploreInput.SuggestionGroup[]
 	>(() => {
+		if (query.length === 0 && recentSearches.length > 0)
+			return [
+				{
+					type: 'recent',
+					title: 'Recent searches',
+					items: recentSearches,
+				},
+			]
+
 		const tokens: TokenSearchResult[] = []
 		const addresses: AddressSearchResult[] = []
 		const blocks: BlockSearchResult[] = []
@@ -107,33 +235,52 @@ export function ExploreInput(props: ExploreInput.Props) {
 			groups.push({ type: 'block', title: 'Blocks', items: blocks })
 
 		if (addresses.length > 0)
-			groups.push({ type: 'address', title: 'Addresses', items: addresses })
+			groups.push({
+				type: 'address',
+				title: 'Contracts & addresses',
+				items: addresses,
+			})
 
 		if (tokens.length > 0)
 			groups.push({ type: 'token', title: 'Tokens', items: tokens })
 
 		return groups
-	}, [suggestions])
+	}, [query.length, recentSearches, suggestions])
 
 	const flatSuggestions = React.useMemo(
 		() => groupedSuggestions.flatMap((g) => g.items),
 		[groupedSuggestions],
 	)
 
+	const closeResults = React.useCallback(() => {
+		setHasFocus(false)
+		setShowResults(false)
+		setSelectedIndex(-1)
+	}, [])
+
+	React.useEffect(() => {
+		setRecentSearches(loadRecentSearches())
+	}, [])
+
+	React.useEffect(() => {
+		if (inputRef.current === document.activeElement) setHasFocus(true)
+	}, [inputRef])
+
 	React.useEffect(() => {
 		if (submittingRef.current) {
 			submittingRef.current = false
 			return
 		}
-		setShowResults(query.length > 0)
-	}, [query])
+		setShowResults(hasFocus && (query.length > 0 || recentSearches.length > 0))
+	}, [hasFocus, query.length, recentSearches.length])
 
-	const lastResultsKey = React.useRef('')
-	const resultsKey = JSON.stringify(flatSuggestions)
-	if (lastResultsKey.current !== resultsKey) {
-		lastResultsKey.current = resultsKey
+	const previousResultsKeyRef = React.useRef('')
+	React.useEffect(() => {
+		const resultsKey = flatSuggestions.map(getSearchResultKey).join('|')
+		if (previousResultsKeyRef.current === resultsKey) return
+		previousResultsKeyRef.current = resultsKey
 		setSelectedIndex(-1)
-	}
+	}, [flatSuggestions])
 
 	// click outside (TODO: move focus from input to results menu)
 	React.useEffect(() => {
@@ -145,13 +292,26 @@ export function ExploreInput(props: ExploreInput.Props) {
 				inputRef.current &&
 				!inputRef.current.contains(event.target as Node)
 			) {
-				setShowResults(false)
-				setSelectedIndex(-1)
+				closeResults()
 			}
 		}
 		document.addEventListener('mousedown', onMouseDown)
 		return () => document.removeEventListener('mousedown', onMouseDown)
-	}, [showResults, inputRef])
+	}, [showResults, inputRef, closeResults])
+
+	React.useEffect(() => {
+		const root = rootRef.current
+		if (!root) return
+
+		const onFocusOut = (event: FocusEvent) => {
+			const nextTarget = event.relatedTarget
+			if (nextTarget && root.contains(nextTarget as Node)) return
+			closeResults()
+		}
+
+		root.addEventListener('focusout', onFocusOut)
+		return () => root.removeEventListener('focusout', onFocusOut)
+	}, [closeResults])
 
 	// cmd+k shortcut
 	React.useEffect(() => {
@@ -165,11 +325,40 @@ export function ExploreInput(props: ExploreInput.Props) {
 		return () => window.removeEventListener('keydown', handleKeyDown)
 	}, [inputRef])
 
+	const rememberSearch = React.useCallback((result: SearchResult) => {
+		setRecentSearches((current) => {
+			const key = getSearchResultKey(result)
+			const next = [
+				result,
+				...current.filter((item) => getSearchResultKey(item) !== key),
+			].slice(0, recentSearchesLimit)
+			persistRecentSearches(next)
+			return next
+		})
+	}, [])
+
+	const clearRecentSearches = React.useCallback(() => {
+		persistRecentSearches([])
+		setRecentSearches([])
+		setSelectedIndex(-1)
+		setShowResults(false)
+	}, [])
+
+	const handleActivate = React.useCallback(
+		(data: ManualActivation) => {
+			rememberSearch(toManualSearchResult(data))
+			submittingRef.current = true
+			closeResults()
+			onActivate?.(data)
+		},
+		[onActivate, rememberSearch, closeResults],
+	)
+
 	const handleSelect = React.useCallback(
 		(result: SearchResult) => {
+			rememberSearch(result)
 			submittingRef.current = true
-			setShowResults(false)
-			setSelectedIndex(-1)
+			closeResults()
 
 			if (result.type === 'block') {
 				const id = String(result.blockNumber)
@@ -196,11 +385,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 				return
 			}
 		},
-		[onChange, onActivate],
+		[onChange, onActivate, rememberSearch, closeResults],
 	)
 
 	return (
-		<div className={cx('relative z-10 w-full', !wide && 'max-w-md')}>
+		<div
+			ref={rootRef}
+			className={cx('relative z-10 w-full', !wide && 'max-w-md')}
+		>
 			<div ref={externalWrapperRef} className="overflow-hidden">
 				<form
 					ref={formRef}
@@ -220,12 +412,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 						const blockId = parseBlockInput(normalizedFormValue)
 						if (blockId !== null) {
-							onActivate?.({ type: 'block', value: blockId })
+							handleActivate({ type: 'block', value: blockId })
 							return
 						}
 
 						if (Address.validate(normalizedFormValue)) {
-							onActivate?.({ type: 'address', value: normalizedFormValue })
+							handleActivate({ type: 'address', value: normalizedFormValue })
 							return
 						}
 
@@ -233,7 +425,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 							Hex.validate(normalizedFormValue) &&
 							Hex.size(normalizedFormValue) === 32
 						) {
-							onActivate?.({ type: 'hash', value: normalizedFormValue })
+							handleActivate({ type: 'hash', value: normalizedFormValue })
 							return
 						}
 					}}
@@ -293,10 +485,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 							}
 						}}
 						onChange={(event) => {
+							setHasFocus(true)
 							onChange?.(event.target.value)
 						}}
 						onFocus={() => {
-							if (query.length > 0 && flatSuggestions.length > 0)
+							setHasFocus(true)
+							if (query.length > 0 || recentSearches.length > 0)
 								setShowResults(true)
 						}}
 						role="combobox"
@@ -368,21 +562,26 @@ export function ExploreInput(props: ExploreInput.Props) {
 										)}
 									>
 										<div className="text-[12px] text-secondary">
-											{group.type === 'token'
-												? 'Tokens'
-												: group.type === 'transaction'
-													? 'Receipt'
-													: group.type === 'block'
-														? 'Block'
-														: 'Address'}
+											{group.title}
 										</div>
-										<div className="text-[12px] text-tertiary">
-											{group.type === 'token'
-												? 'Address'
-												: group.type === 'transaction'
-													? 'Time'
-													: ''}
-										</div>
+										{group.type === 'recent' ? (
+											<button
+												type="button"
+												className="text-[12px] text-tertiary hover:text-base-content"
+												onMouseDown={(event) => event.preventDefault()}
+												onClick={clearRecentSearches}
+											>
+												Clear
+											</button>
+										) : (
+											<div className="text-[12px] text-tertiary">
+												{group.type === 'token'
+													? 'Address'
+													: group.type === 'transaction'
+														? 'Time'
+														: ''}
+											</div>
+										)}
 									</div>
 									{group.items.map((item) => {
 										const flatIndex = flatSuggestions.indexOf(item)
@@ -435,7 +634,7 @@ export namespace ExploreInput {
 	}
 
 	export type SuggestionGroup = {
-		type: 'token' | 'address' | 'transaction' | 'block'
+		type: 'recent' | 'token' | 'address' | 'transaction' | 'block'
 		title: string
 		items: SearchResult[]
 	}
@@ -455,9 +654,15 @@ export namespace ExploreInput {
 				type="button"
 				role="option"
 				aria-selected={isSelected}
-				onClick={() => onSelect(suggestion)}
+				onMouseDown={(event) => {
+					event.preventDefault()
+					onSelect(suggestion)
+				}}
+				onClick={(event) => {
+					if (event.detail === 0) onSelect(suggestion)
+				}}
 				className={cx(
-					'w-full flex items-center justify-between gap-[10px]',
+					'w-full flex items-center justify-between gap-[10px] overflow-hidden',
 					'text-left cursor-pointer px-[12px] py-[6px] press-down hover:bg-base-alt/25',
 					isSelected && 'bg-base-alt/25',
 				)}
@@ -473,8 +678,11 @@ export namespace ExploreInput {
 							<span className="text-[16px] font-medium text-base-content truncate">
 								{suggestion.name}
 							</span>
-							<span className="text-[11px] font-medium text-base-content bg-border-primary p-[4px] rounded-[4px] shrink-0">
+							<span className="text-[11px] font-medium text-base-content bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
 								{suggestion.symbol}
+							</span>
+							<span className="text-[11px] font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
+								TIP-20
 							</span>
 						</div>
 						<span className="text-[13px] font-mono text-accent flex-1 text-right">
@@ -483,9 +691,40 @@ export namespace ExploreInput {
 					</>
 				)}
 				{suggestion.type === 'address' && (
-					<span className="text-[13px] font-mono text-accent truncate">
-						{suggestion.address}
-					</span>
+					<>
+						<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+							<div className="flex min-w-0 max-w-full items-center gap-[8px]">
+								{suggestion.label ? (
+									<span className="min-w-0 truncate text-[15px] font-medium text-base-content">
+										{suggestion.label}
+									</span>
+								) : (
+									<span className="block min-w-0 flex-1 overflow-hidden text-[13px] font-mono text-accent">
+										<Midcut value={suggestion.address} prefix="0x" />
+									</span>
+								)}
+								{suggestion.category ? (
+									<span className="text-[11px] font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
+										{suggestion.category}
+									</span>
+								) : suggestion.isTip20 ? (
+									<span className="text-[11px] font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
+										TIP-20
+									</span>
+								) : null}
+							</div>
+							{suggestion.label && (
+								<span className="block min-w-0 max-w-full overflow-hidden text-[13px] font-mono text-accent">
+									<Midcut value={suggestion.address} prefix="0x" />
+								</span>
+							)}
+						</div>
+						{suggestion.description && (
+							<span className="hidden w-[44%] shrink-0 text-right text-[13px] leading-[1.25] text-secondary sm:block">
+								{suggestion.description}
+							</span>
+						)}
+					</>
 				)}
 				{suggestion.type === 'transaction' && (
 					<>

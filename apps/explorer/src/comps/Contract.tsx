@@ -42,6 +42,7 @@ export function ContractTabContent(props: {
 	address: Address.Address
 	abi?: Abi
 	docsUrl?: string
+	isLoadingContractInfo?: boolean
 	source?: ContractSource
 }) {
 	const { address, docsUrl, source } = props
@@ -67,7 +68,9 @@ export function ContractTabContent(props: {
 		return (
 			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
 				<p className="text-sm font-medium text-tertiary">
-					No ABI available for this contract.
+					{props.isLoadingContractInfo
+						? `Loading contract information${ellipsis}`
+						: 'No ABI available for this contract.'}
 				</p>
 			</div>
 		)
@@ -267,6 +270,7 @@ export function InteractTabContent(props: {
 	address: Address.Address
 	abi?: Abi
 	docsUrl?: string
+	isLoadingContractInfo?: boolean
 }) {
 	const { address, docsUrl } = props
 	const publicClient = usePublicClient()
@@ -315,7 +319,7 @@ export function InteractTabContent(props: {
 		props.abi ??
 		getContractAbi(address)
 
-	if (isLoadingProxy) {
+	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
 			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
 				<p className="text-sm font-medium text-tertiary">

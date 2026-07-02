@@ -60,6 +60,8 @@ jobs:
           - app: explorer
             env: devnet
           - app: explorer
+            env: nextfork
+          - app: explorer
             env: mainnet
           #### fee-payer
           - app: fee-payer
@@ -115,7 +117,7 @@ jobs:
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
         id: deploy
-        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65
+        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

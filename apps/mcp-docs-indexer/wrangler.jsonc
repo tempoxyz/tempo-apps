@@ -1,0 +1,106 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "mcp-docs-indexer",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"worker_loaders": [{ "binding": "LOADER" }],
+	"workers_dev": false,
+	"preview_urls": true,
+	"keep_vars": true,
+	"logpush": true,
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
+	"triggers": {
+		// Public health probe for Datadog metrics.
+		// Hourly resolver pass: re-pulls llms.txt for each source and uploads
+		// any changed pages to AI Search built-in storage.
+		"crons": ["* * * * *", "0 * * * *"]
+	},
+	"ai_search_namespaces": [
+		{
+			"binding": "AI_SEARCH",
+			"namespace": "default"
+		}
+	],
+	"kv_namespaces": [
+		{
+			// Stores per-source ETag and last-synced timestamp.
+			"binding": "ETAG_CACHE",
+			"id": "09bb5cc86f9e48b58ab6593c395f47da"
+		}
+	],
+	"vars": {
+		// AI Search instance id within the namespace. Must already exist and
+		// be created after 2026-04-16 to have built-in storage support.
+		"AI_SEARCH_INSTANCE_ID": "tempo-global",
+		// Public MCP endpoint URL for the AI Search instance above. We
+		// transparently proxy mcp.tempo.xyz -> this upstream so clients
+		// connect to a stable branded URL instead of the opaque hostname.
+		"AI_SEARCH_MCP_URL": "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp",
+		"PUBLIC_MCP_ENDPOINT": "https://mcp.tempo.xyz/",
+		// PostHog host for MCP analytics. Set POSTHOG_PROJECT_API_KEY as a
+		// Worker secret to enable event capture.
+		"POSTHOG_HOST": "https://us.i.posthog.com",
+		// Docs sources to sync. Add sources here instead of changing Worker code.
+		// `indexPath` defaults to `/llms.txt`.
+		"SOURCES": [
+			{
+				"id": "tempo",
+				"base": "https://docs.tempo.xyz",
+				"description": "Tempo network, protocol, and integration documentation"
+			},
+			{
+				"id": "viem",
+				"base": "https://viem.sh",
+				"description": "TypeScript interface for Ethereum / Tempo"
+			},
+			{
+				"id": "wagmi",
+				"base": "https://wagmi.sh",
+				"description": "React Hooks for Ethereum / Tempo"
+			},
+			{
+				"id": "vocs",
+				"base": "https://vocs.dev",
+				"description": "Documentation framework"
+			},
+			{
+				"id": "mpp",
+				"base": "https://mpp.dev",
+				"description": "Machine Payments Protocol documentation"
+			},
+			{
+				"id": "accounts",
+				"base": "https://accounts.tempo.xyz",
+				"description": "Tempo Accounts SDK documentation"
+			},
+			{
+				"id": "tips",
+				"base": "https://tips.sh",
+				"indexPath": "/",
+				"description": "Tempo Improvement Proposals"
+			},
+			{
+				"id": "regen",
+				"base": "https://regen.tempo.xyz",
+				"description": "Tempo Regen UI component documentation"
+			}
+		]
+	},
+	"routes": [
+		{
+			"pattern": "mcp.tempo.xyz",
+			"zone_name": "tempo.xyz",
+			"custom_domain": true
+		}
+	]
+}

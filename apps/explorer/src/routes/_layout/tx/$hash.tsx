@@ -8,6 +8,7 @@ import {
 	useNavigate,
 } from '@tanstack/react-router'
 import type { Address as OxAddress, Hex } from 'ox'
+import * as OxAddressUtil from 'ox/Address'
 import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
@@ -18,21 +19,23 @@ import { Address } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TxBalanceChanges } from '#comps/TxBalanceChanges'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
-import { TxEventDescription } from '#comps/TxEventDescription'
+import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxStateDiff } from '#comps/TxStateDiff'
-import { TxTraceTree } from '#comps/TxTraceTree'
+import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
+import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
 	groupRelatedEvents,
@@ -40,7 +43,7 @@ import {
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
-import { useKeyboardShortcut } from '#lib/hooks'
+import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
@@ -50,7 +53,11 @@ import {
 	txQueryOptions,
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
-import { traceQueryOptions, type TraceData } from '#lib/queries/trace'
+import {
+	type CallTrace,
+	type PrestateDiff,
+	traceQueryOptions,
+} from '#lib/queries/trace'
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
@@ -60,6 +67,10 @@ const defaultSearchValues = {
 	tab: 'overview',
 	page: 1,
 } as const
+
+const RECEIVE_POLICY_GUARD = OxAddressUtil.from(
+	'0xB10C000000000000000000000000000000000000',
+)
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
@@ -165,6 +176,19 @@ function RouteComponent() {
 		transaction,
 	} = Route.useLoaderData()
 
+	const isMobile = useMediaQuery('(max-width: 799px)')
+	const mode = isMobile ? 'stacked' : 'tabs'
+	const hasBlockedTransfer = knownEvents.some(
+		(event) => event.type === 'transfer blocked',
+	)
+	const displayKnownEvents = knownEvents.filter(
+		(event) =>
+			!hasBlockedTransfer ||
+			event.type !== 'send' ||
+			!event.meta?.to ||
+			!OxAddressUtil.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
+	)
+
 	useKeyboardShortcut({
 		t: () =>
 			navigate({
@@ -182,6 +206,17 @@ function RouteComponent() {
 				}>)
 			: undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
+	const summary = React.useMemo(
+		() =>
+			buildTxSummary({
+				receipt,
+				transaction,
+				knownEvents,
+				trace: traceData.trace,
+				balanceChangesData,
+			}),
+		[receipt, knownEvents, traceData.trace, balanceChangesData, transaction],
+	)
 
 	const setActiveSection = (newIndex: number) => {
 		navigate({
@@ -204,7 +239,7 @@ function RouteComponent() {
 				receipt={receipt}
 				transaction={transaction}
 				block={block}
-				knownEvents={knownEvents}
+				knownEvents={displayKnownEvents}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
@@ -239,19 +274,22 @@ function RouteComponent() {
 		),
 	})
 
-	tabs.push('trace')
-	sections.push({
-		title: 'Trace',
-		itemsLabel: 'views',
-		content: (
-			<TraceSection
-				traceData={traceData}
-				receipt={receipt}
-				logs={receipt.logs}
-				tokenMetadata={balanceChangesData.tokenMetadata}
-			/>
-		),
-	})
+	if (traceData.trace || traceData.prestate) {
+		tabs.push('trace')
+		sections.push({
+			title: 'Trace',
+			itemsLabel: 'views',
+			content: (
+				<TraceSection
+					trace={traceData.trace}
+					prestate={traceData.prestate}
+					receipt={receipt}
+					logs={receipt.logs}
+					tokenMetadata={balanceChangesData.tokenMetadata}
+				/>
+			),
+		})
+	}
 
 	tabs.push('raw')
 	sections.push({
@@ -275,48 +313,21 @@ function RouteComponent() {
 			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
+				error={summary.error}
 				blockNumber={receipt.blockNumber}
 				timestamp={block.timestamp}
 				from={receipt.from}
 				to={receipt.to}
 				className="self-start"
 			/>
-			<Sections
-				mode="tabs"
-				sections={sections}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-			/>
-		</div>
-	)
-}
-
-function TraceSection(props: {
-	traceData: TraceData
-	receipt: Pick<TransactionReceipt, 'from' | 'to'>
-	logs: Log[]
-	tokenMetadata: BalanceChangesData['tokenMetadata']
-}) {
-	const { traceData, receipt, logs, tokenMetadata } = props
-
-	if (!traceData.trace && !traceData.prestate) {
-		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
-				Trace data is not available for this transaction.
+			<div className="flex min-w-0 flex-col gap-[14px]">
+				<Sections
+					mode={mode}
+					sections={sections}
+					activeSection={activeSection}
+					onSectionChange={setActiveSection}
+				/>
 			</div>
-		)
-	}
-
-	return (
-		<div className="flex flex-col">
-			<TxTraceTree trace={traceData.trace} />
-			<TxStateDiff
-				prestate={traceData.prestate}
-				trace={traceData.trace}
-				receipt={receipt}
-				logs={logs}
-				tokenMetadata={tokenMetadata}
-			/>
 		</div>
 	)
 }
@@ -371,15 +382,10 @@ function OverviewSection(props: {
 					<div className="flex flex-col gap-[6px]">
 						<TxEventDescription.ExpandGroup events={knownEvents} />
 						{memos.length > 0 && (
-							<div className="flex flex-row items-center gap-[11px] overflow-hidden">
-								<div className="border-l border-base-border pl-[10px] w-full">
-									<span
-										className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-										title={memos[0]}
-									>
-										{memos[0]}
-									</span>
-								</div>
+							<div className="flex flex-col gap-[4px] min-w-0">
+								{memos.map((memo, index) => (
+									<TxEventMemoLine key={`${memo}-${index}`} memo={memo} />
+								))}
 							</div>
 						)}
 					</div>
@@ -504,7 +510,7 @@ function InputDataRow(props: {
 					Input Data
 				</span>
 				<div className="flex-1">
-					<TxDecodedCalldata address={to} data={input} decode={Boolean(to)} />
+					<TxDecodedCalldata address={to} data={input} />
 				</div>
 			</div>
 		</div>
@@ -610,6 +616,31 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					</Link>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function TraceSection(props: {
+	trace: CallTrace | null
+	prestate: PrestateDiff | null
+	receipt: TransactionReceipt
+	logs: Log[]
+	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
+}): React.JSX.Element {
+	const { trace, prestate, receipt, logs, tokenMetadata } = props
+	const tree = useTraceTree(trace)
+
+	return (
+		<div className="flex flex-col">
+			<TxTraceTree trace={trace} tree={tree} />
+			<TxStateDiff
+				prestate={prestate}
+				trace={trace}
+				receipt={{ from: receipt.from, to: receipt.to }}
+				logs={logs}
+				tokenMetadata={tokenMetadata}
+			/>
+			<TxTraceFlamegraph tree={tree} prestate={prestate} />
 		</div>
 	)
 }

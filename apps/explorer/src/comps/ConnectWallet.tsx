@@ -16,7 +16,7 @@ import { Hooks } from 'wagmi/tempo'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import { getTempoChain } from '#wagmi.config.ts'
 import LucideLogOut from '~icons/lucide/log-out'
@@ -60,6 +60,7 @@ function ConnectWalletInner({
 	const chains = useChains()
 	const switchChain = useSwitchChain()
 	const isSupported = chains.some((c) => c.id === chain?.id)
+	const blockExplorerUrl = chains[0].blockExplorers?.default.url
 
 	const hasConnectorOptions = injectedConnectors.length > 0
 
@@ -140,7 +141,9 @@ function ConnectWalletInner({
 						switchChain.mutate({
 							chainId: chains[0].id,
 							addEthereumChainParameter: {
-								blockExplorerUrls: ['https://explore.tempo.xyz'],
+								...(blockExplorerUrl
+									? { blockExplorerUrls: [blockExplorerUrl] }
+									: {}),
 								nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
 							},
 						})

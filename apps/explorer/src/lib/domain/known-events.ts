@@ -2,14 +2,22 @@ import * as Address from 'ox/Address'
 import { VirtualAddress } from 'ox/tempo'
 import type * as Hex from 'ox/Hex'
 import type { AbiEvent, Log, TransactionReceipt } from 'viem'
-import { decodeFunctionData, parseEventLogs, zeroAddress } from 'viem'
+import {
+	decodeAbiParameters,
+	decodeFunctionData,
+	parseEventLogs,
+	zeroAddress,
+} from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis, allAbis } from '#lib/abis'
-import { decodeMemoForDisplay } from '#lib/domain/memo'
+import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
 const FEE_MANAGER = Addresses.feeManager
+const RECEIVE_POLICY_GUARD = Address.from(
+	'0xB10C000000000000000000000000000000000000',
+)
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
 export const STREAM_CHANNELS = [
@@ -98,6 +106,51 @@ type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
 
 function checksumAddress(address: string): Address.Address {
 	return Address.from(address, { checksum: true })
+}
+
+function decodeClaimReceiptV1(receipt: Hex.Hex) {
+	try {
+		const [
+			version,
+			token,
+			recoveryAuthority,
+			originator,
+			recipient,
+			blockedAt,
+			blockedNonce,
+			blockedReason,
+			kind,
+			memo,
+		] = decodeAbiParameters(
+			[
+				{ type: 'uint8' },
+				{ type: 'address' },
+				{ type: 'address' },
+				{ type: 'address' },
+				{ type: 'address' },
+				{ type: 'uint64' },
+				{ type: 'uint64' },
+				{ type: 'uint8' },
+				{ type: 'uint8' },
+				{ type: 'bytes32' },
+			],
+			receipt,
+		)
+		return {
+			version,
+			token,
+			recoveryAuthority,
+			originator,
+			recipient,
+			blockedAt,
+			blockedNonce,
+			blockedReason,
+			kind,
+			memo,
+		}
+	} catch {
+		return null
+	}
 }
 
 function createZonePortalMetadata(events: ParsedEvent[]) {
@@ -349,6 +402,7 @@ function createDetectors(
 				const isFeeTransfer =
 					Address.isEqual(args.to, FEE_MANAGER) &&
 					!Address.isEqual(args.from, zeroAddress)
+				const isMppPayment = 'memo' in args && isMppAttributionMemo(args.memo)
 
 				if (isFeeTransfer) {
 					// When viewer mode is active, let feePayer detector handle fee transfers
@@ -369,7 +423,11 @@ function createDetectors(
 					parts: [
 						{
 							type: 'action',
-							value: VirtualAddress.validate(args.from) ? 'Forwarded' : 'Send',
+							value: isMppPayment
+								? 'MPP Payment'
+								: VirtualAddress.validate(args.from)
+									? 'Forwarded'
+									: 'Send',
 						},
 						{
 							type: 'amount',
@@ -682,6 +740,75 @@ function createDetectors(
 						{ type: 'token', value: { address: args.base } },
 						{ type: 'text', value: '/' },
 						{ type: 'token', value: { address: args.quote } },
+					],
+				}
+
+			return null
+		},
+
+		receivePolicyGuard(event: ParsedEvent) {
+			const { eventName, args } = event
+
+			if (eventName === 'TransferBlocked') {
+				const receipt = decodeClaimReceiptV1(args.receipt)
+				const originator = receipt?.originator ?? args.receiver
+				const recipient = receipt?.recipient ?? args.receiver
+
+				return {
+					type: 'transfer blocked',
+					parts: [
+						{ type: 'action', value: 'Blocked' },
+						{ type: 'action', value: 'Send' },
+						{ type: 'amount', value: createAmount(args.amount, args.token) },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: recipient },
+					],
+					meta: { from: originator, to: recipient },
+				}
+			}
+
+			if (eventName === 'ReceiptClaimed')
+				return {
+					type: 'receipt claimed',
+					parts: [
+						{ type: 'action', value: 'Claim Blocked Transfer' },
+						{ type: 'amount', value: createAmount(args.amount, args.token) },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: args.to },
+					],
+					note: [
+						['Receiver', { type: 'account', value: args.receiver }],
+						['Originator', { type: 'account', value: args.originator }],
+						['Recipient', { type: 'account', value: args.recipient }],
+						[
+							'Recovery Authority',
+							{ type: 'account', value: args.recoveryAuthority },
+						],
+						['Caller', { type: 'account', value: args.caller }],
+						['Receipt Version', { type: 'number', value: args.receiptVersion }],
+						['Blocked Nonce', { type: 'number', value: args.blockedNonce }],
+					],
+				}
+
+			if (eventName === 'ReceiptBurned')
+				return {
+					type: 'receipt burned',
+					parts: [
+						{ type: 'action', value: 'Burn Blocked Transfer' },
+						{ type: 'amount', value: createAmount(args.amount, args.token) },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.receiver },
+					],
+					note: [
+						['Originator', { type: 'account', value: args.originator }],
+						['Recipient', { type: 'account', value: args.recipient }],
+						[
+							'Recovery Authority',
+							{ type: 'account', value: args.recoveryAuthority },
+						],
+						['Caller', { type: 'account', value: args.caller }],
+						['Receipt Version', { type: 'number', value: args.receiptVersion }],
+						['Blocked Nonce', { type: 'number', value: args.blockedNonce }],
 					],
 				}
 
@@ -1239,6 +1366,7 @@ export function parseKnownEvent(
 		detectors.tip20Factory(event) ||
 		detectors.stablecoinDex(event) ||
 		detectors.tip403Registry(event) ||
+		detectors.receivePolicyGuard(event) ||
 		detectors.feeManager(event) ||
 		detectors.nonce(event) ||
 		detectors.accountKeychain(event) ||
@@ -1361,6 +1489,21 @@ export function parseKnownEvents(
 			if (call.calls) queue.push(...call.calls)
 		}
 	})()
+
+	const blockedTransferKeys = new Set<string>()
+	for (const event of events) {
+		if (event.eventName !== 'TransferBlocked') continue
+		const { token, amount, receipt } = event.args as {
+			token: Address.Address
+			amount: bigint
+			receipt: Hex.Hex
+		}
+		const decodedReceipt = decodeClaimReceiptV1(receipt)
+		if (!decodedReceipt) continue
+		blockedTransferKeys.add(
+			`${Address.from(token)}:${Address.from(decodedReceipt.originator)}:${amount.toString()}`,
+		)
+	}
 
 	const preferenceMap = new Map<string, string>()
 	const feeTransferEvents: Array<{
@@ -1529,6 +1672,14 @@ export function parseKnownEvents(
 					to: Address.Address
 					amount: bigint
 				}
+				if (
+					Address.isEqual(to, RECEIVE_POLICY_GUARD) &&
+					blockedTransferKeys.has(
+						`${Address.from(event.address)}:${Address.from(from)}:${amount.toString()}`,
+					)
+				) {
+					include = false
+				}
 				if (isZonePortalAddress(to)) {
 					const zoneDepositKey = createZoneDepositTransferKey({
 						sender: from,
@@ -1593,6 +1744,15 @@ export function parseKnownEvents(
 					from: Address.Address
 					to: Address.Address
 					amount: bigint
+				}
+
+				if (
+					Address.isEqual(to, RECEIVE_POLICY_GUARD) &&
+					blockedTransferKeys.has(
+						`${Address.from(event.address)}:${Address.from(from)}:${amount.toString()}`,
+					)
+				) {
+					include = false
 				}
 
 				if (isZonePortalAddress(to)) {
@@ -1802,6 +1962,7 @@ export function parseKnownEvents(
 			detectors.tip20Factory(event) ||
 			detectors.stablecoinDex(event) ||
 			detectors.tip403Registry(event) ||
+			detectors.receivePolicyGuard(event) ||
 			detectors.feeManager(event) ||
 			detectors.nonce(event) ||
 			detectors.accountKeychain(event) ||

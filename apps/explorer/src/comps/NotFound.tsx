@@ -1,12 +1,15 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
 import { apostrophe } from '#lib/chars'
+import { useMarkNotFoundPage } from '#lib/not-found'
 
 export function NotFound({
 	title = 'Page Not Found',
 	message = `The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
 	data,
 }: NotFound.Props) {
+	useMarkNotFoundPage()
+
 	return (
 		<section className="flex flex-1 size-full items-center justify-center relative pt-[80px]">
 			<div className="flex flex-col items-center gap-[8px] z-1 px-[16px] w-full max-w-[600px]">

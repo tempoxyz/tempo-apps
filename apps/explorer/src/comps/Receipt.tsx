@@ -3,11 +3,12 @@ import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
 import { useState } from 'react'
 import { Amount } from '#comps/Amount'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
-import { TxEventDescription } from '#comps/TxEventDescription'
+import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import {
@@ -15,8 +16,12 @@ import {
 	hasTokenAmount,
 	isUsdPricedToken,
 } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain } from '#wagmi.config.ts'
+import BracesIcon from '~icons/lucide/braces'
+import DownloadIcon from '~icons/lucide/download'
+import FileTextIcon from '~icons/lucide/file-text'
+import ShareIcon from '~icons/lucide/share-2'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -34,16 +39,22 @@ export function Receipt(props: Receipt.Props) {
 		feeDisplay,
 		totalDisplay,
 		feeBreakdown = [],
+		exportSearch = '',
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const copyHash = useCopy()
+	const copyShare = useCopy({ timeout: 2_000 })
 	const { isTokenListed } = useTokenListMembership()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
-	const showFeeBreakdown = feeBreakdown.length > 0
+	const visibleFeeBreakdown = feeBreakdown.filter(
+		(item) => !item.payer || item.payer.toLowerCase() === sender.toLowerCase(),
+	)
+	const showFeeBreakdown = visibleFeeBreakdown.length > 0
+	const showSingleFee = feeBreakdown.length === 0 && hasFee
 	const showUsdFeePrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
@@ -52,18 +63,33 @@ export function Receipt(props: Receipt.Props) {
 			event.type !== 'active key count changed' &&
 			event.type !== 'nonce incremented',
 	)
+	const handleShare = async () => {
+		const url = new URL(
+			`/receipt/${hash}${exportSearch}`,
+			window.location.origin,
+		).toString()
+		if (navigator.share) {
+			try {
+				await navigator.share({ title: 'Tempo receipt', url })
+				return
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'AbortError') return
+			}
+		}
+		await copyShare.copy(url)
+	}
 
 	return (
 		<>
 			<div
 				data-receipt
-				className="flex flex-col w-[360px] bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				className="flex w-[360px] flex-col bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
 			>
 				<div className="flex items-start gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
 						<ReceiptMark />
 					</div>
-					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
+					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1 min-w-0">
 						<div className="flex justify-between items-end">
 							<span className="text-tertiary">Block</span>
 							<Link
@@ -161,6 +187,14 @@ export function Receipt(props: Receipt.Props) {
 										: TEMPO_FEE_TOKEN
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
+								const sideAmount =
+									displayTotalAmount ??
+									(event.type === 'swap' && firstAmountPart?.type === 'amount'
+										? firstAmountPart.value
+										: amountParts.length === 1 &&
+												firstAmountPart?.type === 'amount'
+											? firstAmountPart.value
+											: undefined)
 								const totalAmountBigInt = displayTotalAmount
 									? displayTotalAmount.value
 									: event.type === 'swap' && amountParts.length > 0
@@ -173,10 +207,12 @@ export function Receipt(props: Receipt.Props) {
 												return sum
 											}, 0n)
 								const decimals = displayTotalAmount
-									? (displayTotalAmount.decimals ?? 6)
+									? (displayTotalAmount.decimals ??
+										DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
 									: firstAmountPart?.type === 'amount'
-										? (firstAmountPart.value.decimals ?? 6)
-										: 6
+										? (firstAmountPart.value.decimals ??
+											DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
+										: DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS
 
 								return (
 									<div
@@ -184,13 +220,20 @@ export function Receipt(props: Receipt.Props) {
 										className="[counter-increment:event]"
 									>
 										<div className="flex flex-col gap-[8px]">
-											<div className="grid grid-cols-[1fr_minmax(0,30%)] gap-[10px]">
+											<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-[10px]">
 												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
 													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
 													<TxEventDescription event={event} />
 												</div>
-												<div className="flex items-start justify-end shrink leading-[24px]">
-													{totalAmountBigInt > 0n && (
+												<div className="flex items-start justify-end min-w-0 leading-[24px]">
+													{sideAmount && sideAmount.value > 0n ? (
+														<Amount
+															{...sideAmount}
+															infinite={null}
+															prefix={showUsdPrefix ? '$' : undefined}
+															short
+														/>
+													) : totalAmountBigInt > 0n ? (
 														<Amount.Base
 															decimals={decimals}
 															infinite={null}
@@ -198,23 +241,40 @@ export function Receipt(props: Receipt.Props) {
 															short
 															value={totalAmountBigInt}
 														/>
-													)}
+													) : null}
 												</div>
 											</div>
-											{event.note && (
-												<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-													<div className="border-l border-base-border pl-[10px] w-full">
-														{typeof event.note === 'string' ? (
-															<span
-																className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-																title={event.note}
-															>
-																{event.note}
-															</span>
-														) : (
+											{event.note &&
+												(typeof event.note === 'string' ? (
+													<TxEventMemoLine
+														memo={event.note}
+														className="pl-[24px]"
+													/>
+												) : (
+													<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
+														<div className="border-l border-base-border pl-[10px] w-full">
 															<div className="flex flex-col gap-1 text-secondary text-[13px]">
 																{event.note.map(([label, part], index) => {
 																	const key = `${label}${index}`
+																	if (
+																		(label === 'from' || label === 'to') &&
+																		part.type === 'account'
+																	) {
+																		return (
+																			<div key={key} className="min-w-0">
+																				<TxEventDescription
+																					event={{
+																						type: 'blocked transfer address',
+																						parts: [
+																							{ type: 'text', value: label },
+																							part,
+																						],
+																					}}
+																				/>
+																			</div>
+																		)
+																	}
+
 																	return (
 																		<div
 																			key={key}
@@ -241,10 +301,9 @@ export function Receipt(props: Receipt.Props) {
 																	)
 																})}
 															</div>
-														)}
+														</div>
 													</div>
-												</div>
-											)}
+												))}
 										</div>
 									</div>
 								)
@@ -252,12 +311,12 @@ export function Receipt(props: Receipt.Props) {
 						</div>
 					</>
 				)}
-				{(showFeeBreakdown || hasFee || hasTotal) && (
+				{(showFeeBreakdown || showSingleFee || hasTotal) && (
 					<>
 						<div className="border-t border-dashed border-base-border" />
 						<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
 							{showFeeBreakdown
-								? feeBreakdown.map((item, index) => {
+								? visibleFeeBreakdown.map((item, index) => {
 										const showUsdPrefix = hasTokenAmount(item)
 											? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
 											: showUsdFeePrefix
@@ -269,9 +328,6 @@ export function Receipt(props: Receipt.Props) {
 											: PriceFormatter.formatAmountShort(
 													Value.format(item.amount, item.decimals),
 												)
-										const isSponsored =
-											item.payer &&
-											item.payer.toLowerCase() !== sender.toLowerCase()
 										return (
 											<div
 												key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
@@ -299,29 +355,13 @@ export function Receipt(props: Receipt.Props) {
 														</span>
 													)}
 												</span>
-												<div className="flex items-center gap-1">
-													{isSponsored && item.payer && (
-														<>
-															<Link
-																to="/address/$address"
-																params={{ address: item.payer }}
-																className="text-accent press-down"
-															>
-																<Midcut
-																	value={item.payer}
-																	prefix="0x"
-																	min={4}
-																/>
-															</Link>
-															<span className="text-tertiary">paid</span>
-														</>
-													)}
+												<div className="flex items-center gap-2">
 													<span>{formattedAmount}</span>
 												</div>
 											</div>
 										)
 									})
-								: hasFee && (
+								: showSingleFee && (
 										<div className="flex justify-between items-center">
 											<span className="text-tertiary">Fee</span>
 											<span className="text-right">
@@ -354,6 +394,31 @@ export function Receipt(props: Receipt.Props) {
 
 			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
 				<div className="max-w-[360px] w-full">
+					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive text-[12px] text-tertiary">
+						<button
+							type="button"
+							onClick={() => void handleShare()}
+							className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down hover:bg-base-plane hover:text-primary"
+						>
+							<ShareIcon className="size-[13px]" />
+							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
+						</button>
+						<Receipt.ExportLink
+							hash={hash}
+							format="pdf"
+							exportSearch={exportSearch}
+						/>
+						<Receipt.ExportLink
+							hash={hash}
+							format="txt"
+							exportSearch={exportSearch}
+						/>
+						<Receipt.ExportLink
+							hash={hash}
+							format="json"
+							exportSearch={exportSearch}
+						/>
+					</div>
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
@@ -381,6 +446,7 @@ export namespace Receipt {
 		total?: number
 		totalDisplay?: string
 		feeBreakdown?: FeeBreakdownItem[]
+		exportSearch?: string | undefined
 	}
 
 	export interface FeeBreakdownItem {
@@ -390,5 +456,35 @@ export namespace Receipt {
 		symbol?: string
 		token?: Address.Address
 		payer?: Address.Address
+	}
+
+	export function ExportLink(props: ExportLink.Props): React.JSX.Element {
+		const { hash, format, exportSearch = '' } = props
+		const icon =
+			format === 'pdf' ? (
+				<DownloadIcon className="size-[13px]" />
+			) : format === 'txt' ? (
+				<FileTextIcon className="size-[13px]" />
+			) : (
+				<BracesIcon className="size-[13px]" />
+			)
+
+		return (
+			<a
+				href={`/receipt/${hash}.${format}${exportSearch}`}
+				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border uppercase transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
+			>
+				{icon}
+				<span>{format}</span>
+			</a>
+		)
+	}
+
+	export namespace ExportLink {
+		export interface Props {
+			hash: Hex.Hex
+			format: 'pdf' | 'txt' | 'json'
+			exportSearch?: string | undefined
+		}
 	}
 }

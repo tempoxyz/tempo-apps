@@ -1,58 +1,8 @@
 import { parseAbi } from 'viem'
-import {
-	Abis as ViemTempoAbis,
-	Addresses as ViemTempoAddresses,
-} from 'viem/tempo'
+import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
 
-type TempoAbisWithTip1034 = typeof ViemTempoAbis & {
-	tip20ChannelEscrow?: typeof tip20ChannelEscrowFallbackAbi
-}
-
-type TempoAddressesWithTip1034 = typeof ViemTempoAddresses & {
-	tip20ChannelEscrow?: typeof TIP20_CHANNEL_ESCROW_ADDRESS
-}
-
-export const TIP20_CHANNEL_ESCROW_ADDRESS =
-	'0x4D50500000000000000000000000000000000000'
-
-const tip20ChannelEscrowFallbackAbi = parseAbi([
-	'struct ChannelDescriptor { address payer; address payee; address operator; address token; bytes32 salt; address authorizedSigner; bytes32 expiringNonceHash; }',
-	'struct ChannelState { uint96 settled; uint96 deposit; uint32 closeRequestedAt; }',
-	'function open(address payee, address operator, address token, bytes32 salt, address authorizedSigner, uint96 deposit) returns (bytes32 channelId)',
-	'function settle(ChannelDescriptor descriptor, uint96 cumulativeAmount, bytes signature)',
-	'function topUp(ChannelDescriptor descriptor, uint96 additionalDeposit)',
-	'function requestClose(ChannelDescriptor descriptor)',
-	'function close(ChannelDescriptor descriptor, uint96 cumulativeAmount, uint96 captureAmount, bytes signature)',
-	'function withdraw(ChannelDescriptor descriptor)',
-	'function channelId(ChannelDescriptor descriptor) view returns (bytes32)',
-	'function state(ChannelDescriptor descriptor) view returns (ChannelState)',
-	'event ChannelOpened(bytes32 indexed channelId, ChannelDescriptor descriptor, uint96 deposit)',
-	'event Settled(bytes32 indexed channelId, ChannelDescriptor descriptor, uint96 cumulativeAmount, uint96 deltaPaid, uint96 newSettled)',
-	'event TopUp(bytes32 indexed channelId, ChannelDescriptor descriptor, uint96 additionalDeposit, uint96 newDeposit)',
-	'event CloseRequested(bytes32 indexed channelId, ChannelDescriptor descriptor, uint32 closeRequestedAt)',
-	'event CloseRequestCancelled(bytes32 indexed channelId, ChannelDescriptor descriptor)',
-	'event ChannelClosed(bytes32 indexed channelId, ChannelDescriptor descriptor, uint96 settledToPayee, uint96 refundedToPayer)',
-	'event ChannelWithdrawn(bytes32 indexed channelId, ChannelDescriptor descriptor, uint96 refundedToPayer)',
-	'error InvalidPayee()',
-	'error InvalidToken()',
-	'error InvalidDeposit()',
-	'error ChannelAlreadyOpen(bytes32 channelId)',
-	'error ChannelNotOpen(bytes32 channelId)',
-	'error Unauthorized()',
-	'error InvalidSignature()',
-	'error InvalidCaptureAmount()',
-	'error InsufficientDeposit()',
-	'error CloseGracePeriodNotElapsed()',
-])
-
-export const tip20ChannelEscrowAbi = ((ViemTempoAbis as TempoAbisWithTip1034)
-	.tip20ChannelEscrow ??
-	tip20ChannelEscrowFallbackAbi) as typeof tip20ChannelEscrowFallbackAbi
-
-export const tip20ChannelEscrowAddress = ((
-	ViemTempoAddresses as TempoAddressesWithTip1034
-).tip20ChannelEscrow ??
-	TIP20_CHANNEL_ESCROW_ADDRESS) as typeof TIP20_CHANNEL_ESCROW_ADDRESS
+export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
+export const tip20ChannelReserveAddress = ViemTempoChannel.address
 
 export const streamChannelAbi = [
 	{
@@ -275,33 +225,18 @@ const zoneFactoryAbi = [
 	},
 ] as const
 
-const stablecoinDexTip1056Abi = [
-	{
-		type: 'event',
-		name: 'OrderFlipped',
-		inputs: [
-			{ indexed: true, name: 'orderId', type: 'uint128' },
-			{ indexed: true, name: 'maker', type: 'address' },
-			{ indexed: true, name: 'token', type: 'address' },
-			{ indexed: false, name: 'amount', type: 'uint128' },
-			{ indexed: false, name: 'isBid', type: 'bool' },
-			{ indexed: false, name: 'tick', type: 'int16' },
-			{ indexed: false, name: 'flipTick', type: 'int16' },
-		],
-		anonymous: false,
-	},
-] as const
+export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
 
-// TODO: Remove this local TIP-1056 ABI item once viem/tempo exports OrderFlipped in Abis.stablecoinDex.
-export const stablecoinDexAbi = [
-	...ViemTempoAbis.stablecoinDex,
-	...stablecoinDexTip1056Abi,
-] as const
+export const receivePolicyGuardAbi = parseAbi([
+	'event TransferBlocked(address indexed token, address indexed receiver, uint64 indexed blockedNonce, uint256 amount, uint8 receiptVersion, bytes receipt)',
+	'event ReceiptClaimed(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, address to, uint256 amount)',
+	'event ReceiptBurned(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, uint256 amount)',
+])
 
 export const Abis = {
 	...ViemTempoAbis,
+	receivePolicyGuard: receivePolicyGuardAbi,
 	stablecoinDex: stablecoinDexAbi,
-	tip20ChannelEscrow: tip20ChannelEscrowAbi,
 	streamChannel: streamChannelAbi,
 	zonePortal: zonePortalAbi,
 	zoneFactory: zoneFactoryAbi,

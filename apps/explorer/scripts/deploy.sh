@@ -29,12 +29,12 @@ while (($#)); do
 done
 
 if [[ -z "$env_name" ]]; then
-	echo "Deploy requires --env {devnet|testnet|mainnet}" >&2
+	echo "Deploy requires --env {devnet|nextfork|testnet|mainnet}" >&2
 	exit 1
 fi
 
 case "$env_name" in
-	devnet|testnet|mainnet) ;;
+	devnet|nextfork|testnet|mainnet) ;;
 	*)
 		echo "Unsupported env: $env_name" >&2
 		exit 1

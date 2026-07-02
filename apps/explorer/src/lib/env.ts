@@ -11,7 +11,12 @@ const clientEnvSchema = z.object({
 
 export const clientEnv = clientEnvSchema.parse(import.meta.env)
 
-export type TempoEnv = 'testnet' | 'mainnet' | 'devnet' | 'localnet'
+export type TempoEnv =
+	| 'testnet'
+	| 'mainnet'
+	| 'devnet'
+	| 'localnet'
+	| 'nextfork'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -24,17 +29,19 @@ export function inferTempoEnvFromHostname(
 		host.includes('explorer-mainnet') ||
 		host.includes('explore.mainnet.') ||
 		host.includes('explore.presto.') ||
-		host.includes('explore.4217.')
+		host.includes('explore.4217.') ||
+		host === 'explore.tempo.xyz'
 	) {
 		return 'mainnet'
 	}
 
 	if (
-		host.includes('explorer-devnet') ||
-		host.includes('explore.devnet.') ||
-		host.includes('explore.31318.')
+		host.includes('explorer-nextfork') ||
+		host.includes('explore.nextfork.') ||
+		host.includes('explore-nextfork.') ||
+		host.includes('nextfork.devnet.')
 	) {
-		return 'devnet'
+		return 'nextfork'
 	}
 
 	if (
@@ -43,6 +50,14 @@ export function inferTempoEnvFromHostname(
 		host.includes('explore.31337.')
 	) {
 		return 'localnet'
+	}
+
+	if (
+		host.includes('explorer-devnet') ||
+		host.includes('explore.devnet.') ||
+		host.includes('explore.31318.')
+	) {
+		return 'devnet'
 	}
 
 	if (
@@ -58,7 +73,10 @@ export function inferTempoEnvFromHostname(
 }
 
 function normalizeTempoEnv(value: string | undefined): TempoEnv {
-	return value === 'mainnet' || value === 'devnet' || value === 'localnet'
+	return value === 'mainnet' ||
+		value === 'devnet' ||
+		value === 'localnet' ||
+		value === 'nextfork'
 		? value
 		: 'testnet'
 }

@@ -102,7 +102,7 @@ function getRedirectForSearchMatch(result: SearchMatch) {
 
 	if (result.type === 'transaction') {
 		return {
-			to: '/tx/$hash',
+			to: '/receipt/$hash',
 			params: { hash: result.hash },
 		} as const
 	}
@@ -154,7 +154,7 @@ export const Route = createFileRoute('/search')({
 
 		if (Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32)
 			throw redirect({
-				to: '/tx/$hash',
+				to: '/receipt/$hash',
 				params: { hash: normalizedQuery },
 			})
 

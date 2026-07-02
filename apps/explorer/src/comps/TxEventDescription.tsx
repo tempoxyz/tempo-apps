@@ -8,7 +8,7 @@ import * as React from 'react'
 import { decodeFunctionData, isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
@@ -20,6 +20,35 @@ import {
 	RoleFormatter,
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
+
+export function TxEventMemoLine(
+	props: TxEventMemoLine.Props,
+): React.JSX.Element {
+	const { memo, className } = props
+	return (
+		<div
+			className={cx(
+				'flex min-w-0 items-center gap-2 text-[13px] text-secondary',
+				className,
+			)}
+		>
+			<span className="text-tertiary shrink-0">Memo:</span>
+			<span
+				className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+				title={memo}
+			>
+				{memo}
+			</span>
+		</div>
+	)
+}
+
+export declare namespace TxEventMemoLine {
+	type Props = {
+		memo: string
+		className?: string | undefined
+	}
+}
 
 /**
  * Renders a contract call with decoded function name.
@@ -145,13 +174,16 @@ export namespace TxEventDescription {
 			}
 			case 'action': {
 				const isFailed = part.value === 'Failed'
+				const isBlocked = part.value === 'Blocked'
 				return (
 					<span
 						className={cx(
 							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
-							isFailed
-								? 'bg-negative/[0.06] text-primary'
-								: 'bg-distinct/70 text-primary',
+							isBlocked
+								? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+								: isFailed
+									? 'bg-negative/[0.06] text-primary'
+									: 'bg-distinct/70 text-primary',
 						)}
 					>
 						{part.value}

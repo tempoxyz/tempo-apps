@@ -11,6 +11,7 @@ function sendEvent(params: {
 	from: `0x${string}`
 	to: `0x${string}`
 	amount: bigint
+	decimals?: number
 }): KnownEvent {
 	return {
 		type: 'send',
@@ -21,8 +22,31 @@ function sendEvent(params: {
 				value: {
 					token: tokenAddress,
 					value: params.amount,
-					decimals: 6,
+					decimals: params.decimals ?? 6,
 					symbol: 'PathUSD',
+				},
+			},
+			{ type: 'text', value: 'to' },
+			{ type: 'account', value: params.to },
+		],
+		meta: { from: params.from, to: params.to },
+	}
+}
+
+function sendEventWithoutMetadata(params: {
+	from: `0x${string}`
+	to: `0x${string}`
+	amount: bigint
+}): KnownEvent {
+	return {
+		type: 'send',
+		parts: [
+			{ type: 'action', value: 'Send' },
+			{
+				type: 'amount',
+				value: {
+					token: tokenAddress,
+					value: params.amount,
 				},
 			},
 			{ type: 'text', value: 'to' },
@@ -68,5 +92,26 @@ describe('calculateKnownEventsTotal', () => {
 		]
 
 		expect(calculateKnownEventsTotal(events)).toBe(100n * 10n ** 18n)
+	})
+
+	it('defaults unknown-decimal transfer amounts to 18 decimals', () => {
+		const oneThousand = 1_000n * 10n ** 18n
+		const fiveHundredPointThree = 500_300_000_000_000_000_000n
+		const events = [
+			sendEventWithoutMetadata({
+				from: senderAddress,
+				to: forwardedAddress,
+				amount: oneThousand,
+			}),
+			sendEventWithoutMetadata({
+				from: senderAddress,
+				to: recipientAddress,
+				amount: fiveHundredPointThree,
+			}),
+		]
+
+		expect(calculateKnownEventsTotal(events)).toBe(
+			1_500_300_000_000_000_000_000n,
+		)
 	})
 })

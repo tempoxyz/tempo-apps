@@ -5,10 +5,12 @@ packages:
 
 catalog:
   '@biomejs/biome': ^2.4.10
+  '@cloudflare/codemode': ^0.4.1
   '@cloudflare/puppeteer': ^1.0.6
   '@cloudflare/vite-plugin': 1.30.3
   '@cloudflare/vitest-pool-workers': ^0.13.5
-  '@cloudflare/workers-types': ^4.20260408.1
+  '@cloudflare/workers-types': ^4.20260531.1
+  '@datadog/browser-rum-slim': ^7.2.0
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.460
   '@logtape/config': ^2.0.4
@@ -45,8 +47,10 @@ catalog:
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
   '@wagmi/core': ^3.4.8
-  accounts: ~0.12.1
+  '@modelcontextprotocol/sdk': 1.29.0
+  accounts: ~0.14.9
   abitype: ^1.2.4
+  ai: 6.0.202
   animejs: ^4.3.6
   cloudflare-worker-metrics: ^1.4.0
   cva: ^1.0.0-beta.4
@@ -54,7 +58,7 @@ catalog:
   eruda: ^3.4.3
   esbuild: ^0.28.0
   globals: ^17.4.0
-  hono: ^4.12.14
+  hono: ^4.12.22
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
@@ -75,12 +79,12 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
-  viem: ^2.50.4
+  viem: ^2.52.0
   vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
   wagmi: ^3.6.9
-  wrangler: 4.79.0
+  wrangler: ^4.95.0
   zod: ^4.3.6
 
 catalogMode: strict
@@ -90,6 +94,7 @@ enablePrePostScripts: true
 ignoredBuiltDependencies:
   - '@sentry/cli'
   - bufferutil
+  - cadent
   - cbor-extract
   - cpu-features
   - protobufjs

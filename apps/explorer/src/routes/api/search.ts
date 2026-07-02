@@ -1,23 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import { getBlockNumber, getChainId } from 'wagmi/actions'
-import tokensIndex31318 from '#data/tokens-index-31318.json' with {
-	type: 'json',
-}
-import tokensIndex42431 from '#data/tokens-index-42431.json' with {
-	type: 'json',
-}
-import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
+import {
+	getBlock,
+	getBlockNumber,
+	getChainId,
+	getTransaction,
+} from 'wagmi/actions'
+import { getAccountTag } from '#lib/account'
+import {
+	contractRegistry,
+	getContractInfo,
+	type ContractInfo,
+} from '#lib/domain/contracts'
 import { isTip20Address } from '#lib/domain/tip20'
 import { getTempoEnv } from '#lib/env'
 import { normalizeSearchInput } from '#lib/tempo-address'
-import {
-	fetchLatestBlockNumber,
-	fetchTokenCreatedRows,
-	fetchTransactionTimestamp,
-} from '#lib/server/tempo-queries'
-import { getTokenListAddresses } from '#lib/server/tokens'
+import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type SearchResult =
@@ -32,6 +31,9 @@ export type SearchResult =
 			type: 'address'
 			address: Address.Address
 			isTip20: boolean
+			label?: string
+			description?: string
+			category?: ContractInfo['category']
 	  }
 	| {
 			type: 'transaction'
@@ -56,8 +58,6 @@ export type TransactionSearchResult = Extract<
 >
 export type BlockSearchResult = Extract<SearchResult, { type: 'block' }>
 
-type Token = [address: Address.Address, symbol: string, name: string]
-
 type IndexedToken = {
 	address: Address.Address
 	symbol: string
@@ -65,56 +65,121 @@ type IndexedToken = {
 	searchKey: string
 }
 
-const LOCALNET_TOKEN_SEARCH_LIMIT = 500
+/** The slice of a verified-token row that token search matches against. */
+export type SearchTokenEntry = {
+	address: string
+	symbol: string
+	name: string
+}
 
-function indexTokens(tokens: Token[]): IndexedToken[] {
-	return tokens.map(([address, symbol, name]) => ({
-		address,
-		symbol,
-		name,
-		searchKey: `${symbol.toLowerCase()}|${name.toLowerCase()}|${address.toLowerCase()}`,
+function indexSearchTokenEntries(tokens: SearchTokenEntry[]): IndexedToken[] {
+	return tokens.map((token) => ({
+		address: token.address.toLowerCase() as Address.Address,
+		symbol: token.symbol,
+		name: token.name,
+		searchKey: `${token.symbol.toLowerCase()}|${token.name.toLowerCase()}|${token.address.toLowerCase()}`,
 	}))
 }
 
-const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
-	31318: indexTokens(tokensIndex31318 as Token[]),
-	42431: indexTokens(tokensIndex42431 as Token[]),
-	4217: indexTokens(tokensIndex4217 as Token[]),
+function mergeIndexedTokens(tokens: IndexedToken[]): IndexedToken[] {
+	const tokensByAddress = new Map<string, IndexedToken>()
+	for (const token of tokens) {
+		tokensByAddress.set(token.address.toLowerCase(), token)
+	}
+	return [...tokensByAddress.values()]
 }
 
-async function getSearchableTokens(chainId: number): Promise<IndexedToken[]> {
-	if (getTempoEnv() !== 'localnet') return INDEXED_TOKENS[chainId] ?? []
+function buildAddressResult(address: Address.Address): AddressSearchResult {
+	const contractInfo = getContractInfo(address)
+	const accountTag = getAccountTag(address)
 
-	const rows = await fetchTokenCreatedRows(
-		chainId,
-		LOCALNET_TOKEN_SEARCH_LIMIT,
-		0,
-	).catch((error) => {
-		console.error('[search] localnet token search failed:', error)
-		return []
+	return {
+		type: 'address',
+		address,
+		isTip20: isTip20Address(address),
+		label: accountTag?.label ?? contractInfo?.name,
+		description: contractInfo?.description,
+		category: contractInfo?.category,
+	}
+}
+
+function searchKnownContracts(query: string): AddressSearchResult[] {
+	const normalizedQuery = query.toLowerCase()
+	if (normalizedQuery.length < 2) return []
+
+	const matches = [...contractRegistry.values()].filter((contract) => {
+		const address = contract.address.toLowerCase()
+		const name = contract.name.toLowerCase()
+		const description = contract.description?.toLowerCase() ?? ''
+		const category = contract.category.toLowerCase()
+
+		return (
+			address.startsWith(normalizedQuery) ||
+			name.includes(normalizedQuery) ||
+			description.includes(normalizedQuery) ||
+			category.includes(normalizedQuery)
+		)
 	})
 
-	return rows.map((row) => ({
-		address: row.token,
-		symbol: row.symbol,
-		name: row.name,
-		searchKey: `${row.symbol.toLowerCase()}|${row.name.toLowerCase()}|${row.token.toLowerCase()}`,
-	}))
+	matches.sort((a, b) => {
+		const aAddress = a.address.toLowerCase()
+		const bAddress = b.address.toLowerCase()
+		const aName = a.name.toLowerCase()
+		const bName = b.name.toLowerCase()
+
+		if (aName === normalizedQuery && bName !== normalizedQuery) return -1
+		if (bName === normalizedQuery && aName !== normalizedQuery) return 1
+
+		if (aName.startsWith(normalizedQuery) && !bName.startsWith(normalizedQuery))
+			return -1
+		if (bName.startsWith(normalizedQuery) && !aName.startsWith(normalizedQuery))
+			return 1
+
+		if (
+			aAddress.startsWith(normalizedQuery) &&
+			!bAddress.startsWith(normalizedQuery)
+		)
+			return -1
+		if (
+			bAddress.startsWith(normalizedQuery) &&
+			!aAddress.startsWith(normalizedQuery)
+		)
+			return 1
+
+		return aName.localeCompare(bName)
+	})
+
+	const addresses = new Set<string>()
+	const results: AddressSearchResult[] = []
+	for (const contract of matches) {
+		const address = Address.checksum(contract.address)
+		const key = address.toLowerCase()
+		if (addresses.has(key)) continue
+		addresses.add(key)
+		results.push(buildAddressResult(address))
+		if (results.length === 5) break
+	}
+
+	return results
 }
 
-async function searchTokens(
+export function searchTokens(
 	query: string,
-	chainId: number,
-	verifiedAddresses: Set<string>,
-): Promise<TokenSearchResult[]> {
+	verifiedTokens: SearchTokenEntry[],
+): TokenSearchResult[] {
 	query = query.toLowerCase()
-	const indexedTokens = await getSearchableTokens(chainId)
+	const verifiedAddresses = new Set(
+		verifiedTokens.map((token) => token.address.toLowerCase()),
+	)
+	const indexedTokens = mergeIndexedTokens(
+		indexSearchTokenEntries(verifiedTokens),
+	)
 	const isAddressQuery = query.startsWith('0x')
 
 	// filter using search keys
 	const matches = indexedTokens.filter((token) => {
-		if (isAddressQuery) return token.address.toLowerCase().startsWith(query)
-		// for name/symbol queries, only match verified tokenlist tokens
+		if (isAddressQuery) return token.address.startsWith(query)
+		// for name/symbol queries, only match verified tokens
 		if (verifiedAddresses.size > 0 && !verifiedAddresses.has(token.address))
 			return false
 		return token.searchKey.includes(query)
@@ -154,6 +219,43 @@ async function searchTokens(
 	}))
 }
 
+function searchResultAddressKey(result: SearchResult): string | undefined {
+	if (result.type !== 'address' && result.type !== 'token') return undefined
+	return result.address.toLowerCase()
+}
+
+function shouldReplaceSearchResult(
+	current: SearchResult,
+	next: SearchResult,
+): boolean {
+	return current.type === 'address' && next.type === 'token'
+}
+
+function dedupeSearchResults(results: SearchResult[]): SearchResult[] {
+	const resultIndexByAddress = new Map<string, number>()
+	const deduped: SearchResult[] = []
+
+	for (const result of results) {
+		const addressKey = searchResultAddressKey(result)
+		if (!addressKey) {
+			deduped.push(result)
+			continue
+		}
+
+		const existingIndex = resultIndexByAddress.get(addressKey)
+		if (existingIndex === undefined) {
+			resultIndexByAddress.set(addressKey, deduped.length)
+			deduped.push(result)
+			continue
+		}
+
+		if (shouldReplaceSearchResult(deduped[existingIndex], result))
+			deduped[existingIndex] = result
+	}
+
+	return deduped
+}
+
 export const Route = createFileRoute('/api/search')({
 	server: {
 		handlers: {
@@ -170,11 +272,7 @@ export const Route = createFileRoute('/api/search')({
 
 				const config = getWagmiConfig()
 				const chainId = getChainId(config)
-				const tempoEnv = getTempoEnv()
-				const verifiedAddresses =
-					tempoEnv === 'localnet'
-						? new Set<string>()
-						: await getTokenListAddresses(chainId)
+				const verifiedTokens = await getVerifiedTokens(chainId)
 				const results: SearchResult[] = []
 
 				// block number (plain digits or #-prefixed)
@@ -188,57 +286,54 @@ export const Route = createFileRoute('/api/search')({
 					blockNumber >= 0
 				) {
 					try {
-						const latestBlock =
-							getTempoEnv() === 'localnet'
-								? await getBlockNumber(config)
-								: await fetchLatestBlockNumber(chainId)
+						const latestBlock = await getBlockNumber(config)
 						if (blockNumber <= Number(latestBlock))
 							results.push({ type: 'block', blockNumber })
 					} catch {
-						// index unavailable — skip block result
+						// node unavailable — skip block result
 					}
 				}
 
 				// address
-				if (Address.validate(query))
-					results.push({
-						type: 'address',
-						address: query,
-						isTip20: isTip20Address(query),
-					})
+				if (Address.validate(query)) results.push(buildAddressResult(query))
 
 				const isHash = Hex.validate(query) && Hex.size(query) === 32
 
 				// hash
 				if (isHash) {
+					let timestamp: number | undefined
 					try {
-						const timestamp = await fetchTransactionTimestamp(chainId, query)
-
-						results.push({
-							type: 'transaction',
-							hash: query,
-							timestamp,
-						})
+						const transaction = await getTransaction(config, { hash: query })
+						if (transaction.blockNumber) {
+							const block = await getBlock(config, {
+								blockNumber: transaction.blockNumber,
+							})
+							timestamp = Number(block.timestamp)
+						}
 					} catch {
-						results.push({
-							type: 'transaction',
-							hash: query,
-							timestamp: undefined,
-						})
+						// unknown or pending — return the hash without a timestamp
 					}
+
+					results.push({ type: 'transaction', hash: query, timestamp })
 				} else {
+					if (!Address.validate(query))
+						results.push(...searchKnownContracts(query))
+
 					// search for token matches (even if an address was found)
-					results.push(
-						...(await searchTokens(query, chainId, verifiedAddresses)),
-					)
+					results.push(...searchTokens(query, verifiedTokens))
 				}
 
 				return Response.json(
-					{ results, query: rawQuery } satisfies SearchApiResponse,
+					{
+						results: dedupeSearchResults(results),
+						query: rawQuery,
+					} satisfies SearchApiResponse,
 					{
 						headers: {
 							'Cache-Control':
-								tempoEnv === 'localnet' ? 'no-store' : 'public, max-age=30',
+								getTempoEnv() === 'localnet'
+									? 'no-store'
+									: 'public, max-age=30',
 						},
 					},
 				)
