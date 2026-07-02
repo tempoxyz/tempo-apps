@@ -3,6 +3,18 @@ import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
+export const storageCreditsAddress =
+	'0x1060000000000000000000000000000000000000' as const
+
+export const storageCreditsAbi = parseAbi([
+	'error DelegateCallNotAllowed()',
+	'error InvalidMode()',
+	'function balanceOf(address account) view returns (uint64)',
+	'function modeOf(address account) view returns (uint8)',
+	'function budgetOf(address account) view returns (uint64)',
+	'function setMode(uint8 newMode)',
+	'function setBudget(uint64 creditBudget)',
+])
 
 export const streamChannelAbi = [
 	{
@@ -237,6 +249,7 @@ export const Abis = {
 	...ViemTempoAbis,
 	receivePolicyGuard: receivePolicyGuardAbi,
 	stablecoinDex: stablecoinDexAbi,
+	storageCredits: storageCreditsAbi,
 	streamChannel: streamChannelAbi,
 	zonePortal: zonePortalAbi,
 	zoneFactory: zoneFactoryAbi,

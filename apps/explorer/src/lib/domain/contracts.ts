@@ -12,6 +12,8 @@ import {
 	Abis,
 	stablecoinDexAbi,
 	streamChannelAbi,
+	storageCreditsAbi,
+	storageCreditsAddress,
 	tip20ChannelReserveAbi,
 	tip20ChannelReserveAddress,
 } from '#lib/abis'
@@ -324,6 +326,18 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			category: 'system',
 			docsUrl: 'https://tips.sh/1034-1',
 			address: tip20ChannelReserveAddress,
+		},
+	],
+	[
+		storageCreditsAddress,
+		{
+			name: 'Storage Credits',
+			code: '0xef',
+			description: 'Per-account storage credit accounting precompile',
+			abi: storageCreditsAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1060',
+			address: storageCreditsAddress,
 		},
 	],
 	[
