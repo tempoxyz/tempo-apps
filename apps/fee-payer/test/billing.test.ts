@@ -178,7 +178,7 @@ describe('billing sponsorship intents', () => {
 			authorizationList: [],
 			calls: [{ to: target, value: 0n, data: '0x' }],
 			chainId: tempoChain.id,
-			feeToken,
+			feeToken: pathUsd,
 			gas: 0xd492n,
 			maxFeePerGas: 0x4a817c800n,
 			maxPriorityFeePerGas: 0n,
