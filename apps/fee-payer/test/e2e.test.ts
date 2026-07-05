@@ -4,6 +4,7 @@ import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { pathUsd } from '../src/lib/consts.js'
 import {
 	sponsorAddress,
 	createTestAccount,
@@ -64,10 +65,10 @@ beforeAll(async () => {
 		[1n, 2n, 3n].map((id) =>
 			Actions.amm.mintSync(client, {
 				account: sponsorAccount,
-				feeToken: '0x20c0000000000000000000000000000000000000',
+				feeToken: pathUsd,
 				nonceKey: 'expiring',
 				userTokenAddress: id,
-				validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+				validatorTokenAddress: pathUsd,
 				validatorTokenAmount: parseUnits('1000', 6),
 				to: sponsorAccount.address,
 			}),
@@ -173,11 +174,10 @@ describe('fee-payer integration', () => {
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
-			// Regression: the broadcast envelope must carry a feeToken the
-			// chain can charge. Without it the chain falls back to the
-			// sender's default account token and the tx reverts at
-			// validation with `insufficient liquidity in FeeAMM pool`.
-			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+			// Regression: sponsored transactions must pay with PathUSD,
+			// avoiding account-level fee token preferences that can route
+			// through illiquid FeeAMM pools.
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter((request) =>
@@ -216,11 +216,10 @@ describe('fee-payer integration', () => {
 			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
-			// Regression: the broadcast envelope must carry a feeToken the
-			// chain can charge. Without it the chain falls back to the
-			// sender's default account token and the tx reverts at
-			// validation with `insufficient liquidity in FeeAMM pool`.
-			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+			// Regression: sponsored transactions must pay with PathUSD,
+			// avoiding account-level fee token preferences that can route
+			// through illiquid FeeAMM pools.
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter((request) =>

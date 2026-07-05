@@ -1,6 +1,7 @@
 import { env, exports } from 'cloudflare:workers'
 import { sendTransactionSync } from 'viem/actions'
 import { describe, expect, it } from 'vitest'
+import { pathUsd } from '../src/lib/consts.js'
 import {
 	buildSponsorClient,
 	createTestAccount,
@@ -499,6 +500,6 @@ describe('API key sponsorship integration', () => {
 		expect(receipt.status).toBe('success')
 		expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 		expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
-		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+		expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 	})
 })

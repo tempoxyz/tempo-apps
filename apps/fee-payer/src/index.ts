@@ -12,6 +12,7 @@ import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import { enqueueSponsorshipIntent } from './lib/billing.js'
 import { tempoChain } from './lib/chain.js'
+import { pathUsd } from './lib/consts.js'
 import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
 	FeePayerEvents,
@@ -105,6 +106,8 @@ const relayHandler = Handler.relay({
 	features: 'all',
 	feePayer: {
 		account: sponsorAccount,
+		// Always use PathUSD as fee token.
+		feeToken: pathUsd,
 		name: 'Tempo Sponsor',
 		url: 'https://sponsor.tempo.xyz',
 	},

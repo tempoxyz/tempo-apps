@@ -5,6 +5,7 @@ import type { Address } from 'ox'
 import { createPublicClient, formatUnits, http } from 'viem'
 import { Actions, Addresses } from 'viem/tempo'
 import { tempoChain } from './chain.js'
+import { pathUsd } from './consts.js'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: env.INDEXSUPPLY_API_KEY,
@@ -70,7 +71,7 @@ export async function getUsage(
 					env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0],
 				),
 			}),
-			{ token: tempoChain.feeToken },
+			{ token: pathUsd },
 		)
 	}
 
