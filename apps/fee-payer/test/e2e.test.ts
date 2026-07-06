@@ -4,7 +4,7 @@ import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { alphaUsd, pathUsd } from '../src/lib/consts.js'
+import { pathUsd } from '../src/lib/consts.js'
 import {
 	sponsorAddress,
 	createTestAccount,
@@ -19,6 +19,7 @@ const sponsorAccount = Account.fromSecp256k1(
 		path: Mnemonic.path({ account: 0 }),
 	}),
 )
+const thetaUsd = '0x20c0000000000000000000000000000000000003' as const
 
 function createFeePayerTransportWithSpy() {
 	const requests: Array<{ method: string; params: unknown }> = []
@@ -242,63 +243,32 @@ describe('fee-payer integration', () => {
 				transport: http(env.TEMPO_RPC_URL),
 			})
 
-			const originalUserToken = await Actions.fee.getUserToken(sponsorClient, {
+			// Simulates an account-level preference that previously overrode sponsored fee settlement.
+			await Actions.fee.setUserTokenSync(sponsorClient, {
 				account: sponsorAccount,
+				token: thetaUsd,
+				nonceKey: 'expiring',
 			})
-			const originalToken = originalUserToken?.address
-			if (!originalToken)
-				throw new Error('expected sponsor to have an initial user token')
 
-			const adversarialToken =
-				originalToken.toLowerCase() !== pathUsd.toLowerCase()
-					? originalToken
-					: alphaUsd
-			const changedUserToken =
-				originalToken.toLowerCase() !== adversarialToken.toLowerCase()
+			const { transport: feePayerTransport } = createFeePayerTransportWithSpy()
+			const account = createTestAccount()
+			const client = createClient({
+				account,
+				chain: tempoChain,
+				transport: withRelay(tempoTransport(), feePayerTransport, {
+					policy: 'sign-and-broadcast',
+				}),
+			})
 
-			try {
-				// Ensure the sponsor's on-chain preference is away from pathUSD.
-				if (changedUserToken) {
-					await Actions.fee.setUserTokenSync(sponsorClient, {
-						account: sponsorAccount,
-						token: adversarialToken,
-						nonceKey: 'expiring',
-					})
-				}
+			const receipt = await sendTransactionSync(client, {
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000002',
+				value: 0n,
+			})
 
-				const { transport: feePayerTransport } =
-					createFeePayerTransportWithSpy()
-				const account = createTestAccount()
-				const client = createClient({
-					account,
-					chain: tempoChain,
-					transport: withRelay(tempoTransport(), feePayerTransport, {
-						policy: 'sign-and-broadcast',
-					}),
-				})
-
-				const receipt = await sendTransactionSync(client, {
-					feePayer: true,
-					to: '0x0000000000000000000000000000000000000002',
-					value: 0n,
-				})
-
-				expect(receipt.status).toBe('success')
-				expect(receipt.feePayer?.toLowerCase()).toBe(
-					sponsorAddress.toLowerCase(),
-				)
-				// The worker pins pathUSD, overriding the sponsor's on-chain preference.
-				expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
-			} finally {
-				// Restore so tests remain order-independent.
-				if (changedUserToken && originalToken) {
-					await Actions.fee.setUserTokenSync(sponsorClient, {
-						account: sponsorAccount,
-						token: originalToken,
-						nonceKey: 'expiring',
-					})
-				}
-			}
+			expect(receipt.status).toBe('success')
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 		})
 
 		// The prod failure only hit TIP-20 transfer activities, not the native
