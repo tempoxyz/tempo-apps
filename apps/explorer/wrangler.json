@@ -6,6 +6,9 @@
 		"binding": "CF_VERSION_METADATA"
 	},
 	"main": "./src/index.server.ts",
+	"assets": {
+		"not_found_handling": "single-page-application"
+	},
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
