@@ -24,27 +24,26 @@ type TokenInfo = {
 	logoURI?: string
 }
 
-type TokenListInfo = {
+type TempoToken = {
+	address: string
+	decimals: number
 	name: string
-	timestamp: string
-	version: {
-		major: number
-		minor: number
-		patch: number
-	}
-	tokens: TokenInfo[]
+	symbol: string
+	logoUri?: string
 }
 
 /**
- * Fetches the chain's tokenlist from the Tempo API. Returns `null` when
+ * Fetches the chain's verified tokens from the Tempo API. Returns `null` when
  * the chain is unsupported or the request fails (callers map this to 404).
  */
-async function fetchTokenList(
+async function fetchTokens(
 	env: Cloudflare.Env,
 	chainId: number,
-): Promise<TokenListInfo | null> {
-	const url = new URL('/v1/tokenlist', tempoApiUrl)
+): Promise<TokenInfo[] | null> {
+	const url = new URL('/v1/tokens', tempoApiUrl)
 	url.searchParams.set('chainId', String(chainId))
+	url.searchParams.set('verified', 'true')
+	url.searchParams.set('limit', String(200))
 
 	const response = await fetch(url, {
 		headers: env.TEMPO_API_KEY
@@ -53,10 +52,17 @@ async function fetchTokenList(
 	})
 	if (!response.ok) return null
 
-	const body = (await response.json()) as Partial<TokenListInfo>
-	if (!Array.isArray(body.tokens)) return null
+	const body = (await response.json()) as { data?: TempoToken[] }
+	if (!body.data) return null
 
-	return body as TokenListInfo
+	return body.data.map((token) => ({
+		chainId,
+		address: token.address,
+		decimals: token.decimals,
+		name: token.name,
+		symbol: token.symbol,
+		logoURI: token.logoUri,
+	}))
 }
 
 const tokenIconExtensions = ['svg', 'png'] as const
@@ -162,10 +168,10 @@ app.get('/list/:chain_id', async (context) => {
 	const chainId = Number(context.req.param('chain_id'))
 	if (!CHAIN_IDS.includes(chainId)) return context.notFound()
 
-	const tokenlist = await fetchTokenList(context.env, chainId)
-	if (!tokenlist) return context.notFound()
+	const tokens = await fetchTokens(context.env, chainId)
+	if (!tokens) return context.notFound()
 
-	return context.json(tokenlist)
+	return context.json({ tokens })
 })
 
 // id could be symbol or address
@@ -175,10 +181,10 @@ app.get('/asset/:chain_id/:id', async (context) => {
 
 	if (!CHAIN_IDS.includes(chainId)) return context.notFound()
 
-	const tokenlist = await fetchTokenList(context.env, chainId)
-	if (!tokenlist) return context.notFound()
+	const tokens = await fetchTokens(context.env, chainId)
+	if (!tokens) return context.notFound()
 
-	const asset = tokenlist.tokens.find(
+	const asset = tokens.find(
 		(token) =>
 			token.symbol?.toLowerCase() === id.toLowerCase() ||
 			token.address?.toLowerCase() === id.toLowerCase(),
@@ -191,14 +197,15 @@ app.get('/asset/:chain_id/:id', async (context) => {
 
 app.get('/lists/all', async (context) => {
 	const responses = await Promise.allSettled(
-		CHAIN_IDS.map((chainId) => fetchTokenList(context.env, chainId)),
+		CHAIN_IDS.map((chainId) => fetchTokens(context.env, chainId)),
 	)
 
 	const lists = responses
 		.map((response) =>
 			response.status === 'fulfilled' ? response.value : null,
 		)
-		.filter((tokenlist): tokenlist is TokenListInfo => tokenlist !== null)
+		.filter((tokens): tokens is TokenInfo[] => tokens !== null)
+		.map((tokens) => ({ tokens }))
 
 	return context.json(lists)
 })
