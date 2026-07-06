@@ -54,7 +54,6 @@ import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
 	type AssetData,
-	type BalancesResponse,
 	balancesQueryOptions,
 	calculateTotalHoldings,
 	useBalancesData,
@@ -91,8 +90,9 @@ import {
 	holdersQueryOptions,
 	transfersQueryOptions,
 } from '#lib/queries/tokens'
-import { getApiUrl } from '#lib/env.ts'
 import { areUsdPricedTokens } from '#lib/pricing'
+import { fetchAddressBalances } from '#lib/server/address-balances'
+import { fetchAddressMetadata } from '#lib/server/address-metadata'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
@@ -105,13 +105,6 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
-type AddressOgMetadata = {
-	accountType?: AccountType
-	txCount?: number | null
-	holdersCount?: number | null
-	lastActivityTimestamp?: number | null
-	createdTimestamp?: number | null
-}
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -315,11 +308,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			// Fetch address metadata through the API route so TIDX credentials stay
-			// server-side when loaders run in the browser. Goes through the query
-			// cache (shared with the component query) so paging within the same
-			// address reuses the entry instead of re-running the slow count query
-			// on every navigation.
+			// Fetch address metadata through a server fn (in-process during SSR —
+			// the Worker cannot fetch its own hostname — an RPC from the browser,
+			// keeping TIDX credentials server-side). Goes through the query cache
+			// (shared with the component query) so paging within the same address
+			// reuses the entry instead of re-running the slow count query on
+			// every navigation.
 			const ogMetaPromise = timeout(
 				context.queryClient
 					.ensureQueryData(addressMetadataQueryOptions(address))
@@ -376,7 +370,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const address = params.address as Address.Address
 		const ogMeta =
 			loaderData?.ogMeta ??
-			(await fetchAddressMetadata(address).catch(() => undefined))
+			(await fetchAddressMetadata({ data: address }).catch(() => undefined))
 		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
 		// since 'empty' is the correct type for regular EOAs
 		let accountType = loaderData?.accountType ?? 'empty'
@@ -405,6 +399,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				: 0
 
 			const formatSupply = (n: number): string => {
+				if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`
 				if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
 				if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
 				if (n >= 1e3)
@@ -443,7 +438,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
 			const balancesData =
 				loaderData?.balancesData ??
-				(await fetchAddressOgBalances(address).catch(() => undefined))
+				(await fetchAddressBalances({ data: address }).catch(() => undefined))
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
@@ -737,24 +732,6 @@ function RouteComponent() {
 	)
 }
 
-async function fetchAddressMetadata(address: Address.Address) {
-	const response = await fetch(getApiUrl(`/api/address/metadata/${address}`), {
-		headers: { 'Content-Type': 'application/json' },
-	})
-	if (!response.ok) throw new Error('Failed to fetch address metadata')
-	return response.json() as Promise<AddressOgMetadata>
-}
-
-async function fetchAddressOgBalances(
-	address: Address.Address,
-): Promise<BalancesResponse> {
-	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
-		headers: { 'Content-Type': 'application/json' },
-	})
-	if (!response.ok) throw new Error('Failed to fetch address balances')
-	return response.json() as Promise<BalancesResponse>
-}
-
 /**
  * Shared by the route loader (OG meta) and the header component: one cache
  * entry per address, so search-param navigations (paging, tab switches)
@@ -763,7 +740,7 @@ async function fetchAddressOgBalances(
 function addressMetadataQueryOptions(address: Address.Address) {
 	return {
 		queryKey: ['address-metadata', address] as const,
-		queryFn: () => fetchAddressMetadata(address),
+		queryFn: () => fetchAddressMetadata({ data: address }),
 		staleTime: 30_000,
 	}
 }

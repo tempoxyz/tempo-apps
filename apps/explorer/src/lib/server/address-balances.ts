@@ -1,6 +1,8 @@
+import { createServerFn } from '@tanstack/react-start'
 import { type InferResponseType, parseResponse } from 'hono/client'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
+import { getChainId } from 'wagmi/actions'
 
 import type { BalancesResponse, TokenBalance } from '#lib/address-balances'
 import {
@@ -9,6 +11,8 @@ import {
 	createTimestampedCsvFilename,
 } from '#lib/server/csv'
 import { api } from '#lib/server/tempo-api'
+import { zAddress } from '#lib/zod'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 export const TIP20_DECIMALS = 6
 export const MAX_TOKENS = 50
@@ -111,3 +115,12 @@ export async function fetchAddressBalancesData(params: {
 
 	return { balances: mapBalances(data) }
 }
+
+export const fetchAddressBalances = createServerFn({ method: 'GET' })
+	.inputValidator((input) => zAddress().parse(input))
+	.handler(({ data }) =>
+		fetchAddressBalancesData({
+			address: data,
+			chainId: getChainId(getWagmiConfig()),
+		}),
+	)
