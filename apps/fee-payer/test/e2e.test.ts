@@ -19,6 +19,7 @@ const sponsorAccount = Account.fromSecp256k1(
 		path: Mnemonic.path({ account: 0 }),
 	}),
 )
+const betaUsd = '0x20c0000000000000000000000000000000000002' as const
 const thetaUsd = '0x20c0000000000000000000000000000000000003' as const
 
 function createFeePayerTransportWithSpy() {
@@ -233,47 +234,7 @@ describe('fee-payer integration', () => {
 			expect(sponsorshipRequests[0].params).toBeDefined()
 		})
 
-		// Reproduces the outage: the sponsor's on-chain fee-token preference was
-		// a non-pathUSD token routing through an illiquid FeeAMM pool. The worker
-		// must pin pathUSD and ignore that preference.
-		it('settles in pathUSD even when the sponsor has a non-pathUSD on-chain userToken', async () => {
-			const sponsorClient = createClient({
-				account: sponsorAccount,
-				chain: tempoChain,
-				transport: http(env.TEMPO_RPC_URL),
-			})
-
-			// Simulates an account-level preference that previously overrode sponsored fee settlement.
-			await Actions.fee.setUserTokenSync(sponsorClient, {
-				account: sponsorAccount,
-				token: thetaUsd,
-				nonceKey: 'expiring',
-			})
-
-			const { transport: feePayerTransport } = createFeePayerTransportWithSpy()
-			const account = createTestAccount()
-			const client = createClient({
-				account,
-				chain: tempoChain,
-				transport: withRelay(tempoTransport(), feePayerTransport, {
-					policy: 'sign-and-broadcast',
-				}),
-			})
-
-			const receipt = await sendTransactionSync(client, {
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000002',
-				value: 0n,
-			})
-
-			expect(receipt.status).toBe('success')
-			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
-			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
-		})
-
-		// The prod failure only hit TIP-20 transfer activities, not the native
-		// value transfers the other tests exercise.
-		it('sponsors a TIP-20 transfer out of the sender', async () => {
+		it('sponsors a betaUSD transfer while the sponsor prefers thetaUSD', async () => {
 			const sponsorClient = createClient({
 				account: sponsorAccount,
 				chain: tempoChain,
@@ -283,10 +244,16 @@ describe('fee-payer integration', () => {
 			const account = createTestAccount()
 			const recipient = createTestAccount()
 
-			// Fund the sender with pathUSD to transfer out.
+			// ThetaUSD simulates a sponsor preference that previously overrode sponsored TIP-20 fee settlement.
+			await Actions.fee.setUserTokenSync(sponsorClient, {
+				account: sponsorAccount,
+				token: thetaUsd,
+				nonceKey: 'expiring',
+			})
+
 			await Actions.token.transferSync(sponsorClient, {
 				account: sponsorAccount,
-				token: pathUsd,
+				token: betaUsd,
 				to: account.address,
 				amount: parseUnits('1', 6),
 				nonceKey: 'expiring',
@@ -304,7 +271,7 @@ describe('fee-payer integration', () => {
 			const amount = parseUnits('0.25', 6)
 			const { receipt } = await Actions.token.transferSync(client, {
 				feePayer: true,
-				token: pathUsd,
+				token: betaUsd,
 				to: recipient.address,
 				amount,
 			})
@@ -315,7 +282,7 @@ describe('fee-payer integration', () => {
 			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 
 			const balance = await Actions.token.getBalance(sponsorClient, {
-				token: pathUsd,
+				token: betaUsd,
 				account: recipient.address,
 			})
 			expect(balance).toBe(amount)
