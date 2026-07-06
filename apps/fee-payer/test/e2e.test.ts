@@ -242,14 +242,30 @@ describe('fee-payer integration', () => {
 				transport: http(env.TEMPO_RPC_URL),
 			})
 
-			// Set the sponsor's on-chain preference away from pathUSD.
-			await Actions.fee.setUserTokenSync(sponsorClient, {
+			const originalUserToken = await Actions.fee.getUserToken(sponsorClient, {
 				account: sponsorAccount,
-				token: alphaUsd,
-				nonceKey: 'expiring',
 			})
+			const originalToken = originalUserToken?.address
+			if (!originalToken)
+				throw new Error('expected sponsor to have an initial user token')
+
+			const adversarialToken =
+				originalToken.toLowerCase() !== pathUsd.toLowerCase()
+					? originalToken
+					: alphaUsd
+			const changedUserToken =
+				originalToken.toLowerCase() !== adversarialToken.toLowerCase()
 
 			try {
+				// Ensure the sponsor's on-chain preference is away from pathUSD.
+				if (changedUserToken) {
+					await Actions.fee.setUserTokenSync(sponsorClient, {
+						account: sponsorAccount,
+						token: adversarialToken,
+						nonceKey: 'expiring',
+					})
+				}
+
 				const { transport: feePayerTransport } =
 					createFeePayerTransportWithSpy()
 				const account = createTestAccount()
@@ -275,11 +291,13 @@ describe('fee-payer integration', () => {
 				expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 			} finally {
 				// Restore so tests remain order-independent.
-				await Actions.fee.setUserTokenSync(sponsorClient, {
-					account: sponsorAccount,
-					token: pathUsd,
-					nonceKey: 'expiring',
-				})
+				if (changedUserToken && originalToken) {
+					await Actions.fee.setUserTokenSync(sponsorClient, {
+						account: sponsorAccount,
+						token: originalToken,
+						nonceKey: 'expiring',
+					})
+				}
 			}
 		})
 
