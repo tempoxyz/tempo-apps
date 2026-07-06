@@ -4,7 +4,7 @@ import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { pathUsd } from '../src/lib/consts.js'
+import { alphaUsd, pathUsd } from '../src/lib/consts.js'
 import {
 	sponsorAddress,
 	createTestAccount,
@@ -12,6 +12,13 @@ import {
 	tempoTransport,
 	testMnemonic,
 } from './helpers.js'
+
+const sponsorAccount = Account.fromSecp256k1(
+	Mnemonic.toPrivateKey(testMnemonic, {
+		as: 'Hex',
+		path: Mnemonic.path({ account: 0 }),
+	}),
+)
 
 function createFeePayerTransportWithSpy() {
 	const requests: Array<{ method: string; params: unknown }> = []
@@ -48,13 +55,6 @@ function createFeePayerTransportWithSpy() {
 
 // Mint liquidity for fee tokens.
 beforeAll(async () => {
-	const sponsorAccount = Account.fromSecp256k1(
-		Mnemonic.toPrivateKey(testMnemonic, {
-			as: 'Hex',
-			path: Mnemonic.path({ account: 0 }),
-		}),
-	)
-
 	const client = createClient({
 		account: sponsorAccount,
 		chain: tempoChain,
@@ -230,6 +230,107 @@ describe('fee-payer integration', () => {
 			expect(sponsorshipRequests).toHaveLength(1)
 			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
+		})
+
+		// Reproduces the outage: the sponsor's on-chain fee-token preference was
+		// a non-pathUSD token routing through an illiquid FeeAMM pool. The worker
+		// must pin pathUSD and ignore that preference.
+		it('settles in pathUSD even when the sponsor has a non-pathUSD on-chain userToken', async () => {
+			const sponsorClient = createClient({
+				account: sponsorAccount,
+				chain: tempoChain,
+				transport: http(env.TEMPO_RPC_URL),
+			})
+
+			// Set the sponsor's on-chain preference away from pathUSD.
+			await Actions.fee.setUserTokenSync(sponsorClient, {
+				account: sponsorAccount,
+				token: alphaUsd,
+				nonceKey: 'expiring',
+			})
+
+			try {
+				const { transport: feePayerTransport } =
+					createFeePayerTransportWithSpy()
+				const account = createTestAccount()
+				const client = createClient({
+					account,
+					chain: tempoChain,
+					transport: withRelay(tempoTransport(), feePayerTransport, {
+						policy: 'sign-and-broadcast',
+					}),
+				})
+
+				const receipt = await sendTransactionSync(client, {
+					feePayer: true,
+					to: '0x0000000000000000000000000000000000000002',
+					value: 0n,
+				})
+
+				expect(receipt.status).toBe('success')
+				expect(receipt.feePayer?.toLowerCase()).toBe(
+					sponsorAddress.toLowerCase(),
+				)
+				// The worker pins pathUSD, overriding the sponsor's on-chain preference.
+				expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
+			} finally {
+				// Restore so tests remain order-independent.
+				await Actions.fee.setUserTokenSync(sponsorClient, {
+					account: sponsorAccount,
+					token: pathUsd,
+					nonceKey: 'expiring',
+				})
+			}
+		})
+
+		// The prod failure only hit TIP-20 transfer activities, not the native
+		// value transfers the other tests exercise.
+		it('sponsors a TIP-20 transfer out of the sender', async () => {
+			const sponsorClient = createClient({
+				account: sponsorAccount,
+				chain: tempoChain,
+				transport: http(env.TEMPO_RPC_URL),
+			})
+
+			const account = createTestAccount()
+			const recipient = createTestAccount()
+
+			// Fund the sender with pathUSD to transfer out.
+			await Actions.token.transferSync(sponsorClient, {
+				account: sponsorAccount,
+				token: pathUsd,
+				to: account.address,
+				amount: parseUnits('1', 6),
+				nonceKey: 'expiring',
+			})
+
+			const { transport: feePayerTransport } = createFeePayerTransportWithSpy()
+			const client = createClient({
+				account,
+				chain: tempoChain,
+				transport: withRelay(tempoTransport(), feePayerTransport, {
+					policy: 'sign-and-broadcast',
+				}),
+			})
+
+			const amount = parseUnits('0.25', 6)
+			const { receipt } = await Actions.token.transferSync(client, {
+				feePayer: true,
+				token: pathUsd,
+				to: recipient.address,
+				amount,
+			})
+
+			expect(receipt.status).toBe('success')
+			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
+
+			const balance = await Actions.token.getBalance(sponsorClient, {
+				token: pathUsd,
+				account: recipient.address,
+			})
+			expect(balance).toBe(amount)
 		})
 	})
 })
