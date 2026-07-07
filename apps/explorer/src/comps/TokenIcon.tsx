@@ -3,6 +3,8 @@ import * as React from 'react'
 import { cx } from '#lib/css'
 import { resolveLogoURI } from '#lib/domain/tip20'
 
+const TOKEN_ICON_FALLBACK_SRC = '/token-fallback.svg'
+
 export function TokenIcon(props: TokenIcon.Props) {
 	const { address, className, logoURI } = props
 	const fallbackSrc = `/api/token/logo/${address}`
@@ -18,12 +20,14 @@ export function TokenIcon(props: TokenIcon.Props) {
 			src={src}
 			alt=""
 			className={cx('size-4 rounded-full shrink-0', className)}
-			onError={(e) => {
-				if (e.currentTarget.src !== fallbackSrc) {
+			onError={() => {
+				if (src !== fallbackSrc) {
 					setSrc(fallbackSrc)
 					return
 				}
-				e.currentTarget.style.display = 'none'
+				if (src !== TOKEN_ICON_FALLBACK_SRC) {
+					setSrc(TOKEN_ICON_FALLBACK_SRC)
+				}
 			}}
 		/>
 	)
