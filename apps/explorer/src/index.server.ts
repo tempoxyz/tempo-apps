@@ -51,6 +51,26 @@ function sanitizeUrl(rawUrl: string): string {
 	}
 }
 
+/** Per-IP limit for all worker requests (pages, API). Assets bypass the worker. Fails open when the binding is unavailable (local dev). */
+async function checkRateLimit(
+	request: Request,
+	env: Cloudflare.Env,
+): Promise<Response | undefined> {
+	if (!env.REQUESTS_RATE_LIMITER) return undefined
+	try {
+		const key = request.headers.get('cf-connecting-ip') ?? 'unknown'
+		const { success } = await env.REQUESTS_RATE_LIMITER.limit({ key })
+		if (!success)
+			return new Response('Rate limit exceeded', {
+				status: 429,
+				headers: { 'retry-after': '10' },
+			})
+	} catch (error) {
+		console.error('Rate limit check failed:', error)
+	}
+	return undefined
+}
+
 const serverEntry = createServerEntry({
 	fetch: async (request, opts) => {
 		const url = new URL(request.url)
@@ -103,7 +123,10 @@ export default Sentry.withSentry(
 		},
 	}),
 	{
-		fetch: (request, env, _context) => {
+		fetch: async (request, env, _context) => {
+			const rateLimited = await checkRateLimit(request, env)
+			if (rateLimited) return rateLimited
+
 			const processEnv = process.env as Record<string, string | undefined>
 			if (env) {
 				for (const [key, value] of Object.entries(env)) {
