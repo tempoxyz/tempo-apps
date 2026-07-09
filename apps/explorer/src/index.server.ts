@@ -51,15 +51,19 @@ function sanitizeUrl(rawUrl: string): string {
 	}
 }
 
-/** Per-IP limit for all worker requests (pages, API). Assets bypass the worker. Fails open when the binding is unavailable (local dev). */
+/** Per-IP limit for all worker requests; `/api/rpc` uses the looser RPC limiter. Fails open when bindings are unavailable (local dev). */
 async function checkRateLimit(
 	request: Request,
 	env: Cloudflare.Env,
 ): Promise<Response | undefined> {
-	if (!env.REQUESTS_RATE_LIMITER) return undefined
+	const isRpc = new URL(request.url).pathname === '/api/rpc'
+	const limiter = isRpc
+		? (env.RPC_RATE_LIMITER ?? env.REQUESTS_RATE_LIMITER)
+		: env.REQUESTS_RATE_LIMITER
+	if (!limiter) return undefined
 	try {
 		const key = request.headers.get('cf-connecting-ip') ?? 'unknown'
-		const { success } = await env.REQUESTS_RATE_LIMITER.limit({ key })
+		const { success } = await limiter.limit({ key })
 		if (!success)
 			return new Response('Rate limit exceeded', {
 				status: 429,

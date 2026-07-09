@@ -15,6 +15,11 @@
 			"name": "REQUESTS_RATE_LIMITER",
 			"namespace_id": "1001",
 			"simple": { "limit": 100, "period": 10 }
+		},
+		{
+			"name": "RPC_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": { "limit": 300, "period": 10 }
 		}
 	],
 	"env": {
@@ -62,6 +67,11 @@
 					"name": "REQUESTS_RATE_LIMITER",
 					"namespace_id": "1001",
 					"simple": { "limit": 100, "period": 10 }
+				},
+				{
+					"name": "RPC_RATE_LIMITER",
+					"namespace_id": "1002",
+					"simple": { "limit": 300, "period": 10 }
 				}
 			],
 			"observability": {
@@ -113,6 +123,11 @@
 					"name": "REQUESTS_RATE_LIMITER",
 					"namespace_id": "1001",
 					"simple": { "limit": 100, "period": 10 }
+				},
+				{
+					"name": "RPC_RATE_LIMITER",
+					"namespace_id": "1002",
+					"simple": { "limit": 300, "period": 10 }
 				}
 			],
 			"observability": {
@@ -159,6 +174,11 @@
 					"name": "REQUESTS_RATE_LIMITER",
 					"namespace_id": "1001",
 					"simple": { "limit": 100, "period": 10 }
+				},
+				{
+					"name": "RPC_RATE_LIMITER",
+					"namespace_id": "1002",
+					"simple": { "limit": 300, "period": 10 }
 				}
 			],
 			"observability": {
@@ -220,6 +240,11 @@
 					"name": "REQUESTS_RATE_LIMITER",
 					"namespace_id": "1001",
 					"simple": { "limit": 100, "period": 10 }
+				},
+				{
+					"name": "RPC_RATE_LIMITER",
+					"namespace_id": "1002",
+					"simple": { "limit": 300, "period": 10 }
 				}
 			],
 			"observability": {

@@ -67,12 +67,10 @@ const getFallbackUrls = createIsomorphicFn()
 
 const getTempoTransport = createIsomorphicFn()
 	.client(() => {
-		const proxy = getRpcProxyUrl()
-
-		// Browser traffic should only hit the RPC proxy. Direct chain RPC endpoints
-		// may require credentials that are only available server-side.
+		// Browser traffic goes through the same-origin RPC proxy (`/api/rpc`) so
+		// credentials stay server-side and requests are rate limited per IP.
 		return loadBalance([
-			rateLimit(http(proxy.http), {
+			rateLimit(http(`${window.location.origin}/api/rpc`), {
 				requestsPerSecond: 20,
 			}),
 		])

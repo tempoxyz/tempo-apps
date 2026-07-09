@@ -15,6 +15,7 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as ApiVerifiedTokensRouteImport } from './routes/api/verified-tokens'
 import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
+import { Route as ApiRpcRouteImport } from './routes/api/rpc'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
@@ -67,6 +68,11 @@ const ApiTip20RolesRoute = ApiTip20RolesRouteImport.update({
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiRpcRoute = ApiRpcRouteImport.update({
+  id: '/api/rpc',
+  path: '/api/rpc',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/rpc': typeof ApiRpcRoute
   '/api/search': typeof ApiSearchRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/api/verified-tokens': typeof ApiVerifiedTokensRoute
@@ -233,6 +240,7 @@ export interface FileRoutesByTo {
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/rpc': typeof ApiRpcRoute
   '/api/search': typeof ApiSearchRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/api/verified-tokens': typeof ApiVerifiedTokensRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/rpc': typeof ApiRpcRoute
   '/api/search': typeof ApiSearchRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/api/verified-tokens': typeof ApiVerifiedTokensRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/api/code'
     | '/api/health'
+    | '/api/rpc'
     | '/api/search'
     | '/api/tip20-roles'
     | '/api/verified-tokens'
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/api/code'
     | '/api/health'
+    | '/api/rpc'
     | '/api/search'
     | '/api/tip20-roles'
     | '/api/verified-tokens'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/_layout/tokens'
     | '/api/code'
     | '/api/health'
+    | '/api/rpc'
     | '/api/search'
     | '/api/tip20-roles'
     | '/api/verified-tokens'
@@ -392,6 +404,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiRpcRoute: typeof ApiRpcRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ApiTip20RolesRoute: typeof ApiTip20RolesRoute
   ApiVerifiedTokensRoute: typeof ApiVerifiedTokensRoute
@@ -447,6 +460,13 @@ declare module '@tanstack/react-router' {
       path: '/api/search'
       fullPath: '/api/search'
       preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/rpc': {
+      id: '/api/rpc'
+      path: '/api/rpc'
+      fullPath: '/api/rpc'
+      preLoaderRoute: typeof ApiRpcRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -664,6 +684,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiRpcRoute: ApiRpcRoute,
   ApiSearchRoute: ApiSearchRoute,
   ApiTip20RolesRoute: ApiTip20RolesRoute,
   ApiVerifiedTokensRoute: ApiVerifiedTokensRoute,
