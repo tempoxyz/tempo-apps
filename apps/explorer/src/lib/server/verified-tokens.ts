@@ -10,7 +10,7 @@ import { api } from '#lib/server/tempo-api'
 
 /** A row of the API's curated verified-token list (the token registry). */
 export type VerifiedToken = InferResponseType<
-	typeof api.v1.tokens.$get,
+	(typeof api.v1)['verified-tokens']['$get'],
 	200
 >['data'][number]
 
@@ -32,8 +32,8 @@ export async function getVerifiedTokens(
 
 	try {
 		const { data } = await parseResponse(
-			api.v1.tokens.$get({
-				query: { chainId: String(chainId), verified: 'true' },
+			api.v1['verified-tokens'].$get({
+				query: { chainId: String(chainId) },
 			}),
 		)
 		verifiedTokensCache.set(chainId, { tokens: data, ts: now })
