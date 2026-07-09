@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { handleDatadogProxy } from '#lib/server/datadog-proxy'
+import { checkRequestGuard } from '#lib/server/request-guard'
 
 export const redirects: Array<{
 	from: RegExp
@@ -124,6 +125,9 @@ export default Sentry.withSentry(
 	}),
 	{
 		fetch: async (request, env, _context) => {
+			const blocked = checkRequestGuard(request, env.BLOCKED_ASNS)
+			if (blocked) return blocked
+
 			const rateLimited = await checkRateLimit(request, env)
 			if (rateLimited) return rateLimited
 
