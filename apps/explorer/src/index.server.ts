@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 import { handleDatadogProxy } from '#lib/server/datadog-proxy'
+import { checkRateLimit } from '#lib/server/rate-limit'
 import { checkRequestGuard } from '#lib/server/request-guard'
 
 export const redirects: Array<{
@@ -50,26 +51,6 @@ function sanitizeUrl(rawUrl: string): string {
 	} catch {
 		return rawUrl
 	}
-}
-
-/** Per-IP limit for all worker requests (pages, API). Assets bypass the worker. Fails open when the binding is unavailable (local dev). */
-async function checkRateLimit(
-	request: Request,
-	env: Cloudflare.Env,
-): Promise<Response | undefined> {
-	if (!env.REQUESTS_RATE_LIMITER) return undefined
-	try {
-		const key = request.headers.get('cf-connecting-ip') ?? 'unknown'
-		const { success } = await env.REQUESTS_RATE_LIMITER.limit({ key })
-		if (!success)
-			return new Response('Rate limit exceeded', {
-				status: 429,
-				headers: { 'retry-after': '10' },
-			})
-	} catch (error) {
-		console.error('Rate limit check failed:', error)
-	}
-	return undefined
 }
 
 const serverEntry = createServerEntry({
@@ -128,7 +109,11 @@ export default Sentry.withSentry(
 			const blocked = checkRequestGuard(request, env.BLOCKED_ASNS)
 			if (blocked) return blocked
 
-			const rateLimited = await checkRateLimit(request, env)
+			const rateLimited = await checkRateLimit(request, {
+				asn: env.ASN_RATE_LIMITER,
+				global: env.GLOBAL_RATE_LIMITER,
+				ip: env.REQUESTS_RATE_LIMITER,
+			})
 			if (rateLimited) return rateLimited
 
 			const processEnv = process.env as Record<string, string | undefined>
