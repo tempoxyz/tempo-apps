@@ -327,6 +327,18 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
+		Addresses.storageCredits,
+		{
+			name: 'Storage Credits',
+			code: '0xef',
+			description: 'Per-account storage credit accounting precompile',
+			abi: Abis.storageCredits,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1060',
+			address: Addresses.storageCredits,
+		},
+	],
+	[
 		'0x9d136eea063ede5418a6bc7beaff009bbb6cfa70',
 		{
 			name: 'Tempo Stream Channel',
