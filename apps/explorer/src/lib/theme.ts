@@ -2,6 +2,7 @@ export type ThemeMode = 'dark' | 'light'
 
 export const defaultThemeMode = 'dark' satisfies ThemeMode
 export const themeStorageKey = 'tempo-explorer-theme'
+export const themeMediaQuery = '(prefers-color-scheme: light)'
 
 export function isThemeMode(
 	value: string | null | undefined,
@@ -16,20 +17,35 @@ export function applyThemeMode(mode: ThemeMode): void {
 	document.documentElement.style.colorScheme = mode
 }
 
+export function getSystemThemeMode(): ThemeMode {
+	if (
+		typeof window === 'undefined' ||
+		typeof window.matchMedia !== 'function'
+	) {
+		return defaultThemeMode
+	}
+
+	return window.matchMedia(themeMediaQuery).matches ? 'light' : 'dark'
+}
+
+export function getStoredThemeMode(): ThemeMode | undefined {
+	if (typeof window === 'undefined') return undefined
+
+	try {
+		const storedTheme = window.localStorage.getItem(themeStorageKey)
+		return isThemeMode(storedTheme) ? storedTheme : undefined
+	} catch {
+		return undefined
+	}
+}
+
 export function getInitialThemeMode(): ThemeMode {
 	if (typeof document === 'undefined') return defaultThemeMode
 
 	const datasetTheme = document.documentElement.dataset.theme
 	if (isThemeMode(datasetTheme)) return datasetTheme
 
-	try {
-		const storedTheme = window.localStorage.getItem(themeStorageKey)
-		if (isThemeMode(storedTheme)) return storedTheme
-	} catch {
-		// Keep the default theme when storage is unavailable.
-	}
-
-	return defaultThemeMode
+	return getStoredThemeMode() ?? getSystemThemeMode()
 }
 
 export function persistThemeMode(mode: ThemeMode): void {
@@ -42,4 +58,4 @@ export function persistThemeMode(mode: ThemeMode): void {
 	}
 }
 
-export const themeBootScript = `(function(){try{var key='${themeStorageKey}';var stored=window.localStorage.getItem(key);var theme=stored==='light'||stored==='dark'?stored:'${defaultThemeMode}';document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;}catch(e){document.documentElement.dataset.theme='${defaultThemeMode}';document.documentElement.style.colorScheme='${defaultThemeMode}';}})();`
+export const themeBootScript = `(function(){var stored;try{stored=window.localStorage.getItem('${themeStorageKey}');}catch(e){}var theme=stored==='light'||stored==='dark'?stored:typeof window.matchMedia==='function'&&window.matchMedia('${themeMediaQuery}').matches?'light':'${defaultThemeMode}';document.documentElement.dataset.theme=theme;document.documentElement.style.colorScheme=theme;})();`

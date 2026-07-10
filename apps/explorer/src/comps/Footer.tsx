@@ -4,8 +4,11 @@ import {
 	applyThemeMode,
 	defaultThemeMode,
 	getInitialThemeMode,
+	getStoredThemeMode,
+	getSystemThemeMode,
 	isThemeMode,
 	persistThemeMode,
+	themeMediaQuery,
 	themeStorageKey,
 	type ThemeMode,
 } from '#lib/theme'
@@ -53,13 +56,25 @@ export namespace Footer {
 				if (event.key !== themeStorageKey) return
 				const updatedTheme = isThemeMode(event.newValue)
 					? event.newValue
-					: getInitialThemeMode()
+					: getSystemThemeMode()
+				setTheme(updatedTheme)
+				applyThemeMode(updatedTheme)
+			}
+			const colorScheme = window.matchMedia(themeMediaQuery)
+			const handleColorScheme = (event: MediaQueryListEvent) => {
+				if (getStoredThemeMode()) return
+
+				const updatedTheme = event.matches ? 'light' : 'dark'
 				setTheme(updatedTheme)
 				applyThemeMode(updatedTheme)
 			}
 
 			window.addEventListener('storage', handleStorage)
-			return () => window.removeEventListener('storage', handleStorage)
+			colorScheme.addEventListener('change', handleColorScheme)
+			return () => {
+				window.removeEventListener('storage', handleStorage)
+				colorScheme.removeEventListener('change', handleColorScheme)
+			}
 		}, [])
 
 		return (
