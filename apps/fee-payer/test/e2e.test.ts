@@ -285,7 +285,7 @@ describe('fee-payer integration', () => {
 				token: betaUsd,
 				account: recipient.address,
 			})
-			expect(balance).toBe(amount)
+			expect(balance.amount).toBe(amount)
 		})
 	})
 })
