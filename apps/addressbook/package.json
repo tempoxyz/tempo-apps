@@ -1,0 +1,35 @@
+{
+	"name": "addressbook",
+	"type": "module",
+	"private": true,
+	"imports": {
+		"#*": "./src/*",
+		"#wrangler.json": "./wrangler.json"
+	},
+	"scripts": {
+		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
+		"postinstall": "pnpm gen:types",
+		"test": "vitest --run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@hono/zod-validator": "catalog:",
+		"hono": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
