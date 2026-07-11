@@ -21,19 +21,13 @@ const NON_INDEXABLE_EXPLORER_HOSTS = new Set([
 	'explore.nextfork.devnet.tempo.xyz',
 ])
 
-export const RETIRED_ANDANTINO_HOST = 'explore.andantino.tempo.xyz'
-
-export type ExplorerHostPolicy =
-	| { type: 'redirect'; location: string }
-	| { type: 'retired' }
+export type ExplorerHostPolicy = { type: 'redirect'; location: string }
 
 export function getExplorerHostPolicy(
 	requestUrl: string | URL,
 ): ExplorerHostPolicy | undefined {
 	const url = new URL(requestUrl)
 	const hostname = url.hostname.toLowerCase()
-
-	if (hostname === RETIRED_ANDANTINO_HOST) return { type: 'retired' }
 
 	const canonicalHostname = EXPLORER_HOST_REDIRECTS.get(hostname)
 	if (!canonicalHostname) return undefined

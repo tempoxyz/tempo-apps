@@ -34,11 +34,6 @@
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
-					"pattern": "explore.andantino.tempo.xyz"
-				},
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.42431.tempo.xyz"
 				},
 				{

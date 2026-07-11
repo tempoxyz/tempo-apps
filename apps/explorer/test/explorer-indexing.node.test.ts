@@ -16,9 +16,7 @@ describe('Explorer host consolidation', () => {
 		['explore.42431.tempo.xyz', 'explore.testnet.tempo.xyz'],
 		['explore.moderato.tempo.xyz', 'explore.testnet.tempo.xyz'],
 	])('redirects %s to %s while preserving the resource URL', (from, to) => {
-		expect(
-			getExplorerHostPolicy(`https://${from}/tx/0x123?page=2`),
-		).toEqual({
+		expect(getExplorerHostPolicy(`https://${from}/tx/0x123?page=2`)).toEqual({
 			type: 'redirect',
 			location: `https://${to}/tx/0x123?page=2`,
 		})
@@ -29,12 +27,6 @@ describe('Explorer host consolidation', () => {
 		expect(
 			getExplorerHostPolicy('https://explore.testnet.tempo.xyz/'),
 		).toBeUndefined()
-	})
-
-	it('retires Andantino instead of mapping old resource URLs to another chain', () => {
-		expect(
-			getExplorerHostPolicy('https://explore.andantino.tempo.xyz/tx/0x123'),
-		).toEqual({ type: 'retired' })
 	})
 })
 

@@ -114,15 +114,6 @@ export default Sentry.withSentry(
 			if (hostPolicy?.type === 'redirect') {
 				return Response.redirect(hostPolicy.location, 308)
 			}
-			if (hostPolicy?.type === 'retired') {
-				return new Response('The Tempo Andantino explorer has been retired.', {
-					headers: {
-						'Content-Type': 'text/plain; charset=utf-8',
-						'X-Robots-Tag': 'noindex, nofollow',
-					},
-					status: 410,
-				})
-			}
 
 			const blocked = checkRequestGuard(request, env.BLOCKED_ASNS)
 			if (blocked) return blocked
