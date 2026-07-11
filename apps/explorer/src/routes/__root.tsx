@@ -16,6 +16,11 @@ import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
+import {
+	getCanonicalExplorerUrl,
+	getExplorerWebApplication,
+} from '#lib/explorer-indexing'
+import { getRequestURL, getTempoEnv } from '#lib/env'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
@@ -30,6 +35,37 @@ import {
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
+
+function getCurrentCanonicalExplorerUrl(): string | undefined {
+	const pathname =
+		typeof window === 'undefined'
+			? getRequestURL().pathname
+			: window.location.pathname
+	return getCanonicalExplorerUrl(getTempoEnv(), pathname)
+}
+
+function getExplorerCanonicalLinks() {
+	const href = getCurrentCanonicalExplorerUrl()
+	return href ? [{ rel: 'canonical', href }] : []
+}
+
+function getExplorerRobotsMeta() {
+	return getCurrentCanonicalExplorerUrl()
+		? []
+		: [{ name: 'robots', content: 'noindex, nofollow' }]
+}
+
+function getExplorerWebApplicationScripts() {
+	const webApplication = getExplorerWebApplication(getTempoEnv())
+	return webApplication
+		? [
+				{
+					children: JSON.stringify(webApplication),
+					type: 'application/ld+json',
+				},
+			]
+		: []
+}
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient
@@ -88,8 +124,10 @@ export const Route = createRootRouteWithContext<{
 				name: 'twitter:image',
 				content: `${OG_BASE_URL}/explorer`,
 			},
+			...getExplorerRobotsMeta(),
 		],
 		links: [
+			...getExplorerCanonicalLinks(),
 			{
 				rel: 'preload',
 				href: '/fonts/satoshi/Satoshi-Variable.woff2',
@@ -154,6 +192,7 @@ export const Route = createRootRouteWithContext<{
 				href: '/favicon-light.png',
 			},
 		],
+		scripts: getExplorerWebApplicationScripts(),
 	}),
 	scripts: async () => {
 		const scripts: Array<{ children: string; type: string }> = []

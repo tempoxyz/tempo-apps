@@ -1,5 +1,9 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
+import {
+	getExplorerHostPolicy,
+	withExplorerIndexingHeaders,
+} from '#lib/explorer-indexing'
 import { handleDatadogProxy } from '#lib/server/datadog-proxy'
 import { checkRateLimit } from '#lib/server/rate-limit'
 import { checkRequestGuard } from '#lib/server/request-guard'
@@ -106,6 +110,20 @@ export default Sentry.withSentry(
 	}),
 	{
 		fetch: async (request, env, _context) => {
+			const hostPolicy = getExplorerHostPolicy(request.url)
+			if (hostPolicy?.type === 'redirect') {
+				return Response.redirect(hostPolicy.location, 308)
+			}
+			if (hostPolicy?.type === 'retired') {
+				return new Response('The Tempo Andantino explorer has been retired.', {
+					headers: {
+						'Content-Type': 'text/plain; charset=utf-8',
+						'X-Robots-Tag': 'noindex, nofollow',
+					},
+					status: 410,
+				})
+			}
+
 			const blocked = checkRequestGuard(request, env.BLOCKED_ASNS)
 			if (blocked) return blocked
 
@@ -123,7 +141,8 @@ export default Sentry.withSentry(
 				}
 			}
 
-			return serverEntry.fetch(request, undefined)
+			const response = await serverEntry.fetch(request, undefined)
+			return withExplorerIndexingHeaders(request.url, response)
 		},
 	},
 )
