@@ -3,6 +3,8 @@ import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
+export const validatorConfigV2Address =
+	'0xcccccccc00000000000000000000000000000001' as const
 
 export const streamChannelAbi = [
 	{
