@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+	contractSourceQueryOptions,
 	normalizeContractSourceResponse,
 	parseContractSource,
 } from '#lib/domain/contract-source.ts'
@@ -91,5 +92,26 @@ describe('contract-source parsing', () => {
 
 		const reparsed = parseContractSource(source)
 		expect(reparsed.kind).toBe('native')
+	})
+})
+
+describe('contract-source queries', () => {
+	it('caches plain and highlighted source separately', () => {
+		const params = {
+			address: '0xcccccccc00000000000000000000000000000000' as const,
+			chainId: 4217,
+		}
+
+		expect(
+			contractSourceQueryOptions({ ...params, highlight: false }).queryKey,
+		).toEqual(['contract-source', params.address, params.chainId, 'plain'])
+		expect(
+			contractSourceQueryOptions({ ...params, highlight: true }).queryKey,
+		).toEqual([
+			'contract-source',
+			params.address,
+			params.chainId,
+			'highlighted',
+		])
 	})
 })
