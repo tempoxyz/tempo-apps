@@ -45,6 +45,8 @@ Metrics are emitted through `cloudflare-worker-metrics` with these global tags:
 | `http_response_count` | counter | `method`, `route`, `status`, optional `error_type` |
 | `http_response_duration_ms` | histogram | `method`, `route` |
 | `fee_payer_rpc_request_count` | counter | `rpc_method`, `keyed_route`, `chain_id` |
+| `fee_payer_rpc_response_duration_ms` | histogram | `rpc_method`, `keyed_route`, `chain_id` |
+| `fee_payer_relay_duration_ms` | histogram | `rpc_method`, `keyed_route` |
 | `fee_payer_sponsorship_response_count` | counter | `rpc_method`, `keyed_route`, `chain_id`, `status` (`success` or `error`) |
 
 Routes are normalized and metrics never include API keys, addresses, origins, or transaction hashes.
