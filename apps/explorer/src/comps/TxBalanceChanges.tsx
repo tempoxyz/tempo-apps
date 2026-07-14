@@ -24,7 +24,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 		)
 
 	const cols: DataGrid.Column[] = [
-		{ label: 'Address', align: 'start', width: '2fr' },
+		{ label: 'Address', align: 'start', width: '2fr', minWidth: 140 },
 		{ label: 'Token', align: 'start', width: '1fr', minWidth: 120 },
 		{ label: 'Before', align: 'end', width: '2fr', minWidth: 160 },
 		{ label: 'After', align: 'end', width: '2fr', minWidth: 160 },

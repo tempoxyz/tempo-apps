@@ -1,5 +1,12 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
+import {
+	getExplorerHostPolicy,
+	withExplorerIndexingHeaders,
+} from '#lib/explorer-indexing'
+import { handleDatadogProxy } from '#lib/server/datadog-proxy'
+import { checkRateLimit } from '#lib/server/rate-limit'
+import { checkRequestGuard } from '#lib/server/request-guard'
 
 export const redirects: Array<{
 	from: RegExp
@@ -54,6 +61,10 @@ const serverEntry = createServerEntry({
 	fetch: async (request, opts) => {
 		const url = new URL(request.url)
 
+		if (url.pathname === '/dd-proxy') {
+			return handleDatadogProxy(request)
+		}
+
 		for (const { from, to } of redirects) {
 			const match = url.pathname.match(from)
 			if (match) {
@@ -98,7 +109,22 @@ export default Sentry.withSentry(
 		},
 	}),
 	{
-		fetch: (request, env, _context) => {
+		fetch: async (request, env, _context) => {
+			const hostPolicy = getExplorerHostPolicy(request.url)
+			if (hostPolicy?.type === 'redirect') {
+				return Response.redirect(hostPolicy.location, 308)
+			}
+
+			const blocked = checkRequestGuard(request, env.BLOCKED_ASNS)
+			if (blocked) return blocked
+
+			const rateLimited = await checkRateLimit(request, {
+				asn: env.ASN_RATE_LIMITER,
+				global: env.GLOBAL_RATE_LIMITER,
+				ip: env.REQUESTS_RATE_LIMITER,
+			})
+			if (rateLimited) return rateLimited
+
 			const processEnv = process.env as Record<string, string | undefined>
 			if (env) {
 				for (const [key, value] of Object.entries(env)) {
@@ -106,7 +132,8 @@ export default Sentry.withSentry(
 				}
 			}
 
-			return serverEntry.fetch(request, undefined)
+			const response = await serverEntry.fetch(request, undefined)
+			return withExplorerIndexingHeaders(request.url, response)
 		},
 	},
 )

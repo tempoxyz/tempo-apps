@@ -4,6 +4,7 @@ import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { Account, Actions, withRelay } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { pathUsd } from '../src/lib/consts.js'
 import {
 	sponsorAddress,
 	createTestAccount,
@@ -11,6 +12,15 @@ import {
 	tempoTransport,
 	testMnemonic,
 } from './helpers.js'
+
+const sponsorAccount = Account.fromSecp256k1(
+	Mnemonic.toPrivateKey(testMnemonic, {
+		as: 'Hex',
+		path: Mnemonic.path({ account: 0 }),
+	}),
+)
+const betaUsd = '0x20c0000000000000000000000000000000000002' as const
+const thetaUsd = '0x20c0000000000000000000000000000000000003' as const
 
 function createFeePayerTransportWithSpy() {
 	const requests: Array<{
@@ -50,13 +60,6 @@ function createFeePayerTransportWithSpy() {
 
 // Mint liquidity for fee tokens.
 beforeAll(async () => {
-	const sponsorAccount = Account.fromSecp256k1(
-		Mnemonic.toPrivateKey(testMnemonic, {
-			as: 'Hex',
-			path: Mnemonic.path({ account: 0 }),
-		}),
-	)
-
 	const client = createClient({
 		account: sponsorAccount,
 		chain: tempoChain,
@@ -67,10 +70,10 @@ beforeAll(async () => {
 		[1n, 2n, 3n].map((id) =>
 			Actions.amm.mintSync(client, {
 				account: sponsorAccount,
-				feeToken: '0x20c0000000000000000000000000000000000000',
+				feeToken: pathUsd,
 				nonceKey: 'expiring',
 				userTokenAddress: id,
-				validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+				validatorTokenAddress: pathUsd,
 				validatorTokenAmount: parseUnits('1000', 6),
 				to: sponsorAccount.address,
 			}),
@@ -128,11 +131,16 @@ describe('fee-payer integration', () => {
 					headers: {
 						Origin: 'https://example.com',
 						'Access-Control-Request-Method': 'POST',
+						'Access-Control-Request-Headers':
+							'Content-Type, X-Tempo-Attribution-Key',
 					},
 				}),
 			)
 
 			expect([200, 204]).toContain(response.status)
+			expect(response.headers.get('Access-Control-Allow-Headers')).toContain(
+				'x-tempo-attribution-key',
+			)
 		})
 
 		it('handles health check / root path', async () => {
@@ -171,11 +179,10 @@ describe('fee-payer integration', () => {
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
-			// Regression: the broadcast envelope must carry a feeToken the
-			// chain can charge. Without it the chain falls back to the
-			// sender's default account token and the tx reverts at
-			// validation with `insufficient liquidity in FeeAMM pool`.
-			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+			// Regression: sponsored transactions must pay with PathUSD,
+			// avoiding account-level fee token preferences that can route
+			// through illiquid FeeAMM pools.
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter((request) =>
@@ -217,11 +224,10 @@ describe('fee-payer integration', () => {
 			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
-			// Regression: the broadcast envelope must carry a feeToken the
-			// chain can charge. Without it the chain falls back to the
-			// sender's default account token and the tx reverts at
-			// validation with `insufficient liquidity in FeeAMM pool`.
-			expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+			// Regression: sponsored transactions must pay with PathUSD,
+			// avoiding account-level fee token preferences that can route
+			// through illiquid FeeAMM pools.
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 
 			// Assert RPC methods sent to fee-payer service
 			const sponsorshipRequests = feePayerRequests.filter((request) =>
@@ -232,6 +238,60 @@ describe('fee-payer integration', () => {
 			expect(sponsorshipRequests).toHaveLength(1)
 			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
+		})
+
+		it('sponsors a betaUSD transfer while the sponsor prefers thetaUSD', async () => {
+			const sponsorClient = createClient({
+				account: sponsorAccount,
+				chain: tempoChain,
+				transport: http(env.TEMPO_RPC_URL),
+			})
+
+			const account = createTestAccount()
+			const recipient = createTestAccount()
+
+			// ThetaUSD simulates a sponsor preference that previously overrode sponsored TIP-20 fee settlement.
+			await Actions.fee.setUserTokenSync(sponsorClient, {
+				account: sponsorAccount,
+				token: thetaUsd,
+				nonceKey: 'expiring',
+			})
+
+			await Actions.token.transferSync(sponsorClient, {
+				account: sponsorAccount,
+				token: betaUsd,
+				to: account.address,
+				amount: parseUnits('1', 6),
+				nonceKey: 'expiring',
+			})
+
+			const { transport: feePayerTransport } = createFeePayerTransportWithSpy()
+			const client = createClient({
+				account,
+				chain: tempoChain,
+				transport: withRelay(tempoTransport(), feePayerTransport, {
+					policy: 'sign-and-broadcast',
+				}),
+			})
+
+			const amount = parseUnits('0.25', 6)
+			const { receipt } = await Actions.token.transferSync(client, {
+				feePayer: true,
+				token: betaUsd,
+				to: recipient.address,
+				amount,
+			})
+
+			expect(receipt.status).toBe('success')
+			expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
+
+			const balance = await Actions.token.getBalance(sponsorClient, {
+				token: betaUsd,
+				account: recipient.address,
+			})
+			expect(balance.amount).toBe(amount)
 		})
 	})
 })

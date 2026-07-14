@@ -185,6 +185,7 @@ describe('syncSource — page uploads', () => {
 			expect(u.metadata).toEqual({
 				source: 'viem',
 				url: expect.any(String),
+				title: expect.any(String),
 			})
 		}
 		expect(store.get('etag:viem')).toBe('W/"new"')
@@ -197,6 +198,7 @@ describe('syncSource — page uploads', () => {
 		])
 		expect(idx['viem/docs_bar.md']).toMatchObject({
 			id: 'item-viem/docs_bar.md',
+			content_hash: expect.any(String),
 		})
 	})
 
@@ -233,6 +235,79 @@ describe('syncSource — page uploads', () => {
 		expect(Object.keys(JSON.parse(store.get('index:regen') ?? '{}'))).toEqual([
 			'regen/otp.md',
 		])
+	})
+
+	it('strips repeated Vocs sitemap comments and docs chrome before upload', async () => {
+		const source: Source = { id: 'vocs', base: 'https://vocs.dev' }
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://vocs.dev/llms.txt') {
+				return mockResponse({ body: '- [MCP Server](/features/mcp-server)' })
+			}
+			if (url === 'https://vocs.dev/features/mcp-server.md') {
+				return mockResponse({
+					body: `<!--
+Sitemap:
+- [What is Vocs](/introduction/what-is-vocs)
+- [MCP Server](/features/mcp-server)
+-->
+
+[Skip to content](#vocs-content)
+Search...
+
+# MCP Server
+
+Expose your docs and source code to AI assistants.
+
+Was this helpful?
+Copy page for AI`,
+				})
+			}
+			throw new Error(`unexpected: ${url}`)
+		})
+
+		const report = await syncSource({ source, instance, etagCache: kv })
+
+		expect(report).toMatchObject({ status: 'synced', pages: 1, failed: 0 })
+		expect(uploads[0]?.content).toBe(
+			'# MCP Server\n\nExpose your docs and source code to AI assistants.',
+		)
+	})
+
+	it('sets title metadata from the first markdown H1', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [Foo](/foo)' })
+			}
+			return mockResponse({
+				body: '# Connect To Wallets\n\nBody text here.',
+			})
+		})
+
+		await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(uploads[0]?.metadata).toMatchObject({ title: 'Connect To Wallets' })
+	})
+
+	it('omits title metadata when the page has no H1', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [Foo](/foo)' })
+			}
+			return mockResponse({ body: '## Subheading only\n\nBody text.' })
+		})
+
+		await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(uploads[0]?.metadata).not.toHaveProperty('title')
 	})
 })
 
@@ -285,6 +360,48 @@ describe('syncSource — per-page conditional fetch', () => {
 		expect(idx['viem/b.md']).toMatchObject({
 			id: 'item-viem/b.md',
 			etag: 'W/"b2"',
+			content_hash: expect.any(String),
+		})
+	})
+
+	it('skips upload when cleaned content hash is unchanged despite a new ETag', async () => {
+		const { instance, uploads } = fakeInstance()
+		const contentHash =
+			'b2e77fbb5f564e2145071c75ac6a7d56478cf3ef696e5100f53378a7bb185750'
+		const { kv, store } = fakeKv({
+			'index:viem': JSON.stringify({
+				'viem/a.md': {
+					id: 'item-viem/a.md',
+					etag: 'W/"a1"',
+					content_hash: contentHash,
+				},
+			}),
+		})
+
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [A](/a)' })
+			}
+			if (url === 'https://viem.sh/a.md') {
+				return mockResponse({ body: '# a', etag: 'W/"a2"' })
+			}
+			throw new Error(`unexpected: ${url}`)
+		})
+
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(report).toMatchObject({
+			status: 'synced',
+			pages: 0,
+			unchanged: 1,
+			failed: 0,
+		})
+		expect(uploads).toHaveLength(0)
+		const idx = JSON.parse(store.get('index:viem') ?? '{}')
+		expect(idx['viem/a.md']).toEqual({
+			id: 'item-viem/a.md',
+			etag: 'W/"a2"',
+			content_hash: contentHash,
 		})
 	})
 

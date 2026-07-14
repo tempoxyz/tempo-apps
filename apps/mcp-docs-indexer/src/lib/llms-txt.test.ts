@@ -35,6 +35,19 @@ describe('parseLlmsTxt', () => {
 		])
 	})
 
+	it('extracts TIP pages from the tips.sh root index', () => {
+		const body = `
+- **TIP-0000**: TIP Process (Approved)
+- **TIP-1026**: Token Logo URI (Approved)
+- **TIP-1061-1**: Native Multisig Accounts (Draft)
+`
+		expect(parseLlmsTxt(body, 'https://tips.sh')).toEqual([
+			'https://tips.sh/0000.md',
+			'https://tips.sh/1026.md',
+			'https://tips.sh/1061-1.md',
+		])
+	})
+
 	it('drops off-origin links', () => {
 		const body = '- [In](/in)\n- [Out](https://other.example.com/out)'
 		expect(parseLlmsTxt(body, 'https://viem.sh')).toEqual([

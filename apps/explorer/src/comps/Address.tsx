@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
 import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { cx } from '#lib/css'
 
 export function Address(props: Address.Props) {
@@ -14,6 +14,7 @@ export function Address(props: Address.Props) {
 				params={{ address }}
 				search={search}
 				title={title}
+				preload="intent"
 				className={cx(
 					'text-accent press-down hover:underline font-mono inline-flex min-w-0',
 					align === 'end' && 'w-full justify-end',

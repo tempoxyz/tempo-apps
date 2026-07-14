@@ -1,4 +1,3 @@
-import { getApiUrl, clientEnv } from '#lib/env.ts'
 import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import { isAddress } from 'viem'
@@ -204,6 +203,7 @@ export async function fetchContractSourceDirect(params: {
 	signal?: AbortSignal
 }): Promise<ContractSource> {
 	const { address, chainId, signal } = params
+	const { clientEnv } = await import('#lib/env.ts')
 
 	const apiUrl = new URL(
 		`${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${chainId}/${address.toLowerCase()}`,
@@ -232,6 +232,7 @@ export async function fetchContractSource(params: {
 	const { address, chainId, highlight = true, signal } = params
 
 	try {
+		const { getApiUrl } = await import('#lib/env.ts')
 		const url = getApiUrl(
 			'/api/code',
 			new URLSearchParams({

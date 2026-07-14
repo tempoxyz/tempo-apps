@@ -1,18 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
+import { parseResponse } from 'hono/client'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getAccountTag } from '#lib/account'
-import { TOKEN_COUNT_MAX } from '#lib/constants'
-import { fetchLogoURIs } from '#lib/domain/tip20'
-import {
-	fetchGenesisBlockTimestamp,
-	fetchTokenCreatedMetadata,
-	fetchTokenHoldersCount,
-	fetchTokenTransferAggregate,
-} from '#lib/server/tempo-queries'
+import { api } from '#lib/server/tempo-api'
 import { parseTimestamp } from '#lib/timestamp'
-import { TOKENLIST_URLS } from '#lib/tokenlist'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type Token = {
@@ -23,260 +16,102 @@ export type Token = {
 	logoURI?: string | undefined
 	createdAt?: number | undefined
 	holdersCount?: number
-	holdersCountCapped?: boolean
 }
 
 const FetchTokensInputSchema = z.object({
-	offset: z.coerce.number().check(z.gte(0)),
+	page: z.coerce.number().check(z.gte(1)),
 	limit: z.coerce.number().check(z.gte(1), z.lte(25)),
 })
 
 export type TokensApiResponse = {
 	tokens: Token[]
-	offset: number
-	limit: number
 	total: number
-}
-
-export type TokenListEntry = {
-	address: string
-	name: string
-	symbol: string
-	extensions?: {
-		label?: string
-	}
-}
-
-type TokenListResponse = {
-	tokens: TokenListEntry[]
-}
-
-type CachedTokenList = {
-	entries: TokenListEntry[]
-	addresses: Set<string>
-	ts: number
-}
-
-const tokenListCache = new Map<number, CachedTokenList>()
-
-async function getTokenList(chainId: number): Promise<CachedTokenList> {
-	const now = Date.now()
-	const cached = tokenListCache.get(chainId)
-
-	if (cached && now - cached.ts < 5 * 60_000) {
-		return cached
-	}
-
-	const url = TOKENLIST_URLS[chainId]
-	if (!url) {
-		return cached ?? { entries: [], addresses: new Set(), ts: now }
-	}
-
-	try {
-		const res = await fetch(url)
-		if (!res.ok) {
-			return cached ?? { entries: [], addresses: new Set(), ts: now }
-		}
-
-		const data = (await res.json()) as TokenListResponse
-		const entries = data.tokens.map((entry) => ({ ...entry }))
-		const next = {
-			entries,
-			addresses: new Set(entries.map((entry) => entry.address.toLowerCase())),
-			ts: now,
-		}
-
-		tokenListCache.set(chainId, next)
-		return next
-	} catch {
-		return cached ?? { entries: [], addresses: new Set(), ts: now }
-	}
-}
-
-export async function getTokenListAddresses(
-	chainId: number,
-): Promise<Set<string>> {
-	return (await getTokenList(chainId)).addresses
-}
-
-export async function getTokenListEntries(
-	chainId: number,
-): Promise<TokenListEntry[]> {
-	return (await getTokenList(chainId)).entries
-}
-
-function getAddressKey(address: string): string {
-	return address.toLowerCase()
 }
 
 function isGenesisTokenAddress(address: Address.Address): boolean {
 	return getAccountTag(address)?.id.startsWith('genesis-token:') ?? false
 }
 
-function inferTokenCurrency(entry: TokenListEntry): string {
-	const searchable = [entry.symbol, entry.name, entry.extensions?.label]
-		.filter(Boolean)
-		.join(' ')
-		.toUpperCase()
-
-	if (searchable.includes('EUR')) return 'EUR'
-	if (
-		searchable.includes('USD') ||
-		searchable.includes('USDC') ||
-		searchable.includes('USDT')
-	) {
-		return 'USD'
-	}
-
-	return ''
-}
+/**
+ * Max page size accepted by the Tempo API's list endpoints. The curated
+ * verified-token list is small enough to fetch in one call, so request the
+ * whole list at once and paginate locally. (Without an explicit `limit` the
+ * API defaults to 10, which silently truncated the page to a single page.)
+ */
+const VERIFIED_TOKENS_MAX_LIMIT = 200
 
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
-		const { offset, limit } = data
+		const { page, limit } = data
+		const offset = (page - 1) * limit
 
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
-		const { entries: tokenListEntries } = await getTokenList(chainId)
-		const total = tokenListEntries.length
-		const pageEntries = tokenListEntries.slice(offset, offset + limit)
-		const pageAddresses = pageEntries.map(
-			(entry) => entry.address as Address.Address,
+		const chainId = getChainId(getWagmiConfig())
+
+		// One verified-list call carries everything the page renders: the API
+		// resolves logos (curated icon → on-chain `logoURI`), currencies, and
+		// the requested per-token enrichments.
+		//
+		// `createdAt` is intentionally omitted: for the hyper-active genesis
+		// tokens it makes the API scan for a (nonexistent) `TokenCreated` event,
+		// adding ~5s to the blocking loader while returning null. Creation time
+		// is derived from `transferStats.firstAt` (fast) with a genesis-block
+		// fallback below.
+		const tokens = await parseResponse(
+			api.v1.tokens.$get({
+				query: {
+					chainId: String(chainId),
+					verified: 'true',
+					include: 'holderCount,transferStats',
+					limit: String(VERIFIED_TOKENS_MAX_LIMIT),
+				},
+			}),
 		)
-		const hasGenesisTokens = pageAddresses.some((address) =>
-			isGenesisTokenAddress(address),
+			.then((response) => response.data)
+			.catch((error) => {
+				console.error('Failed to fetch verified tokens:', error)
+				return []
+			})
+
+		const pageTokens = tokens.slice(offset, offset + limit)
+
+		// Genesis tokens have no `TokenCreated` event; when one also has no
+		// transfer history, fall back to the genesis block timestamp.
+		const needsGenesisCreatedAt = pageTokens.some(
+			(token) =>
+				!token.transferStats?.firstAt &&
+				!token.createdAt &&
+				isGenesisTokenAddress(token.address as Address.Address),
 		)
-
-		const tokenMetadata = new Map<
-			string,
-			{
-				name: string
-				symbol: string
-				currency: string
-				logoURI?: string | undefined
-				createdAt?: number
-			}
-		>()
-		const createdAtByAddress = new Map<string, number>()
-		let genesisCreatedAt: number | undefined
-
-		const holdersCounts = new Map<string, { count: number; capped: boolean }>()
-
-		if (pageAddresses.length > 0) {
-			const [
-				metadataResult,
-				genesisTimestampResult,
-				logoURIs,
-				perTokenResults,
-			] = await Promise.all([
-				fetchTokenCreatedMetadata(chainId, pageAddresses).catch((error) => {
-					console.error('Failed to fetch token metadata:', error)
-					return []
-				}),
-				hasGenesisTokens
-					? fetchGenesisBlockTimestamp(chainId).catch((error) => {
-							console.error('Failed to fetch genesis block timestamp:', error)
-							return null
-						})
-					: Promise.resolve(null),
-				fetchLogoURIs(config, pageAddresses),
-				Promise.allSettled(
-					pageAddresses.map(async (address) => ({
-						address,
-						transferAggregate: await fetchTokenTransferAggregate(
-							address,
-							chainId,
-						).catch((error) => {
-							console.error(
-								`Failed to fetch transfer aggregate for ${address}:`,
-								error,
-							)
-							return {
-								oldestTimestamp: undefined,
-								latestTimestamp: undefined,
-							}
-						}),
-						holdersCount: await fetchTokenHoldersCount(
-							address,
-							chainId,
-							TOKEN_COUNT_MAX,
-						),
-					})),
-				),
-			])
-
-			genesisCreatedAt = parseTimestamp(
-				genesisTimestampResult == null
-					? undefined
-					: typeof genesisTimestampResult === 'bigint'
-						? genesisTimestampResult.toString()
-						: genesisTimestampResult,
-			)
-
-			for (const row of metadataResult) {
-				tokenMetadata.set(getAddressKey(row.token), {
-					name: String(row.name),
-					symbol: String(row.symbol),
-					currency: String(row.currency),
-					createdAt: parseTimestamp(row.block_timestamp),
-				})
-			}
-
-			for (const result of perTokenResults) {
-				if (result.status !== 'fulfilled') {
-					console.error('Failed to fetch token page metadata:', result.reason)
-					continue
-				}
-
-				const addressKey = getAddressKey(result.value.address)
-				const createdAt = parseTimestamp(
-					result.value.transferAggregate.oldestTimestamp,
+		const genesisCreatedAt = needsGenesisCreatedAt
+			? await parseResponse(
+					api.v1.blocks.$get({
+						query: { chainId: String(chainId), limit: '5', order: 'asc' },
+					}),
 				)
-
-				if (createdAt != null) {
-					createdAtByAddress.set(addressKey, createdAt)
-				}
-
-				holdersCounts.set(addressKey, result.value.holdersCount)
-				const logoURI = logoURIs.get(addressKey)
-				if (logoURI) {
-					const metadata = tokenMetadata.get(addressKey)
-					if (metadata) {
-						metadata.logoURI = logoURI
-					} else {
-						tokenMetadata.set(addressKey, {
-							name: '',
-							symbol: '',
-							currency: '',
-							logoURI,
-						})
-					}
-				}
-			}
-		}
+					.then((response) => parseTimestamp(response.data[0]?.timestamp))
+					.catch((error) => {
+						console.error('Failed to fetch genesis block timestamp:', error)
+						return undefined
+					})
+			: undefined
 
 		return {
-			offset,
-			limit,
-			total,
-			tokens: pageEntries.map((entry) => {
-				const address = entry.address as Address.Address
-				const addressKey = getAddressKey(address)
-				const metadata = tokenMetadata.get(addressKey)
+			total: tokens.length,
+			tokens: pageTokens.map((token) => {
+				const address = token.address as Address.Address
 
 				return {
 					address,
-					symbol: metadata?.symbol || entry.symbol,
-					name: metadata?.name || entry.name,
-					currency: metadata?.currency || inferTokenCurrency(entry),
-					logoURI: metadata?.logoURI,
+					symbol: token.symbol,
+					name: token.name,
+					currency: token.currency,
+					logoURI: token.logoUri,
 					createdAt:
-						createdAtByAddress.get(addressKey) ??
-						metadata?.createdAt ??
+						parseTimestamp(token.transferStats?.firstAt) ??
+						parseTimestamp(token.createdAt) ??
 						(isGenesisTokenAddress(address) ? genesisCreatedAt : undefined),
-					holdersCount: holdersCounts.get(addressKey)?.count,
-					holdersCountCapped: holdersCounts.get(addressKey)?.capped,
+					holdersCount: token.holderCount,
 				}
 			}),
 		}

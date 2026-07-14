@@ -5,7 +5,9 @@ export function InfoRow(props: { label: string; children: React.ReactNode }) {
 			<span className="text-[13px] text-tertiary min-w-[140px] shrink-0 font-sans">
 				{label}
 			</span>
-			<div className="text-[13px] break-all w-full font-mono">{children}</div>
+			<div className="text-[13px] break-all w-full min-w-0 font-mono">
+				{children}
+			</div>
 		</div>
 	)
 }

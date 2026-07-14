@@ -20,7 +20,7 @@ import { Amount } from '#comps/Amount'
 import { BlockCard } from '#comps/BlockCard'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { useTokenListMembership } from '#comps/TokenListMembership'
@@ -36,7 +36,7 @@ import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
 import { areUsdPricedTokens } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import {
 	type BlockIdentifier,
 	type BlockTransaction,

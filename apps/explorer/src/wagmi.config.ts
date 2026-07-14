@@ -6,7 +6,7 @@ import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoMainnet, tempoNextfork, tempoTestnet } from './lib/chains'
 import { getTempoEnv } from './lib/env'
-import { serverEnv } from './lib/server/env'
+import { serverEnv, tempoApiUrl } from './lib/server/env'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -46,21 +46,12 @@ export const getTempoChain = createIsomorphicFn()
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
 
-const getRpcProxyUrl = createIsomorphicFn()
-	.client(() => {
-		const chain = getTempoChain()
-		return {
-			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
-		}
-	})
-	.server(() => {
-		const chain = getTempoChain()
-		const key = serverEnv.TEMPO_RPC_KEY
-		const keyParam = key ? `?key=${key}` : ''
-		return {
-			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
-		}
-	})
+function getRpcProxyUrl() {
+	const chain = getTempoChain()
+	return {
+		http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
+	}
+}
 
 const getFallbackUrls = createIsomorphicFn()
 	.client(() => ({
@@ -69,11 +60,8 @@ const getFallbackUrls = createIsomorphicFn()
 	}))
 	.server(() => {
 		const chain = getTempoChain()
-		const key = serverEnv.TEMPO_RPC_KEY
 		return {
-			http: chain.rpcUrls.default.http.map((url) =>
-				key ? `${url}/${key}` : url,
-			),
+			http: [...chain.rpcUrls.default.http],
 		}
 	})
 
@@ -90,6 +78,18 @@ const getTempoTransport = createIsomorphicFn()
 		])
 	})
 	.server(() => {
+		const chain = getTempoChain()
+
+		// Tempo API RPC passthrough (mainnet + testnet; requires an API key).
+		const apiKey = serverEnv.TEMPO_API_KEY
+		if (
+			apiKey &&
+			(chain.id === tempoMainnet.id || chain.id === tempoTestnet.id)
+		)
+			return http(`${tempoApiUrl}/rpc/${chain.id}`, {
+				fetchOptions: { headers: { 'tempo-api-key': apiKey } },
+			})
+
 		const proxy = getRpcProxyUrl()
 		const fallbackUrls = getFallbackUrls()
 		return loadBalance([
