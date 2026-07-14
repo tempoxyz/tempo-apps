@@ -45,6 +45,8 @@ Metrics are emitted through `cloudflare-worker-metrics` with these global tags o
 | `http_response_count` | counter | `caller_service`, `method`, `route`, `status`, optional `error_type` |
 | `http_response_duration_ms` | histogram | `caller_service`, `method`, `route` |
 | `fee_payer_rpc_request_count` | counter | `caller_service`, `rpc_method`, `keyed_route`, `chain_id` |
+| `fee_payer_rpc_response_duration_ms` | histogram | `caller_service`, `rpc_method`, `keyed_route`, `chain_id` |
+| `fee_payer_relay_duration_ms` | histogram | `caller_service`, `rpc_method`, `keyed_route` |
 | `fee_payer_sponsorship_response_count` | counter | `caller_service`, `rpc_method`, `keyed_route`, `chain_id`, `status` (`success` or `error`) |
 
 Every request metric includes `caller_service`: the API key's `callerService`, its legacy label, or `anonymous` for open requests. Routes are normalized and metrics never include API keys, addresses, origins, or transaction hashes.

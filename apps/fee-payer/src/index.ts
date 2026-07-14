@@ -13,6 +13,7 @@ import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import { enqueueSponsorshipIntent } from './lib/billing.js'
 import { tempoChain } from './lib/chain.js'
 import { pathUsd } from './lib/consts.js'
+import { metrics } from './lib/observability/metrics.js'
 import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
 	FeePayerEvents,
@@ -103,7 +104,8 @@ const sponsorAccount = privateKeyToAccount(
 const relayHandler = Handler.relay({
 	cors: false,
 	chains: [tempoChain],
-	features: 'all',
+	// Sponsorship needs a chain fill and local fee-payer signature. Optional
+	// relay enrichment adds a serial post-fill simulation before responding.
 	feePayer: {
 		account: sponsorAccount,
 		// Always use PathUSD as fee token.
@@ -155,7 +157,18 @@ async function feePayerHandler(c: Context) {
 	const target =
 		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
 
+	const relayStart = performance.now()
 	const response = await relayHandler.fetch(target)
+	metrics.histogram(
+		'fee_payer_relay_duration_ms',
+		performance.now() - relayStart,
+		{
+			caller_service:
+				apiKeyRecord?.callerService ?? apiKeyRecord?.label ?? 'anonymous',
+			rpc_method: rpcMethod ?? 'unknown',
+			keyed_route: String(Boolean(apiKey)),
+		},
+	)
 	if (apiKey && billingRequest && apiKeyRecord?.billable) {
 		c.executionCtx.waitUntil(
 			enqueueSponsorshipIntent({
