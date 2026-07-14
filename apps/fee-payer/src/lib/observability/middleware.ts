@@ -47,6 +47,7 @@ export function httpMetrics(): MiddlewareHandler {
 
 export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 	return createMiddleware(async (c, next) => {
+		const start = performance.now()
 		const rpc = await resolveRpcContext(c)
 		let thrown: unknown
 
@@ -66,10 +67,18 @@ export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 			throw error
 		} finally {
 			if (rpc) {
-				metrics.count('fee_payer_sponsorship_response_count', 1, {
+				const tags = {
 					rpc_method: rpc.method,
 					keyed_route: String(opts.keyed),
 					chain_id: String(rpc.chainId),
+				}
+				metrics.histogram(
+					'fee_payer_rpc_response_duration_ms',
+					performance.now() - start,
+					tags,
+				)
+				metrics.count('fee_payer_sponsorship_response_count', 1, {
+					...tags,
 					status:
 						thrown || c.error
 							? 'error'

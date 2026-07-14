@@ -11,6 +11,7 @@ import * as z from 'zod'
 import { admin } from './lib/admin.js'
 import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import { tempoChain } from './lib/chain.js'
+import { metrics } from './lib/observability/metrics.js'
 import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
 	FeePayerEvents,
@@ -100,7 +101,8 @@ const sponsorAccount = privateKeyToAccount(
 const relayHandler = Handler.relay({
 	cors: false,
 	chains: [tempoChain],
-	features: 'all',
+	// Sponsorship needs a chain fill and local fee-payer signature. Optional
+	// relay enrichment adds a serial post-fill simulation before responding.
 	feePayer: {
 		account: sponsorAccount,
 		name: 'Tempo Sponsor',
@@ -145,7 +147,17 @@ async function feePayerHandler(c: Context) {
 	const target =
 		url.pathname === '/' ? raw : new Request(new URL('/', url), raw)
 
-	return relayHandler.fetch(target)
+	const relayStart = performance.now()
+	const response = await relayHandler.fetch(target)
+	metrics.histogram(
+		'fee_payer_relay_duration_ms',
+		performance.now() - relayStart,
+		{
+			rpc_method: rpcMethod ?? 'unknown',
+			keyed_route: String(Boolean(apiKey)),
+		},
+	)
+	return response
 }
 
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123

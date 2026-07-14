@@ -13,12 +13,14 @@ import {
 } from './helpers.js'
 
 function createFeePayerTransportWithSpy() {
-	const requests: Array<{ method: string; params: unknown }> = []
+	const requests: Array<{
+		method: string
+		params: unknown
+		result?: unknown
+	}> = []
 
 	const transport = custom({
 		async request({ method, params }) {
-			requests.push({ method, params })
-
 			const response = await exports.default.fetch(
 				new Request('https://fee-payer.test/', {
 					method: 'POST',
@@ -38,6 +40,7 @@ function createFeePayerTransportWithSpy() {
 			if (data.error) {
 				throw new Error(data.error.message || 'RPC Error')
 			}
+			requests.push({ method, params, result: data.result })
 			return data.result
 		},
 	})
@@ -183,6 +186,9 @@ describe('fee-payer integration', () => {
 			expect(sponsorshipRequests).toHaveLength(1)
 			expect(sponsorshipRequests[0].method).toBe('eth_fillTransaction')
 			expect(sponsorshipRequests[0].params).toBeDefined()
+			expect(sponsorshipRequests[0].result).not.toHaveProperty(
+				'capabilities.balanceDiffs',
+			)
 		})
 
 		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
