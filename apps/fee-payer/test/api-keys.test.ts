@@ -87,12 +87,24 @@ describe('admin API key management', () => {
 			expect(response.status).toBe(201)
 			const data = (await response.json()) as { key: string }
 			expect(data.key).toMatch(/^tp_/)
+
+			const listRes = await exports.default.fetch(adminRequest('GET', '/keys'))
+			const list = (await listRes.json()) as {
+				keys: Array<{
+					key: string
+					record: { callerService?: string }
+				}>
+			}
+			expect(
+				list.keys.find((entry) => entry.key === data.key)?.record.callerService,
+			).toBe('Test Key')
 		})
 
 		it('creates a key with all fields', async () => {
 			const response = await exports.default.fetch(
 				adminRequest('POST', '/keys', {
 					label: 'Full Key',
+					callerService: 'full-key-client',
 					dailyLimitUsd: '10.00',
 					allowedDestinations: ['0x0000000000000000000000000000000000000001'],
 					billable: true,
@@ -104,10 +116,14 @@ describe('admin API key management', () => {
 
 			const listRes = await exports.default.fetch(adminRequest('GET', '/keys'))
 			const list = (await listRes.json()) as {
-				keys: Array<{ key: string; record: { billable: boolean } }>
+				keys: Array<{
+					key: string
+					record: { billable: boolean; callerService?: string }
+				}>
 			}
 			const entry = list.keys.find((k) => k.key === data.key)
 			expect(entry?.record.billable).toBe(true)
+			expect(entry?.record.callerService).toBe('full-key-client')
 		})
 
 		it('rejects create with missing label', async () => {

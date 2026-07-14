@@ -5,6 +5,8 @@ import * as z from 'zod'
 const ApiKeyRecord = z.object({
 	/** Human-readable label (e.g. "Acme Corp - testnet"). */
 	label: z.string(),
+	/** Stable service identifier used to attribute sponsorship metrics. */
+	callerService: z.string().optional(),
 	/** Daily spend limit in USD (e.g. "1.00"). Null = unlimited. */
 	dailyLimitUsd: z.string().nullable(),
 	/** Allowed destination addresses. Empty = any destination. */
@@ -66,7 +68,12 @@ export async function updateApiKey(
 	updates: Partial<
 		Pick<
 			ApiKeyRecord,
-			'label' | 'dailyLimitUsd' | 'allowedDestinations' | 'billable' | 'active'
+			| 'label'
+			| 'dailyLimitUsd'
+			| 'allowedDestinations'
+			| 'billable'
+			| 'active'
+			| 'callerService'
 		>
 	>,
 ): Promise<boolean> {

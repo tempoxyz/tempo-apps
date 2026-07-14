@@ -163,6 +163,8 @@ async function feePayerHandler(c: Context) {
 		'fee_payer_relay_duration_ms',
 		performance.now() - relayStart,
 		{
+			caller_service:
+				apiKeyRecord?.callerService ?? apiKeyRecord?.label ?? 'anonymous',
 			rpc_method: rpcMethod ?? 'unknown',
 			keyed_route: String(Boolean(apiKey)),
 		},
@@ -187,8 +189,8 @@ async function feePayerHandler(c: Context) {
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
 app.all(
 	'/:key{tp_.+}',
-	rpcMetrics({ keyed: true }),
 	apiKeyMiddleware,
+	rpcMetrics({ keyed: true }),
 	rateLimitMiddleware({ keyed: true }),
 	feePayerHandler,
 )

@@ -38,6 +38,7 @@ admin.post(
 		'json',
 		z.object({
 			label: z.string(),
+			callerService: z.string().optional(),
 			dailyLimitUsd: z.string().nullable().optional().default(null),
 			allowedDestinations: z.array(z.string()).optional().default([]),
 			billable: z.boolean().optional().default(false),
@@ -47,6 +48,7 @@ admin.post(
 		const body = c.req.valid('json')
 		const key = await createApiKey({
 			label: body.label,
+			callerService: body.callerService ?? body.label,
 			dailyLimitUsd: body.dailyLimitUsd,
 			allowedDestinations: body.allowedDestinations,
 			billable: body.billable,
@@ -77,6 +79,7 @@ admin.patch(
 		'json',
 		z.object({
 			label: z.string().optional(),
+			callerService: z.string().optional(),
 			dailyLimitUsd: z.string().nullable().optional(),
 			allowedDestinations: z.array(z.string()).optional(),
 			billable: z.boolean().optional(),
