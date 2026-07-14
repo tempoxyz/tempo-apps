@@ -176,8 +176,8 @@ async function feePayerHandler(c: Context) {
 // Keyed path: https://sponsor.tempo.xyz/tp_abc123
 app.all(
 	'/:key{tp_.+}',
-	rpcMetrics({ keyed: true }),
 	apiKeyMiddleware,
+	rpcMetrics({ keyed: true }),
 	rateLimitMiddleware({ keyed: true }),
 	feePayerHandler,
 )

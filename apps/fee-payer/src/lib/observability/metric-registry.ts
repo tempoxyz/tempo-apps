@@ -1,9 +1,13 @@
-type HttpRouteTags = {
+type CallerTags = {
+	caller_service: string
+}
+
+type HttpRouteTags = CallerTags & {
 	method: string
 	route: string
 }
 
-type RpcTags = {
+type RpcTags = CallerTags & {
 	rpc_method: string
 	keyed_route: string
 	chain_id: string

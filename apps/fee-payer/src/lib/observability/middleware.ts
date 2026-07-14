@@ -5,6 +5,7 @@ import { cloneRawRequest } from 'hono/request'
 import { Hex, RpcRequest } from 'ox'
 import { Transaction } from 'viem/tempo'
 import * as z from 'zod/mini'
+import type { ApiKeyRecord } from '../api-keys.js'
 import { tempoChain } from '../chain.js'
 import { metrics } from './metrics.js'
 
@@ -20,6 +21,7 @@ export function httpMetrics(): MiddlewareHandler {
 			throw error
 		} finally {
 			const tags = {
+				caller_service: callerService(c),
 				method: c.req.method,
 				route: resolveRoute(c),
 			}
@@ -53,6 +55,7 @@ export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 		if (rpc) {
 			c.set('rpcMethod', rpc.method)
 			metrics.count('fee_payer_rpc_request_count', 1, {
+				caller_service: callerService(c),
 				rpc_method: rpc.method,
 				keyed_route: String(opts.keyed),
 				chain_id: String(rpc.chainId),
@@ -67,6 +70,7 @@ export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 		} finally {
 			if (rpc) {
 				metrics.count('fee_payer_sponsorship_response_count', 1, {
+					caller_service: callerService(c),
 					rpc_method: rpc.method,
 					keyed_route: String(opts.keyed),
 					chain_id: String(rpc.chainId),
@@ -78,6 +82,11 @@ export function rpcMetrics(opts: { keyed: boolean }): MiddlewareHandler {
 			}
 		}
 	})
+}
+
+function callerService(c: Context): string {
+	const record = c.get('apiKeyRecord') as ApiKeyRecord | undefined
+	return record?.callerService ?? record?.label ?? 'anonymous'
 }
 
 function resolveRoute(c: Context): string {

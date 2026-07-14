@@ -41,10 +41,10 @@ Metrics are emitted through `cloudflare-worker-metrics` with these global tags o
 
 | Metric | Type | Tags |
 | --- | --- | --- |
-| `http_request_count` | counter | `method`, `route` |
-| `http_response_count` | counter | `method`, `route`, `status`, optional `error_type` |
-| `http_response_duration_ms` | histogram | `method`, `route` |
-| `fee_payer_rpc_request_count` | counter | `rpc_method`, `keyed_route`, `chain_id` |
-| `fee_payer_sponsorship_response_count` | counter | `rpc_method`, `keyed_route`, `chain_id`, `status` (`success` or `error`) |
+| `http_request_count` | counter | `caller_service`, `method`, `route` |
+| `http_response_count` | counter | `caller_service`, `method`, `route`, `status`, optional `error_type` |
+| `http_response_duration_ms` | histogram | `caller_service`, `method`, `route` |
+| `fee_payer_rpc_request_count` | counter | `caller_service`, `rpc_method`, `keyed_route`, `chain_id` |
+| `fee_payer_sponsorship_response_count` | counter | `caller_service`, `rpc_method`, `keyed_route`, `chain_id`, `status` (`success` or `error`) |
 
-Routes are normalized and metrics never include API keys, addresses, origins, or transaction hashes.
+Every request metric includes `caller_service`: the API key's `callerService`, its legacy label, or `anonymous` for open requests. Routes are normalized and metrics never include API keys, addresses, origins, or transaction hashes.
