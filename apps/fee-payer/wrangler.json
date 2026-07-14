@@ -14,6 +14,7 @@
 	],
 	"preview_urls": true,
 	"keep_vars": true,
+	"logpush": true,
 	"kv_namespaces": [
 		{
 			"binding": "SponsorApiKeyStore",
@@ -26,7 +27,12 @@
 			"enabled": true,
 			"head_sampling_rate": 1,
 			"invocation_logs": true,
-			"persist": true
+			"persist": true,
+			"destinations": ["internal-logs"]
+		},
+		"traces": {
+			"enabled": true,
+			"destinations": ["internal-traces"]
 		}
 	},
 	"env": {
