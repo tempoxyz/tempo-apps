@@ -30,3 +30,21 @@ Environment variables:
 |--------|-------|--------|
 | GET | `/usage` | - optional: `blockTimestampFrom` (epoch seconds)<br>- optional: `blockTimestampTo` (epoch seconds) |
 | POST | `*` | JSON-RPC request body for fee sponsorship<br>Supported sponsorship methods: `eth_signRawTransaction`, `eth_sendRawTransactionSync` (other JSON-RPC methods may be proxied, e.g. `eth_chainId`) |
+
+## Metrics
+
+Metrics are emitted through `cloudflare-worker-metrics` with these global tags:
+
+- `service:fee-payer`
+- `tempo_env` from `TEMPO_ENV`
+- `build_version`
+
+| Metric | Type | Tags |
+| --- | --- | --- |
+| `http_request_count` | counter | `method`, `route` |
+| `http_response_count` | counter | `method`, `route`, `status`, optional `error_type` |
+| `http_response_duration_ms` | histogram | `method`, `route` |
+| `fee_payer_rpc_request_count` | counter | `rpc_method`, `keyed_route`, `chain_id` |
+| `fee_payer_sponsorship_response_count` | counter | `rpc_method`, `keyed_route`, `chain_id`, `status` (`success` or `error`) |
+
+Routes are normalized and metrics never include API keys, addresses, origins, or transaction hashes.
