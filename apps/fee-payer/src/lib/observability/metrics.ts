@@ -1,3 +1,4 @@
+import { env } from 'cloudflare:workers'
 import { createMetrics } from 'cloudflare-worker-metrics'
 import type { MetricRegistry } from './metric-registry.js'
 
@@ -20,12 +21,18 @@ function getBuildVersion(): string {
 	return typeof __BUILD_VERSION__ === 'string' ? __BUILD_VERSION__ : 'dev'
 }
 
+function getTempoEnvironment(): string {
+	return env.TEMPO_ENV
+}
+
 function createFeePayerMetrics(): FeePayerMetrics {
 	if (!metricsEnabled()) return noop
 
 	const instance = createMetrics<MetricRegistry>({
 		globalTags: {
 			build_version: getBuildVersion(),
+			service: 'fee-payer',
+			tempo_env: getTempoEnvironment(),
 		},
 	})
 
