@@ -33,11 +33,11 @@ Environment variables:
 
 ## Metrics
 
-Metrics are emitted through `cloudflare-worker-metrics` with these global tags:
+Metrics are emitted through `cloudflare-worker-metrics` with these global tags on every metric:
 
 - `service:fee-payer`
-- `tempo_env` from `TEMPO_ENV`
-- `build_version`
+- `env` and `tempo_env` from `TEMPO_ENV`
+- `version` and `build_version`
 
 | Metric | Type | Tags |
 | --- | --- | --- |

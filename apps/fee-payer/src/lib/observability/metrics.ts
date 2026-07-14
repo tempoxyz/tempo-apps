@@ -31,8 +31,10 @@ function createFeePayerMetrics(): FeePayerMetrics {
 	const instance = createMetrics<MetricRegistry>({
 		globalTags: {
 			build_version: getBuildVersion(),
+			env: getTempoEnvironment(),
 			service: 'fee-payer',
 			tempo_env: getTempoEnvironment(),
+			version: getBuildVersion(),
 		},
 	})
 
