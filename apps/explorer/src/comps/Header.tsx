@@ -13,6 +13,7 @@ import {
 	buildExplorerNetworkHref,
 	EXPLORER_NETWORK_OPTIONS,
 	getActiveExplorerNetworkOption,
+	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -202,7 +203,7 @@ export namespace Header {
 					aria-controls={isOpen ? menuId : undefined}
 					aria-expanded={isOpen}
 					aria-haspopup="menu"
-					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-[8px] border border-[#2C2C2F] bg-[#1A1A1A] px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none press-down"
+					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none press-down"
 					title={`Network: ${activeOption.label}`}
 					onClick={() => setIsOpen((value) => !value)}
 				>
@@ -229,13 +230,15 @@ export namespace Header {
 								<a
 									key={option.env}
 									href={buildExplorerNetworkHref(option.host, currentPath, {
-										fallbackToHome: isNotFoundPage,
+										fallbackToHome:
+											isNotFoundPage &&
+											!isExplorerNetworkPathPreservable(currentPath),
 									})}
 									role="menuitemradio"
 									aria-checked={isActive}
 									aria-current={isActive ? 'page' : undefined}
 									className={cx(
-										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[13px] font-medium text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
+										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
 										isActive && 'bg-surface text-primary',
 									)}
 									onClick={() => setIsOpen(false)}

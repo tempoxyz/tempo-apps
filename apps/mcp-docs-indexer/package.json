@@ -3,8 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"benchmark": "tsx scripts/benchmark-mcp.ts",
 		"build": "echo 'No build step needed for Cloudflare Worker'",
 		"configure:metadata": "tsx scripts/configure-ai-search-metadata.ts",
+		"eval": "tsx scripts/eval-mcp.ts",
+		"eval:promptfoo": "tsx scripts/run-promptfoo.ts",
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"check": "pnpm check:biome && pnpm check:types",
@@ -15,7 +18,13 @@
 		"test": "vitest --run",
 		"test:watch": "vitest"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@cloudflare/codemode": "catalog:",
+		"@modelcontextprotocol/sdk": "catalog:",
+		"ai": "catalog:",
+		"cloudflare-worker-metrics": "catalog:",
+		"zod": "catalog:"
+	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/workers-types": "catalog:",

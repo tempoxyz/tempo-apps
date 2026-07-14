@@ -81,9 +81,7 @@ app.use(
 	chainRegistry({
 		staticChains,
 		url: env.CHAINS_CONFIG_URL || undefined,
-		authToken: await resolveAuthToken(
-			env.CHAINS_CONFIG_AUTH_TOKEN_SECRET || env.CHAINS_CONFIG_AUTH_TOKEN,
-		),
+		authToken: await resolveAuthToken(env.CHAINS_CONFIG_AUTH_TOKEN),
 	}),
 )
 

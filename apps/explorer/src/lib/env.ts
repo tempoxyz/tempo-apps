@@ -24,7 +24,8 @@ export function inferTempoEnvFromHostname(
 		host.includes('explorer-mainnet') ||
 		host.includes('explore.mainnet.') ||
 		host.includes('explore.presto.') ||
-		host.includes('explore.4217.')
+		host.includes('explore.4217.') ||
+		host === 'explore.tempo.xyz'
 	) {
 		return 'mainnet'
 	}

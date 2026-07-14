@@ -1,15 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
-import { getChainId } from 'wagmi/actions'
-import { fetchLatestBlockNumber } from '#lib/server/tempo-queries'
+import { getBlockNumber } from 'wagmi/actions'
 import { getWagmiConfig } from '#wagmi.config'
 
 export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 	async () => {
 		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
-
-			return await fetchLatestBlockNumber(chainId)
+			return await getBlockNumber(getWagmiConfig())
 		} catch (error) {
 			console.error('Failed to fetch latest block:', error)
 			return 0n

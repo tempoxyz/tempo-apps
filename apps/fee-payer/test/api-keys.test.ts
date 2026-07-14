@@ -1,6 +1,7 @@
 import { env, exports } from 'cloudflare:workers'
 import { sendTransactionSync } from 'viem/actions'
 import { describe, expect, it } from 'vitest'
+import { pathUsd } from '../src/lib/consts.js'
 import {
 	buildSponsorClient,
 	createTestAccount,
@@ -94,11 +95,19 @@ describe('admin API key management', () => {
 					label: 'Full Key',
 					dailyLimitUsd: '10.00',
 					allowedDestinations: ['0x0000000000000000000000000000000000000001'],
+					billable: true,
 				}),
 			)
 			expect(response.status).toBe(201)
 			const data = (await response.json()) as { key: string }
 			expect(data.key).toMatch(/^tp_/)
+
+			const listRes = await exports.default.fetch(adminRequest('GET', '/keys'))
+			const list = (await listRes.json()) as {
+				keys: Array<{ key: string; record: { billable: boolean } }>
+			}
+			const entry = list.keys.find((k) => k.key === data.key)
+			expect(entry?.record.billable).toBe(true)
 		})
 
 		it('rejects create with missing label', async () => {
@@ -106,6 +115,37 @@ describe('admin API key management', () => {
 				adminRequest('POST', '/keys', {}),
 			)
 			expect(response.status).toBe(400)
+		})
+
+		it('defaults new and legacy keys to non-billable', async () => {
+			const createRes = await exports.default.fetch(
+				adminRequest('POST', '/keys', { label: 'Non-Billable Default' }),
+			)
+			const { key } = (await createRes.json()) as { key: string }
+
+			const legacyKey = 'tp_legacy_non_billable_default'
+			await env.SponsorApiKeyStore.put(
+				`api-key:${legacyKey}`,
+				JSON.stringify({
+					label: 'Legacy Non-Billable Default',
+					dailyLimitUsd: null,
+					allowedDestinations: [],
+					createdAt: '2026-06-20T12:00:00.000Z',
+					active: true,
+				}),
+			)
+
+			const response = await exports.default.fetch(adminRequest('GET', '/keys'))
+			expect(response.status).toBe(200)
+			const data = (await response.json()) as {
+				keys: Array<{ key: string; record: { billable: boolean } }>
+			}
+			expect(
+				data.keys.find((entry) => entry.key === key)?.record.billable,
+			).toBe(false)
+			expect(
+				data.keys.find((entry) => entry.key === legacyKey)?.record.billable,
+			).toBe(false)
 		})
 
 		it('lists keys', async () => {
@@ -162,6 +202,7 @@ describe('admin API key management', () => {
 				adminRequest('PATCH', `/keys/${key}`, {
 					label: 'Updated',
 					dailyLimitUsd: '5.00',
+					billable: true,
 				}),
 			)
 			expect(updateRes.status).toBe(200)
@@ -171,12 +212,17 @@ describe('admin API key management', () => {
 			const data = (await listRes.json()) as {
 				keys: Array<{
 					key: string
-					record: { label: string; dailyLimitUsd: string | null }
+					record: {
+						label: string
+						dailyLimitUsd: string | null
+						billable: boolean
+					}
 				}>
 			}
 			const updated = data.keys.find((k) => k.key === key)
 			expect(updated?.record.label).toBe('Updated')
 			expect(updated?.record.dailyLimitUsd).toBe('5.00')
+			expect(updated?.record.billable).toBe(true)
 		})
 
 		it('returns 404 for updating nonexistent key', async () => {
@@ -454,6 +500,6 @@ describe('API key sponsorship integration', () => {
 		expect(receipt.status).toBe('success')
 		expect(receipt.from.toLowerCase()).toBe(account.address.toLowerCase())
 		expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
-		expect(receipt.feeToken).toMatch(/^0x[a-fA-F0-9]{40}$/)
+		expect(receipt.feeToken?.toLowerCase()).toBe(pathUsd.toLowerCase())
 	})
 })

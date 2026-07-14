@@ -531,7 +531,7 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 						style={holdersGrey ? { color: '#9ca3af' } : undefined}
 						tw={holdersGrey ? '' : 'text-gray-900'}
 					>
-						{holdersGrey ? '0' : truncateText(data.holders, 16)}
+						{holdersGrey ? '—' : truncateText(data.holders, 16)}
 					</span>
 				</div>
 				<div tw="flex w-full justify-between">

@@ -1,25 +1,19 @@
 import { createServerFn } from '@tanstack/react-start'
+import { type InferResponseType, parseResponse } from 'hono/client'
 import type { Address } from 'ox'
-import * as Value from 'ox/Value'
 import { Addresses } from 'viem/tempo'
-import { Abis } from '#lib/abis'
-import type { Config } from 'wagmi'
-import { getChainId, readContracts } from 'wagmi/actions'
-import { Actions } from 'wagmi/tempo'
+import { getChainId } from 'wagmi/actions'
+import { api } from '#lib/server/tempo-api'
+import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 
-export type FeeAmmPoolRow = {
+export type FeeAmmPool = {
 	poolId: `0x${string}`
 	userToken: Address.Address
 	validatorToken: Address.Address
 	createdAt: number | null
-	createdTxHash: `0x${string}`
 	latestMintAt: number | null
-	latestMintTxHash: `0x${string}`
 	mintCount: number
-}
-
-export type FeeAmmPool = FeeAmmPoolRow & {
 	reserveUserToken: bigint
 	reserveValidatorToken: bigint
 	liquidityUsd: number
@@ -31,148 +25,68 @@ export type FeeAmmPool = FeeAmmPoolRow & {
 	validatorTokenDecimals?: number | undefined
 }
 
-type TokenMetadata = {
-	name?: string | undefined
-	symbol?: string | undefined
-	decimals?: number | undefined
-}
+type PoolsResponse = InferResponseType<
+	(typeof api.v1)['fee-amm']['pools']['$get'],
+	200
+>
 
-function parsePoolReserves(result: unknown): {
-	reserveUserToken: bigint
-	reserveValidatorToken: bigint
-} {
-	if (Array.isArray(result)) {
-		const reserveUserToken = result[0] as bigint | number | string | undefined
-		const reserveValidatorToken = result[1] as
-			| bigint
-			| number
-			| string
-			| undefined
-		return {
-			reserveUserToken: BigInt(reserveUserToken ?? 0),
-			reserveValidatorToken: BigInt(reserveValidatorToken ?? 0),
-		}
-	}
+/** Max number of pools the page shows (API bounds to the same limit). */
+const POOL_LIMIT = 50
 
-	if (result && typeof result === 'object') {
-		const pool = result as {
-			reserveUserToken?: bigint
-			reserveValidatorToken?: bigint
-		}
-		return {
-			reserveUserToken: pool.reserveUserToken ?? 0n,
-			reserveValidatorToken: pool.reserveValidatorToken ?? 0n,
-		}
-	}
+/**
+ * Maps API pools (token metadata + live reserves included) into the page's
+ * shape, sorted pathUSD-validator pools first, then by liquidity, then by
+ * most recent activity.
+ */
+export function mapFeeAmmPools(pools: PoolsResponse['data']): FeeAmmPool[] {
+	return pools
+		.map((pool) => ({
+			poolId: pool.poolId,
+			userToken: pool.userToken.address,
+			validatorToken: pool.validatorToken.address,
+			createdAt: parseTimestamp(pool.createdAt) ?? null,
+			latestMintAt: parseTimestamp(pool.lastMintAt) ?? null,
+			mintCount: pool.mintCount,
+			reserveUserToken: BigInt(pool.userToken.amount ?? 0),
+			reserveValidatorToken: BigInt(pool.validatorToken.amount ?? 0),
+			liquidityUsd:
+				Number(pool.userToken.formatted ?? 0) +
+				Number(pool.validatorToken.formatted ?? 0),
+			userTokenName: pool.userToken.name,
+			userTokenSymbol: pool.userToken.symbol,
+			userTokenDecimals: pool.userToken.decimals,
+			validatorTokenName: pool.validatorToken.name,
+			validatorTokenSymbol: pool.validatorToken.symbol,
+			validatorTokenDecimals: pool.validatorToken.decimals,
+		}))
+		.sort((a, b) => {
+			const pathUsd = Addresses.pathUsd.toLowerCase()
+			const aPriority = a.validatorToken.toLowerCase() === pathUsd
+			const bPriority = b.validatorToken.toLowerCase() === pathUsd
 
-	return {
-		reserveUserToken: 0n,
-		reserveValidatorToken: 0n,
-	}
-}
+			if (aPriority !== bPriority) {
+				return aPriority ? -1 : 1
+			}
 
-async function fetchTokenMetadata(
-	config: Config,
-	token: Address.Address,
-): Promise<TokenMetadata> {
-	try {
-		const metadata = await Actions.token.getMetadata(config, { token })
-		return {
-			name: metadata.name,
-			symbol: metadata.symbol,
-			decimals: metadata.decimals,
-		}
-	} catch {
-		return {}
-	}
+			if (a.liquidityUsd !== b.liquidityUsd) {
+				return b.liquidityUsd - a.liquidityUsd
+			}
+
+			const aTimestamp = a.latestMintAt ?? a.createdAt ?? 0
+			const bTimestamp = b.latestMintAt ?? b.createdAt ?? 0
+			return bTimestamp - aTimestamp
+		})
+		.slice(0, POOL_LIMIT)
 }
 
 export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
 	async (): Promise<FeeAmmPool[]> => {
 		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
-			const { fetchFeeAmmPoolRows } = await import(
-				'#lib/server/fee-amm-pool-rows'
+			const chainId = getChainId(getWagmiConfig())
+			const { data } = await parseResponse(
+				api.v1['fee-amm'].pools.$get({ query: { chainId: String(chainId) } }),
 			)
-			const pools = await fetchFeeAmmPoolRows(chainId)
-
-			if (pools.length === 0) return []
-
-			const tokenAddresses = Array.from(
-				new Set(pools.flatMap((pool) => [pool.userToken, pool.validatorToken])),
-			) as Address.Address[]
-
-			const tokenMetadataEntries = await Promise.all(
-				tokenAddresses.map(
-					async (token) =>
-						[token, await fetchTokenMetadata(config as Config, token)] as const,
-				),
-			)
-
-			const tokenMetadata = new Map<Address.Address, TokenMetadata>(
-				tokenMetadataEntries,
-			)
-
-			const contractResults = await readContracts(config, {
-				contracts: pools.map((pool) => ({
-					address: Addresses.feeManager,
-					abi: Abis.feeAmm,
-					functionName: 'getPool',
-					args: [pool.userToken, pool.validatorToken],
-				})),
-			})
-
-			return pools
-				.map((pool, index) => {
-					const reservesResult = contractResults[index]?.result
-					const reserves = parsePoolReserves(reservesResult)
-					const userTokenMetadata = tokenMetadata.get(pool.userToken)
-					const validatorTokenMetadata = tokenMetadata.get(pool.validatorToken)
-					const liquidityUsd =
-						Number.parseFloat(
-							Value.format(
-								reserves.reserveUserToken,
-								userTokenMetadata?.decimals ?? 0,
-							),
-						) +
-						Number.parseFloat(
-							Value.format(
-								reserves.reserveValidatorToken,
-								validatorTokenMetadata?.decimals ?? 0,
-							),
-						)
-
-					return {
-						...pool,
-						reserveUserToken: reserves.reserveUserToken,
-						reserveValidatorToken: reserves.reserveValidatorToken,
-						liquidityUsd,
-						userTokenName: userTokenMetadata?.name,
-						userTokenSymbol: userTokenMetadata?.symbol,
-						userTokenDecimals: userTokenMetadata?.decimals,
-						validatorTokenName: validatorTokenMetadata?.name,
-						validatorTokenSymbol: validatorTokenMetadata?.symbol,
-						validatorTokenDecimals: validatorTokenMetadata?.decimals,
-					}
-				})
-				.sort((a, b) => {
-					const pathUsd = Addresses.pathUsd.toLowerCase()
-					const aPriority = a.validatorToken.toLowerCase() === pathUsd
-					const bPriority = b.validatorToken.toLowerCase() === pathUsd
-
-					if (aPriority !== bPriority) {
-						return aPriority ? -1 : 1
-					}
-
-					if (a.liquidityUsd !== b.liquidityUsd) {
-						return b.liquidityUsd - a.liquidityUsd
-					}
-
-					const aTimestamp = a.latestMintAt ?? a.createdAt ?? 0
-					const bTimestamp = b.latestMintAt ?? b.createdAt ?? 0
-					return bTimestamp - aTimestamp
-				})
+			return mapFeeAmmPools(data)
 		} catch (error) {
 			console.error('Failed to fetch Fee AMM pools:', error)
 			return []

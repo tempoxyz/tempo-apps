@@ -113,6 +113,8 @@ const addressRegistryAbi = Abis.addressRegistry
 
 const signatureVerifierAbi = Abis.signatureVerifier
 
+const storageCreditsAbi = Abis.storageCredits
+
 const validatorConfigAddress = Addresses.validator
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
@@ -126,6 +128,7 @@ const addressRegistryAddress =
 	'0xfdc0000000000000000000000000000000000000' as const
 const signatureVerifierAddress =
 	'0x5165300000000000000000000000000000000000' as const
+const storageCreditsAddress = Addresses.storageCredits
 
 export const validatorConfigManifest = {
 	id: 'validator-config',
@@ -365,6 +368,32 @@ export const signatureVerifierManifest = {
 	}),
 } as const satisfies NativeContractManifestEntry
 
+export const storageCreditsManifest = {
+	id: 'storage-credits',
+	name: 'Storage Credits',
+	runtimeType: 'precompile',
+	language: 'Rust',
+	abi: storageCreditsAbi,
+	repository: tempoRepository,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1060',
+	sourceRoot: 'crates/precompiles/src/storage_credits',
+	paths: [
+		'crates/precompiles/src/storage_credits/mod.rs',
+		'crates/precompiles/src/storage_credits/dispatch.rs',
+	],
+	entrypoints: ['crates/precompiles/src/storage_credits/mod.rs'],
+	deployments: buildDeployments(
+		storageCreditsAddress,
+		buildProtocolActivation('T7'),
+	),
+	references: buildReferences({
+		abiReferencePaths: ['crates/contracts/src/precompiles/storage_credits.rs'],
+		specificationPaths: ['tips/tip-1060.md'],
+	}),
+} as const satisfies NativeContractManifestEntry
+
 export const nativeContractsManifest = [
 	validatorConfigManifest,
 	validatorConfigV2Manifest,
@@ -376,4 +405,5 @@ export const nativeContractsManifest = [
 	stablecoinDexManifest,
 	addressRegistryManifest,
 	signatureVerifierManifest,
+	storageCreditsManifest,
 ] as const satisfies ReadonlyArray<NativeContractManifestEntry>

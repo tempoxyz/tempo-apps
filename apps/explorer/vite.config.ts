@@ -28,6 +28,29 @@ export default defineConfig((config) => {
 	if (!success) throw new Error(z.prettifyError(error))
 
 	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV].vars
+	const datadogEnv = {
+		VITE_DATADOG_ALLOWED_TRACING_URLS:
+			wranglerVars.VITE_DATADOG_ALLOWED_TRACING_URLS ??
+			envConfig.VITE_DATADOG_ALLOWED_TRACING_URLS,
+		VITE_DATADOG_ENABLED:
+			wranglerVars.VITE_DATADOG_ENABLED ??
+			String(envConfig.VITE_DATADOG_ENABLED),
+		VITE_DATADOG_ENV:
+			wranglerVars.VITE_DATADOG_ENV ??
+			envConfig.VITE_DATADOG_ENV ??
+			envConfig.VITE_TEMPO_ENV,
+		VITE_DATADOG_SERVICE:
+			wranglerVars.VITE_DATADOG_SERVICE ?? envConfig.VITE_DATADOG_SERVICE,
+		VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE:
+			wranglerVars.VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE ??
+			envConfig.VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE,
+		VITE_DATADOG_SESSION_SAMPLE_RATE:
+			wranglerVars.VITE_DATADOG_SESSION_SAMPLE_RATE ??
+			envConfig.VITE_DATADOG_SESSION_SAMPLE_RATE,
+		VITE_DATADOG_TRACE_SAMPLE_RATE:
+			wranglerVars.VITE_DATADOG_TRACE_SAMPLE_RATE ??
+			envConfig.VITE_DATADOG_TRACE_SAMPLE_RATE,
+	}
 	const tempoEnv = tempoEnvSchema.safeParse(wranglerVars.VITE_TEMPO_ENV)
 	if (!tempoEnv.success) throw new Error(z.prettifyError(tempoEnv.error))
 
@@ -139,6 +162,27 @@ export default defineConfig((config) => {
 			},
 		},
 		define: {
+			'import.meta.env.VITE_DATADOG_ALLOWED_TRACING_URLS': JSON.stringify(
+				datadogEnv.VITE_DATADOG_ALLOWED_TRACING_URLS,
+			),
+			'import.meta.env.VITE_DATADOG_ENABLED': JSON.stringify(
+				datadogEnv.VITE_DATADOG_ENABLED,
+			),
+			'import.meta.env.VITE_DATADOG_ENV': JSON.stringify(
+				datadogEnv.VITE_DATADOG_ENV,
+			),
+			'import.meta.env.VITE_DATADOG_SERVICE': JSON.stringify(
+				datadogEnv.VITE_DATADOG_SERVICE,
+			),
+			'import.meta.env.VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE': JSON.stringify(
+				datadogEnv.VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE,
+			),
+			'import.meta.env.VITE_DATADOG_SESSION_SAMPLE_RATE': JSON.stringify(
+				datadogEnv.VITE_DATADOG_SESSION_SAMPLE_RATE,
+			),
+			'import.meta.env.VITE_DATADOG_TRACE_SAMPLE_RATE': JSON.stringify(
+				datadogEnv.VITE_DATADOG_TRACE_SAMPLE_RATE,
+			),
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				wranglerVars.VITE_TEMPO_ENV || envConfig.VITE_TEMPO_ENV,
 			),

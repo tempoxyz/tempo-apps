@@ -40,3 +40,20 @@ export namespace buildExplorerNetworkHref {
 		fallbackToHome?: boolean
 	}
 }
+
+export function isExplorerNetworkPathPreservable(path: string): boolean {
+	const pathname = path.split(/[?#]/, 1)[0]
+
+	return [
+		/^\/$/,
+		/^\/blocks\/?$/,
+		/^\/tokens\/?$/,
+		/^\/fee-amm\/?$/,
+		/^\/tx\/[^/]+\/?$/,
+		/^\/receipt\/[^/]+\/?$/,
+		/^\/block\/[^/]+\/?$/,
+		/^\/block\/countdown\/[^/]+\/?$/,
+		/^\/address\/[^/]+\/?$/,
+		/^\/token\/[^/]+\/?$/,
+	].some((pattern) => pattern.test(pathname))
+}

@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { cx } from '#lib/css'
 
 export function AddressCell(props: {
@@ -31,6 +31,7 @@ export function AddressCell(props: {
 		<Link
 			to="/address/$address"
 			params={{ address }}
+			preload="intent"
 			className={cx(
 				'text-[13px] text-accent hover:text-accent/80 transition-colors press-down w-full font-mono',
 				isHighlighted && 'underline',

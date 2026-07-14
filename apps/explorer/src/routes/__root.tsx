@@ -16,8 +16,14 @@ import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
+import {
+	getCanonicalExplorerUrl,
+	getExplorerWebApplication,
+} from '#lib/explorer-indexing'
+import { getRequestURL, getTempoEnv } from '#lib/env'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
+import { defaultThemeMode, themeBootScript } from '#lib/theme'
 import {
 	type LoaderTiming,
 	captureEvent,
@@ -26,8 +32,40 @@ import {
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
+import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
+
+function getCurrentCanonicalExplorerUrl(): string | undefined {
+	const pathname =
+		typeof window === 'undefined'
+			? getRequestURL().pathname
+			: window.location.pathname
+	return getCanonicalExplorerUrl(getTempoEnv(), pathname)
+}
+
+function getExplorerCanonicalLinks() {
+	const href = getCurrentCanonicalExplorerUrl()
+	return href ? [{ rel: 'canonical', href }] : []
+}
+
+function getExplorerRobotsMeta() {
+	return getCurrentCanonicalExplorerUrl()
+		? []
+		: [{ name: 'robots', content: 'noindex, nofollow' }]
+}
+
+function getExplorerWebApplicationScripts() {
+	const webApplication = getExplorerWebApplication(getTempoEnv())
+	return webApplication
+		? [
+				{
+					children: JSON.stringify(webApplication),
+					type: 'application/ld+json',
+				},
+			]
+		: []
+}
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient
@@ -86,8 +124,10 @@ export const Route = createRootRouteWithContext<{
 				name: 'twitter:image',
 				content: `${OG_BASE_URL}/explorer`,
 			},
+			...getExplorerRobotsMeta(),
 		],
 		links: [
+			...getExplorerCanonicalLinks(),
 			{
 				rel: 'preload',
 				href: '/fonts/satoshi/Satoshi-Variable.woff2',
@@ -109,26 +149,50 @@ export const Route = createRootRouteWithContext<{
 			{
 				rel: 'icon',
 				type: 'image/svg+xml',
+				href: '/favicon-light.svg',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/svg+xml',
 				href: '/favicon-dark.svg',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '32x32',
+				href: '/favicon-32x32-light.png',
+				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/png',
 				sizes: '32x32',
 				href: '/favicon-32x32-dark.png',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '16x16',
+				href: '/favicon-16x16-light.png',
+				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/png',
 				sizes: '16x16',
 				href: '/favicon-16x16-dark.png',
+				media: '(prefers-color-scheme: dark)',
 			},
 			{
 				rel: 'apple-touch-icon',
 				sizes: '180x180',
-				href: '/favicon-dark.png',
+				href: '/favicon-light.png',
 			},
 		],
+		scripts: getExplorerWebApplicationScripts(),
 	}),
 	scripts: async () => {
 		const scripts: Array<{ children: string; type: string }> = []
@@ -268,6 +332,12 @@ function useAppBoot() {
 	}, [])
 }
 
+function useDatadogRum() {
+	React.useEffect(() => {
+		void initDatadogRum().catch(() => {})
+	}, [])
+}
+
 function useLoaderTiming() {
 	const matches = useMatches()
 	const reportedRef = React.useRef<Set<string>>(new Set())
@@ -351,6 +421,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	useFirstDrawTiming()
 	useErrorTracking()
 	useAppBoot()
+	useDatadogRum()
 
 	const { queryClient } = Route.useRouteContext()
 	const [config] = React.useState(() => getWagmiConfig())
@@ -367,8 +438,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html lang="en" className="scrollbar-gutter-stable">
+		<html
+			lang="en"
+			className="scrollbar-gutter-stable"
+			data-theme={defaultThemeMode}
+			suppressHydrationWarning
+		>
 			<head>
+				<script>{themeBootScript}</script>
 				<HeadContent />
 			</head>
 			<body className="antialiased">

@@ -8,6 +8,7 @@ import * as DB from '#database/schema.ts'
 import { runVerificationJob } from '#route.verify.ts'
 import { staticChains } from '#wagmi.config.ts'
 import { ChainRegistry } from '#lib/chain-registry.ts'
+import type { VerificationJob } from '#schema.ts'
 import { counterFixture, counterSource } from '../fixtures/counter.fixture.ts'
 
 const VerificationIdSchema = z.object({ verificationId: z.string() })
@@ -69,7 +70,10 @@ function solcOutputWithRuntimeBytecode(bytecode: `0x${string}`): unknown {
 }
 
 describe('full verification flow', () => {
-	type VerifyRequestBody = Parameters<typeof runVerificationJob>[4]
+	type VerifyRequestBody = Omit<
+		VerificationJob,
+		'jobId' | 'chainId' | 'address'
+	>
 
 	async function createVerificationJob(
 		body: VerifyRequestBody = verifyRequestBody,
@@ -101,10 +105,12 @@ describe('full verification flow', () => {
 
 		await runVerificationJob(
 			env,
-			verificationId,
-			counterFixture.chainId,
-			counterFixture.address,
-			body,
+			{
+				jobId: verificationId,
+				chainId: counterFixture.chainId,
+				address: counterFixture.address,
+				...body,
+			},
 			ChainRegistry.fromStatic(staticChains),
 			{
 				createPublicClient: () => ({
@@ -154,10 +160,12 @@ describe('full verification flow', () => {
 
 		await runVerificationJob(
 			env,
-			options.jobId ?? globalThis.crypto.randomUUID(),
-			counterFixture.chainId,
-			options.address,
-			body,
+			{
+				jobId: options.jobId ?? globalThis.crypto.randomUUID(),
+				chainId: counterFixture.chainId,
+				address: options.address,
+				...body,
+			},
 			ChainRegistry.fromStatic(staticChains),
 			{
 				createPublicClient: () => ({

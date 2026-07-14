@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
-import { Address, Hex } from 'ox'
+import { Hex } from 'ox'
 import { and, eq, isNull, or } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 
@@ -31,14 +31,20 @@ import {
 import {
 	AuxdataStyle,
 	matchBytecode,
-	type LinkReferences,
 	getVyperAuxdataStyle,
-	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
 import type { AppEnv } from '#index.tsx'
 import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
+import {
+	type CompileOutput,
+	getValidationCustomCode,
+	type StdJsonInput,
+	VerificationJob,
+	zAddress,
+	zChainId,
+} from '#schema.ts'
 
 const logger = getLogger(['tempo'])
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
@@ -73,13 +79,13 @@ function sanitizeJsonValue(value: unknown): unknown {
 	return value
 }
 
-function sanitizeCompilerSettings(settings: object): object {
-	return sanitizeJsonValue(settings) as object
+function sanitizeCompilerSettings<T extends object>(settings: T): T {
+	return sanitizeJsonValue(settings) as T
 }
 
-function sanitizeVerificationInput(
-	input: VerificationInput,
-): VerificationInput {
+function sanitizeVerificationInput<T extends { stdJsonInput: StdJsonInput }>(
+	input: T,
+): T {
 	return {
 		...input,
 		stdJsonInput: {
@@ -150,20 +156,11 @@ verifyRoute
 			}
 
 			const parsedBody = z.safeParse(
-				z.object({
-					stdJsonInput: z.object({
-						language: z.string(),
-						sources: z.record(
-							z.string(),
-							z.object({
-								content: z.string(),
-							}),
-						),
-						settings: z.record(z.string(), z.unknown()),
-					}),
-					compilerVersion: z.string(),
-					contractIdentifier: z.string(),
-					creationTransactionHash: z.optional(z.string()),
+				z.pick(VerificationJob, {
+					stdJsonInput: true,
+					compilerVersion: true,
+					contractIdentifier: true,
+					creationTransactionHash: true,
 				}),
 				body,
 			)
@@ -176,16 +173,17 @@ verifyRoute
 				)
 			}
 
-			if (!/^\d+$/.test(_chainId)) {
+			const parsedChainId = z.safeParse(zChainId(), _chainId)
+			if (!parsedChainId.success) {
 				return sourcifyError(
 					context,
 					400,
-					'invalid_chain_id',
+					getValidationCustomCode(parsedChainId.error) ?? 'invalid_chain_id',
 					`Invalid chainId format: ${_chainId}`,
 				)
 			}
 
-			const chainId = Number(_chainId)
+			const chainId = parsedChainId.data
 			const registry = context.get('chainRegistry')
 			if (!registry.isSupported(chainId)) {
 				return sourcifyError(
@@ -196,14 +194,16 @@ verifyRoute
 				)
 			}
 
-			if (!Address.validate(address, { strict: true })) {
+			const parsedAddress = z.safeParse(zAddress({ strict: true }), address)
+			if (!parsedAddress.success) {
 				return sourcifyError(
 					context,
 					400,
-					'invalid_address',
+					getValidationCustomCode(parsedAddress.error) ?? 'invalid_address',
 					`Invalid address: ${address}`,
 				)
 			}
+			Hex.assert(address)
 
 			const { contractIdentifier } = parsedBody.data
 
@@ -345,9 +345,7 @@ verifyRoute
 				return context.json({ verificationId: firstJob.id }, 202)
 			}
 
-			const verificationInput = sanitizeVerificationInput(
-				parsedBody.data as VerificationInput,
-			)
+			const verificationInput = sanitizeVerificationInput(parsedBody.data)
 
 			// Dispatch verification to a per-job Durable Object for durable background execution
 			const doId = context.env.VERIFICATION_JOB_RUNNER.idFromName(jobId)
@@ -357,7 +355,7 @@ verifyRoute
 					jobId,
 					chainId,
 					address,
-					body: verificationInput,
+					...verificationInput,
 				})
 			} catch (enqueueError) {
 				logger.error('job_enqueue_failed', {
@@ -634,17 +632,6 @@ verifyRoute
 		}
 	})
 
-type VerificationInput = {
-	stdJsonInput: {
-		language: string
-		sources: Record<string, { content: string }>
-		settings: object
-	}
-	compilerVersion: string
-	contractIdentifier: string
-	creationTransactionHash?: string
-}
-
 type PublicClientLike = {
 	getCode: (args: { address: `0x${string}` }) => Promise<`0x${string}`>
 	getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
@@ -671,59 +658,19 @@ type VerificationDeps = {
 	}) => PublicClientLike
 }
 
-type CompileOutput = {
-	contracts?: Record<
-		string,
-		Record<
-			string,
-			{
-				abi: Array<{
-					type: string
-					name?: string
-					inputs?: Array<{ type: string; name?: string }>
-				}>
-				evm: {
-					bytecode: {
-						object: string
-						linkReferences?: LinkReferences
-						sourceMap?: string
-					}
-					deployedBytecode: {
-						object: string
-						linkReferences?: LinkReferences
-						immutableReferences?: ImmutableReferences
-						sourceMap?: string
-					}
-				}
-				metadata?: string
-				storageLayout?: unknown
-				userdoc?: unknown
-				devdoc?: unknown
-			}
-		>
-	>
-	errors?: Array<{
-		severity: string
-		message: string
-		formattedMessage?: string
-	}>
-}
-
 async function runVerificationJob(
 	env: Cloudflare.Env,
-	jobId: string,
-	chainId: number,
-	address: string,
-	body: VerificationInput,
+	job: VerificationJob,
 	chainRegistry: ChainRegistry,
 	deps?: VerificationDeps,
 ): Promise<void> {
 	const db = getDb(env.CONTRACTS_DB)
+	const { jobId, chainId, address } = job
 	Hex.assert(address)
 	const addressBytes = Hex.toBytes(address)
 	const startTime = Date.now()
 
-	const sanitizedBody = sanitizeVerificationInput(body)
+	const sanitizedBody = sanitizeVerificationInput(job)
 	const { stdJsonInput, compilerVersion, contractIdentifier } = sanitizedBody
 	const language = stdJsonInput.language?.toLowerCase() ?? 'solidity'
 	const isVyper = language === 'vyper'
@@ -831,6 +778,8 @@ async function runVerificationJob(
 			return
 		}
 
+		// Deliberately a cast, not a schema parse: zod objects strip unknown keys,
+		// which would drop ABI fields (stateMutability, outputs, ...) before storage.
 		const compileOutput = (await compileResponse.json()) as CompileOutput
 
 		const errors =

@@ -3,7 +3,7 @@ import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
 import { useState } from 'react'
 import { Amount } from '#comps/Amount'
-import { Midcut } from 'midcut'
+import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
@@ -16,8 +16,12 @@ import {
 	hasTokenAmount,
 	isUsdPricedToken,
 } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain } from '#wagmi.config.ts'
+import BracesIcon from '~icons/lucide/braces'
+import DownloadIcon from '~icons/lucide/download'
+import FileTextIcon from '~icons/lucide/file-text'
+import ShareIcon from '~icons/lucide/share-2'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -35,9 +39,11 @@ export function Receipt(props: Receipt.Props) {
 		feeDisplay,
 		totalDisplay,
 		feeBreakdown = [],
+		exportSearch = '',
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const copyHash = useCopy()
+	const copyShare = useCopy({ timeout: 2_000 })
 	const { isTokenListed } = useTokenListMembership()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 
@@ -57,18 +63,33 @@ export function Receipt(props: Receipt.Props) {
 			event.type !== 'active key count changed' &&
 			event.type !== 'nonce incremented',
 	)
+	const handleShare = async () => {
+		const url = new URL(
+			`/receipt/${hash}${exportSearch}`,
+			window.location.origin,
+		).toString()
+		if (navigator.share) {
+			try {
+				await navigator.share({ title: 'Tempo receipt', url })
+				return
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'AbortError') return
+			}
+		}
+		await copyShare.copy(url)
+	}
 
 	return (
 		<>
 			<div
 				data-receipt
-				className="flex flex-col w-[360px] bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				className="flex w-[360px] flex-col bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
 			>
 				<div className="flex items-start gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
 						<ReceiptMark />
 					</div>
-					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
+					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1 min-w-0">
 						<div className="flex justify-between items-end">
 							<span className="text-tertiary">Block</span>
 							<Link
@@ -373,6 +394,31 @@ export function Receipt(props: Receipt.Props) {
 
 			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
 				<div className="max-w-[360px] w-full">
+					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive text-[12px] text-tertiary">
+						<button
+							type="button"
+							onClick={() => void handleShare()}
+							className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down hover:bg-base-plane hover:text-primary"
+						>
+							<ShareIcon className="size-[13px]" />
+							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
+						</button>
+						<Receipt.ExportLink
+							hash={hash}
+							format="pdf"
+							exportSearch={exportSearch}
+						/>
+						<Receipt.ExportLink
+							hash={hash}
+							format="txt"
+							exportSearch={exportSearch}
+						/>
+						<Receipt.ExportLink
+							hash={hash}
+							format="json"
+							exportSearch={exportSearch}
+						/>
+					</div>
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
@@ -400,6 +446,7 @@ export namespace Receipt {
 		total?: number
 		totalDisplay?: string
 		feeBreakdown?: FeeBreakdownItem[]
+		exportSearch?: string | undefined
 	}
 
 	export interface FeeBreakdownItem {
@@ -409,5 +456,35 @@ export namespace Receipt {
 		symbol?: string
 		token?: Address.Address
 		payer?: Address.Address
+	}
+
+	export function ExportLink(props: ExportLink.Props): React.JSX.Element {
+		const { hash, format, exportSearch = '' } = props
+		const icon =
+			format === 'pdf' ? (
+				<DownloadIcon className="size-[13px]" />
+			) : format === 'txt' ? (
+				<FileTextIcon className="size-[13px]" />
+			) : (
+				<BracesIcon className="size-[13px]" />
+			)
+
+		return (
+			<a
+				href={`/receipt/${hash}.${format}${exportSearch}`}
+				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border uppercase transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
+			>
+				{icon}
+				<span>{format}</span>
+			</a>
+		)
+	}
+
+	export namespace ExportLink {
+		export interface Props {
+			hash: Hex.Hex
+			format: 'pdf' | 'txt' | 'json'
+			exportSearch?: string | undefined
+		}
 	}
 }
