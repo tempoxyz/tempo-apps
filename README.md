@@ -1,8 +1,8 @@
 # Tempo Apps
 
-Tempo Apps is the monorepo for the applications and services that make up Tempo's developer-facing infrastructure, including block exploration, account tooling, documentation search, and network services. Developers working with Tempo can use these projects as reference implementations or hosted services for block exploration, fee sponsorship, token metadata, smart contract verification, and related workflows.
+Tempo Apps is the monorepo for the applications and services that make up Tempo's developer-facing infrastructure: block exploration, wallet/account tooling, and network services. If you're building on Tempo and need a reference implementation or a hosted service (explorer, fee sponsorship, token registry), this is where it lives. These apps are built and maintained by the Tempo team and complement the core tempo node and the mpp/SDK repos.
 
-These apps are maintained by the Tempo team and complement the core [`tempo`](https://github.com/tempoxyz/tempo) node. See the [Tempo developer documentation](https://tempo.xyz/developers/docs) for integration guides and protocol documentation.
+See the [Tempo developer documentation](https://tempo.xyz/developers/docs) for integration guides and protocol documentation.
 
 ## Apps
 
@@ -23,6 +23,9 @@ These apps are maintained by the Tempo team and complement the core [`tempo`](ht
 - [`tempoxyz/tempo`](https://github.com/tempoxyz/tempo): Core Tempo node and protocol implementation.
 - [`tempoxyz/tidx`](https://github.com/tempoxyz/tidx): Chain indexer for querying Tempo blocks, transactions, and logs.
 - [`tempoxyz/wallet-cli`](https://github.com/tempoxyz/wallet-cli): Command-line wallet and HTTP client for Tempo and MPP-enabled services.
+- [`tempoxyz/mpp`](https://github.com/tempoxyz/mpp): Documentation, protocol explainers, and service directory for MPP.
+- [`tempoxyz/mpp-specs`](https://github.com/tempoxyz/mpp-specs): Specifications for the Machine Payments Protocol.
+- [`tempoxyz/mpp-rs`](https://github.com/tempoxyz/mpp-rs): Rust SDK for the Machine Payments Protocol.
 
 ## Contributing
 
