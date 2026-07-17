@@ -10,6 +10,7 @@ import * as z from 'zod/mini'
  */
 export const serverEnvSchema = z.object({
 	TEMPO_API_KEY: z.optional(z.string()),
+	TIDX_BASIC_AUTH: z.optional(z.string()),
 })
 
 export const serverEnv = serverEnvSchema.parse(process.env)
