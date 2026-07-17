@@ -960,17 +960,29 @@ function SectionsWrapper(props: {
 	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
+	const isContractTabActive = visibleTabs[activeSection] === 'contract'
 
-	// Contract source query - fetch on demand when contract tab is active
-	// Keeps initial page load light while still enabling ABI/source in the UI
+	// Fetch readable source first so highlighting never delays contract data.
 	const contractSourceQuery = useQuery({
-		...useContractSourceQueryOptions({ address }),
+		...useContractSourceQueryOptions({ address, highlight: false }),
 		initialData: contractSource,
 		enabled: isMounted && isContract,
 	})
+	// Progressively replace plain source with server-highlighted output only when
+	// it is about to be rendered.
+	const highlightedContractSourceQuery = useQuery({
+		...useContractSourceQueryOptions({ address, highlight: true }),
+		enabled:
+			isMounted &&
+			isContract &&
+			isContractTabActive &&
+			Boolean(contractSourceQuery.data),
+	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
-		? (contractSourceQuery.data ?? undefined)
+		? (highlightedContractSourceQuery.data ??
+			contractSourceQuery.data ??
+			undefined)
 		: contractSource
 
 	const extractedAbiQuery = useQuery({

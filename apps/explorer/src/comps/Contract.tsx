@@ -146,7 +146,7 @@ export function ContractTabContent(props: {
 					</>
 				}
 			>
-				<AbiViewer abi={abi} />
+				<AbiViewer abi={abi} enabled={abiExpanded} />
 			</CollapsibleSection>
 
 			{/* Bytecode Section - hidden for TIP-20 */}

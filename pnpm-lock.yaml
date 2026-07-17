@@ -205,8 +205,8 @@ catalogs:
       specifier: ^11.13.0
       version: 11.13.0
     tidx.ts:
-      specifier: ^0.1.1
-      version: 0.1.1
+      specifier: ^0.1.2
+      version: 0.1.2
     tw-animate-css:
       specifier: ^1.4.0
       version: 1.4.0
@@ -463,7 +463,7 @@ importers:
         version: 4.2.2
       tidx.ts:
         specifier: 'catalog:'
-        version: 0.1.1(typescript@6.0.2)
+        version: 0.1.2(typescript@6.0.2)
       viem:
         specifier: 'catalog:'
         version: 2.55.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)
@@ -6246,8 +6246,8 @@ packages:
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
 
-  tidx.ts@0.1.1:
-    resolution: {integrity: sha512-XFoDuwCQwkERGRYB+QGQvzH//Y6kDknttWSts3durreALgkrKOCM9mUDfgRVg3zVisuQgx5RfvoJmO8x8oXm+g==}
+  tidx.ts@0.1.2:
+    resolution: {integrity: sha512-iz+ghbOFRAePPJGs1AA2wYqx13qyqNKBgI77p9HPq20mcX5Xh3XF0RkcgOLlvWAezWRCJdYgCnQY53+vCJ+A+w==}
 
   tiny-invariant@1.3.3:
     resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
@@ -9715,7 +9715,7 @@ snapshots:
       mppx: 0.6.28(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))(express@5.2.1)(hono@4.12.25)(typescript@6.0.2)(viem@2.55.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
       nanoid: 5.1.15
       ox: 0.14.27(typescript@6.0.2)(zod@4.4.3)
-      tidx.ts: 0.1.1(typescript@6.0.2)
+      tidx.ts: 0.1.2(typescript@6.0.2)
       viem: 2.55.0(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.4.3)
       zod: 4.4.3
     transitivePeerDependencies:
@@ -12113,7 +12113,7 @@ snapshots:
 
   through@2.3.8: {}
 
-  tidx.ts@0.1.1(typescript@6.0.2):
+  tidx.ts@0.1.2(typescript@6.0.2):
     dependencies:
       abitype: 1.2.4(typescript@6.0.2)(zod@4.3.6)
       kysely: 0.28.15

@@ -261,15 +261,19 @@ export async function fetchContractSource(params: {
 export function contractSourceQueryOptions(params: {
 	address: Address.Address
 	chainId: number
+	highlight?: boolean
 }) {
-	const { address, chainId } = params
+	const { address, chainId, highlight = true } = params
 	return queryOptions({
 		enabled: isAddress(address) && Boolean(chainId),
-		queryKey: ['contract-source', address, chainId],
-		queryFn: () => fetchContractSource({ address, chainId }),
-		// staleTime: 0 so client refetches with highlighting after SSR seeds unhighlighted data
-		// gcTime keeps the data cached to prevent flashing during refetch
-		staleTime: 0,
+		queryKey: [
+			'contract-source',
+			address,
+			chainId,
+			highlight ? 'highlighted' : 'plain',
+		],
+		queryFn: () => fetchContractSource({ address, chainId, highlight }),
+		staleTime: Number.POSITIVE_INFINITY,
 		gcTime: 1000 * 60 * 60, // 1 hour
 	})
 }
@@ -277,12 +281,14 @@ export function contractSourceQueryOptions(params: {
 export function useContractSourceQueryOptions(params: {
 	address: Address.Address
 	chainId?: number
+	highlight?: boolean
 }) {
-	const { address, chainId } = params
+	const { address, chainId, highlight } = params
 	const defaultChainId = useChainId()
 
 	return contractSourceQueryOptions({
 		address,
 		chainId: chainId ?? defaultChainId,
+		highlight,
 	})
 }
