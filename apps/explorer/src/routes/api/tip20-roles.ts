@@ -11,6 +11,9 @@ import { getWagmiConfig } from '#wagmi.config'
 
 const ROLE_MEMBERSHIP_UPDATED_SELECTOR_SIGNATURE =
 	'RoleMembershipUpdated(bytes32,address,address,bool)'
+const ROLE_MEMBERSHIP_UPDATED_SELECTOR = Hash.keccak256(
+	Hex.fromString(ROLE_MEMBERSHIP_UPDATED_SELECTOR_SIGNATURE),
+)
 const ROLE_LOG_SCAN_LIMIT = 10_000
 
 const ZERO_BYTES32 =
@@ -123,10 +126,6 @@ export const Route = createFileRoute('/api/tip20-roles')({
 
 					const roles: RoleHolder[] = []
 					try {
-						const selector = Hash.keccak256(
-							Hex.fromString(ROLE_MEMBERSHIP_UPDATED_SELECTOR_SIGNATURE),
-						)
-
 						const roleLogs = await tempoQueryBuilder(chainId)
 							.selectFrom('logs')
 							.select([
@@ -140,6 +139,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 								'log_idx',
 							])
 							.where('address', '=', address)
+							.where('topic0', '=', ROLE_MEMBERSHIP_UPDATED_SELECTOR)
 							.orderBy('block_num', 'asc')
 							.orderBy('log_idx', 'asc')
 							.limit(ROLE_LOG_SCAN_LIMIT)
@@ -152,7 +152,6 @@ export const Route = createFileRoute('/api/tip20-roles')({
 						>()
 
 						for (const event of roleLogs) {
-							if (event.topic0 !== selector) continue
 							if (!event.topic1 || !event.topic2 || !event.data) continue
 
 							const roleHash = event.topic1.toLowerCase()
@@ -197,6 +196,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 						}
 					} catch (error) {
 						console.error('[tip20-roles] failed to fetch role logs:', error)
+						throw error
 					}
 
 					return Response.json(
