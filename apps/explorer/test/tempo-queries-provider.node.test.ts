@@ -12,7 +12,7 @@ vi.mock('tidx.ts', () => ({
 }))
 
 vi.mock('#lib/server/env', () => ({
-	serverEnv: { TIDX_BASIC_AUTH: 'explorer:secret' },
+	serverEnv: { TEMPO_API_KEY: 'tempo-api-secret' },
 	tempoApiUrl: 'https://api.tempo.xyz',
 }))
 
@@ -21,10 +21,10 @@ describe('Tempo query provider', () => {
 		await import('#lib/server/tempo-queries-provider')
 	})
 
-	it('authenticates TIDX requests with the configured basic auth secret', () => {
+	it('authenticates indexer requests with the Tempo API key', () => {
 		expect(mocks.create).toHaveBeenCalledWith({
-			basicAuth: 'explorer:secret',
 			baseUrl: 'https://api.tempo.xyz/v1/indexer',
+			headers: { 'tempo-api-key': 'tempo-api-secret' },
 		})
 	})
 })
