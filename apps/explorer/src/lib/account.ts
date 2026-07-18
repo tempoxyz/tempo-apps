@@ -48,6 +48,10 @@ const taggedAccounts: Record<Address.Address, AccountTag> = {
 		id: 'system:validator-config',
 		label: 'Validator Config',
 	},
+	'0xcccccccc00000000000000000000000000000001': {
+		id: 'system:validator-config-v2',
+		label: 'Validator Config V2',
+	},
 	'0x4e4f4e4345000000000000000000000000000000': {
 		id: 'system:nonce-manager',
 		label: 'Nonce Manager',

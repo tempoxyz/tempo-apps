@@ -14,6 +14,7 @@ import {
 	streamChannelAbi,
 	tip20ChannelReserveAbi,
 	tip20ChannelReserveAddress,
+	validatorConfigV2Address,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -290,6 +291,18 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/validators',
 			address: Addresses.validator,
+		},
+	],
+	[
+		validatorConfigV2Address,
+		{
+			name: 'Validator Config V2',
+			code: '0xef',
+			description: 'Manage validator lifecycle and configuration',
+			abi: Abis.validatorConfigV2,
+			category: 'system',
+			docsUrl: 'https://tips.sh/1017',
+			address: validatorConfigV2Address,
 		},
 	],
 	[
