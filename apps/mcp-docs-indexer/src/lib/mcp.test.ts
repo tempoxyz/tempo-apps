@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
+import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { handleMcp } from './mcp.js'
 import { captureMcpAnalytics, parseJsonRpcRequest } from './posthog-mcp.js'
 import type { Source } from './sources.js'
@@ -53,6 +54,14 @@ describe('handleMcp', () => {
 		expect(res).toBeDefined()
 		const body = await res?.json()
 		expect(body.result.tools).toHaveLength(3)
+		expect(body.result.tools.map((tool: Tool) => tool.annotations)).toEqual(
+			Array.from({ length: 3 }, () => ({
+				destructiveHint: false,
+				idempotentHint: true,
+				openWorldHint: true,
+				readOnlyHint: true,
+			})),
+		)
 		expect(body.result.tools[0].name).toBe('search')
 		expect(body.result.tools[0].inputSchema.properties.source.enum).toEqual([
 			'viem',
