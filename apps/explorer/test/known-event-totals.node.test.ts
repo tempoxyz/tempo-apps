@@ -12,6 +12,8 @@ function sendEvent(params: {
 	to: `0x${string}`
 	amount: bigint
 	decimals?: number
+	currency?: string
+	token?: `0x${string}`
 }): KnownEvent {
 	return {
 		type: 'send',
@@ -20,10 +22,11 @@ function sendEvent(params: {
 			{
 				type: 'amount',
 				value: {
-					token: tokenAddress,
+					token: params.token ?? tokenAddress,
 					value: params.amount,
 					decimals: params.decimals ?? 6,
 					symbol: 'PathUSD',
+					...(params.currency ? { currency: params.currency } : {}),
 				},
 			},
 			{ type: 'text', value: 'to' },
@@ -113,5 +116,44 @@ describe('calculateKnownEventsTotal', () => {
 		expect(calculateKnownEventsTotal(events)).toBe(
 			1_500_300_000_000_000_000_000n,
 		)
+	})
+
+	it('uses only priced events when priced and unpriced amounts are mixed', () => {
+		const pricedAmount = 500_000_000n
+		const unpricedAmount = 250_000_000n
+		const unpricedTokenAddress = `0x${'e'.repeat(40)}` as const
+		const events = [
+			sendEvent({
+				from: senderAddress,
+				to: recipientAddress,
+				amount: pricedAmount,
+				currency: 'USD',
+			}),
+			sendEvent({
+				from: senderAddress,
+				to: recipientAddress,
+				amount: unpricedAmount,
+				token: unpricedTokenAddress,
+			}),
+		]
+
+		expect(calculateKnownEventsTotal(events)).toBe(500n * 10n ** 18n)
+	})
+
+	it('keeps the existing raw total fallback when no events are priced', () => {
+		const amount = 500_000_000n
+		const otherAmount = 250_000_000n
+		const otherTokenAddress = `0x${'e'.repeat(40)}` as const
+		const events = [
+			sendEvent({ from: senderAddress, to: recipientAddress, amount }),
+			sendEvent({
+				from: senderAddress,
+				to: recipientAddress,
+				amount: otherAmount,
+				token: otherTokenAddress,
+			}),
+		]
+
+		expect(calculateKnownEventsTotal(events)).toBe(750n * 10n ** 18n)
 	})
 })

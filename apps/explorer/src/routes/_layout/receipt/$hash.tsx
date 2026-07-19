@@ -48,7 +48,7 @@ const RECEIVE_POLICY_GUARD = Address.from(
 function getKnownEventAmounts(
 	events: readonly KnownEvent[],
 ): NonNullable<KnownEvent['totalAmount']>[] {
-	return events.flatMap((event) => {
+	const amounts = events.flatMap((event) => {
 		if (event.type === 'approval') return []
 		if (event.totalAmount) return [event.totalAmount]
 
@@ -56,6 +56,8 @@ function getKnownEventAmounts(
 			.filter((part) => part.type === 'amount')
 			.map((part) => part.value)
 	})
+	const pricedAmounts = amounts.filter((amount) => Boolean(amount.currency))
+	return pricedAmounts.length > 0 ? pricedAmounts : amounts
 }
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
