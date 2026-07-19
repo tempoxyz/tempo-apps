@@ -97,6 +97,12 @@ const SOURCE_INDEX_CACHE_MAX_ENTRIES = 64
 const DEFAULT_MAX_PAGE_CHARS = 12_000
 const RESOURCE_INDEX_MAX_ENTRIES = 50
 const SOURCES_RESOURCE_URI = 'tempo-docs://sources'
+const READ_ONLY_TOOL_ANNOTATIONS = {
+	destructiveHint: false,
+	idempotentHint: true,
+	openWorldHint: true,
+	readOnlyHint: true,
+} as const
 
 type SearchResultChunk = AiSearchSearchResponse['chunks'][number]
 const sourceFilterFallbackUntil = new Map<string, number>()
@@ -1439,6 +1445,7 @@ function toolSchemas(sources: Source[]): Tool[] {
 		{
 			name: 'search',
 			description: 'Search Tempo, viem, wagmi, MPP, Vocs, and Regen docs.',
+			annotations: READ_ONLY_TOOL_ANNOTATIONS,
 			inputSchema: {
 				type: 'object',
 				properties: {
@@ -1499,6 +1506,7 @@ function toolSchemas(sources: Source[]): Tool[] {
 		{
 			name: 'find_pages',
 			description: 'Find page URLs from a source index.',
+			annotations: READ_ONLY_TOOL_ANNOTATIONS,
 			inputSchema: {
 				type: 'object',
 				properties: {
@@ -1530,6 +1538,7 @@ function toolSchemas(sources: Source[]): Tool[] {
 		{
 			name: 'read_page',
 			description: 'Read one cleaned docs page.',
+			annotations: READ_ONLY_TOOL_ANNOTATIONS,
 			inputSchema: {
 				type: 'object',
 				properties: {
