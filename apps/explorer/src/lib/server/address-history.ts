@@ -62,6 +62,10 @@ type TransactionRow = InferResponseType<
 	typeof api.v1.transactions.$get,
 	200
 >['data'][number]
+type TransferRow = InferResponseType<
+	typeof api.v1.transfers.$get,
+	200
+>['data'][number]
 
 function serializeBigInts<T>(value: T): T {
 	if (typeof value === 'bigint') {
@@ -187,6 +191,65 @@ export function toEnrichedTransaction(
 	}
 }
 
+export function toTransferTransaction(row: TransferRow): EnrichedTransaction {
+	const from = Address.checksum(row.sender as Address.Address)
+	const to = Address.checksum(row.recipient as Address.Address)
+	const tokenAddress = row.sourceToken.address as Address.Address
+
+	return {
+		hash: row.transactionHash as `0x${string}`,
+		blockNumber: toHexQuantity(row.blockNumber),
+		timestamp: parseTimestamp(row.timestamp) ?? 0,
+		from,
+		to,
+		value: '0x0',
+		status: 'success',
+		gasUsed: '0x0',
+		effectiveGasPrice: '0x0',
+		knownEvents: serializeBigInts([
+			{
+				type: 'send',
+				parts: [
+					{ type: 'action', value: 'Send' },
+					{
+						type: 'amount',
+						value: {
+							token: tokenAddress,
+							value: BigInt(row.sourceToken.amount),
+						},
+					},
+					{ type: 'text', value: 'to' },
+					{ type: 'account', value: to },
+				],
+				meta: { from, to },
+			},
+		]),
+	}
+}
+
+function sortTransactions(
+	transactions: readonly EnrichedTransaction[],
+	sort: 'asc' | 'desc',
+): EnrichedTransaction[] {
+	return [...transactions].sort((a, b) => {
+		const timeDiff =
+			sort === 'desc' ? b.timestamp - a.timestamp : a.timestamp - b.timestamp
+		if (timeDiff !== 0) return timeDiff
+
+		const aBlockNumber = Hex.toBigInt(a.blockNumber as Hex.Hex)
+		const bBlockNumber = Hex.toBigInt(b.blockNumber as Hex.Hex)
+		const blockDiff =
+			sort === 'desc'
+				? Number(bBlockNumber) - Number(aBlockNumber)
+				: Number(aBlockNumber) - Number(bBlockNumber)
+		if (blockDiff !== 0) return blockDiff
+
+		return sort === 'desc'
+			? b.hash.localeCompare(a.hash)
+			: a.hash.localeCompare(b.hash)
+	})
+}
+
 export async function fetchAddressHistoryData(params: {
 	address: Address.Address
 	chainId: number
@@ -229,42 +292,93 @@ export async function fetchAddressHistoryData(params: {
 				? { recipient: address }
 				: { address }
 
-	const result = await parseResponse(
-		api.v1.transactions.$get({
-			query: {
-				chainId: String(chainId),
-				...sideFilter,
-				...(searchParams.status ? { status: searchParams.status } : {}),
-				...(searchParams.after
-					? {
-							'timestamp.from': new Date(
-								searchParams.after * 1000,
-							).toISOString(),
-						}
-					: {}),
-				order: searchParams.sort,
-				limit: String(limit),
-				...(page > 1 ? { page: String(page) } : {}),
-				include: 'receipt,totalCount',
-			},
-		}),
-	)
+	const [result, transferResult] = await Promise.all([
+		parseResponse(
+			api.v1.transactions.$get({
+				query: {
+					chainId: String(chainId),
+					...sideFilter,
+					...(searchParams.status ? { status: searchParams.status } : {}),
+					...(searchParams.after
+						? {
+								'timestamp.from': new Date(
+									searchParams.after * 1000,
+								).toISOString(),
+							}
+						: {}),
+					order: searchParams.sort,
+					limit: String(limit),
+					...(page > 1 ? { page: String(page) } : {}),
+					include: 'receipt,totalCount',
+				},
+			}),
+		),
+		searchParams.include === 'all' && !searchParams.status
+			? parseResponse(
+					api.v1.transfers.$get({
+						query: {
+							chainId: String(chainId),
+							address,
+							...(searchParams.after
+								? {
+										'timestamp.from': new Date(
+											searchParams.after * 1000,
+										).toISOString(),
+									}
+								: {}),
+							order: searchParams.sort,
+							limit: String(limit),
+							...(page > 1 ? { page: String(page) } : {}),
+							include: 'totalCount',
+						},
+					}),
+				).catch((error) => {
+					console.error('[history] failed to fetch transfer history:', error)
+					return undefined
+				})
+			: Promise.resolve(undefined),
+	])
 
 	const getTokenMetadata = includeKnownEvents
 		? await buildTokenMetadataLookup(result.data)
 		: () => undefined
 
-	const transactions = result.data.map((row) =>
+	const transactionsByHash = new Map<string, EnrichedTransaction>()
+	for (const transaction of result.data.map((row) =>
 		toEnrichedTransaction(row, { includeKnownEvents, getTokenMetadata }),
-	)
+	)) {
+		transactionsByHash.set(transaction.hash.toLowerCase(), transaction)
+	}
+	for (const transaction of (transferResult?.data ?? []).map(
+		toTransferTransaction,
+	)) {
+		if (!transactionsByHash.has(transaction.hash.toLowerCase())) {
+			transactionsByHash.set(transaction.hash.toLowerCase(), transaction)
+		}
+	}
+
+	const transactions = sortTransactions(
+		[...transactionsByHash.values()],
+		searchParams.sort,
+	).slice(0, limit)
 
 	const { total, totalCapped } = resolveTotal({
-		exactCount: result.meta?.totalCount,
-		exactCountCapped: result.meta?.totalCountCapped,
+		exactCount:
+			result.meta?.totalCount === undefined &&
+			transferResult?.meta?.totalCount === undefined
+				? undefined
+				: Math.max(
+						result.meta?.totalCount ?? 0,
+						transferResult?.meta?.totalCount ?? 0,
+					),
+		exactCountCapped:
+			result.meta?.totalCountCapped || transferResult?.meta?.totalCountCapped,
 		page,
 		limit,
 		rows: transactions.length,
-		exhausted: result.nextCursor === null,
+		exhausted:
+			result.nextCursor === null &&
+			(transferResult?.nextCursor ?? null) === null,
 	})
 
 	return {
@@ -272,7 +386,9 @@ export async function fetchAddressHistoryData(params: {
 		total,
 		page,
 		limit,
-		hasMore: result.nextCursor !== null,
+		hasMore:
+			result.nextCursor !== null ||
+			(transferResult ? transferResult.nextCursor !== null : false),
 		countCapped: totalCapped,
 		error: null,
 	}
