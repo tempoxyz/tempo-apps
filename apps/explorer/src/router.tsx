@@ -11,6 +11,7 @@ import {
 	ProfileEvents,
 } from '#lib/profiling'
 import { initSentry } from '#lib/sentry'
+import { shouldRetryQuery } from '#lib/query-retry'
 import { routeTree } from '#routeTree.gen.ts'
 
 const queryStartTimes = new WeakMap<object, number>()
@@ -20,6 +21,7 @@ export const getRouter = () => {
 	const queryClient: QueryClient = new QueryClient({
 		defaultOptions: {
 			queries: {
+				retry: shouldRetryQuery,
 				staleTime: 60 * 1_000, // needed for SSR - prevents refetch on hydration
 				gcTime: 1_000 * 60 * 60 * 24, // 24 hours
 				queryKeyHashFn: hashFn,
