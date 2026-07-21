@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/cloudflare'
 import { hc } from 'hono/client'
 import { serverEnv, tempoApiUrl } from './env.ts'
 
-const ALERTABLE_STATUSES = new Set([401, 402, 403, 429])
+const ALERTABLE_STATUSES = new Set([402, 403, 429])
 const REPORT_THROTTLE_MS = 60_000
 const lastReportedAt = new Map<string, number>()
 
