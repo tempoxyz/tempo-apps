@@ -18,6 +18,7 @@ import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
+import { FeePayer } from '#comps/FeePayer'
 import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -368,6 +369,12 @@ function OverviewSection(props: {
 	const isExpiringNonce = nonceKey === 2n ** 256n - 1n
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
+	const feePayer =
+		'feePayer' in receipt &&
+		typeof receipt.feePayer === 'string' &&
+		OxAddressUtil.validate(receipt.feePayer)
+			? receipt.feePayer
+			: undefined
 
 	const memos = knownEvents
 		.map((event) => event.note)
@@ -428,6 +435,11 @@ function OverviewSection(props: {
 					</span>
 				)}
 			</InfoRow>
+			{feePayer && (
+				<InfoRow label="Fee Payer">
+					<FeePayer address={feePayer} />
+				</InfoRow>
+			)}
 			<InfoRow label="Gas Used">
 				<span className="text-primary">
 					{gasUsed.toLocaleString()} / {gasLimit.toLocaleString()}{' '}
