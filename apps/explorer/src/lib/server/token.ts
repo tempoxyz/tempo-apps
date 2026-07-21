@@ -42,8 +42,9 @@ const tokenDetailsCache = new Map<
 
 /**
  * Cached token detail lookup shared by the holders / transfers server fns:
- * exact `holderCount`, `totalSupply`, the `TokenCreated` timestamp, and
- * lifetime `transferStats`.
+ * exact `holderCount`, `totalSupply`, and lifetime `transferStats`.
+ * `createdAt` is intentionally omitted because the creation lookup can add
+ * several seconds and neither paginated view consumes it.
  */
 async function getTokenDetails(
 	chainId: number,
@@ -58,7 +59,7 @@ async function getTokenDetails(
 			param: { token: address },
 			query: {
 				chainId: String(chainId),
-				include: 'createdAt,holderCount,transferStats',
+				include: 'holderCount,transferStats',
 			},
 		}),
 	).catch((error) => {
@@ -357,7 +358,7 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 			}
 		} catch (error) {
 			console.error('Failed to fetch account transfers:', error)
-			return EMPTY_ACCOUNT_TRANSFERS_RESPONSE
+			throw error
 		}
 	})
 
@@ -409,6 +410,6 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 			}
 		} catch (error) {
 			console.error('Failed to fetch transfers:', error)
-			return EMPTY_TRANSFERS_RESPONSE
+			throw error
 		}
 	})

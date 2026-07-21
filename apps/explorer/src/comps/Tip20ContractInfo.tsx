@@ -45,7 +45,7 @@ export function Tip20TokenTabContent(
 		},
 	})
 
-	const { data: tip20Data } = useQuery<{
+	const { data: tip20Data, refetch: refetchTip20Data } = useQuery<{
 		roles: Array<{
 			role: string
 			roleHash: string
@@ -53,6 +53,7 @@ export function Tip20TokenTabContent(
 			grantedAt?: number
 			grantedTx?: `0x${string}`
 		}>
+		rolesUnavailable: boolean
 		config: {
 			supplyCap: string | null
 			totalSupply: string | null
@@ -72,16 +73,7 @@ export function Tip20TokenTabContent(
 			)
 			const response = await fetch(url)
 			if (!response.ok)
-				return {
-					roles: [],
-					config: {
-						supplyCap: null,
-						totalSupply: null,
-						currency: null,
-						transferPolicyId: null,
-						paused: null,
-					},
-				}
+				throw new Error(`Failed to fetch TIP-20 data: ${response.status}`)
 			return response.json()
 		},
 	})
@@ -186,7 +178,20 @@ export function Tip20TokenTabContent(
 				onToggle={() => setRolesExpanded(!rolesExpanded)}
 			>
 				<div className="px-[18px] py-[12px]">
-					{roles && roles.length > 0 ? (
+					{tip20Data?.rolesUnavailable ? (
+						<div className="flex items-center gap-2 text-[13px]">
+							<span className="text-tertiary">
+								Roles are temporarily unavailable.
+							</span>
+							<button
+								type="button"
+								className="text-accent hover:underline"
+								onClick={() => void refetchTip20Data()}
+							>
+								Try again
+							</button>
+						</div>
+					) : roles && roles.length > 0 ? (
 						<div className="flex flex-col gap-[8px] text-[13px]">
 							{roles.map((r) => {
 								const info = getContractInfo(r.account)

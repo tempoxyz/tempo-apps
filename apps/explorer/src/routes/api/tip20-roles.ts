@@ -60,7 +60,11 @@ export type Tip20Config = {
 	symbol: string | null
 }
 
-export type Tip20RolesResponse = { roles: RoleHolder[]; config: Tip20Config }
+export type Tip20RolesResponse = {
+	roles: RoleHolder[]
+	rolesUnavailable: boolean
+	config: Tip20Config
+}
 
 export const Route = createFileRoute('/api/tip20-roles')({
 	server: {
@@ -125,6 +129,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 					}
 
 					const roles: RoleHolder[] = []
+					let rolesUnavailable = false
 					try {
 						const roleLogs = await tempoQueryBuilder(chainId)
 							.selectFrom('logs')
@@ -196,14 +201,20 @@ export const Route = createFileRoute('/api/tip20-roles')({
 						}
 					} catch (error) {
 						console.error('[tip20-roles] failed to fetch role logs:', error)
-						throw error
+						rolesUnavailable = true
 					}
 
 					return Response.json(
-						{ roles, config: tip20Config } satisfies Tip20RolesResponse,
+						{
+							roles,
+							rolesUnavailable,
+							config: tip20Config,
+						} satisfies Tip20RolesResponse,
 						{
 							headers: {
-								'Cache-Control': 'public, max-age=300',
+								'Cache-Control': rolesUnavailable
+									? 'no-store'
+									: 'public, max-age=300',
 							},
 						},
 					)

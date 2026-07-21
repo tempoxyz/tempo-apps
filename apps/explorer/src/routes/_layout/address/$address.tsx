@@ -630,6 +630,9 @@ function RouteComponent() {
 	const prefetchedRef = React.useRef<string | null>(null)
 	React.useEffect(() => {
 		if (prefetchedRef.current === address) return
+		// Keep the transfers request isolated from slower history/holder queries.
+		// Those tabs fetch normally when the user opens them.
+		if (tab === 'transfers') return
 
 		const after =
 			period === '24h'
@@ -654,7 +657,7 @@ function RouteComponent() {
 					}),
 				)
 
-			if (visibleTabs.includes('transfers') && tab !== 'transfers') {
+			if (visibleTabs.includes('transfers')) {
 				if (isToken)
 					void queryClient.prefetchQuery(
 						transfersQueryOptions({ address, page: 1, limit, account }),
@@ -1102,6 +1105,8 @@ function SectionsWrapper(props: {
 		data: transfersData,
 		isPending: isTransfersPending,
 		isFetching: isTransfersFetching,
+		error: tokenTransfersError,
+		refetch: refetchTransfers,
 	} = useQuery({
 		...transfersQueryOptions({
 			address,
@@ -1118,6 +1123,8 @@ function SectionsWrapper(props: {
 		data: accountTransfersData,
 		isPending: isAccountTransfersPending,
 		isFetching: isAccountTransfersFetching,
+		error: accountTransfersError,
+		refetch: refetchAccountTransfers,
 	} = useQuery({
 		...accountTransfersQueryOptions({
 			account: address,
@@ -1167,9 +1174,16 @@ function SectionsWrapper(props: {
 		isTransactionsTabActive && !error && (isHistoryPending || !historyData)
 	const isTransactionsFetching =
 		isTransactionsTabActive && isHistoryFetching && !isTransactionsLoading
+	const transfersError = isToken ? tokenTransfersError : accountTransfersError
+	const refetchActiveTransfers = isToken
+		? refetchTransfers
+		: refetchAccountTransfers
 	const isTransfersLoading = isToken
-		? isTransfersTabActive && (isTransfersPending || !transfersData)
+		? isTransfersTabActive &&
+			!transfersError &&
+			(isTransfersPending || !transfersData)
 		: isTransfersTabActive &&
+			!transfersError &&
 			(isAccountTransfersPending || !accountTransfersData)
 	const isTransfersFetchingNext = isToken
 		? isTransfersTabActive && isTransfersFetching && !isTransfersLoading
@@ -1608,6 +1622,29 @@ function SectionsWrapper(props: {
 				}
 			}
 			case 'transfers': {
+				if (transfersError) {
+					return {
+						title: 'Transfers',
+						itemsLabel: 'transfers',
+						content: (
+							<div className="rounded-[10px] bg-card-header p-4.5">
+								<p className="text-sm font-medium text-red-400">
+									Transfers are temporarily unavailable
+								</p>
+								<p className="mt-1 text-xs text-tertiary">
+									The Tempo API could not complete this request.
+								</p>
+								<button
+									type="button"
+									className="mt-3 rounded-[6px] bg-distinct px-3 py-1.5 text-xs text-primary transition-colors hover:bg-base-alt"
+									onClick={() => void refetchActiveTransfers()}
+								>
+									Try again
+								</button>
+							</div>
+						),
+					}
+				}
 				if (!isToken) {
 					// Account-scoped view: rows span multiple tokens, so amounts
 					// carry per-row token metadata.

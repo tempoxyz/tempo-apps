@@ -116,6 +116,7 @@ describe('TIP-20 roles API', () => {
 
 		expect(response.status).toBe(200)
 		expect(await response.json()).toMatchObject({
+			rolesUnavailable: false,
 			roles: [
 				{
 					role: 'PAUSE',
@@ -147,18 +148,25 @@ describe('TIP-20 roles API', () => {
 		expect(limitIndex).toBeGreaterThan(topicFilterIndex)
 	})
 
-	it('returns an uncached server error when the role query fails', async () => {
+	it('returns config without caching when the role query fails', async () => {
 		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 		mocks.setQueryResult(new Error('TIDX unavailable'))
 
 		try {
 			const response = await handler({ request: request() })
 
-			expect(response.status).toBe(500)
-			expect(response.headers.has('Cache-Control')).toBe(false)
-			expect(await response.json()).toEqual({
-				data: null,
-				error: 'TIDX unavailable',
+			expect(response.status).toBe(200)
+			expect(response.headers.get('Cache-Control')).toBe('no-store')
+			expect(await response.json()).toMatchObject({
+				roles: [],
+				rolesUnavailable: true,
+				config: {
+					totalSupply: '100 CADD',
+					supplyCap: '1 CADD',
+					currency: 'CAD',
+					transferPolicyId: '1',
+					paused: false,
+				},
 			})
 		} finally {
 			consoleError.mockRestore()
