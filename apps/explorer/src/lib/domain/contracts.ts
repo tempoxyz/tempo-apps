@@ -19,6 +19,9 @@ import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
+const validatorConfigV2Address =
+	'0xcccccccc00000000000000000000000000000001' as const
+
 /**
  * Registry of known contract addresses to their ABIs and metadata.
  * This enables the explorer to render contract interfaces for any precompile.
@@ -283,13 +286,25 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 	[
 		Addresses.validator,
 		{
-			name: 'Validator Config',
+			name: 'Validator Contract V1 (legacy)',
 			code: '0xef',
 			description: 'Manage validator set and configuration',
 			abi: Abis.validatorConfig,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/validators',
 			address: Addresses.validator,
+		},
+	],
+	[
+		validatorConfigV2Address,
+		{
+			name: 'Validator Contract',
+			code: '0xef',
+			description: 'Manage validator set and configuration',
+			abi: Abis.validatorConfigV2,
+			category: 'system',
+			docsUrl: 'https://tips.sh/1017',
+			address: validatorConfigV2Address,
 		},
 	],
 	[
