@@ -102,7 +102,7 @@ function buildAddressResult(address: Address.Address): AddressSearchResult {
 	}
 }
 
-function searchKnownContracts(query: string): AddressSearchResult[] {
+export function searchKnownContracts(query: string): AddressSearchResult[] {
 	const normalizedQuery = query.toLowerCase()
 	if (normalizedQuery.length < 2) return []
 

@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { searchTokens } from '../src/routes/api/search.ts'
+import { searchKnownContracts, searchTokens } from '../src/routes/api/search.ts'
+
+describe('searchKnownContracts', () => {
+	it('ranks the V2 validator contract before the legacy V1 contract', () => {
+		const results = searchKnownContracts('validator contract')
+
+		expect(results.slice(0, 2).map(({ label }) => label)).toEqual([
+			'Validator Contract',
+			'Validator Contract V1 (legacy)',
+		])
+	})
+})
 
 describe('searchTokens', () => {
 	it('finds verified tokens missing from the static index by symbol', () => {
