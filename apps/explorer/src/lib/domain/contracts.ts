@@ -286,7 +286,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 	[
 		Addresses.validator,
 		{
-			name: 'Validator Contract V1 (legacy)',
+			name: 'Validator Config V1 (legacy)',
 			code: '0xef',
 			description: 'Manage validator set and configuration',
 			abi: Abis.validatorConfig,
@@ -298,7 +298,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 	[
 		validatorConfigV2Address,
 		{
-			name: 'Validator Contract',
+			name: 'Validator Config',
 			code: '0xef',
 			description: 'Manage validator set and configuration',
 			abi: Abis.validatorConfigV2,
