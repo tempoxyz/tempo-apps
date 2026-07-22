@@ -50,6 +50,10 @@ const mocks = vi.hoisted(() => {
 		setQueryResult(result: unknown[] | Error) {
 			queryResult = result
 		},
+		tempoQueryBuilder(...args: unknown[]) {
+			queryCalls.push(['tempoQueryBuilder', ...args])
+			return queryBuilder
+		},
 	}
 })
 
@@ -59,7 +63,7 @@ vi.mock('wagmi/actions', () => ({
 }))
 
 vi.mock('#lib/server/tempo-queries-provider', () => ({
-	tempoQueryBuilder: () => mocks.queryBuilder,
+	tempoQueryBuilder: mocks.tempoQueryBuilder,
 }))
 
 vi.mock('#wagmi.config', () => ({
@@ -97,7 +101,7 @@ describe('TIP-20 roles API', () => {
 		])
 	})
 
-	it('filters role events by topic before applying the scan limit', async () => {
+	it('queries ClickHouse by selector before applying the scan limit', async () => {
 		const pauseRole = Hash.keccak256(Hex.fromString('PAUSE_ROLE'))
 		mocks.setQueryResult([
 			{
@@ -127,10 +131,10 @@ describe('TIP-20 roles API', () => {
 			],
 		})
 
-		const topicFilterIndex = mocks.queryCalls.findIndex(
+		const selectorFilterIndex = mocks.queryCalls.findIndex(
 			(call) =>
 				call[0] === 'where' &&
-				call[1] === 'topic0' &&
+				call[1] === 'selector' &&
 				call[2] === '=' &&
 				call[3] === ROLE_MEMBERSHIP_UPDATED_SELECTOR,
 		)
@@ -139,13 +143,18 @@ describe('TIP-20 roles API', () => {
 		)
 
 		expect(mocks.queryCalls).toContainEqual([
+			'tempoQueryBuilder',
+			4217,
+			{ engine: 'clickhouse' },
+		])
+		expect(mocks.queryCalls).toContainEqual([
 			'where',
 			'address',
 			'=',
 			TOKEN_ADDRESS,
 		])
-		expect(topicFilterIndex).toBeGreaterThan(-1)
-		expect(limitIndex).toBeGreaterThan(topicFilterIndex)
+		expect(selectorFilterIndex).toBeGreaterThan(-1)
+		expect(limitIndex).toBeGreaterThan(selectorFilterIndex)
 	})
 
 	it('returns config without caching when the role query fails', async () => {

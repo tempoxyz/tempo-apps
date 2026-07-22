@@ -131,7 +131,9 @@ export const Route = createFileRoute('/api/tip20-roles')({
 					const roles: RoleHolder[] = []
 					let rolesUnavailable = false
 					try {
-						const roleLogs = await tempoQueryBuilder(chainId)
+						const roleLogs = await tempoQueryBuilder(chainId, {
+							engine: 'clickhouse',
+						})
 							.selectFrom('logs')
 							.select([
 								'topic0',
@@ -144,7 +146,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 								'log_idx',
 							])
 							.where('address', '=', address)
-							.where('topic0', '=', ROLE_MEMBERSHIP_UPDATED_SELECTOR)
+							.where('selector', '=', ROLE_MEMBERSHIP_UPDATED_SELECTOR)
 							.orderBy('block_num', 'asc')
 							.orderBy('log_idx', 'asc')
 							.limit(ROLE_LOG_SCAN_LIMIT)

@@ -4,10 +4,11 @@ const mocks = vi.hoisted(() => ({
 	create: vi.fn(() => ({
 		on: vi.fn(),
 	})),
+	from: vi.fn(),
 }))
 
 vi.mock('tidx.ts', () => ({
-	QB: { from: vi.fn() },
+	QB: { from: mocks.from },
 	Tidx: { create: mocks.create },
 }))
 
@@ -17,8 +18,10 @@ vi.mock('#lib/server/env', () => ({
 }))
 
 describe('Tempo query provider', () => {
+	let provider: typeof import('#lib/server/tempo-queries-provider')
+
 	beforeAll(async () => {
-		await import('#lib/server/tempo-queries-provider')
+		provider = await import('#lib/server/tempo-queries-provider')
 	})
 
 	it('authenticates indexer requests with the Tempo API key', () => {
@@ -26,5 +29,13 @@ describe('Tempo query provider', () => {
 			baseUrl: 'https://api.tempo.xyz/v1/indexer',
 			headers: { 'tempo-api-key': 'tempo-api-secret' },
 		})
+	})
+
+	it('forwards the query engine', () => {
+		provider.tempoQueryBuilder(4217, { engine: 'clickhouse' })
+
+		expect(mocks.from).toHaveBeenCalledWith(
+			expect.objectContaining({ chainId: 4217, engine: 'clickhouse' }),
+		)
 	})
 })

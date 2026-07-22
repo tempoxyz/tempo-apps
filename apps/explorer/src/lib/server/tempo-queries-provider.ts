@@ -22,8 +22,11 @@ tidx.on('response', (res) => {
 			)
 })
 
-export function tempoQueryBuilder(chainId: number) {
-	return QB.from({ ...tidx, chainId })
+export function tempoQueryBuilder(
+	chainId: number,
+	options: { engine?: string | undefined } = {},
+) {
+	return QB.from({ ...tidx, chainId, ...options })
 }
 
 export { tidx }
