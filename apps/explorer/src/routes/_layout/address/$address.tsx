@@ -54,6 +54,7 @@ import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
 	type AssetData,
+	type BalancesResponse,
 	balancesQueryOptions,
 	calculateTotalHoldings,
 	useBalancesData,
@@ -75,7 +76,7 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import {
 	buildAddressDescription,
@@ -91,7 +92,6 @@ import {
 	transfersQueryOptions,
 } from '#lib/queries/tokens'
 import { areUsdPricedTokens } from '#lib/pricing'
-import { fetchAddressBalances } from '#lib/server/address-balances'
 import { fetchAddressMetadata } from '#lib/server/address-metadata'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
@@ -295,47 +295,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const shouldFetchBalances = !isKnownTokenAddress
-			const balancesPromise = shouldFetchBalances
-				? timeout(
-						context.queryClient
-							.ensureQueryData(balancesQueryOptions(address))
-							.catch((error) => {
-								console.error('Fetch balances error:', error)
-								return undefined
-							}),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
-
-			// Fetch address metadata through a server fn (in-process during SSR —
-			// the Worker cannot fetch its own hostname — an RPC from the browser,
-			// keeping TIDX credentials server-side). Goes through the query cache
-			// (shared with the component query) so paging within the same address
-			// reuses the entry instead of re-running the slow count query on
-			// every navigation.
-			const ogMetaPromise = timeout(
-				context.queryClient
-					.ensureQueryData(addressMetadataQueryOptions(address))
-					.catch(() => undefined),
-				QUERY_TIMEOUT_MS,
-			)
-
-			const [
-				contractBytecode,
-				transactionsData,
-				balancesResult,
-				tokenMetadata,
-				tokenLogoURI,
-				ogMeta,
-			] = await Promise.all([
-				contractBytecodePromise,
-				transactionsPromise,
-				balancesPromise,
-				tokenMetadataPromise,
-				tokenLogoURIPromise,
-				ogMetaPromise,
-			])
+			const [contractBytecode, transactionsData, tokenMetadata, tokenLogoURI] =
+				await Promise.all([
+					contractBytecodePromise,
+					transactionsPromise,
+					tokenMetadataPromise,
+					tokenLogoURIPromise,
+				])
 
 			const accountType = getAccountType(contractBytecode)
 
@@ -344,9 +310,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const isKnownToken = isKnownTokenAddress
 			const isToken =
 				isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
-			// Discard balance results for token addresses to avoid stale/misleading data
-			const balancesData = isToken ? undefined : balancesResult
 			const contractSource: ContractSource | undefined = undefined
+			const balancesData: BalancesResponse | undefined = undefined
+			const ogMeta:
+				| Awaited<ReturnType<typeof fetchAddressMetadata>>
+				| undefined = undefined
 
 			return {
 				live,
@@ -366,17 +334,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				ogMeta,
 			}
 		}),
-	head: async ({ params, loaderData }) => {
-		const address = params.address as Address.Address
-		const ogMeta =
-			loaderData?.ogMeta ??
-			(await fetchAddressMetadata({ data: address }).catch(() => undefined))
-		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
-		// since 'empty' is the correct type for regular EOAs
-		let accountType = loaderData?.accountType ?? 'empty'
-		if (accountType === 'empty' && ogMeta?.accountType === 'contract') {
-			accountType = 'contract'
-		}
+	head: ({ params, loaderData }) => {
+		// Never retry timed-out enrichment while generating metadata. The head
+		// must be available with the initial response; richer data can load in
+		// the page after hydration.
+		const accountType = loaderData?.accountType ?? 'empty'
 		const isToken = loaderData?.isToken ?? false
 		const tokenMeta = loaderData?.tokenMetadata
 
@@ -410,13 +372,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const supply = formatSupply(totalSupply)
 			const chainId = getTempoChain().id
 
-			let created: string | undefined
-			if (ogMeta?.createdTimestamp) {
-				created = DateFormatter.formatTimestampForOg(
-					BigInt(ogMeta.createdTimestamp),
-				).date
-			}
-
 			description = buildTokenDescription({
 				name: tokenMeta.name ?? '—',
 				symbol: tokenMeta.symbol,
@@ -430,46 +385,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				symbol: tokenMeta.symbol,
 				supply,
 				currency: tokenMeta.currency ?? undefined,
-				holders: ogMeta?.holdersCount ?? undefined,
-				created,
+				holders: undefined,
+				created: undefined,
 			})
 		} else {
-			const txCount =
-				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
-			const balancesData =
-				loaderData?.balancesData ??
-				(await fetchAddressBalances({ data: address }).catch(() => undefined))
+			const txCount = loaderData?.transactionsData?.total ?? 0
 			let lastActive: string | undefined
 			let created: string | undefined
-			let holdings = '—'
-
-			if (balancesData?.balances) {
-				const totalValue = calculateTotalHoldings(
-					balancesData.balances.map((b) => ({
-						address: b.token,
-						metadata: {
-							decimals: b.decimals,
-							currency: b.currency,
-						},
-						balance: BigInt(b.balance),
-					})),
-				)
-				if (totalValue && totalValue > 0) {
-					holdings = PriceFormatter.format(totalValue, { format: 'short' })
-				}
-			}
-
-			if (ogMeta?.lastActivityTimestamp) {
-				lastActive = DateFormatter.formatTimestampForOg(
-					BigInt(ogMeta.lastActivityTimestamp),
-				).date
-			}
-
-			if (ogMeta?.createdTimestamp) {
-				created = DateFormatter.formatTimestampForOg(
-					BigInt(ogMeta.createdTimestamp),
-				).date
-			}
+			const holdings = '—'
 
 			description = buildAddressDescription(
 				{ holdings, txCount },
@@ -523,10 +446,12 @@ function RouteComponent() {
 	} = Route.useLoaderData()
 
 	Address.assert(address)
+	const isMounted = useIsMounted()
 
-	const { data: addressMetadata } = useQuery(
-		addressMetadataQueryOptions(address),
-	)
+	const { data: addressMetadata } = useQuery({
+		...addressMetadataQueryOptions(address),
+		enabled: isMounted,
+	})
 
 	const hash = location.hash
 
@@ -616,12 +541,10 @@ function RouteComponent() {
 	const activeSection =
 		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
-	const isHoldingsTabActive = tab === 'holdings'
-
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
-		!isToken && (isHoldingsTabActive || balancesData !== undefined),
+		isMounted && !isToken,
 	)
 	// Warm the first page of every non-active tab once the active tab has had a
 	// moment to start loading, so switching tabs is instant. Runs once per

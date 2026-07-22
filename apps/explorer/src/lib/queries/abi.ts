@@ -96,8 +96,59 @@ export function lookupSignatureQueryOptions(args: { selector?: Hex }) {
 		gcTime: Number.POSITIVE_INFINITY,
 		staleTime: Number.POSITIVE_INFINITY,
 		queryKey: ['lookup-signature', selector],
-		queryFn: () => lookupSignature(selector as Hex),
+		queryFn: () => lookupSignatureBatched(selector as Hex),
 	})
+}
+
+type SignatureRequest = {
+	resolve: (signature: string | null) => void
+	reject: (error: unknown) => void
+}
+
+let pendingSignatureRequests = new Map<Hex, SignatureRequest[]>()
+let signatureBatchTimer: ReturnType<typeof setTimeout> | undefined
+
+/**
+ * Coalesce signature lookups started during the same render into one request.
+ * Server-side callers use the in-process lookup directly; browser callers use
+ * the batch endpoint so transaction lists do not fan out to OpenChain.
+ */
+function lookupSignatureBatched(selector: Hex): Promise<string | null> {
+	if (typeof window === 'undefined') return lookupSignature(selector)
+
+	return new Promise((resolve, reject) => {
+		const requests = pendingSignatureRequests.get(selector) ?? []
+		requests.push({ resolve, reject })
+		pendingSignatureRequests.set(selector, requests)
+
+		if (signatureBatchTimer) return
+		signatureBatchTimer = setTimeout(flushSignatureBatch, 0)
+	})
+}
+
+async function flushSignatureBatch(): Promise<void> {
+	const requests = pendingSignatureRequests
+	pendingSignatureRequests = new Map()
+	signatureBatchTimer = undefined
+
+	try {
+		const response = await fetch(getApiUrl('/api/abi/batch'), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ addresses: [], selectors: [...requests.keys()] }),
+		})
+		if (!response.ok) throw new Error('Failed to fetch signature batch')
+
+		const data = (await response.json()) as BatchAbiResponse
+		for (const [selector, callbacks] of requests) {
+			const signature = data.signatures[selector.toLowerCase()] ?? null
+			for (const callback of callbacks) callback.resolve(signature)
+		}
+	} catch (error) {
+		for (const callbacks of requests.values()) {
+			for (const callback of callbacks) callback.reject(error)
+		}
+	}
 }
 
 export function useLookupSignature(args: {
