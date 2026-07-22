@@ -132,6 +132,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 					let rolesUnavailable = false
 					try {
 						const roleLogs = await tempoQueryBuilder(chainId, {
+							// TODO: Switch to TIDX 1.0 once released.
 							engine: 'clickhouse',
 						})
 							.selectFrom('logs')
