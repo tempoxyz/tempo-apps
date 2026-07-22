@@ -5,16 +5,8 @@ import { VirtualAddress } from 'ox/tempo'
 import { getCode } from 'viem/actions'
 import { type AccountType, getAccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
-import {
-	type ContractCreationData,
-	fetchContractCreationData,
-} from '#lib/server/contract-creation'
 import { api } from '#lib/server/tempo-api'
 import {
-	type ContractCreationReceiptRow,
-	fetchAddressOldestTx,
-	fetchAddressTxStats,
-	fetchContractCreationReceipt,
 	fetchTokenTransferBoundaries,
 	fetchVirtualAddressTransferStats,
 } from '#lib/server/tempo-queries'
@@ -59,27 +51,15 @@ type AddressTxAggregate = {
 export function pickTip20CreatedTimestamp(params: {
 	tokenCreatedTimestamp: unknown
 	firstTransferTimestamp: unknown
-	contractCreationTimestamp?: unknown
 }): number | undefined {
 	const tokenCreatedTimestamp = parseTimestamp(params.tokenCreatedTimestamp)
 	const firstTransferTimestamp = parseTimestamp(params.firstTransferTimestamp)
-	const contractCreationTimestamp = parseTimestamp(
-		params.contractCreationTimestamp,
-	)
 
 	if (tokenCreatedTimestamp != null) return tokenCreatedTimestamp
-
-	return contractCreationTimestamp != null &&
-		(firstTransferTimestamp == null ||
-			contractCreationTimestamp < firstTransferTimestamp)
-		? contractCreationTimestamp
-		: firstTransferTimestamp
+	return firstTransferTimestamp
 }
 
-export function buildAddressTxMetadata(
-	aggregate: AddressTxAggregate,
-	creation: ContractCreationReceiptRow | ContractCreationData | undefined,
-): {
+export function buildAddressTxMetadata(aggregate: AddressTxAggregate): {
 	txCount: number
 	lastActivityTimestamp?: number
 	createdTimestamp?: number
@@ -87,32 +67,53 @@ export function buildAddressTxMetadata(
 	createdBy?: string
 } {
 	const oldestTimestamp = parseTimestamp(aggregate.oldestTxsBlockTimestamp)
-	const creationTimestamp = parseTimestamp(
-		creation && 'block_timestamp' in creation
-			? creation.block_timestamp
-			: creation?.timestamp,
-	)
-	const useCreation =
-		creationTimestamp != null &&
-		(oldestTimestamp == null || creationTimestamp <= oldestTimestamp)
 
 	return {
-		txCount: (aggregate.count ?? 0) + (creation ? 1 : 0),
+		txCount: aggregate.count ?? 0,
 		lastActivityTimestamp: parseTimestamp(aggregate.latestTxsBlockTimestamp),
-		createdTimestamp:
-			useCreation && creationTimestamp != null
-				? creationTimestamp
-				: oldestTimestamp,
-		createdTxHash:
-			useCreation && creation
-				? 'tx_hash' in creation
-					? creation.tx_hash
-					: (creation.hash ?? undefined)
-				: aggregate.oldestTxHash,
-		createdBy:
-			useCreation && creation
-				? (creation.from ?? undefined)
-				: aggregate.oldestTxFrom,
+		createdTimestamp: oldestTimestamp,
+		createdTxHash: aggregate.oldestTxHash,
+		createdBy: aggregate.oldestTxFrom,
+	}
+}
+
+/** Address activity boundaries and count from structured Tempo API pages. */
+export async function fetchAddressTxMetadata(
+	chainId: number,
+	address: Address.Address,
+): Promise<AddressTxAggregate> {
+	const [oldestPage, latestPage] = await Promise.all([
+		parseResponse(
+			api.v1.transactions.$get({
+				query: {
+					address,
+					chainId: String(chainId),
+					include: 'totalCount',
+					limit: '5',
+					order: 'asc',
+				},
+			}),
+		),
+		parseResponse(
+			api.v1.transactions.$get({
+				query: {
+					address,
+					chainId: String(chainId),
+					limit: '5',
+					order: 'desc',
+				},
+			}),
+		),
+	])
+	const oldest = oldestPage.data[0]
+	const latest = latestPage.data[0]
+
+	return {
+		count: oldestPage.meta?.totalCount,
+		latestTxsBlockTimestamp: latest?.timestamp,
+		oldestTxsBlockTimestamp: oldest?.timestamp,
+		oldestTxHash: oldest?.hash,
+		oldestTxFrom: oldest?.sender,
 	}
 }
 
@@ -211,11 +212,6 @@ async function loadAddressMetadata(
 				latestTimestamp: undefined,
 			})),
 		])
-		const contractCreation =
-			stats?.createdAt == null
-				? await fetchContractCreationData(address).catch(() => null)
-				: null
-
 		response = {
 			address,
 			chainId,
@@ -225,36 +221,17 @@ async function loadAddressMetadata(
 			createdTimestamp: pickTip20CreatedTimestamp({
 				tokenCreatedTimestamp: stats?.createdAt,
 				firstTransferTimestamp: boundaries.oldestTimestamp,
-				contractCreationTimestamp: contractCreation?.timestamp,
 			}),
 		}
 	} else {
-		// One aggregate (exact distinct count + boundaries) + the oldest
-		// tx row for the "created by" stat. Creation receipt stays on
-		// the SQL lane (D4.1) with the existing RPC bisection fallback.
-		const [bytecode, stats, oldestTx, indexedCreation] = await Promise.all([
+		// Structured Tempo API pages provide the first and latest indexed activity
+		// without the historical RPC binary search previously used for contracts.
+		const [bytecode, stats] = await Promise.all([
 			bytecodePromise,
-			fetchAddressTxStats(address, chainId),
-			fetchAddressOldestTx(address, chainId).catch(() => undefined),
-			fetchContractCreationReceipt(address, chainId).catch(() => undefined),
+			fetchAddressTxMetadata(chainId, address),
 		])
 		const accountType = getAccountType(bytecode)
-		const creation =
-			indexedCreation ??
-			(accountType === 'contract'
-				? await fetchContractCreationData(address).catch(() => null)
-				: undefined) ??
-			undefined
-		const metadata = buildAddressTxMetadata(
-			{
-				count: stats.count,
-				latestTxsBlockTimestamp: stats.latestTimestamp,
-				oldestTxsBlockTimestamp: stats.oldestTimestamp,
-				oldestTxHash: oldestTx?.hash,
-				oldestTxFrom: oldestTx?.from,
-			},
-			creation,
-		)
+		const metadata = buildAddressTxMetadata(stats)
 
 		response = {
 			address,
