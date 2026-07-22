@@ -248,13 +248,17 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				QUERY_TIMEOUT_MS,
 			)
 
-			// Try to fetch token metadata (non-blocking, used for isToken detection)
-			const tokenMetadataPromise = timeout(
-				Actions.token
-					.getMetadata(config as Config, { token: address })
-					.catch(() => null),
-				QUERY_TIMEOUT_MS,
-			)
+			// TIP-20 addresses have a reserved prefix, and legacy tokens are listed in
+			// the contract registry. Avoid probing arbitrary accounts for token methods:
+			// those calls run until the full timeout and block the initial Worker HTML.
+			const tokenMetadataPromise = isKnownTokenAddress
+				? timeout(
+						Actions.token
+							.getMetadata(config as Config, { token: address })
+							.catch(() => null),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(null)
 			const tokenLogoURIPromise = isKnownTokenAddress
 				? timeout(
 						Tip20.fetchLogoURI(config as Config, address as Address.Address),
