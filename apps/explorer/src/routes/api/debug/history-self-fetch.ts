@@ -71,11 +71,20 @@ export const Route = createFileRoute('/api/debug/history-self-fetch')({
 					const response = await fetch(historyUrl, {
 						signal: AbortSignal.timeout(10_000),
 					})
-					await response.arrayBuffer()
-					return { status: response.status }
+					const body = await response.text()
+					return {
+						status: response.status,
+						responseUrl: response.url,
+						body: body.slice(0, 200),
+					}
 				})
 
-				return Response.json({ transactions, metadata, selfFetch })
+				return Response.json({
+					transactions,
+					metadata,
+					selfFetchTarget: historyUrl.toString(),
+					selfFetch,
+				})
 			},
 		},
 	},
