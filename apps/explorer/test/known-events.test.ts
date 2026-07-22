@@ -15,6 +15,7 @@ import {
 import { parseKnownEvents } from '#lib/domain/known-events'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
+const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
 
 const bounceBackAbi = [
@@ -173,6 +174,35 @@ describe('parseKnownEvents', () => {
 
 		expect(knownEvents).toHaveLength(1)
 		expect(knownEvents[0]?.type).toBe('approval')
+	})
+
+	it('labels Zone E deposits', () => {
+		const hash = `0x${'3'.repeat(64)}` as const
+		const amount = 500_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from: accountAddress, to: ZONE_E_PORTAL },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+		]
+
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const knownEvents = parseKnownEvents(receipt, { getTokenMetadata })
+
+		expect(knownEvents).toHaveLength(1)
+		expect(knownEvents[0]?.type).toBe('zone deposit')
+		expect(knownEvents[0]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Deposit to Zone E',
+		})
 	})
 
 	it('labels virtual address outgoing transfers as forwarded', () => {
