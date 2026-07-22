@@ -201,11 +201,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		dir,
 		period,
 	}),
-	loader: ({
-		deps: { page, limit, live, tab, a, status, dir, period },
-		params,
-		context,
-	}) =>
+	loader: ({ deps: { page, limit, live, a }, params }) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -219,8 +215,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const account =
 				a && Address.validate(a) ? (a as Address.Address) : undefined
 
-			// Tab-aware loading: only fetch data needed for the active tab
-			const isTransactionsTab = tab === 'transactions'
 			const knownContractInfo = getContractInfo(address)
 			const isKnownTokenAddress =
 				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
@@ -256,42 +250,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			let after: number | undefined
-			if (period === '24h') after = Math.floor(Date.now() / 1000) - 86400
-			else if (period === '7d')
-				after = Math.floor(Date.now() / 1000) - 7 * 86400
-
-			const transactionsQuery = historyQueryOptions({
-				address,
-				page,
-				limit,
-				status,
-				include:
-					dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
-				after,
-			})
-
-			// Only block on transactions if transactions tab is active.
-			// Select history sources from address type so SSR and client stay aligned.
-			const transactionsPromise = isTransactionsTab
-				? timeout(
-						context.queryClient
-							.ensureQueryData(transactionsQuery)
-							.catch((error) => {
-								console.error('Fetch transactions error:', error)
-								context.queryClient.removeQueries({
-									queryKey: transactionsQuery.queryKey,
-									exact: true,
-								})
-								return undefined
-							}),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
-
-			const [transactionsData, tokenMetadata, tokenLogoURI] = await Promise.all(
-				[transactionsPromise, tokenMetadataPromise, tokenLogoURIPromise],
-			)
+			const [tokenMetadata, tokenLogoURI] = await Promise.all([
+				tokenMetadataPromise,
+				tokenLogoURIPromise,
+			])
 
 			// Unknown account types are enriched after hydration by address metadata.
 			// A bytecode RPC here would put that enrichment back on the critical path.
@@ -305,6 +267,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const isToken =
 				isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
 			const contractSource: ContractSource | undefined = undefined
+			// History is fetched in the browser. A Worker self-fetch here reaches the
+			// timeout and delays the entire HTML response.
+			const transactionsData: HistoryResponse | undefined = undefined
 			const balancesData: BalancesResponse | undefined = undefined
 			const ogMeta:
 				| Awaited<ReturnType<typeof fetchAddressMetadata>>
@@ -383,7 +348,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				created: undefined,
 			})
 		} else {
-			const txCount = loaderData?.transactionsData?.total ?? 0
+			const txCount = 0
 			let lastActive: string | undefined
 			let created: string | undefined
 			const holdings = '—'
