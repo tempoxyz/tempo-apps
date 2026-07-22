@@ -1,73 +1,101 @@
-import type { Address, Hex } from 'ox'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	buildAddressTxMetadata,
+	fetchAddressTxMetadata,
 	pickTip20CreatedTimestamp,
 } from '#lib/server/address-metadata'
-import type { ContractCreationData } from '#lib/server/contract-creation'
+
+const { getTransactions } = vi.hoisted(() => ({
+	getTransactions: vi.fn(),
+}))
+
+vi.mock('#lib/server/tempo-api', () => ({
+	api: { v1: { transactions: { $get: getTransactions } } },
+}))
+
+beforeEach(() => {
+	getTransactions.mockReset()
+})
 
 describe('address metadata', () => {
-	it('uses RPC contract creation fallback when indexed receipts miss creation', () => {
-		const creation = {
-			blockNumber: 10n,
-			timestamp: 100n,
-			hash: '0xcreate' as Hex.Hex,
-			from: '0xdeployer' as Address.Address,
-			to: null,
-			value: 0n,
-			status: 'success',
-			gasUsed: 21_000n,
-			effectiveGasPrice: 1n,
-		} satisfies ContractCreationData
-
+	it('uses the first indexed address activity as creation metadata', () => {
 		expect(
-			buildAddressTxMetadata(
-				{
-					count: 0,
-					latestTxsBlockTimestamp: undefined,
-					oldestTxsBlockTimestamp: undefined,
-				},
-				creation,
-			),
+			buildAddressTxMetadata({
+				count: 3,
+				latestTxsBlockTimestamp: 300,
+				oldestTxsBlockTimestamp: 100,
+				oldestTxHash: '0xoldest',
+				oldestTxFrom: '0xsender',
+			}),
 		).toEqual({
-			txCount: 1,
-			lastActivityTimestamp: undefined,
+			txCount: 3,
+			lastActivityTimestamp: 300,
 			createdTimestamp: 100,
-			createdTxHash: '0xcreate',
-			createdBy: '0xdeployer',
+			createdTxHash: '0xoldest',
+			createdBy: '0xsender',
 		})
 	})
 
-	it('keeps older direct address activity as the created timestamp', () => {
-		const creation = {
-			blockNumber: 20n,
-			timestamp: 200n,
-			hash: '0xcreate' as Hex.Hex,
-			from: '0xdeployer' as Address.Address,
-			to: null,
-			value: 0n,
-			status: 'success',
-			gasUsed: 21_000n,
-			effectiveGasPrice: 1n,
-		} satisfies ContractCreationData
+	it('returns empty activity metadata for a new address', () => {
+		expect(buildAddressTxMetadata({ count: 0 })).toEqual({
+			txCount: 0,
+			lastActivityTimestamp: undefined,
+			createdTimestamp: undefined,
+			createdTxHash: undefined,
+			createdBy: undefined,
+		})
+	})
 
-		expect(
-			buildAddressTxMetadata(
-				{
-					count: 3,
-					latestTxsBlockTimestamp: 300,
-					oldestTxsBlockTimestamp: 100,
-					oldestTxHash: '0xold',
-					oldestTxFrom: '0xsender',
-				},
-				creation,
+	it('loads activity boundaries and count from Tempo API transaction pages', async () => {
+		getTransactions
+			.mockResolvedValueOnce(
+				Response.json({
+					data: [
+						{
+							hash: '0xoldest',
+							sender: '0xsender',
+							timestamp: '2026-01-01T00:00:00.000Z',
+						},
+					],
+					meta: { totalCount: 3 },
+					nextCursor: null,
+				}),
+			)
+			.mockResolvedValueOnce(
+				Response.json({
+					data: [{ timestamp: '2026-01-03T00:00:00.000Z' }],
+					nextCursor: null,
+				}),
+			)
+
+		await expect(
+			fetchAddressTxMetadata(
+				4217,
+				'0x1111111111111111111111111111111111111111',
 			),
-		).toEqual({
-			txCount: 4,
-			lastActivityTimestamp: 300,
-			createdTimestamp: 100,
-			createdTxHash: '0xold',
-			createdBy: '0xsender',
+		).resolves.toEqual({
+			count: 3,
+			latestTxsBlockTimestamp: '2026-01-03T00:00:00.000Z',
+			oldestTxsBlockTimestamp: '2026-01-01T00:00:00.000Z',
+			oldestTxHash: '0xoldest',
+			oldestTxFrom: '0xsender',
+		})
+		expect(getTransactions).toHaveBeenNthCalledWith(1, {
+			query: {
+				address: '0x1111111111111111111111111111111111111111',
+				chainId: '4217',
+				include: 'totalCount',
+				limit: '5',
+				order: 'asc',
+			},
+		})
+		expect(getTransactions).toHaveBeenNthCalledWith(2, {
+			query: {
+				address: '0x1111111111111111111111111111111111111111',
+				chainId: '4217',
+				limit: '5',
+				order: 'desc',
+			},
 		})
 	})
 })
@@ -78,19 +106,8 @@ describe('pickTip20CreatedTimestamp', () => {
 			pickTip20CreatedTimestamp({
 				tokenCreatedTimestamp: '2026-01-02T00:00:00.000Z',
 				firstTransferTimestamp: '2026-01-01T00:00:00.000Z',
-				contractCreationTimestamp: 100,
 			}),
 		).toBe(Date.parse('2026-01-02T00:00:00.000Z') / 1000)
-	})
-
-	it('uses the contract creation when older than the first transfer', () => {
-		expect(
-			pickTip20CreatedTimestamp({
-				tokenCreatedTimestamp: undefined,
-				firstTransferTimestamp: 200,
-				contractCreationTimestamp: 100,
-			}),
-		).toBe(100)
 	})
 
 	it('falls back to the first transfer timestamp', () => {
@@ -98,7 +115,6 @@ describe('pickTip20CreatedTimestamp', () => {
 			pickTip20CreatedTimestamp({
 				tokenCreatedTimestamp: undefined,
 				firstTransferTimestamp: 200,
-				contractCreationTimestamp: undefined,
 			}),
 		).toBe(200)
 		expect(
