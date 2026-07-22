@@ -17,12 +17,12 @@ export type FeeAmmPool = {
 	reserveUserToken: bigint
 	reserveValidatorToken: bigint
 	liquidityUsd: number
-	userTokenSymbol?: string | undefined
-	userTokenName?: string | undefined
-	userTokenDecimals?: number | undefined
-	validatorTokenSymbol?: string | undefined
-	validatorTokenName?: string | undefined
-	validatorTokenDecimals?: number | undefined
+	userTokenSymbol: string
+	userTokenName: string
+	userTokenDecimals: number
+	validatorTokenSymbol: string
+	validatorTokenName: string
+	validatorTokenDecimals: number
 }
 
 type PoolsResponse = InferResponseType<
@@ -47,11 +47,11 @@ export function mapFeeAmmPools(pools: PoolsResponse['data']): FeeAmmPool[] {
 			createdAt: parseTimestamp(pool.createdAt) ?? null,
 			latestMintAt: parseTimestamp(pool.lastMintAt) ?? null,
 			mintCount: pool.mintCount,
-			reserveUserToken: BigInt(pool.userToken.amount ?? 0),
-			reserveValidatorToken: BigInt(pool.validatorToken.amount ?? 0),
+			reserveUserToken: BigInt(pool.userAmount?.baseUnits ?? 0),
+			reserveValidatorToken: BigInt(pool.validatorAmount?.baseUnits ?? 0),
 			liquidityUsd:
-				Number(pool.userToken.formatted ?? 0) +
-				Number(pool.validatorToken.formatted ?? 0),
+				Number(pool.userAmount?.formatted ?? 0) +
+				Number(pool.validatorAmount?.formatted ?? 0),
 			userTokenName: pool.userToken.name,
 			userTokenSymbol: pool.userToken.symbol,
 			userTokenDecimals: pool.userToken.decimals,
