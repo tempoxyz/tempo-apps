@@ -63,7 +63,7 @@ import {
 	getVirtualAddressParts,
 	normalizeSearchInput,
 } from '#lib/tempo-address'
-import { type AccountType, getAccountType } from '#lib/account'
+import type { AccountType } from '#lib/account'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
 import {
 	type ContractSource,
@@ -72,7 +72,6 @@ import {
 import {
 	type ContractInfo,
 	extractContractAbi,
-	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
@@ -239,15 +238,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			const config = getWagmiConfig()
 
-			// Always fetch bytecode (needed for account type detection)
-			const contractBytecodePromise = timeout(
-				getContractBytecode(address).catch((error) => {
-					console.error('[loader] Failed to get bytecode:', error)
-					return undefined
-				}),
-				QUERY_TIMEOUT_MS,
-			)
-
 			// TIP-20 addresses have a reserved prefix, and legacy tokens are listed in
 			// the contract registry. Avoid probing arbitrary accounts for token methods:
 			// those calls run until the full timeout and block the initial Worker HTML.
@@ -299,15 +289,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const [contractBytecode, transactionsData, tokenMetadata, tokenLogoURI] =
-				await Promise.all([
-					contractBytecodePromise,
-					transactionsPromise,
-					tokenMetadataPromise,
-					tokenLogoURIPromise,
-				])
+			const [transactionsData, tokenMetadata, tokenLogoURI] = await Promise.all(
+				[transactionsPromise, tokenMetadataPromise, tokenLogoURIPromise],
+			)
 
-			const accountType = getAccountType(contractBytecode)
+			// Unknown account types are enriched after hydration by address metadata.
+			// A bytecode RPC here would put that enrichment back on the critical path.
+			const accountType = (
+				knownContractInfo ? 'contract' : 'empty'
+			) as AccountType
 
 			// check if it's a known contract from our registry
 			const contractInfo = knownContractInfo
