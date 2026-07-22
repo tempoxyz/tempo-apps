@@ -64,28 +64,26 @@ function ContractCallPart(props: {
 	const selector = Hex.slice(input, 0, 4)
 	const isViewingAsContract = seenAs && isAddressEqual(seenAs, address)
 
-	const { data: functionName, isLoading: isLoadingAbi } = useQuery({
-		queryKey: ['contract-call-function', address, selector],
+	const { data: abi, isLoading: isLoadingAbi } = useQuery({
+		queryKey: ['contract-call-abi', address.toLowerCase()],
 		queryFn: async () => {
 			// Try known ABI first
-			let abi = getContractAbi(address)
+			const knownAbi = getContractAbi(address)
+			if (knownAbi) return knownAbi
 
 			// Fall back to extracting from bytecode
-			if (!abi) {
-				abi = await extractContractAbi(address)
-			}
-
-			if (!abi) return null
-
-			try {
-				const decoded = decodeFunctionData({ abi, data: input })
-				return decoded.functionName
-			} catch {
-				return null
-			}
+			return extractContractAbi(address)
 		},
 		staleTime: Number.POSITIVE_INFINITY,
 	})
+	const functionName = React.useMemo(() => {
+		if (!abi) return null
+		try {
+			return decodeFunctionData({ abi, data: input }).functionName
+		} catch {
+			return null
+		}
+	}, [abi, input])
 
 	// Fall back to 4byte directory lookup
 	const { data: signature, isFetched: isSignatureFetched } = useLookupSignature(

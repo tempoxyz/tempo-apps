@@ -883,12 +883,28 @@ const defaultSignatureLookup = new loaders.MultiSignatureLookup([
 export async function lookupSignature(
 	selector: Hex.Hex,
 ): Promise<string | null> {
-	const signatures =
-		selector.length === 10
-			? await defaultSignatureLookup.loadFunctions(selector)
-			: await defaultSignatureLookup.loadEvents(selector)
-	return signatures[0] ?? null
+	const key = selector.toLowerCase() as Hex.Hex
+	const cached = signatureLookupCache.get(key)
+	if (cached) return cached
+
+	const lookup = (async () => {
+		const signatures =
+			key.length === 10
+				? await defaultSignatureLookup.loadFunctions(key)
+				: await defaultSignatureLookup.loadEvents(key)
+		return signatures[0] ?? null
+	})()
+	signatureLookupCache.set(key, lookup)
+
+	try {
+		return await lookup
+	} catch (error) {
+		signatureLookupCache.delete(key)
+		throw error
+	}
 }
+
+const signatureLookupCache = new Map<Hex.Hex, Promise<string | null>>()
 
 class TempoABILoader {
 	readonly name = 'TempoABILoader'

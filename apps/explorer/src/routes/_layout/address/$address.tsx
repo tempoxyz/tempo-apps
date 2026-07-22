@@ -54,6 +54,7 @@ import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
 	type AssetData,
+	type BalancesResponse,
 	balancesQueryOptions,
 	calculateTotalHoldings,
 	useBalancesData,
@@ -62,7 +63,7 @@ import {
 	getVirtualAddressParts,
 	normalizeSearchInput,
 } from '#lib/tempo-address'
-import { type AccountType, getAccountType } from '#lib/account'
+import type { AccountType } from '#lib/account'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
 import {
 	type ContractSource,
@@ -71,11 +72,10 @@ import {
 import {
 	type ContractInfo,
 	extractContractAbi,
-	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import {
 	buildAddressDescription,
@@ -91,7 +91,6 @@ import {
 	transfersQueryOptions,
 } from '#lib/queries/tokens'
 import { areUsdPricedTokens } from '#lib/pricing'
-import { fetchAddressBalances } from '#lib/server/address-balances'
 import { fetchAddressMetadata } from '#lib/server/address-metadata'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
@@ -202,11 +201,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		dir,
 		period,
 	}),
-	loader: ({
-		deps: { page, limit, live, tab, a, status, dir, period },
-		params,
-		context,
-	}) =>
+	loader: ({ deps: { page, limit, live, a }, params }) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -220,8 +215,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const account =
 				a && Address.validate(a) ? (a as Address.Address) : undefined
 
-			// Tab-aware loading: only fetch data needed for the active tab
-			const isTransactionsTab = tab === 'transactions'
 			const knownContractInfo = getContractInfo(address)
 			const isKnownTokenAddress =
 				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
@@ -239,22 +232,17 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			const config = getWagmiConfig()
 
-			// Always fetch bytecode (needed for account type detection)
-			const contractBytecodePromise = timeout(
-				getContractBytecode(address).catch((error) => {
-					console.error('[loader] Failed to get bytecode:', error)
-					return undefined
-				}),
-				QUERY_TIMEOUT_MS,
-			)
-
-			// Try to fetch token metadata (non-blocking, used for isToken detection)
-			const tokenMetadataPromise = timeout(
-				Actions.token
-					.getMetadata(config as Config, { token: address })
-					.catch(() => null),
-				QUERY_TIMEOUT_MS,
-			)
+			// TIP-20 addresses have a reserved prefix, and legacy tokens are listed in
+			// the contract registry. Avoid probing arbitrary accounts for token methods:
+			// those calls run until the full timeout and block the initial Worker HTML.
+			const tokenMetadataPromise = isKnownTokenAddress
+				? timeout(
+						Actions.token
+							.getMetadata(config as Config, { token: address })
+							.catch(() => null),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(null)
 			const tokenLogoURIPromise = isKnownTokenAddress
 				? timeout(
 						Tip20.fetchLogoURI(config as Config, address as Address.Address),
@@ -262,91 +250,30 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			let after: number | undefined
-			if (period === '24h') after = Math.floor(Date.now() / 1000) - 86400
-			else if (period === '7d')
-				after = Math.floor(Date.now() / 1000) - 7 * 86400
-
-			const transactionsQuery = historyQueryOptions({
-				address,
-				page,
-				limit,
-				status,
-				include:
-					dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
-				after,
-			})
-
-			// Only block on transactions if transactions tab is active.
-			// Select history sources from address type so SSR and client stay aligned.
-			const transactionsPromise = isTransactionsTab
-				? timeout(
-						context.queryClient
-							.ensureQueryData(transactionsQuery)
-							.catch((error) => {
-								console.error('Fetch transactions error:', error)
-								context.queryClient.removeQueries({
-									queryKey: transactionsQuery.queryKey,
-									exact: true,
-								})
-								return undefined
-							}),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
-
-			const shouldFetchBalances = !isKnownTokenAddress
-			const balancesPromise = shouldFetchBalances
-				? timeout(
-						context.queryClient
-							.ensureQueryData(balancesQueryOptions(address))
-							.catch((error) => {
-								console.error('Fetch balances error:', error)
-								return undefined
-							}),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
-
-			// Fetch address metadata through a server fn (in-process during SSR —
-			// the Worker cannot fetch its own hostname — an RPC from the browser,
-			// keeping TIDX credentials server-side). Goes through the query cache
-			// (shared with the component query) so paging within the same address
-			// reuses the entry instead of re-running the slow count query on
-			// every navigation.
-			const ogMetaPromise = timeout(
-				context.queryClient
-					.ensureQueryData(addressMetadataQueryOptions(address))
-					.catch(() => undefined),
-				QUERY_TIMEOUT_MS,
-			)
-
-			const [
-				contractBytecode,
-				transactionsData,
-				balancesResult,
-				tokenMetadata,
-				tokenLogoURI,
-				ogMeta,
-			] = await Promise.all([
-				contractBytecodePromise,
-				transactionsPromise,
-				balancesPromise,
+			const [tokenMetadata, tokenLogoURI] = await Promise.all([
 				tokenMetadataPromise,
 				tokenLogoURIPromise,
-				ogMetaPromise,
 			])
 
-			const accountType = getAccountType(contractBytecode)
+			// Unknown account types are enriched after hydration by address metadata.
+			// A bytecode RPC here would put that enrichment back on the critical path.
+			const accountType = (
+				knownContractInfo ? 'contract' : 'empty'
+			) as AccountType
 
 			// check if it's a known contract from our registry
 			const contractInfo = knownContractInfo
 			const isKnownToken = isKnownTokenAddress
 			const isToken =
 				isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
-			// Discard balance results for token addresses to avoid stale/misleading data
-			const balancesData = isToken ? undefined : balancesResult
 			const contractSource: ContractSource | undefined = undefined
+			// History is fetched in the browser. A Worker self-fetch here reaches the
+			// timeout and delays the entire HTML response.
+			const transactionsData: HistoryResponse | undefined = undefined
+			const balancesData: BalancesResponse | undefined = undefined
+			const ogMeta:
+				| Awaited<ReturnType<typeof fetchAddressMetadata>>
+				| undefined = undefined
 
 			return {
 				live,
@@ -366,17 +293,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				ogMeta,
 			}
 		}),
-	head: async ({ params, loaderData }) => {
-		const address = params.address as Address.Address
-		const ogMeta =
-			loaderData?.ogMeta ??
-			(await fetchAddressMetadata({ data: address }).catch(() => undefined))
-		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
-		// since 'empty' is the correct type for regular EOAs
-		let accountType = loaderData?.accountType ?? 'empty'
-		if (accountType === 'empty' && ogMeta?.accountType === 'contract') {
-			accountType = 'contract'
-		}
+	head: ({ params, loaderData }) => {
+		// Never retry timed-out enrichment while generating metadata. The head
+		// must be available with the initial response; richer data can load in
+		// the page after hydration.
+		const accountType = loaderData?.accountType ?? 'empty'
 		const isToken = loaderData?.isToken ?? false
 		const tokenMeta = loaderData?.tokenMetadata
 
@@ -410,13 +331,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const supply = formatSupply(totalSupply)
 			const chainId = getTempoChain().id
 
-			let created: string | undefined
-			if (ogMeta?.createdTimestamp) {
-				created = DateFormatter.formatTimestampForOg(
-					BigInt(ogMeta.createdTimestamp),
-				).date
-			}
-
 			description = buildTokenDescription({
 				name: tokenMeta.name ?? '—',
 				symbol: tokenMeta.symbol,
@@ -430,46 +344,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				symbol: tokenMeta.symbol,
 				supply,
 				currency: tokenMeta.currency ?? undefined,
-				holders: ogMeta?.holdersCount ?? undefined,
-				created,
+				holders: undefined,
+				created: undefined,
 			})
 		} else {
-			const txCount =
-				ogMeta?.txCount ?? loaderData?.transactionsData?.total ?? 0
-			const balancesData =
-				loaderData?.balancesData ??
-				(await fetchAddressBalances({ data: address }).catch(() => undefined))
+			const txCount = 0
 			let lastActive: string | undefined
 			let created: string | undefined
-			let holdings = '—'
-
-			if (balancesData?.balances) {
-				const totalValue = calculateTotalHoldings(
-					balancesData.balances.map((b) => ({
-						address: b.token,
-						metadata: {
-							decimals: b.decimals,
-							currency: b.currency,
-						},
-						balance: BigInt(b.balance),
-					})),
-				)
-				if (totalValue && totalValue > 0) {
-					holdings = PriceFormatter.format(totalValue, { format: 'short' })
-				}
-			}
-
-			if (ogMeta?.lastActivityTimestamp) {
-				lastActive = DateFormatter.formatTimestampForOg(
-					BigInt(ogMeta.lastActivityTimestamp),
-				).date
-			}
-
-			if (ogMeta?.createdTimestamp) {
-				created = DateFormatter.formatTimestampForOg(
-					BigInt(ogMeta.createdTimestamp),
-				).date
-			}
+			const holdings = '—'
 
 			description = buildAddressDescription(
 				{ holdings, txCount },
@@ -523,10 +405,12 @@ function RouteComponent() {
 	} = Route.useLoaderData()
 
 	Address.assert(address)
+	const isMounted = useIsMounted()
 
-	const { data: addressMetadata } = useQuery(
-		addressMetadataQueryOptions(address),
-	)
+	const { data: addressMetadata } = useQuery({
+		...addressMetadataQueryOptions(address),
+		enabled: isMounted,
+	})
 
 	const hash = location.hash
 
@@ -616,12 +500,10 @@ function RouteComponent() {
 	const activeSection =
 		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
-	const isHoldingsTabActive = tab === 'holdings'
-
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
-		!isToken && (isHoldingsTabActive || balancesData !== undefined),
+		isMounted && !isToken,
 	)
 	// Warm the first page of every non-active tab once the active tab has had a
 	// moment to start loading, so switching tabs is instant. Runs once per
