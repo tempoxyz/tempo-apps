@@ -1,13 +1,10 @@
 import { createServerFn } from '@tanstack/react-start'
 import { type InferResponseType, parseResponse } from 'hono/client'
 import type { Address, Hex } from 'ox'
-import type { Config } from 'wagmi'
 import { getChainId } from 'wagmi/actions'
-import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { api } from '#lib/server/tempo-api'
-import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -217,9 +214,9 @@ export type AccountTransfersApiResponse = {
 		timestamp: string | null
 		token: {
 			address: Address.Address
-			symbol?: string | undefined
-			decimals?: number | undefined
-			currency?: string | undefined
+			symbol: string
+			decimals: number
+			currency: string
 		}
 	}>
 	total: number
@@ -230,70 +227,6 @@ const EMPTY_ACCOUNT_TRANSFERS_RESPONSE: AccountTransfersApiResponse = {
 	transfers: [],
 	total: 0,
 	totalCapped: false,
-}
-
-type TransferTokenMeta = {
-	symbol?: string | undefined
-	decimals?: number | undefined
-	currency?: string | undefined
-}
-
-const transferTokenMetaCache = new Map<string, CacheEntry<TransferTokenMeta>>()
-
-/**
- * Display metadata (symbol/decimals) for transfer-row tokens: the cached
- * verified list covers nearly every row for free; unknown tokens fall back to
- * one RPC metadata read each, memoized. (The API's `include=token` does the
- * same upstream but adds ~5s per page — resolve locally instead.)
- */
-async function getTransferTokenMeta(
-	chainId: number,
-	tokens: readonly Address.Address[],
-): Promise<Map<string, TransferTokenMeta>> {
-	const verified = await getVerifiedTokens(chainId)
-	const verifiedByAddress = new Map(
-		verified.map((token) => [token.address.toLowerCase(), token]),
-	)
-
-	const meta = new Map<string, TransferTokenMeta>()
-	const misses: Address.Address[] = []
-	for (const token of new Set(tokens.map((t) => t.toLowerCase()))) {
-		const entry = verifiedByAddress.get(token)
-		if (entry) {
-			meta.set(token, {
-				symbol: entry.symbol,
-				decimals: entry.decimals,
-				currency: entry.currency,
-			})
-			continue
-		}
-		const cached = transferTokenMetaCache.get(`${chainId}-${token}`)
-		if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-			meta.set(token, cached.data)
-			continue
-		}
-		misses.push(token as Address.Address)
-	}
-
-	const config = getWagmiConfig()
-	await Promise.all(
-		misses.map(async (token) => {
-			const resolved = await Actions.token
-				.getMetadata(config as Config, { token })
-				.then(
-					(m): TransferTokenMeta => ({
-						symbol: m.symbol,
-						decimals: m.decimals,
-						currency: m.currency,
-					}),
-				)
-				.catch((): TransferTokenMeta => ({}))
-			meta.set(token.toLowerCase(), resolved)
-			setCached(transferTokenMetaCache, `${chainId}-${token}`, resolved)
-		}),
-	)
-
-	return meta
 }
 
 /**
@@ -321,31 +254,21 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 				}),
 			)
 
-			const tokenMeta = await getTransferTokenMeta(
-				chainId,
-				page.data.map(
-					(transfer) => transfer.sourceToken.address as Address.Address,
-				),
-			)
-
 			return {
-				transfers: page.data.map((transfer) => {
-					const meta = tokenMeta.get(transfer.sourceToken.address.toLowerCase())
-					return {
-						from: transfer.sender as Address.Address,
-						to: transfer.recipient as Address.Address,
-						value: transfer.sourceToken.amount,
-						transactionHash: transfer.transactionHash as Hex.Hex,
-						blockNumber: String(transfer.blockNumber),
-						timestamp: transfer.timestamp ?? null,
-						token: {
-							address: transfer.sourceToken.address as Address.Address,
-							symbol: meta?.symbol,
-							decimals: meta?.decimals,
-							currency: meta?.currency,
-						},
-					}
-				}),
+				transfers: page.data.map((transfer) => ({
+					from: transfer.sender as Address.Address,
+					to: transfer.recipient as Address.Address,
+					value: transfer.sourceAmount.baseUnits,
+					transactionHash: transfer.transactionHash as Hex.Hex,
+					blockNumber: String(transfer.blockNumber),
+					timestamp: transfer.timestamp ?? null,
+					token: {
+						address: transfer.sourceToken.address as Address.Address,
+						symbol: transfer.sourceToken.symbol,
+						decimals: transfer.sourceToken.decimals,
+						currency: transfer.sourceToken.currency,
+					},
+				})),
 				...resolveTotal({
 					exactCount: page.meta?.totalCount,
 					exactCountCapped: page.meta?.totalCountCapped,
@@ -389,7 +312,7 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 				transfers: page.data.map((transfer) => ({
 					from: transfer.sender as Address.Address,
 					to: transfer.recipient as Address.Address,
-					value: transfer.sourceToken.amount,
+					value: transfer.sourceAmount.baseUnits,
 					transactionHash: transfer.transactionHash as Hex.Hex,
 					blockNumber: String(transfer.blockNumber),
 					timestamp: transfer.timestamp ?? null,
