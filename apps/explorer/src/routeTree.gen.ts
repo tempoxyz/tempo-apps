@@ -21,6 +21,7 @@ import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
+import { Route as ApiDebugHistorySelfFetchRouteImport } from './routes/api/debug/history-self-fetch'
 import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
@@ -99,6 +100,12 @@ const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
   path: '/demo/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const ApiDebugHistorySelfFetchRoute =
+  ApiDebugHistorySelfFetchRouteImport.update({
+    id: '/api/debug/history-self-fetch',
+    path: '/api/debug/history-self-fetch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
   id: '/api/abi/batch',
   path: '/api/abi/batch',
@@ -216,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
+  '/api/debug/history-self-fetch': typeof ApiDebugHistorySelfFetchRoute
   '/demo/': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -247,6 +255,7 @@ export interface FileRoutesByTo {
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
+  '/api/debug/history-self-fetch': typeof ApiDebugHistorySelfFetchRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -280,6 +289,7 @@ export interface FileRoutesById {
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
+  '/api/debug/history-self-fetch': typeof ApiDebugHistorySelfFetchRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/token/$address'
     | '/tx/$hash'
     | '/api/abi/batch'
+    | '/api/debug/history-self-fetch'
     | '/demo/'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/token/$address'
     | '/tx/$hash'
     | '/api/abi/batch'
+    | '/api/debug/history-self-fetch'
     | '/demo'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
@@ -376,6 +388,7 @@ export interface FileRouteTypes {
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
     | '/api/abi/batch'
+    | '/api/debug/history-self-fetch'
     | '/_layout/demo/'
     | '/_layout/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
@@ -396,6 +409,7 @@ export interface RootRouteChildren {
   ApiTip20RolesRoute: typeof ApiTip20RolesRoute
   ApiVerifiedTokensRoute: typeof ApiVerifiedTokensRoute
   ApiAbiBatchRoute: typeof ApiAbiBatchRoute
+  ApiDebugHistorySelfFetchRoute: typeof ApiDebugHistorySelfFetchRoute
   ApiAddressBalancesAddressRoute: typeof ApiAddressBalancesAddressRoute
   ApiAddressHistoryAddressRoute: typeof ApiAddressHistoryAddressRoute
   ApiAddressMetadataAddressRoute: typeof ApiAddressMetadataAddressRoute
@@ -490,6 +504,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/demo/'
       preLoaderRoute: typeof LayoutDemoIndexRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/api/debug/history-self-fetch': {
+      id: '/api/debug/history-self-fetch'
+      path: '/api/debug/history-self-fetch'
+      fullPath: '/api/debug/history-self-fetch'
+      preLoaderRoute: typeof ApiDebugHistorySelfFetchRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/abi/batch': {
       id: '/api/abi/batch'
@@ -668,6 +689,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTip20RolesRoute: ApiTip20RolesRoute,
   ApiVerifiedTokensRoute: ApiVerifiedTokensRoute,
   ApiAbiBatchRoute: ApiAbiBatchRoute,
+  ApiDebugHistorySelfFetchRoute: ApiDebugHistorySelfFetchRoute,
   ApiAddressBalancesAddressRoute: ApiAddressBalancesAddressRoute,
   ApiAddressHistoryAddressRoute: ApiAddressHistoryAddressRoute,
   ApiAddressMetadataAddressRoute: ApiAddressMetadataAddressRoute,
