@@ -187,7 +187,7 @@ export const tip20ContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: Abis.tip20,
 			code: '0xef',
 			category: 'token',
-			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange/pathUSD',
+			docsUrl: 'https://docs.tempo.xyz/protocol/exchange/quote-tokens#pathusd',
 			address: '0x20c0000000000000000000000000000000000000',
 		},
 	],
