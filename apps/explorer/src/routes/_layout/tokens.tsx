@@ -140,7 +140,7 @@ function TokensPage() {
 				/>
 			),
 			align: 'end',
-			width: 170,
+			width: 240,
 		},
 	]
 
