@@ -143,6 +143,26 @@ function TokensPage() {
 			width: 240,
 		},
 	]
+	const stackedColumns: DataGrid.Column[] = [
+		{
+			label: 'Token',
+			align: 'start',
+			width: '1fr',
+			minWidth: 110,
+		},
+		{
+			label: (
+				<TimeColumnHeader
+					label="Created"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="text-secondary hover:text-accent cursor-pointer transition-colors"
+				/>
+			),
+			align: 'end',
+			width: 210,
+		},
+	]
 
 	return (
 		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
@@ -156,35 +176,10 @@ function TokensPage() {
 						autoCollapse: false,
 						content: (
 							<DataGrid
-								columns={{ stacked: columns, tabs: columns }}
-								items={() =>
-									tokens.map((token: Token) => ({
-										cells: [
-											<span
-												key="symbol"
-												className="inline-flex items-center gap-2 text-base-content-positive font-medium"
-											>
-												<TokenIcon
-													address={token.address}
-													name={token.symbol}
-													logoURI={token.logoURI}
-												/>
-												{token.symbol}
-											</span>,
-											<span key="name" className="truncate max-w-[40ch]">
-												{token.name}
-											</span>,
-											<span key="currency" className="text-secondary">
-												{token.currency}
-											</span>,
-											<span key="holders" className="font-mono text-secondary">
-												{formatHoldersCount(token)}
-											</span>,
-											<Address
-												key="address"
-												address={token.address}
-												className="w-full"
-											/>,
+								columns={{ stacked: stackedColumns, tabs: columns }}
+								items={(gridMode) =>
+									tokens.map((token: Token) => {
+										const createdCell =
 											token.createdAt == null ? (
 												<span
 													key="created"
@@ -199,13 +194,71 @@ function TokensPage() {
 													format={timeFormat}
 													className="font-mono text-secondary whitespace-nowrap"
 												/>
-											),
-										],
-										link: {
-											href: `/token/${token.address}`,
-											title: `View token ${token.symbol}`,
-										},
-									}))
+											)
+
+										const tokenCell = (
+											<div key="token" className="flex flex-col min-w-0 gap-1">
+												<span className="inline-flex items-center gap-2 text-base-content-positive font-medium">
+													<TokenIcon
+														address={token.address}
+														name={token.symbol}
+														logoURI={token.logoURI}
+													/>
+													{token.symbol}
+												</span>
+												<span className="truncate text-secondary">
+													{token.name}
+												</span>
+												<span className="text-tertiary">
+													{token.currency} · {formatHoldersCount(token)} holders
+												</span>
+											</div>
+										)
+
+										return {
+											cells:
+												gridMode === 'stacked'
+													? [tokenCell, createdCell]
+													: [
+															<span
+																key="symbol"
+																className="inline-flex items-center gap-2 text-base-content-positive font-medium"
+															>
+																<TokenIcon
+																	address={token.address}
+																	name={token.symbol}
+																	logoURI={token.logoURI}
+																/>
+																{token.symbol}
+															</span>,
+															<span
+																key="name"
+																className="truncate max-w-[40ch]"
+															>
+																{token.name}
+															</span>,
+															<span key="currency" className="text-secondary">
+																{token.currency}
+															</span>,
+															<span
+																key="holders"
+																className="font-mono text-secondary"
+															>
+																{formatHoldersCount(token)}
+															</span>,
+															<Address
+																key="address"
+																address={token.address}
+																className="w-full"
+															/>,
+															createdCell,
+														],
+											link: {
+												href: `/token/${token.address}`,
+												title: `View token ${token.symbol}`,
+											},
+										}
+									})
 								}
 								totalItems={total}
 								displayCount={total}
