@@ -52,17 +52,15 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		// resolves logos (curated icon → on-chain `logoURI`), currencies, and
 		// the requested per-token enrichments.
 		//
-		// `createdAt` is intentionally omitted: for the hyper-active genesis
-		// tokens it makes the API scan for a (nonexistent) `TokenCreated` event,
-		// adding ~5s to the blocking loader while returning null. Creation time
-		// is derived from `transferStats.firstAt` (fast) with a genesis-block
+		// Creation timestamps come from the batched, cached `TokenCreated` lookup.
+		// Genesis tokens have no creation event, so they use the genesis-block
 		// fallback below.
 		const tokens = await parseResponse(
 			api.v1.tokens.$get({
 				query: {
 					chainId: String(chainId),
 					verified: 'true',
-					include: 'holderCount,transferStats',
+					include: 'createdAt,holderCount',
 					limit: String(VERIFIED_TOKENS_MAX_LIMIT),
 				},
 			}),
@@ -75,11 +73,10 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const pageTokens = tokens.slice(offset, offset + limit)
 
-		// Genesis tokens have no `TokenCreated` event; when one also has no
-		// transfer history, fall back to the genesis block timestamp.
+		// Genesis tokens have no `TokenCreated` event, so fall back to the genesis
+		// block timestamp.
 		const needsGenesisCreatedAt = pageTokens.some(
 			(token) =>
-				!token.transferStats?.firstAt &&
 				!token.createdAt &&
 				isGenesisTokenAddress(token.address as Address.Address),
 		)
@@ -108,7 +105,6 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 					currency: token.currency,
 					logoURI: token.logoUri,
 					createdAt:
-						parseTimestamp(token.transferStats?.firstAt) ??
 						parseTimestamp(token.createdAt) ??
 						(isGenesisTokenAddress(address) ? genesisCreatedAt : undefined),
 					holdersCount: token.holderCount,
