@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Abi } from 'viem'
 import { getReadFunctions, getWriteFunctions } from '#lib/domain/contracts'
+import { isProxyUnavailableRead } from '#lib/domain/proxy'
 
 const proxyImplementationAbi = [
 	{
@@ -88,5 +89,10 @@ describe('contract function classification', () => {
 				'setMinterAllowance',
 			])
 		}
+	})
+
+	it('identifies reads that intentionally revert through a proxy', () => {
+		expect(isProxyUnavailableRead('proxiableUUID')).toBe(true)
+		expect(isProxyUnavailableRead('supportsInterface')).toBe(false)
 	})
 })

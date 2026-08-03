@@ -41,6 +41,16 @@ export type ProxyInfo = {
 	beaconAddress?: Address.Address
 }
 
+/**
+ * Functions that intentionally cannot be called through a proxy.
+ *
+ * UUPS implementations use `notDelegated` for `proxiableUUID()` so a proxy
+ * cannot appear proxiable and accidentally delegate to itself.
+ */
+export function isProxyUnavailableRead(name: string | undefined): boolean {
+	return name?.toLowerCase() === 'proxiableuuid'
+}
+
 // Use a generic client type that works with wagmi's PublicClient
 type Client = {
 	getStorageAt: (args: {

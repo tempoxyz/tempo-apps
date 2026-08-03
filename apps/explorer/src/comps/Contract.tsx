@@ -390,7 +390,12 @@ export function InteractTabContent(props: {
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
 				<div className="px-[10px] pb-[10px]">
-					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+					<ContractReader
+						address={address}
+						abi={abi}
+						docsUrl={docsUrl}
+						isProxy={isProxy}
+					/>
 				</div>
 			</CollapsibleSection>
 
