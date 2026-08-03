@@ -451,6 +451,8 @@ export function getFunctionSelector(fn: AbiFunction): string {
  * Used to include functions that are likely read-only even if marked as 'nonpayable'.
  */
 const READ_FUNCTION_PATTERNS = [
+	/^supports[A-Z_]/i,
+	/^proxiableUUID$/i,
 	/^get[A-Z_]/i,
 	/^is[A-Z_]/i,
 	/^has[A-Z_]/i,
@@ -472,6 +474,11 @@ const READ_FUNCTION_PATTERNS = [
 	/^name$/i,
 	/^symbol$/i,
 	/^decimals$/i,
+	/^reserveStores$/i,
+	/^minterAllowances$/i,
+	/^mintTxnLimits$/i,
+	/^[A-Z][A-Z0-9]*_[A-Z0-9_]+$/,
+	/_ROLE$/,
 	/^version$/i,
 	/^nonce/i,
 	/^supply/i,
@@ -548,6 +555,8 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 	const functions = abi.filter((item): item is ReadFunction => {
 		if (item.type !== 'function') return false
 		if (!Array.isArray(item.inputs)) return false
+		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
+			return false
 
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
@@ -556,12 +565,15 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 		if (!isWhatsabi) {
 			if (!Array.isArray(item.outputs) || item.outputs.length === 0)
 				return false
+			// Some verified/proxy ABIs contain incorrect mutability metadata.
+			// Prefer a recognized getter name over that metadata so those functions
+			// remain callable from the Read section.
+			if (looksLikeReadFunction(item.name)) return true
 			return item.stateMutability === 'view' || item.stateMutability === 'pure'
 		}
 
 		// For whatsabi ABIs, stateMutability is often wrong (everything is nonpayable)
 		// Use name-based heuristics instead
-		if (looksLikeWriteFunction(item.name)) return false
 		if (looksLikeReadFunction(item.name)) return true
 
 		// Functions with no inputs that don't look like writes are likely getters
@@ -600,13 +612,16 @@ export function getWriteFunctions(abi: Abi): WriteFunction[] {
 			item.stateMutability === 'nonpayable' ||
 			item.stateMutability === 'payable'
 		if (!isNonpayableOrPayable) return false
+		// ABI sources used for proxy implementations can carry incorrect
+		// mutability metadata. Do not expose recognized getters as transactions,
+		// regardless of whether the entry came from whatsabi or a verified ABI.
+		if (looksLikeReadFunction(item.name)) return false
 
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
 
 		// For whatsabi ABIs, filter out functions that look like read functions
 		if (isWhatsabi) {
-			if (looksLikeReadFunction(item.name)) return false
 			// Functions with no inputs that don't look like writes are likely getters
 			if (item.inputs.length === 0 && !looksLikeWriteFunction(item.name))
 				return false
