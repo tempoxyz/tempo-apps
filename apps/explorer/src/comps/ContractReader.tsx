@@ -17,7 +17,6 @@ import {
 	isArrayType,
 	parseInputValue,
 } from '#lib/domain/contracts'
-import { isProxyUnavailableRead } from '#lib/domain/proxy'
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -175,9 +174,8 @@ export function ContractReader(props: {
 	address: Address.Address
 	abi: Abi
 	docsUrl?: string
-	isProxy?: boolean
 }) {
-	const { address, abi, isProxy = false } = props
+	const { address, abi } = props
 
 	const key = React.useId()
 
@@ -193,7 +191,6 @@ export function ContractReader(props: {
 					address={address}
 					abi={abi}
 					fn={fn}
-					isProxy={isProxy}
 				/>
 			))}
 
@@ -256,9 +253,8 @@ function StaticReadFunction(props: {
 	address: Address.Address
 	abi: Abi
 	fn: ReadFunction
-	isProxy: boolean
 }) {
-	const { address, abi, fn, isProxy } = props
+	const { address, abi, fn } = props
 	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const [mounted, setMounted] = React.useState(false)
@@ -269,7 +265,6 @@ function StaticReadFunction(props: {
 	usePermalinkHighlight({ elementId: fnId })
 
 	const hasOutputs = Array.isArray(fn.outputs) && fn.outputs.length > 0
-	const unavailableThroughProxy = isProxy && isProxyUnavailableRead(fn.name)
 
 	// For unnamed functions (selector-only), create an ABI with the selector as name
 	// so viem can look up the function entry
@@ -289,7 +284,7 @@ function StaticReadFunction(props: {
 		abi: effectiveAbi,
 		functionName: fnId,
 		args: [],
-		query: { enabled: mounted && hasOutputs && !unavailableThroughProxy },
+		query: { enabled: mounted && hasOutputs },
 	})
 
 	// Raw call fallback for functions without outputs
@@ -315,10 +310,7 @@ function StaticReadFunction(props: {
 	} = useCall({
 		to: address,
 		data: callData,
-		query: {
-			enabled:
-				mounted && !hasOutputs && Boolean(callData) && !unavailableThroughProxy,
-		},
+		query: { enabled: mounted && !hasOutputs && Boolean(callData) },
 	})
 
 	const refetch = hasOutputs ? typedRefetch : rawRefetch
@@ -338,13 +330,11 @@ function StaticReadFunction(props: {
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
 
-	const displayValue = unavailableThroughProxy
-		? 'Unavailable through proxy'
-		: error
-			? error
-			: isLoading
-				? ellipsis
-				: formatOutputValue(result, outputType)
+	const displayValue = error
+		? error
+		: isLoading
+			? ellipsis
+			: formatOutputValue(result, outputType)
 
 	// Format address outputs as links (only after mount to avoid hydration mismatch)
 	const isAddressOutput = outputType === 'address' || isResultAddress
@@ -427,11 +417,7 @@ function StaticReadFunction(props: {
 					</div>
 				) : (
 					<ReadResult
-						className={cx(
-							error && !unavailableThroughProxy
-								? 'text-red-400'
-								: 'text-primary',
-						)}
+						className={cx(error ? 'text-red-400' : 'text-primary')}
 						value={displayValue}
 					/>
 				)}
