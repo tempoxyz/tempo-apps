@@ -11,7 +11,15 @@ const MAX_CRUMBS = 3
 export interface Crumb {
 	path: string
 	label: string
-	type: 'home' | 'tx' | 'receipt' | 'address' | 'token' | 'block' | 'other'
+	type:
+		| 'home'
+		| 'tx'
+		| 'receipt'
+		| 'address'
+		| 'token'
+		| 'block'
+		| 'policy'
+		| 'other'
 }
 
 function truncateHash(hash: string, prefixLen = 6, suffixLen = 4): string {
@@ -53,6 +61,11 @@ function getLabelForPath(pathname: string): {
 	const blockMatch = pathname.match(/^\/block\/(\d+|latest)$/)
 	if (blockMatch) {
 		return { label: `Block ${blockMatch[1]}`, type: 'block' }
+	}
+
+	const policyMatch = pathname.match(/^\/policy\/(\d+)$/)
+	if (policyMatch) {
+		return { label: `Policy #${policyMatch[1]}`, type: 'policy' }
 	}
 
 	if (pathname === '/blocks') {

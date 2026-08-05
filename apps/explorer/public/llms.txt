@@ -1,6 +1,6 @@
 # Tempo Explorer
 
-> The official block explorer for the Tempo blockchain. View blocks, transactions, receipts, addresses, contracts, tokens, Fee AMM pools, and network activity.
+> The official block explorer for the Tempo blockchain. View blocks, transactions, receipts, addresses, contracts, tokens, TIP-403 policies, Fee AMM pools, and network activity.
 
 For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 
@@ -11,6 +11,7 @@ For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 - Browse recent blocks and inspect a block's transactions.
 - Inspect addresses, balances, transaction history, contracts, and token activity.
 - View TIP20 token metadata, transfers, and holders.
+- View TIP-403 policy types, administrators, members, composed policies, and policy events.
 - Read verified contracts and interact with contract functions when an ABI is available.
 - Browse Fee AMM pools, reserves, liquidity, and routes.
 - Export address transactions and balances as CSV.
@@ -34,6 +35,9 @@ For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 - Block countdown: `/block/countdown/{targetBlock}`
 - Tokens list: `/tokens`
 - Fee AMM: `/fee-amm`
+- TIP-403 policy: `/policy/{policyId}`
+  - Member search: `?q={address}`
+  - Member pagination: `?page={number}&limit={number}`
 
 ## Networks
 

@@ -25,6 +25,7 @@ import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
+import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
 import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/empty-state'
@@ -117,6 +118,11 @@ const LayoutTokenAddressRoute = LayoutTokenAddressRouteImport.update({
 const LayoutReceiptHashRoute = LayoutReceiptHashRouteImport.update({
   id: '/receipt/$hash',
   path: '/receipt/$hash',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPolicyIdRoute = LayoutPolicyIdRouteImport.update({
+  id: '/policy/$id',
+  path: '/policy/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/_layout/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
+  '/_layout/policy/$id': typeof LayoutPolicyIdRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/_layout/demo/empty-state'
     | '/_layout/demo/pagination'
     | '/_layout/demo/tx'
+    | '/_layout/policy/$id'
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
@@ -519,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutReceiptHashRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/policy/$id': {
+      id: '/_layout/policy/$id'
+      path: '/policy/$id'
+      fullPath: '/policy/$id'
+      preLoaderRoute: typeof LayoutPolicyIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/demo/tx': {
       id: '/_layout/demo/tx'
       path: '/demo/tx'
@@ -631,6 +650,7 @@ interface LayoutRouteChildren {
   LayoutDemoEmptyStateRoute: typeof LayoutDemoEmptyStateRoute
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
+  LayoutPolicyIdRoute: typeof LayoutPolicyIdRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
@@ -649,6 +669,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDemoEmptyStateRoute: LayoutDemoEmptyStateRoute,
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
+  LayoutPolicyIdRoute: LayoutPolicyIdRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,

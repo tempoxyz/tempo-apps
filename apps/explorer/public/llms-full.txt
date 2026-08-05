@@ -2,7 +2,7 @@
 
 > Comprehensive reference for agents and AI systems using Tempo Explorer.
 
-Tempo Explorer is a blockchain explorer for the Tempo network. It helps users inspect blocks, transactions, receipts, addresses, contracts, tokens, balances, Fee AMM pools, and on-chain events.
+Tempo Explorer is a blockchain explorer for the Tempo network. It helps users inspect blocks, transactions, receipts, addresses, contracts, tokens, TIP-403 policies, balances, Fee AMM pools, and on-chain events.
 
 For a shorter overview, see [`/llms.txt`](/llms.txt).
 
