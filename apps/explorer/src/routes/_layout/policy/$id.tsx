@@ -5,6 +5,7 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
+import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
@@ -87,6 +88,7 @@ function RouteComponent() {
 	const { page, limit, q } = Route.useSearch()
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+	const [activeSection, setActiveSection] = React.useState(0)
 
 	return (
 		<div className="max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 grid w-full grid-cols-[auto_1fr] gap-[14px] px-4 pt-20 pb-16 min-w-0 min-[1240px]:max-w-[1280px]">
@@ -94,6 +96,8 @@ function RouteComponent() {
 			<PolicyCard policy={policy} />
 			<Sections
 				mode={mode}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
 				sections={[
 					{
 						title: 'Members',
