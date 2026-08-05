@@ -12,10 +12,16 @@ import {
 	type Tip403PolicyType,
 } from '#lib/domain/tip403'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import {
+	dedupePolicyLogs,
+	fetchAllPolicyLogPages,
+	fetchRecentUniquePolicyLogs,
+} from '#lib/server/tip403-log-utils'
 import { getWagmiConfig } from '#wagmi.config'
 import * as z from 'zod/mini'
 
-const POLICY_LOG_SCAN_LIMIT = 10_000
+const POLICY_LOG_PAGE_SIZE = 10_000
+const RECENT_ACTIVITY_LIMIT = 20
 const registryAddress =
 	Addresses.tip403Registry.toLowerCase() as Address.Address
 
@@ -51,6 +57,7 @@ export type Tip403PolicyEvent = {
 	blockNumber: string
 	timestamp: number | null
 	txHash: Hex.Hex
+	logIndex: string
 	updater?: Address.Address
 	admin?: Address.Address
 	account?: Address.Address
@@ -189,7 +196,12 @@ export const fetchTip403Policy = createServerFn({ method: 'POST' })
 				? ([...results[2].result].map(String) as [string, string, string])
 				: undefined
 
-		const fetchLogs = async (selector: Hex.Hex) => {
+		const fetchLogsPage = async (
+			selector: Hex.Hex,
+			direction: 'asc' | 'desc',
+			limit: number,
+			offset: number,
+		) => {
 			return (await tempoQueryBuilder(chainId, { engine: 'clickhouse' })
 				.selectFrom('logs')
 				.select([
@@ -206,30 +218,50 @@ export const fetchTip403Policy = createServerFn({ method: 'POST' })
 				.where('address', '=', registryAddress)
 				.where('selector', '=', selector)
 				.where('topic1', '=', policyTopic)
-				.orderBy('block_num', 'asc')
-				.orderBy('log_idx', 'asc')
-				.limit(POLICY_LOG_SCAN_LIMIT)
+				.orderBy('block_num', direction)
+				.orderBy('log_idx', direction)
+				.limit(limit)
+				.offset(offset)
 				.execute()) as PolicyLog[]
 		}
 
+		const fetchAllLogs = async (selector: Hex.Hex) => {
+			return fetchAllPolicyLogPages(
+				(limit, offset) => fetchLogsPage(selector, 'asc', limit, offset),
+				POLICY_LOG_PAGE_SIZE,
+			)
+		}
+
+		const fetchRecentLogs = async (selector: Hex.Hex) => {
+			return fetchRecentUniquePolicyLogs(
+				(limit, offset) => fetchLogsPage(selector, 'desc', limit, offset),
+				RECENT_ACTIVITY_LIMIT + 1,
+			)
+		}
+
+		const [whitelistUpdated, blacklistUpdated, recentByType] =
+			await Promise.all([
+				fetchAllLogs(eventSelectors.whitelistUpdated),
+				fetchAllLogs(eventSelectors.blacklistUpdated),
+				Promise.all([
+					fetchRecentLogs(eventSelectors.created),
+					fetchRecentLogs(eventSelectors.adminUpdated),
+					fetchRecentLogs(eventSelectors.whitelistUpdated),
+					fetchRecentLogs(eventSelectors.blacklistUpdated),
+					fetchRecentLogs(eventSelectors.compoundCreated),
+				]),
+			])
+
 		const [
 			created,
-			adminUpdated,
-			whitelistUpdated,
-			blacklistUpdated,
+			recentAdminUpdated,
+			recentWhitelistUpdated,
+			recentBlacklistUpdated,
 			compoundCreated,
-		] = await Promise.all([
-			fetchLogs(eventSelectors.created),
-			fetchLogs(eventSelectors.adminUpdated),
-			fetchLogs(eventSelectors.whitelistUpdated),
-			fetchLogs(eventSelectors.blacklistUpdated),
-			fetchLogs(eventSelectors.compoundCreated),
-		])
+		] = recentByType
 
-		const events = sortLogs(
+		const membershipEvents = sortLogs(
 			[
-				...created.map((log) => ({ log, type: 'created' as const })),
-				...adminUpdated.map((log) => ({ log, type: 'admin updated' as const })),
 				...whitelistUpdated.map((log) => ({
 					log,
 					type: 'whitelist updated' as const,
@@ -238,33 +270,51 @@ export const fetchTip403Policy = createServerFn({ method: 'POST' })
 					log,
 					type: 'blacklist updated' as const,
 				})),
-				...compoundCreated.map((log) => ({
-					log,
-					type: 'compound created' as const,
-				})),
 			].map(({ log, type }) => ({ ...log, eventType: type })),
 		)
 
+		const recentEvents = sortLogs(
+			dedupePolicyLogs([
+				...created,
+				...recentAdminUpdated,
+				...recentWhitelistUpdated,
+				...recentBlacklistUpdated,
+				...compoundCreated,
+			]).map((log) => ({
+				...log,
+				eventType:
+					log.selector === eventSelectors.created
+						? 'created'
+						: log.selector === eventSelectors.adminUpdated
+							? 'admin updated'
+							: log.selector === eventSelectors.whitelistUpdated
+								? 'whitelist updated'
+								: log.selector === eventSelectors.blacklistUpdated
+									? 'blacklist updated'
+									: 'compound created',
+			})),
+		).reverse()
+
 		const members = new Map<string, Address.Address>()
+		for (const event of membershipEvents) {
+			const account = parseAddress(event.topic3)
+			if (!account) continue
+			updateTip403Member(members, account, parseBool(event.data))
+		}
+
 		const activity: Tip403PolicyEvent[] = []
-		for (const event of events) {
+		for (const event of recentEvents.slice(0, RECENT_ACTIVITY_LIMIT)) {
 			const account = parseAddress(event.topic3)
 			const updater = parseAddress(event.topic2)
 			const txHash = event.tx_hash as Hex.Hex | null
-			if (!txHash) continue
-
-			if (event.eventType === 'whitelist updated' && account) {
-				updateTip403Member(members, account, parseBool(event.data))
-			}
-			if (event.eventType === 'blacklist updated' && account) {
-				updateTip403Member(members, account, parseBool(event.data))
-			}
+			if (!txHash || event.log_idx == null) continue
 
 			activity.push({
 				type: event.eventType,
 				blockNumber: String(event.block_num ?? 0),
 				timestamp: parseTimestamp(event.block_timestamp),
 				txHash,
+				logIndex: String(event.log_idx),
 				updater,
 				admin:
 					event.eventType === 'admin updated'
@@ -300,7 +350,7 @@ export const fetchTip403Policy = createServerFn({ method: 'POST' })
 			componentPolicies,
 			members: allMembers.slice(offset, offset + data.limit),
 			membersTotal: allMembers.length,
-			activity: activity.reverse().slice(0, 20),
-			activityTruncated: events.length > 20,
+			activity,
+			activityTruncated: recentEvents.length > RECENT_ACTIVITY_LIMIT,
 		}
 	})

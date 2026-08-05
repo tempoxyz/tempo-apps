@@ -353,7 +353,7 @@ function activityRow(
 					: 'Policy created'
 
 	return {
-		key: `${event.txHash}-${event.blockNumber}`,
+		key: `${event.txHash}-${event.logIndex}`,
 		cells: [
 			<span key="event" className="text-primary">
 				{eventLabel}
