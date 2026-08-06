@@ -187,16 +187,39 @@ function rpcCalls(input: SimulationRequest) {
 	}))
 }
 
-/** `debug_traceCallMany` state context, which differs from the call block tag. */
-function rpcStateContext(block: SimulationRequest['block']): unknown {
-	return block === 'latest' ? { blockNumber: 'latest' } : { blockHash: block }
+/**
+ * State context for `debug_traceCallMany`.
+ *
+ * It does not resolve a `blockHash` the way `debug_traceCall` and
+ * `eth_simulateV1` do — given the same pinned block it executes against
+ * different state, so a replayed batch reported a revert while the execution
+ * result reported success. Resolving the hash to a number first makes all
+ * three agree. Verified against block 33,553,795: by hash the batch reverts at
+ * 103,826 gas, by number it succeeds at 705,700, matching `eth_simulateV1`.
+ */
+async function traceCallManyContext(
+	input: SimulationRequest,
+	signal: AbortSignal,
+): Promise<unknown> {
+	if (input.block === 'latest') return { blockNumber: 'latest' }
+
+	const block = await rpcRequest<{ number?: Hex.Hex } | null>({
+		chainId: input.chainId,
+		method: 'eth_getBlockByHash',
+		params: [input.block, false],
+		signal,
+	})
+	if (!block?.number) throw new Error(`block not found: ${input.block}`)
+	return { blockNumber: block.number }
 }
 
 /**
- * One trace per call, always. Batches go through `debug_traceCallMany`, which
- * runs the bundle sequentially against shared state — so call 2 of an
- * approve→deposit pair traces correctly instead of reverting for want of the
- * approve that precedes it.
+ * One trace per call, for one call or twenty.
+ *
+ * `debug_traceCallMany` runs a bundle sequentially against shared state, so
+ * call 2 of an approve→deposit pair traces correctly rather than reverting for
+ * want of the approve before it. A one-element bundle returns byte-identical
+ * output to `debug_traceCall`, so there is no reason to keep both paths.
  */
 async function tracePanel(
 	input: SimulationRequest,
@@ -208,22 +231,12 @@ async function tracePanel(
 			? { tracer, tracerConfig: { withLog: true } }
 			: { tracer, tracerConfig: { diffMode: true } }
 
-	if (!input.calls?.length || input.calls.length < 2)
-		return [
-			await rpcRequest({
-				chainId: input.chainId,
-				method: 'debug_traceCall',
-				params: [rpcCall(input), rpcBlock(input.block), config],
-				signal,
-			}),
-		]
-
 	const result = await rpcRequest<unknown[][]>({
 		chainId: input.chainId,
 		method: 'debug_traceCallMany',
 		params: [
 			[{ transactions: rpcCalls(input) }],
-			rpcStateContext(input.block),
+			await traceCallManyContext(input, signal),
 			config,
 		],
 		signal,

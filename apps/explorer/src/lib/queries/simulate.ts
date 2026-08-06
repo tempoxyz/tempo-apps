@@ -326,6 +326,24 @@ export function mergePrestateDiffs(
 				: state
 		}
 	}
+
+	// `diffMode` only reports fields that changed, so after merging an account
+	// can carry a nonce on one side and not the other. Left alone that renders
+	// as "nonce 1 → 0" — a change that never happened.
+	for (const address of new Set([
+		...Object.keys(merged.pre),
+		...Object.keys(merged.post),
+	])) {
+		const key = address as Address.Address
+		const pre = merged.pre[key]
+		const post = merged.post[key]
+		if (!pre || !post) continue
+		if (pre.nonce !== undefined && post.nonce === undefined)
+			merged.post[key] = { ...post, nonce: pre.nonce }
+		else if (post.nonce !== undefined && pre.nonce === undefined)
+			merged.pre[key] = { ...pre, nonce: post.nonce }
+	}
+
 	return merged
 }
 
