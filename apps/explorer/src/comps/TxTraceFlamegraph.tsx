@@ -53,9 +53,6 @@ export function TxTraceFlamegraph(
 	const maxDepth = rows.length
 
 	if (!tree || !root || maxDepth === 0) return null
-	// One or two frames render as a single full-width bar that says nothing the
-	// trace tree hasn't already said.
-	if (root.subtreeSize < 3) return null
 
 	return (
 		<div className="flex flex-col">
