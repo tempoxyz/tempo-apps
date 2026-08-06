@@ -1,11 +1,13 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
+	Link,
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
+import * as Value from 'ox/Value'
 import * as React from 'react'
 import type { Abi, AbiFunction, Log } from 'viem'
 import {
@@ -17,7 +19,9 @@ import {
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import { useConnection } from 'wagmi'
 import * as z from 'zod/mini'
+import { Address } from '#comps/Address'
 import { Sections } from '#comps/Sections'
+import { TokenIcon } from '#comps/TokenIcon'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
@@ -47,13 +51,14 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
 import { formatDecodedTraceErrorShort } from '#lib/domain/trace-errors'
-import { HexFormatter } from '#lib/formatting'
+import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useKeyboardShortcut } from '#lib/hooks'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import type { CallTrace, PrestateDiff } from '#lib/queries/trace'
 import {
 	mergePrestateDiffs,
 	SimulationApiError,
+	type SimulationAssetChange,
 	type SimulationCallResult,
 	simulationExecutionQueryOptions,
 	type SimulationExecutionResult,
@@ -1036,9 +1041,6 @@ function SimulationResults(props: {
 				omitNonceOnlyFor: input.from,
 			}).accounts.length
 		: 0
-	const effectCount =
-		(executionQuery.data?.logs.length ?? 0) +
-		(executionQuery.data?.assetChanges.length ?? 0)
 
 	const sections: Sections.Section[] = [
 		{
@@ -1104,6 +1106,19 @@ function SimulationResults(props: {
 			),
 		},
 		{
+			title: 'Balance changes',
+			itemsLabel: 'changes',
+			totalItems: executionQuery.data?.assetChanges.length ?? 0,
+			autoCollapse: false,
+			visible: (executionQuery.data?.assetChanges.length ?? 0) > 0,
+			content: (
+				<SimulationBalances
+					assetChanges={executionQuery.data?.assetChanges ?? []}
+					tokenMetadata={tokenMetadata}
+				/>
+			),
+		},
+		{
 			title: 'Events',
 			itemsLabel: 'events',
 			totalItems: executionQuery.data?.logs.length ?? 0,
@@ -1111,7 +1126,7 @@ function SimulationResults(props: {
 			visible:
 				executionQuery.isPending ||
 				Boolean(executionQuery.error) ||
-				effectCount > 0,
+				(executionQuery.data?.logs.length ?? 0) > 0,
 			content: executionQuery.isPending ? (
 				<PanelSkeleton rows={4} />
 			) : executionQuery.error ? (
@@ -1120,11 +1135,9 @@ function SimulationResults(props: {
 					error={executionQuery.error}
 				/>
 			) : (
-				<SimulationEffects
+				<SimulationEvents
 					logs={executionQuery.data?.logs ?? []}
 					knownEvents={knownEvents}
-					assetChanges={executionQuery.data?.assetChanges ?? []}
-					tokenMetadata={tokenMetadata}
 				/>
 			),
 		},
@@ -1226,10 +1239,7 @@ function SimulationVerdict(props: {
 					</div>
 
 					{execution.calls.length > 1 ? (
-						<BatchDetail
-							execution={execution}
-							knownEvents={props.knownEvents}
-						/>
+						<BatchDetail execution={execution} />
 					) : succeeded ? (
 						<SuccessDetail
 							tree={tree}
@@ -1265,28 +1275,26 @@ function verdictHeadline(execution: SimulationExecutionResult): string {
 	return `Reverted in call ${failed.index + 1} of ${execution.calls.length}`
 }
 
+/**
+ * A batch has no single representative event — picking one out of twenty-six
+ * is arbitrary and misleading. Summarise by volume and let the sections below
+ * carry the detail.
+ */
 function BatchDetail(props: {
 	execution: SimulationExecutionResult
-	knownEvents: ReturnType<typeof parseKnownEvents>
 }): React.JSX.Element {
-	const { execution, knownEvents } = props
-	const succeeded = execution.calls.filter(
-		(call) => call.status === 'success',
-	).length
-	const event = knownEvents.find(preferredEventsFilter) ?? knownEvents[0]
+	const { execution } = props
+	const parts = [
+		`${execution.calls.length} calls in order`,
+		`${execution.logs.length} event${execution.logs.length === 1 ? '' : 's'}`,
+	]
+	if (execution.assetChanges.length > 0)
+		parts.push(
+			`${execution.assetChanges.length} balance change${execution.assetChanges.length === 1 ? '' : 's'}`,
+		)
 
 	return (
-		<div className="mt-[5px] flex flex-col gap-[6px]">
-			<p className="text-[13px] text-secondary">
-				{succeeded} of {execution.calls.length} calls succeeded, executed in
-				order against each other{'’'}s state.
-			</p>
-			{event && (
-				<div className="text-[13px] text-secondary">
-					<TxEventDescription event={event} />
-				</div>
-			)}
-		</div>
+		<p className="mt-[5px] text-[13px] text-secondary">{parts.join(' · ')}</p>
 	)
 }
 
@@ -1460,20 +1468,14 @@ function DiffChip(props: {
 	)
 }
 
-function SimulationEffects(props: {
+function SimulationEvents(props: {
 	logs: Log[]
 	knownEvents: ReturnType<typeof parseKnownEvents>
-	assetChanges: Array<{
-		address: OxAddress.Address
-		token: OxAddress.Address
-		diff: bigint
-	}>
-	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
 }): React.JSX.Element {
-	if (props.logs.length === 0 && props.assetChanges.length === 0)
+	if (props.logs.length === 0)
 		return (
 			<div className="px-[18px] py-[24px] text-center text-[13px] text-tertiary">
-				No events or balance changes.
+				No events emitted.
 			</div>
 		)
 
@@ -1487,35 +1489,106 @@ function SimulationEffects(props: {
 					<TxEventDescription event={event} />
 				</div>
 			))}
-			{props.logs.length > 0 && props.knownEvents.length === 0 && (
+			{props.knownEvents.length === 0 && (
 				<div className="px-[18px] py-[12px] text-[12px] text-tertiary">
 					{props.logs.length} raw event{props.logs.length === 1 ? '' : 's'}{' '}
 					emitted.
 				</div>
 			)}
-			{props.assetChanges.map((change) => (
+		</div>
+	)
+}
+
+/**
+ * Net token movement per account. Amounts are formatted with the token's
+ * decimals — a raw integer here reads as a wildly wrong number (0.1 USDC.e
+ * shows as 100,000), which is worse than showing nothing.
+ */
+function SimulationBalances(props: {
+	assetChanges: SimulationAssetChange[]
+	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
+}): React.JSX.Element {
+	if (props.assetChanges.length === 0)
+		return (
+			<div className="px-[18px] py-[24px] text-center text-[13px] text-tertiary">
+				No balance changes.
+			</div>
+		)
+
+	const byAccount = new Map<OxAddress.Address, SimulationAssetChange[]>()
+	for (const change of props.assetChanges) {
+		const existing = byAccount.get(change.address)
+		if (existing) existing.push(change)
+		else byAccount.set(change.address, [change])
+	}
+
+	return (
+		<div className="flex flex-col divide-y divide-card-border">
+			{[...byAccount.entries()].map(([account, changes]) => (
 				<div
-					key={`${change.address}-${change.token}`}
-					className="grid grid-cols-[1fr_auto] gap-[12px] px-[18px] py-[10px] text-[12px] font-mono"
+					key={account}
+					className="flex flex-col gap-[6px] px-[18px] py-[12px]"
 				>
-					<span
-						className="min-w-0 truncate text-secondary"
-						title={change.address}
-					>
-						{change.address} ·{' '}
-						{props.tokenMetadata[change.token]?.symbol ?? change.token}
-					</span>
-					<span
-						className={
-							change.diff > 0n ? 'text-base-content-positive' : 'text-primary'
-						}
-					>
-						{signed(change.diff)}
-					</span>
+					<Address address={account} />
+					<div className="flex flex-col gap-[3px] border-l border-base-border pl-[12px]">
+						{changes.map((change) => {
+							const metadata =
+								props.tokenMetadata[change.token] ??
+								props.tokenMetadata[change.token.toLowerCase()]
+							const positive = change.diff > 0n
+							return (
+								<div
+									key={change.token}
+									className="flex items-center gap-[8px] text-[13px]"
+								>
+									<span
+										className={cx(
+											'shrink-0 tabular-nums',
+											positive
+												? 'text-base-content-positive'
+												: 'text-secondary',
+										)}
+										title={`${change.diff.toString()} (raw)`}
+									>
+										{formatBalanceDelta(change.diff, metadata?.decimals)}
+									</span>
+									<Link
+										to={
+											Tip20.isTip20Address(change.token)
+												? '/token/$address'
+												: '/address/$address'
+										}
+										params={{ address: change.token }}
+										className="inline-flex shrink-0 items-center gap-[4px] text-base-content-positive press-down"
+									>
+										<TokenIcon
+											address={change.token}
+											name={metadata?.symbol}
+											className="size-[16px]!"
+										/>
+										<span>
+											{metadata?.symbol ?? HexFormatter.truncate(change.token)}
+										</span>
+									</Link>
+								</div>
+							)
+						})}
+					</div>
 				</div>
 			))}
 		</div>
 	)
+}
+
+/** Formats with the token's decimals, or falls back to the raw integer. */
+function formatBalanceDelta(
+	diff: bigint,
+	decimals: number | undefined,
+): string {
+	const sign = diff > 0n ? '+' : '−'
+	const magnitude = diff < 0n ? -diff : diff
+	if (decimals === undefined) return `${sign}${magnitude.toLocaleString()}`
+	return `${sign}${PriceFormatter.formatAmount(Value.format(magnitude, decimals))}`
 }
 
 function SimulationEmptyState(props: {
@@ -1611,7 +1684,17 @@ function BatchCallRow(props: {
 
 	return (
 		<div className="flex flex-col gap-[6px] px-[18px] py-[12px]">
-			<div className="flex flex-wrap items-center gap-[8px] text-[12px]">
+			{/* The whole row toggles: a small text link was too easy to miss. */}
+			<button
+				type="button"
+				onClick={() => tree && setExpanded(!expanded)}
+				disabled={!tree}
+				title={tree ? (expanded ? 'Hide trace' : 'Show trace') : undefined}
+				className={cx(
+					'-mx-[6px] flex flex-wrap items-center gap-[8px] rounded-[6px] px-[6px] py-[4px] text-left text-[12px]',
+					tree && 'cursor-pointer press-down hover:bg-distinct/60',
+				)}
+			>
 				<span
 					className={cx(
 						'flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-medium',
@@ -1632,19 +1715,20 @@ function BatchCallRow(props: {
 				<span className="shrink-0 font-mono text-[11px] text-tertiary">
 					{call.gasUsed.toLocaleString()} gas
 				</span>
-				<button
-					type="button"
-					onClick={() => setExpanded(!expanded)}
-					disabled={!tree}
-					className="shrink-0 text-[11px] text-accent cursor-pointer hover:underline press-down disabled:cursor-default disabled:text-tertiary disabled:no-underline"
-				>
+				<span className="flex shrink-0 items-center gap-[4px] text-[11px] text-tertiary">
 					{tree
-						? expanded
-							? 'Hide trace'
-							: `Trace (${tree.subtreeSize})`
-						: 'No trace'}
-				</button>
-			</div>
+						? `${tree.subtreeSize} frame${tree.subtreeSize === 1 ? '' : 's'}`
+						: 'no trace'}
+					{tree && (
+						<ChevronDownIcon
+							className={cx(
+								'size-[12px] transition-transform',
+								!expanded && '-rotate-90',
+							)}
+						/>
+					)}
+				</span>
+			</button>
 			{!succeeded && (
 				<span className="pl-[26px] font-mono text-[11px] break-all text-negative">
 					reverted{call.revertData ? ` · ${call.revertData}` : ''}
