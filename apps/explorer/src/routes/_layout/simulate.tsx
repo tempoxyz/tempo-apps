@@ -21,7 +21,11 @@ import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
-import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
+import {
+	findDeepestFailedNode,
+	TxTraceTree,
+	useTraceTree,
+} from '#comps/TxTraceTree'
 import { cx } from '#lib/css'
 import {
 	formatAbiValue,
@@ -43,7 +47,6 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
 import { formatDecodedTraceErrorShort } from '#lib/domain/trace-errors'
-import { findDeepestFailedNode } from '#lib/domain/tx-summary'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useKeyboardShortcut } from '#lib/hooks'
 import { getFeeTokenForChain } from '#lib/fee-token'

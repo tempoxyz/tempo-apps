@@ -258,7 +258,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 						receipt: data.receipt,
 						transaction: data.transaction,
 						knownEvents: data.knownEvents,
-						tree: null,
+						trace: null,
 					})
 					return Response.json(
 						JSON.parse(
@@ -602,7 +602,7 @@ namespace TextRenderer {
 			receipt,
 			transaction,
 			knownEvents,
-			tree: null,
+			trace: null,
 		})
 
 		const lines: string[] = []

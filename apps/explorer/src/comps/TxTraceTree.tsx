@@ -86,6 +86,29 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	)
 }
 
+/** Deepest frame that reverted — the one that actually explains the failure. */
+export function findDeepestFailedNode(
+	tree: TxTraceTree.Node | null,
+): TxTraceTree.Node | null {
+	if (!tree) return null
+
+	let failed: { node: TxTraceTree.Node; depth: number } | null = null
+	const stack = [{ node: tree, depth: 0 }]
+
+	while (stack.length > 0) {
+		const current = stack.pop()
+		if (!current) continue
+		if (current.node.hasError) {
+			if (!failed || current.depth > failed.depth) failed = current
+		}
+		for (const child of current.node.children) {
+			stack.push({ node: child, depth: current.depth + 1 })
+		}
+	}
+
+	return failed?.node ?? null
+}
+
 function RawToggle(props: {
 	raw: boolean
 	onToggle: () => void

@@ -36,10 +36,6 @@ import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
-import {
-	countTransferBalanceChanges,
-	withoutFeeTransferLogs,
-} from '#lib/domain/tempo-calls'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
@@ -67,7 +63,6 @@ import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
-import FlaskConicalIcon from '~icons/lucide/flask-conical'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -212,17 +207,16 @@ function RouteComponent() {
 				}>)
 			: undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
-	const traceTree = useTraceTree(traceData.trace)
 	const summary = React.useMemo(
 		() =>
 			buildTxSummary({
 				receipt,
 				transaction,
 				knownEvents,
-				tree: traceTree,
+				trace: traceData.trace,
 				balanceChangesData,
 			}),
-		[receipt, knownEvents, traceTree, balanceChangesData, transaction],
+		[receipt, knownEvents, traceData.trace, balanceChangesData, transaction],
 	)
 
 	const setActiveSection = (newIndex: number) => {
@@ -289,7 +283,6 @@ function RouteComponent() {
 			content: (
 				<TraceSection
 					trace={traceData.trace}
-					tree={traceTree}
 					prestate={traceData.prestate}
 					receipt={receipt}
 					logs={receipt.logs}
@@ -309,25 +302,6 @@ function RouteComponent() {
 
 	const tabIndex = tabs.indexOf(tab)
 	const activeSection = tabIndex !== -1 ? tabIndex : 0
-	const resimulateSearch = hasCalls
-		? {
-				tx: receipt.transactionHash,
-			}
-		: transaction.to
-			? {
-					from: transaction.from,
-					to: transaction.to,
-					data: transaction.input,
-					value: transaction.value.toString(),
-					gas: transaction.gas.toString(),
-					block: block.parentHash,
-					tx: receipt.transactionHash,
-					originStatus: receipt.status,
-					originGas: receipt.gasUsed.toString(),
-					originEvents: withoutFeeTransferLogs(receipt.logs).length,
-					originBalances: countTransferBalanceChanges(receipt.logs),
-				}
-			: null
 
 	return (
 		<div
@@ -348,18 +322,6 @@ function RouteComponent() {
 				className="self-start"
 			/>
 			<div className="flex min-w-0 flex-col gap-[14px]">
-				{resimulateSearch && (
-					<div className="flex justify-end">
-						<Link
-							to="/simulate"
-							search={resimulateSearch}
-							className="inline-flex items-center gap-[6px] rounded-[7px] border border-card-border bg-card px-[10px] py-[7px] text-[12px] text-accent hover:border-accent press-down"
-						>
-							<FlaskConicalIcon className="size-[13px]" />
-							{hasCalls ? 'Simulate a batch call' : 'Re-simulate'}
-						</Link>
-					</div>
-				)}
 				<Sections
 					mode={mode}
 					sections={sections}
@@ -672,13 +634,13 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 
 function TraceSection(props: {
 	trace: CallTrace | null
-	tree: TxTraceTree.Node | null
 	prestate: PrestateDiff | null
 	receipt: TransactionReceipt
 	logs: Log[]
 	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
 }): React.JSX.Element {
-	const { trace, tree, prestate, receipt, logs, tokenMetadata } = props
+	const { trace, prestate, receipt, logs, tokenMetadata } = props
+	const tree = useTraceTree(trace)
 
 	return (
 		<div className="flex flex-col">
