@@ -267,8 +267,11 @@ export function simulationTraceQueryOptions(input: SimulationInput) {
 	return queryOptions({
 		queryKey: [...simulationQueryKey(input), 'trace'],
 		queryFn: async () => {
-			const result = await postSimulation<{ trace: CallTrace }>(input, 'trace')
-			return result.trace
+			const result = await postSimulation<{ trace: CallTrace[] }>(
+				input,
+				'trace',
+			)
+			return result.trace ?? []
 		},
 		staleTime: input.block === 'latest' ? 0 : Number.POSITIVE_INFINITY,
 	})
@@ -278,14 +281,52 @@ export function simulationPrestateQueryOptions(input: SimulationInput) {
 	return queryOptions({
 		queryKey: [...simulationQueryKey(input), 'prestate'],
 		queryFn: async () => {
-			const result = await postSimulation<{ prestate: PrestateDiff }>(
+			const result = await postSimulation<{ prestate: PrestateDiff[] }>(
 				input,
 				'prestate',
 			)
-			return result.prestate
+			return result.prestate ?? []
 		},
 		staleTime: input.block === 'latest' ? 0 : Number.POSITIVE_INFINITY,
 	})
+}
+
+/**
+ * Collapse per-call diffs into one. Earliest `pre` and latest `post` win, so
+ * the merged view reads as the net effect of the whole batch.
+ */
+export function mergePrestateDiffs(
+	diffs: readonly PrestateDiff[],
+): PrestateDiff | null {
+	if (diffs.length === 0) return null
+	if (diffs.length === 1) return diffs[0] ?? null
+
+	const merged: PrestateDiff = { pre: {}, post: {} }
+	for (const diff of diffs) {
+		for (const [address, state] of Object.entries(diff.pre ?? {})) {
+			const key = address as Address.Address
+			const existing = merged.pre[key]
+			merged.pre[key] = existing
+				? {
+						...state,
+						...existing,
+						storage: { ...state.storage, ...existing.storage },
+					}
+				: state
+		}
+		for (const [address, state] of Object.entries(diff.post ?? {})) {
+			const key = address as Address.Address
+			const existing = merged.post[key]
+			merged.post[key] = existing
+				? {
+						...existing,
+						...state,
+						storage: { ...existing.storage, ...state.storage },
+					}
+				: state
+		}
+	}
+	return merged
 }
 
 export function simulationExecutionQueryOptions(input: SimulationInput) {

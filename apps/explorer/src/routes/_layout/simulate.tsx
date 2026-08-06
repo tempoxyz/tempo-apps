@@ -50,7 +50,9 @@ import { formatDecodedTraceErrorShort } from '#lib/domain/trace-errors'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useKeyboardShortcut } from '#lib/hooks'
 import { getFeeTokenForChain } from '#lib/fee-token'
+import type { CallTrace, PrestateDiff } from '#lib/queries/trace'
 import {
+	mergePrestateDiffs,
 	SimulationApiError,
 	type SimulationCallResult,
 	simulationExecutionQueryOptions,
@@ -170,10 +172,13 @@ function SimulatePage(): React.JSX.Element {
 	const navigate = useNavigate({ from: Route.fullPath })
 	const chainId = getWagmiConfig().chains[0].id as SimulationInput['chainId']
 	const connection = useConnection()
+	// A bare /simulate starts empty. Prefilling a token address and a name()
+	// selector looked like state the user had chosen, so the first task on
+	// arriving was working out what was already there and deleting it.
 	const [form, setForm] = React.useState<FormState>(() => ({
-		from: search.from,
-		to: search.to ?? getFeeTokenForChain(chainId) ?? EXAMPLE_TOKEN,
-		data: search.to ? search.data : EXAMPLE_CALLDATA,
+		from: search.to ? search.from : '',
+		to: search.to ?? '',
+		data: search.to ? search.data : '',
 		value: search.value,
 		gas: search.gas,
 		block: search.block,
@@ -206,7 +211,7 @@ function SimulatePage(): React.JSX.Element {
 	React.useEffect(() => {
 		if (
 			!search.to &&
-			form.from === zeroAddress &&
+			!form.from &&
 			connection.address &&
 			OxAddress.validate(connection.address)
 		)
@@ -288,10 +293,12 @@ function SimulatePage(): React.JSX.Element {
 		(kind: 'read' | 'failing') => {
 			const input: SimulationInput = {
 				chainId,
+				// Self-contained: the form is empty on arrival, so the examples
+				// cannot borrow a sender from it.
 				from: OxAddress.from(
 					kind === 'failing'
 						? '0x000000000000000000000000000000000000dEaD'
-						: form.from,
+						: zeroAddress,
 				),
 				to: OxAddress.from(getFeeTokenForChain(chainId) ?? EXAMPLE_TOKEN),
 				data: kind === 'failing' ? FAILING_EXAMPLE_CALLDATA : EXAMPLE_CALLDATA,
@@ -306,7 +313,7 @@ function SimulatePage(): React.JSX.Element {
 			setEditing(false)
 			void navigate({ search: input, replace: true, resetScroll: false })
 		},
-		[chainId, form.from, form.gas, navigate],
+		[chainId, form.gas, navigate],
 	)
 
 	useKeyboardShortcut({ 'mod+enter': run })
@@ -628,6 +635,7 @@ function CallBar(props: {
 										from: event.target.value,
 									}))
 								}
+								placeholder="0x sender — defaults to the zero address"
 								className={inputClassName}
 							/>
 						</Field>
@@ -937,23 +945,29 @@ function SimulationResults(props: {
 	const fallback = emptySimulationInput()
 	const input = props.input ?? fallback
 	const enabled = Boolean(props.input)
-	// `debug_traceCall` takes one call and cannot chain state between them, so a
-	// batch has no single call tree or state diff. `eth_simulateV1` still gives
-	// accurate sequential per-call results, which is what batch mode shows.
 	const isBatch = (input.calls?.length ?? 0) > 1
+	// Batches trace through `debug_traceCallMany`, which runs the bundle in
+	// order against shared state — so every call gets a real tree, not just
+	// the first one.
 	const traceQuery = useQuery({
 		...simulationTraceQueryOptions(input),
-		enabled: enabled && !isBatch,
+		enabled,
 	})
 	const prestateQuery = useQuery({
 		...simulationPrestateQueryOptions(input),
-		enabled: enabled && !isBatch,
+		enabled,
 	})
+	const traces = traceQuery.data ?? []
+	const prestate = React.useMemo(
+		() => mergePrestateDiffs(prestateQuery.data ?? []),
+		[prestateQuery.data],
+	)
 	const executionQuery = useQuery({
 		...simulationExecutionQueryOptions(input),
 		enabled,
 	})
-	const tree = useTraceTree(traceQuery.data ?? null)
+	// The primary tree: the single call, or the first call of a batch.
+	const tree = useTraceTree(traces[0] ?? null)
 	const metadataAddresses = React.useMemo(
 		() => [
 			input.to,
@@ -1017,8 +1031,8 @@ function SimulationResults(props: {
 	const frameCount = tree?.subtreeSize ?? 0
 	// Count what actually renders, not raw prestate keys — the diff drops
 	// accounts with no real change and the caller's simulation-only nonce tick.
-	const stateAccounts = prestateQuery.data
-		? TxStateDiff.buildData(prestateQuery.data, [], tokenMetadata, {
+	const stateAccounts = prestate
+		? TxStateDiff.buildData(prestate, [], tokenMetadata, {
 				omitNonceOnlyFor: input.from,
 			}).accounts.length
 		: 0
@@ -1038,6 +1052,8 @@ function SimulationResults(props: {
 			) : (
 				<BatchCalls
 					calls={executionQuery.data?.calls ?? []}
+					traces={traces}
+					prestates={prestateQuery.data ?? []}
 					onTraceCall={props.onTraceCall}
 				/>
 			),
@@ -1054,12 +1070,8 @@ function SimulationResults(props: {
 				<PanelError title="Call trace unavailable" error={traceQuery.error} />
 			) : (
 				<div className="flex flex-col">
-					<TxTraceTree
-						trace={traceQuery.data ?? null}
-						tree={tree}
-						label={null}
-					/>
-					<TxTraceFlamegraph tree={tree} prestate={prestateQuery.data} />
+					<TxTraceTree trace={traces[0] ?? null} tree={tree} label={null} />
+					<TxTraceFlamegraph tree={tree} prestate={prestate} />
 				</div>
 			),
 		},
@@ -1069,10 +1081,9 @@ function SimulationResults(props: {
 			totalItems: stateAccounts,
 			autoCollapse: false,
 			visible:
-				!isBatch &&
-				(prestateQuery.isPending ||
-					Boolean(prestateQuery.error) ||
-					stateAccounts > 0),
+				prestateQuery.isPending ||
+				Boolean(prestateQuery.error) ||
+				stateAccounts > 0,
 			content: prestateQuery.isPending ? (
 				<PanelSkeleton rows={5} />
 			) : prestateQuery.error ? (
@@ -1082,8 +1093,8 @@ function SimulationResults(props: {
 				/>
 			) : (
 				<TxStateDiff
-					prestate={prestateQuery.data ?? null}
-					trace={traceQuery.data ?? null}
+					prestate={prestate}
+					trace={traces[0] ?? null}
 					receipt={{ from: input.from, to: input.to }}
 					logs={executionQuery.data?.logs}
 					tokenMetadata={tokenMetadata}
@@ -1547,6 +1558,8 @@ function SimulationEmptyState(props: {
  */
 function BatchCalls(props: {
 	calls: SimulationCallResult[]
+	traces: CallTrace[]
+	prestates: PrestateDiff[]
 	onTraceCall: (index: number) => void
 }): React.JSX.Element {
 	if (props.calls.length === 0)
@@ -1562,6 +1575,8 @@ function BatchCalls(props: {
 				<BatchCallRow
 					key={call.index}
 					call={call}
+					trace={props.traces[call.index] ?? null}
+					prestate={props.prestates[call.index] ?? null}
 					onTrace={() => props.onTraceCall(call.index)}
 				/>
 			))}
@@ -1571,9 +1586,13 @@ function BatchCalls(props: {
 
 function BatchCallRow(props: {
 	call: SimulationCallResult
+	trace: CallTrace | null
+	prestate: PrestateDiff | null
 	onTrace: () => void
 }): React.JSX.Element {
 	const { call } = props
+	const [expanded, setExpanded] = React.useState(call.status === 'reverted')
+	const tree = useTraceTree(props.trace)
 	const { data: abi } = useAutoloadAbi({ address: call.to, enabled: true })
 	const succeeded = call.status === 'success'
 
@@ -1615,10 +1634,15 @@ function BatchCallRow(props: {
 				</span>
 				<button
 					type="button"
-					onClick={props.onTrace}
-					className="shrink-0 text-[11px] text-accent cursor-pointer hover:underline press-down"
+					onClick={() => setExpanded(!expanded)}
+					disabled={!tree}
+					className="shrink-0 text-[11px] text-accent cursor-pointer hover:underline press-down disabled:cursor-default disabled:text-tertiary disabled:no-underline"
 				>
-					Trace
+					{tree
+						? expanded
+							? 'Hide trace'
+							: `Trace (${tree.subtreeSize})`
+						: 'No trace'}
 				</button>
 			</div>
 			{!succeeded && (
@@ -1630,6 +1654,12 @@ function BatchCallRow(props: {
 				<span className="pl-[26px] font-mono text-[11px] break-all text-tertiary">
 					returned {abbreviate(call.returnData, 42)}
 				</span>
+			)}
+			{expanded && tree && (
+				<div className="mt-[6px] overflow-hidden rounded-[7px] border border-card-border bg-card-header">
+					<TxTraceTree trace={props.trace} tree={tree} label={null} />
+					<TxTraceFlamegraph tree={tree} prestate={props.prestate} />
+				</div>
 			)}
 		</div>
 	)
@@ -1756,9 +1786,11 @@ const inputClassName =
 
 /** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)  @ latest` */
 function describeCall(form: FormState, abi: Abi | undefined): string {
+	if (!form.to.trim() && !form.data.trim()) return 'New call'
+
 	const from = OxAddress.validate(form.from)
 		? HexFormatter.truncate(form.from as OxHex.Hex)
-		: form.from || '—'
+		: form.from || 'anyone'
 	const to = OxAddress.validate(form.to)
 		? HexFormatter.truncate(form.to as OxHex.Hex)
 		: form.to || '—'
@@ -1827,11 +1859,15 @@ function parseSingleForm(
 	form: FormState,
 	chainId: number,
 ): SimulationInput | null {
+	// An unset sender means "nobody in particular" — the zero address, matching
+	// what `eth_call` does. Only `to` is genuinely required.
+	const from = form.from.trim() === '' ? zeroAddress : form.from.trim()
+	const data = form.data.trim() === '' ? '0x' : form.data.trim()
 	if (
 		(chainId !== 4217 && chainId !== 42431 && chainId !== 31318) ||
-		!OxAddress.validate(form.from) ||
+		!OxAddress.validate(from) ||
 		!OxAddress.validate(form.to) ||
-		!OxHex.validate(form.data) ||
+		!OxHex.validate(data) ||
 		!/^\d+$/.test(form.value) ||
 		!/^\d+$/.test(form.gas) ||
 		(form.block !== 'latest' &&

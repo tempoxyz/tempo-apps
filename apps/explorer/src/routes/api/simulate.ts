@@ -90,8 +90,9 @@ export type SerializedExecutionResult = {
 }
 
 export type SerializedSimulationResult = {
-	trace: unknown | null
-	prestate: unknown | null
+	/** One entry per call; length 1 for an ordinary single call. */
+	trace: unknown[] | null
+	prestate: unknown[] | null
 	execution: SerializedExecutionResult | null
 	errors: {
 		callTracer?: string | undefined
@@ -186,36 +187,62 @@ function rpcCalls(input: SimulationRequest) {
 	}))
 }
 
-export async function fetchTracePanel(
+/** `debug_traceCallMany` state context, which differs from the call block tag. */
+function rpcStateContext(block: SimulationRequest['block']): unknown {
+	return block === 'latest' ? { blockNumber: 'latest' } : { blockHash: block }
+}
+
+/**
+ * One trace per call, always. Batches go through `debug_traceCallMany`, which
+ * runs the bundle sequentially against shared state — so call 2 of an
+ * approve→deposit pair traces correctly instead of reverting for want of the
+ * approve that precedes it.
+ */
+async function tracePanel(
 	input: SimulationRequest,
+	tracer: 'callTracer' | 'prestateTracer',
 	signal: AbortSignal,
-): Promise<unknown> {
-	return rpcRequest({
+): Promise<unknown[]> {
+	const config =
+		tracer === 'callTracer'
+			? { tracer, tracerConfig: { withLog: true } }
+			: { tracer, tracerConfig: { diffMode: true } }
+
+	if (!input.calls?.length || input.calls.length < 2)
+		return [
+			await rpcRequest({
+				chainId: input.chainId,
+				method: 'debug_traceCall',
+				params: [rpcCall(input), rpcBlock(input.block), config],
+				signal,
+			}),
+		]
+
+	const result = await rpcRequest<unknown[][]>({
 		chainId: input.chainId,
-		method: 'debug_traceCall',
+		method: 'debug_traceCallMany',
 		params: [
-			rpcCall(input),
-			rpcBlock(input.block),
-			{ tracer: 'callTracer', tracerConfig: { withLog: true } },
+			[{ transactions: rpcCalls(input) }],
+			rpcStateContext(input.block),
+			config,
 		],
 		signal,
 	})
+	return result[0] ?? []
+}
+
+export async function fetchTracePanel(
+	input: SimulationRequest,
+	signal: AbortSignal,
+): Promise<unknown[]> {
+	return tracePanel(input, 'callTracer', signal)
 }
 
 export async function fetchPrestatePanel(
 	input: SimulationRequest,
 	signal: AbortSignal,
-): Promise<unknown> {
-	return rpcRequest({
-		chainId: input.chainId,
-		method: 'debug_traceCall',
-		params: [
-			rpcCall(input),
-			rpcBlock(input.block),
-			{ tracer: 'prestateTracer', tracerConfig: { diffMode: true } },
-		],
-		signal,
-	})
+): Promise<unknown[]> {
+	return tracePanel(input, 'prestateTracer', signal)
 }
 
 export async function fetchExecutionPanel(
