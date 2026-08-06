@@ -108,6 +108,20 @@
 	--color-warning: light-dark(#e2a336, #8f6424);
 	--color-warning-background: light-dark(#fdf5c2, #252018);
 
+	/* Code & data visualisation.
+	 *
+	 * Deliberately outside the semantic scale. Syntax highlighting and charts
+	 * describe *what something is*, never whether it succeeded — reusing
+	 * positive/negative/accent for them makes green mean "success" in one place
+	 * and "function name" in another, and puts chart fills in direct conflict
+	 * with error states. The page reads as:
+	 *   accent  → you can click it
+	 *   positive/negative → it succeeded / it failed
+	 *   code    → it is code or data
+	 */
+	--color-code-identifier: light-dark(#7c3aed, #a78bfa);
+	--color-viz-base: light-dark(#7c3aed, #a78bfa);
+
 	--font-display: "Satoshi", ui-sans-serif, sans-serif;
 	--font-sans: var(--font-display);
 	--font-mono: "Geist Mono", ui-monospace, monospace;

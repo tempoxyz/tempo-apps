@@ -79,6 +79,15 @@ export function Sections(props: Sections.Props) {
 										<h1 className="text-[13px] font-medium text-primary font-sans">
 											{section.title}
 										</h1>
+										{Boolean(section.totalItems) && (
+											<span className="text-[13px] text-tertiary">
+												{section.totalItems}{' '}
+												{Pagination.pluralize(
+													section.totalItems ?? 0,
+													itemsLabel,
+												)}
+											</span>
+										)}
 									</div>
 								)}
 

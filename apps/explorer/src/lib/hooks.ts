@@ -129,22 +129,25 @@ export function useKeyboardShortcut(shortcuts: Record<string, () => void>) {
 	React.useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
 			const target = event.target as HTMLElement
+			const key = event.key.toLowerCase()
+			const shortcutKey =
+				(event.metaKey || event.ctrlKey) && !event.altKey ? `mod+${key}` : key
+			const supportsModifiedShortcut = shortcutKey in shortcuts
 			if (
-				target.tagName === 'INPUT' ||
-				target.tagName === 'TEXTAREA' ||
-				target.isContentEditable
+				!supportsModifiedShortcut &&
+				(target.tagName === 'INPUT' ||
+					target.tagName === 'TEXTAREA' ||
+					target.isContentEditable)
 			) {
 				return
 			}
-			const key = event.key.toLowerCase()
 			if (
-				!event.metaKey &&
-				!event.ctrlKey &&
+				(supportsModifiedShortcut || (!event.metaKey && !event.ctrlKey)) &&
 				!event.altKey &&
-				key in shortcuts
+				shortcutKey in shortcuts
 			) {
 				event.preventDefault()
-				shortcuts[key]()
+				shortcuts[shortcutKey]?.()
 			}
 		}
 		window.addEventListener('keydown', handleKeyDown)

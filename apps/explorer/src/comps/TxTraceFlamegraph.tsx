@@ -7,23 +7,23 @@ import DatabaseIcon from '~icons/lucide/database'
 const BAR_HEIGHT = 32
 const MIN_WIDTH_PX = 6
 
-// Standard flamegraph palettes stay in the warm red/orange/yellow range.
-const FLAME_COLORS = [
-	{ bg: 'rgb(180, 38, 28)', hover: 'rgb(218, 52, 38)' },
-	{ bg: 'rgb(202, 66, 25)', hover: 'rgb(236, 84, 35)' },
-	{ bg: 'rgb(220, 94, 24)', hover: 'rgb(249, 115, 22)' },
-	{ bg: 'rgb(225, 128, 24)', hover: 'rgb(251, 146, 60)' },
-	{ bg: 'rgb(218, 161, 32)', hover: 'rgb(245, 184, 53)' },
-	{ bg: 'rgb(197, 142, 23)', hover: 'rgb(234, 179, 8)' },
-] as const
-
-const ERROR_COLOR = {
-	bg: 'rgb(190, 38, 38)',
-	hover: 'rgb(239, 68, 68)',
-} as const
-
-function getFlameColor(depth: number) {
-	return FLAME_COLORS[Math.min(depth, FLAME_COLORS.length - 1)]
+/**
+ * A flamegraph encodes one quantitative variable: share of total gas. So it
+ * gets a single-hue ramp from the data-visualisation token, and no semantic
+ * colour at all — filling failed frames red put the chart in a three-way fight
+ * with the error state above it and the links beside it, and colouring by
+ * depth (the previous behaviour) made every shallow trace solid red.
+ *
+ * Failure is marked structurally instead: a red left edge, the same idiom the
+ * trace tree uses for the failure path.
+ */
+function getFlameColor(gasShare: number) {
+	const intensity = 16 + Math.min(Math.max(gasShare, 0), 1) * 30
+	return {
+		bg: `color-mix(in oklab, var(--color-viz-base) ${intensity}%, transparent)`,
+		hover: `color-mix(in oklab, var(--color-viz-base) ${intensity + 16}%, transparent)`,
+		border: `color-mix(in oklab, var(--color-viz-base) ${intensity + 22}%, transparent)`,
+	}
 }
 
 export function TxTraceFlamegraph(
@@ -53,6 +53,9 @@ export function TxTraceFlamegraph(
 	const maxDepth = rows.length
 
 	if (!tree || !root || maxDepth === 0) return null
+	// One or two frames render as a single full-width bar that says nothing the
+	// trace tree hasn't already said.
+	if (root.subtreeSize < 3) return null
 
 	return (
 		<div className="flex flex-col">
@@ -90,7 +93,6 @@ export function TxTraceFlamegraph(
 										key={`${index}-${span.node.trace.to}`}
 										span={span}
 										rootGas={root.gasUsed}
-										depth={depth}
 										leftPct={leftPct}
 										widthPct={widthPct}
 										hovered={hoveredNode === span.node}
@@ -197,23 +199,14 @@ export namespace TxTraceFlamegraph {
 	export function Bar(props: {
 		span: Span
 		rootGas: number
-		depth: number
 		leftPct: number
 		widthPct: number
 		hovered: boolean
 		storageSlots?: StorageInfo | undefined
 		onHover: (node: TxTraceTree.Node | null) => void
 	}): React.JSX.Element {
-		const {
-			span,
-			rootGas,
-			depth,
-			leftPct,
-			widthPct,
-			hovered,
-			storageSlots,
-			onHover,
-		} = props
+		const { span, rootGas, leftPct, widthPct, hovered, storageSlots, onHover } =
+			props
 		const { node } = span
 
 		const isNarrow = widthPct < 1.5
@@ -226,19 +219,21 @@ export namespace TxTraceFlamegraph {
 		const hasStorage =
 			storageSlots && (storageSlots.reads > 0 || storageSlots.writes > 0)
 
-		const color = node.hasError ? ERROR_COLOR : getFlameColor(depth)
+		const color = getFlameColor(rootGas > 0 ? node.gasUsed / rootGas : 0)
 
 		return (
 			// biome-ignore lint/a11y/noStaticElementInteractions: hover drives the details panel below
 			<div
 				className={cx(
-					'absolute top-0 h-full rounded-[3px] text-[11px] font-mono overflow-hidden transition-colors border border-black/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]',
-					hovered && 'border-white/50 z-10',
+					'absolute top-0 h-full rounded-[3px] text-[11px] font-mono overflow-hidden transition-colors border',
+					hovered && 'z-10',
+					node.hasError && 'border-l-2 border-l-negative!',
 				)}
 				style={{
 					left: `${leftPct}%`,
 					width: `max(${widthPct}%, ${MIN_WIDTH_PX}px)`,
 					backgroundColor: hovered ? color.hover : color.bg,
+					borderColor: color.border,
 				}}
 				onMouseEnter={() => onHover(node)}
 				title={`${label} — ${node.gasUsed.toLocaleString()} gas (${gasPct.toFixed(1)}%)${hasStorage ? ` · ${storageSlots.writes} SSTORE, ${storageSlots.reads} SLOAD` : ''}`}
@@ -246,25 +241,18 @@ export namespace TxTraceFlamegraph {
 				{!isNarrow && (
 					<span className="absolute inset-0 flex items-center gap-[4px] px-[6px] overflow-hidden select-none">
 						<span
-							className="truncate font-medium min-w-0"
-							style={{
-								color: 'rgba(255, 255, 255, 0.95)',
-								textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
-							}}
+							className={cx(
+								'truncate font-medium min-w-0',
+								node.hasError ? 'text-negative' : 'text-primary',
+							)}
 						>
 							{label}
 						</span>
-						<span
-							className="shrink-0 text-[10px]"
-							style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-						>
+						<span className="shrink-0 text-[10px] text-tertiary">
 							{`${gasPct.toFixed(gasPct >= 10 ? 0 : 1)}%`}
 						</span>
 						{hasStorage && widthPct > 8 && (
-							<DatabaseIcon
-								className="shrink-0 size-[10px]"
-								style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-							/>
+							<DatabaseIcon className="shrink-0 size-[10px] text-tertiary" />
 						)}
 					</span>
 				)}
@@ -314,8 +302,8 @@ export namespace TxTraceFlamegraph {
 								className={cx(
 									'text-[10px] font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
 									node.hasError
-										? 'bg-negative/20 text-negative'
-										: 'bg-accent/20 text-accent',
+										? 'bg-negative/15 text-negative'
+										: 'bg-distinct text-tertiary',
 								)}
 							>
 								{node.trace.type}
@@ -328,9 +316,7 @@ export namespace TxTraceFlamegraph {
 								</span>
 							)}
 						</div>
-						<span className="text-base-content-positive truncate">
-							{displayName}
-						</span>
+						<span className="text-code-identifier truncate">{displayName}</span>
 						{node.hasError && (
 							<span className="text-negative text-[11px]">
 								{node.trace.revertReason || node.trace.error || 'reverted'}

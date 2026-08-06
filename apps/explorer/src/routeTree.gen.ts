@@ -14,10 +14,12 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as ApiVerifiedTokensRouteImport } from './routes/api/verified-tokens'
 import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
+import { Route as ApiSimulateRouteImport } from './routes/api/simulate'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
+import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
@@ -65,6 +67,11 @@ const ApiTip20RolesRoute = ApiTip20RolesRouteImport.update({
   path: '/api/tip20-roles',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSimulateRoute = ApiSimulateRouteImport.update({
+  id: '/api/simulate',
+  path: '/api/simulate',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
   path: '/api/search',
@@ -83,6 +90,11 @@ const ApiCodeRoute = ApiCodeRouteImport.update({
 const LayoutTokensRoute = LayoutTokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSimulateRoute = LayoutSimulateRouteImport.update({
+  id: '/simulate',
+  path: '/simulate',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
@@ -206,10 +218,12 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
+  '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/simulate': typeof ApiSimulateRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/api/verified-tokens': typeof ApiVerifiedTokensRoute
   '/address/$address': typeof LayoutAddressAddressRoute
@@ -237,10 +251,12 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
+  '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/simulate': typeof ApiSimulateRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/api/verified-tokens': typeof ApiVerifiedTokensRoute
   '/': typeof LayoutIndexRoute
@@ -271,10 +287,12 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
+  '/_layout/simulate': typeof LayoutSimulateRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/simulate': typeof ApiSimulateRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/api/verified-tokens': typeof ApiVerifiedTokensRoute
   '/_layout/': typeof LayoutIndexRoute
@@ -306,10 +324,12 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/fee-amm'
+    | '/simulate'
     | '/tokens'
     | '/api/code'
     | '/api/health'
     | '/api/search'
+    | '/api/simulate'
     | '/api/tip20-roles'
     | '/api/verified-tokens'
     | '/address/$address'
@@ -337,10 +357,12 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/fee-amm'
+    | '/simulate'
     | '/tokens'
     | '/api/code'
     | '/api/health'
     | '/api/search'
+    | '/api/simulate'
     | '/api/tip20-roles'
     | '/api/verified-tokens'
     | '/'
@@ -370,10 +392,12 @@ export interface FileRouteTypes {
     | '/search'
     | '/_layout/blocks'
     | '/_layout/fee-amm'
+    | '/_layout/simulate'
     | '/_layout/tokens'
     | '/api/code'
     | '/api/health'
     | '/api/search'
+    | '/api/simulate'
     | '/api/tip20-roles'
     | '/api/verified-tokens'
     | '/_layout/'
@@ -405,6 +429,7 @@ export interface RootRouteChildren {
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiSimulateRoute: typeof ApiSimulateRoute
   ApiTip20RolesRoute: typeof ApiTip20RolesRoute
   ApiVerifiedTokensRoute: typeof ApiVerifiedTokensRoute
   ApiAbiBatchRoute: typeof ApiAbiBatchRoute
@@ -454,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTip20RolesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/simulate': {
+      id: '/api/simulate'
+      path: '/api/simulate'
+      fullPath: '/api/simulate'
+      preLoaderRoute: typeof ApiSimulateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/search': {
       id: '/api/search'
       path: '/api/search'
@@ -480,6 +512,13 @@ declare module '@tanstack/react-router' {
       path: '/tokens'
       fullPath: '/tokens'
       preLoaderRoute: typeof LayoutTokensRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/simulate': {
+      id: '/_layout/simulate'
+      path: '/simulate'
+      fullPath: '/simulate'
+      preLoaderRoute: typeof LayoutSimulateRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/fee-amm': {
@@ -642,6 +681,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
+  LayoutSimulateRoute: typeof LayoutSimulateRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
@@ -661,6 +701,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
+  LayoutSimulateRoute: LayoutSimulateRoute,
   LayoutTokensRoute: LayoutTokensRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAddressAddressRoute: LayoutAddressAddressRoute,
@@ -686,6 +727,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiSimulateRoute: ApiSimulateRoute,
   ApiTip20RolesRoute: ApiTip20RolesRoute,
   ApiVerifiedTokensRoute: ApiVerifiedTokensRoute,
   ApiAbiBatchRoute: ApiAbiBatchRoute,

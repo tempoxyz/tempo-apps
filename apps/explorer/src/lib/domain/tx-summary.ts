@@ -1,8 +1,8 @@
-import * as Hex from 'ox/Hex'
+import type * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import type * as Address from 'ox/Address'
 import type { TransactionReceipt } from 'viem'
-import { decodeErrorResult, decodeFunctionData, parseAbi } from 'viem'
+import { decodeFunctionData } from 'viem'
 import { allAbis } from '#lib/abis'
 import { getContractInfo } from '#lib/domain/contracts'
 import {
@@ -13,7 +13,7 @@ import {
 import { isTip20Address } from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
-import type { CallTrace } from '#lib/queries/trace'
+import type { TxTraceTree } from '#comps/TxTraceTree'
 
 export type TxSummary = {
 	tone: 'success' | 'failure' | 'neutral'
@@ -22,13 +22,6 @@ export type TxSummary = {
 	error?: string
 	rawReason?: string
 }
-
-type DecodedTraceError = {
-	errorName: string
-	args: readonly unknown[]
-}
-
-const fallbackErrorAbi = parseAbi(['error UnknownFunctionSelector(bytes4)'])
 
 type SummaryTransaction = {
 	input?: Hex.Hex | undefined
@@ -39,16 +32,15 @@ type SummaryTransaction = {
 export function buildTxSummary(params: {
 	receipt: TransactionReceipt
 	knownEvents: KnownEvent[]
-	trace: CallTrace | null
+	tree: TxTraceTree.Node | null
 	transaction?: SummaryTransaction
 	balanceChangesData?: BalanceChangesData
 }): TxSummary {
-	const { receipt, knownEvents, trace, transaction, balanceChangesData } =
-		params
+	const { receipt, knownEvents, tree, transaction, balanceChangesData } = params
 
 	if (receipt.status === 'reverted') {
 		return buildFailureSummary({
-			trace,
+			tree,
 			transaction,
 			knownEvents,
 			balanceChangesData,
@@ -78,15 +70,16 @@ export function buildTxSummary(params: {
 }
 
 function buildFailureSummary(params: {
-	trace: CallTrace | null
+	tree: TxTraceTree.Node | null
 	transaction?: SummaryTransaction
 	knownEvents: KnownEvent[]
 	balanceChangesData?: BalanceChangesData
 }): TxSummary {
-	const failedTrace = findDeepestFailedTrace(params.trace)
-	const decodedError = failedTrace ? decodeTraceError(failedTrace) : null
+	const failedNode = findDeepestFailedNode(params.tree)
+	const failedTrace = failedNode?.trace
+	const decodedError = failedNode?.decodedError
 	const rawReason =
-		failedTrace?.revertReason || failedTrace?.error || decodedError?.errorName
+		failedTrace?.revertReason || failedTrace?.error || decodedError?.name
 
 	const insufficientBalance = buildInsufficientBalanceSummary({
 		decodedError,
@@ -97,18 +90,18 @@ function buildFailureSummary(params: {
 	if (insufficientBalance) return insufficientBalance
 
 	const functionName =
-		(failedTrace ? decodeTraceFunctionName(failedTrace) : null) ??
+		failedNode?.functionName ??
 		decodeTransactionFunctionName(params.transaction) ??
 		decodeKnownEventFunctionName(params.knownEvents)
 	const contractAddress = failedTrace?.to ?? params.transaction?.to
-	const contractName = contractAddress
-		? getContractInfo(contractAddress)?.name
-		: undefined
+	const contractName =
+		failedNode?.contractName ??
+		(contractAddress ? getContractInfo(contractAddress)?.name : undefined)
 	const action = functionName
 		? `${sentenceCase(functionName)} failed`
 		: (failureActionFromKnownEvents(params.knownEvents) ?? 'Transaction failed')
-	const reason = decodedError?.errorName
-		? humanizeErrorName(decodedError.errorName)
+	const reason = decodedError
+		? formatDecodedError(decodedError)
 		: humanizeRawReason(rawReason)
 
 	const details: string[] = []
@@ -130,13 +123,13 @@ function buildFailureSummary(params: {
 }
 
 function buildInsufficientBalanceSummary(params: {
-	decodedError: DecodedTraceError | null
-	failedTrace: CallTrace | null
+	decodedError: TxTraceTree.DecodedError | undefined
+	failedTrace: TxTraceTree.Node['trace'] | undefined
 	balanceChangesData?: BalanceChangesData
 	rawReason?: string
 }): TxSummary | null {
 	const { decodedError, failedTrace, balanceChangesData, rawReason } = params
-	const errorText = `${decodedError?.errorName ?? ''} ${rawReason ?? ''}`
+	const errorText = `${decodedError?.name ?? ''} ${rawReason ?? ''}`
 	if (!/insufficient/i.test(errorText) || !/balance/i.test(errorText)) {
 		return null
 	}
@@ -180,51 +173,26 @@ function buildInsufficientBalanceSummary(params: {
 	}
 }
 
-function findDeepestFailedTrace(trace: CallTrace | null): CallTrace | null {
-	if (!trace) return null
+export function findDeepestFailedNode(
+	tree: TxTraceTree.Node | null,
+): TxTraceTree.Node | null {
+	if (!tree) return null
 
-	let failed: { trace: CallTrace; depth: number } | null = null
-	const stack = [{ trace, depth: 0 }]
+	let failed: { node: TxTraceTree.Node; depth: number } | null = null
+	const stack = [{ node: tree, depth: 0 }]
 
 	while (stack.length > 0) {
 		const current = stack.pop()
 		if (!current) continue
-		if (current.trace.error || current.trace.revertReason) {
+		if (current.node.hasError) {
 			if (!failed || current.depth > failed.depth) failed = current
 		}
-		for (const call of current.trace.calls ?? []) {
-			stack.push({ trace: call, depth: current.depth + 1 })
+		for (const child of current.node.children) {
+			stack.push({ node: child, depth: current.depth + 1 })
 		}
 	}
 
-	return failed?.trace ?? null
-}
-
-function decodeTraceError(trace: CallTrace): DecodedTraceError | null {
-	const data = getRevertData(trace)
-	if (!data) return null
-
-	try {
-		const decoded = decodeErrorResult({ abi: allAbis, data })
-		return {
-			errorName: decoded.errorName,
-			args: decoded.args ?? [],
-		}
-	} catch {
-		try {
-			const decoded = decodeErrorResult({ abi: fallbackErrorAbi, data })
-			return {
-				errorName: decoded.errorName,
-				args: decoded.args ?? [],
-			}
-		} catch {
-			return null
-		}
-	}
-}
-
-function decodeTraceFunctionName(trace: CallTrace): string | null {
-	return decodeInputFunctionName(trace.input)
+	return failed?.node ?? null
 }
 
 function decodeTransactionFunctionName(
@@ -273,17 +241,6 @@ function failureActionFromKnownEvents(
 	if (!action) return undefined
 
 	return `${sentenceCase(action)} failed`
-}
-
-function getRevertData(trace: CallTrace): Hex.Hex | null {
-	if (trace.output && trace.output !== '0x' && Hex.validate(trace.output)) {
-		return trace.output
-	}
-
-	const raw = trace.revertReason || trace.error
-	const [data] = raw?.match(/0x[0-9a-fA-F]+/) ?? []
-	if (data && Hex.validate(data)) return data as Hex.Hex
-	return null
 }
 
 function formatKnownEvent(event: KnownEvent): string {
@@ -340,18 +297,23 @@ function sentenceCase(value: string): string {
 	return `${value[0]?.toUpperCase() ?? ''}${value.slice(1)}`
 }
 
-function humanizeIdentifier(value: string): string {
-	return value
-		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-		.replace(/[_-]+/g, ' ')
-		.replace(/^tip 20\s+/i, 'TIP-20 ')
-		.toLowerCase()
+function formatDecodedError(error: TxTraceTree.DecodedError): string {
+	if (error.panicReason) return `panic: ${error.panicReason}`
+	const args = error.args.map(formatErrorArgument).join(', ')
+	return args ? `${error.name}(${args})` : error.name
 }
 
-function humanizeErrorName(value: string): string {
-	if (value === 'UnknownFunctionSelector')
-		return 'unsupported function selector'
-	return humanizeIdentifier(value)
+function formatErrorArgument(value: unknown): string {
+	if (typeof value === 'bigint') return value.toLocaleString()
+	if (typeof value === 'string') return value
+	if (typeof value === 'boolean') return value ? 'true' : 'false'
+	try {
+		return JSON.stringify(value, (_, item) =>
+			typeof item === 'bigint' ? item.toString() : item,
+		)
+	} catch {
+		return String(value)
+	}
 }
 
 function humanizeRawReason(value: string | undefined): string | undefined {

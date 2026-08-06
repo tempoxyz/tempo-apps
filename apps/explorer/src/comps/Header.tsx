@@ -18,6 +18,7 @@ import {
 import { useIsNotFoundPage } from '#lib/not-found'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import SquareSquare from '~icons/lucide/square-square'
+import FlaskConicalIcon from '~icons/lucide/flask-conical'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
@@ -36,6 +37,13 @@ export function Header(): React.JSX.Element {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
+					<Link
+						to="/simulate"
+						className="flex h-[28px] items-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] text-[12px] text-secondary hover:border-accent hover:text-primary press-down"
+					>
+						<FlaskConicalIcon className="size-[12px]" />
+						<span className="@max-[799px]:hidden">Simulate</span>
+					</Link>
 					<Header.BlockNumber />
 				</div>
 			</div>

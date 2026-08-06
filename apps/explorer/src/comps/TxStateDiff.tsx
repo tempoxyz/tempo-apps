@@ -15,7 +15,14 @@ import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
 
 export function TxStateDiff(props: TxStateDiff.Props) {
-	const { prestate, trace, receipt, logs, tokenMetadata } = props
+	const {
+		prestate,
+		trace,
+		receipt,
+		logs,
+		tokenMetadata,
+		label = 'State Changes',
+	} = props
 	const [wrap, setWrap] = React.useState(true)
 	const [raw, setRaw] = React.useState(false)
 	const copy = useCopy()
@@ -37,8 +44,10 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 
 	const data = React.useMemo(() => {
 		if (!prestate) return null
-		return TxStateDiff.buildData(prestate, candidateAddresses, tokenMetadata)
-	}, [prestate, candidateAddresses, tokenMetadata])
+		return TxStateDiff.buildData(prestate, candidateAddresses, tokenMetadata, {
+			omitNonceOnlyFor: props.omitSenderNonceFor,
+		})
+	}, [prestate, candidateAddresses, tokenMetadata, props.omitSenderNonceFor])
 
 	const hasData = data && data.accounts.length > 0
 
@@ -46,15 +55,11 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 		<div className="flex flex-col">
 			<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-dashed border-distinct">
 				<span className="text-[13px]">
-					<span className="text-tertiary">State Changes</span>{' '}
-					{hasData && (
-						<button
-							type="button"
-							onClick={() => setRaw(!raw)}
-							className="text-accent hover:underline cursor-pointer press-down"
-						>
-							{raw ? '(raw)' : '(decoded)'}
-						</button>
+					{label && (
+						<>
+							<span className="text-tertiary">{label} </span>
+							{hasData && <RawToggle raw={raw} onToggle={() => setRaw(!raw)} />}
+						</>
 					)}
 				</span>
 				{hasData && (
@@ -62,6 +67,7 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 						{copy.notifying && (
 							<span className="text-[11px] select-none">copied</span>
 						)}
+						{!label && <RawToggle raw={raw} onToggle={() => setRaw(!raw)} />}
 						<button
 							type="button"
 							className="press-down cursor-pointer hover:text-secondary p-[4px]"
@@ -105,6 +111,21 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 	)
 }
 
+function RawToggle(props: {
+	raw: boolean
+	onToggle: () => void
+}): React.JSX.Element {
+	return (
+		<button
+			type="button"
+			onClick={props.onToggle}
+			className="text-[13px] text-accent hover:underline cursor-pointer press-down"
+		>
+			{props.raw ? '(raw)' : '(decoded)'}
+		</button>
+	)
+}
+
 export namespace TxStateDiff {
 	export interface Props {
 		prestate: PrestateDiff | null
@@ -112,6 +133,13 @@ export namespace TxStateDiff {
 		receipt?: { from: Hex; to: Hex | null }
 		logs?: Array<{ address: Hex; topics?: Hex[] }>
 		tokenMetadata?: Record<string, { symbol?: string; decimals?: number }>
+		/** Header label. Pass `null` when an enclosing section already names it. */
+		label?: string | null | undefined
+		/**
+		 * Drop this account's nonce-only change. Simulations run through the
+		 * transaction path, so the caller's nonce ticks even on a `view` call.
+		 */
+		omitSenderNonceFor?: Hex | undefined
 	}
 
 	export interface Data {
@@ -136,7 +164,17 @@ export namespace TxStateDiff {
 		prestate: PrestateDiff,
 		candidateAddresses: Hex[] = [],
 		tokenMetadata?: Record<string, { symbol?: string; decimals?: number }>,
+		options?: {
+			/**
+			 * Sender whose nonce-only change should be dropped. `debug_traceCall`
+			 * runs the call down the transaction path, so the caller's nonce ticks
+			 * even for a pure `view` — that is the harness, not the contract, and
+			 * reporting it makes a read look state-mutating.
+			 */
+			omitNonceOnlyFor?: Hex | undefined
+		},
 	): Data {
+		const omitNonceOnlyFor = options?.omitNonceOnlyFor?.toLowerCase()
 		const addresses = Array.from(
 			new Set([...Object.keys(prestate.pre), ...Object.keys(prestate.post)]),
 		).sort() as Hex[]
@@ -188,6 +226,12 @@ export namespace TxStateDiff {
 
 			const hasChanges = nonceChanged || storageChanges.length > 0
 			if (!hasChanges) continue
+
+			const senderNonceOnly =
+				nonceChanged &&
+				storageChanges.length === 0 &&
+				address.toLowerCase() === omitNonceOnlyFor
+			if (senderNonceOnly) continue
 
 			accounts.push({
 				address,

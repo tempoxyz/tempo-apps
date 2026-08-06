@@ -66,6 +66,19 @@ export async function metadataFromLogs(
 	const tip20Addresses = events
 		.map(({ address }) => address)
 		.filter(isTip20Address)
+	return metadataForTokens(tip20Addresses)
+}
+
+export async function metadataForTokens(
+	tokens: Address.Address[],
+): Promise<GetTip20MetadataFn> {
+	const tip20Addresses = [
+		...new Map(
+			tokens
+				.filter(isTip20Address)
+				.map((address) => [address.toLowerCase(), address]),
+		).values(),
+	]
 
 	const config = getWagmiConfig()
 

@@ -11,7 +11,15 @@ import {
 	precompileRegistry,
 } from '#lib/domain/contracts'
 import { decodePrecompile } from '#lib/domain/precompiles'
-import { useCopy } from '#lib/hooks'
+import {
+	decodeTraceError,
+	findDeepestFailurePath,
+	formatDecodedTraceError,
+	formatDecodedTraceErrorShort,
+	getRevertData,
+	type DecodedTraceError,
+} from '#lib/domain/trace-errors'
+import { useCopy, usePermalinkHighlight } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
 import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
@@ -20,7 +28,7 @@ import WrapIcon from '~icons/lucide/corner-down-left'
 import ReturnIcon from '~icons/lucide/corner-down-right'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
-	const { trace, tree: treeProp } = props
+	const { trace, tree: treeProp, label = 'Execution Trace' } = props
 	const [raw, setRaw] = useState(false)
 	const [wrap, setWrap] = useState(true)
 	const copy = useCopy()
@@ -38,19 +46,18 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 		<div className="flex flex-col">
 			<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-b border-dashed border-distinct">
 				<span className="text-[13px]">
-					<span className="text-tertiary">Execution Trace</span>{' '}
-					<button
-						type="button"
-						onClick={() => setRaw(!raw)}
-						className="text-accent hover:underline cursor-pointer press-down"
-					>
-						{raw ? '(raw)' : '(decoded)'}
-					</button>
+					{label && (
+						<>
+							<span className="text-tertiary">{label} </span>
+							<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
+						</>
+					)}
 				</span>
 				<div className="flex items-center gap-[8px] text-tertiary">
 					{copy.notifying && (
 						<span className="text-[11px] select-none">copied</span>
 					)}
+					{!label && <RawToggle raw={raw} onToggle={() => setRaw(!raw)} />}
 					<button
 						type="button"
 						className="press-down cursor-pointer hover:text-secondary p-[4px]"
@@ -79,6 +86,31 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	)
 }
 
+function RawToggle(props: {
+	raw: boolean
+	onToggle: () => void
+}): React.JSX.Element {
+	return (
+		<button
+			type="button"
+			onClick={props.onToggle}
+			className="text-[13px] text-accent hover:underline cursor-pointer press-down"
+		>
+			{props.raw ? '(raw)' : '(decoded)'}
+		</button>
+	)
+}
+
+/**
+ * Decoded view is for reading, not for exactness — a 78-digit uint256 or a
+ * 200-character bytes blob wraps the whole tree and hides the arguments beside
+ * it. The raw toggle still shows every byte.
+ */
+function abbreviateTraceValue(value: string, max = 24): string {
+	if (value.length <= max) return value
+	return `${value.slice(0, max - 8)}…${value.slice(-6)}`
+}
+
 export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 	const { addresses, selectors } = useMemo(() => {
 		if (!trace)
@@ -90,6 +122,9 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 			if (trace.to) addresses.add(trace.to as `0x${string}`)
 			const hasSelector = trace.input && trace.input.length >= 10
 			if (hasSelector) selectors.add(slice(trace.input, 0, 4))
+			const revertData = getRevertData(trace)
+			if (revertData && revertData.length >= 10)
+				selectors.add(slice(revertData, 0, 4))
 			if (trace.calls) stack.push(...trace.calls)
 		}
 		return {
@@ -127,7 +162,14 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 			]),
 		)
 
-		function buildNode(trace: CallTrace): TxTraceTree.Node {
+		const failurePath = findDeepestFailurePath(trace)
+		let frameIndex = 0
+
+		function buildNode(
+			trace: CallTrace,
+			path: number[] = [],
+		): TxTraceTree.Node {
+			const currentFrameIndex = frameIndex++
 			const hasSelector = trace.input && trace.input.length >= 10
 			const selector = hasSelector ? slice(trace.input, 0, 4) : undefined
 			const contractInfo = trace.to ? getContractInfo(trace.to) : undefined
@@ -138,6 +180,19 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 			let functionName: string | undefined
 			let params: string | undefined
 			let decodedOutput: string | undefined
+			const hasError = Boolean(trace.error || trace.revertReason)
+			const decodedError = hasError
+				? decodeTraceError({
+						trace,
+						abi: abiMap.get(trace.to?.toLowerCase() ?? '') as
+							| Abi
+							| null
+							| undefined,
+						signature: getRevertData(trace)
+							? sigMap.get(slice(getRevertData(trace) as Hex, 0, 4))
+							: undefined,
+					})
+				: undefined
 
 			if (precompileInfo && trace.to) {
 				const decoded = decodePrecompile(
@@ -151,7 +206,7 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 					decodedOutput = decoded.decodedOutput
 				}
 			} else if (selector) {
-				const autoloadAbi = abiMap.get(trace.to ?? '')
+				const autoloadAbi = abiMap.get(trace.to?.toLowerCase() ?? '')
 				const autoloadAbiItem =
 					autoloadAbi && getAbiItem({ abi: autoloadAbi as Abi, selector })
 
@@ -171,7 +226,7 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 							params = decoded
 								.map((v, i) => {
 									const name = item.inputs[i]?.name
-									const value = formatAbiValue(v)
+									const value = abbreviateTraceValue(formatAbiValue(v))
 									return name ? `${name}: ${value}` : value
 								})
 								.join(', ')
@@ -189,7 +244,7 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 					if (trace.output && trace.output !== '0x' && item.outputs?.length) {
 						try {
 							decodedOutput = decodeAbiParameters(item.outputs, trace.output)
-								.map((v) => formatAbiValue(v))
+								.map((v) => abbreviateTraceValue(formatAbiValue(v)))
 								.join(', ')
 						} catch {
 							// keep decodedOutput undefined
@@ -208,18 +263,31 @@ export function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 				}
 			}
 
+			const children =
+				trace.calls?.map((child, index) =>
+					buildNode(child, [...path, index]),
+				) ?? []
 			return {
 				trace,
+				id: `trace-frame-${path.length === 0 ? 'root' : path.join('-')}`,
+				frameIndex: currentFrameIndex,
 				gasUsed: parseInt(trace.gasUsed, 16),
 				selector,
 				hasInput: hasSelector,
 				hasOutput: Boolean(trace.output && trace.output !== '0x'),
-				hasError: Boolean(trace.error || trace.revertReason),
+				hasError,
+				onFailurePath:
+					failurePath !== null &&
+					path.every((part, index) => failurePath[index] === part),
+				hasFailure: failurePath !== null,
 				contractName: precompileInfo?.name ?? contractInfo?.name,
 				functionName,
 				params,
 				decodedOutput,
-				children: trace.calls?.map(buildNode) ?? [],
+				decodedError,
+				children,
+				subtreeSize:
+					1 + children.reduce((sum, child) => sum + child.subtreeSize, 0),
 			}
 		}
 
@@ -231,25 +299,45 @@ export namespace TxTraceTree {
 	export interface Props {
 		trace: CallTrace | null
 		tree?: Node | null | undefined
+		/** Header label. Pass `null` when an enclosing section already names it. */
+		label?: string | null | undefined
 	}
 
 	export interface Node {
 		trace: CallTrace
+		id: string
+		frameIndex: number
 		gasUsed: number
 		selector?: Hex
 		hasInput: boolean
 		hasOutput: boolean
 		hasError: boolean
+		hasFailure: boolean
+		onFailurePath: boolean
 		contractName?: string
 		functionName?: string
 		params?: string
 		decodedOutput?: string
+		decodedError?: DecodedTraceError
 		children: Node[]
+		subtreeSize: number
 	}
+
+	export type DecodedError = DecodedTraceError
 
 	export function NodeView(props: NodeView.Props) {
 		const { node, depth, wrap, raw } = props
 		const { trace } = node
+		const [expanded, setExpanded] = useState(
+			!node.hasFailure || node.onFailurePath,
+		)
+		useEffect(() => {
+			setExpanded(!node.hasFailure || node.onFailurePath)
+		}, [node.hasFailure, node.onFailurePath])
+		usePermalinkHighlight({
+			elementId: node.id,
+			onTargetChange: setExpanded,
+		})
 
 		const displayName = raw
 			? trace.input || '0x'
@@ -270,14 +358,25 @@ export namespace TxTraceTree {
 						? 'CREATE2'
 						: trace.type
 
+		// Short form only — the full decode with named arguments is rendered in
+		// the verdict, and inlining every argument here wraps the tree.
+		const errorDisplay = node.decodedError
+			? formatDecodedTraceErrorShort(node.decodedError)
+			: trace.revertReason || trace.error || 'reverted'
+		const errorTitle = node.decodedError
+			? formatDecodedTraceError(node.decodedError)
+			: undefined
+
 		return (
 			<>
 				<span
 					className={cx(
 						'text-[10px] font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+						// Neutral by default: the opcode is a label, not a link and not a
+						// status. Accent stays reserved for things you can click.
 						node.hasError
-							? 'bg-negative/20 text-negative'
-							: 'bg-accent/20 text-accent',
+							? 'bg-negative/15 text-negative'
+							: 'bg-distinct text-tertiary',
 						depth > 0 && 'mt-[4px]',
 					)}
 					title={trace.type}
@@ -294,10 +393,12 @@ export namespace TxTraceTree {
 					{node.gasUsed.toLocaleString()}
 				</span>
 				<span
+					id={node.id}
 					className={cx(
 						'inline-flex items-start min-w-0',
 						!wrap && 'whitespace-nowrap',
 						depth > 0 && 'mt-[4px]',
+						node.onFailurePath && 'border-l-2 border-negative pl-[6px]',
 					)}
 				>
 					<span
@@ -309,7 +410,25 @@ export namespace TxTraceTree {
 							depth > 0 ? { marginLeft: 16 + (depth - 1) * 24 } : undefined
 						}
 					>
-						<ArrowRightIcon className="shrink-0 size-[12px] text-tertiary mr-[4px] mt-[4px]" />
+						<button
+							type="button"
+							onClick={() => node.children.length > 0 && setExpanded(!expanded)}
+							className={cx(
+								'shrink-0 size-[16px] text-tertiary mr-[2px] press-down',
+								node.children.length > 0 && 'cursor-pointer hover:text-primary',
+							)}
+							title={expanded ? 'Collapse frame' : 'Expand frame'}
+						>
+							{node.children.length > 0 ? (
+								expanded ? (
+									'−'
+								) : (
+									'+'
+								)
+							) : (
+								<ArrowRightIcon className="size-[12px] mt-[2px]" />
+							)}
+						</button>
 						<span className={cx(wrap && 'break-all', 'min-w-0')}>
 							{trace.to ? (
 								<Link
@@ -334,29 +453,39 @@ export namespace TxTraceTree {
 										? 'text-primary'
 										: node.hasError
 											? 'text-negative'
-											: 'text-base-content-positive'
+											: 'text-code-identifier'
 								}
 							>
 								{displayName}
 							</span>
 							{node.hasError && (
-								<span className="text-negative ml-[4px]">
-									[{trace.revertReason || trace.error || 'reverted'}]
+								<span className="text-negative ml-[4px]" title={errorTitle}>
+									[{errorDisplay}]
 								</span>
+							)}
+							{!expanded && node.subtreeSize > 1 && (
+								<button
+									type="button"
+									onClick={() => setExpanded(true)}
+									className="ml-[6px] text-accent hover:underline cursor-pointer"
+								>
+									+{node.subtreeSize - 1} frames
+								</button>
 							)}
 						</span>
 					</span>
 				</span>
 
-				{node.children.map((child, i) => (
-					<NodeView
-						key={`${child.trace.to}-${i}`}
-						node={child}
-						depth={depth + 1}
-						wrap={wrap}
-						raw={raw}
-					/>
-				))}
+				{expanded &&
+					node.children.map((child, i) => (
+						<NodeView
+							key={`${child.trace.to}-${i}`}
+							node={child}
+							depth={depth + 1}
+							wrap={wrap}
+							raw={raw}
+						/>
+					))}
 
 				{node.hasOutput && (
 					<>
@@ -383,7 +512,10 @@ export namespace TxTraceTree {
 								<span
 									className={cx(wrap && 'break-all', 'min-w-0 text-primary')}
 								>
-									{raw ? trace.output : node.decodedOutput || trace.output}
+									{raw
+										? trace.output
+										: (node.decodedOutput ??
+											abbreviateTraceValue(trace.output ?? '', 42))}
 								</span>
 							</span>
 						</span>
