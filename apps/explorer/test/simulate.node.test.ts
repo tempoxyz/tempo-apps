@@ -14,6 +14,10 @@ import {
 	simulationQueryKey,
 } from '#lib/queries/simulate'
 import type { CallTrace } from '#lib/queries/trace'
+import {
+	parseExtraCalls,
+	serializeExtraCalls,
+} from '#lib/domain/simulate-calls'
 
 const baseTrace = {
 	type: 'CALL',
@@ -95,6 +99,8 @@ describe('simulation query normalization', () => {
 			baseTrace.input,
 			'0',
 			'50000000',
+			// Batch calls participate in the key, so editing call 2 refetches.
+			null,
 		])
 	})
 
@@ -138,5 +144,43 @@ describe('Tempo batch calls', () => {
 			],
 		} as unknown as Log
 		expect(withoutFeeTransferLogs([feeLog])).toEqual([])
+	})
+})
+
+describe('search parameter round-trips', () => {
+	// The router JSON-parses search values, so a schema that only accepts the
+	// serialized form rejects its own output and takes the whole route down.
+	// This has bitten `gas` (parsed back as a number) and `calls` (parsed back
+	// as an array); both crashed every shared link that carried them.
+	it('round-trips extra calls through the value the router gives back', () => {
+		const drafts = [
+			{ to: '0xaaaa', data: '0xdead', value: '0' },
+			{ to: '0xbbbb', data: '0xbeef', value: '7' },
+			{ to: '0xcccc', data: '0x', value: '0' },
+		]
+		const serialized = serializeExtraCalls(drafts)
+		expect(serialized).toEqual([
+			['0xbbbb', '0xbeef', '7'],
+			['0xcccc', '0x', '0'],
+		])
+
+		// The router hands back a parsed array, not the string we wrote.
+		const roundTripped = parseExtraCalls(
+			JSON.parse(JSON.stringify(serialized)) as string[][],
+		)
+		expect(roundTripped).toEqual(drafts.slice(1))
+	})
+
+	it('keeps a single call out of the extras parameter', () => {
+		expect(
+			serializeExtraCalls([{ to: '0xaaaa', data: '0x', value: '0' }]),
+		).toBeUndefined()
+		expect(parseExtraCalls(undefined)).toEqual([])
+	})
+
+	it('drops malformed entries rather than throwing', () => {
+		expect(parseExtraCalls([[], ['0xaaaa']] as string[][])).toEqual([
+			{ to: '0xaaaa', data: '0x', value: '0' },
+		])
 	})
 })

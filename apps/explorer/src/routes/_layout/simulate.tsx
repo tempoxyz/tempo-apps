@@ -48,6 +48,12 @@ import {
 	type TempoBatchCall,
 	withoutFeeTransferLogs,
 } from '#lib/domain/tempo-calls'
+import {
+	type CallDraft,
+	emptyCall,
+	parseExtraCalls,
+	serializeExtraCalls,
+} from '#lib/domain/simulate-calls'
 import * as Tip20 from '#lib/domain/tip20'
 import { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
 import { formatDecodedTraceErrorShort } from '#lib/domain/trace-errors'
@@ -59,6 +65,7 @@ import {
 	mergePrestateDiffs,
 	SimulationApiError,
 	type SimulationAssetChange,
+	type SimulationBatchCall,
 	type SimulationCallResult,
 	simulationExecutionQueryOptions,
 	type SimulationExecutionResult,
@@ -77,6 +84,7 @@ import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
 import LoaderIcon from '~icons/lucide/loader-circle'
 import PlayIcon from '~icons/lucide/play'
+import PlusIcon from '~icons/lucide/plus'
 import RotateCcwIcon from '~icons/lucide/rotate-ccw'
 
 const DEFAULT_GAS = '50000000'
@@ -137,7 +145,14 @@ export const Route = createFileRoute('/_layout/simulate')({
 			defaultSearch.block,
 		),
 		tx: z.optional(zHash()),
-		call: z.optional(z.coerce.number()),
+		/**
+		 * Calls after the first, as [[to, data, value], …].
+		 *
+		 * Must be declared as the array it is: the router JSON-parses search
+		 * values, so a `string` schema rejects its own serialized output and
+		 * takes the route down — the same trap `gas` fell into.
+		 */
+		calls: z.optional(z.array(z.array(z.string()))),
 		originStatus: z.optional(z.enum(['success', 'reverted'])),
 		originGas: z.optional(DecimalSchema),
 		originEvents: z.optional(z.coerce.number()),
@@ -158,9 +173,7 @@ export const Route = createFileRoute('/_layout/simulate')({
 
 type FormState = {
 	from: string
-	to: string
-	data: string
-	value: string
+	calls: CallDraft[]
 	gas: string
 	block: string
 }
@@ -182,9 +195,12 @@ function SimulatePage(): React.JSX.Element {
 	// arriving was working out what was already there and deleting it.
 	const [form, setForm] = React.useState<FormState>(() => ({
 		from: search.to ? search.from : '',
-		to: search.to ?? '',
-		data: search.to ? search.data : '',
-		value: search.value,
+		calls: search.to
+			? [
+					{ to: search.to, data: search.data, value: search.value },
+					...parseExtraCalls(search.calls),
+				]
+			: [emptyCall],
 		gas: search.gas,
 		block: search.block,
 	}))
@@ -192,7 +208,6 @@ function SimulatePage(): React.JSX.Element {
 	const [loadHash, setLoadHash] = React.useState(search.tx ?? '')
 	const [loadError, setLoadError] = React.useState<string | null>(null)
 	const [loadingTransaction, setLoadingTransaction] = React.useState(false)
-	const [batchCalls, setBatchCalls] = React.useState<TempoBatchCall[]>([])
 	const [original, setOriginal] = React.useState<OriginalMetrics | null>(() =>
 		search.originStatus && search.originGas
 			? {
@@ -249,12 +264,9 @@ function SimulatePage(): React.JSX.Element {
 		}
 	}, [search.gas])
 
-	// A batch runs whole unless the user has drilled into one of its calls.
-	const activeBatch =
-		search.call === undefined && batchCalls.length > 1 ? batchCalls : undefined
 	const currentInput = React.useMemo(
-		() => parseForm(form, chainId, activeBatch),
-		[form, chainId, activeBatch],
+		() => parseForm(form, chainId),
+		[form, chainId],
 	)
 	const dirty = Boolean(
 		runInput &&
@@ -263,7 +275,7 @@ function SimulatePage(): React.JSX.Element {
 	)
 
 	const run = React.useCallback(() => {
-		const input = parseForm(form, chainId, activeBatch)
+		const input = parseForm(form, chainId)
 		if (!input) {
 			setFormError(
 				'Enter valid from/to addresses, hexadecimal calldata, and numeric gas/value fields.',
@@ -273,7 +285,12 @@ function SimulatePage(): React.JSX.Element {
 		setFormError(null)
 		setRunInput(input)
 		setEditing(false)
-		if (OxHex.size(input.data) > MAX_URL_CALLDATA_BYTES) return
+		const extras = serializeExtraCalls(form.calls)
+		if (
+			OxHex.size(input.data) > MAX_URL_CALLDATA_BYTES ||
+			(extras ? JSON.stringify(extras).length : 0) > MAX_URL_CALLDATA_BYTES
+		)
+			return
 		void navigate({
 			search: {
 				from: input.from,
@@ -282,8 +299,8 @@ function SimulatePage(): React.JSX.Element {
 				value: input.value,
 				gas: input.gas,
 				block: input.block,
+				calls: extras,
 				tx: search.tx,
-				call: search.call,
 				originStatus: original?.status,
 				originGas: original?.gasUsed.toString(),
 				originEvents: original?.events,
@@ -292,7 +309,7 @@ function SimulatePage(): React.JSX.Element {
 			replace: true,
 			resetScroll: false,
 		})
-	}, [form, chainId, activeBatch, navigate, search.tx, search.call, original])
+	}, [form, chainId, navigate, search.tx, original])
 
 	const runExample = React.useCallback(
 		(kind: 'read' | 'failing') => {
@@ -311,12 +328,28 @@ function SimulatePage(): React.JSX.Element {
 				gas: form.gas,
 				block: 'latest',
 			}
-			setForm(input)
+			setForm({
+				from: input.from,
+				calls: [{ to: input.to, data: input.data, value: input.value }],
+				gas: input.gas,
+				block: input.block,
+			})
 			setOriginal(null)
 			setFormError(null)
 			setRunInput(input)
 			setEditing(false)
-			void navigate({ search: input, replace: true, resetScroll: false })
+			void navigate({
+				search: {
+					from: input.from,
+					to: input.to,
+					data: input.data,
+					value: input.value,
+					gas: input.gas,
+					block: input.block,
+				},
+				replace: true,
+				resetScroll: false,
+			})
 		},
 		[chainId, form.gas, navigate],
 	)
@@ -354,21 +387,27 @@ function SimulatePage(): React.JSX.Element {
 								.map((call) => normalizeTempoBatchCall(call))
 								.filter((call): call is TempoBatchCall => call !== null)
 						: []
-				setBatchCalls(tempoCalls)
-				const selectedCall = tempoCalls[search.call ?? 0]
-				const next = selectedCall ?? {
-					to: transaction.to,
-					data: transaction.input,
-					value: transaction.value,
-				}
-				if (!next.to)
+				// Every call of a batch lands in the form, so all of them are
+				// visible and editable rather than just the first.
+				const drafts: CallDraft[] = tempoCalls.length
+					? tempoCalls.map((call) => ({
+							to: call.to,
+							data: call.data,
+							value: call.value.toString(),
+						}))
+					: [
+							{
+								to: transaction.to ?? '',
+								data: transaction.input ?? '0x',
+								value: transaction.value.toString(),
+							},
+						]
+				if (drafts.some((call) => !call.to))
 					throw new Error('Contract creation simulation is not supported yet.')
 				const comparableLogs = withoutFeeTransferLogs(receipt.logs)
 				const nextForm: FormState = {
 					from: transaction.from,
-					to: next.to,
-					data: next.data ?? '0x',
-					value: (next.value ?? 0n).toString(),
+					calls: drafts,
 					gas: transaction.gas.toString(),
 					block: parent.hash,
 				}
@@ -386,11 +425,7 @@ function SimulatePage(): React.JSX.Element {
 
 				// Loading a transaction is a request to see its result, so run it
 				// rather than leaving the user staring at a filled-in form.
-				const batch =
-					search.call === undefined && tempoCalls.length > 1
-						? tempoCalls
-						: undefined
-				const loaded = parseForm(nextForm, chainId, batch)
+				const loaded = parseForm(nextForm, chainId)
 				setRunInput(loaded)
 				setEditing(!loaded)
 				void navigate({
@@ -406,7 +441,7 @@ function SimulatePage(): React.JSX.Element {
 				setLoadingTransaction(false)
 			}
 		},
-		[navigate, search.call, chainId],
+		[navigate, chainId],
 	)
 
 	const autoLoaded = React.useRef(false)
@@ -438,23 +473,6 @@ function SimulatePage(): React.JSX.Element {
 					setLoadHash={setLoadHash}
 					loadError={loadError}
 					loadingTransaction={loadingTransaction}
-					batchCalls={batchCalls}
-					selectedCall={search.call}
-					onSelectCall={(index) => {
-						const call = index === undefined ? batchCalls[0] : batchCalls[index]
-						if (call)
-							setForm((current) => ({
-								...current,
-								to: call.to,
-								data: call.data,
-								value: call.value.toString(),
-							}))
-						void navigate({
-							search: (previous) => ({ ...previous, call: index }),
-							replace: true,
-							resetScroll: false,
-						})
-					}}
 					onLoad={() => void loadTransaction(loadHash)}
 					onRun={run}
 				/>
@@ -464,21 +482,6 @@ function SimulatePage(): React.JSX.Element {
 					dirty={dirty}
 					original={original}
 					onExample={runExample}
-					onTraceCall={(index) => {
-						const call = batchCalls[index]
-						if (!call) return
-						setForm((current) => ({
-							...current,
-							to: call.to,
-							data: call.data,
-							value: call.value.toString(),
-						}))
-						void navigate({
-							search: (previous) => ({ ...previous, call: index }),
-							replace: true,
-							resetScroll: false,
-						})
-					}}
 				/>
 			</div>
 		</div>
@@ -501,26 +504,32 @@ function CallBar(props: {
 	setLoadHash: (value: string) => void
 	loadError: string | null
 	loadingTransaction: boolean
-	batchCalls: TempoBatchCall[]
-	selectedCall: number | undefined
-	onSelectCall: (index: number | undefined) => void
 	onLoad: () => void
 	onRun: () => void
 }): React.JSX.Element {
 	const { form, setForm, editing } = props
 	const loadTransactionId = React.useId()
 	const shareCopy = useCopy({ timeout: 1_500 })
-	const address = OxAddress.validate(form.to)
-		? (form.to as OxAddress.Address)
+	const firstTo = form.calls[0]?.to ?? ''
+	const address = OxAddress.validate(firstTo)
+		? (firstTo as OxAddress.Address)
 		: undefined
 	const { data: abi } = useAutoloadAbi({ address, enabled: Boolean(address) })
 
 	const summary = React.useMemo(
-		() =>
-			props.batchCalls.length > 1 && props.selectedCall === undefined
-				? describeBatch(form, props.batchCalls)
-				: describeCall(form, abi as Abi | undefined),
-		[form, abi, props.batchCalls, props.selectedCall],
+		() => describeCall(form, abi as Abi | undefined),
+		[form, abi],
+	)
+
+	const updateCall = React.useCallback(
+		(index: number, patch: Partial<CallDraft>) =>
+			setForm((current) => ({
+				...current,
+				calls: current.calls.map((call, i) =>
+					i === index ? { ...call, ...patch } : call,
+				),
+			})),
+		[setForm],
 	)
 
 	return (
@@ -608,73 +617,58 @@ function CallBar(props: {
 						)}
 					</div>
 
-					{props.batchCalls.length > 1 && (
-						<div className="flex flex-wrap items-center gap-[10px] rounded-[6px] border border-card-border bg-distinct px-[10px] py-[8px] text-[11px]">
-							<span className="text-secondary">
-								Tempo batch · {props.batchCalls.length} calls
-							</span>
-							<span className="text-tertiary">
-								{props.selectedCall === undefined
-									? 'Simulating the whole batch in order.'
-									: `Simulating call ${props.selectedCall + 1} on its own — earlier calls in the batch are not applied.`}
-							</span>
-							{props.selectedCall !== undefined && (
-								<button
-									type="button"
-									onClick={() => props.onSelectCall(undefined)}
-									className="ml-auto text-accent cursor-pointer hover:underline press-down"
-								>
-									Simulate whole batch
-								</button>
-							)}
-						</div>
-					)}
+					<Field label="From">
+						<input
+							value={form.from}
+							onChange={(event) =>
+								setForm((current) => ({
+									...current,
+									from: event.target.value,
+								}))
+							}
+							placeholder="0x sender — defaults to the zero address"
+							className={cx(inputClassName, 'max-w-[520px]')}
+						/>
+					</Field>
 
-					<div className="grid gap-[12px] min-[720px]:grid-cols-2">
-						<Field label="From">
-							<input
-								value={form.from}
-								onChange={(event) =>
+					<div className="flex flex-col gap-[10px]">
+						{form.calls.map((call, index) => (
+							<CallEditor
+								key={index}
+								call={call}
+								index={index}
+								total={form.calls.length}
+								onChange={(patch) => updateCall(index, patch)}
+								onRemove={() =>
 									setForm((current) => ({
 										...current,
-										from: event.target.value,
+										calls: current.calls.filter((_, i) => i !== index),
 									}))
 								}
-								placeholder="0x sender — defaults to the zero address"
-								className={inputClassName}
 							/>
-						</Field>
-						<Field label="To">
-							<input
-								value={form.to}
-								onChange={(event) =>
-									setForm((current) => ({ ...current, to: event.target.value }))
-								}
-								placeholder="0x contract address"
-								className={inputClassName}
-							/>
-						</Field>
+						))}
+						<button
+							type="button"
+							onClick={() =>
+								setForm((current) => ({
+									...current,
+									calls: [...current.calls, emptyCall],
+								}))
+							}
+							className="flex w-fit items-center gap-[5px] rounded-[6px] border border-dashed border-card-border px-[10px] py-[6px] text-[11px] text-secondary cursor-pointer press-down hover:border-accent hover:text-primary"
+						>
+							<PlusIcon className="size-[12px]" />
+							Add a call
+						</button>
+						{form.calls.length > 1 && (
+							<p className="text-[11px] text-tertiary">
+								Calls run in order against each other{'’'}s state, the way a
+								Tempo batch transaction executes.
+							</p>
+						)}
 					</div>
 
-					<CalldataControl
-						abi={abi as Abi | undefined}
-						data={form.data}
-						onChange={(data) => setForm((current) => ({ ...current, data }))}
-					/>
-
-					<div className="grid gap-[12px] min-[720px]:grid-cols-3">
-						<Field label="Value">
-							<input
-								value={form.value}
-								onChange={(event) =>
-									setForm((current) => ({
-										...current,
-										value: event.target.value,
-									}))
-								}
-								className={inputClassName}
-							/>
-						</Field>
+					<div className="grid gap-[12px] min-[720px]:grid-cols-2">
 						<Field label="Gas limit">
 							<input
 								value={form.gas}
@@ -708,6 +702,78 @@ function CallBar(props: {
 				</div>
 			)}
 		</section>
+	)
+}
+
+/**
+ * A single call in the list: target, calldata, value. Numbered only once there
+ * is more than one, so a plain single call keeps its uncluttered form.
+ */
+function CallEditor(props: {
+	call: CallDraft
+	index: number
+	total: number
+	onChange: (patch: Partial<CallDraft>) => void
+	onRemove: () => void
+}): React.JSX.Element {
+	const { call, index, total } = props
+	const address = OxAddress.validate(call.to)
+		? (call.to as OxAddress.Address)
+		: undefined
+	const { data: abi } = useAutoloadAbi({ address, enabled: Boolean(address) })
+	const isList = total > 1
+
+	return (
+		<div
+			className={cx(
+				'flex flex-col gap-[12px]',
+				isList &&
+					'rounded-[8px] border border-card-border bg-distinct/40 p-[12px]',
+			)}
+		>
+			{isList && (
+				<div className="flex items-center gap-[8px]">
+					<span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-distinct text-[10px] font-medium text-secondary">
+						{index + 1}
+					</span>
+					<span className="text-[11px] text-tertiary">
+						Call {index + 1} of {total}
+					</span>
+					<button
+						type="button"
+						onClick={props.onRemove}
+						className="ml-auto text-[11px] text-tertiary cursor-pointer press-down hover:text-negative"
+						title="Remove this call"
+					>
+						Remove
+					</button>
+				</div>
+			)}
+
+			<div className="grid gap-[12px] min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+				<Field label="To">
+					<input
+						value={call.to}
+						onChange={(event) => props.onChange({ to: event.target.value })}
+						placeholder="0x contract address"
+						className={inputClassName}
+					/>
+				</Field>
+				<Field label="Value">
+					<input
+						value={call.value}
+						onChange={(event) => props.onChange({ value: event.target.value })}
+						className={inputClassName}
+					/>
+				</Field>
+			</div>
+
+			<CalldataControl
+				abi={abi as Abi | undefined}
+				data={call.data}
+				onChange={(data) => props.onChange({ data })}
+			/>
+		</div>
 	)
 }
 
@@ -945,7 +1011,6 @@ function SimulationResults(props: {
 	dirty: boolean
 	original: OriginalMetrics | null
 	onExample: (kind: 'read' | 'failing') => void
-	onTraceCall: (index: number) => void
 }): React.JSX.Element {
 	const fallback = emptySimulationInput()
 	const input = props.input ?? fallback
@@ -973,6 +1038,15 @@ function SimulationResults(props: {
 	})
 	// The primary tree: the single call, or the first call of a batch.
 	const tree = useTraceTree(traces[0] ?? null)
+	// When a later call in a batch is the one that reverted, its trace holds the
+	// reason — call 0's does not.
+	const failedCallIndex =
+		executionQuery.data?.calls.findIndex(
+			(call) => call.status === 'reverted',
+		) ?? -1
+	const failedCallTree = useTraceTree(
+		failedCallIndex > 0 ? (traces[failedCallIndex] ?? null) : null,
+	)
 	const metadataAddresses = React.useMemo(
 		() => [
 			input.to,
@@ -1010,7 +1084,7 @@ function SimulationResults(props: {
 				: [],
 		[executionQuery.data, input, metadataQuery.data],
 	)
-	const failedNode = findDeepestFailedNode(tree)
+	const failedNode = findDeepestFailedNode(failedCallTree ?? tree)
 
 	if (!props.input) return <SimulationEmptyState onExample={props.onExample} />
 
@@ -1056,7 +1130,6 @@ function SimulationResults(props: {
 					calls={executionQuery.data?.calls ?? []}
 					traces={traces}
 					prestates={prestateQuery.data ?? []}
-					onTraceCall={props.onTraceCall}
 				/>
 			),
 		},
@@ -1238,7 +1311,7 @@ function SimulationVerdict(props: {
 						</span>
 					</div>
 
-					{execution.calls.length > 1 ? (
+					{execution.calls.length > 1 && succeeded ? (
 						<BatchDetail execution={execution} />
 					) : succeeded ? (
 						<SuccessDetail
@@ -1633,7 +1706,6 @@ function BatchCalls(props: {
 	calls: SimulationCallResult[]
 	traces: CallTrace[]
 	prestates: PrestateDiff[]
-	onTraceCall: (index: number) => void
 }): React.JSX.Element {
 	if (props.calls.length === 0)
 		return (
@@ -1650,7 +1722,6 @@ function BatchCalls(props: {
 					call={call}
 					trace={props.traces[call.index] ?? null}
 					prestate={props.prestates[call.index] ?? null}
-					onTrace={() => props.onTraceCall(call.index)}
 				/>
 			))}
 		</div>
@@ -1661,11 +1732,16 @@ function BatchCallRow(props: {
 	call: SimulationCallResult
 	trace: CallTrace | null
 	prestate: PrestateDiff | null
-	onTrace: () => void
 }): React.JSX.Element {
 	const { call } = props
 	const [expanded, setExpanded] = React.useState(call.status === 'reverted')
 	const tree = useTraceTree(props.trace)
+	// The outer frame's revert bytes are usually a wrapper like TokenCallFailed;
+	// the deepest failing frame is the one that says what actually went wrong.
+	const failed = findDeepestFailedNode(tree)
+	const reason = failed?.decodedError
+		? formatDecodedTraceErrorShort(failed.decodedError)
+		: undefined
 	const { data: abi } = useAutoloadAbi({ address: call.to, enabled: true })
 	const succeeded = call.status === 'success'
 
@@ -1730,8 +1806,22 @@ function BatchCallRow(props: {
 				</span>
 			</button>
 			{!succeeded && (
-				<span className="pl-[26px] font-mono text-[11px] break-all text-negative">
-					reverted{call.revertData ? ` · ${call.revertData}` : ''}
+				<span
+					className="pl-[26px] font-mono text-[11px] break-all text-negative"
+					title={call.revertData}
+				>
+					reverted
+					{reason ? (
+						<>
+							{' · '}
+							<span className="font-medium">{reason}</span>
+							{failed?.contractName ? (
+								<span className="text-tertiary"> in {failed.contractName}</span>
+							) : null}
+						</>
+					) : call.revertData ? (
+						` · ${call.revertData}`
+					) : null}
 				</span>
 			)}
 			{succeeded && call.returnData !== '0x' && (
@@ -1868,25 +1958,32 @@ function Field(props: {
 const inputClassName =
 	'w-full min-w-0 rounded-[6px] border border-card-border bg-distinct px-[9px] py-[7px] text-[12px] font-mono text-primary outline-none focus:border-accent'
 
-/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)  @ latest` */
+/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …) @ latest`, or `→ 2 calls`. */
 function describeCall(form: FormState, abi: Abi | undefined): string {
-	if (!form.to.trim() && !form.data.trim()) return 'New call'
+	const first = form.calls[0]
+	if (!first || (!first.to.trim() && !first.data.trim())) return 'New call'
 
 	const from = OxAddress.validate(form.from)
 		? HexFormatter.truncate(form.from as OxHex.Hex)
 		: form.from || 'anyone'
-	const to = OxAddress.validate(form.to)
-		? HexFormatter.truncate(form.to as OxHex.Hex)
-		: form.to || '—'
 	const block = form.block === 'latest' ? 'latest' : 'pinned block'
 
+	if (form.calls.length > 1)
+		return `${from} → ${form.calls.length} calls @ ${block}`
+
+	const to = OxAddress.validate(first.to)
+		? HexFormatter.truncate(first.to as OxHex.Hex)
+		: first.to || '—'
+
 	let call =
-		form.data && form.data !== '0x' ? `${form.data.slice(0, 10)}()` : 'call()'
-	if (abi && OxHex.validate(form.data) && form.data.length >= 10) {
+		first.data && first.data !== '0x'
+			? `${first.data.slice(0, 10)}()`
+			: 'call()'
+	if (abi && OxHex.validate(first.data) && first.data.length >= 10) {
 		try {
 			const decoded = decodeFunctionData({
 				abi,
-				data: form.data as OxHex.Hex,
+				data: first.data as OxHex.Hex,
 			})
 			const args = (decoded.args ?? [])
 				.map((value) => shorten(inputValueToString(value)))
@@ -1898,15 +1995,6 @@ function describeCall(form: FormState, abi: Abi | undefined): string {
 	}
 
 	return `${from} → ${to}.${call} @ ${block}`
-}
-
-/** `0x54bd…194d → 2 calls @ pinned block` */
-function describeBatch(form: FormState, calls: TempoBatchCall[]): string {
-	const from = OxAddress.validate(form.from)
-		? HexFormatter.truncate(form.from as OxHex.Hex)
-		: form.from || '—'
-	const block = form.block === 'latest' ? 'latest' : 'pinned block'
-	return `${from} → ${calls.length} calls @ ${block}`
 }
 
 function shorten(value: string): string {
@@ -1922,50 +2010,46 @@ function callLabel(node: TxTraceTree.Node): string {
 	return `${contract}.${fn}()`
 }
 
-function parseForm(
-	form: FormState,
-	chainId: number,
-	batch?: TempoBatchCall[] | undefined,
-): SimulationInput | null {
-	const single = parseSingleForm(form, chainId)
-	if (!single || !batch?.length || batch.length < 2) return single
-	return {
-		...single,
-		calls: batch.map((call) => ({
-			to: call.to,
-			data: call.data,
-			value: call.value.toString(),
-		})),
-	}
-}
-
-function parseSingleForm(
-	form: FormState,
-	chainId: number,
-): SimulationInput | null {
+function parseForm(form: FormState, chainId: number): SimulationInput | null {
+	if (chainId !== 4217 && chainId !== 42431 && chainId !== 31318) return null
 	// An unset sender means "nobody in particular" — the zero address, matching
 	// what `eth_call` does. Only `to` is genuinely required.
 	const from = form.from.trim() === '' ? zeroAddress : form.from.trim()
-	const data = form.data.trim() === '' ? '0x' : form.data.trim()
 	if (
-		(chainId !== 4217 && chainId !== 42431 && chainId !== 31318) ||
 		!OxAddress.validate(from) ||
-		!OxAddress.validate(form.to) ||
-		!OxHex.validate(data) ||
-		!/^\d+$/.test(form.value) ||
 		!/^\d+$/.test(form.gas) ||
 		(form.block !== 'latest' &&
 			(!OxHex.validate(form.block) || OxHex.size(form.block) !== 32))
 	)
 		return null
+
+	const calls: SimulationBatchCall[] = []
+	for (const draft of form.calls) {
+		const data = draft.data.trim() === '' ? '0x' : draft.data.trim()
+		if (
+			!OxAddress.validate(draft.to.trim()) ||
+			!OxHex.validate(data) ||
+			!/^\d+$/.test(draft.value)
+		)
+			return null
+		calls.push({
+			to: OxAddress.from(draft.to.trim()),
+			data: data as OxHex.Hex,
+			value: draft.value,
+		})
+	}
+
+	const first = calls[0]
+	if (!first) return null
 	return {
 		chainId,
-		from: OxAddress.from(form.from),
-		to: OxAddress.from(form.to),
-		data: form.data as OxHex.Hex,
-		value: form.value,
+		from: OxAddress.from(from),
+		to: first.to,
+		data: first.data,
+		value: first.value,
 		gas: form.gas,
 		block: form.block as 'latest' | OxHex.Hex,
+		...(calls.length > 1 ? { calls } : {}),
 	}
 }
 
@@ -1977,9 +2061,10 @@ function toSimulationInput(
 	return parseForm(
 		{
 			from: search.from,
-			to: search.to,
-			data: search.data,
-			value: search.value,
+			calls: [
+				{ to: search.to, data: search.data, value: search.value },
+				...parseExtraCalls(search.calls),
+			],
 			gas: search.gas,
 			block: search.block,
 		},
