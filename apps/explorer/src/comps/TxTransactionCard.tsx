@@ -136,6 +136,32 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						View →
 					</span>
 				</Link>,
+				/**
+				 * "Why did this fail?" is the most common reason anyone opens a
+				 * simulator, and until now there was no way in from the transaction
+				 * that raised the question — you retyped every field by hand. `tx`
+				 * alone is enough: the simulator loads the transaction, prefills every
+				 * call, pins the block to the parent, and runs it.
+				 */
+				<Link
+					key="simulate"
+					to="/simulate"
+					search={{ tx: hash }}
+					className="press-down flex items-center justify-between w-full print:hidden py-[6px]"
+					title="Replay this transaction against the state of its parent block"
+				>
+					<span className="text-[13px] text-tertiary">Simulate</span>
+					<span
+						className={cx(
+							'text-[12px] px-[8px] py-[2px] border rounded-full transition-colors',
+							status === 'reverted'
+								? 'border-negative/40 text-base-content-negative hover:text-negative'
+								: 'border-base-border text-tertiary hover:text-primary',
+						)}
+					>
+						{status === 'reverted' ? 'Debug →' : 'Re-run →'}
+					</span>
+				</Link>,
 			]}
 		/>
 	)

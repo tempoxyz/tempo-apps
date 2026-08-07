@@ -8,6 +8,16 @@ const BAR_HEIGHT = 32
 const MIN_WIDTH_PX = 6
 
 /**
+ * Below this a flamegraph is a rectangle, not a chart.
+ *
+ * Nearly every TIP-20 call on Tempo is one frame, which rendered as a single
+ * 100%-wide bar — the largest and least informative element on the screen. The
+ * gate lives here rather than in each caller so the transaction page and the
+ * simulator can't disagree about it.
+ */
+export const MIN_FLAMEGRAPH_FRAMES = 3
+
+/**
  * A flamegraph encodes one quantitative variable: share of total gas. So it
  * gets a single-hue ramp from the data-visualisation token, and no semantic
  * colour at all — filling failed frames red put the chart in a three-way fight
@@ -29,7 +39,7 @@ function getFlameColor(gasShare: number) {
 export function TxTraceFlamegraph(
 	props: TxTraceFlamegraph.Props,
 ): React.JSX.Element | null {
-	const { tree, prestate } = props
+	const { tree, prestate, selectedId, onSelect } = props
 	const [hoveredNode, setHoveredNode] = useState<TxTraceTree.Node | null>(null)
 
 	const traceRef = tree?.trace
@@ -52,13 +62,29 @@ export function TxTraceFlamegraph(
 
 	const maxDepth = rows.length
 
+	// The selection wins over the hover: you move the mouse *off* a bar to read
+	// its detail, so a hover-only panel empties exactly when you want to read it.
+	const selectedNode = useMemo(() => {
+		if (!selectedId || !root) return null
+		const stack = [root]
+		while (stack.length > 0) {
+			const node = stack.pop()
+			if (!node) continue
+			if (node.id === selectedId) return node
+			stack.push(...node.children)
+		}
+		return null
+	}, [selectedId, root])
+	const detailNode = hoveredNode ?? selectedNode
+
 	if (!tree || !root || maxDepth === 0) return null
+	if (root.subtreeSize < MIN_FLAMEGRAPH_FRAMES) return null
 
 	return (
 		<div className="flex flex-col">
-			<div className="flex items-center pl-[16px] pr-[12px] h-[40px] border-y border-dashed border-distinct">
-				<span className="text-[13px]">
-					<span className="text-tertiary">Gas Flamegraph</span>
+			<div className="flex items-center pl-[16px] pr-[12px] h-[34px] border-b border-dashed border-distinct">
+				<span className="text-[11px] text-tertiary">
+					{onSelect ? 'Gas by frame — click to select' : 'Gas flamegraph'}
 				</span>
 			</div>
 
@@ -93,6 +119,7 @@ export function TxTraceFlamegraph(
 										leftPct={leftPct}
 										widthPct={widthPct}
 										hovered={hoveredNode === span.node}
+										selected={selectedId === span.node.id}
 										storageSlots={
 											span.node.trace.to
 												? storageByAddress?.get(
@@ -101,6 +128,7 @@ export function TxTraceFlamegraph(
 												: undefined
 										}
 										onHover={setHoveredNode}
+										onSelect={onSelect}
 									/>
 								)
 							})}
@@ -110,11 +138,11 @@ export function TxTraceFlamegraph(
 			</div>
 
 			<TxTraceFlamegraph.Details
-				node={hoveredNode}
+				node={detailNode}
 				rootGas={root.gasUsed}
 				storageSlots={
-					hoveredNode?.trace.to
-						? storageByAddress?.get(hoveredNode.trace.to.toLowerCase())
+					detailNode?.trace.to
+						? storageByAddress?.get(detailNode.trace.to.toLowerCase())
 						: undefined
 				}
 			/>
@@ -126,6 +154,10 @@ export declare namespace TxTraceFlamegraph {
 	interface Props {
 		tree: TxTraceTree.Node | null
 		prestate?: PrestateDiff | null | undefined
+		/** Frame id from the URL. Selection persists where hover cannot. */
+		selectedId?: string | undefined
+		/** Omit to keep the graph read-only, as on the transaction page. */
+		onSelect?: ((id: string) => void) | undefined
 	}
 
 	interface Span {
@@ -199,11 +231,22 @@ export namespace TxTraceFlamegraph {
 		leftPct: number
 		widthPct: number
 		hovered: boolean
+		selected?: boolean | undefined
 		storageSlots?: StorageInfo | undefined
 		onHover: (node: TxTraceTree.Node | null) => void
+		onSelect?: ((id: string) => void) | undefined
 	}): React.JSX.Element {
-		const { span, rootGas, leftPct, widthPct, hovered, storageSlots, onHover } =
-			props
+		const {
+			span,
+			rootGas,
+			leftPct,
+			widthPct,
+			hovered,
+			selected,
+			storageSlots,
+			onHover,
+			onSelect,
+		} = props
 		const { node } = span
 
 		const isNarrow = widthPct < 1.5
@@ -223,7 +266,11 @@ export namespace TxTraceFlamegraph {
 			<div
 				className={cx(
 					'absolute top-0 h-full rounded-[3px] text-[11px] font-mono overflow-hidden transition-colors border',
-					hovered && 'z-10',
+					(hovered || selected) && 'z-10',
+					onSelect && 'cursor-pointer',
+					// Selection reads as an outline rather than a fill, so it never
+					// competes with the fill that encodes gas share.
+					selected && 'ring-1 ring-accent ring-inset',
 					node.hasError && 'border-l-2 border-l-negative!',
 				)}
 				style={{
@@ -232,6 +279,19 @@ export namespace TxTraceFlamegraph {
 					backgroundColor: hovered ? color.hover : color.bg,
 					borderColor: color.border,
 				}}
+				{...(onSelect
+					? {
+							role: 'button' as const,
+							tabIndex: 0,
+							'aria-pressed': selected,
+							onClick: () => onSelect(node.id),
+							onKeyDown: (event: React.KeyboardEvent) => {
+								if (event.key !== 'Enter' && event.key !== ' ') return
+								event.preventDefault()
+								onSelect(node.id)
+							},
+						}
+					: {})}
 				onMouseEnter={() => onHover(node)}
 				title={`${label} — ${node.gasUsed.toLocaleString()} gas (${gasPct.toFixed(1)}%)${hasStorage ? ` · ${storageSlots.writes} SSTORE, ${storageSlots.reads} SLOAD` : ''}`}
 			>
@@ -261,21 +321,13 @@ export namespace TxTraceFlamegraph {
 		node: TxTraceTree.Node | null
 		rootGas: number
 		storageSlots?: StorageInfo | undefined
-	}): React.JSX.Element {
+	}): React.JSX.Element | null {
 		const { node, rootGas, storageSlots } = props
 
-		// Fixed height so the panel doesn't shift the layout as the hovered
-		// node's row count (self gas, storage) varies.
-		if (!node)
-			return (
-				<div className="px-[16px] pb-[12px]">
-					<div className="flex items-start h-[102px] bg-distinct border border-card-border rounded-[6px] px-[12px] py-[10px] text-[12px] font-mono">
-						<span className="text-tertiary select-none">
-							Hover a call to see details
-						</span>
-					</div>
-				</div>
-			)
+		// Nothing hovered or selected renders nothing. This box used to reserve
+		// ~150px to say "Hover a call to see details", which on a shallow trace
+		// was the largest thing in the panel and always empty.
+		if (!node) return null
 
 		const gasPct = rootGas > 0 ? (node.gasUsed / rootGas) * 100 : 0
 		const selfGas = getSelfGas(node)
@@ -292,7 +344,10 @@ export namespace TxTraceFlamegraph {
 
 		return (
 			<div className="px-[16px] pb-[12px]">
-				<div className="flex items-start gap-[12px] h-[102px] overflow-hidden bg-distinct border border-card-border rounded-[6px] px-[12px] py-[10px] text-[12px] font-mono">
+				{/* min-h, not h: enough to stop the panel twitching as the row count
+				    (self gas, storage) varies between frames, without a floor of
+				    empty space when there is little to say. */}
+				<div className="flex items-start gap-[12px] min-h-[72px] overflow-hidden bg-distinct border border-card-border rounded-[6px] px-[12px] py-[10px] text-[12px] font-mono">
 					<div className="flex flex-col gap-[4px] min-w-0 flex-1">
 						<div className="flex items-center gap-[6px]">
 							<span

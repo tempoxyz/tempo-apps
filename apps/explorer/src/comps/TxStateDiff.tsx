@@ -10,7 +10,9 @@ import {
 	type StorageDecodeContext,
 } from '#lib/domain/storage-decode'
 import { useCopy } from '#lib/hooks'
+import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import type { CallTrace, PrestateDiff } from '#lib/queries'
+import CheckIcon from '~icons/lucide/check'
 import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
 
@@ -53,40 +55,83 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 
 	return (
 		<div className="flex flex-col">
-			<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-dashed border-distinct">
-				<span className="text-[13px]">
-					{label && (
-						<>
-							<span className="text-tertiary">{label} </span>
-							{hasData && <RawToggle raw={raw} onToggle={() => setRaw(!raw)} />}
-						</>
-					)}
-				</span>
-				{hasData && (
-					<div className="flex items-center gap-[8px] text-tertiary">
-						{copy.notifying && (
-							<span className="text-[11px] select-none">copied</span>
-						)}
-						{!label && <RawToggle raw={raw} onToggle={() => setRaw(!raw)} />}
-						<button
-							type="button"
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+			{/* With a label this is a section header on the transaction page. Without
+			    one — the simulator, where the tab already names the panel — it is the
+			    same toolbar the trace uses, so the two panels are visibly siblings
+			    instead of an empty band with a stray `(decoded)` link in it. */}
+			{label === null ? (
+				hasData &&
+				data && (
+					<PanelToolbar
+						summary={`${data.accounts.length} account${data.accounts.length === 1 ? '' : 's'} changed`}
+					>
+						<PanelToolbar.IconButton
+							onClick={() => setWrap(!wrap)}
+							active={wrap}
+							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+						>
+							<WrapIcon className="size-[12px]" />
+						</PanelToolbar.IconButton>
+						<PanelToolbar.IconButton
 							onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
 							title="Copy state changes"
 						>
-							<CopyIcon className="size-[14px]" />
-						</button>
-						<button
-							type="button"
-							onClick={() => setWrap(!wrap)}
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
-							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-						>
-							<WrapIcon className={cx('size-[14px]', wrap && 'text-primary')} />
-						</button>
-					</div>
-				)}
-			</div>
+							{copy.notifying ? (
+								<CheckIcon className="size-[12px]" />
+							) : (
+								<CopyIcon className="size-[12px]" />
+							)}
+						</PanelToolbar.IconButton>
+						<SegmentedControl
+							size="sm"
+							value={raw ? 'raw' : 'decoded'}
+							options={[
+								{ value: 'decoded', label: 'Decoded' },
+								{ value: 'raw', label: 'Raw' },
+							]}
+							onChange={(value) => setRaw(value === 'raw')}
+						/>
+					</PanelToolbar>
+				)
+			) : (
+				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-dashed border-distinct">
+					<span className="text-[13px]">
+						{label && (
+							<>
+								<span className="text-tertiary">{label} </span>
+								{hasData && (
+									<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
+								)}
+							</>
+						)}
+					</span>
+					{hasData && (
+						<div className="flex items-center gap-[8px] text-tertiary">
+							{copy.notifying && (
+								<span className="text-[11px] select-none">copied</span>
+							)}
+							<button
+								type="button"
+								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+								onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
+								title="Copy state changes"
+							>
+								<CopyIcon className="size-[14px]" />
+							</button>
+							<button
+								type="button"
+								onClick={() => setWrap(!wrap)}
+								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+								title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+							>
+								<WrapIcon
+									className={cx('size-[14px]', wrap && 'text-primary')}
+								/>
+							</button>
+						</div>
+					)}
+				</div>
+			)}
 			{!prestate || !data ? (
 				<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
 					No state diff available.
@@ -252,15 +297,15 @@ export namespace TxStateDiff {
 
 		return (
 			<div className="flex flex-col">
-				<div className="flex items-center gap-[8px] px-[16px] py-[12px]">
+				<div className="flex items-center gap-[8px] px-[16px] pt-[12px] pb-[8px]">
 					<Link
 						to="/address/$address"
 						params={{ address }}
-						className="text-accent hover:underline font-mono text-[12px] press-down"
+						className="min-w-0 truncate text-accent hover:underline font-mono text-[12px] press-down"
 					>
 						{contractName ? `${contractName} (${address})` : address}
 					</Link>
-					<span className="text-[11px] text-tertiary ml-auto">
+					<span className="shrink-0 text-[11px] text-tertiary ml-auto">
 						{nonceChange && 'nonce'}
 						{nonceChange && storageChanges.length > 0 && ' + '}
 						{storageChanges.length > 0 &&
@@ -271,19 +316,19 @@ export namespace TxStateDiff {
 				<div className="px-[16px] pb-[12px] overflow-x-auto">
 					<div
 						className={cx(
-							'bg-distinct border border-card-border rounded-[6px] overflow-hidden text-[12px] font-mono grid',
+							'rounded-[6px] overflow-hidden border border-card-border bg-base-plane text-[12px] font-mono grid',
 							wrap
 								? 'grid-cols-3'
 								: 'grid-cols-[auto_auto_auto] w-fit min-w-full',
 						)}
 					>
-						<div className="px-[12px] py-[8px] font-medium text-tertiary">
+						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] text-[11px] text-tertiary">
 							Slot
 						</div>
-						<div className="px-[12px] py-[8px] font-medium text-tertiary">
+						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] text-[11px] text-tertiary">
 							Before
 						</div>
-						<div className="px-[12px] py-[8px] font-medium text-tertiary">
+						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] text-[11px] text-tertiary">
 							After
 						</div>
 						{nonceChange && (
@@ -399,11 +444,14 @@ export namespace TxStateDiff {
 				title={isDecoded ? valueToCopy : undefined}
 			>
 				<span className="text-primary">{value}</span>
+				{/* A balance going down is not a failure, so it does not get failure
+				    red. Green marks an increase; a decrease is just a value. This is
+				    the same pairing the simulator's balance table uses. */}
 				{diff && (
 					<span
 						className={cx(
 							'text-[11px]',
-							diff.isPositive ? 'text-positive' : 'text-negative',
+							diff.isPositive ? 'text-base-content-positive' : 'text-secondary',
 						)}
 					>
 						{diff.display}

@@ -3,7 +3,8 @@ import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
-import type { Abi, AbiFunction } from 'viem'
+import type { Abi, AbiFunction, Hex } from 'viem'
+import { encodeFunctionData } from 'viem'
 import { useConnection, useWriteContract } from 'wagmi'
 import { cx } from '#lib/css'
 import {
@@ -19,6 +20,7 @@ import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
+import FlaskIcon from '~icons/lucide/flask-conical'
 import LinkIcon from '~icons/lucide/link'
 import PlayIcon from '~icons/lucide/play'
 
@@ -147,6 +149,24 @@ function WriteContractFunction(props: {
 		void copy(getMethodWithSelector(fn))
 	}
 
+	/**
+	 * Calldata for the Simulate link. Falls back to the bare selector when the
+	 * arguments aren't filled in yet, so the link is never dead.
+	 */
+	const simulateCalldata = React.useMemo(() => {
+		if (allInputsFilled && !parsedArgs.error)
+			try {
+				return encodeFunctionData({
+					abi: props.abi,
+					functionName: fn.name,
+					args: parsedArgs.args,
+				})
+			} catch {
+				// Fall through to the selector.
+			}
+		return selector as Hex
+	}, [allInputsFilled, parsedArgs, props.abi, fn.name, selector])
+
 	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
 		fragment: fnId,
 	})
@@ -224,6 +244,30 @@ function WriteContractFunction(props: {
 							<LinkIcon className="w-[12px] h-[12px]" />
 						)}
 					</button>
+					{/* Simulate is available whether or not a wallet is connected —
+					    checking what a write would do is the step *before* signing, and
+					    gating it on a connection put the safe option behind the risky
+					    one. Args are optional: an unfilled form still simulates the
+					    selector, which is enough to see who is allowed to call it. */}
+					<Link
+						to="/simulate"
+						search={{
+							to: props.address,
+							data: simulateCalldata,
+							...(connection.address ? { from: connection.address } : {}),
+							...(isPayable && inputs.value ? { value: inputs.value } : {}),
+						}}
+						title="Simulate this call without signing"
+						onClick={(event) => event.stopPropagation()}
+						className={cx(
+							'text-tertiary hover:text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
+							connection.status === 'connected' || hasInputs
+								? 'pr-[4px]'
+								: 'pr-[12px]',
+						)}
+					>
+						<FlaskIcon className="size-[14px]" />
+					</Link>
 					{connection.status === 'connected' && (
 						<button
 							type="button"
