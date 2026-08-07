@@ -15,8 +15,11 @@ import {
 } from '#lib/queries/simulate'
 import type { CallTrace } from '#lib/queries/trace'
 import {
+	draftFieldErrors,
 	parseExtraCalls,
+	parseForm,
 	serializeExtraCalls,
+	shareGasAcrossCalls,
 } from '#lib/domain/simulate-calls'
 
 const baseTrace = {
@@ -182,5 +185,120 @@ describe('search parameter round-trips', () => {
 		expect(parseExtraCalls([[], ['0xaaaa']] as string[][])).toEqual([
 			{ to: '0xaaaa', data: '0x', value: '0' },
 		])
+	})
+})
+
+describe('draft validation', () => {
+	const base = {
+		from: '',
+		calls: [
+			{
+				to: '0x20c0000000000000000000000000000000000001',
+				data: '0x06fdde03',
+				value: '0',
+			},
+		],
+		gas: '50000000',
+		block: 'latest',
+	}
+
+	it('treats an unset sender as the zero address rather than as invalid', () => {
+		const input = parseForm(base, 42431)
+		expect(input?.from).toBe('0x0000000000000000000000000000000000000000')
+	})
+
+	it('refuses to build an input from an incomplete draft', () => {
+		expect(
+			parseForm(
+				{ ...base, calls: [{ to: '', data: '0x', value: '0' }] },
+				42431,
+			),
+		).toBeNull()
+		expect(parseForm({ ...base, gas: '-1' }, 42431)).toBeNull()
+		expect(parseForm({ ...base, block: '0x1234' }, 42431)).toBeNull()
+	})
+
+	it('promotes a multi-call draft to a batch and keeps the first call at the top level', () => {
+		const input = parseForm(
+			{
+				...base,
+				calls: [
+					...base.calls,
+					{
+						to: '0x20c0000000000000000000000000000000000002',
+						data: '0x',
+						value: '3',
+					},
+				],
+			},
+			42431,
+		)
+		expect(input?.calls).toHaveLength(2)
+		expect(input?.to).toBe(input?.calls?.[0]?.to)
+	})
+
+	// The empty page used to arrive with the calldata box already outlined red,
+	// because '' fails hex validation. An unfilled field is not a wrong field.
+	it('does not flag empty optional fields as invalid', () => {
+		const errors = draftFieldErrors({
+			from: '',
+			calls: [{ to: '', data: '', value: '0' }],
+			gas: '50000000',
+			block: 'latest',
+		})
+		expect(errors.from).toBe(false)
+		expect(errors.calls[0]).toEqual({ to: false, data: false, value: false })
+	})
+
+	it('flags fields that are filled in but wrong', () => {
+		const errors = draftFieldErrors({
+			from: '0xnope',
+			calls: [{ to: '0x1234', data: 'zzz', value: 'x' }],
+			gas: '',
+			block: '0x99',
+		})
+		expect(errors.from).toBe(true)
+		expect(errors.gas).toBe(true)
+		expect(errors.block).toBe(true)
+		expect(errors.calls[0]).toEqual({ to: true, data: true, value: true })
+	})
+})
+
+// `eth_simulateV1` runs a batch as one block and applies the gas limit to each
+// call, so N calls at the block limit ask for N blocks and the node rejects the
+// whole bundle with "Block gas limit exceeded by the block's transactions".
+describe('batch gas sharing', () => {
+	const BLOCK = '500000000'
+
+	it('leaves a single call alone', () => {
+		expect(shareGasAcrossCalls(BLOCK, 1, BLOCK)).toBe(BLOCK)
+	})
+
+	it('shares the block between the calls of a batch', () => {
+		expect(shareGasAcrossCalls(BLOCK, 2, BLOCK)).toBe('250000000')
+		expect(shareGasAcrossCalls(BLOCK, 4, BLOCK)).toBe('125000000')
+	})
+
+	it('keeps a modest explicit limit exactly as typed', () => {
+		expect(shareGasAcrossCalls('21000', 5, BLOCK)).toBe('21000')
+	})
+
+	it('is a no-op without a known block limit', () => {
+		expect(shareGasAcrossCalls(BLOCK, 3, undefined)).toBe(BLOCK)
+	})
+
+	it('applies through parseForm so the input never exceeds one block', () => {
+		const call = {
+			to: '0x20c0000000000000000000000000000000000001',
+			data: '0x06fdde03',
+			value: '0',
+		}
+		const input = parseForm(
+			{ from: '', calls: [call, call], gas: BLOCK, block: 'latest' },
+			42431,
+			BLOCK,
+		)
+		expect(input?.gas).toBe('250000000')
+		expect(BigInt(input?.gas ?? '0') * 2n <= BigInt(BLOCK)).toBe(true)
 	})
 })

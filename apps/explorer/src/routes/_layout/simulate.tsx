@@ -1,98 +1,90 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
-	Link,
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
-import * as Value from 'ox/Value'
 import * as React from 'react'
-import type { Abi, AbiFunction, Log } from 'viem'
-import {
-	decodeFunctionData,
-	encodeFunctionData,
-	getFunctionSelector,
-	zeroAddress,
-} from 'viem'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import type { Abi } from 'viem'
+import { zeroAddress } from 'viem'
 import { useConnection } from 'wagmi'
+import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { Address } from '#comps/Address'
-import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
-import { TxEventDescription } from '#comps/TxEventDescription'
+import { SimulateCallForm } from '#comps/SimulateCallForm'
+import { SimulateGasPanel } from '#comps/SimulateGasPanel'
+import {
+	type OriginalMetrics,
+	type OutputTab,
+	SimulateAnswer,
+	SimulateCallHeading,
+	SimulateDiff,
+	SimulateEvents,
+	SimulateOverview,
+	SimulateResultHeader,
+	SimulateStepBar,
+	SimulateTabs,
+} from '#comps/SimulateResultPane'
+import {
+	Button,
+	describeCall,
+	PanelEmpty,
+	PanelError,
+	PanelSkeleton,
+	SegmentedControl,
+	SimulationFailure,
+} from '#comps/SimulateShared'
 import { TxStateDiff } from '#comps/TxStateDiff'
-import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import {
 	findDeepestFailedNode,
 	TxTraceTree,
-	useTraceTree,
+	useTraceTrees,
 } from '#comps/TxTraceTree'
 import { cx } from '#lib/css'
+import { parseKnownEvents } from '#lib/domain/known-events'
 import {
-	formatAbiValue,
-	getInputType,
-	getPlaceholder,
-	isArrayType,
-	parseInputValue,
-} from '#lib/domain/contracts'
-import {
-	parseKnownEvents,
-	preferredEventsFilter,
-} from '#lib/domain/known-events'
+	type CallDraft,
+	DEFAULT_GAS,
+	emptyCall,
+	type FormState,
+	MAX_URL_CALLDATA_BYTES,
+	parseExtraCalls,
+	parseForm,
+	serializeExtraCalls,
+	shareGasAcrossCalls,
+} from '#lib/domain/simulate-calls'
 import {
 	countTransferBalanceChanges,
 	normalizeTempoBatchCall,
 	type TempoBatchCall,
 	withoutFeeTransferLogs,
 } from '#lib/domain/tempo-calls'
-import {
-	type CallDraft,
-	emptyCall,
-	parseExtraCalls,
-	serializeExtraCalls,
-} from '#lib/domain/simulate-calls'
 import * as Tip20 from '#lib/domain/tip20'
 import { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
-import { formatDecodedTraceErrorShort } from '#lib/domain/trace-errors'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useCopy, useKeyboardShortcut } from '#lib/hooks'
 import { getFeeTokenForChain } from '#lib/fee-token'
-import type { CallTrace, PrestateDiff } from '#lib/queries/trace'
+import { useCopy, useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import {
+	type CallTrace,
 	mergePrestateDiffs,
-	SimulationApiError,
-	type SimulationAssetChange,
-	type SimulationBatchCall,
-	type SimulationCallResult,
 	simulationExecutionQueryOptions,
-	type SimulationExecutionResult,
 	type SimulationInput,
 	simulationPrestateQueryOptions,
 	simulationTraceQueryOptions,
+	type SimulationCallResult,
 	useAutoloadAbi,
 } from '#lib/queries'
-import { getWagmiConfig } from '#wagmi.config'
 import { zAddress, zHash } from '#lib/zod'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
-import CheckIcon from '~icons/lucide/check'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CircleAlertIcon from '~icons/lucide/circle-alert'
-import CopyIcon from '~icons/lucide/copy'
+import { getWagmiConfig } from '#wagmi.config'
 import LinkIcon from '~icons/lucide/link'
-import LoaderIcon from '~icons/lucide/loader-circle'
 import PlayIcon from '~icons/lucide/play'
-import PlusIcon from '~icons/lucide/plus'
-import RotateCcwIcon from '~icons/lucide/rotate-ccw'
 
-const DEFAULT_GAS = '50000000'
-const MAX_URL_CALLDATA_BYTES = 3_000
 const EXAMPLE_TOKEN = '0x20c0000000000000000000000000000000000001'
 const EXAMPLE_CALLDATA = '0x06fdde03'
 const FAILING_EXAMPLE_CALLDATA =
 	'0xa9059cbb0000000000000000000000000000000000000000000000000000000000000002ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+
+type Pane = 'input' | 'split' | 'output'
 
 const defaultSearch = {
 	from: zeroAddress,
@@ -100,6 +92,8 @@ const defaultSearch = {
 	value: '0',
 	gas: DEFAULT_GAS,
 	block: 'latest',
+	pane: 'split',
+	tab: 'overview',
 } as const
 
 /**
@@ -157,6 +151,23 @@ export const Route = createFileRoute('/_layout/simulate')({
 		originGas: z.optional(DecimalSchema),
 		originEvents: z.optional(z.coerce.number()),
 		originBalances: z.optional(z.coerce.number()),
+		/**
+		 * View state lives in the URL too, so a shared link lands on whatever the
+		 * sender was looking at — and so the active tab can never desynchronise
+		 * from the rendered panel, which is what made the old tab bar inert.
+		 */
+		pane: z.prefault(z.enum(['input', 'split', 'output']), defaultSearch.pane),
+		tab: z.prefault(
+			z.enum(['overview', 'trace', 'state', 'events', 'gas']),
+			defaultSearch.tab,
+		),
+		/** Selected trace frame, shared between the Trace and Gas tabs. */
+		frame: z.optional(z.string()),
+		/**
+		 * Which call of a batch the evidence tabs are narrowed to. Absent — the
+		 * default — shows every call, because a batch is one transaction.
+		 */
+		step: z.optional(z.coerce.number()),
 	}),
 	search: { middlewares: [stripSearchParams(defaultSearch)] },
 	head: () => ({
@@ -171,25 +182,15 @@ export const Route = createFileRoute('/_layout/simulate')({
 	}),
 })
 
-type FormState = {
-	from: string
-	calls: CallDraft[]
-	gas: string
-	block: string
-}
-
-type OriginalMetrics = {
-	status: 'success' | 'reverted'
-	gasUsed: bigint
-	events: number
-	balances: number
-}
-
 function SimulatePage(): React.JSX.Element {
 	const search = Route.useSearch()
 	const navigate = useNavigate({ from: Route.fullPath })
 	const chainId = getWagmiConfig().chains[0].id as SimulationInput['chainId']
 	const connection = useConnection()
+	// Two panes need room. Below this the split collapses to one pane at a time,
+	// because 560px each is narrower than a single trace line.
+	const narrow = useMediaQuery('(max-width: 1099px)')
+
 	// A bare /simulate starts empty. Prefilling a token address and a name()
 	// selector looked like state the user had chosen, so the first task on
 	// arriving was working out what was already there and deleting it.
@@ -225,8 +226,21 @@ function SimulatePage(): React.JSX.Element {
 	const [runInput, setRunInput] = React.useState<SimulationInput | null>(
 		initialInput,
 	)
-	// Collapsed once something has run — the call is an input, not the subject.
-	const [editing, setEditing] = React.useState(!initialInput)
+	const shareLink = useCopy({ timeout: 1_500 })
+	// The form always edits exactly one call, even while the result pane shows
+	// them all — so "which call am I editing" is separate from "which call am I
+	// looking at", and clearing the filter does not yank the form elsewhere.
+	const [editIndex, setEditIndex] = React.useState(search.step ?? 0)
+
+	const setSearch = React.useCallback(
+		(patch: Partial<typeof search>) =>
+			void navigate({
+				search: (current) => ({ ...current, ...patch }),
+				replace: true,
+				resetScroll: false,
+			}),
+		[navigate],
+	)
 
 	React.useEffect(() => {
 		if (
@@ -242,19 +256,26 @@ function SimulatePage(): React.JSX.Element {
 	// advance `runInput` alongside the form, otherwise the first render is
 	// instantly "stale" against a value the user never touched — and the gas
 	// shown in the form would not be the gas the simulation ran with.
+	const [blockGasLimit, setBlockGasLimit] = React.useState(DEFAULT_GAS)
 	React.useEffect(() => {
-		if (search.gas !== DEFAULT_GAS) return
 		let cancelled = false
 		void getBlock(getWagmiConfig())
 			.then((block) => {
 				if (cancelled) return
 				const gas = block.gasLimit.toString()
+				setBlockGasLimit(gas)
+				if (search.gas !== DEFAULT_GAS) return
 				setForm((current) =>
 					current.gas === DEFAULT_GAS ? { ...current, gas } : current,
 				)
 				setRunInput((current) =>
 					current && current.gas === DEFAULT_GAS
-						? { ...current, gas }
+						? {
+								...current,
+								// A batch shares the block between its calls; handing each
+								// call the whole block limit makes the node reject the bundle.
+								gas: shareGasAcrossCalls(gas, current.calls?.length ?? 1, gas),
+							}
 						: current,
 				)
 			})
@@ -265,34 +286,39 @@ function SimulatePage(): React.JSX.Element {
 	}, [search.gas])
 
 	const currentInput = React.useMemo(
-		() => parseForm(form, chainId),
-		[form, chainId],
+		() => parseForm(form, chainId, blockGasLimit),
+		[form, chainId, blockGasLimit],
 	)
-	const dirty = Boolean(
+	const stale = Boolean(
 		runInput &&
 			(!currentInput ||
 				JSON.stringify(currentInput) !== JSON.stringify(runInput)),
 	)
 
 	const run = React.useCallback(() => {
-		const input = parseForm(form, chainId)
+		const input = parseForm(form, chainId, blockGasLimit)
 		if (!input) {
 			setFormError(
-				'Enter valid from/to addresses, hexadecimal calldata, and numeric gas/value fields.',
+				'Enter a valid target address, hexadecimal calldata, and numeric gas and value fields.',
 			)
 			return
 		}
 		setFormError(null)
 		setRunInput(input)
-		setEditing(false)
 		const extras = serializeExtraCalls(form.calls)
+		// On a narrow screen the panes are exclusive, so running is also a request
+		// to look at the result.
+		const paneAfterRun = narrow ? ('output' as const) : undefined
 		if (
 			OxHex.size(input.data) > MAX_URL_CALLDATA_BYTES ||
 			(extras ? JSON.stringify(extras).length : 0) > MAX_URL_CALLDATA_BYTES
-		)
+		) {
+			if (paneAfterRun) setSearch({ pane: paneAfterRun })
 			return
+		}
 		void navigate({
-			search: {
+			search: (current) => ({
+				...current,
 				from: input.from,
 				to: input.to,
 				data: input.data,
@@ -300,16 +326,12 @@ function SimulatePage(): React.JSX.Element {
 				gas: input.gas,
 				block: input.block,
 				calls: extras,
-				tx: search.tx,
-				originStatus: original?.status,
-				originGas: original?.gasUsed.toString(),
-				originEvents: original?.events,
-				originBalances: original?.balances,
-			},
+				...(paneAfterRun ? { pane: paneAfterRun } : {}),
+			}),
 			replace: true,
 			resetScroll: false,
 		})
-	}, [form, chainId, navigate, search.tx, original])
+	}, [form, chainId, blockGasLimit, navigate, narrow, setSearch])
 
 	const runExample = React.useCallback(
 		(kind: 'read' | 'failing') => {
@@ -337,16 +359,20 @@ function SimulatePage(): React.JSX.Element {
 			setOriginal(null)
 			setFormError(null)
 			setRunInput(input)
-			setEditing(false)
 			void navigate({
-				search: {
+				search: (current) => ({
+					...current,
 					from: input.from,
 					to: input.to,
 					data: input.data,
 					value: input.value,
 					gas: input.gas,
 					block: input.block,
-				},
+					calls: undefined,
+					tx: undefined,
+					frame: undefined,
+					tab: 'overview',
+				}),
 				replace: true,
 				resetScroll: false,
 			})
@@ -425,11 +451,10 @@ function SimulatePage(): React.JSX.Element {
 
 				// Loading a transaction is a request to see its result, so run it
 				// rather than leaving the user staring at a filled-in form.
-				const loaded = parseForm(nextForm, chainId)
+				const loaded = parseForm(nextForm, chainId, blockGasLimit)
 				setRunInput(loaded)
-				setEditing(!loaded)
 				void navigate({
-					search: (previous) => ({ ...previous, tx: hash }),
+					search: (current) => ({ ...current, tx: hash, frame: undefined }),
 					replace: true,
 					resetScroll: false,
 				})
@@ -441,7 +466,7 @@ function SimulatePage(): React.JSX.Element {
 				setLoadingTransaction(false)
 			}
 		},
-		[navigate, chainId],
+		[navigate, chainId, blockGasLimit],
 	)
 
 	const autoLoaded = React.useRef(false)
@@ -451,571 +476,152 @@ function SimulatePage(): React.JSX.Element {
 		void loadTransaction(search.tx)
 	}, [search.tx, search.to, loadTransaction])
 
-	return (
-		<div className="w-full px-4 pt-12 pb-16 min-[800px]:pt-20 min-[1240px]:max-w-[1180px]">
-			<div className="mb-[18px] flex flex-col gap-[6px]">
-				<h1 className="text-[20px] font-medium text-primary">Simulate</h1>
-				<p className="max-w-[680px] text-[13px] text-tertiary">
-					Run a call against current or pinned chain state without signing it.
-				</p>
-			</div>
-
-			<div className="flex flex-col gap-[14px]">
-				<CallBar
-					form={form}
-					setForm={setForm}
-					editing={editing}
-					setEditing={setEditing}
-					dirty={dirty}
-					hasRun={Boolean(runInput)}
-					formError={formError}
-					loadHash={loadHash}
-					setLoadHash={setLoadHash}
-					loadError={loadError}
-					loadingTransaction={loadingTransaction}
-					onLoad={() => void loadTransaction(loadHash)}
-					onRun={run}
-				/>
-
-				<SimulationResults
-					input={runInput}
-					dirty={dirty}
-					original={original}
-					onExample={runExample}
-				/>
-			</div>
-		</div>
-	)
-}
-
-/**
- * Collapsed, the call reads as one sentence. Expanded, it is the full form.
- * Keeping it one control means the result stays the subject of the page.
- */
-function CallBar(props: {
-	form: FormState
-	setForm: React.Dispatch<React.SetStateAction<FormState>>
-	editing: boolean
-	setEditing: (value: boolean) => void
-	dirty: boolean
-	hasRun: boolean
-	formError: string | null
-	loadHash: string
-	setLoadHash: (value: string) => void
-	loadError: string | null
-	loadingTransaction: boolean
-	onLoad: () => void
-	onRun: () => void
-}): React.JSX.Element {
-	const { form, setForm, editing } = props
-	const loadTransactionId = React.useId()
-	const shareCopy = useCopy({ timeout: 1_500 })
 	const firstTo = form.calls[0]?.to ?? ''
-	const address = OxAddress.validate(firstTo)
+	const summaryAddress = OxAddress.validate(firstTo)
 		? (firstTo as OxAddress.Address)
 		: undefined
-	const { data: abi } = useAutoloadAbi({ address, enabled: Boolean(address) })
-
+	const { data: summaryAbi } = useAutoloadAbi({
+		address: summaryAddress,
+		enabled: Boolean(summaryAddress),
+	})
 	const summary = React.useMemo(
-		() => describeCall(form, abi as Abi | undefined),
-		[form, abi],
+		() => describeCall(form, summaryAbi as Abi | undefined),
+		[form, summaryAbi],
 	)
 
-	const updateCall = React.useCallback(
-		(index: number, patch: Partial<CallDraft>) =>
-			setForm((current) => ({
-				...current,
-				calls: current.calls.map((call, i) =>
-					i === index ? { ...call, ...patch } : call,
-				),
-			})),
-		[setForm],
-	)
+	// On a narrow screen the segmented control has two states, not three: a
+	// 560px pane is narrower than one trace line, so `split` is not offered.
+	// Which of the two `split` collapses to depends on why you are here — a
+	// shared link carries a result and should show it, an empty page has only
+	// a form to offer.
+	const pane: Pane =
+		narrow && search.pane === 'split'
+			? runInput
+				? 'output'
+				: 'input'
+			: search.pane
+	const showInput = pane === 'input' || pane === 'split'
+	const showOutput = pane === 'output' || pane === 'split'
 
 	return (
-		<section className="overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_4px_44px_rgba(0,0,0,0.05)]">
-			<div className="flex flex-wrap items-center gap-[10px] px-[14px] py-[10px]">
-				<button
-					type="button"
-					onClick={() => props.setEditing(!editing)}
-					className="flex min-w-0 flex-1 items-center gap-[8px] text-left cursor-pointer press-down"
-					title={editing ? 'Collapse call' : 'Edit call'}
+		<div className="flex w-full flex-col px-[24px] pt-8 pb-12 min-[800px]:pt-14 min-[1240px]:px-[84px]">
+			<div className="mb-[12px] flex flex-wrap items-center gap-x-[14px] gap-y-[8px]">
+				<h1 className="shrink-0 text-[18px] font-medium text-primary">
+					Simulate
+				</h1>
+				<p
+					className="min-w-0 flex-1 truncate font-mono text-[12px] text-tertiary"
+					title={summary}
 				>
-					<ChevronDownIcon
-						className={cx(
-							'size-[13px] shrink-0 text-tertiary transition-transform',
-							!editing && '-rotate-90',
-						)}
-					/>
-					<span className="min-w-0 truncate font-mono text-[12px] text-secondary">
-						{summary}
-					</span>
-				</button>
-				<div className="flex shrink-0 items-center gap-[6px]">
-					{props.hasRun && (
-						<button
-							type="button"
-							onClick={() =>
-								shareCopy.copy(
-									typeof window === 'undefined' ? '' : window.location.href,
-								)
-							}
-							className="flex h-[30px] items-center gap-[5px] rounded-[7px] border border-card-border px-[9px] text-[12px] text-secondary cursor-pointer press-down hover:text-primary"
-							title="Copy a link to this simulation"
-						>
-							<LinkIcon className="size-[12px]" />
-							{shareCopy.notifying ? 'Copied' : 'Share'}
-						</button>
-					)}
-					<button
-						type="button"
-						onClick={props.onRun}
-						className={cx(
-							'flex h-[30px] items-center gap-[7px] rounded-[7px] px-[12px] text-[12px] font-medium cursor-pointer press-down',
-							props.dirty || !props.hasRun
-								? 'bg-accent text-accent-contrast'
-								: 'border border-card-border text-secondary hover:text-primary',
-						)}
-					>
-						<PlayIcon className="size-[12px]" />
-						{props.dirty && props.hasRun ? 'Re-run' : 'Run'}
-						<span className="text-[10px] opacity-70">⌘↵</span>
-					</button>
-				</div>
-			</div>
-
-			{editing && (
-				<div className="flex flex-col gap-[14px] border-t border-card-border bg-card px-[16px] py-[16px]">
-					<div className="flex flex-col gap-[6px]">
-						<label
-							className="text-[11px] text-tertiary"
-							htmlFor={loadTransactionId}
-						>
-							Load an existing transaction
-						</label>
-						<div className="flex gap-[6px]">
-							<input
-								id={loadTransactionId}
-								value={props.loadHash}
-								onChange={(event) => props.setLoadHash(event.target.value)}
-								placeholder="0x transaction hash"
-								className={cx(inputClassName, 'max-w-[520px]')}
-							/>
-							<button
-								type="button"
-								onClick={props.onLoad}
-								disabled={props.loadingTransaction}
-								className="rounded-[6px] bg-distinct px-[10px] text-[12px] text-primary cursor-pointer press-down disabled:opacity-50"
-							>
-								{props.loadingTransaction ? 'Loading…' : 'Load'}
-							</button>
-						</div>
-						{props.loadError && (
-							<span className="text-[11px] text-negative">
-								{props.loadError}
-							</span>
-						)}
-					</div>
-
-					<Field label="From">
-						<input
-							value={form.from}
-							onChange={(event) =>
-								setForm((current) => ({
-									...current,
-									from: event.target.value,
-								}))
-							}
-							placeholder="0x sender — defaults to the zero address"
-							className={cx(inputClassName, 'max-w-[520px]')}
-						/>
-					</Field>
-
-					<div className="flex flex-col gap-[10px]">
-						{form.calls.map((call, index) => (
-							<CallEditor
-								key={index}
-								call={call}
-								index={index}
-								total={form.calls.length}
-								onChange={(patch) => updateCall(index, patch)}
-								onRemove={() =>
-									setForm((current) => ({
-										...current,
-										calls: current.calls.filter((_, i) => i !== index),
-									}))
-								}
-							/>
-						))}
-						<button
-							type="button"
-							onClick={() =>
-								setForm((current) => ({
-									...current,
-									calls: [...current.calls, emptyCall],
-								}))
-							}
-							className="flex w-fit items-center gap-[5px] rounded-[6px] border border-dashed border-card-border px-[10px] py-[6px] text-[11px] text-secondary cursor-pointer press-down hover:border-accent hover:text-primary"
-						>
-							<PlusIcon className="size-[12px]" />
-							Add a call
-						</button>
-						{form.calls.length > 1 && (
-							<p className="text-[11px] text-tertiary">
-								Calls run in order against each other{'’'}s state, the way a
-								Tempo batch transaction executes.
-							</p>
-						)}
-					</div>
-
-					<div className="grid gap-[12px] min-[720px]:grid-cols-2">
-						<Field label="Gas limit">
-							<input
-								value={form.gas}
-								onChange={(event) =>
-									setForm((current) => ({
-										...current,
-										gas: event.target.value,
-									}))
-								}
-								className={inputClassName}
-							/>
-						</Field>
-						<Field label="Block">
-							<input
-								value={form.block}
-								onChange={(event) =>
-									setForm((current) => ({
-										...current,
-										block: event.target.value,
-									}))
-								}
-								placeholder="latest or block hash"
-								className={inputClassName}
-							/>
-						</Field>
-					</div>
-
-					{props.formError && (
-						<div className="text-[12px] text-negative">{props.formError}</div>
-					)}
-				</div>
-			)}
-		</section>
-	)
-}
-
-/**
- * A single call in the list: target, calldata, value. Numbered only once there
- * is more than one, so a plain single call keeps its uncluttered form.
- */
-function CallEditor(props: {
-	call: CallDraft
-	index: number
-	total: number
-	onChange: (patch: Partial<CallDraft>) => void
-	onRemove: () => void
-}): React.JSX.Element {
-	const { call, index, total } = props
-	const address = OxAddress.validate(call.to)
-		? (call.to as OxAddress.Address)
-		: undefined
-	const { data: abi } = useAutoloadAbi({ address, enabled: Boolean(address) })
-	const isList = total > 1
-
-	return (
-		<div
-			className={cx(
-				'flex flex-col gap-[12px]',
-				isList &&
-					'rounded-[8px] border border-card-border bg-distinct/40 p-[12px]',
-			)}
-		>
-			{isList && (
-				<div className="flex items-center gap-[8px]">
-					<span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-distinct text-[10px] font-medium text-secondary">
-						{index + 1}
-					</span>
-					<span className="text-[11px] text-tertiary">
-						Call {index + 1} of {total}
-					</span>
-					<button
-						type="button"
-						onClick={props.onRemove}
-						className="ml-auto text-[11px] text-tertiary cursor-pointer press-down hover:text-negative"
-						title="Remove this call"
-					>
-						Remove
-					</button>
-				</div>
-			)}
-
-			<div className="grid gap-[12px] min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-				<Field label="To">
-					<input
-						value={call.to}
-						onChange={(event) => props.onChange({ to: event.target.value })}
-						placeholder="0x contract address"
-						className={inputClassName}
-					/>
-				</Field>
-				<Field label="Value">
-					<input
-						value={call.value}
-						onChange={(event) => props.onChange({ value: event.target.value })}
-						className={inputClassName}
-					/>
-				</Field>
-			</div>
-
-			<CalldataControl
-				abi={abi as Abi | undefined}
-				data={call.data}
-				onChange={(data) => props.onChange({ data })}
-			/>
-		</div>
-	)
-}
-
-/**
- * One value, two representations, one explicit toggle. The previous split
- * between a function picker and a separate calldata box let the two disagree
- * silently — the form could show one call while running another.
- */
-function CalldataControl(props: {
-	abi: Abi | undefined
-	data: string
-	onChange: (data: string) => void
-}): React.JSX.Element {
-	const { abi, data, onChange } = props
-	// Every function, not just the writes: "what does this return" is a
-	// first-class reason to simulate, and read calls are the cheapest way in.
-	const functions = React.useMemo(
-		() =>
-			(abi ?? []).filter(
-				(item): item is AbiFunction => item.type === 'function',
-			),
-		[abi],
-	)
-	const [mode, setMode] = React.useState<'decoded' | 'hex'>('decoded')
-	const [selector, setSelector] = React.useState('')
-	const [values, setValues] = React.useState<string[]>([])
-	const [mismatch, setMismatch] = React.useState(false)
-
-	const selected = functions.find((fn) => getFunctionSelector(fn) === selector)
-
-	// Keep the decoded view in step with hex edits, and say so when it can't.
-	React.useEffect(() => {
-		if (!abi || !OxHex.validate(data) || data.length < 10) {
-			setMismatch(false)
-			return
-		}
-		try {
-			const decoded = decodeFunctionData({ abi, data: data as OxHex.Hex })
-			setSelector(OxHex.slice(data as OxHex.Hex, 0, 4))
-			setValues((decoded.args ?? []).map((value) => inputValueToString(value)))
-			setMismatch(false)
-		} catch {
-			setMismatch(true)
-		}
-	}, [abi, data])
-
-	const encode = React.useCallback(
-		(fn: AbiFunction, nextValues: string[]) => {
-			try {
-				const args = fn.inputs.map((input, index) =>
-					parseInputValue(nextValues[index] ?? '', input.type),
-				)
-				onChange(encodeFunctionData({ abi: [fn], functionName: fn.name, args }))
-				setMismatch(false)
-			} catch {
-				// Incomplete input while typing — leave the hex at its last good value.
-			}
-		},
-		[onChange],
-	)
-
-	const canDecode = functions.length > 0
-	const showDecoded = canDecode && mode === 'decoded' && !mismatch
-	const byteLength = OxHex.validate(data) ? OxHex.size(data) : 0
-
-	return (
-		<div className="flex flex-col gap-[8px]">
-			<div className="flex items-center justify-between gap-[8px]">
-				<span className="text-[11px] text-tertiary">Calldata</span>
-				{canDecode && (
-					<div className="flex items-center rounded-[6px] border border-card-border p-[2px] text-[11px]">
-						{(['decoded', 'hex'] as const).map((value) => (
-							<button
-								key={value}
-								type="button"
-								onClick={() => setMode(value)}
-								className={cx(
-									'rounded-[4px] px-[8px] py-[2px] cursor-pointer press-down capitalize',
-									mode === value
-										? 'bg-distinct text-primary'
-										: 'text-tertiary hover:text-secondary',
-								)}
-							>
-								{value}
-							</button>
-						))}
-					</div>
-				)}
-			</div>
-
-			{mismatch && mode === 'decoded' && (
-				<div className="rounded-[6px] border border-warning/40 bg-warning-background px-[10px] py-[7px] text-[11px] text-secondary">
-					This calldata doesn{'’'}t match any function in the contract
-					{'’'}s ABI — showing hex.
-				</div>
-			)}
-
-			{showDecoded ? (
-				<div className="flex flex-col gap-[10px] rounded-[6px] border border-card-border bg-distinct px-[10px] py-[10px]">
-					<select
-						value={selector}
-						onChange={(event) => {
-							const next = event.target.value
-							setSelector(next)
-							const fn = functions.find(
-								(candidate) => getFunctionSelector(candidate) === next,
+					{summary}
+				</p>
+				<SegmentedControl
+					value={pane}
+					options={
+						narrow
+							? [
+									{ value: 'input', label: 'Input' },
+									{ value: 'output', label: 'Result' },
+								]
+							: [
+									{ value: 'input', label: 'Input' },
+									{ value: 'split', label: 'Split' },
+									{ value: 'output', label: 'Result' },
+								]
+					}
+					onChange={(value) => setSearch({ pane: value })}
+				/>
+				{/* Both page-scoped: Share copies the whole URL — inputs, tab, and
+				    selected frame — not just the result. Keeping them here means one
+				    action bar rather than a second Run inside the result header. */}
+				{runInput && (
+					<Button
+						onClick={() =>
+							shareLink.copy(
+								typeof window === 'undefined' ? '' : window.location.href,
 							)
-							if (!fn) return
-							const blank = fn.inputs.map(() => '')
-							setValues(blank)
-							if (fn.inputs.length === 0) encode(fn, blank)
-						}}
-						className={cx(inputClassName, 'bg-card')}
+						}
+						title="Copy a link that reproduces this screen"
 					>
-						<option value="">Select a function…</option>
-						{functions.map((fn) => (
-							<option
-								key={getFunctionSelector(fn)}
-								value={getFunctionSelector(fn)}
-							>
-								{fn.name || getFunctionSelector(fn)}(
-								{fn.inputs.map((input) => input.type).join(', ')})
-							</option>
-						))}
-					</select>
-
-					{selected?.inputs.map((input, index) => (
-						<div
-							key={`${input.name}-${input.type}-${index}`}
-							className="grid items-center gap-[8px] min-[720px]:grid-cols-[140px_minmax(0,1fr)]"
-						>
-							<span className="text-[11px] text-tertiary">
-								{input.name || `arg ${index}`}
-								<span className="ml-[5px] text-quaternary">{input.type}</span>
-							</span>
-							{getInputType(input.type) === 'textarea' ? (
-								<textarea
-									value={values[index] ?? ''}
-									onChange={(event) => {
-										const next = values.map((value, itemIndex) =>
-											itemIndex === index ? event.target.value : value,
-										)
-										setValues(next)
-										encode(selected, next)
-									}}
-									placeholder={getPlaceholder(input)}
-									className={cx(
-										inputClassName,
-										'min-h-[64px] resize-y bg-card',
-									)}
-								/>
-							) : (
-								<input
-									type={getInputType(input.type)}
-									checked={
-										getInputType(input.type) === 'checkbox'
-											? values[index] === 'true'
-											: undefined
-									}
-									value={values[index] ?? ''}
-									onChange={(event) => {
-										const value =
-											event.target.type === 'checkbox'
-												? String(event.target.checked)
-												: event.target.value
-										const next = values.map((current, itemIndex) =>
-											itemIndex === index ? value : current,
-										)
-										setValues(next)
-										encode(selected, next)
-									}}
-									placeholder={getPlaceholder(input)}
-									className={cx(inputClassName, 'bg-card')}
-								/>
-							)}
-						</div>
-					))}
-
-					<HexRow data={data} byteLength={byteLength} />
-				</div>
-			) : (
-				<>
-					<textarea
-						value={data}
-						onChange={(event) => onChange(event.target.value)}
-						className={cx(
-							inputClassName,
-							'min-h-[84px] resize-y break-all',
-							!OxHex.validate(data) && 'border-negative',
-						)}
-					/>
-					{byteLength > 0 && (
-						<span className="text-[11px] text-tertiary">
-							{byteLength} bytes
-							{byteLength > MAX_URL_CALLDATA_BYTES &&
-								' · too long for a shareable URL'}
-						</span>
-					)}
-				</>
-			)}
-		</div>
-	)
-}
-
-function HexRow(props: {
-	data: string
-	byteLength: number
-}): React.JSX.Element | null {
-	const copy = useCopy({ timeout: 1_500 })
-	if (!props.data || props.data === '0x') return null
-	return (
-		<div className="flex items-center gap-[8px] border-t border-dashed border-card-border pt-[8px] text-[11px]">
-			<span className="min-w-0 flex-1 truncate font-mono text-tertiary">
-				{props.data}
-			</span>
-			<span className="shrink-0 text-quaternary">{props.byteLength} bytes</span>
-			<button
-				type="button"
-				onClick={() => copy.copy(props.data)}
-				className="shrink-0 text-tertiary cursor-pointer press-down hover:text-primary"
-				title="Copy calldata"
-			>
-				{copy.notifying ? (
-					<CheckIcon className="size-[12px]" />
-				) : (
-					<CopyIcon className="size-[12px]" />
+						<LinkIcon className="size-[12px]" />
+						{shareLink.notifying ? 'Copied' : 'Share'}
+					</Button>
 				)}
-			</button>
+				<Button tone="primary" onClick={run} title="Run this simulation (⌘↵)">
+					<PlayIcon className="size-[12px]" />
+					{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
+					<span className="text-[10px] opacity-70">⌘↵</span>
+				</Button>
+			</div>
+
+			<div
+				className={cx(
+					'grid min-h-[560px] min-w-0 items-start gap-[14px]',
+					pane === 'split' &&
+						'min-[1100px]:grid-cols-[minmax(360px,420px)_minmax(0,1fr)]',
+				)}
+			>
+				{showInput && (
+					<section className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+						<SimulateCallForm
+							form={form}
+							setForm={setForm}
+							step={editIndex}
+							onStepChange={(index) => {
+								setEditIndex(index)
+								setSearch({ step: index })
+							}}
+							defaultGas={blockGasLimit}
+							formError={formError}
+							loadHash={loadHash}
+							setLoadHash={setLoadHash}
+							loadError={loadError}
+							loadingTransaction={loadingTransaction}
+							onLoad={() => void loadTransaction(loadHash)}
+						/>
+					</section>
+				)}
+
+				{showOutput && (
+					<SimulationResults
+						input={runInput}
+						stale={stale}
+						original={original}
+						tab={search.tab}
+						frame={search.frame}
+						step={search.step}
+						onStepChange={(index) => {
+							if (index !== undefined) setEditIndex(index)
+							setSearch({ step: index, frame: undefined })
+						}}
+						onSearchChange={setSearch}
+						onExample={runExample}
+						onEdit={() => setSearch({ pane: narrow ? 'input' : 'split' })}
+					/>
+				)}
+			</div>
 		</div>
 	)
 }
 
 function SimulationResults(props: {
 	input: SimulationInput | null
-	dirty: boolean
+	stale: boolean
 	original: OriginalMetrics | null
+	tab: OutputTab
+	frame: string | undefined
+	/** `undefined` narrows nothing: the evidence covers the whole batch. */
+	step: number | undefined
+	onStepChange: (index: number | undefined) => void
+	onSearchChange: (patch: Record<string, unknown>) => void
 	onExample: (kind: 'read' | 'failing') => void
+	onEdit: () => void
 }): React.JSX.Element {
 	const fallback = emptySimulationInput()
 	const input = props.input ?? fallback
 	const enabled = Boolean(props.input)
 	const isBatch = (input.calls?.length ?? 0) > 1
+
 	// Batches trace through `debug_traceCallMany`, which runs the bundle in
 	// order against shared state — so every call gets a real tree, not just
 	// the first one.
@@ -1027,26 +633,62 @@ function SimulationResults(props: {
 		...simulationPrestateQueryOptions(input),
 		enabled,
 	})
-	const traces = traceQuery.data ?? []
-	const prestate = React.useMemo(
-		() => mergePrestateDiffs(prestateQuery.data ?? []),
-		[prestateQuery.data],
-	)
 	const executionQuery = useQuery({
 		...simulationExecutionQueryOptions(input),
 		enabled,
 	})
-	// The primary tree: the single call, or the first call of a batch.
-	const tree = useTraceTree(traces[0] ?? null)
+	// Stable identity: `?? []` allocates a fresh array on every pending render,
+	// which would defeat the tree builder's memo.
+	const traces = React.useMemo(() => traceQuery.data ?? [], [traceQuery.data])
+	const prestate = React.useMemo(
+		() => mergePrestateDiffs(prestateQuery.data ?? []),
+		[prestateQuery.data],
+	)
+
+	// Which call the evidence tabs are narrowed to. A single call is always
+	// "step 0"; a batch defaults to every call.
+	const callCount = input.calls?.length ?? 1
+	const step = isBatch
+		? props.step === undefined
+			? undefined
+			: Math.min(props.step, callCount - 1)
+		: 0
+	const showingAll = step === undefined
+	// Gas available to everything currently in view. `input.gas` is per call, so
+	// a batch's allowance is that times the number of calls — the header and the
+	// Gas tab must not disagree about the denominator.
+	const gasAllowance =
+		BigInt(input.gas || '0') * BigInt(showingAll ? callCount : 1)
+	// The trace for the narrowed call. When showing all, each call renders its
+	// own tree below rather than being stitched into one synthetic root.
+	// Every call's tree, built through one shared ABI lookup. The narrowed view
+	// picks one out of it rather than building a second time.
+	const framePrefix = React.useCallback((index: number) => `call-${index}`, [])
+	const allTrees = useTraceTrees(traces, framePrefix)
+	const tree = allTrees[step ?? 0] ?? null
+	const stepPrestate = React.useMemo(
+		() =>
+			isBatch && step !== undefined
+				? mergePrestateDiffs(
+						prestateQuery.data
+							? [prestateQuery.data[step]].filter(Boolean)
+							: [],
+					)
+				: // `mergePrestateDiffs` already collapses the batch into its net
+					// effect: earliest `pre`, latest `post`.
+					prestate,
+		[isBatch, prestateQuery.data, step, prestate],
+	)
+
 	// When a later call in a batch is the one that reverted, its trace holds the
 	// reason — call 0's does not.
 	const failedCallIndex =
 		executionQuery.data?.calls.findIndex(
 			(call) => call.status === 'reverted',
 		) ?? -1
-	const failedCallTree = useTraceTree(
-		failedCallIndex > 0 ? (traces[failedCallIndex] ?? null) : null,
-	)
+	const failedCallTree =
+		failedCallIndex > 0 ? (allTrees[failedCallIndex] ?? null) : null
+
 	const metadataAddresses = React.useMemo(
 		() => [
 			input.to,
@@ -1084,9 +726,102 @@ function SimulationResults(props: {
 				: [],
 		[executionQuery.data, input, metadataQuery.data],
 	)
-	const failedNode = findDeepestFailedNode(failedCallTree ?? tree)
+	// Narrowing to one call narrows its events too — `eth_simulateV1` already
+	// reports logs per call, so this is a filter rather than a reconstruction.
+	const visibleLogs =
+		step === undefined
+			? (executionQuery.data?.logs ?? [])
+			: (executionQuery.data?.calls[step]?.logs ?? [])
+	// A `KnownEvent` does not carry the log it came from, so the narrowed set is
+	// re-interpreted from that call's logs rather than filtered after the fact —
+	// which also gives the interpreter the right call as context.
+	const visibleKnownEvents = React.useMemo(() => {
+		const execution = executionQuery.data
+		if (!isBatch || step === undefined || !execution) return knownEvents
+		const call = input.calls?.[step]
+		return parseKnownEvents(
+			{
+				...execution.receipt,
+				logs: visibleLogs as unknown as typeof execution.receipt.logs,
+			},
+			{
+				transaction: {
+					to: call?.to ?? input.to,
+					input: call?.data ?? input.data,
+				},
+				getTokenMetadata: metadataQuery.data,
+			},
+		)
+	}, [
+		executionQuery.data,
+		isBatch,
+		knownEvents,
+		step,
+		visibleLogs,
+		input,
+		metadataQuery.data,
+	])
+	const failedNode = React.useMemo(
+		() => findDeepestFailedNode(failedCallTree ?? tree),
+		[failedCallTree, tree],
+	)
+	/** Decoded name per call, from the trees rather than a second ABI fetch. */
+	const callLabels = React.useMemo(
+		() =>
+			allTrees.map((node) =>
+				node?.functionName
+					? `${node.functionName}()`
+					: (node?.selector ?? 'call()'),
+			),
+		[allTrees],
+	)
 
-	if (!props.input) return <SimulationEmptyState onExample={props.onExample} />
+	// Remember what the previous run produced so this one can be compared against
+	// it. `props.input` is a fresh object per run, so identity is the run key —
+	// a refetch of the same input must not overwrite the comparison point.
+	const execution = executionQuery.data
+	const [previous, setPrevious] = React.useState<OriginalMetrics | null>(null)
+	const lastRun = React.useRef<{
+		input: SimulationInput
+		metrics: OriginalMetrics
+	} | null>(null)
+	React.useEffect(() => {
+		if (!execution || !props.input) return
+		const prior = lastRun.current
+		if (prior && prior.input !== props.input) setPrevious(prior.metrics)
+		lastRun.current = {
+			input: props.input,
+			metrics: {
+				status: execution.status,
+				gasUsed: execution.gasUsed,
+				events: execution.logs.length,
+				balances: execution.assetChanges.length,
+			},
+		}
+	}, [execution, props.input])
+
+	const stateAccounts = React.useMemo(
+		() =>
+			stepPrestate
+				? TxStateDiff.buildData(stepPrestate, [], tokenMetadata, {
+						omitNonceOnlyFor: input.from,
+					}).accounts.length
+				: 0,
+		[stepPrestate, tokenMetadata, input.from],
+	)
+	const stateReceipt = React.useMemo(
+		() => ({ from: input.from, to: input.to }),
+		[input.from, input.to],
+	)
+	const gasTrees = React.useMemo(
+		() => (showingAll ? allTrees : [tree]),
+		[showingAll, allTrees, tree],
+	)
+
+	if (!props.input)
+		return (
+			<SimulationEmptyState onExample={props.onExample} onEdit={props.onEdit} />
+		)
 
 	// The three panels share one endpoint and one node, so anything wrong with
 	// the request — bad params, rate limit, timeout, node down — fails all three
@@ -1107,950 +842,328 @@ function SimulationResults(props: {
 			/>
 		)
 
-	const frameCount = tree?.subtreeSize ?? 0
 	// Count what actually renders, not raw prestate keys — the diff drops
 	// accounts with no real change and the caller's simulation-only nonce tick.
-	const stateAccounts = prestate
-		? TxStateDiff.buildData(prestate, [], tokenMetadata, {
-				omitNonceOnlyFor: input.from,
-			}).accounts.length
-		: 0
 
-	const sections: Sections.Section[] = [
+	const tabs = [
+		{ id: 'overview' as const, label: 'Overview' },
 		{
-			title: 'Calls',
-			itemsLabel: 'calls',
-			totalItems: executionQuery.data?.calls.length ?? 0,
-			autoCollapse: false,
-			visible: isBatch,
-			content: executionQuery.isPending ? (
-				<PanelSkeleton rows={3} />
-			) : (
-				<BatchCalls
-					calls={executionQuery.data?.calls ?? []}
-					traces={traces}
-					prestates={prestateQuery.data ?? []}
-				/>
-			),
+			id: 'trace' as const,
+			label: 'Trace',
+			// Counts describe what the tab will actually render, so showing every
+			// call has to count every call's frames.
+			count: showingAll
+				? allTrees.reduce(
+						(sum: number, node) => sum + (node?.subtreeSize ?? 0),
+						0,
+					)
+				: (tree?.subtreeSize ?? 0),
 		},
-		{
-			title: 'Trace',
-			itemsLabel: 'frames',
-			totalItems: frameCount,
-			autoCollapse: false,
-			visible: !isBatch,
-			content: traceQuery.isPending ? (
-				<PanelSkeleton rows={7} />
-			) : traceQuery.error ? (
-				<PanelError title="Call trace unavailable" error={traceQuery.error} />
-			) : (
-				<div className="flex flex-col">
-					<TxTraceTree trace={traces[0] ?? null} tree={tree} label={null} />
-					<TxTraceFlamegraph tree={tree} prestate={prestate} />
-				</div>
-			),
-		},
-		{
-			title: 'State changes',
-			itemsLabel: 'accounts',
-			totalItems: stateAccounts,
-			autoCollapse: false,
-			visible:
-				prestateQuery.isPending ||
-				Boolean(prestateQuery.error) ||
-				stateAccounts > 0,
-			content: prestateQuery.isPending ? (
-				<PanelSkeleton rows={5} />
-			) : prestateQuery.error ? (
-				<PanelError
-					title="State diff unavailable"
-					error={prestateQuery.error}
-				/>
-			) : (
-				<TxStateDiff
-					prestate={prestate}
-					trace={traces[0] ?? null}
-					receipt={{ from: input.from, to: input.to }}
-					logs={executionQuery.data?.logs}
-					tokenMetadata={tokenMetadata}
-					label={null}
-					omitSenderNonceFor={input.from}
-				/>
-			),
-		},
-		{
-			title: 'Balance changes',
-			itemsLabel: 'changes',
-			totalItems: executionQuery.data?.assetChanges.length ?? 0,
-			autoCollapse: false,
-			visible: (executionQuery.data?.assetChanges.length ?? 0) > 0,
-			content: (
-				<SimulationBalances
-					assetChanges={executionQuery.data?.assetChanges ?? []}
-					tokenMetadata={tokenMetadata}
-				/>
-			),
-		},
-		{
-			title: 'Events',
-			itemsLabel: 'events',
-			totalItems: executionQuery.data?.logs.length ?? 0,
-			autoCollapse: false,
-			visible:
-				executionQuery.isPending ||
-				Boolean(executionQuery.error) ||
-				(executionQuery.data?.logs.length ?? 0) > 0,
-			content: executionQuery.isPending ? (
-				<PanelSkeleton rows={4} />
-			) : executionQuery.error ? (
-				<PanelError
-					title="Execution result unavailable"
-					error={executionQuery.error}
-				/>
-			) : (
-				<SimulationEvents
-					logs={executionQuery.data?.logs ?? []}
-					knownEvents={knownEvents}
-				/>
-			),
-		},
+		{ id: 'state' as const, label: 'State', count: stateAccounts },
+		{ id: 'events' as const, label: 'Events', count: visibleLogs.length },
+		{ id: 'gas' as const, label: 'Gas' },
 	]
 
-	return (
-		<div
-			className={cx(
-				'flex min-w-0 flex-col gap-[14px] transition-opacity',
-				props.dirty && 'opacity-50',
-			)}
-		>
-			<SimulationVerdict
-				execution={executionQuery.data}
-				error={executionQuery.error}
-				tree={tree}
-				failedNode={failedNode}
-				knownEvents={knownEvents}
-				original={props.original}
-				input={input}
-				tokenMetadata={tokenMetadata}
-			/>
-
-			<Sections mode="stacked" sections={sections} />
-		</div>
-	)
-}
-
-function SimulationVerdict(props: {
-	execution: SimulationExecutionResult | undefined
-	error: Error | null
-	tree: TxTraceTree.Node | null
-	failedNode: TxTraceTree.Node | null
-	knownEvents: ReturnType<typeof parseKnownEvents>
-	original: OriginalMetrics | null
-	input: SimulationInput
-	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
-}): React.JSX.Element {
-	const { execution, tree, failedNode } = props
-	if (props.error)
-		return <PanelError title="Simulation unavailable" error={props.error} />
-	if (!execution)
-		return (
-			<div className="rounded-[10px] border border-card-border bg-card px-[18px] py-[18px]">
-				<div className="flex items-center gap-[8px] text-[13px] text-tertiary">
-					<LoaderIcon className="size-[14px] animate-spin" /> Simulating
-					execution…
-				</div>
-			</div>
-		)
-
-	const succeeded = execution.status === 'success'
-	const errorArgs = failedNode?.decodedError
-		? formatTraceErrorArgs({
-				error: failedNode.decodedError,
-				contract: failedNode.trace.to,
-				tokenMetadata: props.tokenMetadata,
-			})
-		: []
-
-	return (
-		<div
-			className={cx(
-				'overflow-hidden rounded-[10px] border bg-card shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
-				succeeded ? 'border-card-border' : 'border-negative/40',
-			)}
-		>
-			<div className="flex items-start gap-[12px] px-[18px] py-[16px]">
-				<div
-					className={cx(
-						'mt-[1px] flex size-[20px] shrink-0 items-center justify-center rounded-full',
-						succeeded
-							? 'bg-base-content-positive/15 text-base-content-positive'
-							: 'bg-negative/15 text-negative',
-					)}
-				>
-					{succeeded ? (
-						<CheckIcon className="size-[13px]" />
-					) : (
-						<CircleAlertIcon className="size-[13px]" />
-					)}
-				</div>
-				<div className="min-w-0 flex-1">
-					<div className="flex flex-wrap items-center justify-between gap-[8px]">
-						<h2
-							className={cx(
-								'text-[14px] font-medium',
-								succeeded ? 'text-primary' : 'text-negative',
-							)}
-						>
-							{verdictHeadline(execution)}
-						</h2>
-						<span
-							className="font-mono text-[11px] text-tertiary"
-							title="Gas used by the simulated call. No fee is charged or synthesized."
-						>
-							{execution.gasUsed.toLocaleString()} gas estimated
-						</span>
-					</div>
-
-					{execution.calls.length > 1 && succeeded ? (
-						<BatchDetail execution={execution} />
-					) : succeeded ? (
-						<SuccessDetail
-							tree={tree}
-							knownEvents={props.knownEvents}
-							execution={execution}
-						/>
-					) : (
-						<FailureDetail
-							failedNode={failedNode}
-							errorArgs={errorArgs}
-							returnData={execution.returnData}
-						/>
-					)}
-
-					<VerdictFooter
-						input={props.input}
-						blockNumber={execution.blockNumber}
-					/>
-				</div>
-			</div>
-			{props.original && (
-				<SimulationDiff original={props.original} execution={execution} />
-			)}
-		</div>
-	)
-}
-
-function verdictHeadline(execution: SimulationExecutionResult): string {
-	if (execution.calls.length <= 1)
-		return execution.status === 'success' ? 'Succeeded' : 'Reverted'
-	const failed = execution.calls.find((call) => call.status === 'reverted')
-	if (!failed) return `All ${execution.calls.length} calls succeeded`
-	return `Reverted in call ${failed.index + 1} of ${execution.calls.length}`
-}
-
-/**
- * A batch has no single representative event — picking one out of twenty-six
- * is arbitrary and misleading. Summarise by volume and let the sections below
- * carry the detail.
- */
-function BatchDetail(props: {
-	execution: SimulationExecutionResult
-}): React.JSX.Element {
-	const { execution } = props
-	const parts = [
-		`${execution.calls.length} calls in order`,
-		`${execution.logs.length} event${execution.logs.length === 1 ? '' : 's'}`,
-	]
-	if (execution.assetChanges.length > 0)
-		parts.push(
-			`${execution.assetChanges.length} balance change${execution.assetChanges.length === 1 ? '' : 's'}`,
-		)
-
-	return (
-		<p className="mt-[5px] text-[13px] text-secondary">{parts.join(' · ')}</p>
-	)
-}
-
-function SuccessDetail(props: {
-	tree: TxTraceTree.Node | null
-	knownEvents: ReturnType<typeof parseKnownEvents>
-	execution: SimulationExecutionResult
-}): React.JSX.Element {
-	const { tree, knownEvents, execution } = props
-	const event = knownEvents.find(preferredEventsFilter) ?? knownEvents[0]
-	const call = tree ? callLabel(tree) : undefined
-	const returned = tree?.decodedOutput
-
-	// A read call's return value is the entire answer — lead with it.
-	if (returned)
-		return (
-			<p className="mt-[5px] font-mono text-[13px] text-secondary">
-				<span className="text-tertiary">{call} returned </span>
-				<span className="text-primary">{returned}</span>
-			</p>
-		)
-
-	if (event)
-		return (
-			<div className="mt-[5px] text-[13px] text-secondary">
-				<TxEventDescription event={event} />
-			</div>
-		)
-
-	return (
-		<p className="mt-[5px] text-[13px] text-tertiary">
-			{call ? `${call} completed. ` : ''}
-			{execution.logs.length === 0
-				? 'No events emitted.'
-				: `${execution.logs.length} event${execution.logs.length === 1 ? '' : 's'} emitted.`}
-		</p>
-	)
-}
-
-function FailureDetail(props: {
-	failedNode: TxTraceTree.Node | null
-	errorArgs: ReturnType<typeof formatTraceErrorArgs>
-	returnData: string
-}): React.JSX.Element {
-	const { failedNode, errorArgs } = props
-	const decoded = failedNode?.decodedError
-	const call = failedNode ? callLabel(failedNode) : undefined
-	const errorName = decoded
-		? decoded.undecoded
-			? undefined
-			: formatDecodedTraceErrorShort(decoded)
-		: undefined
-
-	return (
-		<div className="mt-[6px] flex flex-col gap-[8px]">
-			<p className="font-mono text-[13px] text-secondary">
-				{call ? `${call} ` : ''}
-				<span className="text-tertiary">reverted</span>
-			</p>
-
-			{errorName ? (
-				<div className="flex flex-col gap-[5px] rounded-[7px] border border-negative/25 bg-negative/5 px-[12px] py-[10px]">
-					<span className="font-mono text-[13px] font-medium text-negative">
-						{errorName}
-					</span>
-					{errorArgs.length > 0 && (
-						<dl className="mt-[2px] grid gap-x-[14px] gap-y-[3px] font-mono text-[12px] min-[560px]:grid-cols-[max-content_minmax(0,1fr)]">
-							{errorArgs.map((arg) => (
-								<React.Fragment key={arg.label}>
-									<dt className="text-tertiary">{arg.label}</dt>
-									<dd
-										className="min-w-0 break-all text-primary"
-										title={arg.title}
-									>
-										{arg.value}
-										{arg.note && (
-											<span className="ml-[8px] text-tertiary">{arg.note}</span>
-										)}
-									</dd>
-								</React.Fragment>
-							))}
-						</dl>
-					)}
-				</div>
-			) : (
-				<div className="rounded-[7px] border border-negative/25 bg-negative/5 px-[12px] py-[10px] font-mono text-[12px] break-all text-secondary">
-					{decoded?.raw ?? props.returnData ?? 'No revert data returned.'}
-				</div>
-			)}
-
-			{failedNode?.hasFailure && failedNode.frameIndex > 0 && (
-				<a
-					href={`#${failedNode.id}`}
-					className="inline-flex w-fit items-center gap-[4px] text-[11px] text-accent hover:underline"
-				>
-					<ArrowRightIcon className="size-[11px]" />
-					Jump to {call ?? 'the failing frame'}
-				</a>
-			)}
-		</div>
-	)
-}
-
-function VerdictFooter(props: {
-	input: SimulationInput
-	blockNumber: bigint
-}): React.JSX.Element {
-	const network =
-		props.input.chainId === 4217
-			? 'mainnet'
-			: props.input.chainId === 42431
-				? 'moderato'
-				: 'devnet'
-	return (
-		<p className="mt-[10px] text-[11px] text-tertiary">
-			{network} ·{' '}
-			{props.input.block === 'latest'
-				? `after the latest block${props.blockNumber > 0n ? ` (${props.blockNumber.toLocaleString()})` : ''}`
-				: `after block ${props.blockNumber.toLocaleString()} — later transactions in the next block are not applied`}
-		</p>
-	)
-}
-
-function SimulationDiff(props: {
-	original: OriginalMetrics
-	execution: {
-		status: 'success' | 'reverted'
-		gasUsed: bigint
-		logs: Log[]
-		assetChanges: Array<unknown>
-	}
-}): React.JSX.Element {
-	const gasDiff = props.execution.gasUsed - props.original.gasUsed
-	const eventDiff = props.execution.logs.length - props.original.events
-	const balanceDiff =
-		props.execution.assetChanges.length - props.original.balances
-	const statusChanged = props.execution.status !== props.original.status
-	return (
-		<div className="flex flex-wrap items-center gap-[6px] border-t border-dashed border-card-border px-[18px] py-[10px] text-[11px]">
-			<span className="mr-[4px] text-tertiary">vs. on-chain</span>
-			<DiffChip label="gas" value={signed(gasDiff)} />
-			{statusChanged && (
-				<DiffChip
-					label="status"
-					value={`${props.original.status} → ${props.execution.status}`}
-					tone="negative"
-				/>
-			)}
-			<DiffChip label="events" value={signed(BigInt(eventDiff))} />
-			<DiffChip label="balances" value={signed(BigInt(balanceDiff))} />
-		</div>
-	)
-}
-
-function DiffChip(props: {
-	label: string
-	value: string
-	tone?: 'negative'
-}): React.JSX.Element {
-	return (
-		<span
-			className={cx(
-				'rounded-full px-[8px] py-[3px] font-mono',
-				props.tone === 'negative'
-					? 'bg-negative/10 text-negative'
-					: 'bg-distinct text-secondary',
-			)}
-		>
-			{props.label} {props.value}
-		</span>
-	)
-}
-
-function SimulationEvents(props: {
-	logs: Log[]
-	knownEvents: ReturnType<typeof parseKnownEvents>
-}): React.JSX.Element {
-	if (props.logs.length === 0)
-		return (
-			<div className="px-[18px] py-[24px] text-center text-[13px] text-tertiary">
-				No events emitted.
-			</div>
-		)
-
-	return (
-		<div className="flex flex-col divide-y divide-card-border">
-			{props.knownEvents.map((event, index) => (
-				<div
-					key={`${event.type}-${index}`}
-					className="px-[18px] py-[12px] text-[13px]"
-				>
-					<TxEventDescription event={event} />
-				</div>
-			))}
-			{props.knownEvents.length === 0 && (
-				<div className="px-[18px] py-[12px] text-[12px] text-tertiary">
-					{props.logs.length} raw event{props.logs.length === 1 ? '' : 's'}{' '}
-					emitted.
-				</div>
-			)}
-		</div>
-	)
-}
-
-/**
- * Net token movement per account. Amounts are formatted with the token's
- * decimals — a raw integer here reads as a wildly wrong number (0.1 USDC.e
- * shows as 100,000), which is worse than showing nothing.
- */
-function SimulationBalances(props: {
-	assetChanges: SimulationAssetChange[]
-	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
-}): React.JSX.Element {
-	if (props.assetChanges.length === 0)
-		return (
-			<div className="px-[18px] py-[24px] text-center text-[13px] text-tertiary">
-				No balance changes.
-			</div>
-		)
-
-	const byAccount = new Map<OxAddress.Address, SimulationAssetChange[]>()
-	for (const change of props.assetChanges) {
-		const existing = byAccount.get(change.address)
-		if (existing) existing.push(change)
-		else byAccount.set(change.address, [change])
-	}
-
-	return (
-		<div className="flex flex-col divide-y divide-card-border">
-			{[...byAccount.entries()].map(([account, changes]) => (
-				<div
-					key={account}
-					className="flex flex-col gap-[6px] px-[18px] py-[12px]"
-				>
-					<Address address={account} />
-					<div className="flex flex-col gap-[3px] border-l border-base-border pl-[12px]">
-						{changes.map((change) => {
-							const metadata =
-								props.tokenMetadata[change.token] ??
-								props.tokenMetadata[change.token.toLowerCase()]
-							const positive = change.diff > 0n
-							return (
-								<div
-									key={change.token}
-									className="flex items-center gap-[8px] text-[13px]"
-								>
-									<span
-										className={cx(
-											'shrink-0 tabular-nums',
-											positive
-												? 'text-base-content-positive'
-												: 'text-secondary',
-										)}
-										title={`${change.diff.toString()} (raw)`}
-									>
-										{formatBalanceDelta(change.diff, metadata?.decimals)}
-									</span>
-									<Link
-										to={
-											Tip20.isTip20Address(change.token)
-												? '/token/$address'
-												: '/address/$address'
-										}
-										params={{ address: change.token }}
-										className="inline-flex shrink-0 items-center gap-[4px] text-base-content-positive press-down"
-									>
-										<TokenIcon
-											address={change.token}
-											name={metadata?.symbol}
-											className="size-[16px]!"
-										/>
-										<span>
-											{metadata?.symbol ?? HexFormatter.truncate(change.token)}
-										</span>
-									</Link>
-								</div>
-							)
-						})}
-					</div>
-				</div>
-			))}
-		</div>
-	)
-}
-
-/** Formats with the token's decimals, or falls back to the raw integer. */
-function formatBalanceDelta(
-	diff: bigint,
-	decimals: number | undefined,
-): string {
-	const sign = diff > 0n ? '+' : '−'
-	const magnitude = diff < 0n ? -diff : diff
-	if (decimals === undefined) return `${sign}${magnitude.toLocaleString()}`
-	return `${sign}${PriceFormatter.formatAmount(Value.format(magnitude, decimals))}`
-}
-
-function SimulationEmptyState(props: {
-	onExample: (kind: 'read' | 'failing') => void
-}): React.JSX.Element {
-	return (
-		<div className="rounded-[10px] border border-card-border bg-card px-[20px] py-[22px]">
-			<h2 className="text-[13px] font-medium text-primary">
-				Nothing simulated yet
-			</h2>
-			<p className="mt-[6px] max-w-[560px] text-[12px] leading-[18px] text-tertiary">
-				Fill in the call above and run it, or load an existing transaction by
-				hash to replay it against the state of its parent block. Nothing is
-				signed and nothing is broadcast.
-			</p>
-			<div className="mt-[14px] flex flex-wrap gap-[8px]">
-				<button
-					type="button"
-					onClick={() => props.onExample('read')}
-					className="rounded-[6px] bg-accent/10 px-[12px] py-[7px] text-[12px] text-accent cursor-pointer press-down"
-				>
-					Read a token name
-				</button>
-				<button
-					type="button"
-					onClick={() => props.onExample('failing')}
-					className="rounded-[6px] border border-card-border bg-distinct px-[12px] py-[7px] text-[12px] text-primary cursor-pointer press-down"
-				>
-					See a failing transfer
-				</button>
-			</div>
-		</div>
-	)
-}
-
-/**
- * Per-call results for a Tempo batch. `eth_simulateV1` runs the calls in order
- * against each other's state, so unlike tracing them individually these numbers
- * are the ones the real transaction would produce.
- */
-function BatchCalls(props: {
-	calls: SimulationCallResult[]
-	traces: CallTrace[]
-	prestates: PrestateDiff[]
-}): React.JSX.Element {
-	if (props.calls.length === 0)
-		return (
-			<div className="px-[18px] py-[24px] text-center text-[13px] text-tertiary">
-				No call results.
-			</div>
-		)
-
-	return (
-		<div className="flex flex-col divide-y divide-card-border">
-			{props.calls.map((call) => (
-				<BatchCallRow
-					key={call.index}
-					call={call}
-					trace={props.traces[call.index] ?? null}
-					prestate={props.prestates[call.index] ?? null}
-				/>
-			))}
-		</div>
-	)
-}
-
-function BatchCallRow(props: {
-	call: SimulationCallResult
-	trace: CallTrace | null
-	prestate: PrestateDiff | null
-}): React.JSX.Element {
-	const { call } = props
-	const [expanded, setExpanded] = React.useState(call.status === 'reverted')
-	const tree = useTraceTree(props.trace)
-	// The outer frame's revert bytes are usually a wrapper like TokenCallFailed;
-	// the deepest failing frame is the one that says what actually went wrong.
-	const failed = findDeepestFailedNode(tree)
-	const reason = failed?.decodedError
-		? formatDecodedTraceErrorShort(failed.decodedError)
-		: undefined
-	const { data: abi } = useAutoloadAbi({ address: call.to, enabled: true })
-	const succeeded = call.status === 'success'
-
-	const label = React.useMemo(() => {
-		if (abi && call.data.length >= 10) {
-			try {
-				const decoded = decodeFunctionData({ abi: abi as Abi, data: call.data })
-				const args = (decoded.args ?? [])
-					.map((value) => shorten(inputValueToString(value)))
-					.join(', ')
-				return `${decoded.functionName}(${args})`
-			} catch {}
-		}
-		return call.data.length >= 10 ? `${call.data.slice(0, 10)}()` : 'call()'
-	}, [abi, call.data])
-
-	return (
-		<div className="flex flex-col gap-[6px] px-[18px] py-[12px]">
-			{/* The whole row toggles: a small text link was too easy to miss. */}
-			<button
-				type="button"
-				onClick={() => tree && setExpanded(!expanded)}
-				disabled={!tree}
-				title={tree ? (expanded ? 'Hide trace' : 'Show trace') : undefined}
-				className={cx(
-					'-mx-[6px] flex flex-wrap items-center gap-[8px] rounded-[6px] px-[6px] py-[4px] text-left text-[12px]',
-					tree && 'cursor-pointer press-down hover:bg-distinct/60',
-				)}
-			>
-				<span
-					className={cx(
-						'flex size-[18px] shrink-0 items-center justify-center rounded-full text-[10px] font-medium',
-						succeeded
-							? 'bg-base-content-positive/15 text-base-content-positive'
-							: 'bg-negative/15 text-negative',
-					)}
-					title={succeeded ? 'Succeeded' : 'Reverted'}
-				>
-					{call.index + 1}
-				</span>
-				<span className="font-mono text-tertiary">
-					{HexFormatter.truncate(call.to)}
-				</span>
-				<span className="min-w-0 flex-1 truncate font-mono text-code-identifier">
-					{label}
-				</span>
-				<span className="shrink-0 font-mono text-[11px] text-tertiary">
-					{call.gasUsed.toLocaleString()} gas
-				</span>
-				<span className="flex shrink-0 items-center gap-[4px] text-[11px] text-tertiary">
-					{tree
-						? `${tree.subtreeSize} frame${tree.subtreeSize === 1 ? '' : 's'}`
-						: 'no trace'}
-					{tree && (
-						<ChevronDownIcon
-							className={cx(
-								'size-[12px] transition-transform',
-								!expanded && '-rotate-90',
-							)}
-						/>
-					)}
-				</span>
-			</button>
-			{!succeeded && (
-				<span
-					className="pl-[26px] font-mono text-[11px] break-all text-negative"
-					title={call.revertData}
-				>
-					reverted
-					{reason ? (
-						<>
-							{' · '}
-							<span className="font-medium">{reason}</span>
-							{failed?.contractName ? (
-								<span className="text-tertiary"> in {failed.contractName}</span>
-							) : null}
-						</>
-					) : call.revertData ? (
-						` · ${call.revertData}`
-					) : null}
-				</span>
-			)}
-			{succeeded && call.returnData !== '0x' && (
-				<span className="pl-[26px] font-mono text-[11px] break-all text-tertiary">
-					returned {abbreviate(call.returnData, 42)}
-				</span>
-			)}
-			{expanded && tree && (
-				<div className="mt-[6px] overflow-hidden rounded-[7px] border border-card-border bg-card-header">
-					<TxTraceTree trace={props.trace} tree={tree} label={null} />
-					<TxTraceFlamegraph tree={tree} prestate={props.prestate} />
-				</div>
-			)}
-		</div>
-	)
-}
-
-function abbreviate(value: string, max: number): string {
-	if (value.length <= max) return value
-	return `${value.slice(0, max - 8)}…${value.slice(-6)}`
-}
-
-/**
- * Whole-simulation failure: one box, not one per panel. Titled by what the user
- * can do about it rather than by which query object threw.
- */
-function SimulationFailure(props: {
-	errors: Error[]
-	onRetry: () => void
-}): React.JSX.Element {
-	const status = props.errors.find(
-		(error): error is SimulationApiError => error instanceof SimulationApiError,
-	)?.status
-	const { title, hint } = describeFailure(status)
-	const messages = [...new Set(props.errors.map((error) => error.message))]
-
-	return (
-		<div className="overflow-hidden rounded-[10px] border border-negative/40 bg-card shadow-[0px_4px_44px_rgba(0,0,0,0.05)]">
-			<div className="flex items-start gap-[12px] px-[18px] py-[16px]">
-				<div className="mt-[1px] flex size-[20px] shrink-0 items-center justify-center rounded-full bg-negative/15 text-negative">
-					<CircleAlertIcon className="size-[13px]" />
-				</div>
-				<div className="min-w-0 flex-1">
-					<h2 className="text-[14px] font-medium text-negative">{title}</h2>
-					<p className="mt-[5px] text-[13px] text-secondary">{hint}</p>
-					<div className="mt-[10px] flex flex-col gap-[4px]">
-						{messages.map((message) => (
-							<code
-								key={message}
-								className="block break-all rounded-[6px] bg-distinct px-[10px] py-[7px] font-mono text-[11px] text-tertiary"
-							>
-								{message}
-							</code>
-						))}
-					</div>
-					<button
-						type="button"
-						onClick={props.onRetry}
-						className="mt-[12px] flex h-[30px] w-fit items-center gap-[6px] rounded-[7px] border border-card-border px-[10px] text-[12px] text-secondary cursor-pointer press-down hover:text-primary"
-					>
-						<RotateCcwIcon className="size-[12px]" />
-						Try again
-					</button>
-				</div>
-			</div>
-		</div>
-	)
-}
-
-function describeFailure(status: number | undefined): {
-	title: string
-	hint: string
-} {
-	if (status === 429)
-		return {
-			title: 'Rate limited',
-			hint: 'Too many simulations from this address in a short window. Wait a few seconds and run it again.',
-		}
-	if (status === 504)
-		return {
-			title: 'Simulation timed out',
-			hint: 'The node took too long to trace this call. A lower gas limit or a pinned block may help.',
-		}
-	if (status === 400)
-		return {
-			title: 'This call could not be simulated',
-			hint: 'The request was rejected before it reached the node. Check the addresses, calldata, and gas limit.',
-		}
-	return {
-		title: 'The node rejected this simulation',
-		hint: 'Nothing was traced. This is usually the call itself — an unsupported target, or a block the node no longer has state for.',
-	}
-}
-
-function PanelSkeleton(props: { rows: number }): React.JSX.Element {
-	return (
-		<div className="flex flex-col gap-[9px] px-[18px] py-[16px] animate-pulse">
-			{Array.from({ length: props.rows }, (_, index) => (
-				<div
-					key={index}
-					className="h-[12px] rounded bg-distinct"
-					style={{ width: `${88 - (index % 3) * 14}%` }}
-				/>
-			))}
-		</div>
-	)
-}
-
-function PanelError(props: { title: string; error: Error }): React.JSX.Element {
-	const rateLimited =
-		props.error instanceof SimulationApiError && props.error.status === 429
-	return (
-		<div className="px-[18px] py-[18px] text-[12px]">
-			<div className="text-negative">
-				{rateLimited ? 'Rate limited' : props.title}
-			</div>
-			<div className="mt-[4px] text-tertiary">{props.error.message}</div>
-		</div>
-	)
-}
-
-function Field(props: {
-	label: string
-	children: React.ReactNode
-}): React.JSX.Element {
-	return (
-		<div className="flex min-w-0 flex-col gap-[6px] text-[11px] text-tertiary">
-			<span>{props.label}</span>
-			{props.children}
-		</div>
-	)
-}
-
-const inputClassName =
-	'w-full min-w-0 rounded-[6px] border border-card-border bg-distinct px-[9px] py-[7px] text-[12px] font-mono text-primary outline-none focus:border-accent'
-
-/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …) @ latest`, or `→ 2 calls`. */
-function describeCall(form: FormState, abi: Abi | undefined): string {
-	const first = form.calls[0]
-	if (!first || (!first.to.trim() && !first.data.trim())) return 'New call'
-
-	const from = OxAddress.validate(form.from)
-		? HexFormatter.truncate(form.from as OxHex.Hex)
-		: form.from || 'anyone'
-	const block = form.block === 'latest' ? 'latest' : 'pinned block'
-
-	if (form.calls.length > 1)
-		return `${from} → ${form.calls.length} calls @ ${block}`
-
-	const to = OxAddress.validate(first.to)
-		? HexFormatter.truncate(first.to as OxHex.Hex)
-		: first.to || '—'
-
-	let call =
-		first.data && first.data !== '0x'
-			? `${first.data.slice(0, 10)}()`
-			: 'call()'
-	if (abi && OxHex.validate(first.data) && first.data.length >= 10) {
-		try {
-			const decoded = decodeFunctionData({
-				abi,
-				data: first.data as OxHex.Hex,
-			})
-			const args = (decoded.args ?? [])
-				.map((value) => shorten(inputValueToString(value)))
-				.join(', ')
-			call = `${decoded.functionName}(${args})`
-		} catch {
-			// Unknown selector — the hex form above is a fine fallback.
-		}
-	}
-
-	return `${from} → ${to}.${call} @ ${block}`
-}
-
-function shorten(value: string): string {
-	if (value.length <= 14) return value
-	return `${value.slice(0, 6)}…${value.slice(-4)}`
-}
-
-function callLabel(node: TxTraceTree.Node): string {
-	const contract =
-		node.contractName ??
-		(node.trace.to ? HexFormatter.truncate(node.trace.to) : 'contract')
-	const fn = node.functionName ?? node.selector ?? 'call'
-	return `${contract}.${fn}()`
-}
-
-function parseForm(form: FormState, chainId: number): SimulationInput | null {
-	if (chainId !== 4217 && chainId !== 42431 && chainId !== 31318) return null
-	// An unset sender means "nobody in particular" — the zero address, matching
-	// what `eth_call` does. Only `to` is genuinely required.
-	const from = form.from.trim() === '' ? zeroAddress : form.from.trim()
-	if (
-		!OxAddress.validate(from) ||
-		!/^\d+$/.test(form.gas) ||
-		(form.block !== 'latest' &&
-			(!OxHex.validate(form.block) || OxHex.size(form.block) !== 32))
-	)
-		return null
-
-	const calls: SimulationBatchCall[] = []
-	for (const draft of form.calls) {
-		const data = draft.data.trim() === '' ? '0x' : draft.data.trim()
-		if (
-			!OxAddress.validate(draft.to.trim()) ||
-			!OxHex.validate(data) ||
-			!/^\d+$/.test(draft.value)
-		)
-			return null
-		calls.push({
-			to: OxAddress.from(draft.to.trim()),
-			data: data as OxHex.Hex,
-			value: draft.value,
+	// One selection operation for every site that has one — the gas table, the
+	// flamegraph, the trace rows, "Go to revert", and the answer's jump link.
+	// Three of them used to set `?frame=` without switching tab or scrolling, so
+	// "Go to revert" highlighted a frame that stayed off-screen.
+	const selectFrame = (id: string) => {
+		props.onSearchChange({ frame: id, tab: 'trace' })
+		// The trace may be off-screen when the jump comes from the Gas tab, so
+		// scroll after the tab switch has committed.
+		requestAnimationFrame(() => {
+			document
+				.getElementById(id)
+				?.scrollIntoView({ block: 'center', behavior: 'smooth' })
 		})
 	}
 
-	const first = calls[0]
-	if (!first) return null
-	return {
-		chainId,
-		from: OxAddress.from(from),
-		to: first.to,
-		data: first.data,
-		value: first.value,
-		gas: form.gas,
-		block: form.block as 'latest' | OxHex.Hex,
-		...(calls.length > 1 ? { calls } : {}),
-	}
+	return (
+		<section className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+			<SimulateResultHeader
+				execution={execution}
+				input={input}
+				gasLimit={gasAllowance}
+				stale={props.stale}
+			/>
+
+			<div
+				className={cx(
+					'flex min-w-0 flex-col transition-opacity',
+					// Only the evidence dims when inputs change. Dimming the header too
+					// made every shared link's first impression a greyed-out screen.
+					props.stale && 'opacity-60',
+				)}
+			>
+				{execution ? (
+					<>
+						<SimulateAnswer
+							execution={execution}
+							tree={tree}
+							failedNode={failedNode}
+							errorArgs={
+								failedNode?.decodedError
+									? formatTraceErrorArgs({
+											error: failedNode.decodedError,
+											contract: failedNode.trace.to,
+											tokenMetadata,
+										})
+									: []
+							}
+							knownEvents={knownEvents}
+							onJumpToFrame={selectFrame}
+						/>
+						{/* On-chain is the more meaningful comparison when it exists, so
+						    it wins; otherwise fall back to the previous run. */}
+						{props.original ? (
+							<SimulateDiff
+								label="vs. on-chain"
+								original={props.original}
+								execution={execution}
+							/>
+						) : previous ? (
+							<SimulateDiff
+								label="vs. previous run"
+								original={previous}
+								execution={execution}
+							/>
+						) : null}
+					</>
+				) : (
+					<PanelSkeleton rows={2} />
+				)}
+
+				{/* Waits for results rather than rendering a bare "Showing" with no
+				    chips: the chips are labelled by outcome, so there is nothing to
+				    draw until the run lands. */}
+				{isBatch && execution && execution.calls.length > 1 && (
+					<SimulateStepBar
+						calls={execution.calls}
+						labels={callLabels}
+						step={step}
+						onSelect={props.onStepChange}
+					/>
+				)}
+
+				<SimulateTabs
+					tabs={tabs}
+					value={props.tab}
+					onChange={(tab) => props.onSearchChange({ tab })}
+				/>
+
+				<div className="min-w-0">
+					{props.tab === 'overview' &&
+						(execution ? (
+							<SimulateOverview
+								input={input}
+								execution={execution}
+								gasLimit={gasAllowance}
+								functionLabel={
+									tree?.functionName
+										? `${tree.functionName}()`
+										: (tree?.selector ?? undefined)
+								}
+								assetChanges={execution.assetChanges}
+								tokenMetadata={tokenMetadata}
+							/>
+						) : (
+							<PanelSkeleton rows={5} />
+						))}
+
+					{props.tab === 'trace' &&
+						(traceQuery.isPending ? (
+							<PanelSkeleton rows={7} />
+						) : traceQuery.error ? (
+							<PanelError
+								title="Call trace unavailable"
+								error={traceQuery.error}
+							/>
+						) : showingAll && isBatch ? (
+							// One tree per call, in order, each under its own heading.
+							// Keeping them separate is the point: which call a frame
+							// belongs to is never in question, and nothing has to be
+							// invented for a batch-level root frame that does not exist.
+							<div className="flex flex-col">
+								{(execution?.calls ?? []).map((call) => (
+									<CallTracePanel
+										key={call.index}
+										call={call}
+										label={callLabels[call.index] ?? 'call()'}
+										total={callCount}
+										trace={traces[call.index] ?? null}
+										tree={allTrees[call.index] ?? null}
+										selectedId={props.frame}
+										onSelect={selectFrame}
+										onIsolate={() => props.onStepChange(call.index)}
+									/>
+								))}
+							</div>
+						) : tree ? (
+							<TxTraceTree
+								trace={traces[step ?? 0] ?? null}
+								tree={tree}
+								label={null}
+								toolbar
+								selectedId={props.frame}
+								onSelect={selectFrame}
+							/>
+						) : (
+							<PanelEmpty>No trace returned for this call.</PanelEmpty>
+						))}
+
+					{props.tab === 'state' &&
+						(prestateQuery.isPending ? (
+							<PanelSkeleton rows={5} />
+						) : prestateQuery.error ? (
+							<PanelError
+								title="State diff unavailable"
+								error={prestateQuery.error}
+							/>
+						) : stateAccounts > 0 ? (
+							<TxStateDiff
+								prestate={stepPrestate}
+								trace={traces[step ?? 0] ?? null}
+								receipt={stateReceipt}
+								logs={execution?.logs}
+								tokenMetadata={tokenMetadata}
+								label={null}
+								omitSenderNonceFor={input.from}
+							/>
+						) : (
+							<PanelEmpty>No state changed.</PanelEmpty>
+						))}
+
+					{props.tab === 'events' &&
+						(executionQuery.isPending ? (
+							<PanelSkeleton rows={4} />
+						) : executionQuery.error ? (
+							<PanelError
+								title="Execution result unavailable"
+								error={executionQuery.error}
+							/>
+						) : (
+							<SimulateEvents
+								logs={visibleLogs}
+								knownEvents={visibleKnownEvents}
+							/>
+						))}
+
+					{props.tab === 'gas' &&
+						(traceQuery.isPending ? (
+							<PanelSkeleton rows={5} />
+						) : (
+							<SimulateGasPanel
+								trees={gasTrees}
+								prestate={stepPrestate}
+								gasUsed={
+									showingAll && execution
+										? execution.gasUsed
+										: BigInt(tree?.gasUsed ?? 0)
+								}
+								gasLimit={
+									BigInt(input.gas || '0') * BigInt(showingAll ? callCount : 1)
+								}
+								selectedFrameId={props.frame}
+								onSelectFrame={selectFrame}
+							/>
+						))}
+				</div>
+			</div>
+		</section>
+	)
+}
+
+/**
+ * One call of a batch, with its own heading and its own trace tree.
+ *
+ * A component rather than a loop body because `useTraceTree` is a hook and each
+ * call needs its own — and its own frame-id namespace, so `?frame=` stays
+ * unambiguous about which call it points at.
+ */
+function CallTracePanel(props: {
+	call: SimulationCallResult
+	label: string
+	total: number
+	trace: CallTrace | null
+	tree: TxTraceTree.Node | null
+	selectedId: string | undefined
+	onSelect: (id: string) => void
+	onIsolate: () => void
+}): React.JSX.Element {
+	const { tree } = props
+	return (
+		<div className="flex min-w-0 flex-col">
+			<SimulateCallHeading
+				call={props.call}
+				label={props.label}
+				total={props.total}
+				onIsolate={props.onIsolate}
+			/>
+			{tree ? (
+				<TxTraceTree
+					trace={props.trace}
+					tree={tree}
+					label={null}
+					toolbar
+					selectedId={props.selectedId}
+					onSelect={props.onSelect}
+				/>
+			) : (
+				<PanelEmpty>No trace returned for this call.</PanelEmpty>
+			)}
+		</div>
+	)
+}
+
+/**
+ * The empty pane teaches the layout rather than apologising for being empty:
+ * the shape of the result is visible, greyed, before anything has run.
+ */
+function SimulationEmptyState(props: {
+	onExample: (kind: 'read' | 'failing') => void
+	onEdit: () => void
+}): React.JSX.Element {
+	return (
+		<section className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+			<div className="flex items-center gap-[8px] border-b border-card-border px-[16px] py-[10px]">
+				<span className="text-[14px] font-medium text-content-dimmed">
+					Nothing simulated yet
+				</span>
+			</div>
+			<div className="pointer-events-none select-none opacity-40">
+				<SimulateTabs
+					tabs={[
+						{ id: 'overview', label: 'Overview' },
+						{ id: 'trace', label: 'Trace' },
+						{ id: 'state', label: 'State' },
+						{ id: 'events', label: 'Events' },
+						{ id: 'gas', label: 'Gas' },
+					]}
+					value="overview"
+					onChange={() => {}}
+				/>
+			</div>
+			<div className="flex flex-col gap-[12px] px-[16px] py-[16px]">
+				<p className="max-w-[520px] text-[12px] leading-[18px] text-tertiary">
+					Fill in a call and run it, or replay an existing transaction by hash
+					against the state of its parent block. Nothing is signed and nothing
+					is broadcast.
+				</p>
+				{/* All secondary: the page already has one primary action, and a second
+				    blue button competing with Run is a coin toss, not a hierarchy. */}
+				<div className="flex flex-wrap gap-[8px]">
+					<Button onClick={() => props.onExample('read')}>
+						Read a token name
+					</Button>
+					<Button onClick={() => props.onExample('failing')}>
+						See a failing transfer
+					</Button>
+					<Button onClick={props.onEdit}>Compose a call</Button>
+				</div>
+			</div>
+		</section>
+	)
 }
 
 function toSimulationInput(
@@ -2082,24 +1195,4 @@ function emptySimulationInput(): SimulationInput {
 		gas: DEFAULT_GAS,
 		block: 'latest',
 	}
-}
-
-function inputValueToString(value: unknown): string {
-	if (typeof value === 'bigint') return value.toString()
-	if (typeof value === 'string' || typeof value === 'boolean')
-		return String(value)
-	if (isArrayType(Array.isArray(value) ? 'unknown[]' : 'unknown'))
-		return JSON.stringify(value)
-	try {
-		return JSON.stringify(value, (_, item) =>
-			typeof item === 'bigint' ? item.toString() : item,
-		)
-	} catch {
-		return formatAbiValue(value)
-	}
-}
-
-function signed(value: bigint): string {
-	if (value === 0n) return '±0'
-	return `${value > 0n ? '+' : '−'}${(value < 0n ? -value : value).toLocaleString()}`
 }
