@@ -76,6 +76,7 @@ import {
 } from '#lib/queries'
 import { zAddress, zHash } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
+import EraserIcon from '~icons/lucide/eraser'
 import LinkIcon from '~icons/lucide/link'
 import PlayIcon from '~icons/lucide/play'
 
@@ -382,6 +383,44 @@ function SimulatePage(): React.JSX.Element {
 
 	useKeyboardShortcut({ 'mod+enter': run })
 
+	/** Anything worth discarding — an edited draft, or a run to throw away. */
+	const hasDraft = Boolean(
+		runInput ||
+			form.from.trim() ||
+			form.calls.some((call) => call.to.trim() || call.data.trim()) ||
+			loadHash.trim(),
+	)
+
+	/**
+	 * Back to a bare `/simulate`.
+	 *
+	 * Clears the search params too, so the URL stops describing a call that is
+	 * no longer on screen — and because the previous state is one Back away,
+	 * this needs no confirmation.
+	 */
+	const clear = React.useCallback(() => {
+		setForm({
+			from: '',
+			calls: [emptyCall],
+			gas: blockGasLimit,
+			block: 'latest',
+		})
+		setRunInput(null)
+		setOriginal(null)
+		setFormError(null)
+		setLoadHash('')
+		setLoadError(null)
+		setEditIndex(0)
+		// A transaction loaded earlier must be re-loadable, so let the `?tx=`
+		// autoload fire again if the user pastes the same hash.
+		autoLoaded.current = false
+		void navigate({
+			search: (current) => ({ pane: current.pane }),
+			replace: true,
+			resetScroll: false,
+		})
+	}, [navigate, blockGasLimit])
+
 	const loadTransaction = React.useCallback(
 		async (hashValue: string) => {
 			if (!OxHex.validate(hashValue) || OxHex.size(hashValue) !== 32) {
@@ -534,6 +573,12 @@ function SimulatePage(): React.JSX.Element {
 				{/* Both page-scoped: Share copies the whole URL — inputs, tab, and
 				    selected frame — not just the result. Keeping them here means one
 				    action bar rather than a second Run inside the result header. */}
+				{hasDraft && (
+					<Button onClick={clear} title="Start over with an empty call">
+						<EraserIcon className="size-[12px]" />
+						Clear
+					</Button>
+				)}
 				{runInput && (
 					<Button
 						onClick={() =>
