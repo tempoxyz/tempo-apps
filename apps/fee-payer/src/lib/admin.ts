@@ -24,6 +24,12 @@ admin.use('*', async (c, next) => {
 			503,
 		)
 	}
+	// Refuse to authenticate when no secret is configured. Otherwise the
+	// comparison string degrades to the literal "Bearer undefined", which any
+	// caller could send to gain full control over the API keys.
+	if (!env.ADMIN_SECRET) {
+		return c.json({ error: 'API key management not available in this environment' }, 503)
+	}
 	const auth = c.req.header('Authorization')
 	if (!auth || auth !== `Bearer ${env.ADMIN_SECRET}`) {
 		return c.json({ error: 'Unauthorized' }, 401)
