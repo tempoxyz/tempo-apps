@@ -110,7 +110,9 @@ export function blockKnownEventsQueryOptions(
 
 			const tip20Array = Array.from(allTip20Addresses) as Hex.Hex[]
 			const metadataResults = await Promise.all(
-				tip20Array.map((token) => client.token.getMetadata({ token })),
+				tip20Array.map((token) =>
+					client.token.getMetadata({ token }).catch(() => null),
+				),
 			)
 
 			const tokenMetadataMap = new Map<
