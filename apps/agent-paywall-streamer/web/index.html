@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tempo Stream Paywall • Sub-Second Live Content Payments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="logo-area">
+      <div class="logo-badge">
+        <span class="logo-glow"></span>
+        <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </div>
+      <div>
+        <h1 class="brand-title">TEMPO <span class="badge-stream">STREAM PAYWALL</span></h1>
+        <p class="brand-subtitle">Sub-Second Stablecoin Micro-Settlement (0.0001 TUSD per chunk)</p>
+      </div>
+    </div>
+
+    <!-- Active Channel Meter -->
+    <div class="channel-meter">
+      <span class="pulse-dot"></span>
+      <span id="header-stream-status">Channel Ready</span>
+      <span class="cost-tag" id="header-total-paid">0.0000 TUSD</span>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Hero Banner -->
+    <section class="hero-card">
+      <div class="hero-content">
+        <div class="pill-highlight">⚡ Reth L1 • Sub-Second Micro-Streaming</div>
+        <h2>Pay-As-You-Read Content & AI Inference</h2>
+        <p>
+          Experience zero subscription lock-in. Premium research articles and AI reasoning streams unlock in real-time as sub-cent payments stream across the Tempo blockchain in &lt; 30ms.
+        </p>
+      </div>
+    </section>
+
+    <!-- Articles Feed & Reader Grid -->
+    <section class="reader-layout mt-4">
+      <!-- Left Column: Articles Selection -->
+      <div class="articles-sidebar">
+        <h3>📰 Premium Content</h3>
+        <div class="articles-list" id="articles-container"></div>
+      </div>
+
+      <!-- Right Column: Live Streaming Terminal Reader -->
+      <div class="reader-container card">
+        <div class="reader-header">
+          <div>
+            <span class="category-tag" id="reader-category">Protocol Engineering</span>
+            <h3 id="reader-title">Select an article to start streaming</h3>
+            <p class="text-muted" id="reader-author" style="font-size: 0.85rem;">Tempo Research Lab</p>
+          </div>
+          <button class="btn btn-gradient" id="btn-stream-read">
+            ⚡ Open Channel & Stream Read ($0.0001/tick)
+          </button>
+        </div>
+
+        <!-- Live Streaming Box -->
+        <div class="stream-content-box" id="reader-content-box">
+          <div class="empty-state">
+            🔒 Content is locked. Click "Open Channel & Stream Read" to begin live sub-second blockchain settlement and read in real-time.
+          </div>
+        </div>
+
+        <!-- Live Settlement Tracker -->
+        <div class="settlement-tracker mt-3">
+          <div class="tracker-item">
+            <span class="lbl">Active Channel</span>
+            <span class="val mono" id="track-channel-id">Not connected</span>
+          </div>
+          <div class="tracker-item">
+            <span class="lbl">Current Tick TX</span>
+            <span class="val mono" id="track-latest-tx">Waiting...</span>
+          </div>
+          <div class="tracker-item">
+            <span class="lbl">Latency</span>
+            <span class="val" style="color: #34d399;" id="track-latency">-- ms</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Tempo Sub-Second Agent Paywall • Powered by Tempo Moderato Testnet • Open Source</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

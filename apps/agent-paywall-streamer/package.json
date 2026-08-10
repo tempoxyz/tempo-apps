@@ -1,0 +1,21 @@
+{
+  "name": "@tempo-apps/agent-paywall-streamer",
+  "version": "1.0.0",
+  "description": "Sub-Second Agent Paywall & Live Content Streamer dApp for the Tempo Blockchain — unlock premium AI insights and articles word-by-word with live 0.0001 TUSD micro-settlements.",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "tempo-stream": "./bin/stream-cli.js"
+  },
+  "scripts": {
+    "start": "node src/server/app.js",
+    "cli": "node bin/stream-cli.js",
+    "test": "node tests/run-all.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.5",
+    "express": "^4.21.2"
+  }
+}
