@@ -2,7 +2,7 @@
 
 ## Repository Overview
 
-This is a **TypeScript monorepo** for applications on the Tempo blockchain applications. Applications in this repo run on Cloudflare, unless explicitly declared otherwise.
+This is a **TypeScript monorepo** for applications on the Tempo blockchain. Applications in this repo run on Cloudflare, unless explicitly declared otherwise.
 
 ### Existing Apps
 
@@ -38,11 +38,6 @@ pnpm build                      # Build all apps
 
 ## Code Style Guidelines
 
-## Dependencies
-
-* You *must* use wagmi, viem, or ox to interact with tempo
-* When adding a new dependency, look at other apps and see if there is a similar dependency
-
 ### TypeScript
 
 * **Type imports**: Use `import type` for type-only imports
@@ -73,6 +68,11 @@ export declare namespace MyComponent {
 * Use Tailwind v4 syntax
 * Custom variants: `@custom-variant`, `@theme`
 * Prefer utility classes over custom CSS
+
+## Dependencies
+
+* You *must* use wagmi, viem, or ox to interact with tempo
+* When adding a new dependency, look at other apps and see if there is a similar dependency
 
 ## Making Changes to an Application
 
