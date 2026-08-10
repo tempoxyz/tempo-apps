@@ -1,5 +1,20 @@
-import { describe, expect, it } from 'vitest'
-import { toEnrichedTransaction } from '#lib/server/address-history'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+	fetchAddressHistoryData,
+	toEnrichedTransaction,
+} from '#lib/server/address-history'
+
+const { getTransactions } = vi.hoisted(() => ({
+	getTransactions: vi.fn(),
+}))
+
+vi.mock('#lib/server/tempo-api', () => ({
+	api: { v1: { transactions: { $get: getTransactions } } },
+}))
+
+beforeEach(() => {
+	getTransactions.mockReset()
+})
 
 const SENDER = '0x286ad6cfc7279c8a6d86d15dcefcb77a65aa7e92'
 const RECIPIENT = '0x20c0000000000000000000000000000000000003'
@@ -88,5 +103,90 @@ describe('toEnrichedTransaction', () => {
 		)
 
 		expect(result.status).toBe('reverted')
+	})
+})
+
+describe('fetchAddressHistoryData', () => {
+	it('reuses one total count across transaction pages', async () => {
+		getTransactions.mockImplementation((options) => {
+			const { include } = (options as { query: { include: string } }).query
+			return Promise.resolve(
+				Response.json(
+					include === 'totalCount'
+						? {
+								data: [],
+								meta: { totalCount: 1_750, totalCountCapped: false },
+								nextCursor: null,
+							}
+						: { data: [], nextCursor: 'next' },
+				),
+			)
+		})
+
+		const params = {
+			address: '0x1111111111111111111111111111111111111111' as const,
+			chainId: 4217,
+			includeKnownEvents: false,
+			searchParams: {
+				include: 'all' as const,
+				limit: 100,
+				page: 1,
+				sort: 'desc' as const,
+			},
+		}
+
+		await expect(fetchAddressHistoryData(params)).resolves.toMatchObject({
+			countCapped: false,
+			page: 1,
+			total: 1_750,
+		})
+		for (let page = 2; page <= 18; page++) {
+			await expect(
+				fetchAddressHistoryData({
+					...params,
+					searchParams: { ...params.searchParams, page },
+				}),
+			).resolves.toMatchObject({
+				countCapped: false,
+				page,
+				total: 1_750,
+			})
+		}
+
+		expect(getTransactions).toHaveBeenCalledTimes(19)
+		expect(getTransactions).toHaveBeenNthCalledWith(1, {
+			query: {
+				address: params.address,
+				chainId: '4217',
+				include: 'receipt',
+				limit: '100',
+				order: 'desc',
+			},
+		})
+		expect(getTransactions).toHaveBeenNthCalledWith(2, {
+			query: {
+				address: params.address,
+				chainId: '4217',
+				include: 'totalCount',
+				limit: '1',
+			},
+		})
+		expect(getTransactions).toHaveBeenLastCalledWith({
+			query: {
+				address: params.address,
+				chainId: '4217',
+				include: 'receipt',
+				limit: '100',
+				order: 'desc',
+				page: '18',
+			},
+		})
+		expect(
+			getTransactions.mock.calls.filter(
+				([options]) =>
+					(options as { query: { include: string } }).query.include ===
+					'totalCount',
+			),
+		).toHaveLength(1)
 	})
 })

@@ -23,6 +23,8 @@ export const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
 /** The API's positional-pagination window: `page × limit` must stay within. */
 const HISTORY_COUNT_MAX = 10_000
 const CSV_EXPORT_LIMIT = HISTORY_COUNT_MAX
+const HISTORY_TOTAL_CACHE_TTL = 60_000
+const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
 
 export type EnrichedTransaction = {
 	hash: `0x${string}`
@@ -62,6 +64,85 @@ type TransactionRow = InferResponseType<
 	typeof api.v1.transactions.$get,
 	200
 >['data'][number]
+
+type HistoryTotal = {
+	totalCount: number
+	totalCountCapped: boolean
+}
+
+const historyTotalCache = new Map<
+	string,
+	{ promise: Promise<HistoryTotal | undefined>; timestamp: number }
+>()
+
+function historyFilters(
+	address: Address.Address,
+	searchParams: HistoryRequestParameters,
+) {
+	const sideFilter =
+		searchParams.include === 'sent'
+			? { sender: address }
+			: searchParams.include === 'received'
+				? { recipient: address }
+				: { address }
+
+	return {
+		...sideFilter,
+		...(searchParams.status ? { status: searchParams.status } : {}),
+		...(searchParams.after
+			? {
+					'timestamp.from': new Date(searchParams.after * 1000).toISOString(),
+				}
+			: {}),
+	}
+}
+
+function getAddressHistoryTotal(params: {
+	address: Address.Address
+	chainId: number
+	searchParams: HistoryRequestParameters
+}): Promise<HistoryTotal | undefined> {
+	const filters = historyFilters(params.address, params.searchParams)
+	const key = JSON.stringify([params.chainId, filters])
+	const cached = historyTotalCache.get(key)
+	if (cached && Date.now() - cached.timestamp < HISTORY_TOTAL_CACHE_TTL)
+		return cached.promise
+
+	if (
+		!historyTotalCache.has(key) &&
+		historyTotalCache.size >= HISTORY_TOTAL_CACHE_MAX_ENTRIES
+	) {
+		const oldestKey = historyTotalCache.keys().next().value
+		if (oldestKey) historyTotalCache.delete(oldestKey)
+	}
+
+	const promise = parseResponse(
+		api.v1.transactions.$get({
+			query: {
+				chainId: String(params.chainId),
+				...filters,
+				include: 'totalCount',
+				limit: '1',
+			},
+		}),
+	)
+		.then((result) =>
+			result.meta?.totalCount === undefined
+				? undefined
+				: {
+						totalCount: result.meta.totalCount,
+						totalCountCapped: result.meta.totalCountCapped ?? false,
+					},
+		)
+		.catch(() => undefined)
+
+	historyTotalCache.set(key, { promise, timestamp: Date.now() })
+	void promise.then((total) => {
+		if (total === undefined && historyTotalCache.get(key)?.promise === promise)
+			historyTotalCache.delete(key)
+	})
+	return promise
+}
 
 function serializeBigInts<T>(value: T): T {
 	if (typeof value === 'bigint') {
@@ -221,34 +302,22 @@ export async function fetchAddressHistoryData(params: {
 	// (totals are clamped page-aligned below), but guard direct requests.
 	if (page * limit > HISTORY_COUNT_MAX) return emptyResponse
 
-	// `include=sent|received` narrows the side; `all` matches either side.
-	const sideFilter =
-		searchParams.include === 'sent'
-			? { sender: address }
-			: searchParams.include === 'received'
-				? { recipient: address }
-				: { address }
-
-	const result = await parseResponse(
-		api.v1.transactions.$get({
-			query: {
-				chainId: String(chainId),
-				...sideFilter,
-				...(searchParams.status ? { status: searchParams.status } : {}),
-				...(searchParams.after
-					? {
-							'timestamp.from': new Date(
-								searchParams.after * 1000,
-							).toISOString(),
-						}
-					: {}),
-				order: searchParams.sort,
-				limit: String(limit),
-				...(page > 1 ? { page: String(page) } : {}),
-				include: 'receipt,totalCount',
-			},
-		}),
-	)
+	const filters = historyFilters(address, searchParams)
+	const [result, exactTotal] = await Promise.all([
+		parseResponse(
+			api.v1.transactions.$get({
+				query: {
+					chainId: String(chainId),
+					...filters,
+					order: searchParams.sort,
+					limit: String(limit),
+					...(page > 1 ? { page: String(page) } : {}),
+					include: 'receipt',
+				},
+			}),
+		),
+		getAddressHistoryTotal({ address, chainId, searchParams }),
+	])
 
 	const getTokenMetadata = includeKnownEvents
 		? await buildTokenMetadataLookup(result.data)
@@ -259,8 +328,8 @@ export async function fetchAddressHistoryData(params: {
 	)
 
 	const { total, totalCapped } = resolveTotal({
-		exactCount: result.meta?.totalCount,
-		exactCountCapped: result.meta?.totalCountCapped,
+		exactCount: exactTotal?.totalCount,
+		exactCountCapped: exactTotal?.totalCountCapped,
 		page,
 		limit,
 		rows: transactions.length,
