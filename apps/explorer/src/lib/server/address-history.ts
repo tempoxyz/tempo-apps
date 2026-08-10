@@ -97,17 +97,19 @@ function historyFilters(
 	}
 }
 
-function getAddressHistoryTotal(params: {
-	address: Address.Address
-	chainId: number
-	searchParams: HistoryRequestParameters
-}): Promise<HistoryTotal | undefined> {
-	const filters = historyFilters(params.address, params.searchParams)
-	const key = JSON.stringify([params.chainId, filters])
+function getCachedHistoryTotal(
+	key: string,
+): Promise<HistoryTotal | undefined> | undefined {
 	const cached = historyTotalCache.get(key)
 	if (cached && Date.now() - cached.timestamp < HISTORY_TOTAL_CACHE_TTL)
 		return cached.promise
+	if (cached) historyTotalCache.delete(key)
+}
 
+function cacheHistoryTotal(
+	key: string,
+	promise: Promise<HistoryTotal | undefined>,
+) {
 	if (
 		!historyTotalCache.has(key) &&
 		historyTotalCache.size >= HISTORY_TOTAL_CACHE_MAX_ENTRIES
@@ -116,32 +118,11 @@ function getAddressHistoryTotal(params: {
 		if (oldestKey) historyTotalCache.delete(oldestKey)
 	}
 
-	const promise = parseResponse(
-		api.v1.transactions.$get({
-			query: {
-				chainId: String(params.chainId),
-				...filters,
-				include: 'totalCount',
-				limit: '1',
-			},
-		}),
-	)
-		.then((result) =>
-			result.meta?.totalCount === undefined
-				? undefined
-				: {
-						totalCount: result.meta.totalCount,
-						totalCountCapped: result.meta.totalCountCapped ?? false,
-					},
-		)
-		.catch(() => undefined)
-
 	historyTotalCache.set(key, { promise, timestamp: Date.now() })
 	void promise.then((total) => {
 		if (total === undefined && historyTotalCache.get(key)?.promise === promise)
 			historyTotalCache.delete(key)
 	})
-	return promise
 }
 
 function serializeBigInts<T>(value: T): T {
@@ -303,20 +284,40 @@ export async function fetchAddressHistoryData(params: {
 	if (page * limit > HISTORY_COUNT_MAX) return emptyResponse
 
 	const filters = historyFilters(address, searchParams)
+	const totalKey = JSON.stringify([chainId, filters])
+	const cachedTotal = getCachedHistoryTotal(totalKey)
+	// Direct deep-page requests use the capped fallback until page one warms the
+	// cache; only page one refreshes the exact total.
+	const includeTotal = page === 1 && cachedTotal === undefined
+	const resultPromise = parseResponse(
+		api.v1.transactions.$get({
+			query: {
+				chainId: String(chainId),
+				...filters,
+				order: searchParams.sort,
+				limit: String(limit),
+				...(page > 1 ? { page: String(page) } : {}),
+				include: includeTotal ? 'receipt,totalCount' : 'receipt',
+			},
+		}),
+	)
+	const requestedTotal = includeTotal
+		? resultPromise
+				.then((result) =>
+					result.meta?.totalCount === undefined
+						? undefined
+						: {
+								totalCount: result.meta.totalCount,
+								totalCountCapped: result.meta.totalCountCapped ?? false,
+							},
+				)
+				.catch(() => undefined)
+		: undefined
+	if (requestedTotal) cacheHistoryTotal(totalKey, requestedTotal)
+
 	const [result, exactTotal] = await Promise.all([
-		parseResponse(
-			api.v1.transactions.$get({
-				query: {
-					chainId: String(chainId),
-					...filters,
-					order: searchParams.sort,
-					limit: String(limit),
-					...(page > 1 ? { page: String(page) } : {}),
-					include: 'receipt',
-				},
-			}),
-		),
-		getAddressHistoryTotal({ address, chainId, searchParams }),
+		resultPromise,
+		cachedTotal ?? requestedTotal,
 	])
 
 	const getTokenMetadata = includeKnownEvents

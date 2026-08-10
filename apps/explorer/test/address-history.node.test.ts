@@ -107,12 +107,12 @@ describe('toEnrichedTransaction', () => {
 })
 
 describe('fetchAddressHistoryData', () => {
-	it('reuses one total count across transaction pages', async () => {
+	it('requests and reuses the total count from the first page', async () => {
 		getTransactions.mockImplementation((options) => {
 			const { include } = (options as { query: { include: string } }).query
 			return Promise.resolve(
 				Response.json(
-					include === 'totalCount'
+					include.includes('totalCount')
 						? {
 								data: [],
 								meta: { totalCount: 1_750, totalCountCapped: false },
@@ -153,12 +153,12 @@ describe('fetchAddressHistoryData', () => {
 			})
 		}
 
-		expect(getTransactions).toHaveBeenCalledTimes(19)
+		expect(getTransactions).toHaveBeenCalledTimes(18)
 		expect(getTransactions).toHaveBeenNthCalledWith(1, {
 			query: {
 				address: params.address,
 				chainId: '4217',
-				include: 'receipt',
+				include: 'receipt,totalCount',
 				limit: '100',
 				order: 'desc',
 			},
@@ -167,8 +167,10 @@ describe('fetchAddressHistoryData', () => {
 			query: {
 				address: params.address,
 				chainId: '4217',
-				include: 'totalCount',
-				limit: '1',
+				include: 'receipt',
+				limit: '100',
+				order: 'desc',
+				page: '2',
 			},
 		})
 		expect(getTransactions).toHaveBeenLastCalledWith({
@@ -182,11 +184,47 @@ describe('fetchAddressHistoryData', () => {
 			},
 		})
 		expect(
-			getTransactions.mock.calls.filter(
-				([options]) =>
-					(options as { query: { include: string } }).query.include ===
+			getTransactions.mock.calls.filter(([options]) =>
+				(options as { query: { include: string } }).query.include.includes(
 					'totalCount',
+				),
 			),
 		).toHaveLength(1)
+	})
+
+	it('does not request a total when opened on a later page', async () => {
+		getTransactions.mockResolvedValue(
+			Response.json({ data: [], nextCursor: 'next' }),
+		)
+
+		await expect(
+			fetchAddressHistoryData({
+				address: '0x2222222222222222222222222222222222222222',
+				chainId: 4217,
+				includeKnownEvents: false,
+				searchParams: {
+					include: 'all',
+					limit: 100,
+					page: 6,
+					sort: 'desc',
+				},
+			}),
+		).resolves.toMatchObject({
+			countCapped: true,
+			page: 6,
+			total: 10_000,
+		})
+
+		expect(getTransactions).toHaveBeenCalledOnce()
+		expect(getTransactions).toHaveBeenCalledWith({
+			query: {
+				address: '0x2222222222222222222222222222222222222222',
+				chainId: '4217',
+				include: 'receipt',
+				limit: '100',
+				order: 'desc',
+				page: '6',
+			},
+		})
 	})
 })
