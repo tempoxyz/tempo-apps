@@ -1,0 +1,363 @@
+import * as Address from 'ox/Address'
+import * as Hash from 'ox/Hash'
+import * as Hex from 'ox/Hex'
+import {
+	type Abi,
+	type AbiFunction,
+	type Chain,
+	createPublicClient,
+	http,
+	parseAbiItem,
+	type PublicClient,
+	type Transport,
+	zeroAddress,
+} from 'viem'
+import { Abis } from '#lib/abis'
+import type {
+	ContractDiscovery,
+	DiscoveryEdge,
+	DiscoveryNode,
+} from '#lib/domain/contract-discovery'
+import { fetchContractSourceDirect } from '#lib/domain/contract-source'
+import * as Tip20 from '#lib/domain/tip20'
+import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import { getTempoChain } from '#wagmi.config'
+
+const MAX_NODES = 32
+const MAX_DEPTH = 4
+const MAX_GETTERS_PER_CONTRACT = 80
+const ROLE_LOG_SCAN_LIMIT = 10_000
+const ROLE_EVENT = Hash.keccak256(
+	Hex.fromString('RoleMembershipUpdated(bytes32,address,address,bool)'),
+)
+const ISSUER_ROLE = Hash.keccak256(Hex.fromString('ISSUER_ROLE'))
+const ROLE_EVENT_ABI = parseAbiItem(
+	'event RoleMembershipUpdated(bytes32 indexed role, address indexed account, address indexed sender, bool hasRole)',
+)
+const IMPLEMENTATION_SLOT =
+	'0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+const ADMIN_SLOT =
+	'0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
+
+type QueueItem = { address: Address.Address; depth: number }
+
+export async function discoverContractGraph(
+	root: Address.Address,
+): Promise<ContractDiscovery> {
+	const chain = getTempoChain()
+	const client = createPublicClient({
+		chain,
+		transport: http(chain.rpcUrls.default.http[0]),
+	})
+	const queue: QueueItem[] = [{ address: Address.checksum(root), depth: 0 }]
+	const seen = new Set<string>()
+	const queued = new Set([root.toLowerCase()])
+	const nodes: DiscoveryNode[] = []
+	const edges: DiscoveryEdge[] = []
+	const deadline = Date.now() + 25_000
+	let incomplete = false
+
+	while (
+		queue.length > 0 &&
+		nodes.length < MAX_NODES &&
+		Date.now() < deadline
+	) {
+		const current = queue.shift()
+		if (!current) break
+		const key = current.address.toLowerCase()
+		if (seen.has(key)) continue
+		seen.add(key)
+
+		const isNative = Tip20.isTip20Address(current.address)
+		let abi: Abi | undefined
+		let name: string | undefined
+		let hasVerifiedSource = false
+
+		if (isNative) {
+			abi = Abis.tip20
+		} else {
+			try {
+				const source = await withTimeout(
+					fetchContractSourceDirect({
+						address: current.address,
+						chainId: chain.id,
+					}),
+					3_000,
+				)
+				abi = source.abi as Abi
+				name = source.kind === 'native' ? source.name : source.compilation.name
+				hasVerifiedSource = true
+			} catch {
+				// Fall through to bytecode classification for unverified addresses.
+			}
+		}
+		const bytecode = hasVerifiedSource
+			? undefined
+			: await withTimeout(
+					client.getCode({ address: current.address }),
+					3_000,
+				).catch(() => undefined)
+		const isContract =
+			isNative ||
+			hasVerifiedSource ||
+			(bytecode !== undefined && bytecode !== '0x')
+
+		nodes.push({
+			id: current.address,
+			name: name ?? fallbackName(current.address, isNative, isContract),
+			kind: isNative ? 'native' : isContract ? 'contract' : 'account',
+			depth: current.depth,
+			isRoot: current.depth === 0,
+		})
+
+		if (!isContract || current.depth >= MAX_DEPTH) continue
+
+		const found: DiscoveryEdge[] = []
+		if (isNative) {
+			const roleResult = await currentTip20Issuers(
+				current.address,
+				chain.id,
+				client,
+			)
+			if (!roleResult.complete) incomplete = true
+			for (const issuer of roleResult.issuers) {
+				found.push({
+					from: current.address,
+					to: issuer,
+					label: 'ISSUER_ROLE',
+					kind: 'role',
+				})
+			}
+		}
+
+		if (abi) {
+			const getters = abi
+				.filter(isAddressGetter)
+				.slice(0, MAX_GETTERS_PER_CONTRACT)
+			const results = await Promise.all(
+				getters.map((getter) =>
+					withTimeout(
+						client.readContract({
+							address: current.address,
+							abi: [getter],
+							functionName: getter.name,
+						}),
+						3_000,
+					).then(
+						(result) => ({ getter, result }),
+						() => undefined,
+					),
+				),
+			)
+			for (const entry of results) {
+				if (!entry) continue
+				const { getter, result } = entry
+				for (const target of extractAddresses(result)) {
+					found.push({
+						from: current.address,
+						to: target,
+						label: getter.name,
+						kind: 'getter',
+					})
+				}
+			}
+		}
+
+		if (!isNative) {
+			for (const [label, slot] of [
+				['$implementation', IMPLEMENTATION_SLOT],
+				['$admin', ADMIN_SLOT],
+			] as const) {
+				try {
+					const value = await withTimeout(
+						client.getStorageAt({ address: current.address, slot }),
+						3_000,
+					)
+					const target = storageAddress(value)
+					if (target)
+						found.push({
+							from: current.address,
+							to: target,
+							label,
+							kind: 'proxy',
+						})
+				} catch {
+					// Some RPC transports do not expose storage reads.
+				}
+			}
+		}
+
+		for (const edge of dedupeEdges(found)) {
+			edges.push(edge)
+			const targetKey = edge.to.toLowerCase()
+			if (!seen.has(targetKey) && !queued.has(targetKey)) {
+				queued.add(targetKey)
+				queue.push({ address: edge.to, depth: current.depth + 1 })
+			}
+		}
+	}
+
+	return {
+		root: Address.checksum(root),
+		nodes,
+		edges: edges.filter(
+			(edge) =>
+				nodes.some(
+					(node) => node.id.toLowerCase() === edge.from.toLowerCase(),
+				) &&
+				nodes.some((node) => node.id.toLowerCase() === edge.to.toLowerCase()),
+		),
+		truncated: incomplete || queue.length > 0,
+	}
+}
+
+function isAddressGetter(item: Abi[number]): item is AbiFunction {
+	return (
+		item.type === 'function' &&
+		(item.stateMutability === 'view' || item.stateMutability === 'pure') &&
+		item.inputs.length === 0 &&
+		item.outputs.length === 1 &&
+		(item.outputs[0]?.type === 'address' ||
+			item.outputs[0]?.type === 'address[]')
+	)
+}
+
+function extractAddresses(value: unknown): Address.Address[] {
+	const values = Array.isArray(value) ? value : [value]
+	return values.flatMap((candidate) => {
+		if (typeof candidate !== 'string' || !Address.validate(candidate)) return []
+		if (candidate.toLowerCase() === zeroAddress) return []
+		return [Address.checksum(candidate)]
+	})
+}
+
+function storageAddress(
+	value: Hex.Hex | undefined,
+): Address.Address | undefined {
+	if (!value || value === '0x') return undefined
+	const candidate = `0x${value.slice(-40)}`
+	if (!Address.validate(candidate) || candidate.toLowerCase() === zeroAddress)
+		return undefined
+	return Address.checksum(candidate)
+}
+
+async function currentTip20Issuers<
+	TTransport extends Transport,
+	TChain extends Chain | undefined,
+>(
+	address: Address.Address,
+	chainId: number,
+	client: PublicClient<TTransport, TChain>,
+): Promise<{ issuers: Address.Address[]; complete: boolean }> {
+	try {
+		const query = tempoQueryBuilder(chainId, { engine: 'clickhouse' })
+			.selectFrom('logs')
+			.select(['topic1', 'topic2', 'data', 'block_num', 'log_idx'])
+			.where('address', '=', address.toLowerCase() as Address.Address)
+			.where('selector', '=', ROLE_EVENT)
+			.orderBy('block_num', 'asc')
+			.orderBy('log_idx', 'asc')
+			.limit(ROLE_LOG_SCAN_LIMIT)
+			.execute()
+		const logs = await withTimeout(query, 4_000)
+		const current = new Map<Address.Address, boolean>()
+		for (const log of logs) {
+			if (log.topic1?.toLowerCase() !== ISSUER_ROLE.toLowerCase()) continue
+			if (!log.topic2 || !log.data) continue
+			const account = Address.checksum(`0x${log.topic2.slice(-40)}`)
+			current.set(account, Hex.toBigInt(log.data) !== 0n)
+		}
+		return {
+			issuers: [...current]
+				.filter(([, active]) => active)
+				.map(([account]) => account),
+			complete: true,
+		}
+	} catch {
+		return currentTip20IssuersFromRpc(address, client)
+	}
+}
+
+async function currentTip20IssuersFromRpc<
+	TTransport extends Transport,
+	TChain extends Chain | undefined,
+>(
+	address: Address.Address,
+	client: PublicClient<TTransport, TChain>,
+): Promise<{ issuers: Address.Address[]; complete: boolean }> {
+	try {
+		const latest = await withTimeout(client.getBlockNumber(), 3_000)
+		const first = latest > 1_000_000n ? latest - 1_000_000n : 0n
+		const ranges: { fromBlock: bigint; toBlock: bigint }[] = []
+		for (let fromBlock = first; fromBlock <= latest; fromBlock += 100_000n) {
+			ranges.push({
+				fromBlock,
+				toBlock: fromBlock + 99_999n < latest ? fromBlock + 99_999n : latest,
+			})
+		}
+		const logs = (
+			await withTimeout(
+				Promise.all(
+					ranges.map((range) =>
+						client.getLogs({ address, event: ROLE_EVENT_ABI, ...range }),
+					),
+				),
+				8_000,
+			)
+		).flat()
+		const current = new Map<Address.Address, boolean>()
+		for (const log of logs) {
+			if (log.args.role?.toLowerCase() !== ISSUER_ROLE.toLowerCase()) continue
+			if (!log.args.account || log.args.hasRole === undefined) continue
+			current.set(Address.checksum(log.args.account), log.args.hasRole)
+		}
+		return {
+			issuers: [...current]
+				.filter(([, active]) => active)
+				.map(([account]) => account),
+			complete: true,
+		}
+	} catch {
+		return { issuers: [], complete: false }
+	}
+}
+
+async function withTimeout<T>(
+	promise: Promise<T>,
+	timeoutMs: number,
+): Promise<T> {
+	let timeout: ReturnType<typeof setTimeout> | undefined
+	try {
+		return await Promise.race([
+			promise,
+			new Promise<never>((_, reject) => {
+				timeout = setTimeout(() => reject(new Error('Timed out')), timeoutMs)
+			}),
+		])
+	} finally {
+		if (timeout) clearTimeout(timeout)
+	}
+}
+
+function fallbackName(
+	address: Address.Address,
+	isNative: boolean,
+	isContract: boolean,
+): string {
+	const short = `${address.slice(0, 8)}…${address.slice(-6)}`
+	return isNative
+		? `Native token ${short}`
+		: isContract
+			? `Contract ${short}`
+			: `Account ${short}`
+}
+
+function dedupeEdges(edges: DiscoveryEdge[]): DiscoveryEdge[] {
+	const seen = new Set<string>()
+	return edges.filter((edge) => {
+		const key = `${edge.from.toLowerCase()}:${edge.to.toLowerCase()}:${edge.label}`
+		if (seen.has(key)) return false
+		seen.add(key)
+		return edge.from.toLowerCase() !== edge.to.toLowerCase()
+	})
+}

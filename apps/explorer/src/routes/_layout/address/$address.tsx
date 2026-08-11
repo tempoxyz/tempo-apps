@@ -124,6 +124,7 @@ const allTabs = [
 	'holders',
 	'token',
 	'contract',
+	'dependencies',
 	'interact',
 ] as const
 
@@ -458,7 +459,7 @@ function RouteComponent() {
 			tabs.push('token')
 		}
 		if (isContract) {
-			tabs.push('contract', 'interact')
+			tabs.push('contract', 'dependencies', 'interact')
 		}
 		return tabs
 	}, [isToken, isTip20, isContract])
@@ -1691,6 +1692,32 @@ function SectionsWrapper(props: {
 							}
 							isLoadingContractInfo={isLoadingContractInfo}
 						/>
+					),
+				}
+			case 'dependencies':
+				return {
+					title: 'Dependencies',
+					totalItems: 0,
+					itemsLabel: 'relationships',
+					content: (
+						<div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-lg border border-border bg-surface-secondary/40 p-8 text-center">
+							<div>
+								<h3 className="text-base font-semibold">
+									Contract dependency graph
+								</h3>
+								<p className="mt-1 max-w-xl text-sm text-secondary">
+									Trace verified address getters, proxy implementations, and
+									native TIP-20 roles from this address.
+								</p>
+							</div>
+							<Link
+								className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+								params={{ address }}
+								to="/discover/$address"
+							>
+								Open discovery graph
+							</Link>
+						</div>
 					),
 				}
 			default:
