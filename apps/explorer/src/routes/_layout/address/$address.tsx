@@ -25,6 +25,7 @@ import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
+import { ContractFeatureCard } from '#comps/ContractFeatureCard'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Pagination } from '#comps/Pagination'
@@ -1699,26 +1700,7 @@ function SectionsWrapper(props: {
 					title: 'Dependencies',
 					totalItems: 0,
 					itemsLabel: 'relationships',
-					content: (
-						<div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-lg border border-border bg-surface-secondary/40 p-8 text-center">
-							<div>
-								<h3 className="text-base font-semibold">
-									Contract dependency graph
-								</h3>
-								<p className="mt-1 max-w-xl text-sm text-secondary">
-									Trace verified address getters, proxy implementations, and
-									native TIP-20 roles from this address.
-								</p>
-							</div>
-							<Link
-								className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-								params={{ address }}
-								to="/discover/$address"
-							>
-								Open discovery graph
-							</Link>
-						</div>
-					),
+					content: <DependenciesTabContent address={address} />,
 				}
 			default:
 				return {
@@ -1737,6 +1719,50 @@ function SectionsWrapper(props: {
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
 		/>
+	)
+}
+
+function DependenciesTabContent(props: {
+	address: Address.Address
+}): React.JSX.Element {
+	return (
+		<ContractFeatureCard
+			actions={
+				<Link
+					className="rounded-[6px] bg-primary px-[10px] py-[6px] text-[12px] font-medium text-content-inverse press-down hover:opacity-90"
+					params={{ address: props.address }}
+					to="/discover/$address"
+				>
+					Open graph
+				</Link>
+			}
+			description="Trace verified getters, proxy slots, and native TIP-20 roles."
+			rightSideDescription="Mainnet"
+			rightSideTitle="Live discovery"
+			title="Contract dependency graph"
+		>
+			<div className="flex min-h-[220px] items-center justify-center rounded-[6px] border border-dashed border-distinct bg-base-alt px-[18px] py-[24px] text-center">
+				<div className="flex max-w-[520px] flex-col items-center gap-3">
+					<div className="flex items-center gap-2 text-[13px] font-medium text-primary">
+						<span className="grid size-[24px] place-items-center rounded-[6px] bg-accent/10 text-accent">
+							<span className="size-[7px] rounded-full bg-accent" />
+						</span>
+						<span>Explore the relationships behind this contract</span>
+					</div>
+					<p className="max-w-[440px] text-[12px] leading-[18px] text-secondary">
+						Open the discovery graph to inspect connected contracts,
+						implementations, roles, ABI summaries, and verification metadata.
+					</p>
+					<Link
+						className="inline-flex items-center rounded-[6px] border border-card-border bg-card px-[10px] py-[6px] text-[12px] font-medium text-primary press-down hover:bg-surface"
+						params={{ address: props.address }}
+						to="/discover/$address"
+					>
+						View dependencies
+					</Link>
+				</div>
+			</div>
+		</ContractFeatureCard>
 	)
 }
 
