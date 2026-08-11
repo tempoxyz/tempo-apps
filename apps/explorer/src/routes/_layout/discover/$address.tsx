@@ -11,6 +11,7 @@ import { CopyButton } from '#comps/CopyButton'
 import { cx } from '#lib/css'
 import { fetchContractDiscovery } from '#lib/domain/contract-discovery'
 import { zAddress } from '#lib/zod'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
 import MinusIcon from '~icons/lucide/minus'
 import PlusIcon from '~icons/lucide/plus'
 import RefreshCwIcon from '~icons/lucide/refresh-cw'
@@ -58,43 +59,46 @@ function DiscoveryPage(): React.JSX.Element {
 	}
 
 	return (
-		<main className="mx-auto flex w-full max-w-[1800px] flex-col gap-5 px-4 py-6 sm:px-6">
-			<header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+		<main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-6 px-4 pt-20 pb-16 sm:px-6">
+			<header className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
 				<div>
-					<div className="mb-1 text-xs font-medium tracking-[0.18em] text-secondary uppercase">
+					<div className="mb-2 text-[11px] font-medium tracking-[0.16em] text-tertiary uppercase">
 						Tempo Discovery
 					</div>
-					<h1 className="text-2xl font-semibold tracking-tight">
+					<h1 className="text-[32px] leading-none font-semibold tracking-[-0.02em] text-primary">
 						Contract dependency graph
 					</h1>
-					<p className="mt-1 max-w-3xl text-sm text-secondary">
+					<p className="mt-2 max-w-[720px] text-[14px] text-secondary">
 						Live relationships from verified getters, proxy slots, and native
 						TIP-20 roles.
 					</p>
 				</div>
-				<form className="flex w-full max-w-2xl gap-2" onSubmit={submit}>
-					<input
-						aria-label="Root contract address"
-						className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-accent"
-						value={input}
-						onChange={(event) => setInput(event.target.value)}
-					/>
-					<button
-						className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-						disabled={!Address.validate(input)}
-						type="submit"
-					>
-						Discover
-					</button>
+				<form className="w-full max-w-[640px]" onSubmit={submit}>
+					<div className="relative">
+						<input
+							aria-label="Root contract address"
+							className="h-[42px] w-full rounded-[10px] border border-base-border bg-surface px-[16px] pr-[52px] font-mono text-[13px] text-primary outline-none placeholder:text-tertiary focus-visible:border-focus"
+							value={input}
+							onChange={(event) => setInput(event.target.value)}
+						/>
+						<button
+							aria-label="Discover contract"
+							className="absolute top-1/2 right-[6px] grid size-[30px] -translate-y-1/2 place-items-center rounded-[10px]! border border-base-border bg-base-background/90 text-primary press-down transition-colors hover:bg-surface disabled:cursor-default disabled:text-tertiary"
+							disabled={!Address.validate(input)}
+							type="submit"
+						>
+							<ArrowRightIcon className="size-[14px]" />
+						</button>
+					</div>
 				</form>
 			</header>
 
 			{query.isPending ? (
-				<section className="relative min-h-[680px] overflow-hidden rounded-xl border border-border bg-surface">
+				<section className="relative min-h-[680px] overflow-hidden rounded-[10px] border border-card-border bg-card-header">
 					<GraphLoading />
 				</section>
 			) : query.isError ? (
-				<section className="grid min-h-[680px] place-items-center rounded-xl border border-border bg-surface text-sm text-negative">
+				<section className="grid min-h-[680px] place-items-center rounded-[10px] border border-card-border bg-card-header text-[13px] text-negative">
 					{query.error.message}
 				</section>
 			) : (
@@ -125,16 +129,16 @@ function DiscoveryWorkspace(props: {
 	if (!selectedNode) return <GraphLoading />
 
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-			<section className="relative min-h-[680px] overflow-hidden rounded-xl border border-border bg-surface">
-				<div className="absolute top-3 right-3 z-20 flex items-center gap-1 rounded-lg border border-border bg-surface/95 p-1 shadow-sm backdrop-blur">
+		<div className="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1fr)_360px]">
+			<section className="relative min-h-[680px] min-w-0 overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+				<div className="absolute top-3 right-3 z-20 flex items-center gap-[2px] rounded-[7px] border border-card-border bg-card-header/95 p-[2px] shadow-[0_4px_20px_rgba(0,0,0,0.05)] backdrop-blur">
 					<IconButton
 						label="Zoom out"
 						onClick={() => props.setZoom((z) => Math.max(0.5, z - 0.1))}
 					>
 						<MinusIcon />
 					</IconButton>
-					<span className="w-12 text-center text-xs tabular-nums text-secondary">
+					<span className="w-12 text-center text-[11px] tabular-nums text-tertiary">
 						{Math.round(props.zoom * 100)}%
 					</span>
 					<IconButton
@@ -179,7 +183,7 @@ function DependencyGraph(props: {
 	)
 
 	return (
-		<div className="h-[680px] overflow-auto">
+		<div className="h-[680px] overflow-auto bg-card">
 			<div
 				className="relative origin-top-left transition-transform duration-150"
 				style={{
@@ -201,7 +205,7 @@ function DependencyGraph(props: {
 							refX="7"
 							refY="4"
 						>
-							<path d="M0,0 L8,4 L0,8 Z" className="fill-border-strong" />
+							<path d="M0,0 L8,4 L0,8 Z" className="fill-card-border" />
 						</marker>
 					</defs>
 					{props.graph.edges.map((edge) => (
@@ -228,7 +232,7 @@ function DependencyGraph(props: {
 					/>
 				))}
 				{props.graph.truncated && (
-					<div className="absolute bottom-4 left-4 rounded-md border border-border bg-surface px-3 py-2 text-xs text-secondary shadow-sm">
+					<div className="absolute bottom-4 left-4 rounded-[6px] border border-card-border bg-card-header px-3 py-2 text-[11px] text-secondary shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
 						Partial graph: a source timed out or the 32-node limit was reached.
 					</div>
 				)}
@@ -285,28 +289,30 @@ function GraphNode(props: GraphNodeProps): React.JSX.Element {
 			aria-label={`Inspect ${node.name}`}
 			aria-pressed={selected}
 			className={cx(
-				'absolute rounded-xl border bg-surface p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md',
+				'absolute rounded-[10px] border bg-card-header p-[14px] text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-accent hover:bg-surface',
 				selected || node.isRoot
-					? 'border-accent ring-2 ring-accent/15'
-					: 'border-border',
+					? 'border-accent bg-accent/[0.04] ring-1 ring-accent/30'
+					: 'border-card-border',
 			)}
 			onClick={() => onSelect(node)}
 			style={{ left: x, top: y, width: CARD_WIDTH, height: CARD_HEIGHT }}
 			type="button"
 		>
 			<div className="mb-2 flex items-center justify-between gap-2">
-				<div className="truncate text-sm font-semibold">{node.name}</div>
-				<span className="shrink-0 rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] font-medium text-secondary uppercase">
+				<div className="truncate text-[13px] font-medium text-primary">
+					{node.name}
+				</div>
+				<span className="shrink-0 rounded-[5px] border border-card-border bg-base-alt px-[6px] py-[2px] text-[10px] font-medium leading-none text-tertiary uppercase">
 					{node.kind}
 				</span>
 			</div>
 			<div
-				className="truncate font-mono text-xs text-secondary"
+				className="truncate font-mono text-[11px] text-secondary"
 				title={node.id}
 			>
 				{node.id}
 			</div>
-			<div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-tertiary">
+			<div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-tertiary">
 				<span>
 					{node.details.source
 						? 'verified source'
@@ -344,13 +350,13 @@ function GraphEdgeLine(props: {
 				d={path}
 				className={cx(
 					'fill-none transition-colors',
-					isActive ? 'stroke-accent' : 'stroke-border-strong',
+					isActive ? 'stroke-accent' : 'stroke-card-border',
 				)}
 				markerEnd={`url(#${props.markerId})`}
 				strokeWidth={isActive ? '2' : '1.5'}
 			/>
 			<rect
-				className="fill-surface stroke-border"
+				className="fill-card-header stroke-card-border"
 				height="20"
 				rx="10"
 				width={labelWidth}
@@ -390,28 +396,31 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 	)
 
 	return (
-		<aside className="flex max-h-[680px] min-h-[680px] flex-col overflow-y-auto rounded-xl border border-border bg-surface">
-			<div className="border-b border-border px-5 py-4">
+		<aside className="flex min-h-0 max-h-none flex-col overflow-y-auto rounded-[10px] border border-card-border bg-card-header lg:max-h-[680px] lg:min-h-[680px]">
+			<div className="border-b border-dashed border-card-border px-[16px] py-[14px]">
 				<div className="mb-2 flex items-center justify-between gap-3">
-					<span className="text-xs font-medium tracking-[0.16em] text-secondary uppercase">
+					<span className="text-[11px] font-medium tracking-[0.14em] text-tertiary uppercase">
 						Node inspector
 					</span>
-					<span className="rounded-full bg-surface-secondary px-2 py-0.5 text-[10px] font-medium text-secondary uppercase">
+					<span className="rounded-[5px] border border-card-border bg-base-alt px-[6px] py-[2px] text-[10px] font-medium leading-none text-tertiary uppercase">
 						{node.kind}
 					</span>
 				</div>
-				<h2 className="truncate text-lg font-semibold" title={node.name}>
+				<h2
+					className="truncate text-[18px] font-medium text-primary"
+					title={node.name}
+				>
 					{node.name}
 				</h2>
 				<div className="mt-2 flex items-start gap-2">
-					<code className="min-w-0 flex-1 break-all text-xs text-secondary">
+					<code className="min-w-0 flex-1 break-all font-mono text-[12px] text-secondary">
 						{node.id}
 					</code>
 					<CopyButton value={node.id} ariaLabel="Copy node address" />
 				</div>
-				<div className="mt-4 flex flex-wrap gap-2">
+				<div className="mt-3 flex flex-wrap gap-2">
 					<Link
-						className="rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90"
+						className="rounded-[6px] bg-primary px-[10px] py-[7px] text-[12px] font-medium text-content-inverse press-down hover:opacity-90"
 						params={{ address: node.id }}
 						search={{
 							tab: node.kind === 'account' ? 'transactions' : 'contract',
@@ -420,7 +429,7 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 					>
 						Open address details
 					</Link>
-					<span className="rounded-md border border-border px-3 py-2 text-xs text-secondary">
+					<span className="rounded-[6px] border border-card-border bg-base-alt px-[10px] py-[7px] text-[12px] text-secondary">
 						{node.isRoot ? 'Root node' : `Depth ${node.depth}`}
 					</span>
 				</div>
@@ -444,7 +453,7 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 				{source ? (
 					<SourceDetails source={source} />
 				) : (
-					<p className="px-4 py-3 text-xs text-secondary">
+					<p className="px-[16px] py-[10px] text-[12px] text-tertiary">
 						{node.kind === 'account'
 							? 'No deployed bytecode or verified source was found.'
 							: 'No source metadata was returned for this node.'}
@@ -455,37 +464,37 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 			<InspectorSection title="Interface">
 				{abi ? (
 					<>
-						<div className="grid grid-cols-2 gap-px border-b border-border bg-border">
+						<div className="grid grid-cols-2 gap-px border-b border-card-border bg-card-border">
 							<Stat label="Functions" value={abi.functionCount} />
 							<Stat label="Read" value={abi.readFunctionCount} />
 							<Stat label="Write" value={abi.writeFunctionCount} />
 							<Stat label="Events" value={abi.eventCount} />
 							<Stat label="Errors" value={abi.errorCount} />
 						</div>
-						<details className="group px-4 py-3">
-							<summary className="cursor-pointer list-none text-xs font-medium text-primary marker:hidden">
+						<details className="group px-[16px] py-[10px]">
+							<summary className="cursor-pointer list-none text-[12px] font-medium text-primary marker:hidden">
 								Show functions
 								<span className="ml-1 text-secondary">
 									({abi.functionCount})
 								</span>
 							</summary>
-							<div className="mt-3 divide-y divide-border rounded-md border border-border">
+							<div className="mt-3 divide-y divide-card-border overflow-hidden rounded-[6px] border border-card-border bg-card">
 								{abi.functions.map((item) => (
 									<div
-										className="flex items-center justify-between gap-3 px-3 py-2"
+										className="flex items-center justify-between gap-3 border-b border-card-border px-[10px] py-[8px] last:border-b-0"
 										key={`${item.name}-${item.stateMutability}`}
 									>
-										<code className="min-w-0 truncate text-[11px] text-primary">
+										<code className="min-w-0 truncate font-mono text-[11px] text-primary">
 											{item.name}({item.inputs}) → {item.outputs}
 										</code>
-										<span className="shrink-0 text-[10px] text-secondary">
+										<span className="shrink-0 rounded-[4px] bg-base-alt px-[5px] py-[2px] text-[10px] text-tertiary">
 											{item.stateMutability}
 										</span>
 									</div>
 								))}
 							</div>
 							{abi.truncated && (
-								<p className="mt-2 text-[11px] text-secondary">
+								<p className="mt-2 text-[11px] text-tertiary">
 									Showing the first 100 functions. Open the address for the full
 									ABI.
 								</p>
@@ -493,7 +502,7 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 						</details>
 					</>
 				) : (
-					<p className="px-4 py-3 text-xs text-secondary">
+					<p className="px-[16px] py-[10px] text-[12px] text-tertiary">
 						No ABI was available for this node.
 					</p>
 				)}
@@ -540,7 +549,7 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 					/>
 				)}
 				{outgoing.length === 0 && incoming.length === 0 && (
-					<p className="px-4 py-3 text-xs text-secondary">
+					<p className="px-[16px] py-[10px] text-[12px] text-tertiary">
 						No resolved relationships at this depth.
 					</p>
 				)}
@@ -554,11 +563,11 @@ function InspectorSection(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<section className="border-b border-border">
-			<h3 className="px-4 pt-4 text-xs font-semibold tracking-wide text-secondary uppercase">
+		<section className="border-b border-dashed border-card-border">
+			<h3 className="px-[16px] pt-[12px] text-[11px] font-medium tracking-[0.08em] text-tertiary uppercase">
 				{props.title}
 			</h3>
-			<div className="pb-3">{props.children}</div>
+			<div className="pb-[6px]">{props.children}</div>
 		</section>
 	)
 }
@@ -568,8 +577,8 @@ function DetailRow(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div className="flex items-start justify-between gap-4 px-4 pt-3 text-xs">
-			<span className="shrink-0 text-secondary">{props.label}</span>
+		<div className="flex items-start justify-between gap-4 px-[16px] py-[7px] text-[12px]">
+			<span className="min-w-[84px] shrink-0 text-tertiary">{props.label}</span>
 			<span className="min-w-0 text-right text-primary">{props.children}</span>
 		</div>
 	)
@@ -577,9 +586,11 @@ function DetailRow(props: {
 
 function Stat(props: { label: string; value: number }): React.JSX.Element {
 	return (
-		<div className="bg-surface px-4 py-3">
-			<div className="text-lg font-semibold tabular-nums">{props.value}</div>
-			<div className="text-[10px] text-secondary uppercase">{props.label}</div>
+		<div className="bg-card px-[16px] py-[10px]">
+			<div className="text-[18px] font-medium tabular-nums text-primary">
+				{props.value}
+			</div>
+			<div className="text-[10px] text-tertiary uppercase">{props.label}</div>
 		</div>
 	)
 }
@@ -645,7 +656,7 @@ function ProxyAddressRow(props: {
 	onSelect: (node: DiscoveryNode) => void
 }): React.JSX.Element {
 	return (
-		<div className="flex items-center justify-between gap-3 px-4 pt-3 text-xs">
+		<div className="flex items-center justify-between gap-3 px-[16px] py-[7px] text-[12px]">
 			<span className="text-secondary">{props.label}</span>
 			<div className="flex min-w-0 items-center gap-2">
 				{props.node ? (
@@ -680,36 +691,38 @@ function ConnectionGroup(props: {
 	title: string
 }): React.JSX.Element {
 	return (
-		<div className="px-4 pt-3">
-			<div className="mb-2 text-[11px] font-medium text-secondary">
+		<div className="px-[16px] pt-[10px]">
+			<div className="mb-2 text-[11px] font-medium text-tertiary">
 				{props.title}
 			</div>
-			<div className="space-y-2">
+			<div className="flex flex-col gap-2">
 				{props.edges.map((edge) => {
 					const address = props.title === 'Points to' ? edge.to : edge.from
 					const node = findNode(props.graph, address)
 					return (
 						<div
-							className="rounded-md border border-border px-3 py-2"
+							className="rounded-[6px] border border-card-border bg-card px-[10px] py-[9px]"
 							key={`${edge.from}:${edge.to}:${edge.label}`}
 						>
 							<div className="mb-1 flex items-center justify-between gap-2">
-								<span className="rounded bg-surface-secondary px-1.5 py-0.5 text-[10px] text-secondary">
+								<span className="rounded-[4px] bg-base-alt px-[5px] py-[2px] text-[10px] text-tertiary">
 									{edge.kind}
 								</span>
-								<code className="text-[10px] text-tertiary">{edge.label}</code>
+								<code className="font-mono text-[10px] text-tertiary">
+									{edge.label}
+								</code>
 							</div>
 							<div className="flex items-center justify-between gap-2">
 								{node ? (
 									<button
-										className="min-w-0 truncate text-left text-xs font-medium text-accent hover:underline"
+										className="min-w-0 truncate text-left text-[12px] font-medium text-accent press-down hover:underline"
 										onClick={() => props.onSelect(node)}
 										type="button"
 									>
 										{node.name}
 									</button>
 								) : (
-									<span className="truncate text-xs text-primary">
+									<span className="truncate text-[12px] text-primary">
 										{shortenAddress(address)}
 									</span>
 								)}
@@ -765,7 +778,7 @@ function IconButton(props: {
 	return (
 		<button
 			aria-label={props.label}
-			className="grid size-8 place-items-center rounded-md text-secondary hover:bg-surface-secondary hover:text-primary [&>svg]:size-4"
+			className="grid size-[24px] place-items-center rounded-[6px] text-tertiary press-down hover:bg-base-alt hover:text-primary [&>svg]:size-[14px]"
 			onClick={props.onClick}
 			type="button"
 		>
@@ -777,8 +790,8 @@ function IconButton(props: {
 function GraphLoading(): React.JSX.Element {
 	return (
 		<div className="grid min-h-[680px] place-items-center">
-			<div className="flex items-center gap-3 text-sm text-secondary">
-				<div className="size-4 animate-spin rounded-full border-2 border-border border-t-accent" />
+			<div className="flex items-center gap-3 text-[13px] text-tertiary">
+				<div className="size-4 animate-spin rounded-full border-2 border-card-border border-t-accent" />
 				Reading live contract relationships…
 			</div>
 		</div>
