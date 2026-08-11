@@ -6,6 +6,53 @@ export type DiscoveryNode = {
 	kind: 'contract' | 'native' | 'account'
 	depth: number
 	isRoot: boolean
+	details: DiscoveryNodeDetails
+}
+
+export type DiscoveryNodeDetails = {
+	bytecode: {
+		status: 'available' | 'empty' | 'unavailable' | 'precompile'
+		bytes?: number
+	}
+	abi?: DiscoveryAbiSummary
+	source?: DiscoverySourceSummary
+	proxy?: {
+		implementation?: Address
+		admin?: Address
+	}
+}
+
+export type DiscoveryAbiSummary = {
+	functionCount: number
+	readFunctionCount: number
+	writeFunctionCount: number
+	eventCount: number
+	errorCount: number
+	functions: Array<{
+		name: string
+		stateMutability: string
+		inputs: number
+		outputs: number
+	}>
+	truncated: boolean
+}
+
+export type DiscoverySourceSummary = {
+	kind: 'verified' | 'native'
+	name: string
+	language: string
+	compiler?: string
+	compilerVersion?: string
+	fullyQualifiedName?: string
+	verifiedAt?: string | null
+	match?: string | null
+	runtimeMatch?: string | null
+	sourceFileCount: number
+	docsUrl?: string
+	repository?: string
+	commit?: string
+	commitUrl?: string | null
+	entrypoints?: string[]
 }
 
 export type DiscoveryEdge = {
@@ -17,6 +64,7 @@ export type DiscoveryEdge = {
 
 export type ContractDiscovery = {
 	root: Address
+	chainId: number
 	nodes: DiscoveryNode[]
 	edges: DiscoveryEdge[]
 	truncated: boolean

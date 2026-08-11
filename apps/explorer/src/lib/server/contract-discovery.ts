@@ -18,6 +18,7 @@ import type {
 	DiscoveryEdge,
 	DiscoveryNode,
 } from '#lib/domain/contract-discovery'
+import type { ContractSource } from '#lib/domain/contract-source'
 import { fetchContractSourceDirect } from '#lib/domain/contract-source'
 import * as Tip20 from '#lib/domain/tip20'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
@@ -71,46 +72,56 @@ export async function discoverContractGraph(
 		const isNative = Tip20.isTip20Address(current.address)
 		let abi: Abi | undefined
 		let name: string | undefined
-		let hasVerifiedSource = false
 
 		if (isNative) {
 			abi = Abis.tip20
-		} else {
-			try {
-				const source = await withTimeout(
-					fetchContractSourceDirect({
-						address: current.address,
-						chainId: chain.id,
-					}),
-					3_000,
-				)
-				abi = source.abi as Abi
-				name = source.kind === 'native' ? source.name : source.compilation.name
-				hasVerifiedSource = true
-			} catch {
-				// Fall through to bytecode classification for unverified addresses.
-			}
 		}
-		const bytecode = hasVerifiedSource
-			? undefined
-			: await withTimeout(
-					client.getCode({ address: current.address }),
-					3_000,
-				).catch(() => undefined)
+
+		const [source, bytecode] = await Promise.all([
+			isNative
+				? Promise.resolve(undefined)
+				: withTimeout(
+						fetchContractSourceDirect({
+							address: current.address,
+							chainId: chain.id,
+						}),
+						3_000,
+					).catch(() => undefined),
+			isNative
+				? Promise.resolve(undefined)
+				: withTimeout(
+						client.getCode({ address: current.address }),
+						3_000,
+					).catch(() => undefined),
+		])
+		if (source) {
+			abi = source.abi as Abi
+			name = source.kind === 'native' ? source.name : source.compilation.name
+		}
+		const hasVerifiedSource = source !== undefined
 		const isContract =
 			isNative ||
 			hasVerifiedSource ||
 			(bytecode !== undefined && bytecode !== '0x')
 
-		nodes.push({
+		const node: DiscoveryNode = {
 			id: current.address,
 			name: name ?? fallbackName(current.address, isNative, isContract),
 			kind: isNative ? 'native' : isContract ? 'contract' : 'account',
 			depth: current.depth,
 			isRoot: current.depth === 0,
-		})
+			details: buildNodeDetails({
+				abi,
+				bytecode,
+				isNative,
+				source,
+			}),
+		}
 
-		if (!isContract || current.depth >= MAX_DEPTH) continue
+		if (!isContract || current.depth >= MAX_DEPTH) {
+			nodes.push(node)
+			continue
+		}
 
 		const found: DiscoveryEdge[] = []
 		if (isNative) {
@@ -174,18 +185,24 @@ export async function discoverContractGraph(
 						3_000,
 					)
 					const target = storageAddress(value)
-					if (target)
+					if (target) {
+						const proxy = node.details.proxy ?? {}
+						proxy[label === '$implementation' ? 'implementation' : 'admin'] =
+							target
+						node.details.proxy = proxy
 						found.push({
 							from: current.address,
 							to: target,
 							label,
 							kind: 'proxy',
 						})
+					}
 				} catch {
 					// Some RPC transports do not expose storage reads.
 				}
 			}
 		}
+		nodes.push(node)
 
 		for (const edge of dedupeEdges(found)) {
 			edges.push(edge)
@@ -199,6 +216,7 @@ export async function discoverContractGraph(
 
 	return {
 		root: Address.checksum(root),
+		chainId: chain.id,
 		nodes,
 		edges: edges.filter(
 			(edge) =>
@@ -208,6 +226,94 @@ export async function discoverContractGraph(
 				nodes.some((node) => node.id.toLowerCase() === edge.to.toLowerCase()),
 		),
 		truncated: incomplete || queue.length > 0,
+	}
+}
+
+function buildNodeDetails(props: {
+	abi?: Abi
+	bytecode?: Hex.Hex
+	isNative: boolean
+	source?: ContractSource
+}): DiscoveryNode['details'] {
+	const { abi, bytecode, isNative, source } = props
+	return {
+		bytecode: {
+			status: isNative
+				? 'precompile'
+				: bytecode === undefined
+					? 'unavailable'
+					: bytecode === '0x'
+						? 'empty'
+						: 'available',
+			...(bytecode && bytecode !== '0x'
+				? { bytes: (bytecode.length - 2) / 2 }
+				: {}),
+		},
+		...(abi ? { abi: summarizeAbi(abi) } : {}),
+		...(source ? { source: summarizeSource(source) } : {}),
+	}
+}
+
+function summarizeAbi(abi: Abi) {
+	const functions = abi.filter(
+		(item): item is AbiFunction => item.type === 'function',
+	)
+	const reads = functions.filter(
+		(item) =>
+			item.stateMutability === 'view' || item.stateMutability === 'pure',
+	)
+	const writes = functions.filter(
+		(item) =>
+			item.stateMutability === 'nonpayable' ||
+			item.stateMutability === 'payable',
+	)
+	const maxFunctions = 100
+
+	return {
+		functionCount: functions.length,
+		readFunctionCount: reads.length,
+		writeFunctionCount: writes.length,
+		eventCount: abi.filter((item) => item.type === 'event').length,
+		errorCount: abi.filter((item) => item.type === 'error').length,
+		functions: functions.slice(0, maxFunctions).map((item) => ({
+			name: item.name,
+			stateMutability: item.stateMutability,
+			inputs: item.inputs.length,
+			outputs: item.outputs.length,
+		})),
+		truncated: functions.length > maxFunctions,
+	}
+}
+
+function summarizeSource(source: ContractSource) {
+	if (source.kind === 'native') {
+		return {
+			kind: source.kind,
+			name: source.name,
+			language: source.nativeSource.language,
+			verifiedAt: source.verifiedAt,
+			match: source.match,
+			runtimeMatch: source.runtimeMatch,
+			sourceFileCount: Object.keys(source.sources).length,
+			...(source.docsUrl ? { docsUrl: source.docsUrl } : {}),
+			repository: source.nativeSource.repository,
+			commit: source.nativeSource.commit,
+			commitUrl: source.nativeSource.commitUrl,
+			entrypoints: source.nativeSource.entrypoints,
+		}
+	}
+
+	return {
+		kind: source.kind,
+		name: source.compilation.name,
+		language: source.compilation.language,
+		compiler: source.compilation.compiler,
+		compilerVersion: source.compilation.compilerVersion,
+		fullyQualifiedName: source.compilation.fullyQualifiedName,
+		verifiedAt: source.verifiedAt,
+		match: source.match,
+		runtimeMatch: source.runtimeMatch,
+		sourceFileCount: Object.keys(source.stdJsonInput.sources).length,
 	}
 }
 
