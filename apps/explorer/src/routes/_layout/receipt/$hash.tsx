@@ -27,6 +27,7 @@ import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
+import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
 import {
@@ -37,6 +38,7 @@ import {
 import { areUsdPricedTokens, hasTokenAmount } from '#lib/pricing'
 import { withLoaderTiming } from '#lib/profiling'
 import { getFeeTokenForChain } from '#lib/fee-token'
+import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -90,10 +92,11 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		hash: params.hash,
 	})
 	// TODO: investigate & consider batch/multicall
-	const [block, transaction, getTokenMetadata] = await Promise.all([
+	const [block, transaction, getTokenMetadata, activities] = await Promise.all([
 		client.getBlock({ blockHash: receipt.blockHash }),
 		client.getTransaction({ hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
+		fetchTransactionActivities({ data: { hash: receipt.transactionHash } }),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
@@ -113,9 +116,12 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 			? decodeKnownCall(transaction.to, transaction.input)
 			: null
 
-	const knownEvents = knownCall
+	const fallbackEvents = knownCall
 		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
 		: parsedEvents
+	const activityEvents = activitiesToKnownEvents(activities)
+	const knownEvents =
+		activityEvents.length > 0 ? activityEvents : fallbackEvents
 
 	return {
 		block,
