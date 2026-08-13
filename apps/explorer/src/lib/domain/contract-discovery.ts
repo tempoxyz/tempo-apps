@@ -58,6 +58,7 @@ export type DiscoverySourceSummary = {
 export type DiscoveryEdge = {
 	from: Address
 	to: Address
+	action: string
 	label: string
 	kind: 'getter' | 'proxy' | 'role'
 }

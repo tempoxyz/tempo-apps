@@ -135,6 +135,7 @@ export async function discoverContractGraph(
 				found.push({
 					from: current.address,
 					to: issuer,
+					action: 'needs approval from',
 					label: 'ISSUER_ROLE',
 					kind: 'role',
 				})
@@ -167,6 +168,7 @@ export async function discoverContractGraph(
 					found.push({
 						from: current.address,
 						to: target,
+						action: describeGetterAction(getter.name),
 						label: getter.name,
 						kind: 'getter',
 					})
@@ -193,6 +195,10 @@ export async function discoverContractGraph(
 						found.push({
 							from: current.address,
 							to: target,
+							action:
+								label === '$implementation'
+									? 'runs code from'
+									: 'is controlled by',
 							label,
 							kind: 'proxy',
 						})
@@ -452,10 +458,32 @@ function fallbackName(
 ): string {
 	const short = `${address.slice(0, 8)}…${address.slice(-6)}`
 	return isNative
-		? `Native token ${short}`
+		? `Tempo system contract ${short}`
 		: isContract
-			? `Contract ${short}`
-			: `Account ${short}`
+			? `Unverified contract ${short}`
+			: `Wallet / account ${short}`
+}
+
+function describeGetterAction(name: string): string {
+	const normalized = name.replaceAll('_', '').toLowerCase()
+	if (normalized.includes('implementation')) return 'runs code from'
+	if (
+		normalized.includes('admin') ||
+		normalized.includes('owner') ||
+		normalized.includes('manager') ||
+		normalized.includes('authority')
+	)
+		return 'is controlled by'
+	if (normalized.includes('issuer')) return 'gets its issuer from'
+	if (normalized.includes('feetoken') || normalized.includes('feecurrency'))
+		return 'pays fees with'
+	if (normalized.includes('registry')) return 'checks with'
+	if (normalized.includes('policy')) return 'follows rules from'
+	if (normalized.includes('factory')) return 'was created by'
+	if (normalized.includes('validator')) return 'uses validator settings from'
+	if (normalized.includes('recipient')) return 'sends to'
+	if (normalized.includes('token')) return 'uses token from'
+	return 'looks up an address from'
 }
 
 function dedupeEdges(edges: DiscoveryEdge[]): DiscoveryEdge[] {

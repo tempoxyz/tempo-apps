@@ -69,8 +69,8 @@ function DiscoveryPage(): React.JSX.Element {
 						Contract dependency graph
 					</h1>
 					<p className="mt-2 max-w-[720px] text-[14px] text-secondary">
-						Live relationships from verified getters, proxy slots, and native
-						TIP-20 roles.
+						See what this contract depends on, who controls it, and which system
+						contracts it uses.
 					</p>
 				</div>
 				<form className="w-full max-w-[640px]" onSubmit={submit}>
@@ -236,6 +236,10 @@ function DependencyGraph(props: {
 						Partial graph: a source timed out or the 32-node limit was reached.
 					</div>
 				)}
+				<div className="absolute right-4 bottom-4 rounded-[6px] border border-card-border bg-card-header px-3 py-2 text-[11px] text-tertiary shadow-[0_4px_20px_rgba(0,0,0,0.05)]">
+					Arrows read left to right: the item on the left relies on, reads, or
+					is controlled by the item on the right.
+				</div>
 			</div>
 		</div>
 	)
@@ -302,8 +306,8 @@ function GraphNode(props: GraphNodeProps): React.JSX.Element {
 				<div className="truncate text-[13px] font-medium text-primary">
 					{node.name}
 				</div>
-				<span className="shrink-0 rounded-[5px] border border-card-border bg-base-alt px-[6px] py-[2px] text-[10px] font-medium leading-none text-tertiary uppercase">
-					{node.kind}
+				<span className="shrink-0 rounded-[5px] border border-card-border bg-base-alt px-[6px] py-[2px] text-[10px] font-medium leading-none text-tertiary">
+					{nodeKindLabel(node.kind)}
 				</span>
 			</div>
 			<div
@@ -314,11 +318,9 @@ function GraphNode(props: GraphNodeProps): React.JSX.Element {
 			</div>
 			<div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-tertiary">
 				<span>
-					{node.details.source
-						? 'verified source'
-						: node.details.bytecode.status}
+					{node.details.source ? 'Verified source' : nodeStatusLabel(node)}
 				</span>
-				<span>depth {node.depth}</span>
+				<span>Level {node.depth + 1}</span>
 			</div>
 		</button>
 	)
@@ -343,9 +345,13 @@ function GraphEdgeLine(props: {
 	const isActive =
 		props.edge.from.toLowerCase() === props.selectedNodeId.toLowerCase() ||
 		props.edge.to.toLowerCase() === props.selectedNodeId.toLowerCase()
-	const labelWidth = Math.max(58, props.edge.label.length * 7 + 18)
+	const label = props.edge.action
+	const labelWidth = Math.min(176, Math.max(82, label.length * 6.4 + 22))
 	return (
 		<g>
+			<title>
+				{props.from.node.name} {props.edge.action} {props.to.node.name}
+			</title>
 			<path
 				d={path}
 				className={cx(
@@ -372,7 +378,7 @@ function GraphEdgeLine(props: {
 				x={labelX}
 				y={labelY}
 			>
-				{props.edge.label}
+				{label}
 			</text>
 		</g>
 	)
@@ -402,8 +408,8 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 					<span className="text-[11px] font-medium tracking-[0.14em] text-tertiary uppercase">
 						Node inspector
 					</span>
-					<span className="rounded-[5px] border border-card-border bg-base-alt px-[6px] py-[2px] text-[10px] font-medium leading-none text-tertiary uppercase">
-						{node.kind}
+					<span className="rounded-[5px] border border-card-border bg-base-alt px-[6px] py-[2px] text-[10px] font-medium leading-none text-tertiary">
+						{nodeKindLabel(node.kind)}
 					</span>
 				</div>
 				<h2
@@ -509,11 +515,11 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 			</InspectorSection>
 
 			{node.details.proxy && (
-				<InspectorSection title="Proxy slots">
+				<InspectorSection title="How this contract is set up">
 					{node.details.proxy.implementation && (
 						<ProxyAddressRow
 							address={node.details.proxy.implementation}
-							label="Implementation"
+							label="Runs code from"
 							node={findNode(graph, node.details.proxy.implementation)}
 							onSelect={onSelect}
 						/>
@@ -521,7 +527,7 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 					{node.details.proxy.admin && (
 						<ProxyAddressRow
 							address={node.details.proxy.admin}
-							label="Admin"
+							label="Controlled by"
 							node={findNode(graph, node.details.proxy.admin)}
 							onSelect={onSelect}
 						/>
@@ -530,14 +536,14 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 			)}
 
 			<InspectorSection
-				title={`Connections (${outgoing.length + incoming.length})`}
+				title={`How it connects (${outgoing.length + incoming.length})`}
 			>
 				{outgoing.length > 0 && (
 					<ConnectionGroup
 						edges={outgoing}
 						graph={graph}
 						onSelect={onSelect}
-						title="Points to"
+						title="Needs from"
 					/>
 				)}
 				{incoming.length > 0 && (
@@ -545,7 +551,7 @@ function DiscoveryInspector(props: DiscoveryInspectorProps): React.JSX.Element {
 						edges={incoming}
 						graph={graph}
 						onSelect={onSelect}
-						title="Referenced by"
+						title="Used by"
 					/>
 				)}
 				{outgoing.length === 0 && incoming.length === 0 && (
@@ -697,7 +703,7 @@ function ConnectionGroup(props: {
 			</div>
 			<div className="flex flex-col gap-2">
 				{props.edges.map((edge) => {
-					const address = props.title === 'Points to' ? edge.to : edge.from
+					const address = props.title === 'Needs from' ? edge.to : edge.from
 					const node = findNode(props.graph, address)
 					return (
 						<div
@@ -705,12 +711,12 @@ function ConnectionGroup(props: {
 							key={`${edge.from}:${edge.to}:${edge.label}`}
 						>
 							<div className="mb-1 flex items-center justify-between gap-2">
-								<span className="rounded-[4px] bg-base-alt px-[5px] py-[2px] text-[10px] text-tertiary">
-									{edge.kind}
+								<span className="text-[12px] font-medium text-primary">
+									{edge.action}
 								</span>
-								<code className="font-mono text-[10px] text-tertiary">
-									{edge.label}
-								</code>
+								<span className="rounded-[4px] bg-base-alt px-[5px] py-[2px] text-[10px] text-tertiary">
+									{connectionKindLabel(edge.kind)}
+								</span>
 							</div>
 							<div className="flex items-center justify-between gap-2">
 								{node ? (
@@ -734,6 +740,12 @@ function ConnectionGroup(props: {
 									{shortenAddress(address)}
 								</Link>
 							</div>
+							<div
+								className="mt-1 truncate font-mono text-[10px] text-tertiary"
+								title={edge.label}
+							>
+								Technical source: {edge.label}
+							</div>
 						</div>
 					)
 				})}
@@ -753,6 +765,25 @@ function findNode(
 
 function shortenAddress(address: string): string {
 	return `${address.slice(0, 8)}…${address.slice(-6)}`
+}
+
+function nodeKindLabel(kind: DiscoveryNode['kind']): string {
+	if (kind === 'native') return 'System contract'
+	if (kind === 'account') return 'Wallet / account'
+	return 'Contract'
+}
+
+function nodeStatusLabel(node: DiscoveryNode): string {
+	if (node.details.bytecode.status === 'precompile') return 'Tempo system code'
+	if (node.details.bytecode.status === 'available') return 'On-chain code'
+	if (node.details.bytecode.status === 'empty') return 'No code found'
+	return 'Code unavailable'
+}
+
+function connectionKindLabel(kind: DiscoveryEdge['kind']): string {
+	if (kind === 'role') return 'Permission'
+	if (kind === 'proxy') return 'Contract setup'
+	return 'Contract lookup'
 }
 
 function formatBytecode(
