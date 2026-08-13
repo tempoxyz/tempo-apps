@@ -7,7 +7,7 @@ import type {
 import { zeroAddress } from 'viem'
 
 export const transactionHash = `0x${'1'.repeat(64)}` as const
-export const blockHash = zeroAddress
+export const blockHash = `0x${'1'.repeat(64)}` as const
 export const blockNumber = 12345n
 export const baseTimestamp = BigInt(Math.floor(Date.now() / 1000))
 
