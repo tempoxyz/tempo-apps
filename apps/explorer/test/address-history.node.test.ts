@@ -107,6 +107,23 @@ describe('toEnrichedTransaction', () => {
 })
 
 describe('fetchAddressHistoryData', () => {
+	it('rejects page sizes above 10', async () => {
+		await expect(
+			fetchAddressHistoryData({
+				address: '0x1111111111111111111111111111111111111111',
+				chainId: 4217,
+				includeKnownEvents: false,
+				searchParams: {
+					include: 'all',
+					limit: 11,
+					page: 1,
+					sort: 'desc',
+				},
+			}),
+		).rejects.toThrowError('Limit is too high')
+		expect(getTransactions).not.toHaveBeenCalled()
+	})
+
 	it('requests and reuses the total count from the first page', async () => {
 		getTransactions.mockImplementation((options) => {
 			const { include } = (options as { query: { include: string } }).query
@@ -129,7 +146,7 @@ describe('fetchAddressHistoryData', () => {
 			includeKnownEvents: false,
 			searchParams: {
 				include: 'all' as const,
-				limit: 100,
+				limit: 10,
 				page: 1,
 				sort: 'desc' as const,
 			},
@@ -159,7 +176,7 @@ describe('fetchAddressHistoryData', () => {
 				address: params.address,
 				chainId: '4217',
 				include: 'receipt,totalCount',
-				limit: '100',
+				limit: '10',
 				order: 'desc',
 			},
 		})
@@ -168,7 +185,7 @@ describe('fetchAddressHistoryData', () => {
 				address: params.address,
 				chainId: '4217',
 				include: 'receipt',
-				limit: '100',
+				limit: '10',
 				order: 'desc',
 				page: '2',
 			},
@@ -178,7 +195,7 @@ describe('fetchAddressHistoryData', () => {
 				address: params.address,
 				chainId: '4217',
 				include: 'receipt',
-				limit: '100',
+				limit: '10',
 				order: 'desc',
 				page: '18',
 			},
@@ -204,7 +221,7 @@ describe('fetchAddressHistoryData', () => {
 				includeKnownEvents: false,
 				searchParams: {
 					include: 'all',
-					limit: 100,
+					limit: 10,
 					page: 6,
 					sort: 'desc',
 				},
@@ -221,7 +238,7 @@ describe('fetchAddressHistoryData', () => {
 				address: '0x2222222222222222222222222222222222222222',
 				chainId: '4217',
 				include: 'receipt',
-				limit: '100',
+				limit: '10',
 				order: 'desc',
 				page: '6',
 			},

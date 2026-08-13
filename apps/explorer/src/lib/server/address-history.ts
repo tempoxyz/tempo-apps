@@ -24,7 +24,7 @@ import { resolveTotal } from '#lib/server/token'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 
-export const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
+export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 /** The API's positional-pagination window: `page × limit` must stay within. */
 const HISTORY_COUNT_MAX = 10_000
 const CSV_EXPORT_LIMIT = HISTORY_COUNT_MAX

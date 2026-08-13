@@ -166,7 +166,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		limit: z.prefault(
 			z.pipe(
 				z.number(),
-				z.transform((val) => Math.min(100, Math.max(5, val))),
+				z.transform((val) => Math.min(10, Math.max(5, val))),
 			),
 			defaultSearchValues.limit,
 		),
