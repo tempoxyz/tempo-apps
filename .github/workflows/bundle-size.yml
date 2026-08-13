@@ -47,7 +47,7 @@ jobs:
       - name: Restore baseline from cache
         if: github.event_name == 'pull_request'
         id: cache-restore
-        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
@@ -75,7 +75,7 @@ jobs:
 
       - name: Save bundle stats to cache (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-${{ github.sha }}
@@ -89,7 +89,7 @@ jobs:
 
       - name: Save bundle stats with stable key (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
