@@ -89,7 +89,7 @@ export function getPerspectiveEvent(
 	accountAddress?: Address.Address,
 ) {
 	if (!accountAddress) return event
-	if (event.type !== 'send') return event
+	if (event.type !== 'send' && event.type !== 'transfer') return event
 	const toMatches =
 		event.meta?.to && Address.isEqual(event.meta.to, accountAddress)
 	const fromMatches =

@@ -2,6 +2,57 @@ import { describe, expect, test } from 'vitest'
 import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
+	test('preserves token amounts and perspective for transfers', () => {
+		expect(
+			activitiesToKnownEvents([
+				{
+					id: 'activity-1',
+					title: 'Token transferred',
+					type: 'transfer',
+					data: {
+						direction: 'in',
+						sender: '0x0000000000000000000000000000000000000001',
+						recipient: '0x0000000000000000000000000000000000000002',
+						sourceAmount: {
+							baseUnits: '1230000',
+							currency: 'USD',
+							decimals: 6,
+							formatted: '1.23',
+						},
+						sourceToken: {
+							address: '0x20c0000000000000000000000000000000000001',
+							symbol: 'USD',
+						},
+					},
+				},
+			]),
+		).toMatchObject([
+			{
+				type: 'transfer',
+				meta: {
+					from: '0x0000000000000000000000000000000000000001',
+					to: '0x0000000000000000000000000000000000000002',
+				},
+				parts: [
+					{ type: 'action', value: 'Token transferred' },
+					{
+						type: 'amount',
+						value: {
+							value: 1230000n,
+							decimals: 6,
+							symbol: 'USD',
+						},
+					},
+					{ type: 'text', value: 'from' },
+					{
+						type: 'account',
+						value: '0x0000000000000000000000000000000000000001',
+					},
+				],
+			},
+		])
+	})
+
 	test('maps an Earn activity into a receipt event', () => {
 		expect(
 			activitiesToKnownEvents([

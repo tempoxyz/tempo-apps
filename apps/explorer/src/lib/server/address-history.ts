@@ -9,11 +9,16 @@ import * as z from 'zod/mini'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
+	activitiesToKnownEvents,
+	type TransactionActivity,
+} from '#lib/domain/transaction-activities'
+import {
 	buildCsv,
 	createCsvDownloadResponse,
 	createTimestampedCsvFilename,
 } from '#lib/server/csv'
 import { api } from '#lib/server/tempo-api'
+import { getTransactionActivities } from '#lib/server/transaction-activities'
 import { fetchAddressTxExportRows } from '#lib/server/tempo-queries'
 import { resolveTotal } from '#lib/server/token'
 import { parseTimestamp } from '#lib/timestamp'
@@ -199,6 +204,7 @@ export function toEnrichedTransaction(
 	options: {
 		includeKnownEvents: boolean
 		getTokenMetadata: (address: Address.Address) => Metadata | undefined
+		activities?: TransactionActivity[] | undefined
 	},
 ): EnrichedTransaction {
 	const receipt = row.meta?.receipt
@@ -207,6 +213,8 @@ export function toEnrichedTransaction(
 
 	const knownEvents = (() => {
 		if (!options.includeKnownEvents || !receipt) return []
+		const activityEvents = activitiesToKnownEvents(options.activities ?? [])
+		if (activityEvents.length > 0) return activityEvents
 		try {
 			return parseKnownEvents(
 				{
@@ -320,12 +328,23 @@ export async function fetchAddressHistoryData(params: {
 		cachedTotal ?? requestedTotal,
 	])
 
-	const getTokenMetadata = includeKnownEvents
-		? await buildTokenMetadataLookup(result.data)
-		: () => undefined
+	const [getTokenMetadata, activities] = await Promise.all([
+		includeKnownEvents
+			? buildTokenMetadataLookup(result.data)
+			: Promise.resolve(() => undefined),
+		includeKnownEvents
+			? Promise.all(
+					result.data.map((row) => getTransactionActivities(row.hash, chainId)),
+				)
+			: Promise.resolve([]),
+	])
 
-	const transactions = result.data.map((row) =>
-		toEnrichedTransaction(row, { includeKnownEvents, getTokenMetadata }),
+	const transactions = result.data.map((row, index) =>
+		toEnrichedTransaction(row, {
+			includeKnownEvents,
+			getTokenMetadata,
+			activities: activities[index],
+		}),
 	)
 
 	const { total, totalCapped } = resolveTotal({
