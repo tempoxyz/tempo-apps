@@ -23,7 +23,7 @@
 		"test": "vitest --run",
 		"test:watch": "vitest",
 		"test:moderato": "TEMPO_ENV=moderato vitest --run",
-		"test:testnet": "TEMPO_ENV=moderato vitest --run",
+		"test:testnet": "TEMPO_ENV=testnet vitest --run",
 		"postinstall": "pnpm gen:types"
 	},
 	"dependencies": {
