@@ -1286,6 +1286,7 @@ function SectionsWrapper(props: {
 										transaction.hash.toLowerCase() ===
 											voucher.final_voucher.toLowerCase()
 									return {
+										key: transaction.hash,
 										cells: [
 											<TransactionTimeCell
 												key="time"
@@ -2009,13 +2010,9 @@ function AssetValue(props: { asset: AssetData }) {
 	)
 }
 
-function HistoryPagination(props: {
-	position: HistoryPosition
-	data: HistoryResponse | undefined
-	pageCount: number | undefined
-	pageCountCapped: boolean
-	onPrefetch: (position: HistoryPosition) => void
-}) {
+export function HistoryPagination(
+	props: HistoryPagination.Props,
+): React.JSX.Element {
 	const { position, data, pageCount, pageCountCapped, onPrefetch } = props
 	const location = useLocation()
 	const navigation = getHistoryNavigation(position, data)
@@ -2137,6 +2134,16 @@ function HistoryPagination(props: {
 			</Link>
 		</div>
 	)
+}
+
+export declare namespace HistoryPagination {
+	type Props = {
+		position: HistoryPosition
+		data: HistoryResponse | undefined
+		pageCount: number | undefined
+		pageCountCapped: boolean
+		onPrefetch: (position: HistoryPosition) => void
+	}
 }
 
 function useHistoryPrefetchRef(
