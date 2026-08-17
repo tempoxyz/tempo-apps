@@ -26,6 +26,7 @@ export function DataGrid(props: DataGrid.Props) {
 		flexible = false,
 		onPrefetchNextPage,
 		onCancelPrefetchNextPage,
+		showSimplePageLabel = true,
 	} = props
 
 	const mode = Sections.useSectionsMode()
@@ -222,6 +223,7 @@ export function DataGrid(props: DataGrid.Props) {
 								disableLastPage={disableLastPage}
 								onPrefetchNext={onPrefetchNextPage}
 								onCancelPrefetchNext={onCancelPrefetchNextPage}
+								showPageLabel={showSimplePageLabel}
 							/>
 							{showSimpleCount ? (
 								<Pagination.Count
@@ -295,6 +297,7 @@ export namespace DataGrid {
 		disableLastPage?: boolean
 		onPrefetchNextPage?: () => void
 		onCancelPrefetchNextPage?: () => void
+		showSimplePageLabel?: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple' | React.ReactNode

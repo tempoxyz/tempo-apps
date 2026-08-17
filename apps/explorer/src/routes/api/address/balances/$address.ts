@@ -1,10 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { getChainId } from 'wagmi/actions'
-import { getRequestURL } from '#lib/env'
 import type { BalancesResponse } from '#lib/address-balances'
 import {
 	MAX_TOKENS,
-	createBalancesCsvResponse,
 	fetchAddressBalancesData,
 } from '#lib/server/address-balances'
 import { zAddress } from '#lib/zod'
@@ -17,8 +15,6 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 		handlers: {
 			GET: async ({ params }) => {
 				try {
-					const url = getRequestURL()
-					const isCsvExport = url.searchParams.get('format') === 'csv'
 					const address = zAddress().parse(params.address)
 					const chainId = getChainId(getWagmiConfig())
 					const response = await fetchAddressBalancesData({
@@ -27,14 +23,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 						maxTokens: MAX_TOKENS,
 					})
 
-					if (!isCsvExport) {
-						return Response.json(response satisfies BalancesResponse)
-					}
-
-					return createBalancesCsvResponse({
-						address,
-						balances: response.balances,
-					})
+					return Response.json(response satisfies BalancesResponse)
 				} catch (error) {
 					console.error(error)
 					const errorMessage = error instanceof Error ? error.message : error

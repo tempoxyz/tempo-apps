@@ -107,7 +107,7 @@ describe('toEnrichedTransaction', () => {
 })
 
 describe('fetchAddressHistoryData', () => {
-	it('rejects page sizes above 10', async () => {
+	it('rejects page sizes above 5', async () => {
 		await expect(
 			fetchAddressHistoryData({
 				address: '0x1111111111111111111111111111111111111111',
@@ -115,8 +115,7 @@ describe('fetchAddressHistoryData', () => {
 				includeKnownEvents: false,
 				searchParams: {
 					include: 'all',
-					limit: 11,
-					page: 1,
+					limit: 6,
 					sort: 'desc',
 				},
 			}),
@@ -124,18 +123,20 @@ describe('fetchAddressHistoryData', () => {
 		expect(getTransactions).not.toHaveBeenCalled()
 	})
 
-	it('requests and reuses the total count from the first page', async () => {
+	it('requests the total at the latest edge and reuses it on cursor pages', async () => {
 		getTransactions.mockImplementation((options) => {
-			const { include } = (options as { query: { include: string } }).query
+			const { cursor, include } = (
+				options as { query: { cursor?: string; include: string } }
+			).query
 			return Promise.resolve(
 				Response.json(
 					include.includes('totalCount')
 						? {
 								data: [],
 								meta: { totalCount: 1_750, totalCountCapped: false },
-								nextCursor: null,
+								nextCursor: 'cursor-1',
 							}
-						: { data: [], nextCursor: 'next' },
+						: { data: [], nextCursor: cursor ? null : 'cursor-1' },
 				),
 			)
 		})
@@ -146,37 +147,34 @@ describe('fetchAddressHistoryData', () => {
 			includeKnownEvents: false,
 			searchParams: {
 				include: 'all' as const,
-				limit: 10,
-				page: 1,
+				limit: 5,
 				sort: 'desc' as const,
 			},
 		}
 
 		await expect(fetchAddressHistoryData(params)).resolves.toMatchObject({
 			countCapped: false,
-			page: 1,
+			nextCursor: 'cursor-1',
 			total: 1_750,
 		})
-		for (let page = 2; page <= 18; page++) {
-			await expect(
-				fetchAddressHistoryData({
-					...params,
-					searchParams: { ...params.searchParams, page },
-				}),
-			).resolves.toMatchObject({
-				countCapped: false,
-				page,
-				total: 1_750,
-			})
-		}
+		await expect(
+			fetchAddressHistoryData({
+				...params,
+				searchParams: { ...params.searchParams, cursor: 'cursor-1' },
+			}),
+		).resolves.toMatchObject({
+			countCapped: false,
+			nextCursor: null,
+			total: 1_750,
+		})
 
-		expect(getTransactions).toHaveBeenCalledTimes(18)
+		expect(getTransactions).toHaveBeenCalledTimes(2)
 		expect(getTransactions).toHaveBeenNthCalledWith(1, {
 			query: {
 				address: params.address,
 				chainId: '4217',
 				include: 'receipt,totalCount',
-				limit: '10',
+				limit: '5',
 				order: 'desc',
 			},
 		})
@@ -184,20 +182,10 @@ describe('fetchAddressHistoryData', () => {
 			query: {
 				address: params.address,
 				chainId: '4217',
+				cursor: 'cursor-1',
 				include: 'receipt',
-				limit: '10',
+				limit: '5',
 				order: 'desc',
-				page: '2',
-			},
-		})
-		expect(getTransactions).toHaveBeenLastCalledWith({
-			query: {
-				address: params.address,
-				chainId: '4217',
-				include: 'receipt',
-				limit: '10',
-				order: 'desc',
-				page: '18',
 			},
 		})
 		expect(
@@ -209,9 +197,17 @@ describe('fetchAddressHistoryData', () => {
 		).toHaveLength(1)
 	})
 
-	it('does not request a total when opened on a later page', async () => {
+	it('fetches and reverses the oldest edge without positional pagination', async () => {
+		const olderHash = `0x${'1'.repeat(64)}`
+		const oldestHash = `0x${'2'.repeat(64)}`
 		getTransactions.mockResolvedValue(
-			Response.json({ data: [], nextCursor: 'next' }),
+			Response.json({
+				data: [
+					row({ hash: oldestHash, blockNumber: 1, transactionIndex: 0 }),
+					row({ hash: olderHash, blockNumber: 2, transactionIndex: 0 }),
+				],
+				nextCursor: 'toward-head',
+			}),
 		)
 
 		await expect(
@@ -221,15 +217,20 @@ describe('fetchAddressHistoryData', () => {
 				includeKnownEvents: false,
 				searchParams: {
 					include: 'all',
-					limit: 10,
-					page: 6,
-					sort: 'desc',
+					limit: 5,
+					sort: 'asc',
 				},
 			}),
-		).resolves.toMatchObject({
-			countCapped: true,
-			page: 6,
-			total: 10_000,
+		).resolves.toEqual({
+			countCapped: false,
+			error: null,
+			limit: 5,
+			nextCursor: 'toward-head',
+			total: null,
+			transactions: [
+				expect.objectContaining({ hash: olderHash }),
+				expect.objectContaining({ hash: oldestHash }),
+			],
 		})
 
 		expect(getTransactions).toHaveBeenCalledOnce()
@@ -238,9 +239,8 @@ describe('fetchAddressHistoryData', () => {
 				address: '0x2222222222222222222222222222222222222222',
 				chainId: '4217',
 				include: 'receipt',
-				limit: '10',
-				order: 'desc',
-				page: '6',
+				limit: '5',
+				order: 'asc',
 			},
 		})
 	})

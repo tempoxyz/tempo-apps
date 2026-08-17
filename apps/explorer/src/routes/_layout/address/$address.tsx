@@ -19,7 +19,6 @@ import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
-import { AddressCsvExportButton } from '#comps/AddressCsvExportButton'
 import { WalletActions } from '#comps/WalletActions'
 import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
@@ -116,6 +115,7 @@ const defaultSearchValues = {
 } as const
 
 const ASSETS_PER_PAGE = 10
+const HISTORY_PAGE_SIZE = 5
 
 const allTabs = [
 	'transactions',
@@ -128,6 +128,11 @@ const allTabs = [
 ] as const
 
 type TabValue = (typeof allTabs)[number]
+
+type HistoryPagePosition = {
+	order: 'asc' | 'desc'
+	cursor?: string | undefined
+}
 
 const TabSchema = z.prefault(
 	z.pipe(
@@ -527,17 +532,22 @@ function RouteComponent() {
 			prefetchedRef.current = address
 
 			if (tab !== 'transactions')
-				void queryClient.prefetchQuery(
-					historyQueryOptions({
-						address,
-						page: 1,
-						limit,
-						status,
-						include:
-							dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
-						after,
-					}),
-				)
+				for (const order of ['desc', 'asc'] as const)
+					void queryClient.prefetchQuery(
+						historyQueryOptions({
+							address,
+							limit: HISTORY_PAGE_SIZE,
+							order,
+							status,
+							include:
+								dir === 'sent'
+									? 'sent'
+									: dir === 'received'
+										? 'received'
+										: 'all',
+							after,
+						}),
+					)
 
 			if (visibleTabs.includes('transfers')) {
 				if (isToken)
@@ -764,6 +774,8 @@ function SectionsWrapper(props: {
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
 	const isContractTabActive = visibleTabs[activeSection] === 'contract'
+	const navigate = useNavigate()
+	const queryClient = useQueryClient()
 
 	// Fetch readable source first so highlighting never delays contract data.
 	const contractSourceQuery = useQuery({
@@ -810,45 +822,130 @@ function SectionsWrapper(props: {
 			extractedAbiQuery.isLoading ||
 			extractedAbiQuery.isFetching)
 
-	// Only auto-refresh on page 1 when transactions tab is active and live=true
-	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
-
-	const {
-		data: historyQueryData,
-		isPending: isHistoryPending,
-		isFetching: isHistoryFetching,
-		error: historyError,
-	} = useQuery({
+	const latestHistoryQuery = useQuery({
 		...historyQueryOptions({
 			address,
-			page,
-			limit,
+			limit: HISTORY_PAGE_SIZE,
+			order: 'desc',
 			status,
 			include,
 			after,
 		}),
-		initialData: page === 1 ? initialData : undefined,
+		initialData,
 		enabled:
 			isMounted && (isTransactionsTabActive || initialData !== undefined),
-		refetchInterval: shouldAutoRefresh ? 4_000 : false,
-		refetchOnWindowFocus: shouldAutoRefresh,
+		refetchInterval:
+			live && isTransactionsTabActive && page === 1 ? 4_000 : false,
+		refetchOnWindowFocus: live && isTransactionsTabActive && page === 1,
+	})
+	const latestHistoryData = latestHistoryQuery.data
+	const total = latestHistoryData?.total ?? undefined
+	const countCapped = latestHistoryData?.countCapped ?? false
+	const exactHistoryPages =
+		total !== undefined && !countCapped
+			? Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE))
+			: undefined
+	const historyPage = exactHistoryPages
+		? Math.min(Math.max(1, page), exactHistoryPages)
+		: Math.max(1, page)
+	const isLastHistoryPage =
+		exactHistoryPages !== undefined &&
+		historyPage === exactHistoryPages &&
+		historyPage > 1
+
+	React.useEffect(() => {
+		if (!isTransactionsTabActive || page === historyPage) return
+		navigate({
+			to: '.',
+			search: (previous) => ({ ...previous, page: historyPage }),
+			replace: true,
+			resetScroll: false,
+		})
+	}, [historyPage, isTransactionsTabActive, navigate, page])
+
+	const getHistoryQueryOptions = React.useCallback(
+		(position: HistoryPagePosition) =>
+			historyQueryOptions({
+				address,
+				limit: HISTORY_PAGE_SIZE,
+				order: position.order,
+				cursor: position.cursor,
+				status,
+				include,
+				after,
+			}),
+		[address, after, include, status],
+	)
+
+	const oldestHistoryQuery = useQuery({
+		...getHistoryQueryOptions({
+			order: 'asc',
+		}),
+		enabled:
+			isMounted &&
+			isTransactionsTabActive &&
+			exactHistoryPages !== undefined &&
+			exactHistoryPages > 1,
 	})
 
-	const error = isHistoryPending ? null : historyError
+	const fetchHistoryPage = React.useCallback(
+		async (targetPage: number): Promise<HistoryResponse> => {
+			const fromOldest =
+				exactHistoryPages !== undefined && targetPage > exactHistoryPages / 2
+			let currentPage = fromOldest ? exactHistoryPages : 1
+			let position: HistoryPagePosition = fromOldest
+				? { order: 'asc' }
+				: { order: 'desc' }
 
-	/**
-	 * use initialData until mounted to avoid hydration mismatch
-	 * (tanstack query may have fresher cached data that differs from SSR)
-	 */
-	const historyData = isMounted
-		? historyQueryData
-		: page === 1
-			? initialData
-			: historyQueryData
+			while (currentPage !== targetPage) {
+				const current = await queryClient.fetchQuery(
+					getHistoryQueryOptions(position),
+				)
+				if (!current.nextCursor)
+					return { ...current, transactions: [], nextCursor: null }
+
+				currentPage += fromOldest ? -1 : 1
+				position = {
+					order: position.order,
+					cursor: current.nextCursor,
+				}
+			}
+
+			return queryClient.fetchQuery(getHistoryQueryOptions(position))
+		},
+		[exactHistoryPages, getHistoryQueryOptions, queryClient],
+	)
+
+	const cursorHistoryQuery = useQuery({
+		queryKey: [
+			'account-history-page',
+			address,
+			status ?? 'all',
+			include,
+			after,
+			total ?? 'unknown',
+			countCapped,
+			historyPage,
+		],
+		queryFn: () => fetchHistoryPage(historyPage),
+		staleTime: 10_000,
+		enabled:
+			isMounted &&
+			isTransactionsTabActive &&
+			historyPage > 1 &&
+			!isLastHistoryPage &&
+			latestHistoryData !== undefined,
+	})
+
+	const activeHistoryQuery =
+		historyPage === 1
+			? latestHistoryQuery
+			: isLastHistoryPage
+				? oldestHistoryQuery
+				: cursorHistoryQuery
+	const historyData = activeHistoryQuery.data
+	const error = activeHistoryQuery.isPending ? null : activeHistoryQuery.error
 	const transactions = historyData?.transactions ?? []
-	const hasMore = historyData?.hasMore ?? false
-	const total = historyData?.total
-	const countCapped = historyData?.countCapped ?? false
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
@@ -918,13 +1015,18 @@ function SectionsWrapper(props: {
 		totalBalance: holdersTotalBalance = '0',
 	} = holdersData ?? {}
 
-	// Only use after mount AND when data has loaded to avoid showing 0 during loading
-	const totalTrxCount = isMounted && historyData ? total : undefined
+	// Only use after mount AND when the latest edge has loaded to avoid showing
+	// a stale count while filters change.
+	const totalTrxCount = isMounted && latestHistoryData ? total : undefined
 
 	const isTransactionsLoading =
-		isTransactionsTabActive && !error && (isHistoryPending || !historyData)
+		isTransactionsTabActive &&
+		!error &&
+		(activeHistoryQuery.isPending || !historyData)
 	const isTransactionsFetching =
-		isTransactionsTabActive && isHistoryFetching && !isTransactionsLoading
+		isTransactionsTabActive &&
+		activeHistoryQuery.isFetching &&
+		!isTransactionsLoading
 	const transfersError = isToken ? tokenTransfersError : accountTransfersError
 	const refetchActiveTransfers = isToken
 		? refetchTransfers
@@ -944,49 +1046,24 @@ function SectionsWrapper(props: {
 	const isHoldersFetchingNext =
 		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
 
-	const queryClient = useQueryClient()
-
 	const prefetchTransactionsNextPage = React.useCallback(() => {
 		if (!isTransactionsTabActive) return
 
-		const lastPage =
-			totalTrxCount === undefined || countCapped
-				? undefined
-				: Math.ceil(totalTrxCount / limit)
-		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
-			const nextPage = page + i
-			// Unknown/capped total: only `hasMore` (page+1 exists) is certain;
-			// pages beyond are speculative — the server fn returns empty if past
-			// the window, so warming them is harmless.
-			const hasNextPage =
-				lastPage === undefined ? hasMore : nextPage <= lastPage
-			if (!hasNextPage) break
+		void (async () => {
+			for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
+				const nextPage = historyPage + i
+				if (exactHistoryPages !== undefined && nextPage > exactHistoryPages)
+					break
 
-			void queryClient
-				.prefetchQuery(
-					historyQueryOptions({
-						address,
-						page: nextPage,
-						limit,
-						status,
-						include,
-						after,
-					}),
-				)
-				.catch(() => {})
-		}
+				const next = await fetchHistoryPage(nextPage)
+				if (next.nextCursor === null) break
+			}
+		})().catch(() => {})
 	}, [
-		address,
-		after,
-		countCapped,
-		hasMore,
-		include,
+		exactHistoryPages,
+		fetchHistoryPage,
+		historyPage,
 		isTransactionsTabActive,
-		limit,
-		page,
-		queryClient,
-		status,
-		totalTrxCount,
 	])
 
 	const prefetchTransfersNextPage = React.useCallback(() => {
@@ -1197,21 +1274,12 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex items-center justify-end gap-[8px]">
-							<TransactionFilters
-								status={status}
-								period={period}
-								onStatusChange={onStatusChange}
-								onPeriodChange={onPeriodChange}
-							/>
-							<AddressCsvExportButton
-								address={address}
-								kind="transactions"
-								status={status}
-								include={include}
-								after={after}
-							/>
-						</div>
+						<TransactionFilters
+							status={status}
+							period={period}
+							onStatusChange={onStatusChange}
+							onPeriodChange={onPeriodChange}
+						/>
 					),
 					content: transactionsError ?? (
 						<DataGrid
@@ -1271,17 +1339,22 @@ function SectionsWrapper(props: {
 								})
 							}
 							totalItems={totalTrxCount ?? transactions.length}
-							pages={totalTrxCount === undefined ? { hasMore } : undefined}
+							pages={
+								exactHistoryPages ?? {
+									hasMore: historyData?.nextCursor != null,
+								}
+							}
 							displayCount={totalTrxCount}
 							displayCountCapped={countCapped}
-							page={page}
+							page={historyPage}
 							fetching={isTransactionsFetching}
 							loading={isTransactionsLoading}
 							countLoading={totalTrxCount === undefined}
 							itemsLabel="transactions"
-							itemsPerPage={limit}
+							itemsPerPage={HISTORY_PAGE_SIZE}
 							pagination="simple"
 							onPrefetchNextPage={prefetchTransactionsNextPage}
+							showSimplePageLabel={false}
 							emptyState={
 								status || dir || period
 									? 'No matching transactions found.'
@@ -1296,11 +1369,6 @@ function SectionsWrapper(props: {
 					title: 'Holdings',
 					totalItems: visibleAssets.length,
 					itemsLabel: 'assets',
-					contextual: (
-						<div className="flex justify-end">
-							<AddressCsvExportButton address={address} kind="balances" />
-						</div>
-					),
 					content: (
 						<DataGrid
 							columns={{

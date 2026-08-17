@@ -12,22 +12,12 @@ import {
 	activitiesToKnownEvents,
 	type TransactionActivity,
 } from '#lib/domain/transaction-activities'
-import {
-	buildCsv,
-	createCsvDownloadResponse,
-	createTimestampedCsvFilename,
-} from '#lib/server/csv'
 import { api } from '#lib/server/tempo-api'
 import { getTransactionActivities } from '#lib/server/transaction-activities'
-import { fetchAddressTxExportRows } from '#lib/server/tempo-queries'
-import { resolveTotal } from '#lib/server/token'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 
-export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
-/** The API's positional-pagination window: `page × limit` must stay within. */
-const HISTORY_COUNT_MAX = 10_000
-const CSV_EXPORT_LIMIT = HISTORY_COUNT_MAX
+export const [MAX_LIMIT, DEFAULT_LIMIT] = [5, 5]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
 const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
 
@@ -46,18 +36,17 @@ export type EnrichedTransaction = {
 
 export type HistoryResponse = {
 	transactions: EnrichedTransaction[]
-	total: number
-	page: number
+	total: number | null
 	limit: number
-	hasMore: boolean
+	nextCursor: string | null
 	countCapped: boolean
 	error: null | string
 }
 
 export const RequestParametersSchema = z.object({
-	page: z.prefault(z.coerce.number(), 1),
 	limit: z.prefault(z.coerce.number(), DEFAULT_LIMIT),
 	sort: z.prefault(z.enum(['asc', 'desc']), 'desc'),
+	cursor: z.optional(z.string()),
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	status: z.optional(z.enum(['success', 'reverted'])),
 	after: z.optional(z.coerce.number()),
@@ -268,35 +257,21 @@ export async function fetchAddressHistoryData(params: {
 	const maxLimit = params.maxLimit ?? MAX_LIMIT
 	const includeKnownEvents = params.includeKnownEvents ?? true
 
-	const page = Math.max(
-		1,
-		Number.isFinite(searchParams.page) ? Math.floor(searchParams.page) : 1,
-	)
 	let limit = Number.isFinite(searchParams.limit)
 		? Math.floor(searchParams.limit)
 		: DEFAULT_LIMIT
 	if (limit > maxLimit) throw new Error('Limit is too high')
 	if (limit < 1) limit = 1
 
-	const emptyResponse: HistoryResponse = {
-		transactions: [],
-		total: 0,
-		page,
-		limit,
-		hasMore: false,
-		countCapped: false,
-		error: null,
-	}
-	// Beyond the API's positional window — callers can't reach this via the UI
-	// (totals are clamped page-aligned below), but guard direct requests.
-	if (page * limit > HISTORY_COUNT_MAX) return emptyResponse
-
 	const filters = historyFilters(address, searchParams)
 	const totalKey = JSON.stringify([chainId, filters])
 	const cachedTotal = getCachedHistoryTotal(totalKey)
-	// Direct deep-page requests use the capped fallback until page one warms the
-	// cache; only page one refreshes the exact total.
-	const includeTotal = page === 1 && cachedTotal === undefined
+	// Only the latest edge refreshes the count. The oldest edge is fetched in
+	// parallel with ascending order and reuses the same cached total.
+	const includeTotal =
+		searchParams.cursor === undefined &&
+		searchParams.sort === 'desc' &&
+		cachedTotal === undefined
 	const resultPromise = parseResponse(
 		api.v1.transactions.$get({
 			query: {
@@ -304,7 +279,7 @@ export async function fetchAddressHistoryData(params: {
 				...filters,
 				order: searchParams.sort,
 				limit: String(limit),
-				...(page > 1 ? { page: String(page) } : {}),
+				...(searchParams.cursor ? { cursor: searchParams.cursor } : {}),
 				include: includeTotal ? 'receipt,totalCount' : 'receipt',
 			},
 		}),
@@ -346,133 +321,14 @@ export async function fetchAddressHistoryData(params: {
 			activities: activities[index],
 		}),
 	)
-
-	const { total, totalCapped } = resolveTotal({
-		exactCount: exactTotal?.totalCount,
-		exactCountCapped: exactTotal?.totalCountCapped,
-		page,
-		limit,
-		rows: transactions.length,
-		exhausted: result.nextCursor === null,
-	})
+	if (searchParams.sort === 'asc') transactions.reverse()
 
 	return {
 		transactions,
-		total,
-		page,
+		total: exactTotal?.totalCount ?? null,
 		limit,
-		hasMore: result.nextCursor !== null,
-		countCapped: totalCapped,
+		nextCursor: result.nextCursor,
+		countCapped: exactTotal?.totalCountCapped ?? false,
 		error: null,
 	}
-}
-
-/**
- * Bulk rows for the CSV export in one SQL round-trip (the per-page API walk
- * with embedded receipts is far too slow at the 10k export cap).
- */
-export async function fetchAddressHistoryExportRows(params: {
-	address: Address.Address
-	chainId: number
-	searchParams: HistoryRequestParameters
-}): Promise<ReadonlyArray<EnrichedTransaction>> {
-	const { searchParams } = params
-
-	const rows = await fetchAddressTxExportRows({
-		address: params.address,
-		chainId: params.chainId,
-		includeSent: searchParams.include !== 'received',
-		includeReceived: searchParams.include !== 'sent',
-		status: searchParams.status,
-		after: searchParams.after,
-		sortDirection: searchParams.sort,
-		limit: CSV_EXPORT_LIMIT,
-	})
-
-	return rows.map((row) => ({
-		hash: row.hash,
-		blockNumber: toHexQuantity(row.block_num),
-		timestamp: parseTimestamp(row.block_timestamp) ?? 0,
-		from: Address.checksum(row.from as Address.Address),
-		to: row.to ? Address.checksum(row.to as Address.Address) : null,
-		value: toHexQuantity(row.value),
-		status: row.status === 0 ? 'reverted' : 'success',
-		gasUsed: toHexQuantity(row.gas_used),
-		effectiveGasPrice: toHexQuantity(row.effective_gas_price),
-		knownEvents: [],
-	}))
-}
-
-function hexToDecimalString(value: string | null | undefined): string {
-	if (!value) return ''
-
-	try {
-		return BigInt(value).toString()
-	} catch {
-		return ''
-	}
-}
-
-export function createTransactionsCsvResponse(params: {
-	address: Address.Address
-	transactions: ReadonlyArray<EnrichedTransaction>
-}): Response {
-	const rows: Array<ReadonlyArray<unknown>> = [
-		[
-			'timestamp_iso',
-			'timestamp_unix',
-			'status',
-			'direction',
-			'hash',
-			'block_number',
-			'from',
-			'to',
-			'value_wei',
-			'gas_used',
-			'effective_gas_price_wei',
-			'fee_wei',
-		],
-	]
-
-	for (const transaction of params.transactions) {
-		const gasUsed = hexToDecimalString(transaction.gasUsed)
-		const effectiveGasPrice = hexToDecimalString(transaction.effectiveGasPrice)
-		const feeWei =
-			gasUsed && effectiveGasPrice
-				? (BigInt(gasUsed) * BigInt(effectiveGasPrice)).toString()
-				: ''
-
-		const direction = Address.isEqual(transaction.from, params.address)
-			? transaction.to && Address.isEqual(transaction.to, params.address)
-				? 'self'
-				: 'sent'
-			: transaction.to && Address.isEqual(transaction.to, params.address)
-				? 'received'
-				: 'related'
-
-		rows.push([
-			transaction.timestamp > 0
-				? new Date(transaction.timestamp * 1000).toISOString()
-				: '',
-			transaction.timestamp,
-			transaction.status,
-			direction,
-			transaction.hash,
-			hexToDecimalString(transaction.blockNumber),
-			transaction.from,
-			transaction.to,
-			hexToDecimalString(transaction.value),
-			gasUsed,
-			effectiveGasPrice,
-			feeWei,
-		])
-	}
-
-	return createCsvDownloadResponse({
-		csv: buildCsv(rows),
-		filename: createTimestampedCsvFilename('transactions', params.address),
-		headers: {
-			'X-Tempo-Export-Row-Limit': String(CSV_EXPORT_LIMIT),
-		},
-	})
 }

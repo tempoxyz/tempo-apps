@@ -8,10 +8,9 @@ export type { HistoryResponse }
 
 const HistoryResponseSchema = z.object({
 	transactions: z.array(z.any()),
-	total: z.number(),
-	page: z.number(),
+	total: z.nullable(z.number()),
 	limit: z.number(),
-	hasMore: z.boolean(),
+	nextCursor: z.nullable(z.string()),
 	countCapped: z.boolean(),
 	error: z.union([z.string(), z.null()]),
 })
@@ -21,8 +20,9 @@ const HistoryErrorResponseSchema = z.object({
 })
 
 export function historyQueryOptions(params: {
-	page: number
 	limit: number
+	cursor?: string | undefined
+	order?: 'asc' | 'desc' | undefined
 	include?: 'all' | 'sent' | 'received' | undefined
 	after?: number | undefined
 	address: Address.Address
@@ -31,8 +31,9 @@ export function historyQueryOptions(params: {
 	const searchParams = new URLSearchParams({
 		include: params?.include ?? 'all',
 		limit: params.limit.toString(),
-		page: params.page.toString(),
+		sort: params.order ?? 'desc',
 	})
+	if (params.cursor) searchParams.set('cursor', params.cursor)
 	if (params.status) {
 		searchParams.set('status', params.status)
 	}
@@ -43,8 +44,9 @@ export function historyQueryOptions(params: {
 		queryKey: [
 			'account-history',
 			params.address,
-			params.page,
 			params.limit,
+			params.order ?? 'desc',
+			params.cursor ?? 'head',
 			params.include ?? 'all',
 			params.after,
 			params.status ?? 'all',
@@ -65,10 +67,9 @@ export function historyQueryOptions(params: {
 
 			return {
 				transactions: [],
-				total: 0,
-				page: params.page,
+				total: null,
 				limit: params.limit,
-				hasMore: false,
+				nextCursor: null,
 				countCapped: false,
 				error: `Failed to load transaction history: ${z.prettifyError(parsed.error)}`,
 			}

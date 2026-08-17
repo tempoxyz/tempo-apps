@@ -6,9 +6,7 @@ import { getRequestURL } from '#lib/env'
 import {
 	MAX_LIMIT,
 	RequestParametersSchema,
-	createTransactionsCsvResponse,
 	fetchAddressHistoryData,
-	fetchAddressHistoryExportRows,
 	type HistoryResponse,
 } from '#lib/server/address-history'
 import { zAddress } from '#lib/zod'
@@ -28,7 +26,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const url = getRequestURL()
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
-					const isCsvExport = url.searchParams.get('format') === 'csv'
 
 					const parseParams = RequestParametersSchema.safeParse(
 						Object.fromEntries(url.searchParams),
@@ -41,17 +38,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
-					if (isCsvExport) {
-						const transactions = await fetchAddressHistoryExportRows({
-							address,
-							chainId,
-							searchParams: parseParams.data,
-						})
-						return createTransactionsCsvResponse({
-							address,
-							transactions,
-						})
-					}
 					const history = await fetchAddressHistoryData({
 						address,
 						chainId,

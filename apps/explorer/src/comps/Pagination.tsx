@@ -247,6 +247,7 @@ export namespace Pagination {
 			disableLastPage,
 			onPrefetchNext,
 			onCancelPrefetchNext,
+			showPageLabel = true,
 		} = props
 		const isIndefinite = typeof pages !== 'number'
 
@@ -306,13 +307,15 @@ export namespace Pagination {
 				>
 					<ChevronLeft className="size-[14px]" />
 				</Link>
-				<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
-					<span className={cx('text-primary', fetching && 'opacity-50')}>
-						{Pagination.numFormat.format(page)}
+				{showPageLabel && (
+					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+						<span className={cx('text-primary', fetching && 'opacity-50')}>
+							{Pagination.numFormat.format(page)}
+						</span>
+						{' of '}
+						{totalPagesLabel}
 					</span>
-					{' of '}
-					{totalPagesLabel}
-				</span>
+				)}
 				<Link
 					to="."
 					resetScroll={false}
@@ -363,6 +366,7 @@ export namespace Pagination {
 			disableLastPage?: boolean
 			onPrefetchNext?: () => void
 			onCancelPrefetchNext?: () => void
+			showPageLabel?: boolean | undefined
 		}
 	}
 

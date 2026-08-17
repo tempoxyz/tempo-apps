@@ -1,5 +1,5 @@
 import type { Address, Hex } from 'ox'
-import { tempoQueryBuilder, tidx } from '#lib/server/tempo-queries-provider'
+import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
@@ -154,67 +154,6 @@ export async function fetchContractCreationReceipt(
 		.orderBy('block_num', 'asc')
 		.limit(1)
 		.executeTakeFirst()) as ContractCreationReceiptRow | undefined
-}
-
-export type AddressTxExportRow = {
-	hash: Hex.Hex
-	from: string
-	to: string | null
-	value: unknown
-	block_num: unknown
-	block_timestamp: unknown
-	status: number | null
-	gas_used: unknown
-	effective_gas_price: unknown
-}
-
-/**
- * Bulk transaction rows (with receipt status/gas joined) for the CSV export,
- * in one round-trip. Sent/received ride separate `UNION ALL` branches because
- * tidx rejects `OR` filters combined with `ORDER BY`/`LIMIT`; `DISTINCT`
- * collapses self-sends that match both branches.
- */
-export async function fetchAddressTxExportRows(params: {
-	address: Address.Address
-	chainId: number
-	includeSent: boolean
-	includeReceived: boolean
-	status?: 'success' | 'reverted' | undefined
-	after?: number | undefined
-	sortDirection: SortDirection
-	limit: number
-}): Promise<AddressTxExportRow[]> {
-	const address = indexedAddress(params.address)
-	const direction = params.sortDirection === 'asc' ? 'ASC' : 'DESC'
-	const limit = Math.floor(params.limit)
-
-	const conditions: string[] = []
-	if (params.status !== undefined)
-		conditions.push(`r.status = ${params.status === 'reverted' ? 0 : 1}`)
-	if (params.after !== undefined)
-		conditions.push(
-			`t.block_timestamp >= '${new Date(params.after * 1000).toISOString()}'`,
-		)
-	const extra = conditions.length > 0 ? ` AND ${conditions.join(' AND ')}` : ''
-
-	const select = `SELECT t.hash, t."from", t."to", t.value, t.block_num, t.block_timestamp, r.status, r.gas_used, r.effective_gas_price
-		FROM txs t LEFT JOIN receipts r ON r.tx_hash = t.hash`
-	const branch = (field: 'from' | 'to') =>
-		`(${select} WHERE t."${field}" = '${address}'${extra} ORDER BY t.block_num ${direction} LIMIT ${limit})`
-
-	const branches: string[] = []
-	if (params.includeSent) branches.push(branch('from'))
-	if (params.includeReceived) branches.push(branch('to'))
-	if (branches.length === 0) return []
-
-	const query =
-		branches.length === 1
-			? branches[0].slice(1, -1)
-			: `SELECT DISTINCT * FROM (${branches.join(' UNION ALL ')}) combined
-				ORDER BY block_num ${direction} LIMIT ${limit}`
-
-	const result = await tidx.fetch({ chainId: params.chainId, query })
-	return result.rows as unknown as AddressTxExportRow[]
 }
 
 export type { SortDirection }
