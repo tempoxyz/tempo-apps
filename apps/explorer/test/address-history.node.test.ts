@@ -107,7 +107,7 @@ describe('toEnrichedTransaction', () => {
 })
 
 describe('fetchAddressHistoryData', () => {
-	it('rejects page sizes above 5', async () => {
+	it('rejects page sizes above 10', async () => {
 		await expect(
 			fetchAddressHistoryData({
 				address: '0x1111111111111111111111111111111111111111',
@@ -115,7 +115,7 @@ describe('fetchAddressHistoryData', () => {
 				includeKnownEvents: false,
 				searchParams: {
 					include: 'all',
-					limit: 6,
+					limit: 11,
 					sort: 'desc',
 				},
 			}),
@@ -147,7 +147,7 @@ describe('fetchAddressHistoryData', () => {
 			includeKnownEvents: false,
 			searchParams: {
 				include: 'all' as const,
-				limit: 5,
+				limit: 10,
 				sort: 'desc' as const,
 			},
 		}
@@ -174,7 +174,7 @@ describe('fetchAddressHistoryData', () => {
 				address: params.address,
 				chainId: '4217',
 				include: 'receipt,totalCount',
-				limit: '5',
+				limit: '10',
 				order: 'desc',
 			},
 		})
@@ -184,7 +184,7 @@ describe('fetchAddressHistoryData', () => {
 				chainId: '4217',
 				cursor: 'cursor-1',
 				include: 'receipt',
-				limit: '5',
+				limit: '10',
 				order: 'desc',
 			},
 		})
@@ -217,14 +217,14 @@ describe('fetchAddressHistoryData', () => {
 				includeKnownEvents: false,
 				searchParams: {
 					include: 'all',
-					limit: 5,
+					limit: 10,
 					sort: 'asc',
 				},
 			}),
 		).resolves.toEqual({
 			countCapped: false,
 			error: null,
-			limit: 5,
+			limit: 10,
 			nextCursor: 'toward-head',
 			total: null,
 			transactions: [
@@ -239,7 +239,7 @@ describe('fetchAddressHistoryData', () => {
 				address: '0x2222222222222222222222222222222222222222',
 				chainId: '4217',
 				include: 'receipt',
-				limit: '5',
+				limit: '10',
 				order: 'asc',
 			},
 		})

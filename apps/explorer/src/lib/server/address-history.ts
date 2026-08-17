@@ -17,7 +17,7 @@ import { getTransactionActivities } from '#lib/server/transaction-activities'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 
-export const [MAX_LIMIT, DEFAULT_LIMIT] = [5, 5]
+export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
 const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
 

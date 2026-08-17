@@ -115,7 +115,7 @@ const defaultSearchValues = {
 } as const
 
 const ASSETS_PER_PAGE = 10
-const HISTORY_PAGE_SIZE = 5
+const HISTORY_PAGE_SIZE = 10
 
 const allTabs = [
 	'transactions',
