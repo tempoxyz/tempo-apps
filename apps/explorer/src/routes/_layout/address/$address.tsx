@@ -929,10 +929,6 @@ function SectionsWrapper(props: {
 	const historyData = activeHistoryQuery.data
 	const error = activeHistoryQuery.isPending ? null : activeHistoryQuery.error
 	const transactions = historyData?.transactions ?? []
-	const historyNavigation = getHistoryNavigation(
-		{ order: historyOrder, cursor },
-		historyData,
-	)
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
@@ -1033,25 +1029,23 @@ function SectionsWrapper(props: {
 	const isHoldersFetchingNext =
 		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
 
-	const prefetchTransactionsNextPage = React.useCallback(() => {
-		if (!isTransactionsTabActive || !historyNavigation.next) return
+	const prefetchTransactionPages = React.useCallback(
+		(initialPosition: HistoryPosition) => {
+			if (!isTransactionsTabActive) return
 
-		void (async (initialPosition: HistoryPosition) => {
-			let position = initialPosition
-			for (let i = 0; i < PREFETCH_PAGE_COUNT; i++) {
-				const next = await queryClient.fetchQuery(
-					getHistoryQueryOptions(position),
-				)
-				if (!next.nextCursor) break
-				position = { order: position.order, cursor: next.nextCursor }
-			}
-		})(historyNavigation.next).catch(() => {})
-	}, [
-		getHistoryQueryOptions,
-		historyNavigation.next,
-		isTransactionsTabActive,
-		queryClient,
-	])
+			void (async () => {
+				let position = initialPosition
+				for (let i = 0; i < PREFETCH_PAGE_COUNT; i++) {
+					const next = await queryClient.fetchQuery(
+						getHistoryQueryOptions(position),
+					)
+					if (!next.nextCursor) break
+					position = { order: position.order, cursor: next.nextCursor }
+				}
+			})().catch(() => {})
+		},
+		[getHistoryQueryOptions, isTransactionsTabActive, queryClient],
+	)
 
 	const prefetchTransfersNextPage = React.useCallback(() => {
 		if (!isToken || !isTransfersTabActive) return
@@ -1336,7 +1330,7 @@ function SectionsWrapper(props: {
 									<HistoryPagination
 										position={{ order: historyOrder, cursor }}
 										data={historyData}
-										onPrefetchNext={prefetchTransactionsNextPage}
+										onPrefetch={prefetchTransactionPages}
 									/>
 									<Pagination.Count
 										totalItems={totalTrxCount ?? 0}
@@ -2005,10 +1999,12 @@ function AssetValue(props: { asset: AssetData }) {
 function HistoryPagination(props: {
 	position: HistoryPosition
 	data: HistoryResponse | undefined
-	onPrefetchNext: () => void
+	onPrefetch: (position: HistoryPosition) => void
 }) {
-	const { position, data, onPrefetchNext } = props
+	const { position, data, onPrefetch } = props
 	const navigation = getHistoryNavigation(position, data)
+	const previousRef = useHistoryPrefetchRef(navigation.previous, onPrefetch)
+	const nextRef = useHistoryPrefetchRef(navigation.next, onPrefetch)
 	const isFirst = position.order === 'desc' && position.cursor === undefined
 	const isLast = position.order === 'asc' && position.cursor === undefined
 	const isOnlyPage = position.cursor === undefined && data?.nextCursor === null
@@ -2034,7 +2030,9 @@ function HistoryPagination(props: {
 				<ChevronFirst className="size-[14px]" />
 			</Link>
 			<Link
+				ref={previousRef}
 				to="."
+				preload="viewport"
 				resetScroll={false}
 				search={(previous) => ({
 					...previous,
@@ -2049,7 +2047,9 @@ function HistoryPagination(props: {
 				<ChevronLeft className="size-[14px]" />
 			</Link>
 			<Link
+				ref={nextRef}
 				to="."
+				preload="viewport"
 				resetScroll={false}
 				search={(previous) => ({
 					...previous,
@@ -2057,8 +2057,6 @@ function HistoryPagination(props: {
 					cursor: navigation.next?.cursor,
 					order: navigation.next?.order,
 				})}
-				onMouseEnter={() => navigation.next && onPrefetchNext()}
-				onFocus={() => navigation.next && onPrefetchNext()}
 				disabled={!navigation.next}
 				className={buttonClass}
 				title="Next page"
@@ -2082,6 +2080,30 @@ function HistoryPagination(props: {
 			</Link>
 		</div>
 	)
+}
+
+function useHistoryPrefetchRef(
+	position: HistoryPosition | undefined,
+	onPrefetch: (position: HistoryPosition) => void,
+): React.RefObject<HTMLAnchorElement | null> {
+	const ref = React.useRef<HTMLAnchorElement>(null)
+	const order = position?.order
+	const cursor = position?.cursor
+
+	React.useEffect(() => {
+		const element = ref.current
+		if (!element || !order) return
+
+		const observer = new IntersectionObserver(([entry]) => {
+			if (!entry?.isIntersecting) return
+			onPrefetch({ order, cursor })
+			observer.disconnect()
+		})
+		observer.observe(element)
+		return () => observer.disconnect()
+	}, [cursor, onPrefetch, order])
+
+	return ref
 }
 
 function HoldingsFooter(props: {
