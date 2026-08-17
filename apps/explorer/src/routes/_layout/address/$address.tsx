@@ -134,6 +134,13 @@ type HistoryPosition = {
 	cursor?: string | undefined
 }
 
+function getHistoryStatePage(state: object): number | undefined {
+	if (!('addressHistoryPage' in state)) return undefined
+	return typeof state.addressHistoryPage === 'number'
+		? state.addressHistoryPage
+		: undefined
+}
+
 function getHistoryNavigation(
 	position: HistoryPosition,
 	data: HistoryResponse | undefined,
@@ -1001,6 +1008,10 @@ function SectionsWrapper(props: {
 	// Only use after mount AND when the latest edge has loaded to avoid showing
 	// a stale count while filters change.
 	const totalTrxCount = isMounted && latestHistoryData ? total : undefined
+	const historyPageCount =
+		totalTrxCount === undefined
+			? undefined
+			: Math.max(1, Math.ceil(totalTrxCount / HISTORY_PAGE_SIZE))
 
 	const isTransactionsLoading =
 		isTransactionsTabActive &&
@@ -1330,6 +1341,8 @@ function SectionsWrapper(props: {
 									<HistoryPagination
 										position={{ order: historyOrder, cursor }}
 										data={historyData}
+										pageCount={historyPageCount}
+										pageCountCapped={countCapped}
 										onPrefetch={prefetchTransactionPages}
 									/>
 									<Pagination.Count
@@ -1999,15 +2012,23 @@ function AssetValue(props: { asset: AssetData }) {
 function HistoryPagination(props: {
 	position: HistoryPosition
 	data: HistoryResponse | undefined
+	pageCount: number | undefined
+	pageCountCapped: boolean
 	onPrefetch: (position: HistoryPosition) => void
 }) {
-	const { position, data, onPrefetch } = props
+	const { position, data, pageCount, pageCountCapped, onPrefetch } = props
+	const location = useLocation()
 	const navigation = getHistoryNavigation(position, data)
 	const previousRef = useHistoryPrefetchRef(navigation.previous, onPrefetch)
 	const nextRef = useHistoryPrefetchRef(navigation.next, onPrefetch)
 	const isFirst = position.order === 'desc' && position.cursor === undefined
 	const isLast = position.order === 'asc' && position.cursor === undefined
 	const isOnlyPage = position.cursor === undefined && data?.nextCursor === null
+	const currentPage = isFirst
+		? 1
+		: isLast && !pageCountCapped
+			? pageCount
+			: getHistoryStatePage(location.state)
 	const buttonClass = cx(
 		'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 	)
@@ -2022,6 +2043,10 @@ function HistoryPagination(props: {
 					page: 1,
 					cursor: undefined,
 					order: 'desc',
+				})}
+				state={(previous) => ({
+					...previous,
+					addressHistoryPage: 1,
 				})}
 				disabled={isFirst || isOnlyPage}
 				className={buttonClass}
@@ -2040,12 +2065,35 @@ function HistoryPagination(props: {
 					cursor: navigation.previous?.cursor,
 					order: navigation.previous?.order,
 				})}
+				state={(previous) => ({
+					...previous,
+					addressHistoryPage:
+						currentPage === undefined
+							? undefined
+							: Math.max(1, currentPage - 1),
+				})}
 				disabled={!navigation.previous}
 				className={buttonClass}
 				title="Previous page"
 			>
 				<ChevronLeft className="size-[14px]" />
 			</Link>
+			<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+				<span className="text-primary">
+					{currentPage === undefined
+						? '?'
+						: Pagination.numFormat.format(currentPage)}
+				</span>
+				{' of '}
+				{pageCount === undefined ? (
+					'…'
+				) : (
+					<>
+						{pageCountCapped && '> '}
+						{Pagination.numFormat.format(pageCount)}
+					</>
+				)}
+			</span>
 			<Link
 				ref={nextRef}
 				to="."
@@ -2056,6 +2104,11 @@ function HistoryPagination(props: {
 					page: 1,
 					cursor: navigation.next?.cursor,
 					order: navigation.next?.order,
+				})}
+				state={(previous) => ({
+					...previous,
+					addressHistoryPage:
+						currentPage === undefined ? undefined : currentPage + 1,
 				})}
 				disabled={!navigation.next}
 				className={buttonClass}
@@ -2071,6 +2124,10 @@ function HistoryPagination(props: {
 					page: 1,
 					cursor: undefined,
 					order: 'asc',
+				})}
+				state={(previous) => ({
+					...previous,
+					addressHistoryPage: pageCountCapped ? undefined : pageCount,
 				})}
 				disabled={isLast || isOnlyPage}
 				className={buttonClass}
