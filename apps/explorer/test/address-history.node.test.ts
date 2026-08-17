@@ -226,6 +226,7 @@ describe('fetchAddressHistoryData', () => {
 			error: null,
 			limit: 10,
 			nextCursor: 'toward-head',
+			reverseCursor: 'WzEsMF0=',
 			total: null,
 			transactions: [
 				expect.objectContaining({ hash: olderHash }),

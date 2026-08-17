@@ -129,9 +129,38 @@ const allTabs = [
 
 type TabValue = (typeof allTabs)[number]
 
-type HistoryPagePosition = {
+type HistoryPosition = {
 	order: 'asc' | 'desc'
 	cursor?: string | undefined
+}
+
+function getHistoryNavigation(
+	position: HistoryPosition,
+	data: HistoryResponse | undefined,
+): { previous?: HistoryPosition; next?: HistoryPosition } {
+	if (!data) return {}
+
+	if (position.order === 'desc') {
+		return {
+			previous:
+				position.cursor && data.reverseCursor
+					? { order: 'asc', cursor: data.reverseCursor }
+					: undefined,
+			next: data.nextCursor
+				? { order: 'desc', cursor: data.nextCursor }
+				: undefined,
+		}
+	}
+
+	return {
+		previous: data.nextCursor
+			? { order: 'asc', cursor: data.nextCursor }
+			: undefined,
+		next:
+			position.cursor && data.reverseCursor
+				? { order: 'desc', cursor: data.reverseCursor }
+				: undefined,
+	}
 }
 
 const TabSchema = z.prefault(
@@ -151,11 +180,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	beforeLoad: ({ params, search }) => {
 		const normalized = normalizeSearchInput(params.address)
-		if (normalized !== params.address) {
+		const page = search.tab === 'transactions' ? 1 : search.page
+		if (normalized !== params.address || page !== search.page) {
 			throw redirect({
 				to: '/address/$address',
 				params: { address: normalized },
-				search,
+				search: { ...search, page },
 			})
 		}
 	},
@@ -168,6 +198,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	),
 	validateSearch: z.object({
 		page: z.prefault(z.number(), defaultSearchValues.page),
+		cursor: z.optional(z.string()),
+		order: z.optional(z.enum(['asc', 'desc'])),
 		limit: z.prefault(
 			z.pipe(
 				z.number(),
@@ -396,7 +428,8 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit, status, dir, period } = Route.useSearch()
+	const { page, cursor, order, tab, live, limit, status, dir, period } =
+		Route.useSearch()
 	const {
 		accountType,
 		isToken,
@@ -473,7 +506,13 @@ function RouteComponent() {
 			const newTab = visibleTabs[newIndex] ?? 'transactions'
 			navigate({
 				to: '.',
-				search: (prev) => ({ ...prev, page: 1, tab: newTab }),
+				search: (prev) => ({
+					...prev,
+					page: 1,
+					cursor: undefined,
+					order: newTab === 'transactions' ? 'desc' : undefined,
+					tab: newTab,
+				}),
 				resetScroll: false,
 			})
 		},
@@ -484,7 +523,13 @@ function RouteComponent() {
 		(newStatus: 'success' | 'reverted' | undefined) => {
 			navigate({
 				to: '.',
-				search: (prev) => ({ ...prev, page: 1, status: newStatus }),
+				search: (prev) => ({
+					...prev,
+					page: 1,
+					cursor: undefined,
+					order: 'desc',
+					status: newStatus,
+				}),
 				resetScroll: false,
 			})
 		},
@@ -495,7 +540,13 @@ function RouteComponent() {
 		(newPeriod: '24h' | '7d' | undefined) => {
 			navigate({
 				to: '.',
-				search: (prev) => ({ ...prev, page: 1, period: newPeriod }),
+				search: (prev) => ({
+					...prev,
+					page: 1,
+					cursor: undefined,
+					order: 'desc',
+					period: newPeriod,
+				}),
 				resetScroll: false,
 			})
 		},
@@ -603,6 +654,8 @@ function RouteComponent() {
 			<SectionsWrapper
 				address={address}
 				page={page}
+				cursor={cursor}
+				order={order}
 				limit={limit}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
@@ -712,6 +765,8 @@ function AccountCardWithTimestamps(props: {
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
+	cursor?: string | undefined
+	order?: 'asc' | 'desc' | undefined
 	limit: number
 	activeSection: number
 	onSectionChange: (index: number) => void
@@ -735,6 +790,8 @@ function SectionsWrapper(props: {
 	const {
 		address,
 		page,
+		cursor,
+		order,
 		limit,
 		activeSection,
 		onSectionChange,
@@ -774,7 +831,6 @@ function SectionsWrapper(props: {
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
 	const isContractTabActive = visibleTabs[activeSection] === 'contract'
-	const navigate = useNavigate()
 	const queryClient = useQueryClient()
 
 	// Fetch readable source first so highlighting never delays contract data.
@@ -822,6 +878,24 @@ function SectionsWrapper(props: {
 			extractedAbiQuery.isLoading ||
 			extractedAbiQuery.isFetching)
 
+	const historyOrder = order ?? 'desc'
+	const isLatestHistoryPosition =
+		historyOrder === 'desc' && cursor === undefined
+
+	const getHistoryQueryOptions = React.useCallback(
+		(position: HistoryPosition) =>
+			historyQueryOptions({
+				address,
+				limit: HISTORY_PAGE_SIZE,
+				order: position.order,
+				cursor: position.cursor,
+				status,
+				include,
+				after,
+			}),
+		[address, after, include, status],
+	)
+
 	const latestHistoryQuery = useQuery({
 		...historyQueryOptions({
 			address,
@@ -835,117 +909,30 @@ function SectionsWrapper(props: {
 		enabled:
 			isMounted && (isTransactionsTabActive || initialData !== undefined),
 		refetchInterval:
-			live && isTransactionsTabActive && page === 1 ? 4_000 : false,
-		refetchOnWindowFocus: live && isTransactionsTabActive && page === 1,
+			live && isTransactionsTabActive && isLatestHistoryPosition
+				? 4_000
+				: false,
+		refetchOnWindowFocus:
+			live && isTransactionsTabActive && isLatestHistoryPosition,
 	})
 	const latestHistoryData = latestHistoryQuery.data
 	const total = latestHistoryData?.total ?? undefined
 	const countCapped = latestHistoryData?.countCapped ?? false
-	const exactHistoryPages =
-		total !== undefined && !countCapped
-			? Math.max(1, Math.ceil(total / HISTORY_PAGE_SIZE))
-			: undefined
-	const historyPage = exactHistoryPages
-		? Math.min(Math.max(1, page), exactHistoryPages)
-		: Math.max(1, page)
-	const isLastHistoryPage =
-		exactHistoryPages !== undefined &&
-		historyPage === exactHistoryPages &&
-		historyPage > 1
-
-	React.useEffect(() => {
-		if (!isTransactionsTabActive || page === historyPage) return
-		navigate({
-			to: '.',
-			search: (previous) => ({ ...previous, page: historyPage }),
-			replace: true,
-			resetScroll: false,
-		})
-	}, [historyPage, isTransactionsTabActive, navigate, page])
-
-	const getHistoryQueryOptions = React.useCallback(
-		(position: HistoryPagePosition) =>
-			historyQueryOptions({
-				address,
-				limit: HISTORY_PAGE_SIZE,
-				order: position.order,
-				cursor: position.cursor,
-				status,
-				include,
-				after,
-			}),
-		[address, after, include, status],
-	)
-
-	const oldestHistoryQuery = useQuery({
-		...getHistoryQueryOptions({
-			order: 'asc',
-		}),
-		enabled:
-			isMounted &&
-			isTransactionsTabActive &&
-			exactHistoryPages !== undefined &&
-			exactHistoryPages > 1,
+	const selectedHistoryQuery = useQuery({
+		...getHistoryQueryOptions({ order: historyOrder, cursor }),
+		enabled: isMounted && isTransactionsTabActive && !isLatestHistoryPosition,
 	})
 
-	const fetchHistoryPage = React.useCallback(
-		async (targetPage: number): Promise<HistoryResponse> => {
-			const fromOldest =
-				exactHistoryPages !== undefined && targetPage > exactHistoryPages / 2
-			let currentPage = fromOldest ? exactHistoryPages : 1
-			let position: HistoryPagePosition = fromOldest
-				? { order: 'asc' }
-				: { order: 'desc' }
-
-			while (currentPage !== targetPage) {
-				const current = await queryClient.fetchQuery(
-					getHistoryQueryOptions(position),
-				)
-				if (!current.nextCursor)
-					return { ...current, transactions: [], nextCursor: null }
-
-				currentPage += fromOldest ? -1 : 1
-				position = {
-					order: position.order,
-					cursor: current.nextCursor,
-				}
-			}
-
-			return queryClient.fetchQuery(getHistoryQueryOptions(position))
-		},
-		[exactHistoryPages, getHistoryQueryOptions, queryClient],
-	)
-
-	const cursorHistoryQuery = useQuery({
-		queryKey: [
-			'account-history-page',
-			address,
-			status ?? 'all',
-			include,
-			after,
-			total ?? 'unknown',
-			countCapped,
-			historyPage,
-		],
-		queryFn: () => fetchHistoryPage(historyPage),
-		staleTime: 10_000,
-		enabled:
-			isMounted &&
-			isTransactionsTabActive &&
-			historyPage > 1 &&
-			!isLastHistoryPage &&
-			latestHistoryData !== undefined,
-	})
-
-	const activeHistoryQuery =
-		historyPage === 1
-			? latestHistoryQuery
-			: isLastHistoryPage
-				? oldestHistoryQuery
-				: cursorHistoryQuery
+	const activeHistoryQuery = isLatestHistoryPosition
+		? latestHistoryQuery
+		: selectedHistoryQuery
 	const historyData = activeHistoryQuery.data
 	const error = activeHistoryQuery.isPending ? null : activeHistoryQuery.error
 	const transactions = historyData?.transactions ?? []
+	const historyNavigation = getHistoryNavigation(
+		{ order: historyOrder, cursor },
+		historyData,
+	)
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
@@ -1047,23 +1034,23 @@ function SectionsWrapper(props: {
 		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
 
 	const prefetchTransactionsNextPage = React.useCallback(() => {
-		if (!isTransactionsTabActive) return
+		if (!isTransactionsTabActive || !historyNavigation.next) return
 
-		void (async () => {
-			for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
-				const nextPage = historyPage + i
-				if (exactHistoryPages !== undefined && nextPage > exactHistoryPages)
-					break
-
-				const next = await fetchHistoryPage(nextPage)
-				if (next.nextCursor === null) break
+		void (async (initialPosition: HistoryPosition) => {
+			let position = initialPosition
+			for (let i = 0; i < PREFETCH_PAGE_COUNT; i++) {
+				const next = await queryClient.fetchQuery(
+					getHistoryQueryOptions(position),
+				)
+				if (!next.nextCursor) break
+				position = { order: position.order, cursor: next.nextCursor }
 			}
-		})().catch(() => {})
+		})(historyNavigation.next).catch(() => {})
 	}, [
-		exactHistoryPages,
-		fetchHistoryPage,
-		historyPage,
+		getHistoryQueryOptions,
+		historyNavigation.next,
 		isTransactionsTabActive,
+		queryClient,
 	])
 
 	const prefetchTransfersNextPage = React.useCallback(() => {
@@ -1339,22 +1326,26 @@ function SectionsWrapper(props: {
 								})
 							}
 							totalItems={totalTrxCount ?? transactions.length}
-							pages={
-								exactHistoryPages ?? {
-									hasMore: historyData?.nextCursor != null,
-								}
-							}
-							displayCount={totalTrxCount}
-							displayCountCapped={countCapped}
-							page={historyPage}
+							page={1}
 							fetching={isTransactionsFetching}
 							loading={isTransactionsLoading}
-							countLoading={totalTrxCount === undefined}
 							itemsLabel="transactions"
 							itemsPerPage={HISTORY_PAGE_SIZE}
-							pagination="simple"
-							onPrefetchNextPage={prefetchTransactionsNextPage}
-							showSimplePageLabel={false}
+							pagination={
+								<div className="flex flex-col items-center sm:flex-row gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary sm:justify-between">
+									<HistoryPagination
+										position={{ order: historyOrder, cursor }}
+										data={historyData}
+										onPrefetchNext={prefetchTransactionsNextPage}
+									/>
+									<Pagination.Count
+										totalItems={totalTrxCount ?? 0}
+										itemsLabel="transactions"
+										loading={totalTrxCount === undefined}
+										capped={countCapped}
+									/>
+								</div>
+							}
 							emptyState={
 								status || dir || period
 									? 'No matching transactions found.'
@@ -2008,6 +1999,88 @@ function AssetValue(props: { asset: AssetData }) {
 				format: 'short',
 			})}
 		</span>
+	)
+}
+
+function HistoryPagination(props: {
+	position: HistoryPosition
+	data: HistoryResponse | undefined
+	onPrefetchNext: () => void
+}) {
+	const { position, data, onPrefetchNext } = props
+	const navigation = getHistoryNavigation(position, data)
+	const isFirst = position.order === 'desc' && position.cursor === undefined
+	const isLast = position.order === 'asc' && position.cursor === undefined
+	const isOnlyPage = position.cursor === undefined && data?.nextCursor === null
+	const buttonClass = cx(
+		'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+	)
+
+	return (
+		<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+			<Link
+				to="."
+				resetScroll={false}
+				search={(previous) => ({
+					...previous,
+					page: 1,
+					cursor: undefined,
+					order: 'desc',
+				})}
+				disabled={isFirst || isOnlyPage}
+				className={buttonClass}
+				title="First page"
+			>
+				<ChevronFirst className="size-[14px]" />
+			</Link>
+			<Link
+				to="."
+				resetScroll={false}
+				search={(previous) => ({
+					...previous,
+					page: 1,
+					cursor: navigation.previous?.cursor,
+					order: navigation.previous?.order,
+				})}
+				disabled={!navigation.previous}
+				className={buttonClass}
+				title="Previous page"
+			>
+				<ChevronLeft className="size-[14px]" />
+			</Link>
+			<Link
+				to="."
+				resetScroll={false}
+				search={(previous) => ({
+					...previous,
+					page: 1,
+					cursor: navigation.next?.cursor,
+					order: navigation.next?.order,
+				})}
+				onMouseEnter={() => navigation.next && onPrefetchNext()}
+				onFocus={() => navigation.next && onPrefetchNext()}
+				disabled={!navigation.next}
+				className={buttonClass}
+				title="Next page"
+			>
+				<ChevronRight className="size-[14px]" />
+			</Link>
+			<Link
+				to="."
+				resetScroll={false}
+				search={(previous) => ({
+					...previous,
+					page: 1,
+					cursor: undefined,
+					order: 'asc',
+				})}
+				disabled={isLast || isOnlyPage}
+				className={buttonClass}
+				title="Last page"
+			>
+				<ChevronLast className="size-[14px]" />
+			</Link>
+		</div>
 	)
 }
 

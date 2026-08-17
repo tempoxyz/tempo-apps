@@ -11,6 +11,7 @@ const HistoryResponseSchema = z.object({
 	total: z.nullable(z.number()),
 	limit: z.number(),
 	nextCursor: z.nullable(z.string()),
+	reverseCursor: z.nullable(z.string()),
 	countCapped: z.boolean(),
 	error: z.union([z.string(), z.null()]),
 })
@@ -70,6 +71,7 @@ export function historyQueryOptions(params: {
 				total: null,
 				limit: params.limit,
 				nextCursor: null,
+				reverseCursor: null,
 				countCapped: false,
 				error: `Failed to load transaction history: ${z.prettifyError(parsed.error)}`,
 			}

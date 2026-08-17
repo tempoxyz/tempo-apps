@@ -39,6 +39,7 @@ export type HistoryResponse = {
 	total: number | null
 	limit: number
 	nextCursor: string | null
+	reverseCursor: string | null
 	countCapped: boolean
 	error: null | string
 }
@@ -152,6 +153,13 @@ function toHexQuantity(value: unknown): Hex.Hex {
 		}
 	}
 	return '0x0'
+}
+
+function transactionCursor(row: TransactionRow): string {
+	// Tempo transaction cursors encode the block and transaction index boundary.
+	return btoa(
+		JSON.stringify([Number(row.blockNumber), Number(row.transactionIndex)]),
+	)
 }
 
 /**
@@ -328,6 +336,7 @@ export async function fetchAddressHistoryData(params: {
 		total: exactTotal?.totalCount ?? null,
 		limit,
 		nextCursor: result.nextCursor,
+		reverseCursor: result.data[0] ? transactionCursor(result.data[0]) : null,
 		countCapped: exactTotal?.totalCountCapped ?? false,
 		error: null,
 	}
