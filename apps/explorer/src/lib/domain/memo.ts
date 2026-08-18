@@ -22,18 +22,13 @@ export function decodeMemoForDisplay(memo: Hex.Hex): string | undefined {
 	if (isMppAttributionMemo(memo)) return undefined
 
 	const bytes = OxHex.toBytes(memo)
+	const displayBytes = bytes.filter((byte) => byte !== 0)
 
-	let start = 0
-	let end = bytes.length
-
-	while (start < end && bytes[start] === 0) start += 1
-	while (end > start && bytes[end - 1] === 0) end -= 1
-
-	if (start === end) return undefined
+	if (displayBytes.length === 0) return undefined
 
 	let decoded: string
 	try {
-		decoded = decoder.decode(bytes.subarray(start, end))
+		decoded = decoder.decode(displayBytes)
 	} catch {
 		return undefined
 	}

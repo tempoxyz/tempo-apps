@@ -27,6 +27,17 @@ const providedReceiptToken =
 const providedReceiptMemo =
 	'0xef1ed71201c62939e7f7496e1106ef00000000000000000000a166aee7e294f6' as Hex.Hex
 
+describe('memo display', () => {
+	it('filters null bytes from text memos', () => {
+		expect(
+			decodeMemoForDisplay(
+				'0x67616d6573000000000000000000000000000000000000000000000000000000',
+			),
+		).toBe('games')
+		expect(decodeMemoForDisplay('0x67616d006573')).toBe('games')
+	})
+})
+
 describe('MPP attribution memos', () => {
 	it('identifies and hides MPP attribution memos from generic memo display', () => {
 		expect({
