@@ -23,6 +23,13 @@ Tests use Cloudflare's [vitest-pool-workers](https://developers.cloudflare.com/w
 Environment variables:
 - `TEMPO_ENV` - `localnet` (default), `moderato`, or `devnet` (`testnet` is accepted as a backwards-compatible alias of `moderato`)
 - `TEMPO_TAG` - Docker image tag for localnet (default: `latest`)
+- `TEMPO_RPC_AUTH` - optional Tempo RPC Basic Auth credentials in `client_id:api_key` format; configure production values as a Cloudflare secret
+
+Configure authenticated Moderato RPC access with:
+
+```bash
+pnpm wrangler secret put TEMPO_RPC_AUTH --env moderato
+```
 
 ## API
 

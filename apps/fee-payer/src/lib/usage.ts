@@ -2,10 +2,11 @@ import { env } from 'cloudflare:workers'
 import * as IDX from 'idxs'
 import { sql } from 'kysely'
 import type { Address } from 'ox'
-import { createPublicClient, formatUnits, http } from 'viem'
+import { createPublicClient, formatUnits } from 'viem'
 import { Actions, Addresses } from 'viem/tempo'
 import { tempoChain } from './chain.js'
 import { pathUsd } from './consts.js'
+import { createRpcTransport } from './rpc.js'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: env.INDEXSUPPLY_API_KEY,
@@ -67,8 +68,10 @@ export async function getUsage(
 		cachedFeeTokenMetadata = await Actions.token.getMetadata(
 			createPublicClient({
 				chain: tempoChain,
-				transport: http(
-					env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0],
+				transport: createRpcTransport(
+					env.TEMPO_RPC_URL,
+					tempoChain.rpcUrls.default.http[0],
+					env,
 				),
 			}),
 			{ token: pathUsd },

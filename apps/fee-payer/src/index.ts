@@ -5,7 +5,6 @@ import { type Context, Hono } from 'hono'
 import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
-import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import * as z from 'zod'
 import { admin } from './lib/admin.js'
@@ -21,6 +20,7 @@ import {
 	getRequestContext,
 } from './lib/posthog.js'
 import { rateLimitMiddleware } from './lib/rate-limit.js'
+import { createRpcTransport } from './lib/rpc.js'
 import { getUsage } from './lib/usage.js'
 
 const USAGE_CACHE_TTL = 60
@@ -114,8 +114,10 @@ const relayHandler = Handler.relay({
 		url: 'https://sponsor.tempo.xyz',
 	},
 	transports: {
-		[tempoChain.id]: http(
-			env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0],
+		[tempoChain.id]: createRpcTransport(
+			env.TEMPO_RPC_URL,
+			tempoChain.rpcUrls.default.http[0],
+			env,
 		),
 	},
 })

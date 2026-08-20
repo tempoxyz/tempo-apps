@@ -1,6 +1,8 @@
 interface EnvironmentVariables {
 	readonly TEMPO_ENV: 'testnet' | 'devnet' | 'moderato' | 'localnet' | 'mainnet'
 	readonly TEMPO_RPC_URL: string
+	/** Basic Auth credentials (`client_id:api_key`) for the Tempo RPC. */
+	readonly TEMPO_RPC_AUTH?: string
 	readonly ALLOWED_ORIGINS: string
 	readonly POSTHOG_API_KEY?: string
 	readonly ADMIN_SECRET?: string
