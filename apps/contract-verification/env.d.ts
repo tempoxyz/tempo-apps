@@ -24,6 +24,10 @@ interface EnvironmentVariables {
 	readonly CHAINS_CONFIG_URL?: string
 	/** Bearer token for authenticating with the chain config endpoint (optional). */
 	readonly CHAINS_CONFIG_AUTH_TOKEN?: string
+
+	/** Basic Auth credentials (`client_id:api_key`) for Tempo RPCs (optional). */
+	readonly TEMPO_MAINNET_RPC_AUTH?: string
+	readonly TEMPO_TESTNET_RPC_AUTH?: string
 }
 
 // Node.js `process.env` auto-completion

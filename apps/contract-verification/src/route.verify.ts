@@ -5,7 +5,7 @@ import { and, eq, isNull, or } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 
 import { getRandom } from '@cloudflare/containers'
-import { createPublicClient, http, keccak256 } from 'viem'
+import { createPublicClient, type http, keccak256 } from 'viem'
 
 import {
 	getDb,
@@ -37,6 +37,7 @@ import {
 import type { AppEnv } from '#index.tsx'
 import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
+import { createRpcTransport } from '#lib/rpc.ts'
 import {
 	type CompileOutput,
 	getValidationCustomCode,
@@ -688,7 +689,7 @@ async function runVerificationJob(
 		const createClient = deps?.createPublicClient ?? createPublicClient
 		const client = createClient({
 			chain,
-			transport: http(rpcUrl),
+			transport: createRpcTransport(rpcUrl, chain.id, env),
 		})
 
 		const creationTransactionMetadata = sanitizedBody.creationTransactionHash

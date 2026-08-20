@@ -3,7 +3,7 @@ import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
 import { and, eq, or } from 'drizzle-orm'
 import { getRandom } from '@cloudflare/containers'
-import { createPublicClient, http, keccak256 } from 'viem'
+import { createPublicClient, keccak256 } from 'viem'
 
 import {
 	getDb,
@@ -34,6 +34,7 @@ import {
 } from '#lib/bytecode-matching.ts'
 import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
+import { createRpcTransport } from '#lib/rpc.ts'
 
 const logger = getLogger(['tempo'])
 
@@ -188,7 +189,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		const rpcUrl = chainConfig.rpcUrls.default.http.at(0)
 		const client = createPublicClient({
 			chain: chainConfig,
-			transport: http(rpcUrl),
+			transport: createRpcTransport(rpcUrl, chainConfig.id, context.env),
 		})
 
 		const creationTransactionMetadata = body.creatorTxHash
