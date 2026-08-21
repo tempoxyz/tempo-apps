@@ -51,11 +51,12 @@ export type ContractInfo = {
 }
 
 function makePrecompile(
-	data: Omit<ContractInfo, 'code' | 'abi' | 'category'>,
+	data: Omit<ContractInfo, 'code' | 'abi' | 'category'> & { abi?: Abi },
 ): [Address.Address, ContractInfo] {
+	const { abi = [], ...metadata } = data
 	return [
 		data.address,
-		{ ...data, code: '0x' as Hex.Hex, abi: [] as Abi, category: 'precompile' },
+		{ ...metadata, code: '0x' as Hex.Hex, abi, category: 'precompile' },
 	]
 }
 
@@ -173,6 +174,13 @@ export const precompileRegistry = new Map<Address.Address, ContractInfo>([
 		name: 'p256Verify',
 		description: 'ECDSA signature verification on secp256r1 (P-256)',
 		docsUrl: 'https://www.evm.codes/precompiled#0x100',
+	}),
+	makePrecompile({
+		address: Addresses.signatureVerifier,
+		name: 'Signature Verification',
+		description: 'Recover and verify Tempo signature types',
+		abi: Abis.signatureVerifier,
+		docsUrl: 'https://github.com/tempoxyz/tempo/blob/main/tips/tip-1020.md',
 	}),
 ])
 

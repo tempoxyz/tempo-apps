@@ -372,6 +372,7 @@ export function useTraceTrees(
 			function buildNode(
 				trace: CallTrace,
 				path: number[] = [],
+				parentTrace?: CallTrace,
 			): TxTraceTree.Node {
 				const currentFrameIndex = frameIndex++
 				const hasSelector = trace.input && trace.input.length >= 10
@@ -400,7 +401,7 @@ export function useTraceTrees(
 						})
 					: undefined
 
-				if (precompileInfo && trace.to) {
+				if (precompileInfo && precompileInfo.abi.length === 0 && trace.to) {
 					const decoded = decodePrecompile(
 						trace.to,
 						trace.input || '0x',
@@ -487,10 +488,12 @@ export function useTraceTrees(
 						}
 					}
 				}
+				if (trace.type === 'DELEGATECALL' && parentTrace?.input === trace.input)
+					params = undefined
 
 				const children =
 					trace.calls?.map((child, index) =>
-						buildNode(child, [...path, index]),
+						buildNode(child, [...path, index], trace),
 					) ?? []
 				return {
 					trace,

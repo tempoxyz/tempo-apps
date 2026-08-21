@@ -178,4 +178,18 @@ describe('Zone protocol contracts', () => {
 			31_767_176n,
 		])
 	})
+
+	it('recognizes the TIP-1020 signature verification precompile', () => {
+		const info = getContractInfo('0x5165300000000000000000000000000000000000')
+		expect(info).toMatchObject({
+			name: 'Signature Verification',
+			category: 'precompile',
+		})
+		expect(info?.abi).toContainEqual(
+			expect.objectContaining({ type: 'function', name: 'recover' }),
+		)
+		expect(info?.abi).toContainEqual(
+			expect.objectContaining({ type: 'function', name: 'verify' }),
+		)
+	})
 })
