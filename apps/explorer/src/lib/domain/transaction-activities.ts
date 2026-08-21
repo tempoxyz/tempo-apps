@@ -22,7 +22,13 @@ const HIDDEN_FIELDS = new Set(['signer', 'status'])
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 ): KnownEvent[] {
-	return activities.map((activity) => {
+	return activities.flatMap((activity) => {
+		if (
+			activity.title.trim().toLowerCase() === 'unknown' ||
+			activity.type.trim().toLowerCase() === 'unknown'
+		)
+			return []
+
 		const parts = activityParts(activity)
 		const representedFields = new Set([
 			'sourceAmount',
@@ -33,26 +39,28 @@ export function activitiesToKnownEvents(
 			'sender',
 			'spender',
 		])
-		return {
-			type: activity.type,
-			parts,
-			...(activity.type === 'transfer'
-				? {
-						meta: {
-							from: activityAddress(activity.data.sender),
-							to: activityAddress(activity.data.recipient),
-						},
-					}
-				: {}),
-			note: Object.entries(activity.data).flatMap(([key, value]) => {
-				if (HIDDEN_FIELDS.has(key) || value == null) return []
-				if (representedFields.has(key)) return []
-				const part = activityValueToPart(value)
-				return part
-					? [[formatLabel(key), part] as [string, KnownEventPart]]
-					: []
-			}),
-		}
+		return [
+			{
+				type: activity.type,
+				parts,
+				...(activity.type === 'transfer'
+					? {
+							meta: {
+								from: activityAddress(activity.data.sender),
+								to: activityAddress(activity.data.recipient),
+							},
+						}
+					: {}),
+				note: Object.entries(activity.data).flatMap(([key, value]) => {
+					if (HIDDEN_FIELDS.has(key) || value == null) return []
+					if (representedFields.has(key)) return []
+					const part = activityValueToPart(value)
+					return part
+						? [[formatLabel(key), part] as [string, KnownEventPart]]
+						: []
+				}),
+			},
+		]
 	})
 }
 

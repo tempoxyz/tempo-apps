@@ -2,6 +2,14 @@ import { describe, expect, test } from 'vitest'
 import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
+	test('omits unknown activities so local descriptions can be used', () => {
+		expect(
+			activitiesToKnownEvents([
+				{ id: 'unknown', title: 'Unknown', type: 'unknown', data: {} },
+			]),
+		).toEqual([])
+	})
+
 	test('preserves token amounts and perspective for transfers', () => {
 		expect(
 			activitiesToKnownEvents([
