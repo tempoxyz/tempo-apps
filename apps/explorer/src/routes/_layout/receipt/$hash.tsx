@@ -19,7 +19,7 @@ import { Receipt } from '#comps/Receipt'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
 import {
-	decodeKnownCall,
+	decodeKnownTransactionCall,
 	parseKnownEvents,
 	type KnownEvent,
 } from '#lib/domain/known-events'
@@ -114,10 +114,7 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 
 	// Try to decode known contract calls (e.g., validator precompile)
 	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall =
-		transaction.to && transaction.input && transaction.input !== '0x'
-			? decodeKnownCall(transaction.to, transaction.input)
-			: null
+	const knownCall = decodeKnownTransactionCall(transaction)
 
 	const fallbackEvents = knownCall
 		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
