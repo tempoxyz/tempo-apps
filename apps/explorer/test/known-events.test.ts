@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest'
 import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
 import type { AbiEvent, AbiParameter } from 'viem'
-import { encodeAbiParameters, encodeEventTopics, toHex, zeroHash } from 'viem'
+import {
+	encodeAbiParameters,
+	encodeEventTopics,
+	encodeFunctionData,
+	toHex,
+	zeroHash,
+} from 'viem'
 import { Addresses } from 'viem/tempo'
+import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	stablecoinDexAbi,
@@ -19,7 +26,7 @@ import {
 	recipientAddress,
 	userTokenAddress,
 } from '#lib/demo'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
@@ -105,6 +112,126 @@ function mockZoneEventLog(event: AbiEvent, address: Address.Address) {
 }
 
 describe('parseKnownEvents', () => {
+	it('describes every Zone write call', () => {
+		const portal = '0x5ad0000000000000000000000000000000000003' as const
+		const calls = [
+			{
+				to: ZoneAddresses.zoneFactory,
+				input: encodeFunctionData({
+					abi: zoneFactoryAbi,
+					functionName: 'createZone',
+					args: [
+						{
+							initialToken: userTokenAddress,
+							accessMode: true,
+							gatewayMode: false,
+							allowedAccounts: [accountAddress],
+							zoneGateways: [],
+							admin: accountAddress,
+							sequencers: [recipientAddress],
+							threshold: 1,
+							rpcUrl: 'https://zone.example',
+						},
+					],
+				}),
+				action: 'Create Zone',
+			},
+			{
+				to: portal,
+				input: encodeFunctionData({
+					abi: zonePortalAbi,
+					functionName: 'deposit',
+					args: [
+						userTokenAddress,
+						recipientAddress,
+						1_000_000n,
+						zeroHash,
+						accountAddress,
+					],
+				}),
+				action: 'Deposit to Zone 3',
+			},
+			{
+				to: portal,
+				input: encodeFunctionData({
+					abi: zonePortalAbi,
+					functionName: 'depositEncrypted',
+					args: [
+						userTokenAddress,
+						1_000_000n,
+						1n,
+						{
+							ephemeralPubkeyX: zeroHash,
+							ephemeralPubkeyYParity: 2,
+							ciphertext: '0x1234',
+							nonce: `0x${'00'.repeat(12)}`,
+							tag: `0x${'00'.repeat(16)}`,
+						},
+						accountAddress,
+					],
+				}),
+				action: 'Encrypted Deposit to Zone 3',
+			},
+			{
+				to: portal,
+				input: encodeFunctionData({
+					abi: zonePortalAbi,
+					functionName: 'pause',
+				}),
+				action: 'Pause Zone 3 Portal',
+			},
+			{
+				to: portal,
+				input: encodeFunctionData({
+					abi: zonePortalAbi,
+					functionName: 'submitBatch',
+					args: [
+						1n,
+						0n,
+						{ prevBlockHash: zeroHash, nextBlockHash: zeroHash },
+						{
+							prevProcessedHash: zeroHash,
+							nextProcessedHash: zeroHash,
+							prevDepositNumber: 0n,
+							nextDepositNumber: 0n,
+						},
+						zeroHash,
+						'0x',
+						'0x',
+						1n,
+						[],
+					],
+				}),
+				action: 'Submit Zone 3 Batch',
+			},
+			{
+				to: ZoneAddresses.zoneOutbox,
+				input: encodeFunctionData({
+					abi: zoneOutboxAbi,
+					functionName: 'requestWithdrawal',
+					args: [
+						userTokenAddress,
+						recipientAddress,
+						1_000_000n,
+						zeroHash,
+						100_000n,
+						accountAddress,
+						'0x',
+						'0x',
+					],
+				}),
+				action: 'Request Zone Withdrawal',
+			},
+		] as const
+
+		for (const call of calls) {
+			expect(decodeKnownCall(call.to, call.input)?.parts[0]).toEqual({
+				type: 'action',
+				value: call.action,
+			})
+		}
+	})
+
 	it('maps every Zone ABI event to a known event', () => {
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
 		const eventGroups = [

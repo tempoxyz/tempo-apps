@@ -9,7 +9,14 @@ import {
 	zeroAddress,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Abis, allAbis } from '#lib/abis'
+import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
+import {
+	Abis,
+	allAbis,
+	zoneFactoryAbi,
+	zoneOutboxAbi,
+	zonePortalAbi,
+} from '#lib/abis'
 import {
 	getZonePortalId,
 	isZonePortalAddress as isDeterministicZonePortalAddress,
@@ -2187,6 +2194,7 @@ const VALIDATOR_CONFIG = '0xcccccccc00000000000000000000000000000000'
 type CallDecoder = (
 	functionName: string,
 	args: readonly unknown[],
+	to: Address.Address,
 ) => KnownEvent | null
 
 function decodeValidatorConfigCall(
@@ -2291,6 +2299,176 @@ function decodeValidatorConfigCall(
 	}
 }
 
+function decodeZoneFactoryCall(
+	functionName: string,
+	args: readonly unknown[],
+): KnownEvent | null {
+	if (functionName !== 'createZone') return null
+
+	const [params] = args as readonly [
+		{
+			initialToken: Address.Address
+			admin: Address.Address
+			sequencer?: Address.Address
+			sequencers?: readonly Address.Address[]
+			threshold?: number
+			rpcUrl: string
+			verifier?: Address.Address
+		},
+	]
+	const sequencers =
+		params.sequencers ?? (params.sequencer ? [params.sequencer] : [])
+	const note: NonNullable<KnownEvent['note']> = [
+		['Admin', { type: 'account', value: params.admin }],
+		...sequencers.map((sequencer, index): [string, KnownEventPart] => [
+			`Sequencer ${index + 1}`,
+			{ type: 'account', value: sequencer },
+		]),
+		['RPC URL', { type: 'text', value: params.rpcUrl }],
+	]
+	if (params.threshold !== undefined)
+		note.push(['Threshold', { type: 'number', value: params.threshold }])
+	if (params.verifier)
+		note.push(['Verifier', { type: 'account', value: params.verifier }])
+
+	return {
+		type: 'zone creation',
+		parts: [
+			{ type: 'action', value: 'Create Zone' },
+			{ type: 'text', value: 'with' },
+			{ type: 'token', value: { address: params.initialToken } },
+		],
+		note,
+	}
+}
+
+function decodeZonePortalCall(
+	functionName: string,
+	args: readonly unknown[],
+	to: Address.Address,
+): KnownEvent | null {
+	const zoneId = getZonePortalId(to)
+	const zoneName = zoneId === undefined ? 'Zone' : `Zone ${zoneId}`
+
+	switch (functionName) {
+		case 'deposit': {
+			const [token, recipient, amount, memo, refundRecipient] = args as [
+				Address.Address,
+				Address.Address,
+				bigint,
+				Hex.Hex,
+				Address.Address,
+			]
+			const note: NonNullable<KnownEvent['note']> = [
+				['Refund Recipient', { type: 'account', value: refundRecipient }],
+			]
+			const decodedMemo = decodeMemoForDisplay(memo)
+			if (decodedMemo)
+				note.unshift(['Memo', { type: 'text', value: decodedMemo }])
+			return {
+				type: 'zone deposit',
+				parts: [
+					{ type: 'action', value: `Deposit to ${zoneName}` },
+					{ type: 'amount', value: { token, value: amount } },
+					{ type: 'text', value: 'for' },
+					{ type: 'account', value: recipient },
+				],
+				note,
+			}
+		}
+		case 'depositEncrypted': {
+			const [token, amount, keyIndex, _encrypted, refundRecipient] = args as [
+				Address.Address,
+				bigint,
+				bigint,
+				unknown,
+				Address.Address,
+			]
+			return {
+				type: 'zone encrypted deposit',
+				parts: [
+					{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+					{ type: 'amount', value: { token, value: amount } },
+				],
+				note: [
+					['Key Index', { type: 'number', value: keyIndex }],
+					['Refund Recipient', { type: 'account', value: refundRecipient }],
+				],
+			}
+		}
+		case 'pause':
+			return {
+				type: 'zone portal paused',
+				parts: [{ type: 'action', value: `Pause ${zoneName} Portal` }],
+			}
+		case 'submitBatch': {
+			const [
+				tempoBlockNumber,
+				_recentTempoBlockNumber,
+				_blockTransition,
+				_depositQueueTransition,
+				withdrawalQueueHash,
+				_verifierConfig,
+				_proof,
+				zoneHeight,
+			] = args as [
+				bigint,
+				bigint,
+				unknown,
+				unknown,
+				Hex.Hex,
+				Hex.Hex,
+				Hex.Hex,
+				bigint,
+				readonly Hex.Hex[],
+			]
+			return {
+				type: 'zone batch submission',
+				parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
+				note: [
+					['Tempo Block', { type: 'number', value: tempoBlockNumber }],
+					['Zone Height', { type: 'number', value: zoneHeight }],
+					['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
+				],
+			}
+		}
+		default:
+			return null
+	}
+}
+
+function decodeZoneOutboxCall(
+	functionName: string,
+	args: readonly unknown[],
+): KnownEvent | null {
+	if (functionName !== 'requestWithdrawal') return null
+	const [token, recipient, amount, memo, gasLimit, fallbackRecipient] =
+		args as [
+			Address.Address,
+			Address.Address,
+			bigint,
+			Hex.Hex,
+			bigint,
+			Address.Address,
+		]
+	const note: NonNullable<KnownEvent['note']> = [
+		['Gas Limit', { type: 'number', value: gasLimit }],
+		['Fallback Recipient', { type: 'account', value: fallbackRecipient }],
+	]
+	const decodedMemo = decodeMemoForDisplay(memo)
+	if (decodedMemo) note.unshift(['Memo', { type: 'text', value: decodedMemo }])
+	return {
+		type: 'zone withdrawal request',
+		parts: [
+			{ type: 'action', value: 'Request Zone Withdrawal' },
+			{ type: 'amount', value: { token, value: amount } },
+			{ type: 'text', value: 'to' },
+			{ type: 'account', value: recipient },
+		],
+		note,
+	}
+}
+
 const callDecoders: Record<
 	string,
 	{ abi: readonly unknown[]; decoder: CallDecoder }
@@ -2298,6 +2476,18 @@ const callDecoders: Record<
 	[VALIDATOR_CONFIG.toLowerCase()]: {
 		abi: Abis.validatorConfig,
 		decoder: decodeValidatorConfigCall,
+	},
+	[ZoneAddresses.zoneFactory.toLowerCase()]: {
+		abi: zoneFactoryAbi,
+		decoder: decodeZoneFactoryCall,
+	},
+	[ZoneAddresses.zonePortalImplementation.toLowerCase()]: {
+		abi: zonePortalAbi,
+		decoder: decodeZonePortalCall,
+	},
+	[ZoneAddresses.zoneOutbox.toLowerCase()]: {
+		abi: zoneOutboxAbi,
+		decoder: decodeZoneOutboxCall,
 	},
 }
 
@@ -2312,7 +2502,9 @@ export function decodeKnownCall(
 ): KnownEvent | null {
 	if (!input || input === '0x') return null
 
-	const entry = callDecoders[to.toLowerCase()]
+	const entry = isDeterministicZonePortalAddress(to)
+		? { abi: zonePortalAbi, decoder: decodeZonePortalCall }
+		: callDecoders[to.toLowerCase()]
 	if (!entry) return null
 
 	try {
@@ -2320,7 +2512,7 @@ export function decodeKnownCall(
 			abi: entry.abi as readonly unknown[],
 			data: input,
 		})
-		return entry.decoder(decoded.functionName, decoded.args ?? [])
+		return entry.decoder(decoded.functionName, decoded.args ?? [], to)
 	} catch {
 		return null
 	}

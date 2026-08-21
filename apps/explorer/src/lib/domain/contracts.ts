@@ -16,6 +16,7 @@ import {
 	tip20ChannelReserveAbi,
 	tip20ChannelReserveAddress,
 	zoneFactoryAbi,
+	zoneOutboxAbi,
 	zonePortalAbi,
 	zoneVerifierAbi,
 } from '#lib/abis'
@@ -384,6 +385,18 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
 			address: ZoneAddresses.zonePortalImplementation,
+		},
+	],
+	[
+		ZoneAddresses.zoneOutbox,
+		{
+			name: 'Zone Outbox',
+			code: '0xef',
+			description: 'Request withdrawals from a Tempo Zone',
+			abi: zoneOutboxAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneOutbox,
 		},
 	],
 	[
