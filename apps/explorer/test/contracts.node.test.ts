@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { toEventSelector, type Abi } from 'viem'
+import {
+	decodeAbiParameters,
+	encodeAbiParameters,
+	toEventSelector,
+	type Abi,
+} from 'viem'
 import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import { zoneFactoryAbi, zonePortalAbi, zoneVerifierAbi } from '#lib/abis'
 import {
@@ -161,8 +166,16 @@ describe('Zone protocol contracts', () => {
 	})
 
 	it('recognizes the EIP-2935 history contract', () => {
-		expect(
-			getContractInfo('0x0000f90827f1c53a10cb7a02335b175320002935'),
-		).toMatchObject({ name: 'Block Hash History' })
+		const info = getContractInfo('0x0000f90827f1c53a10cb7a02335b175320002935')
+		expect(info).toMatchObject({ name: 'Block Hash History' })
+		const getBlockHash = info?.abi.find(
+			(item) => item.type === 'function' && item.name === 'getBlockHash',
+		)
+		expect(getBlockHash?.type).toBe('function')
+		if (!getBlockHash || getBlockHash.type !== 'function') return
+		const input = encodeAbiParameters(getBlockHash.inputs, [31_767_176n])
+		expect(decodeAbiParameters(getBlockHash.inputs, input)).toEqual([
+			31_767_176n,
+		])
 	})
 })

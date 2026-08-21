@@ -11,6 +11,7 @@ import { Addresses } from 'viem/tempo'
 import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
+	blockHashHistoryAbi,
 	stablecoinDexAbi,
 	streamChannelAbi,
 	tip20ChannelReserveAbi,
@@ -429,7 +430,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'Block Hash History',
 			code: '0xef',
 			description: 'EIP-2935 historical block hash storage',
-			abi: [],
+			abi: blockHashHistoryAbi,
 			category: 'system',
 			docsUrl: 'https://eips.ethereum.org/EIPS/eip-2935',
 			address: blockHashHistoryAddress,

@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, erc20Abi, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
+import { blockHashHistoryAbi } from '#lib/abis'
 import { cx } from '#lib/css'
 import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import {
@@ -410,10 +411,25 @@ export function useTraceTrees(
 						params = decoded.params
 						decodedOutput = decoded.decodedOutput
 					}
-				} else if (isBlockHashHistory && trace.input.length === 66) {
-					functionName = 'getBlockHash'
-					params = `blockNumber: ${BigInt(trace.input)}`
-					decodedOutput = trace.output
+				} else if (isBlockHashHistory) {
+					const [getBlockHash] = blockHashHistoryAbi
+					try {
+						const [blockNumber] = decodeAbiParameters(
+							getBlockHash.inputs,
+							trace.input,
+						)
+						functionName = getBlockHash.name
+						params = `blockNumber: ${blockNumber}`
+						if (trace.output && trace.output !== '0x') {
+							const [blockHash] = decodeAbiParameters(
+								getBlockHash.outputs,
+								trace.output,
+							)
+							decodedOutput = blockHash
+						}
+					} catch {
+						// EIP-2935 rejects malformed raw calldata.
+					}
 				} else if (selector) {
 					const autoloadAbi = abiMap.get(trace.to?.toLowerCase() ?? '')
 					const autoloadAbiItem =
