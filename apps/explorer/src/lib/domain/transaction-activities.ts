@@ -71,17 +71,26 @@ export function selectTransactionDescriptionEvents(params: {
 }): KnownEvent[] {
 	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
 	const hasMeaningfulActivity = params.activityEvents.some(
-		(event) => event.type !== 'nonce incremented',
+		(event) => !isNonceIncrementedEvent(event),
 	)
 	const activityEvents =
 		params.knownCall || hasMeaningfulActivity
-			? params.activityEvents.filter(
-					(event) => event.type !== 'nonce incremented',
-				)
+			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
 			: params.activityEvents
 	return params.knownCall
 		? [params.knownCall, ...activityEvents]
 		: [...activityEvents]
+}
+
+export function isNonceIncrementedEvent(event: KnownEvent): boolean {
+	return (
+		event.type.trim().toLowerCase() === 'nonce incremented' ||
+		event.parts.some(
+			(part) =>
+				part.type === 'action' &&
+				part.value.trim().toLowerCase() === 'nonce incremented',
+		)
+	)
 }
 
 function activityAddress(

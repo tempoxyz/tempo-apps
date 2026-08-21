@@ -14,6 +14,7 @@ import {
 	calculateKnownEventsTotal,
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
+import { isNonceIncrementedEvent } from '#lib/domain/transaction-activities'
 import { PriceFormatter } from '#lib/formatting'
 import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
@@ -70,7 +71,7 @@ export function TransactionDescription(props: {
 }) {
 	const { knownEvents, accountAddress } = props
 	const meaningfulEvents = knownEvents.filter(
-		(event) => event.type !== 'nonce incremented',
+		(event) => !isNonceIncrementedEvent(event),
 	)
 	const visibleEvents =
 		meaningfulEvents.length > 0 ? meaningfulEvents : knownEvents
