@@ -1,5 +1,6 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
+import { Abis as ViemZoneAbis } from 'viem-zones/tempo/zones'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
@@ -102,7 +103,7 @@ export const streamChannelAbi = [
 	},
 ] as const
 
-const zonePortalAbi = [
+const zonePortalEventsAbi = [
 	{
 		type: 'event',
 		name: 'DepositMade',
@@ -206,26 +207,13 @@ const zonePortalAbi = [
 	},
 ] as const
 
-const zoneFactoryAbi = [
-	{
-		type: 'event',
-		name: 'ZoneCreated',
-		inputs: [
-			{ indexed: true, name: 'zoneId', type: 'uint32' },
-			{ indexed: true, name: 'portal', type: 'address' },
-			{ indexed: true, name: 'messenger', type: 'address' },
-			{ indexed: false, name: 'initialToken', type: 'address' },
-			{ indexed: false, name: 'sequencer', type: 'address' },
-			{ indexed: false, name: 'verifier', type: 'address' },
-			{ indexed: false, name: 'genesisBlockHash', type: 'bytes32' },
-			{ indexed: false, name: 'genesisTempoBlockHash', type: 'bytes32' },
-			{ indexed: false, name: 'genesisTempoBlockNumber', type: 'uint64' },
-		],
-		anonymous: false,
-	},
-] as const
-
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
+export const zoneFactoryAbi = ViemZoneAbis.zoneFactory
+export const zoneOutboxAbi = ViemZoneAbis.zoneOutbox
+export const zonePortalAbi = [
+	...zonePortalEventsAbi,
+	...ViemZoneAbis.zonePortal,
+] as const
 
 export const receivePolicyGuardAbi = parseAbi([
 	'event TransferBlocked(address indexed token, address indexed receiver, uint64 indexed blockedNonce, uint256 amount, uint8 receiptVersion, bytes receipt)',
@@ -238,8 +226,9 @@ export const Abis = {
 	receivePolicyGuard: receivePolicyGuardAbi,
 	stablecoinDex: stablecoinDexAbi,
 	streamChannel: streamChannelAbi,
-	zonePortal: zonePortalAbi,
-	zoneFactory: zoneFactoryAbi,
+	zoneFactory: zoneFactoryAbi.filter((item) => item.type === 'event'),
+	zoneOutbox: zoneOutboxAbi.filter((item) => item.type === 'event'),
+	zonePortal: zonePortalAbi.filter((item) => item.type === 'event'),
 } as const
 
 export const allAbis = Object.values(Abis).flat()

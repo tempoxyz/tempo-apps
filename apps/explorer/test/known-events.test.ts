@@ -3,7 +3,7 @@ import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Abis, stablecoinDexAbi } from '#lib/abis'
+import { Abis, stablecoinDexAbi, zoneFactoryAbi } from '#lib/abis'
 import {
 	accountAddress,
 	getTokenMetadata,
@@ -202,6 +202,67 @@ describe('parseKnownEvents', () => {
 		expect(knownEvents[0]?.parts[0]).toEqual({
 			type: 'action',
 			value: 'Deposit to Zone E',
+		})
+	})
+
+	it('decodes current ZoneCreated events', () => {
+		const hash = `0x${'4'.repeat(64)}` as const
+		const portal = `0x${'7'.repeat(40)}` as const
+		const verifier = `0x${'6'.repeat(40)}` as const
+		const sequencers = [accountAddress, recipientAddress] as const
+		const logs = [
+			mockLog(
+				{
+					address: Addresses.tip20Factory,
+					topics: encodeEventTopics({
+						abi: zoneFactoryAbi,
+						eventName: 'ZoneCreated',
+						args: { zoneId: 8, portal },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[
+							{ type: 'address' },
+							{ type: 'bool' },
+							{ type: 'bool' },
+							{ type: 'address' },
+							{ type: 'address[]' },
+							{ type: 'uint8' },
+							{ type: 'address' },
+						],
+						[
+							userTokenAddress,
+							true,
+							false,
+							accountAddress,
+							sequencers,
+							2,
+							verifier,
+						],
+					),
+				},
+				hash,
+			),
+		]
+
+		const [event] = parseKnownEvents(mockReceipt(logs, accountAddress, hash), {
+			getTokenMetadata,
+		})
+
+		expect(event).toMatchObject({
+			type: 'zone created',
+			note: [
+				[
+					'Sequencer 1',
+					{ type: 'account', value: Address.checksum(accountAddress) },
+				],
+				[
+					'Sequencer 2',
+					{ type: 'account', value: Address.checksum(recipientAddress) },
+				],
+				['Initial Token', { type: 'token' }],
+				['Verifier', { type: 'account', value: Address.checksum(verifier) }],
+			],
+			meta: { to: Address.checksum(portal) },
 		})
 	})
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Abi } from 'viem'
-import { getReadFunctions, getWriteFunctions } from '#lib/domain/contracts'
+import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
+import { zoneFactoryAbi, zonePortalAbi } from '#lib/abis'
+import {
+	getContractInfo,
+	getReadFunctions,
+	getWriteFunctions,
+} from '#lib/domain/contracts'
 
 const proxyImplementationAbi = [
 	{
@@ -88,5 +94,38 @@ describe('contract function classification', () => {
 				'setMinterAllowance',
 			])
 		}
+	})
+})
+
+describe('Zone protocol contracts', () => {
+	it('registers the Zone protocol addresses exported by viem', () => {
+		expect(getContractInfo(ZoneAddresses.zoneFactory)).toMatchObject({
+			name: 'Zone Factory',
+			abi: zoneFactoryAbi,
+		})
+		expect(
+			getContractInfo(ZoneAddresses.zonePortalImplementation),
+		).toMatchObject({
+			name: 'Zone Portal Implementation',
+			abi: zonePortalAbi,
+		})
+		expect(getContractInfo(ZoneAddresses.zoneMessenger)?.name).toBe(
+			'Zone Messenger',
+		)
+		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.name).toBe(
+			'Zone Verifier',
+		)
+	})
+
+	it('exposes Zone registry and portal administration functions', () => {
+		expect(getReadFunctions(zoneFactoryAbi).map((fn) => fn.name)).toContain(
+			'zones',
+		)
+		expect(getReadFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
+			'tokenConfig',
+		)
+		expect(getWriteFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
+			'pause',
+		)
 	})
 })

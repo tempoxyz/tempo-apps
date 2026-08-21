@@ -8,12 +8,15 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
+import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	stablecoinDexAbi,
 	streamChannelAbi,
 	tip20ChannelReserveAbi,
 	tip20ChannelReserveAddress,
+	zoneFactoryAbi,
+	zonePortalAbi,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -351,6 +354,54 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1060',
 			address: Addresses.storageCredits,
+		},
+	],
+	[
+		ZoneAddresses.zoneFactory,
+		{
+			name: 'Zone Factory',
+			code: '0xef',
+			description: 'Create and discover Tempo Zones',
+			abi: zoneFactoryAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneFactory,
+		},
+	],
+	[
+		ZoneAddresses.zonePortalImplementation,
+		{
+			name: 'Zone Portal Implementation',
+			code: '0xef',
+			description: 'Bridge assets between Tempo and Tempo Zones',
+			abi: zonePortalAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zonePortalImplementation,
+		},
+	],
+	[
+		ZoneAddresses.zoneMessenger,
+		{
+			name: 'Zone Messenger',
+			code: '0xef',
+			description: 'Relay messages between Tempo and Tempo Zones',
+			abi: [],
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneMessenger,
+		},
+	],
+	[
+		ZoneAddresses.zoneVerifier,
+		{
+			name: 'Zone Verifier',
+			code: '0xef',
+			description: 'Verify Tempo Zone state transitions',
+			abi: [],
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneVerifier,
 		},
 	],
 	[

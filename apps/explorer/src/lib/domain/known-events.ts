@@ -341,7 +341,30 @@ function createDetectors(
 				}
 			}
 
-			if (eventName === 'ZoneCreated')
+			if (eventName === 'ZoneCreated') {
+				const note: NonNullable<KnownEvent['note']> = [
+					[
+						'Initial Token',
+						{ type: 'token', value: { address: args.initialToken } },
+					],
+					['Verifier', { type: 'account', value: args.verifier }],
+				]
+				if ('messenger' in args) {
+					note.unshift(
+						['Messenger', { type: 'account', value: args.messenger }],
+						['Sequencer', { type: 'account', value: args.sequencer }],
+					)
+				} else {
+					note.unshift(
+						...args.sequencers.map(
+							(sequencer, index): [string, KnownEventPart] => [
+								`Sequencer ${index + 1}`,
+								{ type: 'account', value: sequencer },
+							],
+						),
+					)
+				}
+
 				return {
 					type: 'zone created',
 					parts: [
@@ -350,17 +373,10 @@ function createDetectors(
 						{ type: 'text', value: 'at' },
 						{ type: 'account', value: args.portal },
 					],
-					note: [
-						['Messenger', { type: 'account', value: args.messenger }],
-						[
-							'Initial Token',
-							{ type: 'token', value: { address: args.initialToken } },
-						],
-						['Sequencer', { type: 'account', value: args.sequencer }],
-						['Verifier', { type: 'account', value: args.verifier }],
-					],
+					note,
 					meta: { from: address, to: args.portal },
 				}
+			}
 
 			if (eventName === 'TokenEnabled') {
 				const zoneName = getZoneName(address)
