@@ -17,6 +17,7 @@ import {
 	tip20ChannelReserveAddress,
 	zoneFactoryAbi,
 	zonePortalAbi,
+	zoneVerifierAbi,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -24,6 +25,9 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
+const blockHashHistoryAddress =
+	'0x0000f90827f1c53a10cb7a02335b175320002935' as const
+const zonePortalPrefix = '0x5ad000000000000000000000' as const
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -398,10 +402,22 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'Zone Verifier',
 			code: '0xef',
 			description: 'Verify Tempo Zone state transitions',
-			abi: [],
+			abi: zoneVerifierAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
 			address: ZoneAddresses.zoneVerifier,
+		},
+	],
+	[
+		blockHashHistoryAddress,
+		{
+			name: 'Block Hash History',
+			code: '0xef',
+			description: 'EIP-2935 historical block hash storage',
+			abi: [],
+			category: 'system',
+			docsUrl: 'https://eips.ethereum.org/EIPS/eip-2935',
+			address: blockHashHistoryAddress,
 		},
 	],
 	[
@@ -434,7 +450,14 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(
  * detect if an address is a system address (i.e., not a token)
  */
 export function systemAddress(address: Address.Address): boolean {
-	return systemContractRegistry.has(address.toLowerCase() as Address.Address)
+	return (
+		systemContractRegistry.has(address.toLowerCase() as Address.Address) ||
+		isZonePortalAddress(address)
+	)
+}
+
+export function isZonePortalAddress(address: Address.Address): boolean {
+	return address.toLowerCase().startsWith(zonePortalPrefix)
 }
 
 /**
@@ -447,6 +470,19 @@ export function getContractInfo(
 	const lowerAddress = address.toLowerCase() as Address.Address
 	const registered = contractRegistry.get(lowerAddress)
 	if (registered) return registered
+
+	if (isZonePortalAddress(address)) {
+		const zoneId = BigInt(`0x${address.slice(zonePortalPrefix.length)}`)
+		return {
+			address,
+			name: `Zone Portal #${zoneId}`,
+			code: '0xef',
+			description: 'Bridge assets between Tempo and a Tempo Zone',
+			abi: zonePortalAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+		}
+	}
 
 	// Dynamic TIP-20 token detection
 	if (isTip20Address(address))

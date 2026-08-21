@@ -247,7 +247,6 @@ function createDetectors(
 
 			if (eventName === 'DepositMade') {
 				const zoneName = getZoneName(address)
-				const memo = decodeMemoForDisplay(args.memo)
 				const note: NonNullable<KnownEvent['note']> = []
 
 				if (args.fee > 0n) {
@@ -256,6 +255,23 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.fee, args.token) },
 					])
 				}
+				if (!('to' in args)) {
+					note.push(['Key Index', { type: 'number', value: args.keyIndex }])
+					return {
+						type: 'zone encrypted deposit',
+						parts: [
+							{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+							{
+								type: 'amount',
+								value: createAmount(args.netAmount, args.token),
+							},
+						],
+						note,
+						meta: { from: args.sender, to: address },
+					}
+				}
+
+				const memo = decodeMemoForDisplay(args.memo)
 				if (memo) note.push(['Memo', { type: 'text', value: memo }])
 
 				return {
@@ -296,14 +312,33 @@ function createDetectors(
 
 			if (eventName === 'BatchSubmitted') {
 				const zoneName = getZoneName(address)
+				const note: NonNullable<KnownEvent['note']> = [
+					['Batch Index', { type: 'number', value: args.withdrawalBatchIndex }],
+					[
+						'Processed Deposits',
+						{ type: 'hex', value: args.nextProcessedDepositQueueHash },
+					],
+					['Next Block', { type: 'hex', value: args.nextBlockHash }],
+					[
+						'Withdrawal Queue',
+						{ type: 'hex', value: args.withdrawalQueueHash },
+					],
+				]
+				if ('withdrawalQueueIndex' in args) {
+					note.splice(1, 0, [
+						'Withdrawal Queue Index',
+						{ type: 'number', value: args.withdrawalQueueIndex },
+					])
+					note.push([
+						'Last Processed Deposit',
+						{ type: 'number', value: args.lastProcessedDepositNumber },
+					])
+				}
+
 				return {
 					type: 'zone batch submitted',
 					parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
-					note: [
-						['Processed Deposits', { type: 'text', value: '' }],
-						['Next Block', { type: 'text', value: '' }],
-						['Withdrawal Queue', { type: 'text', value: '' }],
-					],
+					note,
 				}
 			}
 

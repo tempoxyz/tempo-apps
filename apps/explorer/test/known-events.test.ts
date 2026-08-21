@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
-import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
+import { encodeAbiParameters, encodeEventTopics, toHex, zeroHash } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis, stablecoinDexAbi, zoneFactoryAbi } from '#lib/abis'
 import {
@@ -263,6 +263,53 @@ describe('parseKnownEvents', () => {
 				['Verifier', { type: 'account', value: Address.checksum(verifier) }],
 			],
 			meta: { to: Address.checksum(portal) },
+		})
+	})
+
+	it('decodes current BatchSubmitted events', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const portal = '0x5ad0000000000000000000000000000000000003' as const
+		const nextProcessedHash = `0x${'1'.repeat(64)}` as const
+		const nextBlockHash = `0x${'2'.repeat(64)}` as const
+		const withdrawalQueueHash = `0x${'3'.repeat(64)}` as const
+		const logs = [
+			mockLog(
+				{
+					address: portal,
+					topics: [
+						'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
+						toHex(337n, { size: 32 }),
+						toHex(4n, { size: 32 }),
+					],
+					data: encodeAbiParameters(
+						[
+							{ type: 'bytes32' },
+							{ type: 'bytes32' },
+							{ type: 'bytes32' },
+							{ type: 'uint64' },
+						],
+						[nextProcessedHash, nextBlockHash, withdrawalQueueHash, 35n],
+					),
+				},
+				hash,
+			),
+		]
+
+		const [event] = parseKnownEvents(mockReceipt(logs, accountAddress, hash), {
+			getTokenMetadata,
+		})
+
+		expect(event).toMatchObject({
+			type: 'zone batch submitted',
+			parts: [{ type: 'action', value: 'Submit Zone Batch' }],
+			note: [
+				['Batch Index', { type: 'number', value: 337n }],
+				['Withdrawal Queue Index', { type: 'number', value: 4n }],
+				['Processed Deposits', { type: 'hex', value: nextProcessedHash }],
+				['Next Block', { type: 'hex', value: nextBlockHash }],
+				['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
+				['Last Processed Deposit', { type: 'number', value: 35n }],
+			],
 		})
 	})
 

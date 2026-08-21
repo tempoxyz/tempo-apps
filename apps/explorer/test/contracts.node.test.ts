@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { Abi } from 'viem'
+import { toEventSelector, type Abi } from 'viem'
 import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
-import { zoneFactoryAbi, zonePortalAbi } from '#lib/abis'
+import { zoneFactoryAbi, zonePortalAbi, zoneVerifierAbi } from '#lib/abis'
 import {
+	getAbiItem,
 	getContractInfo,
 	getReadFunctions,
 	getWriteFunctions,
+	isZonePortalAddress,
+	systemAddress,
 } from '#lib/domain/contracts'
 
 const proxyImplementationAbi = [
@@ -115,6 +118,9 @@ describe('Zone protocol contracts', () => {
 		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.name).toBe(
 			'Zone Verifier',
 		)
+		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.abi).toBe(
+			zoneVerifierAbi,
+		)
 	})
 
 	it('exposes Zone registry and portal administration functions', () => {
@@ -127,5 +133,36 @@ describe('Zone protocol contracts', () => {
 		expect(getWriteFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
 			'pause',
 		)
+		expect(
+			getAbiItem({ abi: zonePortalAbi, selector: '0x78fb159b' })?.name,
+		).toBe('submitBatch')
+		expect(
+			getAbiItem({ abi: zoneVerifierAbi, selector: '0x7106a43e' })?.name,
+		).toBe('verify')
+		expect(
+			zonePortalAbi.some(
+				(item) =>
+					item.type === 'event' &&
+					toEventSelector(item) ===
+						'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
+			),
+		).toBe(true)
+	})
+
+	it('recognizes deterministic Zone Portal proxy addresses', () => {
+		const portal = '0x5ad0000000000000000000000000000000000003'
+
+		expect(isZonePortalAddress(portal)).toBe(true)
+		expect(systemAddress(portal)).toBe(true)
+		expect(getContractInfo(portal)).toMatchObject({
+			name: 'Zone Portal #3',
+			abi: zonePortalAbi,
+		})
+	})
+
+	it('recognizes the EIP-2935 history contract', () => {
+		expect(
+			getContractInfo('0x0000f90827f1c53a10cb7a02335b175320002935'),
+		).toMatchObject({ name: 'Block Hash History' })
 	})
 })
