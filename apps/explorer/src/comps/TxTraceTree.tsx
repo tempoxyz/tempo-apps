@@ -6,6 +6,7 @@ import type { Abi, Hex } from 'viem'
 import { cx } from '#lib/css'
 import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import {
+	blockHashHistoryAddress,
 	formatAbiValue,
 	getAbiItem,
 	getContractInfo,
@@ -379,8 +380,7 @@ export function useTraceTrees(
 					? precompileRegistry.get(trace.to.toLowerCase() as `0x${string}`)
 					: undefined
 				const isBlockHashHistory =
-					trace.to?.toLowerCase() ===
-					'0x0000f90827f1c53a10cb7a02335b175320002935'
+					trace.to?.toLowerCase() === blockHashHistoryAddress
 
 				let functionName: string | undefined
 				let params: string | undefined

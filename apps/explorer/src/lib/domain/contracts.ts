@@ -25,7 +25,7 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
-const blockHashHistoryAddress =
+export const blockHashHistoryAddress =
 	'0x0000f90827f1c53a10cb7a02335b175320002935' as const
 const zonePortalPrefix = '0x5ad000000000000000000000' as const
 
