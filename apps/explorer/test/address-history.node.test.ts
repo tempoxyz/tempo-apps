@@ -103,7 +103,7 @@ describe('toEnrichedTransaction', () => {
 					{
 						id: 'nonce',
 						title: 'Nonce Incremented',
-						type: 'nonce incremented',
+						type: 'nonce',
 						data: {},
 					},
 				],
