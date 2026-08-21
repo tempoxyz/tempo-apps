@@ -47,6 +47,25 @@ describe('activitiesToKnownEvents', () => {
 		).toEqual([activity])
 	})
 
+	test('omits nonce activity when another indexed activity is available', () => {
+		const batch = {
+			type: 'zone batch submission',
+			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+		}
+		const nonce = {
+			type: 'nonce incremented',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [batch, nonce],
+				fallbackEvents: [],
+				knownCall: null,
+			}),
+		).toEqual([batch])
+	})
+
 	test('preserves token amounts and perspective for transfers', () => {
 		expect(
 			activitiesToKnownEvents([

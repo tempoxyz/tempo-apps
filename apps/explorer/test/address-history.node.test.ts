@@ -114,6 +114,9 @@ describe('toEnrichedTransaction', () => {
 			type: 'action',
 			value: 'Submit Zone 3 Batch',
 		})
+		expect(result.knownEvents).not.toContainEqual(
+			expect.objectContaining({ type: 'nonce incremented' }),
+		)
 	})
 
 	it('maps a Cadent row + humanized receipt to the UI contract', () => {
