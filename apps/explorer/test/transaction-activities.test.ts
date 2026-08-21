@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
+import {
+	activitiesToKnownEvents,
+	selectTransactionDescriptionEvents,
+} from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
 	test('omits unknown activities so local descriptions can be used', () => {
@@ -8,6 +11,25 @@ describe('activitiesToKnownEvents', () => {
 				{ id: 'unknown', title: 'Unknown', type: 'unknown', data: {} },
 			]),
 		).toEqual([])
+	})
+
+	test('keeps a decoded call ahead of indexed activities', () => {
+		const knownCall = {
+			type: 'zone batch submission',
+			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+		}
+		const activity = {
+			type: 'nonce incremented',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [activity],
+				fallbackEvents: [],
+				knownCall,
+			}),
+		).toEqual([knownCall, activity])
 	})
 
 	test('preserves token amounts and perspective for transfers', () => {

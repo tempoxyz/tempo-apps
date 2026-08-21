@@ -116,6 +116,7 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 	return {
 		block,
 		feeBreakdown,
+		knownCall,
 		knownEvents,
 		knownEventsByLog,
 		receipt,

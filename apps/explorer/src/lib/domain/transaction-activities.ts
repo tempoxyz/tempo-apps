@@ -64,6 +64,17 @@ export function activitiesToKnownEvents(
 	})
 }
 
+export function selectTransactionDescriptionEvents(params: {
+	activityEvents: readonly KnownEvent[]
+	fallbackEvents: readonly KnownEvent[]
+	knownCall: KnownEvent | null
+}): KnownEvent[] {
+	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
+	return params.knownCall
+		? [params.knownCall, ...params.activityEvents]
+		: [...params.activityEvents]
+}
+
 function activityAddress(
 	value: ActivityDataValue | undefined,
 ): Address.Address | undefined {

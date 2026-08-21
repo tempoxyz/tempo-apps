@@ -27,7 +27,10 @@ import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
-import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
+import {
+	activitiesToKnownEvents,
+	selectTransactionDescriptionEvents,
+} from '#lib/domain/transaction-activities'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
 import {
@@ -120,8 +123,11 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
 		: parsedEvents
 	const activityEvents = activitiesToKnownEvents(activities)
-	const knownEvents =
-		activityEvents.length > 0 ? activityEvents : fallbackEvents
+	const knownEvents = selectTransactionDescriptionEvents({
+		activityEvents,
+		fallbackEvents,
+		knownCall,
+	})
 
 	return {
 		block,
