@@ -10,6 +10,10 @@ import {
 } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis, allAbis } from '#lib/abis'
+import {
+	getZonePortalId,
+	isZonePortalAddress as isDeterministicZonePortalAddress,
+} from '#lib/domain/zones'
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import type * as Tip20 from './tip20'
 
@@ -45,15 +49,16 @@ const KNOWN_ZONES: ReadonlyMap<Address.Address, { name: string }> = new Map([
 	],
 ])
 
-const ZONE_PORTAL_EVENT_NAMES = new Set([
-	'DepositMade',
-	'EncryptedDepositMade',
-	'BatchSubmitted',
-	'WithdrawalProcessed',
-	'BounceBack',
-	'SequencerTransferred',
-	'TokenEnabled',
-])
+const ZONE_EVENT_NAMES = new Set(
+	[...Abis.zoneFactory, ...Abis.zonePortal, ...Abis.zoneOutbox]
+		.filter((item) => item.type === 'event')
+		.map((item) => item.name),
+)
+const ZONE_PORTAL_EVENT_NAMES = new Set(
+	Abis.zonePortal
+		.filter((item) => item.type === 'event')
+		.map((item) => item.name),
+)
 
 function createZoneDepositTransferKey(params: {
 	sender: Address.Address
@@ -112,6 +117,54 @@ function checksumAddress(address: string): Address.Address {
 	return Address.from(address, { checksum: true })
 }
 
+function humanizeIdentifier(value: string): string {
+	return value
+		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+		.replace(/^./, (character) => character.toUpperCase())
+}
+
+function formatZoneEventAction(eventName: string, zoneName: string): string {
+	const transformations = [
+		['Updated', 'Update'],
+		['Paused', 'Pause'],
+		['Resumed', 'Resume'],
+		['Transferred', 'Transfer'],
+		['Started', 'Start'],
+		['Scheduled', 'Schedule'],
+		['Claimed', 'Claim'],
+		['Requested', 'Request'],
+	] as const
+
+	for (const [suffix, verb] of transformations) {
+		if (!eventName.endsWith(suffix)) continue
+		const subject = humanizeIdentifier(eventName.slice(0, -suffix.length))
+		return `${verb} ${zoneName} ${subject}`
+	}
+
+	return `${zoneName} ${humanizeIdentifier(eventName)}`
+}
+
+function formatZoneEventArgument(value: unknown): KnownEventPart {
+	if (typeof value === 'bigint' || typeof value === 'number')
+		return { type: 'number', value }
+	if (typeof value === 'boolean')
+		return { type: 'text', value: value ? 'Yes' : 'No' }
+	if (typeof value === 'string') {
+		if (/^0x[\da-fA-F]{40}$/.test(value))
+			return { type: 'account', value: checksumAddress(value) }
+		if (/^0x[\da-fA-F]*$/.test(value))
+			return { type: 'hex', value: value as Hex.Hex }
+		return { type: 'text', value }
+	}
+
+	return {
+		type: 'text',
+		value: JSON.stringify(value, (_, item) =>
+			typeof item === 'bigint' ? item.toString() : item,
+		),
+	}
+}
+
 function decodeClaimReceiptV1(receipt: Hex.Hex) {
 	try {
 		const [
@@ -168,9 +221,17 @@ function createZonePortalMetadata(events: ParsedEvent[]) {
 			continue
 		}
 
-		if (ZONE_PORTAL_EVENT_NAMES.has(event.eventName)) {
+		if (
+			isDeterministicZonePortalAddress(event.address) ||
+			ZONE_PORTAL_EVENT_NAMES.has(event.eventName)
+		) {
 			const portal = checksumAddress(event.address)
-			zonePortals.set(portal, zonePortals.get(portal) ?? { name: 'Zone' })
+			const zoneId = getZonePortalId(portal)
+			zonePortals.set(portal, {
+				name:
+					zonePortals.get(portal)?.name ??
+					(zoneId === undefined ? 'Zone' : `Zone ${zoneId}`),
+			})
 		}
 	}
 
@@ -444,6 +505,31 @@ function createDetectors(
 						['Previous', { type: 'account', value: args.previousSequencer }],
 					],
 					meta: { from: address, to: args.newSequencer },
+				}
+			}
+
+			if (ZONE_EVENT_NAMES.has(eventName)) {
+				const zoneName = isZonePortalAddress(address)
+					? getZoneName(address)
+					: 'Zone'
+				const note = Object.entries(args).map(
+					([name, value]): [string, KnownEventPart] => [
+						humanizeIdentifier(name),
+						formatZoneEventArgument(value),
+					],
+				)
+
+				return {
+					type: `zone ${eventName
+						.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+						.toLowerCase()}`,
+					parts: [
+						{
+							type: 'action',
+							value: formatZoneEventAction(eventName, zoneName),
+						},
+					],
+					note: note.length > 0 ? note : undefined,
 				}
 			}
 

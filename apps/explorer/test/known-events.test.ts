@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
+import type { AbiEvent, AbiParameter } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, toHex, zeroHash } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Abis, stablecoinDexAbi, zoneFactoryAbi } from '#lib/abis'
+import {
+	Abis,
+	stablecoinDexAbi,
+	zoneFactoryAbi,
+	zoneOutboxAbi,
+	zonePortalAbi,
+} from '#lib/abis'
 import {
 	accountAddress,
 	getTokenMetadata,
@@ -57,7 +64,71 @@ const depositMadeAbi = [
 	},
 ] as const
 
+function sampleZoneEventValue(parameter: AbiParameter): unknown {
+	const array = /^(.*)\[\]$/.exec(parameter.type)
+	if (array?.[1])
+		return [
+			sampleZoneEventValue({ ...parameter, type: array[1] } as AbiParameter),
+		]
+	if (parameter.type === 'address') return accountAddress
+	if (parameter.type === 'bool') return true
+	if (parameter.type === 'string') return 'test'
+	if (parameter.type === 'bytes') return '0x1234'
+	if (parameter.type.startsWith('bytes')) {
+		const size = Number(parameter.type.slice('bytes'.length))
+		return `0x${'11'.repeat(size)}`
+	}
+	if (/^u?int\d*$/.test(parameter.type)) return 1n
+	throw new Error(`Missing sample value for ${parameter.type}`)
+}
+
+function mockZoneEventLog(event: AbiEvent, address: Address.Address) {
+	const args = Object.fromEntries(
+		event.inputs.map((input) => [input.name, sampleZoneEventValue(input)]),
+	)
+	const dataInputs = event.inputs.filter((input) => !input.indexed)
+	return mockLog(
+		{
+			address,
+			topics: encodeEventTopics({
+				abi: [event],
+				eventName: event.name,
+				args,
+			}) as [Hex.Hex, ...Hex.Hex[]],
+			data: encodeAbiParameters(
+				dataInputs,
+				dataInputs.map(sampleZoneEventValue),
+			),
+		},
+		`0x${'9'.repeat(64)}`,
+	)
+}
+
 describe('parseKnownEvents', () => {
+	it('maps every Zone ABI event to a known event', () => {
+		const portal = '0x5ad0000000000000000000000000000000000003' as const
+		const eventGroups = [
+			{ abi: zoneFactoryAbi, address: Addresses.tip20Factory },
+			{ abi: zonePortalAbi, address: portal },
+			{ abi: zoneOutboxAbi, address: accountAddress },
+		] as const
+
+		for (const { abi, address } of eventGroups) {
+			for (const item of abi) {
+				if (item.type !== 'event') continue
+				const receipt = mockReceipt(
+					[mockZoneEventLog(item, address)],
+					accountAddress,
+					`0x${'9'.repeat(64)}`,
+				)
+				expect(
+					parseKnownEvents(receipt, { getTokenMetadata }),
+					`${item.name} should be a known event`,
+				).toHaveLength(1)
+			}
+		}
+	})
+
 	it('decodes stablecoin DEX OrderFlipped buy and sell events', () => {
 		const hash = `0x${'6'.repeat(64)}` as const
 		const amount = 1_000_000n
@@ -301,7 +372,7 @@ describe('parseKnownEvents', () => {
 
 		expect(event).toMatchObject({
 			type: 'zone batch submitted',
-			parts: [{ type: 'action', value: 'Submit Zone Batch' }],
+			parts: [{ type: 'action', value: 'Submit Zone 3 Batch' }],
 			note: [
 				['Batch Index', { type: 'number', value: 337n }],
 				['Withdrawal Queue Index', { type: 'number', value: 4n }],
