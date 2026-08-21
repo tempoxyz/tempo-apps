@@ -3,9 +3,11 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, erc20Abi, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
+import { blockHashHistoryAbi } from '#lib/abis'
 import { cx } from '#lib/css'
 import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import {
+	blockHashHistoryAddress,
 	formatAbiValue,
 	getAbiItem,
 	getContractInfo,
@@ -235,11 +237,7 @@ function RawToggle(props: {
 	)
 }
 
-/**
- * Decoded view is for reading, not for exactness — a 78-digit uint256 or a
- * 200-character bytes blob wraps the whole tree and hides the arguments beside
- * it. The raw toggle still shows every byte.
- */
+/** Keep return values compact in the trace tree; the raw view preserves them. */
 function abbreviateTraceValue(value: string, max = 24): string {
 	if (value.length <= max) return value
 	return `${value.slice(0, max - 8)}…${value.slice(-6)}`
@@ -374,6 +372,7 @@ export function useTraceTrees(
 			function buildNode(
 				trace: CallTrace,
 				path: number[] = [],
+				parentTrace?: CallTrace,
 			): TxTraceTree.Node {
 				const currentFrameIndex = frameIndex++
 				const hasSelector = trace.input && trace.input.length >= 10
@@ -382,6 +381,8 @@ export function useTraceTrees(
 				const precompileInfo = trace.to
 					? precompileRegistry.get(trace.to.toLowerCase() as `0x${string}`)
 					: undefined
+				const isBlockHashHistory =
+					trace.to?.toLowerCase() === blockHashHistoryAddress
 
 				let functionName: string | undefined
 				let params: string | undefined
@@ -400,7 +401,7 @@ export function useTraceTrees(
 						})
 					: undefined
 
-				if (precompileInfo && trace.to) {
+				if (precompileInfo && precompileInfo.abi.length === 0 && trace.to) {
 					const decoded = decodePrecompile(
 						trace.to,
 						trace.input || '0x',
@@ -410,6 +411,25 @@ export function useTraceTrees(
 					if (decoded) {
 						params = decoded.params
 						decodedOutput = decoded.decodedOutput
+					}
+				} else if (isBlockHashHistory) {
+					const [getBlockHash] = blockHashHistoryAbi
+					try {
+						const [blockNumber] = decodeAbiParameters(
+							getBlockHash.inputs,
+							trace.input,
+						)
+						functionName = getBlockHash.name
+						params = `blockNumber: ${blockNumber}`
+						if (trace.output && trace.output !== '0x') {
+							const [blockHash] = decodeAbiParameters(
+								getBlockHash.outputs,
+								trace.output,
+							)
+							decodedOutput = blockHash
+						}
+					} catch {
+						// EIP-2935 rejects malformed raw calldata.
 					}
 				} else if (selector) {
 					const autoloadAbi = abiMap.get(trace.to?.toLowerCase() ?? '')
@@ -432,7 +452,7 @@ export function useTraceTrees(
 								params = decoded
 									.map((v, i) => {
 										const name = item.inputs[i]?.name
-										const value = abbreviateTraceValue(formatAbiValue(v))
+										const value = formatAbiValue(v)
 										return name ? `${name}: ${value}` : value
 									})
 									.join(', ')
@@ -468,10 +488,12 @@ export function useTraceTrees(
 						}
 					}
 				}
+				if (trace.type === 'DELEGATECALL' && parentTrace?.input === trace.input)
+					params = 'same args as parent'
 
 				const children =
 					trace.calls?.map((child, index) =>
-						buildNode(child, [...path, index]),
+						buildNode(child, [...path, index], trace),
 					) ?? []
 				return {
 					trace,

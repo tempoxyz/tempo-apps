@@ -9,7 +9,18 @@ import {
 	zeroAddress,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Abis, allAbis } from '#lib/abis'
+import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
+import {
+	Abis,
+	allAbis,
+	zoneFactoryAbi,
+	zoneOutboxAbi,
+	zonePortalAbi,
+} from '#lib/abis'
+import {
+	getZonePortalId,
+	isZonePortalAddress as isDeterministicZonePortalAddress,
+} from '#lib/domain/zones'
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import type * as Tip20 from './tip20'
 
@@ -45,15 +56,16 @@ const KNOWN_ZONES: ReadonlyMap<Address.Address, { name: string }> = new Map([
 	],
 ])
 
-const ZONE_PORTAL_EVENT_NAMES = new Set([
-	'DepositMade',
-	'EncryptedDepositMade',
-	'BatchSubmitted',
-	'WithdrawalProcessed',
-	'BounceBack',
-	'SequencerTransferred',
-	'TokenEnabled',
-])
+const ZONE_EVENT_NAMES = new Set(
+	[...Abis.zoneFactory, ...Abis.zonePortal, ...Abis.zoneOutbox]
+		.filter((item) => item.type === 'event')
+		.map((item) => item.name),
+)
+const ZONE_PORTAL_EVENT_NAMES = new Set(
+	Abis.zonePortal
+		.filter((item) => item.type === 'event')
+		.map((item) => item.name),
+)
 
 function createZoneDepositTransferKey(params: {
 	sender: Address.Address
@@ -112,6 +124,54 @@ function checksumAddress(address: string): Address.Address {
 	return Address.from(address, { checksum: true })
 }
 
+function humanizeIdentifier(value: string): string {
+	return value
+		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+		.replace(/^./, (character) => character.toUpperCase())
+}
+
+function formatZoneEventAction(eventName: string, zoneName: string): string {
+	const transformations = [
+		['Updated', 'Update'],
+		['Paused', 'Pause'],
+		['Resumed', 'Resume'],
+		['Transferred', 'Transfer'],
+		['Started', 'Start'],
+		['Scheduled', 'Schedule'],
+		['Claimed', 'Claim'],
+		['Requested', 'Request'],
+	] as const
+
+	for (const [suffix, verb] of transformations) {
+		if (!eventName.endsWith(suffix)) continue
+		const subject = humanizeIdentifier(eventName.slice(0, -suffix.length))
+		return `${verb} ${zoneName} ${subject}`
+	}
+
+	return `${zoneName} ${humanizeIdentifier(eventName)}`
+}
+
+function formatZoneEventArgument(value: unknown): KnownEventPart {
+	if (typeof value === 'bigint' || typeof value === 'number')
+		return { type: 'number', value }
+	if (typeof value === 'boolean')
+		return { type: 'text', value: value ? 'Yes' : 'No' }
+	if (typeof value === 'string') {
+		if (/^0x[\da-fA-F]{40}$/.test(value))
+			return { type: 'account', value: checksumAddress(value) }
+		if (/^0x[\da-fA-F]*$/.test(value))
+			return { type: 'hex', value: value as Hex.Hex }
+		return { type: 'text', value }
+	}
+
+	return {
+		type: 'text',
+		value: JSON.stringify(value, (_, item) =>
+			typeof item === 'bigint' ? item.toString() : item,
+		),
+	}
+}
+
 function decodeClaimReceiptV1(receipt: Hex.Hex) {
 	try {
 		const [
@@ -168,9 +228,17 @@ function createZonePortalMetadata(events: ParsedEvent[]) {
 			continue
 		}
 
-		if (ZONE_PORTAL_EVENT_NAMES.has(event.eventName)) {
+		if (
+			isDeterministicZonePortalAddress(event.address) ||
+			ZONE_PORTAL_EVENT_NAMES.has(event.eventName)
+		) {
 			const portal = checksumAddress(event.address)
-			zonePortals.set(portal, zonePortals.get(portal) ?? { name: 'Zone' })
+			const zoneId = getZonePortalId(portal)
+			zonePortals.set(portal, {
+				name:
+					zonePortals.get(portal)?.name ??
+					(zoneId === undefined ? 'Zone' : `Zone ${zoneId}`),
+			})
 		}
 	}
 
@@ -247,7 +315,6 @@ function createDetectors(
 
 			if (eventName === 'DepositMade') {
 				const zoneName = getZoneName(address)
-				const memo = decodeMemoForDisplay(args.memo)
 				const note: NonNullable<KnownEvent['note']> = []
 
 				if (args.fee > 0n) {
@@ -256,6 +323,23 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.fee, args.token) },
 					])
 				}
+				if (!('to' in args)) {
+					note.push(['Key Index', { type: 'number', value: args.keyIndex }])
+					return {
+						type: 'zone encrypted deposit',
+						parts: [
+							{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+							{
+								type: 'amount',
+								value: createAmount(args.netAmount, args.token),
+							},
+						],
+						note,
+						meta: { from: args.sender, to: address },
+					}
+				}
+
+				const memo = decodeMemoForDisplay(args.memo)
 				if (memo) note.push(['Memo', { type: 'text', value: memo }])
 
 				return {
@@ -296,14 +380,33 @@ function createDetectors(
 
 			if (eventName === 'BatchSubmitted') {
 				const zoneName = getZoneName(address)
+				const note: NonNullable<KnownEvent['note']> = [
+					['Batch Index', { type: 'number', value: args.withdrawalBatchIndex }],
+					[
+						'Processed Deposits',
+						{ type: 'hex', value: args.nextProcessedDepositQueueHash },
+					],
+					['Next Block', { type: 'hex', value: args.nextBlockHash }],
+					[
+						'Withdrawal Queue',
+						{ type: 'hex', value: args.withdrawalQueueHash },
+					],
+				]
+				if ('withdrawalQueueIndex' in args) {
+					note.splice(1, 0, [
+						'Withdrawal Queue Index',
+						{ type: 'number', value: args.withdrawalQueueIndex },
+					])
+					note.push([
+						'Last Processed Deposit',
+						{ type: 'number', value: args.lastProcessedDepositNumber },
+					])
+				}
+
 				return {
 					type: 'zone batch submitted',
 					parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
-					note: [
-						['Processed Deposits', { type: 'text', value: '' }],
-						['Next Block', { type: 'text', value: '' }],
-						['Withdrawal Queue', { type: 'text', value: '' }],
-					],
+					note,
 				}
 			}
 
@@ -341,7 +444,30 @@ function createDetectors(
 				}
 			}
 
-			if (eventName === 'ZoneCreated')
+			if (eventName === 'ZoneCreated') {
+				const note: NonNullable<KnownEvent['note']> = [
+					[
+						'Initial Token',
+						{ type: 'token', value: { address: args.initialToken } },
+					],
+					['Verifier', { type: 'account', value: args.verifier }],
+				]
+				if ('messenger' in args) {
+					note.unshift(
+						['Messenger', { type: 'account', value: args.messenger }],
+						['Sequencer', { type: 'account', value: args.sequencer }],
+					)
+				} else {
+					note.unshift(
+						...args.sequencers.map(
+							(sequencer, index): [string, KnownEventPart] => [
+								`Sequencer ${index + 1}`,
+								{ type: 'account', value: sequencer },
+							],
+						),
+					)
+				}
+
 				return {
 					type: 'zone created',
 					parts: [
@@ -350,17 +476,10 @@ function createDetectors(
 						{ type: 'text', value: 'at' },
 						{ type: 'account', value: args.portal },
 					],
-					note: [
-						['Messenger', { type: 'account', value: args.messenger }],
-						[
-							'Initial Token',
-							{ type: 'token', value: { address: args.initialToken } },
-						],
-						['Sequencer', { type: 'account', value: args.sequencer }],
-						['Verifier', { type: 'account', value: args.verifier }],
-					],
+					note,
 					meta: { from: address, to: args.portal },
 				}
+			}
 
 			if (eventName === 'TokenEnabled') {
 				const zoneName = getZoneName(address)
@@ -393,6 +512,31 @@ function createDetectors(
 						['Previous', { type: 'account', value: args.previousSequencer }],
 					],
 					meta: { from: address, to: args.newSequencer },
+				}
+			}
+
+			if (ZONE_EVENT_NAMES.has(eventName)) {
+				const zoneName = isZonePortalAddress(address)
+					? getZoneName(address)
+					: 'Zone'
+				const note = Object.entries(args).map(
+					([name, value]): [string, KnownEventPart] => [
+						humanizeIdentifier(name),
+						formatZoneEventArgument(value),
+					],
+				)
+
+				return {
+					type: `zone ${eventName
+						.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+						.toLowerCase()}`,
+					parts: [
+						{
+							type: 'action',
+							value: formatZoneEventAction(eventName, zoneName),
+						},
+					],
+					note: note.length > 0 ? note : undefined,
 				}
 			}
 
@@ -2050,6 +2194,7 @@ const VALIDATOR_CONFIG = '0xcccccccc00000000000000000000000000000000'
 type CallDecoder = (
 	functionName: string,
 	args: readonly unknown[],
+	to: Address.Address,
 ) => KnownEvent | null
 
 function decodeValidatorConfigCall(
@@ -2154,6 +2299,176 @@ function decodeValidatorConfigCall(
 	}
 }
 
+function decodeZoneFactoryCall(
+	functionName: string,
+	args: readonly unknown[],
+): KnownEvent | null {
+	if (functionName !== 'createZone') return null
+
+	const [params] = args as readonly [
+		{
+			initialToken: Address.Address
+			admin: Address.Address
+			sequencer?: Address.Address
+			sequencers?: readonly Address.Address[]
+			threshold?: number
+			rpcUrl: string
+			verifier?: Address.Address
+		},
+	]
+	const sequencers =
+		params.sequencers ?? (params.sequencer ? [params.sequencer] : [])
+	const note: NonNullable<KnownEvent['note']> = [
+		['Admin', { type: 'account', value: params.admin }],
+		...sequencers.map((sequencer, index): [string, KnownEventPart] => [
+			`Sequencer ${index + 1}`,
+			{ type: 'account', value: sequencer },
+		]),
+		['RPC URL', { type: 'text', value: params.rpcUrl }],
+	]
+	if (params.threshold !== undefined)
+		note.push(['Threshold', { type: 'number', value: params.threshold }])
+	if (params.verifier)
+		note.push(['Verifier', { type: 'account', value: params.verifier }])
+
+	return {
+		type: 'zone creation',
+		parts: [
+			{ type: 'action', value: 'Create Zone' },
+			{ type: 'text', value: 'with' },
+			{ type: 'token', value: { address: params.initialToken } },
+		],
+		note,
+	}
+}
+
+function decodeZonePortalCall(
+	functionName: string,
+	args: readonly unknown[],
+	to: Address.Address,
+): KnownEvent | null {
+	const zoneId = getZonePortalId(to)
+	const zoneName = zoneId === undefined ? 'Zone' : `Zone ${zoneId}`
+
+	switch (functionName) {
+		case 'deposit': {
+			const [token, recipient, amount, memo, refundRecipient] = args as [
+				Address.Address,
+				Address.Address,
+				bigint,
+				Hex.Hex,
+				Address.Address,
+			]
+			const note: NonNullable<KnownEvent['note']> = [
+				['Refund Recipient', { type: 'account', value: refundRecipient }],
+			]
+			const decodedMemo = decodeMemoForDisplay(memo)
+			if (decodedMemo)
+				note.unshift(['Memo', { type: 'text', value: decodedMemo }])
+			return {
+				type: 'zone deposit',
+				parts: [
+					{ type: 'action', value: `Deposit to ${zoneName}` },
+					{ type: 'amount', value: { token, value: amount } },
+					{ type: 'text', value: 'for' },
+					{ type: 'account', value: recipient },
+				],
+				note,
+			}
+		}
+		case 'depositEncrypted': {
+			const [token, amount, keyIndex, _encrypted, refundRecipient] = args as [
+				Address.Address,
+				bigint,
+				bigint,
+				unknown,
+				Address.Address,
+			]
+			return {
+				type: 'zone encrypted deposit',
+				parts: [
+					{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+					{ type: 'amount', value: { token, value: amount } },
+				],
+				note: [
+					['Key Index', { type: 'number', value: keyIndex }],
+					['Refund Recipient', { type: 'account', value: refundRecipient }],
+				],
+			}
+		}
+		case 'pause':
+			return {
+				type: 'zone portal paused',
+				parts: [{ type: 'action', value: `Pause ${zoneName} Portal` }],
+			}
+		case 'submitBatch': {
+			const [
+				tempoBlockNumber,
+				_recentTempoBlockNumber,
+				_blockTransition,
+				_depositQueueTransition,
+				withdrawalQueueHash,
+				_verifierConfig,
+				_proof,
+				zoneHeight,
+			] = args as [
+				bigint,
+				bigint,
+				unknown,
+				unknown,
+				Hex.Hex,
+				Hex.Hex,
+				Hex.Hex,
+				bigint,
+				readonly Hex.Hex[],
+			]
+			return {
+				type: 'zone batch submission',
+				parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
+				note: [
+					['Tempo Block', { type: 'number', value: tempoBlockNumber }],
+					['Zone Height', { type: 'number', value: zoneHeight }],
+					['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
+				],
+			}
+		}
+		default:
+			return null
+	}
+}
+
+function decodeZoneOutboxCall(
+	functionName: string,
+	args: readonly unknown[],
+): KnownEvent | null {
+	if (functionName !== 'requestWithdrawal') return null
+	const [token, recipient, amount, memo, gasLimit, fallbackRecipient] =
+		args as [
+			Address.Address,
+			Address.Address,
+			bigint,
+			Hex.Hex,
+			bigint,
+			Address.Address,
+		]
+	const note: NonNullable<KnownEvent['note']> = [
+		['Gas Limit', { type: 'number', value: gasLimit }],
+		['Fallback Recipient', { type: 'account', value: fallbackRecipient }],
+	]
+	const decodedMemo = decodeMemoForDisplay(memo)
+	if (decodedMemo) note.unshift(['Memo', { type: 'text', value: decodedMemo }])
+	return {
+		type: 'zone withdrawal request',
+		parts: [
+			{ type: 'action', value: 'Request Zone Withdrawal' },
+			{ type: 'amount', value: { token, value: amount } },
+			{ type: 'text', value: 'to' },
+			{ type: 'account', value: recipient },
+		],
+		note,
+	}
+}
+
 const callDecoders: Record<
 	string,
 	{ abi: readonly unknown[]; decoder: CallDecoder }
@@ -2161,6 +2476,18 @@ const callDecoders: Record<
 	[VALIDATOR_CONFIG.toLowerCase()]: {
 		abi: Abis.validatorConfig,
 		decoder: decodeValidatorConfigCall,
+	},
+	[ZoneAddresses.zoneFactory.toLowerCase()]: {
+		abi: zoneFactoryAbi,
+		decoder: decodeZoneFactoryCall,
+	},
+	[ZoneAddresses.zonePortalImplementation.toLowerCase()]: {
+		abi: zonePortalAbi,
+		decoder: decodeZonePortalCall,
+	},
+	[ZoneAddresses.zoneOutbox.toLowerCase()]: {
+		abi: zoneOutboxAbi,
+		decoder: decodeZoneOutboxCall,
 	},
 }
 
@@ -2175,7 +2502,9 @@ export function decodeKnownCall(
 ): KnownEvent | null {
 	if (!input || input === '0x') return null
 
-	const entry = callDecoders[to.toLowerCase()]
+	const entry = isDeterministicZonePortalAddress(to)
+		? { abi: zonePortalAbi, decoder: decodeZonePortalCall }
+		: callDecoders[to.toLowerCase()]
 	if (!entry) return null
 
 	try {
@@ -2183,8 +2512,27 @@ export function decodeKnownCall(
 			abi: entry.abi as readonly unknown[],
 			data: input,
 		})
-		return entry.decoder(decoded.functionName, decoded.args ?? [])
+		return entry.decoder(decoded.functionName, decoded.args ?? [], to)
 	} catch {
 		return null
 	}
+}
+
+export function decodeKnownTransactionCall(
+	transaction: TransactionLike,
+): KnownEvent | null {
+	const queue: TransactionLike[] = [transaction]
+
+	while (queue.length > 0) {
+		const call = queue.shift()
+		if (!call) break
+		const input = call.input ?? call.data
+		if (call.to && input && input !== '0x') {
+			const decoded = decodeKnownCall(call.to, input)
+			if (decoded) return decoded
+		}
+		if (call.calls) queue.push(...call.calls)
+	}
+
+	return null
 }

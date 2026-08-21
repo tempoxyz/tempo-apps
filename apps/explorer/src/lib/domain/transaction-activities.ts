@@ -22,7 +22,13 @@ const HIDDEN_FIELDS = new Set(['signer', 'status'])
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 ): KnownEvent[] {
-	return activities.map((activity) => {
+	return activities.flatMap((activity) => {
+		if (
+			activity.title.trim().toLowerCase() === 'unknown' ||
+			activity.type.trim().toLowerCase() === 'unknown'
+		)
+			return []
+
 		const parts = activityParts(activity)
 		const representedFields = new Set([
 			'sourceAmount',
@@ -33,27 +39,58 @@ export function activitiesToKnownEvents(
 			'sender',
 			'spender',
 		])
-		return {
-			type: activity.type,
-			parts,
-			...(activity.type === 'transfer'
-				? {
-						meta: {
-							from: activityAddress(activity.data.sender),
-							to: activityAddress(activity.data.recipient),
-						},
-					}
-				: {}),
-			note: Object.entries(activity.data).flatMap(([key, value]) => {
-				if (HIDDEN_FIELDS.has(key) || value == null) return []
-				if (representedFields.has(key)) return []
-				const part = activityValueToPart(value)
-				return part
-					? [[formatLabel(key), part] as [string, KnownEventPart]]
-					: []
-			}),
-		}
+		return [
+			{
+				type: activity.type,
+				parts,
+				...(activity.type === 'transfer'
+					? {
+							meta: {
+								from: activityAddress(activity.data.sender),
+								to: activityAddress(activity.data.recipient),
+							},
+						}
+					: {}),
+				note: Object.entries(activity.data).flatMap(([key, value]) => {
+					if (HIDDEN_FIELDS.has(key) || value == null) return []
+					if (representedFields.has(key)) return []
+					const part = activityValueToPart(value)
+					return part
+						? [[formatLabel(key), part] as [string, KnownEventPart]]
+						: []
+				}),
+			},
+		]
 	})
+}
+
+export function selectTransactionDescriptionEvents(params: {
+	activityEvents: readonly KnownEvent[]
+	fallbackEvents: readonly KnownEvent[]
+	knownCall: KnownEvent | null
+}): KnownEvent[] {
+	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
+	const hasMeaningfulActivity = params.activityEvents.some(
+		(event) => !isNonceIncrementedEvent(event),
+	)
+	const activityEvents =
+		params.knownCall || hasMeaningfulActivity
+			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
+			: params.activityEvents
+	return params.knownCall
+		? [params.knownCall, ...activityEvents]
+		: [...activityEvents]
+}
+
+export function isNonceIncrementedEvent(event: KnownEvent): boolean {
+	return (
+		event.type.trim().toLowerCase() === 'nonce incremented' ||
+		event.parts.some(
+			(part) =>
+				part.type === 'action' &&
+				part.value.trim().toLowerCase() === 'nonce incremented',
+		)
+	)
 }
 
 function activityAddress(
