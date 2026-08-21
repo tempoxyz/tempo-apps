@@ -69,6 +69,11 @@ export function TransactionDescription(props: {
 	accountAddress: Address.Address
 }) {
 	const { knownEvents, accountAddress } = props
+	const meaningfulEvents = knownEvents.filter(
+		(event) => event.type !== 'nonce incremented',
+	)
+	const visibleEvents =
+		meaningfulEvents.length > 0 ? meaningfulEvents : knownEvents
 
 	const transformEvent = React.useCallback(
 		(event: KnownEvent) => getPerspectiveEvent(event, accountAddress),
@@ -77,7 +82,7 @@ export function TransactionDescription(props: {
 
 	return (
 		<TxEventDescription.ExpandGroup
-			events={knownEvents}
+			events={visibleEvents}
 			seenAs={accountAddress}
 			transformEvent={transformEvent}
 		/>
