@@ -70,9 +70,14 @@ export function selectTransactionDescriptionEvents(params: {
 	knownCall: KnownEvent | null
 }): KnownEvent[] {
 	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
+	const activityEvents = params.knownCall
+		? params.activityEvents.filter(
+				(event) => event.type !== 'nonce incremented',
+			)
+		: params.activityEvents
 	return params.knownCall
-		? [params.knownCall, ...params.activityEvents]
-		: [...params.activityEvents]
+		? [params.knownCall, ...activityEvents]
+		: [...activityEvents]
 }
 
 function activityAddress(

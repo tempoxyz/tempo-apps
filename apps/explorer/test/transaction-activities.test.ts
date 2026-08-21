@@ -13,7 +13,7 @@ describe('activitiesToKnownEvents', () => {
 		).toEqual([])
 	})
 
-	test('keeps a decoded call ahead of indexed activities', () => {
+	test('omits nonce activity when a decoded call is available', () => {
 		const knownCall = {
 			type: 'zone batch submission',
 			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
@@ -29,7 +29,22 @@ describe('activitiesToKnownEvents', () => {
 				fallbackEvents: [],
 				knownCall,
 			}),
-		).toEqual([knownCall, activity])
+		).toEqual([knownCall])
+	})
+
+	test('preserves nonce activity when no decoded call is available', () => {
+		const activity = {
+			type: 'nonce incremented',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [activity],
+				fallbackEvents: [],
+				knownCall: null,
+			}),
+		).toEqual([activity])
 	})
 
 	test('preserves token amounts and perspective for transfers', () => {

@@ -160,7 +160,8 @@ describe('Zone protocol contracts', () => {
 		expect(isZonePortalAddress(portal)).toBe(true)
 		expect(systemAddress(portal)).toBe(true)
 		expect(getContractInfo(portal)).toMatchObject({
-			name: 'Zone Portal #3',
+			name: 'Zone Portal Proxy #3',
+			description: 'ERC-1167 minimal proxy for Tempo Zone 3',
 			abi: zonePortalAbi,
 		})
 	})

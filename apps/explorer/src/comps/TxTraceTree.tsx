@@ -489,7 +489,7 @@ export function useTraceTrees(
 					}
 				}
 				if (trace.type === 'DELEGATECALL' && parentTrace?.input === trace.input)
-					params = undefined
+					params = 'same args as parent'
 
 				const children =
 					trace.calls?.map((child, index) =>

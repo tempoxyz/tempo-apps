@@ -495,12 +495,12 @@ export function getContractInfo(
 		const zoneId = getZonePortalId(address)
 		return {
 			address,
-			name: `Zone Portal #${zoneId}`,
+			name: `Zone Portal Proxy #${zoneId}`,
 			code: '0xef',
-			description: 'Bridge assets between Tempo and a Tempo Zone',
+			description: `ERC-1167 minimal proxy for Tempo Zone ${zoneId}`,
 			abi: zonePortalAbi,
 			category: 'system',
-			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			docsUrl: 'https://eips.ethereum.org/EIPS/eip-1167',
 		}
 	}
 
