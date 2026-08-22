@@ -1497,16 +1497,11 @@ export function parseKnownEvents(
 	const blockedTransferKeys = new Set<string>()
 	for (const event of events) {
 		if (event.eventName !== 'TransferBlocked') continue
-		const { token, amount, receipt } = event.args as {
+		const { token, amount } = event.args as {
 			token: Address.Address
 			amount: bigint
-			receipt: Hex.Hex
 		}
-		const decodedReceipt = decodeClaimReceiptV1(receipt)
-		if (!decodedReceipt) continue
-		blockedTransferKeys.add(
-			`${Address.from(token)}:${Address.from(decodedReceipt.originator)}:${amount.toString()}`,
-		)
+		blockedTransferKeys.add(`${token.toLowerCase()}:${amount.toString()}`)
 	}
 
 	const preferenceMap = new Map<string, string>()
@@ -1679,7 +1674,7 @@ export function parseKnownEvents(
 				if (
 					Address.isEqual(to, RECEIVE_POLICY_GUARD) &&
 					blockedTransferKeys.has(
-						`${Address.from(event.address)}:${Address.from(from)}:${amount.toString()}`,
+						`${event.address.toLowerCase()}:${amount.toString()}`,
 					)
 				) {
 					include = false
@@ -1753,7 +1748,7 @@ export function parseKnownEvents(
 				if (
 					Address.isEqual(to, RECEIVE_POLICY_GUARD) &&
 					blockedTransferKeys.has(
-						`${Address.from(event.address)}:${Address.from(from)}:${amount.toString()}`,
+						`${event.address.toLowerCase()}:${amount.toString()}`,
 					)
 				) {
 					include = false
