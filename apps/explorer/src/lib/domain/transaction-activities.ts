@@ -20,7 +20,7 @@ export type ActivityDataValue =
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
 const PRIVATE_ZONE_ACTIONS: Record<string, string> = {
 	'private-assets-deposited': 'Private Zone Deposit',
-	'private-assets-redeemed': 'Private Zone Withdrawal',
+	'private-shares-redeemed': 'Private Zone Withdrawal',
 }
 
 export function activitiesToKnownEvents(
