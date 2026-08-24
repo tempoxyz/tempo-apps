@@ -106,16 +106,7 @@ describe('activitiesToKnownEvents', () => {
 		).toEqual([
 			{
 				type: 'zone encrypted deposit',
-				parts: [
-					{ type: 'action', value: 'Private Zone Deposit' },
-					{
-						type: 'amount',
-						value: {
-							value: 500275n,
-							token: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
-						},
-					},
-				],
+				parts: [{ type: 'action', value: 'Private Zone Deposit' }],
 			},
 		])
 	})

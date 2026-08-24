@@ -23,22 +23,11 @@ export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 ): KnownEvent[] {
 	return activities.map((activity) => {
-		if (activity.type === 'private-assets-deposited') {
-			const shares = activity.data.shares
-			const vault = activityAddress(activity.data.vault)
-			const amount =
-				typeof shares === 'number' && Number.isSafeInteger(shares)
-					? BigInt(shares)
-					: typeof shares === 'string' && /^\d+$/.test(shares)
-						? BigInt(shares)
-						: null
-			const parts: KnownEventPart[] = [
-				{ type: 'action', value: 'Private Zone Deposit' },
-			]
-			if (amount !== null && vault)
-				parts.push({ type: 'amount', value: { value: amount, token: vault } })
-			return { type: 'zone encrypted deposit', parts }
-		}
+		if (activity.type === 'private-assets-deposited')
+			return {
+				type: 'zone encrypted deposit',
+				parts: [{ type: 'action', value: 'Private Zone Deposit' }],
+			}
 
 		const parts = activityParts(activity)
 		const representedFields = new Set([
