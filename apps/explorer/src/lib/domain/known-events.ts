@@ -324,17 +324,16 @@ function createDetectors(
 					])
 				}
 				if (!('to' in args)) {
-					note.push(['Key Index', { type: 'number', value: args.keyIndex }])
 					return {
 						type: 'zone encrypted deposit',
 						parts: [
-							{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+							{ type: 'action', value: `Private Deposit to ${zoneName}` },
 							{
 								type: 'amount',
 								value: createAmount(args.netAmount, args.token),
 							},
 						],
-						note,
+						note: note.length > 0 ? note : undefined,
 						meta: { from: args.sender, to: address },
 					}
 				}
@@ -365,12 +364,10 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.fee, args.token) },
 					])
 				}
-				note.push(['Key Index', { type: 'number', value: args.keyIndex }])
-
 				return {
 					type: 'zone encrypted deposit',
 					parts: [
-						{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+						{ type: 'action', value: `Private Deposit to ${zoneName}` },
 						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
 					],
 					note: note.length > 0 ? note : undefined,
@@ -2377,7 +2374,7 @@ function decodeZonePortalCall(
 			}
 		}
 		case 'depositEncrypted': {
-			const [token, amount, keyIndex, _encrypted, refundRecipient] = args as [
+			const [token, amount, _keyIndex, _encrypted, refundRecipient] = args as [
 				Address.Address,
 				bigint,
 				bigint,
@@ -2387,11 +2384,10 @@ function decodeZonePortalCall(
 			return {
 				type: 'zone encrypted deposit',
 				parts: [
-					{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
+					{ type: 'action', value: `Private Deposit to ${zoneName}` },
 					{ type: 'amount', value: { token, value: amount } },
 				],
 				note: [
-					['Key Index', { type: 'number', value: keyIndex }],
 					['Refund Recipient', { type: 'account', value: refundRecipient }],
 				],
 			}

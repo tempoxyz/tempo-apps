@@ -18,6 +18,11 @@ export type ActivityDataValue =
 	| { [key: string]: ActivityDataValue }
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
+const PRIVATE_EARN_ACTIVITY_TYPES = new Set([
+	'earn-private-deposit',
+	'earn-private-redeem',
+])
+const SUPPLEMENTAL_FALLBACK_EVENT_TYPES = new Set(['zone encrypted deposit'])
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
@@ -25,7 +30,8 @@ export function activitiesToKnownEvents(
 	return activities.flatMap((activity) => {
 		if (
 			activity.title.trim().toLowerCase() === 'unknown' ||
-			activity.type.trim().toLowerCase() === 'unknown'
+			activity.type.trim().toLowerCase() === 'unknown' ||
+			PRIVATE_EARN_ACTIVITY_TYPES.has(activity.type.trim().toLowerCase())
 		)
 			return []
 
@@ -77,9 +83,16 @@ export function selectTransactionDescriptionEvents(params: {
 		params.knownCall || hasMeaningfulActivity
 			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
 			: params.activityEvents
+	const supplementalFallbackEvents = params.fallbackEvents.filter(
+		(event) =>
+			SUPPLEMENTAL_FALLBACK_EVENT_TYPES.has(event.type) &&
+			!activityEvents.some(
+				(activityEvent) => activityEvent.type === event.type,
+			),
+	)
 	return params.knownCall
-		? [params.knownCall, ...activityEvents]
-		: [...activityEvents]
+		? [params.knownCall, ...activityEvents, ...supplementalFallbackEvents]
+		: [...activityEvents, ...supplementalFallbackEvents]
 }
 
 export function isNonceIncrementedEvent(event: KnownEvent): boolean {

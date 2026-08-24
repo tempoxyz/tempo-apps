@@ -75,6 +75,33 @@ const depositMadeAbi = [
 	},
 ] as const
 
+const privateDepositMadeAbi = [
+	{
+		type: 'event',
+		name: 'DepositMade',
+		inputs: [
+			{
+				indexed: true,
+				name: 'newCurrentDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: true, name: 'sender', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'netAmount', type: 'uint128' },
+			{ indexed: false, name: 'fee', type: 'uint128' },
+			{ indexed: false, name: 'keyIndex', type: 'uint256' },
+			{ indexed: false, name: 'ephemeralPubkeyX', type: 'bytes32' },
+			{ indexed: false, name: 'ephemeralPubkeyYParity', type: 'uint8' },
+			{ indexed: false, name: 'ciphertext', type: 'bytes' },
+			{ indexed: false, name: 'nonce', type: 'bytes12' },
+			{ indexed: false, name: 'tag', type: 'bytes16' },
+			{ indexed: false, name: 'tempoRefundRecipient', type: 'address' },
+			{ indexed: false, name: 'depositNumber', type: 'uint64' },
+		],
+		anonymous: false,
+	},
+] as const
+
 function sampleZoneEventValue(parameter: AbiParameter): unknown {
 	const array = /^(.*)\[\]$/.exec(parameter.type)
 	if (array?.[1])
@@ -174,7 +201,7 @@ describe('parseKnownEvents', () => {
 						accountAddress,
 					],
 				}),
-				action: 'Encrypted Deposit to Zone 3',
+				action: 'Private Deposit to Zone 3',
 			},
 			{
 				to: portal,
@@ -413,6 +440,58 @@ describe('parseKnownEvents', () => {
 			type: 'action',
 			value: 'Deposit to Zone E',
 		})
+	})
+
+	it('describes private deposits without internal encryption fields', () => {
+		const hash = `0x${'4'.repeat(64)}` as const
+		const portal = '0x5ad0000000000000000000000000000000000003' as const
+		const event = privateDepositMadeAbi[0]
+		const logs = [
+			mockLog(
+				{
+					address: portal,
+					topics: encodeEventTopics({
+						abi: privateDepositMadeAbi,
+						eventName: 'DepositMade',
+						args: {
+							newCurrentDepositQueueHash: zeroHash,
+							sender: accountAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						event.inputs.filter((input) => !input.indexed),
+						[
+							userTokenAddress,
+							500_275n,
+							0n,
+							7n,
+							zeroHash,
+							2,
+							'0x1234',
+							`0x${'00'.repeat(12)}`,
+							`0x${'00'.repeat(16)}`,
+							recipientAddress,
+							42n,
+						],
+					),
+				},
+				hash,
+			),
+		]
+
+		const [privateDeposit] = parseKnownEvents(
+			mockReceipt(logs, accountAddress, hash),
+			{ getTokenMetadata },
+		)
+
+		expect(privateDeposit).toMatchObject({
+			type: 'zone encrypted deposit',
+			parts: [
+				{ type: 'action', value: 'Private Deposit to Zone 3' },
+				{ type: 'amount', value: { value: 500_275n } },
+			],
+		})
+		expect(privateDeposit?.note).toBeUndefined()
 	})
 
 	it('decodes current ZoneCreated events', () => {

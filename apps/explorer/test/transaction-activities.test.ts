@@ -13,6 +13,27 @@ describe('activitiesToKnownEvents', () => {
 		).toEqual([])
 	})
 
+	test('uses the canonical Zone event instead of private Earn plumbing', () => {
+		expect(
+			activitiesToKnownEvents([
+				{
+					id: 'private-deposit',
+					title: 'Private Assets Deposited',
+					type: 'earn-private-deposit',
+					data: {
+						actionId: `0x${'1'.repeat(64)}`,
+						assets: '1000000',
+						inputAmount: '1000000',
+						inputToken: '0x20c0000000000000000000000000000000000000',
+						shares: '500275',
+						vault: '0x4f94590b636f5878bce585e82379de81e1ec174f',
+						zoneDepositHash: `0x${'2'.repeat(64)}`,
+					},
+				},
+			]),
+		).toEqual([])
+	})
+
 	test('omits nonce activity when a decoded call is available', () => {
 		const knownCall = {
 			type: 'zone batch submission',
@@ -64,6 +85,25 @@ describe('activitiesToKnownEvents', () => {
 				knownCall: null,
 			}),
 		).toEqual([batch])
+	})
+
+	test('keeps the canonical private Zone deposit with indexed activities', () => {
+		const mint = {
+			type: 'mint',
+			parts: [{ type: 'action' as const, value: 'Token Minted' }],
+		}
+		const privateZoneDeposit = {
+			type: 'zone encrypted deposit',
+			parts: [{ type: 'action' as const, value: 'Private Deposit to Zone 1' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [mint],
+				fallbackEvents: [privateZoneDeposit],
+				knownCall: null,
+			}),
+		).toEqual([mint, privateZoneDeposit])
 	})
 
 	test('recognizes nonce activity from its rendered action', () => {
