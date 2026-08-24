@@ -18,15 +18,20 @@ export type ActivityDataValue =
 	| { [key: string]: ActivityDataValue }
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
+const PRIVATE_ZONE_ACTIONS: Record<string, string> = {
+	'private-assets-deposited': 'Private Zone Deposit',
+	'private-assets-redeemed': 'Private Zone Withdrawal',
+}
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 ): KnownEvent[] {
 	return activities.map((activity) => {
-		if (activity.type === 'private-assets-deposited')
+		const privateZoneAction = PRIVATE_ZONE_ACTIONS[activity.type]
+		if (privateZoneAction)
 			return {
-				type: 'zone encrypted deposit',
-				parts: [{ type: 'action', value: 'Private Zone Deposit' }],
+				type: activity.type,
+				parts: [{ type: 'action', value: privateZoneAction }],
 			}
 
 		const parts = activityParts(activity)

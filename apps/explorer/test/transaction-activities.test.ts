@@ -88,26 +88,19 @@ describe('activitiesToKnownEvents', () => {
 		])
 	})
 
-	test('simplifies private Zone deposits', () => {
+	test.each([
+		['private-assets-deposited', 'Private Zone Deposit'],
+		['private-assets-redeemed', 'Private Zone Withdrawal'],
+	])('simplifies %s', (type, action) => {
 		expect(
 			activitiesToKnownEvents([
 				{
 					id: 'activity-1',
-					title: 'Private Assets Deposited',
-					type: 'private-assets-deposited',
-					data: {
-						actionId: `0x${'1'.repeat(64)}`,
-						shares: '500275',
-						vault: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
-						zoneDepositHash: `0x${'2'.repeat(64)}`,
-					},
+					title: 'Low-level private activity',
+					type,
+					data: { actionId: `0x${'1'.repeat(64)}` },
 				},
 			]),
-		).toEqual([
-			{
-				type: 'zone encrypted deposit',
-				parts: [{ type: 'action', value: 'Private Zone Deposit' }],
-			},
-		])
+		).toEqual([{ type, parts: [{ type: 'action', value: action }] }])
 	})
 })
