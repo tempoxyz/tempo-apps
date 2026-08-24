@@ -90,7 +90,7 @@ describe('activitiesToKnownEvents', () => {
 
 	test.each([
 		['private-assets-deposited', 'Private Zone Deposit'],
-		['private-assets-redeemed', 'Private Zone Withdrawal'],
+		['private-shares-redeemed', 'Private Zone Withdrawal'],
 	])('simplifies %s', (type, action) => {
 		expect(
 			activitiesToKnownEvents([
