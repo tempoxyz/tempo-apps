@@ -173,15 +173,18 @@ export namespace TxEventDescription {
 			case 'action': {
 				const isFailed = part.value === 'Failed'
 				const isBlocked = part.value === 'Blocked'
+				const isPrivateZoneDeposit = part.value === 'Private Zone Deposit'
 				return (
 					<span
 						className={cx(
 							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
-							isBlocked
-								? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
-								: isFailed
-									? 'bg-negative/[0.06] text-primary'
-									: 'bg-distinct/70 text-primary',
+							isPrivateZoneDeposit
+								? 'bg-neutral-950 text-white'
+								: isBlocked
+									? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+									: isFailed
+										? 'bg-negative/[0.06] text-primary'
+										: 'bg-distinct/70 text-primary',
 						)}
 					>
 						{part.value}

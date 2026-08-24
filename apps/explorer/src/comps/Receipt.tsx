@@ -7,7 +7,6 @@ import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
-import { cx } from '#lib/css'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
@@ -166,8 +165,6 @@ export function Receipt(props: Receipt.Props) {
 						<div className="border-t border-dashed border-base-border" />
 						<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
 							{filteredEvents.map((event, index) => {
-								const isPrivateZoneDeposit =
-									event.type === 'zone encrypted deposit'
 								// Calculate total amount from event parts
 								// For swaps, only show the first amount (what's being swapped out)
 								const amountParts = event.parts.filter(
@@ -220,11 +217,7 @@ export function Receipt(props: Receipt.Props) {
 								return (
 									<div
 										key={`${event.type}-${index}`}
-										className={cx(
-											'[counter-increment:event]',
-											isPrivateZoneDeposit &&
-												'mx-[-20px] px-[20px] py-[16px] bg-neutral-950 text-white [&_.text-tertiary]:text-white/60 [&_.text-secondary]:text-white/70 [&_.text-primary]:text-white [&_.text-accent]:text-blue-400 [&_.border-base-border]:border-white/15',
-										)}
+										className="[counter-increment:event]"
 									>
 										<div className="flex flex-col gap-[8px]">
 											<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-[10px]">

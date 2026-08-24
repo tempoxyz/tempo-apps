@@ -487,9 +487,9 @@ describe('parseKnownEvents', () => {
 		expect(privateDeposit).toMatchObject({
 			type: 'zone encrypted deposit',
 			parts: [{ type: 'action', value: 'Private Zone Deposit' }],
-			note: [['Zone', { type: 'text', value: 'Zone 3' }]],
 			totalAmount: { value: 500_275n },
 		})
+		expect(privateDeposit?.note).toBeUndefined()
 	})
 
 	it('decodes current ZoneCreated events', () => {
