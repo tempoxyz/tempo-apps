@@ -14,7 +14,6 @@ import {
 	calculateKnownEventsTotal,
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
-import { isNonceIncrementedEvent } from '#lib/domain/transaction-activities'
 import { PriceFormatter } from '#lib/formatting'
 import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
@@ -70,11 +69,6 @@ export function TransactionDescription(props: {
 	accountAddress: Address.Address
 }) {
 	const { knownEvents, accountAddress } = props
-	const meaningfulEvents = knownEvents.filter(
-		(event) => !isNonceIncrementedEvent(event),
-	)
-	const visibleEvents =
-		meaningfulEvents.length > 0 ? meaningfulEvents : knownEvents
 
 	const transformEvent = React.useCallback(
 		(event: KnownEvent) => getPerspectiveEvent(event, accountAddress),
@@ -83,7 +77,7 @@ export function TransactionDescription(props: {
 
 	return (
 		<TxEventDescription.ExpandGroup
-			events={visibleEvents}
+			events={knownEvents}
 			seenAs={accountAddress}
 			transformEvent={transformEvent}
 		/>

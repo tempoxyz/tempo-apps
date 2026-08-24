@@ -18,24 +18,27 @@ export type ActivityDataValue =
 	| { [key: string]: ActivityDataValue }
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
-const PRIVATE_EARN_ACTIVITY_TYPES = new Set([
-	'earn-private-deposit',
-	'earn-private-redeem',
-	'private-assets-deposited',
-	'private-assets-redeemed',
-])
-const SUPPLEMENTAL_FALLBACK_EVENT_TYPES = new Set(['zone encrypted deposit'])
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 ): KnownEvent[] {
-	return activities.flatMap((activity) => {
-		if (
-			activity.title.trim().toLowerCase() === 'unknown' ||
-			activity.type.trim().toLowerCase() === 'unknown' ||
-			PRIVATE_EARN_ACTIVITY_TYPES.has(activity.type.trim().toLowerCase())
-		)
-			return []
+	return activities.map((activity) => {
+		if (activity.type === 'private-assets-deposited') {
+			const shares = activity.data.shares
+			const vault = activityAddress(activity.data.vault)
+			const amount =
+				typeof shares === 'number' && Number.isSafeInteger(shares)
+					? BigInt(shares)
+					: typeof shares === 'string' && /^\d+$/.test(shares)
+						? BigInt(shares)
+						: null
+			const parts: KnownEventPart[] = [
+				{ type: 'action', value: 'Private Zone Deposit' },
+			]
+			if (amount !== null && vault)
+				parts.push({ type: 'amount', value: { value: amount, token: vault } })
+			return { type: 'zone encrypted deposit', parts }
+		}
 
 		const parts = activityParts(activity)
 		const representedFields = new Set([
@@ -47,65 +50,27 @@ export function activitiesToKnownEvents(
 			'sender',
 			'spender',
 		])
-		return [
-			{
-				type: activity.type,
-				parts,
-				...(activity.type === 'transfer'
-					? {
-							meta: {
-								from: activityAddress(activity.data.sender),
-								to: activityAddress(activity.data.recipient),
-							},
-						}
-					: {}),
-				note: Object.entries(activity.data).flatMap(([key, value]) => {
-					if (HIDDEN_FIELDS.has(key) || value == null) return []
-					if (representedFields.has(key)) return []
-					const part = activityValueToPart(value)
-					return part
-						? [[formatLabel(key), part] as [string, KnownEventPart]]
-						: []
-				}),
-			},
-		]
+		return {
+			type: activity.type,
+			parts,
+			...(activity.type === 'transfer'
+				? {
+						meta: {
+							from: activityAddress(activity.data.sender),
+							to: activityAddress(activity.data.recipient),
+						},
+					}
+				: {}),
+			note: Object.entries(activity.data).flatMap(([key, value]) => {
+				if (HIDDEN_FIELDS.has(key) || value == null) return []
+				if (representedFields.has(key)) return []
+				const part = activityValueToPart(value)
+				return part
+					? [[formatLabel(key), part] as [string, KnownEventPart]]
+					: []
+			}),
+		}
 	})
-}
-
-export function selectTransactionDescriptionEvents(params: {
-	activityEvents: readonly KnownEvent[]
-	fallbackEvents: readonly KnownEvent[]
-	knownCall: KnownEvent | null
-}): KnownEvent[] {
-	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
-	const hasMeaningfulActivity = params.activityEvents.some(
-		(event) => !isNonceIncrementedEvent(event),
-	)
-	const activityEvents =
-		params.knownCall || hasMeaningfulActivity
-			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
-			: params.activityEvents
-	const supplementalFallbackEvents = params.fallbackEvents.filter(
-		(event) =>
-			SUPPLEMENTAL_FALLBACK_EVENT_TYPES.has(event.type) &&
-			!activityEvents.some(
-				(activityEvent) => activityEvent.type === event.type,
-			),
-	)
-	return params.knownCall
-		? [params.knownCall, ...activityEvents, ...supplementalFallbackEvents]
-		: [...activityEvents, ...supplementalFallbackEvents]
-}
-
-export function isNonceIncrementedEvent(event: KnownEvent): boolean {
-	return (
-		event.type.trim().toLowerCase() === 'nonce incremented' ||
-		event.parts.some(
-			(part) =>
-				part.type === 'action' &&
-				part.value.trim().toLowerCase() === 'nonce incremented',
-		)
-	)
 }
 
 function activityAddress(

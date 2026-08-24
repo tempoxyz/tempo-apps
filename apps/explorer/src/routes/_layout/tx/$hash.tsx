@@ -43,10 +43,7 @@ import {
 } from '#lib/domain/tx-event-groups'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
-import {
-	activitiesToKnownEvents,
-	selectTransactionDescriptionEvents,
-} from '#lib/domain/transaction-activities'
+import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
 import { PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
@@ -149,11 +146,10 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			? buildTxDescription({
 					timestamp: Number(loaderData.block.timestamp) * 1000,
 					from: loaderData.receipt.from,
-					events: selectTransactionDescriptionEvents({
-						activityEvents: loaderData.activityEvents,
-						fallbackEvents: loaderData.knownEvents ?? [],
-						knownCall: loaderData.knownCall,
-					}),
+					events:
+						loaderData.activityEvents.length > 0
+							? loaderData.activityEvents
+							: (loaderData.knownEvents ?? []),
 				})
 			: 'View transaction details on Tempo Explorer.'
 
@@ -184,7 +180,6 @@ function RouteComponent() {
 		traceData,
 		block,
 		feeBreakdown,
-		knownCall,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
@@ -203,11 +198,8 @@ function RouteComponent() {
 			!event.meta?.to ||
 			!OxAddressUtil.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
 	)
-	const descriptionEvents = selectTransactionDescriptionEvents({
-		activityEvents,
-		fallbackEvents: displayKnownEvents,
-		knownCall,
-	})
+	const descriptionEvents =
+		activityEvents.length > 0 ? activityEvents : displayKnownEvents
 
 	useKeyboardShortcut({
 		t: () =>
@@ -231,13 +223,14 @@ function RouteComponent() {
 			buildTxSummary({
 				receipt,
 				transaction,
-				knownEvents: descriptionEvents,
+				knownEvents: activityEvents.length > 0 ? activityEvents : knownEvents,
 				trace: traceData.trace,
 				balanceChangesData,
 			}),
 		[
 			receipt,
-			descriptionEvents,
+			knownEvents,
+			activityEvents,
 			traceData.trace,
 			balanceChangesData,
 			transaction,

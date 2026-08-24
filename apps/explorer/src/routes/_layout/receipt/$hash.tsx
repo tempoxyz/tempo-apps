@@ -19,7 +19,7 @@ import { Receipt } from '#comps/Receipt'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
 import {
-	decodeKnownTransactionCall,
+	decodeKnownCall,
 	parseKnownEvents,
 	type KnownEvent,
 } from '#lib/domain/known-events'
@@ -27,10 +27,7 @@ import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
-import {
-	activitiesToKnownEvents,
-	selectTransactionDescriptionEvents,
-} from '#lib/domain/transaction-activities'
+import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
 import {
@@ -114,17 +111,17 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 
 	// Try to decode known contract calls (e.g., validator precompile)
 	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall = decodeKnownTransactionCall(transaction)
+	const knownCall =
+		transaction.to && transaction.input && transaction.input !== '0x'
+			? decodeKnownCall(transaction.to, transaction.input)
+			: null
 
 	const fallbackEvents = knownCall
 		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
 		: parsedEvents
 	const activityEvents = activitiesToKnownEvents(activities)
-	const knownEvents = selectTransactionDescriptionEvents({
-		activityEvents,
-		fallbackEvents,
-		knownCall,
-	})
+	const knownEvents =
+		activityEvents.length > 0 ? activityEvents : fallbackEvents
 
 	return {
 		block,

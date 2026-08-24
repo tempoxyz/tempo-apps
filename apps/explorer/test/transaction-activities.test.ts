@@ -1,130 +1,7 @@
 import { describe, expect, test } from 'vitest'
-import {
-	activitiesToKnownEvents,
-	selectTransactionDescriptionEvents,
-} from '#lib/domain/transaction-activities'
+import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
-	test('omits unknown activities so local descriptions can be used', () => {
-		expect(
-			activitiesToKnownEvents([
-				{ id: 'unknown', title: 'Unknown', type: 'unknown', data: {} },
-			]),
-		).toEqual([])
-	})
-
-	test('uses the canonical Zone event instead of private Earn plumbing', () => {
-		expect(
-			activitiesToKnownEvents([
-				{
-					id: 'private-deposit',
-					title: 'Private Assets Deposited',
-					type: 'private-assets-deposited',
-					data: {
-						actionId: `0x${'1'.repeat(64)}`,
-						assets: '1000000',
-						inputAmount: '1000000',
-						inputToken: '0x20c0000000000000000000000000000000000000',
-						shares: '500275',
-						vault: '0x4f94590b636f5878bce585e82379de81e1ec174f',
-						zoneDepositHash: `0x${'2'.repeat(64)}`,
-					},
-				},
-			]),
-		).toEqual([])
-	})
-
-	test('omits nonce activity when a decoded call is available', () => {
-		const knownCall = {
-			type: 'zone batch submission',
-			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
-		}
-		const activity = {
-			type: 'nonce incremented',
-			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
-		}
-
-		expect(
-			selectTransactionDescriptionEvents({
-				activityEvents: [activity],
-				fallbackEvents: [],
-				knownCall,
-			}),
-		).toEqual([knownCall])
-	})
-
-	test('preserves nonce activity when no decoded call is available', () => {
-		const activity = {
-			type: 'nonce incremented',
-			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
-		}
-
-		expect(
-			selectTransactionDescriptionEvents({
-				activityEvents: [activity],
-				fallbackEvents: [],
-				knownCall: null,
-			}),
-		).toEqual([activity])
-	})
-
-	test('omits nonce activity when another indexed activity is available', () => {
-		const batch = {
-			type: 'zone batch submission',
-			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
-		}
-		const nonce = {
-			type: 'nonce incremented',
-			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
-		}
-
-		expect(
-			selectTransactionDescriptionEvents({
-				activityEvents: [batch, nonce],
-				fallbackEvents: [],
-				knownCall: null,
-			}),
-		).toEqual([batch])
-	})
-
-	test('keeps the canonical private Zone deposit with indexed activities', () => {
-		const mint = {
-			type: 'mint',
-			parts: [{ type: 'action' as const, value: 'Token Minted' }],
-		}
-		const privateZoneDeposit = {
-			type: 'zone encrypted deposit',
-			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
-		}
-
-		expect(
-			selectTransactionDescriptionEvents({
-				activityEvents: [mint],
-				fallbackEvents: [privateZoneDeposit],
-				knownCall: null,
-			}),
-		).toEqual([mint, privateZoneDeposit])
-	})
-
-	test('recognizes nonce activity from its rendered action', () => {
-		const batch = {
-			type: 'zone batch submission',
-			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
-		}
-		const nonce = {
-			type: 'nonce',
-			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
-		}
-
-		expect(
-			selectTransactionDescriptionEvents({
-				activityEvents: [batch, nonce],
-				fallbackEvents: [],
-				knownCall: null,
-			}),
-		).toEqual([batch])
-	})
-
 	test('preserves token amounts and perspective for transfers', () => {
 		expect(
 			activitiesToKnownEvents([
@@ -206,6 +83,38 @@ describe('activitiesToKnownEvents', () => {
 							value: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
 						},
 					],
+				],
+			},
+		])
+	})
+
+	test('simplifies private Zone deposits', () => {
+		expect(
+			activitiesToKnownEvents([
+				{
+					id: 'activity-1',
+					title: 'Private Assets Deposited',
+					type: 'private-assets-deposited',
+					data: {
+						actionId: `0x${'1'.repeat(64)}`,
+						shares: '500275',
+						vault: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
+						zoneDepositHash: `0x${'2'.repeat(64)}`,
+					},
+				},
+			]),
+		).toEqual([
+			{
+				type: 'zone encrypted deposit',
+				parts: [
+					{ type: 'action', value: 'Private Zone Deposit' },
+					{
+						type: 'amount',
+						value: {
+							value: 500275n,
+							token: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
+						},
+					},
 				],
 			},
 		])

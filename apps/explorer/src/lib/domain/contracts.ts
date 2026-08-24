@@ -8,31 +8,19 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
-	blockHashHistoryAbi,
 	stablecoinDexAbi,
 	streamChannelAbi,
 	tip20ChannelReserveAbi,
 	tip20ChannelReserveAddress,
-	zoneFactoryAbi,
-	zoneMessengerAbi,
-	zoneOutboxAbi,
-	zonePortalAbi,
-	zoneVerifierAbi,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
-import { getZonePortalId, isZonePortalAddress } from '#lib/domain/zones.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-export { isZonePortalAddress } from '#lib/domain/zones.ts'
 
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
-export const blockHashHistoryAddress =
-	'0x0000f90827f1c53a10cb7a02335b175320002935' as const
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -52,12 +40,11 @@ export type ContractInfo = {
 }
 
 function makePrecompile(
-	data: Omit<ContractInfo, 'code' | 'abi' | 'category'> & { abi?: Abi },
+	data: Omit<ContractInfo, 'code' | 'abi' | 'category'>,
 ): [Address.Address, ContractInfo] {
-	const { abi = [], ...metadata } = data
 	return [
 		data.address,
-		{ ...metadata, code: '0x' as Hex.Hex, abi, category: 'precompile' },
+		{ ...data, code: '0x' as Hex.Hex, abi: [] as Abi, category: 'precompile' },
 	]
 }
 
@@ -175,13 +162,6 @@ export const precompileRegistry = new Map<Address.Address, ContractInfo>([
 		name: 'p256Verify',
 		description: 'ECDSA signature verification on secp256r1 (P-256)',
 		docsUrl: 'https://www.evm.codes/precompiled#0x100',
-	}),
-	makePrecompile({
-		address: Addresses.signatureVerifier,
-		name: 'Signature Verification',
-		description: 'Recover and verify Tempo signature types',
-		abi: Abis.signatureVerifier,
-		docsUrl: 'https://github.com/tempoxyz/tempo/blob/main/tips/tip-1020.md',
 	}),
 ])
 
@@ -374,78 +354,6 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		ZoneAddresses.zoneFactory,
-		{
-			name: 'Zone Factory',
-			code: '0xef',
-			description: 'Create and discover Tempo Zones',
-			abi: zoneFactoryAbi,
-			category: 'system',
-			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneFactory,
-		},
-	],
-	[
-		ZoneAddresses.zonePortalImplementation,
-		{
-			name: 'Zone Portal Implementation',
-			code: '0xef',
-			description: 'Bridge assets between Tempo and Tempo Zones',
-			abi: zonePortalAbi,
-			category: 'system',
-			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zonePortalImplementation,
-		},
-	],
-	[
-		ZoneAddresses.zoneOutbox,
-		{
-			name: 'Zone Outbox',
-			code: '0xef',
-			description: 'Request withdrawals from a Tempo Zone',
-			abi: zoneOutboxAbi,
-			category: 'system',
-			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneOutbox,
-		},
-	],
-	[
-		ZoneAddresses.zoneMessenger,
-		{
-			name: 'Zone Messenger',
-			code: '0xef',
-			description: 'Relay messages between Tempo and Tempo Zones',
-			abi: zoneMessengerAbi,
-			category: 'system',
-			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneMessenger,
-		},
-	],
-	[
-		ZoneAddresses.zoneVerifier,
-		{
-			name: 'Zone Verifier',
-			code: '0xef',
-			description: 'Verify Tempo Zone state transitions',
-			abi: zoneVerifierAbi,
-			category: 'system',
-			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneVerifier,
-		},
-	],
-	[
-		blockHashHistoryAddress,
-		{
-			name: 'Block Hash History',
-			code: '0xef',
-			description: 'EIP-2935 historical block hash storage',
-			abi: blockHashHistoryAbi,
-			category: 'system',
-			docsUrl: 'https://eips.ethereum.org/EIPS/eip-2935',
-			address: blockHashHistoryAddress,
-		},
-	],
-	[
 		'0x9d136eea063ede5418a6bc7beaff009bbb6cfa70',
 		{
 			name: 'Tempo Stream Channel',
@@ -475,10 +383,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(
  * detect if an address is a system address (i.e., not a token)
  */
 export function systemAddress(address: Address.Address): boolean {
-	return (
-		systemContractRegistry.has(address.toLowerCase() as Address.Address) ||
-		isZonePortalAddress(address)
-	)
+	return systemContractRegistry.has(address.toLowerCase() as Address.Address)
 }
 
 /**
@@ -491,19 +396,6 @@ export function getContractInfo(
 	const lowerAddress = address.toLowerCase() as Address.Address
 	const registered = contractRegistry.get(lowerAddress)
 	if (registered) return registered
-
-	if (isZonePortalAddress(address)) {
-		const zoneId = getZonePortalId(address)
-		return {
-			address,
-			name: `Zone Portal Proxy #${zoneId}`,
-			code: '0xef',
-			description: `ERC-1167 minimal proxy for Tempo Zone ${zoneId}`,
-			abi: zonePortalAbi,
-			category: 'system',
-			docsUrl: 'https://eips.ethereum.org/EIPS/eip-1167',
-		}
-	}
 
 	// Dynamic TIP-20 token detection
 	if (isTip20Address(address))

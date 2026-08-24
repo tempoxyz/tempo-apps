@@ -6,15 +6,10 @@ import type { Config } from 'wagmi'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 
-import {
-	decodeKnownTransactionCall,
-	type KnownEvent,
-	parseKnownEvents,
-} from '#lib/domain/known-events'
+import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
 	activitiesToKnownEvents,
-	selectTransactionDescriptionEvents,
 	type TransactionActivity,
 } from '#lib/domain/transaction-activities'
 import { api } from '#lib/server/tempo-api'
@@ -215,15 +210,10 @@ export function toEnrichedTransaction(
 
 	const knownEvents = (() => {
 		if (!options.includeKnownEvents || !receipt) return []
-		const transaction = {
-			to,
-			input: row.input,
-			data: row.input,
-			calls: row.meta?.rpc?.calls as never,
-		}
 		const activityEvents = activitiesToKnownEvents(options.activities ?? [])
+		if (activityEvents.length > 0) return activityEvents
 		try {
-			const parsedEvents = parseKnownEvents(
+			return parseKnownEvents(
 				{
 					from: receipt.sender,
 					to,
@@ -232,19 +222,15 @@ export function toEnrichedTransaction(
 					contractAddress: receipt.contractAddress ?? null,
 				} as unknown as TransactionReceipt,
 				{
-					transaction,
+					transaction: {
+						to,
+						input: row.input,
+						data: row.input,
+						calls: row.meta?.rpc?.calls as never,
+					} as never,
 					getTokenMetadata: options.getTokenMetadata,
 				},
 			)
-			const knownCall = decodeKnownTransactionCall(transaction)
-			const fallbackEvents = knownCall
-				? [knownCall, ...parsedEvents.filter((event) => event.type !== 'fee')]
-				: parsedEvents
-			return selectTransactionDescriptionEvents({
-				activityEvents,
-				fallbackEvents,
-				knownCall,
-			})
 		} catch (error) {
 			console.error(
 				`[history] failed to parse known events for ${row.hash}:`,
