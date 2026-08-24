@@ -6,7 +6,12 @@ import {
 	type Abi,
 } from 'viem'
 import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
-import { zoneFactoryAbi, zonePortalAbi, zoneVerifierAbi } from '#lib/abis'
+import {
+	zoneFactoryAbi,
+	zoneMessengerAbi,
+	zonePortalAbi,
+	zoneVerifierAbi,
+} from '#lib/abis'
 import {
 	getAbiItem,
 	getContractInfo,
@@ -117,9 +122,10 @@ describe('Zone protocol contracts', () => {
 			name: 'Zone Portal Implementation',
 			abi: zonePortalAbi,
 		})
-		expect(getContractInfo(ZoneAddresses.zoneMessenger)?.name).toBe(
-			'Zone Messenger',
-		)
+		expect(getContractInfo(ZoneAddresses.zoneMessenger)).toMatchObject({
+			name: 'Zone Messenger',
+			abi: zoneMessengerAbi,
+		})
 		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.name).toBe(
 			'Zone Verifier',
 		)
@@ -141,6 +147,15 @@ describe('Zone protocol contracts', () => {
 		expect(
 			getAbiItem({ abi: zonePortalAbi, selector: '0x78fb159b' })?.name,
 		).toBe('submitBatch')
+		expect(
+			getAbiItem({ abi: zonePortalAbi, selector: '0x91aa3f04' })?.name,
+		).toBe('processWithdrawals')
+		expect(
+			getAbiItem({ abi: zonePortalAbi, selector: '0x005d97ef' })?.name,
+		).toBe('deliverWithdrawal')
+		expect(
+			getAbiItem({ abi: zoneMessengerAbi, selector: '0x11da5261' })?.name,
+		).toBe('relayMessage')
 		expect(
 			getAbiItem({ abi: zoneVerifierAbi, selector: '0x7106a43e' })?.name,
 		).toBe('verify')
