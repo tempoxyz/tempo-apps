@@ -18,21 +18,32 @@ export type ActivityDataValue =
 	| { [key: string]: ActivityDataValue }
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
-const PRIVATE_ZONE_ACTIONS: Record<string, string> = {
-	'private-assets-deposited': 'Private Zone Deposit',
-	'private-shares-redeemed': 'Private Zone Withdrawal',
+const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
+	'private-assets-deposited': [
+		'Private Zone Deposit',
+		'inputAmount',
+		'inputToken',
+	],
+	'private-shares-redeemed': [
+		'Private Zone Withdrawal',
+		'outputAmount',
+		'outputToken',
+	],
 }
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 ): KnownEvent[] {
 	return activities.map((activity) => {
-		const privateZoneAction = PRIVATE_ZONE_ACTIONS[activity.type]
-		if (privateZoneAction)
+		const privateZone = PRIVATE_ZONE_ACTIONS[activity.type]
+		if (privateZone) {
+			const [action, amountKey, tokenKey] = privateZone
+			const amount = amountPart(activity.data, amountKey, tokenKey)
 			return {
 				type: activity.type,
-				parts: [{ type: 'action', value: privateZoneAction }],
+				parts: [{ type: 'action', value: action }, ...(amount ? [amount] : [])],
 			}
+		}
 
 		const parts = activityParts(activity)
 		const representedFields = new Set([
@@ -109,8 +120,21 @@ function amountPart(
 	amountKey: string,
 	tokenKey: string,
 ): KnownEventPart | null {
-	const amount = asRecord(data[amountKey])
-	const token = asRecord(data[tokenKey])
+	const rawAmount = data[amountKey]
+	const rawToken = data[tokenKey]
+	if (
+		typeof rawAmount === 'string' &&
+		/^\d+$/.test(rawAmount) &&
+		typeof rawToken === 'string' &&
+		Address.validate(rawToken)
+	)
+		return {
+			type: 'amount',
+			value: { value: BigInt(rawAmount), token: rawToken },
+		}
+
+	const amount = asRecord(rawAmount)
+	const token = asRecord(rawToken)
 	if (!amount || !token) return null
 	const baseUnits = amount.baseUnits
 	const decimals = amount.decimals
