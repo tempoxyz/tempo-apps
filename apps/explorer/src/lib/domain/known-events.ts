@@ -324,17 +324,14 @@ function createDetectors(
 					])
 				}
 				if (!('to' in args)) {
+					note.unshift(['Zone', { type: 'text', value: zoneName }])
+					const amount = createAmount(args.netAmount, args.token)
 					return {
 						type: 'zone encrypted deposit',
-						parts: [
-							{ type: 'action', value: `Private Deposit to ${zoneName}` },
-							{
-								type: 'amount',
-								value: createAmount(args.netAmount, args.token),
-							},
-						],
-						note: note.length > 0 ? note : undefined,
+						parts: [{ type: 'action', value: 'Private Zone Deposit' }],
+						note,
 						meta: { from: args.sender, to: address },
+						totalAmount: amount,
 					}
 				}
 
@@ -356,7 +353,9 @@ function createDetectors(
 
 			if (eventName === 'EncryptedDepositMade') {
 				const zoneName = getZoneName(address)
-				const note: NonNullable<KnownEvent['note']> = []
+				const note: NonNullable<KnownEvent['note']> = [
+					['Zone', { type: 'text', value: zoneName }],
+				]
 
 				if (args.fee > 0n) {
 					note.push([
@@ -364,14 +363,13 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.fee, args.token) },
 					])
 				}
+				const amount = createAmount(args.netAmount, args.token)
 				return {
 					type: 'zone encrypted deposit',
-					parts: [
-						{ type: 'action', value: `Private Deposit to ${zoneName}` },
-						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
-					],
-					note: note.length > 0 ? note : undefined,
+					parts: [{ type: 'action', value: 'Private Zone Deposit' }],
+					note,
 					meta: { from: args.sender, to: address },
+					totalAmount: amount,
 				}
 			}
 

@@ -94,7 +94,7 @@ describe('activitiesToKnownEvents', () => {
 		}
 		const privateZoneDeposit = {
 			type: 'zone encrypted deposit',
-			parts: [{ type: 'action' as const, value: 'Private Deposit to Zone 1' }],
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
 		}
 
 		expect(
