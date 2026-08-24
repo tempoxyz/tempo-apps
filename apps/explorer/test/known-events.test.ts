@@ -17,6 +17,8 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
+const RECEIVE_POLICY_GUARD =
+	'0xB10C000000000000000000000000000000000000' as const
 
 const bounceBackAbi = [
 	{
@@ -58,6 +60,49 @@ const depositMadeAbi = [
 ] as const
 
 describe('parseKnownEvents', () => {
+	it('deduplicates policy guard transfers when the receipt version is unknown', () => {
+		const hash = `0x${'9'.repeat(64)}` as const
+		const amount = 35_000_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from: accountAddress, to: RECEIVE_POLICY_GUARD },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: RECEIVE_POLICY_GUARD,
+					topics: encodeEventTopics({
+						abi: Abis.receivePolicyGuard,
+						eventName: 'TransferBlocked',
+						args: {
+							token: userTokenAddress,
+							receiver: recipientAddress,
+							blockedNonce: 1n,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[{ type: 'uint256' }, { type: 'uint8' }, { type: 'bytes' }],
+						[amount, 2, '0x'],
+					),
+				},
+				hash,
+			),
+		]
+
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const knownEvents = parseKnownEvents(receipt, { getTokenMetadata })
+
+		expect(knownEvents.map((event) => event.type)).toEqual(['transfer blocked'])
+	})
+
 	it('decodes stablecoin DEX OrderFlipped buy and sell events', () => {
 		const hash = `0x${'6'.repeat(64)}` as const
 		const amount = 1_000_000n
