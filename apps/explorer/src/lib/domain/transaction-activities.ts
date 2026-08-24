@@ -21,6 +21,8 @@ const HIDDEN_FIELDS = new Set(['signer', 'status'])
 const PRIVATE_EARN_ACTIVITY_TYPES = new Set([
 	'earn-private-deposit',
 	'earn-private-redeem',
+	'private-assets-deposited',
+	'private-assets-redeemed',
 ])
 const SUPPLEMENTAL_FALLBACK_EVENT_TYPES = new Set(['zone encrypted deposit'])
 

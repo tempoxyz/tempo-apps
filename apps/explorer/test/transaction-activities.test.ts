@@ -19,7 +19,7 @@ describe('activitiesToKnownEvents', () => {
 				{
 					id: 'private-deposit',
 					title: 'Private Assets Deposited',
-					type: 'earn-private-deposit',
+					type: 'private-assets-deposited',
 					data: {
 						actionId: `0x${'1'.repeat(64)}`,
 						assets: '1000000',
