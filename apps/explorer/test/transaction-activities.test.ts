@@ -1,7 +1,90 @@
 import { describe, expect, test } from 'vitest'
-import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
+import {
+	activitiesToKnownEvents,
+	selectTransactionDescriptionEvents,
+} from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
+	test('omits unknown activities so local descriptions can be used', () => {
+		expect(
+			activitiesToKnownEvents([
+				{ id: 'unknown', title: 'Unknown', type: 'unknown', data: {} },
+			]),
+		).toEqual([])
+	})
+
+	test('omits nonce activity when a decoded call is available', () => {
+		const knownCall = {
+			type: 'zone batch submission',
+			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+		}
+		const activity = {
+			type: 'nonce incremented',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [activity],
+				fallbackEvents: [],
+				knownCall,
+			}),
+		).toEqual([knownCall])
+	})
+
+	test('preserves nonce activity when no decoded call is available', () => {
+		const activity = {
+			type: 'nonce incremented',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [activity],
+				fallbackEvents: [],
+				knownCall: null,
+			}),
+		).toEqual([activity])
+	})
+
+	test('omits nonce activity when another indexed activity is available', () => {
+		const batch = {
+			type: 'zone batch submission',
+			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+		}
+		const nonce = {
+			type: 'nonce incremented',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [batch, nonce],
+				fallbackEvents: [],
+				knownCall: null,
+			}),
+		).toEqual([batch])
+	})
+
+	test('recognizes nonce activity from its rendered action', () => {
+		const batch = {
+			type: 'zone batch submission',
+			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+		}
+		const nonce = {
+			type: 'nonce',
+			parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [batch, nonce],
+				fallbackEvents: [],
+				knownCall: null,
+			}),
+		).toEqual([batch])
+	})
+
 	test('preserves token amounts and perspective for transfers', () => {
 		expect(
 			activitiesToKnownEvents([

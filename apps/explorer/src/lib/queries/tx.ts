@@ -4,7 +4,7 @@ import { toEventSelector } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import {
 	type Authorization,
-	decodeKnownCall,
+	decodeKnownTransactionCall,
 	parseAuthorizationEvents,
 	parseKnownEvent,
 	isStreamChannelAddress,
@@ -48,10 +48,7 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 
 	// Try to decode known contract calls (e.g., validator precompile)
 	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall =
-		transaction.to && transaction.input && transaction.input !== '0x'
-			? decodeKnownCall(transaction.to, transaction.input)
-			: null
+	const knownCall = decodeKnownTransactionCall(transaction)
 
 	// Parse EIP-7702 authorization list for delegate account events
 	const authorizationList =
@@ -116,6 +113,7 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 	return {
 		block,
 		feeBreakdown,
+		knownCall,
 		knownEvents,
 		knownEventsByLog,
 		receipt,

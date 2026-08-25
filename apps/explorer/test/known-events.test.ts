@@ -26,7 +26,11 @@ import {
 	recipientAddress,
 	userTokenAddress,
 } from '#lib/demo'
-import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
+import {
+	decodeKnownCall,
+	decodeKnownTransactionCall,
+	parseKnownEvents,
+} from '#lib/domain/known-events'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
@@ -230,6 +234,14 @@ describe('parseKnownEvents', () => {
 				value: call.action,
 			})
 		}
+
+		expect(
+			decodeKnownTransactionCall({
+				to: accountAddress,
+				input: '0x',
+				calls: [{ to: calls[4].to, input: calls[4].input }],
+			})?.parts[0],
+		).toEqual({ type: 'action', value: 'Submit Zone 3 Batch' })
 	})
 
 	it('maps every Zone ABI event to a known event', () => {

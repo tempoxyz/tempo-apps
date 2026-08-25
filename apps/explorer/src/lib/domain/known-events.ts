@@ -2517,3 +2517,22 @@ export function decodeKnownCall(
 		return null
 	}
 }
+
+export function decodeKnownTransactionCall(
+	transaction: TransactionLike,
+): KnownEvent | null {
+	const queue: TransactionLike[] = [transaction]
+
+	while (queue.length > 0) {
+		const call = queue.shift()
+		if (!call) break
+		const input = call.input ?? call.data
+		if (call.to && input && input !== '0x') {
+			const decoded = decodeKnownCall(call.to, input)
+			if (decoded) return decoded
+		}
+		if (call.calls) queue.push(...call.calls)
+	}
+
+	return null
+}

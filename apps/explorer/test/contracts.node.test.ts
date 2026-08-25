@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { toEventSelector, type Abi } from 'viem'
+import {
+	decodeAbiParameters,
+	encodeAbiParameters,
+	toEventSelector,
+	type Abi,
+} from 'viem'
 import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	zoneFactoryAbi,
@@ -170,14 +175,37 @@ describe('Zone protocol contracts', () => {
 		expect(isZonePortalAddress(portal)).toBe(true)
 		expect(systemAddress(portal)).toBe(true)
 		expect(getContractInfo(portal)).toMatchObject({
-			name: 'Zone Portal #3',
+			name: 'Zone Portal Proxy #3',
+			description: 'ERC-1167 minimal proxy for Tempo Zone 3',
 			abi: zonePortalAbi,
 		})
 	})
 
 	it('recognizes the EIP-2935 history contract', () => {
-		expect(
-			getContractInfo('0x0000f90827f1c53a10cb7a02335b175320002935'),
-		).toMatchObject({ name: 'Block Hash History' })
+		const info = getContractInfo('0x0000f90827f1c53a10cb7a02335b175320002935')
+		expect(info).toMatchObject({ name: 'Block Hash History' })
+		const getBlockHash = info?.abi.find(
+			(item) => item.type === 'function' && item.name === 'getBlockHash',
+		)
+		expect(getBlockHash?.type).toBe('function')
+		if (!getBlockHash || getBlockHash.type !== 'function') return
+		const input = encodeAbiParameters(getBlockHash.inputs, [31_767_176n])
+		expect(decodeAbiParameters(getBlockHash.inputs, input)).toEqual([
+			31_767_176n,
+		])
+	})
+
+	it('recognizes the TIP-1020 signature verification precompile', () => {
+		const info = getContractInfo('0x5165300000000000000000000000000000000000')
+		expect(info).toMatchObject({
+			name: 'Signature Verification',
+			category: 'precompile',
+		})
+		expect(info?.abi).toContainEqual(
+			expect.objectContaining({ type: 'function', name: 'recover' }),
+		)
+		expect(info?.abi).toContainEqual(
+			expect.objectContaining({ type: 'function', name: 'verify' }),
+		)
 	})
 })

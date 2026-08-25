@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, erc20Abi, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
+import { blockHashHistoryAbi } from '#lib/abis'
 import { cx } from '#lib/css'
 import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import {
@@ -371,6 +372,7 @@ export function useTraceTrees(
 			function buildNode(
 				trace: CallTrace,
 				path: number[] = [],
+				parentTrace?: CallTrace,
 			): TxTraceTree.Node {
 				const currentFrameIndex = frameIndex++
 				const hasSelector = trace.input && trace.input.length >= 10
@@ -399,7 +401,7 @@ export function useTraceTrees(
 						})
 					: undefined
 
-				if (precompileInfo && trace.to) {
+				if (precompileInfo && precompileInfo.abi.length === 0 && trace.to) {
 					const decoded = decodePrecompile(
 						trace.to,
 						trace.input || '0x',
@@ -410,10 +412,25 @@ export function useTraceTrees(
 						params = decoded.params
 						decodedOutput = decoded.decodedOutput
 					}
-				} else if (isBlockHashHistory && trace.input.length === 66) {
-					functionName = 'getBlockHash'
-					params = `blockNumber: ${BigInt(trace.input)}`
-					decodedOutput = trace.output
+				} else if (isBlockHashHistory) {
+					const [getBlockHash] = blockHashHistoryAbi
+					try {
+						const [blockNumber] = decodeAbiParameters(
+							getBlockHash.inputs,
+							trace.input,
+						)
+						functionName = getBlockHash.name
+						params = `blockNumber: ${blockNumber}`
+						if (trace.output && trace.output !== '0x') {
+							const [blockHash] = decodeAbiParameters(
+								getBlockHash.outputs,
+								trace.output,
+							)
+							decodedOutput = blockHash
+						}
+					} catch {
+						// EIP-2935 rejects malformed raw calldata.
+					}
 				} else if (selector) {
 					const autoloadAbi = abiMap.get(trace.to?.toLowerCase() ?? '')
 					const autoloadAbiItem =
@@ -471,10 +488,12 @@ export function useTraceTrees(
 						}
 					}
 				}
+				if (trace.type === 'DELEGATECALL' && parentTrace?.input === trace.input)
+					params = 'same args as parent'
 
 				const children =
 					trace.calls?.map((child, index) =>
-						buildNode(child, [...path, index]),
+						buildNode(child, [...path, index], trace),
 					) ?? []
 				return {
 					trace,

@@ -32,6 +32,12 @@ export function activitiesToKnownEvents(
 	options: { portal?: Address.Address | null } = {},
 ): KnownEvent[] {
 	return activities.flatMap((activity) => {
+		if (
+			activity.title.trim().toLowerCase() === 'unknown' ||
+			activity.type.trim().toLowerCase() === 'unknown'
+		)
+			return []
+
 		const privateZone = PRIVATE_ZONE_ACTIONS[activity.type]
 		if (privateZone) {
 			const [action, amountKey, tokenKey] = privateZone
@@ -130,6 +136,35 @@ function vaultActivityEvent(activity: TransactionActivity): KnownEvent | null {
 			destination,
 		],
 	}
+}
+
+export function selectTransactionDescriptionEvents(params: {
+	activityEvents: readonly KnownEvent[]
+	fallbackEvents: readonly KnownEvent[]
+	knownCall: KnownEvent | null
+}): KnownEvent[] {
+	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
+	const hasMeaningfulActivity = params.activityEvents.some(
+		(event) => !isNonceIncrementedEvent(event),
+	)
+	const activityEvents =
+		params.knownCall || hasMeaningfulActivity
+			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
+			: params.activityEvents
+	return params.knownCall
+		? [params.knownCall, ...activityEvents]
+		: [...activityEvents]
+}
+
+export function isNonceIncrementedEvent(event: KnownEvent): boolean {
+	return (
+		event.type.trim().toLowerCase() === 'nonce incremented' ||
+		event.parts.some(
+			(part) =>
+				part.type === 'action' &&
+				part.value.trim().toLowerCase() === 'nonce incremented',
+		)
+	)
 }
 
 function activityAddress(

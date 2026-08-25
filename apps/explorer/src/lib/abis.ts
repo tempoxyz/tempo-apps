@@ -5,6 +5,11 @@ import { Abis as ViemZoneAbis } from 'viem-zones/tempo/zones'
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
 
+/** Semantic ABI for EIP-2935's selectorless raw-calldata read. */
+export const blockHashHistoryAbi = parseAbi([
+	'function getBlockHash(uint256 blockNumber) view returns (bytes32 blockHash)',
+])
+
 export const streamChannelAbi = [
 	{
 		type: 'event',
