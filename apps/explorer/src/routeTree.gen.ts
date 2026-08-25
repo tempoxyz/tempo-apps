@@ -17,6 +17,7 @@ import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
 import { Route as ApiSimulateRouteImport } from './routes/api/simulate'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiContractDiscoveryRouteImport } from './routes/api/contract-discovery'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
@@ -28,6 +29,7 @@ import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
 import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
+import { Route as LayoutDiscoverAddressRouteImport } from './routes/_layout/discover/$address'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
 import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/empty-state'
@@ -80,6 +82,11 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContractDiscoveryRoute = ApiContractDiscoveryRouteImport.update({
+  id: '/api/contract-discovery',
+  path: '/api/contract-discovery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCodeRoute = ApiCodeRouteImport.update({
@@ -135,6 +142,11 @@ const LayoutReceiptHashRoute = LayoutReceiptHashRouteImport.update({
 const LayoutPolicyIdRoute = LayoutPolicyIdRouteImport.update({
   id: '/policy/$id',
   path: '/policy/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDiscoverAddressRoute = LayoutDiscoverAddressRouteImport.update({
+  id: '/discover/$address',
+  path: '/discover/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
@@ -221,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
+  '/api/contract-discovery': typeof ApiContractDiscoveryRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/api/simulate': typeof ApiSimulateRoute
@@ -232,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/discover/$address': typeof LayoutDiscoverAddressRoute
   '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
@@ -254,6 +268,7 @@ export interface FileRoutesByTo {
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
+  '/api/contract-discovery': typeof ApiContractDiscoveryRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/api/simulate': typeof ApiSimulateRoute
@@ -266,6 +281,7 @@ export interface FileRoutesByTo {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/discover/$address': typeof LayoutDiscoverAddressRoute
   '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
@@ -290,6 +306,7 @@ export interface FileRoutesById {
   '/_layout/simulate': typeof LayoutSimulateRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
+  '/api/contract-discovery': typeof ApiContractDiscoveryRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/api/simulate': typeof ApiSimulateRoute
@@ -302,6 +319,7 @@ export interface FileRoutesById {
   '/_layout/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
+  '/_layout/discover/$address': typeof LayoutDiscoverAddressRoute
   '/_layout/policy/$id': typeof LayoutPolicyIdRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
@@ -327,6 +345,7 @@ export interface FileRouteTypes {
     | '/simulate'
     | '/tokens'
     | '/api/code'
+    | '/api/contract-discovery'
     | '/api/health'
     | '/api/search'
     | '/api/simulate'
@@ -338,6 +357,7 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/discover/$address'
     | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
@@ -360,6 +380,7 @@ export interface FileRouteTypes {
     | '/simulate'
     | '/tokens'
     | '/api/code'
+    | '/api/contract-discovery'
     | '/api/health'
     | '/api/search'
     | '/api/simulate'
@@ -372,6 +393,7 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/discover/$address'
     | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
@@ -395,6 +417,7 @@ export interface FileRouteTypes {
     | '/_layout/simulate'
     | '/_layout/tokens'
     | '/api/code'
+    | '/api/contract-discovery'
     | '/api/health'
     | '/api/search'
     | '/api/simulate'
@@ -407,6 +430,7 @@ export interface FileRouteTypes {
     | '/_layout/demo/empty-state'
     | '/_layout/demo/pagination'
     | '/_layout/demo/tx'
+    | '/_layout/discover/$address'
     | '/_layout/policy/$id'
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
@@ -427,6 +451,7 @@ export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   SearchRoute: typeof SearchRoute
   ApiCodeRoute: typeof ApiCodeRoute
+  ApiContractDiscoveryRoute: typeof ApiContractDiscoveryRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ApiSimulateRoute: typeof ApiSimulateRoute
@@ -498,6 +523,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contract-discovery': {
+      id: '/api/contract-discovery'
+      path: '/api/contract-discovery'
+      fullPath: '/api/contract-discovery'
+      preLoaderRoute: typeof ApiContractDiscoveryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/code': {
@@ -575,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/policy/$id'
       fullPath: '/policy/$id'
       preLoaderRoute: typeof LayoutPolicyIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/discover/$address': {
+      id: '/_layout/discover/$address'
+      path: '/discover/$address'
+      fullPath: '/discover/$address'
+      preLoaderRoute: typeof LayoutDiscoverAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/demo/tx': {
@@ -690,6 +729,7 @@ interface LayoutRouteChildren {
   LayoutDemoEmptyStateRoute: typeof LayoutDemoEmptyStateRoute
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
+  LayoutDiscoverAddressRoute: typeof LayoutDiscoverAddressRoute
   LayoutPolicyIdRoute: typeof LayoutPolicyIdRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
@@ -710,6 +750,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDemoEmptyStateRoute: LayoutDemoEmptyStateRoute,
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
+  LayoutDiscoverAddressRoute: LayoutDiscoverAddressRoute,
   LayoutPolicyIdRoute: LayoutPolicyIdRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
@@ -725,6 +766,7 @@ const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   SearchRoute: SearchRoute,
   ApiCodeRoute: ApiCodeRoute,
+  ApiContractDiscoveryRoute: ApiContractDiscoveryRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
   ApiSimulateRoute: ApiSimulateRoute,
