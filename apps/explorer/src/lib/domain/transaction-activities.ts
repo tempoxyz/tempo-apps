@@ -30,18 +30,30 @@ const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
 		'outputToken',
 	],
 }
+const VAULT_ACTIONS: Record<
+	string,
+	[action: string, shareAmountKey: string, isDeposit: boolean]
+> = {
+	'assets-deposited': ['Vault Deposit', 'shares', true],
+	'assets-withdrawn': ['Vault Withdrawal', 'sharesBurned', false],
+	'private-assets-deposited': ['Vault Deposit', 'shares', true],
+	'private-shares-redeemed': ['Vault Withdrawal', 'shares', false],
+	'shares-redeemed': ['Vault Withdrawal', 'shares', false],
+	'shares-redemption-finalized': ['Vault Withdrawal', 'shares', false],
+}
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 	options: { portal?: Address.Address | null } = {},
 ): KnownEvent[] {
-	return activities.map((activity) => {
+	return activities.flatMap((activity) => {
+		const vault = vaultEvent(activity)
 		const privateZone = PRIVATE_ZONE_ACTIONS[activity.type]
 		if (privateZone) {
 			const [action, amountKey, tokenKey] = privateZone
 			const amount = amountPart(activity.data, amountKey, tokenKey)
 			const portal = activityAddress(options.portal ?? undefined)
-			return {
+			const zoneEvent: KnownEvent = {
 				type: activity.type,
 				parts: [
 					{ type: 'action', value: action },
@@ -54,7 +66,9 @@ export function activitiesToKnownEvents(
 						: []),
 				],
 			}
+			return vault ? [vault, zoneEvent] : [zoneEvent]
 		}
+		if (vault) return [vault]
 
 		const parts = activityParts(activity)
 		const representedFields = new Set([
@@ -66,27 +80,49 @@ export function activitiesToKnownEvents(
 			'sender',
 			'spender',
 		])
-		return {
-			type: activity.type,
-			parts,
-			...(activity.type === 'transfer'
-				? {
-						meta: {
-							from: activityAddress(activity.data.sender),
-							to: activityAddress(activity.data.recipient),
-						},
-					}
-				: {}),
-			note: Object.entries(activity.data).flatMap(([key, value]) => {
-				if (HIDDEN_FIELDS.has(key) || value == null) return []
-				if (representedFields.has(key)) return []
-				const part = activityValueToPart(value)
-				return part
-					? [[formatLabel(key), part] as [string, KnownEventPart]]
-					: []
-			}),
-		}
+		return [
+			{
+				type: activity.type,
+				parts,
+				...(activity.type === 'transfer'
+					? {
+							meta: {
+								from: activityAddress(activity.data.sender),
+								to: activityAddress(activity.data.recipient),
+							},
+						}
+					: {}),
+				note: Object.entries(activity.data).flatMap(([key, value]) => {
+					if (HIDDEN_FIELDS.has(key) || value == null) return []
+					if (representedFields.has(key)) return []
+					const part = activityValueToPart(value)
+					return part
+						? [[formatLabel(key), part] as [string, KnownEventPart]]
+						: []
+				}),
+			},
+		]
 	})
+}
+
+function vaultEvent(activity: TransactionActivity): KnownEvent | null {
+	const vaultAction = VAULT_ACTIONS[activity.type]
+	if (!vaultAction) return null
+	const [action, shareAmountKey, isDeposit] = vaultAction
+	const asset = amountPart(activity.data, 'assets', 'vaultAssetToken')
+	const share = amountPart(activity.data, shareAmountKey, 'vaultShareToken')
+	if (!asset || !share) return null
+	const [source, destination] = isDeposit ? [asset, share] : [share, asset]
+	return {
+		type: activity.type,
+		parts: [
+			{ type: 'action', value: action },
+			source,
+			{ type: 'text', value: 'for' },
+			destination,
+		],
+		totalAmount: asset.type === 'amount' ? asset.value : undefined,
+	}
 }
 
 function activityAddress(
