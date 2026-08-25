@@ -26,7 +26,7 @@ export function Layout(props: Layout.Props) {
 						{children}
 					</main>
 					<div className="w-full mt-6 relative z-1 print:hidden">
-						<Footer />
+						<Footer flush={isLanding} />
 					</div>
 					{isLanding && <Sphere />}
 				</div>
