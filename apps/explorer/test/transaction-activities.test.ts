@@ -53,7 +53,7 @@ describe('activitiesToKnownEvents', () => {
 		])
 	})
 
-	test('maps an Earn activity into a receipt event', () => {
+	test('maps an Earn redemption into a Vault Withdrawal', () => {
 		expect(
 			activitiesToKnownEvents([
 				{
@@ -63,6 +63,8 @@ describe('activitiesToKnownEvents', () => {
 					data: {
 						assets: '49999',
 						shares: '49999',
+						assetToken: '0x20c0000000000000000000000000000000000001',
+						shareToken: '0x20c0000000000000000000000000000000000002',
 						status: 'completed',
 						signer: 'self',
 						vault: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
@@ -72,17 +74,23 @@ describe('activitiesToKnownEvents', () => {
 		).toEqual([
 			{
 				type: 'shares-redeemed',
-				parts: [{ type: 'action', value: 'Shares redeemed' }],
-				note: [
-					['Assets', { type: 'number', value: 49999n }],
-					['Shares', { type: 'number', value: 49999n }],
-					[
-						'Vault',
-						{
-							type: 'account',
-							value: '0x10c063b3bbc396d7e4a0d4d48212d901e2943663',
+				parts: [
+					{ type: 'action', value: 'Vault Withdrawal' },
+					{
+						type: 'amount',
+						value: {
+							value: 49999n,
+							token: '0x20c0000000000000000000000000000000000002',
 						},
-					],
+					},
+					{ type: 'text', value: 'for' },
+					{
+						type: 'amount',
+						value: {
+							value: 49999n,
+							token: '0x20c0000000000000000000000000000000000001',
+						},
+					},
 				],
 			},
 		])
@@ -115,6 +123,10 @@ describe('activitiesToKnownEvents', () => {
 							actionId: `0x${'1'.repeat(64)}`,
 							[amountKey]: '1000000',
 							[tokenKey]: token,
+							assets: '1000000',
+							shares: '500000',
+							assetToken: '0x20c0000000000000000000000000000000000002',
+							shareToken: '0x20c0000000000000000000000000000000000003',
 						},
 					},
 				],
@@ -128,6 +140,39 @@ describe('activitiesToKnownEvents', () => {
 					{ type: 'amount', value: { value: 1000000n, token } },
 					{ type: 'text', value: 'to' },
 					{ type: 'account', value: portal },
+				],
+			},
+			{
+				type,
+				parts: [
+					{
+						type: 'action',
+						value:
+							type === 'private-assets-deposited'
+								? 'Vault Deposit'
+								: 'Vault Withdrawal',
+					},
+					{
+						type: 'amount',
+						value: {
+							value: type === 'private-assets-deposited' ? 1000000n : 500000n,
+							token:
+								type === 'private-assets-deposited'
+									? '0x20c0000000000000000000000000000000000002'
+									: '0x20c0000000000000000000000000000000000003',
+						},
+					},
+					{ type: 'text', value: 'for' },
+					{
+						type: 'amount',
+						value: {
+							value: type === 'private-assets-deposited' ? 500000n : 1000000n,
+							token:
+								type === 'private-assets-deposited'
+									? '0x20c0000000000000000000000000000000000003'
+									: '0x20c0000000000000000000000000000000000002',
+						},
+					},
 				],
 			},
 		])
