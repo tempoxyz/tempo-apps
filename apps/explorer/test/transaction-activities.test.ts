@@ -188,7 +188,7 @@ describe('activitiesToKnownEvents', () => {
 		],
 		[
 			'private-shares-redeemed',
-			'Private Zone Deposit',
+			'Private Zone Withdrawal',
 			'outputAmount',
 			'outputToken',
 		],
@@ -263,10 +263,85 @@ describe('activitiesToKnownEvents', () => {
 									: token,
 						},
 					},
-					{ type: 'text', value: 'to' },
-					{ type: 'account', value: portal },
+					...(type === 'private-assets-deposited'
+						? [
+								{ type: 'text' as const, value: 'to' },
+								{ type: 'account' as const, value: portal },
+							]
+						: []),
 				],
 			},
 		])
+	})
+})
+
+describe('selectTransactionDescriptionEvents for Zones', () => {
+	const zoneDeposit = {
+		type: 'zone deposit',
+		parts: [{ type: 'action' as const, value: 'Deposit to Zone' }],
+	}
+
+	test('prefers a decoded Zone event over generic API activities', () => {
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [
+					{ type: 'approval', parts: [] },
+					{ type: 'transfer', parts: [] },
+				],
+				fallbackEvents: [{ type: 'approval', parts: [] }, zoneDeposit],
+				knownCall: null,
+			}),
+		).toEqual([zoneDeposit])
+	})
+
+	test('prefers a decoded Zone event over generic token and nonce activities', () => {
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [
+					{ type: 'mint', parts: [] },
+					{ type: 'burn', parts: [] },
+					{
+						type: 'nonce incremented',
+						parts: [{ type: 'action' as const, value: 'Nonce Incremented' }],
+					},
+				],
+				fallbackEvents: [zoneDeposit],
+				knownCall: null,
+			}),
+		).toEqual([zoneDeposit])
+	})
+
+	test('preserves semantic API activities for Earn transactions', () => {
+		const vaultDeposit = {
+			type: 'private-assets-deposited',
+			parts: [{ type: 'action' as const, value: 'Vault Deposit' }],
+		}
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [vaultDeposit],
+				fallbackEvents: [zoneDeposit],
+				knownCall: null,
+			}),
+		).toEqual([vaultDeposit])
+	})
+
+	test('does not duplicate private Zone activity with a low-level decoded call', () => {
+		const decodedCall = {
+			type: 'zone encrypted deposit',
+			parts: [
+				{ type: 'action' as const, value: 'Encrypted Deposit to Zone 1' },
+			],
+		}
+		const privateDeposit = {
+			type: 'private-assets-deposited',
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
+		}
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [privateDeposit],
+				fallbackEvents: [decodedCall],
+				knownCall: decodedCall,
+			}),
+		).toEqual([privateDeposit])
 	})
 })

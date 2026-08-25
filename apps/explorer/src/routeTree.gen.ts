@@ -38,10 +38,12 @@ import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiTokenLogoAddressRouteImport } from './routes/api/token/logo/$address'
 import { Route as ApiContractCreationAddressRouteImport } from './routes/api/contract/creation/$address'
+import { Route as ApiAddressZonePortalAddressRouteImport } from './routes/api/address/zone-portal/$address'
 import { Route as ApiAddressMetadataAddressRouteImport } from './routes/api/address/metadata/$address'
 import { Route as ApiAddressHistoryAddressRouteImport } from './routes/api/address/history/$address'
 import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
+import { Route as ApiAddressZonePortalAddressKindRouteImport } from './routes/api/address/zone-portal/$address/$kind'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
@@ -188,6 +190,12 @@ const ApiContractCreationAddressRoute =
     path: '/api/contract/creation/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAddressZonePortalAddressRoute =
+  ApiAddressZonePortalAddressRouteImport.update({
+    id: '/api/address/zone-portal/$address',
+    path: '/api/address/zone-portal/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAddressMetadataAddressRoute =
   ApiAddressMetadataAddressRouteImport.update({
     id: '/api/address/metadata/$address',
@@ -211,6 +219,12 @@ const LayoutBlockCountdownTargetBlockRoute =
     id: '/block/countdown/$targetBlock',
     path: '/block/countdown/$targetBlock',
     getParentRoute: () => LayoutRoute,
+  } as any)
+const ApiAddressZonePortalAddressKindRoute =
+  ApiAddressZonePortalAddressKindRouteImport.update({
+    id: '/$kind',
+    path: '/$kind',
+    getParentRoute: () => ApiAddressZonePortalAddressRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -242,10 +256,12 @@ export interface FileRoutesByFullPath {
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/metadata/$address': typeof ApiAddressMetadataAddressRoute
+  '/api/address/zone-portal/$address': typeof ApiAddressZonePortalAddressRouteWithChildren
   '/api/contract/creation/$address': typeof ApiContractCreationAddressRoute
   '/api/token/logo/$address': typeof ApiTokenLogoAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
+  '/api/address/zone-portal/$address/$kind': typeof ApiAddressZonePortalAddressKindRoute
 }
 export interface FileRoutesByTo {
   '/search': typeof SearchRoute
@@ -276,10 +292,12 @@ export interface FileRoutesByTo {
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/metadata/$address': typeof ApiAddressMetadataAddressRoute
+  '/api/address/zone-portal/$address': typeof ApiAddressZonePortalAddressRouteWithChildren
   '/api/contract/creation/$address': typeof ApiContractCreationAddressRoute
   '/api/token/logo/$address': typeof ApiTokenLogoAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
+  '/api/address/zone-portal/$address/$kind': typeof ApiAddressZonePortalAddressKindRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -312,10 +330,12 @@ export interface FileRoutesById {
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/metadata/$address': typeof ApiAddressMetadataAddressRoute
+  '/api/address/zone-portal/$address': typeof ApiAddressZonePortalAddressRouteWithChildren
   '/api/contract/creation/$address': typeof ApiContractCreationAddressRoute
   '/api/token/logo/$address': typeof ApiTokenLogoAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
+  '/api/address/zone-portal/$address/$kind': typeof ApiAddressZonePortalAddressKindRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -348,10 +368,12 @@ export interface FileRouteTypes {
     | '/api/address/balances/$address'
     | '/api/address/history/$address'
     | '/api/address/metadata/$address'
+    | '/api/address/zone-portal/$address'
     | '/api/contract/creation/$address'
     | '/api/token/logo/$address'
     | '/api/tx/balance-changes/$hash'
     | '/api/tx/trace/$hash'
+    | '/api/address/zone-portal/$address/$kind'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/search'
@@ -382,10 +404,12 @@ export interface FileRouteTypes {
     | '/api/address/balances/$address'
     | '/api/address/history/$address'
     | '/api/address/metadata/$address'
+    | '/api/address/zone-portal/$address'
     | '/api/contract/creation/$address'
     | '/api/token/logo/$address'
     | '/api/tx/balance-changes/$hash'
     | '/api/tx/trace/$hash'
+    | '/api/address/zone-portal/$address/$kind'
   id:
     | '__root__'
     | '/_layout'
@@ -417,10 +441,12 @@ export interface FileRouteTypes {
     | '/api/address/balances/$address'
     | '/api/address/history/$address'
     | '/api/address/metadata/$address'
+    | '/api/address/zone-portal/$address'
     | '/api/contract/creation/$address'
     | '/api/token/logo/$address'
     | '/api/tx/balance-changes/$hash'
     | '/api/tx/trace/$hash'
+    | '/api/address/zone-portal/$address/$kind'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -436,6 +462,7 @@ export interface RootRouteChildren {
   ApiAddressBalancesAddressRoute: typeof ApiAddressBalancesAddressRoute
   ApiAddressHistoryAddressRoute: typeof ApiAddressHistoryAddressRoute
   ApiAddressMetadataAddressRoute: typeof ApiAddressMetadataAddressRoute
+  ApiAddressZonePortalAddressRoute: typeof ApiAddressZonePortalAddressRouteWithChildren
   ApiContractCreationAddressRoute: typeof ApiContractCreationAddressRoute
   ApiTokenLogoAddressRoute: typeof ApiTokenLogoAddressRoute
   ApiTxBalanceChangesHashRoute: typeof ApiTxBalanceChangesHashRoute
@@ -647,6 +674,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiContractCreationAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/address/zone-portal/$address': {
+      id: '/api/address/zone-portal/$address'
+      path: '/api/address/zone-portal/$address'
+      fullPath: '/api/address/zone-portal/$address'
+      preLoaderRoute: typeof ApiAddressZonePortalAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/address/metadata/$address': {
       id: '/api/address/metadata/$address'
       path: '/api/address/metadata/$address'
@@ -674,6 +708,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/block/countdown/$targetBlock'
       preLoaderRoute: typeof LayoutBlockCountdownTargetBlockRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/api/address/zone-portal/$address/$kind': {
+      id: '/api/address/zone-portal/$address/$kind'
+      path: '/$kind'
+      fullPath: '/api/address/zone-portal/$address/$kind'
+      preLoaderRoute: typeof ApiAddressZonePortalAddressKindRouteImport
+      parentRoute: typeof ApiAddressZonePortalAddressRoute
     }
   }
 }
@@ -721,6 +762,20 @@ const LayoutRouteChildren: LayoutRouteChildren = {
 const LayoutRouteWithChildren =
   LayoutRoute._addFileChildren(LayoutRouteChildren)
 
+interface ApiAddressZonePortalAddressRouteChildren {
+  ApiAddressZonePortalAddressKindRoute: typeof ApiAddressZonePortalAddressKindRoute
+}
+
+const ApiAddressZonePortalAddressRouteChildren: ApiAddressZonePortalAddressRouteChildren =
+  {
+    ApiAddressZonePortalAddressKindRoute: ApiAddressZonePortalAddressKindRoute,
+  }
+
+const ApiAddressZonePortalAddressRouteWithChildren =
+  ApiAddressZonePortalAddressRoute._addFileChildren(
+    ApiAddressZonePortalAddressRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   SearchRoute: SearchRoute,
@@ -734,6 +789,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAddressBalancesAddressRoute: ApiAddressBalancesAddressRoute,
   ApiAddressHistoryAddressRoute: ApiAddressHistoryAddressRoute,
   ApiAddressMetadataAddressRoute: ApiAddressMetadataAddressRoute,
+  ApiAddressZonePortalAddressRoute:
+    ApiAddressZonePortalAddressRouteWithChildren,
   ApiContractCreationAddressRoute: ApiContractCreationAddressRoute,
   ApiTokenLogoAddressRoute: ApiTokenLogoAddressRoute,
   ApiTxBalanceChangesHashRoute: ApiTxBalanceChangesHashRoute,

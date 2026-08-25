@@ -26,9 +26,11 @@ import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
+import { InfoCard } from '#comps/InfoCard'
 import { Pagination } from '#comps/Pagination'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
+import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
 import {
 	TimeColumnHeader,
@@ -75,7 +77,7 @@ import {
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useIsMounted, useMediaQuery } from '#lib/hooks'
+import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
 import {
 	buildAddressDescription,
 	buildAddressOgImageUrl,
@@ -92,6 +94,16 @@ import {
 import { areUsdPricedTokens } from '#lib/pricing'
 import { fetchAddressMetadata } from '#lib/server/address-metadata'
 import { getFeeTokenForChain } from '#lib/fee-token'
+import {
+	type ZonePortalActivityKind,
+	type ZonePortalBatchReference,
+	type ZonePortalOverview,
+	isZonePortalAddress,
+} from '#lib/domain/zones'
+import {
+	zonePortalActivityQueryOptions,
+	zonePortalOverviewQueryOptions,
+} from '#lib/zone-portal'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import ChevronFirst from '~icons/lucide/chevron-first'
@@ -100,6 +112,8 @@ import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
+import CopyIcon from '~icons/lucide/copy'
+import PlayIcon from '~icons/lucide/play'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -118,6 +132,9 @@ const ASSETS_PER_PAGE = 10
 const HISTORY_PAGE_SIZE = 10
 
 const allTabs = [
+	'deposits',
+	'withdrawals',
+	'batches',
 	'transactions',
 	'holdings',
 	'transfers',
@@ -451,6 +468,13 @@ function RouteComponent() {
 
 	Address.assert(address)
 	const isMounted = useIsMounted()
+	const isZonePortal = isZonePortalAddress(address)
+	const [portalLive, setPortalLive] = React.useState(true)
+	const { data: zonePortalOverview } = useQuery({
+		...zonePortalOverviewQueryOptions(address),
+		enabled: isMounted && isZonePortal,
+		refetchInterval: portalLive ? 4_000 : false,
+	})
 
 	const { data: addressMetadata } = useQuery({
 		...addressMetadataQueryOptions(address),
@@ -491,7 +515,9 @@ function RouteComponent() {
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
-		const tabs: TabValue[] = ['transactions']
+		const tabs: TabValue[] = isZonePortal
+			? ['deposits', 'withdrawals', 'batches', 'transactions']
+			: ['transactions']
 		if (!isTip20) {
 			tabs.push('transfers', 'holdings')
 		}
@@ -506,7 +532,7 @@ function RouteComponent() {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract])
+	}, [isToken, isTip20, isContract, isZonePortal])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -657,6 +683,8 @@ function RouteComponent() {
 				isToken={isToken}
 				tokenMetadata={tokenMetadata}
 				tokenLogoURI={tokenLogoURI}
+				isZonePortal={isZonePortal}
+				zonePortalOverview={zonePortalOverview}
 			/>
 			<SectionsWrapper
 				address={address}
@@ -682,6 +710,9 @@ function RouteComponent() {
 				dir={dir}
 				period={period}
 				onPeriodChange={setPeriod}
+				zonePortalOverview={zonePortalOverview}
+				portalLive={portalLive}
+				onPortalLiveChange={setPortalLive}
 			/>
 		</div>
 	)
@@ -705,18 +736,22 @@ function AccountCardWithTimestamps(props: {
 	assetsData: AssetData[]
 	accountType?: AccountType
 	addressMetadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
+	isZonePortal: boolean
 	isToken?: boolean
 	tokenLogoURI?: string | undefined
 	tokenMetadata?: TokenMetadata | null
+	zonePortalOverview?: ZonePortalOverview | undefined
 }) {
 	const {
 		address,
 		assetsData,
 		accountType: initialAccountType,
 		addressMetadata,
+		isZonePortal,
 		isToken,
 		tokenLogoURI,
 		tokenMetadata,
+		zonePortalOverview,
 	} = props
 
 	const resolvedAccountType = addressMetadata?.accountType ?? initialAccountType
@@ -736,6 +771,20 @@ function AccountCardWithTimestamps(props: {
 			}),
 		[assetsData, isTokenListed],
 	)
+
+	if (isZonePortal)
+		return (
+			<ZonePortalCard
+				address={address}
+				createdTimestamp={createdTimestamp}
+				lastActivityTimestamp={
+					addressMetadata?.lastActivityTimestamp
+						? BigInt(addressMetadata.lastActivityTimestamp)
+						: undefined
+				}
+				overview={zonePortalOverview}
+			/>
+		)
 
 	return (
 		<div className="min-[800px]:self-start flex flex-col gap-2">
@@ -769,6 +818,122 @@ function AccountCardWithTimestamps(props: {
 	)
 }
 
+type ZonePortalCardProps = {
+	address: Address.Address
+	createdTimestamp?: bigint | undefined
+	lastActivityTimestamp?: bigint | undefined
+	overview?: ZonePortalOverview | undefined
+}
+
+function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
+	const { address, createdTimestamp, lastActivityTimestamp, overview } = props
+	const { copy, notifying } = useCopy()
+	const numberFormat = React.useMemo(() => new Intl.NumberFormat('en-US'), [])
+
+	return (
+		<InfoCard
+			title={<InfoCard.Title>Zone Portal</InfoCard.Title>}
+			className="min-[800px]:self-start min-[1240px]:w-[258px]"
+			sections={[
+				<button
+					key="address"
+					type="button"
+					onClick={() => copy(address)}
+					className="w-full text-left cursor-pointer press-down text-tertiary"
+					title={address}
+				>
+					<div className="flex items-center gap-[8px] mb-[8px]">
+						<span className="text-[13px] font-normal">Address</span>
+						<div className="relative flex items-center">
+							<CopyIcon className="size-3" />
+							{notifying && (
+								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
+									copied
+								</span>
+							)}
+						</div>
+					</div>
+					<p className="max-w-[21ch] break-all font-mono text-[14px] leading-[17px] text-primary">
+						{address}
+					</p>
+				</button>,
+				<div key="balances" className="w-full min-w-0">
+					<p className="mb-2 text-[13px] text-tertiary">Balances</p>
+					<div className="flex flex-col gap-2">
+						{overview ? (
+							overview.assets.map((asset) => (
+								<div
+									key={asset.address}
+									className="flex min-w-0 items-center justify-between gap-2 text-[13px]"
+								>
+									<Link
+										to="/token/$address"
+										params={{ address: asset.address }}
+										className="flex min-w-0 items-center gap-1.5 text-base-content-positive press-down"
+									>
+										<TokenIcon address={asset.address} name={asset.symbol} />
+										<span className="truncate">{asset.symbol}</span>
+									</Link>
+									<Amount.Base
+										value={BigInt(asset.balance)}
+										decimals={asset.decimals}
+										short
+										shortMaximumFractionDigits={6}
+									/>
+								</div>
+							))
+						) : (
+							<span className="text-[13px] text-tertiary">…</span>
+						)}
+					</div>
+				</div>,
+				{
+					label: 'Deposits',
+					value: overview ? (
+						<span className="text-[13px] text-primary">
+							{numberFormat.format(overview.counts.deposits)}
+						</span>
+					) : (
+						<span className="text-[13px] text-tertiary">…</span>
+					),
+				},
+				{
+					label: 'Withdrawals',
+					value: overview ? (
+						<span className="text-[13px] text-primary">
+							{numberFormat.format(overview.counts.withdrawals)}
+						</span>
+					) : (
+						<span className="text-[13px] text-tertiary">…</span>
+					),
+				},
+				{
+					label: 'Active',
+					value: lastActivityTimestamp ? (
+						<RelativeTime
+							timestamp={lastActivityTimestamp}
+							className="text-[13px] text-primary"
+						/>
+					) : (
+						<span className="text-[13px] text-tertiary">…</span>
+					),
+				},
+				{
+					label: 'Created',
+					value: createdTimestamp ? (
+						<RelativeTime
+							timestamp={createdTimestamp}
+							className="text-[13px] text-primary"
+						/>
+					) : (
+						<span className="text-[13px] text-tertiary">…</span>
+					),
+				},
+			]}
+		/>
+	)
+}
+
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
@@ -793,6 +958,9 @@ function SectionsWrapper(props: {
 	dir?: 'sent' | 'received' | undefined
 	period?: '24h' | '7d' | undefined
 	onPeriodChange: (period: '24h' | '7d' | undefined) => void
+	zonePortalOverview?: ZonePortalOverview | undefined
+	portalLive: boolean
+	onPortalLiveChange: (live: boolean) => void
 }) {
 	const {
 		address,
@@ -818,6 +986,9 @@ function SectionsWrapper(props: {
 		dir,
 		period,
 		onPeriodChange,
+		zonePortalOverview,
+		portalLive,
+		onPortalLiveChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const { voucher } = Route.useSearch()
@@ -838,7 +1009,25 @@ function SectionsWrapper(props: {
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
 	const isContractTabActive = visibleTabs[activeSection] === 'contract'
+	const activeTab = visibleTabs[activeSection]
+	const isZonePortalTab =
+		activeTab === 'deposits' ||
+		activeTab === 'withdrawals' ||
+		activeTab === 'batches'
+	const zonePortalKind: ZonePortalActivityKind = isZonePortalTab
+		? activeTab
+		: 'deposits'
 	const queryClient = useQueryClient()
+	const zonePortalActivityQuery = useQuery({
+		...zonePortalActivityQueryOptions({
+			address,
+			kind: zonePortalKind,
+			page,
+			limit,
+		}),
+		enabled: isMounted && isZonePortalTab,
+		refetchInterval: portalLive && page === 1 ? 4_000 : false,
+	})
 
 	// Fetch readable source first so highlighting never delays contract data.
 	const contractSourceQuery = useQuery({
@@ -1217,6 +1406,126 @@ function SectionsWrapper(props: {
 		{ label: 'Percentage', align: 'end', minWidth: 100 },
 	]
 
+	const zoneTimeColumn: DataGrid.Column = {
+		label: (
+			<TimeColumnHeader
+				label="Time"
+				formatLabel={formatLabel}
+				onCycle={cycleTimeFormat}
+				className="cursor-pointer text-secondary transition-colors hover:text-accent"
+			/>
+		),
+		align: 'start',
+		minWidth: 86,
+		width: '0.6fr',
+	}
+
+	const zoneDepositColumns: DataGrid.Column[] = [
+		zoneTimeColumn,
+		{ label: 'Asset / amount', align: 'start', minWidth: 160, width: '1.2fr' },
+		{ label: 'From', align: 'start', minWidth: 135, width: '1fr' },
+		{
+			label: (
+				<InfoColumnLabel
+					label="Processed in"
+					info="A deposit becomes usable in the private zone after an accepted batch processes it. Pending means no accepted batch has processed it yet."
+				/>
+			),
+			align: 'start',
+			minWidth: 115,
+			width: '0.8fr',
+		},
+		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
+	]
+
+	const zoneWithdrawalColumns: DataGrid.Column[] = [
+		zoneTimeColumn,
+		{ label: 'Asset / amount', align: 'start', minWidth: 160, width: '1.2fr' },
+		{ label: 'Recipient', align: 'start', minWidth: 135, width: '1fr' },
+		{
+			label: (
+				<InfoColumnLabel
+					label="Processed in"
+					info="A withdrawal is delivered on Tempo by the batch that proves it."
+				/>
+			),
+			align: 'start',
+			minWidth: 115,
+			width: '0.8fr',
+		},
+		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
+	]
+
+	const zoneBatchColumns: DataGrid.Column[] = [
+		zoneTimeColumn,
+		{ label: 'Batch', align: 'start', minWidth: 90, width: '0.7fr' },
+		{
+			label: (
+				<InfoColumnLabel
+					label="Last deposit"
+					info="The highest public deposit number accepted by this batch. A dash means no deposit has been accepted yet."
+				/>
+			),
+			align: 'start',
+			minWidth: 125,
+			width: '0.9fr',
+		},
+		{
+			label: (
+				<InfoColumnLabel
+					label="Withdrawal queue"
+					info="The queue index assigned when this batch adds encrypted withdrawals. A dash means the batch added none."
+				/>
+			),
+			align: 'start',
+			minWidth: 145,
+			width: '1.1fr',
+		},
+		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
+	]
+
+	const zonePortalContextual = (
+		<button
+			type="button"
+			onClick={() => onPortalLiveChange(!portalLive)}
+			className={cx(
+				'flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium press-down',
+				portalLive
+					? 'bg-positive/10 text-positive hover:bg-positive/20'
+					: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
+			)}
+			title={portalLive ? 'Pause live updates' : 'Resume live updates'}
+		>
+			{portalLive ? (
+				<>
+					<span className="relative flex size-2">
+						<span className="absolute inline-flex size-full animate-ping rounded-full bg-positive opacity-75" />
+						<span className="relative inline-flex size-2 rounded-full bg-positive" />
+					</span>
+					<span>Live</span>
+				</>
+			) : (
+				<>
+					<PlayIcon className="size-3" />
+					<span>Paused</span>
+				</>
+			)}
+		</button>
+	)
+
+	const zonePortalError = zonePortalActivityQuery.error ? (
+		<div className="rounded-[10px] bg-card-header p-4.5">
+			<p className="text-sm font-medium text-red-400">
+				Zone activity is temporarily unavailable
+			</p>
+			<p className="mt-1 text-xs text-tertiary">
+				{zonePortalActivityQuery.error instanceof Error
+					? zonePortalActivityQuery.error.message
+					: 'Unknown error'}
+			</p>
+		</div>
+	) : null
+
 	// Holdings uses local pagination state (decoupled from URL `page` param)
 	const [holdingsPage, setHoldingsPage] = React.useState(1)
 	const [showAllHoldings, setShowAllHoldings] = React.useState(false)
@@ -1260,6 +1569,202 @@ function SectionsWrapper(props: {
 	// Build sections based on visible tabs
 	const sections = visibleTabs.map((tabName) => {
 		switch (tabName) {
+			case 'deposits': {
+				const deposits =
+					zonePortalActivityQuery.data?.items.filter(
+						(item) => item.kind === 'deposit',
+					) ?? []
+				const total = zonePortalActivityQuery.data?.total ?? 0
+				return {
+					title: 'Deposits',
+					totalItems: zonePortalOverview?.counts.deposits,
+					itemsLabel: 'deposits',
+					contextual: zonePortalContextual,
+					content: zonePortalError ?? (
+						<DataGrid
+							columns={{
+								stacked: zoneDepositColumns,
+								tabs: zoneDepositColumns,
+							}}
+							items={() =>
+								deposits.map((deposit) => ({
+									key: `${deposit.transactionHash}-${deposit.timestamp}`,
+									cells: [
+										<TimestampCell
+											key="time"
+											timestamp={BigInt(deposit.timestamp)}
+											link={`/receipt/${deposit.transactionHash}`}
+											format={timeFormat}
+										/>,
+										<Amount
+											key="amount"
+											value={deposit.amount}
+											token={deposit.token}
+										/>,
+										<AddressCell
+											key="from"
+											address={deposit.sender}
+											label="From"
+										/>,
+										<ProcessedInBatchCell
+											key="batch"
+											batch={deposit.processedInBatch}
+											fallback="Pending"
+										/>,
+										<LinkedTransactionHash
+											key="hash"
+											hash={deposit.transactionHash}
+										/>,
+									],
+									link: {
+										href: `/receipt/${deposit.transactionHash}`,
+										title: `View receipt ${deposit.transactionHash}`,
+									},
+								}))
+							}
+							totalItems={total}
+							displayCount={total}
+							page={page}
+							fetching={zonePortalActivityQuery.isFetching}
+							loading={zonePortalActivityQuery.isPending}
+							itemsLabel="deposits"
+							itemsPerPage={limit}
+							pagination="simple"
+							emptyState="No deposits found."
+						/>
+					),
+				}
+			}
+			case 'withdrawals': {
+				const withdrawals =
+					zonePortalActivityQuery.data?.items.filter(
+						(item) => item.kind === 'withdrawal',
+					) ?? []
+				const total = zonePortalActivityQuery.data?.total ?? 0
+				return {
+					title: 'Withdrawals',
+					totalItems: zonePortalOverview?.counts.withdrawals,
+					itemsLabel: 'withdrawals',
+					contextual: zonePortalContextual,
+					content: zonePortalError ?? (
+						<DataGrid
+							columns={{
+								stacked: zoneWithdrawalColumns,
+								tabs: zoneWithdrawalColumns,
+							}}
+							items={() =>
+								withdrawals.map((withdrawal) => ({
+									key: `${withdrawal.transactionHash}-${withdrawal.timestamp}`,
+									cells: [
+										<TimestampCell
+											key="time"
+											timestamp={BigInt(withdrawal.timestamp)}
+											link={`/receipt/${withdrawal.transactionHash}`}
+											format={timeFormat}
+										/>,
+										<Amount
+											key="amount"
+											value={withdrawal.amount}
+											token={withdrawal.token}
+										/>,
+										<AddressCell
+											key="to"
+											address={withdrawal.recipient}
+											label="To"
+										/>,
+										<ProcessedInBatchCell
+											key="batch"
+											batch={withdrawal.processedInBatch}
+											fallback="—"
+										/>,
+										<LinkedTransactionHash
+											key="hash"
+											hash={withdrawal.transactionHash}
+										/>,
+									],
+									link: {
+										href: `/receipt/${withdrawal.transactionHash}`,
+										title: `View receipt ${withdrawal.transactionHash}`,
+									},
+								}))
+							}
+							totalItems={total}
+							displayCount={total}
+							page={page}
+							fetching={zonePortalActivityQuery.isFetching}
+							loading={zonePortalActivityQuery.isPending}
+							itemsLabel="withdrawals"
+							itemsPerPage={limit}
+							pagination="simple"
+							emptyState="No withdrawals found."
+						/>
+					),
+				}
+			}
+			case 'batches': {
+				const batches =
+					zonePortalActivityQuery.data?.items.filter(
+						(item) => item.kind === 'batch',
+					) ?? []
+				const total = zonePortalActivityQuery.data?.total ?? 0
+				return {
+					title: 'Batches',
+					totalItems: zonePortalOverview?.counts.batches,
+					itemsLabel: 'batches',
+					contextual: zonePortalContextual,
+					content: zonePortalError ?? (
+						<DataGrid
+							columns={{
+								stacked: zoneBatchColumns,
+								tabs: zoneBatchColumns,
+							}}
+							items={() =>
+								batches.map((batch) => ({
+									key: batch.transactionHash,
+									cells: [
+										<TimestampCell
+											key="time"
+											timestamp={BigInt(batch.timestamp)}
+											link={`/receipt/${batch.transactionHash}`}
+											format={timeFormat}
+										/>,
+										<span key="batch" className="whitespace-nowrap font-mono">
+											#{batch.batchIndex}
+										</span>,
+										<span key="deposit" className="text-[13px] text-primary">
+											{batch.lastProcessedDepositNumber === '0'
+												? '—'
+												: `#${batch.lastProcessedDepositNumber}`}
+										</span>,
+										<span key="queue" className="text-[13px] text-primary">
+											{batch.withdrawalQueueIndex
+												? `#${batch.withdrawalQueueIndex}`
+												: '—'}
+										</span>,
+										<LinkedTransactionHash
+											key="hash"
+											hash={batch.transactionHash}
+										/>,
+									],
+									link: {
+										href: `/receipt/${batch.transactionHash}`,
+										title: `View receipt ${batch.transactionHash}`,
+									},
+								}))
+							}
+							totalItems={total}
+							displayCount={total}
+							page={page}
+							fetching={zonePortalActivityQuery.isFetching}
+							loading={zonePortalActivityQuery.isPending}
+							itemsLabel="batches"
+							itemsPerPage={limit}
+							pagination="simple"
+							emptyState="No batches found."
+						/>
+					),
+				}
+			}
 			case 'transactions':
 				return {
 					title: 'Transactions',
@@ -1777,6 +2282,74 @@ function SectionsWrapper(props: {
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
 		/>
+	)
+}
+
+type InfoColumnLabelProps = { label: string; info: string }
+
+function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
+	return (
+		<span className="inline-flex items-center gap-1">
+			<span>{props.label}</span>
+			<span
+				className="cursor-help text-[11px] text-tertiary"
+				title={props.info}
+				role="img"
+				aria-label={props.info}
+			>
+				ⓘ
+			</span>
+		</span>
+	)
+}
+
+type ProcessedInBatchCellProps = {
+	batch: ZonePortalBatchReference | null
+	fallback: string
+}
+
+function ProcessedInBatchCell(
+	props: ProcessedInBatchCellProps,
+): React.JSX.Element {
+	if (!props.batch) {
+		return (
+			<span className="whitespace-nowrap text-[13px] text-tertiary">
+				{props.fallback}
+			</span>
+		)
+	}
+
+	return (
+		<span className="whitespace-nowrap text-[13px]">
+			Batch{' '}
+			<Link
+				to="/receipt/$hash"
+				params={{ hash: props.batch.transactionHash }}
+				preload="intent"
+				className="text-accent transition-colors hover:text-accent/80 press-down"
+				title={`View batch #${props.batch.index}`}
+			>
+				#{props.batch.index}
+			</Link>
+		</span>
+	)
+}
+
+type LinkedTransactionHashProps = { hash: Hex.Hex }
+
+function LinkedTransactionHash(
+	props: LinkedTransactionHashProps,
+): React.JSX.Element {
+	return (
+		<Link
+			to="/receipt/$hash"
+			params={{ hash: props.hash }}
+			preload="intent"
+			className="w-full text-[13px] text-tertiary press-down"
+			title={props.hash}
+		>
+			<Midcut value={props.hash} prefix="0x" align="end" />
+		</Link>
 	)
 }
 

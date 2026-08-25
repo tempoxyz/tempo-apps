@@ -315,6 +315,10 @@ function createDetectors(
 
 			if (eventName === 'DepositMade') {
 				const zoneName = getZoneName(address)
+				const action =
+					'to' in args ? `Deposit to ${zoneName}` : 'Private Zone Deposit'
+				const memo =
+					'memo' in args ? decodeMemoForDisplay(args.memo) : undefined
 				const note: NonNullable<KnownEvent['note']> = []
 
 				if (args.fee > 0n) {
@@ -323,32 +327,22 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.fee, args.token) },
 					])
 				}
-				if (!('to' in args)) {
-					note.push(['Key Index', { type: 'number', value: args.keyIndex }])
-					return {
-						type: 'zone encrypted deposit',
-						parts: [
-							{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
-							{
-								type: 'amount',
-								value: createAmount(args.netAmount, args.token),
-							},
-						],
-						note,
-						meta: { from: args.sender, to: address },
-					}
-				}
-
-				const memo = decodeMemoForDisplay(args.memo)
 				if (memo) note.push(['Memo', { type: 'text', value: memo }])
+
+				const recipientParts: KnownEvent['parts'] =
+					'to' in args
+						? [
+								{ type: 'text', value: 'for' },
+								{ type: 'account', value: args.to },
+							]
+						: []
 
 				return {
 					type: 'zone deposit',
 					parts: [
-						{ type: 'action', value: `Deposit to ${zoneName}` },
+						{ type: 'action', value: action },
 						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
-						{ type: 'text', value: 'for' },
-						{ type: 'account', value: args.to },
+						...recipientParts,
 					],
 					note: note.length > 0 ? note : undefined,
 					meta: { from: args.sender, to: address },

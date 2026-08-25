@@ -18,10 +18,17 @@ export type ActivityDataValue =
 	| { [key: string]: ActivityDataValue }
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
+const GENERIC_ACTIVITY_TYPES = new Set(['approval', 'burn', 'mint', 'transfer'])
+const ZONE_EVENT_TYPES = new Set([
+	'zone deposit',
+	'zone encrypted deposit',
+	'zone withdrawal',
+	'zone bounce back',
+])
 const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
 	'private-assets-deposited': ['Private Zone Deposit', 'shares', 'shareToken'],
 	'private-shares-redeemed': [
-		'Private Zone Deposit',
+		'Private Zone Withdrawal',
 		'outputAmount',
 		'outputToken',
 	],
@@ -48,7 +55,7 @@ export function activitiesToKnownEvents(
 				parts: [
 					{ type: 'action', value: action },
 					...(amount ? [amount] : []),
-					...(portal
+					...(portal && activity.type === 'private-assets-deposited'
 						? [
 								{ type: 'text' as const, value: 'to' },
 								{ type: 'account' as const, value: portal },
@@ -144,6 +151,20 @@ export function selectTransactionDescriptionEvents(params: {
 	knownCall: KnownEvent | null
 }): KnownEvent[] {
 	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
+
+	const hasDecodedZoneEvent = params.fallbackEvents.some((event) =>
+		ZONE_EVENT_TYPES.has(event.type),
+	)
+	const activitiesAreGeneric = params.activityEvents.every(
+		(event) =>
+			GENERIC_ACTIVITY_TYPES.has(event.type) || isNonceIncrementedEvent(event),
+	)
+	if (hasDecodedZoneEvent && activitiesAreGeneric) {
+		return params.fallbackEvents.filter(
+			(event) => !GENERIC_ACTIVITY_TYPES.has(event.type),
+		)
+	}
+
 	const hasMeaningfulActivity = params.activityEvents.some(
 		(event) => !isNonceIncrementedEvent(event),
 	)
@@ -151,7 +172,10 @@ export function selectTransactionDescriptionEvents(params: {
 		params.knownCall || hasMeaningfulActivity
 			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
 			: params.activityEvents
-	return params.knownCall
+	const hasPrivateZoneActivity = activityEvents.some(
+		(event) => PRIVATE_ZONE_ACTIONS[event.type] !== undefined,
+	)
+	return params.knownCall && !hasPrivateZoneActivity
 		? [params.knownCall, ...activityEvents]
 		: [...activityEvents]
 }

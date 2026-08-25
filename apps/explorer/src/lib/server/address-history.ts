@@ -250,7 +250,7 @@ export function toEnrichedTransaction(
 				`[history] failed to parse known events for ${row.hash}:`,
 				error,
 			)
-			return []
+			return activityEvents
 		}
 	})()
 

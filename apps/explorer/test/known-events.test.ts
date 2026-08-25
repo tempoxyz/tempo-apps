@@ -115,6 +115,33 @@ function mockZoneEventLog(event: AbiEvent, address: Address.Address) {
 	)
 }
 
+const encryptedDepositMadeAbi = [
+	{
+		type: 'event',
+		name: 'DepositMade',
+		inputs: [
+			{
+				indexed: true,
+				name: 'newCurrentDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: true, name: 'sender', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'netAmount', type: 'uint128' },
+			{ indexed: false, name: 'fee', type: 'uint128' },
+			{ indexed: false, name: 'keyIndex', type: 'uint256' },
+			{ indexed: false, name: 'ephemeralPubkeyX', type: 'bytes32' },
+			{ indexed: false, name: 'ephemeralPubkeyYParity', type: 'uint8' },
+			{ indexed: false, name: 'ciphertext', type: 'bytes' },
+			{ indexed: false, name: 'nonce', type: 'bytes12' },
+			{ indexed: false, name: 'tag', type: 'bytes16' },
+			{ indexed: false, name: 'tempoRefundRecipient', type: 'address' },
+			{ indexed: false, name: 'depositNumber', type: 'uint64' },
+		],
+		anonymous: false,
+	},
+] as const
+
 describe('parseKnownEvents', () => {
 	it('describes every Zone write call', () => {
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
@@ -670,5 +697,48 @@ describe('parseKnownEvents', () => {
 
 		expect(knownEvents).toHaveLength(1)
 		expect(knownEvents[0]?.type).toBe('zone deposit')
+	})
+
+	it('does not expose the encrypted recipient of current Zone deposits', () => {
+		const hash = `0x${'4'.repeat(64)}` as const
+		const netAmount = 1_000_000n
+		const topics = encodeEventTopics({
+			abi: encryptedDepositMadeAbi,
+			eventName: 'DepositMade',
+			args: {
+				newCurrentDepositQueueHash: zeroHash,
+				sender: accountAddress,
+			},
+		}) as [Hex.Hex, ...Hex.Hex[]]
+		const data = encodeAbiParameters(
+			encryptedDepositMadeAbi[0].inputs.filter((input) => !input.indexed),
+			[
+				userTokenAddress,
+				netAmount,
+				0n,
+				3n,
+				zeroHash,
+				3,
+				`0x${'11'.repeat(64)}`,
+				`0x${'22'.repeat(12)}`,
+				`0x${'33'.repeat(16)}`,
+				recipientAddress,
+				70n,
+			],
+		)
+		const receipt = mockReceipt(
+			[mockLog({ address: UNKNOWN_ZONE_PORTAL, topics, data }, hash)],
+			accountAddress,
+			hash,
+		)
+
+		const [event] = parseKnownEvents(receipt, { getTokenMetadata })
+		expect(event?.type).toBe('zone deposit')
+		expect(event?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Private Zone Deposit',
+		})
+		expect(event?.parts).toHaveLength(2)
+		expect(event?.parts.some((part) => part.type === 'account')).toBe(false)
 	})
 })
