@@ -100,12 +100,12 @@ describe('activitiesToKnownEvents', () => {
 		[
 			'private-assets-deposited',
 			'Private Zone Deposit',
-			'inputAmount',
-			'inputToken',
+			'shares',
+			'shareToken',
 		],
 		[
 			'private-shares-redeemed',
-			'Private Zone Withdrawal',
+			'Private Zone Deposit',
 			'outputAmount',
 			'outputToken',
 		],
@@ -133,15 +133,6 @@ describe('activitiesToKnownEvents', () => {
 				{ portal },
 			),
 		).toEqual([
-			{
-				type,
-				parts: [
-					{ type: 'action', value: action },
-					{ type: 'amount', value: { value: 1000000n, token } },
-					{ type: 'text', value: 'to' },
-					{ type: 'account', value: portal },
-				],
-			},
 			{
 				type,
 				parts: [
@@ -173,6 +164,24 @@ describe('activitiesToKnownEvents', () => {
 									: '0x20c0000000000000000000000000000000000002',
 						},
 					},
+				],
+			},
+			{
+				type,
+				parts: [
+					{ type: 'action', value: action },
+					{
+						type: 'amount',
+						value: {
+							value: type === 'private-assets-deposited' ? 500000n : 1000000n,
+							token:
+								type === 'private-assets-deposited'
+									? '0x20c0000000000000000000000000000000000003'
+									: token,
+						},
+					},
+					{ type: 'text', value: 'to' },
+					{ type: 'account', value: portal },
 				],
 			},
 		])

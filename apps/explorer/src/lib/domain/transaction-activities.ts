@@ -19,13 +19,9 @@ export type ActivityDataValue =
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
 const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
-	'private-assets-deposited': [
-		'Private Zone Deposit',
-		'inputAmount',
-		'inputToken',
-	],
+	'private-assets-deposited': ['Private Zone Deposit', 'shares', 'shareToken'],
 	'private-shares-redeemed': [
-		'Private Zone Withdrawal',
+		'Private Zone Deposit',
 		'outputAmount',
 		'outputToken',
 	],
@@ -55,7 +51,7 @@ export function activitiesToKnownEvents(
 				],
 			}
 			const vaultEvent = vaultActivityEvent(activity)
-			return vaultEvent ? [zoneEvent, vaultEvent] : [zoneEvent]
+			return vaultEvent ? [vaultEvent, zoneEvent] : [zoneEvent]
 		}
 
 		const vaultEvent = vaultActivityEvent(activity)
