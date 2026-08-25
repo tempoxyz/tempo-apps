@@ -17,18 +17,21 @@ import {
 	tip20ChannelReserveAddress,
 	zoneFactoryAbi,
 	zoneMessengerAbi,
+	zoneOutboxAbi,
 	zonePortalAbi,
 	zoneVerifierAbi,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
+import { getZonePortalId, isZonePortalAddress } from '#lib/domain/zones.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
+
+export { isZonePortalAddress } from '#lib/domain/zones.ts'
 
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
 export const blockHashHistoryAddress =
 	'0x0000f90827f1c53a10cb7a02335b175320002935' as const
-const zonePortalPrefix = '0x5ad000000000000000000000' as const
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -386,6 +389,18 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
+		ZoneAddresses.zoneOutbox,
+		{
+			name: 'Zone Outbox',
+			code: '0xef',
+			description: 'Request withdrawals from a Tempo Zone',
+			abi: zoneOutboxAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneOutbox,
+		},
+	],
+	[
 		ZoneAddresses.zoneMessenger,
 		{
 			name: 'Zone Messenger',
@@ -457,10 +472,6 @@ export function systemAddress(address: Address.Address): boolean {
 	)
 }
 
-export function isZonePortalAddress(address: Address.Address): boolean {
-	return address.toLowerCase().startsWith(zonePortalPrefix)
-}
-
 /**
  * Get contract info by address (case-insensitive).
  * Also handles TIP-20 tokens that aren't explicitly registered.
@@ -474,7 +485,7 @@ export function getContractInfo(
 	if (registered) return registered
 
 	if (isZonePortalAddress(address)) {
-		const zoneId = BigInt(`0x${address.slice(zonePortalPrefix.length)}`)
+		const zoneId = getZonePortalId(address)
 		return {
 			address,
 			name: `Zone Portal #${zoneId}`,
