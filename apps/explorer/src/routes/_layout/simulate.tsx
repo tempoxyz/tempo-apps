@@ -543,13 +543,13 @@ function SimulatePage(): React.JSX.Element {
 	const showOutput = pane === 'output' || pane === 'split'
 
 	return (
-		<div className="flex w-full flex-col px-[24px] pt-8 pb-12 min-[800px]:pt-14 min-[1240px]:px-[84px]">
+		<div className="flex w-full flex-col px-[24px] pt-8 pb-12 type-card min-[800px]:pt-14 min-[1240px]:px-[84px]">
 			<div className="mb-[12px] flex flex-wrap items-center gap-x-[14px] gap-y-[8px]">
 				<h1 className="shrink-0 text-[18px] font-medium text-primary">
 					Simulate
 				</h1>
 				<p
-					className="min-w-0 flex-1 truncate font-mono text-[12px] text-tertiary"
+					className="min-w-0 flex-1 truncate type-card-data text-tertiary"
 					title={summary}
 				>
 					{summary}
@@ -1190,7 +1190,7 @@ function SimulationEmptyState(props: {
 				/>
 			</div>
 			<div className="flex flex-col gap-[12px] px-[16px] py-[16px]">
-				<p className="max-w-[520px] text-[12px] leading-[18px] text-tertiary">
+				<p className="max-w-[520px] type-card text-tertiary">
 					Fill in a call and run it, or replay an existing transaction by hash
 					against the state of its parent block. Nothing is signed and nothing
 					is broadcast.
