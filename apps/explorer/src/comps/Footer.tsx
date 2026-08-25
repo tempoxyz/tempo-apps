@@ -1,6 +1,5 @@
 import { Link as RouterLink } from '@tanstack/react-router'
 import * as React from 'react'
-import { cx } from '#lib/css'
 import {
 	applyThemeMode,
 	defaultThemeMode,
@@ -16,14 +15,9 @@ import {
 import MoonIcon from '~icons/lucide/moon'
 import SunIcon from '~icons/lucide/sun'
 
-export function Footer(props: Footer.Props): React.JSX.Element {
+export function Footer(): React.JSX.Element {
 	return (
-		<footer
-			className={cx(
-				'@container px-[24px] @min-[1240px]:px-[84px] pt-[24px] relative print:hidden',
-				props.flush ? 'pb-0' : 'pb-[48px]',
-			)}
-		>
+		<footer className="@container px-[24px] @min-[1240px]:px-[84px] pt-[24px] pb-[48px] relative print:hidden">
 			<div className="relative flex min-h-[34px] items-center justify-center">
 				<Footer.ThemeToggle />
 				<ul className="text-ui-meta flex items-center justify-center gap-[24px] select-none">
@@ -49,10 +43,6 @@ export function Footer(props: Footer.Props): React.JSX.Element {
 }
 
 export namespace Footer {
-	export interface Props {
-		flush?: boolean
-	}
-
 	export function ThemeToggle(): React.JSX.Element {
 		const [theme, setTheme] = React.useState<ThemeMode>(defaultThemeMode)
 		const nextTheme = theme === 'dark' ? 'light' : 'dark'
