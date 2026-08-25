@@ -503,6 +503,13 @@ function Component() {
 	const eventsTotalDisplayValue =
 		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
 	const eventTotalTokens = getKnownEventAmounts(displayEvents)
+	const hasVaultActivity = displayEvents.some((event) =>
+		event.parts.some(
+			(part) =>
+				part.type === 'action' &&
+				(part.value === 'Vault Deposit' || part.value === 'Vault Withdrawal'),
+		),
+	)
 
 	const total =
 		streamingTotal !== undefined
@@ -549,8 +556,8 @@ function Component() {
 				sender={receipt.from}
 				status={receipt.status}
 				timestamp={block.timestamp}
-				total={total}
-				totalDisplay={totalDisplay}
+				total={hasVaultActivity ? undefined : total}
+				totalDisplay={hasVaultActivity ? undefined : totalDisplay}
 				exportSearch={location.searchStr}
 			/>
 		</div>

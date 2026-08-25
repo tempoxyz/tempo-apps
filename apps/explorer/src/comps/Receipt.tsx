@@ -8,7 +8,6 @@ import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import {
@@ -195,25 +194,6 @@ export function Receipt(props: Receipt.Props) {
 												firstAmountPart?.type === 'amount'
 											? firstAmountPart.value
 											: undefined)
-								const totalAmountBigInt = displayTotalAmount
-									? displayTotalAmount.value
-									: event.type === 'swap' && amountParts.length > 0
-										? firstAmountPart?.type === 'amount'
-											? firstAmountPart.value.value
-											: 0n
-										: amountParts.reduce((sum, part) => {
-												if (part.type === 'amount')
-													return sum + part.value.value
-												return sum
-											}, 0n)
-								const decimals = displayTotalAmount
-									? (displayTotalAmount.decimals ??
-										DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
-									: firstAmountPart?.type === 'amount'
-										? (firstAmountPart.value.decimals ??
-											DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)
-										: DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS
-
 								return (
 									<div
 										key={`${event.type}-${index}`}
@@ -232,14 +212,6 @@ export function Receipt(props: Receipt.Props) {
 															infinite={null}
 															prefix={showUsdPrefix ? '$' : undefined}
 															short
-														/>
-													) : totalAmountBigInt > 0n ? (
-														<Amount.Base
-															decimals={decimals}
-															infinite={null}
-															prefix={showUsdPrefix ? '$' : undefined}
-															short
-															value={totalAmountBigInt}
 														/>
 													) : null}
 												</div>
