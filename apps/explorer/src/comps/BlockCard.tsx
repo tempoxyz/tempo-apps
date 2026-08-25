@@ -74,7 +74,7 @@ export function BlockCard(props: BlockCard.Props) {
 
 	return (
 		<InfoCard
-			className="text-[13px]"
+			className="type-card"
 			sections={[
 				<button
 					key="block-number"
@@ -84,13 +84,11 @@ export function BlockCard(props: BlockCard.Props) {
 					title={String(blockNumber ?? 0n)}
 				>
 					<div className="flex items-center gap-[8px] mb-[8px]">
-						<span className="text-[13px] font-normal">Block</span>
+						<span>Block</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
 							{copyBlock.notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
-									copied
-								</span>
+								<span className="absolute left-[calc(100%+8px)]">copied</span>
 							)}
 						</div>
 					</div>
@@ -127,9 +125,8 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							{/* the 15px font size needs to match the block number wrapper font size to make sure they align */}
 							{/* 22 chars/line * (1ch + 1px tracking) */}
-							<div className="text-[15px] font-mono font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
+							<div className="type-card-data tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
 							</div>
 						</button>
@@ -179,7 +176,7 @@ export function BlockCard(props: BlockCard.Props) {
 							className="flex w-full items-center justify-between text-tertiary cursor-pointer press-down"
 							onClick={() => setShowAdvanced((prev) => !prev)}
 						>
-							<span className="text-[13px]">Advanced</span>
+							<span>Advanced</span>
 							<ChevronDown
 								className={cx(
 									'size-[14px] text-content-dimmed',
@@ -333,7 +330,7 @@ export namespace BlockCard {
 		if (!hash) {
 			return (
 				<div className="flex items-center justify-between gap-[8px] text-primary lowercase">
-					<span className="text-[12px] text-tertiary shrink-0">{label}</span>
+					<span className="text-tertiary shrink-0">{label}</span>
 					<span className="text-tertiary">—</span>
 				</div>
 			)
@@ -346,7 +343,7 @@ export namespace BlockCard {
 				className="w-full flex items-center justify-between gap-[8px] text-primary lowercase cursor-pointer press-down"
 				title={hash}
 			>
-				<span className="text-[12px] text-tertiary shrink-0 font-sans">
+				<span className="text-tertiary shrink-0 font-sans">
 					{notifying ? 'copied' : label}
 				</span>
 				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end font-mono">

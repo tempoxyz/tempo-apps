@@ -26,7 +26,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 							{
 								label: 'Error',
 								value: (
-									<span className="text-right font-sans text-[13px] text-primary">
+									<span className="text-right type-card text-primary">
 										{error}
 									</span>
 								),
@@ -41,18 +41,16 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					title={hash}
 				>
 					<div className="flex items-center gap-[8px] mb-[8px] font-sans">
-						<span className="text-[13px] font-normal capitalize">Hash</span>
+						<span className="capitalize">Hash</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="w-[12px] h-[12px]" />
 							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
-									copied
-								</span>
+								<span className="absolute left-[calc(100%+8px)]">copied</span>
 							)}
 						</div>
 					</div>
 					{/* 66 chars / 3 lines = 22ch */}
-					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[22ch] font-mono">
+					<p className="type-card-data text-primary break-all max-w-[22ch]">
 						{hash}
 					</p>
 				</button>,
@@ -62,7 +60,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/block/$id"
 							params={{ id: String(blockNumber) }}
-							className="text-[13px] text-accent hover:underline press-down font-mono tabular-nums"
+							className="text-accent hover:underline press-down font-mono tabular-nums"
 						>
 							{blockNumber}
 						</Link>
@@ -86,7 +84,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<FormattedTimestamp
 							timestamp={timestamp}
 							format={timeFormat}
-							className="text-[13px] text-primary font-mono"
+							className="text-primary font-mono"
 						/>
 					),
 				},
@@ -96,7 +94,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/address/$address"
 							params={{ address: from }}
-							className="text-[13px] text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
+							className="text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
 							title={from}
 						>
 							<Midcut value={from} prefix="0x" min={4} align="end" />
@@ -110,7 +108,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 								<Link
 									to="/address/$address"
 									params={{ address: to }}
-									className="text-[13px] text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
+									className="text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
 									title={to}
 								>
 									<Midcut value={to} prefix="0x" min={4} align="end" />
@@ -119,11 +117,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						}
 					: {
 							label: 'To',
-							value: (
-								<span className="text-[13px] text-tertiary">
-									Contract Creation
-								</span>
-							),
+							value: <span className="text-tertiary">Contract Creation</span>,
 						},
 				<Link
 					key="receipt"
@@ -131,7 +125,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					params={{ hash }}
 					className="press-down flex items-center justify-between w-full print:hidden py-[6px]"
 				>
-					<span className="text-[13px] text-tertiary">Receipt</span>
+					<span className="text-tertiary">Receipt</span>
 					<span className="text-[12px] text-tertiary hover:text-primary px-[8px] py-[2px] border border-base-border rounded-full transition-colors">
 						View →
 					</span>
@@ -150,7 +144,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					className="press-down flex items-center justify-between w-full print:hidden py-[6px]"
 					title="Replay this transaction against the state of its parent block"
 				>
-					<span className="text-[13px] text-tertiary">Simulate</span>
+					<span className="text-tertiary">Simulate</span>
 					<span
 						className={cx(
 							'text-[12px] px-[8px] py-[2px] border rounded-full transition-colors',

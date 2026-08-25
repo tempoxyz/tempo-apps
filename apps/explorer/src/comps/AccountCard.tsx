@@ -69,18 +69,16 @@ export function AccountCard(props: AccountCard.Props) {
 					title={address}
 				>
 					<div className="flex items-center gap-[8px] mb-[8px]">
-						<span className="text-[13px] font-normal capitalize">Address</span>
+						<span className="capitalize">Address</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="w-[12px] h-[12px]" />
 							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
-									copied
-								</span>
+								<span className="absolute left-[calc(100%+8px)]">copied</span>
 							)}
 						</div>
 					</div>
 					{/* 42 chars / 2 lines = 21ch */}
-					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[21ch] font-mono">
+					<p className="type-card-data text-primary break-all max-w-[21ch]">
 						{address}
 					</p>
 				</button>,
@@ -89,7 +87,7 @@ export function AccountCard(props: AccountCard.Props) {
 							{
 								label: 'Master ID',
 								value: (
-									<span className="text-[13px] text-primary">
+									<span className="text-primary">
 										{virtualAddressParts.masterId}
 									</span>
 								),
@@ -97,7 +95,7 @@ export function AccountCard(props: AccountCard.Props) {
 							{
 								label: 'User Tag',
 								value: (
-									<span className="text-[13px] text-primary">
+									<span className="text-primary">
 										{virtualAddressParts.userTag}
 									</span>
 								),
@@ -108,9 +106,7 @@ export function AccountCard(props: AccountCard.Props) {
 					? [
 							{
 								label: 'Holdings',
-								value: (
-									<span className="text-[13px] text-tertiary">Forwarded</span>
-								),
+								value: <span className="text-tertiary">Forwarded</span>,
 							},
 						]
 					: !hideHoldings
@@ -119,13 +115,11 @@ export function AccountCard(props: AccountCard.Props) {
 									label: 'Holdings',
 									value: (
 										<ClientOnly
-											fallback={
-												<span className="text-tertiary text-[13px]">…</span>
-											}
+											fallback={<span className="text-tertiary">…</span>}
 										>
 											{totalValue !== undefined ? (
 												<span
-													className="text-[13px] text-primary"
+													className="text-primary"
 													title={PriceFormatter.format(totalValue)}
 												>
 													{PriceFormatter.format(totalValue, {
@@ -133,7 +127,7 @@ export function AccountCard(props: AccountCard.Props) {
 													})}
 												</span>
 											) : (
-												<span className="text-tertiary text-[13px]">…</span>
+												<span className="text-tertiary">…</span>
 											)}
 										</ClientOnly>
 									),
@@ -143,16 +137,14 @@ export function AccountCard(props: AccountCard.Props) {
 				{
 					label: 'Active',
 					value: (
-						<ClientOnly
-							fallback={<span className="text-tertiary text-[13px]">…</span>}
-						>
+						<ClientOnly fallback={<span className="text-tertiary">…</span>}>
 							{lastActivityTimestamp ? (
 								<RelativeTime
 									timestamp={lastActivityTimestamp}
-									className="text-[13px] text-primary"
+									className="text-primary"
 								/>
 							) : (
-								<span className="text-tertiary text-[13px]">…</span>
+								<span className="text-tertiary">…</span>
 							)}
 						</ClientOnly>
 					),
@@ -160,16 +152,14 @@ export function AccountCard(props: AccountCard.Props) {
 				{
 					label: 'Created',
 					value: (
-						<ClientOnly
-							fallback={<span className="text-tertiary text-[13px]">…</span>}
-						>
+						<ClientOnly fallback={<span className="text-tertiary">…</span>}>
 							{createdTimestamp ? (
 								<RelativeTime
 									timestamp={createdTimestamp}
-									className="text-[13px] text-primary"
+									className="text-primary"
 								/>
 							) : (
-								<span className="text-tertiary text-[13px]">…</span>
+								<span className="text-tertiary">…</span>
 							)}
 						</ClientOnly>
 					),

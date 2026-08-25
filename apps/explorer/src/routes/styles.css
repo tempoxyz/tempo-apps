@@ -183,6 +183,22 @@ input[type="number"] {
 	line-height: 1.25rem;
 }
 
+@utility type-card {
+	font-family: var(--font-sans);
+	font-size: 13px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 16px;
+}
+
+@utility type-card-data {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	font-style: normal;
+	font-weight: 400;
+	line-height: 16px;
+}
+
 @utility text-ui-meta {
 	color: var(--color-primary);
 	text-align: center;
