@@ -119,7 +119,9 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const fallbackEvents = knownCall
 		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
 		: parsedEvents
-	const activityEvents = activitiesToKnownEvents(activities)
+	const activityEvents = activitiesToKnownEvents(activities, {
+		portal: receipt.to,
+	})
 	const knownEvents =
 		activityEvents.length > 0 ? activityEvents : fallbackEvents
 

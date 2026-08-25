@@ -33,15 +33,26 @@ const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
+	options: { portal?: Address.Address | null } = {},
 ): KnownEvent[] {
 	return activities.map((activity) => {
 		const privateZone = PRIVATE_ZONE_ACTIONS[activity.type]
 		if (privateZone) {
 			const [action, amountKey, tokenKey] = privateZone
 			const amount = amountPart(activity.data, amountKey, tokenKey)
+			const portal = activityAddress(options.portal ?? undefined)
 			return {
 				type: activity.type,
-				parts: [{ type: 'action', value: action }, ...(amount ? [amount] : [])],
+				parts: [
+					{ type: 'action', value: action },
+					...(amount ? [amount] : []),
+					...(portal
+						? [
+								{ type: 'text' as const, value: 'to' },
+								{ type: 'account' as const, value: portal },
+							]
+						: []),
+				],
 			}
 		}
 

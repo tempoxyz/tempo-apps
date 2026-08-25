@@ -124,7 +124,9 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 						fetchTransactionActivities({ data: { hash } }),
 					])
 
-				const activityEvents = activitiesToKnownEvents(activities)
+				const activityEvents = activitiesToKnownEvents(activities, {
+					portal: txData.receipt.to,
+				})
 				return { ...txData, balanceChangesData, traceData, activityEvents }
 			} catch (error) {
 				console.error(error)

@@ -103,25 +103,31 @@ describe('activitiesToKnownEvents', () => {
 		],
 	])('simplifies %s', (type, action, amountKey, tokenKey) => {
 		const token = '0x20c0000000000000000000000000000000000001'
+		const portal = '0x5ad0000000000000000000000000000000000001'
 		expect(
-			activitiesToKnownEvents([
-				{
-					id: 'activity-1',
-					title: 'Low-level private activity',
-					type,
-					data: {
-						actionId: `0x${'1'.repeat(64)}`,
-						[amountKey]: '1000000',
-						[tokenKey]: token,
+			activitiesToKnownEvents(
+				[
+					{
+						id: 'activity-1',
+						title: 'Low-level private activity',
+						type,
+						data: {
+							actionId: `0x${'1'.repeat(64)}`,
+							[amountKey]: '1000000',
+							[tokenKey]: token,
+						},
 					},
-				},
-			]),
+				],
+				{ portal },
+			),
 		).toEqual([
 			{
 				type,
 				parts: [
 					{ type: 'action', value: action },
 					{ type: 'amount', value: { value: 1000000n, token } },
+					{ type: 'text', value: 'to' },
+					{ type: 'account', value: portal },
 				],
 			},
 		])
