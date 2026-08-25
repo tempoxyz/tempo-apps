@@ -344,4 +344,24 @@ describe('selectTransactionDescriptionEvents for Zones', () => {
 			}),
 		).toEqual([privateDeposit])
 	})
+
+	test('does not duplicate a private Zone log when API activity is unavailable', () => {
+		const decodedCall = {
+			type: 'zone encrypted deposit',
+			parts: [
+				{ type: 'action' as const, value: 'Encrypted Deposit to Zone 1' },
+			],
+		}
+		const privateDeposit = {
+			type: 'zone deposit',
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
+		}
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [],
+				fallbackEvents: [decodedCall, privateDeposit],
+				knownCall: decodedCall,
+			}),
+		).toEqual([privateDeposit])
+	})
 })

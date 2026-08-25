@@ -150,9 +150,15 @@ export function selectTransactionDescriptionEvents(params: {
 	fallbackEvents: readonly KnownEvent[]
 	knownCall: KnownEvent | null
 }): KnownEvent[] {
-	if (params.activityEvents.length === 0) return [...params.fallbackEvents]
+	const hasPrivateZoneFallback = params.fallbackEvents.some(
+		(event) => event !== params.knownCall && isPrivateZoneEvent(event),
+	)
+	const fallbackEvents = hasPrivateZoneFallback
+		? params.fallbackEvents.filter((event) => event !== params.knownCall)
+		: params.fallbackEvents
+	if (params.activityEvents.length === 0) return [...fallbackEvents]
 
-	const hasDecodedZoneEvent = params.fallbackEvents.some((event) =>
+	const hasDecodedZoneEvent = fallbackEvents.some((event) =>
 		ZONE_EVENT_TYPES.has(event.type),
 	)
 	const activitiesAreGeneric = params.activityEvents.every(
@@ -160,7 +166,7 @@ export function selectTransactionDescriptionEvents(params: {
 			GENERIC_ACTIVITY_TYPES.has(event.type) || isNonceIncrementedEvent(event),
 	)
 	if (hasDecodedZoneEvent && activitiesAreGeneric) {
-		return params.fallbackEvents.filter(
+		return fallbackEvents.filter(
 			(event) => !GENERIC_ACTIVITY_TYPES.has(event.type),
 		)
 	}
@@ -172,12 +178,23 @@ export function selectTransactionDescriptionEvents(params: {
 		params.knownCall || hasMeaningfulActivity
 			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
 			: params.activityEvents
-	const hasPrivateZoneActivity = activityEvents.some(
-		(event) => PRIVATE_ZONE_ACTIONS[event.type] !== undefined,
-	)
+	const hasPrivateZoneActivity = activityEvents.some(isPrivateZoneEvent)
 	return params.knownCall && !hasPrivateZoneActivity
 		? [params.knownCall, ...activityEvents]
 		: [...activityEvents]
+}
+
+function isPrivateZoneEvent(event: KnownEvent): boolean {
+	return (
+		PRIVATE_ZONE_ACTIONS[event.type] !== undefined ||
+		event.parts.some(
+			(part) =>
+				part.type === 'action' &&
+				['Private Zone Deposit', 'Private Zone Withdrawal'].includes(
+					part.value,
+				),
+		)
+	)
 }
 
 export function isNonceIncrementedEvent(event: KnownEvent): boolean {
