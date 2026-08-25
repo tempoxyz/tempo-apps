@@ -1,5 +1,6 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
+import { Abis as ViemZoneAbis } from 'viem/tempo/zones'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
@@ -238,7 +239,7 @@ export const Abis = {
 	receivePolicyGuard: receivePolicyGuardAbi,
 	stablecoinDex: stablecoinDexAbi,
 	streamChannel: streamChannelAbi,
-	zonePortal: zonePortalAbi,
+	zonePortal: [...ViemZoneAbis.zonePortal, ...zonePortalAbi],
 	zoneFactory: zoneFactoryAbi,
 } as const
 

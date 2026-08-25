@@ -21,6 +21,7 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
+const zonePortalAddressPrefix = '0x5ad000000000000000000000'
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -396,6 +397,20 @@ export function getContractInfo(
 	const lowerAddress = address.toLowerCase() as Address.Address
 	const registered = contractRegistry.get(lowerAddress)
 	if (registered) return registered
+
+	// TIP-1091 assigns each Zone Portal a deterministic address whose low eight
+	// bytes contain the zone ID. Use the canonical ABI instead of attempting to
+	// recover an incomplete interface from the portal's minimal-proxy bytecode.
+	if (lowerAddress.startsWith(zonePortalAddressPrefix))
+		return {
+			address,
+			name: 'Zone Portal',
+			code: '0xef',
+			description: 'Bridge assets between Tempo and a Tempo Zone',
+			abi: Abis.zonePortal,
+			category: 'system',
+			docsUrl: 'https://tips.sh/1091',
+		}
 
 	// Dynamic TIP-20 token detection
 	if (isTip20Address(address))

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Abi } from 'viem'
-import { getReadFunctions, getWriteFunctions } from '#lib/domain/contracts'
+import {
+	getContractInfo,
+	getReadFunctions,
+	getWriteFunctions,
+} from '#lib/domain/contracts'
 
 const proxyImplementationAbi = [
 	{
@@ -88,5 +92,19 @@ describe('contract function classification', () => {
 				'setMinterAllowance',
 			])
 		}
+	})
+
+	it('uses the canonical ABI for deterministic Zone Portal addresses', () => {
+		const info = getContractInfo('0x5Ad0000000000000000000000000000000000002')
+
+		expect(info?.name).toBe('Zone Portal')
+		expect(getWriteFunctions(info?.abi ?? []).map((fn) => fn.name)).toEqual([
+			'deposit',
+			'depositEncrypted',
+		])
+		expect(getReadFunctions(info?.abi ?? []).map((fn) => fn.name)).toEqual([
+			'sequencerEncryptionKey',
+			'encryptionKeyCount',
+		])
 	})
 })
