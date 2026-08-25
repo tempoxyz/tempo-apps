@@ -6,6 +6,7 @@ import type { Abi, Hex } from 'viem'
 import { cx } from '#lib/css'
 import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import {
+	blockHashHistoryAddress,
 	formatAbiValue,
 	getAbiItem,
 	getContractInfo,
@@ -235,11 +236,7 @@ function RawToggle(props: {
 	)
 }
 
-/**
- * Decoded view is for reading, not for exactness — a 78-digit uint256 or a
- * 200-character bytes blob wraps the whole tree and hides the arguments beside
- * it. The raw toggle still shows every byte.
- */
+/** Keep return values compact in the trace tree; the raw view preserves them. */
 function abbreviateTraceValue(value: string, max = 24): string {
 	if (value.length <= max) return value
 	return `${value.slice(0, max - 8)}…${value.slice(-6)}`
@@ -382,6 +379,8 @@ export function useTraceTrees(
 				const precompileInfo = trace.to
 					? precompileRegistry.get(trace.to.toLowerCase() as `0x${string}`)
 					: undefined
+				const isBlockHashHistory =
+					trace.to?.toLowerCase() === blockHashHistoryAddress
 
 				let functionName: string | undefined
 				let params: string | undefined
@@ -411,6 +410,10 @@ export function useTraceTrees(
 						params = decoded.params
 						decodedOutput = decoded.decodedOutput
 					}
+				} else if (isBlockHashHistory && trace.input.length === 66) {
+					functionName = 'getBlockHash'
+					params = `blockNumber: ${BigInt(trace.input)}`
+					decodedOutput = trace.output
 				} else if (selector) {
 					const autoloadAbi = abiMap.get(trace.to?.toLowerCase() ?? '')
 					const autoloadAbiItem =
@@ -432,7 +435,7 @@ export function useTraceTrees(
 								params = decoded
 									.map((v, i) => {
 										const name = item.inputs[i]?.name
-										const value = abbreviateTraceValue(formatAbiValue(v))
+										const value = formatAbiValue(v)
 										return name ? `${name}: ${value}` : value
 									})
 									.join(', ')

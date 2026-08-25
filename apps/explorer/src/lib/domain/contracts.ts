@@ -8,12 +8,17 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
+import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	stablecoinDexAbi,
 	streamChannelAbi,
 	tip20ChannelReserveAbi,
 	tip20ChannelReserveAddress,
+	zoneFactoryAbi,
+	zoneMessengerAbi,
+	zonePortalAbi,
+	zoneVerifierAbi,
 } from '#lib/abis'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -21,7 +26,9 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
-const zonePortalAddressPrefix = '0x5ad000000000000000000000'
+export const blockHashHistoryAddress =
+	'0x0000f90827f1c53a10cb7a02335b175320002935' as const
+const zonePortalPrefix = '0x5ad000000000000000000000' as const
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -355,6 +362,66 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
+		ZoneAddresses.zoneFactory,
+		{
+			name: 'Zone Factory',
+			code: '0xef',
+			description: 'Create and discover Tempo Zones',
+			abi: zoneFactoryAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneFactory,
+		},
+	],
+	[
+		ZoneAddresses.zonePortalImplementation,
+		{
+			name: 'Zone Portal Implementation',
+			code: '0xef',
+			description: 'Bridge assets between Tempo and Tempo Zones',
+			abi: zonePortalAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zonePortalImplementation,
+		},
+	],
+	[
+		ZoneAddresses.zoneMessenger,
+		{
+			name: 'Zone Messenger',
+			code: '0xef',
+			description: 'Relay messages between Tempo and Tempo Zones',
+			abi: zoneMessengerAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneMessenger,
+		},
+	],
+	[
+		ZoneAddresses.zoneVerifier,
+		{
+			name: 'Zone Verifier',
+			code: '0xef',
+			description: 'Verify Tempo Zone state transitions',
+			abi: zoneVerifierAbi,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+			address: ZoneAddresses.zoneVerifier,
+		},
+	],
+	[
+		blockHashHistoryAddress,
+		{
+			name: 'Block Hash History',
+			code: '0xef',
+			description: 'EIP-2935 historical block hash storage',
+			abi: [],
+			category: 'system',
+			docsUrl: 'https://eips.ethereum.org/EIPS/eip-2935',
+			address: blockHashHistoryAddress,
+		},
+	],
+	[
 		'0x9d136eea063ede5418a6bc7beaff009bbb6cfa70',
 		{
 			name: 'Tempo Stream Channel',
@@ -384,7 +451,14 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(
  * detect if an address is a system address (i.e., not a token)
  */
 export function systemAddress(address: Address.Address): boolean {
-	return systemContractRegistry.has(address.toLowerCase() as Address.Address)
+	return (
+		systemContractRegistry.has(address.toLowerCase() as Address.Address) ||
+		isZonePortalAddress(address)
+	)
+}
+
+export function isZonePortalAddress(address: Address.Address): boolean {
+	return address.toLowerCase().startsWith(zonePortalPrefix)
 }
 
 /**
@@ -394,23 +468,23 @@ export function systemAddress(address: Address.Address): boolean {
 export function getContractInfo(
 	address: Address.Address,
 ): ContractInfo | undefined {
-	const lowerAddress = address.toLowerCase() as Address.Address
-	const registered = contractRegistry.get(lowerAddress)
+	const registered = contractRegistry.get(
+		address.toLowerCase() as Address.Address,
+	)
 	if (registered) return registered
 
-	// TIP-1091 assigns each Zone Portal a deterministic address whose low eight
-	// bytes contain the zone ID. Use the canonical ABI instead of attempting to
-	// recover an incomplete interface from the portal's minimal-proxy bytecode.
-	if (lowerAddress.startsWith(zonePortalAddressPrefix))
+	if (isZonePortalAddress(address)) {
+		const zoneId = BigInt(`0x${address.slice(zonePortalPrefix.length)}`)
 		return {
 			address,
-			name: 'Zone Portal',
+			name: `Zone Portal #${zoneId}`,
 			code: '0xef',
 			description: 'Bridge assets between Tempo and a Tempo Zone',
-			abi: Abis.zonePortal,
+			abi: zonePortalAbi,
 			category: 'system',
-			docsUrl: 'https://tips.sh/1091',
+			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
 		}
+	}
 
 	// Dynamic TIP-20 token detection
 	if (isTip20Address(address))

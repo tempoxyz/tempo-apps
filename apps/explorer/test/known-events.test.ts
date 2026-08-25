@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
-import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
+import { encodeAbiParameters, encodeEventTopics, toHex, zeroHash } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Abis, stablecoinDexAbi } from '#lib/abis'
+import { Abis, stablecoinDexAbi, zoneFactoryAbi } from '#lib/abis'
 import {
 	accountAddress,
 	getTokenMetadata,
@@ -202,6 +202,114 @@ describe('parseKnownEvents', () => {
 		expect(knownEvents[0]?.parts[0]).toEqual({
 			type: 'action',
 			value: 'Deposit to Zone E',
+		})
+	})
+
+	it('decodes current ZoneCreated events', () => {
+		const hash = `0x${'4'.repeat(64)}` as const
+		const portal = `0x${'7'.repeat(40)}` as const
+		const verifier = `0x${'6'.repeat(40)}` as const
+		const sequencers = [accountAddress, recipientAddress] as const
+		const logs = [
+			mockLog(
+				{
+					address: Addresses.tip20Factory,
+					topics: encodeEventTopics({
+						abi: zoneFactoryAbi,
+						eventName: 'ZoneCreated',
+						args: { zoneId: 8, portal },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[
+							{ type: 'address' },
+							{ type: 'bool' },
+							{ type: 'bool' },
+							{ type: 'address' },
+							{ type: 'address[]' },
+							{ type: 'uint8' },
+							{ type: 'address' },
+						],
+						[
+							userTokenAddress,
+							true,
+							false,
+							accountAddress,
+							sequencers,
+							2,
+							verifier,
+						],
+					),
+				},
+				hash,
+			),
+		]
+
+		const [event] = parseKnownEvents(mockReceipt(logs, accountAddress, hash), {
+			getTokenMetadata,
+		})
+
+		expect(event).toMatchObject({
+			type: 'zone created',
+			note: [
+				[
+					'Sequencer 1',
+					{ type: 'account', value: Address.checksum(accountAddress) },
+				],
+				[
+					'Sequencer 2',
+					{ type: 'account', value: Address.checksum(recipientAddress) },
+				],
+				['Initial Token', { type: 'token' }],
+				['Verifier', { type: 'account', value: Address.checksum(verifier) }],
+			],
+			meta: { to: Address.checksum(portal) },
+		})
+	})
+
+	it('decodes current BatchSubmitted events', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const portal = '0x5ad0000000000000000000000000000000000003' as const
+		const nextProcessedHash = `0x${'1'.repeat(64)}` as const
+		const nextBlockHash = `0x${'2'.repeat(64)}` as const
+		const withdrawalQueueHash = `0x${'3'.repeat(64)}` as const
+		const logs = [
+			mockLog(
+				{
+					address: portal,
+					topics: [
+						'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
+						toHex(337n, { size: 32 }),
+						toHex(4n, { size: 32 }),
+					],
+					data: encodeAbiParameters(
+						[
+							{ type: 'bytes32' },
+							{ type: 'bytes32' },
+							{ type: 'bytes32' },
+							{ type: 'uint64' },
+						],
+						[nextProcessedHash, nextBlockHash, withdrawalQueueHash, 35n],
+					),
+				},
+				hash,
+			),
+		]
+
+		const [event] = parseKnownEvents(mockReceipt(logs, accountAddress, hash), {
+			getTokenMetadata,
+		})
+
+		expect(event).toMatchObject({
+			type: 'zone batch submitted',
+			parts: [{ type: 'action', value: 'Submit Zone Batch' }],
+			note: [
+				['Batch Index', { type: 'number', value: 337n }],
+				['Withdrawal Queue Index', { type: 'number', value: 4n }],
+				['Processed Deposits', { type: 'hex', value: nextProcessedHash }],
+				['Next Block', { type: 'hex', value: nextBlockHash }],
+				['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
+				['Last Processed Deposit', { type: 'number', value: 35n }],
+			],
 		})
 	})
 
