@@ -34,6 +34,8 @@ const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
 	],
 }
 
+type ZoneDirection = 'deposit' | 'withdrawal'
+
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 	options: { portal?: Address.Address | null } = {},
@@ -178,23 +180,46 @@ export function selectTransactionDescriptionEvents(params: {
 		params.knownCall || hasMeaningfulActivity
 			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
 			: params.activityEvents
-	const hasPrivateZoneActivity = activityEvents.some(isPrivateZoneEvent)
+	const representedPrivateZoneDirections = new Set(
+		activityEvents.flatMap((event) => {
+			const direction = privateZoneEventDirection(event)
+			return direction ? [direction] : []
+		}),
+	)
+	const hasPrivateZoneActivity = representedPrivateZoneDirections.size > 0
+	const supplementalZoneEvents = fallbackEvents.filter((event) => {
+		const direction = zoneEventDirection(event)
+		return (
+			event !== params.knownCall &&
+			direction !== null &&
+			!representedPrivateZoneDirections.has(direction)
+		)
+	})
+	const events = [...supplementalZoneEvents, ...activityEvents]
 	return params.knownCall && !hasPrivateZoneActivity
-		? [params.knownCall, ...activityEvents]
-		: [...activityEvents]
+		? [params.knownCall, ...events]
+		: events
 }
 
 function isPrivateZoneEvent(event: KnownEvent): boolean {
-	return (
-		PRIVATE_ZONE_ACTIONS[event.type] !== undefined ||
-		event.parts.some(
-			(part) =>
-				part.type === 'action' &&
-				['Private Zone Deposit', 'Private Zone Withdrawal'].includes(
-					part.value,
-				),
-		)
-	)
+	return privateZoneEventDirection(event) !== null
+}
+
+function privateZoneEventDirection(event: KnownEvent): ZoneDirection | null {
+	if (event.type === 'private-assets-deposited') return 'deposit'
+	if (event.type === 'private-shares-redeemed') return 'withdrawal'
+	const action = event.parts.find((part) => part.type === 'action')?.value
+	if (action === 'Private Zone Deposit') return 'deposit'
+	if (action === 'Private Zone Withdrawal') return 'withdrawal'
+	return null
+}
+
+function zoneEventDirection(event: KnownEvent): ZoneDirection | null {
+	if (event.type === 'zone deposit' || event.type === 'zone encrypted deposit')
+		return 'deposit'
+	if (event.type === 'zone withdrawal' || event.type === 'zone bounce back')
+		return 'withdrawal'
+	return null
 }
 
 export function isNonceIncrementedEvent(event: KnownEvent): boolean {

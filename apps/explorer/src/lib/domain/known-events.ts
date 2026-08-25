@@ -294,7 +294,8 @@ function createDetectors(
 
 				if (
 					isZonePortalAddress(args.from) &&
-					!Address.isEqual(args.to, zeroAddress)
+					!Address.isEqual(args.to, zeroAddress) &&
+					!Address.isEqual(args.to, ZoneAddresses.zoneMessenger)
 				) {
 					const zoneName = getZoneName(args.from)
 					return {
@@ -405,6 +406,10 @@ function createDetectors(
 
 			if (eventName === 'WithdrawalProcessed') {
 				const zoneName = getZoneName(address)
+				const action =
+					'senderTag' in args
+						? 'Private Zone Withdrawal'
+						: `Withdraw from ${zoneName}`
 				const note: NonNullable<KnownEvent['note']> = []
 				if (!args.callbackSuccess) {
 					note.push(['Callback', { type: 'text', value: 'Failed' }])
@@ -413,7 +418,7 @@ function createDetectors(
 				return {
 					type: 'zone withdrawal',
 					parts: [
-						{ type: 'action', value: `Withdraw from ${zoneName}` },
+						{ type: 'action', value: action },
 						{ type: 'amount', value: createAmount(args.amount, args.token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: args.to },

@@ -295,6 +295,32 @@ describe('parseKnownEvents', () => {
 		}
 	})
 
+	it('labels sender-tagged Zone withdrawals as private', () => {
+		const portal = '0x5ad0000000000000000000000000000000000003' as const
+		const withdrawalProcessed = zonePortalAbi.find(
+			(item): item is AbiEvent =>
+				item.type === 'event' &&
+				item.name === 'WithdrawalProcessed' &&
+				item.inputs.some((input) => input.name === 'senderTag'),
+		)
+		expect(withdrawalProcessed).toBeDefined()
+		if (!withdrawalProcessed) return
+
+		const [event] = parseKnownEvents(
+			mockReceipt(
+				[mockZoneEventLog(withdrawalProcessed, portal)],
+				accountAddress,
+				`0x${'9'.repeat(64)}`,
+			),
+			{ getTokenMetadata },
+		)
+
+		expect(event?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Private Zone Withdrawal',
+		})
+	})
+
 	it('decodes stablecoin DEX OrderFlipped buy and sell events', () => {
 		const hash = `0x${'6'.repeat(64)}` as const
 		const amount = 1_000_000n
@@ -439,6 +465,45 @@ describe('parseKnownEvents', () => {
 		expect(knownEvents[0]?.parts[0]).toEqual({
 			type: 'action',
 			value: 'Deposit to Zone E',
+		})
+	})
+
+	it('does not label a Zone Messenger transfer as a completed withdrawal', () => {
+		const hash = `0x${'4'.repeat(64)}` as const
+		const amount = 500_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: {
+							from: ZONE_5_PORTAL,
+							to: ZoneAddresses.zoneMessenger,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+		]
+
+		const [event] = parseKnownEvents(mockReceipt(logs, accountAddress, hash), {
+			getTokenMetadata,
+		})
+
+		expect(event).toMatchObject({
+			type: 'send',
+			parts: [
+				{ type: 'action', value: 'Send' },
+				{ type: 'amount' },
+				{ type: 'text', value: 'to' },
+				{
+					type: 'account',
+					value: Address.checksum(ZoneAddresses.zoneMessenger),
+				},
+			],
 		})
 	})
 

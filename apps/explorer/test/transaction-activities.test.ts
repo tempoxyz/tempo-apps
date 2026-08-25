@@ -325,6 +325,33 @@ describe('selectTransactionDescriptionEvents for Zones', () => {
 		).toEqual([vaultDeposit])
 	})
 
+	test('preserves a Zone withdrawal alongside private Earn activity', () => {
+		const zoneWithdrawal = {
+			type: 'zone withdrawal',
+			parts: [{ type: 'action' as const, value: 'Private Zone Withdrawal' }],
+		}
+		const privateZoneDeposit = {
+			type: 'zone deposit',
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
+		}
+		const vaultDeposit = {
+			type: 'private-assets-deposited',
+			parts: [{ type: 'action' as const, value: 'Vault Deposit' }],
+		}
+		const zoneDepositActivity = {
+			type: 'private-assets-deposited',
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [vaultDeposit, zoneDepositActivity],
+				fallbackEvents: [privateZoneDeposit, zoneWithdrawal],
+				knownCall: null,
+			}),
+		).toEqual([zoneWithdrawal, vaultDeposit, zoneDepositActivity])
+	})
+
 	test('does not duplicate private Zone activity with a low-level decoded call', () => {
 		const decodedCall = {
 			type: 'zone encrypted deposit',
