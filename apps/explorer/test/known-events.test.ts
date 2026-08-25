@@ -206,7 +206,7 @@ describe('parseKnownEvents', () => {
 						[],
 					],
 				}),
-				action: 'Submit Zone 3 Batch',
+				action: 'Submit Zone Batch',
 			},
 			{
 				to: ZoneAddresses.zoneOutbox,
@@ -241,7 +241,7 @@ describe('parseKnownEvents', () => {
 				input: '0x',
 				calls: [{ to: calls[4].to, input: calls[4].input }],
 			})?.parts[0],
-		).toEqual({ type: 'action', value: 'Submit Zone 3 Batch' })
+		).toEqual({ type: 'action', value: 'Submit Zone Batch' })
 	})
 
 	it('maps every Zone ABI event to a known event', () => {
@@ -511,7 +511,7 @@ describe('parseKnownEvents', () => {
 
 		expect(event).toMatchObject({
 			type: 'zone batch submitted',
-			parts: [{ type: 'action', value: 'Submit Zone 3 Batch' }],
+			parts: [{ type: 'action', value: 'Submit Zone Batch' }],
 			note: [
 				['Batch Index', { type: 'number', value: 337n }],
 				['Withdrawal Queue Index', { type: 'number', value: 4n }],

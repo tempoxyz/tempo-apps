@@ -16,7 +16,7 @@ describe('activitiesToKnownEvents', () => {
 	test('omits nonce activity when a decoded call is available', () => {
 		const knownCall = {
 			type: 'zone batch submission',
-			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+			parts: [{ type: 'action' as const, value: 'Submit Zone Batch' }],
 		}
 		const activity = {
 			type: 'nonce incremented',
@@ -50,7 +50,7 @@ describe('activitiesToKnownEvents', () => {
 	test('omits nonce activity when another indexed activity is available', () => {
 		const batch = {
 			type: 'zone batch submission',
-			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+			parts: [{ type: 'action' as const, value: 'Submit Zone Batch' }],
 		}
 		const nonce = {
 			type: 'nonce incremented',
@@ -69,7 +69,7 @@ describe('activitiesToKnownEvents', () => {
 	test('recognizes nonce activity from its rendered action', () => {
 		const batch = {
 			type: 'zone batch submission',
-			parts: [{ type: 'action' as const, value: 'Submit Zone 3 Batch' }],
+			parts: [{ type: 'action' as const, value: 'Submit Zone Batch' }],
 		}
 		const nonce = {
 			type: 'nonce',

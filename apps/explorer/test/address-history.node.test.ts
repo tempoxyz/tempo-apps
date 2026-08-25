@@ -112,7 +112,7 @@ describe('toEnrichedTransaction', () => {
 
 		expect(result.knownEvents[0]?.parts[0]).toEqual({
 			type: 'action',
-			value: 'Submit Zone 3 Batch',
+			value: 'Submit Zone Batch',
 		})
 		expect(result.knownEvents).not.toContainEqual(
 			expect.objectContaining({ type: 'nonce incremented' }),

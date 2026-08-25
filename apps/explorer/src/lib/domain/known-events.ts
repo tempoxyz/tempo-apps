@@ -379,7 +379,6 @@ function createDetectors(
 			}
 
 			if (eventName === 'BatchSubmitted') {
-				const zoneName = getZoneName(address)
 				const note: NonNullable<KnownEvent['note']> = [
 					['Batch Index', { type: 'number', value: args.withdrawalBatchIndex }],
 					[
@@ -405,7 +404,7 @@ function createDetectors(
 
 				return {
 					type: 'zone batch submitted',
-					parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
+					parts: [{ type: 'action', value: 'Submit Zone Batch' }],
 					note,
 				}
 			}
@@ -2424,7 +2423,7 @@ function decodeZonePortalCall(
 			]
 			return {
 				type: 'zone batch submission',
-				parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
+				parts: [{ type: 'action', value: 'Submit Zone Batch' }],
 				note: [
 					['Tempo Block', { type: 'number', value: tempoBlockNumber }],
 					['Zone Height', { type: 'number', value: zoneHeight }],
