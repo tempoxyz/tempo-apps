@@ -207,6 +207,27 @@ describe('parseKnownEvents', () => {
 				to: portal,
 				input: encodeFunctionData({
 					abi: zonePortalAbi,
+					functionName: 'deposit',
+					args: [
+						userTokenAddress,
+						1_000_000n,
+						1n,
+						{
+							ephemeralPubkeyX: zeroHash,
+							ephemeralPubkeyYParity: 2,
+							ciphertext: '0x1234',
+							nonce: `0x${'00'.repeat(12)}`,
+							tag: `0x${'00'.repeat(16)}`,
+						},
+						accountAddress,
+					],
+				}),
+				action: 'Encrypted Deposit to Zone 3',
+			},
+			{
+				to: portal,
+				input: encodeFunctionData({
+					abi: zonePortalAbi,
 					functionName: 'pause',
 				}),
 				action: 'Pause Zone 3 Portal',
@@ -266,7 +287,7 @@ describe('parseKnownEvents', () => {
 			decodeKnownTransactionCall({
 				to: accountAddress,
 				input: '0x',
-				calls: [{ to: calls[4].to, input: calls[4].input }],
+				calls: [{ to: calls[5].to, input: calls[5].input }],
 			})?.parts[0],
 		).toEqual({ type: 'action', value: 'Submit Zone Batch' })
 	})
