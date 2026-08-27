@@ -47,7 +47,7 @@ jobs:
       - name: Restore baseline from cache
         if: github.event_name == 'pull_request'
         id: cache-restore
-        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
