@@ -10,7 +10,6 @@ import {
 	zeroHash,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	stablecoinDexAbi,
@@ -147,7 +146,7 @@ describe('parseKnownEvents', () => {
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
 		const calls = [
 			{
-				to: ZoneAddresses.zoneFactory,
+				to: Addresses.zoneFactory,
 				input: encodeFunctionData({
 					abi: zoneFactoryAbi,
 					functionName: 'createZone',
@@ -236,7 +235,7 @@ describe('parseKnownEvents', () => {
 				action: 'Submit Zone Batch',
 			},
 			{
-				to: ZoneAddresses.zoneOutbox,
+				to: Addresses.zoneOutbox,
 				input: encodeFunctionData({
 					abi: zoneOutboxAbi,
 					functionName: 'requestWithdrawal',
@@ -480,7 +479,7 @@ describe('parseKnownEvents', () => {
 						eventName: 'Transfer',
 						args: {
 							from: ZONE_5_PORTAL,
-							to: ZoneAddresses.zoneMessenger,
+							to: Addresses.zoneMessenger,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
@@ -501,7 +500,7 @@ describe('parseKnownEvents', () => {
 				{ type: 'text', value: 'to' },
 				{
 					type: 'account',
-					value: Address.checksum(ZoneAddresses.zoneMessenger),
+					value: Address.checksum(Addresses.zoneMessenger),
 				},
 			],
 		})

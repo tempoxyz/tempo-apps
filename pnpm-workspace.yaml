@@ -46,9 +46,9 @@ catalog:
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
-  '@wagmi/core': ^3.4.8
+  '@wagmi/core': ^3.6.5
   '@modelcontextprotocol/sdk': 1.29.0
-  accounts: ~0.14.9
+  accounts: ~0.18.0
   abitype: ^1.2.4
   ai: 6.0.202
   animejs: ^4.3.6
@@ -79,11 +79,11 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
-  viem: ^2.55.0
+  viem: ^2.56.0
   vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
-  wagmi: ^3.6.9
+  wagmi: ^3.7.7
   wrangler: ^4.95.0
   zod: ^4.3.6
 

@@ -2,7 +2,7 @@ import * as Address from 'ox/Address'
 import type { Config } from 'wagmi'
 import { Actions } from 'wagmi/tempo'
 import { zeroHash } from 'viem'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
+import { Addresses } from 'viem/tempo'
 import {
 	Abis,
 	zoneFactoryRegistryAbi,
@@ -103,7 +103,7 @@ export async function fetchZonePortalOverview(params: {
 
 	const client = getBatchedClient()
 	const registered = await client.readContract({
-		address: ZoneAddresses.zoneFactory,
+		address: Addresses.zoneFactory,
 		abi: zoneFactoryRegistryAbi,
 		functionName: 'isZonePortal',
 		args: [address],

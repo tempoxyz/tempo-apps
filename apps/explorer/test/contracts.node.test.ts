@@ -5,7 +5,7 @@ import {
 	toEventSelector,
 	type Abi,
 } from 'viem'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
+import { Addresses } from 'viem/tempo'
 import {
 	zoneFactoryAbi,
 	zoneMessengerAbi,
@@ -113,26 +113,20 @@ describe('contract function classification', () => {
 
 describe('Zone protocol contracts', () => {
 	it('registers the Zone protocol addresses exported by viem', () => {
-		expect(getContractInfo(ZoneAddresses.zoneFactory)).toMatchObject({
+		expect(getContractInfo(Addresses.zoneFactory)).toMatchObject({
 			name: 'Zone Factory',
 			abi: zoneFactoryAbi,
 		})
-		expect(
-			getContractInfo(ZoneAddresses.zonePortalImplementation),
-		).toMatchObject({
+		expect(getContractInfo(Addresses.zonePortalImplementation)).toMatchObject({
 			name: 'Zone Portal Implementation',
 			abi: zonePortalAbi,
 		})
-		expect(getContractInfo(ZoneAddresses.zoneMessenger)).toMatchObject({
+		expect(getContractInfo(Addresses.zoneMessenger)).toMatchObject({
 			name: 'Zone Messenger',
 			abi: zoneMessengerAbi,
 		})
-		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.name).toBe(
-			'Zone Verifier',
-		)
-		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.abi).toBe(
-			zoneVerifierAbi,
-		)
+		expect(getContractInfo(Addresses.zoneVerifier)?.name).toBe('Zone Verifier')
+		expect(getContractInfo(Addresses.zoneVerifier)?.abi).toBe(zoneVerifierAbi)
 	})
 
 	it('exposes Zone registry and portal administration functions', () => {

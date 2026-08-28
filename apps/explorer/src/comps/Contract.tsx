@@ -313,11 +313,13 @@ export function InteractTabContent(props: {
 		void loadProxyInfo()
 	}, [publicClient, address])
 
-	// For proxies, prefer implementation ABI so users see callable functions
+	// Known contracts already include their canonical implementation ABI. Only
+	// prefer an autoloaded implementation for otherwise unknown proxies.
+	const knownAbi = getContractAbi(address)
 	const abi =
+		knownAbi ??
 		(implAbi && implAbi.length > 0 ? implAbi : null) ??
-		props.abi ??
-		getContractAbi(address)
+		props.abi
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
