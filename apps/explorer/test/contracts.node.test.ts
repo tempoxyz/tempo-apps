@@ -5,7 +5,7 @@ import {
 	toEventSelector,
 	type Abi,
 } from 'viem'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
+import { Addresses } from 'viem/tempo'
 import {
 	zoneFactoryAbi,
 	zoneMessengerAbi,
@@ -25,35 +25,35 @@ const proxyImplementationAbi = [
 	{
 		type: 'function',
 		name: 'supportsInterface',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [{ name: 'interfaceId', type: 'bytes4' }],
 		outputs: [{ name: '', type: 'bool' }],
 	},
 	{
 		type: 'function',
 		name: 'reserveStores',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [{ name: 'token', type: 'address' }],
 		outputs: [{ name: '', type: 'address' }],
 	},
 	{
 		type: 'function',
 		name: 'BURNER_ROLE',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [],
 		outputs: [{ name: '', type: 'bytes32' }],
 	},
 	{
 		type: 'function',
 		name: 'MINT_RATE_LIMIT_SETTER_ROLE',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [],
 		outputs: [{ name: '', type: 'bytes32' }],
 	},
 	{
 		type: 'function',
 		name: 'minterAllowances',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [
 			{ name: 'minter', type: 'address' },
 			{ name: 'token', type: 'address' },
@@ -63,7 +63,7 @@ const proxyImplementationAbi = [
 	{
 		type: 'function',
 		name: 'mintTxnLimits',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [{ name: 'minter', type: 'address' }],
 		outputs: [{ name: '', type: 'uint256' }],
 	},
@@ -85,6 +85,7 @@ const proxyImplementationAbi = [
 
 const whatsabiImplementationAbi = proxyImplementationAbi.map((fn, index) => ({
 	...fn,
+	stateMutability: 'nonpayable',
 	selector: `0x${index.toString(16).padStart(8, '0')}`,
 })) as Abi
 
@@ -112,26 +113,20 @@ describe('contract function classification', () => {
 
 describe('Zone protocol contracts', () => {
 	it('registers the Zone protocol addresses exported by viem', () => {
-		expect(getContractInfo(ZoneAddresses.zoneFactory)).toMatchObject({
+		expect(getContractInfo(Addresses.zoneFactory)).toMatchObject({
 			name: 'Zone Factory',
 			abi: zoneFactoryAbi,
 		})
-		expect(
-			getContractInfo(ZoneAddresses.zonePortalImplementation),
-		).toMatchObject({
+		expect(getContractInfo(Addresses.zonePortalImplementation)).toMatchObject({
 			name: 'Zone Portal Implementation',
 			abi: zonePortalAbi,
 		})
-		expect(getContractInfo(ZoneAddresses.zoneMessenger)).toMatchObject({
+		expect(getContractInfo(Addresses.zoneMessenger)).toMatchObject({
 			name: 'Zone Messenger',
 			abi: zoneMessengerAbi,
 		})
-		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.name).toBe(
-			'Zone Verifier',
-		)
-		expect(getContractInfo(ZoneAddresses.zoneVerifier)?.abi).toBe(
-			zoneVerifierAbi,
-		)
+		expect(getContractInfo(Addresses.zoneVerifier)?.name).toBe('Zone Verifier')
+		expect(getContractInfo(Addresses.zoneVerifier)?.abi).toBe(zoneVerifierAbi)
 	})
 
 	it('exposes Zone registry and portal administration functions', () => {
@@ -143,6 +138,12 @@ describe('Zone protocol contracts', () => {
 		)
 		expect(getWriteFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
 			'pause',
+		)
+		expect(getWriteFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
+			'resume',
+		)
+		expect(getReadFunctions(zonePortalAbi).map((fn) => fn.name)).toEqual(
+			expect.arrayContaining(['paused', 'pauseExpiry']),
 		)
 		expect(
 			getAbiItem({ abi: zonePortalAbi, selector: '0x78fb159b' })?.name,

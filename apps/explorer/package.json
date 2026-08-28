@@ -60,7 +60,6 @@
 		"tailwindcss": "catalog:",
 		"tidx.ts": "catalog:",
 		"viem": "catalog:",
-		"viem-zones": "https://pkg.pr.new/viem@5030",
 		"wagmi": "catalog:",
 		"zod": "catalog:"
 	},

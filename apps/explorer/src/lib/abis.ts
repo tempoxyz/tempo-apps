@@ -1,6 +1,5 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
-import { Abis as ViemZoneAbis } from 'viem-zones/tempo/zones'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
@@ -108,7 +107,9 @@ export const streamChannelAbi = [
 	},
 ] as const
 
-const zonePortalEventsAbi = [
+// Retain superseded event signatures so historical Zone Portal activity remains
+// decodable; current functions and events come from viem.
+const legacyZonePortalEventsAbi = [
 	{
 		type: 'event',
 		name: 'DepositMade',
@@ -212,34 +213,6 @@ const zonePortalEventsAbi = [
 	},
 ] as const
 
-const zonePortalCurrentAbi = parseAbi([
-	'event BatchSubmitted(uint64 indexed withdrawalBatchIndex, uint256 indexed withdrawalQueueIndex, bytes32 nextProcessedDepositQueueHash, bytes32 nextBlockHash, bytes32 withdrawalQueueHash, uint64 lastProcessedDepositNumber)',
-	'event WithdrawalBounceBack(bytes32 indexed newCurrentDepositQueueHash, uint64 indexed fallbackNonce, address token, uint128 amount, uint64 depositNumber)',
-	'event AdminTransferStarted(address indexed currentAdmin, address indexed pendingAdmin)',
-	'event AdminTransferred(address indexed previousAdmin, address indexed newAdmin)',
-	'event DepositMade(bytes32 indexed newCurrentDepositQueueHash, address indexed sender, address token, uint128 netAmount, uint128 fee, uint256 keyIndex, bytes32 ephemeralPubkeyX, uint8 ephemeralPubkeyYParity, bytes ciphertext, bytes12 nonce, bytes16 tag, address tempoRefundRecipient, uint64 depositNumber)',
-	'event DepositBounceBack(address indexed tempoRefundRecipient, address token, uint128 amount, uint128 bouncebackFee)',
-	'event DepositBounceBackPending(address indexed tempoRefundRecipient, address token, uint128 amount, uint128 bouncebackFee)',
-	'event RefundClaimed(address indexed recipient, address indexed token, uint128 amount)',
-	'event SequencerEncryptionKeyUpdated(bytes32 x, uint8 yParity, address pubkey, uint256 keyIndex, uint64 activationBlock)',
-	'event ZoneGasRateUpdated(uint128 zoneGasRate)',
-	'event MaxTempoGasRateUpdated(uint128 maxTempoGasRate)',
-	'event BouncebackGasUpdated(uint64 bouncebackGas)',
-	'event DepositsPaused(address indexed token)',
-	'event DepositsResumed(address indexed token)',
-	'event PortalPaused(address indexed account)',
-	'event PortalResumed(address indexed account)',
-	'event AbdicationScheduled(uint8 indexed capability, uint64 effectiveAt)',
-	'event RpcUrlUpdated(string rpcUrl)',
-	'event SequencerSetUpdated(uint64 indexed nonce, uint8 threshold, address[] sequencers)',
-	'event LeaderUpdated(address indexed previousLeader, address indexed newLeader, uint64 indexed epoch, uint64 activationTempoBlock)',
-	'event EnforcementModesUpdated(bool accessMode, bool gatewayMode)',
-	'event RoleUpdated(address indexed account, uint8 prev, uint8 next)',
-	'function processWithdrawals((address token, bytes32 senderTag, address to, uint128 amount, bytes32 memo, uint64 gasLimit, uint64 fallbackNonce, bytes callbackData, bytes encryptedSender)[] withdrawals, bytes32 remainingQueue)',
-	'function deliverWithdrawal(address token, address target, uint128 amount, bytes32 senderTag, uint64 gasLimit, bytes data)',
-	'function submitBatch(uint64 tempoBlockNumber, uint64 recentTempoBlockNumber, (bytes32 prevBlockHash, bytes32 nextBlockHash) blockTransition, (bytes32 prevProcessedHash, bytes32 nextProcessedHash, uint64 prevDepositNumber, uint64 nextDepositNumber) depositQueueTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof, uint256 zoneHeight, bytes[] signatures)',
-])
-
 export const zonePortalActivityAbi = parseAbi([
 	'event DepositMade(bytes32 indexed newCurrentDepositQueueHash, address indexed sender, address token, uint128 netAmount, uint128 fee, uint256 keyIndex, bytes32 ephemeralPubkeyX, uint8 ephemeralPubkeyYParity, bytes ciphertext, bytes12 nonce, bytes16 tag, address tempoRefundRecipient, uint64 depositNumber)',
 	'event BatchSubmitted(uint64 indexed withdrawalBatchIndex, uint256 indexed withdrawalQueueIndex, bytes32 nextProcessedDepositQueueHash, bytes32 nextBlockHash, bytes32 withdrawalQueueHash, uint64 lastProcessedDepositNumber)',
@@ -255,21 +228,15 @@ export const zoneFactoryRegistryAbi = parseAbi([
 	'function isZonePortal(address portal) view returns (bool)',
 ])
 
-export const zoneMessengerAbi = parseAbi([
-	'function relayMessage(uint32 zoneId, address token, bytes32 senderTag, address target, uint128 amount, uint64 gasLimit, bytes data)',
-])
-
-export const zoneVerifierAbi = parseAbi([
-	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, (bytes32 prevBlockHash, bytes32 nextBlockHash) blockTransition, (bytes32 prevProcessedHash, bytes32 nextProcessedHash, uint64 prevDepositNumber, uint64 nextDepositNumber) depositQueueTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
-])
+export const zoneMessengerAbi = ViemTempoAbis.zoneMessenger
+export const zoneVerifierAbi = ViemTempoAbis.zoneVerifier
 
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
-export const zoneFactoryAbi = ViemZoneAbis.zoneFactory
-export const zoneOutboxAbi = ViemZoneAbis.zoneOutbox
+export const zoneFactoryAbi = ViemTempoAbis.zoneFactory
+export const zoneOutboxAbi = ViemTempoAbis.zoneOutbox
 export const zonePortalAbi = [
-	...zonePortalEventsAbi,
-	...ViemZoneAbis.zonePortal,
-	...zonePortalCurrentAbi,
+	...legacyZonePortalEventsAbi,
+	...ViemTempoAbis.zonePortal,
 ] as const
 
 export const receivePolicyGuardAbi = parseAbi([
@@ -279,10 +246,21 @@ export const receivePolicyGuardAbi = parseAbi([
 ])
 
 export const Abis = {
-	...ViemTempoAbis,
+	accountKeychain: ViemTempoAbis.accountKeychain,
+	feeAmm: ViemTempoAbis.feeAmm,
+	feeManager: ViemTempoAbis.feeManager,
+	nonce: ViemTempoAbis.nonce,
 	receivePolicyGuard: receivePolicyGuardAbi,
+	signatureVerifier: ViemTempoAbis.signatureVerifier,
 	stablecoinDex: stablecoinDexAbi,
+	storageCredits: ViemTempoAbis.storageCredits,
 	streamChannel: streamChannelAbi,
+	tip20: ViemTempoAbis.tip20,
+	tip20ChannelReserve: ViemTempoAbis.tip20ChannelReserve,
+	tip20Factory: ViemTempoAbis.tip20Factory,
+	tip403Registry: ViemTempoAbis.tip403Registry,
+	validatorConfig: ViemTempoAbis.validatorConfig,
+	validatorConfigV2: ViemTempoAbis.validatorConfigV2,
 	zoneFactory: zoneFactoryAbi.filter((item) => item.type === 'event'),
 	zoneOutbox: zoneOutboxAbi.filter((item) => item.type === 'event'),
 	zonePortal: zonePortalAbi.filter((item) => item.type === 'event'),
