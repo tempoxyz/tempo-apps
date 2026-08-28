@@ -144,6 +144,12 @@ describe('Zone protocol contracts', () => {
 		expect(getWriteFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
 			'pause',
 		)
+		expect(getWriteFunctions(zonePortalAbi).map((fn) => fn.name)).toContain(
+			'resume',
+		)
+		expect(getReadFunctions(zonePortalAbi).map((fn) => fn.name)).toEqual(
+			expect.arrayContaining(['paused', 'pauseExpiry']),
+		)
 		expect(
 			getAbiItem({ abi: zonePortalAbi, selector: '0x78fb159b' })?.name,
 		).toBe('submitBatch')

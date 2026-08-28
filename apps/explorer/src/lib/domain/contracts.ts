@@ -564,6 +564,8 @@ const READ_FUNCTION_PATTERNS = [
 	/^proxiableUUID$/i,
 	/^get[A-Z_]/i,
 	/^is[A-Z_]/i,
+	/^paused$/i,
+	/^pauseExpiry$/i,
 	/^has[A-Z_]/i,
 	/^can[A-Z_]/i,
 	/^check[A-Z_]/i,
