@@ -25,35 +25,35 @@ const proxyImplementationAbi = [
 	{
 		type: 'function',
 		name: 'supportsInterface',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [{ name: 'interfaceId', type: 'bytes4' }],
 		outputs: [{ name: '', type: 'bool' }],
 	},
 	{
 		type: 'function',
 		name: 'reserveStores',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [{ name: 'token', type: 'address' }],
 		outputs: [{ name: '', type: 'address' }],
 	},
 	{
 		type: 'function',
 		name: 'BURNER_ROLE',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [],
 		outputs: [{ name: '', type: 'bytes32' }],
 	},
 	{
 		type: 'function',
 		name: 'MINT_RATE_LIMIT_SETTER_ROLE',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [],
 		outputs: [{ name: '', type: 'bytes32' }],
 	},
 	{
 		type: 'function',
 		name: 'minterAllowances',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [
 			{ name: 'minter', type: 'address' },
 			{ name: 'token', type: 'address' },
@@ -63,7 +63,7 @@ const proxyImplementationAbi = [
 	{
 		type: 'function',
 		name: 'mintTxnLimits',
-		stateMutability: 'nonpayable',
+		stateMutability: 'view',
 		inputs: [{ name: 'minter', type: 'address' }],
 		outputs: [{ name: '', type: 'uint256' }],
 	},
@@ -85,6 +85,7 @@ const proxyImplementationAbi = [
 
 const whatsabiImplementationAbi = proxyImplementationAbi.map((fn, index) => ({
 	...fn,
+	stateMutability: 'nonpayable',
 	selector: `0x${index.toString(16).padStart(8, '0')}`,
 })) as Abi
 
