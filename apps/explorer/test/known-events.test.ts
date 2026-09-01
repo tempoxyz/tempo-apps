@@ -13,6 +13,7 @@ import { Addresses } from 'viem/tempo'
 import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
+	earnEventsAbi,
 	stablecoinDexAbi,
 	zoneFactoryAbi,
 	zoneOutboxAbi,
@@ -29,6 +30,7 @@ import {
 import {
 	decodeKnownCall,
 	decodeKnownTransactionCall,
+	parseKnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
 
@@ -805,5 +807,47 @@ describe('parseKnownEvents', () => {
 		})
 		expect(event?.parts).toHaveLength(2)
 		expect(event?.parts.some((part) => part.type === 'account')).toBe(false)
+	})
+
+	it('describes every bundled Earn event on the transaction Events page', () => {
+		for (const abiEvent of earnEventsAbi) {
+			const log = mockZoneEventLog(abiEvent, accountAddress)
+			const event = parseKnownEvent(log)
+
+			expect.soft(event?.type, abiEvent.name).toBe('earn event')
+			expect.soft(event?.parts[0]?.type, abiEvent.name).toBe('action')
+		}
+	})
+
+	it.each([
+		['EarnDeposit', 7, 'Private Earn Deposit'],
+		['EarnRedeem', 7, 'Private Earn Redemption'],
+		['Deposited', 4, 'Earn Vault Deposit'],
+		['Deposited', 3, 'Earn Engine Deposit'],
+		['Redeemed', 4, 'Earn Vault Redemption'],
+		['Redeemed', 3, 'Earn Engine Redemption'],
+	] as const)('labels %s/%i without relying on contract verification', (name, arity, label) => {
+		const abiEvent = earnEventsAbi.find(
+			(event) => event.name === name && event.inputs.length === arity,
+		)
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+
+		const event = parseKnownEvent(mockZoneEventLog(abiEvent, accountAddress))
+		expect(event?.parts[0]).toEqual({ type: 'action', value: label })
+	})
+
+	it('keeps lower-level Earn events out of aggregate receipt summaries', () => {
+		const feesAccrued = earnEventsAbi.find(
+			(event) => event.name === 'FeesAccrued',
+		)
+		expect(feesAccrued).toBeDefined()
+		if (!feesAccrued) return
+
+		const receipt = mockReceipt(
+			[mockZoneEventLog(feesAccrued, accountAddress)],
+			accountAddress,
+		)
+		expect(parseKnownEvents(receipt)).toEqual([])
 	})
 })

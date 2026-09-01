@@ -6,6 +6,7 @@ import {
 	decodeAbiParameters,
 	decodeFunctionData,
 	parseEventLogs,
+	toEventSelector,
 	zeroAddress,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
@@ -13,6 +14,7 @@ import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	allAbis,
+	earnEventsAbi,
 	zoneFactoryAbi,
 	zoneOutboxAbi,
 	zonePortalAbi,
@@ -25,6 +27,38 @@ import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
+const earnEventActionOverrides: Record<string, string> = {
+	'Deposited(address,address,uint256,uint256)': 'Earn Vault Deposit',
+	'Deposited(address,uint256,uint256)': 'Earn Engine Deposit',
+	'EarnDeposit(bytes32,address,address,uint256,uint256,uint256,bytes32)':
+		'Private Earn Deposit',
+	'EarnRedeem(bytes32,address,address,uint256,uint256,uint256,bytes32)':
+		'Private Earn Redemption',
+	'EarnVaultInitialized(address)': 'Earn Engine Bound',
+	'Redeemed(address,address,uint256,uint256)': 'Earn Vault Redemption',
+	'Redeemed(address,uint256,uint256)': 'Earn Engine Redemption',
+	'VenueSharesDeposited(address,address,uint256,uint256,uint256)':
+		'Earn Vault In-Kind Deposit',
+	'VenueSharesDeposited(address,uint256,uint256)':
+		'Earn Engine In-Kind Deposit',
+	'WithdrewExact(address,address,uint256,uint256)':
+		'Earn Vault Exact Withdrawal',
+	'WithdrewExact(address,uint256,uint256)': 'Earn Engine Exact Withdrawal',
+}
+
+function formatEarnEventAction(event: AbiEvent): string {
+	const signature = `${event.name}(${event.inputs.map((input) => input.type).join(',')})`
+	const override = earnEventActionOverrides[signature]
+	if (override) return override
+	return event.name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+}
+
+const earnEventActions = new Map(
+	earnEventsAbi.map((event) => [
+		toEventSelector(event).toLowerCase(),
+		formatEarnEventAction(event),
+	]),
+)
 const FEE_MANAGER = Addresses.feeManager
 const RECEIVE_POLICY_GUARD = Address.from(
 	'0xB10C000000000000000000000000000000000000',
@@ -266,6 +300,17 @@ function createDetectors(
 	}
 
 	return {
+		earn(event: ParsedEvent) {
+			const selector = event.topics[0]?.toLowerCase()
+			if (!selector) return null
+			const action = earnEventActions.get(selector)
+			if (!action) return null
+
+			return {
+				type: 'earn event',
+				parts: [{ type: 'action', value: action }],
+			}
+		},
 		zone(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
@@ -1517,7 +1562,8 @@ export function parseKnownEvent(
 		detectors.nonce(event) ||
 		detectors.accountKeychain(event) ||
 		detectors.feeAmm(event) ||
-		detectors.streamChannel(event)
+		detectors.streamChannel(event) ||
+		detectors.earn(event)
 
 	if (!detected || isFeeTransferEvent(detected)) return null
 	return detected
