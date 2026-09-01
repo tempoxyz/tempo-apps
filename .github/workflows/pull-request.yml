@@ -91,7 +91,7 @@ jobs:
       - name: Check for relevant changes
         id: changes
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
           APP_NAME: ${{ matrix.app }}
         run: |
           if git diff --name-only "origin/${BASE_REF}...HEAD" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
