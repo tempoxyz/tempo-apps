@@ -12,7 +12,7 @@ import * as OxAddressUtil from 'ox/Address'
 import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
-import type { Log, TransactionReceipt } from 'viem'
+import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
@@ -43,7 +43,10 @@ import {
 } from '#lib/domain/tx-event-groups'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
-import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
+import {
+	activitiesToKnownEvents,
+	selectTransactionDescriptionEvents,
+} from '#lib/domain/transaction-activities'
 import { PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
@@ -53,6 +56,8 @@ import {
 	lookupSignatureQueryOptions,
 	type TxData,
 	txQueryOptions,
+	useAutoloadAbi,
+	useLookupSignature,
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import {
@@ -148,10 +153,11 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			? buildTxDescription({
 					timestamp: Number(loaderData.block.timestamp) * 1000,
 					from: loaderData.receipt.from,
-					events:
-						loaderData.activityEvents.length > 0
-							? loaderData.activityEvents
-							: (loaderData.knownEvents ?? []),
+					events: selectTransactionDescriptionEvents({
+						activityEvents: loaderData.activityEvents,
+						fallbackEvents: loaderData.knownEvents ?? [],
+						knownCall: loaderData.knownCall,
+					}),
 				})
 			: 'View transaction details on Tempo Explorer.'
 
@@ -182,6 +188,7 @@ function RouteComponent() {
 		traceData,
 		block,
 		feeBreakdown,
+		knownCall,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
@@ -200,8 +207,11 @@ function RouteComponent() {
 			!event.meta?.to ||
 			!OxAddressUtil.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
 	)
-	const descriptionEvents =
-		activityEvents.length > 0 ? activityEvents : displayKnownEvents
+	const descriptionEvents = selectTransactionDescriptionEvents({
+		activityEvents,
+		fallbackEvents: displayKnownEvents,
+		knownCall,
+	})
 
 	useKeyboardShortcut({
 		t: () =>
@@ -225,14 +235,13 @@ function RouteComponent() {
 			buildTxSummary({
 				receipt,
 				transaction,
-				knownEvents: activityEvents.length > 0 ? activityEvents : knownEvents,
+				knownEvents: descriptionEvents,
 				trace: traceData.trace,
 				balanceChangesData,
 			}),
 		[
 			receipt,
-			knownEvents,
-			activityEvents,
+			descriptionEvents,
 			traceData.trace,
 			balanceChangesData,
 			transaction,
@@ -850,13 +859,7 @@ function EventGroupCell(props: {
 					className="flex flex-row items-center gap-[6px] leading-[18px]"
 				/>
 			) : (
-				<span className="text-primary">
-					{logs[0].topics[0] ? (
-						<Midcut value={logs[0].topics[0]} prefix="0x" />
-					) : (
-						'Unknown'
-					)}
-				</span>
+				<EventFallbackName log={logs[0]} />
 			)}
 			<div>
 				<button
@@ -874,6 +877,39 @@ function EventGroupCell(props: {
 				</button>
 			</div>
 		</div>
+	)
+}
+
+function EventFallbackName(props: { log: Log }) {
+	const { log } = props
+	const selector = log.topics[0]
+	const { data: autoloadAbi } = useAutoloadAbi({
+		address: log.address,
+		enabled: Boolean(selector),
+	})
+	const { data: signature } = useLookupSignature({ selector })
+
+	const abiEventName = React.useMemo(() => {
+		if (!autoloadAbi || !selector) return undefined
+		const item = getAbiItem({
+			abi: autoloadAbi as Abi,
+			name: selector,
+		})
+		return item && 'name' in item ? item.name : undefined
+	}, [autoloadAbi, selector])
+	const signatureEventName = signature?.match(/^([^(]+)/)?.[1]
+	const eventName = abiEventName ?? signatureEventName
+
+	return (
+		<span className="text-primary">
+			{eventName ? (
+				eventName.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+			) : selector ? (
+				<Midcut value={selector} prefix="0x" />
+			) : (
+				'Unknown'
+			)}
+		</span>
 	)
 }
 

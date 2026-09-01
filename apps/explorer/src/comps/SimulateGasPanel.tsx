@@ -62,7 +62,7 @@ export function SimulateGasPanel(
 					onSelect={props.onSelectFrame}
 				/>
 			) : (
-				<p className="border-b border-dashed border-card-border px-[16px] py-[10px] text-[11px] text-content-dimmed">
+				<p className="border-b border-dashed border-card-border px-[16px] py-[10px] type-card text-content-dimmed">
 					{present.length > 1
 						? `${present.length} calls — pick one call above to see its flamegraph.`
 						: frames.length === 1
@@ -113,9 +113,9 @@ function FrameTable(props: {
 	)
 
 	return (
-		<table className="w-full text-[12px]">
+		<table className="w-full type-card">
 			<thead>
-				<tr className="border-b border-card-border bg-base-alt text-[11px] text-tertiary">
+				<tr className="border-b border-card-border bg-base-alt type-card text-tertiary">
 					{props.showCall && (
 						<th className="w-[64px] px-[16px] py-[6px] text-left font-normal">
 							Call
@@ -155,7 +155,7 @@ function FrameTable(props: {
 							)}
 						>
 							{props.showCall && (
-								<td className="px-[16px] py-[6px] font-mono text-[11px] text-tertiary">
+								<td className="px-[16px] py-[6px] type-card-data text-tertiary">
 									{frame.call ?? ''}
 								</td>
 							)}

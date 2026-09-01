@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { encodeFunctionData, zeroHash } from 'viem'
+import { zonePortalAbi } from '#lib/abis'
 import {
 	fetchAddressHistoryData,
 	toEnrichedTransaction,
@@ -64,6 +66,59 @@ function row(overrides: Record<string, unknown> = {}) {
 }
 
 describe('toEnrichedTransaction', () => {
+	it('prioritizes nested Zone calls over indexed activities', () => {
+		const portal = '0x5ad0000000000000000000000000000000000003'
+		const input = encodeFunctionData({
+			abi: zonePortalAbi,
+			functionName: 'submitBatch',
+			args: [
+				1n,
+				0n,
+				{ prevBlockHash: zeroHash, nextBlockHash: zeroHash },
+				{
+					prevProcessedHash: zeroHash,
+					nextProcessedHash: zeroHash,
+					prevDepositNumber: 0n,
+					nextDepositNumber: 0n,
+				},
+				zeroHash,
+				'0x',
+				'0x',
+				1n,
+				[],
+			],
+		})
+		const result = toEnrichedTransaction(
+			row({
+				recipient: portal,
+				meta: {
+					receipt: receipt({ recipient: portal }),
+					rpc: { calls: [{ to: portal, input }] },
+				},
+			}),
+			{
+				includeKnownEvents: true,
+				getTokenMetadata: () => undefined,
+				activities: [
+					{
+						id: 'nonce',
+						title: 'Nonce Incremented',
+						type: 'nonce',
+						data: {},
+					},
+				],
+			},
+		)
+
+		expect(result.knownEvents[0]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Submit Zone Batch',
+		})
+		expect(result.knownEvents).not.toContainEqual(
+			expect.objectContaining({ type: 'nonce incremented' }),
+		)
+	})
+
 	it('maps a Cadent row + humanized receipt to the UI contract', () => {
 		const result = toEnrichedTransaction(row(), {
 			includeKnownEvents: false,

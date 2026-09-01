@@ -1,13 +1,12 @@
 /**
  * Shared primitives for the simulator.
  *
- * The simulator is the densest screen in the explorer, so it commits to one
- * type and colour ramp and never improvises:
+ * The simulator uses the explorer's shared card typography roles:
  *
- *   11px  labels, units, meta, chips        text-tertiary / text-content-dimmed
- *   12px  mono data — trace, hex, numbers   text-primary / text-secondary
- *   13px  titles and readable prose         text-primary (medium) / text-secondary
- *   14px  exactly one headline per pane     text-primary (medium)
+ *   type-card       labels, controls, prose
+ *   type-card-data  trace, hex, numbers
+ *   14px            exactly one headline per pane
+ *   11px            compact status chips only
  *
  * Weight carries hierarchy, not size: `font-medium` marks a title or the one
  * value that is the answer, everything else is `font-normal`. There is no bold.
@@ -42,19 +41,19 @@ import RotateCcwIcon from '~icons/lucide/rotate-ccw'
 /* Controls                                                                   */
 /* -------------------------------------------------------------------------- */
 
-/** Label above a control. 11px tertiary, always. */
+/** Label above a control. */
 export function Field(props: Field.Props): React.JSX.Element {
 	return (
 		<div className="flex min-w-0 flex-col gap-[5px]">
 			<div className="flex items-center justify-between gap-[8px]">
-				<span className="text-[11px] text-tertiary">{props.label}</span>
+				<span className="type-card text-tertiary">{props.label}</span>
 				{props.action}
 			</div>
 			{props.children}
 			{props.hint && (
 				<span
 					className={cx(
-						'text-[11px]',
+						'type-card',
 						props.invalid ? 'text-negative' : 'text-content-dimmed',
 					)}
 				>
@@ -77,7 +76,7 @@ export declare namespace Field {
 }
 
 const inputClassName =
-	'w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-[9px] py-[6px] font-mono text-[12px] text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-accent'
+	'w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-[9px] py-[6px] type-card-data text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-accent'
 
 /** Invalid state is applied on blur, never on mount — see `draftFieldErrors`. */
 export function inputClass(invalid?: boolean): string {
@@ -92,7 +91,7 @@ export function Button(props: Button.Props): React.JSX.Element {
 			type="button"
 			{...rest}
 			className={cx(
-				'flex h-[28px] shrink-0 items-center gap-[6px] rounded-[7px] px-[10px] text-[12px] cursor-pointer press-down transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+				'flex h-[28px] shrink-0 items-center gap-[6px] rounded-[7px] px-[10px] type-card cursor-pointer press-down transition-colors disabled:cursor-not-allowed disabled:opacity-50',
 				// `text-white-black` is white on the light-mode accent and black on the
 				// lighter dark-mode accent, which is the readable pairing in both.
 				tone === 'primary'
@@ -148,19 +147,18 @@ export declare namespace Chip {
 }
 
 /**
- * A label/value pair in the result header. The label is 11px tertiary and the
- * value is 12px mono, so a column of them aligns on both axes without a table.
+ * A label/value pair in the result header using the shared card roles.
  */
 export function Fact(props: Fact.Props): React.JSX.Element {
 	return (
 		<div className="flex min-w-0 items-baseline gap-[8px]">
 			<span
-				className="w-[72px] shrink-0 text-[11px] text-tertiary"
+				className="w-[72px] shrink-0 type-card text-tertiary"
 				title={props.hint}
 			>
 				{props.label}
 			</span>
-			<span className="min-w-0 truncate font-mono text-[12px] text-primary">
+			<span className="min-w-0 truncate type-card-data text-primary">
 				{props.children}
 			</span>
 		</div>
@@ -188,7 +186,7 @@ export function GasMeter(props: GasMeter.Props): React.JSX.Element {
 	return (
 		<div className="flex flex-col gap-[6px]">
 			<div className="flex items-baseline justify-between gap-[8px]">
-				<span className="text-[11px] text-tertiary">Gas used</span>
+				<span className="type-card text-tertiary">Gas used</span>
 				<GasRatio used={props.used} limit={props.limit} />
 			</div>
 			<div className="h-[4px] w-full overflow-hidden rounded-full bg-distinct">
@@ -237,7 +235,7 @@ export function GasRatio(props: {
 }): React.JSX.Element {
 	const pct = gasPercent(props.used, props.limit)
 	return (
-		<span className={cx('font-mono text-[12px]', props.className)}>
+		<span className={cx('type-card-data', props.className)}>
 			<span className="text-primary">{props.used.toLocaleString()}</span>
 			<span className="text-content-dimmed">
 				{' / '}
@@ -289,7 +287,7 @@ export function PanelEmpty(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div className="px-[16px] py-[18px] text-[12px] text-tertiary">
+		<div className="px-[16px] py-[18px] type-card text-tertiary">
 			{props.children}
 		</div>
 	)
@@ -302,11 +300,11 @@ export function PanelError(props: {
 	const rateLimited =
 		props.error instanceof SimulationApiError && props.error.status === 429
 	return (
-		<div className="flex flex-col gap-[4px] px-[16px] py-[14px] text-[12px]">
+		<div className="flex flex-col gap-[4px] px-[16px] py-[14px] type-card">
 			<span className="text-negative">
 				{rateLimited ? 'Rate limited' : props.title}
 			</span>
-			<span className="font-mono text-[11px] break-all text-tertiary">
+			<span className="type-card-data break-all text-tertiary">
 				{props.error.message}
 			</span>
 		</div>
@@ -334,12 +332,12 @@ export function SimulationFailure(props: {
 			<CircleAlertIcon className="mt-[2px] size-[14px] shrink-0 text-negative" />
 			<div className="flex min-w-0 flex-1 flex-col gap-[6px]">
 				<h2 className="text-[13px] font-medium text-negative">{title}</h2>
-				<p className="text-[12px] text-secondary">{hint}</p>
+				<p className="type-card text-secondary">{hint}</p>
 				<div className="flex flex-col gap-[4px]">
 					{messages.map((message) => (
 						<code
 							key={message}
-							className="block rounded-[6px] bg-distinct px-[9px] py-[6px] font-mono text-[11px] break-all text-tertiary"
+							className="block rounded-[6px] bg-distinct px-[9px] py-[6px] type-card-data break-all text-tertiary"
 						>
 							{message}
 						</code>

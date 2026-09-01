@@ -18,36 +18,35 @@ export type ActivityDataValue =
 	| { [key: string]: ActivityDataValue }
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
+const GENERIC_ACTIVITY_TYPES = new Set(['approval', 'burn', 'mint', 'transfer'])
+const ZONE_EVENT_TYPES = new Set([
+	'zone deposit',
+	'zone encrypted deposit',
+	'zone withdrawal',
+	'zone bounce back',
+])
 const PRIVATE_ZONE_ACTIONS: Record<string, [string, string, string]> = {
-	'private-assets-deposited': [
-		'Private Zone Deposit',
-		'inputAmount',
-		'inputToken',
-	],
+	'private-assets-deposited': ['Private Zone Deposit', 'shares', 'shareToken'],
 	'private-shares-redeemed': [
 		'Private Zone Withdrawal',
 		'outputAmount',
 		'outputToken',
 	],
 }
-const VAULT_ACTIONS: Record<
-	string,
-	[action: string, shareAmountKey: string, isDeposit: boolean]
-> = {
-	'assets-deposited': ['Vault Deposit', 'shares', true],
-	'assets-withdrawn': ['Vault Withdrawal', 'sharesBurned', false],
-	'private-assets-deposited': ['Vault Deposit', 'shares', true],
-	'private-shares-redeemed': ['Vault Withdrawal', 'shares', false],
-	'shares-redeemed': ['Vault Withdrawal', 'shares', false],
-	'shares-redemption-finalized': ['Vault Withdrawal', 'shares', false],
-}
+
+type ZoneDirection = 'deposit' | 'withdrawal'
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
 	options: { portal?: Address.Address | null } = {},
 ): KnownEvent[] {
 	return activities.flatMap((activity) => {
-		const vault = vaultEvent(activity)
+		if (
+			activity.title.trim().toLowerCase() === 'unknown' ||
+			activity.type.trim().toLowerCase() === 'unknown'
+		)
+			return []
+
 		const privateZone = PRIVATE_ZONE_ACTIONS[activity.type]
 		if (privateZone) {
 			const [action, amountKey, tokenKey] = privateZone
@@ -58,7 +57,7 @@ export function activitiesToKnownEvents(
 				parts: [
 					{ type: 'action', value: action },
 					...(amount ? [amount] : []),
-					...(portal
+					...(portal && activity.type === 'private-assets-deposited'
 						? [
 								{ type: 'text' as const, value: 'to' },
 								{ type: 'account' as const, value: portal },
@@ -66,9 +65,12 @@ export function activitiesToKnownEvents(
 						: []),
 				],
 			}
-			return vault ? [vault, zoneEvent] : [zoneEvent]
+			const vaultEvent = vaultActivityEvent(activity)
+			return vaultEvent ? [vaultEvent, zoneEvent] : [zoneEvent]
 		}
-		if (vault) return [vault]
+
+		const vaultEvent = vaultActivityEvent(activity)
+		if (vaultEvent) return [vaultEvent]
 
 		const parts = activityParts(activity)
 		const representedFields = new Set([
@@ -105,24 +107,146 @@ export function activitiesToKnownEvents(
 	})
 }
 
-function vaultEvent(activity: TransactionActivity): KnownEvent | null {
-	const vaultAction = VAULT_ACTIONS[activity.type]
-	if (!vaultAction) return null
-	const [action, shareAmountKey, isDeposit] = vaultAction
-	const asset = amountPart(activity.data, 'assets', 'vaultAssetToken')
-	const share = amountPart(activity.data, shareAmountKey, 'vaultShareToken')
-	if (!asset || !share) return null
-	const [source, destination] = isDeposit ? [asset, share] : [share, asset]
+function vaultActivityEvent(activity: TransactionActivity): KnownEvent | null {
+	const isDeposit = ['assets-deposited', 'private-assets-deposited'].includes(
+		activity.type,
+	)
+	const isWithdrawal = [
+		'assets-withdrawn',
+		'private-shares-redeemed',
+		'shares-redeemed',
+		'shares-redemption-finalized',
+	].includes(activity.type)
+	if (!isDeposit && !isWithdrawal) return null
+	const [sourceAmount, sourceToken, destinationAmount, destinationToken] =
+		isDeposit
+			? ['assets', 'assetToken', 'shares', 'shareToken']
+			: [
+					activity.type === 'assets-withdrawn' ? 'sharesBurned' : 'shares',
+					'shareToken',
+					'assets',
+					'assetToken',
+				]
+	const source = amountPart(activity.data, sourceAmount, sourceToken)
+	const destination = amountPart(
+		activity.data,
+		destinationAmount,
+		destinationToken,
+	)
+	if (!source || !destination) return null
 	return {
 		type: activity.type,
 		parts: [
-			{ type: 'action', value: action },
+			{
+				type: 'action',
+				value: isDeposit ? 'Vault Deposit' : 'Vault Withdrawal',
+			},
 			source,
 			{ type: 'text', value: 'for' },
 			destination,
 		],
-		totalAmount: asset.type === 'amount' ? asset.value : undefined,
 	}
+}
+
+export function selectTransactionDescriptionEvents(params: {
+	activityEvents: readonly KnownEvent[]
+	fallbackEvents: readonly KnownEvent[]
+	knownCall: KnownEvent | null
+}): KnownEvent[] {
+	const hasPrivateZoneFallback = params.fallbackEvents.some(
+		(event) => event !== params.knownCall && isPrivateZoneEvent(event),
+	)
+	const fallbackEvents = hasPrivateZoneFallback
+		? params.fallbackEvents.filter((event) => event !== params.knownCall)
+		: params.fallbackEvents
+	const hasEarnReceiptSummary = fallbackEvents.some(isEarnReceiptSummary)
+	if (hasEarnReceiptSummary) {
+		const zoneWithdrawals = fallbackEvents.filter(
+			(event) => zoneEventDirection(event) === 'withdrawal',
+		)
+		const earnEvents = fallbackEvents.filter(isEarnReceiptSummary)
+		const zoneDeposits = fallbackEvents.filter(
+			(event) => zoneEventDirection(event) === 'deposit',
+		)
+		return [...zoneWithdrawals, ...earnEvents, ...zoneDeposits]
+	}
+	if (params.activityEvents.length === 0) return [...fallbackEvents]
+
+	const hasDecodedZoneEvent = fallbackEvents.some((event) =>
+		ZONE_EVENT_TYPES.has(event.type),
+	)
+	const activitiesAreGeneric = params.activityEvents.every(
+		(event) =>
+			GENERIC_ACTIVITY_TYPES.has(event.type) || isNonceIncrementedEvent(event),
+	)
+	if (hasDecodedZoneEvent && activitiesAreGeneric) {
+		return fallbackEvents.filter(
+			(event) => !GENERIC_ACTIVITY_TYPES.has(event.type),
+		)
+	}
+
+	const hasMeaningfulActivity = params.activityEvents.some(
+		(event) => !isNonceIncrementedEvent(event),
+	)
+	const activityEvents =
+		params.knownCall || hasMeaningfulActivity
+			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
+			: params.activityEvents
+	const representedPrivateZoneDirections = new Set(
+		activityEvents.flatMap((event) => {
+			const direction = privateZoneEventDirection(event)
+			return direction ? [direction] : []
+		}),
+	)
+	const hasPrivateZoneActivity = representedPrivateZoneDirections.size > 0
+	const supplementalZoneEvents = fallbackEvents.filter((event) => {
+		const direction = zoneEventDirection(event)
+		return (
+			event !== params.knownCall &&
+			direction !== null &&
+			!representedPrivateZoneDirections.has(direction)
+		)
+	})
+	const events = [...supplementalZoneEvents, ...activityEvents]
+	return params.knownCall && !hasPrivateZoneActivity
+		? [params.knownCall, ...events]
+		: events
+}
+
+function isEarnReceiptSummary(event: KnownEvent): boolean {
+	return event.type.startsWith('earn ')
+}
+
+function isPrivateZoneEvent(event: KnownEvent): boolean {
+	return privateZoneEventDirection(event) !== null
+}
+
+function privateZoneEventDirection(event: KnownEvent): ZoneDirection | null {
+	if (event.type === 'private-assets-deposited') return 'deposit'
+	if (event.type === 'private-shares-redeemed') return 'withdrawal'
+	const action = event.parts.find((part) => part.type === 'action')?.value
+	if (action === 'Private Zone Deposit') return 'deposit'
+	if (action === 'Private Zone Withdrawal') return 'withdrawal'
+	return null
+}
+
+function zoneEventDirection(event: KnownEvent): ZoneDirection | null {
+	if (event.type === 'zone deposit' || event.type === 'zone encrypted deposit')
+		return 'deposit'
+	if (event.type === 'zone withdrawal' || event.type === 'zone bounce back')
+		return 'withdrawal'
+	return null
+}
+
+export function isNonceIncrementedEvent(event: KnownEvent): boolean {
+	return (
+		event.type.trim().toLowerCase() === 'nonce incremented' ||
+		event.parts.some(
+			(part) =>
+				part.type === 'action' &&
+				part.value.trim().toLowerCase() === 'nonce incremented',
+		)
+	)
 }
 
 function activityAddress(

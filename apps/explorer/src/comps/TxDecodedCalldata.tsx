@@ -2,7 +2,11 @@ import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
-import { formatAbiValue, getAbiItem } from '#lib/domain/contracts'
+import {
+	formatAbiValue,
+	getAbiItem,
+	getContractInfo,
+} from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
@@ -42,18 +46,18 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				abi: signatureAbi,
 				selector,
 			}) as AbiFunction)
+		const contractAbi = address ? getContractInfo(address)?.abi : undefined
+		const contractAbiItem =
+			contractAbi &&
+			(getAbiItem({
+				abi: contractAbi,
+				selector,
+			}) as AbiFunction)
 
-		if (autoloadAbiItem) {
-			if (
-				(signatureAbiItem?.inputs?.length || 0) >
-				(autoloadAbiItem?.inputs?.length || 0)
-			)
-				return signatureAbiItem
-			return autoloadAbiItem
-		}
-
-		return signatureAbiItem
-	}, [autoloadAbi, signatureAbi, selector])
+		return [autoloadAbiItem, contractAbiItem, signatureAbiItem]
+			.filter((item): item is AbiFunction => Boolean(item))
+			.sort((a, b) => (b.inputs?.length ?? 0) - (a.inputs?.length ?? 0))[0]
+	}, [address, autoloadAbi, signatureAbi, selector])
 
 	const rawArgs = abiItem && data.length > 10 ? slice(data, 4) : undefined
 	const { args } = useMemo(() => {

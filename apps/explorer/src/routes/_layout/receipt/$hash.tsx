@@ -19,15 +19,21 @@ import { Receipt } from '#comps/Receipt'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
 import {
-	decodeKnownCall,
+	decodeKnownTransactionCall,
 	parseKnownEvents,
 	type KnownEvent,
 } from '#lib/domain/known-events'
-import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
+import {
+	calculateKnownEventsTotal,
+	hasNonAdditiveVaultActivity,
+} from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
-import { activitiesToKnownEvents } from '#lib/domain/transaction-activities'
+import {
+	activitiesToKnownEvents,
+	selectTransactionDescriptionEvents,
+} from '#lib/domain/transaction-activities'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
 import {
@@ -111,10 +117,7 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 
 	// Try to decode known contract calls (e.g., validator precompile)
 	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall =
-		transaction.to && transaction.input && transaction.input !== '0x'
-			? decodeKnownCall(transaction.to, transaction.input)
-			: null
+	const knownCall = decodeKnownTransactionCall(transaction)
 
 	const fallbackEvents = knownCall
 		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
@@ -122,8 +125,11 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const activityEvents = activitiesToKnownEvents(activities, {
 		portal: receipt.to,
 	})
-	const knownEvents =
-		activityEvents.length > 0 ? activityEvents : fallbackEvents
+	const knownEvents = selectTransactionDescriptionEvents({
+		activityEvents,
+		fallbackEvents,
+		knownCall,
+	})
 
 	return {
 		block,
@@ -503,6 +509,7 @@ function Component() {
 	const eventsTotalDisplayValue =
 		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
 	const eventTotalTokens = getKnownEventAmounts(displayEvents)
+	const hasVaultActivity = hasNonAdditiveVaultActivity(displayEvents)
 
 	const total =
 		streamingTotal !== undefined
@@ -549,8 +556,8 @@ function Component() {
 				sender={receipt.from}
 				status={receipt.status}
 				timestamp={block.timestamp}
-				total={total}
-				totalDisplay={totalDisplay}
+				total={hasVaultActivity ? undefined : total}
+				totalDisplay={hasVaultActivity ? undefined : totalDisplay}
 				exportSearch={location.searchStr}
 			/>
 		</div>

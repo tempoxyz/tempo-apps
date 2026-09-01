@@ -16,16 +16,16 @@ export function InfoCard(props: InfoCard.Props) {
 			<div
 				key={key}
 				className={cx(
-					'flex items-center px-4.5 py-3',
+					'flex items-center px-4.5 py-3 type-card',
 					!isLast && 'border-b border-dashed border-card-border',
 				)}
 			>
 				{isSectionEntry ? (
 					<div className="flex items-center gap-2 justify-between w-full">
-						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0 font-sans">
+						<span className="capitalize text-tertiary shrink-0">
 							{section.label}
 						</span>
-						<div className="min-w-0 flex-1 flex justify-end font-mono text-primary">
+						<div className="min-w-0 flex-1 flex justify-end type-card-data text-primary">
 							{section.value}
 						</div>
 					</div>
@@ -39,14 +39,14 @@ export function InfoCard(props: InfoCard.Props) {
 	return (
 		<section
 			className={cx(
-				'font-sans',
+				'type-card',
 				'w-full min-[1240px]:w-fit',
 				'rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]',
 				className,
 			)}
 		>
 			{hasTitle && (
-				<div className="flex items-center h-9 px-4 text-[13px] text-tertiary font-normal bg-card-header">
+				<div className="flex items-center h-9 px-4 text-tertiary bg-card-header">
 					{title}
 				</div>
 			)}
@@ -68,7 +68,7 @@ InfoCard.Title = function InfoCardTitle(props: {
 	return (
 		<h1
 			className={cx(
-				'text-[13px] text-tertiary select-none flex items-center gap-2',
+				'text-tertiary select-none flex items-center gap-2',
 				props.className,
 			)}
 		>
