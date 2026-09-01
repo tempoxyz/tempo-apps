@@ -47,10 +47,14 @@ const earnEventActionOverrides: Record<string, string> = {
 }
 
 function formatEarnEventAction(event: AbiEvent): string {
-	const signature = `${event.name}(${event.inputs.map((input) => input.type).join(',')})`
+	const signature = getEventSignature(event)
 	const override = earnEventActionOverrides[signature]
 	if (override) return override
 	return event.name.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+}
+
+function getEventSignature(event: AbiEvent): string {
+	return `${event.name}(${event.inputs.map((input) => input.type).join(',')})`
 }
 
 const earnEventActions = new Map(
@@ -59,6 +63,468 @@ const earnEventActions = new Map(
 		formatEarnEventAction(event),
 	]),
 )
+const earnEventSignatures = new Map(
+	earnEventsAbi.map((event) => [
+		toEventSelector(event).toLowerCase(),
+		getEventSignature(event),
+	]),
+)
+
+type CreateAmount = (value: bigint, token: Address.Address) => Amount
+
+function eventArgument(event: ParsedEvent, name: string): unknown {
+	return (event.args as Record<string, unknown>)[name]
+}
+
+function eventBigInt(event: ParsedEvent, name: string): bigint | undefined {
+	const value = eventArgument(event, name)
+	return typeof value === 'bigint' ? value : undefined
+}
+
+function eventAddress(
+	event: ParsedEvent,
+	name: string,
+): Address.Address | undefined {
+	const value = eventArgument(event, name)
+	return typeof value === 'string' && Address.validate(value)
+		? Address.checksum(value)
+		: undefined
+}
+
+function findEarnToken(
+	events: ParsedEvent[],
+	params: {
+		amount: bigint
+		from?: Address.Address | undefined
+		to?: Address.Address | undefined
+		kind?: 'mint' | 'burn' | 'transfer' | undefined
+		exclude?: Address.Address | undefined
+	},
+): Address.Address | undefined {
+	for (const candidate of events) {
+		if (eventBigInt(candidate, 'amount') !== params.amount) continue
+		if (params.exclude && Address.isEqual(candidate.address, params.exclude))
+			continue
+
+		const from = eventAddress(candidate, 'from')
+		const to = eventAddress(candidate, 'to')
+		if (params.from && (!from || !Address.isEqual(from, params.from))) continue
+		if (params.to && (!to || !Address.isEqual(to, params.to))) continue
+		if (params.kind === 'mint' && candidate.eventName !== 'Mint') continue
+		if (params.kind === 'burn' && candidate.eventName !== 'Burn') continue
+		if (
+			params.kind === 'transfer' &&
+			candidate.eventName !== 'Transfer' &&
+			candidate.eventName !== 'TransferWithMemo'
+		)
+			continue
+		if (
+			candidate.eventName !== 'Mint' &&
+			candidate.eventName !== 'Burn' &&
+			candidate.eventName !== 'Transfer' &&
+			candidate.eventName !== 'TransferWithMemo'
+		)
+			continue
+
+		return Address.checksum(candidate.address)
+	}
+	return undefined
+}
+
+function earnValuePart(
+	value: bigint,
+	token: Address.Address | undefined,
+	createAmount: CreateAmount,
+): KnownEventPart {
+	return token
+		? { type: 'amount', value: createAmount(value, token) }
+		: { type: 'number', value }
+}
+
+function createEarnReceiptSummary(
+	event: ParsedEvent,
+	events: ParsedEvent[],
+	createAmount: CreateAmount,
+): KnownEvent | null {
+	const selector = event.topics[0]?.toLowerCase()
+	const signature = selector ? earnEventSignatures.get(selector) : undefined
+	const hasEvent = (name: string) =>
+		events.some((candidate) => candidate.eventName === name)
+
+	if (event.eventName === 'EarnDeposit') {
+		const inputToken = eventAddress(event, 'inputToken')
+		const inputAmount = eventBigInt(event, 'inputAmount')
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (!inputToken || inputAmount === undefined || earnShares === undefined)
+			return null
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			kind: 'mint',
+			exclude: inputToken,
+		})
+		return {
+			type: 'earn private deposit',
+			parts: [
+				{ type: 'action', value: 'Private Earn Deposit' },
+				{ type: 'amount', value: createAmount(inputAmount, inputToken) },
+				{ type: 'text', value: 'for' },
+				earnValuePart(earnShares, earnShare, createAmount),
+			],
+		}
+	}
+
+	if (event.eventName === 'EarnRedeem') {
+		const outputToken = eventAddress(event, 'outputToken')
+		const outputAmount = eventBigInt(event, 'outputAmount')
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (!outputToken || outputAmount === undefined || earnShares === undefined)
+			return null
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			kind: 'burn',
+			exclude: outputToken,
+		})
+		return {
+			type: 'earn private redemption',
+			parts: [
+				{ type: 'action', value: 'Private Earn Redemption' },
+				earnValuePart(earnShares, earnShare, createAmount),
+				{ type: 'text', value: 'for' },
+				{ type: 'amount', value: createAmount(outputAmount, outputToken) },
+			],
+		}
+	}
+
+	if (
+		signature === 'Deposited(address,address,uint256,uint256)' &&
+		!hasEvent('EarnDeposit') &&
+		!hasEvent('AssetsFunded') &&
+		!hasEvent('Contributed')
+	) {
+		const receiver = eventAddress(event, 'receiver')
+		const assets = eventBigInt(event, 'assets')
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (!receiver || assets === undefined || earnShares === undefined)
+			return null
+		const asset = findEarnToken(events, {
+			amount: assets,
+			to: event.address,
+			kind: 'transfer',
+		})
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			to: receiver,
+			kind: 'mint',
+		})
+		return {
+			type: 'earn deposit',
+			parts: [
+				{ type: 'action', value: 'Earn Deposit' },
+				earnValuePart(assets, asset, createAmount),
+				{ type: 'text', value: 'for' },
+				earnValuePart(earnShares, earnShare, createAmount),
+			],
+		}
+	}
+
+	if (
+		signature === 'Redeemed(address,address,uint256,uint256)' &&
+		!hasEvent('EarnRedeem')
+	) {
+		const caller = eventAddress(event, 'caller')
+		const receiver = eventAddress(event, 'receiver')
+		const earnShares = eventBigInt(event, 'earnShares')
+		const assets = eventBigInt(event, 'assets')
+		if (
+			!caller ||
+			!receiver ||
+			earnShares === undefined ||
+			assets === undefined
+		)
+			return null
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			kind: 'burn',
+		})
+		const asset = findEarnToken(events, {
+			amount: assets,
+			to: receiver,
+			kind: 'transfer',
+		})
+		return {
+			type: 'earn redemption',
+			parts: [
+				{ type: 'action', value: 'Earn Redemption' },
+				earnValuePart(earnShares, earnShare, createAmount),
+				{ type: 'text', value: 'for' },
+				earnValuePart(assets, asset, createAmount),
+			],
+		}
+	}
+
+	if (signature === 'WithdrewExact(address,address,uint256,uint256)') {
+		const caller = eventAddress(event, 'caller')
+		const receiver = eventAddress(event, 'receiver')
+		const assets = eventBigInt(event, 'assets')
+		const earnShares = eventBigInt(event, 'earnSharesBurned')
+		if (
+			!caller ||
+			!receiver ||
+			assets === undefined ||
+			earnShares === undefined
+		)
+			return null
+		const asset = findEarnToken(events, {
+			amount: assets,
+			to: receiver,
+			kind: 'transfer',
+		})
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			kind: 'burn',
+		})
+		return {
+			type: 'earn exact withdrawal',
+			parts: [
+				{ type: 'action', value: 'Earn Exact Withdrawal' },
+				earnValuePart(assets, asset, createAmount),
+				{ type: 'text', value: 'burning' },
+				earnValuePart(earnShares, earnShare, createAmount),
+			],
+		}
+	}
+
+	if (
+		signature ===
+		'VenueSharesDeposited(address,address,uint256,uint256,uint256)'
+	) {
+		const caller = eventAddress(event, 'caller')
+		const receiver = eventAddress(event, 'receiver')
+		const venueShares = eventBigInt(event, 'requestedVenueShares')
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (
+			!caller ||
+			!receiver ||
+			venueShares === undefined ||
+			earnShares === undefined
+		)
+			return null
+		const venue = findEarnToken(events, {
+			amount: venueShares,
+			from: caller,
+			kind: 'transfer',
+		})
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			to: receiver,
+			kind: 'mint',
+		})
+		return {
+			type: 'earn in-kind deposit',
+			parts: [
+				{ type: 'action', value: 'Earn In-Kind Deposit' },
+				earnValuePart(venueShares, venue, createAmount),
+				{ type: 'text', value: 'for' },
+				earnValuePart(earnShares, earnShare, createAmount),
+			],
+		}
+	}
+
+	if (event.eventName === 'Funded') {
+		const funder = eventAddress(event, 'funder')
+		const fundedAssets = eventBigInt(event, 'fundedAssets')
+		if (!funder || fundedAssets === undefined) return null
+		const asset = findEarnToken(events, {
+			amount: fundedAssets,
+			from: funder,
+		})
+		return {
+			type: 'earn contribution',
+			parts: [
+				{ type: 'action', value: 'Fund Earn Contribution' },
+				earnValuePart(fundedAssets, asset, createAmount),
+			],
+		}
+	}
+
+	if (event.eventName === 'Contributed' && !hasEvent('Funded')) {
+		const assets = eventBigInt(event, 'assets')
+		if (assets === undefined) return null
+		const asset = findEarnToken(events, { amount: assets })
+		return {
+			type: 'earn contribution',
+			parts: [
+				{ type: 'action', value: 'Fund Earn Contribution' },
+				earnValuePart(assets, asset, createAmount),
+			],
+		}
+	}
+
+	if (event.eventName === 'AssetsFunded') {
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (earnShares === undefined) return null
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			to: event.address,
+			kind: 'mint',
+		})
+		return {
+			type: 'earn reward funding',
+			parts: [
+				{ type: 'action', value: 'Fund Earn Rewards' },
+				earnValuePart(earnShares, earnShare, createAmount),
+			],
+		}
+	}
+
+	if (event.eventName === 'RootPublished') {
+		const version = eventBigInt(event, 'version')
+		const entitlement = eventBigInt(event, 'totalEntitlement')
+		if (version === undefined || entitlement === undefined) return null
+		const funded = events.find(
+			(candidate) => candidate.eventName === 'AssetsFunded',
+		)
+		const fundedShares = funded && eventBigInt(funded, 'earnShares')
+		const earnShare =
+			fundedShares === undefined
+				? undefined
+				: findEarnToken(events, {
+						amount: fundedShares,
+						to: event.address,
+						kind: 'mint',
+					})
+		return {
+			type: 'earn reward root',
+			parts: [
+				{ type: 'action', value: 'Publish Earn Reward Root' },
+				{ type: 'text', value: `v${version.toString()} for` },
+				earnValuePart(entitlement, earnShare, createAmount),
+			],
+		}
+	}
+
+	if (event.eventName === 'BatchPushed') {
+		const attempted = eventBigInt(event, 'attemptedCount')
+		const paid = eventBigInt(event, 'paidCount')
+		const paidShares = eventBigInt(event, 'paidEarnShares')
+		if (
+			attempted === undefined ||
+			paid === undefined ||
+			paidShares === undefined
+		)
+			return null
+		const earnShare = events.find((candidate) => {
+			if (
+				candidate.eventName !== 'Transfer' &&
+				candidate.eventName !== 'TransferWithMemo'
+			)
+				return false
+			const from = eventAddress(candidate, 'from')
+			return from ? Address.isEqual(from, event.address) : false
+		})?.address
+		return {
+			type: 'earn reward distribution',
+			parts: [
+				{ type: 'action', value: 'Distribute Earn Rewards' },
+				earnValuePart(paidShares, earnShare, createAmount),
+				{
+					type: 'text',
+					value: `to ${paid.toString()} of ${attempted.toString()} recipients`,
+				},
+			],
+		}
+	}
+
+	if (event.eventName === 'RewardClaimed') {
+		const recipient = eventAddress(event, 'recipient')
+		const amount = eventBigInt(event, 'amount')
+		if (!recipient || amount === undefined) return null
+		const earnShare = findEarnToken(events, {
+			amount,
+			to: recipient,
+			kind: 'transfer',
+		})
+		return {
+			type: 'earn reward claim',
+			parts: [
+				{ type: 'action', value: 'Claim Earn Rewards' },
+				earnValuePart(amount, earnShare, createAmount),
+				{ type: 'text', value: 'to' },
+				{ type: 'account', value: recipient },
+			],
+		}
+	}
+
+	if (event.eventName === 'RedeemRequested' && 'requester' in event.args) {
+		const receiver = eventAddress(event, 'receiver')
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (!receiver || earnShares === undefined) return null
+		const earnShare = findEarnToken(events, {
+			amount: earnShares,
+			kind: 'burn',
+		})
+		return {
+			type: 'earn async redemption request',
+			parts: [
+				{ type: 'action', value: 'Request Earn Redemption' },
+				earnValuePart(earnShares, earnShare, createAmount),
+				{ type: 'text', value: 'for' },
+				{ type: 'account', value: receiver },
+			],
+		}
+	}
+
+	if (event.eventName === 'RedeemFinalized') {
+		const receiver = eventAddress(event, 'receiver')
+		const asset = eventAddress(event, 'asset')
+		const assets = eventBigInt(event, 'assets')
+		if (!receiver || !asset || assets === undefined) return null
+		return {
+			type: 'earn async redemption finalized',
+			parts: [
+				{ type: 'action', value: 'Finalize Earn Redemption' },
+				{ type: 'amount', value: createAmount(assets, asset) },
+				{ type: 'text', value: 'to' },
+				{ type: 'account', value: receiver },
+			],
+		}
+	}
+
+	if (event.eventName === 'RedeemCancelled') {
+		const receiver = eventAddress(event, 'receiver')
+		const earnShares = eventBigInt(event, 'earnShares')
+		if (!receiver || earnShares === undefined) return null
+		return {
+			type: 'earn async redemption cancelled',
+			parts: [
+				{ type: 'action', value: 'Cancel Earn Redemption' },
+				{ type: 'number', value: earnShares },
+				{ type: 'text', value: 'for' },
+				{ type: 'account', value: receiver },
+			],
+		}
+	}
+
+	if (event.eventName === 'EngineMigrated') {
+		const oldEngine = eventAddress(event, 'oldEngine')
+		const newEngine = eventAddress(event, 'newEngine')
+		const assetsMoved = eventBigInt(event, 'assetsMoved')
+		if (!oldEngine || !newEngine || assetsMoved === undefined) return null
+		return {
+			type: 'earn engine migration',
+			parts: [
+				{ type: 'action', value: 'Migrate Earn Engine' },
+				{ type: 'number', value: assetsMoved },
+			],
+			note: [
+				['From', { type: 'account', value: oldEngine }],
+				['To', { type: 'account', value: newEngine }],
+			],
+		}
+	}
+
+	return null
+}
 const FEE_MANAGER = Addresses.feeManager
 const RECEIVE_POLICY_GUARD = Address.from(
 	'0xB10C000000000000000000000000000000000000',
@@ -2159,7 +2625,8 @@ export function parseKnownEvents(
 			detectors.nonce(event) ||
 			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event) ||
-			detectors.streamChannel(event)
+			detectors.streamChannel(event) ||
+			createEarnReceiptSummary(event, dedupedEvents, createAmount)
 
 		if (!detected) continue
 

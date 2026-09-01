@@ -392,3 +392,46 @@ describe('selectTransactionDescriptionEvents for Zones', () => {
 		).toEqual([privateDeposit])
 	})
 })
+
+describe('selectTransactionDescriptionEvents for Earn receipts', () => {
+	test('prefers one composed Earn flow over generic indexed token activity', () => {
+		const earnDeposit = {
+			type: 'earn deposit',
+			parts: [{ type: 'action' as const, value: 'Earn Deposit' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [
+					{ type: 'mint', parts: [] },
+					{ type: 'assets-deposited', parts: [] },
+				],
+				fallbackEvents: [{ type: 'send', parts: [] }, earnDeposit],
+				knownCall: null,
+			}),
+		).toEqual([earnDeposit])
+	})
+
+	test('orders a private Earn flow from source Zone through Earn to destination Zone', () => {
+		const zoneDeposit = {
+			type: 'zone deposit',
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
+		}
+		const earnDeposit = {
+			type: 'earn private deposit',
+			parts: [{ type: 'action' as const, value: 'Private Earn Deposit' }],
+		}
+		const zoneWithdrawal = {
+			type: 'zone withdrawal',
+			parts: [{ type: 'action' as const, value: 'Private Zone Withdrawal' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [{ type: 'private-assets-deposited', parts: [] }],
+				fallbackEvents: [zoneDeposit, earnDeposit, zoneWithdrawal],
+				knownCall: null,
+			}),
+		).toEqual([zoneWithdrawal, earnDeposit, zoneDeposit])
+	})
+})

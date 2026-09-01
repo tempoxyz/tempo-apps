@@ -158,6 +158,17 @@ export function selectTransactionDescriptionEvents(params: {
 	const fallbackEvents = hasPrivateZoneFallback
 		? params.fallbackEvents.filter((event) => event !== params.knownCall)
 		: params.fallbackEvents
+	const hasEarnReceiptSummary = fallbackEvents.some(isEarnReceiptSummary)
+	if (hasEarnReceiptSummary) {
+		const zoneWithdrawals = fallbackEvents.filter(
+			(event) => zoneEventDirection(event) === 'withdrawal',
+		)
+		const earnEvents = fallbackEvents.filter(isEarnReceiptSummary)
+		const zoneDeposits = fallbackEvents.filter(
+			(event) => zoneEventDirection(event) === 'deposit',
+		)
+		return [...zoneWithdrawals, ...earnEvents, ...zoneDeposits]
+	}
 	if (params.activityEvents.length === 0) return [...fallbackEvents]
 
 	const hasDecodedZoneEvent = fallbackEvents.some((event) =>
@@ -199,6 +210,10 @@ export function selectTransactionDescriptionEvents(params: {
 	return params.knownCall && !hasPrivateZoneActivity
 		? [params.knownCall, ...events]
 		: events
+}
+
+function isEarnReceiptSummary(event: KnownEvent): boolean {
+	return event.type.startsWith('earn ')
 }
 
 function isPrivateZoneEvent(event: KnownEvent): boolean {
