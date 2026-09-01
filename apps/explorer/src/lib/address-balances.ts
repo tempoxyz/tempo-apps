@@ -12,6 +12,11 @@ export type TokenBalance = {
 	symbol?: string
 	decimals?: number
 	currency?: string
+	valuation?: {
+		amount: string
+		currency: string
+		decimals: number
+	}
 }
 
 export type BalancesResponse = {
@@ -25,6 +30,7 @@ export type AssetData = {
 		| { name?: string; symbol?: string; decimals?: number; currency?: string }
 		| undefined
 	balance: bigint | undefined
+	valuation: { amount: bigint; currency: string; decimals: number } | undefined
 }
 
 async function fetchAddressBalances(
@@ -69,6 +75,13 @@ export function useBalancesData(
 				currency: token.currency,
 			},
 			balance: BigInt(token.balance),
+			valuation: token.valuation
+				? {
+						amount: BigInt(token.valuation.amount),
+						currency: token.valuation.currency,
+						decimals: token.valuation.decimals,
+					}
+				: undefined,
 		}))
 	}, [data])
 
@@ -81,18 +94,32 @@ export function calculateTotalHoldings(
 		isTokenListed?: ((address: Address.Address) => boolean) | undefined
 	},
 ): number | undefined {
-	const PRICE_PER_TOKEN = 1
 	let total: number | undefined
 	for (const asset of assetsData) {
-		if (asset.metadata?.currency !== 'USD') continue
 		if (options?.isTokenListed && !options.isTokenListed(asset.address)) {
 			continue
 		}
-		const decimals = asset.metadata?.decimals
-		const balance = asset.balance
-		if (decimals === undefined || balance === undefined) continue
-		total =
-			(total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
+		const value = getAssetValue(asset)
+		if (!value || value.currency !== 'USD') continue
+		total = (total ?? 0) + Number(formatUnits(value.amount, value.decimals))
 	}
 	return total
+}
+
+/** Returns a token's explicit valuation, falling back to its face value. */
+export function getAssetValue(
+	asset: AssetData,
+): { amount: bigint; currency: string; decimals: number } | undefined {
+	if (asset.valuation) return asset.valuation
+	if (
+		asset.balance === undefined ||
+		asset.metadata?.currency === undefined ||
+		asset.metadata.decimals === undefined
+	)
+		return undefined
+	return {
+		amount: asset.balance,
+		currency: asset.metadata.currency,
+		decimals: asset.metadata.decimals,
+	}
 }

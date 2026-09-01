@@ -58,6 +58,7 @@ import {
 	type BalancesResponse,
 	balancesQueryOptions,
 	calculateTotalHoldings,
+	getAssetValue,
 	useBalancesData,
 } from '#lib/address-balances'
 import {
@@ -2567,16 +2568,15 @@ function AssetAmount(props: { asset: AssetData }) {
 function AssetValue(props: { asset: AssetData }) {
 	const { asset } = props
 	const { isTokenListed } = useTokenListMembership()
-	if (asset.metadata?.currency !== 'USD')
-		return <span className="text-tertiary">—</span>
 	if (!isTokenListed(TEMPO_CHAIN_ID, asset.address))
 		return <span className="text-tertiary">—</span>
-	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
-		return <span className="text-tertiary">…</span>
+	const value = getAssetValue(asset)
+	if (!value) return <span className="text-tertiary">…</span>
+	if (value.currency !== 'USD') return <span className="text-tertiary">—</span>
 	return (
 		<span>
-			{PriceFormatter.format(asset.balance, {
-				decimals: asset.metadata.decimals,
+			{PriceFormatter.format(value.amount, {
+				decimals: value.decimals,
 				format: 'short',
 			})}
 		</span>
