@@ -829,8 +829,8 @@ describe('parseKnownEvents', () => {
 	})
 
 	it.each([
-		['EarnDeposit', 7, 'Private Earn Deposit'],
-		['EarnRedeem', 7, 'Private Earn Redemption'],
+		['EarnDeposit', 7, 'Earn Deposit'],
+		['EarnRedeem', 7, 'Earn Redemption'],
 		['Deposited', 4, 'Earn Vault Deposit'],
 		['Deposited', 3, 'Earn Engine Deposit'],
 		['Redeemed', 4, 'Earn Vault Redemption'],
@@ -983,6 +983,38 @@ describe('parseKnownEvents', () => {
 				],
 			},
 		])
+	})
+
+	it.each([
+		['EarnDeposit', 7, 'earn private deposit'],
+		['EarnRedeem', 7, 'earn private redemption'],
+		['Redeemed', 4, 'earn redemption'],
+		['WithdrewExact', 4, 'earn exact withdrawal'],
+		['VenueSharesDeposited', 5, 'earn in-kind deposit'],
+		['Funded', 3, 'earn contribution'],
+		['Contributed', 5, 'earn contribution'],
+		['AssetsFunded', 3, 'earn reward funding'],
+		['RootPublished', 4, 'earn reward root'],
+		['BatchPushed', 6, 'earn reward distribution'],
+		['RewardClaimed', 3, 'earn reward claim'],
+		['RedeemRequested', 4, 'earn async redemption request'],
+		['RedeemFinalized', 5, 'earn async redemption finalized'],
+		['RedeemCancelled', 3, 'earn async redemption cancelled'],
+		['EngineMigrated', 8, 'earn engine migration'],
+	] as const)('composes the %s/%i major-flow receipt summary', (name, arity, expectedType) => {
+		const abiEvent = earnEventsAbi.find(
+			(event) => event.name === name && event.inputs.length === arity,
+		)
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+
+		const summaries = parseKnownEvents(
+			mockReceipt(
+				[mockZoneEventLog(abiEvent, recipientAddress)],
+				accountAddress,
+			),
+		)
+		expect(summaries.some((event) => event.type === expectedType)).toBe(true)
 	})
 
 	it('keeps lower-level Earn events out of aggregate receipt summaries', () => {

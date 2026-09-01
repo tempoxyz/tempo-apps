@@ -31,9 +31,9 @@ const earnEventActionOverrides: Record<string, string> = {
 	'Deposited(address,address,uint256,uint256)': 'Earn Vault Deposit',
 	'Deposited(address,uint256,uint256)': 'Earn Engine Deposit',
 	'EarnDeposit(bytes32,address,address,uint256,uint256,uint256,bytes32)':
-		'Private Earn Deposit',
+		'Earn Deposit',
 	'EarnRedeem(bytes32,address,address,uint256,uint256,uint256,bytes32)':
-		'Private Earn Redemption',
+		'Earn Redemption',
 	'EarnVaultInitialized(address)': 'Earn Engine Bound',
 	'Redeemed(address,address,uint256,uint256)': 'Earn Vault Redemption',
 	'Redeemed(address,uint256,uint256)': 'Earn Engine Redemption',
@@ -165,7 +165,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn private deposit',
 			parts: [
-				{ type: 'action', value: 'Private Earn Deposit' },
+				{ type: 'action', value: 'Earn Deposit' },
 				{ type: 'amount', value: createAmount(inputAmount, inputToken) },
 				{ type: 'text', value: 'for' },
 				earnValuePart(earnShares, earnShare, createAmount),
@@ -187,7 +187,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn private redemption',
 			parts: [
-				{ type: 'action', value: 'Private Earn Redemption' },
+				{ type: 'action', value: 'Earn Redemption' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				{ type: 'amount', value: createAmount(outputAmount, outputToken) },

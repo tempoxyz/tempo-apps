@@ -23,7 +23,10 @@ import {
 	parseKnownEvents,
 	type KnownEvent,
 } from '#lib/domain/known-events'
-import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
+import {
+	calculateKnownEventsTotal,
+	hasNonAdditiveVaultActivity,
+} from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
@@ -506,13 +509,7 @@ function Component() {
 	const eventsTotalDisplayValue =
 		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
 	const eventTotalTokens = getKnownEventAmounts(displayEvents)
-	const hasVaultActivity = displayEvents.some((event) =>
-		event.parts.some(
-			(part) =>
-				part.type === 'action' &&
-				(part.value === 'Vault Deposit' || part.value === 'Vault Withdrawal'),
-		),
-	)
+	const hasVaultActivity = hasNonAdditiveVaultActivity(displayEvents)
 
 	const total =
 		streamingTotal !== undefined

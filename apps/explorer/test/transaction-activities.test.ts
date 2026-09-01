@@ -419,7 +419,7 @@ describe('selectTransactionDescriptionEvents for Earn receipts', () => {
 		}
 		const earnDeposit = {
 			type: 'earn private deposit',
-			parts: [{ type: 'action' as const, value: 'Private Earn Deposit' }],
+			parts: [{ type: 'action' as const, value: 'Earn Deposit' }],
 		}
 		const zoneWithdrawal = {
 			type: 'zone withdrawal',
