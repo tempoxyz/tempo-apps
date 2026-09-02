@@ -116,23 +116,13 @@ jobs:
           # Also output for debugging
           echo "$REPORT"
 
-      - name: Find existing comment
-        if: github.event_name == 'pull_request'
-        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: "github-actions[bot]"
-          body-includes: "Bundle Size Report"
-
       - name: Post or update PR comment
         if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9
+        uses: tempoxyz/gh-actions/actions/pr-comment@ab45d76f6e7420a094281a22aee1973ecc0754f8
         with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body-path: apps/explorer/bundle-report.md
-          edit-mode: replace
+          number: ${{ github.event.pull_request.number }}
+          header: bundle-size-report
+          path: apps/explorer/bundle-report.md
 
       - name: Upload Sonda report artifact
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
