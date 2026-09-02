@@ -1,7 +1,14 @@
 import { env, exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 
-function request(body: unknown, clientIp = '203.0.113.1'): Request {
+type JsonRpcRequest = {
+	jsonrpc: '2.0'
+	id: number
+	method: string
+	params?: unknown[] | undefined
+}
+
+function request(body: JsonRpcRequest, clientIp = '203.0.113.1'): Request {
 	return new Request('https://fee-payer.test/', {
 		method: 'POST',
 		headers: {
