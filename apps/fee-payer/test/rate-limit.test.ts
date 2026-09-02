@@ -106,4 +106,39 @@ describe('rate-limit middleware', () => {
 			error: 'Rate limit exceeded',
 		})
 	})
+
+	it('rate limits object-form sponsorship requests by client IP', {
+		timeout: 30_000,
+	}, async () => {
+		const clientIp = '203.0.113.3'
+		for (let index = 0; index < 1_000; index++)
+			await env.AddressRateLimiter.limit({ key: clientIp })
+
+		const response = await exports.default.fetch(
+			new Request('https://fee-payer.test/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'CF-Connecting-IP': clientIp,
+				},
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_fillTransaction',
+					params: [
+						{
+							feePayer: true,
+							from: '0x0000000000000000000000000000000000000001',
+							to: '0x0000000000000000000000000000000000000002',
+						},
+					],
+				}),
+			}),
+		)
+
+		expect(response.status).toBe(429)
+		await expect(response.json()).resolves.toEqual({
+			error: 'Rate limit exceeded',
+		})
+	})
 })

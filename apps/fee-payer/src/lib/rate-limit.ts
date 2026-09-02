@@ -8,10 +8,13 @@ import * as z from 'zod/mini'
 import type { ApiKeyRecord } from './api-keys.js'
 import { checkBudget, recordSpend } from './api-key-budget.js'
 
+const FillTransaction = z.object({
+	feePayer: z.optional(z.union([z.boolean(), z.string()])),
+})
+
 /**
- * Middleware that rate limits serialized sponsorship requests by client IP.
- * Extracts the transaction before checking the rate limiter and any API-key
- * restrictions.
+ * Middleware that rate limits sponsorship requests by client IP.
+ * Applies to object-form fill requests and serialized Tempo transactions.
  *
  * When `opts.keyed` is true, uses the `KeyedAddressRateLimiter` binding (looser
  * limits, since per-key $ budget is the real ceiling). Otherwise uses the open
@@ -52,25 +55,43 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 			const request = RpcRequest.from(rawBody.data)
 			c.set('rpcMethod', request.method)
-			const serialized = request.params?.[0]
+			const parameters = request.params?.[0]
+			const fill =
+				request.method === 'eth_fillTransaction'
+					? z.safeParse(FillTransaction, parameters)
+					: undefined
+			const fillsFeePayer = fill?.success && fill.data.feePayer !== false
+			let transaction:
+				| {
+						to?: string
+						calls?: Array<{ to?: string }>
+						gas?: bigint
+						maxFeePerGas?: bigint
+				  }
+				| undefined
 
 			if (
-				typeof serialized === 'string' &&
-				(serialized.startsWith('0x76') || serialized.startsWith('0x78'))
+				typeof parameters === 'string' &&
+				(parameters.startsWith('0x76') || parameters.startsWith('0x78'))
 			) {
-				if (!Hex.validate(serialized) || serialized.length < 100)
+				if (!Hex.validate(parameters) || parameters.length < 100)
 					return c.json({ error: 'Bad request' }, 400)
-				const transaction = Transaction.deserialize(serialized) as {
+				transaction = Transaction.deserialize(parameters) as {
 					to?: string
 					calls?: Array<{ to?: string }>
 					gas?: bigint
 					maxFeePerGas?: bigint
 				}
-				const to = transaction.calls?.[0]?.to ?? transaction.to
+			}
+
+			if (fillsFeePayer || transaction) {
 				const clientIp = c.req.header('cf-connecting-ip') ?? 'unknown'
 				const { success } = await limiter.limit({ key: clientIp })
 				if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
+			}
 
+			if (transaction) {
+				const to = transaction.calls?.[0]?.to ?? transaction.to
 				// Expose an upper-bound fee estimate for analytics. This is
 				// `gasLimit * maxFeePerGas` (the user's authorized ceiling),
 				// not the actual fee paid — see dashboard note.
