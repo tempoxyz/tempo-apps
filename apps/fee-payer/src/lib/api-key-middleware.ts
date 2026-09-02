@@ -13,17 +13,28 @@ declare module 'hono' {
  * e.g. `https://sponsor.tempo.xyz/tp_abc123`
  *
  * When a valid API key is present, sets `apiKey` and `apiKeyRecord` on context.
- * Requests to `/` (no key) pass through unauthenticated (preserving open access).
+ * Requests without a key pass through unless authentication is required.
  */
-export async function apiKeyMiddleware(c: Context, next: Next) {
-	const keyParam = c.req.param('key')
-	if (!keyParam) return next()
+export function apiKeyMiddleware(options: apiKeyMiddleware.Options = {}) {
+	return async function authenticateApiKey(c: Context, next: Next) {
+		const keyParam = c.req.param('key')
+		if (!keyParam) {
+			if (options.required) return c.json({ error: 'API key required' }, 401)
+			return next()
+		}
 
-	const record = await getApiKey(keyParam)
-	if (!record) return c.json({ error: 'Invalid or revoked API key' }, 401)
+		const record = await getApiKey(keyParam)
+		if (!record) return c.json({ error: 'Invalid or revoked API key' }, 401)
 
-	c.set('apiKey', keyParam)
-	c.set('apiKeyRecord', record)
+		c.set('apiKey', keyParam)
+		c.set('apiKeyRecord', record)
 
-	await next()
+		await next()
+	}
+}
+
+export declare namespace apiKeyMiddleware {
+	type Options = {
+		required?: boolean | undefined
+	}
 }

@@ -1,6 +1,8 @@
 import { env, exports } from 'cloudflare:workers'
+import { Hono } from 'hono'
 import { sendTransactionSync } from 'viem/actions'
 import { describe, expect, it } from 'vitest'
+import { apiKeyMiddleware } from '../src/lib/api-key-middleware.js'
 import { pathUsd } from '../src/lib/consts.js'
 import {
 	buildSponsorClient,
@@ -283,6 +285,17 @@ describe('admin API key management', () => {
 })
 
 describe('API key sponsorship integration', () => {
+	it('requires a key when authentication is required', async () => {
+		const app = new Hono()
+		app.use(apiKeyMiddleware({ required: true }))
+		app.all('*', (c) => c.text('OK'))
+
+		const response = await app.request('/')
+
+		expect(response.status).toBe(401)
+		expect(await response.json()).toEqual({ error: 'API key required' })
+	})
+
 	it('rejects requests with invalid API key', async () => {
 		const response = await exports.default.fetch(
 			feePayerRequest('/tp_invalid_key_12345678', {
