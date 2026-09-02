@@ -1,23 +1,8 @@
 import { env, exports } from 'cloudflare:workers'
+import { TxEnvelopeTempo } from 'ox/tempo'
 import { describe, expect, it } from 'vitest'
-
-type JsonRpcRequest = {
-	jsonrpc: '2.0'
-	id: number
-	method: string
-	params?: unknown[] | undefined
-}
-
-function request(body: JsonRpcRequest, clientIp = '203.0.113.1'): Request {
-	return new Request('https://fee-payer.test/', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'CF-Connecting-IP': clientIp,
-		},
-		body: JSON.stringify(body),
-	})
-}
+import { pathUsd } from '../src/lib/consts.js'
+import { tempoChain } from './helpers.js'
 
 describe('rate-limit middleware', () => {
 	it('returns 400 for malformed transaction data', {
@@ -72,51 +57,48 @@ describe('rate-limit middleware', () => {
 		expect(response.status).toBe(200)
 	})
 
-	it('rejects external fee payer URLs', async () => {
-		const response = await exports.default.fetch(
-			request({
-				jsonrpc: '2.0',
-				id: 1,
-				method: 'eth_fillTransaction',
-				params: [
-					{
-						feePayer: 'https://example.com',
-						from: '0x0000000000000000000000000000000000000001',
-						to: '0x0000000000000000000000000000000000000002',
-					},
-				],
-			}),
-		)
-
-		expect(response.status).toBe(400)
-		await expect(response.json()).resolves.toEqual({
-			error: 'External fee payer URLs are not allowed',
-		})
-	})
-
-	it('rate limits object-form fill requests by client IP', {
+	it('rate limits serialized sponsorship requests by client IP', {
 		timeout: 30_000,
 	}, async () => {
 		const clientIp = '203.0.113.2'
 		for (let index = 0; index < 1_000; index++)
 			await env.AddressRateLimiter.limit({ key: clientIp })
 
+		const serialized = TxEnvelopeTempo.serialize(
+			TxEnvelopeTempo.from({
+				accessList: [],
+				authorizationList: [],
+				calls: [
+					{
+						to: '0x0000000000000000000000000000000000000002',
+						value: 0n,
+						data: '0x',
+					},
+				],
+				chainId: tempoChain.id,
+				feeToken: pathUsd,
+				gas: 21_000n,
+				maxFeePerGas: 1n,
+				maxPriorityFeePerGas: 0n,
+				nonce: 0n,
+				nonceKey: 0n,
+				validBefore: Math.floor(Date.now() / 1_000) + 60,
+			}),
+		)
 		const response = await exports.default.fetch(
-			request(
-				{
+			new Request('https://fee-payer.test/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'CF-Connecting-IP': clientIp,
+				},
+				body: JSON.stringify({
 					jsonrpc: '2.0',
 					id: 1,
-					method: 'eth_fillTransaction',
-					params: [
-						{
-							feePayer: true,
-							from: '0x0000000000000000000000000000000000000001',
-							to: '0x0000000000000000000000000000000000000002',
-						},
-					],
-				},
-				clientIp,
-			),
+					method: 'eth_signRawTransaction',
+					params: [serialized],
+				}),
+			}),
 		)
 
 		expect(response.status).toBe(429)
