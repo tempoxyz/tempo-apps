@@ -1,7 +1,10 @@
 import * as Value from 'ox/Value'
 import { maxUint256, type TransactionReceipt } from 'viem'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
-import type { ReceiptPresentation } from '#lib/domain/receipt-presentation'
+import {
+	getReceiptEventSideAmount,
+	type ReceiptPresentation,
+} from '#lib/domain/receipt-presentation'
 import {
 	DateFormatter,
 	HexFormatter,
@@ -20,35 +23,54 @@ type ReceiptTextData = {
 	>
 }
 
+type ReceiptTextOptions = {
+	summary?: string
+}
+
 export function renderReceiptText(
 	data: ReceiptTextData,
 	presentation: ReceiptPresentation,
+	options: ReceiptTextOptions = {},
 ): string {
 	const { block, receipt } = data
 	const { events, feeBreakdown, feeDisplay, totalDisplay } = presentation
 	const formattedTime = DateFormatter.formatTimestampTime(block.timestamp)
 	const lines: string[] = [center('TEMPO RECEIPT'), '']
 
-	lines.push(`Block: ${receipt.blockNumber.toString()}`)
-	lines.push(`Sender: ${receipt.from}`)
-	lines.push(`Hash: ${receipt.transactionHash}`)
-	lines.push(`Date: ${DateFormatter.formatTimestampDate(block.timestamp)}`)
+	lines.push(`TX HASH: ${receipt.transactionHash}`)
+	lines.push(`DATE: ${DateFormatter.formatTimestampDate(block.timestamp)}`)
 	lines.push(
-		`Time: ${formattedTime.time} ${formattedTime.timezone}${formattedTime.offset}`,
+		`TIME: ${formattedTime.time} ${formattedTime.timezone}${formattedTime.offset}`,
 	)
-	if (receipt.status === 'reverted') lines.push('Status: Failed')
+	lines.push(`BLOCK: ${receipt.blockNumber.toString()}`)
+	lines.push(`SENDER: ${receipt.from}`)
+	if (options.summary) lines.push(`SUMMARY: ${options.summary.toUpperCase()}`)
+	if (receipt.status === 'reverted') lines.push('STATUS: FAILED')
 
 	if (events.length > 0) {
 		lines.push('', '-'.repeat(width), '')
 		for (const [index, event] of events.entries()) {
-			lines.push(`${index + 1}. ${formatEvent(event)}`)
+			const action = getEventAction(event)
+			const sideAmount = getReceiptEventSideAmount(event)
+			lines.push(
+				leftRight(
+					`${index + 1}. ${action.toUpperCase()}`,
+					sideAmount ? formatAmount(sideAmount, true).toUpperCase() : '–',
+				),
+			)
+			const details = event.parts
+				.filter((part) => part.type !== 'action')
+				.map(formatPart)
+				.filter(Boolean)
+				.join(' ')
+			if (details) lines.push(`${indent}${details.toUpperCase()}`)
 			if (typeof event.note === 'string') {
-				lines.push(`${indent}Memo: ${event.note}`)
+				lines.push(`${indent}MEMO: ${event.note.toUpperCase()}`)
 			} else if (event.note) {
 				for (const [label, part] of event.note) {
 					const value = formatPart(part)
 					lines.push(
-						`${indent}${label}${part.type === 'text' && part.value === '' ? '' : ':'}${value ? ` ${value}` : ''}`,
+						`${indent}${label.toUpperCase()}${part.type === 'text' && part.value === '' ? '' : ':'}${value ? ` ${value.toUpperCase()}` : ''}`,
 					)
 				}
 			}
@@ -58,20 +80,21 @@ export function renderReceiptText(
 	if (feeBreakdown.length > 0) {
 		lines.push('')
 		for (const item of feeBreakdown) {
-			const label = item.symbol ? `Fee (${item.symbol})` : 'Fee'
+			const label = item.symbol ? `FEE (${item.symbol.toUpperCase()})` : 'FEE'
 			lines.push(leftRight(label, item.display))
 		}
 	} else {
-		lines.push('', leftRight('Fee', feeDisplay))
+		lines.push('', leftRight('FEE', feeDisplay))
 	}
 
-	if (totalDisplay !== undefined) lines.push(leftRight('Total', totalDisplay))
+	if (totalDisplay !== undefined) lines.push(leftRight('TOTAL', totalDisplay))
 
 	return lines.join('\n')
 }
 
-function formatEvent(event: KnownEvent): string {
-	return event.parts.map(formatPart).filter(Boolean).join(' ')
+function getEventAction(event: KnownEvent): string {
+	const action = event.parts.find((part) => part.type === 'action')
+	return action?.type === 'action' ? action.value : event.type
 }
 
 function formatPart(part: KnownEventPart): string {
@@ -81,19 +104,8 @@ function formatPart(part: KnownEventPart): string {
 		case 'action':
 		case 'text':
 			return part.value
-		case 'amount': {
-			const precisionLossTolerance = 10n ** 64n
-			if (
-				part.value.value >
-				(maxUint256 / precisionLossTolerance) * precisionLossTolerance
-			)
-				return 'infinite'
-			const value = PriceFormatter.formatAmount(
-				Value.format(part.value.value, part.value.decimals ?? 18),
-			)
-			const suffix = part.value.symbol ?? part.value.currency
-			return suffix ? `${value} ${suffix}` : value
-		}
+		case 'amount':
+			return formatAmount(part.value, false)
 		case 'contractCall':
 			return `call ${HexFormatter.truncate(part.value.address)}`
 		case 'duration':
@@ -116,6 +128,24 @@ function formatPart(part: KnownEventPart): string {
 		case 'token':
 			return part.value.symbol ?? HexFormatter.truncate(part.value.address)
 	}
+}
+
+function formatAmount(
+	amount: NonNullable<KnownEvent['totalAmount']>,
+	short: boolean,
+): string {
+	const precisionLossTolerance = 10n ** 64n
+	if (
+		amount.value >
+		(maxUint256 / precisionLossTolerance) * precisionLossTolerance
+	)
+		return 'infinite'
+	const raw = Value.format(amount.value, amount.decimals ?? 18)
+	const value = short
+		? PriceFormatter.formatAmountShort(raw)
+		: PriceFormatter.formatAmount(raw)
+	const suffix = amount.symbol ?? amount.currency
+	return suffix ? `${value} ${suffix}` : value
 }
 
 function center(text: string): string {

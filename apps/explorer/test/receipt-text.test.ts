@@ -110,17 +110,27 @@ describe('renderReceiptText', () => {
 			receipt,
 			voucher: null,
 		})
-		const text = renderReceiptText({ block, receipt }, presentation)
+		const text = renderReceiptText({ block, receipt }, presentation, {
+			summary: 'Private Zone Withdrawal',
+		})
+		const lines = text.split('\n')
 
-		expect(text).toContain(
-			'1. Private Zone Withdrawal 0.25012 senpathUSDE to 0x8117…dfb6',
+		expect(text).toContain('SUMMARY: PRIVATE ZONE WITHDRAWAL')
+		expect(lines.find((line) => line.startsWith('1. '))).toMatch(
+			/^1\. PRIVATE ZONE WITHDRAWAL\s+0\.25 SENPATHUSDE$/,
 		)
-		expect(text).toContain(
-			'2. Earn Redemption 0.25012 senpathUSDE for 0.5 DLUSD',
+		expect(text).toContain('  0.25012 SENPATHUSDE TO 0X8117…DFB6')
+		expect(lines.find((line) => line.startsWith('2. '))).toMatch(
+			/^2\. EARN REDEMPTION\s+–$/,
 		)
-		expect(text).toContain('3. Private Zone Deposit 0.5 DLUSD')
-		expect(text).toContain('Fee (pathUSD)')
-		expect(text).not.toContain('Nonce Incremented')
-		expect(text).not.toContain('Total')
+		expect(text).toContain('  0.25012 SENPATHUSDE FOR 0.5 DLUSD')
+		expect(lines.find((line) => line.startsWith('3. '))).toMatch(
+			/^3\. PRIVATE ZONE DEPOSIT\s+0\.5 DLUSD$/,
+		)
+		expect(lines.find((line) => line.startsWith('FEE '))).toMatch(
+			/^FEE \(PATHUSD\)\s+<\$0\.01$/,
+		)
+		expect(text).not.toContain('NONCE INCREMENTED')
+		expect(text).not.toContain('TOTAL')
 	})
 })

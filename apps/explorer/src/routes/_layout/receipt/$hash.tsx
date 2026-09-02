@@ -273,7 +273,15 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 						data,
 						voucherData,
 					)
-					const text = renderReceiptText(data, presentation)
+					const summary = buildTxSummary({
+						receipt: data.receipt,
+						transaction: data.transaction,
+						knownEvents: presentation.events,
+						trace: null,
+					})
+					const text = renderReceiptText(data, presentation, {
+						summary: summary.headline,
+					})
 					return new Response(text, {
 						headers: {
 							'Content-Type': 'text/plain; charset=utf-8',
