@@ -19,8 +19,9 @@ import {
 	captureEvent,
 	getRequestContext,
 } from './lib/posthog.js'
-import { rateLimitMiddleware } from './lib/rate-limit.js'
+import { ipRateLimitMiddleware } from './lib/ip-rate-limit.js'
 import { createRpcTransport } from './lib/rpc.js'
+import { sponsorshipPolicyMiddleware } from './lib/sponsorship-policy.js'
 import { getUsage } from './lib/usage.js'
 
 const USAGE_CACHE_TTL = 60
@@ -193,7 +194,8 @@ app.all(
 	'/:key{tp_.+}',
 	apiKeyMiddleware,
 	rpcMetrics({ keyed: true }),
-	rateLimitMiddleware({ keyed: true }),
+	ipRateLimitMiddleware({ keyed: true }),
+	sponsorshipPolicyMiddleware,
 	feePayerHandler,
 )
 
@@ -201,7 +203,8 @@ app.all(
 app.all(
 	'/',
 	rpcMetrics({ keyed: false }),
-	rateLimitMiddleware({ keyed: false }),
+	ipRateLimitMiddleware({ keyed: false }),
+	sponsorshipPolicyMiddleware,
 	feePayerHandler,
 )
 
