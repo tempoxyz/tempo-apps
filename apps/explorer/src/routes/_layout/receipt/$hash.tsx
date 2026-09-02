@@ -8,40 +8,40 @@ import {
 	useLocation,
 	useNavigate,
 } from '@tanstack/react-router'
-import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as Json from 'ox/Json'
-import * as Value from 'ox/Value'
 import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
+import { getReceiptResponseType } from '#lib/domain/receipt-export'
 import {
 	decodeKnownTransactionCall,
 	parseKnownEvents,
-	type KnownEvent,
 } from '#lib/domain/known-events'
-import {
-	calculateKnownEventsTotal,
-	hasNonAdditiveVaultActivity,
-} from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
+import {
+	buildReceiptPresentation,
+	enrichReceiptEventAmounts,
+	type ReceiptPresentation,
+	type ReceiptVoucher,
+} from '#lib/domain/receipt-presentation'
+import { renderReceiptText } from '#lib/domain/receipt-text'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import * as Tip20 from '#lib/domain/tip20'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
 } from '#lib/domain/transaction-activities'
-import { DateFormatter, PriceFormatter } from '#lib/formatting'
+import { DateFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
 import {
 	buildTxDescription,
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { areUsdPricedTokens, hasTokenAmount } from '#lib/pricing'
 import { withLoaderTiming } from '#lib/profiling'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
@@ -49,23 +49,6 @@ import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
-const RECEIVE_POLICY_GUARD = Address.from(
-	'0xB10C000000000000000000000000000000000000',
-)
-
-function getKnownEventAmounts(
-	events: readonly KnownEvent[],
-): NonNullable<KnownEvent['totalAmount']>[] {
-	return events.flatMap((event) => {
-		if (event.type === 'approval') return []
-		if (event.totalAmount) return [event.totalAmount]
-
-		return event.parts
-			.filter((part) => part.type === 'amount')
-			.map((part) => part.value)
-	})
-}
-
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
 		queryKey: ['receipt-detail', params.hash, params.rpcUrl],
@@ -104,8 +87,6 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		Tip20.metadataFromLogs(receipt.logs),
 		fetchTransactionActivities({ data: { hash: receipt.transactionHash } }),
 	])
-	const timestampFormatted = DateFormatter.format(block.timestamp)
-
 	const lineItems = stripLineItemEvents(
 		LineItems.fromReceipt(receipt, { getTokenMetadata }),
 	)
@@ -125,11 +106,14 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const activityEvents = activitiesToKnownEvents(activities, {
 		portal: receipt.to,
 	})
-	const knownEvents = selectTransactionDescriptionEvents({
-		activityEvents,
-		fallbackEvents,
-		knownCall,
-	})
+	const knownEvents = enrichReceiptEventAmounts(
+		selectTransactionDescriptionEvents({
+			activityEvents,
+			fallbackEvents,
+			knownCall,
+		}),
+		getTokenMetadata,
+	)
 
 	return {
 		block,
@@ -137,9 +121,41 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		knownEvents,
 		lineItems,
 		receipt,
-		timestampFormatted,
 		transaction,
 	}
+}
+
+function getReceiptPresentation(
+	data: Awaited<ReturnType<typeof fetchReceiptData>>,
+	voucher: ReceiptVoucher | null,
+	isTokenListed: (
+		chainId: number,
+		address: `0x${string}` | undefined,
+	) => boolean,
+): ReceiptPresentation {
+	return buildReceiptPresentation({
+		chainId: TEMPO_CHAIN_ID,
+		feeBreakdown: data.feeBreakdown,
+		feeToken: TEMPO_FEE_TOKEN,
+		isTokenListed,
+		knownEvents: data.knownEvents,
+		lineItems: data.lineItems,
+		receipt: data.receipt,
+		voucher,
+	})
+}
+
+async function getServerReceiptPresentation(
+	data: Awaited<ReturnType<typeof fetchReceiptData>>,
+	voucher: ReceiptVoucher | null,
+): Promise<ReceiptPresentation> {
+	const { getVerifiedTokenAddresses } = await import(
+		'#lib/server/verified-tokens'
+	)
+	const verifiedTokens = await getVerifiedTokenAddresses(TEMPO_CHAIN_ID)
+	return getReceiptPresentation(data, voucher, (_chainId, address) =>
+		address ? verifiedTokens.has(address.toLowerCase()) : true,
+	)
 }
 
 function parseHashFromParams(params: unknown): Hex.Hex | null {
@@ -160,6 +176,28 @@ function parseHashFromParams(params: unknown): Hex.Hex | null {
 	if (!Hex.validate(hash) || Hex.size(hash) !== 32) return null
 
 	return hash
+}
+
+function receiptExportNotFound(
+	type: ReturnType<typeof getReceiptResponseType>,
+) {
+	return type === 'application/json'
+		? Response.json({ error: 'Not found' }, { status: 404 })
+		: new Response('Not found', {
+				status: 404,
+				headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+			})
+}
+
+async function fetchReceiptDataForExport(params: {
+	hash: Hex.Hex
+	rpcUrl?: string
+}): Promise<Awaited<ReturnType<typeof fetchReceiptData>> | null> {
+	try {
+		return await fetchReceiptData(params)
+	} catch {
+		return null
+	}
 }
 
 export const Route = createFileRoute('/_layout/receipt/$hash')({
@@ -221,32 +259,21 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 					userAgent.includes('wget') ||
 					userAgent.includes('httpie')
 
-				const type = (() => {
-					if (
-						url.pathname.endsWith('.pdf') ||
-						accept.includes('application/pdf')
-					)
-						return 'application/pdf'
-					if (
-						url.pathname.endsWith('.json') ||
-						accept.includes('application/json')
-					)
-						return 'application/json'
-					if (
-						url.pathname.endsWith('.txt') ||
-						isTerminal ||
-						accept.includes('text/plain')
-					)
-						return 'text/plain'
-				})()
+				const type = getReceiptResponseType(url.pathname, accept, isTerminal)
 
 				const rpcUrl = url.searchParams.get('r') ?? undefined
 				const hash = parseHashFromParams(params)
+				if (!hash) return type ? receiptExportNotFound(type) : next()
 
 				if (type === 'text/plain') {
-					if (!hash) return new Response('Not found', { status: 404 })
-					const data = await fetchReceiptData({ hash, rpcUrl })
-					const text = TextRenderer.render(data)
+					const data = await fetchReceiptDataForExport({ hash, rpcUrl })
+					if (!data) return receiptExportNotFound(type)
+					const voucherData = parseVoucherSearchParams(url.searchParams)
+					const presentation = await getServerReceiptPresentation(
+						data,
+						voucherData,
+					)
+					const text = renderReceiptText(data, presentation)
 					return new Response(text, {
 						headers: {
 							'Content-Type': 'text/plain; charset=utf-8',
@@ -262,28 +289,38 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 
 				if (type === 'application/json') {
-					if (!hash)
-						return Response.json({ error: 'Not found' }, { status: 404 })
-					const data = await fetchReceiptData({
+					const data = await fetchReceiptDataForExport({
 						hash,
 						rpcUrl,
 					})
+					if (!data) return receiptExportNotFound(type)
+					const voucherData = parseVoucherSearchParams(url.searchParams)
+					const presentation = await getServerReceiptPresentation(
+						data,
+						voucherData,
+					)
 					const summary = buildTxSummary({
 						receipt: data.receipt,
 						transaction: data.transaction,
-						knownEvents: data.knownEvents,
+						knownEvents: presentation.events,
 						trace: null,
 					})
 					return Response.json(
 						JSON.parse(
 							Json.stringify({
-								version: 1,
+								version: 2,
 								summary,
 								block: data.block,
 								transaction: data.transaction,
 								receipt: data.receipt,
-								knownEvents: data.knownEvents,
-								feeBreakdown: data.feeBreakdown,
+								knownEvents: presentation.events,
+								feeBreakdown: presentation.feeBreakdown,
+								display: {
+									fee: presentation.fee,
+									feeDisplay: presentation.feeDisplay,
+									total: presentation.total,
+									totalDisplay: presentation.totalDisplay,
+								},
 								lineItems: data.lineItems,
 							}),
 						),
@@ -291,15 +328,19 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 
 				if (type === 'application/pdf') {
+					const data = await fetchReceiptDataForExport({ hash, rpcUrl })
+					if (!data) return receiptExportNotFound(type)
 					const browser = await puppeteer.launch(env.BROWSER)
 					const page = await browser.newPage()
 
-					// Pass through authentication if present
-					const authHeader = request.headers.get('Authorization')
-					if (authHeader)
-						await page.setExtraHTTPHeaders({
-							Authorization: authHeader,
-						})
+					const forwardedHeaders = Object.fromEntries(
+						['authorization', 'cookie', 'accept-language'].flatMap((name) => {
+							const value = request.headers.get(name)
+							return value ? [[name, value]] : []
+						}),
+					)
+					if (Object.keys(forwardedHeaders).length > 0)
+						await page.setExtraHTTPHeaders(forwardedHeaders)
 
 					// Build the equivalent HTML URL, preserving existing query params
 					const htmlUrl = new URL(url.href)
@@ -307,7 +348,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 					htmlUrl.searchParams.set('plain', '')
 
 					// Navigate to the HTML version of the receipt
-					await page.goto(htmlUrl.toString(), { waitUntil: 'domcontentloaded' })
+					await page.goto(htmlUrl.toString(), { waitUntil: 'networkidle0' })
 
 					// Generate PDF
 					const pdf = await page.pdf({
@@ -341,15 +382,19 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			z.transform((val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex),
 		),
 	}),
-	head: ({ params, loaderData }) => {
+	head: ({ params, loaderData, match }) => {
 		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const voucherData = parseVoucherParam(match.search.voucher)
+		const presentation = loaderData
+			? getReceiptPresentation(loaderData, voucherData, () => true)
+			: null
 
 		const description = buildTxDescription(
 			loaderData
 				? {
 						timestamp: Number(loaderData.block.timestamp) * 1000,
 						from: loaderData.receipt.from,
-						events: loaderData.knownEvents ?? [],
+						events: presentation?.events ?? [],
 					}
 				: null,
 		)
@@ -364,24 +409,13 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			search.set('date', ogTimestamp.date)
 			search.set('time', ogTimestamp.time)
 
-			const feePrice = loaderData.lineItems.feeTotals?.[0]?.price
-			const fee = feePrice
-				? Number(Value.format(feePrice.amount, feePrice.decimals))
-				: Number(
-						Value.format(
-							BigInt(loaderData.receipt.gasUsed ?? 0) *
-								BigInt(
-									loaderData.receipt.effectiveGasPrice ??
-										loaderData.transaction.gasPrice ??
-										0,
-								),
-							18,
-						),
-					)
-			const feeDisplay = PriceFormatter.format(fee)
-			search.set('fee', feeDisplay)
+			if (presentation) {
+				search.set('fee', presentation.feeDisplay)
+				if (presentation.totalDisplay)
+					search.set('total', presentation.totalDisplay)
+			}
 
-			loaderData.knownEvents
+			presentation?.events
 				?.slice(0, 6)
 				.forEach(
 					(
@@ -415,7 +449,11 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 function parseVoucherParam(
 	raw:
-		| { final_voucher?: string; packet_size?: number; number?: number }
+		| {
+				final_voucher?: string
+				packet_size?: number | string
+				number?: number | string
+		  }
 		| undefined,
 ): { packetSize: number; packetCount: number } | null {
 	if (!raw) return null
@@ -423,6 +461,32 @@ function parseVoucherParam(
 	const packetCount = Number(raw.number)
 	if (!Number.isFinite(packetSize) || !Number.isFinite(packetCount)) return null
 	return { packetSize, packetCount }
+}
+
+function parseVoucherSearchParams(
+	searchParams: URLSearchParams,
+): { packetSize: number; packetCount: number } | null {
+	const serializedVoucher = searchParams.get('voucher')
+	if (serializedVoucher) {
+		try {
+			const voucher = JSON.parse(serializedVoucher)
+			if (voucher && typeof voucher === 'object')
+				return parseVoucherParam(
+					voucher as {
+						final_voucher?: string
+						packet_size?: number | string
+						number?: number | string
+					},
+				)
+		} catch {
+			// Fall through to bracket-style query parameters.
+		}
+	}
+
+	return parseVoucherParam({
+		packet_size: searchParams.get('voucher[packet_size]') ?? undefined,
+		number: searchParams.get('voucher[number]') ?? undefined,
+	})
 }
 
 function Component() {
@@ -447,255 +511,25 @@ function Component() {
 
 	const { isTokenListed } = useTokenListMembership()
 
-	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
-	const hasBlockedTransfer = knownEvents.some(
-		(event) => event.type === 'transfer blocked',
-	)
-
-	const feePrice = lineItems.feeTotals?.[0]?.price
-	const previousFee = feePrice
-		? Number(Value.format(feePrice.amount, feePrice.decimals))
-		: 0
-
-	const totalPrice = lineItems.totals?.[0]?.price
-	const previousTotal = totalPrice
-		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
-		: undefined
-
-	const fallbackFeeAmount = receipt.effectiveGasPrice * receipt.gasUsed
-	const feeRaw = feePrice
-		? Value.format(feePrice.amount, feePrice.decimals)
-		: Value.format(fallbackFeeAmount, 18)
-	const fee = Number(feeRaw)
-	const feeTokens = feeBreakdown.filter(hasTokenAmount)
-	const showUsdFeePrefix =
-		feeTokens.length > 0
-			? areUsdPricedTokens(TEMPO_CHAIN_ID, feeTokens, isTokenListed)
-			: TEMPO_FEE_TOKEN
-				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
-				: true
-	const feeDisplay = showUsdFeePrefix
-		? PriceFormatter.format(fee)
-		: PriceFormatter.formatAmountShort(feeRaw)
-
-	// Inject a streaming payment event when voucher params are present.
-	// For TIP-1028 blocked transfers, the TIP-20 receipt also contains the
-	// mechanical Transfer to ReceivePolicyGuard. Hide that implementation detail
-	// from the human receipt so the blocked transfer is not shown or totaled twice.
-	const displayEvents: KnownEvent[] = (
-		voucherData
-			? [
-					buildStreamedPaymentEvent(
-						voucherData.packetSize,
-						voucherData.packetCount,
-					),
-					...knownEvents,
-				]
-			: knownEvents
-	).filter(
-		(event) =>
-			!hasBlockedTransfer ||
-			event.type !== 'send' ||
-			!event.meta?.to ||
-			!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD),
-	)
-
-	// When a voucher is present, show the streaming total as the receipt total
-	const streamingTotal = voucherData
-		? voucherData.packetSize * voucherData.packetCount
-		: undefined
-
-	const eventsTotal = calculateKnownEventsTotal(displayEvents)
-	const eventsTotalDisplayValue =
-		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
-	const eventTotalTokens = getKnownEventAmounts(displayEvents)
-	const hasVaultActivity = hasNonAdditiveVaultActivity(displayEvents)
-
-	const total =
-		streamingTotal !== undefined
-			? streamingTotal
-			: eventsTotalDisplayValue !== undefined
-				? eventsTotalDisplayValue + fee
-				: previousTotal !== undefined
-					? previousTotal - previousFee + fee
-					: fee
-	const totalTokens = lineItems.totals
-		.map((item) => item.price)
-		.filter(hasTokenAmount)
-	const showUsdTotalPrefix = (() => {
-		if (streamingTotal !== undefined) return true
-		if (eventsTotalDisplayValue !== undefined) {
-			return areUsdPricedTokens(TEMPO_CHAIN_ID, eventTotalTokens, isTokenListed)
-		}
-		if (totalTokens.length > 0) {
-			return areUsdPricedTokens(TEMPO_CHAIN_ID, totalTokens, isTokenListed)
-		}
-		return showUsdFeePrefix
-	})()
-	const totalDisplayValue =
-		streamingTotal !== undefined
-			? streamingTotal
-			: eventsTotalDisplayValue !== undefined
-				? eventsTotalDisplayValue + fee
-				: previousTotal !== undefined
-					? previousTotal
-					: total
-	const totalDisplay = showUsdTotalPrefix
-		? PriceFormatter.format(totalDisplayValue)
-		: PriceFormatter.formatAmountShort(String(totalDisplayValue))
+	const { block, receipt } = data
+	const presentation = getReceiptPresentation(data, voucherData, isTokenListed)
 
 	return (
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
 			<Receipt
 				blockNumber={receipt.blockNumber}
-				events={displayEvents}
-				fee={fee}
-				feeBreakdown={feeBreakdown}
-				feeDisplay={feeDisplay}
+				events={presentation.events}
+				fee={presentation.fee}
+				feeBreakdown={presentation.feeBreakdown}
+				feeDisplay={presentation.feeDisplay}
 				hash={receipt.transactionHash}
 				sender={receipt.from}
 				status={receipt.status}
 				timestamp={block.timestamp}
-				total={hasVaultActivity ? undefined : total}
-				totalDisplay={hasVaultActivity ? undefined : totalDisplay}
+				total={presentation.total}
+				totalDisplay={presentation.totalDisplay}
 				exportSearch={location.searchStr}
 			/>
 		</div>
 	)
-}
-
-/**
- * Builds a synthetic KnownEvent representing a streamed (off-chain) payment session.
- * The final voucher proves all prior off-chain packets were authorized.
- */
-function buildStreamedPaymentEvent(
-	packetSize: number,
-	packetCount: number,
-): KnownEvent {
-	const totalMicros = BigInt(Math.round(packetSize * packetCount * 1_000_000))
-
-	const parts: KnownEvent['parts'] = [
-		{ type: 'action', value: 'Streamed Payment' },
-	]
-
-	// Include total amount using pathUSD (6 decimals) if the fee token is available
-	if (TEMPO_FEE_TOKEN) {
-		parts.push({
-			type: 'amount',
-			value: {
-				value: totalMicros,
-				decimals: 6,
-				currency: 'USD',
-				token: TEMPO_FEE_TOKEN,
-				symbol: 'pathUSD',
-			},
-		})
-	}
-
-	return {
-		type: 'streamed payment',
-		parts,
-		note: [
-			[
-				'Packets',
-				{ type: 'number', value: [BigInt(packetCount), 0] as [bigint, number] },
-			],
-			['Per packet', { type: 'text', value: `$${packetSize}` }],
-			['Settlement', { type: 'text', value: 'final voucher proven on-chain' }],
-		],
-	}
-}
-
-namespace TextRenderer {
-	const width = 76
-	const indent = '  '
-
-	export function render(data: Awaited<ReturnType<typeof fetchReceiptData>>) {
-		const { knownEvents, lineItems, receipt, timestampFormatted, transaction } =
-			data
-		const summary = buildTxSummary({
-			receipt,
-			transaction,
-			knownEvents,
-			trace: null,
-		})
-
-		const lines: string[] = []
-
-		// Header
-		lines.push(center('TEMPO RECEIPT'))
-		lines.push('')
-
-		// Transaction details
-		lines.push(`Tx Hash: ${receipt.transactionHash}`)
-		lines.push(`Date: ${timestampFormatted}`)
-		lines.push(`Block: ${receipt.blockNumber.toString()}`)
-		lines.push(`Sender: ${receipt.from}`)
-		lines.push(`Summary: ${summary.headline}`)
-		lines.push('')
-		lines.push('-'.repeat(width))
-		lines.push('')
-
-		// Main line items
-		if (lineItems.main) {
-			for (const item of lineItems.main) {
-				// Render `left` and `right`
-				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
-
-				// Render `bottom`
-				if ('bottom' in item.ui && item.ui.bottom) {
-					for (const bottom of item.ui.bottom) {
-						if (bottom.right)
-							lines.push(`${indent}${leftRight(bottom.left, bottom.right)}`)
-						else lines.push(`${indent}${bottom.left}`)
-					}
-				}
-			}
-
-			lines.push('')
-		}
-
-		// Fee breakdown
-		if (lineItems.feeBreakdown?.length) {
-			let hasVisibleFee = false
-			for (const item of lineItems.feeBreakdown) {
-				if (
-					item.payer &&
-					item.payer.toLowerCase() !== receipt.from.toLowerCase()
-				)
-					continue
-				hasVisibleFee = true
-				const label = item.symbol ? `Fee (${item.symbol})` : 'Fee'
-				const amount = PriceFormatter.format(item.amount, {
-					decimals: item.decimals,
-					format: 'short',
-				})
-				lines.push(leftRight(label.toUpperCase(), amount))
-			}
-
-			if (hasVisibleFee) lines.push('')
-		}
-
-		// Fee totals
-		if (lineItems.feeTotals)
-			for (const item of lineItems.feeTotals)
-				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
-
-		// Totals
-		if (lineItems.totals)
-			for (const item of lineItems.totals)
-				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
-
-		return lines.join('\n')
-	}
-
-	function center(text: string): string {
-		const padding = Math.max(0, Math.floor((width - text.length) / 2))
-		return ' '.repeat(padding) + text
-	}
-
-	function leftRight(left: string, right: string): string {
-		const spacing = Math.max(1, width - left.length - right.length)
-		return left + ' '.repeat(spacing) + right
-	}
 }

@@ -3,6 +3,7 @@ import * as Value from 'ox/Value'
 import type { AccountType } from '#lib/account'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
 import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
+import { getReceiptEventSideAmount } from '#lib/domain/receipt-presentation'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import {
 	type AddressOgParams,
@@ -173,18 +174,15 @@ export function formatEventForOgServer(event: KnownEvent): string {
 	const detailParts = event.parts.filter((p) => p.type !== 'action')
 	const details = detailParts.map(formatEventPart).filter(Boolean).join(' ')
 
-	let usdAmount = ''
-	for (const part of event.parts) {
-		if (part.type === 'amount') {
-			const formatted = formatAmount(part.value, false)
-			usdAmount = formatted.startsWith('<')
-				? `<$${formatted.slice(1)}`
-				: `$${formatted}`
-			break
-		}
-	}
+	const sideAmount = getReceiptEventSideAmount(event)
+	const formattedSideAmount = sideAmount ? formatAmount(sideAmount, false) : ''
+	const usdAmount = formattedSideAmount.startsWith('<')
+		? `<$${formattedSideAmount.slice(1)}`
+		: formattedSideAmount
+			? `$${formattedSideAmount}`
+			: ''
 
-	return `${truncateOgText(action, 20)}|${truncateOgText(details, 60)}|${truncateOgText(usdAmount, 15)}`
+	return `${truncateOgText(action, 40)}|${truncateOgText(details, 180)}|${truncateOgText(usdAmount, 30)}`
 }
 
 export function formatDate(timestamp: number): string {

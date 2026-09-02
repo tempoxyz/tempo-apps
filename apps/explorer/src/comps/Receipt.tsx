@@ -8,6 +8,10 @@ import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	getReceiptEventSideAmount,
+	isReceiptEventVisible,
+} from '#lib/domain/receipt-presentation'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import {
@@ -57,11 +61,7 @@ export function Receipt(props: Receipt.Props) {
 	const showUsdFeePrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
-	const filteredEvents = events.filter(
-		(event) =>
-			event.type !== 'active key count changed' &&
-			event.type !== 'nonce incremented',
-	)
+	const filteredEvents = events.filter(isReceiptEventVisible)
 	const handleShare = async () => {
 		const url = new URL(
 			`/receipt/${hash}${exportSearch}`,
@@ -169,7 +169,6 @@ export function Receipt(props: Receipt.Props) {
 								const amountParts = event.parts.filter(
 									(part) => part.type === 'amount',
 								)
-								const firstAmountPart = amountParts[0]
 								const displayTotalAmount = event.totalAmount
 								const amountTokens = displayTotalAmount
 									? [displayTotalAmount]
@@ -186,14 +185,7 @@ export function Receipt(props: Receipt.Props) {
 										: TEMPO_FEE_TOKEN
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
-								const sideAmount =
-									displayTotalAmount ??
-									(event.type === 'swap' && firstAmountPart?.type === 'amount'
-										? firstAmountPart.value
-										: amountParts.length === 1 &&
-												firstAmountPart?.type === 'amount'
-											? firstAmountPart.value
-											: undefined)
+								const sideAmount = getReceiptEventSideAmount(event)
 								return (
 									<div
 										key={`${event.type}-${index}`}
@@ -292,14 +284,16 @@ export function Receipt(props: Receipt.Props) {
 										const showUsdPrefix = hasTokenAmount(item)
 											? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
 											: showUsdFeePrefix
-										const formattedAmount = showUsdPrefix
-											? PriceFormatter.format(item.amount, {
-													decimals: item.decimals,
-													format: 'short',
-												})
-											: PriceFormatter.formatAmountShort(
-													Value.format(item.amount, item.decimals),
-												)
+										const formattedAmount =
+											item.display ??
+											(showUsdPrefix
+												? PriceFormatter.format(item.amount, {
+														decimals: item.decimals,
+														format: 'short',
+													})
+												: PriceFormatter.formatAmountShort(
+														Value.format(item.amount, item.decimals),
+													))
 										return (
 											<div
 												key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
@@ -428,6 +422,7 @@ export namespace Receipt {
 		symbol?: string
 		token?: Address.Address
 		payer?: Address.Address
+		display?: string
 	}
 
 	export function ExportLink(props: ExportLink.Props): React.JSX.Element {
