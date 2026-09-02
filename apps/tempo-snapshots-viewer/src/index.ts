@@ -323,17 +323,7 @@ app.get('/:chainId/:snapshotName', (context) =>
 	serveSnapshot(
 		{
 			headers: context.req.raw.headers,
-			snapshotName: `${context.req.param('chainId')}/${context.req.param('snapshotName')}`,
-			fallbackSnapshotName: context.req.param('snapshotName'),
-		},
-		context.env,
-	),
-)
-app.get('/*', (context) =>
-	serveSnapshot(
-		{
-			headers: context.req.raw.headers,
-			snapshotName: decodeURIComponent(context.req.path.slice(1)),
+			snapshotName: context.req.param('snapshotName'),
 		},
 		context.env,
 	),
@@ -399,28 +389,15 @@ async function serveManifest(
 }
 
 async function serveSnapshot(
-	{
-		headers,
-		snapshotName,
-		fallbackSnapshotName,
-	}: {
-		headers: Headers
-		snapshotName: string
-		fallbackSnapshotName?: string
-	},
+	{ headers, snapshotName }: { snapshotName: string; headers: Headers },
 	env: Env,
 ): Promise<Response> {
 	const rangeHeader = headers.get('Range')
 
-	const getOptions: R2GetOptions = {
+	const object = await env.SNAPSHOTS.get(snapshotName, {
 		onlyIf: headers,
 		range: headers,
-	}
-	const object =
-		(await env.SNAPSHOTS.get(snapshotName, getOptions)) ||
-		(fallbackSnapshotName
-			? await env.SNAPSHOTS.get(fallbackSnapshotName, getOptions)
-			: null)
+	})
 
 	if (object === null) {
 		return error(404, 'Object Not Found')
