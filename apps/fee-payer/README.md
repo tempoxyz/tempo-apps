@@ -36,7 +36,7 @@ pnpm wrangler secret put TEMPO_RPC_AUTH --env moderato
 | Method | Route | Params |
 |--------|-------|--------|
 | GET | `/usage` | - optional: `blockTimestampFrom` (epoch seconds)<br>- optional: `blockTimestampTo` (epoch seconds) |
-| POST | `*` | JSON-RPC request body for fee sponsorship<br>Supported sponsorship methods: `eth_signRawTransaction`, `eth_sendRawTransactionSync` (other JSON-RPC methods may be proxied, e.g. `eth_chainId`) |
+| POST | `*` | JSON-RPC request body for fee sponsorship. Mainnet requests require an API key in the path (`/tp_...`); testnet requests may use `/` anonymously.<br>Supported sponsorship methods: `eth_signRawTransaction`, `eth_sendRawTransactionSync` (other JSON-RPC methods may be proxied, e.g. `eth_chainId`) |
 
 ## Metrics
 

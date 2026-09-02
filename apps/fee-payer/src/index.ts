@@ -12,6 +12,7 @@ import { apiKeyMiddleware } from './lib/api-key-middleware.js'
 import { enqueueSponsorshipIntent } from './lib/billing.js'
 import { tempoChain } from './lib/chain.js'
 import { pathUsd } from './lib/consts.js'
+import { mainnetApiKeyMiddleware } from './lib/mainnet-api-key-middleware.js'
 import { metrics } from './lib/observability/metrics.js'
 import { httpMetrics, rpcMetrics } from './lib/observability/middleware.js'
 import {
@@ -200,6 +201,7 @@ app.all(
 // Open path: https://sponsor.tempo.xyz/
 app.all(
 	'/',
+	mainnetApiKeyMiddleware({ tempoEnv: env.TEMPO_ENV }),
 	rpcMetrics({ keyed: false }),
 	rateLimitMiddleware({ keyed: false }),
 	feePayerHandler,
