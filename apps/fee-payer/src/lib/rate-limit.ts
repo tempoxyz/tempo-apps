@@ -104,9 +104,6 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 			}
 
 			if (transaction) {
-				// Tempo envelopes nest the destination under `calls[0].to`; legacy
-				// envelopes use top-level `to`.
-				const to = transaction.calls?.[0]?.to ?? transaction.to
 				const clientIp = c.req.header('cf-connecting-ip') ?? 'unknown'
 				const { success } = await limiter.limit({ key: clientIp })
 				if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
@@ -123,12 +120,23 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 				const apiKey = c.get('apiKey') as string | undefined
 				const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
 				if (apiKey && apiKeyRecord) {
-					if (apiKeyRecord.allowedDestinations.length > 0 && to) {
-						const dest = to.toLowerCase()
-						const allowed = apiKeyRecord.allowedDestinations.some(
-							(a) => a.toLowerCase() === dest,
+					if (apiKeyRecord.allowedDestinations.length > 0) {
+						const destinations = transaction.calls
+							? transaction.calls.map((call) => call.to)
+							: [transaction.to]
+						const allowedDestinations = new Set(
+							apiKeyRecord.allowedDestinations.map((address) =>
+								address.toLowerCase(),
+							),
 						)
-						if (!allowed) {
+						const destinationsAllowed =
+							destinations.length > 0 &&
+							destinations.every(
+								(destination) =>
+									destination &&
+									allowedDestinations.has(destination.toLowerCase()),
+							)
+						if (!destinationsAllowed) {
 							return c.json(
 								{ error: 'Destination address not allowed for this API key' },
 								403,
