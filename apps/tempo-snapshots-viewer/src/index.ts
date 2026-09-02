@@ -316,9 +316,20 @@ app.get('/latest.txt', (context) => serveLatest({}, context.env))
 app.get('/:chainId/latest.txt', (context) =>
 	serveLatest({ chainId: context.req.param('chainId') }, context.env),
 )
-app.get('/:chainId/manifest.json', (context) =>
-	serveManifest({ chainId: context.req.param('chainId') }, context.env),
-)
+app.get('/:chainId/manifest.json', (context) => {
+	const chainId = context.req.param('chainId')
+	if (/^\d+$/.test(chainId)) {
+		return serveManifest({ chainId }, context.env)
+	}
+
+	return serveSnapshot(
+		{
+			headers: context.req.raw.headers,
+			snapshotName: `${chainId}/manifest.json`,
+		},
+		context.env,
+	)
+})
 app.get('/:chainId/:snapshotName', (context) =>
 	serveSnapshot(
 		{
