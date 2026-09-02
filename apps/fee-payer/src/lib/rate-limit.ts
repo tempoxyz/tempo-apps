@@ -8,11 +8,22 @@ import * as z from 'zod/mini'
 import type { ApiKeyRecord } from './api-keys.js'
 import { checkBudget, recordSpend } from './api-key-budget.js'
 
+const FillTransaction = z.object({
+	feePayer: z.optional(z.union([z.boolean(), z.string()])),
+	to: z.optional(z.string()),
+	calls: z.optional(
+		z.array(
+			z.object({
+				to: z.optional(z.string()),
+			}),
+		),
+	),
+})
+
 /**
- * Middleware that rate limits requests based on the transaction's `from` address.
- * Extracts the transaction from the RPC request and checks against the rate limiter.
- * Fails closed: rejects requests when the binding is missing, the sender cannot
- * be identified, or the request body is malformed.
+ * Middleware that rate limits sponsorship requests by client IP.
+ * Extracts serialized transactions and object-form fill requests before checking
+ * the rate limiter and any API-key restrictions.
  *
  * When `opts.keyed` is true, uses the `KeyedAddressRateLimiter` binding (looser
  * limits, since per-key $ budget is the real ceiling). Otherwise uses the open
@@ -53,34 +64,51 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 			const request = RpcRequest.from(rawBody.data)
 			c.set('rpcMethod', request.method)
-			const serialized = request.params?.[0]
+			const parameters = request.params?.[0]
+			let transaction:
+				| {
+						to?: string
+						calls?: Array<{ to?: string }>
+						gas?: bigint
+						maxFeePerGas?: bigint
+				  }
+				| undefined
 
 			if (
-				typeof serialized === 'string' &&
-				(serialized.startsWith('0x76') || serialized.startsWith('0x78'))
+				typeof parameters === 'string' &&
+				(parameters.startsWith('0x76') || parameters.startsWith('0x78'))
 			) {
-				if (!Hex.validate(serialized) || serialized.length < 100)
+				if (!Hex.validate(parameters) || parameters.length < 100)
 					return c.json({ error: 'Bad request' }, 400)
-				const transaction = Transaction.deserialize(serialized) as {
-					from?: string
+				transaction = Transaction.deserialize(parameters) as {
 					to?: string
 					calls?: Array<{ to?: string }>
 					gas?: bigint
 					maxFeePerGas?: bigint
 				}
-				const from = transaction.from
+			} else if (rawBody.data.method === 'eth_fillTransaction') {
+				const fillResult = z.safeParse(FillTransaction, parameters)
+				if (!fillResult.success) return c.json({ error: 'Bad request' }, 400)
+				const fill = fillResult.data
+				if (typeof fill.feePayer === 'string')
+					return c.json(
+						{ error: 'External fee payer URLs are not allowed' },
+						400,
+					)
+
+				if (fill.feePayer !== false) {
+					transaction = {}
+					if (fill.to) transaction.to = fill.to
+					if (fill.calls) transaction.calls = fill.calls
+				}
+			}
+
+			if (transaction) {
 				// Tempo envelopes nest the destination under `calls[0].to`; legacy
 				// envelopes use top-level `to`.
 				const to = transaction.calls?.[0]?.to ?? transaction.to
-
-				if (!from) {
-					return c.json(
-						{ error: 'Unable to determine sender for rate limiting' },
-						400,
-					)
-				}
-
-				const { success } = await limiter.limit({ key: from })
+				const clientIp = c.req.header('cf-connecting-ip') ?? 'unknown'
+				const { success } = await limiter.limit({ key: clientIp })
 				if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
 
 				// Expose an upper-bound fee estimate for analytics. This is
