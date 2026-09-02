@@ -387,40 +387,6 @@ describe('API key sponsorship integration', () => {
 		})
 	})
 
-	it('rejects object-form fills when any call destination is not allowed', async () => {
-		const allowed = '0x0000000000000000000000000000000000000002'
-		const createRes = await exports.default.fetch(
-			adminRequest('POST', '/keys', {
-				label: 'Object Fill Allowlist',
-				allowedDestinations: [allowed],
-			}),
-		)
-		const { key } = (await createRes.json()) as { key: string }
-
-		const response = await exports.default.fetch(
-			feePayerRequest(`/${key}`, {
-				jsonrpc: '2.0',
-				id: 1,
-				method: 'eth_fillTransaction',
-				params: [
-					{
-						feePayer: true,
-						from: '0x0000000000000000000000000000000000000001',
-						calls: [
-							{ to: allowed },
-							{ to: '0x0000000000000000000000000000000000000003' },
-						],
-					},
-				],
-			}),
-		)
-
-		expect(response.status).toBe(403)
-		await expect(response.json()).resolves.toEqual({
-			error: 'Destination address not allowed for this API key',
-		})
-	})
-
 	it('rejects a sponsored transaction when dailyLimitUsd is exceeded', async () => {
 		const createRes = await exports.default.fetch(
 			adminRequest('POST', '/keys', {

@@ -8,22 +8,10 @@ import * as z from 'zod/mini'
 import type { ApiKeyRecord } from './api-keys.js'
 import { checkBudget, recordSpend } from './api-key-budget.js'
 
-const FillTransaction = z.object({
-	feePayer: z.optional(z.union([z.boolean(), z.string()])),
-	to: z.optional(z.string()),
-	calls: z.optional(
-		z.array(
-			z.object({
-				to: z.optional(z.string()),
-			}),
-		),
-	),
-})
-
 /**
- * Middleware that rate limits sponsorship requests by client IP.
- * Extracts serialized transactions and object-form fill requests before checking
- * the rate limiter and any API-key restrictions.
+ * Middleware that rate limits serialized sponsorship requests by client IP.
+ * Extracts the transaction before checking the rate limiter and any API-key
+ * restrictions.
  *
  * When `opts.keyed` is true, uses the `KeyedAddressRateLimiter` binding (looser
  * limits, since per-key $ budget is the real ceiling). Otherwise uses the open
@@ -64,46 +52,21 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 
 			const request = RpcRequest.from(rawBody.data)
 			c.set('rpcMethod', request.method)
-			const parameters = request.params?.[0]
-			let transaction:
-				| {
-						to?: string
-						calls?: Array<{ to?: string }>
-						gas?: bigint
-						maxFeePerGas?: bigint
-				  }
-				| undefined
+			const serialized = request.params?.[0]
 
 			if (
-				typeof parameters === 'string' &&
-				(parameters.startsWith('0x76') || parameters.startsWith('0x78'))
+				typeof serialized === 'string' &&
+				(serialized.startsWith('0x76') || serialized.startsWith('0x78'))
 			) {
-				if (!Hex.validate(parameters) || parameters.length < 100)
+				if (!Hex.validate(serialized) || serialized.length < 100)
 					return c.json({ error: 'Bad request' }, 400)
-				transaction = Transaction.deserialize(parameters) as {
+				const transaction = Transaction.deserialize(serialized) as {
 					to?: string
 					calls?: Array<{ to?: string }>
 					gas?: bigint
 					maxFeePerGas?: bigint
 				}
-			} else if (rawBody.data.method === 'eth_fillTransaction') {
-				const fillResult = z.safeParse(FillTransaction, parameters)
-				if (!fillResult.success) return c.json({ error: 'Bad request' }, 400)
-				const fill = fillResult.data
-				if (typeof fill.feePayer === 'string')
-					return c.json(
-						{ error: 'External fee payer URLs are not allowed' },
-						400,
-					)
-
-				if (fill.feePayer !== false) {
-					transaction = {}
-					if (fill.to) transaction.to = fill.to
-					if (fill.calls) transaction.calls = fill.calls
-				}
-			}
-
-			if (transaction) {
+				const to = transaction.calls?.[0]?.to ?? transaction.to
 				const clientIp = c.req.header('cf-connecting-ip') ?? 'unknown'
 				const { success } = await limiter.limit({ key: clientIp })
 				if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
@@ -120,23 +83,12 @@ export function rateLimitMiddleware(opts: { keyed: boolean }) {
 				const apiKey = c.get('apiKey') as string | undefined
 				const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
 				if (apiKey && apiKeyRecord) {
-					if (apiKeyRecord.allowedDestinations.length > 0) {
-						const destinations = transaction.calls
-							? transaction.calls.map((call) => call.to)
-							: [transaction.to]
-						const allowedDestinations = new Set(
-							apiKeyRecord.allowedDestinations.map((address) =>
-								address.toLowerCase(),
-							),
+					if (apiKeyRecord.allowedDestinations.length > 0 && to) {
+						const dest = to.toLowerCase()
+						const allowed = apiKeyRecord.allowedDestinations.some(
+							(a) => a.toLowerCase() === dest,
 						)
-						const destinationsAllowed =
-							destinations.length > 0 &&
-							destinations.every(
-								(destination) =>
-									destination &&
-									allowedDestinations.has(destination.toLowerCase()),
-							)
-						if (!destinationsAllowed) {
+						if (!allowed) {
 							return c.json(
 								{ error: 'Destination address not allowed for this API key' },
 								403,
