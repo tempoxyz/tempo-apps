@@ -24,7 +24,7 @@
 		}
 	],
 	"vars": {
-		"R2_PUBLIC_URL": "https://tempo-node-snapshots.tempoxyz.dev"
+		"R2_PUBLIC_URL": "https://snapshots.tempo.xyz"
 	},
 	"routes": [
 		{
