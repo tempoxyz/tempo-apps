@@ -1,10 +1,7 @@
 import { env, exports } from 'cloudflare:workers'
-import { TxEnvelopeTempo } from 'ox/tempo'
 import { describe, expect, it } from 'vitest'
-import { pathUsd } from '../src/lib/consts.js'
-import { tempoChain } from './helpers.js'
 
-describe('rate-limit middleware', () => {
+describe('IP rate-limit middleware', () => {
 	it('returns 400 for malformed transaction data', {
 		timeout: 30_000,
 	}, async () => {
@@ -57,34 +54,13 @@ describe('rate-limit middleware', () => {
 		expect(response.status).toBe(200)
 	})
 
-	it('rate limits serialized sponsorship requests by client IP', {
+	it('rate limits requests by client IP without inspecting the RPC method', {
 		timeout: 30_000,
 	}, async () => {
 		const clientIp = '203.0.113.2'
 		for (let index = 0; index < 1_000; index++)
 			await env.AddressRateLimiter.limit({ key: clientIp })
 
-		const serialized = TxEnvelopeTempo.serialize(
-			TxEnvelopeTempo.from({
-				accessList: [],
-				authorizationList: [],
-				calls: [
-					{
-						to: '0x0000000000000000000000000000000000000002',
-						value: 0n,
-						data: '0x',
-					},
-				],
-				chainId: tempoChain.id,
-				feeToken: pathUsd,
-				gas: 21_000n,
-				maxFeePerGas: 1n,
-				maxPriorityFeePerGas: 0n,
-				nonce: 0n,
-				nonceKey: 0n,
-				validBefore: Math.floor(Date.now() / 1_000) + 60,
-			}),
-		)
 		const response = await exports.default.fetch(
 			new Request('https://fee-payer.test/', {
 				method: 'POST',
@@ -95,43 +71,7 @@ describe('rate-limit middleware', () => {
 				body: JSON.stringify({
 					jsonrpc: '2.0',
 					id: 1,
-					method: 'eth_signRawTransaction',
-					params: [serialized],
-				}),
-			}),
-		)
-
-		expect(response.status).toBe(429)
-		await expect(response.json()).resolves.toEqual({
-			error: 'Rate limit exceeded',
-		})
-	})
-
-	it('rate limits object-form sponsorship requests by client IP', {
-		timeout: 30_000,
-	}, async () => {
-		const clientIp = '203.0.113.3'
-		for (let index = 0; index < 1_000; index++)
-			await env.AddressRateLimiter.limit({ key: clientIp })
-
-		const response = await exports.default.fetch(
-			new Request('https://fee-payer.test/', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'CF-Connecting-IP': clientIp,
-				},
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'eth_fillTransaction',
-					params: [
-						{
-							feePayer: true,
-							from: '0x0000000000000000000000000000000000000001',
-							to: '0x0000000000000000000000000000000000000002',
-						},
-					],
+					method: 'eth_chainId',
 				}),
 			}),
 		)
