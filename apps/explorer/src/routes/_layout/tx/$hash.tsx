@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -52,7 +52,6 @@ import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
-	LIMIT,
 	lookupSignatureQueryOptions,
 	type TxData,
 	txQueryOptions,
@@ -61,13 +60,16 @@ import {
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import {
+	balanceChangesQueryOptions,
+	LIMIT as BALANCE_CHANGES_LIMIT,
+} from '#lib/queries/balance-changes'
+import {
 	type CallTrace,
 	type PrestateDiff,
 	traceQueryOptions,
 } from '#lib/queries/trace'
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
-import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
@@ -75,6 +77,14 @@ const defaultSearchValues = {
 	tab: 'overview',
 	page: 1,
 } as const
+
+const EMPTY_BALANCE_CHANGES: BalanceChangesData = {
+	changes: [],
+	tokenMetadata: {},
+	total: 0,
+}
+
+const EMPTY_TRACE_DATA = { trace: null, prestate: null } as const
 
 const RECEIVE_POLICY_GUARD = OxAddressUtil.from(
 	'0xB10C000000000000000000000000000000000000',
@@ -107,32 +117,20 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: ({ params, context, deps: { page } }) =>
+	loader: ({ params, context }) =>
 		withLoaderTiming('/_layout/tx/$hash', async () => {
 			const { hash } = params
 
 			try {
-				const offset = (page - 1) * LIMIT
-
-				const [txData, balanceChangesData, traceData, activities] =
-					await Promise.all([
-						context.queryClient.ensureQueryData(txQueryOptions({ hash })),
-						fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
-							changes: [],
-							tokenMetadata: {},
-							total: 0,
-						})),
-						context.queryClient
-							.ensureQueryData(traceQueryOptions({ hash }))
-							.catch(() => ({ trace: null, prestate: null })),
-						fetchTransactionActivities({ data: { hash } }),
-					])
+				const [txData, activities] = await Promise.all([
+					context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+					fetchTransactionActivities({ data: { hash } }),
+				])
 
 				const activityEvents = activitiesToKnownEvents(activities, {
 					portal: txData.receipt.to,
 				})
-				return { ...txData, balanceChangesData, traceData, activityEvents }
+				return { ...txData, activityEvents }
 			} catch (error) {
 				console.error(error)
 				throw notFound({
@@ -183,9 +181,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const { tab, page } = Route.useSearch()
 	const {
-		balanceChangesData,
 		activityEvents,
-		traceData,
 		block,
 		feeBreakdown,
 		knownCall,
@@ -194,6 +190,21 @@ function RouteComponent() {
 		receipt,
 		transaction,
 	} = Route.useLoaderData()
+	const hash = receipt.transactionHash
+	const balanceChangesQuery = useQuery({
+		...balanceChangesQueryOptions({
+			hash,
+			limit: BALANCE_CHANGES_LIMIT,
+			offset: (page - 1) * BALANCE_CHANGES_LIMIT,
+		}),
+		enabled: typeof window !== 'undefined',
+	})
+	const traceQuery = useQuery({
+		...traceQueryOptions({ hash }),
+		enabled: typeof window !== 'undefined',
+	})
+	const balanceChangesData = balanceChangesQuery.data ?? EMPTY_BALANCE_CHANGES
+	const traceData = traceQuery.data ?? EMPTY_TRACE_DATA
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -281,7 +292,13 @@ function RouteComponent() {
 		title: 'Balances',
 		totalItems: balanceChangesData.total,
 		itemsLabel: 'balances',
-		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
+		content: (
+			<TxBalanceChanges
+				data={balanceChangesData}
+				loading={balanceChangesQuery.isPending}
+				page={page}
+			/>
+		),
 	})
 
 	if (hasCalls && calls) {

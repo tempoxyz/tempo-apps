@@ -14,14 +14,7 @@ import {
 } from '#lib/queries/balance-changes'
 
 export function TxBalanceChanges(props: TxBalanceChanges.Props) {
-	const { data, page } = props
-
-	if (data.total === 0)
-		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
-				No balance changes for this transaction.
-			</div>
-		)
+	const { data, loading = false, page } = props
 
 	const cols: DataGrid.Column[] = [
 		{ label: 'Address', align: 'start', width: '2fr', minWidth: 140 },
@@ -30,6 +23,13 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 		{ label: 'After', align: 'end', width: '2fr', minWidth: 160 },
 		{ label: 'Change', align: 'end', width: '2fr', minWidth: 160 },
 	]
+
+	if (data.total === 0 && !loading)
+		return (
+			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+				No balance changes for this transaction.
+			</div>
+		)
 
 	return (
 		<DataGrid
@@ -73,6 +73,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 			itemsLabel="changes"
 			itemsPerPage={LIMIT}
 			emptyState="No balance changes detected."
+			loading={loading}
 			pagination="simple"
 			showSimpleCount={false}
 		/>
@@ -82,6 +83,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 export namespace TxBalanceChanges {
 	export interface Props {
 		data: BalanceChangesData
+		loading?: boolean | undefined
 		page: number
 	}
 

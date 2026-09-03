@@ -44,6 +44,7 @@ import {
 } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { getFeeTokenForChain } from '#lib/fee-token'
+import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
@@ -73,7 +74,10 @@ function stripLineItemEvents(
 	}
 }
 
-async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+async function fetchReceiptDataUncached(params: {
+	hash: Hex.Hex
+	rpcUrl?: string
+}) {
 	const config = getWagmiConfig()
 	const client = getPublicClient(config)
 	if (!client) throw new Error('RPC client unavailable')
@@ -123,6 +127,16 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		receipt,
 		transaction,
 	}
+}
+
+async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+	if (params.rpcUrl) return fetchReceiptDataUncached(params)
+
+	return withImmutableDataCache({
+		key: `receipt-detail:v1:${TEMPO_CHAIN_ID}:${params.hash.toLowerCase()}`,
+		load: () => fetchReceiptDataUncached(params),
+		ttlSeconds: 300,
+	})
 }
 
 function getReceiptPresentation(

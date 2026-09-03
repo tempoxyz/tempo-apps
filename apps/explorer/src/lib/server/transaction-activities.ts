@@ -6,6 +6,7 @@ import type {
 	ActivityDataValue,
 	TransactionActivity,
 } from '#lib/domain/transaction-activities'
+import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { api } from '#lib/server/tempo-api'
 import { zHash } from '#lib/zod'
 import { getBatchedClient, getTempoChain } from '#wagmi.config.ts'
@@ -15,9 +16,13 @@ const InputSchema = z.object({ hash: zHash() })
 export const fetchTransactionActivities = createServerFn({ method: 'GET' })
 	.inputValidator((input) => InputSchema.parse(input))
 	.handler(async ({ data }): Promise<TransactionActivity[]> => {
-		return enrichVaultTokens(
-			await getTransactionActivities(data.hash, getTempoChain().id),
-		)
+		const chainId = getTempoChain().id
+		return withImmutableDataCache({
+			key: `transaction-activities:v1:${chainId}:${data.hash.toLowerCase()}`,
+			load: async () =>
+				enrichVaultTokens(await getTransactionActivities(data.hash, chainId)),
+			ttlSeconds: 300,
+		})
 	})
 
 export async function getTransactionActivities(
