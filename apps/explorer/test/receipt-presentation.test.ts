@@ -130,7 +130,7 @@ describe('receipt presentation', () => {
 		const redemption: KnownEvent = {
 			type: 'earn private redemption',
 			parts: [
-				{ type: 'action', value: 'Earn Redemption' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				{ type: 'amount', value: first },
 				{ type: 'text', value: 'for' },
 				{ type: 'amount', value: second },

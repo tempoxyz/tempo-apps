@@ -50,7 +50,7 @@ describe('renderReceiptText', () => {
 			{
 				type: 'earn private redemption',
 				parts: [
-					{ type: 'action', value: 'Earn Redemption' },
+					{ type: 'action', value: 'Withdraw from Earn' },
 					{
 						type: 'amount',
 						value: {
@@ -121,7 +121,7 @@ describe('renderReceiptText', () => {
 		)
 		expect(text).toContain('  0.25012 SENPATHUSDE TO 0X8117…DFB6')
 		expect(lines.find((line) => line.startsWith('2. '))).toMatch(
-			/^2\. EARN REDEMPTION\s+–$/,
+			/^2\. WITHDRAW FROM EARN\s+–$/,
 		)
 		expect(text).toContain('  0.25012 SENPATHUSDE FOR 0.5 DLUSD')
 		expect(lines.find((line) => line.startsWith('3. '))).toMatch(
