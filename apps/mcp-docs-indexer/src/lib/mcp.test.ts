@@ -107,6 +107,12 @@ describe('handleMcp', () => {
 			body.result.tools.map((tool: { name: string }) => tool.name),
 		).toEqual(['search', 'find_pages', 'read_page', 'code'])
 		expect(body.result.tools[3].description).toContain('codemode.search')
+		expect(body.result.tools[3].annotations).toEqual({
+			destructiveHint: false,
+			idempotentHint: true,
+			openWorldHint: true,
+			readOnlyHint: true,
+		})
 		expect(body.result.tools[0].inputSchema.properties).not.toHaveProperty(
 			'include_raw',
 		)

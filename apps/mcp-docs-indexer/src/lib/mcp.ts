@@ -378,7 +378,10 @@ async function listCodeTools(
 	const codeServer = await createCodeServer(tools, context)
 	return withMcpClient(codeServer, async (client) => {
 		const result = await client.listTools()
-		return result.tools
+		return result.tools.map((tool) => ({
+			...tool,
+			annotations: READ_ONLY_TOOL_ANNOTATIONS,
+		}))
 	})
 }
 
