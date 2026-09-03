@@ -42,16 +42,9 @@ export namespace Sphere {
 
 	export function Artwork(): React.JSX.Element {
 		return (
-			<img
-				src="/landing-circles.png"
-				alt=""
+			<div
 				aria-hidden="true"
-				decoding="async"
-				loading="lazy"
-				width={656}
-				height={285}
-				className="w-[656px] max-w-[120vw] h-auto"
-				draggable={false}
+				className="sphere-artwork w-[656px] max-w-[120vw] aspect-[656/285]"
 			/>
 		)
 	}
