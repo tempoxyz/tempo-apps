@@ -41,7 +41,6 @@ admin.post(
 			callerService: z.string().optional(),
 			dailyLimitUsd: z.string().nullable().optional().default(null),
 			allowedDestinations: z.array(z.string()).optional().default([]),
-			billable: z.boolean().optional().default(false),
 		}),
 	),
 	async (c) => {
@@ -51,7 +50,6 @@ admin.post(
 			callerService: body.callerService ?? body.label,
 			dailyLimitUsd: body.dailyLimitUsd,
 			allowedDestinations: body.allowedDestinations,
-			billable: body.billable,
 		})
 		return c.json({ key }, 201)
 	},
@@ -82,7 +80,6 @@ admin.patch(
 			callerService: z.string().optional(),
 			dailyLimitUsd: z.string().nullable().optional(),
 			allowedDestinations: z.array(z.string()).optional(),
-			billable: z.boolean().optional(),
 			active: z.boolean().optional(),
 		}),
 	),

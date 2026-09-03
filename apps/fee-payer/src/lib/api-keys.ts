@@ -11,8 +11,6 @@ const ApiKeyRecord = z.object({
 	dailyLimitUsd: z.string().nullable(),
 	/** Allowed destination addresses. Empty = any destination. */
 	allowedDestinations: z.array(z.string()),
-	/** Whether this key emits sponsorship intents for billing. */
-	billable: z.boolean().default(false),
 	/** ISO timestamp of creation. */
 	createdAt: z.string(),
 	/** Whether the key is active. */
@@ -71,7 +69,6 @@ export async function updateApiKey(
 			| 'label'
 			| 'dailyLimitUsd'
 			| 'allowedDestinations'
-			| 'billable'
 			| 'active'
 			| 'callerService'
 		>

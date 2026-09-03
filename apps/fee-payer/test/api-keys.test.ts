@@ -109,7 +109,6 @@ describe('admin API key management', () => {
 					callerService: 'full-key-client',
 					dailyLimitUsd: '10.00',
 					allowedDestinations: ['0x0000000000000000000000000000000000000001'],
-					billable: true,
 				}),
 			)
 			expect(response.status).toBe(201)
@@ -120,11 +119,10 @@ describe('admin API key management', () => {
 			const list = (await listRes.json()) as {
 				keys: Array<{
 					key: string
-					record: { billable: boolean; callerService?: string }
+					record: { callerService?: string }
 				}>
 			}
 			const entry = list.keys.find((k) => k.key === data.key)
-			expect(entry?.record.billable).toBe(true)
 			expect(entry?.record.callerService).toBe('full-key-client')
 		})
 
@@ -133,37 +131,6 @@ describe('admin API key management', () => {
 				adminRequest('POST', '/keys', {}),
 			)
 			expect(response.status).toBe(400)
-		})
-
-		it('defaults new and legacy keys to non-billable', async () => {
-			const createRes = await exports.default.fetch(
-				adminRequest('POST', '/keys', { label: 'Non-Billable Default' }),
-			)
-			const { key } = (await createRes.json()) as { key: string }
-
-			const legacyKey = 'tp_legacy_non_billable_default'
-			await env.SponsorApiKeyStore.put(
-				`api-key:${legacyKey}`,
-				JSON.stringify({
-					label: 'Legacy Non-Billable Default',
-					dailyLimitUsd: null,
-					allowedDestinations: [],
-					createdAt: '2026-06-20T12:00:00.000Z',
-					active: true,
-				}),
-			)
-
-			const response = await exports.default.fetch(adminRequest('GET', '/keys'))
-			expect(response.status).toBe(200)
-			const data = (await response.json()) as {
-				keys: Array<{ key: string; record: { billable: boolean } }>
-			}
-			expect(
-				data.keys.find((entry) => entry.key === key)?.record.billable,
-			).toBe(false)
-			expect(
-				data.keys.find((entry) => entry.key === legacyKey)?.record.billable,
-			).toBe(false)
 		})
 
 		it('lists keys', async () => {
@@ -220,7 +187,6 @@ describe('admin API key management', () => {
 				adminRequest('PATCH', `/keys/${key}`, {
 					label: 'Updated',
 					dailyLimitUsd: '5.00',
-					billable: true,
 				}),
 			)
 			expect(updateRes.status).toBe(200)
@@ -233,14 +199,12 @@ describe('admin API key management', () => {
 					record: {
 						label: string
 						dailyLimitUsd: string | null
-						billable: boolean
 					}
 				}>
 			}
 			const updated = data.keys.find((k) => k.key === key)
 			expect(updated?.record.label).toBe('Updated')
 			expect(updated?.record.dailyLimitUsd).toBe('5.00')
-			expect(updated?.record.billable).toBe(true)
 		})
 
 		it('returns 404 for updating nonexistent key', async () => {
