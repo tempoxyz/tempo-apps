@@ -65,8 +65,6 @@ jobs:
             env: mainnet
           #### fee-payer
           - app: fee-payer
-            env: privy
-          - app: fee-payer
             env: devnet
           - app: fee-payer
             env: moderato
