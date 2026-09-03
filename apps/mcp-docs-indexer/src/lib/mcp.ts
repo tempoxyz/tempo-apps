@@ -15,6 +15,12 @@ import {
 	recordJsonRpcError,
 	recordToolCall,
 } from './metrics.js'
+import {
+	parseProductFeedback,
+	sendProductFeedback,
+	type ProductFeedback,
+	type ProductFeedbackReceipt,
+} from './product-feedback.js'
 import type { Source } from './sources.js'
 
 type JsonRpcRequest = {
@@ -27,7 +33,10 @@ type JsonRpcRequest = {
 	}
 }
 
-type ToolArguments = SearchArguments & ReadPageArguments & FindPagesArguments
+type ToolArguments = SearchArguments &
+	ReadPageArguments &
+	FindPagesArguments &
+	Record<string, unknown>
 
 type SearchArguments = {
 	query?: unknown
@@ -102,6 +111,12 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
 	idempotentHint: true,
 	openWorldHint: true,
 	readOnlyHint: true,
+} as const
+const SIDE_EFFECTING_TOOL_ANNOTATIONS = {
+	destructiveHint: false,
+	idempotentHint: false,
+	openWorldHint: true,
+	readOnlyHint: false,
 } as const
 
 type SearchResultChunk = AiSearchSearchResponse['chunks'][number]
@@ -253,6 +268,11 @@ export async function handleMcp(
 			handleFindPages(req, body, context.sources ?? []),
 		)
 	}
+	if (body.params?.name === 'send_product_feedback') {
+		return trackToolCall('send_product_feedback', () =>
+			handleProductFeedback(req, body),
+		)
+	}
 	if (body.params?.name !== 'search') return undefined
 	const args = body.params.arguments
 
@@ -299,6 +319,35 @@ export async function handleMcp(
 			return toolErrorResponse(req, body.id, err)
 		}
 	})
+}
+
+async function handleProductFeedback(
+	req: Request,
+	body: JsonRpcRequest,
+): Promise<Response> {
+	let report: ProductFeedback
+	try {
+		report = parseProductFeedback(body.params?.arguments)
+	} catch (error) {
+		return jsonRpcErrorFor(
+			req,
+			body,
+			-32602,
+			error instanceof Error
+				? error.message
+				: 'Invalid product feedback payload',
+		)
+	}
+
+	try {
+		return productFeedbackToolResult(
+			req,
+			body.id,
+			await sendProductFeedback(report),
+		)
+	} catch (error) {
+		return toolErrorResponse(req, body.id, error)
+	}
 }
 
 async function createCodeServer(
@@ -1345,6 +1394,17 @@ function toolResult(
 	})
 }
 
+function productFeedbackToolResult(
+	req: Request,
+	id: JsonRpcRequest['id'],
+	receipt: ProductFeedbackReceipt,
+): Response {
+	return jsonRpc(req, id, {
+		content: [{ type: 'text', text: JSON.stringify(receipt) }],
+		structuredContent: receipt,
+	})
+}
+
 function toolErrorResponse(
 	req: Request,
 	id: JsonRpcRequest['id'],
@@ -1572,6 +1632,49 @@ function toolSchemas(sources: Source[]): Tool[] {
 					},
 				},
 				required: ['source'],
+			},
+			execution: { taskSupport: 'forbidden' },
+		},
+		{
+			name: 'send_product_feedback',
+			description:
+				'Use only when the user explicitly asks to send Tempo feedback or report a bug. Free and side-effecting: sends the approved report to Tempo maintainers. Troubleshooting or mentioning an error is not authorization. Include only the minimum sanitized reproduction details. Never include secrets, credentials, private keys, payment material, personal data, wallet or session identifiers, transaction hashes, or raw tool inputs or outputs. Do not automatically attach tempo wallet debug output.',
+			annotations: SIDE_EFFECTING_TOOL_ANNOTATIONS,
+			inputSchema: {
+				type: 'object',
+				additionalProperties: false,
+				properties: {
+					kind: {
+						type: 'string',
+						enum: ['bug_report', 'feedback'],
+					},
+					summary: { type: 'string', minLength: 1, maxLength: 200 },
+					details: { type: 'string', minLength: 1, maxLength: 3000 },
+					steps_to_reproduce: {
+						type: 'string',
+						minLength: 1,
+						maxLength: 2000,
+					},
+					expected_behavior: {
+						type: 'string',
+						minLength: 1,
+						maxLength: 2000,
+					},
+					actual_behavior: {
+						type: 'string',
+						minLength: 1,
+						maxLength: 2000,
+					},
+				},
+				required: ['kind', 'summary', 'details'],
+			},
+			outputSchema: {
+				type: 'object',
+				properties: {
+					accepted: { type: 'boolean', const: true },
+					report_id: { type: 'string', minLength: 1 },
+				},
+				required: ['accepted', 'report_id'],
 			},
 			execution: { taskSupport: 'forbidden' },
 		},

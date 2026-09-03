@@ -8,9 +8,10 @@ canonical Markdown pages for configured sources into the instance's
 query time.
 
 The Worker exposes an optimized MCP endpoint on `mcp.tempo.xyz`. It handles
-`tools/list`, `tools/call` for `search`, and docs source `resources/*` locally
-so it can provide a compact tool schema, source-aware filters, and lower-token
-search responses. Unsupported MCP methods fall through to the AI Search MCP
+`tools/list`, local documentation tools, `send_product_feedback`, and docs
+source `resources/*` locally so it can provide compact schemas, source-aware
+filters, lower-token search responses, and a confirmed feedback delivery path.
+Unsupported MCP methods fall through to the AI Search MCP
 upstream, so clients still connect to a stable branded URL instead of the
 opaque `<instance-id>.search.ai.cloudflare.com` hostname.
 
@@ -117,6 +118,15 @@ If an AI Search metadata filter returns no chunks for a known source, the
 server retries with a wider unfiltered search, filters chunks by source
 metadata/key prefix, and remembers that source briefly so repeated filtered
 queries skip the stale metadata-filter attempt.
+
+## MCP product feedback
+
+`send_product_feedback` is a free, side-effecting tool for feedback or bug
+reports the user explicitly asks to submit. It validates the bounded report,
+rejects likely sensitive or identifying data, and sends the sanitized fields to
+the Tempo docs feedback ingress. A successful call returns `accepted: true` and
+the stable `report_id` assigned by the receiving service. Delivery failures are
+returned as tool errors and never as accepted reports.
 
 The server also exposes MCP resources:
 

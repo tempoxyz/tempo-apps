@@ -53,8 +53,10 @@ describe('handleMcp', () => {
 
 		expect(res).toBeDefined()
 		const body = await res?.json()
-		expect(body.result.tools).toHaveLength(3)
-		expect(body.result.tools.map((tool: Tool) => tool.annotations)).toEqual(
+		expect(body.result.tools).toHaveLength(4)
+		expect(
+			body.result.tools.slice(0, 3).map((tool: Tool) => tool.annotations),
+		).toEqual(
 			Array.from({ length: 3 }, () => ({
 				destructiveHint: false,
 				idempotentHint: true,
@@ -83,6 +85,29 @@ describe('handleMcp', () => {
 			'viem',
 			'wagmi',
 		])
+		expect(body.result.tools[3]).toMatchObject({
+			name: 'send_product_feedback',
+			annotations: {
+				destructiveHint: false,
+				idempotentHint: false,
+				openWorldHint: true,
+				readOnlyHint: false,
+			},
+			inputSchema: {
+				additionalProperties: false,
+				required: ['kind', 'summary', 'details'],
+				properties: {
+					kind: { enum: ['bug_report', 'feedback'] },
+				},
+			},
+			outputSchema: {
+				required: ['accepted', 'report_id'],
+			},
+		})
+		expect(body.result.tools[3].description).toContain(
+			'Free and side-effecting',
+		)
+		expect(body.result.tools[3].description).toContain('explicitly asks')
 	})
 
 	it('adds the codemode code tool when an executor is configured', async () => {
@@ -105,8 +130,191 @@ describe('handleMcp', () => {
 		const body = await res?.json()
 		expect(
 			body.result.tools.map((tool: { name: string }) => tool.name),
-		).toEqual(['search', 'find_pages', 'read_page', 'code'])
-		expect(body.result.tools[3].description).toContain('codemode.search')
+		).toEqual([
+			'search',
+			'find_pages',
+			'read_page',
+			'send_product_feedback',
+			'code',
+		])
+		expect(body.result.tools[4].description).toContain('codemode.search')
+	})
+
+	it('validates product feedback before submission', async () => {
+		const fetch = vi.fn()
+		vi.stubGlobal('fetch', fetch)
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 41,
+					method: 'tools/call',
+					params: {
+						name: 'send_product_feedback',
+						arguments: {
+							kind: 'problem',
+							summary: 'Search issue',
+							details: 'Search returned no results.',
+						},
+					},
+				}),
+			}),
+			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
+		)
+
+		const body = await res?.json()
+		expect(body.error).toMatchObject({
+			code: -32602,
+			message: 'Invalid product feedback payload',
+		})
+		expect(fetch).not.toHaveBeenCalled()
+	})
+
+	it('rejects identifying data in product feedback', async () => {
+		const fetch = vi.fn()
+		vi.stubGlobal('fetch', fetch)
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 45,
+					method: 'tools/call',
+					params: {
+						name: 'send_product_feedback',
+						arguments: {
+							kind: 'bug_report',
+							summary: 'Wallet issue',
+							details:
+								'Observed with 0x1111111111111111111111111111111111111111.',
+						},
+					},
+				}),
+			}),
+			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
+		)
+
+		const body = await res?.json()
+		expect(body.error).toMatchObject({
+			code: -32602,
+			message: 'Product feedback must exclude sensitive or identifying data',
+		})
+		expect(fetch).not.toHaveBeenCalled()
+	})
+
+	it('maps complete product feedback and returns its acknowledgement', async () => {
+		const fetch = vi.fn(async () =>
+			Response.json(
+				{ accepted: true, report_id: 'fb_report_123' },
+				{ status: 201 },
+			),
+		)
+		vi.stubGlobal('fetch', fetch)
+		const report = {
+			kind: 'bug_report',
+			summary: 'Search misses a page',
+			details: 'The page is indexed but does not appear.',
+			steps_to_reproduce: 'Search for its exact title.',
+			expected_behavior: 'The page appears.',
+			actual_behavior: 'No result appears.',
+		}
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 42,
+					method: 'tools/call',
+					params: { name: 'send_product_feedback', arguments: report },
+				}),
+			}),
+			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
+		)
+
+		expect(fetch).toHaveBeenCalledWith(
+			'https://tempo.xyz/developers/api/feedback',
+			expect.objectContaining({
+				method: 'POST',
+				body: JSON.stringify({ source: 'mcp', ...report }),
+			}),
+		)
+		const body = await res?.json()
+		expect(body.result.structuredContent).toEqual({
+			accepted: true,
+			report_id: 'fb_report_123',
+		})
+		expect(JSON.parse(body.result.content[0].text)).toEqual(
+			body.result.structuredContent,
+		)
+	})
+
+	it('omits absent optional product feedback fields', async () => {
+		const fetch = vi.fn(async () =>
+			Response.json({ accepted: true, report_id: 'fb_report_456' }),
+		)
+		vi.stubGlobal('fetch', fetch)
+		await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 43,
+					method: 'tools/call',
+					params: {
+						name: 'send_product_feedback',
+						arguments: {
+							kind: 'feedback',
+							summary: 'Result ordering',
+							details: 'Prefer exact title matches first.',
+						},
+					},
+				}),
+			}),
+			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
+		)
+
+		const payload = JSON.parse(fetch.mock.calls[0][1]?.body as string)
+		expect(payload).toEqual({
+			source: 'mcp',
+			kind: 'feedback',
+			summary: 'Result ordering',
+			details: 'Prefer exact title matches first.',
+		})
+	})
+
+	it('reports product feedback transport failures without acceptance', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response('unavailable', { status: 503 })),
+		)
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 44,
+					method: 'tools/call',
+					params: {
+						name: 'send_product_feedback',
+						arguments: {
+							kind: 'feedback',
+							summary: 'Result ordering',
+							details: 'Prefer exact title matches first.',
+						},
+					},
+				}),
+			}),
+			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
+		)
+
+		const body = await res?.json()
+		expect(body.result.isError).toBe(true)
+		expect(JSON.parse(body.result.content[0].text)).toEqual({
+			success: false,
+			error: 'Product feedback delivery failed with status 503',
+		})
+		expect(body.result.structuredContent).toBeUndefined()
 	})
 
 	it('normalizes simple source and result controls into retrieval options', async () => {
