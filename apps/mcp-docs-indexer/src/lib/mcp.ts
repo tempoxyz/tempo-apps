@@ -1484,15 +1484,6 @@ function toolSchemas(sources: Source[]): Tool[] {
 						minimum: 300,
 						maximum: 50000,
 					},
-					include_raw: {
-						type: 'boolean',
-						description: 'Return raw AI Search chunks.',
-					},
-					ai_search_options: {
-						type: 'object',
-						description: 'Advanced AI Search options.',
-						additionalProperties: true,
-					},
 					response_format: {
 						type: 'string',
 						enum: ['text', 'structured'],

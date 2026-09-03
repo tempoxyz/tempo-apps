@@ -73,7 +73,6 @@ The local `search` tool accepts Code Mode-friendly top-level controls:
 | `max_results`  | Maximum chunks to return; defaults to `5`                      |
 | `max_chars_per_chunk` | Maximum compact text chars per chunk; defaults to `1200` |
 | `max_total_chars` | Maximum total compact chunk text chars; defaults to `2400` |
-| `include_raw`  | Return full AI Search chunks instead of compact chunks         |
 | `response_format` | Use `structured` to return data in MCP `structuredContent` with a short text summary |
 
 When `source` and `sources` are omitted, the server applies a conservative
@@ -100,15 +99,16 @@ enters an MCP client's context window. Compact output also returns at most one
 chunk per page, preserving result diversity and avoiding repeated snippets from
 the same URL. Search text is bounded by `max_total_chars` after page
 deduplication, so broad searches cannot accidentally fill the client context
-with five large excerpts. Advanced `ai_search_options` are still accepted and
-normalized into the current AI Search binding shape.
+with five large excerpts. The public tool schema exposes only bounded,
+task-specific controls; upstream AI Search configuration and raw chunk
+responses are not advertised to MCP clients.
 
 Pass `response_format: "structured"` on `search`, `find_pages`, or `read_page`
 when the client can read MCP `structuredContent`; this keeps the text content to
 a short status line while preserving the same machine-readable result object.
 
 AI Search response caching is enabled by default with the `close_enough`
-threshold. Clients can override this with `ai_search_options.cache`.
+threshold.
 The Worker also keeps a small 60-second in-memory cache of successful search
 results per isolate to skip repeated AI Search round trips for identical
 normalized searches.
