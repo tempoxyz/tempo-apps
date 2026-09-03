@@ -19,6 +19,11 @@ const RECEIVE_POLICY_GUARD = Address.from(
 	'0xB10C000000000000000000000000000000000000',
 )
 
+const PRIVATE_ZONE_ACTIONS = new Set([
+	'Private Zone Deposit',
+	'Private Zone Withdrawal',
+])
+
 export type ReceiptVoucher = {
 	packetSize: number
 	packetCount: number
@@ -201,6 +206,12 @@ function enrichAmount(
 export function getReceiptEventSideAmount(
 	event: KnownEvent,
 ): NonNullable<KnownEvent['totalAmount']> | undefined {
+	if (
+		event.parts.some(
+			(part) => part.type === 'action' && PRIVATE_ZONE_ACTIONS.has(part.value),
+		)
+	)
+		return undefined
 	if (event.totalAmount) return event.totalAmount
 	const amounts = event.parts.flatMap((part) =>
 		part.type === 'amount' ? [part.value] : [],

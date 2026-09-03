@@ -147,6 +147,39 @@ describe('receipt presentation', () => {
 		).toBe('$6')
 	})
 
+	test('hides side amounts for private Zone activity', () => {
+		const amount = { token, value: 5_000n, decimals: 6 }
+		const privateDeposit: KnownEvent = {
+			type: 'private-assets-deposited',
+			parts: [
+				{ type: 'action', value: 'Private Zone Deposit' },
+				{ type: 'amount', value: amount },
+			],
+		}
+		const privateWithdrawal: KnownEvent = {
+			type: 'private-shares-redeemed',
+			parts: [
+				{ type: 'action', value: 'Private Zone Withdrawal' },
+				{ type: 'amount', value: amount },
+			],
+			totalAmount: { ...amount, value: 10_000n },
+		}
+		const publicWithdrawal: KnownEvent = {
+			...privateWithdrawal,
+			parts: [
+				{ type: 'action', value: 'Withdraw from Zone 1' },
+				{ type: 'amount', value: amount },
+			],
+		}
+
+		expect(getReceiptEventSideAmount(privateDeposit)).toBeUndefined()
+		expect(getReceiptEventSideAmount(privateWithdrawal)).toBeUndefined()
+		expect(getReceiptEventSideAmount(publicWithdrawal)).toEqual({
+			...amount,
+			value: 10_000n,
+		})
+	})
+
 	test('derives regular totals from the same visible token flows', () => {
 		const presentation = build([
 			{
