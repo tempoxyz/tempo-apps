@@ -165,11 +165,14 @@ export function selectTransactionDescriptionEvents(params: {
 			(event) => zoneEventDirection(event) === 'withdrawal',
 		)
 		const earnEvents = fallbackEvents.filter(isEarnReceiptSummary)
+		const propAmmSwaps = fallbackEvents.filter(isPropAmmSwap)
 		const zoneDeposits = fallbackEvents.filter(
 			(event) => zoneEventDirection(event) === 'deposit',
 		)
-		return [...zoneWithdrawals, ...earnEvents, ...zoneDeposits]
+		return [...zoneWithdrawals, ...earnEvents, ...propAmmSwaps, ...zoneDeposits]
 	}
+	const propAmmSwaps = fallbackEvents.filter(isPropAmmSwap)
+	if (propAmmSwaps.length > 0) return propAmmSwaps
 	if (params.activityEvents.length === 0) return [...fallbackEvents]
 
 	const hasDecodedZoneEvent = fallbackEvents.some((event) =>
@@ -215,6 +218,10 @@ export function selectTransactionDescriptionEvents(params: {
 
 function isEarnReceiptSummary(event: KnownEvent): boolean {
 	return event.type.startsWith('earn ')
+}
+
+function isPropAmmSwap(event: KnownEvent): boolean {
+	return event.type === 'propamm swap'
 }
 
 function isPrivateZoneEvent(event: KnownEvent): boolean {

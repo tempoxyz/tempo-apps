@@ -279,6 +279,12 @@ export const receivePolicyGuardAbi = parseAbi([
 	'event ReceiptBurned(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, uint256 amount)',
 ])
 
+// Customer-agnostic propAMM trade event. Bundling this event lets the explorer
+// identify swaps without relying on a deployment allowlist or verified ABI.
+export const propAmmEventsAbi = parseAbi([
+	'event TradeExecuted(address indexed taker, address indexed recipient, bytes32 indexed customerId, bytes32 tradeId, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, uint256 oraclePrice, uint256 oracleUpdatedAt)',
+])
+
 // Customer-agnostic Tempo Earn events. These are bundled separately from viem's
 // protocol ABIs so transaction logs remain readable before or without contract
 // verification. Standard Ownable events are intentionally omitted because their
@@ -360,6 +366,7 @@ export const earnEventsAbi = parseAbi([
 export const Abis = {
 	...ViemTempoAbis,
 	earn: earnEventsAbi,
+	propAmm: propAmmEventsAbi,
 	receivePolicyGuard: receivePolicyGuardAbi,
 	stablecoinDex: stablecoinDexAbi,
 	streamChannel: streamChannelAbi,

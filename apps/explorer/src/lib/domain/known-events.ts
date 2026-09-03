@@ -15,6 +15,7 @@ import {
 	Abis,
 	allAbis,
 	earnEventsAbi,
+	propAmmEventsAbi,
 	zoneFactoryAbi,
 	zoneOutboxAbi,
 	zonePortalAbi,
@@ -69,6 +70,7 @@ const earnEventSignatures = new Map(
 		getEventSignature(event),
 	]),
 )
+const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
 
@@ -766,6 +768,25 @@ function createDetectors(
 	}
 
 	return {
+		propAmm(event: ParsedEvent) {
+			if (event.topics[0]?.toLowerCase() !== propAmmTradeSelector) return null
+			const { tokenIn, tokenOut, amountIn, amountOut } = event.args as {
+				tokenIn: Address.Address
+				tokenOut: Address.Address
+				amountIn: bigint
+				amountOut: bigint
+			}
+
+			return {
+				type: 'propamm swap',
+				parts: [
+					{ type: 'action', value: 'propAMM Swap' },
+					{ type: 'amount', value: createAmount(amountIn, tokenIn) },
+					{ type: 'text', value: 'for' },
+					{ type: 'amount', value: createAmount(amountOut, tokenOut) },
+				],
+			}
+		},
 		earn(event: ParsedEvent) {
 			const selector = event.topics[0]?.toLowerCase()
 			if (!selector) return null
@@ -2018,6 +2039,7 @@ export function parseKnownEvent(
 	)
 
 	const detected =
+		detectors.propAmm(event) ||
 		detectors.zone(event) ||
 		detectors.tip20(event) ||
 		detectors.tip20Factory(event) ||
@@ -2507,6 +2529,32 @@ export function parseKnownEvents(
 			index,
 		}))
 
+	// A propAMM trade is self-identifying through TradeExecuted. Hide the two
+	// settlement transfers so the receipt shows one swap summary instead.
+	for (const trade of dedupedEvents) {
+		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue
+		const { taker, tokenIn, tokenOut, amountIn, amountOut } = trade.args as {
+			taker: Address.Address
+			tokenIn: Address.Address
+			tokenOut: Address.Address
+			amountIn: bigint
+			amountOut: bigint
+		}
+		for (const { event, index } of transferEvents) {
+			const { from, to, amount } = event.args
+			const isInput =
+				Address.isEqual(event.address, tokenIn) &&
+				Address.isEqual(from, taker) &&
+				Address.isEqual(to, trade.address) &&
+				amount === amountIn
+			const isOutput =
+				Address.isEqual(event.address, tokenOut) &&
+				Address.isEqual(from, trade.address) &&
+				amount === amountOut
+			if (isInput || isOutput) swapIndices.add(index)
+		}
+	}
+
 	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
@@ -2614,6 +2662,7 @@ export function parseKnownEvents(
 		const event = dedupedEvents[index]
 
 		const detected =
+			detectors.propAmm(event) ||
 			detectors.feePayer(event) ||
 			detectors.zone(event) ||
 			detectors.tip20(event) ||

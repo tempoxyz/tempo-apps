@@ -14,6 +14,7 @@ import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	earnEventsAbi,
+	propAmmEventsAbi,
 	stablecoinDexAbi,
 	zoneFactoryAbi,
 	zoneOutboxAbi,
@@ -37,6 +38,8 @@ import {
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
+const PROP_AMM_POOL = `0x${'7'.repeat(40)}` as const
+const PROP_AMM_OUTPUT_TOKEN = `0x${'6'.repeat(40)}` as const
 
 const bounceBackAbi = [
 	{
@@ -847,6 +850,86 @@ describe('parseKnownEvents', () => {
 			expect.soft(event?.type, abiEvent.name).toBe('earn event')
 			expect.soft(event?.parts[0]?.type, abiEvent.name).toBe('action')
 		}
+	})
+
+	it('composes a propAMM swap and hides its settlement transfers', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const amountIn = 10_000n
+		const amountOut = 11_449n
+
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+
+		const tradeLog = mockZoneEventLog(propAmmEventsAbi[0], PROP_AMM_POOL, {
+			taker: accountAddress,
+			recipient: recipientAddress,
+			tokenIn: userTokenAddress,
+			tokenOut: PROP_AMM_OUTPUT_TOKEN,
+			amountIn,
+			amountOut,
+		})
+		const events = parseKnownEvents(
+			mockReceipt(
+				[
+					transferLog(
+						userTokenAddress,
+						accountAddress,
+						PROP_AMM_POOL,
+						amountIn,
+					),
+					transferLog(
+						PROP_AMM_OUTPUT_TOKEN,
+						PROP_AMM_POOL,
+						recipientAddress,
+						amountOut,
+					),
+					tradeLog,
+				],
+				accountAddress,
+				hash,
+			),
+		)
+
+		expect(events).toEqual([
+			{
+				type: 'propamm swap',
+				parts: [
+					{ type: 'action', value: 'propAMM Swap' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(userTokenAddress),
+							value: amountIn,
+						},
+					},
+					{ type: 'text', value: 'for' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(PROP_AMM_OUTPUT_TOKEN),
+							value: amountOut,
+						},
+					},
+				],
+			},
+		])
+		expect(parseKnownEvent(tradeLog)?.type).toBe('propamm swap')
 	})
 
 	it.each([

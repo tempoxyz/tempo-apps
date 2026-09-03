@@ -216,7 +216,7 @@ export function getReceiptEventSideAmount(
 	const amounts = event.parts.flatMap((part) =>
 		part.type === 'amount' ? [part.value] : [],
 	)
-	if (event.type === 'swap') return amounts[0]
+	if (event.type === 'swap' || event.type === 'propamm swap') return amounts[0]
 	return amounts.length === 1 ? amounts[0] : undefined
 }
 
