@@ -298,6 +298,34 @@ input[type="number"] {
 	scrollbar-gutter: stable;
 }
 
+/* Landing orb.
+ *
+ * Two renders of the same artwork, cropped identically, so switching theme
+ * swaps the shading without moving the arch. The dark render is near-white
+ * line work that disappears on a white page; the light one carries its own
+ * shading.
+ *
+ * Painted as a background rather than an <img> for two reasons: only the
+ * asset for the active theme is fetched, and the theme is a `data-theme`
+ * attribute set before first paint — a React-driven `src` resolves after
+ * hydration, so a light-mode visitor would see the dark render flash first.
+ */
+.sphere-artwork {
+	background-image: url("/landing-circles.png");
+	background-repeat: no-repeat;
+	background-size: 100% auto;
+}
+
+/* The light render carries real shading, so at full strength its strands
+ * compete with the footer links they pass behind. Held back to 42%, which
+ * keeps its darkest strand clearly stronger than the old flat-grey asset
+ * while staying clear of the footer. The dark render is faint enough already
+ * to stay at full strength. */
+html[data-theme="light"] .sphere-artwork {
+	background-image: url("/landing-circles-light.png");
+	opacity: 0.42;
+}
+
 .midcut {
 	display: inline-grid;
 	grid-template-areas: "content";
