@@ -12,7 +12,7 @@ const sender = '0x0000000000000000000000000000000000000003'
 const sponsorAddress = '0x0000000000000000000000000000000000000004'
 const target = '0x0000000000000000000000000000000000000005'
 const signedAt = '2026-06-20T12:00:00.000Z'
-const attributionKey = 'privy-app-123'
+const attributionKey = 'example-client-123'
 const feePayerSignature = {
 	r: `0x${'11'.repeat(32)}`,
 	s: `0x${'22'.repeat(32)}`,
