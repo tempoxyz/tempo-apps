@@ -850,12 +850,16 @@ describe('parseKnownEvents', () => {
 	})
 
 	it.each([
-		['EarnDeposit', 7, 'Earn Deposit'],
-		['EarnRedeem', 7, 'Earn Redemption'],
-		['Deposited', 4, 'Earn Vault Deposit'],
-		['Deposited', 3, 'Earn Engine Deposit'],
-		['Redeemed', 4, 'Earn Vault Redemption'],
-		['Redeemed', 3, 'Earn Engine Redemption'],
+		['EarnDeposit', 7, 'Deposit to Earn'],
+		['EarnRedeem', 7, 'Withdraw from Earn'],
+		['Deposited', 4, 'Deposit to Earn'],
+		['Deposited', 3, 'Deposit to Earn'],
+		['Redeemed', 4, 'Withdraw from Earn'],
+		['Redeemed', 3, 'Withdraw from Earn'],
+		['VenueSharesDeposited', 5, 'Move Position to Earn'],
+		['VenueSharesDeposited', 3, 'Move Position to Earn'],
+		['WithdrewExact', 4, 'Withdraw from Earn'],
+		['WithdrewExact', 3, 'Withdraw from Earn'],
 	] as const)('labels %s/%i without relying on contract verification', (name, arity, label) => {
 		const abiEvent = earnEventsAbi.find(
 			(event) => event.name === name && event.inputs.length === arity,
@@ -919,7 +923,7 @@ describe('parseKnownEvents', () => {
 		).find((event) => event.type === 'earn deposit')
 
 		expect(summary?.parts).toEqual([
-			{ type: 'action', value: 'Earn Deposit' },
+			{ type: 'action', value: 'Deposit to Earn' },
 			{
 				type: 'amount',
 				value: { token: Address.checksum(userTokenAddress), value: assets },
@@ -930,6 +934,88 @@ describe('parseKnownEvents', () => {
 				value: { token: Address.checksum(shareToken), value: earnShares },
 			},
 		])
+	})
+
+	it('describes an Earn-funded transfer as a Send', () => {
+		const hash = `0x${'8'.repeat(64)}` as const
+		const vault = recipientAddress
+		const shareToken = Address.from(
+			'0x20c0000000000000000000000000000000000012',
+		)
+		const assets = 1_110_000n
+		const earnShares = 555_000n
+		const withdrewExact = earnEventsAbi.find(
+			(event) => event.name === 'WithdrewExact' && event.inputs.length === 4,
+		)
+		expect(withdrewExact).toBeDefined()
+		if (!withdrewExact) return
+
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from: vault, to: accountAddress },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [assets]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: shareToken,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Burn',
+						args: { from: accountAddress },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [earnShares]),
+				},
+				hash,
+			),
+			mockZoneEventLog(withdrewExact, vault, {
+				caller: accountAddress,
+				receiver: accountAddress,
+				assets,
+				earnSharesBurned: earnShares,
+			}),
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from: accountAddress, to: recipientAddress },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [assets]),
+				},
+				hash,
+			),
+		]
+
+		const summary = parseKnownEvents(
+			mockReceipt(logs, accountAddress, hash),
+		).find((event) => event.type === 'earn send')
+
+		expect(summary).toEqual({
+			type: 'earn send',
+			parts: [
+				{ type: 'action', value: 'Send' },
+				{
+					type: 'amount',
+					value: { token: Address.checksum(userTokenAddress), value: assets },
+				},
+				{ type: 'text', value: 'to' },
+				{ type: 'account', value: Address.checksum(recipientAddress) },
+			],
+			note: [['Source', { type: 'text', value: 'Earn balance' }]],
+			meta: {
+				from: Address.checksum(accountAddress),
+				to: Address.checksum(recipientAddress),
+			},
+		})
 	})
 
 	it('composes Earn reward funding and root publication receipt rows', () => {
@@ -982,7 +1068,7 @@ describe('parseKnownEvents', () => {
 			{
 				type: 'earn reward funding',
 				parts: [
-					{ type: 'action', value: 'Fund Earn Rewards' },
+					{ type: 'action', value: 'Add Earn Rewards' },
 					{
 						type: 'amount',
 						value: { token: Address.checksum(shareToken), value: earnShares },
@@ -992,7 +1078,7 @@ describe('parseKnownEvents', () => {
 			{
 				type: 'earn reward root',
 				parts: [
-					{ type: 'action', value: 'Publish Earn Reward Root' },
+					{ type: 'action', value: 'Publish Reward Allocation' },
 					{ type: 'text', value: 'v12 for' },
 					{
 						type: 'amount',

@@ -124,7 +124,7 @@ describe('hasNonAdditiveVaultActivity', () => {
 		const earnDeposit: KnownEvent = {
 			type: 'earn private deposit',
 			parts: [
-				{ type: 'action', value: 'Earn Deposit' },
+				{ type: 'action', value: 'Deposit to Earn' },
 				{
 					type: 'amount',
 					value: { token: tokenAddress, value: 1_000_000n, decimals: 6 },
@@ -137,7 +137,7 @@ describe('hasNonAdditiveVaultActivity', () => {
 			hasNonAdditiveVaultActivity([
 				{
 					type: 'earn reward root',
-					parts: [{ type: 'action', value: 'Publish Earn Reward Root' }],
+					parts: [{ type: 'action', value: 'Publish Reward Allocation' }],
 				},
 			]),
 		).toBe(true)

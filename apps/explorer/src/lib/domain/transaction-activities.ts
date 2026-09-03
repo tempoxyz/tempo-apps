@@ -139,7 +139,7 @@ function vaultActivityEvent(activity: TransactionActivity): KnownEvent | null {
 		parts: [
 			{
 				type: 'action',
-				value: isDeposit ? 'Vault Deposit' : 'Vault Withdrawal',
+				value: isDeposit ? 'Deposit to Earn' : 'Withdraw from Earn',
 			},
 			source,
 			{ type: 'text', value: 'for' },
