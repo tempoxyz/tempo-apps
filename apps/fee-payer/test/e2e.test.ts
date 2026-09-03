@@ -137,9 +137,11 @@ describe('fee-payer integration', () => {
 			)
 
 			expect([200, 204]).toContain(response.status)
-			expect(response.headers.get('Access-Control-Allow-Headers')).toContain(
-				'content-type',
+			const allowedHeaders = response.headers.get(
+				'Access-Control-Allow-Headers',
 			)
+			expect(allowedHeaders).toContain('Content-Type')
+			expect(allowedHeaders).not.toContain('X-Tempo-Attribution-Key')
 		})
 
 		it('handles health check / root path', async () => {
