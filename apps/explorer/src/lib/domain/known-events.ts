@@ -2533,13 +2533,15 @@ export function parseKnownEvents(
 	// settlement transfers so the receipt shows one swap summary instead.
 	for (const trade of dedupedEvents) {
 		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue
-		const { taker, tokenIn, tokenOut, amountIn, amountOut } = trade.args as {
-			taker: Address.Address
-			tokenIn: Address.Address
-			tokenOut: Address.Address
-			amountIn: bigint
-			amountOut: bigint
-		}
+		const { taker, recipient, tokenIn, tokenOut, amountIn, amountOut } =
+			trade.args as {
+				taker: Address.Address
+				recipient: Address.Address
+				tokenIn: Address.Address
+				tokenOut: Address.Address
+				amountIn: bigint
+				amountOut: bigint
+			}
 		for (const { event, index } of transferEvents) {
 			const { from, to, amount } = event.args
 			const isInput =
@@ -2550,6 +2552,7 @@ export function parseKnownEvents(
 			const isOutput =
 				Address.isEqual(event.address, tokenOut) &&
 				Address.isEqual(from, trade.address) &&
+				Address.isEqual(to, recipient) &&
 				amount === amountOut
 			if (isInput || isOutput) swapIndices.add(index)
 		}

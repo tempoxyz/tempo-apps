@@ -40,6 +40,7 @@ const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
 const PROP_AMM_POOL = `0x${'7'.repeat(40)}` as const
 const PROP_AMM_OUTPUT_TOKEN = `0x${'6'.repeat(40)}` as const
+const UNRELATED_RECIPIENT = `0x${'4'.repeat(40)}` as const
 
 const bounceBackAbi = [
 	{
@@ -852,7 +853,7 @@ describe('parseKnownEvents', () => {
 		}
 	})
 
-	it('composes a propAMM swap and hides its settlement transfers', () => {
+	it('composes a propAMM swap and hides only its settlement transfers', () => {
 		const hash = `0x${'5'.repeat(64)}` as const
 		const amountIn = 10_000n
 		const amountOut = 11_449n
@@ -899,6 +900,12 @@ describe('parseKnownEvents', () => {
 						recipientAddress,
 						amountOut,
 					),
+					transferLog(
+						PROP_AMM_OUTPUT_TOKEN,
+						PROP_AMM_POOL,
+						UNRELATED_RECIPIENT,
+						amountOut,
+					),
 					tradeLog,
 				],
 				accountAddress,
@@ -906,7 +913,12 @@ describe('parseKnownEvents', () => {
 			),
 		)
 
-		expect(events).toEqual([
+		expect(events).toHaveLength(2)
+		expect(events[0]).toMatchObject({
+			type: 'send',
+			meta: { from: PROP_AMM_POOL, to: UNRELATED_RECIPIENT },
+		})
+		expect(events.slice(-1)).toEqual([
 			{
 				type: 'propamm swap',
 				parts: [
