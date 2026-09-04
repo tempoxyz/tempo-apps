@@ -47,4 +47,27 @@ describe('withImmutableDataCache', () => {
 			}),
 		).resolves.toEqual({ status: 'success' })
 	})
+
+	it('does not cache values rejected by shouldCache', async () => {
+		const cache = mockCache()
+		const load = vi.fn(async () => ({ trace: null }))
+
+		await expect(
+			withImmutableDataCache({
+				key: 'trace:1',
+				load,
+				shouldCache: (data) => data.trace !== null,
+			}),
+		).resolves.toEqual({ trace: null })
+		await expect(
+			withImmutableDataCache({
+				key: 'trace:1',
+				load,
+				shouldCache: (data) => data.trace !== null,
+			}),
+		).resolves.toEqual({ trace: null })
+
+		expect(load).toHaveBeenCalledTimes(2)
+		expect(cache.put).not.toHaveBeenCalled()
+	})
 })

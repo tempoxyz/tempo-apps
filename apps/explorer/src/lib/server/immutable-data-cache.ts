@@ -5,6 +5,7 @@ const CACHE_ORIGIN = 'https://explore.tempo.xyz'
 export async function withImmutableDataCache<T>(options: {
 	key: string
 	load: () => Promise<T>
+	shouldCache?: ((data: T) => boolean) | undefined
 	ttlSeconds?: number | undefined
 }): Promise<T> {
 	if (typeof window !== 'undefined' || typeof caches === 'undefined')
@@ -23,6 +24,8 @@ export async function withImmutableDataCache<T>(options: {
 	}
 
 	const data = await options.load()
+	if (options.shouldCache && !options.shouldCache(data)) return data
+
 	try {
 		await cache.put(
 			cacheKey,

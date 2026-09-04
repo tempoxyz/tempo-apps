@@ -12,24 +12,28 @@ export function Sections(props: Sections.Props) {
 
 	const sections = sections_.filter((section) => section.visible !== false)
 
-	const [collapsedSections, setCollapsedSections] = React.useState<boolean[]>(
-		new Array(sections.length).fill(true),
+	const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
+		() => new Set(),
 	)
 
-	const toggleSection = (index: number) => {
-		setCollapsedSections((collapsed) =>
-			collapsed.map((v, i) => (i === index ? !v : v)),
-		)
+	const toggleSection = (title: string) => {
+		setExpandedSections((expanded) => {
+			const next = new Set(expanded)
+			if (next.has(title)) next.delete(title)
+			else next.add(title)
+			return next
+		})
 	}
 
 	if (mode === 'stacked')
 		return (
 			<Sections.Context.Provider value={{ mode }}>
 				<div className="flex flex-col gap-[14px]">
-					{sections.map((section, index) => {
+					{sections.map((section) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
 						const isCollapsed =
-							section.autoCollapse !== false && collapsedSections[index]
+							section.autoCollapse !== false &&
+							!expandedSections.has(section.title)
 
 						const canCollapse = section.autoCollapse !== false
 
@@ -45,7 +49,7 @@ export function Sections(props: Sections.Props) {
 								{canCollapse ? (
 									<button
 										type="button"
-										onClick={() => toggleSection(index)}
+										onClick={() => toggleSection(section.title)}
 										className={cx(
 											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',

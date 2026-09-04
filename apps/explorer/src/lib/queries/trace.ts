@@ -71,6 +71,9 @@ export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
 	return withImmutableDataCache({
 		key: `trace:v1:${getTempoChain().id}:${hash.toLowerCase()}`,
 		load: () => fetchTraceDataUncached(hash),
+		// Trace RPC errors are represented as null so the page can still render.
+		// Do not let a transient error become a cached missing trace.
+		shouldCache: (data) => data.trace !== null && data.prestate !== null,
 	})
 }
 
