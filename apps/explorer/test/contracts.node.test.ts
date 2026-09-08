@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	decodeAbiParameters,
 	encodeAbiParameters,
+	parseAbi,
 	toEventSelector,
 	type Abi,
 } from 'viem'
@@ -14,12 +15,45 @@ import {
 } from '#lib/abis'
 import {
 	getAbiItem,
+	getContractAbi,
 	getContractInfo,
 	getReadFunctions,
 	getWriteFunctions,
 	isZonePortalAddress,
+	resolveInteractAbi,
 	systemAddress,
 } from '#lib/domain/contracts'
+
+describe('resolveInteractAbi', () => {
+	it('preserves verified functions when the bundled Stream Channel ABI only contains events', () => {
+		const address = '0x9d136eea063ede5418a6bc7beaff009bbb6cfa70'
+		const verifiedAbi = parseAbi([
+			'function CLOSE_GRACE_PERIOD() view returns (uint256)',
+			'function requestClose(bytes32 channelId)',
+		])
+		const bundledAbi = getContractAbi(address)
+		expect(bundledAbi?.length).toBeGreaterThan(0)
+		expect(bundledAbi?.every((item) => item.type === 'event')).toBe(true)
+
+		const abi = resolveInteractAbi({ address, abi: verifiedAbi })
+		expect
+			.soft(getReadFunctions(abi ?? []).map((fn) => fn.name))
+			.toEqual(['CLOSE_GRACE_PERIOD'])
+		expect
+			.soft(getWriteFunctions(abi ?? []).map((fn) => fn.name))
+			.toEqual(['requestClose'])
+	})
+
+	it('prefers the canonical Zone Portal interface over supplied and implementation ABIs', () => {
+		const incompleteAbi = parseAbi(['function pause()'])
+		const abi = resolveInteractAbi({
+			address: '0x5ad0000000000000000000000000000000000003',
+			abi: incompleteAbi,
+			implementationAbi: incompleteAbi,
+		})
+		expect(abi).toBe(zonePortalAbi)
+	})
+})
 
 const proxyImplementationAbi = [
 	{

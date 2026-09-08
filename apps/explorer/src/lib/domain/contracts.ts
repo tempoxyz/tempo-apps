@@ -526,6 +526,21 @@ export function getContractAbi(address: Address.Address): Abi | undefined {
 	return getContractInfo(address)?.abi
 }
 
+export function resolveInteractAbi(params: {
+	address: Address.Address
+	abi?: Abi
+	implementationAbi?: Abi | null
+}): Abi | undefined {
+	const knownAbi = getContractAbi(params.address)
+	// Prefer canonical interfaces, but not event-only ABIs bundled for decoding.
+	if (knownAbi?.some((item) => item.type === 'function')) return knownAbi
+
+	const implAbi = params.implementationAbi
+	return (
+		(implAbi && implAbi.length > 0 ? implAbi : null) ?? params.abi ?? knownAbi
+	)
+}
+
 // ============================================================================
 // ABI Utilities
 // ============================================================================

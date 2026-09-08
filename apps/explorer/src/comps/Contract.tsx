@@ -11,7 +11,11 @@ import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { autoloadAbi, getContractAbi } from '#lib/domain/contracts.ts'
+import {
+	autoloadAbi,
+	getContractAbi,
+	resolveInteractAbi,
+} from '#lib/domain/contracts.ts'
 import {
 	detectProxy,
 	type ProxyInfo,
@@ -313,11 +317,11 @@ export function InteractTabContent(props: {
 		void loadProxyInfo()
 	}, [publicClient, address])
 
-	// Known contracts already include their canonical implementation ABI. Only
-	// prefer an autoloaded implementation for otherwise unknown proxies.
-	const knownAbi = getContractAbi(address)
-	const abi =
-		knownAbi ?? (implAbi && implAbi.length > 0 ? implAbi : null) ?? props.abi
+	const abi = resolveInteractAbi({
+		address,
+		abi: props.abi,
+		implementationAbi: implAbi,
+	})
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
