@@ -11,7 +11,11 @@ import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { autoloadAbi, getContractAbi } from '#lib/domain/contracts.ts'
+import {
+	autoloadAbi,
+	getContractAbi,
+	isInferredAbi,
+} from '#lib/domain/contracts.ts'
 import {
 	detectProxy,
 	type ProxyInfo,
@@ -33,6 +37,17 @@ const proxyTypeUrls: Record<ProxyType, string> = {
 
 function proxyTypeUrl(type: ProxyType | undefined): string {
 	return type ? proxyTypeUrls[type] : proxyTypeUrls['EIP-1967']
+}
+
+function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
+	if (!isInferredAbi(abi)) return null
+	return (
+		<p className="px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
+			Inferred ABI: function names, read/write classifications, and return types
+			may be incomplete or incorrect. Verify the contract source for an accurate
+			ABI.
+		</p>
+	)
 }
 
 /**
@@ -106,6 +121,7 @@ export function ContractTabContent(props: {
 			{source && <SourceSection {...source} docsUrl={docsUrl} />}
 
 			{/* ABI Section */}
+			<InferredAbiNotice abi={abi} />
 			<CollapsibleSection
 				first={!isTip20}
 				title={<span title="Contract ABI">ABI</span>}
@@ -371,6 +387,7 @@ export function InteractTabContent(props: {
 			)}
 
 			{/* Write Contract Section (Implementation functions via proxy) */}
+			<InferredAbiNotice abi={abi} />
 			<CollapsibleSection
 				first={!isProxy}
 				title={isProxy ? 'Write (via Proxy)' : 'Write'}
@@ -411,6 +428,7 @@ export function InteractTabContent(props: {
 							These are functions defined on the proxy contract itself, not the
 							implementation.
 						</div>
+						<InferredAbiNotice abi={proxyAbi} />
 						<ContractReader address={address} abi={proxyAbi} />
 						<ContractWriter address={address} abi={proxyAbi} />
 					</div>

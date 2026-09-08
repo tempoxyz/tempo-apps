@@ -26,6 +26,7 @@ import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getZonePortalId, isZonePortalAddress } from '#lib/domain/zones.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
+import { clientEnv } from '#lib/env.ts'
 
 export { isZonePortalAddress } from '#lib/domain/zones.ts'
 
@@ -542,6 +543,15 @@ export type WriteFunction = AbiFunction & {
  */
 type WhatsabiAbiFunction = AbiFunction & { selector?: string }
 
+/** Bytecode-extracted entries carry selectors; compiler ABIs do not. */
+export function isInferredAbi(abi: Abi): boolean {
+	return abi.some(
+		(item) =>
+			item.type === 'function' &&
+			Boolean((item as WhatsabiAbiFunction).selector),
+	)
+}
+
 /**
  * Get the function selector, using whatsabi's extracted selector if available,
  * otherwise computing it from the function signature.
@@ -664,9 +674,6 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 	const functions = abi.filter((item): item is ReadFunction => {
 		if (item.type !== 'function') return false
 		if (!Array.isArray(item.inputs)) return false
-		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
-			return false
-
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
 
@@ -674,12 +681,10 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 		if (!isWhatsabi) {
 			if (!Array.isArray(item.outputs) || item.outputs.length === 0)
 				return false
-			// Some verified/proxy ABIs contain incorrect mutability metadata.
-			// Prefer a recognized getter name over that metadata so those functions
-			// remain callable from the Read section.
-			if (looksLikeReadFunction(item.name)) return true
 			return item.stateMutability === 'view' || item.stateMutability === 'pure'
 		}
+		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
+			return false
 
 		// For whatsabi ABIs, stateMutability is often wrong (everything is nonpayable)
 		// Use name-based heuristics instead
@@ -721,16 +726,12 @@ export function getWriteFunctions(abi: Abi): WriteFunction[] {
 			item.stateMutability === 'nonpayable' ||
 			item.stateMutability === 'payable'
 		if (!isNonpayableOrPayable) return false
-		// ABI sources used for proxy implementations can carry incorrect
-		// mutability metadata. Do not expose recognized getters as transactions,
-		// regardless of whether the entry came from whatsabi or a verified ABI.
-		if (looksLikeReadFunction(item.name)) return false
-
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
 
 		// For whatsabi ABIs, filter out functions that look like read functions
 		if (isWhatsabi) {
+			if (looksLikeReadFunction(item.name)) return false
 			// Functions with no inputs that don't look like writes are likely getters
 			if (item.inputs.length === 0 && !looksLikeWriteFunction(item.name))
 				return false
@@ -1030,7 +1031,7 @@ export async function lookupSignature(
 
 const signatureLookupCache = new Map<Hex.Hex, Promise<string | null>>()
 
-class TempoABILoader {
+export class TempoABILoader {
 	readonly name = 'TempoABILoader'
 	readonly chainId: number
 
@@ -1047,7 +1048,7 @@ class TempoABILoader {
 
 	async loadABI(address: string): Promise<unknown[]> {
 		try {
-			const url = `${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
+			const url = `${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
 			const response = await fetch(url)
 			if (!response.ok) return []
 			const data = (await response.json()) as { abi?: unknown[] }

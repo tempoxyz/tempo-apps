@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	decodeAbiParameters,
 	encodeAbiParameters,
@@ -17,11 +17,13 @@ import {
 	getContractInfo,
 	getReadFunctions,
 	getWriteFunctions,
+	isInferredAbi,
 	isZonePortalAddress,
 	systemAddress,
+	TempoABILoader,
 } from '#lib/domain/contracts'
 
-const proxyImplementationAbi = [
+const inferredImplementationAbi = [
 	{
 		type: 'function',
 		name: 'supportsInterface',
@@ -83,12 +85,67 @@ const proxyImplementationAbi = [
 	},
 ] as const satisfies Abi
 
-const whatsabiImplementationAbi = proxyImplementationAbi.map((fn, index) => ({
+const proxyImplementationAbi = inferredImplementationAbi.map((fn, index) => ({
 	...fn,
-	selector: `0x${index.toString(16).padStart(8, '0')}`,
+	stateMutability: index < 6 ? 'view' : 'nonpayable',
 })) as Abi
 
+const whatsabiImplementationAbi = inferredImplementationAbi.map(
+	(fn, index) => ({
+		...fn,
+		selector: `0x${index.toString(16).padStart(8, '0')}`,
+	}),
+) as Abi
+
 describe('contract function classification', () => {
+	it('trusts compiler mutability even when names suggest the opposite', () => {
+		const abi = [
+			{
+				type: 'function',
+				name: 'paused',
+				stateMutability: 'view',
+				inputs: [],
+				outputs: [{ type: 'bool' }],
+			},
+			{
+				type: 'function',
+				name: 'calculateAndStore',
+				stateMutability: 'nonpayable',
+				inputs: [],
+				outputs: [{ type: 'uint256' }],
+			},
+			{
+				type: 'function',
+				name: 'getAndPay',
+				stateMutability: 'payable',
+				inputs: [],
+				outputs: [{ type: 'uint256' }],
+			},
+			{
+				type: 'function',
+				name: 'compute',
+				stateMutability: 'pure',
+				inputs: [],
+				outputs: [{ type: 'uint256' }],
+			},
+		] as const satisfies Abi
+		expect(getReadFunctions(abi).map((fn) => fn.name)).toEqual([
+			'paused',
+			'compute',
+		])
+		expect(getWriteFunctions(abi).map((fn) => fn.name)).toEqual([
+			'calculateAndStore',
+			'getAndPay',
+		])
+		expect(getReadFunctions(abi)[0]).toBe(abi[0])
+	})
+
+	it('identifies inferred entries without relabeling compiler ABIs', () => {
+		expect(isInferredAbi(whatsabiImplementationAbi)).toBe(true)
+		expect(isInferredAbi(proxyImplementationAbi)).toBe(false)
+		expect(isInferredAbi([])).toBe(false)
+	})
+
 	it('keeps getter-style implementation functions out of Write', () => {
 		for (const abi of [proxyImplementationAbi, whatsabiImplementationAbi]) {
 			const reads = getReadFunctions(abi)
@@ -107,6 +164,72 @@ describe('contract function classification', () => {
 				'setMinterAllowance',
 			])
 		}
+	})
+})
+
+describe('Tempo ABI lookup', () => {
+	afterEach(() => {
+		vi.unstubAllGlobals()
+		vi.unstubAllEnvs()
+		vi.resetModules()
+	})
+
+	it('loads the verified implementation ABI from the default host without losing metadata', async () => {
+		const abi = [
+			{
+				type: 'function',
+				name: 'paused',
+				stateMutability: 'view',
+				inputs: [],
+				outputs: [{ type: 'bool' }],
+			},
+		]
+		const fetch = vi
+			.fn()
+			.mockResolvedValue(Response.json({ match: 'exact_match', abi }))
+		vi.stubGlobal('fetch', fetch)
+		const loader = new TempoABILoader({ chainId: 4217 })
+		const result = await loader.loadABI(
+			'0x3B3F2e2aa07460a9ba95ffd06ad9597398Bbbab7',
+		)
+		expect(fetch).toHaveBeenCalledWith(
+			'https://contracts.tempo.xyz/v2/contract/4217/0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7?fields=abi',
+		)
+		expect(result).toEqual(abi)
+		expect(isInferredAbi(result as Abi)).toBe(false)
+	})
+
+	it('honors the configured verifier host and requested chain', async () => {
+		vi.stubEnv(
+			'VITE_CONTRACT_VERIFICATION_API_BASE_URL',
+			'https://verifier.example',
+		)
+		vi.resetModules()
+		const { TempoABILoader } = await import('#lib/domain/contracts')
+		const fetch = vi.fn().mockResolvedValue(Response.json({ abi: [] }))
+		vi.stubGlobal('fetch', fetch)
+		await new TempoABILoader({ chainId: 42431 }).loadABI(
+			'0x0000000000000000000000000000000000000001',
+		)
+		expect(fetch).toHaveBeenCalledWith(
+			'https://verifier.example/v2/contract/42431/0x0000000000000000000000000000000000000001?fields=abi',
+		)
+	})
+
+	it('allows inference when the contract is not verified', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValue(
+					Response.json({ customCode: 'contract_not_found' }, { status: 404 }),
+				),
+		)
+		expect(
+			await new TempoABILoader({ chainId: 4217 }).loadABI(
+				'0x0000000000000000000000000000000000000001',
+			),
+		).toEqual([])
 	})
 })
 
