@@ -131,16 +131,17 @@ describe('fee-payer integration', () => {
 					headers: {
 						Origin: 'https://example.com',
 						'Access-Control-Request-Method': 'POST',
-						'Access-Control-Request-Headers':
-							'Content-Type, X-Tempo-Attribution-Key',
+						'Access-Control-Request-Headers': 'Content-Type',
 					},
 				}),
 			)
 
 			expect([200, 204]).toContain(response.status)
-			expect(response.headers.get('Access-Control-Allow-Headers')).toContain(
-				'x-tempo-attribution-key',
+			const allowedHeaders = response.headers.get(
+				'Access-Control-Allow-Headers',
 			)
+			expect(allowedHeaders).toContain('Content-Type')
+			expect(allowedHeaders).not.toContain('X-Tempo-Attribution-Key')
 		})
 
 		it('handles health check / root path', async () => {

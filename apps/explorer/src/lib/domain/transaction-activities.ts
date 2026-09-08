@@ -115,6 +115,7 @@ function vaultActivityEvent(activity: TransactionActivity): KnownEvent | null {
 		'assets-withdrawn',
 		'private-shares-redeemed',
 		'shares-redeemed',
+		'shares-redemption-finalized',
 	].includes(activity.type)
 	if (!isDeposit && !isWithdrawal) return null
 	const [sourceAmount, sourceToken, destinationAmount, destinationToken] =
@@ -158,6 +159,20 @@ export function selectTransactionDescriptionEvents(params: {
 	const fallbackEvents = hasPrivateZoneFallback
 		? params.fallbackEvents.filter((event) => event !== params.knownCall)
 		: params.fallbackEvents
+	const hasEarnReceiptSummary = fallbackEvents.some(isEarnReceiptSummary)
+	if (hasEarnReceiptSummary) {
+		const zoneWithdrawals = fallbackEvents.filter(
+			(event) => zoneEventDirection(event) === 'withdrawal',
+		)
+		const earnEvents = fallbackEvents.filter(isEarnReceiptSummary)
+		const propAmmSwaps = fallbackEvents.filter(isPropAmmSwap)
+		const zoneDeposits = fallbackEvents.filter(
+			(event) => zoneEventDirection(event) === 'deposit',
+		)
+		return [...zoneWithdrawals, ...earnEvents, ...propAmmSwaps, ...zoneDeposits]
+	}
+	const propAmmSwaps = fallbackEvents.filter(isPropAmmSwap)
+	if (propAmmSwaps.length > 0) return propAmmSwaps
 	if (params.activityEvents.length === 0) return [...fallbackEvents]
 
 	const hasDecodedZoneEvent = fallbackEvents.some((event) =>
@@ -199,6 +214,14 @@ export function selectTransactionDescriptionEvents(params: {
 	return params.knownCall && !hasPrivateZoneActivity
 		? [params.knownCall, ...events]
 		: events
+}
+
+function isEarnReceiptSummary(event: KnownEvent): boolean {
+	return event.type.startsWith('earn ')
+}
+
+function isPropAmmSwap(event: KnownEvent): boolean {
+	return event.type === 'propamm swap'
 }
 
 function isPrivateZoneEvent(event: KnownEvent): boolean {

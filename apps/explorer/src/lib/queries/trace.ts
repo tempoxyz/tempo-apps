@@ -1,7 +1,8 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Address, Hex } from 'ox'
 import { zeroAddress } from 'viem'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 export interface CallTrace {
 	type: 'CALL' | 'DELEGATECALL' | 'STATICCALL' | 'CREATE' | 'CREATE2'
@@ -34,7 +35,7 @@ export interface TraceData {
 	prestate: PrestateDiff | null
 }
 
-export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
+async function fetchTraceDataUncached(hash: Hex.Hex): Promise<TraceData> {
 	const config = getWagmiConfig()
 	const client = config.getClient()
 
@@ -66,10 +67,25 @@ export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
 	return { trace: unwrapped ?? null, prestate }
 }
 
+export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
+	return withImmutableDataCache({
+		key: `trace:v1:${getTempoChain().id}:${hash.toLowerCase()}`,
+		load: () => fetchTraceDataUncached(hash),
+		// Trace RPC errors are represented as null so the page can still render.
+		// Do not let a transient error become a cached missing trace.
+		shouldCache: (data) => data.trace !== null && data.prestate !== null,
+	})
+}
+
 export function traceQueryOptions(params: { hash: string }) {
 	return queryOptions({
 		queryKey: ['trace', params.hash],
-		queryFn: () => fetchTraceData(params.hash as Hex.Hex),
+		queryFn: async (): Promise<TraceData> => {
+			const response = await fetch(`/api/tx/trace/${params.hash}`)
+			if (!response.ok)
+				throw new Error(`Failed to fetch transaction trace: ${response.status}`)
+			return response.json()
+		},
 		staleTime: Infinity,
 	})
 }

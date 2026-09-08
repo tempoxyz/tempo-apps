@@ -317,9 +317,7 @@ export function InteractTabContent(props: {
 	// prefer an autoloaded implementation for otherwise unknown proxies.
 	const knownAbi = getContractAbi(address)
 	const abi =
-		knownAbi ??
-		(implAbi && implAbi.length > 0 ? implAbi : null) ??
-		props.abi
+		knownAbi ?? (implAbi && implAbi.length > 0 ? implAbi : null) ?? props.abi
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (

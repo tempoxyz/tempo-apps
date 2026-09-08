@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import { decodeAbiParameters, erc20Abi, slice } from 'viem'
+import { decodeAbiParameters, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
 import { blockHashHistoryAbi } from '#lib/abis'
 import { cx } from '#lib/css'
@@ -22,6 +22,7 @@ import {
 	getRevertData,
 	type DecodedTraceError,
 } from '#lib/domain/trace-errors'
+import { getKnownTraceAbiItem } from '#lib/domain/trace-abi'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, usePermalinkHighlight } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
@@ -439,9 +440,9 @@ export function useTraceTrees(
 					const contractAbiItem =
 						contractInfo?.abi && getAbiItem({ abi: contractInfo.abi, selector })
 
-					const erc20AbiItem = getAbiItem({ abi: erc20Abi, selector })
+					const knownAbiItem = getKnownTraceAbiItem(selector)
 
-					const item = autoloadAbiItem || contractAbiItem || erc20AbiItem
+					const item = autoloadAbiItem || contractAbiItem || knownAbiItem
 					if (item?.name && item.inputs) {
 						functionName = item.name
 						const rawArgs =

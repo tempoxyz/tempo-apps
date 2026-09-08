@@ -86,7 +86,7 @@ jobs:
 
       - name: Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0
+        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@6f436eb3a168279692739e8c0c9fdb52b94bfae7
         env:
           NODE_ENV: production
           CLOUDFLARE_ENV: ${{ matrix.env || '' }}

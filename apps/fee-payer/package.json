@@ -16,7 +16,6 @@
 		"dev:playground": "pnpm --filter fee-payer-playground dev",
 		"deploy": "wrangler deploy",
 		"deploy:mainnet": "wrangler deploy --env mainnet",
-		"deploy:privy": "wrangler deploy --env privy",
 		"format": "biome format --write .",
 		"gen:types": "CLOUDFLARE_ENV= wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
 		"tail": "wrangler tail",

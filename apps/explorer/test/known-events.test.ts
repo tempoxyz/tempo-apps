@@ -12,6 +12,8 @@ import {
 import { Addresses } from 'viem/tempo'
 import {
 	Abis,
+	earnEventsAbi,
+	propAmmEventsAbi,
 	stablecoinDexAbi,
 	zoneFactoryAbi,
 	zoneOutboxAbi,
@@ -28,12 +30,15 @@ import {
 import {
 	decodeKnownCall,
 	decodeKnownTransactionCall,
+	parseKnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
+const PROP_AMM_POOL = `0x${'7'.repeat(40)}` as const
+const PROP_AMM_OUTPUT_TOKEN = `0x${'6'.repeat(40)}` as const
 
 const bounceBackAbi = [
 	{
@@ -92,10 +97,17 @@ function sampleZoneEventValue(parameter: AbiParameter): unknown {
 	throw new Error(`Missing sample value for ${parameter.type}`)
 }
 
-function mockZoneEventLog(event: AbiEvent, address: Address.Address) {
-	const args = Object.fromEntries(
-		event.inputs.map((input) => [input.name, sampleZoneEventValue(input)]),
-	)
+function mockZoneEventLog(
+	event: AbiEvent,
+	address: Address.Address,
+	overrides: Record<string, unknown> = {},
+) {
+	const args = {
+		...Object.fromEntries(
+			event.inputs.map((input) => [input.name, sampleZoneEventValue(input)]),
+		),
+		...overrides,
+	}
 	const dataInputs = event.inputs.filter((input) => !input.indexed)
 	return mockLog(
 		{
@@ -107,7 +119,9 @@ function mockZoneEventLog(event: AbiEvent, address: Address.Address) {
 			}) as [Hex.Hex, ...Hex.Hex[]],
 			data: encodeAbiParameters(
 				dataInputs,
-				dataInputs.map(sampleZoneEventValue),
+				dataInputs.map(
+					(input) => args[input.name] ?? sampleZoneEventValue(input),
+				),
 			),
 		},
 		`0x${'9'.repeat(64)}`,
@@ -206,6 +220,27 @@ describe('parseKnownEvents', () => {
 				to: portal,
 				input: encodeFunctionData({
 					abi: zonePortalAbi,
+					functionName: 'deposit',
+					args: [
+						userTokenAddress,
+						1_000_000n,
+						1n,
+						{
+							ephemeralPubkeyX: zeroHash,
+							ephemeralPubkeyYParity: 2,
+							ciphertext: '0x1234',
+							nonce: `0x${'00'.repeat(12)}`,
+							tag: `0x${'00'.repeat(16)}`,
+						},
+						accountAddress,
+					],
+				}),
+				action: 'Encrypted Deposit to Zone 3',
+			},
+			{
+				to: portal,
+				input: encodeFunctionData({
+					abi: zonePortalAbi,
 					functionName: 'pause',
 				}),
 				action: 'Pause Zone 3 Portal',
@@ -265,7 +300,7 @@ describe('parseKnownEvents', () => {
 			decodeKnownTransactionCall({
 				to: accountAddress,
 				input: '0x',
-				calls: [{ to: calls[4].to, input: calls[4].input }],
+				calls: [{ to: calls[5].to, input: calls[5].input }],
 			})?.parts[0],
 		).toEqual({ type: 'action', value: 'Submit Zone Batch' })
 	})
@@ -804,5 +839,298 @@ describe('parseKnownEvents', () => {
 		})
 		expect(event?.parts).toHaveLength(2)
 		expect(event?.parts.some((part) => part.type === 'account')).toBe(false)
+	})
+
+	it('describes every bundled Earn event on the transaction Events page', () => {
+		for (const abiEvent of earnEventsAbi) {
+			const log = mockZoneEventLog(abiEvent, accountAddress)
+			const event = parseKnownEvent(log)
+
+			expect.soft(event?.type, abiEvent.name).toBe('earn event')
+			expect.soft(event?.parts[0]?.type, abiEvent.name).toBe('action')
+		}
+	})
+
+	it('composes a propAMM swap and hides its settlement transfers', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const amountIn = 10_000n
+		const amountOut = 11_449n
+
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+
+		const tradeLog = mockZoneEventLog(propAmmEventsAbi[0], PROP_AMM_POOL, {
+			taker: accountAddress,
+			recipient: recipientAddress,
+			tokenIn: userTokenAddress,
+			tokenOut: PROP_AMM_OUTPUT_TOKEN,
+			amountIn,
+			amountOut,
+		})
+		const events = parseKnownEvents(
+			mockReceipt(
+				[
+					transferLog(
+						userTokenAddress,
+						accountAddress,
+						PROP_AMM_POOL,
+						amountIn,
+					),
+					transferLog(
+						PROP_AMM_OUTPUT_TOKEN,
+						PROP_AMM_POOL,
+						recipientAddress,
+						amountOut,
+					),
+					tradeLog,
+				],
+				accountAddress,
+				hash,
+			),
+		)
+
+		expect(events).toEqual([
+			{
+				type: 'propamm swap',
+				parts: [
+					{ type: 'action', value: 'propAMM Swap' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(userTokenAddress),
+							value: amountIn,
+						},
+					},
+					{ type: 'text', value: 'for' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(PROP_AMM_OUTPUT_TOKEN),
+							value: amountOut,
+						},
+					},
+				],
+			},
+		])
+		expect(parseKnownEvent(tradeLog)?.type).toBe('propamm swap')
+	})
+
+	it.each([
+		['EarnDeposit', 7, 'Earn Deposit'],
+		['EarnRedeem', 7, 'Earn Redemption'],
+		['Deposited', 4, 'Earn Vault Deposit'],
+		['Deposited', 3, 'Earn Engine Deposit'],
+		['Redeemed', 4, 'Earn Vault Redemption'],
+		['Redeemed', 3, 'Earn Engine Redemption'],
+	] as const)('labels %s/%i without relying on contract verification', (name, arity, label) => {
+		const abiEvent = earnEventsAbi.find(
+			(event) => event.name === name && event.inputs.length === arity,
+		)
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+
+		const event = parseKnownEvent(mockZoneEventLog(abiEvent, accountAddress))
+		expect(event?.parts[0]).toEqual({ type: 'action', value: label })
+	})
+
+	it('composes a public Earn deposit receipt with inferred asset and share tokens', () => {
+		const hash = `0x${'7'.repeat(64)}` as const
+		const vault = recipientAddress
+		const shareToken = Address.from(
+			'0x20c0000000000000000000000000000000000012',
+		)
+		const assets = 1_000_000n
+		const earnShares = 500_000n
+		const deposited = earnEventsAbi.find(
+			(event) => event.name === 'Deposited' && event.inputs.length === 4,
+		)
+		expect(deposited).toBeDefined()
+		if (!deposited) return
+
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from: accountAddress, to: vault },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [assets]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: shareToken,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Mint',
+						args: { to: accountAddress },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [earnShares]),
+				},
+				hash,
+			),
+			mockZoneEventLog(deposited, vault, {
+				caller: accountAddress,
+				receiver: accountAddress,
+				assets,
+				earnShares,
+			}),
+		]
+
+		const summary = parseKnownEvents(
+			mockReceipt(logs, accountAddress, hash),
+		).find((event) => event.type === 'earn deposit')
+
+		expect(summary?.parts).toEqual([
+			{ type: 'action', value: 'Earn Deposit' },
+			{
+				type: 'amount',
+				value: { token: Address.checksum(userTokenAddress), value: assets },
+			},
+			{ type: 'text', value: 'for' },
+			{
+				type: 'amount',
+				value: { token: Address.checksum(shareToken), value: earnShares },
+			},
+		])
+	})
+
+	it('composes Earn reward funding and root publication receipt rows', () => {
+		const hash = `0x${'6'.repeat(64)}` as const
+		const distributor = recipientAddress
+		const shareToken = Address.from(
+			'0x20c0000000000000000000000000000000000012',
+		)
+		const earnShares = 750_000n
+		const totalEntitlement = 700_000n
+		const assetsFunded = earnEventsAbi.find(
+			(event) => event.name === 'AssetsFunded',
+		)
+		const rootPublished = earnEventsAbi.find(
+			(event) => event.name === 'RootPublished',
+		)
+		expect(assetsFunded).toBeDefined()
+		expect(rootPublished).toBeDefined()
+		if (!assetsFunded || !rootPublished) return
+
+		const logs = [
+			mockLog(
+				{
+					address: shareToken,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Mint',
+						args: { to: distributor },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [earnShares]),
+				},
+				hash,
+			),
+			mockZoneEventLog(assetsFunded, distributor, {
+				funder: accountAddress,
+				assets: earnShares,
+				earnShares,
+			}),
+			mockZoneEventLog(rootPublished, distributor, {
+				version: 12n,
+				totalEntitlement,
+			}),
+		]
+
+		const summaries = parseKnownEvents(
+			mockReceipt(logs, accountAddress, hash),
+		).filter((event) => event.type.startsWith('earn reward'))
+
+		expect(summaries).toEqual([
+			{
+				type: 'earn reward funding',
+				parts: [
+					{ type: 'action', value: 'Fund Earn Rewards' },
+					{
+						type: 'amount',
+						value: { token: Address.checksum(shareToken), value: earnShares },
+					},
+				],
+			},
+			{
+				type: 'earn reward root',
+				parts: [
+					{ type: 'action', value: 'Publish Earn Reward Root' },
+					{ type: 'text', value: 'v12 for' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(shareToken),
+							value: totalEntitlement,
+						},
+					},
+				],
+			},
+		])
+	})
+
+	it.each([
+		['EarnDeposit', 7, 'earn private deposit'],
+		['EarnRedeem', 7, 'earn private redemption'],
+		['Redeemed', 4, 'earn redemption'],
+		['WithdrewExact', 4, 'earn exact withdrawal'],
+		['VenueSharesDeposited', 5, 'earn in-kind deposit'],
+		['Funded', 3, 'earn contribution'],
+		['Contributed', 5, 'earn contribution'],
+		['AssetsFunded', 3, 'earn reward funding'],
+		['RootPublished', 4, 'earn reward root'],
+		['BatchPushed', 6, 'earn reward distribution'],
+		['RewardClaimed', 3, 'earn reward claim'],
+		['RedeemRequested', 4, 'earn async redemption request'],
+		['RedeemFinalized', 5, 'earn async redemption finalized'],
+		['RedeemCancelled', 3, 'earn async redemption cancelled'],
+		['EngineMigrated', 8, 'earn engine migration'],
+	] as const)('composes the %s/%i major-flow receipt summary', (name, arity, expectedType) => {
+		const abiEvent = earnEventsAbi.find(
+			(event) => event.name === name && event.inputs.length === arity,
+		)
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+
+		const summaries = parseKnownEvents(
+			mockReceipt(
+				[mockZoneEventLog(abiEvent, recipientAddress)],
+				accountAddress,
+			),
+		)
+		expect(summaries.some((event) => event.type === expectedType)).toBe(true)
+	})
+
+	it('keeps lower-level Earn events out of aggregate receipt summaries', () => {
+		const feesAccrued = earnEventsAbi.find(
+			(event) => event.name === 'FeesAccrued',
+		)
+		expect(feesAccrued).toBeDefined()
+		if (!feesAccrued) return
+
+		const receipt = mockReceipt(
+			[mockZoneEventLog(feesAccrued, accountAddress)],
+			accountAddress,
+		)
+		expect(parseKnownEvents(receipt)).toEqual([])
 	})
 })

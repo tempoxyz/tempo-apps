@@ -13,7 +13,8 @@ import {
 } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const transferTopic = toEventSelector(
 	'event Transfer(address indexed, address indexed, uint256)',
@@ -29,7 +30,7 @@ export function txQueryOptions(params: { hash: Hex.Hex }) {
 	})
 }
 
-async function fetchTxData(params: { hash: Hex.Hex }) {
+async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 	const config = getWagmiConfig()
 
 	const receipt = await getTransactionReceipt(config, { hash: params.hash })
@@ -119,6 +120,13 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 		receipt,
 		transaction,
 	}
+}
+
+async function fetchTxData(params: { hash: Hex.Hex }) {
+	return withImmutableDataCache({
+		key: `tx-detail:v1:${getTempoChain().id}:${params.hash.toLowerCase()}`,
+		load: () => fetchTxDataUncached(params),
+	})
 }
 
 export type TxData = Awaited<ReturnType<typeof fetchTxData>>

@@ -38,7 +38,7 @@ jobs:
           persist-credentials: false
 
       - name: "Generate Directory Listings"
-        uses: jayanta525/github-pages-directory-listing@624ac8c4e56893256d3772f61a88e3b14d54314e
+        uses: tempoxyz/gh-actions/vendor/jayanta525/github-pages-directory-listing@6f436eb3a168279692739e8c0c9fdb52b94bfae7
         with:
           FOLDER: apps/tokenlist/data #directory to generate index
 

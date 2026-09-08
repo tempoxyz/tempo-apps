@@ -125,7 +125,17 @@ export function Tip20TokenTabContent(
 						<ConfigRow label="Currency" value={config?.currency ?? undefined} />
 						<ConfigRow
 							label="Transfer Policy ID"
-							value={config?.transferPolicyId ?? undefined}
+							value={
+								config?.transferPolicyId ? (
+									<Link
+										to="/policy/$id"
+										params={{ id: config.transferPolicyId }}
+										className="text-accent hover:underline"
+									>
+										{config.transferPolicyId}
+									</Link>
+								) : undefined
+							}
 						/>
 						<ConfigRow
 							label="Paused"
@@ -241,7 +251,7 @@ export function Tip20TokenTabContent(
 	)
 }
 
-function ConfigRow(props: { label: string; value: string | undefined }) {
+function ConfigRow(props: { label: string; value: React.ReactNode }) {
 	return (
 		<div className="flex items-center justify-between gap-[12px]">
 			<span className="text-secondary">{props.label}</span>

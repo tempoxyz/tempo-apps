@@ -179,6 +179,46 @@ describe('activitiesToKnownEvents', () => {
 		])
 	})
 
+	test('maps a finalized Earn redemption into a Vault Withdrawal', () => {
+		expect(
+			activitiesToKnownEvents([
+				{
+					id: 'activity-1',
+					title: 'Shares redemption finalized',
+					type: 'shares-redemption-finalized',
+					data: {
+						assets: '49999',
+						shares: '49999',
+						assetToken: '0x20c0000000000000000000000000000000000001',
+						shareToken: '0x20c0000000000000000000000000000000000002',
+					},
+				},
+			]),
+		).toEqual([
+			{
+				type: 'shares-redemption-finalized',
+				parts: [
+					{ type: 'action', value: 'Vault Withdrawal' },
+					{
+						type: 'amount',
+						value: {
+							value: 49999n,
+							token: '0x20c0000000000000000000000000000000000002',
+						},
+					},
+					{ type: 'text', value: 'for' },
+					{
+						type: 'amount',
+						value: {
+							value: 49999n,
+							token: '0x20c0000000000000000000000000000000000001',
+						},
+					},
+				],
+			},
+		])
+	})
+
 	test.each([
 		[
 			'private-assets-deposited',
@@ -391,4 +431,81 @@ describe('selectTransactionDescriptionEvents for Zones', () => {
 			}),
 		).toEqual([privateDeposit])
 	})
+})
+
+describe('selectTransactionDescriptionEvents for Earn receipts', () => {
+	test('prefers one composed Earn flow over generic indexed token activity', () => {
+		const earnDeposit = {
+			type: 'earn deposit',
+			parts: [{ type: 'action' as const, value: 'Earn Deposit' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [
+					{ type: 'mint', parts: [] },
+					{ type: 'assets-deposited', parts: [] },
+				],
+				fallbackEvents: [{ type: 'send', parts: [] }, earnDeposit],
+				knownCall: null,
+			}),
+		).toEqual([earnDeposit])
+	})
+
+	test('orders a private Earn flow from source Zone through Earn to destination Zone', () => {
+		const zoneDeposit = {
+			type: 'zone deposit',
+			parts: [{ type: 'action' as const, value: 'Private Zone Deposit' }],
+		}
+		const earnDeposit = {
+			type: 'earn private deposit',
+			parts: [{ type: 'action' as const, value: 'Earn Deposit' }],
+		}
+		const zoneWithdrawal = {
+			type: 'zone withdrawal',
+			parts: [{ type: 'action' as const, value: 'Private Zone Withdrawal' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [{ type: 'private-assets-deposited', parts: [] }],
+				fallbackEvents: [zoneDeposit, earnDeposit, zoneWithdrawal],
+				knownCall: null,
+			}),
+		).toEqual([zoneWithdrawal, earnDeposit, zoneDeposit])
+	})
+
+	test('keeps Earn primary and nests a propAMM swap after it', () => {
+		const earnWithdrawal = {
+			type: 'earn exact withdrawal',
+			parts: [{ type: 'action' as const, value: 'Earn Exact Withdrawal' }],
+		}
+		const propAmmSwap = {
+			type: 'propamm swap',
+			parts: [{ type: 'action' as const, value: 'propAMM Swap' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [{ type: 'transfer', parts: [] }],
+				fallbackEvents: [propAmmSwap, earnWithdrawal],
+				knownCall: null,
+			}),
+		).toEqual([earnWithdrawal, propAmmSwap])
+	})
+})
+
+test('prefers a standalone propAMM swap over generic indexed activity', () => {
+	const propAmmSwap = {
+		type: 'propamm swap',
+		parts: [{ type: 'action' as const, value: 'propAMM Swap' }],
+	}
+
+	expect(
+		selectTransactionDescriptionEvents({
+			activityEvents: [{ type: 'transfer', parts: [] }],
+			fallbackEvents: [{ type: 'send', parts: [] }, propAmmSwap],
+			knownCall: null,
+		}),
+	).toEqual([propAmmSwap])
 })

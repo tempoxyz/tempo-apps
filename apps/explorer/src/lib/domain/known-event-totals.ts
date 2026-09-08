@@ -86,3 +86,17 @@ export function calculateKnownEventsTotal(
 
 	return netOutflowTotal + fallbackTotal
 }
+
+export function hasNonAdditiveVaultActivity(
+	events: readonly KnownEvent[],
+): boolean {
+	return events.some(
+		(event) =>
+			event.type.startsWith('earn ') ||
+			event.parts.some(
+				(part) =>
+					part.type === 'action' &&
+					(part.value === 'Vault Deposit' || part.value === 'Vault Withdrawal'),
+			),
+	)
+}

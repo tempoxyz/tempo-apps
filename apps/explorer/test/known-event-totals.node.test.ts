@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { KnownEvent } from '../src/lib/domain/known-events'
-import { calculateKnownEventsTotal } from '../src/lib/domain/known-event-totals'
+import {
+	calculateKnownEventsTotal,
+	hasNonAdditiveVaultActivity,
+} from '../src/lib/domain/known-event-totals'
 
 const senderAddress = `0x${'a'.repeat(40)}` as const
 const forwardedAddress = `0x${'b'.repeat(40)}` as const
@@ -113,5 +116,42 @@ describe('calculateKnownEventsTotal', () => {
 		expect(calculateKnownEventsTotal(events)).toBe(
 			1_500_300_000_000_000_000_000n,
 		)
+	})
+})
+
+describe('hasNonAdditiveVaultActivity', () => {
+	it('suppresses aggregate totals for composed Earn receipts', () => {
+		const earnDeposit: KnownEvent = {
+			type: 'earn private deposit',
+			parts: [
+				{ type: 'action', value: 'Earn Deposit' },
+				{
+					type: 'amount',
+					value: { token: tokenAddress, value: 1_000_000n, decimals: 6 },
+				},
+			],
+		}
+
+		expect(hasNonAdditiveVaultActivity([earnDeposit])).toBe(true)
+		expect(
+			hasNonAdditiveVaultActivity([
+				{
+					type: 'earn reward root',
+					parts: [{ type: 'action', value: 'Publish Earn Reward Root' }],
+				},
+			]),
+		).toBe(true)
+	})
+
+	it('preserves aggregate totals for ordinary transfers', () => {
+		expect(
+			hasNonAdditiveVaultActivity([
+				sendEvent({
+					from: senderAddress,
+					to: recipientAddress,
+					amount: 1_000_000n,
+				}),
+			]),
+		).toBe(false)
 	})
 })
