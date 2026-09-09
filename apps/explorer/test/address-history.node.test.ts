@@ -12,16 +12,34 @@ import {
 	toEnrichedTransaction,
 } from '#lib/server/address-history'
 
-const { getTransactions } = vi.hoisted(() => ({
+const { getTransactions, getTransaction, queryIndex } = vi.hoisted(() => ({
 	getTransactions: vi.fn(),
+	getTransaction: vi.fn(),
+	queryIndex: vi.fn(),
 }))
 
 vi.mock('#lib/server/tempo-api', () => ({
-	api: { v1: { transactions: { $get: getTransactions } } },
+	api: {
+		v1: {
+			transactions: {
+				$get: getTransactions,
+				':transactionHash': { $get: getTransaction },
+			},
+		},
+	},
+}))
+
+vi.mock('#lib/server/tempo-queries-provider', () => ({
+	tidx: { fetch: queryIndex },
 }))
 
 beforeEach(() => {
 	getTransactions.mockReset()
+	queryIndex.mockReset()
+	getTransaction.mockReset()
+	getTransaction.mockImplementation(({ param }) =>
+		Promise.resolve(Response.json(row({ hash: param.transactionHash }))),
+	)
 })
 
 const SENDER = '0x286ad6cfc7279c8a6d86d15dcefcb77a65aa7e92'
@@ -194,132 +212,97 @@ describe('fetchAddressHistoryData', () => {
 		).toBe(false)
 	})
 
-	it('fills a page across batch-only results and resumes after the last visible row', async () => {
-		getTransactions
-			.mockResolvedValueOnce(
-				Response.json({
-					data: [
-						row({ recipient: portal, input: batchInput, blockNumber: 10 }),
-					],
-					nextCursor: 'scan-2',
-				}),
-			)
-			.mockResolvedValueOnce(
-				Response.json({
-					data: [
-						row({ blockNumber: 9 }),
-						row({ blockNumber: 8 }),
-						row({ blockNumber: 7 }),
-					],
-					nextCursor: 'scan-3',
-				}),
-			)
+	it('queries matching hashes before hydrating only the visible page', async () => {
+		const hashes = [1, 2, 3].map((n) => `0x${String(n).repeat(64)}`)
+		queryIndex
+			.mockResolvedValueOnce({
+				rows: [{ hash: hashes[1], block_num: 8, idx: 0 }],
+			})
+			.mockResolvedValueOnce({
+				rows: hashes.map((hash, i) => ({ hash, block_num: 9 - i, idx: 0 })),
+			})
 		const result = await fetchAddressHistoryData(filteredParams)
-		expect(result.transactions.map((tx) => tx.blockNumber)).toEqual([
-			'0x9',
-			'0x8',
-		])
-		expect(result.nextCursor).toBe(btoa(JSON.stringify([8, 17])))
-		expect(result.reverseCursor).toBe(btoa(JSON.stringify([10, 17])))
+		expect(result.transactions.map((tx) => tx.hash)).toEqual(hashes.slice(0, 2))
+		expect(result.nextCursor).toBe(btoa(JSON.stringify([8, 0])))
+		expect(result.reverseCursor).toBe(btoa(JSON.stringify([9, 0])))
 		expect(result.total).toBeNull()
-		expect(getTransactions).toHaveBeenNthCalledWith(2, {
-			query: {
-				address: portal,
-				chainId: '4217',
-				include: 'receipt',
-				limit: '50',
-				order: 'desc',
-				cursor: 'scan-2',
-			},
+		expect(getTransactions).not.toHaveBeenCalled()
+		expect(getTransaction).toHaveBeenCalledTimes(2)
+		expect(getTransaction).toHaveBeenCalledWith({
+			param: { transactionHash: hashes[0] },
+			query: { chainId: '4217', include: 'receipt' },
 		})
+		expect(queryIndex.mock.calls[0]?.[0].query).toContain(
+			`t."from" = '${portal}'`,
+		)
+		expect(queryIndex.mock.calls[1]?.[0].query).toContain(
+			`t."to" = '${portal}'`,
+		)
+		for (const [options] of queryIndex.mock.calls) {
+			expect(options.query).toContain('LIMIT 3')
+			expect(options.query).toContain('jsonb_array_elements')
+			expect(options.query).toContain(batchInput)
+			expect(options.query).toContain('IS NOT TRUE')
+		}
 	})
 
-	it('filters nested and reverted submissions only to the requested portal', async () => {
-		getTransactions.mockResolvedValue(
-			Response.json({
-				data: [
-					row({
-						recipient: portal,
-						input: batchInput,
-						meta: { receipt: receipt({ status: 'reverted' }) },
-					}),
-					row({
-						meta: { rpc: { calls: [{ to: portal, input: batchInput }] } },
-					}),
-					row({ calls: [{ to: portal.toUpperCase(), data: batchInput }] }),
-					row({ recipient: RECIPIENT, input: batchInput, blockNumber: 7 }),
-					row({ recipient: portal, input: '0x', blockNumber: 6 }),
-				],
-				nextCursor: null,
-			}),
-		)
-		const result = await fetchAddressHistoryData(filteredParams)
-		expect(result.transactions.map((tx) => tx.blockNumber)).toEqual([
-			'0x7',
-			'0x6',
-		])
-		expect(result.nextCursor).toBeNull()
-	})
-
-	it('preserves status, direction, period and ascending cursor navigation', async () => {
-		getTransactions.mockResolvedValue(
-			Response.json({
-				data: [
-					row({ recipient: portal, input: batchInput, blockNumber: 1 }),
-					row({ blockNumber: 2 }),
-					row({ blockNumber: 3 }),
-				],
-				nextCursor: null,
-			}),
-		)
+	it('keeps status, direction, period and ascending cursor filters in the indexed query', async () => {
+		const hashes = [1, 2].map((n) => `0x${String(n).repeat(64)}`)
+		queryIndex.mockResolvedValue({
+			rows: hashes.map((hash, i) => ({ hash, block_num: i + 2, idx: 0 })),
+		})
 		const result = await fetchAddressHistoryData({
 			...filteredParams,
 			searchParams: {
 				...filteredParams.searchParams,
 				sort: 'asc',
-				cursor: 'older',
+				cursor: btoa('[1,0]'),
 				include: 'received',
 				status: 'reverted',
 				after: 1,
 			},
 		})
-		expect(result.transactions.map((tx) => tx.blockNumber)).toEqual([
-			'0x3',
-			'0x2',
-		])
-		expect(getTransactions).toHaveBeenCalledWith({
-			query: {
-				recipient: portal,
-				chainId: '4217',
-				include: 'receipt',
-				limit: '50',
-				order: 'asc',
-				cursor: 'older',
-				status: 'reverted',
-				'timestamp.from': '1970-01-01T00:00:01.000Z',
-			},
-		})
+		expect(result.transactions.map((tx) => tx.hash)).toEqual(
+			[...hashes].reverse(),
+		)
+		expect(result.nextCursor).toBeNull()
+		expect(queryIndex).toHaveBeenCalledTimes(1)
+		const query = queryIndex.mock.calls[0]?.[0].query
+		expect(query).toContain('JOIN receipts AS r ON r.tx_hash = t.hash')
+		expect(query).toContain('r.status = 0')
+		expect(query).toContain('(t.block_num, t.idx) > (1, 0)')
+		expect(query).toContain("t.block_timestamp >= '1970-01-01T00:00:01.000Z'")
+		expect(query).toContain('ORDER BY t.block_num + 0 ASC, t.idx ASC')
 	})
 
-	it('keeps both navigation boundaries when the bounded scan finds only batches', async () => {
-		getTransactions.mockImplementation(() =>
-			Promise.resolve(
-				Response.json({
-					data: [
-						row({ recipient: portal, input: batchInput, blockNumber: 10 }),
-					],
-					nextCursor: `scan-${getTransactions.mock.calls.length}`,
-				}),
-			),
-		)
-		const result = await fetchAddressHistoryData(filteredParams)
-		expect(getTransactions).toHaveBeenCalledTimes(10)
-		expect(result).toMatchObject({
+	it('returns an exhausted page without hydrating discarded batches', async () => {
+		queryIndex.mockResolvedValue({ rows: [] })
+		await expect(
+			fetchAddressHistoryData(filteredParams),
+		).resolves.toMatchObject({
 			transactions: [],
-			nextCursor: 'scan-10',
-			reverseCursor: btoa(JSON.stringify([10, 17])),
+			nextCursor: null,
+			reverseCursor: null,
 			total: null,
 		})
+		expect(getTransaction).not.toHaveBeenCalled()
+		expect(getTransactions).not.toHaveBeenCalled()
+	})
+
+	it.each([
+		'invalid',
+		btoa('["1",0]'),
+		btoa('[-1,0]'),
+		btoa('[1.5,0]'),
+		btoa('[9007199254740992,0]'),
+	])('rejects malformed cursors before querying: %s', async (cursor) => {
+		await expect(
+			fetchAddressHistoryData({
+				...filteredParams,
+				searchParams: { ...filteredParams.searchParams, cursor },
+			}),
+		).rejects.toThrow()
+		expect(queryIndex).not.toHaveBeenCalled()
 	})
 
 	it.each([

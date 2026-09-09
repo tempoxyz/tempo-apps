@@ -28,6 +28,7 @@ import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 import { zonePortalAbi } from '#lib/abis'
 import { isZonePortalAddress } from '#lib/domain/zones'
+import { tidx } from '#lib/server/tempo-queries-provider'
 
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
@@ -35,8 +36,6 @@ const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
 const SUBMIT_BATCH_SELECTOR = toFunctionSelector(
 	getAbiItem({ abi: zonePortalAbi, name: 'submitBatch' }),
 )
-const FILTER_SCAN_PAGE_SIZE = 50
-const FILTER_SCAN_MAX_PAGES = 10
 
 export type EnrichedTransaction = {
 	hash: `0x${string}`
@@ -180,21 +179,6 @@ function transactionCursor(row: TransactionRow): string {
 	)
 }
 
-function isSubmitBatch(row: TransactionRow, address: Address.Address): boolean {
-	const calls = [
-		{ to: row.recipient, data: row.input },
-		...(row.calls ?? []),
-		...(row.meta?.rpc?.calls ?? []),
-	]
-	return calls.some(
-		(call) =>
-			call.to?.toLowerCase() === address.toLowerCase() &&
-			('input' in call ? (call.input ?? call.data) : call.data)
-				?.toLowerCase()
-				.startsWith(SUBMIT_BATCH_SELECTOR),
-	)
-}
-
 async function fetchFilteredHistoryPage(
 	address: Address.Address,
 	chainId: number,
@@ -206,43 +190,100 @@ async function fetchFilteredHistoryPage(
 	nextCursor: string | null
 	reverseCursor: string | null
 }> {
-	const data: TransactionRow[] = []
-	let cursor = searchParams.cursor
-	let reverseCursor: string | null = null
-	for (let page = 0; page < FILTER_SCAN_MAX_PAGES; page++) {
-		const result = await parseResponse(
-			api.v1.transactions.$get({
-				query: {
-					chainId: String(chainId),
-					...historyFilters(address, searchParams),
-					order: searchParams.sort,
-					limit: String(FILTER_SCAN_PAGE_SIZE),
-					...(cursor ? { cursor } : {}),
-					include: 'receipt',
-				},
-			}),
+	Address.assert(address)
+	const account = address.toLowerCase()
+	const direction = searchParams.sort === 'asc' ? 'ASC' : 'DESC'
+	const filters = [
+		`(t."to" = '${account}' AND lower(left(t.input, 10)) = '${SUBMIT_BATCH_SELECTOR}') IS NOT TRUE`,
+		`NOT EXISTS (
+			SELECT 1 FROM jsonb_array_elements(
+				CASE WHEN jsonb_typeof(t.calls) = 'array' THEN t.calls ELSE '[]'::jsonb END
+			) AS call
+			WHERE lower(call->>'to') = '${account}'
+			AND lower(left(COALESCE(call->>'input', call->>'data'), 10)) = '${SUBMIT_BATCH_SELECTOR}'
+		)`,
+	]
+	if (searchParams.cursor) {
+		const cursor: unknown = JSON.parse(atob(searchParams.cursor))
+		if (
+			!Array.isArray(cursor) ||
+			cursor.length !== 2 ||
+			!cursor.every(
+				(value) =>
+					typeof value === 'number' &&
+					Number.isSafeInteger(value) &&
+					value >= 0,
+			)
 		)
-		// Keep the scan boundary even for an empty filtered page, so Previous works.
-		if (reverseCursor === null && result.data[0])
-			reverseCursor = transactionCursor(result.data[0])
-		for (const [index, row] of result.data.entries()) {
-			if (isSubmitBatch(row, address)) continue
-			data.push(row)
-			if (data.length === limit)
-				return {
-					data,
-					reverseCursor,
-					nextCursor:
-						index < result.data.length - 1 || result.nextCursor
-							? transactionCursor(row)
-							: null,
-				}
-		}
-		if (!result.nextCursor) return { data, reverseCursor, nextCursor: null }
-		cursor = result.nextCursor
+			throw new Error('Invalid history cursor')
+		filters.push(
+			`(t.block_num, t.idx) ${direction === 'ASC' ? '>' : '<'} (${cursor[0]}, ${cursor[1]})`,
+		)
 	}
-	// Bound Worker work for batch-only stretches; Next continues from this boundary.
-	return { data, reverseCursor, nextCursor: cursor ?? null }
+	if (searchParams.after !== undefined)
+		filters.push(
+			`t.block_timestamp >= '${new Date(searchParams.after * 1000).toISOString()}'`,
+		)
+	if (searchParams.status)
+		filters.push(`r.status = ${searchParams.status === 'success' ? 1 : 0}`)
+	const sides =
+		searchParams.include === 'sent'
+			? ['from']
+			: searchParams.include === 'received'
+				? ['to']
+				: ['from', 'to']
+	// Separate address indexes avoid a broad OR scan. Exclude batches before
+	// pagination and fetch receipts only for the visible page.
+	const results = await Promise.all(
+		sides.map((side) =>
+			tidx.fetch({
+				chainId,
+				query: `SELECT t.hash, t.block_num, t.idx FROM txs AS t
+			${searchParams.status ? 'JOIN receipts AS r ON r.tx_hash = t.hash' : ''}
+			WHERE t."${side}" = '${account}' AND ${filters.join(' AND ')}
+			ORDER BY t.block_num + 0 ${direction}, t.idx ${direction}
+			LIMIT ${limit + 1}` as string,
+			}),
+		),
+	)
+	const positions = new Map<
+		string,
+		{ hash: Hex.Hex; block: number; index: number }
+	>()
+	for (const result of results)
+		for (const row of result.rows) {
+			const hash = String(row.hash)
+			Hex.assert(hash)
+			positions.set(hash.toLowerCase(), {
+				hash,
+				block: Number(row.block_num),
+				index: Number(row.idx),
+			})
+		}
+	const rows = [...positions.values()].sort(
+		(a, b) =>
+			(direction === 'ASC' ? 1 : -1) * (a.block - b.block || a.index - b.index),
+	)
+	const page = rows.slice(0, limit)
+	const data = await Promise.all(
+		page.map(async (row) => {
+			const response = await parseResponse(
+				api.v1.transactions[':transactionHash'].$get({
+					param: { transactionHash: row.hash },
+					query: { chainId: String(chainId), include: 'receipt' },
+				}),
+			)
+			return response
+		}),
+	)
+	const cursorFor = (row: (typeof rows)[number]) =>
+		btoa(JSON.stringify([row.block, row.index]))
+	const last = page.at(-1)
+	return {
+		data,
+		reverseCursor: page[0] ? cursorFor(page[0]) : null,
+		nextCursor: rows.length > limit && last ? cursorFor(last) : null,
+	}
 }
 
 /**

@@ -1953,11 +1953,9 @@ function SectionsWrapper(props: {
 								</div>
 							}
 							emptyState={
-								hideSubmitBatches && historyData?.nextCursor
-									? 'No matching transactions in this range. Select Next to continue.'
-									: status || dir || period || hideSubmitBatches
-										? 'No matching transactions found.'
-										: 'No transactions found.'
+								status || dir || period || hideSubmitBatches
+									? 'No matching transactions found.'
+									: 'No transactions found.'
 							}
 						/>
 					),
