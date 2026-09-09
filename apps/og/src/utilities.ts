@@ -1,9 +1,5 @@
 import { Hex } from 'ox'
 
-const FONT_MONO_URL =
-	'https://unpkg.com/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2'
-const FONT_INTER_URL =
-	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
 const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
 
 interface ImageCache {
@@ -42,19 +38,27 @@ export const toBase64DataUrl = (
 export async function loadFonts(env: Cloudflare.Env) {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
+		const loadFont = async (name: string) => {
+			const response = await env.ASSETS.fetch(
+				new Request(`https://assets/fonts/${name}`),
+			)
+			if (!response.ok)
+				throw new Error(`Failed to load font ${name}: ${response.status}`)
+			return response.arrayBuffer()
+		}
 		fontsInFlight = Promise.all([
-			fetch(FONT_MONO_URL).then((response: Response) => response.arrayBuffer()),
-			fetch(FONT_INTER_URL).then((response: Response) =>
-				response.arrayBuffer(),
-			),
-			env.ASSETS.fetch(new Request('https://assets/fonts/Pilat-Book.otf')).then(
-				(response: Response) => response.arrayBuffer(),
-			),
-		]).then(([mono, inter, pilat]) => {
-			fontCache = { mono, inter, pilat }
-			fontsInFlight = null
-			return fontCache
-		})
+			loadFont('GeistMono-Regular.woff2'),
+			loadFont('inter-latin-500-normal.woff2'),
+			loadFont('Pilat-Book.otf'),
+		])
+			.then(([mono, inter, pilat]) => {
+				fontCache = { mono, inter, pilat }
+				return fontCache
+			})
+			.finally(() => {
+				// A transient asset failure must not poison subsequent requests.
+				fontsInFlight = null
+			})
 	}
 	return fontsInFlight
 }

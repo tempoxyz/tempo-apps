@@ -212,6 +212,7 @@ export const addressOgQuerySchema = z.pipe(
 		accountType: z.optional(zAccountType),
 		deployer: sanitized(MAX_PARAM_MED),
 		contractName: sanitized(MAX_PARAM_SHORT),
+		contractDescription: sanitized(180),
 	}),
 	z.transform((data) => ({
 		holdings: data.holdings,
@@ -224,6 +225,7 @@ export const addressOgQuerySchema = z.pipe(
 		accountType: data.accountType,
 		deployer: data.deployer,
 		contractName: data.contractName,
+		contractDescription: data.contractDescription,
 	})),
 )
 

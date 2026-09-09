@@ -3,7 +3,7 @@
 	"name": "og",
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-12-17",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"vars": {
 		"EXPLORER_URL": "https://explorer.tempo.xyz"
 	},

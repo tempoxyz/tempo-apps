@@ -66,6 +66,7 @@ export interface AddressOgParams {
 	methods?: string[]
 	deployer?: string
 	contractName?: string
+	contractDescription?: string
 }
 
 // ============ Utility Functions ============
@@ -89,6 +90,14 @@ export function sanitizeText(value: string): string {
 }
 
 // ============ URL Builders ============
+
+export function buildZonePortalOgUrl(
+	baseUrl: string,
+	address: string,
+	network: 'mainnet' | 'testnet' | 'devnet' | 'nextfork',
+): string {
+	return `${baseUrl}/zone-portal/${address}?${new URLSearchParams({ network })}`
+}
 
 export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 	const search = new URLSearchParams()
@@ -182,6 +191,11 @@ export function buildAddressOgUrl(
 		if (params.deployer) search.set('deployer', params.deployer)
 		if (params.contractName)
 			search.set('contractName', truncateText(params.contractName, 64))
+		if (params.contractDescription)
+			search.set(
+				'contractDescription',
+				truncateText(params.contractDescription, 180),
+			)
 	}
 
 	return `${baseUrl}/address/${params.address}?${search.toString()}`

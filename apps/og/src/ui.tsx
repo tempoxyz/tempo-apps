@@ -16,6 +16,8 @@ export interface AddressData {
 	methods?: string[]
 	deployer?: string
 	contractName?: string
+	contractDescription?: string
+	details?: { label: string; value: string }[]
 }
 
 export interface TokenData {
@@ -802,11 +804,34 @@ export function BlockCard({ data }: { data: BlockData }) {
 
 // ============ Address Card Component ============
 
+export function AddressImage({
+	background,
+	children,
+}: {
+	background: string
+	children: import('hono/jsx').Child
+}) {
+	return (
+		<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
+			<img
+				src={background}
+				alt=""
+				tw="absolute inset-0 w-full h-full"
+				style={{ objectFit: 'cover' }}
+			/>
+			<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				{children}
+			</div>
+		</div>
+	)
+}
+
 export function AddressCard({ data }: { data: AddressData }) {
 	const addrLine1 = data.address.slice(0, 21)
 	const addrLine2 = data.address.slice(21)
 	const holdingsGrey = isEmptyValue(data.holdings)
-	const holdingsDisplay = holdingsGrey ? '$0.00' : data.holdings
+	const holdingsDisplay = data.holdings
+	const hasValue = (value: string) => Boolean(value && value !== '—')
 
 	return (
 		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
@@ -883,8 +908,19 @@ export function AddressCard({ data }: { data: AddressData }) {
 					paddingLeft: '56px',
 				}}
 			>
+				{data.accountType === 'contract' && data.contractDescription && (
+					<div tw="flex text-gray-500" style={{ lineHeight: '1.4' }}>
+						{data.contractDescription}
+					</div>
+				)}
+				{data.details?.map(({ label, value }) => (
+					<div key={label} tw="flex w-full justify-between">
+						<span tw="text-gray-500">{label}</span>
+						<span tw="text-gray-900">{value}</span>
+					</div>
+				))}
 				{/* Holdings */}
-				{data.accountType !== 'contract' && (
+				{data.accountType !== 'contract' && hasValue(data.holdings) && (
 					<div
 						tw="flex w-full justify-between items-center"
 						style={{ paddingTop: '6px', paddingBottom: '6px' }}
@@ -913,7 +949,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 				)}
 
 				{/* Divider (when not contract) */}
-				{data.accountType !== 'contract' && (
+				{data.accountType !== 'contract' && hasValue(data.holdings) && (
 					<div
 						tw="flex"
 						style={{
@@ -926,15 +962,17 @@ export function AddressCard({ data }: { data: AddressData }) {
 				)}
 
 				{/* Transactions/Events */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">
-						{data.accountType === 'contract' ? 'Events' : 'Transactions'}
-					</span>
-					<span tw="text-gray-900">{data.txCount}</span>
-				</div>
+				{hasValue(data.txCount) && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-500">
+							{data.accountType === 'contract' ? 'Events' : 'Transactions'}
+						</span>
+						<span tw="text-gray-900">{data.txCount}</span>
+					</div>
+				)}
 
 				{/* Last Active - only for non-contracts */}
-				{data.accountType !== 'contract' && (
+				{data.accountType !== 'contract' && hasValue(data.lastActive) && (
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Last Active</span>
 						<span tw="text-gray-900">{data.lastActive}</span>
@@ -942,10 +980,12 @@ export function AddressCard({ data }: { data: AddressData }) {
 				)}
 
 				{/* Created */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Created</span>
-					<span tw="text-gray-900">{data.created}</span>
-				</div>
+				{hasValue(data.created) && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-500">Created</span>
+						<span tw="text-gray-900">{data.created}</span>
+					</div>
+				)}
 
 				{/* Deployer */}
 				{data.accountType === 'contract' && data.deployer && (

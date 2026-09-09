@@ -7,6 +7,12 @@ import { createFactory, createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 
 import { Address } from 'ox'
+import {
+	fetchPortalOverview,
+	portalId,
+	portalQuerySchema,
+} from '#zone-portal.ts'
+import { ZonePortalCard } from '#zone-portal-card.tsx'
 
 import {
 	addressOgQuerySchema,
@@ -16,6 +22,7 @@ import {
 } from '#params.ts'
 import {
 	AddressCard,
+	AddressImage,
 	type AddressData,
 	BlockCard,
 	type BlockData,
@@ -88,6 +95,7 @@ app.use('/tx/*', rateLimiter)
 app.use('/tx', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
+app.use('/zone-portal/*', rateLimiter)
 app.use('/receipt/*', rateLimiter)
 app.use('/block/*', rateLimiter)
 app.use('/blocks', rateLimiter)
@@ -96,6 +104,60 @@ app.use('/explorer', rateLimiter)
 app.use('/blocks', rateLimiter)
 app.use('/tokens', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
+
+app.get(
+	'/zone-portal/:address',
+	zValidator('query', portalQuerySchema),
+	async (context) => {
+		const address = context.req.param('address')
+		if (portalId(address) === undefined)
+			throw new HTTPException(400, { message: 'Invalid Zone Portal address' })
+		const { network } = context.req.valid('query')
+		let dataError = ''
+		const [fonts, images, overview] = await Promise.all([
+			loadFonts(context.env),
+			loadImages(context.env),
+			fetchPortalOverview(address, network).catch((error) => {
+				console.error('Zone Portal OG data unavailable:', error)
+				dataError =
+					error instanceof Error && typeof error.cause === 'number'
+						? `http-${error.cause}`
+						: error instanceof Error && error.name === 'ZodError'
+							? 'invalid-response'
+							: error instanceof Error && error.name === 'TimeoutError'
+								? 'timeout'
+								: 'network-error'
+				return undefined
+			}),
+		])
+		const response = new ImageResponse(
+			<AddressImage background={toBase64DataUrl(images.bgContract)}>
+				<ZonePortalCard address={address} overview={overview} />
+			</AddressImage>,
+			{
+				width: 1200,
+				height: 630,
+				format: 'webp',
+				module,
+				fonts: [
+					{ name: 'Pilat', data: fonts.pilat, weight: 400, style: 'normal' },
+					{ name: 'Inter', data: fonts.inter, weight: 500, style: 'normal' },
+					{ name: 'GeistMono', data: fonts.mono, weight: 400, style: 'normal' },
+				],
+			},
+		)
+		return new Response(response.body, {
+			headers: {
+				'Content-Type': 'image/webp',
+				'Cache-Control': overview
+					? 'public, max-age=60, s-maxage=60'
+					: 'no-store',
+				'X-Portal-Data': overview ? 'available' : 'unavailable',
+				...(dataError ? { 'X-Portal-Data-Error': dataError } : {}),
+			},
+		})
+	},
+)
 
 // Dynamic OG image routes
 
@@ -397,6 +459,7 @@ app.get(
 			methods: addrParams.methods,
 			deployer: addrParams.deployer,
 			contractName: addrParams.contractName,
+			contractDescription: addrParams.contractDescription,
 		}
 
 		const [fonts, images] = await Promise.all([
@@ -410,17 +473,9 @@ app.get(
 				: images.bgAddress
 
 		const imageResponse = new ImageResponse(
-			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				<img
-					src={toBase64DataUrl(bgImage)}
-					alt=""
-					tw="absolute inset-0 w-full h-full"
-					style={{ objectFit: 'cover' }}
-				/>
-				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
-					<AddressCard data={addressData} />
-				</div>
-			</div>,
+			<AddressImage background={toBase64DataUrl(bgImage)}>
+				<AddressCard data={addressData} />
+			</AddressImage>,
 			{
 				width: 1200,
 				height: 630,
