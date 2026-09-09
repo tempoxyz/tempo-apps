@@ -2,7 +2,6 @@ import type * as Address from 'ox/Address'
 import * as Value from 'ox/Value'
 import type { AccountType } from '#lib/account'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
-import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { getReceiptEventSideAmount } from '#lib/domain/receipt-presentation'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import {
@@ -27,7 +26,15 @@ function truncateOgText(text: string, maxLength: number): string {
 
 // ============ Client-side OG (for $hash.tsx) ============
 
-export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
+export function buildOgImageUrl(
+	data: {
+		block: Pick<TxDataQuery['block'], 'number' | 'timestamp'>
+		receipt: Pick<TxDataQuery['receipt'], 'from'>
+		feeBreakdown: TxDataQuery['feeBreakdown']
+	},
+	hash: string,
+	descriptionEvents: readonly KnownEvent[],
+): string {
 	const timestamp = data.block.timestamp
 	const ogTimestamp = DateFormatter.formatTimestampForOg(timestamp)
 
@@ -44,30 +51,7 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 		total = feeDisplay
 	}
 
-	const events: TxOgEvent[] = data.knownEvents.slice(0, 5).map((event) => {
-		const actionPart = event.parts.find((p) => p.type === 'action')
-		const action = actionPart?.type === 'action' ? actionPart.value : event.type
-
-		const details = event.parts
-			.filter((p) => p.type !== 'action')
-			.map((part) => formatPartForOgClient(part))
-			.filter(Boolean)
-			.join(' ')
-
-		const amountPart = event.parts.find((p) => p.type === 'amount')
-		let amount = ''
-		if (amountPart?.type === 'amount') {
-			const val = Number(
-				Value.format(
-					amountPart.value.value,
-					amountPart.value.decimals ?? DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS,
-				),
-			)
-			amount = val > 0 && val < 0.01 ? '<$0.01' : `$${val.toFixed(0)}`
-		}
-
-		return { action, details, amount: amount || undefined }
-	})
+	const events = descriptionEvents.slice(0, 5).map(formatEventForOg)
 
 	const params: TxOgParams = {
 		hash,
@@ -81,26 +65,6 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 	}
 
 	return buildTxOgUrl(OG_BASE_URL, params)
-}
-
-function formatPartForOgClient(part: KnownEventPart): string {
-	switch (part.type) {
-		case 'text':
-			return part.value
-		case 'amount':
-			return `${Value.format(part.value.value, part.value.decimals ?? DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS)} ${part.value.symbol || ''}`
-		case 'account':
-			return HexFormatter.truncate(part.value)
-		case 'token':
-			return part.value.symbol || HexFormatter.truncate(part.value.address)
-		case 'contractCall': {
-			const selector = part.value.input.slice(0, 10)
-			const target = HexFormatter.truncate(part.value.address)
-			return `${selector} on ${target}`
-		}
-		default:
-			return ''
-	}
 }
 
 function formatAmount(
@@ -167,7 +131,7 @@ function formatEventPart(part: KnownEventPart): string {
 	}
 }
 
-export function formatEventForOgServer(event: KnownEvent): string {
+function formatEventForOg(event: KnownEvent): TxOgEvent {
 	const actionPart = event.parts.find((p) => p.type === 'action')
 	const action = actionPart ? formatEventPart(actionPart) : event.type
 
@@ -182,7 +146,16 @@ export function formatEventForOgServer(event: KnownEvent): string {
 			? `$${formattedSideAmount}`
 			: ''
 
-	return `${truncateOgText(action, 40)}|${truncateOgText(details, 180)}|${truncateOgText(usdAmount, 30)}`
+	return {
+		action: truncateOgText(action, 40),
+		details: truncateOgText(details, 180),
+		amount: truncateOgText(usdAmount, 30),
+	}
+}
+
+export function formatEventForOgServer(event: KnownEvent): string {
+	const { action, details, amount } = formatEventForOg(event)
+	return `${action}|${details}|${amount}`
 }
 
 export function formatDate(timestamp: number): string {
