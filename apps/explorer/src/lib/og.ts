@@ -1,6 +1,7 @@
 import type * as Address from 'ox/Address'
 import * as Value from 'ox/Value'
 import type { AccountType } from '#lib/account'
+import { getTempoEnv } from '#lib/env'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
 import { DEFAULT_KNOWN_EVENT_AMOUNT_DECIMALS } from '#lib/domain/known-event-totals'
 import { getReceiptEventSideAmount } from '#lib/domain/receipt-presentation'
@@ -10,6 +11,7 @@ import {
 	buildAddressOgUrl,
 	buildTokenOgUrl,
 	buildTxOgUrl,
+	buildZonePortalOgUrl,
 	type TokenOgParams,
 	type TxOgEvent,
 	type TxOgParams,
@@ -19,6 +21,10 @@ import type { TxData as TxDataQuery } from '#lib/queries'
 // ============ Constants ============
 
 export const OG_BASE_URL = 'https://og.tempo.xyz'
+
+export function buildZonePortalOgImageUrl(address: string): string {
+	return buildZonePortalOgUrl(OG_BASE_URL, address, getTempoEnv())
+}
 
 function truncateOgText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text

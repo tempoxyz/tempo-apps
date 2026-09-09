@@ -54,7 +54,7 @@ test('contract descriptions are bounded and escaped', () => {
 		accountType: 'contract',
 		contractDescription: `<script>${'x'.repeat(300)}</script>`,
 	})
-	assert.doesNotMatch(html, /<script>/)
+	assert.doesNotMatch(html, /<script>/i)
 	assert.match(html, /&lt;script&gt;/)
 	assert.doesNotMatch(html, /x{181}/)
 })

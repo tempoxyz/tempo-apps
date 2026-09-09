@@ -91,6 +91,14 @@ export function sanitizeText(value: string): string {
 
 // ============ URL Builders ============
 
+export function buildZonePortalOgUrl(
+	baseUrl: string,
+	address: string,
+	network: 'mainnet' | 'testnet' | 'devnet' | 'nextfork',
+): string {
+	return `${baseUrl}/zone-portal/${address}?${new URLSearchParams({ network })}`
+}
+
 export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 	const search = new URLSearchParams()
 

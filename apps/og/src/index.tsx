@@ -7,6 +7,12 @@ import { createFactory, createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 
 import { Address } from 'ox'
+import {
+	fetchPortalOverview,
+	portalId,
+	portalQuerySchema,
+} from '#zone-portal.ts'
+import { ZonePortalCard } from '#zone-portal-card.tsx'
 
 import {
 	addressOgQuerySchema,
@@ -88,6 +94,7 @@ app.use('/tx/*', rateLimiter)
 app.use('/tx', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
+app.use('/zone-portal/*', rateLimiter)
 app.use('/receipt/*', rateLimiter)
 app.use('/block/*', rateLimiter)
 app.use('/blocks', rateLimiter)
@@ -96,6 +103,51 @@ app.use('/explorer', rateLimiter)
 app.use('/blocks', rateLimiter)
 app.use('/tokens', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
+
+app.get(
+	'/zone-portal/:address',
+	zValidator('query', portalQuerySchema),
+	async (context) => {
+		const address = context.req.param('address')
+		if (portalId(address) === undefined)
+			throw new HTTPException(400, { message: 'Invalid Zone Portal address' })
+		const { network } = context.req.valid('query')
+		const [fonts, overview] = await Promise.all([
+			loadFonts(context.env),
+			fetchPortalOverview(address, network).catch((error) => {
+				console.error('Zone Portal OG data unavailable:', error)
+				return undefined
+			}),
+		])
+		const response = new ImageResponse(
+			<ZonePortalCard
+				address={address}
+				network={network}
+				overview={overview}
+				updated={new Date().toISOString().slice(0, 16).replace('T', ' ')}
+			/>,
+			{
+				width: 1200,
+				height: 630,
+				format: 'webp',
+				module,
+				fonts: [
+					{ name: 'Pilat', data: fonts.pilat, weight: 400, style: 'normal' },
+					{ name: 'GeistMono', data: fonts.mono, weight: 400, style: 'normal' },
+				],
+			},
+		)
+		return new Response(response.body, {
+			headers: {
+				'Content-Type': 'image/webp',
+				'Cache-Control': overview
+					? 'public, max-age=60, s-maxage=60'
+					: 'no-store',
+				'X-Portal-Data': overview ? 'available' : 'unavailable',
+			},
+		})
+	},
+)
 
 // Dynamic OG image routes
 

@@ -82,6 +82,7 @@ import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
 import {
 	buildAddressDescription,
 	buildAddressOgImageUrl,
+	buildZonePortalOgImageUrl,
 	buildTokenDescription,
 	buildTokenOgImageUrl,
 } from '#lib/og'
@@ -411,6 +412,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				holders: undefined,
 				created: undefined,
 			})
+		} else if (isZonePortalAddress(params.address as Address.Address)) {
+			description =
+				'View Zone Portal deposits, withdrawals, batches, and token balances on Tempo Explorer.'
+			ogImageUrl = buildZonePortalOgImageUrl(params.address)
 		} else {
 			// Activity and balances load after hydration. Missing data is not zero.
 			description = contractInfo?.description

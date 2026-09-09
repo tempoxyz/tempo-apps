@@ -25,23 +25,22 @@ it.skipIf(!process.env.EXPLORER_TEST_ORIGIN)(
 		]
 		expect(images).toHaveLength(1)
 		expect(html).toContain('content="Zone Portal Proxy #1 ⋅ Tempo Explorer"')
-		expect(html).toContain('ERC-1167 minimal proxy for Tempo Zone 1')
+		expect(html).toContain('deposits, withdrawals, batches, and token balances')
 		const imageContent = images[0]?.[1]
 		if (!imageContent) throw new Error('Missing OG image metadata')
 		const imageUrl = new URL(imageContent.replaceAll('&amp;', '&'))
 		expect(imageUrl.searchParams.has('txCount')).toBe(false)
 		expect(imageUrl.searchParams.has('holdings')).toBe(false)
-		expect(imageUrl.searchParams.get('contractName')).toBe(
-			'Zone Portal Proxy #1',
+		expect(imageUrl.pathname).toBe(
+			'/zone-portal/0x5ad0000000000000000000000000000000000001',
 		)
-		expect(imageUrl.searchParams.get('contractDescription')).toBe(
-			'ERC-1167 minimal proxy for Tempo Zone 1',
-		)
+		expect(imageUrl.searchParams.get('network')).toBe('mainnet')
 		const target = process.env.OG_TEST_ORIGIN
 			? new URL(imageUrl.pathname + imageUrl.search, process.env.OG_TEST_ORIGIN)
 			: imageUrl
 		const image = await fetch(target)
 		expect(image.status).toBe(200)
+		expect(image.headers.get('x-portal-data')).toBe('available')
 		expect(image.headers.get('content-type')).toBe('image/webp')
 		const bytes = new Uint8Array(await image.arrayBuffer())
 		expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe('RIFF')
