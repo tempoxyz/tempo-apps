@@ -50,7 +50,7 @@ test('fetches the selected network overview and renders the returned counts and 
 			url,
 			`https://explore.tempo.xyz/api/address/zone-portal/${address}`,
 		)
-		assert.equal(init?.redirect, 'error')
+		assert.equal(init?.redirect, 'manual')
 		assert.ok(init?.signal)
 		return Response.json(overview)
 	}) as typeof fetch)

@@ -45,7 +45,7 @@ export async function fetchPortalOverview(
 		`${portalNetworks[network]}/api/address/zone-portal/${address}`,
 		{
 			signal: AbortSignal.timeout(8_000),
-			redirect: 'error',
+			redirect: 'manual',
 		},
 	)
 	if (!response.ok)
