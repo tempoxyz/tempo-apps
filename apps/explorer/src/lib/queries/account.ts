@@ -28,6 +28,7 @@ export function historyQueryOptions(params: {
 	after?: number | undefined
 	address: Address.Address
 	status?: 'success' | 'reverted' | undefined
+	hideSubmitBatches?: boolean | undefined
 }) {
 	const searchParams = new URLSearchParams({
 		include: params?.include ?? 'all',
@@ -35,6 +36,7 @@ export function historyQueryOptions(params: {
 		sort: params.order ?? 'desc',
 	})
 	if (params.cursor) searchParams.set('cursor', params.cursor)
+	if (params.hideSubmitBatches) searchParams.set('hideSubmitBatches', 'true')
 	if (params.status) {
 		searchParams.set('status', params.status)
 	}
@@ -51,6 +53,7 @@ export function historyQueryOptions(params: {
 			params.include ?? 'all',
 			params.after,
 			params.status ?? 'all',
+			params.hideSubmitBatches ?? false,
 		],
 		queryFn: async ({ signal }): Promise<HistoryResponse> => {
 			const url = getApiUrl(

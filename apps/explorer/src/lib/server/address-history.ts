@@ -1,7 +1,12 @@
 import { type InferResponseType, parseResponse } from 'hono/client'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import type { Log, TransactionReceipt } from 'viem'
+import {
+	getAbiItem,
+	toFunctionSelector,
+	type Log,
+	type TransactionReceipt,
+} from 'viem'
 import type { Config } from 'wagmi'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
@@ -21,10 +26,15 @@ import { api } from '#lib/server/tempo-api'
 import { getTransactionActivities } from '#lib/server/transaction-activities'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
+import { zonePortalAbi } from '#lib/abis'
+import { isZonePortalAddress } from '#lib/domain/zones'
 
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
 const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
+const SUBMIT_BATCH_SELECTOR = toFunctionSelector(
+	getAbiItem({ abi: zonePortalAbi, name: 'submitBatch' }),
+)
 
 export type EnrichedTransaction = {
 	hash: `0x${string}`
@@ -56,6 +66,7 @@ export const RequestParametersSchema = z.object({
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	status: z.optional(z.enum(['success', 'reverted'])),
 	after: z.optional(z.coerce.number()),
+	hideSubmitBatches: z.optional(z.enum(['true', 'false'])),
 })
 
 export type HistoryRequestParameters = z.infer<typeof RequestParametersSchema>
@@ -165,6 +176,136 @@ function transactionCursor(row: TransactionRow): string {
 	return btoa(
 		JSON.stringify([Number(row.blockNumber), Number(row.transactionIndex)]),
 	)
+}
+
+async function fetchFilteredHistoryPage(
+	address: Address.Address,
+	chainId: number,
+	searchParams: HistoryRequestParameters,
+	limit: number,
+): Promise<{
+	data: TransactionRow[]
+	meta?: HistoryTotal | undefined
+	nextCursor: string | null
+	reverseCursor: string | null
+}> {
+	Address.assert(address)
+	const account = address.toLowerCase()
+	const direction = searchParams.sort === 'asc' ? 'ASC' : 'DESC'
+	const callDestination = `"to"[[:space:]]*:[[:space:]]*"${account}"`
+	const callInput = `"(?:input|data)"[[:space:]]*:[[:space:]]*"${SUBMIT_BATCH_SELECTOR}`
+	const filters = [
+		`NOT (ifNull(t."to", '') = '${account}' AND startsWith(lower(ifNull(t.input, '')), '${SUBMIT_BATCH_SELECTOR}'))`,
+		// Indexed calls are flat JSON objects. TIDX's SQL validator does not
+		// support array lambdas, so match the two fields within one object in
+		// either key order. The brace boundary prevents matching different calls.
+		`empty(extractAll(lower(ifNull(t.calls, '')), '${callDestination}[^{}]*${callInput}|${callInput}[^{}]*${callDestination}'))`,
+	]
+	if (searchParams.cursor) {
+		const cursor: unknown = JSON.parse(atob(searchParams.cursor))
+		if (
+			!Array.isArray(cursor) ||
+			cursor.length !== 2 ||
+			!cursor.every(
+				(value) =>
+					typeof value === 'number' &&
+					Number.isSafeInteger(value) &&
+					value >= 0,
+			)
+		)
+			throw new Error('Invalid history cursor')
+		filters.push(
+			`(t.block_num, t.idx) ${direction === 'ASC' ? '>' : '<'} (${cursor[0]}, ${cursor[1]})`,
+		)
+	}
+	if (searchParams.after !== undefined)
+		filters.push(
+			`t.block_timestamp >= '${new Date(searchParams.after * 1000).toISOString()}'`,
+		)
+	const sides =
+		searchParams.include === 'sent'
+			? ['from']
+			: searchParams.include === 'received'
+				? ['to']
+				: ['from', 'to']
+	// Separate address indexes avoid a broad OR scan. Exclude batches before
+	// pagination and fetch receipts only for the visible page.
+	const results = await Promise.all(
+		sides.map(async (side) => {
+			// Restrict the receipt side before joining, rather than building a
+			// hash table of every receipt in the archive for a status filter.
+			const receiptJoin = searchParams.status
+				? `JOIN (SELECT DISTINCT tx_hash FROM receipts
+					WHERE "${side}" = '${account}' AND status = ${searchParams.status === 'success' ? 1 : 0}
+				) AS r ON r.tx_hash = t.hash`
+				: ''
+			const response = await api.v1.indexer.query.$get({
+				query: {
+					chainId: String(chainId),
+					// Native ClickHouse covers the archive without relying on the
+					// PostgreSQL FDW user mapping used by the default tiered engine.
+					engine: 'clickhouse',
+					sql: `SELECT t.hash, t.block_num, t.idx FROM txs AS t
+			${receiptJoin}
+			WHERE t."${side}" = '${account}' AND ${filters.join(' AND ')}
+			ORDER BY t.block_num ${direction}, t.idx ${direction}
+			LIMIT ${limit + 1}`,
+				},
+			})
+			// Preserve query-rejection details; tidx.ts 0.1.2 only reads `message`,
+			// while the indexer returns its diagnostic in `error`.
+			if (response.status === 422)
+				throw new Error(
+					`Indexer query rejected: ${(await response.json()).error}`,
+				)
+			const result = await parseResponse(response)
+			return {
+				rows: result.rows.map((values) =>
+					Object.fromEntries(
+						result.columns.map((name, i) => [name, values[i]]),
+					),
+				),
+			}
+		}),
+	)
+	const positions = new Map<
+		string,
+		{ hash: Hex.Hex; block: number; index: number }
+	>()
+	for (const result of results)
+		for (const row of result.rows) {
+			const hash = String(row.hash)
+			Hex.assert(hash)
+			positions.set(hash.toLowerCase(), {
+				hash,
+				block: Number(row.block_num),
+				index: Number(row.idx),
+			})
+		}
+	const rows = [...positions.values()].sort(
+		(a, b) =>
+			(direction === 'ASC' ? 1 : -1) * (a.block - b.block || a.index - b.index),
+	)
+	const page = rows.slice(0, limit)
+	const data = await Promise.all(
+		page.map(async (row) => {
+			const response = await parseResponse(
+				api.v1.transactions[':transactionHash'].$get({
+					param: { transactionHash: row.hash },
+					query: { chainId: String(chainId), include: 'receipt' },
+				}),
+			)
+			return response
+		}),
+	)
+	const cursorFor = (row: (typeof rows)[number]) =>
+		btoa(JSON.stringify([row.block, row.index]))
+	const last = page.at(-1)
+	return {
+		data,
+		reverseCursor: page[0] ? cursorFor(page[0]) : null,
+		nextCursor: rows.length > limit && last ? cursorFor(last) : null,
+	}
 }
 
 /**
@@ -286,26 +427,31 @@ export async function fetchAddressHistoryData(params: {
 	if (limit < 1) limit = 1
 
 	const filters = historyFilters(address, searchParams)
+	const hideSubmitBatches =
+		searchParams.hideSubmitBatches === 'true' && isZonePortalAddress(address)
 	const totalKey = JSON.stringify([chainId, filters])
 	const cachedTotal = getCachedHistoryTotal(totalKey)
 	// Only the latest edge refreshes the count. The oldest edge is fetched in
 	// parallel with ascending order and reuses the same cached total.
 	const includeTotal =
+		!hideSubmitBatches &&
 		searchParams.cursor === undefined &&
 		searchParams.sort === 'desc' &&
 		cachedTotal === undefined
-	const resultPromise = parseResponse(
-		api.v1.transactions.$get({
-			query: {
-				chainId: String(chainId),
-				...filters,
-				order: searchParams.sort,
-				limit: String(limit),
-				...(searchParams.cursor ? { cursor: searchParams.cursor } : {}),
-				include: includeTotal ? 'receipt,totalCount' : 'receipt',
-			},
-		}),
-	)
+	const resultPromise = hideSubmitBatches
+		? fetchFilteredHistoryPage(address, chainId, searchParams, limit)
+		: parseResponse(
+				api.v1.transactions.$get({
+					query: {
+						chainId: String(chainId),
+						...filters,
+						order: searchParams.sort,
+						limit: String(limit),
+						...(searchParams.cursor ? { cursor: searchParams.cursor } : {}),
+						include: includeTotal ? 'receipt,totalCount' : 'receipt',
+					},
+				}),
+			)
 	const requestedTotal = includeTotal
 		? resultPromise
 				.then((result) =>
@@ -322,7 +468,7 @@ export async function fetchAddressHistoryData(params: {
 
 	const [result, exactTotal] = await Promise.all([
 		resultPromise,
-		cachedTotal ?? requestedTotal,
+		hideSubmitBatches ? undefined : (cachedTotal ?? requestedTotal),
 	])
 
 	const [getTokenMetadata, activities] = await Promise.all([
@@ -350,7 +496,14 @@ export async function fetchAddressHistoryData(params: {
 		total: exactTotal?.totalCount ?? null,
 		limit,
 		nextCursor: result.nextCursor,
-		reverseCursor: result.data[0] ? transactionCursor(result.data[0]) : null,
+		reverseCursor:
+			'reverseCursor' in result &&
+			(typeof result.reverseCursor === 'string' ||
+				result.reverseCursor === null)
+				? result.reverseCursor
+				: result.data[0]
+					? transactionCursor(result.data[0])
+					: null,
 		countCapped: exactTotal?.totalCountCapped ?? false,
 		error: null,
 	}

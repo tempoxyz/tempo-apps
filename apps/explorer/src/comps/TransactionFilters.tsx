@@ -29,7 +29,15 @@ const periodSection: FilterSection<'24h' | '7d'> = {
 export function TransactionFilters(
 	props: TransactionFilters.Props,
 ): React.JSX.Element {
-	const { status, period, onStatusChange, onPeriodChange } = props
+	const {
+		status,
+		period,
+		onStatusChange,
+		onPeriodChange,
+		hideSubmitBatches,
+		onHideSubmitBatchesChange,
+		onClearAll,
+	} = props
 
 	const mode = Sections.useSectionsMode()
 	const isStacked = mode === 'stacked'
@@ -38,12 +46,28 @@ export function TransactionFilters(
 	const containerRef = React.useRef<HTMLDivElement>(null)
 
 	const activeCount =
-		(status !== undefined ? 1 : 0) + (period !== undefined ? 1 : 0)
+		(status !== undefined ? 1 : 0) +
+		(period !== undefined ? 1 : 0) +
+		(hideSubmitBatches ? 1 : 0)
 
 	const handleClearAll = React.useCallback(() => {
+		if (onClearAll) return onClearAll()
 		onStatusChange(undefined)
 		onPeriodChange(undefined)
-	}, [onStatusChange, onPeriodChange])
+		onHideSubmitBatchesChange?.(false)
+	}, [onStatusChange, onPeriodChange, onHideSubmitBatchesChange, onClearAll])
+
+	const batchFilter = onHideSubmitBatchesChange && (
+		<label className="flex items-center gap-[8px] text-[12px] text-secondary cursor-pointer">
+			<input
+				type="checkbox"
+				checked={hideSubmitBatches ?? false}
+				onChange={(event) => onHideSubmitBatchesChange(event.target.checked)}
+				className="accent-accent"
+			/>
+			Hide submit batches
+		</label>
+	)
 
 	const toggleOpen = React.useCallback(() => setOpen((v) => !v), [])
 
@@ -68,6 +92,8 @@ export function TransactionFilters(
 					<button
 						type="button"
 						onClick={toggleOpen}
+						aria-label="Filter transactions"
+						aria-expanded={open}
 						className={cx(
 							'flex items-center gap-[6px] border rounded-[6px] px-[8px] py-[4px] text-[12px] cursor-pointer transition-colors',
 							activeCount > 0
@@ -94,6 +120,7 @@ export function TransactionFilters(
 				</div>
 				{open && (
 					<div className="flex flex-col gap-[10px] pt-[6px]">
+						{batchFilter}
 						<SegmentedRow
 							label={statusSection.label}
 							options={statusSection.options}
@@ -117,6 +144,8 @@ export function TransactionFilters(
 			<button
 				type="button"
 				onClick={toggleOpen}
+				aria-label="Filter transactions"
+				aria-expanded={open}
 				className={cx(
 					'flex items-center gap-[6px] border rounded-[6px] px-[8px] py-[4px] text-[12px] cursor-pointer transition-colors',
 					activeCount > 0
@@ -135,6 +164,7 @@ export function TransactionFilters(
 			{open && (
 				<div className="absolute top-full right-0 mt-[6px] z-50 bg-card-header border border-card-border rounded-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.5)] min-w-[260px]">
 					<div className="flex flex-col gap-[10px] p-[14px]">
+						{batchFilter}
 						<SegmentedRow
 							label={statusSection.label}
 							options={statusSection.options}
@@ -200,6 +230,9 @@ export declare namespace TransactionFilters {
 	type Props = {
 		status?: 'success' | 'reverted' | undefined
 		period?: '24h' | '7d' | undefined
+		hideSubmitBatches?: boolean | undefined
+		onHideSubmitBatchesChange?: ((hide: boolean) => void) | undefined
+		onClearAll?: (() => void) | undefined
 		onStatusChange: (status: 'success' | 'reverted' | undefined) => void
 		onPeriodChange: (period: '24h' | '7d' | undefined) => void
 	}
