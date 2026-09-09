@@ -22,6 +22,7 @@ import {
 } from '#params.ts'
 import {
 	AddressCard,
+	AddressImage,
 	type AddressData,
 	BlockCard,
 	type BlockData,
@@ -113,8 +114,9 @@ app.get(
 			throw new HTTPException(400, { message: 'Invalid Zone Portal address' })
 		const { network } = context.req.valid('query')
 		let dataError = ''
-		const [fonts, overview] = await Promise.all([
+		const [fonts, images, overview] = await Promise.all([
 			loadFonts(context.env),
+			loadImages(context.env),
 			fetchPortalOverview(address, network).catch((error) => {
 				console.error('Zone Portal OG data unavailable:', error)
 				dataError =
@@ -129,12 +131,9 @@ app.get(
 			}),
 		])
 		const response = new ImageResponse(
-			<ZonePortalCard
-				address={address}
-				network={network}
-				overview={overview}
-				updated={new Date().toISOString().slice(0, 16).replace('T', ' ')}
-			/>,
+			<AddressImage background={toBase64DataUrl(images.bgContract)}>
+				<ZonePortalCard address={address} overview={overview} />
+			</AddressImage>,
 			{
 				width: 1200,
 				height: 630,
@@ -142,6 +141,7 @@ app.get(
 				module,
 				fonts: [
 					{ name: 'Pilat', data: fonts.pilat, weight: 400, style: 'normal' },
+					{ name: 'Inter', data: fonts.inter, weight: 500, style: 'normal' },
 					{ name: 'GeistMono', data: fonts.mono, weight: 400, style: 'normal' },
 				],
 			},
@@ -473,17 +473,9 @@ app.get(
 				: images.bgAddress
 
 		const imageResponse = new ImageResponse(
-			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				<img
-					src={toBase64DataUrl(bgImage)}
-					alt=""
-					tw="absolute inset-0 w-full h-full"
-					style={{ objectFit: 'cover' }}
-				/>
-				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
-					<AddressCard data={addressData} />
-				</div>
-			</div>,
+			<AddressImage background={toBase64DataUrl(bgImage)}>
+				<AddressCard data={addressData} />
+			</AddressImage>,
 			{
 				width: 1200,
 				height: 630,

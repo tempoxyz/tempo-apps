@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildZonePortalOgUrl } from '../../explorer/src/lib/og-params.ts'
+import { AddressImage } from '../src/ui.tsx'
 import { ZonePortalCard } from '../src/zone-portal-card.tsx'
 import {
 	fetchPortalOverview,
@@ -56,9 +57,7 @@ test('fetches the selected network overview and renders the returned counts and 
 	}) as typeof fetch)
 	const html = ZonePortalCard({
 		address,
-		network: 'mainnet',
 		overview: data,
-		updated: '2026-09-09 15:30',
 	}).toString()
 	for (const text of [
 		'Deposits',
@@ -69,7 +68,7 @@ test('fetches the selected network overview and renders the returned counts and 
 		'>24,502<',
 		'DLUSD',
 		'11.895002',
-		address,
+		'Zone Portal Proxy #1',
 	])
 		assert.ok(html.includes(text), text)
 	assert.doesNotMatch(html, /Events|ERC-1167/)
@@ -78,22 +77,33 @@ test('fetches the selected network overview and renders the returned counts and 
 test('real zero counts remain zero; unavailable data is never rendered as zero', () => {
 	const empty = ZonePortalCard({
 		address,
-		network: 'testnet',
 		overview: {
 			...overview,
 			counts: { deposits: 0, withdrawals: 0, batches: 0 },
 			assets: [],
 		},
-		updated: '',
 	}).toString()
 	assert.equal([...empty.matchAll(/>0</g)].length, 3)
 	const unavailable = ZonePortalCard({
 		address,
-		network: 'testnet',
-		updated: '',
 	}).toString()
 	assert.match(unavailable, /Data temporarily unavailable/)
 	assert.doesNotMatch(unavailable, />0</)
+})
+
+test('portal cards retain the shared contract template and label/value layout', () => {
+	const html = AddressImage({
+		background: '/bg-template-contract.webp',
+		children: ZonePortalCard({ address, overview }),
+	}).toString()
+	assert.match(html, /src="\/bg-template-contract.webp"/)
+	assert.match(html, /width:700px/)
+	assert.match(html, /border-top-right-radius:24px/)
+	assert.match(html, /font-family:Pilat/)
+	assert.match(html, /left:0;bottom:0/)
+	assert.match(html, /text-gray-500">Deposits/)
+	assert.match(html, /text-gray-900">95/)
+	assert.doesNotMatch(html, /Indexed activity|enabled assets|Mainnet/)
 })
 
 test('rejects unavailable and malformed source data', async () => {

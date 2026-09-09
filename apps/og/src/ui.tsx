@@ -17,6 +17,7 @@ export interface AddressData {
 	deployer?: string
 	contractName?: string
 	contractDescription?: string
+	details?: { label: string; value: string }[]
 }
 
 export interface TokenData {
@@ -803,6 +804,28 @@ export function BlockCard({ data }: { data: BlockData }) {
 
 // ============ Address Card Component ============
 
+export function AddressImage({
+	background,
+	children,
+}: {
+	background: string
+	children: import('hono/jsx').Child
+}) {
+	return (
+		<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
+			<img
+				src={background}
+				alt=""
+				tw="absolute inset-0 w-full h-full"
+				style={{ objectFit: 'cover' }}
+			/>
+			<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				{children}
+			</div>
+		</div>
+	)
+}
+
 export function AddressCard({ data }: { data: AddressData }) {
 	const addrLine1 = data.address.slice(0, 21)
 	const addrLine2 = data.address.slice(21)
@@ -890,6 +913,12 @@ export function AddressCard({ data }: { data: AddressData }) {
 						{data.contractDescription}
 					</div>
 				)}
+				{data.details?.map(({ label, value }) => (
+					<div key={label} tw="flex w-full justify-between">
+						<span tw="text-gray-500">{label}</span>
+						<span tw="text-gray-900">{value}</span>
+					</div>
+				))}
 				{/* Holdings */}
 				{data.accountType !== 'contract' && hasValue(data.holdings) && (
 					<div
