@@ -49,7 +49,9 @@ export async function fetchPortalOverview(
 		},
 	)
 	if (!response.ok)
-		throw new Error(`Portal overview returned ${response.status}`)
+		throw new Error(`Portal overview returned ${response.status}`, {
+			cause: response.status,
+		})
 	return overviewSchema.parse(await response.json())
 }
 

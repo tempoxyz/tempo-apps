@@ -112,10 +112,19 @@ app.get(
 		if (portalId(address) === undefined)
 			throw new HTTPException(400, { message: 'Invalid Zone Portal address' })
 		const { network } = context.req.valid('query')
+		let dataError = ''
 		const [fonts, overview] = await Promise.all([
 			loadFonts(context.env),
 			fetchPortalOverview(address, network).catch((error) => {
 				console.error('Zone Portal OG data unavailable:', error)
+				dataError =
+					error instanceof Error && typeof error.cause === 'number'
+						? `http-${error.cause}`
+						: error instanceof Error && error.name === 'ZodError'
+							? 'invalid-response'
+							: error instanceof Error && error.name === 'TimeoutError'
+								? 'timeout'
+								: 'network-error'
 				return undefined
 			}),
 		])
@@ -144,6 +153,7 @@ app.get(
 					? 'public, max-age=60, s-maxage=60'
 					: 'no-store',
 				'X-Portal-Data': overview ? 'available' : 'unavailable',
+				...(dataError ? { 'X-Portal-Data-Error': dataError } : {}),
 			},
 		})
 	},
