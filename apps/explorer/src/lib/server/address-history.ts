@@ -192,18 +192,14 @@ async function fetchFilteredHistoryPage(
 	Address.assert(address)
 	const account = address.toLowerCase()
 	const direction = searchParams.sort === 'asc' ? 'ASC' : 'DESC'
+	const callDestination = `"to"[[:space:]]*:[[:space:]]*"${account}"`
+	const callInput = `"(?:input|data)"[[:space:]]*:[[:space:]]*"${SUBMIT_BATCH_SELECTOR}`
 	const filters = [
-		// Native PostgreSQL exposes bytea (\\x), while tiered views expose hex
-		// text (0x). Compare the selector bytes after either two-character prefix.
-		`(t."to" = '${account}' AND lower(substring(t.input::text FROM 3 FOR 8)) = '${SUBMIT_BATCH_SELECTOR.slice(2)}') IS NOT TRUE`,
-		// Use a scalar JSON-path predicate: TIDX does not allow table functions.
-		// Match destination and selector in the same call.
-		`(t.calls::jsonb @? '$[*] ? (
-			@.to like_regex "^${account}$" flag "i" && (
-				@.input like_regex "^${SUBMIT_BATCH_SELECTOR}" flag "i" ||
-				@.data like_regex "^${SUBMIT_BATCH_SELECTOR}" flag "i"
-			)
-		)') IS NOT TRUE`,
+		`NOT (ifNull(t."to", '') = '${account}' AND startsWith(lower(ifNull(t.input, '')), '${SUBMIT_BATCH_SELECTOR}'))`,
+		// Indexed calls are flat JSON objects. TIDX's SQL validator does not
+		// support array lambdas, so match the two fields within one object in
+		// either key order. The brace boundary prevents matching different calls.
+		`empty(extractAll(lower(ifNull(t.calls, '')), '${callDestination}[^{}]*${callInput}|${callInput}[^{}]*${callDestination}'))`,
 	]
 	if (searchParams.cursor) {
 		const cursor: unknown = JSON.parse(atob(searchParams.cursor))
@@ -226,8 +222,6 @@ async function fetchFilteredHistoryPage(
 		filters.push(
 			`t.block_timestamp >= '${new Date(searchParams.after * 1000).toISOString()}'`,
 		)
-	if (searchParams.status)
-		filters.push(`r.status = ${searchParams.status === 'success' ? 1 : 0}`)
 	const sides =
 		searchParams.include === 'sent'
 			? ['from']
@@ -238,13 +232,23 @@ async function fetchFilteredHistoryPage(
 	// pagination and fetch receipts only for the visible page.
 	const results = await Promise.all(
 		sides.map(async (side) => {
+			// Restrict the receipt side before joining, rather than building a
+			// hash table of every receipt in the archive for a status filter.
+			const receiptJoin = searchParams.status
+				? `JOIN (SELECT DISTINCT tx_hash FROM receipts
+					WHERE "${side}" = '${account}' AND status = ${searchParams.status === 'success' ? 1 : 0}
+				) AS r ON r.tx_hash = t.hash`
+				: ''
 			const response = await api.v1.indexer.query.$get({
 				query: {
 					chainId: String(chainId),
+					// Native ClickHouse covers the archive without relying on the
+					// PostgreSQL FDW user mapping used by the default tiered engine.
+					engine: 'clickhouse',
 					sql: `SELECT t.hash, t.block_num, t.idx FROM txs AS t
-			${searchParams.status ? 'JOIN receipts AS r ON r.tx_hash = t.hash' : ''}
+			${receiptJoin}
 			WHERE t."${side}" = '${account}' AND ${filters.join(' AND ')}
-			ORDER BY t.block_num + 0 ${direction}, t.idx ${direction}
+			ORDER BY t.block_num ${direction}, t.idx ${direction}
 			LIMIT ${limit + 1}`,
 				},
 			})

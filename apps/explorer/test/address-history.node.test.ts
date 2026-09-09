@@ -26,11 +26,12 @@ vi.mock('#lib/server/tempo-api', () => ({
 					$get: async ({
 						query,
 					}: {
-						query: { sql: string; chainId: string }
+						query: { sql: string; chainId: string; engine: string }
 					}) => {
 						const result = await queryIndex({
 							query: query.sql,
 							chainId: Number(query.chainId),
+							engine: query.engine,
 						})
 						if (result instanceof Response) return result
 						return Response.json({
@@ -260,10 +261,13 @@ describe('fetchAddressHistoryData', () => {
 		)
 		for (const [options] of queryIndex.mock.calls) {
 			expect(options.query).toContain('LIMIT 3')
-			expect(options.query).toContain("t.calls::jsonb @? '$[*]")
-			expect(options.query).not.toContain('jsonb_array_elements')
+			expect(options.engine).toBe('clickhouse')
+			expect(options.query).toContain("ifNull(t.input, '')")
+			expect(options.query).toContain(
+				"empty(extractAll(lower(ifNull(t.calls, ''))",
+			)
+			expect(options.query).toContain('[^{}]*')
 			expect(options.query).toContain(batchInput)
-			expect(options.query).toContain('IS NOT TRUE')
 		}
 	})
 
@@ -289,11 +293,48 @@ describe('fetchAddressHistoryData', () => {
 		expect(result.nextCursor).toBeNull()
 		expect(queryIndex).toHaveBeenCalledTimes(1)
 		const query = queryIndex.mock.calls[0]?.[0].query
-		expect(query).toContain('JOIN receipts AS r ON r.tx_hash = t.hash')
-		expect(query).toContain('r.status = 0')
+		expect(query).toContain('JOIN (SELECT DISTINCT tx_hash FROM receipts')
+		expect(query).toContain('AS r ON r.tx_hash = t.hash')
+		expect(query).toContain(`WHERE "to" = '${portal}' AND status = 0`)
 		expect(query).toContain('(t.block_num, t.idx) > (1, 0)')
 		expect(query).toContain("t.block_timestamp >= '1970-01-01T00:00:01.000Z'")
-		expect(query).toContain('ORDER BY t.block_num + 0 ASC, t.idx ASC')
+		expect(query).toContain('ORDER BY t.block_num ASC, t.idx ASC')
+	})
+
+	it.each([
+		{ calls: [{ to: portal, input: batchInput }], excluded: true },
+		{ calls: [{ data: `${batchInput}abcd`, to: portal }], excluded: true },
+		{
+			calls: [{ to: portal.toUpperCase(), input: batchInput.toUpperCase() }],
+			excluded: true,
+		},
+		{ calls: [{ to: RECIPIENT, input: batchInput }], excluded: false },
+		{
+			calls: [
+				{ to: portal, input: '0xdeadbeef' },
+				{ to: RECIPIENT, input: batchInput },
+			],
+			excluded: false,
+		},
+		{ calls: null, excluded: false },
+		{ calls: [], excluded: false },
+	])('matches a batch selector and destination within one call: $calls', async ({
+		calls,
+		excluded,
+	}) => {
+		queryIndex.mockResolvedValue({ rows: [] })
+		await fetchAddressHistoryData(filteredParams)
+		const sql = queryIndex.mock.calls[0]?.[0].query as string
+		const pattern = sql.match(
+			/empty\(extractAll\(lower\(ifNull\(t.calls, ''\)\), '([^']+)'\)\)/,
+		)?.[1]
+		expect(pattern).toBeDefined()
+		// JavaScript's equivalent of the POSIX whitespace class used by RE2.
+		const regex = new RegExp(pattern?.replaceAll('[[:space:]]', '\\s'))
+		for (const spacing of [undefined, 2])
+			expect(
+				regex.test(JSON.stringify(calls, null, spacing).toLowerCase()),
+			).toBe(excluded)
 	})
 
 	it('returns an exhausted page without hydrating discarded batches', async () => {
