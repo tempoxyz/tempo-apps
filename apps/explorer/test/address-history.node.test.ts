@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { encodeFunctionData, zeroHash } from 'viem'
+import {
+	encodeFunctionData,
+	getAbiItem,
+	toFunctionSelector,
+	zeroHash,
+} from 'viem'
 import { zonePortalAbi } from '#lib/abis'
 import {
 	fetchAddressHistoryData,
+	RequestParametersSchema,
 	toEnrichedTransaction,
 } from '#lib/server/address-history'
 
@@ -162,6 +168,186 @@ describe('toEnrichedTransaction', () => {
 })
 
 describe('fetchAddressHistoryData', () => {
+	const portal = '0x5ad0000000000000000000000000000000000001'
+	const batchInput = toFunctionSelector(
+		getAbiItem({ abi: zonePortalAbi, name: 'submitBatch' }),
+	)
+	const filteredParams = {
+		address: portal,
+		chainId: 4217,
+		includeKnownEvents: false,
+		searchParams: {
+			include: 'all',
+			limit: 2,
+			sort: 'desc',
+			hideSubmitBatches: 'true',
+		},
+	} as const
+
+	it('parses explicit filter booleans without treating false as true', () => {
+		expect(
+			RequestParametersSchema.parse({ hideSubmitBatches: 'false' })
+				.hideSubmitBatches,
+		).toBe('false')
+		expect(
+			RequestParametersSchema.safeParse({ hideSubmitBatches: 'yes' }).success,
+		).toBe(false)
+	})
+
+	it('fills a page across batch-only results and resumes after the last visible row', async () => {
+		getTransactions
+			.mockResolvedValueOnce(
+				Response.json({
+					data: [
+						row({ recipient: portal, input: batchInput, blockNumber: 10 }),
+					],
+					nextCursor: 'scan-2',
+				}),
+			)
+			.mockResolvedValueOnce(
+				Response.json({
+					data: [
+						row({ blockNumber: 9 }),
+						row({ blockNumber: 8 }),
+						row({ blockNumber: 7 }),
+					],
+					nextCursor: 'scan-3',
+				}),
+			)
+		const result = await fetchAddressHistoryData(filteredParams)
+		expect(result.transactions.map((tx) => tx.blockNumber)).toEqual([
+			'0x9',
+			'0x8',
+		])
+		expect(result.nextCursor).toBe(btoa(JSON.stringify([8, 17])))
+		expect(result.reverseCursor).toBe(btoa(JSON.stringify([10, 17])))
+		expect(result.total).toBeNull()
+		expect(getTransactions).toHaveBeenNthCalledWith(2, {
+			query: {
+				address: portal,
+				chainId: '4217',
+				include: 'receipt',
+				limit: '50',
+				order: 'desc',
+				cursor: 'scan-2',
+			},
+		})
+	})
+
+	it('filters nested and reverted submissions only to the requested portal', async () => {
+		getTransactions.mockResolvedValue(
+			Response.json({
+				data: [
+					row({
+						recipient: portal,
+						input: batchInput,
+						meta: { receipt: receipt({ status: 'reverted' }) },
+					}),
+					row({
+						meta: { rpc: { calls: [{ to: portal, input: batchInput }] } },
+					}),
+					row({ calls: [{ to: portal.toUpperCase(), data: batchInput }] }),
+					row({ recipient: RECIPIENT, input: batchInput, blockNumber: 7 }),
+					row({ recipient: portal, input: '0x', blockNumber: 6 }),
+				],
+				nextCursor: null,
+			}),
+		)
+		const result = await fetchAddressHistoryData(filteredParams)
+		expect(result.transactions.map((tx) => tx.blockNumber)).toEqual([
+			'0x7',
+			'0x6',
+		])
+		expect(result.nextCursor).toBeNull()
+	})
+
+	it('preserves status, direction, period and ascending cursor navigation', async () => {
+		getTransactions.mockResolvedValue(
+			Response.json({
+				data: [
+					row({ recipient: portal, input: batchInput, blockNumber: 1 }),
+					row({ blockNumber: 2 }),
+					row({ blockNumber: 3 }),
+				],
+				nextCursor: null,
+			}),
+		)
+		const result = await fetchAddressHistoryData({
+			...filteredParams,
+			searchParams: {
+				...filteredParams.searchParams,
+				sort: 'asc',
+				cursor: 'older',
+				include: 'received',
+				status: 'reverted',
+				after: 1,
+			},
+		})
+		expect(result.transactions.map((tx) => tx.blockNumber)).toEqual([
+			'0x3',
+			'0x2',
+		])
+		expect(getTransactions).toHaveBeenCalledWith({
+			query: {
+				recipient: portal,
+				chainId: '4217',
+				include: 'receipt',
+				limit: '50',
+				order: 'asc',
+				cursor: 'older',
+				status: 'reverted',
+				'timestamp.from': '1970-01-01T00:00:01.000Z',
+			},
+		})
+	})
+
+	it('keeps both navigation boundaries when the bounded scan finds only batches', async () => {
+		getTransactions.mockImplementation(() =>
+			Promise.resolve(
+				Response.json({
+					data: [
+						row({ recipient: portal, input: batchInput, blockNumber: 10 }),
+					],
+					nextCursor: `scan-${getTransactions.mock.calls.length}`,
+				}),
+			),
+		)
+		const result = await fetchAddressHistoryData(filteredParams)
+		expect(getTransactions).toHaveBeenCalledTimes(10)
+		expect(result).toMatchObject({
+			transactions: [],
+			nextCursor: 'scan-10',
+			reverseCursor: btoa(JSON.stringify([10, 17])),
+			total: null,
+		})
+	})
+
+	it.each([
+		undefined,
+		'false',
+	] as const)('leaves unfiltered history unchanged for %s', async (hideSubmitBatches) => {
+		getTransactions.mockResolvedValue(
+			Response.json({
+				data: [row({ recipient: portal, input: batchInput })],
+				nextCursor: null,
+			}),
+		)
+		const result = await fetchAddressHistoryData({
+			...filteredParams,
+			searchParams: { ...filteredParams.searchParams, hideSubmitBatches },
+		})
+		expect(result.transactions).toHaveLength(1)
+		expect(getTransactions.mock.calls[0]?.[0].query.limit).toBe('2')
+	})
+
+	it('ignores the portal-specific filter on other addresses', async () => {
+		getTransactions.mockResolvedValue(
+			Response.json({ data: [row()], nextCursor: null }),
+		)
+		await fetchAddressHistoryData({ ...filteredParams, address: RECIPIENT })
+		expect(getTransactions.mock.calls[0]?.[0].query.limit).toBe('2')
+	})
+
 	it('rejects page sizes above 10', async () => {
 		await expect(
 			fetchAddressHistoryData({

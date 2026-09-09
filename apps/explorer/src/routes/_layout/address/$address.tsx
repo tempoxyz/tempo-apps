@@ -238,6 +238,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		status: z.optional(z.enum(['success', 'reverted'])),
 		dir: z.optional(z.enum(['sent', 'received'])),
 		period: z.optional(z.enum(['24h', '7d'])),
+		hideSubmitBatches: z.optional(z.boolean()),
 		voucher: z.optional(
 			z.object({
 				final_voucher: z.optional(z.string()),
@@ -453,8 +454,18 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, cursor, order, tab, live, limit, status, dir, period } =
-		Route.useSearch()
+	const {
+		page,
+		cursor,
+		order,
+		tab,
+		live,
+		limit,
+		status,
+		dir,
+		period,
+		hideSubmitBatches: hideSubmitBatchesSearch,
+	} = Route.useSearch()
 	const {
 		accountType,
 		isToken,
@@ -470,6 +481,7 @@ function RouteComponent() {
 	Address.assert(address)
 	const isMounted = useIsMounted()
 	const isZonePortal = isZonePortalAddress(address)
+	const hideSubmitBatches = isZonePortal && hideSubmitBatchesSearch === true
 	const [portalLive, setPortalLive] = React.useState(true)
 	const { data: zonePortalOverview } = useQuery({
 		...zonePortalOverviewQueryOptions(address),
@@ -590,6 +602,38 @@ function RouteComponent() {
 	const activeSection =
 		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
+	const setHideSubmitBatches = React.useCallback(
+		(hide: boolean) => {
+			navigate({
+				to: '.',
+				search: (prev) => ({
+					...prev,
+					page: 1,
+					cursor: undefined,
+					order: 'desc',
+					hideSubmitBatches: hide || undefined,
+				}),
+				resetScroll: false,
+			})
+		},
+		[navigate],
+	)
+	const clearTransactionFilters = React.useCallback(() => {
+		navigate({
+			to: '.',
+			search: (prev) => ({
+				...prev,
+				page: 1,
+				cursor: undefined,
+				order: 'desc',
+				status: undefined,
+				period: undefined,
+				hideSubmitBatches: undefined,
+			}),
+			resetScroll: false,
+		})
+	}, [navigate])
+
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
@@ -624,6 +668,7 @@ function RouteComponent() {
 							limit: HISTORY_PAGE_SIZE,
 							order,
 							status,
+							hideSubmitBatches,
 							include:
 								dir === 'sent'
 									? 'sent'
@@ -662,6 +707,7 @@ function RouteComponent() {
 		isToken,
 		limit,
 		period,
+		hideSubmitBatches,
 		queryClient,
 		status,
 		tab,
@@ -711,6 +757,11 @@ function RouteComponent() {
 				dir={dir}
 				period={period}
 				onPeriodChange={setPeriod}
+				hideSubmitBatches={hideSubmitBatches}
+				onHideSubmitBatchesChange={
+					isZonePortal ? setHideSubmitBatches : undefined
+				}
+				onClearTransactionFilters={clearTransactionFilters}
 				zonePortalOverview={zonePortalOverview}
 				portalLive={portalLive}
 				onPortalLiveChange={setPortalLive}
@@ -959,6 +1010,9 @@ function SectionsWrapper(props: {
 	dir?: 'sent' | 'received' | undefined
 	period?: '24h' | '7d' | undefined
 	onPeriodChange: (period: '24h' | '7d' | undefined) => void
+	hideSubmitBatches: boolean
+	onHideSubmitBatchesChange?: ((hide: boolean) => void) | undefined
+	onClearTransactionFilters: () => void
 	zonePortalOverview?: ZonePortalOverview | undefined
 	portalLive: boolean
 	onPortalLiveChange: (live: boolean) => void
@@ -987,6 +1041,9 @@ function SectionsWrapper(props: {
 		dir,
 		period,
 		onPeriodChange,
+		hideSubmitBatches,
+		onHideSubmitBatchesChange,
+		onClearTransactionFilters,
 		zonePortalOverview,
 		portalLive,
 		onPortalLiveChange,
@@ -1087,10 +1144,11 @@ function SectionsWrapper(props: {
 				order: position.order,
 				cursor: position.cursor,
 				status,
+				hideSubmitBatches,
 				include,
 				after,
 			}),
-		[address, after, include, status],
+		[address, after, include, status, hideSubmitBatches],
 	)
 
 	const latestHistoryQuery = useQuery({
@@ -1099,6 +1157,7 @@ function SectionsWrapper(props: {
 			limit: HISTORY_PAGE_SIZE,
 			order: 'desc',
 			status,
+			hideSubmitBatches,
 			include,
 			after,
 		}),
@@ -1803,6 +1862,9 @@ function SectionsWrapper(props: {
 							period={period}
 							onStatusChange={onStatusChange}
 							onPeriodChange={onPeriodChange}
+							hideSubmitBatches={hideSubmitBatches}
+							onHideSubmitBatchesChange={onHideSubmitBatchesChange}
+							onClearAll={onClearTransactionFilters}
 						/>
 					),
 					content: transactionsError ?? (
@@ -1878,18 +1940,24 @@ function SectionsWrapper(props: {
 										pageCountCapped={countCapped}
 										onPrefetch={prefetchTransactionPages}
 									/>
-									<Pagination.Count
-										totalItems={totalTrxCount ?? 0}
-										itemsLabel="transactions"
-										loading={totalTrxCount === undefined}
-										capped={countCapped}
-									/>
+									{hideSubmitBatches ? (
+										<span>Submit batches hidden</span>
+									) : (
+										<Pagination.Count
+											totalItems={totalTrxCount ?? 0}
+											itemsLabel="transactions"
+											loading={totalTrxCount === undefined}
+											capped={countCapped}
+										/>
+									)}
 								</div>
 							}
 							emptyState={
-								status || dir || period
-									? 'No matching transactions found.'
-									: 'No transactions found.'
+								hideSubmitBatches && historyData?.nextCursor
+									? 'No matching transactions in this range. Select Next to continue.'
+									: status || dir || period || hideSubmitBatches
+										? 'No matching transactions found.'
+										: 'No transactions found.'
 							}
 						/>
 					),

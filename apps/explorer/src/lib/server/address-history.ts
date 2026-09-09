@@ -1,7 +1,12 @@
 import { type InferResponseType, parseResponse } from 'hono/client'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import type { Log, TransactionReceipt } from 'viem'
+import {
+	getAbiItem,
+	toFunctionSelector,
+	type Log,
+	type TransactionReceipt,
+} from 'viem'
 import type { Config } from 'wagmi'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
@@ -21,10 +26,17 @@ import { api } from '#lib/server/tempo-api'
 import { getTransactionActivities } from '#lib/server/transaction-activities'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
+import { zonePortalAbi } from '#lib/abis'
+import { isZonePortalAddress } from '#lib/domain/zones'
 
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
 const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
+const SUBMIT_BATCH_SELECTOR = toFunctionSelector(
+	getAbiItem({ abi: zonePortalAbi, name: 'submitBatch' }),
+)
+const FILTER_SCAN_PAGE_SIZE = 50
+const FILTER_SCAN_MAX_PAGES = 10
 
 export type EnrichedTransaction = {
 	hash: `0x${string}`
@@ -56,6 +68,7 @@ export const RequestParametersSchema = z.object({
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	status: z.optional(z.enum(['success', 'reverted'])),
 	after: z.optional(z.coerce.number()),
+	hideSubmitBatches: z.optional(z.enum(['true', 'false'])),
 })
 
 export type HistoryRequestParameters = z.infer<typeof RequestParametersSchema>
@@ -165,6 +178,71 @@ function transactionCursor(row: TransactionRow): string {
 	return btoa(
 		JSON.stringify([Number(row.blockNumber), Number(row.transactionIndex)]),
 	)
+}
+
+function isSubmitBatch(row: TransactionRow, address: Address.Address): boolean {
+	const calls = [
+		{ to: row.recipient, data: row.input },
+		...(row.calls ?? []),
+		...(row.meta?.rpc?.calls ?? []),
+	]
+	return calls.some(
+		(call) =>
+			call.to?.toLowerCase() === address.toLowerCase() &&
+			('input' in call ? (call.input ?? call.data) : call.data)
+				?.toLowerCase()
+				.startsWith(SUBMIT_BATCH_SELECTOR),
+	)
+}
+
+async function fetchFilteredHistoryPage(
+	address: Address.Address,
+	chainId: number,
+	searchParams: HistoryRequestParameters,
+	limit: number,
+): Promise<{
+	data: TransactionRow[]
+	meta?: HistoryTotal | undefined
+	nextCursor: string | null
+	reverseCursor: string | null
+}> {
+	const data: TransactionRow[] = []
+	let cursor = searchParams.cursor
+	let reverseCursor: string | null = null
+	for (let page = 0; page < FILTER_SCAN_MAX_PAGES; page++) {
+		const result = await parseResponse(
+			api.v1.transactions.$get({
+				query: {
+					chainId: String(chainId),
+					...historyFilters(address, searchParams),
+					order: searchParams.sort,
+					limit: String(FILTER_SCAN_PAGE_SIZE),
+					...(cursor ? { cursor } : {}),
+					include: 'receipt',
+				},
+			}),
+		)
+		// Keep the scan boundary even for an empty filtered page, so Previous works.
+		if (reverseCursor === null && result.data[0])
+			reverseCursor = transactionCursor(result.data[0])
+		for (const [index, row] of result.data.entries()) {
+			if (isSubmitBatch(row, address)) continue
+			data.push(row)
+			if (data.length === limit)
+				return {
+					data,
+					reverseCursor,
+					nextCursor:
+						index < result.data.length - 1 || result.nextCursor
+							? transactionCursor(row)
+							: null,
+				}
+		}
+		if (!result.nextCursor) return { data, reverseCursor, nextCursor: null }
+		cursor = result.nextCursor
+	}
+	// Bound Worker work for batch-only stretches; Next continues from this boundary.
+	return { data, reverseCursor, nextCursor: cursor ?? null }
 }
 
 /**
@@ -286,26 +364,31 @@ export async function fetchAddressHistoryData(params: {
 	if (limit < 1) limit = 1
 
 	const filters = historyFilters(address, searchParams)
+	const hideSubmitBatches =
+		searchParams.hideSubmitBatches === 'true' && isZonePortalAddress(address)
 	const totalKey = JSON.stringify([chainId, filters])
 	const cachedTotal = getCachedHistoryTotal(totalKey)
 	// Only the latest edge refreshes the count. The oldest edge is fetched in
 	// parallel with ascending order and reuses the same cached total.
 	const includeTotal =
+		!hideSubmitBatches &&
 		searchParams.cursor === undefined &&
 		searchParams.sort === 'desc' &&
 		cachedTotal === undefined
-	const resultPromise = parseResponse(
-		api.v1.transactions.$get({
-			query: {
-				chainId: String(chainId),
-				...filters,
-				order: searchParams.sort,
-				limit: String(limit),
-				...(searchParams.cursor ? { cursor: searchParams.cursor } : {}),
-				include: includeTotal ? 'receipt,totalCount' : 'receipt',
-			},
-		}),
-	)
+	const resultPromise = hideSubmitBatches
+		? fetchFilteredHistoryPage(address, chainId, searchParams, limit)
+		: parseResponse(
+				api.v1.transactions.$get({
+					query: {
+						chainId: String(chainId),
+						...filters,
+						order: searchParams.sort,
+						limit: String(limit),
+						...(searchParams.cursor ? { cursor: searchParams.cursor } : {}),
+						include: includeTotal ? 'receipt,totalCount' : 'receipt',
+					},
+				}),
+			)
 	const requestedTotal = includeTotal
 		? resultPromise
 				.then((result) =>
@@ -322,7 +405,7 @@ export async function fetchAddressHistoryData(params: {
 
 	const [result, exactTotal] = await Promise.all([
 		resultPromise,
-		cachedTotal ?? requestedTotal,
+		hideSubmitBatches ? undefined : (cachedTotal ?? requestedTotal),
 	])
 
 	const [getTokenMetadata, activities] = await Promise.all([
@@ -350,7 +433,14 @@ export async function fetchAddressHistoryData(params: {
 		total: exactTotal?.totalCount ?? null,
 		limit,
 		nextCursor: result.nextCursor,
-		reverseCursor: result.data[0] ? transactionCursor(result.data[0]) : null,
+		reverseCursor:
+			'reverseCursor' in result &&
+			(typeof result.reverseCursor === 'string' ||
+				result.reverseCursor === null)
+				? result.reverseCursor
+				: result.data[0]
+					? transactionCursor(result.data[0])
+					: null,
 		countCapped: exactTotal?.totalCountCapped ?? false,
 		error: null,
 	}
