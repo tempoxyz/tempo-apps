@@ -370,7 +370,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				: accountType === 'account'
 					? 'Account'
 					: 'Address'
-		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
+		const contractInfo = loaderData?.contractInfo
+		const contractName = !isToken ? contractInfo?.name : undefined
+		const title = `${contractName ?? `${label} ${HexFormatter.truncate(params.address as Hex.Hex)}`} ⋅ Tempo Explorer`
 
 		let description: string
 		let ogImageUrl: string
@@ -410,24 +412,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				created: undefined,
 			})
 		} else {
-			const txCount = 0
-			let lastActive: string | undefined
-			let created: string | undefined
-			const holdings = '—'
-
-			description = buildAddressDescription(
-				{ holdings, txCount },
-				params.address,
-			)
+			// Activity and balances load after hydration. Missing data is not zero.
+			description = contractInfo?.description
+				? `${contractInfo.description}. View contract activity on Tempo Explorer.`
+				: buildAddressDescription(null, params.address)
 
 			ogImageUrl = buildAddressOgImageUrl({
 				address: params.address,
-				holdings,
-				txCount,
 				accountType,
-				lastActive,
-				created,
-				contractName: loaderData?.contractInfo?.name,
+				contractName: contractInfo?.name,
+				contractDescription: contractInfo?.description,
 			})
 		}
 
@@ -435,6 +429,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			title,
 			meta: [
 				{ title },
+				{ name: 'description', content: description },
 				{ property: 'og:title', content: title },
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },

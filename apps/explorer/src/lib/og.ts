@@ -334,6 +334,7 @@ export function buildAddressOgImageUrl(params: {
 	methods?: string[]
 	deployer?: string
 	contractName?: string
+	contractDescription?: string
 }): string {
 	const ogParams: AddressOgParams = {
 		address: params.address,
@@ -350,6 +351,7 @@ export function buildAddressOgImageUrl(params: {
 		methods: params.methods,
 		deployer: params.deployer,
 		contractName: params.contractName,
+		contractDescription: params.contractDescription,
 	}
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }

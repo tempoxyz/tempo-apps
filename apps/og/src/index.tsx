@@ -397,6 +397,7 @@ app.get(
 			methods: addrParams.methods,
 			deployer: addrParams.deployer,
 			contractName: addrParams.contractName,
+			contractDescription: addrParams.contractDescription,
 		}
 
 		const [fonts, images] = await Promise.all([

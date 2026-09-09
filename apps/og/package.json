@@ -4,6 +4,7 @@
 	"scripts": {
 		"build": "echo 'No build step needed for Cloudflare Worker'",
 		"dev": "wrangler dev",
+		"test": "tsx --test test/*.test.ts",
 		"deploy": "wrangler deploy",
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
