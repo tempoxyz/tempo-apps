@@ -240,7 +240,8 @@ describe('fetchAddressHistoryData', () => {
 		)
 		for (const [options] of queryIndex.mock.calls) {
 			expect(options.query).toContain('LIMIT 3')
-			expect(options.query).toContain('jsonb_array_elements')
+			expect(options.query).toContain("t.calls::jsonb @? '$[*]")
+			expect(options.query).not.toContain('jsonb_array_elements')
 			expect(options.query).toContain(batchInput)
 			expect(options.query).toContain('IS NOT TRUE')
 		}

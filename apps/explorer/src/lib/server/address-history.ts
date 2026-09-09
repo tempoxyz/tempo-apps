@@ -195,13 +195,14 @@ async function fetchFilteredHistoryPage(
 	const direction = searchParams.sort === 'asc' ? 'ASC' : 'DESC'
 	const filters = [
 		`(t."to" = '${account}' AND lower(left(t.input, 10)) = '${SUBMIT_BATCH_SELECTOR}') IS NOT TRUE`,
-		`NOT EXISTS (
-			SELECT 1 FROM jsonb_array_elements(
-				CASE WHEN jsonb_typeof(t.calls) = 'array' THEN t.calls ELSE '[]'::jsonb END
-			) AS call
-			WHERE lower(call->>'to') = '${account}'
-			AND lower(left(COALESCE(call->>'input', call->>'data'), 10)) = '${SUBMIT_BATCH_SELECTOR}'
-		)`,
+		// Use a scalar JSON-path predicate: TIDX does not allow table functions.
+		// Match destination and selector in the same call.
+		`(t.calls::jsonb @? '$[*] ? (
+			@.to like_regex "^${account}$" flag "i" && (
+				@.input like_regex "^${SUBMIT_BATCH_SELECTOR}" flag "i" ||
+				@.data like_regex "^${SUBMIT_BATCH_SELECTOR}" flag "i"
+			)
+		)') IS NOT TRUE`,
 	]
 	if (searchParams.cursor) {
 		const cursor: unknown = JSON.parse(atob(searchParams.cursor))
