@@ -21,16 +21,36 @@ const { getTransactions, getTransaction, queryIndex } = vi.hoisted(() => ({
 vi.mock('#lib/server/tempo-api', () => ({
 	api: {
 		v1: {
+			indexer: {
+				query: {
+					$get: async ({
+						query,
+					}: {
+						query: { sql: string; chainId: string }
+					}) => {
+						const result = await queryIndex({
+							query: query.sql,
+							chainId: Number(query.chainId),
+						})
+						if (result instanceof Response) return result
+						return Response.json({
+							ok: true,
+							columns: ['hash', 'block_num', 'idx'],
+							rows: result.rows.map((row: Record<string, unknown>) => [
+								row.hash,
+								row.block_num,
+								row.idx,
+							]),
+						})
+					},
+				},
+			},
 			transactions: {
 				$get: getTransactions,
 				':transactionHash': { $get: getTransaction },
 			},
 		},
 	},
-}))
-
-vi.mock('#lib/server/tempo-queries-provider', () => ({
-	tidx: { fetch: queryIndex },
 }))
 
 beforeEach(() => {
@@ -288,6 +308,23 @@ describe('fetchAddressHistoryData', () => {
 		})
 		expect(getTransaction).not.toHaveBeenCalled()
 		expect(getTransactions).not.toHaveBeenCalled()
+	})
+
+	it('preserves the indexer rejection detail without retrying or hydrating', async () => {
+		queryIndex.mockResolvedValue(
+			Response.json(
+				{ ok: false, error: 'Unsupported expression' },
+				{ status: 422 },
+			),
+		)
+		await expect(
+			fetchAddressHistoryData({
+				...filteredParams,
+				searchParams: { ...filteredParams.searchParams, include: 'received' },
+			}),
+		).rejects.toThrow('Indexer query rejected: Unsupported expression')
+		expect(queryIndex).toHaveBeenCalledTimes(1)
+		expect(getTransaction).not.toHaveBeenCalled()
 	})
 
 	it.each([

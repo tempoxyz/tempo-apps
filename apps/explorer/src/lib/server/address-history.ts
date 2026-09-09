@@ -28,7 +28,6 @@ import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config'
 import { zonePortalAbi } from '#lib/abis'
 import { isZonePortalAddress } from '#lib/domain/zones'
-import { tidx } from '#lib/server/tempo-queries-provider'
 
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
@@ -194,7 +193,9 @@ async function fetchFilteredHistoryPage(
 	const account = address.toLowerCase()
 	const direction = searchParams.sort === 'asc' ? 'ASC' : 'DESC'
 	const filters = [
-		`(t."to" = '${account}' AND lower(left(t.input, 10)) = '${SUBMIT_BATCH_SELECTOR}') IS NOT TRUE`,
+		// Native PostgreSQL exposes bytea (\\x), while tiered views expose hex
+		// text (0x). Compare the selector bytes after either two-character prefix.
+		`(t."to" = '${account}' AND lower(substring(t.input::text FROM 3 FOR 8)) = '${SUBMIT_BATCH_SELECTOR.slice(2)}') IS NOT TRUE`,
 		// Use a scalar JSON-path predicate: TIDX does not allow table functions.
 		// Match destination and selector in the same call.
 		`(t.calls::jsonb @? '$[*] ? (
@@ -236,16 +237,32 @@ async function fetchFilteredHistoryPage(
 	// Separate address indexes avoid a broad OR scan. Exclude batches before
 	// pagination and fetch receipts only for the visible page.
 	const results = await Promise.all(
-		sides.map((side) =>
-			tidx.fetch({
-				chainId,
-				query: `SELECT t.hash, t.block_num, t.idx FROM txs AS t
+		sides.map(async (side) => {
+			const response = await api.v1.indexer.query.$get({
+				query: {
+					chainId: String(chainId),
+					sql: `SELECT t.hash, t.block_num, t.idx FROM txs AS t
 			${searchParams.status ? 'JOIN receipts AS r ON r.tx_hash = t.hash' : ''}
 			WHERE t."${side}" = '${account}' AND ${filters.join(' AND ')}
 			ORDER BY t.block_num + 0 ${direction}, t.idx ${direction}
-			LIMIT ${limit + 1}` as string,
-			}),
-		),
+			LIMIT ${limit + 1}`,
+				},
+			})
+			// Preserve query-rejection details; tidx.ts 0.1.2 only reads `message`,
+			// while the indexer returns its diagnostic in `error`.
+			if (response.status === 422)
+				throw new Error(
+					`Indexer query rejected: ${(await response.json()).error}`,
+				)
+			const result = await parseResponse(response)
+			return {
+				rows: result.rows.map((values) =>
+					Object.fromEntries(
+						result.columns.map((name, i) => [name, values[i]]),
+					),
+				),
+			}
+		}),
 	)
 	const positions = new Map<
 		string,
