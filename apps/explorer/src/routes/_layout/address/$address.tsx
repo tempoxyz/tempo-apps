@@ -1429,11 +1429,11 @@ function SectionsWrapper(props: {
 			label: (
 				<InfoColumnLabel
 					label="Processed in"
-					info="A deposit becomes usable in the private zone after an accepted batch processes it. Pending means no accepted batch has processed it yet."
+					info="An accepted checkpoint proves that the zone has processed the deposit. Pending means no accepted checkpoint includes it yet."
 				/>
 			),
 			align: 'start',
-			minWidth: 115,
+			minWidth: 145,
 			width: '0.8fr',
 		},
 		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
@@ -1447,42 +1447,67 @@ function SectionsWrapper(props: {
 			label: (
 				<InfoColumnLabel
 					label="Processed in"
-					info="A withdrawal is delivered on Tempo by the batch that proves it."
+					info="The checkpoint that proves this withdrawal and queues it for processing on Tempo."
 				/>
 			),
 			align: 'start',
-			minWidth: 115,
+			minWidth: 145,
 			width: '0.8fr',
 		},
 		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
 	]
 
 	const zoneBatchColumns: DataGrid.Column[] = [
-		zoneTimeColumn,
-		{ label: 'Batch', align: 'start', minWidth: 90, width: '0.7fr' },
 		{
 			label: (
 				<InfoColumnLabel
-					label="Last deposit"
-					info="The highest public deposit number accepted by this batch. A dash means no deposit has been accepted yet."
+					label="Checkpoint"
+					info="A checkpoint proves the zone’s execution progress to Tempo without publishing its transaction data."
 				/>
 			),
 			align: 'start',
-			minWidth: 125,
+			minWidth: 115,
+			width: '0.7fr',
+		},
+		{
+			label: 'Transaction hash',
+			align: 'start',
+			minWidth: 180,
+			width: '1.5fr',
+		},
+		{
+			...zoneTimeColumn,
+			label: (
+				<TimeColumnHeader
+					label="Submitted"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="cursor-pointer text-secondary transition-colors hover:text-accent"
+				/>
+			),
+		},
+		{
+			label: (
+				<InfoColumnLabel
+					label="Deposits processed through"
+					info="The highest public deposit number processed by the zone and proven by this checkpoint. A dash means no deposit has been processed yet."
+				/>
+			),
+			align: 'start',
+			minWidth: 200,
 			width: '0.9fr',
 		},
 		{
 			label: (
 				<InfoColumnLabel
 					label="Withdrawal queue"
-					info="The queue index assigned when this batch adds encrypted withdrawals. A dash means the batch added none."
+					info="The queue index assigned when this checkpoint adds withdrawals. A dash means the checkpoint added none."
 				/>
 			),
 			align: 'start',
 			minWidth: 145,
 			width: '1.1fr',
 		},
-		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
 	]
 
 	const zonePortalContextual = (
@@ -1709,9 +1734,9 @@ function SectionsWrapper(props: {
 					) ?? []
 				const total = zonePortalActivityQuery.data?.total ?? 0
 				return {
-					title: 'Batches',
+					title: 'Checkpoints',
 					totalItems: zonePortalOverview?.counts.batches,
-					itemsLabel: 'batches',
+					itemsLabel: 'checkpoints',
 					contextual: zonePortalContextual,
 					content: zonePortalError ?? (
 						<DataGrid
@@ -1723,15 +1748,20 @@ function SectionsWrapper(props: {
 								batches.map((batch) => ({
 									key: batch.transactionHash,
 									cells: [
+										<span key="batch" className="whitespace-nowrap font-mono">
+											#{batch.batchIndex}
+										</span>,
+										<LinkedTransactionHash
+											key="hash"
+											hash={batch.transactionHash}
+											prominent
+										/>,
 										<TimestampCell
 											key="time"
 											timestamp={BigInt(batch.timestamp)}
 											link={`/receipt/${batch.transactionHash}`}
 											format={timeFormat}
 										/>,
-										<span key="batch" className="whitespace-nowrap font-mono">
-											#{batch.batchIndex}
-										</span>,
 										<span key="deposit" className="text-[13px] text-primary">
 											{batch.lastProcessedDepositNumber === '0'
 												? '—'
@@ -1742,10 +1772,6 @@ function SectionsWrapper(props: {
 												? `#${batch.withdrawalQueueIndex}`
 												: '—'}
 										</span>,
-										<LinkedTransactionHash
-											key="hash"
-											hash={batch.transactionHash}
-										/>,
 									],
 									link: {
 										href: `/receipt/${batch.transactionHash}`,
@@ -1758,10 +1784,10 @@ function SectionsWrapper(props: {
 							page={page}
 							fetching={zonePortalActivityQuery.isFetching}
 							loading={zonePortalActivityQuery.isPending}
-							itemsLabel="batches"
+							itemsLabel="checkpoints"
 							itemsPerPage={limit}
 							pagination="simple"
-							emptyState="No batches found."
+							emptyState="No checkpoints found."
 						/>
 					),
 				}
@@ -2322,13 +2348,13 @@ function ProcessedInBatchCell(
 
 	return (
 		<span className="whitespace-nowrap text-[13px]">
-			Batch{' '}
+			Checkpoint{' '}
 			<Link
 				to="/receipt/$hash"
 				params={{ hash: props.batch.transactionHash }}
 				preload="intent"
 				className="text-accent transition-colors hover:text-accent/80 press-down"
-				title={`View batch #${props.batch.index}`}
+				title={`View checkpoint #${props.batch.index}`}
 			>
 				#{props.batch.index}
 			</Link>
@@ -2336,7 +2362,7 @@ function ProcessedInBatchCell(
 	)
 }
 
-type LinkedTransactionHashProps = { hash: Hex.Hex }
+type LinkedTransactionHashProps = { hash: Hex.Hex; prominent?: boolean }
 
 function LinkedTransactionHash(
 	props: LinkedTransactionHashProps,
@@ -2346,10 +2372,19 @@ function LinkedTransactionHash(
 			to="/receipt/$hash"
 			params={{ hash: props.hash }}
 			preload="intent"
-			className="w-full text-[13px] text-tertiary press-down"
+			className={cx(
+				'w-full text-[13px] press-down',
+				props.prominent
+					? 'font-medium text-accent transition-colors hover:text-accent/80'
+					: 'text-tertiary',
+			)}
 			title={props.hash}
 		>
-			<Midcut value={props.hash} prefix="0x" align="end" />
+			<Midcut
+				value={props.hash}
+				prefix="0x"
+				align={props.prominent ? 'start' : 'end'}
+			/>
 		</Link>
 	)
 }
