@@ -144,18 +144,21 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	}),
 	head: ({ params, loaderData }) => {
 		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const descriptionEvents = loaderData
+			? selectTransactionDescriptionEvents({
+					activityEvents: loaderData.activityEvents,
+					fallbackEvents: loaderData.knownEvents ?? [],
+					knownCall: loaderData.knownCall,
+				})
+			: []
 		const ogImageUrl = loaderData
-			? buildOgImageUrl(loaderData, params.hash)
+			? buildOgImageUrl(loaderData, params.hash, descriptionEvents)
 			: `${OG_BASE_URL}/tx/${params.hash}`
 		const description = loaderData
 			? buildTxDescription({
 					timestamp: Number(loaderData.block.timestamp) * 1000,
 					from: loaderData.receipt.from,
-					events: selectTransactionDescriptionEvents({
-						activityEvents: loaderData.activityEvents,
-						fallbackEvents: loaderData.knownEvents ?? [],
-						knownCall: loaderData.knownCall,
-					}),
+					events: descriptionEvents,
 				})
 			: 'View transaction details on Tempo Explorer.'
 
