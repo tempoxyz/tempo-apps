@@ -15,6 +15,7 @@ import {
 	autoloadAbi,
 	getContractAbi,
 	isInferredAbi,
+	resolveInteractAbi,
 } from '#lib/domain/contracts.ts'
 import {
 	detectProxy,
@@ -329,11 +330,11 @@ export function InteractTabContent(props: {
 		void loadProxyInfo()
 	}, [publicClient, address])
 
-	// For proxies, prefer implementation ABI so users see callable functions
-	const abi =
-		(implAbi && implAbi.length > 0 ? implAbi : null) ??
-		props.abi ??
-		getContractAbi(address)
+	const abi = resolveInteractAbi({
+		address,
+		abi: props.abi,
+		implementationAbi: implAbi,
+	})
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (

@@ -8,7 +8,6 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	blockHashHistoryAbi,
@@ -375,7 +374,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		ZoneAddresses.zoneFactory,
+		Addresses.zoneFactory,
 		{
 			name: 'Zone Factory',
 			code: '0xef',
@@ -383,11 +382,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneFactoryAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneFactory,
+			address: Addresses.zoneFactory,
 		},
 	],
 	[
-		ZoneAddresses.zonePortalImplementation,
+		Addresses.zonePortalImplementation,
 		{
 			name: 'Zone Portal Implementation',
 			code: '0xef',
@@ -395,11 +394,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zonePortalAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zonePortalImplementation,
+			address: Addresses.zonePortalImplementation,
 		},
 	],
 	[
-		ZoneAddresses.zoneOutbox,
+		Addresses.zoneOutbox,
 		{
 			name: 'Zone Outbox',
 			code: '0xef',
@@ -407,11 +406,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneOutboxAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneOutbox,
+			address: Addresses.zoneOutbox,
 		},
 	],
 	[
-		ZoneAddresses.zoneMessenger,
+		Addresses.zoneMessenger,
 		{
 			name: 'Zone Messenger',
 			code: '0xef',
@@ -419,11 +418,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneMessengerAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneMessenger,
+			address: Addresses.zoneMessenger,
 		},
 	],
 	[
-		ZoneAddresses.zoneVerifier,
+		Addresses.zoneVerifier,
 		{
 			name: 'Zone Verifier',
 			code: '0xef',
@@ -431,7 +430,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneVerifierAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneVerifier,
+			address: Addresses.zoneVerifier,
 		},
 	],
 	[
@@ -526,6 +525,21 @@ export function getContractInfo(
  */
 export function getContractAbi(address: Address.Address): Abi | undefined {
 	return getContractInfo(address)?.abi
+}
+
+export function resolveInteractAbi(params: {
+	address: Address.Address
+	abi?: Abi
+	implementationAbi?: Abi | null
+}): Abi | undefined {
+	const knownAbi = getContractAbi(params.address)
+	// Prefer canonical interfaces, but not event-only ABIs bundled for decoding.
+	if (knownAbi?.some((item) => item.type === 'function')) return knownAbi
+
+	const implAbi = params.implementationAbi
+	return (
+		(implAbi && implAbi.length > 0 ? implAbi : null) ?? params.abi ?? knownAbi
+	)
 }
 
 // ============================================================================
@@ -674,6 +688,7 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 	const functions = abi.filter((item): item is ReadFunction => {
 		if (item.type !== 'function') return false
 		if (!Array.isArray(item.inputs)) return false
+
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
 
@@ -683,11 +698,11 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 				return false
 			return item.stateMutability === 'view' || item.stateMutability === 'pure'
 		}
-		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
-			return false
 
 		// For whatsabi ABIs, stateMutability is often wrong (everything is nonpayable)
 		// Use name-based heuristics instead
+		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
+			return false
 		if (looksLikeReadFunction(item.name)) return true
 
 		// Functions with no inputs that don't look like writes are likely getters
@@ -726,6 +741,7 @@ export function getWriteFunctions(abi: Abi): WriteFunction[] {
 			item.stateMutability === 'nonpayable' ||
 			item.stateMutability === 'payable'
 		if (!isNonpayableOrPayable) return false
+
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
 

@@ -10,7 +10,6 @@ import {
 	zeroAddress,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	allAbis,
@@ -827,7 +826,7 @@ function createDetectors(
 				if (
 					isZonePortalAddress(args.from) &&
 					!Address.isEqual(args.to, zeroAddress) &&
-					!Address.isEqual(args.to, ZoneAddresses.zoneMessenger)
+					!Address.isEqual(args.to, Addresses.zoneMessenger)
 				) {
 					const zoneName = getZoneName(args.from)
 					return {
@@ -3046,15 +3045,15 @@ const callDecoders: Record<
 		abi: Abis.validatorConfig,
 		decoder: decodeValidatorConfigCall,
 	},
-	[ZoneAddresses.zoneFactory.toLowerCase()]: {
+	[Addresses.zoneFactory.toLowerCase()]: {
 		abi: zoneFactoryAbi,
 		decoder: decodeZoneFactoryCall,
 	},
-	[ZoneAddresses.zonePortalImplementation.toLowerCase()]: {
+	[Addresses.zonePortalImplementation.toLowerCase()]: {
 		abi: zonePortalAbi,
 		decoder: decodeZonePortalCall,
 	},
-	[ZoneAddresses.zoneOutbox.toLowerCase()]: {
+	[Addresses.zoneOutbox.toLowerCase()]: {
 		abi: zoneOutboxAbi,
 		decoder: decodeZoneOutboxCall,
 	},
