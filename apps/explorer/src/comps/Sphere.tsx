@@ -23,7 +23,7 @@ export function Sphere(props: Sphere.Props) {
 	}, [])
 
 	return (
-		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[242px] z-0 print:hidden hidden sm:block">
+		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[194px] z-0 print:hidden hidden sm:block">
 			<div
 				ref={containerRef}
 				className="absolute top-0 z-0 w-full flex justify-center pointer-events-none"
@@ -42,16 +42,9 @@ export namespace Sphere {
 
 	export function Artwork(): React.JSX.Element {
 		return (
-			<img
-				src="/landing-circles.png"
-				alt=""
+			<div
 				aria-hidden="true"
-				decoding="async"
-				loading="lazy"
-				width={656}
-				height={285}
-				className="w-[656px] max-w-[120vw] h-auto"
-				draggable={false}
+				className="sphere-artwork w-[656px] max-w-[120vw] aspect-[656/285]"
 			/>
 		)
 	}
