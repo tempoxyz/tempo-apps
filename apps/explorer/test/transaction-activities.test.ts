@@ -136,7 +136,7 @@ describe('activitiesToKnownEvents', () => {
 		])
 	})
 
-	test('maps an Earn redemption into a Vault Withdrawal', () => {
+	test('maps an Earn redemption into a withdrawal from Earn', () => {
 		expect(
 			activitiesToKnownEvents([
 				{
@@ -158,7 +158,7 @@ describe('activitiesToKnownEvents', () => {
 			{
 				type: 'shares-redeemed',
 				parts: [
-					{ type: 'action', value: 'Vault Withdrawal' },
+					{ type: 'action', value: 'Withdraw from Earn' },
 					{
 						type: 'amount',
 						value: {
@@ -179,7 +179,7 @@ describe('activitiesToKnownEvents', () => {
 		])
 	})
 
-	test('maps a finalized Earn redemption into a Vault Withdrawal', () => {
+	test('maps a finalized Earn redemption into a withdrawal from Earn', () => {
 		expect(
 			activitiesToKnownEvents([
 				{
@@ -198,7 +198,7 @@ describe('activitiesToKnownEvents', () => {
 			{
 				type: 'shares-redemption-finalized',
 				parts: [
-					{ type: 'action', value: 'Vault Withdrawal' },
+					{ type: 'action', value: 'Withdraw from Earn' },
 					{
 						type: 'amount',
 						value: {
@@ -263,8 +263,8 @@ describe('activitiesToKnownEvents', () => {
 						type: 'action',
 						value:
 							type === 'private-assets-deposited'
-								? 'Vault Deposit'
-								: 'Vault Withdrawal',
+								? 'Deposit to Earn'
+								: 'Withdraw from Earn',
 					},
 					{
 						type: 'amount',
@@ -354,7 +354,7 @@ describe('selectTransactionDescriptionEvents for Zones', () => {
 	test('preserves semantic API activities for Earn transactions', () => {
 		const vaultDeposit = {
 			type: 'private-assets-deposited',
-			parts: [{ type: 'action' as const, value: 'Vault Deposit' }],
+			parts: [{ type: 'action' as const, value: 'Deposit to Earn' }],
 		}
 		expect(
 			selectTransactionDescriptionEvents({
@@ -376,7 +376,7 @@ describe('selectTransactionDescriptionEvents for Zones', () => {
 		}
 		const vaultDeposit = {
 			type: 'private-assets-deposited',
-			parts: [{ type: 'action' as const, value: 'Vault Deposit' }],
+			parts: [{ type: 'action' as const, value: 'Deposit to Earn' }],
 		}
 		const zoneDepositActivity = {
 			type: 'private-assets-deposited',
@@ -437,7 +437,7 @@ describe('selectTransactionDescriptionEvents for Earn receipts', () => {
 	test('prefers one composed Earn flow over generic indexed token activity', () => {
 		const earnDeposit = {
 			type: 'earn deposit',
-			parts: [{ type: 'action' as const, value: 'Earn Deposit' }],
+			parts: [{ type: 'action' as const, value: 'Deposit to Earn' }],
 		}
 
 		expect(
@@ -459,7 +459,7 @@ describe('selectTransactionDescriptionEvents for Earn receipts', () => {
 		}
 		const earnDeposit = {
 			type: 'earn private deposit',
-			parts: [{ type: 'action' as const, value: 'Earn Deposit' }],
+			parts: [{ type: 'action' as const, value: 'Deposit to Earn' }],
 		}
 		const zoneWithdrawal = {
 			type: 'zone withdrawal',
