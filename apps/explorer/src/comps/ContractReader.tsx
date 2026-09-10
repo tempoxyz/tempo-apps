@@ -18,12 +18,15 @@ import {
 	parseInputValue,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
+import { getTempoChain } from '#wagmi.config'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import ReturnIcon from '~icons/lucide/corner-down-right'
 import LinkIcon from '~icons/lucide/link'
 import PlayIcon from '~icons/lucide/play'
+
+const TEMPO_CHAIN_ID = getTempoChain().id
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
@@ -282,6 +285,7 @@ function StaticReadFunction(props: {
 	} = useReadContract({
 		address,
 		abi: effectiveAbi,
+		chainId: TEMPO_CHAIN_ID,
 		functionName: fnId,
 		args: [],
 		query: { enabled: mounted && hasOutputs },
@@ -310,6 +314,7 @@ function StaticReadFunction(props: {
 	} = useCall({
 		to: address,
 		data: callData,
+		chainId: TEMPO_CHAIN_ID,
 		query: { enabled: mounted && !hasOutputs && Boolean(callData) },
 	})
 
@@ -487,6 +492,7 @@ function DynamicReadFunction(props: {
 	} = useReadContract({
 		address,
 		abi: effectiveAbi,
+		chainId: TEMPO_CHAIN_ID,
 		functionName: fnId,
 		args: parsedArgs.args,
 		query: {
@@ -516,6 +522,7 @@ function DynamicReadFunction(props: {
 	} = useCall({
 		to: address,
 		data: callData,
+		chainId: TEMPO_CHAIN_ID,
 		query: {
 			enabled:
 				!hasOutputs &&
