@@ -71,8 +71,8 @@ describe('access key permissions', () => {
 		expect(html).not.toContain(authorization.address)
 		expect(html).not.toContain('Scoped calls')
 		expect(html).not.toContain('<h3')
-		expect(html).toContain('Other tokens have no spending allowance')
-		expect(html).toContain('Only these contracts and functions are allowed')
+		expect(html).not.toContain('Other tokens have no spending allowance')
+		expect(html).not.toContain('Only these contracts and functions are allowed')
 	})
 
 	it('includes authorization before indexed descriptions without requiring a log', () => {
@@ -137,12 +137,10 @@ describe('access key permissions', () => {
 		expect(html).toContain('PathUSD')
 		expect(html).toContain('Every 30 days')
 		expect(html).toContain('approve(address,uint256)')
-		expect(html).toContain('Only these spenders')
+		expect(html).toContain('Spenders')
 		expect(html).toContain(contract)
 		expect(html).toContain('0xc50e660a')
-		expect(html).toContain('Function selector')
 		expect(html).toContain('Dec 15, 2026, 15:27:21 UTC')
-		expect(html).toContain('Not current permissions or remaining balances')
 		expect(html).not.toContain('No recipient restriction')
 		expect(html).not.toContain('Any recipient')
 	})
@@ -153,13 +151,13 @@ describe('access key permissions', () => {
 			scopes: undefined,
 			expiry: undefined,
 		})
-		expect(unrestricted).toContain('No token spending limits')
+		expect(unrestricted).toContain('Unrestricted')
 		expect(unrestricted).toContain('Any contract and function')
 		expect(unrestricted).toContain('Never expires')
 		const denied = render({ limits: [], scopes: [] })
-		expect(denied).toContain('No token spending allowed')
+		expect(denied).toContain('No spending allowed')
 		expect(denied).toContain('No calls allowed')
-		expect(denied).not.toContain('Unrestricted calls')
+		expect(denied).not.toContain('Unrestricted')
 	})
 
 	it('keeps wildcard functions explicit without suggesting recipient scoping', () => {
@@ -178,12 +176,16 @@ describe('access key permissions', () => {
 				scopes: [{ address: token, selector, recipients }],
 			})
 			expect(html).toContain(`Any ${label}`)
-			expect(html).not.toContain(`Only these ${label}s`)
+			expect(html).not.toContain(
+				label === 'spender' ? 'Spenders' : 'Recipients',
+			)
 		}
 		const restricted = render({
 			scopes: [{ address: token, selector, recipients: [contract] }],
 		})
-		expect(restricted).toContain(`Only these ${label}s`)
+		expect(restricted).toContain(
+			label === 'spender' ? 'Spenders' : 'Recipients',
+		)
 		expect(restricted).toContain(`href="/address/${contract}"`)
 		expect(restricted).not.toContain(`Any ${label}`)
 	})

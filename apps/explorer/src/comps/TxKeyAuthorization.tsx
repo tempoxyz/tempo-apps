@@ -36,49 +36,33 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Spend limits">
 					{authorization.limits === undefined ? (
-						<p className="text-secondary">No token spending limits</p>
+						<p className="text-secondary">Unrestricted</p>
 					) : authorization.limits.length === 0 ? (
-						<p className="text-secondary">No token spending allowed</p>
+						<p className="text-secondary">No spending allowed</p>
 					) : (
-						<>
-							{authorization.limits.map((limit) => (
-								<SpendingLimit
-									key={limit.token}
-									limit={limit}
-									metadata={tokenMetadata?.[limit.token.toLowerCase()]}
-								/>
-							))}
-							<p className="text-[11px] text-tertiary">
-								Other tokens have no spending allowance.
-							</p>
-						</>
+						authorization.limits.map((limit) => (
+							<SpendingLimit
+								key={limit.token}
+								limit={limit}
+								metadata={tokenMetadata?.[limit.token.toLowerCase()]}
+							/>
+						))
 					)}
 				</PermissionRow>
 				<PermissionRow label="Allowed calls">
 					{targets === undefined ? (
-						<p className="text-secondary">
-							Any contract and function, subject to protocol restrictions.
-						</p>
+						<p className="text-secondary">Any contract and function</p>
 					) : targets.length === 0 ? (
 						<p className="text-secondary">No calls allowed</p>
 					) : (
-						<>
-							<ul className="flex flex-col gap-[12px]">
-								{targets.map((target) => (
-									<CallScope key={target.address} target={target} />
-								))}
-							</ul>
-							<p className="text-[11px] text-tertiary">
-								Only these contracts and functions are allowed.
-							</p>
-						</>
+						<ul className="flex flex-col gap-[12px]">
+							{targets.map((target) => (
+								<CallScope key={target.address} target={target} />
+							))}
+						</ul>
 					)}
 				</PermissionRow>
 			</dl>
-			<p className="mt-[10px] text-[11px] text-tertiary">
-				Permissions in this transaction. Not current permissions or remaining
-				balances.
-			</p>
 		</section>
 	)
 }
@@ -216,11 +200,6 @@ function CallScope(props: {
 										{rule.selector}
 									</code>
 								)}
-								{rule.selector && !functionName && (
-									<span className="text-[11px] text-tertiary">
-										Function selector
-									</span>
-								)}
 							</div>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
 							{signature && (
@@ -228,9 +207,7 @@ function CallScope(props: {
 									{rule.recipients?.length ? (
 										<div className="flex min-w-0 flex-col gap-1">
 											<span>
-												{selector === '0x095ea7b3'
-													? 'Only these spenders'
-													: 'Only these recipients'}
+												{selector === '0x095ea7b3' ? 'Spenders' : 'Recipients'}
 											</span>
 											{rule.recipients.map((recipient) => (
 												<PermissionAddress
