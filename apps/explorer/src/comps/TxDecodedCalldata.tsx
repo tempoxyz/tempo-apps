@@ -2,11 +2,8 @@ import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
-import {
-	formatAbiValue,
-	getAbiItem,
-	getContractInfo,
-} from '#lib/domain/contracts'
+import { AbiArgument } from '#comps/AbiArgument'
+import { getAbiItem, getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
@@ -136,7 +133,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				{args && args.length > 0 && (
 					<div className="divide-y divide-card-border">
 						{abiItem.inputs?.map((input, i) => (
-							<TxDecodedCalldata.ArgumentRow
+							<AbiArgument
 								key={`${input.type}-${input.name ?? i}`}
 								input={input}
 								value={args[i]}
@@ -182,40 +179,5 @@ export namespace TxDecodedCalldata {
 	export interface Props {
 		address?: Address | null
 		data: Hex
-	}
-
-	export function ArgumentRow(props: ArgumentRow.Props) {
-		const { input, value } = props
-		const { copy, notifying } = useCopy()
-		const formattedValue = formatAbiValue(value)
-
-		return (
-			<button
-				type="button"
-				onClick={() => copy(formattedValue)}
-				className="flex items-start gap-[12px] px-[10px] py-[8px] text-[12px] font-mono w-full text-left cursor-pointer press-down hover:bg-base-alt/50 transition-colors"
-			>
-				<span className="text-secondary shrink-0 min-w-[120px]">
-					{notifying ? (
-						<span className="text-primary">copied</span>
-					) : (
-						<>
-							{input.type}
-							{input.name && (
-								<span className="text-primary"> {input.name}</span>
-							)}
-						</>
-					)}
-				</span>
-				<span className="text-primary break-all">{formattedValue}</span>
-			</button>
-		)
-	}
-
-	export namespace ArgumentRow {
-		export interface Props {
-			input: { type: string; name?: string }
-			value: unknown
-		}
 	}
 }
