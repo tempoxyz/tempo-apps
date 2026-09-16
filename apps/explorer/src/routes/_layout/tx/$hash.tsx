@@ -33,6 +33,7 @@ import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
+import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -187,6 +188,8 @@ function RouteComponent() {
 		activityEvents,
 		block,
 		feeBreakdown,
+		keyAuthorization,
+		keyTokenMetadata,
 		knownCall,
 		knownEvents,
 		knownEventsByLog = [],
@@ -371,6 +374,12 @@ function RouteComponent() {
 				className="self-start"
 			/>
 			<div className="flex min-w-0 flex-col gap-[14px]">
+				{keyAuthorization && (
+					<TxKeyAuthorization
+						authorization={keyAuthorization}
+						tokenMetadata={keyTokenMetadata}
+					/>
+				)}
 				<Sections
 					mode={mode}
 					sections={sections}

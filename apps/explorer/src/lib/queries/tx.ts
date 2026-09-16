@@ -15,6 +15,7 @@ import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
+import type { KeyAuthorization } from '#lib/domain/access-key'
 
 const transferTopic = toEventSelector(
 	'event Transfer(address indexed, address indexed, uint256)',
@@ -46,6 +47,29 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 		transaction,
 		getTokenMetadata,
 	})
+	// Wagmi's mixed-chain return type omits Tempo's formatted extension fields.
+	const keyAuthorization =
+		'keyAuthorization' in transaction
+			? (transaction.keyAuthorization as KeyAuthorization | null)
+			: undefined
+	const keyTokenMetadata: Record<
+		string,
+		Pick<Tip20.Metadata, 'decimals' | 'symbol'>
+	> = {}
+	await Promise.all(
+		(keyAuthorization?.limits ?? []).map(async ({ token }) => {
+			const metadata =
+				getTokenMetadata(token) ??
+				(await Tip20.metadataForTokens([token])
+					.then((getMetadata) => getMetadata(token))
+					.catch(() => undefined))
+			if (metadata)
+				keyTokenMetadata[token.toLowerCase()] = {
+					decimals: metadata.decimals,
+					symbol: metadata.symbol,
+				}
+		}),
+	)
 
 	// Try to decode known contract calls (e.g., validator precompile)
 	// Prioritize decoded calls over fee-only events since they're more descriptive
@@ -113,6 +137,8 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 
 	return {
 		block,
+		keyAuthorization,
+		keyTokenMetadata,
 		feeBreakdown,
 		knownCall,
 		knownEvents,
@@ -124,7 +150,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 
 async function fetchTxData(params: { hash: Hex.Hex }) {
 	return withImmutableDataCache({
-		key: `tx-detail:v1:${getTempoChain().id}:${params.hash.toLowerCase()}`,
+		key: `tx-detail:v2:${getTempoChain().id}:${params.hash.toLowerCase()}`,
 		load: () => fetchTxDataUncached(params),
 	})
 }
