@@ -1,10 +1,14 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
+import { encodeEventTopics } from 'viem'
+import { Addresses } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import {
 	formatKeyExpiry,
 	formatKeyPeriod,
 	groupKeyScopes,
+	isKeyAuthorizationEvent,
 	type KeyAuthorization,
 } from '#lib/domain/access-key'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
@@ -59,6 +63,44 @@ function render(overrides: Partial<KeyAuthorization> = {}) {
 }
 
 describe('access key permissions', () => {
+	it('matches only the keychain authorization for the envelope account and key', () => {
+		const account = '0xb9ba2b8382f1a712c31fbfcf1a692c01639bf43c'
+		const topics = encodeEventTopics({
+			abi: Abis.accountKeychain,
+			eventName: 'KeyAuthorized',
+			args: { account, publicKey: authorization.address },
+		}) as `0x${string}`[]
+		const log = { address: Addresses.accountKeychain, topics }
+		expect(isKeyAuthorizationEvent(log, account, authorization.address)).toBe(
+			true,
+		)
+		expect(
+			isKeyAuthorizationEvent(
+				{ ...log, address: contract },
+				account,
+				authorization.address,
+			),
+		).toBe(false)
+		expect(isKeyAuthorizationEvent(log, contract, authorization.address)).toBe(
+			false,
+		)
+		expect(isKeyAuthorizationEvent(log, account, contract)).toBe(false)
+		expect(
+			isKeyAuthorizationEvent(
+				{ ...log, topics: [] },
+				account,
+				authorization.address,
+			),
+		).toBe(false)
+		expect(
+			isKeyAuthorizationEvent(
+				{ ...log, topics: ['0x', ...topics.slice(1)] },
+				account,
+				authorization.address,
+			),
+		).toBe(false)
+	})
+
 	it('renders the reported budget, approval spender, unknown selector, and expiry', () => {
 		const html = render()
 		expect(html).toContain('1,000')

@@ -37,6 +37,7 @@ import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { isKeyAuthorizationEvent } from '#lib/domain/access-key'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
@@ -323,7 +324,13 @@ function RouteComponent() {
 		totalItems: receipt.logs.length,
 		itemsLabel: 'events',
 		content: (
-			<EventsSection logs={receipt.logs} knownEvents={knownEventsByLog} />
+			<EventsSection
+				logs={receipt.logs}
+				knownEvents={knownEventsByLog}
+				account={transaction.from}
+				keyAuthorization={keyAuthorization}
+				keyTokenMetadata={keyTokenMetadata}
+			/>
 		),
 	})
 
@@ -373,20 +380,12 @@ function RouteComponent() {
 				to={receipt.to}
 				className="self-start"
 			/>
-			<div className="flex min-w-0 flex-col gap-[14px]">
-				{keyAuthorization && (
-					<TxKeyAuthorization
-						authorization={keyAuthorization}
-						tokenMetadata={keyTokenMetadata}
-					/>
-				)}
-				<Sections
-					mode={mode}
-					sections={sections}
-					activeSection={activeSection}
-					onSectionChange={setActiveSection}
-				/>
-			</div>
+			<Sections
+				mode={mode}
+				sections={sections}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
+			/>
 		</div>
 	)
 }
@@ -771,8 +770,12 @@ function CallItem(props: {
 function EventsSection(props: {
 	logs: Log[]
 	knownEvents: (KnownEvent | null)[]
+	account: `0x${string}`
+	keyAuthorization: TxData['keyAuthorization']
+	keyTokenMetadata: TxData['keyTokenMetadata']
 }) {
-	const { logs, knownEvents } = props
+	const { logs, knownEvents, account, keyAuthorization, keyTokenMetadata } =
+		props
 	const queryClient = useQueryClient()
 	const [expandedGroups, setExpandedGroups] = React.useState<Set<number>>(
 		new Set(),
@@ -852,6 +855,19 @@ function EventsSection(props: {
 						],
 						expanded: isExpanded ? (
 							<div className="flex flex-col gap-4">
+								{keyAuthorization &&
+									group.logs.some((log) =>
+										isKeyAuthorizationEvent(
+											log,
+											account,
+											keyAuthorization.address,
+										),
+									) && (
+										<TxKeyAuthorization
+											authorization={keyAuthorization}
+											tokenMetadata={keyTokenMetadata}
+										/>
+									)}
 								{group.logs.map((log, i) => (
 									<TxDecodedTopics key={log.logIndex ?? i} log={log} />
 								))}
@@ -894,6 +910,7 @@ function EventGroupCell(props: {
 				<button
 					type="button"
 					onClick={onToggle}
+					aria-expanded={expanded}
 					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded

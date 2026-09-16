@@ -1,8 +1,28 @@
-import type { Transaction } from 'viem/tempo'
+import { encodeEventTopics, type Address, type Log } from 'viem'
+import { Addresses, type Transaction } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 
 export type KeyAuthorization = NonNullable<
 	Transaction.TransactionTempo['keyAuthorization']
 >
+
+/** Attach envelope permissions only to the corresponding keychain event. */
+export function isKeyAuthorizationEvent(
+	log: Pick<Log, 'address' | 'topics'>,
+	account: Address,
+	publicKey: Address,
+) {
+	if (log.address.toLowerCase() !== Addresses.accountKeychain.toLowerCase())
+		return false
+	const topics = encodeEventTopics({
+		abi: Abis.accountKeychain,
+		eventName: 'KeyAuthorized',
+		args: { account, publicKey },
+	})
+	return topics.every(
+		(topic, index) => topic === log.topics[index]?.toLowerCase(),
+	)
+}
 
 export function groupKeyScopes(scopes: KeyAuthorization['scopes']) {
 	if (scopes === undefined) return undefined

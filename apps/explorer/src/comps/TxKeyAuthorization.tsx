@@ -27,9 +27,9 @@ export function TxKeyAuthorization(
 	return (
 		<section
 			aria-label="Access key permissions"
-			className="min-w-0 rounded-[10px] border border-card-border bg-card font-sans text-[13px] shadow-[0px_4px_44px_rgba(0,0,0,0.05)]"
+			className="min-w-0 border-b border-dashed border-card-border pb-4 font-sans text-[13px]"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-2 rounded-t-[10px] border-b border-card-border bg-card-header px-[18px] py-3">
+			<div className="flex flex-wrap items-center justify-between gap-2 py-3">
 				<h2 className="flex items-center gap-2 font-medium text-primary">
 					<KeyRoundIcon className="size-4 text-accent" />
 					Access key permissions
@@ -38,7 +38,7 @@ export function TxKeyAuthorization(
 					{targets === undefined ? 'Unrestricted calls' : 'Scoped calls'}
 				</span>
 			</div>
-			<div className="flex flex-col gap-4 px-[18px] py-4">
+			<div className="flex flex-col gap-4 py-4">
 				<div className="flex flex-col gap-1">
 					<span className="text-tertiary">Access key</span>
 					<PermissionAddress address={authorization.address} />
@@ -98,7 +98,7 @@ export function TxKeyAuthorization(
 					)}
 				</div>
 			</div>
-			<p className="border-t border-dashed border-card-border px-[18px] py-3 text-[12px] text-tertiary">
+			<p className="text-[12px] text-tertiary">
 				Permissions in this transaction. Not current permissions or remaining
 				balances.
 			</p>
