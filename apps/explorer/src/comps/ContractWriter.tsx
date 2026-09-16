@@ -17,12 +17,15 @@ import {
 	type WriteFunction,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
+import { getTempoChain } from '#wagmi.config'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import FlaskIcon from '~icons/lucide/flask-conical'
 import LinkIcon from '~icons/lucide/link'
 import PlayIcon from '~icons/lucide/play'
+
+const TEMPO_CHAIN_ID = getTempoChain().id
 
 function getWriteErrorMessage(err: Error): string {
 	// Walk the cause chain to find the deepest shortMessage/message
@@ -175,6 +178,8 @@ function WriteContractFunction(props: {
 	const hasInputs = fn.inputs.length > 0 || isPayable
 
 	const connection = useConnection()
+	const canWrite =
+		connection.status === 'connected' && connection.chainId === TEMPO_CHAIN_ID
 	const queryClient = useQueryClient()
 
 	const writeContract = useWriteContract({
@@ -271,14 +276,18 @@ function WriteContractFunction(props: {
 					{connection.status === 'connected' && (
 						<button
 							type="button"
-							title="Execute"
+							title={canWrite ? 'Execute' : 'Switch to Tempo to execute'}
 							disabled={
-								writeContract.isPending || (hasInputs && !allInputsFilled)
+								!canWrite ||
+								writeContract.isPending ||
+								(hasInputs && !allInputsFilled)
 							}
 							className={cx(
 								'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
 								hasInputs ? 'pr-[4px]' : 'pr-[12px]',
-								(writeContract.isPending || (hasInputs && !allInputsFilled)) &&
+								(!canWrite ||
+									writeContract.isPending ||
+									(hasInputs && !allInputsFilled)) &&
 									'opacity-50 cursor-not-allowed',
 							)}
 							onClick={() =>
@@ -287,6 +296,9 @@ function WriteContractFunction(props: {
 									abi: props.abi,
 									functionName: fn.name,
 									args: parsedArgs.args,
+									account: connection.address,
+									connector: connection.connector,
+									chainId: TEMPO_CHAIN_ID,
 									value: isPayable
 										? inputs.value
 											? BigInt(inputs.value)

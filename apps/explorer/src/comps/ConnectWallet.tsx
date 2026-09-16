@@ -7,8 +7,10 @@ import {
 	useClient,
 	useConnect,
 	useConnection,
+	useConnections,
 	useConnectors,
 	useDisconnect,
+	useSwitchConnection,
 	useSwitchChain,
 } from 'wagmi'
 import { Actions } from 'viem/tempo'
@@ -17,9 +19,16 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/fee-token'
-import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
+import {
+	discoverInjectedConnectors,
+	type getSelectableInjectedConnectors,
+	getStoredWalletId,
+	prioritizeStoredWallet,
+	switchInjectedWallet,
+} from '#lib/wallets.ts'
 import { getTempoChain } from '#wagmi.config.ts'
 import LucideLogOut from '~icons/lucide/log-out'
+import LucideX from '~icons/lucide/x'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -49,13 +58,34 @@ function ConnectWalletInner({
 	showAddChain?: boolean
 }) {
 	const connect = useConnect()
+	const connections = useConnections()
+	const switchConnection = useSwitchConnection()
 	const connectors = useConnectors()
 	const { address, chain, connector } = useConnection()
 
 	const [pendingId, setPendingId] = React.useState<string | null>(null)
-	const injectedConnectors = React.useMemo(
-		() => filterSupportedInjectedConnectors(connectors),
-		[connectors],
+	const [selectorOpen, setSelectorOpen] = React.useState(false)
+	const [selectionError, setSelectionError] = React.useState<string>()
+	const [storedWalletId, setStoredWalletId] = React.useState<string>()
+	const [injectedConnectors, setInjectedConnectors] = React.useState<
+		ReturnType<typeof getSelectableInjectedConnectors>
+	>([])
+	const [discoveryComplete, setDiscoveryComplete] = React.useState(false)
+	React.useEffect(() => setStoredWalletId(getStoredWalletId()), [])
+	React.useEffect(() => {
+		let cancelled = false
+		void discoverInjectedConnectors(connectors).then((available) => {
+			if (cancelled) return
+			setInjectedConnectors(available)
+			setDiscoveryComplete(true)
+		})
+		return () => {
+			cancelled = true
+		}
+	}, [connectors])
+	const prioritizedConnectors = React.useMemo(
+		() => prioritizeStoredWallet(injectedConnectors, storedWalletId),
+		[injectedConnectors, storedWalletId],
 	)
 	const chains = useChains()
 	const switchChain = useSwitchChain()
@@ -63,7 +93,56 @@ function ConnectWalletInner({
 	const blockExplorerUrl = chains[0].blockExplorers?.default.url
 
 	const hasConnectorOptions = injectedConnectors.length > 0
+	const selectConnector = async (
+		selectedConnector: (typeof connectors)[number],
+	) => {
+		setPendingId(selectedConnector.id)
+		setSelectionError(undefined)
+		try {
+			await switchInjectedWallet({
+				connector: selectedConnector,
+				currentConnector: connector,
+				connectedConnectors: connections.map(
+					(connection) => connection.connector,
+				),
+				connect: async (nextConnector) => {
+					await connect.mutateAsync({
+						connector: nextConnector,
+						chainId: TEMPO_CHAIN_ID,
+					})
+				},
+				switchConnection: async (nextConnector) => {
+					await switchConnection.mutateAsync({ connector: nextConnector })
+				},
+			})
+			setStoredWalletId(selectedConnector.id)
+			setSelectorOpen(false)
+		} catch (error) {
+			setSelectionError(
+				error instanceof Error ? error.message : 'Failed to connect wallet',
+			)
+		} finally {
+			setPendingId(null)
+		}
+	}
+	const walletSelector = selectorOpen ? (
+		<WalletSelectionDialog
+			connectors={prioritizedConnectors}
+			currentConnector={connector}
+			error={selectionError}
+			pendingId={pendingId}
+			storedWalletId={storedWalletId}
+			onClose={() => setSelectorOpen(false)}
+			onSelect={selectConnector}
+		/>
+	) : null
 
+	if (!discoveryComplete)
+		return (
+			<div className="text-[12px] flex items-center text-secondary whitespace-nowrap">
+				Detecting wallet…
+			</div>
+		)
 	if (!hasConnectorOptions)
 		return (
 			<div className="text-[12px] -tracking-[2%] flex items-center whitespace-nowrap select-none">
@@ -71,61 +150,30 @@ function ConnectWalletInner({
 			</div>
 		)
 	if (!address) {
-		const brandedConnectors = injectedConnectors.filter(
-			(candidate) =>
-				candidate.id !== 'injected' && candidate.name !== 'Injected',
-		)
-		const prioritizedConnectors = [
-			...(brandedConnectors.length > 0
-				? brandedConnectors
-				: injectedConnectors.filter(
-						(candidate) => candidate.id === 'injected',
-					)),
-		]
-			.sort((a, b) => {
-				if (a.id === 'xyz.tempo') return -1
-				if (b.id === 'xyz.tempo') return 1
-				return 0
-			})
-			.slice(0, 2)
+		const onlyConnector = prioritizedConnectors[0]
 
 		return (
 			<div className="flex items-center gap-1.5">
-				{prioritizedConnectors.map((connector) => (
-					<Button
-						type="button"
-						variant="default"
-						key={connector.id}
-						onClick={() => {
-							setPendingId(connector.id)
-							connect.mutate(
-								{ connector },
-								{
-									onSettled: () => setPendingId(null),
-								},
-							)
-						}}
-						className={cx(
-							'flex gap-[8px] items-center rounded-[8px] bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
-							pendingId === connector.id &&
-								connect.isPending &&
-								'animate-pulse',
-						)}
-					>
-						{connector.icon ? (
-							<img
-								className="size-[12px] rounded-[2px]"
-								src={connector.icon}
-								alt={connector.name}
-							/>
-						) : (
-							<LucideWalletCards className="size-[12px]" />
-						)}
-						{connector.name && connector.name !== 'Injected'
-							? `Connect ${connector.name}`
+				<Button
+					type="button"
+					variant="default"
+					onClick={() => {
+						if (prioritizedConnectors.length > 1) setSelectorOpen(true)
+						else if (onlyConnector) void selectConnector(onlyConnector)
+					}}
+					className={cx(
+						'flex gap-[8px] items-center rounded-[8px] bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
+						pendingId && 'animate-pulse',
+					)}
+				>
+					<LucideWalletCards className="size-[12px]" />
+					{prioritizedConnectors.length > 1
+						? 'Connect Wallet'
+						: onlyConnector?.name && onlyConnector.name !== 'Injected'
+							? `Connect ${onlyConnector.name}`
 							: 'Connect Wallet'}
-					</Button>
-				))}
+				</Button>
+				{walletSelector}
 			</div>
 		)
 	}
@@ -157,7 +205,125 @@ function ConnectWalletInner({
 					Added Tempo to {connector?.name ?? 'Wallet'}!
 				</span>
 			)}
+			{prioritizedConnectors.length > 1 && (
+				<button
+					type="button"
+					title="Switch wallet"
+					className="h-full text-secondary hover:text-primary cursor-pointer press-down"
+					onClick={() => setSelectorOpen(true)}
+				>
+					<LucideWalletCards className="size-[12px]" />
+				</button>
+			)}
 			<SignOut />
+			{walletSelector}
+		</div>
+	)
+}
+
+function WalletSelectionDialog(props: {
+	connectors: ReturnType<typeof getSelectableInjectedConnectors>
+	currentConnector: ReturnType<typeof useConnection>['connector']
+	error: string | undefined
+	pendingId: string | null
+	storedWalletId: string | undefined
+	onClose: () => void
+	onSelect: (connector: ReturnType<typeof useConnectors>[number]) => void
+}): React.JSX.Element {
+	const titleId = React.useId()
+	const closeButtonRef = React.useRef<HTMLButtonElement>(null)
+	React.useEffect(() => {
+		closeButtonRef.current?.focus()
+		const closeOnEscape = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') props.onClose()
+		}
+		window.addEventListener('keydown', closeOnEscape)
+		return () => window.removeEventListener('keydown', closeOnEscape)
+	}, [props.onClose])
+
+	return (
+		<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+			<button
+				type="button"
+				aria-label="Close wallet selection"
+				className="absolute inset-0 cursor-default"
+				tabIndex={-1}
+				onClick={props.onClose}
+			/>
+			<div
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby={titleId}
+				className="relative w-full max-w-[380px] rounded-[12px] border border-base-border bg-base-background p-4 shadow-[0_24px_80px_rgba(0,0,0,0.5)]"
+			>
+				<div className="mb-3 flex items-center justify-between gap-4">
+					<div>
+						<h2 id={titleId} className="text-[14px] font-semibold">
+							Select wallet
+						</h2>
+						<p className="mt-1 text-[12px] text-secondary">
+							Choose the browser wallet to use for contract transactions.
+						</p>
+					</div>
+					<button
+						ref={closeButtonRef}
+						type="button"
+						aria-label="Close wallet selection"
+						className="shrink-0 text-secondary hover:text-primary cursor-pointer press-down"
+						onClick={props.onClose}
+					>
+						<LucideX className="size-4" />
+					</button>
+				</div>
+				{props.error && (
+					<p role="alert" className="mb-3 text-[12px] text-red-400">
+						{props.error}
+					</p>
+				)}
+				<div className="flex flex-col gap-2">
+					{props.connectors.map((connector) => {
+						const isCurrent = connector.uid === props.currentConnector?.uid
+						const isPending = connector.id === props.pendingId
+
+						return (
+							<button
+								type="button"
+								key={connector.uid}
+								disabled={isCurrent || props.pendingId !== null}
+								className={cx(
+									'flex w-full items-center gap-3 rounded-[9px] border border-base-border bg-base-plane-interactive px-3 py-2.5 text-left transition-colors hover:bg-base-plane disabled:cursor-default',
+									isPending && 'animate-pulse',
+								)}
+								onClick={() => props.onSelect(connector)}
+							>
+								{connector.icon ? (
+									<img
+										className="size-6 rounded-[5px]"
+										src={connector.icon}
+										alt=""
+									/>
+								) : (
+									<LucideWalletCards className="size-6 text-secondary" />
+								)}
+								<span className="min-w-0 flex-1 text-[13px] font-medium text-primary">
+									{connector.name === 'Injected'
+										? 'Browser wallet'
+										: connector.name}
+								</span>
+								<span className="text-[11px] text-tertiary">
+									{isCurrent
+										? 'Connected'
+										: connector.id === props.storedWalletId
+											? 'Last used'
+											: isPending
+												? 'Connecting…'
+												: ''}
+								</span>
+							</button>
+						)
+					})}
+				</div>
+			</div>
 		</div>
 	)
 }
@@ -331,14 +497,19 @@ function FundAccountButton() {
 
 function SignOut() {
 	const disconnect = useDisconnect()
-	const { connector } = useConnection()
+	const connections = useConnections()
+
+	const disconnectAll = async () => {
+		for (const connection of connections)
+			await disconnect.mutateAsync({ connector: connection.connector })
+	}
 
 	return (
 		<button
 			type="button"
 			title="Disconnect"
 			className="h-full text-secondary hover:text-primary cursor-pointer press-down"
-			onClick={() => disconnect.mutate({ connector })}
+			onClick={() => void disconnectAll()}
 		>
 			<LucideLogOut className="size-[12px] translate-y-px" />
 		</button>
