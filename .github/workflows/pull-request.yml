@@ -100,7 +100,7 @@ jobs:
             echo "relevant=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Initialize zone-prover preview deployment
+      - name: Reconcile zone-prover preview routing
         if: steps.changes.outputs.relevant == 'true' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -129,24 +129,19 @@ jobs:
                   result = [{key: deployment.get(key) for key in ('id', 'created_on', 'versions')}
                             for deployment in result['deployments']]
               print(endpoint + ': ' + json.dumps(result))
-          # One-time repair: never replace an existing deployment or change routes.
-          if not result:
-              request = urllib.request.Request(base + '/deployments', method='POST', headers={
-                  'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
-                  'Content-Type': 'application/json',
-              }, data=json.dumps({
-                  'strategy': 'percentage',
-                  'versions': [{
-                      'version_id': '4e61f103-253d-4e89-8a33-e296ece78a7d',
-                      'percentage': 100,
-                  }],
-                  'annotations': {'workers/message': 'Initialize zone-prover for PR #1246 previews'},
-              }).encode())
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  payload = json.load(response)
-              if not payload.get('success'):
-                  raise SystemExit('Cloudflare deployment initialization failed')
-              print('Initialized deployment: ' + payload['result']['id'])
+          request = urllib.request.Request(base + '/subdomain', method='POST', headers={
+              'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
+              'Content-Type': 'application/json',
+              'Cloudflare-Workers-Script-Api-Date': '2025-08-01',
+          }, data=json.dumps({'enabled': True, 'previews_enabled': True}).encode())
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+          if not payload.get('success'):
+              raise SystemExit('Cloudflare routing reconciliation failed')
+          result = payload['result']
+          print('Reconciled subdomain: ' + json.dumps({
+              key: result.get(key) for key in ('enabled', 'previews_enabled')
+          }))
           PY
 
       - name: Install dependencies
