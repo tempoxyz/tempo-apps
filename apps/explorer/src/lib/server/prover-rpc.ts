@@ -84,7 +84,8 @@ export async function forwardProverRpc(
 				'Content-Type': 'application/json',
 				Authorization: authorization,
 			},
-			redirect: 'error',
+			// Workers does not support 'error'; reject redirects via !upstream.ok below.
+			redirect: 'manual',
 			signal: AbortSignal.timeout(15_000),
 		})
 		if (!upstream.ok)
