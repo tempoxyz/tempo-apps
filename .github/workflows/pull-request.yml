@@ -109,14 +109,7 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        env:
-          APP_NAME: ${{ matrix.app }}
-        run: |
-          if [[ "$APP_NAME" == "explorer" ]]; then
-            bash scripts/build.sh
-          else
-            pnpm build
-          fi
+        run: pnpm build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version

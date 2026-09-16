@@ -30,7 +30,7 @@ export function inferTempoEnvFromHostname(
 
 	if (
 		host.includes('explorer-zone-prover') ||
-		host === 'dev-eu-zone-prover-explorer.tail388b2e.ts.net'
+		host === 'explore-zone-prover.tehq.net'
 	)
 		return 'zone-prover'
 

@@ -29,7 +29,10 @@ const READ_METHODS = new Set([
 const MAX_BODY_BYTES = 128 * 1024
 const MAX_BATCH = 50
 
-export async function forwardProverRpc(request: Request): Promise<Response> {
+export async function forwardProverRpc(
+	request: Request,
+	authorization: string,
+): Promise<Response> {
 	const reader = request.body?.getReader()
 	if (!reader) return new Response('Missing RPC request', { status: 400 })
 	const chunks: Uint8Array[] = []
@@ -79,6 +82,7 @@ export async function forwardProverRpc(request: Request): Promise<Response> {
 			body,
 			headers: {
 				'Content-Type': 'application/json',
+				Authorization: authorization,
 			},
 			redirect: 'error',
 			signal: AbortSignal.timeout(15_000),

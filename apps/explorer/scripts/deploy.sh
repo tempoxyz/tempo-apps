@@ -36,8 +36,10 @@ fi
 case "$env_name" in
 	devnet|nextfork|testnet|mainnet) ;;
 	zone-prover)
-		echo "zone-prover is internal-only; build the container instead" >&2
-		exit 1
+		if [[ "${PROVER_ACCESS_READY:-}" != "1" ]]; then
+			echo "Apply the prover Cloudflare Access policy first, then set PROVER_ACCESS_READY=1" >&2
+			exit 1
+		fi
 		;;
 	*)
 		echo "Unsupported env: $env_name" >&2

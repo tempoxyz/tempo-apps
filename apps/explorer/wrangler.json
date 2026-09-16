@@ -185,7 +185,13 @@
 		},
 		"zone-prover": {
 			"name": "explorer-zone-prover",
-			"routes": [],
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tehq.net",
+					"pattern": "explore-zone-prover.tehq.net"
+				}
+			],
 			"preview_urls": false,
 			"vars": {
 				"DATADOG_SITE": "us5.datadoghq.com",

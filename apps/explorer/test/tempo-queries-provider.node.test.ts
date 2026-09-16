@@ -18,6 +18,7 @@ vi.mock('tidx.ts', () => ({
 vi.mock('#lib/server/env', () => ({
 	serverEnv: {
 		TEMPO_API_KEY: 'tempo-api-secret',
+		ZONE_PROVER_TIDX_AUTH: 'Basic dGVzdDp0ZXN0',
 	},
 	tempoApiUrl: 'https://api.tempo.xyz',
 }))
@@ -48,8 +49,8 @@ describe('Tempo query provider', () => {
 		mocks.network = 'zone-prover'
 		provider.tempoQueryBuilder(31318)
 		expect(mocks.create).toHaveBeenLastCalledWith({
-			baseUrl: 'http://tidx.tempo-devnet-zone-prover.svc.cluster.local:8080',
-			headers: {},
+			baseUrl: 'https://tidx-zone-prover.devnet.tempoxyz.dev',
+			headers: { Authorization: 'Basic dGVzdDp0ZXN0' },
 		})
 		expect(() => provider.tempoQueryBuilder(4217)).toThrow('Wrong chain')
 		mocks.create.mockClear()
