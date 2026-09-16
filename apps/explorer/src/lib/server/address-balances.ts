@@ -7,6 +7,7 @@ import * as z from 'zod/mini'
 
 import type { BalancesResponse, TokenBalance } from '#lib/address-balances'
 import { serverEnv, tempoApiUrl } from '#lib/server/env'
+import { getTempoEnv } from '#lib/env'
 import { api } from '#lib/server/tempo-api'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -98,6 +99,7 @@ async function fetchEarnPositions(params: {
 	chainId: number
 	limit: number
 }): Promise<EarnPosition[]> {
+	if (getTempoEnv() === 'zone-prover') return []
 	try {
 		const url = new URL(
 			`/v1/earn/addresses/${params.address}/positions`,

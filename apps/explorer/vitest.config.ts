@@ -8,6 +8,7 @@ export default defineConfig({
 		tsconfigPaths: true,
 	},
 	test: {
+		setupFiles: ['./test/worker-setup.ts'],
 		include: ['test/**/*.test.ts'],
 		exclude: ['test/**/*.node.test.ts'],
 	},

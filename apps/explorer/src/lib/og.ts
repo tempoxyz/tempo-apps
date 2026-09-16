@@ -22,7 +22,12 @@ import type { TxData as TxDataQuery } from '#lib/queries'
 export const OG_BASE_URL = 'https://og.tempo.xyz'
 
 export function buildZonePortalOgImageUrl(address: string): string {
-	return buildZonePortalOgUrl(OG_BASE_URL, address, getTempoEnv())
+	const network = getTempoEnv()
+	// The shared OG service does not yet know this network. Use a static address
+	// card rather than requesting activity from another chain with ID 31318.
+	if (network === 'zone-prover')
+		return buildAddressOgUrl(OG_BASE_URL, { address, accountType: 'contract' })
+	return buildZonePortalOgUrl(OG_BASE_URL, address, network)
 }
 
 function truncateOgText(text: string, maxLength: number): string {

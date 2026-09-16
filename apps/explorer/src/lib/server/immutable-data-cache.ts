@@ -1,4 +1,5 @@
 import * as Json from 'ox/Json'
+import { networkCacheScope } from './network'
 
 const CACHE_ORIGIN = 'https://explore.tempo.xyz'
 
@@ -13,7 +14,7 @@ export async function withImmutableDataCache<T>(options: {
 
 	const cache = (caches as unknown as { default: Cache }).default
 	const cacheKey = new Request(
-		`${CACHE_ORIGIN}/__immutable-data/${encodeURIComponent(options.key)}`,
+		`${CACHE_ORIGIN}/__immutable-data/${encodeURIComponent(networkCacheScope())}/${encodeURIComponent(options.key)}`,
 	)
 
 	try {

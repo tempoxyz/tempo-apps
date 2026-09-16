@@ -6,6 +6,9 @@ import { getCode } from 'viem/actions'
 import { type AccountType, getAccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
 import { api } from '#lib/server/tempo-api'
+import { getTempoEnv } from '#lib/env'
+import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import { networkCacheScope } from './network'
 import {
 	fetchTokenTransferBoundaries,
 	fetchVirtualAddressTransferStats,
@@ -148,7 +151,7 @@ export function getAddressMetadata(
 	address: Address.Address,
 ): Promise<AddressMetadata> {
 	const { id: chainId } = getTempoChain()
-	const cacheKey = `${chainId}-${address}`
+	const cacheKey = `${networkCacheScope()}-${chainId}-${address}`
 	const cached = metadataCache.get(cacheKey)
 	if (cached && Date.now() - cached.timestamp < METADATA_CACHE_TTL)
 		return cached.promise
@@ -178,6 +181,31 @@ async function loadAddressMetadata(
 	const isVirtual = VirtualAddress.validate(address)
 
 	const bytecodePromise = getCode(client, { address }).catch(() => undefined)
+	if (getTempoEnv() === 'zone-prover') {
+		const [bytecode, stats] = await Promise.all([
+			bytecodePromise,
+			tempoQueryBuilder(chainId)
+				.selectFrom('txs')
+				.select((eb) => [
+					eb.fn.count('hash').as('count'),
+					eb.fn.max('block_timestamp').as('latest'),
+				])
+				.where((eb) =>
+					eb.or([
+						eb('from', '=', address.toLowerCase() as Address.Address),
+						eb('to', '=', address.toLowerCase() as Address.Address),
+					]),
+				)
+				.executeTakeFirst(),
+		])
+		return {
+			address,
+			chainId,
+			accountType: getAccountType(bytecode),
+			txCount: Number(stats?.count ?? 0),
+			lastActivityTimestamp: parseTimestamp(stats?.latest),
+		}
+	}
 
 	let response: AddressMetadata
 

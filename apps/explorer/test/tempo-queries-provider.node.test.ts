@@ -1,11 +1,14 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+	network: 'mainnet',
 	create: vi.fn(() => ({
 		on: vi.fn(),
 	})),
 	from: vi.fn(),
 }))
+
+vi.mock('#lib/env', () => ({ getTempoEnv: () => mocks.network }))
 
 vi.mock('tidx.ts', () => ({
 	QB: { from: mocks.from },
@@ -13,7 +16,10 @@ vi.mock('tidx.ts', () => ({
 }))
 
 vi.mock('#lib/server/env', () => ({
-	serverEnv: { TEMPO_API_KEY: 'tempo-api-secret' },
+	serverEnv: {
+		TEMPO_API_KEY: 'tempo-api-secret',
+		ZONE_PROVER_TIDX_AUTH: 'Basic dGVzdDp0ZXN0',
+	},
 	tempoApiUrl: 'https://api.tempo.xyz',
 }))
 
@@ -37,5 +43,20 @@ describe('Tempo query provider', () => {
 		expect(mocks.from).toHaveBeenCalledWith(
 			expect.objectContaining({ chainId: 4217, engine: 'clickhouse' }),
 		)
+	})
+
+	it('routes the same chain ID to separate indexers based on the environment', () => {
+		mocks.network = 'zone-prover'
+		provider.tempoQueryBuilder(31318)
+		expect(mocks.create).toHaveBeenLastCalledWith({
+			baseUrl: 'https://tidx-zone-prover.devnet.tempoxyz.dev',
+			headers: { Authorization: 'Basic dGVzdDp0ZXN0' },
+		})
+		expect(() => provider.tempoQueryBuilder(4217)).toThrow('Wrong chain')
+		mocks.create.mockClear()
+		mocks.network = 'devnet'
+		provider.tempoQueryBuilder(31318)
+		expect(mocks.create).not.toHaveBeenCalled()
+		mocks.network = 'mainnet'
 	})
 })

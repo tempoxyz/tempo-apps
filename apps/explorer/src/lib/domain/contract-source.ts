@@ -203,7 +203,9 @@ export async function fetchContractSourceDirect(params: {
 	signal?: AbortSignal
 }): Promise<ContractSource> {
 	const { address, chainId, signal } = params
-	const { clientEnv } = await import('#lib/env.ts')
+	const { clientEnv, getTempoEnv } = await import('#lib/env.ts')
+	if (getTempoEnv() === 'zone-prover')
+		throw new Error('Source verification is unavailable for prover devnet')
 
 	const apiUrl = new URL(
 		`${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${chainId}/${address.toLowerCase()}`,

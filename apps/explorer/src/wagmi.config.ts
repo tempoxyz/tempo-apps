@@ -4,9 +4,15 @@ import { createPublicClient, fallback } from 'viem'
 import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
-import { tempoMainnet, tempoNextfork, tempoTestnet } from './lib/chains'
-import { getTempoEnv } from './lib/env'
+import {
+	tempoMainnet,
+	tempoNextfork,
+	tempoTestnet,
+	tempoZoneProver,
+} from './lib/chains'
+import { getApiUrl, getTempoEnv } from './lib/env'
 import { serverEnv, tempoApiUrl } from './lib/server/env'
+import { getZoneProverTarget } from './lib/server/network'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -22,26 +28,30 @@ let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
-		getTempoEnv() === 'mainnet'
-			? tempoMainnet
-			: getTempoEnv() === 'nextfork'
-				? tempoNextfork
-				: getTempoEnv() === 'devnet'
-					? tempoDevnet
-					: getTempoEnv() === 'testnet'
-						? tempoTestnet
-						: tempoMainnet,
+		getTempoEnv() === 'zone-prover'
+			? tempoZoneProver
+			: getTempoEnv() === 'mainnet'
+				? tempoMainnet
+				: getTempoEnv() === 'nextfork'
+					? tempoNextfork
+					: getTempoEnv() === 'devnet'
+						? tempoDevnet
+						: getTempoEnv() === 'testnet'
+							? tempoTestnet
+							: tempoMainnet,
 	)
 	.server(() =>
-		getTempoEnv() === 'mainnet'
-			? tempoMainnet
-			: getTempoEnv() === 'nextfork'
-				? tempoNextfork
-				: getTempoEnv() === 'devnet'
-					? tempoDevnet
-					: getTempoEnv() === 'testnet'
-						? tempoTestnet
-						: tempoMainnet,
+		getTempoEnv() === 'zone-prover'
+			? tempoZoneProver
+			: getTempoEnv() === 'mainnet'
+				? tempoMainnet
+				: getTempoEnv() === 'nextfork'
+					? tempoNextfork
+					: getTempoEnv() === 'devnet'
+						? tempoDevnet
+						: getTempoEnv() === 'testnet'
+							? tempoTestnet
+							: tempoMainnet,
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
@@ -80,6 +90,11 @@ const getFallbackUrls = createIsomorphicFn()
 
 const getTempoTransport = createIsomorphicFn()
 	.client(() => {
+		if (getTempoEnv() === 'zone-prover')
+			return http(getApiUrl('/api/rpc').toString(), {
+				batch: { batchSize: 50 },
+				timeout: 15_000,
+			})
 		const proxy = getRpcProxyUrl()
 
 		// Browser traffic should only hit the RPC proxy. Direct chain RPC endpoints
@@ -91,6 +106,10 @@ const getTempoTransport = createIsomorphicFn()
 		])
 	})
 	.server(() => {
+		if (getTempoEnv() === 'zone-prover') {
+			const target = getZoneProverTarget('rpc')
+			return rpcHttp(target.url, { headers: target.headers, timeout: 15_000 })
+		}
 		const chain = getTempoChain()
 		const proxy = getRpcProxyUrl()
 		const fallbackUrls = getFallbackUrls()

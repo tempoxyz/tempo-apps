@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/cloudflare'
 import { create } from 'tapimo/client'
 import { serverEnv, tempoApiUrl } from './env.ts'
+import { getTempoEnv } from '#lib/env'
 
 const ALERTABLE_STATUSES = new Set([402, 403, 429])
 const REPORT_THROTTLE_MS = 60_000
@@ -39,6 +40,13 @@ function reportTempoApiResponse(response: Response, method: string): void {
 }
 
 const instrumentedFetch: typeof fetch = async (input, init) => {
+	// The shared API identifies chains by number only. It cannot distinguish
+	// this private devnet from the public devnet that also uses 31318.
+	if (getTempoEnv() === 'zone-prover')
+		return Response.json(
+			{ error: 'This feature requires a prover-specific Tempo API' },
+			{ status: 503 },
+		)
 	const response = await fetch(input, init)
 	const method =
 		init?.method ?? (input instanceof Request ? input.method : 'GET')

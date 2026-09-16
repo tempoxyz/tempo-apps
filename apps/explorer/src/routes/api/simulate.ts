@@ -6,6 +6,9 @@ import { numberToHex } from 'viem'
 import * as z from 'zod/mini'
 import { tempoMainnet, tempoTestnet } from '#lib/chains'
 import { serverEnv, tempoApiUrl } from '#lib/server/env'
+import { getTempoEnv } from '#lib/env'
+import { getZoneProverTarget } from '#lib/server/network'
+import { ZONE_PROVER_CHAIN_ID } from '#lib/zone-prover'
 import { checkRateLimit } from '#lib/server/rate-limit'
 import { zAddress, zHash } from '#lib/zod'
 
@@ -109,10 +112,15 @@ export type SerializedSimulationResult = {
  * Without a key (local dev) or on chains the API does not front, fall back to
  * the public proxy.
  */
-function getRpcTarget(chainId: number): {
+export function getRpcTarget(chainId: number): {
 	url: string
 	headers: Record<string, string>
 } {
+	if (getTempoEnv() === 'zone-prover') {
+		if (chainId !== ZONE_PROVER_CHAIN_ID)
+			throw new Error('Wrong chain for prover simulation')
+		return getZoneProverTarget('rpc')
+	}
 	const apiKey = serverEnv.TEMPO_API_KEY
 	if (apiKey && (chainId === tempoMainnet.id || chainId === tempoTestnet.id))
 		return {

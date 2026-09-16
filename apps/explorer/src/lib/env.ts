@@ -14,7 +14,12 @@ export const clientEnv = clientEnvSchema.parse({
 		.VITE_CONTRACT_VERIFICATION_API_BASE_URL,
 })
 
-export type TempoEnv = 'testnet' | 'mainnet' | 'devnet' | 'nextfork'
+export type TempoEnv =
+	| 'testnet'
+	| 'mainnet'
+	| 'devnet'
+	| 'nextfork'
+	| 'zone-prover'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -22,6 +27,12 @@ export function inferTempoEnvFromHostname(
 	if (!hostname) return undefined
 
 	const host = hostname.toLowerCase()
+
+	if (
+		host.includes('explorer-zone-prover') ||
+		host === 'explore.zone-prover.devnet.tempo.xyz'
+	)
+		return 'zone-prover'
 
 	if (
 		host.includes('explorer-mainnet') ||
@@ -63,7 +74,10 @@ export function inferTempoEnvFromHostname(
 }
 
 function normalizeTempoEnv(value: string | undefined): TempoEnv {
-	return value === 'mainnet' || value === 'devnet' || value === 'nextfork'
+	return value === 'mainnet' ||
+		value === 'devnet' ||
+		value === 'nextfork' ||
+		value === 'zone-prover'
 		? value
 		: 'testnet'
 }
@@ -101,10 +115,12 @@ export function getApiUrl(path: string, searchParams?: URLSearchParams): URL {
 
 export const getTempoEnv = createIsomorphicFn()
 	.client(() => {
+		if (import.meta.env.VITE_TEMPO_ENV === 'zone-prover') return 'zone-prover'
 		const inferred = inferTempoEnvFromHostname(window.location.hostname)
 		return inferred ?? normalizeTempoEnv(import.meta.env.VITE_TEMPO_ENV)
 	})
 	.server(() => {
+		if (import.meta.env.VITE_TEMPO_ENV === 'zone-prover') return 'zone-prover'
 		// Some modules read the active chain at import time before TanStack Start has
 		// established request AsyncLocalStorage. Fall back to Vite env there. In
 		// Cloudflare/Vite dev, `process.env` may not include the command env inside

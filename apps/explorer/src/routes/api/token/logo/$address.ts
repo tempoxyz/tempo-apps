@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { serverEnv, tempoApiUrl } from '#lib/server/env'
+import { getTempoEnv } from '#lib/env'
 import { getTempoChain } from '#wagmi.config.ts'
 
 /**
@@ -12,6 +13,8 @@ export const Route = createFileRoute('/api/token/logo/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
+				if (getTempoEnv() === 'zone-prover')
+					return new Response(null, { status: 404 })
 				if (!Address.validate(params.address))
 					return new Response(null, { status: 400 })
 				const address = params.address.toLowerCase()
