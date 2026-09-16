@@ -59,11 +59,11 @@ jobs:
           # if workflow_dispatch, always deploy all
           #
           if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
-            echo "relevant=false" >> $GITHUB_OUTPUT
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
