@@ -1,3 +1,12 @@
+/* Pilat Book Font */
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Book.woff2") format("woff2");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
 /* Satoshi Variable Font */
 @font-face {
 	font-family: "Satoshi";
