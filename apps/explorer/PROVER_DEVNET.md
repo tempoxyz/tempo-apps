@@ -7,7 +7,7 @@ as nextfork, including default Worker/preview URL settings. No sign-in or
 Tailscale connection is required. Pull requests upload a `zone-prover` preview
 alongside the other explorer environments. Preview requests require the backend
 credentials below on the `explorer-zone-prover` Worker. Deployment to the custom
-domain remains manual.
+domain runs through the main workflow alongside the other explorer environments.
 
 ## Deploy prerequisites
 
