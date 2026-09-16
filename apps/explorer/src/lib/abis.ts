@@ -234,9 +234,19 @@ export const zoneVerifierAbi = ViemTempoAbis.zoneVerifier
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
 export const zoneFactoryAbi = ViemTempoAbis.zoneFactory
 export const zoneOutboxAbi = ViemTempoAbis.zoneOutbox
+// T13 adds the enabled-token transition to submitBatch. Keep viem's earlier
+// overload for historical calls until its bundled ABI includes both versions.
+const zonePortalT13CallsAbi = parseAbi([
+	'struct BlockTransition { bytes32 prevBlockHash; bytes32 nextBlockHash; }',
+	'struct DepositQueueTransition { bytes32 prevProcessedHash; bytes32 nextProcessedHash; uint64 prevDepositNumber; uint64 nextDepositNumber; }',
+	'struct TokenEnablementTransition { uint64 prevProcessedTokenCount; uint64 nextProcessedTokenCount; }',
+	'function submitBatch(uint64 tempoBlockNumber, uint64 recentTempoBlockNumber, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof, uint256 nextZoneHeight, bytes[] signatures)',
+])
+
 export const zonePortalAbi = [
 	...legacyZonePortalEventsAbi,
 	...ViemTempoAbis.zonePortal,
+	...zonePortalT13CallsAbi,
 ] as const
 
 export const receivePolicyGuardAbi = parseAbi([

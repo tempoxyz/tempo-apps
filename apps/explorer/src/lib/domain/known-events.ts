@@ -2946,26 +2946,11 @@ function decodeZonePortalCall(
 				parts: [{ type: 'action', value: `Pause ${zoneName} Portal` }],
 			}
 		case 'submitBatch': {
-			const [
-				tempoBlockNumber,
-				_recentTempoBlockNumber,
-				_blockTransition,
-				_depositQueueTransition,
-				withdrawalQueueHash,
-				_verifierConfig,
-				_proof,
-				zoneHeight,
-			] = args as [
-				bigint,
-				bigint,
-				unknown,
-				unknown,
-				Hex.Hex,
-				Hex.Hex,
-				Hex.Hex,
-				bigint,
-				readonly Hex.Hex[],
-			]
+			// T13 inserts tokenEnablementTransition after depositQueueTransition.
+			const offset = args.length === 10 ? 1 : 0
+			const tempoBlockNumber = args[0] as bigint
+			const withdrawalQueueHash = args[4 + offset] as Hex.Hex
+			const zoneHeight = args[7 + offset] as bigint
 			return {
 				type: 'zone batch submission',
 				parts: [{ type: 'action', value: 'Submit Zone Batch' }],
