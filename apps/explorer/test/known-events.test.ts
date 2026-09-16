@@ -156,6 +156,43 @@ const encryptedDepositMadeAbi = [
 ] as const
 
 describe('parseKnownEvents', () => {
+	it('preserves both block transition hashes in a submitted batch summary', () => {
+		const prevBlockHash = toHex(123n, { size: 32 })
+		const nextBlockHash = toHex(456n, { size: 32 })
+		const withdrawalQueueHash = toHex(789n, { size: 32 })
+		const event = decodeKnownCall(
+			Addresses.zonePortalImplementation,
+			encodeFunctionData({
+				abi: zonePortalAbi,
+				functionName: 'submitBatch',
+				args: [
+					100n,
+					99n,
+					{ prevBlockHash, nextBlockHash },
+					{
+						prevProcessedHash: zeroHash,
+						nextProcessedHash: zeroHash,
+						prevDepositNumber: 0n,
+						nextDepositNumber: 0n,
+					},
+					withdrawalQueueHash,
+					'0x',
+					'0x',
+					42n,
+					[],
+				],
+			}),
+		)
+
+		expect(event?.note).toEqual([
+			['Tempo Block', { type: 'number', value: 100n }],
+			['Zone Height', { type: 'number', value: 42n }],
+			['Previous Block Hash', { type: 'hex', value: prevBlockHash }],
+			['Next Block Hash', { type: 'hex', value: nextBlockHash }],
+			['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
+		])
+	})
+
 	it('describes every Zone write call', () => {
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
 		const calls = [

@@ -2949,7 +2949,7 @@ function decodeZonePortalCall(
 			const [
 				tempoBlockNumber,
 				_recentTempoBlockNumber,
-				_blockTransition,
+				blockTransition,
 				_depositQueueTransition,
 				withdrawalQueueHash,
 				_verifierConfig,
@@ -2958,7 +2958,7 @@ function decodeZonePortalCall(
 			] = args as [
 				bigint,
 				bigint,
-				unknown,
+				{ prevBlockHash: Hex.Hex; nextBlockHash: Hex.Hex },
 				unknown,
 				Hex.Hex,
 				Hex.Hex,
@@ -2972,6 +2972,14 @@ function decodeZonePortalCall(
 				note: [
 					['Tempo Block', { type: 'number', value: tempoBlockNumber }],
 					['Zone Height', { type: 'number', value: zoneHeight }],
+					[
+						'Previous Block Hash',
+						{ type: 'hex', value: blockTransition.prevBlockHash },
+					],
+					[
+						'Next Block Hash',
+						{ type: 'hex', value: blockTransition.nextBlockHash },
+					],
 					['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
 				],
 			}
