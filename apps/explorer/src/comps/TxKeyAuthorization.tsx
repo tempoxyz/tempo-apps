@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
 import {
@@ -24,12 +25,9 @@ export function TxKeyAuthorization(
 	return (
 		<section
 			aria-label="Access key permissions"
-			className="min-w-0 rounded-[6px] bg-distinct font-sans text-[12px] text-primary overflow-hidden"
+			className="min-w-0 border-l border-base-border pl-[10px] font-sans text-[12px] text-primary"
 		>
-			<h2 className="border-b border-card-border px-[10px] py-[8px] text-[11px] text-tertiary">
-				Permissions
-			</h2>
-			<dl className="divide-y divide-card-border">
+			<dl className="flex flex-col gap-[10px]">
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -77,7 +75,7 @@ export function TxKeyAuthorization(
 					)}
 				</PermissionRow>
 			</dl>
-			<p className="border-t border-card-border px-[10px] py-[8px] text-[11px] text-tertiary">
+			<p className="mt-[10px] text-[11px] text-tertiary">
 				Permissions in this transaction. Not current permissions or remaining
 				balances.
 			</p>
@@ -91,19 +89,40 @@ function PermissionRow(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div className="grid grid-cols-1 gap-[4px] px-[10px] py-[8px] min-[600px]:grid-cols-[100px_minmax(0,1fr)] min-[600px]:gap-[8px]">
+		<div className="grid grid-cols-1 gap-[4px]">
 			<dt className="text-[11px] text-tertiary">{props.label}</dt>
 			<dd className="flex min-w-0 flex-col gap-[6px]">{props.children}</dd>
 		</div>
 	)
 }
 
-export declare namespace TxKeyAuthorization {
-	type Props = {
+export namespace TxKeyAuthorization {
+	export type Props = {
 		authorization: KeyAuthorization
 		tokenMetadata?:
 			| Record<string, { decimals: number; symbol: string }>
 			| undefined
+	}
+
+	export function Disclosure(props: Props): React.JSX.Element {
+		const [expanded, setExpanded] = useState(false)
+		const id = useId()
+		return (
+			<div className="flex min-w-0 flex-col items-start gap-[8px] font-sans">
+				<button
+					type="button"
+					aria-expanded={expanded}
+					aria-controls={id}
+					onClick={() => setExpanded(!expanded)}
+					className="text-[12px] text-accent cursor-pointer press-down"
+				>
+					{expanded ? 'Hide permissions' : 'Show permissions'}
+				</button>
+				<div id={id} hidden={!expanded} className="w-full min-w-0">
+					{expanded && <TxKeyAuthorization {...props} />}
+				</div>
+			</div>
+		)
 	}
 }
 

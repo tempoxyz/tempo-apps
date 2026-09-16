@@ -1,14 +1,11 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { encodeEventTopics } from 'viem'
-import { Addresses } from 'viem/tempo'
-import { Abis } from '#lib/abis'
 import {
 	formatKeyExpiry,
 	formatKeyPeriod,
 	groupKeyScopes,
-	isKeyAuthorizationEvent,
+	withKeyAuthorizationDescription,
 	type KeyAuthorization,
 } from '#lib/domain/access-key'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
@@ -78,42 +75,60 @@ describe('access key permissions', () => {
 		expect(html).toContain('Only these contracts and functions are allowed')
 	})
 
-	it('matches only the keychain authorization for the envelope account and key', () => {
+	it('includes authorization before indexed descriptions without requiring a log', () => {
 		const account = '0xb9ba2b8382f1a712c31fbfcf1a692c01639bf43c'
-		const topics = encodeEventTopics({
-			abi: Abis.accountKeychain,
-			eventName: 'KeyAuthorized',
-			args: { account, publicKey: authorization.address },
-		}) as `0x${string}`[]
-		const log = { address: Addresses.accountKeychain, topics }
-		expect(isKeyAuthorizationEvent(log, account, authorization.address)).toBe(
-			true,
+		const activity = { type: 'send', parts: [] }
+		const result = withKeyAuthorizationDescription(
+			[activity],
+			account,
+			authorization,
 		)
-		expect(
-			isKeyAuthorizationEvent(
-				{ ...log, address: contract },
-				account,
-				authorization.address,
-			),
-		).toBe(false)
-		expect(isKeyAuthorizationEvent(log, contract, authorization.address)).toBe(
-			false,
+		expect(result.events).toEqual([result.authorizationEvent, activity])
+		expect(result.authorizationEvent?.parts).toContainEqual({
+			type: 'account',
+			value: authorization.address,
+		})
+	})
+
+	it('deduplicates only the matching account and key and preserves ordinary transactions', () => {
+		const account = '0xb9ba2b8382f1a712c31fbfcf1a692c01639bf43c'
+		const event = withKeyAuthorizationDescription([], account, authorization)
+			.events[0]
+		const otherKey = withKeyAuthorizationDescription([], account, {
+			...authorization,
+			address: contract,
+		}).events[0]
+		const otherAccount = withKeyAuthorizationDescription(
+			[],
+			contract,
+			authorization,
+		).events[0]
+		const events = [event, otherKey, otherAccount]
+		const result = withKeyAuthorizationDescription(
+			events,
+			account,
+			authorization,
 		)
-		expect(isKeyAuthorizationEvent(log, account, contract)).toBe(false)
-		expect(
-			isKeyAuthorizationEvent(
-				{ ...log, topics: [] },
-				account,
-				authorization.address,
-			),
-		).toBe(false)
-		expect(
-			isKeyAuthorizationEvent(
-				{ ...log, topics: ['0x', ...topics.slice(1)] },
-				account,
-				authorization.address,
-			),
-		).toBe(false)
+		expect(result.events).toEqual([
+			result.authorizationEvent,
+			otherKey,
+			otherAccount,
+		])
+		expect(withKeyAuthorizationDescription(events, account, null)).toEqual({
+			events,
+			authorizationEvent: undefined,
+		})
+		expect(events).toEqual([event, otherKey, otherAccount])
+	})
+
+	it('starts collapsed with an accessible disclosure and does not load permission contents', () => {
+		const html = renderToStaticMarkup(
+			createElement(TxKeyAuthorization.Disclosure, { authorization }),
+		)
+		expect(html).toContain('Show permissions')
+		expect(html).toContain('aria-expanded="false"')
+		expect(html).toContain('aria-controls=')
+		expect(html).not.toContain('Spend limits')
 	})
 
 	it('renders the reported budget, approval spender, unknown selector, and expiry', () => {

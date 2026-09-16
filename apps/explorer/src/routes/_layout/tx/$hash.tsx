@@ -37,7 +37,7 @@ import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { isKeyAuthorizationEvent } from '#lib/domain/access-key'
+import { withKeyAuthorizationDescription } from '#lib/domain/access-key'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
@@ -288,6 +288,8 @@ function RouteComponent() {
 				transaction={transaction}
 				block={block}
 				knownEvents={descriptionEvents}
+				keyAuthorization={keyAuthorization}
+				keyTokenMetadata={keyTokenMetadata}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
@@ -324,13 +326,7 @@ function RouteComponent() {
 		totalItems: receipt.logs.length,
 		itemsLabel: 'events',
 		content: (
-			<EventsSection
-				logs={receipt.logs}
-				knownEvents={knownEventsByLog}
-				account={transaction.from}
-				keyAuthorization={keyAuthorization}
-				keyTokenMetadata={keyTokenMetadata}
-			/>
+			<EventsSection logs={receipt.logs} knownEvents={knownEventsByLog} />
 		),
 	})
 
@@ -395,6 +391,8 @@ function OverviewSection(props: {
 	transaction: TxData['transaction']
 	block: TxData['block']
 	knownEvents: KnownEvent[]
+	keyAuthorization: TxData['keyAuthorization']
+	keyTokenMetadata: TxData['keyTokenMetadata']
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
 }) {
@@ -403,6 +401,8 @@ function OverviewSection(props: {
 		transaction,
 		block,
 		knownEvents,
+		keyAuthorization,
+		keyTokenMetadata,
 		feeBreakdown,
 		balanceChangesData,
 	} = props
@@ -437,14 +437,29 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
-	// knownEvents already has decoded calls prepended (from the loader)
+	const description = withKeyAuthorizationDescription(
+		knownEvents,
+		transaction.from,
+		keyAuthorization,
+	)
 
 	return (
 		<div className="flex flex-col">
-			{knownEvents.length > 0 && (
-				<InfoRow label="Description">
+			{description.events.length > 0 && (
+				<InfoRow label="Description" stackOnMobile={Boolean(keyAuthorization)}>
 					<div className="flex flex-col gap-[6px]">
-						<TxEventDescription.ExpandGroup events={knownEvents} />
+						<TxEventDescription.ExpandGroup
+							events={description.events}
+							renderDetails={(event) =>
+								keyAuthorization && event === description.authorizationEvent ? (
+									<TxKeyAuthorization.Disclosure
+										key={keyAuthorization.address}
+										authorization={keyAuthorization}
+										tokenMetadata={keyTokenMetadata}
+									/>
+								) : null
+							}
+						/>
 						{memos.length > 0 && (
 							<div className="flex flex-col gap-[4px] min-w-0">
 								{memos.map((memo, index) => (
@@ -770,12 +785,8 @@ function CallItem(props: {
 function EventsSection(props: {
 	logs: Log[]
 	knownEvents: (KnownEvent | null)[]
-	account: `0x${string}`
-	keyAuthorization: TxData['keyAuthorization']
-	keyTokenMetadata: TxData['keyTokenMetadata']
 }) {
-	const { logs, knownEvents, account, keyAuthorization, keyTokenMetadata } =
-		props
+	const { logs, knownEvents } = props
 	const queryClient = useQueryClient()
 	const [expandedGroups, setExpandedGroups] = React.useState<Set<number>>(
 		new Set(),
@@ -855,19 +866,6 @@ function EventsSection(props: {
 						],
 						expanded: isExpanded ? (
 							<div className="flex flex-col gap-4">
-								{keyAuthorization &&
-									group.logs.some((log) =>
-										isKeyAuthorizationEvent(
-											log,
-											account,
-											keyAuthorization.address,
-										),
-									) && (
-										<TxKeyAuthorization
-											authorization={keyAuthorization}
-											tokenMetadata={keyTokenMetadata}
-										/>
-									)}
 								{group.logs.map((log, i) => (
 									<TxDecodedTopics key={log.logIndex ?? i} log={log} />
 								))}

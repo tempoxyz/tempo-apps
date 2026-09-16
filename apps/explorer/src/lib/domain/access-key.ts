@@ -1,27 +1,42 @@
-import { encodeEventTopics, type Address, type Log } from 'viem'
-import { Addresses, type Transaction } from 'viem/tempo'
-import { Abis } from '#lib/abis'
+import type { Address } from 'viem'
+import type { Transaction } from 'viem/tempo'
+import type { KnownEvent } from './known-events'
 
 export type KeyAuthorization = NonNullable<
 	Transaction.TransactionTempo['keyAuthorization']
 >
 
-/** Attach envelope permissions only to the corresponding keychain event. */
-export function isKeyAuthorizationEvent(
-	log: Pick<Log, 'address' | 'topics'>,
+/** Keep transaction authorization visible even when indexed activities replace logs. */
+export function withKeyAuthorizationDescription(
+	events: KnownEvent[],
 	account: Address,
-	publicKey: Address,
+	authorization: KeyAuthorization | null | undefined,
 ) {
-	if (log.address.toLowerCase() !== Addresses.accountKeychain.toLowerCase())
-		return false
-	const topics = encodeEventTopics({
-		abi: Abis.accountKeychain,
-		eventName: 'KeyAuthorized',
-		args: { account, publicKey },
-	})
-	return topics.every(
-		(topic, index) => topic === log.topics[index]?.toLowerCase(),
-	)
+	if (!authorization) return { events, authorizationEvent: undefined }
+	const authorizationEvent: KnownEvent = {
+		type: 'key authorized',
+		parts: [
+			{ type: 'action', value: 'Authorize Key' },
+			{ type: 'account', value: authorization.address },
+			{ type: 'text', value: 'for' },
+			{ type: 'account', value: account },
+		],
+	}
+	return {
+		authorizationEvent,
+		events: [
+			authorizationEvent,
+			...events.filter((event) => {
+				if (event.type !== 'key authorized') return true
+				const accounts = event.parts.filter((part) => part.type === 'account')
+				return (
+					accounts[0]?.value.toLowerCase() !==
+						authorization.address.toLowerCase() ||
+					accounts[1]?.value.toLowerCase() !== account.toLowerCase()
+				)
+			}),
+		],
+	}
 }
 
 export function groupKeyScopes(scopes: KeyAuthorization['scopes']) {
