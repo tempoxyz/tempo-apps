@@ -2,17 +2,16 @@
 
 The `zone-prover` build targets Tempo L1 chain **31319**, not the zone chain.
 The deployment hostname is `explore.zone-prover.devnet.tempo.xyz`, configured
-in `wrangler.json`. Apply the companion
-Cloudflare Access policy before publishing; default Worker and preview URLs
-remain disabled. This environment is intentionally absent from automatic CI
-deployment matrices.
+in `wrangler.json`. The explorer uses the same public Cloudflare hosting model
+as nextfork, including default Worker/preview URL settings. No sign-in or
+Tailscale connection is required. Automatic CI deployment remains disabled
+until the backend prerequisites below are complete.
 
 ## Deploy prerequisites
 
-1. Apply the companion Access policy and provision the authenticated RPC/TIDX
-   gateways and dedicated indexer in dev-infra. Verify the RPC returns chain
+1. Provision the authenticated RPC/TIDX gateways and dedicated indexer in
+   dev-infra. Verify the RPC returns chain
    ID `0x7a57` and the indexer has caught up with that same chain.
-   Apply the exact-host Tailscale app-connector route before verifying access.
 2. Set `ZONE_PROVER_RPC_AUTH` and `ZONE_PROVER_TIDX_AUTH` with
    `wrangler secret put <name> --env zone-prover`. Values are the complete
    `Basic ...` headers for the respective gateways. Never use a `VITE_` variable
@@ -24,10 +23,9 @@ deployment matrices.
    the renderer's static fallback for unsupported networks.
    Do not advertise a fully functioning explorer until they pass.
 4. Build with `CLOUDFLARE_ENV=zone-prover VITE_TEMPO_ENV=zone-prover pnpm build`,
-   then deploy with `PROVER_ACCESS_READY=1 pnpm deploy --env zone-prover`.
-   The flag acknowledges prior verification; it does not create/check Access.
-5. Verify authorized access and rejection without the required identity/network,
-   including alternate Worker URLs. Check a known L1 block/receipt, a checkpoint
+   then deploy with `pnpm deploy --env zone-prover`.
+5. Verify the explorer loads without sign-in or Tailscale, including the default
+   Worker URL. Check a known L1 block/receipt, a checkpoint
    and its deposits/withdrawals, and simulation on chain 31319. Browser RPC uses
    same-origin `/api/rpc`; credentials must not appear in browser requests/assets.
 

@@ -103,14 +103,18 @@ describe('prover chain routing', () => {
 			).toBe(status)
 		expect(upstream).not.toHaveBeenCalled()
 	})
-	it('keeps alternate URLs disabled and requires deployment acknowledgement', () => {
+	it('uses a public custom domain with the same URL settings as nextfork', () => {
 		const config = JSON.parse(
 			readFileSync(new URL('../wrangler.json', import.meta.url), 'utf8'),
-		).env['zone-prover']
-		expect(config.workers_dev).toBe(false)
-		expect(config.preview_urls).toBe(false)
-		expect(config.routes).toHaveLength(1)
-		expect(config.routes[0]).toEqual({
+		).env
+		expect(config['zone-prover'].workers_dev).toBe(true)
+		expect(config['zone-prover'].workers_dev).toBe(config.nextfork.workers_dev)
+		expect(config['zone-prover'].preview_urls).toBe(
+			config.nextfork.preview_urls,
+		)
+		const prover = config['zone-prover']
+		expect(prover.routes).toHaveLength(1)
+		expect(prover.routes[0]).toEqual({
 			custom_domain: true,
 			zone_name: 'tempo.xyz',
 			pattern: 'explore.zone-prover.devnet.tempo.xyz',
@@ -118,12 +122,31 @@ describe('prover chain routing', () => {
 		expect(tempoZoneProver.blockExplorers.default.url).toBe(
 			'https://explore.zone-prover.devnet.tempo.xyz',
 		)
+	})
+	it.each([
+		'zone-prover',
+		'nextfork',
+	])('deploys %s without an acknowledgement flag', (environment) => {
+		// Shadow exec to capture arguments; never invoke a real deployment in tests.
 		const result = spawnSync(
 			'bash',
-			['scripts/deploy.sh', '--env', 'zone-prover'],
-			{ env: { ...process.env, PROVER_ACCESS_READY: '' }, encoding: 'utf8' },
+			[
+				'-c',
+				'exec() { printf "%s\\n" "$CLOUDFLARE_ENV" "$VITE_TEMPO_ENV" "$@"; }; source scripts/deploy.sh "$@"',
+				'deploy-test',
+				'--env',
+				environment,
+			],
+			{ env: { PATH: process.env.PATH }, encoding: 'utf8' },
 		)
-		expect(result.status).toBe(1)
-		expect(result.stderr).toContain('PROVER_ACCESS_READY=1')
+		expect(result.status).toBe(0)
+		expect(result.stdout.trim().split('\n')).toEqual([
+			environment,
+			environment,
+			'wrangler',
+			'deploy',
+			'--env',
+			environment,
+		])
 	})
 })

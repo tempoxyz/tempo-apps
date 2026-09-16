@@ -29,18 +29,12 @@ while (($#)); do
 done
 
 if [[ -z "$env_name" ]]; then
-	echo "Deploy requires --env {devnet|nextfork|testnet|mainnet}" >&2
+	echo "Deploy requires --env {devnet|nextfork|zone-prover|testnet|mainnet}" >&2
 	exit 1
 fi
 
 case "$env_name" in
-	devnet|nextfork|testnet|mainnet) ;;
-	zone-prover)
-		if [[ "${PROVER_ACCESS_READY:-}" != "1" ]]; then
-			echo "Apply the prover Cloudflare Access policy first, then set PROVER_ACCESS_READY=1" >&2
-			exit 1
-		fi
-		;;
+	devnet|nextfork|zone-prover|testnet|mainnet) ;;
 	*)
 		echo "Unsupported env: $env_name" >&2
 		exit 1

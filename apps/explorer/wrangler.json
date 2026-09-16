@@ -192,7 +192,6 @@
 					"pattern": "explore.zone-prover.devnet.tempo.xyz"
 				}
 			],
-			"preview_urls": false,
 			"vars": {
 				"DATADOG_SITE": "us5.datadoghq.com",
 				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
@@ -211,7 +210,7 @@
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
 			},
-			"workers_dev": false,
+			"workers_dev": true,
 			"browser": {
 				"binding": "BROWSER"
 			},
