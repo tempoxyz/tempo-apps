@@ -17,11 +17,16 @@ env:
 
 jobs:
   check-membership:
+    permissions:
+      id-token: write
     name: Check Org Membership
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     outputs:
       is-member: ${{ steps.check.outputs.is-member }}
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@6a4184039b7a7537d35ace0badc96764d5a1d4d0
+
       - name: Check if PR author is org member
         id: check
         env:
@@ -39,6 +44,8 @@ jobs:
           fi
 
   verify:
+    permissions:
+      id-token: write
     name: Verify
     uses: ./.github/workflows/verify.yml
 
@@ -48,6 +55,7 @@ jobs:
     if: needs.check-membership.outputs.is-member == 'true'
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       issues: write
       contents: read
       pull-requests: write
@@ -77,6 +85,9 @@ jobs:
       NODE_ENV: production
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@6a4184039b7a7537d35ace0badc96764d5a1d4d0
+
       - name: Clone repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -170,9 +181,13 @@ jobs:
     needs: [check-membership, deploy-preview]
     if: always() && needs.check-membership.outputs.is-member == 'true'
     permissions:
+      id-token: write
       pull-requests: write
       contents: read
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@6a4184039b7a7537d35ace0badc96764d5a1d4d0
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:

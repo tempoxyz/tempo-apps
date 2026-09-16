@@ -12,10 +12,14 @@ env:
 
 jobs:
   verify:
+    permissions:
+      id-token: write
     name: Verify
     uses: ./.github/workflows/verify.yml
 
   deploy-explorer:
+    permissions:
+      id-token: write
     name: Deploy Explorer
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -27,6 +31,8 @@ jobs:
       environments: '["testnet","mainnet","devnet","nextfork"]'
 
   deploy-fee-payer:
+    permissions:
+      id-token: write
     name: Deploy Fee Payer
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -38,6 +44,8 @@ jobs:
       environments: '["devnet","moderato","mainnet"]'
 
   deploy-contract-verification:
+    permissions:
+      id-token: write
     name: Deploy Contract Verification
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -49,6 +57,8 @@ jobs:
       environments: '[""]'
 
   deploy-key-manager:
+    permissions:
+      id-token: write
     name: Deploy Key Manager
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -60,6 +70,8 @@ jobs:
       environments: '[""]'
 
   deploy-og:
+    permissions:
+      id-token: write
     name: Deploy OG
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -71,6 +83,8 @@ jobs:
       environments: '[""]'
 
   deploy-tokenlist:
+    permissions:
+      id-token: write
     name: Deploy Tokenlist
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -82,6 +96,8 @@ jobs:
       environments: '[""]'
 
   deploy-reth-snapshots-viewer:
+    permissions:
+      id-token: write
     name: Deploy Reth Snapshots Viewer
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -93,6 +109,8 @@ jobs:
       environments: '[""]'
 
   deploy-tempo-snapshots-viewer:
+    permissions:
+      id-token: write
     name: Deploy Tempo Snapshots Viewer
     needs: verify
     uses: ./.github/workflows/deploy.yml
@@ -104,6 +122,8 @@ jobs:
       environments: '[""]'
 
   deploy-mcp-docs-indexer:
+    permissions:
+      id-token: write
     name: Deploy MCP Docs Indexer
     needs: verify
     uses: ./.github/workflows/deploy.yml
