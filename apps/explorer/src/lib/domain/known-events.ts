@@ -28,22 +28,20 @@ import type * as Tip20 from './tip20'
 
 const abi = allAbis
 const earnEventActionOverrides: Record<string, string> = {
-	'Deposited(address,address,uint256,uint256)': 'Earn Vault Deposit',
-	'Deposited(address,uint256,uint256)': 'Earn Engine Deposit',
+	'Deposited(address,address,uint256,uint256)': 'Deposit to Earn',
+	'Deposited(address,uint256,uint256)': 'Deposit to Earn',
 	'EarnDeposit(bytes32,address,address,uint256,uint256,uint256,bytes32)':
-		'Earn Deposit',
+		'Deposit to Earn',
 	'EarnRedeem(bytes32,address,address,uint256,uint256,uint256,bytes32)':
-		'Earn Redemption',
-	'EarnVaultInitialized(address)': 'Earn Engine Bound',
-	'Redeemed(address,address,uint256,uint256)': 'Earn Vault Redemption',
-	'Redeemed(address,uint256,uint256)': 'Earn Engine Redemption',
+		'Withdraw from Earn',
+	'EarnVaultInitialized(address)': 'Earn Strategy Connected',
+	'Redeemed(address,address,uint256,uint256)': 'Withdraw from Earn',
+	'Redeemed(address,uint256,uint256)': 'Withdraw from Earn',
 	'VenueSharesDeposited(address,address,uint256,uint256,uint256)':
-		'Earn Vault In-Kind Deposit',
-	'VenueSharesDeposited(address,uint256,uint256)':
-		'Earn Engine In-Kind Deposit',
-	'WithdrewExact(address,address,uint256,uint256)':
-		'Earn Vault Exact Withdrawal',
-	'WithdrewExact(address,uint256,uint256)': 'Earn Engine Exact Withdrawal',
+		'Move Position to Earn',
+	'VenueSharesDeposited(address,uint256,uint256)': 'Move Position to Earn',
+	'WithdrewExact(address,address,uint256,uint256)': 'Withdraw from Earn',
+	'WithdrewExact(address,uint256,uint256)': 'Withdraw from Earn',
 }
 
 function formatEarnEventAction(event: AbiEvent): string {
@@ -132,6 +130,33 @@ function findEarnToken(
 	return undefined
 }
 
+function findEarnSendRecipient(
+	events: ParsedEvent[],
+	params: {
+		amount: bigint
+		from: Address.Address
+		token: Address.Address
+	},
+): Address.Address | undefined {
+	for (const candidate of events) {
+		if (
+			candidate.eventName !== 'Transfer' &&
+			candidate.eventName !== 'TransferWithMemo'
+		)
+			continue
+		if (!Address.isEqual(candidate.address, params.token)) continue
+		if (eventBigInt(candidate, 'amount') !== params.amount) continue
+
+		const from = eventAddress(candidate, 'from')
+		const to = eventAddress(candidate, 'to')
+		if (!from || !to || !Address.isEqual(from, params.from)) continue
+		if (Address.isEqual(to, params.from) || Address.isEqual(to, zeroAddress))
+			continue
+		return to
+	}
+	return undefined
+}
+
 function earnValuePart(
 	value: bigint,
 	token: Address.Address | undefined,
@@ -166,7 +191,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn private deposit',
 			parts: [
-				{ type: 'action', value: 'Earn Deposit' },
+				{ type: 'action', value: 'Deposit to Earn' },
 				{ type: 'amount', value: createAmount(inputAmount, inputToken) },
 				{ type: 'text', value: 'for' },
 				earnValuePart(earnShares, earnShare, createAmount),
@@ -188,7 +213,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn private redemption',
 			parts: [
-				{ type: 'action', value: 'Earn Redemption' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				{ type: 'amount', value: createAmount(outputAmount, outputToken) },
@@ -220,7 +245,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn deposit',
 			parts: [
-				{ type: 'action', value: 'Earn Deposit' },
+				{ type: 'action', value: 'Deposit to Earn' },
 				earnValuePart(assets, asset, createAmount),
 				{ type: 'text', value: 'for' },
 				earnValuePart(earnShares, earnShare, createAmount),
@@ -255,7 +280,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn redemption',
 			parts: [
-				{ type: 'action', value: 'Earn Redemption' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				earnValuePart(assets, asset, createAmount),
@@ -284,12 +309,32 @@ function createEarnReceiptSummary(
 			amount: earnShares,
 			kind: 'burn',
 		})
+		if (asset) {
+			const sendRecipient = findEarnSendRecipient(events, {
+				amount: assets,
+				from: receiver,
+				token: asset,
+			})
+			if (sendRecipient) {
+				return {
+					type: 'earn send',
+					parts: [
+						{ type: 'action', value: 'Send' },
+						{ type: 'amount', value: createAmount(assets, asset) },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: sendRecipient },
+					],
+					note: [['Source', { type: 'text', value: 'Earn balance' }]],
+					meta: { from: receiver, to: sendRecipient },
+				}
+			}
+		}
 		return {
 			type: 'earn exact withdrawal',
 			parts: [
-				{ type: 'action', value: 'Earn Exact Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				earnValuePart(assets, asset, createAmount),
-				{ type: 'text', value: 'burning' },
+				{ type: 'text', value: 'using' },
 				earnValuePart(earnShares, earnShare, createAmount),
 			],
 		}
@@ -323,7 +368,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn in-kind deposit',
 			parts: [
-				{ type: 'action', value: 'Earn In-Kind Deposit' },
+				{ type: 'action', value: 'Move Position to Earn' },
 				earnValuePart(venueShares, venue, createAmount),
 				{ type: 'text', value: 'for' },
 				earnValuePart(earnShares, earnShare, createAmount),
@@ -342,7 +387,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn contribution',
 			parts: [
-				{ type: 'action', value: 'Fund Earn Contribution' },
+				{ type: 'action', value: 'Add Funds to Earn' },
 				earnValuePart(fundedAssets, asset, createAmount),
 			],
 		}
@@ -355,7 +400,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn contribution',
 			parts: [
-				{ type: 'action', value: 'Fund Earn Contribution' },
+				{ type: 'action', value: 'Add Funds to Earn' },
 				earnValuePart(assets, asset, createAmount),
 			],
 		}
@@ -372,7 +417,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn reward funding',
 			parts: [
-				{ type: 'action', value: 'Fund Earn Rewards' },
+				{ type: 'action', value: 'Add Earn Rewards' },
 				earnValuePart(earnShares, earnShare, createAmount),
 			],
 		}
@@ -397,7 +442,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn reward root',
 			parts: [
-				{ type: 'action', value: 'Publish Earn Reward Root' },
+				{ type: 'action', value: 'Publish Reward Allocation' },
 				{ type: 'text', value: `v${version.toString()} for` },
 				earnValuePart(entitlement, earnShare, createAmount),
 			],
@@ -467,7 +512,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption request',
 			parts: [
-				{ type: 'action', value: 'Request Earn Redemption' },
+				{ type: 'action', value: 'Request Earn Withdrawal' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
@@ -483,7 +528,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption finalized',
 			parts: [
-				{ type: 'action', value: 'Finalize Earn Redemption' },
+				{ type: 'action', value: 'Complete Earn Withdrawal' },
 				{ type: 'amount', value: createAmount(assets, asset) },
 				{ type: 'text', value: 'to' },
 				{ type: 'account', value: receiver },
@@ -498,7 +543,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption cancelled',
 			parts: [
-				{ type: 'action', value: 'Cancel Earn Redemption' },
+				{ type: 'action', value: 'Cancel Earn Withdrawal' },
 				{ type: 'number', value: earnShares },
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
@@ -514,7 +559,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn engine migration',
 			parts: [
-				{ type: 'action', value: 'Migrate Earn Engine' },
+				{ type: 'action', value: 'Migrate Earn Strategy' },
 				{ type: 'number', value: assetsMoved },
 			],
 			note: [
