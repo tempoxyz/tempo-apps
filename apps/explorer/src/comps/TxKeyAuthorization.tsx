@@ -1,7 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
-import { TokenIcon } from '#comps/TokenIcon'
 import {
 	formatKeyExpiry,
 	formatKeyPeriod,
@@ -10,8 +9,6 @@ import {
 } from '#lib/domain/access-key'
 import { isTip20Address } from '#lib/domain/tip20'
 import { useAutoloadAbi } from '#lib/queries'
-import KeyRoundIcon from '~icons/lucide/key-round'
-import CornerDownRightIcon from '~icons/lucide/corner-down-right'
 
 const tokenFunctions: Record<string, string> = {
 	'0x095ea7b3': 'approve(address,uint256)',
@@ -27,38 +24,19 @@ export function TxKeyAuthorization(
 	return (
 		<section
 			aria-label="Access key permissions"
-			className="min-w-0 border-b border-dashed border-card-border pb-4 font-sans text-[13px]"
+			className="min-w-0 rounded-[6px] bg-distinct font-sans text-[12px] text-primary overflow-hidden"
 		>
-			<div className="flex flex-wrap items-center justify-between gap-2 py-3">
-				<h2 className="flex items-center gap-2 font-medium text-primary">
-					<KeyRoundIcon className="size-4 text-accent" />
-					Access key permissions
-				</h2>
-				<span className="rounded border border-card-border px-2 py-0.5 text-[11px] text-secondary">
-					{targets === undefined ? 'Unrestricted calls' : 'Scoped calls'}
-				</span>
-			</div>
-			<div className="flex flex-col gap-4 py-4">
-				<div className="flex flex-col gap-1">
-					<span className="text-tertiary">Access key</span>
-					<PermissionAddress address={authorization.address} />
-				</div>
-				<dl className="grid grid-cols-1 gap-3 border-y border-dashed border-card-border py-3 min-[600px]:grid-cols-[1fr_auto]">
-					<div>
-						<dt className="text-tertiary">Expires</dt>
-						<dd className="mt-1 text-primary">
-							{formatKeyExpiry(authorization.expiry)}
-						</dd>
-					</div>
-					<div>
-						<dt className="text-tertiary">Key management</dt>
-						<dd className="mt-1 text-primary">
-							{authorization.isAdmin ? 'Admin access' : 'No admin access'}
-						</dd>
-					</div>
-				</dl>
-				<div className="flex flex-col gap-2">
-					<h3 className="font-medium text-primary">Spend limits</h3>
+			<h2 className="border-b border-card-border px-[10px] py-[8px] text-[11px] text-tertiary">
+				Permissions
+			</h2>
+			<dl className="divide-y divide-card-border">
+				<PermissionRow label="Expires">
+					{formatKeyExpiry(authorization.expiry)}
+				</PermissionRow>
+				<PermissionRow label="Key management">
+					{authorization.isAdmin ? 'Admin access' : 'No admin access'}
+				</PermissionRow>
+				<PermissionRow label="Spend limits">
 					{authorization.limits === undefined ? (
 						<p className="text-secondary">No token spending limits</p>
 					) : authorization.limits.length === 0 ? (
@@ -72,14 +50,13 @@ export function TxKeyAuthorization(
 									metadata={tokenMetadata?.[limit.token.toLowerCase()]}
 								/>
 							))}
-							<p className="text-[12px] text-tertiary">
+							<p className="text-[11px] text-tertiary">
 								Other tokens have no spending allowance.
 							</p>
 						</>
 					)}
-				</div>
-				<div className="flex flex-col gap-2">
-					<h3 className="font-medium text-primary">Allowed calls</h3>
+				</PermissionRow>
+				<PermissionRow label="Allowed calls">
 					{targets === undefined ? (
 						<p className="text-secondary">
 							Any contract and function, subject to protocol restrictions.
@@ -88,21 +65,36 @@ export function TxKeyAuthorization(
 						<p className="text-secondary">No calls allowed</p>
 					) : (
 						<>
-							{targets.map((target) => (
-								<CallScope key={target.address} target={target} />
-							))}
-							<p className="text-[12px] text-tertiary">
-								Only the contracts and functions listed above are allowed.
+							<ul className="flex flex-col gap-[12px]">
+								{targets.map((target) => (
+									<CallScope key={target.address} target={target} />
+								))}
+							</ul>
+							<p className="text-[11px] text-tertiary">
+								Only these contracts and functions are allowed.
 							</p>
 						</>
 					)}
-				</div>
-			</div>
-			<p className="text-[12px] text-tertiary">
+				</PermissionRow>
+			</dl>
+			<p className="border-t border-card-border px-[10px] py-[8px] text-[11px] text-tertiary">
 				Permissions in this transaction. Not current permissions or remaining
 				balances.
 			</p>
 		</section>
+	)
+}
+
+// Match the compact label/value rows in decoded event and calldata details.
+function PermissionRow(props: {
+	label: string
+	children: React.ReactNode
+}): React.JSX.Element {
+	return (
+		<div className="grid grid-cols-1 gap-[4px] px-[10px] py-[8px] min-[600px]:grid-cols-[100px_minmax(0,1fr)] min-[600px]:gap-[8px]">
+			<dt className="text-[11px] text-tertiary">{props.label}</dt>
+			<dd className="flex min-w-0 flex-col gap-[6px]">{props.children}</dd>
+		</div>
 	)
 }
 
@@ -122,7 +114,7 @@ function PermissionAddress(props: {
 		<Link
 			to="/address/$address"
 			params={{ address: props.address }}
-			className="break-all font-mono text-[12px] text-accent hover:underline"
+			className="break-all font-mono text-[11px] text-accent hover:underline"
 		>
 			{props.address}
 		</Link>
@@ -146,20 +138,15 @@ function SpendingLimit(props: {
 	const [integer, fraction] = amount.split('.')
 	const formatted = `${BigInt(integer).toLocaleString('en-US')}${fraction ? `.${fraction}` : ''}`
 	return (
-		<div className="rounded-[6px] border border-card-border bg-card-header px-3 py-3">
-			<div className="flex flex-wrap items-center justify-between gap-2">
-				<div className="flex min-w-0 flex-wrap items-center gap-2 text-primary">
-					<TokenIcon address={limit.token} name={metadata?.symbol} />
-					<span className="break-all text-[18px] font-medium tabular-nums">
-						{formatted}
-					</span>
+		<div className="flex min-w-0 flex-col gap-[4px]">
+			<div className="flex flex-wrap items-baseline gap-x-[8px] gap-y-[2px]">
+				<div className="flex min-w-0 flex-wrap items-baseline gap-[4px]">
+					<span className="break-all tabular-nums">{formatted}</span>
 					<span>{metadata?.symbol ?? 'base units'}</span>
 				</div>
 				<span className="text-secondary">{formatKeyPeriod(limit.period)}</span>
 			</div>
-			<div className="mt-2">
-				<PermissionAddress address={limit.token} />
-			</div>
+			<PermissionAddress address={limit.token} />
 		</div>
 	)
 }
@@ -173,11 +160,9 @@ function CallScope(props: {
 		enabled: true,
 	})
 	return (
-		<div className="min-w-0 rounded-[6px] border border-card-border">
-			<div className="rounded-t-[6px] bg-card-header px-3 py-2">
-				<PermissionAddress address={target.address} />
-			</div>
-			<ul className="divide-y divide-dashed divide-card-border px-3">
+		<li className="flex min-w-0 flex-col gap-[4px]">
+			<PermissionAddress address={target.address} />
+			<ul className="flex flex-col gap-[8px] border-l border-card-border pl-[8px]">
 				{target.rules.map((rule, index) => {
 					const selector = rule.selector?.toLowerCase()
 					const abiFunction = abi?.find(
@@ -194,11 +179,11 @@ function CallScope(props: {
 					return (
 						<li
 							key={`${rule.selector}-${index}`}
-							className="flex flex-col gap-2 py-3"
+							className="flex min-w-0 flex-col gap-[4px]"
 						>
-							<div className="flex flex-wrap items-center gap-2 text-primary">
+							<div className="flex flex-wrap items-baseline gap-x-[6px] gap-y-[2px]">
 								<code
-									className="break-all text-[12px]"
+									className="break-all text-[11px]"
 									title={
 										abiFunction?.type === 'function'
 											? toFunctionSignature(abiFunction)
@@ -218,8 +203,7 @@ function CallScope(props: {
 									</span>
 								)}
 							</div>
-							<div className="flex items-start gap-2 text-[12px] text-secondary">
-								<CornerDownRightIcon className="mt-0.5 size-3 shrink-0 text-tertiary" />
+							<div className="text-[11px] text-secondary">
 								{rule.recipients?.length ? (
 									<div className="flex min-w-0 flex-col gap-1">
 										<span>
@@ -239,6 +223,6 @@ function CallScope(props: {
 					)
 				})}
 			</ul>
-		</div>
+		</li>
 	)
 }

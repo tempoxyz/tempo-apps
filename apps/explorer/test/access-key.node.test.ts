@@ -32,7 +32,6 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('wagmi/tempo', () => ({
 	Hooks: { token: { useGetMetadata: () => ({ data: metadata.current }) } },
 }))
-vi.mock('#comps/TokenIcon', () => ({ TokenIcon: () => null }))
 vi.mock('#lib/queries', () => ({ useAutoloadAbi: () => ({ data: undefined }) }))
 vi.mock('#lib/domain/tip20', () => ({
 	isTip20Address: (address: string) => address.startsWith('0x20c'),
@@ -63,6 +62,22 @@ function render(overrides: Partial<KeyAuthorization> = {}) {
 }
 
 describe('access key permissions', () => {
+	it('uses labelled detail rows without repeating the event identity or a status badge', () => {
+		const html = render()
+		for (const label of [
+			'Expires',
+			'Key management',
+			'Spend limits',
+			'Allowed calls',
+		])
+			expect(html).toMatch(new RegExp(`<dt[^>]*>${label}</dt>`))
+		expect(html).not.toContain(authorization.address)
+		expect(html).not.toContain('Scoped calls')
+		expect(html).not.toContain('<h3')
+		expect(html).toContain('Other tokens have no spending allowance')
+		expect(html).toContain('Only these contracts and functions are allowed')
+	})
+
 	it('matches only the keychain authorization for the envelope account and key', () => {
 		const account = '0xb9ba2b8382f1a712c31fbfcf1a692c01639bf43c'
 		const topics = encodeEventTopics({
