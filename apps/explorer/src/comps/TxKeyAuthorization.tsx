@@ -222,22 +222,32 @@ function CallScope(props: {
 									</span>
 								)}
 							</div>
-							<div className="text-[11px] text-secondary">
-								{rule.recipients?.length ? (
-									<div className="flex min-w-0 flex-col gap-1">
+							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
+							{signature && (
+								<div className="text-[11px] text-secondary">
+									{rule.recipients?.length ? (
+										<div className="flex min-w-0 flex-col gap-1">
+											<span>
+												{selector === '0x095ea7b3'
+													? 'Only these spenders'
+													: 'Only these recipients'}
+											</span>
+											{rule.recipients.map((recipient) => (
+												<PermissionAddress
+													key={recipient}
+													address={recipient}
+												/>
+											))}
+										</div>
+									) : (
 										<span>
 											{selector === '0x095ea7b3'
-												? 'Only these spenders'
-												: 'Only these recipients'}
+												? 'Any spender'
+												: 'Any recipient'}
 										</span>
-										{rule.recipients.map((recipient) => (
-											<PermissionAddress key={recipient} address={recipient} />
-										))}
-									</div>
-								) : (
-									<span>No recipient restriction</span>
-								)}
-							</div>
+									)}
+								</div>
+							)}
 						</li>
 					)
 				})}

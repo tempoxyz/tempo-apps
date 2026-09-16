@@ -143,6 +143,8 @@ describe('access key permissions', () => {
 		expect(html).toContain('Function selector')
 		expect(html).toContain('Dec 15, 2026, 15:27:21 UTC')
 		expect(html).toContain('Not current permissions or remaining balances')
+		expect(html).not.toContain('No recipient restriction')
+		expect(html).not.toContain('Any recipient')
 	})
 
 	it('distinguishes absent permissions from explicit deny-all arrays', () => {
@@ -160,10 +162,44 @@ describe('access key permissions', () => {
 		expect(denied).not.toContain('Unrestricted calls')
 	})
 
-	it('keeps wildcard functions and unrestricted recipients explicit', () => {
+	it('keeps wildcard functions explicit without suggesting recipient scoping', () => {
 		const html = render({ scopes: [{ address: contract }] })
 		expect(html).toContain('Any function')
-		expect(html).toContain('No recipient restriction')
+		expect(html).not.toMatch(/recipient|spender/)
+	})
+
+	it.each([
+		['0xa9059cbb', 'recipient'],
+		['0x95777d59', 'recipient'],
+		['0x095ea7b3', 'spender'],
+	])('shows the applicable address scope for TIP-20 selector %s', (selector, label) => {
+		for (const recipients of [undefined, []]) {
+			const html = render({
+				scopes: [{ address: token, selector, recipients }],
+			})
+			expect(html).toContain(`Any ${label}`)
+			expect(html).not.toContain(`Only these ${label}s`)
+		}
+		const restricted = render({
+			scopes: [{ address: token, selector, recipients: [contract] }],
+		})
+		expect(restricted).toContain(`Only these ${label}s`)
+		expect(restricted).toContain(`href="/address/${contract}"`)
+		expect(restricted).not.toContain(`Any ${label}`)
+	})
+
+	it.each([
+		{ address: contract, selector: '0xc50e660a' },
+		{ address: token, selector: '0xc50e660a' },
+		{ address: token, selector: '0x23b872dd' },
+		{ address: token },
+		...['0xa9059cbb', '0x95777d59', '0x095ea7b3'].map((selector) => ({
+			address: contract,
+			selector,
+		})),
+	])('omits recipient details for unsupported scope $address/$selector', (scope) => {
+		const html = render({ scopes: [scope] })
+		expect(html).not.toMatch(/recipient|spender/)
 	})
 
 	it('displays zero, small allowances, and exact base units when metadata is unavailable', () => {
