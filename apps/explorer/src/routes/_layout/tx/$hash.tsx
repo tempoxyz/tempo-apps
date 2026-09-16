@@ -148,7 +148,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			? selectTransactionDescriptionEvents({
 					activityEvents: loaderData.activityEvents,
 					fallbackEvents: loaderData.knownEvents ?? [],
-					knownCall: loaderData.knownCall,
+					knownCalls: loaderData.knownCalls,
 				})
 			: []
 		const ogImageUrl = loaderData
@@ -187,7 +187,7 @@ function RouteComponent() {
 		activityEvents,
 		block,
 		feeBreakdown,
-		knownCall,
+		knownCalls,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
@@ -224,7 +224,7 @@ function RouteComponent() {
 	const descriptionEvents = selectTransactionDescriptionEvents({
 		activityEvents,
 		fallbackEvents: displayKnownEvents,
-		knownCall,
+		knownCalls,
 	})
 
 	useKeyboardShortcut({

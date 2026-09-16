@@ -12,7 +12,7 @@ import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 
 import {
-	decodeKnownTransactionCall,
+	decodeKnownTransactionCalls,
 	type KnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
@@ -377,14 +377,10 @@ export function toEnrichedTransaction(
 					getTokenMetadata: options.getTokenMetadata,
 				},
 			)
-			const knownCall = decodeKnownTransactionCall(transaction)
-			const fallbackEvents = knownCall
-				? [knownCall, ...parsedEvents.filter((event) => event.type !== 'fee')]
-				: parsedEvents
 			return selectTransactionDescriptionEvents({
 				activityEvents,
-				fallbackEvents,
-				knownCall,
+				fallbackEvents: parsedEvents,
+				knownCalls: decodeKnownTransactionCalls(transaction, status),
 			})
 		} catch (error) {
 			console.error(

@@ -4,7 +4,7 @@ import { toEventSelector } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import {
 	type Authorization,
-	decodeKnownTransactionCall,
+	decodeKnownTransactionCalls,
 	parseAuthorizationEvents,
 	parseKnownEvent,
 	isStreamChannelAddress,
@@ -47,9 +47,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 		getTokenMetadata,
 	})
 
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall = decodeKnownTransactionCall(transaction)
+	const knownCalls = decodeKnownTransactionCalls(transaction, receipt.status)
 
 	// Parse EIP-7702 authorization list for delegate account events
 	const authorizationList =
@@ -58,12 +56,8 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 			: undefined
 	const authEvents = parseAuthorizationEvents(authorizationList)
 
-	// Build knownEvents: authorization events first, then decoded call, then parsed events
-	const knownEvents = [
-		...authEvents,
-		...(knownCall ? [knownCall] : []),
-		...parsedEvents.filter((e) => (knownCall ? e.type !== 'fee' : true)),
-	]
+	// Keep evidence separate until the shared description composer selects actions.
+	const knownEvents = [...authEvents, ...parsedEvents]
 
 	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
@@ -114,7 +108,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 	return {
 		block,
 		feeBreakdown,
-		knownCall,
+		knownCalls,
 		knownEvents,
 		knownEventsByLog,
 		receipt,
@@ -124,7 +118,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 
 async function fetchTxData(params: { hash: Hex.Hex }) {
 	return withImmutableDataCache({
-		key: `tx-detail:v1:${getTempoChain().id}:${params.hash.toLowerCase()}`,
+		key: `tx-detail:v2:${getTempoChain().id}:${params.hash.toLowerCase()}`,
 		load: () => fetchTxDataUncached(params),
 	})
 }

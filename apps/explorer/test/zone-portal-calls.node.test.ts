@@ -33,7 +33,7 @@ describe('Zone Portal submitBatch compatibility', () => {
 			note: [
 				['Tempo Block', { type: 'number', value: 43438n }],
 				['Zone Height', { type: 'number', value: 35280n }],
-				['Withdrawal Queue', { type: 'hex', value: zeroHash }],
+				['Withdrawals', { type: 'text', value: 'None' }],
 			],
 		})
 	})
@@ -69,7 +69,7 @@ describe('Zone Portal submitBatch compatibility', () => {
 			note: [
 				['Tempo Block', { type: 'number', value: 42n }],
 				['Zone Height', { type: 'number', value: 99n }],
-				['Withdrawal Queue', { type: 'hex', value: zeroHash }],
+				['Withdrawals', { type: 'text', value: 'None' }],
 			],
 		})
 	})
