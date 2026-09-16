@@ -13,7 +13,10 @@ vi.mock('tidx.ts', () => ({
 }))
 
 vi.mock('#lib/server/env', () => ({
-	serverEnv: { TEMPO_API_KEY: 'tempo-api-secret' },
+	serverEnv: {
+		TEMPO_API_KEY: 'tempo-api-secret',
+		ZONE_PROVER_TIDX_AUTH: 'Basic dGlkeDp0ZXN0',
+	},
 	tempoApiUrl: 'https://api.tempo.xyz',
 }))
 
@@ -36,6 +39,17 @@ describe('Tempo query provider', () => {
 
 		expect(mocks.from).toHaveBeenCalledWith(
 			expect.objectContaining({ chainId: 4217, engine: 'clickhouse' }),
+		)
+	})
+
+	it('routes 31319 directly to its authenticated indexer', () => {
+		provider.tempoQueryBuilder(31319, { engine: 'clickhouse' })
+		expect(mocks.create).toHaveBeenLastCalledWith({
+			baseUrl: 'https://tidx-zone-prover.devnet.tempoxyz.dev',
+			headers: { Authorization: 'Basic dGlkeDp0ZXN0' },
+		})
+		expect(mocks.from).toHaveBeenLastCalledWith(
+			expect.objectContaining({ chainId: 31319, engine: 'clickhouse' }),
 		)
 	})
 })

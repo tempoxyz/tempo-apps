@@ -6,6 +6,7 @@ import { numberToHex } from 'viem'
 import * as z from 'zod/mini'
 import { tempoMainnet, tempoTestnet } from '#lib/chains'
 import { serverEnv, tempoApiUrl } from '#lib/server/env'
+import { getChainBackend } from '#lib/server/network'
 import { checkRateLimit } from '#lib/server/rate-limit'
 import { zAddress, zHash } from '#lib/zod'
 
@@ -46,7 +47,12 @@ const BatchCallSchema = z.object({
 export const MAX_BATCH_CALLS = 32
 
 export const SimulationRequestSchema = z.object({
-	chainId: z.union([z.literal(4217), z.literal(42431), z.literal(31318)]),
+	chainId: z.union([
+		z.literal(4217),
+		z.literal(42431),
+		z.literal(31318),
+		z.literal(31319),
+	]),
 	from: zAddress({ lowercase: true }),
 	to: zAddress({ lowercase: true }),
 	data: CalldataSchema,
@@ -113,6 +119,8 @@ function getRpcTarget(chainId: number): {
 	url: string
 	headers: Record<string, string>
 } {
+	const target = getChainBackend(chainId, 'rpc')
+	if (target) return target
 	const apiKey = serverEnv.TEMPO_API_KEY
 	if (apiKey && (chainId === tempoMainnet.id || chainId === tempoTestnet.id))
 		return {

@@ -19,6 +19,13 @@ describe('simulation request validation', () => {
 		expect(SimulationRequestSchema.safeParse(validRequest).success).toBe(true)
 	})
 
+	it('accepts prover chain 31319', () => {
+		expect(
+			SimulationRequestSchema.safeParse({ ...validRequest, chainId: 31319 })
+				.success,
+		).toBe(true)
+	})
+
 	it('rejects malformed addresses and numeric fields', () => {
 		expect(
 			SimulationRequestSchema.safeParse({
