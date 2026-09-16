@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	decodeAbiParameters,
+	decodeFunctionData,
 	encodeAbiParameters,
 	parseAbi,
+	parseAbiParameters,
 	toEventSelector,
 	type Abi,
 } from 'viem'
@@ -318,6 +320,98 @@ describe('Zone protocol contracts', () => {
 						'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
 			),
 		).toBe(true)
+	})
+
+	it('decodes T13 verifier and submitBatch calls with token enablement transitions', () => {
+		const hash = `0x${'11'.repeat(32)}` as const
+		// Encode the wire layout independently of the bundled ABI. Literal selectors
+		// are from the prover-devnet trace; older signatures are asserted above.
+		const verifierData = encodeAbiParameters(
+			parseAbiParameters(
+				'uint32, uint64, uint64, bytes32, uint64, (bytes32,bytes32), (bytes32,bytes32,uint64,uint64), (uint64,uint64), bytes32, bytes, bytes',
+			),
+			[
+				2,
+				44998n,
+				44998n,
+				hash,
+				7n,
+				[hash, hash],
+				[hash, hash, 3n, 5n],
+				[1n, 2n],
+				hash,
+				'0x1234',
+				'0xabcd',
+			],
+		)
+		const verifierAbi = getContractInfo(Addresses.zoneVerifier)?.abi ?? []
+		expect(
+			decodeFunctionData({
+				abi: verifierAbi,
+				data: `0xe57a6366${verifierData.slice(2)}`,
+			}),
+		).toMatchObject({
+			functionName: 'verify',
+			args: [
+				2,
+				44998n,
+				44998n,
+				hash,
+				7n,
+				{ prevBlockHash: hash, nextBlockHash: hash },
+				{
+					prevProcessedHash: hash,
+					nextProcessedHash: hash,
+					prevDepositNumber: 3n,
+					nextDepositNumber: 5n,
+				},
+				{ prevProcessedTokenCount: 1n, nextProcessedTokenCount: 2n },
+				hash,
+				'0x1234',
+				'0xabcd',
+			],
+		})
+		const verifier = getAbiItem({ abi: verifierAbi, selector: '0xe57a6366' })
+		if (!verifier || verifier.type !== 'function')
+			throw new Error('Missing T13 verify')
+		expect(
+			decodeAbiParameters(verifier.outputs, `0x${'0'.repeat(63)}1`),
+		).toEqual([true])
+
+		const batchData = encodeAbiParameters(
+			parseAbiParameters(
+				'uint64, uint64, (bytes32,bytes32), (bytes32,bytes32,uint64,uint64), (uint64,uint64), bytes32, bytes, bytes, uint256, bytes[]',
+			),
+			[
+				44998n,
+				0n,
+				[hash, hash],
+				[hash, hash, 3n, 5n],
+				[1n, 2n],
+				hash,
+				'0x1234',
+				'0xabcd',
+				99n,
+				['0x5678'],
+			],
+		)
+		const portalAbi =
+			getContractInfo('0x5ad0000000000000000000000000000000000002')?.abi ?? []
+		const decoded = decodeFunctionData({
+			abi: portalAbi,
+			data: `0x4cd6c7c7${batchData.slice(2)}`,
+		})
+		expect(decoded.functionName).toBe('submitBatch')
+		expect(decoded.args?.[4]).toEqual({
+			prevProcessedTokenCount: 1n,
+			nextProcessedTokenCount: 2n,
+		})
+		expect(decoded.args?.slice(6)).toEqual([
+			'0x1234',
+			'0xabcd',
+			99n,
+			['0x5678'],
+		])
 	})
 
 	it('recognizes deterministic Zone Portal proxy addresses', () => {

@@ -245,7 +245,30 @@ export const zoneFactoryRegistryAbi = parseAbi([
 ])
 
 export const zoneMessengerAbi = ViemTempoAbis.zoneMessenger
-export const zoneVerifierAbi = ViemTempoAbis.zoneVerifier
+
+// T13 adds TokenEnablementTransition to both batch calls. Keep the earlier
+// viem signatures for historical traces and networks that have not activated T13.
+// Source: tempoxyz/zones@a403d8cd, runtime/interfaces/IZone.sol.
+const zoneT13Transitions = [
+	'struct BlockTransition { bytes32 prevBlockHash; bytes32 nextBlockHash; }',
+	'struct DepositQueueTransition { bytes32 prevProcessedHash; bytes32 nextProcessedHash; uint64 prevDepositNumber; uint64 nextDepositNumber; }',
+	'struct TokenEnablementTransition { uint64 prevProcessedTokenCount; uint64 nextProcessedTokenCount; }',
+] as const
+
+const zoneVerifierT13Abi = parseAbi([
+	...zoneT13Transitions,
+	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
+])
+
+const zonePortalT13FunctionsAbi = parseAbi([
+	...zoneT13Transitions,
+	'function submitBatch(uint64 tempoBlockNumber, uint64 recentTempoBlockNumber, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof, uint256 zoneHeight, bytes[] signatures)',
+])
+
+export const zoneVerifierAbi = [
+	...ViemTempoAbis.zoneVerifier,
+	...zoneVerifierT13Abi,
+] as const
 
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
 export const zoneFactoryAbi = ViemTempoAbis.zoneFactory
@@ -254,6 +277,7 @@ export const zonePortalAbi = [
 	...legacyZonePortalEventsAbi,
 	...ViemTempoAbis.zonePortal,
 	...zonePortalT13BatchAbi,
+	...zonePortalT13FunctionsAbi,
 ] as const
 
 export const receivePolicyGuardAbi = parseAbi([
