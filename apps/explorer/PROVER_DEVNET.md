@@ -4,8 +4,10 @@ The `zone-prover` build targets Tempo L1 chain **31319**, not the zone chain.
 The deployment hostname is `explore.zone-prover.devnet.tempo.xyz`, configured
 in `wrangler.json`. The explorer uses the same public Cloudflare hosting model
 as nextfork, including default Worker/preview URL settings. No sign-in or
-Tailscale connection is required. Automatic CI deployment remains disabled
-until the backend prerequisites below are complete.
+Tailscale connection is required. Pull requests upload a `zone-prover` preview
+alongside the other explorer environments. Preview requests require the backend
+credentials below on the `explorer-zone-prover` Worker. Deployment to the custom
+domain remains manual.
 
 ## Deploy prerequisites
 

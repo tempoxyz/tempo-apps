@@ -62,6 +62,8 @@ jobs:
           - app: explorer
             env: nextfork
           - app: explorer
+            env: zone-prover
+          - app: explorer
             env: mainnet
           #### fee-payer
           - app: fee-payer
@@ -109,8 +111,15 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        run: pnpm build
         working-directory: apps/${{ matrix.app }}
+        env:
+          APP_NAME: ${{ matrix.app }}
+        run: |
+          if [[ "$APP_NAME" == "explorer" ]]; then
+            bash scripts/build.sh
+          else
+            pnpm build
+          fi
 
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
