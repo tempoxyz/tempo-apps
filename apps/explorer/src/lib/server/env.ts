@@ -10,8 +10,6 @@ import * as z from 'zod/mini'
  */
 export const serverEnvSchema = z.object({
 	TEMPO_API_KEY: z.optional(z.string()),
-	ZONE_PROVER_RPC_AUTH: z.optional(z.string()),
-	ZONE_PROVER_TIDX_AUTH: z.optional(z.string()),
 	ZONE_PROVER_DATA_EPOCH: z.optional(z.string()),
 })
 

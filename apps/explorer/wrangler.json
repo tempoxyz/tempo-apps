@@ -185,24 +185,19 @@
 		},
 		"zone-prover": {
 			"name": "explorer-zone-prover",
-			"routes": [
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
-					"pattern": "explore.zone-prover.devnet.tempo.xyz"
-				}
-			],
+			"routes": [],
+			"preview_urls": false,
 			"vars": {
 				"DATADOG_SITE": "us5.datadoghq.com",
 				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
-				"VITE_DATADOG_ENABLED": "true",
+				"VITE_DATADOG_ENABLED": "false",
 				"VITE_DATADOG_ENV": "zone-prover",
 				"VITE_DATADOG_SERVICE": "explorer",
 				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
 				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
 				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "zone-prover",
-				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"VITE_SENTRY_DSN": "",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz",
@@ -211,7 +206,7 @@
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
 			},
-			"workers_dev": true,
+			"workers_dev": false,
 			"browser": {
 				"binding": "BROWSER"
 			},

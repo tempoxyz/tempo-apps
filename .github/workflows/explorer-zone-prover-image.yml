@@ -1,0 +1,59 @@
+name: Internal prover explorer image
+
+on:
+  pull_request:
+    paths:
+      - 'apps/explorer/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/explorer-zone-prover-image.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/explorer/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'package.json'
+      - '.github/workflows/explorer-zone-prover-image.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/tempoxyz/explorer-zone-prover
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - name: Build internal runtime
+        run: docker build -f apps/explorer/Dockerfile -t "$IMAGE:$GITHUB_SHA" .
+      - name: Smoke test worker and static assets
+        run: |
+          docker run --detach --name explorer --publish 127.0.0.1:8080:8080 "$IMAGE:$GITHUB_SHA"
+          trap 'docker logs explorer; docker stop explorer' EXIT
+          for attempt in $(seq 1 30); do
+            if node --input-type=module -e 'const r = await fetch("http://127.0.0.1:8080/robots.txt"); if (!r.ok) process.exit(1)'; then
+              break
+            fi
+            sleep 1
+          done
+          node apps/explorer/runtime/smoke.mjs
+      - name: Publish image (no deployment)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker tag "$IMAGE:$GITHUB_SHA" "$IMAGE:main"
+          docker push "$IMAGE:main"

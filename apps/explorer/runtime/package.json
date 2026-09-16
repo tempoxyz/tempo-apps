@@ -1,0 +1,15 @@
+{
+	"name": "explorer-zone-prover-runtime",
+	"private": true,
+	"type": "module",
+	"files": [
+		"server.mjs"
+	],
+	"scripts": {
+		"start": "node server.mjs",
+		"check:biome": "biome check --write --unsafe ."
+	},
+	"dependencies": {
+		"miniflare": "4.20260317.3"
+	}
+}

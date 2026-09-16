@@ -1,7 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { createFileRoute } from '@tanstack/react-router'
 import { getTempoEnv } from '#lib/env'
-import { getZoneProverTarget } from '#lib/server/network'
 import { forwardProverRpc } from '#lib/server/prover-rpc'
 import { checkRateLimit } from '#lib/server/rate-limit'
 
@@ -18,8 +17,7 @@ export const Route = createFileRoute('/api/rpc')({
 				})
 				if (limited) return limited
 				try {
-					const target = getZoneProverTarget('rpc')
-					return await forwardProverRpc(request, target.headers.Authorization)
+					return await forwardProverRpc(request)
 				} catch {
 					return new Response('Prover RPC is not configured', { status: 503 })
 				}

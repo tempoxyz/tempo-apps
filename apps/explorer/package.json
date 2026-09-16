@@ -29,7 +29,6 @@
 		"deploy": "bash scripts/deploy.sh",
 		"deploy:devnet": "pnpm deploy --env devnet",
 		"deploy:nextfork": "pnpm deploy --env nextfork",
-		"deploy:zone-prover": "pnpm deploy --env zone-prover",
 		"deploy:testnet": "pnpm deploy --env testnet",
 		"deploy:mainnet": "pnpm deploy --env mainnet",
 		"gen:types": "CLOUDFLARE_ENV='mainnet' wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",

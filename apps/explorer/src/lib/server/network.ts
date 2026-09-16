@@ -3,12 +3,7 @@ import { zoneProverTarget } from '#lib/zone-prover'
 import { serverEnv } from './env'
 
 export function getZoneProverTarget(kind: 'rpc' | 'tidx') {
-	return zoneProverTarget(
-		kind,
-		kind === 'rpc'
-			? serverEnv.ZONE_PROVER_RPC_AUTH
-			: serverEnv.ZONE_PROVER_TIDX_AUTH,
-	)
+	return zoneProverTarget(kind)
 }
 
 export function networkCacheScope() {
