@@ -188,8 +188,8 @@
 			"routes": [
 				{
 					"custom_domain": true,
-					"zone_name": "tehq.net",
-					"pattern": "explore-zone-prover.tehq.net"
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.zone-prover.devnet.tempo.xyz"
 				}
 			],
 			"preview_urls": false,

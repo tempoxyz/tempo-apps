@@ -19,7 +19,7 @@ const NON_INDEXABLE_EXPLORER_HOSTS = new Set([
 	'explore.31318.tempo.xyz',
 	'explore.devnet.tempo.xyz',
 	'explore.nextfork.devnet.tempo.xyz',
-	'explore-zone-prover.tehq.net',
+	'explore.zone-prover.devnet.tempo.xyz',
 ])
 
 export type ExplorerHostPolicy = { type: 'redirect'; location: string }

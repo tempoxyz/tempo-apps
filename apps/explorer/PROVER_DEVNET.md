@@ -1,7 +1,8 @@
 # Prover devnet
 
 The `zone-prover` build targets Tempo L1 chain **31319**, not the zone chain.
-The deployment hostname is configured in `wrangler.json`. Apply the companion
+The deployment hostname is `explore.zone-prover.devnet.tempo.xyz`, configured
+in `wrangler.json`. Apply the companion
 Cloudflare Access policy before publishing; default Worker and preview URLs
 remain disabled. This environment is intentionally absent from automatic CI
 deployment matrices.
@@ -11,6 +12,7 @@ deployment matrices.
 1. Apply the companion Access policy and provision the authenticated RPC/TIDX
    gateways and dedicated indexer in dev-infra. Verify the RPC returns chain
    ID `0x7a57` and the indexer has caught up with that same chain.
+   Apply the exact-host Tailscale app-connector route before verifying access.
 2. Set `ZONE_PROVER_RPC_AUTH` and `ZONE_PROVER_TIDX_AUTH` with
    `wrangler secret put <name> --env zone-prover`. Values are the complete
    `Basic ...` headers for the respective gateways. Never use a `VITE_` variable

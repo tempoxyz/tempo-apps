@@ -110,6 +110,14 @@ describe('prover chain routing', () => {
 		expect(config.workers_dev).toBe(false)
 		expect(config.preview_urls).toBe(false)
 		expect(config.routes).toHaveLength(1)
+		expect(config.routes[0]).toEqual({
+			custom_domain: true,
+			zone_name: 'tempo.xyz',
+			pattern: 'explore.zone-prover.devnet.tempo.xyz',
+		})
+		expect(tempoZoneProver.blockExplorers.default.url).toBe(
+			'https://explore.zone-prover.devnet.tempo.xyz',
+		)
 		const result = spawnSync(
 			'bash',
 			['scripts/deploy.sh', '--env', 'zone-prover'],
