@@ -100,6 +100,37 @@ jobs:
             echo "relevant=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Inspect zone-prover preview routing
+        if: steps.changes.outputs.relevant == 'true' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          base = ('https://api.cloudflare.com/client/v4/accounts/'
+                  + os.environ['CLOUDFLARE_ACCOUNT_ID']
+                  + '/workers/scripts/explorer-zone-prover')
+          for endpoint in ('subdomain', 'deployments'):
+              request = urllib.request.Request(base + '/' + endpoint, headers={
+                  'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
+              })
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.load(response)
+              if not payload.get('success'):
+                  raise SystemExit('Cloudflare diagnostic request failed: ' + endpoint)
+              result = payload['result']
+              if endpoint == 'subdomain':
+                  result = {key: result.get(key) for key in ('enabled', 'previews_enabled')}
+              else:
+                  result = [{key: deployment.get(key) for key in ('id', 'created_on', 'versions')}
+                            for deployment in result.get('deployments', [])]
+              print(endpoint + ': ' + json.dumps(result))
+          PY
+
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
