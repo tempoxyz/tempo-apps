@@ -71,7 +71,7 @@ describe('prover chain routing', () => {
 			ZONE_PROVER_RPC_URL,
 			expect.objectContaining({
 				body,
-				redirect: 'error',
+				redirect: 'manual',
 				headers: {
 					'Content-Type': 'application/json',
 					Authorization: 'Basic cnBjOnRlc3Q=',
