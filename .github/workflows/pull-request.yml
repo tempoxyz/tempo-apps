@@ -100,50 +100,6 @@ jobs:
             echo "relevant=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Reconcile zone-prover preview routing
-        if: steps.changes.outputs.relevant == 'true' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          python3 - <<'PY'
-          import json
-          import os
-          import urllib.request
-
-          base = ('https://api.cloudflare.com/client/v4/accounts/'
-                  + os.environ['CLOUDFLARE_ACCOUNT_ID']
-                  + '/workers/scripts/explorer-zone-prover')
-          for endpoint in ('subdomain', 'deployments'):
-              request = urllib.request.Request(base + '/' + endpoint, headers={
-                  'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
-              })
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  payload = json.load(response)
-              if not payload.get('success'):
-                  raise SystemExit('Cloudflare diagnostic request failed: ' + endpoint)
-              result = payload['result']
-              if endpoint == 'subdomain':
-                  result = {key: result.get(key) for key in ('enabled', 'previews_enabled')}
-              else:
-                  result = [{key: deployment.get(key) for key in ('id', 'created_on', 'versions')}
-                            for deployment in result['deployments']]
-              print(endpoint + ': ' + json.dumps(result))
-          request = urllib.request.Request(base + '/subdomain', method='POST', headers={
-              'Authorization': 'Bearer ' + os.environ['CLOUDFLARE_API_TOKEN'],
-              'Content-Type': 'application/json',
-              'Cloudflare-Workers-Script-Api-Date': '2025-08-01',
-          }, data=json.dumps({'enabled': True, 'previews_enabled': True}).encode())
-          with urllib.request.urlopen(request, timeout=30) as response:
-              payload = json.load(response)
-          if not payload.get('success'):
-              raise SystemExit('Cloudflare routing reconciliation failed')
-          result = payload['result']
-          print('Reconciled subdomain: ' + json.dumps({
-              key: result.get(key) for key in ('enabled', 'previews_enabled')
-          }))
-          PY
-
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
@@ -176,6 +132,17 @@ jobs:
           environment: ${{ env.CLOUDFLARE_ENV }}
           command: versions upload
 
+      - name: Verify zone-prover preview
+        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
+        id: preview-health
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          test -n "$PREVIEW_URL"
+          curl --fail --silent --show-error --location \
+            --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+            --output /dev/null "$PREVIEW_URL"
+
       - name: Save Deployment Info
         if: always()
         shell: bash
@@ -186,7 +153,7 @@ jobs:
             STATUS="skipped"
             DEPLOYMENT_URL=""
             ALIAS_URL=""
-          elif [[ "${{ steps.deploy.outcome }}" == "success" ]]; then
+          elif [[ "${{ steps.deploy.outcome }}" == "success" && "${{ steps.preview-health.outcome }}" != "failure" ]]; then
             STATUS="success"
             DEPLOYMENT_URL="${{ steps.deploy.outputs.deployment-url }}"
             ALIAS_URL="${{ steps.deploy.outputs.pages-deployment-alias-url }}"
