@@ -62,6 +62,8 @@ jobs:
           - app: explorer
             env: nextfork
           - app: explorer
+            env: zone-prover
+          - app: explorer
             env: mainnet
           #### fee-payer
           - app: fee-payer
@@ -109,8 +111,15 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        run: pnpm build
         working-directory: apps/${{ matrix.app }}
+        env:
+          APP_NAME: ${{ matrix.app }}
+        run: |
+          if [[ "$APP_NAME" == "explorer" ]]; then
+            bash scripts/build.sh
+          else
+            pnpm build
+          fi
 
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
@@ -123,6 +132,17 @@ jobs:
           environment: ${{ env.CLOUDFLARE_ENV }}
           command: versions upload
 
+      - name: Verify zone-prover preview
+        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
+        id: preview-health
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          test -n "$PREVIEW_URL"
+          curl --fail --silent --show-error --location \
+            --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+            --output /dev/null "$PREVIEW_URL"
+
       - name: Save Deployment Info
         if: always()
         shell: bash
@@ -133,7 +153,7 @@ jobs:
             STATUS="skipped"
             DEPLOYMENT_URL=""
             ALIAS_URL=""
-          elif [[ "${{ steps.deploy.outcome }}" == "success" ]]; then
+          elif [[ "${{ steps.deploy.outcome }}" == "success" && "${{ steps.preview-health.outcome }}" != "failure" ]]; then
             STATUS="success"
             DEPLOYMENT_URL="${{ steps.deploy.outputs.deployment-url }}"
             ALIAS_URL="${{ steps.deploy.outputs.pages-deployment-alias-url }}"

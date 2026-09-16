@@ -3,6 +3,7 @@ import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
 import type { AbiEvent, AbiParameter } from 'viem'
 import {
+	decodeEventLog,
 	encodeAbiParameters,
 	encodeEventTopics,
 	encodeFunctionData,
@@ -33,6 +34,7 @@ import {
 	parseKnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
+import { zoneProverBatchLog } from './fixtures/zone-prover-batch'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
@@ -602,7 +604,7 @@ describe('parseKnownEvents', () => {
 		})
 	})
 
-	it('decodes current BatchSubmitted events', () => {
+	it('decodes pre-T13 BatchSubmitted events', () => {
 		const hash = `0x${'5'.repeat(64)}` as const
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
 		const nextProcessedHash = `0x${'1'.repeat(64)}` as const
@@ -646,6 +648,40 @@ describe('parseKnownEvents', () => {
 				['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
 				['Last Processed Deposit', { type: 'number', value: 35n }],
 			],
+		})
+	})
+
+	it('decodes the live T13 prover batch 177 settlement', () => {
+		const log = zoneProverBatchLog
+		const decoded = decodeEventLog({
+			abi: zonePortalAbi,
+			data: log.data,
+			topics: [...log.topics],
+		})
+		expect(decoded).toMatchObject({
+			eventName: 'BatchSubmitted',
+			args: {
+				withdrawalBatchIndex: 177n,
+				withdrawalQueueIndex: 2n ** 256n - 1n,
+				withdrawalQueueHash: zeroHash,
+				lastProcessedDepositNumber: 2n,
+				lastProcessedEnabledTokenCount: 1n,
+			},
+		})
+		const [event] = parseKnownEvents(
+			mockReceipt(
+				[mockLog({ ...log, topics: [...log.topics] }, log.transactionHash)],
+				accountAddress,
+				log.transactionHash,
+			),
+			{ getTokenMetadata },
+		)
+		expect(event).toMatchObject({
+			type: 'zone batch submitted',
+			note: expect.arrayContaining([
+				['Batch Index', { type: 'number', value: 177n }],
+				['Last Processed Deposit', { type: 'number', value: 2n }],
+			]),
 		})
 	})
 

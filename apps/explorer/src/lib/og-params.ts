@@ -94,8 +94,11 @@ export function sanitizeText(value: string): string {
 export function buildZonePortalOgUrl(
 	baseUrl: string,
 	address: string,
-	network: 'mainnet' | 'testnet' | 'devnet' | 'nextfork',
+	network: string,
 ): string {
+	// Networks not supported by the shared renderer get a static address card.
+	if (!['mainnet', 'testnet', 'devnet', 'nextfork'].includes(network))
+		return buildAddressOgUrl(baseUrl, { address, accountType: 'contract' })
 	return `${baseUrl}/zone-portal/${address}?${new URLSearchParams({ network })}`
 }
 

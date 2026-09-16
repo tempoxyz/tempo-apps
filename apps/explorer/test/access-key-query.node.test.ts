@@ -25,7 +25,7 @@ vi.mock('#lib/domain/tip20', () => ({ metadataFromLogs, metadataForTokens }))
 vi.mock('#lib/domain/known-events', () => ({
 	parseKnownEvents: () => [],
 	parseKnownEvent: () => null,
-	decodeKnownTransactionCall: () => null,
+	decodeKnownTransactionCalls: () => [],
 	parseAuthorizationEvents: () => [],
 	isStreamChannelAddress: () => false,
 	STREAM_CHANNELS: [],

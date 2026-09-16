@@ -238,7 +238,7 @@ function RawToggle(props: {
 	)
 }
 
-/** Keep return values compact in the trace tree; the raw view preserves them. */
+/** Keep byte arguments and return values compact; the raw view preserves them. */
 function abbreviateTraceValue(value: string, max = 24): string {
 	if (value.length <= max) return value
 	return `${value.slice(0, max - 8)}…${value.slice(-6)}`
@@ -453,7 +453,11 @@ export function useTraceTrees(
 								params = decoded
 									.map((v, i) => {
 										const name = item.inputs[i]?.name
-										const value = formatAbiValue(v)
+										const formatted = formatAbiValue(v)
+										const value =
+											item.inputs[i]?.type === 'bytes'
+												? abbreviateTraceValue(formatted)
+												: formatted
 										return name ? `${name}: ${value}` : value
 									})
 									.join(', ')

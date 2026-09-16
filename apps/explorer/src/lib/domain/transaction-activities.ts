@@ -1,6 +1,10 @@
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { KnownEvent, KnownEventPart } from './known-events'
+import {
+	composeCallAndLogEvents,
+	isZoneBatchEvent,
+} from './transaction-actions'
 
 export type TransactionActivity = {
 	id: string
@@ -151,14 +155,38 @@ function vaultActivityEvent(activity: TransactionActivity): KnownEvent | null {
 export function selectTransactionDescriptionEvents(params: {
 	activityEvents: readonly KnownEvent[]
 	fallbackEvents: readonly KnownEvent[]
-	knownCall: KnownEvent | null
+	knownCall?: KnownEvent | null
+	knownCalls?: readonly KnownEvent[]
 }): KnownEvent[] {
-	const hasPrivateZoneFallback = params.fallbackEvents.some(
-		(event) => event !== params.knownCall && isPrivateZoneEvent(event),
+	const calls =
+		params.knownCalls ?? (params.knownCall ? [params.knownCall] : [])
+	const composed = composeCallAndLogEvents(
+		params.fallbackEvents.filter(
+			(event) => calls.length === 0 || event.type !== 'fee',
+		),
+		calls,
 	)
-	const fallbackEvents = hasPrivateZoneFallback
-		? params.fallbackEvents.filter((event) => event !== params.knownCall)
-		: params.fallbackEvents
+	const hasPrivateZoneFallback = composed.events.some(
+		(event) =>
+			!composed.unmatchedCalls.includes(event) && isPrivateZoneEvent(event),
+	)
+	const hasBatch = composed.events.some(isZoneBatchEvent)
+	const fallbackEvents = composed.events.filter(
+		(event) =>
+			(!hasPrivateZoneFallback ||
+				!composed.unmatchedCalls.includes(event) ||
+				isZoneBatchEvent(event)) &&
+			(!hasBatch || !isNonceIncrementedEvent(event)),
+	)
+	const batchEvents = fallbackEvents.filter(isZoneBatchEvent)
+	const unmatchedCalls = hasPrivateZoneFallback
+		? []
+		: composed.unmatchedCalls.filter((event) => !isZoneBatchEvent(event))
+	// The local batch projection covers the complete receipt and transaction.
+	// Indexed batch descriptions are an alternative projection, not extra actions.
+	const indexedEvents = batchEvents.length
+		? params.activityEvents.filter((event) => !isZoneBatchEvent(event))
+		: params.activityEvents
 	const hasEarnReceiptSummary = fallbackEvents.some(isEarnReceiptSummary)
 	if (hasEarnReceiptSummary) {
 		const zoneWithdrawals = fallbackEvents.filter(
@@ -169,16 +197,22 @@ export function selectTransactionDescriptionEvents(params: {
 		const zoneDeposits = fallbackEvents.filter(
 			(event) => zoneEventDirection(event) === 'deposit',
 		)
-		return [...zoneWithdrawals, ...earnEvents, ...propAmmSwaps, ...zoneDeposits]
+		return [
+			...batchEvents,
+			...zoneWithdrawals,
+			...earnEvents,
+			...propAmmSwaps,
+			...zoneDeposits,
+		]
 	}
 	const propAmmSwaps = fallbackEvents.filter(isPropAmmSwap)
-	if (propAmmSwaps.length > 0) return propAmmSwaps
-	if (params.activityEvents.length === 0) return [...fallbackEvents]
+	if (propAmmSwaps.length > 0) return [...batchEvents, ...propAmmSwaps]
+	if (indexedEvents.length === 0) return [...fallbackEvents]
 
 	const hasDecodedZoneEvent = fallbackEvents.some((event) =>
 		ZONE_EVENT_TYPES.has(event.type),
 	)
-	const activitiesAreGeneric = params.activityEvents.every(
+	const activitiesAreGeneric = indexedEvents.every(
 		(event) =>
 			GENERIC_ACTIVITY_TYPES.has(event.type) || isNonceIncrementedEvent(event),
 	)
@@ -188,13 +222,13 @@ export function selectTransactionDescriptionEvents(params: {
 		)
 	}
 
-	const hasMeaningfulActivity = params.activityEvents.some(
+	const hasMeaningfulActivity = indexedEvents.some(
 		(event) => !isNonceIncrementedEvent(event),
 	)
 	const activityEvents =
-		params.knownCall || hasMeaningfulActivity
-			? params.activityEvents.filter((event) => !isNonceIncrementedEvent(event))
-			: params.activityEvents
+		calls.length > 0 || batchEvents.length > 0 || hasMeaningfulActivity
+			? indexedEvents.filter((event) => !isNonceIncrementedEvent(event))
+			: indexedEvents
 	const representedPrivateZoneDirections = new Set(
 		activityEvents.flatMap((event) => {
 			const direction = privateZoneEventDirection(event)
@@ -205,15 +239,13 @@ export function selectTransactionDescriptionEvents(params: {
 	const supplementalZoneEvents = fallbackEvents.filter((event) => {
 		const direction = zoneEventDirection(event)
 		return (
-			event !== params.knownCall &&
+			!composed.unmatchedCalls.includes(event) &&
 			direction !== null &&
 			!representedPrivateZoneDirections.has(direction)
 		)
 	})
-	const events = [...supplementalZoneEvents, ...activityEvents]
-	return params.knownCall && !hasPrivateZoneActivity
-		? [params.knownCall, ...events]
-		: events
+	const events = [...batchEvents, ...supplementalZoneEvents, ...activityEvents]
+	return !hasPrivateZoneActivity ? [...unmatchedCalls, ...events] : events
 }
 
 function isEarnReceiptSummary(event: KnownEvent): boolean {

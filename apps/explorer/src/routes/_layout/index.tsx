@@ -186,14 +186,14 @@ function SpotlightPill(props: {
 
 function LandingWords() {
 	return (
-		<div className="flex flex-col items-center gap-1">
-			<span className="text-[32px] font-semibold tracking-[-0.02em] leading-[0.95] text-primary/50">
+		<div className="flex flex-col items-center gap-1 font-pilat font-normal">
+			<span className="text-[32px] tracking-[-0.02em] leading-[0.95] text-primary/50">
 				Search
 			</span>
-			<span className="text-[40px] font-semibold tracking-[-0.02em] leading-[0.95] text-primary/70">
+			<span className="text-[40px] tracking-[-0.02em] leading-[0.95] text-primary/70">
 				Explore
 			</span>
-			<span className="text-[52px] font-semibold tracking-[-0.02em] leading-[0.95] text-primary">
+			<span className="text-[52px] tracking-[-0.02em] leading-[0.95] text-primary">
 				Discover
 			</span>
 		</div>

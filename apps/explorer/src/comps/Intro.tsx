@@ -70,7 +70,10 @@ export function Intro({ onPhaseChange }: IntroProps) {
 	}, [onPhaseChange, seen, setSeen])
 
 	return (
-		<div ref={containerRef} className="flex flex-col items-center gap-1">
+		<div
+			ref={containerRef}
+			className="flex flex-col items-center gap-1 font-pilat font-normal"
+		>
 			{words.map((word) => (
 				<span
 					key={word.text}
@@ -78,7 +81,6 @@ export function Intro({ onPhaseChange }: IntroProps) {
 					style={{
 						opacity: 0,
 						fontSize: word.size,
-						fontWeight: 600,
 						letterSpacing: '-0.02em',
 						lineHeight: '0.95',
 					}}

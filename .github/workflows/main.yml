@@ -24,7 +24,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: explorer
-      environments: '["testnet","mainnet","devnet","nextfork"]'
+      environments: '["testnet","mainnet","devnet","nextfork","zone-prover"]'
 
   deploy-fee-payer:
     name: Deploy Fee Payer

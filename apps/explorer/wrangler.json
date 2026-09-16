@@ -183,6 +183,81 @@
 				}
 			}
 		},
+		"zone-prover": {
+			"name": "explorer-zone-prover",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.zone-prover.devnet.tempo.xyz"
+				}
+			],
+			"vars": {
+				"DATADOG_SITE": "us5.datadoghq.com",
+				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
+				"VITE_DATADOG_ENABLED": "false",
+				"VITE_DATADOG_ENV": "zone-prover",
+				"VITE_DATADOG_SERVICE": "explorer",
+				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
+				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
+				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
+				"VITE_TEMPO_ENV": "zone-prover",
+				"VITE_SENTRY_DSN": "",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
+			},
+			"workers_dev": true,
+			"browser": {
+				"binding": "BROWSER"
+			},
+			"ratelimits": [
+				{
+					"name": "REQUESTS_RATE_LIMITER",
+					"namespace_id": "1001",
+					"simple": {
+						"limit": 100,
+						"period": 10
+					}
+				},
+				{
+					"name": "SIMULATE_RATE_LIMITER",
+					"namespace_id": "1005",
+					"simple": {
+						"limit": 30,
+						"period": 10
+					}
+				},
+				{
+					"name": "ASN_RATE_LIMITER",
+					"namespace_id": "1003",
+					"simple": {
+						"limit": 2000,
+						"period": 10
+					}
+				},
+				{
+					"name": "GLOBAL_RATE_LIMITER",
+					"namespace_id": "1004",
+					"simple": {
+						"limit": 10000,
+						"period": 10
+					}
+				}
+			],
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
 		"nextfork": {
 			"name": "explorer-nextfork",
 			"routes": [
