@@ -21,6 +21,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		// Map old tab names to new ones
 		let tab: string = 'transfers'
 		if (search.tab === 'holders') tab = 'holders'
+		else if (search.tab === 'token') tab = 'token'
 		else if (search.tab === 'contract') tab = 'contract'
 		else if (search.tab === 'interact') tab = 'contract'
 
