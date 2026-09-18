@@ -28,6 +28,9 @@ appearance and clipboard actions manually:
 3. Open `/fee-amm?token=0x20c0000000000000000000006a37DA5C996874BE` directly.
    OUSD liquidity is immediately visible: 0.000024 OUSD and 49.999977 pathUSD.
    The token filter must use the indexer query, not scan global API pages.
+   The heading remains Fee AMM; the active filter is labeled beneath it.
+   Clear filter returns to all pools on the same route. Filtering pathUSD also
+   verifies that pagination and page-size changes preserve the token parameter.
 4. Follow the token address into the Token tab. Its Fee AMM section should link
    back to the token-specific liquidity URL. The legacy `/token/<address>?tab=token`
    route should also preserve the selected tab.

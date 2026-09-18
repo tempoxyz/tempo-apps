@@ -46,13 +46,13 @@ try {
 	await open('/fee-amm')
 	await contains('10 pools on this page')
 	assert.ok(!browser('get', 'text', 'main').includes('OUSD'))
-	click('nav[aria-label="Fee AMM pagination"] a:last-of-type')
+	click('nav[aria-label="Fee AMM pagination"] a[title="Next page"]')
 	await contains('Page 2')
 	await contains('OUSD')
 	assert.ok(browser('get', 'url').includes('page=2'))
 	browser('reload')
 	await contains('Page 2')
-	click('nav[aria-label="Fee AMM pagination"] a:first-of-type')
+	click('nav[aria-label="Fee AMM pagination"] a[title="Previous page"]')
 	await contains('Page 1')
 	browser('select', 'select[aria-label="Pools per page"]', '25')
 	await contains('12 pools on this page')
@@ -60,15 +60,37 @@ try {
 	assert.ok(!browser('get', 'url').includes('page=2'))
 
 	await open(scoped)
-	await contains('OUSD Fee AMM')
+	await contains('Filtered by OUSD')
+	assert.equal(
+		evaluate('document.querySelector("main h1").textContent'),
+		'Fee AMM',
+	)
 	await contains('0.000024')
 	await contains('49.999977')
+	browser('click', 'button[aria-label="Copy link"]')
+	assert.equal(
+		evaluate(
+			'document.querySelector("button[aria-label=\\"Copy link\\"]").title',
+		),
+		'Copied!',
+	)
 	click('main a[href*="/address/"]')
 	await contains('Fee AMM liquidity')
 	assert.ok(browser('get', 'url').includes('tab=token'))
 	click('section[aria-label="Fee AMM liquidity"] a')
-	await contains('OUSD Fee AMM')
+	await contains('Filtered by OUSD')
 	assert.ok(browser('get', 'url').includes(`token=${token}`))
+	click('main form a')
+	await contains('10 pools on this page')
+	assert.ok(!browser('get', 'url').includes('token='))
+	const validatorToken = '0x20c0000000000000000000000000000000000000'
+	await open(`/fee-amm?token=${validatorToken}`)
+	click('nav[aria-label="Fee AMM pagination"] a[title="Next page"]')
+	await contains('Page 2')
+	assert.ok(browser('get', 'url').includes(`token=${validatorToken}`))
+	browser('select', 'select[aria-label="Pools per page"]', '25')
+	await contains('Page 1')
+	assert.ok(browser('get', 'url').includes(`token=${validatorToken}`))
 	await open(`/token/${token}?tab=token`)
 	await contains('Fee AMM liquidity')
 	assert.ok(browser('get', 'url').includes('tab=token'))

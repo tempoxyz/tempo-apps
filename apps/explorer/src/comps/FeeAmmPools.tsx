@@ -3,19 +3,20 @@ import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import type * as React from 'react'
 import { Amount } from '#comps/Amount'
+import { CopyButton } from '#comps/CopyButton'
 import { TokenIcon } from '#comps/TokenIcon'
 import { FormattedTimestamp } from '#comps/TimeFormat'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy } from '#lib/hooks'
 import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
 import type { FeeAmmPage, FeeAmmPool } from '#lib/server/fee-amm'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
 
 export function FeeAmmQueryState({
 	query,
 }: FeeAmmQueryState.Props): React.JSX.Element | null {
 	if (query.isPending)
 		return (
-			<p role="status" className="px-4 py-8 text-sm text-secondary">
+			<p role="status" className="px-4 py-8 type-card text-tertiary">
 				Loading Fee AMM liquidity…
 			</p>
 		)
@@ -23,7 +24,7 @@ export function FeeAmmQueryState({
 	return (
 		<div
 			role="alert"
-			className="flex flex-wrap items-center gap-3 px-4 py-6 text-sm"
+			className="flex flex-wrap items-center gap-3 px-4 py-6 type-card"
 		>
 			<p className="text-secondary">
 				{query.data
@@ -64,26 +65,23 @@ export declare namespace FeeAmmPoolList {
 }
 
 export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
-	const { copy, notifying } = useCopy()
 	return (
-		<div className="grid grid-cols-2 md:grid-cols-[1.6fr_1.5fr_1fr_1fr] gap-4 px-4 py-5 border-b border-dashed border-distinct last:border-b-0 text-sm">
+		<div className="grid grid-cols-2 md:grid-cols-[1.6fr_1.5fr_1fr_1fr] gap-4 px-4 py-3 border-b border-dashed border-card-border last:border-b-0 type-card">
 			<div className="col-span-2 md:col-span-1 flex flex-col gap-2 min-w-0">
 				<div className="flex flex-wrap items-center gap-2">
 					<PoolTokenLink
 						address={pool.userToken}
 						symbol={pool.userTokenSymbol}
 					/>
-					<span
-						className="text-tertiary"
-						role="img"
+					<ArrowRightIcon
+						className="size-3.5 text-tertiary"
 						aria-label="converts fees to"
-					>
-						→
-					</span>
+					/>
 					<PoolTokenLink
 						address={pool.validatorToken}
 						symbol={pool.validatorTokenSymbol}
 					/>
+					<CopyButton value={pool.poolId} ariaLabel="Copy pool ID" />
 				</div>
 				<p className="text-xs text-secondary">
 					{token
@@ -92,19 +90,11 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 							: 'Received by validators'
 						: 'Fee token → Validator token'}
 				</p>
-				<button
-					type="button"
-					onClick={() => copy(pool.poolId)}
-					title={pool.poolId}
-					className="text-xs text-tertiary hover:text-accent text-left"
-				>
-					{notifying ? 'Pool ID copied' : 'Copy pool ID'}
-				</button>
 			</div>
 			<dl className="col-span-2 md:col-span-1 grid grid-cols-2 md:flex md:flex-col gap-2 min-w-0">
 				<div>
 					<dt className="text-xs text-tertiary">Fee-token reserve</dt>
-					<dd className="text-primary font-mono tabular-nums">
+					<dd className="text-primary type-card-data tabular-nums">
 						{pool.reserveUserToken === null ? (
 							'Unavailable'
 						) : (
@@ -119,7 +109,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 				</div>
 				<div>
 					<dt className="text-xs text-tertiary">Validator-token reserve</dt>
-					<dd className="text-primary font-mono tabular-nums">
+					<dd className="text-primary type-card-data tabular-nums">
 						{pool.reserveValidatorToken === null ? (
 							'Unavailable'
 						) : (
@@ -135,7 +125,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 			</dl>
 			<dl className="flex flex-col gap-1">
 				<dt className="text-xs text-tertiary">Estimated liquidity</dt>
-				<dd className="font-mono tabular-nums text-primary">
+				<dd className="type-card-data tabular-nums text-primary">
 					{pool.liquidityUsd === null
 						? 'Unavailable'
 						: PriceFormatter.format(pool.liquidityUsd)}
@@ -198,7 +188,7 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 		>
 			<div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
 				<div>
-					<h2 className="text-sm font-medium text-primary">
+					<h2 className="type-card font-medium text-primary">
 						Fee AMM liquidity
 					</h2>
 					<p className="text-xs text-secondary">
@@ -208,9 +198,9 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 				<Link
 					to="/fee-amm"
 					search={{ token: address, page: 1, limit: 10 }}
-					className="text-sm text-accent hover:underline"
+					className="type-card text-accent hover:underline inline-flex items-center gap-1"
 				>
-					View all pools →
+					View all pools <ArrowRightIcon className="size-3.5" />
 				</Link>
 			</div>
 			<FeeAmmQueryState query={query} />
