@@ -11,6 +11,7 @@ export function Sections(props: Sections.Props) {
 	} = props
 
 	const sections = sections_.filter((section) => section.visible !== false)
+	const id = React.useId()
 
 	const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
 		() => new Set(),
@@ -36,6 +37,7 @@ export function Sections(props: Sections.Props) {
 							!expandedSections.has(section.title)
 
 						const canCollapse = section.autoCollapse !== false
+						const panelId = `${id}-${encodeURIComponent(section.title)}`
 
 						return (
 							<section
@@ -49,6 +51,8 @@ export function Sections(props: Sections.Props) {
 								{canCollapse ? (
 									<button
 										type="button"
+										aria-expanded={!isCollapsed}
+										aria-controls={panelId}
 										onClick={() => toggleSection(section.title)}
 										className={cx(
 											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
@@ -95,16 +99,18 @@ export function Sections(props: Sections.Props) {
 									</div>
 								)}
 
-								{!isCollapsed && (
-									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
-										{section.contextual && (
-											<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
-												{section.contextual}
-											</div>
-										)}
-										{section.content}
-									</div>
-								)}
+								<div id={panelId} hidden={isCollapsed}>
+									{!isCollapsed && (
+										<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+											{section.contextual && (
+												<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
+													{section.contextual}
+												</div>
+											)}
+											{section.content}
+										</div>
+									)}
+								</div>
 							</section>
 						)
 					})}

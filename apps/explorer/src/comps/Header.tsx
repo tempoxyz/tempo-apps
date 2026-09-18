@@ -8,7 +8,7 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
-import { type TempoEnv, getTempoEnv, isTestnet } from '#lib/env'
+import { type TempoEnv, getTempoEnv } from '#lib/env'
 import {
 	buildExplorerNetworkHref,
 	EXPLORER_NETWORK_OPTIONS,
@@ -39,6 +39,7 @@ export function Header(): React.JSX.Element {
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
 					<Link
 						to="/simulate"
+						aria-label="Simulate"
 						className="flex h-[28px] items-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] text-[12px] text-secondary hover:border-accent hover:text-primary press-down"
 					>
 						<FlaskConicalIcon className="size-[12px]" />
@@ -282,7 +283,6 @@ export namespace Header {
 
 		return (
 			<Link
-				disabled={!isTestnet()}
 				to="/block/$id"
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(

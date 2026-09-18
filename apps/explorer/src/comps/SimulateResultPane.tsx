@@ -18,6 +18,7 @@ import { Address } from '#comps/Address'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
+import { handleTabKeyDown } from '#lib/tab-keyboard'
 import type { parseKnownEvents } from '#lib/domain/known-events'
 import { preferredEventsFilter } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
@@ -198,6 +199,8 @@ export function SimulateTabs(props: SimulateTabs.Props): React.JSX.Element {
 						type="button"
 						role="tab"
 						aria-selected={active}
+						tabIndex={active && !empty ? 0 : -1}
+						onKeyDown={handleTabKeyDown}
 						disabled={empty}
 						onClick={() => props.onChange(tab.id)}
 						className={cx(

@@ -58,10 +58,8 @@ export function BlockCard(props: BlockCard.Props) {
 		}
 	}, [isMounted, liveBlockNumber, getConfirmations])
 
-	const utcFormatted = timestamp
-		? DateFormatter.formatUtcTimestamp(timestamp)
-		: undefined
-	const [utcDate, utcTime] = utcFormatted?.split(', ') ?? []
+	const [utcDate, utcTime] =
+		DateFormatter.formatUtcTimestamp(timestamp).split(', ')
 
 	const gasUsage = BlockCard.getGasUsagePercent(gasUsed, gasLimit)
 	const roots = [
