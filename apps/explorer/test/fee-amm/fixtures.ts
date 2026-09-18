@@ -147,6 +147,12 @@ createServer(async (req, res) => {
 		return
 	}
 	requests.push(url.pathname + url.search)
+	if (/^\/v1\/tokens\/0x[0-9a-f]+\/logo$/.test(url.pathname)) {
+		// Missing curated logos are 404s, never successful JSON image responses.
+		res.statusCode = 404
+		res.end()
+		return
+	}
 	if (url.pathname === '/rpc') {
 		let body = ''
 		for await (const chunk of req) body += chunk

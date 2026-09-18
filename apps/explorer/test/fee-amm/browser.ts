@@ -67,6 +67,12 @@ try {
 	)
 	await contains('0.000024')
 	await contains('49.999977')
+	// Includes SSR images that fail before hydration attaches error handlers.
+	browser(
+		'wait',
+		'--fn',
+		'[...document.querySelectorAll("main img")].length > 0 && [...document.querySelectorAll("main img")].every(i => i.complete && i.naturalWidth > 0 && i.getAttribute("src") === "/token-fallback.svg")',
+	)
 	browser('click', 'button[aria-label="Copy link"]')
 	assert.equal(
 		evaluate(
@@ -122,6 +128,14 @@ try {
 	)
 	click('button[aria-label="Switch to dark mode"]')
 	assert.equal(evaluate('document.documentElement.dataset.theme'), 'dark')
+	// Even if the bundled fallback fails, do not bounce back to the API forever.
+	evaluate(
+		'document.querySelector("main img").dispatchEvent(new Event("error"))',
+	)
+	assert.equal(
+		evaluate('document.querySelector("main img").getAttribute("src")'),
+		'/token-fallback.svg',
+	)
 	console.log(
 		'Fee AMM browser checks passed: pagination, direct links, Token tab, retry, missing reserves, validation, and mobile layout.',
 	)
