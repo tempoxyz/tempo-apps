@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import * as React from 'react'
+import type * as React from 'react'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { cx } from '#lib/css'
@@ -79,7 +79,8 @@ export function DataGrid(props: DataGrid.Props) {
 	return (
 		<div className="flex flex-col min-h-0">
 			<div className="relative w-full overflow-x-auto">
-				<div
+				<table
+					aria-label={itemsLabel}
 					className={cx(
 						'w-full text-[13px] rounded-t-[2px] grid',
 						flexible && 'min-w-max',
@@ -88,46 +89,62 @@ export function DataGrid(props: DataGrid.Props) {
 					aria-busy={effectiveLoading}
 					style={{ gridTemplateColumns }}
 				>
-					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
-						{activeColumns.map((column, index) => {
-							const key = `header-${index}`
-							const sortDir = column.sortDirection
-							const hasSort = sortDir === 'asc' || sortDir === 'desc'
-							const label =
-								typeof column.label === 'string'
-									? column.label.charAt(0) + column.label.slice(1).toLowerCase()
-									: column.label
-							return (
-								<div
-									key={key}
-									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px]',
-										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
-										column.align === 'end' ? 'justify-end' : 'justify-start',
-									)}
-								>
-									<span className="inline-flex items-center gap-[4px]">
-										{label}
-										{hasSort && (
-											<ChevronDownIcon
-												className={cx(
-													'size-[12px] text-tertiary',
-													sortDir === 'asc' && 'rotate-180',
-												)}
-											/>
+					<thead className="grid col-span-full grid-cols-subgrid">
+						<tr className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
+							{activeColumns.map((column, index) => {
+								const key = `header-${index}`
+								const sortDir = column.sortDirection
+								const hasSort = sortDir === 'asc' || sortDir === 'desc'
+								const label =
+									typeof column.label === 'string'
+										? column.label.charAt(0) +
+											column.label.slice(1).toLowerCase()
+										: column.label
+								return (
+									<th
+										scope="col"
+										aria-sort={
+											hasSort
+												? sortDir === 'asc'
+													? 'ascending'
+													: 'descending'
+												: undefined
+										}
+										key={key}
+										className={cx(
+											'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px]',
+											'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
+											column.align === 'end' ? 'justify-end' : 'justify-start',
 										)}
-									</span>
-								</div>
-							)
-						})}
-					</div>
+									>
+										<span className="inline-flex items-center gap-[4px]">
+											{label}
+											{hasSort && (
+												<ChevronDownIcon
+													className={cx(
+														'size-[12px] text-tertiary',
+														sortDir === 'asc' && 'rotate-180',
+													)}
+												/>
+											)}
+										</span>
+									</th>
+								)
+							})}
+						</tr>
+					</thead>
 					{activeItems.length === 0 ? (
-						<div
-							className="px-[16px] py-[32px] text-tertiary col-span-full flex items-center justify-center"
-							style={{ minHeight: itemsPerPage * 49 }}
-						>
-							{emptyState}
-						</div>
+						<tbody className="grid col-span-full grid-cols-subgrid">
+							<tr className="grid col-span-full grid-cols-subgrid">
+								<td
+									colSpan={activeColumns.length}
+									className="px-[16px] py-[32px] text-tertiary col-span-full flex items-center justify-center"
+									style={{ minHeight: itemsPerPage * 49 }}
+								>
+									{emptyState}
+								</td>
+							</tr>
+						</tbody>
 					) : null}
 					{activeItems.map((item, rowIndex) => {
 						let maxLines = 1
@@ -136,7 +153,7 @@ export function DataGrid(props: DataGrid.Props) {
 								maxLines = cell.length
 						}
 						return (
-							<div
+							<tbody
 								key={item.key ?? `row-${rowIndex}-${page}`}
 								className={cx(
 									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
@@ -146,19 +163,17 @@ export function DataGrid(props: DataGrid.Props) {
 									item.className,
 								)}
 							>
-								{item.link && (
-									<Link
-										to={item.link.href}
-										search={item.link.search}
-										title={item.link.title}
-										preload="intent"
-										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
-									/>
-								)}
 								{Array.from({ length: maxLines }, (_, lineIndex) => {
 									const key = `line-${rowIndex}-${lineIndex}`
 									return (
-										<React.Fragment key={key}>
+										<tr
+											key={key}
+											className={cx(
+												'grid col-span-full grid-cols-subgrid',
+												lineIndex < maxLines - 1 &&
+													'border-b border-dashed border-distinct',
+											)}
+										>
 											{item.cells.map((cell, cellIndex) => {
 												const key = `cell-${rowIndex}-${cellIndex}-${lineIndex}`
 												const column = activeColumns[cellIndex]
@@ -168,7 +183,7 @@ export function DataGrid(props: DataGrid.Props) {
 												const isLastColumn =
 													cellIndex === activeColumns.length - 1
 												return (
-													<div
+													<td
 														key={key}
 														className={cx(
 															'px-[10px] py-[12px] flex items-start min-h-[48px]',
@@ -183,25 +198,36 @@ export function DataGrid(props: DataGrid.Props) {
 															mode === 'tabs' && 'min-w-0 overflow-hidden',
 														)}
 													>
+														{item.link && lineIndex === 0 && isFirstColumn && (
+															<Link
+																to={item.link.href}
+																search={item.link.search}
+																title={item.link.title}
+																preload="intent"
+																className="absolute! inset-0 -left-[3px] z-0! -outline-offset-2!"
+															/>
+														)}
 														{content}
-													</div>
+													</td>
 												)
 											})}
-											{lineIndex < maxLines - 1 && (
-												<div className="col-span-full border-b border-dashed border-distinct" />
-											)}
-										</React.Fragment>
+										</tr>
 									)
 								})}
 								{item.expanded && typeof item.expanded !== 'boolean' && (
-									<div className="col-span-full px-[16px] pb-[12px] contain-[inline-size] -mt-[4px]">
-										{item.expanded}
-									</div>
+									<tr className="grid col-span-full grid-cols-subgrid">
+										<td
+											colSpan={activeColumns.length}
+											className="col-span-full px-[16px] pb-[12px] contain-[inline-size] -mt-[4px]"
+										>
+											{item.expanded}
+										</td>
+									</tr>
 								)}
-							</div>
+							</tbody>
 						)
 					})}
-				</div>
+				</table>
 			</div>
 			<div className="mt-auto">
 				{pagination !== 'default' && pagination !== 'simple' ? (

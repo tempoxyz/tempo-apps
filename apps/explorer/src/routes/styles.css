@@ -52,6 +52,9 @@
 	--accent: var(--color-accent);
 	--color-accent-hover: light-dark(#2563eb, #93c5fd);
 	--accent-hover: var(--color-accent-hover);
+	/* Filled actions pair white/black text with at least 4.5:1 contrast. */
+	--color-action-primary: light-dark(#2563eb, #60a5fa);
+	--color-action-primary-hover: light-dark(#1d4ed8, #93c5fd);
 	--color-focus: var(--color-accent);
 
 	/* Border Colors */

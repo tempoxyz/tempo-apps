@@ -92,10 +92,8 @@ export function Button(props: Button.Props): React.JSX.Element {
 			{...rest}
 			className={cx(
 				'flex h-[28px] shrink-0 items-center gap-[6px] rounded-[7px] px-[10px] type-card cursor-pointer press-down transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-				// `text-white-black` is white on the light-mode accent and black on the
-				// lighter dark-mode accent, which is the readable pairing in both.
 				tone === 'primary'
-					? 'bg-accent font-medium text-white-black hover:bg-accent-hover'
+					? 'bg-action-primary font-medium text-white-black hover:bg-action-primary-hover'
 					: 'border border-card-border text-secondary hover:text-primary',
 				props.className,
 			)}
@@ -152,15 +150,15 @@ export declare namespace Chip {
 export function Fact(props: Fact.Props): React.JSX.Element {
 	return (
 		<div className="flex min-w-0 items-baseline gap-[8px]">
-			<span
+			<dt
 				className="w-[72px] shrink-0 type-card text-tertiary"
 				title={props.hint}
 			>
 				{props.label}
-			</span>
-			<span className="min-w-0 truncate type-card-data text-primary">
+			</dt>
+			<dd className="min-w-0 truncate type-card-data text-primary">
 				{props.children}
-			</span>
+			</dd>
 		</div>
 	)
 }

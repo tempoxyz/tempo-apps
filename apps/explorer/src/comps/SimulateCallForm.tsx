@@ -604,6 +604,7 @@ export function CalldataField(props: {
 			{showDecoded ? (
 				<div className="flex flex-col gap-[9px] rounded-[6px] border border-card-border bg-base-plane p-[9px]">
 					<select
+						aria-label="Function"
 						value={selector}
 						onChange={(event) => {
 							const next = event.target.value
