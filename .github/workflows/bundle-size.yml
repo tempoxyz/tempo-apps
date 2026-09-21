@@ -33,7 +33,7 @@ jobs:
       contents: write
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@0a60d757d0f4725a34f22f7b9ebf7b91b4b00bcf
+        uses: tempoxyz/gh-actions/actions/secure-runner@baf48ebcfcb26812085b8351125493b2ef8009ab # 2026-09-21T19-33-30Z-baf48ebc
 
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -122,7 +122,7 @@ jobs:
 
       - name: Post or update PR comment
         if: github.event_name == 'pull_request'
-        uses: tempoxyz/gh-actions/actions/pr-comment@0a60d757d0f4725a34f22f7b9ebf7b91b4b00bcf
+        uses: tempoxyz/gh-actions/actions/pr-comment@baf48ebcfcb26812085b8351125493b2ef8009ab # 2026-09-21T19-33-30Z-baf48ebc
         with:
           number: ${{ github.event.pull_request.number }}
           header: bundle-size-report
@@ -137,7 +137,7 @@ jobs:
 
       - name: Deploy to GitHub Pages (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: tempoxyz/gh-actions/vendor/peaceiris/actions-gh-pages@0a60d757d0f4725a34f22f7b9ebf7b91b4b00bcf
+        uses: tempoxyz/gh-actions/vendor/peaceiris/actions-gh-pages@baf48ebcfcb26812085b8351125493b2ef8009ab # 2026-09-21T19-33-30Z-baf48ebc
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apps/explorer/.sonda

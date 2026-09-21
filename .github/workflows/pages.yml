@@ -33,7 +33,7 @@ jobs:
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@0a60d757d0f4725a34f22f7b9ebf7b91b4b00bcf
+        uses: tempoxyz/gh-actions/actions/secure-runner@baf48ebcfcb26812085b8351125493b2ef8009ab # 2026-09-21T19-33-30Z-baf48ebc
 
       - name: "Checkout"
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -43,7 +43,7 @@ jobs:
           persist-credentials: false
 
       - name: "Generate Directory Listings"
-        uses: tempoxyz/gh-actions/vendor/jayanta525/github-pages-directory-listing@0a60d757d0f4725a34f22f7b9ebf7b91b4b00bcf
+        uses: tempoxyz/gh-actions/vendor/jayanta525/github-pages-directory-listing@baf48ebcfcb26812085b8351125493b2ef8009ab # 2026-09-21T19-33-30Z-baf48ebc
         with:
           FOLDER: apps/tokenlist/data #directory to generate index
 
@@ -67,7 +67,7 @@ jobs:
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@0a60d757d0f4725a34f22f7b9ebf7b91b4b00bcf
+        uses: tempoxyz/gh-actions/actions/secure-runner@baf48ebcfcb26812085b8351125493b2ef8009ab # 2026-09-21T19-33-30Z-baf48ebc
 
       - name: "Deploy Pages"
         id: deployment
