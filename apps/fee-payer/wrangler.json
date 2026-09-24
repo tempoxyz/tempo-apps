@@ -127,7 +127,7 @@
 					"name": "KeyedAddressRateLimiter",
 					"namespace_id": "889",
 					"simple": {
-						"limit": 1000,
+						"limit": 5000,
 						"period": 60
 					}
 				}
