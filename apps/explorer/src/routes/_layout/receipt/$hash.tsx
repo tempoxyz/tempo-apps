@@ -18,7 +18,7 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
 import { getReceiptResponseType } from '#lib/domain/receipt-export'
 import {
-	decodeKnownTransactionCall,
+	decodeKnownTransactionCalls,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
@@ -100,21 +100,15 @@ async function fetchReceiptDataUncached(params: {
 	})
 	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall = decodeKnownTransactionCall(transaction)
-
-	const fallbackEvents = knownCall
-		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-		: parsedEvents
+	const knownCalls = decodeKnownTransactionCalls(transaction, receipt.status)
 	const activityEvents = activitiesToKnownEvents(activities, {
 		portal: receipt.to,
 	})
 	const knownEvents = enrichReceiptEventAmounts(
 		selectTransactionDescriptionEvents({
 			activityEvents,
-			fallbackEvents,
-			knownCall,
+			fallbackEvents: parsedEvents,
+			knownCalls,
 		}),
 		getTokenMetadata,
 	)
@@ -133,7 +127,7 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	if (params.rpcUrl) return fetchReceiptDataUncached(params)
 
 	return withImmutableDataCache({
-		key: `receipt-detail:v1:${TEMPO_CHAIN_ID}:${params.hash.toLowerCase()}`,
+		key: `receipt-detail:v2:${TEMPO_CHAIN_ID}:${params.hash.toLowerCase()}`,
 		load: () => fetchReceiptDataUncached(params),
 		ttlSeconds: 300,
 	})

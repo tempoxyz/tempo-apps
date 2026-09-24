@@ -5,8 +5,8 @@ import { zeroHash } from 'viem'
 import { Addresses } from 'viem/tempo'
 import {
 	Abis,
+	getZonePortalActivityAbi,
 	zoneFactoryRegistryAbi,
-	zonePortalActivityAbi,
 	zonePortalReadAbi,
 } from '#lib/abis'
 import {
@@ -24,7 +24,7 @@ import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { getBatchedClient, getWagmiConfig } from '#wagmi.config'
 
 function portalQueryBuilder(chainId: number) {
-	return tempoQueryBuilder(chainId).withAbi(zonePortalActivityAbi)
+	return tempoQueryBuilder(chainId).withAbi(getZonePortalActivityAbi(chainId))
 }
 
 async function countDeposits(address: Address.Address, chainId: number) {

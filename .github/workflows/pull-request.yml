@@ -17,11 +17,16 @@ env:
 
 jobs:
   check-membership:
+    permissions:
+      id-token: write
     name: Check Org Membership
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     outputs:
       is-member: ${{ steps.check.outputs.is-member }}
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
+
       - name: Check if PR author is org member
         id: check
         env:
@@ -29,16 +34,18 @@ jobs:
           AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
         run: |
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
-            echo "is-member=true" >> $GITHUB_OUTPUT
+            echo "is-member=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           if [[ "$AUTHOR_ASSOCIATION" == "MEMBER" || "$AUTHOR_ASSOCIATION" == "OWNER" || "$AUTHOR_ASSOCIATION" == "COLLABORATOR" ]]; then
-            echo "is-member=true" >> $GITHUB_OUTPUT
+            echo "is-member=true" >> "$GITHUB_OUTPUT"
           else
-            echo "is-member=false" >> $GITHUB_OUTPUT
+            echo "is-member=false" >> "$GITHUB_OUTPUT"
           fi
 
   verify:
+    permissions:
+      id-token: write
     name: Verify
     uses: ./.github/workflows/verify.yml
 
@@ -48,6 +55,7 @@ jobs:
     if: needs.check-membership.outputs.is-member == 'true'
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       issues: write
       contents: read
       pull-requests: write
@@ -61,6 +69,8 @@ jobs:
             env: devnet
           - app: explorer
             env: nextfork
+          - app: explorer
+            env: zone-prover
           - app: explorer
             env: mainnet
           #### fee-payer
@@ -77,8 +87,11 @@ jobs:
       NODE_ENV: production
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
+
       - name: Clone repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -93,9 +106,9 @@ jobs:
           APP_NAME: ${{ matrix.app }}
         run: |
           if git diff --name-only "origin/${BASE_REF}...HEAD" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
-            echo "relevant=false" >> $GITHUB_OUTPUT
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
@@ -109,13 +122,20 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        run: pnpm build
         working-directory: apps/${{ matrix.app }}
+        env:
+          APP_NAME: ${{ matrix.app }}
+        run: |
+          if [[ "$APP_NAME" == "explorer" ]]; then
+            bash scripts/build.sh
+          else
+            pnpm build
+          fi
 
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
         id: deploy
-        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@6f436eb3a168279692739e8c0c9fdb52b94bfae7
+        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -123,20 +143,33 @@ jobs:
           environment: ${{ env.CLOUDFLARE_ENV }}
           command: versions upload
 
+      - name: Verify zone-prover preview
+        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
+        id: preview-health
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          test -n "$PREVIEW_URL"
+          curl --fail --silent --show-error --location \
+            --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+            --output /dev/null "$PREVIEW_URL"
+
       - name: Save Deployment Info
         if: always()
+        env:
+          RELEVANT_CHANGES: ${{ steps.changes.outputs.relevant }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
+          ALIAS_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
         shell: bash
         run: |
           mkdir -p deployment-info
 
-          if [[ "${{ steps.changes.outputs.relevant }}" != "true" ]]; then
+          if [[ "$RELEVANT_CHANGES" != "true" ]]; then
             STATUS="skipped"
             DEPLOYMENT_URL=""
             ALIAS_URL=""
-          elif [[ "${{ steps.deploy.outcome }}" == "success" ]]; then
+          elif [[ "${{ steps.deploy.outcome }}" == "success" && "${{ steps.preview-health.outcome }}" != "failure" ]]; then
             STATUS="success"
-            DEPLOYMENT_URL="${{ steps.deploy.outputs.deployment-url }}"
-            ALIAS_URL="${{ steps.deploy.outputs.pages-deployment-alias-url }}"
           else
             STATUS="failed"
             DEPLOYMENT_URL=""
@@ -158,7 +191,7 @@ jobs:
 
       - name: Upload Deployment Info
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: deployment-${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
           path: deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json
@@ -170,16 +203,20 @@ jobs:
     needs: [check-membership, deploy-preview]
     if: always() && needs.check-membership.outputs.is-member == 'true'
     permissions:
+      id-token: write
       pull-requests: write
       contents: read
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
+
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
       - name: Download All Deployment Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: deployment-*
           path: deployments

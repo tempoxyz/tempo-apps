@@ -35,6 +35,7 @@ describe('Explorer indexing controls', () => {
 		'explore.31318.tempo.xyz',
 		'explore.devnet.tempo.xyz',
 		'explore.nextfork.devnet.tempo.xyz',
+		'explore.zone-prover.devnet.tempo.xyz',
 		'explorer-devnet.example.workers.dev',
 		'explorer-nextfork.example.workers.dev',
 	])('marks %s as non-indexable', (hostname) => {

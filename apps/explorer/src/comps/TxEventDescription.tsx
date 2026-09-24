@@ -267,6 +267,7 @@ export namespace TxEventDescription {
 			events,
 			seenAs,
 			transformEvent,
+			renderDetails,
 			emptyContent = '…',
 			limit = 3,
 		} = props
@@ -288,12 +289,14 @@ export namespace TxEventDescription {
 		return (
 			<div className="flex flex-col gap-[4px] flex-1">
 				{displayEvents.map((event, index) => (
-					<TxEventDescription
-						key={`${event.type}-${index}`}
-						event={event}
-						seenAs={seenAs}
-						className="flex flex-row items-center gap-[6px]"
-					/>
+					<React.Fragment key={`${event.type}-${index}`}>
+						<TxEventDescription
+							event={event}
+							seenAs={seenAs}
+							className="flex flex-row items-center gap-[6px]"
+						/>
+						{renderDetails?.(event)}
+					</React.Fragment>
 				))}
 				{remainingCount > 0 && (
 					<button
@@ -322,6 +325,7 @@ export namespace TxEventDescription {
 			events: KnownEvent[]
 			seenAs?: AddressType.Address
 			transformEvent?: (event: KnownEvent) => KnownEvent
+			renderDetails?: (event: KnownEvent) => React.ReactNode
 			emptyContent?: React.ReactNode
 			limit?: number
 		}

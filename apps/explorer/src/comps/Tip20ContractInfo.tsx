@@ -5,6 +5,7 @@ import * as React from 'react'
 import { useChainId } from 'wagmi'
 import { Address as AddressComp } from '#comps/Address.tsx'
 import { CollapsibleSection } from '#comps/Contract.tsx'
+import { TokenFeeAmm } from '#comps/FeeAmmPools'
 import { getContractInfo } from '#lib/domain/contracts.ts'
 import { getApiUrl } from '#lib/env.ts'
 import ArrowUpRightIcon from '~icons/lucide/arrow-up-right'
@@ -83,6 +84,7 @@ export function Tip20TokenTabContent(
 
 	return (
 		<div className="flex flex-col [&>*:last-child]:border-b-transparent">
+			<TokenFeeAmm address={address} />
 			{/* Info Banner */}
 			<div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
 				<span className="whitespace-nowrap">TIP-20 Native Token</span>

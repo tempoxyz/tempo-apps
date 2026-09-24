@@ -1,615 +1,276 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import type { Address } from 'ox'
-import { useMemo, useState } from 'react'
-import type * as React from 'react'
-import { Addresses } from 'viem/tempo'
-import { Amount } from '#comps/Amount'
-import { DataGrid } from '#comps/DataGrid'
-import { Sections } from '#comps/Sections'
 import {
-	FormattedTimestamp,
-	TimeColumnHeader,
-	useTimeFormat,
-} from '#comps/TimeFormat'
+	createFileRoute,
+	Link,
+	stripSearchParams,
+} from '@tanstack/react-router'
+import * as Address from 'ox/Address'
+import { useId, useState } from 'react'
+import type * as React from 'react'
+import { FeeAmmPoolList, FeeAmmQueryState } from '#comps/FeeAmmPools'
+import { CopyButton } from '#comps/CopyButton'
+import { Pagination } from '#comps/Pagination'
+import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
-import { isTip20Address } from '#lib/domain/tip20'
+import { FEE_AMM_MAX_ROWS, feeAmmSearchSchema } from '#lib/fee-amm'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy, useMediaQuery } from '#lib/hooks'
-import { withLoaderTiming } from '#lib/profiling'
-import { feeAmmPoolsQueryOptions } from '#lib/queries'
-import type { FeeAmmPool } from '#lib/server/fee-amm'
-
-type TokenRoute = {
-	address: Address.Address
-	symbol: string | undefined
-	liquidityUsd: number
-}
-
-type DirectionalSummary = {
-	reserve: bigint
-	liquidityUsd: number
-	routes: TokenRoute[]
-}
-
-type FeeAmmTokenSummary = {
-	address: Address.Address
-	symbol: string | undefined
-	name: string | undefined
-	decimals: number | undefined
-	totalLiquidityUsd: number
-	asFeeToken: DirectionalSummary
-	asValidatorToken: DirectionalSummary
-}
+import ArrowRightIcon from '~icons/lucide/arrow-right'
+import XIcon from '~icons/lucide/x'
+import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
 
 export const Route = createFileRoute('/_layout/fee-amm')({
 	component: FeeAmmPage,
-	head: () => ({
-		meta: [{ title: 'Fee AMM – Tempo Explorer' }],
-	}),
-	loader: ({ context }) =>
-		withLoaderTiming('/_layout/fee-amm', async () =>
-			context.queryClient.ensureQueryData(feeAmmPoolsQueryOptions()),
-		),
+	errorComponent: () => (
+		<div className="mx-auto max-w-[1200px] px-4 pt-20 flex flex-col gap-3">
+			<h1 className="text-xl text-primary">Invalid Fee AMM link</h1>
+			<p className="text-sm text-secondary">
+				Check the token address and page number, or start from all pools.
+			</p>
+			<Link
+				to="/fee-amm"
+				search={{ page: 1, limit: 10 }}
+				className="text-accent hover:underline"
+			>
+				View all pools
+			</Link>
+		</div>
+	),
+	validateSearch: feeAmmSearchSchema,
+	search: { middlewares: [stripSearchParams({ page: 1, limit: 10 })] },
+	head: () => ({ meta: [{ title: 'Fee AMM – Tempo Explorer' }] }),
+	loaderDeps: ({ search }) => search,
+	// Prefetch caches failures too, letting the page render its retry state.
+	loader: ({ context, deps }) =>
+		context.queryClient.prefetchQuery(feeAmmPoolsQueryOptions(deps)),
 })
 
 function FeeAmmPage(): React.JSX.Element {
-	const loaderData = Route.useLoaderData()
-	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
-	const { data, isPending } = useQuery({
-		...feeAmmPoolsQueryOptions(),
-		initialData: loaderData,
-	})
-	const pools = data ?? []
-	const tokens = useMemo(() => aggregateTokens(pools), [pools])
-	const [activeSection, setActiveSection] = useState(0)
-
-	const isMobile = useMediaQuery('(max-width: 799px)')
-	const mode = isMobile ? 'stacked' : 'tabs'
-
-	const columns: DataGrid.Column[] = [
-		{ label: 'Pool', align: 'start', width: '2.5fr', minWidth: 240 },
-		{ label: 'Reserves', align: 'start', width: '2.5fr', minWidth: 280 },
-		{ label: 'Liquidity', align: 'start', width: 140 },
-		{
-			label: (
-				<TimeColumnHeader
-					label="Created"
-					formatLabel={formatLabel}
-					onCycle={cycleTimeFormat}
-					className="text-secondary hover:text-accent cursor-pointer transition-colors"
-				/>
-			),
-			align: 'end',
-			width: 170,
-		},
-		{
-			label: (
-				<TimeColumnHeader
-					label="Last Mint"
-					formatLabel={formatLabel}
-					onCycle={cycleTimeFormat}
-					className="text-secondary hover:text-accent cursor-pointer transition-colors"
-				/>
-			),
-			align: 'end',
-			width: 170,
-		},
-	]
-
-	const stackedColumns: DataGrid.Column[] = [
-		{ label: 'Pool', align: 'start', minWidth: 180 },
-		{ label: 'Reserves', align: 'start', minWidth: 200 },
-		{ label: 'Activity', align: 'end', minWidth: 130 },
-	]
+	const search = Route.useSearch()
+	const filterId = useId()
+	const errorId = useId()
+	const navigate = Route.useNavigate()
+	const query = useQuery(feeAmmPoolsQueryOptions(search))
+	const [filterError, setFilterError] = useState<string>()
+	const pools = query.data?.pools ?? []
+	const maxPage = Math.floor(FEE_AMM_MAX_ROWS / search.limit)
+	const sample = pools.find((pool) =>
+		[pool.userToken, pool.validatorToken].some(
+			(token) => token.toLowerCase() === search.token?.toLowerCase(),
+		),
+	)
+	const symbol =
+		sample?.userToken.toLowerCase() === search.token?.toLowerCase()
+			? sample?.userTokenSymbol
+			: sample?.validatorTokenSymbol
+	const liquidity =
+		pools.length && pools.every((pool) => pool.liquidityUsd !== null)
+			? pools.reduce((sum, pool) => sum + (pool.liquidityUsd ?? 0), 0)
+			: null
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
-			<div className="flex flex-col gap-2">
-				<h1 className="text-[32px] leading-none tracking-[-0.02em] font-semibold text-primary">
-					Fee AMM
-				</h1>
-				<p className="text-sm text-secondary max-w-[720px]">
-					Liquidity pools discovered from FeeAMM mint activity on{' '}
-					<Link
-						to="/address/$address"
-						params={{ address: Addresses.feeManager }}
-						className="text-accent hover:underline font-mono"
-					>
-						{Addresses.feeManager}
-					</Link>
-					.
-				</p>
+		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+			<div className="flex flex-wrap items-start justify-between gap-4">
+				<div className="flex flex-col gap-3 min-w-0">
+					<h1 className="flex items-center gap-3 text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
+						Fee AMM
+					</h1>
+					<p className="text-sm text-secondary max-w-[680px]">
+						Liquidity that converts transaction fees into a validator’s
+						preferred token. Each pool has a fee token and a validator token.
+					</p>
+					{search.token && (
+						<div className="flex flex-col gap-2 type-card">
+							<span className="inline-flex items-center gap-2 text-secondary">
+								<TokenIcon address={search.token} />
+								Filtered by {symbol ?? 'token'}
+							</span>
+							<Link
+								to="/address/$address"
+								params={{ address: search.token }}
+								search={{ tab: 'token' }}
+								className="text-xs font-mono text-accent hover:underline break-all"
+							>
+								{search.token}
+							</Link>
+						</div>
+					)}
+				</div>
+				<CopyButton
+					value={() => window.location.href}
+					ariaLabel="Copy link"
+					className="h-7 rounded-[7px] border border-card-border px-2.5 type-card cursor-pointer"
+				>
+					Copy link
+				</CopyButton>
 			</div>
+
+			<form
+				key={search.token ?? 'all'}
+				className="flex flex-wrap items-end gap-3"
+				onSubmit={(event) => {
+					event.preventDefault()
+					const value = String(
+						new FormData(event.currentTarget).get('token') ?? '',
+					).trim()
+					if (value && !Address.validate(value)) {
+						setFilterError('Enter a valid token contract address.')
+						return
+					}
+					setFilterError(undefined)
+					void navigate({
+						search: {
+							token: value ? Address.from(value.toLowerCase()) : undefined,
+							page: 1,
+							limit: search.limit,
+						},
+					})
+				}}
+			>
+				<div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+					<label htmlFor={filterId} className="type-card text-tertiary">
+						Find pools by token address
+					</label>
+					<input
+						id={filterId}
+						name="token"
+						defaultValue={search.token ?? ''}
+						placeholder="0x…"
+						spellCheck={false}
+						autoComplete="off"
+						aria-invalid={Boolean(filterError)}
+						aria-describedby={filterError ? errorId : undefined}
+						className="w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-3 py-2 font-mono text-base sm:text-[13px] text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-accent aria-invalid:border-negative"
+					/>
+				</div>
+				<button
+					type="submit"
+					className="inline-flex items-center gap-1.5 rounded-[7px] border border-card-border px-3 py-2 type-card text-secondary hover:text-primary cursor-pointer press-down transition-colors"
+				>
+					Find pools <ArrowRightIcon className="size-3.5" />
+				</button>
+				{search.token && (
+					<Link
+						to="/fee-amm"
+						search={{ page: 1, limit: search.limit }}
+						onClick={() => setFilterError(undefined)}
+						className="inline-flex items-center gap-1.5 py-2 type-card text-accent hover:underline"
+					>
+						<XIcon className="size-3.5" /> Clear filter
+					</Link>
+				)}
+				{filterError && (
+					<p id={errorId} role="alert" className="w-full text-sm text-negative">
+						{filterError}
+					</p>
+				)}
+			</form>
+
 			<Sections
-				mode={mode}
 				sections={[
 					{
-						title: 'Tokens',
-						totalItems: `${tokens.length}`,
-						itemsLabel: 'tokens',
-						autoCollapse: false,
+						title: 'Liquidity pools',
 						content: (
-							<div className="flex flex-col">
-								{tokens.length === 0 ? (
-									<div className="px-4 py-8 text-tertiary text-[13px] text-center">
-										No fee tokens found.
+							<>
+								<div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-b border-dashed border-card-border">
+									<div className="flex flex-col gap-1">
+										<p className="text-xs text-tertiary">
+											Most active first · Reserves shown in each token’s units
+										</p>
 									</div>
-								) : (
-									tokens.map((token) => (
-										<div
-											key={token.address}
-											className="flex flex-col gap-3 px-4 py-3 border-b border-dashed border-distinct last:border-b-0"
-										>
-											<TokenCell
-												address={token.address}
-												symbol={token.symbol}
-												name={token.name}
-											/>
-											<DirectionalBreakdown token={token} />
+									{query.data && pools.length > 0 && (
+										<div className="text-right">
+											<div className="type-card-data tabular-nums text-primary">
+												{liquidity === null
+													? 'Unavailable'
+													: PriceFormatter.format(liquidity)}
+											</div>
+											<div className="text-xs text-tertiary">
+												Estimated liquidity · {pools.length}{' '}
+												{pools.length === 1 ? 'pool' : 'pools'} on this page
+											</div>
 										</div>
-									))
+									)}
+								</div>
+								<FeeAmmQueryState query={query} />
+								{query.data && (
+									<>
+										<FeeAmmPoolList pools={pools} token={search.token} />
+										{pools.length === 0 && !query.isError && (
+											<div className="px-4 py-10 text-center text-sm text-secondary">
+												{search.page > 1
+													? 'No more pools on this page.'
+													: search.token
+														? 'No Fee AMM pools found for this token.'
+														: 'No Fee AMM pools found.'}
+											</div>
+										)}
+									</>
 								)}
-							</div>
-						),
-					},
-					{
-						title: 'Pools',
-						totalItems: `${pools.length}`,
-						itemsLabel: 'pools',
-						autoCollapse: false,
-						content: (
-							<DataGrid
-								columns={{ stacked: stackedColumns, tabs: columns }}
-								items={(gridMode) =>
-									pools.map((pool) => ({
-										cells:
-											gridMode === 'stacked'
-												? [
-														<PoolPairCell key="pool" pool={pool} compact />,
-														<PoolReservesCell key="reserves" pool={pool} />,
-														[
-															renderTimestamp(
-																pool.latestMintAt ?? pool.createdAt,
-																timeFormat,
-															),
-															<span
-																key="mints"
-																className="text-tertiary text-nowrap"
-															>
-																{pool.mintCount} mint
-																{pool.mintCount === 1 ? '' : 's'}
-															</span>,
-														],
-													]
-												: [
-														<PoolPairCell key="pool" pool={pool} />,
-														<PoolReservesCell key="reserves" pool={pool} />,
-														[
-															<span
-																key="supply"
-																className="font-mono text-secondary tabular-nums"
-																title={PriceFormatter.format(pool.liquidityUsd)}
-															>
-																{PriceFormatter.format(pool.liquidityUsd, {
-																	format: 'short',
-																})}
-															</span>,
-															<span
-																key="mints"
-																className="text-tertiary text-nowrap"
-															>
-																{pool.mintCount} mint
-																{pool.mintCount === 1 ? '' : 's'}
-															</span>,
-														],
-														renderTimestamp(pool.createdAt, timeFormat),
-														renderTimestamp(pool.latestMintAt, timeFormat),
-													],
-									}))
-								}
-								totalItems={pools.length}
-								page={1}
-								loading={isPending}
-								itemsLabel="pools"
-								itemsPerPage={pools.length || 10}
-								emptyState="No Fee AMM pools found."
-								pagination={false}
-							/>
+								<nav
+									aria-label="Fee AMM pagination"
+									className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-dashed border-card-border type-card"
+								>
+									<div className="flex items-center gap-2">
+										<Pagination.Simple
+											page={search.page}
+											pages={{
+												hasMore:
+													Boolean(query.data?.hasMore) &&
+													!query.isFetching &&
+													!query.isError &&
+													search.page < maxPage,
+											}}
+											fetching={query.isFetching}
+											showPageLabel={false}
+										/>
+										<span
+											className="px-2 text-secondary tabular-nums"
+											aria-live="polite"
+										>
+											Page {search.page}
+										</span>
+									</div>
+									<label className="flex items-center gap-2 text-xs text-secondary">
+										Pools per page
+										<select
+											aria-label="Pools per page"
+											value={search.limit}
+											onChange={(event) =>
+												void navigate({
+													search: {
+														...search,
+														page: 1,
+														limit: Number(event.target.value) as 10 | 25 | 50,
+													},
+													resetScroll: false,
+												})
+											}
+											className="h-7 rounded-[6px] border border-card-border bg-base-plane px-2 text-primary"
+										>
+											{[10, 25, 50].map((limit) => (
+												<option key={limit} value={limit}>
+													{limit}
+												</option>
+											))}
+										</select>
+									</label>
+								</nav>
+								{search.page >= maxPage && query.data?.hasMore && (
+									<p className="px-4 pb-4 text-sm text-secondary">
+										Showing the first 10,000 pools. Filter by token address to
+										narrow the results.
+									</p>
+								)}
+							</>
 						),
 					},
 				]}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
 			/>
-		</div>
-	)
-}
-
-function renderTimestamp(
-	timestamp: number | null,
-	format: ReturnType<typeof useTimeFormat>['timeFormat'],
-): React.ReactNode {
-	if (timestamp == null) {
-		return <span className="text-tertiary">—</span>
-	}
-
-	return (
-		<FormattedTimestamp
-			timestamp={BigInt(timestamp)}
-			format={format}
-			className="font-mono text-secondary whitespace-nowrap"
-		/>
-	)
-}
-
-export function PoolPairCell(props: PoolPairCell.Props): React.JSX.Element {
-	const { pool, compact = false } = props
-	const { copy, notifying } = useCopy()
-
-	return (
-		<div className="flex flex-col gap-2 min-w-0">
-			<div className="inline-flex items-center gap-2 min-w-0">
-				<TokenIcon address={pool.userToken} />
-				<PoolTokenLink
-					address={pool.userToken}
-					label={pool.userTokenSymbol ?? pool.userTokenName ?? pool.userToken}
-				/>
-				<span className="text-tertiary">→</span>
-				<TokenIcon address={pool.validatorToken} />
-				<PoolTokenLink
-					address={pool.validatorToken}
-					label={
-						pool.validatorTokenSymbol ??
-						pool.validatorTokenName ??
-						pool.validatorToken
-					}
-				/>
-			</div>
-			{!compact ? (
-				<button
-					type="button"
-					onClick={() => copy(pool.poolId)}
-					className={`text-xs font-mono text-left truncate transition-colors ${
-						notifying
-							? 'text-positive'
-							: 'text-tertiary hover:text-accent hover:underline'
-					}`}
-					title={notifying ? 'Copied pool ID' : 'Copy pool ID'}
-				>
-					{pool.poolId}
-				</button>
-			) : null}
-		</div>
-	)
-}
-
-export declare namespace PoolPairCell {
-	type Props = {
-		pool: FeeAmmPool
-		compact?: boolean | undefined
-	}
-}
-
-export function PoolReservesCell(
-	props: PoolReservesCell.Props,
-): React.JSX.Element {
-	const { pool } = props
-
-	return (
-		<div className="flex flex-col items-start gap-1 min-w-0">
-			<Amount
-				value={pool.reserveUserToken}
-				token={pool.userToken}
-				decimals={pool.userTokenDecimals}
-				symbol={pool.userTokenSymbol}
-				short
-				maxWidth={14}
-			/>
-			<Amount
-				value={pool.reserveValidatorToken}
-				token={pool.validatorToken}
-				decimals={pool.validatorTokenDecimals}
-				symbol={pool.validatorTokenSymbol}
-				short
-				maxWidth={14}
-			/>
-		</div>
-	)
-}
-
-export declare namespace PoolReservesCell {
-	type Props = {
-		pool: FeeAmmPool
-	}
-}
-
-export function PoolTokenLink(props: PoolTokenLink.Props): React.JSX.Element {
-	const { address, label } = props
-	const to = isTip20Address(address) ? '/token/$address' : '/address/$address'
-
-	return (
-		<Link
-			to={to}
-			params={{ address }}
-			preload="intent"
-			className="text-accent hover:underline truncate"
-			title={address}
-		>
-			{label}
-		</Link>
-	)
-}
-
-export declare namespace PoolTokenLink {
-	type Props = {
-		address: Address.Address
-		label: string
-	}
-}
-
-function emptyDirectional() {
-	return {
-		reserve: 0n,
-		liquidityUsd: 0,
-		routes: new Map<string, TokenRoute>(),
-	}
-}
-
-function aggregateTokens(pools: FeeAmmPool[]): FeeAmmTokenSummary[] {
-	const map = new Map<
-		string,
-		{
-			address: Address.Address
-			symbol: string | undefined
-			name: string | undefined
-			decimals: number | undefined
-			totalLiquidityUsd: number
-			asFeeToken: ReturnType<typeof emptyDirectional>
-			asValidatorToken: ReturnType<typeof emptyDirectional>
-		}
-	>()
-
-	function getOrCreate(
-		key: string,
-		address: Address.Address,
-		symbol: string | undefined,
-		name: string | undefined,
-		decimals: number | undefined,
-	) {
-		let entry = map.get(key)
-		if (!entry) {
-			entry = {
-				address,
-				symbol,
-				name,
-				decimals,
-				totalLiquidityUsd: 0,
-				asFeeToken: emptyDirectional(),
-				asValidatorToken: emptyDirectional(),
-			}
-			map.set(key, entry)
-		}
-		return entry
-	}
-
-	for (const pool of pools) {
-		const userKey = pool.userToken.toLowerCase()
-		const valKey = pool.validatorToken.toLowerCase()
-
-		const userEntry = getOrCreate(
-			userKey,
-			pool.userToken,
-			pool.userTokenSymbol,
-			pool.userTokenName,
-			pool.userTokenDecimals,
-		)
-		userEntry.totalLiquidityUsd += pool.liquidityUsd
-		userEntry.asFeeToken.reserve += pool.reserveUserToken
-		userEntry.asFeeToken.liquidityUsd += pool.liquidityUsd
-		const existingFeeRoute = userEntry.asFeeToken.routes.get(valKey)
-		userEntry.asFeeToken.routes.set(valKey, {
-			address: pool.validatorToken,
-			symbol: pool.validatorTokenSymbol,
-			liquidityUsd: (existingFeeRoute?.liquidityUsd ?? 0) + pool.liquidityUsd,
-		})
-
-		const valEntry = getOrCreate(
-			valKey,
-			pool.validatorToken,
-			pool.validatorTokenSymbol,
-			pool.validatorTokenName,
-			pool.validatorTokenDecimals,
-		)
-		valEntry.totalLiquidityUsd += pool.liquidityUsd
-		valEntry.asValidatorToken.reserve += pool.reserveValidatorToken
-		valEntry.asValidatorToken.liquidityUsd += pool.liquidityUsd
-		const existingValRoute = valEntry.asValidatorToken.routes.get(userKey)
-		valEntry.asValidatorToken.routes.set(userKey, {
-			address: pool.userToken,
-			symbol: pool.userTokenSymbol,
-			liquidityUsd: (existingValRoute?.liquidityUsd ?? 0) + pool.liquidityUsd,
-		})
-	}
-
-	return Array.from(map.values())
-		.map((entry) => ({
-			address: entry.address,
-			symbol: entry.symbol,
-			name: entry.name,
-			decimals: entry.decimals,
-			totalLiquidityUsd: entry.totalLiquidityUsd,
-			asFeeToken: {
-				reserve: entry.asFeeToken.reserve,
-				liquidityUsd: entry.asFeeToken.liquidityUsd,
-				routes: Array.from(entry.asFeeToken.routes.values()).sort(
-					(a, b) => b.liquidityUsd - a.liquidityUsd,
-				),
-			},
-			asValidatorToken: {
-				reserve: entry.asValidatorToken.reserve,
-				liquidityUsd: entry.asValidatorToken.liquidityUsd,
-				routes: Array.from(entry.asValidatorToken.routes.values()).sort(
-					(a, b) => b.liquidityUsd - a.liquidityUsd,
-				),
-			},
-		}))
-		.sort((a, b) => b.totalLiquidityUsd - a.totalLiquidityUsd)
-}
-
-function TokenCell(props: {
-	address: Address.Address
-	symbol: string | undefined
-	name: string | undefined
-}): React.JSX.Element {
-	const { address, symbol, name } = props
-	const to = isTip20Address(address) ? '/token/$address' : '/address/$address'
-
-	return (
-		<div className="inline-flex items-center gap-2 min-w-0">
-			<TokenIcon address={address} />
-			<Link
-				to={to}
-				params={{ address }}
-				preload="intent"
-				className="text-accent hover:underline truncate"
-				title={address}
-			>
-				{symbol ?? name ?? address}
-			</Link>
-		</div>
-	)
-}
-
-function DirectionalBreakdown(props: {
-	token: FeeAmmTokenSummary
-}): React.JSX.Element {
-	const { token } = props
-
-	return (
-		<div className="flex flex-col gap-3">
-			<DirectionalRow
-				label="As Fee Token"
-				reserve={token.asFeeToken.reserve}
-				tokenAddress={token.address}
-				decimals={token.decimals}
-				symbol={token.symbol}
-				liquidityUsd={token.asFeeToken.liquidityUsd}
-				routes={token.asFeeToken.routes}
-			/>
-			<DirectionalRow
-				label="As Validator Token"
-				reserve={token.asValidatorToken.reserve}
-				tokenAddress={token.address}
-				decimals={token.decimals}
-				symbol={token.symbol}
-				liquidityUsd={token.asValidatorToken.liquidityUsd}
-				routes={token.asValidatorToken.routes}
-			/>
-		</div>
-	)
-}
-
-function DirectionalRow(props: {
-	label: string
-	reserve: bigint
-	tokenAddress: Address.Address
-	decimals: number | undefined
-	symbol: string | undefined
-	liquidityUsd: number
-	routes: TokenRoute[]
-}): React.JSX.Element {
-	const {
-		label,
-		reserve,
-		tokenAddress,
-		decimals,
-		symbol,
-		liquidityUsd,
-		routes,
-	} = props
-	const hasActivity = routes.length > 0
-
-	return (
-		<div className="flex flex-col gap-2 rounded-lg border border-dashed border-distinct px-3 py-2.5">
-			<span className="text-xs font-medium text-primary">{label}</span>
-			<div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-6">
-				{hasActivity ? (
-					<>
-						<div className="flex flex-col gap-0.5 min-w-[140px]">
-							<span className="text-[11px] text-tertiary">Reserves</span>
-							<Amount
-								value={reserve}
-								token={tokenAddress}
-								decimals={decimals}
-								symbol={symbol}
-								short
-								maxWidth={14}
-							/>
-						</div>
-						<div className="flex flex-col gap-0.5 min-w-[100px]">
-							<span className="text-[11px] text-tertiary">Liquidity</span>
-							<span
-								className="text-secondary tabular-nums text-[13px] font-mono"
-								title={PriceFormatter.format(liquidityUsd)}
-							>
-								{PriceFormatter.format(liquidityUsd, { format: 'short' })}
-							</span>
-						</div>
-						<div className="flex flex-col gap-0.5 min-w-0 flex-1">
-							<span className="text-[11px] text-tertiary">Routes</span>
-							<RoutesCell routes={routes} />
-						</div>
-					</>
-				) : (
-					<>
-						<div className="min-w-[140px]" />
-						<div className="min-w-[100px]">
-							<span className="text-xs text-tertiary">No pools</span>
-						</div>
-					</>
-				)}
-			</div>
-		</div>
-	)
-}
-
-const MAX_VISIBLE_ROUTES = 5
-
-function RoutesCell(props: { routes: TokenRoute[] }): React.JSX.Element {
-	const { routes } = props
-	const visible = routes.slice(0, MAX_VISIBLE_ROUTES)
-	const overflow = routes.length - MAX_VISIBLE_ROUTES
-
-	return (
-		<div className="flex flex-wrap items-center gap-y-1">
-			{visible.map((route, i) => {
-				const to = isTip20Address(route.address)
-					? '/token/$address'
-					: '/address/$address'
-				const isLast = i === visible.length - 1 && overflow <= 0
-				return (
-					<span
-						key={route.address}
-						className="inline-flex items-center gap-1 mr-1"
-					>
-						<TokenIcon address={route.address} className="size-4" />
-						<Link
-							to={to}
-							params={{ address: route.address }}
-							preload="intent"
-							className="text-accent hover:underline text-sm"
-							title={route.address}
-						>
-							{route.symbol ?? route.address}
-						</Link>
-						{!isLast && <span className="text-tertiary ml-1">·</span>}
-					</span>
-				)
-			})}
-			{overflow > 0 && (
-				<span className="text-tertiary text-sm">+ {overflow} more</span>
-			)}
+			<p className="text-xs text-tertiary">
+				USD estimates assume USD-denominated tokens trade at par. Pool reserves
+				do not guarantee fee payment: token policies and the validator’s fee
+				token also apply.
+			</p>
 		</div>
 	)
 }

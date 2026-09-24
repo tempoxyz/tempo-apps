@@ -1,5 +1,6 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
+import { ZONE_PROVER_CHAIN_ID } from './zone-prover'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
@@ -219,6 +220,21 @@ export const zonePortalActivityAbi = parseAbi([
 	'event WithdrawalProcessed(address indexed to, bytes32 indexed senderTag, address token, uint128 amount, bool callbackSuccess)',
 ])
 
+// T13 adds the processed token count to BatchSubmitted, changing its topic.
+// Keep the earlier query signature for networks that have not activated T13.
+const zonePortalT13BatchAbi = parseAbi([
+	'event BatchSubmitted(uint64 indexed withdrawalBatchIndex, uint256 indexed withdrawalQueueIndex, bytes32 nextProcessedDepositQueueHash, bytes32 nextBlockHash, bytes32 withdrawalQueueHash, uint64 lastProcessedDepositNumber, uint64 lastProcessedEnabledTokenCount)',
+])
+export function getZonePortalActivityAbi(chainId: number) {
+	return [
+		zonePortalActivityAbi[0],
+		chainId === ZONE_PROVER_CHAIN_ID
+			? zonePortalT13BatchAbi[0]
+			: zonePortalActivityAbi[1],
+		zonePortalActivityAbi[2],
+	] as const
+}
+
 export const zonePortalReadAbi = parseAbi([
 	'function enabledTokenCount() view returns (uint256)',
 	'function enabledTokenAt(uint256 index) view returns (address)',
@@ -229,7 +245,30 @@ export const zoneFactoryRegistryAbi = parseAbi([
 ])
 
 export const zoneMessengerAbi = ViemTempoAbis.zoneMessenger
-export const zoneVerifierAbi = ViemTempoAbis.zoneVerifier
+
+// T13 adds TokenEnablementTransition to both batch calls. Keep the earlier
+// viem signatures for historical traces and networks that have not activated T13.
+// Source: tempoxyz/zones@a403d8cd, runtime/interfaces/IZone.sol.
+const zoneT13Transitions = [
+	'struct BlockTransition { bytes32 prevBlockHash; bytes32 nextBlockHash; }',
+	'struct DepositQueueTransition { bytes32 prevProcessedHash; bytes32 nextProcessedHash; uint64 prevDepositNumber; uint64 nextDepositNumber; }',
+	'struct TokenEnablementTransition { uint64 prevProcessedTokenCount; uint64 nextProcessedTokenCount; }',
+] as const
+
+const zoneVerifierT13Abi = parseAbi([
+	...zoneT13Transitions,
+	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
+])
+
+const zonePortalT13FunctionsAbi = parseAbi([
+	...zoneT13Transitions,
+	'function submitBatch(uint64 tempoBlockNumber, uint64 recentTempoBlockNumber, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof, uint256 zoneHeight, bytes[] signatures)',
+])
+
+export const zoneVerifierAbi = [
+	...ViemTempoAbis.zoneVerifier,
+	...zoneVerifierT13Abi,
+] as const
 
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex
 export const zoneFactoryAbi = ViemTempoAbis.zoneFactory
@@ -237,6 +276,8 @@ export const zoneOutboxAbi = ViemTempoAbis.zoneOutbox
 export const zonePortalAbi = [
 	...legacyZonePortalEventsAbi,
 	...ViemTempoAbis.zonePortal,
+	...zonePortalT13BatchAbi,
+	...zonePortalT13FunctionsAbi,
 ] as const
 
 export const receivePolicyGuardAbi = parseAbi([

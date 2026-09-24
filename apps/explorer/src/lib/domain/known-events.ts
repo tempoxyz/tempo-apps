@@ -5,9 +5,11 @@ import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import {
 	decodeAbiParameters,
 	decodeFunctionData,
+	keccak256,
 	parseEventLogs,
 	toEventSelector,
 	zeroAddress,
+	zeroHash,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
 import {
@@ -912,16 +914,14 @@ function createDetectors(
 						{ type: 'hex', value: args.nextProcessedDepositQueueHash },
 					],
 					['Next Block', { type: 'hex', value: args.nextBlockHash }],
-					[
-						'Withdrawal Queue',
-						{ type: 'hex', value: args.withdrawalQueueHash },
-					],
+					zoneBatchWithdrawalNote(args.withdrawalQueueHash),
 				]
 				if ('withdrawalQueueIndex' in args) {
-					note.splice(1, 0, [
-						'Withdrawal Queue Index',
-						{ type: 'number', value: args.withdrawalQueueIndex },
-					])
+					if (args.withdrawalQueueHash !== zeroHash)
+						note.splice(1, 0, [
+							'Withdrawal Queue Index',
+							{ type: 'number', value: args.withdrawalQueueIndex },
+						])
 					note.push([
 						'Last Processed Deposit',
 						{ type: 'number', value: args.lastProcessedDepositNumber },
@@ -932,6 +932,17 @@ function createDetectors(
 					type: 'zone batch submitted',
 					parts: [{ type: 'action', value: 'Submit Zone Batch' }],
 					note,
+					meta: {
+						zoneBatch: {
+							portal: address,
+							nextBlockHash: args.nextBlockHash,
+							nextProcessedDepositQueueHash: args.nextProcessedDepositQueueHash,
+							withdrawalQueueHash: args.withdrawalQueueHash,
+						},
+					},
+					evidence: [
+						{ kind: 'log', address, index: event.logIndex ?? undefined },
+					],
 				}
 			}
 
@@ -1982,7 +1993,19 @@ export interface KnownEvent {
 	meta?: {
 		from?: Address.Address
 		to?: Address.Address
+		zoneBatch?: {
+			portal: Address.Address
+			nextBlockHash: Hex.Hex
+			nextProcessedDepositQueueHash: Hex.Hex
+			withdrawalQueueHash: Hex.Hex
+		}
 	}
+	evidence?: readonly {
+		kind: 'call' | 'log'
+		address: Address.Address
+		index?: number | undefined
+		inputHash?: Hex.Hex | undefined
+	}[]
 	totalAmount?: Amount
 	failed?: boolean
 }
@@ -2946,34 +2969,30 @@ function decodeZonePortalCall(
 				parts: [{ type: 'action', value: `Pause ${zoneName} Portal` }],
 			}
 		case 'submitBatch': {
-			const [
-				tempoBlockNumber,
-				_recentTempoBlockNumber,
-				_blockTransition,
-				_depositQueueTransition,
-				withdrawalQueueHash,
-				_verifierConfig,
-				_proof,
-				zoneHeight,
-			] = args as [
-				bigint,
-				bigint,
-				unknown,
-				unknown,
-				Hex.Hex,
-				Hex.Hex,
-				Hex.Hex,
-				bigint,
-				readonly Hex.Hex[],
-			]
+			// T13 inserts tokenEnablementTransition after depositQueueTransition.
+			const offset = args.length === 10 ? 1 : 0
+			const tempoBlockNumber = args[0] as bigint
+			const withdrawalQueueHash = args[4 + offset] as Hex.Hex
+			const zoneHeight = args[7 + offset] as bigint
 			return {
 				type: 'zone batch submission',
 				parts: [{ type: 'action', value: 'Submit Zone Batch' }],
 				note: [
 					['Tempo Block', { type: 'number', value: tempoBlockNumber }],
 					['Zone Height', { type: 'number', value: zoneHeight }],
-					['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
+					zoneBatchWithdrawalNote(withdrawalQueueHash),
 				],
+				meta: {
+					zoneBatch: {
+						portal: to,
+						nextBlockHash: (args[2] as { nextBlockHash: Hex.Hex })
+							.nextBlockHash,
+						nextProcessedDepositQueueHash: (
+							args[3] as { nextProcessedHash: Hex.Hex }
+						).nextProcessedHash,
+						withdrawalQueueHash,
+					},
+				},
 			}
 		}
 		default:
@@ -3089,18 +3108,50 @@ export function decodeKnownCall(
 export function decodeKnownTransactionCall(
 	transaction: TransactionLike,
 ): KnownEvent | null {
-	const queue: TransactionLike[] = [transaction]
+	return decodeKnownTransactionCalls(transaction)[0] ?? null
+}
 
-	while (queue.length > 0) {
-		const call = queue.shift()
-		if (!call) break
+/** Decode each top-level operation once; Tempo's to/input alias its first call. */
+export function decodeKnownTransactionCalls(
+	transaction: TransactionLike,
+	status?: TransactionReceipt['status'],
+): KnownEvent[] {
+	const calls = transaction.calls?.length ? transaction.calls : [transaction]
+	return calls.flatMap((call, index) => {
 		const input = call.input ?? call.data
 		if (call.to && input && input !== '0x') {
 			const decoded = decodeKnownCall(call.to, input)
-			if (decoded) return decoded
+			if (decoded)
+				return [
+					{
+						...decoded,
+						evidence: [
+							{
+								kind: 'call' as const,
+								address: call.to,
+								index,
+								inputHash: keccak256(input),
+							},
+						],
+						...(status === 'reverted'
+							? {
+									failed: true,
+									parts: decoded.parts.map((part) =>
+										part.type === 'action'
+											? { ...part, value: `${part.value} (failed)` }
+											: part,
+									),
+								}
+							: {}),
+					},
+				]
 		}
-		if (call.calls) queue.push(...call.calls)
-	}
+		return []
+	})
+}
 
-	return null
+function zoneBatchWithdrawalNote(hash: Hex.Hex): [string, KnownEventPart] {
+	return hash === zeroHash
+		? ['Withdrawals', { type: 'text', value: 'None' }]
+		: ['Withdrawal Queue', { type: 'hex', value: hash }]
 }

@@ -27,12 +27,16 @@ jobs:
     name: Bundle Size
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     permissions:
+      id-token: write
       actions: write
       pull-requests: write
       contents: write
     steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
+
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: "recursive"
           persist-credentials: false
@@ -47,7 +51,7 @@ jobs:
       - name: Restore baseline from cache
         if: github.event_name == 'pull_request'
         id: cache-restore
-        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
@@ -75,7 +79,7 @@ jobs:
 
       - name: Save bundle stats to cache (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-${{ github.sha }}
@@ -89,7 +93,7 @@ jobs:
 
       - name: Save bundle stats with stable key (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
@@ -118,14 +122,14 @@ jobs:
 
       - name: Post or update PR comment
         if: github.event_name == 'pull_request'
-        uses: tempoxyz/gh-actions/actions/pr-comment@ab45d76f6e7420a094281a22aee1973ecc0754f8
+        uses: tempoxyz/gh-actions/actions/pr-comment@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
         with:
           number: ${{ github.event.pull_request.number }}
           header: bundle-size-report
           path: apps/explorer/bundle-report.md
 
       - name: Upload Sonda report artifact
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: sonda-bundle-report-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('main-{0}', github.sha) }}
           path: apps/explorer/.sonda/
@@ -133,7 +137,7 @@ jobs:
 
       - name: Deploy to GitHub Pages (main only)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: tempoxyz/gh-actions/vendor/peaceiris/actions-gh-pages@6f436eb3a168279692739e8c0c9fdb52b94bfae7
+        uses: tempoxyz/gh-actions/vendor/peaceiris/actions-gh-pages@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./apps/explorer/.sonda

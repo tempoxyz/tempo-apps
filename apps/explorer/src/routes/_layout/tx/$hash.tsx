@@ -33,9 +33,11 @@ import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
+import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { withKeyAuthorizationDescription } from '#lib/domain/access-key'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
@@ -148,7 +150,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			? selectTransactionDescriptionEvents({
 					activityEvents: loaderData.activityEvents,
 					fallbackEvents: loaderData.knownEvents ?? [],
-					knownCall: loaderData.knownCall,
+					knownCalls: loaderData.knownCalls,
 				})
 			: []
 		const ogImageUrl = loaderData
@@ -187,7 +189,9 @@ function RouteComponent() {
 		activityEvents,
 		block,
 		feeBreakdown,
-		knownCall,
+		keyAuthorization,
+		keyTokenMetadata,
+		knownCalls,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
@@ -224,7 +228,7 @@ function RouteComponent() {
 	const descriptionEvents = selectTransactionDescriptionEvents({
 		activityEvents,
 		fallbackEvents: displayKnownEvents,
-		knownCall,
+		knownCalls,
 	})
 
 	useKeyboardShortcut({
@@ -284,6 +288,8 @@ function RouteComponent() {
 				transaction={transaction}
 				block={block}
 				knownEvents={descriptionEvents}
+				keyAuthorization={keyAuthorization}
+				keyTokenMetadata={keyTokenMetadata}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
@@ -370,14 +376,12 @@ function RouteComponent() {
 				to={receipt.to}
 				className="self-start"
 			/>
-			<div className="flex min-w-0 flex-col gap-[14px]">
-				<Sections
-					mode={mode}
-					sections={sections}
-					activeSection={activeSection}
-					onSectionChange={setActiveSection}
-				/>
-			</div>
+			<Sections
+				mode={mode}
+				sections={sections}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
+			/>
 		</div>
 	)
 }
@@ -387,6 +391,8 @@ function OverviewSection(props: {
 	transaction: TxData['transaction']
 	block: TxData['block']
 	knownEvents: KnownEvent[]
+	keyAuthorization: TxData['keyAuthorization']
+	keyTokenMetadata: TxData['keyTokenMetadata']
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
 }) {
@@ -395,6 +401,8 @@ function OverviewSection(props: {
 		transaction,
 		block,
 		knownEvents,
+		keyAuthorization,
+		keyTokenMetadata,
 		feeBreakdown,
 		balanceChangesData,
 	} = props
@@ -429,14 +437,29 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
-	// knownEvents already has decoded calls prepended (from the loader)
+	const description = withKeyAuthorizationDescription(
+		knownEvents,
+		transaction.from,
+		keyAuthorization,
+	)
 
 	return (
 		<div className="flex flex-col">
-			{knownEvents.length > 0 && (
-				<InfoRow label="Description">
+			{description.events.length > 0 && (
+				<InfoRow label="Description" stackOnMobile={Boolean(keyAuthorization)}>
 					<div className="flex flex-col gap-[6px]">
-						<TxEventDescription.ExpandGroup events={knownEvents} />
+						<TxEventDescription.ExpandGroup
+							events={description.events}
+							renderDetails={(event) =>
+								keyAuthorization && event === description.authorizationEvent ? (
+									<TxKeyAuthorization.Disclosure
+										key={keyAuthorization.address}
+										authorization={keyAuthorization}
+										tokenMetadata={keyTokenMetadata}
+									/>
+								) : null
+							}
+						/>
 						{memos.length > 0 && (
 							<div className="flex flex-col gap-[4px] min-w-0">
 								{memos.map((memo, index) => (
@@ -885,6 +908,7 @@ function EventGroupCell(props: {
 				<button
 					type="button"
 					onClick={onToggle}
+					aria-expanded={expanded}
 					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded

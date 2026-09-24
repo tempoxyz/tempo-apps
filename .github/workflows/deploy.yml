@@ -29,6 +29,8 @@ env:
 
 jobs:
   deploy:
+    permissions:
+      id-token: write
     name: ${{ inputs.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -37,7 +39,10 @@ jobs:
         env: ${{ fromJson(inputs.environments) }}
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -54,11 +59,11 @@ jobs:
           # if workflow_dispatch, always deploy all
           #
           if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
-            echo "relevant=false" >> $GITHUB_OUTPUT
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install dependencies
@@ -86,7 +91,7 @@ jobs:
 
       - name: Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
-        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@6f436eb3a168279692739e8c0c9fdb52b94bfae7
+        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@d39baa2b43f5eba5d261c047521a4fbd56101129 # 2026-09-23T04-31-11Z-d39baa2b
         env:
           NODE_ENV: production
           CLOUDFLARE_ENV: ${{ matrix.env || '' }}
