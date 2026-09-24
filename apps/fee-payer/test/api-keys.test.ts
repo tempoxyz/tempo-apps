@@ -54,6 +54,26 @@ async function sponsoredTransactionRequest(key: string, to: `0x${string}`) {
 
 describe('admin API key management', () => {
 	describe('authentication', () => {
+		it('fails closed when the admin secret is missing', async () => {
+			const adminSecret = env.ADMIN_SECRET
+			Reflect.deleteProperty(env, 'ADMIN_SECRET')
+
+			try {
+				const response = await exports.default.fetch(
+					new Request('https://fee-payer.test/admin/keys', {
+						method: 'GET',
+						headers: { Authorization: 'Bearer undefined' },
+					}),
+				)
+				expect(response.status).toBe(503)
+				expect(await response.json()).toEqual({
+					error: 'Service misconfigured',
+				})
+			} finally {
+				Reflect.set(env, 'ADMIN_SECRET', adminSecret)
+			}
+		})
+
 		it('rejects requests without Authorization header', async () => {
 			const response = await exports.default.fetch(
 				new Request('https://fee-payer.test/admin/keys', {
