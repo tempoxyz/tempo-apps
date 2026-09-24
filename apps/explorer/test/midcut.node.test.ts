@@ -3,10 +3,6 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { Midcut } from '#comps/Midcut'
 
-function textContentFromMarkup(markup: string) {
-	return markup.replace(/<[^>]*>/g, '')
-}
-
 describe('Midcut', () => {
 	it('keeps the full value as contiguous searchable text', () => {
 		const value =
@@ -21,8 +17,7 @@ describe('Midcut', () => {
 			}),
 		)
 
-		expect(textContentFromMarkup(markup)).toBe(value)
-		expect(markup).toContain(`>${value}<`)
+		expect(markup.match(/>[^<]+</g)).toEqual([`>${value}<`])
 		expect(markup).not.toContain('<style')
 		expect(markup).toContain('data-text="0x3"')
 		expect(markup).toContain('data-text="d789254740b87080b5bb61d2a2f907b9"')
