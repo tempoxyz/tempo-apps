@@ -90,6 +90,7 @@ export function getExplorerWebApplication(tempoEnv: TempoEnv) {
 		'@context': 'https://schema.org',
 		'@id': `${origin}/#application`,
 		'@type': 'WebApplication',
+		...(tempoEnv === 'mainnet' ? { alternateName: 'Temposcan' } : {}),
 		applicationCategory: 'DeveloperApplication',
 		description:
 			'Explore and analyze blocks, transactions, contracts, and tokens on Tempo.',
