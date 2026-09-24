@@ -12,7 +12,7 @@
 			"simple": { "limit": 1000, "period": 60 }
 		}
 	],
-	"preview_urls": true,
+	"preview_urls": false,
 	"keep_vars": true,
 	"logpush": true,
 	"kv_namespaces": [
