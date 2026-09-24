@@ -136,15 +136,6 @@ function Component() {
 					/>
 				</div>
 				<SpotlightLinks />
-				{getTempoEnv() === 'mainnet' && (
-					<section className="max-w-[560px] text-center pb-8">
-						<h1 className="font-medium">Tempo Explorer (Temposcan)</h1>
-						<p className="mt-2 text-base-content-secondary">
-							Search transactions, blocks, addresses, contracts, and tokens on
-							Tempo.
-						</p>
-					</section>
-				)}
 			</div>
 		</div>
 	)
