@@ -129,6 +129,7 @@ app.get('/icon/:chain_id/:address', async (context) => {
 	if (/^0x[0-9a-f]{40}$/.test(iconBaseName)) {
 		const response = await fetch(
 			`${tempoApiUrl}/assets/${chainId}/icons/${iconBaseName}`,
+			{ signal: AbortSignal.timeout(2_000) },
 		).catch(() => undefined)
 		if (response?.ok) return response
 	}

@@ -50,6 +50,7 @@ describe('token icon route', () => {
 		)
 		expect(fetch).toHaveBeenCalledWith(
 			'https://api.tempo.xyz/assets/4217/icons/0x20c0000000000000000000006a37da5c996874be',
+			{ signal: expect.any(AbortSignal) },
 		)
 		expect(await response.text()).toBe('OUSD artwork')
 		expect(response.headers.get('Content-Type')).toBe('image/svg+xml')
@@ -59,9 +60,21 @@ describe('token icon route', () => {
 	it.each([
 		'error',
 		'unavailable',
+		'stalled',
 	])('keeps bundled artwork when the API is %s', async (failure) => {
 		if (failure === 'error')
 			vi.mocked(fetch).mockRejectedValue(new Error('offline'))
+		else if (failure === 'stalled')
+			vi.mocked(fetch).mockImplementation(
+				(_input, options) =>
+					new Promise((_resolve, reject) => {
+						options?.signal?.addEventListener(
+							'abort',
+							() => reject(options.signal?.reason),
+							{ once: true },
+						)
+					}),
+			)
 		else vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 503 }))
 		const response = await app.request(
 			'/icon/4217/0x20c0000000000000000000000000000000000000.svg',
