@@ -21,7 +21,15 @@ export type ActivityDataValue =
 	| ActivityDataValue[]
 	| { [key: string]: ActivityDataValue }
 
-const HIDDEN_FIELDS = new Set(['signer', 'status'])
+// Transaction metadata belongs in the header, not in per-event notes.
+const HIDDEN_FIELDS = new Set([
+	'blockNumber',
+	'direction',
+	'signer',
+	'status',
+	'timestamp',
+	'transactionHash',
+])
 const GENERIC_ACTIVITY_TYPES = new Set(['approval', 'burn', 'mint', 'transfer'])
 const ZONE_EVENT_TYPES = new Set([
 	'zone deposit',
@@ -86,6 +94,12 @@ export function activitiesToKnownEvents(
 			'sender',
 			'spender',
 		])
+		const note = Object.entries(activity.data).flatMap(([key, value]) => {
+			if (HIDDEN_FIELDS.has(key) || value == null) return []
+			if (representedFields.has(key)) return []
+			const part = activityValueToPart(value)
+			return part ? [[formatLabel(key), part] as [string, KnownEventPart]] : []
+		})
 		return [
 			{
 				type: activity.type,
@@ -98,14 +112,7 @@ export function activitiesToKnownEvents(
 							},
 						}
 					: {}),
-				note: Object.entries(activity.data).flatMap(([key, value]) => {
-					if (HIDDEN_FIELDS.has(key) || value == null) return []
-					if (representedFields.has(key)) return []
-					const part = activityValueToPart(value)
-					return part
-						? [[formatLabel(key), part] as [string, KnownEventPart]]
-						: []
-				}),
+				...(note.length > 0 ? { note } : {}),
 			},
 		]
 	})

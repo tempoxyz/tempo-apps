@@ -93,6 +93,10 @@ describe('activitiesToKnownEvents', () => {
 					title: 'Token transferred',
 					type: 'transfer',
 					data: {
+						blockNumber: 41195348,
+						timestamp: '2026-09-25T15:16:45.000Z',
+						transactionHash:
+							'0x97dd0c3156d4d05105c47cb32f694ecccd040d3193872a98cd56ff76d75d136e',
 						direction: 'in',
 						sender: '0x0000000000000000000000000000000000000001',
 						recipient: '0x0000000000000000000000000000000000000002',
@@ -109,7 +113,7 @@ describe('activitiesToKnownEvents', () => {
 					},
 				},
 			]),
-		).toMatchObject([
+		).toEqual([
 			{
 				type: 'transfer',
 				meta: {
@@ -124,6 +128,8 @@ describe('activitiesToKnownEvents', () => {
 							value: 1230000n,
 							decimals: 6,
 							symbol: 'USD',
+							currency: 'USD',
+							token: '0x20c0000000000000000000000000000000000001',
 						},
 					},
 					{ type: 'text', value: 'from' },
@@ -133,6 +139,30 @@ describe('activitiesToKnownEvents', () => {
 					},
 				],
 			},
+		])
+	})
+
+	test('preserves event-specific notes while omitting transaction metadata', () => {
+		const [event] = activitiesToKnownEvents([
+			{
+				id: 'activity-with-memo',
+				title: 'Token transferred',
+				type: 'transfer',
+				data: {
+					blockNumber: 41195348,
+					direction: 'out',
+					signer: 'self',
+					status: 'completed',
+					timestamp: '2026-09-25T15:16:45.000Z',
+					transactionHash:
+						'0x97dd0c3156d4d05105c47cb32f694ecccd040d3193872a98cd56ff76d75d136e',
+					memo: 'Invoice payment',
+				},
+			},
+		])
+
+		expect(event?.note).toEqual([
+			['Memo', { type: 'text', value: 'Invoice payment' }],
 		])
 	})
 
