@@ -124,10 +124,18 @@ app.get('/icon/:chain_id/:address', async (context) => {
 
 	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
 
+	const iconBaseName = getTokenIconBaseName(address)
+	// Contract artwork is managed by the API; keep bundled icons as a fallback.
+	if (/^0x[0-9a-f]{40}$/.test(iconBaseName)) {
+		const response = await fetch(
+			`${tempoApiUrl}/assets/${chainId}/icons/${iconBaseName}`,
+			{ signal: AbortSignal.timeout(2_000) },
+		).catch(() => undefined)
+		if (response?.ok) return response
+	}
+
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
-
-	const iconBaseName = getTokenIconBaseName(address)
 	let assetResponse: Response | undefined
 	let contentType = 'image/svg+xml'
 	for (const extension of tokenIconExtensions) {
