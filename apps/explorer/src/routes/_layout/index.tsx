@@ -5,6 +5,7 @@ import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { getTempoEnv } from '#lib/env'
+import { getCanonicalExplorerUrl } from '#lib/explorer-indexing'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -39,6 +40,38 @@ function getSpotlightData() {
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
+	head: () => {
+		if (getTempoEnv() !== 'mainnet') return {}
+
+		const title = 'Tempo Explorer (Temposcan)'
+		const description =
+			'Explore Tempo with Temposcan, the Tempo block explorer. Look up transactions, blocks, addresses, contracts, and tokens.'
+		const url = getCanonicalExplorerUrl('mainnet', '/')
+
+		return {
+			meta: [
+				{ title },
+				{ name: 'description', content: description },
+				{ name: 'og:title', content: title },
+				{ name: 'og:description', content: description },
+				{ name: 'twitter:title', content: title },
+				{ name: 'twitter:description', content: description },
+			],
+			scripts: [
+				{
+					type: 'application/ld+json',
+					children: JSON.stringify({
+						'@context': 'https://schema.org',
+						'@type': 'WebSite',
+						'@id': `${url}#website`,
+						name: 'Tempo Explorer',
+						alternateName: 'Temposcan',
+						url,
+					}),
+				},
+			],
+		}
+	},
 	validateSearch: z.object({
 		q: z.optional(z.coerce.string()),
 	}).parse,
