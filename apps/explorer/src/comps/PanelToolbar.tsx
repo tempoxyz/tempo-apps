@@ -14,6 +14,7 @@
 
 import type * as React from 'react'
 import { cx } from '#lib/css'
+import { handleTabKeyDown } from '#lib/tab-keyboard'
 
 /**
  * One control, N mutually exclusive states — the pane split, Decoded/Raw in a
@@ -35,6 +36,8 @@ export function SegmentedControl<T extends string>(
 					type="button"
 					role="tab"
 					aria-selected={value === option.value}
+					tabIndex={value === option.value ? 0 : -1}
+					onKeyDown={handleTabKeyDown}
 					onClick={() => onChange(option.value)}
 					title={option.title}
 					className={cx(
