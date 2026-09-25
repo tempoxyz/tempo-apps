@@ -24,6 +24,13 @@ const PRIVATE_ZONE_ACTIONS = new Set([
 	'Private Zone Withdrawal',
 ])
 
+// These transaction details are already shown in the receipt header.
+const RECEIPT_HEADER_FIELDS = new Set([
+	'Block Number',
+	'Timestamp',
+	'Transaction Hash',
+])
+
 export type ReceiptVoucher = {
 	packetSize: number
 	packetCount: number
@@ -238,14 +245,22 @@ function getReceiptDisplayEvents(
 		voucher
 			? [buildStreamedPaymentEvent(voucher, feeToken), ...knownEvents]
 			: knownEvents
-	).filter(
-		(event) =>
-			isReceiptEventVisible(event) &&
-			(!hasBlockedTransfer ||
-				event.type !== 'send' ||
-				!event.meta?.to ||
-				!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD)),
 	)
+		.filter(
+			(event) =>
+				isReceiptEventVisible(event) &&
+				(!hasBlockedTransfer ||
+					event.type !== 'send' ||
+					!event.meta?.to ||
+					!Address.isEqual(event.meta.to, RECEIVE_POLICY_GUARD)),
+		)
+		.map((event) => {
+			if (!Array.isArray(event.note)) return event
+			const note = event.note.filter(
+				([label]) => !RECEIPT_HEADER_FIELDS.has(label),
+			)
+			return { ...event, note: note.length > 0 ? note : undefined }
+		})
 }
 
 function buildStreamedPaymentEvent(
