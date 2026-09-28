@@ -59,10 +59,10 @@ describe('token trust presentation', () => {
 	})
 	it.each([
 		[true, 'Paused'],
-		[false, 'Not paused'],
+		[false, 'Active'],
 		[null, 'Status unavailable'],
 		[undefined, 'Status unavailable'],
-	] as const)('labels pause status %s without implying unrestricted transfers', (paused, expected) => {
+	] as const)('labels pause status %s explicitly', (paused, expected) => {
 		expect(pauseStatusLabel(paused)).toBe(expected)
 	})
 })

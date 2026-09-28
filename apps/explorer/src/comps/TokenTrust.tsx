@@ -33,30 +33,36 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	)
 	return (
 		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
-			<div className="flex flex-wrap items-center gap-2">
-				<h3 className="text-[13px] text-tertiary">Trust & permissions</h3>
-				<span
-					role="status"
-					aria-label="Token pause status"
-					className={cx(
-						'inline-flex items-center rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
-						policy?.paused === true
-							? 'bg-warning/15 text-warning'
-							: 'bg-distinct text-tertiary',
-					)}
-				>
-					{policyQuery.isPending
-						? 'Loading status…'
-						: pauseStatusLabel(policy?.paused)}
-				</span>
-			</div>
+			<h3 className="text-[13px] text-tertiary">Trust & permissions</h3>
 			<section
 				aria-label="Transfer policy"
 				className="rounded-[6px] border border-distinct overflow-hidden"
 			>
-				<div className="flex flex-wrap items-center justify-between gap-2 border-b border-distinct px-3 py-2.5">
+				<div className="flex items-start justify-between gap-2 border-b border-distinct px-3 py-2.5">
 					<h4 className="font-medium">Transfer policy</h4>
-					{policy && <PolicyLink policy={policy.policy} />}
+					<div className="flex flex-col items-end gap-1">
+						{policy && <PolicyLink policy={policy.policy} />}
+						<span
+							role="status"
+							aria-label="Token pause status"
+							title={
+								policy?.paused === false
+									? 'Token is not paused. Transfer policy restrictions still apply.'
+									: undefined
+							}
+							className={cx(
+								'inline-flex items-center rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
+								policy?.paused === true && 'bg-warning/15 text-warning',
+								policy?.paused !== true && 'bg-distinct',
+								policy?.paused === false && 'text-inherit',
+								policy?.paused == null && 'text-tertiary',
+							)}
+						>
+							{policyQuery.isPending
+								? 'Loading status…'
+								: pauseStatusLabel(policy?.paused)}
+						</span>
+					</div>
 				</div>
 				<div className="flex flex-col gap-3 p-3">
 					{policyQuery.isPending ? (

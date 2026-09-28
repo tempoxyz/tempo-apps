@@ -36,7 +36,7 @@ export const policyDescriptions = {
 
 export function pauseStatusLabel(paused: boolean | null | undefined): string {
 	if (paused === true) return 'Paused'
-	if (paused === false) return 'Not paused'
+	if (paused === false) return 'Active'
 	return 'Status unavailable'
 }
 
