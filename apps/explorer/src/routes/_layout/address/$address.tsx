@@ -21,6 +21,7 @@ import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
 import { WalletActions } from '#comps/WalletActions'
 import { ValidatorFees } from '#comps/ValidatorFees'
+import { ValidatorCard } from '#comps/ValidatorCard'
 import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -863,6 +864,7 @@ function AccountCardWithTimestamps(props: {
 				tokenName={tokenMetadata?.name}
 				virtualAddressParts={virtualAddressParts}
 			/>
+			{!isTip20 && <ValidatorCard address={address} />}
 			{isToken && (
 				<ClientOnly fallback={null}>
 					<WalletActions
