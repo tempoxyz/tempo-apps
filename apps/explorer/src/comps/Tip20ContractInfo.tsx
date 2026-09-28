@@ -24,7 +24,7 @@ export function Tip20TokenTabContent(
 	const { address } = props
 	const chainId = useChainId()
 	const [configExpanded, setConfigExpanded] = React.useState(true)
-	const [liquidityExpanded, setLiquidityExpanded] = React.useState(false)
+	const [liquidityExpanded, setLiquidityExpanded] = React.useState(true)
 	const { data: metadataData } = useQuery<{
 		createdTimestamp: number | null
 		createdTxHash: `0x${string}` | null
