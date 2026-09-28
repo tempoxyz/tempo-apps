@@ -66,13 +66,6 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 								{policy.policy.type !== 'compound' && !policy.policy.admin && (
 									<p>This policy has no list administrator.</p>
 								)}
-								<Link
-									to="/policy/$id"
-									params={{ id: policy.policy.id }}
-									className="text-accent hover:underline"
-								>
-									View policy members and activity ↗
-								</Link>
 							</div>
 						)
 					)}
@@ -272,9 +265,15 @@ function AddressPolicyChecker(props: {
 	const displayedPolicy = result ?? props.policy
 	return (
 		<div className="flex flex-col gap-3 text-[12px]">
-			<div aria-live="polite">
-				{displayedPolicy && <PolicyCheckResult result={displayedPolicy} />}
-			</div>
+			{displayedPolicy && (
+				<p className="text-tertiary">
+					{displayedPolicy.paused === null
+						? 'Pause status unavailable.'
+						: displayedPolicy.paused
+							? 'Token is paused.'
+							: 'Token is not paused.'}
+				</p>
+			)}
 			<details className="border-t border-dashed border-distinct pt-3 text-[12px]">
 				<summary className="cursor-pointer text-accent">
 					Check an address
@@ -327,18 +326,18 @@ function AddressPolicyChecker(props: {
 						</p>
 					)}
 				</form>
-				{account && (
-					<div aria-live="polite" className="pt-3">
-						{query.isFetching ? (
-							<p className="text-tertiary">Checking current policy…</p>
-						) : query.isError ? (
-							<Unavailable
-								message="Could not check this address."
-								onRetry={() => void query.refetch()}
-							/>
-						) : null}
-					</div>
-				)}
+				<div aria-live="polite" className="pt-3">
+					{account && query.isFetching ? (
+						<p className="text-tertiary">Checking current policy…</p>
+					) : account && query.isError ? (
+						<Unavailable
+							message="Could not check this address."
+							onRetry={() => void query.refetch()}
+						/>
+					) : displayedPolicy ? (
+						<PolicyCheckResult result={displayedPolicy} />
+					) : null}
+				</div>
 				<p className="text-tertiary pt-2">
 					Token policy only; this does not simulate a transfer.
 				</p>
@@ -380,14 +379,9 @@ function PolicyCheckResult({
 					))}
 				</dl>
 			)}
-			<p className="text-tertiary">
-				{result.paused === null
-					? 'Pause status unavailable.'
-					: result.paused
-						? 'Token is paused.'
-						: 'Token is not paused.'}{' '}
-				{result.checks && <>Checked at block {result.blockNumber}.</>}
-			</p>
+			{result.checks && (
+				<p className="text-tertiary">Checked at block {result.blockNumber}.</p>
+			)}
 		</div>
 	)
 }
