@@ -51,7 +51,7 @@ import {
 	calculateKnownEventsTotal,
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
-import { TransactionFilters } from '#comps/TransactionFilters'
+import { TransactionFilters, TransferFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
 	type AssetData,
@@ -238,6 +238,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		a: z.optional(z.string()),
 		status: z.optional(z.enum(['success', 'reverted'])),
 		dir: z.optional(z.enum(['sent', 'received'])),
+		transferDirection: z.optional(z.enum(['in', 'out'])),
 		period: z.optional(z.enum(['24h', '7d'])),
 		hideSubmitBatches: z.optional(z.boolean()),
 		voucher: z.optional(
@@ -465,6 +466,7 @@ function RouteComponent() {
 		dir,
 		period,
 		hideSubmitBatches: hideSubmitBatchesSearch,
+		transferDirection,
 	} = Route.useSearch()
 	const {
 		accountType,
@@ -582,6 +584,17 @@ function RouteComponent() {
 		[navigate],
 	)
 
+	const setTransferDirection = React.useCallback(
+		(direction: 'in' | 'out' | undefined) => {
+			navigate({
+				to: '.',
+				search: (prev) => ({ ...prev, page: 1, transferDirection: direction }),
+				resetScroll: false,
+			})
+		},
+		[navigate],
+	)
+
 	const setPeriod = React.useCallback(
 		(newPeriod: '24h' | '7d' | undefined) => {
 			navigate({
@@ -686,7 +699,12 @@ function RouteComponent() {
 					)
 				else
 					void queryClient.prefetchQuery(
-						accountTransfersQueryOptions({ account: address, page: 1, limit }),
+						accountTransfersQueryOptions({
+							account: address,
+							page: 1,
+							limit,
+							direction: transferDirection,
+						}),
 					)
 			}
 
@@ -704,6 +722,7 @@ function RouteComponent() {
 		account,
 		address,
 		dir,
+		transferDirection,
 		isToken,
 		limit,
 		period,
@@ -754,6 +773,8 @@ function RouteComponent() {
 				visibleTabs={visibleTabs}
 				status={status}
 				onStatusChange={setStatus}
+				transferDirection={transferDirection}
+				onTransferDirectionChange={setTransferDirection}
 				dir={dir}
 				period={period}
 				onPeriodChange={setPeriod}
@@ -1007,6 +1028,8 @@ function SectionsWrapper(props: {
 	visibleTabs: TabValue[]
 	status?: 'success' | 'reverted' | undefined
 	onStatusChange: (status: 'success' | 'reverted' | undefined) => void
+	transferDirection?: 'in' | 'out' | undefined
+	onTransferDirectionChange: (direction: 'in' | 'out' | undefined) => void
 	dir?: 'sent' | 'received' | undefined
 	period?: '24h' | '7d' | undefined
 	onPeriodChange: (period: '24h' | '7d' | undefined) => void
@@ -1038,6 +1061,8 @@ function SectionsWrapper(props: {
 		visibleTabs,
 		status,
 		onStatusChange,
+		transferDirection,
+		onTransferDirectionChange,
 		dir,
 		period,
 		onPeriodChange,
@@ -1217,6 +1242,7 @@ function SectionsWrapper(props: {
 			account: address,
 			page: transfersPage,
 			limit,
+			direction: transferDirection,
 		}),
 		enabled: isMounted && !isToken && isTransfersTabActive,
 	})
@@ -1355,6 +1381,7 @@ function SectionsWrapper(props: {
 						account: address,
 						page: nextPage,
 						limit,
+						direction: transferDirection,
 					}),
 				)
 				.catch(() => {})
@@ -1362,6 +1389,7 @@ function SectionsWrapper(props: {
 	}, [
 		accountTransfersTotal,
 		accountTransfersTotalCapped,
+		transferDirection,
 		address,
 		isToken,
 		isTransfersTabActive,
@@ -2038,10 +2066,17 @@ function SectionsWrapper(props: {
 				}
 			}
 			case 'transfers': {
+				const filters = !isToken && (
+					<TransferFilters
+						direction={transferDirection}
+						onDirectionChange={onTransferDirectionChange}
+					/>
+				)
 				if (transfersError) {
 					return {
 						title: 'Transfers',
 						itemsLabel: 'transfers',
+						contextual: filters,
 						content: (
 							<div className="rounded-[10px] bg-card-header p-4.5">
 								<p className="text-sm font-medium text-red-400">
@@ -2073,6 +2108,7 @@ function SectionsWrapper(props: {
 							accountTransfersData &&
 							(accountTotalCapped ? '10k+' : accountTotal),
 						itemsLabel: 'transfers',
+						contextual: filters,
 						content: (
 							<DataGrid
 								columns={{

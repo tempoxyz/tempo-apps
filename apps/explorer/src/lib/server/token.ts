@@ -203,6 +203,7 @@ const FetchAccountTransfersInputSchema = z.object({
 	account: zAddress({ lowercase: true }),
 	page: z.coerce.number().check(z.gte(1)),
 	limit: z.coerce.number().check(z.gte(5), z.lte(200)),
+	direction: z.optional(z.enum(['in', 'out'])),
 })
 
 export type AccountTransfersApiResponse = {
@@ -247,7 +248,11 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 				api.v1.transfers.$get({
 					query: {
 						chainId: String(chainId),
-						address: data.account,
+						...(data.direction === 'in'
+							? { recipient: data.account }
+							: data.direction === 'out'
+								? { sender: data.account }
+								: { address: data.account }),
 						limit: String(data.limit),
 						page: String(data.page),
 						include: 'totalCount',

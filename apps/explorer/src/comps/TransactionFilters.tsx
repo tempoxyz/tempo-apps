@@ -39,12 +39,6 @@ export function TransactionFilters(
 		onClearAll,
 	} = props
 
-	const mode = Sections.useSectionsMode()
-	const isStacked = mode === 'stacked'
-
-	const [open, setOpen] = React.useState(false)
-	const containerRef = React.useRef<HTMLDivElement>(null)
-
 	const activeCount =
 		(status !== undefined ? 1 : 0) +
 		(period !== undefined ? 1 : 0) +
@@ -69,6 +63,66 @@ export function TransactionFilters(
 		</label>
 	)
 
+	return (
+		<TableFilters
+			label="Filter transactions"
+			activeCount={activeCount}
+			onClearAll={handleClearAll}
+		>
+			{batchFilter}
+			<SegmentedRow
+				label={statusSection.label}
+				options={statusSection.options}
+				value={status}
+				onChange={onStatusChange}
+			/>
+			<SegmentedRow
+				label={periodSection.label}
+				options={periodSection.options}
+				value={period}
+				onChange={onPeriodChange}
+			/>
+		</TableFilters>
+	)
+}
+
+export function TransferFilters(
+	props: TransferFilters.Props,
+): React.JSX.Element {
+	const { direction, onDirectionChange } = props
+	return (
+		<TableFilters
+			label="Filter transfers"
+			activeCount={direction ? 1 : 0}
+			onClearAll={() => onDirectionChange(undefined)}
+		>
+			<SegmentedRow
+				label="Direction"
+				options={[
+					{ value: undefined, label: 'All' },
+					{ value: 'in', label: 'Incoming' },
+					{ value: 'out', label: 'Outgoing' },
+				]}
+				value={direction}
+				onChange={onDirectionChange}
+			/>
+		</TableFilters>
+	)
+}
+
+export declare namespace TransferFilters {
+	type Props = {
+		direction?: 'in' | 'out' | undefined
+		onDirectionChange: (direction: 'in' | 'out' | undefined) => void
+	}
+}
+
+export function TableFilters(props: TableFilters.Props): React.JSX.Element {
+	const { label, activeCount, onClearAll, children } = props
+	const mode = Sections.useSectionsMode()
+	const isStacked = mode === 'stacked'
+	const [open, setOpen] = React.useState(false)
+	const containerRef = React.useRef<HTMLDivElement>(null)
 	const toggleOpen = React.useCallback(() => setOpen((v) => !v), [])
 
 	React.useEffect(() => {
@@ -92,7 +146,7 @@ export function TransactionFilters(
 					<button
 						type="button"
 						onClick={toggleOpen}
-						aria-label="Filter transactions"
+						aria-label={label}
 						aria-expanded={open}
 						className={cx(
 							'flex items-center gap-[6px] border rounded-[6px] px-[8px] py-[4px] text-[12px] cursor-pointer transition-colors',
@@ -111,7 +165,7 @@ export function TransactionFilters(
 					{open && activeCount > 0 && (
 						<button
 							type="button"
-							onClick={handleClearAll}
+							onClick={onClearAll}
 							className="text-[11px] text-tertiary hover:text-accent cursor-pointer transition-colors"
 						>
 							Clear all
@@ -119,21 +173,7 @@ export function TransactionFilters(
 					)}
 				</div>
 				{open && (
-					<div className="flex flex-col gap-[10px] pt-[6px]">
-						{batchFilter}
-						<SegmentedRow
-							label={statusSection.label}
-							options={statusSection.options}
-							value={status}
-							onChange={onStatusChange}
-						/>
-						<SegmentedRow
-							label={periodSection.label}
-							options={periodSection.options}
-							value={period}
-							onChange={onPeriodChange}
-						/>
-					</div>
+					<div className="flex flex-col gap-[10px] pt-[6px]">{children}</div>
 				)}
 			</div>
 		)
@@ -144,7 +184,7 @@ export function TransactionFilters(
 			<button
 				type="button"
 				onClick={toggleOpen}
-				aria-label="Filter transactions"
+				aria-label={label}
 				aria-expanded={open}
 				className={cx(
 					'flex items-center gap-[6px] border rounded-[6px] px-[8px] py-[4px] text-[12px] cursor-pointer transition-colors',
@@ -163,26 +203,12 @@ export function TransactionFilters(
 
 			{open && (
 				<div className="absolute top-full right-0 mt-[6px] z-50 bg-card-header border border-card-border rounded-[10px] shadow-[0_12px_40px_rgba(0,0,0,0.5)] min-w-[260px]">
-					<div className="flex flex-col gap-[10px] p-[14px]">
-						{batchFilter}
-						<SegmentedRow
-							label={statusSection.label}
-							options={statusSection.options}
-							value={status}
-							onChange={onStatusChange}
-						/>
-						<SegmentedRow
-							label={periodSection.label}
-							options={periodSection.options}
-							value={period}
-							onChange={onPeriodChange}
-						/>
-					</div>
+					<div className="flex flex-col gap-[10px] p-[14px]">{children}</div>
 					{activeCount > 0 && (
 						<div className="border-t border-card-border px-[14px] py-[10px]">
 							<button
 								type="button"
-								onClick={handleClearAll}
+								onClick={onClearAll}
 								className="text-[11px] text-tertiary hover:text-accent cursor-pointer transition-colors"
 							>
 								Clear all
@@ -193,6 +219,15 @@ export function TransactionFilters(
 			)}
 		</div>
 	)
+}
+
+export declare namespace TableFilters {
+	type Props = {
+		label: string
+		activeCount: number
+		onClearAll: () => void
+		children: React.ReactNode
+	}
 }
 
 function SegmentedRow<V extends string>(props: {
@@ -211,6 +246,7 @@ function SegmentedRow<V extends string>(props: {
 						key={option.label}
 						type="button"
 						onClick={() => onChange(option.value)}
+						aria-pressed={value === option.value}
 						className={cx(
 							'px-2 py-0.5 rounded-[4px] cursor-pointer transition-colors',
 							value === option.value
