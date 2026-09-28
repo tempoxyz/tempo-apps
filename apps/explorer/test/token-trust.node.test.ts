@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	groupTokenAuthorities,
+	tokenRoleDescription,
 	type TokenPolicy,
 } from '#lib/domain/token-trust'
 import type { RoleHolder } from '#routes/api/tip20-roles'
@@ -43,6 +44,29 @@ const policy: TokenPolicy = {
 }
 
 describe('token authority grouping', () => {
+	it('provides expanded explanations for every standard token role', () => {
+		expect(
+			['DEFAULT_ADMIN', 'PAUSE', 'UNPAUSE', 'ISSUER', 'BURN_BLOCKED'].map(
+				tokenRoleDescription,
+			),
+		).toEqual([
+			'Sets the TIP-403 transfer policy used by this token. Can manage token roles and their administrators. Can change the maximum token supply.',
+			'Can pause token transfers.',
+			'Can unpause token transfers.',
+			'Can mint new tokens.',
+			'Can burn tokens from blocked accounts.',
+		])
+		expect(tokenRoleDescription('0xcustom')).toBe(
+			'Custom token role. Permissions are not known to the explorer.',
+		)
+	})
+	it('keeps each role paired with its own grant transaction and date', () => {
+		const roles = [
+			{ ...role('PAUSE'), grantedTx: `0x${'ab'.repeat(32)}`, grantedAt: 100 },
+			{ ...role('UNPAUSE'), grantedTx: `0x${'cd'.repeat(32)}`, grantedAt: 200 },
+		]
+		expect(groupTokenAuthorities(roles, policy)[0].roles).toEqual(roles)
+	})
 	it('merges case variants and policy control into one account, preserving each role', () => {
 		const groups = groupTokenAuthorities(
 			[role('PAUSE'), role('UNPAUSE', admin.toUpperCase()), role('PAUSE')],

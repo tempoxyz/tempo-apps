@@ -7,12 +7,12 @@ import { Address as AddressLink } from '#comps/Address'
 import {
 	groupTokenAuthorities,
 	policyLabel,
+	tokenRoleDescription,
 	type TokenPolicy,
 	type TransferPolicy,
 } from '#lib/domain/token-trust'
 import { fetchTokenPolicy } from '#lib/server/token-trust'
 import type { RoleHolder } from '#routes/api/tip20-roles'
-import InfoIcon from '~icons/lucide/info'
 
 export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	const chainId = useChainId()
@@ -30,164 +30,185 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	return (
 		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
 			<h3 className="text-[13px] text-tertiary">Trust & permissions</h3>
-			{policyQuery.isPending ? (
-				<p className="text-tertiary" role="status">
-					Loading transfer policy…
-				</p>
-			) : policyQuery.isError ? (
-				<Unavailable
-					message="Transfer policy unavailable."
-					onRetry={() => void policyQuery.refetch()}
-				/>
-			) : (
-				policy && (
-					<>
-						<div className="flex justify-between gap-3">
-							<span className="text-secondary">Paused</span>
-							<span>
-								{policy.paused === null
-									? 'Unavailable'
-									: policy.paused
-										? 'Yes'
-										: 'No'}
-							</span>
-						</div>
-						<div className="flex justify-between gap-3">
-							<span className="text-secondary">Transfer policy</span>
-							<PolicyLink policy={policy.policy} />
-						</div>
-						<details className="text-[12px]">
-							<summary className="text-accent cursor-pointer">
-								Policy details
-							</summary>
-							<div className="flex flex-col gap-2 pt-2 text-secondary">
-								{policy.components.map((component) => (
-									<div
-										key={component.scope}
-										className="flex justify-between gap-3"
-									>
-										<span>{component.scope}</span>
-										<PolicyLink policy={component} />
-									</div>
-								))}
-								<p>
-									{policy.policy.type === 'always-allow'
-										? 'This policy permits all accounts. Token admins can still replace it with a restrictive policy.'
-										: policy.policy.type === 'always-reject'
-											? 'This policy rejects all accounts. Token admins can replace it with another policy.'
-											: policy.policy.type === 'compound'
-												? 'Each component has its own account rules and administrator. Token admins can replace the whole policy.'
-												: policy.policy.type === 'allowlist'
-													? 'Only listed accounts are permitted. The policy admin manages the list; token admins can replace the policy.'
-													: 'Listed accounts are blocked. The policy admin manages the list; token admins can replace the policy.'}
-								</p>
-								{policy.policy.type !== 'compound' && !policy.policy.admin && (
-									<p>This policy has no list administrator.</p>
-								)}
-								<Link
-									to="/policy/$id"
-									params={{ id: policy.policy.id }}
-									className="text-accent hover:underline"
-								>
-									View policy members and activity ↗
-								</Link>
-							</div>
-						</details>
-					</>
-				)
-			)}
-			{props.loading ? (
-				<p className="text-tertiary" role="status">
-					Loading token roles…
-				</p>
-			) : props.unavailable ? (
-				<Unavailable
-					message="Token roles unavailable. Policy permissions below may still be shown."
-					onRetry={props.onRetry}
-				/>
-			) : (
-				props.roles.length === 0 && (
-					<p className="text-tertiary">No current token role holders found.</p>
-				)
-			)}
-			{groups.length > 0 && (
-				<div className="flex flex-col divide-y divide-dashed divide-distinct">
-					{groups.map((group) => (
-						<div
-							key={group.account}
-							className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
-						>
-							<AddressLink
-								address={group.account}
-								className="text-[12px] break-all"
-							/>
-							<div className="flex flex-wrap gap-1.5">
-								{group.permissions.map((permission, index) => (
-									<span
-										key={`${permission.label}:${index}`}
-										className="inline-flex max-w-full items-center gap-1 rounded-[4px] border border-distinct px-1.5 py-0.5 text-[11px] text-secondary break-all"
-										title={permission.description}
-									>
-										{permission.label}
-										{permission.policyId && (
-											<Link
-												to="/policy/$id"
-												params={{ id: permission.policyId }}
-												className="text-accent hover:underline"
-											>
-												#{permission.policyId}
-											</Link>
-										)}
-										<InfoIcon
-											className="size-[11px] text-tertiary"
-											role="img"
-											aria-label={permission.description}
-										/>
+			<section
+				aria-label="Transfer policy"
+				className="rounded-[6px] border border-distinct overflow-hidden"
+			>
+				<div className="flex flex-wrap items-center justify-between gap-2 border-b border-distinct px-3 py-2.5">
+					<h4 className="font-medium">Transfer policy</h4>
+					{policy && <PolicyLink policy={policy.policy} />}
+				</div>
+				<div className="flex flex-col gap-3 p-3">
+					{policyQuery.isPending ? (
+						<p className="text-tertiary" role="status">
+							Loading transfer policy…
+						</p>
+					) : policyQuery.isError ? (
+						<Unavailable
+							message="Transfer policy unavailable."
+							onRetry={() => void policyQuery.refetch()}
+						/>
+					) : (
+						policy && (
+							<>
+								<div className="flex justify-between gap-3">
+									<span className="text-secondary">Paused</span>
+									<span>
+										{policy.paused === null
+											? 'Unavailable'
+											: policy.paused
+												? 'Yes'
+												: 'No'}
 									</span>
-								))}
-							</div>
-							{group.roles.length > 0 && (
-								<details className="text-[11px] text-tertiary">
-									<summary className="cursor-pointer">
-										Roles & grant details
-									</summary>
-									<div className="flex flex-col gap-2 pt-2">
+								</div>
+								<div className="flex flex-col gap-2 text-[12px] text-secondary">
+									{policy.components.map((component) => (
+										<div
+											key={component.scope}
+											className="flex justify-between gap-3"
+										>
+											<span>{component.scope}</span>
+											<PolicyLink policy={component} />
+										</div>
+									))}
+									<p>
+										{policy.policy.type === 'always-allow'
+											? 'This policy permits all accounts. Token admins can still replace it with a restrictive policy.'
+											: policy.policy.type === 'always-reject'
+												? 'This policy rejects all accounts. Token admins can replace it with another policy.'
+												: policy.policy.type === 'compound'
+													? 'Each component has its own account rules and administrator. Token admins can replace the whole policy.'
+													: policy.policy.type === 'allowlist'
+														? 'Only listed accounts are permitted. The policy admin manages the list; token admins can replace the policy.'
+														: 'Listed accounts are blocked. The policy admin manages the list; token admins can replace the policy.'}
+									</p>
+									{policy.policy.type !== 'compound' &&
+										!policy.policy.admin && (
+											<p>This policy has no list administrator.</p>
+										)}
+									<Link
+										to="/policy/$id"
+										params={{ id: policy.policy.id }}
+										className="text-accent hover:underline"
+									>
+										View policy members and activity ↗
+									</Link>
+								</div>
+							</>
+						)
+					)}
+					<AddressPolicyChecker
+						key={`${chainId}:${props.address}`}
+						address={props.address}
+						chainId={chainId}
+					/>
+				</div>
+			</section>
+			<section
+				aria-label="Address roles"
+				className="rounded-[6px] border border-distinct overflow-hidden"
+			>
+				<h4 className="border-b border-distinct px-3 py-2.5 font-medium">
+					Address roles
+				</h4>
+				<div className="flex flex-col gap-3 p-3">
+					{props.loading ? (
+						<p className="text-tertiary" role="status">
+							Loading token roles…
+						</p>
+					) : props.unavailable ? (
+						<Unavailable
+							message="Token roles unavailable. Policy permissions below may still be shown."
+							onRetry={props.onRetry}
+						/>
+					) : (
+						props.roles.length === 0 && (
+							<p className="text-tertiary">
+								No current token role holders found.
+							</p>
+						)
+					)}
+					{groups.length > 0 && (
+						<div className="flex flex-col divide-y divide-dashed divide-distinct">
+							{groups.map((group) => (
+								<div
+									key={group.account}
+									className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
+								>
+									<AddressLink
+										address={group.account}
+										className="text-[12px] break-all"
+									/>
+									<dl className="flex flex-col gap-3 text-[12px]">
 										{group.roles.map((role) => (
 											<div
 												key={role.roleHash}
-												className="flex flex-wrap gap-2 items-center"
+												className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
 											>
-												<span className="break-all">{role.role}</span>
-												{role.grantedAt != null && (
-													<span>
-														{new Date(role.grantedAt * 1000).toLocaleDateString(
-															'en-US',
-														)}
-													</span>
-												)}
-												{role.grantedTx && (
-													<Link
-														to="/tx/$hash"
-														params={{ hash: role.grantedTx as `0x${string}` }}
-														className="text-accent hover:underline"
-													>
-														Grant ↗
-													</Link>
-												)}
+												<dt className="font-mono text-[11px] break-all">
+													{role.role}
+												</dt>
+												<dd className="text-secondary">
+													{tokenRoleDescription(role.role)}
+												</dd>
+												<dd className="flex flex-col gap-1 md:items-end text-[11px]">
+													{role.grantedAt != null && (
+														<span className="text-tertiary">
+															{new Date(
+																role.grantedAt * 1000,
+															).toLocaleDateString('en-US')}
+														</span>
+													)}
+													{role.grantedTx ? (
+														<Link
+															to="/tx/$hash"
+															params={{ hash: role.grantedTx as `0x${string}` }}
+															className="text-accent hover:underline"
+															aria-label={`View ${role.role} grant transaction for ${group.account}`}
+														>
+															Grant transaction ↗
+														</Link>
+													) : (
+														<span className="text-tertiary">
+															Grant transaction unavailable
+														</span>
+													)}
+												</dd>
 											</div>
 										))}
-									</div>
-								</details>
-							)}
+										{group.permissions.map(
+											(permission, index) =>
+												permission.policyId !== undefined && (
+													<div
+														key={`${permission.policyId}:${index}`}
+														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
+													>
+														<dt>Policy admin</dt>
+														<dd className="text-secondary">
+															<p>{permission.label}</p>
+															<p className="text-tertiary">
+																{permission.description}
+															</p>
+														</dd>
+														<dd className="md:text-right text-[11px]">
+															<Link
+																to="/policy/$id"
+																params={{ id: permission.policyId }}
+																className="text-accent hover:underline"
+															>
+																Policy #{permission.policyId} activity ↗
+															</Link>
+														</dd>
+													</div>
+												),
+										)}
+									</dl>
+								</div>
+							))}
 						</div>
-					))}
+					)}
 				</div>
-			)}
-			<AddressPolicyChecker
-				key={`${chainId}:${props.address}`}
-				address={props.address}
-				chainId={chainId}
-			/>
+			</section>
 		</div>
 	)
 }
@@ -260,7 +281,9 @@ function AddressPolicyChecker(props: {
 	})
 	return (
 		<details className="border-t border-dashed border-distinct pt-3 text-[12px]">
-			<summary className="cursor-pointer text-accent">Check an address</summary>
+			<summary className="cursor-pointer text-accent">
+				Check address: send, receive, receive mints
+			</summary>
 			<form
 				className="flex flex-col gap-2 pt-3"
 				onSubmit={(event) => {
@@ -277,7 +300,8 @@ function AddressPolicyChecker(props: {
 				}}
 			>
 				<label htmlFor={id} className="text-secondary">
-					Address to check against the token’s policy
+					Check whether an address can send tokens, receive tokens, or receive
+					mints under this policy.
 				</label>
 				<div className="flex gap-2">
 					<input
@@ -339,7 +363,15 @@ function PolicyCheckResult({
 		<div className="flex flex-col gap-2">
 			{result.checks?.map((check) => (
 				<div key={check.scope} className="flex flex-wrap justify-between gap-2">
-					<span className="text-secondary">{check.scope}</span>
+					<span className="text-secondary">
+						{
+							{
+								Sender: 'Send',
+								Recipient: 'Receive',
+								'Mint recipient': 'Receive mints',
+							}[check.scope]
+						}
+					</span>
 					<span>
 						{check.allowed === null
 							? 'Unavailable'
