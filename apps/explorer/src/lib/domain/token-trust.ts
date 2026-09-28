@@ -35,8 +35,8 @@ export const policyDescriptions = {
 } satisfies Record<TransferPolicy['type'], string>
 
 export function pauseStatusLabel(paused: boolean | null | undefined): string {
-	if (paused === true) return 'Paused'
-	if (paused === false) return 'Active (not paused)'
+	if (paused === true) return 'Status: Paused'
+	if (paused === false) return 'Status: Active'
 	return 'Status unavailable'
 }
 

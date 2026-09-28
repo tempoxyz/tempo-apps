@@ -58,8 +58,8 @@ describe('token trust presentation', () => {
 		})
 	})
 	it.each([
-		[true, 'Paused'],
-		[false, 'Active (not paused)'],
+		[true, 'Status: Paused'],
+		[false, 'Status: Active'],
 		[null, 'Status unavailable'],
 		[undefined, 'Status unavailable'],
 	] as const)('labels pause status %s explicitly', (paused, expected) => {
