@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	groupTokenAuthorities,
+	pauseStatusLabel,
+	policyDescriptions,
 	tokenPolicyRows,
 	tokenRoleDescription,
 	type TokenPolicy,
@@ -43,6 +45,27 @@ const policy: TokenPolicy = {
 	blockNumber: '100',
 	checks: null,
 }
+
+describe('token trust presentation', () => {
+	it('describes each policy rule separately from administration', () => {
+		expect(policyDescriptions).toEqual({
+			'always-allow': 'All accounts are permitted.',
+			'always-reject': 'All accounts are blocked.',
+			allowlist: 'Only listed accounts are permitted.',
+			blocklist: 'Listed accounts are blocked.',
+			compound:
+				'Separate policies govern sending, receiving, and receiving mints.',
+		})
+	})
+	it.each([
+		[true, 'Paused'],
+		[false, 'Not paused'],
+		[null, 'Status unavailable'],
+		[undefined, 'Status unavailable'],
+	] as const)('labels pause status %s without implying unrestricted transfers', (paused, expected) => {
+		expect(pauseStatusLabel(paused)).toBe(expected)
+	})
+})
 
 describe('token authority grouping', () => {
 	it('uses the same rows for policy details and address checks', () => {

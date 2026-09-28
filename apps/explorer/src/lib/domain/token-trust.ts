@@ -26,6 +26,20 @@ export type TokenPolicy = {
 	}> | null
 }
 
+export const policyDescriptions = {
+	'always-allow': 'All accounts are permitted.',
+	'always-reject': 'All accounts are blocked.',
+	allowlist: 'Only listed accounts are permitted.',
+	blocklist: 'Listed accounts are blocked.',
+	compound: 'Separate policies govern sending, receiving, and receiving mints.',
+} satisfies Record<TransferPolicy['type'], string>
+
+export function pauseStatusLabel(paused: boolean | null | undefined): string {
+	if (paused === true) return 'Paused'
+	if (paused === false) return 'Not paused'
+	return 'Status unavailable'
+}
+
 const rolePermissions = new Map([
 	[
 		'DEFAULT_ADMIN',

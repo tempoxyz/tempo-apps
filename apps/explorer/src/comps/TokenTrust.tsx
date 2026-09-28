@@ -4,8 +4,11 @@ import * as Address from 'ox/Address'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
 import { Address as AddressLink } from '#comps/Address'
+import { cx } from '#lib/css'
 import {
 	groupTokenAuthorities,
+	pauseStatusLabel,
+	policyDescriptions,
 	policyLabel,
 	tokenPolicyRows,
 	tokenRoleDescription,
@@ -30,7 +33,23 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	)
 	return (
 		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
-			<h3 className="text-[13px] text-tertiary">Trust & permissions</h3>
+			<div className="flex flex-wrap items-center gap-2">
+				<h3 className="text-[13px] text-tertiary">Trust & permissions</h3>
+				<span
+					role="status"
+					aria-label="Token pause status"
+					className={cx(
+						'inline-flex items-center rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
+						policy?.paused === true
+							? 'bg-warning/15 text-warning'
+							: 'bg-distinct text-tertiary',
+					)}
+				>
+					{policyQuery.isPending
+						? 'Loading status…'
+						: pauseStatusLabel(policy?.paused)}
+				</span>
+			</div>
 			<section
 				aria-label="Transfer policy"
 				className="rounded-[6px] border border-distinct overflow-hidden"
@@ -52,20 +71,10 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 					) : (
 						policy && (
 							<div className="flex flex-col gap-2 text-[12px] text-secondary">
-								<p>
-									{policy.policy.type === 'always-allow'
-										? 'This policy permits all accounts. Token admins can still replace it with a restrictive policy.'
-										: policy.policy.type === 'always-reject'
-											? 'This policy rejects all accounts. Token admins can replace it with another policy.'
-											: policy.policy.type === 'compound'
-												? 'Each component has its own account rules and administrator. Token admins can replace the whole policy.'
-												: policy.policy.type === 'allowlist'
-													? 'Only listed accounts are permitted. The policy admin manages the list; token admins can replace the policy.'
-													: 'Listed accounts are blocked. The policy admin manages the list; token admins can replace the policy.'}
+								<p>{policyDescriptions[policy.policy.type]}</p>
+								<p className="text-tertiary">
+									Token admins can replace this policy.
 								</p>
-								{policy.policy.type !== 'compound' && !policy.policy.admin && (
-									<p>This policy has no list administrator.</p>
-								)}
 							</div>
 						)
 					)}
@@ -265,15 +274,6 @@ function AddressPolicyChecker(props: {
 	const displayedPolicy = result ?? props.policy
 	return (
 		<div className="flex flex-col gap-3 text-[12px]">
-			{displayedPolicy && (
-				<p className="text-tertiary">
-					{displayedPolicy.paused === null
-						? 'Pause status unavailable.'
-						: displayedPolicy.paused
-							? 'Token is paused.'
-							: 'Token is not paused.'}
-				</p>
-			)}
 			<details className="border-t border-dashed border-distinct pt-3 text-[12px]">
 				<summary className="cursor-pointer text-accent">
 					Check an address
