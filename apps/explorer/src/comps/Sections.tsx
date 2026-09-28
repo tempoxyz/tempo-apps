@@ -13,7 +13,10 @@ export function Sections(props: Sections.Props) {
 	const sections = sections_.filter((section) => section.visible !== false)
 
 	const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
-		() => new Set(),
+		() =>
+			new Set(
+				props.defaultExpandedSection ? [props.defaultExpandedSection] : [],
+			),
 	)
 
 	const toggleSection = (title: string) => {
@@ -188,6 +191,7 @@ export function Sections(props: Sections.Props) {
 
 export namespace Sections {
 	export interface Props {
+		defaultExpandedSection?: string
 		activeSection?: number
 		mode?: Mode
 		onSectionChange?: (index: number) => void

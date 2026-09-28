@@ -77,6 +77,11 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
+import {
+	addressTabSchema,
+	resolveAddressTab,
+	type AddressTab as TabValue,
+} from '#lib/domain/address-tabs'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
 import {
@@ -126,27 +131,11 @@ const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 const defaultSearchValues = {
 	page: 1,
 	limit: 10,
-	tab: 'transactions',
 	live: false,
 } as const
 
 const ASSETS_PER_PAGE = 10
 const HISTORY_PAGE_SIZE = 10
-
-const allTabs = [
-	'deposits',
-	'withdrawals',
-	'batches',
-	'transactions',
-	'holdings',
-	'transfers',
-	'holders',
-	'token',
-	'contract',
-	'interact',
-] as const
-
-type TabValue = (typeof allTabs)[number]
 
 type HistoryPosition = {
 	order: 'asc' | 'desc'
@@ -189,24 +178,12 @@ function getHistoryNavigation(
 	}
 }
 
-const TabSchema = z.prefault(
-	z.pipe(
-		z.string(),
-		z.transform((val): TabValue => {
-			if (val === 'history') return 'transactions'
-			if (val === 'assets') return 'holdings'
-			if (allTabs.includes(val as TabValue)) return val as TabValue
-			return 'transactions'
-		}),
-	),
-	defaultSearchValues.tab,
-)
-
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	beforeLoad: ({ params, search }) => {
 		const normalized = normalizeSearchInput(params.address)
-		const page = search.tab === 'transactions' ? 1 : search.page
+		const tab = resolveAddressTab(search.tab, Tip20.isTip20Address(normalized))
+		const page = tab === 'transactions' ? 1 : search.page
 		if (normalized !== params.address || page !== search.page) {
 			throw redirect({
 				to: '/address/$address',
@@ -233,7 +210,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			),
 			defaultSearchValues.limit,
 		),
-		tab: TabSchema,
+		tab: addressTabSchema,
 		live: z.prefault(z.boolean(), false),
 		a: z.optional(z.string()),
 		status: z.optional(z.enum(['success', 'reverted'])),
@@ -459,7 +436,7 @@ function RouteComponent() {
 		page,
 		cursor,
 		order,
-		tab,
+		tab: requestedTab,
 		live,
 		limit,
 		status,
@@ -468,6 +445,7 @@ function RouteComponent() {
 		hideSubmitBatches: hideSubmitBatchesSearch,
 		transferDirection,
 	} = Route.useSearch()
+	const tab = resolveAddressTab(requestedTab, Tip20.isTip20Address(address))
 	const {
 		accountType,
 		isToken,
@@ -2406,8 +2384,14 @@ function SectionsWrapper(props: {
 
 	return (
 		<Sections
+			key={address}
 			mode={mode}
 			sections={sections}
+			defaultExpandedSection={
+				Tip20.isTip20Address(address)
+					? sections[activeSection]?.title
+					: undefined
+			}
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
 		/>
