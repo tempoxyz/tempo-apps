@@ -83,10 +83,10 @@ export function Tip20TokenTabContent(
 							Metadata
 						</h3>
 						<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
-							<MetadataField label="Total supply" value={config?.totalSupply} />
-							<MetadataField label="Supply cap" value={config?.supplyCap} />
 							<MetadataField label="Currency" value={config?.currency} />
 							<MetadataField label="Decimals" value={config?.decimals} />
+							<MetadataField label="Total supply" value={config?.totalSupply} />
+							<MetadataField label="Supply cap" value={config?.supplyCap} />
 						</dl>
 						<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 text-[12px]">
 							<ConfigRow

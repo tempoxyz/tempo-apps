@@ -35,3 +35,16 @@ export function resolveAddressTab(
 ): AddressTab {
 	return tab ?? (isTip20 ? 'token' : 'transactions')
 }
+
+export function resolveLegacyTokenTab(
+	tab: string | undefined,
+	isTip20: boolean,
+	account?: string,
+): AddressTab {
+	// Unqualified token links open configuration; account-filtered links are
+	// transfer drill-downs and must retain their existing destination.
+	if (tab === undefined && isTip20 && !account) return 'token'
+	if (tab === 'holders' || tab === 'token' || tab === 'contract') return tab
+	if (tab === 'interact') return 'contract'
+	return 'transfers'
+}
