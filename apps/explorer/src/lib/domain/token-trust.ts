@@ -131,3 +131,26 @@ export function tokenRoleDescription(role: string): string {
 		'Custom token role. Permissions are not known to the explorer.'
 	)
 }
+
+/** Use the same policy rows before and after checking an address. */
+export function tokenPolicyRows(policy: TokenPolicy) {
+	const scopes = ['Sender', 'Recipient', 'Mint recipient'] as const
+	const labels = {
+		Sender: 'Send',
+		Recipient: 'Receive',
+		'Mint recipient': 'Receive mints',
+	}
+	return scopes.map((scope) => {
+		const component =
+			policy.components.find((item) => item.scope === scope) ?? policy.policy
+		const check = policy.checks?.find(
+			(item) => item.scope === scope && item.policyId === component.id,
+		)
+		return {
+			scope,
+			label: labels[scope],
+			policy: component,
+			allowed: check?.allowed ?? null,
+		}
+	})
+}

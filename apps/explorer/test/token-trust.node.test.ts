@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	groupTokenAuthorities,
+	tokenPolicyRows,
 	tokenRoleDescription,
 	type TokenPolicy,
 } from '#lib/domain/token-trust'
@@ -44,6 +45,45 @@ const policy: TokenPolicy = {
 }
 
 describe('token authority grouping', () => {
+	it('uses the same rows for policy details and address checks', () => {
+		const rows = tokenPolicyRows(policy)
+		expect(rows.map((row) => [row.label, row.policy.id, row.allowed])).toEqual([
+			['Send', '42', null],
+			['Receive', '42', null],
+			['Receive mints', '42', null],
+		])
+		const compound: TokenPolicy = {
+			...policy,
+			policy: { id: '45', type: 'compound', admin: null },
+			components: [
+				{ id: '1', type: 'always-allow', admin: null, scope: 'Sender' },
+				{ id: '42', type: 'blocklist', admin, scope: 'Recipient' },
+				{ id: '43', type: 'allowlist', admin, scope: 'Mint recipient' },
+			],
+			checks: [
+				{ scope: 'Mint recipient', policyId: '43', allowed: null },
+				{ scope: 'Recipient', policyId: '42', allowed: false },
+				{ scope: 'Sender', policyId: '1', allowed: true },
+			],
+		}
+		expect(
+			tokenPolicyRows(compound).map((row) => [
+				row.label,
+				row.policy.id,
+				row.allowed,
+			]),
+		).toEqual([
+			['Send', '1', true],
+			['Receive', '42', false],
+			['Receive mints', '43', null],
+		])
+		expect(
+			tokenPolicyRows({
+				...policy,
+				checks: [{ scope: 'Sender', policyId: '999', allowed: true }],
+			})[0].allowed,
+		).toBeNull()
+	})
 	it('provides expanded explanations for every standard token role', () => {
 		expect(
 			['DEFAULT_ADMIN', 'PAUSE', 'UNPAUSE', 'ISSUER', 'BURN_BLOCKED'].map(

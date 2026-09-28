@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as React from 'react'
@@ -7,6 +7,7 @@ import { Address as AddressLink } from '#comps/Address'
 import {
 	groupTokenAuthorities,
 	policyLabel,
+	tokenPolicyRows,
 	tokenRoleDescription,
 	type TokenPolicy,
 	type TransferPolicy,
@@ -50,57 +51,36 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 						/>
 					) : (
 						policy && (
-							<>
-								<div className="flex justify-between gap-3">
-									<span className="text-secondary">Paused</span>
-									<span>
-										{policy.paused === null
-											? 'Unavailable'
-											: policy.paused
-												? 'Yes'
-												: 'No'}
-									</span>
-								</div>
-								<div className="flex flex-col gap-2 text-[12px] text-secondary">
-									{policy.components.map((component) => (
-										<div
-											key={component.scope}
-											className="flex justify-between gap-3"
-										>
-											<span>{component.scope}</span>
-											<PolicyLink policy={component} />
-										</div>
-									))}
-									<p>
-										{policy.policy.type === 'always-allow'
-											? 'This policy permits all accounts. Token admins can still replace it with a restrictive policy.'
-											: policy.policy.type === 'always-reject'
-												? 'This policy rejects all accounts. Token admins can replace it with another policy.'
-												: policy.policy.type === 'compound'
-													? 'Each component has its own account rules and administrator. Token admins can replace the whole policy.'
-													: policy.policy.type === 'allowlist'
-														? 'Only listed accounts are permitted. The policy admin manages the list; token admins can replace the policy.'
-														: 'Listed accounts are blocked. The policy admin manages the list; token admins can replace the policy.'}
-									</p>
-									{policy.policy.type !== 'compound' &&
-										!policy.policy.admin && (
-											<p>This policy has no list administrator.</p>
-										)}
-									<Link
-										to="/policy/$id"
-										params={{ id: policy.policy.id }}
-										className="text-accent hover:underline"
-									>
-										View policy members and activity ↗
-									</Link>
-								</div>
-							</>
+							<div className="flex flex-col gap-2 text-[12px] text-secondary">
+								<p>
+									{policy.policy.type === 'always-allow'
+										? 'This policy permits all accounts. Token admins can still replace it with a restrictive policy.'
+										: policy.policy.type === 'always-reject'
+											? 'This policy rejects all accounts. Token admins can replace it with another policy.'
+											: policy.policy.type === 'compound'
+												? 'Each component has its own account rules and administrator. Token admins can replace the whole policy.'
+												: policy.policy.type === 'allowlist'
+													? 'Only listed accounts are permitted. The policy admin manages the list; token admins can replace the policy.'
+													: 'Listed accounts are blocked. The policy admin manages the list; token admins can replace the policy.'}
+								</p>
+								{policy.policy.type !== 'compound' && !policy.policy.admin && (
+									<p>This policy has no list administrator.</p>
+								)}
+								<Link
+									to="/policy/$id"
+									params={{ id: policy.policy.id }}
+									className="text-accent hover:underline"
+								>
+									View policy members and activity ↗
+								</Link>
+							</div>
 						)
 					)}
 					<AddressPolicyChecker
 						key={`${chainId}:${props.address}`}
 						address={props.address}
 						chainId={chainId}
+						policy={policy}
 					/>
 				</div>
 			</section>
@@ -151,7 +131,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 												<dd className="text-secondary">
 													{tokenRoleDescription(role.role)}
 												</dd>
-												<dd className="flex flex-col gap-1 md:items-end text-[11px]">
+												<dd className="flex items-baseline gap-2 md:justify-end text-[11px] whitespace-nowrap">
 													{role.grantedAt != null && (
 														<span className="text-tertiary">
 															{new Date(
@@ -166,7 +146,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 															className="text-accent hover:underline"
 															aria-label={`View ${role.role} grant transaction for ${group.account}`}
 														>
-															Grant transaction ↗
+															Grant tx ↗
 														</Link>
 													) : (
 														<span className="text-tertiary">
@@ -259,98 +239,111 @@ function Unavailable(props: {
 function AddressPolicyChecker(props: {
 	address: Address.Address
 	chainId: number
+	policy?: TokenPolicy
 }): React.JSX.Element {
+	const queryClient = useQueryClient()
 	const [value, setValue] = React.useState('')
 	const [account, setAccount] = React.useState<Address.Address>()
 	const [invalid, setInvalid] = React.useState(false)
 	const id = React.useId()
 	const query = useQuery({
 		queryKey: ['token-policy-check', props.chainId, props.address, account],
-		queryFn: () => {
+		queryFn: async () => {
 			if (!account) throw new Error('Enter an address to check')
-			return fetchTokenPolicy({
+			const result = await fetchTokenPolicy({
 				data: {
 					token: props.address,
 					chainId: props.chainId,
 					account,
 				},
 			})
+			// Keep the policy header and administrator details on the checked snapshot.
+			queryClient.setQueryData(['token-policy', props.chainId, props.address], {
+				...result,
+				checks: null,
+			})
+			return result
 		},
 		enabled: Boolean(account),
 		staleTime: 0,
 	})
+	const result =
+		account && !query.isFetching && !query.isError ? query.data : undefined
+	const displayedPolicy = result ?? props.policy
 	return (
-		<details className="border-t border-dashed border-distinct pt-3 text-[12px]">
-			<summary className="cursor-pointer text-accent">
-				Check address: send, receive, receive mints
-			</summary>
-			<form
-				className="flex flex-col gap-2 pt-3"
-				onSubmit={(event) => {
-					event.preventDefault()
-					const input = value.trim()
-					if (!Address.validate(input)) {
-						setInvalid(true)
-						setAccount(undefined)
-						return
-					}
-					setInvalid(false)
-					if (account === input) void query.refetch()
-					else setAccount(input)
-				}}
-			>
-				<label htmlFor={id} className="text-secondary">
-					Check whether an address can send tokens, receive tokens, or receive
-					mints under this policy.
-				</label>
-				<div className="flex gap-2">
-					<input
-						id={id}
-						value={value}
-						onChange={(event) => {
-							setValue(event.target.value)
+		<div className="flex flex-col gap-3 text-[12px]">
+			<div aria-live="polite">
+				{displayedPolicy && <PolicyCheckResult result={displayedPolicy} />}
+			</div>
+			<details className="border-t border-dashed border-distinct pt-3 text-[12px]">
+				<summary className="cursor-pointer text-accent">
+					Check an address
+				</summary>
+				<form
+					className="flex flex-col gap-2 pt-3"
+					onSubmit={(event) => {
+						event.preventDefault()
+						const input = value.trim()
+						if (!Address.validate(input)) {
+							setInvalid(true)
 							setAccount(undefined)
-							setInvalid(false)
-						}}
-						placeholder="0x…"
-						autoComplete="off"
-						spellCheck={false}
-						aria-invalid={invalid}
-						aria-describedby={invalid ? `${id}-error` : undefined}
-						className="min-w-0 flex-1 rounded-[5px] border border-distinct bg-transparent px-2 py-1.5 font-mono text-[12px]"
-					/>
-					<button
-						type="submit"
-						disabled={query.isFetching}
-						className="text-accent hover:underline disabled:opacity-50"
-					>
-						{query.isFetching ? 'Checking…' : 'Check'}
-					</button>
-				</div>
-				{invalid && (
-					<p id={`${id}-error`} role="alert" className="text-negative">
-						Enter a valid address.
-					</p>
-				)}
-			</form>
-			{account && (
-				<div aria-live="polite" className="pt-3">
-					{query.isFetching ? (
-						<p className="text-tertiary">Checking current policy…</p>
-					) : query.isError ? (
-						<Unavailable
-							message="Could not check this address."
-							onRetry={() => void query.refetch()}
+							return
+						}
+						setInvalid(false)
+						if (account === input) void query.refetch()
+						else setAccount(input)
+					}}
+				>
+					<label htmlFor={id} className="text-secondary">
+						Send, receive and mint receipt permissions
+					</label>
+					<div className="flex gap-2">
+						<input
+							id={id}
+							value={value}
+							onChange={(event) => {
+								setValue(event.target.value)
+								setAccount(undefined)
+								setInvalid(false)
+							}}
+							placeholder="0x…"
+							autoComplete="off"
+							spellCheck={false}
+							aria-invalid={invalid}
+							aria-describedby={invalid ? `${id}-error` : undefined}
+							className="min-w-0 flex-1 rounded-[5px] border border-distinct bg-transparent px-2 py-1.5 font-mono text-[12px]"
 						/>
-					) : (
-						query.data && <PolicyCheckResult result={query.data} />
+						<button
+							type="submit"
+							disabled={query.isFetching}
+							className="text-accent hover:underline disabled:opacity-50"
+						>
+							{query.isFetching ? 'Checking…' : 'Check'}
+						</button>
+					</div>
+					{invalid && (
+						<p id={`${id}-error`} role="alert" className="text-negative">
+							Enter a valid address.
+						</p>
 					)}
-				</div>
-			)}
-			<p className="text-tertiary pt-2">
-				Token policy only; this does not simulate a transfer.
-			</p>
-		</details>
+				</form>
+				{account && (
+					<div aria-live="polite" className="pt-3">
+						{query.isFetching ? (
+							<p className="text-tertiary">Checking current policy…</p>
+						) : query.isError ? (
+							<Unavailable
+								message="Could not check this address."
+								onRetry={() => void query.refetch()}
+							/>
+						) : null}
+					</div>
+				)}
+				<p className="text-tertiary pt-2">
+					Token policy only; this does not simulate a transfer.
+				</p>
+			</details>
+		</div>
 	)
 }
 
@@ -361,40 +354,39 @@ function PolicyCheckResult({
 }): React.JSX.Element {
 	return (
 		<div className="flex flex-col gap-2">
-			{result.checks?.map((check) => (
-				<div key={check.scope} className="flex flex-wrap justify-between gap-2">
-					<span className="text-secondary">
-						{
-							{
-								Sender: 'Send',
-								Recipient: 'Receive',
-								'Mint recipient': 'Receive mints',
-							}[check.scope]
-						}
-					</span>
-					<span>
-						{check.allowed === null
-							? 'Unavailable'
-							: check.allowed
-								? 'Permitted by policy'
-								: 'Blocked by policy'}{' '}
-						<Link
-							to="/policy/$id"
-							params={{ id: check.policyId }}
-							className="text-accent hover:underline"
+			{(result.components.length > 0 || result.checks) && (
+				<dl className="flex flex-col gap-2" aria-label="Policy permissions">
+					{tokenPolicyRows(result).map((row) => (
+						<div
+							key={row.scope}
+							className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
 						>
-							#{check.policyId}
-						</Link>
-					</span>
-				</div>
-			))}
+							<dt className="text-secondary">{row.label}</dt>
+							<dd className="flex flex-wrap items-baseline justify-end gap-x-3 gap-y-1">
+								{result.components.length > 0 && (
+									<PolicyLink policy={row.policy} />
+								)}
+								{result.checks && (
+									<span>
+										{row.allowed === null
+											? 'Unavailable'
+											: row.allowed
+												? 'Permitted by policy'
+												: 'Blocked by policy'}
+									</span>
+								)}
+							</dd>
+						</div>
+					))}
+				</dl>
+			)}
 			<p className="text-tertiary">
 				{result.paused === null
 					? 'Pause status unavailable.'
 					: result.paused
 						? 'Token is paused.'
 						: 'Token is not paused.'}{' '}
-				Checked at block {result.blockNumber}.
+				{result.checks && <>Checked at block {result.blockNumber}.</>}
 			</p>
 		</div>
 	)

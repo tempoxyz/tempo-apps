@@ -75,45 +75,54 @@ export function Tip20TokenTabContent(
 							</button>
 						</p>
 					)}
-					<div className="flex flex-col gap-[8px]">
-						<ConfigRow label="Total supply" value={config?.totalSupply} />
-						<ConfigRow label="Supply cap" value={config?.supplyCap} />
-						<ConfigRow label="Currency" value={config?.currency} />
-						<ConfigRow label="Decimals" value={config?.decimals} />
-						<ConfigRow
-							label="Created"
-							value={
-								metadataData?.createdTimestamp != null
-									? formatDate(metadataData.createdTimestamp)
-									: undefined
-							}
-						/>
-						{metadataData?.createdBy && (
+					<section
+						aria-label="Metadata"
+						className="rounded-[6px] border border-distinct overflow-hidden"
+					>
+						<h3 className="border-b border-distinct px-3 py-2.5 font-medium">
+							Metadata
+						</h3>
+						<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
+							<MetadataField label="Total supply" value={config?.totalSupply} />
+							<MetadataField label="Supply cap" value={config?.supplyCap} />
+							<MetadataField label="Currency" value={config?.currency} />
+							<MetadataField label="Decimals" value={config?.decimals} />
+						</dl>
+						<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 text-[12px]">
 							<ConfigRow
-								label="Created by"
+								label="Created"
 								value={
-									<AddressComp
-										address={metadataData.createdBy}
-										className="text-[12px]"
-									/>
+									<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+										<span>
+											{metadataData?.createdTimestamp != null
+												? formatDate(metadataData.createdTimestamp)
+												: '—'}
+										</span>
+										{metadataData?.createdTxHash && (
+											<Link
+												to="/tx/$hash"
+												params={{ hash: metadataData.createdTxHash }}
+												className="text-accent hover:underline"
+											>
+												Creation tx ↗
+											</Link>
+										)}
+									</span>
 								}
 							/>
-						)}
-						{metadataData?.createdTxHash && (
-							<ConfigRow
-								label="Creation tx"
-								value={
-									<Link
-										to="/tx/$hash"
-										params={{ hash: metadataData.createdTxHash }}
-										className="text-accent hover:underline"
-									>
-										View transaction ↗
-									</Link>
-								}
-							/>
-						)}
-					</div>
+							{metadataData?.createdBy && (
+								<ConfigRow
+									label="Created by"
+									value={
+										<AddressComp
+											address={metadataData.createdBy}
+											className="text-[12px]"
+										/>
+									}
+								/>
+							)}
+						</div>
+					</section>
 					<TokenTrust
 						address={address}
 						roles={query.data?.roles ?? []}
@@ -158,11 +167,25 @@ function ConfigRow(props: {
 	value: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div className="flex items-center justify-between gap-[12px]">
+		<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
 			<span className="text-secondary shrink-0">{props.label}</span>
 			<span className="text-primary min-w-0">
 				{props.value ?? <span className="text-tertiary">&mdash;</span>}
 			</span>
+		</div>
+	)
+}
+
+function MetadataField(props: {
+	label: string
+	value: React.ReactNode
+}): React.JSX.Element {
+	return (
+		<div className="min-w-0 flex flex-col gap-1.5">
+			<dt className="text-[12px] text-secondary">{props.label}</dt>
+			<dd className="text-[14px] text-primary tabular-nums wrap-anywhere">
+				{props.value ?? <span className="text-tertiary">&mdash;</span>}
+			</dd>
 		</div>
 	)
 }
