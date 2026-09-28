@@ -76,7 +76,7 @@
 					"POSTHOG_API_KEY",
 					"TEMPO_API_KEY",
 					"TEMPO_API_URL",
-					"TEMPO_RPC_KEY",
+					"RPC_AUTH",
 					"TIDX_BASIC_AUTH"
 				]
 			},
@@ -119,6 +119,7 @@
 		},
 		"devnet": {
 			"name": "explorer-devnet",
+			"secrets": { "required": ["RPC_AUTH"] },
 			"routes": [
 				{
 					"custom_domain": true,
@@ -260,6 +261,7 @@
 		},
 		"nextfork": {
 			"name": "explorer-nextfork",
+			"secrets": { "required": ["RPC_AUTH"] },
 			"routes": [
 				{
 					"custom_domain": true,
@@ -321,6 +323,7 @@
 		},
 		"mainnet": {
 			"name": "explorer-mainnet",
+			"secrets": { "required": ["RPC_AUTH"] },
 			"routes": [
 				{
 					"custom_domain": true,

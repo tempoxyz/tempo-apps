@@ -30,8 +30,8 @@ export default defineConfig(async (env) => {
 						)
 					if (file === wagmiConfig)
 						return code.replace(
-							"const target = getChainBackend(chain.id, 'rpc')",
-							"return http('http://localhost:4018/rpc', { batch: true })\n\t\tconst target = getChainBackend(chain.id, 'rpc')",
+							'const target = getExplorerRpcBackend(',
+							"return http('http://localhost:4018/rpc', { batch: true })\n\t\tconst target = getExplorerRpcBackend(",
 						)
 				},
 			},

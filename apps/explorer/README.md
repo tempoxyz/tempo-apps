@@ -41,3 +41,8 @@ When adding new features, please read TanStack Router and Start docs first.
 
 [TanStack Router](https://tanstack.com/router/latest/docs)
 [TanStack Start](https://tanstack.com/start/latest/docs)
+
+# RPC backend configuration
+
+See [RPC.md](./RPC.md) for the `/api/rpc` endpoint, per-Worker Orchestra secrets,
+and rollout verification.
