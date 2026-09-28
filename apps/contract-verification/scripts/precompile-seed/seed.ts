@@ -1,6 +1,7 @@
 import { Hex } from 'ox'
 import { keccak256 } from 'viem'
-import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core'
+import { and, eq, sql } from 'drizzle-orm'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
 
 import {
 	sourcesTable,
@@ -14,8 +15,8 @@ import {
 } from './manifest.ts'
 
 type Database = Pick<
-	BaseSQLiteDatabase<'async', unknown, Record<string, never>>,
-	'insert'
+	DrizzleD1Database,
+	'insert' | 'select' | 'delete' | 'batch'
 >
 
 export type FetchLike = (
@@ -110,10 +111,6 @@ function buildNativeContractRevisionId(
 	].join(':')
 }
 
-function buildRevisionSourceId(revisionId: string, path: string): string {
-	return `revision-source:${revisionId}:${path}`
-}
-
 function validateManifestEntry(entry: NativeContractManifestEntry): void {
 	const paths = new Set(entry.paths)
 	for (const entrypoint of entry.entrypoints) {
@@ -190,7 +187,7 @@ export async function seedNativeContracts(
 				deployment.activation,
 			)
 
-			await db
+			const contractUpsert = db
 				.insert(nativeContractsTable)
 				.values({
 					id: nativeContractId,
@@ -215,9 +212,7 @@ export async function seedNativeContracts(
 						updatedBy: auditUser,
 					},
 				})
-			contracts += 1
-
-			await db
+			const revisionUpsert = db
 				.insert(nativeContractRevisionsTable)
 				.values({
 					id: revisionId,
@@ -234,7 +229,10 @@ export async function seedNativeContracts(
 					updatedBy: auditUser,
 				})
 				.onConflictDoUpdate({
-					target: nativeContractRevisionsTable.id,
+					target: [
+						nativeContractRevisionsTable.nativeContractId,
+						nativeContractRevisionsTable.fromBlock,
+					],
 					set: {
 						repo: entry.repository,
 						commitSha: entry.commit,
@@ -247,28 +245,46 @@ export async function seedNativeContracts(
 						updatedBy: auditUser,
 					},
 				})
-			revisions += 1
 
-			for (const source of sourcesByPath) {
-				await db
-					.insert(nativeContractRevisionSourcesTable)
-					.values({
-						id: buildRevisionSourceId(revisionId, source.path),
-						revisionId,
+			// Revision IDs include the original commit; refreshes keep the stored ID.
+			// Resolve the stored ID inside the batch, after the natural-key upsert.
+			const storedRevision = db
+				.select({ id: nativeContractRevisionsTable.id })
+				.from(nativeContractRevisionsTable)
+				.where(
+					and(
+						eq(nativeContractRevisionsTable.nativeContractId, nativeContractId),
+						eq(
+							nativeContractRevisionsTable.fromBlock,
+							deployment.activation.fromBlock ?? 0,
+						),
+					),
+				)
+			const storedRevisionId = sql<string>`(${storedRevision})`
+
+			// D1 batches are atomic. Replace links so removed/renamed paths do not
+			// survive a refresh, and failed writes leave the previous snapshot intact.
+			await db.batch([
+				contractUpsert,
+				revisionUpsert,
+				db
+					.delete(nativeContractRevisionSourcesTable)
+					.where(
+						eq(nativeContractRevisionSourcesTable.revisionId, storedRevisionId),
+					),
+				...sourcesByPath.map((source) =>
+					db.insert(nativeContractRevisionSourcesTable).values({
+						id: sql<string>`'revision-source:' || ${storedRevisionId} || ':' || ${source.path}`,
+						revisionId: storedRevisionId,
 						sourceHash: source.sourceHash,
 						path: source.path,
 						isEntrypoint: entry.entrypoints.includes(source.path),
-					})
-					.onConflictDoUpdate({
-						target: nativeContractRevisionSourcesTable.id,
-						set: {
-							sourceHash: source.sourceHash,
-							path: source.path,
-							isEntrypoint: entry.entrypoints.includes(source.path),
-						},
-					})
-				revisionSources += 1
-			}
+					}),
+				),
+			])
+			contracts += 1
+			revisions += 1
+			revisionSources += sourcesByPath.length
 		}
 	}
 

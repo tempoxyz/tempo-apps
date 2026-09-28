@@ -86,6 +86,11 @@ pnpm db:seed:remote    # Seed native/precompile contract metadata into remote D1
 
 The seed script uses Wrangler's D1 binding path rather than opening the SQLite file directly, so the same seeding logic works for both local and remote D1.
 
+Rerunning the seed refreshes each `(contract, from_block)` snapshot in place,
+preserving its revision ID. Metadata and source links are replaced atomically per
+deployment, including removal of obsolete paths; other activation blocks are
+unchanged. A partially completed seed can be rerun without deleting existing rows.
+
 The native manifest covers Tempo's 15 fixed precompiles and the shared TIP-20
 implementation. It pins Rust source snapshots and records activation versions;
 these are native-source records, not Solidity bytecode verification. All entries
