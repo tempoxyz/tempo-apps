@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { fitMidcut } from '#lib/midcut'
 
 export function Midcut(props: Midcut.Props): React.JSX.Element {
 	const {
@@ -10,10 +11,17 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 	} = props
 	const ref = React.useRef<HTMLSpanElement>(null)
 	const prefixLength = value.startsWith(prefix) ? prefix.length : 0
-	const body = value.slice(prefixLength)
 	const minChars = Math.max(1, min)
-	const minWidth = prefixLength + minChars * 2 + 1
-	const [cut, setCut] = React.useState(value.length > minWidth)
+	const minWidth = prefixLength + minChars * 2 + ellipsis.length
+	const [parts, setParts] = React.useState(() =>
+		fitMidcut(value, {
+			width: 0,
+			measure: (text) => text.length,
+			prefix,
+			ellipsis,
+			min,
+		}),
+	)
 
 	React.useLayoutEffect(() => {
 		const element = ref.current
@@ -30,9 +38,22 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 			const style = getComputedStyle(element)
 
 			context.font = style.font
-			const fullWidth = context.measureText(value).width
-			const nextCut = fullWidth > element.clientWidth + 0.5
-			setCut((current) => (current === nextCut ? current : nextCut))
+			context.letterSpacing =
+				style.letterSpacing === 'normal' ? '0px' : style.letterSpacing
+			const next = fitMidcut(value, {
+				width: Math.floor(element.getBoundingClientRect().width),
+				measure: (text) => context.measureText(text).width,
+				prefix,
+				ellipsis,
+				min,
+			})
+			setParts((current) =>
+				current.start === next.start &&
+				current.end === next.end &&
+				current.cut === next.cut
+					? current
+					: next,
+			)
 		}
 
 		update()
@@ -45,33 +66,22 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 			mounted = false
 			observer.disconnect()
 		}
-	}, [value])
-
-	const cutAt = 1 + Math.ceil((body.length - 1) / 2)
-	const leading = `${prefix}${body[0] ?? ''}`
-	const start = body.slice(1, cutAt)
-	const end = body.slice(cutAt, -1)
-	const trailing = body.at(-1) ?? ''
+	}, [value, prefix, ellipsis, min])
 
 	return (
 		<span
 			ref={ref}
 			className="midcut"
 			data-align={align}
-			data-cut={cut ? 'true' : 'false'}
+			data-cut={parts.cut ? 'true' : 'false'}
 			title={value}
 			style={{ minWidth: `${minWidth}ch` }}
 		>
 			<span className="midcut__findable">{value}</span>
 			<span aria-hidden="true" className="midcut__visual">
-				<span className="midcut__text" data-text={leading} />
-				<span className="midcut__text midcut__part" data-text={start} />
-				<span className="midcut__text midcut__ellipsis" data-text={ellipsis} />
-				<span
-					className="midcut__text midcut__part midcut__part--end"
-					data-text={end}
-				/>
-				<span className="midcut__text" data-text={trailing} />
+				<span className="midcut__text" data-text={parts.start} />
+				<span className="midcut__text" data-text={ellipsis} />
+				<span className="midcut__text" data-text={parts.end} />
 			</span>
 		</span>
 	)

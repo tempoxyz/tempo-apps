@@ -376,23 +376,16 @@ html[data-theme="light"] .sphere-artwork {
 	color: inherit;
 }
 
-.midcut__text::before {
-	content: attr(data-text);
+.midcut[data-align="end"] .midcut__visual {
+	justify-content: flex-end;
 }
 
-.midcut__ellipsis {
+.midcut__text {
 	flex: 0 0 auto;
 }
 
-.midcut[data-cut="true"] .midcut__part {
-	flex: 1 1 0;
-	min-width: 0;
-	overflow: hidden;
-}
-
-.midcut[data-cut="true"] .midcut__part--end {
-	display: inline-flex;
-	justify-content: flex-end;
+.midcut__text::before {
+	content: attr(data-text);
 }
 
 @keyframes progressline {
