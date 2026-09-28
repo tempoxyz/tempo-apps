@@ -6,19 +6,9 @@ import { useChainId } from 'wagmi'
 import { Address as AddressComp } from '#comps/Address.tsx'
 import { CollapsibleSection } from '#comps/Contract.tsx'
 import { TokenFeeAmm } from '#comps/FeeAmmPools'
-import { getContractInfo } from '#lib/domain/contracts.ts'
+import { TokenTrust } from '#comps/TokenTrust'
 import { getApiUrl } from '#lib/env.ts'
-import ArrowUpRightIcon from '~icons/lucide/arrow-up-right'
-import InfoIcon from '~icons/lucide/info'
-
-// The roles API returns display names without the `_ROLE` suffix.
-const ROLE_DESCRIPTIONS = new Map([
-	['DEFAULT_ADMIN', 'Can grant/revoke any role.'],
-	['PAUSE', 'Can pause token transfers.'],
-	['UNPAUSE', 'Can unpause token transfers.'],
-	['ISSUER', 'Can mint new tokens.'],
-	['BURN_BLOCKED', 'Can burn tokens from blocked accounts.'],
-])
+import type { Tip20RolesResponse } from '#routes/api/tip20-roles'
 
 function formatDate(timestamp: number): string {
 	return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -33,10 +23,8 @@ export function Tip20TokenTabContent(
 ): React.JSX.Element {
 	const { address } = props
 	const chainId = useChainId()
-
 	const [configExpanded, setConfigExpanded] = React.useState(true)
-	const [rolesExpanded, setRolesExpanded] = React.useState(true)
-
+	const [liquidityExpanded, setLiquidityExpanded] = React.useState(false)
 	const { data: metadataData } = useQuery<{
 		createdTimestamp: number | null
 		createdTxHash: `0x${string}` | null
@@ -44,43 +32,20 @@ export function Tip20TokenTabContent(
 	}>({
 		queryKey: ['address-metadata', address],
 		queryFn: async () => {
-			const url = getApiUrl(`/api/address/metadata/${address}`)
-			const response = await fetch(url)
+			const response = await fetch(
+				getApiUrl(`/api/address/metadata/${address}`),
+			)
 			if (!response.ok)
-				return {
-					createdTimestamp: null,
-					createdTxHash: null,
-					createdBy: null,
-				} as const
+				return { createdTimestamp: null, createdTxHash: null, createdBy: null }
 			return response.json()
 		},
 	})
-
-	const { data: tip20Data, refetch: refetchTip20Data } = useQuery<{
-		roles: Array<{
-			role: string
-			roleHash: string
-			account: Address.Address
-			grantedAt?: number
-			grantedTx?: `0x${string}`
-		}>
-		rolesUnavailable: boolean
-		config: {
-			supplyCap: string | null
-			totalSupply: string | null
-			currency: string | null
-			transferPolicyId: string | null
-			paused: boolean | null
-		}
-	}>({
+	const query = useQuery<Tip20RolesResponse>({
 		queryKey: ['tip20-data', address, chainId],
 		queryFn: async () => {
 			const url = getApiUrl(
 				'/api/tip20-roles',
-				new URLSearchParams({
-					address,
-					chainId: String(chainId),
-				}),
+				new URLSearchParams({ address, chainId: String(chainId) }),
 			)
 			const response = await fetch(url)
 			if (!response.ok)
@@ -88,22 +53,90 @@ export function Tip20TokenTabContent(
 			return response.json()
 		},
 	})
-
-	const roles = tip20Data?.roles
-	const config = tip20Data?.config
-
+	const config = query.isError ? undefined : query.data?.config
 	return (
 		<div className="flex flex-col [&>*:last-child]:border-b-transparent">
-			<TokenFeeAmm address={address} />
-			{/* Info Banner */}
-			<div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
-				<span className="whitespace-nowrap">TIP-20 Native Token</span>
-				<span className="text-tertiary">·</span>
+			<CollapsibleSection
+				first
+				title="Token configuration"
+				expanded={configExpanded}
+				onToggle={() => setConfigExpanded(!configExpanded)}
+			>
+				<div className="px-[18px] pb-[14px] pt-[6px] text-[13px]">
+					{query.isError && (
+						<p role="status" className="text-tertiary pb-3">
+							Token configuration unavailable.{' '}
+							<button
+								type="button"
+								onClick={() => void query.refetch()}
+								className="text-accent hover:underline"
+							>
+								Try again
+							</button>
+						</p>
+					)}
+					<div className="flex flex-col gap-[8px]">
+						<ConfigRow label="Total supply" value={config?.totalSupply} />
+						<ConfigRow label="Supply cap" value={config?.supplyCap} />
+						<ConfigRow label="Currency" value={config?.currency} />
+						<ConfigRow label="Decimals" value={config?.decimals} />
+						<ConfigRow
+							label="Created"
+							value={
+								metadataData?.createdTimestamp != null
+									? formatDate(metadataData.createdTimestamp)
+									: undefined
+							}
+						/>
+						{metadataData?.createdBy && (
+							<ConfigRow
+								label="Created by"
+								value={
+									<AddressComp
+										address={metadataData.createdBy}
+										className="text-[12px]"
+									/>
+								}
+							/>
+						)}
+						{metadataData?.createdTxHash && (
+							<ConfigRow
+								label="Creation tx"
+								value={
+									<Link
+										to="/tx/$hash"
+										params={{ hash: metadataData.createdTxHash }}
+										className="text-accent hover:underline"
+									>
+										View transaction ↗
+									</Link>
+								}
+							/>
+						)}
+					</div>
+					<TokenTrust
+						address={address}
+						roles={query.data?.roles ?? []}
+						loading={query.isPending}
+						unavailable={query.isError || Boolean(query.data?.rolesUnavailable)}
+						onRetry={() => void query.refetch()}
+					/>
+				</div>
+			</CollapsibleSection>
+			<CollapsibleSection
+				title="Fee AMM liquidity"
+				expanded={liquidityExpanded}
+				onToggle={() => setLiquidityExpanded(!liquidityExpanded)}
+			>
+				{liquidityExpanded && <TokenFeeAmm address={address} />}
+			</CollapsibleSection>
+			<div className="flex items-center gap-3 px-[18px] py-[10px] text-[12px] text-tertiary">
+				<span>TIP-20</span>
 				<a
 					href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-accent hover:underline whitespace-nowrap"
+					className="text-accent hover:underline"
 				>
 					Spec
 				</a>
@@ -111,176 +144,23 @@ export function Tip20TokenTabContent(
 					href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-accent hover:underline whitespace-nowrap"
+					className="text-accent hover:underline"
 				>
 					Rust
 				</a>
 			</div>
-
-			{/* Configuration Section */}
-			<CollapsibleSection
-				first
-				title="Configuration"
-				expanded={configExpanded}
-				onToggle={() => setConfigExpanded(!configExpanded)}
-			>
-				<div className="px-[18px] py-[12px]">
-					<div className="flex flex-col gap-[8px] text-[13px]">
-						<ConfigRow
-							label="Total Supply"
-							value={config?.totalSupply ?? undefined}
-						/>
-						<ConfigRow
-							label="Supply Cap"
-							value={config?.supplyCap ?? undefined}
-						/>
-						<ConfigRow label="Currency" value={config?.currency ?? undefined} />
-						<ConfigRow
-							label="Transfer Policy ID"
-							value={
-								config?.transferPolicyId ? (
-									<Link
-										to="/policy/$id"
-										params={{ id: config.transferPolicyId }}
-										className="text-accent hover:underline"
-									>
-										{config.transferPolicyId}
-									</Link>
-								) : undefined
-							}
-						/>
-						<ConfigRow
-							label="Paused"
-							value={
-								config?.paused !== null && config?.paused !== undefined
-									? config.paused
-										? 'Yes'
-										: 'No'
-									: undefined
-							}
-						/>
-						<ConfigRow
-							label="Created"
-							value={
-								metadataData?.createdTimestamp
-									? formatDate(metadataData.createdTimestamp)
-									: undefined
-							}
-						/>
-						{metadataData?.createdBy && (
-							<div className="flex items-center justify-between gap-[12px]">
-								<span className="text-secondary">Created By</span>
-								<AddressComp
-									address={metadataData.createdBy}
-									className="text-[13px]"
-								/>
-							</div>
-						)}
-						{metadataData?.createdTxHash && (
-							<div className="flex items-center justify-between gap-[12px]">
-								<span className="text-secondary">Creation Tx</span>
-								<Link
-									to="/tx/$hash"
-									params={{ hash: metadataData.createdTxHash }}
-									className="text-[13px] font-mono text-accent hover:underline"
-								>
-									{metadataData.createdTxHash.slice(0, 10)}…
-									{metadataData.createdTxHash.slice(-8)}
-								</Link>
-							</div>
-						)}
-					</div>
-				</div>
-			</CollapsibleSection>
-
-			{/* Roles Section */}
-			<CollapsibleSection
-				title="Roles"
-				expanded={rolesExpanded}
-				onToggle={() => setRolesExpanded(!rolesExpanded)}
-			>
-				<div className="px-[18px] py-[12px]">
-					{tip20Data?.rolesUnavailable ? (
-						<div className="flex items-center gap-2 text-[13px]">
-							<span className="text-tertiary">
-								Roles are temporarily unavailable.
-							</span>
-							<button
-								type="button"
-								className="text-accent hover:underline"
-								onClick={() => void refetchTip20Data()}
-							>
-								Try again
-							</button>
-						</div>
-					) : roles && roles.length > 0 ? (
-						<div className="flex flex-col gap-[8px] text-[13px]">
-							{roles.map((r) => {
-								const info = getContractInfo(r.account)
-								const label = info?.name
-								const description = ROLE_DESCRIPTIONS.get(r.role)
-								return (
-									<div
-										key={`${r.role}:${r.account}`}
-										className="flex items-center gap-[8px]"
-									>
-										<span
-											className="text-secondary shrink-0 inline-flex items-center gap-[4px]"
-											title={description}
-										>
-											{r.role}
-											{description && (
-												<InfoIcon
-													className="size-[12px] text-tertiary cursor-help"
-													role="img"
-													aria-label={description}
-												/>
-											)}
-										</span>
-										{label && (
-											<span className="text-[11px] text-tertiary shrink-0">
-												{label}
-											</span>
-										)}
-										<span className="min-w-0 flex-1">
-											<AddressComp
-												address={r.account}
-												className="text-[12px]"
-												align="end"
-											/>
-										</span>
-										{r.grantedAt && (
-											<span className="text-[11px] text-tertiary whitespace-nowrap hidden sm:inline">
-												{formatDate(r.grantedAt)}
-											</span>
-										)}
-										{r.grantedTx && (
-											<Link
-												to="/tx/$hash"
-												params={{ hash: r.grantedTx }}
-												className="text-[11px] text-accent hover:underline whitespace-nowrap shrink-0 inline-flex items-center gap-[2px]"
-											>
-												Grant <ArrowUpRightIcon className="size-[10px]" />
-											</Link>
-										)}
-									</div>
-								)
-							})}
-						</div>
-					) : (
-						<span className="text-[13px] text-tertiary">No roles found.</span>
-					)}
-				</div>
-			</CollapsibleSection>
 		</div>
 	)
 }
 
-function ConfigRow(props: { label: string; value: React.ReactNode }) {
+function ConfigRow(props: {
+	label: string
+	value: React.ReactNode
+}): React.JSX.Element {
 	return (
 		<div className="flex items-center justify-between gap-[12px]">
-			<span className="text-secondary">{props.label}</span>
-			<span className="text-primary">
+			<span className="text-secondary shrink-0">{props.label}</span>
+			<span className="text-primary min-w-0">
 				{props.value ?? <span className="text-tertiary">&mdash;</span>}
 			</span>
 		</div>
@@ -288,7 +168,5 @@ function ConfigRow(props: { label: string; value: React.ReactNode }) {
 }
 
 export declare namespace Tip20TokenTabContent {
-	type Props = {
-		address: Address.Address
-	}
+	type Props = { address: Address.Address }
 }

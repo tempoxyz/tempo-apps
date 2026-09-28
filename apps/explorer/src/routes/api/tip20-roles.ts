@@ -118,11 +118,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 								: null,
 						currency: currency ?? null,
 						transferPolicyId:
-							transferPolicyId !== undefined
-								? transferPolicyId === 0n
-									? '0 (none)'
-									: String(transferPolicyId)
-								: null,
+							transferPolicyId !== undefined ? String(transferPolicyId) : null,
 						paused: paused ?? null,
 						decimals: decimals ?? null,
 						symbol: symbol ?? null,
@@ -152,6 +148,11 @@ export const Route = createFileRoute('/api/tip20-roles')({
 							.orderBy('log_idx', 'asc')
 							.limit(ROLE_LOG_SCAN_LIMIT)
 							.execute()
+
+						// A bounded history cannot establish current holders once it fills up.
+						if (roleLogs.length === ROLE_LOG_SCAN_LIMIT) {
+							throw new Error('Role history exceeds the scan limit')
+						}
 
 						const holders = new Map<string, boolean>()
 						const grantMeta = new Map<
