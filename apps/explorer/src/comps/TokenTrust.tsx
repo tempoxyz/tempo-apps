@@ -40,8 +40,10 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 			>
 				<div className="flex items-start justify-between gap-2 border-b border-distinct px-3 py-2.5">
 					<h4 className="font-medium">Transfer policy</h4>
-					<div className="flex flex-col items-end gap-1">
-						{policy && <PolicyLink policy={policy.policy} />}
+					{policy && <PolicyLink policy={policy.policy} />}
+				</div>
+				<div className="flex flex-col gap-3 p-3">
+					<div className="flex flex-col items-start gap-3 md:flex-row-reverse md:justify-between">
 						<span
 							role="status"
 							aria-label="Token pause status"
@@ -51,7 +53,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 									: undefined
 							}
 							className={cx(
-								'inline-flex items-center rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
+								'inline-flex shrink-0 items-center rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
 								policy?.paused === true && 'bg-warning/15 text-warning',
 								policy?.paused !== true && 'bg-distinct',
 								policy?.paused === false && 'text-inherit',
@@ -62,28 +64,26 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 								? 'Loading status…'
 								: pauseStatusLabel(policy?.paused)}
 						</span>
+						{policyQuery.isPending ? (
+							<p className="text-tertiary" role="status">
+								Loading transfer policy…
+							</p>
+						) : policyQuery.isError ? (
+							<Unavailable
+								message="Transfer policy unavailable."
+								onRetry={() => void policyQuery.refetch()}
+							/>
+						) : (
+							policy && (
+								<div className="flex flex-col gap-2 text-[12px] text-secondary">
+									<p>{policyDescriptions[policy.policy.type]}</p>
+									<p className="text-tertiary">
+										Token admins can replace this policy.
+									</p>
+								</div>
+							)
+						)}
 					</div>
-				</div>
-				<div className="flex flex-col gap-3 p-3">
-					{policyQuery.isPending ? (
-						<p className="text-tertiary" role="status">
-							Loading transfer policy…
-						</p>
-					) : policyQuery.isError ? (
-						<Unavailable
-							message="Transfer policy unavailable."
-							onRetry={() => void policyQuery.refetch()}
-						/>
-					) : (
-						policy && (
-							<div className="flex flex-col gap-2 text-[12px] text-secondary">
-								<p>{policyDescriptions[policy.policy.type]}</p>
-								<p className="text-tertiary">
-									Token admins can replace this policy.
-								</p>
-							</div>
-						)
-					)}
 					<AddressPolicyChecker
 						key={`${chainId}:${props.address}`}
 						address={props.address}
