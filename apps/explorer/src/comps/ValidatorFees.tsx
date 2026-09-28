@@ -5,19 +5,15 @@ import type * as React from 'react'
 import { formatUnits } from 'viem'
 import { Sections } from '#comps/Sections'
 import { useIsMounted } from '#lib/hooks'
-import { fetchValidatorFees } from '#lib/server/validator-fees'
-import { getTempoChain } from '#wagmi.config'
+import { validatorFeesQueryOptions } from '#lib/queries/validator-fees'
 
 export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 	const { address, active } = props
 	const isMounted = useIsMounted()
 	const mode = Sections.useSectionsMode()
 	const query = useQuery({
-		queryKey: ['validator-fees', getTempoChain().id, address.toLowerCase()],
-		queryFn: () => fetchValidatorFees({ data: address }),
+		...validatorFeesQueryOptions(address),
 		enabled: isMounted && (active || mode === 'stacked'),
-		staleTime: 15_000,
-		retry: false,
 	})
 
 	return (

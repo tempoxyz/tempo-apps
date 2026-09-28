@@ -94,6 +94,7 @@ import {
 } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { type HistoryResponse, historyQueryOptions } from '#lib/queries/account'
+import { validatorFeesQueryOptions } from '#lib/queries/validator-fees'
 import {
 	accountTransfersQueryOptions,
 	holdersQueryOptions,
@@ -508,12 +509,18 @@ function RouteComponent() {
 
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
+	const { data: validatorFees } = useQuery({
+		...validatorFeesQueryOptions(address),
+		enabled: isMounted && !isTip20,
+	})
+	const hasUnclaimedFees = (validatorFees?.fees.length ?? 0) > 0
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = isZonePortal
 			? ['deposits', 'withdrawals', 'batches', 'transactions']
 			: ['transactions']
 		if (!isTip20) {
-			tabs.push('transfers', 'holdings', 'fees')
+			tabs.push('transfers', 'holdings')
+			if (hasUnclaimedFees) tabs.push('fees')
 		}
 		if (isToken) {
 			if (!tabs.includes('transfers')) tabs.push('transfers')
@@ -526,7 +533,7 @@ function RouteComponent() {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract, isZonePortal])
+	}, [isToken, isTip20, isContract, isZonePortal, hasUnclaimedFees])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
