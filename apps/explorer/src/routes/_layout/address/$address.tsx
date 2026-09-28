@@ -20,6 +20,7 @@ import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
 import { WalletActions } from '#comps/WalletActions'
+import { ValidatorFees } from '#comps/ValidatorFees'
 import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -512,7 +513,7 @@ function RouteComponent() {
 			? ['deposits', 'withdrawals', 'batches', 'transactions']
 			: ['transactions']
 		if (!isTip20) {
-			tabs.push('transfers', 'holdings')
+			tabs.push('transfers', 'holdings', 'fees')
 		}
 		if (isToken) {
 			if (!tabs.includes('transfers')) tabs.push('transfers')
@@ -1964,6 +1965,13 @@ function SectionsWrapper(props: {
 									: 'No transactions found.'
 							}
 						/>
+					),
+				}
+			case 'fees':
+				return {
+					title: 'Unclaimed fees',
+					content: (
+						<ValidatorFees address={address} active={activeTab === 'fees'} />
 					),
 				}
 			case 'holdings': {

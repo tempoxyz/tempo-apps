@@ -6,6 +6,7 @@ const allTabs = [
 	'batches',
 	'transactions',
 	'holdings',
+	'fees',
 	'transfers',
 	'holders',
 	'token',
