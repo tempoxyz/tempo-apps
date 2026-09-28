@@ -9,6 +9,16 @@ import { TokenFeeAmm } from '#comps/FeeAmmPools'
 import { getContractInfo } from '#lib/domain/contracts.ts'
 import { getApiUrl } from '#lib/env.ts'
 import ArrowUpRightIcon from '~icons/lucide/arrow-up-right'
+import InfoIcon from '~icons/lucide/info'
+
+// The roles API returns display names without the `_ROLE` suffix.
+const ROLE_DESCRIPTIONS = new Map([
+	['DEFAULT_ADMIN', 'Can grant/revoke any role.'],
+	['PAUSE', 'Can pause token transfers.'],
+	['UNPAUSE', 'Can unpause token transfers.'],
+	['ISSUER', 'Can mint new tokens.'],
+	['BURN_BLOCKED', 'Can burn tokens from blocked accounts.'],
+])
 
 function formatDate(timestamp: number): string {
 	return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -208,12 +218,25 @@ export function Tip20TokenTabContent(
 							{roles.map((r) => {
 								const info = getContractInfo(r.account)
 								const label = info?.name
+								const description = ROLE_DESCRIPTIONS.get(r.role)
 								return (
 									<div
 										key={`${r.role}:${r.account}`}
 										className="flex items-center gap-[8px]"
 									>
-										<span className="text-secondary shrink-0">{r.role}</span>
+										<span
+											className="text-secondary shrink-0 inline-flex items-center gap-[4px]"
+											title={description}
+										>
+											{r.role}
+											{description && (
+												<InfoIcon
+													className="size-[12px] text-tertiary cursor-help"
+													role="img"
+													aria-label={description}
+												/>
+											)}
+										</span>
 										{label && (
 											<span className="text-[11px] text-tertiary shrink-0">
 												{label}
