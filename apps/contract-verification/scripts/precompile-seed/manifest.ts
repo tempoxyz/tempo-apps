@@ -48,14 +48,9 @@ export type NativeContractManifestEntry = {
 }
 
 const tempoRepository = 'tempoxyz/tempo' as const
-const tempoCommit = '194dec5c35deeb58ddb3ab88ad028122b511a5af' as const
+const tempoCommit = '07761a78a4ac00988533aa8acbcb6667786b625d' as const
 const tempoCommitUrl =
 	`https://github.com/${tempoRepository}/tree/${tempoCommit}` as const
-
-// This snapshot contains the post-T3 precompiles absent from the original pin.
-const extendedTempoCommit = '07761a78a4ac00988533aa8acbcb6667786b625d' as const
-const extendedTempoCommitUrl =
-	`https://github.com/${tempoRepository}/tree/${extendedTempoCommit}` as const
 
 const addressDefinitionPaths = [
 	'crates/contracts/src/precompiles/mod.rs',
@@ -312,7 +307,8 @@ export const stablecoinDexManifest = {
 	paths: [
 		'crates/precompiles/src/stablecoin_dex/mod.rs',
 		'crates/precompiles/src/stablecoin_dex/dispatch.rs',
-		'crates/precompiles/src/stablecoin_dex/order.rs',
+		'crates/precompiles/src/stablecoin_dex/order/mod.rs',
+		'crates/precompiles/src/stablecoin_dex/order/storage.rs',
 		'crates/precompiles/src/stablecoin_dex/orderbook.rs',
 		'crates/precompiles/src/stablecoin_dex/error.rs',
 	],
@@ -380,8 +376,8 @@ export const storageCreditsManifest = {
 	language: 'Rust',
 	abi: storageCreditsAbi,
 	repository: tempoRepository,
-	commit: extendedTempoCommit,
-	commitUrl: extendedTempoCommitUrl,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
 	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1060',
 	sourceRoot: 'crates/precompiles/src/storage_credits',
 	paths: [
@@ -406,8 +402,8 @@ export const tip20Manifest = {
 	language: 'Rust',
 	abi: Abis.tip20,
 	repository: tempoRepository,
-	commit: extendedTempoCommit,
-	commitUrl: extendedTempoCommitUrl,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
 	docsUrl: 'https://docs.tempo.xyz/protocol/tip20/spec',
 	sourceRoot: 'crates/precompiles/src/tip20',
 	paths: [
@@ -431,8 +427,8 @@ export const tip20ChannelReserveManifest = {
 	language: 'Rust',
 	abi: Abis.tip20ChannelReserve,
 	repository: tempoRepository,
-	commit: extendedTempoCommit,
-	commitUrl: extendedTempoCommitUrl,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
 	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1034',
 	sourceRoot: 'crates/precompiles/src/tip20_channel_reserve',
 	paths: [
@@ -459,8 +455,8 @@ export const receivePolicyGuardManifest = {
 	language: 'Rust',
 	abi: Abis.receivePolicyGuard,
 	repository: tempoRepository,
-	commit: extendedTempoCommit,
-	commitUrl: extendedTempoCommitUrl,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
 	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1028',
 	sourceRoot: 'crates/precompiles/src/receive_policy_guard',
 	paths: [
@@ -487,8 +483,8 @@ export const currentCommitteeManifest = {
 	language: 'Rust',
 	abi: Abis.currentCommittee,
 	repository: tempoRepository,
-	commit: extendedTempoCommit,
-	commitUrl: extendedTempoCommitUrl,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
 	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1070',
 	sourceRoot: 'crates/precompiles/src/current_committee',
 	paths: [
@@ -515,8 +511,8 @@ export const zoneFactoryManifest = {
 	language: 'Rust',
 	abi: Abis.zoneFactory,
 	repository: tempoRepository,
-	commit: extendedTempoCommit,
-	commitUrl: extendedTempoCommitUrl,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
 	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1091',
 	sourceRoot: 'crates/precompiles/src/zone_factory',
 	paths: [

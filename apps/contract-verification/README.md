@@ -88,10 +88,9 @@ The seed script uses Wrangler's D1 binding path rather than opening the SQLite f
 
 The native manifest covers Tempo's 15 fixed precompiles and the shared TIP-20
 implementation. It pins Rust source snapshots and records activation versions;
-these are native-source records, not Solidity bytecode verification. New entries
-and Storage Credits use the newer snapshot declared in the manifest because the
-original snapshot predates those precompiles. Review snapshot/ABI alignment and
-activation metadata before publishing updates.
+these are native-source records, not Solidity bytecode verification. All entries
+share the `tempoCommit` snapshot declared in the manifest. Review snapshot/ABI
+alignment and activation metadata before publishing updates.
 
 Seeded pathUSD provides the TIP-20 source template. Single-chain address lookups
 reuse it for other TIP-20 addresses on the static Tempo networks only after RPC
