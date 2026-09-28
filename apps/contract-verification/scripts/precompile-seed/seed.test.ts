@@ -72,13 +72,19 @@ describe('seedNativeContracts', () => {
 			.select()
 			.from(DB.nativeContractRevisionsTable)
 		expect(nativeRevisions).toHaveLength(expectedContracts)
-		expect(
-			nativeRevisions.every(
-				(row) =>
-					row.repo === nativeContractsManifest[0]?.repository &&
-					row.commitSha === nativeContractsManifest[0]?.commit,
-			),
-		).toBe(true)
+		for (const entry of nativeContractsManifest) {
+			for (const deployment of entry.deployments) {
+				expect(nativeRevisions).toEqual(
+					expect.arrayContaining([
+						expect.objectContaining({
+							nativeContractId: `native:${entry.id}:${deployment.chainId}:${deployment.address.toLowerCase()}`,
+							repo: entry.repository,
+							commitSha: entry.commit,
+						}),
+					]),
+				)
+			}
+		}
 
 		const nativeRevisionSources = await db
 			.select()

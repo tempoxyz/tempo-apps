@@ -1,7 +1,8 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { Address, Hex } from 'ox'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
-import { keccak256 } from 'viem'
+import { createPublicClient, keccak256 } from 'viem'
+import { Addresses } from 'viem/tempo'
 
 import {
 	codeTable,
@@ -18,6 +19,8 @@ import {
 } from '#database/schema.ts'
 import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
+import { createRpcTransport } from '#lib/rpc.ts'
+import { staticChains } from '#wagmi.config.ts'
 import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -509,6 +512,58 @@ async function getNativeLookupResponse(
 	return { minimalResponse, fullResponse }
 }
 
+async function getTip20LookupResponse(
+	context: Context<AppEnv>,
+	chainId: number,
+	address: string,
+) {
+	const normalizedAddress = address.toLowerCase() as `0x${string}`
+	if (!/^0x20c000000000000000000000[0-9a-f]{16}$/.test(normalizedAddress))
+		return null
+
+	// Dynamic registry entries may be non-Tempo chains. Only use source snapshots
+	// seeded for the static Tempo networks, never a prefix match on arbitrary EVMs.
+	const chain = staticChains.find((candidate) => candidate.id === chainId)
+	if (!chain) return null
+
+	const template = await getNativeLookupResponse(
+		getDb(context.env.CONTRACTS_DB),
+		chainId,
+		Hex.toBytes(Addresses.pathUsd),
+	)
+	if (!template) return null
+
+	const client = createPublicClient({
+		chain,
+		transport: createRpcTransport(undefined, chainId, context.env),
+	})
+	// Initialized native tokens carry the 0xef marker installed by Tempo's
+	// storage layout macro. Empty/reserved prefix addresses are not contracts.
+	if ((await client.getCode({ address: normalizedAddress })) !== '0xef')
+		return null
+
+	const minimalResponse = {
+		...template.minimalResponse,
+		matchId: `native:native:tip20:${chainId}:${normalizedAddress}`,
+		address: normalizedAddress,
+	}
+	return {
+		minimalResponse,
+		fullResponse: {
+			...template.fullResponse,
+			...minimalResponse,
+			deployment: {
+				chainId: String(chainId),
+				address: normalizedAddress,
+				transactionHash: null,
+				blockNumber: null,
+				transactionIndex: null,
+				deployer: null,
+			},
+		},
+	}
+}
+
 /**
  * GET /v2/contract/{chainId}/{address}
  * GET /v2/contract/all-chains/{address}
@@ -716,11 +771,9 @@ lookupRoute
 
 			const [row] = results
 			if (!row) {
-				const nativeLookup = await getNativeLookupResponse(
-					db,
-					chainIdNumber,
-					addressBytes,
-				)
+				const nativeLookup =
+					(await getNativeLookupResponse(db, chainIdNumber, addressBytes)) ??
+					(await getTip20LookupResponse(context, chainIdNumber, address))
 				if (nativeLookup) {
 					return context.json(
 						applyFieldSelection(

@@ -86,6 +86,21 @@ pnpm db:seed:remote    # Seed native/precompile contract metadata into remote D1
 
 The seed script uses Wrangler's D1 binding path rather than opening the SQLite file directly, so the same seeding logic works for both local and remote D1.
 
+The native manifest covers Tempo's 15 fixed precompiles and the shared TIP-20
+implementation. It pins Rust source snapshots and records activation versions;
+these are native-source records, not Solidity bytecode verification. New entries
+and Storage Credits use the newer snapshot declared in the manifest because the
+original snapshot predates those precompiles. Review snapshot/ABI alignment and
+activation metadata before publishing updates.
+
+Seeded pathUSD provides the TIP-20 source template. Single-chain address lookups
+reuse it for other TIP-20 addresses on the static Tempo networks only after RPC
+confirms the native `0xef` code marker. Uninitialized addresses return 404; RPC
+failures return an error rather than claiming verification. This lookup does not
+write token instances to D1, so list/all-chains endpoints enumerate stored records
+only. Zone Portal, Zone Messenger, and Zone Verifier are EVM contracts, not native
+precompiles, and use the ordinary bytecode-verification path.
+
 `pnpm db:studio` uses the Drizzle D1 HTTP config. If you need to inspect the local SQLite file directly, resolve it with [local-d1.ts](./scripts/local-d1.ts) and point a SQLite-capable tool at that path instead.
 
 | environment | database      | dialect | GUI                                                                 |

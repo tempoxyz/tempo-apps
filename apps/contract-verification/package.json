@@ -26,7 +26,7 @@
 		"db:prepare:remote": "CI=1 pnpm exec wrangler d1 migrations apply CONTRACTS_DB --remote",
 		"db:seed": "node ./scripts/precompile-seed/index.ts",
 		"db:seed:local": "pnpm db:prepare:local && pnpm db:seed",
-		"db:seed:remote": "pnpm db:prepare:remote && pnpm db:seed",
+		"db:seed:remote": "pnpm db:prepare:remote && pnpm db:seed --remote",
 		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'"
 	},
 	"dependencies": {
