@@ -11,7 +11,7 @@ export const EXPLORER_NETWORK_OPTIONS = [
 		env: 'testnet',
 		label: 'Testnet',
 		host: 'https://explore.testnet.tempo.xyz',
-		dotClassName: 'bg-amber-400',
+		dotClassName: 'bg-warning',
 	},
 ] as const
 
@@ -22,7 +22,7 @@ export function getActiveExplorerNetworkOption(tempoEnv: TempoEnv) {
 	return {
 		env: tempoEnv,
 		label: tempoEnv === 'nextfork' ? 'Nextfork' : 'Devnet',
-		dotClassName: 'bg-amber-400',
+		dotClassName: 'bg-warning',
 	}
 }
 

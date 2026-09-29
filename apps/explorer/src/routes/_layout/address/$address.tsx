@@ -902,28 +902,28 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 					title={address}
 				>
 					<div className="flex items-center gap-[8px] mb-[8px]">
-						<span className="text-[13px] font-normal">Address</span>
+						<span className="copy-13 font-normal">Address</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="size-3" />
 							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
+								<span className="absolute left-[calc(100%+8px)] copy-13 ">
 									copied
 								</span>
 							)}
 						</div>
 					</div>
-					<p className="max-w-[21ch] break-all font-mono text-[14px] leading-[17px] text-primary">
+					<p className="max-w-[21ch] break-all font-mono copy-14 text-primary">
 						{address}
 					</p>
 				</button>,
 				<div key="balances" className="w-full min-w-0">
-					<p className="mb-2 text-[13px] text-tertiary">Balances</p>
+					<p className="mb-2 copy-13 text-tertiary">Balances</p>
 					<div className="flex flex-col gap-2">
 						{overview ? (
 							overview.assets.map((asset) => (
 								<div
 									key={asset.address}
-									className="flex min-w-0 items-center justify-between gap-2 text-[13px]"
+									className="flex min-w-0 items-center justify-between gap-2 copy-13"
 								>
 									<Link
 										to="/token/$address"
@@ -942,28 +942,28 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 								</div>
 							))
 						) : (
-							<span className="text-[13px] text-tertiary">…</span>
+							<span className="copy-13 text-tertiary">…</span>
 						)}
 					</div>
 				</div>,
 				{
 					label: 'Deposits',
 					value: overview ? (
-						<span className="text-[13px] text-primary">
+						<span className="copy-13 text-primary">
 							{numberFormat.format(overview.counts.deposits)}
 						</span>
 					) : (
-						<span className="text-[13px] text-tertiary">…</span>
+						<span className="copy-13 text-tertiary">…</span>
 					),
 				},
 				{
 					label: 'Withdrawals',
 					value: overview ? (
-						<span className="text-[13px] text-primary">
+						<span className="copy-13 text-primary">
 							{numberFormat.format(overview.counts.withdrawals)}
 						</span>
 					) : (
-						<span className="text-[13px] text-tertiary">…</span>
+						<span className="copy-13 text-tertiary">…</span>
 					),
 				},
 				{
@@ -971,10 +971,10 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 					value: lastActivityTimestamp ? (
 						<RelativeTime
 							timestamp={lastActivityTimestamp}
-							className="text-[13px] text-primary"
+							className="copy-13 text-primary"
 						/>
 					) : (
-						<span className="text-[13px] text-tertiary">…</span>
+						<span className="copy-13 text-tertiary">…</span>
 					),
 				},
 				{
@@ -982,10 +982,10 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 					value: createdTimestamp ? (
 						<RelativeTime
 							timestamp={createdTimestamp}
-							className="text-[13px] text-primary"
+							className="copy-13 text-primary"
 						/>
 					) : (
-						<span className="text-[13px] text-tertiary">…</span>
+						<span className="copy-13 text-tertiary">…</span>
 					),
 				},
 			]}
@@ -1419,11 +1419,11 @@ function SectionsWrapper(props: {
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const transactionsError = error ? (
-		<div className="rounded-[10px] bg-card-header p-4.5">
-			<p className="text-sm font-medium text-red-400">
+		<div className="rounded-body bg-card-header p-4.5">
+			<p className="copy-14 font-medium text-negative">
 				Failed to load transaction history
 			</p>
-			<p className="text-xs text-tertiary mt-1">
+			<p className="label-12 text-tertiary mt-1">
 				{error instanceof Error ? error.message : 'Unknown error'}
 			</p>
 		</div>
@@ -1588,7 +1588,7 @@ function SectionsWrapper(props: {
 			type="button"
 			onClick={() => onPortalLiveChange(!portalLive)}
 			className={cx(
-				'flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium press-down',
+				'flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 label-12 font-medium press-down',
 				portalLive
 					? 'bg-positive/10 text-positive hover:bg-positive/20'
 					: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
@@ -1613,11 +1613,11 @@ function SectionsWrapper(props: {
 	)
 
 	const zonePortalError = zonePortalActivityQuery.error ? (
-		<div className="rounded-[10px] bg-card-header p-4.5">
-			<p className="text-sm font-medium text-red-400">
+		<div className="rounded-body bg-card-header p-4.5">
+			<p className="copy-14 font-medium text-negative">
 				Zone activity is temporarily unavailable
 			</p>
-			<p className="mt-1 text-xs text-tertiary">
+			<p className="mt-1 label-12 text-tertiary">
 				{zonePortalActivityQuery.error instanceof Error
 					? zonePortalActivityQuery.error.message
 					: 'Unknown error'}
@@ -1835,12 +1835,12 @@ function SectionsWrapper(props: {
 											link={`/receipt/${batch.transactionHash}`}
 											format={timeFormat}
 										/>,
-										<span key="deposit" className="text-[13px] text-primary">
+										<span key="deposit" className="copy-13 text-primary">
 											{batch.lastProcessedDepositNumber === '0'
 												? '—'
 												: `#${batch.lastProcessedDepositNumber}`}
 										</span>,
-										<span key="queue" className="text-[13px] text-primary">
+										<span key="queue" className="copy-13 text-primary">
 											{batch.withdrawalQueueIndex
 												? `#${batch.withdrawalQueueIndex}`
 												: '—'}
@@ -1946,7 +1946,7 @@ function SectionsWrapper(props: {
 							itemsLabel="transactions"
 							itemsPerPage={HISTORY_PAGE_SIZE}
 							pagination={
-								<div className="flex flex-col items-center sm:flex-row gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary sm:justify-between">
+								<div className="flex flex-col items-center sm:flex-row gap-[12px] border-t border-solid border-card-border px-[16px] py-[12px] label-12 text-tertiary sm:justify-between">
 									<HistoryPagination
 										position={{ order: historyOrder, cursor }}
 										data={historyData}
@@ -2003,7 +2003,7 @@ function SectionsWrapper(props: {
 										holdingsPage * ASSETS_PER_PAGE,
 									)
 									.map((asset) => ({
-										className: 'text-[13px]',
+										className: 'copy-13',
 										cells:
 											mode === 'stacked'
 												? [
@@ -2064,16 +2064,16 @@ function SectionsWrapper(props: {
 						itemsLabel: 'transfers',
 						contextual: filters,
 						content: (
-							<div className="rounded-[10px] bg-card-header p-4.5">
-								<p className="text-sm font-medium text-red-400">
+							<div className="rounded-body bg-card-header p-4.5">
+								<p className="copy-14 font-medium text-negative">
 									Transfers are temporarily unavailable
 								</p>
-								<p className="mt-1 text-xs text-tertiary">
+								<p className="mt-1 label-12 text-tertiary">
 									The Tempo API could not complete this request.
 								</p>
 								<button
 									type="button"
-									className="mt-3 rounded-[6px] bg-distinct px-3 py-1.5 text-xs text-primary transition-colors hover:bg-base-alt"
+									className="mt-3 rounded-body bg-distinct px-3 py-1.5 label-12 text-primary transition-colors hover:bg-base-alt"
 									onClick={() => void refetchActiveTransfers()}
 								>
 									Try again
@@ -2151,7 +2151,7 @@ function SectionsWrapper(props: {
 														params={{ address: transfer.token.address }}
 														title={transfer.token.address}
 														preload="intent"
-														className="flex items-center gap-[6px] text-[12px] text-primary hover:text-accent transition-colors press-down"
+														className="flex items-center gap-[6px] label-12 text-primary hover:text-accent transition-colors press-down"
 													>
 														<TokenIcon address={transfer.token.address} />
 														<span>
@@ -2308,10 +2308,7 @@ function SectionsWrapper(props: {
 												balance={holder.balance}
 												decimals={tokenMetadata?.decimals}
 											/>,
-											<span
-												key="percentage"
-												className="text-[12px] text-primary"
-											>
+											<span key="percentage" className="label-12 text-primary">
 												{percentage.toFixed(2)}%
 											</span>,
 										],
@@ -2413,7 +2410,7 @@ function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 		<span className="inline-flex items-center gap-1">
 			<span>{props.label}</span>
 			<span
-				className="cursor-help text-[11px] text-tertiary"
+				className="cursor-help label-12 text-tertiary"
 				title={props.info}
 				role="img"
 				aria-label={props.info}
@@ -2434,14 +2431,14 @@ function ProcessedInBatchCell(
 ): React.JSX.Element {
 	if (!props.batch) {
 		return (
-			<span className="whitespace-nowrap text-[13px] text-tertiary">
+			<span className="whitespace-nowrap copy-13 text-tertiary">
 				{props.fallback}
 			</span>
 		)
 	}
 
 	return (
-		<span className="whitespace-nowrap text-[13px]">
+		<span className="whitespace-nowrap copy-13">
 			Checkpoint{' '}
 			<Link
 				to="/receipt/$hash"
@@ -2467,7 +2464,7 @@ function LinkedTransactionHash(
 			params={{ hash: props.hash }}
 			preload="intent"
 			className={cx(
-				'w-full text-[13px] press-down',
+				'w-full copy-13 press-down',
 				props.prominent
 					? 'font-medium text-accent transition-colors hover:text-accent/80'
 					: 'text-tertiary',
@@ -2729,7 +2726,7 @@ export function HistoryPagination(
 			? pageCount
 			: getHistoryStatePage(location.state)
 	const buttonClass = cx(
-		'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+		'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 	)
 
 	return (
@@ -2893,12 +2890,12 @@ function HoldingsFooter(props: {
 		onToggleShowAll,
 	} = props
 	const btnClass = cx(
-		'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+		'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
 	)
 	return (
-		<div className="flex flex-col gap-0 border-t border-dashed border-card-border">
+		<div className="flex flex-col gap-0 border-t border-solid border-card-border">
 			{pages > 1 && (
-				<div className="flex flex-col items-center sm:flex-row gap-[12px] px-[16px] py-[12px] text-[12px] text-tertiary sm:justify-between">
+				<div className="flex flex-col items-center sm:flex-row gap-[12px] px-[16px] py-[12px] label-12 text-tertiary sm:justify-between">
 					<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 						<button
 							type="button"
@@ -2953,8 +2950,8 @@ function HoldingsFooter(props: {
 			{hasUnlisted && (
 				<div
 					className={cx(
-						'flex items-center justify-center px-[16px] py-[10px] text-[12px]',
-						pages > 1 && 'border-t border-dashed border-card-border',
+						'flex items-center justify-center px-[16px] py-[10px] label-12',
+						pages > 1 && 'border-t border-solid border-card-border',
 					)}
 				>
 					<button
@@ -2988,7 +2985,7 @@ function FilterIndicator(props: {
 }) {
 	const { account, tokenAddress } = props
 	return (
-		<div className="flex items-center gap-2 text-[12px]">
+		<div className="flex items-center gap-2 label-12">
 			<span className="text-tertiary">Filtered:</span>
 			<Link
 				to="/address/$address"
@@ -3056,7 +3053,7 @@ function StreamedPaymentReceipt(props: {
 	const digits = String(packetCount).length
 
 	return (
-		<div className="pb-4 font-mono text-[13px]">
+		<div className="pb-4 font-sans copy-13">
 			{/* On-chain settlement — visually part of the main row */}
 			<div className="bg-base-alt -mx-[16px] px-[16px] py-[10px] border-b-2 border-base-border flex items-center">
 				<span
@@ -3065,7 +3062,7 @@ function StreamedPaymentReceipt(props: {
 				>
 					↓
 				</span>
-				<span className="text-[11px] text-accent shrink-0 w-[64px] italic">
+				<span className="label-12 text-accent shrink-0 w-[64px] italic">
 					on-chain
 				</span>
 				{transaction.knownEvents
@@ -3078,9 +3075,9 @@ function StreamedPaymentReceipt(props: {
 			</div>
 
 			{/* Off-chain section header */}
-			<div className="flex items-center gap-[8px] pt-[12px] pb-[6px] text-[11px] text-tertiary uppercase tracking-wider">
+			<div className="flex items-center gap-[8px] pt-[12px] pb-[6px] label-12 text-tertiary r">
 				<span>off-chain vouchers</span>
-				<span className="flex-1 border-t border-dashed border-distinct" />
+				<span className="flex-1 border-t border-solid border-distinct" />
 				<span>{packetCount.toLocaleString()}</span>
 			</div>
 
@@ -3094,7 +3091,7 @@ function StreamedPaymentReceipt(props: {
 				return (
 					<div
 						key={i}
-						className="flex items-center py-[9px] border-b border-dashed border-distinct"
+						className="flex items-center py-[9px] border-b border-solid border-distinct"
 					>
 						<span
 							className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
@@ -3102,7 +3099,7 @@ function StreamedPaymentReceipt(props: {
 						>
 							{i + 1}
 						</span>
-						<span className="text-[11px] text-tertiary shrink-0 w-[64px]">
+						<span className="label-12 text-tertiary shrink-0 w-[64px]">
 							off-chain
 						</span>
 						<div className="flex items-center gap-[10px] ml-auto">

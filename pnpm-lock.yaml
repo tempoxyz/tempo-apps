@@ -174,6 +174,9 @@ catalogs:
     kysely:
       specifier: ^0.28.15
       version: 0.28.15
+    lucide-react:
+      specifier: ^1.48.0
+      version: 1.48.0
     midcut:
       specifier: ^0.2.0
       version: 0.2.0
@@ -189,6 +192,9 @@ catalogs:
     react-dom:
       specifier: ^19.2.5
       version: 19.2.5
+    regen-ui:
+      specifier: 0.5.0
+      version: 0.5.0
     rollup-plugin-visualizer:
       specifier: ^7.0.1
       version: 7.0.1
@@ -251,6 +257,7 @@ overrides:
   sharp@<0.35.4: 0.35.4
   seroval@<1.5.4: 1.5.4
   undici@>=7 <7.29.1: 7.29.1
+  regen-ui>@base-ui/react: 1.4.0
   basic-ftp: 5.3.0
   flatted: ^3.4.2
   shell-quote@<1.9.0: 1.9.0
@@ -462,6 +469,9 @@ importers:
       hono:
         specifier: ^4.12.31
         version: 4.12.31
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.48.0(react@19.2.5)
       midcut:
         specifier: 'catalog:'
         version: 0.2.0(react@19.2.5)
@@ -474,6 +484,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.5(react@19.2.5)
+      regen-ui:
+        specifier: 'catalog:'
+        version: 0.5.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(lucide-react@1.48.0(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))(zod@4.3.6)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
@@ -558,7 +571,7 @@ importers:
         version: 3.5.0
       tapimo:
         specifier: https://pkg.pr.new/tempoxyz/api/tapimo@500
-        version: https://pkg.pr.new/tempoxyz/api/tapimo@500(49761ce9d2ce172df11ec1da61200acd)
+        version: https://pkg.pr.new/tempoxyz/api/tapimo@500(992a8b0a7a9970dcdb0aa215d29e7856)
       tw-animate-css:
         specifier: 'catalog:'
         version: 1.4.0
@@ -1056,6 +1069,19 @@ packages:
   '@balena/dockerignore@1.0.2':
     resolution: {integrity: sha512-wMue2Sy4GAVTk6Ic4tJVcnfdau+gx2EnG7S+uAEe+TWJFqE4YoWN4/H8MSLj4eYJKxGg26lZwboEniNiNwZQ6Q==}
 
+  '@base-ui/react@1.4.0':
+    resolution: {integrity: sha512-QcqdVbr/+ba2/RAKJIV1PV6S02Q5+r6a4Eym8ndBw+ZbBILkkmQAyRxXCg/pArrHnkrGeU8goe26aw0h6eE8pg==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@date-fns/tz': ^1.2.0
+      '@types/react': ^17 || ^18 || ^19
+      date-fns: ^4.0.0
+      react: ^17 || ^18 || ^19
+      react-dom: ^17 || ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
   '@base-ui/react@1.6.0':
     resolution: {integrity: sha512-/jzjTWJYXhRFO45Bev9lc3cHbmjzCMpUqbMZ2AgKy/z25mY9B6shGSNcXcjQar9n5doM0KYW1W8fcFv2jZBuMw==}
     engines: {node: '>=14.0.0'}
@@ -1071,6 +1097,16 @@ packages:
       '@types/react':
         optional: true
       date-fns:
+        optional: true
+
+  '@base-ui/utils@0.2.7':
+    resolution: {integrity: sha512-nXYKhiL/0JafyJE8PfcflipGftOftlIwKd72rU15iZ1M5yqgg5J9P8NHU71GReDuXco5MJA/eVQqUT5WRqX9sA==}
+    peerDependencies:
+      '@types/react': ^17 || ^18 || ^19
+      react: ^17 || ^18 || ^19
+      react-dom: ^17 || ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
         optional: true
 
   '@base-ui/utils@0.3.1':
@@ -1368,6 +1404,9 @@ packages:
 
   '@datadog/js-core@0.0.2':
     resolution: {integrity: sha512-tubNtQXlHiDovBB04M16MWQbUj4j0F7eu6lWMUmFo/+SD5j8adzSGcVxtSNdSR/u++IaghkCpqcAaR3ZAJh2jQ==}
+
+  '@date-fns/tz@1.5.0':
+    resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
@@ -5201,6 +5240,16 @@ packages:
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
+  cuer@0.0.3:
+    resolution: {integrity: sha512-f/UNxRMRCYtfLEGECAViByA3JNflZImOk11G9hwSd+44jvzrc99J35u5l+fbdQ2+ZG441GvOpaeGYBmWquZsbQ==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   cva@1.0.0-beta.4:
     resolution: {integrity: sha512-F/JS9hScapq4DBVQXcK85l9U91M6ePeXoBMSp7vypzShoefUBxjQTo3g3935PUHgQd+IW77DjbPRIxugy4/GCQ==}
     peerDependencies:
@@ -5220,6 +5269,9 @@ packages:
   data-uri-to-buffer@6.0.2:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
     engines: {node: '>= 14'}
+
+  date-fns@4.4.0:
+    resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
 
   dayjs@1.11.20:
     resolution: {integrity: sha512-YbwwqR/uYpeoP4pu043q+LTDLFBLApUP6VxRihdfNTqu4ubqMlGDLd6ErXhEgsyvY0K6nCs7nggYumAN+9uEuQ==}
@@ -6411,6 +6463,11 @@ packages:
   lru_map@0.4.1:
     resolution: {integrity: sha512-I+lBvqMMFfqaV8CJCISjI3wbjmwVu/VyOoU7+qtu9d7ioW5klMgsTTiUOUp+DJvfTTzKXoPbyC6YfgkNcyPSOg==}
 
+  lucide-react@1.48.0:
+    resolution: {integrity: sha512-R0CIKY/fXiC6y9xRBADgsK+VW2p/pcTJOMhLZf1T+uG+vJUvyUR02nGOgmIIC7MPkiNK4Ox8QDnbqF8rJYWPZQ==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
     hasBin: true
@@ -7264,6 +7321,10 @@ packages:
   pump@3.0.4:
     resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
 
+  qr@0.7.2:
+    resolution: {integrity: sha512-yovYRuacJBJkG9fWSwcB2bKZhr58c04DpOXguDU+rAAoJZdi6/J3DtlomkKqdd1MutIptIK+kigWmT7LKz8y7A==}
+    engines: {node: '>= 20.19.0'}
+
   qs@6.15.2:
     resolution: {integrity: sha512-Rzq0KEyX/w/tEybncDgdkZrJgVUsUMk3xjh3t5bv3S1HTAtg+uOYt72+ZfwiQwKdysThkTBdL/rTi6HDmX9Ddw==}
     engines: {node: '>=0.6'}
@@ -7339,6 +7400,16 @@ packages:
 
   recma-stringify@1.0.0:
     resolution: {integrity: sha512-cjwII1MdIIVloKvC9ErQ+OgAtwHBmcZ0Bg4ciz78FtbT8In39aAYbaA7zvxQ61xVMSPE8WxhLwLbhif4Js2C+g==}
+
+  regen-ui@0.5.0:
+    resolution: {integrity: sha512-CIirnOq2EJnUzYaZPf0gqG0Vh+L4wPkIZVMqrDfad3db24oyLF2GKiLOzq0I7FQXtGt3pEO/TR69pRmgY2LfXg==}
+    peerDependencies:
+      lucide-react: ^1.14.0
+      react: '>=18'
+      react-dom: '>=18'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
 
   regex-recursion@6.0.2:
     resolution: {integrity: sha512-0YCaSCq2VRIebiaUviZNs0cBz1kg5kVS2UKUfNIx8YVs1cN3AV7NTctO5FOKBA+UT2BPJIWZauYHPqJODG50cg==}
@@ -8770,7 +8841,21 @@ snapshots:
 
   '@balena/dockerignore@1.0.2': {}
 
-  '@base-ui/react@1.6.0(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+  '@base-ui/react@1.4.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@base-ui/utils': 0.2.7(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@date-fns/tz': 1.5.0
+      '@floating-ui/react-dom': 2.1.9(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@floating-ui/utils': 0.2.12
+      date-fns: 4.4.0
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
+      use-sync-external-store: 1.6.0(react@19.2.5)
+    optionalDependencies:
+      '@types/react': 19.2.14
+
+  '@base-ui/react@1.6.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@base-ui/utils': 0.3.1(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -8778,6 +8863,19 @@ snapshots:
       '@floating-ui/utils': 0.2.12
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
+      use-sync-external-store: 1.6.0(react@19.2.5)
+    optionalDependencies:
+      '@date-fns/tz': 1.5.0
+      '@types/react': 19.2.14
+      date-fns: 4.4.0
+
+  '@base-ui/utils@0.2.7(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@floating-ui/utils': 0.2.12
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
+      reselect: 5.2.0
       use-sync-external-store: 1.6.0(react@19.2.5)
     optionalDependencies:
       '@types/react': 19.2.14
@@ -9132,6 +9230,8 @@ snapshots:
       '@datadog/browser-rum-core': 7.3.0
 
   '@datadog/js-core@0.0.2': {}
+
+  '@date-fns/tz@1.5.0': {}
 
   '@drizzle-team/brocli@0.10.2': {}
 
@@ -9653,7 +9753,7 @@ snapshots:
   '@floating-ui/vue@1.1.9(vue@3.5.40(typescript@6.0.2))':
     dependencies:
       '@floating-ui/dom': 1.8.0
-      '@floating-ui/utils': 0.2.10
+      '@floating-ui/utils': 0.2.12
       vue-demi: 0.14.10(vue@3.5.40(typescript@6.0.2))
     transitivePeerDependencies:
       - '@vue/composition-api'
@@ -12720,6 +12820,14 @@ snapshots:
 
   csstype@3.2.3: {}
 
+  cuer@0.0.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2):
+    dependencies:
+      qr: 0.7.2
+      react: 19.2.5
+      react-dom: 19.2.5(react@19.2.5)
+    optionalDependencies:
+      typescript: 6.0.2
+
   cva@1.0.0-beta.4(typescript@6.0.2):
     dependencies:
       clsx: 2.1.1
@@ -12735,6 +12843,8 @@ snapshots:
     optional: true
 
   data-uri-to-buffer@6.0.2: {}
+
+  date-fns@4.4.0: {}
 
   dayjs@1.11.20: {}
 
@@ -14052,6 +14162,10 @@ snapshots:
 
   lru_map@0.4.1: {}
 
+  lucide-react@1.48.0(react@19.2.5):
+    dependencies:
+      react: 19.2.5
+
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
@@ -15178,6 +15292,8 @@ snapshots:
       end-of-stream: 1.4.5
       once: 1.4.0
 
+  qr@0.7.2: {}
+
   qs@6.15.2:
     dependencies:
       side-channel: 1.1.1
@@ -15295,6 +15411,24 @@ snapshots:
       estree-util-to-js: 2.0.0
       unified: 11.0.5
       vfile: 6.0.3
+
+  regen-ui@0.5.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(lucide-react@1.48.0(react@19.2.5))(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))(zod@4.3.6):
+    dependencies:
+      '@base-ui/react': 1.4.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@tailwindcss/vite': 4.3.3(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      cuer: 0.0.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)
+      lucide-react: 1.48.0(react@19.2.5)
+      ox: 0.14.34(typescript@6.0.2)(zod@4.3.6)
+      react: 19.2.5
+    optionalDependencies:
+      react-dom: 19.2.5(react@19.2.5)
+    transitivePeerDependencies:
+      - '@date-fns/tz'
+      - '@types/react'
+      - date-fns
+      - typescript
+      - vite
+      - zod
 
   regex-recursion@6.0.2:
     dependencies:
@@ -15903,7 +16037,7 @@ snapshots:
 
   tapable@2.3.3: {}
 
-  tapimo@https://pkg.pr.new/tempoxyz/api/tapimo@500(49761ce9d2ce172df11ec1da61200acd):
+  tapimo@https://pkg.pr.new/tempoxyz/api/tapimo@500(992a8b0a7a9970dcdb0aa215d29e7856):
     dependencies:
       '@hono/node-server': 2.0.6(hono@4.12.31)
       '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.12.31)
@@ -15920,7 +16054,7 @@ snapshots:
       stripe: 19.3.0(@types/node@25.5.2)
       tidx.ts: 0.1.2(typescript@6.0.2)
       viem: 2.54.6(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.4.3)
-      vocs: 2.6.1(@cfworker/json-schema@4.1.1)(@tanstack/react-router@1.168.10(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react@19.2.14)(@vue/compiler-sfc@3.5.40)(axios@1.13.6)(change-case@5.4.4)(esbuild@0.28.1)(idb-keyval@6.2.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(rollup@4.59.0)(typescript@6.0.2)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      vocs: 2.6.1(@cfworker/json-schema@4.1.1)(@date-fns/tz@1.5.0)(@tanstack/react-router@1.168.10(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react@19.2.14)(@vue/compiler-sfc@3.5.40)(axios@1.13.6)(change-case@5.4.4)(date-fns@4.4.0)(esbuild@0.28.1)(idb-keyval@6.2.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(rollup@4.59.0)(typescript@6.0.2)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
       zod: 4.4.3
     transitivePeerDependencies:
       - '@cfworker/json-schema'
@@ -16526,9 +16660,9 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vocs@2.6.1(@cfworker/json-schema@4.1.1)(@tanstack/react-router@1.168.10(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react@19.2.14)(@vue/compiler-sfc@3.5.40)(axios@1.13.6)(change-case@5.4.4)(esbuild@0.28.1)(idb-keyval@6.2.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(rollup@4.59.0)(typescript@6.0.2)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
+  vocs@2.6.1(@cfworker/json-schema@4.1.1)(@date-fns/tz@1.5.0)(@tanstack/react-router@1.168.10(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(@types/react@19.2.14)(@vue/compiler-sfc@3.5.40)(axios@1.13.6)(change-case@5.4.4)(date-fns@4.4.0)(esbuild@0.28.1)(idb-keyval@6.2.2)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(rollup@4.59.0)(typescript@6.0.2)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
-      '@base-ui/react': 1.6.0(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@base-ui/react': 1.6.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@codesandbox/sandpack-react': 2.20.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@hono/node-server': 2.0.6(hono@4.12.31)
       '@iconify-json/lucide': 1.2.118

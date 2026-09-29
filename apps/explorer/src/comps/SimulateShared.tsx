@@ -1,20 +1,6 @@
-/**
- * Shared primitives for the simulator.
- *
- * The simulator uses the explorer's shared card typography roles:
- *
- *   type-card       labels, controls, prose
- *   type-card-data  trace, hex, numbers
- *   14px            exactly one headline per pane
- *   11px            compact status chips only
- *
- * Weight carries hierarchy, not size: `font-medium` marks a title or the one
- * value that is the answer, everything else is `font-normal`. There is no bold.
- *
- * Colour means one thing each:
- *   accent    you can click it
- *   positive  it succeeded          negative  it failed
- *   viz/code  it is code or data    tertiary  it is a label
+import { Button as RegenButton, Tag } from 'regen-ui'
+/** Shared simulator controls use Regen copy/label scales and semantic colors.
+ * Pilat is the UI face; explicit code and hash values use JetBrains Mono Light.
  */
 
 import * as OxAddress from 'ox/Address'
@@ -46,7 +32,7 @@ export function Field(props: Field.Props): React.JSX.Element {
 	return (
 		<div className="flex min-w-0 flex-col gap-[5px]">
 			<div className="flex items-center justify-between gap-[8px]">
-				<span className="type-card text-tertiary">{props.label}</span>
+				<span className="font-sans label-12 text-tertiary">{props.label}</span>
 				{props.action}
 			</div>
 			{props.children}
@@ -76,7 +62,7 @@ export declare namespace Field {
 }
 
 const inputClassName =
-	'w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-[9px] py-[6px] type-card-data text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-accent'
+	'w-full min-w-0 rounded-body border border-card-border bg-pane px-[12px] py-[9px] type-card-data text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-focus'
 
 /** Invalid state is applied on blur, never on mount — see `draftFieldErrors`. */
 export function inputClass(invalid?: boolean): string {
@@ -87,21 +73,12 @@ export function inputClass(invalid?: boolean): string {
 export function Button(props: Button.Props): React.JSX.Element {
 	const { tone = 'default', ...rest } = props
 	return (
-		<button
+		<RegenButton
 			type="button"
 			{...rest}
-			className={cx(
-				'flex h-[28px] shrink-0 items-center gap-[6px] rounded-[7px] px-[10px] type-card cursor-pointer press-down transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-				// `text-white-black` is white on the light-mode accent and black on the
-				// lighter dark-mode accent, which is the readable pairing in both.
-				tone === 'primary'
-					? 'bg-accent font-medium text-white-black hover:bg-accent-hover'
-					: 'border border-card-border text-secondary hover:text-primary',
-				props.className,
-			)}
-		>
-			{props.children}
-		</button>
+			size="small"
+			variant={tone === 'primary' ? 'primary' : 'secondary'}
+		/>
 	)
 }
 
@@ -119,21 +96,9 @@ export declare namespace Button {
 export function Chip(props: Chip.Props): React.JSX.Element {
 	const { tone = 'neutral' } = props
 	return (
-		<span
-			title={props.title}
-			className={cx(
-				'inline-flex shrink-0 items-center gap-[4px] rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
-				tone === 'positive' &&
-					'bg-base-content-positive/12 text-base-content-positive',
-				tone === 'negative' && 'bg-negative/12 text-negative',
-				tone === 'warning' && 'bg-warning/15 text-warning',
-				tone === 'accent' && 'bg-accent/12 text-accent',
-				tone === 'neutral' && 'bg-distinct text-tertiary',
-				props.className,
-			)}
-		>
+		<Tag intent={tone} title={props.title} className={props.className}>
 			{props.children}
-		</span>
+		</Tag>
 	)
 }
 
@@ -328,16 +293,16 @@ export function SimulationFailure(props: {
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
 	return (
-		<div className="flex items-start gap-[10px] rounded-[10px] border border-negative/40 bg-card px-[16px] py-[14px]">
+		<div className="flex items-start gap-[10px] rounded-body border border-negative/40 bg-card px-[16px] py-[14px]">
 			<CircleAlertIcon className="mt-[2px] size-[14px] shrink-0 text-negative" />
 			<div className="flex min-w-0 flex-1 flex-col gap-[6px]">
-				<h2 className="text-[13px] font-medium text-negative">{title}</h2>
+				<h2 className="label-13 text-negative">{title}</h2>
 				<p className="type-card text-secondary">{hint}</p>
 				<div className="flex flex-col gap-[4px]">
 					{messages.map((message) => (
 						<code
 							key={message}
-							className="block rounded-[6px] bg-distinct px-[9px] py-[6px] type-card-data break-all text-tertiary"
+							className="block rounded-body bg-distinct px-[9px] py-[6px] type-card-data break-all text-tertiary"
 						>
 							{message}
 						</code>

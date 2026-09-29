@@ -1,5 +1,5 @@
 import type * as React from 'react'
-import { cx } from '#lib/css'
+import { Choices } from 'regen-ui'
 
 type StatusValue = 'all' | 'success' | 'reverted'
 
@@ -13,25 +13,13 @@ export function TxStatusFilter(props: TxStatusFilter.Props): React.JSX.Element {
 	const { value = 'all', onChange } = props
 
 	return (
-		<div className="flex items-center gap-0.5 text-[12px]">
-			{options.map((option) => (
-				<button
-					key={option.value}
-					type="button"
-					onClick={() =>
-						onChange(option.value === 'all' ? undefined : option.value)
-					}
-					className={cx(
-						'px-2 py-0.5 rounded-[4px] cursor-pointer transition-colors',
-						value === option.value
-							? 'bg-distinct text-primary'
-							: 'text-tertiary hover:text-secondary',
-					)}
-				>
-					{option.label}
-				</button>
-			))}
-		</div>
+		<Choices
+			label="Transaction status"
+			value={value}
+			items={options}
+			variant="compact"
+			onChange={(next) => onChange(next === 'all' ? undefined : next)}
+		/>
 	)
 }
 

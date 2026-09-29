@@ -94,8 +94,8 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 					</PanelToolbar>
 				)
 			) : (
-				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-dashed border-distinct">
-					<span className="text-[13px]">
+				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-solid border-distinct">
+					<span className="copy-13">
 						{label && (
 							<>
 								<span className="text-tertiary">{label} </span>
@@ -108,7 +108,7 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 					{hasData && (
 						<div className="flex items-center gap-[8px] text-tertiary">
 							{copy.notifying && (
-								<span className="text-[11px] select-none">copied</span>
+								<span className="label-12 select-none">copied</span>
 							)}
 							<button
 								type="button"
@@ -133,11 +133,11 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 				</div>
 			)}
 			{!prestate || !data ? (
-				<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+				<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
 					No state diff available.
 				</div>
 			) : data.accounts.length === 0 ? (
-				<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+				<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
 					No state changes.
 				</div>
 			) : (
@@ -164,7 +164,7 @@ function RawToggle(props: {
 		<button
 			type="button"
 			onClick={props.onToggle}
-			className="text-[13px] text-accent hover:underline cursor-pointer press-down"
+			className="copy-13 text-accent hover:underline cursor-pointer press-down"
 		>
 			{props.raw ? '(raw)' : '(decoded)'}
 		</button>
@@ -301,11 +301,11 @@ export namespace TxStateDiff {
 					<Link
 						to="/address/$address"
 						params={{ address }}
-						className="min-w-0 truncate text-accent hover:underline font-mono text-[12px] press-down"
+						className="min-w-0 truncate text-accent hover:underline font-mono label-12 press-down"
 					>
 						{contractName ? `${contractName} (${address})` : address}
 					</Link>
-					<span className="shrink-0 text-[11px] text-tertiary ml-auto">
+					<span className="shrink-0 label-12 text-tertiary ml-auto">
 						{nonceChange && 'nonce'}
 						{nonceChange && storageChanges.length > 0 && ' + '}
 						{storageChanges.length > 0 &&
@@ -316,19 +316,19 @@ export namespace TxStateDiff {
 				<div className="px-[16px] pb-[12px] overflow-x-auto">
 					<div
 						className={cx(
-							'rounded-[6px] overflow-hidden border border-card-border bg-base-plane text-[12px] font-mono grid',
+							'rounded-body overflow-hidden border border-card-border bg-base-plane label-12 font-mono grid',
 							wrap
 								? 'grid-cols-3'
 								: 'grid-cols-[auto_auto_auto] w-fit min-w-full',
 						)}
 					>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] text-[11px] text-tertiary">
+						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
 							Slot
 						</div>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] text-[11px] text-tertiary">
+						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
 							Before
 						</div>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] text-[11px] text-tertiary">
+						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
 							After
 						</div>
 						{nonceChange && (
@@ -450,7 +450,7 @@ export namespace TxStateDiff {
 				{diff && (
 					<span
 						className={cx(
-							'text-[11px]',
+							'label-12',
 							diff.isPositive ? 'text-base-content-positive' : 'text-secondary',
 						)}
 					>

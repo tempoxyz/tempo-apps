@@ -12,8 +12,14 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 	const prefixLength = value.startsWith(prefix) ? prefix.length : 0
 	const body = value.slice(prefixLength)
 	const minChars = Math.max(1, min)
-	const minWidth = prefixLength + minChars * 2 + 1
-	const [cut, setCut] = React.useState(value.length > minWidth)
+	const shorten = (count: number) => {
+		const start = Math.ceil(count / 2)
+		const end = Math.floor(count / 2)
+		return `${value.slice(0, prefixLength)}${body.slice(0, start)}${ellipsis}${end ? body.slice(-end) : ''}`
+	}
+	const [display, setDisplay] = React.useState(() =>
+		body.length > minChars * 2 ? shorten(minChars * 2) : value,
+	)
 
 	React.useLayoutEffect(() => {
 		const element = ref.current
@@ -26,53 +32,52 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 
 		const update = () => {
 			if (!mounted) return
-
 			const style = getComputedStyle(element)
-
-			context.font = style.font
-			const fullWidth = context.measureText(value).width
-			const nextCut = fullWidth > element.clientWidth + 0.5
-			setCut((current) => (current === nextCut ? current : nextCut))
+			context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
+			const spacing = Number.parseFloat(style.letterSpacing) || 0
+			const fits = (text: string) =>
+				context.measureText(text).width + text.length * spacing <=
+				element.clientWidth
+			if (fits(value)) {
+				setDisplay(value)
+				return
+			}
+			const candidate = (count: number) => {
+				const start = Math.ceil(count / 2)
+				const end = Math.floor(count / 2)
+				return `${value.slice(0, prefixLength)}${body.slice(0, start)}${ellipsis}${end ? body.slice(-end) : ''}`
+			}
+			let low = 0
+			let high = Math.max(0, body.length - 1)
+			while (low < high) {
+				const middle = Math.ceil((low + high) / 2)
+				if (fits(candidate(middle))) low = middle
+				else high = middle - 1
+			}
+			const next = candidate(low)
+			setDisplay(fits(next) ? next : fits(ellipsis) ? ellipsis : '')
 		}
 
 		update()
-
 		const observer = new ResizeObserver(update)
 		observer.observe(element)
 		void document.fonts?.ready.then(update)
-
 		return () => {
 			mounted = false
 			observer.disconnect()
 		}
-	}, [value])
-
-	const cutAt = 1 + Math.ceil((body.length - 1) / 2)
-	const leading = `${prefix}${body[0] ?? ''}`
-	const start = body.slice(1, cutAt)
-	const end = body.slice(cutAt, -1)
-	const trailing = body.at(-1) ?? ''
+	}, [body, ellipsis, prefixLength, value])
 
 	return (
 		<span
 			ref={ref}
 			className="midcut"
 			data-align={align}
-			data-cut={cut ? 'true' : 'false'}
+			data-cut={display !== value ? 'true' : 'false'}
 			title={value}
-			style={{ minWidth: `${minWidth}ch` }}
 		>
 			<span className="midcut__findable">{value}</span>
-			<span aria-hidden="true" className="midcut__visual">
-				<span className="midcut__text" data-text={leading} />
-				<span className="midcut__text midcut__part" data-text={start} />
-				<span className="midcut__text midcut__ellipsis" data-text={ellipsis} />
-				<span
-					className="midcut__text midcut__part midcut__part--end"
-					data-text={end}
-				/>
-				<span className="midcut__text" data-text={trailing} />
-			</span>
+			<span aria-hidden="true" className="midcut__visual" data-text={display} />
 		</span>
 	)
 }

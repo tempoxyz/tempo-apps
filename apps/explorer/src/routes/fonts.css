@@ -1,26 +1,24 @@
-/* Pilat Book Font */
+/* Tempo's Pilat faces, shared with regen.tempo.xyz. */
 @font-face {
 	font-family: "Pilat";
-	src: url("/fonts/pilat/Pilat-Book.woff2") format("woff2");
+	src: url("/fonts/pilat/Pilat-Regular.woff2") format("woff2");
 	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
 }
-
-/* Satoshi Variable Font */
 @font-face {
-	font-family: "Satoshi";
-	src: url("/fonts/satoshi/Satoshi-Variable.woff2") format("woff2");
-	font-weight: 300 900;
+	font-family: "Pilat";
+	src: url("/fonts/pilat/Pilat-Demi.woff2") format("woff2");
+	font-weight: 500 600;
 	font-style: normal;
 	font-display: swap;
 }
 
-/* Geist Mono Variable Font */
+/* Code and hashes use Regen's light monospace face. */
 @font-face {
-	font-family: "Geist Mono";
-	src: url("/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
-	font-weight: 100 900;
+	font-family: "JetBrains Mono";
+	src: url("/fonts/jetbrains-mono/JetBrainsMono-Light.woff2") format("woff2");
+	font-weight: 300;
 	font-style: normal;
 	font-display: swap;
 }

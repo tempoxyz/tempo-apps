@@ -26,7 +26,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 
 	if (data.total === 0 && !loading)
 		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+			<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
 				No balance changes for this transaction.
 			</div>
 		)
@@ -93,7 +93,7 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				className="text-base-content-positive press-down inline-flex items-center gap-1 font-mono"
+				className="text-base-content-positive press-down inline-flex items-center gap-1 font-sans"
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
@@ -126,7 +126,14 @@ export namespace TxBalanceChanges {
 		const raw = Value.format(value, metadata.decimals)
 		const formatted = PriceFormatter.formatAmount(raw)
 
-		return <span className="text-secondary font-mono">{formatted}</span>
+		return (
+			<span
+				className="text-secondary font-sans min-w-0 truncate tabular-nums"
+				title={formatted}
+			>
+				{formatted}
+			</span>
+		)
 	}
 
 	export namespace BalanceCell {
@@ -155,9 +162,14 @@ export namespace TxBalanceChanges {
 		return (
 			<span
 				className={cx(
-					'font-mono',
-					isPositive ? 'text-base-content-positive' : undefined,
+					'font-sans min-w-0 truncate tabular-nums',
+					isPositive
+						? 'text-base-content-positive'
+						: diff < 0n
+							? 'text-base-content-negative'
+							: undefined,
 				)}
+				title={formatted}
 			>
 				{formatted}
 			</span>

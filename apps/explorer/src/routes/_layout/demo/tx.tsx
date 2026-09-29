@@ -561,7 +561,7 @@ function Component() {
 	const data = Route.useLoaderData()
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
+		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
 			<Receipt {...data} />
 		</div>
 	)

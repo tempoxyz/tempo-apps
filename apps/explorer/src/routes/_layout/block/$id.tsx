@@ -576,7 +576,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 					<AddressLink address={transaction.to} chars={4} />
 				</div>
 				{subtitle && (
-					<span className="text-base-content-secondary text-[12px]">
+					<span className="text-base-content-secondary label-12">
 						{subtitle}
 					</span>
 				)}

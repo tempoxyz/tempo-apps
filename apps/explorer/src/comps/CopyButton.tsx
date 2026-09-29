@@ -1,3 +1,4 @@
+import { Button } from 'regen-ui'
 import type * as React from 'react'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks.ts'
@@ -10,10 +11,12 @@ export function CopyButton(props: CopyButton.Props): React.JSX.Element {
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 
 	return (
-		<button
-			type="button"
+		<Button.Icon
+			variant="plain"
+			size="sm"
 			className={cx(
-				'inline-flex items-center gap-1.5 transition-colors press-down',
+				'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap transition-colors press-down',
+				children && 'w-auto! px-2!',
 				notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
 				className,
 			)}
@@ -28,7 +31,7 @@ export function CopyButton(props: CopyButton.Props): React.JSX.Element {
 				<CopyIcon className="size-3.75" />
 			)}
 			{children}
-		</button>
+		</Button.Icon>
 	)
 }
 

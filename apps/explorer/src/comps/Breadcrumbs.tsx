@@ -199,7 +199,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 			aria-label="Breadcrumb"
 			aria-hidden={isEmpty}
 			className={cx(
-				'flex items-center gap-1 text-[12px] text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5 origin-left transition-[opacity,scale] duration-[80ms] starting:opacity-0 starting:scale-[0.97]',
+				'flex items-center gap-1 label-12 text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5 origin-left transition-[opacity,scale] duration-[80ms] starting:opacity-0 starting:scale-[0.97]',
 				isEmpty
 					? 'opacity-0 scale-[0.97] pointer-events-none'
 					: 'opacity-100 scale-100',

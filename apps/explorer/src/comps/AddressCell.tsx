@@ -17,7 +17,7 @@ export function AddressCell(props: {
 		return (
 			<span
 				className={cx(
-					'text-[13px] text-accent w-full font-mono',
+					'copy-14 text-accent w-full font-mono',
 					isHighlighted && 'underline',
 				)}
 				title={title}
@@ -33,7 +33,7 @@ export function AddressCell(props: {
 			params={{ address }}
 			preload="intent"
 			className={cx(
-				'text-[13px] text-accent hover:text-accent/80 transition-colors press-down w-full font-mono',
+				'copy-14 text-accent hover:text-accent/80 transition-colors press-down w-full font-mono',
 				isHighlighted && 'underline',
 			)}
 			title={title}

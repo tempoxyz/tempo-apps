@@ -36,15 +36,15 @@ const examples = [
 
 function Component() {
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center gap-8 pt-16 pb-8 grow">
-			<h1 className="text-tertiary uppercase">Pagination</h1>
+		<div className="font-sans copy-13 flex flex-col items-center gap-8 pt-16 pb-8 grow">
+			<h1 className="text-tertiary ">Pagination</h1>
 			<div className="flex flex-col gap-6 w-full max-w-[800px]">
 				{examples.map((example) => (
 					<div
 						key={example.label}
-						className="border border-card-border rounded-[10px] overflow-hidden"
+						className="border border-card-border rounded-body overflow-hidden"
 					>
-						<div className="px-[16px] py-[8px] bg-card-header text-tertiary text-[12px]">
+						<div className="px-[16px] py-[8px] bg-card-header text-tertiary label-12">
 							{example.label}
 						</div>
 						<div className="bg-card">

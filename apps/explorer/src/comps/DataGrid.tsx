@@ -1,3 +1,4 @@
+import { Empty } from 'regen-ui'
 import { Link, useRouterState } from '@tanstack/react-router'
 import * as React from 'react'
 import { Pagination } from '#comps/Pagination'
@@ -81,14 +82,14 @@ export function DataGrid(props: DataGrid.Props) {
 			<div className="relative w-full overflow-x-auto">
 				<div
 					className={cx(
-						'w-full text-[13px] rounded-t-[2px] grid',
+						'w-full copy-14 rounded-t-[2px] grid',
 						flexible && 'min-w-max',
 						mode === 'tabs' && 'max-w-full',
 					)}
 					aria-busy={effectiveLoading}
 					style={{ gridTemplateColumns }}
 				>
-					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
+					<div className="grid col-span-full border-b border-solid border-distinct grid-cols-subgrid">
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
 							const sortDir = column.sortDirection
@@ -102,7 +103,7 @@ export function DataGrid(props: DataGrid.Props) {
 									key={key}
 									className={cx(
 										'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px]',
-										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
+										'button-12 text-secondary whitespace-nowrap font-sans',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}
 								>
@@ -124,9 +125,9 @@ export function DataGrid(props: DataGrid.Props) {
 					{activeItems.length === 0 ? (
 						<div
 							className="px-[16px] py-[32px] text-tertiary col-span-full flex items-center justify-center"
-							style={{ minHeight: itemsPerPage * 49 }}
+							style={{ minHeight: 220 }}
 						>
-							{emptyState}
+							<Empty title={emptyState} className="min-h-0 py-8" />
 						</div>
 					) : null}
 					{activeItems.map((item, rowIndex) => {
@@ -139,9 +140,9 @@ export function DataGrid(props: DataGrid.Props) {
 							<div
 								key={item.key ?? `row-${rowIndex}-${page}`}
 								className={cx(
-									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
+									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-solid border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
 									item.link &&
-										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-px hover:border-t hover:border-t-distinct',
+										'hover:bg-surface-hover transition-colors duration-100',
 									item.expanded && 'border-l-distinct',
 									item.className,
 								)}
@@ -188,7 +189,7 @@ export function DataGrid(props: DataGrid.Props) {
 												)
 											})}
 											{lineIndex < maxLines - 1 && (
-												<div className="col-span-full border-b border-dashed border-distinct" />
+												<div className="col-span-full border-b border-solid border-distinct" />
 											)}
 										</React.Fragment>
 									)
@@ -210,7 +211,7 @@ export function DataGrid(props: DataGrid.Props) {
 					shouldRenderSimpleFooter ? (
 						<div
 							className={cx(
-								'flex flex-col items-center sm:flex-row gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary',
+								'flex flex-col items-center sm:flex-row gap-[12px] border-t border-solid border-card-border px-[16px] py-[12px] label-12 text-tertiary',
 								showSimpleCount ? 'sm:justify-between' : 'sm:justify-start',
 							)}
 						>

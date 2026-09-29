@@ -67,6 +67,7 @@ export function AccountCard(props: AccountCard.Props) {
 					onClick={() => copy(address)}
 					className="w-full text-left cursor-pointer press-down text-tertiary"
 					title={address}
+					aria-label={notifying ? 'Address copied' : 'Copy address'}
 				>
 					<div className="flex items-center gap-[8px] mb-[8px]">
 						<span className="capitalize">Address</span>
@@ -77,8 +78,7 @@ export function AccountCard(props: AccountCard.Props) {
 							)}
 						</div>
 					</div>
-					{/* 42 chars / 2 lines = 21ch */}
-					<p className="type-card-data text-primary break-all max-w-[21ch]">
+					<p className="font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch]">
 						{address}
 					</p>
 				</button>,
@@ -144,7 +144,12 @@ export function AccountCard(props: AccountCard.Props) {
 									className="text-primary"
 								/>
 							) : (
-								<span className="text-tertiary">…</span>
+								<span
+									className="text-tertiary"
+									title="Last activity unavailable"
+								>
+									—
+								</span>
 							)}
 						</ClientOnly>
 					),
@@ -159,7 +164,12 @@ export function AccountCard(props: AccountCard.Props) {
 									className="text-primary"
 								/>
 							) : (
-								<span className="text-tertiary">…</span>
+								<span
+									className="text-tertiary"
+									title="Creation time unavailable"
+								>
+									—
+								</span>
 							)}
 						</ClientOnly>
 					),

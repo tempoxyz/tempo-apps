@@ -160,7 +160,7 @@ function TokensPage() {
 				/>
 			),
 			align: 'end',
-			width: 210,
+			width: timeFormat === 'relative' ? 100 : 210,
 		},
 	]
 
@@ -183,7 +183,7 @@ function TokensPage() {
 											token.createdAt == null ? (
 												<span
 													key="created"
-													className="font-mono text-secondary whitespace-nowrap"
+													className="font-sans text-secondary whitespace-nowrap"
 												>
 													-
 												</span>
@@ -192,19 +192,21 @@ function TokensPage() {
 													key="created"
 													timestamp={BigInt(token.createdAt)}
 													format={timeFormat}
-													className="font-mono text-secondary whitespace-nowrap"
+													className="font-sans text-secondary whitespace-nowrap"
 												/>
 											)
 
 										const tokenCell = (
 											<div key="token" className="flex flex-col min-w-0 gap-1">
-												<span className="inline-flex items-center gap-2 text-base-content-positive font-medium">
+												<span className="inline-flex min-w-0 items-center gap-2 text-base-content-positive font-medium">
 													<TokenIcon
 														address={token.address}
 														name={token.symbol}
 														logoURI={token.logoURI}
 													/>
-													{token.symbol}
+													<span className="truncate" title={token.symbol}>
+														{token.symbol}
+													</span>
 												</span>
 												<span className="truncate text-secondary">
 													{token.name}
@@ -242,7 +244,7 @@ function TokensPage() {
 															</span>,
 															<span
 																key="holders"
-																className="font-mono text-secondary"
+																className="font-sans text-secondary"
 															>
 																{formatHoldersCount(token)}
 															</span>,

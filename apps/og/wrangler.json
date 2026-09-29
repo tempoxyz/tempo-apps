@@ -9,7 +9,15 @@
 	},
 	"assets": {
 		"directory": "./public",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		"run_worker_first": [
+			"/bg-default.webp",
+			"/og-blocks.webp",
+			"/bg-list-blocks.webp",
+			"/og-tokens.webp",
+			"/bg-list-tokens.webp",
+			"/og-transactions.webp"
+		]
 	},
 	"ratelimits": [
 		{

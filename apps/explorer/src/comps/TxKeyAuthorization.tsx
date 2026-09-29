@@ -25,7 +25,7 @@ export function TxKeyAuthorization(
 	return (
 		<section
 			aria-label="Access key permissions"
-			className="min-w-0 border-l border-base-border pl-[10px] font-sans text-[12px] text-primary"
+			className="min-w-0 border-l border-base-border pl-[10px] font-sans label-12 text-primary"
 		>
 			<dl className="flex flex-col gap-[10px]">
 				<PermissionRow label="Expires">
@@ -74,7 +74,7 @@ function PermissionRow(props: {
 }): React.JSX.Element {
 	return (
 		<div className="grid grid-cols-1 gap-[4px]">
-			<dt className="text-[11px] text-tertiary">{props.label}</dt>
+			<dt className="label-12 text-tertiary">{props.label}</dt>
 			<dd className="flex min-w-0 flex-col gap-[6px]">{props.children}</dd>
 		</div>
 	)
@@ -98,7 +98,7 @@ export namespace TxKeyAuthorization {
 					aria-expanded={expanded}
 					aria-controls={id}
 					onClick={() => setExpanded(!expanded)}
-					className="text-[12px] text-accent cursor-pointer press-down"
+					className="label-12 text-accent cursor-pointer press-down"
 				>
 					{expanded ? 'Hide permissions' : 'Show permissions'}
 				</button>
@@ -117,7 +117,7 @@ function PermissionAddress(props: {
 		<Link
 			to="/address/$address"
 			params={{ address: props.address }}
-			className="break-all font-mono text-[11px] text-accent hover:underline"
+			className="break-all font-mono label-12 text-accent hover:underline"
 		>
 			{props.address}
 		</Link>
@@ -186,7 +186,7 @@ function CallScope(props: {
 						>
 							<div className="flex flex-wrap items-baseline gap-x-[6px] gap-y-[2px]">
 								<code
-									className="break-all text-[11px]"
+									className="break-all label-12"
 									title={
 										abiFunction?.type === 'function'
 											? toFunctionSignature(abiFunction)
@@ -196,14 +196,14 @@ function CallScope(props: {
 									{functionName ?? rule.selector ?? 'Any function'}
 								</code>
 								{functionName && (
-									<code className="text-[11px] text-tertiary">
+									<code className="label-12 text-tertiary">
 										{rule.selector}
 									</code>
 								)}
 							</div>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
 							{signature && (
-								<div className="text-[11px] text-secondary">
+								<div className="label-12 text-secondary">
 									{rule.recipients?.length ? (
 										<div className="flex min-w-0 flex-col gap-1">
 											<span>

@@ -1,7 +1,9 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 import { buildOgImageUrl, formatEventForOgServer } from '#lib/og'
+
+vi.mock('#wagmi.config.ts', () => ({ getTempoChain: () => ({ id: 42431 }) }))
 
 const hash =
 	'0xd450f9268b6f14ccfea04dfbf57b67cc8a65ec30a3f0ffbaa19b6f70502a49c9'
@@ -58,7 +60,7 @@ describe('transaction social card actions', () => {
 		expect(cardEvents(selected)[0]?.[2]).toBe('')
 		expect(cardEvents(selected)[2]?.[2]).toBe('')
 		for (const [index, action] of selected.entries()) {
-			expect(cardEvents(selected)[index]?.slice(0, 3).join('|')).toBe(
+			expect(cardEvents(selected)[index]?.join('|')).toBe(
 				formatEventForOgServer(action),
 			)
 		}
@@ -81,7 +83,14 @@ describe('transaction social card actions', () => {
 			fallbackEvents: [event('send', 'Send')],
 			knownCall: null,
 		})
-		expect(cardEvents(selected)[0]).toEqual(['Send', '0.10 DLUSD', '$0.10', ''])
+		expect(cardEvents(selected)[0]).toEqual([
+			'Send',
+			'0.10 DLUSD',
+			'$0.10',
+			'',
+			amount.token,
+			'DLUSD',
+		])
 	})
 
 	test('keeps numeric and hex details from interpreted actions', () => {
@@ -103,4 +112,17 @@ describe('transaction social card actions', () => {
 			cardEvents(Array.from({ length: 7 }, () => event('send', 'Send'))),
 		).toHaveLength(5)
 	})
+})
+
+test('social card carries token identities and the full step count', () => {
+	const url = new URL(
+		buildOgImageUrl(
+			data,
+			hash,
+			Array.from({ length: 12 }, () => event('send', 'Send')),
+		),
+	)
+	expect(url.searchParams.get('eventCount')).toBe('12')
+	expect(url.searchParams.get('chainId')).toBe('42431')
+	expect(url.searchParams.get('ev1')?.split('|')[4]).toBe(amount.token)
 })

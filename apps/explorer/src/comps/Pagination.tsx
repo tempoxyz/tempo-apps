@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { cx } from '#lib/css'
+import { useMediaQuery } from '#lib/hooks'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
@@ -21,13 +22,14 @@ export function Pagination(props: Pagination.Props) {
 		hideOnSinglePage = true,
 	} = props
 
-	const compact = compact_ || pages > 999
+	const isNarrow = useMediaQuery('(max-width: 479px)')
+	const compact = compact_ || pages > 999 || isNarrow
 
 	const itemsLabel = Pagination.pluralize(totalItems, itemsLabel_)
 
 	if (hideOnSinglePage && pages <= 1)
 		return (
-			<div className="flex items-center justify-end px-[16px] py-[12px] text-[12px] text-tertiary">
+			<div className="flex items-center justify-end px-[16px] py-[12px] label-12 text-tertiary">
 				<span className="text-primary tabular-nums">
 					{Pagination.numFormat.format(totalItems)}
 				</span>
@@ -37,15 +39,15 @@ export function Pagination(props: Pagination.Props) {
 
 	if (compact)
 		return (
-			<div className="flex flex-col items-center gap-[12px] sm:flex-row sm:justify-between px-[16px] py-[12px] text-[12px] text-tertiary w-full">
-				<div className="flex items-center gap-[6px]">
+			<div className="flex flex-col items-center gap-[12px] sm:flex-row sm:justify-between px-[16px] py-[12px] label-12 text-tertiary w-full">
+				<div className="grid grid-cols-4 justify-items-center gap-2 min-[480px]:flex min-[480px]:items-center min-[480px]:gap-[6px]">
 					<Link
 						to="."
 						resetScroll={false}
 						search={(previous) => ({ ...previous, page: 1 })}
 						disabled={page <= 1 || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
 						)}
 						title="First page"
 					>
@@ -61,14 +63,14 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page <= 1 || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
 						)}
 						title="Previous page"
 					>
 						<ChevronLeft className="size-[14px]" />
 					</Link>
 
-					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					<span className="col-span-4 row-start-1 text-center text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
 						Page{' '}
 						<span className="text-primary">
 							{Pagination.numFormat.format(page)}
@@ -86,7 +88,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page >= pages || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
 						)}
 						title="Next page"
 					>
@@ -100,7 +102,7 @@ export function Pagination(props: Pagination.Props) {
 						search={(previous) => ({ ...previous, page: pages })}
 						disabled={page >= pages || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
 						)}
 						title="Last page"
 					>
@@ -113,7 +115,7 @@ export function Pagination(props: Pagination.Props) {
 		)
 
 	return (
-		<div className="flex flex-col gap-[12px] px-[16px] py-[12px] text-[12px] text-tertiary md:flex-row md:items-center md:justify-between">
+		<div className="flex flex-col gap-[12px] px-[16px] py-[12px] label-12 text-tertiary md:flex-row md:items-center md:justify-between">
 			<div className="flex flex-row items-center gap-[8px] mx-auto md:mx-0">
 				<Link
 					to="."
@@ -124,7 +126,7 @@ export function Pagination(props: Pagination.Props) {
 					})}
 					disabled={page <= 1 || isPending}
 					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
+						'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
 					title="Previous page"
 				>
@@ -151,9 +153,9 @@ export function Pagination(props: Pagination.Props) {
 									resetScroll={false}
 									disabled={page === p || isPending}
 									search={(previous) => ({ ...previous, page: p })}
-									className={`rounded-[4px] flex w-[28px] h-[28px] items-center justify-center ${
+									className={`rounded-button flex w-[28px] h-[28px] items-center justify-center ${
 										page === p
-											? 'border border-accent/50 text-primary cursor-default'
+											? 'bg-accent text-on-accent cursor-default'
 											: 'cursor-pointer press-down hover:bg-alt text-primary'
 									} ${isPending && page !== p ? 'opacity-50 cursor-not-allowed' : ''}`}
 								>
@@ -173,7 +175,7 @@ export function Pagination(props: Pagination.Props) {
 					})}
 					disabled={page >= pages || isPending}
 					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
+						'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
 					title="Next page"
 				>
@@ -286,7 +288,7 @@ export namespace Pagination {
 					search={(prev) => ({ ...prev, page: 1 })}
 					disabled={page <= 1}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="First page"
 				>
@@ -301,7 +303,7 @@ export namespace Pagination {
 					})}
 					disabled={page <= 1}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Previous page"
 				>
@@ -329,7 +331,7 @@ export namespace Pagination {
 					onBlur={onCancelPrefetchNext}
 					disabled={disableNext}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Next page"
 				>
@@ -342,7 +344,7 @@ export namespace Pagination {
 						search={(prev) => ({ ...prev, page: pages })}
 						disabled={page >= pages || disableLastPage}
 						className={cx(
-							'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+							'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						title="Last page"
 					>

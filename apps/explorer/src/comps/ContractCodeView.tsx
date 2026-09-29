@@ -179,7 +179,7 @@ export function ContractCodeView(
 
 	return (
 		<div className="overflow-hidden rounded-md border border-card-border bg-source-background">
-			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border px-3 py-2.5 text-xs">
+			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border px-3 py-2.5 label-12">
 				<span className="font-medium">
 					{entries.length} source files{' '}
 					<span className="ml-2 font-normal text-tertiary">Read only</span>
@@ -249,7 +249,7 @@ export function ContractCodeView(
 					</div>
 				</WorkerPoolContextProvider>
 			</div>
-			<div className="flex flex-wrap justify-between gap-2 border-t border-card-border px-3 py-2 text-[11px] text-tertiary">
+			<div className="flex flex-wrap justify-between gap-2 border-t border-card-border px-3 py-2 label-12 text-tertiary">
 				<span>
 					{selection
 						? `Lines ${Math.min(selection.range.start, selection.range.end)}–${Math.max(selection.range.start, selection.range.end)}`

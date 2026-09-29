@@ -33,7 +33,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	)
 	return (
 		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
-			<h3 className="text-[13px] text-tertiary">Trust & permissions</h3>
+			<h3 className="copy-13 text-tertiary">Trust & permissions</h3>
 			<section
 				aria-label="Transfer policy"
 				className="rounded-[6px] border border-distinct overflow-hidden"
@@ -53,7 +53,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 									: undefined
 							}
 							className={cx(
-								'inline-flex shrink-0 items-center rounded-[5px] px-[5px] py-[1px] text-[11px] whitespace-nowrap',
+								'inline-flex shrink-0 items-center rounded-[5px] px-[5px] py-[1px] label-12 whitespace-nowrap',
 								policy?.paused === true && 'bg-warning/15 text-warning',
 								policy?.paused !== true && 'bg-distinct',
 								policy?.paused === false && 'text-inherit',
@@ -75,7 +75,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 							/>
 						) : (
 							policy && (
-								<div className="flex flex-col gap-2 text-[12px] text-secondary">
+								<div className="flex flex-col gap-2 label-12 text-secondary">
 									<p>{policyDescriptions[policy.policy.type]}</p>
 									<p className="text-tertiary">
 										Token admins can replace this policy.
@@ -125,21 +125,21 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 								>
 									<AddressLink
 										address={group.account}
-										className="text-[12px] break-all"
+										className="label-12 break-all"
 									/>
-									<dl className="flex flex-col gap-3 text-[12px]">
+									<dl className="flex flex-col gap-3 label-12">
 										{group.roles.map((role) => (
 											<div
 												key={role.roleHash}
 												className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
 											>
-												<dt className="font-mono text-[11px] break-all">
+												<dt className="font-mono label-12 break-all">
 													{role.role}
 												</dt>
 												<dd className="text-secondary">
 													{tokenRoleDescription(role.role)}
 												</dd>
-												<dd className="flex items-baseline gap-2 md:justify-end text-[11px] whitespace-nowrap">
+												<dd className="flex items-baseline gap-2 md:justify-end label-12 whitespace-nowrap">
 													{role.grantedAt != null && (
 														<span className="text-tertiary">
 															{new Date(
@@ -178,7 +178,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 																{permission.description}
 															</p>
 														</dd>
-														<dd className="md:text-right text-[11px]">
+														<dd className="md:text-right label-12">
 															<Link
 																to="/policy/$id"
 																params={{ id: permission.policyId }}
@@ -221,7 +221,7 @@ function PolicyLink({ policy }: { policy: TransferPolicy }): React.JSX.Element {
 			>
 				#{policy.id}
 			</Link>
-			<span className="text-[11px] text-tertiary">{policyLabel(policy)}</span>
+			<span className="label-12 text-tertiary">{policyLabel(policy)}</span>
 		</span>
 	)
 }
@@ -231,7 +231,7 @@ function Unavailable(props: {
 	onRetry: () => void
 }): React.JSX.Element {
 	return (
-		<div role="status" className="text-[12px] text-tertiary">
+		<div role="status" className="label-12 text-tertiary">
 			{props.message}{' '}
 			<button
 				type="button"
@@ -279,8 +279,8 @@ function AddressPolicyChecker(props: {
 		account && !query.isFetching && !query.isError ? query.data : undefined
 	const displayedPolicy = result ?? props.policy
 	return (
-		<div className="flex flex-col gap-3 text-[12px]">
-			<details className="border-t border-dashed border-distinct pt-3 text-[12px]">
+		<div className="flex flex-col gap-3 label-12">
+			<details className="border-t border-dashed border-distinct pt-3 label-12">
 				<summary className="cursor-pointer text-accent">
 					Check an address
 				</summary>
@@ -316,7 +316,7 @@ function AddressPolicyChecker(props: {
 							spellCheck={false}
 							aria-invalid={invalid}
 							aria-describedby={invalid ? `${id}-error` : undefined}
-							className="min-w-0 flex-1 rounded-[5px] border border-distinct bg-transparent px-2 py-1.5 font-mono text-[12px]"
+							className="min-w-0 flex-1 rounded-[5px] border border-distinct bg-transparent px-2 py-1.5 font-mono label-12"
 						/>
 						<button
 							type="submit"

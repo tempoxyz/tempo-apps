@@ -30,7 +30,7 @@ export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
 		return (
 			<details
 				open={input.type === 'tuple'}
-				className="min-w-0 text-[12px] font-mono"
+				className="min-w-0 label-12 font-mono"
 			>
 				<summary className="cursor-pointer px-[10px] py-[10px] text-primary hover:bg-base-alt/50 break-all">
 					<span className="font-medium">{name}</span>
@@ -58,7 +58,7 @@ export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
 			type="button"
 			onClick={() => copy(String(value))}
 			title={`Copy ${name}`}
-			className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-[4px] sm:gap-[12px] px-[10px] py-[8px] text-[12px] font-mono w-full text-left cursor-pointer press-down hover:bg-base-alt/50 transition-colors"
+			className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-[4px] sm:gap-[12px] px-[10px] py-[8px] label-12 font-mono w-full text-left cursor-pointer press-down hover:bg-base-alt/50 transition-colors"
 		>
 			<span className="min-w-0 break-all">
 				<span className="block text-primary">

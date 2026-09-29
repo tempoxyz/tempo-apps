@@ -64,11 +64,13 @@ catalog:
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
+  lucide-react: ^1.48.0
   midcut: ^0.2.0
   ox: ^0.14.20
   prool: ^0.2.4
   react: ^19.2.5
   react-dom: ^19.2.5
+  regen-ui: 0.5.0
   rollup-plugin-visualizer: ^7.0.1
   shiki: ^4.0.2
   sonda: ^0.11.1
@@ -136,6 +138,8 @@ overrides:
   # Patch vulnerable transitive serializers and HTTP clients without changing majors.
   'seroval@<1.5.4': 1.5.4
   'undici@>=7 <7.29.1': 7.29.1
+  # Regen 0.5 uses the preview OTP export renamed in Base UI 1.6.
+  regen-ui>@base-ui/react: 1.4.0
   basic-ftp: 5.3.0
   flatted: ^3.4.2
   'shell-quote@<1.9.0': 1.9.0

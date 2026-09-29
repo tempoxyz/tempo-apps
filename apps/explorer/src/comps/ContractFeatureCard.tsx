@@ -35,31 +35,31 @@ export function ContractFeatureCard(props: {
 			<section
 				className={cx(
 					'flex flex-col w-full overflow-hidden',
-					'rounded-[10px] border border-card-border bg-card-header',
-					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					'rounded-body border border-card-border bg-card-header',
+					'shadow-none',
 				)}
 			>
-				<div className="flex items-center h-9 shrink-0">
+				<div className="flex items-center min-h-9 shrink-0">
 					<button
 						type="button"
 						onClick={() => setIsCollapsed(!isCollapsed)}
 						className={cx(
-							'flex-1 flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
+							'min-w-0 flex-1 flex items-center gap-[6px] py-2 pl-[16px] text-left cursor-pointer press-down focus-visible:-outline-offset-2!',
 							actions ? 'pr-[12px]' : 'pr-[16px]',
 						)}
 					>
-						<span className="text-[13px] text-tertiary whitespace-nowrap">
+						<span className="min-w-0 copy-13 text-tertiary [overflow-wrap:anywhere]">
 							{title}
 						</span>
 						<ChevronDownIcon
 							className={cx(
-								'size-[14px] text-tertiary',
+								'size-[14px] shrink-0 text-tertiary',
 								isCollapsed && '-rotate-90',
 							)}
 						/>
 					</button>
 					{actions && (
-						<div className="flex items-center gap-[8px] text-tertiary px-[12px]">
+						<div className="flex shrink-0 items-center gap-[8px] text-tertiary px-[12px]">
 							{actions}
 						</div>
 					)}
@@ -67,7 +67,7 @@ export function ContractFeatureCard(props: {
 
 				<div
 					className={cx(
-						'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]',
+						'rounded-t-body border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]',
 						isCollapsed && 'hidden',
 					)}
 				>
@@ -78,36 +78,34 @@ export function ContractFeatureCard(props: {
 	}
 
 	return (
-		<section className="rounded-[10px] bg-card-header overflow-hidden">
+		<section className="rounded-body bg-card-header overflow-hidden">
 			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
-				<div className="w-full">
+				<div className="w-full min-w-0">
 					<div className="flex items-center w-full gap-2 justify-between">
 						<a
 							id={title.toLowerCase().replaceAll(' ', '-')}
 							href={`#${title.toLowerCase().replaceAll(' ', '-')}`}
-							className="text-[14px] text-primary/90 font-medium"
+							className="min-w-0 copy-14 text-primary/90 font-medium [overflow-wrap:anywhere]"
 						>
 							{title}
 						</a>
 
-						<p className="text-[12px] text-primary font-medium">
+						<p className="min-w-0 label-12 text-primary text-right font-medium [overflow-wrap:anywhere]">
 							{rightSideTitle}
 						</p>
 					</div>
 					<div className="flex items-center w-full gap-2 justify-between">
 						{description && (
-							<p className="text-[12px] text-secondary">{description}</p>
+							<p className="label-12 text-secondary">{description}</p>
 						)}
 						{rightSideDescription && (
-							<p className="text-[12px] text-secondary">
-								{rightSideDescription}
-							</p>
+							<p className="label-12 text-secondary">{rightSideDescription}</p>
 						)}
 					</div>
 					{textGrid && (
-						<div className="flex flex-row justify-between mt-1">
+						<div className="flex flex-wrap gap-x-4 gap-y-1 justify-between mt-1">
 							{textGrid.map((item, index) => (
-								<div key={index} className="text-xs gap-2 flex">
+								<div key={index} className="label-12 gap-2 flex">
 									{item.left}
 									{item.right}
 								</div>

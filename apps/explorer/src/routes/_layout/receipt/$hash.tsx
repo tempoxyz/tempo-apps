@@ -365,6 +365,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 					// Navigate to the HTML version of the receipt
 					await page.goto(htmlUrl.toString(), { waitUntil: 'networkidle0' })
+					await page.evaluate(() => document.fonts.ready.then(() => undefined))
 
 					// Generate PDF
 					const pdf = await page.pdf({
@@ -417,6 +418,8 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 		const search = new URLSearchParams()
 		if (loaderData) {
+			search.set('chainId', String(TEMPO_CHAIN_ID))
+			search.set('eventCount', String(presentation?.events.length ?? 0))
 			search.set('block', loaderData.block.number.toString())
 			search.set('sender', loaderData.receipt.from)
 			const ogTimestamp = DateFormatter.formatTimestampForOg(
@@ -531,7 +534,7 @@ function Component() {
 	const presentation = getReceiptPresentation(data, voucherData, isTokenListed)
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
+		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
 			<Receipt
 				blockNumber={receipt.blockNumber}
 				events={presentation.events}

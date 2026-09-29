@@ -18,6 +18,8 @@ export const MAX_EVENTS = 6
 // ============ Transaction OG Params ============
 
 export interface TxOgEvent {
+	tokenSymbols?: string[]
+	tokens?: string[]
 	action: string
 	details: string
 	amount?: string
@@ -25,6 +27,8 @@ export interface TxOgEvent {
 }
 
 export interface TxOgParams {
+	chainId?: number
+	eventCount?: number
 	hash: string
 	block?: string
 	sender?: string
@@ -104,6 +108,8 @@ export function buildZonePortalOgUrl(
 
 export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 	const search = new URLSearchParams()
+	if (params.chainId) search.set('chainId', String(params.chainId))
+	if (params.eventCount) search.set('eventCount', String(params.eventCount))
 
 	if (params.block)
 		search.set('block', truncateText(params.block, MAX_PARAM_SHORT))
@@ -126,6 +132,10 @@ export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 			truncateText(event.details, 180),
 			event.amount ? truncateText(event.amount, 30) : '',
 			event.message ? truncateText(event.message, 140) : '',
+			event.tokens?.slice(0, 2).join(',') ?? '',
+			event.tokenSymbols
+				?.map((symbol) => symbol.replace(/[,|]/g, ''))
+				.join(',') ?? '',
 		]
 		// Use `ev{n}` instead of `e{n}` to avoid potential upstream query-param filtering.
 		// The OG renderer supports both.

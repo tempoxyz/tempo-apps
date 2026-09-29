@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Use the published components/CSS directly: Regen's Vite plugin replaces
+ * resolve.alias entries installed by TanStack Start in this Vite 8 app. */
+@import "regen-ui/tailwind.css";
 @import "tw-animate-css";
 @import "./fonts.css";
 
@@ -14,19 +17,19 @@
 	scrollbar-color: var(--color-tertiary) var(--color-source-background);
 }
 
+/* Explorer compatibility roles resolve to Regen so every route shares one palette. */
 @theme {
 	/* Background Colors */
-	--color-background-inverse: light-dark(#202020, #fcfcfc);
+	--color-background-inverse: var(--regen-accent-neutral);
 	--background-color-inverse: var(--color-background-inverse);
-	--color-background-primary: light-dark(#ffffff, #191919);
+	--color-background-primary: var(--background-color-background);
 	--background-color-primary: var(--color-background-primary);
-	--color-background-surface: light-dark(#ffffff, #1a1a1a);
-	--background-color-surface: var(--color-background-surface);
-	--color-background-alt: light-dark(#fcfcfc, #161616);
+	--color-background-surface: var(--background-color-surface);
+	--color-background-alt: var(--background-color-pane);
 	--background-alt: var(--color-background-alt);
-	--color-frame-background: light-dark(#ffffff, #1a1a1a);
+	--color-frame-background: var(--background-color-surface);
 	--frame-background: var(--color-frame-background);
-	--color-system-background: light-dark(#f8f8f8, #111111);
+	--color-system-background: var(--background-color-background);
 	--system-background: var(--color-system-background);
 	--color-inverse: var(--color-background-inverse);
 	--color-system: var(--color-system-background);
@@ -35,21 +38,21 @@
 	--color-frame: var(--color-frame-background);
 
 	/* Content/Text Colors */
-	--color-content-primary: light-dark(#151515, #ffffff);
+	--color-content-primary: var(--text-color-foreground);
 	--content-primary: var(--color-content-primary);
-	--color-content-secondary: light-dark(#525252, #6e6e6e);
+	--color-content-secondary: var(--text-color-foreground-secondary);
 	--content-secondary: var(--color-content-secondary);
-	--color-content-tertiary: light-dark(#737373, #6e6e6e);
+	--color-content-tertiary: var(--text-color-foreground-secondary);
 	--content-tertiary: var(--color-content-tertiary);
-	--color-content-positive: light-dark(#16a34a, #22c55e);
+	--color-content-positive: var(--text-color-positive);
 	--content-positive: var(--color-content-positive);
-	--color-content-negative: light-dark(#dc2626, #ef4444);
+	--color-content-negative: var(--text-color-negative);
 	--content-negative: var(--color-content-negative);
-	--color-content-disabled: light-dark(#d4d4d4, #525252);
+	--color-content-disabled: var(--border-color-border-hover);
 	--content-disabled: var(--color-content-disabled);
-	--color-label-primary: light-dark(#000000, #ffffff);
+	--color-label-primary: var(--text-color-foreground);
 	--label-primary: var(--color-label-primary);
-	--color-content-inverse: light-dark(#f5f5f5, #0a0a0a);
+	--color-content-inverse: var(--text-color-on-accent);
 	--content-inverse: var(--color-content-inverse);
 	--color-primary: var(--color-content-primary);
 	--color-secondary: var(--color-content-secondary);
@@ -57,43 +60,43 @@
 	--color-positive: var(--color-content-positive);
 	--color-negative: var(--color-content-negative);
 	--color-disabled: var(--color-content-disabled);
-	--color-content-dimmed: light-dark(#bebebe, #4e4e4e);
+	--color-content-dimmed: var(--text-color-foreground-secondary);
 
 	/* Accent & Interactive */
 	--color-accent: light-dark(#3b82f6, #60a5fa);
 	--accent: var(--color-accent);
 	--color-accent-hover: light-dark(#2563eb, #93c5fd);
 	--accent-hover: var(--color-accent-hover);
-	--color-focus: var(--color-accent);
+	--color-focus: var(--outline-color-focus);
 
 	/* Border Colors */
-	--color-border-primary: light-dark(#e5e5e5, #232323);
+	--color-border-primary: var(--border-color-border);
 	--border-primary: var(--color-border-primary);
-	--color-border-secondary: light-dark(#e5e5e5, #232323);
+	--color-border-secondary: var(--border-color-border);
 	--border-secondary: var(--color-border-secondary);
-	--color-border-tertiary: light-dark(#eeeeee, #232323);
+	--color-border-tertiary: var(--border-color-border-pane);
 	--border-tertiary: var(--color-border-tertiary);
-	--color-border-negative: light-dark(#dc2626, #ef4444);
+	--color-border-negative: var(--border-color-negative);
 	--border-negative: var(--color-border-negative);
 
 	/* Outline Colors */
-	--color-outline-primary: light-dark(#f0f0f0, #262626);
+	--color-outline-primary: var(--border-color-border);
 	--outline-primary: var(--color-outline-primary);
-	--color-outline-secondary: light-dark(#f8f8f8, #1a1a1a);
+	--color-outline-secondary: var(--border-color-border-pane);
 	--outline-secondary: var(--color-outline-secondary);
-	--color-outline-negative: light-dark(#dc2626, #ef4444);
+	--color-outline-negative: var(--border-color-negative);
 	--outline-negative: var(--color-outline-negative);
 
 	/* Field Colors */
-	--color-field-content-secondary: light-dark(#a3a3a3, #737373);
+	--color-field-content-secondary: var(--text-color-foreground-secondary);
 	--field-content-secondary: var(--color-field-content-secondary);
 
 	/* Outline Colors */
-	--color-outline-inverse: light-dark(#171717, #fafafa);
+	--color-outline-inverse: var(--regen-accent-neutral);
 	--outline-color-inverse: var(--color-outline-inverse);
 
 	/* Solid Colors */
-	--color-solid-gray-3: light-dark(#f5f5f5, #262626);
+	--color-solid-gray-3: var(--background-color-secondary);
 	--solid-gray-3: var(--color-solid-gray-3);
 
 	/* Tokenized Color Pairings */
@@ -101,26 +104,25 @@
 	--color-white-black: light-dark(#ffffff, #000000);
 
 	/* Card */
-	--color-card: light-dark(#f9f9f9, #222222);
-	--color-card-header: light-dark(#f9f9f9, #191919);
-	--color-card-border: light-dark(#e5e5e5, #232323);
-	/* Corebook off-white (#F3F3F3), expressed as Regen's neutral OKLCH rung. */
+	--color-card: var(--background-color-surface);
+	--color-card-header: var(--background-color-surface);
+	--color-card-border: var(--border-color-border);
 	--color-source-background: light-dark(oklch(96.19% 0 0), #191919);
 
 	/* Other Colors */
-	--color-base-background: light-dark(#ffffff, #191919);
-	--color-base-plane: light-dark(#ffffff, #1a1a1a);
-	--color-base-plane-background: light-dark(#ffffff, #1a1a1a);
-	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
-	--color-base-alt: light-dark(#f5f5f5, #232323);
-	--color-base-border: light-dark(#e5e5e5, #232323);
-	--color-base-content: light-dark(#151515, #ffffff);
-	--color-base-content-secondary: light-dark(#525252, #6e6e6e);
-	--color-base-content-positive: light-dark(#30a46c, #30a46c);
-	--color-base-content-negative: light-dark(#e5484d, #e5484d);
-	--color-distinct: light-dark(#ececec, #313131);
-	--color-warning: light-dark(#e2a336, #8f6424);
-	--color-warning-background: light-dark(#fdf5c2, #252018);
+	--color-base-background: var(--background-color-background);
+	--color-base-plane: var(--background-color-surface);
+	--color-base-plane-background: var(--background-color-surface);
+	--color-base-plane-interactive: var(--background-color-surface-hover);
+	--color-base-alt: var(--background-color-pane);
+	--color-base-border: var(--border-color-border);
+	--color-base-content: var(--text-color-foreground);
+	--color-base-content-secondary: var(--text-color-foreground-secondary);
+	--color-base-content-positive: var(--text-color-positive);
+	--color-base-content-negative: var(--text-color-negative);
+	--color-distinct: var(--border-color-border);
+	--color-warning: var(--text-color-warning);
+	--color-warning-background: var(--background-color-warning-subtle);
 
 	/* Code & data visualisation.
 	 *
@@ -136,10 +138,12 @@
 	--color-code-identifier: light-dark(#7c3aed, #a78bfa);
 	--color-viz-base: light-dark(#7c3aed, #a78bfa);
 
-	--font-display: "Satoshi", ui-sans-serif, sans-serif;
+	--font-display: "Pilat", ui-sans-serif, sans-serif;
+	--font-body: "Pilat", ui-sans-serif, sans-serif;
+	--font-sans: var(--font-body);
+	--font-code: "JetBrains Mono", ui-monospace, monospace;
+	--font-mono: var(--font-code);
 	--font-pilat: "Pilat", ui-sans-serif, sans-serif;
-	--font-sans: var(--font-display);
-	--font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
 html,
@@ -169,19 +173,25 @@ html[data-theme="dark"] {
 
 body {
 	font-family: var(--font-display);
-	@apply text-base;
+	@apply copy-14;
 	min-width: 320px;
 }
 
-pre {
-	font-family: var(--font-mono);
+pre,
+code {
+	font-family: var(--font-code);
+	font-weight: 300;
 }
 
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible {
 	outline: 2px solid var(--color-focus);
 	outline-offset: 2px;
-	border-radius: 2px;
+	border-radius: var(--radius-button);
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -193,48 +203,20 @@ input[type="number"] {
 	appearance: textfield;
 }
 
-@utility text-md {
-	font-size: 16px;
-	line-height: 1.25rem;
-}
-
 @utility type-card {
-	font-family: var(--font-sans);
-	font-size: 13px;
-	font-style: normal;
-	font-weight: 400;
-	line-height: 16px;
+	@apply font-sans copy-14;
 }
 
 @utility type-card-data {
-	font-family: var(--font-mono);
-	font-size: 13px;
-	font-style: normal;
-	font-weight: 400;
-	line-height: 16px;
+	@apply font-sans copy-14 tabular-nums;
 }
 
 @utility text-ui-meta {
-	color: var(--color-primary);
-	text-align: center;
-	leading-trim: both;
-	text-edge: cap;
-	font-family: "Satoshi", ui-sans-serif, sans-serif;
-	font-size: 14px;
-	font-style: normal;
-	font-weight: 500;
-	line-height: 16px;
-	letter-spacing: 0.14px;
+	@apply font-sans label-14;
 }
 
 @utility text-search-input {
-	color: light-dark(var(--color-primary), #6e6e6e);
-	font-family: "Satoshi", ui-sans-serif, sans-serif;
-	font-size: 16px;
-	font-style: normal;
-	font-weight: 500;
-	line-height: normal;
-	letter-spacing: -0.48px;
+	@apply font-sans copy-16;
 }
 
 @utility size-max {
@@ -275,10 +257,6 @@ input[type="number"] {
 @utility max-size-screen {
 	max-width: 100vw;
 	max-height: 100vh;
-}
-
-@utility font-bolder {
-	font-weight: 750;
 }
 
 @utility no-scrollbar {
@@ -384,29 +362,16 @@ html[data-theme="light"] .sphere-artwork {
 }
 
 .midcut[data-cut="true"] .midcut__visual {
-	display: inline-flex;
-	justify-content: flex-start;
-	width: 100%;
+	display: block;
 	color: inherit;
 }
 
-.midcut__text::before {
+.midcut[data-align="end"] .midcut__visual {
+	text-align: end;
+}
+
+.midcut__visual::before {
 	content: attr(data-text);
-}
-
-.midcut__ellipsis {
-	flex: 0 0 auto;
-}
-
-.midcut[data-cut="true"] .midcut__part {
-	flex: 1 1 0;
-	min-width: 0;
-	overflow: hidden;
-}
-
-.midcut[data-cut="true"] .midcut__part--end {
-	display: inline-flex;
-	justify-content: flex-end;
 }
 
 @keyframes progressline {
@@ -462,8 +427,7 @@ html[data-theme="light"] .sphere-artwork {
 	padding-inline: unset;
 	margin-bottom: 8px;
 	box-sizing: border-box;
-	font-size: 13.5px;
-	line-height: 20px;
+	@apply copy-13 font-mono;
 }
 
 .shiki-block code {
@@ -474,4 +438,22 @@ html[data-theme="light"] .sphere-artwork {
 pre .shiki,
 .shiki pre {
 	@apply bg-card-header!;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		transition-duration: 0.01ms;
+		scroll-behavior: auto;
+	}
+}
+
+/* Only one code weight is supplied by the brand. Never synthesize bold mono. */
+@utility font-mono {
+	font-family: var(--font-code);
+	font-weight: 300;
+	letter-spacing: 0;
 }

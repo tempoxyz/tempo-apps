@@ -50,7 +50,7 @@ export function SimulateGasPanel(
 
 	return (
 		<div className="flex flex-col">
-			<div className="border-b border-dashed border-card-border px-[16px] py-[12px]">
+			<div className="border-b border-solid border-card-border px-[16px] py-[12px]">
 				<GasMeter used={props.gasUsed} limit={gasLimit} />
 			</div>
 
@@ -62,7 +62,7 @@ export function SimulateGasPanel(
 					onSelect={props.onSelectFrame}
 				/>
 			) : (
-				<p className="border-b border-dashed border-card-border px-[16px] py-[10px] type-card text-content-dimmed">
+				<p className="border-b border-solid border-card-border px-[16px] py-[10px] type-card text-content-dimmed">
 					{present.length > 1
 						? `${present.length} calls — pick one call above to see its flamegraph.`
 						: frames.length === 1
@@ -168,7 +168,7 @@ function FrameTable(props: {
 								<span className="flex min-w-0 items-center gap-[7px]">
 									{/* Depth as a badge, not as indentation — a table that
 									    indents loses its left edge past about six levels. */}
-									<span className="w-[16px] shrink-0 text-right font-mono text-[10px] text-content-dimmed">
+									<span className="w-[16px] shrink-0 text-right font-mono label-12 text-content-dimmed">
 										{frame.depth > 0 ? `+${frame.depth}` : '·'}
 									</span>
 									<span
@@ -182,10 +182,10 @@ function FrameTable(props: {
 									</span>
 								</span>
 							</td>
-							<td className="px-[8px] py-[6px] text-right font-mono tabular-nums text-primary">
+							<td className="px-[8px] py-[6px] text-right font-sans tabular-nums text-primary">
 								{formatGas(frame.selfGas)}
 							</td>
-							<td className="px-[8px] py-[6px] text-right font-mono tabular-nums text-tertiary">
+							<td className="px-[8px] py-[6px] text-right font-sans tabular-nums text-tertiary">
 								{formatGas(frame.node.gasUsed)}
 							</td>
 							<td className="px-[16px] py-[6px]">
@@ -196,7 +196,7 @@ function FrameTable(props: {
 											style={{ width: `${Math.min(share, 100)}%` }}
 										/>
 									</span>
-									<span className="w-[38px] text-right font-mono tabular-nums text-tertiary">
+									<span className="w-[38px] text-right font-sans tabular-nums text-tertiary">
 										{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
 									</span>
 								</span>

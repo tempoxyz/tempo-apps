@@ -19,7 +19,7 @@ describe('Midcut', () => {
 
 		expect(markup.match(/>[^<]+</g)).toEqual([`>${value}<`])
 		expect(markup).not.toContain('<style')
-		expect(markup).toContain('data-text="0x3"')
-		expect(markup).toContain('data-text="d789254740b87080b5bb61d2a2f907b9"')
+		expect(markup).toContain('data-text="0x3d78…a8a9"')
+		expect(markup).toContain('aria-hidden="true"')
 	})
 })

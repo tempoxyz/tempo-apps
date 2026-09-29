@@ -211,7 +211,7 @@ function RouteComponent() {
 											: undefined,
 								})}
 								className={cx(
-									'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] text-[11px] font-medium press-down',
+									'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] label-12 font-medium press-down',
 									live && !paused
 										? 'bg-positive/10 text-positive hover:bg-positive/20'
 										: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
@@ -260,7 +260,7 @@ function RouteComponent() {
 												cells: [
 													<span
 														key="number"
-														className="font-mono tabular-nums text-accent font-medium"
+														className="font-sans tabular-nums text-accent font-medium"
 													>
 														#{blockNumber}
 													</span>,
@@ -269,7 +269,7 @@ function RouteComponent() {
 													</span>,
 													<span
 														key="time"
-														className="font-mono text-secondary tabular-nums whitespace-nowrap"
+														className="font-sans text-secondary tabular-nums whitespace-nowrap"
 													>
 														<FormattedTimestamp
 															timestamp={block.timestamp}
@@ -278,7 +278,7 @@ function RouteComponent() {
 													</span>,
 													<span
 														key="txns"
-														className="font-mono text-secondary tabular-nums"
+														className="font-sans text-secondary tabular-nums"
 													>
 														{txCount}
 													</span>,
@@ -335,14 +335,14 @@ function BlocksPagination({
 	const olderFrom = displayedEnd != null ? Number(displayedEnd) - 1 : undefined
 
 	return (
-		<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+		<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-solid border-card-border px-[16px] py-[12px] label-12 text-tertiary">
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
 					to="."
 					resetScroll={false}
 					search={{ from: undefined, live: undefined }}
 					disabled={!canGoNewer}
-					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
 					title="Latest blocks"
 				>
 					<ChevronFirst className="size-[14px]" />
@@ -352,7 +352,7 @@ function BlocksPagination({
 					resetScroll={false}
 					search={{ from: newerFrom, live: undefined }}
 					disabled={!canGoNewer}
-					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
 					title="Newer blocks"
 				>
 					<ChevronLeft className="size-[14px]" />
@@ -365,7 +365,7 @@ function BlocksPagination({
 					resetScroll={false}
 					search={{ from: olderFrom, live: undefined }}
 					disabled={!canGoOlder}
-					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
 					title="Older blocks"
 				>
 					<ChevronRight className="size-[14px]" />
@@ -375,7 +375,7 @@ function BlocksPagination({
 					resetScroll={false}
 					search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
 					disabled={displayedEnd === 0n}
-					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
 					title="Oldest blocks"
 				>
 					<ChevronLast className="size-[14px]" />

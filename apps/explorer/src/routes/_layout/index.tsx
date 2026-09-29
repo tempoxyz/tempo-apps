@@ -55,7 +55,7 @@ function Component() {
 	}, [query])
 
 	return (
-		<div className="flex flex-1 w-full flex-col text-[16px]">
+		<div className="flex flex-1 w-full flex-col copy-16">
 			<div className="flex min-h-[42svh] flex-col justify-end">
 				<div className="flex justify-center select-none [@media(max-height:360px)]:hidden">
 					<LandingWords />
@@ -67,7 +67,7 @@ function Component() {
 						autoFocus
 						size="large"
 						wide
-						className="bg-base-alt"
+						className="bg-pane"
 						value={inputValue}
 						onChange={setInputValue}
 						onActivate={(data) => {
@@ -112,8 +112,8 @@ function SpotlightLinks() {
 	const spotlightData = getSpotlightData()
 
 	return (
-		<section className="text-center max-w-[500px] px-4">
-			<div className="group/pills flex items-center gap-2 text-[13px] flex-wrap justify-center">
+		<section className="text-center max-w-[560px] px-4">
+			<div className="group/pills flex items-center gap-2 copy-13 flex-wrap justify-center">
 				{spotlightData && (
 					<>
 						<SpotlightPill
@@ -174,7 +174,7 @@ function SpotlightPill(props: {
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
 			className={cx(
-				'flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none border-base-border',
+				'flex h-9 items-center gap-2 text-secondary hover:text-primary border hover:border-border-hover px-3 rounded-button press-down bg-surface border-base-border transition-colors',
 				className,
 			)}
 		>
@@ -184,18 +184,12 @@ function SpotlightPill(props: {
 	)
 }
 
-function LandingWords() {
+function LandingWords(): React.JSX.Element {
 	return (
-		<div className="flex flex-col items-center gap-1 font-pilat font-normal">
-			<span className="text-[32px] tracking-[-0.02em] leading-[0.95] text-primary/50">
-				Search
-			</span>
-			<span className="text-[40px] tracking-[-0.02em] leading-[0.95] text-primary/70">
-				Explore
-			</span>
-			<span className="text-[52px] tracking-[-0.02em] leading-[0.95] text-primary">
-				Discover
-			</span>
-		</div>
+		<h1 className="flex flex-col items-center gap-1">
+			<span className="heading-32 text-primary/50">Search</span>
+			<span className="heading-40 text-primary/70">Explore</span>
+			<span className="heading-48 text-primary">Discover</span>
+		</h1>
 	)
 }

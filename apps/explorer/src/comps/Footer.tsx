@@ -18,9 +18,9 @@ import SunIcon from '~icons/lucide/sun'
 export function Footer(): React.JSX.Element {
 	return (
 		<footer className="@container px-[24px] @min-[1240px]:px-[84px] pt-[24px] pb-[48px] relative print:hidden">
-			<div className="relative flex min-h-[34px] items-center justify-center">
+			<div className="relative flex min-h-[34px] flex-wrap items-center justify-center gap-5 @max-[399px]:flex-col-reverse">
 				<Footer.ThemeToggle />
-				<ul className="text-ui-meta flex items-center justify-center gap-[24px] select-none">
+				<ul className="text-ui-meta flex items-center justify-center gap-5 sm:gap-6 select-none">
 					<Footer.Link to="https://tempo.xyz" external>
 						About
 					</Footer.Link>
@@ -84,7 +84,7 @@ export namespace Footer {
 					persistThemeMode(nextTheme)
 					setTheme(nextTheme)
 				}}
-				className="absolute left-0 top-1/2 grid size-[34px] -translate-y-1/2 cursor-pointer place-items-center rounded-[10px] border border-base-border bg-base-plane-interactive text-secondary transition-colors press-down hover:bg-surface hover:text-primary"
+				className="@min-[400px]:absolute @min-[400px]:left-0 @min-[400px]:top-1/2 grid size-11 sm:size-[34px] @min-[400px]:-translate-y-1/2 cursor-pointer place-items-center rounded-body border border-base-border bg-base-plane-interactive text-secondary transition-colors press-down hover:bg-surface hover:text-primary"
 				aria-label={`Switch to ${nextTheme} mode`}
 				title={`Switch to ${nextTheme} mode`}
 			>
@@ -104,7 +104,7 @@ export namespace Footer {
 				<RouterLink
 					to={to}
 					params={params}
-					className="press-down"
+					className="press-down inline-flex min-h-11 sm:min-h-8 items-center hover:text-secondary transition-colors"
 					target={external ? '_blank' : undefined}
 					rel={external ? 'noopener noreferrer' : undefined}
 				>

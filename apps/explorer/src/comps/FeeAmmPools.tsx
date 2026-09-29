@@ -83,7 +83,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 					/>
 					<CopyButton value={pool.poolId} ariaLabel="Copy pool ID" />
 				</div>
-				<p className="text-xs text-secondary">
+				<p className="label-12 text-secondary">
 					{token
 						? pool.userToken.toLowerCase() === token.toLowerCase()
 							? 'Used to pay fees'
@@ -93,7 +93,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 			</div>
 			<dl className="col-span-2 md:col-span-1 grid grid-cols-2 md:flex md:flex-col gap-2 min-w-0">
 				<div>
-					<dt className="text-xs text-tertiary">Fee-token reserve</dt>
+					<dt className="label-12 text-tertiary">Fee-token reserve</dt>
 					<dd className="text-primary type-card-data tabular-nums">
 						{pool.reserveUserToken === null ? (
 							'Unavailable'
@@ -108,7 +108,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 					</dd>
 				</div>
 				<div>
-					<dt className="text-xs text-tertiary">Validator-token reserve</dt>
+					<dt className="label-12 text-tertiary">Validator-token reserve</dt>
 					<dd className="text-primary type-card-data tabular-nums">
 						{pool.reserveValidatorToken === null ? (
 							'Unavailable'
@@ -124,7 +124,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 				</div>
 			</dl>
 			<dl className="flex flex-col gap-1">
-				<dt className="text-xs text-tertiary">Estimated liquidity</dt>
+				<dt className="label-12 text-tertiary">Estimated liquidity</dt>
 				<dd className="type-card-data tabular-nums text-primary">
 					{pool.liquidityUsd === null
 						? 'Unavailable'
@@ -132,7 +132,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 				</dd>
 			</dl>
 			<dl className="flex flex-col gap-1">
-				<dt className="text-xs text-tertiary">Last liquidity added</dt>
+				<dt className="label-12 text-tertiary">Last liquidity added</dt>
 				<dd className="text-primary">
 					{pool.latestMintAt === null ? (
 						'Unknown'
@@ -143,7 +143,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 						/>
 					)}
 				</dd>
-				<dd className="text-xs text-tertiary">
+				<dd className="label-12 text-tertiary">
 					{pool.mintCount.toLocaleString()} liquidity{' '}
 					{pool.mintCount === 1 ? 'deposit' : 'deposits'}
 				</dd>
@@ -191,7 +191,7 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 					<h2 className="type-card font-medium text-primary">
 						Fee AMM liquidity
 					</h2>
-					<p className="text-xs text-secondary">
+					<p className="label-12 text-secondary">
 						Pools that use this token to pay or receive transaction fees.
 					</p>
 				</div>
@@ -208,12 +208,12 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 				<FeeAmmPoolList pools={query.data.pools.slice(0, 3)} token={address} />
 			)}
 			{query.data?.pools.length === 0 && !query.isError && (
-				<p className="px-4 pb-5 text-sm text-secondary">
+				<p className="px-4 pb-5 copy-14 text-secondary">
 					No Fee AMM pools found for this token.
 				</p>
 			)}
 			{query.data && query.data.pools.length > 3 && (
-				<p className="px-4 pb-3 text-xs text-tertiary">
+				<p className="px-4 pb-3 label-12 text-tertiary">
 					Showing the 3 most active pools. View all pools for more.
 				</p>
 			)}

@@ -34,10 +34,8 @@ export const Route = createFileRoute('/_layout/policy/$id')({
 	notFoundComponent: ({ data }) => (
 		<div className="flex flex-1 items-center justify-center px-4 pt-20">
 			<div className="text-center">
-				<h1 className="text-[32px] font-medium text-primary">
-					Policy Not Found
-				</h1>
-				<p className="mt-2 text-[15px] text-secondary">
+				<h1 className="heading-32 text-primary">Policy Not Found</h1>
+				<p className="mt-2 copy-15 text-secondary">
 					The TIP-403 policy does not exist or could not be loaded.
 				</p>
 				{data ? <span className="sr-only">{String(data)}</span> : null}
@@ -201,7 +199,7 @@ function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
 	return (
 		<span
 			className={cx(
-				'rounded-[4px] px-1.5 py-0.5 text-[11px] font-medium capitalize',
+				'rounded-[4px] px-1.5 py-0.5 label-12 font-medium capitalize',
 				props.type === 'whitelist'
 					? 'bg-positive/10 text-positive'
 					: props.type === 'blacklist'
@@ -238,11 +236,11 @@ function MembersSearch(props: { query: string }) {
 				defaultValue={props.query}
 				placeholder="Search addresses"
 				aria-label="Search policy members"
-				className="h-7 w-[220px] rounded-[4px] border border-base-border bg-base px-2 text-[12px] font-mono text-primary outline-none placeholder:text-tertiary focus:border-accent"
+				className="h-7 w-[220px] rounded-[4px] border border-base-border bg-base px-2 label-12 font-mono text-primary outline-none placeholder:text-tertiary focus:border-accent"
 			/>
 			<button
 				type="submit"
-				className="h-7 rounded-[4px] border border-base-border px-2 text-[12px] text-secondary hover:bg-base-alt press-down"
+				className="h-7 rounded-[4px] border border-base-border px-2 label-12 text-secondary hover:bg-base-alt press-down"
 			>
 				Search
 			</button>

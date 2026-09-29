@@ -39,12 +39,13 @@ export function Header(): React.JSX.Element {
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
 					<Link
 						to="/simulate"
-						className="flex h-[28px] items-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] text-[12px] text-secondary hover:border-accent hover:text-primary press-down"
+						aria-label="Simulate transaction"
+						className="flex h-[28px] items-center gap-[5px] rounded-body border border-base-border bg-base-plane px-[8px] label-12 text-secondary hover:border-accent hover:text-primary press-down"
 					>
 						<FlaskConicalIcon className="size-[12px]" />
 						<span className="@max-[799px]:hidden">Simulate</span>
 					</Link>
-					<Header.BlockNumber />
+					<Header.BlockNumber className="@max-[399px]:hidden" />
 				</div>
 			</div>
 			<Header.Search compact />
@@ -211,7 +212,7 @@ export namespace Header {
 					aria-controls={isOpen ? menuId : undefined}
 					aria-expanded={isOpen}
 					aria-haspopup="menu"
-					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-[8px] border border-base-border bg-base-plane px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-none press-down"
+					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-body border border-base-border bg-base-plane px-[8px] py-[4px] label-14 text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-focus press-down"
 					title={`Network: ${activeOption.label}`}
 					onClick={() => setIsOpen((value) => !value)}
 				>
@@ -229,7 +230,7 @@ export namespace Header {
 						id={menuId}
 						role="menu"
 						aria-label="Tempo network"
-						className="absolute left-0 top-[calc(100%+8px)] z-50 w-[156px] overflow-hidden rounded-[10px] border border-base-border bg-base-background/95 p-[4px] shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur"
+						className="absolute left-0 top-[calc(100%+8px)] z-50 w-[156px] overflow-hidden rounded-body border border-base-border bg-surface p-[4px] shadow-lg"
 					>
 						{EXPLORER_NETWORK_OPTIONS.map((option) => {
 							const isActive = option.env === activeOption.env
@@ -246,7 +247,7 @@ export namespace Header {
 									aria-checked={isActive}
 									aria-current={isActive ? 'page' : undefined}
 									className={cx(
-										'flex items-center gap-[8px] rounded-[7px] px-[10px] py-[9px] text-[14px] font-medium leading-[140%] text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-none',
+										'flex items-center gap-[8px] rounded-body px-[10px] py-[9px] label-14 text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-focus',
 										isActive && 'bg-surface text-primary',
 									)}
 									onClick={() => setIsOpen(false)}
@@ -287,14 +288,14 @@ export namespace Header {
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
 					className,
-					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down origin-right transition-[opacity,scale] duration-[80ms]',
+					'flex items-center gap-[6px] label-15 text-secondary press-down origin-right transition-[opacity,scale] duration-[80ms]',
 					isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
 				)}
 				title="View latest block"
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block">
+					<span className="text-primary font-medium tabular-nums font-sans min-w-[6ch] inline-block">
 						{blockNumber != null ? String(blockNumber) : '…'}
 					</span>
 				</div>

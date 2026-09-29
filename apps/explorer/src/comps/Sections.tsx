@@ -2,7 +2,8 @@ import * as React from 'react'
 import { cx } from '#lib/css'
 import { Pagination } from './Pagination'
 
-export function Sections(props: Sections.Props) {
+export function Sections(props: Sections.Props): React.JSX.Element {
+	const sectionId = React.useId()
 	const {
 		sections: sections_,
 		activeSection = 0,
@@ -45,25 +46,26 @@ export function Sections(props: Sections.Props) {
 								key={section.title}
 								className={cx(
 									'flex flex-col font-sans w-full overflow-hidden',
-									'rounded-[10px] border border-card-border bg-card-header',
-									'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+									'rounded-body border border-card-border bg-card-header',
+									'shadow-none',
 								)}
 							>
 								{canCollapse ? (
 									<button
 										type="button"
+										aria-expanded={!isCollapsed}
 										onClick={() => toggleSection(section.title)}
 										className={cx(
 											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
-											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
+											isCollapsed ? 'rounded-body!' : 'rounded-t-body!',
 										)}
 									>
-										<h1 className="text-[13px] font-medium text-primary font-sans">
+										<h1 className="heading-16 text-primary font-sans">
 											{section.title}
 										</h1>
 										<div className="flex items-center gap-[12px]">
 											{isCollapsed && Boolean(section.totalItems) && (
-												<span className="text-[13px] text-tertiary">
+												<span className="copy-13 text-tertiary">
 													{section.totalItems}{' '}
 													{Pagination.pluralize(
 														section.totalItems ?? 0,
@@ -73,7 +75,7 @@ export function Sections(props: Sections.Props) {
 											)}
 											<div
 												className={cx(
-													'accent text-[16px] font-mono',
+													'accent copy-16 font-mono',
 													isCollapsed ? 'text-accent' : 'text-tertiary',
 												)}
 											>
@@ -82,12 +84,12 @@ export function Sections(props: Sections.Props) {
 										</div>
 									</button>
 								) : (
-									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
-										<h1 className="text-[13px] font-medium text-primary font-sans">
+									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-body">
+										<h1 className="heading-16 text-primary font-sans">
 											{section.title}
 										</h1>
 										{Boolean(section.totalItems) && (
-											<span className="text-[13px] text-tertiary">
+											<span className="copy-13 text-tertiary">
 												{section.totalItems}{' '}
 												{Pagination.pluralize(
 													section.totalItems ?? 0,
@@ -99,9 +101,9 @@ export function Sections(props: Sections.Props) {
 								)}
 
 								{!isCollapsed && (
-									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+									<div className="rounded-t-body border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
 										{section.contextual && (
-											<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
+											<div className="px-[18px] py-[10px] border-b border-solid border-card-border">
 												{section.contextual}
 											</div>
 										)}
@@ -120,14 +122,25 @@ export function Sections(props: Sections.Props) {
 			<section
 				className={cx(
 					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
-					'rounded-[10px] border border-card-border bg-card-header',
-					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					'rounded-body border border-card-border bg-card-header',
+					'shadow-none',
 				)}
 			>
-				<div className="h-9 flex items-center justify-between">
-					<div className="flex items-center h-full font-sans">
+				<div className="min-h-11 flex flex-wrap items-center justify-between gap-x-3">
+					<div
+						role="tablist"
+						aria-label="Details"
+						className="flex min-w-0 overflow-x-auto items-center self-stretch font-sans"
+					>
 						{sections.length === 1 ? (
-							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">
+							<div
+								role="tab"
+								aria-selected="true"
+								id={`${sectionId}-tab-0`}
+								aria-controls={`${sectionId}-panel-0`}
+								tabIndex={0}
+								className="h-full flex items-center gap-[8px] button-14 pl-[18px] pr-[12px] font-sans"
+							>
 								<span className="text-primary">{sections[0].title}</span>
 								{Boolean(sections[0].totalItems) && (
 									<span className="text-tertiary">
@@ -140,15 +153,36 @@ export function Sections(props: Sections.Props) {
 								<button
 									key={section.title}
 									type="button"
-									onPointerDown={() => {
+									role="tab"
+									aria-selected={activeSection === index}
+									id={`${sectionId}-tab-${index}`}
+									aria-controls={`${sectionId}-panel-${index}`}
+									tabIndex={activeSection === index ? 0 : -1}
+									onKeyDown={(event) => {
+										const next =
+											event.key === 'ArrowRight'
+												? (index + 1) % sections.length
+												: event.key === 'ArrowLeft'
+													? (index - 1 + sections.length) % sections.length
+													: event.key === 'Home'
+														? 0
+														: event.key === 'End'
+															? sections.length - 1
+															: null
+										if (next === null) return
+										event.preventDefault()
+										onSectionChange?.(next)
+										document.getElementById(`${sectionId}-tab-${next}`)?.focus()
+									}}
+									onClick={() => {
 										if (activeSection === index) return
 										onSectionChange?.(index)
 									}}
 									className={cx(
-										'h-full flex items-center text-[13px] font-medium font-sans',
+										'min-h-11 shrink-0 flex items-center button-14 font-sans',
 										'focus-visible:-outline-offset-2! cursor-pointer',
 										index === 0
-											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
+											? 'pl-[18px] pr-[12px] rounded-tl-body!'
 											: 'px-[12px]',
 										activeSection === index ? 'text-primary' : 'text-tertiary',
 									)}
@@ -156,7 +190,7 @@ export function Sections(props: Sections.Props) {
 									<div className="relative h-full flex items-center">
 										{section.title}
 										{activeSection === index && (
-											<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
+											<div className="absolute h-px bg-accent bottom-0 left-0 right-0 -mx-[2px]" />
 										)}
 									</div>
 								</button>
@@ -176,8 +210,11 @@ export function Sections(props: Sections.Props) {
 				{sections.map((section, index) => (
 					<div
 						key={section.title}
+						role="tabpanel"
+						id={`${sectionId}-panel-${index}`}
+						aria-labelledby={`${sectionId}-tab-${index}`}
 						className={cx(
-							'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
+							'border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
 							activeSection !== index && 'hidden',
 						)}
 					>

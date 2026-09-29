@@ -588,9 +588,9 @@ function InputDataRow(props: {
 	const { input, to } = props
 
 	return (
-		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-solid border-card-border last:border-b-0">
 			<div className="flex items-start gap-[16px]">
-				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
+				<span className="copy-13 text-tertiary min-w-[140px] shrink-0">
 					Input Data
 				</span>
 				<div className="flex-1">
@@ -618,19 +618,16 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 	}, [data.changes])
 
 	return (
-		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border">
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-solid border-card-border">
 			<div className="flex items-start gap-[16px]">
-				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
+				<span className="copy-13 text-tertiary min-w-[140px] shrink-0">
 					Balance Updates
 				</span>
 				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
-					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-mono">
+					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-sans">
 						{Array.from(groupedByAccount.entries()).map(
 							([address, changes]) => (
-								<div
-									key={address}
-									className="flex flex-col gap-[4px] text-[13px]"
-								>
+								<div key={address} className="flex flex-col gap-[4px] copy-13">
 									<Address address={address} />
 									<div className="flex flex-col gap-[2px] pl-[12px] border-l border-base-border">
 										{changes.map((change) => {
@@ -693,7 +690,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					<Link
 						to="."
 						search={{ tab: 'balances' }}
-						className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down w-fit"
+						className="inline-flex items-center gap-[4px] label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] press-down w-fit"
 					>
 						See all ({data.total})
 						<ChevronDownIcon className="size-[12px]" />
@@ -758,7 +755,7 @@ function CallItem(props: {
 	const data = call.data
 	return (
 		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
-			<div className="flex items-center gap-[8px] text-[13px]">
+			<div className="flex items-center gap-[8px] copy-13">
 				<span className="text-primary">#{index}</span>
 				{call.to ? (
 					<Link
@@ -824,7 +821,7 @@ function EventsSection(props: {
 
 	if (logs.length === 0)
 		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+			<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
 				No events emitted in this transaction
 			</div>
 		)
@@ -899,7 +896,7 @@ function EventGroupCell(props: {
 			{knownEvent ? (
 				<TxEventDescription
 					event={knownEvent}
-					className="flex flex-row items-center gap-[6px] leading-[18px]"
+					className="flex flex-row items-center gap-[6px] "
 				/>
 			) : (
 				<EventFallbackName log={logs[0]} />
@@ -909,7 +906,7 @@ function EventGroupCell(props: {
 					type="button"
 					onClick={onToggle}
 					aria-expanded={expanded}
-					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
+					className="inline-flex items-center gap-[4px] label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded
 						? eventCount > 1
@@ -966,7 +963,7 @@ function RawSection(props: {
 	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
 
 	return (
-		<div className="px-[18px] py-[12px] text-[13px] break-all">
+		<div className="px-[18px] py-[12px] copy-13 break-all">
 			<TxRawTransaction data={rawData} />
 		</div>
 	)

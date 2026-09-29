@@ -13,7 +13,7 @@ export function ValidatorTag(props: ValidatorTag.Props) {
 			title={address}
 		>
 			{name && (
-				<span className="text-[11px] px-[6px] py-[2px] rounded bg-base-alt/65 text-tertiary whitespace-nowrap">
+				<span className="label-12 px-[6px] py-[2px] rounded bg-base-alt/65 text-tertiary whitespace-nowrap">
 					{name}
 				</span>
 			)}

@@ -98,12 +98,12 @@ export function ContractFileTree(
 						placeholder="Find a file…"
 						value={search.value}
 						onChange={(event) => search.setValue(event.target.value || null)}
-						className="min-w-0 w-full bg-transparent text-[13px] tracking-[0.01em] text-primary placeholder:text-tertiary outline-none"
+						className="min-w-0 w-full bg-transparent copy-13 tracking-[0.01em] text-primary placeholder:text-tertiary outline-none"
 					/>
 				</label>
 			</div>
 			{search.value && search.matchingPaths.length === 0 && (
-				<p className="px-3 text-xs text-tertiary" role="status">
+				<p className="px-3 label-12 text-tertiary" role="status">
 					No files found.
 				</p>
 			)}

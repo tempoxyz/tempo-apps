@@ -1,6 +1,7 @@
 import type * as Address from 'ox/Address'
 import * as Value from 'ox/Value'
 import type { AccountType } from '#lib/account'
+import { getTempoChain } from '#wagmi.config.ts'
 import { getTempoEnv } from '#lib/env'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
 import { getReceiptEventSideAmount } from '#lib/domain/receipt-presentation'
@@ -61,6 +62,8 @@ export function buildOgImageUrl(
 
 	const params: TxOgParams = {
 		hash,
+		chainId: getTempoChain().id,
+		eventCount: descriptionEvents.length,
 		block: String(data.block.number),
 		sender: data.receipt.from,
 		date: ogTimestamp.date,
@@ -152,7 +155,23 @@ function formatEventForOg(event: KnownEvent): TxOgEvent {
 			? `$${formattedSideAmount}`
 			: ''
 
+	const tokenParts = event.parts.flatMap((part) =>
+		part.type === 'amount'
+			? [{ address: part.value.token, symbol: part.value.symbol }]
+			: part.type === 'token'
+				? [part.value]
+				: [],
+	)
+	const uniqueTokens = [
+		...new Map(
+			tokenParts
+				.filter((part) => part.address)
+				.map((part) => [part.address, part]),
+		).values(),
+	].slice(0, 2)
 	return {
+		tokens: uniqueTokens.map((token) => token.address!),
+		tokenSymbols: uniqueTokens.map((token) => token.symbol ?? ''),
 		action: truncateOgText(action, 40),
 		details: truncateOgText(details, 180),
 		amount: truncateOgText(usdAmount, 30),
@@ -160,8 +179,9 @@ function formatEventForOg(event: KnownEvent): TxOgEvent {
 }
 
 export function formatEventForOgServer(event: KnownEvent): string {
-	const { action, details, amount } = formatEventForOg(event)
-	return `${action}|${details}|${amount}`
+	const { action, details, amount, tokens, tokenSymbols } =
+		formatEventForOg(event)
+	return `${action}|${details}|${amount}||${tokens?.join(',') ?? ''}|${tokenSymbols?.map((symbol) => symbol.replace(/[,|]/g, '')).join(',') ?? ''}`
 }
 
 export function formatDate(timestamp: number): string {

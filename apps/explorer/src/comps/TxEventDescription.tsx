@@ -28,7 +28,7 @@ export function TxEventMemoLine(
 	return (
 		<div
 			className={cx(
-				'flex min-w-0 items-center gap-2 text-[13px] text-secondary',
+				'flex min-w-0 items-center gap-2 copy-13 text-secondary',
 				className,
 			)}
 		>
@@ -129,7 +129,7 @@ export function TxEventDescription(props: TxEventDescription.Props) {
 	return (
 		<div
 			className={cx(
-				'flex flex-row items-center gap-[6px] leading-[18px] flex-wrap min-w-0 flex-1',
+				'flex flex-row items-center gap-[6px] flex-wrap min-w-0 flex-1',
 				className,
 			)}
 		>
@@ -181,9 +181,9 @@ export namespace TxEventDescription {
 						className={cx(
 							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
 							isPrivateZoneAction
-								? 'bg-neutral-950 text-white'
+								? 'bg-inverse text-content-inverse'
 								: isBlocked
-									? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+									? 'bg-warning-subtle text-warning'
 									: isFailed
 										? 'bg-negative/[0.06] text-primary'
 										: 'bg-distinct/70 text-primary',
@@ -302,7 +302,7 @@ export namespace TxEventDescription {
 					<button
 						type="button"
 						onClick={() => setExpanded(true)}
-						className="text-[12px] text-accent cursor-pointer press-down self-start"
+						className="label-12 text-accent cursor-pointer press-down self-start"
 					>
 						+ Show {remainingCount} more
 					</button>
@@ -311,7 +311,7 @@ export namespace TxEventDescription {
 					<button
 						type="button"
 						onClick={() => setExpanded(false)}
-						className="text-[12px] text-accent cursor-pointer press-down self-start"
+						className="label-12 text-accent cursor-pointer press-down self-start"
 					>
 						− View less
 					</button>

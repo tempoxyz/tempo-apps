@@ -62,7 +62,7 @@ export function Tip20TokenTabContent(
 				expanded={configExpanded}
 				onToggle={() => setConfigExpanded(!configExpanded)}
 			>
-				<div className="px-[18px] pb-[14px] pt-[6px] text-[13px]">
+				<div className="px-[18px] pb-[14px] pt-[6px] copy-13">
 					{query.isError && (
 						<p role="status" className="text-tertiary pb-3">
 							Token configuration unavailable.{' '}
@@ -88,7 +88,7 @@ export function Tip20TokenTabContent(
 							<MetadataField label="Total supply" value={config?.totalSupply} />
 							<MetadataField label="Supply cap" value={config?.supplyCap} />
 						</dl>
-						<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 text-[12px]">
+						<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 label-12">
 							<ConfigRow
 								label="Created"
 								value={
@@ -116,7 +116,7 @@ export function Tip20TokenTabContent(
 									value={
 										<AddressComp
 											address={metadataData.createdBy}
-											className="text-[12px]"
+											className="label-12"
 										/>
 									}
 								/>
@@ -139,7 +139,7 @@ export function Tip20TokenTabContent(
 			>
 				{liquidityExpanded && <TokenFeeAmm address={address} />}
 			</CollapsibleSection>
-			<div className="flex items-center gap-3 px-[18px] py-[10px] text-[12px] text-tertiary">
+			<div className="flex items-center gap-3 px-[18px] py-[10px] label-12 text-tertiary">
 				<span>TIP-20</span>
 				<a
 					href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
@@ -182,8 +182,8 @@ function MetadataField(props: {
 }): React.JSX.Element {
 	return (
 		<div className="min-w-0 flex flex-col gap-1.5">
-			<dt className="text-[12px] text-secondary">{props.label}</dt>
-			<dd className="text-[14px] text-primary tabular-nums wrap-anywhere">
+			<dt className="label-12 text-secondary">{props.label}</dt>
+			<dd className="copy-14 text-primary tabular-nums wrap-anywhere">
 				{props.value ?? <span className="text-tertiary">&mdash;</span>}
 			</dd>
 		</div>

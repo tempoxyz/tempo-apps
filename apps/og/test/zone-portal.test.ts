@@ -93,16 +93,17 @@ test('real zero counts remain zero; unavailable data is never rendered as zero',
 
 test('portal cards retain the shared contract template and label/value layout', () => {
 	const html = AddressImage({
-		background: '/bg-template-contract.webp',
+		logo: '/tempo-lockup.svg',
+		artwork: '/bg-template.webp',
 		children: ZonePortalCard({ address, overview }),
 	}).toString()
-	assert.match(html, /src="\/bg-template-contract.webp"/)
-	assert.match(html, /width:700px/)
-	assert.match(html, /border-top-right-radius:24px/)
+	assert.match(html, /src="\/tempo-lockup.svg"/)
+	assert.match(html, /width:720px/)
+	assert.match(html, /border-radius:0px 24px 0px 0px/)
 	assert.match(html, /font-family:Pilat/)
-	assert.match(html, /left:0;bottom:0/)
-	assert.match(html, /text-gray-500">Deposits/)
-	assert.match(html, /text-gray-900">95/)
+	assert.match(html, /left:0px;bottom:0px/)
+	assert.match(html, /text-\[#6b6b6b\]">Deposits/)
+	assert.match(html, /text-\[#181818\]">95/)
 	assert.doesNotMatch(html, /Indexed activity|enabled assets|Mainnet/)
 })
 

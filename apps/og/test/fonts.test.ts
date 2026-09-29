@@ -20,10 +20,11 @@ test('fonts use bundled assets, retry failures, and share successful loads', asy
 	const [first, second] = await Promise.all([loadFonts(env), loadFonts(env)])
 	assert.equal(first, second)
 	assert.equal(await loadFonts(env), first)
-	assert.equal(paths.length, 6)
-	assert.deepEqual(paths.slice(3), [
-		'/fonts/GeistMono-Regular.woff2',
-		'/fonts/inter-latin-500-normal.woff2',
-		'/fonts/Pilat-Book.otf',
+	assert.equal(paths.length, 8)
+	assert.deepEqual(paths.slice(4), [
+		'/fonts/Pilat-Regular.woff2',
+		'/fonts/Pilat-Demi.woff2',
+		'/fonts/Pilat-Demi.woff2',
+		'/fonts/JetBrainsMono-Light.woff2',
 	])
 })

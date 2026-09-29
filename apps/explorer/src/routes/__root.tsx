@@ -87,10 +87,6 @@ export const Route = createRootRouteWithContext<{
 				content: 'Explore - Tempo',
 			},
 			{
-				name: 'viewport',
-				content: 'width=device-width, initial-scale=1, maximum-scale=1',
-			},
-			{
 				name: 'description',
 				content:
 					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
@@ -130,14 +126,14 @@ export const Route = createRootRouteWithContext<{
 			...getExplorerCanonicalLinks(),
 			{
 				rel: 'preload',
-				href: '/fonts/satoshi/Satoshi-Variable.woff2',
+				href: '/fonts/pilat/Pilat-Regular.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
 			},
 			{
 				rel: 'preload',
-				href: '/fonts/geist-mono/GeistMono-Variable.woff2',
+				href: '/fonts/jetbrains-mono/JetBrainsMono-Light.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
