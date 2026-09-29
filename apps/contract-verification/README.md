@@ -102,8 +102,21 @@ reuse it for other TIP-20 addresses on the static Tempo networks only after RPC
 confirms the native `0xef` code marker. Uninitialized addresses return 404; RPC
 failures return an error rather than claiming verification. This lookup does not
 write token instances to D1, so list/all-chains endpoints enumerate stored records
-only. Zone Portal, Zone Messenger, and Zone Verifier are EVM contracts, not native
-precompiles, and use the ordinary bytecode-verification path.
+only.
+
+The Zone Portal implementation, Zone Messenger, and Zone Verifier are seeded
+individually as Solidity `system_contract` source records from the pinned
+`zonesCommit`. These expose sources with `bytecodeVerified: false`, not a compiled
+bytecode match. The Zone Factory retains its Rust precompile record.
+
+Portal instance lookups reuse the implementation's sources and ABI, like TIP-20s
+reuse pathUSD. They require a nonzero zone ID in the full reserved address prefix,
+a static Tempo chain, a seeded implementation, and the exact ERC-1167 runtime
+targeting that implementation. Empty accounts, native markers, and proxies to
+other implementations do not qualify. Instances are not inserted into D1. Rerun
+`pnpm db:seed:remote` after deployment to publish the singleton source records;
+new portal instances then resolve without further seeding. Review and refresh
+the pinned Solidity snapshot when protocol upgrades change the shared runtimes.
 
 `pnpm db:studio` uses the Drizzle D1 HTTP config. If you need to inspect the local SQLite file directly, resolve it with [local-d1.ts](./scripts/local-d1.ts) and point a SQLite-capable tool at that path instead.
 

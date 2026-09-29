@@ -512,14 +512,20 @@ async function getNativeLookupResponse(
 	return { minimalResponse, fullResponse }
 }
 
-async function getTip20LookupResponse(
+async function getDynamicNativeLookupResponse(
 	context: Context<AppEnv>,
 	chainId: number,
 	address: string,
 ) {
 	const normalizedAddress = address.toLowerCase() as `0x${string}`
-	if (!/^0x20c000000000000000000000[0-9a-f]{16}$/.test(normalizedAddress))
-		return null
+	const isTip20 = /^0x20c000000000000000000000[0-9a-f]{16}$/.test(
+		normalizedAddress,
+	)
+	const isZonePortal =
+		/^0x5ad000000000000000000000[0-9a-f]{16}$/.test(normalizedAddress) &&
+		BigInt(`0x${normalizedAddress.slice(-16)}`) > 0n &&
+		BigInt(`0x${normalizedAddress.slice(-16)}`) <= 0xffffffffn
+	if (!isTip20 && !isZonePortal) return null
 
 	// Dynamic registry entries may be non-Tempo chains. Only use source snapshots
 	// seeded for the static Tempo networks, never a prefix match on arbitrary EVMs.
@@ -529,7 +535,9 @@ async function getTip20LookupResponse(
 	const template = await getNativeLookupResponse(
 		getDb(context.env.CONTRACTS_DB),
 		chainId,
-		Hex.toBytes(Addresses.pathUsd),
+		Hex.toBytes(
+			isTip20 ? Addresses.pathUsd : Addresses.zonePortalImplementation,
+		),
 	)
 	if (!template) return null
 
@@ -537,14 +545,17 @@ async function getTip20LookupResponse(
 		chain,
 		transport: createRpcTransport(undefined, chainId, context.env),
 	})
-	// Initialized native tokens carry the 0xef marker installed by Tempo's
-	// storage layout macro. Empty/reserved prefix addresses are not contracts.
-	if ((await client.getCode({ address: normalizedAddress })) !== '0xef')
+	// TIP-20s carry the native marker; ZoneFactory installs an ERC-1167 proxy
+	// targeting the shared implementation. A reserved prefix alone proves neither.
+	const expectedCode = isTip20
+		? '0xef'
+		: `0x363d3d373d3d3d363d73${Addresses.zonePortalImplementation.slice(2).toLowerCase()}5af43d82803e903d91602b57fd5bf3`
+	if ((await client.getCode({ address: normalizedAddress })) !== expectedCode)
 		return null
 
 	const minimalResponse = {
 		...template.minimalResponse,
-		matchId: `native:native:tip20:${chainId}:${normalizedAddress}`,
+		matchId: `native:native:${isTip20 ? 'tip20' : 'zone-portal'}:${chainId}:${normalizedAddress}`,
 		address: normalizedAddress,
 	}
 	return {
@@ -552,6 +563,11 @@ async function getTip20LookupResponse(
 		fullResponse: {
 			...template.fullResponse,
 			...minimalResponse,
+			...(isZonePortal
+				? {
+						name: `Zone Portal Proxy #${BigInt(`0x${normalizedAddress.slice(-16)}`)}`,
+					}
+				: {}),
 			deployment: {
 				chainId: String(chainId),
 				address: normalizedAddress,
@@ -773,7 +789,11 @@ lookupRoute
 			if (!row) {
 				const nativeLookup =
 					(await getNativeLookupResponse(db, chainIdNumber, addressBytes)) ??
-					(await getTip20LookupResponse(context, chainIdNumber, address))
+					(await getDynamicNativeLookupResponse(
+						context,
+						chainIdNumber,
+						address,
+					))
 				if (nativeLookup) {
 					return context.json(
 						applyFieldSelection(
