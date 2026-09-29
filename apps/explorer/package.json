@@ -37,6 +37,8 @@
 	"dependencies": {
 		"accounts": "catalog:",
 		"@datadog/browser-rum-slim": "catalog:",
+		"@pierre/diffs": "catalog:",
+		"@pierre/trees": "catalog:",
 		"@sentry/cloudflare": "catalog:",
 		"@sentry/react": "catalog:",
 		"@shazow/whatsabi": "catalog:",

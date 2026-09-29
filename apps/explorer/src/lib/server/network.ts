@@ -5,6 +5,33 @@ import {
 } from '#lib/zone-prover'
 import { serverEnv } from './env'
 
+const RPC_BACKENDS = {
+	mainnet: { chainId: 4217, url: 'https://rpc.tempo.xyz' },
+	testnet: { chainId: 42431, url: 'https://rpc.testnet.tempo.xyz' },
+	devnet: { chainId: 31318, url: 'https://rpc.devnet.tempoxyz.dev' },
+	nextfork: { chainId: 31318, url: 'https://rpc-nextfork.devnet.tempoxyz.dev' },
+}
+
+/** Select the upstream from deployment configuration, never caller input. */
+export function getExplorerRpcBackend(
+	environment: string | undefined,
+	auth: string | undefined,
+) {
+	if (environment === 'zone-prover') {
+		const target = getChainBackend(ZONE_PROVER_CHAIN_ID, 'rpc')
+		if (!target) throw new Error('RPC network is not configured')
+		return { ...target, chainId: ZONE_PROVER_CHAIN_ID }
+	}
+	if (!environment || !Object.hasOwn(RPC_BACKENDS, environment))
+		throw new Error('RPC network is not configured')
+	if (!auth || !/^[^:\s]+:[^\s]+$/.test(auth))
+		throw new Error('RPC credentials are not configured')
+	return {
+		...RPC_BACKENDS[environment as keyof typeof RPC_BACKENDS],
+		headers: { Authorization: `Basic ${btoa(auth)}` },
+	}
+}
+
 /** Authenticated backends are selected by chain ID, never by page hostname. */
 export function getChainBackend(chainId: number, kind: 'rpc' | 'tidx') {
 	if (chainId !== ZONE_PROVER_CHAIN_ID) return undefined

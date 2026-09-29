@@ -531,6 +531,81 @@ export const zoneFactoryManifest = {
 	}),
 } as const satisfies NativeContractManifestEntry
 
+// These EVM system contracts use source attribution, like the native records;
+// publishing a snapshot does not claim Solidity bytecode verification.
+const zonesRepository = 'tempoxyz/zones'
+const zonesCommit = 'f96c54b5afe63ab01f39f7772933403c24d4707f'
+const zonesSourceRoot = 'crates/contracts/src/runtime'
+const zoneSystemSource = {
+	runtimeType: 'system_contract',
+	language: 'Solidity',
+	repository: zonesRepository,
+	commit: zonesCommit,
+	commitUrl: `https://github.com/${zonesRepository}/tree/${zonesCommit}`,
+	docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+	sourceRoot: zonesSourceRoot,
+	references: {
+		addressDefinitionPaths: [`${zonesSourceRoot}/interfaces/IZone.sol`],
+		abiReferencePaths: [`${zonesSourceRoot}/interfaces/IZone.sol`],
+		registrationPaths: [],
+		specificationPaths: [],
+	},
+} as const
+
+export const zonePortalManifest = {
+	...zoneSystemSource,
+	id: 'zone-portal',
+	name: 'Zone Portal Implementation',
+	abi: Abis.zonePortal,
+	paths: [
+		`${zonesSourceRoot}/tempo/ZonePortal.sol`,
+		`${zonesSourceRoot}/interfaces/IZone.sol`,
+		`${zonesSourceRoot}/libraries/BlockHashHistory.sol`,
+		`${zonesSourceRoot}/libraries/DepositQueueLib.sol`,
+		`${zonesSourceRoot}/libraries/EncryptedDeposit.sol`,
+		`${zonesSourceRoot}/libraries/Secp256k1Lib.sol`,
+		`${zonesSourceRoot}/libraries/WithdrawalQueueLib.sol`,
+	],
+	entrypoints: [`${zonesSourceRoot}/tempo/ZonePortal.sol`],
+	// The singleton implementation supplies shared sources for initialized proxies.
+	deployments: buildDeployments(
+		Addresses.zonePortalImplementation,
+		buildProtocolActivation('T10'),
+	),
+} as const satisfies NativeContractManifestEntry
+
+export const zoneMessengerManifest = {
+	...zoneSystemSource,
+	id: 'zone-messenger',
+	name: 'Zone Messenger',
+	abi: Abis.zoneMessenger,
+	paths: [
+		`${zonesSourceRoot}/tempo/ZoneMessenger.sol`,
+		`${zonesSourceRoot}/interfaces/IZone.sol`,
+	],
+	entrypoints: [`${zonesSourceRoot}/tempo/ZoneMessenger.sol`],
+	deployments: buildDeployments(
+		Addresses.zoneMessenger,
+		buildProtocolActivation('T10'),
+	),
+} as const satisfies NativeContractManifestEntry
+
+export const zoneVerifierManifest = {
+	...zoneSystemSource,
+	id: 'zone-verifier',
+	name: 'Zone Verifier',
+	abi: Abis.zoneVerifier,
+	paths: [
+		`${zonesSourceRoot}/tempo/Verifier.sol`,
+		`${zonesSourceRoot}/interfaces/IZone.sol`,
+	],
+	entrypoints: [`${zonesSourceRoot}/tempo/Verifier.sol`],
+	deployments: buildDeployments(
+		Addresses.zoneVerifier,
+		buildProtocolActivation('T10'),
+	),
+} as const satisfies NativeContractManifestEntry
+
 export const nativeContractsManifest = [
 	validatorConfigManifest,
 	validatorConfigV2Manifest,
@@ -548,4 +623,7 @@ export const nativeContractsManifest = [
 	receivePolicyGuardManifest,
 	currentCommitteeManifest,
 	zoneFactoryManifest,
+	zonePortalManifest,
+	zoneMessengerManifest,
+	zoneVerifierManifest,
 ] as const satisfies ReadonlyArray<NativeContractManifestEntry>

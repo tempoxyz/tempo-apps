@@ -82,6 +82,7 @@ import * as Tip20 from '#lib/domain/tip20'
 import {
 	addressTabSchema,
 	resolveAddressTab,
+	resolveContractHashTab,
 	type AddressTab as TabValue,
 } from '#lib/domain/address-tabs'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -494,8 +495,7 @@ function RouteComponent() {
 		if (!hash || !isContract || redirectedForHashRef.current === hash) return
 
 		// Determine which tab the hash should navigate to
-		const isSourceFileHash = hash.startsWith('source-file-')
-		const targetTab = isSourceFileHash ? 'contract' : 'interact'
+		const targetTab = resolveContractHashTab(hash)
 		if (tab === targetTab) return
 
 		redirectedForHashRef.current = hash

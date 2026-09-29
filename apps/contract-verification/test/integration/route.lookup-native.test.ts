@@ -8,6 +8,9 @@ import { seedNativeContracts } from '../../scripts/precompile-seed/seed.ts'
 import {
 	nativeContractsManifest,
 	tip20Manifest,
+	zonePortalManifest,
+	zoneMessengerManifest,
+	zoneVerifierManifest,
 } from '../../scripts/precompile-seed/manifest.ts'
 
 const chainId = 4217
@@ -24,7 +27,7 @@ async function seed() {
 	})
 }
 
-function mockCode(code: string) {
+function mockCode(code: string, address = token) {
 	return vi
 		.spyOn(globalThis, 'fetch')
 		.mockImplementation(async (_input, init) => {
@@ -34,7 +37,7 @@ function mockCode(code: string) {
 				id: number
 			}
 			expect(request.method).toBe('eth_getCode')
-			expect(request.params).toEqual([token, 'latest'])
+			expect(request.params).toEqual([address, 'latest'])
 			return Response.json({ jsonrpc: '2.0', id: request.id, result: code })
 		})
 }
@@ -151,6 +154,121 @@ describe('native precompile source coverage', () => {
 			env,
 		)
 		expect(unrelated.status).toBe(404)
+		expect(rpc).not.toHaveBeenCalled()
+	})
+})
+
+const portal1 = '0x5ad0000000000000000000000000000000000001'
+const portal2 = '0x5ad0000000000000000000000000000000000002'
+const portalProxyCode =
+	'0x363d3d373d3d3d363d735ad10000000000000000000000000000000000005af43d82803e903d91602b57fd5bf3'
+
+describe('zone system contract source coverage', () => {
+	it.each([
+		zonePortalManifest,
+		zoneMessengerManifest,
+		zoneVerifierManifest,
+	])('serves the $name singleton with pinned Solidity sources', async (entry) => {
+		await seed()
+		const address = entry.deployments.find(
+			(item) => item.chainId === chainId,
+		)?.address
+		const rpc = mockCode('0x')
+		const response = await app.request(
+			`/v2/contract/${chainId}/${address}?fields=all`,
+			{},
+			env,
+		)
+		expect(response.status).toBe(200)
+		const body = (await response.json()) as SourceResponse
+		expect(body).toMatchObject({
+			name: entry.name,
+			abi: entry.abi,
+			language: 'Solidity',
+			extensions: {
+				tempo: {
+					nativeSource: {
+						kind: 'system_contract',
+						bytecodeVerified: false,
+						repository: 'tempoxyz/zones',
+						commit: entry.commit,
+						entrypoints: entry.entrypoints,
+					},
+				},
+			},
+		})
+		expect(Object.keys(body.sources).sort()).toEqual([...entry.paths].sort())
+		expect(rpc).not.toHaveBeenCalled()
+	})
+
+	it.each([
+		portal1,
+		portal2,
+	])('resolves initialized portal %s without storing an instance', async (address) => {
+		await seed()
+		mockCode(portalProxyCode, address)
+		const db = drizzle(env.CONTRACTS_DB, { schema: DB })
+		const before = await db.select().from(DB.nativeContractsTable)
+		const response = await app.request(
+			`/v2/contract/${chainId}/${address}?fields=all`,
+			{},
+			env,
+		)
+		expect(response.status).toBe(200)
+		const body = (await response.json()) as SourceResponse
+		expect(body).toMatchObject({
+			address,
+			name: `Zone Portal Proxy #${BigInt(`0x${address.slice(-16)}`)}`,
+			matchId: `native:native:zone-portal:${chainId}:${address}`,
+			abi: zonePortalManifest.abi,
+			deployment: { address, chainId: String(chainId), transactionHash: null },
+			extensions: {
+				tempo: {
+					nativeSource: {
+						bytecodeVerified: false,
+						commit: zonePortalManifest.commit,
+					},
+				},
+			},
+		})
+		expect(Object.keys(body.sources).sort()).toEqual(
+			[...zonePortalManifest.paths].sort(),
+		)
+		expect(await db.select().from(DB.nativeContractsTable)).toEqual(before)
+	})
+
+	it.each([
+		'0x',
+		'0xef',
+		'0x60006000',
+		portalProxyCode.replace('5ad1', '5ad2'),
+	])('rejects an uninitialized portal or unexpected proxy runtime %s', async (code) => {
+		await seed()
+		mockCode(code, portal1)
+		const response = await app.request(
+			`/v2/contract/${chainId}/${portal1}`,
+			{},
+			env,
+		)
+		expect(response.status).toBe(404)
+	})
+
+	it('does not query RPC for an unseeded implementation or invalid portal IDs', async () => {
+		const rpc = mockCode(portalProxyCode, portal1)
+		expect(
+			(await app.request(`/v2/contract/${chainId}/${portal1}`, {}, env)).status,
+		).toBe(404)
+		await seed()
+		for (const address of [
+			'0x5ad0000000000000000000000000000000000000',
+			'0x5ad0000000000000000000000000000100000000',
+			'0x5ad0000100000000000000000000000000000001',
+		]) {
+			expect(
+				(await app.request(`/v2/contract/${chainId}/${address}`, {}, env))
+					.status,
+			).toBe(404)
+		}
 		expect(rpc).not.toHaveBeenCalled()
 	})
 })

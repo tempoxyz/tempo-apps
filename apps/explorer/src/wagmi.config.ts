@@ -1,6 +1,6 @@
 import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
-import { createPublicClient, fallback } from 'viem'
+import { createPublicClient } from 'viem'
 import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
@@ -11,8 +11,7 @@ import {
 	tempoZoneProver,
 } from './lib/chains'
 import { getApiUrl, getTempoEnv } from './lib/env'
-import { serverEnv, tempoApiUrl } from './lib/server/env'
-import { getChainBackend } from './lib/server/network'
+import { getExplorerRpcBackend } from './lib/server/network'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -38,87 +37,35 @@ export const getTempoChain = createIsomorphicFn()
 	.client(() => chains[getTempoEnv()])
 	.server(() => chains[getTempoEnv()])
 
-const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
-const PRIMARY_RPC_TIMEOUT_MS = 1_500
-const FALLBACK_RPC_TIMEOUT_MS = 3_000
-
 function rpcHttp(
 	url: string | undefined,
 	options: { headers?: Record<string, string> | undefined; timeout: number },
 ) {
 	return http(url, {
-		batch: true,
-		fetchOptions: options.headers ? { headers: options.headers } : undefined,
+		batch: { batchSize: 50 },
+		fetchOptions: { headers: options.headers, redirect: 'manual' },
 		timeout: options.timeout,
 	})
 }
 
-function getRpcProxyUrl() {
-	const chain = getTempoChain()
-	return {
-		http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
-	}
-}
-
-const getFallbackUrls = createIsomorphicFn()
-	.client(() => ({
-		// Browser requests must never hit direct RPC fallbacks.
-		http: [] as string[],
-	}))
-	.server(() => {
-		const chain = getTempoChain()
-		return {
-			http: [...chain.rpcUrls.default.http],
-		}
-	})
-
 const getTempoTransport = createIsomorphicFn()
 	.client(() => {
-		if (getTempoChain().id === tempoZoneProver.id)
-			return http(getApiUrl('/api/rpc').toString(), {
-				batch: { batchSize: 50 },
-				timeout: 15_000,
-			})
-		const proxy = getRpcProxyUrl()
-
-		// Browser traffic should only hit the RPC proxy. Direct chain RPC endpoints
-		// may require credentials that are only available server-side.
+		// Credentials stay in the Worker's same-origin RPC endpoint.
 		return loadBalance([
-			rateLimit(rpcHttp(proxy.http, { timeout: FALLBACK_RPC_TIMEOUT_MS }), {
-				requestsPerSecond: 20,
-			}),
+			rateLimit(
+				rpcHttp(getApiUrl('/api/rpc').toString(), { timeout: 15_000 }),
+				{
+					requestsPerSecond: 20,
+				},
+			),
 		])
 	})
 	.server(() => {
-		const chain = getTempoChain()
-		const target = getChainBackend(chain.id, 'rpc')
-		if (target)
-			return rpcHttp(target.url, { headers: target.headers, timeout: 15_000 })
-		const proxy = getRpcProxyUrl()
-		const fallbackUrls = getFallbackUrls()
-		const apiKey = serverEnv.TEMPO_API_KEY
-		const transports = [
-			rpcHttp(proxy.http, { timeout: PRIMARY_RPC_TIMEOUT_MS }),
-			...fallbackUrls.http.map((url) =>
-				rpcHttp(url, { timeout: PRIMARY_RPC_TIMEOUT_MS }),
-			),
-		]
-
-		// Keep the authenticated API passthrough as the final fallback. Its latency
-		// is materially higher than the chain RPCs, so it should not sit on the
-		// successful request path.
-		if (
-			apiKey &&
-			(chain.id === tempoMainnet.id || chain.id === tempoTestnet.id)
+		const target = getExplorerRpcBackend(
+			import.meta.env.VITE_TEMPO_ENV,
+			process.env.RPC_AUTH,
 		)
-			transports.push(
-				rpcHttp(`${tempoApiUrl}/rpc/${chain.id}`, {
-					headers: { 'tempo-api-key': apiKey },
-					timeout: FALLBACK_RPC_TIMEOUT_MS,
-				}),
-			)
-
-		return fallback(transports)
+		return rpcHttp(target.url, { headers: target.headers, timeout: 15_000 })
 	})
 
 export function getWagmiConfig() {

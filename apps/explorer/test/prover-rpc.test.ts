@@ -62,7 +62,7 @@ describe('prover RPC in the Workers runtime', () => {
 
 		const response = await forwardProverRpc(request(), authorization)
 		expect(response.status).toBe(502)
-		expect(await response.text()).toBe('Prover RPC unavailable')
+		expect(await response.text()).toBe('RPC unavailable')
 		expect(response.headers.get('Location')).toBeNull()
 		expect(upstream).toHaveBeenCalledOnce()
 		expect(upstream.mock.calls[0]?.[1]?.redirect).toBe('manual')

@@ -49,3 +49,10 @@ export function resolveLegacyTokenTab(
 	if (tab === 'interact') return 'contract'
 	return 'transfers'
 }
+
+export function resolveContractHashTab(hash: string): 'contract' | 'interact' {
+	return hash.startsWith('source-file-') ||
+		new URLSearchParams(hash).has('source')
+		? 'contract'
+		: 'interact'
+}

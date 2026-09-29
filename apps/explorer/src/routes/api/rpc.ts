@@ -1,26 +1,25 @@
 import { env } from 'cloudflare:workers'
 import { createFileRoute } from '@tanstack/react-router'
-import { getChainBackend } from '#lib/server/network'
-import { getTempoChain } from '#wagmi.config'
+import { getExplorerRpcBackend } from '#lib/server/network'
 import { forwardProverRpc } from '#lib/server/prover-rpc'
-import { checkRateLimit } from '#lib/server/rate-limit'
+import { forwardRpc } from '#lib/server/rpc'
+import { ZONE_PROVER_CHAIN_ID } from '#lib/zone-prover'
 
 export const Route = createFileRoute('/api/rpc')({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {
-				const limited = await checkRateLimit(request, {
-					ip: env.REQUESTS_RATE_LIMITER,
-					asn: env.ASN_RATE_LIMITER,
-					global: env.GLOBAL_RATE_LIMITER,
-				})
-				if (limited) return limited
+				// The Worker entrypoint applies IP, ASN and global limits once.
 				try {
-					const target = getChainBackend(getTempoChain().id, 'rpc')
-					if (!target) return new Response(null, { status: 404 })
-					return await forwardProverRpc(request, target.headers.Authorization)
+					const target = getExplorerRpcBackend(
+						import.meta.env.VITE_TEMPO_ENV,
+						env.RPC_AUTH,
+					)
+					if (target.chainId === ZONE_PROVER_CHAIN_ID)
+						return await forwardProverRpc(request, target.headers.Authorization)
+					return await forwardRpc(request, target)
 				} catch {
-					return new Response('Prover RPC is not configured', { status: 503 })
+					return new Response('RPC is not configured', { status: 503 })
 				}
 			},
 		},
