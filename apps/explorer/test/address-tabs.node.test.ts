@@ -2,8 +2,27 @@ import { describe, expect, it } from 'vitest'
 import {
 	addressTabSchema,
 	resolveAddressTab,
+	resolveContractHashTab,
 	resolveLegacyTokenTab,
 } from '#lib/domain/address-tabs'
+
+describe('contract source hash routing', () => {
+	it.each([
+		'source-file-contracts-token-sol',
+		'source=contracts%2FToken.sol',
+		'source=contracts%2FToken.sol&line=18&end=20',
+		'line=18&source=contracts%2FToken.sol&end=20',
+	])('keeps %s on the source tab', (hash) => {
+		expect(resolveContractHashTab(hash)).toBe('contract')
+	})
+	it.each([
+		'transfer(address,uint256)',
+		'balanceOf(address)',
+		'resource=abc',
+	])('preserves interaction link %s', (hash) => {
+		expect(resolveContractHashTab(hash)).toBe('interact')
+	})
+})
 
 describe('address tab defaults', () => {
 	it('defaults TIP-20 addresses to Token and other addresses to Transactions', () => {
