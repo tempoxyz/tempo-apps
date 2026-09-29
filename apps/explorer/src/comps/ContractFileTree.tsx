@@ -26,9 +26,9 @@ export function ContractFileTree(
 			--trees-fg-override: var(--color-primary);
 			--trees-fg-muted-override: var(--color-tertiary);
 			--trees-bg-muted-override: var(--color-base-alt);
-			--trees-accent-override: var(--color-primary);
-			--trees-selected-bg-override: var(--color-primary);
-			--trees-selected-fg-override: var(--color-base-background);
+			--trees-accent-override: var(--color-accent);
+			--trees-selected-bg-override: var(--color-base-background);
+			--trees-selected-fg-override: var(--color-primary);
 			--trees-focus-ring-color-override: var(--color-focus);
 			--trees-selected-focused-border-color-override: var(--color-focus);
 			--trees-focus-ring-width-override: 2px;
@@ -41,6 +41,9 @@ export function ContractFileTree(
 		}
 		[data-type="item"]:active:not([data-item-selected="true"]) {
 			background: var(--color-distinct);
+		}
+		[data-item-selected="true"] {
+			box-shadow: inset 0 0 0 1px var(--color-accent);
 		}
 		[data-item-selected="true"] [data-icon-token] {
 			color: var(--trees-selected-fg);
