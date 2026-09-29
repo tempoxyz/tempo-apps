@@ -292,3 +292,16 @@ export function useContractSourceQueryOptions(params: {
 		highlight,
 	})
 }
+
+/** Widest line in monospace columns, expanding tabs to the viewer's tab size. */
+export function longestLineColumns(source: string, tabSize = 2): number {
+	let longest = 0
+	for (const line of source.split('\n')) {
+		let columns = 0
+		for (const char of line)
+			columns =
+				char === '\t' ? columns + tabSize - (columns % tabSize) : columns + 1
+		longest = Math.max(longest, columns)
+	}
+	return longest
+}

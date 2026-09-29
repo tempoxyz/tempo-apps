@@ -1,5 +1,6 @@
 import { FileTree, useFileTree, useFileTreeSearch } from '@pierre/trees/react'
 import * as React from 'react'
+import { contractSourceIcons } from '#lib/contract-source-icons'
 import SearchIcon from '~icons/lucide/search'
 
 export function ContractFileTree(
@@ -12,6 +13,7 @@ export function ContractFileTree(
 		initialExpansion: 'open',
 		flattenEmptyDirectories: true,
 		itemHeight: 28,
+		icons: contractSourceIcons,
 		fileTreeSearchMode: 'hide-non-matches',
 		onSelectionChange: (selected) => {
 			if (syncing.current) return
@@ -41,6 +43,9 @@ export function ContractFileTree(
 		}
 		[data-type="item"]:active:not([data-item-selected="true"]) {
 			background: var(--color-distinct);
+		}
+		[data-item-selected="true"] [data-item-section="icon"] {
+			--contract-source-icon-color: var(--trees-selected-fg);
 		}
 		[data-item-selected="true"] [data-icon-token] {
 			color: var(--trees-selected-fg);
