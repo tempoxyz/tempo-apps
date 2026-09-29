@@ -50,9 +50,7 @@ describe('validator address card', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
 		expect(html).toContain('>Index<')
-		expect(html).toContain(
-			`href="/address/${validator.feeRecipient}?tab=fees"`,
-		)
+		expect(html).toContain(`href="/address/${validator.feeRecipient}?tab=fees"`)
 		expect(html).toContain(`>${validator.feeRecipient}</a>`)
 		expect(html).toContain('href="/block/0"')
 		expect(html).toContain('title="Not deactivated">-</span>')
