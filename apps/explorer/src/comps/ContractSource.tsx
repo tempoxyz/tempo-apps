@@ -19,15 +19,14 @@ function getLanguageFromFileName(fileName: string): string {
 }
 
 function getSourceEntries(
-	source: ContractSource,
+	sources: Record<string, ContractSourceFile>,
+	paths?: string[],
 ): Array<[string, ContractSourceFile]> {
-	if (source.kind === 'verified') {
-		return Object.entries(source.stdJsonInput.sources)
-	}
+	if (!paths) return Object.entries(sources)
 
-	return Object.entries(source.sources).toSorted(([left], [right]) => {
-		const leftIndex = source.nativeSource.paths.indexOf(left)
-		const rightIndex = source.nativeSource.paths.indexOf(right)
+	return Object.entries(sources).toSorted(([left], [right]) => {
+		const leftIndex = paths.indexOf(left)
+		const rightIndex = paths.indexOf(right)
 		const safeLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex
 		const safeRightIndex =
 			rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex
@@ -53,11 +52,19 @@ function LanguageIcon(props: { language: string }) {
 }
 
 export function SourceSection(props: ContractSource & { docsUrl?: string }) {
+	const sources =
+		props.kind === 'verified' ? props.stdJsonInput.sources : props.sources
+	const paths = props.kind === 'verified' ? undefined : props.nativeSource.paths
+	// Selection URL changes must not recreate the viewer's source/highlight cache.
+	const entries = React.useMemo(
+		() => getSourceEntries(sources, paths),
+		[sources, paths],
+	)
 	return (
 		<section aria-label="Contract source code">
 			<SourceBrowser
 				key={`${props.chainId}:${props.address}`}
-				entries={getSourceEntries(props)}
+				entries={entries}
 			/>
 		</section>
 	)

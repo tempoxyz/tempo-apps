@@ -5,7 +5,7 @@ import {
 	WorkerPoolContextProvider,
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
-import { useLocation } from '@tanstack/react-router'
+import { useLocation, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
@@ -24,6 +24,11 @@ export function ContractCodeView(
 ): React.JSX.Element {
 	const { entries } = props
 	const locationHref = useLocation({ select: (location) => location.href })
+	const navigate = useNavigate()
+	const localSelection = React.useRef<{
+		entries: typeof entries
+		target: Parameters<typeof createContractSourceLink>[1]
+	} | null>(null)
 	const viewer = React.useRef<CodeViewHandle<undefined>>(null)
 	const [activeFile, setActiveFile] = React.useState(entries[0]?.[0] ?? '')
 	const [selection, setSelection] =
@@ -33,11 +38,36 @@ export function ContractCodeView(
 	const sourceCopy = useCopy()
 	const linkCopy = useCopy()
 	const paths = React.useMemo(() => entries.map(([name]) => name), [entries])
-	const selectFile = React.useCallback((name: string) => {
-		setActiveFile(name)
-		setSelection(null)
-		viewer.current?.scrollTo({ type: 'item', id: name, align: 'start' })
-	}, [])
+	const updateSelectionUrl = React.useCallback(
+		(target: Parameters<typeof createContractSourceLink>[1]) => {
+			const url = new URL(
+				createContractSourceLink(new URL(window.location.href), target),
+			)
+			localSelection.current = { entries, target }
+			void navigate({
+				href: `${url.pathname}${url.search}`,
+				replace: true,
+				resetScroll: false,
+			})
+		},
+		[entries, navigate],
+	)
+	const selectFile = React.useCallback(
+		(name: string) => {
+			setActiveFile(name)
+			setSelection(null)
+			updateSelectionUrl({ id: name, range: null })
+			viewer.current?.scrollTo({ type: 'item', id: name, align: 'start' })
+		},
+		[updateSelectionUrl],
+	)
+	const selectLines = React.useCallback(
+		(next: CodeViewLineSelection | null) => {
+			setSelection(next)
+			updateSelectionUrl(next ?? { id: activeFile, range: null })
+		},
+		[activeFile, updateSelectionUrl],
+	)
 	const items = React.useMemo<CodeViewItem[]>(
 		() =>
 			entries.map(([name, source]) => {
@@ -92,6 +122,22 @@ export function ContractCodeView(
 			new URL(locationHref, window.location.origin),
 			entries,
 		)
+		const local = localSelection.current
+		localSelection.current = null
+		// URL updates from the editor must not scroll it or reset a drag selection.
+		if (
+			local?.entries === entries &&
+			target?.id === local.target.id &&
+			target?.range?.start ===
+				(local.target.range
+					? Math.min(local.target.range.start, local.target.range.end)
+					: undefined) &&
+			target?.range?.end ===
+				(local.target.range
+					? Math.max(local.target.range.start, local.target.range.end)
+					: undefined)
+		)
+			return
 		const path = target?.id ?? entries[0]?.[0]
 		setSelection(target?.range ? { id: target.id, range: target.range } : null)
 		if (!path) return
@@ -168,7 +214,7 @@ export function ContractCodeView(
 						items={items}
 						options={options}
 						selectedLines={selection}
-						onSelectedLinesChange={setSelection}
+						onSelectedLinesChange={selectLines}
 						onScroll={(_, instance) => {
 							const top =
 								instance.getContainerElement()?.getBoundingClientRect().top ?? 0

@@ -120,4 +120,28 @@ describe('contract source links', () => {
 		expect(single.searchParams.get('line')).toBe('2')
 		expect(single.searchParams.has('end')).toBe(false)
 	})
+
+	it('round-trips successive editor selections and file changes', () => {
+		let url = new URL(`${base}?limit=10`)
+		for (const [selection, expected] of [
+			[
+				{ id: entries[1][0], range: { start: 4, end: 2 } },
+				{ id: entries[1][0], range: { start: 2, end: 4 } },
+			],
+			[
+				{ id: entries[1][0], range: { start: 3, end: 3 } },
+				{ id: entries[1][0], range: { start: 3, end: 3 } },
+			],
+			[
+				{ id: entries[0][0], range: null },
+				{ id: entries[0][0], range: null },
+			],
+		] as const) {
+			url = new URL(createContractSourceLink(url, selection))
+			expect(parseContractSourceLink(url, entries)).toEqual(expected)
+			expect(url.searchParams.get('limit')).toBe('10')
+		}
+		expect(url.searchParams.has('line')).toBe(false)
+		expect(url.searchParams.has('end')).toBe(false)
+	})
 })
