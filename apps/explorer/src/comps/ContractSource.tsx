@@ -153,16 +153,10 @@ export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 					},
 				]}
 			>
-				<div className="flex flex-col gap-2">
-					{sourceEntries.map(([fileName, source]) => (
-						<SourceFile
-							key={fileName}
-							fileName={fileName}
-							content={source.content}
-							highlightedHtml={source.highlightedHtml}
-						/>
-					))}
-				</div>
+				<SourceBrowser
+					key={`${props.chainId}:${props.address}`}
+					entries={sourceEntries}
+				/>
 			</ContractFeatureCard>
 		)
 	}
@@ -207,17 +201,44 @@ export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 				},
 			]}
 		>
-			<div className="flex flex-col gap-2">
-				{sourceEntries.map(([fileName, source]) => (
-					<SourceFile
-						key={fileName}
-						fileName={fileName}
-						content={source.content}
-						highlightedHtml={source.highlightedHtml}
-					/>
-				))}
-			</div>
+			<SourceBrowser
+				key={`${props.chainId}:${props.address}`}
+				entries={sourceEntries}
+			/>
 		</ContractFeatureCard>
+	)
+}
+
+function SourceBrowser(props: {
+	entries: Array<[string, ContractSourceFile]>
+}): React.JSX.Element {
+	const [Viewer, setViewer] =
+		React.useState<typeof import('./ContractCodeView').ContractCodeView>()
+	React.useEffect(() => {
+		let mounted = true
+		void import('./ContractCodeView')
+			.then(({ ContractCodeView }) => {
+				if (mounted) setViewer(() => ContractCodeView)
+			})
+			.catch(() => {
+				// Keep the existing readable source view when the optional chunk fails.
+			})
+		return () => {
+			mounted = false
+		}
+	}, [])
+	if (Viewer) return <Viewer entries={props.entries} />
+	return (
+		<div className="flex flex-col gap-2">
+			{props.entries.map(([fileName, source]) => (
+				<SourceFile
+					key={fileName}
+					fileName={fileName}
+					content={source.content}
+					highlightedHtml={source.highlightedHtml}
+				/>
+			))}
+		</div>
 	)
 }
 
