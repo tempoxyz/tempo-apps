@@ -1,11 +1,9 @@
 import * as React from 'react'
 import { cx } from '#lib/css'
-import {
-	type ContractSource,
-	type ContractSourceFile,
-	getContractCloneCommand,
+import type {
+	ContractSource,
+	ContractSourceFile,
 } from '#lib/domain/contract-source.ts'
-import { clientEnv } from '#lib/env'
 import { useCopy, useCopyPermalink } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import CopyIcon from '~icons/lucide/copy'
@@ -60,10 +58,6 @@ export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 			<SourceBrowser
 				key={`${props.chainId}:${props.address}`}
 				entries={getSourceEntries(props)}
-				cloneCommand={getContractCloneCommand(
-					props,
-					clientEnv.CONTRACT_VERIFICATION_API_BASE_URL,
-				)}
 			/>
 		</section>
 	)
@@ -71,7 +65,6 @@ export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 
 function SourceBrowser(props: {
 	entries: Array<[string, ContractSourceFile]>
-	cloneCommand?: string | undefined
 }): React.JSX.Element {
 	const [Viewer, setViewer] =
 		React.useState<typeof import('./ContractCodeView').ContractCodeView>()
@@ -88,7 +81,7 @@ function SourceBrowser(props: {
 			mounted = false
 		}
 	}, [])
-	if (Viewer) return <Viewer {...props} />
+	if (Viewer) return <Viewer entries={props.entries} />
 	return (
 		<div className="flex flex-col gap-2">
 			{props.entries.map(([fileName, source]) => (

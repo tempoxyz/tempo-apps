@@ -135,24 +135,6 @@ export const ContractSourceSchema = z.union([
 export type ContractSource = z.infer<typeof ContractSourceSchema>
 export type ContractSourceFile = z.infer<typeof SourceFileSchema>
 
-export function getContractCloneCommand(
-	source: ContractSource,
-	verifierUrl: string,
-): string | undefined {
-	if (
-		source.kind !== 'verified' ||
-		source.stdJsonInput.language !== 'Solidity' ||
-		!isAddress(source.address) ||
-		!Number.isSafeInteger(source.chainId) ||
-		source.chainId <= 0
-	)
-		return undefined
-	// Forge's custom Sourcify URL expects the full API path through the chain ID.
-	const url = `${verifierUrl.replace(/\/+$/, '')}/v2/contract/${source.chainId}`
-	const quotedUrl = `'${url.replaceAll("'", "'\\''")}'`
-	return `forge clone ${source.address} contract-${source.address} --chain ${source.chainId} --sourcify-url ${quotedUrl} --keep-directory-structure --no-git`
-}
-
 export function normalizeContractSourceResponse(
 	data: z.infer<typeof RawContractVerificationLookupSchema>,
 ): ContractSource {

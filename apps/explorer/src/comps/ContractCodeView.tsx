@@ -12,7 +12,6 @@ import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
-import TerminalIcon from '~icons/lucide/terminal'
 import WrapIcon from '~icons/lucide/wrap-text'
 
 export function ContractCodeView(
@@ -27,7 +26,6 @@ export function ContractCodeView(
 	const [theme, setTheme] = React.useState(getInitialThemeMode)
 	const sourceCopy = useCopy()
 	const linkCopy = useCopy()
-	const cloneCopy = useCopy()
 	const paths = React.useMemo(() => entries.map(([name]) => name), [entries])
 	const selectFile = React.useCallback((name: string) => {
 		setActiveFile(name)
@@ -149,19 +147,6 @@ export function ContractCodeView(
 					<span className="ml-2 font-normal text-tertiary">Read only</span>
 				</span>
 				<div className="flex flex-wrap items-center gap-3 text-secondary">
-					{props.cloneCommand && (
-						<button
-							type="button"
-							title={props.cloneCommand}
-							onClick={() => {
-								if (props.cloneCommand) void cloneCopy.copy(props.cloneCommand)
-							}}
-							className="flex items-center gap-1.5 cursor-pointer hover:text-primary"
-						>
-							<TerminalIcon />
-							{cloneCopy.notifying ? 'Copied!' : 'Copy clone command'}
-						</button>
-					)}
 					<button
 						type="button"
 						aria-pressed={wrap}
@@ -236,7 +221,6 @@ export function ContractCodeView(
 export declare namespace ContractCodeView {
 	type Props = {
 		entries: Array<[string, ContractSourceFile]>
-		cloneCommand?: string | undefined
 	}
 }
 
