@@ -462,7 +462,14 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 	const fee = hasFeeEvent ? 0n : getEstimatedFee(transaction)
 
 	if (hasAmounts) {
-		const totalValue = calculateKnownEventsTotal(events ?? []) + fee
+		const eventTotal = calculateKnownEventsTotal(events ?? [])
+		if (eventTotal === undefined || !showUsdPrefix)
+			return (
+				<span className="text-tertiary" title="No comparable payment total">
+					—
+				</span>
+			)
+		const totalValue = eventTotal + fee
 		if (totalValue !== 0n) {
 			return (
 				<Amount.Base

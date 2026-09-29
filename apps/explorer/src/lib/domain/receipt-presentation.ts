@@ -3,10 +3,7 @@ import * as Value from 'ox/Value'
 import type { TransactionReceipt } from 'viem'
 import type { FeeBreakdownItem, LineItems } from '#lib/domain/receipt'
 import type { KnownEvent } from '#lib/domain/known-events'
-import {
-	calculateKnownEventsTotal,
-	hasNonAdditiveVaultActivity,
-} from '#lib/domain/known-event-totals'
+import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { isNonceIncrementedEvent } from '#lib/domain/transaction-activities'
 import { PriceFormatter } from '#lib/formatting'
 import {
@@ -82,13 +79,6 @@ export function buildReceiptPresentation(
 						),
 		}))
 	const feePrice = params.lineItems.feeTotals[0]?.price
-	const previousFee = feePrice
-		? Number(Value.format(feePrice.amount, feePrice.decimals))
-		: 0
-	const totalPrice = params.lineItems.totals[0]?.price
-	const previousTotal = totalPrice
-		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
-		: undefined
 	const fallbackFeeAmount =
 		params.receipt.effectiveGasPrice * params.receipt.gasUsed
 	const feeRaw = feePrice
@@ -109,59 +99,30 @@ export function buildReceiptPresentation(
 	const streamingTotal = params.voucher
 		? params.voucher.packetSize * params.voucher.packetCount
 		: undefined
-	const eventsTotal = calculateKnownEventsTotal(events)
-	const eventsTotalDisplayValue =
-		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
+	const eventsTotal = calculateKnownEventsTotal(
+		events.filter((event) => event.type !== 'fee'),
+	)
 	const eventTotalTokens = getKnownEventAmounts(events)
+	const canShowTotal =
+		eventsTotal !== undefined &&
+		eventsTotal > 0n &&
+		showUsdFeePrefix &&
+		areUsdPricedTokens(params.chainId, eventTotalTokens, params.isTokenListed)
 	const total =
-		streamingTotal !== undefined
-			? streamingTotal
-			: eventsTotalDisplayValue !== undefined
-				? eventsTotalDisplayValue + fee
-				: previousTotal !== undefined
-					? previousTotal - previousFee + fee
-					: fee
-	const totalTokens = params.lineItems.totals
-		.map((item) => item.price)
-		.filter(hasTokenAmount)
-	const showUsdTotalPrefix = (() => {
-		if (streamingTotal !== undefined) return true
-		if (eventsTotalDisplayValue !== undefined) {
-			return areUsdPricedTokens(
-				params.chainId,
-				eventTotalTokens,
-				params.isTokenListed,
-			)
-		}
-		if (totalTokens.length > 0) {
-			return areUsdPricedTokens(
-				params.chainId,
-				totalTokens,
-				params.isTokenListed,
-			)
-		}
-		return showUsdFeePrefix
-	})()
-	const totalDisplayValue =
-		streamingTotal !== undefined
-			? streamingTotal
-			: eventsTotalDisplayValue !== undefined
-				? eventsTotalDisplayValue + fee
-				: previousTotal !== undefined
-					? previousTotal
-					: total
-	const totalDisplay = showUsdTotalPrefix
-		? PriceFormatter.format(totalDisplayValue)
-		: PriceFormatter.formatAmountShort(String(totalDisplayValue))
+		streamingTotal ??
+		(canShowTotal && eventsTotal !== undefined
+			? Number(Value.format(eventsTotal, 18)) + fee
+			: undefined)
+	const totalDisplay =
+		total === undefined ? undefined : PriceFormatter.format(total)
 
 	return {
 		events,
 		fee,
 		feeBreakdown,
 		feeDisplay,
-		...(!hasNonAdditiveVaultActivity(events) || params.voucher
-			? { total, totalDisplay }
-			: {}),
+		total,
+		totalDisplay,
 	}
 }
 

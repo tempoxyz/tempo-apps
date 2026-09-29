@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { renderReceiptText } from '#lib/domain/receipt-text'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
 	buildReceiptPresentation,
@@ -203,4 +204,64 @@ describe('receipt presentation', () => {
 		expect(presentation.total).toBe(1.000001)
 		expect(presentation.totalDisplay).toBe('$1')
 	})
+})
+
+test('unpriced asset exchanges retain details and fees but never fall back to legacy totals', () => {
+	const events: KnownEvent[] = [
+		{
+			type: 'transfer',
+			parts: [
+				{
+					type: 'amount',
+					value: {
+						token,
+						value: 38_495_077_61472146n,
+						decimals: 8,
+						symbol: 'MEENY',
+						currency: 'MEENY',
+					},
+				},
+			],
+		},
+		{
+			type: 'transfer',
+			parts: [
+				{
+					type: 'amount',
+					value: {
+						token,
+						value: 232_854_000n,
+						decimals: 6,
+						symbol: 'USDC.e',
+						currency: 'USD',
+					},
+				},
+			],
+		},
+	]
+	const presentation = build(events)
+	expect(presentation.events).toEqual(events)
+	expect(presentation.feeDisplay).toBeDefined()
+	expect(presentation.feeBreakdown).toHaveLength(1)
+	expect(presentation.total).toBeUndefined()
+	expect(presentation.totalDisplay).toBeUndefined()
+	const text = renderReceiptText(
+		{
+			block: { timestamp: 1_787_524_629n },
+			receipt: {
+				...receipt,
+				blockNumber: 36_181_164n,
+				transactionHash: `0x${'1'.repeat(64)}`,
+				status: 'success',
+			},
+		},
+		presentation,
+	)
+	expect(text).not.toMatch(/TOTAL/)
+	expect(text).toContain('MEENY')
+	expect(text).toContain('USDC.E')
+})
+
+test('approval-only transactions do not fall back to a payment total', () => {
+	expect(build([{ type: 'approval', parts: [] }]).totalDisplay).toBeUndefined()
 })

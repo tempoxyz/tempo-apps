@@ -337,7 +337,14 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 									total: presentation.total,
 									totalDisplay: presentation.totalDisplay,
 								},
-								lineItems: data.lineItems,
+								lineItems: {
+									...data.lineItems,
+									// Legacy raw-flow totals can combine incomparable assets.
+									totals:
+										presentation.totalDisplay === undefined
+											? []
+											: data.lineItems.totals,
+								},
 							}),
 						),
 					)

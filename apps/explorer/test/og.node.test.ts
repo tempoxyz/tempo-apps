@@ -16,6 +16,7 @@ const amount = {
 	value: 100_000n,
 	decimals: 6,
 	symbol: 'DLUSD',
+	currency: 'USD',
 	token: '0x20c0000000000000000000000000000000000001' as const,
 }
 
@@ -125,4 +126,76 @@ test('social card carries token identities and the full step count', () => {
 	expect(url.searchParams.get('eventCount')).toBe('12')
 	expect(url.searchParams.get('chainId')).toBe('42431')
 	expect(url.searchParams.get('ev1')?.split('|')[4]).toBe(amount.token)
+})
+
+test('unpriced token quantities never become dollar amounts in social cards', () => {
+	const unpriced: KnownEvent = {
+		type: 'transfer',
+		parts: [
+			{ type: 'action', value: 'Token Transferred' },
+			{
+				type: 'amount',
+				value: {
+					...amount,
+					value: 38_495_077_61472146n,
+					decimals: 8,
+					currency: 'MEENY',
+					symbol: 'MEENY',
+				},
+			},
+		],
+	}
+	const url = new URL(
+		buildOgImageUrl(data, hash, [unpriced, event('send', 'Send')]),
+	)
+	expect(url.searchParams.has('total')).toBe(false)
+	expect(url.searchParams.get('ev1')?.split('|')[2]).toBe('')
+	expect(formatEventForOgServer(unpriced).split('|')[2]).toBe('')
+	expect(url.searchParams.get('ev1')).toContain('MEENY')
+})
+
+test('a swap social card never labels its fee as the transaction total', () => {
+	const url = new URL(
+		buildOgImageUrl(
+			{
+				...data,
+				feeBreakdown: [
+					{
+						amount: 10_000n,
+						decimals: 6,
+						currency: 'USD',
+						token: amount.token,
+						symbol: 'USDC.e',
+					},
+				],
+			},
+			hash,
+			[event('swap', 'Swap')],
+		),
+	)
+	expect(url.searchParams.get('fee')).toBe('$0.01')
+	expect(url.searchParams.has('total')).toBe(false)
+})
+
+test('an ordinary USD payment has one total without counting its fee twice', () => {
+	const feeBreakdown = [
+		{
+			amount: 10_000n,
+			decimals: 6,
+			currency: 'USD',
+			token: amount.token,
+			symbol: 'USDC.e',
+		},
+	]
+	const feeEvent: KnownEvent = {
+		type: 'fee',
+		parts: [{ type: 'amount', value: { ...amount, value: 10_000n } }],
+	}
+	const url = new URL(
+		buildOgImageUrl({ ...data, feeBreakdown }, hash, [
+			event('send', 'Send'),
+			feeEvent,
+		]),
+	)
+	expect(url.searchParams.get('total')).toBe('$0.11')
 })

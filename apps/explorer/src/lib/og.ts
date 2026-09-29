@@ -4,8 +4,9 @@ import type { AccountType } from '#lib/account'
 import { getTempoChain } from '#wagmi.config.ts'
 import { getTempoEnv } from '#lib/env'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
+import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getReceiptEventSideAmount } from '#lib/domain/receipt-presentation'
-import { DateFormatter, HexFormatter } from '#lib/formatting'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import {
 	type AddressOgParams,
 	buildAddressOgUrl,
@@ -47,15 +48,35 @@ export function buildOgImageUrl(
 
 	let fee: string | undefined
 	let total: string | undefined
+	const eventsTotal = calculateKnownEventsTotal(
+		descriptionEvents.filter((event) => event.type !== 'fee'),
+	)
+	const usdFees = data.feeBreakdown.every((item) => item.currency === 'USD')
 	if (data.feeBreakdown.length > 0) {
-		const totalFee = data.feeBreakdown.reduce((sum, item) => {
-			const amount = Number.parseFloat(Value.format(item.amount, item.decimals))
-			return sum + amount
-		}, 0)
-		const feeDisplay =
-			totalFee > 0 && totalFee < 0.01 ? '<$0.01' : `$${totalFee.toFixed(2)}`
-		fee = feeDisplay
-		total = feeDisplay
+		if (usdFees) {
+			const totalFee = data.feeBreakdown.reduce(
+				(sum, item) => sum + Number(Value.format(item.amount, item.decimals)),
+				0,
+			)
+			fee =
+				totalFee > 0 && totalFee < 0.01 ? '<$0.01' : `$${totalFee.toFixed(2)}`
+		} else {
+			fee = data.feeBreakdown
+				.map(
+					(item) =>
+						`${Value.format(item.amount, item.decimals)} ${item.symbol ?? item.currency}`,
+				)
+				.join(' + ')
+		}
+	}
+	if (eventsTotal !== undefined && eventsTotal > 0n && usdFees) {
+		const totalFee = data.feeBreakdown.reduce(
+			(sum, item) => sum + Number(Value.format(item.amount, item.decimals)),
+			0,
+		)
+		total = PriceFormatter.format(
+			Number(Value.format(eventsTotal, 18)) + totalFee,
+		)
 	}
 
 	const events = descriptionEvents.slice(0, 5).map(formatEventForOg)
@@ -148,7 +169,8 @@ function formatEventForOg(event: KnownEvent): TxOgEvent {
 	const details = detailParts.map(formatEventPart).filter(Boolean).join(' ')
 
 	const sideAmount = getReceiptEventSideAmount(event)
-	const formattedSideAmount = sideAmount ? formatAmount(sideAmount, false) : ''
+	const formattedSideAmount =
+		sideAmount?.currency === 'USD' ? formatAmount(sideAmount, false) : ''
 	const usdAmount = formattedSideAmount.startsWith('<')
 		? `<$${formattedSideAmount.slice(1)}`
 		: formattedSideAmount

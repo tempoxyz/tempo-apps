@@ -2607,6 +2607,12 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 
 	const normalizedDecimals = NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS
 	const totalValue = calculateKnownEventsTotal(events)
+	if (totalValue === undefined || !showUsdPrefix)
+		return (
+			<span className="text-tertiary" title="No comparable payment total">
+				—
+			</span>
+		)
 
 	if (totalValue === 0n) {
 		const value = transaction.value
