@@ -78,3 +78,35 @@ export function getReceiptNotePresentation(
 	}
 	return { kind: 'part', label, part }
 }
+
+/** Keep event-specific details; the receipt header already supplies this context. */
+export function getReceiptEventNote(
+	note: KnownEvent['note'],
+	context: { blockNumber: bigint; hash: Hex.Hex; timestamp: bigint },
+): KnownEvent['note'] {
+	if (!Array.isArray(note)) return note
+	const details = note.map(([label, part]) =>
+		getReceiptNotePresentation(label, part),
+	)
+	// A referenced transaction/block may have its own associated timestamp.
+	if (
+		details.some(
+			(detail) =>
+				(detail.kind === 'transaction' &&
+					detail.hash.toLowerCase() !== context.hash.toLowerCase()) ||
+				(detail.kind === 'block' && BigInt(detail.id) !== context.blockNumber),
+		)
+	)
+		return note
+	const filtered = note.filter((_, index) => {
+		const detail = details[index]
+		if (detail.kind === 'block')
+			return BigInt(detail.id) !== context.blockNumber
+		if (detail.kind === 'transaction')
+			return detail.hash.toLowerCase() !== context.hash.toLowerCase()
+		if (detail.kind === 'time')
+			return Date.parse(detail.iso) !== Number(context.timestamp) * 1000
+		return true
+	})
+	return filtered.length ? filtered : undefined
+}

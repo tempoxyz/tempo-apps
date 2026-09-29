@@ -11,6 +11,7 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import { isReceiptEventVisible } from '#lib/domain/receipt-presentation'
 import {
 	getReceiptDistinctSideAmount,
+	getReceiptEventNote,
 	getReceiptNotePresentation,
 	type ReceiptNotePresentation,
 } from '#lib/domain/receipt-ui'
@@ -167,6 +168,11 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
 								const sideAmount = getReceiptDistinctSideAmount(event)
+								const eventNote = getReceiptEventNote(event.note, {
+									blockNumber,
+									hash,
+									timestamp,
+								})
 								return (
 									<div
 										key={`${event.type}-${index}`}
@@ -195,17 +201,17 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 													</div>
 												) : null}
 											</div>
-											{event.note &&
-												(typeof event.note === 'string' ? (
+											{eventNote &&
+												(typeof eventNote === 'string' ? (
 													<TxEventMemoLine
-														memo={event.note}
+														memo={eventNote}
 														className="pl-[24px]"
 													/>
 												) : (
 													<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
 														<div className="border-l border-base-border pl-[10px] w-full">
 															<div className="flex flex-col gap-1 text-primary copy-14">
-																{event.note.map(([label, part], index) => {
+																{eventNote.map(([label, part], index) => {
 																	const key = `${label}${index}`
 																	const note = getReceiptNotePresentation(
 																		label,

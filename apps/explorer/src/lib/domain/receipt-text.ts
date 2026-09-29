@@ -5,6 +5,7 @@ import {
 	getReceiptEventSideAmount,
 	type ReceiptPresentation,
 } from '#lib/domain/receipt-presentation'
+import { getReceiptEventNote } from '#lib/domain/receipt-ui'
 import {
 	DateFormatter,
 	HexFormatter,
@@ -64,10 +65,15 @@ export function renderReceiptText(
 				.filter(Boolean)
 				.join(' ')
 			if (details) lines.push(`${indent}${details.toUpperCase()}`)
-			if (typeof event.note === 'string') {
-				lines.push(`${indent}MEMO: ${event.note.toUpperCase()}`)
-			} else if (event.note) {
-				for (const [label, part] of event.note) {
+			const note = getReceiptEventNote(event.note, {
+				blockNumber: receipt.blockNumber,
+				hash: receipt.transactionHash,
+				timestamp: block.timestamp,
+			})
+			if (typeof note === 'string') {
+				lines.push(`${indent}MEMO: ${note.toUpperCase()}`)
+			} else if (note) {
+				for (const [label, part] of note) {
 					const value = formatPart(part)
 					lines.push(
 						`${indent}${label.toUpperCase()}${part.type === 'text' && part.value === '' ? '' : ':'}${value ? ` ${value.toUpperCase()}` : ''}`,

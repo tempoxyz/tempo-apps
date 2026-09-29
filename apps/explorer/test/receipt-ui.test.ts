@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
 import {
 	getReceiptDistinctSideAmount,
+	getReceiptEventNote,
 	getReceiptNotePresentation,
 } from '#lib/domain/receipt-ui'
 
@@ -142,5 +143,53 @@ describe('receipt details', () => {
 				label,
 				part,
 			})
+	})
+})
+
+describe('receipt header duplication', () => {
+	const timestamp = 1_774_612_370n
+	const context = { blockNumber: 10202719n, hash, timestamp }
+	const repeated: [string, KnownEventPart][] = [
+		['Block Number', { type: 'number', value: 10202719n }],
+		['Transaction Hash', { type: 'hex', value: hash }],
+		[
+			'Timestamp',
+			{ type: 'text', value: new Date(Number(timestamp) * 1000).toISOString() },
+		],
+	]
+	test('removes matching header context and preserves high-level details', () => {
+		const detail: [string, KnownEventPart] = [
+			'Direction',
+			{ type: 'text', value: 'out' },
+		]
+		expect(getReceiptEventNote([...repeated, detail], context)).toEqual([
+			detail,
+		])
+		expect(getReceiptEventNote(repeated, context)).toBeUndefined()
+		expect(repeated).toHaveLength(3)
+	})
+	test('keeps foreign transaction and block context', () => {
+		for (const reference of [
+			['Transaction Hash', { type: 'hex', value: `0x${'a'.repeat(64)}` }],
+			['Block', { type: 'number', value: 10202718n }],
+		] as [string, KnownEventPart][]) {
+			const note = [...repeated, reference]
+			expect(getReceiptEventNote(note, context)).toEqual(note)
+		}
+	})
+	test('preserves memos, unknown metadata, and distinct instants', () => {
+		expect(getReceiptEventNote('invoice 123', context)).toBe('invoice 123')
+		const notes: [string, KnownEventPart][] = [
+			[
+				'Timestamp',
+				{
+					type: 'text',
+					value: new Date(Number(timestamp) * 1000 + 1).toISOString(),
+				},
+			],
+			['Timestamp', { type: 'text', value: 'unknown' }],
+			['Memo', { type: 'text', value: 'invoice 123' }],
+		]
+		expect(getReceiptEventNote(notes, context)).toEqual(notes)
 	})
 })
