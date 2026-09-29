@@ -285,6 +285,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				? timeout(
 						Actions.token
 							.getMetadata(config as Config, { token: address })
+							.then((metadata) => Tip20.withNameOverride(address, metadata))
 							.catch(() => null),
 						QUERY_TIMEOUT_MS,
 					)

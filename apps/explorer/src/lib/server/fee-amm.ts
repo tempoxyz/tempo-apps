@@ -10,6 +10,7 @@ import {
 } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
+import { withNameOverride } from '#lib/domain/tip20'
 import { getChainId } from 'wagmi/actions'
 import { api } from '#lib/server/tempo-api'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
@@ -145,7 +146,10 @@ export async function getFeeAmmPools(input: FeeAmmSearch): Promise<FeeAmmPage> {
 		await Promise.all(
 			tokens.map(
 				async (token) =>
-					[token, await client.token.getMetadata({ token })] as const,
+					[
+						token,
+						withNameOverride(token, await client.token.getMetadata({ token })),
+					] as const,
 			),
 		),
 	)

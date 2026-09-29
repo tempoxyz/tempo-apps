@@ -16,7 +16,11 @@ import {
 	type KnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
-import { isTip20Address, type Metadata } from '#lib/domain/tip20'
+import {
+	isTip20Address,
+	type Metadata,
+	withNameOverride,
+} from '#lib/domain/tip20'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
@@ -331,7 +335,7 @@ async function buildTokenMetadataLookup(
 				const metadata = await Actions.token.getMetadata(config as Config, {
 					token,
 				})
-				return [token.toLowerCase(), metadata] as const
+				return [token.toLowerCase(), withNameOverride(token, metadata)] as const
 			} catch {
 				return [token.toLowerCase(), undefined] as const
 			}

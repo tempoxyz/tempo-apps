@@ -13,7 +13,7 @@ import {
 	getContractInfo,
 	type ContractInfo,
 } from '#lib/domain/contracts'
-import { isTip20Address } from '#lib/domain/tip20'
+import { isTip20Address, resolveName } from '#lib/domain/tip20'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -72,12 +72,15 @@ export type SearchTokenEntry = {
 }
 
 function indexSearchTokenEntries(tokens: SearchTokenEntry[]): IndexedToken[] {
-	return tokens.map((token) => ({
-		address: token.address.toLowerCase() as Address.Address,
-		symbol: token.symbol,
-		name: token.name,
-		searchKey: `${token.symbol.toLowerCase()}|${token.name.toLowerCase()}|${token.address.toLowerCase()}`,
-	}))
+	return tokens.map((token) => {
+		const name = resolveName(token.address, token.name)
+		return {
+			address: token.address.toLowerCase() as Address.Address,
+			symbol: token.symbol,
+			name,
+			searchKey: `${token.symbol.toLowerCase()}|${name.toLowerCase()}|${token.address.toLowerCase()}`,
+		}
+	})
 }
 
 function mergeIndexedTokens(tokens: IndexedToken[]): IndexedToken[] {

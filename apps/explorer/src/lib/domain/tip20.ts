@@ -17,6 +17,26 @@ export function isTip20Address(address: string): address is Tip20Address {
 
 export type Metadata = Actions.token.getMetadata.ReturnValue
 
+/** Display names that replace a token's onchain `name()`, keyed by lowercased address. */
+const nameOverrides: Record<string, string> = {
+	// OUSD
+	'0x20c0000000000000000000006a37da5c996874be': 'Open USD',
+}
+
+/** Returns the display name for a token, preferring any explorer override. */
+export function resolveName(address: string, name: string): string {
+	return nameOverrides[address.toLowerCase()] ?? name
+}
+
+/** Applies any explorer name override to token metadata. */
+export function withNameOverride<metadata extends { name: string }>(
+	address: string,
+	metadata: metadata,
+): metadata {
+	const name = nameOverrides[address.toLowerCase()]
+	return name ? { ...metadata, name } : metadata
+}
+
 export type GetTip20MetadataFn = (
 	address: Address.Address,
 ) => Metadata | undefined
@@ -90,7 +110,10 @@ export async function metadataForTokens(
 	)
 	const map = new Map<string, Metadata>()
 	for (const [index, address] of tip20Addresses.entries())
-		map.set(address.toLowerCase(), metadataResults[index])
+		map.set(
+			address.toLowerCase(),
+			withNameOverride(address, metadataResults[index]),
+		)
 
 	return (address: Address.Address) => map.get(address.toLowerCase())
 }

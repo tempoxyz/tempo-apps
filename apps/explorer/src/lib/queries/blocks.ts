@@ -9,7 +9,7 @@ import {
 	parseKnownEvents,
 } from '#lib/domain/known-events'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
-import { isTip20Address } from '#lib/domain/tip20.ts'
+import { isTip20Address, withNameOverride } from '#lib/domain/tip20.ts'
 import { getBatchedClient, getWagmiConfig } from '#wagmi.config.ts'
 
 export const BLOCKS_PER_PAGE = 12
@@ -120,7 +120,11 @@ export function blockKnownEventsQueryOptions(
 			>()
 			for (const [index, address] of tip20Array.entries()) {
 				const metadata = metadataResults[index]
-				if (metadata) tokenMetadataMap.set(address.toLowerCase(), metadata)
+				if (metadata)
+					tokenMetadataMap.set(
+						address.toLowerCase(),
+						withNameOverride(address, metadata),
+					)
 			}
 
 			const result: Record<Hex.Hex, KnownEvent[]> = {}
