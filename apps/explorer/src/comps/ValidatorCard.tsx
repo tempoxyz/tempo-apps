@@ -34,7 +34,7 @@ export function ValidatorCard(
 					<Link
 						to="/address/$address"
 						params={{ address: validator.feeRecipient }}
-						search={{ tab: 'fees' }}
+						search={{ tab: 'holdings' }}
 						className="type-card-data text-primary break-all max-w-[21ch] hover:underline"
 					>
 						{validator.feeRecipient}

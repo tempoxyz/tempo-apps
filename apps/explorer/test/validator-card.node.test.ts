@@ -46,11 +46,13 @@ const render = () =>
 beforeEach(() => readContract.mockReturnValue({ data: validator }))
 
 describe('validator address card', () => {
-	it('links the full fee recipient to unclaimed fees and preserves genesis index and height', () => {
+	it('links the full fee recipient to holdings and preserves genesis index and height', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
 		expect(html).toContain('>Index<')
-		expect(html).toContain(`href="/address/${validator.feeRecipient}?tab=fees"`)
+		expect(html).toContain(
+			`href="/address/${validator.feeRecipient}?tab=holdings"`,
+		)
 		expect(html).toContain(`>${validator.feeRecipient}</a>`)
 		expect(html).toContain('href="/block/0"')
 		expect(html).toContain('title="Not deactivated">-</span>')

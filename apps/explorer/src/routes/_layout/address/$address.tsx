@@ -1978,7 +1978,7 @@ function SectionsWrapper(props: {
 				}
 			case 'fees':
 				return {
-					title: 'Unclaimed fees',
+					title: 'Unclaimed Fees',
 					content: (
 						<ValidatorFees address={address} active={activeTab === 'fees'} />
 					),
