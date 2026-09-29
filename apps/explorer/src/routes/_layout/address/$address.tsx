@@ -212,6 +212,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			defaultSearchValues.limit,
 		),
 		tab: addressTabSchema,
+		source: z.catch(z.optional(z.string()), undefined),
+		line: z.catch(z.optional(z.coerce.number()), undefined),
+		end: z.catch(z.optional(z.coerce.number()), undefined),
 		live: z.prefault(z.boolean(), false),
 		a: z.optional(z.string()),
 		status: z.optional(z.enum(['success', 'reverted'])),
@@ -438,6 +441,8 @@ function RouteComponent() {
 		cursor,
 		order,
 		tab: requestedTab,
+		source,
+		line,
 		live,
 		limit,
 		status,
@@ -446,7 +451,10 @@ function RouteComponent() {
 		hideSubmitBatches: hideSubmitBatchesSearch,
 		transferDirection,
 	} = Route.useSearch()
-	const tab = resolveAddressTab(requestedTab, Tip20.isTip20Address(address))
+	const tab = resolveAddressTab(
+		requestedTab ?? (source || line !== undefined ? 'contract' : undefined),
+		Tip20.isTip20Address(address),
+	)
 	const {
 		accountType,
 		isToken,

@@ -5,9 +5,14 @@ import {
 	WorkerPoolContextProvider,
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
+import { useLocation } from '@tanstack/react-router'
 import * as React from 'react'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
+import {
+	createContractSourceLink,
+	parseContractSourceLink,
+} from '#lib/domain/contract-source-link'
 import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
 import CopyIcon from '~icons/lucide/copy'
@@ -18,6 +23,7 @@ export function ContractCodeView(
 	props: ContractCodeView.Props,
 ): React.JSX.Element {
 	const { entries } = props
+	const locationHref = useLocation({ select: (location) => location.href })
 	const viewer = React.useRef<CodeViewHandle<undefined>>(null)
 	const [activeFile, setActiveFile] = React.useState(entries[0]?.[0] ?? '')
 	const [selection, setSelection] =
@@ -82,61 +88,33 @@ export function ContractCodeView(
 	}, [])
 
 	React.useEffect(() => {
-		function restoreFragment() {
-			const params = new URLSearchParams(window.location.hash.slice(1))
-			const path =
-				params.get('source') ??
-				entries.find(
-					([name]) =>
-						window.location.hash ===
-						`#source-file-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-				)?.[0]
-			if (!path || !entries.some(([name]) => name === path)) return
-			const content = entries.find(([name]) => name === path)?.[1].content ?? ''
-			const count = content.split('\n').length
-			const start = Math.min(
-				count,
-				Math.max(1, Math.floor(Number(params.get('line'))) || 1),
-			)
-			const end = Math.min(
-				count,
-				Math.max(start, Math.floor(Number(params.get('end'))) || start),
-			)
-			setActiveFile(path)
-			setSelection(
-				params.has('line') ? { id: path, range: { start, end } } : null,
-			)
-			viewer.current?.scrollTo({
-				type: 'line',
-				id: path,
-				lineNumber: start,
-				align: 'start',
-			})
-		}
-		restoreFragment()
-		window.addEventListener('hashchange', restoreFragment)
-		return () => window.removeEventListener('hashchange', restoreFragment)
-	}, [entries])
+		const target = parseContractSourceLink(
+			new URL(locationHref, window.location.origin),
+			entries,
+		)
+		const path = target?.id ?? entries[0]?.[0]
+		setSelection(target?.range ? { id: target.id, range: target.range } : null)
+		if (!path) return
+		setActiveFile(path)
+		viewer.current?.scrollTo({
+			type: 'line',
+			id: path,
+			lineNumber: target?.range?.start ?? 1,
+			align: 'start',
+		})
+	}, [entries, locationHref])
 
 	const selectedPath = selection?.id ?? activeFile
 	const currentSource =
 		entries.find(([name]) => name === selectedPath)?.[1].content ?? ''
 
 	function copyPermalink() {
-		const url = new URL(window.location.href)
-		const params = new URLSearchParams({ source: selectedPath })
-		if (selection) {
-			params.set(
-				'line',
-				String(Math.min(selection.range.start, selection.range.end)),
-			)
-			params.set(
-				'end',
-				String(Math.max(selection.range.start, selection.range.end)),
-			)
-		}
-		url.hash = params.toString()
-		void linkCopy.copy(url.toString())
+		void linkCopy.copy(
+			createContractSourceLink(new URL(window.location.href), {
+				id: selectedPath,
+				range: selection?.range ?? null,
+			}),
+		)
 	}
 
 	return (
