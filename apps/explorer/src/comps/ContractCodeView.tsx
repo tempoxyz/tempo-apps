@@ -7,6 +7,7 @@ import {
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
+import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
 import {
@@ -34,6 +35,18 @@ export function ContractCodeView(
 	const [selection, setSelection] =
 		React.useState<CodeViewLineSelection | null>(null)
 	const [wrap, setWrap] = React.useState(false)
+	const [scrollCode, setScrollCode] = React.useState<HTMLElement | null>(null)
+	const syncScrollCode = React.useCallback(() => {
+		const item = viewer.current
+			?.getInstance()
+			?.getRenderedItems()
+			.find(({ id }) => id === activeFile)
+		setScrollCode(
+			item?.element.shadowRoot?.querySelector<HTMLElement>('[data-code]') ??
+				null,
+		)
+	}, [activeFile])
+	React.useEffect(syncScrollCode, [syncScrollCode])
 	const [theme, setTheme] = React.useState(getInitialThemeMode)
 	const sourceCopy = useCopy()
 	const linkCopy = useCopy()
@@ -102,10 +115,11 @@ export function ContractCodeView(
 			enableLineSelection: true,
 			overflow: wrap ? ('wrap' as const) : ('scroll' as const),
 			layout: { paddingTop: 0, paddingBottom: 16, gap: 16 },
+			onPostRender: syncScrollCode,
 			unsafeCSS:
-				':host { --diffs-font-family: "Geist Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; }',
+				':host { --diffs-font-family: "Geist Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--color-source-background); }',
 		}),
-		[theme, wrap],
+		[theme, wrap, syncScrollCode],
 	)
 
 	React.useEffect(() => {
@@ -164,7 +178,7 @@ export function ContractCodeView(
 	}
 
 	return (
-		<div className="overflow-hidden rounded-md border border-card-border bg-base-background">
+		<div className="overflow-hidden rounded-md border border-card-border bg-source-background">
 			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border px-3 py-2.5 text-xs">
 				<span className="font-medium">
 					{entries.length} source files{' '}
@@ -209,26 +223,30 @@ export function ContractCodeView(
 					poolOptions={highlightPoolOptions}
 					highlighterOptions={highlightOptions}
 				>
-					<CodeView
-						ref={viewer}
-						items={items}
-						options={options}
-						selectedLines={selection}
-						onSelectedLinesChange={selectLines}
-						onScroll={(_, instance) => {
-							const top =
-								instance.getContainerElement()?.getBoundingClientRect().top ?? 0
-							const visible = instance
-								.getRenderedItems()
-								.find(
-									({ element }) =>
-										element.getBoundingClientRect().bottom > top + 40,
-								)
-							if (visible) setActiveFile(visible.id)
-						}}
-						className="min-h-0 min-w-0 md:flex-1"
-						style={{ height: 620, overflow: 'auto' }}
-					/>
+					<div className="min-w-0 md:flex-1">
+						<CodeView
+							ref={viewer}
+							items={items}
+							options={options}
+							selectedLines={selection}
+							onSelectedLinesChange={selectLines}
+							onScroll={(_, instance) => {
+								const top =
+									instance.getContainerElement()?.getBoundingClientRect().top ??
+									0
+								const visible = instance
+									.getRenderedItems()
+									.find(
+										({ element }) =>
+											element.getBoundingClientRect().bottom > top + 40,
+									)
+								if (visible) setActiveFile(visible.id)
+							}}
+							className="min-h-0 min-w-0 md:flex-1"
+							style={{ height: 620, overflow: 'auto' }}
+						/>
+						<ContractCodeScrollbar code={scrollCode} wrap={wrap} />
+					</div>
 				</WorkerPoolContextProvider>
 			</div>
 			<div className="flex flex-wrap justify-between gap-2 border-t border-card-border px-3 py-2 text-[11px] text-tertiary">

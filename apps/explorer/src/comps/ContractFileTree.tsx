@@ -22,7 +22,7 @@ export function ContractFileTree(
 			color-scheme: inherit;
 			--trees-font-family-override: var(--font-pilat);
 			--trees-font-size-override: 13px;
-			--trees-bg-override: var(--color-base-background);
+			--trees-bg-override: var(--color-source-background);
 			--trees-fg-override: var(--color-primary);
 			--trees-fg-muted-override: var(--color-tertiary);
 			--trees-bg-muted-override: var(--color-base-alt);
@@ -88,7 +88,7 @@ export function ContractFileTree(
 	return (
 		<nav
 			aria-label="Source files"
-			className="min-w-0 shrink-0 border-b border-card-border bg-base-background font-pilat md:w-[280px] md:border-r md:border-b-0"
+			className="min-w-0 shrink-0 border-b border-card-border bg-source-background font-pilat md:w-[280px] md:border-r md:border-b-0"
 		>
 			<div className="p-2">
 				<label className="flex h-[40px] items-center gap-2 rounded-md bg-base-alt px-3 text-tertiary focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-[-2px]">

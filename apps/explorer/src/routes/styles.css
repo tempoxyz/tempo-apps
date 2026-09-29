@@ -2,6 +2,18 @@
 @import "tw-animate-css";
 @import "./fonts.css";
 
+.source-scrollbar::-webkit-scrollbar {
+	height: 12px;
+}
+.source-scrollbar::-webkit-scrollbar-thumb {
+	background: var(--color-tertiary);
+	border: 3px solid var(--color-source-background);
+	border-radius: 6px;
+}
+.source-scrollbar {
+	scrollbar-color: var(--color-tertiary) var(--color-source-background);
+}
+
 @theme {
 	/* Background Colors */
 	--color-background-inverse: light-dark(#202020, #fcfcfc);
@@ -92,6 +104,8 @@
 	--color-card: light-dark(#f9f9f9, #222222);
 	--color-card-header: light-dark(#f9f9f9, #191919);
 	--color-card-border: light-dark(#e5e5e5, #232323);
+	/* Corebook off-white (#F3F3F3), expressed as Regen's neutral OKLCH rung. */
+	--color-source-background: light-dark(oklch(96.19% 0 0), #191919);
 
 	/* Other Colors */
 	--color-base-background: light-dark(#ffffff, #191919);
