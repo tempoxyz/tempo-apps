@@ -20,6 +20,7 @@ catalog:
   '@logtape/pretty': ^2.0.4
   '@logtape/redaction': ^2.0.4
   '@pierre/diffs': 1.2.0
+  '@pierre/trees': 1.0.0-beta.6
   '@sentry/cloudflare': ^10.44.0
   '@sentry/react': ^10.44.0
   '@sentry/vite-plugin': ^5.1.1

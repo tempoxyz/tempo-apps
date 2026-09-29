@@ -1,14 +1,18 @@
 import type { CodeViewItem, CodeViewLineSelection } from '@pierre/diffs'
-import { CodeView, type CodeViewHandle } from '@pierre/diffs/react'
+import {
+	CodeView,
+	type CodeViewHandle,
+	WorkerPoolContextProvider,
+} from '@pierre/diffs/react'
+import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { ContractFileTree } from '#comps/ContractFileTree.tsx'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
 import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
 import CopyIcon from '~icons/lucide/copy'
-import FileCodeIcon from '~icons/lucide/file-code-2'
 import LinkIcon from '~icons/lucide/link'
-import SearchIcon from '~icons/lucide/search'
+import TerminalIcon from '~icons/lucide/terminal'
 import WrapIcon from '~icons/lucide/wrap-text'
 
 export function ContractCodeView(
@@ -16,7 +20,6 @@ export function ContractCodeView(
 ): React.JSX.Element {
 	const { entries } = props
 	const viewer = React.useRef<CodeViewHandle<undefined>>(null)
-	const [filter, setFilter] = React.useState('')
 	const [activeFile, setActiveFile] = React.useState(entries[0]?.[0] ?? '')
 	const [selection, setSelection] =
 		React.useState<CodeViewLineSelection | null>(null)
@@ -24,29 +27,36 @@ export function ContractCodeView(
 	const [theme, setTheme] = React.useState(getInitialThemeMode)
 	const sourceCopy = useCopy()
 	const linkCopy = useCopy()
+	const cloneCopy = useCopy()
+	const paths = React.useMemo(() => entries.map(([name]) => name), [entries])
+	const selectFile = React.useCallback((name: string) => {
+		setActiveFile(name)
+		setSelection(null)
+		viewer.current?.scrollTo({ type: 'item', id: name, align: 'start' })
+	}, [])
 	const items = React.useMemo<CodeViewItem[]>(
 		() =>
-			entries.map(([name, source]) => ({
-				id: name,
-				type: 'file',
-				file: {
-					name,
-					contents: source.content,
-					lang: name.endsWith('.vy')
-						? 'vyper'
-						: name.endsWith('.rs')
-							? 'rust'
-							: name.endsWith('.sol')
-								? 'solidity'
-								: 'text',
-				},
-				// Source changes must invalidate CodeView's item cache, even at the same path.
-				version: Array.from(source.content).reduce(
-					(hash, char) =>
-						(Math.imul(31, hash) + (char.codePointAt(0) ?? 0)) | 0,
-					0,
-				),
-			})),
+			entries.map(([name, source]) => {
+				// Unique revisions invalidate both CodeView and worker highlight caches.
+				const version = ++sourceRevision
+				return {
+					id: name,
+					type: 'file',
+					file: {
+						name,
+						contents: source.content,
+						cacheKey: `contract-source:${version}`,
+						lang: name.endsWith('.vy')
+							? 'vyper'
+							: name.endsWith('.rs')
+								? 'rust'
+								: name.endsWith('.sol')
+									? 'solidity'
+									: 'text',
+					},
+					version,
+				}
+			}),
 		[entries],
 	)
 	const options = React.useMemo(
@@ -113,9 +123,6 @@ export function ContractCodeView(
 	const selectedPath = selection?.id ?? activeFile
 	const currentSource =
 		entries.find(([name]) => name === selectedPath)?.[1].content ?? ''
-	const visibleEntries = entries.filter(([name]) =>
-		name.toLowerCase().includes(filter.toLowerCase()),
-	)
 
 	function copyPermalink() {
 		const url = new URL(window.location.href)
@@ -141,7 +148,20 @@ export function ContractCodeView(
 					{entries.length} source files{' '}
 					<span className="ml-2 font-normal text-tertiary">Read only</span>
 				</span>
-				<div className="flex items-center gap-3 text-secondary">
+				<div className="flex flex-wrap items-center gap-3 text-secondary">
+					{props.cloneCommand && (
+						<button
+							type="button"
+							title={props.cloneCommand}
+							onClick={() => {
+								if (props.cloneCommand) void cloneCopy.copy(props.cloneCommand)
+							}}
+							className="flex items-center gap-1.5 cursor-pointer hover:text-primary"
+						>
+							<TerminalIcon />
+							{cloneCopy.notifying ? 'Copied!' : 'Copy clone command'}
+						</button>
+					)}
 					<button
 						type="button"
 						aria-pressed={wrap}
@@ -170,79 +190,37 @@ export function ContractCodeView(
 				</div>
 			</div>
 			<div className="flex min-w-0 flex-col md:flex-row">
-				<nav
-					aria-label="Source files"
-					className="shrink-0 border-b border-card-border bg-card-header md:w-[230px] md:border-r md:border-b-0"
-				>
-					<label className="m-3 flex items-center gap-2 rounded border border-card-border bg-base-background px-2 py-2 text-tertiary">
-						<SearchIcon className="size-3.5 shrink-0" />
-						<input
-							aria-label="Filter source files"
-							placeholder="Find a file…"
-							value={filter}
-							onChange={(event) => setFilter(event.target.value)}
-							className="min-w-0 w-full bg-transparent text-xs outline-none"
-						/>
-					</label>
-					<div className="max-h-[160px] overflow-auto px-2 pb-3 md:max-h-[548px]">
-						{visibleEntries.map(([name]) => (
-							<button
-								key={name}
-								type="button"
-								title={name}
-								aria-current={selectedPath === name ? 'true' : undefined}
-								onClick={() => {
-									setActiveFile(name)
-									setSelection(null)
-									viewer.current?.scrollTo({
-										type: 'item',
-										id: name,
-										align: 'start',
-									})
-								}}
-								className={cx(
-									'flex w-full items-start gap-2 rounded px-2 py-2.5 text-left cursor-pointer hover:bg-base-alt',
-									selectedPath === name && 'bg-base-alt text-primary',
-								)}
-							>
-								<FileCodeIcon className="mt-0.5 size-3.5 shrink-0 text-tertiary" />
-								<span className="min-w-0">
-									<span className="block text-xs font-medium">
-										{name.split('/').at(-1)}
-									</span>
-									<span className="mt-1 block truncate text-[10px] text-tertiary">
-										{name.includes('/')
-											? name.slice(0, name.lastIndexOf('/'))
-											: '/'}
-									</span>
-								</span>
-							</button>
-						))}
-						{visibleEntries.length === 0 && (
-							<p className="p-2 text-xs text-tertiary">No files found.</p>
-						)}
-					</div>
-				</nav>
-				<CodeView
-					ref={viewer}
-					items={items}
-					options={options}
-					selectedLines={selection}
-					onSelectedLinesChange={setSelection}
-					onScroll={(_, instance) => {
-						const top =
-							instance.getContainerElement()?.getBoundingClientRect().top ?? 0
-						const visible = instance
-							.getRenderedItems()
-							.find(
-								({ element }) =>
-									element.getBoundingClientRect().bottom > top + 40,
-							)
-						if (visible) setActiveFile(visible.id)
-					}}
-					className="min-w-0 flex-1"
-					style={{ height: 620, overflow: 'auto' }}
+				<ContractFileTree
+					key={JSON.stringify(paths)}
+					paths={paths}
+					selectedPath={selectedPath}
+					onSelect={selectFile}
 				/>
+				<WorkerPoolContextProvider
+					poolOptions={highlightPoolOptions}
+					highlighterOptions={highlightOptions}
+				>
+					<CodeView
+						ref={viewer}
+						items={items}
+						options={options}
+						selectedLines={selection}
+						onSelectedLinesChange={setSelection}
+						onScroll={(_, instance) => {
+							const top =
+								instance.getContainerElement()?.getBoundingClientRect().top ?? 0
+							const visible = instance
+								.getRenderedItems()
+								.find(
+									({ element }) =>
+										element.getBoundingClientRect().bottom > top + 40,
+								)
+							if (visible) setActiveFile(visible.id)
+						}}
+						className="min-h-0 min-w-0 md:flex-1"
+						style={{ height: 620, overflow: 'auto' }}
+					/>
+				</WorkerPoolContextProvider>
 			</div>
 			<div className="flex flex-wrap justify-between gap-2 border-t border-card-border px-3 py-2 text-[11px] text-tertiary">
 				<span>
@@ -256,5 +234,17 @@ export function ContractCodeView(
 }
 
 export declare namespace ContractCodeView {
-	type Props = { entries: Array<[string, ContractSourceFile]> }
+	type Props = {
+		entries: Array<[string, ContractSourceFile]>
+		cloneCommand?: string | undefined
+	}
 }
+
+const highlightPoolOptions = {
+	workerFactory: () => new HighlightWorker(),
+	poolSize: 2,
+}
+const highlightOptions = {
+	theme: { light: 'github-light', dark: 'github-dark' },
+}
+let sourceRevision = 0

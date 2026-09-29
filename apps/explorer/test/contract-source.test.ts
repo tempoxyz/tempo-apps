@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
 	contractSourceQueryOptions,
+	getContractCloneCommand,
 	normalizeContractSourceResponse,
 	parseContractSource,
 } from '#lib/domain/contract-source.ts'
@@ -41,6 +42,34 @@ describe('contract-source parsing', () => {
 		expect(source.stdJsonInput.sources['contracts/Foo.sol']?.content).toContain(
 			'Foo',
 		)
+
+		const address = '0x379EF54309c35d317f405F3e9f77d1BdE9d713AF'
+		const verified = { ...source, address }
+		expect(
+			getContractCloneCommand(verified, 'https://contracts.tempo.xyz/'),
+		).toBe(
+			`forge clone ${address} contract-${address} --chain 4217 --sourcify-url 'https://contracts.tempo.xyz/v2/contract/4217' --keep-directory-structure --no-git`,
+		)
+		expect(
+			getContractCloneCommand(
+				{ ...verified, chainId: 42431 },
+				'https://contracts.tempo.xyz',
+			),
+		).toBe(
+			`forge clone ${address} contract-${address} --chain 42431 --sourcify-url 'https://contracts.tempo.xyz/v2/contract/42431' --keep-directory-structure --no-git`,
+		)
+		expect(
+			getContractCloneCommand(source, 'https://contracts.tempo.xyz'),
+		).toBeUndefined()
+		expect(
+			getContractCloneCommand(
+				{
+					...verified,
+					stdJsonInput: { ...source.stdJsonInput, language: 'Vyper' },
+				},
+				'https://contracts.tempo.xyz',
+			),
+		).toBeUndefined()
 	})
 
 	it('normalizes native contract source responses', () => {
@@ -92,6 +121,9 @@ describe('contract-source parsing', () => {
 
 		const reparsed = parseContractSource(source)
 		expect(reparsed.kind).toBe('native')
+		expect(
+			getContractCloneCommand(reparsed, 'https://contracts.tempo.xyz'),
+		).toBeUndefined()
 	})
 })
 
