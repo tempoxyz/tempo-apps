@@ -9,7 +9,10 @@ import { useLocation, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
-import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
+import {
+	type ContractSourceFile,
+	longestLineColumns,
+} from '#lib/domain/contract-source.ts'
 import {
 	createContractSourceLink,
 	parseContractSourceLink,
@@ -51,6 +54,24 @@ export function ContractCodeView(
 	const sourceCopy = useCopy()
 	const linkCopy = useCopy()
 	const paths = React.useMemo(() => entries.map(([name]) => name), [entries])
+	// Virtualization renders only visible lines, so size every file to the widest
+	// line and longest line number to keep the horizontal scroll width static.
+	const sourceWidth = React.useMemo(
+		() =>
+			({
+				'--contract-source-columns': Math.max(
+					0,
+					...entries.map(([, source]) => longestLineColumns(source.content)),
+				),
+				'--contract-source-line-digits': Math.max(
+					1,
+					...entries.map(
+						([, source]) => `${source.content.split('\n').length}`.length,
+					),
+				),
+			}) as React.CSSProperties,
+		[entries],
+	)
 	const updateSelectionUrl = React.useCallback(
 		(target: Parameters<typeof createContractSourceLink>[1]) => {
 			const url = new URL(
@@ -117,7 +138,7 @@ export function ContractCodeView(
 			layout: { paddingTop: 0, paddingBottom: 16, gap: 16 },
 			onPostRender: syncScrollCode,
 			unsafeCSS:
-				':host { --diffs-font-family: "Geist Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--color-source-background); }',
+				':host { --diffs-font-family: "Geist Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; --diffs-min-number-column-width: calc(var(--contract-source-line-digits, 3) * 1ch); } :host, [data-file] { --diffs-bg: var(--color-source-background); } [data-overflow="scroll"] [data-code] { grid-template-columns: var(--diffs-grid-number-column-width) minmax(calc((var(--contract-source-columns, 0) + 4) * 1ch), 1fr); }',
 		}),
 		[theme, wrap, syncScrollCode],
 	)
@@ -243,7 +264,7 @@ export function ContractCodeView(
 								if (visible) setActiveFile(visible.id)
 							}}
 							className="min-h-0 min-w-0 md:flex-1"
-							style={{ height: 620, overflow: 'auto' }}
+							style={{ height: 620, overflow: 'auto', ...sourceWidth }}
 						/>
 						<ContractCodeScrollbar code={scrollCode} wrap={wrap} />
 					</div>
