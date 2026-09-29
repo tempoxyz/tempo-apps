@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { ContractFeatureCard } from '#comps/ContractFeatureCard.tsx'
 import { cx } from '#lib/css'
 import type {
 	ContractSource,
@@ -12,31 +11,7 @@ import FileCode2Icon from '~icons/lucide/file-code-2'
 import LinkIcon from '~icons/lucide/link'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
 import RustIcon from '~icons/material-icon-theme/rust'
-import ExternalLinkIcon from '~icons/lucide/external-link'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
-
-function getCompilerVersionUrl(compiler: string, version: string) {
-	const isVyper = compiler.toLowerCase() === 'vyper'
-	const repo = isVyper ? 'vyperlang/vyper' : 'argotorg/solidity'
-
-	const tag = isVyper ? version.trim() : version.trim().split('+commit.', 1)[0]
-
-	return `https://github.com/${repo}/releases/tag/v${tag}`
-}
-
-function getOptimizerText(
-	compilation: Extract<ContractSource, { kind: 'verified' }>['compilation'],
-) {
-	const isVyper = compilation.compiler === 'vyper'
-	if (isVyper) {
-		return compilation.compilerSettings.evmVersion
-			? `EVM: ${compilation.compilerSettings.evmVersion}`
-			: 'Vyper'
-	}
-	return compilation.compilerSettings.optimizer?.enabled
-		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
-		: 'Optimizer: disabled'
-}
 
 function getLanguageFromFileName(fileName: string): string {
 	const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
@@ -60,30 +35,6 @@ function getSourceEntries(
 	})
 }
 
-function getCommitUrl(
-	source: Extract<ContractSource, { kind: 'native' }>,
-): string {
-	return (
-		source.nativeSource.commitUrl ??
-		`https://github.com/${source.nativeSource.repository}/commit/${source.nativeSource.commit}`
-	)
-}
-
-function getNativeActivationText(
-	source: Extract<ContractSource, { kind: 'native' }>,
-): string | undefined {
-	const activation = source.nativeSource.activation
-	const parts: string[] = []
-	if (activation.protocolVersion) parts.push(activation.protocolVersion)
-	if (activation.fromBlock) parts.push(`from block ${activation.fromBlock}`)
-	if (activation.toBlock) parts.push(`until block ${activation.toBlock}`)
-	return parts.length > 0 ? parts.join(' · ') : undefined
-}
-
-function formatSourceKind(kind: string): string {
-	return kind.replaceAll('_', ' ')
-}
-
 function getSourceFragment(fileName: string): string {
 	return `source-file-${fileName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 }
@@ -102,110 +53,13 @@ function LanguageIcon(props: { language: string }) {
 }
 
 export function SourceSection(props: ContractSource & { docsUrl?: string }) {
-	const sourceEntries = getSourceEntries(props)
-
-	if (props.kind === 'verified') {
-		const optimizerText = getOptimizerText(props.compilation)
-		const compilerVersionUrl = getCompilerVersionUrl(
-			props.compilation.compiler,
-			props.compilation.compilerVersion,
-		)
-
-		return (
-			<ContractFeatureCard
-				rightSideTitle={props.verifiedAt ?? undefined}
-				rightSideDescription={optimizerText}
-				title={`Source code (${props.runtimeMatch ?? 'verified'})`}
-				description="Verified contract source code."
-				textGrid={[
-					{
-						right: (
-							<div className="space-x-2 flex items-center">
-								<span className="font-medium text-primary/80">
-									{props.compilation.name}
-								</span>
-								{props.docsUrl && (
-									<a
-										target="_blank"
-										rel="noopener noreferrer"
-										href={props.docsUrl}
-										className="text-[11px] text-accent hover:underline press-down inline-flex items-center gap-[4px]"
-									>
-										Docs
-										<ExternalLinkIcon className="size-[12px]" />
-									</a>
-								)}
-							</div>
-						),
-					},
-					{
-						right: (
-							<a
-								target="_blank"
-								rel="noopener noreferrer"
-								className="font-medium text-primary/80"
-								href={compilerVersionUrl}
-							>
-								{props.compilation.compilerVersion} (
-								{props.compilation.compiler})
-							</a>
-						),
-					},
-				]}
-			>
-				<SourceBrowser
-					key={`${props.chainId}:${props.address}`}
-					entries={sourceEntries}
-				/>
-			</ContractFeatureCard>
-		)
-	}
-
 	return (
-		<ContractFeatureCard
-			rightSideTitle={props.nativeSource.language}
-			rightSideDescription={getNativeActivationText(props)}
-			title={`Source code (${formatSourceKind(props.nativeSource.kind)})`}
-			description="Native Tempo runtime source code."
-			textGrid={[
-				{
-					right: (
-						<div className="space-x-2 flex items-center">
-							<span className="text-primary/80 text-md">{props.name}</span>
-							{props.docsUrl && (
-								<a
-									target="_blank"
-									rel="noopener noreferrer"
-									href={props.docsUrl}
-									className="text-[11px] text-accent hover:underline press-down inline-flex items-center gap-[4px]"
-								>
-									Docs
-									<ExternalLinkIcon className="size-[12px]" />
-								</a>
-							)}
-						</div>
-					),
-				},
-				{
-					right: (
-						<a
-							target="_blank"
-							rel="noopener noreferrer"
-							href={getCommitUrl(props)}
-							className="text-primary/70 font-mono hover:text-primary/80 transition-colors"
-						>
-							{props.nativeSource.repository}@
-							{props.nativeSource.commit.slice(0, 7)}
-						</a>
-					),
-				},
-			]}
-		>
+		<section aria-label="Contract source code">
 			<SourceBrowser
 				key={`${props.chainId}:${props.address}`}
-				entries={sourceEntries}
+				entries={getSourceEntries(props)}
 			/>
-		</ContractFeatureCard>
+		</section>
 	)
 }
 

@@ -250,7 +250,6 @@ export function ContractCodeView(
 						? `Lines ${Math.min(selection.range.start, selection.range.end)}–${Math.max(selection.range.start, selection.range.end)}`
 						: 'Click a line number to select · Shift-click to select a range'}
 				</span>
-				<span>Source from Tempo · Viewer by Pierre</span>
 			</div>
 		</div>
 	)
