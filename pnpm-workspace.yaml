@@ -7,7 +7,7 @@ catalog:
   '@biomejs/biome': ^2.4.10
   '@cloudflare/codemode': ^0.4.1
   '@cloudflare/puppeteer': ^1.0.6
-  '@cloudflare/vite-plugin': 1.30.3
+  '@cloudflare/vite-plugin': 1.61.0
   '@cloudflare/vitest-pool-workers': ^0.13.5
   '@cloudflare/workers-types': ^5.20260926.1
   '@datadog/browser-rum-slim': ^7.2.0
@@ -147,7 +147,7 @@ overrides:
   protobufjs: 7.5.5
 
 patchedDependencies:
-  '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
+  '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
 
 strictDepBuilds: true
 

@@ -1,0 +1,31 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 96d81e224762658787cc3990e41353ccbc51f662..5942e168fd1b4723ddd57843884559bf171556b1 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -77869,7 +77869,7 @@ async function pullImage(dockerPath, options, logger2, complianceConfig) {
+ 		"pull",
+ 		options.image_uri,
+ 		"--platform",
+-		"linux/amd64"
++		(process.arch === "arm64" ? "linux/arm64" : "linux/amd64")
+ 	]);
+ 	const ready = pull.ready.then(async ({ aborted: aborted$2 }) => {
+ 		if (!aborted$2) await runDockerCmd(dockerPath, [
+@@ -77907,7 +77907,7 @@ async function prepareContainerImagesForDev(args) {
+ 					pathToDockerfile: options.dockerfile,
+ 					buildContext: options.image_build_context,
+ 					args: options.image_vars,
+-					platform: "linux/amd64"
++					platform: (process.arch === "arm64" ? "linux/arm64" : "linux/amd64")
+ 				}
+ 			});
+ 			onContainerImagePreparationStart({
+@@ -78180,7 +78180,7 @@ function isDockerfileContainerConfig(container) {
+ }
+ __name$2(isDockerfileContainerConfig, "isDockerfileContainerConfig");
+ async function constructBuildCommand(options) {
+-	const platform$1 = options.platform ?? "linux/amd64";
++	const platform$1 = options.platform ?? (process.arch === "arm64" ? "linux/arm64" : "linux/amd64");
+ 	const buildCmd = [
+ 		"build",
+ 		"--load",
