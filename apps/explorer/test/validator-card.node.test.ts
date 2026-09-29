@@ -55,7 +55,7 @@ describe('validator address card', () => {
 		)
 		expect(html).toContain(`>${validator.feeRecipient}</a>`)
 		expect(html).toContain('href="/block/0"')
-		expect(html).toContain('title="Not deactivated">0</span>')
+		expect(html).toContain('title="Not deactivated">-</span>')
 		expect(readContract.mock.lastCall?.[0]).toMatchObject({
 			functionName: 'validatorByAddress',
 			args: [address],

@@ -55,7 +55,7 @@ export function ValidatorCard(
 				{
 					label: 'Deactivated at height',
 					value: active ? (
-						<span title="Not deactivated">0</span>
+						<span title="Not deactivated">-</span>
 					) : (
 						<Link
 							to="/block/$id"
