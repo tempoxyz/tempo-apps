@@ -132,7 +132,7 @@ function TokensPage() {
 		{
 			label: 'Circulating supply',
 			align: 'start',
-			width: 130,
+			width: 160,
 		},
 		{
 			label: 'Holders',
