@@ -35,6 +35,103 @@ afterEach(() => {
 })
 
 describe('handleMcp', () => {
+	describe.each([
+		'search',
+		'find_pages',
+		'read_page',
+	])('%s query limits', (name) => {
+		it.each([
+			4095, 4096, 4097,
+		])('handles a %i-character query', async (length) => {
+			const source = {
+				id: `limits-${name}-${length}`,
+				base: `https://limits-${name}-${length}.example`,
+			}
+			const fetcher = vi.fn(
+				async () => new Response('- [Needle](/needle): documentation'),
+			)
+			vi.stubGlobal('fetch', fetcher)
+			const search = vi.fn(async () => ({ search_query: 'needle', chunks: [] }))
+			const res = await handleMcp(
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'tools/call',
+						params: {
+							name,
+							arguments: {
+								source: source.id,
+								path: '/needle',
+								query: 'needle'.padEnd(length, ' '),
+								response_format: 'structured',
+							},
+						},
+					}),
+				}),
+				{ instance: instance(search), sources: [source] },
+			)
+			const body = await res?.json()
+			if (length > 4096) {
+				expect(body.error).toMatchObject({
+					code: -32602,
+					message: 'query exceeds maximum length of 4096 characters',
+				})
+				expect(search).not.toHaveBeenCalled()
+				expect(fetcher).not.toHaveBeenCalled()
+			} else {
+				expect(body.error).toBeUndefined()
+				expect(body.result.isError).not.toBe(true)
+				if (name === 'search') expect(search).toHaveBeenCalled()
+				else expect(fetcher).toHaveBeenCalledOnce()
+			}
+		})
+	})
+
+	it.each([
+		127, 128, 129,
+	])('scores at most 128 unique query tokens from %i terms', async (count) => {
+		const source = {
+			id: `tokens-${count}`,
+			base: `https://tokens-${count}.example`,
+		}
+		const tokens = Array.from(
+			{ length: count },
+			(_, i) => `term${String(i).padStart(3, '0')}`,
+		)
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(`- [Last term](/last): ${tokens.at(-1)}`)),
+		)
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: {
+						name: 'find_pages',
+						arguments: {
+							source: source.id,
+							query: tokens.join(' '),
+							response_format: 'structured',
+						},
+					},
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources: [source],
+			},
+		)
+		const body = await res?.json()
+		expect(body.result.structuredContent.result.pages).toHaveLength(
+			count <= 128 ? 1 : 0,
+		)
+	})
+
 	it('serves compact search and page read tool schemas', async () => {
 		const res = await handleMcp(
 			new Request('https://mcp.tempo.xyz/', {
@@ -54,6 +151,9 @@ describe('handleMcp', () => {
 		expect(res).toBeDefined()
 		const body = await res?.json()
 		expect(body.result.tools).toHaveLength(3)
+		for (const tool of body.result.tools) {
+			expect(tool.inputSchema.properties.query.maxLength).toBe(4096)
+		}
 		expect(body.result.tools.map((tool: Tool) => tool.annotations)).toEqual(
 			Array.from({ length: 3 }, () => ({
 				destructiveHint: false,

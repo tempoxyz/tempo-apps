@@ -83,6 +83,8 @@ type McpContext = {
 
 const CODE_TOOL_NAME = 'code'
 const CODEMODE_TOOL_NAMES = new Set(['search', 'find_pages', 'read_page'])
+const MAX_QUERY_LENGTH = 4096
+const MAX_QUERY_TOKENS = 128
 const DEFAULT_MAX_RESULTS = 5
 const DEFAULT_MATCH_THRESHOLD = 0.45
 const DEFAULT_MAX_CHARS_PER_CHUNK = 1200
@@ -242,6 +244,19 @@ export async function handleMcp(
 			})
 			return jsonRpc(req, body.id, result)
 		})
+	}
+	const query = body.params?.arguments?.query
+	if (
+		CODEMODE_TOOL_NAMES.has(body.params?.name ?? '') &&
+		typeof query === 'string' &&
+		query.length > MAX_QUERY_LENGTH
+	) {
+		return jsonRpcErrorFor(
+			req,
+			body,
+			-32602,
+			`query exceeds maximum length of ${MAX_QUERY_LENGTH} characters`,
+		)
 	}
 	if (body.params?.name === 'read_page') {
 		return trackToolCall('read_page', () =>
@@ -1152,7 +1167,9 @@ function queryTokens(query: string): string[] {
 				.split(/[^a-z0-9]+/)
 				.filter((token) => token.length >= 4 && !stopwords.has(token)),
 		),
-	].sort((a, b) => b.length - a.length)
+	]
+		.sort((a, b) => b.length - a.length)
+		.slice(0, MAX_QUERY_TOKENS)
 }
 
 function maxResultsFor(args: SearchArguments | undefined): number {
@@ -1454,6 +1471,7 @@ function toolSchemas(sources: Source[]): Tool[] {
 				properties: {
 					query: {
 						type: 'string',
+						maxLength: MAX_QUERY_LENGTH,
 						description: 'Question or task.',
 					},
 					source: {
@@ -1511,6 +1529,7 @@ function toolSchemas(sources: Source[]): Tool[] {
 					},
 					query: {
 						type: 'string',
+						maxLength: MAX_QUERY_LENGTH,
 						description: 'Page topic.',
 					},
 					max_results: {
@@ -1557,6 +1576,7 @@ function toolSchemas(sources: Source[]): Tool[] {
 					},
 					query: {
 						type: 'string',
+						maxLength: MAX_QUERY_LENGTH,
 						description: 'Focus excerpt when truncating.',
 					},
 					response_format: {
