@@ -16,8 +16,8 @@ export type Token = {
 	logoURI?: string | undefined
 	createdAt?: number | undefined
 	holdersCount?: number
-	/** Total supply as a decimal string in whole token units. */
-	liquidity?: string | undefined
+	/** Assets on platform (total supply) as a decimal string in token units. */
+	aop?: string | undefined
 }
 
 const FetchTokensInputSchema = z.object({
@@ -35,16 +35,17 @@ function isGenesisTokenAddress(address: Address.Address): boolean {
 }
 
 /**
- * Order tokens by liquidity (total supply), largest first. Supplies are only
- * comparable within one currency, so USD-denominated tokens rank ahead of the
- * rest; tokens without a known supply go last. Ties keep their input order.
+ * Order tokens by assets on platform (AOP, total supply), largest first.
+ * Supplies are only comparable within one currency, so USD-denominated tokens
+ * rank ahead of the rest; tokens without a known supply go last. Ties keep
+ * their input order.
  */
-export function sortTokensByLiquidity<
-	token extends Pick<Token, 'currency' | 'liquidity'>,
->(tokens: readonly token[]): token[] {
+export function sortTokensByAop<token extends Pick<Token, 'currency' | 'aop'>>(
+	tokens: readonly token[],
+): token[] {
 	const rank = (token: token) => [
-		token.liquidity === undefined ? 2 : token.currency === 'USD' ? 0 : 1,
-		Number(token.liquidity ?? 0),
+		token.aop === undefined ? 2 : token.currency === 'USD' ? 0 : 1,
+		Number(token.aop ?? 0),
 	]
 	return tokens.toSorted((a, b) => {
 		const [aGroup, aSupply] = rank(a)
@@ -89,10 +90,10 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			}),
 		)
 			.then((response) =>
-				sortTokensByLiquidity(
+				sortTokensByAop(
 					response.data.map((token) => ({
 						...token,
-						liquidity:
+						aop:
 							token.totalSupply === undefined
 								? undefined
 								: Value.format(BigInt(token.totalSupply), token.decimals),
@@ -143,7 +144,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 						parseTimestamp(token.createdAt) ??
 						(isGenesisTokenAddress(address) ? genesisCreatedAt : undefined),
 					holdersCount: token.holderCount,
-					liquidity: token.liquidity,
+					aop: token.aop,
 				}
 			}),
 		}

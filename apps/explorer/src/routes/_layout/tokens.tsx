@@ -86,11 +86,11 @@ function TokensPage() {
 		[holdersCountFormatter],
 	)
 
-	const formatLiquidity = React.useCallback((token: Token) => {
-		if (token.liquidity === undefined) return '-'
+	const formatAop = React.useCallback((token: Token) => {
+		if (token.aop === undefined) return '-'
 		if (token.currency === 'USD')
-			return PriceFormatter.format(Number(token.liquidity), { format: 'short' })
-		return `${PriceFormatter.formatAmountShort(token.liquidity)} ${token.currency}`
+			return PriceFormatter.format(Number(token.aop), { format: 'short' })
+		return `${PriceFormatter.formatAmountShort(token.aop)} ${token.currency}`
 	}, [])
 
 	const prefetchNextPage = React.useCallback(() => {
@@ -128,7 +128,7 @@ function TokensPage() {
 			width: 110,
 		},
 		{
-			label: 'Liquidity',
+			label: 'AOP',
 			align: 'start',
 			width: 130,
 		},
@@ -225,7 +225,7 @@ function TokensPage() {
 													{token.name}
 												</span>
 												<span className="text-tertiary">
-													{formatLiquidity(token)} · {formatHoldersCount(token)}{' '}
+													{formatAop(token)} · {formatHoldersCount(token)}{' '}
 													holders
 												</span>
 											</div>
@@ -257,11 +257,11 @@ function TokensPage() {
 																{token.currency}
 															</span>,
 															<span
-																key="liquidity"
+																key="aop"
 																className="font-sans text-secondary"
-																title={token.liquidity}
+																title={token.aop}
 															>
-																{formatLiquidity(token)}
+																{formatAop(token)}
 															</span>,
 															<span
 																key="holders"
