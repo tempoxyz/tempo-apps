@@ -2,11 +2,10 @@ import { env } from 'cloudflare:workers'
 import * as IDX from 'idxs'
 import { sql } from 'kysely'
 import type { Address } from 'ox'
-import { createPublicClient, formatUnits } from 'viem'
-import { Actions, Addresses } from 'viem/tempo'
+import { formatUnits } from 'viem'
+import { Addresses } from 'viem/tempo'
+import { pathusd } from 'viem/tokens'
 import { tempoChain } from './chain.js'
-import { pathUsd } from './consts.js'
-import { createRpcTransport } from './rpc.js'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: env.INDEXSUPPLY_API_KEY,
@@ -16,8 +15,6 @@ const QB = IDX.QueryBuilder.from(IS)
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
-
-let cachedFeeTokenMetadata: { decimals: number; currency: string } | null = null
 
 const epochToTimestamp = (epoch: number): string =>
 	new Date(epoch * 1000).toISOString()
@@ -64,24 +61,10 @@ export async function getUsage(
 
 	const feesPaid = result?.total_spent ? BigInt(result.total_spent) : 0n
 
-	if (!cachedFeeTokenMetadata) {
-		cachedFeeTokenMetadata = await Actions.token.getMetadata(
-			createPublicClient({
-				chain: tempoChain,
-				transport: createRpcTransport(
-					env.TEMPO_RPC_URL,
-					tempoChain.rpcUrls.default.http[0],
-					env,
-				),
-			}),
-			{ token: pathUsd },
-		)
-	}
-
 	return {
 		feePayerAddress,
-		feesPaid: formatUnits(feesPaid, cachedFeeTokenMetadata.decimals),
-		feeCurrency: cachedFeeTokenMetadata.currency,
+		feesPaid: formatUnits(feesPaid, pathusd.decimals),
+		feeCurrency: pathusd.currency,
 		numTransactions: result?.n_transactions ? Number(result.n_transactions) : 0,
 		endingAt: result?.ending_at ?? null,
 		startingAt: result?.starting_at ?? null,

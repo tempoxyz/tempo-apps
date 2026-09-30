@@ -1,2 +1,5 @@
-export const alphaUsd = '0x20c0000000000000000000000000000000000001' as const
-export const pathUsd = '0x20c0000000000000000000000000000000000000' as const
+import { tempo, tempoModerato } from 'viem/chains'
+import { alphausd, pathusd } from 'viem/tokens'
+
+export const alphaUsd = alphausd.addresses[tempoModerato.id]
+export const pathUsd = pathusd.addresses[tempo.id]

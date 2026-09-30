@@ -1,10 +1,11 @@
 import { QueryClient } from '@tanstack/react-query'
 import { tempoModerato } from 'viem/chains'
 import { withFeePayer } from 'viem/tempo'
+import { alphausd } from 'viem/tokens'
 import { createConfig, http } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
-export const alphaUsd = '0x20c0000000000000000000000000000000000001'
+export const alphaUsd = alphausd.addresses[tempoModerato.id]
 
 export const queryClient = new QueryClient()
 
