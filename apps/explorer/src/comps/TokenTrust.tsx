@@ -93,11 +93,11 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 				</div>
 			</section>
 			<section
-				aria-label="Address roles"
+				aria-label="Privileged addresses"
 				className="rounded-[6px] border border-distinct overflow-hidden"
 			>
 				<h4 className="border-b border-distinct px-3 py-2.5 font-medium">
-					Address roles
+					Privileged addresses
 				</h4>
 				<div className="flex flex-col gap-3 p-3">
 					{props.loading ? (

@@ -24,6 +24,7 @@ export namespace RoleFormatter {
 		'PAUSE_ROLE',
 		'UNPAUSE_ROLE',
 		'BURN_BLOCKED_ROLE',
+		'BURN_AT_ROLE',
 	] as const
 
 	const roleHashMap = new Map<Hex.Hex, string>(

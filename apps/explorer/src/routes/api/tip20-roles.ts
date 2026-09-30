@@ -25,6 +25,7 @@ const KNOWN_ROLES: Record<string, Hex.Hex> = {
 	UNPAUSE_ROLE: Hash.keccak256(Hex.fromString('UNPAUSE_ROLE')),
 	ISSUER_ROLE: Hash.keccak256(Hex.fromString('ISSUER_ROLE')),
 	BURN_BLOCKED_ROLE: Hash.keccak256(Hex.fromString('BURN_BLOCKED_ROLE')),
+	BURN_AT_ROLE: Hash.keccak256(Hex.fromString('BURN_AT_ROLE')),
 }
 
 const ROLE_HASH_TO_NAME = new Map<string, string>(

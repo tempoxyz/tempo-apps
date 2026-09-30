@@ -109,15 +109,21 @@ describe('token authority grouping', () => {
 	})
 	it('provides expanded explanations for every standard token role', () => {
 		expect(
-			['DEFAULT_ADMIN', 'PAUSE', 'UNPAUSE', 'ISSUER', 'BURN_BLOCKED'].map(
-				tokenRoleDescription,
-			),
+			[
+				'DEFAULT_ADMIN',
+				'PAUSE',
+				'UNPAUSE',
+				'ISSUER',
+				'BURN_BLOCKED',
+				'BURN_AT',
+			].map(tokenRoleDescription),
 		).toEqual([
 			'Sets the TIP-403 transfer policy used by this token. Can manage token roles and their administrators. Can change the maximum token supply.',
 			'Can pause token transfers.',
 			'Can unpause token transfers.',
 			'Can mint new tokens.',
 			'Can burn tokens from blocked accounts.',
+			'Can burn tokens from any account (intended for bridging).',
 		])
 		expect(tokenRoleDescription('0xcustom')).toBe(
 			'Custom token role. Permissions are not known to the explorer.',

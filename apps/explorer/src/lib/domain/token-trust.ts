@@ -59,6 +59,15 @@ const rolePermissions = new Map([
 		'BURN_BLOCKED',
 		[['Burn blocked tokens', 'Can burn tokens from blocked accounts.']],
 	],
+	[
+		'BURN_AT',
+		[
+			[
+				'Burn from any account',
+				'Can burn tokens from any account (intended for bridging).',
+			],
+		],
+	],
 ])
 
 export function groupTokenAuthorities(
