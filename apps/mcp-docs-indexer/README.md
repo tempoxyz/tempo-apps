@@ -63,11 +63,6 @@ exclusively from the scheduled cron handler inside Cloudflare Workers.
 
 ## MCP search behavior
 
-All three local tools accept queries up to 4,096 UTF-16 code units, including
-whitespace. Longer queries return JSON-RPC error `-32602` before search or page
-retrieval. Local scoring and excerpt matching use at most 128 unique terms,
-prioritizing longer terms. These limits also apply to calls through Code Mode.
-
 The local `search` tool accepts Code Mode-friendly top-level controls:
 
 | Field          | Purpose                                                        |
