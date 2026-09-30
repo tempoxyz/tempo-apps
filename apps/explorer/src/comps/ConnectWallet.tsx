@@ -12,7 +12,9 @@ import {
 	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
+import { tempoModerato } from 'viem/chains'
 import { Actions } from 'viem/tempo'
+import { alphausd } from 'viem/tokens'
 import { Hooks } from 'wagmi/tempo'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { cx } from '#lib/css'
@@ -243,7 +245,7 @@ function ConnectedAddress() {
 	)
 }
 
-const ALPHA_USD = '0x20c0000000000000000000000000000000000001' as const
+const ALPHA_USD = alphausd.addresses[tempoModerato.id]
 
 function FundAccountButton() {
 	const { address } = useConnection()

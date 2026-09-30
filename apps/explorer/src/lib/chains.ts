@@ -1,4 +1,5 @@
 import { tempoDevnet as tempoDevnet_, tempo, tempoModerato } from 'viem/chains'
+import { alphausd, pathusd } from 'viem/tokens'
 import { ZONE_PROVER_CHAIN_ID, ZONE_PROVER_EXPLORER_URL } from './zone-prover'
 
 export const tempoZoneProver = tempoDevnet_.extend({
@@ -15,11 +16,11 @@ export const tempoZoneProver = tempoDevnet_.extend({
 })
 
 export const tempoMainnet = tempo.extend({
-	feeToken: '0x20c0000000000000000000000000000000000000',
+	feeToken: pathusd.addresses[tempo.id],
 })
 
 export const tempoTestnet = tempoModerato.extend({
-	feeToken: '0x20c0000000000000000000000000000000000001',
+	feeToken: alphausd.addresses[tempoModerato.id],
 })
 
 export const tempoDevnet = tempoDevnet_.extend({

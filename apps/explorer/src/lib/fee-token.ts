@@ -1,6 +1,9 @@
+import { tempo, tempoModerato } from 'viem/chains'
+import { alphausd, pathusd } from 'viem/tokens'
+
 const FEE_TOKEN_BY_CHAIN_ID: Record<number, `0x${string}`> = {
-	4217: '0x20c0000000000000000000000000000000000000',
-	42431: '0x20c0000000000000000000000000000000000001',
+	[tempo.id]: pathusd.addresses[tempo.id],
+	[tempoModerato.id]: alphausd.addresses[tempoModerato.id],
 	31318: '0x20c0000000000000000000000000000000000002',
 	31319: '0x20c0000000000000000000000000000000000002',
 }
