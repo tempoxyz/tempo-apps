@@ -16,8 +16,8 @@ export type Token = {
 	logoURI?: string | undefined
 	createdAt?: number | undefined
 	holdersCount?: number
-	/** Assets on platform (total supply) as a decimal string in token units. */
-	aop?: string | undefined
+	/** Circulating (total) supply as a decimal string in token units. */
+	circulatingSupply?: string | undefined
 }
 
 const FetchTokensInputSchema = z.object({
@@ -35,17 +35,21 @@ function isGenesisTokenAddress(address: Address.Address): boolean {
 }
 
 /**
- * Order tokens by assets on platform (AOP, total supply), largest first.
+ * Order tokens by circulating supply, largest first.
  * Supplies are only comparable within one currency, so USD-denominated tokens
  * rank ahead of the rest; tokens without a known supply go last. Ties keep
  * their input order.
  */
-export function sortTokensByAop<token extends Pick<Token, 'currency' | 'aop'>>(
-	tokens: readonly token[],
-): token[] {
+export function sortTokensByCirculatingSupply<
+	token extends Pick<Token, 'currency' | 'circulatingSupply'>,
+>(tokens: readonly token[]): token[] {
 	const rank = (token: token) => [
-		token.aop === undefined ? 2 : token.currency === 'USD' ? 0 : 1,
-		Number(token.aop ?? 0),
+		token.circulatingSupply === undefined
+			? 2
+			: token.currency === 'USD'
+				? 0
+				: 1,
+		Number(token.circulatingSupply ?? 0),
 	]
 	return tokens.toSorted((a, b) => {
 		const [aGroup, aSupply] = rank(a)
@@ -90,10 +94,10 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			}),
 		)
 			.then((response) =>
-				sortTokensByAop(
+				sortTokensByCirculatingSupply(
 					response.data.map((token) => ({
 						...token,
-						aop:
+						circulatingSupply:
 							token.totalSupply === undefined
 								? undefined
 								: Value.format(BigInt(token.totalSupply), token.decimals),
@@ -144,7 +148,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 						parseTimestamp(token.createdAt) ??
 						(isGenesisTokenAddress(address) ? genesisCreatedAt : undefined),
 					holdersCount: token.holderCount,
-					aop: token.aop,
+					circulatingSupply: token.circulatingSupply,
 				}
 			}),
 		}
