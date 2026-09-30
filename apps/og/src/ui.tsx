@@ -1,3 +1,4 @@
+import { brand, CardBackground } from '#brand.tsx'
 import { truncateText } from '#params.ts'
 
 // ============ Types ============
@@ -16,6 +17,8 @@ export interface AddressData {
 	methods?: string[]
 	deployer?: string
 	contractName?: string
+	contractDescription?: string
+	details?: { label: string; value: string }[]
 }
 
 export interface TokenData {
@@ -42,6 +45,8 @@ export interface BlockData {
 }
 
 export interface ReceiptData {
+	eventCount?: number
+	icons?: Record<string, string>
 	hash: string
 	blockNumber: string
 	sender: string
@@ -57,6 +62,8 @@ export interface ReceiptData {
 }
 
 interface ReceiptEvent {
+	tokenSymbols?: string[]
+	tokens?: string[]
 	action: string
 	details: string
 	amount?: string
@@ -242,205 +249,175 @@ export function parseEventDetails(
 // ============ Shared card styles ============
 
 const CARD_BASE = {
-	width: '700px',
-	maxWidth: '700px',
+	width: '720px',
+	maxWidth: '720px',
 	minHeight: '400px',
-	maxHeight: '583px',
+	maxHeight: '534px',
 	overflow: 'hidden' as const,
 	fontFamily: 'Pilat',
 	fontWeight: 400,
+	lineHeight: 1.45,
+	color: brand.foreground,
 	fontFeatureSettings: '"tnum"',
-	boxShadow:
-		'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
-	borderTopRightRadius: '24px',
-	borderTopLeftRadius: '0',
-	borderBottomLeftRadius: '0',
-	borderBottomRightRadius: '0',
+	border: `1px solid ${brand.border}`,
+	borderRadius: '0px 24px 0px 0px',
 }
 
-const GRADIENT = {
-	height: '100px',
-	background:
-		'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
-}
+const MONO = { fontFamily: 'JetBrains Mono', fontWeight: 300 }
 
-const DIVIDER = { height: '1px', backgroundColor: '#d1d5db' }
+const DIVIDER = { height: '1px', flexShrink: 0, backgroundColor: brand.border }
+
+export function ReceiptDetails({
+	event,
+	icons,
+	compact,
+}: {
+	event: ReceiptEvent
+	icons: Record<string, string>
+	compact: boolean
+}) {
+	const words = truncateText(event.details, compact ? 62 : 90).split(' ')
+	const symbols = event.tokenSymbols ?? []
+	return (
+		<div
+			tw="flex items-center"
+			style={{
+				flexWrap: compact ? 'nowrap' : 'wrap',
+				paddingLeft: 24,
+				gap: 5,
+				fontSize: compact ? 25 : 30,
+				lineHeight: 1.2,
+				maxHeight: compact ? 32 : 84,
+				overflow: 'hidden',
+			}}
+		>
+			{words.map((word, index) => {
+				const tokenIndex = symbols.indexOf(word)
+				const address = event.tokens?.[tokenIndex]
+				const icon = address ? icons[address] : undefined
+				const asset =
+					tokenIndex >= 0 ||
+					(symbols.includes(words[index + 1] ?? '') &&
+						/^[<>$\d.,]+$/.test(word))
+				return (
+					<span
+						key={index}
+						tw="flex items-center"
+						style={{ gap: 5, color: asset ? '#009b72' : brand.secondary }}
+					>
+						{tokenIndex >= 0 && icon && (
+							<img
+								src={icon}
+								width={23}
+								height={23}
+								style={{ borderRadius: 12 }}
+								alt=""
+							/>
+						)}
+						{word}
+					</span>
+				)
+			})}
+		</div>
+	)
+}
 
 // ============ Receipt Component ============
 
 export function ReceiptCard({ data }: { data: ReceiptData }) {
-	const when = formatDateSmart(data.date, data.time)
-	const feeTokenLabel = data.feeToken || 'pathUSD'
-
+	const events = data.events.slice(0, 3)
+	const remaining = Math.max(
+		0,
+		(data.eventCount ?? data.events.length) - events.length,
+	)
+	const compact = events.length > 1
 	return (
-		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
-			{/* Header */}
-			<div
-				tw="flex flex-col w-full pr-12 pt-10 pb-8 text-[28px]"
-				style={{
-					fontFamily: 'Pilat',
-					fontWeight: 400,
-					fontFeatureSettings: '"tnum"',
-					gap: '18px',
-					paddingLeft: '48px',
-					letterSpacing: '0em',
-				}}
-			>
-				<div tw="flex w-full justify-between items-center">
-					<span tw="text-gray-500 shrink-0">Block</span>
-					<div tw="flex items-center" style={{ gap: '10px' }}>
-						<span tw="text-gray-900">{data.blockNumber}</span>
-						{data.status && (
-							<span
-								tw={`text-[20px] ${data.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
-								style={{
-									borderRadius: '6px',
-									paddingLeft: '8px',
-									paddingRight: '8px',
-									paddingTop: '3px',
-									paddingBottom: '3px',
-								}}
-							>
-								{data.status === 'success' ? 'Success' : 'Failed'}
-							</span>
-						)}
-					</div>
-				</div>
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500 shrink-0">Sender</span>
-					<span tw="text-blue-500">{truncateHash(data.sender, 6)}</span>
-				</div>
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500 shrink-0">Time (UTC)</span>
-					<span>{when}</span>
-				</div>
+		<div
+			tw="flex flex-col"
+			style={{
+				...CARD_BASE,
+				height: 534,
+				padding: compact ? 24 : 32,
+				borderRadius: '0px 24px 0px 0px',
+				backgroundColor: brand.surface,
+				gap: compact ? 4 : 8,
+				fontSize: compact ? 27 : 30,
+				lineHeight: compact ? 1.2 : 1.35,
+			}}
+		>
+			{data.status === 'reverted' && (
+				<span style={{ color: '#c52b2b', fontSize: 22 }}>
+					Failed transaction
+				</span>
+			)}
+			<div tw="flex justify-between">
+				<span style={{ color: brand.secondary }}>Block</span>
+				<span style={{ color: brand.link }}>{data.blockNumber}</span>
 			</div>
-
-			{/* Divider */}
-			<div tw="flex w-full" style={DIVIDER} />
-
-			{/* Events */}
-			<div
-				tw="flex flex-col"
-				style={{ paddingTop: '12px', paddingBottom: '12px' }}
-			>
-				{data.eventsFailed ? (
-					<div
-						tw="flex px-12 py-6 text-[28px] text-gray-400"
-						style={{ fontFamily: 'Pilat', letterSpacing: '0em' }}
-					>
-						Failed to render summary.
-					</div>
-				) : data.events.length === 0 ? (
-					<div
-						tw="flex px-12 py-6 text-[28px] text-gray-400"
-						style={{ fontFamily: 'Pilat', letterSpacing: '0em' }}
-					>
-						No events to display.
-					</div>
-				) : (
-					<div tw="flex flex-col">
-						{data.events.slice(0, 3).map((event, index) => {
-							const parts = parseEventDetails(event.details || '')
-							const showAmount = event.amount && event.amount !== '$0'
-							return (
-								<div
-									key={`event-${event.details}`}
-									tw="flex px-12 py-4 text-[28px]"
-									style={{
-										fontFamily: 'Pilat',
-										fontWeight: 400,
-										fontFeatureSettings: '"tnum"',
-										letterSpacing: '0em',
-										justifyContent: 'space-between',
-									}}
-								>
-									<div
-										tw="flex"
-										style={{
-											gap: '8px',
-											maxWidth: showAmount ? '85%' : '100%',
-										}}
-									>
-										<span tw="text-gray-500 shrink-0">{index + 1}.</span>
-										<div tw="flex flex-wrap" style={{ gap: '8px' }}>
-											<span
-												tw="bg-gray-100 text-gray-800 shrink-0"
-												style={PILL_STYLE}
-											>
-												{event.action}
-											</span>
-											{parts.map((part) => (
-												<span
-													key={`part-${part.text}`}
-													tw={
-														part.type === 'asset'
-															? 'text-emerald-600'
-															: part.type === 'selector'
-																? 'text-purple-600'
-																: part.type === 'address'
-																	? 'text-blue-600'
-																	: 'text-gray-500'
-													}
-												>
-													{part.text}
-												</span>
-											))}
-										</div>
-									</div>
-									{showAmount && <span tw="shrink-0">{event.amount}</span>}
-								</div>
-							)
-						})}
-						{data.events.length > 3 && (
-							<div
-								tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
-								style={{ fontFamily: 'Pilat', fontFeatureSettings: '"tnum"' }}
-							>
-								...and {data.events.length - 3} more
-							</div>
-						)}
-					</div>
-				)}
-			</div>
-
-			{/* Divider */}
-			<div tw="flex w-full" style={DIVIDER} />
-
-			{/* Fee and Total */}
-			<div
-				tw="flex flex-col px-12 text-[28px]"
-				style={{
-					fontFamily: 'Pilat',
-					fontWeight: 400,
-					fontFeatureSettings: '"tnum"',
-					gap: '22px',
-					width: '100%',
-					letterSpacing: '0em',
-					paddingTop: '24px',
-					paddingBottom: '48px',
-				}}
-			>
-				<div
-					tw="flex items-center w-full"
-					style={{ justifyContent: 'space-between' }}
+			<div tw="flex justify-between">
+				<span style={{ color: brand.secondary }}>Sender</span>
+				<span
+					style={{
+						fontFamily: 'JetBrains Mono',
+						fontWeight: 300,
+						color: brand.link,
+					}}
 				>
-					<span tw="text-gray-500">Fee ({feeTokenLabel})</span>
-					<span style={!data.fee ? { color: '#9ca3af' } : undefined}>
-						{data.fee || '$0.00'}
+					{truncateHash(data.sender, 6)}
+				</span>
+			</div>
+			<div tw="flex justify-between">
+				<span style={{ color: brand.secondary }}>Time (UTC)</span>
+				<span>{formatDateSmart(data.date, data.time)}</span>
+			</div>
+			<div style={DIVIDER} />
+			<div tw="flex flex-col" style={{ gap: compact ? 6 : 18, flex: 1 }}>
+				{data.eventsFailed ? (
+					<span style={{ color: brand.secondary }}>Summary unavailable</span>
+				) : events.length === 0 ? (
+					<span style={{ color: brand.secondary }}>Transaction details</span>
+				) : (
+					events.map((event, index) => (
+						<div key={index} tw="flex flex-col" style={{ gap: 4 }}>
+							<div tw="flex justify-between" style={{ fontWeight: 400 }}>
+								<div tw="flex items-center" style={{ gap: 8 }}>
+									<span style={{ color: brand.secondary, fontWeight: 400 }}>
+										{index + 1}.
+									</span>
+									<span>{truncateText(event.action, 24)}</span>
+								</div>
+								<span>{event.amount}</span>
+							</div>
+							<ReceiptDetails
+								event={event}
+								icons={data.icons ?? {}}
+								compact={compact}
+							/>
+						</div>
+					))
+				)}
+				{remaining > 0 && (
+					<span style={{ color: brand.secondary, fontSize: 20 }}>
+						+{remaining} more steps · open full receipt
 					</span>
-				</div>
-				{data.total && (
-					<div
-						tw="flex items-center w-full"
-						style={{ justifyContent: 'space-between' }}
-					>
-						<span tw="text-gray-500">Total</span>
-						<span>{data.total}</span>
-					</div>
 				)}
 			</div>
-			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
+			<div style={DIVIDER} />
+			<div tw="flex justify-between" style={{ fontSize: 30 }}>
+				<span style={{ color: brand.secondary }}>
+					Fee{data.feeToken ? ` (${data.feeToken})` : ''}
+				</span>
+				<span>{data.fee || '—'}</span>
+			</div>
+			{data.total && (
+				<div
+					tw="flex justify-between"
+					style={{ fontSize: 36, fontWeight: 500 }}
+				>
+					<span>Total</span>
+					<span>{data.total}</span>
+				</div>
+			)}
 		</div>
 	)
 }
@@ -455,11 +432,14 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 	const currSym = CURRENCY_SYMBOLS[data.currency] || ''
 
 	return (
-		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
+		<div
+			tw="flex flex-col bg-white relative"
+			style={{ ...CARD_BASE, height: 534 }}
+		>
 			{/* Header */}
 			<div
-				tw={`flex ${isLongName ? 'flex-col' : 'items-center'} pr-10 pt-10 pb-8`}
-				style={{ gap: isLongName ? '12px' : '20px', paddingLeft: '56px' }}
+				tw={`flex ${isLongName ? 'flex-col' : 'items-center'} pr-8 pt-8 pb-6`}
+				style={{ gap: isLongName ? '12px' : '20px', paddingLeft: '32px' }}
 			>
 				<div tw="flex items-center" style={{ gap: '20px' }}>
 					<img
@@ -469,7 +449,7 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 						style={{ width: '68px', height: '68px' }}
 					/>
 					<span
-						tw="text-[42px] text-gray-900"
+						tw="text-[46px] text-[#181818]"
 						style={{ fontWeight: 400, lineHeight: '1.1' }}
 					>
 						{truncateText(data.name, 28)}
@@ -477,14 +457,14 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 				</div>
 				<div tw="flex shrink-0 items-end justify-end" style={{ gap: '8px' }}>
 					<span
-						tw="flex items-center bg-gray-100 text-gray-600 text-2xl"
+						tw="flex items-center bg-[#f2f2f2] text-[#6b6b6b] text-2xl"
 						style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 					>
 						{truncateText(data.symbol, 12)}
 					</span>
 					{data.isFeeToken && (
 						<span
-							tw="flex items-center bg-emerald-100 text-emerald-700 text-2xl"
+							tw="flex items-center bg-[#eaf5ed] text-[#16803c] text-2xl"
 							style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 						>
 							Fee Token
@@ -497,64 +477,65 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 pt-10 pb-14 text-[29px]"
+				tw="flex flex-col pr-8 pt-6 pb-8 text-[30px]"
 				style={{
 					fontFamily: 'Pilat',
 					fontWeight: 400,
 					fontFeatureSettings: '"tnum"',
-					gap: '29px',
+					gap: '16px',
 					letterSpacing: '0em',
-					paddingLeft: '56px',
+					paddingLeft: '32px',
 				}}
 			>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Address</span>
-					<span tw="text-blue-500">{truncateHash(data.address, 8)}</span>
+					<span tw="text-[#6b6b6b]">Address</span>
+					<span tw="text-blue-500" style={MONO}>
+						{truncateHash(data.address, 8)}
+					</span>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Currency</span>
+					<span tw="text-[#6b6b6b]">Currency</span>
 					<div tw="flex items-center" style={{ gap: '8px' }}>
 						{currSym && (
 							<span
-								tw="flex items-center justify-center bg-gray-100 text-gray-700 text-[22px]"
+								tw="flex items-center justify-center bg-[#f2f2f2] text-[#181818] text-[22px]"
 								style={{ width: '32px', height: '32px', borderRadius: '16px' }}
 							>
 								{currSym}
 							</span>
 						)}
-						<span tw="text-gray-900">{data.currency}</span>
+						<span tw="text-[#181818]">{data.currency}</span>
 					</div>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Holders</span>
+					<span tw="text-[#6b6b6b]">Holders</span>
 					<span
-						style={holdersGrey ? { color: '#9ca3af' } : undefined}
-						tw={holdersGrey ? '' : 'text-gray-900'}
+						style={holdersGrey ? { color: brand.secondary } : undefined}
+						tw={holdersGrey ? '' : 'text-[#181818]'}
 					>
 						{holdersGrey ? '—' : truncateText(data.holders, 16)}
 					</span>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Supply</span>
+					<span tw="text-[#6b6b6b]">Supply</span>
 					<span
-						style={supplyGrey ? { color: '#9ca3af' } : undefined}
-						tw={supplyGrey ? '' : 'text-gray-900'}
+						style={supplyGrey ? { color: brand.secondary } : undefined}
+						tw={supplyGrey ? '' : 'text-[#181818]'}
 					>
 						{supplyDisplay}
 					</span>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Created</span>
-					<span tw="text-gray-900">{data.created}</span>
+					<span tw="text-[#6b6b6b]">Created</span>
+					<span tw="text-[#181818]">{data.created}</span>
 				</div>
 				{data.quoteToken && (
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Quote Token</span>
-						<span tw="text-gray-900">{data.quoteToken}</span>
+						<span tw="text-[#6b6b6b]">Quote Token</span>
+						<span tw="text-[#181818]">{data.quoteToken}</span>
 					</div>
 				)}
 			</div>
-			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }
@@ -580,7 +561,7 @@ export function TokenBadges({
 			{displayTokens.map((token, idx) => (
 				<span
 					key={token}
-					tw="flex bg-gray-100 text-gray-700 text-[23px]"
+					tw="flex bg-[#f2f2f2] text-[#181818] text-[23px]"
 					style={{
 						...PILL_STYLE,
 						fontFamily: 'Pilat',
@@ -592,7 +573,7 @@ export function TokenBadges({
 			))}
 			{remaining > 0 && (
 				<span
-					tw="flex bg-gray-100 text-gray-500 text-[23px]"
+					tw="flex bg-[#f2f2f2] text-[#6b6b6b] text-[23px]"
 					style={{ ...PILL_STYLE, fontFamily: 'Pilat', marginLeft: '8px' }}
 				>
 					+{remaining}
@@ -634,7 +615,7 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 	const renderBadge = (m: string, idx: number) => (
 		<span
 			key={idx}
-			tw="bg-gray-100 text-gray-700 text-[23px]"
+			tw="bg-[#f2f2f2] text-[#181818] text-[23px]"
 			style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 		>
 			{truncateMethod(m)}
@@ -648,7 +629,7 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 				{row2.map((m, i) => renderBadge(m, i + 10))}
 				{remaining > 0 && (
 					<span
-						tw="bg-gray-100 text-gray-500 text-[23px]"
+						tw="bg-[#f2f2f2] text-[#6b6b6b] text-[23px]"
 						style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 					>
 						+{remaining}
@@ -709,10 +690,10 @@ export function BlockCard({ data }: { data: BlockData }) {
 		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
 			{/* Header */}
 			<div
-				tw="flex w-full pr-10 pt-10 pb-8 items-center justify-between"
-				style={{ paddingLeft: '56px' }}
+				tw="flex w-full pr-8 pt-8 pb-6 items-center justify-between"
+				style={{ paddingLeft: '32px' }}
 			>
-				<span tw="text-gray-500 text-[29px]" style={{ fontFamily: 'Pilat' }}>
+				<span tw="text-[#6b6b6b] text-[28px]" style={{ fontFamily: 'Pilat' }}>
 					Block
 				</span>
 				<span
@@ -722,7 +703,7 @@ export function BlockCard({ data }: { data: BlockData }) {
 					<span style={{ color: 'rgba(0,0,0,0.15)' }}>
 						{'0'.repeat(Math.max(0, 12 - data.number.length))}
 					</span>
-					<span tw="text-gray-900">{data.number}</span>
+					<span tw="text-[#181818]">{data.number}</span>
 				</span>
 			</div>
 
@@ -730,31 +711,27 @@ export function BlockCard({ data }: { data: BlockData }) {
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 pt-10 pb-14 text-[29px]"
+				tw="flex flex-col pr-8 pt-6 pb-8 text-[28px]"
 				style={{
 					fontFamily: 'Pilat',
 					fontWeight: 400,
 					fontFeatureSettings: '"tnum"',
-					gap: '29px',
+					gap: '16px',
 					letterSpacing: '0em',
-					paddingLeft: '56px',
+					paddingLeft: '32px',
 				}}
 			>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">UTC</span>
-					<span tw="text-gray-900" style={{ opacity: 0.5 }}>
-						{data.timestamp}
-					</span>
+					<span tw="text-[#6b6b6b]">UTC</span>
+					<span tw="text-[#181818]">{data.timestamp}</span>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">UNIX</span>
-					<span tw="text-gray-900" style={{ opacity: 0.5 }}>
-						{data.unixTimestamp}
-					</span>
+					<span tw="text-[#6b6b6b]">UNIX</span>
+					<span tw="text-[#181818]">{data.unixTimestamp}</span>
 				</div>
 
 				<div tw="flex w-full justify-between items-end">
-					<span tw="text-gray-500">Transactions</span>
+					<span tw="text-[#6b6b6b]">Transactions</span>
 					<div tw="flex items-end" style={{ gap: '8px' }}>
 						{data.prevBlockTxCounts &&
 							data.prevBlockTxCounts.length > 0 &&
@@ -768,12 +745,12 @@ export function BlockCard({ data }: { data: BlockData }) {
 									style={{ height: '24px' }}
 								/>
 							)}
-						<span tw="text-gray-900">{data.txCount}</span>
+						<span tw="text-[#181818]">{data.txCount}</span>
 					</div>
 				</div>
 
 				<div tw="flex w-full justify-between items-center">
-					<span tw="text-gray-500">Gas Usage</span>
+					<span tw="text-[#6b6b6b]">Gas Usage</span>
 					<div tw="flex items-center" style={{ gap: '8px' }}>
 						{gasPercent !== undefined && (
 							<img
@@ -782,49 +759,72 @@ export function BlockCard({ data }: { data: BlockData }) {
 								style={{ height: '24px' }}
 							/>
 						)}
-						<span tw="text-gray-900">{data.gasUsage}</span>
+						<span tw="text-[#181818]">{data.gasUsage}</span>
 					</div>
 				</div>
 
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Miner</span>
-					<span tw="text-blue-500">{truncateHash(data.miner, 6)}</span>
+					<span tw="text-[#6b6b6b]">Miner</span>
+					<span tw="text-blue-500" style={MONO}>
+						{truncateHash(data.miner, 6)}
+					</span>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Parent</span>
-					<span tw="text-blue-500">{truncateHash(data.parentHash, 6)}</span>
+					<span tw="text-[#6b6b6b]">Parent</span>
+					<span tw="text-blue-500" style={MONO}>
+						{truncateHash(data.parentHash, 6)}
+					</span>
 				</div>
 			</div>
-			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }
 
 // ============ Address Card Component ============
 
+export function AddressImage({
+	artwork,
+	logo,
+	children,
+}: {
+	logo: string
+	artwork: string
+	children: import('hono/jsx').Child
+}) {
+	return (
+		<div tw="flex w-full h-full relative" style={{ fontFamily: 'Pilat' }}>
+			<CardBackground title="Zone Portal" logo={logo} artwork={artwork} />
+			<div tw="absolute flex items-end" style={{ left: '0px', bottom: '0px' }}>
+				{children}
+			</div>
+		</div>
+	)
+}
+
 export function AddressCard({ data }: { data: AddressData }) {
 	const addrLine1 = data.address.slice(0, 21)
 	const addrLine2 = data.address.slice(21)
 	const holdingsGrey = isEmptyValue(data.holdings)
-	const holdingsDisplay = holdingsGrey ? '$0.00' : data.holdings
+	const holdingsDisplay = data.holdings
+	const hasValue = (value: string) => Boolean(value && value !== '—')
 
 	return (
 		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
 			{/* Header */}
 			{data.accountType === 'contract' && data.contractName ? (
 				<div
-					tw="flex flex-col w-full pr-10 pt-10 pb-8"
-					style={{ paddingLeft: '56px' }}
+					tw="flex flex-col w-full pr-8 pt-8 pb-6"
+					style={{ paddingLeft: '32px' }}
 				>
 					<div tw="flex w-full justify-between items-center">
 						<span
-							tw="text-gray-500 text-[29px]"
+							tw="text-[#6b6b6b] text-[28px]"
 							style={{ fontFamily: 'Pilat', fontWeight: 400 }}
 						>
 							Contract
 						</span>
 						<span
-							tw="text-gray-900 text-[36px]"
+							tw="text-[#181818] text-[32px]"
 							style={{ fontFamily: 'Pilat', fontWeight: 400 }}
 						>
 							{data.contractName}
@@ -834,8 +834,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 						<span
 							tw="text-gray-400 text-[22px]"
 							style={{
-								fontFamily: 'Pilat',
-								fontWeight: 400,
+								...MONO,
 								fontFeatureSettings: '"tnum"',
 							}}
 						>
@@ -845,20 +844,19 @@ export function AddressCard({ data }: { data: AddressData }) {
 				</div>
 			) : (
 				<div
-					tw="flex w-full pr-10 pt-10 pb-8 justify-between items-start"
-					style={{ paddingLeft: '56px' }}
+					tw="flex w-full pr-8 pt-8 pb-6 justify-between items-start"
+					style={{ paddingLeft: '32px' }}
 				>
 					<span
-						tw="text-gray-500 text-[29px]"
+						tw="text-[#6b6b6b] text-[28px]"
 						style={{ fontFamily: 'Pilat', fontWeight: 400 }}
 					>
 						{data.accountType === 'contract' ? 'Contract' : 'Address'}
 					</span>
 					<div
-						tw="flex flex-col items-end text-[29px] text-blue-500"
+						tw="flex flex-col items-end text-[28px] text-blue-500"
 						style={{
-							fontFamily: 'Pilat',
-							fontWeight: 400,
+							...MONO,
 							fontFeatureSettings: '"tnum"',
 							lineHeight: '1.3',
 						}}
@@ -873,26 +871,37 @@ export function AddressCard({ data }: { data: AddressData }) {
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 pt-8 pb-14 text-[29px]"
+				tw="flex flex-col pr-8 pt-6 pb-8 text-[28px]"
 				style={{
 					fontFamily: 'Pilat',
 					fontWeight: 400,
 					fontFeatureSettings: '"tnum"',
-					gap: '22px',
+					gap: '14px',
 					letterSpacing: '0em',
-					paddingLeft: '56px',
+					paddingLeft: '32px',
 				}}
 			>
+				{data.accountType === 'contract' && data.contractDescription && (
+					<div tw="flex text-[#6b6b6b]" style={{ lineHeight: '1.4' }}>
+						{data.contractDescription}
+					</div>
+				)}
+				{data.details?.map(({ label, value }) => (
+					<div key={label} tw="flex w-full justify-between">
+						<span tw="text-[#6b6b6b]">{label}</span>
+						<span tw="text-[#181818]">{value}</span>
+					</div>
+				))}
 				{/* Holdings */}
-				{data.accountType !== 'contract' && (
+				{data.accountType !== 'contract' && hasValue(data.holdings) && (
 					<div
 						tw="flex w-full justify-between items-center"
 						style={{ paddingTop: '6px', paddingBottom: '6px' }}
 					>
-						<span tw="text-gray-500">Holdings</span>
+						<span tw="text-[#6b6b6b]">Holdings</span>
 						<span
-							style={holdingsGrey ? { color: '#9ca3af' } : undefined}
-							tw={holdingsGrey ? '' : 'text-gray-900'}
+							style={holdingsGrey ? { color: brand.secondary } : undefined}
+							tw={holdingsGrey ? '' : 'text-[#181818]'}
 						>
 							{holdingsDisplay}
 						</span>
@@ -905,7 +914,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 						tw="flex w-full justify-between items-center"
 						style={{ paddingTop: '2px', paddingBottom: '2px' }}
 					>
-						<span tw="text-gray-500">Assets</span>
+						<span tw="text-[#6b6b6b]">Assets</span>
 						<div tw="flex flex-wrap justify-end" style={{ gap: '0px' }}>
 							<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
 						</div>
@@ -913,45 +922,51 @@ export function AddressCard({ data }: { data: AddressData }) {
 				)}
 
 				{/* Divider (when not contract) */}
-				{data.accountType !== 'contract' && (
+				{data.accountType !== 'contract' && hasValue(data.holdings) && (
 					<div
 						tw="flex"
 						style={{
 							height: '1px',
-							backgroundColor: '#d1d5db',
-							marginLeft: '-56px',
-							marginRight: '-40px',
+							backgroundColor: brand.border,
+							marginLeft: '-32px',
+							marginRight: '-32px',
 						}}
 					/>
 				)}
 
 				{/* Transactions/Events */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">
-						{data.accountType === 'contract' ? 'Events' : 'Transactions'}
-					</span>
-					<span tw="text-gray-900">{data.txCount}</span>
-				</div>
+				{hasValue(data.txCount) && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-[#6b6b6b]">
+							{data.accountType === 'contract' ? 'Events' : 'Transactions'}
+						</span>
+						<span tw="text-[#181818]">{data.txCount}</span>
+					</div>
+				)}
 
 				{/* Last Active - only for non-contracts */}
-				{data.accountType !== 'contract' && (
+				{data.accountType !== 'contract' && hasValue(data.lastActive) && (
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Last Active</span>
-						<span tw="text-gray-900">{data.lastActive}</span>
+						<span tw="text-[#6b6b6b]">Last Active</span>
+						<span tw="text-[#181818]">{data.lastActive}</span>
 					</div>
 				)}
 
 				{/* Created */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Created</span>
-					<span tw="text-gray-900">{data.created}</span>
-				</div>
+				{hasValue(data.created) && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-[#6b6b6b]">Created</span>
+						<span tw="text-[#181818]">{data.created}</span>
+					</div>
+				)}
 
 				{/* Deployer */}
 				{data.accountType === 'contract' && data.deployer && (
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Deployer</span>
-						<span tw="text-blue-500">{truncateHash(data.deployer, 6)}</span>
+						<span tw="text-[#6b6b6b]">Deployer</span>
+						<span tw="text-blue-500" style={MONO}>
+							{truncateHash(data.deployer, 6)}
+						</span>
 					</div>
 				)}
 
@@ -961,7 +976,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 					data.methods.length > 0 && (
 						<div tw="flex w-full" style={{ marginTop: '4px' }}>
 							<span
-								tw="text-gray-500 shrink-0"
+								tw="text-[#6b6b6b] shrink-0"
 								style={{ marginRight: '16px', paddingTop: '4px' }}
 							>
 								Methods
@@ -973,7 +988,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 								{data.methods.slice(0, 6).map((m) => (
 									<span
 										key={m}
-										tw="bg-gray-100 text-gray-700 text-[23px]"
+										tw="bg-[#f2f2f2] text-[#181818] text-[23px]"
 										style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 									>
 										{m.length > 14 ? `${m.slice(0, 13)}…` : m}
@@ -981,7 +996,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 								))}
 								{data.methods.length > 6 && (
 									<span
-										tw="bg-gray-100 text-gray-500 text-[23px]"
+										tw="bg-[#f2f2f2] text-[#6b6b6b] text-[23px]"
 										style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 									>
 										+{data.methods.length - 6}
@@ -991,7 +1006,6 @@ export function AddressCard({ data }: { data: AddressData }) {
 						</div>
 					)}
 			</div>
-			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }

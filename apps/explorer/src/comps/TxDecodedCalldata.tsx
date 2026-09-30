@@ -2,11 +2,8 @@ import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
-import {
-	formatAbiValue,
-	getAbiItem,
-	getContractInfo,
-} from '#lib/domain/contracts'
+import { AbiArgument } from '#comps/AbiArgument'
+import { getAbiItem, getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
@@ -73,14 +70,14 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 
 	if (!isFetched || !abiItem)
 		return (
-			<div className="bg-distinct rounded-[6px] overflow-hidden">
+			<div className="bg-distinct rounded-body overflow-hidden">
 				<div className="relative px-[10px] py-[8px]">
-					<pre className="text-[12px] text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
+					<pre className="label-12 text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
 						{data}
 					</pre>
 					<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
 						{copyRaw.notifying && (
-							<span className="text-[11px] select-none">copied</span>
+							<span className="label-12 select-none">copied</span>
 						)}
 						<button
 							type="button"
@@ -97,9 +94,9 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 
 	return (
 		<div className="flex flex-col gap-[8px]">
-			<div className="bg-distinct rounded-[6px] overflow-hidden">
+			<div className="bg-distinct rounded-body overflow-hidden">
 				<div className="flex items-center justify-between px-[10px] py-[8px] border-b border-card-border">
-					<code className="text-[12px] text-primary font-mono">
+					<code className="label-12 text-primary font-sans">
 						<span className="text-base-content-positive">
 							{'name' in abiItem ? abiItem.name : selector}
 						</span>
@@ -117,7 +114,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 					</code>
 					<div className="flex items-center gap-[4px] text-tertiary">
 						{copySignature.notifying && (
-							<span className="text-[11px] select-none">copied</span>
+							<span className="label-12 select-none">copied</span>
 						)}
 						<button
 							type="button"
@@ -136,7 +133,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				{args && args.length > 0 && (
 					<div className="divide-y divide-card-border">
 						{abiItem.inputs?.map((input, i) => (
-							<TxDecodedCalldata.ArgumentRow
+							<AbiArgument
 								key={`${input.type}-${input.name ?? i}`}
 								input={input}
 								value={args[i]}
@@ -148,19 +145,19 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 			<button
 				type="button"
 				onClick={() => setShowRaw(!showRaw)}
-				className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] cursor-pointer press-down w-fit"
+				className="label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] cursor-pointer press-down w-fit"
 			>
 				{showRaw ? 'Hide' : 'Show'} raw
 			</button>
 			{showRaw && (
-				<div className="bg-distinct rounded-[6px] overflow-hidden">
+				<div className="bg-distinct rounded-body overflow-hidden">
 					<div className="relative px-[10px] py-[8px]">
-						<pre className="text-[12px] text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
+						<pre className="label-12 text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
 							{data}
 						</pre>
 						<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
 							{copyRaw.notifying && (
-								<span className="text-[11px] select-none">copied</span>
+								<span className="label-12 select-none">copied</span>
 							)}
 							<button
 								type="button"
@@ -182,40 +179,5 @@ export namespace TxDecodedCalldata {
 	export interface Props {
 		address?: Address | null
 		data: Hex
-	}
-
-	export function ArgumentRow(props: ArgumentRow.Props) {
-		const { input, value } = props
-		const { copy, notifying } = useCopy()
-		const formattedValue = formatAbiValue(value)
-
-		return (
-			<button
-				type="button"
-				onClick={() => copy(formattedValue)}
-				className="flex items-start gap-[12px] px-[10px] py-[8px] text-[12px] font-mono w-full text-left cursor-pointer press-down hover:bg-base-alt/50 transition-colors"
-			>
-				<span className="text-secondary shrink-0 min-w-[120px]">
-					{notifying ? (
-						<span className="text-primary">copied</span>
-					) : (
-						<>
-							{input.type}
-							{input.name && (
-								<span className="text-primary"> {input.name}</span>
-							)}
-						</>
-					)}
-				</span>
-				<span className="text-primary break-all">{formattedValue}</span>
-			</button>
-		)
-	}
-
-	export namespace ArgumentRow {
-		export interface Props {
-			input: { type: string; name?: string }
-			value: unknown
-		}
 	}
 }

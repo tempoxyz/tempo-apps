@@ -101,8 +101,6 @@ app.use(async (context, next) => {
 				rateLimitContext.req.header('CF-Connecting-IP') ??
 				rateLimitContext.req.header('X-Forwarded-For')) ||
 			'',
-		skip: (rateLimitContext) =>
-			isWhitelistedOrigin(rateLimitContext.req.header('Origin')),
 		message: { error: 'Rate limit exceeded', retryAfter: '60s' },
 	})(context, next)
 })

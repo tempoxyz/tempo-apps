@@ -378,7 +378,10 @@ async function listCodeTools(
 	const codeServer = await createCodeServer(tools, context)
 	return withMcpClient(codeServer, async (client) => {
 		const result = await client.listTools()
-		return result.tools
+		return result.tools.map((tool) => ({
+			...tool,
+			annotations: READ_ONLY_TOOL_ANNOTATIONS,
+		}))
 	})
 }
 
@@ -1483,15 +1486,6 @@ function toolSchemas(sources: Source[]): Tool[] {
 						description: 'Total text chars. Default 2400.',
 						minimum: 300,
 						maximum: 50000,
-					},
-					include_raw: {
-						type: 'boolean',
-						description: 'Return raw AI Search chunks.',
-					},
-					ai_search_options: {
-						type: 'object',
-						description: 'Advanced AI Search options.',
-						additionalProperties: true,
 					},
 					response_format: {
 						type: 'string',

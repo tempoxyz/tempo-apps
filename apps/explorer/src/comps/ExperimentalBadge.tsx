@@ -1,18 +1,9 @@
-import { cx } from '#lib/css'
+import { Tag } from 'regen-ui'
 
-export function ExperimentalBadge(props: ExperimentalBadge.Props) {
-	const { className } = props
-
-	return (
-		<div
-			className={cx(
-				'text-[11px] font-normal bg-base-alt text-base-content rounded-md px-[6px] py-[2px]',
-				className,
-			)}
-		>
-			Experimental
-		</div>
-	)
+export function ExperimentalBadge(
+	props: ExperimentalBadge.Props,
+): React.JSX.Element {
+	return <Tag className={props.className}>Experimental</Tag>
 }
 
 export declare namespace ExperimentalBadge {

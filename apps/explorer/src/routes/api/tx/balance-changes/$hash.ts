@@ -6,8 +6,13 @@ import { getTransactionReceipt, readContract } from 'viem/actions'
 import { Abis } from '#lib/abis'
 import * as z from 'zod/mini'
 import { mapWithConcurrency } from '#lib/network.ts'
+import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { zHash } from '#lib/zod'
-import { getWagmiConfig, type WagmiConfig } from '#wagmi.config.ts'
+import {
+	getTempoChain,
+	getWagmiConfig,
+	type WagmiConfig,
+} from '#wagmi.config.ts'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -122,7 +127,7 @@ async function getTokenMetadata(
 	return { decimals, symbol }
 }
 
-export async function fetchBalanceChanges(params: {
+async function fetchBalanceChangesUncached(params: {
 	hash: Address.Address
 	limit: number
 	offset: number
@@ -190,6 +195,17 @@ export async function fetchBalanceChanges(params: {
 		tokenMetadata,
 		total,
 	}
+}
+
+export async function fetchBalanceChanges(params: {
+	hash: Address.Address
+	limit: number
+	offset: number
+}): Promise<BalanceChangesData> {
+	return withImmutableDataCache({
+		key: `balance-changes:v1:${getTempoChain().id}:${params.hash.toLowerCase()}:${params.limit}:${params.offset}`,
+		load: () => fetchBalanceChangesUncached(params),
+	})
 }
 
 const querySchema = z.object({

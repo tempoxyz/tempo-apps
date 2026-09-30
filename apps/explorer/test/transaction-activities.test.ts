@@ -474,4 +474,38 @@ describe('selectTransactionDescriptionEvents for Earn receipts', () => {
 			}),
 		).toEqual([zoneWithdrawal, earnDeposit, zoneDeposit])
 	})
+
+	test('keeps Earn primary and nests a propAMM swap after it', () => {
+		const earnWithdrawal = {
+			type: 'earn exact withdrawal',
+			parts: [{ type: 'action' as const, value: 'Earn Exact Withdrawal' }],
+		}
+		const propAmmSwap = {
+			type: 'propamm swap',
+			parts: [{ type: 'action' as const, value: 'propAMM Swap' }],
+		}
+
+		expect(
+			selectTransactionDescriptionEvents({
+				activityEvents: [{ type: 'transfer', parts: [] }],
+				fallbackEvents: [propAmmSwap, earnWithdrawal],
+				knownCall: null,
+			}),
+		).toEqual([earnWithdrawal, propAmmSwap])
+	})
+})
+
+test('prefers a standalone propAMM swap over generic indexed activity', () => {
+	const propAmmSwap = {
+		type: 'propamm swap',
+		parts: [{ type: 'action' as const, value: 'propAMM Swap' }],
+	}
+
+	expect(
+		selectTransactionDescriptionEvents({
+			activityEvents: [{ type: 'transfer', parts: [] }],
+			fallbackEvents: [{ type: 'send', parts: [] }, propAmmSwap],
+			knownCall: null,
+		}),
+	).toEqual([propAmmSwap])
 })

@@ -1,6 +1,8 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as z from 'zod/mini'
+import { resolveLegacyTokenTab } from '#lib/domain/address-tabs'
+import { isTip20Address } from '#lib/domain/tip20'
 
 export const Route = createFileRoute('/_layout/token/$address')({
 	validateSearch: z.object({
@@ -18,11 +20,11 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			})
 		}
 
-		// Map old tab names to new ones
-		let tab: string = 'transfers'
-		if (search.tab === 'holders') tab = 'holders'
-		else if (search.tab === 'contract') tab = 'contract'
-		else if (search.tab === 'interact') tab = 'contract'
+		const tab = resolveLegacyTokenTab(
+			search.tab,
+			isTip20Address(address),
+			search.a,
+		)
 
 		throw redirect({
 			to: '/address/$address',

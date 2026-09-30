@@ -3,13 +3,21 @@
 	"name": "og",
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-12-17",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 	"vars": {
 		"EXPLORER_URL": "https://explorer.tempo.xyz"
 	},
 	"assets": {
 		"directory": "./public",
-		"binding": "ASSETS"
+		"binding": "ASSETS",
+		"run_worker_first": [
+			"/bg-default.webp",
+			"/og-blocks.webp",
+			"/bg-list-blocks.webp",
+			"/og-tokens.webp",
+			"/bg-list-tokens.webp",
+			"/og-transactions.webp"
+		]
 	},
 	"ratelimits": [
 		{

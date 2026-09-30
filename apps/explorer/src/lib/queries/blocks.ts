@@ -4,10 +4,11 @@ import type { Block, Log, TransactionReceipt } from 'viem'
 import { getBlock } from 'wagmi/actions'
 import type { Actions } from 'wagmi/tempo'
 import {
-	decodeKnownTransactionCall,
+	decodeKnownTransactionCalls,
 	type KnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
+import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getBatchedClient, getWagmiConfig } from '#wagmi.config.ts'
 
@@ -136,13 +137,11 @@ export function blockKnownEventsQueryOptions(
 					getTokenMetadata,
 				})
 
-				// Try to decode known contract calls (e.g., validator precompile)
-				// Prioritize decoded calls over fee-only events
-				const knownCall = decodeKnownTransactionCall(transaction)
-
-				const events = knownCall
-					? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-					: parsedEvents
+				const events = selectTransactionDescriptionEvents({
+					activityEvents: [],
+					fallbackEvents: parsedEvents,
+					knownCalls: decodeKnownTransactionCalls(transaction, receipt.status),
+				})
 
 				result[transaction.hash] = events
 			}

@@ -545,9 +545,7 @@ function SimulatePage(): React.JSX.Element {
 	return (
 		<div className="flex w-full flex-col px-[24px] pt-8 pb-12 type-card min-[800px]:pt-14 min-[1240px]:px-[84px]">
 			<div className="mb-[12px] flex flex-wrap items-center gap-x-[14px] gap-y-[8px]">
-				<h1 className="shrink-0 text-[18px] font-medium text-primary">
-					Simulate
-				</h1>
+				<h1 className="shrink-0 heading-20 text-primary">Simulate</h1>
 				<p
 					className="min-w-0 flex-1 truncate type-card-data text-tertiary"
 					title={summary}
@@ -595,7 +593,7 @@ function SimulatePage(): React.JSX.Element {
 				<Button tone="primary" onClick={run} title="Run this simulation (⌘↵)">
 					<PlayIcon className="size-[12px]" />
 					{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
-					<span className="text-[10px] opacity-70">⌘↵</span>
+					<span className="label-12 opacity-70">⌘↵</span>
 				</Button>
 			</div>
 
@@ -607,7 +605,7 @@ function SimulatePage(): React.JSX.Element {
 				)}
 			>
 				{showInput && (
-					<section className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+					<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
 						<SimulateCallForm
 							form={form}
 							setForm={setForm}
@@ -925,7 +923,7 @@ function SimulationResults(props: {
 	}
 
 	return (
-		<section className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+		<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
 			<SimulateResultHeader
 				execution={execution}
 				input={input}
@@ -1170,9 +1168,9 @@ function SimulationEmptyState(props: {
 	onEdit: () => void
 }): React.JSX.Element {
 	return (
-		<section className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-card-border bg-card-header">
+		<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
 			<div className="flex items-center gap-[8px] border-b border-card-border px-[16px] py-[10px]">
-				<span className="text-[14px] font-medium text-content-dimmed">
+				<span className="label-14 text-content-dimmed">
 					Nothing simulated yet
 				</span>
 			</div>

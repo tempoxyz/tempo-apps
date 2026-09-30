@@ -117,7 +117,7 @@ describe('renderReceiptText', () => {
 
 		expect(text).toContain('SUMMARY: PRIVATE ZONE WITHDRAWAL')
 		expect(lines.find((line) => line.startsWith('1. '))).toMatch(
-			/^1\. PRIVATE ZONE WITHDRAWAL\s+0\.25 SENPATHUSDE$/,
+			/^1\. PRIVATE ZONE WITHDRAWAL\s+–$/,
 		)
 		expect(text).toContain('  0.25012 SENPATHUSDE TO 0X8117…DFB6')
 		expect(lines.find((line) => line.startsWith('2. '))).toMatch(
@@ -125,7 +125,7 @@ describe('renderReceiptText', () => {
 		)
 		expect(text).toContain('  0.25012 SENPATHUSDE FOR 0.5 DLUSD')
 		expect(lines.find((line) => line.startsWith('3. '))).toMatch(
-			/^3\. PRIVATE ZONE DEPOSIT\s+0\.5 DLUSD$/,
+			/^3\. PRIVATE ZONE DEPOSIT\s+–$/,
 		)
 		expect(lines.find((line) => line.startsWith('FEE '))).toMatch(
 			/^FEE \(PATHUSD\)\s+<\$0\.01$/,

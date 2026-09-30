@@ -1,3 +1,4 @@
+import { Button as RegenButton } from 'regen-ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClientOnly, Link } from '@tanstack/react-router'
 import * as React from 'react'
@@ -33,7 +34,7 @@ export function ConnectWallet({
 	return (
 		<ClientOnly
 			fallback={
-				<div className="text-[12px] flex items-center text-secondary whitespace-nowrap">
+				<div className="label-12 flex items-center text-secondary whitespace-nowrap">
 					Detecting wallet…
 				</div>
 			}
@@ -66,7 +67,7 @@ function ConnectWalletInner({
 
 	if (!hasConnectorOptions)
 		return (
-			<div className="text-[12px] -tracking-[2%] flex items-center whitespace-nowrap select-none">
+			<div className="label-12 flex items-center whitespace-nowrap select-none">
 				No wallet found.
 			</div>
 		)
@@ -106,7 +107,7 @@ function ConnectWalletInner({
 							)
 						}}
 						className={cx(
-							'flex gap-[8px] items-center rounded-[8px] bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
+							'flex gap-[8px] items-center rounded-body bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
 							pendingId === connector.id &&
 								connect.isPending &&
 								'animate-pulse',
@@ -153,7 +154,7 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<span className="text-[12px] font-normal text-tertiary whitespace-nowrap">
+				<span className="label-12 font-normal text-tertiary whitespace-nowrap">
 					Added Tempo to {connector?.name ?? 'Wallet'}!
 				</span>
 			)}
@@ -220,7 +221,7 @@ function ConnectedAddress() {
 	if (!address) return null
 
 	return (
-		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center justify-end gap-[4px] flex-1 min-w-0">
+		<div className="label-12 text-secondary whitespace-nowrap flex items-center justify-end gap-[4px] flex-1 min-w-0">
 			<span className="hidden sm:inline shrink-0">Connected as</span>
 			<Link
 				to="/address/$address"
@@ -297,7 +298,7 @@ function FundAccountButton() {
 
 	if (status === 'done') {
 		return (
-			<span className="text-[12px] text-tertiary flex items-center gap-1">
+			<span className="label-12 text-tertiary flex items-center gap-1">
 				Funded!
 			</span>
 		)
@@ -323,7 +324,9 @@ function FundAccountButton() {
 			onClick={handleFund}
 		>
 			<span className="text-tertiary">[</span>
-			<span className="text-center my-auto font-bold text-[12px]">{label}</span>
+			<span className="text-center my-auto font-semibold label-12">
+				{label}
+			</span>
 			<span className="text-tertiary">]</span>
 		</button>
 	)
@@ -362,36 +365,21 @@ export function Button(
 		variant,
 		...rest
 	} = props
-	const Element = render
-		? (p: typeof props) => React.cloneElement(render, p)
-		: 'button'
 	return (
-		<Element
-			className={buttonClassName({
-				className,
-				disabled,
-				static: static_,
-				variant,
-			})}
+		<RegenButton
+			type="button"
 			{...rest}
+			render={render}
+			disabled={disabled || static_}
+			size="small"
+			variant={
+				variant === 'accent'
+					? 'primary'
+					: variant === 'destructive'
+						? 'negative'
+						: 'secondary'
+			}
+			className={className}
 		/>
-	)
-}
-
-function buttonClassName(opts: {
-	className?: string
-	disabled?: boolean
-	static?: boolean
-	variant?: 'accent' | 'default' | 'destructive'
-}) {
-	const { className, disabled, static: static_, variant = 'default' } = opts
-	return cx(
-		'inline-flex gap-[6px] items-center whitespace-nowrap font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer press-down text-[12px] hover:underline',
-		disabled && 'pointer-events-none opacity-50',
-		static_ && 'pointer-events-none',
-		variant === 'accent' && 'text-accent',
-		variant === 'default' && 'text-secondary',
-		variant === 'destructive' && 'text-negative',
-		className,
 	)
 }

@@ -4,8 +4,7 @@ import type { Hex } from 'ox'
 import * as OxHex from 'ox/Hex'
 import { numberToHex } from 'viem'
 import * as z from 'zod/mini'
-import { tempoMainnet, tempoTestnet } from '#lib/chains'
-import { serverEnv, tempoApiUrl } from '#lib/server/env'
+import { getExplorerRpcBackend } from '#lib/server/network'
 import { checkRateLimit } from '#lib/server/rate-limit'
 import { zAddress, zHash } from '#lib/zod'
 
@@ -46,7 +45,12 @@ const BatchCallSchema = z.object({
 export const MAX_BATCH_CALLS = 32
 
 export const SimulationRequestSchema = z.object({
-	chainId: z.union([z.literal(4217), z.literal(42431), z.literal(31318)]),
+	chainId: z.union([
+		z.literal(4217),
+		z.literal(42431),
+		z.literal(31318),
+		z.literal(31319),
+	]),
 	from: zAddress({ lowercase: true }),
 	to: zAddress({ lowercase: true }),
 	data: CalldataSchema,
@@ -101,25 +105,18 @@ export type SerializedSimulationResult = {
 	}
 }
 
-/**
- * Tracing is the most expensive traffic the explorer sends, so it goes through
- * the authenticated Tempo API rather than the shared public proxy — the same
- * preference the RPC transport makes server-side (`wagmi.config.ts`).
- *
- * Without a key (local dev) or on chains the API does not front, fall back to
- * the public proxy.
- */
+/** Simulation uses the same authenticated backend as the Explorer's RPC reads. */
 function getRpcTarget(chainId: number): {
 	url: string
 	headers: Record<string, string>
 } {
-	const apiKey = serverEnv.TEMPO_API_KEY
-	if (apiKey && (chainId === tempoMainnet.id || chainId === tempoTestnet.id))
-		return {
-			url: `${tempoApiUrl}/rpc/${chainId}`,
-			headers: { 'tempo-api-key': apiKey },
-		}
-	return { url: `https://proxy.tempo.xyz/rpc/${chainId}`, headers: {} }
+	const target = getExplorerRpcBackend(
+		import.meta.env.VITE_TEMPO_ENV,
+		env.RPC_AUTH,
+	)
+	if (chainId !== target.chainId)
+		throw new Error('Unsupported simulation chain')
+	return target
 }
 
 async function rpcRequest<T>(args: {
@@ -131,6 +128,7 @@ async function rpcRequest<T>(args: {
 	const target = getRpcTarget(args.chainId)
 	const response = await fetch(target.url, {
 		method: 'POST',
+		redirect: 'manual',
 		headers: { 'content-type': 'application/json', ...target.headers },
 		body: JSON.stringify({
 			jsonrpc: '2.0',

@@ -71,9 +71,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 			))}
 
 			{writeFunctions.length === 0 && (
-				<p className="text-[13px] text-tertiary">
-					No write functions available.
-				</p>
+				<p className="copy-13 text-tertiary">No write functions available.</p>
 			)}
 		</div>
 	)
@@ -191,22 +189,22 @@ function WriteContractFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="rounded-[8px] border border-card-border bg-surface overflow-hidden"
+			className="rounded-body border border-card-border bg-surface overflow-hidden"
 		>
 			<div className="w-full flex items-center justify-between">
 				<button
 					type="button"
 					onClick={() => hasInputs && setIsExpanded(!isExpanded)}
 					className={cx(
-						'flex-1 text-left flex items-center gap-[8px] h-full py-[10px] pl-[12px] focus-visible:-outline-offset-2! focus-visible:rounded-l-[8px]!',
+						'min-w-0 flex-1 text-left flex flex-wrap items-center gap-[8px] h-full py-[10px] pl-[12px] focus-visible:-outline-offset-2! focus-visible:rounded-l-body!',
 						hasInputs && 'cursor-pointer press-down',
 					)}
 				>
-					<span className="text-[12px] text-secondary font-mono">
+					<span className="min-w-0 label-12 text-secondary font-mono [overflow-wrap:anywhere]">
 						{getFunctionDisplaySignature(fn)}
 					</span>
 					{isPayable && (
-						<span className="text-[10px] px-[6px] py-[2px] rounded-[4px] bg-amber-500/20 text-amber-500 font-medium">
+						<span className="shrink-0 label-12 px-[6px] py-[2px] rounded-[4px] bg-warning-subtle text-warning font-medium">
 							payable
 						</span>
 					)}
@@ -302,6 +300,8 @@ function WriteContractFunction(props: {
 						<button
 							type="button"
 							className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
+							aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
+							aria-expanded={isExpanded}
 							onClick={() => setIsExpanded(!isExpanded)}
 						>
 							<ChevronDownIcon
@@ -335,27 +335,27 @@ function WriteContractFunction(props: {
 					))}
 
 					{parsedArgs.error && (
-						<div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
-							<p className="text-[12px] text-red-400">{parsedArgs.error}</p>
+						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
+							<p className="label-12 text-negative">{parsedArgs.error}</p>
 						</div>
 					)}
 
 					{writeContract.error && (
-						<div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
-							<p className="text-[12px] text-red-400">
+						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
+							<p className="label-12 text-negative">
 								{getWriteErrorMessage(writeContract.error)}
 							</p>
 						</div>
 					)}
 
 					{writeContract.isSuccess && writeContract.data && (
-						<div className="p-2.5 rounded-md bg-green-500/10 border border-green-500/20">
-							<p className="text-[12px] text-green-400 font-mono break-all">
+						<div className="p-2.5 rounded-body bg-positive-subtle border border-positive/20">
+							<p className="label-12 text-positive font-mono break-all">
 								tx:{' '}
 								<Link
 									to="/receipt/$hash"
 									params={{ hash: writeContract.data }}
-									className="underline hover:text-green-300"
+									className="underline hover:text-positive"
 								>
 									{writeContract.data}
 								</Link>
@@ -391,7 +391,7 @@ function FunctionInput(props: {
 					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
 					className="w-[16px] h-[16px] rounded border-base-border"
 				/>
-				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+				<label htmlFor={inputId} className="label-12 text-primary font-sans">
 					{displayLabel} <span className="text-secondary">({input.type})</span>
 				</label>
 			</div>
@@ -401,7 +401,7 @@ function FunctionInput(props: {
 	if (inputType === 'textarea' || isArrayType(input.type)) {
 		return (
 			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+				<label htmlFor={inputId} className="label-12 text-primary font-sans">
 					{displayLabel} <span className="text-secondary">({input.type})</span>
 				</label>
 				<textarea
@@ -410,7 +410,7 @@ function FunctionInput(props: {
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={placeholder}
 					rows={3}
-					className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
 				/>
 			</div>
 		)
@@ -418,7 +418,7 @@ function FunctionInput(props: {
 
 	return (
 		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+			<label htmlFor={inputId} className="label-12 text-primary font-sans">
 				{displayLabel} <span className="text-secondary">({input.type})</span>
 			</label>
 			<input
@@ -430,7 +430,7 @@ function FunctionInput(props: {
 				id={inputId}
 				placeholder={placeholder}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
 			/>
 		</div>
 	)

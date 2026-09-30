@@ -18,7 +18,7 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
 import { getReceiptResponseType } from '#lib/domain/receipt-export'
 import {
-	decodeKnownTransactionCall,
+	decodeKnownTransactionCalls,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
@@ -44,6 +44,7 @@ import {
 } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { getFeeTokenForChain } from '#lib/fee-token'
+import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
@@ -73,7 +74,10 @@ function stripLineItemEvents(
 	}
 }
 
-async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+async function fetchReceiptDataUncached(params: {
+	hash: Hex.Hex
+	rpcUrl?: string
+}) {
 	const config = getWagmiConfig()
 	const client = getPublicClient(config)
 	if (!client) throw new Error('RPC client unavailable')
@@ -96,21 +100,15 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	})
 	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall = decodeKnownTransactionCall(transaction)
-
-	const fallbackEvents = knownCall
-		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-		: parsedEvents
+	const knownCalls = decodeKnownTransactionCalls(transaction, receipt.status)
 	const activityEvents = activitiesToKnownEvents(activities, {
 		portal: receipt.to,
 	})
 	const knownEvents = enrichReceiptEventAmounts(
 		selectTransactionDescriptionEvents({
 			activityEvents,
-			fallbackEvents,
-			knownCall,
+			fallbackEvents: parsedEvents,
+			knownCalls,
 		}),
 		getTokenMetadata,
 	)
@@ -123,6 +121,16 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		receipt,
 		transaction,
 	}
+}
+
+async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+	if (params.rpcUrl) return fetchReceiptDataUncached(params)
+
+	return withImmutableDataCache({
+		key: `receipt-detail:v2:${TEMPO_CHAIN_ID}:${params.hash.toLowerCase()}`,
+		load: () => fetchReceiptDataUncached(params),
+		ttlSeconds: 300,
+	})
 }
 
 function getReceiptPresentation(
@@ -329,7 +337,14 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 									total: presentation.total,
 									totalDisplay: presentation.totalDisplay,
 								},
-								lineItems: data.lineItems,
+								lineItems: {
+									...data.lineItems,
+									// Legacy raw-flow totals can combine incomparable assets.
+									totals:
+										presentation.totalDisplay === undefined
+											? []
+											: data.lineItems.totals,
+								},
 							}),
 						),
 					)
@@ -357,6 +372,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 					// Navigate to the HTML version of the receipt
 					await page.goto(htmlUrl.toString(), { waitUntil: 'networkidle0' })
+					await page.evaluate(() => document.fonts.ready.then(() => undefined))
 
 					// Generate PDF
 					const pdf = await page.pdf({
@@ -409,6 +425,8 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 		const search = new URLSearchParams()
 		if (loaderData) {
+			search.set('chainId', String(TEMPO_CHAIN_ID))
+			search.set('eventCount', String(presentation?.events.length ?? 0))
 			search.set('block', loaderData.block.number.toString())
 			search.set('sender', loaderData.receipt.from)
 			const ogTimestamp = DateFormatter.formatTimestampForOg(
@@ -523,7 +541,7 @@ function Component() {
 	const presentation = getReceiptPresentation(data, voucherData, isTokenListed)
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
+		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
 			<Receipt
 				blockNumber={receipt.blockNumber}
 				events={presentation.events}

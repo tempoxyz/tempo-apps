@@ -56,7 +56,7 @@ export function SetAsFeeToken(
 			type="button"
 			disabled={busy || isAlreadyFeeToken}
 			className={cx(
-				'flex items-center gap-2 w-full text-[13px] font-sans font-medium transition-colors',
+				'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
 				isAlreadyFeeToken
 					? 'text-tertiary cursor-default'
 					: showSuccess

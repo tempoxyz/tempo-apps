@@ -82,8 +82,8 @@ export function TxTraceFlamegraph(
 
 	return (
 		<div className="flex flex-col">
-			<div className="flex items-center pl-[16px] pr-[12px] h-[34px] border-b border-dashed border-distinct">
-				<span className="text-[11px] text-tertiary">
+			<div className="flex items-center pl-[16px] pr-[12px] h-[34px] border-b border-solid border-distinct">
+				<span className="label-12 text-tertiary">
 					{onSelect ? 'Gas by frame — click to select' : 'Gas flamegraph'}
 				</span>
 			</div>
@@ -265,7 +265,7 @@ export namespace TxTraceFlamegraph {
 			// biome-ignore lint/a11y/noStaticElementInteractions: hover drives the details panel below
 			<div
 				className={cx(
-					'absolute top-0 h-full rounded-[3px] text-[11px] font-mono overflow-hidden transition-colors border',
+					'absolute top-0 h-full rounded-[3px] label-12 font-mono overflow-hidden transition-colors border',
 					(hovered || selected) && 'z-10',
 					onSelect && 'cursor-pointer',
 					// Selection reads as an outline rather than a fill, so it never
@@ -305,7 +305,7 @@ export namespace TxTraceFlamegraph {
 						>
 							{label}
 						</span>
-						<span className="shrink-0 text-[10px] text-tertiary">
+						<span className="shrink-0 label-12 text-tertiary">
 							{`${gasPct.toFixed(gasPct >= 10 ? 0 : 1)}%`}
 						</span>
 						{hasStorage && widthPct > 8 && (
@@ -347,12 +347,12 @@ export namespace TxTraceFlamegraph {
 				{/* min-h, not h: enough to stop the panel twitching as the row count
 				    (self gas, storage) varies between frames, without a floor of
 				    empty space when there is little to say. */}
-				<div className="flex items-start gap-[12px] min-h-[72px] overflow-hidden bg-distinct border border-card-border rounded-[6px] px-[12px] py-[10px] text-[12px] font-mono">
+				<div className="flex items-start gap-[12px] min-h-[72px] overflow-hidden bg-distinct border border-card-border rounded-body px-[12px] py-[10px] label-12 font-mono">
 					<div className="flex flex-col gap-[4px] min-w-0 flex-1">
 						<div className="flex items-center gap-[6px]">
 							<span
 								className={cx(
-									'text-[10px] font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+									'label-12 font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
 									node.hasError
 										? 'bg-negative/15 text-negative'
 										: 'bg-distinct text-tertiary',
@@ -370,7 +370,7 @@ export namespace TxTraceFlamegraph {
 						</div>
 						<span className="text-code-identifier truncate">{displayName}</span>
 						{node.hasError && (
-							<span className="text-negative text-[11px]">
+							<span className="text-negative label-12">
 								{node.trace.revertReason || node.trace.error || 'reverted'}
 							</span>
 						)}

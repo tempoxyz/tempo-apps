@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -33,9 +33,11 @@ import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
+import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { withKeyAuthorizationDescription } from '#lib/domain/access-key'
 import { buildTxSummary } from '#lib/domain/tx-summary'
 import {
 	type EventGroup,
@@ -52,7 +54,6 @@ import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
-	LIMIT,
 	lookupSignatureQueryOptions,
 	type TxData,
 	txQueryOptions,
@@ -61,13 +62,16 @@ import {
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import {
+	balanceChangesQueryOptions,
+	LIMIT as BALANCE_CHANGES_LIMIT,
+} from '#lib/queries/balance-changes'
+import {
 	type CallTrace,
 	type PrestateDiff,
 	traceQueryOptions,
 } from '#lib/queries/trace'
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
-import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
@@ -75,6 +79,14 @@ const defaultSearchValues = {
 	tab: 'overview',
 	page: 1,
 } as const
+
+const EMPTY_BALANCE_CHANGES: BalanceChangesData = {
+	changes: [],
+	tokenMetadata: {},
+	total: 0,
+}
+
+const EMPTY_TRACE_DATA = { trace: null, prestate: null } as const
 
 const RECEIVE_POLICY_GUARD = OxAddressUtil.from(
 	'0xB10C000000000000000000000000000000000000',
@@ -107,32 +119,20 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: ({ params, context, deps: { page } }) =>
+	loader: ({ params, context }) =>
 		withLoaderTiming('/_layout/tx/$hash', async () => {
 			const { hash } = params
 
 			try {
-				const offset = (page - 1) * LIMIT
-
-				const [txData, balanceChangesData, traceData, activities] =
-					await Promise.all([
-						context.queryClient.ensureQueryData(txQueryOptions({ hash })),
-						fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
-							changes: [],
-							tokenMetadata: {},
-							total: 0,
-						})),
-						context.queryClient
-							.ensureQueryData(traceQueryOptions({ hash }))
-							.catch(() => ({ trace: null, prestate: null })),
-						fetchTransactionActivities({ data: { hash } }),
-					])
+				const [txData, activities] = await Promise.all([
+					context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+					fetchTransactionActivities({ data: { hash } }),
+				])
 
 				const activityEvents = activitiesToKnownEvents(activities, {
 					portal: txData.receipt.to,
 				})
-				return { ...txData, balanceChangesData, traceData, activityEvents }
+				return { ...txData, activityEvents }
 			} catch (error) {
 				console.error(error)
 				throw notFound({
@@ -146,18 +146,21 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	}),
 	head: ({ params, loaderData }) => {
 		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const descriptionEvents = loaderData
+			? selectTransactionDescriptionEvents({
+					activityEvents: loaderData.activityEvents,
+					fallbackEvents: loaderData.knownEvents ?? [],
+					knownCalls: loaderData.knownCalls,
+				})
+			: []
 		const ogImageUrl = loaderData
-			? buildOgImageUrl(loaderData, params.hash)
+			? buildOgImageUrl(loaderData, params.hash, descriptionEvents)
 			: `${OG_BASE_URL}/tx/${params.hash}`
 		const description = loaderData
 			? buildTxDescription({
 					timestamp: Number(loaderData.block.timestamp) * 1000,
 					from: loaderData.receipt.from,
-					events: selectTransactionDescriptionEvents({
-						activityEvents: loaderData.activityEvents,
-						fallbackEvents: loaderData.knownEvents ?? [],
-						knownCall: loaderData.knownCall,
-					}),
+					events: descriptionEvents,
 				})
 			: 'View transaction details on Tempo Explorer.'
 
@@ -183,17 +186,32 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const { tab, page } = Route.useSearch()
 	const {
-		balanceChangesData,
 		activityEvents,
-		traceData,
 		block,
 		feeBreakdown,
-		knownCall,
+		keyAuthorization,
+		keyTokenMetadata,
+		knownCalls,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
 		transaction,
 	} = Route.useLoaderData()
+	const hash = receipt.transactionHash
+	const balanceChangesQuery = useQuery({
+		...balanceChangesQueryOptions({
+			hash,
+			limit: BALANCE_CHANGES_LIMIT,
+			offset: (page - 1) * BALANCE_CHANGES_LIMIT,
+		}),
+		enabled: typeof window !== 'undefined',
+	})
+	const traceQuery = useQuery({
+		...traceQueryOptions({ hash }),
+		enabled: typeof window !== 'undefined',
+	})
+	const balanceChangesData = balanceChangesQuery.data ?? EMPTY_BALANCE_CHANGES
+	const traceData = traceQuery.data ?? EMPTY_TRACE_DATA
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -210,7 +228,7 @@ function RouteComponent() {
 	const descriptionEvents = selectTransactionDescriptionEvents({
 		activityEvents,
 		fallbackEvents: displayKnownEvents,
-		knownCall,
+		knownCalls,
 	})
 
 	useKeyboardShortcut({
@@ -270,6 +288,8 @@ function RouteComponent() {
 				transaction={transaction}
 				block={block}
 				knownEvents={descriptionEvents}
+				keyAuthorization={keyAuthorization}
+				keyTokenMetadata={keyTokenMetadata}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
@@ -281,7 +301,13 @@ function RouteComponent() {
 		title: 'Balances',
 		totalItems: balanceChangesData.total,
 		itemsLabel: 'balances',
-		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
+		content: (
+			<TxBalanceChanges
+				data={balanceChangesData}
+				loading={balanceChangesQuery.isPending}
+				page={page}
+			/>
+		),
 	})
 
 	if (hasCalls && calls) {
@@ -350,14 +376,12 @@ function RouteComponent() {
 				to={receipt.to}
 				className="self-start"
 			/>
-			<div className="flex min-w-0 flex-col gap-[14px]">
-				<Sections
-					mode={mode}
-					sections={sections}
-					activeSection={activeSection}
-					onSectionChange={setActiveSection}
-				/>
-			</div>
+			<Sections
+				mode={mode}
+				sections={sections}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
+			/>
 		</div>
 	)
 }
@@ -367,6 +391,8 @@ function OverviewSection(props: {
 	transaction: TxData['transaction']
 	block: TxData['block']
 	knownEvents: KnownEvent[]
+	keyAuthorization: TxData['keyAuthorization']
+	keyTokenMetadata: TxData['keyTokenMetadata']
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
 }) {
@@ -375,6 +401,8 @@ function OverviewSection(props: {
 		transaction,
 		block,
 		knownEvents,
+		keyAuthorization,
+		keyTokenMetadata,
 		feeBreakdown,
 		balanceChangesData,
 	} = props
@@ -409,14 +437,29 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
-	// knownEvents already has decoded calls prepended (from the loader)
+	const description = withKeyAuthorizationDescription(
+		knownEvents,
+		transaction.from,
+		keyAuthorization,
+	)
 
 	return (
 		<div className="flex flex-col">
-			{knownEvents.length > 0 && (
-				<InfoRow label="Description">
+			{description.events.length > 0 && (
+				<InfoRow label="Description" stackOnMobile={Boolean(keyAuthorization)}>
 					<div className="flex flex-col gap-[6px]">
-						<TxEventDescription.ExpandGroup events={knownEvents} />
+						<TxEventDescription.ExpandGroup
+							events={description.events}
+							renderDetails={(event) =>
+								keyAuthorization && event === description.authorizationEvent ? (
+									<TxKeyAuthorization.Disclosure
+										key={keyAuthorization.address}
+										authorization={keyAuthorization}
+										tokenMetadata={keyTokenMetadata}
+									/>
+								) : null
+							}
+						/>
 						{memos.length > 0 && (
 							<div className="flex flex-col gap-[4px] min-w-0">
 								{memos.map((memo, index) => (
@@ -545,9 +588,9 @@ function InputDataRow(props: {
 	const { input, to } = props
 
 	return (
-		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-solid border-card-border last:border-b-0">
 			<div className="flex items-start gap-[16px]">
-				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
+				<span className="copy-13 text-tertiary min-w-[140px] shrink-0">
 					Input Data
 				</span>
 				<div className="flex-1">
@@ -575,19 +618,16 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 	}, [data.changes])
 
 	return (
-		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border">
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-solid border-card-border">
 			<div className="flex items-start gap-[16px]">
-				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
+				<span className="copy-13 text-tertiary min-w-[140px] shrink-0">
 					Balance Updates
 				</span>
 				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
-					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-mono">
+					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-sans">
 						{Array.from(groupedByAccount.entries()).map(
 							([address, changes]) => (
-								<div
-									key={address}
-									className="flex flex-col gap-[4px] text-[13px]"
-								>
+								<div key={address} className="flex flex-col gap-[4px] copy-13">
 									<Address address={address} />
 									<div className="flex flex-col gap-[2px] pl-[12px] border-l border-base-border">
 										{changes.map((change) => {
@@ -650,7 +690,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					<Link
 						to="."
 						search={{ tab: 'balances' }}
-						className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down w-fit"
+						className="inline-flex items-center gap-[4px] label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] press-down w-fit"
 					>
 						See all ({data.total})
 						<ChevronDownIcon className="size-[12px]" />
@@ -715,7 +755,7 @@ function CallItem(props: {
 	const data = call.data
 	return (
 		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
-			<div className="flex items-center gap-[8px] text-[13px]">
+			<div className="flex items-center gap-[8px] copy-13">
 				<span className="text-primary">#{index}</span>
 				{call.to ? (
 					<Link
@@ -781,7 +821,7 @@ function EventsSection(props: {
 
 	if (logs.length === 0)
 		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+			<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
 				No events emitted in this transaction
 			</div>
 		)
@@ -856,7 +896,7 @@ function EventGroupCell(props: {
 			{knownEvent ? (
 				<TxEventDescription
 					event={knownEvent}
-					className="flex flex-row items-center gap-[6px] leading-[18px]"
+					className="flex flex-row items-center gap-[6px] "
 				/>
 			) : (
 				<EventFallbackName log={logs[0]} />
@@ -865,7 +905,8 @@ function EventGroupCell(props: {
 				<button
 					type="button"
 					onClick={onToggle}
-					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
+					aria-expanded={expanded}
+					className="inline-flex items-center gap-[4px] label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded
 						? eventCount > 1
@@ -922,7 +963,7 @@ function RawSection(props: {
 	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
 
 	return (
-		<div className="px-[18px] py-[12px] text-[13px] break-all">
+		<div className="px-[18px] py-[12px] copy-13 break-all">
 			<TxRawTransaction data={rawData} />
 		</div>
 	)

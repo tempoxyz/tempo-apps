@@ -5,10 +5,10 @@ runs:
   using: 'composite'
   steps:
     - name: Set up pnpm
-      uses: tempoxyz/gh-actions/vendor/pnpm/action-setup@6f436eb3a168279692739e8c0c9fdb52b94bfae7
+      uses: tempoxyz/gh-actions/vendor/pnpm/action-setup@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
 
     - name: Set up Node
-      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         cache: 'pnpm'
         # `lts/*` lags a few days to a week

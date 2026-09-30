@@ -908,19 +908,17 @@ function Component() {
 						title={accountAddress}
 					>
 						<div className="flex items-center gap-[8px] mb-[8px]">
-							<span className="text-[13px] font-normal capitalize">
-								Address
-							</span>
+							<span className="copy-13 font-normal capitalize">Address</span>
 							<div className="relative flex items-center">
 								<CopyIcon className="w-[12px] h-[12px]" />
 								{notifying && (
-									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
+									<span className="absolute left-[calc(100%+8px)] copy-13 ">
 										copied
 									</span>
 								)}
 							</div>
 						</div>
-						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[21ch]">
+						<p className="copy-14 font-normal text-primary break-all max-w-[21ch]">
 							{accountAddress}
 						</p>
 					</button>,
@@ -928,11 +926,11 @@ function Component() {
 						label: 'Active',
 						value: (
 							<ClientOnly
-								fallback={<span className="text-tertiary text-[13px]">…</span>}
+								fallback={<span className="text-tertiary copy-13">…</span>}
 							>
 								<RelativeTime
 									timestamp={baseTimestamp - 60n}
-									className="text-[13px] text-primary"
+									className="copy-13 text-primary"
 								/>
 							</ClientOnly>
 						),
@@ -941,9 +939,9 @@ function Component() {
 						label: 'Holdings',
 						value: (
 							<ClientOnly
-								fallback={<span className="text-tertiary text-[13px]">…</span>}
+								fallback={<span className="text-tertiary copy-13">…</span>}
 							>
-								<span className="text-[13px] text-primary">$1,234,567.00</span>
+								<span className="copy-13 text-primary">$1,234,567.00</span>
 							</ClientOnly>
 						),
 					},
@@ -951,11 +949,11 @@ function Component() {
 						label: 'Created',
 						value: (
 							<ClientOnly
-								fallback={<span className="text-tertiary text-[13px]">…</span>}
+								fallback={<span className="text-tertiary copy-13">…</span>}
 							>
 								<RelativeTime
 									timestamp={baseTimestamp - 518400n}
-									className="text-[13px] text-primary"
+									className="copy-13 text-primary"
 								/>
 							</ClientOnly>
 						),
@@ -991,7 +989,7 @@ function Component() {
 														key={key}
 														event={event}
 														seenAs={accountAddress}
-														className="flex flex-row items-center gap-[6px] leading-[18px] w-auto flex-wrap"
+														className="flex flex-row items-center gap-[6px] w-auto flex-wrap"
 													/>
 												)
 											})
@@ -1004,7 +1002,7 @@ function Component() {
 													<TxEventDescription
 														event={perspectiveEvents[0]}
 														seenAs={accountAddress}
-														className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center flex-nowrap"
+														className="flex flex-row items-center gap-[6px] w-auto justify-center flex-nowrap"
 													/>
 												)}
 												{events.length > 1 && (

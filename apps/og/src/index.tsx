@@ -7,6 +7,13 @@ import { createFactory, createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 
 import { Address } from 'ox'
+import {
+	fetchPortalOverview,
+	portalId,
+	portalQuerySchema,
+} from '#zone-portal.ts'
+import { ZonePortalCard } from '#zone-portal-card.tsx'
+import { CardBackground, ListingCard, ReceiptBackground } from '#brand.tsx'
 
 import {
 	addressOgQuerySchema,
@@ -16,6 +23,7 @@ import {
 } from '#params.ts'
 import {
 	AddressCard,
+	AddressImage,
 	type AddressData,
 	BlockCard,
 	type BlockData,
@@ -74,28 +82,83 @@ app.get('/favicon.ico', (context) =>
 app
 	.get('/', (context) => context.text('OK'))
 	.get('/health', (context) => context.text('OK'))
-	.get('/explorer', (context) =>
-		context.env.ASSETS.fetch(new URL('/bg-default.webp', context.req.url)),
-	)
-	.get('/blocks', (context) =>
-		context.env.ASSETS.fetch(new URL('/og-blocks.webp', context.req.url)),
-	)
-	.get('/tokens', (context) =>
-		context.env.ASSETS.fetch(new URL('/og-tokens.webp', context.req.url)),
-	)
 // Apply rate limiting and caching (cache only in prod) to OG image routes
 app.use('/tx/*', rateLimiter)
 app.use('/tx', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
+app.use('/zone-portal/*', rateLimiter)
 app.use('/receipt/*', rateLimiter)
 app.use('/block/*', rateLimiter)
 app.use('/blocks', rateLimiter)
 app.use('/tokens', rateLimiter)
 app.use('/explorer', rateLimiter)
-app.use('/blocks', rateLimiter)
-app.use('/tokens', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
+
+app.get(
+	'/zone-portal/:address',
+	zValidator('query', portalQuerySchema),
+	async (context) => {
+		const address = context.req.param('address')
+		if (portalId(address) === undefined)
+			throw new HTTPException(400, { message: 'Invalid Zone Portal address' })
+		const { network } = context.req.valid('query')
+		let dataError = ''
+		const [fonts, images, overview] = await Promise.all([
+			loadFonts(context.env),
+			loadImages(context.env),
+			fetchPortalOverview(address, network).catch((error) => {
+				console.error('Zone Portal OG data unavailable:', error)
+				dataError =
+					error instanceof Error && typeof error.cause === 'number'
+						? `http-${error.cause}`
+						: error instanceof Error && error.name === 'ZodError'
+							? 'invalid-response'
+							: error instanceof Error && error.name === 'TimeoutError'
+								? 'timeout'
+								: 'network-error'
+				return undefined
+			}),
+		])
+		const response = new ImageResponse(
+			<AddressImage
+				artwork={toBase64DataUrl(images.receiptRings)}
+				logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
+			>
+				<ZonePortalCard address={address} overview={overview} />
+			</AddressImage>,
+			{
+				width: 1200,
+				height: 630,
+				format: 'webp',
+				module,
+				fonts,
+			},
+		)
+		return new Response(response.body, {
+			headers: {
+				'Content-Type': 'image/webp',
+				'Cache-Control': overview
+					? 'public, max-age=60, s-maxage=60'
+					: 'no-store',
+				'X-Portal-Data': overview ? 'available' : 'unavailable',
+				...(dataError ? { 'X-Portal-Data-Error': dataError } : {}),
+			},
+		})
+	},
+)
+
+// Preserve old share-image URLs without serving the baked-in legacy design.
+for (const [path, destination] of [
+	['/bg-default.webp', '/explorer'],
+	['/og-blocks.webp', '/blocks'],
+	['/bg-list-blocks.webp', '/blocks'],
+	['/og-tokens.webp', '/tokens'],
+	['/bg-list-tokens.webp', '/tokens'],
+	['/og-transactions.webp', '/tx'],
+] as const) {
+	app.get(path, (context) => context.redirect(destination.slice(1), 302))
+}
 
 // Dynamic OG image routes
 
@@ -105,7 +168,21 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 		throw new HTTPException(400, { message: 'Invalid transaction hash' })
 
 	const txParams = context.req.valid('query')
+	const icons: Record<string, string> = {}
+	if (txParams.chainId)
+		await Promise.all(
+			[
+				...new Set(
+					txParams.events.slice(0, 3).flatMap((event) => event.tokens ?? []),
+				),
+			].map(async (token) => {
+				const icon = await fetchTokenIcon(token, txParams.chainId!)
+				if (icon) icons[token] = icon
+			}),
+		)
 	const receiptData: ReceiptData = {
+		icons,
+		eventCount: txParams.eventCount,
 		hash,
 		blockNumber: txParams.block,
 		sender: txParams.sender,
@@ -126,14 +203,19 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 	])
 
 	const imageResponse = new ImageResponse(
-		<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-			<img
-				src={toBase64DataUrl(images.bgTx)}
-				alt=""
-				tw="absolute inset-0 w-full h-full"
-				style={{ objectFit: 'cover' }}
+		<div
+			tw="flex w-full h-full relative"
+			style={{
+				fontFamily: 'Pilat',
+				color: '#181818',
+				backgroundColor: '#fafafa',
+			}}
+		>
+			<ReceiptBackground
+				logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
+				artwork={toBase64DataUrl(images.receiptRings)}
 			/>
-			<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+			<div tw="absolute flex items-end" style={{ left: '0px', bottom: '0px' }}>
 				<ReceiptCard data={receiptData} />
 			</div>
 		</div>,
@@ -142,21 +224,7 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 			height: 630,
 			format: 'webp',
 			module,
-			fonts: [
-				{
-					weight: 400,
-					name: 'GeistMono',
-					data: fonts.mono,
-					style: 'normal',
-				},
-				{ weight: 500, name: 'Inter', data: fonts.inter, style: 'normal' },
-				{
-					weight: 400,
-					name: 'Pilat',
-					data: fonts.pilat,
-					style: 'normal',
-				},
-			],
+			fonts,
 		},
 	)
 
@@ -174,7 +242,21 @@ app.get(
 			throw new HTTPException(400, { message: 'Invalid transaction hash' })
 
 		const txParams = context.req.valid('query')
+		const icons: Record<string, string> = {}
+		if (txParams.chainId)
+			await Promise.all(
+				[
+					...new Set(
+						txParams.events.slice(0, 3).flatMap((event) => event.tokens ?? []),
+					),
+				].map(async (token) => {
+					const icon = await fetchTokenIcon(token, txParams.chainId!)
+					if (icon) icons[token] = icon
+				}),
+			)
 		const receiptData: ReceiptData = {
+			icons,
+			eventCount: txParams.eventCount,
 			hash,
 			blockNumber: txParams.block,
 			sender: txParams.sender,
@@ -195,14 +277,22 @@ app.get(
 		])
 
 		const imageResponse = new ImageResponse(
-			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				<img
-					src={toBase64DataUrl(images.bgReceipt)}
-					alt=""
-					tw="absolute inset-0 w-full h-full"
-					style={{ objectFit: 'cover' }}
+			<div
+				tw="flex w-full h-full relative"
+				style={{
+					fontFamily: 'Pilat',
+					color: '#181818',
+					backgroundColor: '#fafafa',
+				}}
+			>
+				<ReceiptBackground
+					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
+					artwork={toBase64DataUrl(images.receiptRings)}
 				/>
-				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				<div
+					tw="absolute flex items-end"
+					style={{ left: '0px', bottom: '0px' }}
+				>
 					<ReceiptCard data={receiptData} />
 				</div>
 			</div>,
@@ -211,26 +301,7 @@ app.get(
 				height: 630,
 				format: 'webp',
 				module,
-				fonts: [
-					{
-						weight: 400,
-						name: 'GeistMono',
-						data: fonts.mono,
-						style: 'normal',
-					},
-					{
-						weight: 500,
-						name: 'Inter',
-						data: fonts.inter,
-						style: 'normal',
-					},
-					{
-						weight: 400,
-						name: 'Pilat',
-						data: fonts.pilat,
-						style: 'normal',
-					},
-				],
+				fonts,
 			},
 		)
 
@@ -262,14 +333,23 @@ app.get(
 		])
 
 		const imageResponse = new ImageResponse(
-			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				<img
-					src={toBase64DataUrl(images.bgBlock)}
-					alt=""
-					tw="absolute inset-0 w-full h-full"
-					style={{ objectFit: 'cover' }}
+			<div
+				tw="flex w-full h-full relative"
+				style={{
+					fontFamily: 'Pilat',
+					color: '#181818',
+					backgroundColor: '#fafafa',
+				}}
+			>
+				<CardBackground
+					artwork={toBase64DataUrl(images.receiptRings)}
+					title="Block"
+					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
 				/>
-				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				<div
+					tw="absolute flex items-end"
+					style={{ left: '0px', bottom: '0px' }}
+				>
 					<BlockCard data={blockData} />
 				</div>
 			</div>,
@@ -278,26 +358,7 @@ app.get(
 				height: 630,
 				format: 'webp',
 				module,
-				fonts: [
-					{
-						weight: 400,
-						name: 'GeistMono',
-						data: fonts.mono,
-						style: 'normal',
-					},
-					{
-						weight: 500,
-						name: 'Inter',
-						data: fonts.inter,
-						style: 'normal',
-					},
-					{
-						weight: 400,
-						name: 'Pilat',
-						data: fonts.pilat,
-						style: 'normal',
-					},
-				],
+				fonts,
 			},
 		)
 
@@ -326,14 +387,23 @@ app.get(
 		])
 
 		const imageResponse = new ImageResponse(
-			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				<img
-					src={toBase64DataUrl(images.bgToken)}
-					alt=""
-					tw="absolute inset-0 w-full h-full"
-					style={{ objectFit: 'cover' }}
+			<div
+				tw="flex w-full h-full relative"
+				style={{
+					fontFamily: 'Pilat',
+					color: '#181818',
+					backgroundColor: '#fafafa',
+				}}
+			>
+				<CardBackground
+					artwork={toBase64DataUrl(images.receiptRings)}
+					title="Token"
+					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
 				/>
-				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				<div
+					tw="absolute flex items-end"
+					style={{ left: '0px', bottom: '0px' }}
+				>
 					<TokenCard
 						data={tokenData}
 						icon={tokenIcon || toBase64DataUrl(images.nullIcon)}
@@ -345,26 +415,7 @@ app.get(
 				height: 630,
 				format: 'webp',
 				module,
-				fonts: [
-					{
-						weight: 400,
-						name: 'GeistMono',
-						data: fonts.mono,
-						style: 'normal',
-					},
-					{
-						weight: 500,
-						name: 'Inter',
-						data: fonts.inter,
-						style: 'normal',
-					},
-					{
-						weight: 400,
-						name: 'Pilat',
-						data: fonts.pilat,
-						style: 'normal',
-					},
-				],
+				fonts,
 			},
 		)
 
@@ -397,6 +448,7 @@ app.get(
 			methods: addrParams.methods,
 			deployer: addrParams.deployer,
 			contractName: addrParams.contractName,
+			contractDescription: addrParams.contractDescription,
 		}
 
 		const [fonts, images] = await Promise.all([
@@ -404,20 +456,26 @@ app.get(
 			loadImages(context.env),
 		])
 
-		const bgImage =
-			addressData.accountType === 'contract'
-				? images.bgContract
-				: images.bgAddress
-
 		const imageResponse = new ImageResponse(
-			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				<img
-					src={toBase64DataUrl(bgImage)}
-					alt=""
-					tw="absolute inset-0 w-full h-full"
-					style={{ objectFit: 'cover' }}
+			<div
+				tw="flex w-full h-full relative"
+				style={{
+					fontFamily: 'Pilat',
+					color: '#181818',
+					backgroundColor: '#fafafa',
+				}}
+			>
+				<CardBackground
+					artwork={toBase64DataUrl(images.receiptRings)}
+					title={
+						addressData.accountType === 'contract' ? 'Contract' : 'Account'
+					}
+					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
 				/>
-				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				<div
+					tw="absolute flex items-end"
+					style={{ left: '0px', bottom: '0px' }}
+				>
 					<AddressCard data={addressData} />
 				</div>
 			</div>,
@@ -426,26 +484,7 @@ app.get(
 				height: 630,
 				format: 'webp',
 				module,
-				fonts: [
-					{
-						weight: 400,
-						name: 'GeistMono',
-						data: fonts.mono,
-						style: 'normal',
-					},
-					{
-						weight: 500,
-						name: 'Inter',
-						data: fonts.inter,
-						style: 'normal',
-					},
-					{
-						weight: 400,
-						name: 'Pilat',
-						data: fonts.pilat,
-						style: 'normal',
-					},
-				],
+				fonts,
 			},
 		)
 
@@ -455,14 +494,28 @@ app.get(
 	},
 )
 
-// Static listing OG images
-
-app.get('/blocks', (context) =>
-	context.env.ASSETS.fetch(new URL('/bg-list-blocks.webp', context.req.url)),
-)
-
-app.get('/tokens', (context) =>
-	context.env.ASSETS.fetch(new URL('/bg-list-tokens.webp', context.req.url)),
-)
+// Listing and fallback cards use the same renderer as detail cards.
+for (const [path, title, subtitle] of [
+	['/explorer', 'Search. Explore. Discover.', 'Tempo Explorer'],
+	['/blocks', 'Blocks', 'Explore activity on Tempo'],
+	['/tokens', 'Tokens', 'Explore assets on Tempo'],
+	['/tx', 'Transactions', 'Explore payments on Tempo'],
+] as const) {
+	app.get(path, async (context) => {
+		const [fonts, images] = await Promise.all([
+			loadFonts(context.env),
+			loadImages(context.env),
+		])
+		return new ImageResponse(
+			<ListingCard
+				artwork={toBase64DataUrl(images.receiptRings)}
+				title={title}
+				subtitle={subtitle}
+				logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
+			/>,
+			{ width: 1200, height: 630, format: 'webp', module, fonts },
+		)
+	})
+}
 
 export default app

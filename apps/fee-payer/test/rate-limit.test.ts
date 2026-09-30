@@ -1,7 +1,7 @@
-import { exports } from 'cloudflare:workers'
+import { env, exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 
-describe('rate-limit middleware', () => {
+describe('IP rate-limit middleware', () => {
 	it('returns 400 for malformed transaction data', {
 		timeout: 30_000,
 	}, async () => {
@@ -52,5 +52,33 @@ describe('rate-limit middleware', () => {
 
 		// Should reach the handler (not blocked by rate limiting)
 		expect(response.status).toBe(200)
+	})
+
+	it('rate limits requests by client IP without inspecting the RPC method', {
+		timeout: 30_000,
+	}, async () => {
+		const clientIp = '203.0.113.2'
+		for (let index = 0; index < 1_000; index++)
+			await env.AddressRateLimiter.limit({ key: clientIp })
+
+		const response = await exports.default.fetch(
+			new Request('https://fee-payer.test/', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'CF-Connecting-IP': clientIp,
+				},
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_chainId',
+				}),
+			}),
+		)
+
+		expect(response.status).toBe(429)
+		await expect(response.json()).resolves.toEqual({
+			error: 'Rate limit exceeded',
+		})
 	})
 })

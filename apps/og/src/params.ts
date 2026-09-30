@@ -68,9 +68,18 @@ const optionalString = z.optional(z.string())
 function parseEventString(eventParam: string | undefined) {
 	if (!eventParam) return undefined
 	const sanitizedParam = sanitizeText(eventParam).slice(0, MAX_PARAM_LONG)
-	const [action, details, amount, message] = sanitizedParam.split('|')
+	const [action, details, amount, message, tokens, symbols] =
+		sanitizedParam.split('|')
 	if (!action) return undefined
 	return {
+		tokenSymbols: symbols
+			?.split(',')
+			.slice(0, 2)
+			.map((symbol) => truncateText(symbol, 24)),
+		tokens: tokens
+			?.split(',')
+			.filter((address) => /^0x[0-9a-fA-F]{40}$/.test(address))
+			.slice(0, 2),
 		action: truncateText(action, 40),
 		details: truncateText(details || '', 180),
 		amount: amount ? truncateText(amount, 30) : undefined,
@@ -81,6 +90,8 @@ function parseEventString(eventParam: string | undefined) {
 // ============ Transaction OG Schema ============
 
 export interface TxOgEvent {
+	tokenSymbols?: string[]
+	tokens?: string[]
 	action: string
 	details: string
 	amount?: string
@@ -89,6 +100,8 @@ export interface TxOgEvent {
 
 export const txOgQuerySchema = z.pipe(
 	z.object({
+		chainId: optionalString,
+		eventCount: optionalString,
 		block: sanitizedWithDefault(MAX_PARAM_SHORT),
 		sender: sanitizedWithDefault(MAX_PARAM_MED),
 		date: sanitizedWithDefault(MAX_PARAM_SHORT),
@@ -130,6 +143,12 @@ export const txOgQuerySchema = z.pipe(
 			if (event) events.push(event)
 		}
 		return {
+			chainId: /^\d{1,9}$/.test(data.chainId ?? '')
+				? Number(data.chainId)
+				: undefined,
+			eventCount: /^\d{1,6}$/.test(data.eventCount ?? '')
+				? Number(data.eventCount)
+				: events.length,
 			block: data.block,
 			sender: data.sender,
 			date: data.date,
@@ -212,6 +231,7 @@ export const addressOgQuerySchema = z.pipe(
 		accountType: z.optional(zAccountType),
 		deployer: sanitized(MAX_PARAM_MED),
 		contractName: sanitized(MAX_PARAM_SHORT),
+		contractDescription: sanitized(180),
 	}),
 	z.transform((data) => ({
 		holdings: data.holdings,
@@ -224,6 +244,7 @@ export const addressOgQuerySchema = z.pipe(
 		accountType: data.accountType,
 		deployer: data.deployer,
 		contractName: data.contractName,
+		contractDescription: data.contractDescription,
 	})),
 )
 

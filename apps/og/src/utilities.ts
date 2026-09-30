@@ -1,33 +1,21 @@
 import { Hex } from 'ox'
 
-const FONT_MONO_URL =
-	'https://unpkg.com/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2'
-const FONT_INTER_URL =
-	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
 const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
 
 interface ImageCache {
-	bgTx: ArrayBuffer
-	bgToken: ArrayBuffer
-	bgAddress: ArrayBuffer
-	bgContract: ArrayBuffer
-	bgReceipt: ArrayBuffer
-	bgBlock: ArrayBuffer
+	receiptRings: ArrayBuffer
 	tempoLockup: ArrayBuffer
-	tempoMark: ArrayBuffer
 	nullIcon: ArrayBuffer
 }
 
-let fontCache: {
-	mono: ArrayBuffer
-	inter: ArrayBuffer
-	pilat: ArrayBuffer
-} | null = null
-let fontsInFlight: Promise<{
-	mono: ArrayBuffer
-	inter: ArrayBuffer
-	pilat: ArrayBuffer
-}> | null = null
+type Font = {
+	name: string
+	data: ArrayBuffer
+	weight: 300 | 400 | 500 | 600
+	style: 'normal'
+}
+let fontCache: Font[] | null = null
+let fontsInFlight: Promise<Font[]> | null = null
 let imageCache: ImageCache | null = null
 let imagesInFlight: Promise<ImageCache> | null = null
 
@@ -39,84 +27,61 @@ export const toBase64DataUrl = (
 	mime = 'image/webp',
 ): string => `data:${mime};base64,${Buffer.from(data).toString('base64')}`
 
-export async function loadFonts(env: Cloudflare.Env) {
+export async function loadFonts(env: Cloudflare.Env): Promise<Font[]> {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
-		fontsInFlight = Promise.all([
-			fetch(FONT_MONO_URL).then((response: Response) => response.arrayBuffer()),
-			fetch(FONT_INTER_URL).then((response: Response) =>
-				response.arrayBuffer(),
-			),
-			env.ASSETS.fetch(new Request('https://assets/fonts/Pilat-Book.otf')).then(
-				(response: Response) => response.arrayBuffer(),
-			),
-		]).then(([mono, inter, pilat]) => {
-			fontCache = { mono, inter, pilat }
-			fontsInFlight = null
-			return fontCache
-		})
+		fontsInFlight = Promise.all(
+			[
+				['Pilat', 'Pilat-Regular.woff2', 400],
+				['Pilat', 'Pilat-Demi.woff2', 500],
+				['Pilat', 'Pilat-Demi.woff2', 600],
+				['JetBrains Mono', 'JetBrainsMono-Light.woff2', 300],
+			].map(async ([name, file, weight]) => {
+				const response = await env.ASSETS.fetch(
+					new Request(`https://assets/fonts/${file}`),
+				)
+				if (!response.ok)
+					throw new Error(`Failed to load font ${file}: ${response.status}`)
+				return {
+					name,
+					weight,
+					style: 'normal',
+					data: await response.arrayBuffer(),
+				} as Font
+			}),
+		)
+			.then((fonts) => {
+				fontCache = fonts
+				return fonts
+			})
+			.finally(() => {
+				fontsInFlight = null
+			})
 	}
 	return fontsInFlight
 }
 
 export async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
 	if (imageCache) return imageCache
-	if (!imagesInFlight) {
-		imagesInFlight = (async () => {
-			const [
-				bgTx,
-				bgToken,
-				bgAddress,
-				bgContract,
-				bgReceipt,
-				bgBlock,
-				tempoLockup,
-				tempoMark,
-				nullIcon,
-			] = await Promise.all([
-				env.ASSETS.fetch(
-					new Request('https://assets/bg-template-transaction.webp'),
-				).then((response: Response) => response.arrayBuffer()),
-				env.ASSETS.fetch(
-					new Request('https://assets/bg-template-token.webp'),
-				).then((response: Response) => response.arrayBuffer()),
-				env.ASSETS.fetch(
-					new Request('https://assets/bg-template-address.webp'),
-				).then((response: Response) => response.arrayBuffer()),
-				env.ASSETS.fetch(
-					new Request('https://assets/bg-template-contract.webp'),
-				).then((response: Response) => response.arrayBuffer()),
-				env.ASSETS.fetch(
-					new Request('https://assets/bg-template-receipt.webp'),
-				).then((response: Response) => response.arrayBuffer()),
-				env.ASSETS.fetch(
-					new Request('https://assets/bg-template-blocks.webp'),
-				).then((response: Response) => response.arrayBuffer()),
-				env.ASSETS.fetch(new Request('https://assets/tempo-lockup.svg')).then(
-					(response: Response) => response.arrayBuffer(),
-				),
-				env.ASSETS.fetch(new Request('https://assets/tempo-mark.webp')).then(
-					(response: Response) => response.arrayBuffer(),
-				),
-				env.ASSETS.fetch(new Request('https://assets/null.webp')).then(
-					(response: Response) => response.arrayBuffer(),
-				),
-			])
-			imageCache = {
-				bgTx,
-				bgToken,
-				bgAddress,
-				bgContract,
-				bgReceipt,
-				bgBlock,
-				tempoLockup,
-				tempoMark,
-				nullIcon,
-			}
-			imagesInFlight = null
-			return imageCache
-		})()
-	}
+	if (!imagesInFlight)
+		imagesInFlight = Promise.all([
+			env.ASSETS.fetch(new Request('https://assets/tempo-lockup.svg')),
+			env.ASSETS.fetch(new Request('https://assets/null.webp')),
+			env.ASSETS.fetch(new Request('https://assets/bg-template.webp')),
+		])
+			.then(async ([logo, icon, rings]) => {
+				if (!logo.ok || !icon.ok || !rings.ok)
+					throw new Error('Unable to load brand assets')
+				imageCache = {
+					receiptRings: await rings.arrayBuffer(),
+					tempoLockup: await logo.arrayBuffer(),
+					nullIcon: await icon.arrayBuffer(),
+				}
+				return imageCache
+			})
+			.finally(() => {
+				imagesInFlight = null
+			})
 	return imagesInFlight
 }
 
@@ -127,7 +92,7 @@ export async function fetchTokenIcon(
 	try {
 		const response = await fetch(
 			`${TOKENLIST_ICON_URL}/${chainId}/${address}`,
-			{ cf: { cacheTtl: 3600 } },
+			{ cf: { cacheTtl: 3600 }, signal: AbortSignal.timeout(2500) },
 		)
 		if (!response.ok) return null
 		const contentType = response.headers.get('content-type') || 'image/svg+xml'

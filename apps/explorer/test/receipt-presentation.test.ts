@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { renderReceiptText } from '#lib/domain/receipt-text'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
 	buildReceiptPresentation,
@@ -147,6 +148,39 @@ describe('receipt presentation', () => {
 		).toBe('$6')
 	})
 
+	test('hides side amounts for private Zone activity', () => {
+		const amount = { token, value: 5_000n, decimals: 6 }
+		const privateDeposit: KnownEvent = {
+			type: 'private-assets-deposited',
+			parts: [
+				{ type: 'action', value: 'Private Zone Deposit' },
+				{ type: 'amount', value: amount },
+			],
+		}
+		const privateWithdrawal: KnownEvent = {
+			type: 'private-shares-redeemed',
+			parts: [
+				{ type: 'action', value: 'Private Zone Withdrawal' },
+				{ type: 'amount', value: amount },
+			],
+			totalAmount: { ...amount, value: 10_000n },
+		}
+		const publicWithdrawal: KnownEvent = {
+			...privateWithdrawal,
+			parts: [
+				{ type: 'action', value: 'Withdraw from Zone 1' },
+				{ type: 'amount', value: amount },
+			],
+		}
+
+		expect(getReceiptEventSideAmount(privateDeposit)).toBeUndefined()
+		expect(getReceiptEventSideAmount(privateWithdrawal)).toBeUndefined()
+		expect(getReceiptEventSideAmount(publicWithdrawal)).toEqual({
+			...amount,
+			value: 10_000n,
+		})
+	})
+
 	test('derives regular totals from the same visible token flows', () => {
 		const presentation = build([
 			{
@@ -170,4 +204,64 @@ describe('receipt presentation', () => {
 		expect(presentation.total).toBe(1.000001)
 		expect(presentation.totalDisplay).toBe('$1')
 	})
+})
+
+test('unpriced asset exchanges retain details and fees but never fall back to legacy totals', () => {
+	const events: KnownEvent[] = [
+		{
+			type: 'transfer',
+			parts: [
+				{
+					type: 'amount',
+					value: {
+						token,
+						value: 38_495_077_61472146n,
+						decimals: 8,
+						symbol: 'MEENY',
+						currency: 'MEENY',
+					},
+				},
+			],
+		},
+		{
+			type: 'transfer',
+			parts: [
+				{
+					type: 'amount',
+					value: {
+						token,
+						value: 232_854_000n,
+						decimals: 6,
+						symbol: 'USDC.e',
+						currency: 'USD',
+					},
+				},
+			],
+		},
+	]
+	const presentation = build(events)
+	expect(presentation.events).toEqual(events)
+	expect(presentation.feeDisplay).toBeDefined()
+	expect(presentation.feeBreakdown).toHaveLength(1)
+	expect(presentation.total).toBeUndefined()
+	expect(presentation.totalDisplay).toBeUndefined()
+	const text = renderReceiptText(
+		{
+			block: { timestamp: 1_787_524_629n },
+			receipt: {
+				...receipt,
+				blockNumber: 36_181_164n,
+				transactionHash: `0x${'1'.repeat(64)}`,
+				status: 'success',
+			},
+		},
+		presentation,
+	)
+	expect(text).not.toMatch(/TOTAL/)
+	expect(text).toContain('MEENY')
+	expect(text).toContain('USDC.E')
+})
+
+test('approval-only transactions do not fall back to a payment total', () => {
+	expect(build([{ type: 'approval', parts: [] }]).totalDisplay).toBeUndefined()
 })

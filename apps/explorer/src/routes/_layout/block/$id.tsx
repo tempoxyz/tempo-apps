@@ -462,7 +462,14 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 	const fee = hasFeeEvent ? 0n : getEstimatedFee(transaction)
 
 	if (hasAmounts) {
-		const totalValue = calculateKnownEventsTotal(events ?? []) + fee
+		const eventTotal = calculateKnownEventsTotal(events ?? [])
+		if (eventTotal === undefined || !showUsdPrefix)
+			return (
+				<span className="text-tertiary" title="No comparable payment total">
+					—
+				</span>
+			)
+		const totalValue = eventTotal + fee
 		if (totalValue !== 0n) {
 			return (
 				<Amount.Base
@@ -576,7 +583,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 					<AddressLink address={transaction.to} chars={4} />
 				</div>
 				{subtitle && (
-					<span className="text-base-content-secondary text-[12px]">
+					<span className="text-base-content-secondary label-12">
 						{subtitle}
 					</span>
 				)}

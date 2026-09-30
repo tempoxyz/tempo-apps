@@ -1,3 +1,4 @@
+import { Choices } from 'regen-ui'
 /**
  * The control strip above a data panel.
  *
@@ -25,32 +26,20 @@ export function SegmentedControl<T extends string>(
 ): React.JSX.Element {
 	const { value, options, onChange, size = 'md' } = props
 	return (
-		<div
-			className="flex shrink-0 items-center rounded-[7px] border border-card-border bg-card-header p-[2px]"
-			role="tablist"
-		>
-			{options.map((option) => (
-				<button
-					key={option.value}
-					type="button"
-					role="tab"
-					aria-selected={value === option.value}
-					onClick={() => onChange(option.value)}
-					title={option.title}
-					className={cx(
-						'cursor-pointer rounded-[5px] press-down transition-colors',
-						size === 'sm'
-							? 'px-[7px] py-[2px] text-[11px]'
-							: 'px-[10px] py-[3px] text-[12px]',
-						value === option.value
-							? 'bg-base-plane text-primary shadow-[0_1px_2px_rgba(0,0,0,0.06)]'
-							: 'text-tertiary hover:text-secondary',
-					)}
-				>
-					{option.label}
-				</button>
-			))}
-		</div>
+		<Choices
+			label={options.map((option) => option.label).join(' / ')}
+			value={value}
+			onChange={onChange}
+			variant="compact"
+			className={cx(
+				'rounded-body bg-pane',
+				size === 'sm' && '[&_[role=radio]]:h-5',
+			)}
+			items={options.map((option) => ({
+				value: option.value,
+				label: <span title={option.title}>{option.label}</span>,
+			}))}
+		/>
 	)
 }
 
@@ -65,9 +54,9 @@ export declare namespace SegmentedControl {
 
 export function PanelToolbar(props: PanelToolbar.Props): React.JSX.Element {
 	return (
-		<div className="flex flex-wrap items-center gap-[6px] border-b border-dashed border-distinct px-[12px] py-[7px]">
+		<div className="flex flex-wrap items-center gap-[6px] border-b border-solid border-distinct px-[12px] py-[7px]">
 			{props.summary && (
-				<span className="mr-auto min-w-0 truncate text-[11px] text-tertiary">
+				<span className="mr-auto min-w-0 truncate label-12 text-tertiary">
 					{props.summary}
 				</span>
 			)}
@@ -97,7 +86,7 @@ export namespace PanelToolbar {
 				onClick={props.onClick}
 				title={props.title}
 				className={cx(
-					'flex size-[24px] shrink-0 items-center justify-center rounded-[6px] border border-card-border cursor-pointer press-down transition-colors',
+					'flex size-[24px] shrink-0 items-center justify-center rounded-body border border-card-border cursor-pointer press-down transition-colors',
 					props.active ? 'text-primary' : 'text-tertiary hover:text-primary',
 				)}
 			>

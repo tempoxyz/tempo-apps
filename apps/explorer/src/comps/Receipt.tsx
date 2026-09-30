@@ -1,17 +1,20 @@
-import { Link } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
-import { useState } from 'react'
 import { Amount } from '#comps/Amount'
+import { CopyButton } from '#comps/CopyButton'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { isReceiptEventVisible } from '#lib/domain/receipt-presentation'
 import {
-	getReceiptEventSideAmount,
-	isReceiptEventVisible,
-} from '#lib/domain/receipt-presentation'
+	getReceiptDistinctSideAmount,
+	getReceiptEventNote,
+	getReceiptNotePresentation,
+	type ReceiptNotePresentation,
+} from '#lib/domain/receipt-ui'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import {
@@ -29,7 +32,7 @@ import ShareIcon from '~icons/lucide/share-2'
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
-export function Receipt(props: Receipt.Props) {
+export function Receipt(props: Receipt.Props): React.JSX.Element {
 	const {
 		blockNumber,
 		sender,
@@ -44,11 +47,8 @@ export function Receipt(props: Receipt.Props) {
 		feeBreakdown = [],
 		exportSearch = '',
 	} = props
-	const [hashExpanded, setHashExpanded] = useState(false)
-	const copyHash = useCopy()
 	const copyShare = useCopy({ timeout: 2_000 })
 	const { isTokenListed } = useTokenListMembership()
-	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
@@ -82,13 +82,13 @@ export function Receipt(props: Receipt.Props) {
 		<>
 			<div
 				data-receipt
-				className="flex w-[min(414px,calc(100vw-32px))] flex-col bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				className="flex w-[min(480px,calc(100vw-32px))] flex-col bg-surface border border-base-border border-b-0 shadow-sm rounded-body rounded-br-none rounded-bl-none text-base-content"
 			>
-				<div className="flex items-start gap-[40px] px-[20px] pt-[24px] pb-[16px]">
+				<div className="flex items-start gap-4 sm:gap-8 px-[24px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
 						<ReceiptMark />
 					</div>
-					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1 min-w-0">
+					<div className="flex flex-col gap-[8px] font-sans copy-16 flex-1 min-w-0">
 						<div className="flex justify-between items-end">
 							<span className="text-tertiary">Block</span>
 							<Link
@@ -104,55 +104,38 @@ export function Receipt(props: Receipt.Props) {
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
-								className="text-accent text-right press-down min-w-0 flex-1 flex justify-end"
+								className="font-mono text-accent text-right press-down min-w-0 flex-1 flex justify-end"
 							>
 								<Midcut value={sender} prefix="0x" align="end" min={4} />
 							</Link>
 						</div>
-						<div className="flex justify-between items-start gap-4">
-							<div className="relative shrink-0">
-								<span className="text-tertiary">Hash</span>
-								{copyHash.notifying && (
-									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
-										copied
-									</span>
-								)}
-							</div>
-							{hashExpanded ? (
-								<button
-									type="button"
-									onClick={() => copyHash.copy(hash)}
-									className="text-right break-all max-w-[11ch] cursor-pointer press-down min-w-0 flex-1"
-								>
-									{hash}
-								</button>
-							) : (
-								<button
-									type="button"
-									onClick={() => setHashExpanded(true)}
-									className="text-right cursor-pointer press-down min-w-0 flex-1 flex justify-end"
+						<div className="flex justify-between items-center gap-4">
+							<span className="text-tertiary shrink-0">Hash</span>
+							<div className="flex min-w-0 flex-1 items-center justify-end gap-1">
+								<Link
+									to="/tx/$hash"
+									params={{ hash }}
+									className="font-mono text-accent text-right press-down min-w-0 flex-1 flex justify-end"
+									title={hash}
 								>
 									<Midcut value={hash} prefix="0x" align="end" min={4} />
-								</button>
-							)}
+								</Link>
+								<CopyButton
+									value={hash}
+									ariaLabel="Copy transaction hash"
+									className="shrink-0 print:hidden"
+								/>
+							</div>
 						</div>
-						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Date</span>
-							<span className="text-right">
-								{DateFormatter.formatTimestampDate(timestamp)}
-							</span>
-						</div>
-						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Time</span>
-							<span className="text-right">
-								{formattedTime.time} {formattedTime.timezone}
-								<span className="text-tertiary">{formattedTime.offset}</span>
-							</span>
-						</div>
+						<ClientOnly
+							fallback={<Receipt.TimeRows timestamp={timestamp} utc />}
+						>
+							<Receipt.TimeRows timestamp={timestamp} />
+						</ClientOnly>
 						{status === 'reverted' && (
 							<div className="flex justify-between items-end">
 								<span className="text-tertiary">Status</span>
-								<span className="text-base-content-negative uppercase text-[11px]">
+								<span className="text-base-content-negative label-12">
 									Failed
 								</span>
 							</div>
@@ -162,10 +145,9 @@ export function Receipt(props: Receipt.Props) {
 				{filteredEvents.length > 0 && (
 					<>
 						<div className="border-t border-dashed border-base-border" />
-						<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
+						<div className="flex flex-col gap-4 px-[24px] py-[24px] font-sans copy-16 [counter-reset:event]">
 							{filteredEvents.map((event, index) => {
-								// Calculate total amount from event parts
-								// For swaps, only show the first amount (what's being swapped out)
+								// Only a distinct aggregate needs a second amount beside the description.
 								const amountParts = event.parts.filter(
 									(part) => part.type === 'amount',
 								)
@@ -185,41 +167,56 @@ export function Receipt(props: Receipt.Props) {
 										: TEMPO_FEE_TOKEN
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
-								const sideAmount = getReceiptEventSideAmount(event)
+								const sideAmount = getReceiptDistinctSideAmount(event)
+								const eventNote = getReceiptEventNote(event.note, {
+									blockNumber,
+									hash,
+									timestamp,
+								})
 								return (
 									<div
 										key={`${event.type}-${index}`}
 										className="[counter-increment:event]"
 									>
 										<div className="flex flex-col gap-[8px]">
-											<div className="grid grid-cols-[minmax(0,1fr)_auto] gap-[10px]">
+											<div
+												className={
+													sideAmount
+														? 'grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-[10px]'
+														: 'min-w-0'
+												}
+											>
 												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
-													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
+													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 min-w-[20px]"></div>
 													<TxEventDescription event={event} />
 												</div>
-												<div className="flex items-start justify-end min-w-0 leading-[24px]">
-													{sideAmount && sideAmount.value > 0n ? (
+												{sideAmount ? (
+													<div className="flex items-start justify-end min-w-0">
 														<Amount
 															{...sideAmount}
 															infinite={null}
 															prefix={showUsdPrefix ? '$' : undefined}
 															short
 														/>
-													) : null}
-												</div>
+													</div>
+												) : null}
 											</div>
-											{event.note &&
-												(typeof event.note === 'string' ? (
+											{eventNote &&
+												(typeof eventNote === 'string' ? (
 													<TxEventMemoLine
-														memo={event.note}
+														memo={eventNote}
 														className="pl-[24px]"
 													/>
 												) : (
 													<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
 														<div className="border-l border-base-border pl-[10px] w-full">
-															<div className="flex flex-col gap-1 text-secondary text-[13px]">
-																{event.note.map(([label, part], index) => {
+															<div className="flex flex-col gap-1 text-primary copy-14">
+																{eventNote.map(([label, part], index) => {
 																	const key = `${label}${index}`
+																	const note = getReceiptNotePresentation(
+																		label,
+																		part,
+																	)
 																	if (
 																		(label === 'from' || label === 'to') &&
 																		part.type === 'account'
@@ -245,7 +242,13 @@ export function Receipt(props: Receipt.Props) {
 																			className="flex gap-2 min-w-0"
 																		>
 																			<div className="text-tertiary shrink-0">
-																				{label}
+																				{note.kind === 'time' ? (
+																					<ClientOnly fallback="Time (UTC)">
+																						{note.label}
+																					</ClientOnly>
+																				) : (
+																					note.label
+																				)}
 																				{!(
 																					part.type === 'text' &&
 																					part.value === ''
@@ -255,10 +258,8 @@ export function Receipt(props: Receipt.Props) {
 																				part.type === 'text' &&
 																				part.value === ''
 																			) && (
-																				<div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-																					<TxEventDescription.Part
-																						part={part}
-																					/>
+																				<div className="min-w-0 flex-1">
+																					<Receipt.NoteValue note={note} />
 																				</div>
 																			)}
 																		</div>
@@ -278,7 +279,7 @@ export function Receipt(props: Receipt.Props) {
 				{(showFeeBreakdown || showSingleFee || hasTotal) && (
 					<>
 						<div className="border-t border-dashed border-base-border" />
-						<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
+						<div className="flex flex-col gap-2 px-[24px] py-[24px] font-sans copy-15">
 							{showFeeBreakdown
 								? visibleFeeBreakdown.map((item, index) => {
 										const showUsdPrefix = hasTokenAmount(item)
@@ -344,8 +345,8 @@ export function Receipt(props: Receipt.Props) {
 									)}
 							{hasTotal && (
 								<div className="flex justify-between items-center">
-									<span className="text-tertiary">Total</span>
-									<span className="text-right">
+									<span className="heading-16 text-primary">Total</span>
+									<span className="heading-20 text-right tabular-nums">
 										{totalDisplay ??
 											(showUsdFeePrefix
 												? PriceFormatter.format(total ?? 0, { format: 'short' })
@@ -359,8 +360,8 @@ export function Receipt(props: Receipt.Props) {
 			</div>
 
 			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
-				<div className="w-[min(414px,calc(100vw-32px))]">
-					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive text-[12px] text-tertiary">
+				<div className="w-[min(480px,calc(100vw-32px))]">
+					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive button-14 text-secondary">
 						<button
 							type="button"
 							onClick={() => void handleShare()}
@@ -388,7 +389,7 @@ export function Receipt(props: Receipt.Props) {
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-[10px]! rounded-br-[10px]! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
+						className="press-down button-14 font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-body! rounded-br-body! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
 					>
 						<span>View transaction</span>
 						<span aria-hidden="true">→</span>
@@ -400,6 +401,107 @@ export function Receipt(props: Receipt.Props) {
 }
 
 export namespace Receipt {
+	export function TimeRows(props: TimeRows.Props): React.JSX.Element {
+		const { timestamp, utc = false } = props
+		const iso = new Date(Number(timestamp) * 1_000).toISOString()
+		const date = utc
+			? iso.slice(0, 10)
+			: DateFormatter.formatTimestampDate(timestamp)
+		const time = utc
+			? { time: iso.slice(11, 19), timezone: 'UTC', offset: '' }
+			: DateFormatter.formatTimestampTime(timestamp)
+		return (
+			<>
+				<div className="flex justify-between items-end">
+					<span className="text-tertiary">Date</span>
+					<time dateTime={iso} className="text-right">
+						{date}
+					</time>
+				</div>
+				<div className="flex justify-between items-end">
+					<span className="text-tertiary">Time</span>
+					<time dateTime={iso} className="text-right">
+						{time.time} {time.timezone}
+						<span className="text-tertiary">{time.offset}</span>
+					</time>
+				</div>
+			</>
+		)
+	}
+
+	export namespace TimeRows {
+		export interface Props {
+			timestamp: bigint
+			utc?: boolean | undefined
+		}
+	}
+
+	export function NoteTime(props: NoteTime.Props): React.JSX.Element {
+		const { timestamp, iso, utc = false } = props
+		if (utc)
+			return (
+				<time dateTime={iso} title={iso}>
+					{DateFormatter.formatUtcTimestamp(timestamp)} UTC
+				</time>
+			)
+		const time = DateFormatter.formatTimestampTime(timestamp)
+		return (
+			<time dateTime={iso} title={iso}>
+				{DateFormatter.formatTimestampDate(timestamp)} · {time.time}{' '}
+				{time.timezone}
+				{time.offset}
+			</time>
+		)
+	}
+
+	export namespace NoteTime {
+		export interface Props extends TimeRows.Props {
+			iso: string
+		}
+	}
+
+	export function NoteValue(props: NoteValue.Props): React.JSX.Element {
+		const { note } = props
+		if (note.kind === 'block')
+			return (
+				<Link
+					to="/block/$id"
+					params={{ id: note.id }}
+					className="text-accent press-down"
+				>
+					{BigInt(note.id).toLocaleString()}
+				</Link>
+			)
+		if (note.kind === 'transaction')
+			return (
+				<Link
+					to="/tx/$hash"
+					params={{ hash: note.hash }}
+					className="font-mono text-accent press-down flex min-w-0"
+					title={note.hash}
+				>
+					<Midcut value={note.hash} prefix="0x" min={4} />
+				</Link>
+			)
+		if (note.kind === 'time')
+			return (
+				<ClientOnly
+					fallback={
+						<Receipt.NoteTime timestamp={note.timestamp} iso={note.iso} utc />
+					}
+				>
+					<Receipt.NoteTime timestamp={note.timestamp} iso={note.iso} />
+				</ClientOnly>
+			)
+		return <TxEventDescription.Part part={note.part} />
+	}
+
+	export namespace NoteValue {
+		export interface Props {
+			note: ReceiptNotePresentation
+		}
+	}
+
 	export interface Props {
 		blockNumber: bigint
 		sender: Address.Address
@@ -439,10 +541,10 @@ export namespace Receipt {
 		return (
 			<a
 				href={`/receipt/${hash}.${format}${exportSearch}`}
-				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border uppercase transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
+				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
 			>
 				{icon}
-				<span>{format}</span>
+				<span>{format.toUpperCase()}</span>
 			</a>
 		)
 	}

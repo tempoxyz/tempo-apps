@@ -113,7 +113,7 @@ export function WalletActions(
 								type="button"
 								disabled={busy}
 								className={cx(
-									'flex items-center gap-2 w-full text-[13px] font-sans font-medium transition-colors',
+									'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
 									busy
 										? 'text-secondary animate-pulse'
 										: 'text-secondary hover:text-primary cursor-pointer press-down',

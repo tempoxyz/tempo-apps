@@ -8,7 +8,6 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	blockHashHistoryAbi,
@@ -26,6 +25,7 @@ import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getZonePortalId, isZonePortalAddress } from '#lib/domain/zones.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
+import { clientEnv } from '#lib/env.ts'
 
 export { isZonePortalAddress } from '#lib/domain/zones.ts'
 
@@ -374,7 +374,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		ZoneAddresses.zoneFactory,
+		Addresses.zoneFactory,
 		{
 			name: 'Zone Factory',
 			code: '0xef',
@@ -382,11 +382,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneFactoryAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneFactory,
+			address: Addresses.zoneFactory,
 		},
 	],
 	[
-		ZoneAddresses.zonePortalImplementation,
+		Addresses.zonePortalImplementation,
 		{
 			name: 'Zone Portal Implementation',
 			code: '0xef',
@@ -394,11 +394,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zonePortalAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zonePortalImplementation,
+			address: Addresses.zonePortalImplementation,
 		},
 	],
 	[
-		ZoneAddresses.zoneOutbox,
+		Addresses.zoneOutbox,
 		{
 			name: 'Zone Outbox',
 			code: '0xef',
@@ -406,11 +406,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneOutboxAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneOutbox,
+			address: Addresses.zoneOutbox,
 		},
 	],
 	[
-		ZoneAddresses.zoneMessenger,
+		Addresses.zoneMessenger,
 		{
 			name: 'Zone Messenger',
 			code: '0xef',
@@ -418,11 +418,11 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneMessengerAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneMessenger,
+			address: Addresses.zoneMessenger,
 		},
 	],
 	[
-		ZoneAddresses.zoneVerifier,
+		Addresses.zoneVerifier,
 		{
 			name: 'Zone Verifier',
 			code: '0xef',
@@ -430,7 +430,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: zoneVerifierAbi,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/protocol/zones',
-			address: ZoneAddresses.zoneVerifier,
+			address: Addresses.zoneVerifier,
 		},
 	],
 	[
@@ -527,6 +527,21 @@ export function getContractAbi(address: Address.Address): Abi | undefined {
 	return getContractInfo(address)?.abi
 }
 
+export function resolveInteractAbi(params: {
+	address: Address.Address
+	abi?: Abi
+	implementationAbi?: Abi | null
+}): Abi | undefined {
+	const knownAbi = getContractAbi(params.address)
+	// Prefer canonical interfaces, but not event-only ABIs bundled for decoding.
+	if (knownAbi?.some((item) => item.type === 'function')) return knownAbi
+
+	const implAbi = params.implementationAbi
+	return (
+		(implAbi && implAbi.length > 0 ? implAbi : null) ?? params.abi ?? knownAbi
+	)
+}
+
 // ============================================================================
 // ABI Utilities
 // ============================================================================
@@ -541,6 +556,15 @@ export type WriteFunction = AbiFunction & {
  * This is needed because whatsabi doesn't always recover the function name.
  */
 type WhatsabiAbiFunction = AbiFunction & { selector?: string }
+
+/** Bytecode-extracted entries carry selectors; compiler ABIs do not. */
+export function isInferredAbi(abi: Abi): boolean {
+	return abi.some(
+		(item) =>
+			item.type === 'function' &&
+			Boolean((item as WhatsabiAbiFunction).selector),
+	)
+}
 
 /**
  * Get the function selector, using whatsabi's extracted selector if available,
@@ -664,8 +688,6 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 	const functions = abi.filter((item): item is ReadFunction => {
 		if (item.type !== 'function') return false
 		if (!Array.isArray(item.inputs)) return false
-		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
-			return false
 
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
@@ -674,15 +696,13 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 		if (!isWhatsabi) {
 			if (!Array.isArray(item.outputs) || item.outputs.length === 0)
 				return false
-			// Some verified/proxy ABIs contain incorrect mutability metadata.
-			// Prefer a recognized getter name over that metadata so those functions
-			// remain callable from the Read section.
-			if (looksLikeReadFunction(item.name)) return true
 			return item.stateMutability === 'view' || item.stateMutability === 'pure'
 		}
 
 		// For whatsabi ABIs, stateMutability is often wrong (everything is nonpayable)
 		// Use name-based heuristics instead
+		if (looksLikeWriteFunction(item.name) && !looksLikeReadFunction(item.name))
+			return false
 		if (looksLikeReadFunction(item.name)) return true
 
 		// Functions with no inputs that don't look like writes are likely getters
@@ -721,16 +741,13 @@ export function getWriteFunctions(abi: Abi): WriteFunction[] {
 			item.stateMutability === 'nonpayable' ||
 			item.stateMutability === 'payable'
 		if (!isNonpayableOrPayable) return false
-		// ABI sources used for proxy implementations can carry incorrect
-		// mutability metadata. Do not expose recognized getters as transactions,
-		// regardless of whether the entry came from whatsabi or a verified ABI.
-		if (looksLikeReadFunction(item.name)) return false
 
 		const whatsabiItem = item as WhatsabiAbiFunction
 		const isWhatsabi = Boolean(whatsabiItem.selector)
 
 		// For whatsabi ABIs, filter out functions that look like read functions
 		if (isWhatsabi) {
+			if (looksLikeReadFunction(item.name)) return false
 			// Functions with no inputs that don't look like writes are likely getters
 			if (item.inputs.length === 0 && !looksLikeWriteFunction(item.name))
 				return false
@@ -1030,7 +1047,7 @@ export async function lookupSignature(
 
 const signatureLookupCache = new Map<Hex.Hex, Promise<string | null>>()
 
-class TempoABILoader {
+export class TempoABILoader {
 	readonly name = 'TempoABILoader'
 	readonly chainId: number
 
@@ -1047,7 +1064,7 @@ class TempoABILoader {
 
 	async loadABI(address: string): Promise<unknown[]> {
 		try {
-			const url = `${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
+			const url = `${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
 			const response = await fetch(url)
 			if (!response.ok) return []
 			const data = (await response.json()) as { abi?: unknown[] }

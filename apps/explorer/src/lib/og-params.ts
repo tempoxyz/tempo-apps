@@ -18,6 +18,8 @@ export const MAX_EVENTS = 6
 // ============ Transaction OG Params ============
 
 export interface TxOgEvent {
+	tokenSymbols?: string[]
+	tokens?: string[]
 	action: string
 	details: string
 	amount?: string
@@ -25,6 +27,8 @@ export interface TxOgEvent {
 }
 
 export interface TxOgParams {
+	chainId?: number
+	eventCount?: number
 	hash: string
 	block?: string
 	sender?: string
@@ -66,6 +70,7 @@ export interface AddressOgParams {
 	methods?: string[]
 	deployer?: string
 	contractName?: string
+	contractDescription?: string
 }
 
 // ============ Utility Functions ============
@@ -90,8 +95,21 @@ export function sanitizeText(value: string): string {
 
 // ============ URL Builders ============
 
+export function buildZonePortalOgUrl(
+	baseUrl: string,
+	address: string,
+	network: string,
+): string {
+	// Networks not supported by the shared renderer get a static address card.
+	if (!['mainnet', 'testnet', 'devnet', 'nextfork'].includes(network))
+		return buildAddressOgUrl(baseUrl, { address, accountType: 'contract' })
+	return `${baseUrl}/zone-portal/${address}?${new URLSearchParams({ network })}`
+}
+
 export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 	const search = new URLSearchParams()
+	if (params.chainId) search.set('chainId', String(params.chainId))
+	if (params.eventCount) search.set('eventCount', String(params.eventCount))
 
 	if (params.block)
 		search.set('block', truncateText(params.block, MAX_PARAM_SHORT))
@@ -114,6 +132,10 @@ export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 			truncateText(event.details, 180),
 			event.amount ? truncateText(event.amount, 30) : '',
 			event.message ? truncateText(event.message, 140) : '',
+			event.tokens?.slice(0, 2).join(',') ?? '',
+			event.tokenSymbols
+				?.map((symbol) => symbol.replace(/[,|]/g, ''))
+				.join(',') ?? '',
 		]
 		// Use `ev{n}` instead of `e{n}` to avoid potential upstream query-param filtering.
 		// The OG renderer supports both.
@@ -182,6 +204,11 @@ export function buildAddressOgUrl(
 		if (params.deployer) search.set('deployer', params.deployer)
 		if (params.contractName)
 			search.set('contractName', truncateText(params.contractName, 64))
+		if (params.contractDescription)
+			search.set(
+				'contractDescription',
+				truncateText(params.contractDescription, 180),
+			)
 	}
 
 	return `${baseUrl}/address/${params.address}?${search.toString()}`

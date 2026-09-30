@@ -48,7 +48,7 @@ export type NativeContractManifestEntry = {
 }
 
 const tempoRepository = 'tempoxyz/tempo' as const
-const tempoCommit = '194dec5c35deeb58ddb3ab88ad028122b511a5af' as const
+const tempoCommit = '07761a78a4ac00988533aa8acbcb6667786b625d' as const
 const tempoCommitUrl =
 	`https://github.com/${tempoRepository}/tree/${tempoCommit}` as const
 
@@ -307,7 +307,8 @@ export const stablecoinDexManifest = {
 	paths: [
 		'crates/precompiles/src/stablecoin_dex/mod.rs',
 		'crates/precompiles/src/stablecoin_dex/dispatch.rs',
-		'crates/precompiles/src/stablecoin_dex/order.rs',
+		'crates/precompiles/src/stablecoin_dex/order/mod.rs',
+		'crates/precompiles/src/stablecoin_dex/order/storage.rs',
 		'crates/precompiles/src/stablecoin_dex/orderbook.rs',
 		'crates/precompiles/src/stablecoin_dex/error.rs',
 	],
@@ -394,6 +395,217 @@ export const storageCreditsManifest = {
 	}),
 } as const satisfies NativeContractManifestEntry
 
+export const tip20Manifest = {
+	id: 'tip20',
+	name: 'TIP-20',
+	runtimeType: 'precompile',
+	language: 'Rust',
+	abi: Abis.tip20,
+	repository: tempoRepository,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/tip20/spec',
+	sourceRoot: 'crates/precompiles/src/tip20',
+	paths: [
+		'crates/precompiles/src/tip20/mod.rs',
+		'crates/precompiles/src/tip20/dispatch.rs',
+		'crates/precompiles/src/tip20/rewards.rs',
+		'crates/precompiles/src/tip20/roles.rs',
+	],
+	entrypoints: ['crates/precompiles/src/tip20/mod.rs'],
+	// pathUSD also supplies the shared source snapshot for other initialized tokens.
+	deployments: buildDeployments(Addresses.pathUsd, genesisActivation),
+	references: buildReferences({
+		abiReferencePaths: ['crates/contracts/src/precompiles/tip20.rs'],
+	}),
+} as const satisfies NativeContractManifestEntry
+
+export const tip20ChannelReserveManifest = {
+	id: 'tip20-channel-reserve',
+	name: 'TIP-20 Channel Reserve',
+	runtimeType: 'precompile',
+	language: 'Rust',
+	abi: Abis.tip20ChannelReserve,
+	repository: tempoRepository,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1034',
+	sourceRoot: 'crates/precompiles/src/tip20_channel_reserve',
+	paths: [
+		'crates/precompiles/src/tip20_channel_reserve/mod.rs',
+		'crates/precompiles/src/tip20_channel_reserve/dispatch.rs',
+	],
+	entrypoints: ['crates/precompiles/src/tip20_channel_reserve/mod.rs'],
+	deployments: buildDeployments(
+		Addresses.tip20ChannelReserve,
+		buildProtocolActivation('T5'),
+	),
+	references: buildReferences({
+		abiReferencePaths: [
+			'crates/contracts/src/precompiles/tip20_channel_reserve.rs',
+		],
+		specificationPaths: ['tips/tip-1034.md'],
+	}),
+} as const satisfies NativeContractManifestEntry
+
+export const receivePolicyGuardManifest = {
+	id: 'receive-policy-guard',
+	name: 'Receive Policy Guard',
+	runtimeType: 'precompile',
+	language: 'Rust',
+	abi: Abis.receivePolicyGuard,
+	repository: tempoRepository,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1028',
+	sourceRoot: 'crates/precompiles/src/receive_policy_guard',
+	paths: [
+		'crates/precompiles/src/receive_policy_guard/mod.rs',
+		'crates/precompiles/src/receive_policy_guard/dispatch.rs',
+	],
+	entrypoints: ['crates/precompiles/src/receive_policy_guard/mod.rs'],
+	deployments: buildDeployments(
+		Addresses.receivePolicyGuard,
+		buildProtocolActivation('T6'),
+	),
+	references: buildReferences({
+		abiReferencePaths: [
+			'crates/contracts/src/precompiles/receive_policy_guard.rs',
+		],
+		specificationPaths: ['tips/tip-1028.md'],
+	}),
+} as const satisfies NativeContractManifestEntry
+
+export const currentCommitteeManifest = {
+	id: 'current-committee',
+	name: 'Current Committee',
+	runtimeType: 'precompile',
+	language: 'Rust',
+	abi: Abis.currentCommittee,
+	repository: tempoRepository,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1070',
+	sourceRoot: 'crates/precompiles/src/current_committee',
+	paths: [
+		'crates/precompiles/src/current_committee/mod.rs',
+		'crates/precompiles/src/current_committee/dispatch.rs',
+	],
+	entrypoints: ['crates/precompiles/src/current_committee/mod.rs'],
+	deployments: buildDeployments(
+		'0xc077e00000000000000000000000000000000000',
+		buildProtocolActivation('T8'),
+	),
+	references: buildReferences({
+		abiReferencePaths: [
+			'crates/contracts/src/precompiles/current_committee.rs',
+		],
+		specificationPaths: ['tips/tip-1070.md'],
+	}),
+} as const satisfies NativeContractManifestEntry
+
+export const zoneFactoryManifest = {
+	id: 'zone-factory',
+	name: 'Zone Factory',
+	runtimeType: 'precompile',
+	language: 'Rust',
+	abi: Abis.zoneFactory,
+	repository: tempoRepository,
+	commit: tempoCommit,
+	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/tips/tip-1091',
+	sourceRoot: 'crates/precompiles/src/zone_factory',
+	paths: [
+		'crates/precompiles/src/zone_factory/mod.rs',
+		'crates/precompiles/src/zone_factory/dispatch.rs',
+		'crates/precompiles/src/zone_factory/portal.rs',
+	],
+	entrypoints: ['crates/precompiles/src/zone_factory/mod.rs'],
+	deployments: buildDeployments(
+		Addresses.zoneFactory,
+		buildProtocolActivation('T10'),
+	),
+	references: buildReferences({
+		abiReferencePaths: ['crates/contracts/src/precompiles/zone_factory.rs'],
+		specificationPaths: ['tips/tip-1091.md'],
+	}),
+} as const satisfies NativeContractManifestEntry
+
+// These EVM system contracts use source attribution, like the native records;
+// publishing a snapshot does not claim Solidity bytecode verification.
+const zonesRepository = 'tempoxyz/zones'
+const zonesCommit = 'f96c54b5afe63ab01f39f7772933403c24d4707f'
+const zonesSourceRoot = 'crates/contracts/src/runtime'
+const zoneSystemSource = {
+	runtimeType: 'system_contract',
+	language: 'Solidity',
+	repository: zonesRepository,
+	commit: zonesCommit,
+	commitUrl: `https://github.com/${zonesRepository}/tree/${zonesCommit}`,
+	docsUrl: 'https://docs.tempo.xyz/protocol/zones',
+	sourceRoot: zonesSourceRoot,
+	references: {
+		addressDefinitionPaths: [`${zonesSourceRoot}/interfaces/IZone.sol`],
+		abiReferencePaths: [`${zonesSourceRoot}/interfaces/IZone.sol`],
+		registrationPaths: [],
+		specificationPaths: [],
+	},
+} as const
+
+export const zonePortalManifest = {
+	...zoneSystemSource,
+	id: 'zone-portal',
+	name: 'Zone Portal Implementation',
+	abi: Abis.zonePortal,
+	paths: [
+		`${zonesSourceRoot}/tempo/ZonePortal.sol`,
+		`${zonesSourceRoot}/interfaces/IZone.sol`,
+		`${zonesSourceRoot}/libraries/BlockHashHistory.sol`,
+		`${zonesSourceRoot}/libraries/DepositQueueLib.sol`,
+		`${zonesSourceRoot}/libraries/EncryptedDeposit.sol`,
+		`${zonesSourceRoot}/libraries/Secp256k1Lib.sol`,
+		`${zonesSourceRoot}/libraries/WithdrawalQueueLib.sol`,
+	],
+	entrypoints: [`${zonesSourceRoot}/tempo/ZonePortal.sol`],
+	// The singleton implementation supplies shared sources for initialized proxies.
+	deployments: buildDeployments(
+		Addresses.zonePortalImplementation,
+		buildProtocolActivation('T10'),
+	),
+} as const satisfies NativeContractManifestEntry
+
+export const zoneMessengerManifest = {
+	...zoneSystemSource,
+	id: 'zone-messenger',
+	name: 'Zone Messenger',
+	abi: Abis.zoneMessenger,
+	paths: [
+		`${zonesSourceRoot}/tempo/ZoneMessenger.sol`,
+		`${zonesSourceRoot}/interfaces/IZone.sol`,
+	],
+	entrypoints: [`${zonesSourceRoot}/tempo/ZoneMessenger.sol`],
+	deployments: buildDeployments(
+		Addresses.zoneMessenger,
+		buildProtocolActivation('T10'),
+	),
+} as const satisfies NativeContractManifestEntry
+
+export const zoneVerifierManifest = {
+	...zoneSystemSource,
+	id: 'zone-verifier',
+	name: 'Zone Verifier',
+	abi: Abis.zoneVerifier,
+	paths: [
+		`${zonesSourceRoot}/tempo/Verifier.sol`,
+		`${zonesSourceRoot}/interfaces/IZone.sol`,
+	],
+	entrypoints: [`${zonesSourceRoot}/tempo/Verifier.sol`],
+	deployments: buildDeployments(
+		Addresses.zoneVerifier,
+		buildProtocolActivation('T10'),
+	),
+} as const satisfies NativeContractManifestEntry
+
 export const nativeContractsManifest = [
 	validatorConfigManifest,
 	validatorConfigV2Manifest,
@@ -406,4 +618,12 @@ export const nativeContractsManifest = [
 	addressRegistryManifest,
 	signatureVerifierManifest,
 	storageCreditsManifest,
+	tip20Manifest,
+	tip20ChannelReserveManifest,
+	receivePolicyGuardManifest,
+	currentCommitteeManifest,
+	zoneFactoryManifest,
+	zonePortalManifest,
+	zoneMessengerManifest,
+	zoneVerifierManifest,
 ] as const satisfies ReadonlyArray<NativeContractManifestEntry>

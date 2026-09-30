@@ -3,6 +3,7 @@ import * as Address from 'ox/Address'
 import type * as Hex from 'ox/Hex'
 import type { AbiEvent, AbiParameter } from 'viem'
 import {
+	decodeEventLog,
 	encodeAbiParameters,
 	encodeEventTopics,
 	encodeFunctionData,
@@ -10,10 +11,10 @@ import {
 	zeroHash,
 } from 'viem'
 import { Addresses } from 'viem/tempo'
-import { Addresses as ZoneAddresses } from 'viem-zones/tempo'
 import {
 	Abis,
 	earnEventsAbi,
+	propAmmEventsAbi,
 	stablecoinDexAbi,
 	zoneFactoryAbi,
 	zoneOutboxAbi,
@@ -33,10 +34,13 @@ import {
 	parseKnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
+import { zoneProverBatchLog } from './fixtures/zone-prover-batch'
 
 const ZONE_5_PORTAL = '0x7069DeC4E64Fd07334A0933eDe836C17259c9B23' as const
 const ZONE_E_PORTAL = '0x59831A17340EE14FE136d751EfbeA8b630470fD2' as const
 const UNKNOWN_ZONE_PORTAL = `0x${'8'.repeat(40)}` as const
+const PROP_AMM_POOL = `0x${'7'.repeat(40)}` as const
+const PROP_AMM_OUTPUT_TOKEN = `0x${'6'.repeat(40)}` as const
 
 const bounceBackAbi = [
 	{
@@ -158,7 +162,7 @@ describe('parseKnownEvents', () => {
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
 		const calls = [
 			{
-				to: ZoneAddresses.zoneFactory,
+				to: Addresses.zoneFactory,
 				input: encodeFunctionData({
 					abi: zoneFactoryAbi,
 					functionName: 'createZone',
@@ -268,7 +272,7 @@ describe('parseKnownEvents', () => {
 				action: 'Submit Zone Batch',
 			},
 			{
-				to: ZoneAddresses.zoneOutbox,
+				to: Addresses.zoneOutbox,
 				input: encodeFunctionData({
 					abi: zoneOutboxAbi,
 					functionName: 'requestWithdrawal',
@@ -512,7 +516,7 @@ describe('parseKnownEvents', () => {
 						eventName: 'Transfer',
 						args: {
 							from: ZONE_5_PORTAL,
-							to: ZoneAddresses.zoneMessenger,
+							to: Addresses.zoneMessenger,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
@@ -533,7 +537,7 @@ describe('parseKnownEvents', () => {
 				{ type: 'text', value: 'to' },
 				{
 					type: 'account',
-					value: Address.checksum(ZoneAddresses.zoneMessenger),
+					value: Address.checksum(Addresses.zoneMessenger),
 				},
 			],
 		})
@@ -600,7 +604,7 @@ describe('parseKnownEvents', () => {
 		})
 	})
 
-	it('decodes current BatchSubmitted events', () => {
+	it('decodes pre-T13 BatchSubmitted events', () => {
 		const hash = `0x${'5'.repeat(64)}` as const
 		const portal = '0x5ad0000000000000000000000000000000000003' as const
 		const nextProcessedHash = `0x${'1'.repeat(64)}` as const
@@ -644,6 +648,40 @@ describe('parseKnownEvents', () => {
 				['Withdrawal Queue', { type: 'hex', value: withdrawalQueueHash }],
 				['Last Processed Deposit', { type: 'number', value: 35n }],
 			],
+		})
+	})
+
+	it('decodes the live T13 prover batch 177 settlement', () => {
+		const log = zoneProverBatchLog
+		const decoded = decodeEventLog({
+			abi: zonePortalAbi,
+			data: log.data,
+			topics: [...log.topics],
+		})
+		expect(decoded).toMatchObject({
+			eventName: 'BatchSubmitted',
+			args: {
+				withdrawalBatchIndex: 177n,
+				withdrawalQueueIndex: 2n ** 256n - 1n,
+				withdrawalQueueHash: zeroHash,
+				lastProcessedDepositNumber: 2n,
+				lastProcessedEnabledTokenCount: 1n,
+			},
+		})
+		const [event] = parseKnownEvents(
+			mockReceipt(
+				[mockLog({ ...log, topics: [...log.topics] }, log.transactionHash)],
+				accountAddress,
+				log.transactionHash,
+			),
+			{ getTokenMetadata },
+		)
+		expect(event).toMatchObject({
+			type: 'zone batch submitted',
+			note: expect.arrayContaining([
+				['Batch Index', { type: 'number', value: 177n }],
+				['Last Processed Deposit', { type: 'number', value: 2n }],
+			]),
 		})
 	})
 
@@ -847,6 +885,86 @@ describe('parseKnownEvents', () => {
 			expect.soft(event?.type, abiEvent.name).toBe('earn event')
 			expect.soft(event?.parts[0]?.type, abiEvent.name).toBe('action')
 		}
+	})
+
+	it('composes a propAMM swap and hides its settlement transfers', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const amountIn = 10_000n
+		const amountOut = 11_449n
+
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+
+		const tradeLog = mockZoneEventLog(propAmmEventsAbi[0], PROP_AMM_POOL, {
+			taker: accountAddress,
+			recipient: recipientAddress,
+			tokenIn: userTokenAddress,
+			tokenOut: PROP_AMM_OUTPUT_TOKEN,
+			amountIn,
+			amountOut,
+		})
+		const events = parseKnownEvents(
+			mockReceipt(
+				[
+					transferLog(
+						userTokenAddress,
+						accountAddress,
+						PROP_AMM_POOL,
+						amountIn,
+					),
+					transferLog(
+						PROP_AMM_OUTPUT_TOKEN,
+						PROP_AMM_POOL,
+						recipientAddress,
+						amountOut,
+					),
+					tradeLog,
+				],
+				accountAddress,
+				hash,
+			),
+		)
+
+		expect(events).toEqual([
+			{
+				type: 'propamm swap',
+				parts: [
+					{ type: 'action', value: 'propAMM Swap' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(userTokenAddress),
+							value: amountIn,
+						},
+					},
+					{ type: 'text', value: 'for' },
+					{
+						type: 'amount',
+						value: {
+							token: Address.checksum(PROP_AMM_OUTPUT_TOKEN),
+							value: amountOut,
+						},
+					},
+				],
+			},
+		])
+		expect(parseKnownEvent(tradeLog)?.type).toBe('propamm swap')
 	})
 
 	it.each([

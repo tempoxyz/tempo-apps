@@ -9,9 +9,17 @@ const clientEnvSchema = z.object({
 	),
 })
 
-export const clientEnv = clientEnvSchema.parse(import.meta.env)
+export const clientEnv = clientEnvSchema.parse({
+	CONTRACT_VERIFICATION_API_BASE_URL: import.meta.env
+		.VITE_CONTRACT_VERIFICATION_API_BASE_URL,
+})
 
-export type TempoEnv = 'testnet' | 'mainnet' | 'devnet' | 'nextfork'
+export type TempoEnv =
+	| 'testnet'
+	| 'mainnet'
+	| 'devnet'
+	| 'nextfork'
+	| 'zone-prover'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -19,6 +27,12 @@ export function inferTempoEnvFromHostname(
 	if (!hostname) return undefined
 
 	const host = hostname.toLowerCase()
+
+	if (
+		host.includes('explorer-zone-prover') ||
+		host === 'explore.zone-prover.devnet.tempo.xyz'
+	)
+		return 'zone-prover'
 
 	if (
 		host.includes('explorer-mainnet') ||
@@ -60,7 +74,10 @@ export function inferTempoEnvFromHostname(
 }
 
 function normalizeTempoEnv(value: string | undefined): TempoEnv {
-	return value === 'mainnet' || value === 'devnet' || value === 'nextfork'
+	return value === 'mainnet' ||
+		value === 'devnet' ||
+		value === 'nextfork' ||
+		value === 'zone-prover'
 		? value
 		: 'testnet'
 }

@@ -14,14 +14,7 @@ import {
 } from '#lib/queries/balance-changes'
 
 export function TxBalanceChanges(props: TxBalanceChanges.Props) {
-	const { data, page } = props
-
-	if (data.total === 0)
-		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
-				No balance changes for this transaction.
-			</div>
-		)
+	const { data, loading = false, page } = props
 
 	const cols: DataGrid.Column[] = [
 		{ label: 'Address', align: 'start', width: '2fr', minWidth: 140 },
@@ -30,6 +23,13 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 		{ label: 'After', align: 'end', width: '2fr', minWidth: 160 },
 		{ label: 'Change', align: 'end', width: '2fr', minWidth: 160 },
 	]
+
+	if (data.total === 0 && !loading)
+		return (
+			<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
+				No balance changes for this transaction.
+			</div>
+		)
 
 	return (
 		<DataGrid
@@ -73,6 +73,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 			itemsLabel="changes"
 			itemsPerPage={LIMIT}
 			emptyState="No balance changes detected."
+			loading={loading}
 			pagination="simple"
 			showSimpleCount={false}
 		/>
@@ -82,6 +83,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 export namespace TxBalanceChanges {
 	export interface Props {
 		data: BalanceChangesData
+		loading?: boolean | undefined
 		page: number
 	}
 
@@ -91,7 +93,7 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				className="text-base-content-positive press-down inline-flex items-center gap-1 font-mono"
+				className="text-base-content-positive press-down inline-flex items-center gap-1 font-sans"
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
@@ -124,7 +126,14 @@ export namespace TxBalanceChanges {
 		const raw = Value.format(value, metadata.decimals)
 		const formatted = PriceFormatter.formatAmount(raw)
 
-		return <span className="text-secondary font-mono">{formatted}</span>
+		return (
+			<span
+				className="text-secondary font-sans min-w-0 truncate tabular-nums"
+				title={formatted}
+			>
+				{formatted}
+			</span>
+		)
 	}
 
 	export namespace BalanceCell {
@@ -153,9 +162,14 @@ export namespace TxBalanceChanges {
 		return (
 			<span
 				className={cx(
-					'font-mono',
-					isPositive ? 'text-base-content-positive' : undefined,
+					'font-sans min-w-0 truncate tabular-nums',
+					isPositive
+						? 'text-base-content-positive'
+						: diff < 0n
+							? 'text-base-content-negative'
+							: undefined,
 				)}
+				title={formatted}
 			>
 				{formatted}
 			</span>

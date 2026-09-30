@@ -7,9 +7,9 @@ catalog:
   '@biomejs/biome': ^2.4.10
   '@cloudflare/codemode': ^0.4.1
   '@cloudflare/puppeteer': ^1.0.6
-  '@cloudflare/vite-plugin': 1.30.3
+  '@cloudflare/vite-plugin': 1.61.0
   '@cloudflare/vitest-pool-workers': ^0.13.5
-  '@cloudflare/workers-types': ^4.20260531.1
+  '@cloudflare/workers-types': ^5.20260926.1
   '@datadog/browser-rum-slim': ^7.2.0
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.460
@@ -19,6 +19,8 @@ catalog:
   '@logtape/logtape': ^2.0.4
   '@logtape/pretty': ^2.0.4
   '@logtape/redaction': ^2.0.4
+  '@pierre/diffs': 1.2.0
+  '@pierre/trees': 1.0.0-beta.6
   '@sentry/cloudflare': ^10.44.0
   '@sentry/react': ^10.44.0
   '@sentry/vite-plugin': ^5.1.1
@@ -46,9 +48,9 @@ catalog:
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
-  '@wagmi/core': ^3.4.8
+  '@wagmi/core': ^3.6.5
   '@modelcontextprotocol/sdk': 1.29.0
-  accounts: ~0.14.9
+  accounts: ~0.18.0
   abitype: ^1.2.4
   ai: 6.0.202
   animejs: ^4.3.6
@@ -62,11 +64,13 @@ catalog:
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
+  lucide-react: ^1.48.0
   midcut: ^0.2.0
   ox: ^0.14.20
   prool: ^0.2.4
   react: ^19.2.5
   react-dom: ^19.2.5
+  regen-ui: 0.5.0
   rollup-plugin-visualizer: ^7.0.1
   shiki: ^4.0.2
   sonda: ^0.11.1
@@ -79,12 +83,12 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
-  viem: ^2.55.0
+  viem: ^2.56.0
   vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
-  wagmi: ^3.6.9
-  wrangler: ^4.95.0
+  wagmi: ^3.7.7
+  wrangler: ^4.131.0
   zod: ^4.3.6
 
 catalogMode: strict
@@ -97,6 +101,7 @@ ignoredBuiltDependencies:
   - cadent
   - cbor-extract
   - cpu-features
+  - es5-ext
   - protobufjs
   - sharp
   - ssh2
@@ -128,9 +133,17 @@ minimumReleaseAgeExclude:
   - '@cloudflare/containers'
 
 overrides:
+  # sharp 0.35.4 bundles libheif 1.23.2 (GHSA-rgj7-g3m4-5g8c).
+  'sharp@<0.35.4': 0.35.4
+  # Patch vulnerable transitive serializers and HTTP clients without changing majors.
+  'seroval@<1.5.4': 1.5.4
+  'undici@>=7 <7.29.1': 7.29.1
+  # Regen 0.5 uses the preview OTP export renamed in Base UI 1.6.
+  regen-ui>@base-ui/react: 1.4.0
   basic-ftp: 5.3.0
   flatted: ^3.4.2
-  tar: ^7.5.13
+  'shell-quote@<1.9.0': 1.9.0
+  tar: ^7.5.19
   picomatch@<3: ^2.3.2
   picomatch@>=4: ^4.0.4
   lodash: ^4.18.1
@@ -140,7 +153,7 @@ overrides:
   protobufjs: 7.5.5
 
 patchedDependencies:
-  '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
+  '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
 
 strictDepBuilds: true
 

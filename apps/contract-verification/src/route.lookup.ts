@@ -1,7 +1,8 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { Address, Hex } from 'ox'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
-import { keccak256 } from 'viem'
+import { createPublicClient, keccak256 } from 'viem'
+import { Addresses } from 'viem/tempo'
 
 import {
 	codeTable,
@@ -18,6 +19,8 @@ import {
 } from '#database/schema.ts'
 import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
+import { createRpcTransport } from '#lib/rpc.ts'
+import { staticChains } from '#wagmi.config.ts'
 import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -509,6 +512,74 @@ async function getNativeLookupResponse(
 	return { minimalResponse, fullResponse }
 }
 
+async function getDynamicNativeLookupResponse(
+	context: Context<AppEnv>,
+	chainId: number,
+	address: string,
+) {
+	const normalizedAddress = address.toLowerCase() as `0x${string}`
+	const isTip20 = /^0x20c000000000000000000000[0-9a-f]{16}$/.test(
+		normalizedAddress,
+	)
+	const isZonePortal =
+		/^0x5ad000000000000000000000[0-9a-f]{16}$/.test(normalizedAddress) &&
+		BigInt(`0x${normalizedAddress.slice(-16)}`) > 0n &&
+		BigInt(`0x${normalizedAddress.slice(-16)}`) <= 0xffffffffn
+	if (!isTip20 && !isZonePortal) return null
+
+	// Dynamic registry entries may be non-Tempo chains. Only use source snapshots
+	// seeded for the static Tempo networks, never a prefix match on arbitrary EVMs.
+	const chain = staticChains.find((candidate) => candidate.id === chainId)
+	if (!chain) return null
+
+	const template = await getNativeLookupResponse(
+		getDb(context.env.CONTRACTS_DB),
+		chainId,
+		Hex.toBytes(
+			isTip20 ? Addresses.pathUsd : Addresses.zonePortalImplementation,
+		),
+	)
+	if (!template) return null
+
+	const client = createPublicClient({
+		chain,
+		transport: createRpcTransport(undefined, chainId, context.env),
+	})
+	// TIP-20s carry the native marker; ZoneFactory installs an ERC-1167 proxy
+	// targeting the shared implementation. A reserved prefix alone proves neither.
+	const expectedCode = isTip20
+		? '0xef'
+		: `0x363d3d373d3d3d363d73${Addresses.zonePortalImplementation.slice(2).toLowerCase()}5af43d82803e903d91602b57fd5bf3`
+	if ((await client.getCode({ address: normalizedAddress })) !== expectedCode)
+		return null
+
+	const minimalResponse = {
+		...template.minimalResponse,
+		matchId: `native:native:${isTip20 ? 'tip20' : 'zone-portal'}:${chainId}:${normalizedAddress}`,
+		address: normalizedAddress,
+	}
+	return {
+		minimalResponse,
+		fullResponse: {
+			...template.fullResponse,
+			...minimalResponse,
+			...(isZonePortal
+				? {
+						name: `Zone Portal Proxy #${BigInt(`0x${normalizedAddress.slice(-16)}`)}`,
+					}
+				: {}),
+			deployment: {
+				chainId: String(chainId),
+				address: normalizedAddress,
+				transactionHash: null,
+				blockNumber: null,
+				transactionIndex: null,
+				deployer: null,
+			},
+		},
+	}
+}
+
 /**
  * GET /v2/contract/{chainId}/{address}
  * GET /v2/contract/all-chains/{address}
@@ -716,11 +787,13 @@ lookupRoute
 
 			const [row] = results
 			if (!row) {
-				const nativeLookup = await getNativeLookupResponse(
-					db,
-					chainIdNumber,
-					addressBytes,
-				)
+				const nativeLookup =
+					(await getNativeLookupResponse(db, chainIdNumber, addressBytes)) ??
+					(await getDynamicNativeLookupResponse(
+						context,
+						chainIdNumber,
+						address,
+					))
 				if (nativeLookup) {
 					return context.json(
 						applyFieldSelection(

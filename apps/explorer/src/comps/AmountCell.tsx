@@ -10,7 +10,7 @@ export function AmountCell(props: {
 	const { value, decimals = 18, symbol } = props
 	const formatted = PriceFormatter.formatAmount(formatUnits(value, decimals))
 	return (
-		<span className="text-[12px] text-primary">
+		<span className="label-12 text-primary">
 			{formatted} {symbol}
 		</span>
 	)
@@ -69,7 +69,7 @@ export function TransferAmountCell(props: {
 			type="button"
 			title="Toggle currency/token amounts"
 			className={cx(
-				'text-[12px] cursor-pointer tabular-nums',
+				'label-12 cursor-pointer tabular-nums',
 				direction === 'out'
 					? 'text-negative'
 					: direction === 'in'
@@ -92,5 +92,5 @@ export function BalanceCell(props: { balance: string; decimals?: number }) {
 	const formatted = PriceFormatter.formatAmount(
 		formatUnits(BigInt(balance), decimals),
 	)
-	return <span className="text-[12px] text-primary">{formatted}</span>
+	return <span className="label-12 text-primary">{formatted}</span>
 }

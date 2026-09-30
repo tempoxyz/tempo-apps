@@ -74,7 +74,7 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 
 	return (
 		<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
-			<div className="bg-distinct rounded-[6px] overflow-hidden w-full min-w-0">
+			<div className="bg-distinct rounded-body overflow-hidden w-full min-w-0">
 				<TxDecodedTopics.SignatureHeader abiItem={abiItem} />
 				<TxDecodedTopics.ArgumentsSection
 					abiItem={abiItem}
@@ -110,7 +110,7 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="flex items-start justify-between px-[10px] py-[8px] border-b border-card-border gap-[8px]">
-				<code className="text-[11px] text-primary font-mono break-all">
+				<code className="label-12 text-primary font-mono break-all">
 					<span className="text-tertiary">Name </span>
 					<span className="text-base-content-positive">{abiItem.name}</span>
 					<span className="text-secondary"> (</span>
@@ -129,7 +129,7 @@ export namespace TxDecodedTopics {
 					<span className="text-secondary">)</span>
 				</code>
 				<div className="flex items-center gap-[4px] text-tertiary shrink-0">
-					{notifying && <span className="text-[11px] select-none">copied</span>}
+					{notifying && <span className="label-12 select-none">copied</span>}
 					<button
 						type="button"
 						className="press-down cursor-pointer hover:text-secondary p-[4px]"
@@ -156,12 +156,12 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="px-[10px] py-[8px]">
-				<div className="text-[11px] text-tertiary mb-[6px] flex items-center gap-[6px]">
+				<div className="label-12 text-tertiary mb-[6px] flex items-center gap-[6px]">
 					<span>Arguments</span>
 					<button
 						type="button"
 						onClick={() => setShowRaw(!showRaw)}
-						className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[8px] py-[2px] cursor-pointer press-down"
+						className="label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[8px] py-[2px] cursor-pointer press-down"
 					>
 						{showRaw ? 'raw' : 'decoded'}
 					</button>
@@ -216,7 +216,7 @@ export namespace TxDecodedTopics {
 				onClick={() => copy(displayValue)}
 				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[4px] -mx-[4px]"
 			>
-				<span className="text-[11px] text-tertiary whitespace-pre">
+				<span className="label-12 text-tertiary whitespace-pre">
 					{notifying ? (
 						<span className="text-primary">
 							{'copied'.padEnd(label.length + 1)}
@@ -225,7 +225,7 @@ export namespace TxDecodedTopics {
 						<>{label}:</>
 					)}
 				</span>
-				<span className="text-[11px] text-primary font-mono break-all min-w-0">
+				<span className="label-12 text-primary font-mono break-all min-w-0">
 					{displayValue}
 				</span>
 			</button>
@@ -244,7 +244,7 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div>
-				<div className="text-[11px] text-tertiary mb-[4px]">
+				<div className="label-12 text-tertiary mb-[4px]">
 					{notifying ? <span className="text-primary">copied</span> : 'Data'}
 				</div>
 				<button
@@ -252,7 +252,7 @@ export namespace TxDecodedTopics {
 					onClick={() => copy(data)}
 					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
 				>
-					<span className="text-[11px] text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
+					<span className="label-12 text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
 						{data}
 					</span>
 				</button>
@@ -270,13 +270,13 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
-				<div className="bg-distinct rounded-[6px] overflow-hidden w-full min-w-0">
+				<div className="bg-distinct rounded-body overflow-hidden w-full min-w-0">
 					<div className="px-[10px] py-[8px] border-b border-card-border">
-						<span className="text-[11px] text-tertiary">Raw event</span>
+						<span className="label-12 text-tertiary">Raw event</span>
 					</div>
 					<div className="divide-y divide-card-border">
 						<div className="px-[10px] py-[8px] min-w-0">
-							<div className="text-[11px] text-tertiary mb-[6px]">Topics</div>
+							<div className="label-12 text-tertiary mb-[6px]">Topics</div>
 							<div className="flex flex-col gap-[4px]">
 								{log.topics.map((topic, i) => (
 									<RawTopicRow key={topic} index={i} topic={topic} />
@@ -307,14 +307,14 @@ export namespace TxDecodedTopics {
 				onClick={() => copy(topic)}
 				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px]"
 			>
-				<span className="text-[11px] text-tertiary shrink-0">
+				<span className="label-12 text-tertiary shrink-0">
 					{notifying ? (
 						<span className="text-primary">copied</span>
 					) : (
 						`topic[${index}]`
 					)}
 				</span>
-				<span className="text-[11px] text-primary font-mono break-all min-w-0">
+				<span className="label-12 text-primary font-mono break-all min-w-0">
 					{topic}
 				</span>
 			</button>
@@ -333,7 +333,7 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="px-[10px] py-[8px] min-w-0">
-				<div className="text-[11px] text-tertiary mb-[6px]">
+				<div className="label-12 text-tertiary mb-[6px]">
 					{notifying ? <span className="text-primary">copied</span> : 'Data'}
 				</div>
 				<button
@@ -341,7 +341,7 @@ export namespace TxDecodedTopics {
 					onClick={() => copy(data)}
 					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
 				>
-					<span className="text-[11px] text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
+					<span className="label-12 text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
 						{data}
 					</span>
 				</button>

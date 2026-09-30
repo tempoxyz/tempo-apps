@@ -10,25 +10,37 @@ export function TokenIcon(props: TokenIcon.Props) {
 	const fallbackSrc = `/api/token/logo/${address}`
 	const primarySrc = resolveLogoURI(logoURI)
 	const [src, setSrc] = React.useState(primarySrc ?? fallbackSrc)
+	const imageRef = React.useRef<HTMLImageElement>(null)
+	const handleError = React.useCallback(
+		(failedSrc: string) => {
+			setSrc((current) => {
+				// Ignore stale errors after a token change, and never retry a
+				// failed fallback asset in a loop.
+				if (current !== failedSrc || current === TOKEN_ICON_FALLBACK_SRC)
+					return current
+				return current === fallbackSrc ? TOKEN_ICON_FALLBACK_SRC : fallbackSrc
+			})
+		},
+		[fallbackSrc],
+	)
 
 	React.useEffect(() => {
 		setSrc(primarySrc ?? fallbackSrc)
 	}, [primarySrc, fallbackSrc])
 
+	React.useEffect(() => {
+		// An SSR image can fail before React attaches its onError listener.
+		const image = imageRef.current
+		if (image?.complete && image.naturalWidth === 0) handleError(src)
+	}, [src, handleError])
+
 	return (
 		<img
+			ref={imageRef}
 			src={src}
 			alt=""
 			className={cx('size-4 rounded-full shrink-0', className)}
-			onError={() => {
-				if (src !== fallbackSrc) {
-					setSrc(fallbackSrc)
-					return
-				}
-				if (src !== TOKEN_ICON_FALLBACK_SRC) {
-					setSrc(TOKEN_ICON_FALLBACK_SRC)
-				}
-			}}
+			onError={() => handleError(src)}
 		/>
 	)
 }

@@ -205,9 +205,7 @@ export function ContractReader(props: {
 			))}
 
 			{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
-				<p className="text-[13px] text-tertiary">
-					No read functions available.
-				</p>
+				<p className="copy-13 text-tertiary">No read functions available.</p>
 			)}
 		</div>
 	)
@@ -240,7 +238,7 @@ function ReadResult(props: { className?: string; value: string }) {
 	return (
 		<div
 			className={cx(
-				'text-primary text-[13px] font-mono leading-[20px] whitespace-pre overflow-x-auto',
+				'min-w-0 flex-1 text-primary copy-13 font-mono whitespace-pre overflow-x-auto',
 				className,
 			)}
 		>
@@ -351,13 +349,13 @@ function StaticReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="flex flex-col rounded-[8px] border border-card-border bg-surface overflow-hidden"
+			className="flex flex-col rounded-body border border-card-border bg-surface overflow-hidden"
 		>
 			<div className="flex items-center justify-between gap-[8px]">
-				<span className="text-[12px] text-secondary font-mono py-[10px] pl-[12px]">
+				<span className="min-w-0 flex-1 label-12 text-secondary font-mono py-[10px] pl-[12px] [overflow-wrap:anywhere]">
 					{getFunctionDisplaySignature(fn)}
 				</span>
-				<div className="flex items-center pl-[12px]">
+				<div className="flex shrink-0 items-center pl-[12px]">
 					<button
 						type="button"
 						onClick={handleCopyMethod}
@@ -402,11 +400,9 @@ function StaticReadFunction(props: {
 			<div className="border-t border-card-border px-[12px] py-[10px] flex">
 				<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
 				{isFetching || isLoading ? (
-					<div className="text-[13px] text-secondary leading-[20px]">
-						{ellipsis}
-					</div>
+					<div className="copy-13 text-secondary ">{ellipsis}</div>
 				) : isValidAddress ? (
-					<div className="text-[13px] leading-[20px]">
+					<div className="min-w-0 copy-13 break-all">
 						<Link
 							to="/address/$address"
 							params={{ address: result as Address.Address }}
@@ -417,7 +413,7 @@ function StaticReadFunction(props: {
 					</div>
 				) : (
 					<ReadResult
-						className={cx(error ? 'text-red-400' : 'text-primary')}
+						className={cx(error ? 'text-negative' : 'text-primary')}
 						value={displayValue}
 					/>
 				)}
@@ -556,19 +552,21 @@ function DynamicReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="rounded-[8px] border border-card-border bg-surface overflow-hidden"
+			className="rounded-body border border-card-border bg-surface overflow-hidden"
 		>
 			<div className="w-full flex items-center justify-between">
 				<button
 					type="button"
+					aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
+					aria-expanded={isExpanded}
 					onClick={() => setIsExpanded(!isExpanded)}
-					className="flex-1 text-left h-full py-[10px] pl-[12px] cursor-pointer press-down focus-visible:-outline-offset-2! focus-visible:rounded-l-[8px]!"
+					className="min-w-0 flex-1 text-left h-full py-[10px] pl-[12px] cursor-pointer press-down focus-visible:-outline-offset-2! focus-visible:rounded-l-body!"
 				>
-					<span className="text-[12px] text-secondary font-mono">
+					<span className="block label-12 text-secondary font-mono [overflow-wrap:anywhere]">
 						{getFunctionDisplaySignature(fn)}
 					</span>
 				</button>
-				<div className="flex items-center pl-[12px]">
+				<div className="flex shrink-0 items-center pl-[12px]">
 					<button
 						type="button"
 						onClick={handleCopyMethod}
@@ -611,6 +609,8 @@ function DynamicReadFunction(props: {
 					</button>
 					<button
 						type="button"
+						aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
+						aria-expanded={isExpanded}
 						onClick={() => setIsExpanded(!isExpanded)}
 						className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
 					>
@@ -638,9 +638,7 @@ function DynamicReadFunction(props: {
 					{isFetching && (
 						<div className="flex">
 							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							<p className="text-[13px] text-secondary leading-[20px]">
-								{ellipsis}
-							</p>
+							<p className="copy-13 text-secondary ">{ellipsis}</p>
 						</div>
 					)}
 
@@ -648,11 +646,9 @@ function DynamicReadFunction(props: {
 						<div className="flex">
 							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
 							{error ? (
-								<p className="text-[13px] break-all leading-[20px] text-red-400">
-									{error}
-								</p>
+								<p className="copy-13 break-all text-negative">{error}</p>
 							) : (
-								<pre className="text-[13px] leading-[20px] text-primary whitespace-pre overflow-x-auto font-mono">
+								<pre className="min-w-0 flex-1 copy-13 text-primary whitespace-pre overflow-x-auto font-mono">
 									{formatOutputValue(result, outputType)}
 								</pre>
 							)}
@@ -692,7 +688,7 @@ function FunctionInput(props: {
 						onChange(event.target.checked ? 'true' : 'false')
 					}
 				/>
-				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+				<label htmlFor={inputId} className="label-12 text-primary font-sans">
 					{input.name || 'value'}{' '}
 					<span className="text-secondary">({input.type})</span>
 				</label>
@@ -704,7 +700,7 @@ function FunctionInput(props: {
 	if (inputType === 'textarea' || isArrayType(input.type)) {
 		return (
 			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+				<label htmlFor={inputId} className="label-12 text-primary font-sans">
 					{input.name || 'value'}{' '}
 					<span className="text-secondary">({input.type})</span>
 				</label>
@@ -713,7 +709,7 @@ function FunctionInput(props: {
 					id={inputId}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
 				/>
 			</div>
 		)
@@ -722,7 +718,7 @@ function FunctionInput(props: {
 	// Standard text input
 	return (
 		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+			<label htmlFor={inputId} className="label-12 text-primary font-sans">
 				{input.name || 'value'}{' '}
 				<span className="text-secondary">({input.type})</span>
 			</label>
@@ -735,7 +731,7 @@ function FunctionInput(props: {
 				id={inputId}
 				placeholder={placeholder}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
 			/>
 		</div>
 	)

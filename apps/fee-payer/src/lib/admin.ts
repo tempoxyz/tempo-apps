@@ -24,6 +24,10 @@ admin.use('*', async (c, next) => {
 			503,
 		)
 	}
+	if (!env.ADMIN_SECRET) {
+		console.error('ADMIN_SECRET is not configured')
+		return c.json({ error: 'Service misconfigured' }, 503)
+	}
 	const auth = c.req.header('Authorization')
 	if (!auth || auth !== `Bearer ${env.ADMIN_SECRET}`) {
 		return c.json({ error: 'Unauthorized' }, 401)

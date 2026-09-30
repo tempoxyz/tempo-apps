@@ -11,7 +11,12 @@ import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { autoloadAbi, getContractAbi } from '#lib/domain/contracts.ts'
+import {
+	autoloadAbi,
+	getContractAbi,
+	isInferredAbi,
+	resolveInteractAbi,
+} from '#lib/domain/contracts.ts'
 import {
 	detectProxy,
 	type ProxyInfo,
@@ -33,6 +38,17 @@ const proxyTypeUrls: Record<ProxyType, string> = {
 
 function proxyTypeUrl(type: ProxyType | undefined): string {
 	return type ? proxyTypeUrls[type] : proxyTypeUrls['EIP-1967']
+}
+
+function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
+	if (!isInferredAbi(abi)) return null
+	return (
+		<p className="px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
+			Inferred ABI: function names, read/write classifications, and return types
+			may be incomplete or incorrect. Verify the contract source for an accurate
+			ABI.
+		</p>
+	)
 }
 
 /**
@@ -66,8 +82,8 @@ export function ContractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
-				<p className="text-sm font-medium text-tertiary">
+			<div className="rounded-body bg-card-header p-[18px] h-full">
+				<p className="copy-14 font-medium text-tertiary">
 					{props.isLoadingContractInfo
 						? `Loading contract information${ellipsis}`
 						: 'No ABI available for this contract.'}
@@ -80,7 +96,7 @@ export function ContractTabContent(props: {
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
 			{/* TIP-20 Banner */}
 			{isTip20 && (
-				<div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
+				<div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] px-[16px] py-[10px] copy-13 text-secondary border-b border-solid border-distinct">
 					<span className="whitespace-nowrap">TIP-20 Native Precompile</span>
 					<span className="text-tertiary">·</span>
 					<a
@@ -106,6 +122,7 @@ export function ContractTabContent(props: {
 			{source && <SourceSection {...source} docsUrl={docsUrl} />}
 
 			{/* ABI Section */}
+			<InferredAbiNotice abi={abi} />
 			<CollapsibleSection
 				first={!isTip20}
 				title={<span title="Contract ABI">ABI</span>}
@@ -113,9 +130,7 @@ export function ContractTabContent(props: {
 				onToggle={() => setAbiExpanded(!abiExpanded)}
 				actions={
 					<>
-						{copiedAbi && (
-							<span className="text-[11px] select-none">copied</span>
-						)}
+						{copiedAbi && <span className="label-12 select-none">copied</span>}
 						<button
 							type="button"
 							onClick={handleCopyAbi}
@@ -137,7 +152,7 @@ export function ContractTabContent(props: {
 								href={docsUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="text-[11px] text-accent hover:underline press-down inline-flex items-center gap-[4px]"
+								className="label-12 text-accent hover:underline press-down inline-flex items-center gap-[4px]"
 							>
 								Docs
 								<ExternalLinkIcon className="size-[12px]" />
@@ -169,7 +184,7 @@ export function CollapsibleSection(props: {
 	const { title, expanded, onToggle, actions, children, first } = props
 
 	return (
-		<div className="flex flex-col border-b border-dashed border-distinct">
+		<div className="flex flex-col border-b border-solid border-distinct">
 			<div className="flex items-center h-auto py-[6px] shrink-0">
 				<button
 					type="button"
@@ -177,11 +192,11 @@ export function CollapsibleSection(props: {
 					className={cx(
 						'flex items-center gap-[8px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2! py-[6px]',
 						actions ? 'pr-[12px]' : 'flex-1 pr-[16px]',
-						first && 'focus-visible:rounded-tl-[8px]!',
-						first && !actions && 'focus-visible:rounded-tr-[8px]!',
+						first && 'focus-visible:rounded-tl-body!',
+						first && !actions && 'focus-visible:rounded-tr-body!',
 					)}
 				>
-					<span className="text-[14px] text-tertiary whitespace-nowrap font-sans">
+					<span className="copy-14 text-tertiary whitespace-nowrap font-sans">
 						{title}
 					</span>
 					<ChevronDownIcon
@@ -229,7 +244,7 @@ function BytecodeSection(props: { address: Address.Address }) {
 			onToggle={() => setExpanded(!expanded)}
 			actions={
 				<>
-					{notifying && <span className="text-[11px] select-none">copied</span>}
+					{notifying && <span className="label-12 select-none">copied</span>}
 					<button
 						type="button"
 						onClick={handleCopy}
@@ -251,7 +266,7 @@ function BytecodeSection(props: { address: Address.Address }) {
 		>
 			<div className="max-h-[280px] overflow-auto px-[18px] py-[12px]">
 				<pre
-					className="text-[12px] leading-[18px] text-primary break-all whitespace-pre-wrap"
+					className="label-12 text-primary break-all whitespace-pre-wrap"
 					suppressHydrationWarning
 				>
 					{bytecode ?? `Loading${ellipsis}`}
@@ -313,16 +328,16 @@ export function InteractTabContent(props: {
 		void loadProxyInfo()
 	}, [publicClient, address])
 
-	// For proxies, prefer implementation ABI so users see callable functions
-	const abi =
-		(implAbi && implAbi.length > 0 ? implAbi : null) ??
-		props.abi ??
-		getContractAbi(address)
+	const abi = resolveInteractAbi({
+		address,
+		abi: props.abi,
+		implementationAbi: implAbi,
+	})
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
-				<p className="text-sm font-medium text-tertiary">
+			<div className="rounded-body bg-card-header p-[18px] h-full">
+				<p className="copy-14 font-medium text-tertiary">
 					Loading contract information{ellipsis}
 				</p>
 			</div>
@@ -331,8 +346,8 @@ export function InteractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
-				<p className="text-sm font-medium text-tertiary">
+			<div className="rounded-body bg-card-header p-[18px] h-full">
+				<p className="copy-14 font-medium text-tertiary">
 					No ABI available for this contract.
 				</p>
 			</div>
@@ -347,12 +362,12 @@ export function InteractTabContent(props: {
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
 			{/* Proxy Info Banner */}
 			{isProxy && implementationAddress && (
-				<div className="flex items-center gap-[8px] px-[16px] py-[10px] bg-accent/10 border-b border-dashed border-distinct text-[13px]">
+				<div className="flex items-center gap-[8px] px-[16px] py-[10px] bg-accent/10 border-b border-solid border-distinct copy-13">
 					<a
 						href={proxyTypeUrl(proxyInfo?.type)}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-accent/20 text-accent hover:bg-accent/30 rounded text-[11px] font-medium transition-colors"
+						className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-accent/20 text-accent hover:bg-accent/30 rounded label-12 font-medium transition-colors"
 					>
 						{proxyInfo?.type} Proxy
 						<ExternalLinkIcon className="size-[10px]" />
@@ -362,7 +377,7 @@ export function InteractTabContent(props: {
 						to="/address/$address"
 						params={{ address: implementationAddress }}
 						search={{ tab: 'interact' }}
-						className="font-mono text-[12px] text-accent hover:underline"
+						className="font-mono label-12 text-accent hover:underline"
 					>
 						{implementationAddress.slice(0, 10)}...
 						{implementationAddress.slice(-8)}
@@ -371,6 +386,7 @@ export function InteractTabContent(props: {
 			)}
 
 			{/* Write Contract Section (Implementation functions via proxy) */}
+			<InferredAbiNotice abi={abi} />
 			<CollapsibleSection
 				first={!isProxy}
 				title={isProxy ? 'Write (via Proxy)' : 'Write'}
@@ -401,16 +417,17 @@ export function InteractTabContent(props: {
 					expanded={proxyFunctionsExpanded}
 					onToggle={() => setProxyFunctionsExpanded(!proxyFunctionsExpanded)}
 					actions={
-						<span className="text-[11px] text-secondary">
+						<span className="label-12 text-secondary">
 							Direct proxy functions
 						</span>
 					}
 				>
 					<div className="px-[10px] pb-[10px] flex flex-col gap-[12px]">
-						<div className="text-[12px] text-secondary px-[6px] py-[4px] bg-amber-500/10 rounded border border-amber-500/20">
+						<div className="label-12 text-secondary px-[6px] py-[4px] bg-warning-subtle rounded border border-warning">
 							These are functions defined on the proxy contract itself, not the
 							implementation.
 						</div>
+						<InferredAbiNotice abi={proxyAbi} />
 						<ContractReader address={address} abi={proxyAbi} />
 						<ContractWriter address={address} abi={proxyAbi} />
 					</div>

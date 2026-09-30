@@ -25,6 +25,7 @@ const KNOWN_ROLES: Record<string, Hex.Hex> = {
 	UNPAUSE_ROLE: Hash.keccak256(Hex.fromString('UNPAUSE_ROLE')),
 	ISSUER_ROLE: Hash.keccak256(Hex.fromString('ISSUER_ROLE')),
 	BURN_BLOCKED_ROLE: Hash.keccak256(Hex.fromString('BURN_BLOCKED_ROLE')),
+	BURN_AT_ROLE: Hash.keccak256(Hex.fromString('BURN_AT_ROLE')),
 }
 
 const ROLE_HASH_TO_NAME = new Map<string, string>(
@@ -118,11 +119,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 								: null,
 						currency: currency ?? null,
 						transferPolicyId:
-							transferPolicyId !== undefined
-								? transferPolicyId === 0n
-									? '0 (none)'
-									: String(transferPolicyId)
-								: null,
+							transferPolicyId !== undefined ? String(transferPolicyId) : null,
 						paused: paused ?? null,
 						decimals: decimals ?? null,
 						symbol: symbol ?? null,
@@ -152,6 +149,11 @@ export const Route = createFileRoute('/api/tip20-roles')({
 							.orderBy('log_idx', 'asc')
 							.limit(ROLE_LOG_SCAN_LIMIT)
 							.execute()
+
+						// A bounded history cannot establish current holders once it fills up.
+						if (roleLogs.length === ROLE_LOG_SCAN_LIMIT) {
+							throw new Error('Role history exceeds the scan limit')
+						}
 
 						const holders = new Map<string, boolean>()
 						const grantMeta = new Map<

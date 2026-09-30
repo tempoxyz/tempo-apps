@@ -51,15 +51,23 @@ export function accountTransfersQueryOptions(params: {
 	account: Address.Address
 	page: number
 	limit: number
+	direction?: 'in' | 'out' | undefined
 }) {
 	return queryOptions({
-		queryKey: ['account-transfers', params.account, params.page, params.limit],
+		queryKey: [
+			'account-transfers',
+			params.account,
+			params.page,
+			params.limit,
+			params.direction,
+		],
 		queryFn: async () => {
 			const data = await fetchAccountTransfers({
 				data: {
 					account: params.account,
 					page: params.page,
 					limit: params.limit,
+					direction: params.direction,
 				},
 			})
 			return data

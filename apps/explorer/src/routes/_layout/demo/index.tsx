@@ -19,8 +19,8 @@ export const Route = createFileRoute('/_layout/demo/')({
 
 function Component() {
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-4 pt-16 pb-8 grow">
-			<h1 className="text-tertiary uppercase">Demo</h1>
+		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-4 pt-16 pb-8 grow">
+			<h1 className="text-tertiary ">Demo</h1>
 			{demoPages.map((page) => (
 				<Link
 					key={page.path}

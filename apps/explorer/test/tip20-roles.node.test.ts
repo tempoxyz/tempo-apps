@@ -181,4 +181,35 @@ describe('TIP-20 roles API', () => {
 			consoleError.mockRestore()
 		}
 	})
+
+	it('does not present a capped role history as current permissions', async () => {
+		const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+		mocks.setQueryResult(Array.from({ length: 10_000 }, () => ({})))
+		try {
+			const response = await handler({ request: request() })
+			expect(response.headers.get('Cache-Control')).toBe('no-store')
+			expect(await response.json()).toMatchObject({
+				roles: [],
+				rolesUnavailable: true,
+			})
+		} finally {
+			consoleError.mockRestore()
+		}
+	})
+
+	it('preserves policy zero as a valid policy ID', async () => {
+		mocks.readContracts.mockResolvedValue([
+			{ result: 0n },
+			{ result: 'USD' },
+			{ result: 0n },
+			{ result: false },
+			{ result: 6 },
+			{ result: 'USD' },
+			{ result: 0n },
+		])
+		const response = await handler({ request: request() })
+		expect(await response.json()).toMatchObject({
+			config: { transferPolicyId: '0' },
+		})
+	})
 })

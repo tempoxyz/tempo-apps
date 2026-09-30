@@ -119,14 +119,14 @@ export function BlockCard(props: BlockCard.Props) {
 								<div className="relative flex items-center">
 									<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
 									{copyHash.notifying && (
-										<span className="absolute left-[calc(100%+8px)] leading-[16px]">
+										<span className="absolute left-[calc(100%+8px)] ">
 											copied
 										</span>
 									)}
 								</div>
 							</div>
 							{/* 22 chars/line * (1ch + 1px tracking) */}
-							<div className="type-card-data tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
+							<div className="font-mono copy-13 text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
 							</div>
 						</button>
@@ -160,7 +160,7 @@ export function BlockCard(props: BlockCard.Props) {
 					<BlockCard.InfoRow label="Confirmations">
 						<span
 							ref={confirmationsRef}
-							className="text-primary font-mono tabular-nums"
+							className="text-primary font-sans tabular-nums"
 						>
 							<span className="text-secondary">—</span>
 						</span>
@@ -186,11 +186,12 @@ export function BlockCard(props: BlockCard.Props) {
 						</button>
 
 						{showAdvanced && (
-							<div className="mt-[14px] space-y-[20px] pb-4">
+							// Contain inline size so full-length root hashes don't widen the card.
+							<div className="mt-[14px] space-y-[20px] pb-4 w-full [contain:inline-size]">
 								<div className="space-y-[12px]">
 									<div className="flex items-center justify-between">
 										<span className="text-secondary">Gas Usage</span>
-										<span className="text-primary font-mono tabular-nums">
+										<span className="text-primary font-sans tabular-nums">
 											{gasUsage !== undefined
 												? `${gasUsage.toFixed(2)}%`
 												: '0.00%'}
@@ -204,7 +205,7 @@ export function BlockCard(props: BlockCard.Props) {
 											}}
 										/>
 									</div>
-									<div className="flex items-center justify-between text-tertiary font-mono tabular-nums">
+									<div className="flex items-center justify-between text-tertiary font-sans tabular-nums">
 										<BlockCard.GasValue value={gasUsed} />
 										<BlockCard.GasValue value={gasLimit} highlight={false} />
 									</div>
@@ -238,10 +239,10 @@ export namespace BlockCard {
 		const { label, value } = props
 		return (
 			<div className="w-full flex items-center justify-between">
-				<span className="text-[11px] uppercase text-tertiary bg-base-alt/65 px-[4px] py-[2px]">
+				<span className="label-12 text-tertiary bg-base-alt/65 px-[4px] py-[2px]">
 					{label}
 				</span>
-				<span className="text-right text-base-content-secondary font-mono">
+				<span className="text-right text-base-content-secondary font-sans tabular-nums">
 					{value}
 				</span>
 			</div>
@@ -260,9 +261,8 @@ export namespace BlockCard {
 		const str = String(value).padStart(15, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			// the 15px font size is used to set the same width as the block hash
-			<div className="text-[15px] max-w-[calc(22ch+22px)] font-mono">
-				<span className="flex justify-between gap-px text-[22px] text-tertiary select-none">
+			<div className="font-sans tabular-nums">
+				<span className="flex justify-between gap-px heading-24 text-tertiary select-none">
 					{str.split('').map((char, index) => (
 						<span
 							key={`${index}-${char}`}

@@ -14,7 +14,7 @@ export default defineConfig(async () => {
 	return {
 		test: {
 			setupFiles: ['./test/setup.ts'],
-			include: ['test/**/*.test.ts'],
+			include: ['test/**/*.test.ts', 'scripts/precompile-seed/*.test.ts'],
 			exclude: ['**/_/**'],
 		},
 		plugins: [

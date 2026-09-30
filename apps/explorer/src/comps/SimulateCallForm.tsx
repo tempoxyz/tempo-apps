@@ -186,7 +186,7 @@ export function SimulateCallForm(
 							}))
 							props.onStepChange(1)
 						}}
-						className="mt-[2px] w-fit border-dashed"
+						className="mt-[2px] w-fit border-solid"
 						title="Run several calls in order against each other's state, the way a Tempo batch transaction executes"
 					>
 						<PlusIcon className="size-[12px]" />
@@ -295,7 +295,7 @@ function LoadTransaction(props: {
 }): React.JSX.Element {
 	const id = React.useId()
 	return (
-		<div className="flex flex-col gap-[5px] rounded-[8px] border border-dashed border-card-border px-[10px] py-[9px]">
+		<div className="flex flex-col gap-[5px] rounded-body border border-solid border-card-border px-[10px] py-[9px]">
 			<label className="type-card text-tertiary" htmlFor={id}>
 				Replay an existing transaction
 			</label>
@@ -350,13 +350,13 @@ function StepTabs(props: {
 								onClick={() => props.onSelect(index)}
 								title={call.to || `Call ${index + 1}`}
 								className={cx(
-									'flex h-[28px] items-center gap-[6px] rounded-[6px] border px-[8px] type-card cursor-pointer press-down transition-colors',
+									'flex h-[28px] items-center gap-[6px] rounded-body border px-[8px] type-card cursor-pointer press-down transition-colors',
 									selected
 										? 'border-accent bg-accent/8 text-primary'
 										: 'border-card-border text-tertiary hover:text-secondary',
 								)}
 							>
-								<span className="flex size-[15px] shrink-0 items-center justify-center rounded-full bg-distinct text-[10px] text-tertiary">
+								<span className="flex size-[15px] shrink-0 items-center justify-center rounded-full bg-distinct label-12 text-tertiary">
 									{index + 1}
 								</span>
 								<span className="font-mono">
@@ -382,7 +382,7 @@ function StepTabs(props: {
 					type="button"
 					onClick={props.onAdd}
 					title="Add a call"
-					className="flex size-[26px] items-center justify-center rounded-[6px] border border-dashed border-card-border text-tertiary cursor-pointer press-down hover:border-accent hover:text-primary"
+					className="flex size-[26px] items-center justify-center rounded-body border border-solid border-card-border text-tertiary cursor-pointer press-down hover:border-accent hover:text-primary"
 				>
 					<PlusIcon className="size-[12px]" />
 				</button>
@@ -595,14 +595,14 @@ export function CalldataField(props: {
 			}
 		>
 			{mismatch && mode === 'decoded' && (
-				<div className="rounded-[6px] border border-warning/40 bg-warning-background px-[9px] py-[6px] type-card text-secondary">
+				<div className="rounded-body border border-warning/40 bg-warning-background px-[9px] py-[6px] type-card text-secondary">
 					This calldata doesn{'’'}t match any function in the contract{'’'}s ABI
 					— showing hex.
 				</div>
 			)}
 
 			{showDecoded ? (
-				<div className="flex flex-col gap-[9px] rounded-[6px] border border-card-border bg-base-plane p-[9px]">
+				<div className="flex flex-col gap-[9px] rounded-body border border-card-border bg-base-plane p-[9px]">
 					<select
 						value={selector}
 						onChange={(event) => {
@@ -685,7 +685,7 @@ export function CalldataField(props: {
 					))}
 
 					{data && data !== '0x' && (
-						<div className="flex items-center gap-[8px] border-t border-dashed border-card-border pt-[8px] type-card">
+						<div className="flex items-center gap-[8px] border-t border-solid border-card-border pt-[8px] type-card">
 							<span className="min-w-0 flex-1 truncate type-card-data text-tertiary">
 								{data}
 							</span>
@@ -787,7 +787,7 @@ export function OptionalRow(props: {
 		)
 
 	return (
-		<div className="flex flex-col gap-[8px] rounded-[8px] border border-card-border bg-card-header p-[9px]">
+		<div className="flex flex-col gap-[8px] rounded-body border border-card-border bg-card-header p-[9px]">
 			<div className="flex items-center gap-[8px]">
 				<span className="shrink-0 text-content-dimmed">{props.icon}</span>
 				<span className="type-card text-secondary">{props.label}</span>
