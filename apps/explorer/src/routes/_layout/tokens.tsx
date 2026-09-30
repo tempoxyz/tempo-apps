@@ -12,6 +12,7 @@ import {
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
+import { PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
@@ -85,6 +86,13 @@ function TokensPage() {
 		[holdersCountFormatter],
 	)
 
+	const formatLiquidity = React.useCallback((token: Token) => {
+		if (token.liquidity === undefined) return '-'
+		if (token.currency === 'USD')
+			return PriceFormatter.format(Number(token.liquidity), { format: 'short' })
+		return `${PriceFormatter.formatAmountShort(token.liquidity)} ${token.currency}`
+	}, [])
+
 	const prefetchNextPage = React.useCallback(() => {
 		const lastPage = Math.ceil(total / TOKENS_PER_PAGE)
 		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
@@ -118,6 +126,11 @@ function TokensPage() {
 			label: 'Currency',
 			align: 'start',
 			width: 110,
+		},
+		{
+			label: 'Liquidity',
+			align: 'start',
+			width: 130,
 		},
 		{
 			label: 'Holders',
@@ -212,7 +225,8 @@ function TokensPage() {
 													{token.name}
 												</span>
 												<span className="text-tertiary">
-													{token.currency} · {formatHoldersCount(token)} holders
+													{formatLiquidity(token)} · {formatHoldersCount(token)}{' '}
+													holders
 												</span>
 											</div>
 										)
@@ -241,6 +255,13 @@ function TokensPage() {
 															</span>,
 															<span key="currency" className="text-secondary">
 																{token.currency}
+															</span>,
+															<span
+																key="liquidity"
+																className="font-sans text-secondary"
+																title={token.liquidity}
+															>
+																{formatLiquidity(token)}
 															</span>,
 															<span
 																key="holders"

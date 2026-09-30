@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { parseResponse } from 'hono/client'
-import type { Address } from 'ox'
+import { type Address, Value } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getAccountTag } from '#lib/account'
@@ -16,6 +16,8 @@ export type Token = {
 	logoURI?: string | undefined
 	createdAt?: number | undefined
 	holdersCount?: number
+	/** Total supply as a decimal string in whole token units. */
+	liquidity?: string | undefined
 }
 
 const FetchTokensInputSchema = z.object({
@@ -30,6 +32,25 @@ export type TokensApiResponse = {
 
 function isGenesisTokenAddress(address: Address.Address): boolean {
 	return getAccountTag(address)?.id.startsWith('genesis-token:') ?? false
+}
+
+/**
+ * Order tokens by liquidity (total supply), largest first. Supplies are only
+ * comparable within one currency, so USD-denominated tokens rank ahead of the
+ * rest; tokens without a known supply go last. Ties keep their input order.
+ */
+export function sortTokensByLiquidity<
+	token extends Pick<Token, 'currency' | 'liquidity'>,
+>(tokens: readonly token[]): token[] {
+	const rank = (token: token) => [
+		token.liquidity === undefined ? 2 : token.currency === 'USD' ? 0 : 1,
+		Number(token.liquidity ?? 0),
+	]
+	return tokens.toSorted((a, b) => {
+		const [aGroup, aSupply] = rank(a)
+		const [bGroup, bSupply] = rank(b)
+		return aGroup - bGroup || bSupply - aSupply
+	})
 }
 
 /**
@@ -67,7 +88,17 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				},
 			}),
 		)
-			.then((response) => response.data)
+			.then((response) =>
+				sortTokensByLiquidity(
+					response.data.map((token) => ({
+						...token,
+						liquidity:
+							token.totalSupply === undefined
+								? undefined
+								: Value.format(BigInt(token.totalSupply), token.decimals),
+					})),
+				),
+			)
 			.catch((error) => {
 				console.error('Failed to fetch verified tokens:', error)
 				return []
@@ -112,6 +143,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 						parseTimestamp(token.createdAt) ??
 						(isGenesisTokenAddress(address) ? genesisCreatedAt : undefined),
 					holdersCount: token.holderCount,
+					liquidity: token.liquidity,
 				}
 			}),
 		}
