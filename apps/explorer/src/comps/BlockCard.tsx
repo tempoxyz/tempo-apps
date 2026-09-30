@@ -186,7 +186,8 @@ export function BlockCard(props: BlockCard.Props) {
 						</button>
 
 						{showAdvanced && (
-							<div className="mt-[14px] space-y-[20px] pb-4">
+							// Contain inline size so full-length root hashes don't widen the card.
+							<div className="mt-[14px] space-y-[20px] pb-4 w-full [contain:inline-size]">
 								<div className="space-y-[12px]">
 									<div className="flex items-center justify-between">
 										<span className="text-secondary">Gas Usage</span>
