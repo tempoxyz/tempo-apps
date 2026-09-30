@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
+import { cx } from '#lib/css'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
 import {
 	createContractSourceLink,
@@ -18,6 +19,7 @@ import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
+import PanelLeftIcon from '~icons/lucide/panel-left'
 import WrapIcon from '~icons/lucide/wrap-text'
 
 export function ContractCodeView(
@@ -34,7 +36,23 @@ export function ContractCodeView(
 	const [activeFile, setActiveFile] = React.useState(entries[0]?.[0] ?? '')
 	const [selection, setSelection] =
 		React.useState<CodeViewLineSelection | null>(null)
-	const [wrap, setWrap] = React.useState(false)
+	const container = React.useRef<HTMLDivElement>(null)
+	const sidebarId = React.useId()
+	const [compact, setCompact] = React.useState(true)
+	const [sidebarPreference, setSidebarPreference] = React.useState<
+		boolean | null
+	>(null)
+	const sidebarOpen = sidebarPreference ?? !compact
+	React.useEffect(() => {
+		const element = container.current
+		if (!element) return
+		const observer = new ResizeObserver(([entry]) => {
+			if (entry) setCompact(entry.contentRect.width < 1000)
+		})
+		observer.observe(element)
+		return () => observer.disconnect()
+	}, [])
+	const [wrap, setWrap] = React.useState(true)
 	const [scrollCode, setScrollCode] = React.useState<HTMLElement | null>(null)
 	const syncScrollCode = React.useCallback(() => {
 		const item = viewer.current
@@ -67,12 +85,13 @@ export function ContractCodeView(
 	)
 	const selectFile = React.useCallback(
 		(name: string) => {
+			if (compact) setSidebarPreference(false)
 			setActiveFile(name)
 			setSelection(null)
 			updateSelectionUrl({ id: name, range: null })
 			viewer.current?.scrollTo({ type: 'item', id: name, align: 'start' })
 		},
-		[updateSelectionUrl],
+		[compact, updateSelectionUrl],
 	)
 	const selectLines = React.useCallback(
 		(next: CodeViewLineSelection | null) => {
@@ -178,52 +197,95 @@ export function ContractCodeView(
 	}
 
 	return (
-		<div className="overflow-hidden rounded-md border border-card-border bg-source-background">
-			<div className="flex flex-wrap items-center justify-between gap-2 border-b border-card-border px-3 py-2.5 label-12">
-				<span className="font-medium">
-					{entries.length} source files{' '}
-					<span className="ml-2 font-normal text-tertiary">Read only</span>
-				</span>
-				<div className="flex flex-wrap items-center gap-3 text-secondary">
+		<div
+			ref={container}
+			className="@container/source overflow-hidden rounded-lg border border-card-border bg-source-background"
+		>
+			<div className="flex items-center justify-between gap-2 border-b border-card-border p-2 label-12">
+				<div className="flex min-w-0 items-center gap-2">
 					<button
 						type="button"
+						aria-label={sidebarOpen ? 'Hide source files' : 'Show source files'}
+						title={sidebarOpen ? 'Hide source files' : 'Show source files'}
+						aria-expanded={sidebarOpen}
+						aria-controls={sidebarId}
+						onClick={() => setSidebarPreference(!sidebarOpen)}
+						className={cx(
+							toolbarButton,
+							sidebarOpen && 'bg-base-alt text-primary',
+						)}
+					>
+						<PanelLeftIcon className="size-4" />
+					</button>
+					<span className="whitespace-nowrap font-medium">
+						{entries.length}{' '}
+						<span className="hidden @sm/source:inline">source </span>
+						{entries.length === 1 ? 'file' : 'files'}
+					</span>
+				</div>
+				<div className="flex shrink-0 items-center gap-1 text-secondary">
+					<button
+						type="button"
+						aria-label="Wrap lines"
+						title="Wrap lines"
 						aria-pressed={wrap}
 						onClick={() => setWrap(!wrap)}
-						className="flex items-center gap-1.5 cursor-pointer hover:text-primary"
+						className={cx(toolbarButton, wrap && 'bg-base-alt text-primary')}
 					>
-						<WrapIcon />
-						Wrap
+						<WrapIcon className="size-4" />
+						<span className="hidden @lg/source:inline">Wrap</span>
 					</button>
 					<button
 						type="button"
+						aria-label={linkCopy.notifying ? 'Link copied' : 'Copy link'}
+						title="Copy link"
 						onClick={copyPermalink}
-						className="flex items-center gap-1.5 cursor-pointer hover:text-primary"
+						className={toolbarButton}
 					>
-						<LinkIcon />
-						{linkCopy.notifying ? 'Copied!' : 'Copy link'}
+						<LinkIcon className="size-4" />
+						<span className="hidden @lg/source:inline">
+							{linkCopy.notifying ? 'Copied!' : 'Copy link'}
+						</span>
 					</button>
 					<button
 						type="button"
+						aria-label={sourceCopy.notifying ? 'File copied' : 'Copy file'}
+						title="Copy file"
 						onClick={() => void sourceCopy.copy(currentSource)}
-						className="flex items-center gap-1.5 cursor-pointer hover:text-primary"
+						className={toolbarButton}
 					>
-						<CopyIcon />
-						{sourceCopy.notifying ? 'Copied!' : 'Copy file'}
+						<CopyIcon className="size-4" />
+						<span className="hidden @lg/source:inline">
+							{sourceCopy.notifying ? 'Copied!' : 'Copy file'}
+						</span>
 					</button>
+					<span className="sr-only" role="status">
+						{linkCopy.notifying
+							? 'Link copied to clipboard'
+							: sourceCopy.notifying
+								? 'File copied to clipboard'
+								: ''}
+					</span>
 				</div>
 			</div>
-			<div className="flex min-w-0 flex-col md:flex-row">
-				<ContractFileTree
-					key={JSON.stringify(paths)}
-					paths={paths}
-					selectedPath={selectedPath}
-					onSelect={selectFile}
-				/>
+			<div className="flex min-w-0 flex-col @2xl/source:flex-row">
+				<div
+					id={sidebarId}
+					hidden={!sidebarOpen}
+					className="shrink-0 @2xl/source:w-[240px]"
+				>
+					<ContractFileTree
+						key={JSON.stringify(paths)}
+						paths={paths}
+						selectedPath={selectedPath}
+						onSelect={selectFile}
+					/>
+				</div>
 				<WorkerPoolContextProvider
 					poolOptions={highlightPoolOptions}
 					highlighterOptions={highlightOptions}
 				>
-					<div className="min-w-0 md:flex-1">
+					<div className="min-w-0 flex-1">
 						<CodeView
 							ref={viewer}
 							items={items}
@@ -242,8 +304,7 @@ export function ContractCodeView(
 									)
 								if (visible) setActiveFile(visible.id)
 							}}
-							className="min-h-0 min-w-0 md:flex-1"
-							style={{ height: 620, overflow: 'auto' }}
+							className="h-[min(620px,70svh)] min-h-[320px] min-w-0 overflow-auto"
 						/>
 						<ContractCodeScrollbar code={scrollCode} wrap={wrap} />
 					</div>
@@ -253,8 +314,9 @@ export function ContractCodeView(
 				<span>
 					{selection
 						? `Lines ${Math.min(selection.range.start, selection.range.end)}–${Math.max(selection.range.start, selection.range.end)}`
-						: 'Click a line number to select · Shift-click to select a range'}
+						: 'Select line numbers to link to code'}
 				</span>
+				<span className="hidden @sm/source:inline">Read only</span>
 			</div>
 		</div>
 	)
@@ -274,3 +336,6 @@ const highlightOptions = {
 	theme: { light: 'github-light', dark: 'github-dark' },
 }
 let sourceRevision = 0
+
+const toolbarButton =
+	'flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 text-secondary transition-colors hover:bg-base-alt hover:text-primary focus-visible:outline-2 focus-visible:outline-focus'

@@ -107,7 +107,7 @@
 	--color-card: var(--background-color-surface);
 	--color-card-header: var(--background-color-surface);
 	--color-card-border: var(--border-color-border);
-	--color-source-background: light-dark(oklch(96.19% 0 0), #191919);
+	--color-source-background: light-dark(#ffffff, #191919);
 
 	/* Other Colors */
 	--color-base-background: var(--background-color-background);

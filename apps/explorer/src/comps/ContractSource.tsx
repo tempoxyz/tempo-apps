@@ -60,7 +60,7 @@ function SourceBrowser(props: {
 	}, [])
 	if (Viewer) return <Viewer entries={props.entries} />
 	return (
-		<div className="flex h-[710px] flex-col items-center justify-center gap-3 rounded-md border border-card-border bg-source-background copy-14 text-tertiary">
+		<div className="flex h-[calc(min(620px,70svh)+96px)] min-h-[416px] flex-col items-center justify-center gap-3 rounded-lg border border-card-border bg-source-background copy-14 text-tertiary">
 			<p role={failed ? 'alert' : 'status'}>
 				{failed ? 'Unable to load source viewer.' : 'Loading source viewer…'}
 			</p>

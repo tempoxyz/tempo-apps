@@ -91,10 +91,10 @@ export function ContractFileTree(
 	return (
 		<nav
 			aria-label="Source files"
-			className="min-w-0 shrink-0 border-b border-card-border bg-source-background font-pilat md:w-[280px] md:border-r md:border-b-0"
+			className="min-w-0 shrink-0 border-b border-card-border bg-source-background font-pilat @2xl/source:h-full @2xl/source:border-r @2xl/source:border-b-0"
 		>
 			<div className="p-2">
-				<label className="flex h-[40px] items-center gap-2 rounded-md bg-base-alt px-3 text-tertiary focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-[-2px]">
+				<label className="flex h-8 items-center gap-2 rounded-md border border-card-border bg-source-background px-2 text-tertiary focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-[-2px]">
 					<SearchIcon className="size-3.5 shrink-0" />
 					<input
 						aria-label="Filter source files"
@@ -113,7 +113,7 @@ export function ContractFileTree(
 			<FileTree
 				model={model}
 				aria-label="Contract source files"
-				className="block h-[180px] overflow-auto pb-2 md:h-[564px]"
+				className="block h-[180px] overflow-auto pb-2 @2xl/source:h-[calc(min(620px,70svh)-32px)] @2xl/source:min-h-[288px]"
 			/>
 		</nav>
 	)
