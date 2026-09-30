@@ -32,13 +32,14 @@ import { isZonePortalAddress } from '#lib/domain/zones'
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
 const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
-const SUBMIT_BATCH_SELECTOR = toFunctionSelector(
+export const SUBMIT_BATCH_SELECTOR = toFunctionSelector(
 	getAbiItem({ abi: zonePortalAbi, name: 'submitBatch' }),
 )
 
 export type EnrichedTransaction = {
 	hash: `0x${string}`
 	blockNumber: string
+	transactionIndex?: number | undefined
 	timestamp: number
 	from: `0x${string}`
 	to: `0x${string}` | null
@@ -312,7 +313,7 @@ async function fetchFilteredHistoryPage(
  * Resolves TIP-20 metadata for every token referenced by the page's event
  * logs (symbol/decimals for the known-event summaries).
  */
-async function buildTokenMetadataLookup(
+export async function buildTokenMetadataLookup(
 	rows: readonly TransactionRow[],
 ): Promise<(address: Address.Address) => Metadata | undefined> {
 	const config = getWagmiConfig()
@@ -394,6 +395,7 @@ export function toEnrichedTransaction(
 	return {
 		hash: row.hash,
 		blockNumber: toHexQuantity(row.blockNumber),
+		transactionIndex: row.transactionIndex ?? undefined,
 		timestamp: parseTimestamp(row.timestamp) ?? 0,
 		from: Address.checksum(row.sender),
 		to,

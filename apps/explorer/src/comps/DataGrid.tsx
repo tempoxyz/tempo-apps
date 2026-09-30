@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { cx } from '#lib/css'
+import { useNewLiveRows } from '#lib/use-new-live-rows'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export function DataGrid(props: DataGrid.Props) {
@@ -56,6 +57,10 @@ export function DataGrid(props: DataGrid.Props) {
 				}),
 			}))
 		: items(mode)
+	const newLiveRows = useNewLiveRows(
+		activeItems.map((item) => item.key),
+		effectiveLoading ? undefined : props.liveScope,
+	)
 	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
 	const isSimpleSinglePage =
 		pagination === 'simple' &&
@@ -145,6 +150,9 @@ export function DataGrid(props: DataGrid.Props) {
 										'hover:bg-surface-hover transition-colors duration-100',
 									item.expanded && 'border-l-distinct',
 									item.className,
+									item.key !== undefined &&
+										newLiveRows.has(item.key) &&
+										'block-row-shimmer',
 								)}
 							>
 								{item.link && (
@@ -278,6 +286,8 @@ export namespace DataGrid {
 	}
 
 	export interface Props {
+		/** Enables new-row highlights, resetting when the feed scope changes. */
+		liveScope?: string | undefined
 		columns: {
 			stacked: Column[]
 			tabs: Column[]

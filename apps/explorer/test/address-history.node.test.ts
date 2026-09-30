@@ -173,6 +173,7 @@ describe('toEnrichedTransaction', () => {
 		expect(result).toEqual({
 			hash: HASH,
 			blockNumber: '0x14d5b48',
+			transactionIndex: 17,
 			timestamp: Date.parse('2026-06-12T03:58:20.000Z') / 1000,
 			from: '0x286ad6cfc7279C8a6D86D15dcEFcB77A65Aa7E92',
 			to: '0x20C0000000000000000000000000000000000003',

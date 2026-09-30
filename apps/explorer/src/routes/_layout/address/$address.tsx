@@ -53,6 +53,9 @@ import {
 } from '#lib/domain/known-event-totals'
 import { TransactionFilters, TransferFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
+import { useLiveFeed } from '#lib/use-live-feed'
+import { useAddressLive } from '#lib/use-address-live'
+import { mergeLiveRows } from '#lib/sse'
 import {
 	type AssetData,
 	type BalancesResponse,
@@ -1162,6 +1165,25 @@ function SectionsWrapper(props: {
 		[address, after, include, status, hideSubmitBatches],
 	)
 
+	const feedScope = JSON.stringify([
+		address,
+		activeTab,
+		page,
+		cursor,
+		order,
+		limit,
+		account,
+		status,
+		transferDirection,
+		dir,
+		period,
+		hideSubmitBatches,
+	])
+	const feedEligible = isTransactionsTabActive
+		? isLatestHistoryPosition
+		: isTransfersTabActive && page === 1
+	const feed = useLiveFeed(feedScope, feedEligible, live)
+
 	const latestHistoryQuery = useQuery({
 		...historyQueryOptions({
 			address,
@@ -1175,12 +1197,9 @@ function SectionsWrapper(props: {
 		initialData,
 		enabled:
 			isMounted && (isTransactionsTabActive || initialData !== undefined),
-		refetchInterval:
-			live && isTransactionsTabActive && isLatestHistoryPosition
-				? 4_000
-				: false,
-		refetchOnWindowFocus:
-			live && isTransactionsTabActive && isLatestHistoryPosition,
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+		retry: false,
 	})
 	const latestHistoryData = latestHistoryQuery.data
 	const total = latestHistoryData?.total ?? undefined
@@ -1213,6 +1232,9 @@ function SectionsWrapper(props: {
 			account,
 		}),
 		enabled: isMounted && isToken && isTransfersTabActive,
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+		retry: false,
 	})
 
 	// Account-scoped transfers query (non-token addresses): the D2 split moved
@@ -1231,7 +1253,166 @@ function SectionsWrapper(props: {
 			direction: transferDirection,
 		}),
 		enabled: isMounted && !isToken && isTransfersTabActive,
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+		retry: false,
 	})
+
+	const liveParams = new URLSearchParams({
+		kind: isTransactionsTabActive
+			? 'transactions'
+			: isToken
+				? 'token-transfers'
+				: 'account-transfers',
+		limit: String(isTransactionsTabActive ? HISTORY_PAGE_SIZE : limit),
+		include,
+	})
+	if (account) liveParams.set('account', account)
+	if (transferDirection) liveParams.set('direction', transferDirection)
+	if (status) liveParams.set('status', status)
+	if (after) liveParams.set('after', String(after))
+	if (hideSubmitBatches) liveParams.set('hideSubmitBatches', 'true')
+	const streamError = useAddressLive(
+		`/api/address/live/${address}?${liveParams}`,
+		feed.live,
+		(update) => {
+			if (update.kind === 'transactions') {
+				queryClient.setQueryData(
+					getHistoryQueryOptions({ order: 'desc' }).queryKey,
+					(old) => {
+						const transactions = mergeLiveRows(
+							old?.transactions ?? [],
+							update.rows,
+							(row) => row.hash,
+							HISTORY_PAGE_SIZE,
+						)
+						const last = transactions.at(-1)
+						const first = transactions[0]
+						const cursorFor = (row: typeof last) =>
+							row?.transactionIndex !== undefined
+								? btoa(
+										JSON.stringify([
+											Number(BigInt(row.blockNumber)),
+											row.transactionIndex,
+										]),
+									)
+								: undefined
+						return {
+							total: null,
+							limit: HISTORY_PAGE_SIZE,
+							nextCursor: null,
+							reverseCursor: null,
+							countCapped: false,
+							...old,
+							transactions,
+							error: null,
+							...(cursorFor(last)
+								? { nextCursor: cursorFor(last) ?? null }
+								: {}),
+							...(cursorFor(first)
+								? { reverseCursor: cursorFor(first) ?? null }
+								: {}),
+						}
+					},
+				)
+			} else if (update.kind === 'token-transfers') {
+				queryClient.setQueryData(
+					transfersQueryOptions({ address, page: 1, limit, account }).queryKey,
+					(old) => ({
+						total: 0,
+						totalCapped: true,
+						...old,
+						transfers: mergeLiveRows(
+							old?.transfers ?? [],
+							update.rows,
+							(row) => row.id,
+							limit,
+						),
+					}),
+				)
+			} else {
+				queryClient.setQueryData(
+					accountTransfersQueryOptions({
+						account: address,
+						page: 1,
+						limit,
+						direction: transferDirection,
+					}).queryKey,
+					(old) => ({
+						total: 0,
+						totalCapped: true,
+						...old,
+						transfers: mergeLiveRows(
+							old?.transfers ?? [],
+							update.rows,
+							(row) => row.id,
+							limit,
+						),
+					}),
+				)
+			}
+		},
+		feed.stop,
+	)
+
+	const feedError = isTransactionsTabActive
+		? latestHistoryQuery.error || latestHistoryQuery.data?.error
+		: isToken
+			? tokenTransfersError
+			: accountTransfersError
+	React.useEffect(() => {
+		if (feedError) feed.stop()
+	}, [feedError, feed.stop])
+
+	const liveControl = (
+		<>
+			{streamError && (
+				<span role="status" className="label-12 text-negative">
+					{streamError}
+				</span>
+			)}
+			<button
+				type="button"
+				aria-pressed={feed.live}
+				disabled={!feedEligible}
+				title={
+					!feedEligible
+						? 'Live updates are available on the newest page'
+						: feed.live
+							? 'Pause live updates'
+							: 'Start live updates; pauses when you leave this tab'
+				}
+				onClick={() => {
+					if (feed.live) {
+						feed.stop()
+						return
+					}
+					feed.start()
+				}}
+				className={cx(
+					'ml-auto flex shrink-0 items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] label-12 font-medium press-down disabled:opacity-50 disabled:cursor-not-allowed',
+					feed.live
+						? 'bg-positive/10 text-positive hover:bg-positive/20'
+						: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
+				)}
+			>
+				{feed.live ? (
+					<>
+						<span className="relative flex size-2">
+							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
+							<span className="relative inline-flex rounded-full size-2 bg-positive" />
+						</span>
+						<span>Live</span>
+					</>
+				) : (
+					<>
+						<PlayIcon className="size-3" />
+						<span>Paused</span>
+					</>
+				)}
+			</button>
+		</>
+	)
 
 	const {
 		transfers = [],
@@ -1871,18 +2052,22 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<TransactionFilters
-							status={status}
-							period={period}
-							onStatusChange={onStatusChange}
-							onPeriodChange={onPeriodChange}
-							hideSubmitBatches={hideSubmitBatches}
-							onHideSubmitBatchesChange={onHideSubmitBatchesChange}
-							onClearAll={onClearTransactionFilters}
-						/>
+						<div className="flex items-center gap-3">
+							<TransactionFilters
+								status={status}
+								period={period}
+								onStatusChange={onStatusChange}
+								onPeriodChange={onPeriodChange}
+								hideSubmitBatches={hideSubmitBatches}
+								onHideSubmitBatchesChange={onHideSubmitBatchesChange}
+								onClearAll={onClearTransactionFilters}
+							/>
+							{liveControl}
+						</div>
 					),
 					content: transactionsError ?? (
 						<DataGrid
+							liveScope={feed.live ? feedScope : undefined}
 							columns={{
 								stacked: transactionsColumns,
 								tabs: transactionsColumns,
@@ -2062,7 +2247,12 @@ function SectionsWrapper(props: {
 					return {
 						title: 'Transfers',
 						itemsLabel: 'transfers',
-						contextual: filters,
+						contextual: (
+							<div className="flex items-center gap-3">
+								{filters}
+								{liveControl}
+							</div>
+						),
 						content: (
 							<div className="rounded-body bg-card-header p-4.5">
 								<p className="copy-14 font-medium text-negative">
@@ -2094,9 +2284,15 @@ function SectionsWrapper(props: {
 							accountTransfersData &&
 							(accountTotalCapped ? '10k+' : accountTotal),
 						itemsLabel: 'transfers',
-						contextual: filters,
+						contextual: (
+							<div className="flex items-center gap-3">
+								{filters}
+								{liveControl}
+							</div>
+						),
 						content: (
 							<DataGrid
+								liveScope={feed.live ? feedScope : undefined}
 								columns={{
 									stacked: accountTransfersColumns,
 									tabs: accountTransfersColumns,
@@ -2124,6 +2320,7 @@ function SectionsWrapper(props: {
 														: ('in' as const)
 
 											return {
+												key: transfer.id,
 												cells: [
 													<TimestampCell
 														key="time"
@@ -2202,11 +2399,17 @@ function SectionsWrapper(props: {
 					totalItems:
 						transfersData && (transfersTotalCapped ? '100k+' : transfersTotal),
 					itemsLabel: 'transfers',
-					contextual: account && (
-						<FilterIndicator account={account} tokenAddress={address} />
+					contextual: (
+						<div className="flex items-center gap-3">
+							{account && (
+								<FilterIndicator account={account} tokenAddress={address} />
+							)}
+							{liveControl}
+						</div>
 					),
 					content: (
 						<DataGrid
+							liveScope={feed.live ? feedScope : undefined}
 							columns={{
 								stacked: transfersColumns,
 								tabs: transfersColumns,
@@ -2221,6 +2424,7 @@ function SectionsWrapper(props: {
 								})
 
 								return validTransfers.map(({ transfer, timestamp, value }) => ({
+									key: transfer.id,
 									cells: [
 										<TimestampCell
 											key="time"

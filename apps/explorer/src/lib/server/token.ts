@@ -182,6 +182,7 @@ export type FetchTokenTransfersInput = z.infer<
 
 export type TokenTransfersApiResponse = {
 	transfers: Array<{
+		id: string
 		from: Address.Address
 		to: Address.Address
 		value: string
@@ -208,6 +209,7 @@ const FetchAccountTransfersInputSchema = z.object({
 
 export type AccountTransfersApiResponse = {
 	transfers: Array<{
+		id: string
 		from: Address.Address
 		to: Address.Address
 		value: string
@@ -262,6 +264,7 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 
 			return {
 				transfers: page.data.map((transfer) => ({
+					id: transfer.id,
 					from: transfer.sender as Address.Address,
 					to: transfer.recipient as Address.Address,
 					value: transfer.sourceAmount.baseUnits,
@@ -316,6 +319,7 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 
 			return {
 				transfers: page.data.map((transfer) => ({
+					id: transfer.id,
 					from: transfer.sender as Address.Address,
 					to: transfer.recipient as Address.Address,
 					value: transfer.sourceAmount.baseUnits,
