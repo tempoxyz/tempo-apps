@@ -1,8 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import { parseResponse } from 'hono/client'
 import { type Address, Value } from 'ox'
-import { getChainId } from 'wagmi/actions'
+import { getChainId, readContracts } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { Abis } from '#lib/abis'
 import { getAccountTag } from '#lib/account'
 import { api } from '#lib/server/tempo-api'
 import { parseTimestamp } from '#lib/timestamp'
@@ -72,7 +73,8 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		const { page, limit } = data
 		const offset = (page - 1) * limit
 
-		const chainId = getChainId(getWagmiConfig())
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
 
 		// One verified-list call carries everything the page renders: the API
 		// resolves logos (curated icon → on-chain `logoURI`), currencies, and
@@ -93,23 +95,41 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				},
 			}),
 		)
-			.then((response) =>
-				sortTokensByCirculatingSupply(
-					response.data.map((token) => ({
-						...token,
-						circulatingSupply:
-							token.totalSupply === undefined
-								? undefined
-								: Value.format(BigInt(token.totalSupply), token.decimals),
-					})),
-				),
-			)
+			.then((response) => response.data)
 			.catch((error) => {
 				console.error('Failed to fetch verified tokens:', error)
 				return []
 			})
 
-		const pageTokens = tokens.slice(offset, offset + limit)
+		// The verified-list endpoint does not return `totalSupply`, so read it
+		// onchain in one batched request. Failed reads leave the supply unknown.
+		const supplies = await readContracts(config, {
+			contracts: tokens.map(
+				(token) =>
+					({
+						address: token.address as Address.Address,
+						abi: Abis.tip20,
+						functionName: 'totalSupply',
+					}) as const,
+			),
+		}).catch((error) => {
+			console.error('Failed to fetch token supplies:', error)
+			return []
+		})
+		const sortedTokens = sortTokensByCirculatingSupply(
+			tokens.map((token, index) => {
+				const supply = supplies[index]
+				return {
+					...token,
+					circulatingSupply:
+						supply?.status === 'success'
+							? Value.format(supply.result, token.decimals)
+							: undefined,
+				}
+			}),
+		)
+
+		const pageTokens = sortedTokens.slice(offset, offset + limit)
 
 		// Genesis tokens have no `TokenCreated` event; when one also has no
 		// transfer history, fall back to the genesis block timestamp.
