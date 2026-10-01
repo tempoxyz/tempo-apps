@@ -1,0 +1,51 @@
+{
+  "total_runs": 273,
+  "relevant_runs": [
+    {
+      "run_id": "scan_mup3nxlu_3hs8hb",
+      "run_label": "pr-1300-20261001t053450-290efea93387",
+      "status": "running",
+      "scan_type": "pr-review",
+      "repo": "tempoxyz/tempo-apps",
+      "started_at": "2026-10-01T05:34:50.082Z",
+      "finished_at": null,
+      "event_count": 21,
+      "finding_count": 0
+    },
+    {
+      "run_id": "scan_mup3kf2k_e0p3ab",
+      "run_label": "pr-1302-20261001t053206-a31f8978236e",
+      "status": "completed",
+      "scan_type": "pr-review",
+      "repo": "tempoxyz/tempo-apps",
+      "started_at": "2026-10-01T05:32:07Z",
+      "finished_at": "2026-10-01T05:35:37Z",
+      "event_count": 73,
+      "finding_count": 0
+    },
+    {
+      "run_id": "scan_mup3juxc_1onwgw",
+      "run_label": "pr-1301-20261001t053139-609a8386db01",
+      "status": "completed",
+      "scan_type": "pr-review",
+      "repo": "tempoxyz/tempo-apps",
+      "started_at": "2026-10-01T05:31:41Z",
+      "finished_at": "2026-10-01T05:34:55Z",
+      "event_count": 74,
+      "finding_count": 0
+    },
+    {
+      "run_id": "scan_mup35iup_4gkzf1",
+      "run_label": "pr-1300-20261001t052031-77f317ac6c45",
+      "status": "failed",
+      "scan_type": "pr-review",
+      "repo": "tempoxyz/tempo-apps",
+      "started_at": "2026-10-01T05:20:32Z",
+      "finished_at": "2026-10-01T05:23:59Z",
+      "event_count": 5,
+      "finding_count": 0
+    }
+  ],
+  "comment_id": 5925418109,
+  "matching_job": false
+}

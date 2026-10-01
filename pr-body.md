@@ -15,7 +15,7 @@ Recognized URLs bypass current-chain lookup and stale suggestions. Existing raw 
 
 565 tests passed across the explorer worker and Node suites, including 59 URL parser cases. Monorepo lint/types, explorer test types/build, Tempo lint, and precommit passed. Chrome verified keyboard/click/submit, source-network routing, stale-response suppression, history preservation, raw search, mobile layout, SSR redirect, and composition with individual history removal. [Factory evidence](https://github.com/tempoxyz/tempo-apps/tree/factory/evidence-url-search) records the frozen criteria, exact candidate, checks and browser cases.
 
-Independent verification and audit passed for `a6a8f55`, including 172 parser cases and real browser composition with #1301. Current-head CI and Cyclops are pending. No merge or deployment.
+Independent verification and code review passed for `a6a8f55`, including 172 parser cases and real browser composition with #1301. Current-head CI passed. Cyclops reported no findings, but its final archived report marks review completeness blocked because three conclusions lack current-revision exact-read support. This PR is not yet certified ready to merge; [the gate report](https://github.com/tempoxyz/tempo-apps/blob/factory/evidence-url-search/ready.md) records the remaining evidence gap. No merge or deployment.
 
 ## Screenshots
 
