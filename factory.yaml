@@ -4,7 +4,7 @@ repository: tempoxyz/tempo-apps
 scope: apps/explorer
 base: main
 library: ../factory
-library_revision: 85b4291ae006fec0493ddd917a3191981a17eaf2
+library_revision: 02bd8907509c2bb9d61683373a3b4c532b6e70e6
 workflow: config/pipeline.yaml
 
 instructions:
@@ -17,6 +17,7 @@ instructions:
   - Expand testing to affected shared packages and other apps when the diff crosses explorer boundaries.
   - Supply external references at intake so research can use the task's existing scope without re-asking.
   - Do not change the accepted gate policy or criteria as part of a feature repair.
+  - Inherit the shared repair procedure. Any verification, audit, Cyclops, or CI defect interrupts forward progress and replays implementation through monitor on the same PR.
 
 # Explicit skill selection for every explorer gate.
 gates:
@@ -89,7 +90,17 @@ cyclops:
   max_iterations: 3
   poll_seconds: 30
   deadline_minutes: 60
-  integration: null # Bind the reachable CLI/service and its PR or commit review scope before launch.
+  integration:
+    kind: github_comment
+    trigger: cyclops-audit fast
+    completion: A terminal Cyclops result tied to the submitted PR head, with findings/comments and publication status reconciled; a trigger or acknowledgement is not completion.
+    fallback:
+      kind: rpc
+      url: https://dev-eu-cyclops-scan-ui.tail388b2e.ts.net/rpc/v1
+      method: scan.pr
+      mode: fast
+      condition: Only after comment/workflow/service reconciliation proves no matching job was created; record the unavailable comment handler and use one supported submission route.
+    instructions: Save trigger comment ID and submitted head/base; discover and persist the responding bot/run identity; reconcile edited comments and inline reviews before another submission.
   instructions:
     - Use skills/cyclops-review/SKILL.md; persist iteration count across repairs and resumed runs.
     - Respond to each finding with fix or dismissal evidence and resolve through its actual review thread.
@@ -103,7 +114,7 @@ delivery:
   merge: false
   deploy: false
   instructions:
-    - This run may publish the timestamp-preference PR, submit Cyclops audits, and reply to and resolve its findings. Stop at merge-ready.
+    - When authorized by the task, publish its feature PR, submit Cyclops audits, and reply to and resolve its findings. Stop at merge-ready.
     - PR creation can invoke Cloudflare preview deployments, including devnet previews; review those side effects before enabling publication.
     - Use repository rulesets as the authority for required checks; also require Verify / Checks and Bundle Size when applicable.
     - Bind the actual Cyclops command or tool and authentication before the run; do not guess an API or treat a missing audit as passed.
