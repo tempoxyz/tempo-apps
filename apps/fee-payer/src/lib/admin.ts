@@ -29,11 +29,22 @@ admin.use('*', async (c, next) => {
 		return c.json({ error: 'Service misconfigured' }, 503)
 	}
 	const auth = c.req.header('Authorization')
-	if (!auth || auth !== `Bearer ${env.ADMIN_SECRET}`) {
+	if (!auth || !timingSafeEqual(auth, `Bearer ${env.ADMIN_SECRET}`)) {
 		return c.json({ error: 'Unauthorized' }, 401)
 	}
 	await next()
 })
+
+/** Compare secrets without short-circuiting on the first differing byte to prevent timing attacks. */
+function timingSafeEqual(left: string, right: string): boolean {
+	const leftBytes = new TextEncoder().encode(left)
+	const rightBytes = new TextEncoder().encode(right)
+	if (leftBytes.length !== rightBytes.length) return false
+	let difference = 0
+	for (let index = 0; index < leftBytes.length; index++)
+		difference |= leftBytes[index]! ^ rightBytes[index]!
+	return difference === 0
+}
 
 /** POST /admin/keys — create a new API key. */
 admin.post(

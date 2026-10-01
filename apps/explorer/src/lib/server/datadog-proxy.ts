@@ -11,6 +11,8 @@ const hosts = {
 
 const placeholderApplicationId = '00000000-0000-0000-0000-000000000000'
 const placeholderClientToken = 'explorer-dd-proxy'
+const maxBodyBytes = 10_000_000
+const payloadTooLarge = new Error('payload too large')
 
 type Config = {
 	applicationId: string
@@ -32,8 +34,9 @@ export async function handleDatadogProxy(request: Request): Promise<Response> {
 	if (!config)
 		return new Response('Datadog proxy misconfigured', { status: 503 })
 
+	// Fast rejection when Content-Length header is present and exceeds the cap
 	const contentLength = request.headers.get('content-length')
-	if (contentLength && Number.parseInt(contentLength, 10) > 10_000_000) {
+	if (contentLength && Number.parseInt(contentLength, 10) > maxBodyBytes) {
 		return new Response('Payload too large', { status: 413 })
 	}
 
@@ -50,9 +53,17 @@ export async function handleDatadogProxy(request: Request): Promise<Response> {
 		})
 	}
 
-	const body = await getBody(request, config.applicationId)
-	if (body === undefined)
-		return new Response('Invalid Datadog payload', { status: 400 })
+	let body: string
+	try {
+		const parsed = await getBody(request, config.applicationId)
+		if (parsed === undefined)
+			return new Response('Invalid Datadog payload', { status: 400 })
+		body = parsed
+	} catch (error) {
+		if (error === payloadTooLarge)
+			return new Response('Payload too large', { status: 413 })
+		throw error
+	}
 
 	const headers = getHeaders(request, config.host)
 	const upstream = await fetch(getUrl(config, forward), {
@@ -131,7 +142,8 @@ async function getBody(
 	request: Request,
 	applicationId: string,
 ): Promise<string | undefined> {
-	const body = await request.text()
+	const body = await readBoundedText(request)
+	if (body === undefined) throw payloadTooLarge
 	const lines: string[] = []
 	for (const line of body.split('\n')) {
 		const rewritten = rewriteEvent(line, applicationId)
@@ -139,6 +151,39 @@ async function getBody(
 		lines.push(rewritten)
 	}
 	return lines.join('\n')
+}
+
+// Content-Length is caller controlled and may be absent (e.g. chunked transfer),
+// so the cap is strictly enforced while consuming the incoming stream.
+async function readBoundedText(request: Request): Promise<string | undefined> {
+	if (!request.body) return ''
+	const reader = request.body.getReader()
+	const chunks: Uint8Array[] = []
+	let size = 0
+
+	try {
+		while (true) {
+			const { done, value } = await reader.read()
+			if (done) break
+			if (!value) continue
+			size += value.byteLength
+			if (size > maxBodyBytes) {
+				await reader.cancel()
+				return undefined
+			}
+			chunks.push(value)
+		}
+	} finally {
+		reader.releaseLock()
+	}
+
+	const body = new Uint8Array(size)
+	let offset = 0
+	for (const chunk of chunks) {
+		body.set(chunk, offset)
+		offset += chunk.byteLength
+	}
+	return new TextDecoder().decode(body)
 }
 
 function rewriteEvent(line: string, applicationId: string): string | undefined {
