@@ -32,3 +32,4 @@
 2026-10-01T05:35:10.611147+00:00	verify	3	passed	4655e8b3ddb12611d3f2e85945525873a3aa712b	v1	composed/report.md; four final app patches,612tests,real browser flow; config-only timestamp app hash unchanged
 2026-10-01T05:40:30.875401+00:00	cyclops	2	blocked	4655e8b3ddb12611d3f2e85945525873a3aa712b	v1	ready.md; archived review completeness blocked despite12/12 nofindings; exactreads+externalfactoryscope missing
 2026-10-01T05:47:00.771134+00:00	cyclops	2	blocked	4655e8b3ddb12611d3f2e85945525873a3aa712b	v1	Revalidated archived block; prepared and reviewed local source-read capture repair,158tests/typecheck pass; no extra audit/deployment; repair-proposal/README.md
+2026-10-01T05:48:56.668814+00:00	ready	3	blocked	4655e8b3ddb12611d3f2e85945525873a3aa712b	v1	blocked-audit.md; third consecutive goal-turn evidence block; all4reviews terminal/incomplete, no supported in-scope completion path
