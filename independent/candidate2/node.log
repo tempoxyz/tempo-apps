@@ -1,0 +1,9 @@
+
+ RUN  v4.1.0 /Users/daniel/tempo/tempo-apps-factory-clipboard/apps/explorer
+
+
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+   Start at  01:29:04
+   Duration  110ms (transform 15ms, setup 0ms, import 21ms, tests 5ms, environment 0ms)
+

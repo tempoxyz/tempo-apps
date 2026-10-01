@@ -1,0 +1,16 @@
+PASS baseline rejected copy lacks visible alert
+baseline pageerrors 0
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ 'Could not copy. Try copying again.\n\nDismiss'
+- 'Could not copy. Try copying again.\nDismiss'
+
+    at [stdin]:11:48 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'Could not copy. Try copying again.\n\nDismiss',
+  expected: 'Could not copy. Try copying again.\nDismiss',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

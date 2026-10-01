@@ -1,0 +1,25 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const out='/Users/daniel/tempo/tempo-apps-factory-clipboard/.factory/clipboard';
+(async()=>{
+const browser=await chromium.launch({channel:'chrome',headless:true});
+for(const [label,port] of [['before',3001],['after',3004]]){
+ const context=await browser.newContext({viewport:{width:1440,height:1000},timezoneId:'UTC'});
+ await context.addInitScript(()=>{window.copyMode='deny'; window.copied=[];Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{if(window.copyMode==='deny')throw new DOMException('Denied','NotAllowedError');window.copied.push(text)}}})});
+ const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(`http://127.0.0.1:${port}/demo/address`,{waitUntil:'domcontentloaded',timeout:120000});
+ const button=page.locator('button[title^="0x"]').first();await button.waitFor({timeout:120000});await page.waitForTimeout(1500);await button.click();
+ if(label==='after'){
+ await page.getByRole('alert').waitFor();assert.equal(await page.getByRole('alert').textContent(),'Could not copy. Try copying again.Dismiss');assert(!await button.textContent().then(t=>t.includes('copied')));
+ await page.screenshot({path:`${out}/after.png`,fullPage:true});
+ const expected=await button.getAttribute('title');
+ await page.evaluate(()=>{window.copyMode='success'});await button.click();await page.waitForFunction(()=>window.copied.length===1);assert.deepEqual(await page.evaluate(()=>window.copied),[expected]);assert.equal(await page.getByRole('alert').count(),0);assert((await button.textContent()).includes('copied'));
+ await page.evaluate(()=>{window.copyMode='deny'});await button.click();await page.getByRole('alert').waitFor();await page.getByRole('button',{name:'Dismiss copy error'}).focus();await page.keyboard.press('Enter');assert.equal(await page.getByRole('alert').count(),0);
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:undefined})});await button.click();await page.getByRole('alert').waitFor();const bounds=await page.getByRole('alert').boundingBox();assert(bounds.x>=0&&bounds.x+bounds.width<=390);await page.screenshot({path:`${out}/mobile.png`,fullPage:true});
+ console.log('PASS real direct consumer: denial, success retry exact text, keyboard dismiss, missing API/mobile');
+ }else{await page.waitForTimeout(100);assert.equal(await page.getByRole('alert').count(),0);await page.screenshot({path:`${out}/before.png`,fullPage:true});console.log('Baseline copy denial has no feedback');}
+ fs.writeFileSync(`${out}/${label}-browser-errors.log`,JSON.stringify(errors,null,2));console.log(label,'pageerrors',errors.length);await context.close();
+}
+await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});

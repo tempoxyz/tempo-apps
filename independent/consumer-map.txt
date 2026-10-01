@@ -1,0 +1,777 @@
+apps/explorer/src/comps/AbiArgument.tsx-3-
+apps/explorer/src/comps/AbiArgument.tsx-4-/** Render decoded ABI values using their structure, including unnamed tuples. */
+apps/explorer/src/comps/AbiArgument.tsx-5-export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
+apps/explorer/src/comps/AbiArgument.tsx-6-	const { input, value } = props
+apps/explorer/src/comps/AbiArgument.tsx:7:	const { copy, notifying } = useCopy()
+apps/explorer/src/comps/AbiArgument.tsx-8-	const name = input.name || '(unnamed)'
+apps/explorer/src/comps/AbiArgument.tsx-9-	const array = /^(.*)\[\d*\]$/.exec(input.type)
+apps/explorer/src/comps/AbiArgument.tsx-10-	const children =
+apps/explorer/src/comps/AbiArgument.tsx-11-		array && Array.isArray(value)
+--
+apps/explorer/src/comps/AbiArgument.tsx-55-
+apps/explorer/src/comps/AbiArgument.tsx-56-	return (
+apps/explorer/src/comps/AbiArgument.tsx-57-		<button
+apps/explorer/src/comps/AbiArgument.tsx-58-			type="button"
+apps/explorer/src/comps/AbiArgument.tsx:59:			onClick={() => copy(String(value))}
+apps/explorer/src/comps/AbiArgument.tsx-60-			title={`Copy ${name}`}
+apps/explorer/src/comps/AbiArgument.tsx-61-			className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-[4px] sm:gap-[12px] px-[10px] py-[8px] label-12 font-mono w-full text-left cursor-pointer press-down hover:bg-base-alt/50 transition-colors"
+apps/explorer/src/comps/AbiArgument.tsx-62-		>
+apps/explorer/src/comps/AbiArgument.tsx-63-			<span className="min-w-0 break-all">
+apps/explorer/src/comps/AbiArgument.tsx-64-				<span className="block text-primary">
+apps/explorer/src/comps/AbiArgument.tsx:65:					{notifying ? 'copied' : name}
+apps/explorer/src/comps/AbiArgument.tsx-66-				</span>
+apps/explorer/src/comps/AbiArgument.tsx-67-				<span className="block text-tertiary">{input.type}</span>
+apps/explorer/src/comps/AbiArgument.tsx-68-			</span>
+apps/explorer/src/comps/AbiArgument.tsx-69-			<span className="min-w-0 text-primary break-all max-h-[160px] overflow-auto">
+--
+apps/explorer/src/comps/Contract.tsx-63-}) {
+apps/explorer/src/comps/Contract.tsx-64-	const { address, docsUrl, source } = props
+apps/explorer/src/comps/Contract.tsx-65-	const isTip20 = isTip20Address(address)
+apps/explorer/src/comps/Contract.tsx-66-
+apps/explorer/src/comps/Contract.tsx:67:	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2_000 })
+apps/explorer/src/comps/Contract.tsx-68-
+apps/explorer/src/comps/Contract.tsx-69-	const [abiExpanded, setAbiExpanded] = React.useState(false)
+apps/explorer/src/comps/Contract.tsx-70-	const abi = props.abi ?? getContractAbi(address)
+apps/explorer/src/comps/Contract.tsx-71-
+--
+apps/explorer/src/comps/Contract.tsx-222- */
+apps/explorer/src/comps/Contract.tsx-223-function BytecodeSection(props: { address: Address.Address }) {
+apps/explorer/src/comps/Contract.tsx-224-	const { address } = props
+apps/explorer/src/comps/Contract.tsx-225-	const [expanded, setExpanded] = React.useState(false)
+apps/explorer/src/comps/Contract.tsx:226:	const { copy, notifying } = useCopy({ timeout: 2000 })
+apps/explorer/src/comps/Contract.tsx-227-
+apps/explorer/src/comps/Contract.tsx-228-	const { data: bytecode } = useBytecode({ address })
+apps/explorer/src/comps/Contract.tsx-229-
+apps/explorer/src/comps/Contract.tsx-230-	const handleCopy = React.useCallback(() => {
+apps/explorer/src/comps/Contract.tsx:231:		if (bytecode) void copy(bytecode)
+apps/explorer/src/comps/Contract.tsx-232-	}, [bytecode, copy])
+apps/explorer/src/comps/Contract.tsx-233-
+apps/explorer/src/comps/Contract.tsx-234-	const { download: downloadBytecode } = useDownload({
+apps/explorer/src/comps/Contract.tsx-235-		value: bytecode ?? '',
+--
+apps/explorer/src/comps/Contract.tsx-243-			expanded={expanded}
+apps/explorer/src/comps/Contract.tsx-244-			onToggle={() => setExpanded(!expanded)}
+apps/explorer/src/comps/Contract.tsx-245-			actions={
+apps/explorer/src/comps/Contract.tsx-246-				<>
+apps/explorer/src/comps/Contract.tsx:247:					{notifying && <span className="label-12 select-none">copied</span>}
+apps/explorer/src/comps/Contract.tsx-248-					<button
+apps/explorer/src/comps/Contract.tsx-249-						type="button"
+apps/explorer/src/comps/Contract.tsx-250-						onClick={handleCopy}
+apps/explorer/src/comps/Contract.tsx-251-						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+--
+apps/explorer/src/comps/TxDecodedTopics.tsx-92-	}
+apps/explorer/src/comps/TxDecodedTopics.tsx-93-
+apps/explorer/src/comps/TxDecodedTopics.tsx-94-	export function SignatureHeader(props: SignatureHeader.Props) {
+apps/explorer/src/comps/TxDecodedTopics.tsx-95-		const { abiItem } = props
+apps/explorer/src/comps/TxDecodedTopics.tsx:96:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxDecodedTopics.tsx-97-
+apps/explorer/src/comps/TxDecodedTopics.tsx-98-		const signatureText = useMemo(
+apps/explorer/src/comps/TxDecodedTopics.tsx-99-			() =>
+apps/explorer/src/comps/TxDecodedTopics.tsx-100-				`${abiItem.name}(${abiItem.inputs
+--
+apps/explorer/src/comps/TxDecodedTopics.tsx-128-					))}
+apps/explorer/src/comps/TxDecodedTopics.tsx-129-					<span className="text-secondary">)</span>
+apps/explorer/src/comps/TxDecodedTopics.tsx-130-				</code>
+apps/explorer/src/comps/TxDecodedTopics.tsx-131-				<div className="flex items-center gap-[4px] text-tertiary shrink-0">
+apps/explorer/src/comps/TxDecodedTopics.tsx:132:					{notifying && <span className="label-12 select-none">copied</span>}
+apps/explorer/src/comps/TxDecodedTopics.tsx-133-					<button
+apps/explorer/src/comps/TxDecodedTopics.tsx-134-						type="button"
+apps/explorer/src/comps/TxDecodedTopics.tsx-135-						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+apps/explorer/src/comps/TxDecodedTopics.tsx:136:						onClick={() => copy(signatureText)}
+apps/explorer/src/comps/TxDecodedTopics.tsx-137-						title="Copy signature"
+apps/explorer/src/comps/TxDecodedTopics.tsx-138-					>
+apps/explorer/src/comps/TxDecodedTopics.tsx-139-						<CopyIcon className="size-[14px]" />
+apps/explorer/src/comps/TxDecodedTopics.tsx-140-					</button>
+--
+apps/explorer/src/comps/TxDecodedTopics.tsx-204-	}
+apps/explorer/src/comps/TxDecodedTopics.tsx-205-
+apps/explorer/src/comps/TxDecodedTopics.tsx-206-	export function ArgumentRow(props: ArgumentRow.Props) {
+apps/explorer/src/comps/TxDecodedTopics.tsx-207-		const { input, value } = props
+apps/explorer/src/comps/TxDecodedTopics.tsx:208:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxDecodedTopics.tsx-209-
+apps/explorer/src/comps/TxDecodedTopics.tsx-210-		const displayValue = value !== undefined ? formatAbiValue(value) : ''
+apps/explorer/src/comps/TxDecodedTopics.tsx-211-		const label = input.name || input.type
+apps/explorer/src/comps/TxDecodedTopics.tsx-212-
+apps/explorer/src/comps/TxDecodedTopics.tsx-213-		return (
+apps/explorer/src/comps/TxDecodedTopics.tsx-214-			<button
+apps/explorer/src/comps/TxDecodedTopics.tsx-215-				type="button"
+apps/explorer/src/comps/TxDecodedTopics.tsx:216:				onClick={() => copy(displayValue)}
+apps/explorer/src/comps/TxDecodedTopics.tsx-217-				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[4px] -mx-[4px]"
+apps/explorer/src/comps/TxDecodedTopics.tsx-218-			>
+apps/explorer/src/comps/TxDecodedTopics.tsx-219-				<span className="label-12 text-tertiary whitespace-pre">
+apps/explorer/src/comps/TxDecodedTopics.tsx:220:					{notifying ? (
+apps/explorer/src/comps/TxDecodedTopics.tsx-221-						<span className="text-primary">
+apps/explorer/src/comps/TxDecodedTopics.tsx-222-							{'copied'.padEnd(label.length + 1)}
+apps/explorer/src/comps/TxDecodedTopics.tsx-223-						</span>
+apps/explorer/src/comps/TxDecodedTopics.tsx-224-					) : (
+--
+apps/explorer/src/comps/TxDecodedTopics.tsx-239-	}
+apps/explorer/src/comps/TxDecodedTopics.tsx-240-
+apps/explorer/src/comps/TxDecodedTopics.tsx-241-	export function RawDataInline(props: RawDataInline.Props) {
+apps/explorer/src/comps/TxDecodedTopics.tsx-242-		const { data } = props
+apps/explorer/src/comps/TxDecodedTopics.tsx:243:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxDecodedTopics.tsx-244-
+apps/explorer/src/comps/TxDecodedTopics.tsx-245-		return (
+apps/explorer/src/comps/TxDecodedTopics.tsx-246-			<div>
+apps/explorer/src/comps/TxDecodedTopics.tsx-247-				<div className="label-12 text-tertiary mb-[4px]">
+apps/explorer/src/comps/TxDecodedTopics.tsx:248:					{notifying ? <span className="text-primary">copied</span> : 'Data'}
+apps/explorer/src/comps/TxDecodedTopics.tsx-249-				</div>
+apps/explorer/src/comps/TxDecodedTopics.tsx-250-				<button
+apps/explorer/src/comps/TxDecodedTopics.tsx-251-					type="button"
+apps/explorer/src/comps/TxDecodedTopics.tsx:252:					onClick={() => copy(data)}
+apps/explorer/src/comps/TxDecodedTopics.tsx-253-					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+apps/explorer/src/comps/TxDecodedTopics.tsx-254-				>
+apps/explorer/src/comps/TxDecodedTopics.tsx-255-					<span className="label-12 text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
+apps/explorer/src/comps/TxDecodedTopics.tsx-256-						{data}
+--
+apps/explorer/src/comps/TxDecodedTopics.tsx-298-	}
+apps/explorer/src/comps/TxDecodedTopics.tsx-299-
+apps/explorer/src/comps/TxDecodedTopics.tsx-300-	export function RawTopicRow(props: RawTopicRow.Props) {
+apps/explorer/src/comps/TxDecodedTopics.tsx-301-		const { index, topic } = props
+apps/explorer/src/comps/TxDecodedTopics.tsx:302:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxDecodedTopics.tsx-303-
+apps/explorer/src/comps/TxDecodedTopics.tsx-304-		return (
+apps/explorer/src/comps/TxDecodedTopics.tsx-305-			<button
+apps/explorer/src/comps/TxDecodedTopics.tsx-306-				type="button"
+apps/explorer/src/comps/TxDecodedTopics.tsx:307:				onClick={() => copy(topic)}
+apps/explorer/src/comps/TxDecodedTopics.tsx-308-				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px]"
+apps/explorer/src/comps/TxDecodedTopics.tsx-309-			>
+apps/explorer/src/comps/TxDecodedTopics.tsx-310-				<span className="label-12 text-tertiary shrink-0">
+apps/explorer/src/comps/TxDecodedTopics.tsx:311:					{notifying ? (
+apps/explorer/src/comps/TxDecodedTopics.tsx-312-						<span className="text-primary">copied</span>
+apps/explorer/src/comps/TxDecodedTopics.tsx-313-					) : (
+apps/explorer/src/comps/TxDecodedTopics.tsx-314-						`topic[${index}]`
+apps/explorer/src/comps/TxDecodedTopics.tsx-315-					)}
+--
+apps/explorer/src/comps/TxDecodedTopics.tsx-328-	}
+apps/explorer/src/comps/TxDecodedTopics.tsx-329-
+apps/explorer/src/comps/TxDecodedTopics.tsx-330-	export function RawDataSection(props: RawDataSection.Props) {
+apps/explorer/src/comps/TxDecodedTopics.tsx-331-		const { data } = props
+apps/explorer/src/comps/TxDecodedTopics.tsx:332:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxDecodedTopics.tsx-333-
+apps/explorer/src/comps/TxDecodedTopics.tsx-334-		return (
+apps/explorer/src/comps/TxDecodedTopics.tsx-335-			<div className="px-[10px] py-[8px] min-w-0">
+apps/explorer/src/comps/TxDecodedTopics.tsx-336-				<div className="label-12 text-tertiary mb-[6px]">
+apps/explorer/src/comps/TxDecodedTopics.tsx:337:					{notifying ? <span className="text-primary">copied</span> : 'Data'}
+apps/explorer/src/comps/TxDecodedTopics.tsx-338-				</div>
+apps/explorer/src/comps/TxDecodedTopics.tsx-339-				<button
+apps/explorer/src/comps/TxDecodedTopics.tsx-340-					type="button"
+apps/explorer/src/comps/TxDecodedTopics.tsx:341:					onClick={() => copy(data)}
+apps/explorer/src/comps/TxDecodedTopics.tsx-342-					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+apps/explorer/src/comps/TxDecodedTopics.tsx-343-				>
+apps/explorer/src/comps/TxDecodedTopics.tsx-344-					<span className="label-12 text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
+apps/explorer/src/comps/TxDecodedTopics.tsx-345-						{data}
+--
+apps/explorer/src/comps/AccountCard.tsx-25-		tokenName,
+apps/explorer/src/comps/AccountCard.tsx-26-		virtualAddressParts,
+apps/explorer/src/comps/AccountCard.tsx-27-	} = props
+apps/explorer/src/comps/AccountCard.tsx-28-
+apps/explorer/src/comps/AccountCard.tsx:29:	const { copy, notifying } = useCopy()
+apps/explorer/src/comps/AccountCard.tsx-30-
+apps/explorer/src/comps/AccountCard.tsx-31-	const titleLabel = virtualAddressParts
+apps/explorer/src/comps/AccountCard.tsx-32-		? 'Virtual Address'
+apps/explorer/src/comps/AccountCard.tsx-33-		: isToken
+--
+apps/explorer/src/comps/AccountCard.tsx-63-			sections={[
+apps/explorer/src/comps/AccountCard.tsx-64-				<button
+apps/explorer/src/comps/AccountCard.tsx-65-					key="address"
+apps/explorer/src/comps/AccountCard.tsx-66-					type="button"
+apps/explorer/src/comps/AccountCard.tsx:67:					onClick={() => copy(address)}
+apps/explorer/src/comps/AccountCard.tsx-68-					className="w-full text-left cursor-pointer press-down text-tertiary"
+apps/explorer/src/comps/AccountCard.tsx-69-					title={address}
+apps/explorer/src/comps/AccountCard.tsx:70:					aria-label={notifying ? 'Address copied' : 'Copy address'}
+apps/explorer/src/comps/AccountCard.tsx-71-				>
+apps/explorer/src/comps/AccountCard.tsx-72-					<div className="flex items-center gap-[8px] mb-[8px]">
+apps/explorer/src/comps/AccountCard.tsx-73-						<span className="capitalize">Address</span>
+apps/explorer/src/comps/AccountCard.tsx-74-						<div className="relative flex items-center">
+apps/explorer/src/comps/AccountCard.tsx-75-							<CopyIcon className="w-[12px] h-[12px]" />
+apps/explorer/src/comps/AccountCard.tsx:76:							{notifying && (
+apps/explorer/src/comps/AccountCard.tsx-77-								<span className="absolute left-[calc(100%+8px)]">copied</span>
+apps/explorer/src/comps/AccountCard.tsx-78-							)}
+apps/explorer/src/comps/AccountCard.tsx-79-						</div>
+apps/explorer/src/comps/AccountCard.tsx-80-					</div>
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-74-	}
+apps/explorer/src/comps/TxRawTransaction.tsx-75-
+apps/explorer/src/comps/TxRawTransaction.tsx-76-	export function Section(props: Section.Props) {
+apps/explorer/src/comps/TxRawTransaction.tsx-77-		const { title, data, maxKeyLength, showBorder } = props
+apps/explorer/src/comps/TxRawTransaction.tsx:78:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxRawTransaction.tsx-79-		const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b))
+apps/explorer/src/comps/TxRawTransaction.tsx-80-
+apps/explorer/src/comps/TxRawTransaction.tsx-81-		return (
+apps/explorer/src/comps/TxRawTransaction.tsx-82-			<div
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-85-				<div className="flex items-center justify-between mb-[12px]">
+apps/explorer/src/comps/TxRawTransaction.tsx-86-					<div className="text-primary font-sans copy-13">{title}</div>
+apps/explorer/src/comps/TxRawTransaction.tsx-87-					<button
+apps/explorer/src/comps/TxRawTransaction.tsx-88-						type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx:89:						onClick={() => copy(stringify(data))}
+apps/explorer/src/comps/TxRawTransaction.tsx-90-						className="flex items-center gap-[6px] text-tertiary hover:text-secondary cursor-pointer press-down label-12"
+apps/explorer/src/comps/TxRawTransaction.tsx-91-						title={`Copy ${title.toLowerCase()} data`}
+apps/explorer/src/comps/TxRawTransaction.tsx-92-					>
+apps/explorer/src/comps/TxRawTransaction.tsx:93:						{notifying ? (
+apps/explorer/src/comps/TxRawTransaction.tsx-94-							<span className="text-primary">copied</span>
+apps/explorer/src/comps/TxRawTransaction.tsx-95-						) : (
+apps/explorer/src/comps/TxRawTransaction.tsx-96-							<>
+apps/explorer/src/comps/TxRawTransaction.tsx-97-								<CopyIcon className="size-[12px]" />
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-138-
+apps/explorer/src/comps/TxRawTransaction.tsx-139-	export function Row(props: Row.Props) {
+apps/explorer/src/comps/TxRawTransaction.tsx-140-		const { label, value, pad = 21, depth = 0 } = props
+apps/explorer/src/comps/TxRawTransaction.tsx-141-
+apps/explorer/src/comps/TxRawTransaction.tsx:142:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxRawTransaction.tsx-143-
+apps/explorer/src/comps/TxRawTransaction.tsx-144-		const isArray = Array.isArray(value)
+apps/explorer/src/comps/TxRawTransaction.tsx-145-		const isFilledArray = isArray && value.length > 0
+apps/explorer/src/comps/TxRawTransaction.tsx-146-		const isObject =
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-151-			return (
+apps/explorer/src/comps/TxRawTransaction.tsx-152-				<div className="flex flex-col">
+apps/explorer/src/comps/TxRawTransaction.tsx-153-					<button
+apps/explorer/src/comps/TxRawTransaction.tsx-154-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
+apps/explorer/src/comps/TxRawTransaction.tsx:155:						onClick={() => copy(stringify(value))}
+apps/explorer/src/comps/TxRawTransaction.tsx-156-						style={{
+apps/explorer/src/comps/TxRawTransaction.tsx-157-							paddingLeft: `${indent}px`,
+apps/explorer/src/comps/TxRawTransaction.tsx-158-							width: `${pad}ch`,
+apps/explorer/src/comps/TxRawTransaction.tsx-159-						}}
+apps/explorer/src/comps/TxRawTransaction.tsx-160-						type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx-161-					>
+apps/explorer/src/comps/TxRawTransaction.tsx:162:						{notifying ? <span className="text-primary">copied</span> : label}
+apps/explorer/src/comps/TxRawTransaction.tsx-163-					</button>
+apps/explorer/src/comps/TxRawTransaction.tsx-164-					{value.map((item, index) => (
+apps/explorer/src/comps/TxRawTransaction.tsx-165-						<ArrayItem
+apps/explorer/src/comps/TxRawTransaction.tsx-166-							key={`${index}${item}`}
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-180-			return (
+apps/explorer/src/comps/TxRawTransaction.tsx-181-				<div className="flex flex-col">
+apps/explorer/src/comps/TxRawTransaction.tsx-182-					<button
+apps/explorer/src/comps/TxRawTransaction.tsx-183-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
+apps/explorer/src/comps/TxRawTransaction.tsx:184:						onClick={() => copy(stringify(value))}
+apps/explorer/src/comps/TxRawTransaction.tsx-185-						style={{
+apps/explorer/src/comps/TxRawTransaction.tsx-186-							paddingLeft: `${indent}px`,
+apps/explorer/src/comps/TxRawTransaction.tsx-187-							width: `${pad}ch`,
+apps/explorer/src/comps/TxRawTransaction.tsx-188-						}}
+apps/explorer/src/comps/TxRawTransaction.tsx-189-						type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx-190-					>
+apps/explorer/src/comps/TxRawTransaction.tsx:191:						{notifying ? <span className="text-primary">copied</span> : label}
+apps/explorer/src/comps/TxRawTransaction.tsx-192-					</button>
+apps/explorer/src/comps/TxRawTransaction.tsx-193-					{entries.map(([key, val]) => (
+apps/explorer/src/comps/TxRawTransaction.tsx-194-						<Row
+apps/explorer/src/comps/TxRawTransaction.tsx-195-							key={key}
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-211-			<div className="flex gap-[16px] py-[4px]">
+apps/explorer/src/comps/TxRawTransaction.tsx-212-				<button
+apps/explorer/src/comps/TxRawTransaction.tsx-213-					className="flex items-start press-down cursor-pointer text-left"
+apps/explorer/src/comps/TxRawTransaction.tsx-214-					type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx:215:					onClick={() => copy(formattedValue)}
+apps/explorer/src/comps/TxRawTransaction.tsx-216-					style={{
+apps/explorer/src/comps/TxRawTransaction.tsx-217-						paddingLeft: `${indent}px`,
+apps/explorer/src/comps/TxRawTransaction.tsx-218-						minWidth: `${pad}ch`,
+apps/explorer/src/comps/TxRawTransaction.tsx-219-					}}
+apps/explorer/src/comps/TxRawTransaction.tsx-220-				>
+apps/explorer/src/comps/TxRawTransaction.tsx-221-					<span className="text-tertiary shrink-0">
+apps/explorer/src/comps/TxRawTransaction.tsx:222:						{notifying ? <span className="text-primary">copied</span> : label}
+apps/explorer/src/comps/TxRawTransaction.tsx-223-					</span>
+apps/explorer/src/comps/TxRawTransaction.tsx-224-				</button>
+apps/explorer/src/comps/TxRawTransaction.tsx-225-				{isLinkable ? (
+apps/explorer/src/comps/TxRawTransaction.tsx-226-					<Link
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-232-				) : (
+apps/explorer/src/comps/TxRawTransaction.tsx-233-					<button
+apps/explorer/src/comps/TxRawTransaction.tsx-234-						className="flex items-start press-down cursor-pointer text-left"
+apps/explorer/src/comps/TxRawTransaction.tsx-235-						type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx:236:						onClick={() => copy(formattedValue)}
+apps/explorer/src/comps/TxRawTransaction.tsx-237-					>
+apps/explorer/src/comps/TxRawTransaction.tsx-238-						<span>{formattedValue}</span>
+apps/explorer/src/comps/TxRawTransaction.tsx-239-					</button>
+apps/explorer/src/comps/TxRawTransaction.tsx-240-				)}
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-253-
+apps/explorer/src/comps/TxRawTransaction.tsx-254-	export function ArrayItem(props: ArrayItem.Props) {
+apps/explorer/src/comps/TxRawTransaction.tsx-255-		const { index, value, pad = 21, depth = 0 } = props
+apps/explorer/src/comps/TxRawTransaction.tsx-256-
+apps/explorer/src/comps/TxRawTransaction.tsx:257:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxRawTransaction.tsx-258-
+apps/explorer/src/comps/TxRawTransaction.tsx-259-		const isObject =
+apps/explorer/src/comps/TxRawTransaction.tsx-260-			typeof value === 'object' && value !== null && !Array.isArray(value)
+apps/explorer/src/comps/TxRawTransaction.tsx-261-		const indent = depth * 8
+--
+apps/explorer/src/comps/TxRawTransaction.tsx-291-		return (
+apps/explorer/src/comps/TxRawTransaction.tsx-292-			<div className="flex gap-[16px] py-[4px]">
+apps/explorer/src/comps/TxRawTransaction.tsx-293-				<button
+apps/explorer/src/comps/TxRawTransaction.tsx-294-					className="text-tertiary text-left"
+apps/explorer/src/comps/TxRawTransaction.tsx:295:					onClick={() => copy(TxRawTransaction.formatValue(value))}
+apps/explorer/src/comps/TxRawTransaction.tsx-296-					style={{
+apps/explorer/src/comps/TxRawTransaction.tsx-297-						paddingLeft: `${indent}px`,
+apps/explorer/src/comps/TxRawTransaction.tsx-298-						width: `${pad}ch`,
+apps/explorer/src/comps/TxRawTransaction.tsx-299-					}}
+apps/explorer/src/comps/TxRawTransaction.tsx-300-					type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx-301-				>
+apps/explorer/src/comps/TxRawTransaction.tsx:302:					{notifying ? (
+apps/explorer/src/comps/TxRawTransaction.tsx-303-						<span className="text-primary">copied</span>
+apps/explorer/src/comps/TxRawTransaction.tsx-304-					) : (
+apps/explorer/src/comps/TxRawTransaction.tsx-305-						`[${index}]`
+apps/explorer/src/comps/TxRawTransaction.tsx-306-					)}
+apps/explorer/src/comps/TxRawTransaction.tsx-307-				</button>
+apps/explorer/src/comps/TxRawTransaction.tsx-308-				<button
+apps/explorer/src/comps/TxRawTransaction.tsx-309-					className="press-down cursor-pointer text-left"
+apps/explorer/src/comps/TxRawTransaction.tsx-310-					type="button"
+apps/explorer/src/comps/TxRawTransaction.tsx:311:					onClick={() => copy(TxRawTransaction.formatValue(value))}
+apps/explorer/src/comps/TxRawTransaction.tsx-312-				>
+apps/explorer/src/comps/TxRawTransaction.tsx-313-					{TxRawTransaction.formatValue(value)}
+apps/explorer/src/comps/TxRawTransaction.tsx-314-				</button>
+apps/explorer/src/comps/TxRawTransaction.tsx-315-			</div>
+--
+apps/explorer/src/comps/BlockCard.tsx-78-			sections={[
+apps/explorer/src/comps/BlockCard.tsx-79-				<button
+apps/explorer/src/comps/BlockCard.tsx-80-					key="block-number"
+apps/explorer/src/comps/BlockCard.tsx-81-					type="button"
+apps/explorer/src/comps/BlockCard.tsx:82:					onClick={() => copyBlock.copy(String(blockNumber ?? 0n))}
+apps/explorer/src/comps/BlockCard.tsx-83-					className="w-full text-left cursor-pointer press-down text-tertiary"
+apps/explorer/src/comps/BlockCard.tsx-84-					title={String(blockNumber ?? 0n)}
+apps/explorer/src/comps/BlockCard.tsx-85-				>
+apps/explorer/src/comps/BlockCard.tsx-86-					<div className="flex items-center gap-[8px] mb-[8px]">
+apps/explorer/src/comps/BlockCard.tsx-87-						<span>Block</span>
+apps/explorer/src/comps/BlockCard.tsx-88-						<div className="relative flex items-center">
+apps/explorer/src/comps/BlockCard.tsx-89-							<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
+apps/explorer/src/comps/BlockCard.tsx:90:							{copyBlock.notifying && (
+apps/explorer/src/comps/BlockCard.tsx-91-								<span className="absolute left-[calc(100%+8px)]">copied</span>
+apps/explorer/src/comps/BlockCard.tsx-92-							)}
+apps/explorer/src/comps/BlockCard.tsx-93-						</div>
+apps/explorer/src/comps/BlockCard.tsx-94-					</div>
+--
+apps/explorer/src/comps/BlockCard.tsx-109-				<div key="hash-parent" className="w-full flex flex-col gap-[12px]">
+apps/explorer/src/comps/BlockCard.tsx-110-					{hash && (
+apps/explorer/src/comps/BlockCard.tsx-111-						<button
+apps/explorer/src/comps/BlockCard.tsx-112-							type="button"
+apps/explorer/src/comps/BlockCard.tsx:113:							onClick={() => copyHash.copy(hash)}
+apps/explorer/src/comps/BlockCard.tsx-114-							className="w-full text-left cursor-pointer press-down text-tertiary"
+apps/explorer/src/comps/BlockCard.tsx-115-							title={hash}
+apps/explorer/src/comps/BlockCard.tsx-116-						>
+apps/explorer/src/comps/BlockCard.tsx-117-							<div className="flex items-center gap-[8px] mb-[8px]">
+apps/explorer/src/comps/BlockCard.tsx-118-								<span className="font-normal capitalize">Hash</span>
+apps/explorer/src/comps/BlockCard.tsx-119-								<div className="relative flex items-center">
+apps/explorer/src/comps/BlockCard.tsx-120-									<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
+apps/explorer/src/comps/BlockCard.tsx:121:									{copyHash.notifying && (
+apps/explorer/src/comps/BlockCard.tsx-122-										<span className="absolute left-[calc(100%+8px)] ">
+apps/explorer/src/comps/BlockCard.tsx-123-											copied
+apps/explorer/src/comps/BlockCard.tsx-124-										</span>
+apps/explorer/src/comps/BlockCard.tsx-125-									)}
+--
+apps/explorer/src/comps/BlockCard.tsx-324-	}
+apps/explorer/src/comps/BlockCard.tsx-325-
+apps/explorer/src/comps/BlockCard.tsx-326-	export function RootRow(props: RootRow.Props) {
+apps/explorer/src/comps/BlockCard.tsx-327-		const { label, hash } = props
+apps/explorer/src/comps/BlockCard.tsx:328:		const { copy, notifying } = useCopy()
+apps/explorer/src/comps/BlockCard.tsx-329-
+apps/explorer/src/comps/BlockCard.tsx-330-		if (!hash) {
+apps/explorer/src/comps/BlockCard.tsx-331-			return (
+apps/explorer/src/comps/BlockCard.tsx-332-				<div className="flex items-center justify-between gap-[8px] text-primary lowercase">
+--
+apps/explorer/src/comps/BlockCard.tsx-338-
+apps/explorer/src/comps/BlockCard.tsx-339-		return (
+apps/explorer/src/comps/BlockCard.tsx-340-			<button
+apps/explorer/src/comps/BlockCard.tsx-341-				type="button"
+apps/explorer/src/comps/BlockCard.tsx:342:				onClick={() => copy(hash)}
+apps/explorer/src/comps/BlockCard.tsx-343-				className="w-full flex items-center justify-between gap-[8px] text-primary lowercase cursor-pointer press-down"
+apps/explorer/src/comps/BlockCard.tsx-344-				title={hash}
+apps/explorer/src/comps/BlockCard.tsx-345-			>
+apps/explorer/src/comps/BlockCard.tsx-346-				<span className="text-tertiary shrink-0 font-sans">
+apps/explorer/src/comps/BlockCard.tsx:347:					{notifying ? 'copied' : label}
+apps/explorer/src/comps/BlockCard.tsx-348-				</span>
+apps/explorer/src/comps/BlockCard.tsx-349-				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end font-mono">
+apps/explorer/src/comps/BlockCard.tsx-350-					<Midcut value={hash} prefix="0x" align="end" min={4} />
+apps/explorer/src/comps/BlockCard.tsx-351-					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed shrink-0" />
+--
+apps/explorer/src/comps/TxTransactionCard.tsx-9-
+apps/explorer/src/comps/TxTransactionCard.tsx-10-export function TxTransactionCard(props: TxTransactionCard.Props) {
+apps/explorer/src/comps/TxTransactionCard.tsx-11-	const { hash, status, error, blockNumber, timestamp, from, to, className } =
+apps/explorer/src/comps/TxTransactionCard.tsx-12-		props
+apps/explorer/src/comps/TxTransactionCard.tsx:13:	const { copy, notifying } = useCopy()
+apps/explorer/src/comps/TxTransactionCard.tsx-14-	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+apps/explorer/src/comps/TxTransactionCard.tsx-15-	return (
+apps/explorer/src/comps/TxTransactionCard.tsx-16-		<InfoCard
+apps/explorer/src/comps/TxTransactionCard.tsx-17-			title={<InfoCard.Title>Transaction</InfoCard.Title>}
+--
+apps/explorer/src/comps/TxTransactionCard.tsx-35-					: []),
+apps/explorer/src/comps/TxTransactionCard.tsx-36-				<button
+apps/explorer/src/comps/TxTransactionCard.tsx-37-					key="hash"
+apps/explorer/src/comps/TxTransactionCard.tsx-38-					type="button"
+apps/explorer/src/comps/TxTransactionCard.tsx:39:					onClick={() => copy(hash)}
+apps/explorer/src/comps/TxTransactionCard.tsx-40-					className="w-full text-left cursor-pointer press-down text-tertiary"
+apps/explorer/src/comps/TxTransactionCard.tsx-41-					title={hash}
+apps/explorer/src/comps/TxTransactionCard.tsx-42-					aria-label={
+apps/explorer/src/comps/TxTransactionCard.tsx:43:						notifying ? 'Transaction hash copied' : 'Copy transaction hash'
+apps/explorer/src/comps/TxTransactionCard.tsx-44-					}
+apps/explorer/src/comps/TxTransactionCard.tsx-45-				>
+apps/explorer/src/comps/TxTransactionCard.tsx-46-					<div className="flex items-center gap-[8px] mb-[8px] font-sans">
+apps/explorer/src/comps/TxTransactionCard.tsx-47-						<span className="capitalize">Hash</span>
+apps/explorer/src/comps/TxTransactionCard.tsx-48-						<div className="relative flex items-center">
+apps/explorer/src/comps/TxTransactionCard.tsx-49-							<CopyIcon className="w-[12px] h-[12px]" />
+apps/explorer/src/comps/TxTransactionCard.tsx:50:							{notifying && (
+apps/explorer/src/comps/TxTransactionCard.tsx-51-								<span className="absolute left-[calc(100%+8px)]">copied</span>
+apps/explorer/src/comps/TxTransactionCard.tsx-52-							)}
+apps/explorer/src/comps/TxTransactionCard.tsx-53-						</div>
+apps/explorer/src/comps/TxTransactionCard.tsx-54-					</div>
+--
+apps/explorer/src/comps/ContractCodeView.tsx-187-	const currentSource =
+apps/explorer/src/comps/ContractCodeView.tsx-188-		entries.find(([name]) => name === selectedPath)?.[1].content ?? ''
+apps/explorer/src/comps/ContractCodeView.tsx-189-
+apps/explorer/src/comps/ContractCodeView.tsx-190-	function copyPermalink() {
+apps/explorer/src/comps/ContractCodeView.tsx:191:		void linkCopy.copy(
+apps/explorer/src/comps/ContractCodeView.tsx-192-			createContractSourceLink(new URL(window.location.href), {
+apps/explorer/src/comps/ContractCodeView.tsx-193-				id: selectedPath,
+apps/explorer/src/comps/ContractCodeView.tsx-194-				range: selection?.range ?? null,
+apps/explorer/src/comps/ContractCodeView.tsx-195-			}),
+--
+apps/explorer/src/comps/ContractCodeView.tsx-236-						<span className="hidden @lg/source:inline">Wrap</span>
+apps/explorer/src/comps/ContractCodeView.tsx-237-					</button>
+apps/explorer/src/comps/ContractCodeView.tsx-238-					<button
+apps/explorer/src/comps/ContractCodeView.tsx-239-						type="button"
+apps/explorer/src/comps/ContractCodeView.tsx:240:						aria-label={linkCopy.notifying ? 'Link copied' : 'Copy link'}
+apps/explorer/src/comps/ContractCodeView.tsx-241-						title="Copy link"
+apps/explorer/src/comps/ContractCodeView.tsx-242-						onClick={copyPermalink}
+apps/explorer/src/comps/ContractCodeView.tsx-243-						className={toolbarButton}
+apps/explorer/src/comps/ContractCodeView.tsx-244-					>
+apps/explorer/src/comps/ContractCodeView.tsx-245-						<LinkIcon className="size-4" />
+apps/explorer/src/comps/ContractCodeView.tsx-246-						<span className="hidden @lg/source:inline">
+apps/explorer/src/comps/ContractCodeView.tsx:247:							{linkCopy.notifying ? 'Copied!' : 'Copy link'}
+apps/explorer/src/comps/ContractCodeView.tsx-248-						</span>
+apps/explorer/src/comps/ContractCodeView.tsx-249-					</button>
+apps/explorer/src/comps/ContractCodeView.tsx-250-					<button
+apps/explorer/src/comps/ContractCodeView.tsx-251-						type="button"
+apps/explorer/src/comps/ContractCodeView.tsx:252:						aria-label={sourceCopy.notifying ? 'File copied' : 'Copy file'}
+apps/explorer/src/comps/ContractCodeView.tsx-253-						title="Copy file"
+apps/explorer/src/comps/ContractCodeView.tsx:254:						onClick={() => void sourceCopy.copy(currentSource)}
+apps/explorer/src/comps/ContractCodeView.tsx-255-						className={toolbarButton}
+apps/explorer/src/comps/ContractCodeView.tsx-256-					>
+apps/explorer/src/comps/ContractCodeView.tsx-257-						<CopyIcon className="size-4" />
+apps/explorer/src/comps/ContractCodeView.tsx-258-						<span className="hidden @lg/source:inline">
+apps/explorer/src/comps/ContractCodeView.tsx:259:							{sourceCopy.notifying ? 'Copied!' : 'Copy file'}
+apps/explorer/src/comps/ContractCodeView.tsx-260-						</span>
+apps/explorer/src/comps/ContractCodeView.tsx-261-					</button>
+apps/explorer/src/comps/ContractCodeView.tsx-262-					<span className="sr-only" role="status">
+apps/explorer/src/comps/ContractCodeView.tsx:263:						{linkCopy.notifying
+apps/explorer/src/comps/ContractCodeView.tsx-264-							? 'Link copied to clipboard'
+apps/explorer/src/comps/ContractCodeView.tsx:265:							: sourceCopy.notifying
+apps/explorer/src/comps/ContractCodeView.tsx-266-								? 'File copied to clipboard'
+apps/explorer/src/comps/ContractCodeView.tsx-267-								: ''}
+apps/explorer/src/comps/ContractCodeView.tsx-268-					</span>
+apps/explorer/src/comps/ContractCodeView.tsx-269-				</div>
+--
+apps/explorer/src/comps/ErrorBoundary.tsx-80-function CopyButton({ text }: { text: string }) {
+apps/explorer/src/comps/ErrorBoundary.tsx-81-	const copy = useCopy()
+apps/explorer/src/comps/ErrorBoundary.tsx-82-	return (
+apps/explorer/src/comps/ErrorBoundary.tsx-83-		<>
+apps/explorer/src/comps/ErrorBoundary.tsx:84:			{copy.notifying && (
+apps/explorer/src/comps/ErrorBoundary.tsx-85-				<span className="absolute bottom-[12px] right-[40px] copy-13 text-base-content-secondary whitespace-nowrap">
+apps/explorer/src/comps/ErrorBoundary.tsx-86-					copied
+apps/explorer/src/comps/ErrorBoundary.tsx-87-				</span>
+apps/explorer/src/comps/ErrorBoundary.tsx-88-			)}
+apps/explorer/src/comps/ErrorBoundary.tsx-89-			<button
+apps/explorer/src/comps/ErrorBoundary.tsx-90-				type="button"
+apps/explorer/src/comps/ErrorBoundary.tsx-91-				aria-label="Copy error details"
+apps/explorer/src/comps/ErrorBoundary.tsx:92:				onClick={() => copy.copy(text)}
+apps/explorer/src/comps/ErrorBoundary.tsx-93-				className="absolute bottom-[8px] right-[8px] p-[4px] text-base-content-secondary press-down cursor-pointer"
+apps/explorer/src/comps/ErrorBoundary.tsx-94-			>
+apps/explorer/src/comps/ErrorBoundary.tsx-95-				<CopyIcon className="size-[16px]" />
+apps/explorer/src/comps/ErrorBoundary.tsx-96-			</button>
+--
+apps/explorer/src/comps/SimulateCallForm.tsx-693-								{byteLength} bytes
+apps/explorer/src/comps/SimulateCallForm.tsx-694-							</span>
+apps/explorer/src/comps/SimulateCallForm.tsx-695-							<button
+apps/explorer/src/comps/SimulateCallForm.tsx-696-								type="button"
+apps/explorer/src/comps/SimulateCallForm.tsx:697:								onClick={() => copy.copy(data)}
+apps/explorer/src/comps/SimulateCallForm.tsx-698-								className="shrink-0 text-tertiary cursor-pointer press-down hover:text-primary"
+apps/explorer/src/comps/SimulateCallForm.tsx-699-								title="Copy calldata"
+apps/explorer/src/comps/SimulateCallForm.tsx-700-							>
+apps/explorer/src/comps/SimulateCallForm.tsx:701:								{copy.notifying ? (
+apps/explorer/src/comps/SimulateCallForm.tsx-702-									<CheckIcon className="size-[12px]" />
+apps/explorer/src/comps/SimulateCallForm.tsx-703-								) : (
+apps/explorer/src/comps/SimulateCallForm.tsx-704-									<CopyIcon className="size-[12px]" />
+apps/explorer/src/comps/SimulateCallForm.tsx-705-								)}
+--
+apps/explorer/src/comps/ContractWriter.tsx-103-	fn: WriteFunction
+apps/explorer/src/comps/ContractWriter.tsx-104-}) {
+apps/explorer/src/comps/ContractWriter.tsx-105-	const { fn } = props
+apps/explorer/src/comps/ContractWriter.tsx-106-	const [inputs, setInputs] = React.useState<Record<string, string>>({})
+apps/explorer/src/comps/ContractWriter.tsx:107:	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
+apps/explorer/src/comps/ContractWriter.tsx-108-
+apps/explorer/src/comps/ContractWriter.tsx-109-	const selector = getFunctionSelector(fn)
+apps/explorer/src/comps/ContractWriter.tsx-110-	const fnId = `write-${fn.name || selector}`
+apps/explorer/src/comps/ContractWriter.tsx-111-
+--
+apps/explorer/src/comps/ContractWriter.tsx-143-	}, [fn.inputs, inputs, allInputsFilled])
+apps/explorer/src/comps/ContractWriter.tsx-144-
+apps/explorer/src/comps/ContractWriter.tsx-145-	const handleCopyMethod = (event: React.MouseEvent) => {
+apps/explorer/src/comps/ContractWriter.tsx-146-		event.stopPropagation()
+apps/explorer/src/comps/ContractWriter.tsx:147:		void copy(getMethodWithSelector(fn))
+apps/explorer/src/comps/ContractWriter.tsx-148-	}
+apps/explorer/src/comps/ContractWriter.tsx-149-
+apps/explorer/src/comps/ContractWriter.tsx-150-	/**
+apps/explorer/src/comps/ContractWriter.tsx-151-	 * Calldata for the Simulate link. Falls back to the bare selector when the
+--
+apps/explorer/src/comps/ContractWriter.tsx-164-			}
+apps/explorer/src/comps/ContractWriter.tsx-165-		return selector as Hex
+apps/explorer/src/comps/ContractWriter.tsx-166-	}, [allInputsFilled, parsedArgs, props.abi, fn.name, selector])
+apps/explorer/src/comps/ContractWriter.tsx-167-
+apps/explorer/src/comps/ContractWriter.tsx:168:	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
+apps/explorer/src/comps/ContractWriter.tsx-169-		fragment: fnId,
+apps/explorer/src/comps/ContractWriter.tsx-170-	})
+apps/explorer/src/comps/ContractWriter.tsx-171-
+apps/explorer/src/comps/ContractWriter.tsx-172-	const isPayable = fn.stateMutability === 'payable'
+--
+apps/explorer/src/comps/ContractWriter.tsx-225-					<button
+apps/explorer/src/comps/ContractWriter.tsx-226-						type="button"
+apps/explorer/src/comps/ContractWriter.tsx-227-						onClick={(event) => {
+apps/explorer/src/comps/ContractWriter.tsx-228-							event.stopPropagation()
+apps/explorer/src/comps/ContractWriter.tsx:229:							void handleCopyPermalink()
+apps/explorer/src/comps/ContractWriter.tsx-230-						}}
+apps/explorer/src/comps/ContractWriter.tsx-231-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
+apps/explorer/src/comps/ContractWriter.tsx-232-						className={cx(
+apps/explorer/src/comps/ContractWriter.tsx-233-							'cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
+--
+apps/explorer/src/comps/TxTraceTree.tsx-66-
+apps/explorer/src/comps/TxTraceTree.tsx-67-	if (!tree) return null
+apps/explorer/src/comps/TxTraceTree.tsx-68-
+apps/explorer/src/comps/TxTraceTree.tsx-69-	const handleCopy = () => {
+apps/explorer/src/comps/TxTraceTree.tsx:70:		copy.copy(TxTraceTree.toAscii(tree, { raw }))
+apps/explorer/src/comps/TxTraceTree.tsx-71-	}
+apps/explorer/src/comps/TxTraceTree.tsx-72-
+apps/explorer/src/comps/TxTraceTree.tsx-73-	const isTree = tree.subtreeSize > 1
+apps/explorer/src/comps/TxTraceTree.tsx-74-	// A one-frame trace has nothing to filter, expand, or collapse, and inside a
+--
+apps/explorer/src/comps/TxTraceTree.tsx-134-					>
+apps/explorer/src/comps/TxTraceTree.tsx-135-						<WrapIcon className="size-[12px]" />
+apps/explorer/src/comps/TxTraceTree.tsx-136-					</PanelToolbar.IconButton>
+apps/explorer/src/comps/TxTraceTree.tsx-137-					<PanelToolbar.IconButton onClick={handleCopy} title="Copy trace">
+apps/explorer/src/comps/TxTraceTree.tsx:138:						{copy.notifying ? (
+apps/explorer/src/comps/TxTraceTree.tsx-139-							<CheckIcon className="size-[12px]" />
+apps/explorer/src/comps/TxTraceTree.tsx-140-						) : (
+apps/explorer/src/comps/TxTraceTree.tsx-141-							<CopyIcon className="size-[12px]" />
+apps/explorer/src/comps/TxTraceTree.tsx-142-						)}
+--
+apps/explorer/src/comps/TxTraceTree.tsx-157-						<span className="text-tertiary">{label} </span>
+apps/explorer/src/comps/TxTraceTree.tsx-158-						<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
+apps/explorer/src/comps/TxTraceTree.tsx-159-					</span>
+apps/explorer/src/comps/TxTraceTree.tsx-160-					<div className="flex items-center gap-[8px] text-tertiary">
+apps/explorer/src/comps/TxTraceTree.tsx:161:						{copy.notifying && (
+apps/explorer/src/comps/TxTraceTree.tsx-162-							<span className="label-12 select-none">copied</span>
+apps/explorer/src/comps/TxTraceTree.tsx-163-						)}
+apps/explorer/src/comps/TxTraceTree.tsx-164-						<button
+apps/explorer/src/comps/TxTraceTree.tsx-165-							type="button"
+--
+apps/explorer/src/comps/Receipt.tsx-74-			} catch (error) {
+apps/explorer/src/comps/Receipt.tsx-75-				if (error instanceof DOMException && error.name === 'AbortError') return
+apps/explorer/src/comps/Receipt.tsx-76-			}
+apps/explorer/src/comps/Receipt.tsx-77-		}
+apps/explorer/src/comps/Receipt.tsx:78:		await copyShare.copy(url)
+apps/explorer/src/comps/Receipt.tsx-79-	}
+apps/explorer/src/comps/Receipt.tsx-80-
+apps/explorer/src/comps/Receipt.tsx-81-	return (
+apps/explorer/src/comps/Receipt.tsx-82-		<>
+--
+apps/explorer/src/comps/Receipt.tsx-367-							onClick={() => void handleShare()}
+apps/explorer/src/comps/Receipt.tsx-368-							className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down hover:bg-base-plane hover:text-primary"
+apps/explorer/src/comps/Receipt.tsx-369-						>
+apps/explorer/src/comps/Receipt.tsx-370-							<ShareIcon className="size-[13px]" />
+apps/explorer/src/comps/Receipt.tsx:371:							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
+apps/explorer/src/comps/Receipt.tsx-372-						</button>
+apps/explorer/src/comps/Receipt.tsx-373-						<Receipt.ExportLink
+apps/explorer/src/comps/Receipt.tsx-374-							hash={hash}
+apps/explorer/src/comps/Receipt.tsx-375-							format="pdf"
+--
+apps/explorer/src/comps/TxDecodedCalldata.tsx-75-					<pre className="label-12 text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
+apps/explorer/src/comps/TxDecodedCalldata.tsx-76-						{data}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-77-					</pre>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-78-					<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
+apps/explorer/src/comps/TxDecodedCalldata.tsx:79:						{copyRaw.notifying && (
+apps/explorer/src/comps/TxDecodedCalldata.tsx-80-							<span className="label-12 select-none">copied</span>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-81-						)}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-82-						<button
+apps/explorer/src/comps/TxDecodedCalldata.tsx-83-							type="button"
+apps/explorer/src/comps/TxDecodedCalldata.tsx-84-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+apps/explorer/src/comps/TxDecodedCalldata.tsx:85:							onClick={() => copyRaw.copy(data)}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-86-							title="Copy raw data"
+apps/explorer/src/comps/TxDecodedCalldata.tsx-87-						>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-88-							<CopyIcon className="size-[14px]" />
+apps/explorer/src/comps/TxDecodedCalldata.tsx-89-						</button>
+--
+apps/explorer/src/comps/TxDecodedCalldata.tsx-112-						))}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-113-						<span className="text-secondary">)</span>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-114-					</code>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-115-					<div className="flex items-center gap-[4px] text-tertiary">
+apps/explorer/src/comps/TxDecodedCalldata.tsx:116:						{copySignature.notifying && (
+apps/explorer/src/comps/TxDecodedCalldata.tsx-117-							<span className="label-12 select-none">copied</span>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-118-						)}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-119-						<button
+apps/explorer/src/comps/TxDecodedCalldata.tsx-120-							type="button"
+apps/explorer/src/comps/TxDecodedCalldata.tsx-121-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+apps/explorer/src/comps/TxDecodedCalldata.tsx-122-							onClick={() =>
+apps/explorer/src/comps/TxDecodedCalldata.tsx:123:								copySignature.copy(
+apps/explorer/src/comps/TxDecodedCalldata.tsx-124-									`${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`,
+apps/explorer/src/comps/TxDecodedCalldata.tsx-125-								)
+apps/explorer/src/comps/TxDecodedCalldata.tsx-126-							}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-127-							title="Copy signature"
+--
+apps/explorer/src/comps/TxDecodedCalldata.tsx-155-						<pre className="label-12 text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
+apps/explorer/src/comps/TxDecodedCalldata.tsx-156-							{data}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-157-						</pre>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-158-						<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
+apps/explorer/src/comps/TxDecodedCalldata.tsx:159:							{copyRaw.notifying && (
+apps/explorer/src/comps/TxDecodedCalldata.tsx-160-								<span className="label-12 select-none">copied</span>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-161-							)}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-162-							<button
+apps/explorer/src/comps/TxDecodedCalldata.tsx-163-								type="button"
+apps/explorer/src/comps/TxDecodedCalldata.tsx-164-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+apps/explorer/src/comps/TxDecodedCalldata.tsx:165:								onClick={() => copyRaw.copy(data)}
+apps/explorer/src/comps/TxDecodedCalldata.tsx-166-								title="Copy raw data"
+apps/explorer/src/comps/TxDecodedCalldata.tsx-167-							>
+apps/explorer/src/comps/TxDecodedCalldata.tsx-168-								<CopyIcon className="size-[14px]" />
+apps/explorer/src/comps/TxDecodedCalldata.tsx-169-							</button>
+--
+apps/explorer/src/routes/_layout/simulate.tsx-579-				)}
+apps/explorer/src/routes/_layout/simulate.tsx-580-				{runInput && (
+apps/explorer/src/routes/_layout/simulate.tsx-581-					<Button
+apps/explorer/src/routes/_layout/simulate.tsx-582-						onClick={() =>
+apps/explorer/src/routes/_layout/simulate.tsx:583:							shareLink.copy(
+apps/explorer/src/routes/_layout/simulate.tsx-584-								typeof window === 'undefined' ? '' : window.location.href,
+apps/explorer/src/routes/_layout/simulate.tsx-585-							)
+apps/explorer/src/routes/_layout/simulate.tsx-586-						}
+apps/explorer/src/routes/_layout/simulate.tsx-587-						title="Copy a link that reproduces this screen"
+apps/explorer/src/routes/_layout/simulate.tsx-588-					>
+apps/explorer/src/routes/_layout/simulate.tsx-589-						<LinkIcon className="size-[12px]" />
+apps/explorer/src/routes/_layout/simulate.tsx:590:						{shareLink.notifying ? 'Copied' : 'Share'}
+apps/explorer/src/routes/_layout/simulate.tsx-591-					</Button>
+apps/explorer/src/routes/_layout/simulate.tsx-592-				)}
+apps/explorer/src/routes/_layout/simulate.tsx-593-				<Button tone="primary" onClick={run} title="Run this simulation (⌘↵)">
+apps/explorer/src/routes/_layout/simulate.tsx-594-					<PlayIcon className="size-[12px]" />
+--
+apps/explorer/src/comps/TxStateDiff.tsx-72-						>
+apps/explorer/src/comps/TxStateDiff.tsx-73-							<WrapIcon className="size-[12px]" />
+apps/explorer/src/comps/TxStateDiff.tsx-74-						</PanelToolbar.IconButton>
+apps/explorer/src/comps/TxStateDiff.tsx-75-						<PanelToolbar.IconButton
+apps/explorer/src/comps/TxStateDiff.tsx:76:							onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
+apps/explorer/src/comps/TxStateDiff.tsx-77-							title="Copy state changes"
+apps/explorer/src/comps/TxStateDiff.tsx-78-						>
+apps/explorer/src/comps/TxStateDiff.tsx:79:							{copy.notifying ? (
+apps/explorer/src/comps/TxStateDiff.tsx-80-								<CheckIcon className="size-[12px]" />
+apps/explorer/src/comps/TxStateDiff.tsx-81-							) : (
+apps/explorer/src/comps/TxStateDiff.tsx-82-								<CopyIcon className="size-[12px]" />
+apps/explorer/src/comps/TxStateDiff.tsx-83-							)}
+--
+apps/explorer/src/comps/TxStateDiff.tsx-106-						)}
+apps/explorer/src/comps/TxStateDiff.tsx-107-					</span>
+apps/explorer/src/comps/TxStateDiff.tsx-108-					{hasData && (
+apps/explorer/src/comps/TxStateDiff.tsx-109-						<div className="flex items-center gap-[8px] text-tertiary">
+apps/explorer/src/comps/TxStateDiff.tsx:110:							{copy.notifying && (
+apps/explorer/src/comps/TxStateDiff.tsx-111-								<span className="label-12 select-none">copied</span>
+apps/explorer/src/comps/TxStateDiff.tsx-112-							)}
+apps/explorer/src/comps/TxStateDiff.tsx-113-							<button
+apps/explorer/src/comps/TxStateDiff.tsx-114-								type="button"
+apps/explorer/src/comps/TxStateDiff.tsx-115-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+apps/explorer/src/comps/TxStateDiff.tsx:116:								onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
+apps/explorer/src/comps/TxStateDiff.tsx-117-								title="Copy state changes"
+apps/explorer/src/comps/TxStateDiff.tsx-118-							>
+apps/explorer/src/comps/TxStateDiff.tsx-119-								<CopyIcon className="size-[14px]" />
+apps/explorer/src/comps/TxStateDiff.tsx-120-							</button>
+--
+apps/explorer/src/comps/TxStateDiff.tsx-404-					'flex items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group',
+apps/explorer/src/comps/TxStateDiff.tsx-405-					wrap ? 'break-all' : 'whitespace-nowrap',
+apps/explorer/src/comps/TxStateDiff.tsx-406-					className,
+apps/explorer/src/comps/TxStateDiff.tsx-407-				)}
+apps/explorer/src/comps/TxStateDiff.tsx:408:				onClick={() => copy.copy(valueToCopy)}
+apps/explorer/src/comps/TxStateDiff.tsx-409-				title={isDecoded ? valueToCopy : undefined}
+apps/explorer/src/comps/TxStateDiff.tsx-410-			>
+apps/explorer/src/comps/TxStateDiff.tsx-411-				{value}
+apps/explorer/src/comps/TxStateDiff.tsx:412:				{copy.notifying && (
+apps/explorer/src/comps/TxStateDiff.tsx-413-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
+apps/explorer/src/comps/TxStateDiff.tsx-414-						<div className="translate-y-[-2px]">copied</div>
+apps/explorer/src/comps/TxStateDiff.tsx-415-					</div>
+apps/explorer/src/comps/TxStateDiff.tsx-416-				)}
+--
+apps/explorer/src/comps/TxStateDiff.tsx-439-				className={cx(
+apps/explorer/src/comps/TxStateDiff.tsx-440-					'flex flex-col items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group border-t border-card-border',
+apps/explorer/src/comps/TxStateDiff.tsx-441-					wrap ? 'break-all' : 'whitespace-nowrap',
+apps/explorer/src/comps/TxStateDiff.tsx-442-				)}
+apps/explorer/src/comps/TxStateDiff.tsx:443:				onClick={() => copy.copy(valueToCopy)}
+apps/explorer/src/comps/TxStateDiff.tsx-444-				title={isDecoded ? valueToCopy : undefined}
+apps/explorer/src/comps/TxStateDiff.tsx-445-			>
+apps/explorer/src/comps/TxStateDiff.tsx-446-				<span className="text-primary">{value}</span>
+apps/explorer/src/comps/TxStateDiff.tsx-447-				{/* A balance going down is not a failure, so it does not get failure
+--
+apps/explorer/src/comps/TxStateDiff.tsx-456-					>
+apps/explorer/src/comps/TxStateDiff.tsx-457-						{diff.display}
+apps/explorer/src/comps/TxStateDiff.tsx-458-					</span>
+apps/explorer/src/comps/TxStateDiff.tsx-459-				)}
+apps/explorer/src/comps/TxStateDiff.tsx:460:				{copy.notifying && (
+apps/explorer/src/comps/TxStateDiff.tsx-461-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
+apps/explorer/src/comps/TxStateDiff.tsx-462-						<div className="translate-y-[-2px]">copied</div>
+apps/explorer/src/comps/TxStateDiff.tsx-463-					</div>
+apps/explorer/src/comps/TxStateDiff.tsx-464-				)}
+--
+apps/explorer/src/comps/ContractReader.tsx-252-	abi: Abi
+apps/explorer/src/comps/ContractReader.tsx-253-	fn: ReadFunction
+apps/explorer/src/comps/ContractReader.tsx-254-}) {
+apps/explorer/src/comps/ContractReader.tsx-255-	const { address, abi, fn } = props
+apps/explorer/src/comps/ContractReader.tsx:256:	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
+apps/explorer/src/comps/ContractReader.tsx-257-
+apps/explorer/src/comps/ContractReader.tsx-258-	const [mounted, setMounted] = React.useState(false)
+apps/explorer/src/comps/ContractReader.tsx-259-	React.useEffect(() => setMounted(true), [])
+apps/explorer/src/comps/ContractReader.tsx-260-
+--
+apps/explorer/src/comps/ContractReader.tsx-338-	const isAddressOutput = outputType === 'address' || isResultAddress
+apps/explorer/src/comps/ContractReader.tsx-339-	const isValidAddress = mounted && isAddressOutput && isResultAddress
+apps/explorer/src/comps/ContractReader.tsx-340-
+apps/explorer/src/comps/ContractReader.tsx-341-	const handleCopyMethod = () => {
+apps/explorer/src/comps/ContractReader.tsx:342:		void copy(getMethodWithSelector(fn))
+apps/explorer/src/comps/ContractReader.tsx-343-	}
+apps/explorer/src/comps/ContractReader.tsx-344-
+apps/explorer/src/comps/ContractReader.tsx:345:	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
+apps/explorer/src/comps/ContractReader.tsx-346-		fragment: fnId,
+apps/explorer/src/comps/ContractReader.tsx-347-	})
+apps/explorer/src/comps/ContractReader.tsx-348-
+apps/explorer/src/comps/ContractReader.tsx-349-	return (
+--
+apps/explorer/src/comps/ContractReader.tsx-371-					<button
+apps/explorer/src/comps/ContractReader.tsx-372-						type="button"
+apps/explorer/src/comps/ContractReader.tsx-373-						onClick={(event) => {
+apps/explorer/src/comps/ContractReader.tsx-374-							event.stopPropagation()
+apps/explorer/src/comps/ContractReader.tsx:375:							void handleCopyPermalink()
+apps/explorer/src/comps/ContractReader.tsx-376-						}}
+apps/explorer/src/comps/ContractReader.tsx-377-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
+apps/explorer/src/comps/ContractReader.tsx-378-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+apps/explorer/src/comps/ContractReader.tsx-379-					>
+--
+apps/explorer/src/comps/ContractReader.tsx-428-	fn: ReadFunction
+apps/explorer/src/comps/ContractReader.tsx-429-}) {
+apps/explorer/src/comps/ContractReader.tsx-430-	const { address, abi, fn } = props
+apps/explorer/src/comps/ContractReader.tsx-431-	const [inputs, setInputs] = React.useState<Record<string, string>>({})
+apps/explorer/src/comps/ContractReader.tsx:432:	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
+apps/explorer/src/comps/ContractReader.tsx-433-
+apps/explorer/src/comps/ContractReader.tsx-434-	const selector = getFunctionSelector(fn)
+apps/explorer/src/comps/ContractReader.tsx-435-	const fnId = fn.name || selector
+apps/explorer/src/comps/ContractReader.tsx-436-
+--
+apps/explorer/src/comps/ContractReader.tsx-541-		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'uint256')
+apps/explorer/src/comps/ContractReader.tsx-542-
+apps/explorer/src/comps/ContractReader.tsx-543-	const handleCopyMethod = (e: React.MouseEvent) => {
+apps/explorer/src/comps/ContractReader.tsx-544-		e.stopPropagation()
+apps/explorer/src/comps/ContractReader.tsx:545:		void copy(getMethodWithSelector(fn))
+apps/explorer/src/comps/ContractReader.tsx-546-	}
+apps/explorer/src/comps/ContractReader.tsx-547-
+apps/explorer/src/comps/ContractReader.tsx:548:	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
+apps/explorer/src/comps/ContractReader.tsx-549-		fragment: fnId,
+apps/explorer/src/comps/ContractReader.tsx-550-	})
+apps/explorer/src/comps/ContractReader.tsx-551-
+apps/explorer/src/comps/ContractReader.tsx-552-	return (
+--
+apps/explorer/src/comps/ContractReader.tsx-582-					<button
+apps/explorer/src/comps/ContractReader.tsx-583-						type="button"
+apps/explorer/src/comps/ContractReader.tsx-584-						onClick={(event) => {
+apps/explorer/src/comps/ContractReader.tsx-585-							event.stopPropagation()
+apps/explorer/src/comps/ContractReader.tsx:586:							void handleCopyPermalink()
+apps/explorer/src/comps/ContractReader.tsx-587-						}}
+apps/explorer/src/comps/ContractReader.tsx-588-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
+apps/explorer/src/comps/ContractReader.tsx-589-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+apps/explorer/src/comps/ContractReader.tsx-590-					>

@@ -1,0 +1,10 @@
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3001/demo/address
+Call log:
+[2m  - navigating to "http://127.0.0.1:3001/demo/address", waiting until "domcontentloaded"[22m
+
+    at /private/tmp/factory-browser/clipboard.cjs:11:13 {
+  log: [
+    '  - navigating to "http://127.0.0.1:3001/demo/address", waiting until "domcontentloaded"'
+  ],
+  name: 'Error'
+}

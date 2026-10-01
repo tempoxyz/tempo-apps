@@ -1,0 +1,311 @@
+
+> @tempo/apps@ check /Users/daniel/tempo/tempo-apps-factory-clipboard
+> pnpm --recursive --parallel --stream --reporter='append-only' check:biome
+
+Scope: 11 of 12 workspace projects
+apps/contract-verification check:biome$ biome check --write --unsafe
+apps/explorer check:biome$ biome check --write --unsafe
+apps/fee-payer check:biome$ biome check --write .
+apps/reth-snapshots-viewer check:biome$ biome check --write --unsafe
+apps/mcp-docs-indexer check:biome$ biome check --write --unsafe
+apps/og check:biome$ biome check --write --unsafe
+apps/tempo-snapshots-viewer check:biome$ biome check --write --unsafe
+apps/tokenlist check:biome$ biome check --write --unsafe
+packages/rpc-utils check:biome$ biome check --write --unsafe
+apps/reth-snapshots-viewer check:biome: Checked 4 files in 9s. No fixes applied.
+packages/rpc-utils check:biome: Checked 8 files in 9s. No fixes applied.
+apps/fee-payer check:biome: src/lib/api-key-budget.ts:26:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     24 │ /** Read the current daily spend (microdollars) for an API key from KV. */
+apps/fee-payer check:biome:     25 │ export async function getDailySpend(apiKey: string): Promise<bigint> {
+apps/fee-payer check:biome:   > 26 │ 	const raw = await env.SponsorApiKeyStore!.get(dailySpendKvKey(apiKey))
+apps/fee-payer check:biome:        │ 	                  ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     27 │ 	if (!raw) return 0n
+apps/fee-payer check:biome:     28 │ 	return BigInt(raw)
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      24  24 │   /** Read the current daily spend (microdollars) for an API key from KV. */
+apps/fee-payer check:biome:      25  25 │   export async function getDailySpend(apiKey: string): Promise<bigint> {
+apps/fee-payer check:biome:      26     │ - → const·raw·=·await·env.SponsorApiKeyStore!.get(dailySpendKvKey(apiKey))
+apps/fee-payer check:biome:          26 │ + → const·raw·=·await·env.SponsorApiKeyStore?.get(dailySpendKvKey(apiKey))
+apps/fee-payer check:biome:      27  27 │     if (!raw) return 0n
+apps/fee-payer check:biome:      28  28 │     return BigInt(raw)
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-key-budget.ts:33:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     31 │ /** Read the cumulative lifetime spend (microdollars) for an API key from KV. */
+apps/fee-payer check:biome:     32 │ export async function getLifetimeSpend(apiKey: string): Promise<bigint> {
+apps/fee-payer check:biome:   > 33 │ 	const raw = await env.SponsorApiKeyStore!.get(lifetimeSpendKvKey(apiKey))
+apps/fee-payer check:biome:        │ 	                  ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     34 │ 	if (!raw) return 0n
+apps/fee-payer check:biome:     35 │ 	return BigInt(raw)
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      31  31 │   /** Read the cumulative lifetime spend (microdollars) for an API key from KV. */
+apps/fee-payer check:biome:      32  32 │   export async function getLifetimeSpend(apiKey: string): Promise<bigint> {
+apps/fee-payer check:biome:      33     │ - → const·raw·=·await·env.SponsorApiKeyStore!.get(lifetimeSpendKvKey(apiKey))
+apps/fee-payer check:biome:          33 │ + → const·raw·=·await·env.SponsorApiKeyStore?.get(lifetimeSpendKvKey(apiKey))
+apps/fee-payer check:biome:      34  34 │     if (!raw) return 0n
+apps/fee-payer check:biome:      35  35 │     return BigInt(raw)
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-key-budget.ts:68:3 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     67 │ 	await Promise.all([
+apps/fee-payer check:biome:   > 68 │ 		env.SponsorApiKeyStore!.put(
+apps/fee-payer check:biome:        │ 		^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     69 │ 			dailySpendKvKey(apiKey),
+apps/fee-payer check:biome:     70 │ 			(currentDaily + fee).toString(),
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      66  66 │   
+apps/fee-payer check:biome:      67  67 │     await Promise.all([
+apps/fee-payer check:biome:      68     │ - → → env.SponsorApiKeyStore!.put(
+apps/fee-payer check:biome:          68 │ + → → env.SponsorApiKeyStore?.put(
+apps/fee-payer check:biome:      69  69 │         dailySpendKvKey(apiKey),
+apps/fee-payer check:biome:      70  70 │         (currentDaily + fee).toString(),
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-key-budget.ts:73:3 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     71 │ 			{ expirationTtl: 86_400 },
+apps/fee-payer check:biome:     72 │ 		),
+apps/fee-payer check:biome:   > 73 │ 		env.SponsorApiKeyStore!.put(
+apps/fee-payer check:biome:        │ 		^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     74 │ 			lifetimeSpendKvKey(apiKey),
+apps/fee-payer check:biome:     75 │ 			(currentLifetime + fee).toString(),
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      71  71 │         { expirationTtl: 86_400 },
+apps/fee-payer check:biome:      72  72 │       ),
+apps/fee-payer check:biome:      73     │ - → → env.SponsorApiKeyStore!.put(
+apps/fee-payer check:biome:          73 │ + → → env.SponsorApiKeyStore?.put(
+apps/fee-payer check:biome:      74  74 │         lifetimeSpendKvKey(apiKey),
+apps/fee-payer check:biome:      75  75 │         (currentLifetime + fee).toString(),
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-keys.ts:59:8 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     57 │ 		active: true,
+apps/fee-payer check:biome:     58 │ 	}
+apps/fee-payer check:biome:   > 59 │ 	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(full))
+apps/fee-payer check:biome:        │ 	      ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     60 │ 	return key
+apps/fee-payer check:biome:     61 │ }
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      57  57 │       active: true,
+apps/fee-payer check:biome:      58  58 │     }
+apps/fee-payer check:biome:      59     │ - → await·env.SponsorApiKeyStore!.put(kvKey(key),·JSON.stringify(full))
+apps/fee-payer check:biome:          59 │ + → await·env.SponsorApiKeyStore?.put(kvKey(key),·JSON.stringify(full))
+apps/fee-payer check:biome:      60  60 │     return key
+apps/fee-payer check:biome:      61  61 │   }
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-keys.ts:77:25 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     75 │ 	>,
+apps/fee-payer check:biome:     76 │ ): Promise<boolean> {
+apps/fee-payer check:biome:   > 77 │ 	const existing = await env.SponsorApiKeyStore!.get(kvKey(key))
+apps/fee-payer check:biome:        │ 	                       ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     78 │ 	if (!existing) return false
+apps/fee-payer check:biome:     79 │ 	const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      75  75 │     >,
+apps/fee-payer check:biome:      76  76 │   ): Promise<boolean> {
+apps/fee-payer check:biome:      77     │ - → const·existing·=·await·env.SponsorApiKeyStore!.get(kvKey(key))
+apps/fee-payer check:biome:          77 │ + → const·existing·=·await·env.SponsorApiKeyStore?.get(kvKey(key))
+apps/fee-payer check:biome:      78  78 │     if (!existing) return false
+apps/fee-payer check:biome:      79  79 │     const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-keys.ts:82:8 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     80 │ 	if (!parsed.success) return false
+apps/fee-payer check:biome:     81 │ 	const updated = { ...parsed.data, ...updates }
+apps/fee-payer check:biome:   > 82 │ 	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(updated))
+apps/fee-payer check:biome:        │ 	      ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     83 │ 	return true
+apps/fee-payer check:biome:     84 │ }
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      80  80 │     if (!parsed.success) return false
+apps/fee-payer check:biome:      81  81 │     const updated = { ...parsed.data, ...updates }
+apps/fee-payer check:biome:      82     │ - → await·env.SponsorApiKeyStore!.put(kvKey(key),·JSON.stringify(updated))
+apps/fee-payer check:biome:          82 │ + → await·env.SponsorApiKeyStore?.put(kvKey(key),·JSON.stringify(updated))
+apps/fee-payer check:biome:      83  83 │     return true
+apps/fee-payer check:biome:      84  84 │   }
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-keys.ts:96:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     94 │ 	cursor: string | null
+apps/fee-payer check:biome:     95 │ }> {
+apps/fee-payer check:biome:   > 96 │ 	const list = await env.SponsorApiKeyStore!.list({
+apps/fee-payer check:biome:        │ 	                   ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     97 │ 		prefix: KV_PREFIX,
+apps/fee-payer check:biome:     98 │ 		cursor: cursor ?? undefined,
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:      94  94 │     cursor: string | null
+apps/fee-payer check:biome:      95  95 │   }> {
+apps/fee-payer check:biome:      96     │ - → const·list·=·await·env.SponsorApiKeyStore!.list({
+apps/fee-payer check:biome:          96 │ + → const·list·=·await·env.SponsorApiKeyStore?.list({
+apps/fee-payer check:biome:      97  97 │       prefix: KV_PREFIX,
+apps/fee-payer check:biome:      98  98 │       cursor: cursor ?? undefined,
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: src/lib/api-keys.ts:102:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/fee-payer check:biome:   ! Forbidden non-null assertion.
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     100 │ 	const keys: Array<{ key: string; record: ApiKeyRecord }> = []
+apps/fee-payer check:biome:     101 │ 	for (const item of list.keys) {
+apps/fee-payer check:biome:   > 102 │ 		const raw = await env.SponsorApiKeyStore!.get(item.name)
+apps/fee-payer check:biome:         │ 		                  ^^^^^^^^^^^^^^^^^^^^^^^
+apps/fee-payer check:biome:     103 │ 		if (!raw) continue
+apps/fee-payer check:biome:     104 │ 		const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:   i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome:     100 100 │     const keys: Array<{ key: string; record: ApiKeyRecord }> = []
+apps/fee-payer check:biome:     101 101 │     for (const item of list.keys) {
+apps/fee-payer check:biome:     102     │ - → → const·raw·=·await·env.SponsorApiKeyStore!.get(item.name)
+apps/fee-payer check:biome:         102 │ + → → const·raw·=·await·env.SponsorApiKeyStore?.get(item.name)
+apps/fee-payer check:biome:     103 103 │       if (!raw) continue
+apps/fee-payer check:biome:     104 104 │       const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
+apps/fee-payer check:biome:   
+apps/fee-payer check:biome: Skipped 9 suggested fixes.
+apps/fee-payer check:biome: If you wish to apply the suggested (unsafe) fixes, use the command biome check --write --unsafe
+apps/fee-payer check:biome: Checked 39 files in 9s. No fixes applied.
+apps/fee-payer check:biome: Found 9 warnings.
+apps/tokenlist check:biome: Checked 17 files in 8s. No fixes applied.
+apps/tempo-snapshots-viewer check:biome: Checked 4 files in 8s. No fixes applied.
+apps/contract-verification check:biome: Checked 56 files in 9s. No fixes applied.
+apps/mcp-docs-indexer check:biome: Checked 30 files in 9s. No fixes applied.
+apps/og check:biome: src/index.tsx:179:46 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/og check:biome:   ! Forbidden non-null assertion.
+apps/og check:biome:   
+apps/og check:biome:     177 │ 				),
+apps/og check:biome:     178 │ 			].map(async (token) => {
+apps/og check:biome:   > 179 │ 				const icon = await fetchTokenIcon(token, txParams.chainId!)
+apps/og check:biome:         │ 				                                         ^^^^^^^^^^^^^^^^^
+apps/og check:biome:     180 │ 				if (icon) icons[token] = icon
+apps/og check:biome:     181 │ 			}),
+apps/og check:biome:   
+apps/og check:biome: src/index.tsx:253:47 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/og check:biome:   ! Forbidden non-null assertion.
+apps/og check:biome:   
+apps/og check:biome:     251 │ 					),
+apps/og check:biome:     252 │ 				].map(async (token) => {
+apps/og check:biome:   > 253 │ 					const icon = await fetchTokenIcon(token, txParams.chainId!)
+apps/og check:biome:         │ 					                                         ^^^^^^^^^^^^^^^^^
+apps/og check:biome:     254 │ 					if (icon) icons[token] = icon
+apps/og check:biome:     255 │ 				}),
+apps/og check:biome:   
+apps/og check:biome: Checked 15 files in 8s. No fixes applied.
+apps/og check:biome: Found 2 warnings.
+apps/explorer check:biome: src/lib/og.ts:195:39 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+apps/explorer check:biome:   ! Forbidden non-null assertion.
+apps/explorer check:biome:   
+apps/explorer check:biome:     193 │ 	].slice(0, 2)
+apps/explorer check:biome:     194 │ 	return {
+apps/explorer check:biome:   > 195 │ 		tokens: uniqueTokens.map((token) => token.address!),
+apps/explorer check:biome:         │ 		                                    ^^^^^^^^^^^^^^
+apps/explorer check:biome:     196 │ 		tokenSymbols: uniqueTokens.map((token) => token.symbol ?? ''),
+apps/explorer check:biome:     197 │ 		action: truncateOgText(action, 40),
+apps/explorer check:biome:   
+apps/explorer check:biome: Checked 303 files in 9s. No fixes applied.
+apps/explorer check:biome: Found 1 warning.
+packages/rpc-utils check:biome: Done
+apps/tokenlist check:biome: Done
+apps/fee-payer check:biome: Done
+apps/contract-verification check:biome: Done
+apps/reth-snapshots-viewer check:biome: Done
+apps/tempo-snapshots-viewer check:biome: Done
+apps/mcp-docs-indexer check:biome: Done
+apps/og check:biome: Done
+apps/explorer check:biome: Done
+
+> @tempo/apps@ postcheck /Users/daniel/tempo/tempo-apps-factory-clipboard
+> pnpm check:types
+
+
+> @tempo/apps@ check:types /Users/daniel/tempo/tempo-apps-factory-clipboard
+> pnpm --recursive --parallel --stream --reporter='append-only' check:types
+
+Scope: 11 of 12 workspace projects
+apps/contract-verification check:types$ tsgo --project tsconfig.json --noEmit
+apps/explorer check:types$ tsgo --project tsconfig.json --noEmit
+apps/fee-payer check:types$ tsgo --project tsconfig.json --noEmit
+apps/key-manager check:types$ tsgo --project tsconfig.json --noEmit
+apps/mcp-docs-indexer check:types$ pnpm gen:types && tsgo --project tsconfig.json --noEmit
+apps/og check:types$ tsgo --project tsconfig.json --noEmit
+apps/reth-snapshots-viewer check:types$ tsgo --project tsconfig.json --noEmit
+apps/tempo-snapshots-viewer check:types$ tsgo --project tsconfig.json --noEmit
+apps/fee-payer/playground check:types$ tsgo --project tsconfig.json --noEmit
+apps/tokenlist check:types$ tsgo --project tsconfig.json --noEmit
+packages/rpc-utils check:types$ tsgo --project tsconfig.json --noEmit
+apps/fee-payer/playground check:types: Done
+apps/mcp-docs-indexer check:types: > mcp-docs-indexer@ gen:types /Users/daniel/tempo/tempo-apps-factory-clipboard/apps/mcp-docs-indexer
+apps/mcp-docs-indexer check:types: > test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types
+apps/tempo-snapshots-viewer check:types: Done
+apps/reth-snapshots-viewer check:types: Done
+apps/og check:types: Done
+apps/tokenlist check:types: Done
+apps/key-manager check:types: Done
+apps/fee-payer check:types: Done
+packages/rpc-utils check:types: Done
+apps/contract-verification check:types: Done
+apps/mcp-docs-indexer check:types:  ⛅️ wrangler 4.142.0 (update available 4.145.0)
+apps/mcp-docs-indexer check:types: ───────────────────────────────────────────────
+apps/mcp-docs-indexer check:types: Generating project types...
+apps/mcp-docs-indexer check:types: interface __BaseEnv_Env {
+apps/mcp-docs-indexer check:types: 	ETAG_CACHE: KVNamespace;
+apps/mcp-docs-indexer check:types: 	LOADER: WorkerLoader;
+apps/mcp-docs-indexer check:types: 	AI_SEARCH: AiSearchNamespace;
+apps/mcp-docs-indexer check:types: 	AI_SEARCH_INSTANCE_ID: "tempo-global";
+apps/mcp-docs-indexer check:types: 	AI_SEARCH_MCP_URL: "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp";
+apps/mcp-docs-indexer check:types: 	PUBLIC_MCP_ENDPOINT: "https://mcp.tempo.xyz/";
+apps/mcp-docs-indexer check:types: 	POSTHOG_HOST: "https://us.i.posthog.com";
+apps/mcp-docs-indexer check:types: 	SOURCES: [{"id":"tempo","base":"https://docs.tempo.xyz","description":"Tempo network, protocol, and integration documentation"},{"id":"viem","base":"https://viem.sh","description":"TypeScript interface for Ethereum / Tempo"},{"id":"wagmi","base":"https://wagmi.sh","description":"React Hooks for Ethereum / Tempo"},{"id":"vocs","base":"https://vocs.dev","description":"Documentation framework"},{"id":"mpp","base":"https://mpp.dev","description":"Machine Payments Protocol documentation"},{"id":"accounts","base":"https://accounts.tempo.xyz","description":"Tempo Accounts SDK documentation"},{"id":"tips","base":"https://tips.sh","indexPath":"/","description":"Tempo Improvement Proposals"},{"id":"regen","base":"https://regen.tempo.xyz","description":"Tempo Regen UI component documentation"}];
+apps/mcp-docs-indexer check:types: }
+apps/mcp-docs-indexer check:types: declare namespace Cloudflare {
+apps/mcp-docs-indexer check:types: 	interface GlobalProps {
+apps/mcp-docs-indexer check:types: 		mainModule: typeof import("./src/index");
+apps/mcp-docs-indexer check:types: 	}
+apps/mcp-docs-indexer check:types: 	interface Env extends __BaseEnv_Env {}
+apps/mcp-docs-indexer check:types: }
+apps/mcp-docs-indexer check:types: interface Env extends __BaseEnv_Env {}
+apps/mcp-docs-indexer check:types: type StringifyValues<EnvType extends Record<string, unknown>> = {
+apps/mcp-docs-indexer check:types: 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
+apps/mcp-docs-indexer check:types: };
+apps/mcp-docs-indexer check:types: declare namespace NodeJS {
+apps/mcp-docs-indexer check:types: 	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "AI_SEARCH_INSTANCE_ID" | "AI_SEARCH_MCP_URL" | "PUBLIC_MCP_ENDPOINT" | "POSTHOG_HOST" | "SOURCES">> {}
+apps/mcp-docs-indexer check:types: }
+apps/mcp-docs-indexer check:types: Generating runtime types...
+apps/mcp-docs-indexer check:types: Runtime types generated.
+apps/mcp-docs-indexer check:types: ✨ Types written to worker-configuration.d.ts
+apps/mcp-docs-indexer check:types: Action required Migrate from @cloudflare/workers-types to generated runtime types
+apps/mcp-docs-indexer check:types: `wrangler types` now generates runtime types and supersedes @cloudflare/workers-types.
+apps/mcp-docs-indexer check:types: You should now uninstall @cloudflare/workers-types and remove it from your tsconfig.json.
+apps/mcp-docs-indexer check:types: 📖 Read about runtime types
+apps/mcp-docs-indexer check:types: https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+apps/mcp-docs-indexer check:types: 📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+apps/mcp-docs-indexer check:types: Done
+apps/explorer check:types: _verify/clipboard-harness.tsx(11,90): error TS2345: Argument of type 'HTMLDivElement' is not assignable to parameter of type 'string | ReadableStream<any> | Response'.
+apps/explorer check:types: Failed
+/Users/daniel/tempo/tempo-apps-factory-clipboard/apps/explorer:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  explorer@ check:types: `tsgo --project tsconfig.json --noEmit`
+Exit status 2
+ ELIFECYCLE  Command failed with exit code 2.
+ ELIFECYCLE  Command failed with exit code 2.

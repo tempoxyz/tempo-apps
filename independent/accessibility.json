@@ -1,0 +1,61 @@
+[
+  {
+    "nodeId": "695",
+    "ignored": false,
+    "role": {
+      "type": "role",
+      "value": "alert"
+    },
+    "chromeRole": {
+      "type": "internalRole",
+      "value": 2
+    },
+    "name": {
+      "type": "computedString",
+      "value": "",
+      "sources": [
+        {
+          "type": "relatedElement",
+          "attribute": "aria-labelledby"
+        },
+        {
+          "type": "attribute",
+          "attribute": "aria-label"
+        },
+        {
+          "type": "attribute",
+          "attribute": "title"
+        }
+      ]
+    },
+    "properties": [
+      {
+        "name": "live",
+        "value": {
+          "type": "token",
+          "value": "assertive"
+        }
+      },
+      {
+        "name": "atomic",
+        "value": {
+          "type": "boolean",
+          "value": true
+        }
+      },
+      {
+        "name": "relevant",
+        "value": {
+          "type": "tokenList",
+          "value": "additions text"
+        }
+      }
+    ],
+    "parentId": "120",
+    "childIds": [
+      "696",
+      "697"
+    ],
+    "backendDOMNodeId": 695
+  }
+]

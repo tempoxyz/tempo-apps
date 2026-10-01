@@ -1,0 +1,10 @@
+const {chromium}=require('playwright');const assert=require('node:assert/strict');
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});const page=await browser.newPage();
+await page.goto('http://127.0.0.1:3004/',{waitUntil:'domcontentloaded'});await page.waitForTimeout(1500);
+await page.evaluate(async()=>{window.mode='deny';window.written=[];Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{if(window.mode==='deny')throw Error('denied');if(window.mode==='pending')await new Promise((_,r)=>window.rejectPending=r);window.written.push(text)}}});window.unmountHarness=(await import('/_verify/clipboard-harness.tsx')).mount()});
+await page.getByRole('button',{name:'Shared harness copy'}).click();await page.getByRole('alert').waitFor();
+await page.evaluate(()=>window.mode='success');await page.getByRole('button',{name:'Shared harness copy'}).click();await page.waitForFunction(()=>window.written.length===1);assert.deepEqual(await page.evaluate(()=>window.written),['shared payload']);assert.equal(await page.getByRole('alert').count(),0);
+await page.locator('#permalink-copy').click();await page.waitForFunction(()=>window.written.length===2);assert.equal((await page.evaluate(()=>window.written))[1],'http://127.0.0.1:3004/#test-fragment');
+await page.locator('#direct-copy').click();await page.waitForFunction(()=>document.querySelector('#direct-copy').textContent==='copied');await page.waitForTimeout(150);assert.equal(await page.locator('#direct-copy').textContent(),'copy');
+await page.evaluate(()=>window.mode='pending');await page.locator('#direct-copy').click();await page.waitForFunction(()=>!!window.rejectPending);await page.evaluate(()=>{window.unmountHarness();window.rejectPending(Error('late denial'))});await page.waitForTimeout(100);assert.equal(await page.getByRole('alert').count(),0);
+console.log('PASS actual React StrictMode hook, shared CopyButton denial/retry, useCopyPermalink exact URL, success timer, pending unmount');await browser.close()})().catch(e=>{console.error(e);process.exit(1)});

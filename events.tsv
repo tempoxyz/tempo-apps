@@ -1,0 +1,8 @@
+timestamp	stage	status	evidence
+2026-10-01T05:14:38.354863+00:00	plan	passed	acceptance.md;verification-plan.md;antithesis/scratchbook
+2026-10-01T05:20:19.969818+00:00	implement	passed	508 passing tests; full config checks; candidate a7aa1d73eb7ce64a82dcd0d0b1da43c178c005b7
+2026-10-01T05:20:19.969941+00:00	verify	pending	independent context requested;browser-harness.log;browser-after-final.log
+2026-10-01T05:26:07.239326+00:00	verify	failed	candidate1 a7aa1d73;independent/report.md;AC1/AC2 repeated sync retry alert has no DOM update
+2026-10-01T05:26:07.239476+00:00	implement	repair	candidate2;fresh failure identity keys alert insertion;contract unchanged
+2026-10-01T05:28:06.126581+00:00	implement	passed	candidate2 d650da17d46b17c1f410ee08631d60010a18062a;candidate2/repair.md; independent verify required
+2026-10-01T05:31:11.293452+00:00	audit	2	passed	d650da17d46b17c1f410ee08631d60010a18062a	v1	independent/candidate2/report.md; fresh accessibility retry verified

@@ -1,0 +1,8 @@
+native state { native: 'function writeText() { [native code] }', policy: false }
+after click Address
+
+0xffffffffffffffffffffffffffffffffffffffff
+PASS unmodified native Chrome clipboard denied by browser permissions policy shows alert
+PASS native clipboard permissions policy removed retries successfully
+Repeated synchronous failure DOM mutations: []
+Same alert element: true

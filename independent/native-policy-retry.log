@@ -1,0 +1,17 @@
+native state { native: 'function writeText() { [native code] }', policy: false }
+after click Address
+
+0xffffffffffffffffffffffffffffffffffffffff
+PASS unmodified native Chrome clipboard denied by browser permissions policy shows alert
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+  assert((await control.innerText()).includes('copied'))
+
+    at [stdin]:2:1305 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

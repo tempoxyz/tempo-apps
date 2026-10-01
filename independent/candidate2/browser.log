@@ -1,0 +1,3 @@
+PASS live direct consumer: denial alert, focus preserved, AX alert role, persistence, exact retry payload, 800ms expiry, synchronous failure, keyboard dismissal, missing API/mobile bounds
+PASS live StrictMode hook/shared/permalink exact payload; cross-control stale failure; same-hook stale success after failure; configured timer; pending unmount; boolean-only events
+candidate pageerrors 1

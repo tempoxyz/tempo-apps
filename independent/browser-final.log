@@ -1,0 +1,15 @@
+PASS baseline rejected copy lacks visible alert
+baseline pageerrors 0
+PASS live direct consumer: denial alert, focus preserved, AX alert role, persistence, exact retry payload, 800ms expiry, synchronous failure, keyboard dismissal, missing API/mobile bounds
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+null !== 'Copied!'
+
+    at [stdin]:20:192 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: null,
+  expected: 'Copied!',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

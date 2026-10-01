@@ -1,0 +1,19 @@
+node:internal/modules/esm/get_format:185
+  throw new ERR_UNKNOWN_FILE_EXTENSION(ext, filepath);
+        ^
+
+TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".txt" for /Users/daniel/tempo/tempo-apps-factory-clipboard/.factory/clipboard/independent/browser.cjs.txt
+    at Object.getFileProtocolModuleFormat [as file:] (node:internal/modules/esm/get_format:185:9)
+    at defaultGetFormat (node:internal/modules/esm/get_format:211:36)
+    at defaultLoadSync (node:internal/modules/esm/load:158:16)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:790:12)
+    at #loadSync (node:internal/modules/esm/loader:810:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:775:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:520:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:619:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:625:12) {
+  code: 'ERR_UNKNOWN_FILE_EXTENSION'
+}
+
+Node.js v25.6.1

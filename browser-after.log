@@ -1,0 +1,9 @@
+locator.waitFor: Target page, context or browser has been closed
+Call log:
+[2m  - waiting for locator('button[title^="0x"]').first() to be visible[22m
+
+    at /private/tmp/factory-browser/clipboard-after.cjs:12:72 {
+  log: [
+    `  - waiting for locator('button[title^="0x"]').first() to be visible`
+  ]
+}

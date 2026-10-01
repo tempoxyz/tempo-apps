@@ -1,0 +1,6 @@
+# Clipboard feedback contract (frozen before implementation)
+1. Every existing explorer useCopy consumer, including permalink wrappers and shared CopyButton, shows visible accessible feedback when clipboard is unavailable, throws synchronously, or rejects. Do not expose copied contents or raw errors.
+2. The original control stays usable to retry. Starting a new copy clears stale error feedback; successful retry retains existing success icon/timing and copied text remains unchanged. Error may be dismissed without stealing focus and must remain long enough to act on (no automatic expiry).
+3. Only the newest attempt for a mounted hook may update its success or failure state; a slow older completion must not undo a later result. Success indicators reset on attempt start and expire after their configured interval. Unmount clears timers and ignores pending completions.
+4. Missing Clipboard API must not crash or produce an unhandled rejection. All existing call sites keep copy(value): Promise<void> and notifying semantics. SSR never accesses browser globals.
+5. Real browser denial, retry success, missing API, and a permalink/direct consumer are exercised, including mobile layout and keyboard dismissal. Full explorer suites, types/lint/build and independent review pass before PR. Cyclops and current-head CI must finish before merge-ready. No merge/deploy.

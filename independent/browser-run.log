@@ -1,0 +1,12 @@
+PASS baseline rejected copy lacks visible alert
+baseline pageerrors 1
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3004/demo/address
+Call log:
+[2m  - navigating to "http://127.0.0.1:3004/demo/address", waiting until "domcontentloaded"[22m
+
+    at [stdin]:8:110 {
+  log: [
+    '  - navigating to "http://127.0.0.1:3004/demo/address", waiting until "domcontentloaded"'
+  ],
+  name: 'Error'
+}

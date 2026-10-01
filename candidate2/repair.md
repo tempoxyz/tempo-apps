@@ -1,0 +1,6 @@
+# Candidate2 repair
+Independent candidate1 finding: repeated synchronous copy failure retained the same alert node because React batched false then true state.
+Repair: store an incrementing failure identity and key the rendered alert. Event payload remains boolean, global and per-hook stale result suppression unchanged. Original frozen acceptance unchanged.
+Regression: repeated-sync-regression.cjs.txt runs actual Chrome/production React component; asserts a new alert node and observable mutations after missing-API retry, and new nodes after synchronous throw and rejected-promise retries. Native clipboard policy denial/recovery also pass. This establishes fresh live-region updates, not actual spoken screen-reader output.
+Checks: all preparation/check commands passed after removing a disposable browser harness accidentally included by TypeScript. 508 tests (205 worker,303 Node;one skip), types,lint,Biome,test-types,build,precommit. Files candidate2/checks.log preserve first harness-contamination failure; check-retry.log/types-retry.log/precommit-retry.log record successful replay. Production diff only CopyFeedback.tsx.
+Browser harness preserved as candidate2/clipboard-harness.tsx.txt; removed from apps/explorer/_verify after runtime checks so future typecheck remains clean.

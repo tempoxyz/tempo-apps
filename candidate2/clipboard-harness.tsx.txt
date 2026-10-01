@@ -1,0 +1,14 @@
+import * as React from 'react'
+import { createRoot } from 'react-dom/client'
+import { CopyButton } from '#comps/CopyButton'
+import { useCopy, useCopyPermalink } from '#lib/hooks'
+function Controls() {
+ const direct = useCopy({ timeout: 100 })
+ const permalink = useCopyPermalink({fragment:'test-fragment'})
+ return <><button id="direct-copy" onClick={()=>direct.copy('exact harness payload')}>{direct.notifying?'copied':'copy'}</button><button id="permalink-copy" onClick={permalink.handleCopyPermalink}>link</button><CopyButton value="shared payload" ariaLabel="Shared harness copy" /></>
+}
+export function mount() {
+ const div=document.createElement('div');div.id='clipboard-harness';document.body.append(div)
+ const root=createRoot(div);root.render(<React.StrictMode><Controls /></React.StrictMode>)
+ return ()=>{root.unmount();div.remove()}
+}
