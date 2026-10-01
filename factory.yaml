@@ -1,0 +1,119 @@
+# Explorer pipeline. Gates run in the sequence listed below.
+version: 1
+repository: tempoxyz/tempo-apps
+scope: apps/explorer
+base: main
+library: ../factory
+library_revision: 85b4291ae006fec0493ddd917a3191981a17eaf2
+workflow: config/pipeline.yaml
+
+instructions:
+  - The gates below override only the named fields in the shared workflow. Match shared gates by id. Skills replace the inherited list; steps and criteria remain inherited unless explicitly overridden. Run in this list order; a passed gate advances to the following entry.
+  - Resolve every skill path against the pinned factory library. Load the current gate's skills and their required references, not the whole library.
+  - Repo instructions, the accepted task contract, and delivery limits take precedence over skill defaults. No skill may merge, deploy, or expand task scope.
+  - Use a fresh worktree from the selected origin/main SHA; do not reset the user's checkout.
+  - Recheck commands against package.json and workflows at that SHA; this binding was researched at 9609e28fb458c32510053458e4609a090fa9c729.
+  - Install with pnpm install --frozen-lockfile using the repo's pinned Node and pnpm versions.
+  - Expand testing to affected shared packages and other apps when the diff crosses explorer boundaries.
+  - Supply external references at intake so research can use the task's existing scope without re-asking.
+  - Do not change the accepted gate policy or criteria as part of a feature repair.
+
+# Explicit skill selection for every explorer gate.
+gates:
+  - id: plan
+    skills:
+      - skills/antithesis-research/SKILL.md
+      - skills/antithesis-documentation/SKILL.md
+      - skills/pstack/skills/principle-model-the-domain/SKILL.md
+  - id: implement
+    skills:
+      - skills/pstack/skills/typescript-best-practices/SKILL.md
+      - skills/pstack/skills/principle-test-behavior-not-implementation/SKILL.md
+      - skills/pstack/skills/principle-fix-root-causes/SKILL.md
+  - id: verify
+    skills:
+      - skills/pstack/skills/principle-prove-it-works/SKILL.md
+      - skills/pstack/skills/principle-test-behavior-not-implementation/SKILL.md
+    instructions: Use a fresh verifier context and the frozen Antithesis property catalog to run adversarial checks against the actual candidate; do not rewrite acceptance to fit the implementation.
+  - id: audit
+    skills:
+      - skills/pstack/skills/blast-radius/SKILL.md
+      - skills/pstack/skills/principle-boundary-discipline/SKILL.md
+  - id: pr
+    skills:
+      - skills/pstack/skills/technical-writing/SKILL.md
+      - skills/pstack/skills/principle-make-operations-idempotent/SKILL.md
+    instructions: Open or update the same feature PR with verified evidence when publication is enabled; do not merge or enable auto-merge.
+  - id: cyclops
+    skills:
+      - skills/cyclops-review/SKILL.md
+      - skills/pstack/skills/principle-fix-root-causes/SKILL.md
+  - id: monitor
+    skills:
+      - skills/pstack/skills/principle-prove-it-works/SKILL.md
+      - skills/pstack/skills/principle-make-operations-idempotent/SKILL.md
+    instructions: Watch current-head CI, review threads, and authorized PR previews; reconcile existing jobs on resume and route defects through the repair gates without merging or deploying.
+  - id: ready
+    skills:
+      - skills/pstack/skills/principle-prove-it-works/SKILL.md
+      - skills/pstack/skills/technical-writing/SKILL.md
+    instructions: Reconcile every gate's evidence against the final candidate and report the PR ready for merge; stop without merging or deploying.
+
+preparation:
+  - pnpm gen:types
+  - pnpm check
+  - pnpm check:types
+  - pnpm --filter explorer test --run
+  - pnpm precommit
+
+checks:
+  - pnpm exec biome check .
+  - pnpm check:types
+  - pnpm lint:tempo
+  - pnpm --filter explorer test --run
+  - pnpm --filter explorer check:types:test
+  - pnpm --filter explorer check:env
+  - pnpm --filter explorer build
+
+verification:
+  instructions:
+    - pnpm check and precommit may rewrite files; run them before freezing the candidate, never accept an unrecorded diff.
+    - check:env is the Node Vitest suite, not a deployed health check.
+    - Add feature-specific behavioral checks derived during plan; the commands above are only the baseline.
+    - For UI changes exercise the real browser flow and include before/after screenshots at relevant sizes and states.
+    - Cover loading, empty, error, retry, navigation, and network-switch behavior where the changed path involves them.
+    - For RPC/data changes test relevant formatting boundaries, stale or out-of-order responses, and dependency failures.
+    - Antithesis research produces properties; claim a campaign passed only with an actual run and results when the contract requires one.
+
+cyclops:
+  max_iterations: 3
+  poll_seconds: 30
+  deadline_minutes: 60
+  integration: null # Bind the reachable CLI/service and its PR or commit review scope before launch.
+  instructions:
+    - Use skills/cyclops-review/SKILL.md; persist iteration count across repairs and resumed runs.
+    - Respond to each finding with fix or dismissal evidence and resolve through its actual review thread.
+    - Re-trigger after addressing findings; stop blocked at the limit if the final candidate still needs review.
+
+delivery:
+  stop_after: ready
+  publish_pr: true
+  submit_cyclops: true
+  reply_and_resolve_reviews: true
+  merge: false
+  deploy: false
+  instructions:
+    - This run may publish the timestamp-preference PR, submit Cyclops audits, and reply to and resolve its findings. Stop at merge-ready.
+    - PR creation can invoke Cloudflare preview deployments, including devnet previews; review those side effects before enabling publication.
+    - Use repository rulesets as the authority for required checks; also require Verify / Checks and Bundle Size when applicable.
+    - Bind the actual Cyclops command or tool and authentication before the run; do not guess an API or treat a missing audit as passed.
+    - PR monitoring here means CI/reviews/preview checks; post-deploy observability requires a separately configured delivery workflow.
+    - A merge to main currently deploys explorer to multiple environments including mainnet; a dev-only rollout needs workflow changes first.
+
+limits:
+  candidate_attempts: 3
+  infrastructure_retries_per_gate: 2
+  total_run_hours: 4
+  remote_wait_minutes_per_gate: 60
+  poll_seconds: 30
+  on_exhaustion: Record blocked with evidence and the next actionable cause; never convert exhaustion into success.
