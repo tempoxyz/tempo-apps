@@ -1,0 +1,67 @@
+
+ RUN  v4.1.0 /private/tmp/factory-url-independent/apps/explorer
+
+ ❯ test/independent-url.node.test.ts (113 tests | 3 failed) 10ms
+   × reject https://explore.tempo.xyz/tx/0xabababababababababababababababababababababababababababababababa 2ms
+   × reject https://explore.tempo.xyz/receipt/0xabababababababababababababababababababababababababababababababa 0ms
+   × reject https://explore.tempo.xyz/block/0xabababababababababababababababababababababababababababababababa 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/independent-url.node.test.ts > reject https://explore.tempo.xyz/tx/0xabababababababababababababababababababababababababababababababa
+AssertionError: expected { …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "href": "https://explore.tempo.xyz/tx/0xabababababababababababababababababababababababababababababababa",
+  "network": "Mainnet",
+}
+
+ ❯ test/independent-url.node.test.ts:9:66
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  test/independent-url.node.test.ts > reject https://explore.tempo.xyz/receipt/0xabababababababababababababababababababababababababababababababa
+AssertionError: expected { …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "href": "https://explore.tempo.xyz/receipt/0xabababababababababababababababababababababababababababababababa",
+  "network": "Mainnet",
+}
+
+ ❯ test/independent-url.node.test.ts:9:66
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  test/independent-url.node.test.ts > reject https://explore.tempo.xyz/block/0xabababababababababababababababababababababababababababababababa
+AssertionError: expected { …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "href": "https://explore.tempo.xyz/block/0xabababababababababababababababababababababababababababababababa",
+  "network": "Mainnet",
+}
+
+ ❯ test/independent-url.node.test.ts:9:66
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  3 failed | 166 passed (169)
+   Start at  01:24:58
+   Duration  116ms (transform 29ms, setup 0ms, import 86ms, tests 15ms, environment 0ms)
+

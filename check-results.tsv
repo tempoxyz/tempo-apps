@@ -1,0 +1,24 @@
+1	0	pnpm gen:types
+2	0	pnpm check
+3	0	pnpm check:types
+4	0	pnpm --filter explorer test --run
+5	0	pnpm --filter explorer check:env
+6	0	pnpm --filter explorer check:types:test
+7	0	pnpm exec biome check .
+8	0	pnpm lint:tempo
+9	0	pnpm --filter explorer build
+10	0	pnpm precommit
+1	0	pnpm gen:types
+2	0	pnpm check
+3	0	pnpm check:types
+4	0	pnpm --filter explorer test --run
+5	0	pnpm --filter explorer check:env
+6	0	pnpm --filter explorer check:types:test
+7	1	pnpm exec biome check .
+1	0	pnpm gen:types
+2	0	pnpm check
+3	0	pnpm check:types
+4	0	pnpm --filter explorer test --run
+5	0	pnpm --filter explorer check:env
+6	0	pnpm --filter explorer check:types:test
+7	1	pnpm exec biome check .

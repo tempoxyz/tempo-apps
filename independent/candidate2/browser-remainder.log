@@ -1,0 +1,5 @@
+1 PASS raw /address/0x20C0000000000000000000000000000000000000
+2 PASS raw /receipt/0xabababababababababababababababababababababababababababababababab
+3 PASS SSR25 canonical/alias network resource redirects
+4 PASS SSR malformed fallback
+ALL 4 browser groups PASS

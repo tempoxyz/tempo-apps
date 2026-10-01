@@ -1,0 +1,14 @@
+Enter PASS https://explore.tempo.xyz/block/100
+click PASS https://explore.tempo.xyz/block/100
+submit PASS https://explore.tempo.xyz/block/100
+fresh URL/network/latest PASS
+invalid host/raw block PASS
+mobile PASS
+page.waitForURL: Timeout 30000ms exceeded.
+=========================== logs ===========================
+waiting for navigation to "https://explore.tempo.xyz/block/100" until "load"
+============================================================
+    at /private/tmp/factory-browser/url-final.cjs:8:178 {
+  log: [],
+  name: 'TimeoutError'
+}

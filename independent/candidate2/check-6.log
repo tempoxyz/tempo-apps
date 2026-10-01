@@ -1,0 +1,4 @@
+
+> explorer@ check:types:test /private/tmp/factory-url-independent/apps/explorer
+> tsc --project test/tsconfig.json --noEmit
+

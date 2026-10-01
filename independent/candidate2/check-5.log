@@ -1,0 +1,13 @@
+
+> explorer@ check:env /private/tmp/factory-url-independent/apps/explorer
+> vitest run --config vitest.node.config.ts
+
+
+ RUN  v4.1.0 /private/tmp/factory-url-independent/apps/explorer
+
+
+ Test Files  39 passed | 1 skipped (40)
+      Tests  360 passed | 1 skipped (361)
+   Start at  01:31:15
+   Duration  1.53s (transform 1.80s, setup 0ms, import 12.38s, tests 455ms, environment 2ms)
+

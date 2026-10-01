@@ -1,0 +1,25 @@
+TOKEN OPTION [ 'PathUSDpathUSDTIP-200x20c0000000000000000000000000000000000000' ]
+AFTER TOKEN ENTER http://localhost:3002/address/0x20C0000000000000000000000000000000000000?tab=token Skip to content
+Testnet
+Simulate
+37661123
+Search
+Explore
+Discover
+Account
+Contract
+Receipt
+Blocks
+Tokens
+About
+Docs
+GitHub
+Feedback
+page.waitForURL: Timeout 5000ms exceeded.
+=========================== logs ===========================
+waiting for navigation until "commit"
+============================================================
+    at /private/tmp/factory-browser/independent-url-raw-debug.cjs:2:818 {
+  log: [],
+  name: 'TimeoutError'
+}

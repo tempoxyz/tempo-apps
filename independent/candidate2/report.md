@@ -1,0 +1,29 @@
+# Independent verification and review: passed locally
+
+Candidate `a6a8f55b6ff83110f715c9bab56fd2a487872799`, stacked base `feb1fe8d` (recent-search removal, PR1301), original main base `9609e28fb458c32510053458e4609a090fa9c729`. Verification ran in detached `/tmp/factory-url-independent`, using dependencies installed with `pnpm install --frozen-lockfile`. Production tracked files remain clean after checks and browser runs. Factory policy `02bd8907509c2bb9d61683373a3b4c532b6e70e6` and frozen acceptance/verification-plan/addendum-v2 hashes remain unchanged.
+
+No unresolved actionable code finding. The previously reproduced 63-digit hash acceptance defect is fixed for transaction, receipt and block URLs with exact `0x` plus 64 hexadecimal digit validation. All three original reproductions now reject while paired valid 64-digit URLs succeed.
+
+## Evidence
+
+- `parser.log`: 172 passing cases, comprising the candidate's 59 and 113 independently derived cases. Independent coverage crosses all 11 official canonical/alias hosts with all resource forms, including latest and full block hashes, and probes malformed hosts, userinfo, custom ports, Unicode lookalikes, URL escapes, encoded separators, invalid UTF-8, odd/long/nonhex IDs, unsafe heights and unsupported relative forms. The prior failure script is preserved in the parent independent directory as `parser-all-hashes.test.ts.txt`.
+- `check-results.tsv`: all 11 commands exited zero: gen:types, root check, check:types, explorer worker tests, explorer check:env, check:types:test, whole-tree Biome, lint:tempo, explorer build, precommit, diff --check. Worker tests: 205 passed. Node tests: 360 passed, one existing skip. Complete outputs in check-1.log through check-11.log.
+- `browser.log`: actual Chrome at 1440x1000 and 390x844 passes Enter/ArrowDown, visible option click, submit button, aliases and explicit network labels, block hash/latest navigation. Inputs cause no current-chain search requests or destination fetch before activation. Every URL activation preserves seeded history. Destination document requests are intercepted only after the browser emits the navigation; the actual React feature runs unmocked.
+- The same browser run passes delayed old API response plus stale selected index and immediate URL-to-URL replacement. Only this fault test mocks API data. It also rejects malicious hosts, credentials, odd hashes, scheme-relative URLs and encoded slash IDs on both viewport sizes. Recent composition passes individual removal, switching to URL, clearing back to the remaining recent grid and keyboard activation. Raw block activation succeeds.
+- `browser-remainder.log`: raw address/hash activation and history persistence pass. Actual `/search?q=` server returns correct 307 Location in 25 network/resource cases and retains local fallback in four malformed URL cases. No parser exceptions or page errors (`browser-errors.json` is empty).
+- `browser-raw-fixed.log`: unmocked pathUSD API suggestion activates the existing address token tab, and raw Tempo address normalization activates the checksum address; both preserve recent history.
+- `after-1440.png` and `after-390.png` were visually inspected. URL option and explicit network label remain visible and usable. Existing baseline before screenshot and implementer before/after artifacts remain available in the task directory.
+
+## Failed experiments retained
+
+The first browser run passed 11 groups, then its twelfth fresh page timed out waiting for React hydration before feature interaction. `browser.log` retains this failure. The remaining groups passed in a fresh browser run without any candidate changes, consistent with the previously observed local dev hydration issue. This is not counted as feature coverage until the passing rerun.
+
+The first extra raw-token test incorrectly expected the browser to remain at `/token/<address>`. `browser-raw-extra.log` retains its timeout; `browser-raw-debug.log` captured the actual `/address/<checksum>?tab=token` destination. The unchanged token route explicitly redirects there. Correcting the verifier expectation produced the passing `browser-raw-fixed.log`. Test drivers for every attempt are preserved as `.cjs.txt`; no acceptance or source change was made.
+
+## Review and sufficiency assessment
+
+Reviewed the complete final four-file URL diff against the stacked base and the inherited recent-search diff against original main, surrounding ExploreInput state/effects/selection/history code, all Header/home callers, shared address normalization, exact host indexing configuration, search/token/block routes, tests and targeted research artifacts. The security boundary is the literal origin allowlist plus freshly validated resource ID; generated canonical hrefs preserve source network and exclude arbitrary destinations. URL parsing has no browser dependency, and the real SSR checks agree with client destinations. The v2 block identities remain supported, and query/fragment stripping does not alter resource identity.
+
+The composed popup conditions are mutually exclusive: nonempty recognized URL selects one listbox option; empty input with history selects the inherited recent grid. Suppressing API suggestions during recognized URLs prevents old/current-chain results from reaching keyboard activation. URL handling exits before existing history writes. Real delayed-response, selection, removal, storage, raw-token and Tempo-address checks support these invariants.
+
+The checks justify local acceptance for the repaired candidate and frozen contract. No migration, dependency, RPC/consensus behavior or history-schema change. The PR must retain its dependency on PR1301. Publication, Cyclops, current-head CI/review and final readiness reconciliation remain the parent's gates; this report does not claim those external gates passed. No source edit, commit, push, comment, merge or deployment was performed by this verifier.

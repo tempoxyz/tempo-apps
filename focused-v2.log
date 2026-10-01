@@ -1,0 +1,39 @@
+
+ RUN  v4.1.0 /Users/daniel/tempo/tempo-apps-factory-url/apps/explorer
+
+ ❯ test/explorer-search-url.node.test.ts (55 tests | 1 failed) 8ms
+     × rejects unsupported input https://explore.tempo.xyz/block/0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz without throwing 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/explorer-search-url.node.test.ts > parseExplorerSearchUrl > rejects unsupported input https://explore.tempo.xyz/block/0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz without throwing
+AssertionError: expected { …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "href": "https://explore.tempo.xyz/block/0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+  "network": "Mainnet",
+}
+
+ ❯ test/explorer-search-url.node.test.ts:139:41
+    137|   'pathUSD',
+    138|  ])('rejects unsupported input %s without throwing', (input) => {
+    139|   expect(parseExplorerSearchUrl(input)).toBeUndefined()
+       |                                         ^
+    140|   // A valid counterpart guards against a parser that rejects everythi…
+    141|   expect(parseExplorerSearchUrl('https://explore.tempo.xyz/block/1')).…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 54 passed (55)
+   Start at  01:20:29
+   Duration  123ms (transform 20ms, setup 0ms, import 51ms, tests 8ms, environment 0ms)
+
+undefined
+/Users/daniel/tempo/tempo-apps-factory-url/apps/explorer:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: vitest run --config vitest.node.config.ts test/explorer-search-url.node.test.ts

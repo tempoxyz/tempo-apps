@@ -1,0 +1,4 @@
+
+> explorer@ check:types:test /Users/daniel/tempo/tempo-apps-factory-url/apps/explorer
+> tsc --project test/tsconfig.json --noEmit
+

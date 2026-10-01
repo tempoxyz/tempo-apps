@@ -1,0 +1,17 @@
+1 PASS 1440 enter https://explore.testnet.tempo.xyz/block/0xabababababababababababababababababababababababababababababababab
+2 PASS 1440 click https://explore.tempo.xyz/address/0x20C0000000000000000000000000000000000000
+3 PASS 1440 submit https://explore.nextfork.devnet.tempo.xyz/block/latest
+4 PASS 390 enter https://explore.testnet.tempo.xyz/block/0xabababababababababababababababababababababababababababababababab
+5 PASS 390 click https://explore.tempo.xyz/address/0x20C0000000000000000000000000000000000000
+6 PASS 390 submit https://explore.nextfork.devnet.tempo.xyz/block/latest
+7 PASS delayed prior API, stale selectedIndex, immediate URL replacement
+8 PASS invalid destinations 1440
+9 PASS invalid destinations 390
+10 PASS recent removal, URL, restored grid, recent activation
+11 PASS raw /block/42
+page.waitForFunction: Timeout 30000ms exceeded.
+    at open (/private/tmp/factory-browser/independent-url-v2.cjs:6:239)
+    at async /private/tmp/factory-browser/independent-url-v2.cjs:15:110 {
+  log: [],
+  name: 'TimeoutError'
+}

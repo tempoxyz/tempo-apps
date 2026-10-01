@@ -1,0 +1,31 @@
+
+ RUN  v4.1.0 /private/tmp/factory-url-independent/apps/explorer
+
+ ❯ test/independent-url.node.test.ts (111 tests | 1 failed) 10ms
+   × reject https://explore.tempo.xyz/tx/0xabababababababababababababababababababababababababababababababa 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/independent-url.node.test.ts > reject https://explore.tempo.xyz/tx/0xabababababababababababababababababababababababababababababababa
+AssertionError: expected { …(2) } to be undefined
+
+- Expected:
+undefined
+
++ Received:
+{
+  "href": "https://explore.tempo.xyz/tx/0xabababababababababababababababababababababababababababababababa",
+  "network": "Mainnet",
+}
+
+ ❯ test/independent-url.node.test.ts:9:66
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 166 passed (167)
+   Start at  01:24:32
+   Duration  194ms (transform 50ms, setup 0ms, import 181ms, tests 15ms, environment 0ms)
+

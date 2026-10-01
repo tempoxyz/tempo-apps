@@ -1,0 +1,73 @@
+
+> explorer@ test /Users/daniel/tempo/tempo-apps-factory-url/apps/explorer
+> vitest --run
+
+
+ RUN  v4.1.0 /Users/daniel/tempo/tempo-apps-factory-url/apps/explorer
+
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+Using secrets defined in .env
+[vpw:info] Starting runtime for ...
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+workerd/jsg/setup.c++:584: info: CODE_MOVED for unknown code block?
+
+ Test Files  21 passed (21)
+      Tests  205 passed (205)
+   Start at  01:20:54
+   Duration  11.48s (transform 38.27s, setup 0ms, import 87.75s, tests 564ms, environment 0ms)
+

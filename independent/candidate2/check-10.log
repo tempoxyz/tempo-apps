@@ -1,0 +1,10 @@
+
+> @tempo/apps@ precommit /private/tmp/factory-url-independent
+> prek run --all-files --config .github/.pre-commit.yml
+
+check yaml...............................................................Passed
+check toml...............................................................Passed
+fix end of files.........................................................Passed
+detect private key.......................................................Passed
+check that executables have shebangs.....................................Passed
+Detect hardcoded secrets.................................................Passed

@@ -1,0 +1,2 @@
+PASS raw token http://localhost:3002/address/0x20C0000000000000000000000000000000000000?tab=token
+PASS raw tempo-address http://localhost:3002/address/0x20C0000000000000000000000000000000000000

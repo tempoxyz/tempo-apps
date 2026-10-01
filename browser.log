@@ -1,0 +1,10 @@
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3001/
+Call log:
+[2m  - navigating to "http://127.0.0.1:3001/", waiting until "load"[22m
+
+    at /private/tmp/factory-browser/url-search.cjs:11:14 {
+  log: [
+    '  - navigating to "http://127.0.0.1:3001/", waiting until "load"'
+  ],
+  name: 'Error'
+}

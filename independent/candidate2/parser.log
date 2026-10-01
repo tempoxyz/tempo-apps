@@ -1,0 +1,9 @@
+
+ RUN  v4.1.0 /private/tmp/factory-url-independent/apps/explorer
+
+
+ Test Files  2 passed (2)
+      Tests  172 passed (172)
+   Start at  01:30:35
+   Duration  136ms (transform 35ms, setup 0ms, import 115ms, tests 12ms, environment 0ms)
+

@@ -1,0 +1,11 @@
+# Candidate evidence
+Candidate `b822e30cc6b8e6083cf72521b4cf04d313662c30`, base `9609e28fb458c32510053458e4609a090fa9c729`. Original criteria/hash in freeze.sha256; additive block hash/latest criteria in acceptance-addendum-v2.md. Parent changed shared factory binding without changing accepted feature criteria.
+
+- A1/A2/A5:56 literal parser cases passed (focused-v2-fixed.log), including all official hosts/aliases, strict hash rejection, latest/full block hash support, malformed IDs, port/userinfo/host-suffix rejection and raw normalization. /search actual server307 destination asserted by browser request; no external fetching by parser.
+- A3: browser-complete.log verifies replacement of a raw input, no new local-chain URL request, one network-labelled option, and controlled delayed prior API response. Enter opens URL network, never stale prior address.
+- A4: browser confirms raw block/address navigation and URL activation preserves seeded recent storage. Raw token pipeline remains structurally unchanged; existing search-token suite included in full tests. URL target retains token path. No address normalization changes.
+- A6: before.png baseline9609e28; after.png and after-mobile.png final code. Actual Chrome homepage input keyboard Enter/ArrowDown, button, result link, hostile host rejection and mainnet/testnet alias/latest activation. Remote document interception starts only after navigation destination is emitted. Browser errors empty. Driver source browser.cjs.txt; Playwright installed outside repo at /tmp/factory-browser. Dummy local RPC credential permits app boot; no authenticated RPC claim.
+- Full check exit0: pnpm gen:types, pnpm check, pnpm check:types, pnpm --filter explorer test --run (205), pnpm --filter explorer check:env (343 plus1 skipped), check:types:test, pnpm exec biome check . (biome-passed.log), pnpm lint:tempo, explorer build, pnpm precommit, git diff --check. Twelve preexisting Biome warnings do not fail checks. Formatting-only failures in ignored artifact scripts/JSON fixed before final check; no production exceptions suppressed.
+- A7 pending parent fresh verifier/auditor, publication, Cyclops, CI. This implementer report does not certify independent stages.
+
+No Antithesis hosted campaign run or needed by contract. Targeted research artifacts available in antithesis/scratchbook. No merge/deploy performed.

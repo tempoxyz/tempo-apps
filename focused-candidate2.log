@@ -1,0 +1,9 @@
+
+ RUN  v4.1.0 /Users/daniel/tempo/tempo-apps-factory-url/apps/explorer
+
+
+ Test Files  1 passed (1)
+      Tests  59 passed (59)
+   Start at  01:26:21
+   Duration  152ms (transform 20ms, setup 0ms, import 62ms, tests 5ms, environment 0ms)
+

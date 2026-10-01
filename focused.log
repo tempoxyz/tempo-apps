@@ -1,0 +1,102 @@
+
+ RUN  v4.1.0 /Users/daniel/tempo/tempo-apps-factory-url/apps/explorer
+
+ ❯ test/explorer-search-url.node.test.ts (48 tests | 4 failed) 7ms
+     × opens a address resource without changing its type 3ms
+     × opens a token resource without changing its type 0ms
+     × normalizes Tempo addresses using the existing address rules 0ms
+     × leaves raw normalization independent of URL parsing 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/explorer-search-url.node.test.ts > parseExplorerSearchUrl > opens a address resource without changing its type
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "href": "https://explore.tempo.xyz/address/0x20c0000000000000000000000000000000000000",
++   "href": "https://explore.tempo.xyz/address/0x20C0000000000000000000000000000000000000",
+    "network": "Mainnet",
+  }
+
+ ❯ test/explorer-search-url.node.test.ts:45:5
+     43|     `https://explore.tempo.xyz/${resource}/${address}`,
+     44|    ),
+     45|   ).toEqual({
+       |     ^
+     46|    href: `https://explore.tempo.xyz/${resource}/${address}`,
+     47|    network: 'Mainnet',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  test/explorer-search-url.node.test.ts > parseExplorerSearchUrl > opens a token resource without changing its type
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "href": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000",
++   "href": "https://explore.tempo.xyz/token/0x20C0000000000000000000000000000000000000",
+    "network": "Mainnet",
+  }
+
+ ❯ test/explorer-search-url.node.test.ts:45:5
+     43|     `https://explore.tempo.xyz/${resource}/${address}`,
+     44|    ),
+     45|   ).toEqual({
+       |     ^
+     46|    href: `https://explore.tempo.xyz/${resource}/${address}`,
+     47|    network: 'Mainnet',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  test/explorer-search-url.node.test.ts > parseExplorerSearchUrl > normalizes Tempo addresses using the existing address rules
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "href": "https://explore.tempo.xyz/address/0x20c0000000000000000000000000000000000000",
++   "href": "https://explore.tempo.xyz/address/0x20C0000000000000000000000000000000000000",
+    "network": "Mainnet",
+  }
+
+ ❯ test/explorer-search-url.node.test.ts:63:5
+     61|     `https://explore.tempo.xyz/address/${TempoAddress.format(address)}…
+     62|    ),
+     63|   ).toEqual({
+       |     ^
+     64|    href: `https://explore.tempo.xyz/address/${address}`,
+     65|    network: 'Mainnet',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  test/explorer-search-url.node.test.ts > parseExplorerSearchUrl > leaves raw normalization independent of URL parsing
+AssertionError: expected '0x20C00000000000000000000000000000000…' to be '0x20c00000000000000000000000000000000…' // Object.is equality
+
+Expected: "0x20c0000000000000000000000000000000000000"
+Received: "0x20C0000000000000000000000000000000000000"
+
+ ❯ test/explorer-search-url.node.test.ts:126:48
+    124|  })
+    125|  it('leaves raw normalization independent of URL parsing', () => {
+    126|   expect(normalizeSearchInput(` ${address} `)).toBe(address)
+       |                                                ^
+    127|   expect(normalizeSearchInput(' pathUSD ')).toBe('pathUSD')
+    128|   expect(normalizeSearchInput(' #100 ')).toBe('#100')
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 44 passed (48)
+   Start at  01:15:21
+   Duration  158ms (transform 17ms, setup 0ms, import 63ms, tests 7ms, environment 0ms)
+
+undefined
+/Users/daniel/tempo/tempo-apps-factory-url/apps/explorer:
+ ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL  Command failed with exit code 1: vitest run --config vitest.node.config.ts test/explorer-search-url.node.test.ts

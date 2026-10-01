@@ -1,0 +1,10 @@
+locator.fill: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('input[name="explore-query"]').visible().first()[22m
+
+    at /private/tmp/factory-browser/url-search.cjs:29:93 {
+  log: [
+    `  - waiting for locator('input[name="explore-query"]').visible().first()`
+  ],
+  name: 'TimeoutError'
+}

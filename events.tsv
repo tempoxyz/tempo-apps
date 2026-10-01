@@ -1,0 +1,12 @@
+time	gate	status	detail
+2026-10-01	plan	frozen	acceptance and verification hashes in freeze.sha256; independent assessment pending
+2026-10-01	implement	checks-passed	540 tests;10 baseline commands exit0; prehydration browser-driver failure preserved; final browser active
+2026-10-01T05:18:53.004565+00:00	plan	2	passed	9609e28fb458c32510053458e4609a090fa9c729	v2	Parent planner additive supported block URL requirement;acceptance-addendum-v2.md
+2026-10-01T05:22:40.648441+00:00	implement	passed	b822e30cc6b8e6083cf72521b4cf04d313662c30;548 tests; checks and browser proof complete; fresh verify/audit pending
+2026-10-01T05:25:42Z	verify	independent-1	failed	b822e30cc6b8e6083cf72521b4cf04d313662c30	v2	independent/standalone-findings.md (63-digit hashes accepted)
+2026-10-01T05:26:40.891122+00:00	verify	failed	b822e30c; independent/standalone-findings.md odd-length hash reproduction
+2026-10-01T05:26:40.891273+00:00	implement	repairing	candidate2; stack base changed to feb1fe8d at parent direction; exact64hex hash validation; original acceptance+v2 unchanged
+2026-10-01T05:27:49.169131+00:00	implement	passed	a6a8f55b6ff83110f715c9bab56fd2a487872799; candidate2; parent feb1fe8d;565 tests;10 checks passed; independent verification required
+2026-10-01T05:28:34.649109+00:00	implement	browser-passed	a6a8f55b6ff83110f715c9bab56fd2a487872799; browser-final.log first6flows plus browser-remainder.log all remaining flows; composition.log pass; errors[]; independent gates pending
+2026-10-01T05:34:25Z	verify	independent-2	passed	a6a8f55b6ff83110f715c9bab56fd2a487872799	v2	independent/candidate2/report.md
+2026-10-01T05:34:53.129928+00:00	audit	2	passed	a6a8f55b6ff83110f715c9bab56fd2a487872799	v2	independent/candidate2/report.md; prior63digit defect fixed; composed checks passed

@@ -1,0 +1,373 @@
+apps/explorer/src/lib/og.ts:195:39 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    193 │ 	].slice(0, 2)
+    194 │ 	return {
+  > 195 │ 		tokens: uniqueTokens.map((token) => token.address!),
+        │ 		                                    ^^^^^^^^^^^^^^
+    196 │ 		tokenSymbols: uniqueTokens.map((token) => token.symbol ?? ''),
+    197 │ 		action: truncateOgText(action, 40),
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:26:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    24 │ /** Read the current daily spend (microdollars) for an API key from KV. */
+    25 │ export async function getDailySpend(apiKey: string): Promise<bigint> {
+  > 26 │ 	const raw = await env.SponsorApiKeyStore!.get(dailySpendKvKey(apiKey))
+       │ 	                  ^^^^^^^^^^^^^^^^^^^^^^^
+    27 │ 	if (!raw) return 0n
+    28 │ 	return BigInt(raw)
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     24  24 │   /** Read the current daily spend (microdollars) for an API key from KV. */
+     25  25 │   export async function getDailySpend(apiKey: string): Promise<bigint> {
+     26     │ - → const·raw·=·await·env.SponsorApiKeyStore!.get(dailySpendKvKey(apiKey))
+         26 │ + → const·raw·=·await·env.SponsorApiKeyStore?.get(dailySpendKvKey(apiKey))
+     27  27 │     if (!raw) return 0n
+     28  28 │     return BigInt(raw)
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:33:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    31 │ /** Read the cumulative lifetime spend (microdollars) for an API key from KV. */
+    32 │ export async function getLifetimeSpend(apiKey: string): Promise<bigint> {
+  > 33 │ 	const raw = await env.SponsorApiKeyStore!.get(lifetimeSpendKvKey(apiKey))
+       │ 	                  ^^^^^^^^^^^^^^^^^^^^^^^
+    34 │ 	if (!raw) return 0n
+    35 │ 	return BigInt(raw)
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     31  31 │   /** Read the cumulative lifetime spend (microdollars) for an API key from KV. */
+     32  32 │   export async function getLifetimeSpend(apiKey: string): Promise<bigint> {
+     33     │ - → const·raw·=·await·env.SponsorApiKeyStore!.get(lifetimeSpendKvKey(apiKey))
+         33 │ + → const·raw·=·await·env.SponsorApiKeyStore?.get(lifetimeSpendKvKey(apiKey))
+     34  34 │     if (!raw) return 0n
+     35  35 │     return BigInt(raw)
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:68:3 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    67 │ 	await Promise.all([
+  > 68 │ 		env.SponsorApiKeyStore!.put(
+       │ 		^^^^^^^^^^^^^^^^^^^^^^^
+    69 │ 			dailySpendKvKey(apiKey),
+    70 │ 			(currentDaily + fee).toString(),
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     66  66 │   
+     67  67 │     await Promise.all([
+     68     │ - → → env.SponsorApiKeyStore!.put(
+         68 │ + → → env.SponsorApiKeyStore?.put(
+     69  69 │         dailySpendKvKey(apiKey),
+     70  70 │         (currentDaily + fee).toString(),
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:73:3 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    71 │ 			{ expirationTtl: 86_400 },
+    72 │ 		),
+  > 73 │ 		env.SponsorApiKeyStore!.put(
+       │ 		^^^^^^^^^^^^^^^^^^^^^^^
+    74 │ 			lifetimeSpendKvKey(apiKey),
+    75 │ 			(currentLifetime + fee).toString(),
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     71  71 │         { expirationTtl: 86_400 },
+     72  72 │       ),
+     73     │ - → → env.SponsorApiKeyStore!.put(
+         73 │ + → → env.SponsorApiKeyStore?.put(
+     74  74 │         lifetimeSpendKvKey(apiKey),
+     75  75 │         (currentLifetime + fee).toString(),
+  
+
+apps/fee-payer/src/lib/api-keys.ts:59:8 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    57 │ 		active: true,
+    58 │ 	}
+  > 59 │ 	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(full))
+       │ 	      ^^^^^^^^^^^^^^^^^^^^^^^
+    60 │ 	return key
+    61 │ }
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     57  57 │       active: true,
+     58  58 │     }
+     59     │ - → await·env.SponsorApiKeyStore!.put(kvKey(key),·JSON.stringify(full))
+         59 │ + → await·env.SponsorApiKeyStore?.put(kvKey(key),·JSON.stringify(full))
+     60  60 │     return key
+     61  61 │   }
+  
+
+apps/fee-payer/src/lib/api-keys.ts:77:25 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    75 │ 	>,
+    76 │ ): Promise<boolean> {
+  > 77 │ 	const existing = await env.SponsorApiKeyStore!.get(kvKey(key))
+       │ 	                       ^^^^^^^^^^^^^^^^^^^^^^^
+    78 │ 	if (!existing) return false
+    79 │ 	const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     75  75 │     >,
+     76  76 │   ): Promise<boolean> {
+     77     │ - → const·existing·=·await·env.SponsorApiKeyStore!.get(kvKey(key))
+         77 │ + → const·existing·=·await·env.SponsorApiKeyStore?.get(kvKey(key))
+     78  78 │     if (!existing) return false
+     79  79 │     const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
+  
+
+apps/fee-payer/src/lib/api-keys.ts:82:8 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    80 │ 	if (!parsed.success) return false
+    81 │ 	const updated = { ...parsed.data, ...updates }
+  > 82 │ 	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(updated))
+       │ 	      ^^^^^^^^^^^^^^^^^^^^^^^
+    83 │ 	return true
+    84 │ }
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     80  80 │     if (!parsed.success) return false
+     81  81 │     const updated = { ...parsed.data, ...updates }
+     82     │ - → await·env.SponsorApiKeyStore!.put(kvKey(key),·JSON.stringify(updated))
+         82 │ + → await·env.SponsorApiKeyStore?.put(kvKey(key),·JSON.stringify(updated))
+     83  83 │     return true
+     84  84 │   }
+  
+
+apps/fee-payer/src/lib/api-keys.ts:96:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    94 │ 	cursor: string | null
+    95 │ }> {
+  > 96 │ 	const list = await env.SponsorApiKeyStore!.list({
+       │ 	                   ^^^^^^^^^^^^^^^^^^^^^^^
+    97 │ 		prefix: KV_PREFIX,
+    98 │ 		cursor: cursor ?? undefined,
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     94  94 │     cursor: string | null
+     95  95 │   }> {
+     96     │ - → const·list·=·await·env.SponsorApiKeyStore!.list({
+         96 │ + → const·list·=·await·env.SponsorApiKeyStore?.list({
+     97  97 │       prefix: KV_PREFIX,
+     98  98 │       cursor: cursor ?? undefined,
+  
+
+apps/fee-payer/src/lib/api-keys.ts:102:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    100 │ 	const keys: Array<{ key: string; record: ApiKeyRecord }> = []
+    101 │ 	for (const item of list.keys) {
+  > 102 │ 		const raw = await env.SponsorApiKeyStore!.get(item.name)
+        │ 		                  ^^^^^^^^^^^^^^^^^^^^^^^
+    103 │ 		if (!raw) continue
+    104 │ 		const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    100 100 │     const keys: Array<{ key: string; record: ApiKeyRecord }> = []
+    101 101 │     for (const item of list.keys) {
+    102     │ - → → const·raw·=·await·env.SponsorApiKeyStore!.get(item.name)
+        102 │ + → → const·raw·=·await·env.SponsorApiKeyStore?.get(item.name)
+    103 103 │       if (!raw) continue
+    104 104 │       const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
+  
+
+apps/og/src/index.tsx:179:46 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    177 │ 				),
+    178 │ 			].map(async (token) => {
+  > 179 │ 				const icon = await fetchTokenIcon(token, txParams.chainId!)
+        │ 				                                         ^^^^^^^^^^^^^^^^^
+    180 │ 				if (icon) icons[token] = icon
+    181 │ 			}),
+  
+
+apps/og/src/index.tsx:253:47 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    251 │ 					),
+    252 │ 				].map(async (token) => {
+  > 253 │ 					const icon = await fetchTokenIcon(token, txParams.chainId!)
+        │ 					                                         ^^^^^^^^^^^^^^^^^
+    254 │ 					if (icon) icons[token] = icon
+    255 │ 				}),
+  
+
+.factory/url-search/browser.cjs format ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Formatter would have printed the following content:
+  
+     1     │ - const·{chromium}=require('playwright');const·assert=require('node:assert/strict');const·fs=require('node:fs');const·dir='/Users/daniel/tempo/tempo-apps-factory-url/.factory/url-search';
+     2     │ - (async()=>{const·browser=await·chromium.launch({channel:'chrome',headless:true});const·errors=[];
+     3     │ - async·function·open(width=1440){const·context=await·browser.newContext({viewport:{width,height:width===390?844:1000},timezoneId:'UTC'});const·page=await·context.newPage();page.on('pageerror',e=>errors.push(String(e)));await·page.goto('http://localhost:3002/');await·page.waitForFunction(()=>{const·input=document.querySelector('input[name="explore-query"]');return·input&&Object.keys(input).some(k=>k.startsWith('__reactProps'))});const·input=page.locator('input[name="explore-query"]').filter({visible:true}).first();await·page.route('https://explore.tempo.xyz/**',r=>r.fulfill({contentType:'text/html',body:'<h1>Captured·trusted·destination</h1>'}));await·page.route('https://explore.testnet.tempo.xyz/**',r=>r.fulfill({contentType:'text/html',body:'<h1>Captured·trusted·destination</h1>'}));return·{context,page,input};}
+     4     │ - for(const·activation·of·['Enter','click','submit']){const·{context,page,input}=await·open();const·target='https://explore.tempo.xyz/block/100';await·input.fill(target);await·page.getByRole('option',{name:'Open·on·Mainnet'}).waitFor();if(activation==='Enter'){await·page.screenshot({path:`${dir}/after.png`});await·input.press('ArrowDown');assert.equal(await·page.getByRole('option').getAttribute('aria-selected'),'true');await·input.press('Enter');}else·if(activation==='click')await·page.getByRole('option',{name:'Open·on·Mainnet'}).click();else·await·page.getByRole('button',{name:'Search',exact:true}).filter({visible:true}).first().click();await·page.waitForURL(target);console.log(activation,'PASS',page.url());await·context.close();}
+     5     │ - {const·{context,page,input}=await·open();const·requests=[];page.on('request',r=>{if(r.url().includes('/api/search'))requests.push(r.url())});await·input.fill('0x20C0000000000000000000000000000000000000');await·page.waitForTimeout(500);const·count=requests.length;await·input.fill('https://explore.42431.tempo.xyz/block/latest');await·page.getByRole('option',{name:'Open·on·Testnet'}).waitFor();await·page.waitForTimeout(500);assert.equal(requests.length,count);assert.equal(await·page.getByRole('option').count(),1);await·input.press('Enter');await·page.waitForURL('https://explore.testnet.tempo.xyz/block/latest');console.log('fresh·URL/network/latest·PASS');await·context.close();}
+     6     │ - {const·{context,page,input}=await·open();await·input.fill('https://explore.tempo.xyz.evil.example/block/100');await·input.press('Enter');await·page.waitForTimeout(500);assert.equal(new·URL(page.url()).hostname,'localhost');await·input.fill('#100');await·input.press('Enter');await·page.waitForURL('**/block/100',{waitUntil:'commit'});console.log('invalid·host/raw·block·PASS');await·context.close();}
+     7     │ - {const·{context,page,input}=await·open(390);await·input.fill('https://explore.tempo.xyz/block/100');await·page.getByRole('option',{name:'Open·on·Mainnet'}).waitFor();await·page.screenshot({path:`${dir}/after-mobile.png`});console.log('mobile·PASS');await·context.close();}
+     8     │ - {const·{context,page}=await·open();const·target='https://explore.tempo.xyz/block/100';const·response=await·page.request.get(`http://localhost:3002/search?q=${encodeURIComponent(target)}`,{maxRedirects:0});assert.equal(response.status(),307);assert.equal(response.headers().location,target);console.log('server·redirect·PASS');await·context.close();}
+     9     │ - fs.writeFileSync(`${dir}/browser-errors.json`,JSON.stringify(errors,null,2));await·browser.close();console.log('ALL·PASS');})().catch(e=>{console.error(e);process.exit(1)});
+         1 │ + const·{·chromium·}·=·require('playwright')
+         2 │ + const·assert·=·require('node:assert/strict')
+         3 │ + const·fs·=·require('node:fs')
+         4 │ + const·dir·=·'/Users/daniel/tempo/tempo-apps-factory-url/.factory/url-search'
+         5 │ + ;(async·()·=>·{
+         6 │ + → const·browser·=·await·chromium.launch({·channel:·'chrome',·headless:·true·})
+         7 │ + → const·errors·=·[]
+         8 │ + → async·function·open(width·=·1440)·{
+         9 │ + → → const·context·=·await·browser.newContext({
+        10 │ + → → → viewport:·{·width,·height:·width·===·390·?·844·:·1000·},
+        11 │ + → → → timezoneId:·'UTC',
+        12 │ + → → })
+        13 │ + → → const·page·=·await·context.newPage()
+        14 │ + → → page.on('pageerror',·(e)·=>·errors.push(String(e)))
+        15 │ + → → await·page.goto('http://localhost:3002/')
+        16 │ + → → await·page.waitForFunction(()·=>·{
+        17 │ + → → → const·input·=·document.querySelector('input[name="explore-query"]')
+        18 │ + → → → return·(
+        19 │ + → → → → input·&&·Object.keys(input).some((k)·=>·k.startsWith('__reactProps'))
+        20 │ + → → → )
+        21 │ + → → })
+        22 │ + → → const·input·=·page
+        23 │ + → → → .locator('input[name="explore-query"]')
+        24 │ + → → → .filter({·visible:·true·})
+        25 │ + → → → .first()
+        26 │ + → → await·page.route('https://explore.tempo.xyz/**',·(r)·=>
+        27 │ + → → → r.fulfill({
+        28 │ + → → → → contentType:·'text/html',
+        29 │ + → → → → body:·'<h1>Captured·trusted·destination</h1>',
+        30 │ + → → → }),
+        31 │ + → → )
+        32 │ + → → await·page.route('https://explore.testnet.tempo.xyz/**',·(r)·=>
+        33 │ + → → → r.fulfill({
+        34 │ + → → → → contentType:·'text/html',
+        35 │ + → → → → body:·'<h1>Captured·trusted·destination</h1>',
+        36 │ + → → → }),
+        37 │ + → → )
+        38 │ + → → return·{·context,·page,·input·}
+        39 │ + → }
+        40 │ + → for·(const·activation·of·['Enter',·'click',·'submit'])·{
+        41 │ + → → const·{·context,·page,·input·}·=·await·open()
+        42 │ + → → const·target·=·'https://explore.tempo.xyz/block/100'
+        43 │ + → → await·input.fill(target)
+        44 │ + → → await·page.getByRole('option',·{·name:·'Open·on·Mainnet'·}).waitFor()
+        45 │ + → → if·(activation·===·'Enter')·{
+        46 │ + → → → await·page.screenshot({·path:·`${dir}/after.png`·})
+        47 │ + → → → await·input.press('ArrowDown')
+        48 │ + → → → assert.equal(
+        49 │ + → → → → await·page.getByRole('option').getAttribute('aria-selected'),
+        50 │ + → → → → 'true',
+        51 │ + → → → )
+        52 │ + → → → await·input.press('Enter')
+        53 │ + → → }·else·if·(activation·===·'click')
+        54 │ + → → → await·page.getByRole('option',·{·name:·'Open·on·Mainnet'·}).click()
+        55 │ + → → else
+        56 │ + → → → await·page
+        57 │ + → → → → .getByRole('button',·{·name:·'Search',·exact:·true·})
+        58 │ + → → → → .filter({·visible:·true·})
+        59 │ + → → → → .first()
+        60 │ + → → → → .click()
+        61 │ + → → await·page.waitForURL(target)
+        62 │ + → → console.log(activation,·'PASS',·page.url())
+        63 │ + → → await·context.close()
+        64 │ + → }
+        65 │ + → {
+        66 │ + → → const·{·context,·page,·input·}·=·await·open()
+        67 │ + → → const·requests·=·[]
+        68 │ + → → page.on('request',·(r)·=>·{
+        69 │ + → → → if·(r.url().includes('/api/search'))·requests.push(r.url())
+        70 │ + → → })
+        71 │ + → → await·input.fill('0x20C0000000000000000000000000000000000000')
+        72 │ + → → await·page.waitForTimeout(500)
+        73 │ + → → const·count·=·requests.length
+        74 │ + → → await·input.fill('https://explore.42431.tempo.xyz/block/latest')
+        75 │ + → → await·page.getByRole('option',·{·name:·'Open·on·Testnet'·}).waitFor()
+        76 │ + → → await·page.waitForTimeout(500)
+        77 │ + → → assert.equal(requests.length,·count)
+        78 │ + → → assert.equal(await·page.getByRole('option').count(),·1)
+        79 │ + → → await·input.press('Enter')
+        80 │ + → → await·page.waitForURL('https://explore.testnet.tempo.xyz/block/latest')
+        81 │ + → → console.log('fresh·URL/network/latest·PASS')
+        82 │ + → → await·context.close()
+        83 │ + → }
+        84 │ + → {
+        85 │ + → → const·{·context,·page,·input·}·=·await·open()
+        86 │ + → → await·input.fill('https://explore.tempo.xyz.evil.example/block/100')
+        87 │ + → → await·input.press('Enter')
+        88 │ + → → await·page.waitForTimeout(500)
+        89 │ + → → assert.equal(new·URL(page.url()).hostname,·'localhost')
+        90 │ + → → await·input.fill('#100')
+        91 │ + → → await·input.press('Enter')
+        92 │ + → → await·page.waitForURL('**/block/100',·{·waitUntil:·'commit'·})
+        93 │ + → → console.log('invalid·host/raw·block·PASS')
+        94 │ + → → await·context.close()
+        95 │ + → }
+        96 │ + → {
+        97 │ + → → const·{·context,·page,·input·}·=·await·open(390)
+        98 │ + → → await·input.fill('https://explore.tempo.xyz/block/100')
+        99 │ + → → await·page.getByRole('option',·{·name:·'Open·on·Mainnet'·}).waitFor()
+       100 │ + → → await·page.screenshot({·path:·`${dir}/after-mobile.png`·})
+       101 │ + → → console.log('mobile·PASS')
+       102 │ + → → await·context.close()
+       103 │ + → }
+       104 │ + → {
+       105 │ + → → const·{·context,·page·}·=·await·open()
+       106 │ + → → const·target·=·'https://explore.tempo.xyz/block/100'
+       107 │ + → → const·response·=·await·page.request.get(
+       108 │ + → → → `http://localhost:3002/search?q=${encodeURIComponent(target)}`,
+       109 │ + → → → {·maxRedirects:·0·},
+       110 │ + → → )
+       111 │ + → → assert.equal(response.status(),·307)
+       112 │ + → → assert.equal(response.headers().location,·target)
+       113 │ + → → console.log('server·redirect·PASS')
+       114 │ + → → await·context.close()
+       115 │ + → }
+       116 │ + → fs.writeFileSync(
+       117 │ + → → `${dir}/browser-errors.json`,
+       118 │ + → → JSON.stringify(errors,·null,·2),
+       119 │ + → )
+       120 │ + → await·browser.close()
+       121 │ + → console.log('ALL·PASS')
+       122 │ + })().catch((e)·=>·{
+       123 │ + → console.error(e)
+       124 │ + → process.exit(1)
+       125 │ + })
+    10 126 │   
+  
+
+Checked 485 files in 1333ms. No fixes applied.
+Found 1 error.
+Found 12 warnings.
+check ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  × Some errors were emitted while running checks.
+  
+

@@ -1,0 +1,8 @@
+page.waitForURL: Timeout 30000ms exceeded.
+=========================== logs ===========================
+waiting for navigation until "commit"
+============================================================
+    at /private/tmp/factory-browser/independent-url-raw-extra.cjs:2:611 {
+  log: [],
+  name: 'TimeoutError'
+}
