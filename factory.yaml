@@ -1,26 +1,26 @@
-# Explorer pipeline. Gates run in the sequence listed below.
+# Explorer pipeline. Stages run in the sequence listed below.
 version: 1
 repository: tempoxyz/tempo-apps
 scope: apps/explorer
 base: main
 library: ../factory
-library_revision: 02bd8907509c2bb9d61683373a3b4c532b6e70e6
+library_revision: ad2edcde57d7b524886318d450a60d1a5e34daae
 workflow: config/pipeline.yaml
 
 instructions:
-  - The gates below override only the named fields in the shared workflow. Match shared gates by id. Skills replace the inherited list; steps and criteria remain inherited unless explicitly overridden. Run in this list order; a passed gate advances to the following entry.
-  - Resolve every skill path against the pinned factory library. Load the current gate's skills and their required references, not the whole library.
+  - The stages below override only the named fields in the shared workflow. Match shared stages by id. Skills replace the inherited list; steps and criteria remain inherited unless explicitly overridden. Run in this list order; a passed stage advances to the following entry.
+  - Resolve every skill path against the pinned factory library. Load the current stage's skills and their required references, not the whole library.
   - Repo instructions, the accepted task contract, and delivery limits take precedence over skill defaults. No skill may merge, deploy, or expand task scope.
   - Use a fresh worktree from the selected origin/main SHA; do not reset the user's checkout.
   - Recheck commands against package.json and workflows at that SHA; this binding was researched at 9609e28fb458c32510053458e4609a090fa9c729.
   - Install with pnpm install --frozen-lockfile using the repo's pinned Node and pnpm versions.
   - Expand testing to affected shared packages and other apps when the diff crosses explorer boundaries.
   - Supply external references at intake so research can use the task's existing scope without re-asking.
-  - Do not change the accepted gate policy or criteria as part of a feature repair.
+  - Do not change the accepted stage policy or criteria as part of a feature repair.
   - Inherit the shared repair procedure. Any verification, audit, Cyclops, or CI defect interrupts forward progress and replays implementation through monitor on the same PR.
 
-# Explicit skill selection for every explorer gate.
-gates:
+# Explicit skill selection for every explorer stage.
+stages:
   - id: plan
     skills:
       - skills/antithesis-research/SKILL.md
@@ -53,12 +53,12 @@ gates:
     skills:
       - skills/pstack/skills/principle-prove-it-works/SKILL.md
       - skills/pstack/skills/principle-make-operations-idempotent/SKILL.md
-    instructions: Watch current-head CI, review threads, and authorized PR previews; reconcile existing jobs on resume and route defects through the repair gates without merging or deploying.
+    instructions: Watch current-head CI, review threads, and authorized PR previews; reconcile existing jobs on resume and route defects through the repair stages without merging or deploying.
   - id: ready
     skills:
       - skills/pstack/skills/principle-prove-it-works/SKILL.md
       - skills/pstack/skills/technical-writing/SKILL.md
-    instructions: Reconcile every gate's evidence against the final candidate and report the PR ready for merge; stop without merging or deploying.
+    instructions: Reconcile every stage's evidence against the final candidate and report the PR ready for merge; stop without merging or deploying.
 
 preparation:
   - pnpm gen:types
@@ -95,10 +95,23 @@ cyclops:
     trigger: cyclops-audit fast
     completion: A terminal Cyclops result tied to the submitted PR head, with findings/comments and publication status reconciled; a trigger or acknowledgement is not completion.
     fallback:
-      kind: rpc
-      url: https://dev-eu-cyclops-scan-ui.tail388b2e.ts.net/rpc/v1
-      method: scan.pr
-      mode: fast
+      kind: rest
+      url: https://dev-eu-cyclops-scan-ui.tail388b2e.ts.net/api/scans
+      method: POST
+      request_defaults:
+        schema_version: 5
+        scan_type: pr-review
+        repo: tempoxyz/tempo-apps
+        mode: fast
+        config: pr-review-super-fast.yaml
+        review_policy: {version: 1, effort: standard}
+        execution_speed: standard
+        dry_run: false
+        private: false
+      request_inputs:
+        pr_number: Current PR number.
+        target_commit: Freshly verified full 40-character PR head SHA.
+      identity: Require returned target_commit and pr_workflow_parameters.sha to equal the verified head; missing or mismatched identity blocks acceptance.
       condition: Only after comment/workflow/service reconciliation proves no matching job was created; record the unavailable comment handler and use one supported submission route.
     instructions: Save trigger comment ID and submitted head/base; discover and persist the responding bot/run identity; reconcile edited comments and inline reviews before another submission.
   instructions:
@@ -123,8 +136,8 @@ delivery:
 
 limits:
   candidate_attempts: 3
-  infrastructure_retries_per_gate: 2
+  infrastructure_retries_per_stage: 2
   total_run_hours: 4
-  remote_wait_minutes_per_gate: 60
+  remote_wait_minutes_per_stage: 60
   poll_seconds: 30
   on_exhaustion: Record blocked with evidence and the next actionable cause; never convert exhaustion into success.
