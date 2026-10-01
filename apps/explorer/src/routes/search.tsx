@@ -3,6 +3,7 @@ import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as z from 'zod/mini'
 import { getApiUrl } from '#lib/env'
+import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
 import { normalizeSearchInput } from '#lib/tempo-address'
 
 type SearchMatch =
@@ -136,6 +137,9 @@ export const Route = createFileRoute('/search')({
 	beforeLoad: async ({ search }) => {
 		const rawQuery = search.q?.trim() ?? ''
 		if (!rawQuery) throw redirect(getLandingRedirect(rawQuery))
+
+		const explorerUrl = parseExplorerSearchUrl(rawQuery)
+		if (explorerUrl) throw redirect({ href: explorerUrl.href })
 
 		const normalizedQuery = normalizeSearchInput(rawQuery)
 		const blockId = parseBlockInput(normalizedQuery)

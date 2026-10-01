@@ -9,6 +9,7 @@ import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#lib/css'
 import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
+import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import type {
 	AddressSearchResult,
@@ -90,10 +91,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 	const query = value.trim()
 	const showingRecent = query.length === 0 && recentSearches.length > 0
+	const explorerUrl = parseExplorerSearchUrl(query)
 	const normalizedQuery = normalizeSearchInput(query)
 	const isValidInput =
 		query.length > 0 &&
-		(Address.validate(normalizedQuery) ||
+		(explorerUrl !== undefined ||
+			Address.validate(normalizedQuery) ||
 			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
 			parseBlockInput(normalizedQuery) !== null)
 	const {
@@ -112,12 +115,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},
-			enabled: normalizedQuery !== '',
+			enabled: normalizedQuery !== '' && !explorerUrl,
 			staleTime: 30_000,
 			placeholderData: keepPreviousData,
 		}),
 	)
-	const suggestions = searchResults?.results ?? []
+	const suggestions = explorerUrl ? [] : (searchResults?.results ?? [])
 
 	const groupedSuggestions = React.useMemo<
 		ExploreInput.SuggestionGroup[]
@@ -349,6 +352,11 @@ export function ExploreInput(props: ExploreInput.Props) {
 						formValue = formValue.trim()
 						if (!formValue) return
 
+						const target = parseExplorerSearchUrl(formValue)
+						if (target) {
+							window.location.assign(target.href)
+							return
+						}
 						const normalizedFormValue = normalizeSearchInput(formValue)
 
 						const blockId = parseBlockInput(normalizedFormValue)
@@ -386,7 +394,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						)}
 						data-1p-ignore
 						name="explore-query"
-						placeholder="Search address, hash, block, token"
+						placeholder="Search address, hash, block, token, or URL"
 						enterKeyHint="search"
 						spellCheck={false}
 						type="text"
@@ -398,6 +406,13 @@ export function ExploreInput(props: ExploreInput.Props) {
 								return
 							}
 
+							if (showResults && explorerUrl) {
+								if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+									event.preventDefault()
+									setSelectedIndex(0)
+								}
+								return
+							}
 							if (!showResults || flatSuggestions.length === 0) return
 
 							if (event.key === 'ArrowDown') {
@@ -442,7 +457,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						aria-activedescendant={
 							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
 						}
-						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
+						title="Search by Address / Tx Hash / Block / Token / Explorer URL (Cmd+K to focus)"
 					/>
 					<div
 						className={cx(
@@ -552,6 +567,16 @@ export function ExploreInput(props: ExploreInput.Props) {
 								))}
 							</tbody>
 						</table>
+					) : explorerUrl ? (
+						<a
+							href={explorerUrl.href}
+							role="option"
+							aria-selected={selectedIndex === 0}
+							id={`${resultsId}-0`}
+							className="block px-[16px] py-[12px] copy-14 text-accent hover:bg-base-alt"
+						>
+							Open on {explorerUrl.network}
+						</a>
 					) : flatSuggestions.length === 0 ? (
 						<div className="px-[16px] py-[12px] copy-14 text-tertiary">
 							{isError
