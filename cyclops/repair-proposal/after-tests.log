@@ -1,0 +1,56 @@
+bun test v1.2.19 (aad3abea)
+
+src/runner/tool-coverage-head.test.ts:
+(pass) numbered head source coverage > codex credits numbered head -65 only through returned source lines [2.23ms]
+(pass) numbered head source coverage > codex credits numbered head -n 65 only through returned source lines [0.45ms]
+(pass) numbered head source coverage > codex credits numbered head -n65 only through returned source lines [0.22ms]
+(pass) numbered head source coverage > codex credits numbered head --lines=65 only through returned source lines [0.20ms]
+(pass) numbered head source coverage > codex caps numbered head evidence at the literal bound [0.24ms]
+(pass) numbered head source coverage > codex bounds numbered head at EOF [0.24ms]
+(pass) numbered head source coverage > codex bounds numbered head at truncated middle [0.25ms]
+(pass) numbered head source coverage > codex bounds numbered head at different source bytes [0.19ms]
+(pass) numbered head source coverage > codex does not credit numbered head outside the prepared workspace [0.40ms]
+(pass) numbered head source coverage > codex rejects numbered head output without a matching initial source interval:  [0.24ms]
+(pass) numbered head source coverage > codex rejects numbered head output without a matching initial source interval: ... output truncated ... [0.19ms]
+(pass) numbered head source coverage > codex rejects numbered head output without a matching initial source interval:      1	old revision
+ [0.18ms]
+(pass) numbered head source coverage > codex rejects numbered head output without a matching initial source interval:      2	two
+ [0.21ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -n $LIMIT [0.52ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -n $(echo 2) [0.26ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -n -2 [0.38ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -0 [0.17ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -9007199254740992 [0.16ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -c 2 [0.15ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -2 | sort [0.25ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | tee copy.ts | head -2 [0.16ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -2 other.ts [0.19ms]
+(pass) numbered head source coverage > claude credits numbered head -65 only through returned source lines [0.25ms]
+(pass) numbered head source coverage > claude credits numbered head -n 65 only through returned source lines [0.20ms]
+(pass) numbered head source coverage > claude credits numbered head -n65 only through returned source lines [0.31ms]
+(pass) numbered head source coverage > claude credits numbered head --lines=65 only through returned source lines [0.23ms]
+(pass) numbered head source coverage > claude caps numbered head evidence at the literal bound [0.22ms]
+(pass) numbered head source coverage > claude bounds numbered head at EOF [0.19ms]
+(pass) numbered head source coverage > claude bounds numbered head at truncated middle [0.17ms]
+(pass) numbered head source coverage > claude bounds numbered head at different source bytes [0.19ms]
+(pass) numbered head source coverage > claude does not credit numbered head outside the prepared workspace [0.16ms]
+(pass) numbered head source coverage > claude rejects numbered head output without a matching initial source interval:  [0.23ms]
+(pass) numbered head source coverage > claude rejects numbered head output without a matching initial source interval: ... output truncated ... [0.18ms]
+(pass) numbered head source coverage > claude rejects numbered head output without a matching initial source interval:      1	old revision
+ [0.30ms]
+(pass) numbered head source coverage > claude rejects numbered head output without a matching initial source interval:      2	two
+ [0.29ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -n $LIMIT [0.23ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -n $(echo 2) [0.15ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -n -2 [0.16ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -0 [0.17ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -9007199254740992 [0.16ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -c 2 [0.18ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -2 | sort [0.17ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | tee copy.ts | head -2 [0.20ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -2 other.ts [0.17ms]
+
+ 44 pass
+ 0 fail
+ 52 expect() calls
+Ran 44 tests across 1 file. [46.00ms]

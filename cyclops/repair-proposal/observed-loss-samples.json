@@ -1,0 +1,20 @@
+[
+  {
+    "reason": "unsupported_source_intent",
+    "backend": "codex",
+    "trajectory_id": "audit-w1-i1",
+    "stage": "audit",
+    "correlation_id": "919299b8b8860441036a08b8",
+    "tool": "command_execution",
+    "input": "/usr/bin/bash -lc \"B=/var/lib/cyclops/findings/pr-1302-20261001t053206-a31f8978236e/invocation-bundles/audit-w1-i1; sed -n '42,109p;265,390p' \\\"\"'$B/inputs/diff.patch\"; nl -ba apps/explorer/src/lib/clipboard.ts; nl -ba apps/explorer/src/lib/hooks.ts | head -65; rg -n '\"'useCopy\\\\(|copy\\\\(' apps/explorer/src/comps/Copy* apps/explorer/src/routes | head -85; git status --short; git rev-parse HEAD\""
+  },
+  {
+    "reason": "unsupported_source_intent",
+    "backend": "codex",
+    "trajectory_id": "audit-w1-i1",
+    "stage": "audit",
+    "correlation_id": "cfc5c391b5ba915c081c7d09",
+    "tool": "command_execution",
+    "input": "{\"command\":\"nl -ba apps/explorer/src/comps/CopyButton.tsx | head -65\"}"
+  }
+]

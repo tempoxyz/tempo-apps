@@ -1,0 +1,638 @@
+bun test v1.2.19 (aad3abea)
+
+src/runner/tool-coverage-head.test.ts:
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-e0H39n/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > codex credits numbered head -65 only through returned source lines [2.13ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-9mqiUJ/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > codex credits numbered head -n 65 only through returned source lines [1.84ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-9UApls/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > codex credits numbered head -n65 only through returned source lines [0.55ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-JGt7go/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > codex credits numbered head --lines=65 only through returned source lines [0.69ms]
+49 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-bound",
+50 |         onObservation: value => { observations.push(value); } });
+51 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+52 |         { command: 'nl -ba "source.ts" | head -n 2' }, false,
+53 |         "     1\tone\n     2\ttwo\n     3\tthree\n     4\tfour\n"));
+54 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-nFupmB/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:54:28)
+(fail) numbered head source coverage > codex caps numbered head evidence at the literal bound [0.41ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "command_execution",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > codex rejects numbered head output without a matching initial source interval:  [0.40ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "command_execution",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > codex rejects numbered head output without a matching initial source interval: ... output truncated ... [0.21ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "command_execution",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > codex rejects numbered head output without a matching initial source interval:      1	old revision
+ [0.25ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "command_execution",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > codex rejects numbered head output without a matching initial source interval:      2	two
+ [0.23ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -n $LIMIT [0.20ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -n $(echo 2) [0.20ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -n -2 [0.17ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -0 [0.18ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -9007199254740992 [0.18ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -c 2 [0.27ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -2 | sort [0.23ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | tee copy.ts | head -2 [0.22ms]
+(pass) numbered head source coverage > codex does not credit unsupported numbered head form nl -ba source.ts | head -2 other.ts [0.20ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-63udxC/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > claude credits numbered head -65 only through returned source lines [0.33ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-xbZEvc/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > claude credits numbered head -n 65 only through returned source lines [0.18ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-vrilHX/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > claude credits numbered head -n65 only through returned source lines [0.18ms]
+38 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
+39 |         onObservation: value => { observations.push(value); } });
+40 |       const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
+41 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+42 |         { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
+43 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-mEZDa9/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:43:28)
+(fail) numbered head source coverage > claude credits numbered head --lines=65 only through returned source lines [0.27ms]
+49 |       const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-bound",
+50 |         onObservation: value => { observations.push(value); } });
+51 |       consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+52 |         { command: 'nl -ba "source.ts" | head -n 2' }, false,
+53 |         "     1\tone\n     2\ttwo\n     3\tthree\n     4\tfour\n"));
+54 |       expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
+                                ^
+error: expect(received).toEqual(expected)
+
++ []
+- [
+-   {
+-     endLine: 2,
+-     filePath: "/var/folders/s_/3tntpy9j5zlbpqqz8b_cv4740000gn/T/cyclops-tool-coverage-B4Ucrl/source.ts",
+-     kind: "read",
+-     startLine: 1,
+-   }
+- ]
+
+- Expected  - 8
++ Received  + 1
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:54:28)
+(fail) numbered head source coverage > claude caps numbered head evidence at the literal bound [0.18ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "Bash",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > claude rejects numbered head output without a matching initial source interval:  [0.35ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "Bash",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > claude rejects numbered head output without a matching initial source interval: ... output truncated ... [0.29ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "Bash",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > claude rejects numbered head output without a matching initial source interval:      1	old revision
+ [0.21ms]
+58 |       `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
+59 |         const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
+60 |           onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
+61 |         consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
+62 |           { command: "nl -ba source.ts | head -65" }, false, output));
+63 |         expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
+                                         ^
+error: expect(received).toMatchObject(expected)
+
+  {
+    accepted: 0,
++   accepted_reasons: {
++     exact_read: 0,
++     search_seen: 0,
++   },
++   accepted_samples: [],
++   lifecycle: {
++     completed: 1,
++     duplicate_completions: 0,
++     duplicate_starts: 0,
++     failed_completions: 0,
++     pending: 0,
++     started: 1,
++     unmatched_completions: 0,
++   },
+    loss_reasons: {
++     unsupported_source_intent: 1,
+-     range_unavailable: 1,
+    },
++   loss_samples: [
++     {
++       correlation_id: "9f2e6d33a3717ee826353a40",
++       input: "{\"command\":\"nl -ba source.ts | head -65\"}",
++       reason: "unsupported_source_intent",
++       tool: "Bash",
++     }
++   ],
+    losses: 1,
++   schema_version: 3,
+  }
+
+- Expected  - 1
++ Received  + 24
+
+      at <anonymous> (/private/tmp/factory-cyclops-core/src/runner/tool-coverage-head.test.ts:63:37)
+(fail) numbered head source coverage > claude rejects numbered head output without a matching initial source interval:      2	two
+ [0.21ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -n $LIMIT [0.16ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -n $(echo 2) [0.19ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -n -2 [0.13ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -0 [0.18ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -9007199254740992 [0.16ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -c 2 [0.15ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -2 | sort [0.19ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | tee copy.ts | head -2 [0.17ms]
+(pass) numbered head source coverage > claude does not credit unsupported numbered head form nl -ba source.ts | head -2 other.ts [0.22ms]
+
+ 18 pass
+ 18 fail
+ 36 expect() calls
+Ran 36 tests across 1 file. [28.00ms]

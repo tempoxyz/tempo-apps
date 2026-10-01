@@ -1,0 +1,153 @@
+diff --git a/src/runner/tool-coverage.ts b/src/runner/tool-coverage.ts
+index f85ea0d..0360926 100644
+--- a/src/runner/tool-coverage.ts
++++ b/src/runner/tool-coverage.ts
+@@ -183,6 +183,7 @@ function shellInput(input: unknown): { command: string | null; sourceIntent: boo
+ // `directory` is the `cd` a search ran under; the hit paths it prints are relative to it. `segment` places a step of a
+ // compound command in its output: `header` is what the separator steps before it printed (null when unknown).
+ type ClassifiedSource = { operation: "read" | "search"; path: string; start: number | null; end: number | null;
++  maxReturnedEnd?: number;
+   revision?: { rev: string; repository: string }; directory?: string; segment?: { index: number; header: string | null } };
+ // A step of a compound command that states source-read intent in a form coverage cannot bound.
+ type ClassifiedStep = ClassifiedSource | { operation: "unsupported"; command: string; directory: string };
+@@ -429,6 +430,14 @@ function shellCommand(raw: string): ClassifiedSource[] | null {
+   // Admit only this exact, side-effect-free pipeline; arbitrary pipelines remain rejected.
+   let match = raw.match(/^\s*(?:nl\s+-ba|cat(?:\s+-n)?)\s+(?:--\s+)?([^\s|]+)\s*\|\s*sed\s+-n\s+['"]?([\d,$p;]+)['"]?\s*$/);
+   if (match) return boundedRanges(match[2]!, unquoted(match[1]!));
++  // A literal head bound limits numbered source output. Still match the returned
++  // bytes below: the harness can truncate output before that bound or before EOF.
++  match = raw.match(/^\s*nl\s+-ba\s+(?:--\s+)?([^\s|]+)\s*\|\s*head\s+(?:-n\s*|--lines=|-)(\d+)\s*$/);
++  if (match) {
++    const limit = Number(match[2]);
++    return Number.isSafeInteger(limit) && limit > 0
++      ? [{ operation: "read", path: unquoted(match[1]!), start: 1, end: null, maxReturnedEnd: limit }] : null;
++  }
+   // Native workers also select the bounded range before numbering it. This is
+   // equivalent evidence: both stages are read-only and the source path and
+   // exact disjoint ranges remain explicit.
+@@ -703,7 +712,9 @@ export class ToolCoverageNormalizer {
+         if (!length) { this.recordLoss("range_unavailable", event.id, event.name ?? started.name, { path: item.path }); continue; }
+         start = Math.max(1, length + start + 1);
+       }
+-      const end = item.end ?? returnedReadEnd(absolute, start, output, segment?.anchored === false);
++      const returnedEnd = item.end ?? returnedReadEnd(absolute, start, output, segment?.anchored === false);
++      const end = returnedEnd !== null && item.maxReturnedEnd !== undefined
++        ? Math.min(returnedEnd, item.maxReturnedEnd) : returnedEnd;
+       if (end === null || end < start) {
+         this.recordLoss("range_unavailable", event.id, event.name ?? started.name, { path: item.path, start_line: start, end_line: end });
+         continue;
+diff --git a/src/runner/tool-coverage-head.test.ts b/src/runner/tool-coverage-head.test.ts
+new file mode 100644
+index 0000000..a0aa3da
+--- /dev/null
++++ b/src/runner/tool-coverage-head.test.ts
+@@ -0,0 +1,109 @@
++import { afterEach, describe, expect, test } from "bun:test";
++import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
++import { join } from "node:path";
++import { tmpdir } from "node:os";
++import { structuredToolEvents, ToolCoverageNormalizer, type CoverageHarness } from "./tool-coverage.js";
++
++const roots: string[] = [];
++afterEach(() => { while (roots.length) rmSync(roots.pop()!, { recursive: true, force: true }); });
++
++function fixture() {
++  const root = mkdtempSync(join(tmpdir(), "cyclops-tool-coverage-"));
++  roots.push(root);
++  writeFileSync(join(root, "source.ts"), "one\ntwo\nthree\nfour\n");
++  return root;
++}
++
++function lifecycle(backend: CoverageHarness, id: string, name: string, input: unknown, failed = false,
++  output: unknown = "one\ntwo\nthree\nfour\n"): unknown[] {
++  if (backend === "amp" || backend === "claude") return [
++    { type: "assistant", message: { content: [{ type: "tool_use", id, name, input }] } },
++    { type: "user", message: { content: [{ type: "tool_result", tool_use_id: id, content: output, is_error: failed }] } },
++  ];
++  return [
++    { type: "tool.started", id, name, input },
++    { type: "tool.completed", id, name, output, failed },
++  ];
++}
++
++function consume(normalizer: ToolCoverageNormalizer, values: unknown[]) {
++  return values.flatMap(value => structuredToolEvents(value).map(event => normalizer.consume(event))).filter(Boolean);
++}
++
++describe("numbered head source coverage", () => {
++  for (const backend of ["codex", "claude"] as const) {
++    // scan_mup3kf2k_e0p3ab lost `nl -ba .../CopyButton.tsx | head -65`.
++    test.each(["-65", "-n 65", "-n65", "--lines=65"])(`${backend} credits numbered head %s only through returned source lines`, (bound) => {
++      const cwd = fixture(), observations: unknown[] = [];
++      const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head",
++        onObservation: value => { observations.push(value); } });
++      const command = `/usr/bin/bash -lc 'nl -ba source.ts | head ${bound}'`;
++      consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
++        { command }, false, "     1\tone\n     2\ttwo\n... output truncated ...\n"));
++      expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
++      expect(coverage.snapshot()).toMatchObject({ accepted: 1, losses: 0 });
++    });
++
++    test(`${backend} caps numbered head evidence at the literal bound`, () => {
++      const cwd = fixture(), observations: unknown[] = [];
++      const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-bound",
++        onObservation: value => { observations.push(value); } });
++      consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
++        { command: 'nl -ba "source.ts" | head -n 2' }, false,
++        "     1\tone\n     2\ttwo\n     3\tthree\n     4\tfour\n"));
++      expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine: 2, kind: "read" }]);
++    });
++
++    test.each([
++      ["EOF", "     1\tone\n     2\ttwo\n     3\tthree\n     4\tfour\n", 4],
++      ["truncated middle", "     1\tone\n... output truncated ...\n     3\tthree\n     4\tfour\n", 1],
++      ["different source bytes", "     1\tone\n     2\told revision\n     3\tthree\n", 1],
++    ] as const)(`${backend} bounds numbered head at %s`, (_name, output, endLine) => {
++      const cwd = fixture(), observations: unknown[] = [];
++      const coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-prefix",
++        onObservation: value => { observations.push(value); } });
++      consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
++        { command: "nl -ba source.ts | head -65" }, false, output));
++      expect(observations).toEqual([{ filePath: join(cwd, "source.ts"), startLine: 1, endLine, kind: "read" }]);
++    });
++
++    test(`${backend} does not credit numbered head outside the prepared workspace`, () => {
++      const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-outside",
++        onObservation: () => { throw new Error("outside source must not become evidence"); } });
++      consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
++        { command: "nl -ba ../source.ts | head -65" }, false, "     1\tone\n"));
++      expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
++        loss_reasons: { path_outside_workspace: 1 } });
++    });
++
++    test.each(["", "... output truncated ...", "     1\told revision\n", "     2\ttwo\n"])(
++      `${backend} rejects numbered head output without a matching initial source interval: %s`, (output) => {
++        const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-output",
++          onObservation: () => { throw new Error("unobserved source must not become evidence"); } });
++        consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
++          { command: "nl -ba source.ts | head -65" }, false, output));
++        expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
++          loss_reasons: { range_unavailable: 1 } });
++      });
++
++    test.each([
++      "nl -ba source.ts | head -n $LIMIT",
++      "nl -ba source.ts | head -n $(echo 2)",
++      "nl -ba source.ts | head -n -2",
++      "nl -ba source.ts | head -0",
++      "nl -ba source.ts | head -9007199254740992",
++      "nl -ba source.ts | head -c 2",
++      "nl -ba source.ts | head -2 | sort",
++      "nl -ba source.ts | tee copy.ts | head -2",
++      "nl -ba source.ts | head -2 other.ts",
++    ])(`${backend} does not credit unsupported numbered head form %s`, (command) => {
++      const cwd = fixture(), coverage = new ToolCoverageNormalizer({ backend, cwd, invocation: "numbered-head-reject",
++        onObservation: () => { throw new Error("unsupported pipeline must not become evidence"); } });
++      consume(coverage, lifecycle(backend, "head", backend === "codex" ? "command_execution" : "Bash",
++        { command }, false, "     1\tone\n     2\ttwo\n"));
++      expect(coverage.snapshot()).toMatchObject({ accepted: 0, losses: 1,
++        loss_reasons: { unsupported_source_intent: 1 } });
++    });
++
++  }
++});

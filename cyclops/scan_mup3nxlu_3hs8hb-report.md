@@ -5,7 +5,7 @@
 - Target: tempoxyz/tempo-apps#1300
 - Commit: `4655e8b3ddb12611d3f2e85945525873a3aa712b`
 - Started: 2026-10-01T05:34:51Z
-- Finished: 2026-10-01T05:37:55Z
+- Finished: 2026-10-01T05:38:16Z
 
 ## Outcome
 
@@ -48,7 +48,7 @@
 
 ### Workflow attempts
 
-- Attempt 0: [cyclops-scan-pr-review-sbwnb](https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-sbwnb); status succeeded; phase Succeeded; started 2026-10-01T05:34:51Z; finished 2026-10-01T05:37:55Z
+- Attempt 0: [cyclops-scan-pr-review-sbwnb](https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-sbwnb); status succeeded; phase Succeeded; started 2026-10-01T05:34:51Z; finished 2026-10-01T05:38:16Z
 
 </details>
 

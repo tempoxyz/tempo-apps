@@ -9,8 +9,8 @@
       "scan_type": "pr-review",
       "repo": "tempoxyz/tempo-apps",
       "started_at": "2026-10-01T05:34:51Z",
-      "finished_at": "2026-10-01T05:37:55Z",
-      "event_count": 74,
+      "finished_at": "2026-10-01T05:38:16Z",
+      "event_count": 75,
       "finding_count": 0
     },
     "metadata": {
@@ -40,15 +40,15 @@
           "workflow_url": "https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-sbwnb",
           "status": "succeeded",
           "created_at": "2026-10-01T05:34:50.082Z",
-          "updated_at": "2026-10-01T05:38:08.763Z",
+          "updated_at": "2026-10-01T05:40:53.141Z",
           "phase": "Succeeded",
           "started_at": "2026-10-01T05:34:51Z",
-          "finished_at": "2026-10-01T05:37:55Z"
+          "finished_at": "2026-10-01T05:38:16Z"
         }
       ],
       "workflow_namespace": "argo-workflows",
       "created_at": "2026-10-01T05:34:50.082Z",
-      "updated_at": "2026-10-01T05:38:08.763Z",
+      "updated_at": "2026-10-01T05:40:53.141Z",
       "events": [
         {
           "ts": "2026-10-01T05:34:50.082Z",
@@ -4928,6 +4928,24 @@
             "phase": "Succeeded",
             "status": "completed"
           }
+        },
+        {
+          "ts": "2026-10-01T05:39:07.308Z",
+          "event": "artifact.synced",
+          "data": {
+            "results": [
+              {
+                "artifact": "findings-archive",
+                "ok": true
+              },
+              {
+                "artifact": "logs-archive",
+                "ok": true
+              }
+            ],
+            "workflow_name": "cyclops-scan-pr-review-sbwnb",
+            "attempt": 1
+          }
         }
       ],
       "findings": [],
@@ -4966,7 +4984,9 @@
       "last_reconciled_at": "2026-10-01T05:37:35.584Z",
       "phase": "Succeeded",
       "started_at": "2026-10-01T05:34:51Z",
-      "finished_at": "2026-10-01T05:37:55Z",
+      "finished_at": "2026-10-01T05:38:16Z",
+      "artifact_sync_attempted_at": "2026-10-01T05:39:06.743Z",
+      "artifact_synced_at": "2026-10-01T05:39:06.743Z",
       "finding_progress": {
         "confirmed": 0,
         "provisional": 0,
@@ -5246,7 +5266,7 @@
     },
     "status": {
       "status": "completed",
-      "updated_at": "2026-10-01T05:38:08.763Z"
+      "updated_at": "2026-10-01T05:40:53.141Z"
     },
     "findings": [],
     "events": [
@@ -10127,6 +10147,24 @@
           "workflow_name": "cyclops-scan-pr-review-sbwnb",
           "phase": "Succeeded",
           "status": "completed"
+        }
+      },
+      {
+        "ts": "2026-10-01T05:39:07.308Z",
+        "event": "artifact.synced",
+        "data": {
+          "results": [
+            {
+              "artifact": "findings-archive",
+              "ok": true
+            },
+            {
+              "artifact": "logs-archive",
+              "ok": true
+            }
+          ],
+          "workflow_name": "cyclops-scan-pr-review-sbwnb",
+          "attempt": 1
         }
       }
     ]
