@@ -1,0 +1,9 @@
+
+ RUN  v4.1.0 /private/tmp/time-format-independent-6816fa2/apps/explorer
+
+
+ Test Files  1 passed (1)
+      Tests  23 passed (23)
+   Start at  00:52:51
+   Duration  163ms (transform 26ms, setup 0ms, import 31ms, tests 44ms, environment 0ms)
+

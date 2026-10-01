@@ -1,0 +1,154 @@
+{
+  "status": "PASS",
+  "candidate": "6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4",
+  "results": [
+    {
+      "saved": null,
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "relative",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "local",
+      "fault": "none",
+      "initial": "local",
+      "final": "unix",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "utc",
+      "fault": "none",
+      "initial": "utc",
+      "final": "unix",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "unix",
+      "fault": "none",
+      "initial": "unix",
+      "final": "unix",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "UTC",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": " utc ",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "{}",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "[\"unix\"]",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "future",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "null",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "0",
+      "fault": "none",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "utc",
+      "fault": "getter",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "utc",
+      "fault": "read",
+      "initial": "relative",
+      "final": "relative",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "saved": "utc",
+      "fault": "write",
+      "initial": "utc",
+      "final": "unix",
+      "status": "PASS",
+      "hydrationErrors": 0,
+      "consoleErrors": 0
+    },
+    {
+      "scenario": "all four choices survive real browser reload",
+      "status": "PASS"
+    }
+  ]
+}

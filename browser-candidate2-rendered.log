@@ -1,0 +1,25 @@
+after reload: Showing UTC time - click to change
+tokens rendered UTC timestamps: [
+  'Jan 8, 18:13:22 UTC',
+  'Jan 8, 18:11:33 UTC',
+  'Jan 8, 18:13:22 UTC',
+  'Jan 8, 18:13:22 UTC',
+  'Jan 22, 19:22:32 UTC',
+  'Jan 22, 19:21:52 UTC',
+  'Aug 26, 14:09:44 UTC',
+  'Sep 29, 17:54:09 UTC'
+]
+tokens rendered unix timestamps: [
+  '1767896002',
+  '1767895893',
+  '1767896002',
+  '1767896002',
+  '1769109752',
+  '1769109712',
+  '1787753384',
+  '1790704449'
+]
+back URL http://localhost:3000/blocks?from=100000&live=false
+back state { title: undefined, stored: 'unix' }
+after: SPA blocks->home->tokens, hard reload, choose unix, back->blocks all passed
+after pageerrors 0

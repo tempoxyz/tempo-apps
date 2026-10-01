@@ -1,0 +1,22 @@
+{"step":"first document choose local","mode":["local","local"],"stored":"local","pageShows":[false],"reasons":null}
+{"step":"second document choose utc","mode":["utc","utc"],"stored":"utc","pageShows":[false],"reasons":null}
+{"step":"goBack, expected utc","mode":["local","local"],"stored":"utc","pageShows":[false,true],"reasons":null}
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
++   'local',
++   'local'
+-   'utc',
+-   'utc'
+  ]
+
+    at history (file:///private/tmp/time-format-react.ZqQWXR/bfcache.mjs:17:9)
+    at async file:///private/tmp/time-format-react.ZqQWXR/bfcache.mjs:25:2 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [Array],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}

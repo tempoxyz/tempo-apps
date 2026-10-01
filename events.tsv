@@ -1,0 +1,14 @@
+2026-10-01T04:48:49.185742+00:00	plan	1	passed	9609e28fb458c32510053458e4609a090fa9c729	v1	acceptance.md; verification-plan.md; antithesis/scratchbook/evaluation/synthesis.md
+2026-10-01T04:48:49.185917+00:00	implement	1	started	uncommitted	v1	Independent implementation agent; dependencies installed
+2026-10-01T04:48:49.185919+00:00	cyclops-preflight	0	blocked	n/a	v1	Tailscale NeedsLogin; no audit submitted
+2026-10-01T04:51:55.039216+00:00	implement	1	passed	6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4	v1	check-results.tsv; 23 new focused tests; candidate committed
+2026-10-01T04:51:55.039366+00:00	verify	1	started	6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4	v1	Independent verifier in fresh context; browser route experiment
+2026-10-01T04:51:55.039368+00:00	audit	1	started	6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4	v1	Independent reviewer prework; verdict awaits verification evidence
+2026-10-01T04:55:32.639122+00:00	verify	2	failed	6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4	v1	Independent real-Chrome BFCache reproduction: Back restores local while stored selection is utc; verify/bfcache.log
+2026-10-01T04:55:32.639229+00:00	audit	2	stale	6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4	v1	No code findings in initial audit; independent verification now found BFCache defect
+2026-10-01T04:55:32.639231+00:00	implement	2	retrying	6816fa2a4f0bd1bd56ddd6b77e22bed5cc607cf4	v1	Candidate attempt 2: reconcile restored documents with saved preference; frozen acceptance unchanged
+2026-10-01T04:59:08.409258+00:00	implement	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Candidate2 committed after all10 checks;205 worker+318 node tests passed;31 focused tests;candidate2-final-check-results.tsv
+2026-10-01T04:59:08.409383+00:00	verify	2	started	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Re-run independent React and BFCache reproduction against frozen candidate2
+2026-10-01T05:02:13.664384+00:00	verify	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Local acceptance passes;verify/report-candidate2.md;browser-candidate2-rendered.log;external AC8 checks remain assigned to later stages
+2026-10-01T05:02:13.664527+00:00	audit	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Independent final local audit passes;audit.md;no unresolved code findings
+2026-10-01T05:02:13.664531+00:00	pr	2	started	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Verified candidate pushed; publishing PR with screenshots and reproducible evidence

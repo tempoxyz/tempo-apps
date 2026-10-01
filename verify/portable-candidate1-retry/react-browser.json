@@ -1,0 +1,5 @@
+{
+  "status": "FAIL",
+  "results": [],
+  "error": "page.waitForFunction: Timeout 30000ms exceeded.\n    at state (/private/tmp/time-format-react.TkQc0m/browser.mjs:7:58)\n    at scenario (/private/tmp/time-format-react.TkQc0m/browser.mjs:24:125)\n    at async file:///private/tmp/time-format-react.TkQc0m/browser.mjs:36:113"
+}

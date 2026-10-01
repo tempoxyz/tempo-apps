@@ -1,0 +1,3 @@
+Supplemental candidate2 React lifecycle check. Imports unchanged candidate modules; instruments browser add/removeEventListener only to count active pageshow registrations while also asserting visible shared formats.
+
+Run `run.sh /absolute/candidate/worktree /absolute/evidence/output` with the same prerequisites/optional environment parameters documented in ../harness-candidate1/README.md. It verifies one active listener under StrictMode with two consumers, zero after full root unmount, persisted-state reconciliation on a new root, and failed-write in-memory retention on another full root remount. It does not run the larger browser/BFCache suite; use ../harness-candidate1/run.sh for that suite.

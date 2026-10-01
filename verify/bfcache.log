@@ -1,0 +1,21 @@
+{"step":"first doc choose local","mode":["local","local"],"stored":"local","pageShows":[false],"reasons":null}
+{"step":"second doc choose utc","mode":["utc","utc"],"stored":"utc","pageShows":[false],"reasons":null}
+{"step":"back to first doc","mode":["local","local"],"stored":"utc","pageShows":[false,true],"reasons":null}
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  [
++   'local',
++   'local'
+-   'utc',
+-   'utc'
+  ]
+
+    at file:///private/tmp/time-format-independent-harness/bfcache.mjs:5:591 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: [Array],
+  expected: [Array],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}

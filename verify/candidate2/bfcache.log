@@ -1,0 +1,7 @@
+{"step":"first document choose local","mode":["local","local"],"stored":"local","pageShows":[false],"reasons":null}
+{"step":"second document choose utc","mode":["utc","utc"],"stored":"utc","pageShows":[false],"reasons":null}
+{"step":"goBack, expected utc","mode":["utc","utc"],"stored":"utc","pageShows":[false,true],"reasons":null}
+{"step":"goForward, expected unix","mode":["unix","unix"],"stored":"unix","pageShows":[false,true],"reasons":null}
+{"step":"goBack, expected relative","mode":["relative","relative"],"stored":"relative","pageShows":[false,true,true],"reasons":null}
+{"step":"goForward, expected local","mode":["local","local"],"stored":"local","pageShows":[false,true,true],"reasons":null}
+PASS: Back/Forward retained latest same-tab choice in every mode; unrelated preferences intact; no page errors
