@@ -9,6 +9,7 @@ function stubStorage(saved: string | null = null) {
 	const values = new Map<string, string>([['unrelated-preference', 'keep']])
 	if (saved !== null) values.set(storageKey, saved)
 	const writes: [string, string][] = []
+	const events = new EventTarget()
 	const storage = {
 		getItem: (key: string) => values.get(key) ?? null,
 		setItem: (key: string, value: string) => {
@@ -16,8 +17,12 @@ function stubStorage(saved: string | null = null) {
 			values.set(key, value)
 		},
 	}
-	vi.stubGlobal('window', { localStorage: storage })
-	return { storage, values, writes }
+	vi.stubGlobal('window', {
+		localStorage: storage,
+		addEventListener: events.addEventListener.bind(events),
+		removeEventListener: events.removeEventListener.bind(events),
+	})
+	return { storage, values, writes, events }
 }
 
 beforeEach(() => vi.resetModules())
@@ -131,11 +136,7 @@ describe('timestamp preference', () => {
 			throw new Error('Storage denied')
 		}
 		if (fault === 'getter') {
-			vi.stubGlobal('window', {
-				get localStorage() {
-					return fail()
-				},
-			})
+			Object.defineProperty(window, 'localStorage', { get: fail })
 		} else if (fault === 'read') {
 			storage.getItem = fail
 		} else {
@@ -179,6 +180,153 @@ describe('timestamp preference', () => {
 		store.cycleTimeFormat()
 		expect(observed).toEqual(['first:local', 'late:utc'])
 		expect(store.getTimeFormat()).toBe('utc')
+	})
+
+	it('reconciles a BFCache restore with a choice made in a newer document', async () => {
+		const { values, writes, events } = stubStorage()
+		const store = await import('#lib/time-format')
+		const observed: TimeFormat[] = []
+		const stop = store.subscribeTimeFormat(() =>
+			observed.push(store.getTimeFormat()),
+		)
+		store.cycleTimeFormat()
+		expect(store.getTimeFormat()).toBe('local')
+		// A full-document navigation chooses UTC; Back restores this old document.
+		values.set(storageKey, 'utc')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: false }),
+		)
+		expect(store.getTimeFormat()).toBe('local')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('utc')
+		expect(observed).toEqual(['local', 'utc'])
+		expect(writes).toEqual([[storageKey, 'local']])
+		expect(values.get('unrelated-preference')).toBe('keep')
+		store.cycleTimeFormat()
+		expect(store.getTimeFormat()).toBe('unix')
+		stop()
+	})
+
+	it('removes the restore listener when unused and reconciles on remount', async () => {
+		const { values, events } = stubStorage('local')
+		const store = await import('#lib/time-format')
+		const observed: TimeFormat[] = []
+		const listener = () => observed.push(store.getTimeFormat())
+		const stopFirst = store.subscribeTimeFormat(listener)
+		const stopSecond = store.subscribeTimeFormat(listener)
+		stopFirst()
+		values.set(storageKey, 'utc')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('utc')
+		expect(observed).toEqual(['utc'])
+		stopSecond()
+		stopSecond()
+		values.set(storageKey, 'unix')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('utc')
+		const stopRemounted = store.subscribeTimeFormat(listener)
+		expect(store.getTimeFormat()).toBe('unix')
+		store.cycleTimeFormat()
+		expect(observed).toEqual(['utc', 'relative'])
+		stopRemounted()
+	})
+
+	it('keeps an unsaved choice when unchanged storage is read after restore or remount', async () => {
+		const { storage, events, values } = stubStorage('local')
+		storage.setItem = () => {
+			throw new Error('Storage full')
+		}
+		const store = await import('#lib/time-format')
+		const stop = store.subscribeTimeFormat(() => {})
+		store.cycleTimeFormat()
+		expect(store.getTimeFormat()).toBe('utc')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('utc')
+		stop()
+		const stopRemounted = store.subscribeTimeFormat(() => {})
+		expect(store.getTimeFormat()).toBe('utc')
+		expect(values.get(storageKey)).toBe('local')
+		store.cycleTimeFormat()
+		expect(store.getTimeFormat()).toBe('unix')
+		stopRemounted()
+	})
+
+	it('retains memory if a BFCache storage read fails and reconciles once it succeeds', async () => {
+		const { storage, events, values, writes } = stubStorage('local')
+		const store = await import('#lib/time-format')
+		const stop = store.subscribeTimeFormat(() => {})
+		values.set(storageKey, 'utc')
+		const read = storage.getItem
+		storage.getItem = () => {
+			throw new Error('Storage unavailable')
+		}
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('local')
+		storage.getItem = read
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('utc')
+		expect(writes).toEqual([])
+		stop()
+	})
+
+	it('does not replace an unsaved choice with previously unreadable stale storage', async () => {
+		const { storage, events, values } = stubStorage('utc')
+		const read = storage.getItem
+		storage.getItem = () => {
+			throw new Error('Storage denied')
+		}
+		storage.setItem = () => {
+			throw new Error('Storage denied')
+		}
+		const store = await import('#lib/time-format')
+		const stop = store.subscribeTimeFormat(() => {})
+		store.cycleTimeFormat()
+		expect(store.getTimeFormat()).toBe('local')
+		stop()
+		storage.getItem = read
+		const stopRemounted = store.subscribeTimeFormat(() => {})
+		expect(store.getTimeFormat()).toBe('local')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('local')
+		// A later document's genuinely changed saved choice still takes effect.
+		values.set(storageKey, 'unix')
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('unix')
+		stopRemounted()
+	})
+
+	it.each([
+		null,
+		'UTC',
+		'',
+	])('uses the fallback if saved state becomes %s before restoration', async (saved) => {
+		const { values, events, writes } = stubStorage('utc')
+		const store = await import('#lib/time-format')
+		const stop = store.subscribeTimeFormat(() => {})
+		if (saved === null) values.delete(storageKey)
+		else values.set(storageKey, saved)
+		events.dispatchEvent(
+			Object.assign(new Event('pageshow'), { persisted: true }),
+		)
+		expect(store.getTimeFormat()).toBe('relative')
+		expect(writes).toEqual([])
+		stop()
 	})
 
 	it('uses relative server snapshots without reading or leaking browser state', async () => {
