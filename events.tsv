@@ -6,3 +6,7 @@ timestamp	stage	status	evidence
 2026-10-01T05:26:07.239476+00:00	implement	repair	candidate2;fresh failure identity keys alert insertion;contract unchanged
 2026-10-01T05:28:06.126581+00:00	implement	passed	candidate2 d650da17d46b17c1f410ee08631d60010a18062a;candidate2/repair.md; independent verify required
 2026-10-01T05:31:11.293452+00:00	audit	2	passed	d650da17d46b17c1f410ee08631d60010a18062a	v1	independent/candidate2/report.md; fresh accessibility retry verified
+2026-10-01T05:33:18.277003+00:00	cyclops	1	started	d650da17d46b17c1f410ee08631d60010a18062a	v1	comment5925381978 no job; service reconciled; operational REST correction preserves acceptance; scan_mup3kf2k_e0p3ab exact-head identity confirmed
+2026-10-01T05:38:04.902704+00:00	cyclops	2	blocked	d650da17d46b17c1f410ee08631d60010a18062a	v1	SUPERSEDES any pre-archive pass: artifact.synced report review-completeness Blocked;missing exact-read support;submission1/3 retained;no new submission;cyclops/review-completeness-diagnosis.md
+2026-10-01T05:38:04.902707+00:00	ready	2	blocked	d650da17d46b17c1f410ee08631d60010a18062a	v1	SUPERSEDES any pre-archive pass: artifact.synced report review-completeness Blocked;missing exact-read support;submission1/3 retained;no new submission;cyclops/review-completeness-diagnosis.md
+2026-10-01T05:39:26.635920+00:00	pr	2	started	d650da17d46b17c1f410ee08631d60010a18062a	v1	Publish truthful blocked completeness status and evidence only;currentCI passes;no extra audits;draft proposal local-only;no merge/deploy

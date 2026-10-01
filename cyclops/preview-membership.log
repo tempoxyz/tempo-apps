@@ -1,0 +1,191 @@
+Check Org Membership	Set up job	﻿2026-10-01T05:31:30.7647864Z Current runner version: '2.337.0'
+Check Org Membership	Set up job	2026-10-01T05:31:30.7740321Z Runner name: 'depot-rls61vqdd2'
+Check Org Membership	Set up job	2026-10-01T05:31:30.7741483Z Runner group name: 'default'
+Check Org Membership	Set up job	2026-10-01T05:31:30.7742218Z Machine name: 'depot-machine'
+Check Org Membership	Set up job	2026-10-01T05:31:30.7743955Z ##[group]GITHUB_TOKEN Permissions
+Check Org Membership	Set up job	2026-10-01T05:31:30.7745462Z Metadata: read
+Check Org Membership	Set up job	2026-10-01T05:31:30.7746072Z ##[endgroup]
+Check Org Membership	Set up job	2026-10-01T05:31:30.7746589Z Secret source: Actions
+Check Org Membership	Set up job	2026-10-01T05:31:30.7747209Z Cache mode: write
+Check Org Membership	Set up job	2026-10-01T05:31:30.7747730Z Prepare workflow directory
+Check Org Membership	Set up job	2026-10-01T05:31:30.7970736Z Prepare all required actions
+Check Org Membership	Set up job	2026-10-01T05:31:30.8002741Z Getting action download info
+Check Org Membership	Set up job	2026-10-01T05:31:30.9813670Z Download action repository 'tempoxyz/gh-actions@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0' (SHA:55fe3b63d9612623cc51e6c62d9d62fbcb175fb0)
+Check Org Membership	Set up job	2026-10-01T05:31:32.0150096Z Complete job name: Check Org Membership
+Check Org Membership	Secure runner	﻿2026-10-01T05:31:32.0555981Z ##[group]Run tempoxyz/gh-actions/actions/secure-runner@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0557876Z with:
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0558677Z   step-security-sts-host: ss-sts.tempoxyz.net
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0559643Z   socket-sts-host: socket-sts.tempoxyz.net
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0560376Z   egress-policy: audit
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0561068Z   disable-telemetry: false
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0561789Z   disable-sudo-and-containers: false
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0562517Z   disable-file-monitoring: false
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0563233Z   deploy-on-self-hosted-vm: false
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0563990Z   disable-enforcement: false
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0566516Z   token: ***
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0567271Z env:
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0567914Z   NODE_ENV: production
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0568578Z   WRANGLER_SEND_METRICS: false
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0569453Z   NODE_OPTIONS: --disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning
+Check Org Membership	Secure runner	2026-10-01T05:31:32.0570345Z ##[endgroup]
+Check Org Membership	Secure runner	2026-10-01T05:31:33.6223929Z [harden-runner] pre-step
+Check Org Membership	Secure runner	2026-10-01T05:31:33.6227753Z Fetching policy from policy store
+Check Org Membership	Secure runner	2026-10-01T05:31:33.6228253Z Attempt: 1
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8790270Z Policy found: Audit mode
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8791878Z [!] Current Configuration: 
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8795107Z {"repo":"tempoxyz/tempo-apps","run_id":"36820170742","correlation_id":"b9ae2321-0906-4284-84ac-ba8eb094e73a","working_directory":"/home/runner/work/tempo-apps/tempo-apps","api_url":"https://agent.api.stepsecurity.io/v1","telemetry_url":"https://prod.app-api.stepsecurity.io/v1","allowed_endpoints":"github.com:443","denied_endpoints":"","egress_policy":"audit","disable_telemetry":false,"disable_sudo":false,"disable_sudo_and_containers":false,"disable_file_monitoring":false,"private":false,"is_github_hosted":false,"is_debug":false,"one_time_key":"","api_key":"***","use_policy_store":true,"deploy_on_self_hosted_vm":false}
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8796397Z 
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8862909Z [32mView security insights and recommended policy at:[0m
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8865802Z https://app.stepsecurity.io/github/tempoxyz/tempo-apps/actions/runs/36820170742
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8866224Z RUNNER_NAME: depot-rls61vqdd2
+Check Org Membership	Secure runner	2026-10-01T05:31:33.8866534Z Detected Depot runner environment. Installing agent-bravo.
+Check Org Membership	Secure runner	2026-10-01T05:31:34.0836326Z Runner IP Address: 100.60.132.69
+Check Org Membership	Secure runner	2026-10-01T05:31:34.0838649Z Installing Harden Runner bravo agent for third-party runner
+Check Org Membership	Secure runner	2026-10-01T05:31:34.0839451Z [!] Checking TLS_STATUS: tempoxyz
+Check Org Membership	Secure runner	2026-10-01T05:31:34.1754874Z [!] TLS_ENABLED: tempoxyz
+Check Org Membership	Secure runner	2026-10-01T05:31:34.3381759Z ✅ Checksum verification passed. checksum=59ea6f0a488514b2d3feaf5b98fb445af9d2875f32acf5878d84c72e835a3425
+Check Org Membership	Secure runner	2026-10-01T05:31:34.3432383Z [command]/usr/bin/tar xz --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/5e28ba74-f88b-4ba4-b5fe-7bd6123cd05e -f /home/runner/work/_temp/7731306f-434d-4b51-a604-45672feddd5a
+Check Org Membership	Secure runner	2026-10-01T05:31:35.4012981Z Initialized
+Check Org Membership	Secure runner	2026-10-01T05:31:35.5265475Z Selecting previously unselected package aegis.
+Check Org Membership	Secure runner	2026-10-01T05:31:35.6237372Z (Reading database ... 225971 files and directories currently installed.)
+Check Org Membership	Secure runner	2026-10-01T05:31:35.6272083Z Preparing to unpack .../aegis-0.24.0-linux-amd64.deb ...
+Check Org Membership	Secure runner	2026-10-01T05:31:35.6328567Z Unpacking aegis (0.24.0) ...
+Check Org Membership	Secure runner	2026-10-01T05:31:35.7079559Z Setting up aegis (0.24.0) ...
+Check Org Membership	Secure runner	2026-10-01T05:31:35.7839490Z Created symlink /etc/systemd/system/multi-user.target.wants/aegis.service → /usr/lib/systemd/system/aegis.service.
+Check Org Membership	Secure runner	2026-10-01T05:31:36.8127960Z Aegis installed at /usr/bin/aegis; runtime warning verdicts are reported at job end.
+Check Org Membership	Check if PR author is org member	﻿2026-10-01T05:31:36.8253153Z ##[group]Run if [[ "$EVENT_NAME" != "pull_request" ]]; then
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8254435Z [36;1mif [[ "$EVENT_NAME" != "pull_request" ]]; then[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8254866Z [36;1m  echo "is-member=true" >> "$GITHUB_OUTPUT"[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8255187Z [36;1m  exit 0[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8255408Z [36;1mfi[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8255824Z [36;1mif [[ "$AUTHOR_ASSOCIATION" == "MEMBER" || "$AUTHOR_ASSOCIATION" == "OWNER" || "$AUTHOR_ASSOCIATION" == "COLLABORATOR" ]]; then[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8256224Z [36;1m  echo "is-member=true" >> "$GITHUB_OUTPUT"[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8256696Z [36;1melse[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8256935Z [36;1m  echo "is-member=false" >> "$GITHUB_OUTPUT"[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8257258Z [36;1mfi[0m
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8327550Z shell: /usr/bin/bash -e {0}
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8328518Z env:
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8328865Z   NODE_ENV: production
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8329087Z   WRANGLER_SEND_METRICS: false
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8329485Z   NODE_OPTIONS: --disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8329863Z   EVENT_NAME: pull_request
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8330193Z   AUTHOR_ASSOCIATION: NONE
+Check Org Membership	Check if PR author is org member	2026-10-01T05:31:36.8330391Z ##[endgroup]
+Check Org Membership	Post Secure runner	﻿2026-10-01T05:31:36.8546979Z Post job cleanup.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:36.9979590Z Artifact name is valid!
+Check Org Membership	Post Secure runner	2026-10-01T05:31:36.9999790Z Root directory input is valid!
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.2099708Z Uploading artifact: aegis-service-log-check-membership-__tempoxyz_gh-actions.zip
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.2105379Z Beginning upload of artifact content to blob storage
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.3082557Z Uploaded bytes 270
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.3241927Z Finished uploading artifact content to blob storage!
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.3252545Z SHA256 digest of uploaded artifact is c57bc6cd749a9b6871247c1d8248ac93763e1ff68e2f51b49b3658cc832381e9
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.3255067Z Finalizing artifact upload
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.5281892Z Artifact aegis-service-log-check-membership-__tempoxyz_gh-actions successfully finalized. Artifact ID 11142514880
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.5284068Z Uploaded Aegis audit log as artifact aegis-service-log-check-membership-__tempoxyz_gh-actions (ID 11142514880).
+Check Org Membership	Post Secure runner	2026-10-01T05:31:37.7414796Z [harden-runner] post-step
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.0657809Z Socket API token revoked.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7480238Z done.json
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7481503Z log:
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7481933Z Thu, 01 Oct 2026 05:31:34 GMT:[buildInfo] name=AgentBravo branch=HEAD tag=v1.9.1 commit=9990fb0c34e2132c83a97491cdd59eb1f0b11d05
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7482725Z Thu, 01 Oct 2026 05:31:34 GMT:[kernelInfo] Linux version 6.12.109+ (runner@depot-machine) (gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #1 SMP PREEMPT_DYNAMIC Tue Sep 29 10:44:02 UTC 2026
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7483327Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7483719Z Thu, 01 Oct 2026 05:31:34 GMT:Preparing to deploy AgentBravo 🤩
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7483987Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7484440Z Thu, 01 Oct 2026 05:31:34 GMT:Global feature flags: {AgentType:agent-self-hosted EnableArmour:true TLSMaxLimit:10 EnableCustomDetectionRules:true DisableGotls:false DisableOpenssl:false DisableGnutls:false DisableKillEnforcement:false}
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7484981Z Thu, 01 Oct 2026 05:31:34 GMT:read config 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7486444Z  &{Customer: HostName: Repo:tempoxyz/tempo-apps CorrelationId:depot-rls61vqdd2 RunId:36820170742 Workflow: WorkingDirectory:/home/runner/work/tempo-apps/tempo-apps RunnerWorkDirectory: APIURL:https://agent.api.stepsecurity.io/v1 TelemetryUrl:https://prod.app-api.stepsecurity.io/v1 APIKey: OneTimeKey: Endpoints:map[github.com.:[{domainName:github.com. port:443}]] DeniedEndpoints:[] EgressPolicy:audit DisableTelemetry:false DisableSudo:false DisableSudoAndContainers:false DisableFileMonitoring:false Private:false IsGithubHosted:true IsDebug:false IsPersistent:false IntitialFlags:{ResolveTXT:false ResolveAllTypes:false ResolveExtended:false NetMode:ebpf EnableProcessTracing:true} Exemptions:[] MaxRawEvents:15000 HasPreJobPolicy:false}
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7488009Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7488172Z Thu, 01 Oct 2026 05:31:34 GMT:Step Security Job Correlation ID: depot-rls61vqdd2
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7488380Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7488662Z Thu, 01 Oct 2026 05:31:34 GMT:Initial Feature flags: {ResolveTXT:false ResolveAllTypes:false ResolveExtended:false NetMode:ebpf EnableProcessTracing:true}
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7489006Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7489437Z Thu, 01 Oct 2026 05:31:34 GMT:Global Feature flags: {AgentType:agent-self-hosted EnableArmour:true TLSMaxLimit:10 EnableCustomDetectionRules:true DisableGotls:false DisableOpenssl:false DisableGnutls:false DisableKillEnforcement:false}
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7489922Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7490040Z Thu, 01 Oct 2026 05:31:34 GMT:[eventHandler] success
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7490280Z Thu, 01 Oct 2026 05:31:34 GMT:TLS max limit: 10
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7490542Z Thu, 01 Oct 2026 05:31:34 GMT:[tlscapture.InitEventLimiting] Took 0.000029 seconds
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7490851Z Thu, 01 Oct 2026 05:31:34 GMT:[eventHandler] Runner.Worker found pid=2374
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7491113Z Thu, 01 Oct 2026 05:31:34 GMT:[tracerManager] success
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7491611Z Thu, 01 Oct 2026 05:31:35 GMT:[dns-response] dnsID=54599 questionType=CNAME pid=2491 exe=agent domain=prod.app-api.stepsecurity.io. ip=agentapi-rt-alb-851854225.us-west-2.elb.amazonaws.com.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7492467Z Thu, 01 Oct 2026 05:31:35 GMT:[dns-request] time=2026-10-01 05:31:35.099561831 +0000 UTC m=+0.596784781 dnsID=54599 questionType=AAAA pid=2491 exe=agent domain=prod.app-api.stepsecurity.io. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7493185Z Thu, 01 Oct 2026 05:31:35 GMT:[dns-request] time=2026-10-01 05:31:35.099632131 +0000 UTC m=+0.596855070 dnsID=46969 questionType=A pid=2491 exe=agent domain=prod.app-api.stepsecurity.io. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7493821Z Thu, 01 Oct 2026 05:31:35 GMT:[dns-response] dnsID=46969 questionType=A pid=2491 exe=agent domain=prod.app-api.stepsecurity.io. ip=34.218.8.62
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7494341Z Thu, 01 Oct 2026 05:31:35 GMT:[dns-response] dnsID=30957 questionType=A pid=2491 exe=agent domain=prod.app-api.stepsecurity.io. ip=54.214.14.215
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7496132Z Thu, 01 Oct 2026 05:31:35 GMT:[tracerManager] applied global-blocklist entries=[37.27.122.124 23.254.164.123 23.254.164.92 216.126.225.129 57.128.246.79 142.11.206.73 83.142.209.194 23.254.165.112 139.84.223.178 85.137.53.71 skyleen.fr cjn37-uyaaa-aaaac-qgnva-cai.raw.icp0.io dht.transmissionbt.com sh.azurestaticprovider.net npm-cache.com check.git-service.com check.torproject.org whereisitat.lucyatemysuperbox.space js-mirror.com igotnofriendsonlineorirl-imgonnakmslmao.skyhanni.cloud audit.checkmarx.cx evil.invalid flipboxstudio.info router.bittorrent.com metrics.femboy.energy seed1.getsession.org archive.torproject.org t.m-kosche.com telemetry.api-monitor.com git-tanstack.com relay.damus.io relay.nostr.com zero.masscan.cloud api.masscan.cloud filev2.getsession.org sfrclak.com scan.aquasecurtiy.org pypi-get.com *.skyleen.fr]
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7497825Z Thu, 01 Oct 2026 05:31:35 GMT:[armour] Runner.Worker PID: 2374
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7498077Z Thu, 01 Oct 2026 05:31:35 GMT:[armour] Armour attached
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7498341Z Thu, 01 Oct 2026 05:31:35 GMT:[tlscapture.TraceDefault] Took 0.295931 seconds
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7498625Z Thu, 01 Oct 2026 05:31:35 GMT:[tlsMgr.Start] Took 0.555865 seconds
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7498920Z Thu, 01 Oct 2026 05:31:35 GMT:[net-conn] ip=34.218.8.62 port=443 pid=2491 exe=agent
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7499229Z Thu, 01 Oct 2026 05:31:35 GMT:[net-conn] ip=172.234.25.10 port=123 pid=1383 exe=chronyd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7499539Z Thu, 01 Oct 2026 05:31:35 GMT:[net-conn] ip=169.254.169.123 port=123 pid=1383 exe=chronyd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7499887Z Thu, 01 Oct 2026 05:31:35 GMT:[net-conn] ip=185.125.190.56 port=123 pid=1383 exe=chronyd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7500313Z Thu, 01 Oct 2026 05:31:35 GMT:[handleTLSBinary] TLS Capture: /home/runner/runners/2.337.0-depot.3/externals/node24/bin/node took=0.153420711
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7500730Z Thu, 01 Oct 2026 05:31:35 GMT:[net-conn] ip=91.189.91.157 port=123 pid=1383 exe=chronyd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7501045Z Thu, 01 Oct 2026 05:31:35 GMT:[net-conn] ip=192.231.84.116 port=123 pid=1383 exe=chronyd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7501387Z Thu, 01 Oct 2026 05:31:36 GMT:[net-conn] ip=127.0.0.1 port=43633 pid=2615 exe=/usr/bin/aegis
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7501832Z Thu, 01 Oct 2026 05:31:36 GMT:[net-conn] ip=127.0.0.1 port=43633 pid=2621 exe=/usr/bin/aegis
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7502194Z Thu, 01 Oct 2026 05:31:36 GMT:[net-conn] ip=23.186.168.128 port=123 pid=1383 exe=chronyd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7502756Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.006466683 +0000 UTC m=+2.503689642 dnsID=28947 questionType=A pid=1312 exe=agentd domain=results-receiver.actions.githubusercontent.com. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7503554Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.005798811 +0000 UTC m=+2.503021770 dnsID=56178 questionType=AAAA pid=1312 exe=agentd domain=results-receiver.actions.githubusercontent.com. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7504311Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=56178 questionType=CNAME pid=1312 exe=agentd domain=results-receiver.actions.githubusercontent.com. ip=glb-db52c2cf8be544.github.com.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7504990Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=28947 questionType=A pid=1312 exe=agentd domain=results-receiver.actions.githubusercontent.com. ip=140.82.112.21
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7505579Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=10.10.8.2 port=978 pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7505973Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=140.82.112.21 port=443 pid=1312 exe=agentd
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7506618Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.119764705 +0000 UTC m=+2.616987644 dnsID=33793 questionType=AAAA pid=2374 exe=/home/runner/runners/2.337.0-depot.3/bin/Runner.Worker domain=results-receiver.actions.githubusercontent.com. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7507557Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.119753665 +0000 UTC m=+2.616976604 dnsID=4611 questionType=A pid=2374 exe=/home/runner/runners/2.337.0-depot.3/bin/Runner.Worker domain=results-receiver.actions.githubusercontent.com. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7508450Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=4611 questionType=CNAME pid=2374 exe=/home/runner/runners/2.337.0-depot.3/bin/Runner.Worker domain=results-receiver.actions.githubusercontent.com. ip=glb-db52c2cf8be544.github.com.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7509229Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.163274313 +0000 UTC m=+2.660497252 dnsID=56183 questionType=AAAA pid=2407 exe=otelcol-contrib domain=otel-gateway.depot.dev. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7509950Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.166260848 +0000 UTC m=+2.663483817 dnsID=48713 questionType=A pid=2407 exe=otelcol-contrib domain=otel-gateway.depot.dev. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7510560Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=48713 questionType=A pid=2407 exe=otelcol-contrib domain=otel-gateway.depot.dev. ip=3.232.32.19
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7511209Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=4611 questionType=A pid=2374 exe=/home/runner/runners/2.337.0-depot.3/bin/Runner.Worker domain=results-receiver.actions.githubusercontent.com. ip=140.82.112.22
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7511837Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=140.82.112.22 port=443 pid=2374 exe=/home/runner/runners/2.337.0-depot.3/bin/Runner.Worker
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7512349Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=48713 questionType=A pid=2407 exe=otelcol-contrib domain=otel-gateway.depot.dev. ip=18.210.67.92
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7512814Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=3.232.32.19 port=4318 pid=2407 exe=otelcol-contrib
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7513468Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.280057372 +0000 UTC m=+2.777280341 dnsID=31171 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7514403Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=31171 questionType=CNAME pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. ip=blob.bl5prdstrz24a.store.core.windows.net.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7515376Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.280565282 +0000 UTC m=+2.777788221 dnsID=59596 questionType=AAAA pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7516298Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=59596 questionType=CNAME pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. ip=blob.bl5prdstrz24a.trafficmanager.net.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7517011Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=48713 questionType=A pid=2407 exe=otelcol-contrib domain=otel-gateway.depot.dev. ip=52.5.175.45
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7517527Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=57.150.86.161 port=443 pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7518212Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=31171 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. ip=57.150.86.161
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7518971Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=31171 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. ip=57.150.87.97
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7523232Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=31171 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=productionresultssa3.blob.core.windows.net. ip=57.150.27.1
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7524327Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.700109131 +0000 UTC m=+3.197332070 dnsID=51264 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7525213Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.700995953 +0000 UTC m=+3.198218892 dnsID=35167 questionType=AAAA pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7525996Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=51264 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. ip=104.26.10.44
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7531287Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=35167 questionType=AAAA pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. ip=2606:4700:20::ac43:4a30
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7532032Z Thu, 01 Oct 2026 05:31:37 GMT:[HandleStepPolicyEvent] job-end received correlationId=depot-rls61vqdd2
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7532365Z Thu, 01 Oct 2026 05:31:37 GMT:[doJobEndWork] started
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7532623Z Thu, 01 Oct 2026 05:31:37 GMT:[uploadRawEventsToS3] enter
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7532930Z Thu, 01 Oct 2026 05:31:37 GMT:[uploadRawEventsToS3] rawEventsCorrelationId=depot-rls61vqdd2
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7533362Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=104.26.10.44 port=443 pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7534037Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=51264 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. ip=172.67.74.48
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7535458Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=35167 questionType=AAAA pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. ip=2606:4700:20::681a:b2c
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7536241Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=51264 questionType=A pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. ip=104.26.11.44
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7536964Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=35167 questionType=AAAA pid=3673 exe=/home/runner/runners/2.337.0-depot.3/externals/node24/bin/node domain=socket-sts.tempoxyz.net. ip=2606:4700:20::681a:a2c
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7537771Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.887125405 +0000 UTC m=+3.384348344 dnsID=39972 questionType=AAAA pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7538639Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-request] time=2026-10-01 05:31:37.887404555 +0000 UTC m=+3.384627494 dnsID=12916 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. matchedPolicy=NONE
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7539433Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=39972 questionType=CNAME pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=s3-r-w.us-west-2.amazonaws.com.
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7540610Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=12916 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=52.92.181.50
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7541346Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=7985 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=52.218.169.41
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7542011Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=12916 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=3.5.87.87
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7542492Z Thu, 01 Oct 2026 05:31:37 GMT:[net-conn] ip=52.92.181.50 port=443 pid=2491 exe=agent
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7542985Z Thu, 01 Oct 2026 05:31:37 GMT:[dns-response] dnsID=7985 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=52.92.200.18
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7543641Z Thu, 01 Oct 2026 05:31:38 GMT:[dns-response] dnsID=7985 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=16.12.88.34
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7544293Z Thu, 01 Oct 2026 05:31:38 GMT:[dns-response] dnsID=12916 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=3.5.78.50
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7544952Z Thu, 01 Oct 2026 05:31:38 GMT:[dns-response] dnsID=7985 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=16.15.44.102
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7545623Z Thu, 01 Oct 2026 05:31:38 GMT:[dns-response] dnsID=12916 questionType=A pid=2491 exe=agent domain=customer-transient-data-277233109775.s3.us-west-2.amazonaws.com. ip=52.92.155.98
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7546087Z Thu, 01 Oct 2026 05:31:38 GMT:[uploadFileEvents] success
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7546363Z Thu, 01 Oct 2026 05:31:38 GMT:[uploadFileEvents] completed in 236.569902ms
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7546647Z Thu, 01 Oct 2026 05:31:38 GMT:[uploadProcessEvents] success
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7546937Z Thu, 01 Oct 2026 05:31:38 GMT:[uploadProcessEvents] completed in 520.164099ms
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7547213Z Thu, 01 Oct 2026 05:31:38 GMT:[uploadRawEventsToS3] exit
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7547473Z Thu, 01 Oct 2026 05:31:38 GMT:[doJobEndWork] finished
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7547633Z 
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7547749Z status:
+Check Org Membership	Post Secure runner	2026-10-01T05:31:38.7547910Z Initialized
+Check Org Membership	Post Secure runner	2026-10-01T05:31:39.1742103Z Step Security STS lease closed.
+Check Org Membership	Complete job	﻿2026-10-01T05:31:39.1828278Z Evaluate and set job outputs
+Check Org Membership	Complete job	2026-10-01T05:31:39.1832949Z Set output 'is-member'
+Check Org Membership	Complete job	2026-10-01T05:31:39.1834301Z Cleaning up orphan processes
