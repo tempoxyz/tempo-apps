@@ -4,6 +4,7 @@ import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getAccountTag } from '#lib/account'
+import { getTokenDisplayName } from '#lib/domain/token-display'
 import { api } from '#lib/server/tempo-api'
 import { parseTimestamp } from '#lib/timestamp'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -104,7 +105,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				return {
 					address,
 					symbol: token.symbol,
-					name: token.name,
+					name: getTokenDisplayName(chainId, address, token.name),
 					currency: token.currency,
 					logoURI: token.logoUri,
 					createdAt:
