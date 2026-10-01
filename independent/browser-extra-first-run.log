@@ -1,0 +1,8 @@
+locator.focus: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('combobox').first()[22m
+
+    at /private/tmp/factory-browser/independent-recent-extra.cjs:2:496 {
+  log: [ "  - waiting for getByRole('combobox').first()" ],
+  name: 'TimeoutError'
+}

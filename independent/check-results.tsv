@@ -1,0 +1,10 @@
+2026-10-01T05:21:24Z	0	pnpm gen:types
+2026-10-01T05:21:39Z	0	pnpm check
+2026-10-01T05:21:43Z	0	pnpm check:types
+2026-10-01T05:21:57Z	0	pnpm --filter explorer test --run
+2026-10-01T05:22:00Z	0	pnpm --filter explorer check:env
+2026-10-01T05:22:01Z	0	pnpm --filter explorer check:types:test
+2026-10-01T05:22:03Z	0	pnpm exec biome check .
+2026-10-01T05:22:06Z	0	pnpm lint:tempo
+2026-10-01T05:22:11Z	0	pnpm --filter explorer build
+2026-10-01T05:22:13Z	0	pnpm precommit

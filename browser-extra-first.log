@@ -1,0 +1,11 @@
+PASS stale selection reset and remaining result navigation
+locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for getByRole('option', { name: '#123', exact: true }) to be visible[22m
+
+    at /private/tmp/factory-browser/recent-extra.cjs:2:1262 {
+  log: [
+    "  - waiting for getByRole('option', { name: '#123', exact: true }) to be visible"
+  ],
+  name: 'TimeoutError'
+}

@@ -1,0 +1,10 @@
+PASS canonical target, unrelated metadata/order, stale last selection reset, reload, arrow activation
+PASS real Tab reachability, visible focus, Space/Enter removal without activation, last removal and manual search
+PASS mobile visible32px controls, token removal retains address same identity, Clear
+PASS setItem failure retains responsive in-memory removal without durability claim
+PASS removeItem failure retains responsive in-memory removal without durability claim
+PASS malformed/inaccessible read supports manual routing {"raw":"{"}
+PASS malformed/inaccessible read supports manual routing {"raw":"{}"}
+PASS malformed/inaccessible read supports manual routing {"denyRead":true}
+PASS deterministic API fixture suggestions/no removal controls/activation/six limit
+PASS completed; collected page errors=0

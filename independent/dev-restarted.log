@@ -1,0 +1,75 @@
+Default inspector port 9229 not available, using 9232 instead
+
+Using secrets defined in .env
+Using secrets defined in .env
+
+  VITE v8.0.7  ready in 1927 ms
+
+  ➜  Local:   http://127.0.0.1:3003/
+  ➜  Debug:   http://127.0.0.1:3003/__debug
+
+The Cloudflare Vite plugin detected this dev session is running in an AI agent.
+The Local Explorer API is available at http://127.0.0.1:3003/cdn-cgi/local/explorer/api
+Useful routes:
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings
+  POST http://127.0.0.1:3003/cdn-cgi/local/explorer/api/local/scheduled?worker=<name> - invoke a Worker's scheduled handler; cron is required (see the OpenAPI schema for the full request)
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api/storage/kv/namespaces - KV namespaces
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api/d1/database - D1 databases
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api/r2/buckets - R2 buckets
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api/workers/durable_objects/namespaces - Durable Object namespaces
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api/workflows - Workflows
+  POST http://127.0.0.1:3003/cdn-cgi/local/explorer/api/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
+    curl -X POST http://127.0.0.1:3003/cdn-cgi/local/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+  POST http://127.0.0.1:3003/cdn-cgi/local/explorer/api/local/observability/clear - clear all captured traces and logs
+If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
+  GET http://127.0.0.1:3003/cdn-cgi/local/explorer/api - OpenAPI schema
+
+1:23:06 AM [vite] (client) [console.warn] [ts-router] Could not persist scroll restoration state to sessionStorage.
+1:24:04 AM [vite] (client) [console.warn] [ts-router] Could not persist scroll restoration state to sessionStorage.
+1:24:39 AM [vite] (client) [console.error] [TanStack Devtools] Failed to load: Error: storage denied
+    at get (<anonymous>:2:69)
+    at getStorageItem (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:1873:44)
+    at getStateFromLocalStorage (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:1924:37)
+    at getExistingStateFromStorage (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:1934:24)
+    at DevtoolsProvider (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:1961:40)
+    at http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:356:10
+    at untrack (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:271:10)
+    at Object.fn (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:354:36)
+    at runComputation (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:476:20)
+    at updateComputation (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:461:2)
+    at devComponent (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:363:2)
+    at createComponent (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:881:9)
+    at http://localhost:3003/node_modules/.vite/deps/3OW54XWT-D0J1zivp.js?v=f0425c5b:162:25
+    at http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:1292:51
+    at updateFn (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:73:13)
+    at runUpdates (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:573:15)
+    at createRoot (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:78:10)
+    at render (http://localhost:3003/node_modules/.vite/deps/AP5L3KAF-BCLpGDce.js?v=f0425c5b:1290:2)
+    at mountDevtools (http://localhost:3003/node_modules/.vite/deps/3OW54XWT-D0J1zivp.js?v=f0425c5b:162:12)
+    at http://localhost:3003/node_modules/.vite/deps/@tanstack_react-devtools.js?v=f0425c5b:34:19
+1:24:43 AM [vite] (client) [console.error] ContractFunctionExecutionError: HTTP request failed.
+
+Status: 429
+URL: http://localhost:3003/api/rpc
+Request body: [{"method":"eth_getBlockByNumber","params":["0x23ea63d",false]},{"method":"eth_getBlockByNumber","params":["0x23ea63c",false]},{"method":"eth_getBlockByNumber","params":["0x23ea63b",false]},{"method":"eth_getBlockByNumber","params":["0x23ea640",true]},{"method":"eth_call","params":[{"data":"0x5c975abb","to":"0x20c0000000000000000000000000000000000001"},"latest"]}]
+ 
+Raw Call Arguments:
+  to:    0x20c0000000000000000000000000000000000001
+  data:  0x5c975abb
+ 
+Contract Call:
+  address:   0x20c0000000000000000000000000000000000001
+  function:  paused()
+
+Docs: https://viem.sh/docs/contract/readContract
+Details: "RPC unavailable"
+Version: viem@2.56.0
+    at getContractError (http://localhost:3003/node_modules/.vite/deps/writeContractSync-DcAlfOzk.js?v=f0425c5b:3512:9)
+    at readContract (http://localhost:3003/node_modules/.vite/deps/writeContractSync-DcAlfOzk.js?v=f0425c5b:5175:9)
+    at async Promise.allSettled (index 5)
+    at async readMetadataContracts (http://localhost:3003/node_modules/.vite/deps/tempo-VEVM2VgQ.js?v=f0425c5b:7289:10)
+    at async Promise.all (index 0)
+    at async metadataForTokens (http://localhost:3003/src/lib/domain/tip20.ts:49:26)
+    at async Promise.all (index 2)
+    at async fetchReceiptDataUncached (http://localhost:3003/src/routes/_layout/receipt/$hash.tsx?tsr-shared=1:44:61)
+1:26:10 AM [vite] (client) [console.warn] [ts-router] Could not persist scroll restoration state to sessionStorage.

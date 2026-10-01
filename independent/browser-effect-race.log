@@ -1,0 +1,13 @@
+PASS canonical target, unrelated metadata/order, stale last selection reset, reload, arrow activation
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+'true' !== 'false'
+
+    at /private/tmp/factory-browser/independent-recent.cjs:9:892 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: 'true',
+  expected: 'false',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

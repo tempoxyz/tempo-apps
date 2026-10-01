@@ -1,0 +1,13 @@
+
+> explorer@ check:env /private/tmp/recent-independent-verify/apps/explorer
+> vitest run --config vitest.node.config.ts
+
+
+ RUN  v4.1.0 /private/tmp/recent-independent-verify/apps/explorer
+
+
+ Test Files  38 passed | 1 skipped (39)
+      Tests  301 passed | 1 skipped (302)
+   Start at  01:21:58
+   Duration  1.68s (transform 1.65s, setup 0ms, import 13.70s, tests 490ms, environment 2ms)
+

@@ -1,0 +1,19 @@
+# Independent audit: individual recent-search removal
+
+Candidate `feb1fe8dff95e2bd5690b1d6383eb43099169e7c`; base `9609e28fb458c32510053458e4609a090fa9c729`; 2026-10-01.
+
+Local audit verdict: PASS; no actionable production-code finding identified. Final complete browser run exited0 with zero page errors, and all required local evidence is sufficient for AC1–AC6 and the local portions of AC7. Verification detail is in verify.md; remote Cyclops/current-head CI remain separate required gates. This reviewer did not implement the feature and used a separate detached worktree. Verification and audit here share this independent reviewer context; they are not represented as two separately enforced isolated contexts.
+
+Read the complete three-file diff, ExploreInput in full, all Header and home-route callers, SearchResult types and routing, Node tests/configuration, repository instructions, full frozen acceptance/verification plan and targeted property research. Frozen hashes match. The inspected scope changes no backend, consensus, authorization, dependencies, or storage schema. Existing storage validation, six-item bound, deduplication and selection routing were extracted unchanged. Same-page multiple mounted inputs and live cross-tab coherence remain explicitly excluded in the frozen research, matching existing behavior.
+
+The safety fact is that removal never invokes selection or form submission: a separate type=button sibling calls the removal callback, input focus is restored before the focused removal button unmounts, selectedIndex resets, and a functional update filters canonical identity and persists the remaining list. Address and token identities remain distinct even at the same address. The independent actual-browser traces establish this fact for mouse, touch, Enter and Space, including deleting while the last row was arrow-selected. This is stronger than a pure helper test or a structural JSX assertion.
+
+At ExploreInput.tsx:267 the callback focuses before setState and resets selection. At :542 removal is a separate button in a grid cell, not nested under the suggestion button or a listbox option. Input advertises the matching grid only for recent history; query suggestions keep listbox semantics. Captured browser accessibility tree exposes grid→rowgroup→row→gridcell→named button. The real Tab path reaches the control with a visible focus outline; the screenshot was inspected. These checks do not claim a complete screen-reader compatibility certification.
+
+Persistence catches storage access/write/remove failures at its boundary. Node tests execute real helpers and assert literal retained records, casing, metadata, ordering, immutable input, malformed storage, six-item truncation and unrelated keys. Browser traces assert real localStorage contents, URL, input value/focus, selection and popup closure; query response fixtures are limited to the search API scenario. Synchronous repeated persistence inside the functional updater preserves the same data if React reevaluates it; no added external effects escape this idempotent storage boundary.
+
+The independent full ten-command local run passed, including301 Node tests (one existing skip),205 Worker tests, root lint/typecheck, test types, build, tempo lint and precommit. Biome reports12 warnings and zero errors. Full checks leave a clean tracked tree. The original framework preparation requirements were exercised, not inferred from the implementer's log.
+
+Independent screenshots show visible dedicated controls at1440px and390px widths. All mobile control boxes are nominally32×32 (0.1px floating-point measurement tolerance) and inside the viewport. The existing baseline screenshot was visually compared; no functional claim relies on screenshot similarity.
+
+No PR comment is proposed: there is no meaningful scoped defect to anchor. No commit, push, review comment, merge or deployment was made by this reviewer. Never merge remains in force.

@@ -1,0 +1,4 @@
+
+> explorer@ check:types:test /private/tmp/recent-independent-verify/apps/explorer
+> tsc --project test/tsconfig.json --noEmit
+

@@ -1,0 +1,14 @@
+{
+  "head": "feb1fe8dff95e2bd5690b1d6383eb43099169e7c",
+  "base": "9609e28fb458c32510053458e4609a090fa9c729",
+  "worktree": "/tmp/recent-independent-verify",
+  "status": "",
+  "node": "v24.14.0",
+  "pnpm": "10.33.0",
+  "browser": "Playwright system Chrome headless",
+  "url": "http://localhost:3003",
+  "checks_exit": 0,
+  "browser_exit": 0,
+  "browser_extra_exit": 0,
+  "browser_page_errors": 0
+}

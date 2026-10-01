@@ -1,0 +1,13 @@
+PASS canonical target, unrelated metadata/order, stale last selection reset, reload, arrow activation
+PASS real Tab reachability, visible focus, Space/Enter removal without activation, last removal and manual search
+PASS mobile visible32px controls, token removal retains address same identity, Clear
+PASS setItem failure retains responsive in-memory removal without durability claim
+PASS removeItem failure retains responsive in-memory removal without durability claim
+PASS malformed/inaccessible read supports manual routing {"raw":"{"}
+PASS malformed/inaccessible read supports manual routing {"raw":"{}"}
+page.waitForFunction: Timeout 30000ms exceeded.
+    at setup (/private/tmp/factory-browser/independent-recent.cjs:5:717)
+    at async /private/tmp/factory-browser/independent-recent.cjs:12:61 {
+  log: [],
+  name: 'TimeoutError'
+}

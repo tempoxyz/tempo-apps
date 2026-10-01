@@ -1,0 +1,23 @@
+const { chromium } = require('playwright'); const assert = require('node:assert/strict'); const fs=require('node:fs');
+const out='/Users/daniel/tempo/tempo-apps-factory-recent/.factory/remove-recent';
+const key='tempo-explorer-recent-searches';
+const records=[{type:'block',blockNumber:100},{type:'address',address:'0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',isTip20:false},{type:'token',address:'0x20c0000000000000000000000000000000000000',isTip20:true,name:'PathUSD',symbol:'pathUSD'},{type:'transaction',hash:'0x'+'ab'.repeat(32)}];
+(async()=>{const browser=await chromium.launch({channel:'chrome',headless:true});
+async function setup(port, mobile=false, data=records){const ctx=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:1000},isMobile:mobile,hasTouch:mobile,timezoneId:'UTC'});const page=await ctx.newPage(); await page.addInitScript(({key,data})=>{if(!sessionStorage.getItem('seeded')){localStorage.setItem(key,JSON.stringify(data));localStorage.setItem('sentinel','keep');sessionStorage.setItem('seeded','yes')}},{key,data});await page.goto(`http://127.0.0.1:${port}/`);await page.getByRole('combobox').first().waitFor();await page.getByRole('combobox').first().focus();await page.getByText('Recent searches',{exact:true}).waitFor();return {ctx,page,input:page.getByRole('combobox').first()}}
+const base=await setup(3001);await base.page.screenshot({path:out+'/before.png'});await base.ctx.close();
+const {ctx,page,input}=await setup(3003);const start=page.url(); await page.screenshot({path:out+'/after.png'});
+const remove=page.getByRole('button',{name:/^Remove /});assert.equal(await remove.count(),4);
+await page.getByRole('button',{name:'Remove address 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa from recent searches',exact:true}).click();assert.equal(page.url(),start);assert.equal(await input.inputValue(),'');assert.equal(await input.evaluate(e=>document.activeElement===e),true);assert.deepEqual(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),[records[0],records[2],records[3]]);assert.equal(await page.evaluate(()=>localStorage.getItem('sentinel')),'keep');
+await page.reload();await input.focus();await page.getByRole('grid').waitFor();assert.equal(await remove.count(),3);
+// keyboard tab reaches a real removal action; Space removes without navigation.
+await input.focus();for(let i=0;i<10;i++){await page.keyboard.press('Tab');if(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')?.startsWith('Remove ')))break;}
+assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('aria-label')),'Remove block #100 from recent searches');await page.keyboard.press('Space');assert.equal(await remove.count(),2);assert.equal(page.url(),start);assert.equal(await input.evaluate(e=>document.activeElement===e),true);
+await page.getByRole('button',{name:/^Remove token/}).focus();await page.keyboard.press('Enter');assert.equal(await remove.count(),1);assert.equal(page.url(),start);
+await remove.click();await page.getByRole('grid').waitFor({state:'hidden'});assert.equal(await input.evaluate(e=>document.activeElement===e),true);assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),null);
+await input.fill('100');await input.press('Enter');await page.waitForURL('**/block/100');assert.equal(JSON.parse(await page.evaluate(key=>localStorage.getItem(key),key))[0].blockNumber,100);
+await ctx.close();
+// Clear remains operational and pointer removal works on a mobile viewport.
+const m=await setup(3003,true);await m.page.getByRole('button',{name:/^Remove address/}).tap();assert.equal(await m.page.getByRole('button',{name:/^Remove /}).count(),3);await m.page.screenshot({path:out+'/after-mobile.png'});await m.page.getByRole('button',{name:'Clear',exact:true}).click();await m.page.getByRole('grid').waitFor({state:'hidden'});assert.equal(await m.page.evaluate(key=>localStorage.getItem(key),key),null);await m.ctx.close();
+// Failed writes still remove current row and preserve the surviving UI.
+const f=await setup(3003);await f.page.evaluate(()=>{Storage.prototype.setItem=()=>{throw new Error('quota')}});await f.page.getByRole('button',{name:/^Remove address/}).click();assert.equal(await f.page.getByRole('button',{name:/^Remove /}).count(),3);assert.equal(await f.input.evaluate(e=>document.activeElement===e),true);await f.ctx.close();
+console.log('PASS desktop mouse, keyboard Tab/Space/Enter, persistence/reload, last removal, re-add, mobile touch, Clear, storage failure; screenshots saved');await browser.close();})().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,226 @@
+apps/explorer/src/lib/og.ts:195:39 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    193 │ 	].slice(0, 2)
+    194 │ 	return {
+  > 195 │ 		tokens: uniqueTokens.map((token) => token.address!),
+        │ 		                                    ^^^^^^^^^^^^^^
+    196 │ 		tokenSymbols: uniqueTokens.map((token) => token.symbol ?? ''),
+    197 │ 		action: truncateOgText(action, 40),
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:26:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    24 │ /** Read the current daily spend (microdollars) for an API key from KV. */
+    25 │ export async function getDailySpend(apiKey: string): Promise<bigint> {
+  > 26 │ 	const raw = await env.SponsorApiKeyStore!.get(dailySpendKvKey(apiKey))
+       │ 	                  ^^^^^^^^^^^^^^^^^^^^^^^
+    27 │ 	if (!raw) return 0n
+    28 │ 	return BigInt(raw)
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     24  24 │   /** Read the current daily spend (microdollars) for an API key from KV. */
+     25  25 │   export async function getDailySpend(apiKey: string): Promise<bigint> {
+     26     │ - → const·raw·=·await·env.SponsorApiKeyStore!.get(dailySpendKvKey(apiKey))
+         26 │ + → const·raw·=·await·env.SponsorApiKeyStore?.get(dailySpendKvKey(apiKey))
+     27  27 │     if (!raw) return 0n
+     28  28 │     return BigInt(raw)
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:33:20 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    31 │ /** Read the cumulative lifetime spend (microdollars) for an API key from KV. */
+    32 │ export async function getLifetimeSpend(apiKey: string): Promise<bigint> {
+  > 33 │ 	const raw = await env.SponsorApiKeyStore!.get(lifetimeSpendKvKey(apiKey))
+       │ 	                  ^^^^^^^^^^^^^^^^^^^^^^^
+    34 │ 	if (!raw) return 0n
+    35 │ 	return BigInt(raw)
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     31  31 │   /** Read the cumulative lifetime spend (microdollars) for an API key from KV. */
+     32  32 │   export async function getLifetimeSpend(apiKey: string): Promise<bigint> {
+     33     │ - → const·raw·=·await·env.SponsorApiKeyStore!.get(lifetimeSpendKvKey(apiKey))
+         33 │ + → const·raw·=·await·env.SponsorApiKeyStore?.get(lifetimeSpendKvKey(apiKey))
+     34  34 │     if (!raw) return 0n
+     35  35 │     return BigInt(raw)
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:68:3 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    67 │ 	await Promise.all([
+  > 68 │ 		env.SponsorApiKeyStore!.put(
+       │ 		^^^^^^^^^^^^^^^^^^^^^^^
+    69 │ 			dailySpendKvKey(apiKey),
+    70 │ 			(currentDaily + fee).toString(),
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     66  66 │   
+     67  67 │     await Promise.all([
+     68     │ - → → env.SponsorApiKeyStore!.put(
+         68 │ + → → env.SponsorApiKeyStore?.put(
+     69  69 │         dailySpendKvKey(apiKey),
+     70  70 │         (currentDaily + fee).toString(),
+  
+
+apps/fee-payer/src/lib/api-key-budget.ts:73:3 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    71 │ 			{ expirationTtl: 86_400 },
+    72 │ 		),
+  > 73 │ 		env.SponsorApiKeyStore!.put(
+       │ 		^^^^^^^^^^^^^^^^^^^^^^^
+    74 │ 			lifetimeSpendKvKey(apiKey),
+    75 │ 			(currentLifetime + fee).toString(),
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     71  71 │         { expirationTtl: 86_400 },
+     72  72 │       ),
+     73     │ - → → env.SponsorApiKeyStore!.put(
+         73 │ + → → env.SponsorApiKeyStore?.put(
+     74  74 │         lifetimeSpendKvKey(apiKey),
+     75  75 │         (currentLifetime + fee).toString(),
+  
+
+apps/fee-payer/src/lib/api-keys.ts:59:8 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    57 │ 		active: true,
+    58 │ 	}
+  > 59 │ 	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(full))
+       │ 	      ^^^^^^^^^^^^^^^^^^^^^^^
+    60 │ 	return key
+    61 │ }
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     57  57 │       active: true,
+     58  58 │     }
+     59     │ - → await·env.SponsorApiKeyStore!.put(kvKey(key),·JSON.stringify(full))
+         59 │ + → await·env.SponsorApiKeyStore?.put(kvKey(key),·JSON.stringify(full))
+     60  60 │     return key
+     61  61 │   }
+  
+
+apps/fee-payer/src/lib/api-keys.ts:77:25 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    75 │ 	>,
+    76 │ ): Promise<boolean> {
+  > 77 │ 	const existing = await env.SponsorApiKeyStore!.get(kvKey(key))
+       │ 	                       ^^^^^^^^^^^^^^^^^^^^^^^
+    78 │ 	if (!existing) return false
+    79 │ 	const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     75  75 │     >,
+     76  76 │   ): Promise<boolean> {
+     77     │ - → const·existing·=·await·env.SponsorApiKeyStore!.get(kvKey(key))
+         77 │ + → const·existing·=·await·env.SponsorApiKeyStore?.get(kvKey(key))
+     78  78 │     if (!existing) return false
+     79  79 │     const parsed = ApiKeyRecord.safeParse(JSON.parse(existing))
+  
+
+apps/fee-payer/src/lib/api-keys.ts:82:8 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    80 │ 	if (!parsed.success) return false
+    81 │ 	const updated = { ...parsed.data, ...updates }
+  > 82 │ 	await env.SponsorApiKeyStore!.put(kvKey(key), JSON.stringify(updated))
+       │ 	      ^^^^^^^^^^^^^^^^^^^^^^^
+    83 │ 	return true
+    84 │ }
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     80  80 │     if (!parsed.success) return false
+     81  81 │     const updated = { ...parsed.data, ...updates }
+     82     │ - → await·env.SponsorApiKeyStore!.put(kvKey(key),·JSON.stringify(updated))
+         82 │ + → await·env.SponsorApiKeyStore?.put(kvKey(key),·JSON.stringify(updated))
+     83  83 │     return true
+     84  84 │   }
+  
+
+apps/fee-payer/src/lib/api-keys.ts:96:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    94 │ 	cursor: string | null
+    95 │ }> {
+  > 96 │ 	const list = await env.SponsorApiKeyStore!.list({
+       │ 	                   ^^^^^^^^^^^^^^^^^^^^^^^
+    97 │ 		prefix: KV_PREFIX,
+    98 │ 		cursor: cursor ?? undefined,
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+     94  94 │     cursor: string | null
+     95  95 │   }> {
+     96     │ - → const·list·=·await·env.SponsorApiKeyStore!.list({
+         96 │ + → const·list·=·await·env.SponsorApiKeyStore?.list({
+     97  97 │       prefix: KV_PREFIX,
+     98  98 │       cursor: cursor ?? undefined,
+  
+
+apps/fee-payer/src/lib/api-keys.ts:102:21 lint/style/noNonNullAssertion  FIXABLE  ━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    100 │ 	const keys: Array<{ key: string; record: ApiKeyRecord }> = []
+    101 │ 	for (const item of list.keys) {
+  > 102 │ 		const raw = await env.SponsorApiKeyStore!.get(item.name)
+        │ 		                  ^^^^^^^^^^^^^^^^^^^^^^^
+    103 │ 		if (!raw) continue
+    104 │ 		const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
+  
+  i Unsafe fix: Replace with optional chain operator ?. This operator includes runtime checks, so it is safer than the compile-only non-null assertion operator
+  
+    100 100 │     const keys: Array<{ key: string; record: ApiKeyRecord }> = []
+    101 101 │     for (const item of list.keys) {
+    102     │ - → → const·raw·=·await·env.SponsorApiKeyStore!.get(item.name)
+        102 │ + → → const·raw·=·await·env.SponsorApiKeyStore?.get(item.name)
+    103 103 │       if (!raw) continue
+    104 104 │       const parsed = ApiKeyRecord.safeParse(JSON.parse(raw))
+  
+
+apps/og/src/index.tsx:179:46 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    177 │ 				),
+    178 │ 			].map(async (token) => {
+  > 179 │ 				const icon = await fetchTokenIcon(token, txParams.chainId!)
+        │ 				                                         ^^^^^^^^^^^^^^^^^
+    180 │ 				if (icon) icons[token] = icon
+    181 │ 			}),
+  
+
+apps/og/src/index.tsx:253:47 lint/style/noNonNullAssertion ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ! Forbidden non-null assertion.
+  
+    251 │ 					),
+    252 │ 				].map(async (token) => {
+  > 253 │ 					const icon = await fetchTokenIcon(token, txParams.chainId!)
+        │ 					                                         ^^^^^^^^^^^^^^^^^
+    254 │ 					if (icon) icons[token] = icon
+    255 │ 				}),
+  
+
+Checked 484 files in 1477ms. No fixes applied.
+Found 12 warnings.

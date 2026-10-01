@@ -1,0 +1,14 @@
+PASS canonical target, unrelated metadata/order, stale last selection reset, reload, arrow activation
+PASS real Tab reachability, visible focus, Space/Enter removal without activation, last removal and manual search
+PASS mobile visible32px controls, token removal retains address same identity, Clear
+PASS setItem failure retains responsive in-memory removal without durability claim
+PASS removeItem failure retains responsive in-memory removal without durability claim
+page.waitForURL: Timeout 30000ms exceeded.
+=========================== logs ===========================
+waiting for navigation to "**/block/412" until "load"
+  navigated to "http://127.0.0.1:3003/?explore-query=412"
+============================================================
+    at /private/tmp/factory-browser/independent-recent.cjs:12:171 {
+  log: [],
+  name: 'TimeoutError'
+}

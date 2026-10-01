@@ -1,0 +1,83 @@
+- link "Skip to content":
+  - /url: "#_R_1ba_"
+- banner:
+  - link "Tempo":
+    - /url: /
+    - img "Tempo"
+  - button "Testnet":
+    - text: Testnet
+    - img
+  - link "Simulate transaction":
+    - /url: /simulate
+    - img
+    - text: Simulate
+  - link "…":
+    - /url: /block/latest
+    - img
+    - text: …
+- main:
+  - heading "Search Explore Discover" [level=1]
+  - combobox "Search by Address / Tx Hash / Block / Token (Cmd+K to focus)" [expanded]
+  - button "Search" [disabled]:
+    - img
+  - grid "Recent searches":
+    - rowgroup:
+      - row "Recent searches Clear":
+        - gridcell "Recent searches"
+        - gridcell "Clear":
+          - button "Clear"
+      - 'row "#100 Remove block #100 from recent searches"':
+        - gridcell "#100":
+          - button "#100"
+        - 'gridcell "Remove block #100 from recent searches"':
+          - 'button "Remove block #100 from recent searches"':
+            - img
+      - 'row "#200 Remove block #200 from recent searches"':
+        - gridcell "#200":
+          - button "#200"
+        - 'gridcell "Remove block #200 from recent searches"':
+          - 'button "Remove block #200 from recent searches"':
+            - img
+      - 'row "#300 Remove block #300 from recent searches"':
+        - gridcell "#300":
+          - button "#300"
+        - 'gridcell "Remove block #300 from recent searches"':
+          - 'button "Remove block #300 from recent searches"':
+            - img
+  - link "Account":
+    - /url: /address/0xa726a1CD723409074DF9108A2187cfA19899aCF8
+    - img
+    - text: Account
+  - link "Contract":
+    - /url: /address/0x3e44E7C5AAc48Cc0ed6f74D191bd465674571745?tab=contract
+    - img
+    - text: Contract
+  - link "Receipt":
+    - /url: /receipt/0x48b138255c60bf0e2c6bcede32768398f679a213a6a7a7973aa71a8afd89c506
+    - img
+    - text: Receipt
+  - link "Blocks":
+    - /url: /blocks
+    - img
+    - text: Blocks
+  - link "Tokens":
+    - /url: /tokens
+    - img
+    - text: Tokens
+- button "Rotate Tempo globe rings"
+- contentinfo:
+  - button "Switch to dark mode":
+    - img
+  - list:
+    - listitem:
+      - link "About":
+        - /url: https://tempo.xyz
+    - listitem:
+      - link "Docs":
+        - /url: https://docs.tempo.xyz
+    - listitem:
+      - link "GitHub":
+        - /url: https://github.com/tempoxyz
+    - listitem:
+      - link "Feedback":
+        - /url: https://github.com/tempoxyz/tempo-apps/discussions/categories/explorer
