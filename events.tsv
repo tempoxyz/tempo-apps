@@ -3,3 +3,10 @@ timestamp	gate	status	evidence
 2026-10-01T05:18:30.308800+00:00	implement	passed	feb1fe8dff95e2bd5690b1d6383eb43099169e7c check-results.tsv browser.log
 2026-10-01T05:27:53.822300+00:00	verify	1	passed	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	Independent exact-candidate report;independent/verify.md
 2026-10-01T05:27:53.822542+00:00	audit	1	passed	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	Independent exact-candidate report;independent/audit.md
+2026-10-01T05:31:56.602471+00:00	cyclops	1	started	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	comment5925370189 created no job; 270-run reconciliation only timestamp failed; verified REST fallback operational amendment; scan_mup3juxc_1onwgw exact-head identity confirmed
+2026-10-01T05:36:33.586239+00:00	cyclops	1	passed	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	submission1/3;complete12/12;zero actionable/held findings;GitHub review5375359758 reconciled;cyclops/
+2026-10-01T05:36:33.586245+00:00	monitor	1	passed	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	Currenthead requiredCI+Bundle pass;preview org guard valid;main9609 unchanged;MERGEABLE/CLEAN;no threads
+2026-10-01T05:36:33.586248+00:00	ready	1	passed	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	All local/external evidence reconciled;composition PASS tree0ef70a;ready.md;no merge/deploy
+2026-10-01T05:38:04.900639+00:00	cyclops	1	blocked	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	SUPERSEDES any pre-archive pass: artifact.synced report review-completeness Blocked;missing exact-read support;submission1/3 retained;no new submission;cyclops/review-completeness-diagnosis.md
+2026-10-01T05:38:04.900644+00:00	ready	1	blocked	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	SUPERSEDES any pre-archive pass: artifact.synced report review-completeness Blocked;missing exact-read support;submission1/3 retained;no new submission;cyclops/review-completeness-diagnosis.md
+2026-10-01T05:39:26.635192+00:00	pr	1	started	feb1fe8dff95e2bd5690b1d6383eb43099169e7c	v1	Publish truthful blocked completeness status and evidence only;currentCI passes;no extra audits;draft proposal local-only;no merge/deploy

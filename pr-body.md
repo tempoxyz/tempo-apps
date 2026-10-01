@@ -23,4 +23,5 @@ The input regains focus before the removed button unmounts. Recent history uses 
 |--------|-------|
 | ![Before](https://github.com/tempoxyz/tempo-apps/blob/factory/evidence-remove-recent/before.png?raw=true) | ![After](https://github.com/tempoxyz/tempo-apps/blob/factory/evidence-remove-recent/after.png?raw=true) |
 
-[Independent verification and run log](https://github.com/tempoxyz/tempo-apps/tree/factory/evidence-remove-recent/independent) pass for this candidate. Cyclops and current-head CI remain required before factory readiness. No merge or deployment.
+[Independent verification and run log](https://github.com/tempoxyz/tempo-apps/tree/factory/evidence-remove-recent/independent) pass for this candidate. Current-head required CI and Bundle Size pass for `feb1fe8d`; preview jobs are skipped by the existing organization-membership guard. Cyclops completed and published no actionable findings, but its archived review completeness is **blocked**: 1 ruled-out conclusion lacks current-revision exact-read support. [Diagnosis and evidence](https://github.com/tempoxyz/tempo-apps/blob/factory/evidence-remove-recent/cyclops/review-completeness-diagnosis.md). One of three Cyclops submissions has been used. Local verification and four-feature composition pass, but this PR is **not factory-ready**. Nothing has been merged or deployed.
+
