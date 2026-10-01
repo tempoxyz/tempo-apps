@@ -12,3 +12,8 @@
 2026-10-01T05:02:13.664384+00:00	verify	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Local acceptance passes;verify/report-candidate2.md;browser-candidate2-rendered.log;external AC8 checks remain assigned to later stages
 2026-10-01T05:02:13.664527+00:00	audit	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Independent final local audit passes;audit.md;no unresolved code findings
 2026-10-01T05:02:13.664531+00:00	pr	2	started	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Verified candidate pushed; publishing PR with screenshots and reproducible evidence
+2026-10-01T05:02:37.419460+00:00	pr	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	https://github.com/tempoxyz/tempo-apps/pull/1300;remote head matches candidate;proof branch pushed
+2026-10-01T05:02:37.419575+00:00	cyclops	0	blocked	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	No submission;Tailscale NeedsLogin prevents authenticated service access
+2026-10-01T05:02:37.419578+00:00	monitor	2	started	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Observing PR1300 CI while Cyclops remains blocked;not advancing ready gate
+2026-10-01T05:05:19.566204+00:00	monitor	2	passed	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	All required remote checks plus Bundle Size succeed;no review threads;preview skipped by existing membership guard event AUTHOR_ASSOCIATION=NONE;remote-checks.json
+2026-10-01T05:05:19.566398+00:00	ready	2	blocked	7471c7ad91f5a45440b26580b90cc646caa54ee1	v1	Cyclops missing: Tailscale NeedsLogin;0/3 submissions;PR1300 otherwise MERGEABLE/CLEAN;no merge or deployment

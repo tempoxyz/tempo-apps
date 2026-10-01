@@ -24,6 +24,10 @@ Antithesis was used for architecture/property research. No Antithesis campaign w
 
 ## Delivery status
 
-Feature branch is pushed. PR publication and remote checks are being reconciled. Cyclops has not run: its service requires Tailscale and the local daemon reports `NeedsLogin`. Zero Cyclops submissions have been consumed. The run cannot be marked ready until the required external review and checks pass. No merge or live deployment is authorized.
+[PR #1300](https://github.com/tempoxyz/tempo-apps/pull/1300) is open at the verified candidate. All three ruleset-required checks passed: dependency scan, GitHub Actions scan, and Verify / Checks. Bundle Size, CodeQL and Socket also passed. The PR reports MERGEABLE/CLEAN, but that does not substitute for the missing Cyclops audit.
+
+Preview deployment and its comment job were skipped by the existing membership guard: the workflow event carried AUTHOR_ASSOCIATION=NONE, although a later API read reports MEMBER. No preview was created or validated, and no live deployment occurred. The workflow was not changed to bypass that guard.
+
+The automated bundle comment used an April 27 baseline, so its large percentage increase is not a comparison with this PR's actual base. Fresh local builds of base 9609e28 and candidate 7471c7a each contain 368 client JS/CSS files. The candidate adds 765 raw bytes / 345 gzip bytes in aggregate under the same build command; see bundle-comparison.json. This is a local same-base comparison, not a claim to have repaired the CI cache. Cyclops has not run: its service requires Tailscale and the local daemon reports `NeedsLogin`. Zero Cyclops submissions have been consumed. The run cannot be marked ready until the required external review and checks pass. No merge or live deployment is authorized.
 
 `events.tsv` records append-only task transitions. This evidence branch is separate from the feature diff.

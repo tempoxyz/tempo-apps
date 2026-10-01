@@ -1,0 +1,18 @@
+{
+  "base": {
+    "files": 368,
+    "bytes": 14087273,
+    "gzip_bytes": 3150073
+  },
+  "candidate": {
+    "files": 368,
+    "bytes": 14088038,
+    "gzip_bytes": 3150418
+  },
+  "delta": {
+    "files": 0,
+    "bytes": 765,
+    "gzip_bytes": 345
+  },
+  "method": "pnpm --filter explorer build on exact base and candidate; sum all dist/client JS/CSS; gzip each file with mtime=0"
+}
