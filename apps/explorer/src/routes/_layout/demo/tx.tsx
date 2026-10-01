@@ -42,6 +42,27 @@ function loader() {
 				address: tokenAddress,
 				topics: encodeEventTopics({
 					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from: recipientAddress, to: zeroAddress },
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [1_000_000n]),
+			}),
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'BurnAt',
+					args: {
+						burner: spenderAddress,
+						from: recipientAddress,
+						amount: 1_000_000n,
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+			}),
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
 					eventName: 'TransferWithMemo',
 					args: {
 						from: updaterAddress,

@@ -5,6 +5,15 @@ import { ZONE_PROVER_CHAIN_ID } from './zone-prover'
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
 
+export const tip20Abi = [
+	...ViemTempoAbis.tip20,
+	...parseAbi([
+		'event BurnAt(address indexed burner, address indexed from, uint256 indexed amount)',
+		'function burnAt(address from, uint256 amount)',
+		'function BURN_AT_ROLE() view returns (bytes32)',
+	]),
+] as const
+
 /** Semantic ABI for EIP-2935's selectorless raw-calldata read. */
 export const blockHashHistoryAbi = parseAbi([
 	'function getBlockHash(uint256 blockNumber) view returns (bytes32 blockHash)',
@@ -382,7 +391,7 @@ export const Abis = {
 	stablecoinDex: stablecoinDexAbi,
 	storageCredits: ViemTempoAbis.storageCredits,
 	streamChannel: streamChannelAbi,
-	tip20: ViemTempoAbis.tip20,
+	tip20: tip20Abi,
 	tip20ChannelReserve: ViemTempoAbis.tip20ChannelReserve,
 	tip20Factory: ViemTempoAbis.tip20Factory,
 	tip403Registry: ViemTempoAbis.tip403Registry,

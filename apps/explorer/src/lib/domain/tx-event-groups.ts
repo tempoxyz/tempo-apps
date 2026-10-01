@@ -1,5 +1,5 @@
 import type { Log } from 'viem'
-import { toEventSelector } from 'viem'
+import { toEventSelector, zeroHash } from 'viem'
 import type { KnownEvent } from '#lib/domain/known-events'
 
 export type EventGroup = {
@@ -17,6 +17,9 @@ const eventSignatures = {
 	),
 	Mint: toEventSelector('event Mint(address indexed, uint256)'),
 	Burn: toEventSelector('event Burn(address indexed, uint256)'),
+	BurnAt: toEventSelector(
+		'event BurnAt(address indexed, address indexed, uint256 indexed)',
+	),
 	DepositMade: toEventSelector(
 		'event DepositMade(bytes32 indexed, address indexed, address, address, uint128, uint128, bytes32)',
 	),
@@ -38,6 +41,7 @@ export function getEventName(log: Log): string | null {
 		return 'TransferWithMemo'
 	if (topic0 === eventSignatures.Mint.toLowerCase()) return 'Mint'
 	if (topic0 === eventSignatures.Burn.toLowerCase()) return 'Burn'
+	if (topic0 === eventSignatures.BurnAt.toLowerCase()) return 'BurnAt'
 	if (topic0 === eventSignatures.DepositMade.toLowerCase()) return 'DepositMade'
 	if (topic0 === eventSignatures.EncryptedDepositMade.toLowerCase())
 		return 'EncryptedDepositMade'
@@ -68,6 +72,23 @@ export function groupRelatedEvents(
 		if (eventName === 'Transfer' || eventName === 'TransferWithMemo') {
 			const secondLog = logs[i + 1]
 			const secondEventName = secondLog ? getEventName(secondLog) : null
+
+			if (
+				eventName === 'Transfer' &&
+				secondEventName === 'BurnAt' &&
+				log.address.toLowerCase() === secondLog.address.toLowerCase() &&
+				log.topics[1]?.toLowerCase() === secondLog.topics[2]?.toLowerCase() &&
+				log.topics[2]?.toLowerCase() === zeroHash &&
+				log.data.toLowerCase() === secondLog.topics[3]?.toLowerCase()
+			) {
+				groups.push({
+					logs: [log, secondLog],
+					startIndex: i,
+					knownEvent: knownEvents[i + 1],
+				})
+				i += 2
+				continue
+			}
 
 			if (secondEventName === 'Mint' || secondEventName === 'Burn') {
 				const thirdLog = logs[i + 2]
