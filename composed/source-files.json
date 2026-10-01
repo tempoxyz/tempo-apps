@@ -1,0 +1,72 @@
+[
+  {
+    "source": "e742c42",
+    "path": "apps/explorer/src/comps/TimeFormat.tsx",
+    "sha256": "2b247a6b52b3f7cea7ddfdbbd75d5139520204e452fe5fd8d0fc7c6f83f8b2cf"
+  },
+  {
+    "source": "e742c42",
+    "path": "apps/explorer/src/lib/time-format.ts",
+    "sha256": "74f53409dd7870b1e51356988f30e70738f995b8f5b13e292761bedbb92045f3"
+  },
+  {
+    "source": "e742c42",
+    "path": "apps/explorer/test/time-format.node.test.ts",
+    "sha256": "73f0a34e122ec7226c86cbde90852ee8157652a946916c9b57bc07d127cec4eb"
+  },
+  {
+    "source": "d650da17",
+    "path": "apps/explorer/src/comps/CopyFeedback.tsx",
+    "sha256": "1b2fdbfa61d9d0dfc4623775fbcadee0f917df203ae91a62f53631d9a2505037"
+  },
+  {
+    "source": "d650da17",
+    "path": "apps/explorer/src/lib/clipboard.ts",
+    "sha256": "4decac2bd694395de7d8ecb11f958b2aea166bcf4883f68b6392fb722130b65f"
+  },
+  {
+    "source": "d650da17",
+    "path": "apps/explorer/src/lib/hooks.ts",
+    "sha256": "735e04e659af930e32d90614a5ade3116f5344b0c4e92649b26913c965bdd1ce"
+  },
+  {
+    "source": "d650da17",
+    "path": "apps/explorer/src/routes/__root.tsx",
+    "sha256": "c5216ecf117e6eba3d9d450a3674b9935ca3d473e2a71f319085bf8b8abb630f"
+  },
+  {
+    "source": "d650da17",
+    "path": "apps/explorer/test/clipboard.node.test.ts",
+    "sha256": "7719c6ac2a1b0d570fec9021695e716d9dffbee830747a6bf82d0714e13cc031"
+  },
+  {
+    "source": "a6a8f55",
+    "path": "apps/explorer/src/comps/ExploreInput.tsx",
+    "sha256": "469ca5b2d0838a0604cf3cd1ef518176d1dedc7a1cbd4095b074c6e1295eeea4"
+  },
+  {
+    "source": "a6a8f55",
+    "path": "apps/explorer/src/lib/explorer-search-url.ts",
+    "sha256": "b0b64d41c1bdc9bf7e65c433bb281a6ba41d43e72369130aacf768c4a51e418d"
+  },
+  {
+    "source": "a6a8f55",
+    "path": "apps/explorer/src/lib/recent-searches.ts",
+    "sha256": "721e5472eba4a1d5afa79765d4ec17d42de3758a786623f0b75c37815d670c8f"
+  },
+  {
+    "source": "a6a8f55",
+    "path": "apps/explorer/src/routes/search.tsx",
+    "sha256": "59b16945e2e0c2dc2ec965fac0fd6a59e5c79f39df03fdeeb1d33dc6bd3e92fb"
+  },
+  {
+    "source": "a6a8f55",
+    "path": "apps/explorer/test/explorer-search-url.node.test.ts",
+    "sha256": "68b27351fd0cc9928207aa2b790faa1f300341b67eafcf10fad4f48111be1a2e"
+  },
+  {
+    "source": "a6a8f55",
+    "path": "apps/explorer/test/recent-searches.node.test.ts",
+    "sha256": "1829fa9996ba21a4fe1d3e36d9fc3012899f76ad113a64d2a5111cd55465dd60"
+  }
+]

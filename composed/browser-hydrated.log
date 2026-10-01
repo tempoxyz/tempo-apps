@@ -1,0 +1,8 @@
+token table hydrated
+PASS real token table cycle to UTC, reload, rendered UTC timestamps
+PASS remove one recent retains other and does not navigate
+PASS remove recent -> paste trusted URL -> clear restores only remaining recent, no API search
+PASS canonical URL activation preserves timestamp preference and remaining recent
+PASS clipboard denial, repeated synchronous fresh alert, exact successful retry
+PASS persisted UTC restored after search/copy interactions
+pageerrors 1

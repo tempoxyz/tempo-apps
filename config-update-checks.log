@@ -1,0 +1,20 @@
+pnpm gen:types
+exit=0 log=.factory/time-format/candidate2-final-check-1.log
+pnpm check
+exit=0 log=.factory/time-format/candidate2-final-check-2.log
+pnpm check:types
+exit=0 log=.factory/time-format/candidate2-final-check-3.log
+pnpm --filter explorer test --run
+exit=0 log=.factory/time-format/candidate2-final-check-4.log
+pnpm --filter explorer check:env
+exit=0 log=.factory/time-format/candidate2-final-check-5.log
+pnpm --filter explorer check:types:test
+exit=0 log=.factory/time-format/candidate2-final-check-6.log
+pnpm exec biome check .
+exit=0 log=.factory/time-format/candidate2-final-check-7.log
+pnpm lint:tempo
+exit=0 log=.factory/time-format/candidate2-final-check-8.log
+pnpm --filter explorer build
+exit=0 log=.factory/time-format/candidate2-final-check-9.log
+pnpm precommit
+exit=0 log=.factory/time-format/candidate2-final-check-10.log

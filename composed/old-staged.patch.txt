@@ -1,0 +1,1849 @@
+diff --git a/apps/explorer/src/comps/CopyFeedback.tsx b/apps/explorer/src/comps/CopyFeedback.tsx
+new file mode 100644
+index 00000000..c46252e9
+--- /dev/null
++++ b/apps/explorer/src/comps/CopyFeedback.tsx
+@@ -0,0 +1,33 @@
++import * as React from 'react'
++import { copyFeedbackEvent } from '#lib/clipboard'
++
++/** One accessible failure message for both shared and custom copy controls. */
++export function CopyFeedback(): React.JSX.Element | null {
++	const [failed, setFailed] = React.useState(false)
++	React.useEffect(() => {
++		const onFeedback = (event: Event) => {
++			if (event instanceof CustomEvent && typeof event.detail === 'boolean')
++				setFailed(event.detail)
++		}
++		window.addEventListener(copyFeedbackEvent, onFeedback)
++		return () => window.removeEventListener(copyFeedbackEvent, onFeedback)
++	}, [])
++
++	if (!failed) return null
++	return (
++		<div
++			className="fixed bottom-4 left-1/2 z-50 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-lg border border-negative bg-surface px-4 py-3 text-sm shadow-lg"
++			role="alert"
++		>
++			<p>Could not copy. Try copying again.</p>
++			<button
++				type="button"
++				className="shrink-0 underline underline-offset-2"
++				onClick={() => setFailed(false)}
++				aria-label="Dismiss copy error"
++			>
++				Dismiss
++			</button>
++		</div>
++	)
++}
+diff --git a/apps/explorer/src/comps/ExploreInput.tsx b/apps/explorer/src/comps/ExploreInput.tsx
+index 522b154e..d91be3c9 100644
+--- a/apps/explorer/src/comps/ExploreInput.tsx
++++ b/apps/explorer/src/comps/ExploreInput.tsx
+@@ -9,6 +9,7 @@ import { RelativeTime } from '#comps/RelativeTime'
+ import { cx } from '#lib/css'
+ import { isTip20Address } from '#lib/domain/tip20'
+ import { getApiUrl } from '#lib/env.ts'
++import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
+ import { normalizeSearchInput } from '#lib/tempo-address'
+ import type {
+ 	AddressSearchResult,
+@@ -18,9 +19,15 @@ import type {
+ 	TokenSearchResult,
+ } from '#routes/api/search'
+ import ArrowRight from '~icons/lucide/arrow-right'
+-
+-const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
+-const recentSearchesLimit = 6
++import X from '~icons/lucide/x'
++import {
++	getSearchResultKey,
++	loadRecentSearches,
++	persistRecentSearches,
++	recentSearchesLimit,
++	removeRecentSearch,
++	recentSearchLabel,
++} from '#lib/recent-searches'
+ 
+ type ManualActivation =
+ 	| { value: Address.Address; type: 'address' }
+@@ -38,100 +45,6 @@ function parseBlockInput(raw: string): string | null {
+ 	return String(n)
+ }
+ 
+-function getSearchResultKey(result: SearchResult): string {
+-	if (result.type === 'block') return `block-${result.blockNumber}`
+-	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
+-	return `${result.type}-${result.address.toLowerCase()}`
+-}
+-
+-function isPersistedSearchResult(value: unknown): value is SearchResult {
+-	if (typeof value !== 'object' || value == null) return false
+-
+-	const result = value as Record<string, unknown>
+-	if (
+-		result.type === 'block' &&
+-		typeof result.blockNumber === 'number' &&
+-		Number.isSafeInteger(result.blockNumber) &&
+-		result.blockNumber >= 0
+-	)
+-		return true
+-
+-	if (
+-		result.type === 'transaction' &&
+-		typeof result.hash === 'string' &&
+-		Hex.validate(result.hash) &&
+-		Hex.size(result.hash) === 32 &&
+-		(result.timestamp === undefined || typeof result.timestamp === 'number')
+-	)
+-		return true
+-
+-	const validCategory =
+-		result.category === undefined ||
+-		result.category === 'token' ||
+-		result.category === 'system' ||
+-		result.category === 'utility' ||
+-		result.category === 'account' ||
+-		result.category === 'precompile'
+-	const validAddressMetadata =
+-		(result.label === undefined || typeof result.label === 'string') &&
+-		(result.description === undefined ||
+-			typeof result.description === 'string') &&
+-		validCategory
+-
+-	if (
+-		result.type === 'address' &&
+-		typeof result.address === 'string' &&
+-		Address.validate(result.address) &&
+-		typeof result.isTip20 === 'boolean' &&
+-		validAddressMetadata
+-	)
+-		return true
+-
+-	if (
+-		result.type === 'token' &&
+-		typeof result.address === 'string' &&
+-		Address.validate(result.address) &&
+-		typeof result.name === 'string' &&
+-		typeof result.symbol === 'string' &&
+-		typeof result.isTip20 === 'boolean'
+-	)
+-		return true
+-
+-	return false
+-}
+-
+-function loadRecentSearches(): SearchResult[] {
+-	if (typeof window === 'undefined') return []
+-
+-	try {
+-		const rawValue = window.localStorage.getItem(recentSearchesStorageKey)
+-		if (!rawValue) return []
+-		const parsedValue = JSON.parse(rawValue)
+-		if (!Array.isArray(parsedValue)) return []
+-		return parsedValue
+-			.filter(isPersistedSearchResult)
+-			.slice(0, recentSearchesLimit)
+-	} catch {
+-		return []
+-	}
+-}
+-
+-function persistRecentSearches(results: SearchResult[]): void {
+-	if (typeof window === 'undefined') return
+-
+-	try {
+-		if (results.length === 0) {
+-			window.localStorage.removeItem(recentSearchesStorageKey)
+-			return
+-		}
+-
+-		window.localStorage.setItem(
+-			recentSearchesStorageKey,
+-			JSON.stringify(results.slice(0, recentSearchesLimit)),
+-		)
+-	} catch {}
+-}
+-
+ function toManualSearchResult(data: ManualActivation): SearchResult {
+ 	if (data.type === 'block')
+ 		return { type: 'block', blockNumber: Number(data.value) }
+@@ -177,10 +90,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 	const submittingRef = React.useRef(false)
+ 
+ 	const query = value.trim()
++	const showingRecent = query.length === 0 && recentSearches.length > 0
++	const explorerUrl = parseExplorerSearchUrl(query)
+ 	const normalizedQuery = normalizeSearchInput(query)
+ 	const isValidInput =
+ 		query.length > 0 &&
+-		(Address.validate(normalizedQuery) ||
++		(explorerUrl !== undefined ||
++			Address.validate(normalizedQuery) ||
+ 			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
+ 			parseBlockInput(normalizedQuery) !== null)
+ 	const {
+@@ -199,12 +115,12 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 				if (!res.ok) throw new Error('Search failed')
+ 				return res.json()
+ 			},
+-			enabled: normalizedQuery !== '',
++			enabled: normalizedQuery !== '' && !explorerUrl,
+ 			staleTime: 30_000,
+ 			placeholderData: keepPreviousData,
+ 		}),
+ 	)
+-	const suggestions = searchResults?.results ?? []
++	const suggestions = explorerUrl ? [] : (searchResults?.results ?? [])
+ 
+ 	const groupedSuggestions = React.useMemo<
+ 		ExploreInput.SuggestionGroup[]
+@@ -351,6 +267,20 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 		})
+ 	}, [])
+ 
++	const handleRemoveRecentSearch = React.useCallback(
++		(result: SearchResult) => {
++			// Restore focus before removing a keyboard-focused button from the DOM.
++			inputRef.current?.focus({ preventScroll: true })
++			setSelectedIndex(-1)
++			setRecentSearches((current) => {
++				const next = removeRecentSearch(current, result)
++				persistRecentSearches(next)
++				return next
++			})
++		},
++		[inputRef],
++	)
++
+ 	const clearRecentSearches = React.useCallback(() => {
+ 		persistRecentSearches([])
+ 		setRecentSearches([])
+@@ -422,6 +352,11 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						formValue = formValue.trim()
+ 						if (!formValue) return
+ 
++						const target = parseExplorerSearchUrl(formValue)
++						if (target) {
++							window.location.assign(target.href)
++							return
++						}
+ 						const normalizedFormValue = normalizeSearchInput(formValue)
+ 
+ 						const blockId = parseBlockInput(normalizedFormValue)
+@@ -459,7 +394,7 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						)}
+ 						data-1p-ignore
+ 						name="explore-query"
+-						placeholder="Search address, hash, block, token"
++						placeholder="Search address, hash, block, token, or URL"
+ 						enterKeyHint="search"
+ 						spellCheck={false}
+ 						type="text"
+@@ -471,6 +406,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 								return
+ 							}
+ 
++							if (showResults && explorerUrl) {
++								if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
++									event.preventDefault()
++									setSelectedIndex(0)
++								}
++								return
++							}
+ 							if (!showResults || flatSuggestions.length === 0) return
+ 
+ 							if (event.key === 'ArrowDown') {
+@@ -509,13 +451,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						}}
+ 						role="combobox"
+ 						aria-expanded={showResults}
+-						aria-haspopup="listbox"
++						aria-haspopup={showingRecent ? 'grid' : 'listbox'}
+ 						aria-autocomplete="list"
+ 						aria-controls={resultsId}
+ 						aria-activedescendant={
+ 							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
+ 						}
+-						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
++						title="Search by Address / Tx Hash / Block / Token / Explorer URL (Cmd+K to focus)"
+ 					/>
+ 					<div
+ 						className={cx(
+@@ -546,9 +488,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 			{menuMounted && (
+ 				<div
+ 					ref={resultsRef}
+-					id={resultsId}
+-					role="listbox"
+-					aria-label="Search suggestions"
++					{...(!showingRecent
++						? {
++								id: resultsId,
++								role: 'listbox',
++								'aria-label': 'Search suggestions',
++							}
++						: {})}
+ 					className={cx(
+ 						'absolute left-0 right-0 mt-2 z-50',
+ 						'bg-surface border border-base-border rounded-body overflow-hidden',
+@@ -561,7 +507,77 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						start={150}
+ 						className="absolute top-0 left-0 right-0"
+ 					/>
+-					{flatSuggestions.length === 0 ? (
++					{showingRecent ? (
++						<table
++							id={resultsId}
++							// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: Native table semantics support an interactive combobox grid.
++							role="grid"
++							aria-label="Recent searches"
++							className="w-full table-fixed"
++						>
++							<colgroup>
++								<col />
++								<col className="w-[40px]" />
++							</colgroup>
++							<tbody>
++								<tr>
++									<td className="px-[12px] py-[6px] label-12 text-secondary">
++										Recent searches
++									</td>
++									<td className="pr-[8px]">
++										<button
++											type="button"
++											className="label-12 text-tertiary hover:text-base-content"
++											onMouseDown={(event) => event.preventDefault()}
++											onClick={clearRecentSearches}
++										>
++											Clear
++										</button>
++									</td>
++								</tr>
++								{recentSearches.map((item, index) => (
++									<tr key={getSearchResultKey(item)}>
++										<td
++											id={`${resultsId}-${index}`}
++											// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: This cell is the combobox active descendant in the grid.
++											role="gridcell"
++											tabIndex={-1}
++											aria-selected={index === selectedIndex}
++											className="p-0"
++										>
++											<ExploreInput.SuggestionItem
++												suggestion={item}
++												isSelected={index === selectedIndex}
++												onSelect={handleSelect}
++											/>
++										</td>
++										<td className="p-0 pr-[4px]">
++											<button
++												type="button"
++												aria-label={`Remove ${recentSearchLabel(item)} from recent searches`}
++												title="Remove from recent searches"
++												className="size-[32px] grid place-items-center rounded-body text-tertiary hover:text-base-content hover:bg-base-alt/25 focus-visible:outline-2 focus-visible:outline-focus"
++												onMouseDown={(event) => event.preventDefault()}
++												onClick={() => handleRemoveRecentSearch(item)}
++											>
++												<X className="size-[14px]" />
++											</button>
++										</td>
++									</tr>
++								))}
++							</tbody>
++						</table>
++					) : explorerUrl ? (
++						<a
++							href={explorerUrl.href}
++							role="option"
++							aria-selected={selectedIndex === 0}
++							id={`${resultsId}-0`}
++							className="block px-[16px] py-[12px] copy-14 text-accent hover:bg-base-alt"
++						>
++							Open on {explorerUrl.network}
++						</a>
++					) : flatSuggestions.length === 0 ? (
+ 						<div className="px-[16px] py-[12px] copy-14 text-tertiary">
+ 							{isError
+ 								? 'Search unavailable. Paste an address, hash, or block number.'
+@@ -668,8 +684,7 @@ export namespace ExploreInput {
+ 				ref={itemRef}
+ 				id={id}
+ 				type="button"
+-				role="option"
+-				aria-selected={isSelected}
++				{...(id ? { role: 'option', 'aria-selected': isSelected } : {})}
+ 				onMouseDown={(event) => {
+ 					event.preventDefault()
+ 					onSelect(suggestion)
+@@ -766,7 +781,7 @@ export namespace ExploreInput {
+ 			suggestion: SearchResult
+ 			isSelected: boolean
+ 			onSelect: (suggestion: SearchResult) => void
+-			id: string
++			id?: string
+ 		}
+ 	}
+ }
+diff --git a/apps/explorer/src/comps/TimeFormat.tsx b/apps/explorer/src/comps/TimeFormat.tsx
+index 2dec2b48..8b28d579 100644
+--- a/apps/explorer/src/comps/TimeFormat.tsx
++++ b/apps/explorer/src/comps/TimeFormat.tsx
+@@ -1,26 +1,23 @@
+ import * as React from 'react'
+ import { RelativeTime } from '#comps/RelativeTime'
++import {
++	cycleTimeFormat,
++	getServerTimeFormat,
++	getTimeFormat,
++	setTimeFormat,
++	subscribeTimeFormat,
++	type TimeFormat,
++} from '#lib/time-format'
+ 
+-export type TimeFormat = 'relative' | 'local' | 'utc' | 'unix'
++export type { TimeFormat } from '#lib/time-format'
+ 
+-export function useTimeFormat(initialFormat: TimeFormat = 'relative') {
+-	const [timeFormat, setTimeFormat] = React.useState<TimeFormat>(initialFormat)
+-
+-	const cycleTimeFormat = React.useCallback(() => {
+-		setTimeFormat((current) => {
+-			if (current === 'relative') return 'local'
+-			if (current === 'local') return 'utc'
+-			if (current === 'utc') return 'unix'
+-			return 'relative'
+-		})
+-	}, [])
+-
+-	const formatLabel = React.useMemo(() => {
+-		if (timeFormat === 'relative') return 'relative'
+-		if (timeFormat === 'local') return 'local'
+-		if (timeFormat === 'utc') return 'UTC'
+-		return 'unix'
+-	}, [timeFormat])
++export function useTimeFormat() {
++	const timeFormat = React.useSyncExternalStore(
++		subscribeTimeFormat,
++		getTimeFormat,
++		getServerTimeFormat,
++	)
++	const formatLabel = timeFormat === 'utc' ? 'UTC' : timeFormat
+ 
+ 	return { timeFormat, setTimeFormat, cycleTimeFormat, formatLabel }
+ }
+diff --git a/apps/explorer/src/lib/clipboard.ts b/apps/explorer/src/lib/clipboard.ts
+new file mode 100644
+index 00000000..0eeebeae
+--- /dev/null
++++ b/apps/explorer/src/lib/clipboard.ts
+@@ -0,0 +1,61 @@
++// Shared by every copy control; the event contains no clipboard contents.
++export const copyFeedbackEvent = 'explorer:copy-feedback'
++
++let latestFeedback = 0
++
++function createCopyFeedback() {
++	let current = 0
++	return (failed: boolean) => {
++		if (!failed) current = ++latestFeedback
++		// A slow failure from another control must not replace a newer copy result.
++		if (current === latestFeedback)
++			window.dispatchEvent(
++				new CustomEvent(copyFeedbackEvent, { detail: failed }),
++			)
++	}
++}
++
++export function createCopyController(
++	writeText = (value: string) => navigator.clipboard.writeText(value),
++	feedback = createCopyFeedback(),
++) {
++	let notifying = false
++	let attempt = 0
++	let timer: ReturnType<typeof setTimeout> | undefined
++	const listeners = new Set<() => void>()
++	const update = (value: boolean) => {
++		notifying = value
++		for (const listener of listeners) listener()
++	}
++	const cancel = () => {
++		attempt++
++		clearTimeout(timer)
++		timer = undefined
++		update(false)
++	}
++
++	return {
++		getSnapshot: () => notifying,
++		subscribe(listener: () => void) {
++			listeners.add(listener)
++			return () => {
++				listeners.delete(listener)
++			}
++		},
++		cancel,
++		async copy(value: string, timeout = 800): Promise<void> {
++			cancel()
++			const current = attempt
++			feedback(false)
++			try {
++				await writeText(value)
++			} catch {
++				if (current === attempt) feedback(true)
++				return
++			}
++			if (current !== attempt) return
++			update(true)
++			timer = setTimeout(() => update(false), timeout)
++		},
++	}
++}
+diff --git a/apps/explorer/src/lib/explorer-search-url.ts b/apps/explorer/src/lib/explorer-search-url.ts
+new file mode 100644
+index 00000000..4fdca5f7
+--- /dev/null
++++ b/apps/explorer/src/lib/explorer-search-url.ts
+@@ -0,0 +1,74 @@
++import * as Address from 'ox/Address'
++import * as Hex from 'ox/Hex'
++import { normalizeSearchInput } from './tempo-address'
++
++// Exact hosts only: hostname inference for preview environments is intentionally
++// more permissive and must not be used to authorize pasted destinations.
++const networks = [
++	{
++		label: 'Mainnet',
++		host: 'explore.tempo.xyz',
++		aliases: [
++			'explore.4217.tempo.xyz',
++			'explore.mainnet.tempo.xyz',
++			'explore.presto.tempo.xyz',
++		],
++	},
++	{
++		label: 'Testnet',
++		host: 'explore.testnet.tempo.xyz',
++		aliases: ['explore.42431.tempo.xyz', 'explore.moderato.tempo.xyz'],
++	},
++	{
++		label: 'Devnet',
++		host: 'explore.devnet.tempo.xyz',
++		aliases: ['explore.31318.tempo.xyz'],
++	},
++	{ label: 'Nextfork', host: 'explore.nextfork.devnet.tempo.xyz', aliases: [] },
++	{
++		label: 'Zone Prover',
++		host: 'explore.zone-prover.devnet.tempo.xyz',
++		aliases: [],
++	},
++]
++
++export function parseExplorerSearchUrl(
++	input: string,
++): { href: string; network: string } | undefined {
++	try {
++		const url = new URL(input.trim())
++		if (url.protocol !== 'https:' || url.username || url.password || url.port)
++			return undefined
++		const network = networks.find(
++			({ host, aliases }) =>
++				url.hostname === host || aliases.includes(url.hostname),
++		)
++		if (!network) return undefined
++		const match = /^\/(address|token|tx|receipt|block)\/([^/]+)\/?$/.exec(
++			url.pathname,
++		)
++		if (!match) return undefined
++		const [, resource, encodedId] = match
++		let id = decodeURIComponent(encodedId)
++		if (resource === 'address' || resource === 'token') {
++			id = normalizeSearchInput(id)
++			if (!Address.validate(id)) return undefined
++		} else if (resource === 'block') {
++			if (
++				id !== 'latest' &&
++				!(Hex.validate(id, { strict: true }) && Hex.size(id) === 32)
++			) {
++				if (!/^\d+$/.test(id) || !Number.isSafeInteger(Number(id)))
++					return undefined
++				id = String(Number(id))
++			}
++		} else if (!Hex.validate(id, { strict: true }) || Hex.size(id) !== 32)
++			return undefined
++		return {
++			href: `https://${network.host}/${resource}/${id}`,
++			network: network.label,
++		}
++	} catch {
++		return undefined
++	}
++}
+diff --git a/apps/explorer/src/lib/hooks.ts b/apps/explorer/src/lib/hooks.ts
+index 71d67332..657f6ea2 100644
+--- a/apps/explorer/src/lib/hooks.ts
++++ b/apps/explorer/src/lib/hooks.ts
+@@ -1,5 +1,6 @@
+ import { useRouter } from '@tanstack/react-router'
+ import * as React from 'react'
++import { createCopyController } from '#lib/clipboard'
+ 
+ export function useIsMounted() {
+ 	const [isMounted, setIsMounted] = React.useState(false)
+@@ -13,25 +14,17 @@ export function useIsMounted() {
+ 
+ export function useCopy(props: useCopy.Props = { timeout: 800 }) {
+ 	const { timeout } = props
+-
+-	const [notifying, setNotifying] = React.useState(false)
+-	const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+-
++	const [controller] = React.useState(() => createCopyController())
++	const notifying = React.useSyncExternalStore(
++		controller.subscribe,
++		controller.getSnapshot,
++		() => false,
++	)
++	React.useEffect(() => controller.cancel, [controller])
+ 	const copy: useCopy.Result['copy'] = React.useCallback(
+-		async (value: string) => {
+-			if (timer.current) clearTimeout(timer.current)
+-			try {
+-				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
+-				await navigator.clipboard.writeText(value)
+-				setNotifying(true)
+-				timer.current = setTimeout(() => setNotifying(false), timeout)
+-			} catch (error) {
+-				console.error('Failed to copy text: ', error)
+-			}
+-		},
+-		[timeout],
++		(value) => controller.copy(value, timeout),
++		[controller, timeout],
+ 	)
+-
+ 	return { copy, notifying }
+ }
+ 
+diff --git a/apps/explorer/src/lib/recent-searches.ts b/apps/explorer/src/lib/recent-searches.ts
+new file mode 100644
+index 00000000..7a5356d3
+--- /dev/null
++++ b/apps/explorer/src/lib/recent-searches.ts
+@@ -0,0 +1,116 @@
++import * as Address from 'ox/Address'
++import * as Hex from 'ox/Hex'
++import type { SearchResult } from '#routes/api/search'
++
++const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
++export const recentSearchesLimit = 6
++
++export function getSearchResultKey(result: SearchResult): string {
++	if (result.type === 'block') return `block-${result.blockNumber}`
++	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
++	return `${result.type}-${result.address.toLowerCase()}`
++}
++
++function isPersistedSearchResult(value: unknown): value is SearchResult {
++	if (typeof value !== 'object' || value == null) return false
++
++	const result = value as Record<string, unknown>
++	if (
++		result.type === 'block' &&
++		typeof result.blockNumber === 'number' &&
++		Number.isSafeInteger(result.blockNumber) &&
++		result.blockNumber >= 0
++	)
++		return true
++
++	if (
++		result.type === 'transaction' &&
++		typeof result.hash === 'string' &&
++		Hex.validate(result.hash) &&
++		Hex.size(result.hash) === 32 &&
++		(result.timestamp === undefined || typeof result.timestamp === 'number')
++	)
++		return true
++
++	const validCategory =
++		result.category === undefined ||
++		result.category === 'token' ||
++		result.category === 'system' ||
++		result.category === 'utility' ||
++		result.category === 'account' ||
++		result.category === 'precompile'
++	const validAddressMetadata =
++		(result.label === undefined || typeof result.label === 'string') &&
++		(result.description === undefined ||
++			typeof result.description === 'string') &&
++		validCategory
++
++	if (
++		result.type === 'address' &&
++		typeof result.address === 'string' &&
++		Address.validate(result.address) &&
++		typeof result.isTip20 === 'boolean' &&
++		validAddressMetadata
++	)
++		return true
++
++	if (
++		result.type === 'token' &&
++		typeof result.address === 'string' &&
++		Address.validate(result.address) &&
++		typeof result.name === 'string' &&
++		typeof result.symbol === 'string' &&
++		typeof result.isTip20 === 'boolean'
++	)
++		return true
++
++	return false
++}
++
++export function loadRecentSearches(): SearchResult[] {
++	if (typeof window === 'undefined') return []
++
++	try {
++		const rawValue = window.localStorage.getItem(recentSearchesStorageKey)
++		if (!rawValue) return []
++		const parsedValue = JSON.parse(rawValue)
++		if (!Array.isArray(parsedValue)) return []
++		return parsedValue
++			.filter(isPersistedSearchResult)
++			.slice(0, recentSearchesLimit)
++	} catch {
++		return []
++	}
++}
++
++export function persistRecentSearches(results: SearchResult[]): void {
++	if (typeof window === 'undefined') return
++
++	try {
++		if (results.length === 0) {
++			window.localStorage.removeItem(recentSearchesStorageKey)
++			return
++		}
++
++		window.localStorage.setItem(
++			recentSearchesStorageKey,
++			JSON.stringify(results.slice(0, recentSearchesLimit)),
++		)
++	} catch {}
++}
++
++export function removeRecentSearch(
++	results: SearchResult[],
++	target: SearchResult,
++): SearchResult[] {
++	const key = getSearchResultKey(target)
++	return results.filter((item) => getSearchResultKey(item) !== key)
++}
++
++export function recentSearchLabel(result: SearchResult): string {
++	if (result.type === 'block') return `block #${result.blockNumber}`
++	if (result.type === 'transaction') return `transaction ${result.hash}`
++	if (result.type === 'token')
++		return `token ${result.name} (${result.symbol}), ${result.address}`
++	return `address ${result.address}`
++}
+diff --git a/apps/explorer/src/lib/time-format.ts b/apps/explorer/src/lib/time-format.ts
+new file mode 100644
+index 00000000..e518e26d
+--- /dev/null
++++ b/apps/explorer/src/lib/time-format.ts
+@@ -0,0 +1,112 @@
++export type TimeFormat = 'relative' | 'local' | 'utc' | 'unix'
++
++const storageKey = 'tempo-explorer-time-format'
++const listeners = new Set<() => void>()
++let timeFormat: TimeFormat | undefined
++let persistedTimeFormat: TimeFormat | undefined
++let hasUnpersistedSelection = false
++
++export function getServerTimeFormat(): TimeFormat {
++	return 'relative'
++}
++
++function readPersistedTimeFormat(): TimeFormat | undefined {
++	try {
++		const stored = window.localStorage.getItem(storageKey)
++		if (
++			stored === 'relative' ||
++			stored === 'local' ||
++			stored === 'utc' ||
++			stored === 'unix'
++		) {
++			return stored
++		}
++		return 'relative'
++	} catch {
++		// Storage can be unavailable; keep the preference in memory for this tab.
++		return undefined
++	}
++}
++
++export function getTimeFormat(): TimeFormat {
++	if (typeof window === 'undefined') return getServerTimeFormat()
++	if (timeFormat !== undefined) return timeFormat
++
++	persistedTimeFormat = readPersistedTimeFormat()
++	timeFormat = persistedTimeFormat ?? 'relative'
++	return timeFormat
++}
++
++function notify(): void {
++	for (const listener of [...listeners]) {
++		if (listeners.has(listener)) listener()
++	}
++}
++
++function reconcilePersistedTimeFormat(): void {
++	const stored = readPersistedTimeFormat()
++	// An unchanged stored value must not undo an in-memory choice whose write failed.
++	if (stored === undefined || stored === persistedTimeFormat) return
++	if (persistedTimeFormat === undefined && hasUnpersistedSelection) {
++		// Storage has recovered, but this is our first known baseline, not a new choice.
++		persistedTimeFormat = stored
++		return
++	}
++	persistedTimeFormat = stored
++	hasUnpersistedSelection = false
++	if (timeFormat !== stored) {
++		timeFormat = stored
++		notify()
++	}
++}
++
++function handlePageShow(event: PageTransitionEvent): void {
++	if (event.persisted) reconcilePersistedTimeFormat()
++}
++
++export function subscribeTimeFormat(onChange: () => void): () => void {
++	if (typeof window === 'undefined') return () => {}
++	const browser = window
++	const listener = () => onChange()
++	getTimeFormat()
++	if (listeners.size === 0) {
++		browser.addEventListener('pageshow', handlePageShow)
++		// Also reconcile a restored document that had no mounted timestamp controls.
++		reconcilePersistedTimeFormat()
++	}
++	listeners.add(listener)
++	return () => {
++		listeners.delete(listener)
++		if (listeners.size === 0) {
++			browser.removeEventListener('pageshow', handlePageShow)
++		}
++	}
++}
++
++export function setTimeFormat(
++	next: TimeFormat | ((current: TimeFormat) => TimeFormat),
++): void {
++	if (typeof window === 'undefined') return
++	const current = getTimeFormat()
++	timeFormat = typeof next === 'function' ? next(current) : next
++	try {
++		window.localStorage.setItem(storageKey, timeFormat)
++		persistedTimeFormat = timeFormat
++		hasUnpersistedSelection = false
++	} catch {
++		// A failed write must not undo the user's selection or stop notifications.
++		hasUnpersistedSelection = true
++	}
++	if (timeFormat !== current) {
++		notify()
++	}
++}
++
++export function cycleTimeFormat(): void {
++	setTimeFormat((current) => {
++		if (current === 'relative') return 'local'
++		if (current === 'local') return 'utc'
++		if (current === 'utc') return 'unix'
++		return 'relative'
++	})
++}
+diff --git a/apps/explorer/src/routes/__root.tsx b/apps/explorer/src/routes/__root.tsx
+index e40bd665..cf351ee6 100644
+--- a/apps/explorer/src/routes/__root.tsx
++++ b/apps/explorer/src/routes/__root.tsx
+@@ -13,6 +13,7 @@ import * as React from 'react'
+ import { deserialize, type State, WagmiProvider } from 'wagmi'
+ import { AddressHighlightProvider } from '#comps/AddressHighlight'
+ import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
++import { CopyFeedback } from '#comps/CopyFeedback'
+ import { ErrorBoundary } from '#comps/ErrorBoundary'
+ import { IntroSeenProvider } from '#comps/Intro'
+ import { TokenListMembershipProvider } from '#comps/TokenListMembership'
+@@ -478,6 +479,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
+ 						)}
+ 					</QueryClientProvider>
+ 				</WagmiProvider>
++				<CopyFeedback />
+ 				<Scripts />
+ 			</body>
+ 		</html>
+diff --git a/apps/explorer/src/routes/search.tsx b/apps/explorer/src/routes/search.tsx
+index 445a0b16..60f2e33e 100644
+--- a/apps/explorer/src/routes/search.tsx
++++ b/apps/explorer/src/routes/search.tsx
+@@ -3,6 +3,7 @@ import * as Address from 'ox/Address'
+ import * as Hex from 'ox/Hex'
+ import * as z from 'zod/mini'
+ import { getApiUrl } from '#lib/env'
++import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
+ import { normalizeSearchInput } from '#lib/tempo-address'
+ 
+ type SearchMatch =
+@@ -137,6 +138,9 @@ export const Route = createFileRoute('/search')({
+ 		const rawQuery = search.q?.trim() ?? ''
+ 		if (!rawQuery) throw redirect(getLandingRedirect(rawQuery))
+ 
++		const explorerUrl = parseExplorerSearchUrl(rawQuery)
++		if (explorerUrl) throw redirect({ href: explorerUrl.href })
++
+ 		const normalizedQuery = normalizeSearchInput(rawQuery)
+ 		const blockId = parseBlockInput(normalizedQuery)
+ 
+diff --git a/apps/explorer/test/clipboard.node.test.ts b/apps/explorer/test/clipboard.node.test.ts
+new file mode 100644
+index 00000000..54091683
+--- /dev/null
++++ b/apps/explorer/test/clipboard.node.test.ts
+@@ -0,0 +1,209 @@
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import { copyFeedbackEvent, createCopyController } from '../src/lib/clipboard'
++
++function deferred() {
++	let resolve = () => {}
++	let reject = (_error: Error) => {}
++	const promise = new Promise<void>((resolve_, reject_) => {
++		resolve = resolve_
++		reject = reject_
++	})
++	return { promise, resolve, reject }
++}
++
++function setup(write = async (_value: string) => {}) {
++	const errors: boolean[] = []
++	const controller = createCopyController(write, (failed) =>
++		errors.push(failed),
++	)
++	return { controller, errors }
++}
++
++afterEach(() => {
++	vi.useRealTimers()
++	vi.unstubAllGlobals()
++})
++
++describe('clipboard feedback', () => {
++	it.each([
++		'',
++		'0x1234',
++		'Tempo café\nsecond line',
++	])('preserves text %j and expires success', async (value) => {
++		vi.useFakeTimers()
++		let copied = 'not copied'
++		const { controller, errors } = setup(async (text) => {
++			copied = text
++		})
++		await controller.copy(value, 2000)
++		expect(copied).toBe(value)
++		expect(controller.getSnapshot()).toBe(true)
++		expect(errors).toEqual([false])
++		vi.advanceTimersByTime(1999)
++		expect(controller.getSnapshot()).toBe(true)
++		vi.advanceTimersByTime(1)
++		expect(controller.getSnapshot()).toBe(false)
++	})
++
++	it.each([
++		'reject',
++		'throw',
++	])('reports %s without rejecting and recovers on retry', async (mode) => {
++		let fail = true
++		const { controller, errors } = setup(() => {
++			if (!fail) return Promise.resolve()
++			if (mode === 'throw') throw new Error('secret contents must not escape')
++			return Promise.reject(new Error('denied'))
++		})
++		await controller.copy('address')
++		expect(errors).toEqual([false, true])
++		expect(controller.getSnapshot()).toBe(false)
++		fail = false
++		await controller.copy('address')
++		expect(errors).toEqual([false, true, false])
++		expect(controller.getSnapshot()).toBe(true)
++		controller.cancel()
++	})
++
++	it('reports missing Clipboard API and navigator getter failures', async () => {
++		const errors: boolean[] = []
++		vi.stubGlobal('navigator', {})
++		const controller = createCopyController(undefined, (failed) =>
++			errors.push(failed),
++		)
++		await controller.copy('address')
++		expect(errors).toEqual([false, true])
++		vi.stubGlobal('navigator', {
++			get clipboard() {
++				throw new Error('blocked')
++			},
++		})
++		await controller.copy('address')
++		expect(errors).toEqual([false, true, false, true])
++	})
++
++	it('clears previous success immediately when the next copy fails', async () => {
++		let fail = false
++		const { controller, errors } = setup(async () => {
++			if (fail) throw new Error('denied')
++		})
++		await controller.copy('one')
++		expect(controller.getSnapshot()).toBe(true)
++		fail = true
++		const pending = controller.copy('two')
++		expect(controller.getSnapshot()).toBe(false)
++		await pending
++		expect(errors).toEqual([false, false, true])
++	})
++
++	it.each([
++		'resolve',
++		'reject',
++	] as const)('ignores stale %s after newer success', async (outcome) => {
++		const first = deferred()
++		let calls = 0
++		const { controller, errors } = setup(() =>
++			++calls === 1 ? first.promise : Promise.resolve(),
++		)
++		const pending = controller.copy('old')
++		await controller.copy('new')
++		first[outcome](new Error('old rejection'))
++		await pending
++		expect(controller.getSnapshot()).toBe(true)
++		expect(errors).toEqual([false, false])
++		controller.cancel()
++	})
++
++	it('ignores stale success after newer failure', async () => {
++		const first = deferred()
++		let calls = 0
++		const { controller, errors } = setup(() =>
++			++calls === 1 ? first.promise : Promise.reject(new Error('denied')),
++		)
++		const pending = controller.copy('old')
++		await controller.copy('new')
++		first.resolve()
++		await pending
++		expect(controller.getSnapshot()).toBe(false)
++		expect(errors).toEqual([false, false, true])
++	})
++
++	it('restarts the success timer for the newest copy', async () => {
++		vi.useFakeTimers()
++		const { controller } = setup()
++		await controller.copy('one', 800)
++		vi.advanceTimersByTime(700)
++		await controller.copy('two', 800)
++		vi.advanceTimersByTime(100)
++		expect(controller.getSnapshot()).toBe(true)
++		vi.advanceTimersByTime(700)
++		expect(controller.getSnapshot()).toBe(false)
++	})
++
++	it.each([
++		'resolve',
++		'reject',
++	] as const)('cancel ignores pending %s but allows remount/retry', async (outcome) => {
++		const pending = deferred()
++		let calls = 0
++		const { controller, errors } = setup(() =>
++			++calls === 1 ? pending.promise : Promise.resolve(),
++		)
++		const result = controller.copy('old')
++		controller.cancel()
++		pending[outcome](new Error('late'))
++		await result
++		expect(controller.getSnapshot()).toBe(false)
++		expect(errors).toEqual([false])
++		await controller.copy('new')
++		expect(controller.getSnapshot()).toBe(true)
++		controller.cancel()
++	})
++
++	it('cleans success timer and unsubscribes observers', async () => {
++		vi.useFakeTimers()
++		const { controller } = setup()
++		const states: boolean[] = []
++		const unsubscribe = controller.subscribe(() =>
++			states.push(controller.getSnapshot()),
++		)
++		await controller.copy('one')
++		unsubscribe()
++		controller.cancel()
++		vi.runAllTimers()
++		expect(states).toEqual([false, true])
++		expect(controller.getSnapshot()).toBe(false)
++		expect(vi.getTimerCount()).toBe(0)
++	})
++
++	it('keeps separate control success indicators independent', async () => {
++		const first = setup()
++		const second = setup(async () => {
++			throw new Error('denied')
++		})
++		await first.controller.copy('one')
++		await second.controller.copy('two')
++		expect(first.controller.getSnapshot()).toBe(true)
++		expect(second.controller.getSnapshot()).toBe(false)
++		expect(second.errors).toEqual([false, true])
++		first.controller.cancel()
++	})
++	it('ignores an old failure from another control after a newer copy succeeds', async () => {
++		const target = new EventTarget()
++		vi.stubGlobal('window', target)
++		const feedback: unknown[] = []
++		target.addEventListener(copyFeedbackEvent, (event) => {
++			if (event instanceof CustomEvent) feedback.push(event.detail)
++		})
++		const old = deferred()
++		const first = createCopyController(() => old.promise)
++		const second = createCopyController(async () => {})
++		const pending = first.copy('private first value')
++		await second.copy('private second value')
++		old.reject(new Error('late denial'))
++		await pending
++		expect(feedback).toEqual([false, false])
++		expect(second.getSnapshot()).toBe(true)
++		second.cancel()
++	})
++})
+diff --git a/apps/explorer/test/explorer-search-url.node.test.ts b/apps/explorer/test/explorer-search-url.node.test.ts
+new file mode 100644
+index 00000000..3b1ff0a2
+--- /dev/null
++++ b/apps/explorer/test/explorer-search-url.node.test.ts
+@@ -0,0 +1,152 @@
++import { describe, expect, it } from 'vitest'
++import { TempoAddress } from 'ox/tempo'
++import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
++import { normalizeSearchInput } from '#lib/tempo-address'
++
++const address = '0x20C0000000000000000000000000000000000000'
++const hash = `0x${'ab'.repeat(32)}`
++
++describe('parseExplorerSearchUrl', () => {
++	it.each([
++		['explore.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.mainnet.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.4217.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.presto.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.testnet.tempo.xyz', 'explore.testnet.tempo.xyz', 'Testnet'],
++		['explore.42431.tempo.xyz', 'explore.testnet.tempo.xyz', 'Testnet'],
++		['explore.moderato.tempo.xyz', 'explore.testnet.tempo.xyz', 'Testnet'],
++		['explore.devnet.tempo.xyz', 'explore.devnet.tempo.xyz', 'Devnet'],
++		['explore.31318.tempo.xyz', 'explore.devnet.tempo.xyz', 'Devnet'],
++		[
++			'explore.nextfork.devnet.tempo.xyz',
++			'explore.nextfork.devnet.tempo.xyz',
++			'Nextfork',
++		],
++		[
++			'explore.zone-prover.devnet.tempo.xyz',
++			'explore.zone-prover.devnet.tempo.xyz',
++			'Zone Prover',
++		],
++	])('preserves the network for %s', (host, canonicalHost, network) => {
++		expect(parseExplorerSearchUrl(`https://${host}/block/100`)).toEqual({
++			href: `https://${canonicalHost}/block/100`,
++			network,
++		})
++	})
++
++	it.each([
++		'address',
++		'token',
++	])('opens a %s resource without changing its type', (resource) => {
++		expect(
++			parseExplorerSearchUrl(
++				`https://explore.tempo.xyz/${resource}/${address}`,
++			),
++		).toEqual({
++			href: `https://explore.tempo.xyz/${resource}/${address}`,
++			network: 'Mainnet',
++		})
++	})
++	it.each(['tx', 'receipt'])('opens a %s hash', (resource) => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/${resource}/${hash}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/${resource}/${hash}`,
++			network: 'Mainnet',
++		})
++	})
++	it('normalizes Tempo addresses using the existing address rules', () => {
++		expect(
++			parseExplorerSearchUrl(
++				`https://explore.tempo.xyz/address/${TempoAddress.format(address)}`,
++			),
++		).toEqual({
++			href: `https://explore.tempo.xyz/address/${address}`,
++			network: 'Mainnet',
++		})
++	})
++	it.each(['latest', hash])('preserves block identifier %s', (id) => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/block/${id}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/block/${id}`,
++			network: 'Mainnet',
++		})
++	})
++	it('preserves a block hash through a network alias', () => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.42431.tempo.xyz/block/${hash}`),
++		).toEqual({
++			href: `https://explore.testnet.tempo.xyz/block/${hash}`,
++			network: 'Testnet',
++		})
++	})
++	it('trims pasted whitespace, normalizes host case and block number, drops view options', () => {
++		expect(
++			parseExplorerSearchUrl(
++				'  https://EXPLORE.TEMPO.XYZ/block/000100/?tab=foo#bar  ',
++			),
++		).toEqual({
++			href: 'https://explore.tempo.xyz/block/100',
++			network: 'Mainnet',
++		})
++	})
++	it.each([
++		'0',
++		'9007199254740991',
++	])('supports safe block boundary %s', (id) => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/block/${id}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/block/${id}`,
++			network: 'Mainnet',
++		})
++	})
++	it.each([
++		'http://explore.tempo.xyz/block/1',
++		'javascript:alert(1)',
++		'//explore.tempo.xyz/block/1',
++		'https://explore.tempo.xyz.evil.example/block/1',
++		'https://evil.example/explore.tempo.xyz/block/1',
++		'https://explore.tempo.xyz@evil.example/block/1',
++		'https://evil.example@explore.tempo.xyz/block/1',
++		'https://user:pass@explore.tempo.xyz/block/1',
++		'https://explore.tempo.xyz:8443/block/1',
++		'https://explore.tempo.xyz./block/1',
++		'https://explorer-mainnet.evil.example/block/1',
++		'https://explore.tempo.xyz/blocks',
++		'https://explore.tempo.xyz/block/9007199254740992',
++		'https://explore.tempo.xyz/block/-1',
++		'https://explore.tempo.xyz/block/latestish',
++		'https://explore.tempo.xyz/block/0x00',
++		`https://explore.tempo.xyz/block/0x${'ab'.repeat(33)}`,
++		`https://explore.tempo.xyz/block/0x${'zz'.repeat(32)}`,
++		'https://explore.tempo.xyz/block/1.5',
++		'https://explore.tempo.xyz/block/1e2',
++		'https://explore.tempo.xyz/block/1/extra',
++		'https://explore.tempo.xyz/block/%2F1',
++		'https://explore.tempo.xyz/block/%E0%A4%A',
++		'https://explore.tempo.xyz/tx/0x00',
++		`https://explore.tempo.xyz/tx/0x${'zz'.repeat(32)}`,
++		'https://explore.tempo.xyz/token/invalid',
++		'https://explore.tempo.xyz/address/0x00',
++		'https://explore.tempo.xyz/policy/1',
++		'',
++		'not a URL',
++		'#100',
++		'100',
++		'pathUSD',
++	])('rejects unsupported input %s without throwing', (input) => {
++		expect(parseExplorerSearchUrl(input)).toBeUndefined()
++		// A valid counterpart guards against a parser that rejects everything.
++		expect(parseExplorerSearchUrl('https://explore.tempo.xyz/block/1')).toEqual(
++			{ href: 'https://explore.tempo.xyz/block/1', network: 'Mainnet' },
++		)
++	})
++	it('leaves raw normalization independent of URL parsing', () => {
++		expect(normalizeSearchInput(` ${address} `)).toBe(address)
++		expect(normalizeSearchInput(' pathUSD ')).toBe('pathUSD')
++		expect(normalizeSearchInput(' #100 ')).toBe('#100')
++		expect(normalizeSearchInput(hash)).toBe(hash)
++	})
++})
+diff --git a/apps/explorer/test/recent-searches.node.test.ts b/apps/explorer/test/recent-searches.node.test.ts
+new file mode 100644
+index 00000000..3369e0eb
+--- /dev/null
++++ b/apps/explorer/test/recent-searches.node.test.ts
+@@ -0,0 +1,169 @@
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import {
++	loadRecentSearches,
++	persistRecentSearches,
++	recentSearchLabel,
++	removeRecentSearch,
++} from '#lib/recent-searches'
++import type { SearchResult } from '#routes/api/search'
++
++const key = 'tempo-explorer-recent-searches'
++const block: SearchResult = { type: 'block', blockNumber: 100 }
++const address: SearchResult = {
++	type: 'address',
++	address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
++	isTip20: false,
++}
++const token: SearchResult = {
++	...address,
++	type: 'token',
++	name: 'Dollar',
++	symbol: 'USD',
++}
++const tx: SearchResult = { type: 'transaction', hash: `0x${'ab'.repeat(32)}` }
++function storage() {
++	const values = new Map<string, string>([['unrelated', 'keep']])
++	const localStorage = {
++		getItem: (name: string) => values.get(name) ?? null,
++		setItem: (name: string, value: string) => {
++			values.set(name, value)
++		},
++		removeItem: (name: string) => {
++			values.delete(name)
++		},
++	}
++	vi.stubGlobal('window', { localStorage })
++	return { values, localStorage }
++}
++afterEach(() => vi.unstubAllGlobals())
++
++describe('removing recent searches', () => {
++	it('removes the target and preserves order and metadata without mutating history', () => {
++		const history = [block, address, token, tx]
++		expect(removeRecentSearch(history, address)).toEqual([block, token, tx])
++		expect(history).toEqual([block, address, token, tx])
++	})
++	it('uses case-insensitive address identity while retaining token at same address', () => {
++		expect(
++			removeRecentSearch([block, address, token], {
++				...address,
++				address: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
++			}),
++		).toEqual([block, token])
++	})
++	it('uses case-insensitive transaction identity', () => {
++		expect(
++			removeRecentSearch([tx, block], {
++				type: 'transaction',
++				hash: `0x${'AB'.repeat(32)}`,
++			}),
++		).toEqual([block])
++	})
++	it('removing a missing entry is harmless', () => {
++		expect(removeRecentSearch([address, tx], block)).toEqual([address, tx])
++	})
++	it('removes last entry and every duplicate of the same identity', () => {
++		expect(removeRecentSearch([block, block, tx], block)).toEqual([tx])
++		expect(removeRecentSearch([block], block)).toEqual([])
++	})
++	it('persists removal through reload without modifying other keys', () => {
++		const { values } = storage()
++		persistRecentSearches([block, address, token, tx])
++		persistRecentSearches(removeRecentSearch(loadRecentSearches(), address))
++		expect(loadRecentSearches()).toEqual([block, token, tx])
++		expect(values.get('unrelated')).toBe('keep')
++	})
++	it('clears storage after removing the last item', () => {
++		const { values } = storage()
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([block])
++		persistRecentSearches(removeRecentSearch(loadRecentSearches(), block))
++		expect(values.has(key)).toBe(false)
++		expect(loadRecentSearches()).toEqual([])
++		expect(values.get('unrelated')).toBe('keep')
++	})
++	it('keeps the current result usable when storage writes fail', () => {
++		const { localStorage } = storage()
++		persistRecentSearches([block, address])
++		localStorage.setItem = () => {
++			throw new Error('quota')
++		}
++		const remaining = removeRecentSearch(loadRecentSearches(), block)
++		persistRecentSearches(remaining)
++		expect(remaining).toEqual([address])
++		expect(loadRecentSearches()).toEqual([block, address])
++	})
++	it('tolerates failed storage removal', () => {
++		const { localStorage } = storage()
++		persistRecentSearches([block])
++		localStorage.removeItem = () => {
++			throw new Error('denied')
++		}
++		persistRecentSearches([])
++		expect(loadRecentSearches()).toEqual([block])
++	})
++	it('filters invalid persisted records and preserves valid ones', () => {
++		const { values } = storage()
++		values.set(
++			key,
++			JSON.stringify([
++				null,
++				{},
++				{ type: 'block', blockNumber: -1 },
++				address,
++				token,
++				tx,
++				block,
++			]),
++		)
++		expect(loadRecentSearches()).toEqual([address, token, tx, block])
++	})
++	it('handles invalid JSON, non-array data and missing history', () => {
++		const { values } = storage()
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([block])
++		for (const raw of ['{', '{}', 'null']) {
++			values.set(key, raw)
++			expect(loadRecentSearches()).toEqual([])
++		}
++		values.delete(key)
++		expect(loadRecentSearches()).toEqual([])
++	})
++	it('handles blocked storage access and server rendering', () => {
++		vi.stubGlobal('window', {
++			get localStorage() {
++				throw new Error('denied')
++			},
++		})
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([])
++		vi.stubGlobal('window', undefined)
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([])
++		storage()
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([block])
++	})
++	it('retains the existing six-item bound', () => {
++		storage()
++		persistRecentSearches(
++			Array.from({ length: 8 }, (_, blockNumber) => ({
++				type: 'block',
++				blockNumber,
++			})),
++		)
++		expect(loadRecentSearches()).toEqual(
++			[0, 1, 2, 3, 4, 5].map((blockNumber) => ({ type: 'block', blockNumber })),
++		)
++	})
++	it('names removal actions with type and unambiguous identity', () => {
++		expect(recentSearchLabel(block)).toBe('block #100')
++		expect(recentSearchLabel(address)).toBe(
++			'address 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
++		)
++		expect(recentSearchLabel(token)).toBe(
++			'token Dollar (USD), 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
++		)
++		expect(recentSearchLabel(tx)).toBe(`transaction 0x${'ab'.repeat(32)}`)
++	})
++})
+diff --git a/apps/explorer/test/time-format.node.test.ts b/apps/explorer/test/time-format.node.test.ts
+new file mode 100644
+index 00000000..af0c1de3
+--- /dev/null
++++ b/apps/explorer/test/time-format.node.test.ts
+@@ -0,0 +1,385 @@
++import { createElement } from 'react'
++import { renderToStaticMarkup } from 'react-dom/server'
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
++import type { TimeFormat } from '#lib/time-format'
++
++const storageKey = 'tempo-explorer-time-format'
++
++function stubStorage(saved: string | null = null) {
++	const values = new Map<string, string>([['unrelated-preference', 'keep']])
++	if (saved !== null) values.set(storageKey, saved)
++	const writes: [string, string][] = []
++	const events = new EventTarget()
++	const storage = {
++		getItem: (key: string) => values.get(key) ?? null,
++		setItem: (key: string, value: string) => {
++			writes.push([key, value])
++			values.set(key, value)
++		},
++	}
++	vi.stubGlobal('window', {
++		localStorage: storage,
++		addEventListener: events.addEventListener.bind(events),
++		removeEventListener: events.removeEventListener.bind(events),
++	})
++	return { storage, values, writes, events }
++}
++
++beforeEach(() => vi.resetModules())
++afterEach(() => vi.unstubAllGlobals())
++
++describe('timestamp preference', () => {
++	it.each<TimeFormat>([
++		'relative',
++		'local',
++		'utc',
++		'unix',
++	])('restores %s without writing during initialization or subscription', async (saved) => {
++		const { values, writes } = stubStorage(saved)
++		const store = await import('#lib/time-format')
++		const unsubscribe = store.subscribeTimeFormat(() => {})
++		expect(store.getTimeFormat()).toBe(saved)
++		unsubscribe()
++		expect(store.getTimeFormat()).toBe(saved)
++		expect(writes).toEqual([])
++		expect(values.get('unrelated-preference')).toBe('keep')
++	})
++
++	it.each([
++		null,
++		'',
++		'UTC',
++		' utc ',
++		'future',
++		'{}',
++		'["unix"]',
++		'null',
++	])('falls back for invalid storage %s and can persist the next selection', async (saved) => {
++		const { values, writes } = stubStorage(saved)
++		const store = await import('#lib/time-format')
++		expect(store.getTimeFormat()).toBe('relative')
++		expect(writes).toEqual([])
++		store.cycleTimeFormat()
++		expect(store.getTimeFormat()).toBe('local')
++		expect(values.get(storageKey)).toBe('local')
++		expect(values.get('unrelated-preference')).toBe('keep')
++	})
++
++	it.each<TimeFormat>([
++		'relative',
++		'local',
++		'utc',
++		'unix',
++	])('persists an explicit %s selection across a new page session', async (selected) => {
++		const { values } = stubStorage()
++		const store = await import('#lib/time-format')
++		store.setTimeFormat(selected)
++		vi.resetModules()
++		const reloaded = await import('#lib/time-format')
++		expect(reloaded.getTimeFormat()).toBe(selected)
++		expect(values.get('unrelated-preference')).toBe('keep')
++	})
++
++	it('advances every rapid cycle from the latest shared selection', async () => {
++		const { writes } = stubStorage()
++		const store = await import('#lib/time-format')
++		const first: TimeFormat[] = []
++		const second: TimeFormat[] = []
++		const unsubscribeFirst = store.subscribeTimeFormat(() => {
++			first.push(store.getTimeFormat())
++		})
++		const unsubscribeSecond = store.subscribeTimeFormat(() => {
++			second.push(store.getTimeFormat())
++		})
++		expect(store.getTimeFormat()).toBe('relative')
++		for (let i = 0; i < 12; i++) store.cycleTimeFormat()
++		const expected = [
++			'local',
++			'utc',
++			'unix',
++			'relative',
++			'local',
++			'utc',
++			'unix',
++			'relative',
++			'local',
++			'utc',
++			'unix',
++			'relative',
++		]
++		expect(first).toEqual(expected)
++		expect(second).toEqual(expected)
++		expect(writes.map(([, value]) => value)).toEqual(expected)
++		unsubscribeFirst()
++		unsubscribeSecond()
++
++		const remounted: TimeFormat[] = []
++		const unsubscribeRemounted = store.subscribeTimeFormat(() => {
++			remounted.push(store.getTimeFormat())
++		})
++		store.setTimeFormat((current) => (current === 'relative' ? 'utc' : 'unix'))
++		store.setTimeFormat((current) => (current === 'utc' ? 'local' : 'relative'))
++		expect(remounted).toEqual(['utc', 'local'])
++		expect(store.getTimeFormat()).toBe('local')
++		expect(first).toEqual(expected)
++		expect(second).toEqual(expected)
++		unsubscribeRemounted()
++	})
++
++	it.each([
++		'getter',
++		'read',
++		'write',
++	])('keeps a usable shared preference when the storage %s throws', async (fault) => {
++		const { storage } = stubStorage('utc')
++		const fail = () => {
++			throw new Error('Storage denied')
++		}
++		if (fault === 'getter') {
++			Object.defineProperty(window, 'localStorage', { get: fail })
++		} else if (fault === 'read') {
++			storage.getItem = fail
++		} else {
++			storage.setItem = fail
++		}
++		const store = await import('#lib/time-format')
++		expect(store.getTimeFormat()).toBe(fault === 'write' ? 'utc' : 'relative')
++		const first: TimeFormat[] = []
++		const stop = store.subscribeTimeFormat(() =>
++			first.push(store.getTimeFormat()),
++		)
++		store.cycleTimeFormat()
++		expect(first).toEqual(fault === 'write' ? ['unix'] : ['local'])
++		stop()
++		const second: TimeFormat[] = []
++		const stopAgain = store.subscribeTimeFormat(() =>
++			second.push(store.getTimeFormat()),
++		)
++		expect(store.getTimeFormat()).toBe(fault === 'write' ? 'unix' : 'local')
++		store.cycleTimeFormat()
++		expect(second).toEqual(fault === 'write' ? ['relative'] : ['utc'])
++		stopAgain()
++	})
++
++	it('handles cleanup and subscriptions added during notification', async () => {
++		stubStorage()
++		const store = await import('#lib/time-format')
++		const observed: string[] = []
++		const late = () => observed.push(`late:${store.getTimeFormat()}`)
++		const removed = () => observed.push(`removed:${store.getTimeFormat()}`)
++		const stopFirst = store.subscribeTimeFormat(() => {
++			observed.push(`first:${store.getTimeFormat()}`)
++			stopRemoved()
++			store.subscribeTimeFormat(late)
++		})
++		const stopRemoved = store.subscribeTimeFormat(removed)
++		store.cycleTimeFormat()
++		expect(observed).toEqual(['first:local'])
++		stopFirst()
++		stopFirst()
++		store.cycleTimeFormat()
++		expect(observed).toEqual(['first:local', 'late:utc'])
++		expect(store.getTimeFormat()).toBe('utc')
++	})
++
++	it('reconciles a BFCache restore with a choice made in a newer document', async () => {
++		const { values, writes, events } = stubStorage()
++		const store = await import('#lib/time-format')
++		const observed: TimeFormat[] = []
++		const stop = store.subscribeTimeFormat(() =>
++			observed.push(store.getTimeFormat()),
++		)
++		store.cycleTimeFormat()
++		expect(store.getTimeFormat()).toBe('local')
++		// A full-document navigation chooses UTC; Back restores this old document.
++		values.set(storageKey, 'utc')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: false }),
++		)
++		expect(store.getTimeFormat()).toBe('local')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('utc')
++		expect(observed).toEqual(['local', 'utc'])
++		expect(writes).toEqual([[storageKey, 'local']])
++		expect(values.get('unrelated-preference')).toBe('keep')
++		store.cycleTimeFormat()
++		expect(store.getTimeFormat()).toBe('unix')
++		stop()
++	})
++
++	it('removes the restore listener when unused and reconciles on remount', async () => {
++		const { values, events } = stubStorage('local')
++		const store = await import('#lib/time-format')
++		const observed: TimeFormat[] = []
++		const listener = () => observed.push(store.getTimeFormat())
++		const stopFirst = store.subscribeTimeFormat(listener)
++		const stopSecond = store.subscribeTimeFormat(listener)
++		stopFirst()
++		values.set(storageKey, 'utc')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('utc')
++		expect(observed).toEqual(['utc'])
++		stopSecond()
++		stopSecond()
++		values.set(storageKey, 'unix')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('utc')
++		const stopRemounted = store.subscribeTimeFormat(listener)
++		expect(store.getTimeFormat()).toBe('unix')
++		store.cycleTimeFormat()
++		expect(observed).toEqual(['utc', 'relative'])
++		stopRemounted()
++	})
++
++	it('keeps an unsaved choice when unchanged storage is read after restore or remount', async () => {
++		const { storage, events, values } = stubStorage('local')
++		storage.setItem = () => {
++			throw new Error('Storage full')
++		}
++		const store = await import('#lib/time-format')
++		const stop = store.subscribeTimeFormat(() => {})
++		store.cycleTimeFormat()
++		expect(store.getTimeFormat()).toBe('utc')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('utc')
++		stop()
++		const stopRemounted = store.subscribeTimeFormat(() => {})
++		expect(store.getTimeFormat()).toBe('utc')
++		expect(values.get(storageKey)).toBe('local')
++		store.cycleTimeFormat()
++		expect(store.getTimeFormat()).toBe('unix')
++		stopRemounted()
++	})
++
++	it('retains memory if a BFCache storage read fails and reconciles once it succeeds', async () => {
++		const { storage, events, values, writes } = stubStorage('local')
++		const store = await import('#lib/time-format')
++		const stop = store.subscribeTimeFormat(() => {})
++		values.set(storageKey, 'utc')
++		const read = storage.getItem
++		storage.getItem = () => {
++			throw new Error('Storage unavailable')
++		}
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('local')
++		storage.getItem = read
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('utc')
++		expect(writes).toEqual([])
++		stop()
++	})
++
++	it('does not replace an unsaved choice with previously unreadable stale storage', async () => {
++		const { storage, events, values } = stubStorage('utc')
++		const read = storage.getItem
++		storage.getItem = () => {
++			throw new Error('Storage denied')
++		}
++		storage.setItem = () => {
++			throw new Error('Storage denied')
++		}
++		const store = await import('#lib/time-format')
++		const stop = store.subscribeTimeFormat(() => {})
++		store.cycleTimeFormat()
++		expect(store.getTimeFormat()).toBe('local')
++		stop()
++		storage.getItem = read
++		const stopRemounted = store.subscribeTimeFormat(() => {})
++		expect(store.getTimeFormat()).toBe('local')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('local')
++		// A later document's genuinely changed saved choice still takes effect.
++		values.set(storageKey, 'unix')
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('unix')
++		stopRemounted()
++	})
++
++	it.each([
++		null,
++		'UTC',
++		'',
++	])('uses the fallback if saved state becomes %s before restoration', async (saved) => {
++		const { values, events, writes } = stubStorage('utc')
++		const store = await import('#lib/time-format')
++		const stop = store.subscribeTimeFormat(() => {})
++		if (saved === null) values.delete(storageKey)
++		else values.set(storageKey, saved)
++		events.dispatchEvent(
++			Object.assign(new Event('pageshow'), { persisted: true }),
++		)
++		expect(store.getTimeFormat()).toBe('relative')
++		expect(writes).toEqual([])
++		stop()
++	})
++
++	it('uses relative server snapshots without reading or leaking browser state', async () => {
++		const store = await import('#lib/time-format')
++		const { useTimeFormat, TimeColumnHeader } = await import(
++			'#comps/TimeFormat'
++		)
++		function Control() {
++			const { formatLabel, cycleTimeFormat } = useTimeFormat()
++			return createElement(TimeColumnHeader, {
++				formatLabel,
++				onCycle: cycleTimeFormat,
++			})
++		}
++		expect(store.getTimeFormat()).toBe('relative')
++		store.setTimeFormat('unix')
++		expect(renderToStaticMarkup(createElement(Control))).toBe(
++			'<button type="button" title="Showing relative time - click to change">Time</button>',
++		)
++		const { writes } = stubStorage('utc')
++		expect(store.getTimeFormat()).toBe('utc')
++		store.setTimeFormat('unix')
++		expect(store.getTimeFormat()).toBe('unix')
++		expect(renderToStaticMarkup(createElement(Control))).toContain(
++			'Showing relative time',
++		)
++		expect(writes).toEqual([[storageKey, 'unix']])
++		vi.unstubAllGlobals()
++		expect(store.getTimeFormat()).toBe('relative')
++		expect(renderToStaticMarkup(createElement(Control))).toContain(
++			'Showing relative time',
++		)
++	})
++
++	it('preserves UTC and unix timestamp text and the semantic dateTime', async () => {
++		const { FormattedTimestamp } = await import('#comps/TimeFormat')
++		expect(
++			renderToStaticMarkup(
++				createElement(FormattedTimestamp, {
++					timestamp: 1_700_000_000n,
++					format: 'utc',
++				}),
++			),
++		).toBe(
++			'<time dateTime="2023-11-14T22:13:20.000Z">Nov 14, 22:13:20 UTC</time>',
++		)
++		expect(
++			renderToStaticMarkup(
++				createElement(FormattedTimestamp, {
++					timestamp: 1_700_000_000n,
++					format: 'unix',
++				}),
++			),
++		).toBe('<time dateTime="2023-11-14T22:13:20.000Z">1700000000</time>')
++	})
++})

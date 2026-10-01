@@ -1,0 +1,88 @@
+{
+  "id": "scan_mup3nxlu_3hs8hb",
+  "run_label": "pr-1300-20261001t053450-290efea93387",
+  "scan_type": "pr-review",
+  "repo": "tempoxyz/tempo-apps",
+  "pr_number": 1300,
+  "target_commit": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+  "config": "pr-review-super-fast.yaml",
+  "review_policy": {
+    "version": 1,
+    "effort": "standard"
+  },
+  "execution_speed": "standard",
+  "dry_run": false,
+  "private": false,
+  "status": "submitted",
+  "attempt": 0,
+  "max_retries": 0,
+  "workflow_history": [
+    {
+      "attempt": 0,
+      "workflow_name": "cyclops-scan-pr-review-sbwnb",
+      "workflow_namespace": "argo-workflows",
+      "workflow_uid": "35bef2ba-28b7-4f13-a8db-0f45521a05a8",
+      "workflow_url": "https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-sbwnb",
+      "status": "submitted",
+      "created_at": "2026-10-01T05:34:50.082Z",
+      "updated_at": "2026-10-01T05:34:51.162Z"
+    }
+  ],
+  "workflow_namespace": "argo-workflows",
+  "created_at": "2026-10-01T05:34:50.082Z",
+  "updated_at": "2026-10-01T05:34:51.165Z",
+  "events": [
+    {
+      "ts": "2026-10-01T05:34:50.082Z",
+      "event": "scan.accepted",
+      "data": {
+        "target": "tempoxyz/tempo-apps#1300",
+        "attempt": 0,
+        "max_retries": 0,
+        "request_contract": {
+          "schema_version": 5,
+          "policy_source": "explicit"
+        }
+      }
+    },
+    {
+      "ts": "2026-10-01T05:34:51.164Z",
+      "event": "scan.submitted",
+      "data": {
+        "target": "tempoxyz/tempo-apps#1300",
+        "workflow_name": "cyclops-scan-pr-review-sbwnb"
+      }
+    }
+  ],
+  "findings": [],
+  "image": "ghcr.io/tempoxyz/cyclops-internal-worker@sha256:8c082277932a21a7e642a0b50b23d6e0590f4c86195e2c2e61cc5778f489e3fa",
+  "pr_workflow_parameters": {
+    "scan-id": "scan_mup3nxlu_3hs8hb",
+    "config": "pr-review-super-fast.yaml",
+    "run-label": "pr-1300-20261001t053450-290efea93387",
+    "image": "ghcr.io/tempoxyz/cyclops-internal-worker@sha256:8c082277932a21a7e642a0b50b23d6e0590f4c86195e2c2e61cc5778f489e3fa",
+    "ui-event-url": "http://cyclops-scan-ui.argo-workflows.svc.cluster.local:18980/internal/ingest/events",
+    "ui-report-public-url": "https://dev-eu-cyclops-scan-ui.tail388b2e.ts.net",
+    "internal-api-url": "http://cyclops-scan-ui.argo-workflows.svc.cluster.local:18980",
+    "attempt": "0",
+    "pod-spec-patch": "{}",
+    "proxy-url": "http://cyclops-scan-ui-iron-proxy.cyclops-proxy.svc.cluster.local:18081",
+    "no-proxy": "127.0.0.1,localhost,.svc,.cluster.local,kubernetes.default.svc,kubernetes.default.svc.cluster.local,10.96.0.1",
+    "proxy-ca-secret-name": "cyclops-iron-proxy-client-ca",
+    "proxy-ca-cert-path": "/etc/iron-proxy/client-ca/ca.crt",
+    "slack-channel": "#eng-cyclops-alerts",
+    "gh-repo": "tempoxyz/tempo-apps",
+    "pr-number": "1300",
+    "sha": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+    "max-hours": "",
+    "max-iterations": "",
+    "models": "",
+    "audit-note-b64": "",
+    "dry-run": "false",
+    "private": "false",
+    "finding-feedback-enabled": "0"
+  },
+  "workflow_name": "cyclops-scan-pr-review-sbwnb",
+  "workflow_url": "https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-sbwnb",
+  "workflow_uid": "35bef2ba-28b7-4f13-a8db-0f45521a05a8"
+}

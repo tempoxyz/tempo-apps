@@ -1,0 +1,8 @@
+before reload: Showing relative time - click to change
+before pageerrors 0
+after reload: Showing UTC time - click to change
+page.waitForFunction: Timeout 30000ms exceeded.
+    at /private/tmp/factory-browser/routes.cjs:32:14 {
+  log: [],
+  name: 'TimeoutError'
+}

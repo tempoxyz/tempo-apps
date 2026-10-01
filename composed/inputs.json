@@ -1,0 +1,15 @@
+{
+  "heads": {
+    "9609e28": "9609e28fb458c32510053458e4609a090fa9c729",
+    "e742c42": "e742c42d5ac002330bed538098b32b9edd960a01",
+    "d650da17": "d650da17d46b17c1f410ee08631d60010a18062a",
+    "a6a8f55": "a6a8f55b6ff83110f715c9bab56fd2a487872799",
+    "feb1fe8d": "feb1fe8dff95e2bd5690b1d6383eb43099169e7c"
+  },
+  "patchSha256": {
+    "timestamp.patch.txt": "d9e203711c3e59e1ec338678c119865fe15b97a62f6f09537234d2aeacb50cbb",
+    "old-staged.patch.txt": "db49146e61a75d8a27045ca4ff827f522035c1df091f73e454c6d5f0324a87ee",
+    "url-recent.patch.txt": "6e323f284db1601b8b17fc9d3c5d4a30bc79c76693ef02a416a0487ff962a61c",
+    "clipboard.patch.txt": "3930ed5dc419294bffef760731f3a5060c6b6e096d0c3553cef92b82004f7093"
+  }
+}

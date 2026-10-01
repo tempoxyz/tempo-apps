@@ -1,0 +1,389 @@
+diff --git a/apps/explorer/src/comps/CopyFeedback.tsx b/apps/explorer/src/comps/CopyFeedback.tsx
+new file mode 100644
+index 00000000..b9124f06
+--- /dev/null
++++ b/apps/explorer/src/comps/CopyFeedback.tsx
+@@ -0,0 +1,35 @@
++import * as React from 'react'
++import { copyFeedbackEvent } from '#lib/clipboard'
++
++/** One accessible failure message for both shared and custom copy controls. */
++export function CopyFeedback(): React.JSX.Element | null {
++	const [failure, setFailure] = React.useState<number | null>(null)
++	const sequence = React.useRef(0)
++	React.useEffect(() => {
++		const onFeedback = (event: Event) => {
++			if (event instanceof CustomEvent && typeof event.detail === 'boolean')
++				setFailure(event.detail ? ++sequence.current : null)
++		}
++		window.addEventListener(copyFeedbackEvent, onFeedback)
++		return () => window.removeEventListener(copyFeedbackEvent, onFeedback)
++	}, [])
++
++	if (failure === null) return null
++	return (
++		<div
++			key={failure}
++			className="fixed bottom-4 left-1/2 z-50 flex w-max max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-4 rounded-lg border border-negative bg-surface px-4 py-3 text-sm shadow-lg"
++			role="alert"
++		>
++			<p>Could not copy. Try copying again.</p>
++			<button
++				type="button"
++				className="shrink-0 underline underline-offset-2"
++				onClick={() => setFailure(null)}
++				aria-label="Dismiss copy error"
++			>
++				Dismiss
++			</button>
++		</div>
++	)
++}
+diff --git a/apps/explorer/src/lib/clipboard.ts b/apps/explorer/src/lib/clipboard.ts
+new file mode 100644
+index 00000000..0eeebeae
+--- /dev/null
++++ b/apps/explorer/src/lib/clipboard.ts
+@@ -0,0 +1,61 @@
++// Shared by every copy control; the event contains no clipboard contents.
++export const copyFeedbackEvent = 'explorer:copy-feedback'
++
++let latestFeedback = 0
++
++function createCopyFeedback() {
++	let current = 0
++	return (failed: boolean) => {
++		if (!failed) current = ++latestFeedback
++		// A slow failure from another control must not replace a newer copy result.
++		if (current === latestFeedback)
++			window.dispatchEvent(
++				new CustomEvent(copyFeedbackEvent, { detail: failed }),
++			)
++	}
++}
++
++export function createCopyController(
++	writeText = (value: string) => navigator.clipboard.writeText(value),
++	feedback = createCopyFeedback(),
++) {
++	let notifying = false
++	let attempt = 0
++	let timer: ReturnType<typeof setTimeout> | undefined
++	const listeners = new Set<() => void>()
++	const update = (value: boolean) => {
++		notifying = value
++		for (const listener of listeners) listener()
++	}
++	const cancel = () => {
++		attempt++
++		clearTimeout(timer)
++		timer = undefined
++		update(false)
++	}
++
++	return {
++		getSnapshot: () => notifying,
++		subscribe(listener: () => void) {
++			listeners.add(listener)
++			return () => {
++				listeners.delete(listener)
++			}
++		},
++		cancel,
++		async copy(value: string, timeout = 800): Promise<void> {
++			cancel()
++			const current = attempt
++			feedback(false)
++			try {
++				await writeText(value)
++			} catch {
++				if (current === attempt) feedback(true)
++				return
++			}
++			if (current !== attempt) return
++			update(true)
++			timer = setTimeout(() => update(false), timeout)
++		},
++	}
++}
+diff --git a/apps/explorer/src/lib/hooks.ts b/apps/explorer/src/lib/hooks.ts
+index 71d67332..657f6ea2 100644
+--- a/apps/explorer/src/lib/hooks.ts
++++ b/apps/explorer/src/lib/hooks.ts
+@@ -1,5 +1,6 @@
+ import { useRouter } from '@tanstack/react-router'
+ import * as React from 'react'
++import { createCopyController } from '#lib/clipboard'
+ 
+ export function useIsMounted() {
+ 	const [isMounted, setIsMounted] = React.useState(false)
+@@ -13,25 +14,17 @@ export function useIsMounted() {
+ 
+ export function useCopy(props: useCopy.Props = { timeout: 800 }) {
+ 	const { timeout } = props
+-
+-	const [notifying, setNotifying] = React.useState(false)
+-	const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+-
++	const [controller] = React.useState(() => createCopyController())
++	const notifying = React.useSyncExternalStore(
++		controller.subscribe,
++		controller.getSnapshot,
++		() => false,
++	)
++	React.useEffect(() => controller.cancel, [controller])
+ 	const copy: useCopy.Result['copy'] = React.useCallback(
+-		async (value: string) => {
+-			if (timer.current) clearTimeout(timer.current)
+-			try {
+-				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
+-				await navigator.clipboard.writeText(value)
+-				setNotifying(true)
+-				timer.current = setTimeout(() => setNotifying(false), timeout)
+-			} catch (error) {
+-				console.error('Failed to copy text: ', error)
+-			}
+-		},
+-		[timeout],
++		(value) => controller.copy(value, timeout),
++		[controller, timeout],
+ 	)
+-
+ 	return { copy, notifying }
+ }
+ 
+diff --git a/apps/explorer/src/routes/__root.tsx b/apps/explorer/src/routes/__root.tsx
+index e40bd665..cf351ee6 100644
+--- a/apps/explorer/src/routes/__root.tsx
++++ b/apps/explorer/src/routes/__root.tsx
+@@ -13,6 +13,7 @@ import * as React from 'react'
+ import { deserialize, type State, WagmiProvider } from 'wagmi'
+ import { AddressHighlightProvider } from '#comps/AddressHighlight'
+ import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
++import { CopyFeedback } from '#comps/CopyFeedback'
+ import { ErrorBoundary } from '#comps/ErrorBoundary'
+ import { IntroSeenProvider } from '#comps/Intro'
+ import { TokenListMembershipProvider } from '#comps/TokenListMembership'
+@@ -478,6 +479,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
+ 						)}
+ 					</QueryClientProvider>
+ 				</WagmiProvider>
++				<CopyFeedback />
+ 				<Scripts />
+ 			</body>
+ 		</html>
+diff --git a/apps/explorer/test/clipboard.node.test.ts b/apps/explorer/test/clipboard.node.test.ts
+new file mode 100644
+index 00000000..54091683
+--- /dev/null
++++ b/apps/explorer/test/clipboard.node.test.ts
+@@ -0,0 +1,209 @@
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import { copyFeedbackEvent, createCopyController } from '../src/lib/clipboard'
++
++function deferred() {
++	let resolve = () => {}
++	let reject = (_error: Error) => {}
++	const promise = new Promise<void>((resolve_, reject_) => {
++		resolve = resolve_
++		reject = reject_
++	})
++	return { promise, resolve, reject }
++}
++
++function setup(write = async (_value: string) => {}) {
++	const errors: boolean[] = []
++	const controller = createCopyController(write, (failed) =>
++		errors.push(failed),
++	)
++	return { controller, errors }
++}
++
++afterEach(() => {
++	vi.useRealTimers()
++	vi.unstubAllGlobals()
++})
++
++describe('clipboard feedback', () => {
++	it.each([
++		'',
++		'0x1234',
++		'Tempo café\nsecond line',
++	])('preserves text %j and expires success', async (value) => {
++		vi.useFakeTimers()
++		let copied = 'not copied'
++		const { controller, errors } = setup(async (text) => {
++			copied = text
++		})
++		await controller.copy(value, 2000)
++		expect(copied).toBe(value)
++		expect(controller.getSnapshot()).toBe(true)
++		expect(errors).toEqual([false])
++		vi.advanceTimersByTime(1999)
++		expect(controller.getSnapshot()).toBe(true)
++		vi.advanceTimersByTime(1)
++		expect(controller.getSnapshot()).toBe(false)
++	})
++
++	it.each([
++		'reject',
++		'throw',
++	])('reports %s without rejecting and recovers on retry', async (mode) => {
++		let fail = true
++		const { controller, errors } = setup(() => {
++			if (!fail) return Promise.resolve()
++			if (mode === 'throw') throw new Error('secret contents must not escape')
++			return Promise.reject(new Error('denied'))
++		})
++		await controller.copy('address')
++		expect(errors).toEqual([false, true])
++		expect(controller.getSnapshot()).toBe(false)
++		fail = false
++		await controller.copy('address')
++		expect(errors).toEqual([false, true, false])
++		expect(controller.getSnapshot()).toBe(true)
++		controller.cancel()
++	})
++
++	it('reports missing Clipboard API and navigator getter failures', async () => {
++		const errors: boolean[] = []
++		vi.stubGlobal('navigator', {})
++		const controller = createCopyController(undefined, (failed) =>
++			errors.push(failed),
++		)
++		await controller.copy('address')
++		expect(errors).toEqual([false, true])
++		vi.stubGlobal('navigator', {
++			get clipboard() {
++				throw new Error('blocked')
++			},
++		})
++		await controller.copy('address')
++		expect(errors).toEqual([false, true, false, true])
++	})
++
++	it('clears previous success immediately when the next copy fails', async () => {
++		let fail = false
++		const { controller, errors } = setup(async () => {
++			if (fail) throw new Error('denied')
++		})
++		await controller.copy('one')
++		expect(controller.getSnapshot()).toBe(true)
++		fail = true
++		const pending = controller.copy('two')
++		expect(controller.getSnapshot()).toBe(false)
++		await pending
++		expect(errors).toEqual([false, false, true])
++	})
++
++	it.each([
++		'resolve',
++		'reject',
++	] as const)('ignores stale %s after newer success', async (outcome) => {
++		const first = deferred()
++		let calls = 0
++		const { controller, errors } = setup(() =>
++			++calls === 1 ? first.promise : Promise.resolve(),
++		)
++		const pending = controller.copy('old')
++		await controller.copy('new')
++		first[outcome](new Error('old rejection'))
++		await pending
++		expect(controller.getSnapshot()).toBe(true)
++		expect(errors).toEqual([false, false])
++		controller.cancel()
++	})
++
++	it('ignores stale success after newer failure', async () => {
++		const first = deferred()
++		let calls = 0
++		const { controller, errors } = setup(() =>
++			++calls === 1 ? first.promise : Promise.reject(new Error('denied')),
++		)
++		const pending = controller.copy('old')
++		await controller.copy('new')
++		first.resolve()
++		await pending
++		expect(controller.getSnapshot()).toBe(false)
++		expect(errors).toEqual([false, false, true])
++	})
++
++	it('restarts the success timer for the newest copy', async () => {
++		vi.useFakeTimers()
++		const { controller } = setup()
++		await controller.copy('one', 800)
++		vi.advanceTimersByTime(700)
++		await controller.copy('two', 800)
++		vi.advanceTimersByTime(100)
++		expect(controller.getSnapshot()).toBe(true)
++		vi.advanceTimersByTime(700)
++		expect(controller.getSnapshot()).toBe(false)
++	})
++
++	it.each([
++		'resolve',
++		'reject',
++	] as const)('cancel ignores pending %s but allows remount/retry', async (outcome) => {
++		const pending = deferred()
++		let calls = 0
++		const { controller, errors } = setup(() =>
++			++calls === 1 ? pending.promise : Promise.resolve(),
++		)
++		const result = controller.copy('old')
++		controller.cancel()
++		pending[outcome](new Error('late'))
++		await result
++		expect(controller.getSnapshot()).toBe(false)
++		expect(errors).toEqual([false])
++		await controller.copy('new')
++		expect(controller.getSnapshot()).toBe(true)
++		controller.cancel()
++	})
++
++	it('cleans success timer and unsubscribes observers', async () => {
++		vi.useFakeTimers()
++		const { controller } = setup()
++		const states: boolean[] = []
++		const unsubscribe = controller.subscribe(() =>
++			states.push(controller.getSnapshot()),
++		)
++		await controller.copy('one')
++		unsubscribe()
++		controller.cancel()
++		vi.runAllTimers()
++		expect(states).toEqual([false, true])
++		expect(controller.getSnapshot()).toBe(false)
++		expect(vi.getTimerCount()).toBe(0)
++	})
++
++	it('keeps separate control success indicators independent', async () => {
++		const first = setup()
++		const second = setup(async () => {
++			throw new Error('denied')
++		})
++		await first.controller.copy('one')
++		await second.controller.copy('two')
++		expect(first.controller.getSnapshot()).toBe(true)
++		expect(second.controller.getSnapshot()).toBe(false)
++		expect(second.errors).toEqual([false, true])
++		first.controller.cancel()
++	})
++	it('ignores an old failure from another control after a newer copy succeeds', async () => {
++		const target = new EventTarget()
++		vi.stubGlobal('window', target)
++		const feedback: unknown[] = []
++		target.addEventListener(copyFeedbackEvent, (event) => {
++			if (event instanceof CustomEvent) feedback.push(event.detail)
++		})
++		const old = deferred()
++		const first = createCopyController(() => old.promise)
++		const second = createCopyController(async () => {})
++		const pending = first.copy('private first value')
++		await second.copy('private second value')
++		old.reject(new Error('late denial'))
++		await pending
++		expect(feedback).toEqual([false, false])
++		expect(second.getSnapshot()).toBe(true)
++		second.cancel()
++	})
++})

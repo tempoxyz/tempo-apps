@@ -1,0 +1,13 @@
+
+> explorer@ check:env /Users/daniel/tempo/tempo-apps-factory/apps/explorer
+> vitest run --config vitest.node.config.ts
+
+
+ RUN  v4.1.0 /Users/daniel/tempo/tempo-apps-factory/apps/explorer
+
+
+ Test Files  38 passed | 1 skipped (39)
+      Tests  318 passed | 1 skipped (319)
+   Start at  01:33:18
+   Duration  1.97s (transform 1.70s, setup 0ms, import 17.02s, tests 602ms, environment 3ms)
+

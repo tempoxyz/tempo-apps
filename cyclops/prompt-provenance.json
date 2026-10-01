@@ -1,0 +1,691 @@
+{
+  "schema_version": 2,
+  "availability": "available",
+  "unavailable_reason": null,
+  "artifacts": [
+    {
+      "invocation": "audit-w1-i1",
+      "content_sha256": "7446bedfb0c5106f94d382dfe48f47e5ea3db0fc667f1955825692e483ff2a80",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "General Security Lens",
+      "requested_route": {
+        "backend": "codex",
+        "provider": "openai",
+        "model": "gpt-6-sol",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "f2ce96c0f71609ef78a8b6fd702dd7b53c08a406b661eb256af048d923edad1b",
+        "renderedSha256": "69a025c9b8a061150f804c2329dcfb41908e9e07af44a07dbe80e4d405bf224e",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "56d84f6700583ee42470a423572c89838b7792e8d7e68cc42fa1ff37dec9d2cf",
+            "sanitized_sha256": "56d84f6700583ee42470a423572c89838b7792e8d7e68cc42fa1ff37dec9d2cf"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "0a9cd499a48782391c219f1467f88117ccf99a3a4312069230c108ef0894c82b",
+            "sanitized_sha256": "c003e66d994a6faccbe150a545572fb3e6c82cb4e44175cc70dd80b0b5bb6e8e"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "c1982fbad64a592ba147e8d411b5ab8d5fa870712845c6dbb3b326ffe7f598fa",
+        "execution_rendered_sha256": "69a025c9b8a061150f804c2329dcfb41908e9e07af44a07dbe80e4d405bf224e",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "48bfd1d8fe139b1c7fced184727b3ceb767105bc490d2447f652e6d8e526b4ad",
+        "sanitized_rendered_sha256": "4da950751674873b353bbdcd2adc3d03cbdfc97c2479eff1a86c1595a9b39ab5",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5603
+    },
+    {
+      "invocation": "audit-w1-i2",
+      "content_sha256": "0ee2de624d33e5198d6a41021942b1e484af7a73ce92d482544384edf8d7b456",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Cyclops Code Review — Agent Instructions",
+      "requested_route": {
+        "backend": "codex",
+        "provider": "openai",
+        "model": "gpt-6-sol",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "836f53cb1bdcb7e9033b68e6e2bb836523f58d81db83db89af2c52f93fb9a5f8",
+        "renderedSha256": "379d3abd84ee3818551395fe97471e6ea5806ef0abc5fd8b225599e3ca9af3e3",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "524e4595250d548d0ceea4bacc96c07dc7361f6e8609b69de358e2abe231d38f",
+            "sanitized_sha256": "524e4595250d548d0ceea4bacc96c07dc7361f6e8609b69de358e2abe231d38f"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "8cff6d2f0a311acaad62a3bd28e5c5bf64863dd37d1fa781408d7d9f9b18fbab",
+            "sanitized_sha256": "a5d0e77ed6040a4c001e5339af689e9f489eb99112f9048fd3d60f3d7d8bc727"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "d2b86d2a69321973c576bc54f81402ef4d1be38a3992d657d2201161d33567e7",
+        "execution_rendered_sha256": "379d3abd84ee3818551395fe97471e6ea5806ef0abc5fd8b225599e3ca9af3e3",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "1d29ff44db433c9699b152ceb608ff25e30a33f1015f80f9795b062ba86c9824",
+        "sanitized_rendered_sha256": "da8cf8129a63d61a0d5d94586269ecdad1ad940378211e645ec1f07b7127e82d",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 9749
+    },
+    {
+      "invocation": "audit-w1-i3",
+      "content_sha256": "644ee4f13083668123e053803e65363dc2c152f8e4394a8831f79ab866e7fccf",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Invariant Lens",
+      "requested_route": {
+        "backend": "codex",
+        "provider": "openai",
+        "model": "gpt-6-sol",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "eb2d0f4c021d2021c019bb4eaa91a7f5f264c20a4941e5c2115a97c5881b1441",
+        "renderedSha256": "7350bdacf659cc28db7bfa03eac132736f1fac5018f8fa5ece093aeac9edd2a4",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "22c34b4904080556c00aedcdc71f116fcaca03fca56074ed345b2972890da10d",
+            "sanitized_sha256": "22c34b4904080556c00aedcdc71f116fcaca03fca56074ed345b2972890da10d"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "996c760894748ffe1272722b27cba0afc43ffff3f9dd84cac4ff3006fe1120bf",
+            "sanitized_sha256": "84af0522e92c8a019b9c22ed6645bbb02a7a5efec0b559a8ad95058673942657"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "9b24a593e5e18e3d6f9ab882638ea185fab5daaa99aeaba1b23140e83942db51",
+        "execution_rendered_sha256": "7350bdacf659cc28db7bfa03eac132736f1fac5018f8fa5ece093aeac9edd2a4",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "b09894261e96b813230516fd2dbc2ae336089d868daa24113a7bbac1251d0351",
+        "sanitized_rendered_sha256": "80c66850eec1493cb475d713fc5d6c1adc22ca298ca6869c904ef4b28e814d17",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5582
+    },
+    {
+      "invocation": "audit-w1-i4",
+      "content_sha256": "ee03f4982de559984e5674bb400394e2da73d6c01e80c40cf81bc5359d950ede",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "codex",
+        "provider": "openai",
+        "model": "gpt-6-sol",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "f668bfac6f68ab099a4676a1d26f60c3b26de480f102d3d359eb2799b5769a12",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "9383fd71c2c40a34a8de4a2d4adf652787875792a2b38eb4560f7d631e1a3b13",
+            "sanitized_sha256": "4e132b7bf87745e2e604d68b974d739b224cd578aa859fd6da62a913ad54abeb"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "29c139abf9a599f01838f5bef9230a122001531e6f1bb909871c850e5bc727c8",
+        "execution_rendered_sha256": "f668bfac6f68ab099a4676a1d26f60c3b26de480f102d3d359eb2799b5769a12",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "2014483996291b3a2afce2992c24c8088b65737d71b2c242bb7d05cc78762348",
+        "sanitized_rendered_sha256": "2da40bdd31687db4c9b5735386b4dad4e90a28f72a38b4e26aa7268a597d8b87",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5605
+    },
+    {
+      "invocation": "audit-w1-i5",
+      "content_sha256": "c0b5515edf489b766e4361008841aff7121b237891bb03506f2e2be10ec977f5",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "General Security Lens",
+      "requested_route": {
+        "backend": "codex",
+        "provider": "openai",
+        "model": "gpt-6-sol",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "f2ce96c0f71609ef78a8b6fd702dd7b53c08a406b661eb256af048d923edad1b",
+        "renderedSha256": "6ebecd14326fcee03e951332aacaae0499715402c485dc43e7a968ed8133b143",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "56d84f6700583ee42470a423572c89838b7792e8d7e68cc42fa1ff37dec9d2cf",
+            "sanitized_sha256": "56d84f6700583ee42470a423572c89838b7792e8d7e68cc42fa1ff37dec9d2cf"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "51d59dc8b87b556c40c1c4a7248172ba720e06e12c2a35a2b77b1c778cff8556",
+            "sanitized_sha256": "293dc9f3df486b9ccb7ce00a1c3f420d3b74e403c0beaca1940dba9af07427d9"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "14d2368162dfdef187a9faed680351ad5b7e99ba79f0c5206a0d3ad522cfa990",
+        "execution_rendered_sha256": "6ebecd14326fcee03e951332aacaae0499715402c485dc43e7a968ed8133b143",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "1c119e0bcae50b53edc0decd894ea2d2d3590ab13be48a09fe7129074c68a6cf",
+        "sanitized_rendered_sha256": "51ca2188574bb8caeb71a2d3f3a8f8daec77e5fafdabde2ca144185eab81ce7e",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5598
+    },
+    {
+      "invocation": "audit-w1-i6",
+      "content_sha256": "fc8974ff8b9c4b2e32728baaa9467491f1417ac50594d96e33a617bc53c1b702",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Cyclops Code Review — Agent Instructions",
+      "requested_route": {
+        "backend": "codex",
+        "provider": "openai",
+        "model": "gpt-6-sol",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "836f53cb1bdcb7e9033b68e6e2bb836523f58d81db83db89af2c52f93fb9a5f8",
+        "renderedSha256": "b97df9e989bfd6652ad9d4a30b3492c05068ff6a3967f059685554411903cd39",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "524e4595250d548d0ceea4bacc96c07dc7361f6e8609b69de358e2abe231d38f",
+            "sanitized_sha256": "524e4595250d548d0ceea4bacc96c07dc7361f6e8609b69de358e2abe231d38f"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "8e401c081abe72a5e8e206d02309a164c0ef66b2d1e3c0e00dd88e41e4d8ee0d",
+            "sanitized_sha256": "a5fc376188b601ea015a30105ae1c2537a067550f4b07b37b349aa32b9cf7f75"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "d9274458fa831c58a02ad5d80a2ad8d00af0282ef74ea8ea49d79717dce046c5",
+        "execution_rendered_sha256": "b97df9e989bfd6652ad9d4a30b3492c05068ff6a3967f059685554411903cd39",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "48963208c2d1798c1e6ce5afbbf5993b3ff0b3d407f9699839cd39e571552d17",
+        "sanitized_rendered_sha256": "dbf1e949382c7614bf650a22df5320d2f5ca9eaa1edf78b09997c827d386e04c",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 9748
+    },
+    {
+      "invocation": "audit-w2-i1",
+      "content_sha256": "9557a6f5401f9cd12ca494e8c372876f10b915e974718b4160d835cc246143b3",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "claude",
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "dd233fc3eaab0f1c8ac812a88e8614139824720f41ad746e99f40305e6d7e241",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "509a2db6672e197f59ce8be65e14e75dacbd41e939a18788c78066168a93de09",
+            "sanitized_sha256": "e982a24e7d80b72da61f3b54c27ec19c2e60f564667607416bb09efe89fc9bcc"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "3ec1fdf8f650cd667178f0bce7988e4460726d53593933b3c8f95bde0c035dd7",
+        "execution_rendered_sha256": "dd233fc3eaab0f1c8ac812a88e8614139824720f41ad746e99f40305e6d7e241",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "cdedb8eb0a1ddc0ff4eacc59aea6ea28123276e36c013d9f63d6b54c997d6636",
+        "sanitized_rendered_sha256": "b7af69560cb12679519632a4f5df82ba34ce2a5fcb8d87890d6815e3e14b091c",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5599
+    },
+    {
+      "invocation": "audit-w2-i2",
+      "content_sha256": "a8718c9751e3f74be64c0f4c811354244fea0c3ed11078e9f5277d6a431611a6",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "claude",
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "03573106c48ceb2d36edb3beadd444a464fee6d304424222c5767724a5a876c2",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "133e2b91389a33ef1f36606804fbe69dd24f6e810bfd544bf28b25d3e15f8283",
+            "sanitized_sha256": "59cb0a818d6096a7e85b7a049c4c838a84c59a3c392a794010f7351e2f1c25c3"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "59edaeb61a943843a7054adc05dba0d6248fee7897b0bd9829ad288ac4ea1771",
+        "execution_rendered_sha256": "03573106c48ceb2d36edb3beadd444a464fee6d304424222c5767724a5a876c2",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "ed7eb0618909ecf07d88d35761d0376f0fcbf82a4b3aa8ca75f3c2341f67f7fc",
+        "sanitized_rendered_sha256": "35a58e3c936998c3c9973cd20ed84eb0949338d8a181a7b802fe285a1bbeb1dd",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5599
+    },
+    {
+      "invocation": "audit-w2-i3",
+      "content_sha256": "4dd1659891f7f66f886f969991741aae5770cdacad09889c37fe7b2977e51d34",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "claude",
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "9b250657466c75a82a7c7f77e98f0f19f2a84bcd6b9d24fdce30c61f41afb22e",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "b76d4a7747c40aa36658f79fdb922584a5c3f14c84b2a4bf34cc09e159555493",
+            "sanitized_sha256": "e09ea55fd6f57830d6ca5ae1d27ee5f42063ab111499721a823a2757156d052c"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "9d573ee678bf3bb348269aec136de7858dcf7514f18f6abcb12ecea7d33c8a38",
+        "execution_rendered_sha256": "9b250657466c75a82a7c7f77e98f0f19f2a84bcd6b9d24fdce30c61f41afb22e",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "7b8e1fd216ad95b7b5037600982476fa1f5f1ee22c32a7a575642aacd35cfe60",
+        "sanitized_rendered_sha256": "e528353ae8d43ffcb5de737828a487b885e6c2b6b6a2805931aebc2698caea36",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5604
+    },
+    {
+      "invocation": "audit-w2-i4",
+      "content_sha256": "36ad8c48448ba8a58bd2b146547332d4c21ae4f329a68385630417980944e0be",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "claude",
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "f2b3ba6a8884c91773742d0d737681b38da3c575bd1d0a56470e50b3e4347813",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "1837bae838d44672ed79a8f73523e1852700f3771a6968590af27b10ea6c03f6",
+            "sanitized_sha256": "f7ee7c3afcba6b968c9a43202eaeb660a6476413a5bcbff39788f4e528d2d9a4"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "674d07c6f6d0f811ed394d2461265bf86539e8852fabe1d810b5d91faa5f69ac",
+        "execution_rendered_sha256": "f2b3ba6a8884c91773742d0d737681b38da3c575bd1d0a56470e50b3e4347813",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "47d812ef0bf783ff738c0a297fa0e58b4063dfd2d86f742b410c98baa6421ab9",
+        "sanitized_rendered_sha256": "5bcbf1425e428b1da3af6b4a7cac9dd7334dc08cdebb8a26e78f9b2460e92e0c",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5604
+    },
+    {
+      "invocation": "audit-w2-i5",
+      "content_sha256": "52e0df9903b0b2ee08d620daf9e0883c183302af2cb3a1702f5a7489304714a3",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "claude",
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "73a08248884cf34a91aaac9d2bda0525b496dbfecc5e90ccc18ba484400ac5f2",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "2077368e25fd767a4eabf4c5f82146728d4d586f3f934c2666ea31c3433020ad",
+            "sanitized_sha256": "89f47f07c6c1c15fb97531217999ecbd11c5400c1a9b1bd289814a6679b11c9f"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "c261432d28b328c5bf64e3cfc50bab7a3efeadb7ade923e14d3b01aef90a0494",
+        "execution_rendered_sha256": "73a08248884cf34a91aaac9d2bda0525b496dbfecc5e90ccc18ba484400ac5f2",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "8de9f3c9ed58a1cf1fe9fa53979934e69fd59c73166f7bf8a129467b7ccf4ceb",
+        "sanitized_rendered_sha256": "87eef7ff823f701beba1873e4f45b19813c87c2cc1c44e06590caec49743a194",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5599
+    },
+    {
+      "invocation": "audit-w2-i6",
+      "content_sha256": "cf127dbff176acfa0beb9c49684239fb92edf8d06479c7229aaf89bcef992560",
+      "contract": "cyclops.prompt-provenance/v2",
+      "task": "audit",
+      "task_id": null,
+      "lens": "Ripple and Integration Lens",
+      "requested_route": {
+        "backend": "claude",
+        "provider": "anthropic",
+        "model": "claude-opus-5-5",
+        "thinking": "low"
+      },
+      "prompt_plan": {
+        "schemaVersion": "cyclops.prompt-plan/v1",
+        "globalPromptVersion": "pr-audit-contract/v8",
+        "stablePrefixSha256": "45395c530946ac2ac6f37b4059db449358373b8aa03a13be5819ba2324dee320",
+        "renderedSha256": "9c7f0fb451c1da7b752401f751deeee899c9641662d3de5163eb2babac983c83",
+        "layers": [
+          {
+            "name": "global-audit-contract",
+            "reusable": true,
+            "execution_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724",
+            "sanitized_sha256": "fdadd2fdc6f1bbc695f052f12595cf2a57fc208dc372df961da2cfef6030a724"
+          },
+          {
+            "name": "repository-model",
+            "reusable": true,
+            "execution_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47",
+            "sanitized_sha256": "a63b0160659469dffefbf306403e33dc60e713f9a812be84411cc34781f34d47"
+          },
+          {
+            "name": "lens-guidance",
+            "reusable": true,
+            "execution_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60",
+            "sanitized_sha256": "bc01940b0551e9fda86838749b5c43162ef8c3d2ed7de576602d8fd31960cb60"
+          },
+          {
+            "name": "runtime-context",
+            "reusable": false,
+            "execution_sha256": "cc4fc3c6961ba7fd8ee105072a7fe2ec4b487541f5102a0409797efca5f7a8e7",
+            "sanitized_sha256": "eda686aee042a29bb380e000603cb866b988c48d857459d241848b030456c359"
+          }
+        ]
+      },
+      "integrity": {
+        "execution_sha256": "7cd11897fa3d5fa59747c048e5c682ec63e83b3c1a24be6fcd5af084d79614f1",
+        "execution_rendered_sha256": "9c7f0fb451c1da7b752401f751deeee899c9641662d3de5163eb2babac983c83",
+        "execution_system_sha256": "c5fcf577d0ba0be1a5c8640eb21a2536f73c75e38dd0482cdd93b31863a1c715",
+        "sanitized_sha256": "daacc432465c50177adf1697cc78f21e69da84568cb16d9aee869ef4100cee24",
+        "sanitized_rendered_sha256": "3f5920ae8f04720ce40eaee03d2da1ee104f306282fa6be1fd89a1815cd24755",
+        "redactions": 2,
+        "complete": true,
+        "truncation_reason": null
+      },
+      "compressed_bytes": 5600
+    }
+  ]
+}

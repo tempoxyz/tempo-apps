@@ -1,0 +1,10 @@
+pnpm gen:types	0	.factory/time-format/candidate2-check-1.log
+pnpm check	0	.factory/time-format/candidate2-check-2.log
+pnpm check:types	0	.factory/time-format/candidate2-check-3.log
+pnpm --filter explorer test --run	0	.factory/time-format/candidate2-check-4.log
+pnpm --filter explorer check:env	0	.factory/time-format/candidate2-check-5.log
+pnpm --filter explorer check:types:test	0	.factory/time-format/candidate2-check-6.log
+pnpm exec biome check .	0	.factory/time-format/candidate2-check-7.log
+pnpm lint:tempo	0	.factory/time-format/candidate2-check-8.log
+pnpm --filter explorer build	0	.factory/time-format/candidate2-check-9.log
+pnpm precommit	0	.factory/time-format/candidate2-check-10.log

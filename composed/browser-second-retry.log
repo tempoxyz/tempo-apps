@@ -1,0 +1,10 @@
+locator.click: Timeout 30000ms exceeded.
+Call log:
+[2m  - waiting for locator('button[title^="Showing local"]').first()[22m
+
+    at [stdin]:4:325 {
+  log: [
+    `  - waiting for locator('button[title^="Showing local"]').first()`
+  ],
+  name: 'TimeoutError'
+}

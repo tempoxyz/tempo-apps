@@ -1,0 +1,4958 @@
+{
+  "scan_id": "scan_mup3nxlu_3hs8hb",
+  "scopes": [
+    {
+      "kind": "repository",
+      "repository": "tempoxyz/tempo-apps",
+      "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+      "scope_id": "coverage-scope-v1-b1543f9c9795cbd49dcbd6ca7198beee"
+    }
+  ],
+  "coverage": {
+    "schema_version": 1,
+    "exposure": {
+      "availability": "available",
+      "tracked_files": 436,
+      "exact_read_files": 6,
+      "search_seen_files": 22,
+      "total_lines": 94409,
+      "read_lines": 844,
+      "exact_read_rate": 0.00893982565221536,
+      "search_only_intervals": 158
+    },
+    "reachable_slice": {
+      "availability": "unavailable",
+      "units": 0,
+      "states": {}
+    },
+    "semantic": {
+      "availability": "unavailable",
+      "units": 0,
+      "states": {}
+    },
+    "stale_records": 0,
+    "records": 631
+  },
+  "provenance": {
+    "schema_version": 1,
+    "lineage": {
+      "availability": "unavailable",
+      "lanes": [],
+      "claimable_tasks": null
+    },
+    "billing": {
+      "completeness": "unavailable",
+      "calls": null,
+      "tokens": null,
+      "cost_usd": null
+    }
+  },
+  "capabilities_requested": [],
+  "reallocation_metrics": {
+    "held_attempts": 0,
+    "rescue_assignments": 0,
+    "distinct_capability_requests": 0
+  },
+  "outcome": {
+    "schema_version": 1,
+    "scan_id": "scan_mup3nxlu_3hs8hb",
+    "status": "completed",
+    "finding_ids": [],
+    "coverage": {
+      "exposure": "available",
+      "reachable_slice": "unavailable",
+      "semantic": "unavailable"
+    },
+    "report_id": "scan_mup3nxlu_3hs8hb"
+  },
+  "records": [],
+  "investigations": [],
+  "tool_coverage": [
+    {
+      "backend": "pi",
+      "transport": "instrumented_runner_tools",
+      "trajectories": 0,
+      "accepted": 0,
+      "losses": 0,
+      "accepted_reasons": {},
+      "accepted_samples": [],
+      "loss_reasons": {},
+      "loss_samples": [],
+      "lifecycle": {
+        "started": 0,
+        "completed": 0,
+        "duplicate_starts": 0,
+        "duplicate_completions": 0,
+        "unmatched_completions": 0,
+        "failed_completions": 0,
+        "pending": 0
+      },
+      "coverage_schema_versions": [],
+      "harness_protocol_versions": [],
+      "status": "not_observed"
+    },
+    {
+      "backend": "amp",
+      "transport": "structured_harness_events",
+      "trajectories": 0,
+      "accepted": 0,
+      "losses": 0,
+      "accepted_reasons": {},
+      "accepted_samples": [],
+      "loss_reasons": {},
+      "loss_samples": [],
+      "lifecycle": {
+        "started": 0,
+        "completed": 0,
+        "duplicate_starts": 0,
+        "duplicate_completions": 0,
+        "unmatched_completions": 0,
+        "failed_completions": 0,
+        "pending": 0
+      },
+      "coverage_schema_versions": [],
+      "harness_protocol_versions": [],
+      "status": "not_observed"
+    },
+    {
+      "backend": "codex",
+      "transport": "structured_harness_events",
+      "trajectories": 5,
+      "accepted": 193,
+      "losses": 12,
+      "accepted_reasons": {
+        "exact_read": 31,
+        "search_seen": 162
+      },
+      "accepted_samples": [
+        {
+          "reason": "exact_read",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i1",
+          "stage": "audit",
+          "correlation_id": "6250a5521c87ad89d1106408",
+          "tool": "command_execution",
+          "coverage_record_id": "coverage-tool-unit-v2-f8cf4026ab2a81d31535fc3bbf654cd7",
+          "path": "apps/explorer/src/comps/TimeFormat.tsx",
+          "start_line": 1,
+          "end_line": 99
+        },
+        {
+          "reason": "exact_read",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i1",
+          "stage": "audit",
+          "correlation_id": "603f8b874db6cb52904c1b1e",
+          "tool": "command_execution",
+          "coverage_record_id": "coverage-tool-unit-v2-087308aab78bbe73a0e0913ee5e9d9b8",
+          "path": "factory.yaml",
+          "start_line": 1,
+          "end_line": 150
+        },
+        {
+          "reason": "exact_read",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i1",
+          "stage": "audit",
+          "correlation_id": "6baeede577852003bed15b8d",
+          "tool": "command_execution",
+          "coverage_record_id": "coverage-tool-unit-v2-fc5a5a865c408deea72afcdaa831fcef",
+          "path": "apps/explorer/src/lib/time-format.ts",
+          "start_line": 1,
+          "end_line": 120
+        },
+        {
+          "reason": "search_seen",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i1",
+          "stage": "audit",
+          "correlation_id": "89fe23bc74d2defa321d86be",
+          "tool": "command_execution",
+          "coverage_record_id": "coverage-tool-unit-v2-16dc74faa5a7a15a7f3b3719694e04dc",
+          "path": "apps/explorer/src/routes/_layout/tokens.tsx",
+          "start_line": 11,
+          "end_line": 12
+        },
+        {
+          "reason": "search_seen",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i1",
+          "stage": "audit",
+          "correlation_id": "0d35746a80afe8f425893f23",
+          "tool": "command_execution",
+          "coverage_record_id": "coverage-tool-unit-v2-36637ff256c13830e1028c0539b29af2",
+          "path": "apps/explorer/src/routes/_layout/tokens.tsx",
+          "start_line": 59,
+          "end_line": 59
+        },
+        {
+          "reason": "search_seen",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i1",
+          "stage": "audit",
+          "correlation_id": "bc0fc9a7f4d6eaec01395e70",
+          "tool": "command_execution",
+          "coverage_record_id": "coverage-tool-unit-v2-2a54cceb8285a319ed9e7122c6b0f276",
+          "path": "apps/explorer/src/routes/_layout/tokens.tsx",
+          "start_line": 138,
+          "end_line": 138
+        }
+      ],
+      "loss_reasons": {
+        "unsupported_source_intent": 12
+      },
+      "loss_samples": [
+        {
+          "reason": "unsupported_source_intent",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i2",
+          "stage": "audit",
+          "correlation_id": "9462965f2002ffb6e5ebf84d",
+          "tool": "command_execution",
+          "input": "/usr/bin/bash -lc 'B=/var/lib/cyclops/findings/pr-1300-20261001t053450-290efea93387/invocation-bundles/audit-w1-i2/inputs; sha256sum \"$B/diff.patch\"; sed -n '\"'1,260p' \\\"\"'$B/diff.patch\"'"
+        },
+        {
+          "reason": "unsupported_source_intent",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i2",
+          "stage": "audit",
+          "correlation_id": "919299b8b8860441036a08b8",
+          "tool": "command_execution",
+          "input": "/usr/bin/bash -lc \"B=/var/lib/cyclops/findings/pr-1300-20261001t053450-290efea93387/invocation-bundles/audit-w1-i2/inputs; sed -n '261,550p' \\\"\"'$B/diff.patch\"'"
+        },
+        {
+          "reason": "unsupported_source_intent",
+          "backend": "codex",
+          "trajectory_id": "audit-w1-i2",
+          "stage": "audit",
+          "correlation_id": "3f21b4ea2fbe67cd553dbcfa",
+          "tool": "command_execution",
+          "input": "/usr/bin/bash -lc \"B=/var/lib/cyclops/findings/pr-1300-20261001t053450-290efea93387/invocation-bundles/audit-w1-i2/inputs; sed -n '550,850p' \\\"\"'$B/diff.patch\"; cat AGENTS.md 2>/dev/null; cat /home/cyclops/.codex/skills/evil-ralph-master/SKILL.md | head -75; cat /home/cyclops/.codex/skills/differential-review/SKILL.md | head -75'"
+        }
+      ],
+      "lifecycle": {
+        "started": 28,
+        "completed": 28,
+        "duplicate_starts": 0,
+        "duplicate_completions": 0,
+        "unmatched_completions": 0,
+        "failed_completions": 1,
+        "pending": 0
+      },
+      "coverage_schema_versions": [
+        3
+      ],
+      "harness_protocol_versions": [
+        5
+      ],
+      "status": "degraded"
+    },
+    {
+      "backend": "claude",
+      "transport": "structured_harness_events",
+      "trajectories": 7,
+      "accepted": 10,
+      "losses": 3,
+      "accepted_reasons": {
+        "exact_read": 6,
+        "search_seen": 4
+      },
+      "accepted_samples": [
+        {
+          "reason": "exact_read",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i1",
+          "stage": "audit",
+          "correlation_id": "360260852d160d217c7851f8",
+          "tool": "Read",
+          "coverage_record_id": "coverage-tool-unit-v2-e86655ae2a3a27bf5a1f83c8710f1af2",
+          "path": "/workspace/repos/pr-1300-20261001t053450-290efea93387/factory.yaml",
+          "start_line": 1,
+          "end_line": 143
+        },
+        {
+          "reason": "exact_read",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i2",
+          "stage": "audit",
+          "correlation_id": "c1a515cce2a72a5b0164ac29",
+          "tool": "Bash",
+          "coverage_record_id": "coverage-tool-unit-v2-1ef1a95580b220b11cd1ad189ca43c72",
+          "path": "/workspace/repos/pr-1300-20261001t053450-290efea93387/factory.yaml",
+          "start_line": 1,
+          "end_line": 60
+        },
+        {
+          "reason": "exact_read",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i3",
+          "stage": "audit",
+          "correlation_id": "14c8007b857fe7031a1c1768",
+          "tool": "Read",
+          "coverage_record_id": "coverage-tool-unit-v2-96faa502345abe9031c910b6398b947d",
+          "path": "/workspace/repos/pr-1300-20261001t053450-290efea93387/apps/explorer/src/lib/time-format.ts",
+          "start_line": 1,
+          "end_line": 112
+        },
+        {
+          "reason": "search_seen",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i4",
+          "stage": "audit",
+          "correlation_id": "ae60291e4ca7d9cf8e51d2fd",
+          "tool": "Bash",
+          "coverage_record_id": "coverage-tool-unit-v2-66b6c7709a48e0fc509bd73c94d27ff0",
+          "path": "/workspace/repos/pr-1300-20261001t053450-290efea93387/.github",
+          "start_line": 1,
+          "end_line": 1
+        },
+        {
+          "reason": "search_seen",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i5",
+          "stage": "audit",
+          "correlation_id": "cfe02391e539a7028cda313d",
+          "tool": "Bash",
+          "coverage_record_id": "coverage-tool-unit-v2-be4e7369239107baab1c3258b5f5c701",
+          "path": "/workspace/repos/pr-1300-20261001t053450-290efea93387/apps/explorer/src/lib/time-format.ts",
+          "start_line": 15,
+          "end_line": 15
+        },
+        {
+          "reason": "search_seen",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i5",
+          "stage": "audit",
+          "correlation_id": "c734481ad0003f888c100c64",
+          "tool": "Bash",
+          "coverage_record_id": "coverage-tool-unit-v2-fbae04712ca23bdd475061180f9afa31",
+          "path": "/workspace/repos/pr-1300-20261001t053450-290efea93387/apps/explorer/src/lib/time-format.ts",
+          "start_line": 93,
+          "end_line": 93
+        }
+      ],
+      "loss_reasons": {
+        "unsupported_source_intent": 3
+      },
+      "loss_samples": [
+        {
+          "reason": "unsupported_source_intent",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i4",
+          "stage": "audit",
+          "correlation_id": "5eed061725b1d7e32a30406d",
+          "tool": "Bash",
+          "input": "{\"command\":\"cat -n apps/explorer/src/comps/TimeFormat.tsx | head -80\"}"
+        },
+        {
+          "reason": "unsupported_source_intent",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i5",
+          "stage": "audit",
+          "correlation_id": "9b3255c68471a84b0a01bcf5",
+          "tool": "Bash",
+          "input": "{\"command\":\"cat -n factory.yaml | head -80\"}"
+        },
+        {
+          "reason": "unsupported_source_intent",
+          "backend": "claude",
+          "trajectory_id": "audit-w2-i6",
+          "stage": "audit",
+          "correlation_id": "02b4e70c70e534dbfd237f95",
+          "tool": "Bash",
+          "input": "{\"command\":\"cat factory.yaml | head -80\"}"
+        }
+      ],
+      "lifecycle": {
+        "started": 17,
+        "completed": 17,
+        "duplicate_starts": 0,
+        "duplicate_completions": 0,
+        "unmatched_completions": 0,
+        "failed_completions": 2,
+        "pending": 0
+      },
+      "coverage_schema_versions": [
+        3
+      ],
+      "harness_protocol_versions": [
+        5
+      ],
+      "status": "degraded"
+    },
+    {
+      "backend": "zcode",
+      "transport": "structured_harness_events",
+      "trajectories": 0,
+      "accepted": 0,
+      "losses": 0,
+      "accepted_reasons": {},
+      "accepted_samples": [],
+      "loss_reasons": {},
+      "loss_samples": [],
+      "lifecycle": {
+        "started": 0,
+        "completed": 0,
+        "duplicate_starts": 0,
+        "duplicate_completions": 0,
+        "unmatched_completions": 0,
+        "failed_completions": 0,
+        "pending": 0
+      },
+      "coverage_schema_versions": [],
+      "harness_protocol_versions": [],
+      "status": "not_observed"
+    }
+  ],
+  "source": {
+    "total_files": 436,
+    "offset": 0,
+    "limit": 50,
+    "has_more": true,
+    "files": [
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/address/$address.tsx",
+        "total_lines": 3328,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/tempo-snapshots-viewer/src/index.ts",
+        "total_lines": 3277,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/known-events.ts",
+        "total_lines": 3202,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/reth-snapshots-viewer/src/index.ts",
+        "total_lines": 2434,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/mcp.test.ts",
+        "total_lines": 1846,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/mcp.ts",
+        "total_lines": 1772,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.verify.ts",
+        "total_lines": 1355,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/known-events.test.ts",
+        "total_lines": 1258,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.lookup.ts",
+        "total_lines": 1241,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/simulate.tsx",
+        "total_lines": 1241,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/contracts.ts",
+        "total_lines": 1138,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/demo/address.tsx",
+        "total_lines": 1062,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/ui.tsx",
+        "total_lines": 1011,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/scripts/eval-mcp.ts",
+        "total_lines": 975,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/tx/$hash.tsx",
+        "total_lines": 970,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxTraceTree.tsx",
+        "total_lines": 943,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/lib/bytecode-matching.ts",
+        "total_lines": 942,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.lookup-verified.test.ts",
+        "total_lines": 863,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routeTree.gen.ts",
+        "total_lines": 852,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateCallForm.tsx",
+        "total_lines": 806,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateResultPane.tsx",
+        "total_lines": 800,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ExploreInput.tsx",
+        "total_lines": 772,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/scripts/benchmark-mcp.ts",
+        "total_lines": 743,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.verify-legacy.ts",
+        "total_lines": 739,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractReader.tsx",
+        "total_lines": 738,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/bytecode-matching.test.ts",
+        "total_lines": 719,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.lookup.test.ts",
+        "total_lines": 671,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/scripts/precompile-seed/manifest.ts",
+        "total_lines": 629,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/storage-decode.ts",
+        "total_lines": 621,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/block/$id.tsx",
+        "total_lines": 620,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/receipt.ts",
+        "total_lines": 619,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.verify.test.ts",
+        "total_lines": 588,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/ingest.test.ts",
+        "total_lines": 572,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/demo/tx.tsx",
+        "total_lines": 568,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/receipt/$hash.tsx",
+        "total_lines": 561,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Receipt.tsx",
+        "total_lines": 559,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/address-history.node.test.ts",
+        "total_lines": 552,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/run-verification-job-persistence.test.ts",
+        "total_lines": 548,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/index.tsx",
+        "total_lines": 521,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/test/api-keys.test.ts",
+        "total_lines": 518,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxStateDiff.tsx",
+        "total_lines": 517,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/transaction-activities.test.ts",
+        "total_lines": 511,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/database/schema.ts",
+        "total_lines": 510,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/scripts/bundle-diff.ts",
+        "total_lines": 510,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/address-history.ts",
+        "total_lines": 508,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/__root.tsx",
+        "total_lines": 501,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/e2e/verification.test.ts",
+        "total_lines": 472,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/contracts.node.test.ts",
+        "total_lines": 456,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/precompiles.ts",
+        "total_lines": 454,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateShared.tsx",
+        "total_lines": 452,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      }
+    ],
+    "directories": [
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/lib/domain",
+        "total_lines": 9383,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/mcp-docs-indexer/src/lib",
+        "total_lines": 5940,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/src",
+        "total_lines": 3924,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/lib/server",
+        "total_lines": 3903,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/test/unit",
+        "total_lines": 3567,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/_layout/address",
+        "total_lines": 3328,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/tempo-snapshots-viewer/src",
+        "total_lines": 3277,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/test/integration",
+        "total_lines": 3061,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/reth-snapshots-viewer/src",
+        "total_lines": 2434,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/og/src",
+        "total_lines": 2226,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/mcp-docs-indexer/scripts",
+        "total_lines": 1833,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/_layout/demo",
+        "total_lines": 1781,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/src/lib",
+        "total_lines": 1660,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/api",
+        "total_lines": 1283,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src",
+        "total_lines": 1252,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/scripts/precompile-seed",
+        "total_lines": 1229,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/lib/queries",
+        "total_lines": 1180,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/fee-payer/test",
+        "total_lines": 1106,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/_layout/tx",
+        "total_lines": 970,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/_layout/block",
+        "total_lines": 883,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes",
+        "total_lines": 696,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/scripts",
+        "total_lines": 694,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/fee-payer/src/lib",
+        "total_lines": 675,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/_layout/receipt",
+        "total_lines": 561,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/database",
+        "total_lines": 510,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/test/e2e",
+        "total_lines": 472,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/test/fee-amm",
+        "total_lines": 429,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/_layout/policy",
+        "total_lines": 379,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/test/fixtures",
+        "total_lines": 377,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer",
+        "total_lines": 298,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/fee-payer/src/lib/observability",
+        "total_lines": 293,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "packages/rpc-utils/src/utils",
+        "total_lines": 289,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/og/test",
+        "total_lines": 286,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification/container",
+        "total_lines": 282,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/tokenlist/src",
+        "total_lines": 275,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/fee-payer/playground/src",
+        "total_lines": 267,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/api/tx/balance-changes",
+        "total_lines": 242,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/fee-payer/src",
+        "total_lines": 191,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/tokenlist",
+        "total_lines": 180,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/mcp-docs-indexer/src",
+        "total_lines": 150,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/contract-verification",
+        "total_lines": 147,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/tokenlist/test",
+        "total_lines": 146,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/lib/telemetry",
+        "total_lines": 114,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/fee-payer",
+        "total_lines": 110,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/test/__mocks__",
+        "total_lines": 74,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "packages/rpc-utils/src",
+        "total_lines": 74,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/api/abi",
+        "total_lines": 71,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/api/address/history",
+        "total_lines": 60,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/workers",
+        "total_lines": 56,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "path": "apps/explorer/src/routes/api/address/zone-portal/$address",
+        "total_lines": 54,
+        "read_lines": 0,
+        "contributing_producers": 0,
+        "exact_read_rate": 0,
+        "contributing_scans": 0
+      }
+    ],
+    "treemap_files": [
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/address/$address.tsx",
+        "total_lines": 3328,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/tempo-snapshots-viewer/src/index.ts",
+        "total_lines": 3277,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/known-events.ts",
+        "total_lines": 3202,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/reth-snapshots-viewer/src/index.ts",
+        "total_lines": 2434,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/mcp.test.ts",
+        "total_lines": 1846,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/mcp.ts",
+        "total_lines": 1772,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.verify.ts",
+        "total_lines": 1355,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/known-events.test.ts",
+        "total_lines": 1258,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.lookup.ts",
+        "total_lines": 1241,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/simulate.tsx",
+        "total_lines": 1241,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/contracts.ts",
+        "total_lines": 1138,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/demo/address.tsx",
+        "total_lines": 1062,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/ui.tsx",
+        "total_lines": 1011,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/scripts/eval-mcp.ts",
+        "total_lines": 975,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/tx/$hash.tsx",
+        "total_lines": 970,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxTraceTree.tsx",
+        "total_lines": 943,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/lib/bytecode-matching.ts",
+        "total_lines": 942,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.lookup-verified.test.ts",
+        "total_lines": 863,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routeTree.gen.ts",
+        "total_lines": 852,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateCallForm.tsx",
+        "total_lines": 806,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateResultPane.tsx",
+        "total_lines": 800,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ExploreInput.tsx",
+        "total_lines": 772,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/scripts/benchmark-mcp.ts",
+        "total_lines": 743,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.verify-legacy.ts",
+        "total_lines": 739,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractReader.tsx",
+        "total_lines": 738,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/bytecode-matching.test.ts",
+        "total_lines": 719,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.lookup.test.ts",
+        "total_lines": 671,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/scripts/precompile-seed/manifest.ts",
+        "total_lines": 629,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/storage-decode.ts",
+        "total_lines": 621,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/block/$id.tsx",
+        "total_lines": 620,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/receipt.ts",
+        "total_lines": 619,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.verify.test.ts",
+        "total_lines": 588,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/ingest.test.ts",
+        "total_lines": 572,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/demo/tx.tsx",
+        "total_lines": 568,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/receipt/$hash.tsx",
+        "total_lines": 561,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Receipt.tsx",
+        "total_lines": 559,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/address-history.node.test.ts",
+        "total_lines": 552,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/run-verification-job-persistence.test.ts",
+        "total_lines": 548,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/index.tsx",
+        "total_lines": 521,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/test/api-keys.test.ts",
+        "total_lines": 518,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxStateDiff.tsx",
+        "total_lines": 517,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/transaction-activities.test.ts",
+        "total_lines": 511,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/database/schema.ts",
+        "total_lines": 510,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/scripts/bundle-diff.ts",
+        "total_lines": 510,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/address-history.ts",
+        "total_lines": 508,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/__root.tsx",
+        "total_lines": 501,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/e2e/verification.test.ts",
+        "total_lines": 472,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/contracts.node.test.ts",
+        "total_lines": 456,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/precompiles.ts",
+        "total_lines": 454,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateShared.tsx",
+        "total_lines": 452,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/utilities.test.ts",
+        "total_lines": 440,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Contract.tsx",
+        "total_lines": 438,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractWriter.tsx",
+        "total_lines": 437,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Pagination.tsx",
+        "total_lines": 429,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/simulate.ts",
+        "total_lines": 426,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/transaction-activities.ts",
+        "total_lines": 406,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxTraceFlamegraph.tsx",
+        "total_lines": 404,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/abis.ts",
+        "total_lines": 403,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TokenTrust.tsx",
+        "total_lines": 393,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/blocks.tsx",
+        "total_lines": 391,
+        "read_lines": 37,
+        "exact_read_rate": 0.09462915601023018,
+        "contributing_producers": 1,
+        "contributing_scans": 1
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ConnectWallet.tsx",
+        "total_lines": 387,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/time-format.node.test.ts",
+        "total_lines": 385,
+        "read_lines": 385,
+        "exact_read_rate": 1,
+        "contributing_producers": 1,
+        "contributing_scans": 1
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/policy/$id.tsx",
+        "total_lines": 379,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/og.ts",
+        "total_lines": 378,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/BlockCard.tsx",
+        "total_lines": 371,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Header.tsx",
+        "total_lines": 368,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/tx-summary.ts",
+        "total_lines": 366,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/simulate.ts",
+        "total_lines": 361,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/chain-registry.test.ts",
+        "total_lines": 358,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxDecodedTopics.tsx",
+        "total_lines": 356,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/tip403.ts",
+        "total_lines": 356,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/token.ts",
+        "total_lines": 347,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractCodeView.tsx",
+        "total_lines": 341,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.verify-status.test.ts",
+        "total_lines": 338,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/search.ts",
+        "total_lines": 337,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxRawTransaction.tsx",
+        "total_lines": 334,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxEventDescription.tsx",
+        "total_lines": 333,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/zone-portal.ts",
+        "total_lines": 325,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/run-verification-job.test.ts",
+        "total_lines": 321,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/DataGrid.tsx",
+        "total_lines": 319,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/signature-reconstruction.test.ts",
+        "total_lines": 317,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/lib/utilities.ts",
+        "total_lines": 314,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/formatting.ts",
+        "total_lines": 312,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/ingest.ts",
+        "total_lines": 307,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/job-runner-failures.test.ts",
+        "total_lines": 305,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/simulate.node.test.ts",
+        "total_lines": 304,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/token-trust.node.test.ts",
+        "total_lines": 303,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Breadcrumbs.tsx",
+        "total_lines": 300,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/test/e2e.test.ts",
+        "total_lines": 298,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/scripts/precompile-seed/seed.ts",
+        "total_lines": 297,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/address-live.ts",
+        "total_lines": 296,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/contract-source.ts",
+        "total_lines": 294,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/tokens.tsx",
+        "total_lines": 285,
+        "read_lines": 71,
+        "exact_read_rate": 0.24912280701754386,
+        "contributing_producers": 1,
+        "contributing_scans": 1
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/params.ts",
+        "total_lines": 284,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/hooks.ts",
+        "total_lines": 283,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/tempo-queries.test.ts",
+        "total_lines": 280,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/receipt-presentation.ts",
+        "total_lines": 277,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TransactionFilters.tsx",
+        "total_lines": 276,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/fee-amm.tsx",
+        "total_lines": 276,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.lookup-native.test.ts",
+        "total_lines": 274,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/lib/chain-registry.ts",
+        "total_lines": 267,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/receipt-presentation.test.ts",
+        "total_lines": 267,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "packages/rpc-utils/src/utils/queue.ts",
+        "total_lines": 264,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/run-verification-job-vyper.test.ts",
+        "total_lines": 263,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/block/countdown.$targetBlock.tsx",
+        "total_lines": 263,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Sections.tsx",
+        "total_lines": 259,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/tx-event-groups.test.ts",
+        "total_lines": 251,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/access-key.node.test.ts",
+        "total_lines": 250,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/address-metadata.ts",
+        "total_lines": 249,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/metrics.ts",
+        "total_lines": 249,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/fee-amm/fixtures.ts",
+        "total_lines": 244,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/tx/balance-changes/$hash.ts",
+        "total_lines": 242,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/transaction-actions.node.test.ts",
+        "total_lines": 238,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/tip20-roles.ts",
+        "total_lines": 237,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/health.ts",
+        "total_lines": 236,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/unit/job-runner-do.test.ts",
+        "total_lines": 235,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SimulateGasPanel.tsx",
+        "total_lines": 234,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxKeyAuthorization.tsx",
+        "total_lines": 234,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/known-event-totals.node.test.ts",
+        "total_lines": 233,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/FeeAmmPools.tsx",
+        "total_lines": 226,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/fee-amm.node.test.ts",
+        "total_lines": 226,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/route.verify-legacy.test.ts",
+        "total_lines": 224,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/posthog-mcp.ts",
+        "total_lines": 224,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/fee-amm.ts",
+        "total_lines": 221,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/scripts/precompile-seed/seed.test.ts",
+        "total_lines": 218,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/memo.test.ts",
+        "total_lines": 217,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/og-params.ts",
+        "total_lines": 215,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/tip20-roles.node.test.ts",
+        "total_lines": 215,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/tokenlist/src/index.tsx",
+        "total_lines": 214,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxTransactionRow.tsx",
+        "total_lines": 212,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/code.ts",
+        "total_lines": 212,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/playground/src/App.tsx",
+        "total_lines": 210,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/observability/middleware.ts",
+        "total_lines": 207,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/AccountCard.tsx",
+        "total_lines": 201,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/contract-creation.ts",
+        "total_lines": 201,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/og.node.test.ts",
+        "total_lines": 201,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/vite.config.ts",
+        "total_lines": 201,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/datadog-proxy.node.test.ts",
+        "total_lines": 196,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Tip20ContractInfo.tsx",
+        "total_lines": 195,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/index.tsx",
+        "total_lines": 195,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/receipt-ui.test.ts",
+        "total_lines": 195,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxTransactionCard.tsx",
+        "total_lines": 194,
+        "read_lines": 140,
+        "exact_read_rate": 0.7216494845360825,
+        "contributing_producers": 1,
+        "contributing_scans": 1
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/index.ts",
+        "total_lines": 191,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/proxy.ts",
+        "total_lines": 186,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxBalanceChanges.tsx",
+        "total_lines": 185,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TxDecodedCalldata.tsx",
+        "total_lines": 183,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/token-trust.ts",
+        "total_lines": 179,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/simulate-calls.ts",
+        "total_lines": 176,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/brand.tsx",
+        "total_lines": 176,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Amount.tsx",
+        "total_lines": 174,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/search.tsx",
+        "total_lines": 172,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/index.tsx",
+        "total_lines": 171,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractAbi.tsx",
+        "total_lines": 169,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/rpc.test.ts",
+        "total_lines": 168,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/receipt-text.ts",
+        "total_lines": 165,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/abi.ts",
+        "total_lines": 165,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/datadog-proxy.ts",
+        "total_lines": 163,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/schema.ts",
+        "total_lines": 162,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/demo.ts",
+        "total_lines": 160,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/tempo-queries.ts",
+        "total_lines": 159,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/profiling.ts",
+        "total_lines": 157,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/container/index.ts",
+        "total_lines": 154,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/blocks.ts",
+        "total_lines": 153,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/tx.ts",
+        "total_lines": 152,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/prover-chain.node.test.ts",
+        "total_lines": 152,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/fixtures/counter.fixture.ts",
+        "total_lines": 151,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/address-balances.ts",
+        "total_lines": 151,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/known-event-totals.ts",
+        "total_lines": 150,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/index.ts",
+        "total_lines": 150,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/test/zone-portal.test.ts",
+        "total_lines": 149,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/contract-source-link.test.ts",
+        "total_lines": 147,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/tokenlist/test/icon.test.ts",
+        "total_lines": 146,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/fee-amm/browser.ts",
+        "total_lines": 145,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/health.test.ts",
+        "total_lines": 145,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/WalletActions.tsx",
+        "total_lines": 139,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/index.server.ts",
+        "total_lines": 139,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/block-number.tsx",
+        "total_lines": 139,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/transaction-activities.ts",
+        "total_lines": 138,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/zone-portal.ts",
+        "total_lines": 137,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/router.tsx",
+        "total_lines": 137,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/fixtures/vyper.fixture.ts",
+        "total_lines": 136,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/receipt-text.test.ts",
+        "total_lines": 136,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/env.ts",
+        "total_lines": 134,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/scripts/chunk-config.test.ts",
+        "total_lines": 133,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/tx-event-groups.ts",
+        "total_lines": 130,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/container/compiler.ts",
+        "total_lines": 128,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractFileTree.tsx",
+        "total_lines": 128,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/address-metadata.node.test.ts",
+        "total_lines": 127,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Footer.tsx",
+        "total_lines": 125,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/address-balances.ts",
+        "total_lines": 125,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/trace-errors.ts",
+        "total_lines": 123,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/zones.ts",
+        "total_lines": 123,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/token-trust.ts",
+        "total_lines": 122,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractFeatureCard.tsx",
+        "total_lines": 121,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/tokens.ts",
+        "total_lines": 118,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/llms-txt.test.ts",
+        "total_lines": 118,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/contract-source.test.ts",
+        "total_lines": 117,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/api-keys.ts",
+        "total_lines": 115,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/rpc.ts",
+        "total_lines": 114,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/telemetry/datadog.ts",
+        "total_lines": 114,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/rate-limit.test.ts",
+        "total_lines": 114,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Sphere.tsx",
+        "total_lines": 113,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/trace-error-args.ts",
+        "total_lines": 113,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/receipt-ui.ts",
+        "total_lines": 112,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/time-format.ts",
+        "total_lines": 112,
+        "read_lines": 112,
+        "exact_read_rate": 1,
+        "contributing_producers": 2,
+        "contributing_scans": 2
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/wagmi.config.ts",
+        "total_lines": 109,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/tokens.ts",
+        "total_lines": 108,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/admin.ts",
+        "total_lines": 107,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/api-key-budget.ts",
+        "total_lines": 106,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/tokenlist/vite.config.ts",
+        "total_lines": 105,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/test/integration/rate-limit-whitelist.test.ts",
+        "total_lines": 103,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/utilities.ts",
+        "total_lines": 103,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/explorer-indexing.ts",
+        "total_lines": 102,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/lib/logger.ts",
+        "total_lines": 101,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ErrorBoundary.tsx",
+        "total_lines": 99,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Intro.tsx",
+        "total_lines": 99,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TimeFormat.tsx",
+        "total_lines": 99,
+        "read_lines": 99,
+        "exact_read_rate": 1,
+        "contributing_producers": 1,
+        "contributing_scans": 1
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/PanelToolbar.tsx",
+        "total_lines": 97,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/AddToWallet.tsx",
+        "total_lines": 96,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/AmountCell.tsx",
+        "total_lines": 96,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/animation.ts",
+        "total_lines": 96,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/tip20.ts",
+        "total_lines": 96,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Midcut.tsx",
+        "total_lines": 93,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/address-live.node.test.ts",
+        "total_lines": 93,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/trace.ts",
+        "total_lines": 91,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/queries/account.ts",
+        "total_lines": 90,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TokenListMembership.tsx",
+        "total_lines": 89,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/access-key.ts",
+        "total_lines": 89,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/test/helpers.ts",
+        "total_lines": 89,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/explorer-indexing.node.test.ts",
+        "total_lines": 87,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/InfoCard.tsx",
+        "total_lines": 86,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/scripts/configure-ai-search-metadata.ts",
+        "total_lines": 86,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/scripts/precompile-seed/index.ts",
+        "total_lines": 85,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/access-key-query.node.test.ts",
+        "total_lines": 84,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/sponsorship-policy.ts",
+        "total_lines": 84,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/test/rate-limit.test.ts",
+        "total_lines": 84,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/account.ts",
+        "total_lines": 83,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/zone-portal-calls.node.test.ts",
+        "total_lines": 83,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/job-runner.ts",
+        "total_lines": 82,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/SetAsFeeToken.tsx",
+        "total_lines": 82,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/AbiArgument.tsx",
+        "total_lines": 81,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/address-tabs.node.test.ts",
+        "total_lines": 80,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractSource.tsx",
+        "total_lines": 78,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/proxy.test.ts",
+        "total_lines": 78,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/container.ts",
+        "total_lines": 77,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/use-address-live.ts",
+        "total_lines": 74,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/__mocks__/kysely-mock.ts",
+        "total_lines": 74,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/immutable-data-cache.node.test.ts",
+        "total_lines": 73,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/abi-argument.node.test.ts",
+        "total_lines": 72,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/usage.ts",
+        "total_lines": 72,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ProgressLine.tsx",
+        "total_lines": 71,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/abi/batch.ts",
+        "total_lines": 71,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/AddressHighlight.tsx",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/transaction-actions.ts",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/explorer-network.test.ts",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/prover-rpc.test.ts",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/posthog.ts",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/log.test.ts",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/sources.ts",
+        "total_lines": 70,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/test/setup.global.ts",
+        "total_lines": 69,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/vitest.config.ts",
+        "total_lines": 69,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/zone-portal.ts",
+        "total_lines": 69,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/metrics.test.ts",
+        "total_lines": 66,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/rate-limit.ts",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/tempo-api.ts",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/demo/pagination.tsx",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/account-transfers.node.test.ts",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/theme.node.test.ts",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/tip20-channel-reserve.node.test.ts",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/token.node.test.ts",
+        "total_lines": 65,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/env-sync.node.test.ts",
+        "total_lines": 64,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/Layout.tsx",
+        "total_lines": 63,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/tempo-calls.ts",
+        "total_lines": 62,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/proxy.ts",
+        "total_lines": 62,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/src/zone-portal-card.tsx",
+        "total_lines": 62,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/contract-verification/src/route.docs.tsx",
+        "total_lines": 61,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/contract-source-link.ts",
+        "total_lines": 61,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/theme.ts",
+        "total_lines": 61,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/address/history/$address.ts",
+        "total_lines": 60,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/og/test/address-card.test.ts",
+        "total_lines": 60,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/explorer-network.ts",
+        "total_lines": 59,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/mcp-docs-indexer/src/lib/llms-txt.ts",
+        "total_lines": 58,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/build-env.ts",
+        "total_lines": 57,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/domain/address-tabs.ts",
+        "total_lines": 57,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/workers/json-highlighter.ts",
+        "total_lines": 56,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/zone-portal.test.ts",
+        "total_lines": 56,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/TokenIcon.tsx",
+        "total_lines": 55,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/tip403-log-utils.ts",
+        "total_lines": 55,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/tempo-queries-provider.node.test.ts",
+        "total_lines": 55,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/zone-portal-query.node.test.ts",
+        "total_lines": 55,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/comps/ContractCodeScrollbar.tsx",
+        "total_lines": 54,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/sse.ts",
+        "total_lines": 54,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/use-live-feed.ts",
+        "total_lines": 54,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/api/address/zone-portal/$address/$kind.ts",
+        "total_lines": 54,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/fee-payer/src/lib/observability/metrics.ts",
+        "total_lines": 54,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/server/verified-tokens.ts",
+        "total_lines": 53,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/test/address-balances.node.test.ts",
+        "total_lines": 53,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/scripts/chunk-config.ts",
+        "total_lines": 51,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/lib/not-found.tsx",
+        "total_lines": 51,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      },
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "path": "apps/explorer/src/routes/_layout/demo/empty-state.tsx",
+        "total_lines": 51,
+        "read_lines": 0,
+        "exact_read_rate": 0,
+        "contributing_producers": 0,
+        "contributing_scans": 0
+      }
+    ],
+    "treemap_limit": 300,
+    "treemap_total": 436,
+    "repositories": [
+      {
+        "repository": "tempoxyz/tempo-apps",
+        "tracked_files": 436,
+        "exact_read_files": 6,
+        "total_lines": 94409,
+        "read_lines": 844,
+        "exact_read_rate": 0.00893982565221536
+      }
+    ]
+  },
+  "graph": {
+    "availability": "available",
+    "invalid_records": 0,
+    "coverage": {
+      "outcomes": {
+        "examined": 0,
+        "ruled_out": 8,
+        "blocked": 10,
+        "found": 0
+      },
+      "production_line_reads": [
+        {
+          "repository": "tempoxyz/tempo-apps",
+          "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+          "numerator": 459,
+          "denominator": 72308,
+          "percent": 0.006347845328317752
+        }
+      ],
+      "test_line_reads": [
+        {
+          "repository": "tempoxyz/tempo-apps",
+          "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+          "numerator": 385,
+          "denominator": 22101,
+          "percent": 0.017420026243156417
+        }
+      ]
+    },
+    "cartography": {
+      "nodes": [
+        {
+          "version": 1,
+          "occurrence_id": "4a3635ca8ae4820a036d0d6edbfe8cb33006ef1e2b725a6455361803e904ac46",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i1",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The stored input is checked against an allow-list and only selects a display format, so it has no security effect.",
+            "reopen_condition": "The format value is used in HTML sinks or in requests without validation",
+            "evidence": [
+              "E1",
+              "E2"
+            ]
+          },
+          "generation_sha256": "b5bf4a36054dd3ad59aff58f14509eb60d3987a106813e746329633f0c33da22"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "4d55201af2a56eab2e3da2f5e918d36dd9c34e658f0a4e3163ae36eda8470339",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i1",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The traced preference path changes timestamp presentation, and the examined consumer establishes no security-sensitive effect.",
+            "reopen_condition": "A production caller is identified that uses this preference to authorize an action or make another security-sensitive decision.",
+            "evidence": [
+              "E1",
+              "E2",
+              "E3"
+            ]
+          },
+          "generation_sha256": "29e5810494451eb90a37dfed11f8e13fde40e655beba8beb6a8f71086a295d0b"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "97025edc1e63bedf6bc95b4d3e9931fa4bad28ebe6b8ae15cf6307f255b01cb6",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i1",
+            "output_index": 1,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "runtime_evidence: The pinned external factory library and its shared workflow are not available in the assigned repository; the configuration alone does not establish which actions an executor performs.",
+            "resume_condition": "Provide the pinned factory workflow and executor behavior for the library revision named in factory.yaml, including how publication and preview-deployment settings are enforced.",
+            "evidence": [
+              "ce20028f8ce0eea90201d7ec97ce3f8930a898c99ed2f23f1cfa8e9fc6475e51"
+            ]
+          },
+          "generation_sha256": "29e5810494451eb90a37dfed11f8e13fde40e655beba8beb6a8f71086a295d0b"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "6f35b84ffc2362031942b8d99d6d4768f0047a0918ed9177f1e7d2191d3e5be0",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i2",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "validation_method: Ruled-out conclusion lacks current-revision exact-read support: Explorer timestamp preference persisted in localStorage",
+            "resume_condition": "Read every cited interval at the prepared repository revision and resubmit the conclusion.",
+            "evidence": [
+              "2e1f03a1b314b010df3cbf6b207b53d1d8550ea61ca8b7dd6608d48f4e445ff5"
+            ]
+          },
+          "generation_sha256": "07cc532b74c091becf9da7f43bff5e46ae09167100bde55b55778b4228641cf6"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "c1ed2f0f0c4e41a3b8447038275e325d4f2947ddd7db9705143e802ea1c22446",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i2",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "runtime_evidence: The pinned factory library and its workflow implementation are outside the assigned repository; the behavior of stages selected by factory.yaml was not verified.",
+            "resume_condition": "Provide the pinned library and workflow source, plus the executor that consumes this configuration, within an authorized review scope.",
+            "evidence": [
+              "13b2d4de72d39d518471cb95f248f739189b214183c37df9122f4d03161c11fd"
+            ]
+          },
+          "generation_sha256": "d24e25e51f10871e57df248a667f91fa46fabdbc897b1311afd25af95d0ef918"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "37198153289f9a3af1faaffa8034ba1ad1f0514083f8c5d0d93352cf46ba446c",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i2",
+            "output_index": 1,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "validation_method: Ruled-out conclusion lacks current-revision exact-read support: Explorer timestamp selection and persistence",
+            "resume_condition": "Read every cited interval at the prepared repository revision and resubmit the conclusion.",
+            "evidence": [
+              "13b2d4de72d39d518471cb95f248f739189b214183c37df9122f4d03161c11fd"
+            ]
+          },
+          "generation_sha256": "d24e25e51f10871e57df248a667f91fa46fabdbc897b1311afd25af95d0ef918"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "e7c6c1ae65478b59b9ba9f41d630f150b2d22d33d11617172f304a525b7e1ad9",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i3",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The storage value is restricted to a closed enum and only affects display formatting.",
+            "reopen_condition": "A consumer uses the raw storage value without going through readPersistedTimeFormat.",
+            "evidence": [
+              "E1",
+              "E2"
+            ]
+          },
+          "generation_sha256": "276be7b30499b4155e90f478a07dbbb63cf900a7f72bf9bac8ea58c483f684e8"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "813963cb7e75359f96ed277d58021dd487363af3bd3b1266d8c465ec0697b493",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i3",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "runtime_evidence: The pipeline's pinned external factory library and workflow were not supplied; their behavior and deployment effects cannot be verified from factory.yaml alone.",
+            "resume_condition": "Provide the pinned library revision and workflow contents, plus the authorized pipeline entrypoint, for review.",
+            "evidence": [
+              "861e1947eb211021a02ec0beea32e44779b34db15ce4e275baf460b98303f045"
+            ]
+          },
+          "generation_sha256": "cf9e2f96d1403183728cabc171c1277e7bbf8f4c377aa1c3bb7dd3e77999c37c"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "28fcfbc713771565e15f86fadc8522c11c281b823c0e5dc63dec0bda22660d06",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i3",
+            "output_index": 1,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "validation_method: Ruled-out conclusion lacks current-revision exact-read support: Explorer timestamp preference in the traced transaction-card flow",
+            "resume_condition": "Read every cited interval at the prepared repository revision and resubmit the conclusion.",
+            "evidence": [
+              "861e1947eb211021a02ec0beea32e44779b34db15ce4e275baf460b98303f045"
+            ]
+          },
+          "generation_sha256": "cf9e2f96d1403183728cabc171c1277e7bbf8f4c377aa1c3bb7dd3e77999c37c"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "008950b6cabc92ba2f215c371289a02eee713dd0a48232dfc16dc0640bfe431f",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i4",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "validation_method: Ruled-out conclusion lacks current-revision exact-read support: Explorer time-format persistence and factory.yaml config",
+            "resume_condition": "Read every cited interval at the prepared repository revision and resubmit the conclusion.",
+            "evidence": [
+              "67eaae105811e0151be207fb31dbcfe662576af852dc25e5e19ec46b3ca5ab76"
+            ]
+          },
+          "generation_sha256": "9fbba8518f53bb6d8dd86efb6254f0668ee55b51b569364635cf295df161d263"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "907ba8a3b47763b446d2a152565252799abb3f4da6885a422ddae7f6d46c247d",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i5",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The input is validated against a closed set and is used only to choose a display format.",
+            "reopen_condition": "The stored value starts being passed through to rendering or a network request without this validation.",
+            "evidence": [
+              "E1",
+              "E2"
+            ]
+          },
+          "generation_sha256": "416aa0751e8c204c1c770210436e98657dfd2a85e5375e557d994c575f5d1a5e"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "3659980d8b9e39f2cfca75b24ecbf710aa41dd64b47523d75b4b1e6de9125ad2",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i4",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "No security impact is established through the examined timestamp-rendering path.",
+            "reopen_condition": "A production consumer uses the selected format outside timestamp presentation or accepts values outside the validated set.",
+            "evidence": [
+              "E1",
+              "E3",
+              "E4"
+            ]
+          },
+          "generation_sha256": "d61e16622597c5afc5f334fea07e143d140ee154ccc4f0d2f215820892124017"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "8a6c5a5ae8d35bbb61b7d60bf53c36670d34cf45ec247494546604b3646db1c7",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i4",
+            "output_index": 1,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "entrypoint: No factory runner or CI invocation establishing that the new factory.yaml is executed was identified in the examined repository paths.",
+            "resume_condition": "Obtain the pinned runner entrypoint and its configuration-loading path for factory.yaml.",
+            "evidence": [
+              "708a6c5f5490dc149531f7c32945073e67969b9719db85253fdbdf88b751fd9c"
+            ]
+          },
+          "generation_sha256": "d61e16622597c5afc5f334fea07e143d140ee154ccc4f0d2f215820892124017"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "9fb328feb75af35001dcc406ef8596e7b9c1ff60ccd4c82790b4c46f4de5f2dc",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i4",
+            "output_index": 2,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "runtime_evidence: The reviewed source does not establish whether the configured REST fallback runs or what disclosure, if any, private:false causes.",
+            "resume_condition": "Obtain the pinned factory library's fallback implementation and an authorized execution trace showing the submitted request and resulting visibility.",
+            "evidence": [
+              "708a6c5f5490dc149531f7c32945073e67969b9719db85253fdbdf88b751fd9c"
+            ]
+          },
+          "generation_sha256": "d61e16622597c5afc5f334fea07e143d140ee154ccc4f0d2f215820892124017"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "89c2fd3888a17bb39e43509bc725dfcb5b1dccf7bd99ff4d0929edf5e0cfead0",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i6",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The stored value is validated against a fixed allowlist and only selects a display mode",
+            "reopen_condition": "The stored value is used without validation or is passed into an HTML or URL sink",
+            "evidence": [
+              "E1"
+            ]
+          },
+          "generation_sha256": "6f3304109c500ecc452cd2a595408f933eafbb0e677d09d3b9948298bead8911"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "98e4a06383ad44a2797b1d978284396c68159069a6cb4e8eb2536e66e1d08487",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i5",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The traced preference path does not establish a security-sensitive effect or an injection path.",
+            "reopen_condition": "A production consumer passes the preference to a security-sensitive operation, or bypasses the literal-value validation.",
+            "evidence": [
+              "E1",
+              "E3",
+              "E4",
+              "E2"
+            ]
+          },
+          "generation_sha256": "a113289fa152f832e72c21ca8367a8a01c55e24b7fac3c94806505394003af46"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "e1601c6cbc888b679d04043387141ed521389f3c6338c0def9568e41cefcf700",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w1-i5",
+            "output_index": 1,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "blocked",
+            "deficit": "runtime_evidence: The assigned repository does not establish how the external factory executor interprets the pinned library, authorizes publication, or handles preview side effects.",
+            "resume_condition": "Provide the pinned factory library and executor implementation or an authorized execution trace showing how this configuration is consumed.",
+            "evidence": [
+              "30c9d15d6f29957c1b18f3e7c31209d66280a78681531f600f4f32a3807a5ba8"
+            ]
+          },
+          "generation_sha256": "a113289fa152f832e72c21ca8367a8a01c55e24b7fac3c94806505394003af46"
+        },
+        {
+          "version": 1,
+          "occurrence_id": "b33b750a69dd81fa5710afd237200a3cb4bbf2dcd19ed871d0ec12d817a10788",
+          "identity": {
+            "run_id": "pr-1300-20261001t053450-290efea93387",
+            "invocation_id": "audit-w2-i7",
+            "output_index": 0,
+            "repository": "tempoxyz/tempo-apps",
+            "revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+          },
+          "origin": "direct_audit",
+          "parent_edges": [],
+          "outcome": {
+            "kind": "ruled_out",
+            "closure": "The only input crossing a trust boundary is checked against an allowlist and only affects presentation; the new config file has no runtime effect.",
+            "reopen_condition": "The stored preference is used in HTML, URLs, or server requests without the allowlist check, or factory.yaml is used by CI or the deploy tooling.",
+            "evidence": [
+              "E1",
+              "E3",
+              "E4",
+              "E2"
+            ]
+          },
+          "generation_sha256": "3463133ba4ebc16149f5708f822f67a524468a53523ee78c55a5405a213b6cf1"
+        }
+      ],
+      "edges": []
+    },
+    "work_items": [],
+    "prepared_inputs": [
+      {
+        "version": 1,
+        "logical_name": "changed-files",
+        "state": "available",
+        "record_sha256": "51a630af2136de143373559889275f4f7d838a20f9cd9cb74569cf0accffc1f5",
+        "content_sha256": "b9e5eb2bb414a53fe4ad42d9a8762f1598421a41443598a6f2206595f01e047c",
+        "path": "inputs/changed-files.json",
+        "source_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "target_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+      },
+      {
+        "version": 1,
+        "logical_name": "diff",
+        "state": "available",
+        "record_sha256": "774f2345bb5ad29c7ea3de0944f1daa4c60b81e9418482a60492431c5b555920",
+        "content_sha256": "534959fe8124172f7b4ecbba0a1c0dd691354adcf4e4ae2f56890eb0be91ac97",
+        "path": "inputs/diff.patch",
+        "source_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "target_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+      },
+      {
+        "version": 1,
+        "logical_name": "full-history",
+        "state": "not-selected",
+        "record_sha256": "d3e97daf20a5c65efd2392183a85fe773daa65f9088d505be2f67e4efe5c2c8d"
+      },
+      {
+        "version": 1,
+        "logical_name": "librarian",
+        "state": "not-selected",
+        "record_sha256": "2f01ecd05bdb5d33ecc01811118846a188b56306528ce40fc02ca72350b67b5d"
+      },
+      {
+        "version": 1,
+        "logical_name": "navigation",
+        "state": "available",
+        "record_sha256": "73a717ce89c8f8693e61dfb812f6dca18acc83f8706ff2ed90a9c2abcbcea2c8",
+        "content_sha256": "5894704f4bdc51584360f510a48fa161f977a4542f6ac8f5354213d7a6dfcdfc",
+        "path": "inputs/navigation.json",
+        "source_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "target_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+      },
+      {
+        "version": 1,
+        "logical_name": "pr",
+        "state": "available",
+        "record_sha256": "054321ec5a1a05c95032a2479c00638f76f4501d59c8c265ee2c352e5d8a1de4",
+        "content_sha256": "3b5e2ed5c876824a44a4e52e225c6a7631b583ad016bc0313bc1dcd8cc08900d",
+        "path": "inputs/pr.json",
+        "source_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "target_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+      },
+      {
+        "version": 1,
+        "logical_name": "prior-coverage",
+        "state": "not-selected",
+        "record_sha256": "d9cb0e48f759bf34345a01f82d2cdf9726bf2c62daed3e1562fcbd5385bb339f"
+      },
+      {
+        "version": 1,
+        "logical_name": "request",
+        "state": "available",
+        "record_sha256": "7fb8473ef5882c9133a0ddf2f6a9b90dafbf1393d68c82b80346f53b6a8ae182",
+        "content_sha256": "740d728514d41aa72dd2c5b9abbcfa3319ba76d53eea9cf088f4035d93c33267",
+        "path": "inputs/request.json"
+      },
+      {
+        "version": 1,
+        "logical_name": "reviewed-facts",
+        "state": "not-selected",
+        "record_sha256": "a9af397691644bcea78409b00c3dc607978f8c007cbe7dc43b06ab29c5018b8c"
+      },
+      {
+        "version": 1,
+        "logical_name": "source-pin",
+        "state": "available",
+        "record_sha256": "90cad0ee981669e83f89dbca29a9aa12090d8950c81c93921d690f17d0d1b4be",
+        "content_sha256": "47acec76b97d155887e865e0713900d072e0290611fabae3247f6af9da97e677",
+        "path": "inputs/source-pin.json",
+        "source_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+        "target_revision": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+      },
+      {
+        "version": 1,
+        "logical_name": "targeted-history",
+        "state": "not-selected",
+        "record_sha256": "cce5a177197d5fb8f3361c2b7c4db178c94b346f7e854e34af17639c5871014d"
+      },
+      {
+        "version": 1,
+        "logical_name": "validation-policy",
+        "state": "available",
+        "record_sha256": "c07968d5f8697620541519d5c6c4b39ca547014592c619d39787f2352abe27db",
+        "content_sha256": "f6df25a990bdc94c040cdde29b80366caacebda1456f3c00c8f91deacb968df5",
+        "path": "inputs/validation-policy.json"
+      }
+    ],
+    "finding_generations": [],
+    "effectiveness": {
+      "planned": 12,
+      "invocations": {
+        "attempted": 12,
+        "completed": 12,
+        "lost": 0,
+        "blocked": 0
+      },
+      "pre_dispatch": {
+        "blocked": 0
+      },
+      "occurrences": {
+        "examined": 0,
+        "ruled_out": 8,
+        "blocked": 10,
+        "found": 0
+      },
+      "inputs": {
+        "available": 7,
+        "stale": 0,
+        "context-only": 0,
+        "not-selected": 5,
+        "unavailable": 0
+      },
+      "provenance": {
+        "complete": 0,
+        "total": 0
+      },
+      "conserved": true,
+      "status": "blocked"
+    }
+  },
+  "effectiveness": null,
+  "coverage_limits": []
+}

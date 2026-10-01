@@ -1,0 +1,918 @@
+diff --git a/apps/explorer/src/comps/ExploreInput.tsx b/apps/explorer/src/comps/ExploreInput.tsx
+index 522b154e..d91be3c9 100644
+--- a/apps/explorer/src/comps/ExploreInput.tsx
++++ b/apps/explorer/src/comps/ExploreInput.tsx
+@@ -9,6 +9,7 @@ import { RelativeTime } from '#comps/RelativeTime'
+ import { cx } from '#lib/css'
+ import { isTip20Address } from '#lib/domain/tip20'
+ import { getApiUrl } from '#lib/env.ts'
++import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
+ import { normalizeSearchInput } from '#lib/tempo-address'
+ import type {
+ 	AddressSearchResult,
+@@ -18,9 +19,15 @@ import type {
+ 	TokenSearchResult,
+ } from '#routes/api/search'
+ import ArrowRight from '~icons/lucide/arrow-right'
+-
+-const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
+-const recentSearchesLimit = 6
++import X from '~icons/lucide/x'
++import {
++	getSearchResultKey,
++	loadRecentSearches,
++	persistRecentSearches,
++	recentSearchesLimit,
++	removeRecentSearch,
++	recentSearchLabel,
++} from '#lib/recent-searches'
+ 
+ type ManualActivation =
+ 	| { value: Address.Address; type: 'address' }
+@@ -38,100 +45,6 @@ function parseBlockInput(raw: string): string | null {
+ 	return String(n)
+ }
+ 
+-function getSearchResultKey(result: SearchResult): string {
+-	if (result.type === 'block') return `block-${result.blockNumber}`
+-	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
+-	return `${result.type}-${result.address.toLowerCase()}`
+-}
+-
+-function isPersistedSearchResult(value: unknown): value is SearchResult {
+-	if (typeof value !== 'object' || value == null) return false
+-
+-	const result = value as Record<string, unknown>
+-	if (
+-		result.type === 'block' &&
+-		typeof result.blockNumber === 'number' &&
+-		Number.isSafeInteger(result.blockNumber) &&
+-		result.blockNumber >= 0
+-	)
+-		return true
+-
+-	if (
+-		result.type === 'transaction' &&
+-		typeof result.hash === 'string' &&
+-		Hex.validate(result.hash) &&
+-		Hex.size(result.hash) === 32 &&
+-		(result.timestamp === undefined || typeof result.timestamp === 'number')
+-	)
+-		return true
+-
+-	const validCategory =
+-		result.category === undefined ||
+-		result.category === 'token' ||
+-		result.category === 'system' ||
+-		result.category === 'utility' ||
+-		result.category === 'account' ||
+-		result.category === 'precompile'
+-	const validAddressMetadata =
+-		(result.label === undefined || typeof result.label === 'string') &&
+-		(result.description === undefined ||
+-			typeof result.description === 'string') &&
+-		validCategory
+-
+-	if (
+-		result.type === 'address' &&
+-		typeof result.address === 'string' &&
+-		Address.validate(result.address) &&
+-		typeof result.isTip20 === 'boolean' &&
+-		validAddressMetadata
+-	)
+-		return true
+-
+-	if (
+-		result.type === 'token' &&
+-		typeof result.address === 'string' &&
+-		Address.validate(result.address) &&
+-		typeof result.name === 'string' &&
+-		typeof result.symbol === 'string' &&
+-		typeof result.isTip20 === 'boolean'
+-	)
+-		return true
+-
+-	return false
+-}
+-
+-function loadRecentSearches(): SearchResult[] {
+-	if (typeof window === 'undefined') return []
+-
+-	try {
+-		const rawValue = window.localStorage.getItem(recentSearchesStorageKey)
+-		if (!rawValue) return []
+-		const parsedValue = JSON.parse(rawValue)
+-		if (!Array.isArray(parsedValue)) return []
+-		return parsedValue
+-			.filter(isPersistedSearchResult)
+-			.slice(0, recentSearchesLimit)
+-	} catch {
+-		return []
+-	}
+-}
+-
+-function persistRecentSearches(results: SearchResult[]): void {
+-	if (typeof window === 'undefined') return
+-
+-	try {
+-		if (results.length === 0) {
+-			window.localStorage.removeItem(recentSearchesStorageKey)
+-			return
+-		}
+-
+-		window.localStorage.setItem(
+-			recentSearchesStorageKey,
+-			JSON.stringify(results.slice(0, recentSearchesLimit)),
+-		)
+-	} catch {}
+-}
+-
+ function toManualSearchResult(data: ManualActivation): SearchResult {
+ 	if (data.type === 'block')
+ 		return { type: 'block', blockNumber: Number(data.value) }
+@@ -177,10 +90,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 	const submittingRef = React.useRef(false)
+ 
+ 	const query = value.trim()
++	const showingRecent = query.length === 0 && recentSearches.length > 0
++	const explorerUrl = parseExplorerSearchUrl(query)
+ 	const normalizedQuery = normalizeSearchInput(query)
+ 	const isValidInput =
+ 		query.length > 0 &&
+-		(Address.validate(normalizedQuery) ||
++		(explorerUrl !== undefined ||
++			Address.validate(normalizedQuery) ||
+ 			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
+ 			parseBlockInput(normalizedQuery) !== null)
+ 	const {
+@@ -199,12 +115,12 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 				if (!res.ok) throw new Error('Search failed')
+ 				return res.json()
+ 			},
+-			enabled: normalizedQuery !== '',
++			enabled: normalizedQuery !== '' && !explorerUrl,
+ 			staleTime: 30_000,
+ 			placeholderData: keepPreviousData,
+ 		}),
+ 	)
+-	const suggestions = searchResults?.results ?? []
++	const suggestions = explorerUrl ? [] : (searchResults?.results ?? [])
+ 
+ 	const groupedSuggestions = React.useMemo<
+ 		ExploreInput.SuggestionGroup[]
+@@ -351,6 +267,20 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 		})
+ 	}, [])
+ 
++	const handleRemoveRecentSearch = React.useCallback(
++		(result: SearchResult) => {
++			// Restore focus before removing a keyboard-focused button from the DOM.
++			inputRef.current?.focus({ preventScroll: true })
++			setSelectedIndex(-1)
++			setRecentSearches((current) => {
++				const next = removeRecentSearch(current, result)
++				persistRecentSearches(next)
++				return next
++			})
++		},
++		[inputRef],
++	)
++
+ 	const clearRecentSearches = React.useCallback(() => {
+ 		persistRecentSearches([])
+ 		setRecentSearches([])
+@@ -422,6 +352,11 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						formValue = formValue.trim()
+ 						if (!formValue) return
+ 
++						const target = parseExplorerSearchUrl(formValue)
++						if (target) {
++							window.location.assign(target.href)
++							return
++						}
+ 						const normalizedFormValue = normalizeSearchInput(formValue)
+ 
+ 						const blockId = parseBlockInput(normalizedFormValue)
+@@ -459,7 +394,7 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						)}
+ 						data-1p-ignore
+ 						name="explore-query"
+-						placeholder="Search address, hash, block, token"
++						placeholder="Search address, hash, block, token, or URL"
+ 						enterKeyHint="search"
+ 						spellCheck={false}
+ 						type="text"
+@@ -471,6 +406,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 								return
+ 							}
+ 
++							if (showResults && explorerUrl) {
++								if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
++									event.preventDefault()
++									setSelectedIndex(0)
++								}
++								return
++							}
+ 							if (!showResults || flatSuggestions.length === 0) return
+ 
+ 							if (event.key === 'ArrowDown') {
+@@ -509,13 +451,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						}}
+ 						role="combobox"
+ 						aria-expanded={showResults}
+-						aria-haspopup="listbox"
++						aria-haspopup={showingRecent ? 'grid' : 'listbox'}
+ 						aria-autocomplete="list"
+ 						aria-controls={resultsId}
+ 						aria-activedescendant={
+ 							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
+ 						}
+-						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
++						title="Search by Address / Tx Hash / Block / Token / Explorer URL (Cmd+K to focus)"
+ 					/>
+ 					<div
+ 						className={cx(
+@@ -546,9 +488,13 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 			{menuMounted && (
+ 				<div
+ 					ref={resultsRef}
+-					id={resultsId}
+-					role="listbox"
+-					aria-label="Search suggestions"
++					{...(!showingRecent
++						? {
++								id: resultsId,
++								role: 'listbox',
++								'aria-label': 'Search suggestions',
++							}
++						: {})}
+ 					className={cx(
+ 						'absolute left-0 right-0 mt-2 z-50',
+ 						'bg-surface border border-base-border rounded-body overflow-hidden',
+@@ -561,7 +507,77 @@ export function ExploreInput(props: ExploreInput.Props) {
+ 						start={150}
+ 						className="absolute top-0 left-0 right-0"
+ 					/>
+-					{flatSuggestions.length === 0 ? (
++					{showingRecent ? (
++						<table
++							id={resultsId}
++							// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: Native table semantics support an interactive combobox grid.
++							role="grid"
++							aria-label="Recent searches"
++							className="w-full table-fixed"
++						>
++							<colgroup>
++								<col />
++								<col className="w-[40px]" />
++							</colgroup>
++							<tbody>
++								<tr>
++									<td className="px-[12px] py-[6px] label-12 text-secondary">
++										Recent searches
++									</td>
++									<td className="pr-[8px]">
++										<button
++											type="button"
++											className="label-12 text-tertiary hover:text-base-content"
++											onMouseDown={(event) => event.preventDefault()}
++											onClick={clearRecentSearches}
++										>
++											Clear
++										</button>
++									</td>
++								</tr>
++								{recentSearches.map((item, index) => (
++									<tr key={getSearchResultKey(item)}>
++										<td
++											id={`${resultsId}-${index}`}
++											// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: This cell is the combobox active descendant in the grid.
++											role="gridcell"
++											tabIndex={-1}
++											aria-selected={index === selectedIndex}
++											className="p-0"
++										>
++											<ExploreInput.SuggestionItem
++												suggestion={item}
++												isSelected={index === selectedIndex}
++												onSelect={handleSelect}
++											/>
++										</td>
++										<td className="p-0 pr-[4px]">
++											<button
++												type="button"
++												aria-label={`Remove ${recentSearchLabel(item)} from recent searches`}
++												title="Remove from recent searches"
++												className="size-[32px] grid place-items-center rounded-body text-tertiary hover:text-base-content hover:bg-base-alt/25 focus-visible:outline-2 focus-visible:outline-focus"
++												onMouseDown={(event) => event.preventDefault()}
++												onClick={() => handleRemoveRecentSearch(item)}
++											>
++												<X className="size-[14px]" />
++											</button>
++										</td>
++									</tr>
++								))}
++							</tbody>
++						</table>
++					) : explorerUrl ? (
++						<a
++							href={explorerUrl.href}
++							role="option"
++							aria-selected={selectedIndex === 0}
++							id={`${resultsId}-0`}
++							className="block px-[16px] py-[12px] copy-14 text-accent hover:bg-base-alt"
++						>
++							Open on {explorerUrl.network}
++						</a>
++					) : flatSuggestions.length === 0 ? (
+ 						<div className="px-[16px] py-[12px] copy-14 text-tertiary">
+ 							{isError
+ 								? 'Search unavailable. Paste an address, hash, or block number.'
+@@ -668,8 +684,7 @@ export namespace ExploreInput {
+ 				ref={itemRef}
+ 				id={id}
+ 				type="button"
+-				role="option"
+-				aria-selected={isSelected}
++				{...(id ? { role: 'option', 'aria-selected': isSelected } : {})}
+ 				onMouseDown={(event) => {
+ 					event.preventDefault()
+ 					onSelect(suggestion)
+@@ -766,7 +781,7 @@ export namespace ExploreInput {
+ 			suggestion: SearchResult
+ 			isSelected: boolean
+ 			onSelect: (suggestion: SearchResult) => void
+-			id: string
++			id?: string
+ 		}
+ 	}
+ }
+diff --git a/apps/explorer/src/lib/explorer-search-url.ts b/apps/explorer/src/lib/explorer-search-url.ts
+new file mode 100644
+index 00000000..06a66a37
+--- /dev/null
++++ b/apps/explorer/src/lib/explorer-search-url.ts
+@@ -0,0 +1,69 @@
++import * as Address from 'ox/Address'
++import { normalizeSearchInput } from './tempo-address'
++
++// Exact hosts only: hostname inference for preview environments is intentionally
++// more permissive and must not be used to authorize pasted destinations.
++const networks = [
++	{
++		label: 'Mainnet',
++		host: 'explore.tempo.xyz',
++		aliases: [
++			'explore.4217.tempo.xyz',
++			'explore.mainnet.tempo.xyz',
++			'explore.presto.tempo.xyz',
++		],
++	},
++	{
++		label: 'Testnet',
++		host: 'explore.testnet.tempo.xyz',
++		aliases: ['explore.42431.tempo.xyz', 'explore.moderato.tempo.xyz'],
++	},
++	{
++		label: 'Devnet',
++		host: 'explore.devnet.tempo.xyz',
++		aliases: ['explore.31318.tempo.xyz'],
++	},
++	{ label: 'Nextfork', host: 'explore.nextfork.devnet.tempo.xyz', aliases: [] },
++	{
++		label: 'Zone Prover',
++		host: 'explore.zone-prover.devnet.tempo.xyz',
++		aliases: [],
++	},
++]
++
++export function parseExplorerSearchUrl(
++	input: string,
++): { href: string; network: string } | undefined {
++	try {
++		const url = new URL(input.trim())
++		if (url.protocol !== 'https:' || url.username || url.password || url.port)
++			return undefined
++		const network = networks.find(
++			({ host, aliases }) =>
++				url.hostname === host || aliases.includes(url.hostname),
++		)
++		if (!network) return undefined
++		const match = /^\/(address|token|tx|receipt|block)\/([^/]+)\/?$/.exec(
++			url.pathname,
++		)
++		if (!match) return undefined
++		const [, resource, encodedId] = match
++		let id = decodeURIComponent(encodedId)
++		if (resource === 'address' || resource === 'token') {
++			id = normalizeSearchInput(id)
++			if (!Address.validate(id)) return undefined
++		} else if (resource === 'block') {
++			if (id !== 'latest' && !/^0x[0-9a-fA-F]{64}$/.test(id)) {
++				if (!/^\d+$/.test(id) || !Number.isSafeInteger(Number(id)))
++					return undefined
++				id = String(Number(id))
++			}
++		} else if (!/^0x[0-9a-fA-F]{64}$/.test(id)) return undefined
++		return {
++			href: `https://${network.host}/${resource}/${id}`,
++			network: network.label,
++		}
++	} catch {
++		return undefined
++	}
++}
+diff --git a/apps/explorer/src/lib/recent-searches.ts b/apps/explorer/src/lib/recent-searches.ts
+new file mode 100644
+index 00000000..7a5356d3
+--- /dev/null
++++ b/apps/explorer/src/lib/recent-searches.ts
+@@ -0,0 +1,116 @@
++import * as Address from 'ox/Address'
++import * as Hex from 'ox/Hex'
++import type { SearchResult } from '#routes/api/search'
++
++const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
++export const recentSearchesLimit = 6
++
++export function getSearchResultKey(result: SearchResult): string {
++	if (result.type === 'block') return `block-${result.blockNumber}`
++	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
++	return `${result.type}-${result.address.toLowerCase()}`
++}
++
++function isPersistedSearchResult(value: unknown): value is SearchResult {
++	if (typeof value !== 'object' || value == null) return false
++
++	const result = value as Record<string, unknown>
++	if (
++		result.type === 'block' &&
++		typeof result.blockNumber === 'number' &&
++		Number.isSafeInteger(result.blockNumber) &&
++		result.blockNumber >= 0
++	)
++		return true
++
++	if (
++		result.type === 'transaction' &&
++		typeof result.hash === 'string' &&
++		Hex.validate(result.hash) &&
++		Hex.size(result.hash) === 32 &&
++		(result.timestamp === undefined || typeof result.timestamp === 'number')
++	)
++		return true
++
++	const validCategory =
++		result.category === undefined ||
++		result.category === 'token' ||
++		result.category === 'system' ||
++		result.category === 'utility' ||
++		result.category === 'account' ||
++		result.category === 'precompile'
++	const validAddressMetadata =
++		(result.label === undefined || typeof result.label === 'string') &&
++		(result.description === undefined ||
++			typeof result.description === 'string') &&
++		validCategory
++
++	if (
++		result.type === 'address' &&
++		typeof result.address === 'string' &&
++		Address.validate(result.address) &&
++		typeof result.isTip20 === 'boolean' &&
++		validAddressMetadata
++	)
++		return true
++
++	if (
++		result.type === 'token' &&
++		typeof result.address === 'string' &&
++		Address.validate(result.address) &&
++		typeof result.name === 'string' &&
++		typeof result.symbol === 'string' &&
++		typeof result.isTip20 === 'boolean'
++	)
++		return true
++
++	return false
++}
++
++export function loadRecentSearches(): SearchResult[] {
++	if (typeof window === 'undefined') return []
++
++	try {
++		const rawValue = window.localStorage.getItem(recentSearchesStorageKey)
++		if (!rawValue) return []
++		const parsedValue = JSON.parse(rawValue)
++		if (!Array.isArray(parsedValue)) return []
++		return parsedValue
++			.filter(isPersistedSearchResult)
++			.slice(0, recentSearchesLimit)
++	} catch {
++		return []
++	}
++}
++
++export function persistRecentSearches(results: SearchResult[]): void {
++	if (typeof window === 'undefined') return
++
++	try {
++		if (results.length === 0) {
++			window.localStorage.removeItem(recentSearchesStorageKey)
++			return
++		}
++
++		window.localStorage.setItem(
++			recentSearchesStorageKey,
++			JSON.stringify(results.slice(0, recentSearchesLimit)),
++		)
++	} catch {}
++}
++
++export function removeRecentSearch(
++	results: SearchResult[],
++	target: SearchResult,
++): SearchResult[] {
++	const key = getSearchResultKey(target)
++	return results.filter((item) => getSearchResultKey(item) !== key)
++}
++
++export function recentSearchLabel(result: SearchResult): string {
++	if (result.type === 'block') return `block #${result.blockNumber}`
++	if (result.type === 'transaction') return `transaction ${result.hash}`
++	if (result.type === 'token')
++		return `token ${result.name} (${result.symbol}), ${result.address}`
++	return `address ${result.address}`
++}
+diff --git a/apps/explorer/src/routes/search.tsx b/apps/explorer/src/routes/search.tsx
+index 445a0b16..60f2e33e 100644
+--- a/apps/explorer/src/routes/search.tsx
++++ b/apps/explorer/src/routes/search.tsx
+@@ -3,6 +3,7 @@ import * as Address from 'ox/Address'
+ import * as Hex from 'ox/Hex'
+ import * as z from 'zod/mini'
+ import { getApiUrl } from '#lib/env'
++import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
+ import { normalizeSearchInput } from '#lib/tempo-address'
+ 
+ type SearchMatch =
+@@ -137,6 +138,9 @@ export const Route = createFileRoute('/search')({
+ 		const rawQuery = search.q?.trim() ?? ''
+ 		if (!rawQuery) throw redirect(getLandingRedirect(rawQuery))
+ 
++		const explorerUrl = parseExplorerSearchUrl(rawQuery)
++		if (explorerUrl) throw redirect({ href: explorerUrl.href })
++
+ 		const normalizedQuery = normalizeSearchInput(rawQuery)
+ 		const blockId = parseBlockInput(normalizedQuery)
+ 
+diff --git a/apps/explorer/test/explorer-search-url.node.test.ts b/apps/explorer/test/explorer-search-url.node.test.ts
+new file mode 100644
+index 00000000..bfbd8a15
+--- /dev/null
++++ b/apps/explorer/test/explorer-search-url.node.test.ts
+@@ -0,0 +1,169 @@
++import { describe, expect, it } from 'vitest'
++import { TempoAddress } from 'ox/tempo'
++import { parseExplorerSearchUrl } from '#lib/explorer-search-url'
++import { normalizeSearchInput } from '#lib/tempo-address'
++
++const address = '0x20C0000000000000000000000000000000000000'
++const hash = `0x${'ab'.repeat(32)}`
++
++describe('parseExplorerSearchUrl', () => {
++	it.each([
++		['explore.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.mainnet.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.4217.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.presto.tempo.xyz', 'explore.tempo.xyz', 'Mainnet'],
++		['explore.testnet.tempo.xyz', 'explore.testnet.tempo.xyz', 'Testnet'],
++		['explore.42431.tempo.xyz', 'explore.testnet.tempo.xyz', 'Testnet'],
++		['explore.moderato.tempo.xyz', 'explore.testnet.tempo.xyz', 'Testnet'],
++		['explore.devnet.tempo.xyz', 'explore.devnet.tempo.xyz', 'Devnet'],
++		['explore.31318.tempo.xyz', 'explore.devnet.tempo.xyz', 'Devnet'],
++		[
++			'explore.nextfork.devnet.tempo.xyz',
++			'explore.nextfork.devnet.tempo.xyz',
++			'Nextfork',
++		],
++		[
++			'explore.zone-prover.devnet.tempo.xyz',
++			'explore.zone-prover.devnet.tempo.xyz',
++			'Zone Prover',
++		],
++	])('preserves the network for %s', (host, canonicalHost, network) => {
++		expect(parseExplorerSearchUrl(`https://${host}/block/100`)).toEqual({
++			href: `https://${canonicalHost}/block/100`,
++			network,
++		})
++	})
++
++	it.each([
++		'address',
++		'token',
++	])('opens a %s resource without changing its type', (resource) => {
++		expect(
++			parseExplorerSearchUrl(
++				`https://explore.tempo.xyz/${resource}/${address}`,
++			),
++		).toEqual({
++			href: `https://explore.tempo.xyz/${resource}/${address}`,
++			network: 'Mainnet',
++		})
++	})
++	it.each(['tx', 'receipt'])('opens a %s hash', (resource) => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/${resource}/${hash}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/${resource}/${hash}`,
++			network: 'Mainnet',
++		})
++	})
++	it('normalizes Tempo addresses using the existing address rules', () => {
++		expect(
++			parseExplorerSearchUrl(
++				`https://explore.tempo.xyz/address/${TempoAddress.format(address)}`,
++			),
++		).toEqual({
++			href: `https://explore.tempo.xyz/address/${address}`,
++			network: 'Mainnet',
++		})
++	})
++	it.each(['latest', hash])('preserves block identifier %s', (id) => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/block/${id}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/block/${id}`,
++			network: 'Mainnet',
++		})
++	})
++	it('preserves a block hash through a network alias', () => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.42431.tempo.xyz/block/${hash}`),
++		).toEqual({
++			href: `https://explore.testnet.tempo.xyz/block/${hash}`,
++			network: 'Testnet',
++		})
++	})
++	it('trims pasted whitespace, normalizes host case and block number, drops view options', () => {
++		expect(
++			parseExplorerSearchUrl(
++				'  https://EXPLORE.TEMPO.XYZ/block/000100/?tab=foo#bar  ',
++			),
++		).toEqual({
++			href: 'https://explore.tempo.xyz/block/100',
++			network: 'Mainnet',
++		})
++	})
++	it.each([
++		'0',
++		'9007199254740991',
++	])('supports safe block boundary %s', (id) => {
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/block/${id}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/block/${id}`,
++			network: 'Mainnet',
++		})
++	})
++	it.each([
++		'http://explore.tempo.xyz/block/1',
++		'javascript:alert(1)',
++		'//explore.tempo.xyz/block/1',
++		'https://explore.tempo.xyz.evil.example/block/1',
++		'https://evil.example/explore.tempo.xyz/block/1',
++		'https://explore.tempo.xyz@evil.example/block/1',
++		'https://evil.example@explore.tempo.xyz/block/1',
++		'https://user:pass@explore.tempo.xyz/block/1',
++		'https://explore.tempo.xyz:8443/block/1',
++		'https://explore.tempo.xyz./block/1',
++		'https://explorer-mainnet.evil.example/block/1',
++		'https://explore.tempo.xyz/blocks',
++		'https://explore.tempo.xyz/block/9007199254740992',
++		'https://explore.tempo.xyz/block/-1',
++		'https://explore.tempo.xyz/block/latestish',
++		'https://explore.tempo.xyz/block/0x00',
++		`https://explore.tempo.xyz/block/0x${'ab'.repeat(33)}`,
++		`https://explore.tempo.xyz/block/0x${'zz'.repeat(32)}`,
++		'https://explore.tempo.xyz/block/1.5',
++		'https://explore.tempo.xyz/block/1e2',
++		'https://explore.tempo.xyz/block/1/extra',
++		'https://explore.tempo.xyz/block/%2F1',
++		'https://explore.tempo.xyz/block/%E0%A4%A',
++		'https://explore.tempo.xyz/tx/0x00',
++		`https://explore.tempo.xyz/tx/0x${'zz'.repeat(32)}`,
++		'https://explore.tempo.xyz/token/invalid',
++		'https://explore.tempo.xyz/address/0x00',
++		'https://explore.tempo.xyz/policy/1',
++		'',
++		'not a URL',
++		'#100',
++		'100',
++		'pathUSD',
++	])('rejects unsupported input %s without throwing', (input) => {
++		expect(parseExplorerSearchUrl(input)).toBeUndefined()
++		// A valid counterpart guards against a parser that rejects everything.
++		expect(parseExplorerSearchUrl('https://explore.tempo.xyz/block/1')).toEqual(
++			{ href: 'https://explore.tempo.xyz/block/1', network: 'Mainnet' },
++		)
++	})
++	it.each([
++		'tx',
++		'receipt',
++		'block',
++	])('rejects odd-length %s hashes', (resource) => {
++		expect(
++			parseExplorerSearchUrl(
++				`https://explore.tempo.xyz/${resource}/0x${'ab'.repeat(31)}a`,
++			),
++		).toBeUndefined()
++		expect(
++			parseExplorerSearchUrl(`https://explore.tempo.xyz/${resource}/${hash}`),
++		).toEqual({
++			href: `https://explore.tempo.xyz/${resource}/${hash}`,
++			network: 'Mainnet',
++		})
++	})
++	it('leaves raw normalization independent of URL parsing', () => {
++		expect(normalizeSearchInput(` ${address} `)).toBe(address)
++		expect(normalizeSearchInput(' pathUSD ')).toBe('pathUSD')
++		expect(normalizeSearchInput(' #100 ')).toBe('#100')
++		expect(normalizeSearchInput(hash)).toBe(hash)
++	})
++})
+diff --git a/apps/explorer/test/recent-searches.node.test.ts b/apps/explorer/test/recent-searches.node.test.ts
+new file mode 100644
+index 00000000..3369e0eb
+--- /dev/null
++++ b/apps/explorer/test/recent-searches.node.test.ts
+@@ -0,0 +1,169 @@
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import {
++	loadRecentSearches,
++	persistRecentSearches,
++	recentSearchLabel,
++	removeRecentSearch,
++} from '#lib/recent-searches'
++import type { SearchResult } from '#routes/api/search'
++
++const key = 'tempo-explorer-recent-searches'
++const block: SearchResult = { type: 'block', blockNumber: 100 }
++const address: SearchResult = {
++	type: 'address',
++	address: '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
++	isTip20: false,
++}
++const token: SearchResult = {
++	...address,
++	type: 'token',
++	name: 'Dollar',
++	symbol: 'USD',
++}
++const tx: SearchResult = { type: 'transaction', hash: `0x${'ab'.repeat(32)}` }
++function storage() {
++	const values = new Map<string, string>([['unrelated', 'keep']])
++	const localStorage = {
++		getItem: (name: string) => values.get(name) ?? null,
++		setItem: (name: string, value: string) => {
++			values.set(name, value)
++		},
++		removeItem: (name: string) => {
++			values.delete(name)
++		},
++	}
++	vi.stubGlobal('window', { localStorage })
++	return { values, localStorage }
++}
++afterEach(() => vi.unstubAllGlobals())
++
++describe('removing recent searches', () => {
++	it('removes the target and preserves order and metadata without mutating history', () => {
++		const history = [block, address, token, tx]
++		expect(removeRecentSearch(history, address)).toEqual([block, token, tx])
++		expect(history).toEqual([block, address, token, tx])
++	})
++	it('uses case-insensitive address identity while retaining token at same address', () => {
++		expect(
++			removeRecentSearch([block, address, token], {
++				...address,
++				address: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
++			}),
++		).toEqual([block, token])
++	})
++	it('uses case-insensitive transaction identity', () => {
++		expect(
++			removeRecentSearch([tx, block], {
++				type: 'transaction',
++				hash: `0x${'AB'.repeat(32)}`,
++			}),
++		).toEqual([block])
++	})
++	it('removing a missing entry is harmless', () => {
++		expect(removeRecentSearch([address, tx], block)).toEqual([address, tx])
++	})
++	it('removes last entry and every duplicate of the same identity', () => {
++		expect(removeRecentSearch([block, block, tx], block)).toEqual([tx])
++		expect(removeRecentSearch([block], block)).toEqual([])
++	})
++	it('persists removal through reload without modifying other keys', () => {
++		const { values } = storage()
++		persistRecentSearches([block, address, token, tx])
++		persistRecentSearches(removeRecentSearch(loadRecentSearches(), address))
++		expect(loadRecentSearches()).toEqual([block, token, tx])
++		expect(values.get('unrelated')).toBe('keep')
++	})
++	it('clears storage after removing the last item', () => {
++		const { values } = storage()
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([block])
++		persistRecentSearches(removeRecentSearch(loadRecentSearches(), block))
++		expect(values.has(key)).toBe(false)
++		expect(loadRecentSearches()).toEqual([])
++		expect(values.get('unrelated')).toBe('keep')
++	})
++	it('keeps the current result usable when storage writes fail', () => {
++		const { localStorage } = storage()
++		persistRecentSearches([block, address])
++		localStorage.setItem = () => {
++			throw new Error('quota')
++		}
++		const remaining = removeRecentSearch(loadRecentSearches(), block)
++		persistRecentSearches(remaining)
++		expect(remaining).toEqual([address])
++		expect(loadRecentSearches()).toEqual([block, address])
++	})
++	it('tolerates failed storage removal', () => {
++		const { localStorage } = storage()
++		persistRecentSearches([block])
++		localStorage.removeItem = () => {
++			throw new Error('denied')
++		}
++		persistRecentSearches([])
++		expect(loadRecentSearches()).toEqual([block])
++	})
++	it('filters invalid persisted records and preserves valid ones', () => {
++		const { values } = storage()
++		values.set(
++			key,
++			JSON.stringify([
++				null,
++				{},
++				{ type: 'block', blockNumber: -1 },
++				address,
++				token,
++				tx,
++				block,
++			]),
++		)
++		expect(loadRecentSearches()).toEqual([address, token, tx, block])
++	})
++	it('handles invalid JSON, non-array data and missing history', () => {
++		const { values } = storage()
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([block])
++		for (const raw of ['{', '{}', 'null']) {
++			values.set(key, raw)
++			expect(loadRecentSearches()).toEqual([])
++		}
++		values.delete(key)
++		expect(loadRecentSearches()).toEqual([])
++	})
++	it('handles blocked storage access and server rendering', () => {
++		vi.stubGlobal('window', {
++			get localStorage() {
++				throw new Error('denied')
++			},
++		})
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([])
++		vi.stubGlobal('window', undefined)
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([])
++		storage()
++		persistRecentSearches([block])
++		expect(loadRecentSearches()).toEqual([block])
++	})
++	it('retains the existing six-item bound', () => {
++		storage()
++		persistRecentSearches(
++			Array.from({ length: 8 }, (_, blockNumber) => ({
++				type: 'block',
++				blockNumber,
++			})),
++		)
++		expect(loadRecentSearches()).toEqual(
++			[0, 1, 2, 3, 4, 5].map((blockNumber) => ({ type: 'block', blockNumber })),
++		)
++	})
++	it('names removal actions with type and unambiguous identity', () => {
++		expect(recentSearchLabel(block)).toBe('block #100')
++		expect(recentSearchLabel(address)).toBe(
++			'address 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
++		)
++		expect(recentSearchLabel(token)).toBe(
++			'token Dollar (USD), 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
++		)
++		expect(recentSearchLabel(tx)).toBe(`transaction 0x${'ab'.repeat(32)}`)
++	})
++})

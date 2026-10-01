@@ -1,0 +1,16 @@
+{
+  "head": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+  "remote_head": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+  "factory_pin": "ad2edcde57d7b524886318d450a60d1a5e34daae",
+  "pr": 1300,
+  "state": "OPEN",
+  "changed_files": [
+    "factory.yaml"
+  ],
+  "checks_exit": 0,
+  "worker_tests_passed": 205,
+  "node_tests_passed": 318,
+  "node_tests_skipped": 1,
+  "cyclops_submitted": false,
+  "merged": false
+}

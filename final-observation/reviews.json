@@ -1,0 +1,42 @@
+[
+  {
+    "id": 5375378656,
+    "node_id": "PRR_kwDOQN_W4s8AAAABQGXE4A",
+    "user": {
+      "login": "tempoxyz-bot",
+      "id": 258930814,
+      "node_id": "U_kgDOD274fg",
+      "avatar_url": "https://avatars.githubusercontent.com/u/258930814?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/tempoxyz-bot",
+      "html_url": "https://github.com/tempoxyz-bot",
+      "followers_url": "https://api.github.com/users/tempoxyz-bot/followers",
+      "following_url": "https://api.github.com/users/tempoxyz-bot/following{/other_user}",
+      "gists_url": "https://api.github.com/users/tempoxyz-bot/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/tempoxyz-bot/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/tempoxyz-bot/subscriptions",
+      "organizations_url": "https://api.github.com/users/tempoxyz-bot/orgs",
+      "repos_url": "https://api.github.com/users/tempoxyz-bot/repos",
+      "events_url": "https://api.github.com/users/tempoxyz-bot/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/tempoxyz-bot/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "body": "<!-- cyclops:review run=pr-1300-20261001t053450-290efea93387 head=4655e8b3ddb12611d3f2e85945525873a3aa712b scan=scan_mup3nxlu_3hs8hb -->\n:eye: **Cyclops Review** \u2014 No actionable findings.",
+    "state": "COMMENTED",
+    "html_url": "https://github.com/tempoxyz/tempo-apps/pull/1300#pullrequestreview-5375378656",
+    "pull_request_url": "https://api.github.com/repos/tempoxyz/tempo-apps/pulls/1300",
+    "author_association": "MEMBER",
+    "_links": {
+      "html": {
+        "href": "https://github.com/tempoxyz/tempo-apps/pull/1300#pullrequestreview-5375378656"
+      },
+      "pull_request": {
+        "href": "https://api.github.com/repos/tempoxyz/tempo-apps/pulls/1300"
+      }
+    },
+    "submitted_at": "2026-10-01T05:37:56Z",
+    "commit_id": "4655e8b3ddb12611d3f2e85945525873a3aa712b"
+  }
+]

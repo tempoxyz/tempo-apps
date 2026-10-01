@@ -1,0 +1,4 @@
+page.waitForFunction: Target page, context or browser has been closed
+    at [stdin]:4:90 {
+  log: []
+}

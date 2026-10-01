@@ -1,0 +1,10 @@
+page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:3006/tokens
+Call log:
+[2m  - navigating to "http://127.0.0.1:3006/tokens", waiting until "domcontentloaded"[22m
+
+    at [stdin]:4:12 {
+  log: [
+    '  - navigating to "http://127.0.0.1:3006/tokens", waiting until "domcontentloaded"'
+  ],
+  name: 'Error'
+}

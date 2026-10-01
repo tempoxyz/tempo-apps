@@ -1,0 +1,219 @@
+{
+  "jsonrpc": "2.0",
+  "id": "timestamp-status",
+  "result": {
+    "summary": {
+      "run_id": "scan_mup35iup_4gkzf1",
+      "run_label": "pr-1300-20261001t052031-77f317ac6c45",
+      "status": "running",
+      "scan_type": "pr-review",
+      "repo": "tempoxyz/tempo-apps",
+      "started_at": "2026-10-01T05:20:31.153Z",
+      "finished_at": null,
+      "event_count": 2,
+      "finding_count": 0
+    },
+    "metadata": {
+      "id": "scan_mup35iup_4gkzf1",
+      "run_label": "pr-1300-20261001t052031-77f317ac6c45",
+      "scan_type": "pr-review",
+      "repo": "tempoxyz/tempo-apps",
+      "pr_number": 1300,
+      "config": "pr-review-super-fast.yaml",
+      "review_policy": {
+        "version": 1,
+        "effort": "standard"
+      },
+      "execution_speed": "standard",
+      "dry_run": false,
+      "private": false,
+      "status": "submitted",
+      "attempt": 0,
+      "max_retries": 0,
+      "workflow_history": [
+        {
+          "attempt": 0,
+          "workflow_name": "cyclops-scan-pr-review-pzx9w",
+          "workflow_namespace": "argo-workflows",
+          "workflow_uid": "5b2b87c3-4e24-427f-a99d-2e2d8fadcc72",
+          "workflow_url": "https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-pzx9w",
+          "status": "submitted",
+          "created_at": "2026-10-01T05:20:31.153Z",
+          "updated_at": "2026-10-01T05:20:32.292Z"
+        }
+      ],
+      "workflow_namespace": "argo-workflows",
+      "created_at": "2026-10-01T05:20:31.153Z",
+      "updated_at": "2026-10-01T05:20:32.292Z",
+      "events": [
+        {
+          "ts": "2026-10-01T05:20:31.153Z",
+          "event": "scan.accepted",
+          "data": {
+            "target": "tempoxyz/tempo-apps#1300",
+            "attempt": 0,
+            "max_retries": 0,
+            "request_contract": {
+              "schema_version": 5,
+              "policy_source": "explicit"
+            }
+          }
+        },
+        {
+          "ts": "2026-10-01T05:20:32.292Z",
+          "event": "scan.submitted",
+          "data": {
+            "target": "tempoxyz/tempo-apps#1300",
+            "workflow_name": "cyclops-scan-pr-review-pzx9w"
+          }
+        }
+      ],
+      "findings": [],
+      "image": "ghcr.io/tempoxyz/cyclops-internal-worker@sha256:8c082277932a21a7e642a0b50b23d6e0590f4c86195e2c2e61cc5778f489e3fa",
+      "pr_workflow_parameters": {
+        "scan-id": "scan_mup35iup_4gkzf1",
+        "config": "pr-review-super-fast.yaml",
+        "run-label": "pr-1300-20261001t052031-77f317ac6c45",
+        "image": "ghcr.io/tempoxyz/cyclops-internal-worker@sha256:8c082277932a21a7e642a0b50b23d6e0590f4c86195e2c2e61cc5778f489e3fa",
+        "ui-event-url": "http://cyclops-scan-ui.argo-workflows.svc.cluster.local:18980/internal/ingest/events",
+        "ui-report-public-url": "https://dev-eu-cyclops-scan-ui.tail388b2e.ts.net",
+        "internal-api-url": "http://cyclops-scan-ui.argo-workflows.svc.cluster.local:18980",
+        "attempt": "0",
+        "pod-spec-patch": "{}",
+        "proxy-url": "http://cyclops-scan-ui-iron-proxy.cyclops-proxy.svc.cluster.local:18081",
+        "no-proxy": "127.0.0.1,localhost,.svc,.cluster.local,kubernetes.default.svc,kubernetes.default.svc.cluster.local,10.96.0.1",
+        "proxy-ca-secret-name": "cyclops-iron-proxy-client-ca",
+        "proxy-ca-cert-path": "/etc/iron-proxy/client-ca/ca.crt",
+        "slack-channel": "#eng-cyclops-alerts",
+        "gh-repo": "tempoxyz/tempo-apps",
+        "pr-number": "1300",
+        "sha": "",
+        "max-hours": "",
+        "max-iterations": "",
+        "models": "",
+        "audit-note-b64": "",
+        "dry-run": "false",
+        "private": "false",
+        "finding-feedback-enabled": "0"
+      },
+      "workflow_name": "cyclops-scan-pr-review-pzx9w",
+      "workflow_url": "https://dev-eu-argo-workflows.tail388b2e.ts.net/workflows/argo-workflows/cyclops-scan-pr-review-pzx9w",
+      "workflow_uid": "5b2b87c3-4e24-427f-a99d-2e2d8fadcc72",
+      "finding_progress": {
+        "confirmed": 0,
+        "provisional": 0,
+        "held": 0,
+        "unresolved": 0
+      },
+      "collection_completeness": {
+        "findings": true,
+        "events": true
+      },
+      "cost_summary": {
+        "schema_version": 1,
+        "calls": 0,
+        "cost_usd": 0,
+        "basis": "none",
+        "provider_reported_calls": 0,
+        "estimated_calls": 0,
+        "unpriced_calls": 0,
+        "unreported_calls": 0,
+        "tokens": {
+          "uncached_input": 0,
+          "cache_read": 0,
+          "cache_write": 0,
+          "output": 0,
+          "reasoning": 0,
+          "total": 0
+        },
+        "cache_hit_ratio": null,
+        "unpriced_models": [],
+        "price_table_versions": [],
+        "by_stage": [],
+        "by_model": []
+      },
+      "operational_summary": {
+        "schema_version": 2,
+        "progress": {
+          "started": 0,
+          "useful": 0,
+          "running": 0,
+          "held": 0,
+          "lost": 0,
+          "interrupted": 0,
+          "settled": 0,
+          "useful_yield": null,
+          "operational_loss_rate": null
+        },
+        "work": {
+          "useful": 0,
+          "attempted": 0,
+          "capacity": 12,
+          "planned": 12,
+          "model_calls": null,
+          "model_call_limit": null,
+          "model_call_breakdown": {
+            "availability": "unavailable",
+            "reason": "Durable trajectory categories do not reconcile with used model-call permits."
+          },
+          "active_model_calls": 0,
+          "remaining_model_calls": null,
+          "remaining_discovery_model_calls": null,
+          "remaining_finalization_model_calls": null,
+          "repair_attempts": 0,
+          "repairs_recovered": 0,
+          "repairs_exhausted": 0,
+          "finalization_reserve_seconds": null
+        },
+        "total_losses": 0,
+        "recovered": 0,
+        "by_kind": {},
+        "by_stage": {},
+        "loss_reasons": [],
+        "source_telemetry": {
+          "status": "not_observed",
+          "accepted": 0,
+          "losses": 0,
+          "accepted_by_reason": {},
+          "lost_by_reason": {},
+          "harnesses": []
+        },
+        "resolved_route_skew": {},
+        "route_not_recorded": 0,
+        "cause_unproven": 0,
+        "terminal_quality": null,
+        "attempts": [],
+        "investigation_attempts": [],
+        "unresolved": []
+      }
+    },
+    "status": {
+      "status": "running",
+      "updated_at": "2026-10-01T05:20:32.292Z"
+    },
+    "findings": [],
+    "events": [
+      {
+        "ts": "2026-10-01T05:20:31.153Z",
+        "event": "scan.accepted",
+        "data": {
+          "target": "tempoxyz/tempo-apps#1300",
+          "attempt": 0,
+          "max_retries": 0,
+          "request_contract": {
+            "schema_version": 5,
+            "policy_source": "explicit"
+          }
+        }
+      },
+      {
+        "ts": "2026-10-01T05:20:32.292Z",
+        "event": "scan.submitted",
+        "data": {
+          "target": "tempoxyz/tempo-apps#1300",
+          "workflow_name": "cyclops-scan-pr-review-pzx9w"
+        }
+      }
+    ]
+  }
+}

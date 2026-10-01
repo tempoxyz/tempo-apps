@@ -1,0 +1,46 @@
+
+> explorer@ check:types /Users/daniel/tempo/tempo-apps-factory-combined/apps/explorer
+> tsgo --project tsconfig.json --noEmit
+
+src/comps/ExploreInput.tsx(116,5): error TS2322: Type 'unknown' is not assignable to type 'SearchApiResponse'.
+src/comps/Tip20ContractInfo.tsx(34,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Type '() => Promise<unknown>' is not assignable to type 'unique symbol | QueryFunction<{ createdTimestamp: number | null; createdTxHash: `0x${string}` | null; createdBy: `0x${string}` | null; }, readonly unknown[], never> | undefined'.
+      Type '() => Promise<unknown>' is not assignable to type 'QueryFunction<{ createdTimestamp: number | null; createdTxHash: `0x${string}` | null; createdBy: `0x${string}` | null; }, readonly unknown[], never>'.
+        Type 'Promise<unknown>' is not assignable to type 'Promise<{ createdTimestamp: number | null; createdTxHash: `0x${string}` | null; createdBy: `0x${string}` | null; }> | { createdTimestamp: number | null; createdTxHash: `0x${string}` | null; createdBy: `0x${string}` | null; }'.
+          Type 'Promise<unknown>' is not assignable to type 'Promise<{ createdTimestamp: number | null; createdTxHash: `0x${string}` | null; createdBy: `0x${string}` | null; }>'.
+            Type 'unknown' is not assignable to type '{ createdTimestamp: number | null; createdTxHash: `0x${string}` | null; createdBy: `0x${string}` | null; }'.
+src/comps/Tip20ContractInfo.tsx(45,3): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+    Type '() => Promise<unknown>' is not assignable to type 'unique symbol | QueryFunction<Tip20RolesResponse, readonly unknown[], never> | undefined'.
+      Type '() => Promise<unknown>' is not assignable to type 'QueryFunction<Tip20RolesResponse, readonly unknown[], never>'.
+        Type 'Promise<unknown>' is not assignable to type 'Promise<Tip20RolesResponse> | Tip20RolesResponse'.
+          Type 'Promise<unknown>' is not assignable to type 'Promise<Tip20RolesResponse>'.
+            Type 'unknown' is not assignable to type 'Tip20RolesResponse'.
+src/comps/Tip20ContractInfo.tsx(56,57): error TS2339: Property 'config' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(97,27): error TS2339: Property 'createdTimestamp' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(98,39): error TS2339: Property 'createdTimestamp' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(101,26): error TS2339: Property 'createdTxHash' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(104,42): error TS2339: Property 'createdTxHash' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(113,23): error TS2339: Property 'createdBy' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(118,34): error TS2339: Property 'createdBy' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(128,26): error TS2339: Property 'roles' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/comps/Tip20ContractInfo.tsx(130,57): error TS2339: Property 'rolesUnavailable' does not exist on type 'NonNullable<NoInfer_2<TQueryFnData>>'.
+src/index.server.ts(81,8): error TS2503: Cannot find namespace 'Cloudflare'.
+src/index.server.ts(112,17): error TS7006: Parameter 'request' implicitly has an 'any' type.
+src/index.server.ts(112,26): error TS7006: Parameter 'env' implicitly has an 'any' type.
+src/index.server.ts(112,31): error TS7006: Parameter '_context' implicitly has an 'any' type.
+src/lib/queries/abi.ts(52,4): error TS2322: Type 'unknown' is not assignable to type 'BatchAbiResponse'.
+src/lib/queries/balance-changes.ts(30,4): error TS2322: Type 'unknown' is not assignable to type 'BalanceChangesData'.
+src/lib/queries/trace.ts(87,4): error TS2322: Type 'unknown' is not assignable to type 'TraceData'.
+src/lib/server/rate-limit.ts(22,23): error TS2339: Property 'cf' does not exist on type 'Request'.
+src/lib/server/request-guard.ts(5,22): error TS2339: Property 'cf' does not exist on type 'Request'.
+src/routes/_layout/receipt/$hash.tsx(1,21): error TS2307: Cannot find module 'cloudflare:workers' or its corresponding type declarations.
+src/routes/api/code.ts(68,23): error TS2552: Cannot find name 'HTMLRewriter'. Did you mean 'rewriter'?
+src/routes/api/code.ts(70,12): error TS7006: Parameter 'element' implicitly has an 'any' type.
+src/routes/api/code.ts(76,12): error TS7006: Parameter 'element' implicitly has an 'any' type.
+src/routes/api/rpc.ts(1,21): error TS2307: Cannot find module 'cloudflare:workers' or its corresponding type declarations.
+src/routes/api/simulate.ts(1,21): error TS2307: Cannot find module 'cloudflare:workers' or its corresponding type declarations.
+/Users/daniel/tempo/tempo-apps-factory-combined/apps/explorer:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  explorer@ check:types: `tsgo --project tsconfig.json --noEmit`
+Exit status 2

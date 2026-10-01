@@ -1,0 +1,12 @@
+{
+  "jsonrpc": "2.0",
+  "id": "timestamp-1",
+  "result": {
+    "run_id": "scan_mup35iup_4gkzf1",
+    "run_label": "pr-1300-20261001t052031-77f317ac6c45",
+    "status": "accepted",
+    "kind": "pr",
+    "target": "tempoxyz/tempo-apps#1300",
+    "mode": "fast"
+  }
+}

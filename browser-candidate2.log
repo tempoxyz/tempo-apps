@@ -1,0 +1,5 @@
+after reload: Showing UTC time - click to change
+back URL http://localhost:3000/blocks?from=100000&live=false
+back state { title: undefined, stored: 'unix' }
+after: SPA blocks->home->tokens, hard reload, choose unix, back->blocks all passed
+after pageerrors 0

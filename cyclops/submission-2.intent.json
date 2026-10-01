@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-01T05:34:49.729784+00:00",
+  "base": "9609e28fb458c32510053458e4609a090fa9c729",
+  "payload": {
+    "schema_version": 5,
+    "scan_type": "pr-review",
+    "repo": "tempoxyz/tempo-apps",
+    "pr_number": 1300,
+    "target_commit": "4655e8b3ddb12611d3f2e85945525873a3aa712b",
+    "mode": "fast",
+    "config": "pr-review-super-fast.yaml",
+    "review_policy": {
+      "version": 1,
+      "effort": "standard"
+    },
+    "execution_speed": "standard",
+    "dry_run": false,
+    "private": false
+  }
+}
