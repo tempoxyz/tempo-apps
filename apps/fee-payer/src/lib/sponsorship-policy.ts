@@ -38,39 +38,46 @@ export async function sponsorshipPolicyMiddleware(c: Context, next: Next) {
 				gas?: bigint
 				maxFeePerGas?: bigint
 			}
-			const to = transaction.calls?.[0]?.to ?? transaction.to
+			const destinations = transaction.calls?.length
+				? transaction.calls.map((call) => call.to)
+				: [transaction.to]
+			const gas = transaction.gas
+			const maxFeePerGas = transaction.maxFeePerGas
 
-			if (transaction.gas && transaction.maxFeePerGas) {
-				const feeAtto = transaction.gas * transaction.maxFeePerGas
-				c.set('estimatedFeeUsd', Number(formatUnits(feeAtto, 18)))
-			}
+			if (gas != null && maxFeePerGas != null)
+				c.set('estimatedFeeUsd', Number(formatUnits(gas * maxFeePerGas, 18)))
 
 			const apiKey = c.get('apiKey') as string | undefined
 			const apiKeyRecord = c.get('apiKeyRecord') as ApiKeyRecord | undefined
 			if (apiKey && apiKeyRecord) {
-				if (apiKeyRecord.allowedDestinations.length > 0 && to) {
-					const destination = to.toLowerCase()
-					const allowed = apiKeyRecord.allowedDestinations.some(
-						(address) => address.toLowerCase() === destination,
+				// Enforce destination address allowlist
+				if (apiKeyRecord.allowedDestinations.length > 0) {
+					const allowed = new Set(
+						apiKeyRecord.allowedDestinations.map((address) => address.toLowerCase()),
 					)
-					if (!allowed)
+					const allAllowed =
+						destinations.length > 0 &&
+						destinations.every(
+							(destination) =>
+								destination != null && allowed.has(destination.toLowerCase()),
+						)
+					if (!allAllowed)
 						return c.json(
 							{ error: 'Destination address not allowed for this API key' },
 							403,
 						)
 				}
 
-				if (transaction.gas && transaction.maxFeePerGas) {
-					const budget = await checkBudget(
-						apiKey,
-						apiKeyRecord,
-						transaction.gas,
-						transaction.maxFeePerGas,
-					)
+				// Enforce fee budget limit
+				if (gas != null && maxFeePerGas != null) {
+					const budget = await checkBudget(apiKey, apiKeyRecord, gas, maxFeePerGas)
 					if (!budget.allowed) return c.json({ error: budget.reason }, 429)
 
-					c.executionCtx.waitUntil(
-						recordSpend(apiKey, transaction.gas, transaction.maxFeePerGas),
+					c.executionCtx.waitUntil(recordSpend(apiKey, gas, maxFeePerGas))
+				} else if (apiKeyRecord.dailyLimitUsd) {
+					return c.json(
+						{ error: 'Transaction fee could not be determined for budget enforcement' },
+						400,
 					)
 				}
 			}
