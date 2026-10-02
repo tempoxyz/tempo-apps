@@ -1230,6 +1230,17 @@ function createDetectors(
 				}
 			}
 
+			if (eventName === 'BurnAt')
+				return {
+					type: 'burn at',
+					parts: [
+						{ type: 'action', value: 'Burn' },
+						{ type: 'amount', value: createAmount(args.amount, address) },
+						{ type: 'text', value: 'from' },
+						{ type: 'account', value: args.from },
+					],
+				}
+
 			if (eventName === 'RoleMembershipUpdated')
 				return {
 					type: args.hasRole ? 'grant role' : 'revoke role',
@@ -2178,6 +2189,24 @@ export function parseKnownEvents(
 ): KnownEvent[] {
 	const { logs } = receipt
 	const events = parseEventLogs({ abi, logs })
+	const burnAtTransfers = new Set<ParsedEvent>()
+	for (const [index, event] of events.entries()) {
+		if (event.eventName !== 'BurnAt') continue
+		for (let transferIndex = index - 1; transferIndex >= 0; transferIndex--) {
+			const transfer = events[transferIndex]
+			if (!transfer || transfer.eventName !== 'Transfer') continue
+			if (burnAtTransfers.has(transfer)) continue
+			if (
+				Address.isEqual(transfer.address, event.address) &&
+				Address.isEqual(transfer.args.from, event.args.from) &&
+				Address.isEqual(transfer.args.to, zeroAddress) &&
+				transfer.args.amount === event.args.amount
+			) {
+				burnAtTransfers.add(transfer)
+				break
+			}
+		}
+	}
 	const zonePortals = createZonePortalMetadata(events)
 	const getTokenMetadata = options?.getTokenMetadata
 	const viewer = options?.viewer
@@ -2398,6 +2427,7 @@ export function parseKnownEvents(
 	)
 
 	const dedupedEvents = events.filter((event) => {
+		if (burnAtTransfers.has(event)) return false
 		let include = true
 
 		if (event.eventName === 'Transfer') {

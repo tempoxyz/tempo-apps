@@ -216,6 +216,11 @@ export function selectTransactionDescriptionEvents(params: {
 		(event) =>
 			GENERIC_ACTIVITY_TYPES.has(event.type) || isNonceIncrementedEvent(event),
 	)
+	if (
+		fallbackEvents.some((event) => event.type === 'burn at') &&
+		activitiesAreGeneric
+	)
+		return [...fallbackEvents]
 	if (hasDecodedZoneEvent && activitiesAreGeneric) {
 		return fallbackEvents.filter(
 			(event) => !GENERIC_ACTIVITY_TYPES.has(event.type),
