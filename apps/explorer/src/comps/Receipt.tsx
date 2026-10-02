@@ -13,6 +13,7 @@ import {
 	getReceiptDistinctSideAmount,
 	getReceiptEventNote,
 	getReceiptNotePresentation,
+	getReceiptTransferPresentation,
 	type ReceiptNotePresentation,
 } from '#lib/domain/receipt-ui'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
@@ -61,7 +62,9 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 	const showUsdFeePrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
-	const filteredEvents = events.filter(isReceiptEventVisible)
+	const filteredEvents = events
+		.filter(isReceiptEventVisible)
+		.map(getReceiptTransferPresentation)
 	const handleShare = async () => {
 		const url = new URL(
 			`/receipt/${hash}${exportSearch}`,

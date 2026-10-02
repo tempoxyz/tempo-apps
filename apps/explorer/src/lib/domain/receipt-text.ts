@@ -5,7 +5,10 @@ import {
 	getReceiptEventSideAmount,
 	type ReceiptPresentation,
 } from '#lib/domain/receipt-presentation'
-import { getReceiptEventNote } from '#lib/domain/receipt-ui'
+import {
+	getReceiptEventNote,
+	getReceiptTransferPresentation,
+} from '#lib/domain/receipt-ui'
 import {
 	DateFormatter,
 	HexFormatter,
@@ -50,7 +53,9 @@ export function renderReceiptText(
 
 	if (events.length > 0) {
 		lines.push('', '-'.repeat(width), '')
-		for (const [index, event] of events.entries()) {
+		for (const [index, event] of events
+			.map(getReceiptTransferPresentation)
+			.entries()) {
 			const action = getEventAction(event)
 			const sideAmount = getReceiptEventSideAmount(event)
 			lines.push(
