@@ -13,6 +13,7 @@ import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
+import { CopyFeedback } from '#comps/CopyFeedback'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
@@ -478,6 +479,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						)}
 					</QueryClientProvider>
 				</WagmiProvider>
+				<CopyFeedback />
 				<Scripts />
 			</body>
 		</html>
