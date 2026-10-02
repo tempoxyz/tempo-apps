@@ -12,6 +12,7 @@ import {
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
+import { PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
@@ -85,6 +86,15 @@ function TokensPage() {
 		[holdersCountFormatter],
 	)
 
+	const formatCirculatingSupply = React.useCallback((token: Token) => {
+		if (token.circulatingSupply === undefined) return '-'
+		if (token.currency === 'USD')
+			return PriceFormatter.format(Number(token.circulatingSupply), {
+				format: 'short',
+			})
+		return `${PriceFormatter.formatAmountShort(token.circulatingSupply)} ${token.currency}`
+	}, [])
+
 	const prefetchNextPage = React.useCallback(() => {
 		const lastPage = Math.ceil(total / TOKENS_PER_PAGE)
 		for (let i = 1; i <= PREFETCH_PAGE_COUNT; i++) {
@@ -118,6 +128,11 @@ function TokensPage() {
 			label: 'Currency',
 			align: 'start',
 			width: 110,
+		},
+		{
+			label: 'Circulating supply',
+			align: 'start',
+			width: 160,
 		},
 		{
 			label: 'Holders',
@@ -212,7 +227,8 @@ function TokensPage() {
 													{token.name}
 												</span>
 												<span className="text-tertiary">
-													{token.currency} · {formatHoldersCount(token)} holders
+													{formatCirculatingSupply(token)} ·{' '}
+													{formatHoldersCount(token)} holders
 												</span>
 											</div>
 										)
@@ -241,6 +257,13 @@ function TokensPage() {
 															</span>,
 															<span key="currency" className="text-secondary">
 																{token.currency}
+															</span>,
+															<span
+																key="circulatingSupply"
+																className="font-sans text-secondary"
+																title={token.circulatingSupply}
+															>
+																{formatCirculatingSupply(token)}
 															</span>,
 															<span
 																key="holders"
