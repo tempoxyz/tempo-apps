@@ -126,7 +126,6 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 		return parseKnownEvent(log, {
 			getTokenMetadata,
 			streamChannelToken,
-			transactionSender: receipt.from,
 		})
 	})
 

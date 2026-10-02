@@ -1239,10 +1239,6 @@ function createDetectors(
 						{ type: 'text', value: 'from' },
 						{ type: 'account', value: args.from },
 					],
-					note:
-						transactionSender && Address.isEqual(transactionSender, args.burner)
-							? undefined
-							: [['Burner', { type: 'account', value: args.burner }]],
 				}
 
 			if (eventName === 'RoleMembershipUpdated')
@@ -2093,7 +2089,6 @@ export function parseKnownEvent(
 	options?: {
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		streamChannelToken?: Address.Address
-		transactionSender?: Address.Address
 	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
@@ -2117,7 +2112,7 @@ export function parseKnownEvent(
 		getTokenMetadata,
 		undefined,
 		undefined,
-		options?.transactionSender,
+		undefined,
 		() => options?.streamChannelToken,
 	)
 
