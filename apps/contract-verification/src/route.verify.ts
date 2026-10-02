@@ -35,6 +35,7 @@ import {
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
 import type { AppEnv } from '#index.tsx'
+import { formatAbiParameterType } from '#lib/abi-signatures.ts'
 import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
 import { createRpcTransport } from '#lib/rpc.ts'
@@ -1192,7 +1193,10 @@ async function runVerificationJob(
 			else if (item.type === 'error') signatureType = 'error'
 
 			if (signatureType && item.name) {
-				const inputTypes = (item.inputs ?? []).map((i) => i.type).join(',')
+				const inputTypes = (item.inputs ?? [])
+					.map((input) => formatAbiParameterType(input))
+					.filter((type): type is string => type !== null)
+					.join(',')
 				const signature = `${item.name}(${inputTypes})`
 				const signatureHash32 = Hex.toBytes(
 					keccak256(Hex.fromString(signature)),
