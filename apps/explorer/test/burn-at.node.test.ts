@@ -100,6 +100,33 @@ describe('BurnAt', () => {
 		expect(events.map((event) => event.type)).toEqual(['burn at'])
 	})
 
+	it('hides the burner note when it duplicates the transaction sender', () => {
+		const events = parseKnownEvents(
+			mockReceipt([transferLog(), burnAtLog()], accountAddress),
+		)
+		expect(events[0]?.note).toBeUndefined()
+	})
+
+	it('hides the duplicate burner note for individual logs regardless of address casing', () => {
+		const event = parseKnownEvent(burnAtLog(), {
+			transactionSender: Address.checksum(accountAddress),
+		})
+		expect(event?.type).toBe('burn at')
+		expect(event?.note).toBeUndefined()
+	})
+
+	it('keeps the bridge burner note for individual logs', () => {
+		const event = parseKnownEvent(burnAtLog(1_000_000n, userTokenAddress), {
+			transactionSender: accountAddress,
+		})
+		expect(event?.note).toEqual([
+			[
+				'Burner',
+				{ type: 'account', value: Address.checksum(userTokenAddress) },
+			],
+		])
+	})
+
 	it('groups the paired logs under the burn in the Events tab', () => {
 		const logs = [transferLog(), burnAtLog()]
 		const knownEvents = logs.map((log) => parseKnownEvent(log))
@@ -188,7 +215,10 @@ describe('BurnAt', () => {
 
 	it('preserves burner details when the indexer supplies a generic transfer', () => {
 		const fallbackEvents = parseKnownEvents(
-			mockReceipt([transferLog(), burnAtLog()], accountAddress),
+			mockReceipt(
+				[transferLog(), burnAtLog(1_000_000n, userTokenAddress)],
+				accountAddress,
+			),
 		)
 		expect(
 			selectTransactionDescriptionEvents({
