@@ -63,7 +63,7 @@ import {
 	type BalancesResponse,
 	balancesQueryOptions,
 	calculateTotalHoldings,
-	getAssetValue,
+	formatAssetValue,
 	useBalancesData,
 } from '#lib/address-balances'
 import {
@@ -2195,7 +2195,7 @@ function SectionsWrapper(props: {
 									{ label: 'Ticker', align: 'start', width: '0.5fr' },
 									{ label: 'Currency', align: 'start', width: '0.5fr' },
 									{ label: 'Amount', align: 'end', width: '0.5fr' },
-									{ label: 'Value', align: 'end', width: '0.5fr' },
+									{ label: 'Est. value', align: 'end', width: '0.5fr' },
 								],
 							}}
 							items={(mode) =>
@@ -2923,15 +2923,11 @@ function AssetValue(props: { asset: AssetData }) {
 	const { isTokenListed } = useTokenListMembership()
 	if (!isTokenListed(TEMPO_CHAIN_ID, asset.address))
 		return <span className="text-tertiary">—</span>
-	const value = getAssetValue(asset)
-	if (!value) return <span className="text-tertiary">…</span>
-	if (value.currency !== 'USD') return <span className="text-tertiary">—</span>
+	const value = formatAssetValue(asset)
+	if (!value) return <span className="text-tertiary">—</span>
 	return (
-		<span>
-			{PriceFormatter.format(value.amount, {
-				decimals: value.decimals,
-				format: 'short',
-			})}
+		<span title="Estimated value in the denominated currency, assuming the token maintains its peg. No FX conversion applied.">
+			{value}
 		</span>
 	)
 }

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { formatUnits } from 'viem'
 
 import { getApiUrl } from '#lib/env.ts'
+import { PriceFormatter } from '#lib/formatting.ts'
 
 export type TokenBalance = {
 	token: Address.Address
@@ -122,4 +123,21 @@ export function getAssetValue(
 		currency: asset.metadata.currency,
 		decimals: asset.metadata.decimals,
 	}
+}
+
+/** Displays an estimate in its denominated currency; does not convert FX. */
+export function formatAssetValue(asset: AssetData): string | undefined {
+	const value = getAssetValue(asset)
+	if (!value?.currency) return undefined
+	if (value.currency === 'USD')
+		return PriceFormatter.format(value.amount, {
+			decimals: value.decimals,
+			format: 'short',
+		})
+	const amount = formatUnits(value.amount, value.decimals)
+	const display =
+		value.amount > 0n && Number(amount) < 0.01
+			? '<0.01'
+			: PriceFormatter.formatAmountShort(amount)
+	return `${display} ${value.currency}`
 }
