@@ -4,12 +4,14 @@ import { Addresses } from 'viem/tempo'
 import { useReadContract } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { Abis } from '#lib/abis'
-import { useIsMounted } from '#lib/hooks'
+import { useCopy, useIsMounted } from '#lib/hooks'
+import CopyIcon from '~icons/lucide/copy'
 
 export function ValidatorCard(
 	props: ValidatorCard.Props,
 ): React.JSX.Element | null {
 	const isMounted = useIsMounted()
+	const { copy, notifying } = useCopy()
 	const { data: validator } = useReadContract({
 		address: Addresses.validatorV2,
 		abi: Abis.validatorConfigV2,
@@ -29,7 +31,21 @@ export function ValidatorCard(
 			sections={[
 				{ label: 'Active', value: active ? 'Yes' : 'No' },
 				<div key="recipient" className="flex flex-col gap-2 min-w-0">
-					<span className="text-tertiary">Fee recipient</span>
+					<div className="flex items-center gap-2 text-tertiary">
+						<span>Fee recipient</span>
+						<button
+							type="button"
+							onClick={() => copy(validator.feeRecipient)}
+							className="flex items-center gap-2 cursor-pointer press-down hover:text-primary"
+							aria-label={
+								notifying ? 'Fee recipient copied' : 'Copy fee recipient'
+							}
+							title="Copy fee recipient"
+						>
+							<CopyIcon className="size-3" />
+							{notifying && <span>copied</span>}
+						</button>
+					</div>
 					<Link
 						to="/address/$address"
 						params={{ address: validator.feeRecipient }}

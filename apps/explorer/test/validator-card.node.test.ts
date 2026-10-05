@@ -3,9 +3,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ValidatorCard } from '#comps/ValidatorCard'
 
-const { readContract } = vi.hoisted(() => ({ readContract: vi.fn() }))
+const { readContract, copy, copyState } = vi.hoisted(() => ({
+	readContract: vi.fn(),
+	copy: vi.fn(),
+	copyState: { notifying: false },
+}))
 vi.mock('wagmi', () => ({ useReadContract: readContract }))
-vi.mock('#lib/hooks', () => ({ useIsMounted: () => true }))
+vi.mock('#lib/hooks', () => ({
+	useIsMounted: () => true,
+	useCopy: () => ({ copy, notifying: copyState.notifying }),
+}))
 vi.mock('@tanstack/react-router', () => ({
 	Link: ({
 		children,
@@ -46,9 +53,32 @@ const validator = {
 const render = () =>
 	renderToStaticMarkup(createElement(ValidatorCard, { address }))
 
-beforeEach(() => readContract.mockReturnValue({ data: validator }))
+beforeEach(() => {
+	readContract.mockReturnValue({ data: validator })
+	copy.mockClear()
+	copyState.notifying = false
+})
 
 describe('validator address card', () => {
+	it('copies the full fee recipient without navigating the address link', () => {
+		const html = render()
+		expect(html).toContain('aria-label="Copy fee recipient"')
+		const recipientSection = ValidatorCard({ address })?.props.sections[1]
+		const copyButton = recipientSection.props.children[0].props.children[1]
+		copyButton.props.onClick()
+		expect(copy).toHaveBeenCalledExactlyOnceWith(validator.feeRecipient)
+		expect(html).toContain(
+			`href="/address/${validator.feeRecipient}?tab=holdings"`,
+		)
+	})
+
+	it('confirms when the fee recipient was copied', () => {
+		copyState.notifying = true
+		const html = render()
+		expect(html).toContain('aria-label="Fee recipient copied"')
+		expect(html).toContain('>copied</span>')
+	})
+
 	it('links the full fee recipient to holdings, matches address typography and preserves genesis height', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
