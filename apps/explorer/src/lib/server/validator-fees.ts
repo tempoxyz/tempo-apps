@@ -1,9 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
+import { parseResponse } from 'hono/client'
 import type { Address } from 'ox'
 import { pad, toEventSelector, zeroAddress } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { getChainId } from 'wagmi/actions'
 import { Abis } from '#lib/abis'
+import { api } from '#lib/server/tempo-api'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { zAddress } from '#lib/zod'
 import { getBatchedClient, getWagmiConfig } from '#wagmi.config'
@@ -95,23 +97,34 @@ export async function getValidatorFees(
 					blockNumber,
 				})
 				if (amount === 0n) return null
-				const [symbol, name, currency] = await Promise.all(
-					(['symbol', 'name', 'currency'] as const).map((functionName) =>
-						client
-							.readContract({
-								address: token,
-								abi: Abis.tip20,
-								functionName,
-								blockNumber,
-							})
-							.catch(() => null),
+				const [apiToken, [symbol, name, currency]] = await Promise.all([
+					parseResponse(
+						api.v1.tokens[':token'].$get(
+							{
+								param: { token },
+								query: { chainId: String(chainId) },
+							},
+							{ init: { signal: AbortSignal.timeout(4_000) } },
+						),
+					).catch(() => null),
+					Promise.all(
+						(['symbol', 'name', 'currency'] as const).map((functionName) =>
+							client
+								.readContract({
+									address: token,
+									abi: Abis.tip20,
+									functionName,
+									blockNumber,
+								})
+								.catch(() => null),
+						),
 					),
-				)
+				])
 				return {
 					token,
 					amount: amount.toString(),
 					symbol: symbol ?? null,
-					name: name ?? null,
+					name: apiToken?.name ?? name ?? null,
 					currency: currency ?? null,
 				}
 			}),

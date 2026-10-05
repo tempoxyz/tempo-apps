@@ -4,9 +4,13 @@ import { pad, zeroAddress } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { getValidatorFees } from '#lib/server/validator-fees'
 
-const { queryIndex, readContract } = vi.hoisted(() => ({
+const { queryIndex, readContract, getToken } = vi.hoisted(() => ({
 	queryIndex: vi.fn(),
 	readContract: vi.fn(),
+	getToken: vi.fn(),
+}))
+vi.mock('#lib/server/tempo-api', () => ({
+	api: { v1: { tokens: { ':token': { $get: getToken } } } },
 }))
 vi.mock('#lib/server/tempo-queries-provider', () => ({
 	tempoQueryBuilder: (chainId: number, options: { engine: string }) =>
@@ -23,6 +27,7 @@ const currentToken = '0x20c00000000000000000000000000000000000cd'
 
 beforeEach(() => {
 	vi.resetAllMocks()
+	getToken.mockResolvedValue(new Response(null, { status: 404 }))
 	queryIndex.mockResolvedValue({ rows: [] })
 	queryIndex.mockResolvedValueOnce({ rows: [{ num: 1234n }] })
 	readContract.mockImplementation(async ({ functionName }) => {
@@ -35,6 +40,52 @@ beforeEach(() => {
 })
 
 describe('unclaimed validator fees', () => {
+	it('uses the Tempo API name while preserving onchain balances and other metadata', async () => {
+		getToken.mockResolvedValue(
+			Response.json({ name: 'PathUSD', symbol: 'API ticker', currency: 'EUR' }),
+		)
+		readContract.mockImplementation(async ({ functionName }) => {
+			if (functionName === 'validatorTokens') return zeroAddress
+			if (functionName === 'symbol' || functionName === 'name') return 'pathUSD'
+			if (functionName === 'currency') return 'USD'
+			return 1234567n
+		})
+		expect((await getValidatorFees(recipient)).fees).toEqual([
+			{
+				token: Addresses.pathUsd,
+				amount: '1234567',
+				symbol: 'pathUSD',
+				name: 'PathUSD',
+				currency: 'USD',
+			},
+		])
+		expect(getToken).toHaveBeenCalledExactlyOnceWith(
+			{
+				param: { token: Addresses.pathUsd },
+				query: { chainId: '4217' },
+			},
+			{ init: { signal: expect.any(AbortSignal) } },
+		)
+	})
+	it('keeps the onchain name when the Tempo API request fails', async () => {
+		getToken.mockRejectedValue(new Error('API unavailable'))
+		readContract.mockImplementation(async ({ functionName }) => {
+			if (functionName === 'validatorTokens') return zeroAddress
+			if (functionName === 'symbol') return 'USD'
+			if (functionName === 'name') return 'Test USD'
+			if (functionName === 'currency') return 'USD'
+			return 1234567n
+		})
+		expect((await getValidatorFees(recipient)).fees).toEqual([
+			{
+				token: Addresses.pathUsd,
+				amount: '1234567',
+				symbol: 'USD',
+				name: 'Test USD',
+				currency: 'USD',
+			},
+		])
+	})
 	it('finds old, current and default tokens without needing any payout events', async () => {
 		queryIndex.mockResolvedValueOnce({ rows: [{ topic2: pad(oldToken) }] })
 		readContract.mockImplementation(async ({ functionName, args }) => {
@@ -115,6 +166,7 @@ describe('unclaimed validator fees', () => {
 			functionName: 'collectedFees',
 			args: [recipient, Addresses.pathUsd],
 		})
+		expect(getToken).not.toHaveBeenCalled()
 	})
 	it('does not report a zero balance when the indexer or a balance read fails', async () => {
 		queryIndex.mockRejectedValueOnce(new Error('Indexer unavailable'))
