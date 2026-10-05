@@ -73,7 +73,9 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				return []
 			})
 
-		const pageTokens = tokens.slice(offset, offset + limit)
+		const pageTokens = tokens
+			.sort((a, b) => (b.holderCount ?? 0) - (a.holderCount ?? 0))
+			.slice(offset, offset + limit)
 
 		// Genesis tokens have no `TokenCreated` event; when one also has no
 		// transfer history, fall back to the genesis block timestamp.
