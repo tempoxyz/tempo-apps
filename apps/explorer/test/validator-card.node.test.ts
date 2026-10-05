@@ -12,15 +12,18 @@ vi.mock('@tanstack/react-router', () => ({
 		to,
 		params,
 		search,
+		className,
 	}: {
 		children: React.ReactNode
 		to: string
 		params: Record<string, string>
 		search?: { tab: string }
+		className?: string
 	}) =>
 		createElement(
 			'a',
 			{
+				className,
 				href:
 					to.replace(/\$(\w+)/g, (_, key: string) => params[key] ?? '') +
 					(search ? `?tab=${search.tab}` : ''),
@@ -46,16 +49,20 @@ const render = () =>
 beforeEach(() => readContract.mockReturnValue({ data: validator }))
 
 describe('validator address card', () => {
-	it('links the full fee recipient to holdings and preserves genesis index and height', () => {
+	it('links the full fee recipient to holdings, matches address typography and preserves genesis height', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
-		expect(html).toContain('>Index<')
+		expect(html).not.toContain('>Index<')
+		expect(html).toContain(
+			'font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch]',
+		)
+		expect(html).toContain('class="normal-case">Added at height</span>')
 		expect(html).toContain(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
 		expect(html).toContain(`>${validator.feeRecipient}</a>`)
 		expect(html).toContain('href="/block/0"')
-		expect(html).toContain('title="Not deactivated">-</span>')
+		expect(html).not.toContain('Deactivated')
 		expect(readContract.mock.lastCall?.[0]).toMatchObject({
 			functionName: 'validatorByAddress',
 			args: [address],
@@ -73,7 +80,9 @@ describe('validator address card', () => {
 		})
 		const html = render()
 		expect(html).toContain('>No<')
-		expect(html).toContain('>15<')
+		expect(html).not.toContain('>Index<')
+		expect(html).not.toContain('>15<')
+		expect(html).toContain('class="normal-case">Deactivated at height</span>')
 		expect(html).toContain('href="/block/9007199254740993"')
 		expect(html).toContain('href="/block/9007199254740995"')
 	})

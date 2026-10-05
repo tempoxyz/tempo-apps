@@ -28,6 +28,8 @@ beforeEach(() => {
 	readContract.mockImplementation(async ({ functionName }) => {
 		if (functionName === 'validatorTokens') return zeroAddress
 		if (functionName === 'symbol') return 'USD'
+		if (functionName === 'name') return 'Test USD'
+		if (functionName === 'currency') return 'USD'
 		return 0n
 	})
 })
@@ -38,14 +40,34 @@ describe('unclaimed validator fees', () => {
 		readContract.mockImplementation(async ({ functionName, args }) => {
 			if (functionName === 'validatorTokens') return currentToken
 			if (functionName === 'symbol') return 'USD'
+			if (functionName === 'name') return 'Test USD'
+			if (functionName === 'currency') return 'USD'
 			return args[1] === oldToken ? 9876543210123456789n : 1n
 		})
 		expect(await getValidatorFees(recipient)).toEqual({
 			blockNumber: '1234',
 			fees: [
-				{ token: Addresses.pathUsd, amount: '1', symbol: 'USD' },
-				{ token: oldToken, amount: '9876543210123456789', symbol: 'USD' },
-				{ token: currentToken, amount: '1', symbol: 'USD' },
+				{
+					token: Addresses.pathUsd,
+					amount: '1',
+					symbol: 'USD',
+					name: 'Test USD',
+					currency: 'USD',
+				},
+				{
+					token: oldToken,
+					amount: '9876543210123456789',
+					symbol: 'USD',
+					name: 'Test USD',
+					currency: 'USD',
+				},
+				{
+					token: currentToken,
+					amount: '1',
+					symbol: 'USD',
+					name: 'Test USD',
+					currency: 'USD',
+				},
 			],
 		})
 		for (const [call] of readContract.mock.calls)
@@ -109,11 +131,18 @@ describe('unclaimed validator fees', () => {
 	it('preserves a nonzero balance when symbol metadata is unavailable', async () => {
 		readContract.mockImplementation(async ({ functionName }) => {
 			if (functionName === 'validatorTokens') return zeroAddress
-			if (functionName === 'symbol') throw new Error('Metadata unavailable')
+			if (['symbol', 'name', 'currency'].includes(functionName))
+				throw new Error('Metadata unavailable')
 			return 1234567n
 		})
 		expect((await getValidatorFees(recipient)).fees).toEqual([
-			{ token: Addresses.pathUsd, amount: '1234567', symbol: null },
+			{
+				token: Addresses.pathUsd,
+				amount: '1234567',
+				symbol: null,
+				name: null,
+				currency: null,
+			},
 		])
 	})
 	it('rejects malformed history instead of silently omitting a token', async () => {

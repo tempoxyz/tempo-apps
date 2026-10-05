@@ -1,17 +1,33 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import type * as React from 'react'
-import { formatUnits } from 'viem'
+import {
+	AssetName,
+	AssetSymbol,
+	AssetContract,
+	AssetCurrency,
+	AssetAmount,
+	AssetValue,
+} from '#comps/AssetCells'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { useIsMounted } from '#lib/hooks'
 import { validatorFeesQueryOptions } from '#lib/queries/validator-fees'
 
-const columns: DataGrid.Column[] = [
-	{ label: 'Token', align: 'start', width: '1fr' },
-	{ label: 'Unclaimed amount', align: 'end', width: '1fr' },
-]
+const columns: Record<'stacked' | 'tabs', DataGrid.Column[]> = {
+	stacked: [
+		{ label: 'Name', align: 'start', width: '1fr' },
+		{ label: 'Contract', align: 'start', width: '1fr' },
+		{ label: 'Amount', align: 'end', width: '0.5fr' },
+	],
+	tabs: [
+		{ label: 'Name', align: 'start', width: '1fr' },
+		{ label: 'Ticker', align: 'start', width: '0.5fr' },
+		{ label: 'Currency', align: 'start', width: '0.5fr' },
+		{ label: 'Amount', align: 'end', width: '0.5fr' },
+		{ label: 'Value', align: 'end', width: '0.5fr' },
+	],
+}
 
 export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 	const { address, active } = props
@@ -33,27 +49,44 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 	return (
 		<>
 			<DataGrid
-				columns={{ stacked: columns, tabs: columns }}
-				items={() =>
-					fees.map((fee) => ({
-						key: fee.token,
-						cells: [
-							<Link
-								key="token"
-								to="/address/$address"
-								params={{ address: fee.token }}
-								className="min-w-0 text-accent"
-							>
-								<span className="block">{fee.symbol ?? 'TIP-20'}</span>
-								<span className="block break-all font-mono text-xs text-tertiary">
-									{fee.token}
-								</span>
-							</Link>,
-							<span key="amount" className="font-mono tabular-nums break-all">
-								{formatUnits(BigInt(fee.amount), 6)}
-							</span>,
-						],
-					}))
+				columns={columns}
+				items={(mode) =>
+					fees.map((fee) => {
+						const asset = {
+							address: fee.token,
+							metadata: {
+								name: fee.name ?? fee.symbol ?? 'TIP-20',
+								symbol: fee.symbol ?? undefined,
+								currency: fee.currency ?? undefined,
+								decimals: 6,
+							},
+							balance: BigInt(fee.amount),
+							valuation: undefined,
+						}
+						return {
+							key: fee.token,
+							className: 'copy-13',
+							cells:
+								mode === 'stacked'
+									? [
+											<AssetName key="name" asset={asset} />,
+											<AssetContract key="contract" asset={asset} />,
+											<AssetAmount key="amount" asset={asset} />,
+										]
+									: [
+											<AssetName key="name" asset={asset} />,
+											<AssetSymbol key="symbol" asset={asset} />,
+											<AssetCurrency key="currency" asset={asset} />,
+											<AssetAmount key="amount" asset={asset} />,
+											<AssetValue key="value" asset={asset} />,
+										],
+							link: {
+								href: `/address/${fee.token}?tab=transfers` as const,
+								search: { a: address },
+								title: `View token ${fee.token}`,
+							},
+						}
+					})
 				}
 				totalItems={fees.length}
 				page={1}

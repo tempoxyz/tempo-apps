@@ -14,6 +14,8 @@ export type ValidatorFees = {
 		token: Address.Address
 		amount: string
 		symbol: string | null
+		name: string | null
+		currency: string | null
 	}[]
 }
 
@@ -93,15 +95,25 @@ export async function getValidatorFees(
 					blockNumber,
 				})
 				if (amount === 0n) return null
-				const symbol = await client
-					.readContract({
-						address: token,
-						abi: Abis.tip20,
-						functionName: 'symbol',
-						blockNumber,
-					})
-					.catch(() => null)
-				return { token, amount: amount.toString(), symbol }
+				const [symbol, name, currency] = await Promise.all(
+					(['symbol', 'name', 'currency'] as const).map((functionName) =>
+						client
+							.readContract({
+								address: token,
+								abi: Abis.tip20,
+								functionName,
+								blockNumber,
+							})
+							.catch(() => null),
+					),
+				)
+				return {
+					token,
+					amount: amount.toString(),
+					symbol: symbol ?? null,
+					name: name ?? null,
+					currency: currency ?? null,
+				}
 			}),
 		)
 		for (const balance of balances) if (balance) fees.push(balance)

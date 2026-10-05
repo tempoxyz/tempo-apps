@@ -28,20 +28,19 @@ export function ValidatorCard(
 			title={<InfoCard.Title>Validator</InfoCard.Title>}
 			sections={[
 				{ label: 'Active', value: active ? 'Yes' : 'No' },
-				{ label: 'Index', value: validator.index.toString() },
 				<div key="recipient" className="flex flex-col gap-2 min-w-0">
 					<span className="text-tertiary">Fee recipient</span>
 					<Link
 						to="/address/$address"
 						params={{ address: validator.feeRecipient }}
 						search={{ tab: 'holdings' }}
-						className="type-card-data text-primary break-all max-w-[21ch] hover:underline"
+						className="font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch] hover:underline"
 					>
 						{validator.feeRecipient}
 					</Link>
 				</div>,
 				{
-					label: 'Added at height',
+					label: <span className="normal-case">Added at height</span>,
 					value: (
 						<Link
 							to="/block/$id"
@@ -52,20 +51,24 @@ export function ValidatorCard(
 						</Link>
 					),
 				},
-				{
-					label: 'Deactivated at height',
-					value: active ? (
-						<span title="Not deactivated">-</span>
-					) : (
-						<Link
-							to="/block/$id"
-							params={{ id: validator.deactivatedAtHeight.toString() }}
-							className="hover:underline break-all"
-						>
-							{validator.deactivatedAtHeight.toString()}
-						</Link>
-					),
-				},
+				...(!active
+					? [
+							{
+								label: (
+									<span className="normal-case">Deactivated at height</span>
+								),
+								value: (
+									<Link
+										to="/block/$id"
+										params={{ id: validator.deactivatedAtHeight.toString() }}
+										className="hover:underline break-all"
+									>
+										{validator.deactivatedAtHeight.toString()}
+									</Link>
+								),
+							},
+						]
+					: []),
 			]}
 		/>
 	)
