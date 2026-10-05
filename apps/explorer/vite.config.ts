@@ -186,13 +186,8 @@ export default defineConfig((config) => {
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				wranglerVars.VITE_TEMPO_ENV || envConfig.VITE_TEMPO_ENV,
 			),
-			__BASE_URL__: JSON.stringify(
-				envConfig.VITE_BASE_URL
-					? envConfig.VITE_BASE_URL
-					: config.mode === 'development'
-						? `http://localhost:${port}`
-						: (envConfig.VITE_BASE_URL ?? ''),
-			),
+			// Use the request/browser origin unless an explicit base URL is configured.
+			__BASE_URL__: JSON.stringify(envConfig.VITE_BASE_URL),
 			__BUILD_VERSION__: JSON.stringify(
 				envConfig.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
 			),

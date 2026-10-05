@@ -4,13 +4,14 @@ import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
 import { TokenIcon } from '#comps/TokenIcon'
 import type { AccountType } from '#lib/account'
+import { cx } from '#lib/css'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
 const Route = getRouteApi('/_layout/address/$address')
 
-export function AccountCard(props: AccountCard.Props) {
+export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 	const params = Route.useParams()
 	const {
 		address = params.address,
@@ -23,6 +24,7 @@ export function AccountCard(props: AccountCard.Props) {
 		isToken,
 		tokenLogoURI,
 		tokenName,
+		tokenSymbol,
 		virtualAddressParts,
 	} = props
 
@@ -36,22 +38,35 @@ export function AccountCard(props: AccountCard.Props) {
 				? 'Contract'
 				: 'Address'
 
-	const titleVisible = virtualAddressParts || accountType === 'contract'
+	const titleVisible =
+		isToken || virtualAddressParts || accountType === 'contract'
+	const tokenLabel = tokenName || tokenSymbol || 'Token'
 
 	return (
 		<InfoCard
 			title={
 				titleVisible ? (
-					<InfoCard.Title>
-						{isToken && tokenName ? (
+					<InfoCard.Title
+						className={cx(isToken && 'min-w-0 w-full py-3 gap-3')}
+					>
+						{isToken ? (
 							<>
 								<TokenIcon
 									address={address as Address.Address}
-									name={tokenName}
-									className="size-4"
+									name={tokenLabel}
+									className="size-8"
 									logoURI={tokenLogoURI}
 								/>
-								<span className="text-primary">{tokenName}</span>
+								<span className="min-w-0 flex-1">
+									<span className="block wrap-anywhere text-primary">
+										{tokenLabel}
+									</span>
+									{tokenSymbol && tokenSymbol !== tokenLabel && (
+										<span className="block wrap-anywhere label-12 text-tertiary font-normal mt-0.5">
+											{tokenSymbol}
+										</span>
+									)}
+								</span>
 							</>
 						) : (
 							titleLabel
@@ -191,6 +206,7 @@ export declare namespace AccountCard {
 		isToken?: boolean | undefined
 		tokenLogoURI?: string | undefined
 		tokenName?: string | undefined
+		tokenSymbol?: string | undefined
 		virtualAddressParts?:
 			| {
 					masterId: string

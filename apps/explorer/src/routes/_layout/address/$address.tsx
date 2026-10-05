@@ -15,7 +15,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
-import { Actions } from 'wagmi/tempo'
+import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
@@ -464,7 +464,7 @@ function RouteComponent() {
 	const {
 		accountType,
 		isToken,
-		tokenMetadata,
+		tokenMetadata: initialTokenMetadata,
 		tokenLogoURI,
 		account,
 		contractInfo,
@@ -475,6 +475,15 @@ function RouteComponent() {
 
 	Address.assert(address)
 	const isMounted = useIsMounted()
+	// Recover token identity in the browser if the loader's bounded RPC timed out.
+	const { data: queriedTokenMetadata } = Hooks.token.useGetMetadata({
+		token: address,
+		query: {
+			enabled: isMounted && isToken && !initialTokenMetadata,
+			initialData: initialTokenMetadata ?? undefined,
+		},
+	})
+	const tokenMetadata = initialTokenMetadata ?? queriedTokenMetadata
 	const isZonePortal = isZonePortalAddress(address)
 	const hideSubmitBatches = isZonePortal && hideSubmitBatchesSearch === true
 	const [portalLive, setPortalLive] = React.useState(true)
@@ -873,6 +882,7 @@ function AccountCardWithTimestamps(props: {
 				isToken={isToken}
 				tokenLogoURI={tokenLogoURI}
 				tokenName={tokenMetadata?.name}
+				tokenSymbol={tokenMetadata?.symbol}
 				virtualAddressParts={virtualAddressParts}
 			/>
 			{!isTip20 && <ValidatorCard address={address} />}
