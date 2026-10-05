@@ -69,6 +69,9 @@ describe('unclaimed fee grid', () => {
 		section.mode = mode
 		const html = render()
 		expect(html).toContain('grid-cols-subgrid')
+		expect(html).toContain(
+			'<a href="https://tempo.xyz/developers/docs/guide/node/validator-lifecycle#claim-validator-fees" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">available to claim</a>.',
+		)
 		expect(html).toContain('>Name</span>')
 		expect(html).toContain('>Amount</span>')
 		expect(html).toContain('>PathUSD</span>')

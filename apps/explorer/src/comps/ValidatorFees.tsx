@@ -95,7 +95,16 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 				emptyState="No unclaimed fees."
 			/>
 			<p className="px-[16px] py-3 text-[13px] text-secondary">
-				Fees held in the FeeManager for this recipient, available to claim.
+				Fees held in the FeeManager for this recipient,{' '}
+				<a
+					href="https://tempo.xyz/developers/docs/guide/node/validator-lifecycle#claim-validator-fees"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-accent hover:underline"
+				>
+					available to claim
+				</a>
+				.
 			</p>
 		</>
 	)
