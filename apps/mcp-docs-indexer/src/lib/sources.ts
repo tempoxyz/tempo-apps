@@ -59,7 +59,52 @@ function normalizeBase(value: string, index: number): string {
 	if (url.protocol !== 'https:') {
 		throw new Error(`SOURCES[${index}].base must be an https URL`)
 	}
-	return url.origin
+	return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
+}
+
+export function sourceIndexUrl(source: Source): string {
+	return new URL(
+		`.${source.indexPath ?? '/llms.txt'}`,
+		`${source.base}/`,
+	).toString()
+}
+
+export function resolveSourcePageUrl(
+	raw: string,
+	base: string,
+): URL | undefined {
+	try {
+		const root = new URL(base)
+		const prefix = root.pathname.replace(/\/+$/, '')
+		let url = new URL(raw, `${base.replace(/\/+$/, '')}/`)
+		if (
+			root.origin === 'https://tempo.xyz' &&
+			prefix === '/developers' &&
+			url.origin === 'https://docs.tempo.xyz'
+		) {
+			url = new URL(`${prefix}${url.pathname}`, root.origin)
+		} else if (
+			raw.startsWith('/') &&
+			!raw.startsWith('//') &&
+			prefix &&
+			url.pathname !== prefix &&
+			!url.pathname.startsWith(`${prefix}/`)
+		) {
+			url.pathname = `${prefix}${url.pathname}`
+		}
+		if (
+			url.origin !== root.origin ||
+			(prefix &&
+				url.pathname !== prefix &&
+				!url.pathname.startsWith(`${prefix}/`))
+		)
+			return undefined
+		url.hash = ''
+		url.search = ''
+		return url
+	} catch {
+		return undefined
+	}
 }
 
 function expectString(value: unknown, name: string): string {

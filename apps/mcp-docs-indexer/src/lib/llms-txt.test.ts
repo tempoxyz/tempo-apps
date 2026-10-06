@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest'
 import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
 
 describe('parseLlmsTxt', () => {
+	it('indexes canonical Tempo links while excluding marketing and other origins', () => {
+		const body = `
+- [API Keys](https://tempo.xyz/developers/docs/api/api-keys)
+- [Legacy](https://docs.tempo.xyz/docs/api/api-keys)
+- [Authentication](/docs/api/authentication)
+- [Marketing](https://tempo.xyz/about)
+- [Other](https://example.com/docs)
+`
+		expect(parseLlmsTxt(body, 'https://tempo.xyz/developers')).toEqual([
+			'https://tempo.xyz/developers/docs/api/api-keys',
+			'https://tempo.xyz/developers/docs/api/authentication',
+		])
+	})
+
 	it('extracts absolute same-origin URLs', () => {
 		const body = `
 # Viem

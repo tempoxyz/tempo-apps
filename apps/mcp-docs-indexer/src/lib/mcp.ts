@@ -16,6 +16,7 @@ import {
 	recordToolCall,
 } from './metrics.js'
 import type { Source } from './sources.js'
+import { resolveSourcePageUrl, sourceIndexUrl } from './sources.js'
 
 type JsonRpcRequest = {
 	jsonrpc?: string
@@ -530,15 +531,7 @@ function resolvePageUrl(
 				: ''
 	if (!raw) return undefined
 
-	try {
-		const url = new URL(raw, source.base)
-		if (url.origin !== new URL(source.base).origin) return undefined
-		url.hash = ''
-		url.search = ''
-		return url.toString()
-	} catch {
-		return undefined
-	}
+	return resolveSourcePageUrl(raw, source.base)?.toString()
 }
 
 async function readCleanPage(pageUrl: string): Promise<string> {
@@ -783,7 +776,7 @@ async function localSourceSearch(
 }
 
 async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
-	const key = `${source.id}:${source.indexPath ?? '/llms.txt'}`
+	const key = `${source.id}:${sourceIndexUrl(source)}`
 	const cached = sourceIndexCache.get(key)
 	if (cached && cached.expiresAt > Date.now()) return cached.entries
 	if (cached) sourceIndexCache.delete(key)
@@ -801,15 +794,12 @@ async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
 }
 
 async function fetchSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
-	const res = await fetch(
-		new URL(source.indexPath ?? '/llms.txt', source.base).toString(),
-		{
-			cf: { cacheTtl: 60 },
-		},
-	)
+	const res = await fetch(sourceIndexUrl(source), {
+		cf: { cacheTtl: 60 },
+	})
 	if (!res.ok) return []
 	const entries = parseSourceIndex(await res.text(), source.base)
-	cacheSourceIndex(`${source.id}:${source.indexPath ?? '/llms.txt'}`, entries)
+	cacheSourceIndex(`${source.id}:${sourceIndexUrl(source)}`, entries)
 	return entries
 }
 
@@ -824,7 +814,6 @@ function cacheSourceIndex(key: string, entries: SourceIndexEntry[]): void {
 }
 
 function parseSourceIndex(body: string, base: string): SourceIndexEntry[] {
-	const origin = new URL(base).origin
 	const entries = []
 	for (const line of body.split('\n')) {
 		const match =
@@ -833,10 +822,8 @@ function parseSourceIndex(body: string, base: string): SourceIndexEntry[] {
 		if (!match) continue
 		const [, title, rawUrl, description] = match
 		try {
-			const url = new URL(rawUrl, origin)
-			if (url.origin !== origin) continue
-			url.hash = ''
-			url.search = ''
+			const url = resolveSourcePageUrl(rawUrl, base)
+			if (!url) continue
 			entries.push({
 				title: title.trim(),
 				url: publicDocsUrl(url.toString()),
@@ -1070,7 +1057,8 @@ function urlFromKey(key: string, sources: Source[]): string | undefined {
 		.replace(/_/g, '/')
 	if (!path) return source.base
 	try {
-		return publicDocsUrl(new URL(`/${path}`, source.base).toString())
+		const url = resolveSourcePageUrl(`/${path}`, source.base)
+		return url ? publicDocsUrl(url.toString()) : undefined
 	} catch {
 		return undefined
 	}
@@ -1679,7 +1667,7 @@ async function readResource(uri: string, sources: Source[]) {
 				text: [
 					'# Tempo docs MCP sources',
 					'Use the `search` tool with `source` to narrow retrieval when the task names a specific library.',
-					'Use `source: "tempo"` for core Tempo protocol and integration docs from docs.tempo.xyz.',
+					'Use `source: "tempo"` for core Tempo protocol and integration docs.',
 					'',
 					...sources.map(
 						(source) =>

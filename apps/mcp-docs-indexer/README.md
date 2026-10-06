@@ -51,6 +51,7 @@ instead of navigation boilerplate.
 | Key                 | Value                                                    |
 | ------------------- | -------------------------------------------------------- |
 | `etag:<id>`         | last-seen `llms.txt` ETag (only stored on clean syncs)   |
+| `source_url:<id>`   | source index URL from the last clean sync, used to invalidate ETags after a migration |
 | `last_sync:<id>`    | ISO timestamp of last sync attempt                       |
 | `index:<id>`        | JSON map: `{ "<key>": { "id": "...", "etag": "...", "content_hash": "..." } }` |
 
@@ -62,6 +63,17 @@ The Worker has **no public sync or ingest endpoint**: source ingestion runs
 exclusively from the scheduled cron handler inside Cloudflare Workers.
 
 ## MCP search behavior
+
+Tempo uses the canonical `https://tempo.xyz/developers` source, including its
+`/developers/llms.txt` index. Page reads also accept legacy `docs.tempo.xyz`
+URLs and resolve them to that canonical prefix. Absolute URLs outside the
+configured source origin and path prefix are rejected.
+
+Changing a source index URL bypasses its cached ETags on the next hourly sync.
+The migration to a prefixed source also bypasses caches when no source URL has
+been recorded yet, so an empty legacy index can recover without waiting for
+the daily forced sync. An index with no valid pages fails without deleting
+items or advancing its ETag and index state.
 
 The local `search` tool accepts Code Mode-friendly top-level controls:
 
@@ -168,7 +180,7 @@ pnpm --filter mcp-docs-indexer configure:metadata
 Changing AI Search custom metadata triggers a full re-index. Re-run a forced
 sync afterward if existing built-in-storage items need the new schema applied.
 
-`docs.tempo.xyz` is listed as the `tempo` source so MCP clients can explicitly
+`tempo.xyz/developers` is listed as the `tempo` source so MCP clients can explicitly
 pull core protocol and integration docs with `source: "tempo"` or `read_page`.
 
 ## Setup

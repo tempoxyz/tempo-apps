@@ -118,7 +118,9 @@ const fixtures: Fixture[] = [
 		name: 'tempo_virtual_addresses',
 		query: 'How do virtual addresses work for TIP-20 deposits on Tempo?',
 		expectedSources: ['tempo'],
-		expectedUrlIncludes: ['docs.tempo.xyz/guide/payments/virtual-addresses'],
+		expectedUrlIncludes: [
+			'tempo.xyz/developers/docs/guide/payments/virtual-addresses',
+		],
 		filterSource: 'tempo',
 	},
 ]
@@ -129,7 +131,9 @@ const pageFixtures: PageFixture[] = [
 		source: 'tempo',
 		path: '/guide/payments/virtual-addresses',
 		query: 'virtual addresses deposits',
-		expectedUrlIncludes: ['docs.tempo.xyz/guide/payments/virtual-addresses'],
+		expectedUrlIncludes: [
+			'tempo.xyz/developers/docs/guide/payments/virtual-addresses',
+		],
 		expectedTextIncludes: ['# Use virtual addresses for deposits'],
 	},
 	{

@@ -35,6 +35,83 @@ afterEach(() => {
 })
 
 describe('handleMcp', () => {
+	it.each([
+		'https://tempo.xyz/developers/docs/api/api-keys',
+		'https://docs.tempo.xyz/docs/api/api-keys',
+		'/docs/api/api-keys',
+	])('reads migrated Tempo page %s', async (url) => {
+		const fetcher = vi.fn(
+			async () => new Response('# API Keys\n\nCreate a key.'),
+		)
+		vi.stubGlobal('fetch', fetcher)
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: {
+						name: 'read_page',
+						arguments: { source: 'tempo-canonical', url },
+					},
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources: [
+					{ id: 'tempo-canonical', base: 'https://tempo.xyz/developers' },
+				],
+			},
+		)
+		const body = await textContent(res)
+		expect(body.result.url).toBe(
+			'https://tempo.xyz/developers/docs/api/api-keys',
+		)
+		expect(body.result.text).toBe('# API Keys\n\nCreate a key.')
+	})
+
+	it('finds API keys in the canonical Tempo index', async () => {
+		const fetcher = vi.fn(
+			async () =>
+				new Response(
+					'- [API Keys](https://tempo.xyz/developers/docs/api/api-keys): Credentials',
+				),
+		)
+		vi.stubGlobal('fetch', fetcher)
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: {
+						name: 'find_pages',
+						arguments: { source: 'tempo-canonical-index', query: 'API keys' },
+					},
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources: [
+					{ id: 'tempo-canonical-index', base: 'https://tempo.xyz/developers' },
+				],
+			},
+		)
+		const body = await textContent(res)
+		expect(body.result.pages).toEqual([
+			{
+				title: 'API Keys',
+				url: 'https://tempo.xyz/developers/docs/api/api-keys',
+				score: expect.any(Number),
+			},
+		])
+		expect(fetcher.mock.calls[0][0]).toBe(
+			'https://tempo.xyz/developers/llms.txt',
+		)
+	})
+
 	describe.each([
 		'search',
 		'find_pages',

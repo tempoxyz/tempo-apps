@@ -1,6 +1,7 @@
 import { log } from './log.js'
 import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
 import type { Source } from './sources.js'
+import { sourceIndexUrl } from './sources.js'
 
 /** Recorded state for one AI Search item, persisted to KV per source. */
 type IndexEntry = { id: string; etag?: string; content_hash?: string }
@@ -35,18 +36,23 @@ export async function syncSource(args: {
 	const { source, instance, etagCache, force = false } = args
 	const indexKey = `index:${source.id}`
 	const etagKey = `etag:${source.id}`
+	const sourceUrlKey = `source_url:${source.id}`
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 
 	try {
-		const prevSourceEtag = force ? null : await etagCache.get(etagKey)
-		const res = await fetch(
-			new URL(source.indexPath ?? '/llms.txt', source.base).toString(),
-			{
-				headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
-				cf: { cacheTtl: 60 },
-			},
-		)
+		const indexUrl = sourceIndexUrl(source)
+		const previousIndexUrl = await etagCache.get(sourceUrlKey)
+		const sourceChanged =
+			previousIndexUrl === null
+				? new URL(source.base).pathname !== '/'
+				: previousIndexUrl !== indexUrl
+		const prevSourceEtag =
+			force || sourceChanged ? null : await etagCache.get(etagKey)
+		const res = await fetch(indexUrl, {
+			headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
+			cf: { cacheTtl: 60 },
+		})
 		if (res.status === 304) {
 			return { source: source.id, status: 'unchanged', duration_ms: elapsed() }
 		}
@@ -60,6 +66,14 @@ export async function syncSource(args: {
 		}
 
 		const pageUrls = parseLlmsTxt(await res.text(), source.base)
+		if (pageUrls.length === 0) {
+			return {
+				source: source.id,
+				status: 'error',
+				error: 'index contains no documentation pages',
+				duration_ms: elapsed(),
+			}
+		}
 		const prevIndex = await loadIndex(etagCache, indexKey)
 		const next: SourceIndex = {}
 		let pages = 0
@@ -70,7 +84,13 @@ export async function syncSource(args: {
 			const batch = pageUrls.slice(i, i + CONCURRENCY)
 			const results = await Promise.allSettled(
 				batch.map((url) =>
-					syncPage({ url, source, instance, prevIndex, force }),
+					syncPage({
+						url,
+						source,
+						instance,
+						prevIndex,
+						force: force || sourceChanged,
+					}),
 				),
 			)
 			for (const r of results) {
@@ -115,6 +135,7 @@ export async function syncSource(args: {
 			const etag = res.headers.get('etag')
 			if (etag) await etagCache.put(etagKey, etag)
 			await etagCache.put(indexKey, JSON.stringify(next))
+			await etagCache.put(sourceUrlKey, indexUrl)
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		return {

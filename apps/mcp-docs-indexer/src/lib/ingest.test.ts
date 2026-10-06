@@ -435,6 +435,60 @@ describe('syncSource — per-page conditional fetch', () => {
 })
 
 describe('syncSource — stale-page deletion', () => {
+	it.each([
+		'',
+		'- [Off-origin](https://example.com/page)',
+	])('preserves all state when the index has no valid pages: %s', async (body) => {
+		const { instance, uploads, deletes } = fakeInstance()
+		const previous = {
+			'etag:viem': 'W/"prev"',
+			'index:viem': JSON.stringify({ 'viem/keep.md': { id: 'keep' } }),
+			'last_sync:viem': 'previous-sync',
+		}
+		const { kv, store } = fakeKv(previous)
+		fetchMock.mockResolvedValue(mockResponse({ body, etag: 'W/"next"' }))
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+		expect(report).toMatchObject({
+			status: 'error',
+			error: 'index contains no documentation pages',
+		})
+		expect(uploads).toEqual([])
+		expect(deletes).toEqual([])
+		expect(Object.fromEntries(store)).toEqual(previous)
+	})
+
+	it('re-ingests the migrated Tempo source despite the old index ETag', async () => {
+		const source = { id: 'tempo', base: 'https://tempo.xyz/developers' }
+		const { instance, uploads } = fakeInstance()
+		const { kv, store } = fakeKv({
+			'etag:tempo': 'W/"old"',
+			'index:tempo': '{}',
+		})
+		fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+			if (url === `${source.base}/llms.txt`) {
+				expect(init?.headers).toEqual({})
+				return mockResponse({
+					body: `- [API Keys](${source.base}/docs/api/api-keys)`,
+					etag: 'W/"new"',
+				})
+			}
+			expect(url).toBe(`${source.base}/docs/api/api-keys.md`)
+			return mockResponse({ body: '# API Keys\n\nCreate a key.' })
+		})
+		expect(await syncSource({ source, instance, etagCache: kv })).toMatchObject(
+			{ status: 'synced', pages: 1, failed: 0 },
+		)
+		expect(uploads[0].metadata?.url).toBe(`${source.base}/docs/api/api-keys`)
+		expect(store.get('source_url:tempo')).toBe(`${source.base}/llms.txt`)
+		fetchMock.mockResolvedValueOnce(mockResponse({ status: 304 }))
+		expect(await syncSource({ source, instance, etagCache: kv })).toMatchObject(
+			{ status: 'unchanged' },
+		)
+		expect(fetchMock.mock.lastCall?.[1]).toMatchObject({
+			headers: { 'If-None-Match': 'W/"new"' },
+		})
+	})
+
 	it('deletes items that disappear from llms.txt', async () => {
 		const { instance, uploads, deletes } = fakeInstance()
 		const { kv, store } = fakeKv({
