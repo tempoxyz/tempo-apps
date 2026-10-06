@@ -4,12 +4,14 @@ on:
     paths:
       - "pnpm-lock.yaml"
       - "apps/fee-payer/**"
+      - "apps/access-keys/**"
       - "apps/contract-verification/**"
   push:
     branches: [main]
     paths:
       - "pnpm-lock.yaml"
       - "apps/fee-payer/**"
+      - "apps/access-keys/**"
       - "apps/contract-verification/**"
   workflow_dispatch:
 
@@ -23,6 +25,22 @@ env:
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
+  test-access-keys:
+    permissions:
+      id-token: write
+    name: Test Managed Access Keys
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+      - name: Run tests
+        run: pnpm --filter access-keys test
+
   test-fee-payer:
     permissions:
       id-token: write

@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"lib": ["ES2022"],
+		"types": ["@cloudflare/workers-types", "node"],
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"strict": true,
+		"skipLibCheck": true
+	},
+	"files": ["worker-configuration.d.ts"],
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules", "test"]
+}
