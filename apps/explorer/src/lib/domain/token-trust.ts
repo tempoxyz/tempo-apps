@@ -46,7 +46,7 @@ const rolePermissions = new Map([
 		[
 			[
 				'Can replace policy',
-				'Sets the TIP-403 transfer policy used by this token.',
+				'Can set the TIP-403 transfer policy used by this token.',
 			],
 			['Manage roles', 'Can manage token roles and their administrators.'],
 			['Change supply cap', 'Can change the maximum token supply.'],
@@ -119,15 +119,14 @@ export function groupTokenAuthorities(
 				: [{ ...policy.policy, scope: undefined }]
 		for (const item of policies) {
 			if (!item.admin) continue
-			const permission =
-				item.type === 'allowlist'
-					? 'Manage allowed accounts'
-					: 'Block / unblock'
 			group(item.admin).permissions.push({
 				label: item.scope
-					? `${permission} · ${item.scope.toLowerCase()}`
-					: permission,
-				description: `Policy admin: can update the ${item.type} and transfer its administration.`,
+					? `Policy admin · ${item.scope.toLowerCase()}`
+					: 'Policy admin',
+				description:
+					item.type === 'allowlist'
+						? 'Can add or remove allowed accounts and transfer administration of the policy.'
+						: 'Can block or unblock accounts and transfer administration of the policy.',
 				policyId: item.id,
 			})
 		}

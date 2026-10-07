@@ -118,7 +118,7 @@ describe('token authority grouping', () => {
 				'BURN_AT',
 			].map(tokenRoleDescription),
 		).toEqual([
-			'Sets the TIP-403 transfer policy used by this token. Can manage token roles and their administrators. Can change the maximum token supply.',
+			'Can set the TIP-403 transfer policy used by this token. Can manage token roles and their administrators. Can change the maximum token supply.',
 			'Can pause token transfers.',
 			'Can unpause token transfers.',
 			'Can mint new tokens.',
@@ -146,7 +146,7 @@ describe('token authority grouping', () => {
 		expect(groups[0].permissions.map((p) => p.label)).toEqual([
 			'Pause',
 			'Unpause',
-			'Block / unblock',
+			'Policy admin',
 		])
 	})
 	it('keeps multiple holders and unknown roles without inventing permissions', () => {
@@ -169,7 +169,9 @@ describe('token authority grouping', () => {
 			'Change supply cap',
 		])
 		expect(groups[1].permissions[0]).toMatchObject({
-			label: 'Block / unblock',
+			label: 'Policy admin',
+			description:
+				'Can block or unblock accounts and transfer administration of the policy.',
 			policyId: '42',
 		})
 	})
@@ -185,8 +187,12 @@ describe('token authority grouping', () => {
 		})
 		expect(groups).toHaveLength(1)
 		expect(groups[0].permissions.map((p) => p.label)).toEqual([
-			'Block / unblock · recipient',
-			'Manage allowed accounts · mint recipient',
+			'Policy admin · recipient',
+			'Policy admin · mint recipient',
+		])
+		expect(groups[0].permissions.map((p) => p.description)).toEqual([
+			'Can block or unblock accounts and transfer administration of the policy.',
+			'Can add or remove allowed accounts and transfer administration of the policy.',
 		])
 	})
 })

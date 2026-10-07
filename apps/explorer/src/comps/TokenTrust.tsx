@@ -171,12 +171,9 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 														key={`${permission.policyId}:${index}`}
 														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
 													>
-														<dt>Policy admin</dt>
+														<dt>{permission.label}</dt>
 														<dd className="text-secondary">
-															<p>{permission.label}</p>
-															<p className="text-tertiary">
-																{permission.description}
-															</p>
+															{permission.description}
 														</dd>
 														<dd className="md:text-right label-12">
 															<Link
