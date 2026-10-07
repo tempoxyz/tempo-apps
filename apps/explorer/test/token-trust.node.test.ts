@@ -107,7 +107,7 @@ describe('token authority grouping', () => {
 			})[0].allowed,
 		).toBeNull()
 	})
-	it('provides expanded explanations for every standard token role', () => {
+	it('describes every standard token role with a single capability sentence', () => {
 		expect(
 			[
 				'DEFAULT_ADMIN',
@@ -118,7 +118,7 @@ describe('token authority grouping', () => {
 				'BURN_AT',
 			].map(tokenRoleDescription),
 		).toEqual([
-			'Can set the TIP-403 transfer policy used by this token. Can manage token roles and their administrators. Can change the maximum token supply.',
+			'Can set the TIP-403 transfer policy used by this token, manage token roles and their administrators, and change the maximum token supply.',
 			'Can pause token transfers.',
 			'Can unpause token transfers.',
 			'Can mint new tokens.',

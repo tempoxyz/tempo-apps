@@ -145,13 +145,14 @@ export function policyLabel(policy: TransferPolicy) {
 }
 
 export function tokenRoleDescription(role: string): string {
-	return (
-		rolePermissions
-			.get(role)
-			?.map(([, description]) => description)
-			.join(' ') ??
-		'Custom token role. Permissions are not known to the explorer.'
-	)
+	const descriptions = rolePermissions
+		.get(role)
+		?.map(([, description]) =>
+			description.replace(/^Can /, '').replace(/\.$/, ''),
+		)
+	if (!descriptions)
+		return 'Custom token role. Permissions are not known to the explorer.'
+	return `Can ${new Intl.ListFormat('en').format(descriptions)}.`
 }
 
 /** Use the same policy rows before and after checking an address. */
