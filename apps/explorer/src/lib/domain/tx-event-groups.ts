@@ -51,6 +51,34 @@ export function getEventName(log: Log): string | null {
 	return null
 }
 
+function isBurnAtTransferPair(transfer: Log, burn: Log): boolean {
+	return (
+		getEventName(transfer) === 'Transfer' &&
+		getEventName(burn) === 'BurnAt' &&
+		transfer.address.toLowerCase() === burn.address.toLowerCase() &&
+		transfer.topics[1]?.toLowerCase() === burn.topics[2]?.toLowerCase() &&
+		transfer.topics[2]?.toLowerCase() === zeroHash &&
+		transfer.data.toLowerCase() === burn.topics[3]?.toLowerCase()
+	)
+}
+
+/** Match one preceding zero-address transfer per burn, including repeated burns. */
+export function findBurnAtTransfers<T extends Log>(logs: readonly T[]): Set<T> {
+	const transfers = new Set<T>()
+	for (const [index, burn] of logs.entries()) {
+		if (getEventName(burn) !== 'BurnAt') continue
+		for (let transferIndex = index - 1; transferIndex >= 0; transferIndex--) {
+			const transfer = logs[transferIndex]
+			if (transfers.has(transfer)) continue
+			if (isBurnAtTransferPair(transfer, burn)) {
+				transfers.add(transfer)
+				break
+			}
+		}
+	}
+	return transfers
+}
+
 export function groupRelatedEvents(
 	logs: Log[],
 	knownEvents: (KnownEvent | null)[],
@@ -73,14 +101,7 @@ export function groupRelatedEvents(
 			const secondLog = logs[i + 1]
 			const secondEventName = secondLog ? getEventName(secondLog) : null
 
-			if (
-				eventName === 'Transfer' &&
-				secondEventName === 'BurnAt' &&
-				log.address.toLowerCase() === secondLog.address.toLowerCase() &&
-				log.topics[1]?.toLowerCase() === secondLog.topics[2]?.toLowerCase() &&
-				log.topics[2]?.toLowerCase() === zeroHash &&
-				log.data.toLowerCase() === secondLog.topics[3]?.toLowerCase()
-			) {
+			if (secondLog && isBurnAtTransferPair(log, secondLog)) {
 				groups.push({
 					logs: [log, secondLog],
 					startIndex: i,

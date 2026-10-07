@@ -17,8 +17,17 @@ import {
 	userTokenAddress,
 } from '#lib/demo'
 import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
+import { LineItems } from '#lib/domain/receipt'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 import { groupRelatedEvents } from '#lib/domain/tx-event-groups'
+import { HexFormatter } from '#lib/formatting'
+import { renderReceiptText } from '#lib/domain/receipt-text'
+import {
+	burnAtCaller,
+	burnAtHolder,
+	burnAtReceipt,
+	burnAtToken,
+} from './fixtures/burn-at'
 
 const burnAtAbi = parseAbi([
 	'event BurnAt(address indexed burner, address indexed from, uint256 indexed amount)',
@@ -64,12 +73,12 @@ describe('BurnAt', () => {
 		})
 	})
 
-	it('uses the ordinary burn presentation without a burner field', () => {
+	it('labels BurnAt distinctly without a burner field', () => {
 		const event = parseKnownEvent(burnAtLog(), { getTokenMetadata })
 		expect(event).toEqual({
 			type: 'burn at',
 			parts: [
-				{ type: 'action', value: 'Burn' },
+				{ type: 'action', value: 'BurnAt' },
 				{
 					type: 'amount',
 					value: {
@@ -209,5 +218,135 @@ describe('BurnAt', () => {
 				],
 			}),
 		).toEqual(fallbackEvents)
+	})
+
+	it.each([
+		0n,
+		1_000_000n,
+	])('exports one formatted BurnAt item for %s units', (amount) => {
+		const items = LineItems.fromReceipt(
+			mockReceipt([transferLog(amount), burnAtLog(amount)], accountAddress),
+			{ getTokenMetadata },
+		)
+		expect(items.main).toHaveLength(1)
+		expect(items.main[0]).toMatchObject({
+			eventName: 'BurnAt',
+			price: { amount, token: userTokenAddress, symbol: 'USDC', decimals: 6 },
+			ui: {
+				left: 'BurnAt USDC',
+				bottom: [{ left: `From: ${HexFormatter.truncate(recipientAddress)}` }],
+			},
+		})
+		expect(items.main[0].ui.right).not.toBe('-')
+	})
+
+	it('keeps repeated burns and an identical extra transfer in JSON line items', () => {
+		const items = LineItems.fromReceipt(
+			mockReceipt(
+				[transferLog(), transferLog(), burnAtLog(), transferLog(), burnAtLog()],
+				accountAddress,
+			),
+			{ getTokenMetadata },
+		)
+		expect(items.main.map((item) => item.event?.eventName)).toEqual([
+			'Transfer',
+			'BurnAt',
+			'BurnAt',
+		])
+	})
+
+	it('preserves JSON transfers with a different token, holder, or amount', () => {
+		const items = LineItems.fromReceipt(
+			mockReceipt(
+				[
+					transferLog(2n),
+					transferLog(1_000_000n, accountAddress),
+					transferLog(1_000_000n, userTokenAddress, accountAddress),
+					transferLog(),
+					burnAtLog(),
+				],
+				accountAddress,
+			),
+			{ getTokenMetadata },
+		)
+		expect(items.main.map((item) => item.event?.eventName)).toEqual([
+			'Transfer',
+			'Transfer',
+			'Transfer',
+			'BurnAt',
+		])
+	})
+
+	it('keeps ordinary Burn labelled Burn alongside BurnAt', () => {
+		const burn = mockLog({
+			address: userTokenAddress,
+			topics: encodeEventTopics({
+				abi: Abis.tip20,
+				eventName: 'Burn',
+				args: { from: recipientAddress },
+			}),
+			data: encodeAbiParameters([{ type: 'uint256' }], [1_000_000n]),
+		})
+		const receipt = mockReceipt(
+			[transferLog(), burn, transferLog(), burnAtLog()],
+			accountAddress,
+		)
+		expect(
+			parseKnownEvents(receipt).map((event) => event.parts[0].value),
+		).toEqual(['Burn', 'BurnAt'])
+		expect(
+			LineItems.fromReceipt(receipt, { getTokenMetadata }).main.map(
+				(item) => item.ui.left,
+			),
+		).toEqual(['Burn USDC', 'BurnAt USDC'])
+	})
+
+	it('renders the real Nextfork receipt consistently in descriptions, JSON, and text', () => {
+		const metadata = (address: string) => ({
+			currency: 'USD',
+			decimals: 6,
+			logoURI: '',
+			symbol:
+				address.toLowerCase() === burnAtToken.toLowerCase()
+					? 'BATST'
+					: 'pathUSD',
+			name: 'BurnAt Explorer Test',
+			totalSupply: 9_000_000n,
+		})
+		const events = parseKnownEvents(burnAtReceipt, {
+			getTokenMetadata: metadata,
+		})
+		expect(burnAtCaller).not.toBe(burnAtHolder)
+		expect(events).toHaveLength(1)
+		expect(events[0]).toMatchObject({
+			type: 'burn at',
+			parts: [
+				{ type: 'action', value: 'BurnAt' },
+				{ type: 'amount', value: { value: 1_000_000n, symbol: 'BATST' } },
+				{ type: 'text', value: 'from' },
+				{ type: 'account', value: burnAtHolder },
+			],
+		})
+		expect(events[0].note).toBeUndefined()
+		const items = LineItems.fromReceipt(burnAtReceipt, {
+			getTokenMetadata: metadata,
+		})
+		expect(items.main).toHaveLength(1)
+		expect(items.main[0]).toMatchObject({
+			eventName: 'BurnAt',
+			price: { amount: 1_000_000n, symbol: 'BATST' },
+			ui: {
+				left: 'BurnAt BATST',
+				right: '$1',
+				bottom: [{ left: `From: ${HexFormatter.truncate(burnAtHolder)}` }],
+			},
+		})
+		const text = renderReceiptText(
+			{ block: { timestamp: 0x6ac55fc4n }, receipt: burnAtReceipt },
+			{ events, fee: 0, feeBreakdown: [], feeDisplay: '0' },
+		)
+		expect(text).toContain('1. BURNAT')
+		expect(text).not.toContain('2. ')
+		expect(text).not.toContain('BURNER')
 	})
 })

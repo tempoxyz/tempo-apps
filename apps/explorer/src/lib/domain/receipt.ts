@@ -5,6 +5,7 @@ import { parseEventLogs, zeroAddress } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
+import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
 import type * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 
@@ -82,6 +83,7 @@ export namespace LineItems {
 			abi,
 			logs,
 		})
+		const burnAtTransfers = findBurnAtTransfers(events)
 
 		////////////////////////////////////////////////////////////
 
@@ -115,6 +117,7 @@ export namespace LineItems {
 		}
 
 		const dedupedEvents = events.filter((event) => {
+			if (burnAtTransfers.has(event)) return false
 			let include = true
 
 			if (event.eventName === 'Transfer') {
@@ -157,6 +160,7 @@ export namespace LineItems {
 		// Map log events to receipt line items.
 		for (const event of dedupedEvents) {
 			switch (event.eventName) {
+				case 'BurnAt':
 				case 'Burn': {
 					if ('amount' in event.args) {
 						const { amount, from } = event.args
@@ -174,22 +178,23 @@ export namespace LineItems {
 						items.main.push(
 							LineItem.from({
 								event,
-								price: isSelf
-									? {
-											amount,
-											currency,
-											decimals,
-											symbol,
-											token: event.address,
-										}
-									: undefined,
+								price:
+									isSelf || event.eventName === 'BurnAt'
+										? {
+												amount,
+												currency,
+												decimals,
+												symbol,
+												token: event.address,
+											}
+										: undefined,
 								ui: {
 									bottom: [
 										{
 											left: `From: ${HexFormatter.truncate(from)}`,
 										},
 									],
-									left: `Burn ${symbol}`,
+									left: `${event.eventName} ${symbol}`,
 									right: decimals
 										? PriceFormatter.format(amount, decimals)
 										: '-',
