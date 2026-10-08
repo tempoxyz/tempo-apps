@@ -79,16 +79,19 @@ export function getWagmiConfig() {
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
 	const chain = getTempoChain()
 	const transport = getTempoTransport()
+	const preview = getTempoEnv() === 'preview'
 
 	wagmiConfigSingleton = createConfig({
 		ssr: true,
 		multiInjectedProviderDiscovery: true,
-		chains: [chain, tempoLocalnet],
+		chains: preview ? [chain] : [chain, tempoLocalnet],
 		connectors: [tempoWallet()],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[chain.id]: transport,
-			[tempoLocalnet.id]: http(undefined, { batch: true }),
+			...(!preview
+				? { [tempoLocalnet.id]: http(undefined, { batch: true }) }
+				: {}),
 		} as never,
 	})
 
