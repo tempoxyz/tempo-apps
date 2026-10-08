@@ -11,6 +11,7 @@ import {
 	tempoZoneProver,
 } from './lib/chains'
 import { getApiUrl, getTempoEnv } from './lib/env'
+import { getPreviewChain } from './lib/preview-chain'
 import { getExplorerRpcBackend } from './lib/server/network'
 import {
 	cookieStorage,
@@ -34,8 +35,14 @@ const chains = {
 }
 
 export const getTempoChain = createIsomorphicFn()
-	.client(() => chains[getTempoEnv()])
-	.server(() => chains[getTempoEnv()])
+	.client(() => {
+		const environment = getTempoEnv()
+		return environment === 'preview' ? getPreviewChain() : chains[environment]
+	})
+	.server(() => {
+		const environment = getTempoEnv()
+		return environment === 'preview' ? getPreviewChain() : chains[environment]
+	})
 
 function rpcHttp(
 	url: string | undefined,

@@ -17,6 +17,15 @@ export function getExplorerRpcBackend(
 	environment: string | undefined,
 	auth: string | undefined,
 ) {
+	if (environment === 'preview') {
+		if (!serverEnv.PREVIEW_CHAIN_ID || !serverEnv.PREVIEW_RPC_URL)
+			throw new Error('Preview RPC is not configured')
+		return {
+			chainId: serverEnv.PREVIEW_CHAIN_ID,
+			url: serverEnv.PREVIEW_RPC_URL,
+			headers: {} as Record<string, string>,
+		}
+	}
 	if (environment === 'zone-prover') {
 		const target = getChainBackend(ZONE_PROVER_CHAIN_ID, 'rpc')
 		if (!target) throw new Error('RPC network is not configured')

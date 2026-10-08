@@ -20,6 +20,7 @@ export type TempoEnv =
 	| 'devnet'
 	| 'nextfork'
 	| 'zone-prover'
+	| 'preview'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -77,6 +78,7 @@ function normalizeTempoEnv(value: string | undefined): TempoEnv {
 	return value === 'mainnet' ||
 		value === 'devnet' ||
 		value === 'nextfork' ||
+		value === 'preview' ||
 		value === 'zone-prover'
 		? value
 		: 'testnet'
@@ -113,21 +115,25 @@ export function getApiUrl(path: string, searchParams?: URLSearchParams): URL {
 	return url
 }
 
+/** Preview runtime configuration is authoritative even when a name contains a network label. */
+export function resolveTempoEnv(
+	hostname: string | undefined,
+	configured: string | undefined,
+): TempoEnv {
+	if (configured === 'preview') return 'preview'
+	return inferTempoEnvFromHostname(hostname) ?? normalizeTempoEnv(configured)
+}
+
 export const getTempoEnv = createIsomorphicFn()
-	.client(() => {
-		const inferred = inferTempoEnvFromHostname(window.location.hostname)
-		return inferred ?? normalizeTempoEnv(import.meta.env.VITE_TEMPO_ENV)
-	})
-	.server(() => {
-		// Some modules read the active chain at import time before TanStack Start has
-		// established request AsyncLocalStorage. Fall back to Vite env there. In
-		// Cloudflare/Vite dev, `process.env` may not include the command env inside
-		// the worker runtime.
-		const inferred = inferTempoEnvFromHostname(
+	.client(() =>
+		resolveTempoEnv(window.location.hostname, import.meta.env.VITE_TEMPO_ENV),
+	)
+	.server(() =>
+		resolveTempoEnv(
 			getRequestUrlIfAvailable()?.hostname,
-		)
-		return inferred ?? normalizeTempoEnv(import.meta.env.VITE_TEMPO_ENV)
-	})
+			import.meta.env.VITE_TEMPO_ENV,
+		),
+	)
 
 export const isTestnet = createIsomorphicFn()
 	.client(() => getTempoEnv() === 'testnet')

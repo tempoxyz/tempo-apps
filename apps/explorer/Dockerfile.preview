@@ -1,0 +1,12 @@
+FROM node:24.14.0-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git && rm -rf /var/lib/apt/lists/*
+RUN corepack enable
+WORKDIR /app
+COPY . .
+RUN pnpm install --frozen-lockfile --ignore-scripts
+WORKDIR /app/apps/explorer
+RUN VITE_TEMPO_ENV=preview pnpm build
+ENV NODE_ENV=production PORT=8080
+USER node
+EXPOSE 8080
+CMD ["node", "scripts/serve-preview.mjs"]
