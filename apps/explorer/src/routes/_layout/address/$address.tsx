@@ -63,6 +63,7 @@ import {
 } from '#lib/domain/known-event-totals'
 import { TransactionFilters, TransferFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
+import { downloadTransactionsCsv } from '#lib/transactions-csv'
 import { useLiveFeed } from '#lib/use-live-feed'
 import { useAddressLive } from '#lib/use-address-live'
 import { mergeLiveRows } from '#lib/sse'
@@ -136,6 +137,7 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import CopyIcon from '~icons/lucide/copy'
 import PlayIcon from '~icons/lucide/play'
 import XIcon from '~icons/lucide/x'
+import DownloadIcon from '~icons/lucide/download'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -1191,6 +1193,41 @@ function SectionsWrapper(props: {
 			}),
 		[address, after, include, status, hideSubmitBatches],
 	)
+	const [isExportingTransactions, setIsExportingTransactions] =
+		React.useState(false)
+	const [exportError, setExportError] = React.useState<string | undefined>()
+	const exportTransactions = React.useCallback(async () => {
+		setIsExportingTransactions(true)
+		setExportError(undefined)
+		try {
+			const transactions: EnrichedTransaction[] = []
+			let position: HistoryPosition = { order: 'desc' }
+			const seenCursors = new Set<string>()
+
+			while (true) {
+				const data = await queryClient.fetchQuery(
+					getHistoryQueryOptions(position),
+				)
+				if (data.error) throw new Error(data.error)
+				transactions.push(...data.transactions)
+				if (!data.nextCursor) break
+				if (seenCursors.has(data.nextCursor))
+					throw new Error('Transaction history pagination stalled.')
+				seenCursors.add(data.nextCursor)
+				position = { order: 'desc', cursor: data.nextCursor }
+			}
+
+			downloadTransactionsCsv(transactions, address)
+		} catch (error) {
+			setExportError(
+				error instanceof Error
+					? error.message
+					: 'Failed to export transactions.',
+			)
+		} finally {
+			setIsExportingTransactions(false)
+		}
+	}, [address, getHistoryQueryOptions, queryClient])
 
 	const feedScope = JSON.stringify([
 		address,
@@ -2089,6 +2126,21 @@ function SectionsWrapper(props: {
 								onHideSubmitBatchesChange={onHideSubmitBatchesChange}
 								onClearAll={onClearTransactionFilters}
 							/>
+							<button
+								type="button"
+								onClick={() => void exportTransactions()}
+								disabled={isExportingTransactions}
+								className="inline-flex items-center gap-[5px] label-12 text-secondary hover:text-primary disabled:cursor-wait disabled:opacity-60"
+								title="Export all matching transactions as CSV"
+							>
+								<DownloadIcon className="size-[13px]" />
+								{isExportingTransactions ? 'Exporting…' : 'Export CSV'}
+							</button>
+							{exportError && (
+								<span className="label-12 text-secondary" role="alert">
+									{exportError}
+								</span>
+							)}
 							{liveControl}
 						</div>
 					),
