@@ -1,6 +1,7 @@
 import { tempoDevnet as tempoDevnet_, tempo, tempoModerato } from 'viem/chains'
 import { alphausd, pathusd } from 'viem/tokens'
 import { ZONE_PROVER_CHAIN_ID, ZONE_PROVER_EXPLORER_URL } from './zone-prover'
+import { MULTISIG_EXPLORER_URL } from './multisig'
 
 export const tempoZoneProver = tempoDevnet_.extend({
 	id: ZONE_PROVER_CHAIN_ID,
@@ -33,5 +34,16 @@ export const tempoNextfork = tempoDevnet_.extend({
 		default: {
 			http: ['https://rpc-nextfork.devnet.tempoxyz.dev'],
 		},
+	},
+})
+
+export const tempoMultisig = tempoDevnet_.extend({
+	feeToken: '0x20c0000000000000000000000000000000000002',
+	name: 'Tempo Multisig Devnet',
+	rpcUrls: {
+		default: { http: [`${MULTISIG_EXPLORER_URL}/api/rpc`] },
+	},
+	blockExplorers: {
+		default: { name: 'Tempo Multisig Explorer', url: MULTISIG_EXPLORER_URL },
 	},
 })

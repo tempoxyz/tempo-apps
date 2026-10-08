@@ -20,6 +20,7 @@ export type TempoEnv =
 	| 'devnet'
 	| 'nextfork'
 	| 'zone-prover'
+	| 'multisig1'
 
 export function inferTempoEnvFromHostname(
 	hostname: string | undefined,
@@ -27,6 +28,11 @@ export function inferTempoEnvFromHostname(
 	if (!hostname) return undefined
 
 	const host = hostname.toLowerCase()
+	if (
+		host.includes('explorer-multisig1') ||
+		host === 'explore.multisig1.devnet.tempo.xyz'
+	)
+		return 'multisig1'
 
 	if (
 		host.includes('explorer-zone-prover') ||
@@ -77,7 +83,8 @@ function normalizeTempoEnv(value: string | undefined): TempoEnv {
 	return value === 'mainnet' ||
 		value === 'devnet' ||
 		value === 'nextfork' ||
-		value === 'zone-prover'
+		value === 'zone-prover' ||
+		value === 'multisig1'
 		? value
 		: 'testnet'
 }

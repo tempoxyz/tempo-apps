@@ -1,6 +1,7 @@
 import * as Sentry from '@sentry/cloudflare'
 import { create } from 'tapimo/client'
 import { serverEnv, tempoApiUrl } from './env.ts'
+import { isMultisigExplorer } from '#lib/multisig'
 
 const ALERTABLE_STATUSES = new Set([402, 403, 429])
 const REPORT_THROTTLE_MS = 60_000
@@ -39,6 +40,11 @@ function reportTempoApiResponse(response: Response, method: string): void {
 }
 
 const instrumentedFetch: typeof fetch = async (input, init) => {
+	if (isMultisigExplorer())
+		return Response.json(
+			{ error: 'Shared API data is not available for multisig1' },
+			{ status: 503 },
+		)
 	const response = await fetch(input, init)
 	const method =
 		init?.method ?? (input instanceof Request ? input.method : 'GET')

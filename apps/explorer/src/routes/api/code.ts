@@ -9,6 +9,7 @@ import {
 } from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
 import { getRequestURL, clientEnv } from '#lib/env.ts'
+import { isMultisigExplorer } from '#lib/multisig'
 
 const CONTRACT_VERIFICATION_API_BASE_URL = `${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
 
@@ -117,6 +118,11 @@ export const Route = createFileRoute('/api/code')({
 	server: {
 		handlers: {
 			GET: async () => {
+				if (isMultisigExplorer())
+					return Response.json(
+						{ error: 'Source verification is not available for multisig1' },
+						{ status: 503 },
+					)
 				const url = getRequestURL()
 
 				const normalizedParams = Object.fromEntries(

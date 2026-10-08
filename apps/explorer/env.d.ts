@@ -25,6 +25,7 @@ interface EnvironmentVariables {
 		| 'nextfork'
 		| 'mainnet'
 		| 'zone-prover'
+		| 'multisig1'
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

@@ -20,6 +20,7 @@ const NON_INDEXABLE_EXPLORER_HOSTS = new Set([
 	'explore.devnet.tempo.xyz',
 	'explore.nextfork.devnet.tempo.xyz',
 	'explore.zone-prover.devnet.tempo.xyz',
+	'explore.multisig1.devnet.tempo.xyz',
 ])
 
 export type ExplorerHostPolicy = { type: 'redirect'; location: string }
@@ -46,7 +47,8 @@ export function isNonIndexableExplorerHost(hostname: string): boolean {
 		NON_INDEXABLE_EXPLORER_HOSTS.has(host) ||
 		host.includes('explorer-devnet') ||
 		host.includes('explorer-nextfork') ||
-		host.includes('explorer-zone-prover')
+		host.includes('explorer-zone-prover') ||
+		host.includes('explorer-multisig1')
 	)
 }
 

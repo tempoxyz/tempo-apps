@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { serverEnv, tempoApiUrl } from '#lib/server/env'
 import { getTempoChain } from '#wagmi.config.ts'
+import { isMultisigExplorer } from '#lib/multisig'
 
 /**
  * Same-origin proxy for the Tempo API's curated token logo
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/api/token/logo/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
+				if (isMultisigExplorer()) return new Response(null, { status: 404 })
 				if (!Address.validate(params.address))
 					return new Response(null, { status: 400 })
 				const address = params.address.toLowerCase()

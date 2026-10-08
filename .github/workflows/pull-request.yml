@@ -72,6 +72,8 @@ jobs:
           - app: explorer
             env: zone-prover
           - app: explorer
+            env: multisig1
+          - app: explorer
             env: mainnet
           #### fee-payer
           - app: fee-payer

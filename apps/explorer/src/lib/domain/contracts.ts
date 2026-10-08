@@ -26,6 +26,7 @@ import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getZonePortalId, isZonePortalAddress } from '#lib/domain/zones.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import { clientEnv } from '#lib/env.ts'
+import { isMultisigExplorer } from '#lib/multisig'
 
 export { isZonePortalAddress } from '#lib/domain/zones.ts'
 
@@ -1063,6 +1064,7 @@ export class TempoABILoader {
 	}
 
 	async loadABI(address: string): Promise<unknown[]> {
+		if (isMultisigExplorer()) return []
 		try {
 			const url = `${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
 			const response = await fetch(url)

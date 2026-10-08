@@ -3,6 +3,7 @@ import type { Address } from 'ox'
 import { isAddress } from 'viem'
 import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
+import { isMultisigExplorer } from '#lib/multisig'
 
 const CONTRACT_SOURCE_FIELDS = [
 	'stdJsonInput',
@@ -202,6 +203,8 @@ export async function fetchContractSourceDirect(params: {
 	chainId: number
 	signal?: AbortSignal
 }): Promise<ContractSource> {
+	if (isMultisigExplorer())
+		throw new Error('Source verification is not available for multisig1')
 	const { address, chainId, signal } = params
 	const { clientEnv } = await import('#lib/env.ts')
 

@@ -6,6 +6,7 @@ import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import {
 	tempoMainnet,
+	tempoMultisig,
 	tempoNextfork,
 	tempoTestnet,
 	tempoZoneProver,
@@ -31,6 +32,7 @@ const chains = {
 	devnet: tempoDevnet,
 	nextfork: tempoNextfork,
 	'zone-prover': tempoZoneProver,
+	multisig1: tempoMultisig,
 }
 
 export const getTempoChain = createIsomorphicFn()

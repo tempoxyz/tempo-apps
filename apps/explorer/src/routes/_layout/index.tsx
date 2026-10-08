@@ -5,6 +5,7 @@ import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { getTempoEnv } from '#lib/env'
+import { isMultisigExplorer } from '#lib/multisig'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -148,12 +149,14 @@ function SpotlightLinks() {
 				>
 					Blocks
 				</SpotlightPill>
-				<SpotlightPill
-					to="/tokens"
-					icon={<CoinsIcon className="size-[14px] text-accent" />}
-				>
-					Tokens
-				</SpotlightPill>
+				{!isMultisigExplorer() && (
+					<SpotlightPill
+						to="/tokens"
+						icon={<CoinsIcon className="size-[14px] text-accent" />}
+					>
+						Tokens
+					</SpotlightPill>
+				)}
 			</div>
 		</section>
 	)

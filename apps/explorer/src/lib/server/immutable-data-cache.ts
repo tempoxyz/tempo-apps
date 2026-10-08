@@ -1,4 +1,5 @@
 import * as Json from 'ox/Json'
+import { isMultisigExplorer } from '#lib/multisig'
 
 const CACHE_ORIGIN = 'https://explore.tempo.xyz'
 
@@ -12,8 +13,9 @@ export async function withImmutableDataCache<T>(options: {
 		return options.load()
 
 	const cache = (caches as unknown as { default: Cache }).default
+	const key = isMultisigExplorer() ? `multisig1:${options.key}` : options.key
 	const cacheKey = new Request(
-		`${CACHE_ORIGIN}/__immutable-data/${encodeURIComponent(options.key)}`,
+		`${CACHE_ORIGIN}/__immutable-data/${encodeURIComponent(key)}`,
 	)
 
 	try {

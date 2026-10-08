@@ -21,7 +21,12 @@ export function getActiveExplorerNetworkOption(tempoEnv: TempoEnv) {
 
 	return {
 		env: tempoEnv,
-		label: tempoEnv === 'nextfork' ? 'Nextfork' : 'Devnet',
+		label:
+			tempoEnv === 'multisig1'
+				? 'Multisig'
+				: tempoEnv === 'nextfork'
+					? 'Nextfork'
+					: 'Devnet',
 		dotClassName: 'bg-warning',
 	}
 }

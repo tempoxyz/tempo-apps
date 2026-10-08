@@ -17,9 +17,32 @@ function mockCache() {
 
 afterEach(() => {
 	vi.unstubAllGlobals()
+	vi.unstubAllEnvs()
 })
 
 describe('withImmutableDataCache', () => {
+	it('isolates multisig cache entries from other devnets sharing chain 31318', async () => {
+		mockCache()
+		const key = 'receipt:31318:0x1234'
+		vi.stubEnv('VITE_TEMPO_ENV', 'devnet')
+		await withImmutableDataCache({
+			key,
+			load: async () => ({ network: 'devnet' }),
+		})
+		vi.stubEnv('VITE_TEMPO_ENV', 'multisig1')
+		await expect(
+			withImmutableDataCache({
+				key,
+				load: async () => ({ network: 'multisig1' }),
+			}),
+		).resolves.toEqual({ network: 'multisig1' })
+		vi.stubEnv('VITE_TEMPO_ENV', 'devnet')
+		const load = vi.fn()
+		await expect(withImmutableDataCache({ key, load })).resolves.toEqual({
+			network: 'devnet',
+		})
+		expect(load).not.toHaveBeenCalled()
+	})
 	it('caches values and preserves bigint fields', async () => {
 		const cache = mockCache()
 		const load = vi.fn(async () => ({ blockNumber: 37_704_533n }))

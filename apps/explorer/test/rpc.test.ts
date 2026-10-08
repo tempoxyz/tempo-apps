@@ -20,6 +20,7 @@ describe('Explorer Orchestra routing', () => {
 		['testnet', 42431, 'https://rpc.testnet.tempo.xyz'],
 		['devnet', 31318, 'https://rpc.devnet.tempoxyz.dev'],
 		['nextfork', 31318, 'https://rpc-nextfork.devnet.tempoxyz.dev'],
+		['multisig1', 31318, 'https://rpc-multisig1.devnet.tempoxyz.dev'],
 	])('selects %s independently of request host and chain ID', (environment, chainId, url) => {
 		expect(
 			getExplorerRpcBackend(environment, 'explorer:test-credential'),
