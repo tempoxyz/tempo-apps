@@ -55,7 +55,11 @@ const server = createServer(async (incoming, outgoing) => {
 				if (error.code !== 'ENOENT') throw error
 			}
 		}
+		const controller = new AbortController()
+		outgoing.once('close', () => controller.abort())
+		incoming.once('aborted', () => controller.abort())
 		const request = new Request(url, {
+			signal: controller.signal,
 			method: incoming.method,
 			headers: incoming.headers,
 			...(!['GET', 'HEAD'].includes(incoming.method)
@@ -71,8 +75,12 @@ const server = createServer(async (incoming, outgoing) => {
 			outgoing.end(body)
 		} else {
 			outgoing.writeHead(response.status, Object.fromEntries(response.headers))
-			if (response.body) Readable.fromWeb(response.body).pipe(outgoing)
-			else outgoing.end()
+			if (response.body) {
+				const body = Readable.fromWeb(response.body)
+				body.on('error', () => outgoing.destroy())
+				outgoing.once('close', () => body.destroy())
+				body.pipe(outgoing)
+			} else outgoing.end()
 		}
 	} catch (error) {
 		console.error(
