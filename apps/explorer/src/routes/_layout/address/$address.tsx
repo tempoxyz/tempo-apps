@@ -63,6 +63,7 @@ import {
 } from '#lib/domain/known-event-totals'
 import { TransactionFilters, TransferFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
+import { serializeTransactionsCsv } from '#lib/transactions-csv'
 import { useLiveFeed } from '#lib/use-live-feed'
 import { useAddressLive } from '#lib/use-address-live'
 import { mergeLiveRows } from '#lib/sse'
@@ -136,6 +137,7 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import CopyIcon from '~icons/lucide/copy'
 import PlayIcon from '~icons/lucide/play'
 import XIcon from '~icons/lucide/x'
+import DownloadIcon from '~icons/lucide/download'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -1091,6 +1093,7 @@ function SectionsWrapper(props: {
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const { voucher } = Route.useSearch()
+	const queryClient = useQueryClient()
 
 	const after = React.useMemo(() => {
 		if (period === '24h') return Math.floor(Date.now() / 1000) - 86400
@@ -1100,6 +1103,63 @@ function SectionsWrapper(props: {
 
 	const include =
 		dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : ('all' as const)
+
+	const [isExportingTransactions, setIsExportingTransactions] =
+		React.useState(false)
+	const [transactionExportError, setTransactionExportError] =
+		React.useState<string>()
+	const exportingTransactionsRef = React.useRef(false)
+	const exportTransactions = React.useCallback(async () => {
+		if (exportingTransactionsRef.current) return
+		exportingTransactionsRef.current = true
+		setIsExportingTransactions(true)
+		setTransactionExportError(undefined)
+		try {
+			const allTransactions: EnrichedTransaction[] = []
+			const seenCursors = new Set<string>()
+			let pageCursor: string | undefined
+			do {
+				const pageData = await queryClient.fetchQuery(
+					historyQueryOptions({
+						address,
+						limit: HISTORY_PAGE_SIZE,
+						order: 'desc',
+						cursor: pageCursor,
+						status,
+						hideSubmitBatches,
+						include,
+						after,
+					}),
+				)
+				allTransactions.push(...pageData.transactions)
+				pageCursor = pageData.nextCursor ?? undefined
+				if (pageCursor && seenCursors.has(pageCursor))
+					throw new Error('Transaction history pagination did not advance.')
+				if (pageCursor) seenCursors.add(pageCursor)
+			} while (pageCursor)
+
+			const blob = new Blob([serializeTransactionsCsv(allTransactions)], {
+				type: 'text/csv;charset=utf-8',
+			})
+			const url = URL.createObjectURL(blob)
+			const anchor = document.createElement('a')
+			anchor.href = url
+			anchor.download = `${address.toLowerCase()}-transactions.csv`
+			document.body.appendChild(anchor)
+			anchor.click()
+			document.body.removeChild(anchor)
+			URL.revokeObjectURL(url)
+		} catch (error) {
+			setTransactionExportError(
+				error instanceof Error
+					? error.message
+					: 'Failed to export transactions.',
+			)
+		} finally {
+			exportingTransactionsRef.current = false
+			setIsExportingTransactions(false)
+		}
+	}, [address, after, hideSubmitBatches, include, queryClient, status])
 
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
@@ -1116,7 +1176,6 @@ function SectionsWrapper(props: {
 	const zonePortalKind: ZonePortalActivityKind = isZonePortalTab
 		? activeTab
 		: 'deposits'
-	const queryClient = useQueryClient()
 	const zonePortalActivityQuery = useQuery({
 		...zonePortalActivityQueryOptions({
 			address,
@@ -2089,6 +2148,21 @@ function SectionsWrapper(props: {
 								onHideSubmitBatchesChange={onHideSubmitBatchesChange}
 								onClearAll={onClearTransactionFilters}
 							/>
+							<button
+								type="button"
+								onClick={() => void exportTransactions()}
+								disabled={isExportingTransactions}
+								className="flex items-center gap-[6px] rounded-button border border-base-border px-[8px] py-[4px] label-12 text-secondary hover:bg-alt cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+								aria-busy={isExportingTransactions}
+							>
+								<DownloadIcon className="size-[13px]" />
+								{isExportingTransactions ? 'Exporting…' : 'Export CSV'}
+							</button>
+							{transactionExportError && (
+								<span role="alert" className="label-12 text-negative">
+									{transactionExportError}
+								</span>
+							)}
 							{liveControl}
 						</div>
 					),
