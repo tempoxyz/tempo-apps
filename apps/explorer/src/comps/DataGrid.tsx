@@ -73,6 +73,7 @@ export function DataGrid(props: DataGrid.Props) {
 	const gridTemplateColumns = activeColumns
 		.map((col) => {
 			if (typeof col.width === 'number') return `${col.width}px`
+			if (col.width === 'max-content') return col.width
 			if (typeof col.width === 'string')
 				return col.minWidth
 					? `minmax(${col.minWidth}px, ${col.width})`
@@ -264,7 +265,7 @@ export namespace DataGrid {
 		label: React.ReactNode
 		align?: 'start' | 'end'
 		minWidth?: number
-		width?: number | `${number}fr`
+		width?: number | `${number}fr` | 'max-content'
 		sortDirection?: 'asc' | 'desc'
 	}
 

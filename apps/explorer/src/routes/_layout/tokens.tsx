@@ -106,7 +106,7 @@ function TokensPage() {
 		{
 			label: 'Token',
 			align: 'start',
-			width: 120,
+			width: 'max-content',
 		},
 		{
 			label: 'Name',
