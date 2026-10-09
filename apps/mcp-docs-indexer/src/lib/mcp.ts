@@ -131,17 +131,17 @@ const sourceIndexInFlight = new Map<string, Promise<SourceIndexEntry[]>>()
 
 const SOURCE_QUERY_HINTS: Record<
 	string,
-	{ pattern: RegExp; weight: number }[]
+	{ pattern: RegExp; weight: number; explicit?: boolean }[]
 > = {
 	mpp: [
-		{ pattern: /\bmpp\b/, weight: 5 },
+		{ pattern: /\bmpp\b/, weight: 5, explicit: true },
 		{ pattern: /\bmachine payments?\b/, weight: 4 },
 		{ pattern: /\bpayment protocol\b/, weight: 4 },
 		{ pattern: /\bjson rpc\b/, weight: 2 },
 		{ pattern: /\bx402\b/, weight: 2 },
 	],
 	regen: [
-		{ pattern: /\bregen\b/, weight: 5 },
+		{ pattern: /\bregen\b/, weight: 5, explicit: true },
 		{ pattern: /\bbutton\b/, weight: 3 },
 		{ pattern: /\bvariants?\b/, weight: 2 },
 		{ pattern: /\bcomponents?\b/, weight: 2 },
@@ -152,20 +152,19 @@ const SOURCE_QUERY_HINTS: Record<
 		{ pattern: /\bdeposits?\b/, weight: 2 },
 	],
 	viem: [
-		{ pattern: /\bviem\b/, weight: 5 },
+		{ pattern: /\bviem\b/, weight: 5, explicit: true },
 		{ pattern: /\bwallet client\b/, weight: 3 },
 		{ pattern: /\bpublic client\b/, weight: 3 },
 		{ pattern: /\btypescript\b/, weight: 2 },
 		{ pattern: /\bfee token\b/, weight: 2 },
 	],
 	vocs: [
-		{ pattern: /\bvocs\b/, weight: 5 },
-		{ pattern: /\bmcp server\b/, weight: 4 },
+		{ pattern: /\bvocs\b/, weight: 5, explicit: true },
 		{ pattern: /\bdocs site\b/, weight: 3 },
 		{ pattern: /\bdocumentation framework\b/, weight: 3 },
 	],
 	wagmi: [
-		{ pattern: /\bwagmi\b/, weight: 5 },
+		{ pattern: /\bwagmi\b/, weight: 5, explicit: true },
 		{ pattern: /\btempowallet\b/, weight: 4 },
 		{ pattern: /\bconnector\b/, weight: 3 },
 		{ pattern: /\breact hooks?\b/, weight: 3 },
@@ -487,18 +486,16 @@ async function handleFindPages(
 
 	try {
 		const entries = await readSourceIndex(source)
-		const tokens = queryTokens(query)
-		const pages = entries
-			.map((entry) => ({ entry, score: sourceEntryScore(entry, tokens) }))
-			.filter(({ score }) => score > 0)
-			.sort((a, b) => b.score - a.score)
-			.slice(0, findPagesMaxResultsFor(args))
-			.map(({ entry, score }) => ({
-				title: entry.title,
-				url: entry.url,
-				...(entry.section ? { section: entry.section } : {}),
-				score: Number(Math.min(0.99, score / 20).toFixed(4)),
-			}))
+		const pages = rankSourceEntries(
+			entries,
+			query,
+			findPagesMaxResultsFor(args),
+		).map(({ entry, relevance }) => ({
+			title: entry.title,
+			url: entry.url,
+			...(entry.section ? { section: entry.section } : {}),
+			score: Number(relevance.toFixed(4)),
+		}))
 		return toolResult(
 			req,
 			body.id,
@@ -799,21 +796,20 @@ async function localSourceSearch(
 	if (!source) return emptyResult
 
 	const entries = await readSourceIndex(source)
-	const tokens = queryTokens(query)
-	const scored = entries
-		.map((entry) => ({ entry, score: sourceEntryScore(entry, tokens) }))
-		.filter((entry) => entry.score > 0)
-		.sort((a, b) => b.score - a.score)
-		.slice(0, localSourceMaxResultsFor(args))
+	const scored = rankSourceEntries(
+		entries,
+		query,
+		localSourceMaxResultsFor(args),
+	)
 
 	const chunks = (
 		await Promise.allSettled(
-			scored.map(async ({ entry, score }) =>
+			scored.map(async ({ entry, relevance }) =>
 				sourceIndexChunk(
 					source,
 					entry,
 					await readCleanPage(markdownUrlFor(entry.url, source)),
-					score,
+					relevance,
 				),
 			),
 		)
@@ -926,18 +922,84 @@ function titleFromPath(path: string): string {
 	return last.charAt(0).toUpperCase() + last.slice(1)
 }
 
-function sourceEntryScore(entry: SourceIndexEntry, tokens: string[]): number {
-	if (tokens.length === 0) return 0
-	const haystack =
-		`${entry.title} ${entry.description ?? ''} ${entry.section ?? ''} ${entry.url}`
-			.toLowerCase()
-			.replace(/[-_/]+/g, ' ')
+function rankSourceEntries(
+	entries: SourceIndexEntry[],
+	query: string,
+	limit: number,
+): { entry: SourceIndexEntry; relevance: number }[] {
+	const tokens = queryTokens(query)
+	if (tokens.length === 0) return []
+	const phrase = searchableText(query)
+	const maxScore = tokens.length * 3 + 8
+	return entries
+		.map((entry, index) => ({
+			entry,
+			index,
+			score: sourceEntryScore(entry, tokens, phrase),
+		}))
+		.filter(({ score }) => score > 0)
+		.sort(
+			(a, b) =>
+				b.score - a.score ||
+				a.entry.title.length - b.entry.title.length ||
+				a.index - b.index,
+		)
+		.slice(0, limit)
+		.map(({ entry, score }) => ({
+			entry,
+			relevance: Math.min(0.99, score / maxScore),
+		}))
+}
+
+function sourceEntryScore(
+	entry: SourceIndexEntry,
+	tokens: string[],
+	phrase: string,
+): number {
+	const title = searchableText(entry.title)
+	const rest = searchableText(
+		`${entry.description ?? ''} ${entry.section ?? ''} ${new URL(entry.url).pathname}`,
+	)
 	let score = 0
+	let titleHits = 0
 	for (const token of tokens) {
-		if (!haystack.includes(token)) continue
-		score += entry.title.toLowerCase().includes(token) ? 3 : 1
+		if (containsToken(title, token)) {
+			score += 3
+			titleHits++
+		} else if (containsToken(rest, token)) {
+			score += 1
+		}
 	}
+	if (score === 0) return 0
+	if (phrase && title.includes(phrase)) score += 4
+	if (titleHits === tokens.length) score += 2
 	return score
+}
+
+/** Lowercase words separated and padded by single spaces. */
+function searchableText(text: string): string {
+	const words = textWords(text)
+	return words.length > 0 ? ` ${words.join(' ')} ` : ''
+}
+
+/** Lowercase words, splitting camelCase so `useConnect` reads `use connect`. */
+function textWords(text: string): string[] {
+	return text
+		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+		.toLowerCase()
+		.split(/[^a-z0-9]+/)
+		.filter(Boolean)
+}
+
+/**
+ * Tokens match the start of a word (`address` in `addresses`, `api` in
+ * `APIs`, but not `earn` in `learn`); two-character tokens must match a whole
+ * word (`20` in `TIP-20`).
+ */
+function containsToken(text: string, token: string): boolean {
+	return token.length >= 3
+		? text.includes(` ${token}`)
+		: text.includes(` ${token} `)
 }
 
 function sourceIndexChunk(
@@ -949,7 +1011,7 @@ function sourceIndexChunk(
 	return {
 		id: `${source.id}:${entry.url}`,
 		type: 'text',
-		score: Math.min(0.9, 0.4 + score / 20),
+		score: Number(score.toFixed(4)),
 		text,
 		item: {
 			key: keyForSourceUrl(source, entry.url),
@@ -1282,33 +1344,56 @@ function bestMatchIndex(text: string, query: string): number | undefined {
 	return undefined
 }
 
+const QUERY_STOPWORDS = new Set([
+	'a',
+	'about',
+	'an',
+	'and',
+	'are',
+	'available',
+	'can',
+	'configure',
+	'do',
+	'does',
+	'for',
+	'from',
+	'get',
+	'have',
+	'how',
+	'i',
+	'in',
+	'into',
+	'is',
+	'it',
+	'my',
+	'of',
+	'on',
+	'or',
+	'over',
+	'tempo',
+	'that',
+	'the',
+	'this',
+	'to',
+	'use',
+	'using',
+	'what',
+	'when',
+	'where',
+	'which',
+	'with',
+	'work',
+	'works',
+])
+
+/**
+ * Distinct query words, longest first. Common words are dropped unless the
+ * query has nothing else, so `MCP`, `API`, `RPC`, and `T12` still count.
+ */
 function queryTokens(query: string): string[] {
-	const stopwords = new Set([
-		'about',
-		'available',
-		'configure',
-		'does',
-		'have',
-		'into',
-		'over',
-		'tempo',
-		'that',
-		'this',
-		'using',
-		'what',
-		'when',
-		'with',
-		'work',
-		'works',
-	])
-	return [
-		...new Set(
-			query
-				.toLowerCase()
-				.split(/[^a-z0-9]+/)
-				.filter((token) => token.length >= 4 && !stopwords.has(token)),
-		),
-	]
+	const words = textWords(query).filter((word) => word.length >= 2)
+	const meaningful = words.filter((word) => !QUERY_STOPWORDS.has(word))
+	return [...new Set(meaningful.length > 0 ? meaningful : words)]
 		.sort((a, b) => b.length - a.length)
 		.slice(0, MAX_QUERY_TOKENS)
 }
@@ -1389,21 +1474,29 @@ function inferSourceForQuery(
 	if (knownSources.size === 0) return undefined
 
 	const normalized = query.toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+	const mentionsTempo = /\btempo\b/.test(normalized)
 	const scores = [...knownSources]
-		.map((source) => ({
-			source,
-			score: (SOURCE_QUERY_HINTS[source] ?? []).reduce(
-				(total, hint) =>
-					total + (hint.pattern.test(normalized) ? hint.weight : 0),
-				0,
-			),
-		}))
+		.map((source) => {
+			const matched = (SOURCE_QUERY_HINTS[source] ?? []).filter((hint) =>
+				hint.pattern.test(normalized),
+			)
+			return {
+				source,
+				score: matched.reduce((total, hint) => total + hint.weight, 0),
+				explicit: matched.some((hint) => hint.explicit),
+			}
+		})
 		.filter(({ score }) => score > 0)
 		.sort((a, b) => b.score - a.score)
 
 	const [best, second] = scores
 	if (!best || best.score < 4) return undefined
 	if (second && second.score >= best.score) return undefined
+	// "machine payments on Tempo" is a Tempo question too; only an explicit
+	// library name narrows a Tempo query to another source.
+	if (mentionsTempo && best.source !== 'tempo' && !best.explicit) {
+		return undefined
+	}
 	return best.source
 }
 

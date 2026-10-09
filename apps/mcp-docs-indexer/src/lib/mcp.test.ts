@@ -413,6 +413,51 @@ describe('handleMcp', () => {
 		})
 	})
 
+	it.each([
+		['machine payments on Tempo', undefined],
+		['Vocs MCP server', 'vocs'],
+		['wagmi connector on Tempo', 'wagmi'],
+	])('routes %s to %s', async (query, expectedSource) => {
+		let seen: AiSearchSearchRequest | undefined
+		await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 201,
+					method: 'tools/call',
+					params: { name: 'search', arguments: { query } },
+				}),
+			}),
+			{
+				instance: instance(async (params) => {
+					seen = params
+					return {
+						search_query: query,
+						chunks: [
+							{
+								id: 'routing',
+								type: 'text',
+								score: 1,
+								text: 'docs',
+								item: { key: `${expectedSource ?? 'tempo'}/routing` },
+							},
+						],
+					}
+				}),
+				sources: [
+					...sources,
+					{ id: 'tempo', base: 'https://docs.tempo.xyz' },
+					{ id: 'mpp', base: 'https://mpp.dev' },
+					{ id: 'vocs', base: 'https://vocs.dev' },
+				],
+			},
+		)
+		expect(seen?.ai_search_options?.retrieval?.filters).toEqual(
+			expectedSource ? { source: expectedSource } : undefined,
+		)
+	})
+
 	it('preserves explicit AI Search cache overrides', async () => {
 		let seen: AiSearchSearchRequest | undefined
 		await handleMcp(
@@ -1196,7 +1241,7 @@ describe('handleMcp', () => {
 		const text = await textContent(res)
 		expect(text.result.chunks).toEqual([
 			{
-				score: 0.85,
+				score: 0.6471,
 				source: 'tempo',
 				url: 'https://docs.tempo.xyz/guide/payments/virtual-addresses',
 				text: '# Use virtual addresses for deposits\n\nRegister a virtual-address master and watch deposits.',
@@ -1407,9 +1452,58 @@ describe('handleMcp', () => {
 			{
 				title: 'Virtual addresses',
 				url: 'https://page-finder.tempo.xyz/virtual-addresses',
-				score: 0.35,
+				score: 0.4118,
 			},
 		])
+	})
+
+	it('ranks short API and camelCase page names without substring matches', async () => {
+		const source: Source = {
+			id: 'ranked-pages',
+			base: 'https://ranked-pages.example',
+		}
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				async () =>
+					new Response(
+						[
+							'- [Learning](./learning.md)',
+							'- [Earn](./earn.md)',
+							'- [API reference](./api.md)',
+							'- [useConnect](./use-connect.md)',
+						].join('\n'),
+					),
+			),
+		)
+		const find = async (query: string) => {
+			const res = await handleMcp(
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: query,
+						method: 'tools/call',
+						params: {
+							name: 'find_pages',
+							arguments: { source: source.id, query },
+						},
+					}),
+				}),
+				{
+					instance: instance(async () => ({ search_query: '', chunks: [] })),
+					sources: [source],
+				},
+			)
+			return (await textContent(res)).result.pages as { title: string }[]
+		}
+		expect((await find('earn')).map((page) => page.title)).toEqual(['Earn'])
+		expect((await find('API')).map((page) => page.title)).toContain(
+			'API reference',
+		)
+		expect((await find('useConnect')).map((page) => page.title)).toContain(
+			'useConnect',
+		)
 	})
 
 	it('can return tool data as MCP structuredContent', async () => {
