@@ -107,7 +107,9 @@ describe('scheduled Worker', () => {
 
 		expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
 			'https://docs.example/llms.txt',
-			expect.objectContaining({ headers: { 'If-None-Match': '"index-v1"' } }),
+			expect.objectContaining({
+				headers: expect.objectContaining({ 'If-None-Match': '"index-v1"' }),
+			}),
 		)
 		expect(uploads).toEqual([])
 	})

@@ -570,6 +570,10 @@ Search...
 
 # MCP Server
 
+> **Can't find what you're looking for?** Use the docs MCP server.
+>
+> **Have feedback?** Send it to the docs team.
+
 Expose your docs and source code to AI assistants.
 
 Was this helpful?
@@ -963,7 +967,9 @@ describe('syncSource — stale-page deletion', () => {
 		})
 		fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
 			if (url === `${source.base}/llms.txt`) {
-				expect(init?.headers).toEqual({})
+				expect(init?.headers).toEqual({
+					accept: 'text/markdown, text/plain;q=0.9, */*;q=0.1',
+				})
 				return mockResponse({
 					body: `- [API Keys](${source.base}/docs/api/api-keys)`,
 					etag: 'W/"new"',

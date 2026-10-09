@@ -1604,6 +1604,10 @@ Sitemap:
 [Skip to content](#vocs-content)
 Search...
 
+> **Can't find what you're looking for?** Use the docs MCP server.
+>
+> **Have feedback?** Send it to the docs team.
+
 # Cached Page
 
 ${'important '.repeat(80)}
@@ -1669,6 +1673,7 @@ Was this helpful?`,
 		expect(firstText.result.text).toContain('# Cached Page')
 		expect(firstText.result.text).not.toContain('Sitemap:')
 		expect(firstText.result.text).not.toContain('Search...')
+		expect(firstText.result.text).not.toContain('docs MCP server')
 		expect(secondText.result.text).toBe(firstText.result.text)
 	})
 

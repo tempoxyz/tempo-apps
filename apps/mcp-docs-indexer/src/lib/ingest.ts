@@ -1,5 +1,10 @@
 import { log } from './log.js'
 import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
+import {
+	isHtmlDocument,
+	MARKDOWN_ACCEPT,
+	normalizeDocsMarkdown,
+} from './markdown.js'
 import type { Source } from './sources.js'
 import { sourceIndexUrl } from './sources.js'
 
@@ -84,7 +89,10 @@ export async function syncSource(args: {
 				? null
 				: await etagCache.get(etagKey)
 		const res = await fetch(indexUrl, {
-			headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
+			headers: {
+				accept: MARKDOWN_ACCEPT,
+				...(prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {}),
+			},
 			cf: { cacheTtl: 60 },
 		})
 		if (res.status === 304) {
@@ -371,7 +379,7 @@ async function syncPage(args: {
 	const prev = prevIndex[key]
 
 	try {
-		const headers: Record<string, string> = {}
+		const headers: Record<string, string> = { accept: MARKDOWN_ACCEPT }
 		if (prev?.etag && !force && !prev.index_retry)
 			headers['If-None-Match'] = prev.etag
 
@@ -393,12 +401,13 @@ async function syncPage(args: {
 			// Keep the old entry so the page is not treated as removed.
 			return { key, outcome: 'failed', entry: prev }
 		}
-		if (res.headers.get('content-type')?.toLowerCase().includes('text/html')) {
+		const body = await res.text()
+		if (isHtmlDocument(body, res.headers.get('content-type'))) {
 			log.warn('page.html_response', { source: source.id, url })
 			return { key, outcome: 'failed', entry: prev }
 		}
 
-		const content = preparePageContent(await res.text())
+		const content = normalizeDocsMarkdown(body)
 		if (!content) {
 			log.warn('page.empty', { source: source.id, url })
 			return { key, outcome: 'failed', entry: prev }
@@ -494,38 +503,6 @@ function extractTitle(content: string): string | undefined {
 		if (match) return match[1]
 	}
 	return undefined
-}
-
-function preparePageContent(content: string): string {
-	return stripSitemapComment(content)
-		.split('\n')
-		.map((line) => line.trimEnd())
-		.filter((line) => !isDocsChromeLine(line))
-		.join('\n')
-		.replace(/\n{3,}/g, '\n\n')
-		.trim()
-}
-
-function stripSitemapComment(content: string): string {
-	return content
-		.replace(/\r\n/g, '\n')
-		.replace(/^<!--\nSitemap:\n[\s\S]*?\n-->\n*/, '')
-}
-
-function isDocsChromeLine(line: string): boolean {
-	return [
-		/^skip to content$/i,
-		/^\[skip to content\]\(/i,
-		/^search\.\.\.$/i,
-		/^\[\]\(\/\)$/i,
-		/^⌘$/i,
-		/^k$/i,
-		/^i$/i,
-		/^was this helpful\?$/i,
-		/^copy page for ai$/i,
-		/^ask ai\.\.\.$/i,
-		/^suggest changes to this page$/i,
-	].some((pattern) => pattern.test(line.trim()))
 }
 
 /** Derive a stable AI Search item key from a page URL and source id. */

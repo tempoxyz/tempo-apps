@@ -11,6 +11,11 @@ import {
 } from '@modelcontextprotocol/sdk/types.js'
 import { toMarkdownUrl } from './llms-txt.js'
 import {
+	isHtmlDocument,
+	MARKDOWN_ACCEPT,
+	normalizeDocsMarkdown,
+} from './markdown.js'
+import {
 	recordAiSearchRequest,
 	recordJsonRpcError,
 	recordToolCall,
@@ -121,20 +126,6 @@ const sourceIndexCache = new Map<
 	{ expiresAt: number; entries: SourceIndexEntry[] }
 >()
 const sourceIndexInFlight = new Map<string, Promise<SourceIndexEntry[]>>()
-
-const NOISE_LINE_PATTERNS = [
-	/^skip to content$/i,
-	/^\[skip to content\]\(/i,
-	/^search\.\.\.$/i,
-	/^\[\]\(\/\)$/i,
-	/^⌘$/i,
-	/^k$/i,
-	/^i$/i,
-	/^was this helpful\?$/i,
-	/^copy page for ai$/i,
-	/^ask ai\.\.\.$/i,
-	/^suggest changes to this page$/i,
-]
 
 const SOURCE_QUERY_HINTS: Record<
 	string,
@@ -553,9 +544,15 @@ async function readCleanPage(pageUrl: string): Promise<string> {
 }
 
 async function fetchCleanPage(markdownUrl: string): Promise<string> {
-	const res = await fetch(markdownUrl, { cf: { cacheTtl: 60 } })
+	const res = await fetch(markdownUrl, {
+		headers: { accept: MARKDOWN_ACCEPT },
+		cf: { cacheTtl: 60 },
+	})
 	if (!res.ok) throw new Error(`page fetch ${res.status}`)
-	const text = normalizeMarkdown(await res.text())
+	const body = await res.text()
+	if (isHtmlDocument(body, res.headers.get('content-type')))
+		throw new Error('page is HTML, not Markdown')
+	const text = normalizeDocsMarkdown(body)
 	if (!text) throw new Error('page is empty')
 	cachePage(markdownUrl, text)
 	return text
@@ -1189,25 +1186,7 @@ function findPagesMaxResultsFor(args: FindPagesArguments | undefined): number {
 }
 
 function cleanChunkText(text: string): string {
-	return normalizeMarkdown(text)
-}
-
-function normalizeMarkdown(text: string): string {
-	return stripSitemapComment(text)
-		.split('\n')
-		.map((line) => line.trimEnd())
-		.filter(
-			(line) => !NOISE_LINE_PATTERNS.some((pattern) => pattern.test(line)),
-		)
-		.join('\n')
-		.replace(/\n{3,}/g, '\n\n')
-		.trim()
-}
-
-function stripSitemapComment(content: string): string {
-	return content
-		.replace(/\r\n/g, '\n')
-		.replace(/^<!--\nSitemap:\n[\s\S]*?\n-->\n*/, '')
+	return normalizeDocsMarkdown(text)
 }
 
 function maxPageCharsFor(args: ReadPageArguments | undefined): number {
