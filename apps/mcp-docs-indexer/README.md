@@ -7,17 +7,20 @@ canonical Markdown pages for configured sources into the instance's
 **built-in storage**, tagged with a `source` metadata field for filtering at
 query time.
 
-The Worker exposes an optimized MCP endpoint on `mcp.tempo.xyz`. It handles
-`tools/list`, `tools/call` for `search`, and docs source `resources/*` locally
-so it can provide a compact tool schema, source-aware filters, and lower-token
-search responses. Unsupported MCP methods fall through to the AI Search MCP
-upstream, so clients still connect to a stable branded URL instead of the
-opaque `<instance-id>.search.ai.cloudflare.com` hostname.
+The Worker serves the MCP endpoint on `mcp.tempo.xyz` locally. It negotiates
+`initialize`, exposes tools and resources, and handles bounded JSON-RPC
+batches. Browser responses include CORS headers. AI Search remains the backing
+search and ingestion service.
 
 ```
-MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ optimized search/resources
-                                      └─▶ AI Search MCP fallback
+MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ local MCP tools/resources ──▶ AI Search
 Cron ──▶ mcp-docs-indexer Worker ──▶ AI Search items.upload() (ingest plane)
+```
+
+An MCP client can initialize with a JSON-RPC POST to `https://mcp.tempo.xyz/`:
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}
 ```
 
 ## How it works
@@ -323,7 +326,6 @@ Important metrics:
 - `tempo_docs_mcp_ai_search_request_count`
 - `tempo_docs_mcp_ai_search_duration_ms`
 - `tempo_docs_mcp_ai_search_empty_result_count`
-- `tempo_docs_mcp_proxy_fallback_count`
 - `tempo_docs_mcp_ingest_ok`
 - `tempo_docs_mcp_ingest_duration_ms`
 - `tempo_docs_mcp_source_sync_count`

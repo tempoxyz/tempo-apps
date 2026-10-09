@@ -62,6 +62,41 @@ afterEach(() => {
 	vi.restoreAllMocks()
 })
 
+describe('HTTP Worker', () => {
+	it('serves initialization and browser preflight locally', async () => {
+		const workerEnv = testEnv([])
+		const preflight = await worker.fetch(
+			new Request('https://mcp.example/', { method: 'OPTIONS' }),
+			workerEnv,
+			createExecutionContext(),
+		)
+		expect(preflight.status).toBe(204)
+		expect(preflight.headers.get('access-control-allow-origin')).toBe('*')
+
+		const response = await worker.fetch(
+			new Request('https://mcp.example/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'initialize',
+					params: { protocolVersion: '2025-06-18' },
+				}),
+			}),
+			workerEnv,
+			createExecutionContext(),
+		)
+		expect(response.headers.get('access-control-allow-origin')).toBe('*')
+		expect(
+			((await response.json()) as { result: { capabilities: unknown } }).result
+				.capabilities,
+		).toEqual({
+			tools: {},
+			resources: {},
+		})
+	})
+})
+
 describe('scheduled Worker', () => {
 	it('runs the hourly ingestion through fetch, AI Search upload, and KV state', async () => {
 		const uploads: string[] = []

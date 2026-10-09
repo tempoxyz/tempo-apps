@@ -6,10 +6,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import {
 	CallToolRequestSchema,
 	type CallToolResult,
+	LATEST_PROTOCOL_VERSION,
 	ListToolsRequestSchema,
+	SUPPORTED_PROTOCOL_VERSIONS,
 	type Tool,
 } from '@modelcontextprotocol/sdk/types.js'
 import { toMarkdownUrl } from './llms-txt.js'
+import { log } from './log.js'
 import {
 	recordAiSearchRequest,
 	recordJsonRpcError,
@@ -25,6 +28,8 @@ type JsonRpcRequest = {
 	params?: {
 		name?: string
 		arguments?: ToolArguments
+		uri?: unknown
+		protocolVersion?: unknown
 	}
 }
 
@@ -99,7 +104,15 @@ const SOURCE_INDEX_CACHE_TTL_MS = 10 * 60_000
 const SOURCE_INDEX_CACHE_MAX_ENTRIES = 64
 const DEFAULT_MAX_PAGE_CHARS = 12_000
 const RESOURCE_INDEX_MAX_ENTRIES = 50
+const MAX_BATCH_MESSAGES = 20
+const BATCH_CONCURRENCY = 4
 const SOURCES_RESOURCE_URI = 'tempo-docs://sources'
+const CORS_HEADERS = {
+	'access-control-allow-origin': '*',
+	'access-control-allow-methods': 'POST, OPTIONS',
+	'access-control-allow-headers': '*, Authorization',
+	'access-control-max-age': '86400',
+} as const
 const READ_ONLY_TOOL_ANNOTATIONS = {
 	destructiveHint: false,
 	idempotentHint: true,
@@ -182,15 +195,155 @@ const SOURCE_QUERY_HINTS: Record<
 export async function handleMcp(
 	req: Request,
 	context: McpContext,
-): Promise<Response | undefined> {
-	if (req.method !== 'POST') return undefined
+): Promise<Response> {
+	if (req.method === 'OPTIONS')
+		return new Response(null, { status: 204, headers: CORS_HEADERS })
+	if (req.method !== 'POST')
+		return httpError(405, -32000, 'Method not allowed', {
+			allow: 'POST, OPTIONS',
+		})
 
-	let body: JsonRpcRequest
+	let body: unknown
 	try {
-		body = (await req.clone().json()) as JsonRpcRequest
+		body = await req.clone().json()
 	} catch {
-		return undefined
+		return httpError(400, -32700, 'Parse error')
 	}
+	const version = req.headers.get('mcp-protocol-version')
+	if (
+		version &&
+		!SUPPORTED_PROTOCOL_VERSIONS.includes(version) &&
+		!(isRecord(body) && body.method === 'initialize')
+	)
+		return httpError(
+			400,
+			-32600,
+			`Unsupported MCP-Protocol-Version: ${version}`,
+		)
+	if (Array.isArray(body)) return handleBatch(req, body, context)
+	return handleMessage(req, body, context)
+}
+
+async function handleMessage(
+	req: Request,
+	message: unknown,
+	context: McpContext,
+): Promise<Response> {
+	if (
+		isRecord(message) &&
+		message.jsonrpc === '2.0' &&
+		!('method' in message) &&
+		('result' in message || 'error' in message)
+	)
+		return new Response(null, { status: 202, headers: CORS_HEADERS })
+	if (!isJsonRpcRequest(message))
+		return httpError(
+			400,
+			-32600,
+			'Invalid request: expected a JSON-RPC 2.0 message',
+		)
+	if (!('id' in message) || message.id === undefined)
+		return new Response(null, { status: 202, headers: CORS_HEADERS })
+	try {
+		const response = await handleRequest(req, message, context)
+		if (response) return response
+		return jsonRpcErrorFor(
+			req,
+			message,
+			message.method === 'tools/call' ? -32602 : -32601,
+			message.method === 'tools/call'
+				? typeof message.params?.name === 'string'
+					? `Unknown tool: ${message.params.name}`
+					: 'params.name must be a string'
+				: `Method not found: ${message.method}`,
+		)
+	} catch (error) {
+		log.error('mcp.request_failed', {
+			method: message.method,
+			error: error instanceof Error ? error.message : String(error),
+		})
+		return jsonRpcErrorFor(req, message, -32603, 'Internal error')
+	}
+}
+
+async function handleBatch(
+	req: Request,
+	messages: unknown[],
+	context: McpContext,
+): Promise<Response> {
+	if (messages.length === 0)
+		return httpError(400, -32600, 'Invalid request: empty batch')
+	if (messages.length > MAX_BATCH_MESSAGES)
+		return httpError(
+			400,
+			-32600,
+			`Batch too large: send at most ${MAX_BATCH_MESSAGES} messages`,
+		)
+	const jsonRequest = new Request(req.url, {
+		method: 'POST',
+		headers: { accept: 'application/json' },
+	})
+	const replies: unknown[] = []
+	for (let index = 0; index < messages.length; index += BATCH_CONCURRENCY) {
+		const responses = await Promise.all(
+			messages.slice(index, index + BATCH_CONCURRENCY).map(async (message) => {
+				const response = await handleMessage(jsonRequest, message, context)
+				return response.status === 202 ? undefined : await response.json()
+			}),
+		)
+		for (const response of responses)
+			if (response !== undefined) replies.push(response)
+	}
+	if (replies.length === 0)
+		return new Response(null, { status: 202, headers: CORS_HEADERS })
+	return mcpResponse(req, JSON.stringify(replies))
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isJsonRpcRequest(
+	value: unknown,
+): value is JsonRpcRequest & { method: string } {
+	return (
+		isRecord(value) &&
+		value.jsonrpc === '2.0' &&
+		typeof value.method === 'string' &&
+		(!('id' in value) ||
+			value.id === null ||
+			typeof value.id === 'string' ||
+			typeof value.id === 'number')
+	)
+}
+
+function initializeResult(body: JsonRpcRequest, sources: Source[]) {
+	const requested = body.params?.protocolVersion
+	const protocolVersion =
+		typeof requested === 'string' &&
+		SUPPORTED_PROTOCOL_VERSIONS.includes(requested)
+			? requested
+			: LATEST_PROTOCOL_VERSION
+	return {
+		protocolVersion,
+		capabilities: { tools: {}, resources: {} },
+		serverInfo: { name: 'tempo-docs', title: 'Tempo Docs', version: '1.0.0' },
+		instructions: [
+			'Read-only documentation search.',
+			`Sources: ${sources.map((source) => `\`${source.id}\`${source.description ? ` (${source.description})` : ''}`).join('; ')}.`,
+			'Use `find_pages` to locate a page, then `read_page` to read it.',
+		].join(' '),
+	}
+}
+
+async function handleRequest(
+	req: Request,
+	body: JsonRpcRequest & { method: string },
+	context: McpContext,
+): Promise<Response | undefined> {
+	if (body.method === 'initialize')
+		return jsonRpc(req, body.id, initializeResult(body, context.sources ?? []))
+	if (body.method === 'ping') return jsonRpc(req, body.id, {})
 
 	if (body.method === 'tools/list') {
 		const tools = toolSchemas(context.sources ?? [])
@@ -217,7 +370,14 @@ export async function handleMcp(
 		if (typeof uri !== 'string') {
 			return jsonRpcErrorFor(req, body, -32602, 'uri must be a string')
 		}
-		const contents = await readResource(uri, context.sources ?? [])
+		let contents: Awaited<ReturnType<typeof readResource>>
+		try {
+			contents = await readResource(uri, context.sources ?? [])
+		} catch (error) {
+			if (error instanceof Error && error.message === 'page fetch 404')
+				return jsonRpcErrorFor(req, body, -32002, `resource not found: ${uri}`)
+			throw error
+		}
 		if (!contents) {
 			return jsonRpcErrorFor(req, body, -32002, `resource not found: ${uri}`)
 		}
@@ -230,9 +390,13 @@ export async function handleMcp(
 	if (body.params?.name === CODE_TOOL_NAME) {
 		return trackToolCall(CODE_TOOL_NAME, async () => {
 			const executor = context.executor
-			if (!executor) {
-				return jsonRpcErrorFor(req, body, -32601, 'code tool is not available')
-			}
+			if (!executor)
+				return jsonRpcErrorFor(
+					req,
+					body,
+					-32602,
+					`Unknown tool: ${CODE_TOOL_NAME}`,
+				)
 			const codeServer = await createCodeServer(
 				toolSchemas(context.sources ?? []),
 				{ ...context, executor },
@@ -1358,12 +1522,17 @@ function toolErrorResponse(
 	id: JsonRpcRequest['id'],
 	err: unknown,
 ): Response {
-	const message = err instanceof Error ? err.message : String(err)
+	log.error('mcp.tool_failed', {
+		error: err instanceof Error ? err.message : String(err),
+	})
 	return jsonRpc(req, id, {
 		content: [
 			{
 				type: 'text',
-				text: JSON.stringify({ success: false, error: message }),
+				text: JSON.stringify({
+					success: false,
+					error: 'Docs tool failed. Try again.',
+				}),
 			},
 		],
 		isError: true,
@@ -1401,12 +1570,32 @@ function jsonRpcError(
 function mcpResponse(req: Request, payload: string): Response {
 	if (req.headers.get('accept')?.includes('text/event-stream')) {
 		return new Response(`event: message\ndata: ${payload}\n\n`, {
-			headers: { 'content-type': 'text/event-stream' },
+			headers: { ...CORS_HEADERS, 'content-type': 'text/event-stream' },
 		})
 	}
 	return new Response(payload, {
-		headers: { 'content-type': 'application/json' },
+		headers: { ...CORS_HEADERS, 'content-type': 'application/json' },
 	})
+}
+
+function httpError(
+	status: number,
+	code: number,
+	message: string,
+	headers?: HeadersInit,
+): Response {
+	recordJsonRpcError(undefined, code)
+	return new Response(
+		JSON.stringify({ jsonrpc: '2.0', id: null, error: { code, message } }),
+		{
+			status,
+			headers: {
+				...CORS_HEADERS,
+				'content-type': 'application/json',
+				...headers,
+			},
+		},
+	)
 }
 
 async function trackToolCall(
