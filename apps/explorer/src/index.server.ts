@@ -15,6 +15,9 @@ export const redirects: Array<{
 	{ from: /^\/blocks\/(latest|\d+)$/, to: (m) => `/block/${m[1]}` },
 	{ from: /^\/transaction\/(.+)$/, to: (m) => `/tx/${m[1]}` },
 	{ from: /^\/tokens\/(.+)$/, to: (m) => `/token/${m[1]}` },
+	{ from: /^\/(0x[a-fA-F0-9]{40})\/?$/, to: (m) => `/address/${m[1]}` },
+	{ from: /^\/(\d+)\/?$/, to: (m) => `/block/${m[1]}` },
+	{ from: /^\/(0x[a-fA-F0-9]{64})\/?$/, to: (m) => `/receipt/${m[1]}` },
 ]
 
 function normalizeApiPath(pathname: string): string {
