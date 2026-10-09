@@ -283,9 +283,9 @@ with `invocation_logs: true`). Every cron run emits structured JSON lines via
 | Event                | When                                | Useful fields                                                              |
 | -------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
 | `cron.start`         | scheduled handler invoked           | `cron`, `scheduled_time`, `instance`, `sources`, `force`                   |
-| `source.complete`    | source synced or 304-unchanged      | `source`, `status`, `pages`, `unchanged`, `failed`, `deleted`, `duration_ms` |
+| `source.complete`    | source synced without failures or 304-unchanged | `source`, `status`, `pages`, `unchanged`, `failed`, `deleted`, `duration_ms` |
 | `source.pending_deletion` | index removals awaiting confirmation | `source`, `status`, `removed`, `duration_ms` |
-| `source.failed`      | source threw or llms.txt non-OK     | `source`, `error`, `duration_ms`                                           |
+| `source.failed`      | source error or partial page failure | `source`, `status`, `duration_ms`; error reports have `error`, partial reports have `pages`, `unchanged`, `failed`, `deleted` |
 | `cron.complete`      | all sources processed               | `duration_ms`, `sources`, `synced`, `unchanged`, `pending`, `errors`, `force` |
 | `page.fetch_failed`  | per-page `<page>.md` GET non-OK     | `source`, `url`, `status`                                                  |
 | `page.empty`         | empty markdown body                 | `source`, `url`                                                            |

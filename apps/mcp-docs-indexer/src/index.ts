@@ -128,7 +128,9 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		cron: event.cron,
 		duration_ms: durationMs,
 		sources: reports.length,
-		synced: reports.filter((r) => r.status === 'synced').length,
+		synced: reports.filter(
+			(r) => r.status === 'synced' && !isFailedSyncReport(r),
+		).length,
 		unchanged: reports.filter((r) => r.status === 'unchanged').length,
 		pending: reports.filter((r) => r.status === 'pending_deletion').length,
 		errors: reports.filter(isFailedSyncReport).length,
