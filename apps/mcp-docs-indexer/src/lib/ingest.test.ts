@@ -552,6 +552,54 @@ describe('syncSource — per-page conditional fetch', () => {
 
 		expect(uploads).toHaveLength(1)
 	})
+
+	it('retries a failed forced sync without reuploading unchanged pages', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv, store } = fakeKv({
+			'etag:viem': 'W/"old"',
+			'index:viem': JSON.stringify({
+				'viem/a.md': {
+					id: 'item-viem/a.md',
+					etag: 'W/"a1"',
+					content_hash:
+						'b2e77fbb5f564e2145071c75ac6a7d56478cf3ef696e5100f53378a7bb185750',
+				},
+				'viem/b.md': { id: 'item-viem/b.md' },
+			}),
+		})
+		let failPage = true
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [A](/a)\n- [B](/b)', etag: 'W/"new"' })
+			}
+			if (url === 'https://viem.sh/b.md' && failPage) {
+				return mockResponse({ status: 503 })
+			}
+			return mockResponse({ body: url.endsWith('/a.md') ? '# a' : '# b' })
+		})
+
+		expect(
+			await syncSource({
+				source: SOURCE,
+				instance,
+				etagCache: kv,
+				force: true,
+			}),
+		).toMatchObject({ status: 'synced', pages: 0, unchanged: 1, failed: 1 })
+		expect(uploads).toHaveLength(0)
+		expect(store.has('etag:viem')).toBe(false)
+
+		failPage = false
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'synced',
+			failed: 0,
+		})
+		expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ headers: {} })
+		expect(uploads.map((upload) => upload.key)).toEqual(['viem/b.md'])
+		expect(store.get('etag:viem')).toBe('W/"new"')
+	})
 })
 
 describe('syncSource — stale-page deletion', () => {
@@ -858,8 +906,8 @@ describe('syncSource — stale-page deletion', () => {
 
 		expect(report).toMatchObject({ failed: 1, deleted: 0 })
 		expect(deletes).toEqual([])
-		// ETag and index must remain at previous values for retry on next run.
-		expect(store.get('etag:viem')).toBe('W/"prev"')
+		// Clear the ETag so the next run retries against the preserved index.
+		expect(store.has('etag:viem')).toBe(false)
 		expect(JSON.parse(store.get('index:viem') ?? '{}')).toMatchObject({
 			'viem/gone.md': { id: 'item-viem/gone.md' },
 		})

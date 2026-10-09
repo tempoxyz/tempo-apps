@@ -129,6 +129,7 @@ export async function syncSource(args: {
 						instance,
 						prevIndex,
 						force: force || sourceChanged,
+						refreshMetadata: sourceChanged,
 					}),
 				),
 			)
@@ -185,6 +186,8 @@ export async function syncSource(args: {
 			await etagCache.put(sourceUrlKey, indexUrl)
 			if (hasRemovals) await etagCache.delete(pendingDeletionKey)
 			if (etag) await etagCache.put(etagKey, etag)
+		} else {
+			await etagCache.delete(etagKey)
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		return {
@@ -235,8 +238,9 @@ async function syncPage(args: {
 	instance: AiSearchInstance
 	prevIndex: SourceIndex
 	force: boolean
+	refreshMetadata: boolean
 }): Promise<SyncPageResult> {
-	const { url, source, instance, prevIndex, force } = args
+	const { url, source, instance, prevIndex, force, refreshMetadata } = args
 	const key = pageKey(url, source.id)
 	const prev = prevIndex[key]
 
@@ -281,7 +285,7 @@ async function syncPage(args: {
 			return { key, outcome: 'failed', entry: prev }
 		}
 		const contentHash = await sha256(content)
-		if (prev?.content_hash === contentHash && !force) {
+		if (prev?.content_hash === contentHash && !refreshMetadata) {
 			const etag = res.headers.get('etag') ?? prev.etag
 			return {
 				key,
