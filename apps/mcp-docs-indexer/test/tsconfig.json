@@ -11,5 +11,6 @@
 		"./scheduled.test.ts",
 		"../worker-configuration.d.ts",
 		"../env.d.ts"
-	]
+	],
+	"exclude": ["../node_modules"]
 }
