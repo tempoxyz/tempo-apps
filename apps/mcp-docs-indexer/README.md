@@ -285,12 +285,14 @@ with `invocation_logs: true`). Every cron run emits structured JSON lines via
 | `cron.start`         | scheduled handler invoked           | `cron`, `scheduled_time`, `instance`, `sources`, `force`                   |
 | `source.complete`    | source synced without failures or 304-unchanged | `source`, `status`, `pages`, `unchanged`, `failed`, `deleted`, `duration_ms` |
 | `source.pending_deletion` | index removals awaiting confirmation | `source`, `status`, `removed`, `duration_ms` |
+| `source.pending_index` | uploads accepted, AI Search indexing is pending | `source`, `status`, `pages`, `pending`, `duration_ms` |
 | `source.failed`      | source error or partial page failure | `source`, `status`, `duration_ms`; error reports have `error`, partial reports have `pages`, `unchanged`, `failed`, `deleted` |
 | `cron.complete`      | all sources processed               | `duration_ms`, `sources`, `synced`, `unchanged`, `pending`, `errors`, `force` |
 | `page.fetch_failed`  | per-page `<page>.md` GET non-OK     | `source`, `url`, `status`                                                  |
 | `page.empty`         | empty markdown body                 | `source`, `url`                                                            |
 | `page.too_large`     | page exceeds 3.5MB upload cap       | `source`, `url`, `bytes`                                                   |
 | `page.upload_failed` | `uploadAndPoll` threw               | `source`, `url`, `error`                                                   |
+| `page.index_failed` | AI Search reported an indexing error; the item will be retried | `source`, `key`, `item_id`, `status`, `error` |
 | `page.delete_failed` | `items.delete` threw on stale page  | `source`, `key`, `item_id`, `error`                                        |
 | `index.parse_failed` | corrupt JSON in `index:<source>` KV | `key`, `error`                                                             |
 
@@ -326,6 +328,7 @@ Important metrics:
 - `tempo_docs_mcp_ingest_duration_ms`
 - `tempo_docs_mcp_source_sync_count`
 - `tempo_docs_mcp_source_pages_failed`
+- `tempo_docs_mcp_source_items_pending`
 
 ## Deploy
 

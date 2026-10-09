@@ -16,13 +16,18 @@ type UploadCall = {
  * Fake AI Search instance. Returns deterministic item ids (`item-<key>`) so
  * tests can assert delete-by-id round trips.
  */
-function fakeInstance(opts?: { deleteFails?: Set<string> }): {
+function fakeInstance(opts?: {
+	deleteFails?: Set<string>
+	uploadStatus?: AiSearchItemInfo['status']
+}): {
 	instance: AiSearchInstance
 	uploads: UploadCall[]
 	deletes: string[]
+	statuses: Map<string, AiSearchItemInfo['status']>
 } {
 	const uploads: UploadCall[] = []
 	const deletes: string[] = []
+	const statuses = new Map<string, AiSearchItemInfo['status']>()
 	const instance = {
 		items: {
 			upload: async (
@@ -31,15 +36,25 @@ function fakeInstance(opts?: { deleteFails?: Set<string> }): {
 				options?: { metadata?: Record<string, unknown> },
 			) => {
 				uploads.push({ key, content, metadata: options?.metadata })
-				return { id: `item-${key}`, key }
+				const id = `item-${key}`
+				const status = opts?.uploadStatus ?? 'completed'
+				statuses.set(id, status)
+				return { id, key, status }
 			},
+			get: (id: string) => ({
+				info: async () => ({
+					id,
+					key: id.slice('item-'.length),
+					status: statuses.get(id) ?? 'completed',
+				}),
+			}),
 			delete: async (id: string) => {
 				if (opts?.deleteFails?.has(id)) throw new Error(`boom: ${id}`)
 				deletes.push(id)
 			},
 		},
 	} as unknown as AiSearchInstance
-	return { instance, uploads, deletes }
+	return { instance, uploads, deletes, statuses }
 }
 
 function fakeKv(seed?: Record<string, string>) {
@@ -120,6 +135,20 @@ describe('syncSource — llms.txt index', () => {
 			headers: { 'If-None-Match': 'W/"old"' },
 		})
 		expect(store.get('etag:viem')).toBe('W/"old"')
+	})
+
+	it('does not claim completion when a forced retry receives 304', async () => {
+		const { instance } = fakeInstance()
+		const { kv } = fakeKv({ 'retry_force:viem': '1' })
+		fetchMock.mockResolvedValueOnce(mockResponse({ status: 304 }))
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'error',
+			error: 'index returned 304 during retry',
+		})
+		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ headers: {} })
 	})
 
 	it('returns `error` when llms.txt returns non-2xx', async () => {
@@ -271,6 +300,166 @@ describe('syncSource — page uploads', () => {
 		expect(
 			Object.keys(JSON.parse(store.get('index:viem') ?? '{}')).sort(),
 		).toEqual(['viem/a/b.md', 'viem/a_b.md'])
+	})
+
+	it('tracks queued uploads until AI Search reports completion', async () => {
+		const { instance, uploads, statuses } = fakeInstance({
+			uploadStatus: 'queued',
+		})
+		const { kv, store } = fakeKv()
+		let indexUnchanged = false
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? indexUnchanged
+					? mockResponse({ status: 304 })
+					: mockResponse({ body: '- [A](/a)', etag: 'W/"index"' })
+				: mockResponse({ body: '# a' }),
+		)
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_index',
+			pending: 1,
+			pages: 1,
+		})
+		expect(store.get('etag:viem')).toBe('W/"index"')
+		indexUnchanged = true
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_index',
+			pending: 1,
+		})
+		statuses.set('item-viem/a.md', 'completed')
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'unchanged',
+		})
+		expect(uploads).toHaveLength(1)
+		expect(
+			JSON.parse(store.get('index:viem') ?? '{}')['viem/a.md'],
+		).toMatchObject({
+			index_pending: false,
+		})
+	})
+
+	it('retries an AI Search indexing error despite unchanged source and page ETags', async () => {
+		const { instance, uploads, statuses } = fakeInstance({
+			uploadStatus: 'queued',
+		})
+		const { kv, store } = fakeKv()
+		let secondPass = false
+		fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+			if (url === 'https://viem.sh/llms.txt') {
+				return mockResponse({ body: '- [A](/a)', etag: 'W/"index"' })
+			}
+			const headers = init?.headers as Record<string, string>
+			if (secondPass && headers['If-None-Match']) {
+				return mockResponse({ status: 304 })
+			}
+			return mockResponse({ body: '# a', etag: 'W/"page"' })
+		})
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_index',
+		})
+		statuses.set('item-viem/a.md', 'error')
+		secondPass = true
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_index',
+			pages: 1,
+			failed: 0,
+		})
+		expect(uploads).toHaveLength(2)
+		expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ headers: {} })
+		expect(fetchMock.mock.calls[3]?.[1]).toMatchObject({ headers: {} })
+		expect(
+			JSON.parse(store.get('index:viem') ?? '{}')['viem/a.md'],
+		).toMatchObject({
+			index_pending: true,
+		})
+	})
+
+	it('does not commit an upload that immediately reports indexing error', async () => {
+		const { instance } = fakeInstance({ uploadStatus: 'error' })
+		const { kv, store } = fakeKv()
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: '- [A](/a)', etag: 'W/"index"' })
+				: mockResponse({ body: '# a' }),
+		)
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'synced',
+			pages: 0,
+			failed: 1,
+		})
+		expect(store.has('etag:viem')).toBe(false)
+		expect(store.has('index:viem')).toBe(false)
+	})
+
+	it('rotates status checks so a long pending queue cannot starve later items', async () => {
+		const { instance, statuses } = fakeInstance()
+		const index = Object.fromEntries(
+			Array.from({ length: 21 }, (_, i) => {
+				const key = `viem/page-${i}.md`
+				const id = `item-${key}`
+				statuses.set(id, i === 20 ? 'error' : 'queued')
+				return [key, { id, index_pending: true }]
+			}),
+		)
+		const { kv, store } = fakeKv({ 'index:viem': JSON.stringify(index) })
+		fetchMock.mockResolvedValue(mockResponse({ status: 304 }))
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_index',
+			pending: 21,
+		})
+		expect(store.get('index_cursor:viem')).toBe('20')
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_index',
+			pending: 20,
+		})
+		expect(
+			JSON.parse(store.get('index:viem') ?? '{}')['viem/page-20.md'],
+		).toMatchObject({
+			index_retry: true,
+		})
+	})
+
+	it('does not claim completion if the index returns 304 during an item retry', async () => {
+		const { instance, statuses } = fakeInstance()
+		statuses.set('item-viem/a.md', 'error')
+		const { kv, store } = fakeKv({
+			'index:viem': JSON.stringify({
+				'viem/a.md': { id: 'item-viem/a.md', index_pending: true },
+			}),
+		})
+		fetchMock.mockResolvedValue(mockResponse({ status: 304 }))
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'error',
+			error: 'index returned 304 during retry',
+		})
+		expect(
+			JSON.parse(store.get('index:viem') ?? '{}')['viem/a.md'],
+		).toMatchObject({
+			index_retry: true,
+		})
 	})
 
 	it('uploads each page with source+url metadata', async () => {
@@ -726,6 +915,7 @@ describe('syncSource — stale-page deletion', () => {
 				id: 'item-tempo/developers/docs/api/mcp.md',
 				content_hash: expect.any(String),
 				metadata_hash: EMPTY_METADATA_HASH,
+				index_pending: false,
 			},
 		})
 

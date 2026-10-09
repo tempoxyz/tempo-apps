@@ -9,6 +9,8 @@ type IndexEntry = {
 	etag?: string
 	content_hash?: string
 	metadata_hash?: string
+	index_pending?: boolean
+	index_retry?: boolean
 }
 /** Per-source map of AI Search item key → {item id, last-seen ETag}. */
 type SourceIndex = Record<string, IndexEntry>
@@ -23,11 +25,12 @@ export type SyncReport =
 	  }
 	| {
 			source: string
-			status: 'synced'
+			status: 'synced' | 'pending_index'
 			pages: number
 			unchanged: number
 			failed: number
 			deleted: number
+			pending: number
 			duration_ms: number
 	  }
 	| { source: string; status: 'error'; error: string; duration_ms: number }
@@ -37,6 +40,7 @@ const CONCURRENCY = 8
 /** Skip pages larger than AI Search's 4MB per-file cap (with margin). */
 const MAX_PAGE_BYTES = 3_500_000
 const DELETION_CONFIRMATION_MS = 5 * 60_000
+const MAX_PENDING_CHECKS = 20
 
 export async function syncSource(args: {
 	source: Source
@@ -51,6 +55,7 @@ export async function syncSource(args: {
 	const sourceUrlKey = `source_url:${source.id}`
 	const pendingDeletionKey = `pending_deletion:${source.id}`
 	const retryForceKey = `retry_force:${source.id}`
+	const cursorKey = `index_cursor:${source.id}`
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 
@@ -61,9 +66,23 @@ export async function syncSource(args: {
 			previousIndexUrl === null
 				? new URL(source.base).pathname !== '/'
 				: previousIndexUrl !== indexUrl
-		const prevSourceEtag =
-			force || sourceChanged ? null : await etagCache.get(etagKey)
+		const prevIndex = await loadIndex(etagCache, indexKey)
+		const reconciled = await reconcilePendingItems({
+			index: prevIndex,
+			instance,
+			etagCache,
+			indexKey,
+			cursorKey,
+			sourceId: source.id,
+		})
+		const hasRetries = Object.values(prevIndex).some(
+			(entry) => entry.index_retry,
+		)
 		const retryForce = (await etagCache.get(retryForceKey)) === '1'
+		const prevSourceEtag =
+			force || sourceChanged || hasRetries || retryForce
+				? null
+				: await etagCache.get(etagKey)
 		const res = await fetch(indexUrl, {
 			headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
 			cf: { cacheTtl: 60 },
@@ -72,7 +91,26 @@ export async function syncSource(args: {
 			if (await etagCache.get(pendingDeletionKey)) {
 				await etagCache.delete(pendingDeletionKey)
 			}
-			return { source: source.id, status: 'unchanged', duration_ms: elapsed() }
+			if ((hasRetries || retryForce) && reconciled.pending === 0) {
+				return {
+					source: source.id,
+					status: 'error',
+					error: 'index returned 304 during retry',
+					duration_ms: elapsed(),
+				}
+			}
+			return reconciled.pending > 0
+				? {
+						source: source.id,
+						status: 'pending_index',
+						pages: 0,
+						unchanged: 0,
+						failed: 0,
+						deleted: 0,
+						pending: reconciled.pending,
+						duration_ms: elapsed(),
+					}
+				: { source: source.id, status: 'unchanged', duration_ms: elapsed() }
 		}
 		if (!res.ok) {
 			return {
@@ -92,7 +130,6 @@ export async function syncSource(args: {
 				duration_ms: elapsed(),
 			}
 		}
-		const prevIndex = await loadIndex(etagCache, indexKey)
 		const intendedKeys = new Set(pageUrls.map((url) => pageKey(url, source.id)))
 		const removedKeys = Object.keys(prevIndex)
 			.filter((key) => !intendedKeys.has(key))
@@ -201,13 +238,17 @@ export async function syncSource(args: {
 			await etagCache.delete(etagKey)
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
+		const pending = Object.values(next).filter(
+			(entry) => entry.index_pending,
+		).length
 		return {
 			source: source.id,
-			status: 'synced',
+			status: pending > 0 ? 'pending_index' : 'synced',
 			pages,
 			unchanged,
 			failed,
 			deleted,
+			pending,
 			duration_ms: elapsed(),
 		}
 	} catch (err) {
@@ -233,6 +274,71 @@ async function loadIndex(kv: KVNamespace, key: string): Promise<SourceIndex> {
 		})
 	}
 	return {}
+}
+
+async function reconcilePendingItems(args: {
+	index: SourceIndex
+	instance: AiSearchInstance
+	etagCache: KVNamespace
+	indexKey: string
+	cursorKey: string
+	sourceId: string
+}): Promise<{ pending: number }> {
+	const { index, instance, etagCache, indexKey, cursorKey, sourceId } = args
+	const pendingKeys = Object.keys(index).filter(
+		(key) => index[key]?.index_pending,
+	)
+	if (pendingKeys.length === 0) return { pending: 0 }
+
+	const cursor =
+		Math.max(0, Number(await etagCache.get(cursorKey)) || 0) %
+		pendingKeys.length
+	const checks = Math.min(MAX_PENDING_CHECKS, pendingKeys.length)
+	let changed = false
+	for (let i = 0; i < checks; i++) {
+		const key = pendingKeys[(cursor + i) % pendingKeys.length]
+		const entry = index[key]
+		let status: AiSearchItemInfo['status']
+		let error: string | undefined
+		try {
+			const info = await instance.items.get(entry.id).info()
+			status = info.status
+			error = info.error
+		} catch (err) {
+			if (!(err instanceof Error) || !err.message.includes('item_not_found'))
+				throw err
+			status = 'error'
+			error = err.message
+		}
+		if (status === 'completed') {
+			index[key] = { ...entry, index_pending: false }
+			changed = true
+		} else if (
+			status === 'error' ||
+			status === 'skipped' ||
+			status === 'outdated'
+		) {
+			index[key] = { ...entry, index_pending: false, index_retry: true }
+			changed = true
+			log.warn('page.index_failed', {
+				source: sourceId,
+				key,
+				item_id: entry.id,
+				status,
+				error,
+			})
+		}
+	}
+	if (changed) await etagCache.put(indexKey, JSON.stringify(index))
+	if (pendingKeys.length > MAX_PENDING_CHECKS) {
+		await etagCache.put(
+			cursorKey,
+			String((cursor + checks) % pendingKeys.length),
+		)
+	}
+	return {
+		pending: Object.values(index).filter((entry) => entry.index_pending).length,
+	}
 }
 
 type PageOutcome = 'uploaded' | 'unchanged' | 'failed'
@@ -266,7 +372,8 @@ async function syncPage(args: {
 
 	try {
 		const headers: Record<string, string> = {}
-		if (prev?.etag && !force) headers['If-None-Match'] = prev.etag
+		if (prev?.etag && !force && !prev.index_retry)
+			headers['If-None-Match'] = prev.etag
 
 		const res = await fetch(toMarkdownUrl(url), {
 			headers,
@@ -274,6 +381,7 @@ async function syncPage(args: {
 		})
 
 		if (res.status === 304 && prev) {
+			if (prev.index_retry) return { key, outcome: 'failed', entry: prev }
 			return { key, outcome: 'unchanged', entry: prev }
 		}
 		if (!res.ok) {
@@ -308,7 +416,8 @@ async function syncPage(args: {
 		if (
 			prev?.content_hash === contentHash &&
 			prev.metadata_hash === metadataHash &&
-			!refreshMetadata
+			!refreshMetadata &&
+			!prev.index_retry
 		) {
 			const etag = res.headers.get('etag') ?? prev.etag
 			return {
@@ -338,6 +447,16 @@ async function syncPage(args: {
 				...(title ? { title } : {}),
 			},
 		})
+		if (item.status === 'error' || item.status === 'skipped') {
+			log.warn('page.index_failed', {
+				source: source.id,
+				key,
+				item_id: item.id,
+				status: item.status,
+				error: item.error,
+			})
+			return { key, outcome: 'failed', entry: prev }
+		}
 		const etag = res.headers.get('etag') ?? undefined
 		return {
 			key,
@@ -347,6 +466,7 @@ async function syncPage(args: {
 				etag,
 				content_hash: contentHash,
 				metadata_hash: metadataHash,
+				index_pending: item.status !== 'completed',
 			},
 		}
 	} catch (err) {

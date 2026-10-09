@@ -14,6 +14,7 @@ type ToolTags = { outcome: string; tool_name: string }
 type AiSearchTags = { path: string; source_filter: string }
 type ProxyTags = { status_class: string }
 type SourceTags = { force: string; source: string; status: string }
+type PendingTags = { source: string }
 
 type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_http_request_count: HttpTags
@@ -37,6 +38,7 @@ type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_source_pages_uploaded: SourceTags
 	tempo_docs_mcp_source_pages_failed: SourceTags
 	tempo_docs_mcp_source_pages_deleted: SourceTags
+	tempo_docs_mcp_source_items_pending: PendingTags
 }
 
 export type HealthMetricResult = {
@@ -201,7 +203,12 @@ export function recordIngestMetrics(args: {
 			status: report.status,
 		}
 		workerMetrics.count('tempo_docs_mcp_source_sync_count', 1, tags)
-		if (report.status === 'synced') {
+		workerMetrics.gauge(
+			'tempo_docs_mcp_source_items_pending',
+			report.status === 'pending_index' ? report.pending : 0,
+			{ source: report.source },
+		)
+		if (report.status === 'synced' || report.status === 'pending_index') {
 			workerMetrics.count(
 				'tempo_docs_mcp_source_pages_uploaded',
 				report.pages,
@@ -227,7 +234,8 @@ export function recordIngestMetrics(args: {
 export function isFailedSyncReport(report: SyncReport): boolean {
 	return (
 		report.status === 'error' ||
-		(report.status === 'synced' && report.failed > 0)
+		((report.status === 'synced' || report.status === 'pending_index') &&
+			report.failed > 0)
 	)
 }
 
