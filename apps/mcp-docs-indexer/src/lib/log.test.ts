@@ -49,6 +49,25 @@ describe('log', () => {
 		expect(typeof payload.timestamp).toBe('string')
 	})
 
+	it('reserved fields cannot be overwritten by props', () => {
+		log.info('expected.event', {
+			timestamp: 'spoofed',
+			level: 'error',
+			logger: 'other-logger',
+			event: 'other.event',
+		})
+
+		const { event, payload } = callOf(infoSpy)
+		expect(event).toBe('expected.event')
+		expect(payload).toMatchObject({
+			level: 'info',
+			logger: 'mcp-docs-indexer',
+			event: 'expected.event',
+		})
+		expect(payload.timestamp).not.toBe('spoofed')
+		expect(Number.isNaN(Date.parse(payload.timestamp as string))).toBe(false)
+	})
+
 	it('routes warn through console.warn', () => {
 		log.warn('page.empty', { url: 'https://x/y' })
 		expect(warnSpy).toHaveBeenCalledTimes(1)

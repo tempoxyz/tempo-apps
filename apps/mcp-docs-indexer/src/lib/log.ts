@@ -19,11 +19,11 @@ function emit(
 	props?: LogProps,
 ): void {
 	const payload = {
+		...props,
 		timestamp: new Date().toISOString(),
 		level,
 		logger: 'mcp-docs-indexer',
 		event,
-		...props,
 	}
 	if (level === 'error') console.error(event, payload)
 	else if (level === 'warn') console.warn(event, payload)
