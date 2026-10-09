@@ -542,9 +542,7 @@ export function resolveInteractAbi(params: {
 	)
 }
 
-// ============================================================================
 // ABI Utilities
-// ============================================================================
 
 export type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 export type WriteFunction = AbiFunction & {
@@ -783,9 +781,7 @@ export function getInputFunctions(abi: Abi): ReadFunction[] {
 	return getReadFunctions(abi).filter((fn) => fn?.inputs?.length > 0)
 }
 
-// ============================================================================
 // Parameter Type Utilities
-// ============================================================================
 
 export type SolidityBaseType =
 	| 'address'
@@ -916,9 +912,7 @@ export async function getContractBytecode(
 	return code
 }
 
-// ============================================================================
 // ABI Item Utilities
-// ============================================================================
 
 /**
  * Get an ABI item by selector (function selector or event topic)
@@ -1007,9 +1001,7 @@ export function decodeEventLog_guessed(args: {
 	}
 }
 
-// ============================================================================
 // Whatsabi - ABI extraction from bytecode
-// ============================================================================
 
 const defaultSignatureLookup = new loaders.MultiSignatureLookup([
 	new loaders.OpenChainSignatureLookup(),

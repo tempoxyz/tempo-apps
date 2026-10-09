@@ -104,9 +104,7 @@ function scheduleWhenIdle(callback: () => void): () => void {
 	return () => window.clearTimeout(id)
 }
 
-// ============================================================================
 // ABI Viewer
-// ============================================================================
 
 export function AbiViewer(props: AbiViewer.Props): React.JSX.Element {
 	const { abi, enabled } = props

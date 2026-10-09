@@ -2825,9 +2825,7 @@ export function parseKnownEvents(
 	return knownEvents
 }
 
-// ============================================================================
 // Call Decoding (for contracts that emit no events, e.g., validator precompile)
-// ============================================================================
 
 // Validator config address (use Addresses.validator when viem exports it)
 const VALIDATOR_CONFIG = '0xcccccccc00000000000000000000000000000000'
