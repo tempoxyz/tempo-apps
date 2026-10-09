@@ -98,6 +98,7 @@ const PAGE_CACHE_TTL_MS = 60_000
 const PAGE_CACHE_MAX_ENTRIES = 128
 const SOURCE_INDEX_CACHE_TTL_MS = 10 * 60_000
 const SOURCE_INDEX_CACHE_MAX_ENTRIES = 64
+const SECTION_LOOKUP_TIMEOUT_MS = 500
 const DEFAULT_MAX_PAGE_CHARS = 12_000
 const RESOURCE_INDEX_MAX_ENTRIES = 500
 const SOURCES_RESOURCE_URI = 'tempo-docs://sources'
@@ -811,7 +812,12 @@ async function localSourceSearch(
 	const chunks = (
 		await Promise.allSettled(
 			scored.map(async ({ entry, score }) =>
-				sourceIndexChunk(source, entry, await readCleanPage(entry.url), score),
+				sourceIndexChunk(
+					source,
+					entry,
+					await readCleanPage(markdownUrlFor(entry.url, source)),
+					score,
+				),
 			),
 		)
 	)
@@ -925,9 +931,10 @@ function titleFromPath(path: string): string {
 
 function sourceEntryScore(entry: SourceIndexEntry, tokens: string[]): number {
 	if (tokens.length === 0) return 0
-	const haystack = `${entry.title} ${entry.description ?? ''} ${entry.url}`
-		.toLowerCase()
-		.replace(/[-_/]+/g, ' ')
+	const haystack =
+		`${entry.title} ${entry.description ?? ''} ${entry.section ?? ''} ${entry.url}`
+			.toLowerCase()
+			.replace(/[-_/]+/g, ' ')
 	let score = 0
 	for (const token of tokens) {
 		if (!haystack.includes(token)) continue
@@ -1132,7 +1139,7 @@ async function annotateChunkSections(
 	await Promise.all(
 		[...new Set(owners.values())].map(async (source) => {
 			try {
-				const entries = await readSourceIndex(source)
+				const entries = await readSourceIndexWithTimeout(source)
 				sections.set(
 					source.id,
 					new Map(
@@ -1152,6 +1159,25 @@ async function annotateChunkSections(
 			? sections.get(source.id)?.get(chunk.url)
 			: undefined
 		if (section) chunk.section = section
+	}
+}
+
+async function readSourceIndexWithTimeout(
+	source: Source,
+): Promise<SourceIndexEntry[]> {
+	let timeout: ReturnType<typeof setTimeout> | undefined
+	try {
+		return await Promise.race([
+			readSourceIndex(source),
+			new Promise<SourceIndexEntry[]>((_, reject) => {
+				timeout = setTimeout(
+					() => reject(new Error('section lookup timed out')),
+					SECTION_LOOKUP_TIMEOUT_MS,
+				)
+			}),
+		])
+	} finally {
+		if (timeout) clearTimeout(timeout)
 	}
 }
 
@@ -1894,8 +1920,8 @@ function sourceIndexResourceText(
 	const lines: string[] = []
 	let section: string | undefined
 	for (const entry of shown) {
-		if (entry.section && entry.section !== section) {
-			lines.push('', `## ${entry.section}`)
+		if (entry.section !== section) {
+			lines.push('', `## ${entry.section ?? 'Other pages'}`)
 			section = entry.section
 		}
 		lines.push(`- [${entry.title}](${entry.url})`)
