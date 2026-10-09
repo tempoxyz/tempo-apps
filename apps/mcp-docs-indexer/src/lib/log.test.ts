@@ -72,19 +72,48 @@ describe('log', () => {
 		})
 	})
 
-	it('routes warn through console.warn', () => {
-		log.warn('page.empty', { url: 'https://x/y' })
+	it('keeps reserved fields for warn logs when props contain conflicting values', () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date('2024-01-02T03:04:05.000Z'))
+
+		log.warn('page.empty', {
+			timestamp: 'overridden',
+			level: 'error',
+			logger: 'other',
+			event: 'other.event',
+			url: 'https://x/y',
+		})
 		expect(warnSpy).toHaveBeenCalledTimes(1)
-		expect(callOf(warnSpy).payload.level).toBe('warn')
+		const { event, payload } = callOf(warnSpy)
+		expect(event).toBe('page.empty')
+		expect(payload).toMatchObject({
+			timestamp: '2024-01-02T03:04:05.000Z',
+			level: 'warn',
+			logger: 'mcp-docs-indexer',
+			event: 'page.empty',
+			url: 'https://x/y',
+		})
 	})
 
-	it('routes error through console.error', () => {
-		log.error('source.failed', { source: 'viem', error: 'oops' })
+	it('keeps reserved fields for error logs when props contain conflicting values', () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date('2024-01-02T03:04:05.000Z'))
+
+		log.error('source.failed', {
+			timestamp: 'overridden',
+			level: 'info',
+			logger: 'other',
+			event: 'other.event',
+			source: 'viem',
+			error: 'oops',
+		})
 		expect(errorSpy).toHaveBeenCalledTimes(1)
 		const { event, payload } = callOf(errorSpy)
 		expect(event).toBe('source.failed')
 		expect(payload).toMatchObject({
+			timestamp: '2024-01-02T03:04:05.000Z',
 			level: 'error',
+			logger: 'mcp-docs-indexer',
 			event: 'source.failed',
 			source: 'viem',
 			error: 'oops',
