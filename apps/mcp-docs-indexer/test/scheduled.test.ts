@@ -187,6 +187,7 @@ describe('scheduled Worker', () => {
 
 		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ headers: {} })
 		expect(uploads).toEqual(['fixture/page.md'])
+		expect(await env.ETAG_CACHE.get('retry_force:fixture')).toBeNull()
 	})
 
 	it('routes minute events to the public health probe', async () => {

@@ -152,6 +152,9 @@ describe('syncSource — llms.txt index', () => {
 		})
 		const indexWrites = writes.filter(({ key }) => key === 'index:viem')
 		expect(indexWrites).toHaveLength(2)
+		expect(
+			writes.findIndex(({ key }) => key === 'retry_force:viem'),
+		).toBeLessThan(writes.findIndex(({ key }) => key === 'index:viem'))
 		expect(Object.keys(JSON.parse(indexWrites[0]?.value ?? '{}'))).toHaveLength(
 			8,
 		)
@@ -159,6 +162,7 @@ describe('syncSource — llms.txt index', () => {
 			9,
 		)
 		expect(store.get('etag:viem')).toBe('"index-v1"')
+		expect(store.has('retry_force:viem')).toBe(false)
 	})
 
 	it('returns `unchanged` when llms.txt returns 304', async () => {
@@ -192,6 +196,25 @@ describe('syncSource — llms.txt index', () => {
 		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ headers: {} })
 	})
 
+	it('keeps a retry marker if the forced index request returns 304', async () => {
+		const { instance } = fakeInstance()
+		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })
+		fetchMock.mockResolvedValueOnce(mockResponse({ status: 304 }))
+
+		expect(
+			await syncSource({
+				source: SOURCE,
+				instance,
+				etagCache: kv,
+				force: true,
+			}),
+		).toMatchObject({
+			status: 'error',
+			error: 'index returned 304 during retry',
+		})
+		expect(store.get('retry_force:viem')).toBe('1')
+	})
+
 	it('returns `error` when llms.txt returns non-2xx', async () => {
 		const { instance } = fakeInstance()
 		const { kv } = fakeKv()
@@ -222,10 +245,11 @@ describe('syncSource — llms.txt index', () => {
 
 	it('with force=true, bypasses the llms.txt ETag', async () => {
 		const { instance } = fakeInstance()
-		const { kv } = fakeKv({ 'etag:viem': 'W/"old"' })
+		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })
 
 		fetchMock.mockImplementation(async (url: string) => {
 			if (url === 'https://viem.sh/llms.txt') {
+				expect(store.get('retry_force:viem')).toBe('1')
 				return mockResponse({ body: '- [A](/a)\n', etag: 'W/"new"' })
 			}
 			return mockResponse({ body: '# a' })
@@ -239,6 +263,7 @@ describe('syncSource — llms.txt index', () => {
 		})
 
 		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ headers: {} })
+		expect(store.has('retry_force:viem')).toBe(false)
 	})
 })
 

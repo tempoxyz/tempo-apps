@@ -81,6 +81,7 @@ export async function syncSource(args: {
 			(entry) => entry.index_retry,
 		)
 		const retryForce = (await etagCache.get(retryForceKey)) === '1'
+		if (force && !retryForce) await etagCache.put(retryForceKey, '1')
 		const prevSourceEtag =
 			force || sourceChanged || hasRetries || retryForce
 				? null
@@ -93,7 +94,7 @@ export async function syncSource(args: {
 			if (await etagCache.get(pendingDeletionKey)) {
 				await etagCache.delete(pendingDeletionKey)
 			}
-			if ((hasRetries || retryForce) && reconciled.pending === 0) {
+			if ((force || hasRetries || retryForce) && reconciled.pending === 0) {
 				return {
 					source: source.id,
 					status: 'error',
@@ -165,6 +166,7 @@ export async function syncSource(args: {
 		let pages = 0
 		let unchanged = 0
 		let failed = 0
+		let checkpointed = false
 		let lastIndexWriteAt = reconciled.lastIndexWriteAt
 		let lastCheckpointAt = Date.now()
 		const saveIndex = async (index: SourceIndex) => {
@@ -206,8 +208,11 @@ export async function syncSource(args: {
 				i + batch.length < pageUrls.length &&
 				Date.now() - lastCheckpointAt >= CHECKPOINT_INTERVAL_MS
 			) {
+				if (!force && !retryForce && !checkpointed)
+					await etagCache.put(retryForceKey, '1')
 				// Retain old entries until deletion is confirmed at the end.
 				await saveIndex({ ...prevIndex, ...next })
+				checkpointed = true
 				lastCheckpointAt = Date.now()
 			}
 		}
@@ -251,7 +256,8 @@ export async function syncSource(args: {
 			await saveIndex(next)
 			await etagCache.put(sourceUrlKey, indexUrl)
 			if (hasRemovals) await etagCache.delete(pendingDeletionKey)
-			if (retryForce) await etagCache.delete(retryForceKey)
+			if (force || retryForce || checkpointed)
+				await etagCache.delete(retryForceKey)
 			if (etag) await etagCache.put(etagKey, etag)
 		} else {
 			await etagCache.put(retryForceKey, '1')
