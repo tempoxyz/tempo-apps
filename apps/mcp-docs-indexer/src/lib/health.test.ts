@@ -9,6 +9,7 @@ beforeEach(() => {
 	vi.stubGlobal('fetch', fetchMock)
 	vi.spyOn(console, 'log').mockImplementation(() => {})
 	vi.spyOn(console, 'error').mockImplementation(() => {})
+	vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -46,7 +47,9 @@ describe('healthMetrics', () => {
 			.mockResolvedValueOnce(
 				json({
 					result: {
-						structuredContent: { result: { chunks: [{ text: 'Tempo' }] } },
+						structuredContent: {
+							result: { retrieval: 'ai_search', chunks: [{ text: 'Tempo' }] },
+						},
 					},
 				}),
 			)
@@ -79,6 +82,13 @@ describe('healthMetrics', () => {
 				v: 1,
 			}),
 		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_health_check_ok',
+				tags: expect.objectContaining({ check: 'search_tempo_indexed' }),
+				v: 1,
+			}),
+		)
 		expect(fetchMock).toHaveBeenCalledTimes(6)
 	})
 
@@ -104,7 +114,12 @@ describe('healthMetrics', () => {
 			.mockResolvedValueOnce(
 				json({
 					result: {
-						structuredContent: { result: { chunks: [{ text: 'Tempo' }] } },
+						structuredContent: {
+							result: {
+								retrieval: 'source_index',
+								chunks: [{ text: 'Tempo' }],
+							},
+						},
 					},
 				}),
 			)
@@ -128,6 +143,9 @@ describe('healthMetrics', () => {
 		await healthMetrics({ PUBLIC_MCP_ENDPOINT: 'https://mcp.tempo.xyz/' })
 
 		expect(console.error).not.toHaveBeenCalled()
+		expect(console.warn).toHaveBeenCalledWith(
+			expect.stringContaining('search_tempo_indexed'),
+		)
 	})
 })
 
