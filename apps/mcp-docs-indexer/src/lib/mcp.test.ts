@@ -1809,18 +1809,6 @@ Was this helpful?`,
 		const body = await res?.json()
 		expect(body.error.message).toBe('path or url must be provided')
 	})
-
-	it('falls back to the upstream proxy for unsupported MCP methods', async () => {
-		const res = await handleMcp(
-			new Request('https://mcp.tempo.xyz/', {
-				method: 'POST',
-				body: JSON.stringify({ jsonrpc: '2.0', id: 17, method: 'initialize' }),
-			}),
-			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
-		)
-
-		expect(res).toBeUndefined()
-	})
 })
 
 describe('captureMcpAnalytics', () => {

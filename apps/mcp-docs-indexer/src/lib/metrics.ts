@@ -12,7 +12,6 @@ type JsonRpcErrorTags = {
 }
 type ToolTags = { outcome: string; tool_name: string }
 type AiSearchTags = { path: string; source_filter: string }
-type ProxyTags = { status_class: string }
 type SourceTags = { force: string; source: string; status: string }
 type PendingTags = { source: string }
 
@@ -30,8 +29,6 @@ type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_ai_search_request_count: AiSearchTags
 	tempo_docs_mcp_ai_search_duration_ms: AiSearchTags
 	tempo_docs_mcp_ai_search_empty_result_count: AiSearchTags
-	tempo_docs_mcp_proxy_fallback_count: ProxyTags
-	tempo_docs_mcp_proxy_fallback_duration_ms: ProxyTags
 	tempo_docs_mcp_ingest_ok: EmptyTags
 	tempo_docs_mcp_ingest_duration_ms: EmptyTags
 	tempo_docs_mcp_source_sync_count: SourceTags
@@ -172,16 +169,6 @@ export function recordAiSearchRequest(args: {
 	if (args.chunks === 0) {
 		workerMetrics.count('tempo_docs_mcp_ai_search_empty_result_count', 1, tags)
 	}
-}
-
-export function recordProxyFallback(status: number, durationMs: number): void {
-	const tags = { status_class: statusClass(status) }
-	workerMetrics.count('tempo_docs_mcp_proxy_fallback_count', 1, tags)
-	workerMetrics.histogram(
-		'tempo_docs_mcp_proxy_fallback_duration_ms',
-		durationMs,
-		tags,
-	)
 }
 
 export function recordIngestMetrics(args: {
