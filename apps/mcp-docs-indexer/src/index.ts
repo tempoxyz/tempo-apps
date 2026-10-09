@@ -13,7 +13,7 @@ import {
 import { captureMcpAnalytics } from './lib/posthog-mcp.js'
 import { proxyMcp } from './lib/proxy.js'
 import { readMcpRequest } from './lib/request.js'
-import { isForcedHour } from './lib/schedule.js'
+import { forcedSourceIds } from './lib/schedule.js'
 import { parseSources } from './lib/sources.js'
 import type { Source } from './lib/sources.js'
 
@@ -104,14 +104,17 @@ async function runHealthCheck(
 
 async function runSync(event: ScheduledController, env: Env): Promise<void> {
 	const startedAt = performance.now()
-	const force = isForcedHour(event.scheduledTime)
 	const sources = parseSources(env.SOURCES)
+	const forced = forcedSourceIds(
+		event.scheduledTime,
+		sources.map((source) => source.id),
+	)
 	log.info('cron.start', {
 		cron: event.cron,
 		scheduled_time: new Date(event.scheduledTime).toISOString(),
 		instance: env.AI_SEARCH_INSTANCE_ID,
 		sources: sources.length,
-		force,
+		forced_sources: [...forced],
 	})
 
 	const instance = env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID)
@@ -121,7 +124,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			source,
 			instance,
 			etagCache: env.ETAG_CACHE,
-			force,
+			force: forced.has(source.id),
 		})
 		if (isFailedSyncReport(report)) log.error('source.failed', report)
 		else if (report.status === 'pending_deletion')
@@ -146,7 +149,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		}
 	}
 	const durationMs = Math.round(performance.now() - startedAt)
-	recordIngestMetrics({ durationMs, force, reports })
+	recordIngestMetrics({ durationMs, forced, reports })
 	flushWorkerMetrics()
 	log.info('cron.complete', {
 		cron: event.cron,
@@ -160,7 +163,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			(r) => r.status === 'pending_deletion' || r.status === 'pending_index',
 		).length,
 		errors: reports.filter(isFailedSyncReport).length,
-		force,
+		forced_sources: [...forced],
 	})
 }
 

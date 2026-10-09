@@ -89,6 +89,37 @@ describe('worker metrics', () => {
 		)
 	})
 
+	it('tags only the scheduled source as forced', () => {
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		recordIngestMetrics({
+			durationMs: 1,
+			forced: new Set(['other']),
+			reports: [
+				{ source: 'fixture', status: 'unchanged', duration_ms: 1 },
+				{ source: 'other', status: 'unchanged', duration_ms: 1 },
+			],
+		})
+		flushWorkerMetrics()
+		const metrics = logs
+			.filter((message) => message.startsWith('cwm-'))
+			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_source_sync_count',
+				tags: expect.objectContaining({ source: 'fixture', force: 'false' }),
+			}),
+		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_source_sync_count',
+				tags: expect.objectContaining({ source: 'other', force: 'true' }),
+			}),
+		)
+	})
+
 	it('keeps ingestion healthy while removals await confirmation', () => {
 		const logs: string[] = []
 		vi.spyOn(console, 'log').mockImplementation((message) => {
@@ -96,7 +127,7 @@ describe('worker metrics', () => {
 		})
 		recordIngestMetrics({
 			durationMs: 1,
-			force: false,
+			forced: new Set(),
 			reports: [
 				{
 					source: 'docs',
@@ -149,7 +180,7 @@ describe('worker metrics', () => {
 					? { source: 'docs', status, error: 'failed', duration_ms: 1 }
 					: { source: 'docs', status, duration_ms: 1 }
 		expect(isFailedSyncReport(report)).toBe(expected === 0)
-		recordIngestMetrics({ durationMs: 1, force: false, reports: [report] })
+		recordIngestMetrics({ durationMs: 1, forced: new Set(), reports: [report] })
 		flushWorkerMetrics()
 		const metrics = logs
 			.filter((message) => message.startsWith('cwm-'))
@@ -166,7 +197,7 @@ describe('worker metrics', () => {
 		})
 		recordIngestMetrics({
 			durationMs: 1,
-			force: false,
+			forced: new Set(),
 			reports: [
 				{
 					source: 'docs',

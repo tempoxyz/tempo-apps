@@ -65,10 +65,14 @@ beforeEach(async () => {
 		'index:fixture',
 		'source_url:fixture',
 		'last_sync:fixture',
+		'retry_force:fixture',
+		'pending_deletion:fixture',
 		'etag:other',
 		'index:other',
 		'source_url:other',
 		'last_sync:other',
+		'retry_force:other',
+		'pending_deletion:other',
 	]) {
 		await env.ETAG_CACHE.delete(key)
 	}
@@ -199,6 +203,50 @@ describe('scheduled Worker', () => {
 		expect(await env.ETAG_CACHE.get('etag:fixture')).toBeNull()
 		expect(await env.ETAG_CACHE.get('index:fixture')).toBeNull()
 		expect(await env.ETAG_CACHE.get('last_sync:fixture')).toBeTruthy()
+	})
+
+	it('forces only the source assigned to the current UTC hour', async () => {
+		const uploads: string[] = []
+		await env.ETAG_CACHE.put('etag:fixture', '"fixture-v1"')
+		await env.ETAG_CACHE.put('etag:other', '"other-v1"')
+		const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+			if (input.endsWith('/llms.txt')) {
+				return (init?.headers as Record<string, string>)?.['If-None-Match']
+					? new Response(null, { status: 304 })
+					: new Response('- [Page](/page)')
+			}
+			return new Response('# Page')
+		})
+		vi.stubGlobal('fetch', fetchMock)
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation(() => {})
+		const workerEnv = {
+			...testEnv(uploads),
+			SOURCES: JSON.stringify([
+				SOURCE,
+				{ id: 'other', base: 'https://other.example' },
+			]),
+		} as unknown as Env
+
+		await runScheduled(
+			'0 * * * *',
+			workerEnv,
+			Date.parse('2026-10-10T01:00:00Z'),
+		)
+
+		expect(
+			fetchMock.mock.calls.map(([input, init]) => [
+				input,
+				(init?.headers as Record<string, string> | undefined)?.[
+					'If-None-Match'
+				],
+			]),
+		).toEqual([
+			['https://docs.example/llms.txt', '"fixture-v1"'],
+			['https://other.example/llms.txt', undefined],
+			['https://other.example/page.md', undefined],
+		])
+		expect(uploads).toEqual(['other/page.md'])
 	})
 
 	it('bypasses the source ETag at the midnight forced run', async () => {
