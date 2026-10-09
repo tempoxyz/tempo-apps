@@ -19,6 +19,7 @@ function emit(
 	props?: LogProps,
 ): void {
 	const payload = {
+		// Props go first so reserved fields always win.
 		...props,
 		timestamp: new Date().toISOString(),
 		level,
