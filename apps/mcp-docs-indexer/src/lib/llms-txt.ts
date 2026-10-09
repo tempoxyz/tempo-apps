@@ -9,6 +9,11 @@ import { resolveSourcePageUrl } from './sources.js'
  */
 export function parseLlmsTxt(body: string, base: string): string[] {
 	const urls = new Set<string>()
+	if (new URL(base).hostname === 'tips.sh') {
+		for (const match of body.matchAll(/\bhref=["']\/(\d{4}(?:-\d+)?)["']/g)) {
+			addUrl(urls, `/${match[1]}.md`, base)
+		}
+	}
 	for (const m of body.matchAll(/\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g)) {
 		addUrl(urls, m[1], base)
 	}

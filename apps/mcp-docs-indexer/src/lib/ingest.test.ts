@@ -224,6 +224,32 @@ describe('syncSource — page uploads', () => {
 		)
 	})
 
+	it('ingests TIP pages linked from the HTML homepage', async () => {
+		const source: Source = {
+			id: 'tips',
+			base: 'https://tips.sh',
+			indexPath: '/',
+		}
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://tips.sh/') {
+				return mockResponse({
+					body: '<!DOCTYPE html><a href="/0001">TIP-0001</a>',
+				})
+			}
+			if (url === 'https://tips.sh/0001.md') {
+				return mockResponse({ body: '# Tempo Transaction' })
+			}
+			throw new Error(`unexpected: ${url}`)
+		})
+
+		expect(await syncSource({ source, instance, etagCache: kv })).toMatchObject(
+			{ status: 'synced', pages: 1, failed: 0 },
+		)
+		expect(uploads.map((upload) => upload.key)).toEqual(['tips/0001.md'])
+	})
+
 	it('uploads each page with source+url metadata', async () => {
 		const { instance, uploads } = fakeInstance()
 		const { kv, store } = fakeKv()

@@ -62,6 +62,17 @@ describe('parseLlmsTxt', () => {
 		])
 	})
 
+	it('extracts TIP pages from the HTML homepage', () => {
+		const body = `<!DOCTYPE html><html><body>
+<a href="/0000">TIP-0000</a><a href="/1000-1">TIP-1000-1</a>
+<a href="/assets/main.js">Asset</a><a href="https://example.com/0001">Other</a>
+<a href="/0000">Duplicate</a></body></html>`
+		expect(parseLlmsTxt(body, 'https://tips.sh')).toEqual([
+			'https://tips.sh/0000.md',
+			'https://tips.sh/1000-1.md',
+		])
+	})
+
 	it('drops off-origin links', () => {
 		const body = '- [In](/in)\n- [Out](https://other.example.com/out)'
 		expect(parseLlmsTxt(body, 'https://viem.sh')).toEqual([
