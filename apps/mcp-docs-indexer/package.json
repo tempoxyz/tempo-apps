@@ -12,10 +12,11 @@
 		"deploy": "wrangler deploy",
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
-		"check:types": "pnpm gen:types && tsgo --project tsconfig.json --noEmit",
+		"check:types": "pnpm gen:types && tsgo --project tsconfig.json --noEmit && tsgo --project test/tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail",
 		"test": "vitest --run",
+		"test:scheduled": "vitest --run --config vitest.scheduled.config.ts",
 		"test:watch": "vitest"
 	},
 	"dependencies": {
@@ -28,6 +29,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
+		"@cloudflare/vitest-plugin": "catalog:",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:",
