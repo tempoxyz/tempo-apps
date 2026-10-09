@@ -112,6 +112,29 @@ describe('scheduled Worker', () => {
 		expect(uploads).toEqual([])
 	})
 
+	it('keeps source state retryable when an hourly page fetch fails', async () => {
+		const uploads: string[] = []
+		const fetchMock = vi.fn(async (input: string) =>
+			input === 'https://docs.example/llms.txt'
+				? new Response('- [Page](/page)', {
+						status: 200,
+						headers: { etag: '"index-v1"' },
+					})
+				: new Response('upstream error', { status: 503 }),
+		)
+		vi.stubGlobal('fetch', fetchMock)
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation(() => {})
+
+		await runScheduled('0 * * * *', testEnv(uploads))
+
+		expect(uploads).toEqual([])
+		expect(await env.ETAG_CACHE.get('etag:fixture')).toBeNull()
+		expect(await env.ETAG_CACHE.get('index:fixture')).toBeNull()
+		expect(await env.ETAG_CACHE.get('last_sync:fixture')).toBeTruthy()
+	})
+
 	it('bypasses the source ETag at the midnight forced run', async () => {
 		const uploads: string[] = []
 		await env.ETAG_CACHE.put('etag:fixture', '"index-v1"')
