@@ -1002,7 +1002,9 @@ export function decodeEventLog_guessed(args: {
 					topics: topics as [Hex.Hex, ...Hex.Hex[]],
 					data,
 				})
-			} catch {}
+			} catch {
+				// Try the next indexed-parameter layout if this one cannot decode the event.
+			}
 		}
 	}
 }

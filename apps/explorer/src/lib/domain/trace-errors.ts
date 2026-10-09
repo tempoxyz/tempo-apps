@@ -59,7 +59,9 @@ export function decodeTraceError(args: {
 		try {
 			const item = parseAbiItem(`error ${args.signature}`)
 			candidates.push({ abi: [item] as Abi, signature: args.signature })
-		} catch {}
+		} catch {
+			// Ignore an invalid signature and try the remaining ABI candidates.
+		}
 	}
 
 	for (const candidate of candidates) {
@@ -85,7 +87,9 @@ export function decodeTraceError(args: {
 				panicReason: panicCode ? PANIC_REASONS[panicCode] : undefined,
 				raw,
 			}
-		} catch {}
+		} catch {
+			// Try the next ABI candidate before falling back to raw revert data.
+		}
 	}
 	return { name: raw, args: [], raw, undecoded: true }
 }

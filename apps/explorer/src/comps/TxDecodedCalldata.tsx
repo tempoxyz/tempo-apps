@@ -63,7 +63,9 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				return {
 					args: decodeAbiParameters(abiItem.inputs, rawArgs),
 				}
-			} catch {}
+			} catch {
+				// Leave arguments undecoded when the selected ABI does not match the calldata.
+			}
 		}
 		return { args: undefined }
 	}, [abiItem, rawArgs])

@@ -116,6 +116,7 @@ export function BlockNumberProvider(
 				const latest = await getBlockNumber(config)
 				if (!cancelled) setConfirmedBlockNumber(latest)
 			} catch {
+				// Keep the previous block number and retry on the next polling interval.
 			} finally {
 				inFlight = false
 			}

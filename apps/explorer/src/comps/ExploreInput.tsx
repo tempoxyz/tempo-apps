@@ -129,7 +129,9 @@ function persistRecentSearches(results: SearchResult[]): void {
 			recentSearchesStorageKey,
 			JSON.stringify(results.slice(0, recentSearchesLimit)),
 		)
-	} catch {}
+	} catch {
+		// Keep recent searches in memory when local storage is unavailable.
+	}
 }
 
 function toManualSearchResult(data: ManualActivation): SearchResult {

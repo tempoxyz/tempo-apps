@@ -32,7 +32,9 @@ export function normalizeTempoBatchCall(value: unknown): TempoBatchCall | null {
 	let amount = 0n
 	try {
 		amount = BigInt(typeof call.value === 'string' ? call.value : 0)
-	} catch {}
+	} catch {
+		// Keep the zero-value fallback when the supplied amount cannot be parsed.
+	}
 	return { to: Address.from(call.to), data, value: amount }
 }
 
