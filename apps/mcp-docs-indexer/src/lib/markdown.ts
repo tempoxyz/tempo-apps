@@ -48,15 +48,58 @@ const AGENT_NOTICE_START = [
  * client: drop sitemap comments, agent notices, and docs UI chrome.
  */
 export function normalizeDocsMarkdown(text: string): string {
-	return stripAgentNotices(stripSitemapComment(text).split('\n'))
-		.map((line) => line.trimEnd())
-		.filter(
-			(line) =>
-				!CHROME_LINE_PATTERNS.some((pattern) => pattern.test(line.trim())),
-		)
-		.join('\n')
-		.replace(/\n{3,}/g, '\n\n')
-		.trim()
+	const lines = stripSitemapComment(text).split('\n')
+	const kept: string[] = []
+	let fence: { marker: string; length: number } | undefined
+	let blank = false
+	const add = (line: string, code = false) => {
+		if (!line.trim() && !code) {
+			if (blank) return
+			blank = true
+		} else {
+			blank = false
+		}
+		kept.push(code ? line : line.trimEnd())
+	}
+	for (let index = 0; index < lines.length; index++) {
+		const line = lines[index] ?? ''
+		if (fence) {
+			add(line, true)
+			if (
+				new RegExp(`^ {0,3}${fence.marker}{${fence.length},}\\s*$`).test(line)
+			)
+				fence = undefined
+			continue
+		}
+		const opening = line.match(/^ {0,3}(`{3,}|~{3,})/)
+		if (opening) {
+			fence = { marker: opening[1][0], length: opening[1].length }
+			add(line, true)
+			continue
+		}
+		if (/^(?: {4}|\t)/.test(line)) {
+			add(line, true)
+			continue
+		}
+		if (line.trim() === TEMPO_CONTEXT_MARKER) {
+			index = skipBlockquote(lines, index + 1, (quoted) => {
+				const section = quoted.match(SECTION_CONTEXT_LINE)?.[1]
+				if (section) add(`> Section: ${section}`)
+				else if (KEPT_CONTEXT_LINE.test(quoted)) add(quoted)
+			})
+			continue
+		}
+		if (AGENT_NOTICE_START.some((pattern) => pattern.test(line))) {
+			index = skipBlockquote(lines, index)
+			continue
+		}
+		if (CHROME_LINE_PATTERNS.some((pattern) => pattern.test(line.trim())))
+			continue
+		add(line)
+	}
+	while (kept.length > 0 && !kept[0]?.trim()) kept.shift()
+	while (kept.length > 0 && !kept.at(-1)?.trim()) kept.pop()
+	return kept.join('\n')
 }
 
 /** True when a docs page fetch returned an HTML document instead of Markdown. */
@@ -72,29 +115,6 @@ function stripSitemapComment(content: string): string {
 	return content
 		.replace(/\r\n/g, '\n')
 		.replace(/^<!--\nSitemap:\n[\s\S]*?\n-->\n*/, '')
-}
-
-function stripAgentNotices(lines: string[]): string[] {
-	const kept: string[] = []
-	for (let index = 0; index < lines.length; index++) {
-		const line = lines[index] ?? ''
-		if (line.trim() === TEMPO_CONTEXT_MARKER) {
-			index = skipBlockquote(lines, index + 1, (quoted) => {
-				// Keep the docs section as a short label so indexed chunks and page
-				// reads still say where the page sits in the docs navigation.
-				const section = quoted.match(SECTION_CONTEXT_LINE)?.[1]
-				if (section) kept.push(`> Section: ${section}`)
-				else if (KEPT_CONTEXT_LINE.test(quoted)) kept.push(quoted)
-			})
-			continue
-		}
-		if (AGENT_NOTICE_START.some((pattern) => pattern.test(line))) {
-			index = skipBlockquote(lines, index)
-			continue
-		}
-		kept.push(line)
-	}
-	return kept
 }
 
 /** Returns the index of the last line in the blockquote starting at `start`. */

@@ -70,6 +70,44 @@ describe('normalizeDocsMarkdown', () => {
 
 		expect(normalizeDocsMarkdown(page)).toBe('# Page\n\nBody')
 	})
+
+	it('preserves notice and chrome examples in fenced and indented code', () => {
+		const page = [
+			'# Examples',
+			'',
+			'```markdown',
+			'> Tempo MCP: This is a sample blockquote.',
+			'<span id="legacy-anchor" />',
+			'',
+			'',
+			'Was this helpful?',
+			'```',
+			'',
+			'    <span id="legacy-anchor" />',
+			'    > Tempo MCP: This is indented code.',
+			'',
+			'> Tempo MCP: Remove this real notice.',
+			'',
+			'Was this helpful?',
+		].join('\n')
+
+		expect(normalizeDocsMarkdown(page)).toBe(
+			[
+				'# Examples',
+				'',
+				'```markdown',
+				'> Tempo MCP: This is a sample blockquote.',
+				'<span id="legacy-anchor" />',
+				'',
+				'',
+				'Was this helpful?',
+				'```',
+				'',
+				'    <span id="legacy-anchor" />',
+				'    > Tempo MCP: This is indented code.',
+			].join('\n'),
+		)
+	})
 })
 
 describe('isHtmlDocument', () => {
