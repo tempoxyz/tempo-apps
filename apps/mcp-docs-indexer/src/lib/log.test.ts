@@ -49,6 +49,29 @@ describe('log', () => {
 		expect(typeof payload.timestamp).toBe('string')
 	})
 
+	it('keeps reserved fields when props contain conflicting values', () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date('2024-01-02T03:04:05.000Z'))
+
+		log.info('cron.start', {
+			timestamp: 'overridden',
+			level: 'error',
+			logger: 'other',
+			event: 'other.event',
+			sources: 4,
+		})
+
+		const { event, payload } = callOf(infoSpy)
+		expect(event).toBe('cron.start')
+		expect(payload).toMatchObject({
+			timestamp: '2024-01-02T03:04:05.000Z',
+			level: 'info',
+			logger: 'mcp-docs-indexer',
+			event: 'cron.start',
+			sources: 4,
+		})
+	})
+
 	it('routes warn through console.warn', () => {
 		log.warn('page.empty', { url: 'https://x/y' })
 		expect(warnSpy).toHaveBeenCalledTimes(1)
