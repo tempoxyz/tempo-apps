@@ -4,7 +4,12 @@ import type { Source } from './sources.js'
 import { sourceIndexUrl } from './sources.js'
 
 /** Recorded state for one AI Search item, persisted to KV per source. */
-type IndexEntry = { id: string; etag?: string; content_hash?: string }
+type IndexEntry = {
+	id: string
+	etag?: string
+	content_hash?: string
+	metadata_hash?: string
+}
 /** Per-source map of AI Search item key → {item id, last-seen ETag}. */
 type SourceIndex = Record<string, IndexEntry>
 
@@ -45,6 +50,7 @@ export async function syncSource(args: {
 	const etagKey = `etag:${source.id}`
 	const sourceUrlKey = `source_url:${source.id}`
 	const pendingDeletionKey = `pending_deletion:${source.id}`
+	const retryForceKey = `retry_force:${source.id}`
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 
@@ -57,6 +63,7 @@ export async function syncSource(args: {
 				: previousIndexUrl !== indexUrl
 		const prevSourceEtag =
 			force || sourceChanged ? null : await etagCache.get(etagKey)
+		const retryForce = (await etagCache.get(retryForceKey)) === '1'
 		const res = await fetch(indexUrl, {
 			headers: prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {},
 			cf: { cacheTtl: 60 },
@@ -114,6 +121,7 @@ export async function syncSource(args: {
 		} else if (pendingDeletion) {
 			await etagCache.delete(pendingDeletionKey)
 		}
+		const metadataHash = await sha256(source.description ?? '')
 		const next: SourceIndex = {}
 		let pages = 0
 		let unchanged = 0
@@ -128,8 +136,9 @@ export async function syncSource(args: {
 						source,
 						instance,
 						prevIndex,
-						force: force || sourceChanged,
+						force: force || sourceChanged || retryForce,
 						refreshMetadata: sourceChanged,
+						metadataHash,
 					}),
 				),
 			)
@@ -185,8 +194,10 @@ export async function syncSource(args: {
 			await etagCache.put(indexKey, JSON.stringify(next))
 			await etagCache.put(sourceUrlKey, indexUrl)
 			if (hasRemovals) await etagCache.delete(pendingDeletionKey)
+			if (retryForce) await etagCache.delete(retryForceKey)
 			if (etag) await etagCache.put(etagKey, etag)
 		} else {
+			await etagCache.put(retryForceKey, '1')
 			await etagCache.delete(etagKey)
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
@@ -239,8 +250,17 @@ async function syncPage(args: {
 	prevIndex: SourceIndex
 	force: boolean
 	refreshMetadata: boolean
+	metadataHash: string
 }): Promise<SyncPageResult> {
-	const { url, source, instance, prevIndex, force, refreshMetadata } = args
+	const {
+		url,
+		source,
+		instance,
+		prevIndex,
+		force,
+		refreshMetadata,
+		metadataHash,
+	} = args
 	const key = pageKey(url, source.id)
 	const prev = prevIndex[key]
 
@@ -285,7 +305,11 @@ async function syncPage(args: {
 			return { key, outcome: 'failed', entry: prev }
 		}
 		const contentHash = await sha256(content)
-		if (prev?.content_hash === contentHash && !refreshMetadata) {
+		if (
+			prev?.content_hash === contentHash &&
+			prev.metadata_hash === metadataHash &&
+			!refreshMetadata
+		) {
 			const etag = res.headers.get('etag') ?? prev.etag
 			return {
 				key,
@@ -318,7 +342,12 @@ async function syncPage(args: {
 		return {
 			key,
 			outcome: 'uploaded',
-			entry: { id: item.id, etag, content_hash: contentHash },
+			entry: {
+				id: item.id,
+				etag,
+				content_hash: contentHash,
+				metadata_hash: metadataHash,
+			},
 		}
 	} catch (err) {
 		log.error('page.upload_failed', {
