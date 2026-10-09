@@ -59,16 +59,18 @@ function fakeInstance(opts?: {
 
 function fakeKv(seed?: Record<string, string>) {
 	const store = new Map<string, string>(Object.entries(seed ?? {}))
+	const writes: { key: string; value: string }[] = []
 	const kv = {
 		get: async (k: string) => store.get(k) ?? null,
 		put: async (k: string, v: string) => {
+			writes.push({ key: k, value: v })
 			store.set(k, v)
 		},
 		delete: async (k: string) => {
 			store.delete(k)
 		},
 	} as unknown as KVNamespace
-	return { kv, store }
+	return { kv, store, writes }
 }
 
 const fetchMock = vi.fn()
@@ -120,6 +122,45 @@ async function confirmDeletion(
 }
 
 describe('syncSource — llms.txt index', () => {
+	it('checkpoints completed batches before a long sync finishes', async () => {
+		const { instance } = fakeInstance()
+		const { kv, store, writes } = fakeKv()
+		let now = 0
+		let pageFetches = 0
+		vi.spyOn(Date, 'now').mockImplementation(() => now)
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt')
+				return mockResponse({
+					body: Array.from(
+						{ length: 9 },
+						(_, i) => `- [Page ${i}](/page-${i})`,
+					).join('\n'),
+					etag: '"index-v1"',
+				})
+			pageFetches++
+			if (pageFetches === 8) now = 30_001
+			if (pageFetches === 9) now = 31_200
+			return mockResponse({ body: `# ${url}` })
+		})
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'synced',
+			pages: 9,
+			failed: 0,
+		})
+		const indexWrites = writes.filter(({ key }) => key === 'index:viem')
+		expect(indexWrites).toHaveLength(2)
+		expect(Object.keys(JSON.parse(indexWrites[0]?.value ?? '{}'))).toHaveLength(
+			8,
+		)
+		expect(Object.keys(JSON.parse(indexWrites[1]?.value ?? '{}'))).toHaveLength(
+			9,
+		)
+		expect(store.get('etag:viem')).toBe('"index-v1"')
+	})
+
 	it('returns `unchanged` when llms.txt returns 304', async () => {
 		const { instance, uploads } = fakeInstance()
 		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })

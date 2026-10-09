@@ -52,6 +52,8 @@ beforeEach(async () => {
 		'index:fixture',
 		'source_url:fixture',
 		'last_sync:fixture',
+		'retry_force:fixture',
+		'pending_deletion:fixture',
 	]) {
 		await env.ETAG_CACHE.delete(key)
 	}
@@ -133,6 +135,36 @@ describe('scheduled Worker', () => {
 		expect(await env.ETAG_CACHE.get('etag:fixture')).toBeNull()
 		expect(await env.ETAG_CACHE.get('index:fixture')).toBeNull()
 		expect(await env.ETAG_CACHE.get('last_sync:fixture')).toBeTruthy()
+	})
+
+	it('persists successful pages when another page fails', async () => {
+		const uploads: string[] = []
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (input: string) => {
+				if (input === 'https://docs.example/llms.txt')
+					return new Response('- [One](/one)\n- [Two](/two)', {
+						headers: { etag: '"index-v2"' },
+					})
+				if (input === 'https://docs.example/two.md')
+					return new Response('upstream error', { status: 503 })
+				return new Response('# One')
+			}),
+		)
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation(() => {})
+
+		await runScheduled('0 * * * *', testEnv(uploads))
+
+		expect(uploads).toEqual(['fixture/one.md'])
+		expect(
+			JSON.parse((await env.ETAG_CACHE.get('index:fixture')) ?? '{}'),
+		).toMatchObject({
+			'fixture/one.md': { id: 'item-fixture/one.md' },
+		})
+		expect(await env.ETAG_CACHE.get('retry_force:fixture')).toBe('1')
+		expect(await env.ETAG_CACHE.get('etag:fixture')).toBeNull()
 	})
 
 	it('bypasses the source ETag at the midnight forced run', async () => {
