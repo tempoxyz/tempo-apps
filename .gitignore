@@ -30,3 +30,5 @@ _verify
 .dev.vars
 _data
 .tmp*
+
+.factory/
