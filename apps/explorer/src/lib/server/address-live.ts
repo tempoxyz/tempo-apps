@@ -94,7 +94,12 @@ export async function addressLiveResponse(
 				if (!response.ok || !response.body)
 					throw new Error(`Live indexer returned ${response.status}`)
 				for await (const event of readSse(response.body)) {
-					let result: { ok: boolean; columns: string[]; rows: unknown[][] }
+					type Result = {
+						ok: boolean
+						columns: string[]
+						rows: unknown[][]
+					}
+					let result: Result
 					if (event.event === 'lagged') {
 						// Keep the stream open: reconnecting can repeat the same catch-up notice.
 						// A fresh PostgreSQL head snapshot repairs the visible window, then
