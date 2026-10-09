@@ -187,7 +187,7 @@ export function recordIngestMetrics(args: {
 	force: boolean
 	reports: SyncReport[]
 }): void {
-	const ok = args.reports.every((report) => report.status !== 'error')
+	const ok = args.reports.every((report) => !isFailedSyncReport(report))
 	workerMetrics.gauge('tempo_docs_mcp_ingest_ok', ok ? 1 : 0, {})
 	workerMetrics.histogram(
 		'tempo_docs_mcp_ingest_duration_ms',
@@ -222,6 +222,13 @@ export function recordIngestMetrics(args: {
 			workerMetrics.count('tempo_docs_mcp_source_pages_failed', 1, tags)
 		}
 	}
+}
+
+export function isFailedSyncReport(report: SyncReport): boolean {
+	return (
+		report.status === 'error' ||
+		(report.status === 'synced' && report.failed > 0)
+	)
 }
 
 function metricMcpMethod(method: unknown): string {

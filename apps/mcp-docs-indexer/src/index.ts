@@ -5,6 +5,7 @@ import { log } from './lib/log.js'
 import { handleMcp } from './lib/mcp.js'
 import {
 	flushWorkerMetrics,
+	isFailedSyncReport,
 	recordHttpRequestMetrics,
 	recordIngestMetrics,
 } from './lib/metrics.js'
@@ -114,7 +115,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			etagCache: env.ETAG_CACHE,
 			force,
 		})
-		if (report.status === 'error') log.error('source.failed', report)
+		if (isFailedSyncReport(report)) log.error('source.failed', report)
 		else if (report.status === 'pending_deletion')
 			log.info('source.pending_deletion', report)
 		else log.info('source.complete', report)
@@ -130,7 +131,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		synced: reports.filter((r) => r.status === 'synced').length,
 		unchanged: reports.filter((r) => r.status === 'unchanged').length,
 		pending: reports.filter((r) => r.status === 'pending_deletion').length,
-		errors: reports.filter((r) => r.status === 'error').length,
+		errors: reports.filter(isFailedSyncReport).length,
 		force,
 	})
 }

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	flushWorkerMetrics,
+	isFailedSyncReport,
 	recordHealthMetrics,
 	recordHttpRequestMetrics,
 	recordIngestMetrics,
@@ -91,6 +92,45 @@ describe('worker metrics', () => {
 		)
 		expect(metrics).not.toContainEqual(
 			expect.objectContaining({ n: 'tempo_docs_mcp_source_pages_failed' }),
+		)
+	})
+
+	it.each([
+		{ status: 'unchanged' as const, failed: 0, expected: 1 },
+		{ status: 'synced' as const, failed: 0, expected: 1 },
+		{ status: 'synced' as const, failed: 1, expected: 0 },
+		{ status: 'error' as const, failed: 0, expected: 0 },
+	])('marks $status with $failed failed pages as $expected', ({
+		status,
+		failed,
+		expected,
+	}) => {
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		const report =
+			status === 'synced'
+				? {
+						source: 'docs',
+						status,
+						pages: 1,
+						unchanged: 0,
+						failed,
+						deleted: 0,
+						duration_ms: 1,
+					}
+				: status === 'error'
+					? { source: 'docs', status, error: 'failed', duration_ms: 1 }
+					: { source: 'docs', status, duration_ms: 1 }
+		expect(isFailedSyncReport(report)).toBe(expected === 0)
+		recordIngestMetrics({ durationMs: 1, force: false, reports: [report] })
+		flushWorkerMetrics()
+		const metrics = logs
+			.filter((message) => message.startsWith('cwm-'))
+			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({ n: 'tempo_docs_mcp_ingest_ok', v: expected }),
 		)
 	})
 })
