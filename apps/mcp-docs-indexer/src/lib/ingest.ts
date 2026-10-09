@@ -12,6 +12,12 @@ export type SyncReport =
 	| { source: string; status: 'unchanged'; duration_ms: number }
 	| {
 			source: string
+			status: 'pending_deletion'
+			removed: number
+			duration_ms: number
+	  }
+	| {
+			source: string
 			status: 'synced'
 			pages: number
 			unchanged: number
@@ -56,6 +62,9 @@ export async function syncSource(args: {
 			cf: { cacheTtl: 60 },
 		})
 		if (res.status === 304) {
+			if (await etagCache.get(pendingDeletionKey)) {
+				await etagCache.delete(pendingDeletionKey)
+			}
 			return { source: source.id, status: 'unchanged', duration_ms: elapsed() }
 		}
 		if (!res.ok) {
@@ -78,12 +87,13 @@ export async function syncSource(args: {
 		}
 		const prevIndex = await loadIndex(etagCache, indexKey)
 		const intendedKeys = new Set(pageUrls.map((url) => pageKey(url, source.id)))
-		const hasRemovals = Object.keys(prevIndex).some(
-			(key) => !intendedKeys.has(key),
-		)
+		const removedKeys = Object.keys(prevIndex)
+			.filter((key) => !intendedKeys.has(key))
+			.sort()
+		const hasRemovals = removedKeys.length > 0
 		const pendingDeletion = await etagCache.get(pendingDeletionKey)
 		if (hasRemovals && !sourceChanged) {
-			const signature = await sha256(pageUrls.join('\n'))
+			const signature = await sha256(removedKeys.join('\n'))
 			const [observedAt, previousSignature] = pendingDeletion?.split(':') ?? []
 			const observedAtMs = Number(observedAt)
 			if (
@@ -96,8 +106,8 @@ export async function syncSource(args: {
 				}
 				return {
 					source: source.id,
-					status: 'error',
-					error: 'index removals awaiting confirmation',
+					status: 'pending_deletion',
+					removed: removedKeys.length,
 					duration_ms: elapsed(),
 				}
 			}

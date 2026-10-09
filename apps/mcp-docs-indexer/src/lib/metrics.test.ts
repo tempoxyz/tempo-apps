@@ -3,6 +3,7 @@ import {
 	flushWorkerMetrics,
 	recordHealthMetrics,
 	recordHttpRequestMetrics,
+	recordIngestMetrics,
 	recordToolCall,
 } from './metrics.js'
 
@@ -61,6 +62,35 @@ describe('worker metrics', () => {
 				n: 'tempo_docs_mcp_health_ok',
 				v: 1,
 			}),
+		)
+	})
+
+	it('keeps ingestion healthy while removals await confirmation', () => {
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		recordIngestMetrics({
+			durationMs: 1,
+			force: false,
+			reports: [
+				{
+					source: 'docs',
+					status: 'pending_deletion',
+					removed: 1,
+					duration_ms: 1,
+				},
+			],
+		})
+		flushWorkerMetrics()
+		const metrics = logs
+			.filter((message) => message.startsWith('cwm-'))
+			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({ n: 'tempo_docs_mcp_ingest_ok', v: 1 }),
+		)
+		expect(metrics).not.toContainEqual(
+			expect.objectContaining({ n: 'tempo_docs_mcp_source_pages_failed' }),
 		)
 	})
 })

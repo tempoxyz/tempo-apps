@@ -93,8 +93,8 @@ async function confirmDeletion(
 	expect(
 		await syncSource({ source: SOURCE, instance, etagCache }),
 	).toMatchObject({
-		status: 'error',
-		error: 'index removals awaiting confirmation',
+		status: 'pending_deletion',
+		removed: 1,
 	})
 	now.mockReturnValue(300_001)
 	return syncSource({ source: SOURCE, instance, etagCache })
@@ -618,8 +618,8 @@ describe('syncSource — stale-page deletion', () => {
 		expect(
 			await syncSource({ source: SOURCE, instance, etagCache: kv }),
 		).toMatchObject({
-			status: 'error',
-			error: 'index removals awaiting confirmation',
+			status: 'pending_deletion',
+			removed: 1,
 		})
 		expect(deletes).toEqual([])
 		expect(store.get('etag:viem')).toBe('W/"old"')
@@ -633,6 +633,73 @@ describe('syncSource — stale-page deletion', () => {
 		})
 		expect(deletes).toEqual([])
 		expect(store.has('pending_deletion:viem')).toBe(false)
+	})
+
+	it('clears an old deletion candidate when the source recovers with 304', async () => {
+		const { instance, deletes } = fakeInstance()
+		const { kv, store } = fakeKv({
+			'etag:viem': 'W/"old"',
+			'index:viem': JSON.stringify({
+				'viem/keep.md': { id: 'item-viem/keep.md' },
+				'viem/gone.md': { id: 'item-viem/gone.md' },
+			}),
+		})
+		const now = vi.spyOn(Date, 'now').mockReturnValue(0)
+		fetchMock.mockResolvedValueOnce(mockResponse({ body: '- [Keep](/keep)' }))
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_deletion',
+		})
+		expect(store.has('pending_deletion:viem')).toBe(true)
+
+		fetchMock.mockResolvedValueOnce(mockResponse({ status: 304 }))
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'unchanged',
+		})
+		expect(store.has('pending_deletion:viem')).toBe(false)
+
+		now.mockReturnValue(300_001)
+		fetchMock.mockResolvedValueOnce(mockResponse({ body: '- [Keep](/keep)' }))
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_deletion',
+		})
+		expect(deletes).toEqual([])
+	})
+
+	it('confirms the same removal set despite added or reordered pages', async () => {
+		const { instance, deletes } = fakeInstance()
+		const { kv } = fakeKv({
+			'index:viem': JSON.stringify({
+				'viem/keep.md': { id: 'item-viem/keep.md' },
+				'viem/gone.md': { id: 'item-viem/gone.md' },
+			}),
+		})
+		const now = vi.spyOn(Date, 'now').mockReturnValue(0)
+		let indexBody = '- [Keep](/keep)'
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: indexBody })
+				: mockResponse({ body: '# Page' }),
+		)
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'pending_deletion',
+		})
+		indexBody = '- [New](/new)\n- [Keep](/keep)'
+		now.mockReturnValue(300_001)
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'synced',
+			deleted: 1,
+		})
+		expect(deletes).toEqual(['item-viem/gone.md'])
 	})
 
 	it('does NOT delete stale items when any page upload failed', async () => {

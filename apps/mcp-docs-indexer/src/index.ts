@@ -115,6 +115,8 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			force,
 		})
 		if (report.status === 'error') log.error('source.failed', report)
+		else if (report.status === 'pending_deletion')
+			log.info('source.pending_deletion', report)
 		else log.info('source.complete', report)
 		reports.push(report)
 	}
@@ -127,6 +129,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		sources: reports.length,
 		synced: reports.filter((r) => r.status === 'synced').length,
 		unchanged: reports.filter((r) => r.status === 'unchanged').length,
+		pending: reports.filter((r) => r.status === 'pending_deletion').length,
 		errors: reports.filter((r) => r.status === 'error').length,
 		force,
 	})
