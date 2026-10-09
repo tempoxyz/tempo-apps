@@ -18,9 +18,15 @@ import type {
 	TokenSearchResult,
 } from '#routes/api/search'
 import ArrowRight from '~icons/lucide/arrow-right'
-
-const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
-const recentSearchesLimit = 6
+import X from '~icons/lucide/x'
+import {
+	getSearchResultKey,
+	loadRecentSearches,
+	persistRecentSearches,
+	recentSearchesLimit,
+	removeRecentSearch,
+	recentSearchLabel,
+} from '#lib/recent-searches'
 
 type ManualActivation =
 	| { value: Address.Address; type: 'address' }
@@ -36,100 +42,6 @@ function parseBlockInput(raw: string): string | null {
 	const n = Number(withoutHash)
 	if (!Number.isFinite(n) || !Number.isSafeInteger(n) || n < 0) return null
 	return String(n)
-}
-
-function getSearchResultKey(result: SearchResult): string {
-	if (result.type === 'block') return `block-${result.blockNumber}`
-	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
-	return `${result.type}-${result.address.toLowerCase()}`
-}
-
-function isPersistedSearchResult(value: unknown): value is SearchResult {
-	if (typeof value !== 'object' || value == null) return false
-
-	const result = value as Record<string, unknown>
-	if (
-		result.type === 'block' &&
-		typeof result.blockNumber === 'number' &&
-		Number.isSafeInteger(result.blockNumber) &&
-		result.blockNumber >= 0
-	)
-		return true
-
-	if (
-		result.type === 'transaction' &&
-		typeof result.hash === 'string' &&
-		Hex.validate(result.hash) &&
-		Hex.size(result.hash) === 32 &&
-		(result.timestamp === undefined || typeof result.timestamp === 'number')
-	)
-		return true
-
-	const validCategory =
-		result.category === undefined ||
-		result.category === 'token' ||
-		result.category === 'system' ||
-		result.category === 'utility' ||
-		result.category === 'account' ||
-		result.category === 'precompile'
-	const validAddressMetadata =
-		(result.label === undefined || typeof result.label === 'string') &&
-		(result.description === undefined ||
-			typeof result.description === 'string') &&
-		validCategory
-
-	if (
-		result.type === 'address' &&
-		typeof result.address === 'string' &&
-		Address.validate(result.address) &&
-		typeof result.isTip20 === 'boolean' &&
-		validAddressMetadata
-	)
-		return true
-
-	if (
-		result.type === 'token' &&
-		typeof result.address === 'string' &&
-		Address.validate(result.address) &&
-		typeof result.name === 'string' &&
-		typeof result.symbol === 'string' &&
-		typeof result.isTip20 === 'boolean'
-	)
-		return true
-
-	return false
-}
-
-function loadRecentSearches(): SearchResult[] {
-	if (typeof window === 'undefined') return []
-
-	try {
-		const rawValue = window.localStorage.getItem(recentSearchesStorageKey)
-		if (!rawValue) return []
-		const parsedValue = JSON.parse(rawValue)
-		if (!Array.isArray(parsedValue)) return []
-		return parsedValue
-			.filter(isPersistedSearchResult)
-			.slice(0, recentSearchesLimit)
-	} catch {
-		return []
-	}
-}
-
-function persistRecentSearches(results: SearchResult[]): void {
-	if (typeof window === 'undefined') return
-
-	try {
-		if (results.length === 0) {
-			window.localStorage.removeItem(recentSearchesStorageKey)
-			return
-		}
-
-		window.localStorage.setItem(
-			recentSearchesStorageKey,
-			JSON.stringify(results.slice(0, recentSearchesLimit)),
-		)
-	} catch {}
 }
 
 function toManualSearchResult(data: ManualActivation): SearchResult {
@@ -177,6 +89,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const submittingRef = React.useRef(false)
 
 	const query = value.trim()
+	const showingRecent = query.length === 0 && recentSearches.length > 0
 	const normalizedQuery = normalizeSearchInput(query)
 	const isValidInput =
 		query.length > 0 &&
@@ -351,6 +264,20 @@ export function ExploreInput(props: ExploreInput.Props) {
 		})
 	}, [])
 
+	const handleRemoveRecentSearch = React.useCallback(
+		(result: SearchResult) => {
+			// Restore focus before removing a keyboard-focused button from the DOM.
+			inputRef.current?.focus({ preventScroll: true })
+			setSelectedIndex(-1)
+			setRecentSearches((current) => {
+				const next = removeRecentSearch(current, result)
+				persistRecentSearches(next)
+				return next
+			})
+		},
+		[inputRef],
+	)
+
 	const clearRecentSearches = React.useCallback(() => {
 		persistRecentSearches([])
 		setRecentSearches([])
@@ -509,7 +436,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						}}
 						role="combobox"
 						aria-expanded={showResults}
-						aria-haspopup="listbox"
+						aria-haspopup={showingRecent ? 'grid' : 'listbox'}
 						aria-autocomplete="list"
 						aria-controls={resultsId}
 						aria-activedescendant={
@@ -546,9 +473,13 @@ export function ExploreInput(props: ExploreInput.Props) {
 			{menuMounted && (
 				<div
 					ref={resultsRef}
-					id={resultsId}
-					role="listbox"
-					aria-label="Search suggestions"
+					{...(!showingRecent
+						? {
+								id: resultsId,
+								role: 'listbox',
+								'aria-label': 'Search suggestions',
+							}
+						: {})}
 					className={cx(
 						'absolute left-0 right-0 mt-2 z-50',
 						'bg-surface border border-base-border rounded-body overflow-hidden',
@@ -561,7 +492,67 @@ export function ExploreInput(props: ExploreInput.Props) {
 						start={150}
 						className="absolute top-0 left-0 right-0"
 					/>
-					{flatSuggestions.length === 0 ? (
+					{showingRecent ? (
+						<table
+							id={resultsId}
+							// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: Native table semantics support an interactive combobox grid.
+							role="grid"
+							aria-label="Recent searches"
+							className="w-full table-fixed"
+						>
+							<colgroup>
+								<col />
+								<col className="w-[40px]" />
+							</colgroup>
+							<tbody>
+								<tr>
+									<td className="px-[12px] py-[6px] label-12 text-secondary">
+										Recent searches
+									</td>
+									<td className="pr-[8px]">
+										<button
+											type="button"
+											className="label-12 text-tertiary hover:text-base-content"
+											onMouseDown={(event) => event.preventDefault()}
+											onClick={clearRecentSearches}
+										>
+											Clear
+										</button>
+									</td>
+								</tr>
+								{recentSearches.map((item, index) => (
+									<tr key={getSearchResultKey(item)}>
+										<td
+											id={`${resultsId}-${index}`}
+											// biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: This cell is the combobox active descendant in the grid.
+											role="gridcell"
+											tabIndex={-1}
+											aria-selected={index === selectedIndex}
+											className="p-0"
+										>
+											<ExploreInput.SuggestionItem
+												suggestion={item}
+												isSelected={index === selectedIndex}
+												onSelect={handleSelect}
+											/>
+										</td>
+										<td className="p-0 pr-[4px]">
+											<button
+												type="button"
+												aria-label={`Remove ${recentSearchLabel(item)} from recent searches`}
+												title="Remove from recent searches"
+												className="size-[32px] grid place-items-center rounded-body text-tertiary hover:text-base-content hover:bg-base-alt/25 focus-visible:outline-2 focus-visible:outline-focus"
+												onMouseDown={(event) => event.preventDefault()}
+												onClick={() => handleRemoveRecentSearch(item)}
+											>
+												<X className="size-[14px]" />
+											</button>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					) : flatSuggestions.length === 0 ? (
 						<div className="px-[16px] py-[12px] copy-14 text-tertiary">
 							{isError
 								? 'Search unavailable. Paste an address, hash, or block number.'
@@ -668,8 +659,7 @@ export namespace ExploreInput {
 				ref={itemRef}
 				id={id}
 				type="button"
-				role="option"
-				aria-selected={isSelected}
+				{...(id ? { role: 'option', 'aria-selected': isSelected } : {})}
 				onMouseDown={(event) => {
 					event.preventDefault()
 					onSelect(suggestion)
@@ -766,7 +756,7 @@ export namespace ExploreInput {
 			suggestion: SearchResult
 			isSelected: boolean
 			onSelect: (suggestion: SearchResult) => void
-			id: string
+			id?: string
 		}
 	}
 }
