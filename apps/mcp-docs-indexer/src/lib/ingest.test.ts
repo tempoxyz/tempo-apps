@@ -785,6 +785,27 @@ describe('syncSource — stale-page deletion', () => {
 })
 
 describe('syncSource — partial-failure invariants', () => {
+	it('keeps the old source ETag when persisting the new index fails', async () => {
+		const { instance } = fakeInstance()
+		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })
+		const originalPut = kv.put.bind(kv)
+		kv.put = vi.fn(async (key: string, value: string) => {
+			if (key === 'index:viem') throw new Error('KV unavailable')
+			return originalPut(key, value)
+		}) as KVNamespace['put']
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: '- [A](/a)', etag: 'W/"new"' })
+				: mockResponse({ body: '# A' }),
+		)
+
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(report).toMatchObject({ status: 'error', error: 'KV unavailable' })
+		expect(store.get('etag:viem')).toBe('W/"old"')
+		expect(store.has('index:viem')).toBe(false)
+	})
+
 	it('keeps the previous page entry when its fetch fails (so it is not seen as removed)', async () => {
 		const { instance, deletes } = fakeInstance()
 		const { kv, store } = fakeKv({

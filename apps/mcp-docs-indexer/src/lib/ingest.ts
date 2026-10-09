@@ -181,10 +181,10 @@ export async function syncSource(args: {
 		// partial index could re-delete items on the following run.
 		if (failed === 0) {
 			const etag = res.headers.get('etag')
-			if (etag) await etagCache.put(etagKey, etag)
 			await etagCache.put(indexKey, JSON.stringify(next))
 			await etagCache.put(sourceUrlKey, indexUrl)
 			if (hasRemovals) await etagCache.delete(pendingDeletionKey)
+			if (etag) await etagCache.put(etagKey, etag)
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		return {
