@@ -250,6 +250,27 @@ describe('syncSource — page uploads', () => {
 		expect(uploads.map((upload) => upload.key)).toEqual(['tips/0001.md'])
 	})
 
+	it('keeps nested paths distinct from underscores in item keys', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv, store } = fakeKv()
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: '- [Nested](/a/b)\n- [Underscore](/a_b)' })
+				: mockResponse({ body: `# ${url}` }),
+		)
+
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(report).toMatchObject({ status: 'synced', pages: 2, failed: 0 })
+		expect(uploads.map((upload) => upload.key).sort()).toEqual([
+			'viem/a/b.md',
+			'viem/a_b.md',
+		])
+		expect(
+			Object.keys(JSON.parse(store.get('index:viem') ?? '{}')).sort(),
+		).toEqual(['viem/a/b.md', 'viem/a_b.md'])
+	})
+
 	it('uploads each page with source+url metadata', async () => {
 		const { instance, uploads } = fakeInstance()
 		const { kv, store } = fakeKv()
@@ -277,8 +298,8 @@ describe('syncSource — page uploads', () => {
 			deleted: 0,
 		})
 		expect(uploads.map((u) => u.key).sort()).toEqual([
-			'viem/docs_bar.md',
-			'viem/docs_foo.md',
+			'viem/docs/bar.md',
+			'viem/docs/foo.md',
 		])
 		for (const u of uploads) {
 			expect(u.metadata).toEqual({
@@ -292,11 +313,11 @@ describe('syncSource — page uploads', () => {
 
 		const idx = JSON.parse(store.get('index:viem') ?? '{}')
 		expect(Object.keys(idx).sort()).toEqual([
-			'viem/docs_bar.md',
-			'viem/docs_foo.md',
+			'viem/docs/bar.md',
+			'viem/docs/foo.md',
 		])
-		expect(idx['viem/docs_bar.md']).toMatchObject({
-			id: 'item-viem/docs_bar.md',
+		expect(idx['viem/docs/bar.md']).toMatchObject({
+			id: 'item-viem/docs/bar.md',
 			content_hash: expect.any(String),
 		})
 	})
@@ -570,8 +591,8 @@ describe('syncSource — stale-page deletion', () => {
 		expect(store.get('etag:tempo')).toBe('W/"new"')
 		expect(store.get('source_url:tempo')).toBe(`${source.base}/llms.txt`)
 		expect(JSON.parse(store.get('index:tempo') ?? '{}')).toEqual({
-			'tempo/developers_docs_api_mcp.md': {
-				id: 'item-tempo/developers_docs_api_mcp.md',
+			'tempo/developers/docs/api/mcp.md': {
+				id: 'item-tempo/developers/docs/api/mcp.md',
 				content_hash: expect.any(String),
 			},
 		})

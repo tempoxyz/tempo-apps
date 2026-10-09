@@ -378,5 +378,5 @@ function isDocsChromeLine(line: string): boolean {
 /** Derive a stable AI Search item key from a page URL and source id. */
 function pageKey(url: string, sourceId: string): string {
 	const path = new URL(toMarkdownUrl(url)).pathname.replace(/^\/+|\/+$/g, '')
-	return `${sourceId}/${path.replace(/\//g, '_')}`
+	return `${sourceId}/${path}`
 }
