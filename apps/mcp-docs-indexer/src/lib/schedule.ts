@@ -1,11 +1,16 @@
 /**
- * Returns true for the one cron run per day at which we want to bypass all
- * ETag caches. Belt-and-suspenders for sources whose `llms.txt` ETag fails
- * to roll over when individual pages change.
+ * Returns the sources whose forced deep sync runs at this cron tick. A forced
+ * sync bypasses every ETag cache, a backstop for sources whose `llms.txt` ETag
+ * does not roll over when individual pages change.
  *
- * Bound to 00:00 UTC so the forced deep sync happens at a predictable,
- * load-neutral time.
+ * Each source gets its own UTC hour (source index modulo 24), so one cron
+ * invocation never fetches every page of every source and stays within the
+ * Worker subrequest budget.
  */
-export function isForcedHour(scheduledTimeMs: number): boolean {
-	return new Date(scheduledTimeMs).getUTCHours() === 0
+export function forcedSourceIds(
+	scheduledTimeMs: number,
+	sourceIds: readonly string[],
+): Set<string> {
+	const hour = new Date(scheduledTimeMs).getUTCHours()
+	return new Set(sourceIds.filter((_, index) => index % 24 === hour))
 }

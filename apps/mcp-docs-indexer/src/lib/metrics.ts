@@ -186,7 +186,7 @@ export function recordProxyFallback(status: number, durationMs: number): void {
 
 export function recordIngestMetrics(args: {
 	durationMs: number
-	force: boolean
+	forced: ReadonlySet<string>
 	reports: SyncReport[]
 }): void {
 	const ok = args.reports.every((report) => !isFailedSyncReport(report))
@@ -198,7 +198,7 @@ export function recordIngestMetrics(args: {
 	)
 	for (const report of args.reports) {
 		const tags = {
-			force: String(args.force),
+			force: String(args.forced.has(report.source)),
 			source: report.source,
 			status: report.status,
 		}
