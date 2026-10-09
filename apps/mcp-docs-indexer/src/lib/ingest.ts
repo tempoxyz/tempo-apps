@@ -25,6 +25,7 @@ export type SyncReport =
 const CONCURRENCY = 8
 /** Skip pages larger than AI Search's 4MB per-file cap (with margin). */
 const MAX_PAGE_BYTES = 3_500_000
+const DELETION_CONFIRMATION_MS = 5 * 60_000
 
 export async function syncSource(args: {
 	source: Source
@@ -37,6 +38,7 @@ export async function syncSource(args: {
 	const indexKey = `index:${source.id}`
 	const etagKey = `etag:${source.id}`
 	const sourceUrlKey = `source_url:${source.id}`
+	const pendingDeletionKey = `pending_deletion:${source.id}`
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 
@@ -75,6 +77,33 @@ export async function syncSource(args: {
 			}
 		}
 		const prevIndex = await loadIndex(etagCache, indexKey)
+		const intendedKeys = new Set(pageUrls.map((url) => pageKey(url, source.id)))
+		const hasRemovals = Object.keys(prevIndex).some(
+			(key) => !intendedKeys.has(key),
+		)
+		const pendingDeletion = await etagCache.get(pendingDeletionKey)
+		if (hasRemovals && !sourceChanged) {
+			const signature = await sha256(pageUrls.join('\n'))
+			const [observedAt, previousSignature] = pendingDeletion?.split(':') ?? []
+			const observedAtMs = Number(observedAt)
+			if (
+				previousSignature !== signature ||
+				!Number.isFinite(observedAtMs) ||
+				Date.now() - observedAtMs < DELETION_CONFIRMATION_MS
+			) {
+				if (previousSignature !== signature || !Number.isFinite(observedAtMs)) {
+					await etagCache.put(pendingDeletionKey, `${Date.now()}:${signature}`)
+				}
+				return {
+					source: source.id,
+					status: 'error',
+					error: 'index removals awaiting confirmation',
+					duration_ms: elapsed(),
+				}
+			}
+		} else if (pendingDeletion) {
+			await etagCache.delete(pendingDeletionKey)
+		}
 		const next: SourceIndex = {}
 		let pages = 0
 		let unchanged = 0
@@ -145,6 +174,7 @@ export async function syncSource(args: {
 			if (etag) await etagCache.put(etagKey, etag)
 			await etagCache.put(indexKey, JSON.stringify(next))
 			await etagCache.put(sourceUrlKey, indexUrl)
+			if (hasRemovals) await etagCache.delete(pendingDeletionKey)
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		return {
