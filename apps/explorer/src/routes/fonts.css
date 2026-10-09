@@ -14,11 +14,11 @@
 	font-display: swap;
 }
 
-/* Code and hashes use Regen's light monospace face. */
+/* Code and identifiers use TDS’s regular monospace face. */
 @font-face {
 	font-family: "JetBrains Mono";
-	src: url("/fonts/jetbrains-mono/JetBrainsMono-Light.woff2") format("woff2");
-	font-weight: 300;
+	src: url("/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2") format("woff2");
+	font-weight: 400;
 	font-style: normal;
 	font-display: swap;
 }

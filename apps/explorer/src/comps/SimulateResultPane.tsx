@@ -291,8 +291,10 @@ export function SimulateAnswer(props: SimulateAnswer.Props): React.JSX.Element {
 		return (
 			<AnswerShell>
 				<p className="font-sans copy-13">
-					<span className="text-tertiary">{call} returned </span>
-					<span className="font-medium text-primary">{returned}</span>
+					<span className="text-tertiary">
+						<span className="font-mono">{call}</span> returned{' '}
+					</span>
+					<span className="font-mono text-primary">{returned}</span>
 				</p>
 			</AnswerShell>
 		)
@@ -309,7 +311,11 @@ export function SimulateAnswer(props: SimulateAnswer.Props): React.JSX.Element {
 	return (
 		<AnswerShell>
 			<p className="copy-13 text-tertiary">
-				{call ? `${call} completed. ` : ''}
+				{call && (
+					<>
+						<span className="font-mono">{call}</span> completed.{' '}
+					</>
+				)}
 				{execution.logs.length === 0
 					? 'No events emitted.'
 					: `${execution.logs.length} event${execution.logs.length === 1 ? '' : 's'} emitted.`}
@@ -351,7 +357,7 @@ function FailureAnswer(props: {
 	return (
 		<div className="flex flex-col gap-[8px] border-b border-card-border bg-negative/[0.03] px-[16px] py-[12px]">
 			<p className="font-sans copy-13 text-secondary">
-				{call ? `${call} ` : ''}
+				{call && <span className="font-mono">{call} </span>}
 				<span className="text-tertiary">reverted</span>
 			</p>
 
@@ -367,7 +373,7 @@ function FailureAnswer(props: {
 										className="min-w-0 break-all text-primary"
 										title={arg.title}
 									>
-										{arg.value}
+										<span className="font-mono">{arg.value}</span>
 										{arg.note && (
 											<span className="ml-[8px] text-content-dimmed">
 												{arg.note}
@@ -380,7 +386,7 @@ function FailureAnswer(props: {
 					)}
 				</div>
 			) : (
-				<div className="rounded-body border border-negative/25 bg-negative/6 px-[11px] py-[9px] type-card-data break-all text-secondary">
+				<div className="rounded-body border border-negative/25 bg-negative/6 px-[11px] py-[9px] type-card-data break-all text-secondary font-mono">
 					{decoded?.raw ?? props.returnData ?? 'No revert data returned.'}
 				</div>
 			)}
@@ -746,7 +752,11 @@ export function SimulateBalances(props: {
 											name={metadata?.symbol}
 											className="size-[14px]!"
 										/>
-										{metadata?.symbol ?? HexFormatter.truncate(change.token)}
+										{metadata?.symbol ?? (
+											<span className="font-mono">
+												{HexFormatter.truncate(change.token)}
+											</span>
+										)}
 									</Link>
 								</td>
 								<td

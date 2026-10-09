@@ -102,7 +102,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 							{
 								label: 'Master ID',
 								value: (
-									<span className="text-primary">
+									<span className="text-primary font-mono">
 										{virtualAddressParts.masterId}
 									</span>
 								),
@@ -110,7 +110,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 							{
 								label: 'User Tag',
 								value: (
-									<span className="text-primary">
+									<span className="text-primary font-mono">
 										{virtualAddressParts.userTag}
 									</span>
 								),

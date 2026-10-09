@@ -98,7 +98,11 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				<div className="flex items-center justify-between px-[10px] py-[8px] border-b border-card-border">
 					<code className="label-12 text-primary font-sans">
 						<span className="text-base-content-positive">
-							{'name' in abiItem ? abiItem.name : selector}
+							{'name' in abiItem ? (
+								abiItem.name
+							) : (
+								<span className="font-mono">{selector}</span>
+							)}
 						</span>
 						<span className="text-secondary">(</span>
 						{abiItem.inputs?.map((input, i) => (

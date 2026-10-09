@@ -133,7 +133,7 @@ export const Route = createRootRouteWithContext<{
 			},
 			{
 				rel: 'preload',
-				href: '/fonts/jetbrains-mono/JetBrainsMono-Light.woff2',
+				href: '/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',

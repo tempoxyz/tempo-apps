@@ -38,7 +38,7 @@ export function AssetSymbol(props: { asset: AssetData }): React.JSX.Element {
 
 export function AssetContract(props: { asset: AssetData }): React.JSX.Element {
 	return (
-		<span className="text-accent">
+		<span className="text-accent font-mono">
 			{HexFormatter.truncate(props.asset.address, 10)}
 		</span>
 	)

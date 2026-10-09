@@ -136,7 +136,7 @@ export function ContractCodeView(
 			layout: { paddingTop: 0, paddingBottom: 16, gap: 16 },
 			onPostRender: syncScrollCode,
 			unsafeCSS:
-				':host { --diffs-font-family: "Geist Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--color-source-background); }',
+				':host { --diffs-font-family: "JetBrains Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--color-source-background); }',
 		}),
 		[theme, wrap, syncScrollCode],
 	)

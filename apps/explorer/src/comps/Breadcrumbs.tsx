@@ -232,7 +232,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 										)}
 										title={crumb.path}
 									>
-										{crumb.label}
+										<CrumbLabel label={crumb.label} />
 									</span>
 								) : (
 									<Link
@@ -240,7 +240,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 										className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
 										title={crumb.path}
 									>
-										{crumb.label}
+										<CrumbLabel label={crumb.label} />
 									</Link>
 								)}
 							</React.Fragment>
@@ -297,4 +297,15 @@ export function BreadcrumbsPortal() {
 
 	// No slot registered - BreadcrumbsSlot handles the loading fallback
 	return null
+}
+
+function CrumbLabel(props: { label: string }): React.JSX.Element {
+	const index = props.label.indexOf('0x')
+	if (index === -1) return <>{props.label}</>
+	return (
+		<>
+			{props.label.slice(0, index)}
+			<span className="font-mono">{props.label.slice(index)}</span>
+		</>
+	)
 }

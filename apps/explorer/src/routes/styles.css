@@ -180,7 +180,7 @@ body {
 pre,
 code {
 	font-family: var(--font-code);
-	font-weight: 300;
+	font-weight: 400;
 }
 
 a:focus-visible,
@@ -451,9 +451,9 @@ pre .shiki,
 	}
 }
 
-/* Only one code weight is supplied by the brand. Never synthesize bold mono. */
+/* Match TDS’s regular mono weight without synthesizing bold. */
 @utility font-mono {
 	font-family: var(--font-code);
-	font-weight: 300;
+	font-weight: 400;
 	letter-spacing: 0;
 }

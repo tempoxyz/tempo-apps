@@ -71,7 +71,7 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 	return (
 		<span
 			ref={ref}
-			className="midcut"
+			className={prefix === '0x' ? 'midcut font-mono' : 'midcut'}
 			data-align={align}
 			data-cut={display !== value ? 'true' : 'false'}
 			title={value}

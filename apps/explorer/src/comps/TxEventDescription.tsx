@@ -221,8 +221,11 @@ export namespace TxEventDescription {
 			case 'role':
 				return (
 					<span className="items-end whitespace-nowrap" title={part.value}>
-						{RoleFormatter.getRoleName(part.value) ||
-							HexFormatter.shortenHex(part.value)}
+						{RoleFormatter.getRoleName(part.value) || (
+							<span className="font-mono">
+								{HexFormatter.shortenHex(part.value)}
+							</span>
+						)}
 					</span>
 				)
 			case 'text':
