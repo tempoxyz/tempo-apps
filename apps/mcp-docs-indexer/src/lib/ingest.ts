@@ -227,11 +227,12 @@ async function syncPage(args: {
 			log.warn('page.empty', { source: source.id, url })
 			return { key, outcome: 'failed', entry: prev }
 		}
-		if (content.length > MAX_PAGE_BYTES) {
+		const bytes = new TextEncoder().encode(content).byteLength
+		if (bytes > MAX_PAGE_BYTES) {
 			log.warn('page.too_large', {
 				source: source.id,
 				url,
-				bytes: content.length,
+				bytes,
 			})
 			return { key, outcome: 'failed', entry: prev }
 		}

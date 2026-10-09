@@ -151,6 +151,26 @@ describe('syncSource — llms.txt index', () => {
 })
 
 describe('syncSource — page uploads', () => {
+	it('rejects pages whose UTF-8 bytes exceed the upload limit', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv, store } = fakeKv()
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: '- [Large](/large)', etag: 'W/"new"' })
+				: mockResponse({ body: `# Large\n${'é'.repeat(1_750_001)}` }),
+		)
+
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(report).toMatchObject({ status: 'synced', pages: 0, failed: 1 })
+		expect(uploads).toHaveLength(0)
+		expect(store.has('etag:viem')).toBe(false)
+		expect(console.warn).toHaveBeenCalledWith(
+			'page.too_large',
+			expect.objectContaining({ bytes: 3_500_010 }),
+		)
+	})
+
 	it('uploads each page with source+url metadata', async () => {
 		const { instance, uploads } = fakeInstance()
 		const { kv, store } = fakeKv()
