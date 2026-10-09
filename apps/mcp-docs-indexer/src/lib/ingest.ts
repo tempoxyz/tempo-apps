@@ -261,6 +261,10 @@ async function syncPage(args: {
 			// Keep the old entry so the page is not treated as removed.
 			return { key, outcome: 'failed', entry: prev }
 		}
+		if (res.headers.get('content-type')?.toLowerCase().includes('text/html')) {
+			log.warn('page.html_response', { source: source.id, url })
+			return { key, outcome: 'failed', entry: prev }
+		}
 
 		const content = preparePageContent(await res.text())
 		if (!content) {

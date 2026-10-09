@@ -73,10 +73,12 @@ function mockResponse(init: {
 	status?: number
 	body?: string
 	etag?: string
+	contentType?: string
 }): Response {
 	const status = init.status ?? 200
 	const headers = new Headers()
 	if (init.etag) headers.set('etag', init.etag)
+	if (init.contentType) headers.set('content-type', init.contentType)
 	return {
 		status,
 		ok: status >= 200 && status < 300,
@@ -186,6 +188,39 @@ describe('syncSource — page uploads', () => {
 		expect(console.warn).toHaveBeenCalledWith(
 			'page.too_large',
 			expect.objectContaining({ bytes: 3_500_010 }),
+		)
+	})
+
+	it('rejects HTML returned from a Markdown URL', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv, store } = fakeKv({
+			'index:viem': JSON.stringify({
+				'viem/tooltip.md': { id: 'existing-tooltip' },
+			}),
+		})
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: '- [Tooltip](/tooltip)', etag: 'W/"next"' })
+				: mockResponse({
+						body: '<!doctype html><html><body>Site shell</body></html>',
+						contentType: 'text/html; charset=utf-8',
+					}),
+		)
+
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+
+		expect(report).toMatchObject({ status: 'synced', pages: 0, failed: 1 })
+		expect(uploads).toEqual([])
+		expect(store.has('etag:viem')).toBe(false)
+		expect(JSON.parse(store.get('index:viem') ?? '{}')).toEqual({
+			'viem/tooltip.md': { id: 'existing-tooltip' },
+		})
+		expect(console.warn).toHaveBeenCalledWith(
+			'page.html_response',
+			expect.objectContaining({
+				source: 'viem',
+				url: 'https://viem.sh/tooltip',
+			}),
 		)
 	})
 
