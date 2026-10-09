@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { handleMcp } from './mcp.js'
@@ -29,6 +29,13 @@ const sources: Source[] = [
 		description: 'React Hooks for Ethereum / Tempo',
 	},
 ]
+
+beforeEach(() => {
+	vi.stubGlobal(
+		'fetch',
+		vi.fn(async () => new Response('not found', { status: 404 })),
+	)
+})
 
 afterEach(() => {
 	vi.unstubAllGlobals()
