@@ -39,6 +39,8 @@ async function fetchAddressBalances(
 	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
 		headers: { 'Content-Type': 'application/json' },
 	})
+	if (!response.ok)
+		throw new Error(`Failed to fetch address balances: ${response.status}`)
 	return response.json() as Promise<BalancesResponse>
 }
 
