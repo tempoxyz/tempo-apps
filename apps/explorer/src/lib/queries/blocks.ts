@@ -94,9 +94,13 @@ export function blockKnownEventsQueryOptions(
 
 			const receiptByHash = new Map<string, TransactionReceipt>()
 			for (const receipt of receipts) {
-				if (receipt) {
-					receiptByHash.set(receipt.transactionHash.toLowerCase(), receipt)
-				}
+				// Multisig operations can report a `pending` receipt before they
+				// execute; a block only describes executed transactions.
+				if (!receipt || receipt.status === 'pending') continue
+				receiptByHash.set(receipt.transactionHash.toLowerCase(), {
+					...receipt,
+					status: receipt.status,
+				})
 			}
 
 			const allTip20Addresses = new Set<string>()
