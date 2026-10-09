@@ -436,6 +436,61 @@ describe('syncSource — per-page conditional fetch', () => {
 
 describe('syncSource — stale-page deletion', () => {
 	it.each([
+		'item_not_found',
+		'AiSearchNotFoundError: item_not_found',
+	])('persists the Tempo migration when a stale item is already missing: %s', async (message) => {
+		const source = { id: 'tempo', base: 'https://tempo.xyz/developers' }
+		const { instance, uploads } = fakeInstance()
+		const deleteItem = vi
+			.spyOn(instance.items, 'delete')
+			.mockRejectedValue(
+				Object.assign(new Error(message), { name: 'AiSearchNotFoundError' }),
+			)
+		const { kv, store } = fakeKv({
+			'etag:tempo': 'W/"old"',
+			'source_url:tempo': 'https://docs.tempo.xyz/llms.txt',
+			'index:tempo': JSON.stringify({
+				'tempo/docs_api_mcp.md': { id: 'missing-item' },
+			}),
+		})
+		fetchMock.mockResolvedValueOnce(
+			mockResponse({ body: '- [MCP](/docs/api/mcp)', etag: 'W/"new"' }),
+		)
+		fetchMock.mockResolvedValueOnce(mockResponse({ body: '# MCP' }))
+
+		expect(await syncSource({ source, instance, etagCache: kv })).toMatchObject(
+			{
+				status: 'synced',
+				pages: 1,
+				failed: 0,
+				deleted: 1,
+			},
+		)
+		expect(deleteItem).toHaveBeenCalledExactlyOnceWith('missing-item')
+		expect(console.warn).not.toHaveBeenCalled()
+		expect(store.get('etag:tempo')).toBe('W/"new"')
+		expect(store.get('source_url:tempo')).toBe(`${source.base}/llms.txt`)
+		expect(JSON.parse(store.get('index:tempo') ?? '{}')).toEqual({
+			'tempo/developers_docs_api_mcp.md': {
+				id: 'item-tempo/developers_docs_api_mcp.md',
+				content_hash: expect.any(String),
+			},
+		})
+
+		fetchMock.mockResolvedValueOnce(mockResponse({ status: 304 }))
+		expect(await syncSource({ source, instance, etagCache: kv })).toMatchObject(
+			{
+				status: 'unchanged',
+			},
+		)
+		expect(fetchMock.mock.lastCall?.[1]).toMatchObject({
+			headers: { 'If-None-Match': 'W/"new"' },
+		})
+		expect(uploads).toHaveLength(1)
+		expect(deleteItem).toHaveBeenCalledTimes(1)
+	})
+
+	it.each([
 		'',
 		'- [Off-origin](https://example.com/page)',
 	])('preserves all state when the index has no valid pages: %s', async (body) => {
@@ -548,10 +603,13 @@ describe('syncSource — stale-page deletion', () => {
 		})
 	})
 
-	it('treats a delete failure as a failed page and aborts state advance', async () => {
-		const { instance, deletes } = fakeInstance({
-			deleteFails: new Set(['item-viem/gone.md']),
-		})
+	it.each([
+		'network down',
+		'AiSearchNotFoundError: ai_search_not_found',
+		'AiSearchError: You are being rate limited.',
+	])('preserves state for other deletion failures: %s', async (message) => {
+		const { instance, deletes } = fakeInstance()
+		vi.spyOn(instance.items, 'delete').mockRejectedValue(new Error(message))
 		const { kv, store } = fakeKv({
 			'etag:viem': 'W/"prev"',
 			'index:viem': JSON.stringify({

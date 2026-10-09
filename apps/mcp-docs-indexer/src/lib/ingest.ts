@@ -117,6 +117,15 @@ export async function syncSource(args: {
 					await instance.items.delete(entry.id)
 					deleted++
 				} catch (err) {
+					// An already-missing item satisfies the stale-page deletion.
+					if (
+						err instanceof Error &&
+						(err.message === 'item_not_found' ||
+							err.message === 'AiSearchNotFoundError: item_not_found')
+					) {
+						deleted++
+						continue
+					}
 					log.warn('page.delete_failed', {
 						source: source.id,
 						key,
