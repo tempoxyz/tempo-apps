@@ -122,7 +122,9 @@ export const cases: EvalCase[] = [
 		kind: 'tools',
 		requiredTools: ['search', 'find_pages', 'read_page'],
 		requiredSources: ['tempo', 'viem', 'wagmi', 'vocs', 'mpp', 'regen'],
-		maxBytes: 2_800,
+		// The codemode tool description embeds generated TypeScript declarations
+		// for the three docs tools; they account for most of the payload.
+		maxBytes: 7_000,
 	},
 	{
 		name: 'source_resource',
@@ -136,8 +138,8 @@ export const cases: EvalCase[] = [
 			'`mpp`',
 			'`regen`',
 		],
-		maxBytes: 1_000,
-		maxTextChars: 800,
+		maxBytes: 1_200,
+		maxTextChars: 1_000,
 	},
 	{
 		name: 'tempo_index_resource',
@@ -145,11 +147,12 @@ export const cases: EvalCase[] = [
 		uri: 'tempo-docs://source/tempo/index',
 		expectedText: [
 			'# tempo docs page index',
-			'Use virtual addresses for deposits',
+			'Customer deposit addresses',
 			'https://tempo.xyz/developers/docs/guide/payments/virtual-addresses',
 		],
-		maxBytes: 5_200,
-		maxTextChars: 4_800,
+		// The resource lists the full page index (up to 500 entries).
+		maxBytes: 30_000,
+		maxTextChars: 28_000,
 	},
 	{
 		name: 'viem_fee_token_filtered',
@@ -260,7 +263,7 @@ export const cases: EvalCase[] = [
 		expectedUrlIncludes: [
 			'tempo.xyz/developers/docs/guide/payments/virtual-addresses',
 		],
-		expectedTitleIncludes: ['Use virtual addresses for deposits'],
+		expectedTitleIncludes: ['Customer deposit addresses'],
 		maxBytes: 1_500,
 		maxPages: 5,
 	},
@@ -273,7 +276,27 @@ export const cases: EvalCase[] = [
 		expectedUrlIncludes: [
 			'tempo.xyz/developers/docs/guide/payments/virtual-addresses',
 		],
-		expectedTitleIncludes: ['Use virtual addresses for deposits'],
+		expectedTitleIncludes: ['Customer deposit addresses'],
+		maxBytes: 1_500,
+		maxPages: 5,
+	},
+	{
+		name: 'find_tempo_mcp_short_query',
+		kind: 'find_pages',
+		source: 'tempo',
+		query: 'MCP',
+		expectedUrlIncludes: ['tempo.xyz/developers/docs/api/mcp'],
+		expectedTitleIncludes: ['MCP'],
+		maxBytes: 1_500,
+		maxPages: 5,
+	},
+	{
+		name: 'find_tips_state_creation',
+		kind: 'find_pages',
+		source: 'tips',
+		query: 'state creation cost',
+		expectedUrlIncludes: ['tips.sh/1000'],
+		expectedTitleIncludes: ['TIP-1000'],
 		maxBytes: 1_500,
 		maxPages: 5,
 	},
@@ -287,7 +310,7 @@ export const cases: EvalCase[] = [
 		expectedUrlIncludes: [
 			'tempo.xyz/developers/docs/guide/payments/virtual-addresses',
 		],
-		expectedTextIncludes: ['# Use virtual addresses for deposits'],
+		expectedTextIncludes: ['# Customer deposit addresses'],
 		maxBytes: 5_000,
 		maxTextChars: 4_100,
 	},

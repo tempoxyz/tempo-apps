@@ -55,10 +55,10 @@ describe('parseLlmsTxt', () => {
 - **TIP-1026**: Token Logo URI (Approved)
 - **TIP-1061-1**: Native Multisig Accounts (Draft)
 `
+		// Suffixed revisions (TIP-1061-1) are served only as HTML.
 		expect(parseLlmsTxt(body, 'https://tips.sh')).toEqual([
 			'https://tips.sh/0000.md',
 			'https://tips.sh/1026.md',
-			'https://tips.sh/1061-1.md',
 		])
 	})
 
@@ -67,9 +67,9 @@ describe('parseLlmsTxt', () => {
 <a href="/0000">TIP-0000</a><a href="/1000-1">TIP-1000-1</a>
 <a href="/assets/main.js">Asset</a><a href="https://example.com/0001">Other</a>
 <a href="/0000">Duplicate</a></body></html>`
+		// Suffixed revisions (/1000-1) are served only as HTML.
 		expect(parseLlmsTxt(body, 'https://tips.sh')).toEqual([
 			'https://tips.sh/0000.md',
-			'https://tips.sh/1000-1.md',
 		])
 	})
 

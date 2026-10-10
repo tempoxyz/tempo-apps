@@ -7,16 +7,23 @@ canonical Markdown pages for configured sources into the instance's
 **built-in storage**, tagged with a `source` metadata field for filtering at
 query time.
 
-The Worker exposes an optimized MCP endpoint on `mcp.tempo.xyz`. It handles
-`tools/list`, `tools/call` for `search`, and docs source `resources/*` locally
-so it can provide a compact tool schema, source-aware filters, and lower-token
-search responses. Unsupported MCP methods fall through to the AI Search MCP
-upstream, so clients still connect to a stable branded URL instead of the
-opaque `<instance-id>.search.ai.cloudflare.com` hostname.
+The Worker serves a stateless streamable-HTTP MCP endpoint on `mcp.tempo.xyz`
+and answers every JSON-RPC message itself: `initialize` (advertising tools,
+resources, and server instructions), `ping`, `tools/*`, and `resources/*`.
+Notifications get `202 Accepted` and unknown methods get JSON-RPC errors.
+Batches (required by protocol revision 2025-03-26) of up to 20 messages are
+answered four at a time as a JSON array; an array inside a batch is an invalid
+request, not a nested batch. An unsupported `MCP-Protocol-Version` header gets
+`400`, except on `initialize`, which negotiates the version. Every
+response carries CORS headers so browser clients, such as the docs site's MCP
+explorer, can call it directly. Unexpected failures return a generic message
+and are logged as `mcp.request_failed` or `mcp.tool_failed`. It queries AI
+Search through the Worker binding; nothing is proxied to the instance's public
+MCP endpoint.
 
 ```
-MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ optimized search/resources
-                                      └─▶ AI Search MCP fallback
+MCP clients ──▶ https://mcp.tempo.xyz/ ──▶ search/find_pages/read_page/code + resources
+                                              └─▶ AI Search binding (query plane)
 Cron ──▶ mcp-docs-indexer Worker ──▶ AI Search items.upload() (ingest plane)
 ```
 
@@ -95,7 +102,25 @@ always take precedence.
 Use `find_pages` when the task names a specific source and you need exact page
 candidates before retrieving content. It searches the source's cached
 `llms.txt` index and returns compact `{ title, url, score }` rows without
-calling AI Search or reading page bodies.
+calling AI Search or reading page bodies. Ranking keeps short terms such as
+`MCP`, `RPC`, `T12`, and `TIP-20`, ranks exact title phrases first, prefers
+pages in a docs section the query names, and breaks ties toward shorter, more
+specific titles.
+
+### Docs sections
+
+The server follows each source's docs navigation from the `##` and `###`
+headings in its `llms.txt` (a wrapping `Table of Contents` heading is ignored).
+For Tempo these are the product sections, such as `Accounts`, `Earn`, and
+`Zones / Earlier testnet sandbox`.
+
+- `find_pages` rows and compact `search` chunks include `section`. Search
+  chunks crawled directly by AI Search carry only a URL, so the server also
+  fills in their `source` from the configured source that owns that URL.
+- `tempo-docs://source/<id>/index` groups pages under section headings, and
+  `tempo-docs://source/<id>` lists the sections.
+- Page text keeps a short `> Section: Accounts` line from the Tempo docs
+  breadcrumb, along with any earlier-sandbox warning.
 
 Use `read_page` when a search result points at the exact page you need. It
 fetches one same-origin docs page from a configured source, strips docs chrome,
@@ -114,6 +139,23 @@ deduplication, so broad searches cannot accidentally fill the client context
 with five large excerpts. The public tool schema exposes only bounded,
 task-specific controls; upstream AI Search configuration and raw chunk
 responses are not advertised to MCP clients.
+
+Search results include `retrieval`: `ai_search` when chunks came from AI
+Search, `source_index` when AI Search returned nothing for a single-source
+search and the server fell back to title matching against that source's
+`llms.txt` index, or `none` when neither found anything.
+
+Retrieval uses hybrid search with a `0.3` match threshold and reranking with a
+`0.2` floor. Query rewriting is disabled: on a labeled production sample it
+added an extra model call per search (about 2.5s at p50) and rewrote keyword
+queries into generic questions without improving hits. Older clients that send
+`ai_search_options` can still set retrieval shape, result count, thresholds,
+metadata filters, and disable the cache; reranking, rewriting, and other
+upstream settings are server-owned.
+
+Invalid tool arguments and unreadable pages return a tool result with
+`isError: true` and a message the model can act on. Unknown tools and
+malformed requests return JSON-RPC errors.
 
 Pass `response_format: "structured"` on `search`, `find_pages`, or `read_page`
 when the client can read MCP `structuredContent`; this keeps the text content to
@@ -310,6 +352,16 @@ Cloudflare Logpush → metrics exporter → Datadog path. Metric names use the
 `tempo_docs_mcp_` prefix and global tags `repository:tempo-apps`,
 `component:docs_mcp`, and `service:tempo-docs-mcp`.
 
+A once-a-minute cron runs a health check against the public endpoint.
+`tempo_docs_mcp_health_ok` reports availability: `initialize` must advertise
+resources, `tools/list` and `resources/list` must return the docs tools and
+sources, a `source: "tempo"` search must return chunks, and `find_pages` and
+`read_page` must work. A separate informational check,
+`tempo_docs_mcp_health_check_ok{check:search_tempo_indexed}`, requires those
+search chunks to come from AI Search (`retrieval: "ai_search"`). It reports `0`
+when Tempo search only works through the `llms.txt` fallback, and logs
+`mcp.health_degraded` without affecting `tempo_docs_mcp_health_ok`.
+
 Important metrics:
 
 - `tempo_docs_mcp_health_ok`
@@ -323,7 +375,6 @@ Important metrics:
 - `tempo_docs_mcp_ai_search_request_count`
 - `tempo_docs_mcp_ai_search_duration_ms`
 - `tempo_docs_mcp_ai_search_empty_result_count`
-- `tempo_docs_mcp_proxy_fallback_count`
 - `tempo_docs_mcp_ingest_ok`
 - `tempo_docs_mcp_ingest_duration_ms`
 - `tempo_docs_mcp_source_sync_count`

@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { handleMcp } from './mcp.js'
-import { captureMcpAnalytics, parseJsonRpcRequest } from './posthog-mcp.js'
+import {
+	captureMcpAnalytics,
+	captureMcpBatchAnalytics,
+	parseJsonRpcRequest,
+} from './posthog-mcp.js'
 import type { Source } from './sources.js'
 
 function instance(
@@ -30,6 +34,8 @@ const sources: Source[] = [
 	},
 ]
 
+// Search looks up docs sections in source indexes; keep tests off the network
+// unless they stub the responses they need.
 beforeEach(() => {
 	vi.stubGlobal(
 		'fetch',
@@ -158,9 +164,11 @@ describe('handleMcp', () => {
 			)
 			const body = await res?.json()
 			if (length > 4096) {
-				expect(body.error).toMatchObject({
-					code: -32602,
-					message: 'query exceeds maximum length of 4096 characters',
+				expect(body.error).toBeUndefined()
+				expect(body.result.isError).toBe(true)
+				expect(JSON.parse(body.result.content[0].text)).toEqual({
+					success: false,
+					error: 'query exceeds maximum length of 4096 characters',
 				})
 				expect(search).not.toHaveBeenCalled()
 				expect(fetcher).not.toHaveBeenCalled()
@@ -291,6 +299,9 @@ describe('handleMcp', () => {
 			body.result.tools.map((tool: { name: string }) => tool.name),
 		).toEqual(['search', 'find_pages', 'read_page', 'code'])
 		expect(body.result.tools[3].description).toContain('codemode.find_pages')
+		expect(body.result.tools[3].description).toContain('sources?: string[]')
+		expect(body.result.tools[3].description).not.toContain('"wagmi"[]')
+		expect(body.result.tools[3].description).not.toContain('source: "..."')
 		expect(body.result.tools[3].annotations).toEqual({
 			destructiveHint: false,
 			idempotentHint: true,
@@ -997,7 +1008,11 @@ describe('handleMcp', () => {
 
 		expect(called).toBe(false)
 		const body = await res?.json()
-		expect(body.error.message).toBe('unknown source: unknown')
+		expect(body.error).toBeUndefined()
+		expect(body.result.isError).toBe(true)
+		expect(JSON.parse(body.result.content[0].text).error).toBe(
+			'unknown source: unknown',
+		)
 	})
 
 	it('falls back to unfiltered search when metadata filters are stale', async () => {
@@ -1194,9 +1209,10 @@ describe('handleMcp', () => {
 			'https://docs.tempo.xyz/guide/payments/virtual-addresses.md',
 		])
 		const text = await textContent(res)
+		expect(text.result.retrieval).toBe('source_index')
 		expect(text.result.chunks).toEqual([
 			{
-				score: 0.85,
+				score: 0.6471,
 				source: 'tempo',
 				url: 'https://docs.tempo.xyz/guide/payments/virtual-addresses',
 				text: '# Use virtual addresses for deposits\n\nRegister a virtual-address master and watch deposits.',
@@ -1407,7 +1423,7 @@ describe('handleMcp', () => {
 			{
 				title: 'Virtual addresses',
 				url: 'https://page-finder.tempo.xyz/virtual-addresses',
-				score: 0.35,
+				score: 0.4118,
 			},
 		])
 	})
@@ -2029,19 +2045,10 @@ Was this helpful?`,
 		)
 
 		const body = await res?.json()
-		expect(body.error.message).toBe('path or url must be provided')
-	})
-
-	it('falls back to the upstream proxy for unsupported MCP methods', async () => {
-		const res = await handleMcp(
-			new Request('https://mcp.tempo.xyz/', {
-				method: 'POST',
-				body: JSON.stringify({ jsonrpc: '2.0', id: 17, method: 'initialize' }),
-			}),
-			{ instance: instance(async () => ({ search_query: '', chunks: [] })) },
+		expect(body.result.isError).toBe(true)
+		expect(JSON.parse(body.result.content[0].text).error).toBe(
+			'url must be a page under https://viem.sh',
 		)
-
-		expect(res).toBeUndefined()
 	})
 })
 
@@ -2129,6 +2136,52 @@ describe('captureMcpAnalytics', () => {
 				query: 'tempo docs',
 				api_key: '[redacted]',
 			},
+		})
+	})
+
+	it('captures one event per batched request', async () => {
+		const fetch = vi.fn().mockResolvedValue(new Response('{}'))
+		vi.stubGlobal('fetch', fetch)
+		const waitUntil = vi.fn((promise: Promise<unknown>) => promise)
+		const ctx = { waitUntil } as unknown as ExecutionContext
+		const req = new Request('https://mcp.tempo.xyz/', {
+			method: 'POST',
+			body: JSON.stringify([
+				{ jsonrpc: '2.0', id: 1, method: 'tools/list' },
+				{ jsonrpc: '2.0', method: 'notifications/initialized' },
+				{
+					jsonrpc: '2.0',
+					id: 2,
+					method: 'tools/call',
+					params: { name: 'find_pages', arguments: { query: 'fees' } },
+				},
+			]),
+		})
+		const body = await parseJsonRpcRequest(req)
+		if (!Array.isArray(body)) throw new Error('expected a batch')
+
+		captureMcpBatchAnalytics(
+			req,
+			body,
+			new Response(
+				JSON.stringify([
+					{ jsonrpc: '2.0', id: 1, result: { tools: [] } },
+					{ jsonrpc: '2.0', id: 2, result: { isError: true, content: [] } },
+				]),
+			),
+			{ POSTHOG_PROJECT_API_KEY: 'phc_test' },
+			ctx,
+		)
+
+		await waitUntil.mock.calls[0][0]
+		const events = fetch.mock.calls.map((call) => JSON.parse(call[1].body))
+		expect(events.map((event) => event.event)).toEqual([
+			'$mcp_tools_list',
+			'$mcp_tool_call',
+		])
+		expect(events[1].properties).toMatchObject({
+			$mcp_tool_name: 'find_pages',
+			$mcp_is_error: true,
 		})
 	})
 })

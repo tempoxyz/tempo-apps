@@ -9,8 +9,11 @@ import {
 	recordHttpRequestMetrics,
 	recordIngestMetrics,
 } from './lib/metrics.js'
-import { captureMcpAnalytics, parseJsonRpcRequest } from './lib/posthog-mcp.js'
-import { proxyMcp } from './lib/proxy.js'
+import {
+	captureMcpAnalytics,
+	captureMcpBatchAnalytics,
+	parseJsonRpcRequest,
+} from './lib/posthog-mcp.js'
 import { isForcedHour } from './lib/schedule.js'
 import { parseSources } from './lib/sources.js'
 import type { Source } from './lib/sources.js'
@@ -23,7 +26,7 @@ export default {
 		const url = new URL(req.url)
 		return trackRequest(req, routeName(url.pathname, req.method), async () => {
 			const jsonRpcRequest = await parseJsonRpcRequest(req)
-			let response: Response | undefined
+			let response: Response
 			try {
 				response = await handleMcp(req, {
 					instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
@@ -34,12 +37,16 @@ export default {
 				log.error('mcp.local_failed', {
 					error: error instanceof Error ? error.message : String(error),
 				})
+				response = internalError(
+					Array.isArray(jsonRpcRequest) ? undefined : jsonRpcRequest?.id,
+				)
 			}
-			if (response) {
+			if (Array.isArray(jsonRpcRequest)) {
+				captureMcpBatchAnalytics(req, jsonRpcRequest, response, env, ctx)
+			} else {
 				captureMcpAnalytics(req, jsonRpcRequest, response, env, ctx)
-				return response
 			}
-			return proxyMcp(req, env.AI_SEARCH_MCP_URL)
+			return response
 		})
 	},
 	async scheduled(event, env, ctx) {
@@ -148,7 +155,24 @@ function routeName(pathname: string, method: string): string {
 		return 'mcp'
 	}
 	if (pathname === '/') return 'root'
-	return 'proxy'
+	return 'other'
+}
+
+function internalError(id: string | number | null | undefined): Response {
+	return new Response(
+		JSON.stringify({
+			jsonrpc: '2.0',
+			id: id ?? null,
+			error: { code: -32603, message: 'Internal error' },
+		}),
+		{
+			status: 500,
+			headers: {
+				'access-control-allow-origin': '*',
+				'content-type': 'application/json',
+			},
+		},
+	)
 }
 
 function sourcesFor(config: Env['SOURCES']): Source[] {

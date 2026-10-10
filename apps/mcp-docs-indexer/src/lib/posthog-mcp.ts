@@ -33,11 +33,13 @@ const SENSITIVE_KEY_PATTERN =
 
 export function captureMcpAnalytics(
 	req: Request,
-	body: JsonRpcRequest | undefined,
+	body: JsonRpcRequest | JsonRpcRequest[] | undefined,
 	response: Response,
 	env: PostHogEnv,
 	ctx: ExecutionContext,
 ): void {
+	// Batches are captured per message by `captureMcpBatchAnalytics`.
+	if (Array.isArray(body)) return
 	if (!env.POSTHOG_PROJECT_API_KEY || !body?.method) return
 
 	ctx.waitUntil(
@@ -47,13 +49,46 @@ export function captureMcpAnalytics(
 
 export async function parseJsonRpcRequest(
 	req: Request,
-): Promise<JsonRpcRequest | undefined> {
+): Promise<JsonRpcRequest | JsonRpcRequest[] | undefined> {
 	if (req.method !== 'POST') return undefined
 	try {
-		return (await req.clone().json()) as JsonRpcRequest
+		return (await req.clone().json()) as JsonRpcRequest | JsonRpcRequest[]
 	} catch {
 		return undefined
 	}
+}
+
+/** Capture one analytics event per request in a JSON-RPC batch. */
+export function captureMcpBatchAnalytics(
+	req: Request,
+	messages: JsonRpcRequest[],
+	response: Response,
+	env: PostHogEnv,
+	ctx: ExecutionContext,
+): void {
+	if (!env.POSTHOG_PROJECT_API_KEY) return
+
+	ctx.waitUntil(
+		(async () => {
+			const replies = (await parseJsonRpcResponse(response)) as unknown
+			if (!Array.isArray(replies)) return
+			for (const message of messages) {
+				if (!message?.method || message.id === undefined) continue
+				const reply = replies.find(
+					(entry) =>
+						typeof entry === 'object' &&
+						entry !== null &&
+						(entry as { id?: unknown }).id === message.id,
+				)
+				await captureMcpAnalyticsAsync(
+					req,
+					message,
+					new Response(JSON.stringify(reply ?? {})),
+					env,
+				)
+			}
+		})().catch(() => undefined),
+	)
 }
 
 async function captureMcpAnalyticsAsync(
