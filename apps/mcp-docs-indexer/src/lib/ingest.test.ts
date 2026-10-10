@@ -59,16 +59,18 @@ function fakeInstance(opts?: {
 
 function fakeKv(seed?: Record<string, string>) {
 	const store = new Map<string, string>(Object.entries(seed ?? {}))
+	const writes: { key: string; value: string }[] = []
 	const kv = {
 		get: async (k: string) => store.get(k) ?? null,
 		put: async (k: string, v: string) => {
+			writes.push({ key: k, value: v })
 			store.set(k, v)
 		},
 		delete: async (k: string) => {
 			store.delete(k)
 		},
 	} as unknown as KVNamespace
-	return { kv, store }
+	return { kv, store, writes }
 }
 
 const fetchMock = vi.fn()
@@ -120,6 +122,49 @@ async function confirmDeletion(
 }
 
 describe('syncSource — llms.txt index', () => {
+	it('checkpoints completed batches before a long sync finishes', async () => {
+		const { instance } = fakeInstance()
+		const { kv, store, writes } = fakeKv()
+		let now = 0
+		let pageFetches = 0
+		vi.spyOn(Date, 'now').mockImplementation(() => now)
+		fetchMock.mockImplementation(async (url: string) => {
+			if (url === 'https://viem.sh/llms.txt')
+				return mockResponse({
+					body: Array.from(
+						{ length: 9 },
+						(_, i) => `- [Page ${i}](/page-${i})`,
+					).join('\n'),
+					etag: '"index-v1"',
+				})
+			pageFetches++
+			if (pageFetches === 8) now = 30_001
+			if (pageFetches === 9) now = 31_200
+			return mockResponse({ body: `# ${url}` })
+		})
+
+		expect(
+			await syncSource({ source: SOURCE, instance, etagCache: kv }),
+		).toMatchObject({
+			status: 'synced',
+			pages: 9,
+			failed: 0,
+		})
+		const indexWrites = writes.filter(({ key }) => key === 'index:viem')
+		expect(indexWrites).toHaveLength(2)
+		expect(
+			writes.findIndex(({ key }) => key === 'retry_force:viem'),
+		).toBeLessThan(writes.findIndex(({ key }) => key === 'index:viem'))
+		expect(Object.keys(JSON.parse(indexWrites[0]?.value ?? '{}'))).toHaveLength(
+			8,
+		)
+		expect(Object.keys(JSON.parse(indexWrites[1]?.value ?? '{}'))).toHaveLength(
+			9,
+		)
+		expect(store.get('etag:viem')).toBe('"index-v1"')
+		expect(store.has('retry_force:viem')).toBe(false)
+	})
+
 	it('returns `unchanged` when llms.txt returns 304', async () => {
 		const { instance, uploads } = fakeInstance()
 		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })
@@ -149,6 +194,25 @@ describe('syncSource — llms.txt index', () => {
 			error: 'index returned 304 during retry',
 		})
 		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ headers: {} })
+	})
+
+	it('keeps a retry marker if the forced index request returns 304', async () => {
+		const { instance } = fakeInstance()
+		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })
+		fetchMock.mockResolvedValueOnce(mockResponse({ status: 304 }))
+
+		expect(
+			await syncSource({
+				source: SOURCE,
+				instance,
+				etagCache: kv,
+				force: true,
+			}),
+		).toMatchObject({
+			status: 'error',
+			error: 'index returned 304 during retry',
+		})
+		expect(store.get('retry_force:viem')).toBe('1')
 	})
 
 	it('returns `error` when llms.txt returns non-2xx', async () => {
@@ -181,10 +245,11 @@ describe('syncSource — llms.txt index', () => {
 
 	it('with force=true, bypasses the llms.txt ETag', async () => {
 		const { instance } = fakeInstance()
-		const { kv } = fakeKv({ 'etag:viem': 'W/"old"' })
+		const { kv, store } = fakeKv({ 'etag:viem': 'W/"old"' })
 
 		fetchMock.mockImplementation(async (url: string) => {
 			if (url === 'https://viem.sh/llms.txt') {
+				expect(store.get('retry_force:viem')).toBe('1')
 				return mockResponse({ body: '- [A](/a)\n', etag: 'W/"new"' })
 			}
 			return mockResponse({ body: '# a' })
@@ -198,6 +263,7 @@ describe('syncSource — llms.txt index', () => {
 		})
 
 		expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ headers: {} })
+		expect(store.has('retry_force:viem')).toBe(false)
 	})
 })
 
