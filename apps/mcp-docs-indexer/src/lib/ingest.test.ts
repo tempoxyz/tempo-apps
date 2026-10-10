@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { syncSource } from './ingest.js'
+import { sourceIndexStatus, syncSource } from './ingest.js'
 import type { Source } from './sources.js'
 
 const SOURCE: Source = { id: 'viem', base: 'https://viem.sh' }
@@ -118,6 +118,40 @@ async function confirmDeletion(
 	now.mockReturnValue(300_001)
 	return syncSource({ source: SOURCE, instance, etagCache })
 }
+
+describe('sourceIndexStatus', () => {
+	it('reads status counts for one source without changing items', async () => {
+		const list = vi.fn(
+			async (options: {
+				status: string
+				metadata_filter: string
+				per_page: number
+			}) => ({
+				result: options.status === 'error' ? [{ error: 'bad document' }] : [],
+				result_info: {
+					total_count:
+						options.status === 'completed'
+							? 5
+							: options.status === 'error'
+								? 2
+								: 0,
+				},
+			}),
+		)
+		const instance = { items: { list } } as unknown as AiSearchInstance
+
+		expect(await sourceIndexStatus(instance, 'tempo')).toMatchObject({
+			source: 'tempo',
+			counts: { completed: 5, error: 2 },
+			sample_error: 'bad document',
+		})
+		expect(list).toHaveBeenCalledTimes(6)
+		for (const [options] of list.mock.calls) {
+			expect(options.metadata_filter).toBe(JSON.stringify({ source: 'tempo' }))
+			expect(options.per_page).toBe(1)
+		}
+	})
+})
 
 describe('syncSource — llms.txt index', () => {
 	it('returns `unchanged` when llms.txt returns 304', async () => {

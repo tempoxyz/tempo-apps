@@ -488,6 +488,61 @@ async function syncPage(args: {
 	}
 }
 
+/** Indexing states reported by AI Search for uploaded items. */
+export const ITEM_STATUSES = [
+	'completed',
+	'queued',
+	'running',
+	'error',
+	'skipped',
+	'outdated',
+] as const
+
+export type SourceIndexStatus = {
+	source: string
+	counts: Partial<Record<(typeof ITEM_STATUSES)[number], number>>
+	/** First indexing error AI Search reports for the source, if any. */
+	sample_error?: string
+}
+
+/**
+ * Count a source's uploaded items by AI Search indexing state. A source can
+ * sync cleanly while AI Search never makes its items searchable; these counts
+ * make that visible in logs and metrics.
+ */
+export async function sourceIndexStatus(
+	instance: AiSearchInstance,
+	sourceId: string,
+): Promise<SourceIndexStatus> {
+	const metadataFilter = JSON.stringify({ source: sourceId })
+	const status: SourceIndexStatus = { source: sourceId, counts: {} }
+	await Promise.all(
+		ITEM_STATUSES.map(async (itemStatus) => {
+			try {
+				const response = await instance.items.list({
+					status: itemStatus,
+					metadata_filter: metadataFilter,
+					per_page: 1,
+				})
+				const count = response.result_info?.total_count
+				if (typeof count !== 'number')
+					throw new Error('item listing missing total_count')
+				status.counts[itemStatus] = count
+				if (itemStatus === 'error' && response.result[0]?.error) {
+					status.sample_error = response.result[0].error
+				}
+			} catch (err) {
+				log.warn('source.index_status_failed', {
+					source: sourceId,
+					status: itemStatus,
+					error: err instanceof Error ? err.message : String(err),
+				})
+			}
+		}),
+	)
+	return status
+}
+
 async function sha256(content: string): Promise<string> {
 	const bytes = new TextEncoder().encode(content)
 	const digest = await crypto.subtle.digest('SHA-256', bytes)
