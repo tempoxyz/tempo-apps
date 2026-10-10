@@ -83,6 +83,22 @@ try {
 	click('main a[href*="/address/"]')
 	await contains('Fee AMM liquidity')
 	assert.ok(browser('get', 'url').includes('tab=token'))
+	await contains('Estimated liquidity')
+	assert.ok(!browser('get', 'text', 'main').includes('Fee-token reserve'))
+	const poolDetails =
+		'section[aria-label="Fee AMM liquidity"] button[aria-expanded]'
+	click(poolDetails)
+	await contains('0.000024')
+	await contains('49.999977')
+	assert.equal(
+		evaluate(
+			`document.querySelector(${JSON.stringify(poolDetails)}).getAttribute('aria-expanded')`,
+		),
+		'true',
+	)
+	click(poolDetails)
+	assert.ok(!browser('get', 'text', 'main').includes('Fee-token reserve'))
+
 	click('section[aria-label="Fee AMM liquidity"] a')
 	await contains('Filtered by OUSD')
 	assert.ok(browser('get', 'url').includes(`token=${token}`))
