@@ -2,6 +2,7 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { useMediaQuery } from '#lib/hooks'
+import { styles } from './-empty-state.styles'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -24,7 +25,7 @@ function Component() {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+		<div {...styles.page()}>
 			<Sections
 				mode={mode}
 				sections={[

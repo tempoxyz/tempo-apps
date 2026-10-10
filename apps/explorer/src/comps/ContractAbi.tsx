@@ -1,3 +1,4 @@
+import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import type { Abi } from 'viem'
 
@@ -112,18 +113,22 @@ export function AbiViewer(props: AbiViewer.Props): React.JSX.Element {
 	const highlightedHtml = useHighlightedJson(json, enabled)
 
 	return (
-		<div className="max-h-[280px] overflow-auto mx-3 mb-2">
+		<div {...styles.viewer()}>
 			{highlightedHtml ? (
 				<div
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: trusted shiki output
 					dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-					className="shiki shiki-block text-primary whitespace-pre"
-					style={{ padding: 16, maxHeight: 'none', overflow: 'visible' }}
+					{...styles.code({
+						className: 'shiki shiki-block',
+						style: { padding: 16, maxHeight: 'none', overflow: 'visible' },
+					})}
 				/>
 			) : (
 				<pre
-					className="shiki-block text-primary whitespace-pre"
-					style={{ padding: 16, maxHeight: 'none', overflow: 'visible' }}
+					{...styles.code({
+						className: 'shiki-block',
+						style: { padding: 16, maxHeight: 'none', overflow: 'visible' },
+					})}
 				>
 					{json}
 				</pre>
@@ -164,4 +169,16 @@ function useHighlightedJson(json: string, enabled: boolean): string | null {
 	}, [enabled, json])
 
 	return highlighted?.json === json ? highlighted.html : null
+}
+
+namespace styles {
+	export const viewer = style({
+		marginBottom: '8',
+		marginInline: '12',
+		maxHeight: '280px !custom',
+		overflow: 'auto',
+	})
+
+	// `shiki` and `shiki-block` are global classes for the highlighter's markup.
+	export const code = style({ color: 'content.primary', whiteSpace: 'pre' })
 }

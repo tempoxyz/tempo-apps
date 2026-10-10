@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
@@ -50,7 +51,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	const { receipt } = props
 	const { isTokenListed } = useTokenListMembership()
 
-	if (!receipt) return <span className="text-tertiary">…</span>
+	if (!receipt) return <span {...styles.secondary()}>…</span>
 
 	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
@@ -60,7 +61,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 		? PriceFormatter.format(Number(feeRaw))
 		: PriceFormatter.formatAmountShort(feeRaw)
 
-	return <span className="text-tertiary">{feeDisplay}</span>
+	return <span {...styles.secondary()}>{feeDisplay}</span>
 }
 
 export function TransactionDescription(props: {
@@ -121,16 +122,16 @@ export function TransactionTimestamp(props: {
 	const { timestamp, link, format = 'relative' } = props
 
 	return (
-		<div className="text-nowrap">
+		<div {...styles.nowrap()}>
 			{link ? (
-				<Link to={link} preload="intent" className="text-tertiary">
+				<Link to={link} preload="intent" {...styles.secondary()}>
 					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (
 				<FormattedTimestamp
 					timestamp={timestamp}
 					format={format}
-					className="text-tertiary"
+					className={styles.secondary().className}
 				/>
 			)}
 		</div>
@@ -162,7 +163,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true
 
-	const infiniteLabel = <span className="text-secondary">−</span>
+	const infiniteLabel = <span {...styles.secondary()}>−</span>
 
 	if (
 		!events?.some((event) => event.parts.some((part) => part.type === 'amount'))
@@ -181,14 +182,14 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	const totalValue = calculateKnownEventsTotal(events)
 	if (totalValue === undefined || !showUsdPrefix)
 		return (
-			<span className="text-tertiary" title="No comparable payment total">
+			<span {...styles.secondary()} title="No comparable payment total">
 				—
 			</span>
 		)
 
 	if (totalValue === 0n) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
-		if (value === 0n) return <span className="text-tertiary">—</span>
+		if (value === 0n) return <span {...styles.secondary()}>—</span>
 		return (
 			<Amount.Base
 				value={value}
@@ -209,4 +210,10 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			short
 		/>
 	)
+}
+
+namespace styles {
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const nowrap = style({ textWrap: 'nowrap' })
 }

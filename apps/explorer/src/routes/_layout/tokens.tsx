@@ -12,6 +12,7 @@ import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { OG_BASE_URL } from '#lib/og'
+import { styles } from './-tokens.styles'
 
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
@@ -135,7 +136,7 @@ function TokensPage() {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+		<div {...styles.page()}>
 			<Sections
 				mode={mode}
 				sections={[
@@ -150,21 +151,18 @@ function TokensPage() {
 								items={(gridMode) =>
 									tokens.map((token: Token) => {
 										const tokenCell = (
-											<div key="token" className="flex flex-col min-w-0 gap-1">
-												<span className="inline-flex min-w-0 items-center gap-2 text-base-content-positive font-medium">
+											<div key="token" {...styles.tokenCell()}>
+												<span {...styles.symbol()}>
 													<TokenIcon
 														address={token.address}
-														name={token.symbol}
 														logoURI={token.logoURI}
 													/>
-													<span className="truncate" title={token.symbol}>
+													<span {...styles.truncate()} title={token.symbol}>
 														{token.symbol}
 													</span>
 												</span>
-												<span className="truncate text-secondary">
-													{token.name}
-												</span>
-												<span className="text-tertiary">
+												<span {...styles.stackedName()}>{token.name}</span>
+												<span {...styles.secondary()}>
 													{token.currency} · {formatHoldersCount(token)} holders
 												</span>
 											</div>
@@ -175,37 +173,27 @@ function TokensPage() {
 												gridMode === 'stacked'
 													? [tokenCell]
 													: [
-															<span
-																key="symbol"
-																className="inline-flex items-center gap-2 text-base-content-positive font-medium"
-															>
+															<span key="symbol" {...styles.symbol()}>
 																<TokenIcon
 																	address={token.address}
-																	name={token.symbol}
 																	logoURI={token.logoURI}
 																/>
 																{token.symbol}
 															</span>,
-															<span
-																key="name"
-																className="truncate max-w-[40ch]"
-															>
+															<span key="name" {...styles.name()}>
 																{token.name}
 															</span>,
-															<span key="currency" className="text-secondary">
+															<span key="currency" {...styles.secondary()}>
 																{token.currency}
 															</span>,
-															<span
-																key="holders"
-																className="font-sans text-secondary"
-															>
+															<span key="holders" {...styles.secondary()}>
 																{formatHoldersCount(token)}
 															</span>,
 															<Address
 																key="address"
 																address={token.address}
 																align="end"
-																className="w-full"
+																className={styles.address().className}
 															/>,
 														],
 											link: {

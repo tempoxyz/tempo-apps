@@ -1,4 +1,6 @@
 import type { Address } from 'ox'
+import { IconButton, TextButton, Tooltip, style } from '@tempoxyz/ds/platform'
+import { LogOut } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import {
 	useConnect,
@@ -7,14 +9,13 @@ import {
 	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
-import LucideLogOut from '~icons/lucide/log-out'
-import LucideWallet from '~icons/lucide/wallet'
+import { animatePulse, pressDown } from '#styles/explorer'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 
@@ -73,19 +74,22 @@ export function WalletActions(
 
 	return (
 		<InfoCard
-			className="min-[1240px]:w-full"
+			className={styles.card().className}
 			title={
-				<InfoCard.Title className="w-full justify-between">
+				<InfoCard.Title className={styles.title().className}>
 					Wallet actions
 					{isConnected && (
-						<button
-							type="button"
-							title="Disconnect"
-							className="text-secondary hover:text-primary cursor-pointer press-down"
-							onClick={() => disconnect.mutate({ connector })}
-						>
-							<LucideLogOut className="size-3" />
-						</button>
+						<Tooltip content="Disconnect">
+							<IconButton
+								aria-label="Disconnect"
+								onClick={() => disconnect.mutate({ connector })}
+								scale="small"
+								variant="tertiary"
+								{...cx(styles.disconnect(), pressDown())}
+							>
+								<LogOut />
+							</IconButton>
+						</Tooltip>
 					)}
 				</InfoCard.Title>
 			}
@@ -95,7 +99,6 @@ export function WalletActions(
 							<AddToWallet
 								key="add"
 								address={props.address}
-								connectors={supported}
 								symbol={props.symbol}
 								decimals={props.decimals}
 								image={props.image}
@@ -103,26 +106,18 @@ export function WalletActions(
 							<SetAsFeeToken
 								key="fee"
 								address={props.address}
-								connectors={supported}
 								symbol={props.symbol}
 							/>,
 						]
 					: [
-							<button
+							<TextButton
 								key="connect"
-								type="button"
 								disabled={busy}
-								className={cx(
-									'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-									busy
-										? 'text-secondary animate-pulse'
-										: 'text-secondary hover:text-primary cursor-pointer press-down',
-								)}
 								onClick={handleConnectOrSwitch}
+								{...cx(busy && animatePulse())}
 							>
-								<LucideWallet className="size-3.5" />
 								{connectLabel}
-							</button>,
+							</TextButton>,
 						]
 			}
 		/>
@@ -136,4 +131,22 @@ export declare namespace WalletActions {
 		decimals?: number | undefined
 		image?: string | undefined
 	}
+}
+
+namespace styles {
+	// InfoCard fits its content from 1240px; the wallet card fills the column.
+	export const card = style({
+		'@media (width >= 1240px)': { width: '100% !custom' },
+	})
+
+	export const title = style({
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const disconnect = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
 }

@@ -65,28 +65,33 @@ describe('validator address card', () => {
 		expect(html).toContain('aria-label="Copy fee recipient"')
 		const recipientSection = ValidatorCard({ address })?.props.sections[1]
 		const copyButton = recipientSection.props.children[0].props.children[1]
-		copyButton.props.onClick()
+		// CopyButton renders a TDS IconButton inside a Tooltip.
+		const iconButton = copyButton.type(copyButton.props).props.children
+		iconButton.props.onClick()
 		expect(copy).toHaveBeenCalledExactlyOnceWith(validator.feeRecipient)
 		expect(html).toContain(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
 	})
 
-	it('confirms when the fee recipient was copied', () => {
+	it('leaves the copy confirmation to the toast', () => {
 		copyState.notifying = true
 		const html = render()
-		expect(html).toContain('aria-label="Fee recipient copied"')
-		expect(html).toContain('>copied</span>')
+		expect(html).toContain('aria-label="Copy fee recipient"')
+		expect(html).not.toContain('copied')
 	})
 
 	it('links the full fee recipient to holdings, matches address typography and preserves genesis height', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
 		expect(html).not.toContain('>Index<')
-		expect(html).toContain(
-			'font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch]',
+		// The recipient link carries its own styles and shows the full address.
+		expect(html).toMatch(
+			new RegExp(
+				`<a class="[^"]+" href="/address/${validator.feeRecipient}\\?tab=holdings">${validator.feeRecipient}</a>`,
+			),
 		)
-		expect(html).toContain('class="normal-case">Added at height</span>')
+		expect(html).toMatch(/<span class="[^"]+">Added at height<\/span>/)
 		expect(html).toContain(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
@@ -112,7 +117,7 @@ describe('validator address card', () => {
 		expect(html).toContain('>No<')
 		expect(html).not.toContain('>Index<')
 		expect(html).not.toContain('>15<')
-		expect(html).toContain('class="normal-case">Deactivated at height</span>')
+		expect(html).toMatch(/<span class="[^"]+">Deactivated at height<\/span>/)
 		expect(html).toContain('href="/block/9007199254740993"')
 		expect(html).toContain('href="/block/9007199254740995"')
 	})

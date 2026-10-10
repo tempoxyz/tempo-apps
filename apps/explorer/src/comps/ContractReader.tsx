@@ -1,29 +1,32 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
+import {
+	AlertCircle,
+	ArrowCornerDownRight,
+	Play,
+} from '@tempoxyz/ds/platform/icons'
 import * as Address from 'ox/Address'
-import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 import type { Abi, AbiFunction } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import {
+	FunctionAction,
+	FunctionCard,
+	FunctionInput,
+	functionInputKey,
+} from '#comps/ContractFunction'
 import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,
 	getFunctionSelector,
 	getInputFunctions,
-	getInputType,
 	getNoInputFunctions,
-	getPlaceholder,
-	isArrayType,
 	parseInputValue,
 } from '#lib/domain/contracts'
-import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
-import CheckIcon from '~icons/lucide/check'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
-import ReturnIcon from '~icons/lucide/corner-down-right'
-import LinkIcon from '~icons/lucide/link'
-import PlayIcon from '~icons/lucide/play'
+import { usePermalinkHighlight } from '#lib/hooks'
+import { link, linkHover } from '#styles/explorer'
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
@@ -170,11 +173,7 @@ function decodeRawCallResult(
 	}
 }
 
-export function ContractReader(props: {
-	address: Address.Address
-	abi: Abi
-	docsUrl?: string
-}) {
+export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 	const { address, abi } = props
 
 	const key = React.useId()
@@ -183,7 +182,7 @@ export function ContractReader(props: {
 	const inputFunctions = getInputFunctions(abi)
 
 	return (
-		<div className="flex flex-col gap-[12px]">
+		<div {...styles.list()}>
 			{/* Functions without inputs - show as static values */}
 			{noInputFunctions.map((fn) => (
 				<StaticReadFunction
@@ -205,44 +204,24 @@ export function ContractReader(props: {
 			))}
 
 			{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
-				<p className="copy-13 text-tertiary">No read functions available.</p>
+				<p {...styles.emptyMessage()}>No read functions available.</p>
 			)}
 		</div>
 	)
 }
 
-/**
- * Get a display-friendly function signature.
- * Uses getSignature for named functions, falls back to selector for unnamed (whatsabi).
- */
-function getFunctionDisplaySignature(fn: AbiFunction): string {
-	if (fn.name) return getSignature(fn).replace(/,/g, ', ')
-	// Fallback for whatsabi-extracted functions without names
-	const selector = getFunctionSelector(fn)
-	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
-	return `${selector}(${inputs})`
-}
-
-/**
- * Get method name with selector, e.g., "approve (0x095ea7b3)"
- */
-function getMethodWithSelector(fn: AbiFunction): string {
-	const selector = getFunctionSelector(fn)
-	const name = fn.name || selector
-	return `${name} (${selector})`
-}
-
-function ReadResult(props: { className?: string; value: string }) {
-	const { className, value } = props
-
+function ResultRow(props: {
+	children: React.ReactNode
+	error?: boolean | undefined
+}): React.JSX.Element {
 	return (
-		<div
-			className={cx(
-				'min-w-0 flex-1 text-primary copy-13 font-mono whitespace-pre overflow-x-auto',
-				className,
+		<div {...styles.resultRow()}>
+			{props.error ? (
+				<AlertCircle {...cx(styles.resultIcon(), styles.errorIcon())} />
+			) : (
+				<ArrowCornerDownRight {...styles.resultIcon()} />
 			)}
-		>
-			{value}
+			{props.children}
 		</div>
 	)
 }
@@ -253,7 +232,6 @@ function StaticReadFunction(props: {
 	fn: ReadFunction
 }) {
 	const { address, abi, fn } = props
-	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const [mounted, setMounted] = React.useState(false)
 	React.useEffect(() => setMounted(true), [])
@@ -323,102 +301,50 @@ function StaticReadFunction(props: {
 	const result = hasOutputs ? typedResult : decodedRawResult
 	const queryError = hasOutputs ? typedError : rawError
 	const error = queryError ? queryError.message : null
+	const pending = isFetching || isLoading
 
 	const isResultAddress = typeof result === 'string' && Address.validate(result)
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
 
-	const displayValue = error
-		? error
-		: isLoading
-			? ellipsis
-			: formatOutputValue(result, outputType)
-
 	// Format address outputs as links (only after mount to avoid hydration mismatch)
 	const isAddressOutput = outputType === 'address' || isResultAddress
 	const isValidAddress = mounted && isAddressOutput && isResultAddress
 
-	const handleCopyMethod = () => {
-		void copy(getMethodWithSelector(fn))
-	}
-
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: fnId,
-	})
-
 	return (
-		<div
+		<FunctionCard
 			id={fnId}
-			className="flex flex-col rounded-body border border-card-border bg-surface overflow-hidden"
+			fn={fn}
+			actions={
+				<FunctionAction
+					label="Refresh"
+					disabled={isFetching}
+					onClick={() => void refetch()}
+				>
+					<Play />
+				</FunctionAction>
+			}
 		>
-			<div className="flex items-center justify-between gap-[8px]">
-				<span className="min-w-0 flex-1 label-12 text-secondary font-mono py-[10px] pl-[12px] [overflow-wrap:anywhere]">
-					{getFunctionDisplaySignature(fn)}
-				</span>
-				<div className="flex shrink-0 items-center pl-[12px]">
-					<button
-						type="button"
-						onClick={handleCopyMethod}
-						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation()
-							void handleCopyPermalink()
-						}}
-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={() => void refetch()}
-						title="Refresh"
-						disabled={isFetching}
-						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!',
-							isFetching && 'opacity-50 cursor-not-allowed',
-						)}
-					>
-						<PlayIcon className="size-[14px]" />
-					</button>
-				</div>
-			</div>
-			<div className="border-t border-card-border px-[12px] py-[10px] flex">
-				<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-				{isFetching || isLoading ? (
-					<div className="copy-13 text-secondary ">{ellipsis}</div>
+			<ResultRow error={!pending && Boolean(error)}>
+				{pending ? (
+					<span {...styles.pending()}>{ellipsis}</span>
+				) : error ? (
+					<p {...styles.error()}>{error}</p>
 				) : isValidAddress ? (
-					<div className="min-w-0 copy-13 break-all">
-						<Link
-							to="/address/$address"
-							params={{ address: result as Address.Address }}
-							className="text-accent hover:text-accent/80"
-						>
-							{displayValue}
-						</Link>
-					</div>
+					<Link
+						to="/address/$address"
+						params={{ address: result as Address.Address }}
+						{...cx(styles.address(), link(), linkHover())}
+					>
+						{formatOutputValue(result, outputType)}
+					</Link>
 				) : (
-					<ReadResult
-						className={cx(error ? 'text-negative' : 'text-primary')}
-						value={displayValue}
-					/>
+					<pre {...styles.output()}>
+						{formatOutputValue(result, outputType)}
+					</pre>
 				)}
-			</div>
-		</div>
+			</ResultRow>
+		</FunctionCard>
 	)
 }
 
@@ -429,7 +355,6 @@ function DynamicReadFunction(props: {
 }) {
 	const { address, abi, fn } = props
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
-	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
 	const fnId = fn.name || selector
@@ -446,19 +371,19 @@ function DynamicReadFunction(props: {
 	}
 
 	const allInputsFilled = (fn.inputs ?? []).every((input, index) => {
-		const key = input.name ?? `arg${index}`
-		const value = inputs[key]
+		const value = inputs[functionInputKey(input, index)]
 		return value !== undefined && value.trim() !== ''
 	})
 
 	const parsedArgs = React.useMemo(() => {
 		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
 		try {
-			const args = (fn.inputs ?? []).map((input, index) => {
-				const key = input.name ?? `arg${index}`
-				const value = inputs[key] ?? ''
-				return parseInputValue(value, input.type)
-			})
+			const args = (fn.inputs ?? []).map((input, index) =>
+				parseInputValue(
+					inputs[functionInputKey(input, index)] ?? '',
+					input.type,
+				),
+			)
 			return { args, error: null }
 		} catch (err) {
 			return {
@@ -540,91 +465,26 @@ function DynamicReadFunction(props: {
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'uint256')
 
-	const handleCopyMethod = (e: React.MouseEvent) => {
-		e.stopPropagation()
-		void copy(getMethodWithSelector(fn))
-	}
-
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: fnId,
-	})
-
 	return (
-		<div
+		<FunctionCard
 			id={fnId}
-			className="rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="w-full flex items-center justify-between">
-				<button
-					type="button"
-					aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
-					aria-expanded={isExpanded}
-					onClick={() => setIsExpanded(!isExpanded)}
-					className="min-w-0 flex-1 text-left h-full py-[10px] pl-[12px] cursor-pointer press-down focus-visible:-outline-offset-2! focus-visible:rounded-l-body!"
+			fn={fn}
+			expanded={isExpanded}
+			onToggle={() => setIsExpanded(!isExpanded)}
+			actions={
+				<FunctionAction
+					label="Refresh"
+					disabled={isFetching || !allInputsFilled}
+					onClick={() => void refetch()}
 				>
-					<span className="block label-12 text-secondary font-mono [overflow-wrap:anywhere]">
-						{getFunctionDisplaySignature(fn)}
-					</span>
-				</button>
-				<div className="flex shrink-0 items-center pl-[12px]">
-					<button
-						type="button"
-						onClick={handleCopyMethod}
-						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation()
-							void handleCopyPermalink()
-						}}
-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={() => void refetch()}
-						title="Refresh"
-						disabled={isFetching || !allInputsFilled}
-						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!',
-							(isFetching || !allInputsFilled) &&
-								'opacity-50 cursor-not-allowed',
-						)}
-					>
-						<PlayIcon className="size-[14px]" />
-					</button>
-					<button
-						type="button"
-						aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
-						aria-expanded={isExpanded}
-						onClick={() => setIsExpanded(!isExpanded)}
-						className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
-					>
-						<ChevronDownIcon
-							className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
-						/>
-					</button>
-				</div>
-			</div>
-
+					<Play />
+				</FunctionAction>
+			}
+		>
 			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+				<>
 					{fn.inputs.map((input, index) => {
-						const key = input.name ?? `arg${index}`
+						const key = functionInputKey(input, index)
 						return (
 							<FunctionInput
 								key={key}
@@ -635,104 +495,78 @@ function DynamicReadFunction(props: {
 						)
 					})}
 
-					{isFetching && (
-						<div className="flex">
-							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							<p className="copy-13 text-secondary ">{ellipsis}</p>
-						</div>
+					{isFetching ? (
+						<ResultRow>
+							<span {...styles.pending()}>{ellipsis}</span>
+						</ResultRow>
+					) : (
+						(result !== undefined || error) && (
+							<ResultRow error={Boolean(error)}>
+								{error ? (
+									<p {...styles.error()}>{error}</p>
+								) : (
+									<pre {...styles.output()}>
+										{formatOutputValue(result, outputType)}
+									</pre>
+								)}
+							</ResultRow>
+						)
 					)}
-
-					{!isFetching && (result !== undefined || error) && (
-						<div className="flex">
-							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							{error ? (
-								<p className="copy-13 break-all text-negative">{error}</p>
-							) : (
-								<pre className="min-w-0 flex-1 copy-13 text-primary whitespace-pre overflow-x-auto font-mono">
-									{formatOutputValue(result, outputType)}
-								</pre>
-							)}
-						</div>
-					)}
-				</div>
+				</>
 			)}
-		</div>
+		</FunctionCard>
 	)
 }
 
-function FunctionInput(props: {
-	input: { name?: string; type: string }
-	value: string
-	onChange: (value: string) => void
-}) {
-	const { input, value, onChange } = props
+namespace styles {
+	export const list = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
 
-	const inputId = React.useId()
-	const placeholder = getPlaceholder(input)
-	const inputType = getInputType(input.type)
+	export const emptyMessage = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 
-	// Special handling for bool type
-	if (inputType === 'checkbox') {
-		return (
-			<div className="flex items-center gap-[8px]">
-				<input
-					autoCorrect="off"
-					autoComplete="off"
-					spellCheck={false}
-					autoCapitalize="off"
-					id={inputId}
-					type="checkbox"
-					checked={value === 'true'}
-					className="w-[16px] h-[16px] rounded border-base-border"
-					onChange={(event) =>
-						onChange(event.target.checked ? 'true' : 'false')
-					}
-				/>
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{input.name || 'value'}{' '}
-					<span className="text-secondary">({input.type})</span>
-				</label>
-			</div>
-		)
-	}
+	export const resultRow = style({ display: 'flex', gap: '8' })
 
-	// Textarea for complex types
-	if (inputType === 'textarea' || isArrayType(input.type)) {
-		return (
-			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{input.name || 'value'}{' '}
-					<span className="text-secondary">({input.type})</span>
-				</label>
-				<textarea
-					rows={3}
-					id={inputId}
-					placeholder={placeholder}
-					onChange={(event) => onChange(event.target.value)}
-					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
-				/>
-			</div>
-		)
-	}
+	export const resultIcon = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		height: '12',
+		marginTop: '2',
+		width: '12',
+	})
 
-	// Standard text input
-	return (
-		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="label-12 text-primary font-sans">
-				{input.name || 'value'}{' '}
-				<span className="text-secondary">({input.type})</span>
-			</label>
-			<input
-				autoCorrect="off"
-				autoComplete="off"
-				spellCheck={false}
-				autoCapitalize="off"
-				type="text"
-				id={inputId}
-				placeholder={placeholder}
-				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
-			/>
-		</div>
-	)
+	export const errorIcon = style({ color: 'content.negative' })
+
+	export const pending = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const address = style({
+		minWidth: '0px !custom',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const error = style({
+		color: 'content.primary',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		typography: 'body.b3',
+		whiteSpace: 'pre-wrap',
+	})
+
+	export const output = style({
+		color: 'content.primary',
+		flex: 1,
+		minWidth: '0px !custom',
+		overflowX: 'auto',
+		typography: 'mono.inline',
+		whiteSpace: 'pre',
+	})
 }

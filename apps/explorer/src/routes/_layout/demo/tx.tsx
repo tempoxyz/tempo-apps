@@ -32,6 +32,7 @@ import {
 	validatorTokenAddress,
 } from '#lib/demo'
 import { parseKnownEvents } from '#lib/domain/known-events'
+import { styles } from './-tx.styles'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -603,7 +604,7 @@ function Component() {
 	const data = Route.useLoaderData()
 
 	return (
-		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
+		<div {...styles.page()}>
 			<Receipt {...data} />
 		</div>
 	)

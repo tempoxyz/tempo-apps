@@ -1,16 +1,16 @@
-import { Button } from 'regen-ui'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { Button, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
+import { CopyButton } from '#comps/CopyButton'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
-import { useCopy } from '#lib/hooks'
 import {
 	captureEvent,
 	getNavigationId,
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
-import CopyIcon from '~icons/lucide/copy'
+import { pressDown } from '#styles/explorer'
 
 export class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
@@ -43,30 +43,30 @@ export class ErrorBoundary extends React.Component<
 
 	render() {
 		return (
-			<main className="flex min-h-dvh flex-col">
+			<main {...styles.main()}>
 				<Header />
-				<section className="flex flex-1 flex-col size-full items-center justify-center px-[16px] max-w-[600px] gap-[16px] m-auto">
-					<div className="flex flex-col items-center gap-[8px]">
-						<h1 className="heading-24 lg:heading-40 text-base-content">
-							Something went wrong
-						</h1>
-						<p className="text-base-content-secondary copy-15 lg:copy-16 text-center">
+				<section {...styles.section()}>
+					<div {...styles.heading()}>
+						<h1 {...styles.title()}>Something went wrong</h1>
+						<p {...styles.description()}>
 							An unexpected error occurred while loading this page.
 						</p>
 					</div>
 					{this.state.error?.message && (
-						<div className="bg-surface border border-base-border rounded-body p-[16px] max-w-full overflow-hidden relative">
-							<pre className="copy-13 text-base-content-secondary whitespace-pre-wrap pr-[32px] min-h-[40px]">
-								{this.state.error.message}
-							</pre>
-							<CopyButton text={this.state.error.message} />
+						<div {...styles.details()}>
+							<pre {...styles.message()}>{this.state.error.message}</pre>
+							<CopyButton
+								value={this.state.error.message}
+								ariaLabel="Copy error details"
+								className={styles.copy().className}
+							/>
 						</div>
 					)}
 					<Button
 						variant="primary"
 						type="button"
 						onClick={() => window.location.assign('/')}
-						className="text-accent rounded-body press-down"
+						{...pressDown()}
 					>
 						Return home
 					</Button>
@@ -77,23 +77,72 @@ export class ErrorBoundary extends React.Component<
 	}
 }
 
-function CopyButton({ text }: { text: string }) {
-	const copy = useCopy()
-	return (
-		<>
-			{copy.notifying && (
-				<span className="absolute bottom-[12px] right-[40px] copy-13 text-base-content-secondary whitespace-nowrap">
-					copied
-				</span>
-			)}
-			<button
-				type="button"
-				aria-label="Copy error details"
-				onClick={() => copy.copy(text)}
-				className="absolute bottom-[8px] right-[8px] p-[4px] text-base-content-secondary press-down cursor-pointer"
-			>
-				<CopyIcon className="size-[16px]" />
-			</button>
-		</>
-	)
+namespace styles {
+	export const main = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minHeight: '100dvh !custom',
+	})
+
+	export const section = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		gap: '16',
+		height: '100% !custom',
+		justifyContent: 'center',
+		margin: 'auto !custom',
+		maxWidth: '600px !custom',
+		paddingInline: '16',
+		width: '100% !custom',
+	})
+
+	export const heading = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const title = style({
+		color: 'content.primary',
+		typography: 'heading.h2',
+		'@media (width >= 1024px)': { typography: 'heading.h1' },
+	})
+
+	export const description = style({
+		color: 'content.secondary',
+		textAlign: 'center',
+		typography: 'body.b2',
+		'@media (width >= 1024px)': { typography: 'body.b1' },
+	})
+
+	export const details = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		maxWidth: '100% !custom',
+		overflow: 'hidden',
+		padding: '16',
+		position: 'relative',
+	})
+
+	export const message = style({
+		color: 'content.secondary',
+		margin: 'none',
+		minHeight: '40',
+		paddingRight: '32',
+		typography: 'mono.inline',
+		whiteSpace: 'pre-wrap',
+	})
+
+	// Placement only, in the corner of the details box.
+	export const copy = style({
+		bottom: '4',
+		position: 'absolute',
+		right: '4',
+	})
 }

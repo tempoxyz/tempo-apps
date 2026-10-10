@@ -1,9 +1,11 @@
+import { style, Tab } from '@tempoxyz/ds/platform'
+import { ChevronDown } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import { pressDown } from '#styles/explorer'
 import { Pagination } from './Pagination'
 
 export function Sections(props: Sections.Props): React.JSX.Element {
-	const sectionId = React.useId()
 	const {
 		sections: sections_,
 		activeSection = 0,
@@ -32,7 +34,7 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 	if (mode === 'stacked')
 		return (
 			<Sections.Context.Provider value={{ mode }}>
-				<div className="flex flex-col gap-[14px]">
+				<div {...styles.stack()}>
 					{sections.map((section) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
 						const isCollapsed =
@@ -42,54 +44,44 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 						const canCollapse = section.autoCollapse !== false
 
 						return (
-							<section
-								key={section.title}
-								className={cx(
-									'flex flex-col font-sans w-full overflow-hidden',
-									'rounded-body border border-card-border bg-card-header',
-									'shadow-none',
-								)}
-							>
+							<section key={section.title} {...styles.section()}>
 								{canCollapse ? (
-									<button
-										type="button"
-										aria-expanded={!isCollapsed}
-										onClick={() => toggleSection(section.title)}
-										className={cx(
-											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
-											isCollapsed ? 'rounded-body!' : 'rounded-t-body!',
-										)}
-									>
-										<h1 className="heading-16 text-primary font-sans">
-											{section.title}
-										</h1>
-										<div className="flex items-center gap-[12px]">
-											{isCollapsed && Boolean(section.totalItems) && (
-												<span className="copy-13 text-tertiary">
-													{section.totalItems}{' '}
-													{Pagination.pluralize(
-														section.totalItems ?? 0,
-														itemsLabel,
-													)}
-												</span>
+									<h2>
+										<button
+											type="button"
+											aria-expanded={!isCollapsed}
+											onClick={() => toggleSection(section.title)}
+											{...cx(
+												styles.toggle(),
+												pressDown(),
+												!isCollapsed && styles.toggleExpanded(),
 											)}
-											<div
-												className={cx(
-													'accent copy-16 font-mono',
-													isCollapsed ? 'text-accent' : 'text-tertiary',
+										>
+											<span {...styles.title()}>{section.title}</span>
+											<span {...styles.toggleMeta()}>
+												{isCollapsed && Boolean(section.totalItems) && (
+													<span {...styles.count()}>
+														{section.totalItems}{' '}
+														{Pagination.pluralize(
+															section.totalItems ?? 0,
+															itemsLabel,
+														)}
+													</span>
 												)}
-											>
-												[{isCollapsed ? '+' : '–'}]
-											</div>
-										</div>
-									</button>
+												<ChevronDown
+													{...cx(
+														styles.chevron(),
+														!isCollapsed && styles.chevronExpanded(),
+													)}
+												/>
+											</span>
+										</button>
+									</h2>
 								) : (
-									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-body">
-										<h1 className="heading-16 text-primary font-sans">
-											{section.title}
-										</h1>
+									<div {...styles.header()}>
+										<h2 {...styles.title()}>{section.title}</h2>
 										{Boolean(section.totalItems) && (
-											<span className="copy-13 text-tertiary">
+											<span {...styles.count()}>
 												{section.totalItems}{' '}
 												{Pagination.pluralize(
 													section.totalItems ?? 0,
@@ -101,11 +93,9 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 								)}
 
 								{!isCollapsed && (
-									<div className="rounded-t-body border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+									<div {...cx(styles.content(), styles.contentStacked())}>
 										{section.contextual && (
-											<div className="px-[18px] py-[10px] border-b border-solid border-card-border">
-												{section.contextual}
-											</div>
+											<div {...styles.contextual()}>{section.contextual}</div>
 										)}
 										{section.content}
 									</div>
@@ -117,90 +107,49 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 			</Sections.Context.Provider>
 		)
 
+	if (sections.length === 1) {
+		const [section] = sections
+		return (
+			<Sections.Context.Provider value={{ mode }}>
+				<section {...cx(styles.section(), styles.sectionTabs())}>
+					<div {...styles.tabsHeader()}>
+						<h2 {...styles.singleTitle()}>
+							{section.title}
+							{Boolean(section.totalItems) && (
+								<span {...styles.count()}>({section.totalItems})</span>
+							)}
+						</h2>
+						{section.contextual}
+					</div>
+					<div {...styles.content()}>{section.content}</div>
+				</section>
+			</Sections.Context.Provider>
+		)
+	}
+
 	return (
 		<Sections.Context.Provider value={{ mode }}>
-			<section
-				className={cx(
-					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
-					'rounded-body border border-card-border bg-card-header',
-					'shadow-none',
-				)}
+			<Tab.Root
+				value={String(activeSection)}
+				onValueChange={(value) => {
+					if (value === null || Number(value) === activeSection) return
+					onSectionChange?.(Number(value))
+				}}
+				{...cx(styles.section(), styles.sectionTabs())}
 			>
-				<div className="min-h-11 flex flex-wrap items-center justify-between gap-x-3">
-					<div
-						role="tablist"
-						aria-label="Details"
-						className="flex min-w-0 overflow-x-auto items-center self-stretch font-sans"
-					>
-						{sections.length === 1 ? (
-							<div
-								role="tab"
-								aria-selected="true"
-								id={`${sectionId}-tab-0`}
-								aria-controls={`${sectionId}-panel-0`}
-								tabIndex={0}
-								className="h-full flex items-center gap-[8px] button-14 pl-[18px] pr-[12px] font-sans"
-							>
-								<span className="text-primary">{sections[0].title}</span>
-								{Boolean(sections[0].totalItems) && (
-									<span className="text-tertiary">
-										({sections[0].totalItems})
-									</span>
-								)}
-							</div>
-						) : (
-							sections.map((section, index) => (
-								<button
-									key={section.title}
-									type="button"
-									role="tab"
-									aria-selected={activeSection === index}
-									id={`${sectionId}-tab-${index}`}
-									aria-controls={`${sectionId}-panel-${index}`}
-									tabIndex={activeSection === index ? 0 : -1}
-									onKeyDown={(event) => {
-										const next =
-											event.key === 'ArrowRight'
-												? (index + 1) % sections.length
-												: event.key === 'ArrowLeft'
-													? (index - 1 + sections.length) % sections.length
-													: event.key === 'Home'
-														? 0
-														: event.key === 'End'
-															? sections.length - 1
-															: null
-										if (next === null) return
-										event.preventDefault()
-										onSectionChange?.(next)
-										document.getElementById(`${sectionId}-tab-${next}`)?.focus()
-									}}
-									onClick={() => {
-										if (activeSection === index) return
-										onSectionChange?.(index)
-									}}
-									className={cx(
-										'min-h-11 shrink-0 flex items-center button-14 font-sans',
-										'focus-visible:-outline-offset-2! cursor-pointer',
-										index === 0
-											? 'pl-[18px] pr-[12px] rounded-tl-body!'
-											: 'px-[12px]',
-										activeSection === index ? 'text-primary' : 'text-tertiary',
-									)}
-								>
-									<div className="relative h-full flex items-center">
-										{section.title}
-										{activeSection === index && (
-											<div className="absolute h-px bg-accent bottom-0 left-0 right-0 -mx-[2px]" />
-										)}
-									</div>
-								</button>
-							))
-						)}
-					</div>
+				<div {...styles.tabsHeader()}>
+					<Tab.List activateOnFocus aria-label="Details" {...styles.tabList()}>
+						{sections.map((section, index) => (
+							<Tab key={section.title} scale="small" value={String(index)}>
+								{section.title}
+							</Tab>
+						))}
+					</Tab.List>
 					{sections.map((section, index) => (
 						<div
 							key={section.title}
-							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
+							hidden={activeSection !== index}
+							{...styles.contextualSlot()}
 						>
 							{section.contextual}
 						</div>
@@ -208,20 +157,16 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 				</div>
 
 				{sections.map((section, index) => (
-					<div
+					<Tab.Panel
 						key={section.title}
-						role="tabpanel"
-						id={`${sectionId}-panel-${index}`}
-						aria-labelledby={`${sectionId}-tab-${index}`}
-						className={cx(
-							'border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
-							activeSection !== index && 'hidden',
-						)}
+						keepMounted
+						value={String(index)}
+						{...styles.content()}
 					>
 						{section.content}
-					</div>
+					</Tab.Panel>
 				))}
-			</section>
+			</Tab.Root>
 		</Sections.Context.Provider>
 	)
 }
@@ -256,4 +201,135 @@ export namespace Sections {
 	export function useSectionsMode() {
 		return React.useContext(Context).mode
 	}
+}
+
+namespace styles {
+	export const stack = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16',
+	})
+
+	export const section = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		overflow: 'hidden',
+		width: '100% !custom',
+	})
+
+	export const sectionTabs = style({
+		alignSelf: 'flex-start',
+		minHeight: '0 !custom',
+	})
+
+	// Rounded like the card, so the inset focus ring follows its corners.
+	export const toggle = style({
+		alignItems: 'center',
+		borderRadius: 'xs',
+		cursor: 'pointer',
+		display: 'flex',
+		height: '52px !custom',
+		justifyContent: 'space-between',
+		outlineOffset: '-2px !custom',
+		paddingInline: '20',
+		width: '100% !custom',
+	})
+
+	export const toggleExpanded = style({
+		borderBottomLeftRadius: 'none',
+		borderBottomRightRadius: 'none',
+	})
+
+	export const title = style({
+		color: 'content.primary',
+		typography: 'heading.h4',
+	})
+
+	export const toggleMeta = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '12',
+	})
+
+	export const count = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const chevron = style({
+		color: 'content.secondary',
+		height: '16',
+		width: '16',
+	})
+
+	export const chevronExpanded = style({ rotate: '180deg' })
+
+	export const header = style({
+		alignItems: 'center',
+		display: 'flex',
+		height: '52px !custom',
+		justifyContent: 'space-between',
+		paddingInline: '20',
+	})
+
+	export const content = style({
+		backgroundColor: 'background.secondary',
+		borderTopColor: 'line.secondary',
+		borderTopStyle: 'solid',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		minHeight: '0 !custom',
+		overflowX: 'auto',
+		selectors: { '&[hidden]': { display: 'none' } },
+	})
+
+	export const contentStacked = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopLeftRadius: 'xs',
+		borderTopRightRadius: 'xs',
+		borderWidth: 'regular',
+		marginBottom: '-1px !custom',
+		marginInline: '-1px !custom',
+	})
+
+	export const contextual = style({
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+		paddingBlock: '12',
+		paddingInline: '20',
+	})
+
+	export const tabsHeader = style({
+		alignItems: 'center',
+		columnGap: '12',
+		display: 'flex',
+		flexWrap: 'wrap',
+		justifyContent: 'space-between',
+		minHeight: '48',
+		paddingBlock: '8',
+		paddingInline: '16',
+		rowGap: '8',
+	})
+
+	export const tabList = style({ minWidth: '0 !custom', rowGap: '4' })
+
+	export const singleTitle = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b2',
+	})
+
+	export const contextualSlot = style({
+		selectors: { '&[hidden]': { display: 'none' } },
+	})
 }

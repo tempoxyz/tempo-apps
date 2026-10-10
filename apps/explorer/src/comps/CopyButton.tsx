@@ -1,43 +1,60 @@
-import { Button } from 'regen-ui'
+import { Button, IconButton, Tooltip } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import type * as React from 'react'
-import { cx } from '#lib/css'
-import { useCopy } from '#lib/hooks.ts'
-import CheckIcon from '~icons/lucide/check'
-import CopyIcon from '~icons/lucide/copy'
+import { useCopy } from '#lib/hooks'
 
+/**
+ * Copy action. Icon-only, it is a tertiary TDS `IconButton` with a tooltip;
+ * with `children`, a tertiary TDS `Button` labelled by them. The toast from
+ * `useCopy` announces the copy.
+ */
 export function CopyButton(props: CopyButton.Props): React.JSX.Element {
-	const { value, ariaLabel, disabled, className, children } = props
+	const {
+		ariaLabel = 'Copy to clipboard',
+		children,
+		className,
+		disabled,
+		value,
+	} = props
 
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
+	const onClick = () => copy(typeof value === 'function' ? value() : value)
+	const icon = notifying ? <Check /> : <Copy />
+
+	if (children)
+		return (
+			<Button
+				className={className}
+				disabled={disabled}
+				onClick={onClick}
+				scale="small"
+				variant="tertiary"
+			>
+				{icon}
+				{children}
+			</Button>
+		)
 
 	return (
-		<Button.Icon
-			variant="plain"
-			size="sm"
-			className={cx(
-				'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap transition-colors press-down',
-				children && 'w-auto! px-2!',
-				notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
-				className,
-			)}
-			disabled={disabled}
-			onClick={() => copy(typeof value === 'function' ? value() : value)}
-			aria-label={ariaLabel ?? 'Copy to clipboard'}
-			title={notifying ? 'Copied!' : (ariaLabel ?? 'Copy to clipboard')}
-		>
-			{notifying ? (
-				<CheckIcon className="size-3.75" />
-			) : (
-				<CopyIcon className="size-3.75" />
-			)}
-			{children}
-		</Button.Icon>
+		<Tooltip content={ariaLabel}>
+			<IconButton
+				aria-label={ariaLabel}
+				className={className}
+				disabled={disabled}
+				onClick={onClick}
+				scale="small"
+				variant="tertiary"
+			>
+				{icon}
+			</IconButton>
+		</Tooltip>
 	)
 }
 
 export declare namespace CopyButton {
 	type Props = {
 		value: string | (() => string)
+		/** Visible label. Without it the button is icon-only. */
 		children?: React.ReactNode
 		ariaLabel?: string | undefined
 		disabled?: boolean | undefined

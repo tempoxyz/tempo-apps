@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { Alert, SimpleTable, style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
+import { cx } from 'zyzz'
 import { Address as AddressComp } from '#comps/Address.tsx'
 import { CollapsibleSection } from '#comps/Contract.tsx'
 import { TokenFeeAmm } from '#comps/FeeAmmPools'
 import { TokenTrust } from '#comps/TokenTrust'
 import { getApiUrl } from '#lib/env.ts'
+import { link, linkHover } from '#styles/explorer'
 import type { Tip20RolesResponse } from '#routes/api/tip20-roles'
 
 function formatDate(timestamp: number): string {
@@ -55,44 +58,37 @@ export function Tip20TokenTabContent(
 	})
 	const config = query.isError ? undefined : query.data?.config
 	return (
-		<div className="flex flex-col [&>*:last-child]:border-b-transparent">
+		<div {...styles.root()}>
 			<CollapsibleSection
 				first
 				title="Token configuration"
 				expanded={configExpanded}
 				onToggle={() => setConfigExpanded(!configExpanded)}
 			>
-				<div className="px-[18px] pb-[14px] pt-[6px] copy-13">
+				<div {...styles.config()}>
 					{query.isError && (
-						<p role="status" className="text-tertiary pb-3">
-							Token configuration unavailable.{' '}
-							<button
-								type="button"
-								onClick={() => void query.refetch()}
-								className="text-accent hover:underline"
-							>
-								Try again
-							</button>
-						</p>
+						<Alert
+							role="status"
+							tone="warning"
+							title="Token configuration unavailable."
+							action={{
+								label: 'Try again',
+								onClick: () => void query.refetch(),
+							}}
+							style={{ marginBottom: 16, width: '100%' }}
+						/>
 					)}
-					<section
-						aria-label="Metadata"
-						className="rounded-[6px] border border-distinct overflow-hidden"
-					>
-						<h3 className="border-b border-distinct px-3 py-2.5 font-medium">
-							Metadata
-						</h3>
-						<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
-							<MetadataField label="Currency" value={config?.currency} />
-							<MetadataField label="Decimals" value={config?.decimals} />
-							<MetadataField label="Total supply" value={config?.totalSupply} />
-							<MetadataField label="Supply cap" value={config?.supplyCap} />
-						</dl>
-						<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 label-12">
-							<ConfigRow
+					<section aria-label="Metadata">
+						<h3 {...styles.metadataTitle()}>Metadata</h3>
+						<SimpleTable>
+							<MetadataRow label="Currency" value={config?.currency} />
+							<MetadataRow label="Decimals" value={config?.decimals} />
+							<MetadataRow label="Total supply" value={config?.totalSupply} />
+							<MetadataRow label="Supply cap" value={config?.supplyCap} />
+							<MetadataRow
 								label="Created"
 								value={
-									<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+									<span {...styles.created()}>
 										<span>
 											{metadataData?.createdTimestamp != null
 												? formatDate(metadataData.createdTimestamp)
@@ -102,7 +98,7 @@ export function Tip20TokenTabContent(
 											<Link
 												to="/tx/$hash"
 												params={{ hash: metadataData.createdTxHash }}
-												className="text-accent hover:underline"
+												{...cx(link(), linkHover())}
 											>
 												Creation tx ↗
 											</Link>
@@ -111,17 +107,17 @@ export function Tip20TokenTabContent(
 								}
 							/>
 							{metadataData?.createdBy && (
-								<ConfigRow
+								<MetadataRow
 									label="Created by"
 									value={
 										<AddressComp
 											address={metadataData.createdBy}
-											className="label-12"
+											className={styles.createdBy().className}
 										/>
 									}
 								/>
 							)}
-						</div>
+						</SimpleTable>
 					</section>
 					<TokenTrust
 						address={address}
@@ -139,13 +135,13 @@ export function Tip20TokenTabContent(
 			>
 				{liquidityExpanded && <TokenFeeAmm address={address} />}
 			</CollapsibleSection>
-			<div className="flex items-center gap-3 px-[18px] py-[10px] label-12 text-tertiary">
+			<div {...styles.footer()}>
 				<span>TIP-20</span>
 				<a
 					href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-accent hover:underline"
+					{...cx(link(), linkHover())}
 				>
 					Spec
 				</a>
@@ -153,7 +149,7 @@ export function Tip20TokenTabContent(
 					href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-accent hover:underline"
+					{...cx(link(), linkHover())}
 				>
 					Rust
 				</a>
@@ -162,34 +158,66 @@ export function Tip20TokenTabContent(
 	)
 }
 
-function ConfigRow(props: {
+function MetadataRow(props: {
 	label: string
 	value: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-			<span className="text-secondary shrink-0">{props.label}</span>
-			<span className="text-primary min-w-0">
-				{props.value ?? <span className="text-tertiary">&mdash;</span>}
-			</span>
-		</div>
-	)
-}
-
-function MetadataField(props: {
-	label: string
-	value: React.ReactNode
-}): React.JSX.Element {
-	return (
-		<div className="min-w-0 flex flex-col gap-1.5">
-			<dt className="label-12 text-secondary">{props.label}</dt>
-			<dd className="copy-14 text-primary tabular-nums wrap-anywhere">
-				{props.value ?? <span className="text-tertiary">&mdash;</span>}
-			</dd>
-		</div>
+		<SimpleTable.Row>
+			<SimpleTable.Dt>{props.label}</SimpleTable.Dt>
+			<SimpleTable.Dd {...styles.value()}>
+				{props.value ?? <span {...styles.placeholder()}>&mdash;</span>}
+			</SimpleTable.Dd>
+		</SimpleTable.Row>
 	)
 }
 
 export declare namespace Tip20TokenTabContent {
 	type Props = { address: Address.Address }
+}
+
+namespace styles {
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		selectors: {
+			'& > *:last-child': { borderBottomColor: 'transparent !custom' },
+		},
+	})
+
+	export const config = style({
+		paddingBottom: '16',
+		paddingInline: '20',
+		paddingTop: '8',
+		typography: 'body.b3',
+	})
+
+	export const metadataTitle = style({
+		paddingBottom: '8',
+		typography: 'body.b3Strong',
+	})
+
+	export const value = style({ fontVariantNumeric: 'tabular-nums' })
+
+	export const placeholder = style({ color: 'content.secondary' })
+
+	export const created = style({
+		alignItems: 'center',
+		columnGap: '12',
+		display: 'flex',
+		flexWrap: 'wrap',
+		rowGap: '4',
+	})
+
+	export const createdBy = style({ typography: 'mono.inline' })
+
+	export const footer = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '20',
+		typography: 'body.b3',
+	})
 }

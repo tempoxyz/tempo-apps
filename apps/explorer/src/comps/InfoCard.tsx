@@ -1,5 +1,6 @@
+import { style } from '@tempoxyz/ds/platform'
 import type { ReactNode } from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 
 export function InfoCard(props: InfoCard.Props) {
 	const { title, sections, className } = props
@@ -15,19 +16,12 @@ export function InfoCard(props: InfoCard.Props) {
 		return (
 			<div
 				key={key}
-				className={cx(
-					'flex items-center px-4.5 py-3 type-card',
-					!isLast && 'border-b border-solid border-card-border',
-				)}
+				{...cx(styles.section(), !isLast && styles.sectionDivider())}
 			>
 				{isSectionEntry ? (
-					<div className="flex items-center gap-2 justify-between w-full">
-						<span className="capitalize text-tertiary shrink-0">
-							{section.label}
-						</span>
-						<div className="min-w-0 flex-1 flex justify-end type-card-data text-primary">
-							{section.value}
-						</div>
+					<div {...styles.entry()}>
+						<span {...styles.label()}>{section.label}</span>
+						<div {...styles.value()}>{section.value}</div>
 					</div>
 				) : (
 					section
@@ -37,23 +31,10 @@ export function InfoCard(props: InfoCard.Props) {
 	})
 
 	return (
-		<section
-			className={cx(
-				'type-card',
-				'w-full min-[1240px]:w-fit',
-				'rounded-body border border-card-border bg-card-header overflow-hidden shadow-none',
-				className,
-			)}
-		>
-			{hasTitle && (
-				<div className="flex items-center min-h-11 px-4 text-primary bg-card-header">
-					{title}
-				</div>
-			)}
+		<section {...styles.root({ className })}>
+			{hasTitle && <div {...styles.header()}>{title}</div>}
 			{hasTitle ? (
-				<div className="rounded-t-body border-t border-card-border bg-card -mx-px -mb-px">
-					{sectionsContent}
-				</div>
+				<div {...styles.body()}>{sectionsContent}</div>
 			) : (
 				sectionsContent
 			)}
@@ -66,14 +47,7 @@ InfoCard.Title = function InfoCardTitle(props: {
 	className?: string
 }) {
 	return (
-		<h1
-			className={cx(
-				'heading-16 text-primary select-none flex items-center gap-2',
-				props.className,
-			)}
-		>
-			{props.children}
-		</h1>
+		<h1 {...styles.title({ className: props.className })}>{props.children}</h1>
 	)
 }
 
@@ -83,4 +57,89 @@ export declare namespace InfoCard {
 		title?: ReactNode
 		className?: string
 	}
+}
+
+namespace styles {
+	// Width sits in `:where()` so the caller's `className` decides it.
+	export const root = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		overflow: 'hidden',
+		typography: 'body.b2',
+		selectors: { ':where(&)': { width: '100% !custom' } },
+		'@media (width >= 1240px)': {
+			selectors: { ':where(&)': { width: 'fit-content !custom' } },
+		},
+	})
+
+	export const header = style({
+		alignItems: 'center',
+		backgroundColor: 'background.secondary',
+		color: 'content.primary',
+		display: 'flex',
+		minHeight: '44px !custom',
+		paddingInline: '16',
+	})
+
+	export const body = style({
+		backgroundColor: 'background.secondary',
+		borderTopColor: 'line.secondary',
+		borderTopLeftRadius: 'xs',
+		borderTopRightRadius: 'xs',
+		borderTopStyle: 'solid',
+		borderTopWidth: 'regular',
+		marginBottom: '-1px !custom',
+		marginInline: '-1px !custom',
+	})
+
+	export const section = style({
+		alignItems: 'center',
+		display: 'flex',
+		paddingBlock: '12',
+		paddingInline: '20',
+		typography: 'body.b2',
+	})
+
+	export const sectionDivider = style({
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+	})
+
+	export const entry = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const label = style({
+		color: 'content.secondary',
+		flexShrink: '0 !custom',
+		textTransform: 'capitalize',
+	})
+
+	export const value = style({
+		color: 'content.primary',
+		display: 'flex',
+		flex: 1,
+		fontVariantNumeric: 'tabular-nums',
+		justifyContent: 'flex-end',
+		minWidth: '0 !custom',
+		typography: 'body.b2',
+	})
+
+	// Gap sits in `:where()` so the caller's `className` can widen it.
+	export const title = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		typography: 'heading.h4',
+		userSelect: 'none',
+		selectors: { ':where(&)': { gap: '8' } },
+	})
 }

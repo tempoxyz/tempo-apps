@@ -65,14 +65,19 @@ export declare namespace MyComponent {
 
 * Function components only (no classes)
 * Explicit return type `React.JSX.Element`
-* Use `cx()` helper for conditional classNames (from `#lib/css`)
 * Icons from `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
 
-### Tailwind CSS
+### Styling (zyzz + Tempo Design System)
 
-* Use Tailwind v4 syntax
-* Custom variants: `@custom-variant`, `@theme`
-* Prefer utility classes over custom CSS
+The explorer is built on [Tempo Design System](https://github.com/tempoxyz/ds) Platform (`@tempoxyz/ds`) and styles components with [zyzz](https://zyzz.style), which compiles typed style definitions to static CSS.
+
+* Use TDS components (`Button`, `IconButton`, `Badge`, …) from `@tempoxyz/ds/platform` for controls. Do not restyle them through `className`; add only properties they leave unset.
+* Import `style`, `variants`, and `vars` from `@tempoxyz/ds/platform` and use TDS tokens (`color: 'content.secondary'`, `gap: '8'`, `typography: 'body.b3'`). Literal values on token-mapped properties (including sizes) take the ` !custom` suffix.
+* Explorer additions TDS lacks (link and code colors, `pressDown`, `transitionColors`, keyframes) live in `#styles/explorer`; document-level rules live in `#styles/globals`.
+* Keep a component's definitions in a module-level `namespace styles` at the bottom of its file and spread them onto elements: `<div {...styles.card()} />`. Combine with `cx` from `zyzz`, one spread per element.
+* Use `variants` for finite choices and `data-*`/ARIA attribute selectors for state, not class-name logic.
+* Import style modules by name; `import * as` from a style module does not compile. Declare shared partial records at module scope, not inside `namespace styles`. Variant axis names are lowercase.
+* Route files keep their styles in a sibling `-<route>.styles.ts`: TanStack Router code-splits route components into modules that zyzz does not compile.
 
 ## Making Changes to an Application
 
@@ -159,7 +164,7 @@ You can find the documentation for common libraries at the following links:
 * [TanStack Start](https://context7.com/websites/tanstack_start/llms.txt?tokens=1000000)
 * [TanStack Router](https://context7.com/websites/tanstack_router/llms.txt?tokens=1000000)
 * [React](https://context7.com/websites/react_dev/llms.txt?tokens=1000000)
-* [Tailwind CSS v4](https://context7.com/websites/tailwindcss/llms.txt?tokens=1000000)
+* [zyzz](https://zyzz.style/llms.txt)
 * [Wagmi React reference](https://context7.com/websites/wagmi_sh_react/llms.txt?tokens=1000000)
 * [Wagmi Tempo reference](https://context7.com/websites/wagmi_sh_tempo_getting-started/llms.txt?tokens=1000000)
 * [Viem general reference](https://viem.sh/llms.txt)

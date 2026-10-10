@@ -1,9 +1,10 @@
 import type { Address } from 'ox'
+import { StatusIndicator, TextButton } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { type Connector, useConnection } from 'wagmi'
+import { useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from '#lib/css'
-import LucideCoins from '~icons/lucide/coins'
+import { cx } from 'zyzz'
+import { animatePulse } from '#styles/explorer'
 
 export function SetAsFeeToken(
 	props: SetAsFeeToken.Props,
@@ -41,42 +42,29 @@ export function SetAsFeeToken(
 		setFeeToken.mutate({ token: tokenAddress, account })
 	}
 
-	const busy = setFeeToken.isPending || showSuccess
-
-	const label = showSuccess
-		? 'Fee token set!'
-		: isAlreadyFeeToken
-			? 'Currently your fee token'
-			: setFeeToken.isPending
-				? 'Setting…'
-				: `Set ${symbol ?? 'token'} as fee token`
+	if (isAlreadyFeeToken)
+		return (
+			<StatusIndicator tone="positive">
+				{showSuccess ? 'Fee token set!' : 'Currently your fee token'}
+			</StatusIndicator>
+		)
 
 	return (
-		<button
-			type="button"
-			disabled={busy || isAlreadyFeeToken}
-			className={cx(
-				'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-				isAlreadyFeeToken
-					? 'text-tertiary cursor-default'
-					: showSuccess
-						? 'text-positive'
-						: busy
-							? 'text-secondary animate-pulse'
-							: 'text-secondary hover:text-primary cursor-pointer press-down',
-			)}
+		<TextButton
+			disabled={setFeeToken.isPending}
 			onClick={handleClick}
+			{...cx(setFeeToken.isPending && animatePulse())}
 		>
-			<LucideCoins className="size-3.5" />
-			{label}
-		</button>
+			{setFeeToken.isPending
+				? 'Setting…'
+				: `Set ${symbol ?? 'token'} as fee token`}
+		</TextButton>
 	)
 }
 
 export declare namespace SetAsFeeToken {
 	type Props = {
 		address: Address.Address
-		connectors: readonly Connector[]
 		symbol?: string | undefined
 	}
 }

@@ -68,15 +68,16 @@ describe('unclaimed fee grid', () => {
 	])('uses the shared grid header in %s mode without block or refresh controls', (mode) => {
 		section.mode = mode
 		const html = render()
-		expect(html).toContain('grid-cols-subgrid')
-		expect(html).toContain(
-			'<a href="https://tempo.xyz/developers/docs/guide/node/validator-lifecycle#claim-validator-fees" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">available to claim</a>.',
+		expect(html).toContain('aria-busy="false"')
+		expect(html).toMatch(
+			/<a href="https:\/\/tempo\.xyz\/developers\/docs\/guide\/node\/validator-lifecycle#claim-validator-fees" target="_blank" rel="noopener noreferrer" class="[^"]+">available to claim<\/a>\./,
 		)
 		expect(html).toContain('>Name</span>')
 		expect(html).toContain('>Amount</span>')
 		expect(html).toContain('>PathUSD</span>')
-		expect(html).toContain(`/api/token/logo/${token}`)
-		expect(html).toContain('size-5 shrink-0')
+		expect(html).toMatch(
+			new RegExp(`<img src="/api/token/logo/${token}" alt="" class="[^"]+"`),
+		)
 		expect(html).toContain('title="1.178057">1.178057</span>')
 		if (mode === 'tabs') {
 			expect(html).toContain('>Ticker</span>')

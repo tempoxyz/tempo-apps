@@ -5,16 +5,20 @@ import {
 	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
+import { Calendar } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { useAnimatedBlockNumber } from '#lib/block-number'
-import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
-import CalendarIcon from '~icons/lucide/calendar'
+import { link, linkHover } from '#styles/explorer'
+import { styles } from './-countdown.$targetBlock.styles'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
+
+// Explorer link color and hover underline, for route styles that cannot use `cx`.
+const linkClassName = link({ className: linkHover().className }).className
 
 export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 	component: RouteComponent,
@@ -88,12 +92,7 @@ function RouteComponent() {
 	}, [estimatedSeconds])
 
 	return (
-		<div
-			className={cx(
-				'flex flex-col items-center justify-center gap-8 w-full min-h-[calc(100vh-200px)]',
-				'pt-20 pb-16 px-4',
-			)}
-		>
+		<div {...styles.page()}>
 			<CountdownCard
 				targetBlockNumber={targetBlockNumber}
 				currentBlockNumber={currentBlockNumber}
@@ -132,19 +131,19 @@ function CountdownCard(props: {
 	)
 
 	return (
-		<div className="flex flex-col items-center gap-6 w-full max-w-[600px]">
-			<div className="text-center">
-				<h1 className="heading-24 text-primary mb-2">Block Countdown</h1>
-				<p className="text-secondary copy-14">
+		<div {...styles.card()}>
+			<div {...styles.heading()}>
+				<h1 {...styles.title()}>Block Countdown</h1>
+				<p {...styles.description()}>
 					Estimated time for block{' '}
-					<span className="text-accent font-mono">
+					<span {...styles.target({ className: link().className })}>
 						#{targetBlockNumber.toLocaleString()}
 					</span>{' '}
 					to be created
 				</p>
 			</div>
 
-			<div className="grid grid-cols-4 gap-3 w-full max-w-[400px]">
+			<div {...styles.units()}>
 				<CountdownUnit value={countdown.days} label="Days" />
 				<CountdownUnit value={countdown.hours} label="Hours" />
 				<CountdownUnit value={countdown.mins} label="Mins" />
@@ -152,7 +151,6 @@ function CountdownCard(props: {
 			</div>
 
 			<InfoCard
-				className="w-full"
 				sections={[
 					{
 						label: 'Target Block',
@@ -160,7 +158,7 @@ function CountdownCard(props: {
 							<Link
 								to="/block/$id"
 								params={{ id: String(targetBlockNumber) }}
-								className="text-accent hover:underline press-down tabular-nums"
+								{...styles.blockLink({ className: linkClassName })}
 							>
 								#{targetBlockNumber.toLocaleString()}
 							</Link>
@@ -172,7 +170,7 @@ function CountdownCard(props: {
 							<Link
 								to="/block/$id"
 								params={{ id: String(currentBlockNumber) }}
-								className="text-accent hover:underline press-down tabular-nums"
+								{...styles.blockLink({ className: linkClassName })}
 							>
 								#{currentBlockNumber.toLocaleString()}
 							</Link>
@@ -181,22 +179,17 @@ function CountdownCard(props: {
 					{
 						label: 'Remaining Blocks',
 						value: (
-							<span className="text-primary tabular-nums">
+							<span {...styles.remaining()}>
 								{remainingBlocks.toLocaleString()}
 							</span>
 						),
 					},
 					{
 						label: (
-							<span
-								className="flex items-center gap-1.5"
-								title="Estimated Target Date"
-							>
-								<CalendarIcon className="size-3.5 text-content-dimmed" />
-								<span className="hidden min-[480px]:inline">
-									Estimated Target Date
-								</span>
-								<span className="min-[480px]:hidden">Est. Target</span>
+							<span {...styles.dateLabel()} title="Estimated Target Date">
+								<Calendar {...styles.dateIcon()} />
+								<span {...styles.dateLabelLong()}>Estimated Target Date</span>
+								<span {...styles.dateLabelShort()}>Est. Target</span>
 							</span>
 						),
 						value: <EstimatedTargetDateValue date={estimatedTargetDate} />,
@@ -210,11 +203,9 @@ function CountdownCard(props: {
 function CountdownUnit(props: { value: number; label: string }) {
 	const { value, label } = props
 	return (
-		<div className="flex flex-col items-center gap-1 p-3 rounded-body bg-card border border-card-border">
-			<span className="heading-32 font-sans text-primary tabular-nums">
-				{String(value).padStart(2, '0')}
-			</span>
-			<span className="label-12 text-tertiary ">{label}</span>
+		<div {...styles.unit()}>
+			<span {...styles.unitValue()}>{String(value).padStart(2, '0')}</span>
+			<span {...styles.unitLabel()}>{label}</span>
 		</div>
 	)
 }
@@ -242,9 +233,9 @@ function EstimatedTargetDateValue(props: { date: Date }) {
 	})
 
 	return (
-		<span className="text-primary whitespace-nowrap" title={fullDate}>
-			<span className="hidden min-[620px]:inline">{fullDate}</span>
-			<span className="min-[620px]:hidden">{shortDate}</span>
+		<span {...styles.date()} title={fullDate}>
+			<span {...styles.dateLong()}>{fullDate}</span>
+			<span {...styles.dateShort()}>{shortDate}</span>
 		</span>
 	)
 }

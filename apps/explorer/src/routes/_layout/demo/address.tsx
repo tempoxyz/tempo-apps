@@ -3,6 +3,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
@@ -16,7 +17,6 @@ import {
 	TransactionTimestamp,
 	TransactionTotal,
 } from '#comps/TxTransactionRow'
-import { cx } from '#lib/css'
 import {
 	accountAddress,
 	adminAddress,
@@ -41,7 +41,7 @@ import {
 } from '#lib/demo'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import CopyIcon from '~icons/lucide/copy'
+import { composed, styles } from './-address.styles'
 
 type MockTransactionData = {
 	hash: Hex.Hex
@@ -890,47 +890,34 @@ function Component() {
 	]
 
 	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
-			)}
-		>
+		<div {...styles.page()}>
 			<InfoCard
 				title={<InfoCard.Title>Account</InfoCard.Title>}
-				className="self-start"
+				className={styles.accountCard().className}
 				sections={[
 					<button
 						key="address"
 						type="button"
 						onClick={() => copy(accountAddress)}
-						className="w-full text-left cursor-pointer press-down text-tertiary"
-						title={accountAddress}
+						{...composed.accountAddress}
 					>
-						<div className="flex items-center gap-[8px] mb-[8px]">
-							<span className="copy-13 font-normal capitalize">Address</span>
-							<div className="relative flex items-center">
-								<CopyIcon className="w-[12px] h-[12px]" />
-								{notifying && (
-									<span className="absolute left-[calc(100%+8px)] copy-13 ">
-										copied
-									</span>
-								)}
-							</div>
+						<div {...styles.addressHeader()}>
+							<span {...styles.addressLabel()}>Address</span>
+							{notifying ? (
+								<Check {...styles.copyIcon()} />
+							) : (
+								<Copy {...styles.copyIcon()} />
+							)}
 						</div>
-						<p className="copy-14 font-normal text-primary break-all max-w-[21ch]">
-							{accountAddress}
-						</p>
+						<p {...styles.addressValue()}>{accountAddress}</p>
 					</button>,
 					{
 						label: 'Active',
 						value: (
-							<ClientOnly
-								fallback={<span className="text-tertiary copy-13">…</span>}
-							>
+							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
 								<RelativeTime
 									timestamp={baseTimestamp - 60n}
-									className="copy-13 text-primary"
+									{...styles.value()}
 								/>
 							</ClientOnly>
 						),
@@ -938,22 +925,18 @@ function Component() {
 					{
 						label: 'Holdings',
 						value: (
-							<ClientOnly
-								fallback={<span className="text-tertiary copy-13">…</span>}
-							>
-								<span className="copy-13 text-primary">$1,234,567.00</span>
+							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
+								<span {...styles.value()}>$1,234,567.00</span>
 							</ClientOnly>
 						),
 					},
 					{
 						label: 'Created',
 						value: (
-							<ClientOnly
-								fallback={<span className="text-tertiary copy-13">…</span>}
-							>
+							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
 								<RelativeTime
 									timestamp={baseTimestamp - 518400n}
-									className="copy-13 text-primary"
+									{...styles.value()}
 								/>
 							</ClientOnly>
 						),
@@ -989,20 +972,16 @@ function Component() {
 														key={key}
 														event={event}
 														seenAs={accountAddress}
-														className="flex flex-row items-center gap-[6px] w-auto flex-wrap"
 													/>
 												)
 											})
 										) : (
-											<div
-												key="collapsed"
-												className="text-primary h-[20px] flex items-center whitespace-nowrap"
-											>
+											<div key="collapsed" {...styles.collapsed()}>
 												{perspectiveEvents[0] && (
 													<TxEventDescription
 														event={perspectiveEvents[0]}
 														seenAs={accountAddress}
-														className="flex flex-row items-center gap-[6px] w-auto justify-center flex-nowrap"
+														className={styles.collapsedEvent().className}
 													/>
 												)}
 												{events.length > 1 && (
@@ -1015,7 +994,7 @@ function Component() {
 																new Set(prev).add(tx.hash),
 															)
 														}}
-														className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
+														{...composed.moreEvents}
 													>
 														and {events.length - 1} more
 													</button>

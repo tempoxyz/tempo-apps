@@ -1,3 +1,4 @@
+import { Alert, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import type {
 	ContractSource,
@@ -60,19 +61,37 @@ function SourceBrowser(props: {
 	}, [])
 	if (Viewer) return <Viewer entries={props.entries} />
 	return (
-		<div className="flex h-[calc(min(620px,70svh)+96px)] min-h-[416px] flex-col items-center justify-center gap-3 rounded-lg border border-card-border bg-source-background copy-14 text-tertiary">
-			<p role={failed ? 'alert' : 'status'}>
-				{failed ? 'Unable to load source viewer.' : 'Loading source viewer…'}
-			</p>
-			{failed && (
-				<button
-					type="button"
-					onClick={() => window.location.reload()}
-					className="cursor-pointer rounded-md border border-card-border px-3 py-2 text-primary hover:bg-base-alt focus-visible:outline-2 focus-visible:outline-focus"
-				>
-					Reload
-				</button>
+		<div {...styles.placeholder()}>
+			{failed ? (
+				<Alert
+					role="alert"
+					tone="negative"
+					title="Unable to load source viewer."
+					action={{
+						label: 'Reload',
+						onClick: () => window.location.reload(),
+					}}
+				/>
+			) : (
+				<p role="status">Loading source viewer…</p>
 			)}
 		</div>
 	)
+}
+
+namespace styles {
+	export const placeholder = style({
+		alignItems: 'center',
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderWidth: 'regular',
+		color: 'content.secondary',
+		display: 'flex',
+		flexDirection: 'column',
+		height: 'calc(min(620px, 70svh) + 96px) !custom',
+		justifyContent: 'center',
+		minHeight: '416px !custom',
+		typography: 'body.b2',
+	})
 }

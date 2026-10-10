@@ -1,10 +1,10 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { style, Tooltip, variants } from '@tempoxyz/ds/platform'
+import { ChevronRight, Close, Home } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { cx } from '#lib/css'
-import ChevronRight from '~icons/lucide/chevron-right'
-import Home from '~icons/lucide/home'
-import X from '~icons/lucide/x'
+import { cx } from 'zyzz'
+import { animatePulse, mono, pressDown } from '#styles/explorer'
 
 const MAX_CRUMBS = 3
 
@@ -178,8 +178,7 @@ function useBreadcrumbs() {
 	return context
 }
 
-export function Breadcrumbs(props: Breadcrumbs.Props) {
-	const { className } = props
+export function Breadcrumbs(): React.JSX.Element {
 	const { crumbs, pendingCrumb, clearCrumbs } = useBreadcrumbs()
 
 	const resolvedPathname = useRouterState({
@@ -198,22 +197,12 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 		<nav
 			aria-label="Breadcrumb"
 			aria-hidden={isEmpty}
-			className={cx(
-				'flex items-center gap-1 label-12 text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5 origin-left transition-[opacity,scale] duration-[80ms] starting:opacity-0 starting:scale-[0.97]',
-				isEmpty
-					? 'opacity-0 scale-[0.97] pointer-events-none'
-					: 'opacity-100 scale-100',
-				className,
-			)}
+			{...styles.nav({ empty: isEmpty })}
 		>
 			{!isEmpty && (
 				<>
-					<Link
-						to="/"
-						className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
-						title="Home"
-					>
-						<Home className="size-3.5" />
+					<Link to="/" aria-label="Home" {...cx(styles.home(), pressDown())}>
+						<Home {...styles.homeIcon()} />
 					</Link>
 
 					{displayCrumbs.map((crumb, index) => {
@@ -221,14 +210,12 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 						const isPending = isLast && hasPendingCrumb
 						return (
 							<React.Fragment key={crumb.path}>
-								<ChevronRight className="size-3 text-tertiary shrink-0" />
+								<ChevronRight {...styles.separator()} />
 								{isLast ? (
 									<span
-										className={cx(
-											'font-medium truncate max-w-[120px]',
-											isPending
-												? 'text-secondary animate-pulse'
-												: 'text-primary',
+										{...cx(
+											styles.current({ pending: isPending }),
+											isPending && animatePulse(),
 										)}
 										title={crumb.path}
 									>
@@ -237,7 +224,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 								) : (
 									<Link
 										to={crumb.path}
-										className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
+										{...cx(styles.crumb(), pressDown())}
 										title={crumb.path}
 									>
 										<CrumbLabel label={crumb.label} />
@@ -248,25 +235,21 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 					})}
 
 					{crumbs.length > 1 && (
-						<button
-							type="button"
-							onClick={clearCrumbs}
-							className="text-tertiary hover:text-primary press-down shrink-0 outline-none focus-visible:text-accent cursor-pointer"
-							title="Clear navigation history"
-						>
-							<X className="size-3" />
-						</button>
+						<Tooltip content="Clear navigation history">
+							<button
+								type="button"
+								aria-label="Clear navigation history"
+								onClick={clearCrumbs}
+								{...cx(styles.clear(), pressDown())}
+							>
+								<Close {...styles.clearIcon()} />
+							</button>
+						</Tooltip>
 					)}
 				</>
 			)}
 		</nav>
 	)
-}
-
-export namespace Breadcrumbs {
-	export interface Props {
-		className?: string
-	}
 }
 
 export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
@@ -279,7 +262,7 @@ export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
 		return () => setSlotEl(null)
 	}, [setSlotEl])
 
-	return <div ref={ref} className={cx('min-h-5', className)} />
+	return <div ref={ref} {...styles.slot({ className })} />
 }
 
 export namespace BreadcrumbsSlot {
@@ -305,7 +288,100 @@ function CrumbLabel(props: { label: string }): React.JSX.Element {
 	return (
 		<>
 			{props.label.slice(0, index)}
-			<span className="font-mono">{props.label.slice(index)}</span>
+			<span {...mono()}>{props.label.slice(index)}</span>
 		</>
 	)
+}
+
+namespace styles {
+	// The padding gives focus rings room inside the scroll clip; the negative
+	// margins keep the row at 20px.
+	export const nav = variants({
+		base: {
+			alignItems: 'center',
+			color: 'content.secondary',
+			display: 'flex',
+			gap: '4',
+			height: '24',
+			marginBlock: '-2px !custom',
+			marginInline: '-4px !custom',
+			overflowX: 'auto',
+			overflowY: 'hidden',
+			paddingInline: '4',
+			transformOrigin: 'left',
+			transitionDuration: '80ms',
+			transitionProperty: 'opacity, scale',
+			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+			typography: 'body.b3',
+		},
+		defaultVariants: { empty: false },
+		variants: {
+			empty: {
+				true: { opacity: 0, pointerEvents: 'none', scale: 0.97 },
+				false: {
+					opacity: 1,
+					scale: 1,
+					'@starting-style': { opacity: 0, scale: 0.97 },
+				},
+			},
+		},
+	})
+
+	export const home = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		flexShrink: 0,
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		':focus-visible': { color: 'content.primary' },
+	})
+
+	export const homeIcon = style({ height: '16', width: '16' })
+
+	export const separator = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		height: '12',
+		width: '12',
+	})
+
+	export const current = variants({
+		base: {
+			maxWidth: '120px !custom',
+			overflow: 'hidden',
+			textOverflow: 'ellipsis',
+			whiteSpace: 'nowrap',
+		},
+		defaultVariants: { pending: false },
+		variants: {
+			pending: {
+				true: { color: 'content.secondary' },
+				false: { color: 'content.primary' },
+			},
+		},
+	})
+
+	export const crumb = style({
+		color: 'content.secondary',
+		maxWidth: '120px !custom',
+		overflow: 'hidden',
+		textOverflow: 'ellipsis',
+		whiteSpace: 'nowrap',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		':focus-visible': { color: 'content.primary' },
+	})
+
+	export const clear = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'flex',
+		flexShrink: 0,
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		':focus-visible': { color: 'content.primary' },
+	})
+
+	export const clearIcon = style({ height: '12', width: '12' })
+
+	export const slot = style({ minHeight: '20' })
 }

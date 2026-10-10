@@ -12,9 +12,11 @@
  * any depth.
  */
 
+import { DenseTable, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
+import { srOnly, transitionColors, truncate, vizFill } from '#styles/explorer'
 import { formatGas, GasMeter, PanelEmpty } from './SimulateShared'
 import { MIN_FLAMEGRAPH_FRAMES, TxTraceFlamegraph } from './TxTraceFlamegraph'
 import { TxTraceTree } from './TxTraceTree'
@@ -49,8 +51,8 @@ export function SimulateGasPanel(
 		return <PanelEmpty>No trace, so no gas breakdown.</PanelEmpty>
 
 	return (
-		<div className="flex flex-col">
-			<div className="border-b border-solid border-card-border px-[16px] py-[12px]">
+		<div {...styles.root()}>
+			<div {...styles.meter()}>
 				<GasMeter used={props.gasUsed} limit={gasLimit} />
 			</div>
 
@@ -62,7 +64,7 @@ export function SimulateGasPanel(
 					onSelect={props.onSelectFrame}
 				/>
 			) : (
-				<p className="border-b border-solid border-card-border px-[16px] py-[10px] type-card text-content-dimmed">
+				<p {...styles.note()}>
 					{present.length > 1
 						? `${present.length} calls — pick one call above to see its flamegraph.`
 						: frames.length === 1
@@ -113,99 +115,114 @@ function FrameTable(props: {
 	)
 
 	return (
-		<table className="w-full type-card">
-			<thead>
-				<tr className="border-b border-card-border bg-base-alt type-card text-tertiary">
-					{props.showCall && (
-						<th className="w-[64px] px-[16px] py-[6px] text-left font-normal">
-							Call
-						</th>
-					)}
-					<th
-						className={cx(
-							'py-[6px] text-left font-normal',
-							props.showCall ? 'px-[8px]' : 'px-[16px]',
+		<div {...styles.tableWrap()}>
+			<DenseTable>
+				<DenseTable.Thead>
+					<DenseTable.Tr>
+						{props.showCall && (
+							<DenseTable.Th scope="col" {...styles.callColumn()}>
+								Call
+							</DenseTable.Th>
 						)}
-					>
-						Frame
-					</th>
-					<th className="w-[80px] px-[8px] py-[6px] text-right font-normal">
-						Self
-					</th>
-					<th className="w-[80px] px-[8px] py-[6px] text-right font-normal">
-						Total
-					</th>
-					<th className="w-[92px] px-[16px] py-[6px] text-right font-normal">
-						Share
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				{sorted.map((frame) => {
-					const share =
-						props.rootGas > 0 ? (frame.selfGas / props.rootGas) * 100 : 0
-					const selected = frame.node.id === props.selectedId
-					return (
-						<tr
-							key={frame.node.id}
-							onClick={() => props.onSelect(frame.node.id)}
-							className={cx(
-								'cursor-pointer border-b border-card-border last:border-0 transition-colors',
-								selected ? 'bg-accent/8' : 'hover:bg-base-plane-interactive',
-							)}
+						<DenseTable.Th scope="col">Frame</DenseTable.Th>
+						{/* TDS left-aligns header cells; inline wins for number columns. */}
+						<DenseTable.Th
+							scope="col"
+							{...styles.gasColumn({ style: { textAlign: 'right' } })}
 						>
-							{props.showCall && (
-								<td className="px-[16px] py-[6px] type-card-data text-tertiary">
-									{frame.call ?? ''}
-								</td>
-							)}
-							<td
-								className={cx(
-									'py-[6px]',
-									props.showCall ? 'px-[8px]' : 'px-[16px]',
+							Self
+						</DenseTable.Th>
+						<DenseTable.Th
+							scope="col"
+							{...styles.gasColumn({ style: { textAlign: 'right' } })}
+						>
+							Total
+						</DenseTable.Th>
+						<DenseTable.Th
+							scope="col"
+							{...styles.shareColumn({ style: { textAlign: 'right' } })}
+						>
+							Share
+						</DenseTable.Th>
+					</DenseTable.Tr>
+				</DenseTable.Thead>
+				<DenseTable.Tbody>
+					{sorted.map((frame) => {
+						const share =
+							props.rootGas > 0 ? (frame.selfGas / props.rootGas) * 100 : 0
+						const selected = frame.node.id === props.selectedId
+						return (
+							// The row is the click target; the frame button inside makes it
+							// reachable by keyboard, and its click bubbles up to here.
+							<DenseTable.Tr
+								key={frame.node.id}
+								onClick={() => props.onSelect(frame.node.id)}
+								{...cx(
+									styles.row(),
+									transitionColors(),
+									!selected && styles.rowHover(),
+									selected && styles.rowSelected(),
 								)}
 							>
-								<span className="flex min-w-0 items-center gap-[7px]">
-									{/* Depth as a badge, not as indentation — a table that
-									    indents loses its left edge past about six levels. */}
-									<span className="w-[16px] shrink-0 text-right font-mono label-12 text-content-dimmed">
-										{frame.depth > 0 ? `+${frame.depth}` : '·'}
-									</span>
-									<span
-										className={cx(
-											'min-w-0 truncate font-mono',
-											frame.node.hasError ? 'text-negative' : 'text-primary',
-										)}
-										title={frame.label}
+								{props.showCall && (
+									<DenseTable.Td {...styles.callCell()}>
+										{frame.call ?? ''}
+									</DenseTable.Td>
+								)}
+								<DenseTable.Td>
+									<button
+										type="button"
+										aria-pressed={selected}
+										{...styles.frame()}
 									>
-										{frame.label}
-									</span>
-								</span>
-							</td>
-							<td className="px-[8px] py-[6px] text-right font-sans tabular-nums text-primary">
-								{formatGas(frame.selfGas)}
-							</td>
-							<td className="px-[8px] py-[6px] text-right font-sans tabular-nums text-tertiary">
-								{formatGas(frame.node.gasUsed)}
-							</td>
-							<td className="px-[16px] py-[6px]">
-								<span className="flex items-center justify-end gap-[7px]">
-									<span className="h-[3px] w-[36px] overflow-hidden rounded-full bg-distinct">
+										{/* Depth as a badge, not as indentation — a table that
+										    indents loses its left edge past about six levels. */}
+										<span {...styles.depth()}>
+											{frame.depth > 0 ? `+${frame.depth}` : '·'}
+										</span>
+										{frame.node.hasError && (
+											<span aria-hidden {...styles.errorDot()} />
+										)}
 										<span
-											className="block h-full rounded-full bg-viz-base"
-											style={{ width: `${Math.min(share, 100)}%` }}
-										/>
+											{...cx(styles.label(), truncate())}
+											title={frame.label}
+										>
+											{frame.label}
+										</span>
+										{frame.node.hasError && (
+											<span {...srOnly()}>, reverted</span>
+										)}
+									</button>
+								</DenseTable.Td>
+								<DenseTable.Td {...styles.selfGas()}>
+									{formatGas(frame.selfGas)}
+								</DenseTable.Td>
+								<DenseTable.Td {...styles.totalGas()}>
+									{formatGas(frame.node.gasUsed)}
+								</DenseTable.Td>
+								<DenseTable.Td>
+									<span {...styles.share()}>
+										<span {...styles.shareTrack()}>
+											<span
+												{...cx(
+													styles.shareFill({
+														style: { width: `${Math.min(share, 100)}%` },
+													}),
+													vizFill(),
+												)}
+											/>
+										</span>
+										<span {...styles.sharePercent()}>
+											{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
+										</span>
 									</span>
-									<span className="w-[38px] text-right font-sans tabular-nums text-tertiary">
-										{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
-									</span>
-								</span>
-							</td>
-						</tr>
-					)
-				})}
-			</tbody>
-		</table>
+								</DenseTable.Td>
+							</DenseTable.Tr>
+						)
+					})}
+				</DenseTable.Tbody>
+			</DenseTable>
+		</div>
 	)
 }
 
@@ -231,4 +248,125 @@ function flatten(root: TxTraceTree.Node, call?: string | undefined): Frame[] {
 	}
 	walk(root, 0)
 	return frames
+}
+
+namespace styles {
+	export const root = style({ display: 'flex', flexDirection: 'column' })
+
+	export const meter = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		paddingBlock: '16',
+		paddingInline: '16',
+	})
+
+	export const note = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		color: 'content.secondary',
+		margin: 'none',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const tableWrap = style({ padding: '16' })
+
+	export const callColumn = style({ width: '64' })
+
+	export const gasColumn = style({ width: '80px !custom' })
+
+	export const shareColumn = style({ width: '96px !custom' })
+
+	export const row = style({ cursor: 'pointer' })
+
+	export const rowHover = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const rowSelected = style({ backgroundColor: 'container.strong' })
+
+	export const callCell = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+	})
+
+	export const frame = style({
+		alignItems: 'center',
+		color: 'inherit !custom',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+		textAlign: 'left',
+		width: '100% !custom',
+		// The table scrolls sideways, which would clip an outset ring.
+		':focus-visible': { outlineOffset: '-2px !custom' },
+	})
+
+	export const depth = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		textAlign: 'right',
+		typography: 'mono.inline',
+		width: '16',
+	})
+
+	export const errorDot = style({
+		backgroundColor: 'content.negative',
+		borderRadius: 'full',
+		flexShrink: 0,
+		height: '8',
+		width: '8',
+	})
+
+	export const label = style({
+		color: 'content.primary',
+		minWidth: '0 !custom',
+		typography: 'mono.inline',
+	})
+
+	export const selfGas = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+	})
+
+	export const totalGas = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+	})
+
+	export const share = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'flex-end',
+	})
+
+	export const shareTrack = style({
+		backgroundColor: 'container.strong',
+		borderRadius: 'full',
+		height: '4',
+		overflow: 'hidden',
+		width: '32',
+	})
+
+	export const shareFill = style({
+		borderRadius: 'full',
+		display: 'block',
+		height: '100% !custom',
+	})
+
+	export const sharePercent = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+		width: '40',
+	})
 }

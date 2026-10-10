@@ -25,7 +25,6 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import { cx } from '#lib/css'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
 	calculateKnownEventsTotal,
@@ -45,9 +44,14 @@ import {
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
+import { link, linkHover } from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
+import { styles } from './-$id.styles'
 
 const defaultSearchValues = { page: 1 } as const
+
+// Explorer link color and hover underline, for route styles that cannot use `cx`.
+const linkClassName = link({ className: linkHover().className }).className
 
 const combinedAbi = Object.values(Abis).flat()
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -226,14 +230,9 @@ function RouteComponent() {
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
-			)}
-		>
-			<BreadcrumbsSlot className="col-span-full" />
-			<div className="self-start max-[800px]:self-stretch">
+		<div {...styles.page()}>
+			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
+			<div {...styles.card()}>
 				<BlockCard block={block} />
 			</div>
 			<Sections
@@ -354,7 +353,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 
 					return {
 						cells: [
-							<span key="index" className="text-tertiary tabular-nums">
+							<span key="index" {...styles.secondary()}>
 								[{transactionIndex}]
 							</span>,
 							<TransactionDescription
@@ -365,10 +364,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								loading={knownEventsLoading}
 							/>,
 							txType.type === 'system' ? (
-								<span
-									key="from"
-									className="text-tertiary w-full truncate text-right"
-								>
+								<span key="from" {...styles.systemFrom()}>
 									{txType.label}
 								</span>
 							) : (
@@ -384,17 +380,17 @@ function TransactionsSection(props: TransactionsSectionProps) {
 									key="hash"
 									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
-									className="text-accent hover:underline press-down w-full"
+									{...styles.hashLink({ className: linkClassName })}
 									title={transaction.hash}
 								>
 									<Midcut value={transaction.hash} prefix="0x" align="end" />
 								</Link>
 							) : (
-								<span key="hash" className="text-tertiary">
+								<span key="hash" {...styles.secondary()}>
 									—
 								</span>
 							),
-							<span key="fee" className="text-tertiary">
+							<span key="fee" {...styles.secondary()}>
 								{feeDisplay}
 							</span>,
 							<TransactionTotalCell
@@ -448,13 +444,13 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary" title="Loading…">
+			<span {...styles.secondary()} title="Loading…">
 				…
 			</span>
 		)
 	}
 
-	const infiniteLabel = <span className="text-secondary">−</span>
+	const infiniteLabel = <span {...styles.secondary()}>−</span>
 	const hasAmounts = events?.some((event) =>
 		event.parts.some((part) => part.type === 'amount'),
 	)
@@ -465,7 +461,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 		const eventTotal = calculateKnownEventsTotal(events ?? [])
 		if (eventTotal === undefined || !showUsdPrefix)
 			return (
-				<span className="text-tertiary" title="No comparable payment total">
+				<span {...styles.secondary()} title="No comparable payment total">
 					—
 				</span>
 			)
@@ -485,7 +481,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 	}
 
 	const value = (transaction.value ?? 0n) + fee
-	if (value === 0n) return <span className="text-tertiary">—</span>
+	if (value === 0n) return <span {...styles.secondary()}>—</span>
 	return (
 		<Amount.Base
 			value={value}
@@ -530,25 +526,13 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	const selector = transaction.input?.slice(0, 10)
 
-	const { title, subtitle } = React.useMemo(() => {
-		if (!decodedCall)
-			return {
-				title: selector ?? 'Call',
-				subtitle: undefined,
-			}
-
-		return {
-			title: decodedCall.functionName
-				? `${decodedCall.functionName}()`
-				: (selector ?? 'Call'),
-			subtitle: undefined,
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [decodedCall?.functionName, decodedCall?.args, selector, decodedCall])
+	const title = decodedCall?.functionName
+		? `${decodedCall.functionName}()`
+		: (selector ?? 'Call')
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary" title="Loading…">
+			<span {...styles.secondary()} title="Loading…">
 				…
 			</span>
 		)
@@ -568,7 +552,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 			return <TxEventDescription.ExpandGroup events={reorderedEvents} />
 		}
-		return <span className="text-primary">Deploy contract</span>
+		return <span {...styles.primary()}>Deploy contract</span>
 	}
 
 	// knownEvents already has decoded calls prepended (from the loader)
@@ -577,28 +561,15 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	if (transaction.value === 0n)
 		return (
-			<div className="flex flex-col gap-[2px] flex-1">
-				<div className="text-primary flex-1 flex-nowrap flex gap-[8px]">
-					<div>{title} </div>
-					<AddressLink address={transaction.to} chars={4} />
-				</div>
-				{subtitle && (
-					<span className="text-base-content-secondary label-12">
-						{subtitle}
-					</span>
-				)}
+			<div {...styles.call()}>
+				<div>{title} </div>
+				<AddressLink address={transaction.to} chars={4} />
 			</div>
 		)
 
 	return (
-		<span className="text-primary whitespace-nowrap">
-			Send <span className="text-base-content-positive">{amountDisplay}</span>{' '}
-			to{' '}
-			<AddressLink
-				address={transaction.to}
-				chars={4}
-				className="text-accent press-down"
-			/>
+		<span {...styles.send()}>
+			Send {amountDisplay} to <AddressLink address={transaction.to} chars={4} />
 		</span>
 	)
 }
