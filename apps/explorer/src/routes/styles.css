@@ -352,6 +352,8 @@ html[data-theme="light"] .sphere-artwork {
 }
 
 .midcut[data-cut="true"] .midcut__findable {
+	/* Hide inherited underlines along with the searchable full value. */
+	clip-path: inset(50%);
 	color: transparent;
 	text-align: start;
 }
