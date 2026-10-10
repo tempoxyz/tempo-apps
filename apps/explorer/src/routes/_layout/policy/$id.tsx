@@ -5,9 +5,11 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
+import { Button } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
+import { cx } from 'zyzz'
 import { Address as AddressLink } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { CopyButton } from '#comps/CopyButton'
@@ -17,7 +19,6 @@ import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TransactionCell } from '#comps/TransactionCell'
-import { cx } from '#lib/css'
 import { parseTip403PolicyId } from '#lib/domain/tip403'
 import type {
 	Tip403PolicyResponse,
@@ -26,19 +27,21 @@ import type {
 import { fetchTip403Policy } from '#lib/server/tip403'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
+import { link, linkHover, srOnly } from '#styles/explorer'
+import { styles } from './-$id.styles'
 
 const defaultSearchValues = { page: 1, limit: 10, q: '' } as const
 
 export const Route = createFileRoute('/_layout/policy/$id')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
-		<div className="flex flex-1 items-center justify-center px-4 pt-20">
-			<div className="text-center">
-				<h1 className="heading-32 text-primary">Policy Not Found</h1>
-				<p className="mt-2 copy-15 text-secondary">
+		<div {...styles.notFound()}>
+			<div {...styles.notFoundContent()}>
+				<h1 {...styles.notFoundTitle()}>Policy Not Found</h1>
+				<p {...styles.notFoundMessage()}>
 					The TIP-403 policy does not exist or could not be loaded.
 				</p>
-				{data ? <span className="sr-only">{String(data)}</span> : null}
+				{data ? <span {...srOnly()}>{String(data)}</span> : null}
 			</div>
 		</div>
 	),
@@ -89,8 +92,8 @@ function RouteComponent() {
 	const [activeSection, setActiveSection] = React.useState(0)
 
 	return (
-		<div className="max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 grid w-full grid-cols-[auto_1fr] gap-[14px] px-4 pt-20 pb-16 min-w-0 min-[1240px]:max-w-[1280px]">
-			<BreadcrumbsSlot className="col-span-full" />
+		<div {...styles.page()}>
+			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
 			<PolicyCard policy={policy} />
 			<Sections
 				mode={mode}
@@ -128,17 +131,15 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 	return (
 		<InfoCard
 			title={<InfoCard.Title>TIP-403 Policy</InfoCard.Title>}
-			className="self-start max-[800px]:w-full"
+			className={styles.card().className}
 			sections={[
 				{ label: 'Policy ID', value: <span>#{policy.policyId}</span> },
 				{
 					label: 'Type',
 					value: (
-						<span className="flex items-center gap-2">
+						<span {...styles.type()}>
 							<PolicyTypeBadge type={policy.type} />
-							{builtIn ? (
-								<span className="text-tertiary">{builtIn}</span>
-							) : null}
+							{builtIn ? <span {...styles.tertiary()}>{builtIn}</span> : null}
 						</span>
 					),
 				},
@@ -158,7 +159,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[0] }}
-										className="text-accent hover:underline"
+										{...cx(link(), linkHover())}
 									>
 										#{policy.componentPolicies[0]}
 									</Link>
@@ -170,7 +171,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[1] }}
-										className="text-accent hover:underline"
+										{...cx(link(), linkHover())}
 									>
 										#{policy.componentPolicies[1]}
 									</Link>
@@ -182,7 +183,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[2] }}
-										className="text-accent hover:underline"
+										{...cx(link(), linkHover())}
 									>
 										#{policy.componentPolicies[2]}
 									</Link>
@@ -196,27 +197,20 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 }
 
 function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
-	return (
-		<span
-			className={cx(
-				'rounded-[4px] px-1.5 py-0.5 label-12 font-medium capitalize',
-				props.type === 'whitelist'
-					? 'bg-positive/10 text-positive'
-					: props.type === 'blacklist'
-						? 'bg-negative/10 text-negative'
-						: 'bg-accent/10 text-accent',
-			)}
-		>
-			{props.type}
-		</span>
-	)
+	const tone =
+		props.type === 'whitelist'
+			? 'positive'
+			: props.type === 'blacklist'
+				? 'negative'
+				: 'neutral'
+	return <span {...styles.typeBadge({ tone })}>{props.type}</span>
 }
 
 function MembersSearch(props: { query: string }) {
 	const navigate = useNavigate()
 	return (
 		<form
-			className="flex items-center gap-2"
+			{...styles.search()}
 			onSubmit={(event) => {
 				event.preventDefault()
 				const query =
@@ -236,14 +230,11 @@ function MembersSearch(props: { query: string }) {
 				defaultValue={props.query}
 				placeholder="Search addresses"
 				aria-label="Search policy members"
-				className="h-7 w-[220px] rounded-[4px] border border-base-border bg-base px-2 label-12 font-mono text-primary outline-none placeholder:text-tertiary focus:border-accent"
+				{...styles.searchInput()}
 			/>
-			<button
-				type="submit"
-				className="h-7 rounded-[4px] border border-base-border px-2 label-12 text-secondary hover:bg-base-alt press-down"
-			>
+			<Button type="submit" scale="small" variant="secondary">
 				Search
-			</button>
+			</Button>
 		</form>
 	)
 }
@@ -256,6 +247,7 @@ function MembersGrid(props: {
 	const { policy, page, limit } = props
 	const pages = Math.max(1, Math.ceil(policy.membersTotal / limit))
 	const status = policy.type === 'whitelist' ? 'Authorized' : 'Restricted'
+	const statusTone = policy.type === 'whitelist' ? 'positive' : 'negative'
 
 	return (
 		<DataGrid
@@ -274,12 +266,7 @@ function MembersGrid(props: {
 					key: address,
 					cells: [
 						<AddressLink key="address" address={address} chars={5} />,
-						<span
-							key="status"
-							className={
-								policy.type === 'whitelist' ? 'text-positive' : 'text-negative'
-							}
-						>
+						<span key="status" {...styles.status({ tone: statusTone })}>
 							{status}
 						</span>,
 					],
@@ -353,7 +340,7 @@ function activityRow(
 	return {
 		key: `${event.txHash}-${event.logIndex}`,
 		cells: [
-			<span key="event" className="text-primary">
+			<span key="event" {...styles.event()}>
 				{eventLabel}
 			</span>,
 			account ? (
@@ -370,7 +357,7 @@ function activityRow(
 			) : (
 				<span key="time">—</span>
 			),
-			<div key="transaction" className="flex items-center gap-1">
+			<div key="transaction" {...styles.transaction()}>
 				<TransactionCell hash={event.txHash} />
 				<CopyButton value={event.txHash} ariaLabel="Copy transaction hash" />
 			</div>,

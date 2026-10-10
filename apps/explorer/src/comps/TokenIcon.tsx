@@ -1,6 +1,6 @@
+import { style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as React from 'react'
-import { cx } from '#lib/css'
 import { resolveLogoURI } from '#lib/domain/tip20'
 
 const TOKEN_ICON_FALLBACK_SRC = '/token-fallback.svg'
@@ -39,7 +39,7 @@ export function TokenIcon(props: TokenIcon.Props) {
 			ref={imageRef}
 			src={src}
 			alt=""
-			className={cx('size-4 rounded-full shrink-0', className)}
+			{...styles.root({ className })}
 			onError={() => handleError(src)}
 		/>
 	)
@@ -52,4 +52,13 @@ export namespace TokenIcon {
 		className?: string
 		logoURI?: string | null | undefined
 	}
+}
+
+namespace styles {
+	// The size sits in `:where()` so a caller's `className` can resize the icon.
+	export const root = style({
+		borderRadius: 'full',
+		flexShrink: '0 !custom',
+		selectors: { ':where(&)': { height: '16', width: '16' } },
+	})
 }

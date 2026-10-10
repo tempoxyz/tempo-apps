@@ -1,5 +1,5 @@
 import type * as React from 'react'
-import { Choices } from 'regen-ui'
+import { Choices } from '#comps/ui/Choices'
 
 type StatusValue = 'all' | 'success' | 'reverted'
 
@@ -17,7 +17,7 @@ export function TxStatusFilter(props: TxStatusFilter.Props): React.JSX.Element {
 			label="Transaction status"
 			value={value}
 			items={options}
-			variant="compact"
+			scale="small"
 			onChange={(next) => onChange(next === 'all' ? undefined : next)}
 		/>
 	)

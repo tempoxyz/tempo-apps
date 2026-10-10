@@ -15,7 +15,13 @@ export default defineConfig({
 	},
 	plugins: [
 		// Components under test author styles that only exist after compilation.
-		...explorerZyzz({ builtins: 'none' }),
+		...explorerZyzz({
+			builtins: 'none',
+			// Imports `cloudflare:workers`, which the Workers pool provides at
+			// runtime but not to the compiler's import walk. Its styles live in
+			// the sibling `-$hash.styles.ts`.
+			exclude: ['src/routes/_layout/receipt/$hash.tsx'],
+		}),
 		Icons({ compiler: 'jsx', jsx: 'react' }),
 		cloudflareTest({
 			miniflare: {

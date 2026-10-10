@@ -1,9 +1,13 @@
-import { Tag } from 'regen-ui'
+import { Badge } from '@tempoxyz/ds/platform'
 
 export function ExperimentalBadge(
 	props: ExperimentalBadge.Props,
 ): React.JSX.Element {
-	return <Tag className={props.className}>Experimental</Tag>
+	return (
+		<Badge className={props.className} scale="small" variant="gray">
+			Experimental
+		</Badge>
+	)
 }
 
 export declare namespace ExperimentalBadge {

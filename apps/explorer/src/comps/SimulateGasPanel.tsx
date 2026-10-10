@@ -12,9 +12,12 @@
  * any depth.
  */
 
+import { vars as core } from '@tempoxyz/ds/core'
+import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
+import { transitionColors, truncate } from '#styles/explorer'
 import { formatGas, GasMeter, PanelEmpty } from './SimulateShared'
 import { MIN_FLAMEGRAPH_FRAMES, TxTraceFlamegraph } from './TxTraceFlamegraph'
 import { TxTraceTree } from './TxTraceTree'
@@ -49,8 +52,8 @@ export function SimulateGasPanel(
 		return <PanelEmpty>No trace, so no gas breakdown.</PanelEmpty>
 
 	return (
-		<div className="flex flex-col">
-			<div className="border-b border-solid border-card-border px-[16px] py-[12px]">
+		<div {...styles.root()}>
+			<div {...styles.meter()}>
 				<GasMeter used={props.gasUsed} limit={gasLimit} />
 			</div>
 
@@ -62,7 +65,7 @@ export function SimulateGasPanel(
 					onSelect={props.onSelectFrame}
 				/>
 			) : (
-				<p className="border-b border-solid border-card-border px-[16px] py-[10px] type-card text-content-dimmed">
+				<p {...styles.note()}>
 					{present.length > 1
 						? `${present.length} calls — pick one call above to see its flamegraph.`
 						: frames.length === 1
@@ -113,29 +116,51 @@ function FrameTable(props: {
 	)
 
 	return (
-		<table className="w-full type-card">
+		<table {...styles.table()}>
 			<thead>
-				<tr className="border-b border-card-border bg-base-alt type-card text-tertiary">
+				<tr {...styles.headRow()}>
 					{props.showCall && (
-						<th className="w-[64px] px-[16px] py-[6px] text-left font-normal">
+						<th {...cx(styles.cell(), styles.edge(), styles.callColumn())}>
 							Call
 						</th>
 					)}
 					<th
-						className={cx(
-							'py-[6px] text-left font-normal',
-							props.showCall ? 'px-[8px]' : 'px-[16px]',
+						{...cx(
+							styles.cell(),
+							props.showCall && styles.inner(),
+							!props.showCall && styles.edge(),
 						)}
 					>
 						Frame
 					</th>
-					<th className="w-[80px] px-[8px] py-[6px] text-right font-normal">
+					<th
+						{...cx(
+							styles.cell(),
+							styles.inner(),
+							styles.numeric(),
+							styles.gasColumn(),
+						)}
+					>
 						Self
 					</th>
-					<th className="w-[80px] px-[8px] py-[6px] text-right font-normal">
+					<th
+						{...cx(
+							styles.cell(),
+							styles.inner(),
+							styles.numeric(),
+							styles.gasColumn(),
+						)}
+					>
 						Total
 					</th>
-					<th className="w-[92px] px-[16px] py-[6px] text-right font-normal">
+					<th
+						{...cx(
+							styles.cell(),
+							styles.edge(),
+							styles.numeric(),
+							styles.shareColumn(),
+						)}
+					>
 						Share
 					</th>
 				</tr>
@@ -149,32 +174,36 @@ function FrameTable(props: {
 						<tr
 							key={frame.node.id}
 							onClick={() => props.onSelect(frame.node.id)}
-							className={cx(
-								'cursor-pointer border-b border-card-border last:border-0 transition-colors',
-								selected ? 'bg-accent/8' : 'hover:bg-base-plane-interactive',
+							{...cx(
+								styles.row(),
+								transitionColors(),
+								!selected && styles.rowHover(),
+								selected && styles.rowSelected(),
 							)}
 						>
 							{props.showCall && (
-								<td className="px-[16px] py-[6px] type-card-data text-tertiary">
+								<td {...cx(styles.cell(), styles.edge(), styles.callCell())}>
 									{frame.call ?? ''}
 								</td>
 							)}
 							<td
-								className={cx(
-									'py-[6px]',
-									props.showCall ? 'px-[8px]' : 'px-[16px]',
+								{...cx(
+									styles.cell(),
+									props.showCall && styles.inner(),
+									!props.showCall && styles.edge(),
 								)}
 							>
-								<span className="flex min-w-0 items-center gap-[7px]">
+								<span {...styles.frame()}>
 									{/* Depth as a badge, not as indentation — a table that
 									    indents loses its left edge past about six levels. */}
-									<span className="w-[16px] shrink-0 text-right font-mono label-12 text-content-dimmed">
+									<span {...styles.depth()}>
 										{frame.depth > 0 ? `+${frame.depth}` : '·'}
 									</span>
 									<span
-										className={cx(
-											'min-w-0 truncate font-mono',
-											frame.node.hasError ? 'text-negative' : 'text-primary',
+										{...cx(
+											styles.label(),
+											truncate(),
+											frame.node.hasError && styles.labelError(),
 										)}
 										title={frame.label}
 									>
@@ -182,21 +211,22 @@ function FrameTable(props: {
 									</span>
 								</span>
 							</td>
-							<td className="px-[8px] py-[6px] text-right font-sans tabular-nums text-primary">
+							<td {...cx(styles.cell(), styles.inner(), styles.selfGas())}>
 								{formatGas(frame.selfGas)}
 							</td>
-							<td className="px-[8px] py-[6px] text-right font-sans tabular-nums text-tertiary">
+							<td {...cx(styles.cell(), styles.inner(), styles.totalGas())}>
 								{formatGas(frame.node.gasUsed)}
 							</td>
-							<td className="px-[16px] py-[6px]">
-								<span className="flex items-center justify-end gap-[7px]">
-									<span className="h-[3px] w-[36px] overflow-hidden rounded-full bg-distinct">
+							<td {...cx(styles.cell(), styles.edge())}>
+								<span {...styles.share()}>
+									<span {...styles.shareTrack()}>
 										<span
-											className="block h-full rounded-full bg-viz-base"
-											style={{ width: `${Math.min(share, 100)}%` }}
+											{...styles.shareFill({
+												style: { width: `${Math.min(share, 100)}%` },
+											})}
 										/>
 									</span>
-									<span className="w-[38px] text-right font-sans tabular-nums text-tertiary">
+									<span {...styles.sharePercent()}>
 										{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
 									</span>
 								</span>
@@ -231,4 +261,145 @@ function flatten(root: TxTraceTree.Node, call?: string | undefined): Frame[] {
 	}
 	walk(root, 0)
 	return frames
+}
+
+namespace styles {
+	export const root = style({ display: 'flex', flexDirection: 'column' })
+
+	export const meter = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		paddingBlock: '12',
+		paddingInline: '16',
+	})
+
+	export const note = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		color: 'content.tertiary',
+		margin: 'none',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const table = style({
+		borderCollapse: 'collapse',
+		typography: 'body.b2',
+		width: '100% !custom',
+	})
+
+	export const headRow = style({
+		backgroundColor: 'container.subtle',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		color: 'content.tertiary',
+	})
+
+	// `fontWeight` undoes the user-agent bold on header cells.
+	export const cell = style({
+		fontWeight: 'inherit',
+		paddingBlock: '8',
+		textAlign: 'left',
+	})
+
+	export const edge = style({ paddingInline: '16' })
+
+	export const inner = style({ paddingInline: '8' })
+
+	export const numeric = style({ textAlign: 'right' })
+
+	export const callColumn = style({ width: '64px !custom' })
+
+	export const gasColumn = style({ width: '80px !custom' })
+
+	export const shareColumn = style({ width: '92px !custom' })
+
+	export const row = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		cursor: 'pointer',
+		':last-child': { borderBottomWidth: 'none' },
+	})
+
+	export const rowHover = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const rowSelected = style({ backgroundColor: 'container.strong' })
+
+	export const callCell = style({
+		color: 'content.tertiary',
+		fontVariantNumeric: 'tabular-nums',
+	})
+
+	export const frame = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const depth = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		textAlign: 'right',
+		typography: 'mono.inline',
+		width: '16px !custom',
+	})
+
+	export const label = style({
+		color: 'content.primary',
+		minWidth: '0 !custom',
+		typography: 'mono.inline',
+	})
+
+	export const labelError = style({ color: 'content.negative' })
+
+	export const selfGas = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+	})
+
+	export const totalGas = style({
+		color: 'content.tertiary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+	})
+
+	export const share = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'flex-end',
+	})
+
+	export const shareTrack = style({
+		backgroundColor: 'container.strong',
+		borderRadius: 'full',
+		height: '3px !custom',
+		overflow: 'hidden',
+		width: '36px !custom',
+	})
+
+	export const shareFill = style({
+		backgroundColor: `light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) !custom`,
+		borderRadius: 'full',
+		display: 'block',
+		height: '100% !custom',
+	})
+
+	export const sharePercent = style({
+		color: 'content.tertiary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+		width: '38px !custom',
+	})
 }

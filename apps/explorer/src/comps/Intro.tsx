@@ -1,3 +1,4 @@
+import { style } from '@tempoxyz/ds/platform'
 import { waapi, stagger } from 'animejs'
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { springInstant, springSmooth } from '#lib/animation'
@@ -70,10 +71,7 @@ export function Intro({ onPhaseChange }: IntroProps) {
 	}, [onPhaseChange, seen, setSeen])
 
 	return (
-		<div
-			ref={containerRef}
-			className="flex flex-col items-center gap-1 font-pilat font-normal"
-		>
+		<div ref={containerRef} {...styles.root()}>
 			{words.map((word) => (
 				<span
 					key={word.text}
@@ -97,3 +95,14 @@ export function useIntroSeen() {
 }
 
 export type { IntroPhase }
+
+namespace styles {
+	export const root = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		fontFamily: 'Pilat, Arial, sans-serif',
+		fontWeight: 400,
+		gap: '4',
+	})
+}

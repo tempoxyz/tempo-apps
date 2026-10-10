@@ -1,4 +1,5 @@
-import { cx } from '#lib/css'
+import { style } from '@tempoxyz/ds/platform'
+import { cx } from 'zyzz'
 
 export function InfoRow(props: {
 	label: string
@@ -7,18 +8,42 @@ export function InfoRow(props: {
 }) {
 	const { label, children, stackOnMobile } = props
 	return (
-		<div
-			className={cx(
-				'flex items-start gap-[16px] px-[18px] py-[12px] border-b border-solid border-card-border last:border-b-0',
-				stackOnMobile && 'max-[600px]:flex-col max-[600px]:gap-[8px]',
-			)}
-		>
-			<span className="copy-14 text-tertiary min-w-[100px] sm:min-w-[140px] shrink-0 font-sans">
-				{label}
-			</span>
-			<div className="copy-14 break-all w-full min-w-0 font-sans">
-				{children}
-			</div>
+		<div {...cx(styles.row(), stackOnMobile && styles.stackOnMobile())}>
+			<span {...styles.label()}>{label}</span>
+			<div {...styles.value()}>{children}</div>
 		</div>
 	)
+}
+
+namespace styles {
+	export const row = style({
+		alignItems: 'flex-start',
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+		display: 'flex',
+		gap: '16',
+		paddingBlock: '12',
+		paddingInline: '20',
+		':last-child': { borderBottomWidth: 'none' },
+	})
+
+	export const stackOnMobile = style({
+		'@media (width < 600px)': { flexDirection: 'column', gap: '8' },
+	})
+
+	export const label = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+		minWidth: '100px !custom',
+		typography: 'body.b2',
+		'@media (width >= 640px)': { minWidth: '140px !custom' },
+	})
+
+	export const value = style({
+		minWidth: '0 !custom',
+		typography: 'body.b2',
+		width: '100% !custom',
+		wordBreak: 'break-all',
+	})
 }

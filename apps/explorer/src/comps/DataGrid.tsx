@@ -1,10 +1,13 @@
-import { Empty } from 'regen-ui'
 import { Link, useRouterState } from '@tanstack/react-router'
+import { style, vars } from '@tempoxyz/ds/platform'
 import * as React from 'react'
+import { cx } from 'zyzz'
+import { keyframes } from 'zyzz/web'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
-import { cx } from '#lib/css'
+import { Empty } from '#comps/ui/Empty'
 import { useNewLiveRows } from '#lib/use-new-live-rows'
+import { pulse } from '#styles/explorer'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export function DataGrid(props: DataGrid.Props) {
@@ -47,11 +50,8 @@ export function DataGrid(props: DataGrid.Props) {
 				cells: activeColumns.map((_, colIndex) => {
 					const cellKey = `skeleton-${index}-${colIndex}`
 					return (
-						<div
-							key={cellKey}
-							className="w-full max-w-[180px] flex items-center min-h-[24px]"
-						>
-							<div className="h-[12px] w-full rounded-[4px] bg-distinct/70 animate-pulse" />
+						<div key={cellKey} {...styles.skeletonCell()}>
+							<div {...styles.skeletonBar()} />
 						</div>
 					)
 				}),
@@ -84,18 +84,17 @@ export function DataGrid(props: DataGrid.Props) {
 		.join(' ')
 
 	return (
-		<div className="flex flex-col min-h-0">
-			<div className="relative w-full overflow-x-auto">
+		<div {...styles.root()}>
+			<div {...styles.scroller()}>
 				<div
-					className={cx(
-						'w-full copy-14 rounded-t-[2px] grid',
-						flexible && 'min-w-max',
-						mode === 'tabs' && 'max-w-full',
+					{...cx(
+						styles.grid({ style: { gridTemplateColumns } }),
+						flexible && styles.gridFlexible(),
+						mode === 'tabs' && styles.gridTabs(),
 					)}
 					aria-busy={effectiveLoading}
-					style={{ gridTemplateColumns }}
 				>
-					<div className="grid col-span-full border-b border-solid border-distinct grid-cols-subgrid">
+					<div {...styles.headerRow()}>
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
 							const sortDir = column.sortDirection
@@ -107,19 +106,18 @@ export function DataGrid(props: DataGrid.Props) {
 							return (
 								<div
 									key={key}
-									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px]',
-										'button-12 text-secondary whitespace-nowrap font-sans',
-										column.align === 'end' ? 'justify-end' : 'justify-start',
+									{...cx(
+										styles.headerCell(),
+										column.align === 'end' && styles.headerCellEnd(),
 									)}
 								>
-									<span className="inline-flex items-center gap-[4px]">
+									<span {...styles.headerLabel()}>
 										{label}
 										{hasSort && (
 											<ChevronDownIcon
-												className={cx(
-													'size-[12px] text-tertiary',
-													sortDir === 'asc' && 'rotate-180',
+												{...cx(
+													styles.sortIcon(),
+													sortDir === 'asc' && styles.sortIconAsc(),
 												)}
 											/>
 										)}
@@ -129,11 +127,13 @@ export function DataGrid(props: DataGrid.Props) {
 						})}
 					</div>
 					{activeItems.length === 0 ? (
-						<div
-							className="px-[16px] py-[32px] text-tertiary col-span-full flex items-center justify-center"
-							style={{ minHeight: 220 }}
-						>
-							<Empty title={emptyState} className="min-h-0 py-8" />
+						<div {...styles.empty()}>
+							{/* Empty owns its min-height and padding, so the compact
+								override goes through inline style, which always wins. */}
+							<Empty
+								title={emptyState}
+								style={{ minHeight: 0, paddingBlock: 32 }}
+							/>
 						</div>
 					) : null}
 					{activeItems.map((item, rowIndex) => {
@@ -145,15 +145,13 @@ export function DataGrid(props: DataGrid.Props) {
 						return (
 							<div
 								key={item.key ?? `row-${rowIndex}-${page}`}
-								className={cx(
-									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-solid border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
-									item.link &&
-										'hover:bg-surface-hover transition-colors duration-100',
-									item.expanded && 'border-l-distinct',
-									item.className,
+								{...cx(
+									styles.row({ className: item.className }),
+									Boolean(item.link) && styles.rowLinked(),
+									Boolean(item.expanded) && styles.rowExpanded(),
 									item.key !== undefined &&
 										newLiveRows.has(item.key) &&
-										'block-row-shimmer',
+										styles.rowShimmer(),
 								)}
 							>
 								{item.link && (
@@ -162,7 +160,7 @@ export function DataGrid(props: DataGrid.Props) {
 										search={item.link.search}
 										title={item.link.title}
 										preload="intent"
-										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
+										{...styles.rowLink()}
 									/>
 								)}
 								{Array.from({ length: maxLines }, (_, lineIndex) => {
@@ -180,17 +178,13 @@ export function DataGrid(props: DataGrid.Props) {
 												return (
 													<div
 														key={key}
-														className={cx(
-															'px-[10px] py-[12px] flex items-start min-h-[48px]',
-															'text-primary font-sans',
-															isFirstColumn && 'pl-[16px]',
-															isLastColumn && 'pr-[16px]',
-															column?.align === 'end'
-																? 'justify-end text-right'
-																: 'justify-start',
-															item.link &&
-																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-1 [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-1',
-															mode === 'tabs' && 'min-w-0 overflow-hidden',
+														{...cx(
+															styles.cell(),
+															isFirstColumn && styles.cellFirst(),
+															isLastColumn && styles.cellLast(),
+															column?.align === 'end' && styles.cellEnd(),
+															Boolean(item.link) && styles.cellLinked(),
+															mode === 'tabs' && styles.cellTabs(),
 														)}
 													>
 														{content}
@@ -198,30 +192,28 @@ export function DataGrid(props: DataGrid.Props) {
 												)
 											})}
 											{lineIndex < maxLines - 1 && (
-												<div className="col-span-full border-b border-solid border-distinct" />
+												<div {...styles.lineDivider()} />
 											)}
 										</React.Fragment>
 									)
 								})}
 								{item.expanded && typeof item.expanded !== 'boolean' && (
-									<div className="col-span-full px-[16px] pb-[12px] contain-[inline-size] -mt-[4px]">
-										{item.expanded}
-									</div>
+									<div {...styles.expanded()}>{item.expanded}</div>
 								)}
 							</div>
 						)
 					})}
 				</div>
 			</div>
-			<div className="mt-auto">
+			<div {...styles.footer()}>
 				{pagination !== 'default' && pagination !== 'simple' ? (
 					pagination
 				) : pagination === 'simple' ? (
 					shouldRenderSimpleFooter ? (
 						<div
-							className={cx(
-								'flex flex-col items-center sm:flex-row gap-[12px] border-t border-solid border-card-border px-[16px] py-[12px] label-12 text-tertiary',
-								showSimpleCount ? 'sm:justify-between' : 'sm:justify-start',
+							{...cx(
+								styles.simpleFooter(),
+								showSimpleCount && styles.simpleFooterSpread(),
 							)}
 						>
 							<Pagination.Simple
@@ -317,4 +309,212 @@ export namespace DataGrid {
 		emptyState?: React.ReactNode
 		flexible?: boolean
 	}
+}
+
+// Highlights rows that arrive in a live feed.
+const dataGridRowShimmer = keyframes({
+	from: { backgroundColor: vars.color.container.positive },
+	to: { backgroundColor: 'transparent' },
+})
+
+namespace styles {
+	export const skeletonCell = style({
+		alignItems: 'center',
+		display: 'flex',
+		maxWidth: '180px !custom',
+		minHeight: '24',
+		width: '100% !custom',
+	})
+
+	export const skeletonBar = style({
+		animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
+		backgroundColor: 'container.regular',
+		borderRadius: '3xs',
+		height: '12',
+		width: '100% !custom',
+	})
+
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minHeight: '0 !custom',
+	})
+
+	export const scroller = style({
+		overflowX: 'auto',
+		position: 'relative',
+		width: '100% !custom',
+	})
+
+	export const grid = style({
+		borderTopLeftRadius: '2px !custom',
+		borderTopRightRadius: '2px !custom',
+		display: 'grid',
+		typography: 'body.b2',
+		width: '100% !custom',
+	})
+
+	export const gridFlexible = style({ minWidth: 'max-content !custom' })
+
+	export const gridTabs = style({ maxWidth: '100% !custom' })
+
+	export const headerRow = style({
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+		display: 'grid',
+		gridColumn: '1 / -1',
+		gridTemplateColumns: 'subgrid',
+	})
+
+	export const headerCell = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		gap: '8',
+		height: '36px !custom',
+		justifyContent: 'flex-start',
+		paddingInline: '12',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+		':first-child': { paddingLeft: '16' },
+		':last-child': { paddingRight: '16' },
+	})
+
+	export const headerCellEnd = style({ justifyContent: 'flex-end' })
+
+	export const headerLabel = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+	})
+
+	export const sortIcon = style({
+		color: 'content.tertiary',
+		height: '12',
+		width: '12',
+	})
+
+	export const sortIconAsc = style({ rotate: '180deg' })
+
+	export const empty = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		gridColumn: '1 / -1',
+		justifyContent: 'center',
+		minHeight: '220px !custom',
+		paddingBlock: '32',
+		paddingInline: '16',
+	})
+
+	export const row = style({
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+		borderLeftColor: 'transparent !custom',
+		borderLeftStyle: 'solid',
+		borderLeftWidth: '3px !custom',
+		display: 'grid',
+		gridAutoFlow: 'row',
+		gridColumn: '1 / -1',
+		gridTemplateColumns: 'subgrid',
+		position: 'relative',
+		':last-child': { borderBottomWidth: 'none' },
+	})
+
+	export const rowLinked = style({
+		transitionDuration: '100ms',
+		transitionProperty:
+			'color, background-color, border-color, outline-color, text-decoration-color, fill, stroke',
+		transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const rowExpanded = style({ borderLeftColor: 'line.secondary' })
+
+	export const rowShimmer = style({
+		animation: `${dataGridRowShimmer} 0.5s ease-out 1`,
+	})
+
+	export const rowLink = style({
+		inset: '0px !custom',
+		left: '-3px !custom',
+		outlineOffset: '-2px !important',
+		position: 'absolute',
+		zIndex: 0,
+		selectors: {
+			'&:active ~ div': { translate: '0 0.5px !custom' },
+		},
+	})
+
+	export const cell = style({
+		alignItems: 'flex-start',
+		color: 'content.primary',
+		display: 'flex',
+		justifyContent: 'flex-start',
+		minHeight: '48',
+		paddingBlock: '12',
+		paddingInline: '12',
+	})
+
+	export const cellFirst = style({ paddingLeft: '16' })
+
+	export const cellLast = style({ paddingRight: '16' })
+
+	export const cellEnd = style({
+		justifyContent: 'flex-end',
+		textAlign: 'right',
+	})
+
+	export const cellLinked = style({
+		pointerEvents: 'none',
+		selectors: {
+			'& a': { pointerEvents: 'auto', position: 'relative', zIndex: 1 },
+			'& button': { pointerEvents: 'auto', position: 'relative', zIndex: 1 },
+		},
+	})
+
+	export const cellTabs = style({ minWidth: '0 !custom', overflow: 'hidden' })
+
+	export const lineDivider = style({
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+		gridColumn: '1 / -1',
+	})
+
+	export const expanded = style({
+		contain: 'inline-size',
+		gridColumn: '1 / -1',
+		marginTop: '-4px !custom',
+		paddingBottom: '12',
+		paddingInline: '16',
+	})
+
+	export const footer = style({ marginTop: 'auto !custom' })
+
+	export const simpleFooter = style({
+		alignItems: 'center',
+		borderTopColor: 'line.secondary',
+		borderTopStyle: 'solid',
+		borderTopWidth: 'regular',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+		'@media (width >= 640px)': {
+			flexDirection: 'row',
+			justifyContent: 'flex-start',
+		},
+	})
+
+	export const simpleFooterSpread = style({
+		'@media (width >= 640px)': { justifyContent: 'space-between' },
+	})
 }

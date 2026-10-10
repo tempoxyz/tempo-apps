@@ -1,6 +1,6 @@
-import { Button as RegenButton } from 'regen-ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClientOnly, Link } from '@tanstack/react-router'
+import { IconButton, Button as TdsButton, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
 import {
@@ -16,11 +16,12 @@ import { tempoModerato } from 'viem/chains'
 import { Actions } from 'viem/tempo'
 import { alphausd } from 'viem/tokens'
 import { Hooks } from 'wagmi/tempo'
+import { cx } from 'zyzz'
 import { useTokenListMembership } from '#comps/TokenListMembership'
-import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
+import { link, linkHover, pressDown, pulse } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
@@ -34,13 +35,7 @@ export function ConnectWallet({
 	showAddChain?: boolean
 }) {
 	return (
-		<ClientOnly
-			fallback={
-				<div className="label-12 flex items-center text-secondary whitespace-nowrap">
-					Detecting wallet…
-				</div>
-			}
-		>
+		<ClientOnly fallback={<div {...styles.detecting()}>Detecting wallet…</div>}>
 			<ConnectWalletInner showAddChain={showAddChain} />
 		</ClientOnly>
 	)
@@ -68,11 +63,7 @@ function ConnectWalletInner({
 	const hasConnectorOptions = injectedConnectors.length > 0
 
 	if (!hasConnectorOptions)
-		return (
-			<div className="label-12 flex items-center whitespace-nowrap select-none">
-				No wallet found.
-			</div>
-		)
+		return <div {...styles.noWallet()}>No wallet found.</div>
 	if (!address) {
 		const brandedConnectors = injectedConnectors.filter(
 			(candidate) =>
@@ -93,7 +84,7 @@ function ConnectWalletInner({
 			.slice(0, 2)
 
 		return (
-			<div className="flex items-center gap-1.5">
+			<div {...styles.connectors()}>
 				{prioritizedConnectors.map((connector) => (
 					<Button
 						type="button"
@@ -108,21 +99,23 @@ function ConnectWalletInner({
 								},
 							)
 						}}
-						className={cx(
-							'flex gap-[8px] items-center rounded-body bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
-							pendingId === connector.id &&
-								connect.isPending &&
-								'animate-pulse',
-						)}
+						className={
+							cx(
+								styles.connect(),
+								pendingId === connector.id &&
+									connect.isPending &&
+									styles.pending(),
+							).className
+						}
 					>
 						{connector.icon ? (
 							<img
-								className="size-[12px] rounded-[2px]"
+								{...styles.connectorIcon()}
 								src={connector.icon}
 								alt={connector.name}
 							/>
 						) : (
-							<LucideWalletCards className="size-[12px]" />
+							<LucideWalletCards {...styles.walletIcon()} />
 						)}
 						{connector.name && connector.name !== 'Injected'
 							? `Connect ${connector.name}`
@@ -133,12 +126,12 @@ function ConnectWalletInner({
 		)
 	}
 	return (
-		<div className="flex items-stretch gap-2 justify-end min-w-0 flex-1">
+		<div {...styles.connected()}>
 			<ConnectedAddress />
 			{TEMPO_CHAIN_ID !== 4217 && <FundAccountButton />}
 			{showAddChain && !isSupported && (
 				<Button
-					className="w-fit"
+					className={styles.addChain().className}
 					variant="accent"
 					onClick={() =>
 						switchChain.mutate({
@@ -156,7 +149,7 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<span className="label-12 font-normal text-tertiary whitespace-nowrap">
+				<span {...styles.added()}>
 					Added Tempo to {connector?.name ?? 'Wallet'}!
 				</span>
 			)}
@@ -223,21 +216,19 @@ function ConnectedAddress() {
 	if (!address) return null
 
 	return (
-		<div className="label-12 text-secondary whitespace-nowrap flex items-center justify-end gap-[4px] flex-1 min-w-0">
-			<span className="hidden sm:inline shrink-0">Connected as</span>
+		<div {...styles.address()}>
+			<span {...styles.addressPrefix()}>Connected as</span>
 			<Link
 				to="/address/$address"
 				params={{ address }}
 				title={address}
-				className="text-accent press-down hover:underline font-mono flex min-w-0"
+				{...cx(styles.addressLink(), link(), linkHover(), pressDown())}
 			>
-				<span className="overflow-hidden text-ellipsis">
-					{address.slice(0, -10)}
-				</span>
-				<span className="shrink-0">{address.slice(-10)}</span>
+				<span {...styles.addressHead()}>{address.slice(0, -10)}</span>
+				<span {...styles.addressTail()}>{address.slice(-10)}</span>
 			</Link>
 			{totalUsd !== null && (
-				<span className="text-tertiary">
+				<span {...styles.balance()}>
 					(${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })})
 				</span>
 			)}
@@ -299,11 +290,7 @@ function FundAccountButton() {
 	if (!address) return null
 
 	if (status === 'done') {
-		return (
-			<span className="label-12 text-tertiary flex items-center gap-1">
-				Funded!
-			</span>
-		)
+		return <span {...styles.funded()}>Funded!</span>
 	}
 
 	const isPending = status === 'funding' || status === 'setting-fee'
@@ -319,17 +306,17 @@ function FundAccountButton() {
 			type="button"
 			title="Fund from faucet and set fee token"
 			disabled={isPending}
-			className={cx(
-				'h-full text-secondary hover:text-primary cursor-pointer press-down flex items-center gap-1',
-				isPending && 'animate-pulse',
+			{...cx(
+				styles.walletAction(),
+				styles.fund(),
+				isPending && styles.pending(),
+				pressDown(),
 			)}
 			onClick={handleFund}
 		>
-			<span className="text-tertiary">[</span>
-			<span className="text-center my-auto font-semibold label-12">
-				{label}
-			</span>
-			<span className="text-tertiary">]</span>
+			<span {...styles.bracket()}>[</span>
+			<span {...styles.fundLabel()}>{label}</span>
+			<span {...styles.bracket()}>]</span>
 		</button>
 	)
 }
@@ -339,14 +326,16 @@ function SignOut() {
 	const { connector } = useConnection()
 
 	return (
-		<button
-			type="button"
-			title="Disconnect"
-			className="h-full text-secondary hover:text-primary cursor-pointer press-down"
+		<IconButton
+			aria-label="Disconnect"
 			onClick={() => disconnect.mutate({ connector })}
+			scale="small"
+			title="Disconnect"
+			variant="tertiary"
+			{...cx(styles.signOut(), pressDown())}
 		>
-			<LucideLogOut className="size-[12px] translate-y-px" />
-		</button>
+			<LucideLogOut />
+		</IconButton>
 	)
 }
 
@@ -368,20 +357,143 @@ export function Button(
 		...rest
 	} = props
 	return (
-		<RegenButton
+		<TdsButton
 			type="button"
 			{...rest}
-			render={render}
+			// TDS Button forwards `render` to its Base UI button.
+			{...(render ? { render } : {})}
 			disabled={disabled || static_}
-			size="small"
-			variant={
-				variant === 'accent'
-					? 'primary'
-					: variant === 'destructive'
-						? 'negative'
-						: 'secondary'
-			}
+			scale="small"
+			// TDS has no negative button, so destructive actions use secondary.
+			variant={variant === 'accent' ? 'primary' : 'secondary'}
 			className={className}
 		/>
 	)
+}
+
+namespace styles {
+	export const detecting = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+	})
+
+	export const noWallet = style({
+		alignItems: 'center',
+		display: 'flex',
+		typography: 'body.b3',
+		userSelect: 'none',
+		whiteSpace: 'nowrap',
+	})
+
+	export const connectors = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	// TDS Button owns size, fill, radius, and type; only placement is added.
+	export const connect = style({ flexShrink: 0 })
+
+	export const pending = style({
+		animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
+	})
+
+	export const connectorIcon = style({
+		borderRadius: '2px !custom',
+		height: '12',
+		width: '12',
+	})
+
+	export const walletIcon = style({ height: '12', width: '12' })
+
+	export const connected = style({
+		alignItems: 'stretch',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+		justifyContent: 'flex-end',
+		minWidth: '0px !custom',
+	})
+
+	export const addChain = style({ width: 'fit-content !custom' })
+
+	export const added = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+	})
+
+	export const address = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		flex: 1,
+		gap: '4',
+		justifyContent: 'flex-end',
+		minWidth: '0px !custom',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+	})
+
+	export const addressPrefix = style({
+		display: 'none',
+		flexShrink: 0,
+		'@media (width >= 640px)': { display: 'inline' },
+	})
+
+	export const addressLink = style({
+		display: 'flex',
+		minWidth: '0px !custom',
+		typography: 'mono.inline',
+	})
+
+	export const addressHead = style({
+		overflow: 'hidden',
+		textOverflow: 'ellipsis',
+	})
+
+	export const addressTail = style({ flexShrink: 0 })
+
+	export const balance = style({ color: 'content.tertiary' })
+
+	export const funded = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		gap: '4',
+		typography: 'body.b3',
+	})
+
+	export const walletAction = style({
+		color: 'content.secondary',
+		cursor: 'pointer',
+		height: '100% !custom',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const fund = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+	})
+
+	export const bracket = style({ color: 'content.tertiary' })
+
+	export const fundLabel = style({
+		marginBlock: 'auto !custom',
+		textAlign: 'center',
+		typography: 'body.b3Strong',
+	})
+
+	// TDS IconButton owns size, color, radius, and focus ring.
+	export const signOut = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
 }

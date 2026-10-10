@@ -1,7 +1,9 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
+import { cx } from 'zyzz'
 import {
 	formatKeyExpiry,
 	formatKeyPeriod,
@@ -10,6 +12,7 @@ import {
 } from '#lib/domain/access-key'
 import { isTip20Address } from '#lib/domain/tip20'
 import { useAutoloadAbi } from '#lib/queries'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 const tokenFunctions: Record<string, string> = {
 	'0x095ea7b3': 'approve(address,uint256)',
@@ -23,11 +26,8 @@ export function TxKeyAuthorization(
 	const { authorization, tokenMetadata } = props
 	const targets = groupKeyScopes(authorization.scopes)
 	return (
-		<section
-			aria-label="Access key permissions"
-			className="min-w-0 border-l border-base-border pl-[10px] font-sans label-12 text-primary"
-		>
-			<dl className="flex flex-col gap-[10px]">
+		<section aria-label="Access key permissions" {...styles.root()}>
+			<dl {...styles.rows()}>
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -36,9 +36,9 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Spend limits">
 					{authorization.limits === undefined ? (
-						<p className="text-secondary">Unrestricted</p>
+						<p {...styles.secondary()}>Unrestricted</p>
 					) : authorization.limits.length === 0 ? (
-						<p className="text-secondary">No spending allowed</p>
+						<p {...styles.secondary()}>No spending allowed</p>
 					) : (
 						authorization.limits.map((limit) => (
 							<SpendingLimit
@@ -51,11 +51,11 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Allowed calls">
 					{targets === undefined ? (
-						<p className="text-secondary">Any contract and function</p>
+						<p {...styles.secondary()}>Any contract and function</p>
 					) : targets.length === 0 ? (
-						<p className="text-secondary">No calls allowed</p>
+						<p {...styles.secondary()}>No calls allowed</p>
 					) : (
-						<ul className="flex flex-col gap-[12px]">
+						<ul {...styles.targets()}>
 							{targets.map((target) => (
 								<CallScope key={target.address} target={target} />
 							))}
@@ -73,9 +73,9 @@ function PermissionRow(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div className="grid grid-cols-1 gap-[4px]">
-			<dt className="label-12 text-tertiary">{props.label}</dt>
-			<dd className="flex min-w-0 flex-col gap-[6px]">{props.children}</dd>
+		<div {...styles.row()}>
+			<dt {...styles.label()}>{props.label}</dt>
+			<dd {...styles.value()}>{props.children}</dd>
 		</div>
 	)
 }
@@ -92,17 +92,17 @@ export namespace TxKeyAuthorization {
 		const [expanded, setExpanded] = useState(false)
 		const id = useId()
 		return (
-			<div className="flex min-w-0 flex-col items-start gap-[8px] font-sans">
+			<div {...styles.disclosure()}>
 				<button
 					type="button"
 					aria-expanded={expanded}
 					aria-controls={id}
 					onClick={() => setExpanded(!expanded)}
-					className="label-12 text-accent cursor-pointer press-down"
+					{...cx(styles.toggle(), link(), pressDown())}
 				>
 					{expanded ? 'Hide permissions' : 'Show permissions'}
 				</button>
-				<div id={id} hidden={!expanded} className="w-full min-w-0">
+				<div id={id} hidden={!expanded} {...styles.panel()}>
 					{expanded && <TxKeyAuthorization {...props} />}
 				</div>
 			</div>
@@ -117,7 +117,7 @@ function PermissionAddress(props: {
 		<Link
 			to="/address/$address"
 			params={{ address: props.address }}
-			className="break-all font-mono label-12 text-accent hover:underline"
+			{...cx(styles.address(), link(), linkHover())}
 		>
 			{props.address}
 		</Link>
@@ -141,13 +141,13 @@ function SpendingLimit(props: {
 	const [integer, fraction] = amount.split('.')
 	const formatted = `${BigInt(integer).toLocaleString('en-US')}${fraction ? `.${fraction}` : ''}`
 	return (
-		<div className="flex min-w-0 flex-col gap-[4px]">
-			<div className="flex flex-wrap items-baseline gap-x-[8px] gap-y-[2px]">
-				<div className="flex min-w-0 flex-wrap items-baseline gap-[4px]">
-					<span className="break-all tabular-nums">{formatted}</span>
+		<div {...styles.stack()}>
+			<div {...styles.limitLine()}>
+				<div {...styles.limitAmount()}>
+					<span {...styles.amount()}>{formatted}</span>
 					<span>{metadata?.symbol ?? 'base units'}</span>
 				</div>
-				<span className="text-secondary">{formatKeyPeriod(limit.period)}</span>
+				<span {...styles.secondary()}>{formatKeyPeriod(limit.period)}</span>
 			</div>
 			<PermissionAddress address={limit.token} />
 		</div>
@@ -163,9 +163,9 @@ function CallScope(props: {
 		enabled: true,
 	})
 	return (
-		<li className="flex min-w-0 flex-col gap-[4px]">
+		<li {...styles.stack()}>
 			<PermissionAddress address={target.address} />
-			<ul className="flex flex-col gap-[8px] border-l border-card-border pl-[8px]">
+			<ul {...styles.rules()}>
 				{target.rules.map((rule, index) => {
 					const selector = rule.selector?.toLowerCase()
 					const abiFunction = abi?.find(
@@ -180,13 +180,10 @@ function CallScope(props: {
 						signature ??
 						(abiFunction?.type === 'function' ? abiFunction.name : undefined)
 					return (
-						<li
-							key={`${rule.selector}-${index}`}
-							className="flex min-w-0 flex-col gap-[4px]"
-						>
-							<div className="flex flex-wrap items-baseline gap-x-[6px] gap-y-[2px]">
+						<li key={`${rule.selector}-${index}`} {...styles.stack()}>
+							<div {...styles.ruleLine()}>
 								<code
-									className="break-all label-12"
+									{...styles.code()}
 									title={
 										abiFunction?.type === 'function'
 											? toFunctionSignature(abiFunction)
@@ -196,16 +193,16 @@ function CallScope(props: {
 									{functionName ?? rule.selector ?? 'Any function'}
 								</code>
 								{functionName && (
-									<code className="label-12 text-tertiary">
+									<code {...cx(styles.code(), styles.tertiary())}>
 										{rule.selector}
 									</code>
 								)}
 							</div>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
 							{signature && (
-								<div className="label-12 text-secondary">
+								<div {...styles.recipients()}>
 									{rule.recipients?.length ? (
-										<div className="flex min-w-0 flex-col gap-1">
+										<div {...styles.stack()}>
 											<span>
 												{selector === '0x095ea7b3' ? 'Spenders' : 'Recipients'}
 											</span>
@@ -231,4 +228,127 @@ function CallScope(props: {
 			</ul>
 		</li>
 	)
+}
+
+namespace styles {
+	export const root = style({
+		borderColor: 'line.secondary',
+		borderLeftWidth: 'regular',
+		color: 'content.primary',
+		minWidth: '0 !custom',
+		paddingLeft: '12',
+		typography: 'body.b3',
+	})
+
+	export const rows = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
+
+	export const row = style({
+		display: 'grid',
+		gap: '4',
+		gridTemplateColumns: 'minmax(0, 1fr)',
+	})
+
+	export const label = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const value = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const targets = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
+
+	export const disclosure = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const toggle = style({
+		cursor: 'pointer',
+		typography: 'body.b3',
+	})
+
+	export const panel = style({
+		minWidth: '0 !custom',
+		width: '100% !custom',
+	})
+
+	export const address = style({
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const stack = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		minWidth: '0 !custom',
+	})
+
+	export const limitLine = style({
+		alignItems: 'baseline',
+		columnGap: '8',
+		display: 'flex',
+		flexWrap: 'wrap',
+		rowGap: '2',
+	})
+
+	export const limitAmount = style({
+		alignItems: 'baseline',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '4',
+		minWidth: '0 !custom',
+	})
+
+	export const amount = style({
+		fontVariantNumeric: 'tabular-nums',
+		wordBreak: 'break-all',
+	})
+
+	export const rules = style({
+		borderColor: 'line.secondary',
+		borderLeftWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingLeft: '8',
+	})
+
+	export const ruleLine = style({
+		alignItems: 'baseline',
+		columnGap: '8',
+		display: 'flex',
+		flexWrap: 'wrap',
+		rowGap: '2',
+	})
+
+	export const code = style({
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const recipients = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 }

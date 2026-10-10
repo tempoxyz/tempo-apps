@@ -1,6 +1,8 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
+import { style, vars } from '@tempoxyz/ds/platform'
 import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
+import { cx } from 'zyzz'
 import { Amount } from '#comps/Amount'
 import { CopyButton } from '#comps/CopyButton'
 import { Midcut } from '#comps/Midcut'
@@ -23,6 +25,7 @@ import {
 	isUsdPricedToken,
 } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
+import { link, pressDown, transitionColors } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
 import BracesIcon from '~icons/lucide/braces'
 import DownloadIcon from '~icons/lucide/download'
@@ -80,42 +83,39 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 
 	return (
 		<>
-			<div
-				data-receipt
-				className="flex w-[min(480px,calc(100vw-32px))] flex-col bg-surface border border-base-border border-b-0 shadow-sm rounded-body rounded-br-none rounded-bl-none text-base-content"
-			>
-				<div className="flex items-start gap-4 sm:gap-8 px-[24px] pt-[24px] pb-[16px]">
-					<div className="shrink-0">
+			<div data-receipt {...styles.card()}>
+				<div {...styles.head()}>
+					<div {...styles.mark()}>
 						<ReceiptMark />
 					</div>
-					<div className="flex flex-col gap-[8px] font-sans copy-16 flex-1 min-w-0">
-						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Block</span>
+					<div {...styles.fields()}>
+						<div {...styles.field()}>
+							<span {...styles.tertiary()}>Block</span>
 							<Link
 								to="/block/$id"
 								params={{ id: blockNumber.toString() }}
-								className="text-accent text-right before:content-['#'] press-down"
+								{...cx(styles.blockLink(), link(), pressDown())}
 							>
 								{String(blockNumber)}
 							</Link>
 						</div>
-						<div className="flex justify-between items-end gap-4">
-							<span className="text-tertiary shrink-0">Sender</span>
+						<div {...cx(styles.field(), styles.fieldGap())}>
+							<span {...styles.fieldLabel()}>Sender</span>
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
-								className="font-mono text-accent text-right press-down min-w-0 flex-1 flex justify-end"
+								{...cx(styles.hashLink(), link(), pressDown())}
 							>
 								<Midcut value={sender} prefix="0x" align="end" min={4} />
 							</Link>
 						</div>
-						<div className="flex justify-between items-center gap-4">
-							<span className="text-tertiary shrink-0">Hash</span>
-							<div className="flex min-w-0 flex-1 items-center justify-end gap-1">
+						<div {...cx(styles.field(), styles.fieldGap(), styles.centered())}>
+							<span {...styles.fieldLabel()}>Hash</span>
+							<div {...styles.hashValue()}>
 								<Link
 									to="/tx/$hash"
 									params={{ hash }}
-									className="font-mono text-accent text-right press-down min-w-0 flex-1 flex justify-end"
+									{...cx(styles.hashLink(), link(), pressDown())}
 									title={hash}
 								>
 									<Midcut value={hash} prefix="0x" align="end" min={4} />
@@ -123,7 +123,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 								<CopyButton
 									value={hash}
 									ariaLabel="Copy transaction hash"
-									className="shrink-0 print:hidden"
+									className={styles.copyHash().className}
 								/>
 							</div>
 						</div>
@@ -133,19 +133,17 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 							<Receipt.TimeRows timestamp={timestamp} />
 						</ClientOnly>
 						{status === 'reverted' && (
-							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Status</span>
-								<span className="text-base-content-negative label-12">
-									Failed
-								</span>
+							<div {...styles.field()}>
+								<span {...styles.tertiary()}>Status</span>
+								<span {...styles.failed()}>Failed</span>
 							</div>
 						)}
 					</div>
 				</div>
 				{filteredEvents.length > 0 && (
 					<>
-						<div className="border-t border-dashed border-base-border" />
-						<div className="flex flex-col gap-4 px-[24px] py-[24px] font-sans copy-16 [counter-reset:event]">
+						<div {...styles.divider()} />
+						<div {...styles.events()}>
 							{filteredEvents.map((event, index) => {
 								// Only a distinct aggregate needs a second amount beside the description.
 								const amountParts = event.parts.filter(
@@ -174,24 +172,20 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 									timestamp,
 								})
 								return (
-									<div
-										key={`${event.type}-${index}`}
-										className="[counter-increment:event]"
-									>
-										<div className="flex flex-col gap-[8px]">
+									<div key={`${event.type}-${index}`} {...styles.event()}>
+										<div {...styles.eventBody()}>
 											<div
-												className={
-													sideAmount
-														? 'grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-[10px]'
-														: 'min-w-0'
-												}
+												{...cx(
+													sideAmount && styles.eventSplit(),
+													!sideAmount && styles.eventSingle(),
+												)}
 											>
-												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
-													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 min-w-[20px]"></div>
+												<div {...styles.eventLine()}>
+													<div {...styles.eventCounter()}></div>
 													<TxEventDescription event={event} />
 												</div>
 												{sideAmount ? (
-													<div className="flex items-start justify-end min-w-0">
+													<div {...styles.sideAmount()}>
 														<Amount
 															{...sideAmount}
 															infinite={null}
@@ -205,12 +199,12 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 												(typeof eventNote === 'string' ? (
 													<TxEventMemoLine
 														memo={eventNote}
-														className="pl-[24px]"
+														className={styles.noteIndent().className}
 													/>
 												) : (
-													<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-														<div className="border-l border-base-border pl-[10px] w-full">
-															<div className="flex flex-col gap-1 text-primary copy-14">
+													<div {...styles.note()}>
+														<div {...styles.noteRule()}>
+															<div {...styles.noteList()}>
 																{eventNote.map(([label, part], index) => {
 																	const key = `${label}${index}`
 																	const note = getReceiptNotePresentation(
@@ -222,7 +216,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 																		part.type === 'account'
 																	) {
 																		return (
-																			<div key={key} className="min-w-0">
+																			<div key={key} {...styles.minWidth()}>
 																				<TxEventDescription
 																					event={{
 																						type: 'blocked transfer address',
@@ -237,11 +231,8 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 																	}
 
 																	return (
-																		<div
-																			key={key}
-																			className="flex gap-2 min-w-0"
-																		>
-																			<div className="text-tertiary shrink-0">
+																		<div key={key} {...styles.noteItem()}>
+																			<div {...styles.fieldLabel()}>
 																				{note.kind === 'time' ? (
 																					<ClientOnly fallback="Time (UTC)">
 																						{note.label}
@@ -258,7 +249,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 																				part.type === 'text' &&
 																				part.value === ''
 																			) && (
-																				<div className="min-w-0 flex-1">
+																				<div {...styles.noteValue()}>
 																					<Receipt.NoteValue note={note} />
 																				</div>
 																			)}
@@ -278,8 +269,8 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 				)}
 				{(showFeeBreakdown || showSingleFee || hasTotal) && (
 					<>
-						<div className="border-t border-dashed border-base-border" />
-						<div className="flex flex-col gap-2 px-[24px] py-[24px] font-sans copy-15">
+						<div {...styles.divider()} />
+						<div {...styles.totals()}>
 							{showFeeBreakdown
 								? visibleFeeBreakdown.map((item, index) => {
 										const showUsdPrefix = hasTokenAmount(item)
@@ -298,9 +289,9 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 										return (
 											<div
 												key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
-												className="flex flex-wrap gap-2 items-center justify-between"
+												{...styles.feeRow()}
 											>
-												<span className="text-tertiary">
+												<span {...styles.tertiary()}>
 													Fee{' '}
 													{item.symbol && (
 														<span>
@@ -309,12 +300,12 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 																<Link
 																	to="/token/$address"
 																	params={{ address: item.token }}
-																	className="text-base-content-positive press-down"
+																	{...cx(styles.positive(), pressDown())}
 																>
 																	{item.symbol}
 																</Link>
 															) : (
-																<span className="text-base-content-positive">
+																<span {...styles.positive()}>
 																	{item.symbol}
 																</span>
 															)}
@@ -322,16 +313,16 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 														</span>
 													)}
 												</span>
-												<div className="flex items-center gap-2">
+												<div {...styles.feeAmount()}>
 													<span>{formattedAmount}</span>
 												</div>
 											</div>
 										)
 									})
 								: showSingleFee && (
-										<div className="flex justify-between items-center">
-											<span className="text-tertiary">Fee</span>
-											<span className="text-right">
+										<div {...cx(styles.field(), styles.centered())}>
+											<span {...styles.tertiary()}>Fee</span>
+											<span {...styles.end()}>
 												{feeDisplay ??
 													(showUsdFeePrefix
 														? PriceFormatter.format(fee ?? 0, {
@@ -344,9 +335,9 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 										</div>
 									)}
 							{hasTotal && (
-								<div className="flex justify-between items-center">
-									<span className="heading-16 text-primary">Total</span>
-									<span className="heading-20 text-right tabular-nums">
+								<div {...cx(styles.field(), styles.centered())}>
+									<span {...styles.totalLabel()}>Total</span>
+									<span {...styles.totalValue()}>
 										{totalDisplay ??
 											(showUsdFeePrefix
 												? PriceFormatter.format(total ?? 0, { format: 'short' })
@@ -359,15 +350,15 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 				)}
 			</div>
 
-			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
-				<div className="w-[min(480px,calc(100vw-32px))]">
-					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive button-14 text-secondary">
+			<div {...styles.actions()}>
+				<div {...styles.actionsInner()}>
+					<div {...styles.actionBar()}>
 						<button
 							type="button"
 							onClick={() => void handleShare()}
-							className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down hover:bg-base-plane hover:text-primary"
+							{...cx(styles.action(), transitionColors(), pressDown())}
 						>
-							<ShareIcon className="size-[13px]" />
+							<ShareIcon {...styles.actionIcon()} />
 							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
 						</button>
 						<Receipt.ExportLink
@@ -389,7 +380,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						className="press-down button-14 font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-body! rounded-br-body! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
+						{...cx(styles.viewTransaction(), pressDown())}
 					>
 						<span>View transaction</span>
 						<span aria-hidden="true">→</span>
@@ -412,17 +403,17 @@ export namespace Receipt {
 			: DateFormatter.formatTimestampTime(timestamp)
 		return (
 			<>
-				<div className="flex justify-between items-end">
-					<span className="text-tertiary">Date</span>
-					<time dateTime={iso} className="text-right">
+				<div {...styles.field()}>
+					<span {...styles.tertiary()}>Date</span>
+					<time dateTime={iso} {...styles.end()}>
 						{date}
 					</time>
 				</div>
-				<div className="flex justify-between items-end">
-					<span className="text-tertiary">Time</span>
-					<time dateTime={iso} className="text-right">
+				<div {...styles.field()}>
+					<span {...styles.tertiary()}>Time</span>
+					<time dateTime={iso} {...styles.end()}>
 						{time.time} {time.timezone}
-						<span className="text-tertiary">{time.offset}</span>
+						<span {...styles.tertiary()}>{time.offset}</span>
 					</time>
 				</div>
 			</>
@@ -467,7 +458,7 @@ export namespace Receipt {
 				<Link
 					to="/block/$id"
 					params={{ id: note.id }}
-					className="text-accent press-down"
+					{...cx(link(), pressDown())}
 				>
 					{BigInt(note.id).toLocaleString()}
 				</Link>
@@ -477,7 +468,7 @@ export namespace Receipt {
 				<Link
 					to="/tx/$hash"
 					params={{ hash: note.hash }}
-					className="font-mono text-accent press-down flex min-w-0"
+					{...cx(styles.noteHash(), link(), pressDown())}
 					title={note.hash}
 				>
 					<Midcut value={note.hash} prefix="0x" min={4} />
@@ -531,17 +522,17 @@ export namespace Receipt {
 		const { hash, format, exportSearch = '' } = props
 		const icon =
 			format === 'pdf' ? (
-				<DownloadIcon className="size-[13px]" />
+				<DownloadIcon {...styles.actionIcon()} />
 			) : format === 'txt' ? (
-				<FileTextIcon className="size-[13px]" />
+				<FileTextIcon {...styles.actionIcon()} />
 			) : (
-				<BracesIcon className="size-[13px]" />
+				<BracesIcon {...styles.actionIcon()} />
 			)
 
 		return (
 			<a
 				href={`/receipt/${hash}.${format}${exportSearch}`}
-				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
+				{...cx(styles.action(), transitionColors(), pressDown())}
 			>
 				{icon}
 				<span>{format.toUpperCase()}</span>
@@ -556,4 +547,304 @@ export namespace Receipt {
 			exportSearch?: string | undefined
 		}
 	}
+}
+
+namespace styles {
+	export const card = style({
+		backgroundColor: 'background.secondary',
+		borderBottomWidth: 'none',
+		borderColor: 'line.secondary',
+		borderTopLeftRadius: 'xs',
+		borderTopRightRadius: 'xs',
+		borderWidth: 'regular',
+		boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary}`,
+		color: 'content.primary',
+		display: 'flex',
+		flexDirection: 'column',
+		width: 'min(480px, calc(100vw - 32px)) !custom',
+	})
+
+	export const head = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		gap: '16',
+		paddingBottom: '16',
+		paddingInline: '24',
+		paddingTop: '24',
+		'@media (width >= 640px)': { gap: '32' },
+	})
+
+	export const mark = style({ flexShrink: '0 !custom' })
+
+	export const fields = style({
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0 !custom',
+		typography: 'body.b1',
+	})
+
+	export const field = style({
+		alignItems: 'flex-end',
+		display: 'flex',
+		justifyContent: 'space-between',
+	})
+
+	export const fieldGap = style({ gap: '16' })
+
+	export const centered = style({ alignItems: 'center' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const fieldLabel = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+	})
+
+	export const blockLink = style({
+		textAlign: 'right',
+		'::before': { content: '"#"' },
+	})
+
+	export const hashLink = style({
+		display: 'flex',
+		flex: 1,
+		fontFamily: '"JetBrains Mono", monospace',
+		justifyContent: 'flex-end',
+		minWidth: '0 !custom',
+		textAlign: 'right',
+	})
+
+	export const hashValue = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		gap: '4',
+		justifyContent: 'flex-end',
+		minWidth: '0 !custom',
+	})
+
+	// CopyButton sets its own display, so the print rule needs !important.
+	export const copyHash = style({
+		flexShrink: '0 !custom',
+		'@media print': { display: 'none !important' },
+	})
+
+	export const failed = style({
+		color: 'content.negative',
+		typography: 'body.b3',
+	})
+
+	export const divider = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		borderTopWidth: 'regular',
+	})
+
+	export const events = style({
+		counterReset: 'event',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16',
+		paddingBlock: '24',
+		paddingInline: '24',
+		typography: 'body.b1',
+	})
+
+	export const event = style({ counterIncrement: 'event' })
+
+	export const eventBody = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const eventSplit = style({
+		display: 'grid',
+		gap: '8',
+		gridTemplateColumns: 'minmax(0, 1fr)',
+		'@media (width >= 640px)': {
+			gridTemplateColumns: 'minmax(0, 1fr) auto',
+		},
+	})
+
+	export const eventSingle = style({ minWidth: '0 !custom' })
+
+	export const eventLine = style({
+		alignItems: 'flex-start',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexDirection: 'row',
+		flexGrow: 1,
+		gap: '4',
+		minWidth: '0 !custom',
+	})
+
+	export const eventCounter = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexShrink: '0 !custom',
+		minWidth: '20px !custom',
+		'::before': { content: 'counter(event) "."' },
+	})
+
+	export const sideAmount = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		justifyContent: 'flex-end',
+		minWidth: '0 !custom',
+	})
+
+	export const noteIndent = style({ paddingLeft: '24' })
+
+	export const note = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'row',
+		gap: '12',
+		overflow: 'hidden',
+		paddingLeft: '24',
+	})
+
+	export const noteRule = style({
+		borderColor: 'line.secondary',
+		borderLeftWidth: 'regular',
+		paddingLeft: '12',
+		width: '100% !custom',
+	})
+
+	export const noteList = style({
+		color: 'content.primary',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		typography: 'body.b2',
+	})
+
+	export const minWidth = style({ minWidth: '0 !custom' })
+
+	export const noteItem = style({
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const noteValue = style({ flex: 1, minWidth: '0 !custom' })
+
+	export const noteHash = style({
+		display: 'flex',
+		fontFamily: '"JetBrains Mono", monospace',
+		minWidth: '0 !custom',
+	})
+
+	export const totals = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlock: '24',
+		paddingInline: '24',
+		typography: 'body.b2',
+	})
+
+	export const feeRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+		justifyContent: 'space-between',
+	})
+
+	export const positive = style({ color: 'content.positive' })
+
+	export const feeAmount = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const end = style({ textAlign: 'right' })
+
+	export const totalLabel = style({
+		color: 'content.primary',
+		typography: 'heading.h4',
+	})
+
+	export const totalValue = style({
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+		typography: 'heading.h3',
+	})
+
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		marginTop: '-32px !custom',
+		width: '100% !custom',
+		'@media print': { display: 'none' },
+	})
+
+	export const actionsInner = style({
+		width: 'min(480px, calc(100vw - 32px)) !custom',
+	})
+
+	export const actionBar = style({
+		backgroundColor: 'container.regular',
+		borderColor: 'line.secondary',
+		borderWidth: 'regular',
+		color: 'content.secondary',
+		display: 'grid',
+		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+		typography: 'body.b2',
+	})
+
+	export const action = style({
+		alignItems: 'center',
+		borderColor: 'line.secondary',
+		borderRightWidth: 'regular',
+		display: 'inline-flex',
+		gap: '8',
+		height: '40',
+		justifyContent: 'center',
+		'@media (hover: hover)': {
+			':hover': {
+				backgroundColor: 'background.secondary',
+				color: 'content.primary',
+			},
+		},
+		':last-child': { borderRightWidth: 'none' },
+	})
+
+	export const actionIcon = style({
+		height: '13px !custom',
+		width: '13px !custom',
+	})
+
+	export const viewTransaction = style({
+		alignItems: 'center',
+		backgroundColor: 'container.regular',
+		borderBottomLeftRadius: 'xs',
+		borderBottomRightRadius: 'xs',
+		borderColor: 'line.secondary',
+		borderWidth: 'regular',
+		color: 'content.tertiary',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'center',
+		marginTop: '-1px !custom',
+		padding: '12',
+		transitionDuration: '100ms',
+		transitionProperty: 'background-color, color',
+		transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+		typography: 'body.b2',
+		'@media (hover: hover)': {
+			':hover': {
+				backgroundColor: 'background.secondary',
+				color: 'content.primary',
+			},
+		},
+		':focus-visible': { outlineOffset: '-2px' },
+	})
 }

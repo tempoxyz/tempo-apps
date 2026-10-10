@@ -1,5 +1,7 @@
+import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import { pressDown } from '#styles/explorer'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export function ContractFeatureCard(props: {
@@ -32,45 +34,29 @@ export function ContractFeatureCard(props: {
 
 	if (collapsible) {
 		return (
-			<section
-				className={cx(
-					'flex flex-col w-full overflow-hidden',
-					'rounded-body border border-card-border bg-card-header',
-					'shadow-none',
-				)}
-			>
-				<div className="flex items-center min-h-9 shrink-0">
+			<section {...styles.collapsibleCard()}>
+				<div {...styles.collapsibleHeader()}>
 					<button
 						type="button"
 						onClick={() => setIsCollapsed(!isCollapsed)}
-						className={cx(
-							'min-w-0 flex-1 flex items-center gap-[6px] py-2 pl-[16px] text-left cursor-pointer press-down focus-visible:-outline-offset-2!',
-							actions ? 'pr-[12px]' : 'pr-[16px]',
+						{...cx(
+							styles.toggle(),
+							Boolean(actions) && styles.toggleWithActions(),
+							pressDown(),
 						)}
 					>
-						<span className="min-w-0 copy-13 text-tertiary [overflow-wrap:anywhere]">
-							{title}
-						</span>
+						<span {...styles.collapsibleTitle()}>{title}</span>
 						<ChevronDownIcon
-							className={cx(
-								'size-[14px] shrink-0 text-tertiary',
-								isCollapsed && '-rotate-90',
+							{...cx(
+								styles.chevron(),
+								isCollapsed && styles.chevronCollapsed(),
 							)}
 						/>
 					</button>
-					{actions && (
-						<div className="flex shrink-0 items-center gap-[8px] text-tertiary px-[12px]">
-							{actions}
-						</div>
-					)}
+					{actions && <div {...styles.collapsibleActions()}>{actions}</div>}
 				</div>
 
-				<div
-					className={cx(
-						'rounded-t-body border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]',
-						isCollapsed && 'hidden',
-					)}
-				>
+				<div {...cx(styles.collapsibleBody(), isCollapsed && styles.hidden())}>
 					{children}
 				</div>
 			</section>
@@ -78,34 +64,30 @@ export function ContractFeatureCard(props: {
 	}
 
 	return (
-		<section className="rounded-body bg-card-header overflow-hidden">
-			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
-				<div className="w-full min-w-0">
-					<div className="flex items-center w-full gap-2 justify-between">
+		<section {...styles.card()}>
+			<div {...styles.header()}>
+				<div {...styles.headerContent()}>
+					<div {...styles.headerRow()}>
 						<a
 							id={title.toLowerCase().replaceAll(' ', '-')}
 							href={`#${title.toLowerCase().replaceAll(' ', '-')}`}
-							className="min-w-0 copy-14 text-primary/90 font-medium [overflow-wrap:anywhere]"
+							{...styles.title()}
 						>
 							{title}
 						</a>
 
-						<p className="min-w-0 label-12 text-primary text-right font-medium [overflow-wrap:anywhere]">
-							{rightSideTitle}
-						</p>
+						<p {...styles.rightSideTitle()}>{rightSideTitle}</p>
 					</div>
-					<div className="flex items-center w-full gap-2 justify-between">
-						{description && (
-							<p className="label-12 text-secondary">{description}</p>
-						)}
+					<div {...styles.headerRow()}>
+						{description && <p {...styles.description()}>{description}</p>}
 						{rightSideDescription && (
-							<p className="label-12 text-secondary">{rightSideDescription}</p>
+							<p {...styles.description()}>{rightSideDescription}</p>
 						)}
 					</div>
 					{textGrid && (
-						<div className="flex flex-wrap gap-x-4 gap-y-1 justify-between mt-1">
+						<div {...styles.textGrid()}>
 							{textGrid.map((item, index) => (
-								<div key={index} className="label-12 gap-2 flex">
+								<div key={index} {...styles.textGridItem()}>
 									{item.left}
 									{item.right}
 								</div>
@@ -115,7 +97,158 @@ export function ContractFeatureCard(props: {
 				</div>
 				{actions}
 			</div>
-			<div className="bg-card p-2">{children}</div>
+			<div {...styles.body()}>{children}</div>
 		</section>
 	)
+}
+
+namespace styles {
+	export const collapsibleCard = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderWidth: 'regular',
+		boxShadow: 'none',
+		display: 'flex',
+		flexDirection: 'column',
+		overflow: 'hidden',
+		width: '100% !custom',
+	})
+
+	export const collapsibleHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexShrink: 0,
+		minHeight: '36px !custom',
+	})
+
+	export const toggle = style({
+		alignItems: 'center',
+		cursor: 'pointer',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+		minWidth: '0px !custom',
+		paddingBlock: '8',
+		paddingLeft: '16',
+		paddingRight: '16',
+		textAlign: 'left',
+		':focus-visible': { outlineOffset: '-2px !important' },
+	})
+
+	export const toggleWithActions = style({ paddingRight: '12' })
+
+	export const collapsibleTitle = style({
+		color: 'content.tertiary',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		typography: 'body.b3',
+	})
+
+	export const chevron = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		height: '14px !custom',
+		width: '14px !custom',
+	})
+
+	export const chevronCollapsed = style({ rotate: '-90deg' })
+
+	export const collapsibleActions = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexShrink: 0,
+		gap: '8',
+		paddingInline: '12',
+	})
+
+	export const collapsibleBody = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderTopLeftRadius: 'xs',
+		borderTopRightRadius: 'xs',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		minHeight: '0px !custom',
+		overflowX: 'auto',
+		paddingInline: '12',
+		paddingTop: '12',
+	})
+
+	export const hidden = style({ display: 'none' })
+
+	export const card = style({
+		backgroundColor: 'background.secondary',
+		borderRadius: 'xs',
+		overflow: 'hidden',
+	})
+
+	export const header = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '16',
+		width: '100% !custom',
+		'@media (width >= 640px)': {
+			alignItems: 'center',
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+		},
+	})
+
+	export const headerContent = style({
+		minWidth: '0px !custom',
+		width: '100% !custom',
+	})
+
+	export const headerRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const title = style({
+		color: 'content.primary',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		typography: 'body.b2',
+	})
+
+	export const rightSideTitle = style({
+		color: 'content.primary',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		textAlign: 'right',
+		typography: 'body.b3',
+	})
+
+	export const description = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const textGrid = style({
+		columnGap: '16',
+		display: 'flex',
+		flexWrap: 'wrap',
+		justifyContent: 'space-between',
+		marginTop: '4',
+		rowGap: '4',
+	})
+
+	export const textGridItem = style({
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b3',
+	})
+
+	export const body = style({
+		backgroundColor: 'background.secondary',
+		padding: '8',
+	})
 }

@@ -11,6 +11,7 @@ import type { Abi } from 'viem'
 import { zeroAddress } from 'viem'
 import { useConnection } from 'wagmi'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { SimulateCallForm } from '#comps/SimulateCallForm'
 import { SimulateGasPanel } from '#comps/SimulateGasPanel'
@@ -28,6 +29,7 @@ import {
 } from '#comps/SimulateResultPane'
 import {
 	Button,
+	buttonIcon,
 	describeCall,
 	PanelEmpty,
 	PanelError,
@@ -41,7 +43,6 @@ import {
 	TxTraceTree,
 	useTraceTrees,
 } from '#comps/TxTraceTree'
-import { cx } from '#lib/css'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import {
 	type CallDraft,
@@ -79,6 +80,7 @@ import { getWagmiConfig } from '#wagmi.config'
 import EraserIcon from '~icons/lucide/eraser'
 import LinkIcon from '~icons/lucide/link'
 import PlayIcon from '~icons/lucide/play'
+import { styles } from './-simulate.styles'
 
 const EXAMPLE_TOKEN = '0x20c0000000000000000000000000000000000001'
 const EXAMPLE_CALLDATA = '0x06fdde03'
@@ -543,13 +545,10 @@ function SimulatePage(): React.JSX.Element {
 	const showOutput = pane === 'output' || pane === 'split'
 
 	return (
-		<div className="flex w-full flex-col px-[24px] pt-8 pb-12 type-card min-[800px]:pt-14 min-[1240px]:px-[84px]">
-			<div className="mb-[12px] flex flex-wrap items-center gap-x-[14px] gap-y-[8px]">
-				<h1 className="shrink-0 heading-20 text-primary">Simulate</h1>
-				<p
-					className="min-w-0 flex-1 truncate type-card-data text-tertiary"
-					title={summary}
-				>
+		<div {...styles.page()}>
+			<div {...styles.toolbar()}>
+				<h1 {...styles.title()}>Simulate</h1>
+				<p {...styles.summary()} title={summary}>
 					{summary}
 				</p>
 				<SegmentedControl
@@ -573,7 +572,7 @@ function SimulatePage(): React.JSX.Element {
 				    action bar rather than a second Run inside the result header. */}
 				{hasDraft && (
 					<Button onClick={clear} title="Start over with an empty call">
-						<EraserIcon className="size-[12px]" />
+						<EraserIcon {...buttonIcon()} />
 						Clear
 					</Button>
 				)}
@@ -586,26 +585,20 @@ function SimulatePage(): React.JSX.Element {
 						}
 						title="Copy a link that reproduces this screen"
 					>
-						<LinkIcon className="size-[12px]" />
+						<LinkIcon {...buttonIcon()} />
 						{shareLink.notifying ? 'Copied' : 'Share'}
 					</Button>
 				)}
 				<Button tone="primary" onClick={run} title="Run this simulation (⌘↵)">
-					<PlayIcon className="size-[12px]" />
+					<PlayIcon {...buttonIcon()} />
 					{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
-					<span className="label-12 opacity-70">⌘↵</span>
+					<span {...styles.shortcut()}>⌘↵</span>
 				</Button>
 			</div>
 
-			<div
-				className={cx(
-					'grid min-h-[560px] min-w-0 items-start gap-[14px]',
-					pane === 'split' &&
-						'min-[1100px]:grid-cols-[minmax(360px,420px)_minmax(0,1fr)]',
-				)}
-			>
+			<div {...cx(styles.panes(), pane === 'split' && styles.panesSplit())}>
 				{showInput && (
-					<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
+					<section {...styles.card()}>
 						<SimulateCallForm
 							form={form}
 							setForm={setForm}
@@ -923,7 +916,7 @@ function SimulationResults(props: {
 	}
 
 	return (
-		<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
+		<section {...styles.card()}>
 			<SimulateResultHeader
 				execution={execution}
 				input={input}
@@ -932,11 +925,11 @@ function SimulationResults(props: {
 			/>
 
 			<div
-				className={cx(
-					'flex min-w-0 flex-col transition-opacity',
+				{...cx(
+					styles.evidence(),
 					// Only the evidence dims when inputs change. Dimming the header too
 					// made every shared link's first impression a greyed-out screen.
-					props.stale && 'opacity-60',
+					props.stale && styles.stale(),
 				)}
 			>
 				{execution ? (
@@ -995,7 +988,7 @@ function SimulationResults(props: {
 					onChange={(tab) => props.onSearchChange({ tab })}
 				/>
 
-				<div className="min-w-0">
+				<div {...styles.panel()}>
 					{props.tab === 'overview' &&
 						(execution ? (
 							<SimulateOverview
@@ -1027,7 +1020,7 @@ function SimulationResults(props: {
 							// Keeping them separate is the point: which call a frame
 							// belongs to is never in question, and nothing has to be
 							// invented for a batch-level root frame that does not exist.
-							<div className="flex flex-col">
+							<div {...styles.column()}>
 								{(execution?.calls ?? []).map((call) => (
 									<CallTracePanel
 										key={call.index}
@@ -1136,7 +1129,7 @@ function CallTracePanel(props: {
 }): React.JSX.Element {
 	const { tree } = props
 	return (
-		<div className="flex min-w-0 flex-col">
+		<div {...styles.stack()}>
 			<SimulateCallHeading
 				call={props.call}
 				label={props.label}
@@ -1168,13 +1161,11 @@ function SimulationEmptyState(props: {
 	onEdit: () => void
 }): React.JSX.Element {
 	return (
-		<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
-			<div className="flex items-center gap-[8px] border-b border-card-border px-[16px] py-[10px]">
-				<span className="label-14 text-content-dimmed">
-					Nothing simulated yet
-				</span>
+		<section {...styles.card()}>
+			<div {...styles.emptyHeader()}>
+				<span {...styles.emptyTitle()}>Nothing simulated yet</span>
 			</div>
-			<div className="pointer-events-none select-none opacity-40">
+			<div {...styles.emptyPreview()}>
 				<SimulateTabs
 					tabs={[
 						{ id: 'overview', label: 'Overview' },
@@ -1187,15 +1178,15 @@ function SimulationEmptyState(props: {
 					onChange={() => {}}
 				/>
 			</div>
-			<div className="flex flex-col gap-[12px] px-[16px] py-[16px]">
-				<p className="max-w-[520px] type-card text-tertiary">
+			<div {...styles.emptyBody()}>
+				<p {...styles.emptyText()}>
 					Fill in a call and run it, or replay an existing transaction by hash
 					against the state of its parent block. Nothing is signed and nothing
 					is broadcast.
 				</p>
 				{/* All secondary: the page already has one primary action, and a second
 				    blue button competing with Run is a coin toss, not a hierarchy. */}
-				<div className="flex flex-wrap gap-[8px]">
+				<div {...styles.emptyActions()}>
 					<Button onClick={() => props.onExample('read')}>
 						Read a token name
 					</Button>

@@ -1,5 +1,5 @@
+import { style } from '@tempoxyz/ds/platform'
 import { useEffect, useState } from 'react'
-import { cx } from '#lib/css'
 
 interface ProgressLineProps {
 	loading: boolean
@@ -60,12 +60,23 @@ export function ProgressLine({
 	if (!show) return null
 	return (
 		<div
-			className={cx('h-[1px] bg-inverse pointer-events-none', className)}
-			style={{
-				width: `${progress}%`,
-				opacity: progress >= 99 ? 0 : 1,
-				transition: progress >= 99 ? 'width 0.1s ease-out' : 'width 0.1s ease',
-			}}
+			{...styles.line({
+				className,
+				style: {
+					width: `${progress}%`,
+					opacity: progress >= 99 ? 0 : 1,
+					transition:
+						progress >= 99 ? 'width 0.1s ease-out' : 'width 0.1s ease',
+				},
+			})}
 		/>
 	)
+}
+
+namespace styles {
+	export const line = style({
+		backgroundColor: 'component.button.primary.fill',
+		height: '1px !custom',
+		pointerEvents: 'none',
+	})
 }

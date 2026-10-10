@@ -1,10 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { Button, style, variants } from '@tempoxyz/ds/platform'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
+import { cx } from 'zyzz'
 import { Address as AddressLink } from '#comps/Address'
-import { cx } from '#lib/css'
 import {
 	groupTokenAuthorities,
 	pauseStatusLabel,
@@ -17,6 +18,7 @@ import {
 } from '#lib/domain/token-trust'
 import { fetchTokenPolicy } from '#lib/server/token-trust'
 import type { RoleHolder } from '#routes/api/tip20-roles'
+import { link, linkHover } from '#styles/explorer'
 
 export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	const chainId = useChainId()
@@ -31,19 +33,22 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 		props.unavailable ? [] : props.roles,
 		policy,
 	)
+	const pauseState =
+		policy?.paused === true
+			? 'paused'
+			: policy?.paused === false
+				? 'active'
+				: 'unknown'
 	return (
-		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
-			<h3 className="copy-13 text-tertiary">Trust & permissions</h3>
-			<section
-				aria-label="Transfer policy"
-				className="rounded-[6px] border border-distinct overflow-hidden"
-			>
-				<div className="flex items-start justify-between gap-2 border-b border-distinct px-3 py-2.5">
-					<h4 className="font-medium">Transfer policy</h4>
+		<div {...styles.root()}>
+			<h3 {...styles.heading()}>Trust & permissions</h3>
+			<section aria-label="Transfer policy" {...styles.panel()}>
+				<div {...styles.panelHeader()}>
+					<h4 {...styles.panelTitle()}>Transfer policy</h4>
 					{policy && <PolicyLink policy={policy.policy} />}
 				</div>
-				<div className="flex flex-col gap-3 p-3">
-					<div className="flex flex-col items-start gap-3 md:flex-row-reverse md:justify-between">
+				<div {...styles.panelBody()}>
+					<div {...styles.status()}>
 						<span
 							role="status"
 							aria-label="Token pause status"
@@ -52,20 +57,14 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 									? 'Token is not paused. Transfer policy restrictions still apply.'
 									: undefined
 							}
-							className={cx(
-								'inline-flex shrink-0 items-center rounded-[5px] px-[5px] py-[1px] label-12 whitespace-nowrap',
-								policy?.paused === true && 'bg-warning/15 text-warning',
-								policy?.paused !== true && 'bg-distinct',
-								policy?.paused === false && 'text-inherit',
-								policy?.paused == null && 'text-tertiary',
-							)}
+							{...styles.pause({ state: pauseState })}
 						>
 							{policyQuery.isPending
 								? 'Loading status…'
 								: pauseStatusLabel(policy?.paused)}
 						</span>
 						{policyQuery.isPending ? (
-							<p className="text-tertiary" role="status">
+							<p {...styles.muted()} role="status">
 								Loading transfer policy…
 							</p>
 						) : policyQuery.isError ? (
@@ -75,9 +74,9 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 							/>
 						) : (
 							policy && (
-								<div className="flex flex-col gap-2 label-12 text-secondary">
+								<div {...styles.policyDescription()}>
 									<p>{policyDescriptions[policy.policy.type]}</p>
-									<p className="text-tertiary">
+									<p {...styles.muted()}>
 										Token admins can replace this policy.
 									</p>
 								</div>
@@ -92,16 +91,13 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 					/>
 				</div>
 			</section>
-			<section
-				aria-label="Privileged addresses"
-				className="rounded-[6px] border border-distinct overflow-hidden"
-			>
-				<h4 className="border-b border-distinct px-3 py-2.5 font-medium">
+			<section aria-label="Privileged addresses" {...styles.panel()}>
+				<h4 {...cx(styles.panelHeader(), styles.panelTitle())}>
 					Privileged addresses
 				</h4>
-				<div className="flex flex-col gap-3 p-3">
+				<div {...styles.panelBody()}>
 					{props.loading ? (
-						<p className="text-tertiary" role="status">
+						<p {...styles.muted()} role="status">
 							Loading token roles…
 						</p>
 					) : props.unavailable ? (
@@ -111,37 +107,27 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 						/>
 					) : (
 						props.roles.length === 0 && (
-							<p className="text-tertiary">
-								No current token role holders found.
-							</p>
+							<p {...styles.muted()}>No current token role holders found.</p>
 						)
 					)}
 					{groups.length > 0 && (
-						<div className="flex flex-col divide-y divide-dashed divide-distinct">
+						<div {...styles.groups()}>
 							{groups.map((group) => (
-								<div
-									key={group.account}
-									className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
-								>
+								<div key={group.account} {...styles.group()}>
 									<AddressLink
 										address={group.account}
-										className="label-12 break-all"
+										className={styles.groupAddress().className}
 									/>
-									<dl className="flex flex-col gap-3 label-12">
+									<dl {...styles.roles()}>
 										{group.roles.map((role) => (
-											<div
-												key={role.roleHash}
-												className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
-											>
-												<dt className="font-mono label-12 break-all">
-													{role.role}
-												</dt>
-												<dd className="text-secondary">
+											<div key={role.roleHash} {...styles.roleRow()}>
+												<dt {...styles.roleName()}>{role.role}</dt>
+												<dd {...styles.secondary()}>
 													{tokenRoleDescription(role.role)}
 												</dd>
-												<dd className="flex items-baseline gap-2 md:justify-end label-12 whitespace-nowrap">
+												<dd {...styles.roleMeta()}>
 													{role.grantedAt != null && (
-														<span className="text-tertiary">
+														<span {...styles.muted()}>
 															{new Date(
 																role.grantedAt * 1000,
 															).toLocaleDateString('en-US')}
@@ -151,13 +137,13 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 														<Link
 															to="/tx/$hash"
 															params={{ hash: role.grantedTx as `0x${string}` }}
-															className="text-accent hover:underline"
+															{...cx(link(), linkHover())}
 															aria-label={`View ${role.role} grant transaction for ${group.account}`}
 														>
 															Grant tx ↗
 														</Link>
 													) : (
-														<span className="text-tertiary">
+														<span {...styles.muted()}>
 															Grant transaction unavailable
 														</span>
 													)}
@@ -169,17 +155,17 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 												permission.policyId !== undefined && (
 													<div
 														key={`${permission.policyId}:${index}`}
-														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
+														{...styles.roleRow()}
 													>
 														<dt>{permission.label}</dt>
-														<dd className="text-secondary">
+														<dd {...styles.secondary()}>
 															{permission.description}
 														</dd>
-														<dd className="md:text-right label-12">
+														<dd {...styles.permissionLink()}>
 															<Link
 																to="/policy/$id"
 																params={{ id: permission.policyId }}
-																className="text-accent hover:underline"
+																{...cx(link(), linkHover())}
 															>
 																Policy #{permission.policyId} activity ↗
 															</Link>
@@ -210,15 +196,15 @@ export declare namespace TokenTrust {
 
 function PolicyLink({ policy }: { policy: TransferPolicy }): React.JSX.Element {
 	return (
-		<span className="inline-flex items-center gap-2">
+		<span {...styles.policyLink()}>
 			<Link
 				to="/policy/$id"
 				params={{ id: policy.id }}
-				className="text-accent hover:underline"
+				{...cx(link(), linkHover())}
 			>
 				#{policy.id}
 			</Link>
-			<span className="label-12 text-tertiary">{policyLabel(policy)}</span>
+			<span {...styles.policyLabel()}>{policyLabel(policy)}</span>
 		</span>
 	)
 }
@@ -228,12 +214,12 @@ function Unavailable(props: {
 	onRetry: () => void
 }): React.JSX.Element {
 	return (
-		<div role="status" className="label-12 text-tertiary">
+		<div role="status" {...styles.unavailable()}>
 			{props.message}{' '}
 			<button
 				type="button"
 				onClick={props.onRetry}
-				className="text-accent hover:underline"
+				{...cx(styles.textButton(), link(), linkHover())}
 			>
 				Try again
 			</button>
@@ -276,13 +262,11 @@ function AddressPolicyChecker(props: {
 		account && !query.isFetching && !query.isError ? query.data : undefined
 	const displayedPolicy = result ?? props.policy
 	return (
-		<div className="flex flex-col gap-3 label-12">
-			<details className="border-t border-dashed border-distinct pt-3 label-12">
-				<summary className="cursor-pointer text-accent">
-					Check an address
-				</summary>
+		<div {...styles.checker()}>
+			<details {...styles.details()}>
+				<summary {...cx(styles.summary(), link())}>Check an address</summary>
 				<form
-					className="flex flex-col gap-2 pt-3"
+					{...styles.form()}
 					onSubmit={(event) => {
 						event.preventDefault()
 						const input = value.trim()
@@ -296,10 +280,10 @@ function AddressPolicyChecker(props: {
 						else setAccount(input)
 					}}
 				>
-					<label htmlFor={id} className="text-secondary">
+					<label htmlFor={id} {...styles.secondary()}>
 						Send, receive and mint receipt permissions
 					</label>
-					<div className="flex gap-2">
+					<div {...styles.inputRow()}>
 						<input
 							id={id}
 							value={value}
@@ -313,25 +297,27 @@ function AddressPolicyChecker(props: {
 							spellCheck={false}
 							aria-invalid={invalid}
 							aria-describedby={invalid ? `${id}-error` : undefined}
-							className="min-w-0 flex-1 rounded-[5px] border border-distinct bg-transparent px-2 py-1.5 font-mono label-12"
+							{...styles.input()}
 						/>
-						<button
+						<Button
 							type="submit"
 							disabled={query.isFetching}
-							className="text-accent hover:underline disabled:opacity-50"
+							scale="small"
+							variant="secondary"
+							{...styles.submit()}
 						>
 							{query.isFetching ? 'Checking…' : 'Check'}
-						</button>
+						</Button>
 					</div>
 					{invalid && (
-						<p id={`${id}-error`} role="alert" className="text-negative">
+						<p id={`${id}-error`} role="alert" {...styles.negative()}>
 							Enter a valid address.
 						</p>
 					)}
 				</form>
-				<div aria-live="polite" className="pt-3">
+				<div aria-live="polite" {...styles.live()}>
 					{account && query.isFetching ? (
-						<p className="text-tertiary">Checking current policy…</p>
+						<p {...styles.muted()}>Checking current policy…</p>
 					) : account && query.isError ? (
 						<Unavailable
 							message="Could not check this address."
@@ -341,7 +327,7 @@ function AddressPolicyChecker(props: {
 						<PolicyCheckResult result={displayedPolicy} />
 					) : null}
 				</div>
-				<p className="text-tertiary pt-2">
+				<p {...styles.disclaimer()}>
 					Token policy only; this does not simulate a transfer.
 				</p>
 			</details>
@@ -355,16 +341,13 @@ function PolicyCheckResult({
 	result: TokenPolicy
 }): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-2">
+		<div {...styles.result()}>
 			{(result.components.length > 0 || result.checks) && (
-				<dl className="flex flex-col gap-2" aria-label="Policy permissions">
+				<dl {...styles.result()} aria-label="Policy permissions">
 					{tokenPolicyRows(result).map((row) => (
-						<div
-							key={row.scope}
-							className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
-						>
-							<dt className="text-secondary">{row.label}</dt>
-							<dd className="flex flex-wrap items-baseline justify-end gap-x-3 gap-y-1">
+						<div key={row.scope} {...styles.resultRow()}>
+							<dt {...styles.secondary()}>{row.label}</dt>
+							<dd {...styles.resultValue()}>
 								{result.components.length > 0 && (
 									<PolicyLink policy={row.policy} />
 								)}
@@ -383,8 +366,261 @@ function PolicyCheckResult({
 				</dl>
 			)}
 			{result.checks && (
-				<p className="text-tertiary">Checked at block {result.blockNumber}.</p>
+				<p {...styles.muted()}>Checked at block {result.blockNumber}.</p>
 			)}
 		</div>
 	)
+}
+
+namespace styles {
+	export const root = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16',
+		marginTop: '16',
+		paddingTop: '16',
+	})
+
+	export const heading = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const panel = style({
+		borderColor: 'line.secondary',
+		borderRadius: '2xs',
+		borderWidth: 'regular',
+		overflow: 'hidden',
+	})
+
+	export const panelHeader = style({
+		alignItems: 'flex-start',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		paddingBlock: '12',
+		paddingInline: '12',
+	})
+
+	export const panelTitle = style({ typography: 'body.b2Strong' })
+
+	export const panelBody = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		padding: '12',
+	})
+
+	export const status = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		'@media (width >= 768px)': {
+			flexDirection: 'row-reverse',
+			justifyContent: 'space-between',
+		},
+	})
+
+	export const pause = variants({
+		base: {
+			alignItems: 'center',
+			borderRadius: 'full',
+			display: 'inline-flex',
+			flexShrink: 0,
+			paddingBlock: '2',
+			paddingInline: '8',
+			typography: 'body.b3',
+			whiteSpace: 'nowrap',
+		},
+		defaultVariants: { state: 'unknown' },
+		variants: {
+			state: {
+				active: {
+					backgroundColor: 'container.regular',
+					color: 'inherit !custom',
+				},
+				paused: {
+					backgroundColor: 'container.warning',
+					color: 'content.warning',
+				},
+				unknown: {
+					backgroundColor: 'container.regular',
+					color: 'content.tertiary',
+				},
+			},
+		},
+	})
+
+	export const muted = style({ color: 'content.tertiary' })
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const negative = style({ color: 'content.negative' })
+
+	export const policyDescription = style({
+		color: 'content.secondary',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		typography: 'body.b3',
+	})
+
+	export const groups = style({
+		display: 'flex',
+		flexDirection: 'column',
+		selectors: {
+			'& > :not(:last-child)': {
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
+				borderStyle: 'dashed',
+			},
+		},
+	})
+
+	export const group = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlock: '12',
+		typography: 'body.b3',
+		':first-child': { paddingTop: 'none' },
+		':last-child': { paddingBottom: 'none' },
+	})
+
+	export const groupAddress = style({ wordBreak: 'break-all' })
+
+	export const roles = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		typography: 'body.b3',
+	})
+
+	export const roleRow = style({
+		display: 'grid',
+		gap: '4',
+		'@media (width >= 768px)': {
+			gap: '12',
+			gridTemplateColumns: '140px minmax(0, 1fr) auto',
+		},
+	})
+
+	export const roleName = style({
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const roleMeta = style({
+		alignItems: 'baseline',
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+		'@media (width >= 768px)': { justifyContent: 'flex-end' },
+	})
+
+	export const permissionLink = style({
+		typography: 'body.b3',
+		'@media (width >= 768px)': { textAlign: 'right' },
+	})
+
+	export const policyLink = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '8',
+	})
+
+	export const policyLabel = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const unavailable = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const textButton = style({ cursor: 'pointer' })
+
+	export const checker = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		typography: 'body.b3',
+	})
+
+	export const details = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		borderTopWidth: 'regular',
+		paddingTop: '12',
+		typography: 'body.b3',
+	})
+
+	export const summary = style({ cursor: 'pointer' })
+
+	export const form = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingTop: '12',
+	})
+
+	export const inputRow = style({ display: 'flex', gap: '8' })
+
+	// Mirrors TDS TextInput (filled, borderless) at the small button height.
+	export const input = style({
+		backgroundColor: 'component.input.primary.fill',
+		borderRadius: '2xs',
+		color: 'content.primary',
+		flex: 1,
+		minWidth: '0px !custom',
+		paddingBlock: '8',
+		paddingInline: '12',
+		typography: 'mono.inline',
+		'::placeholder': { color: 'content.tertiary' },
+	})
+
+	// TDS Button has no disabled treatment of its own.
+	export const submit = style({
+		flexShrink: 0,
+		':disabled': { opacity: 0.5 },
+	})
+
+	export const live = style({ paddingTop: '12' })
+
+	export const disclaimer = style({
+		color: 'content.tertiary',
+		paddingTop: '8',
+	})
+
+	export const result = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const resultRow = style({
+		alignItems: 'baseline',
+		columnGap: '12',
+		display: 'flex',
+		flexWrap: 'wrap',
+		justifyContent: 'space-between',
+		rowGap: '4',
+	})
+
+	export const resultValue = style({
+		alignItems: 'baseline',
+		columnGap: '12',
+		display: 'flex',
+		flexWrap: 'wrap',
+		justifyContent: 'flex-end',
+		rowGap: '4',
+	})
 }

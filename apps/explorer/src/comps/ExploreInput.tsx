@@ -1,15 +1,17 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import { IconButton, style, variants, vars } from '@tempoxyz/ds/platform'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import { Midcut } from '#comps/Midcut'
 import { useMountAnim } from '#lib/animation'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
-import { cx } from '#lib/css'
 import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
 import { normalizeSearchInput } from '#lib/tempo-address'
+import { link, pressDown, transitionColors, truncate } from '#styles/explorer'
 import type {
 	AddressSearchResult,
 	BlockSearchResult,
@@ -405,11 +407,8 @@ export function ExploreInput(props: ExploreInput.Props) {
 	)
 
 	return (
-		<div
-			ref={rootRef}
-			className={cx('relative z-10 w-full', !wide && 'max-w-md')}
-		>
-			<div ref={externalWrapperRef} className="overflow-hidden">
+		<div ref={rootRef} {...styles.root({ wide: Boolean(wide) })}>
+			<div ref={externalWrapperRef} {...styles.wrapper()}>
 				<form
 					ref={formRef}
 					autoComplete="off"
@@ -445,7 +444,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 							return
 						}
 					}}
-					className="relative w-full"
+					{...styles.form()}
 				>
 					<input
 						ref={inputRef}
@@ -454,11 +453,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						autoCorrect="off"
 						tabIndex={tabIndex}
 						value={value}
-						className={cx(
-							'text-search-input bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary rounded-body focus-visible:border-focus outline-0',
-							size === 'large' ? 'h-[52px]' : 'h-[42px]',
-							className,
-						)}
+						{...styles.input({ className, size })}
 						data-1p-ignore
 						name="explore-query"
 						placeholder="Search address, hash, block, token"
@@ -519,28 +514,19 @@ export function ExploreInput(props: ExploreInput.Props) {
 						}
 						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
 					/>
-					<div
-						className={cx(
-							'absolute top-[50%] -translate-y-[50%]',
-							size === 'large' ? 'right-[16px]' : 'right-[12px]',
-						)}
-					>
-						<button
+					<div {...styles.submitSlot({ size })}>
+						{/* TDS IconButton owns the size, fill, and focus ring. The local
+						    style dims the arrow while the query is not a valid target. */}
+						<IconButton
 							type="submit"
 							aria-label="Search"
 							aria-disabled={!isValidInput}
-							className={cx(
-								'rounded-body! border border-base-border bg-base-background/90 grid place-items-center press-down transition-colors hover:bg-surface',
-								size === 'large' ? 'size-[34px]' : 'size-[30px]',
-								isValidInput
-									? 'text-primary cursor-pointer'
-									: 'text-tertiary cursor-default',
-							)}
+							scale="small"
+							variant="secondary"
+							{...cx(styles.submit(), transitionColors(), pressDown())}
 						>
-							<ArrowRight
-								className={size === 'large' ? 'size-[16px]' : 'size-[14px]'}
-							/>
-						</button>
+							<ArrowRight />
+						</IconButton>
 					</div>
 				</form>
 			</div>
@@ -551,20 +537,15 @@ export function ExploreInput(props: ExploreInput.Props) {
 					id={resultsId}
 					role="listbox"
 					aria-label="Search suggestions"
-					className={cx(
-						'absolute left-0 right-0 mt-2 z-50',
-						'bg-surface border border-base-border rounded-body overflow-hidden',
-						'shadow-sm max-h-[min(420px,50dvh)] overflow-y-auto overscroll-contain',
-					)}
-					style={{ opacity: 0 }}
+					{...styles.results({ style: { opacity: 0 } })}
 				>
 					<ProgressLine
 						loading={isFetching}
 						start={150}
-						className="absolute top-0 left-0 right-0"
+						className={styles.resultsProgress().className}
 					/>
 					{flatSuggestions.length === 0 ? (
-						<div className="px-[16px] py-[12px] copy-14 text-tertiary">
+						<div {...styles.resultsEmpty()}>
 							{isError
 								? 'Search unavailable. Paste an address, hash, or block number.'
 								: isFetching
@@ -572,27 +553,22 @@ export function ExploreInput(props: ExploreInput.Props) {
 									: 'No results'}
 						</div>
 					) : (
-						<div className="flex flex-col py-[4px]">
+						<div {...styles.groups()}>
 							{groupedSuggestions.map((group, groupIndex) => (
-								<div key={group.type} className="flex flex-col">
-									<div
-										className={cx(
-											'flex justify-between items-center px-[12px] py-[6px]',
-											groupIndex > 0 && 'pt-[12px]',
-										)}
-									>
-										<div className="label-12 text-secondary">{group.title}</div>
+								<div key={group.type} {...styles.group()}>
+									<div {...styles.groupHeader({ spaced: groupIndex > 0 })}>
+										<div {...styles.groupTitle()}>{group.title}</div>
 										{group.type === 'recent' ? (
 											<button
 												type="button"
-												className="label-12 text-tertiary hover:text-base-content"
+												{...cx(styles.clearRecent(), transitionColors())}
 												onMouseDown={(event) => event.preventDefault()}
 												onClick={clearRecentSearches}
 											>
 												Clear
 											</button>
 										) : (
-											<div className="label-12 text-tertiary">
+											<div {...styles.groupMeta()}>
 												{group.type === 'token'
 													? 'Address'
 													: group.type === 'transaction'
@@ -679,66 +655,58 @@ export namespace ExploreInput {
 				onClick={(event) => {
 					if (event.detail === 0) onSelect(suggestion)
 				}}
-				className={cx(
-					'w-full flex items-center justify-between gap-[10px] overflow-hidden',
-					'text-left cursor-pointer px-[12px] py-[6px] press-down hover:bg-base-alt/25',
-					isSelected && 'bg-base-alt/25',
+				{...cx(
+					styles.suggestion({ selected: isSelected }),
+					transitionColors(),
+					pressDown(),
 				)}
 			>
 				{suggestion.type === 'block' && (
-					<span className="label-16 text-base-content tabular-nums">
-						#{suggestion.blockNumber}
-					</span>
+					<span {...styles.blockNumber()}>#{suggestion.blockNumber}</span>
 				)}
 				{suggestion.type === 'token' && (
 					<>
-						<div className="flex items-center gap-[10px] min-w-0 shrink">
-							<span className="label-16 text-base-content truncate">
+						<div {...styles.tokenInfo()}>
+							<span {...cx(styles.tokenName(), truncate())}>
 								{suggestion.name}
 							</span>
-							<span className="label-12 font-medium text-base-content bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
+							<span {...styles.chip({ emphasis: 'primary' })}>
 								{suggestion.symbol}
 							</span>
-							<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-								TIP-20
-							</span>
+							<span {...styles.chip()}>TIP-20</span>
 						</div>
-						<span className="copy-14 font-mono text-accent flex-1 text-right">
+						<span {...cx(styles.tokenAddress(), link())}>
 							<Midcut value={suggestion.address} prefix="0x" align="end" />
 						</span>
 					</>
 				)}
 				{suggestion.type === 'address' && (
 					<>
-						<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-							<div className="flex min-w-0 max-w-full items-center gap-[8px]">
+						<div {...styles.addressInfo()}>
+							<div {...styles.addressHeading()}>
 								{suggestion.label ? (
-									<span className="min-w-0 truncate label-15 text-base-content">
+									<span {...cx(styles.addressLabel(), truncate())}>
 										{suggestion.label}
 									</span>
 								) : (
-									<span className="block min-w-0 flex-1 overflow-hidden copy-14 font-mono text-accent">
+									<span {...cx(styles.addressHash({ grow: true }), link())}>
 										<Midcut value={suggestion.address} prefix="0x" />
 									</span>
 								)}
 								{suggestion.category ? (
-									<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-										{suggestion.category}
-									</span>
+									<span {...styles.chip()}>{suggestion.category}</span>
 								) : suggestion.isTip20 ? (
-									<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-										TIP-20
-									</span>
+									<span {...styles.chip()}>TIP-20</span>
 								) : null}
 							</div>
 							{suggestion.label && (
-								<span className="block min-w-0 max-w-full overflow-hidden copy-14 font-mono text-accent">
+								<span {...cx(styles.addressHash(), link())}>
 									<Midcut value={suggestion.address} prefix="0x" />
 								</span>
 							)}
 						</div>
 						{suggestion.description && (
-							<span className="hidden w-[44%] shrink-0 text-right copy-14 text-secondary sm:block">
+							<span {...styles.addressDescription()}>
 								{suggestion.description}
 							</span>
 						)}
@@ -746,16 +714,16 @@ export namespace ExploreInput {
 				)}
 				{suggestion.type === 'transaction' && (
 					<>
-						<span className="copy-14 font-mono text-accent truncate min-w-0 flex-1">
+						<span {...cx(styles.transactionHash(), truncate(), link())}>
 							<Midcut value={suggestion.hash} prefix="0x" />
 						</span>
 						{suggestion.timestamp ? (
 							<RelativeTime
 								timestamp={BigInt(suggestion.timestamp)}
-								className="label-12 text-tertiary"
+								{...styles.meta()}
 							/>
 						) : (
-							<span className="label-12 text-tertiary">−</span>
+							<span {...styles.meta()}>−</span>
 						)}
 					</>
 				)}
@@ -771,4 +739,264 @@ export namespace ExploreInput {
 			id: string
 		}
 	}
+}
+
+// Floating panels use the TDS popover elevation.
+const panelShadow = {
+	boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary}`,
+} as const
+
+namespace styles {
+	export const root = variants({
+		base: { position: 'relative', width: '100% !custom', zIndex: 10 },
+		defaultVariants: { wide: false },
+		variants: { wide: { true: {}, false: { maxWidth: '448px !custom' } } },
+	})
+
+	export const wrapper = style({ overflow: 'hidden' })
+
+	export const form = style({ position: 'relative', width: '100% !custom' })
+
+	// A native input in the TDS TextInput style. It keeps 16px type so iOS does
+	// not zoom on focus. The wrapper clips overflow, so the document focus ring
+	// is drawn inside the field.
+	export const input = variants({
+		base: {
+			backgroundColor: 'component.input.primary.fill',
+			border: 'none !custom',
+			borderRadius: 'xs',
+			boxSizing: 'border-box',
+			color: 'content.primary',
+			paddingLeft: '16',
+			paddingRight: '48',
+			typography: 'body.b1',
+			width: '100% !custom',
+			'::placeholder': { color: 'content.tertiary' },
+			':focus-visible': { outlineOffset: '-2px' },
+		},
+		defaultVariants: { size: 'medium' },
+		variants: {
+			size: { large: { height: '48' }, medium: { height: '40' } },
+		},
+	})
+
+	export const submitSlot = variants({
+		base: {
+			display: 'flex',
+			position: 'absolute',
+			top: '50% !custom',
+			translate: '0 -50% !custom',
+		},
+		defaultVariants: { size: 'medium' },
+		variants: {
+			size: { large: { right: '8' }, medium: { right: '4' } },
+		},
+	})
+
+	export const submit = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+		selectors: {
+			'&[aria-disabled="true"]': {
+				color: 'content.tertiary',
+				cursor: 'default',
+			},
+		},
+	})
+
+	export const results = style({
+		...panelShadow,
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		left: '0px !custom',
+		marginTop: '8',
+		maxHeight: 'min(420px, 50dvh) !custom',
+		overflowX: 'hidden',
+		overflowY: 'auto',
+		overscrollBehavior: 'contain',
+		position: 'absolute',
+		right: '0px !custom',
+		zIndex: 50,
+	})
+
+	export const resultsProgress = style({
+		left: '0px !custom',
+		position: 'absolute',
+		right: '0px !custom',
+		top: '0px !custom',
+	})
+
+	export const resultsEmpty = style({
+		color: 'content.tertiary',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const groups = style({
+		display: 'flex',
+		flexDirection: 'column',
+		paddingBlock: '4',
+	})
+
+	export const group = style({ display: 'flex', flexDirection: 'column' })
+
+	export const groupHeader = variants({
+		base: {
+			alignItems: 'center',
+			display: 'flex',
+			justifyContent: 'space-between',
+			paddingBlock: '8',
+			paddingInline: '12',
+		},
+		defaultVariants: { spaced: false },
+		variants: { spaced: { true: { paddingTop: '12' }, false: {} } },
+	})
+
+	export const groupTitle = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const groupMeta = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const clearRecent = style({
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		typography: 'body.b3',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const suggestion = variants({
+		base: {
+			alignItems: 'center',
+			cursor: 'pointer',
+			display: 'flex',
+			gap: '8',
+			justifyContent: 'space-between',
+			overflow: 'hidden',
+			paddingBlock: '8',
+			paddingInline: '12',
+			textAlign: 'left',
+			width: '100% !custom',
+			'@media (hover: hover)': {
+				':hover': { backgroundColor: 'container.regular' },
+			},
+		},
+		defaultVariants: { selected: false },
+		variants: {
+			selected: {
+				true: { backgroundColor: 'container.regular' },
+				false: {},
+			},
+		},
+	})
+
+	export const blockNumber = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+		typography: 'body.b1',
+	})
+
+	export const tokenInfo = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexShrink: 1,
+		gap: '8',
+		minWidth: '0px !custom',
+	})
+
+	export const tokenName = style({
+		color: 'content.primary',
+		typography: 'body.b1',
+	})
+
+	// Compact metadata chip. TDS Badge has an 80px minimum width and a 28px
+	// height, too large for suggestion rows.
+	export const chip = variants({
+		base: {
+			backgroundColor: 'container.subtle',
+			borderRadius: '3xs',
+			color: 'content.tertiary',
+			flexShrink: 0,
+			paddingBlock: '2',
+			paddingInline: '4',
+			typography: 'body.b3',
+		},
+		defaultVariants: { emphasis: 'tertiary' },
+		variants: {
+			emphasis: {
+				primary: { color: 'content.primary' },
+				tertiary: {},
+			},
+		},
+	})
+
+	export const tokenAddress = style({
+		typography: 'mono.inline',
+		flex: 1,
+		textAlign: 'right',
+	})
+
+	export const addressInfo = style({
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		minWidth: '0px !custom',
+		overflow: 'hidden',
+	})
+
+	export const addressHeading = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		maxWidth: '100% !custom',
+		minWidth: '0px !custom',
+	})
+
+	export const addressLabel = style({
+		color: 'content.primary',
+		minWidth: '0px !custom',
+		typography: 'body.b2',
+	})
+
+	export const addressHash = variants({
+		base: {
+			typography: 'mono.inline',
+			display: 'block',
+			maxWidth: '100% !custom',
+			minWidth: '0px !custom',
+			overflow: 'hidden',
+		},
+		defaultVariants: { grow: false },
+		variants: { grow: { true: { flex: 1 }, false: {} } },
+	})
+
+	export const addressDescription = style({
+		color: 'content.secondary',
+		display: 'none',
+		flexShrink: 0,
+		textAlign: 'right',
+		typography: 'body.b2',
+		width: '44% !custom',
+		'@media (width >= 640px)': { display: 'block' },
+	})
+
+	export const transactionHash = style({
+		typography: 'mono.inline',
+		flex: 1,
+		minWidth: '0px !custom',
+	})
+
+	export const meta = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
 }

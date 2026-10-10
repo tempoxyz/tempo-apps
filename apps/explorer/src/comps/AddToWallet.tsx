@@ -1,9 +1,11 @@
 import type { Address } from 'ox'
+import { style, variants } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { type Connector, useConnection, useWatchAsset } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import { supportsWatchAsset } from '#lib/wallets'
+import { pressDown, pulse, transitionColors } from '#styles/explorer'
 import LucideWallet from '~icons/lucide/wallet'
 
 export function AddToWallet(
@@ -65,21 +67,20 @@ export function AddToWallet(
 			? 'Adding…'
 			: `Add ${symbol ?? 'token'} to ${walletName}`
 
+	const state = isSuccess ? 'success' : isPending ? 'busy' : 'idle'
+
 	return (
 		<button
 			type="button"
 			disabled={isPending || isSuccess}
-			className={cx(
-				'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-				isSuccess
-					? 'text-positive'
-					: isPending
-						? 'text-secondary animate-pulse'
-						: 'text-secondary hover:text-primary cursor-pointer press-down',
+			{...cx(
+				styles.action({ state }),
+				transitionColors(),
+				state === 'idle' && pressDown(),
 			)}
 			onClick={handleClick}
 		>
-			<LucideWallet className="size-3.5" />
+			<LucideWallet {...styles.icon()} />
 			{label}
 		</button>
 	)
@@ -93,4 +94,38 @@ export declare namespace AddToWallet {
 		decimals?: number | undefined
 		image?: string | undefined
 	}
+}
+
+namespace styles {
+	export const action = variants({
+		base: {
+			alignItems: 'center',
+			display: 'flex',
+			gap: '8',
+			typography: 'body.b3',
+			width: '100% !custom',
+		},
+		defaultVariants: { state: 'idle' },
+		variants: {
+			state: {
+				busy: {
+					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
+					color: 'content.secondary',
+				},
+				current: { color: 'content.tertiary', cursor: 'default' },
+				idle: {
+					color: 'content.secondary',
+					cursor: 'pointer',
+					'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+				},
+				success: { color: 'content.positive' },
+			},
+		},
+	})
+
+	export const icon = style({
+		flexShrink: 0,
+		height: '14px !custom',
+		width: '14px !custom',
+	})
 }

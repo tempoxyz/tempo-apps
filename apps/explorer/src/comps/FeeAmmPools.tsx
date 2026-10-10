@@ -1,7 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import type * as React from 'react'
+import { cx } from 'zyzz'
 import { Amount } from '#comps/Amount'
 import { CopyButton } from '#comps/CopyButton'
 import { TokenIcon } from '#comps/TokenIcon'
@@ -9,6 +11,7 @@ import { FormattedTimestamp } from '#comps/TimeFormat'
 import { PriceFormatter } from '#lib/formatting'
 import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
 import type { FeeAmmPage, FeeAmmPool } from '#lib/server/fee-amm'
+import { link, linkHover } from '#styles/explorer'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 
 export function FeeAmmQueryState({
@@ -16,17 +19,14 @@ export function FeeAmmQueryState({
 }: FeeAmmQueryState.Props): React.JSX.Element | null {
 	if (query.isPending)
 		return (
-			<p role="status" className="px-4 py-8 type-card text-tertiary">
+			<p role="status" {...styles.loading()}>
 				Loading Fee AMM liquidity…
 			</p>
 		)
 	if (!query.isError) return null
 	return (
-		<div
-			role="alert"
-			className="flex flex-wrap items-center gap-3 px-4 py-6 type-card"
-		>
-			<p className="text-secondary">
+		<div role="alert" {...styles.alert()}>
+			<p {...styles.secondary()}>
 				{query.data
 					? 'Could not refresh liquidity. Showing the last successful result.'
 					: 'Fee AMM liquidity is temporarily unavailable.'}
@@ -35,7 +35,7 @@ export function FeeAmmQueryState({
 				type="button"
 				onClick={() => void query.refetch()}
 				disabled={query.isFetching}
-				className="text-accent hover:underline disabled:opacity-50"
+				{...cx(styles.retry(), link(), linkHover())}
 			>
 				{query.isFetching ? 'Retrying…' : 'Try again'}
 			</button>
@@ -66,15 +66,15 @@ export declare namespace FeeAmmPoolList {
 
 export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 	return (
-		<div className="grid grid-cols-2 md:grid-cols-[1.6fr_1.5fr_1fr_1fr] gap-4 px-4 py-3 border-b border-dashed border-card-border last:border-b-0 type-card">
-			<div className="col-span-2 md:col-span-1 flex flex-col gap-2 min-w-0">
-				<div className="flex flex-wrap items-center gap-2">
+		<div {...styles.row()}>
+			<div {...styles.pair()}>
+				<div {...styles.tokens()}>
 					<PoolTokenLink
 						address={pool.userToken}
 						symbol={pool.userTokenSymbol}
 					/>
 					<ArrowRightIcon
-						className="size-3.5 text-tertiary"
+						{...styles.pairArrow()}
 						aria-label="converts fees to"
 					/>
 					<PoolTokenLink
@@ -83,7 +83,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 					/>
 					<CopyButton value={pool.poolId} ariaLabel="Copy pool ID" />
 				</div>
-				<p className="label-12 text-secondary">
+				<p {...styles.caption()}>
 					{token
 						? pool.userToken.toLowerCase() === token.toLowerCase()
 							? 'Used to pay fees'
@@ -91,10 +91,10 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 						: 'Fee token → Validator token'}
 				</p>
 			</div>
-			<dl className="col-span-2 md:col-span-1 grid grid-cols-2 md:flex md:flex-col gap-2 min-w-0">
+			<dl {...styles.reserves()}>
 				<div>
-					<dt className="label-12 text-tertiary">Fee-token reserve</dt>
-					<dd className="text-primary type-card-data tabular-nums">
+					<dt {...styles.term()}>Fee-token reserve</dt>
+					<dd {...styles.value()}>
 						{pool.reserveUserToken === null ? (
 							'Unavailable'
 						) : (
@@ -108,8 +108,8 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 					</dd>
 				</div>
 				<div>
-					<dt className="label-12 text-tertiary">Validator-token reserve</dt>
-					<dd className="text-primary type-card-data tabular-nums">
+					<dt {...styles.term()}>Validator-token reserve</dt>
+					<dd {...styles.value()}>
 						{pool.reserveValidatorToken === null ? (
 							'Unavailable'
 						) : (
@@ -123,17 +123,17 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 					</dd>
 				</div>
 			</dl>
-			<dl className="flex flex-col gap-1">
-				<dt className="label-12 text-tertiary">Estimated liquidity</dt>
-				<dd className="type-card-data tabular-nums text-primary">
+			<dl {...styles.stat()}>
+				<dt {...styles.term()}>Estimated liquidity</dt>
+				<dd {...styles.value()}>
 					{pool.liquidityUsd === null
 						? 'Unavailable'
 						: PriceFormatter.format(pool.liquidityUsd)}
 				</dd>
 			</dl>
-			<dl className="flex flex-col gap-1">
-				<dt className="label-12 text-tertiary">Last liquidity added</dt>
-				<dd className="text-primary">
+			<dl {...styles.stat()}>
+				<dt {...styles.term()}>Last liquidity added</dt>
+				<dd {...styles.primary()}>
 					{pool.latestMintAt === null ? (
 						'Unknown'
 					) : (
@@ -143,7 +143,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 						/>
 					)}
 				</dd>
-				<dd className="label-12 text-tertiary">
+				<dd {...styles.term()}>
 					{pool.mintCount.toLocaleString()} liquidity{' '}
 					{pool.mintCount === 1 ? 'deposit' : 'deposits'}
 				</dd>
@@ -165,7 +165,7 @@ export function PoolTokenLink({
 			to="/fee-amm"
 			search={{ token: address, page: 1, limit: 10 }}
 			title={`View ${symbol} Fee AMM liquidity`}
-			className="inline-flex items-center gap-1 text-accent hover:underline"
+			{...cx(styles.tokenLink(), link(), linkHover())}
 		>
 			<TokenIcon address={address} />
 			{symbol}
@@ -182,25 +182,20 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 		feeAmmPoolsQueryOptions({ token: address, page: 1, limit: 10 }),
 	)
 	return (
-		<section
-			aria-label="Fee AMM liquidity"
-			className="border-b border-dashed border-distinct scroll-mt-20"
-		>
-			<div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+		<section aria-label="Fee AMM liquidity" {...styles.section()}>
+			<div {...styles.sectionHeader()}>
 				<div>
-					<h2 className="type-card font-medium text-primary">
-						Fee AMM liquidity
-					</h2>
-					<p className="label-12 text-secondary">
+					<h2 {...styles.sectionTitle()}>Fee AMM liquidity</h2>
+					<p {...styles.caption()}>
 						Pools that use this token to pay or receive transaction fees.
 					</p>
 				</div>
 				<Link
 					to="/fee-amm"
 					search={{ token: address, page: 1, limit: 10 }}
-					className="type-card text-accent hover:underline inline-flex items-center gap-1"
+					{...cx(styles.viewAll(), link(), linkHover())}
 				>
-					View all pools <ArrowRightIcon className="size-3.5" />
+					View all pools <ArrowRightIcon {...styles.icon()} />
 				</Link>
 			</div>
 			<FeeAmmQueryState query={query} />
@@ -208,12 +203,10 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 				<FeeAmmPoolList pools={query.data.pools.slice(0, 3)} token={address} />
 			)}
 			{query.data?.pools.length === 0 && !query.isError && (
-				<p className="px-4 pb-5 copy-14 text-secondary">
-					No Fee AMM pools found for this token.
-				</p>
+				<p {...styles.empty()}>No Fee AMM pools found for this token.</p>
 			)}
 			{query.data && query.data.pools.length > 3 && (
-				<p className="px-4 pb-3 label-12 text-tertiary">
+				<p {...styles.more()}>
 					Showing the 3 most active pools. View all pools for more.
 				</p>
 			)}
@@ -223,4 +216,155 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 
 export declare namespace TokenFeeAmm {
 	type Props = { address: Address.Address }
+}
+
+namespace styles {
+	export const loading = style({
+		color: 'content.tertiary',
+		paddingBlock: '32',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const alert = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '12',
+		paddingBlock: '24',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const retry = style({
+		cursor: 'pointer',
+		':disabled': { opacity: 0.5 },
+	})
+
+	export const row = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		display: 'grid',
+		gap: '16',
+		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b2',
+		':last-child': { borderBottomWidth: 'none' },
+		'@media (width >= 768px)': {
+			gridTemplateColumns: '1.6fr 1.5fr 1fr 1fr',
+		},
+	})
+
+	export const pair = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		gridColumn: 'span 2 / span 2',
+		minWidth: '0px !custom',
+		'@media (width >= 768px)': { gridColumn: 'span 1 / span 1' },
+	})
+
+	export const tokens = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+	})
+
+	export const pairArrow = style({
+		color: 'content.tertiary',
+		height: '14px !custom',
+		width: '14px !custom',
+	})
+
+	export const caption = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const reserves = style({
+		display: 'grid',
+		gap: '8',
+		gridColumn: 'span 2 / span 2',
+		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+		minWidth: '0px !custom',
+		'@media (width >= 768px)': {
+			display: 'flex',
+			flexDirection: 'column',
+			gridColumn: 'span 1 / span 1',
+		},
+	})
+
+	export const term = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const value = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+		typography: 'body.b2',
+	})
+
+	export const stat = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	export const tokenLink = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+	})
+
+	export const section = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		scrollMarginTop: '80px !custom',
+	})
+
+	export const sectionHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '12',
+		justifyContent: 'space-between',
+		padding: '16',
+	})
+
+	export const sectionTitle = style({
+		color: 'content.primary',
+		typography: 'body.b2Strong',
+	})
+
+	export const viewAll = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+		typography: 'body.b2',
+	})
+
+	export const icon = style({ height: '14px !custom', width: '14px !custom' })
+
+	export const empty = style({
+		color: 'content.secondary',
+		paddingBottom: '20',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const more = style({
+		color: 'content.tertiary',
+		paddingBottom: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+	})
 }

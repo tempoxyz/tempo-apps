@@ -8,6 +8,7 @@
  * on the empty page. Nothing is visible unless it was asked for.
  */
 
+import { IconButton, style } from '@tempoxyz/ds/platform'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -17,7 +18,7 @@ import {
 	encodeFunctionData,
 	getFunctionSelector,
 } from 'viem'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import {
 	getContractInfo,
 	getInputType,
@@ -35,11 +36,14 @@ import {
 import { HexFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi } from '#lib/queries'
+import { pressDown, transitionColors, truncate } from '#styles/explorer'
 import {
 	Button,
+	buttonIcon,
 	Chip,
 	Field,
-	inputClass,
+	fieldInput,
+	fieldInputInvalid,
 	inputValueToString,
 	SegmentedControl,
 } from './SimulateShared'
@@ -81,7 +85,7 @@ export function SimulateCallForm(
 	const isBatch = form.calls.length > 1
 
 	return (
-		<div className="flex min-w-0 flex-col">
+		<div {...styles.root()}>
 			<ContextBar
 				form={form}
 				setForm={setForm}
@@ -89,7 +93,7 @@ export function SimulateCallForm(
 				onBlockBlur={() => touch('block')}
 			/>
 
-			<div className="flex min-w-0 flex-1 flex-col gap-[14px] overflow-y-auto px-[16px] py-[14px]">
+			<div {...styles.body()}>
 				<LoadTransaction
 					value={props.loadHash}
 					onChange={props.setLoadHash}
@@ -144,7 +148,7 @@ export function SimulateCallForm(
 				/>
 
 				<OptionalRow
-					icon={<ZapIcon className="size-[13px]" />}
+					icon={<ZapIcon {...styles.rowIcon()} />}
 					label="Gas limit"
 					summary={
 						form.gas !== props.defaultGas
@@ -170,7 +174,10 @@ export function SimulateCallForm(
 								setForm((current) => ({ ...current, gas: event.target.value }))
 							}
 							onBlur={() => touch('gas')}
-							className={inputClass(shows('gas', errors.gas))}
+							{...cx(
+								fieldInput(),
+								shows('gas', errors.gas) && fieldInputInvalid(),
+							)}
 						/>
 					</Field>
 				</OptionalRow>
@@ -186,23 +193,23 @@ export function SimulateCallForm(
 							}))
 							props.onStepChange(1)
 						}}
-						className="mt-[2px] w-fit border-solid"
+						{...styles.addCall()}
 						title="Run several calls in order against each other's state, the way a Tempo batch transaction executes"
 					>
-						<PlusIcon className="size-[12px]" />
+						<PlusIcon {...buttonIcon()} />
 						Add a call
 					</Button>
 				)}
 
 				{isBatch && (
-					<p className="type-card text-content-dimmed">
+					<p {...cx(styles.text(), styles.tertiary())}>
 						Calls run in order against each other{'’'}s state, the way a Tempo
 						batch transaction executes.
 					</p>
 				)}
 
 				{props.formError && (
-					<p className="type-card text-negative">{props.formError}</p>
+					<p {...cx(styles.text(), styles.negative())}>{props.formError}</p>
 				)}
 			</div>
 		</div>
@@ -241,9 +248,9 @@ function ContextBar(props: {
 	const { form, setForm } = props
 	const pinned = form.block !== 'latest'
 	return (
-		<div className="flex flex-col gap-[8px] border-b border-card-border px-[16px] py-[10px]">
-			<div className="flex items-center justify-between gap-[8px]">
-				<span className="type-card text-tertiary">Simulate against</span>
+		<div {...styles.context()}>
+			<div {...styles.contextRow()}>
+				<span {...cx(styles.text(), styles.tertiary())}>Simulate against</span>
 				<SegmentedControl
 					size="sm"
 					value={pinned ? 'pinned' : 'latest'}
@@ -275,7 +282,7 @@ function ContextBar(props: {
 					}
 					onBlur={props.onBlockBlur}
 					placeholder="0x block hash"
-					className={inputClass(props.blockInvalid)}
+					{...cx(fieldInput(), props.blockInvalid && fieldInputInvalid())}
 				/>
 			)}
 		</div>
@@ -295,26 +302,26 @@ function LoadTransaction(props: {
 }): React.JSX.Element {
 	const id = React.useId()
 	return (
-		<div className="flex flex-col gap-[5px] rounded-body border border-solid border-card-border px-[10px] py-[9px]">
-			<label className="type-card text-tertiary" htmlFor={id}>
+		<div {...styles.load()}>
+			<label {...cx(styles.text(), styles.tertiary())} htmlFor={id}>
 				Replay an existing transaction
 			</label>
-			<div className="flex gap-[6px]">
+			<div {...styles.loadRow()}>
 				<input
 					id={id}
 					value={props.value}
 					onChange={(event) => props.onChange(event.target.value)}
 					onKeyDown={(event) => event.key === 'Enter' && props.onLoad()}
 					placeholder="0x transaction hash"
-					className={inputClass(false)}
+					{...fieldInput()}
 				/>
 				<Button onClick={props.onLoad} disabled={props.loading}>
-					<DownloadIcon className="size-[12px]" />
+					<DownloadIcon {...buttonIcon()} />
 					{props.loading ? 'Loading…' : 'Load'}
 				</Button>
 			</div>
 			{props.error && (
-				<span className="type-card text-negative">{props.error}</span>
+				<span {...cx(styles.text(), styles.negative())}>{props.error}</span>
 			)}
 		</div>
 	)
@@ -333,33 +340,30 @@ function StepTabs(props: {
 	onRemove: (index: number) => void
 }): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-[6px]">
-			<span className="type-card text-tertiary">
+		<div {...styles.steps()}>
+			<span {...cx(styles.text(), styles.tertiary())}>
 				Calls
-				<span className="ml-[6px] text-content-dimmed">
-					{props.calls.length} in order
-				</span>
+				<span {...styles.stepsCount()}>{props.calls.length} in order</span>
 			</span>
-			<div className="flex flex-wrap items-center gap-[6px]">
+			<div {...styles.stepList()}>
 				{props.calls.map((call, index) => {
 					const selected = index === props.step
 					return (
-						<div key={index} className="group relative">
+						<div key={index} {...styles.stepItem()}>
 							<button
 								type="button"
 								onClick={() => props.onSelect(index)}
 								title={call.to || `Call ${index + 1}`}
-								className={cx(
-									'flex h-[28px] items-center gap-[6px] rounded-body border px-[8px] type-card cursor-pointer press-down transition-colors',
-									selected
-										? 'border-accent bg-accent/8 text-primary'
-										: 'border-card-border text-tertiary hover:text-secondary',
+								{...cx(
+									styles.stepTab(),
+									pressDown(),
+									transitionColors(),
+									!selected && styles.stepTabIdle(),
+									selected && styles.stepTabSelected(),
 								)}
 							>
-								<span className="flex size-[15px] shrink-0 items-center justify-center rounded-full bg-distinct label-12 text-tertiary">
-									{index + 1}
-								</span>
-								<span className="font-mono">
+								<span {...styles.stepIndex()}>{index + 1}</span>
+								<span {...styles.mono()}>
 									{call.to
 										? HexFormatter.truncate(call.to as OxHex.Hex)
 										: 'empty'}
@@ -370,9 +374,9 @@ function StepTabs(props: {
 									type="button"
 									onClick={() => props.onRemove(index)}
 									title="Remove this call"
-									className="absolute -top-[5px] -right-[5px] hidden size-[15px] items-center justify-center rounded-full border border-card-border bg-base-plane text-tertiary cursor-pointer group-hover:flex hover:text-negative"
+									{...styles.stepRemove()}
 								>
-									<XIcon className="size-[9px]" />
+									<XIcon {...styles.stepRemoveIcon()} />
 								</button>
 							)}
 						</div>
@@ -382,9 +386,9 @@ function StepTabs(props: {
 					type="button"
 					onClick={props.onAdd}
 					title="Add a call"
-					className="flex size-[26px] items-center justify-center rounded-body border border-solid border-card-border text-tertiary cursor-pointer press-down hover:border-accent hover:text-primary"
+					{...cx(styles.stepAdd(), pressDown(), transitionColors())}
 				>
-					<PlusIcon className="size-[12px]" />
+					<PlusIcon {...styles.icon12()} />
 				</button>
 			</div>
 		</div>
@@ -421,7 +425,7 @@ function CallFields(props: {
 	}, [address])
 
 	return (
-		<div className="flex flex-col gap-[12px]">
+		<div {...styles.callFields()}>
 			{/* The resolved name goes on the label line, not inside the field: an
 			    absolutely-positioned chip has no idea how wide the name is, and
 			    "TIP-20 Channel Reserve" sat straight on top of the address. This is
@@ -458,7 +462,7 @@ function CallFields(props: {
 			/>
 
 			<OptionalRow
-				icon={<LayersIcon className="size-[13px]" />}
+				icon={<LayersIcon {...styles.rowIcon()} />}
 				label="Value"
 				summary={call.value !== '0' ? call.value : undefined}
 				onReset={() => props.onChange({ value: '0' })}
@@ -476,7 +480,10 @@ function CallFields(props: {
 						value={call.value}
 						onChange={(event) => props.onChange({ value: event.target.value })}
 						onBlur={() => props.onTouch(valueKey)}
-						className={inputClass(shows(valueKey, props.errors.value))}
+						{...cx(
+							fieldInput(),
+							shows(valueKey, props.errors.value) && fieldInputInvalid(),
+						)}
 					/>
 				</Field>
 			</OptionalRow>
@@ -498,7 +505,7 @@ function AddressInput(props: {
 			onBlur={props.onBlur}
 			placeholder={props.placeholder}
 			spellCheck={false}
-			className={inputClass(props.invalid)}
+			{...cx(fieldInput(), props.invalid && fieldInputInvalid())}
 		/>
 	)
 }
@@ -588,21 +595,21 @@ export function CalldataField(props: {
 					/>
 				) : props.hasTarget && !abi ? (
 					// No ABI is a fact, not an error — say it once and stay usable.
-					<span className="type-card text-content-dimmed">
+					<span {...cx(styles.text(), styles.tertiary())}>
 						no ABI · hex only
 					</span>
 				) : undefined
 			}
 		>
 			{mismatch && mode === 'decoded' && (
-				<div className="rounded-body border border-warning/40 bg-warning-background px-[9px] py-[6px] type-card text-secondary">
+				<div {...styles.mismatch()}>
 					This calldata doesn{'’'}t match any function in the contract{'’'}s ABI
 					— showing hex.
 				</div>
 			)}
 
 			{showDecoded ? (
-				<div className="flex flex-col gap-[9px] rounded-body border border-card-border bg-base-plane p-[9px]">
+				<div {...styles.decoded()}>
 					<select
 						value={selector}
 						onChange={(event) => {
@@ -616,7 +623,7 @@ export function CalldataField(props: {
 							setValues(blank)
 							if (fn.inputs.length === 0) encode(fn, blank)
 						}}
-						className={cx(inputClass(false), 'bg-card-header')}
+						{...fieldInput()}
 					>
 						<option value="">Select a function…</option>
 						{functions.map((fn) => (
@@ -631,15 +638,10 @@ export function CalldataField(props: {
 					</select>
 
 					{selected?.inputs.map((input, index) => (
-						<div
-							key={`${input.name}-${input.type}-${index}`}
-							className="flex flex-col gap-[4px]"
-						>
-							<span className="type-card text-tertiary">
+						<div key={`${input.name}-${input.type}-${index}`} {...styles.arg()}>
+							<span {...cx(styles.text(), styles.tertiary())}>
 								{input.name || `arg ${index}`}
-								<span className="ml-[6px] font-mono text-content-dimmed">
-									{input.type}
-								</span>
+								<span {...styles.argType()}>{input.type}</span>
 							</span>
 							{getInputType(input.type) === 'textarea' ? (
 								<textarea
@@ -652,10 +654,7 @@ export function CalldataField(props: {
 										encode(selected, next)
 									}}
 									placeholder={getPlaceholder(input)}
-									className={cx(
-										inputClass(false),
-										'min-h-[56px] resize-y bg-card-header',
-									)}
+									{...cx(fieldInput(), styles.argTextarea())}
 								/>
 							) : (
 								<input
@@ -678,32 +677,28 @@ export function CalldataField(props: {
 										encode(selected, next)
 									}}
 									placeholder={getPlaceholder(input)}
-									className={cx(inputClass(false), 'bg-card-header')}
+									{...fieldInput()}
 								/>
 							)}
 						</div>
 					))}
 
 					{data && data !== '0x' && (
-						<div className="flex items-center gap-[8px] border-t border-solid border-card-border pt-[8px] type-card">
-							<span className="min-w-0 flex-1 truncate type-card-data text-tertiary">
-								{data}
-							</span>
-							<span className="shrink-0 text-content-dimmed">
+						<div {...styles.encoded()}>
+							<span {...cx(styles.encodedData(), truncate())}>{data}</span>
+							<span {...cx(styles.shrink(), styles.tertiary())}>
 								{byteLength} bytes
 							</span>
-							<button
-								type="button"
+							<IconButton
+								aria-label="Copy calldata"
 								onClick={() => copy.copy(data)}
-								className="shrink-0 text-tertiary cursor-pointer press-down hover:text-primary"
+								scale="small"
 								title="Copy calldata"
+								variant="tertiary"
+								{...cx(styles.iconButton(), pressDown())}
 							>
-								{copy.notifying ? (
-									<CheckIcon className="size-[12px]" />
-								) : (
-									<CopyIcon className="size-[12px]" />
-								)}
-							</button>
+								{copy.notifying ? <CheckIcon /> : <CopyIcon />}
+							</IconButton>
 						</div>
 					)}
 				</div>
@@ -715,13 +710,14 @@ export function CalldataField(props: {
 						onBlur={props.onBlur}
 						placeholder="0x…"
 						spellCheck={false}
-						className={cx(
-							inputClass(props.invalid),
-							'min-h-[76px] resize-y break-all',
+						{...cx(
+							fieldInput(),
+							props.invalid && fieldInputInvalid(),
+							styles.hexTextarea(),
 						)}
 					/>
 					{byteLength > 0 && (
-						<span className="type-card text-content-dimmed">
+						<span {...cx(styles.text(), styles.tertiary())}>
 							{byteLength} bytes
 							{byteLength > MAX_URL_CALLDATA_BYTES &&
 								' · too long for a shareable link'}
@@ -752,55 +748,367 @@ export function OptionalRow(props: {
 
 	if (!open)
 		return (
-			<div className="flex items-center gap-[8px]">
+			<div {...styles.optional()}>
 				<button
 					type="button"
 					onClick={() => setOpen(true)}
-					className="flex min-w-0 flex-1 items-center gap-[8px] text-left type-card text-tertiary cursor-pointer press-down hover:text-secondary"
+					{...cx(styles.optionalToggle(), pressDown(), transitionColors())}
 				>
-					<span className="shrink-0 text-content-dimmed">{props.icon}</span>
-					<span className="shrink-0">{props.label}</span>
+					<span {...cx(styles.shrink(), styles.tertiary())}>{props.icon}</span>
+					<span {...styles.shrink()}>{props.label}</span>
 					{set && (
-						<span className="min-w-0 truncate type-card-data text-primary">
+						<span {...cx(styles.optionalSummary(), truncate())}>
 							{props.summary}
 						</span>
 					)}
-					<span className="ml-auto shrink-0 text-content-dimmed">
+					<span {...cx(styles.shrink(), styles.tertiary(), styles.pushRight())}>
 						{set ? (
-							<ChevronDownIcon className="size-[12px]" />
+							<ChevronDownIcon {...styles.icon12()} />
 						) : (
-							<PlusIcon className="size-[12px]" />
+							<PlusIcon {...styles.icon12()} />
 						)}
 					</span>
 				</button>
 				{set && props.onReset && (
-					<button
-						type="button"
+					<IconButton
+						aria-label={`Reset ${props.label.toLowerCase()}`}
 						onClick={props.onReset}
+						scale="small"
 						title={`Reset ${props.label.toLowerCase()}`}
-						className="shrink-0 text-content-dimmed cursor-pointer press-down hover:text-negative"
+						variant="tertiary"
+						{...cx(styles.iconButton(), styles.resetButton(), pressDown())}
 					>
-						<Trash2Icon className="size-[12px]" />
-					</button>
+						<Trash2Icon />
+					</IconButton>
 				)}
 			</div>
 		)
 
 	return (
-		<div className="flex flex-col gap-[8px] rounded-body border border-card-border bg-card-header p-[9px]">
-			<div className="flex items-center gap-[8px]">
-				<span className="shrink-0 text-content-dimmed">{props.icon}</span>
-				<span className="type-card text-secondary">{props.label}</span>
-				<button
-					type="button"
+		<div {...styles.optionalOpen()}>
+			<div {...styles.optional()}>
+				<span {...cx(styles.shrink(), styles.tertiary())}>{props.icon}</span>
+				<span {...cx(styles.text(), styles.secondary())}>{props.label}</span>
+				<IconButton
+					aria-label="Collapse"
 					onClick={() => setOpen(false)}
+					scale="small"
 					title="Collapse"
-					className="ml-auto shrink-0 text-tertiary cursor-pointer press-down hover:text-primary"
+					variant="tertiary"
+					{...cx(styles.iconButton(), styles.pushRight(), pressDown())}
 				>
-					<XIcon className="size-[12px]" />
-				</button>
+					<XIcon />
+				</IconButton>
 			</div>
 			{props.children}
 		</div>
 	)
+}
+
+namespace styles {
+	export const text = style({ margin: 'none', typography: 'body.b2' })
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const negative = style({ color: 'content.negative' })
+
+	export const mono = style({ typography: 'mono.inline' })
+
+	export const shrink = style({ flexShrink: 0 })
+
+	export const pushRight = style({ marginLeft: 'auto !custom' })
+
+	export const icon12 = style({
+		flexShrink: 0,
+		height: '12px !custom',
+		width: '12px !custom',
+	})
+
+	export const rowIcon = style({
+		height: '13px !custom',
+		width: '13px !custom',
+	})
+
+	// IconButton owns size and fill; this adds only hover and placement.
+	export const iconButton = style({
+		flexShrink: 0,
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const resetButton = style({
+		'@media (hover: hover)': { ':hover': { color: 'content.negative' } },
+	})
+
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minWidth: '0 !custom',
+	})
+
+	export const body = style({
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		gap: '16',
+		minWidth: '0 !custom',
+		overflowY: 'auto',
+		paddingBlock: '16',
+		paddingInline: '16',
+	})
+
+	export const addCall = style({
+		marginTop: '2',
+		width: 'fit-content !custom',
+	})
+
+	export const context = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '16',
+	})
+
+	export const contextRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+	})
+
+	export const load = style({
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const loadRow = style({ display: 'flex', gap: '8' })
+
+	export const steps = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const stepsCount = style({
+		color: 'content.tertiary',
+		marginLeft: '8',
+	})
+
+	export const stepList = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+	})
+
+	// Marks the call for the remove button's hover reveal.
+	export const stepItem = style({ position: 'relative' })
+
+	export const stepTab = style({
+		alignItems: 'center',
+		borderRadius: '2xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		boxSizing: 'border-box',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		height: '28px !custom',
+		paddingInline: '8',
+		typography: 'body.b2',
+	})
+
+	export const stepTabIdle = style({
+		borderColor: 'line.secondary',
+		color: 'content.tertiary',
+		'@media (hover: hover)': { ':hover': { color: 'content.secondary' } },
+	})
+
+	export const stepTabSelected = style({
+		backgroundColor: 'container.regular',
+		borderColor: 'border.focus',
+		color: 'content.primary',
+	})
+
+	export const stepIndex = style({
+		alignItems: 'center',
+		backgroundColor: 'container.strong',
+		borderRadius: 'full',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexShrink: 0,
+		height: '15px !custom',
+		justifyContent: 'center',
+		typography: 'body.b3',
+		width: '15px !custom',
+	})
+
+	export const stepRemove = style({
+		alignItems: 'center',
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'full',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		boxSizing: 'border-box',
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		display: 'none',
+		height: '15px !custom',
+		justifyContent: 'center',
+		position: 'absolute',
+		right: '-5px !custom',
+		top: '-5px !custom',
+		width: '15px !custom',
+		'@media (hover: hover)': {
+			':hover': { color: 'content.negative' },
+			selectors: { [`${stepItem}:hover &`]: { display: 'flex' } },
+		},
+	})
+
+	export const stepRemoveIcon = style({
+		height: '9px !custom',
+		width: '9px !custom',
+	})
+
+	export const stepAdd = style({
+		alignItems: 'center',
+		borderColor: 'line.secondary',
+		borderRadius: '2xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		boxSizing: 'border-box',
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		display: 'flex',
+		height: '26px !custom',
+		justifyContent: 'center',
+		width: '26px !custom',
+		'@media (hover: hover)': {
+			':hover': { borderColor: 'border.focus', color: 'content.primary' },
+		},
+	})
+
+	export const callFields = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
+
+	export const mismatch = style({
+		backgroundColor: 'container.warning',
+		borderColor: 'border.warning',
+		borderRadius: '2xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		color: 'content.secondary',
+		paddingBlock: '8',
+		paddingInline: '8',
+		typography: 'body.b2',
+	})
+
+	export const decoded = style({
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		padding: '8',
+	})
+
+	export const arg = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	export const argType = style({
+		color: 'content.tertiary',
+		marginLeft: '8',
+		typography: 'mono.inline',
+	})
+
+	export const argTextarea = style({
+		minHeight: '56px !custom',
+		resize: 'vertical',
+	})
+
+	export const encoded = style({
+		alignItems: 'center',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		gap: '8',
+		paddingTop: '8',
+		typography: 'body.b2',
+	})
+
+	export const encodedData = style({
+		color: 'content.tertiary',
+		flex: 1,
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0 !custom',
+		typography: 'body.b2',
+	})
+
+	export const hexTextarea = style({
+		minHeight: '76px !custom',
+		resize: 'vertical',
+		wordBreak: 'break-all',
+	})
+
+	export const optional = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const optionalToggle = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+		minWidth: '0 !custom',
+		textAlign: 'left',
+		typography: 'body.b2',
+		'@media (hover: hover)': { ':hover': { color: 'content.secondary' } },
+	})
+
+	export const optionalSummary = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0 !custom',
+		typography: 'body.b2',
+	})
+
+	export const optionalOpen = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		padding: '8',
+	})
 }

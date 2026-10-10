@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import type { Address as OxAddress } from 'ox'
 import * as Value from 'ox/Value'
+import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import {
@@ -12,6 +13,7 @@ import {
 	LIMIT,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
+import { pressDown, truncate } from '#styles/explorer'
 
 export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 	const { data, loading = false, page } = props
@@ -26,9 +28,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 
 	if (data.total === 0 && !loading)
 		return (
-			<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
-				No balance changes for this transaction.
-			</div>
+			<div {...styles.empty()}>No balance changes for this transaction.</div>
 		)
 
 	return (
@@ -93,7 +93,7 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				className="text-base-content-positive press-down inline-flex items-center gap-1 font-sans"
+				{...cx(styles.tokenLink(), pressDown())}
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
@@ -120,7 +120,7 @@ export namespace TxBalanceChanges {
 		try {
 			value = BigInt(valueStr)
 		} catch {
-			return <span className="text-tertiary">Invalid</span>
+			return <span {...styles.invalid()}>Invalid</span>
 		}
 
 		const raw = Value.format(value, metadata.decimals)
@@ -128,7 +128,7 @@ export namespace TxBalanceChanges {
 
 		return (
 			<span
-				className="text-secondary font-sans min-w-0 truncate tabular-nums"
+				{...cx(styles.amount(), styles.balance(), truncate())}
 				title={formatted}
 			>
 				{formatted}
@@ -152,7 +152,7 @@ export namespace TxBalanceChanges {
 		try {
 			diff = BigInt(diffStr)
 		} catch {
-			return <span className="text-tertiary">Invalid</span>
+			return <span {...styles.invalid()}>Invalid</span>
 		}
 
 		const isPositive = diff > 0n
@@ -161,13 +161,11 @@ export namespace TxBalanceChanges {
 
 		return (
 			<span
-				className={cx(
-					'font-sans min-w-0 truncate tabular-nums',
-					isPositive
-						? 'text-base-content-positive'
-						: diff < 0n
-							? 'text-base-content-negative'
-							: undefined,
+				{...cx(
+					styles.amount(),
+					truncate(),
+					isPositive && styles.positive(),
+					diff < 0n && styles.negative(),
 				)}
 				title={formatted}
 			>
@@ -182,4 +180,36 @@ export namespace TxBalanceChanges {
 			metadata: TokenMetadata | undefined
 		}
 	}
+}
+
+namespace styles {
+	export const empty = style({
+		color: 'content.tertiary',
+		paddingBlock: '24',
+		paddingInline: '20',
+		textAlign: 'center',
+		typography: 'body.b3',
+	})
+
+	export const tokenLink = style({
+		alignItems: 'center',
+		color: 'content.positive',
+		display: 'inline-flex',
+		fontFamily: 'Pilat, Arial, sans-serif',
+		gap: '4',
+	})
+
+	export const invalid = style({ color: 'content.tertiary' })
+
+	export const amount = style({
+		fontFamily: 'Pilat, Arial, sans-serif',
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0 !custom',
+	})
+
+	export const balance = style({ color: 'content.secondary' })
+
+	export const positive = style({ color: 'content.positive' })
+
+	export const negative = style({ color: 'content.negative' })
 }

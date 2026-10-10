@@ -3,6 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { type Block, createPublicClient, webSocket } from 'viem'
 import { watchBlocks as subscribeToBlocks } from 'viem/actions'
+import { cx } from 'zyzz'
 import { getTempoChain } from '#wagmi.config'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
@@ -14,15 +15,16 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { syncBlockNumberAtLeast } from '#lib/block-number'
-import { cx } from '#lib/css'
 import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
+import { link, pressDown } from '#styles/explorer'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
 import Play from '~icons/lucide/play'
+import { styles } from './-blocks.styles'
 
 export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
@@ -187,7 +189,7 @@ function RouteComponent() {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-300 mx-auto w-full">
+		<div {...styles.page()}>
 			<Sections
 				mode="tabs"
 				sections={[
@@ -210,25 +212,23 @@ function RouteComponent() {
 											? true
 											: undefined,
 								})}
-								className={cx(
-									'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] label-12 font-medium press-down',
-									live && !paused
-										? 'bg-positive/10 text-positive hover:bg-positive/20'
-										: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
+								{...cx(
+									styles.liveToggle({ live: live && !paused }),
+									pressDown(),
 								)}
 								title={live ? 'Pause live updates' : 'Resume live updates'}
 							>
 								{live && !paused ? (
 									<>
-										<span className="relative flex size-2">
-											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
-											<span className="relative inline-flex rounded-full size-2 bg-positive" />
+										<span {...styles.liveDot()}>
+											<span {...styles.liveDotPing()} />
+											<span {...styles.liveDotCore()} />
 										</span>
 										<span>Live</span>
 									</>
 								) : (
 									<>
-										<Play className="size-3" />
+										<Play {...styles.pausedIcon()} />
 										<span>Paused</span>
 									</>
 								)}
@@ -258,28 +258,19 @@ function RouteComponent() {
 											return {
 												key: `block-${blockNumber}`,
 												cells: [
-													<span
-														key="number"
-														className="font-sans tabular-nums text-accent font-medium"
-													>
+													<span key="number" {...cx(styles.number(), link())}>
 														#{blockNumber}
 													</span>,
-													<span key="hash" className="font-mono w-full min-w-0">
+													<span key="hash" {...styles.hash()}>
 														<Midcut value={blockHash} prefix="0x" />
 													</span>,
-													<span
-														key="time"
-														className="font-sans text-secondary tabular-nums whitespace-nowrap"
-													>
+													<span key="time" {...styles.time()}>
 														<FormattedTimestamp
 															timestamp={block.timestamp}
 															format={timeFormat}
 														/>
 													</span>,
-													<span
-														key="txns"
-														className="font-sans text-secondary tabular-nums"
-													>
+													<span key="txns" {...styles.txns()}>
 														{txCount}
 													</span>,
 												],
@@ -287,7 +278,9 @@ function RouteComponent() {
 													href: `/block/${blockNumber}`,
 													title: `View block #${blockNumber}`,
 												},
-												className: isActive ? 'block-row-shimmer' : undefined,
+												className: isActive
+													? styles.liveRow().className
+													: undefined,
 											}
 										})
 									}
@@ -335,29 +328,29 @@ function BlocksPagination({
 	const olderFrom = displayedEnd != null ? Number(displayedEnd) - 1 : undefined
 
 	return (
-		<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-solid border-card-border px-[16px] py-[12px] label-12 text-tertiary">
-			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+		<div {...styles.pagination()}>
+			<div {...styles.paginationControls()}>
 				<Link
 					to="."
 					resetScroll={false}
 					search={{ from: undefined, live: undefined }}
 					disabled={!canGoNewer}
-					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					{...styles.pageButton()}
 					title="Latest blocks"
 				>
-					<ChevronFirst className="size-[14px]" />
+					<ChevronFirst {...styles.pageIcon()} />
 				</Link>
 				<Link
 					to="."
 					resetScroll={false}
 					search={{ from: newerFrom, live: undefined }}
 					disabled={!canGoNewer}
-					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					{...styles.pageButton()}
 					title="Newer blocks"
 				>
-					<ChevronLeft className="size-[14px]" />
+					<ChevronLeft {...styles.pageIcon()} />
 				</Link>
-				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
+				<span {...styles.pageRange()}>
 					{displayedFrom != null ? `#${displayedFrom}-#${displayedEnd}` : '…'}
 				</span>
 				<Link
@@ -365,23 +358,23 @@ function BlocksPagination({
 					resetScroll={false}
 					search={{ from: olderFrom, live: undefined }}
 					disabled={!canGoOlder}
-					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					{...styles.pageButton()}
 					title="Older blocks"
 				>
-					<ChevronRight className="size-[14px]" />
+					<ChevronRight {...styles.pageIcon()} />
 				</Link>
 				<Link
 					to="."
 					resetScroll={false}
 					search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
 					disabled={displayedEnd === 0n}
-					className="rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					{...styles.pageButton()}
 					title="Oldest blocks"
 				>
-					<ChevronLast className="size-[14px]" />
+					<ChevronLast {...styles.pageIcon()} />
 				</Link>
 			</div>
-			<span className="tabular-nums">
+			<span {...styles.pageCount()}>
 				{latestBlockNumber != null
 					? `${(Number(latestBlockNumber) + 1).toLocaleString()} blocks`
 					: '…'}

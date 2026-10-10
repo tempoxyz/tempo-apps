@@ -1,8 +1,10 @@
 import type { Address } from 'ox'
+import { style, variants } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { type Connector, useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import { pressDown, pulse, transitionColors } from '#styles/explorer'
 import LucideCoins from '~icons/lucide/coins'
 
 export function SetAsFeeToken(
@@ -51,23 +53,26 @@ export function SetAsFeeToken(
 				? 'Setting…'
 				: `Set ${symbol ?? 'token'} as fee token`
 
+	const state = isAlreadyFeeToken
+		? 'current'
+		: showSuccess
+			? 'success'
+			: busy
+				? 'busy'
+				: 'idle'
+
 	return (
 		<button
 			type="button"
 			disabled={busy || isAlreadyFeeToken}
-			className={cx(
-				'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-				isAlreadyFeeToken
-					? 'text-tertiary cursor-default'
-					: showSuccess
-						? 'text-positive'
-						: busy
-							? 'text-secondary animate-pulse'
-							: 'text-secondary hover:text-primary cursor-pointer press-down',
+			{...cx(
+				styles.action({ state }),
+				transitionColors(),
+				state === 'idle' && pressDown(),
 			)}
 			onClick={handleClick}
 		>
-			<LucideCoins className="size-3.5" />
+			<LucideCoins {...styles.icon()} />
 			{label}
 		</button>
 	)
@@ -79,4 +84,38 @@ export declare namespace SetAsFeeToken {
 		connectors: readonly Connector[]
 		symbol?: string | undefined
 	}
+}
+
+namespace styles {
+	export const action = variants({
+		base: {
+			alignItems: 'center',
+			display: 'flex',
+			gap: '8',
+			typography: 'body.b3',
+			width: '100% !custom',
+		},
+		defaultVariants: { state: 'idle' },
+		variants: {
+			state: {
+				busy: {
+					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
+					color: 'content.secondary',
+				},
+				current: { color: 'content.tertiary', cursor: 'default' },
+				idle: {
+					color: 'content.secondary',
+					cursor: 'pointer',
+					'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+				},
+				success: { color: 'content.positive' },
+			},
+		},
+	})
+
+	export const icon = style({
+		flexShrink: 0,
+		height: '14px !custom',
+		width: '14px !custom',
+	})
 }

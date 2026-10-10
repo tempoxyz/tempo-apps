@@ -1,5 +1,5 @@
+import { style, variants } from '@tempoxyz/ds/platform'
 import { formatUnits } from 'viem'
-import { cx } from '#lib/css'
 import { PriceFormatter } from '#lib/formatting'
 
 export function AmountCell(props: {
@@ -10,7 +10,7 @@ export function AmountCell(props: {
 	const { value, decimals = 18, symbol } = props
 	const formatted = PriceFormatter.formatAmount(formatUnits(value, decimals))
 	return (
-		<span className="label-12 text-primary">
+		<span {...styles.amount()}>
 			{formatted} {symbol}
 		</span>
 	)
@@ -68,14 +68,10 @@ export function TransferAmountCell(props: {
 		<button
 			type="button"
 			title="Toggle currency/token amounts"
-			className={cx(
-				'label-12 cursor-pointer tabular-nums',
-				direction === 'out'
-					? 'text-negative'
-					: direction === 'in'
-						? 'text-positive'
-						: 'text-primary',
-			)}
+			{...styles.transfer({
+				direction:
+					direction === 'out' || direction === 'in' ? direction : 'neutral',
+			})}
 			onClick={(event) => {
 				event.preventDefault()
 				event.stopPropagation()
@@ -92,5 +88,28 @@ export function BalanceCell(props: { balance: string; decimals?: number }) {
 	const formatted = PriceFormatter.formatAmount(
 		formatUnits(BigInt(balance), decimals),
 	)
-	return <span className="label-12 text-primary">{formatted}</span>
+	return <span {...styles.amount()}>{formatted}</span>
+}
+
+namespace styles {
+	export const amount = style({
+		color: 'content.primary',
+		typography: 'body.b3',
+	})
+
+	export const transfer = variants({
+		base: {
+			cursor: 'pointer',
+			fontVariantNumeric: 'tabular-nums',
+			typography: 'body.b3',
+		},
+		defaultVariants: { direction: 'neutral' },
+		variants: {
+			direction: {
+				in: { color: 'content.positive' },
+				neutral: { color: 'content.primary' },
+				out: { color: 'content.negative' },
+			},
+		},
+	})
 }

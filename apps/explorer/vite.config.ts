@@ -1,7 +1,6 @@
 import * as z from 'zod/mini'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
-import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
@@ -91,9 +90,8 @@ export default defineConfig((config) => {
 			config.mode === 'development' &&
 				envConfig.VITE_ENABLE_DEVTOOLS &&
 				vitePluginChromiumDevTools(),
-			...explorerZyzz(),
+			...explorerZyzz({ reset: true }),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
-			tailwind(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
 			tanstack({
 				srcDirectory: './src',

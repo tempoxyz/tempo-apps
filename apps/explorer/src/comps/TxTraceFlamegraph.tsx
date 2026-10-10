@@ -1,11 +1,22 @@
+import { style, variants, vars } from '@tempoxyz/ds/platform'
 import { useEffect, useMemo, useState } from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
+import {
+	codeIdentifier,
+	link,
+	transitionColors,
+	truncate,
+} from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
 import DatabaseIcon from '~icons/lucide/database'
 
 const BAR_HEIGHT = 32
 const MIN_WIDTH_PX = 6
+
+// The TDS core violet pair (`core.color.accent.violetLight/Dark`). Bar fills
+// are computed per frame at runtime, so they need the literal colours.
+const VIZ_BASE = 'light-dark(rgb(126 89 228), rgb(152 119 241))'
 
 /**
  * Below this a flamegraph is a rectangle, not a chart.
@@ -19,7 +30,7 @@ export const MIN_FLAMEGRAPH_FRAMES = 3
 
 /**
  * A flamegraph encodes one quantitative variable: share of total gas. So it
- * gets a single-hue ramp from the data-visualisation token, and no semantic
+ * gets a single-hue ramp from the data-visualisation colour, and no semantic
  * colour at all — filling failed frames red put the chart in a three-way fight
  * with the error state above it and the links beside it, and colouring by
  * depth (the previous behaviour) made every shallow trace solid red.
@@ -30,9 +41,9 @@ export const MIN_FLAMEGRAPH_FRAMES = 3
 function getFlameColor(gasShare: number) {
 	const intensity = 16 + Math.min(Math.max(gasShare, 0), 1) * 30
 	return {
-		bg: `color-mix(in oklab, var(--color-viz-base) ${intensity}%, transparent)`,
-		hover: `color-mix(in oklab, var(--color-viz-base) ${intensity + 16}%, transparent)`,
-		border: `color-mix(in oklab, var(--color-viz-base) ${intensity + 22}%, transparent)`,
+		bg: `color-mix(in oklab, ${VIZ_BASE} ${intensity}%, transparent)`,
+		hover: `color-mix(in oklab, ${VIZ_BASE} ${intensity + 16}%, transparent)`,
+		border: `color-mix(in oklab, ${VIZ_BASE} ${intensity + 22}%, transparent)`,
 	}
 }
 
@@ -81,25 +92,18 @@ export function TxTraceFlamegraph(
 	if (root.subtreeSize < MIN_FLAMEGRAPH_FRAMES) return null
 
 	return (
-		<div className="flex flex-col">
-			<div className="flex items-center pl-[16px] pr-[12px] h-[34px] border-b border-solid border-distinct">
-				<span className="label-12 text-tertiary">
+		<div {...styles.root()}>
+			<div {...styles.header()}>
+				<span {...styles.headerLabel()}>
 					{onSelect ? 'Gas by frame — click to select' : 'Gas flamegraph'}
 				</span>
 			</div>
 
-			<div className="px-[16px] py-[12px] overflow-x-auto">
+			<div {...styles.chart()}>
 				{/* biome-ignore lint/a11y/noStaticElementInteractions: mouse tracking for details panel */}
-				<div
-					className="flex flex-col gap-px min-w-0"
-					onMouseLeave={() => setHoveredNode(null)}
-				>
+				<div {...styles.rows()} onMouseLeave={() => setHoveredNode(null)}>
 					{rows.map((row, depth) => (
-						<div
-							key={depth}
-							className="relative w-full"
-							style={{ height: BAR_HEIGHT }}
-						>
+						<div key={depth} {...styles.row({ style: { height: BAR_HEIGHT } })}>
 							{row.map((span, index) => {
 								// Clamp: child gas can exceed the parent's gasUsed in
 								// unusual traces, which would push bars past the container.
@@ -264,21 +268,27 @@ export namespace TxTraceFlamegraph {
 		return (
 			// biome-ignore lint/a11y/noStaticElementInteractions: hover drives the details panel below
 			<div
-				className={cx(
-					'absolute top-0 h-full rounded-[3px] label-12 font-mono overflow-hidden transition-colors border',
-					(hovered || selected) && 'z-10',
-					onSelect && 'cursor-pointer',
+				{...cx(
+					styles.bar({
+						style: {
+							left: `${leftPct}%`,
+							width: `max(${widthPct}%, ${MIN_WIDTH_PX}px)`,
+							backgroundColor: hovered ? color.hover : color.bg,
+							borderTopColor: color.border,
+							borderRightColor: color.border,
+							borderBottomColor: color.border,
+							// A failed frame keeps the red edge from `styles.failed`.
+							borderLeftColor: node.hasError ? undefined : color.border,
+						},
+					}),
+					transitionColors(),
+					(hovered || selected) && styles.raised(),
+					onSelect && styles.clickable(),
 					// Selection reads as an outline rather than a fill, so it never
 					// competes with the fill that encodes gas share.
-					selected && 'ring-1 ring-accent ring-inset',
-					node.hasError && 'border-l-2 border-l-negative!',
+					selected && styles.selected(),
+					node.hasError && styles.failed(),
 				)}
-				style={{
-					left: `${leftPct}%`,
-					width: `max(${widthPct}%, ${MIN_WIDTH_PX}px)`,
-					backgroundColor: hovered ? color.hover : color.bg,
-					borderColor: color.border,
-				}}
 				{...(onSelect
 					? {
 							role: 'button' as const,
@@ -296,20 +306,21 @@ export namespace TxTraceFlamegraph {
 				title={`${label} — ${node.gasUsed.toLocaleString()} gas (${gasPct.toFixed(1)}%)${hasStorage ? ` · ${storageSlots.writes} SSTORE, ${storageSlots.reads} SLOAD` : ''}`}
 			>
 				{!isNarrow && (
-					<span className="absolute inset-0 flex items-center gap-[4px] px-[6px] overflow-hidden select-none">
+					<span {...styles.barContent()}>
 						<span
-							className={cx(
-								'truncate font-medium min-w-0',
-								node.hasError ? 'text-negative' : 'text-primary',
+							{...cx(
+								styles.barLabel(),
+								truncate(),
+								node.hasError && styles.negative(),
 							)}
 						>
 							{label}
 						</span>
-						<span className="shrink-0 label-12 text-tertiary">
+						<span {...styles.barShare()}>
 							{`${gasPct.toFixed(gasPct >= 10 ? 0 : 1)}%`}
 						</span>
 						{hasStorage && widthPct > 8 && (
-							<DatabaseIcon className="shrink-0 size-[10px] text-tertiary" />
+							<DatabaseIcon {...styles.barIcon()} />
 						)}
 					</span>
 				)}
@@ -343,51 +354,48 @@ export namespace TxTraceFlamegraph {
 			storageSlots && (storageSlots.reads > 0 || storageSlots.writes > 0)
 
 		return (
-			<div className="px-[16px] pb-[12px]">
+			<div {...styles.details()}>
 				{/* min-h, not h: enough to stop the panel twitching as the row count
 				    (self gas, storage) varies between frames, without a floor of
 				    empty space when there is little to say. */}
-				<div className="flex items-start gap-[12px] min-h-[72px] overflow-hidden bg-distinct border border-card-border rounded-body px-[12px] py-[10px] label-12 font-mono">
-					<div className="flex flex-col gap-[4px] min-w-0 flex-1">
-						<div className="flex items-center gap-[6px]">
+				<div {...styles.detailsPanel()}>
+					<div {...styles.detailsMain()}>
+						<div {...styles.detailsHeading()}>
 							<span
-								className={cx(
-									'label-12 font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
-									node.hasError
-										? 'bg-negative/15 text-negative'
-										: 'bg-distinct text-tertiary',
-								)}
+								{...styles.callType({
+									tone: node.hasError ? 'negative' : 'neutral',
+								})}
 							>
 								{node.trace.type}
 							</span>
 							{node.trace.to && (
-								<span className="text-accent truncate">
+								<span {...cx(link(), truncate())}>
 									{node.contractName
 										? `${node.contractName}(${node.trace.to})`
 										: node.trace.to}
 								</span>
 							)}
 						</div>
-						<span className="text-code-identifier truncate">{displayName}</span>
+						<span {...cx(codeIdentifier(), truncate())}>{displayName}</span>
 						{node.hasError && (
-							<span className="text-negative label-12">
+							<span {...styles.negative()}>
 								{node.trace.revertReason || node.trace.error || 'reverted'}
 							</span>
 						)}
 					</div>
-					<div className="flex flex-col items-end gap-[2px] shrink-0 text-right">
-						<span className="text-primary">
+					<div {...styles.detailsStats()}>
+						<span {...styles.primary()}>
 							{node.gasUsed.toLocaleString()} gas
 						</span>
-						<span className="text-tertiary">{gasPct.toFixed(1)}% total</span>
+						<span {...styles.tertiary()}>{gasPct.toFixed(1)}% total</span>
 						{node.children.length > 0 && (
-							<span className="text-tertiary">
+							<span {...styles.tertiary()}>
 								{selfGas.toLocaleString()} self ({selfPct.toFixed(1)}%)
 							</span>
 						)}
 						{hasStorage && (
-							<span className="flex items-center gap-[4px] text-tertiary mt-[2px]">
-								<DatabaseIcon className="size-[10px]" />
+							<span {...styles.storage()}>
+								<DatabaseIcon {...styles.icon()} />
 								{storageSlots.writes > 0 && (
 									<span>{storageSlots.writes} SSTORE</span>
 								)}
@@ -401,4 +409,174 @@ export namespace TxTraceFlamegraph {
 			</div>
 		)
 	}
+}
+
+namespace styles {
+	export const root = style({ display: 'flex', flexDirection: 'column' })
+
+	export const header = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		display: 'flex',
+		height: '34px !custom',
+		paddingLeft: '16',
+		paddingRight: '12',
+	})
+
+	export const headerLabel = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const chart = style({
+		overflowX: 'auto',
+		paddingBlock: '12',
+		paddingInline: '16',
+	})
+
+	export const rows = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '1px !custom',
+		minWidth: '0 !custom',
+	})
+
+	export const row = style({ position: 'relative', width: '100% !custom' })
+
+	export const bar = style({
+		borderRadius: '3xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		height: '100% !custom',
+		overflow: 'hidden',
+		position: 'absolute',
+		top: 'none',
+		typography: 'mono.inline',
+	})
+
+	export const raised = style({ zIndex: 10 })
+
+	export const clickable = style({ cursor: 'pointer' })
+
+	export const selected = style({
+		boxShadow: `inset 0 0 0 1px ${vars.color.border.focus}`,
+	})
+
+	export const failed = style({
+		borderLeftColor: 'content.negative',
+		borderLeftWidth: 'thick',
+	})
+
+	export const barContent = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+		inset: 'none',
+		overflow: 'hidden',
+		paddingInline: '8',
+		position: 'absolute',
+		userSelect: 'none',
+	})
+
+	export const barLabel = style({
+		color: 'content.primary',
+		minWidth: '0 !custom',
+	})
+
+	export const negative = style({ color: 'content.negative' })
+
+	export const barShare = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+	})
+
+	export const barIcon = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+		height: '10px !custom',
+		width: '10px !custom',
+	})
+
+	export const details = style({ paddingBottom: '12', paddingInline: '16' })
+
+	export const detailsPanel = style({
+		alignItems: 'flex-start',
+		backgroundColor: 'background.primary',
+		borderColor: 'line.secondary',
+		borderRadius: '2xs',
+		borderWidth: 'regular',
+		display: 'flex',
+		gap: '12',
+		minHeight: '72px !custom',
+		overflow: 'hidden',
+		paddingBlock: '12',
+		paddingInline: '12',
+		typography: 'mono.inline',
+	})
+
+	export const detailsMain = style({
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		gap: '4',
+		minWidth: '0 !custom',
+	})
+
+	export const detailsHeading = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const callType = variants({
+		base: {
+			borderRadius: '3xs',
+			paddingBlock: '1px !custom',
+			paddingInline: '4',
+			textAlign: 'center',
+			userSelect: 'none',
+			whiteSpace: 'nowrap',
+		},
+		defaultVariants: { tone: 'neutral' },
+		variants: {
+			tone: {
+				negative: {
+					backgroundColor: 'container.negative',
+					color: 'content.negative',
+				},
+				neutral: {
+					backgroundColor: 'container.regular',
+					color: 'content.tertiary',
+				},
+			},
+		},
+	})
+
+	export const detailsStats = style({
+		alignItems: 'flex-end',
+		display: 'flex',
+		flexDirection: 'column',
+		flexShrink: '0 !custom',
+		gap: '2',
+		textAlign: 'right',
+	})
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const storage = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		gap: '4',
+		marginTop: '2',
+	})
+
+	export const icon = style({
+		height: '10px !custom',
+		width: '10px !custom',
+	})
 }

@@ -1,8 +1,11 @@
 import { Link } from '@tanstack/react-router'
+import { style, variants } from '@tempoxyz/ds/platform'
 import * as Json from 'ox/Json'
 import { useMemo } from 'react'
+import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { useCopy } from '#lib/hooks'
+import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxRawTransaction(props: TxRawTransaction.Props) {
@@ -22,10 +25,10 @@ export function TxRawTransaction(props: TxRawTransaction.Props) {
 		return Math.max(txMax, receiptMax)
 	}, [parsed])
 
-	if (!parsed.success) return <pre className="whitespace-pre-wrap">{data}</pre>
+	if (!parsed.success) return <pre {...styles.fallback()}>{data}</pre>
 
 	return (
-		<div className="font-mono flex flex-col gap-[24px]">
+		<div {...styles.root()}>
 			<TxRawTransaction.Section
 				title="Transaction"
 				data={parsed.data.tx}
@@ -79,28 +82,26 @@ export namespace TxRawTransaction {
 		const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b))
 
 		return (
-			<div
-				className={showBorder ? 'pt-[24px] border-t border-card-border' : ''}
-			>
-				<div className="flex items-center justify-between mb-[12px]">
-					<div className="text-primary font-sans copy-13">{title}</div>
+			<div {...styles.section({ border: Boolean(showBorder) })}>
+				<div {...styles.sectionHeader()}>
+					<div {...styles.sectionTitle()}>{title}</div>
 					<button
 						type="button"
 						onClick={() => copy(stringify(data))}
-						className="flex items-center gap-[6px] text-tertiary hover:text-secondary cursor-pointer press-down label-12"
+						{...cx(styles.copyButton(), pressDown(), transitionColors())}
 						title={`Copy ${title.toLowerCase()} data`}
 					>
 						{notifying ? (
-							<span className="text-primary">copied</span>
+							<span {...styles.primary()}>copied</span>
 						) : (
 							<>
-								<CopyIcon className="size-[12px]" />
-								<span className="font-sans">Copy</span>
+								<CopyIcon {...styles.copyIcon()} />
+								<span>Copy</span>
 							</>
 						)}
 					</button>
 				</div>
-				<div className="flex flex-col">
+				<div {...styles.column()}>
 					{entries.map(([key, value]) => (
 						<Row
 							depth={0}
@@ -149,17 +150,21 @@ export namespace TxRawTransaction {
 
 		if (isFilledArray)
 			return (
-				<div className="flex flex-col">
+				<div {...styles.column()}>
 					<button
-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
+						{...cx(
+							styles.groupKey({
+								style: {
+									paddingLeft: `${indent}px`,
+									width: `${pad}ch`,
+								},
+							}),
+							pressDown(),
+						)}
 						onClick={() => copy(stringify(value))}
-						style={{
-							paddingLeft: `${indent}px`,
-							width: `${pad}ch`,
-						}}
 						type="button"
 					>
-						{notifying ? <span className="text-primary">copied</span> : label}
+						{notifying ? <span {...styles.primary()}>copied</span> : label}
 					</button>
 					{value.map((item, index) => (
 						<ArrayItem
@@ -178,17 +183,21 @@ export namespace TxRawTransaction {
 				([a], [b]) => a.localeCompare(b),
 			)
 			return (
-				<div className="flex flex-col">
+				<div {...styles.column()}>
 					<button
-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
+						{...cx(
+							styles.groupKey({
+								style: {
+									paddingLeft: `${indent}px`,
+									width: `${pad}ch`,
+								},
+							}),
+							pressDown(),
+						)}
 						onClick={() => copy(stringify(value))}
-						style={{
-							paddingLeft: `${indent}px`,
-							width: `${pad}ch`,
-						}}
 						type="button"
 					>
-						{notifying ? <span className="text-primary">copied</span> : label}
+						{notifying ? <span {...styles.primary()}>copied</span> : label}
 					</button>
 					{entries.map(([key, val]) => (
 						<Row
@@ -208,30 +217,34 @@ export namespace TxRawTransaction {
 		const isLinkable = linkTo && formattedValue && formattedValue !== ''
 
 		return (
-			<div className="flex gap-[16px] py-[4px]">
+			<div {...styles.entry()}>
 				<button
-					className="flex items-start press-down cursor-pointer text-left"
+					{...cx(
+						styles.copyable({
+							style: {
+								paddingLeft: `${indent}px`,
+								minWidth: `${pad}ch`,
+							},
+						}),
+						pressDown(),
+					)}
 					type="button"
 					onClick={() => copy(formattedValue)}
-					style={{
-						paddingLeft: `${indent}px`,
-						minWidth: `${pad}ch`,
-					}}
 				>
-					<span className="text-tertiary shrink-0">
-						{notifying ? <span className="text-primary">copied</span> : label}
+					<span {...styles.key()}>
+						{notifying ? <span {...styles.primary()}>copied</span> : label}
 					</span>
 				</button>
 				{isLinkable ? (
 					<Link
 						to={linkTo(formattedValue)}
-						className="text-accent hover:underline press-down"
+						{...cx(link(), linkHover(), pressDown())}
 					>
 						{formattedValue}
 					</Link>
 				) : (
 					<button
-						className="flex items-start press-down cursor-pointer text-left"
+						{...cx(styles.copyable(), pressDown())}
 						type="button"
 						onClick={() => copy(formattedValue)}
 					>
@@ -265,13 +278,14 @@ export namespace TxRawTransaction {
 				([a], [b]) => a.localeCompare(b),
 			)
 			return (
-				<div className="flex flex-col">
+				<div {...styles.column()}>
 					<div
-						className="text-tertiary py-[4px]"
-						style={{
-							paddingLeft: `${indent}px`,
-							width: `${pad}ch`,
-						}}
+						{...styles.indexLabel({
+							style: {
+								paddingLeft: `${indent}px`,
+								width: `${pad}ch`,
+							},
+						})}
 					>
 						[{index}]
 					</div>
@@ -289,24 +303,21 @@ export namespace TxRawTransaction {
 		}
 
 		return (
-			<div className="flex gap-[16px] py-[4px]">
+			<div {...styles.entry()}>
 				<button
-					className="text-tertiary text-left"
+					{...styles.indexKey({
+						style: {
+							paddingLeft: `${indent}px`,
+							width: `${pad}ch`,
+						},
+					})}
 					onClick={() => copy(TxRawTransaction.formatValue(value))}
-					style={{
-						paddingLeft: `${indent}px`,
-						width: `${pad}ch`,
-					}}
 					type="button"
 				>
-					{notifying ? (
-						<span className="text-primary">copied</span>
-					) : (
-						`[${index}]`
-					)}
+					{notifying ? <span {...styles.primary()}>copied</span> : `[${index}]`}
 				</button>
 				<button
-					className="press-down cursor-pointer text-left"
+					{...cx(styles.value(), pressDown())}
 					type="button"
 					onClick={() => copy(TxRawTransaction.formatValue(value))}
 				>
@@ -331,4 +342,100 @@ function stringify(value: unknown): string {
 		if (typeof value === 'bigint') return value.toString()
 		return value
 	})
+}
+
+namespace styles {
+	export const fallback = style({ whiteSpace: 'pre-wrap' })
+
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		typography: 'mono.inline',
+	})
+
+	export const section = variants({
+		base: {},
+		defaultVariants: { border: false },
+		variants: {
+			border: {
+				false: {},
+				true: {
+					borderColor: 'line.secondary',
+					borderTopWidth: 'regular',
+					paddingTop: '24',
+				},
+			},
+		},
+	})
+
+	export const sectionHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		marginBottom: '12',
+	})
+
+	export const sectionTitle = style({
+		color: 'content.primary',
+		typography: 'body.b3',
+	})
+
+	export const copyButton = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b3',
+		'@media (hover: hover)': {
+			':hover': { color: 'content.secondary' },
+		},
+	})
+
+	export const copyIcon = style({
+		height: '12px !custom',
+		width: '12px !custom',
+	})
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const column = style({ display: 'flex', flexDirection: 'column' })
+
+	export const groupKey = style({
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		paddingBlock: '4',
+		textAlign: 'left',
+	})
+
+	export const entry = style({
+		display: 'flex',
+		gap: '16',
+		paddingBlock: '4',
+	})
+
+	export const copyable = style({
+		alignItems: 'flex-start',
+		cursor: 'pointer',
+		display: 'flex',
+		textAlign: 'left',
+	})
+
+	export const key = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+	})
+
+	export const indexLabel = style({
+		color: 'content.tertiary',
+		paddingBlock: '4',
+	})
+
+	export const indexKey = style({
+		color: 'content.tertiary',
+		textAlign: 'left',
+	})
+
+	export const value = style({ cursor: 'pointer', textAlign: 'left' })
 }

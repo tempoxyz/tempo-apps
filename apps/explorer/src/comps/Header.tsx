@@ -4,10 +4,11 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
+import { Button, style, variants, vars } from '@tempoxyz/ds/platform'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
-import { cx } from '#lib/css'
 import { type TempoEnv, getTempoEnv, isTestnet } from '#lib/env'
 import {
 	buildExplorerNetworkHref,
@@ -16,6 +17,7 @@ import {
 	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
+import { link, ping, pressDown, transitionColors } from '#styles/explorer'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import SquareSquare from '~icons/lucide/square-square'
 import FlaskConicalIcon from '~icons/lucide/flask-conical'
@@ -24,28 +26,25 @@ export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
 
 	return (
-		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-20 print:justify-center">
-				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
-					<Link
-						to="/"
-						className="flex items-center gap-[12px] press-down py-[4px]"
-					>
+		<header {...styles.header()}>
+			<div {...styles.bar()}>
+				<div {...styles.brand()}>
+					<Link to="/" {...cx(styles.homeLink(), pressDown())}>
 						<Header.TempoWordmark />
 					</Link>
 					<Header.NetworkBadge tempoEnv={tempoEnv} />
 				</div>
 				<Header.Search />
-				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
+				<div {...styles.actions()}>
 					<Link
 						to="/simulate"
 						aria-label="Simulate transaction"
-						className="flex h-[28px] items-center gap-[5px] rounded-body border border-base-border bg-base-plane px-[8px] label-12 text-secondary hover:border-accent hover:text-primary press-down"
+						{...cx(styles.simulate(), transitionColors(), pressDown())}
 					>
-						<FlaskConicalIcon className="size-[12px]" />
-						<span className="@max-[799px]:hidden">Simulate</span>
+						<FlaskConicalIcon {...styles.simulateIcon()} />
+						<span {...styles.simulateLabel()}>Simulate</span>
 					</Link>
-					<Header.BlockNumber className="@max-[399px]:hidden" />
+					<Header.BlockNumber hideWhenNarrow />
 				</div>
 			</div>
 			<Header.Search compact />
@@ -103,7 +102,7 @@ export namespace Header {
 
 		if (compact)
 			return (
-				<div className="@min-[800px]:hidden sticky top-0 z-10 px-4 pt-[16px] pb-[12px] print:hidden">
+				<div {...styles.searchCompact()}>
 					<ExploreInput
 						wide
 						value={inputValue}
@@ -135,10 +134,8 @@ export namespace Header {
 
 		return (
 			<>
-				<div className="absolute left-0 right-0 justify-center flex z-1 h-0 items-center @max-[1239px]:hidden print:hidden">
-					{exploreInput}
-				</div>
-				<div className="flex-1 flex justify-center px-[24px] @max-[799px]:hidden @min-[1240px]:hidden print:hidden">
+				<div {...styles.searchCentered()}>{exploreInput}</div>
+				<div {...styles.searchInline()}>
 					<ExploreInput
 						wide
 						value={inputValue}
@@ -206,31 +203,30 @@ export namespace Header {
 		}, [isOpen])
 
 		return (
-			<div ref={rootRef} className="relative">
-				<button
+			<div ref={rootRef} {...styles.network()}>
+				{/* TDS Button owns the pill, fill, type, and focus ring. The local
+				    style only adds what Button leaves unset (shrink, hover, motion). */}
+				<Button
 					type="button"
 					aria-controls={isOpen ? menuId : undefined}
 					aria-expanded={isOpen}
 					aria-haspopup="menu"
-					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-body border border-base-border bg-base-plane px-[8px] py-[4px] label-14 text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-focus press-down"
+					scale="small"
+					variant="secondary"
+					{...cx(styles.networkTrigger(), transitionColors(), pressDown())}
 					title={`Network: ${activeOption.label}`}
 					onClick={() => setIsOpen((value) => !value)}
 				>
-					<Header.NetworkStatusDot className={activeOption.dotClassName} />
+					<Header.NetworkStatusDot tone={activeOption.dotTone} />
 					<span>{activeOption.label}</span>
-					<ChevronDownIcon
-						className={cx(
-							'size-[12px] text-tertiary transition-transform duration-100',
-							isOpen && 'rotate-180',
-						)}
-					/>
-				</button>
+					<ChevronDownIcon {...styles.networkChevron({ open: isOpen })} />
+				</Button>
 				{isOpen && (
 					<div
 						id={menuId}
 						role="menu"
 						aria-label="Tempo network"
-						className="absolute left-0 top-[calc(100%+8px)] z-50 w-[156px] overflow-hidden rounded-body border border-base-border bg-surface p-[4px] shadow-lg"
+						{...styles.networkMenu()}
 					>
 						{EXPLORER_NETWORK_OPTIONS.map((option) => {
 							const isActive = option.env === activeOption.env
@@ -246,13 +242,13 @@ export namespace Header {
 									role="menuitemradio"
 									aria-checked={isActive}
 									aria-current={isActive ? 'page' : undefined}
-									className={cx(
-										'flex items-center gap-[8px] rounded-body px-[10px] py-[9px] label-14 text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-focus',
-										isActive && 'bg-surface text-primary',
+									{...cx(
+										styles.networkOption({ active: isActive }),
+										transitionColors(),
 									)}
 									onClick={() => setIsOpen(false)}
 								>
-									<Header.NetworkStatusDot className={option.dotClassName} />
+									<Header.NetworkStatusDot tone={option.dotTone} />
 									<span>{option.label}</span>
 								</a>
 							)
@@ -270,7 +266,7 @@ export namespace Header {
 	}
 
 	export function BlockNumber(props: BlockNumber.Props) {
-		const { initial, className } = props
+		const { initial, className, hideWhenNarrow = false } = props
 		const resolvedPathname = useRouterState({
 			select: (state) =>
 				state.resolvedLocation?.pathname ?? state.location.pathname,
@@ -286,16 +282,19 @@ export namespace Header {
 				disabled={!isTestnet()}
 				to="/block/$id"
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
-				className={cx(
-					className,
-					'flex items-center gap-[6px] label-15 text-secondary press-down origin-right transition-[opacity,scale] duration-[80ms]',
-					isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
+				{...cx(
+					styles.blockNumber({
+						className,
+						narrow: hideWhenNarrow ? 'hidden' : 'shown',
+						ready: isReady,
+					}),
+					pressDown(),
 				)}
 				title="View latest block"
 			>
-				<SquareSquare className="size-[18px] text-accent" />
-				<div className="text-nowrap">
-					<span className="text-primary font-medium tabular-nums font-sans min-w-[6ch] inline-block">
+				<SquareSquare {...cx(styles.blockNumberIcon(), link())} />
+				<div {...styles.blockNumberText()}>
+					<span {...styles.blockNumberValue()}>
 						{blockNumber != null ? String(blockNumber) : '…'}
 					</span>
 				</div>
@@ -307,20 +306,19 @@ export namespace Header {
 		export interface Props {
 			initial?: bigint
 			className?: string | undefined
+			/** Hide the block number when the header is narrower than 400px. */
+			hideWhenNarrow?: boolean | undefined
 		}
 	}
 
 	export function TempoWordmark(props: TempoWordmark.Props) {
 		const { className } = props
 
-		const baseClass = 'h-6 w-auto fill-current text-primary'
-		const classes = className ? `${baseClass} ${className}` : baseClass
-
 		return (
 			<svg
 				aria-label="Tempo"
 				viewBox="0 0 107 25"
-				className={classes}
+				{...styles.wordmark({ className })}
 				role="img"
 			>
 				<path d="M8.10464 23.7163H1.82475L7.64513 5.79356H0.201172L1.82475 0.540352H22.5637L20.9401 5.79356H13.8944L8.10464 23.7163Z" />
@@ -341,28 +339,298 @@ export namespace Header {
 	export function NetworkStatusDot(
 		props: NetworkStatusDot.Props,
 	): React.JSX.Element {
-		const { className } = props
+		const { tone } = props
 		return (
-			<span aria-hidden className="relative flex size-[6px] shrink-0">
-				<span
-					className={cx(
-						'absolute inline-flex size-full animate-ping rounded-full opacity-60',
-						className,
-					)}
-				/>
-				<span
-					className={cx(
-						'relative inline-flex size-[6px] rounded-full',
-						className,
-					)}
-				/>
+			<span aria-hidden {...styles.dotRoot()}>
+				<span {...styles.dotPing({ tone })} />
+				<span {...styles.dot({ tone })} />
 			</span>
 		)
 	}
 
 	export namespace NetworkStatusDot {
 		export interface Props {
-			className: string
+			tone: 'positive' | 'warning'
 		}
 	}
+}
+
+// Floating panels use the TDS popover elevation.
+const panelShadow = {
+	boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary}`,
+} as const
+
+namespace styles {
+	export const header = style({
+		containerType: 'inline-size',
+		position: 'relative',
+		zIndex: 1,
+	})
+
+	export const bar = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		minHeight: '64',
+		paddingInline: 'page.margin',
+		paddingTop: '32',
+		position: 'relative',
+		userSelect: 'none',
+		zIndex: 20,
+		'@container (width >= 800px) and (width < 1239px)': {
+			height: '88px !custom',
+		},
+		'@container (width >= 1240px)': { paddingTop: '48' },
+		'@media print': { justifyContent: 'center' },
+	})
+
+	export const brand = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '12',
+		height: '32',
+		position: 'relative',
+		zIndex: 1,
+	})
+
+	export const homeLink = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '12',
+		paddingBlock: '4',
+	})
+
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		position: 'relative',
+		zIndex: 1,
+		'@media print': { display: 'none' },
+	})
+
+	// A link in the TDS small secondary Button style. Below 800px only the
+	// icon shows, so the pill collapses to a circle.
+	export const simulate = style({
+		alignItems: 'center',
+		backgroundColor: 'container.regular',
+		borderRadius: 'full',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '4',
+		height: '32',
+		justifyContent: 'center',
+		paddingInline: '12',
+		textDecorationLine: 'none',
+		typography: 'body.b3',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+		'@container (width < 799px)': { paddingInline: 'none', width: '32' },
+	})
+
+	export const simulateIcon = style({
+		flexShrink: 0,
+		height: '14px !custom',
+		width: '14px !custom',
+	})
+
+	export const simulateLabel = style({
+		'@container (width < 799px)': { display: 'none' },
+	})
+
+	export const searchCompact = style({
+		paddingBottom: '12',
+		paddingInline: '16',
+		paddingTop: '16',
+		position: 'sticky',
+		top: '0px !custom',
+		zIndex: 10,
+		'@container (width >= 800px)': { display: 'none' },
+		'@media print': { display: 'none' },
+	})
+
+	export const searchCentered = style({
+		alignItems: 'center',
+		display: 'flex',
+		height: 'none',
+		justifyContent: 'center',
+		left: '0px !custom',
+		position: 'absolute',
+		right: '0px !custom',
+		zIndex: 1,
+		'@container (width < 1239px)': { display: 'none' },
+		'@media print': { display: 'none' },
+	})
+
+	export const searchInline = style({
+		display: 'flex',
+		flex: 1,
+		justifyContent: 'center',
+		paddingInline: '24',
+		'@container (width < 799px)': { display: 'none' },
+		'@container (width >= 1240px)': { display: 'none' },
+		'@media print': { display: 'none' },
+	})
+
+	export const network = style({ position: 'relative' })
+
+	export const networkTrigger = style({
+		flexShrink: 0,
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+	})
+
+	export const networkChevron = variants({
+		base: {
+			color: 'content.tertiary',
+			height: '12px !custom',
+			transitionDuration: '100ms',
+			transitionProperty: 'transform, translate, scale, rotate',
+			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+			width: '12px !custom',
+		},
+		defaultVariants: { open: false },
+		variants: { open: { true: { rotate: '180deg' }, false: {} } },
+	})
+
+	export const networkMenu = style({
+		...panelShadow,
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		left: '0px !custom',
+		overflow: 'hidden',
+		padding: '4',
+		position: 'absolute',
+		top: 'calc(100% + 8px) !custom',
+		width: '160px !custom',
+		zIndex: 50,
+	})
+
+	export const networkOption = variants({
+		base: {
+			alignItems: 'center',
+			borderRadius: '2xs',
+			color: 'content.secondary',
+			display: 'flex',
+			gap: '8',
+			paddingBlock: '8',
+			paddingInline: '12',
+			textDecorationLine: 'none',
+			typography: 'body.b2',
+			'@media (hover: hover)': {
+				':hover': {
+					backgroundColor: 'container.regular',
+					color: 'content.primary',
+				},
+			},
+		},
+		defaultVariants: { active: false },
+		variants: {
+			active: {
+				true: {
+					backgroundColor: 'container.regular',
+					color: 'content.primary',
+				},
+				false: {},
+			},
+		},
+	})
+
+	export const blockNumber = variants({
+		base: {
+			alignItems: 'center',
+			color: 'content.secondary',
+			display: 'flex',
+			gap: '8',
+			textDecorationLine: 'none',
+			transformOrigin: 'right',
+			transitionDuration: '80ms',
+			transitionProperty: 'opacity, scale',
+			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+			typography: 'body.b2',
+		},
+		defaultVariants: { narrow: 'shown', ready: false },
+		variants: {
+			ready: {
+				true: { opacity: 1, scale: 1 },
+				false: { opacity: 0, scale: 0.97 },
+			},
+			narrow: {
+				hidden: { '@container (width < 399px)': { display: 'none' } },
+				shown: {},
+			},
+		},
+	})
+
+	export const blockNumberIcon = style({
+		flexShrink: 0,
+		height: '18px !custom',
+		width: '18px !custom',
+	})
+
+	export const blockNumberText = style({ whiteSpace: 'nowrap' })
+
+	export const blockNumberValue = style({
+		color: 'content.primary',
+		display: 'inline-block',
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '6ch !custom',
+	})
+
+	export const wordmark = style({
+		color: 'content.primary',
+		fill: 'currentColor !custom',
+		height: '24',
+		width: 'auto !custom',
+	})
+
+	export const dotRoot = style({
+		display: 'flex',
+		flexShrink: 0,
+		height: '8',
+		position: 'relative',
+		width: '8',
+	})
+
+	export const dotPing = variants({
+		base: {
+			animation: `${ping} 1s cubic-bezier(0, 0, 0.2, 1) infinite`,
+			borderRadius: 'full',
+			display: 'inline-flex',
+			height: '100% !custom',
+			opacity: 0.6,
+			position: 'absolute',
+			width: '100% !custom',
+		},
+		defaultVariants: { tone: 'warning' },
+		variants: {
+			tone: {
+				positive: { backgroundColor: 'content.positive' },
+				warning: { backgroundColor: 'content.warning' },
+			},
+		},
+	})
+
+	export const dot = variants({
+		base: {
+			borderRadius: 'full',
+			display: 'inline-flex',
+			height: '8',
+			position: 'relative',
+			width: '8',
+		},
+		defaultVariants: { tone: 'warning' },
+		variants: {
+			tone: {
+				positive: { backgroundColor: 'content.positive' },
+				warning: { backgroundColor: 'content.warning' },
+			},
+		},
+	})
 }

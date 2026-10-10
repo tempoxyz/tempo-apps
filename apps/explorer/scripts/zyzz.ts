@@ -26,6 +26,7 @@ export function explorerZyzz(options: explorerZyzz.Options = {}): Plugin[] {
 				'src/lib/server',
 				'src/routes/api',
 				'src/workers',
+				...(options.exclude ?? []),
 			],
 			reset: options.reset,
 			script: false,
@@ -40,6 +41,8 @@ export declare namespace explorerZyzz {
 		 * `'none'` where a Workers runtime resolves them itself.
 		 */
 		builtins?: 'all' | 'client' | 'none' | undefined
+		/** Additional files or directories to leave out of the source graph. */
+		exclude?: readonly string[] | undefined
 		/** Include zyzz's base reset. */
 		reset?: boolean | undefined
 	}

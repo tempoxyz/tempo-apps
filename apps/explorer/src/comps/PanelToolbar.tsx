@@ -1,4 +1,3 @@
-import { Choices } from 'regen-ui'
 /**
  * The control strip above a data panel.
  *
@@ -13,8 +12,11 @@ import { Choices } from 'regen-ui'
  * field, so "same value, different representation" always looks the same.
  */
 
+import { IconButton as TdsIconButton, style } from '@tempoxyz/ds/platform'
 import type * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import { Choices } from '#comps/ui/Choices'
+import { pressDown, transitionColors, truncate } from '#styles/explorer'
 
 /**
  * One control, N mutually exclusive states — the pane split, Decoded/Raw in a
@@ -24,17 +26,15 @@ import { cx } from '#lib/css'
 export function SegmentedControl<T extends string>(
 	props: SegmentedControl.Props<T>,
 ): React.JSX.Element {
-	const { value, options, onChange, size = 'md' } = props
+	const { value, options, onChange } = props
+	// Both sizes use the compact TDS scale: the old `md` was already the 24px
+	// compact control, and TDS has no smaller step for `sm`.
 	return (
 		<Choices
 			label={options.map((option) => option.label).join(' / ')}
 			value={value}
 			onChange={onChange}
-			variant="compact"
-			className={cx(
-				'rounded-body bg-pane',
-				size === 'sm' && '[&_[role=radio]]:h-5',
-			)}
+			scale="small"
 			items={options.map((option) => ({
 				value: option.value,
 				label: <span title={option.title}>{option.label}</span>,
@@ -54,11 +54,9 @@ export declare namespace SegmentedControl {
 
 export function PanelToolbar(props: PanelToolbar.Props): React.JSX.Element {
 	return (
-		<div className="flex flex-wrap items-center gap-[6px] border-b border-solid border-distinct px-[12px] py-[7px]">
+		<div {...styles.toolbar()}>
 			{props.summary && (
-				<span className="mr-auto min-w-0 truncate label-12 text-tertiary">
-					{props.summary}
-				</span>
+				<span {...cx(styles.summary(), truncate())}>{props.summary}</span>
 			)}
 			{props.children}
 		</div>
@@ -74,24 +72,56 @@ export declare namespace PanelToolbar {
 }
 
 export namespace PanelToolbar {
+	/**
+	 * TDS IconButton owns size, fill, radius, and focus ring. A toggle that is
+	 * on gets the filled `secondary` variant; everything else stays `tertiary`.
+	 * The local style only adds hover and motion, which IconButton leaves unset.
+	 */
 	export function IconButton(props: {
 		onClick: () => void
 		title: string
 		active?: boolean | undefined
-		children: React.ReactNode
+		children: React.ReactElement
 	}): React.JSX.Element {
 		return (
-			<button
-				type="button"
+			<TdsIconButton
+				aria-label={props.title}
 				onClick={props.onClick}
 				title={props.title}
-				className={cx(
-					'flex size-[24px] shrink-0 items-center justify-center rounded-body border border-card-border cursor-pointer press-down transition-colors',
-					props.active ? 'text-primary' : 'text-tertiary hover:text-primary',
-				)}
+				scale="small"
+				variant={props.active ? 'secondary' : 'tertiary'}
+				{...cx(styles.iconButton(), pressDown(), transitionColors())}
 			>
 				{props.children}
-			</button>
+			</TdsIconButton>
 		)
 	}
+}
+
+namespace styles {
+	export const toolbar = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+		paddingBlock: '4',
+		paddingInline: '12',
+	})
+
+	export const summary = style({
+		color: 'content.tertiary',
+		marginRight: 'auto !custom',
+		minWidth: '0 !custom',
+		typography: 'body.b3',
+	})
+
+	export const iconButton = style({
+		flexShrink: 0,
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+	})
 }

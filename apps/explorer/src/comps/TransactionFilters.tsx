@@ -1,6 +1,8 @@
-import { Choices } from 'regen-ui'
+import { style, vars } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import { Choices } from '#comps/ui/Choices'
+import { transitionColors } from '#styles/explorer'
 import { Sections } from './Sections'
 import ListFilterIcon from '~icons/lucide/list-filter'
 
@@ -53,12 +55,12 @@ export function TransactionFilters(
 	}, [onStatusChange, onPeriodChange, onHideSubmitBatchesChange, onClearAll])
 
 	const batchFilter = onHideSubmitBatchesChange && (
-		<label className="flex items-center gap-[8px] label-12 text-secondary cursor-pointer">
+		<label {...styles.batchFilter()}>
 			<input
 				type="checkbox"
 				checked={hideSubmitBatches ?? false}
 				onChange={(event) => onHideSubmitBatchesChange(event.target.checked)}
-				className="accent-accent"
+				{...styles.checkbox()}
 			/>
 			Hide submit batches
 		</label>
@@ -149,75 +151,67 @@ export function TableFilters(props: TableFilters.Props): React.JSX.Element {
 
 	if (isStacked) {
 		return (
-			<div className="flex flex-col gap-[10px]">
-				<div className="flex items-center justify-between">
+			<div {...styles.stacked()}>
+				<div {...styles.stackedHeader()}>
 					<button
 						type="button"
 						onClick={toggleOpen}
 						aria-label={label}
 						aria-expanded={open}
-						className={cx(
-							'flex items-center gap-[6px] border rounded-body px-[8px] py-[4px] label-12 cursor-pointer transition-colors',
-							activeCount > 0
-								? 'border-accent/20 text-accent bg-accent/5'
-								: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
+						{...cx(
+							styles.toggle(),
+							transitionColors(),
+							activeCount > 0 && styles.toggleActive(),
 						)}
 					>
-						<ListFilterIcon className="w-[14px] h-[14px]" />
+						<ListFilterIcon {...styles.toggleIcon()} />
 						{activeCount > 0 && (
-							<span className="flex items-center justify-center min-w-[16px] h-[16px] rounded-[4px] bg-accent label-12 font-semibold text-base-background px-[4px]">
-								{activeCount}
-							</span>
+							<span {...styles.toggleCount()}>{activeCount}</span>
 						)}
 					</button>
 					{open && activeCount > 0 && (
 						<button
 							type="button"
 							onClick={onClearAll}
-							className="label-12 text-tertiary hover:text-accent cursor-pointer transition-colors"
+							{...cx(styles.clearAll(), transitionColors())}
 						>
 							Clear all
 						</button>
 					)}
 				</div>
-				{open && (
-					<div className="flex flex-col gap-[10px] pt-[6px]">{children}</div>
-				)}
+				{open && <div {...styles.stackedBody()}>{children}</div>}
 			</div>
 		)
 	}
 
 	return (
-		<div ref={containerRef} className="relative flex items-center">
+		<div ref={containerRef} {...styles.anchor()}>
 			<button
 				type="button"
 				onClick={toggleOpen}
 				aria-label={label}
 				aria-expanded={open}
-				className={cx(
-					'flex items-center gap-[6px] border rounded-body px-[8px] py-[4px] label-12 cursor-pointer transition-colors',
-					activeCount > 0
-						? 'border-accent/20 text-accent bg-accent/5'
-						: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
+				{...cx(
+					styles.toggle(),
+					transitionColors(),
+					activeCount > 0 && styles.toggleActive(),
 				)}
 			>
-				<ListFilterIcon className="w-[14px] h-[14px]" />
+				<ListFilterIcon {...styles.toggleIcon()} />
 				{activeCount > 0 && (
-					<span className="flex items-center justify-center min-w-[16px] h-[16px] rounded-[4px] bg-accent label-12 font-semibold text-base-background px-[4px]">
-						{activeCount}
-					</span>
+					<span {...styles.toggleCount()}>{activeCount}</span>
 				)}
 			</button>
 
 			{open && (
-				<div className="absolute top-full right-0 mt-[6px] z-50 bg-card-header border border-card-border rounded-body shadow-lg w-[280px] max-w-[calc(100vw-32px)]">
-					<div className="flex flex-col gap-[10px] p-[14px]">{children}</div>
+				<div {...styles.popover()}>
+					<div {...styles.popoverBody()}>{children}</div>
 					{activeCount > 0 && (
-						<div className="border-t border-card-border px-[14px] py-[10px]">
+						<div {...styles.popoverFooter()}>
 							<button
 								type="button"
 								onClick={onClearAll}
-								className="label-12 text-tertiary hover:text-accent cursor-pointer transition-colors"
+								{...cx(styles.clearAll(), transitionColors())}
 							>
 								Clear all
 							</button>
@@ -246,17 +240,17 @@ function SegmentedRow<V extends string>(props: {
 }): React.JSX.Element {
 	const { label, options, value, onChange } = props
 	return (
-		<div className="flex flex-col gap-[6px]">
-			<span className="label-12 text-tertiary shrink-0">{label}</span>
+		<div {...styles.segmentedRow()}>
+			<span {...styles.segmentedLabel()}>{label}</span>
 			<Choices
-				className="w-full min-w-0 [&_[role=radio]]:px-1.5"
+				{...styles.segmented()}
 				label={label}
 				value={String(options.findIndex((option) => option.value === value))}
 				items={options.map((option, index) => ({
 					value: String(index),
 					label: option.label,
 				}))}
-				variant="compact"
+				scale="small"
 				onChange={(next) => onChange(options[Number(next)].value)}
 			/>
 		</div>
@@ -273,4 +267,150 @@ export declare namespace TransactionFilters {
 		onStatusChange: (status: 'success' | 'reverted' | undefined) => void
 		onPeriodChange: (period: '24h' | '7d' | undefined) => void
 	}
+}
+
+namespace styles {
+	export const batchFilter = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b3',
+	})
+
+	export const checkbox = style({
+		accentColor: 'component.button.primary.fill',
+	})
+
+	export const stacked = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const stackedHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+	})
+
+	export const stackedBody = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingTop: '8',
+	})
+
+	export const toggle = style({
+		alignItems: 'center',
+		borderColor: 'transparent !custom',
+		borderRadius: '2xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		paddingBlock: '4',
+		paddingInline: '8',
+		typography: 'body.b3',
+		'@media (hover: hover)': {
+			':hover': {
+				backgroundColor: 'container.regular',
+				color: 'content.secondary',
+			},
+		},
+	})
+
+	export const toggleActive = style({
+		backgroundColor: 'container.subtle',
+		borderColor: 'line.primary',
+		color: 'content.primary',
+		'@media (hover: hover)': {
+			':hover': {
+				backgroundColor: 'container.subtle',
+				color: 'content.primary',
+			},
+		},
+	})
+
+	export const toggleIcon = style({
+		height: '14px !custom',
+		width: '14px !custom',
+	})
+
+	export const toggleCount = style({
+		alignItems: 'center',
+		backgroundColor: 'component.button.primary.fill',
+		borderRadius: '3xs',
+		color: 'background.secondary',
+		display: 'flex',
+		height: '16',
+		justifyContent: 'center',
+		minWidth: '16',
+		paddingInline: '4',
+		typography: 'body.b3Strong',
+	})
+
+	export const clearAll = style({
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		typography: 'body.b3',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const anchor = style({
+		alignItems: 'center',
+		display: 'flex',
+		position: 'relative',
+	})
+
+	export const popover = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary} !custom`,
+		marginTop: '8',
+		maxWidth: 'calc(100vw - 32px) !custom',
+		position: 'absolute',
+		right: '0px !custom',
+		top: '100% !custom',
+		width: '280px !custom',
+		zIndex: 50,
+	})
+
+	export const popoverBody = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		padding: '16',
+	})
+
+	export const popoverFooter = style({
+		borderTopColor: 'line.secondary',
+		borderTopStyle: 'solid',
+		borderTopWidth: 'regular',
+		paddingBlock: '12',
+		paddingInline: '16',
+	})
+
+	export const segmentedRow = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const segmentedLabel = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+		typography: 'body.b3',
+	})
+
+	export const segmented = style({
+		minWidth: '0 !custom',
+		width: '100% !custom',
+	})
 }

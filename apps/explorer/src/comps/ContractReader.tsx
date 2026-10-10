@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { getSignature } from 'ox/AbiItem'
+import { IconButton, style, variants } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 import type { Abi, AbiFunction } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,
@@ -18,6 +19,7 @@ import {
 	parseInputValue,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
+import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -183,7 +185,7 @@ export function ContractReader(props: {
 	const inputFunctions = getInputFunctions(abi)
 
 	return (
-		<div className="flex flex-col gap-[12px]">
+		<div {...styles.list()}>
 			{/* Functions without inputs - show as static values */}
 			{noInputFunctions.map((fn) => (
 				<StaticReadFunction
@@ -205,7 +207,7 @@ export function ContractReader(props: {
 			))}
 
 			{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
-				<p className="copy-13 text-tertiary">No read functions available.</p>
+				<p {...styles.emptyMessage()}>No read functions available.</p>
 			)}
 		</div>
 	)
@@ -232,19 +234,10 @@ function getMethodWithSelector(fn: AbiFunction): string {
 	return `${name} (${selector})`
 }
 
-function ReadResult(props: { className?: string; value: string }) {
-	const { className, value } = props
+function ReadResult(props: { error: boolean; value: string }) {
+	const { error, value } = props
 
-	return (
-		<div
-			className={cx(
-				'min-w-0 flex-1 text-primary copy-13 font-mono whitespace-pre overflow-x-auto',
-				className,
-			)}
-		>
-			{value}
-		</div>
-	)
+	return <div {...styles.readResult({ error })}>{value}</div>
 }
 
 function StaticReadFunction(props: {
@@ -347,75 +340,64 @@ function StaticReadFunction(props: {
 	})
 
 	return (
-		<div
-			id={fnId}
-			className="flex flex-col rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="flex items-center justify-between gap-[8px]">
-				<span className="min-w-0 flex-1 label-12 text-secondary font-mono py-[10px] pl-[12px] [overflow-wrap:anywhere]">
+		<div id={fnId} {...cx(styles.card(), styles.staticCard())}>
+			<div {...styles.staticHeader()}>
+				<span {...styles.staticSignature()}>
 					{getFunctionDisplaySignature(fn)}
 				</span>
-				<div className="flex shrink-0 items-center pl-[12px]">
-					<button
-						type="button"
+				<div {...styles.actions()}>
+					<IconButton
+						aria-label={copyNotifying ? 'Copied!' : 'Copy method name'}
 						onClick={handleCopyMethod}
+						scale="small"
 						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
+						{copyNotifying ? <CheckIcon /> : <CopyIcon />}
+					</IconButton>
+					<IconButton
+						aria-label={linkNotifying ? 'Copied!' : 'Copy permalink'}
 						onClick={(event) => {
 							event.stopPropagation()
 							void handleCopyPermalink()
 						}}
+						scale="small"
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
+						{linkNotifying ? <CheckIcon /> : <LinkIcon />}
+					</IconButton>
+					<IconButton
+						aria-label="Refresh"
 						onClick={() => void refetch()}
+						scale="small"
 						title="Refresh"
 						disabled={isFetching}
-						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!',
-							isFetching && 'opacity-50 cursor-not-allowed',
-						)}
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						<PlayIcon className="size-[14px]" />
-					</button>
+						<PlayIcon />
+					</IconButton>
 				</div>
 			</div>
-			<div className="border-t border-card-border px-[12px] py-[10px] flex">
-				<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
+			<div {...styles.staticResult()}>
+				<ReturnIcon {...styles.returnIcon()} />
 				{isFetching || isLoading ? (
-					<div className="copy-13 text-secondary ">{ellipsis}</div>
+					<div {...styles.pending()}>{ellipsis}</div>
 				) : isValidAddress ? (
-					<div className="min-w-0 copy-13 break-all">
+					<div {...styles.addressResult()}>
 						<Link
 							to="/address/$address"
 							params={{ address: result as Address.Address }}
-							className="text-accent hover:text-accent/80"
+							{...cx(link(), linkHover())}
 						>
 							{displayValue}
 						</Link>
 					</div>
 				) : (
-					<ReadResult
-						className={cx(error ? 'text-negative' : 'text-primary')}
-						value={displayValue}
-					/>
+					<ReadResult error={Boolean(error)} value={displayValue} />
 				)}
 			</div>
 		</div>
@@ -550,79 +532,69 @@ function DynamicReadFunction(props: {
 	})
 
 	return (
-		<div
-			id={fnId}
-			className="rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="w-full flex items-center justify-between">
+		<div id={fnId} {...styles.card()}>
+			<div {...styles.header()}>
 				<button
 					type="button"
 					aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
 					aria-expanded={isExpanded}
 					onClick={() => setIsExpanded(!isExpanded)}
-					className="min-w-0 flex-1 text-left h-full py-[10px] pl-[12px] cursor-pointer press-down focus-visible:-outline-offset-2! focus-visible:rounded-l-body!"
+					{...cx(styles.expandButton(), pressDown())}
 				>
-					<span className="block label-12 text-secondary font-mono [overflow-wrap:anywhere]">
-						{getFunctionDisplaySignature(fn)}
-					</span>
+					<span {...styles.signature()}>{getFunctionDisplaySignature(fn)}</span>
 				</button>
-				<div className="flex shrink-0 items-center pl-[12px]">
-					<button
-						type="button"
+				<div {...styles.actions()}>
+					<IconButton
+						aria-label={copyNotifying ? 'Copied!' : 'Copy method name'}
 						onClick={handleCopyMethod}
+						scale="small"
 						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
+						{copyNotifying ? <CheckIcon /> : <CopyIcon />}
+					</IconButton>
+					<IconButton
+						aria-label={linkNotifying ? 'Copied!' : 'Copy permalink'}
 						onClick={(event) => {
 							event.stopPropagation()
 							void handleCopyPermalink()
 						}}
+						scale="small"
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
+						{linkNotifying ? <CheckIcon /> : <LinkIcon />}
+					</IconButton>
+					<IconButton
+						aria-label="Refresh"
 						onClick={() => void refetch()}
+						scale="small"
 						title="Refresh"
 						disabled={isFetching || !allInputsFilled}
-						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!',
-							(isFetching || !allInputsFilled) &&
-								'opacity-50 cursor-not-allowed',
-						)}
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						<PlayIcon className="size-[14px]" />
-					</button>
-					<button
-						type="button"
+						<PlayIcon />
+					</IconButton>
+					<IconButton
 						aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
 						aria-expanded={isExpanded}
 						onClick={() => setIsExpanded(!isExpanded)}
-						className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
+						scale="small"
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
 						<ChevronDownIcon
-							className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
+							{...cx(styles.chevron(), isExpanded && styles.chevronExpanded())}
 						/>
-					</button>
+					</IconButton>
 				</div>
 			</div>
 
 			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+				<div {...styles.body()}>
 					{fn.inputs.map((input, index) => {
 						const key = input.name ?? `arg${index}`
 						return (
@@ -636,19 +608,19 @@ function DynamicReadFunction(props: {
 					})}
 
 					{isFetching && (
-						<div className="flex">
-							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							<p className="copy-13 text-secondary ">{ellipsis}</p>
+						<div {...styles.resultRow()}>
+							<ReturnIcon {...styles.returnIcon()} />
+							<p {...styles.pending()}>{ellipsis}</p>
 						</div>
 					)}
 
 					{!isFetching && (result !== undefined || error) && (
-						<div className="flex">
-							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
+						<div {...styles.resultRow()}>
+							<ReturnIcon {...styles.returnIcon()} />
 							{error ? (
-								<p className="copy-13 break-all text-negative">{error}</p>
+								<p {...styles.error()}>{error}</p>
 							) : (
-								<pre className="min-w-0 flex-1 copy-13 text-primary whitespace-pre overflow-x-auto font-mono">
+								<pre {...styles.output()}>
 									{formatOutputValue(result, outputType)}
 								</pre>
 							)}
@@ -674,7 +646,7 @@ function FunctionInput(props: {
 	// Special handling for bool type
 	if (inputType === 'checkbox') {
 		return (
-			<div className="flex items-center gap-[8px]">
+			<div {...styles.checkboxField()}>
 				<input
 					autoCorrect="off"
 					autoComplete="off"
@@ -683,14 +655,14 @@ function FunctionInput(props: {
 					id={inputId}
 					type="checkbox"
 					checked={value === 'true'}
-					className="w-[16px] h-[16px] rounded border-base-border"
+					{...styles.checkbox()}
 					onChange={(event) =>
 						onChange(event.target.checked ? 'true' : 'false')
 					}
 				/>
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
+				<label htmlFor={inputId} {...styles.label()}>
 					{input.name || 'value'}{' '}
-					<span className="text-secondary">({input.type})</span>
+					<span {...styles.labelType()}>({input.type})</span>
 				</label>
 			</div>
 		)
@@ -699,17 +671,17 @@ function FunctionInput(props: {
 	// Textarea for complex types
 	if (inputType === 'textarea' || isArrayType(input.type)) {
 		return (
-			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
+			<div {...styles.field()}>
+				<label htmlFor={inputId} {...styles.label()}>
 					{input.name || 'value'}{' '}
-					<span className="text-secondary">({input.type})</span>
+					<span {...styles.labelType()}>({input.type})</span>
 				</label>
 				<textarea
 					rows={3}
 					id={inputId}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
+					{...cx(styles.input(), styles.textarea())}
 				/>
 			</div>
 		)
@@ -717,10 +689,10 @@ function FunctionInput(props: {
 
 	// Standard text input
 	return (
-		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="label-12 text-primary font-sans">
+		<div {...styles.field()}>
+			<label htmlFor={inputId} {...styles.label()}>
 				{input.name || 'value'}{' '}
-				<span className="text-secondary">({input.type})</span>
+				<span {...styles.labelType()}>({input.type})</span>
 			</label>
 			<input
 				autoCorrect="off"
@@ -731,8 +703,211 @@ function FunctionInput(props: {
 				id={inputId}
 				placeholder={placeholder}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
+				{...styles.input()}
 			/>
 		</div>
 	)
+}
+
+namespace styles {
+	export const list = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
+
+	export const emptyMessage = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const readResult = variants({
+		base: {
+			color: 'content.primary',
+			flex: 1,
+			minWidth: '0px !custom',
+			overflowX: 'auto',
+			typography: 'mono.inline',
+			whiteSpace: 'pre',
+		},
+		defaultVariants: { error: false },
+		variants: {
+			error: { true: { color: 'content.negative' }, false: {} },
+		},
+	})
+
+	export const card = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderWidth: 'regular',
+		overflow: 'hidden',
+	})
+
+	export const staticCard = style({ display: 'flex', flexDirection: 'column' })
+
+	export const staticHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+	})
+
+	export const staticSignature = style({
+		color: 'content.secondary',
+		flex: 1,
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		paddingBlock: '8',
+		paddingLeft: '12',
+		typography: 'mono.inline',
+	})
+
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexShrink: 0,
+		paddingLeft: '12',
+		paddingRight: '4',
+	})
+
+	// TDS IconButton owns size, color, radius, and focus ring. The card clips
+	// overflow, so the ring is drawn inside the button, as before.
+	export const iconButton = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+		':focus-visible': { outlineOffset: '-2px !important' },
+		':disabled': { opacity: 0.5 },
+	})
+
+	export const staticResult = style({
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		paddingBlock: '12',
+		paddingInline: '12',
+	})
+
+	export const returnIcon = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		height: '12',
+		marginRight: '8',
+		marginTop: '2',
+		width: '12',
+	})
+
+	export const pending = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const addressResult = style({
+		minWidth: '0px !custom',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const header = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const expandButton = style({
+		cursor: 'pointer',
+		flex: 1,
+		height: '100% !custom',
+		minWidth: '0px !custom',
+		paddingBlock: '8',
+		paddingLeft: '12',
+		textAlign: 'left',
+		':focus-visible': {
+			borderBottomLeftRadius: 'xs !important',
+			borderTopLeftRadius: 'xs !important',
+			outlineOffset: '-2px !important',
+		},
+	})
+
+	export const signature = style({
+		color: 'content.secondary',
+		display: 'block',
+		overflowWrap: 'anywhere',
+		typography: 'mono.inline',
+	})
+
+	export const chevron = style({ flexShrink: 0 })
+
+	export const chevronExpanded = style({ rotate: '180deg' })
+
+	export const body = style({
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '12',
+	})
+
+	export const resultRow = style({ display: 'flex' })
+
+	export const error = style({
+		color: 'content.negative',
+		typography: 'body.b3',
+		wordBreak: 'break-all',
+	})
+
+	export const output = style({
+		color: 'content.primary',
+		flex: 1,
+		minWidth: '0px !custom',
+		overflowX: 'auto',
+		typography: 'mono.inline',
+		whiteSpace: 'pre',
+	})
+
+	export const checkboxField = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const checkbox = style({
+		accentColor: 'content.primary',
+		height: '16',
+		width: '16',
+		// The document focus ring rounds focused controls to 8px.
+		':focus-visible': { borderRadius: '3xs' },
+	})
+
+	export const label = style({
+		color: 'content.primary',
+		typography: 'body.b3',
+	})
+
+	export const labelType = style({ color: 'content.secondary' })
+
+	export const field = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	// Mirrors TDS TextInput (filled, borderless) at a compact height. Focus
+	// rings come from the document focus style.
+	export const input = style({
+		backgroundColor: 'component.input.primary.fill',
+		borderRadius: '2xs',
+		color: 'content.primary',
+		paddingBlock: '8',
+		paddingInline: '12',
+		typography: 'mono.inline',
+		width: '100% !custom',
+		'::placeholder': { color: 'content.tertiary' },
+	})
+
+	export const textarea = style({ resize: 'none' })
 }

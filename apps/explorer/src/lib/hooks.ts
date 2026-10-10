@@ -176,37 +176,26 @@ export function usePermalinkHighlight(props: usePermalinkHighlight.Props) {
 
 		onTargetChange?.(true)
 
-		const highlightClasses = [
-			'ring-1',
-			'ring-accent',
-			'ring-offset-1',
-			'transition-shadow',
-			'duration-500',
-		] as const
-
 		let highlightTimer: ReturnType<typeof setTimeout> | undefined
 		let fadeTimer: ReturnType<typeof setTimeout> | undefined
 		let initialTimer: ReturnType<typeof setTimeout> | undefined
 		let observerCleanup: (() => void) | undefined
 		let highlightedElement: HTMLElement | undefined
 
-		const removeHighlightClasses = () => {
+		// `src/styles/globals.ts` draws the ring for each `data-permalink-highlight` state.
+		const removeHighlight = () => {
 			if (!highlightedElement) return
-			highlightedElement.classList.remove(
-				...highlightClasses,
-				'ring-transparent',
-			)
+			delete highlightedElement.dataset.permalinkHighlight
 		}
 
 		const scrollAndHighlight = (element: HTMLElement) => {
 			highlightedElement = element
 			element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-			element.classList.add(...highlightClasses)
+			element.dataset.permalinkHighlight = 'on'
 			highlightTimer = setTimeout(() => {
-				element.classList.remove('ring-accent')
-				element.classList.add('ring-transparent')
+				element.dataset.permalinkHighlight = 'fading'
 				fadeTimer = setTimeout(() => {
-					element.classList.remove(...highlightClasses, 'ring-transparent')
+					delete element.dataset.permalinkHighlight
 				}, 500)
 			}, highlightDuration)
 		}
@@ -231,7 +220,7 @@ export function usePermalinkHighlight(props: usePermalinkHighlight.Props) {
 			clearTimeout(initialTimer)
 			clearTimeout(highlightTimer)
 			clearTimeout(fadeTimer)
-			removeHighlightClasses()
+			removeHighlight()
 			observerCleanup?.()
 		}
 	}, [elementId, highlightDuration, onTargetChange, hash])

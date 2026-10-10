@@ -1,8 +1,11 @@
 import { Link } from '@tanstack/react-router'
+import { vars as core } from '@tempoxyz/ds/core'
+import { style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
+import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from '#comps/Midcut'
-import { cx } from '#lib/css'
+import { link, pressDown, transitionColors } from '#styles/explorer'
 
 export function AddressCell(props: {
 	address: Address.Address
@@ -16,10 +19,7 @@ export function AddressCell(props: {
 	if (!asLink)
 		return (
 			<span
-				className={cx(
-					'copy-14 text-accent w-full font-mono',
-					isHighlighted && 'underline',
-				)}
+				{...cx(styles.address(), link(), isHighlighted && styles.highlighted())}
 				title={title}
 				{...handlers}
 			>
@@ -32,9 +32,13 @@ export function AddressCell(props: {
 			to="/address/$address"
 			params={{ address }}
 			preload="intent"
-			className={cx(
-				'copy-14 text-accent hover:text-accent/80 transition-colors press-down w-full font-mono',
-				isHighlighted && 'underline',
+			{...cx(
+				styles.address(),
+				link(),
+				styles.linkHover(),
+				transitionColors(),
+				pressDown(),
+				isHighlighted && styles.highlighted(),
 			)}
 			title={title}
 			{...handlers}
@@ -42,4 +46,21 @@ export function AddressCell(props: {
 			<Midcut value={address} prefix="0x" />
 		</Link>
 	)
+}
+
+namespace styles {
+	export const address = style({
+		typography: 'mono.inline',
+		width: '100% !custom',
+	})
+
+	export const linkHover = style({
+		'@media (hover: hover)': {
+			':hover': {
+				color: `color-mix(in oklab, light-dark(${core.color.accent.blueLight}, ${core.color.accent.blueDark}) 80%, transparent) !custom`,
+			},
+		},
+	})
+
+	export const highlighted = style({ textDecorationLine: 'underline' })
 }

@@ -1,11 +1,14 @@
+import { IconButton, style } from '@tempoxyz/ds/platform'
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeEventLog, getAbiItem, parseAbiItem } from 'viem'
 import type { Abi, Hex, Log } from 'viem'
+import { cx } from 'zyzz'
 import { Abis } from '#lib/abis'
 import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
+import { pressDown, transitionColors } from '#styles/explorer'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedTopics(props: TxDecodedTopics.Props) {
@@ -73,8 +76,8 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 	if (!abiItem) return <TxDecodedTopics.RawTopics log={log} />
 
 	return (
-		<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
-			<div className="bg-distinct rounded-body overflow-hidden w-full min-w-0">
+		<div {...styles.root()}>
+			<div {...styles.panel()}>
 				<TxDecodedTopics.SignatureHeader abiItem={abiItem} />
 				<TxDecodedTopics.ArgumentsSection
 					abiItem={abiItem}
@@ -109,35 +112,35 @@ export namespace TxDecodedTopics {
 		)
 
 		return (
-			<div className="flex items-start justify-between px-[10px] py-[8px] border-b border-card-border gap-[8px]">
-				<code className="label-12 text-primary font-mono break-all">
-					<span className="text-tertiary">Name </span>
-					<span className="text-base-content-positive">{abiItem.name}</span>
-					<span className="text-secondary"> (</span>
+			<div {...styles.header()}>
+				<code {...styles.signature()}>
+					<span {...styles.tertiary()}>Name </span>
+					<span {...styles.positive()}>{abiItem.name}</span>
+					<span {...styles.secondary()}> (</span>
 					{abiItem.inputs.map((input, i) => (
 						<span key={`${input.type}-${input.name ?? i}`}>
-							{i > 0 && <span className="text-secondary">, </span>}
+							{i > 0 && <span {...styles.secondary()}>, </span>}
 							{input.indexed && (
-								<span className="text-tertiary">topic[{i + 1}] </span>
+								<span {...styles.tertiary()}>topic[{i + 1}] </span>
 							)}
-							<span className="text-secondary">{input.type}</span>
-							{input.name && (
-								<span className="text-primary"> {input.name}</span>
-							)}
+							<span {...styles.secondary()}>{input.type}</span>
+							{input.name && <span {...styles.primary()}> {input.name}</span>}
 						</span>
 					))}
-					<span className="text-secondary">)</span>
+					<span {...styles.secondary()}>)</span>
 				</code>
-				<div className="flex items-center gap-[4px] text-tertiary shrink-0">
-					{notifying && <span className="label-12 select-none">copied</span>}
-					<button
-						type="button"
-						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+				<div {...styles.actions()}>
+					{notifying && <span {...styles.copied()}>copied</span>}
+					<IconButton
+						{...cx(styles.copyButton(), pressDown(), transitionColors())}
+						aria-label="Copy signature"
 						onClick={() => copy(signatureText)}
+						scale="small"
 						title="Copy signature"
+						variant="tertiary"
 					>
-						<CopyIcon className="size-[14px]" />
-					</button>
+						<CopyIcon />
+					</IconButton>
 				</div>
 			</div>
 		)
@@ -155,20 +158,20 @@ export namespace TxDecodedTopics {
 		if (!args || abiItem.inputs.length === 0) return null
 
 		return (
-			<div className="px-[10px] py-[8px]">
-				<div className="label-12 text-tertiary mb-[6px] flex items-center gap-[6px]">
+			<div {...styles.section()}>
+				<div {...styles.argumentsLabel()}>
 					<span>Arguments</span>
 					<button
 						type="button"
 						onClick={() => setShowRaw(!showRaw)}
-						className="label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[8px] py-[2px] cursor-pointer press-down"
+						{...cx(styles.toggle(), pressDown(), transitionColors())}
 					>
 						{showRaw ? 'raw' : 'decoded'}
 					</button>
 				</div>
 				{showRaw ? (
-					<div className="flex flex-col gap-[8px]">
-						<div className="flex flex-col gap-[4px]">
+					<div {...styles.rawStack()}>
+						<div {...styles.topics()}>
 							{log.topics.map((topic, i) => (
 								<RawTopicRow key={topic} index={i} topic={topic} />
 							))}
@@ -176,7 +179,7 @@ export namespace TxDecodedTopics {
 						{log.data && log.data !== '0x' && <RawDataInline data={log.data} />}
 					</div>
 				) : (
-					<div className="grid" style={{ gridTemplateColumns: 'auto 1fr' }}>
+					<div {...styles.argumentGrid()}>
 						{abiItem.inputs.map((input, index) => {
 							const argValue =
 								(args as Record<string, unknown>)[input.name ?? ''] ??
@@ -214,20 +217,18 @@ export namespace TxDecodedTopics {
 			<button
 				type="button"
 				onClick={() => copy(displayValue)}
-				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[4px] -mx-[4px]"
+				{...cx(styles.argumentRow(), pressDown(), transitionColors())}
 			>
-				<span className="label-12 text-tertiary whitespace-pre">
+				<span {...styles.argumentLabel()}>
 					{notifying ? (
-						<span className="text-primary">
+						<span {...styles.primary()}>
 							{'copied'.padEnd(label.length + 1)}
 						</span>
 					) : (
 						<>{label}:</>
 					)}
 				</span>
-				<span className="label-12 text-primary font-mono break-all min-w-0">
-					{displayValue}
-				</span>
+				<span {...styles.hex()}>{displayValue}</span>
 			</button>
 		)
 	}
@@ -244,17 +245,15 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div>
-				<div className="label-12 text-tertiary mb-[4px]">
-					{notifying ? <span className="text-primary">copied</span> : 'Data'}
+				<div {...cx(styles.label(), styles.inlineLabel())}>
+					{notifying ? <span {...styles.primary()}>copied</span> : 'Data'}
 				</div>
 				<button
 					type="button"
 					onClick={() => copy(data)}
-					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+					{...cx(styles.dataButton(), pressDown(), transitionColors())}
 				>
-					<span className="label-12 text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
-						{data}
-					</span>
+					<span {...styles.data()}>{data}</span>
 				</button>
 			</div>
 		)
@@ -269,15 +268,15 @@ export namespace TxDecodedTopics {
 		const { log } = props
 
 		return (
-			<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
-				<div className="bg-distinct rounded-body overflow-hidden w-full min-w-0">
-					<div className="px-[10px] py-[8px] border-b border-card-border">
-						<span className="label-12 text-tertiary">Raw event</span>
+			<div {...styles.root()}>
+				<div {...styles.panel()}>
+					<div {...styles.rawHeader()}>
+						<span {...styles.label()}>Raw event</span>
 					</div>
-					<div className="divide-y divide-card-border">
-						<div className="px-[10px] py-[8px] min-w-0">
-							<div className="label-12 text-tertiary mb-[6px]">Topics</div>
-							<div className="flex flex-col gap-[4px]">
+					<div {...styles.divided()}>
+						<div {...styles.section()}>
+							<div {...cx(styles.label(), styles.sectionLabel())}>Topics</div>
+							<div {...styles.topics()}>
 								{log.topics.map((topic, i) => (
 									<RawTopicRow key={topic} index={i} topic={topic} />
 								))}
@@ -305,18 +304,16 @@ export namespace TxDecodedTopics {
 			<button
 				type="button"
 				onClick={() => copy(topic)}
-				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px]"
+				{...cx(styles.topicRow(), pressDown(), transitionColors())}
 			>
-				<span className="label-12 text-tertiary shrink-0">
+				<span {...styles.topicLabel()}>
 					{notifying ? (
-						<span className="text-primary">copied</span>
+						<span {...styles.primary()}>copied</span>
 					) : (
 						`topic[${index}]`
 					)}
 				</span>
-				<span className="label-12 text-primary font-mono break-all min-w-0">
-					{topic}
-				</span>
+				<span {...styles.hex()}>{topic}</span>
 			</button>
 		)
 	}
@@ -332,18 +329,16 @@ export namespace TxDecodedTopics {
 		const { copy, notifying } = useCopy()
 
 		return (
-			<div className="px-[10px] py-[8px] min-w-0">
-				<div className="label-12 text-tertiary mb-[6px]">
-					{notifying ? <span className="text-primary">copied</span> : 'Data'}
+			<div {...styles.section()}>
+				<div {...cx(styles.label(), styles.sectionLabel())}>
+					{notifying ? <span {...styles.primary()}>copied</span> : 'Data'}
 				</div>
 				<button
 					type="button"
 					onClick={() => copy(data)}
-					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+					{...cx(styles.dataButton(), pressDown(), transitionColors())}
 				>
-					<span className="label-12 text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
-						{data}
-					</span>
+					<span {...styles.data()}>{data}</span>
 				</button>
 			</div>
 		)
@@ -353,4 +348,207 @@ export namespace TxDecodedTopics {
 			data: Hex
 		}
 	}
+}
+
+// Copyable rows sit flush with the surrounding text: the padding that gives
+// them a hover fill is pulled back out with a negative inline margin.
+const copyRow = {
+	borderRadius: '3xs',
+	cursor: 'pointer',
+	marginInline: '-4px !custom',
+	paddingInline: '4',
+	textAlign: 'left',
+	'@media (hover: hover)': {
+		':hover': { backgroundColor: 'container.regular' },
+	},
+} as const
+
+namespace styles {
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		maxWidth: '100% !custom',
+		minWidth: '0 !custom',
+		overflow: 'hidden',
+		width: '100% !custom',
+	})
+
+	// An opaque well that matches the decoded calldata panel.
+	export const panel = style({
+		backgroundColor: 'background.primary',
+		borderRadius: '2xs',
+		minWidth: '0 !custom',
+		overflow: 'hidden',
+		width: '100% !custom',
+	})
+
+	export const header = style({
+		alignItems: 'flex-start',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const signature = style({
+		color: 'content.primary',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const positive = style({ color: 'content.positive' })
+
+	export const actions = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexShrink: '0 !custom',
+		gap: '4',
+	})
+
+	export const copied = style({ typography: 'body.b3', userSelect: 'none' })
+
+	// IconButton keeps its 32px target; negative margins keep the row height
+	// of the old 22px control. Only properties IconButton leaves unset.
+	export const copyButton = style({
+		marginBlock: '-8px !custom',
+		marginRight: '-8px !custom',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const section = style({
+		minWidth: '0 !custom',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const argumentsLabel = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		gap: '8',
+		marginBottom: '8',
+		typography: 'body.b3',
+	})
+
+	export const toggle = style({
+		backgroundColor: 'container.regular',
+		borderRadius: 'full',
+		color: 'content.primary',
+		cursor: 'pointer',
+		paddingBlock: '2',
+		paddingInline: '8',
+		typography: 'body.b3',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+	})
+
+	export const rawStack = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const topics = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	export const argumentGrid = style({
+		display: 'grid',
+		gridTemplateColumns: 'auto 1fr',
+	})
+
+	export const argumentRow = style({
+		...copyRow,
+		alignItems: 'start',
+		display: 'grid',
+		gap: '8',
+		gridColumn: 'span 2 / span 2',
+		gridTemplateColumns: 'subgrid',
+		paddingBlock: '4',
+	})
+
+	export const argumentLabel = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+		whiteSpace: 'pre',
+	})
+
+	export const hex = style({
+		color: 'content.primary',
+		minWidth: '0 !custom',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const label = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const inlineLabel = style({ marginBottom: '4' })
+
+	export const sectionLabel = style({ marginBottom: '8' })
+
+	export const dataButton = style({
+		...copyRow,
+		maxWidth: '100% !custom',
+		minWidth: '0 !custom',
+		paddingBlock: '2',
+		width: '100% !custom',
+	})
+
+	export const data = style({
+		color: 'content.primary',
+		display: 'block',
+		minWidth: '0 !custom',
+		overflowWrap: 'anywhere',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const rawHeader = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const divided = style({
+		selectors: {
+			'& > :not(:last-child)': {
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
+			},
+		},
+	})
+
+	export const topicRow = style({
+		...copyRow,
+		alignItems: 'flex-start',
+		display: 'flex',
+		gap: '8',
+		paddingBlock: '2',
+	})
+
+	export const topicLabel = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+		typography: 'body.b3',
+	})
 }

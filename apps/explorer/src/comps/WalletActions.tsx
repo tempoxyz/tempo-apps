@@ -1,4 +1,5 @@
 import type { Address } from 'ox'
+import { IconButton, style, variants } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import {
 	useConnect,
@@ -7,12 +8,13 @@ import {
 	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
+import { pressDown, pulse, transitionColors } from '#styles/explorer'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWallet from '~icons/lucide/wallet'
 
@@ -70,22 +72,25 @@ export function WalletActions(
 			: !isConnected
 				? `Connect ${walletName}`
 				: `Switch to Tempo`
+	const actionState = busy ? 'busy' : 'idle'
 
 	return (
 		<InfoCard
-			className="min-[1240px]:w-full"
+			className={styles.card().className}
 			title={
-				<InfoCard.Title className="w-full justify-between">
+				<InfoCard.Title className={styles.title().className}>
 					Wallet actions
 					{isConnected && (
-						<button
-							type="button"
-							title="Disconnect"
-							className="text-secondary hover:text-primary cursor-pointer press-down"
+						<IconButton
+							aria-label="Disconnect"
 							onClick={() => disconnect.mutate({ connector })}
+							scale="small"
+							title="Disconnect"
+							variant="tertiary"
+							{...cx(styles.disconnect(), pressDown())}
 						>
-							<LucideLogOut className="size-3" />
-						</button>
+							<LucideLogOut />
+						</IconButton>
 					)}
 				</InfoCard.Title>
 			}
@@ -112,15 +117,14 @@ export function WalletActions(
 								key="connect"
 								type="button"
 								disabled={busy}
-								className={cx(
-									'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-									busy
-										? 'text-secondary animate-pulse'
-										: 'text-secondary hover:text-primary cursor-pointer press-down',
+								{...cx(
+									styles.action({ state: actionState }),
+									transitionColors(),
+									!busy && pressDown(),
 								)}
 								onClick={handleConnectOrSwitch}
 							>
-								<LucideWallet className="size-3.5" />
+								<LucideWallet {...styles.actionIcon()} />
 								{connectLabel}
 							</button>,
 						]
@@ -136,4 +140,55 @@ export declare namespace WalletActions {
 		decimals?: number | undefined
 		image?: string | undefined
 	}
+}
+
+namespace styles {
+	// InfoCard fits its content from 1240px; the wallet card fills the column.
+	export const card = style({
+		'@media (width >= 1240px)': { width: '100% !custom !important' },
+	})
+
+	export const title = style({
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	// TDS IconButton owns size, color, radius, and focus ring.
+	export const disconnect = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const action = variants({
+		base: {
+			alignItems: 'center',
+			display: 'flex',
+			gap: '8',
+			typography: 'body.b3',
+			width: '100% !custom',
+		},
+		defaultVariants: { state: 'idle' },
+		variants: {
+			state: {
+				busy: {
+					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
+					color: 'content.secondary',
+				},
+				current: { color: 'content.tertiary', cursor: 'default' },
+				idle: {
+					color: 'content.secondary',
+					cursor: 'pointer',
+					'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+				},
+				success: { color: 'content.positive' },
+			},
+		},
+	})
+
+	export const actionIcon = style({
+		flexShrink: 0,
+		height: '14px !custom',
+		width: '14px !custom',
+	})
 }

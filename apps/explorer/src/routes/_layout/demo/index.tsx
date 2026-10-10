@@ -1,4 +1,7 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { cx } from 'zyzz'
+import { pressDown } from '#styles/explorer'
+import { styles } from './-index.styles'
 
 const demoPages = [
 	{ path: '/demo/tx', label: 'Transaction' },
@@ -19,13 +22,13 @@ export const Route = createFileRoute('/_layout/demo/')({
 
 function Component() {
 	return (
-		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-4 pt-16 pb-8 grow">
-			<h1 className="text-tertiary ">Demo</h1>
+		<div {...styles.page()}>
+			<h1 {...styles.title()}>Demo</h1>
 			{demoPages.map((page) => (
 				<Link
 					key={page.path}
 					to={page.path}
-					className="text-primary press-down"
+					{...cx(styles.link(), pressDown())}
 				>
 					{page.label}
 				</Link>

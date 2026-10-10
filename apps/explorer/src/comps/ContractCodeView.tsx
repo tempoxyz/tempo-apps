@@ -6,10 +6,11 @@ import {
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
+import { style, vars } from '@tempoxyz/ds/platform'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
-import { cx } from '#lib/css'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
 import {
 	createContractSourceLink,
@@ -17,6 +18,7 @@ import {
 } from '#lib/domain/contract-source-link'
 import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
+import { pressDown, srOnly, transitionColors } from '#styles/explorer'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
 import PanelLeftIcon from '~icons/lucide/panel-left'
@@ -136,7 +138,7 @@ export function ContractCodeView(
 			layout: { paddingTop: 0, paddingBottom: 16, gap: 16 },
 			onPostRender: syncScrollCode,
 			unsafeCSS:
-				':host { --diffs-font-family: "JetBrains Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--color-source-background); }',
+				':host { --diffs-font-family: "JetBrains Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--contract-source-background); }',
 		}),
 		[theme, wrap, syncScrollCode],
 	)
@@ -197,12 +199,9 @@ export function ContractCodeView(
 	}
 
 	return (
-		<div
-			ref={container}
-			className="@container/source overflow-hidden rounded-lg border border-card-border bg-source-background"
-		>
-			<div className="flex items-center justify-between gap-2 border-b border-card-border p-2 label-12">
-				<div className="flex min-w-0 items-center gap-2">
+		<div ref={container} {...styles.root()}>
+			<div {...styles.toolbar()}>
+				<div {...styles.toolbarStart()}>
 					<button
 						type="button"
 						aria-label={sidebarOpen ? 'Hide source files' : 'Show source files'}
@@ -210,40 +209,46 @@ export function ContractCodeView(
 						aria-expanded={sidebarOpen}
 						aria-controls={sidebarId}
 						onClick={() => setSidebarPreference(!sidebarOpen)}
-						className={cx(
-							toolbarButton,
-							sidebarOpen && 'bg-base-alt text-primary',
+						{...cx(
+							styles.toolbarButton(),
+							transitionColors(),
+							pressDown(),
+							sidebarOpen && styles.toolbarButtonActive(),
 						)}
 					>
-						<PanelLeftIcon className="size-4" />
+						<PanelLeftIcon {...styles.toolbarIcon()} />
 					</button>
-					<span className="whitespace-nowrap font-medium">
-						{entries.length}{' '}
-						<span className="hidden @sm/source:inline">source </span>
+					<span {...styles.fileCount()}>
+						{entries.length} <span {...styles.wideLabel()}>source </span>
 						{entries.length === 1 ? 'file' : 'files'}
 					</span>
 				</div>
-				<div className="flex shrink-0 items-center gap-1 text-secondary">
+				<div {...styles.toolbarEnd()}>
 					<button
 						type="button"
 						aria-label="Wrap lines"
 						title="Wrap lines"
 						aria-pressed={wrap}
 						onClick={() => setWrap(!wrap)}
-						className={cx(toolbarButton, wrap && 'bg-base-alt text-primary')}
+						{...cx(
+							styles.toolbarButton(),
+							transitionColors(),
+							pressDown(),
+							wrap && styles.toolbarButtonActive(),
+						)}
 					>
-						<WrapIcon className="size-4" />
-						<span className="hidden @lg/source:inline">Wrap</span>
+						<WrapIcon {...styles.toolbarIcon()} />
+						<span {...styles.buttonLabel()}>Wrap</span>
 					</button>
 					<button
 						type="button"
 						aria-label={linkCopy.notifying ? 'Link copied' : 'Copy link'}
 						title="Copy link"
 						onClick={copyPermalink}
-						className={toolbarButton}
+						{...cx(styles.toolbarButton(), transitionColors(), pressDown())}
 					>
-						<LinkIcon className="size-4" />
-						<span className="hidden @lg/source:inline">
+						<LinkIcon {...styles.toolbarIcon()} />
+						<span {...styles.buttonLabel()}>
 							{linkCopy.notifying ? 'Copied!' : 'Copy link'}
 						</span>
 					</button>
@@ -252,14 +257,14 @@ export function ContractCodeView(
 						aria-label={sourceCopy.notifying ? 'File copied' : 'Copy file'}
 						title="Copy file"
 						onClick={() => void sourceCopy.copy(currentSource)}
-						className={toolbarButton}
+						{...cx(styles.toolbarButton(), transitionColors(), pressDown())}
 					>
-						<CopyIcon className="size-4" />
-						<span className="hidden @lg/source:inline">
+						<CopyIcon {...styles.toolbarIcon()} />
+						<span {...styles.buttonLabel()}>
 							{sourceCopy.notifying ? 'Copied!' : 'Copy file'}
 						</span>
 					</button>
-					<span className="sr-only" role="status">
+					<span {...srOnly()} role="status">
 						{linkCopy.notifying
 							? 'Link copied to clipboard'
 							: sourceCopy.notifying
@@ -268,12 +273,8 @@ export function ContractCodeView(
 					</span>
 				</div>
 			</div>
-			<div className="flex min-w-0 flex-col @2xl/source:flex-row">
-				<div
-					id={sidebarId}
-					hidden={!sidebarOpen}
-					className="shrink-0 @2xl/source:w-[240px]"
-				>
+			<div {...styles.panes()}>
+				<div id={sidebarId} hidden={!sidebarOpen} {...styles.sidebar()}>
 					<ContractFileTree
 						key={JSON.stringify(paths)}
 						paths={paths}
@@ -285,7 +286,7 @@ export function ContractCodeView(
 					poolOptions={highlightPoolOptions}
 					highlighterOptions={highlightOptions}
 				>
-					<div className="min-w-0 flex-1">
+					<div {...styles.code()}>
 						<CodeView
 							ref={viewer}
 							items={items}
@@ -304,19 +305,19 @@ export function ContractCodeView(
 									)
 								if (visible) setActiveFile(visible.id)
 							}}
-							className="h-[min(620px,70svh)] min-h-[320px] min-w-0 overflow-auto"
+							{...styles.codeView()}
 						/>
 						<ContractCodeScrollbar code={scrollCode} wrap={wrap} />
 					</div>
 				</WorkerPoolContextProvider>
 			</div>
-			<div className="flex flex-wrap justify-between gap-2 border-t border-card-border px-3 py-2 label-12 text-tertiary">
+			<div {...styles.footer()}>
 				<span>
 					{selection
 						? `Lines ${Math.min(selection.range.start, selection.range.end)}–${Math.max(selection.range.start, selection.range.end)}`
 						: 'Select line numbers to link to code'}
 				</span>
-				<span className="hidden @sm/source:inline">Read only</span>
+				<span {...styles.wideLabel()}>Read only</span>
 			</div>
 		</div>
 	)
@@ -337,5 +338,118 @@ const highlightOptions = {
 }
 let sourceRevision = 0
 
-const toolbarButton =
-	'flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 text-secondary transition-colors hover:bg-base-alt hover:text-primary focus-visible:outline-2 focus-visible:outline-focus'
+namespace styles {
+	export const root = style({
+		// Read by the viewer's shadow DOM through `unsafeCSS`.
+		'--contract-source-background': vars.color.background.secondary,
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderWidth: 'regular',
+		containerName: 'source',
+		containerType: 'inline-size',
+		overflow: 'hidden',
+	})
+
+	export const toolbar = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		padding: '8',
+		typography: 'body.b3',
+	})
+
+	export const toolbarStart = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0px !custom',
+	})
+
+	// Mirrors a small tertiary TDS Button; the label collapses to an icon at
+	// narrow widths, which TDS Button's minimum width does not allow.
+	export const toolbarButton = style({
+		alignItems: 'center',
+		borderRadius: 'full',
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'flex',
+		flexShrink: 0,
+		gap: '4',
+		height: '32',
+		justifyContent: 'center',
+		minWidth: '32px !custom',
+		paddingInline: '8',
+		typography: 'body.b3',
+		'@media (hover: hover)': {
+			':hover': {
+				backgroundColor: 'container.regular',
+				color: 'content.primary',
+			},
+		},
+	})
+
+	export const toolbarButtonActive = style({
+		backgroundColor: 'container.regular',
+		color: 'content.primary',
+	})
+
+	export const toolbarIcon = style({ height: '16', width: '16' })
+
+	export const fileCount = style({ whiteSpace: 'nowrap' })
+
+	export const wideLabel = style({
+		display: 'none',
+		'@container source (width >= 24rem)': { display: 'inline' },
+	})
+
+	export const buttonLabel = style({
+		display: 'none',
+		'@container source (width >= 32rem)': { display: 'inline' },
+	})
+
+	export const toolbarEnd = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		flexShrink: 0,
+		gap: '4',
+	})
+
+	export const panes = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minWidth: '0px !custom',
+		'@container source (width >= 42rem)': { flexDirection: 'row' },
+	})
+
+	export const sidebar = style({
+		flexShrink: 0,
+		'@container source (width >= 42rem)': { width: '240px !custom' },
+	})
+
+	export const code = style({ flex: 1, minWidth: '0px !custom' })
+
+	export const codeView = style({
+		height: 'min(620px, 70svh) !custom',
+		minHeight: '320px !custom',
+		minWidth: '0px !custom',
+		overflow: 'auto',
+	})
+
+	export const footer = style({
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+		justifyContent: 'space-between',
+		paddingBlock: '8',
+		paddingInline: '12',
+		typography: 'body.b3',
+	})
+}

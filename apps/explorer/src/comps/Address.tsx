@@ -1,8 +1,10 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import type { Address as AddressType } from 'ox'
+import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from '#comps/Midcut'
-import { cx } from '#lib/css'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 export function Address(props: Address.Props) {
 	const { address, align, chars = 3, className, search, self, title } = props
@@ -15,17 +17,19 @@ export function Address(props: Address.Props) {
 				search={search}
 				title={title}
 				preload="intent"
-				className={cx(
-					'text-accent press-down hover:underline font-mono inline-flex min-w-0',
-					align === 'end' && 'w-full justify-end',
-					isHighlighted && 'underline',
-					className,
+				{...cx(
+					styles.link({ className }),
+					link(),
+					linkHover(),
+					pressDown(),
+					align === 'end' && styles.end(),
+					isHighlighted && styles.highlighted(),
 				)}
 				{...handlers}
 			>
 				<Midcut align={align} min={chars} prefix="0x" value={address} />
 			</Link>
-			{self && <span className="text-tertiary"> (self)</span>}
+			{self && <span {...styles.self()}> (self)</span>}
 		</>
 	)
 }
@@ -40,4 +44,23 @@ export namespace Address {
 		self?: boolean
 		title?: string
 	}
+}
+
+namespace styles {
+	export const link = style({
+		display: 'inline-flex',
+		fontFamily: '"JetBrains Mono", monospace',
+		fontWeight: 400,
+		letterSpacing: '0px',
+		minWidth: '0 !custom',
+	})
+
+	export const end = style({
+		justifyContent: 'flex-end',
+		width: '100% !custom',
+	})
+
+	export const highlighted = style({ textDecorationLine: 'underline' })
+
+	export const self = style({ color: 'content.tertiary' })
 }

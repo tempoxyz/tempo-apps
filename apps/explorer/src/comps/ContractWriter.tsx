@@ -2,11 +2,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
+import { IconButton, style, variants } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import type { Abi, AbiFunction, Hex } from 'viem'
 import { encodeFunctionData } from 'viem'
 import { useConnection, useWriteContract } from 'wagmi'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import {
 	getFunctionSelector,
 	getInputType,
@@ -17,6 +18,7 @@ import {
 	type WriteFunction,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
+import { pressDown, transitionColors } from '#styles/explorer'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -60,7 +62,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 	const writeFunctions = getWriteFunctions(abi)
 
 	return (
-		<div className="flex flex-col gap-[12px]">
+		<div {...styles.list()}>
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -71,7 +73,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 			))}
 
 			{writeFunctions.length === 0 && (
-				<p className="copy-13 text-tertiary">No write functions available.</p>
+				<p {...styles.emptyMessage()}>No write functions available.</p>
 			)}
 		</div>
 	)
@@ -187,61 +189,44 @@ function WriteContractFunction(props: {
 	})
 
 	return (
-		<div
-			id={fnId}
-			className="rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="w-full flex items-center justify-between">
+		<div id={fnId} {...styles.card()}>
+			<div {...styles.header()}>
 				<button
 					type="button"
 					onClick={() => hasInputs && setIsExpanded(!isExpanded)}
-					className={cx(
-						'min-w-0 flex-1 text-left flex flex-wrap items-center gap-[8px] h-full py-[10px] pl-[12px] focus-visible:-outline-offset-2! focus-visible:rounded-l-body!',
-						hasInputs && 'cursor-pointer press-down',
+					{...cx(
+						styles.expandButton(),
+						hasInputs && styles.expandable(),
+						hasInputs && pressDown(),
 					)}
 				>
-					<span className="min-w-0 label-12 text-secondary font-mono [overflow-wrap:anywhere]">
-						{getFunctionDisplaySignature(fn)}
-					</span>
-					{isPayable && (
-						<span className="shrink-0 label-12 px-[6px] py-[2px] rounded-[4px] bg-warning-subtle text-warning font-medium">
-							payable
-						</span>
-					)}
+					<span {...styles.signature()}>{getFunctionDisplaySignature(fn)}</span>
+					{isPayable && <span {...styles.payable()}>payable</span>}
 				</button>
-				<div className="flex items-center pl-[12px] shrink-0">
-					<button
-						type="button"
+				<div {...styles.actions()}>
+					<IconButton
+						aria-label={copyNotifying ? 'Copied!' : 'Copy method name'}
 						onClick={handleCopyMethod}
+						scale="small"
 						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
+						{copyNotifying ? <CheckIcon /> : <CopyIcon />}
+					</IconButton>
+					<IconButton
+						aria-label={linkNotifying ? 'Copied!' : 'Copy permalink'}
 						onClick={(event) => {
 							event.stopPropagation()
 							void handleCopyPermalink()
 						}}
+						scale="small"
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className={cx(
-							'cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							connection.status !== 'connected' && !hasInputs
-								? 'pr-[12px]'
-								: 'pr-[4px]',
-						)}
+						variant="tertiary"
+						{...cx(styles.iconButton(), pressDown(), transitionColors())}
 					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
+						{linkNotifying ? <CheckIcon /> : <LinkIcon />}
+					</IconButton>
 					{/* Simulate is available whether or not a wallet is connected —
 					    checking what a write would do is the step *before* signing, and
 					    gating it on a connection put the safe option behind the risky
@@ -257,28 +242,20 @@ function WriteContractFunction(props: {
 						}}
 						title="Simulate this call without signing"
 						onClick={(event) => event.stopPropagation()}
-						className={cx(
-							'text-tertiary hover:text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							connection.status === 'connected' || hasInputs
-								? 'pr-[4px]'
-								: 'pr-[12px]',
-						)}
+						{...cx(styles.simulate(), pressDown(), transitionColors())}
 					>
-						<FlaskIcon className="size-[14px]" />
+						<FlaskIcon {...styles.simulateIcon()} />
 					</Link>
 					{connection.status === 'connected' && (
-						<button
-							type="button"
+						<IconButton
+							aria-label="Execute"
 							title="Execute"
 							disabled={
 								writeContract.isPending || (hasInputs && !allInputsFilled)
 							}
-							className={cx(
-								'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-								hasInputs ? 'pr-[4px]' : 'pr-[12px]',
-								(writeContract.isPending || (hasInputs && !allInputsFilled)) &&
-									'opacity-50 cursor-not-allowed',
-							)}
+							scale="small"
+							variant="tertiary"
+							{...cx(styles.iconButton(), pressDown(), transitionColors())}
 							onClick={() =>
 								writeContract.mutate({
 									address: props.address,
@@ -293,27 +270,31 @@ function WriteContractFunction(props: {
 								})
 							}
 						>
-							<PlayIcon className="size-[14px]" />
-						</button>
+							<PlayIcon />
+						</IconButton>
 					)}
 					{hasInputs && (
-						<button
-							type="button"
-							className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
+						<IconButton
 							aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
 							aria-expanded={isExpanded}
 							onClick={() => setIsExpanded(!isExpanded)}
+							scale="small"
+							variant="tertiary"
+							{...cx(styles.iconButton(), pressDown(), transitionColors())}
 						>
 							<ChevronDownIcon
-								className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
+								{...cx(
+									styles.chevron(),
+									isExpanded && styles.chevronExpanded(),
+								)}
 							/>
-						</button>
+						</IconButton>
 					)}
 				</div>
 			</div>
 
 			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+				<div {...styles.body()}>
 					{isPayable && (
 						<FunctionInput
 							label="Value (wei)"
@@ -335,27 +316,27 @@ function WriteContractFunction(props: {
 					))}
 
 					{parsedArgs.error && (
-						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
-							<p className="label-12 text-negative">{parsedArgs.error}</p>
+						<div {...styles.message({ tone: 'negative' })}>
+							<p {...styles.messageText()}>{parsedArgs.error}</p>
 						</div>
 					)}
 
 					{writeContract.error && (
-						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
-							<p className="label-12 text-negative">
+						<div {...styles.message({ tone: 'negative' })}>
+							<p {...styles.messageText()}>
 								{getWriteErrorMessage(writeContract.error)}
 							</p>
 						</div>
 					)}
 
 					{writeContract.isSuccess && writeContract.data && (
-						<div className="p-2.5 rounded-body bg-positive-subtle border border-positive/20">
-							<p className="label-12 text-positive font-mono break-all">
+						<div {...styles.message({ tone: 'positive' })}>
+							<p {...styles.receipt()}>
 								tx:{' '}
 								<Link
 									to="/receipt/$hash"
 									params={{ hash: writeContract.data }}
-									className="underline hover:text-positive"
+									{...styles.receiptLink()}
 								>
 									{writeContract.data}
 								</Link>
@@ -383,16 +364,16 @@ function FunctionInput(props: {
 
 	if (inputType === 'checkbox') {
 		return (
-			<div className="flex items-center gap-[8px]">
+			<div {...styles.checkboxField()}>
 				<input
 					id={inputId}
 					type="checkbox"
 					checked={value === 'true'}
 					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
-					className="w-[16px] h-[16px] rounded border-base-border"
+					{...styles.checkbox()}
 				/>
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{displayLabel} <span className="text-secondary">({input.type})</span>
+				<label htmlFor={inputId} {...styles.label()}>
+					{displayLabel} <span {...styles.labelType()}>({input.type})</span>
 				</label>
 			</div>
 		)
@@ -400,9 +381,9 @@ function FunctionInput(props: {
 
 	if (inputType === 'textarea' || isArrayType(input.type)) {
 		return (
-			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{displayLabel} <span className="text-secondary">({input.type})</span>
+			<div {...styles.field()}>
+				<label htmlFor={inputId} {...styles.label()}>
+					{displayLabel} <span {...styles.labelType()}>({input.type})</span>
 				</label>
 				<textarea
 					id={inputId}
@@ -410,16 +391,16 @@ function FunctionInput(props: {
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={placeholder}
 					rows={3}
-					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
+					{...cx(styles.input(), styles.textarea())}
 				/>
 			</div>
 		)
 	}
 
 	return (
-		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="label-12 text-primary font-sans">
-				{displayLabel} <span className="text-secondary">({input.type})</span>
+		<div {...styles.field()}>
+			<label htmlFor={inputId} {...styles.label()}>
+				{displayLabel} <span {...styles.labelType()}>({input.type})</span>
 			</label>
 			<input
 				autoCorrect="off"
@@ -430,8 +411,199 @@ function FunctionInput(props: {
 				id={inputId}
 				placeholder={placeholder}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
+				{...styles.input()}
 			/>
 		</div>
 	)
+}
+
+namespace styles {
+	export const list = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
+
+	export const emptyMessage = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const card = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderWidth: 'regular',
+		overflow: 'hidden',
+	})
+
+	export const header = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const expandButton = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		flexWrap: 'wrap',
+		gap: '8',
+		height: '100% !custom',
+		minWidth: '0px !custom',
+		paddingBlock: '8',
+		paddingLeft: '12',
+		textAlign: 'left',
+		':focus-visible': {
+			borderBottomLeftRadius: 'xs !important',
+			borderTopLeftRadius: 'xs !important',
+			outlineOffset: '-2px !important',
+		},
+	})
+
+	export const expandable = style({ cursor: 'pointer' })
+
+	export const signature = style({
+		color: 'content.secondary',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		typography: 'mono.inline',
+	})
+
+	export const payable = style({
+		backgroundColor: 'container.warning',
+		borderRadius: '3xs',
+		color: 'content.warning',
+		flexShrink: 0,
+		paddingBlock: '2',
+		paddingInline: '8',
+		typography: 'body.b3',
+	})
+
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexShrink: 0,
+		paddingLeft: '12',
+		paddingRight: '4',
+	})
+
+	// TDS IconButton owns size, color, radius, and focus ring. The card clips
+	// overflow, so the ring is drawn inside the button, as before.
+	export const iconButton = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+		':focus-visible': { outlineOffset: '-2px !important' },
+		':disabled': { opacity: 0.5 },
+	})
+
+	// Mirrors the small tertiary TDS IconButton beside it; it navigates, so it
+	// stays a router link.
+	export const simulate = style({
+		alignItems: 'center',
+		borderRadius: 'full',
+		color: 'content.primary',
+		display: 'inline-flex',
+		flexShrink: 0,
+		height: '32',
+		justifyContent: 'center',
+		width: '32',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+		':focus-visible': { borderRadius: 'full', outlineOffset: '-2px' },
+	})
+
+	export const simulateIcon = style({ height: '16', width: '16' })
+
+	export const chevron = style({ flexShrink: 0 })
+
+	export const chevronExpanded = style({ rotate: '180deg' })
+
+	export const body = style({
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '12',
+	})
+
+	export const message = variants({
+		base: {
+			borderRadius: '2xs',
+			borderWidth: 'regular',
+			padding: '12',
+		},
+		variants: {
+			tone: {
+				negative: {
+					backgroundColor: 'container.negative',
+					borderColor: 'border.negative',
+				},
+				positive: {
+					backgroundColor: 'container.positive',
+					borderColor: 'border.positive',
+				},
+			},
+		},
+	})
+
+	export const messageText = style({
+		color: 'content.negative',
+		typography: 'body.b3',
+	})
+
+	export const receipt = style({
+		color: 'content.positive',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const receiptLink = style({ textDecorationLine: 'underline' })
+
+	export const checkboxField = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const checkbox = style({
+		accentColor: 'content.primary',
+		height: '16',
+		width: '16',
+		// The document focus ring rounds focused controls to 8px.
+		':focus-visible': { borderRadius: '3xs' },
+	})
+
+	export const label = style({
+		color: 'content.primary',
+		typography: 'body.b3',
+	})
+
+	export const labelType = style({ color: 'content.secondary' })
+
+	export const field = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	// Mirrors TDS TextInput (filled, borderless) at a compact height. Focus
+	// rings come from the document focus style.
+	export const input = style({
+		backgroundColor: 'component.input.primary.fill',
+		borderRadius: '2xs',
+		color: 'content.primary',
+		paddingBlock: '8',
+		paddingInline: '12',
+		typography: 'mono.inline',
+		width: '100% !custom',
+		'::placeholder': { color: 'content.tertiary' },
+	})
+
+	export const textarea = style({ resize: 'none' })
 }

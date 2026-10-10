@@ -1,6 +1,8 @@
 import { Link } from '@tanstack/react-router'
-import { cx } from '#lib/css'
+import { style } from '@tempoxyz/ds/platform'
+import { cx } from 'zyzz'
 import { useMediaQuery } from '#lib/hooks'
+import { pressDown } from '#styles/explorer'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
@@ -29,29 +31,27 @@ export function Pagination(props: Pagination.Props) {
 
 	if (hideOnSinglePage && pages <= 1)
 		return (
-			<div className="flex items-center justify-end px-[16px] py-[12px] label-12 text-tertiary">
-				<span className="text-primary tabular-nums">
+			<div {...styles.single()}>
+				<span {...styles.number()}>
 					{Pagination.numFormat.format(totalItems)}
 				</span>
-				<span className="ml-[8px]">{itemsLabel}</span>
+				<span {...styles.singleLabel()}>{itemsLabel}</span>
 			</div>
 		)
 
 	if (compact)
 		return (
-			<div className="flex flex-col items-center gap-[12px] sm:flex-row sm:justify-between px-[16px] py-[12px] label-12 text-tertiary w-full">
-				<div className="grid grid-cols-4 justify-items-center gap-2 min-[480px]:flex min-[480px]:items-center min-[480px]:gap-[6px]">
+			<div {...styles.compact()}>
+				<div {...styles.compactNav()}>
 					<Link
 						to="."
 						resetScroll={false}
 						search={(previous) => ({ ...previous, page: 1 })}
 						disabled={page <= 1 || isPending}
-						className={cx(
-							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
-						)}
+						{...cx(styles.navButton(), styles.navCompact(), pressDown())}
 						title="First page"
 					>
-						<ChevronFirst className="size-[14px]" />
+						<ChevronFirst {...styles.iconSmall()} />
 					</Link>
 
 					<Link
@@ -62,17 +62,15 @@ export function Pagination(props: Pagination.Props) {
 							page: (previous?.page ?? 1) - 1,
 						})}
 						disabled={page <= 1 || isPending}
-						className={cx(
-							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
-						)}
+						{...cx(styles.navButton(), styles.navCompact(), pressDown())}
 						title="Previous page"
 					>
-						<ChevronLeft className="size-[14px]" />
+						<ChevronLeft {...styles.iconSmall()} />
 					</Link>
 
-					<span className="col-span-4 row-start-1 text-center text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					<span {...styles.compactLabel()}>
 						Page{' '}
-						<span className="text-primary">
+						<span {...styles.primary()}>
 							{Pagination.numFormat.format(page)}
 						</span>{' '}
 						of {Pagination.numFormat.format(pages)}
@@ -87,12 +85,10 @@ export function Pagination(props: Pagination.Props) {
 							page: (previous?.page ?? 1) + 1,
 						})}
 						disabled={page >= pages || isPending}
-						className={cx(
-							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
-						)}
+						{...cx(styles.navButton(), styles.navCompact(), pressDown())}
 						title="Next page"
 					>
-						<ChevronRight className="size-[14px]" />
+						<ChevronRight {...styles.iconSmall()} />
 					</Link>
 
 					<Link
@@ -101,12 +97,10 @@ export function Pagination(props: Pagination.Props) {
 						resetScroll={false}
 						search={(previous) => ({ ...previous, page: pages })}
 						disabled={page >= pages || isPending}
-						className={cx(
-							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
-						)}
+						{...cx(styles.navButton(), styles.navCompact(), pressDown())}
 						title="Last page"
 					>
-						<ChevronLast className="size-[14px]" />
+						<ChevronLast {...styles.iconSmall()} />
 					</Link>
 				</div>
 
@@ -115,8 +109,8 @@ export function Pagination(props: Pagination.Props) {
 		)
 
 	return (
-		<div className="flex flex-col gap-[12px] px-[16px] py-[12px] label-12 text-tertiary md:flex-row md:items-center md:justify-between">
-			<div className="flex flex-row items-center gap-[8px] mx-auto md:mx-0">
+		<div {...styles.full()}>
+			<div {...styles.fullNav()}>
 				<Link
 					to="."
 					resetScroll={false}
@@ -125,15 +119,13 @@ export function Pagination(props: Pagination.Props) {
 						page: (previous?.page ?? 1) - 1,
 					})}
 					disabled={page <= 1 || isPending}
-					className={cx(
-						'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
-					)}
+					{...cx(styles.navButton(), styles.navRegular(), pressDown())}
 					title="Previous page"
 				>
-					<ChevronLeft className="size-[16px]" />
+					<ChevronLeft {...styles.icon()} />
 				</Link>
 
-				<div className="flex items-center gap-[6px]">
+				<div {...styles.pageList()}>
 					{(() => {
 						const pageNumbers = Pagination.getPagination(page, pages)
 						let ellipsisCount = 0
@@ -142,7 +134,7 @@ export function Pagination(props: Pagination.Props) {
 							p === Pagination.Ellipsis ? (
 								<span
 									key={`ellipsis-${ellipsisCount++}`}
-									className="text-tertiary flex w-[28px] h-[28px] items-center justify-center"
+									{...styles.ellipsis()}
 								>
 									…
 								</span>
@@ -153,11 +145,13 @@ export function Pagination(props: Pagination.Props) {
 									resetScroll={false}
 									disabled={page === p || isPending}
 									search={(previous) => ({ ...previous, page: p })}
-									className={`rounded-button flex w-[28px] h-[28px] items-center justify-center ${
-										page === p
-											? 'bg-accent text-on-accent cursor-default'
-											: 'cursor-pointer press-down hover:bg-alt text-primary'
-									} ${isPending && page !== p ? 'opacity-50 cursor-not-allowed' : ''}`}
+									{...cx(
+										styles.pageLink(),
+										page === p && styles.pageCurrent(),
+										page !== p && styles.pageIdle(),
+										page !== p && pressDown(),
+										isPending && page !== p && styles.pagePending(),
+									)}
 								>
 									{p}
 								</Link>
@@ -174,12 +168,10 @@ export function Pagination(props: Pagination.Props) {
 						page: (previous?.page ?? 1) + 1,
 					})}
 					disabled={page >= pages || isPending}
-					className={cx(
-						'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
-					)}
+					{...cx(styles.navButton(), styles.navRegular(), pressDown())}
 					title="Next page"
 				>
-					<ChevronRight className="size-[16px]" />
+					<ChevronRight {...styles.icon()} />
 				</Link>
 			</div>
 
@@ -281,18 +273,16 @@ export namespace Pagination {
 		if (isSinglePage && !countLoading) return <div />
 
 		return (
-			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+			<div {...styles.simple()}>
 				<Link
 					to="."
 					resetScroll={false}
 					search={(prev) => ({ ...prev, page: 1 })}
 					disabled={page <= 1}
-					className={cx(
-						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
-					)}
+					{...cx(styles.navButton(), styles.navSimple())}
 					title="First page"
 				>
-					<ChevronFirst className="size-[14px]" />
+					<ChevronFirst {...styles.iconSmall()} />
 				</Link>
 				<Link
 					to="."
@@ -302,16 +292,14 @@ export namespace Pagination {
 						page: (prev?.page ?? 1) - 1,
 					})}
 					disabled={page <= 1}
-					className={cx(
-						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
-					)}
+					{...cx(styles.navButton(), styles.navSimple())}
 					title="Previous page"
 				>
-					<ChevronLeft className="size-[14px]" />
+					<ChevronLeft {...styles.iconSmall()} />
 				</Link>
 				{showPageLabel && (
-					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
-						<span className={cx('text-primary', fetching && 'opacity-50')}>
+					<span {...styles.simpleLabel()}>
+						<span {...cx(styles.primary(), fetching && styles.fetching())}>
 							{Pagination.numFormat.format(page)}
 						</span>
 						{' of '}
@@ -330,12 +318,10 @@ export namespace Pagination {
 					onMouseLeave={onCancelPrefetchNext}
 					onBlur={onCancelPrefetchNext}
 					disabled={disableNext}
-					className={cx(
-						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
-					)}
+					{...cx(styles.navButton(), styles.navSimple())}
 					title="Next page"
 				>
-					<ChevronRight className="size-[14px]" />
+					<ChevronRight {...styles.iconSmall()} />
 				</Link>
 				{typeof pages === 'number' && !pagesCapped && (
 					<Link
@@ -343,12 +329,10 @@ export namespace Pagination {
 						resetScroll={false}
 						search={(prev) => ({ ...prev, page: pages })}
 						disabled={page >= pages || disableLastPage}
-						className={cx(
-							'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
-						)}
+						{...cx(styles.navButton(), styles.navSimple())}
 						title="Last page"
 					>
-						<ChevronLast className="size-[14px]" />
+						<ChevronLast {...styles.iconSmall()} />
 					</Link>
 				)}
 			</div>
@@ -387,30 +371,25 @@ export namespace Pagination {
 			: Pagination.pluralize(totalItems, itemsLabel_)
 
 		return (
-			<div
-				className={cx(
-					'flex items-center justify-center sm:justify-end gap-[8px]',
-					className,
-				)}
-			>
+			<div {...styles.count({ className })}>
 				{page != null && pages != null && (
 					<>
-						<span className="text-primary tabular-nums">
+						<span {...styles.number()}>
 							{Pagination.numFormat.format(page)}
 						</span>
-						<span className="text-tertiary">of</span>
-						<span className="text-primary tabular-nums">
+						<span {...styles.tertiary()}>of</span>
+						<span {...styles.number()}>
 							{Pagination.numFormat.format(pages)}
 						</span>
-						<span className="text-tertiary">•</span>
+						<span {...styles.tertiary()}>•</span>
 					</>
 				)}
-				<span className="text-primary tabular-nums">
+				<span {...styles.number()}>
 					{loading
 						? '…'
 						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
 				</span>
-				<span className="text-tertiary font-sans">{itemsLabel}</span>
+				<span {...styles.countLabel()}>{itemsLabel}</span>
 			</div>
 		)
 	}
@@ -426,4 +405,203 @@ export namespace Pagination {
 			className?: string
 		}
 	}
+}
+
+const disabledNav = { cursor: 'default', opacity: 0.5 } as const
+
+namespace styles {
+	export const single = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		justifyContent: 'flex-end',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+	})
+
+	export const singleLabel = style({ marginLeft: '8' })
+
+	export const number = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+	})
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const fetching = style({ opacity: 0.5 })
+
+	// Round outline control in the style of a secondary TDS IconButton. The
+	// links stay TanStack `<Link>`s so they keep `disabled` and search updates.
+	export const navButton = style({
+		alignItems: 'center',
+		borderColor: 'line.secondary',
+		borderRadius: 'full',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		color: 'content.primary',
+		cursor: 'pointer',
+		display: 'flex',
+		justifyContent: 'center',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const navCompact = style({
+		height: '24',
+		width: '24',
+		'@media (width < 480px)': { height: '32', width: '32' },
+		selectors: { '&[aria-disabled="true"]': disabledNav },
+	})
+
+	export const navRegular = style({
+		height: '28px !custom',
+		width: '28px !custom',
+		selectors: { '&[aria-disabled="true"]': disabledNav },
+	})
+
+	export const navSimple = style({
+		height: '24',
+		width: '24',
+		':active': { translate: '0 0.5px !custom' },
+		selectors: {
+			'&[aria-disabled="true"]': { cursor: 'not-allowed', opacity: 0.5 },
+		},
+	})
+
+	export const iconSmall = style({
+		height: '14px !custom',
+		width: '14px !custom',
+	})
+
+	export const icon = style({ height: '16', width: '16' })
+
+	export const compact = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+		width: '100% !custom',
+		'@media (width >= 640px)': {
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+		},
+	})
+
+	export const compactNav = style({
+		display: 'grid',
+		gap: '8',
+		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+		justifyItems: 'center',
+		'@media (width >= 480px)': { alignItems: 'center', display: 'flex' },
+	})
+
+	export const compactLabel = style({
+		color: 'content.tertiary',
+		fontVariantNumeric: 'tabular-nums',
+		gridColumn: 'span 4 / span 4',
+		gridRowStart: '1',
+		paddingInline: '4',
+		textAlign: 'center',
+		whiteSpace: 'nowrap',
+	})
+
+	export const full = style({
+		color: 'content.tertiary',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+		'@media (width >= 768px)': {
+			alignItems: 'center',
+			flexDirection: 'row',
+			justifyContent: 'space-between',
+		},
+	})
+
+	export const fullNav = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'row',
+		gap: '8',
+		marginInline: 'auto !custom',
+		'@media (width >= 768px)': { marginInline: 'none' },
+	})
+
+	export const pageList = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const ellipsis = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		height: '28px !custom',
+		justifyContent: 'center',
+		width: '28px !custom',
+	})
+
+	export const pageLink = style({
+		alignItems: 'center',
+		borderRadius: 'full',
+		display: 'flex',
+		height: '28px !custom',
+		justifyContent: 'center',
+		width: '28px !custom',
+	})
+
+	export const pageCurrent = style({
+		backgroundColor: 'component.button.primary.fill',
+		color: 'background.secondary',
+		cursor: 'default',
+	})
+
+	export const pageIdle = style({
+		color: 'content.primary',
+		cursor: 'pointer',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const pagePending = style({ cursor: 'not-allowed', opacity: 0.5 })
+
+	export const simple = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'center',
+		'@media (width >= 640px)': { justifyContent: 'flex-start' },
+	})
+
+	export const simpleLabel = style({
+		color: 'content.tertiary',
+		fontVariantNumeric: 'tabular-nums',
+		paddingInline: '4',
+		whiteSpace: 'nowrap',
+	})
+
+	export const count = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'center',
+		'@media (width >= 640px)': { justifyContent: 'flex-end' },
+	})
+
+	export const countLabel = style({
+		color: 'content.tertiary',
+		fontFamily: 'Pilat, Arial, sans-serif',
+	})
 }

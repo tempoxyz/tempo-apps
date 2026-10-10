@@ -1,7 +1,8 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import type { Hex } from 'viem'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import { getContractInfo } from '#lib/domain/contracts'
 import {
 	decodeStorageChange,
@@ -12,6 +13,7 @@ import {
 import { useCopy } from '#lib/hooks'
 import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import type { CallTrace, PrestateDiff } from '#lib/queries'
+import { link, linkHover, pressDown, truncate } from '#styles/explorer'
 import CheckIcon from '~icons/lucide/check'
 import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
@@ -54,7 +56,7 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 	const hasData = data && data.accounts.length > 0
 
 	return (
-		<div className="flex flex-col">
+		<div {...styles.root()}>
 			{/* With a label this is a section header on the transaction page. Without
 			    one — the simulator, where the tab already names the panel — it is the
 			    same toolbar the trace uses, so the two panels are visibly siblings
@@ -70,17 +72,13 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 							active={wrap}
 							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
 						>
-							<WrapIcon className="size-[12px]" />
+							<WrapIcon />
 						</PanelToolbar.IconButton>
 						<PanelToolbar.IconButton
 							onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
 							title="Copy state changes"
 						>
-							{copy.notifying ? (
-								<CheckIcon className="size-[12px]" />
-							) : (
-								<CopyIcon className="size-[12px]" />
-							)}
+							{copy.notifying ? <CheckIcon /> : <CopyIcon />}
 						</PanelToolbar.IconButton>
 						<SegmentedControl
 							size="sm"
@@ -94,11 +92,11 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 					</PanelToolbar>
 				)
 			) : (
-				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-solid border-distinct">
-					<span className="copy-13">
+				<div {...styles.header()}>
+					<span {...styles.headerLabel()}>
 						{label && (
 							<>
-								<span className="text-tertiary">{label} </span>
+								<span {...styles.tertiary()}>{label} </span>
 								{hasData && (
 									<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
 								)}
@@ -106,42 +104,31 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 						)}
 					</span>
 					{hasData && (
-						<div className="flex items-center gap-[8px] text-tertiary">
-							{copy.notifying && (
-								<span className="label-12 select-none">copied</span>
-							)}
-							<button
-								type="button"
-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+						<div {...styles.headerActions()}>
+							{copy.notifying && <span {...styles.copied()}>copied</span>}
+							<PanelToolbar.IconButton
 								onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
 								title="Copy state changes"
 							>
-								<CopyIcon className="size-[14px]" />
-							</button>
-							<button
-								type="button"
+								<CopyIcon />
+							</PanelToolbar.IconButton>
+							<PanelToolbar.IconButton
 								onClick={() => setWrap(!wrap)}
-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+								active={wrap}
 								title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
 							>
-								<WrapIcon
-									className={cx('size-[14px]', wrap && 'text-primary')}
-								/>
-							</button>
+								<WrapIcon />
+							</PanelToolbar.IconButton>
 						</div>
 					)}
 				</div>
 			)}
 			{!prestate || !data ? (
-				<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
-					No state diff available.
-				</div>
+				<div {...styles.empty()}>No state diff available.</div>
 			) : data.accounts.length === 0 ? (
-				<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
-					No state changes.
-				</div>
+				<div {...styles.empty()}>No state changes.</div>
 			) : (
-				<div className="flex flex-col">
+				<div {...styles.root()}>
 					{data.accounts.map((account) => (
 						<TxStateDiff.AccountView
 							key={account.address}
@@ -164,7 +151,7 @@ function RawToggle(props: {
 		<button
 			type="button"
 			onClick={props.onToggle}
-			className="copy-13 text-accent hover:underline cursor-pointer press-down"
+			{...cx(styles.rawToggle(), link(), linkHover(), pressDown())}
 		>
 			{props.raw ? '(raw)' : '(decoded)'}
 		</button>
@@ -296,16 +283,22 @@ export namespace TxStateDiff {
 		const { address, contractName, nonceChange, storageChanges } = account
 
 		return (
-			<div className="flex flex-col">
-				<div className="flex items-center gap-[8px] px-[16px] pt-[12px] pb-[8px]">
+			<div {...styles.root()}>
+				<div {...styles.accountHeader()}>
 					<Link
 						to="/address/$address"
 						params={{ address }}
-						className="min-w-0 truncate text-accent hover:underline font-mono label-12 press-down"
+						{...cx(
+							styles.accountLink(),
+							truncate(),
+							link(),
+							linkHover(),
+							pressDown(),
+						)}
 					>
 						{contractName ? `${contractName} (${address})` : address}
 					</Link>
-					<span className="shrink-0 label-12 text-tertiary ml-auto">
+					<span {...styles.accountCount()}>
 						{nonceChange && 'nonce'}
 						{nonceChange && storageChanges.length > 0 && ' + '}
 						{storageChanges.length > 0 &&
@@ -313,39 +306,32 @@ export namespace TxStateDiff {
 					</span>
 				</div>
 
-				<div className="px-[16px] pb-[12px] overflow-x-auto">
+				<div {...styles.gridScroll()}>
 					<div
-						className={cx(
-							'rounded-body overflow-hidden border border-card-border bg-base-plane label-12 font-mono grid',
-							wrap
-								? 'grid-cols-3'
-								: 'grid-cols-[auto_auto_auto] w-fit min-w-full',
+						{...cx(
+							styles.grid(),
+							wrap && styles.gridWrap(),
+							!wrap && styles.gridNoWrap(),
 						)}
 					>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
-							Slot
-						</div>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
-							Before
-						</div>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
-							After
-						</div>
+						<div {...styles.gridHead()}>Slot</div>
+						<div {...styles.gridHead()}>Before</div>
+						<div {...styles.gridHead()}>After</div>
 						{nonceChange && (
 							<>
 								<CopyCell
 									value="nonce"
-									className="text-secondary border-t border-card-border"
+									className={styles.cellSlot().className}
 									wrap={wrap}
 								/>
 								<CopyCell
 									value={String(nonceChange.before)}
-									className="text-tertiary border-t border-card-border"
+									className={styles.cellBefore().className}
 									wrap={wrap}
 								/>
 								<CopyCell
 									value={String(nonceChange.after)}
-									className="text-primary border-t border-card-border"
+									className={styles.cellAfter().className}
 									wrap={wrap}
 								/>
 							</>
@@ -357,14 +343,14 @@ export namespace TxStateDiff {
 									<CopyCell
 										value={decoded?.slotLabel ?? change.slot}
 										copyValue={change.slot}
-										className="text-secondary border-t border-card-border"
+										className={styles.cellSlot().className}
 										wrap={wrap}
 										isDecoded={Boolean(decoded?.slotLabel)}
 									/>
 									<CopyCell
 										value={decoded?.beforeDisplay ?? change.before}
 										copyValue={decoded?.beforeRaw ?? change.before}
-										className="text-tertiary border-t border-card-border"
+										className={styles.cellBefore().className}
 										wrap={wrap}
 										isDecoded={Boolean(decoded?.beforeDisplay)}
 									/>
@@ -400,18 +386,19 @@ export namespace TxStateDiff {
 		return (
 			<button
 				type="button"
-				className={cx(
-					'flex items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group',
-					wrap ? 'break-all' : 'whitespace-nowrap',
-					className,
+				{...cx(
+					styles.cell({ className }),
+					pressDown(),
+					wrap && styles.breakAll(),
+					!wrap && styles.nowrap(),
 				)}
 				onClick={() => copy.copy(valueToCopy)}
 				title={isDecoded ? valueToCopy : undefined}
 			>
 				{value}
 				{copy.notifying && (
-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
-						<div className="translate-y-[-2px]">copied</div>
+					<div {...styles.copiedBadge()}>
+						<div {...styles.copiedBadgeText()}>copied</div>
 					</div>
 				)}
 			</button>
@@ -436,30 +423,30 @@ export namespace TxStateDiff {
 		return (
 			<button
 				type="button"
-				className={cx(
-					'flex flex-col items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group border-t border-card-border',
-					wrap ? 'break-all' : 'whitespace-nowrap',
+				{...cx(
+					styles.cell(),
+					styles.diffCell(),
+					pressDown(),
+					wrap && styles.breakAll(),
+					!wrap && styles.nowrap(),
 				)}
 				onClick={() => copy.copy(valueToCopy)}
 				title={isDecoded ? valueToCopy : undefined}
 			>
-				<span className="text-primary">{value}</span>
+				<span {...styles.primary()}>{value}</span>
 				{/* A balance going down is not a failure, so it does not get failure
 				    red. Green marks an increase; a decrease is just a value. This is
 				    the same pairing the simulator's balance table uses. */}
 				{diff && (
 					<span
-						className={cx(
-							'label-12',
-							diff.isPositive ? 'text-base-content-positive' : 'text-secondary',
-						)}
+						{...cx(styles.diff(), diff.isPositive && styles.diffPositive())}
 					>
 						{diff.display}
 					</span>
 				)}
 				{copy.notifying && (
-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
-						<div className="translate-y-[-2px]">copied</div>
+					<div {...styles.copiedBadge()}>
+						<div {...styles.copiedBadgeText()}>copied</div>
 					</div>
 				)}
 			</button>
@@ -514,4 +501,167 @@ export namespace TxStateDiff {
 
 		return lines.join('\n').trim()
 	}
+}
+
+namespace styles {
+	export const root = style({ display: 'flex', flexDirection: 'column' })
+
+	export const header = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		height: '40',
+		justifyContent: 'space-between',
+		paddingLeft: '16',
+		paddingRight: '8',
+	})
+
+	export const headerLabel = style({ typography: 'body.b3' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const rawToggle = style({ cursor: 'pointer', typography: 'body.b3' })
+
+	export const headerActions = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		gap: '4',
+	})
+
+	export const copied = style({ typography: 'body.b3', userSelect: 'none' })
+
+	export const empty = style({
+		color: 'content.tertiary',
+		paddingBlock: '24',
+		paddingInline: '20',
+		textAlign: 'center',
+		typography: 'body.b3',
+	})
+
+	export const accountHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		paddingBottom: '8',
+		paddingInline: '16',
+		paddingTop: '12',
+	})
+
+	export const accountLink = style({
+		minWidth: '0 !custom',
+		typography: 'mono.inline',
+	})
+
+	export const accountCount = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		marginLeft: 'auto !custom',
+		typography: 'body.b3',
+	})
+
+	export const gridScroll = style({
+		overflowX: 'auto',
+		paddingBottom: '12',
+		paddingInline: '16',
+	})
+
+	export const grid = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		display: 'grid',
+		overflow: 'hidden',
+		typography: 'mono.inline',
+	})
+
+	export const gridWrap = style({
+		gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+	})
+
+	export const gridNoWrap = style({
+		gridTemplateColumns: 'auto auto auto',
+		minWidth: '100% !custom',
+		width: 'fit-content !custom',
+	})
+
+	// Header cells inherit the grid's mono face, as they always have.
+	export const gridHead = style({
+		backgroundColor: 'container.subtle',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		color: 'content.tertiary',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const cell = style({
+		alignItems: 'flex-start',
+		cursor: 'pointer',
+		display: 'flex',
+		paddingBlock: '8',
+		paddingInline: '12',
+		position: 'relative',
+		textAlign: 'left',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const cellSlot = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		color: 'content.secondary',
+	})
+
+	export const cellBefore = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		color: 'content.tertiary',
+	})
+
+	export const cellAfter = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		color: 'content.primary',
+	})
+
+	export const diffCell = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		flexDirection: 'column',
+	})
+
+	export const breakAll = style({ wordBreak: 'break-all' })
+
+	export const nowrap = style({ whiteSpace: 'nowrap' })
+
+	export const diff = style({ color: 'content.secondary' })
+
+	export const diffPositive = style({ color: 'content.positive' })
+
+	export const copiedBadge = style({
+		backgroundColor: 'background.elevated',
+		borderRadius: '3xs',
+		bottom: '2',
+		color: 'content.secondary',
+		paddingBlock: '2',
+		paddingInline: '8',
+		position: 'absolute',
+		right: '2',
+	})
+
+	export const copiedBadgeText = style({ translate: '0 -2px !custom' })
 }

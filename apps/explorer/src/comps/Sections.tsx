@@ -1,5 +1,7 @@
+import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import { link, pressDown } from '#styles/explorer'
 import { Pagination } from './Pagination'
 
 export function Sections(props: Sections.Props): React.JSX.Element {
@@ -32,7 +34,7 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 	if (mode === 'stacked')
 		return (
 			<Sections.Context.Provider value={{ mode }}>
-				<div className="flex flex-col gap-[14px]">
+				<div {...styles.stack()}>
 					{sections.map((section) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
 						const isCollapsed =
@@ -42,30 +44,23 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 						const canCollapse = section.autoCollapse !== false
 
 						return (
-							<section
-								key={section.title}
-								className={cx(
-									'flex flex-col font-sans w-full overflow-hidden',
-									'rounded-body border border-card-border bg-card-header',
-									'shadow-none',
-								)}
-							>
+							<section key={section.title} {...styles.section()}>
 								{canCollapse ? (
 									<button
 										type="button"
 										aria-expanded={!isCollapsed}
 										onClick={() => toggleSection(section.title)}
-										className={cx(
-											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
-											isCollapsed ? 'rounded-body!' : 'rounded-t-body!',
+										{...cx(
+											styles.toggle(),
+											pressDown(),
+											isCollapsed && styles.toggleCollapsed(),
+											!isCollapsed && styles.toggleExpanded(),
 										)}
 									>
-										<h1 className="heading-16 text-primary font-sans">
-											{section.title}
-										</h1>
-										<div className="flex items-center gap-[12px]">
+										<h1 {...styles.title()}>{section.title}</h1>
+										<div {...styles.toggleMeta()}>
 											{isCollapsed && Boolean(section.totalItems) && (
-												<span className="copy-13 text-tertiary">
+												<span {...styles.count()}>
 													{section.totalItems}{' '}
 													{Pagination.pluralize(
 														section.totalItems ?? 0,
@@ -74,9 +69,10 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 												</span>
 											)}
 											<div
-												className={cx(
-													'accent copy-16 font-mono',
-													isCollapsed ? 'text-accent' : 'text-tertiary',
+												{...cx(
+													styles.indicator(),
+													isCollapsed && link(),
+													!isCollapsed && styles.indicatorExpanded(),
 												)}
 											>
 												[{isCollapsed ? '+' : '–'}]
@@ -84,12 +80,10 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 										</div>
 									</button>
 								) : (
-									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-body">
-										<h1 className="heading-16 text-primary font-sans">
-											{section.title}
-										</h1>
+									<div {...styles.header()}>
+										<h1 {...styles.title()}>{section.title}</h1>
 										{Boolean(section.totalItems) && (
-											<span className="copy-13 text-tertiary">
+											<span {...styles.count()}>
 												{section.totalItems}{' '}
 												{Pagination.pluralize(
 													section.totalItems ?? 0,
@@ -101,11 +95,9 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 								)}
 
 								{!isCollapsed && (
-									<div className="rounded-t-body border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+									<div {...cx(styles.content(), styles.contentStacked())}>
 										{section.contextual && (
-											<div className="px-[18px] py-[10px] border-b border-solid border-card-border">
-												{section.contextual}
-											</div>
+											<div {...styles.contextual()}>{section.contextual}</div>
 										)}
 										{section.content}
 									</div>
@@ -119,19 +111,9 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 
 	return (
 		<Sections.Context.Provider value={{ mode }}>
-			<section
-				className={cx(
-					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
-					'rounded-body border border-card-border bg-card-header',
-					'shadow-none',
-				)}
-			>
-				<div className="min-h-11 flex flex-wrap items-center justify-between gap-x-3">
-					<div
-						role="tablist"
-						aria-label="Details"
-						className="flex min-w-0 overflow-x-auto items-center self-stretch font-sans"
-					>
+			<section {...cx(styles.section(), styles.sectionTabs())}>
+				<div {...styles.tabsHeader()}>
+					<div role="tablist" aria-label="Details" {...styles.tabList()}>
 						{sections.length === 1 ? (
 							<div
 								role="tab"
@@ -139,13 +121,11 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 								id={`${sectionId}-tab-0`}
 								aria-controls={`${sectionId}-panel-0`}
 								tabIndex={0}
-								className="h-full flex items-center gap-[8px] button-14 pl-[18px] pr-[12px] font-sans"
+								{...styles.singleTab()}
 							>
-								<span className="text-primary">{sections[0].title}</span>
+								<span {...styles.primary()}>{sections[0].title}</span>
 								{Boolean(sections[0].totalItems) && (
-									<span className="text-tertiary">
-										({sections[0].totalItems})
-									</span>
+									<span {...styles.tertiary()}>({sections[0].totalItems})</span>
 								)}
 							</div>
 						) : (
@@ -178,19 +158,16 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 										if (activeSection === index) return
 										onSectionChange?.(index)
 									}}
-									className={cx(
-										'min-h-11 shrink-0 flex items-center button-14 font-sans',
-										'focus-visible:-outline-offset-2! cursor-pointer',
-										index === 0
-											? 'pl-[18px] pr-[12px] rounded-tl-body!'
-											: 'px-[12px]',
-										activeSection === index ? 'text-primary' : 'text-tertiary',
+									{...cx(
+										styles.tab(),
+										index === 0 && styles.tabFirst(),
+										activeSection === index && styles.tabActive(),
 									)}
 								>
-									<div className="relative h-full flex items-center">
+									<div {...styles.tabLabel()}>
 										{section.title}
 										{activeSection === index && (
-											<div className="absolute h-px bg-accent bottom-0 left-0 right-0 -mx-[2px]" />
+											<div {...styles.tabIndicator()} />
 										)}
 									</div>
 								</button>
@@ -200,7 +177,10 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 					{sections.map((section, index) => (
 						<div
 							key={section.title}
-							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
+							{...cx(
+								styles.tabContextual(),
+								activeSection !== index && styles.hidden(),
+							)}
 						>
 							{section.contextual}
 						</div>
@@ -213,9 +193,9 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 						role="tabpanel"
 						id={`${sectionId}-panel-${index}`}
 						aria-labelledby={`${sectionId}-tab-${index}`}
-						className={cx(
-							'border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
-							activeSection !== index && 'hidden',
+						{...cx(
+							styles.content(),
+							activeSection !== index && styles.hidden(),
 						)}
 					>
 						{section.content}
@@ -256,4 +236,195 @@ export namespace Sections {
 	export function useSectionsMode() {
 		return React.useContext(Context).mode
 	}
+}
+
+namespace styles {
+	export const stack = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16',
+	})
+
+	export const section = style({
+		backgroundColor: 'background.secondary',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		boxShadow: 'none',
+		display: 'flex',
+		flexDirection: 'column',
+		fontFamily: 'Pilat, Arial, sans-serif',
+		overflow: 'hidden',
+		width: '100% !custom',
+	})
+
+	export const sectionTabs = style({
+		alignSelf: 'flex-start',
+		minHeight: '0 !custom',
+	})
+
+	// The focus ring rules are `!important`, like the former Tailwind
+	// modifiers, so they beat the global focus ring.
+	export const toggle = style({
+		alignItems: 'center',
+		cursor: 'pointer',
+		display: 'flex',
+		height: '52px !custom',
+		justifyContent: 'space-between',
+		outlineOffset: '-2px !important',
+		paddingInline: '20',
+	})
+
+	export const toggleCollapsed = style({ borderRadius: 'xs !important' })
+
+	export const toggleExpanded = style({
+		borderBottomLeftRadius: 'none !important',
+		borderBottomRightRadius: 'none !important',
+		borderTopLeftRadius: 'xs !important',
+		borderTopRightRadius: 'xs !important',
+	})
+
+	export const title = style({
+		color: 'content.primary',
+		typography: 'heading.h4',
+	})
+
+	export const toggleMeta = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '12',
+	})
+
+	export const count = style({
+		color: 'content.tertiary',
+		typography: 'body.b3',
+	})
+
+	export const indicator = style({
+		fontFamily: '"JetBrains Mono", monospace',
+		fontSize: '16px',
+		fontWeight: 400,
+		letterSpacing: '0px',
+		lineHeight: '22px',
+	})
+
+	export const indicatorExpanded = style({ color: 'content.tertiary' })
+
+	export const header = style({
+		alignItems: 'center',
+		borderTopLeftRadius: 'xs',
+		borderTopRightRadius: 'xs',
+		display: 'flex',
+		height: '52px !custom',
+		justifyContent: 'space-between',
+		paddingInline: '20',
+	})
+
+	export const content = style({
+		backgroundColor: 'background.secondary',
+		borderTopColor: 'line.secondary',
+		borderTopStyle: 'solid',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		minHeight: '0 !custom',
+		overflowX: 'auto',
+		':focus-visible': {
+			borderRadius: '2px !custom !important',
+			outlineColor: 'border.focus',
+			outlineOffset: '-2px !important',
+			outlineStyle: 'solid',
+			outlineWidth: '2px',
+		},
+	})
+
+	export const contentStacked = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopLeftRadius: 'xs',
+		borderTopRightRadius: 'xs',
+		borderWidth: 'regular',
+		marginBottom: '-1px !custom',
+		marginInline: '-1px !custom',
+	})
+
+	export const contextual = style({
+		borderBottomColor: 'line.secondary',
+		borderBottomStyle: 'solid',
+		borderBottomWidth: 'regular',
+		paddingBlock: '12',
+		paddingInline: '20',
+	})
+
+	export const tabsHeader = style({
+		alignItems: 'center',
+		columnGap: '12',
+		display: 'flex',
+		flexWrap: 'wrap',
+		justifyContent: 'space-between',
+		minHeight: '44px !custom',
+	})
+
+	export const tabList = style({
+		alignItems: 'center',
+		alignSelf: 'stretch',
+		display: 'flex',
+		minWidth: '0 !custom',
+		overflowX: 'auto',
+	})
+
+	export const singleTab = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		height: '100% !custom',
+		paddingLeft: '20',
+		paddingRight: '12',
+		typography: 'body.b2',
+	})
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const tab = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		cursor: 'pointer',
+		display: 'flex',
+		flexShrink: '0 !custom',
+		minHeight: '44px !custom',
+		outlineOffset: '-2px !important',
+		paddingInline: '12',
+		typography: 'body.b2',
+	})
+
+	export const tabFirst = style({
+		borderTopLeftRadius: 'xs !important',
+		paddingLeft: '20',
+	})
+
+	export const tabActive = style({ color: 'content.primary' })
+
+	export const tabLabel = style({
+		alignItems: 'center',
+		display: 'flex',
+		height: '100% !custom',
+		position: 'relative',
+	})
+
+	export const tabIndicator = style({
+		backgroundColor: 'component.button.primary.fill',
+		bottom: '0px !custom',
+		height: '1px !custom',
+		left: '0px !custom',
+		marginInline: '-2px !custom',
+		position: 'absolute',
+		right: '0px !custom',
+	})
+
+	export const tabContextual = style({ paddingRight: '20' })
+
+	export const hidden = style({ display: 'none' })
 }

@@ -1,14 +1,15 @@
+import { IconButton, style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
 import { Link } from '@tanstack/react-router'
 import { useBytecode, usePublicClient } from 'wagmi'
+import { cx } from 'zyzz'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
 import { SourceSection } from '#comps/ContractSource.tsx'
 import { ContractWriter } from '#comps/ContractWriter.tsx'
-import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import {
@@ -24,6 +25,7 @@ import {
 } from '#lib/domain/proxy.ts'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
+import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
@@ -43,7 +45,7 @@ function proxyTypeUrl(type: ProxyType | undefined): string {
 function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
 	if (!isInferredAbi(abi)) return null
 	return (
-		<p className="px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
+		<p {...styles.inferredNotice()}>
 			Inferred ABI: function names, read/write classifications, and return types
 			may be incomplete or incorrect. Verify the contract source for an accurate
 			ABI.
@@ -82,8 +84,8 @@ export function ContractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<div className="rounded-body bg-card-header p-[18px] h-full">
-				<p className="copy-14 font-medium text-tertiary">
+			<div {...styles.emptyCard()}>
+				<p {...styles.emptyMessage()}>
 					{props.isLoadingContractInfo
 						? `Loading contract information${ellipsis}`
 						: 'No ABI available for this contract.'}
@@ -93,17 +95,17 @@ export function ContractTabContent(props: {
 	}
 
 	return (
-		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+		<div {...styles.tabContent()}>
 			{/* TIP-20 Banner */}
 			{isTip20 && (
-				<div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] px-[16px] py-[10px] copy-13 text-secondary border-b border-solid border-distinct">
-					<span className="whitespace-nowrap">TIP-20 Native Precompile</span>
-					<span className="text-tertiary">·</span>
+				<div {...styles.tip20Banner()}>
+					<span {...styles.nowrap()}>TIP-20 Native Precompile</span>
+					<span {...styles.separator()}>·</span>
 					<a
 						href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="text-accent hover:underline whitespace-nowrap"
+						{...cx(styles.nowrap(), link(), linkHover())}
 					>
 						Spec
 					</a>
@@ -111,7 +113,7 @@ export function ContractTabContent(props: {
 						href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
 						target="_blank"
 						rel="noopener noreferrer"
-						className="text-accent hover:underline whitespace-nowrap"
+						{...cx(styles.nowrap(), link(), linkHover())}
 					>
 						Rust
 					</a>
@@ -130,32 +132,36 @@ export function ContractTabContent(props: {
 				onToggle={() => setAbiExpanded(!abiExpanded)}
 				actions={
 					<>
-						{copiedAbi && <span className="label-12 select-none">copied</span>}
-						<button
-							type="button"
+						{copiedAbi && <span {...styles.copied()}>copied</span>}
+						<IconButton
+							aria-label="Copy ABI"
 							onClick={handleCopyAbi}
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							scale="small"
 							title="Copy ABI"
+							variant="tertiary"
+							{...cx(styles.actionButton(), pressDown(), transitionColors())}
 						>
-							<CopyIcon className="size-[14px]" />
-						</button>
-						<button
-							type="button"
+							<CopyIcon />
+						</IconButton>
+						<IconButton
+							aria-label="Download ABI"
 							onClick={downloadAbi}
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							scale="small"
 							title="Download ABI"
+							variant="tertiary"
+							{...cx(styles.actionButton(), pressDown(), transitionColors())}
 						>
-							<DownloadIcon className="size-[14px]" />
-						</button>
+							<DownloadIcon />
+						</IconButton>
 						{docsUrl && !source && (
 							<a
 								href={docsUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="label-12 text-accent hover:underline press-down inline-flex items-center gap-[4px]"
+								{...cx(styles.docsLink(), link(), linkHover(), pressDown())}
 							>
 								Docs
-								<ExternalLinkIcon className="size-[12px]" />
+								<ExternalLinkIcon {...styles.docsIcon()} />
 							</a>
 						)}
 					</>
@@ -184,35 +190,28 @@ export function CollapsibleSection(props: {
 	const { title, expanded, onToggle, actions, children, first } = props
 
 	return (
-		<div className="flex flex-col border-b border-solid border-distinct">
-			<div className="flex items-center h-auto py-[6px] shrink-0">
+		<div {...styles.section()}>
+			<div {...styles.sectionHeader()}>
 				<button
 					type="button"
 					onClick={onToggle}
-					className={cx(
-						'flex items-center gap-[8px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2! py-[6px]',
-						actions ? 'pr-[12px]' : 'flex-1 pr-[16px]',
-						first && 'focus-visible:rounded-tl-body!',
-						first && !actions && 'focus-visible:rounded-tr-body!',
+					{...cx(
+						styles.sectionToggle(),
+						Boolean(actions) && styles.sectionToggleWithActions(),
+						!actions && styles.sectionToggleFill(),
+						first && styles.sectionToggleFirst(),
+						first && !actions && styles.sectionToggleFirstEnd(),
+						pressDown(),
 					)}
 				>
-					<span className="copy-14 text-tertiary whitespace-nowrap font-sans">
-						{title}
-					</span>
+					<span {...styles.sectionTitle()}>{title}</span>
 					<ChevronDownIcon
-						className={cx(
-							'size-[14px] text-tertiary',
-							!expanded && '-rotate-90',
-						)}
+						{...cx(styles.chevron(), !expanded && styles.chevronCollapsed())}
 					/>
 				</button>
-				{actions && (
-					<div className="flex-1 min-w-0 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
-						{actions}
-					</div>
-				)}
+				{actions && <div {...styles.sectionActions()}>{actions}</div>}
 			</div>
-			<div className={cx(!expanded && 'hidden')}>{children}</div>
+			<div {...cx(!expanded && styles.hidden())}>{children}</div>
 		</div>
 	)
 }
@@ -244,31 +243,32 @@ function BytecodeSection(props: { address: Address.Address }) {
 			onToggle={() => setExpanded(!expanded)}
 			actions={
 				<>
-					{notifying && <span className="label-12 select-none">copied</span>}
-					<button
-						type="button"
+					{notifying && <span {...styles.copied()}>copied</span>}
+					<IconButton
+						aria-label="Copy bytecode"
 						onClick={handleCopy}
-						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+						scale="small"
 						title="Copy bytecode"
+						variant="tertiary"
+						{...cx(styles.actionButton(), pressDown(), transitionColors())}
 					>
-						<CopyIcon className="size-[14px]" />
-					</button>
-					<button
-						type="button"
+						<CopyIcon />
+					</IconButton>
+					<IconButton
+						aria-label="Download bytecode"
 						onClick={downloadBytecode}
-						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+						scale="small"
 						title="Download bytecode"
+						variant="tertiary"
+						{...cx(styles.actionButton(), pressDown(), transitionColors())}
 					>
-						<DownloadIcon className="size-[14px]" />
-					</button>
+						<DownloadIcon />
+					</IconButton>
 				</>
 			}
 		>
-			<div className="max-h-[280px] overflow-auto px-[18px] py-[12px]">
-				<pre
-					className="label-12 text-primary break-all whitespace-pre-wrap"
-					suppressHydrationWarning
-				>
+			<div {...styles.bytecode()}>
+				<pre {...styles.bytecodeText()} suppressHydrationWarning>
 					{bytecode ?? `Loading${ellipsis}`}
 				</pre>
 			</div>
@@ -336,20 +336,16 @@ export function InteractTabContent(props: {
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
-			<div className="rounded-body bg-card-header p-[18px] h-full">
-				<p className="copy-14 font-medium text-tertiary">
-					Loading contract information{ellipsis}
-				</p>
+			<div {...styles.emptyCard()}>
+				<p {...styles.emptyMessage()}>Loading contract information{ellipsis}</p>
 			</div>
 		)
 	}
 
 	if (!abi) {
 		return (
-			<div className="rounded-body bg-card-header p-[18px] h-full">
-				<p className="copy-14 font-medium text-tertiary">
-					No ABI available for this contract.
-				</p>
+			<div {...styles.emptyCard()}>
+				<p {...styles.emptyMessage()}>No ABI available for this contract.</p>
 			</div>
 		)
 	}
@@ -359,25 +355,25 @@ export function InteractTabContent(props: {
 	const hasProxyFunctions = proxyAbi && proxyAbi.length > 0
 
 	return (
-		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+		<div {...styles.tabContent()}>
 			{/* Proxy Info Banner */}
 			{isProxy && implementationAddress && (
-				<div className="flex items-center gap-[8px] px-[16px] py-[10px] bg-accent/10 border-b border-solid border-distinct copy-13">
+				<div {...styles.proxyBanner()}>
 					<a
 						href={proxyTypeUrl(proxyInfo?.type)}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-accent/20 text-accent hover:bg-accent/30 rounded label-12 font-medium transition-colors"
+						{...cx(styles.proxyType(), transitionColors())}
 					>
 						{proxyInfo?.type} Proxy
-						<ExternalLinkIcon className="size-[10px]" />
+						<ExternalLinkIcon {...styles.proxyTypeIcon()} />
 					</a>
-					<span className="text-secondary">Implementation:</span>
+					<span {...styles.implementationLabel()}>Implementation:</span>
 					<Link
 						to="/address/$address"
 						params={{ address: implementationAddress }}
 						search={{ tab: 'interact' }}
-						className="font-mono label-12 text-accent hover:underline"
+						{...cx(styles.implementationLink(), link(), linkHover())}
 					>
 						{implementationAddress.slice(0, 10)}...
 						{implementationAddress.slice(-8)}
@@ -394,7 +390,7 @@ export function InteractTabContent(props: {
 				onToggle={() => setWriteExpanded(!writeExpanded)}
 				actions={<ConnectWallet />}
 			>
-				<div className="px-[10px] pb-[10px]">
+				<div {...styles.sectionBody()}>
 					<ContractWriter address={address} abi={abi} />
 				</div>
 			</CollapsibleSection>
@@ -405,7 +401,7 @@ export function InteractTabContent(props: {
 				expanded={readExpanded}
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
-				<div className="px-[10px] pb-[10px]">
+				<div {...styles.sectionBody()}>
 					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
 				</div>
 			</CollapsibleSection>
@@ -417,13 +413,11 @@ export function InteractTabContent(props: {
 					expanded={proxyFunctionsExpanded}
 					onToggle={() => setProxyFunctionsExpanded(!proxyFunctionsExpanded)}
 					actions={
-						<span className="label-12 text-secondary">
-							Direct proxy functions
-						</span>
+						<span {...styles.proxyFunctionsNote()}>Direct proxy functions</span>
 					}
 				>
-					<div className="px-[10px] pb-[10px] flex flex-col gap-[12px]">
-						<div className="label-12 text-secondary px-[6px] py-[4px] bg-warning-subtle rounded border border-warning">
+					<div {...styles.proxyFunctionsBody()}>
+						<div {...styles.proxyFunctionsWarning()}>
 							These are functions defined on the proxy contract itself, not the
 							implementation.
 						</div>
@@ -435,4 +429,229 @@ export function InteractTabContent(props: {
 			)}
 		</div>
 	)
+}
+
+namespace styles {
+	export const inferredNotice = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		color: 'content.secondary',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+	})
+
+	export const emptyCard = style({
+		backgroundColor: 'background.secondary',
+		borderRadius: 'xs',
+		height: '100% !custom',
+		padding: '20',
+	})
+
+	export const emptyMessage = style({
+		color: 'content.tertiary',
+		typography: 'body.b2',
+	})
+
+	export const tabContent = style({
+		display: 'flex',
+		flexDirection: 'column',
+		height: '100% !custom',
+		selectors: {
+			'& > :last-child': { borderBottomColor: 'transparent !custom' },
+		},
+	})
+
+	export const tip20Banner = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		color: 'content.secondary',
+		columnGap: '8',
+		display: 'flex',
+		flexWrap: 'wrap',
+		paddingBlock: '12',
+		paddingInline: '16',
+		rowGap: '4',
+		typography: 'body.b3',
+	})
+
+	export const nowrap = style({ whiteSpace: 'nowrap' })
+
+	export const separator = style({ color: 'content.tertiary' })
+
+	export const copied = style({
+		alignItems: 'center',
+		display: 'flex',
+		typography: 'body.b3',
+		userSelect: 'none',
+	})
+
+	// TDS IconButton owns size, color, radius, and focus ring; this only adds
+	// the hover fill it leaves unset.
+	export const actionButton = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const docsLink = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+		typography: 'body.b3',
+	})
+
+	export const docsIcon = style({ height: '12', width: '12' })
+
+	export const section = style({
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		display: 'flex',
+		flexDirection: 'column',
+	})
+
+	export const sectionHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexShrink: 0,
+		height: 'auto !custom',
+		paddingBlock: '4',
+	})
+
+	export const sectionToggle = style({
+		alignItems: 'center',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		height: '100% !custom',
+		paddingBlock: '8',
+		paddingLeft: '16',
+		paddingRight: '16',
+		':focus-visible': { outlineOffset: '-2px !important' },
+	})
+
+	export const sectionToggleWithActions = style({ paddingRight: '12' })
+
+	export const sectionToggleFill = style({ flex: 1 })
+
+	export const sectionToggleFirst = style({
+		':focus-visible': { borderTopLeftRadius: 'xs !important' },
+	})
+
+	export const sectionToggleFirstEnd = style({
+		':focus-visible': { borderTopRightRadius: 'xs !important' },
+	})
+
+	export const sectionTitle = style({
+		color: 'content.tertiary',
+		typography: 'body.b2',
+		whiteSpace: 'nowrap',
+	})
+
+	export const chevron = style({
+		color: 'content.tertiary',
+		height: '14px !custom',
+		width: '14px !custom',
+	})
+
+	export const chevronCollapsed = style({ rotate: '-90deg' })
+
+	export const sectionActions = style({
+		alignItems: 'stretch',
+		color: 'content.tertiary',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+		justifyContent: 'flex-end',
+		minWidth: '0px !custom',
+		paddingInline: '12',
+	})
+
+	export const hidden = style({ display: 'none' })
+
+	export const bytecode = style({
+		maxHeight: '280px !custom',
+		overflow: 'auto',
+		paddingBlock: '12',
+		paddingInline: '20',
+	})
+
+	export const bytecodeText = style({
+		color: 'content.primary',
+		typography: 'mono.inline',
+		whiteSpace: 'pre-wrap',
+		wordBreak: 'break-all',
+	})
+
+	export const proxyBanner = style({
+		alignItems: 'center',
+		backgroundColor: 'container.regular',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		display: 'flex',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b3',
+	})
+
+	// Mirrors a small white TDS Badge; Badge renders a span, not a link.
+	export const proxyType = style({
+		alignItems: 'center',
+		backgroundColor: 'background.secondary',
+		borderRadius: 'full',
+		color: 'content.primary',
+		display: 'inline-flex',
+		gap: '4',
+		paddingBlock: '2',
+		paddingInline: '8',
+		typography: 'body.b3Strong',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+		// The document focus ring squares focused links off at 8px.
+		':focus-visible': { borderRadius: 'full' },
+	})
+
+	export const proxyTypeIcon = style({
+		height: '10px !custom',
+		width: '10px !custom',
+	})
+
+	export const implementationLabel = style({ color: 'content.secondary' })
+
+	export const implementationLink = style({ typography: 'mono.inline' })
+
+	export const sectionBody = style({
+		paddingBottom: '12',
+		paddingInline: '12',
+	})
+
+	export const proxyFunctionsNote = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		typography: 'body.b3',
+	})
+
+	export const proxyFunctionsBody = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		paddingBottom: '12',
+		paddingInline: '12',
+	})
+
+	export const proxyFunctionsWarning = style({
+		backgroundColor: 'container.warning',
+		borderColor: 'border.warning',
+		borderRadius: '3xs',
+		borderWidth: 'regular',
+		color: 'content.secondary',
+		paddingBlock: '4',
+		paddingInline: '8',
+		typography: 'body.b3',
+	})
 }

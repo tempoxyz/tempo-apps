@@ -9,9 +9,6 @@
 		"assist": {
 			"enabled": true
 		},
-		"parser": {
-			"tailwindDirectives": true
-		},
 		"formatter": {
 			"enabled": true
 		},

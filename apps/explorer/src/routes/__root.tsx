@@ -9,6 +9,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
+import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
@@ -35,7 +36,6 @@ import {
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import dsCss from '@tempoxyz/ds/platform.css?url'
-import css from './styles.css?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
 	const pathname =
@@ -126,26 +126,8 @@ export const Route = createRootRouteWithContext<{
 		links: [
 			...getExplorerCanonicalLinks(),
 			{
-				rel: 'preload',
-				href: '/fonts/pilat/Pilat-Regular.woff2',
-				as: 'font',
-				type: 'font/woff2',
-				crossOrigin: 'anonymous',
-			},
-			{
-				rel: 'preload',
-				href: '/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2',
-				as: 'font',
-				type: 'font/woff2',
-				crossOrigin: 'anonymous',
-			},
-			{
 				rel: 'stylesheet',
 				href: dsCss,
-			},
-			{
-				rel: 'stylesheet',
-				href: css,
 			},
 			{
 				rel: 'icon',
@@ -439,21 +421,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html
-			lang="en"
-			className="scrollbar-gutter-stable"
-			data-theme={defaultThemeMode}
-			suppressHydrationWarning
-		>
+		<html lang="en" data-theme={defaultThemeMode} suppressHydrationWarning>
 			<head>
 				<script>{themeBootScript}</script>
 				<HeadContent />
 			</head>
-			<body className="antialiased">
+			<body>
 				<ProgressLine
 					loading={isLoading}
 					start={800}
-					className="fixed top-0 left-0 right-0 z-1"
+					className={styles.progress().className}
 				/>
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
@@ -503,4 +480,14 @@ function useDevTools() {
 			return () => eruda?.destroy()
 		}
 	}, [])
+}
+
+namespace styles {
+	export const progress = style({
+		left: '0px !custom',
+		position: 'fixed',
+		right: '0px !custom',
+		top: '0px !custom',
+		zIndex: 1,
+	})
 }

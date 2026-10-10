@@ -109,3 +109,17 @@ global({
 	},
 	'pre .shiki, .shiki pre': { backgroundColor: 'transparent !important' },
 })
+
+// `usePermalinkHighlight` marks the linked element while it scrolls into view.
+global({
+	'[data-permalink-highlight]': {
+		outlineColor: 'transparent',
+		outlineOffset: '1px',
+		outlineStyle: 'solid',
+		outlineWidth: '1px',
+		transition: 'outline-color 500ms',
+	},
+	'[data-permalink-highlight="on"]': {
+		outlineColor: 'light-dark(rgb(68 113 237), rgb(116 152 251))',
+	},
+})

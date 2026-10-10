@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { style, variants } from '@tempoxyz/ds/platform'
 import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { decodeFunctionData, isAddressEqual } from 'viem'
+import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
 import {
@@ -20,23 +21,16 @@ import {
 	RoleFormatter,
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
+import { link, pressDown, truncate } from '#styles/explorer'
 
 export function TxEventMemoLine(
 	props: TxEventMemoLine.Props,
 ): React.JSX.Element {
 	const { memo, className } = props
 	return (
-		<div
-			className={cx(
-				'flex min-w-0 items-center gap-2 copy-13 text-secondary',
-				className,
-			)}
-		>
-			<span className="text-tertiary shrink-0">Memo:</span>
-			<span
-				className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-				title={memo}
-			>
+		<div {...styles.memo({ className })}>
+			<span {...styles.memoLabel()}>Memo:</span>
+			<span {...cx(styles.memoText(), truncate())} title={memo}>
 				{memo}
 			</span>
 		</div>
@@ -102,22 +96,20 @@ function ContractCallPart(props: {
 		: (functionName ?? signatureFnName ?? selector)
 
 	if (isViewingAsContract) {
-		return (
-			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
-		)
+		return <span {...cx(styles.functionName(), link())}>{fnName}</span>
 	}
 
 	return (
 		<>
-			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
-			<span className="text-secondary">on</span>
-			<span className="min-w-[11ch] basis-[11ch] max-w-full flex-1 overflow-hidden">
+			<span {...cx(styles.functionName(), link())}>{fnName}</span>
+			<span {...styles.secondary()}>on</span>
+			<span {...styles.addressSlot()}>
 				<Address
 					address={address}
 					chars={4}
 					search={{ tab: 'contract' }}
 					title={address}
-					className="whitespace-nowrap w-full max-w-full"
+					className={styles.contractAddress().className}
 				/>
 			</span>
 		</>
@@ -127,12 +119,7 @@ function ContractCallPart(props: {
 export function TxEventDescription(props: TxEventDescription.Props) {
 	const { event, seenAs, className, suffix } = props
 	return (
-		<div
-			className={cx(
-				'flex flex-row items-center gap-[6px] flex-wrap min-w-0 flex-1',
-				className,
-			)}
-		>
+		<div {...styles.root({ className })}>
 			{event.parts.map((part, index) => (
 				<TxEventDescription.Part
 					key={`${part.type}${index}`}
@@ -158,13 +145,13 @@ export namespace TxEventDescription {
 		switch (part.type) {
 			case 'account': {
 				if (!OxAddress.validate(part.value))
-					return <span className="text-tertiary">{String(part.value)}</span>
+					return <span {...styles.tertiary()}>{String(part.value)}</span>
 				return (
-					<span className="min-w-[11ch] basis-[11ch] max-w-full flex-1 overflow-hidden">
+					<span {...styles.addressSlot()}>
 						<Address
 							address={part.value}
 							chars={4}
-							className="text-accent items-end press-down whitespace-nowrap w-full max-w-full"
+							className={styles.accountAddress().className}
 							self={seenAs ? isAddressEqual(part.value, seenAs) : false}
 						/>
 					</span>
@@ -176,22 +163,14 @@ export namespace TxEventDescription {
 				const isPrivateZoneAction =
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
-				return (
-					<span
-						className={cx(
-							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
-							isPrivateZoneAction
-								? 'bg-inverse text-content-inverse'
-								: isBlocked
-									? 'bg-warning-subtle text-warning'
-									: isFailed
-										? 'bg-negative/[0.06] text-primary'
-										: 'bg-distinct/70 text-primary',
-						)}
-					>
-						{part.value}
-					</span>
-				)
+				const tone = isPrivateZoneAction
+					? 'zone'
+					: isBlocked
+						? 'blocked'
+						: isFailed
+							? 'failed'
+							: 'neutral'
+				return <span {...styles.action({ tone })}>{part.value}</span>
 			}
 			case 'amount':
 				return <Amount {...part.value} />
@@ -199,7 +178,7 @@ export namespace TxEventDescription {
 				return <span>{DateFormatter.formatDuration(part.value)}</span>
 			case 'hex':
 				return (
-					<span className="items-end whitespace-nowrap min-w-0 flex-1">
+					<span {...styles.hex()}>
 						<Midcut value={part.value} prefix="0x" />
 					</span>
 				)
@@ -210,41 +189,39 @@ export namespace TxEventDescription {
 						: Value.format(BigInt(part.value)),
 				)
 				return (
-					<span
-						className="items-end overflow-hidden text-ellipsis whitespace-nowrap"
-						title={formatted}
-					>
+					<span {...cx(styles.end(), truncate())} title={formatted}>
 						{formatted}
 					</span>
 				)
 			}
 			case 'role':
 				return (
-					<span className="items-end whitespace-nowrap" title={part.value}>
+					<span {...styles.role()} title={part.value}>
 						{RoleFormatter.getRoleName(part.value) || (
-							<span className="font-mono">
+							<span {...styles.mono()}>
 								{HexFormatter.shortenHex(part.value)}
 							</span>
 						)}
 					</span>
 				)
 			case 'text':
-				return <span className="text-tertiary">{part.value}</span>
+				return <span {...styles.tertiary()}>{part.value}</span>
 			case 'tick':
-				return <span className="items-end">{part.value}</span>
+				return <span {...styles.end()}>{part.value}</span>
 			case 'token':
 				return (
 					<Link
 						to="/token/$address"
 						params={{ address: part.value.address }}
 						title={part.value.address}
-						className={cx(
-							'press-down whitespace-nowrap inline-flex items-center gap-1',
-							!part.value.symbol && 'min-w-0 flex-1',
+						{...cx(
+							styles.token(),
+							pressDown(),
+							!part.value.symbol && styles.tokenFill(),
 						)}
 					>
 						<TokenIcon address={part.value.address} name={part.value.symbol} />
-						<span className="text-base-content-positive items-end">
+						<span {...styles.tokenSymbol()}>
 							{part.value.symbol || (
 								<Midcut value={part.value.address} prefix="0x" />
 							)}
@@ -278,8 +255,8 @@ export namespace TxEventDescription {
 
 		if (!events || events.length === 0)
 			return (
-				<div className="text-tertiary flex items-center">
-					<span className="inline-block">{emptyContent}</span>
+				<div {...styles.empty()}>
+					<span {...styles.emptyContent()}>{emptyContent}</span>
 				</div>
 			)
 
@@ -290,14 +267,10 @@ export namespace TxEventDescription {
 			: eventsToShow
 
 		return (
-			<div className="flex flex-col gap-[4px] flex-1">
+			<div {...styles.group()}>
 				{displayEvents.map((event, index) => (
 					<React.Fragment key={`${event.type}-${index}`}>
-						<TxEventDescription
-							event={event}
-							seenAs={seenAs}
-							className="flex flex-row items-center gap-[6px]"
-						/>
+						<TxEventDescription event={event} seenAs={seenAs} />
 						{renderDetails?.(event)}
 					</React.Fragment>
 				))}
@@ -305,7 +278,7 @@ export namespace TxEventDescription {
 					<button
 						type="button"
 						onClick={() => setExpanded(true)}
-						className="label-12 text-accent cursor-pointer press-down self-start"
+						{...cx(styles.groupToggle(), link(), pressDown())}
 					>
 						+ Show {remainingCount} more
 					</button>
@@ -314,7 +287,7 @@ export namespace TxEventDescription {
 					<button
 						type="button"
 						onClick={() => setExpanded(false)}
-						className="label-12 text-accent cursor-pointer press-down self-start"
+						{...cx(styles.groupToggle(), link(), pressDown())}
 					>
 						− View less
 					</button>
@@ -333,4 +306,144 @@ export namespace TxEventDescription {
 			limit?: number
 		}
 	}
+}
+
+namespace styles {
+	export const memo = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+		typography: 'body.b3',
+	})
+
+	export const memoLabel = style({
+		color: 'content.tertiary',
+		flexShrink: '0 !custom',
+	})
+
+	export const memoText = style({ minWidth: '0 !custom' })
+
+	export const functionName = style({
+		alignItems: 'flex-end',
+		whiteSpace: 'nowrap',
+	})
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const addressSlot = style({
+		flex: 1,
+		flexBasis: '11ch !custom',
+		maxWidth: '100% !custom',
+		minWidth: '11ch !custom',
+		overflow: 'hidden',
+	})
+
+	export const contractAddress = style({
+		maxWidth: '100% !custom',
+		whiteSpace: 'nowrap',
+		width: '100% !custom',
+	})
+
+	// Address already applies the link color and press-down treatment, so
+	// this only adds the properties it leaves unset.
+	export const accountAddress = style({
+		alignItems: 'flex-end',
+		maxWidth: '100% !custom',
+		whiteSpace: 'nowrap',
+		width: '100% !custom',
+	})
+
+	export const root = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'row',
+		flexWrap: 'wrap',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const action = variants({
+		base: {
+			alignItems: 'center',
+			borderRadius: '3xs',
+			display: 'inline-flex',
+			height: '24px !custom',
+			paddingInline: '8',
+			textTransform: 'capitalize',
+		},
+		defaultVariants: { tone: 'neutral' },
+		variants: {
+			tone: {
+				blocked: {
+					backgroundColor: 'container.warning',
+					color: 'content.warning',
+				},
+				failed: {
+					backgroundColor: 'container.negative',
+					color: 'content.primary',
+				},
+				neutral: {
+					backgroundColor: 'container.regular',
+					color: 'content.primary',
+				},
+				zone: {
+					backgroundColor: 'component.button.primary.fill',
+					color: 'background.secondary',
+				},
+			},
+		},
+	})
+
+	export const hex = style({
+		alignItems: 'flex-end',
+		flex: 1,
+		minWidth: '0 !custom',
+		whiteSpace: 'nowrap',
+	})
+
+	export const end = style({ alignItems: 'flex-end' })
+
+	export const role = style({ alignItems: 'flex-end', whiteSpace: 'nowrap' })
+
+	export const mono = style({ fontFamily: '"JetBrains Mono", monospace' })
+
+	export const token = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+		whiteSpace: 'nowrap',
+	})
+
+	export const tokenFill = style({ flex: 1, minWidth: '0 !custom' })
+
+	export const tokenSymbol = style({
+		alignItems: 'flex-end',
+		color: 'content.positive',
+	})
+
+	export const empty = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+	})
+
+	export const emptyContent = style({ display: 'inline-block' })
+
+	export const group = style({
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	export const groupToggle = style({
+		alignSelf: 'flex-start',
+		cursor: 'pointer',
+		typography: 'body.b3',
+	})
 }

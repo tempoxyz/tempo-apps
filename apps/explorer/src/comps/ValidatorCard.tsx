@@ -1,10 +1,13 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import type { Address } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { useReadContract } from 'wagmi'
+import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
 import { Abis } from '#lib/abis'
 import { useCopy, useIsMounted } from '#lib/hooks'
+import { linkHover, pressDown } from '#styles/explorer'
 import CopyIcon from '~icons/lucide/copy'
 
 export function ValidatorCard(
@@ -26,23 +29,23 @@ export function ValidatorCard(
 	const active = validator.deactivatedAtHeight === 0n
 	return (
 		<InfoCard
-			className="w-full!"
+			className={styles.card().className}
 			title={<InfoCard.Title>Validator</InfoCard.Title>}
 			sections={[
 				{ label: 'Active', value: active ? 'Yes' : 'No' },
-				<div key="recipient" className="flex flex-col gap-2 min-w-0">
-					<div className="flex items-center gap-2 text-tertiary">
+				<div key="recipient" {...styles.recipient()}>
+					<div {...styles.recipientHeader()}>
 						<span>Fee recipient</span>
 						<button
 							type="button"
 							onClick={() => copy(validator.feeRecipient)}
-							className="flex items-center gap-2 cursor-pointer press-down hover:text-primary"
+							{...cx(styles.copy(), pressDown())}
 							aria-label={
 								notifying ? 'Fee recipient copied' : 'Copy fee recipient'
 							}
 							title="Copy fee recipient"
 						>
-							<CopyIcon className="size-3" />
+							<CopyIcon {...styles.copyIcon()} />
 							{notifying && <span>copied</span>}
 						</button>
 					</div>
@@ -50,18 +53,18 @@ export function ValidatorCard(
 						to="/address/$address"
 						params={{ address: validator.feeRecipient }}
 						search={{ tab: 'holdings' }}
-						className="font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch] hover:underline"
+						{...cx(styles.recipientLink(), linkHover())}
 					>
 						{validator.feeRecipient}
 					</Link>
 				</div>,
 				{
-					label: <span className="normal-case">Added at height</span>,
+					label: <span {...styles.normalCase()}>Added at height</span>,
 					value: (
 						<Link
 							to="/block/$id"
 							params={{ id: validator.addedAtHeight.toString() }}
-							className="hover:underline break-all"
+							{...cx(styles.height(), linkHover())}
 						>
 							{validator.addedAtHeight.toString()}
 						</Link>
@@ -71,13 +74,13 @@ export function ValidatorCard(
 					? [
 							{
 								label: (
-									<span className="normal-case">Deactivated at height</span>
+									<span {...styles.normalCase()}>Deactivated at height</span>
 								),
 								value: (
 									<Link
 										to="/block/$id"
 										params={{ id: validator.deactivatedAtHeight.toString() }}
-										className="hover:underline break-all"
+										{...cx(styles.height(), linkHover())}
 									>
 										{validator.deactivatedAtHeight.toString()}
 									</Link>
@@ -92,4 +95,44 @@ export function ValidatorCard(
 
 export declare namespace ValidatorCard {
 	type Props = { address: Address }
+}
+
+namespace styles {
+	export const card = style({ width: '100% !custom' })
+
+	export const recipient = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const recipientHeader = style({
+		alignItems: 'center',
+		color: 'content.tertiary',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const copy = style({
+		alignItems: 'center',
+		cursor: 'pointer',
+		display: 'flex',
+		gap: '8',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const copyIcon = style({ height: '12', width: '12' })
+
+	export const recipientLink = style({
+		color: 'content.primary',
+		maxWidth: '32ch !custom',
+		typography: 'mono.inline',
+		lineHeight: '1.625 !custom',
+		wordBreak: 'break-all',
+	})
+
+	export const normalCase = style({ textTransform: 'none' })
+
+	export const height = style({ wordBreak: 'break-all' })
 }
