@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
@@ -13,7 +12,6 @@ import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { OG_BASE_URL } from '#lib/og'
-import { truncate } from '#styles/explorer'
 import { styles } from './-tokens.styles'
 
 export const Route = createFileRoute('/_layout/tokens')({
@@ -157,17 +155,14 @@ function TokensPage() {
 												<span {...styles.symbol()}>
 													<TokenIcon
 														address={token.address}
-														name={token.symbol}
 														logoURI={token.logoURI}
 													/>
-													<span {...truncate()} title={token.symbol}>
+													<span {...styles.truncate()} title={token.symbol}>
 														{token.symbol}
 													</span>
 												</span>
-												<span {...cx(truncate(), styles.secondary())}>
-													{token.name}
-												</span>
-												<span {...styles.tertiary()}>
+												<span {...styles.stackedName()}>{token.name}</span>
+												<span {...styles.secondary()}>
 													{token.currency} · {formatHoldersCount(token)} holders
 												</span>
 											</div>
@@ -181,21 +176,17 @@ function TokensPage() {
 															<span key="symbol" {...styles.symbol()}>
 																<TokenIcon
 																	address={token.address}
-																	name={token.symbol}
 																	logoURI={token.logoURI}
 																/>
 																{token.symbol}
 															</span>,
-															<span
-																key="name"
-																{...cx(truncate(), styles.name())}
-															>
+															<span key="name" {...styles.name()}>
 																{token.name}
 															</span>,
 															<span key="currency" {...styles.secondary()}>
 																{token.currency}
 															</span>,
-															<span key="holders" {...styles.holders()}>
+															<span key="holders" {...styles.secondary()}>
 																{formatHoldersCount(token)}
 															</span>,
 															<Address

@@ -16,7 +16,10 @@ export namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const title = style({ color: 'content.tertiary' })
+	export const title = style({ color: 'content.secondary' })
 
-	export const link = style({ color: 'content.primary' })
+	export const link = style({
+		color: 'content.primary',
+		selectors: { '&:active': { transform: 'translateY(0.5px)' } },
+	})
 }

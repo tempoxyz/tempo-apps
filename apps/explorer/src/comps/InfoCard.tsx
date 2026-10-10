@@ -67,7 +67,6 @@ namespace styles {
 		borderRadius: 'xs',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
-		boxShadow: 'none',
 		overflow: 'hidden',
 		typography: 'body.b2',
 		selectors: { ':where(&)': { width: '100% !custom' } },
@@ -119,7 +118,7 @@ namespace styles {
 	})
 
 	export const label = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 		textTransform: 'capitalize',
 	})

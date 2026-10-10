@@ -1,11 +1,10 @@
 import type { Address } from 'ox'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { StatusIndicator, TextButton } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { type Connector, useConnection } from 'wagmi'
+import { useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from 'zyzz'
-import { pressDown, pulse, transitionColors } from '#styles/explorer'
-import LucideCoins from '~icons/lucide/coins'
+import { animatePulse } from '#styles/explorer'
 
 export function SetAsFeeToken(
 	props: SetAsFeeToken.Props,
@@ -43,79 +42,29 @@ export function SetAsFeeToken(
 		setFeeToken.mutate({ token: tokenAddress, account })
 	}
 
-	const busy = setFeeToken.isPending || showSuccess
-
-	const label = showSuccess
-		? 'Fee token set!'
-		: isAlreadyFeeToken
-			? 'Currently your fee token'
-			: setFeeToken.isPending
-				? 'Setting…'
-				: `Set ${symbol ?? 'token'} as fee token`
-
-	const state = isAlreadyFeeToken
-		? 'current'
-		: showSuccess
-			? 'success'
-			: busy
-				? 'busy'
-				: 'idle'
+	if (isAlreadyFeeToken)
+		return (
+			<StatusIndicator tone="positive">
+				{showSuccess ? 'Fee token set!' : 'Currently your fee token'}
+			</StatusIndicator>
+		)
 
 	return (
-		<button
-			type="button"
-			disabled={busy || isAlreadyFeeToken}
-			{...cx(
-				styles.action({ state }),
-				transitionColors(),
-				state === 'idle' && pressDown(),
-			)}
+		<TextButton
+			disabled={setFeeToken.isPending}
 			onClick={handleClick}
+			{...cx(setFeeToken.isPending && animatePulse())}
 		>
-			<LucideCoins {...styles.icon()} />
-			{label}
-		</button>
+			{setFeeToken.isPending
+				? 'Setting…'
+				: `Set ${symbol ?? 'token'} as fee token`}
+		</TextButton>
 	)
 }
 
 export declare namespace SetAsFeeToken {
 	type Props = {
 		address: Address.Address
-		connectors: readonly Connector[]
 		symbol?: string | undefined
 	}
-}
-
-namespace styles {
-	export const action = variants({
-		base: {
-			alignItems: 'center',
-			display: 'flex',
-			gap: '8',
-			typography: 'body.b3',
-			width: '100% !custom',
-		},
-		defaultVariants: { state: 'idle' },
-		variants: {
-			state: {
-				busy: {
-					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
-					color: 'content.secondary',
-				},
-				current: { color: 'content.tertiary', cursor: 'default' },
-				idle: {
-					color: 'content.secondary',
-					cursor: 'pointer',
-					'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-				},
-				success: { color: 'content.positive' },
-			},
-		},
-	})
-
-	export const icon = style({
-		flexShrink: 0,
-		height: '14px !custom',
-		width: '14px !custom',
-	})
 }

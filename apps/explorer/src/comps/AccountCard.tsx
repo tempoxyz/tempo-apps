@@ -1,5 +1,6 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import { style } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import type { Address } from 'ox'
 import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
@@ -8,8 +9,7 @@ import { TokenIcon } from '#comps/TokenIcon'
 import type { AccountType } from '#lib/account'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
-import { pressDown } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
+import { mono, pressDown } from '#styles/explorer'
 
 const Route = getRouteApi('/_layout/address/$address')
 
@@ -55,9 +55,8 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 							<>
 								<TokenIcon
 									address={address as Address.Address}
-									name={tokenLabel}
-									className={styles.tokenIcon().className}
 									logoURI={tokenLogoURI}
+									size={32}
 								/>
 								<span {...styles.tokenText()}>
 									<span {...styles.tokenName()}>{tokenLabel}</span>
@@ -80,29 +79,30 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 					onClick={() => copy(address)}
 					{...cx(styles.copyAddress(), pressDown())}
 					title={address}
-					aria-label={notifying ? 'Address copied' : 'Copy address'}
+					aria-label="Copy address"
 				>
-					<div {...styles.copyHeader()}>
-						<span {...styles.capitalize()}>Address</span>
-						<div {...styles.copyIconWrap()}>
-							<CopyIcon {...styles.copyIcon()} />
-							{notifying && <span {...styles.copied()}>copied</span>}
-						</div>
-					</div>
-					<p {...styles.addressValue()}>{address}</p>
+					<span {...styles.copyHeader()}>
+						Address
+						{notifying ? <Check /> : <Copy />}
+					</span>
+					<span {...styles.addressValue()}>{address}</span>
 				</button>,
 				...(virtualAddressParts
 					? [
 							{
 								label: 'Master ID',
 								value: (
-									<span {...styles.mono()}>{virtualAddressParts.masterId}</span>
+									<span {...cx(styles.primary(), mono())}>
+										{virtualAddressParts.masterId}
+									</span>
 								),
 							},
 							{
 								label: 'User Tag',
 								value: (
-									<span {...styles.mono()}>{virtualAddressParts.userTag}</span>
+									<span {...cx(styles.primary(), mono())}>
+										{virtualAddressParts.userTag}
+									</span>
 								),
 							},
 						]
@@ -111,7 +111,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 					? [
 							{
 								label: 'Holdings',
-								value: <span {...styles.tertiary()}>Forwarded</span>,
+								value: <span {...styles.secondary()}>Forwarded</span>,
 							},
 						]
 					: !hideHoldings
@@ -120,7 +120,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 									label: 'Holdings',
 									value: (
 										<ClientOnly
-											fallback={<span {...styles.tertiary()}>…</span>}
+											fallback={<span {...styles.secondary()}>…</span>}
 										>
 											{totalValue !== undefined ? (
 												<span
@@ -132,7 +132,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 													})}
 												</span>
 											) : (
-												<span {...styles.tertiary()}>…</span>
+												<span {...styles.secondary()}>…</span>
 											)}
 										</ClientOnly>
 									),
@@ -142,14 +142,14 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 				{
 					label: 'Active',
 					value: (
-						<ClientOnly fallback={<span {...styles.tertiary()}>…</span>}>
+						<ClientOnly fallback={<span {...styles.secondary()}>…</span>}>
 							{lastActivityTimestamp ? (
 								<RelativeTime
 									timestamp={lastActivityTimestamp}
 									className={styles.primary().className}
 								/>
 							) : (
-								<span {...styles.tertiary()} title="Last activity unavailable">
+								<span {...styles.secondary()} title="Last activity unavailable">
 									—
 								</span>
 							)}
@@ -159,14 +159,14 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 				{
 					label: 'Created',
 					value: (
-						<ClientOnly fallback={<span {...styles.tertiary()}>…</span>}>
+						<ClientOnly fallback={<span {...styles.secondary()}>…</span>}>
 							{createdTimestamp ? (
 								<RelativeTime
 									timestamp={createdTimestamp}
 									className={styles.primary().className}
 								/>
 							) : (
-								<span {...styles.tertiary()} title="Creation time unavailable">
+								<span {...styles.secondary()} title="Creation time unavailable">
 									—
 								</span>
 							)}
@@ -208,8 +208,6 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	export const tokenIcon = style({ height: '32', width: '32' })
-
 	export const tokenText = style({ flex: 1, minWidth: '0 !custom' })
 
 	export const tokenName = style({
@@ -219,7 +217,7 @@ namespace styles {
 	})
 
 	export const tokenSymbol = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'block',
 		marginTop: '2',
 		overflowWrap: 'anywhere',
@@ -228,7 +226,7 @@ namespace styles {
 	})
 
 	export const copyAddress = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -239,39 +237,18 @@ namespace styles {
 		display: 'flex',
 		gap: '8',
 		marginBottom: '8',
-	})
-
-	export const capitalize = style({ textTransform: 'capitalize' })
-
-	export const copyIconWrap = style({
-		alignItems: 'center',
-		display: 'flex',
-		position: 'relative',
-	})
-
-	export const copyIcon = style({ height: '12', width: '12' })
-
-	export const copied = style({
-		left: 'calc(100% + 8px) !custom',
-		position: 'absolute',
+		selectors: { '& > svg': { height: '12', width: '12' } },
 	})
 
 	export const addressValue = style({
 		color: 'content.primary',
+		display: 'block',
 		maxWidth: '32ch !custom',
 		typography: 'mono.inline',
-		lineHeight: '1.625 !custom',
 		wordBreak: 'break-all',
-	})
-
-	export const mono = style({
-		color: 'content.primary',
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
 	})
 
 	export const primary = style({ color: 'content.primary' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const secondary = style({ color: 'content.secondary' })
 }

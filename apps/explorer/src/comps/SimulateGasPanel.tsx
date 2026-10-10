@@ -12,12 +12,11 @@
  * any depth.
  */
 
-import { vars as core } from '@tempoxyz/ds/core'
-import { style } from '@tempoxyz/ds/platform'
+import { DenseTable, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
-import { transitionColors, truncate } from '#styles/explorer'
+import { srOnly, transitionColors, truncate, vizFill } from '#styles/explorer'
 import { formatGas, GasMeter, PanelEmpty } from './SimulateShared'
 import { MIN_FLAMEGRAPH_FRAMES, TxTraceFlamegraph } from './TxTraceFlamegraph'
 import { TxTraceTree } from './TxTraceTree'
@@ -116,126 +115,114 @@ function FrameTable(props: {
 	)
 
 	return (
-		<table {...styles.table()}>
-			<thead>
-				<tr {...styles.headRow()}>
-					{props.showCall && (
-						<th {...cx(styles.cell(), styles.edge(), styles.callColumn())}>
-							Call
-						</th>
-					)}
-					<th
-						{...cx(
-							styles.cell(),
-							props.showCall && styles.inner(),
-							!props.showCall && styles.edge(),
+		<div {...styles.tableWrap()}>
+			<DenseTable>
+				<DenseTable.Thead>
+					<DenseTable.Tr>
+						{props.showCall && (
+							<DenseTable.Th scope="col" {...styles.callColumn()}>
+								Call
+							</DenseTable.Th>
 						)}
-					>
-						Frame
-					</th>
-					<th
-						{...cx(
-							styles.cell(),
-							styles.inner(),
-							styles.numeric(),
-							styles.gasColumn(),
-						)}
-					>
-						Self
-					</th>
-					<th
-						{...cx(
-							styles.cell(),
-							styles.inner(),
-							styles.numeric(),
-							styles.gasColumn(),
-						)}
-					>
-						Total
-					</th>
-					<th
-						{...cx(
-							styles.cell(),
-							styles.edge(),
-							styles.numeric(),
-							styles.shareColumn(),
-						)}
-					>
-						Share
-					</th>
-				</tr>
-			</thead>
-			<tbody>
-				{sorted.map((frame) => {
-					const share =
-						props.rootGas > 0 ? (frame.selfGas / props.rootGas) * 100 : 0
-					const selected = frame.node.id === props.selectedId
-					return (
-						<tr
-							key={frame.node.id}
-							onClick={() => props.onSelect(frame.node.id)}
-							{...cx(
-								styles.row(),
-								transitionColors(),
-								!selected && styles.rowHover(),
-								selected && styles.rowSelected(),
-							)}
+						<DenseTable.Th scope="col">Frame</DenseTable.Th>
+						{/* TDS left-aligns header cells; inline wins for number columns. */}
+						<DenseTable.Th
+							scope="col"
+							{...styles.gasColumn({ style: { textAlign: 'right' } })}
 						>
-							{props.showCall && (
-								<td {...cx(styles.cell(), styles.edge(), styles.callCell())}>
-									{frame.call ?? ''}
-								</td>
-							)}
-							<td
+							Self
+						</DenseTable.Th>
+						<DenseTable.Th
+							scope="col"
+							{...styles.gasColumn({ style: { textAlign: 'right' } })}
+						>
+							Total
+						</DenseTable.Th>
+						<DenseTable.Th
+							scope="col"
+							{...styles.shareColumn({ style: { textAlign: 'right' } })}
+						>
+							Share
+						</DenseTable.Th>
+					</DenseTable.Tr>
+				</DenseTable.Thead>
+				<DenseTable.Tbody>
+					{sorted.map((frame) => {
+						const share =
+							props.rootGas > 0 ? (frame.selfGas / props.rootGas) * 100 : 0
+						const selected = frame.node.id === props.selectedId
+						return (
+							// The row is the click target; the frame button inside makes it
+							// reachable by keyboard, and its click bubbles up to here.
+							<DenseTable.Tr
+								key={frame.node.id}
+								onClick={() => props.onSelect(frame.node.id)}
 								{...cx(
-									styles.cell(),
-									props.showCall && styles.inner(),
-									!props.showCall && styles.edge(),
+									styles.row(),
+									transitionColors(),
+									!selected && styles.rowHover(),
+									selected && styles.rowSelected(),
 								)}
 							>
-								<span {...styles.frame()}>
-									{/* Depth as a badge, not as indentation — a table that
-									    indents loses its left edge past about six levels. */}
-									<span {...styles.depth()}>
-										{frame.depth > 0 ? `+${frame.depth}` : '·'}
-									</span>
-									<span
-										{...cx(
-											styles.label(),
-											truncate(),
-											frame.node.hasError && styles.labelError(),
-										)}
-										title={frame.label}
+								{props.showCall && (
+									<DenseTable.Td {...styles.callCell()}>
+										{frame.call ?? ''}
+									</DenseTable.Td>
+								)}
+								<DenseTable.Td>
+									<button
+										type="button"
+										aria-pressed={selected}
+										{...styles.frame()}
 									>
-										{frame.label}
-									</span>
-								</span>
-							</td>
-							<td {...cx(styles.cell(), styles.inner(), styles.selfGas())}>
-								{formatGas(frame.selfGas)}
-							</td>
-							<td {...cx(styles.cell(), styles.inner(), styles.totalGas())}>
-								{formatGas(frame.node.gasUsed)}
-							</td>
-							<td {...cx(styles.cell(), styles.edge())}>
-								<span {...styles.share()}>
-									<span {...styles.shareTrack()}>
+										{/* Depth as a badge, not as indentation — a table that
+										    indents loses its left edge past about six levels. */}
+										<span {...styles.depth()}>
+											{frame.depth > 0 ? `+${frame.depth}` : '·'}
+										</span>
+										{frame.node.hasError && (
+											<span aria-hidden {...styles.errorDot()} />
+										)}
 										<span
-											{...styles.shareFill({
-												style: { width: `${Math.min(share, 100)}%` },
-											})}
-										/>
+											{...cx(styles.label(), truncate())}
+											title={frame.label}
+										>
+											{frame.label}
+										</span>
+										{frame.node.hasError && (
+											<span {...srOnly()}>, reverted</span>
+										)}
+									</button>
+								</DenseTable.Td>
+								<DenseTable.Td {...styles.selfGas()}>
+									{formatGas(frame.selfGas)}
+								</DenseTable.Td>
+								<DenseTable.Td {...styles.totalGas()}>
+									{formatGas(frame.node.gasUsed)}
+								</DenseTable.Td>
+								<DenseTable.Td>
+									<span {...styles.share()}>
+										<span {...styles.shareTrack()}>
+											<span
+												{...cx(
+													styles.shareFill({
+														style: { width: `${Math.min(share, 100)}%` },
+													}),
+													vizFill(),
+												)}
+											/>
+										</span>
+										<span {...styles.sharePercent()}>
+											{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
+										</span>
 									</span>
-									<span {...styles.sharePercent()}>
-										{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
-									</span>
-								</span>
-							</td>
-						</tr>
-					)
-				})}
-			</tbody>
-		</table>
+								</DenseTable.Td>
+							</DenseTable.Tr>
+						)
+					})}
+				</DenseTable.Tbody>
+			</DenseTable>
+		</div>
 	)
 }
 
@@ -270,7 +257,7 @@ namespace styles {
 		borderBottomWidth: 'regular',
 		borderColor: 'line.secondary',
 		borderStyle: 'solid',
-		paddingBlock: '12',
+		paddingBlock: '16',
 		paddingInline: '16',
 	})
 
@@ -278,53 +265,22 @@ namespace styles {
 		borderBottomWidth: 'regular',
 		borderColor: 'line.secondary',
 		borderStyle: 'solid',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		margin: 'none',
 		paddingBlock: '12',
 		paddingInline: '16',
 		typography: 'body.b2',
 	})
 
-	export const table = style({
-		borderCollapse: 'collapse',
-		typography: 'body.b2',
-		width: '100% !custom',
-	})
+	export const tableWrap = style({ padding: '16' })
 
-	export const headRow = style({
-		backgroundColor: 'container.subtle',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		color: 'content.tertiary',
-	})
-
-	// `fontWeight` undoes the user-agent bold on header cells.
-	export const cell = style({
-		fontWeight: 'inherit',
-		paddingBlock: '8',
-		textAlign: 'left',
-	})
-
-	export const edge = style({ paddingInline: '16' })
-
-	export const inner = style({ paddingInline: '8' })
-
-	export const numeric = style({ textAlign: 'right' })
-
-	export const callColumn = style({ width: '64px !custom' })
+	export const callColumn = style({ width: '64' })
 
 	export const gasColumn = style({ width: '80px !custom' })
 
-	export const shareColumn = style({ width: '92px !custom' })
+	export const shareColumn = style({ width: '96px !custom' })
 
-	export const row = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		cursor: 'pointer',
-		':last-child': { borderBottomWidth: 'none' },
-	})
+	export const row = style({ cursor: 'pointer' })
 
 	export const rowHover = style({
 		'@media (hover: hover)': {
@@ -335,23 +291,37 @@ namespace styles {
 	export const rowSelected = style({ backgroundColor: 'container.strong' })
 
 	export const callCell = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const frame = style({
 		alignItems: 'center',
+		color: 'inherit !custom',
+		cursor: 'pointer',
 		display: 'flex',
 		gap: '8',
 		minWidth: '0 !custom',
+		textAlign: 'left',
+		width: '100% !custom',
+		// The table scrolls sideways, which would clip an outset ring.
+		':focus-visible': { outlineOffset: '-2px !custom' },
 	})
 
 	export const depth = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: 0,
 		textAlign: 'right',
 		typography: 'mono.inline',
-		width: '16px !custom',
+		width: '16',
+	})
+
+	export const errorDot = style({
+		backgroundColor: 'content.negative',
+		borderRadius: 'full',
+		flexShrink: 0,
+		height: '8',
+		width: '8',
 	})
 
 	export const label = style({
@@ -360,8 +330,6 @@ namespace styles {
 		typography: 'mono.inline',
 	})
 
-	export const labelError = style({ color: 'content.negative' })
-
 	export const selfGas = style({
 		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums',
@@ -369,7 +337,7 @@ namespace styles {
 	})
 
 	export const totalGas = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
 	})
@@ -384,22 +352,21 @@ namespace styles {
 	export const shareTrack = style({
 		backgroundColor: 'container.strong',
 		borderRadius: 'full',
-		height: '3px !custom',
+		height: '4',
 		overflow: 'hidden',
-		width: '36px !custom',
+		width: '32',
 	})
 
 	export const shareFill = style({
-		backgroundColor: `light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) !custom`,
 		borderRadius: 'full',
 		display: 'block',
 		height: '100% !custom',
 	})
 
 	export const sharePercent = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
-		width: '38px !custom',
+		width: '40',
 	})
 }

@@ -2,8 +2,15 @@
  * colors. Pilat is the UI face; explicit code and hash values use JetBrains Mono.
  */
 
-import { vars as core } from '@tempoxyz/ds/core'
-import { Button as TdsButton, style, variants } from '@tempoxyz/ds/platform'
+import {
+	Alert,
+	InlineCode,
+	KeyboardKey,
+	Progress,
+	style,
+	vars,
+} from '@tempoxyz/ds/platform'
+import { AlertCircle } from '@tempoxyz/ds/platform/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as Value from 'ox/Value'
@@ -15,39 +22,36 @@ import { formatAbiValue, getContractInfo } from '#lib/domain/contracts'
 import type { FormState } from '#lib/domain/simulate-calls'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { SimulationApiError } from '#lib/queries'
-import { pulse, truncate } from '#styles/explorer'
+import { animatePulse } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
-
-// Lives with the panel chrome so the toolbar toggles and this one are literally
-// the same control; re-exported here because the simulator imports it from the
-// shared-primitives module alongside everything else it uses.
-export { SegmentedControl } from './PanelToolbar'
-import CircleAlertIcon from '~icons/lucide/circle-alert'
-import RotateCcwIcon from '~icons/lucide/rotate-ccw'
 
 /* -------------------------------------------------------------------------- */
 /* Controls                                                                   */
 /* -------------------------------------------------------------------------- */
 
-/** Label above a control. */
+/**
+ * Label above a control. The label names the control with id `htmlFor`; the
+ * hint, when there is one, has the id `fieldHintId(htmlFor)` so the control
+ * can point `aria-describedby` at it.
+ */
 export function Field(props: Field.Props): React.JSX.Element {
 	return (
 		<div {...styles.field()}>
 			<div {...styles.fieldHeader()}>
-				<span {...styles.fieldLabel()}>{props.label}</span>
+				<label htmlFor={props.htmlFor} {...styles.fieldLabel()}>
+					{props.label}
+				</label>
 				{props.action}
 			</div>
 			{props.children}
-			{props.hint && (
-				<span
-					{...cx(
-						styles.fieldHint(),
-						props.invalid && styles.fieldHintInvalid(),
-					)}
-				>
-					{props.hint}
-				</span>
-			)}
+			{props.hint &&
+				(props.invalid ? (
+					<ErrorText id={fieldHintId(props.htmlFor)}>{props.hint}</ErrorText>
+				) : (
+					<span id={fieldHintId(props.htmlFor)} {...styles.fieldHint()}>
+						{props.hint}
+					</span>
+				))}
 		</div>
 	)
 }
@@ -55,6 +59,8 @@ export function Field(props: Field.Props): React.JSX.Element {
 export declare namespace Field {
 	interface Props {
 		label: React.ReactNode
+		/** Id of the control the label names. */
+		htmlFor: string
 		children: React.ReactNode
 		/** Right-aligned control on the label line — a mode toggle, a link. */
 		action?: React.ReactNode
@@ -63,59 +69,39 @@ export declare namespace Field {
 	}
 }
 
+export function fieldHintId(htmlFor: string): string {
+	return `${htmlFor}-hint`
+}
+
 /**
- * Text field chrome shared by every simulator input, select, and textarea:
- * a compact TDS TextInput (input fill, no visible border, the global focus
- * ring). The transparent border reserves room for the invalid state.
+ * An inline error. Status colours fail contrast as text in the light theme,
+ * so the text stays primary and the icon carries the tone.
  */
-export const fieldInput = style({
-	backgroundColor: 'component.input.primary.fill',
-	borderColor: 'transparent !custom',
-	borderRadius: 'xs',
-	borderStyle: 'solid',
-	borderWidth: 'regular',
-	boxSizing: 'border-box',
-	color: 'content.primary',
-	fontVariantNumeric: 'tabular-nums',
-	minWidth: '0 !custom',
-	paddingBlock: '8',
-	paddingInline: '12',
-	transitionDuration: '150ms',
-	transitionProperty:
-		'color, background-color, border-color, outline-color, text-decoration-color, fill, stroke',
-	transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-	typography: 'body.b2',
-	width: '100% !custom',
-	'::placeholder': { color: 'content.tertiary' },
-})
-
-/** Invalid state is applied on blur, never on mount — see `draftFieldErrors`. */
-export const fieldInputInvalid = style({ borderColor: 'border.negative' })
-
-/** Leading icon inside a simulator `Button`. */
-export const buttonIcon = style({
-	flexShrink: 0,
-	height: '12px !custom',
-	width: '12px !custom',
-})
-
-/** A primary action. There is at most one per pane. */
-export function Button(props: Button.Props): React.JSX.Element {
-	const { tone = 'default', ...rest } = props
+export function ErrorText(props: {
+	children: React.ReactNode
+	id?: string | undefined
+}): React.JSX.Element {
 	return (
-		<TdsButton
-			type="button"
-			{...rest}
-			scale="small"
-			variant={tone === 'primary' ? 'primary' : 'secondary'}
-		/>
+		<span id={props.id} {...styles.errorText()}>
+			<AlertCircle {...styles.errorIcon()} />
+			<span>{props.children}</span>
+		</span>
 	)
 }
 
-export declare namespace Button {
-	interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-		tone?: 'default' | 'primary'
-	}
+/**
+ * A keyboard shortcut drawn inside a primary button. The button is an inverse
+ * ground, so the key takes the inverse set to stay legible. Hidden from
+ * assistive tech: the button announces it through `aria-keyshortcuts`.
+ */
+export function ButtonShortcut(props: {
+	children: React.ReactNode
+}): React.JSX.Element {
+	return (
+		<KeyboardKey aria-hidden {...cx(vars({ set: 'inverse' }))}>
+			{props.children}
+		</KeyboardKey>
+	)
 }
 
 /* -------------------------------------------------------------------------- */
@@ -123,83 +109,25 @@ export declare namespace Button {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Small status/meta pill. Tone is the only thing that carries colour.
- *
- * Local rather than TDS `Badge`: Badge has no tones and is sized for
- * standalone labels (28px tall, 80px wide minimum), while this sits inline in
- * a header row and on a field's label line.
- */
-export function Chip(props: Chip.Props): React.JSX.Element {
-	const { tone = 'neutral' } = props
-	return (
-		<span
-			title={props.title}
-			{...styles.chip({ className: props.className, tone })}
-		>
-			<span {...truncate()}>{props.children}</span>
-		</span>
-	)
-}
-
-export declare namespace Chip {
-	interface Props {
-		children: React.ReactNode
-		tone?: 'neutral' | 'positive' | 'negative' | 'warning' | 'accent'
-		title?: string
-		className?: string
-	}
-}
-
-/**
- * A label/value pair in the result header using the shared card roles.
- */
-export function Fact(props: Fact.Props): React.JSX.Element {
-	return (
-		<div {...styles.fact()}>
-			<span {...styles.factLabel()} title={props.hint}>
-				{props.label}
-			</span>
-			<span {...cx(styles.factValue(), truncate())}>{props.children}</span>
-		</div>
-	)
-}
-
-export declare namespace Fact {
-	interface Props {
-		label: React.ReactNode
-		children: React.ReactNode
-		hint?: string
-	}
-}
-
-/**
  * Gas used against the limit it ran under.
  *
  * A bare "273,270 gas" answers nothing — the actionable question is whether
- * the call is anywhere near running out, which is the ratio. Tone only turns
- * warm past 80%, so a normal call has no colour here at all.
+ * the call is anywhere near running out, which is the ratio.
  */
 export function GasMeter(props: GasMeter.Props): React.JSX.Element {
 	const pct = gasPercent(props.used, props.limit)
-	const warm = pct >= GAS_PRESSURE_THRESHOLD
 	return (
-		<div {...styles.gasMeter()}>
-			<div {...styles.gasMeterHeader()}>
-				<span {...styles.gasMeterLabel()}>Gas used</span>
-				<GasRatio used={props.used} limit={props.limit} />
-			</div>
-			<div {...styles.gasTrack()}>
-				<div
-					{...cx(
-						styles.gasFill({
-							// Always show a sliver, so "it ran" is visually distinct from "it didn't".
-							style: { width: `max(${Math.min(pct, 100)}%, 2px)` },
-						}),
-						warm && styles.gasFillWarm(),
-					)}
-				/>
-			</div>
-		</div>
+		<Progress
+			label={
+				<span {...styles.gasMeterLabel()}>
+					<span>Gas used</span>
+					<GasRatio used={props.used} limit={props.limit} />
+				</span>
+			}
+			showValue={false}
+			value={Math.min(pct, 100)}
+			style={{ width: '100%' }}
+		/>
 	)
 }
 
@@ -210,12 +138,6 @@ export declare namespace GasMeter {
 	}
 }
 
-/**
- * Above this share of the gas limit the limit starts to matter and the
- * percentage earns colour. Below it, it is shown but stays out of the way.
- */
-export const GAS_PRESSURE_THRESHOLD = 80
-
 /** Share of the limit a run consumed, as a percentage. */
 export function gasPercent(used: bigint, limit: bigint): number {
 	return limit > 0n ? Number((used * 10_000n) / limit) / 100 : 0
@@ -223,32 +145,21 @@ export function gasPercent(used: bigint, limit: bigint): number {
 
 /**
  * `used / limit (pct)` — the transaction page's format, one implementation.
- *
- * Warning, never negative: red on this page means the call failed, and a
- * succeeded-at-99% result printing a red number reads as a contradiction.
- * Running out of gas shows up as a revert anyway.
+ * It takes its type size from the surrounding text.
  */
 export function GasRatio(props: {
 	used: bigint
 	limit: bigint
-	className?: string
 }): React.JSX.Element {
 	const pct = gasPercent(props.used, props.limit)
 	return (
-		<span {...styles.gasRatio({ className: props.className })}>
+		<span {...styles.gasRatio()}>
 			<span {...styles.gasRatioUsed()}>{props.used.toLocaleString()}</span>
 			<span {...styles.gasRatioLimit()}>
 				{' / '}
 				{props.limit.toLocaleString()}
 			</span>
-			<span
-				{...cx(
-					styles.gasRatioPercent(),
-					pct >= GAS_PRESSURE_THRESHOLD && styles.gasRatioPercentWarm(),
-				)}
-			>
-				({formatGasPercent(pct)})
-			</span>
+			<span {...styles.gasRatioPercent()}>({formatGasPercent(pct)})</span>
 		</span>
 	)
 }
@@ -268,7 +179,7 @@ export function formatGasPercent(pct: number): string {
 
 export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
 	return (
-		<div {...styles.skeleton()}>
+		<div {...cx(styles.skeleton(), animatePulse())}>
 			{Array.from({ length: props.rows }, (_, index) => (
 				<div
 					key={index}
@@ -296,10 +207,12 @@ export function PanelError(props: {
 		props.error instanceof SimulationApiError && props.error.status === 429
 	return (
 		<div {...styles.panelError()}>
-			<span {...styles.panelErrorTitle()}>
-				{rateLimited ? 'Rate limited' : props.title}
-			</span>
-			<span {...styles.panelErrorMessage()}>{props.error.message}</span>
+			<Alert
+				tone="negative"
+				title={rateLimited ? 'Rate limited' : props.title}
+				description={props.error.message}
+				style={{ width: '100%' }}
+			/>
 		</div>
 	)
 }
@@ -320,26 +233,28 @@ export function SimulationFailure(props: {
 	const { title, hint } = describeFailure(status)
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
-	// Laid out like a TDS negative `Alert`: tinted container, no border.
 	return (
-		<div {...styles.failure()}>
-			<CircleAlertIcon {...styles.failureIcon()} />
-			<div {...styles.failureBody()}>
-				<h2 {...styles.failureTitle()}>{title}</h2>
-				<p {...styles.failureHint()}>{hint}</p>
-				<div {...styles.failureMessages()}>
+		<Alert
+			tone="negative"
+			title={title}
+			description={
+				<>
+					{hint}
 					{messages.map((message) => (
-						<code key={message} {...styles.failureMessage()}>
-							{message}
-						</code>
+						<span key={message} {...styles.failureMessage()}>
+							{/* Node errors run long; let them wrap inside the alert. */}
+							<InlineCode
+								style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}
+							>
+								{message}
+							</InlineCode>
+						</span>
 					))}
-				</div>
-				<Button onClick={props.onRetry} {...styles.failureRetry()}>
-					<RotateCcwIcon {...buttonIcon()} />
-					Try again
-				</Button>
-			</div>
-		</div>
+				</>
+			}
+			action={{ label: 'Try again', onClick: props.onRetry }}
+			style={{ width: '100%' }}
+		/>
 	)
 }
 
@@ -372,7 +287,6 @@ function describeFailure(status: number | undefined): {
 /* Formatting                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)`, or `→ 2 calls`. */
 /**
  * Longest argument list worth inlining in the header.
  *
@@ -383,6 +297,7 @@ function describeFailure(status: number | undefined): {
  */
 const MAX_SUMMARY_ARG_CHARS = 32
 
+/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)`, or `→ 2 calls`. */
 export function describeCall(form: FormState, abi: Abi | undefined): string {
 	const first = form.calls[0]
 	if (!first || (!first.to.trim() && !first.data.trim())) return 'New call'
@@ -481,7 +396,7 @@ namespace styles {
 	export const field = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -493,225 +408,68 @@ namespace styles {
 	})
 
 	export const fieldLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
 	export const fieldHint = style({
-		color: 'content.tertiary',
-		typography: 'body.b2',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
-	export const fieldHintInvalid = style({ color: 'content.negative' })
-
-	export const chip = variants({
-		base: {
-			alignItems: 'center',
-			borderRadius: 'full',
-			boxSizing: 'border-box',
-			display: 'inline-flex',
-			height: '20px !custom',
-			maxWidth: '100% !custom',
-			minWidth: '0 !custom',
-			paddingInline: '8',
-			typography: 'body.b3',
-			whiteSpace: 'nowrap',
-		},
-		defaultVariants: { tone: 'neutral' },
-		variants: {
-			tone: {
-				accent: {
-					// TDS has no blue container; this is the Alert `tip` tint.
-					backgroundColor: 'rgb(68 113 237 / 0.08) !custom',
-					color: `light-dark(${core.color.accent.blueLight}, ${core.color.accent.blueDark}) !custom`,
-				},
-				negative: {
-					backgroundColor: 'container.negative',
-					color: 'content.negative',
-				},
-				neutral: {
-					backgroundColor: 'container.regular',
-					color: 'content.secondary',
-				},
-				positive: {
-					backgroundColor: 'container.positive',
-					color: 'content.positive',
-				},
-				warning: {
-					backgroundColor: 'container.warning',
-					color: 'content.warning',
-				},
-			},
-		},
-	})
-
-	export const fact = style({
-		alignItems: 'baseline',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const factLabel = style({
-		color: 'content.tertiary',
-		flexShrink: 0,
-		typography: 'body.b2',
-		width: '72px !custom',
-	})
-
-	export const factValue = style({
+	export const errorText = style({
+		alignItems: 'flex-start',
 		color: 'content.primary',
-		fontVariantNumeric: 'tabular-nums',
-		minWidth: '0 !custom',
-		typography: 'body.b2',
-	})
-
-	export const gasMeter = style({
 		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
+		gap: '4',
+		typography: 'body.b3',
 	})
 
-	export const gasMeterHeader = style({
-		alignItems: 'baseline',
+	export const errorIcon = style({
+		color: 'content.negative',
+		flexShrink: 0,
+		height: '16',
+		width: '16',
+	})
+
+	export const gasMeterLabel = style({
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'space-between',
 	})
 
-	export const gasMeterLabel = style({
-		color: 'content.tertiary',
-		typography: 'body.b2',
-	})
-
-	export const gasTrack = style({
-		backgroundColor: 'container.strong',
-		borderRadius: 'full',
-		height: '4px !custom',
-		overflow: 'hidden',
-		width: '100% !custom',
-	})
-
-	export const gasFill = style({
-		backgroundColor: `light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) !custom`,
-		borderRadius: 'full',
-		height: '100% !custom',
-		transitionDuration: '150ms',
-		transitionProperty: 'width',
-		transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-	})
-
-	export const gasFillWarm = style({ backgroundColor: 'content.warning' })
-
-	export const gasRatio = style({
-		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b2',
-	})
+	export const gasRatio = style({ fontVariantNumeric: 'tabular-nums' })
 
 	export const gasRatioUsed = style({ color: 'content.primary' })
 
-	export const gasRatioLimit = style({ color: 'content.tertiary' })
+	export const gasRatioLimit = style({ color: 'content.secondary' })
 
 	export const gasRatioPercent = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		marginLeft: '4',
 	})
 
-	export const gasRatioPercentWarm = style({ color: 'content.warning' })
-
 	export const skeleton = style({
-		animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '8',
-		paddingBlock: '16',
-		paddingInline: '16',
+		padding: '16',
 	})
 
 	export const skeletonRow = style({
 		backgroundColor: 'container.strong',
 		borderRadius: '3xs',
-		height: '10px !custom',
+		height: '12',
 	})
 
 	export const panelEmpty = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '20',
 		paddingInline: '16',
 		typography: 'body.b2',
 	})
 
-	export const panelError = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		paddingBlock: '16',
-		paddingInline: '16',
-		typography: 'body.b2',
-	})
+	export const panelError = style({ padding: '16' })
 
-	export const panelErrorTitle = style({ color: 'content.negative' })
-
-	export const panelErrorMessage = style({
-		color: 'content.tertiary',
-		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b2',
-		wordBreak: 'break-all',
-	})
-
-	export const failure = style({
-		alignItems: 'flex-start',
-		backgroundColor: 'container.negative',
-		borderRadius: 'xs',
-		display: 'flex',
-		gap: '12',
-		padding: '16',
-	})
-
-	export const failureIcon = style({
-		color: 'content.negative',
-		flexShrink: 0,
-		height: '16',
-		marginTop: '2',
-		width: '16',
-	})
-
-	export const failureBody = style({
-		display: 'flex',
-		flex: 1,
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const failureTitle = style({
-		color: 'content.negative',
-		margin: 'none',
-		typography: 'body.b2Strong',
-	})
-
-	export const failureHint = style({
-		color: 'content.secondary',
-		margin: 'none',
-		typography: 'body.b2',
-	})
-
-	export const failureMessages = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-	})
-
-	export const failureMessage = style({
-		backgroundColor: 'container.regular',
-		borderRadius: '2xs',
-		color: 'content.secondary',
-		display: 'block',
-		paddingBlock: '8',
-		paddingInline: '12',
-		typography: 'mono.inline',
-		wordBreak: 'break-all',
-	})
-
-	export const failureRetry = style({ marginTop: '4' })
+	export const failureMessage = style({ display: 'block', marginTop: '8' })
 }

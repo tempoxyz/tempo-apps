@@ -1,11 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { vars as core } from '@tempoxyz/ds/core'
 import { style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from '#comps/Midcut'
-import { link, pressDown, transitionColors } from '#styles/explorer'
+import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
 
 export function AddressCell(props: {
 	address: Address.Address
@@ -35,7 +34,7 @@ export function AddressCell(props: {
 			{...cx(
 				styles.address(),
 				link(),
-				styles.linkHover(),
+				linkHover(),
 				transitionColors(),
 				pressDown(),
 				isHighlighted && styles.highlighted(),
@@ -52,14 +51,6 @@ namespace styles {
 	export const address = style({
 		typography: 'mono.inline',
 		width: '100% !custom',
-	})
-
-	export const linkHover = style({
-		'@media (hover: hover)': {
-			':hover': {
-				color: `color-mix(in oklab, light-dark(${core.color.accent.blueLight}, ${core.color.accent.blueDark}) 80%, transparent) !custom`,
-			},
-		},
 	})
 
 	export const highlighted = style({ textDecorationLine: 'underline' })

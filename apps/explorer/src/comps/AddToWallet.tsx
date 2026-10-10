@@ -1,12 +1,11 @@
 import type { Address } from 'ox'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { StatusIndicator, TextButton } from '@tempoxyz/ds/platform'
 import * as React from 'react'
-import { type Connector, useConnection, useWatchAsset } from 'wagmi'
+import { useConnection, useWatchAsset } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from 'zyzz'
 import { supportsWatchAsset } from '#lib/wallets'
-import { pressDown, pulse, transitionColors } from '#styles/explorer'
-import LucideWallet from '~icons/lucide/wallet'
+import { animatePulse } from '#styles/explorer'
 
 export function AddToWallet(
 	props: AddToWallet.Props,
@@ -58,74 +57,28 @@ export function AddToWallet(
 
 	if (!isSupportedConnector) return null
 
+	if (isSuccess)
+		return <StatusIndicator tone="positive">Added!</StatusIndicator>
+
 	const walletName =
 		connector?.name && connector.name !== 'Injected' ? connector.name : 'Wallet'
 
-	const label = isSuccess
-		? 'Added!'
-		: isPending
-			? 'Adding…'
-			: `Add ${symbol ?? 'token'} to ${walletName}`
-
-	const state = isSuccess ? 'success' : isPending ? 'busy' : 'idle'
-
 	return (
-		<button
-			type="button"
-			disabled={isPending || isSuccess}
-			{...cx(
-				styles.action({ state }),
-				transitionColors(),
-				state === 'idle' && pressDown(),
-			)}
+		<TextButton
+			disabled={isPending}
 			onClick={handleClick}
+			{...cx(isPending && animatePulse())}
 		>
-			<LucideWallet {...styles.icon()} />
-			{label}
-		</button>
+			{isPending ? 'Adding…' : `Add ${symbol ?? 'token'} to ${walletName}`}
+		</TextButton>
 	)
 }
 
 export declare namespace AddToWallet {
 	type Props = {
 		address: Address.Address
-		connectors: readonly Connector[]
 		symbol?: string | undefined
 		decimals?: number | undefined
 		image?: string | undefined
 	}
-}
-
-namespace styles {
-	export const action = variants({
-		base: {
-			alignItems: 'center',
-			display: 'flex',
-			gap: '8',
-			typography: 'body.b3',
-			width: '100% !custom',
-		},
-		defaultVariants: { state: 'idle' },
-		variants: {
-			state: {
-				busy: {
-					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
-					color: 'content.secondary',
-				},
-				current: { color: 'content.tertiary', cursor: 'default' },
-				idle: {
-					color: 'content.secondary',
-					cursor: 'pointer',
-					'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-				},
-				success: { color: 'content.positive' },
-			},
-		},
-	})
-
-	export const icon = style({
-		flexShrink: 0,
-		height: '14px !custom',
-		width: '14px !custom',
-	})
 }

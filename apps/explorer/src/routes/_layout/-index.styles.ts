@@ -55,31 +55,25 @@ export namespace styles {
 		flexWrap: 'wrap',
 		gap: '8',
 		justifyContent: 'center',
-		typography: 'body.b3',
 	})
 
-	export const pillIcon = style({
-		flexShrink: 0,
-		height: '14px !custom',
-		width: '14px !custom',
-	})
-
-	// A link in the TDS small secondary Button style.
+	// TDS Button small secondary geometry on a link.
 	export const pill = style({
 		alignItems: 'center',
 		backgroundColor: 'container.regular',
 		borderRadius: 'full',
-		color: 'content.secondary',
-		display: 'flex',
-		gap: '8',
+		color: 'content.primary',
+		columnGap: '4',
+		display: 'inline-flex',
 		height: '32',
-		paddingInline: '12',
+		justifyContent: 'center',
+		minWidth: '80px !custom',
+		paddingInline: '16',
 		textDecorationLine: 'none',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
 		'@media (hover: hover)': {
-			':hover': {
-				backgroundColor: 'container.strong',
-				color: 'content.primary',
-			},
+			':hover': { backgroundColor: 'container.strong' },
 		},
 	})
 
@@ -90,14 +84,9 @@ export namespace styles {
 		gap: '4',
 	})
 
-	// The hero steps up in size and contrast. TDS has two display sizes, so
-	// the first two words share the smaller one.
-	export const wordSearch = style({
-		color: 'content.tertiary',
-		typography: 'display.d2',
-	})
-
-	export const wordExplore = style({
+	// The hero steps up to the last word. TDS has two display sizes, so the
+	// first two words share the smaller one.
+	export const wordLead = style({
 		color: 'content.secondary',
 		typography: 'display.d2',
 	})

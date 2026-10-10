@@ -5,8 +5,8 @@ import { cx } from 'zyzz'
 import { Midcut } from '#comps/Midcut'
 import { link, linkHover, pressDown } from '#styles/explorer'
 
-export function ValidatorTag(props: ValidatorTag.Props) {
-	const { address, name, showAddress = true, align = 'end' } = props
+export function ValidatorTag(props: ValidatorTag.Props): React.JSX.Element {
+	const { address } = props
 
 	return (
 		<Link
@@ -15,22 +15,14 @@ export function ValidatorTag(props: ValidatorTag.Props) {
 			{...cx(styles.root(), link(), linkHover(), pressDown())}
 			title={address}
 		>
-			{name && <span {...styles.name()}>{name}</span>}
-			{showAddress && (
-				<span {...styles.address()}>
-					<Midcut value={address} prefix="0x" align={align} min={4} />
-				</span>
-			)}
+			<Midcut value={address} prefix="0x" align="end" min={4} />
 		</Link>
 	)
 }
 
-export namespace ValidatorTag {
-	export interface Props {
+export declare namespace ValidatorTag {
+	type Props = {
 		address: Address.Address
-		name?: string
-		showAddress?: boolean
-		align?: 'start' | 'end'
 	}
 }
 
@@ -39,24 +31,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '8',
 		justifyContent: 'flex-end',
 		minWidth: '0 !custom',
-	})
-
-	export const name = style({
-		backgroundColor: 'container.subtle',
-		borderRadius: '3xs',
-		color: 'content.tertiary',
-		paddingBlock: '2',
-		paddingInline: '8',
-		typography: 'body.b3',
-		whiteSpace: 'nowrap',
-	})
-
-	export const address = style({
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
 	})
 }

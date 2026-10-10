@@ -5,18 +5,20 @@ import {
 	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
+import { Calendar } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { useAnimatedBlockNumber } from '#lib/block-number'
 import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
-import { link, linkHover, pressDown } from '#styles/explorer'
-import CalendarIcon from '~icons/lucide/calendar'
+import { link, linkHover } from '#styles/explorer'
 import { styles } from './-countdown.$targetBlock.styles'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
+
+// Explorer link color and hover underline, for route styles that cannot use `cx`.
+const linkClassName = link({ className: linkHover().className }).className
 
 export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 	component: RouteComponent,
@@ -134,7 +136,7 @@ function CountdownCard(props: {
 				<h1 {...styles.title()}>Block Countdown</h1>
 				<p {...styles.description()}>
 					Estimated time for block{' '}
-					<span {...cx(styles.target(), link())}>
+					<span {...styles.target({ className: link().className })}>
 						#{targetBlockNumber.toLocaleString()}
 					</span>{' '}
 					to be created
@@ -156,7 +158,7 @@ function CountdownCard(props: {
 							<Link
 								to="/block/$id"
 								params={{ id: String(targetBlockNumber) }}
-								{...cx(styles.blockLink(), link(), linkHover(), pressDown())}
+								{...styles.blockLink({ className: linkClassName })}
 							>
 								#{targetBlockNumber.toLocaleString()}
 							</Link>
@@ -168,7 +170,7 @@ function CountdownCard(props: {
 							<Link
 								to="/block/$id"
 								params={{ id: String(currentBlockNumber) }}
-								{...cx(styles.blockLink(), link(), linkHover(), pressDown())}
+								{...styles.blockLink({ className: linkClassName })}
 							>
 								#{currentBlockNumber.toLocaleString()}
 							</Link>
@@ -185,7 +187,7 @@ function CountdownCard(props: {
 					{
 						label: (
 							<span {...styles.dateLabel()} title="Estimated Target Date">
-								<CalendarIcon {...styles.dateIcon()} />
+								<Calendar {...styles.dateIcon()} />
 								<span {...styles.dateLabelLong()}>Estimated Target Date</span>
 								<span {...styles.dateLabelShort()}>Est. Target</span>
 							</span>

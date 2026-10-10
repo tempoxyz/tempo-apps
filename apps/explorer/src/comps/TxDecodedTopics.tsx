@@ -1,4 +1,5 @@
-import { IconButton, style } from '@tempoxyz/ds/platform'
+import { IconButton, Tooltip, style } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeEventLog, getAbiItem, parseAbiItem } from 'viem'
@@ -8,8 +9,8 @@ import { Abis } from '#lib/abis'
 import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
-import { pressDown, transitionColors } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
+import { Choices } from '#comps/ui/Choices'
+import { codeIdentifier, pressDown, transitionColors } from '#styles/explorer'
 
 export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 	const { log } = props
@@ -114,14 +115,14 @@ export namespace TxDecodedTopics {
 		return (
 			<div {...styles.header()}>
 				<code {...styles.signature()}>
-					<span {...styles.tertiary()}>Name </span>
-					<span {...styles.positive()}>{abiItem.name}</span>
+					<span {...styles.secondary()}>Name </span>
+					<span {...codeIdentifier()}>{abiItem.name}</span>
 					<span {...styles.secondary()}> (</span>
 					{abiItem.inputs.map((input, i) => (
 						<span key={`${input.type}-${input.name ?? i}`}>
 							{i > 0 && <span {...styles.secondary()}>, </span>}
 							{input.indexed && (
-								<span {...styles.tertiary()}>topic[{i + 1}] </span>
+								<span {...styles.secondary()}>topic[{i + 1}] </span>
 							)}
 							<span {...styles.secondary()}>{input.type}</span>
 							{input.name && <span {...styles.primary()}> {input.name}</span>}
@@ -129,19 +130,17 @@ export namespace TxDecodedTopics {
 					))}
 					<span {...styles.secondary()}>)</span>
 				</code>
-				<div {...styles.actions()}>
-					{notifying && <span {...styles.copied()}>copied</span>}
+				<Tooltip content="Copy signature">
 					<IconButton
-						{...cx(styles.copyButton(), pressDown(), transitionColors())}
+						{...styles.copyButton()}
 						aria-label="Copy signature"
 						onClick={() => copy(signatureText)}
 						scale="small"
-						title="Copy signature"
 						variant="tertiary"
 					>
-						<CopyIcon />
+						{notifying ? <Check /> : <Copy />}
 					</IconButton>
-				</div>
+				</Tooltip>
 			</div>
 		)
 	}
@@ -153,7 +152,7 @@ export namespace TxDecodedTopics {
 
 	export function ArgumentsSection(props: ArgumentsSection.Props) {
 		const { abiItem, args, log } = props
-		const [showRaw, setShowRaw] = useState(false)
+		const [view, setView] = useState<'decoded' | 'raw'>('decoded')
 
 		if (!args || abiItem.inputs.length === 0) return null
 
@@ -161,15 +160,14 @@ export namespace TxDecodedTopics {
 			<div {...styles.section()}>
 				<div {...styles.argumentsLabel()}>
 					<span>Arguments</span>
-					<button
-						type="button"
-						onClick={() => setShowRaw(!showRaw)}
-						{...cx(styles.toggle(), pressDown(), transitionColors())}
-					>
-						{showRaw ? 'raw' : 'decoded'}
-					</button>
+					<Choices
+						items={argumentViews}
+						label="Arguments view"
+						onChange={setView}
+						value={view}
+					/>
 				</div>
-				{showRaw ? (
+				{view === 'raw' ? (
 					<div {...styles.rawStack()}>
 						<div {...styles.topics()}>
 							{log.topics.map((topic, i) => (
@@ -208,7 +206,7 @@ export namespace TxDecodedTopics {
 
 	export function ArgumentRow(props: ArgumentRow.Props) {
 		const { input, value } = props
-		const { copy, notifying } = useCopy()
+		const { copy } = useCopy()
 
 		const displayValue = value !== undefined ? formatAbiValue(value) : ''
 		const label = input.name || input.type
@@ -219,15 +217,7 @@ export namespace TxDecodedTopics {
 				onClick={() => copy(displayValue)}
 				{...cx(styles.argumentRow(), pressDown(), transitionColors())}
 			>
-				<span {...styles.argumentLabel()}>
-					{notifying ? (
-						<span {...styles.primary()}>
-							{'copied'.padEnd(label.length + 1)}
-						</span>
-					) : (
-						<>{label}:</>
-					)}
-				</span>
+				<span {...styles.argumentLabel()}>{label}:</span>
 				<span {...styles.hex()}>{displayValue}</span>
 			</button>
 		)
@@ -241,13 +231,11 @@ export namespace TxDecodedTopics {
 
 	export function RawDataInline(props: RawDataInline.Props) {
 		const { data } = props
-		const { copy, notifying } = useCopy()
+		const { copy } = useCopy()
 
 		return (
 			<div>
-				<div {...cx(styles.label(), styles.inlineLabel())}>
-					{notifying ? <span {...styles.primary()}>copied</span> : 'Data'}
-				</div>
+				<div {...cx(styles.label(), styles.inlineLabel())}>Data</div>
 				<button
 					type="button"
 					onClick={() => copy(data)}
@@ -298,7 +286,7 @@ export namespace TxDecodedTopics {
 
 	export function RawTopicRow(props: RawTopicRow.Props) {
 		const { index, topic } = props
-		const { copy, notifying } = useCopy()
+		const { copy } = useCopy()
 
 		return (
 			<button
@@ -306,13 +294,7 @@ export namespace TxDecodedTopics {
 				onClick={() => copy(topic)}
 				{...cx(styles.topicRow(), pressDown(), transitionColors())}
 			>
-				<span {...styles.topicLabel()}>
-					{notifying ? (
-						<span {...styles.primary()}>copied</span>
-					) : (
-						`topic[${index}]`
-					)}
-				</span>
+				<span {...styles.topicLabel()}>topic[{index}]</span>
 				<span {...styles.hex()}>{topic}</span>
 			</button>
 		)
@@ -326,13 +308,11 @@ export namespace TxDecodedTopics {
 
 	export function RawDataSection(props: RawDataSection.Props) {
 		const { data } = props
-		const { copy, notifying } = useCopy()
+		const { copy } = useCopy()
 
 		return (
 			<div {...styles.section()}>
-				<div {...cx(styles.label(), styles.sectionLabel())}>
-					{notifying ? <span {...styles.primary()}>copied</span> : 'Data'}
-				</div>
+				<div {...cx(styles.label(), styles.sectionLabel())}>Data</div>
 				<button
 					type="button"
 					onClick={() => copy(data)}
@@ -349,6 +329,11 @@ export namespace TxDecodedTopics {
 		}
 	}
 }
+
+const argumentViews = [
+	{ label: 'Decoded', value: 'decoded' },
+	{ label: 'Raw', value: 'raw' },
+] as const
 
 // Copyable rows sit flush with the surrounding text: the padding that gives
 // them a hover fill is pulled back out with a negative inline margin.
@@ -374,13 +359,16 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	// An opaque well that matches the decoded calldata panel.
+	// An opaque well that matches the decoded calldata panel. It clips, so
+	// focus rings inside it are drawn inset (the element type beats
+	// IconButton's own offset).
 	export const panel = style({
 		backgroundColor: 'background.primary',
 		borderRadius: '2xs',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
 		width: '100% !custom',
+		selectors: { '& button:focus-visible': { outlineOffset: '-2px' } },
 	})
 
 	export const header = style({
@@ -404,23 +392,10 @@ namespace styles {
 
 	export const secondary = style({ color: 'content.secondary' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const positive = style({ color: 'content.positive' })
-
-	export const actions = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		display: 'flex',
-		flexShrink: '0 !custom',
-		gap: '4',
-	})
-
-	export const copied = style({ typography: 'body.b3', userSelect: 'none' })
-
-	// IconButton keeps its 32px target; negative margins keep the row height
-	// of the old 22px control. Only properties IconButton leaves unset.
+	// Negative margins let the 32px IconButton sit in a 16px text row without
+	// growing it. Only properties IconButton leaves unset.
 	export const copyButton = style({
+		flexShrink: '0 !custom',
 		marginBlock: '-8px !custom',
 		marginRight: '-8px !custom',
 		'@media (hover: hover)': {
@@ -436,24 +411,11 @@ namespace styles {
 
 	export const argumentsLabel = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
 		marginBottom: '8',
 		typography: 'body.b3',
-	})
-
-	export const toggle = style({
-		backgroundColor: 'container.regular',
-		borderRadius: 'full',
-		color: 'content.primary',
-		cursor: 'pointer',
-		paddingBlock: '2',
-		paddingInline: '8',
-		typography: 'body.b3',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
 	})
 
 	export const rawStack = style({
@@ -484,7 +446,7 @@ namespace styles {
 	})
 
 	export const argumentLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 		whiteSpace: 'pre',
 	})
@@ -497,7 +459,7 @@ namespace styles {
 	})
 
 	export const label = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
@@ -547,7 +509,7 @@ namespace styles {
 	})
 
 	export const topicLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 		typography: 'body.b3',
 	})

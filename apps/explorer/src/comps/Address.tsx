@@ -4,7 +4,7 @@ import type { Address as AddressType } from 'ox'
 import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from '#comps/Midcut'
-import { link, linkHover, pressDown } from '#styles/explorer'
+import { link, linkHover, mono, pressDown } from '#styles/explorer'
 
 export function Address(props: Address.Props) {
 	const { address, align, chars = 3, className, search, self, title } = props
@@ -19,6 +19,7 @@ export function Address(props: Address.Props) {
 				preload="intent"
 				{...cx(
 					styles.link({ className }),
+					mono(),
 					link(),
 					linkHover(),
 					pressDown(),
@@ -49,9 +50,6 @@ export namespace Address {
 namespace styles {
 	export const link = style({
 		display: 'inline-flex',
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
 		minWidth: '0 !custom',
 	})
 
@@ -62,5 +60,5 @@ namespace styles {
 
 	export const highlighted = style({ textDecorationLine: 'underline' })
 
-	export const self = style({ color: 'content.tertiary' })
+	export const self = style({ color: 'content.secondary' })
 }

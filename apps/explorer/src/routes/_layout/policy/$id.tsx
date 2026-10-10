@@ -5,11 +5,10 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { Button } from '@tempoxyz/ds/platform'
+import { Search, StatusIndicator } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
-import { cx } from 'zyzz'
 import { Address as AddressLink } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { CopyButton } from '#comps/CopyButton'
@@ -27,8 +26,8 @@ import type {
 import { fetchTip403Policy } from '#lib/server/tip403'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
-import { link, linkHover, srOnly } from '#styles/explorer'
-import { styles } from './-$id.styles'
+import { srOnly } from '#styles/explorer'
+import { composed, styles } from './-$id.styles'
 
 const defaultSearchValues = { page: 1, limit: 10, q: '' } as const
 
@@ -139,7 +138,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 					value: (
 						<span {...styles.type()}>
 							<PolicyTypeBadge type={policy.type} />
-							{builtIn ? <span {...styles.tertiary()}>{builtIn}</span> : null}
+							{builtIn ? <span {...styles.builtIn()}>{builtIn}</span> : null}
 						</span>
 					),
 				},
@@ -159,7 +158,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[0] }}
-										{...cx(link(), linkHover())}
+										{...composed.textLink}
 									>
 										#{policy.componentPolicies[0]}
 									</Link>
@@ -171,7 +170,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[1] }}
-										{...cx(link(), linkHover())}
+										{...composed.textLink}
 									>
 										#{policy.componentPolicies[1]}
 									</Link>
@@ -183,7 +182,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[2] }}
-										{...cx(link(), linkHover())}
+										{...composed.textLink}
 									>
 										#{policy.componentPolicies[2]}
 									</Link>
@@ -203,38 +202,43 @@ function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
 			: props.type === 'blacklist'
 				? 'negative'
 				: 'neutral'
-	return <span {...styles.typeBadge({ tone })}>{props.type}</span>
+	return (
+		<StatusIndicator tone={tone} {...styles.typeLabel()}>
+			{props.type}
+		</StatusIndicator>
+	)
 }
 
 function MembersSearch(props: { query: string }) {
 	const navigate = useNavigate()
+	const search = (query: string) =>
+		void navigate({
+			to: '.',
+			search: (previous) => ({
+				...previous,
+				page: 1,
+				q: query || undefined,
+			}),
+		})
 	return (
 		<form
 			{...styles.search()}
 			onSubmit={(event) => {
 				event.preventDefault()
-				const query =
-					new FormData(event.currentTarget).get('query')?.toString() ?? ''
-				void navigate({
-					to: '.',
-					search: (previous) => ({
-						...previous,
-						page: 1,
-						q: query || undefined,
-					}),
-				})
+				search(new FormData(event.currentTarget).get('query')?.toString() ?? '')
 			}}
 		>
-			<input
+			<Search
 				name="query"
 				defaultValue={props.query}
 				placeholder="Search addresses"
 				aria-label="Search policy members"
-				{...styles.searchInput()}
+				enterKeyHint="search"
+				// Clearing the field also clears an applied filter.
+				onValueChange={(value) => {
+					if (!value && props.query) search('')
+				}}
 			/>
-			<Button type="submit" scale="small" variant="secondary">
-				Search
-			</Button>
 		</form>
 	)
 }
@@ -266,9 +270,9 @@ function MembersGrid(props: {
 					key: address,
 					cells: [
 						<AddressLink key="address" address={address} chars={5} />,
-						<span key="status" {...styles.status({ tone: statusTone })}>
+						<StatusIndicator key="status" tone={statusTone}>
 							{status}
-						</span>,
+						</StatusIndicator>,
 					],
 				}))
 			}

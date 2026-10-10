@@ -1,13 +1,19 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { StatusIndicator, style } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import type { Address, Hex } from 'ox'
 import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { useCopy } from '#lib/hooks'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
+import {
+	link,
+	linkHover,
+	mono,
+	pressDown,
+	transitionColors,
+} from '#styles/explorer'
 
 export function TxTransactionCard(props: TxTransactionCard.Props) {
 	const { hash, status, error, blockNumber, timestamp, from, to, className } =
@@ -21,7 +27,13 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 			sections={[
 				{
 					label: 'Status',
-					value: <StatusBadge status={status} />,
+					value: (
+						<StatusIndicator
+							tone={status === 'success' ? 'positive' : 'negative'}
+						>
+							{status === 'success' ? 'Success' : 'Failed'}
+						</StatusIndicator>
+					),
 				},
 				...(status === 'reverted' && error
 					? [
@@ -37,18 +49,13 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					onClick={() => copy(hash)}
 					{...cx(styles.copyHash(), pressDown())}
 					title={hash}
-					aria-label={
-						notifying ? 'Transaction hash copied' : 'Copy transaction hash'
-					}
+					aria-label="Copy transaction hash"
 				>
-					<div {...styles.copyHeader()}>
-						<span {...styles.capitalize()}>Hash</span>
-						<div {...styles.copyIconWrap()}>
-							<CopyIcon {...styles.copyIcon()} />
-							{notifying && <span {...styles.copied()}>copied</span>}
-						</div>
-					</div>
-					<p {...styles.hashValue()}>{hash}</p>
+					<span {...styles.copyHeader()}>
+						Hash
+						{notifying ? <Check /> : <Copy />}
+					</span>
+					<span {...styles.hashValue()}>{hash}</span>
 				</button>,
 				{
 					label: 'Block',
@@ -90,7 +97,13 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/address/$address"
 							params={{ address: from }}
-							{...cx(styles.address(), link(), linkHover(), pressDown())}
+							{...cx(
+								styles.address(),
+								mono(),
+								link(),
+								linkHover(),
+								pressDown(),
+							)}
 							title={from}
 						>
 							<Midcut value={from} prefix="0x" min={4} align="end" />
@@ -104,7 +117,13 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 								<Link
 									to="/address/$address"
 									params={{ address: to }}
-									{...cx(styles.address(), link(), linkHover(), pressDown())}
+									{...cx(
+										styles.address(),
+										mono(),
+										link(),
+										linkHover(),
+										pressDown(),
+									)}
 									title={to}
 								>
 									<Midcut value={to} prefix="0x" min={4} align="end" />
@@ -113,7 +132,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						}
 					: {
 							label: 'To',
-							value: <span {...styles.tertiary()}>Contract Creation</span>,
+							value: <span {...styles.secondary()}>Contract Creation</span>,
 						},
 				<Link
 					key="receipt"
@@ -121,7 +140,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					params={{ hash }}
 					{...cx(styles.action(), pressDown())}
 				>
-					<span {...styles.tertiary()}>Receipt</span>
+					<span {...styles.secondary()}>Receipt</span>
 					<span {...cx(styles.actionPill(), transitionColors())}>View →</span>
 				</Link>,
 				/**
@@ -138,7 +157,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					{...cx(styles.action(), pressDown())}
 					title="Replay this transaction against the state of its parent block"
 				>
-					<span {...styles.tertiary()}>Simulate</span>
+					<span {...styles.secondary()}>Simulate</span>
 					<span
 						{...cx(
 							styles.actionPill(),
@@ -151,16 +170,6 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 				</Link>,
 			]}
 		/>
-	)
-}
-
-function StatusBadge(props: { status: 'success' | 'reverted' }) {
-	const { status } = props
-	const isSuccess = status === 'success'
-	return (
-		<span {...styles.status({ tone: isSuccess ? 'positive' : 'negative' })}>
-			{isSuccess ? 'Success' : 'Failed'}
-		</span>
 	)
 }
 
@@ -185,7 +194,7 @@ namespace styles {
 	})
 
 	export const copyHash = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -194,44 +203,26 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		fontFamily: 'Pilat, Arial, sans-serif',
 		gap: '8',
 		marginBottom: '8',
-	})
-
-	export const capitalize = style({ textTransform: 'capitalize' })
-
-	export const copyIconWrap = style({
-		alignItems: 'center',
-		display: 'flex',
-		position: 'relative',
-	})
-
-	export const copyIcon = style({ height: '12', width: '12' })
-
-	export const copied = style({
-		left: 'calc(100% + 8px) !custom',
-		position: 'absolute',
+		selectors: { '& > svg': { height: '12', width: '12' } },
 	})
 
 	export const hashValue = style({
 		color: 'content.primary',
+		display: 'block',
 		maxWidth: '34ch !custom',
 		typography: 'mono.inline',
-		lineHeight: '1.625 !custom',
 		wordBreak: 'break-all',
 	})
 
-	export const block = style({
-		fontFamily: 'Pilat, Arial, sans-serif',
-		fontVariantNumeric: 'tabular-nums',
-	})
+	export const block = style({ fontVariantNumeric: 'tabular-nums' })
 
 	export const timeGroup = style()
 
 	export const timeToggle = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		display: 'inline-flex',
 		gap: '8',
@@ -254,19 +245,15 @@ namespace styles {
 
 	export const timestamp = style({
 		color: 'content.primary',
-		fontFamily: 'Pilat, Arial, sans-serif',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const address = style({
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
 		maxWidth: '50ch !custom',
 		width: '100% !custom',
 	})
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const action = style({
 		alignItems: 'center',
@@ -282,38 +269,16 @@ namespace styles {
 		borderRadius: 'full',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '2',
 		paddingInline: '8',
 		typography: 'body.b3',
 		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 	})
 
+	// Red outline only: red text fails contrast on the light card.
 	export const actionPillNegative = style({
 		borderColor: 'border.negative',
-		color: 'content.negative',
-		'@media (hover: hover)': { ':hover': { color: 'content.negative' } },
-	})
-
-	export const status = variants({
-		base: {
-			borderRadius: '3xs',
-			paddingBlock: '2',
-			paddingInline: '8',
-			typography: 'body.b3',
-		},
-		defaultVariants: { tone: 'positive' },
-		variants: {
-			tone: {
-				negative: {
-					backgroundColor: 'container.negative',
-					color: 'content.negative',
-				},
-				positive: {
-					backgroundColor: 'container.positive',
-					color: 'content.positive',
-				},
-			},
-		},
+		color: 'content.primary',
 	})
 }

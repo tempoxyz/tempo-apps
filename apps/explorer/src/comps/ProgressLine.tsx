@@ -1,26 +1,19 @@
 import { style } from '@tempoxyz/ds/platform'
-import { useEffect, useState } from 'react'
+import * as React from 'react'
 
-interface ProgressLineProps {
-	loading: boolean
-	start?: number
-	interval?: number
-	className?: string
-}
+const endDelay = 200
+const tickInterval = 300
 
-export function ProgressLine({
-	loading,
-	start = 0,
-	interval = 300,
-	className,
-}: ProgressLineProps) {
-	const endDelay = 200
+export function ProgressLine(
+	props: ProgressLine.Props,
+): React.JSX.Element | null {
+	const { loading, start = 0, className } = props
 
-	const [show, setShow] = useState(false)
-	const [progress, setProgress] = useState(0)
+	const [show, setShow] = React.useState(false)
+	const [progress, setProgress] = React.useState(0)
 
 	// Start delay
-	useEffect(() => {
+	React.useEffect(() => {
 		if (!loading) return
 		if (start === 0) {
 			setShow(true)
@@ -31,7 +24,7 @@ export function ProgressLine({
 	}, [loading, start])
 
 	// Progress interval
-	useEffect(() => {
+	React.useEffect(() => {
 		if (!show || !loading) return
 
 		setProgress(0)
@@ -40,13 +33,13 @@ export function ProgressLine({
 				if (prev >= 90) return prev
 				return prev + Math.random() * 10
 			})
-		}, interval)
+		}, tickInterval)
 
 		return () => clearInterval(progressTimer)
-	}, [show, loading, interval])
+	}, [show, loading])
 
 	// Finish progress
-	useEffect(() => {
+	React.useEffect(() => {
 		if (loading) return
 
 		setProgress(99)
@@ -73,9 +66,18 @@ export function ProgressLine({
 	)
 }
 
+export declare namespace ProgressLine {
+	type Props = {
+		loading: boolean
+		/** Delay in milliseconds before the line appears. */
+		start?: number | undefined
+		className?: string | undefined
+	}
+}
+
 namespace styles {
 	export const line = style({
-		backgroundColor: 'component.button.primary.fill',
+		backgroundColor: 'content.primary',
 		height: '1px !custom',
 		pointerEvents: 'none',
 	})

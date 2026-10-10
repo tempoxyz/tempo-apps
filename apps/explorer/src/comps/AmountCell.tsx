@@ -1,30 +1,16 @@
-import { style, variants } from '@tempoxyz/ds/platform'
+import { StatusIndicator, style } from '@tempoxyz/ds/platform'
 import { formatUnits } from 'viem'
 import { PriceFormatter } from '#lib/formatting'
 
-export function AmountCell(props: {
-	value: bigint
-	decimals?: number
-	symbol?: string
-}) {
-	const { value, decimals = 18, symbol } = props
-	const formatted = PriceFormatter.formatAmount(formatUnits(value, decimals))
-	return (
-		<span {...styles.amount()}>
-			{formatted} {symbol}
-		</span>
-	)
-}
-
 /**
- * Directional transfer amount: outgoing renders red with a minus, incoming
- * green. Clicking toggles between currency display (`$1.23`, via
- * `Intl.NumberFormat` when the token has an ISO currency) and the token
- * amount (`1.23 USDC`).
+ * Directional transfer amount: outgoing shows a red marker and a minus,
+ * incoming a green marker. Clicking toggles between currency display
+ * (`$1.23`, via `Intl.NumberFormat` when the token has an ISO currency) and
+ * the token amount (`1.23 USDC`).
  */
 export function TransferAmountCell(props: {
 	value: bigint
-	/** Colors the amount (out = red with minus, in = green); omit for neutral. */
+	/** Marks the amount (out = red with minus, in = green); omit for neutral. */
 	direction?: 'in' | 'out' | 'self' | undefined
 	display: 'currency' | 'token'
 	onToggleDisplay: () => void
@@ -68,17 +54,20 @@ export function TransferAmountCell(props: {
 		<button
 			type="button"
 			title="Toggle currency/token amounts"
-			{...styles.transfer({
-				direction:
-					direction === 'out' || direction === 'in' ? direction : 'neutral',
-			})}
+			{...styles.transfer()}
 			onClick={(event) => {
 				event.preventDefault()
 				event.stopPropagation()
 				onToggleDisplay()
 			}}
 		>
-			{direction === 'out' ? `-${text}` : text}
+			{direction === 'out' ? (
+				<StatusIndicator tone="negative">{`-${text}`}</StatusIndicator>
+			) : direction === 'in' ? (
+				<StatusIndicator tone="positive">{text}</StatusIndicator>
+			) : (
+				text
+			)}
 		</button>
 	)
 }
@@ -97,19 +86,10 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const transfer = variants({
-		base: {
-			cursor: 'pointer',
-			fontVariantNumeric: 'tabular-nums',
-			typography: 'body.b3',
-		},
-		defaultVariants: { direction: 'neutral' },
-		variants: {
-			direction: {
-				in: { color: 'content.positive' },
-				neutral: { color: 'content.primary' },
-				out: { color: 'content.negative' },
-			},
-		},
+	export const transfer = style({
+		color: 'content.primary',
+		cursor: 'pointer',
+		fontVariantNumeric: 'tabular-nums',
+		typography: 'body.b3',
 	})
 }

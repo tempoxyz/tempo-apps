@@ -1,6 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { Button, Search, style } from '@tempoxyz/ds/platform'
+import {
+	AlertCircle,
+	ArrowCornerDownLeft,
+	ArrowCornerDownRight,
+	ArrowRight,
+	Check,
+	Copy,
+	Expand,
+	Shrink,
+} from '@tempoxyz/ds/platform/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
@@ -13,7 +23,7 @@ import {
 	pressDown,
 	transitionColors,
 } from '#styles/explorer'
-import { PanelToolbar, SegmentedControl } from './PanelToolbar'
+import { PanelToolbar, ViewToggle } from './PanelToolbar'
 import {
 	blockHashHistoryAddress,
 	formatAbiValue,
@@ -35,14 +45,6 @@ import { HexFormatter } from '#lib/formatting'
 import { useCopy, usePermalinkHighlight } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
 import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
-import CheckIcon from '~icons/lucide/check'
-import FoldIcon from '~icons/lucide/fold-vertical'
-import UnfoldIcon from '~icons/lucide/unfold-vertical'
-import CircleAlertIcon from '~icons/lucide/circle-alert'
-import CopyIcon from '~icons/lucide/copy'
-import WrapIcon from '~icons/lucide/corner-down-left'
-import ReturnIcon from '~icons/lucide/corner-down-right'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
 	const { trace, tree: treeProp, label = 'Execution Trace', toolbar } = props
@@ -85,94 +87,97 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	const showToolbar = toolbar && isTree
 	const failedNode = showToolbar ? findDeepestFailedNode(tree) : null
 
+	const modeToggle = (
+		<ViewToggle
+			label="Trace format"
+			value={raw ? 'raw' : 'decoded'}
+			options={[
+				{ value: 'decoded', label: 'Decoded' },
+				{ value: 'raw', label: 'Raw' },
+			]}
+			onChange={(value) => setRaw(value === 'raw')}
+		/>
+	)
+	const wrapToggle = (
+		<PanelToolbar.IconButton
+			onClick={() => setWrap(!wrap)}
+			active={wrap}
+			label={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+		>
+			<ArrowCornerDownLeft />
+		</PanelToolbar.IconButton>
+	)
+	const copyButton = (
+		<PanelToolbar.IconButton onClick={handleCopy} label="Copy trace">
+			{copy.notifying ? <Check /> : <Copy />}
+		</PanelToolbar.IconButton>
+	)
+
 	return (
 		<div {...styles.root()}>
 			{showToolbar ? (
 				<PanelToolbar>
-					{
-						<input
-							value={query}
-							onChange={(event) => setQuery(event.target.value)}
-							placeholder="Filter frames…"
-							spellCheck={false}
-							{...cx(styles.filter(), transitionColors())}
-						/>
-					}
-					{failedNode && (
-						<button
-							type="button"
-							onClick={() => props.onSelect?.(failedNode.id)}
-							{...cx(styles.revertButton(), pressDown(), transitionColors())}
-							title="Jump to the frame that reverted"
-						>
-							<CircleAlertIcon {...styles.icon12()} />
-							Go to revert
-						</button>
-					)}
-					{
-						<>
-							<PanelToolbar.IconButton
-								onClick={() =>
-									setCollapseKey({
-										all: false,
-										nonce: (collapseKey?.nonce ?? 0) + 1,
-									})
-								}
-								title="Expand all frames"
-							>
-								<UnfoldIcon />
-							</PanelToolbar.IconButton>
-							<PanelToolbar.IconButton
-								onClick={() =>
-									setCollapseKey({
-										all: true,
-										nonce: (collapseKey?.nonce ?? 0) + 1,
-									})
-								}
-								title="Collapse all frames"
-							>
-								<FoldIcon />
-							</PanelToolbar.IconButton>
-						</>
-					}
-					<PanelToolbar.IconButton
-						onClick={() => setWrap(!wrap)}
-						active={wrap}
-						title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-					>
-						<WrapIcon />
-					</PanelToolbar.IconButton>
-					<PanelToolbar.IconButton onClick={handleCopy} title="Copy trace">
-						{copy.notifying ? <CheckIcon /> : <CopyIcon />}
-					</PanelToolbar.IconButton>
-					<SegmentedControl
-						size="sm"
-						value={raw ? 'raw' : 'decoded'}
-						options={[
-							{ value: 'decoded', label: 'Decoded' },
-							{ value: 'raw', label: 'Raw' },
-						]}
-						onChange={(value) => setRaw(value === 'raw')}
+					<Search
+						value={query}
+						onValueChange={setQuery}
+						placeholder="Filter frames…"
+						aria-label="Filter frames"
+						spellCheck={false}
+						// Sized to the toolbar's 32px controls; inline wins over Search's own.
+						{...styles.filter({
+							style: {
+								height: 32,
+								marginRight: 'auto',
+								paddingBlock: 0,
+								paddingInline: 12,
+								width: 240,
+							},
+						})}
 					/>
+					{failedNode && (
+						<Button
+							scale="small"
+							variant="secondary"
+							onClick={() => props.onSelect?.(failedNode.id)}
+							{...cx(pressDown(), transitionColors())}
+						>
+							<AlertCircle {...styles.revertIcon()} />
+							Go to revert
+						</Button>
+					)}
+					<PanelToolbar.IconButton
+						onClick={() =>
+							setCollapseKey({
+								all: false,
+								nonce: (collapseKey?.nonce ?? 0) + 1,
+							})
+						}
+						label="Expand all frames"
+					>
+						<Expand />
+					</PanelToolbar.IconButton>
+					<PanelToolbar.IconButton
+						onClick={() =>
+							setCollapseKey({
+								all: true,
+								nonce: (collapseKey?.nonce ?? 0) + 1,
+							})
+						}
+						label="Collapse all frames"
+					>
+						<Shrink />
+					</PanelToolbar.IconButton>
+					{wrapToggle}
+					{copyButton}
+					{modeToggle}
 				</PanelToolbar>
 			) : label ? (
 				<div {...styles.header()}>
-					<span {...styles.headerLabel()}>
-						<span {...styles.tertiary()}>{label} </span>
-						<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
-					</span>
+					<span {...styles.headerLabel()}>{label}</span>
 					<div {...styles.headerActions()}>
-						{copy.notifying && <span {...styles.copied()}>copied</span>}
-						<PanelToolbar.IconButton onClick={handleCopy} title="Copy trace">
-							<CopyIcon />
-						</PanelToolbar.IconButton>
-						<PanelToolbar.IconButton
-							onClick={() => setWrap(!wrap)}
-							active={wrap}
-							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-						>
-							<WrapIcon />
-						</PanelToolbar.IconButton>
+						{copyButton}
+						{wrapToggle}
+						{modeToggle}
 					</div>
 				</div>
 			) : null}
@@ -214,21 +219,6 @@ export function findDeepestFailedNode(
 	}
 
 	return failed?.node ?? null
-}
-
-function RawToggle(props: {
-	raw: boolean
-	onToggle: () => void
-}): React.JSX.Element {
-	return (
-		<button
-			type="button"
-			onClick={props.onToggle}
-			{...cx(styles.rawToggle(), link(), linkHover(), pressDown())}
-		>
-			{props.raw ? '(raw)' : '(decoded)'}
-		</button>
-	)
 }
 
 /** Keep byte arguments and return values compact; the raw view preserves them. */
@@ -680,7 +670,6 @@ export namespace TxTraceTree {
 						node.gasUsed >= 100_000 && styles.gasLarge(),
 						depth > 0 && styles.nested(),
 					)}
-					title={`Gas used: ${node.gasUsed.toLocaleString()}`}
 				>
 					{node.gasUsed.toLocaleString()}
 				</span>
@@ -727,26 +716,21 @@ export namespace TxTraceTree {
 								{overflowDepth}
 							</span>
 						)}
-						<button
-							type="button"
-							onClick={() => node.children.length > 0 && setExpanded(!expanded)}
-							{...cx(
-								styles.toggle(),
-								pressDown(),
-								node.children.length > 0 && styles.toggleEnabled(),
-							)}
-							title={expanded ? 'Collapse frame' : 'Expand frame'}
-						>
-							{node.children.length > 0 ? (
-								expanded ? (
-									'−'
-								) : (
-									'+'
-								)
-							) : (
-								<ArrowRightIcon {...styles.leafIcon()} />
-							)}
-						</button>
+						{node.children.length > 0 ? (
+							<button
+								type="button"
+								aria-expanded={expanded}
+								aria-label={expanded ? 'Collapse frame' : 'Expand frame'}
+								onClick={() => setExpanded(!expanded)}
+								{...cx(styles.toggle(), styles.toggleEnabled(), pressDown())}
+							>
+								{expanded ? '−' : '+'}
+							</button>
+						) : (
+							<span {...styles.toggle()}>
+								<ArrowRight {...styles.leafIcon()} />
+							</span>
+						)}
 						<span {...cx(styles.label(), wrap && styles.breakAll())}>
 							{trace.to ? (
 								<Link
@@ -762,16 +746,10 @@ export namespace TxTraceTree {
 											: trace.to}
 								</Link>
 							) : (
-								<span {...styles.tertiary()}>[contract creation]</span>
+								<span {...styles.secondary()}>[contract creation]</span>
 							)}
 							<span {...styles.tertiary()}>{raw ? '::' : '.'}</span>
-							<span
-								{...cx(
-									raw && styles.primary(),
-									!raw && node.hasError && styles.negative(),
-									!raw && !node.hasError && codeIdentifier(),
-								)}
-							>
+							<span {...cx(raw && styles.primary(), !raw && codeIdentifier())}>
 								{displayName}
 							</span>
 							{node.hasError && (
@@ -823,7 +801,7 @@ export namespace TxTraceTree {
 										}),
 								)}
 							>
-								<ReturnIcon {...styles.returnIcon()} />
+								<ArrowCornerDownRight {...styles.returnIcon()} />
 								<span {...cx(styles.outputValue(), wrap && styles.breakAll())}>
 									{raw
 										? trace.output
@@ -927,53 +905,19 @@ namespace styles {
 
 	export const tertiary = style({ color: 'content.tertiary' })
 
+	export const secondary = style({ color: 'content.secondary' })
+
 	export const primary = style({ color: 'content.primary' })
 
-	export const negative = style({ color: 'content.negative' })
-
-	export const icon12 = style({
-		flexShrink: 0,
-		height: '12px !custom',
-		width: '12px !custom',
-	})
-
-	// A compact TDS text input, sized to the toolbar's 32px icon buttons.
+	// Search leaves the inner input's size to TDS; touch screens get 16px text
+	// so iOS does not zoom on focus.
 	export const filter = style({
-		backgroundColor: 'component.input.primary.fill',
-		border: 'none !custom',
-		borderRadius: '2xs',
-		boxSizing: 'border-box',
-		color: 'content.primary',
-		height: '32',
-		marginRight: 'auto !custom',
-		maxWidth: '240px !custom',
-		minWidth: '0 !custom',
-		paddingInline: '12',
-		typography: 'mono.inline',
-		width: '100% !custom',
-		'::placeholder': { color: 'content.tertiary' },
-	})
-
-	// Shaped like a small TDS Button, toned negative.
-	export const revertButton = style({
-		alignItems: 'center',
-		borderColor: 'border.negative',
-		borderRadius: 'full',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
-		boxSizing: 'border-box',
-		color: 'content.negative',
-		cursor: 'pointer',
-		display: 'flex',
-		flexShrink: 0,
-		gap: '4',
-		height: '32',
-		paddingInline: '12',
-		typography: 'body.b3',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.negative' },
+		'@media (pointer: coarse)': {
+			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
 	})
+
+	export const revertIcon = style({ color: 'content.negative' })
 
 	export const header = style({
 		alignItems: 'center',
@@ -981,24 +925,24 @@ namespace styles {
 		borderColor: 'line.secondary',
 		borderStyle: 'solid',
 		display: 'flex',
-		height: '40',
+		gap: '8',
 		justifyContent: 'space-between',
+		minHeight: '48',
+		paddingBlock: '8',
 		paddingLeft: '16',
 		paddingRight: '8',
 	})
 
-	export const headerLabel = style({ typography: 'body.b3' })
+	export const headerLabel = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 
 	export const headerActions = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
 		display: 'flex',
 		gap: '4',
 	})
-
-	export const copied = style({ typography: 'body.b3', userSelect: 'none' })
-
-	export const rawToggle = style({ cursor: 'pointer', typography: 'body.b3' })
 
 	export const frames = style({
 		alignItems: 'start',
@@ -1011,11 +955,11 @@ namespace styles {
 		paddingBlock: '12',
 		paddingInline: '16',
 		typography: 'mono.inline',
+		// Focusable so it can be scrolled by keyboard; an inset ring is not
+		// clipped by its own overflow.
 		':focus-visible': {
-			outlineColor: 'border.focus',
-			outlineOffset: '-2px !important',
-			outlineStyle: 'solid',
-			outlineWidth: '2px',
+			outline: '2px solid currentColor !custom',
+			outlineOffset: '-2px !custom',
 		},
 	})
 
@@ -1029,7 +973,7 @@ namespace styles {
 	export const opcode = style({
 		backgroundColor: 'container.regular',
 		borderRadius: '3xs',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		fontWeight: 500,
 		paddingBlock: '1px !custom',
 		paddingInline: '4',
@@ -1040,17 +984,17 @@ namespace styles {
 
 	export const opcodeError = style({
 		backgroundColor: 'container.negative',
-		color: 'content.negative',
+		color: 'content.primary',
 	})
 
 	export const gas = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
 		userSelect: 'none',
 	})
 
-	export const gasLarge = style({ color: 'content.secondary' })
+	export const gasLarge = style({ color: 'content.primary' })
 
 	export const frame = style({
 		alignItems: 'flex-start',
@@ -1060,6 +1004,10 @@ namespace styles {
 		minWidth: '0 !custom',
 		paddingLeft: '4',
 		paddingRight: '4',
+		':focus-visible': {
+			outline: '2px solid currentColor !custom',
+			outlineOffset: '0px !custom',
+		},
 	})
 
 	export const frameHover = style({
@@ -1092,7 +1040,7 @@ namespace styles {
 	export const depthBadge = style({
 		backgroundColor: 'container.regular',
 		borderRadius: '3xs',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: 0,
 		marginRight: '4',
 		marginTop: '1px !custom',
@@ -1101,7 +1049,7 @@ namespace styles {
 	})
 
 	export const toggle = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: 0,
 		height: '16',
 		marginRight: '2',
@@ -1114,9 +1062,10 @@ namespace styles {
 	})
 
 	export const leafIcon = style({
-		height: '12px !custom',
+		color: 'content.tertiary',
+		height: '12',
 		marginTop: '2',
-		width: '12px !custom',
+		width: '12',
 	})
 
 	export const label = style({ minWidth: '0 !custom' })
@@ -1124,7 +1073,7 @@ namespace styles {
 	export const address = style({ display: 'inline-block' })
 
 	export const errorText = style({
-		color: 'content.negative',
+		color: 'content.primary',
 		marginLeft: '4',
 	})
 
@@ -1148,10 +1097,10 @@ namespace styles {
 	export const returnIcon = style({
 		color: 'content.tertiary',
 		flexShrink: 0,
-		height: '12px !custom',
+		height: '12',
 		marginRight: '4',
 		marginTop: '4',
-		width: '12px !custom',
+		width: '12',
 	})
 
 	export const outputValue = style({

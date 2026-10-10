@@ -1,6 +1,7 @@
 import { style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { cx } from 'zyzz'
+import { mono } from '#styles/explorer'
 
 export function Midcut(props: Midcut.Props): React.JSX.Element {
 	const {
@@ -76,7 +77,7 @@ export function Midcut(props: Midcut.Props): React.JSX.Element {
 			{...cx(
 				// `midcut` and its parts are styled globally in `#styles/globals`.
 				styles.root({ className: 'midcut' }),
-				prefix === '0x' && styles.mono(),
+				prefix === '0x' && mono(),
 			)}
 			data-align={align}
 			data-cut={display !== value ? 'true' : 'false'}
@@ -100,10 +101,4 @@ export namespace Midcut {
 
 namespace styles {
 	export const root = style()
-
-	export const mono = style({
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
-	})
 }

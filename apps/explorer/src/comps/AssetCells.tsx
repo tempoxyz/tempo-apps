@@ -7,19 +7,15 @@ import { TokenIcon } from '#comps/TokenIcon'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { type AssetData, getAssetValue } from '#lib/address-balances'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { link, linkHover, pressDown, truncate } from '#styles/explorer'
+import { link, linkHover, mono, pressDown, truncate } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config'
 
 export function AssetName(props: { asset: AssetData }): React.JSX.Element {
 	const { asset } = props
-	if (!asset.metadata?.name) return <span {...styles.tertiary()}>…</span>
+	if (!asset.metadata?.name) return <span {...styles.placeholder()}>…</span>
 	return (
 		<span {...styles.name()}>
-			<TokenIcon
-				address={asset.address}
-				name={asset.metadata.name}
-				className={styles.nameIcon().className}
-			/>
+			<TokenIcon address={asset.address} size={20} />
 			<span {...truncate()}>{asset.metadata.name}</span>
 		</span>
 	)
@@ -27,7 +23,7 @@ export function AssetName(props: { asset: AssetData }): React.JSX.Element {
 
 export function AssetSymbol(props: { asset: AssetData }): React.JSX.Element {
 	const { asset } = props
-	if (!asset.metadata?.symbol) return <span {...styles.tertiary()}>…</span>
+	if (!asset.metadata?.symbol) return <span {...styles.placeholder()}>…</span>
 	return (
 		<Link
 			to="/token/$address"
@@ -41,7 +37,7 @@ export function AssetSymbol(props: { asset: AssetData }): React.JSX.Element {
 
 export function AssetContract(props: { asset: AssetData }): React.JSX.Element {
 	return (
-		<span {...cx(link(), styles.mono())}>
+		<span {...cx(link(), mono())}>
 			{HexFormatter.truncate(props.asset.address, 10)}
 		</span>
 	)
@@ -49,14 +45,14 @@ export function AssetContract(props: { asset: AssetData }): React.JSX.Element {
 
 export function AssetCurrency(props: { asset: AssetData }): React.JSX.Element {
 	const { asset } = props
-	if (!asset.metadata?.currency) return <span {...styles.tertiary()}>—</span>
+	if (!asset.metadata?.currency) return <span {...styles.placeholder()}>—</span>
 	return <span>{asset.metadata.currency}</span>
 }
 
 export function AssetAmount(props: { asset: AssetData }): React.JSX.Element {
 	const { asset } = props
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
-		return <span {...styles.tertiary()}>…</span>
+		return <span {...styles.placeholder()}>…</span>
 	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
 	const display = PriceFormatter.formatAmountFull(formatted)
 	return (
@@ -70,10 +66,10 @@ export function AssetValue(props: { asset: AssetData }): React.JSX.Element {
 	const { asset } = props
 	const { isTokenListed } = useTokenListMembership()
 	if (!isTokenListed(getTempoChain().id, asset.address))
-		return <span {...styles.tertiary()}>—</span>
+		return <span {...styles.placeholder()}>—</span>
 	const value = getAssetValue(asset)
-	if (!value) return <span {...styles.tertiary()}>…</span>
-	if (value.currency !== 'USD') return <span {...styles.tertiary()}>—</span>
+	if (!value) return <span {...styles.placeholder()}>…</span>
+	if (value.currency !== 'USD') return <span {...styles.placeholder()}>—</span>
 	return (
 		<span>
 			{PriceFormatter.format(value.amount, {
@@ -85,24 +81,12 @@ export function AssetValue(props: { asset: AssetData }): React.JSX.Element {
 }
 
 namespace styles {
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const placeholder = style({ color: 'content.secondary' })
 
 	export const name = style({
 		alignItems: 'center',
 		display: 'inline-flex',
 		gap: '8',
 		minWidth: '0 !custom',
-	})
-
-	export const nameIcon = style({
-		flexShrink: '0 !custom',
-		height: '20',
-		width: '20',
-	})
-
-	export const mono = style({
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
 	})
 }

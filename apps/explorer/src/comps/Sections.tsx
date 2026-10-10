@@ -1,11 +1,11 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style, Tab } from '@tempoxyz/ds/platform'
+import { ChevronDown } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
-import { link, pressDown } from '#styles/explorer'
+import { pressDown } from '#styles/explorer'
 import { Pagination } from './Pagination'
 
 export function Sections(props: Sections.Props): React.JSX.Element {
-	const sectionId = React.useId()
 	const {
 		sections: sections_,
 		activeSection = 0,
@@ -46,42 +46,40 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 						return (
 							<section key={section.title} {...styles.section()}>
 								{canCollapse ? (
-									<button
-										type="button"
-										aria-expanded={!isCollapsed}
-										onClick={() => toggleSection(section.title)}
-										{...cx(
-											styles.toggle(),
-											pressDown(),
-											isCollapsed && styles.toggleCollapsed(),
-											!isCollapsed && styles.toggleExpanded(),
-										)}
-									>
-										<h1 {...styles.title()}>{section.title}</h1>
-										<div {...styles.toggleMeta()}>
-											{isCollapsed && Boolean(section.totalItems) && (
-												<span {...styles.count()}>
-													{section.totalItems}{' '}
-													{Pagination.pluralize(
-														section.totalItems ?? 0,
-														itemsLabel,
-													)}
-												</span>
+									<h2>
+										<button
+											type="button"
+											aria-expanded={!isCollapsed}
+											onClick={() => toggleSection(section.title)}
+											{...cx(
+												styles.toggle(),
+												pressDown(),
+												!isCollapsed && styles.toggleExpanded(),
 											)}
-											<div
-												{...cx(
-													styles.indicator(),
-													isCollapsed && link(),
-													!isCollapsed && styles.indicatorExpanded(),
+										>
+											<span {...styles.title()}>{section.title}</span>
+											<span {...styles.toggleMeta()}>
+												{isCollapsed && Boolean(section.totalItems) && (
+													<span {...styles.count()}>
+														{section.totalItems}{' '}
+														{Pagination.pluralize(
+															section.totalItems ?? 0,
+															itemsLabel,
+														)}
+													</span>
 												)}
-											>
-												[{isCollapsed ? '+' : '–'}]
-											</div>
-										</div>
-									</button>
+												<ChevronDown
+													{...cx(
+														styles.chevron(),
+														!isCollapsed && styles.chevronExpanded(),
+													)}
+												/>
+											</span>
+										</button>
+									</h2>
 								) : (
 									<div {...styles.header()}>
-										<h1 {...styles.title()}>{section.title}</h1>
+										<h2 {...styles.title()}>{section.title}</h2>
 										{Boolean(section.totalItems) && (
 											<span {...styles.count()}>
 												{section.totalItems}{' '}
@@ -109,78 +107,49 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 			</Sections.Context.Provider>
 		)
 
+	if (sections.length === 1) {
+		const [section] = sections
+		return (
+			<Sections.Context.Provider value={{ mode }}>
+				<section {...cx(styles.section(), styles.sectionTabs())}>
+					<div {...styles.tabsHeader()}>
+						<h2 {...styles.singleTitle()}>
+							{section.title}
+							{Boolean(section.totalItems) && (
+								<span {...styles.count()}>({section.totalItems})</span>
+							)}
+						</h2>
+						{section.contextual}
+					</div>
+					<div {...styles.content()}>{section.content}</div>
+				</section>
+			</Sections.Context.Provider>
+		)
+	}
+
 	return (
 		<Sections.Context.Provider value={{ mode }}>
-			<section {...cx(styles.section(), styles.sectionTabs())}>
+			<Tab.Root
+				value={String(activeSection)}
+				onValueChange={(value) => {
+					if (value === null || Number(value) === activeSection) return
+					onSectionChange?.(Number(value))
+				}}
+				{...cx(styles.section(), styles.sectionTabs())}
+			>
 				<div {...styles.tabsHeader()}>
-					<div role="tablist" aria-label="Details" {...styles.tabList()}>
-						{sections.length === 1 ? (
-							<div
-								role="tab"
-								aria-selected="true"
-								id={`${sectionId}-tab-0`}
-								aria-controls={`${sectionId}-panel-0`}
-								tabIndex={0}
-								{...styles.singleTab()}
-							>
-								<span {...styles.primary()}>{sections[0].title}</span>
-								{Boolean(sections[0].totalItems) && (
-									<span {...styles.tertiary()}>({sections[0].totalItems})</span>
-								)}
-							</div>
-						) : (
-							sections.map((section, index) => (
-								<button
-									key={section.title}
-									type="button"
-									role="tab"
-									aria-selected={activeSection === index}
-									id={`${sectionId}-tab-${index}`}
-									aria-controls={`${sectionId}-panel-${index}`}
-									tabIndex={activeSection === index ? 0 : -1}
-									onKeyDown={(event) => {
-										const next =
-											event.key === 'ArrowRight'
-												? (index + 1) % sections.length
-												: event.key === 'ArrowLeft'
-													? (index - 1 + sections.length) % sections.length
-													: event.key === 'Home'
-														? 0
-														: event.key === 'End'
-															? sections.length - 1
-															: null
-										if (next === null) return
-										event.preventDefault()
-										onSectionChange?.(next)
-										document.getElementById(`${sectionId}-tab-${next}`)?.focus()
-									}}
-									onClick={() => {
-										if (activeSection === index) return
-										onSectionChange?.(index)
-									}}
-									{...cx(
-										styles.tab(),
-										index === 0 && styles.tabFirst(),
-										activeSection === index && styles.tabActive(),
-									)}
-								>
-									<div {...styles.tabLabel()}>
-										{section.title}
-										{activeSection === index && (
-											<div {...styles.tabIndicator()} />
-										)}
-									</div>
-								</button>
-							))
-						)}
-					</div>
+					<Tab.List activateOnFocus aria-label="Details" {...styles.tabList()}>
+						{sections.map((section, index) => (
+							<Tab key={section.title} scale="small" value={String(index)}>
+								{section.title}
+							</Tab>
+						))}
+					</Tab.List>
 					{sections.map((section, index) => (
 						<div
 							key={section.title}
-							{...cx(
-								styles.tabContextual(),
-								activeSection !== index && styles.hidden(),
-							)}
+							hidden={activeSection !== index}
+							{...styles.contextualSlot()}
 						>
 							{section.contextual}
 						</div>
@@ -188,20 +157,16 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 				</div>
 
 				{sections.map((section, index) => (
-					<div
+					<Tab.Panel
 						key={section.title}
-						role="tabpanel"
-						id={`${sectionId}-panel-${index}`}
-						aria-labelledby={`${sectionId}-tab-${index}`}
-						{...cx(
-							styles.content(),
-							activeSection !== index && styles.hidden(),
-						)}
+						keepMounted
+						value={String(index)}
+						{...styles.content()}
 					>
 						{section.content}
-					</div>
+					</Tab.Panel>
 				))}
-			</section>
+			</Tab.Root>
 		</Sections.Context.Provider>
 	)
 }
@@ -251,10 +216,8 @@ namespace styles {
 		borderRadius: 'xs',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
-		boxShadow: 'none',
 		display: 'flex',
 		flexDirection: 'column',
-		fontFamily: 'Pilat, Arial, sans-serif',
 		overflow: 'hidden',
 		width: '100% !custom',
 	})
@@ -264,25 +227,22 @@ namespace styles {
 		minHeight: '0 !custom',
 	})
 
-	// The focus ring rules are `!important`, like the former Tailwind
-	// modifiers, so they beat the global focus ring.
+	// Rounded like the card, so the inset focus ring follows its corners.
 	export const toggle = style({
 		alignItems: 'center',
+		borderRadius: 'xs',
 		cursor: 'pointer',
 		display: 'flex',
 		height: '52px !custom',
 		justifyContent: 'space-between',
-		outlineOffset: '-2px !important',
+		outlineOffset: '-2px !custom',
 		paddingInline: '20',
+		width: '100% !custom',
 	})
 
-	export const toggleCollapsed = style({ borderRadius: 'xs !important' })
-
 	export const toggleExpanded = style({
-		borderBottomLeftRadius: 'none !important',
-		borderBottomRightRadius: 'none !important',
-		borderTopLeftRadius: 'xs !important',
-		borderTopRightRadius: 'xs !important',
+		borderBottomLeftRadius: 'none',
+		borderBottomRightRadius: 'none',
 	})
 
 	export const title = style({
@@ -297,24 +257,20 @@ namespace styles {
 	})
 
 	export const count = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
-	export const indicator = style({
-		fontFamily: '"JetBrains Mono", monospace',
-		fontSize: '16px',
-		fontWeight: 400,
-		letterSpacing: '0px',
-		lineHeight: '22px',
+	export const chevron = style({
+		color: 'content.secondary',
+		height: '16',
+		width: '16',
 	})
 
-	export const indicatorExpanded = style({ color: 'content.tertiary' })
+	export const chevronExpanded = style({ rotate: '180deg' })
 
 	export const header = style({
 		alignItems: 'center',
-		borderTopLeftRadius: 'xs',
-		borderTopRightRadius: 'xs',
 		display: 'flex',
 		height: '52px !custom',
 		justifyContent: 'space-between',
@@ -330,13 +286,7 @@ namespace styles {
 		flexDirection: 'column',
 		minHeight: '0 !custom',
 		overflowX: 'auto',
-		':focus-visible': {
-			borderRadius: '2px !custom !important',
-			outlineColor: 'border.focus',
-			outlineOffset: '-2px !important',
-			outlineStyle: 'solid',
-			outlineWidth: '2px',
-		},
+		selectors: { '&[hidden]': { display: 'none' } },
 	})
 
 	export const contentStacked = style({
@@ -363,68 +313,23 @@ namespace styles {
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		minHeight: '44px !custom',
+		minHeight: '48',
+		paddingBlock: '8',
+		paddingInline: '16',
+		rowGap: '8',
 	})
 
-	export const tabList = style({
-		alignItems: 'center',
-		alignSelf: 'stretch',
-		display: 'flex',
-		minWidth: '0 !custom',
-		overflowX: 'auto',
-	})
+	export const tabList = style({ minWidth: '0 !custom', rowGap: '4' })
 
-	export const singleTab = style({
+	export const singleTitle = style({
 		alignItems: 'center',
+		color: 'content.primary',
 		display: 'flex',
 		gap: '8',
-		height: '100% !custom',
-		paddingLeft: '20',
-		paddingRight: '12',
 		typography: 'body.b2',
 	})
 
-	export const primary = style({ color: 'content.primary' })
-
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const tab = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		cursor: 'pointer',
-		display: 'flex',
-		flexShrink: '0 !custom',
-		minHeight: '44px !custom',
-		outlineOffset: '-2px !important',
-		paddingInline: '12',
-		typography: 'body.b2',
+	export const contextualSlot = style({
+		selectors: { '&[hidden]': { display: 'none' } },
 	})
-
-	export const tabFirst = style({
-		borderTopLeftRadius: 'xs !important',
-		paddingLeft: '20',
-	})
-
-	export const tabActive = style({ color: 'content.primary' })
-
-	export const tabLabel = style({
-		alignItems: 'center',
-		display: 'flex',
-		height: '100% !custom',
-		position: 'relative',
-	})
-
-	export const tabIndicator = style({
-		backgroundColor: 'component.button.primary.fill',
-		bottom: '0px !custom',
-		height: '1px !custom',
-		left: '0px !custom',
-		marginInline: '-2px !custom',
-		position: 'absolute',
-		right: '0px !custom',
-	})
-
-	export const tabContextual = style({ paddingRight: '20' })
-
-	export const hidden = style({ display: 'none' })
 }

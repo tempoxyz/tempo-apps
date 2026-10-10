@@ -1,21 +1,19 @@
-import { IconButton, style } from '@tempoxyz/ds/platform'
+import { Button, IconButton, Tooltip, style } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
-import { cx } from 'zyzz'
 import { AbiArgument } from '#comps/AbiArgument'
 import { getAbiItem, getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
-import { pressDown, transitionColors } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
+import { codeIdentifier, mono } from '#styles/explorer'
 
 export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 	const { address, data } = props
 	const selector = slice(data, 0, 4)
 	const copySignature = useCopy()
-	const copyRaw = useCopy()
 	const [showRaw, setShowRaw] = useState(false)
 
 	const { data: autoloadAbi } = useAutoloadAbi({
@@ -76,22 +74,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 	if (!isFetched || !abiItem)
 		return (
 			<div {...styles.panel()}>
-				<div {...styles.raw()}>
-					<pre {...styles.rawData()}>{data}</pre>
-					<div {...cx(styles.actions(), styles.rawActions())}>
-						{copyRaw.notifying && <span {...styles.copied()}>copied</span>}
-						<IconButton
-							{...cx(styles.copyButton(), pressDown(), transitionColors())}
-							aria-label="Copy raw data"
-							onClick={() => copyRaw.copy(data)}
-							scale="small"
-							title="Copy raw data"
-							variant="tertiary"
-						>
-							<CopyIcon />
-						</IconButton>
-					</div>
-				</div>
+				<TxDecodedCalldata.RawData data={data} />
 			</div>
 		)
 
@@ -100,11 +83,11 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 			<div {...styles.panel()}>
 				<div {...styles.header()}>
 					<code {...styles.signature()}>
-						<span {...styles.positive()}>
+						<span {...codeIdentifier()}>
 							{'name' in abiItem ? (
 								abiItem.name
 							) : (
-								<span {...styles.mono()}>{selector}</span>
+								<span {...mono()}>{selector}</span>
 							)}
 						</span>
 						<span {...styles.secondary()}>(</span>
@@ -117,25 +100,21 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 						))}
 						<span {...styles.secondary()}>)</span>
 					</code>
-					<div {...styles.actions()}>
-						{copySignature.notifying && (
-							<span {...styles.copied()}>copied</span>
-						)}
+					<Tooltip content="Copy signature">
 						<IconButton
-							{...cx(styles.copyButton(), pressDown(), transitionColors())}
+							{...styles.copyButton()}
 							aria-label="Copy signature"
-							scale="small"
-							variant="tertiary"
 							onClick={() =>
 								copySignature.copy(
 									`${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`,
 								)
 							}
-							title="Copy signature"
+							scale="small"
+							variant="tertiary"
 						>
-							<CopyIcon />
+							{copySignature.notifying ? <Check /> : <Copy />}
 						</IconButton>
-					</div>
+					</Tooltip>
 				</div>
 				{args && args.length > 0 && (
 					<div {...styles.argumentList()}>
@@ -149,31 +128,18 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 					</div>
 				)}
 			</div>
-			<button
-				type="button"
+			<Button
+				aria-expanded={showRaw}
 				onClick={() => setShowRaw(!showRaw)}
-				{...cx(styles.toggle(), pressDown(), transitionColors())}
+				scale="small"
+				variant="secondary"
+				{...styles.toggle()}
 			>
 				{showRaw ? 'Hide' : 'Show'} raw
-			</button>
+			</Button>
 			{showRaw && (
 				<div {...styles.panel()}>
-					<div {...styles.raw()}>
-						<pre {...styles.rawData()}>{data}</pre>
-						<div {...cx(styles.actions(), styles.rawActions())}>
-							{copyRaw.notifying && <span {...styles.copied()}>copied</span>}
-							<IconButton
-								{...cx(styles.copyButton(), pressDown(), transitionColors())}
-								aria-label="Copy raw data"
-								onClick={() => copyRaw.copy(data)}
-								scale="small"
-								title="Copy raw data"
-								variant="tertiary"
-							>
-								<CopyIcon />
-							</IconButton>
-						</div>
-					</div>
+					<TxDecodedCalldata.RawData data={data} />
 				</div>
 			)}
 		</div>
@@ -185,6 +151,36 @@ export namespace TxDecodedCalldata {
 		address?: Address | null
 		data: Hex
 	}
+
+	export function RawData(props: RawData.Props): React.JSX.Element {
+		const { data } = props
+		const { copy, notifying } = useCopy()
+
+		return (
+			<div {...styles.raw()}>
+				<pre {...styles.rawData()}>{data}</pre>
+				<div {...styles.rawActions()}>
+					<Tooltip content="Copy raw data">
+						<IconButton
+							{...styles.copyButton()}
+							aria-label="Copy raw data"
+							onClick={() => copy(data)}
+							scale="small"
+							variant="tertiary"
+						>
+							{notifying ? <Check /> : <Copy />}
+						</IconButton>
+					</Tooltip>
+				</div>
+			</div>
+		)
+	}
+
+	export namespace RawData {
+		export interface Props {
+			data: Hex
+		}
+	}
 }
 
 namespace styles {
@@ -194,11 +190,18 @@ namespace styles {
 		gap: '8',
 	})
 
-	// An opaque well, so the copy control can mask the text it overlaps.
+	// An opaque well, so the copy control can mask the text it overlaps. It
+	// clips, so focus rings inside it are drawn inset (the element type beats
+	// IconButton's own offset).
 	export const panel = style({
 		backgroundColor: 'background.primary',
 		borderRadius: '2xs',
 		overflow: 'hidden',
+		selectors: {
+			'& a:focus-visible': { outlineOffset: '-2px' },
+			'& button:focus-visible': { outlineOffset: '-2px' },
+			'& summary:focus-visible': { outlineOffset: '-2px' },
+		},
 	})
 
 	export const raw = style({
@@ -217,26 +220,19 @@ namespace styles {
 		wordBreak: 'break-all',
 	})
 
-	export const actions = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		display: 'flex',
-		gap: '4',
-	})
-
 	export const rawActions = style({
 		backgroundColor: 'background.primary',
+		display: 'flex',
 		paddingLeft: '8',
 		position: 'absolute',
 		right: '12',
 		top: '8',
 	})
 
-	export const copied = style({ typography: 'body.b3', userSelect: 'none' })
-
-	// IconButton keeps its 32px target; negative margins keep the row height
-	// of the old 22px control. Only properties IconButton leaves unset.
+	// Negative margins let the 32px IconButton sit in a 16px text row without
+	// growing it. Only properties IconButton leaves unset.
 	export const copyButton = style({
+		flexShrink: '0 !custom',
 		marginBlock: '-8px !custom',
 		marginRight: '-8px !custom',
 		'@media (hover: hover)': {
@@ -249,6 +245,7 @@ namespace styles {
 		borderBottomWidth: 'regular',
 		borderColor: 'line.secondary',
 		display: 'flex',
+		gap: '8',
 		justifyContent: 'space-between',
 		paddingBlock: '8',
 		paddingInline: '12',
@@ -259,13 +256,9 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const positive = style({ color: 'content.positive' })
-
 	export const secondary = style({ color: 'content.secondary' })
 
 	export const primary = style({ color: 'content.primary' })
-
-	export const mono = style({ fontFamily: '"JetBrains Mono", monospace' })
 
 	export const argumentList = style({
 		selectors: {
@@ -276,17 +269,6 @@ namespace styles {
 		},
 	})
 
-	export const toggle = style({
-		backgroundColor: 'container.regular',
-		borderRadius: 'full',
-		color: 'content.primary',
-		cursor: 'pointer',
-		paddingBlock: '4',
-		paddingInline: '12',
-		typography: 'body.b3',
-		width: 'fit-content !custom',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
-	})
+	// Button leaves its alignment in a column unset.
+	export const toggle = style({ alignSelf: 'flex-start' })
 }

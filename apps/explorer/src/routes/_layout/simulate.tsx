@@ -4,6 +4,8 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
+import { Button, SegmentedControl, Tab } from '@tempoxyz/ds/platform'
+import { Check, Link, Play } from '@tempoxyz/ds/platform/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -11,8 +13,8 @@ import type { Abi } from 'viem'
 import { zeroAddress } from 'viem'
 import { useConnection } from 'wagmi'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
-import { cx } from 'zyzz'
 import * as z from 'zod/mini'
+import { ViewToggle } from '#comps/PanelToolbar'
 import { SimulateCallForm } from '#comps/SimulateCallForm'
 import { SimulateGasPanel } from '#comps/SimulateGasPanel'
 import {
@@ -28,13 +30,11 @@ import {
 	SimulateTabs,
 } from '#comps/SimulateResultPane'
 import {
-	Button,
-	buttonIcon,
+	ButtonShortcut,
 	describeCall,
 	PanelEmpty,
 	PanelError,
 	PanelSkeleton,
-	SegmentedControl,
 	SimulationFailure,
 } from '#comps/SimulateShared'
 import { TxStateDiff } from '#comps/TxStateDiff'
@@ -78,8 +78,6 @@ import {
 import { zAddress, zHash } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 import EraserIcon from '~icons/lucide/eraser'
-import LinkIcon from '~icons/lucide/link'
-import PlayIcon from '~icons/lucide/play'
 import { styles } from './-simulate.styles'
 
 const EXAMPLE_TOKEN = '0x20c0000000000000000000000000000000000001'
@@ -229,7 +227,7 @@ function SimulatePage(): React.JSX.Element {
 	const [runInput, setRunInput] = React.useState<SimulationInput | null>(
 		initialInput,
 	)
-	const shareLink = useCopy({ timeout: 1_500 })
+	const shareLink = useCopy({ message: 'Link copied', timeout: 1_500 })
 	// The form always edits exactly one call, even while the result pane shows
 	// them all — so "which call am I editing" is separate from "which call am I
 	// looking at", and clearing the filter does not yank the form elsewhere.
@@ -551,52 +549,68 @@ function SimulatePage(): React.JSX.Element {
 				<p {...styles.summary()} title={summary}>
 					{summary}
 				</p>
-				<SegmentedControl
-					value={pane}
-					options={
-						narrow
-							? [
-									{ value: 'input', label: 'Input' },
-									{ value: 'output', label: 'Result' },
-								]
-							: [
-									{ value: 'input', label: 'Input' },
-									{ value: 'split', label: 'Split' },
-									{ value: 'output', label: 'Result' },
-								]
-					}
-					onChange={(value) => setSearch({ pane: value })}
-				/>
+				{narrow ? (
+					<ViewToggle
+						label="Panes"
+						value={pane}
+						options={[
+							{ value: 'input', label: 'Input' },
+							{ value: 'output', label: 'Result' },
+						]}
+						onChange={(value) => setSearch({ pane: value })}
+					/>
+				) : (
+					<SegmentedControl
+						aria-label="Panes"
+						value={pane}
+						items={[
+							{ value: 'input', label: 'Input' },
+							{ value: 'split', label: 'Split' },
+							{ value: 'output', label: 'Result' },
+						]}
+						onValueChange={(value) => setSearch({ pane: value })}
+						style={{ width: 264 }}
+					/>
+				)}
 				{/* Both page-scoped: Share copies the whole URL — inputs, tab, and
 				    selected frame — not just the result. Keeping them here means one
 				    action bar rather than a second Run inside the result header. */}
-				{hasDraft && (
-					<Button onClick={clear} title="Start over with an empty call">
-						<EraserIcon {...buttonIcon()} />
-						Clear
-					</Button>
-				)}
-				{runInput && (
+				<div {...styles.actions()}>
+					{hasDraft && (
+						<Button scale="medium" variant="secondary" onClick={clear}>
+							{/* No TDS equivalent; sized to match the TDS icons beside it. */}
+							<EraserIcon width="1em" height="1em" aria-hidden />
+							Clear
+						</Button>
+					)}
+					{runInput && (
+						<Button
+							scale="medium"
+							variant="secondary"
+							onClick={() =>
+								shareLink.copy(
+									typeof window === 'undefined' ? '' : window.location.href,
+								)
+							}
+						>
+							{shareLink.notifying ? <Check /> : <Link />}
+							Share
+						</Button>
+					)}
 					<Button
-						onClick={() =>
-							shareLink.copy(
-								typeof window === 'undefined' ? '' : window.location.href,
-							)
-						}
-						title="Copy a link that reproduces this screen"
+						scale="medium"
+						variant="primary"
+						onClick={run}
+						aria-keyshortcuts="Meta+Enter Control+Enter"
 					>
-						<LinkIcon {...buttonIcon()} />
-						{shareLink.notifying ? 'Copied' : 'Share'}
+						<Play />
+						{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
+						<ButtonShortcut>⌘↵</ButtonShortcut>
 					</Button>
-				)}
-				<Button tone="primary" onClick={run} title="Run this simulation (⌘↵)">
-					<PlayIcon {...buttonIcon()} />
-					{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
-					<span {...styles.shortcut()}>⌘↵</span>
-				</Button>
+				</div>
 			</div>
 
-			<div {...cx(styles.panes(), pane === 'split' && styles.panesSplit())}>
+			<div {...styles.panes({ split: pane === 'split' })}>
 				{showInput && (
 					<section {...styles.card()}>
 						<SimulateCallForm
@@ -836,6 +850,8 @@ function SimulationResults(props: {
 		}
 	}, [execution, props.input])
 
+	// Count what actually renders, not raw prestate keys — the diff drops
+	// accounts with no real change and the caller's simulation-only nonce tick.
 	const stateAccounts = React.useMemo(
 		() =>
 			stepPrestate
@@ -877,9 +893,6 @@ function SimulationResults(props: {
 				}}
 			/>
 		)
-
-	// Count what actually renders, not raw prestate keys — the diff drops
-	// accounts with no real change and the caller's simulation-only nonce tick.
 
 	const tabs = [
 		{ id: 'overview' as const, label: 'Overview' },
@@ -924,14 +937,7 @@ function SimulationResults(props: {
 				stale={props.stale}
 			/>
 
-			<div
-				{...cx(
-					styles.evidence(),
-					// Only the evidence dims when inputs change. Dimming the header too
-					// made every shared link's first impression a greyed-out screen.
-					props.stale && styles.stale(),
-				)}
-			>
+			<div {...styles.evidence({ stale: props.stale })}>
 				{execution ? (
 					<>
 						<SimulateAnswer
@@ -971,7 +977,7 @@ function SimulationResults(props: {
 				)}
 
 				{/* Waits for results rather than rendering a bare "Showing" with no
-				    chips: the chips are labelled by outcome, so there is nothing to
+				    buttons: they are labelled by outcome, so there is nothing to
 				    draw until the run lands. */}
 				{isBatch && execution && execution.calls.length > 1 && (
 					<SimulateStepBar
@@ -982,15 +988,14 @@ function SimulationResults(props: {
 					/>
 				)}
 
+				{/* Inactive panels unmount, so only the open tab renders its view. */}
 				<SimulateTabs
 					tabs={tabs}
 					value={props.tab}
 					onChange={(tab) => props.onSearchChange({ tab })}
-				/>
-
-				<div {...styles.panel()}>
-					{props.tab === 'overview' &&
-						(execution ? (
+				>
+					<Tab.Panel value="overview" {...styles.panel()}>
+						{execution ? (
 							<SimulateOverview
 								input={input}
 								execution={execution}
@@ -1005,10 +1010,11 @@ function SimulationResults(props: {
 							/>
 						) : (
 							<PanelSkeleton rows={5} />
-						))}
+						)}
+					</Tab.Panel>
 
-					{props.tab === 'trace' &&
-						(traceQuery.isPending ? (
+					<Tab.Panel value="trace" {...styles.panel()}>
+						{traceQuery.isPending ? (
 							<PanelSkeleton rows={7} />
 						) : traceQuery.error ? (
 							<PanelError
@@ -1046,10 +1052,11 @@ function SimulationResults(props: {
 							/>
 						) : (
 							<PanelEmpty>No trace returned for this call.</PanelEmpty>
-						))}
+						)}
+					</Tab.Panel>
 
-					{props.tab === 'state' &&
-						(prestateQuery.isPending ? (
+					<Tab.Panel value="state" {...styles.panel()}>
+						{prestateQuery.isPending ? (
 							<PanelSkeleton rows={5} />
 						) : prestateQuery.error ? (
 							<PanelError
@@ -1068,10 +1075,11 @@ function SimulationResults(props: {
 							/>
 						) : (
 							<PanelEmpty>No state changed.</PanelEmpty>
-						))}
+						)}
+					</Tab.Panel>
 
-					{props.tab === 'events' &&
-						(executionQuery.isPending ? (
+					<Tab.Panel value="events" {...styles.panel()}>
+						{executionQuery.isPending ? (
 							<PanelSkeleton rows={4} />
 						) : executionQuery.error ? (
 							<PanelError
@@ -1083,10 +1091,11 @@ function SimulationResults(props: {
 								logs={visibleLogs}
 								knownEvents={visibleKnownEvents}
 							/>
-						))}
+						)}
+					</Tab.Panel>
 
-					{props.tab === 'gas' &&
-						(traceQuery.isPending ? (
+					<Tab.Panel value="gas" {...styles.panel()}>
+						{traceQuery.isPending ? (
 							<PanelSkeleton rows={5} />
 						) : (
 							<SimulateGasPanel
@@ -1097,14 +1106,13 @@ function SimulationResults(props: {
 										? execution.gasUsed
 										: BigInt(tree?.gasUsed ?? 0)
 								}
-								gasLimit={
-									BigInt(input.gas || '0') * BigInt(showingAll ? callCount : 1)
-								}
+								gasLimit={gasAllowance}
 								selectedFrameId={props.frame}
 								onSelectFrame={selectFrame}
 							/>
-						))}
-				</div>
+						)}
+					</Tab.Panel>
+				</SimulateTabs>
 			</div>
 		</section>
 	)
@@ -1129,7 +1137,7 @@ function CallTracePanel(props: {
 }): React.JSX.Element {
 	const { tree } = props
 	return (
-		<div {...styles.stack()}>
+		<div {...styles.column()}>
 			<SimulateCallHeading
 				call={props.call}
 				label={props.label}
@@ -1165,7 +1173,9 @@ function SimulationEmptyState(props: {
 			<div {...styles.emptyHeader()}>
 				<span {...styles.emptyTitle()}>Nothing simulated yet</span>
 			</div>
-			<div {...styles.emptyPreview()}>
+			{/* A picture of the tab bar, not a working one: inert keeps it out of
+			    the tab order and away from assistive tech. */}
+			<div inert {...styles.emptyPreview()}>
 				<SimulateTabs
 					tabs={[
 						{ id: 'overview', label: 'Overview' },
@@ -1185,15 +1195,25 @@ function SimulationEmptyState(props: {
 					is broadcast.
 				</p>
 				{/* All secondary: the page already has one primary action, and a second
-				    blue button competing with Run is a coin toss, not a hierarchy. */}
+				    primary button competing with Run is a coin toss, not a hierarchy. */}
 				<div {...styles.emptyActions()}>
-					<Button onClick={() => props.onExample('read')}>
+					<Button
+						scale="small"
+						variant="secondary"
+						onClick={() => props.onExample('read')}
+					>
 						Read a token name
 					</Button>
-					<Button onClick={() => props.onExample('failing')}>
+					<Button
+						scale="small"
+						variant="secondary"
+						onClick={() => props.onExample('failing')}
+					>
 						See a failing transfer
 					</Button>
-					<Button onClick={props.onEdit}>Compose a call</Button>
+					<Button scale="small" variant="secondary" onClick={props.onEdit}>
+						Compose a call
+					</Button>
 				</div>
 			</div>
 		</section>

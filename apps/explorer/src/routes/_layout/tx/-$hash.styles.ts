@@ -1,28 +1,7 @@
 import { style } from '@tempoxyz/ds/platform'
 
 // Route components are code-split into modules that zyzz does not compile, so
-// the transaction route's styles live here. Shared partial records stay at
-// module scope: a non-style member inside `styles` stops zyzz composing them.
-
-// Overview rows that InfoRow cannot express keep its geometry and dividers.
-const overviewRow = {
-	borderBottomWidth: 'regular',
-	borderColor: 'line.secondary',
-	borderStyle: 'solid',
-	display: 'flex',
-	flexDirection: 'column',
-	paddingBlock: '12',
-	paddingInline: '20',
-} as const
-
-const divided = {
-	selectors: {
-		'& > :not(:last-child)': {
-			borderBottomWidth: 'regular',
-			borderColor: 'line.secondary',
-		},
-	},
-} as const
+// the transaction route's styles live here.
 
 export namespace styles {
 	export const page = style({
@@ -64,41 +43,16 @@ export namespace styles {
 
 	export const primary = style({ color: 'content.primary' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const positive = style({ color: 'content.positive' })
-
-	export const infoRow = style({ ...overviewRow })
-
-	export const infoRowLast = style({
-		...overviewRow,
-		':last-child': { borderBottomWidth: 'none' },
-	})
-
-	export const infoRowBody = style({
-		alignItems: 'flex-start',
-		display: 'flex',
-		gap: '16',
-	})
-
-	// Matches InfoRow's label column.
-	export const infoRowLabel = style({
-		color: 'content.tertiary',
-		flexShrink: '0 !custom',
-		minWidth: '140px !custom',
-		typography: 'body.b2',
-	})
-
-	export const infoRowValue = style({ flex: 1 })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const balances = style({
 		display: 'flex',
-		flex: 1,
 		flexDirection: 'column',
 		gap: '4',
 		minWidth: '0 !custom',
 	})
 
+	// The list scrolls, so link focus rings inside it are drawn inset.
 	export const balanceAccounts = style({
 		display: 'flex',
 		flexDirection: 'column',
@@ -106,6 +60,7 @@ export namespace styles {
 		maxHeight: '360px !custom',
 		overflowY: 'auto',
 		paddingBottom: '8',
+		selectors: { '& a:focus-visible': { outlineOffset: '-2px' } },
 	})
 
 	export const balanceAccount = style({
@@ -130,50 +85,18 @@ export namespace styles {
 		gap: '8',
 	})
 
-	export const balanceDiff = style({
-		color: 'content.secondary',
-		flexShrink: '0 !custom',
-		fontVariantNumeric: 'tabular-nums',
-	})
-
-	export const balanceToken = style({
-		alignItems: 'center',
-		color: 'content.positive',
-		display: 'inline-flex',
-		flexShrink: '0 !custom',
-		gap: '4',
-	})
-
-	export const balanceTokenIcon = style({ height: '16', width: '16' })
-
-	// Compact toggle in the TDS secondary Button style (pill, container fill).
-	export const pill = style({
-		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderRadius: 'full',
-		color: 'content.primary',
-		cursor: 'pointer',
-		display: 'inline-flex',
-		gap: '4',
-		paddingBlock: '4',
-		paddingInline: '12',
-		typography: 'body.b3',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
-	})
-
-	export const seeAll = style({ width: 'fit-content !custom' })
-
-	export const seeAllIcon = style({
-		height: '12px !custom',
-		width: '12px !custom',
-	})
+	// TextButton leaves its alignment in a column unset.
+	export const seeAll = style({ alignSelf: 'flex-start' })
 
 	export const calls = style({
-		...divided,
 		display: 'flex',
 		flexDirection: 'column',
+		selectors: {
+			'& > :not(:last-child)': {
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
+			},
+		},
 	})
 
 	export const call = style({
@@ -188,14 +111,6 @@ export namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
-		typography: 'body.b3',
-	})
-
-	export const empty = style({
-		color: 'content.tertiary',
-		paddingBlock: '24',
-		paddingInline: '20',
-		textAlign: 'center',
 		typography: 'body.b3',
 	})
 

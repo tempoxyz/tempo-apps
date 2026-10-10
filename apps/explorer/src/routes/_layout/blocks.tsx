@@ -1,14 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { Tooltip } from '@tempoxyz/ds/platform'
+import {
+	ChevronLeft,
+	ChevronRight,
+	ChevronsLeft,
+	ChevronsRight,
+} from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { type Block, createPublicClient, webSocket } from 'viem'
 import { watchBlocks as subscribeToBlocks } from 'viem/actions'
-import { cx } from 'zyzz'
 import { getTempoChain } from '#wagmi.config'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { Sections } from '#comps/Sections'
+import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import {
 	FormattedTimestamp,
 	TimeColumnHeader,
@@ -18,12 +25,7 @@ import { syncBlockNumberAtLeast } from '#lib/block-number'
 import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
-import { link, pressDown } from '#styles/explorer'
-import ChevronFirst from '~icons/lucide/chevron-first'
-import ChevronLast from '~icons/lucide/chevron-last'
-import ChevronLeft from '~icons/lucide/chevron-left'
-import ChevronRight from '~icons/lucide/chevron-right'
-import Play from '~icons/lucide/play'
+import { link } from '#styles/explorer'
 import { styles } from './-blocks.styles'
 
 export const Route = createFileRoute('/_layout/blocks')({
@@ -185,7 +187,7 @@ function RouteComponent() {
 			width: '1fr',
 			minWidth: 80,
 		},
-		{ align: 'end', label: 'Txns', width: '1fr' },
+		{ align: 'end', label: 'Txns', width: '1fr', minWidth: 56 },
 	]
 
 	return (
@@ -212,25 +214,15 @@ function RouteComponent() {
 											? true
 											: undefined,
 								})}
-								{...cx(
-									styles.liveToggle({ live: live && !paused }),
-									pressDown(),
-								)}
-								title={live ? 'Pause live updates' : 'Resume live updates'}
+								aria-label={
+									live ? 'Live, pause updates' : 'Paused, resume updates'
+								}
+								{...styles.liveToggle()}
 							>
 								{live && !paused ? (
-									<>
-										<span {...styles.liveDot()}>
-											<span {...styles.liveDotPing()} />
-											<span {...styles.liveDotCore()} />
-										</span>
-										<span>Live</span>
-									</>
+									<LiveIndicator pinging>Live</LiveIndicator>
 								) : (
-									<>
-										<Play {...styles.pausedIcon()} />
-										<span>Paused</span>
-									</>
+									<LiveIndicator tone="neutral">Paused</LiveIndicator>
 								)}
 							</Link>
 						),
@@ -258,7 +250,10 @@ function RouteComponent() {
 											return {
 												key: `block-${blockNumber}`,
 												cells: [
-													<span key="number" {...cx(styles.number(), link())}>
+													<span
+														key="number"
+														{...styles.number({ className: link().className })}
+													>
 														#{blockNumber}
 													</span>,
 													<span key="hash" {...styles.hash()}>
@@ -330,49 +325,57 @@ function BlocksPagination({
 	return (
 		<div {...styles.pagination()}>
 			<div {...styles.paginationControls()}>
-				<Link
-					to="."
-					resetScroll={false}
-					search={{ from: undefined, live: undefined }}
-					disabled={!canGoNewer}
-					{...styles.pageButton()}
-					title="Latest blocks"
-				>
-					<ChevronFirst {...styles.pageIcon()} />
-				</Link>
-				<Link
-					to="."
-					resetScroll={false}
-					search={{ from: newerFrom, live: undefined }}
-					disabled={!canGoNewer}
-					{...styles.pageButton()}
-					title="Newer blocks"
-				>
-					<ChevronLeft {...styles.pageIcon()} />
-				</Link>
+				<Tooltip content="Latest blocks">
+					<Link
+						to="."
+						resetScroll={false}
+						search={{ from: undefined, live: undefined }}
+						disabled={!canGoNewer}
+						aria-label="Latest blocks"
+						{...styles.pageButton()}
+					>
+						<ChevronsLeft />
+					</Link>
+				</Tooltip>
+				<Tooltip content="Newer blocks">
+					<Link
+						to="."
+						resetScroll={false}
+						search={{ from: newerFrom, live: undefined }}
+						disabled={!canGoNewer}
+						aria-label="Newer blocks"
+						{...styles.pageButton()}
+					>
+						<ChevronLeft />
+					</Link>
+				</Tooltip>
 				<span {...styles.pageRange()}>
 					{displayedFrom != null ? `#${displayedFrom}-#${displayedEnd}` : '…'}
 				</span>
-				<Link
-					to="."
-					resetScroll={false}
-					search={{ from: olderFrom, live: undefined }}
-					disabled={!canGoOlder}
-					{...styles.pageButton()}
-					title="Older blocks"
-				>
-					<ChevronRight {...styles.pageIcon()} />
-				</Link>
-				<Link
-					to="."
-					resetScroll={false}
-					search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
-					disabled={displayedEnd === 0n}
-					{...styles.pageButton()}
-					title="Oldest blocks"
-				>
-					<ChevronLast {...styles.pageIcon()} />
-				</Link>
+				<Tooltip content="Older blocks">
+					<Link
+						to="."
+						resetScroll={false}
+						search={{ from: olderFrom, live: undefined }}
+						disabled={!canGoOlder}
+						aria-label="Older blocks"
+						{...styles.pageButton()}
+					>
+						<ChevronRight />
+					</Link>
+				</Tooltip>
+				<Tooltip content="Oldest blocks">
+					<Link
+						to="."
+						resetScroll={false}
+						search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
+						disabled={displayedEnd === 0n}
+						aria-label="Oldest blocks"
+						{...styles.pageButton()}
+					>
+						<ChevronsRight />
+					</Link>
+				</Tooltip>
 			</div>
 			<span {...styles.pageCount()}>
 				{latestBlockNumber != null

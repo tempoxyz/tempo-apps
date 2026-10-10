@@ -21,7 +21,7 @@ export function TransactionCell(props: { hash: Hex.Hex }) {
 
 namespace styles {
 	export const link = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 		width: '100% !custom',
 	})

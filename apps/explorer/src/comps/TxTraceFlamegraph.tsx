@@ -1,4 +1,6 @@
-import { style, variants, vars } from '@tempoxyz/ds/platform'
+import { vars as core } from '@tempoxyz/ds/core'
+import { Badge, StatusIndicator, style, vars } from '@tempoxyz/ds/platform'
+import { Database } from '@tempoxyz/ds/platform/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
@@ -9,42 +11,26 @@ import {
 	truncate,
 } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
-import DatabaseIcon from '~icons/lucide/database'
 
 const BAR_HEIGHT = 32
 const MIN_WIDTH_PX = 6
 
-// The TDS core violet pair (`core.color.accent.violetLight/Dark`). Bar fills
-// are computed per frame at runtime, so they need the literal colours.
-const VIZ_BASE = 'light-dark(rgb(126 89 228), rgb(152 119 241))'
-
 /**
- * Below this a flamegraph is a rectangle, not a chart.
- *
- * Nearly every TIP-20 call on Tempo is one frame, which rendered as a single
- * 100%-wide bar — the largest and least informative element on the screen. The
- * gate lives here rather than in each caller so the transaction page and the
- * simulator can't disagree about it.
+ * Below this a flamegraph is a rectangle, not a chart: nearly every TIP-20
+ * call on Tempo is one frame. The gate lives here so the transaction page and
+ * the simulator cannot disagree about it.
  */
 export const MIN_FLAMEGRAPH_FRAMES = 3
 
 /**
- * A flamegraph encodes one quantitative variable: share of total gas. So it
- * gets a single-hue ramp from the data-visualisation colour, and no semantic
- * colour at all — filling failed frames red put the chart in a three-way fight
- * with the error state above it and the links beside it, and colouring by
- * depth (the previous behaviour) made every shallow trace solid red.
- *
- * Failure is marked structurally instead: a red left edge, the same idiom the
- * trace tree uses for the failure path.
+ * A flamegraph encodes one quantitative variable, share of total gas, so it
+ * gets a single-hue ramp from the data-visualisation colour and no semantic
+ * colour. Failure is marked structurally instead: a red left edge, the same
+ * idiom the trace tree uses for the failure path.
  */
-function getFlameColor(gasShare: number) {
+function getFlameMix(gasShare: number) {
 	const intensity = 16 + Math.min(Math.max(gasShare, 0), 1) * 30
-	return {
-		bg: `color-mix(in oklab, ${VIZ_BASE} ${intensity}%, transparent)`,
-		hover: `color-mix(in oklab, ${VIZ_BASE} ${intensity + 16}%, transparent)`,
-		border: `color-mix(in oklab, ${VIZ_BASE} ${intensity + 22}%, transparent)`,
-	}
+	return { border: intensity + 22, fill: intensity, hover: intensity + 16 }
 }
 
 export function TxTraceFlamegraph(
@@ -263,7 +249,7 @@ export namespace TxTraceFlamegraph {
 		const hasStorage =
 			storageSlots && (storageSlots.reads > 0 || storageSlots.writes > 0)
 
-		const color = getFlameColor(rootGas > 0 ? node.gasUsed / rootGas : 0)
+		const mix = getFlameMix(rootGas > 0 ? node.gasUsed / rootGas : 0)
 
 		return (
 			// biome-ignore lint/a11y/noStaticElementInteractions: hover drives the details panel below
@@ -273,13 +259,11 @@ export namespace TxTraceFlamegraph {
 						style: {
 							left: `${leftPct}%`,
 							width: `max(${widthPct}%, ${MIN_WIDTH_PX}px)`,
-							backgroundColor: hovered ? color.hover : color.bg,
-							borderTopColor: color.border,
-							borderRightColor: color.border,
-							borderBottomColor: color.border,
-							// A failed frame keeps the red edge from `styles.failed`.
-							borderLeftColor: node.hasError ? undefined : color.border,
 						},
+					}),
+					styles.barFill({
+						border: `${mix.border}%`,
+						fill: `${hovered ? mix.hover : mix.fill}%`,
 					}),
 					transitionColors(),
 					(hovered || selected) && styles.raised(),
@@ -287,6 +271,7 @@ export namespace TxTraceFlamegraph {
 					// Selection reads as an outline rather than a fill, so it never
 					// competes with the fill that encodes gas share.
 					selected && styles.selected(),
+					// After the fill, so a failed frame keeps its red left edge.
 					node.hasError && styles.failed(),
 				)}
 				{...(onSelect
@@ -307,21 +292,11 @@ export namespace TxTraceFlamegraph {
 			>
 				{!isNarrow && (
 					<span {...styles.barContent()}>
-						<span
-							{...cx(
-								styles.barLabel(),
-								truncate(),
-								node.hasError && styles.negative(),
-							)}
-						>
-							{label}
-						</span>
+						<span {...cx(styles.barLabel(), truncate())}>{label}</span>
 						<span {...styles.barShare()}>
 							{`${gasPct.toFixed(gasPct >= 10 ? 0 : 1)}%`}
 						</span>
-						{hasStorage && widthPct > 8 && (
-							<DatabaseIcon {...styles.barIcon()} />
-						)}
+						{hasStorage && widthPct > 8 && <Database {...styles.barIcon()} />}
 					</span>
 				)}
 			</div>
@@ -335,9 +310,7 @@ export namespace TxTraceFlamegraph {
 	}): React.JSX.Element | null {
 		const { node, rootGas, storageSlots } = props
 
-		// Nothing hovered or selected renders nothing. This box used to reserve
-		// ~150px to say "Hover a call to see details", which on a shallow trace
-		// was the largest thing in the panel and always empty.
+		// Nothing hovered or selected renders nothing rather than an empty box.
 		if (!node) return null
 
 		const gasPct = rootGas > 0 ? (node.gasUsed / rootGas) * 100 : 0
@@ -355,19 +328,14 @@ export namespace TxTraceFlamegraph {
 
 		return (
 			<div {...styles.details()}>
-				{/* min-h, not h: enough to stop the panel twitching as the row count
-				    (self gas, storage) varies between frames, without a floor of
-				    empty space when there is little to say. */}
+				{/* A minimum height, not a fixed one: it stops the panel twitching as
+				    the row count (self gas, storage) varies between frames. */}
 				<div {...styles.detailsPanel()}>
 					<div {...styles.detailsMain()}>
 						<div {...styles.detailsHeading()}>
-							<span
-								{...styles.callType({
-									tone: node.hasError ? 'negative' : 'neutral',
-								})}
-							>
+							<Badge scale="small" variant="gray">
 								{node.trace.type}
-							</span>
+							</Badge>
 							{node.trace.to && (
 								<span {...cx(link(), truncate())}>
 									{node.contractName
@@ -378,24 +346,28 @@ export namespace TxTraceFlamegraph {
 						</div>
 						<span {...cx(codeIdentifier(), truncate())}>{displayName}</span>
 						{node.hasError && (
-							<span {...styles.negative()}>
+							<StatusIndicator
+								tone="negative"
+								// Revert reasons can be long; let them wrap.
+								style={{ height: 'auto', whiteSpace: 'normal' }}
+							>
 								{node.trace.revertReason || node.trace.error || 'reverted'}
-							</span>
+							</StatusIndicator>
 						)}
 					</div>
 					<div {...styles.detailsStats()}>
 						<span {...styles.primary()}>
 							{node.gasUsed.toLocaleString()} gas
 						</span>
-						<span {...styles.tertiary()}>{gasPct.toFixed(1)}% total</span>
+						<span {...styles.secondary()}>{gasPct.toFixed(1)}% total</span>
 						{node.children.length > 0 && (
-							<span {...styles.tertiary()}>
+							<span {...styles.secondary()}>
 								{selfGas.toLocaleString()} self ({selfPct.toFixed(1)}%)
 							</span>
 						)}
 						{hasStorage && (
 							<span {...styles.storage()}>
-								<DatabaseIcon {...styles.icon()} />
+								<Database {...styles.icon()} />
 								{storageSlots.writes > 0 && (
 									<span>{storageSlots.writes} SSTORE</span>
 								)}
@@ -420,13 +392,12 @@ namespace styles {
 		borderColor: 'line.secondary',
 		borderStyle: 'solid',
 		display: 'flex',
-		height: '34px !custom',
-		paddingLeft: '16',
-		paddingRight: '12',
+		paddingBlock: '8',
+		paddingInline: '16',
 	})
 
 	export const headerLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
@@ -456,12 +427,20 @@ namespace styles {
 		typography: 'mono.inline',
 	})
 
+	// The data-visualisation violet (`vizFill`), mixed per frame by gas share.
+	export const barFill = style(
+		(values: { border: `${number}%`; fill: `${number}%` }) => ({
+			backgroundColor: `color-mix(in oklab, light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) ${values.fill}, transparent) !custom`,
+			borderColor: `color-mix(in oklab, light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) ${values.border}, transparent) !custom`,
+		}),
+	)
+
 	export const raised = style({ zIndex: 10 })
 
 	export const clickable = style({ cursor: 'pointer' })
 
 	export const selected = style({
-		boxShadow: `inset 0 0 0 1px ${vars.color.border.focus}`,
+		boxShadow: `inset 0 0 0 1px ${vars.color.content.primary}`,
 	})
 
 	export const failed = style({
@@ -485,18 +464,16 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const negative = style({ color: 'content.negative' })
-
 	export const barShare = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 	})
 
 	export const barIcon = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
-		height: '10px !custom',
-		width: '10px !custom',
+		height: '12',
+		width: '12',
 	})
 
 	export const details = style({ paddingBottom: '12', paddingInline: '16' })
@@ -528,30 +505,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
-	})
-
-	export const callType = variants({
-		base: {
-			borderRadius: '3xs',
-			paddingBlock: '1px !custom',
-			paddingInline: '4',
-			textAlign: 'center',
-			userSelect: 'none',
-			whiteSpace: 'nowrap',
-		},
-		defaultVariants: { tone: 'neutral' },
-		variants: {
-			tone: {
-				negative: {
-					backgroundColor: 'container.negative',
-					color: 'content.negative',
-				},
-				neutral: {
-					backgroundColor: 'container.regular',
-					color: 'content.tertiary',
-				},
-			},
-		},
+		minWidth: '0 !custom',
 	})
 
 	export const detailsStats = style({
@@ -565,18 +519,19 @@ namespace styles {
 
 	export const primary = style({ color: 'content.primary' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const storage = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '4',
 		marginTop: '2',
 	})
 
 	export const icon = style({
-		height: '10px !custom',
-		width: '10px !custom',
+		flexShrink: '0 !custom',
+		height: '12',
+		width: '12',
 	})
 }

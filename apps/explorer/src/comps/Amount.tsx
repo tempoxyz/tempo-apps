@@ -11,7 +11,7 @@ import { TokenIcon } from '#comps/TokenIcon.tsx'
 import { ellipsis } from '#lib/chars'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { PriceFormatter } from '#lib/formatting.ts'
-import { pressDown } from '#styles/explorer'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 export function Amount(props: Amount.Props) {
 	const {
@@ -65,9 +65,9 @@ export function Amount(props: Amount.Props) {
 			before={before}
 			after={
 				<>
-					<TokenIcon address={token} name={symbol_} />
+					<TokenIcon address={token} />
 					<Link
-						{...cx(styles.symbol(), pressDown())}
+						{...cx(styles.symbol(), link(), linkHover(), pressDown())}
 						params={{ address: token }}
 						title={token}
 						to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
@@ -180,7 +180,6 @@ export namespace Amount {
 
 namespace styles {
 	export const symbol = style({
-		color: 'content.positive',
 		display: 'inline-flex',
 		flexShrink: '0 !custom',
 	})
@@ -199,5 +198,5 @@ namespace styles {
 		whiteSpace: 'nowrap',
 	})
 
-	export const small = style({ color: 'content.tertiary' })
+	export const small = style({ color: 'content.secondary' })
 }

@@ -65,18 +65,20 @@ describe('validator address card', () => {
 		expect(html).toContain('aria-label="Copy fee recipient"')
 		const recipientSection = ValidatorCard({ address })?.props.sections[1]
 		const copyButton = recipientSection.props.children[0].props.children[1]
-		copyButton.props.onClick()
+		// CopyButton renders a TDS IconButton inside a Tooltip.
+		const iconButton = copyButton.type(copyButton.props).props.children
+		iconButton.props.onClick()
 		expect(copy).toHaveBeenCalledExactlyOnceWith(validator.feeRecipient)
 		expect(html).toContain(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
 	})
 
-	it('confirms when the fee recipient was copied', () => {
+	it('leaves the copy confirmation to the toast', () => {
 		copyState.notifying = true
 		const html = render()
-		expect(html).toContain('aria-label="Fee recipient copied"')
-		expect(html).toContain('>copied</span>')
+		expect(html).toContain('aria-label="Copy fee recipient"')
+		expect(html).not.toContain('copied')
 	})
 
 	it('links the full fee recipient to holdings, matches address typography and preserves genesis height', () => {

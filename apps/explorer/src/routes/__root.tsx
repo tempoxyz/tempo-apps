@@ -16,7 +16,6 @@ import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { CopyFeedbackProvider } from '#comps/CopyFeedback'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
-import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import {
 	getCanonicalExplorerUrl,
@@ -455,9 +454,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<TokenListMembershipProvider>
 							<BreadcrumbsProvider>
 								<AddressHighlightProvider>
-									<IntroSeenProvider>
-										<CopyFeedbackProvider>{children}</CopyFeedbackProvider>
-									</IntroSeenProvider>
+									<CopyFeedbackProvider>{children}</CopyFeedbackProvider>
 								</AddressHighlightProvider>
 							</BreadcrumbsProvider>
 						</TokenListMembershipProvider>

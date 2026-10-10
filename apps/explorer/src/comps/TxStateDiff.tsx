@@ -1,5 +1,8 @@
+/** biome-ignore-all lint/a11y/useSemanticElements: cells are laid out by one CSS grid per account, which native table rows cannot join, so the grid takes table roles instead */
+/** biome-ignore-all lint/a11y/useFocusableInteractive: role="table" rows and headers are static, not interactive grid cells */
 import { Link } from '@tanstack/react-router'
 import { style } from '@tempoxyz/ds/platform'
+import { ArrowCornerDownLeft, Check, Copy } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import type { Hex } from 'viem'
 import { cx } from 'zyzz'
@@ -11,12 +14,9 @@ import {
 	type StorageDecodeContext,
 } from '#lib/domain/storage-decode'
 import { useCopy } from '#lib/hooks'
-import { PanelToolbar, SegmentedControl } from './PanelToolbar'
+import { PanelToolbar, ViewToggle } from './PanelToolbar'
 import type { CallTrace, PrestateDiff } from '#lib/queries'
 import { link, linkHover, pressDown, truncate } from '#styles/explorer'
-import CheckIcon from '~icons/lucide/check'
-import CopyIcon from '~icons/lucide/copy'
-import WrapIcon from '~icons/lucide/corner-down-left'
 
 export function TxStateDiff(props: TxStateDiff.Props) {
 	const {
@@ -55,72 +55,51 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 
 	const hasData = data && data.accounts.length > 0
 
+	const controls = data && (
+		<>
+			<PanelToolbar.IconButton
+				onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
+				label="Copy state changes"
+			>
+				{copy.notifying ? <Check /> : <Copy />}
+			</PanelToolbar.IconButton>
+			<PanelToolbar.IconButton
+				onClick={() => setWrap(!wrap)}
+				active={wrap}
+				label={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+			>
+				<ArrowCornerDownLeft />
+			</PanelToolbar.IconButton>
+			<ViewToggle
+				label="State format"
+				value={raw ? 'raw' : 'decoded'}
+				options={[
+					{ value: 'decoded', label: 'Decoded' },
+					{ value: 'raw', label: 'Raw' },
+				]}
+				onChange={(value) => setRaw(value === 'raw')}
+			/>
+		</>
+	)
+
 	return (
 		<div {...styles.root()}>
 			{/* With a label this is a section header on the transaction page. Without
 			    one — the simulator, where the tab already names the panel — it is the
-			    same toolbar the trace uses, so the two panels are visibly siblings
-			    instead of an empty band with a stray `(decoded)` link in it. */}
+			    same toolbar the trace uses, so the two panels are visibly siblings. */}
 			{label === null ? (
 				hasData &&
 				data && (
 					<PanelToolbar
 						summary={`${data.accounts.length} account${data.accounts.length === 1 ? '' : 's'} changed`}
 					>
-						<PanelToolbar.IconButton
-							onClick={() => setWrap(!wrap)}
-							active={wrap}
-							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-						>
-							<WrapIcon />
-						</PanelToolbar.IconButton>
-						<PanelToolbar.IconButton
-							onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
-							title="Copy state changes"
-						>
-							{copy.notifying ? <CheckIcon /> : <CopyIcon />}
-						</PanelToolbar.IconButton>
-						<SegmentedControl
-							size="sm"
-							value={raw ? 'raw' : 'decoded'}
-							options={[
-								{ value: 'decoded', label: 'Decoded' },
-								{ value: 'raw', label: 'Raw' },
-							]}
-							onChange={(value) => setRaw(value === 'raw')}
-						/>
+						{controls}
 					</PanelToolbar>
 				)
 			) : (
 				<div {...styles.header()}>
-					<span {...styles.headerLabel()}>
-						{label && (
-							<>
-								<span {...styles.tertiary()}>{label} </span>
-								{hasData && (
-									<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
-								)}
-							</>
-						)}
-					</span>
-					{hasData && (
-						<div {...styles.headerActions()}>
-							{copy.notifying && <span {...styles.copied()}>copied</span>}
-							<PanelToolbar.IconButton
-								onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
-								title="Copy state changes"
-							>
-								<CopyIcon />
-							</PanelToolbar.IconButton>
-							<PanelToolbar.IconButton
-								onClick={() => setWrap(!wrap)}
-								active={wrap}
-								title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-							>
-								<WrapIcon />
-							</PanelToolbar.IconButton>
-						</div>
-					)}
+					<span {...styles.headerLabel()}>{label}</span>
+					{hasData && <div {...styles.headerActions()}>{controls}</div>}
 				</div>
 			)}
 			{!prestate || !data ? (
@@ -140,21 +119,6 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 				</div>
 			)}
 		</div>
-	)
-}
-
-function RawToggle(props: {
-	raw: boolean
-	onToggle: () => void
-}): React.JSX.Element {
-	return (
-		<button
-			type="button"
-			onClick={props.onToggle}
-			{...cx(styles.rawToggle(), link(), linkHover(), pressDown())}
-		>
-			{props.raw ? '(raw)' : '(decoded)'}
-		</button>
 	)
 }
 
@@ -308,17 +272,27 @@ export namespace TxStateDiff {
 
 				<div {...styles.gridScroll()}>
 					<div
+						role="table"
+						aria-label={`State changes for ${contractName ?? address}`}
 						{...cx(
 							styles.grid(),
 							wrap && styles.gridWrap(),
 							!wrap && styles.gridNoWrap(),
 						)}
 					>
-						<div {...styles.gridHead()}>Slot</div>
-						<div {...styles.gridHead()}>Before</div>
-						<div {...styles.gridHead()}>After</div>
+						<div role="row" {...styles.row()}>
+							<div role="columnheader" {...styles.gridHead()}>
+								Slot
+							</div>
+							<div role="columnheader" {...styles.gridHead()}>
+								Before
+							</div>
+							<div role="columnheader" {...styles.gridHead()}>
+								After
+							</div>
+						</div>
 						{nonceChange && (
-							<>
+							<div role="row" {...styles.row()}>
 								<CopyCell
 									value="nonce"
 									className={styles.cellSlot().className}
@@ -334,12 +308,12 @@ export namespace TxStateDiff {
 									className={styles.cellAfter().className}
 									wrap={wrap}
 								/>
-							</>
+							</div>
 						)}
 						{storageChanges.map((change) => {
 							const decoded = !raw ? change.decoded : undefined
 							return (
-								<React.Fragment key={change.slot}>
+								<div role="row" key={change.slot} {...styles.row()}>
 									<CopyCell
 										value={decoded?.slotLabel ?? change.slot}
 										copyValue={change.slot}
@@ -361,7 +335,7 @@ export namespace TxStateDiff {
 										wrap={wrap}
 										isDecoded={Boolean(decoded?.afterDisplay)}
 									/>
-								</React.Fragment>
+								</div>
 							)
 						})}
 					</div>
@@ -378,30 +352,28 @@ export namespace TxStateDiff {
 		}
 	}
 
+	/** A cell whose value copies on click; the toast confirms the copy. */
 	export function CopyCell(props: CopyCell.Props) {
 		const { value, copyValue, className, wrap, isDecoded } = props
 		const copy = useCopy()
 		const valueToCopy = copyValue ?? value
 
 		return (
-			<button
-				type="button"
-				{...cx(
-					styles.cell({ className }),
-					pressDown(),
-					wrap && styles.breakAll(),
-					!wrap && styles.nowrap(),
-				)}
-				onClick={() => copy.copy(valueToCopy)}
-				title={isDecoded ? valueToCopy : undefined}
-			>
-				{value}
-				{copy.notifying && (
-					<div {...styles.copiedBadge()}>
-						<div {...styles.copiedBadgeText()}>copied</div>
-					</div>
-				)}
-			</button>
+			<div role="cell" {...styles.cell({ className })}>
+				<button
+					type="button"
+					{...cx(
+						styles.cellButton(),
+						pressDown(),
+						wrap && styles.breakAll(),
+						!wrap && styles.nowrap(),
+					)}
+					onClick={() => copy.copy(valueToCopy)}
+					title={isDecoded ? valueToCopy : undefined}
+				>
+					{value}
+				</button>
+			</div>
 		)
 	}
 
@@ -421,35 +393,23 @@ export namespace TxStateDiff {
 		const valueToCopy = copyValue ?? value
 
 		return (
-			<button
-				type="button"
-				{...cx(
-					styles.cell(),
-					styles.diffCell(),
-					pressDown(),
-					wrap && styles.breakAll(),
-					!wrap && styles.nowrap(),
-				)}
-				onClick={() => copy.copy(valueToCopy)}
-				title={isDecoded ? valueToCopy : undefined}
-			>
-				<span {...styles.primary()}>{value}</span>
-				{/* A balance going down is not a failure, so it does not get failure
-				    red. Green marks an increase; a decrease is just a value. This is
-				    the same pairing the simulator's balance table uses. */}
-				{diff && (
-					<span
-						{...cx(styles.diff(), diff.isPositive && styles.diffPositive())}
-					>
-						{diff.display}
-					</span>
-				)}
-				{copy.notifying && (
-					<div {...styles.copiedBadge()}>
-						<div {...styles.copiedBadgeText()}>copied</div>
-					</div>
-				)}
-			</button>
+			<div role="cell" {...cx(styles.cell(), styles.cellAfter())}>
+				<button
+					type="button"
+					{...cx(
+						styles.cellButton(),
+						styles.diffCell(),
+						pressDown(),
+						wrap && styles.breakAll(),
+						!wrap && styles.nowrap(),
+					)}
+					onClick={() => copy.copy(valueToCopy)}
+					title={isDecoded ? valueToCopy : undefined}
+				>
+					<span>{value}</span>
+					{diff && <span {...styles.diff()}>{diff.display}</span>}
+				</button>
+			</div>
 		)
 	}
 
@@ -513,31 +473,27 @@ namespace styles {
 		borderStyle: 'solid',
 		borderTopWidth: 'regular',
 		display: 'flex',
-		height: '40',
+		gap: '8',
 		justifyContent: 'space-between',
+		minHeight: '48',
+		paddingBlock: '8',
 		paddingLeft: '16',
 		paddingRight: '8',
 	})
 
-	export const headerLabel = style({ typography: 'body.b3' })
-
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const primary = style({ color: 'content.primary' })
-
-	export const rawToggle = style({ cursor: 'pointer', typography: 'body.b3' })
+	export const headerLabel = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 
 	export const headerActions = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
 		display: 'flex',
 		gap: '4',
 	})
 
-	export const copied = style({ typography: 'body.b3', userSelect: 'none' })
-
 	export const empty = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '24',
 		paddingInline: '20',
 		textAlign: 'center',
@@ -559,7 +515,7 @@ namespace styles {
 	})
 
 	export const accountCount = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: 0,
 		marginLeft: 'auto !custom',
 		typography: 'body.b3',
@@ -592,76 +548,54 @@ namespace styles {
 		width: 'fit-content !custom',
 	})
 
-	// Header cells inherit the grid's mono face, as they always have.
+	// Rows only group cells for assistive tech; the grid lays the cells out.
+	export const row = style({ display: 'contents' })
+
 	export const gridHead = style({
 		backgroundColor: 'container.subtle',
 		borderBottomWidth: 'regular',
 		borderColor: 'line.secondary',
 		borderStyle: 'solid',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '8',
 		paddingInline: '12',
 	})
 
 	export const cell = style({
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		borderTopWidth: 'regular',
+		display: 'flex',
+	})
+
+	export const cellButton = style({
 		alignItems: 'flex-start',
+		color: 'inherit !custom',
 		cursor: 'pointer',
 		display: 'flex',
+		flex: 1,
+		minWidth: '0 !custom',
 		paddingBlock: '8',
 		paddingInline: '12',
-		position: 'relative',
 		textAlign: 'left',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'container.regular' },
 		},
+		// The grid clips its overflow, which would cut an outset ring.
+		':focus-visible': { outlineOffset: '-2px !custom' },
 	})
 
-	export const cellSlot = style({
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		borderTopWidth: 'regular',
-		color: 'content.secondary',
-	})
+	export const cellSlot = style({ color: 'content.secondary' })
 
-	export const cellBefore = style({
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		borderTopWidth: 'regular',
-		color: 'content.tertiary',
-	})
+	export const cellBefore = style({ color: 'content.secondary' })
 
-	export const cellAfter = style({
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		borderTopWidth: 'regular',
-		color: 'content.primary',
-	})
+	export const cellAfter = style({ color: 'content.primary' })
 
-	export const diffCell = style({
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		borderTopWidth: 'regular',
-		flexDirection: 'column',
-	})
+	export const diffCell = style({ flexDirection: 'column' })
 
 	export const breakAll = style({ wordBreak: 'break-all' })
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
 	export const diff = style({ color: 'content.secondary' })
-
-	export const diffPositive = style({ color: 'content.positive' })
-
-	export const copiedBadge = style({
-		backgroundColor: 'background.elevated',
-		borderRadius: '3xs',
-		bottom: '2',
-		color: 'content.secondary',
-		paddingBlock: '2',
-		paddingInline: '8',
-		position: 'absolute',
-		right: '2',
-	})
-
-	export const copiedBadgeText = style({ translate: '0 -2px !custom' })
 }

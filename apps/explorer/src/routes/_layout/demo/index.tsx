@@ -1,6 +1,4 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { cx } from 'zyzz'
-import { pressDown } from '#styles/explorer'
 import { styles } from './-index.styles'
 
 const demoPages = [
@@ -25,11 +23,7 @@ function Component() {
 		<div {...styles.page()}>
 			<h1 {...styles.title()}>Demo</h1>
 			{demoPages.map((page) => (
-				<Link
-					key={page.path}
-					to={page.path}
-					{...cx(styles.link(), pressDown())}
-				>
+				<Link key={page.path} to={page.path} {...styles.link()}>
 					{page.label}
 				</Link>
 			))}

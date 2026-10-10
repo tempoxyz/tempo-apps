@@ -4,11 +4,11 @@ import {
 	Link,
 	stripSearchParams,
 } from '@tanstack/react-router'
-import { Button } from '@tempoxyz/ds/platform'
+import { Button, NativeSelect, TextInput } from '@tempoxyz/ds/platform'
+import { AlertCircle, ArrowRight, Close } from '@tempoxyz/ds/platform/icons'
 import * as Address from 'ox/Address'
 import { useId, useState } from 'react'
 import type * as React from 'react'
-import { cx } from 'zyzz'
 import { FeeAmmPoolList, FeeAmmQueryState } from '#comps/FeeAmmPools'
 import { CopyButton } from '#comps/CopyButton'
 import { Pagination } from '#comps/Pagination'
@@ -16,11 +16,8 @@ import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { FEE_AMM_MAX_ROWS, feeAmmSearchSchema } from '#lib/fee-amm'
 import { PriceFormatter } from '#lib/formatting'
-import { link, linkHover, transitionColors } from '#styles/explorer'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
-import XIcon from '~icons/lucide/x'
 import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
-import { styles } from './-fee-amm.styles'
+import { composed, styles } from './-fee-amm.styles'
 
 export const Route = createFileRoute('/_layout/fee-amm')({
 	component: FeeAmmPage,
@@ -33,7 +30,7 @@ export const Route = createFileRoute('/_layout/fee-amm')({
 			<Link
 				to="/fee-amm"
 				search={{ page: 1, limit: 10 }}
-				{...cx(link(), linkHover())}
+				{...composed.textLink}
 			>
 				View all pools
 			</Link>
@@ -50,8 +47,8 @@ export const Route = createFileRoute('/_layout/fee-amm')({
 
 function FeeAmmPage(): React.JSX.Element {
 	const search = Route.useSearch()
-	const filterId = useId()
 	const errorId = useId()
+	const limitId = useId()
 	const navigate = Route.useNavigate()
 	const query = useQuery(feeAmmPoolsQueryOptions(search))
 	const [filterError, setFilterError] = useState<string>()
@@ -90,18 +87,14 @@ function FeeAmmPage(): React.JSX.Element {
 								to="/address/$address"
 								params={{ address: search.token }}
 								search={{ tab: 'token' }}
-								{...cx(styles.filteredAddress(), link(), linkHover())}
+								{...composed.filteredAddressLink}
 							>
 								{search.token}
 							</Link>
 						</div>
 					)}
 				</div>
-				<CopyButton
-					value={() => window.location.href}
-					ariaLabel="Copy link"
-					className={styles.copyLink().className}
-				>
+				<CopyButton value={() => window.location.href} ariaLabel="Copy link">
 					Copy link
 				</CopyButton>
 			</div>
@@ -129,11 +122,8 @@ function FeeAmmPage(): React.JSX.Element {
 				}}
 			>
 				<div {...styles.field()}>
-					<label htmlFor={filterId} {...styles.label()}>
-						Find pools by token address
-					</label>
-					<input
-						id={filterId}
+					<TextInput
+						label="Find pools by token address"
 						name="token"
 						defaultValue={search.token ?? ''}
 						placeholder="0x…"
@@ -141,24 +131,25 @@ function FeeAmmPage(): React.JSX.Element {
 						autoComplete="off"
 						aria-invalid={Boolean(filterError)}
 						aria-describedby={filterError ? errorId : undefined}
-						{...cx(styles.input(), transitionColors())}
+						className={styles.control().className}
 					/>
 				</div>
-				<Button type="submit" variant="secondary">
-					Find pools <ArrowRightIcon {...styles.buttonIcon()} />
+				<Button type="submit" scale="large" variant="secondary">
+					Find pools <ArrowRight {...styles.buttonIcon()} />
 				</Button>
 				{search.token && (
 					<Link
 						to="/fee-amm"
 						search={{ page: 1, limit: search.limit }}
 						onClick={() => setFilterError(undefined)}
-						{...cx(styles.clear(), link(), linkHover())}
+						{...composed.clearFilterLink}
 					>
-						<XIcon {...styles.icon()} /> Clear filter
+						<Close /> Clear filter
 					</Link>
 				)}
 				{filterError && (
 					<p id={errorId} role="alert" {...styles.filterError()}>
+						<AlertCircle {...styles.filterErrorIcon()} />
 						{filterError}
 					</p>
 				)}
@@ -171,11 +162,9 @@ function FeeAmmPage(): React.JSX.Element {
 						content: (
 							<>
 								<div {...styles.summary()}>
-									<div {...styles.summaryNote()}>
-										<p {...styles.meta()}>
-											Most active first · Reserves shown in each token’s units
-										</p>
-									</div>
+									<p {...styles.meta()}>
+										Most active first · Reserves shown in each token’s units
+									</p>
 									{query.data && pools.length > 0 && (
 										<div {...styles.total()}>
 											<div {...styles.totalValue()}>
@@ -223,10 +212,12 @@ function FeeAmmPage(): React.JSX.Element {
 											Page {search.page}
 										</span>
 									</div>
-									<label {...styles.limit()}>
-										Pools per page
-										<select
-											aria-label="Pools per page"
+									<div {...styles.limit()}>
+										<label htmlFor={limitId} {...styles.limitLabel()}>
+											Pools per page
+										</label>
+										<NativeSelect
+											id={limitId}
 											value={search.limit}
 											onChange={(event) =>
 												void navigate({
@@ -238,15 +229,15 @@ function FeeAmmPage(): React.JSX.Element {
 													resetScroll: false,
 												})
 											}
-											{...styles.select()}
+											style={{ width: 96 }}
 										>
 											{[10, 25, 50].map((limit) => (
 												<option key={limit} value={limit}>
 													{limit}
 												</option>
 											))}
-										</select>
-									</label>
+										</NativeSelect>
+									</div>
 								</nav>
 								{search.page >= maxPage && query.data?.hasMore && (
 									<p {...styles.capped()}>

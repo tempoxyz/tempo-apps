@@ -1,11 +1,7 @@
 import { style } from '@tempoxyz/ds/platform'
 import { cx } from 'zyzz'
 
-export function InfoRow(props: {
-	label: string
-	children: React.ReactNode
-	stackOnMobile?: boolean
-}) {
+export function InfoRow(props: InfoRow.Props): React.JSX.Element {
 	const { label, children, stackOnMobile } = props
 	return (
 		<div {...cx(styles.row(), stackOnMobile && styles.stackOnMobile())}>
@@ -13,6 +9,14 @@ export function InfoRow(props: {
 			<div {...styles.value()}>{children}</div>
 		</div>
 	)
+}
+
+export declare namespace InfoRow {
+	type Props = {
+		label: string
+		children: React.ReactNode
+		stackOnMobile?: boolean | undefined
+	}
 }
 
 namespace styles {
@@ -33,7 +37,7 @@ namespace styles {
 	})
 
 	export const label = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 		minWidth: '100px !custom',
 		typography: 'body.b2',

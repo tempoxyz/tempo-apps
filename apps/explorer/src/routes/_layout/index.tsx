@@ -1,16 +1,17 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+	Coins,
+	Files,
+	Package,
+	Receipt,
+	User,
+} from '@tempoxyz/ds/platform/icons'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
 import { getTempoEnv } from '#lib/env'
-import { link, pressDown, transitionColors } from '#styles/explorer'
-import BoxIcon from '~icons/lucide/box'
-import CoinsIcon from '~icons/lucide/coins'
-import FileIcon from '~icons/lucide/file'
-import ReceiptIcon from '~icons/lucide/receipt'
-import UserIcon from '~icons/lucide/user'
+import { link, pressDown } from '#styles/explorer'
 import { styles } from './-index.styles'
 
 const SPOTLIGHT_DATA: Record<
@@ -120,7 +121,7 @@ function SpotlightLinks() {
 						<SpotlightPill
 							to="/address/$address"
 							params={{ address: spotlightData.accountAddress }}
-							icon={<UserIcon {...cx(styles.pillIcon(), link())} />}
+							icon={<User {...link()} />}
 						>
 							Account
 						</SpotlightPill>
@@ -130,29 +131,23 @@ function SpotlightLinks() {
 								address: spotlightData.contractAddress,
 							}}
 							search={{ tab: 'contract' }}
-							icon={<FileIcon {...cx(styles.pillIcon(), link())} />}
+							icon={<Files {...link()} />}
 						>
 							Contract
 						</SpotlightPill>
 						<SpotlightPill
 							to="/receipt/$hash"
 							params={{ hash: spotlightData.receiptHash }}
-							icon={<ReceiptIcon {...cx(styles.pillIcon(), link())} />}
+							icon={<Receipt {...link()} />}
 						>
 							Receipt
 						</SpotlightPill>
 					</>
 				)}
-				<SpotlightPill
-					to="/blocks"
-					icon={<BoxIcon {...cx(styles.pillIcon(), link())} />}
-				>
+				<SpotlightPill to="/blocks" icon={<Package {...link()} />}>
 					Blocks
 				</SpotlightPill>
-				<SpotlightPill
-					to="/tokens"
-					icon={<CoinsIcon {...cx(styles.pillIcon(), link())} />}
-				>
+				<SpotlightPill to="/tokens" icon={<Coins {...link()} />}>
 					Tokens
 				</SpotlightPill>
 			</div>
@@ -161,20 +156,19 @@ function SpotlightLinks() {
 }
 
 function SpotlightPill(props: {
-	className?: string
 	to: string
 	params?: Record<string, string>
 	search?: Record<string, string>
 	icon: React.ReactNode
 	children: React.ReactNode
 }) {
-	const { className, to, params, search, icon, children } = props
+	const { to, params, search, icon, children } = props
 	return (
 		<Link
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
-			{...cx(styles.pill({ className }), transitionColors(), pressDown())}
+			{...styles.pill({ className: pressDown().className })}
 		>
 			{icon}
 			<span>{children}</span>
@@ -185,8 +179,8 @@ function SpotlightPill(props: {
 function LandingWords(): React.JSX.Element {
 	return (
 		<h1 {...styles.landingWords()}>
-			<span {...styles.wordSearch()}>Search</span>
-			<span {...styles.wordExplore()}>Explore</span>
+			<span {...styles.wordLead()}>Search</span>
+			<span {...styles.wordLead()}>Explore</span>
 			<span {...styles.wordDiscover()}>Discover</span>
 		</h1>
 	)

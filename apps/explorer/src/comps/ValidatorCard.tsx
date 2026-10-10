@@ -4,17 +4,16 @@ import type { Address } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { useReadContract } from 'wagmi'
 import { cx } from 'zyzz'
+import { CopyButton } from '#comps/CopyButton'
 import { InfoCard } from '#comps/InfoCard'
 import { Abis } from '#lib/abis'
-import { useCopy, useIsMounted } from '#lib/hooks'
-import { linkHover, pressDown } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
+import { useIsMounted } from '#lib/hooks'
+import { linkHover } from '#styles/explorer'
 
 export function ValidatorCard(
 	props: ValidatorCard.Props,
 ): React.JSX.Element | null {
 	const isMounted = useIsMounted()
-	const { copy, notifying } = useCopy()
 	const { data: validator } = useReadContract({
 		address: Addresses.validatorV2,
 		abi: Abis.validatorConfigV2,
@@ -36,18 +35,10 @@ export function ValidatorCard(
 				<div key="recipient" {...styles.recipient()}>
 					<div {...styles.recipientHeader()}>
 						<span>Fee recipient</span>
-						<button
-							type="button"
-							onClick={() => copy(validator.feeRecipient)}
-							{...cx(styles.copy(), pressDown())}
-							aria-label={
-								notifying ? 'Fee recipient copied' : 'Copy fee recipient'
-							}
-							title="Copy fee recipient"
-						>
-							<CopyIcon {...styles.copyIcon()} />
-							{notifying && <span>copied</span>}
-						</button>
+						<CopyButton
+							value={validator.feeRecipient}
+							ariaLabel="Copy fee recipient"
+						/>
 					</div>
 					<Link
 						to="/address/$address"
@@ -109,26 +100,15 @@ namespace styles {
 
 	export const recipientHeader = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
 	})
-
-	export const copy = style({
-		alignItems: 'center',
-		cursor: 'pointer',
-		display: 'flex',
-		gap: '8',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-	})
-
-	export const copyIcon = style({ height: '12', width: '12' })
 
 	export const recipientLink = style({
 		color: 'content.primary',
 		maxWidth: '32ch !custom',
 		typography: 'mono.inline',
-		lineHeight: '1.625 !custom',
 		wordBreak: 'break-all',
 	})
 

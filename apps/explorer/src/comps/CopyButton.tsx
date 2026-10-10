@@ -1,97 +1,63 @@
-import { style } from '@tempoxyz/ds/platform'
+import { Button, IconButton, Tooltip } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { useCopy } from '#lib/hooks.ts'
-import { pressDown, transitionColors } from '#styles/explorer'
-import CheckIcon from '~icons/lucide/check'
-import CopyIcon from '~icons/lucide/copy'
+import { useCopy } from '#lib/hooks'
 
 /**
- * Inline copy action in the style of a tertiary TDS `IconButton`. It stays a
- * native button because it can carry a text label beside the icon and callers
- * resize it through `className`, which `IconButton` does not support.
+ * Copy action. Icon-only, it is a tertiary TDS `IconButton` with a tooltip;
+ * with `children`, a tertiary TDS `Button` labelled by them. The toast from
+ * `useCopy` announces the copy.
  */
 export function CopyButton(props: CopyButton.Props): React.JSX.Element {
-	const { value, ariaLabel, disabled, className, children } = props
+	const {
+		ariaLabel = 'Copy to clipboard',
+		children,
+		className,
+		disabled,
+		value,
+	} = props
 
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
+	const onClick = () => copy(typeof value === 'function' ? value() : value)
+	const icon = notifying ? <Check /> : <Copy />
+
+	if (children)
+		return (
+			<Button
+				className={className}
+				disabled={disabled}
+				onClick={onClick}
+				scale="small"
+				variant="tertiary"
+			>
+				{icon}
+				{children}
+			</Button>
+		)
 
 	return (
-		<button
-			type="button"
-			{...cx(
-				styles.button({ className }),
-				transitionColors(),
-				pressDown(),
-				Boolean(children) && styles.labelled(),
-				notifying && styles.notifying(),
-			)}
-			disabled={disabled}
-			onClick={() => copy(typeof value === 'function' ? value() : value)}
-			aria-label={ariaLabel ?? 'Copy to clipboard'}
-			title={notifying ? 'Copied!' : (ariaLabel ?? 'Copy to clipboard')}
-		>
-			{notifying ? (
-				<CheckIcon {...styles.icon()} />
-			) : (
-				<CopyIcon {...styles.icon()} />
-			)}
-			{children}
-		</button>
+		<Tooltip content={ariaLabel}>
+			<IconButton
+				aria-label={ariaLabel}
+				className={className}
+				disabled={disabled}
+				onClick={onClick}
+				scale="small"
+				variant="tertiary"
+			>
+				{icon}
+			</IconButton>
+		</Tooltip>
 	)
 }
 
 export declare namespace CopyButton {
 	type Props = {
 		value: string | (() => string)
+		/** Visible label. Without it the button is icon-only. */
 		children?: React.ReactNode
 		ariaLabel?: string | undefined
 		disabled?: boolean | undefined
 		className?: string | undefined
 	}
-}
-
-namespace styles {
-	// Size, padding, and radius sit in `:where()` so a caller's `className`
-	// can reshape the button.
-	export const button = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		cursor: 'pointer',
-		display: 'inline-flex',
-		flexShrink: '0 !custom',
-		gap: '8',
-		justifyContent: 'center',
-		whiteSpace: 'nowrap',
-		'@media (hover: hover)': {
-			':hover': {
-				backgroundColor: 'container.regular',
-				color: 'content.primary',
-			},
-		},
-		selectors: {
-			':where(&)': {
-				borderRadius: 'full',
-				height: '24',
-				paddingInline: 'none',
-				width: '24',
-			},
-			'&:disabled': { cursor: 'default' },
-		},
-	})
-
-	export const labelled = style({
-		selectors: { ':where(&)': { paddingInline: '8', width: 'auto !custom' } },
-	})
-
-	export const notifying = style({
-		color: 'content.positive',
-		'@media (hover: hover)': { ':hover': { color: 'content.positive' } },
-	})
-
-	export const icon = style({
-		flexShrink: '0 !custom',
-		height: '12',
-		width: '12',
-	})
 }

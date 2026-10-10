@@ -1,5 +1,5 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
-import { IconButton, style, variants, vars } from '@tempoxyz/ds/platform'
+import { Badge, Search, style, variants, vars } from '@tempoxyz/ds/platform'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as React from 'react'
@@ -11,7 +11,7 @@ import { RelativeTime } from '#comps/RelativeTime'
 import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
 import { normalizeSearchInput } from '#lib/tempo-address'
-import { link, pressDown, transitionColors, truncate } from '#styles/explorer'
+import { link, transitionColors, truncate } from '#styles/explorer'
 import type {
 	AddressSearchResult,
 	BlockSearchResult,
@@ -19,10 +19,13 @@ import type {
 	SearchResult,
 	TokenSearchResult,
 } from '#routes/api/search'
-import ArrowRight from '~icons/lucide/arrow-right'
 
 const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
 const recentSearchesLimit = 6
+
+// TDS Search is 52px tall; the header uses the 40px control height.
+const largeSearchSize = { width: '100%' } as const
+const mediumSearchSize = { height: 40, paddingBlock: 0, width: '100%' } as const
 
 type ManualActivation =
 	| { value: Address.Address; type: 'address' }
@@ -149,25 +152,19 @@ function toManualSearchResult(data: ManualActivation): SearchResult {
 	}
 }
 
-export function ExploreInput(props: ExploreInput.Props) {
+export function ExploreInput(props: ExploreInput.Props): React.JSX.Element {
 	const {
 		onActivate,
-		inputRef: externalInputRef,
-		wrapperRef: externalWrapperRef,
 		value,
 		onChange,
 		size = 'medium',
-		className,
 		wide,
-		tabIndex,
 		autoFocus,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const rootRef = React.useRef<HTMLDivElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
-
-	const internalInputRef = React.useRef<HTMLInputElement>(null)
-	const inputRef = externalInputRef ?? internalInputRef
+	const inputRef = React.useRef<HTMLInputElement>(null)
 
 	const [showResults, setShowResults] = React.useState(false)
 	const [selectedIndex, setSelectedIndex] = React.useState(-1)
@@ -182,11 +179,6 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 	const query = value.trim()
 	const normalizedQuery = normalizeSearchInput(query)
-	const isValidInput =
-		query.length > 0 &&
-		(Address.validate(normalizedQuery) ||
-			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
-			parseBlockInput(normalizedQuery) !== null)
 	const {
 		data: searchResults,
 		isFetching,
@@ -278,11 +270,11 @@ export function ExploreInput(props: ExploreInput.Props) {
 		) {
 			inputRef.current?.focus({ preventScroll: true })
 		}
-	}, [autoFocus, inputRef])
+	}, [autoFocus])
 
 	React.useEffect(() => {
 		if (inputRef.current === document.activeElement) setHasFocus(true)
-	}, [inputRef])
+	}, [])
 
 	React.useEffect(() => {
 		if (submittingRef.current) {
@@ -304,18 +296,11 @@ export function ExploreInput(props: ExploreInput.Props) {
 	React.useEffect(() => {
 		if (!showResults) return
 		const onMouseDown = (event: MouseEvent) => {
-			if (
-				resultsRef.current &&
-				!resultsRef.current.contains(event.target as Node) &&
-				inputRef.current &&
-				!inputRef.current.contains(event.target as Node)
-			) {
-				closeResults()
-			}
+			if (!rootRef.current?.contains(event.target as Node)) closeResults()
 		}
 		document.addEventListener('mousedown', onMouseDown)
 		return () => document.removeEventListener('mousedown', onMouseDown)
-	}, [showResults, inputRef, closeResults])
+	}, [showResults, closeResults])
 
 	React.useEffect(() => {
 		const root = rootRef.current
@@ -341,7 +326,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		}
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [inputRef])
+	}, [])
 
 	const rememberSearch = React.useCallback((result: SearchResult) => {
 		setRecentSearches((current) => {
@@ -408,128 +393,112 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 	return (
 		<div ref={rootRef} {...styles.root({ wide: Boolean(wide) })}>
-			<div ref={externalWrapperRef} {...styles.wrapper()}>
-				<form
-					ref={formRef}
+			<form
+				ref={formRef}
+				autoComplete="off"
+				onSubmit={(event) => {
+					event.preventDefault()
+					if (!formRef.current) return
+
+					const data = new FormData(formRef.current)
+					let formValue = data.get('explore-query')
+					if (!formValue || typeof formValue !== 'string') return
+
+					formValue = formValue.trim()
+					if (!formValue) return
+
+					const normalizedFormValue = normalizeSearchInput(formValue)
+
+					const blockId = parseBlockInput(normalizedFormValue)
+					if (blockId !== null) {
+						handleActivate({ type: 'block', value: blockId })
+						return
+					}
+
+					if (Address.validate(normalizedFormValue)) {
+						handleActivate({ type: 'address', value: normalizedFormValue })
+						return
+					}
+
+					if (
+						Hex.validate(normalizedFormValue) &&
+						Hex.size(normalizedFormValue) === 32
+					) {
+						handleActivate({ type: 'hash', value: normalizedFormValue })
+						return
+					}
+				}}
+				{...styles.form()}
+			>
+				{/* Enter submits the form; the clear button empties the field. */}
+				<Search
+					ref={inputRef}
+					value={value}
+					onValueChange={(next) => {
+						setHasFocus(true)
+						onChange(next)
+					}}
+					style={size === 'medium' ? mediumSearchSize : largeSearchSize}
+					autoCapitalize="none"
 					autoComplete="off"
-					onSubmit={(event) => {
-						event.preventDefault()
-						if (!formRef.current) return
-
-						const data = new FormData(formRef.current)
-						let formValue = data.get('explore-query')
-						if (!formValue || typeof formValue !== 'string') return
-
-						formValue = formValue.trim()
-						if (!formValue) return
-
-						const normalizedFormValue = normalizeSearchInput(formValue)
-
-						const blockId = parseBlockInput(normalizedFormValue)
-						if (blockId !== null) {
-							handleActivate({ type: 'block', value: blockId })
+					autoCorrect="off"
+					data-1p-ignore
+					name="explore-query"
+					placeholder="Search address, hash, block, token"
+					aria-label="Search by address, transaction hash, block, or token"
+					aria-keyshortcuts="Meta+K Control+K"
+					enterKeyHint="search"
+					spellCheck={false}
+					onKeyDown={(event) => {
+						if (event.key === 'Escape' && showResults) {
+							event.preventDefault()
+							setShowResults(false)
+							setSelectedIndex(-1)
 							return
 						}
 
-						if (Address.validate(normalizedFormValue)) {
-							handleActivate({ type: 'address', value: normalizedFormValue })
+						if (!showResults || flatSuggestions.length === 0) return
+
+						if (event.key === 'ArrowDown') {
+							event.preventDefault()
+							setSelectedIndex((prev) =>
+								prev < flatSuggestions.length - 1 ? prev + 1 : 0,
+							)
 							return
 						}
 
-						if (
-							Hex.validate(normalizedFormValue) &&
-							Hex.size(normalizedFormValue) === 32
-						) {
-							handleActivate({ type: 'hash', value: normalizedFormValue })
+						if (event.key === 'ArrowUp') {
+							event.preventDefault()
+							setSelectedIndex((prev) =>
+								prev > 0 ? prev - 1 : flatSuggestions.length - 1,
+							)
+							return
+						}
+
+						if (event.key === 'Enter') {
+							const index = selectedIndex >= 0 ? selectedIndex : 0
+							if (index < flatSuggestions.length) {
+								event.preventDefault()
+								handleSelect(flatSuggestions[index])
+							}
 							return
 						}
 					}}
-					{...styles.form()}
-				>
-					<input
-						ref={inputRef}
-						autoCapitalize="none"
-						autoComplete="off"
-						autoCorrect="off"
-						tabIndex={tabIndex}
-						value={value}
-						{...styles.input({ className, size })}
-						data-1p-ignore
-						name="explore-query"
-						placeholder="Search address, hash, block, token"
-						enterKeyHint="search"
-						spellCheck={false}
-						type="text"
-						onKeyDown={(event) => {
-							if (event.key === 'Escape' && showResults) {
-								event.preventDefault()
-								setShowResults(false)
-								setSelectedIndex(-1)
-								return
-							}
-
-							if (!showResults || flatSuggestions.length === 0) return
-
-							if (event.key === 'ArrowDown') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev < flatSuggestions.length - 1 ? prev + 1 : 0,
-								)
-								return
-							}
-
-							if (event.key === 'ArrowUp') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev > 0 ? prev - 1 : flatSuggestions.length - 1,
-								)
-								return
-							}
-
-							if (event.key === 'Enter') {
-								const index = selectedIndex >= 0 ? selectedIndex : 0
-								if (index < flatSuggestions.length) {
-									event.preventDefault()
-									handleSelect(flatSuggestions[index])
-								}
-								return
-							}
-						}}
-						onChange={(event) => {
-							setHasFocus(true)
-							onChange?.(event.target.value)
-						}}
-						onFocus={() => {
-							setHasFocus(true)
-							if (query.length > 0 || recentSearches.length > 0)
-								setShowResults(true)
-						}}
-						role="combobox"
-						aria-expanded={showResults}
-						aria-haspopup="listbox"
-						aria-autocomplete="list"
-						aria-controls={resultsId}
-						aria-activedescendant={
-							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
-						}
-						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
-					/>
-					<div {...styles.submitSlot({ size })}>
-						{/* TDS IconButton owns the size, fill, and focus ring. The local
-						    style dims the arrow while the query is not a valid target. */}
-						<IconButton
-							type="submit"
-							aria-label="Search"
-							aria-disabled={!isValidInput}
-							scale="small"
-							variant="secondary"
-							{...cx(styles.submit(), transitionColors(), pressDown())}
-						>
-							<ArrowRight />
-						</IconButton>
-					</div>
-				</form>
-			</div>
+					onFocus={() => {
+						setHasFocus(true)
+						if (query.length > 0 || recentSearches.length > 0)
+							setShowResults(true)
+					}}
+					role="combobox"
+					aria-expanded={showResults}
+					aria-haspopup="listbox"
+					aria-autocomplete="list"
+					aria-controls={resultsId}
+					aria-activedescendant={
+						selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
+					}
+				/>
+			</form>
 
 			{menuMounted && (
 				<div
@@ -616,14 +585,11 @@ export namespace ExploreInput {
 				| { value: Hex.Hex; type: 'hash' }
 				| { value: string; type: 'block' },
 		) => void
-		inputRef?: React.RefObject<HTMLInputElement | null>
-		wrapperRef?: React.RefObject<HTMLDivElement | null>
 		value: string
 		onChange: (value: string) => void
+		/** `large` keeps the TDS Search height; `medium` fits the header. */
 		size?: 'large' | 'medium'
-		className?: string
 		wide?: boolean
-		tabIndex?: number
 		autoFocus?: boolean
 	}
 
@@ -633,7 +599,9 @@ export namespace ExploreInput {
 		items: SearchResult[]
 	}
 
-	export function SuggestionItem(props: SuggestionItem.Props) {
+	export function SuggestionItem(
+		props: SuggestionItem.Props,
+	): React.JSX.Element {
 		const { suggestion, isSelected, onSelect, id } = props
 		const itemRef = React.useRef<HTMLButtonElement>(null)
 
@@ -655,11 +623,7 @@ export namespace ExploreInput {
 				onClick={(event) => {
 					if (event.detail === 0) onSelect(suggestion)
 				}}
-				{...cx(
-					styles.suggestion({ selected: isSelected }),
-					transitionColors(),
-					pressDown(),
-				)}
+				{...cx(styles.suggestion({ selected: isSelected }), transitionColors())}
 			>
 				{suggestion.type === 'block' && (
 					<span {...styles.blockNumber()}>#{suggestion.blockNumber}</span>
@@ -670,10 +634,12 @@ export namespace ExploreInput {
 							<span {...cx(styles.tokenName(), truncate())}>
 								{suggestion.name}
 							</span>
-							<span {...styles.chip({ emphasis: 'primary' })}>
+							<Badge scale="small" variant="gray" {...styles.badge()}>
 								{suggestion.symbol}
-							</span>
-							<span {...styles.chip()}>TIP-20</span>
+							</Badge>
+							<Badge scale="small" variant="outline" {...styles.badge()}>
+								TIP-20
+							</Badge>
 						</div>
 						<span {...cx(styles.tokenAddress(), link())}>
 							<Midcut value={suggestion.address} prefix="0x" align="end" />
@@ -694,9 +660,13 @@ export namespace ExploreInput {
 									</span>
 								)}
 								{suggestion.category ? (
-									<span {...styles.chip()}>{suggestion.category}</span>
+									<Badge scale="small" variant="outline" {...styles.badge()}>
+										{suggestion.category}
+									</Badge>
 								) : suggestion.isTip20 ? (
-									<span {...styles.chip()}>TIP-20</span>
+									<Badge scale="small" variant="outline" {...styles.badge()}>
+										TIP-20
+									</Badge>
 								) : null}
 							</div>
 							{suggestion.label && (
@@ -747,63 +717,25 @@ const panelShadow = {
 } as const
 
 namespace styles {
+	// 16px input text stops iOS Safari from zooming on focus. Search's
+	// placeholder inherits its full text color.
 	export const root = variants({
-		base: { position: 'relative', width: '100% !custom', zIndex: 10 },
+		base: {
+			position: 'relative',
+			width: '100% !custom',
+			zIndex: 10,
+			selectors: {
+				'& input::placeholder': { color: 'content.secondary' },
+			},
+			'@supports (-webkit-touch-callout: none)': {
+				selectors: { '& input': { fontSize: '16px !custom' } },
+			},
+		},
 		defaultVariants: { wide: false },
 		variants: { wide: { true: {}, false: { maxWidth: '448px !custom' } } },
 	})
 
-	export const wrapper = style({ overflow: 'hidden' })
-
-	export const form = style({ position: 'relative', width: '100% !custom' })
-
-	// A native input in the TDS TextInput style. It keeps 16px type so iOS does
-	// not zoom on focus. The wrapper clips overflow, so the document focus ring
-	// is drawn inside the field.
-	export const input = variants({
-		base: {
-			backgroundColor: 'component.input.primary.fill',
-			border: 'none !custom',
-			borderRadius: 'xs',
-			boxSizing: 'border-box',
-			color: 'content.primary',
-			paddingLeft: '16',
-			paddingRight: '48',
-			typography: 'body.b1',
-			width: '100% !custom',
-			'::placeholder': { color: 'content.tertiary' },
-			':focus-visible': { outlineOffset: '-2px' },
-		},
-		defaultVariants: { size: 'medium' },
-		variants: {
-			size: { large: { height: '48' }, medium: { height: '40' } },
-		},
-	})
-
-	export const submitSlot = variants({
-		base: {
-			display: 'flex',
-			position: 'absolute',
-			top: '50% !custom',
-			translate: '0 -50% !custom',
-		},
-		defaultVariants: { size: 'medium' },
-		variants: {
-			size: { large: { right: '8' }, medium: { right: '4' } },
-		},
-	})
-
-	export const submit = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
-		selectors: {
-			'&[aria-disabled="true"]': {
-				color: 'content.tertiary',
-				cursor: 'default',
-			},
-		},
-	})
+	export const form = style({ width: '100% !custom' })
 
 	export const results = style({
 		...panelShadow,
@@ -831,7 +763,7 @@ namespace styles {
 	})
 
 	export const resultsEmpty = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '12',
 		paddingInline: '16',
 		typography: 'body.b2',
@@ -863,12 +795,12 @@ namespace styles {
 	})
 
 	export const groupMeta = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
 	export const clearRecent = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		typography: 'body.b3',
 		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
@@ -918,26 +850,7 @@ namespace styles {
 		typography: 'body.b1',
 	})
 
-	// Compact metadata chip. TDS Badge has an 80px minimum width and a 28px
-	// height, too large for suggestion rows.
-	export const chip = variants({
-		base: {
-			backgroundColor: 'container.subtle',
-			borderRadius: '3xs',
-			color: 'content.tertiary',
-			flexShrink: 0,
-			paddingBlock: '2',
-			paddingInline: '4',
-			typography: 'body.b3',
-		},
-		defaultVariants: { emphasis: 'tertiary' },
-		variants: {
-			emphasis: {
-				primary: { color: 'content.primary' },
-				tertiary: {},
-			},
-		},
-	})
+	export const badge = style({ flexShrink: 0 })
 
 	export const tokenAddress = style({
 		typography: 'mono.inline',
@@ -996,7 +909,7 @@ namespace styles {
 	})
 
 	export const meta = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 }

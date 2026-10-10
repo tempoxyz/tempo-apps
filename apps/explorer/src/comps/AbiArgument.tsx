@@ -7,7 +7,7 @@ import { pressDown, transitionColors } from '#styles/explorer'
 /** Render decoded ABI values using their structure, including unnamed tuples. */
 export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
 	const { input, value } = props
-	const { copy, notifying } = useCopy()
+	const { copy } = useCopy()
 	const name = input.name || '(unnamed)'
 	const array = /^(.*)\[\d*\]$/.exec(input.type)
 	const children =
@@ -59,7 +59,7 @@ export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
 			{...cx(styles.value(), pressDown(), transitionColors())}
 		>
 			<span {...styles.label()}>
-				<span {...styles.labelName()}>{notifying ? 'copied' : name}</span>
+				<span {...styles.labelName()}>{name}</span>
 				<span {...styles.labelType()}>{input.type}</span>
 			</span>
 			<span {...styles.valueText()}>{String(value)}</span>
@@ -91,7 +91,7 @@ namespace styles {
 		},
 	})
 
-	export const meta = style({ color: 'content.tertiary', marginLeft: '8' })
+	export const meta = style({ color: 'content.secondary', marginLeft: '8' })
 
 	export const children = style({
 		borderColor: 'line.secondary',
@@ -108,7 +108,7 @@ namespace styles {
 	})
 
 	export const empty = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBottom: '12',
 		paddingInline: '24',
 	})
@@ -138,7 +138,7 @@ namespace styles {
 	export const labelName = style({ color: 'content.primary', display: 'block' })
 
 	export const labelType = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'block',
 	})
 

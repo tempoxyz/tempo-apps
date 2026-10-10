@@ -1,5 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { Progress, style, variants } from '@tempoxyz/ds/platform'
+import {
+	Check,
+	ChevronDown,
+	Copy,
+	FilterDescending,
+} from '@tempoxyz/ds/platform/icons'
 import type { Hex } from 'ox'
 import * as React from 'react'
 import { cx } from 'zyzz'
@@ -11,11 +17,8 @@ import { DateFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
 import { link, linkHover, pressDown } from '#styles/explorer'
-import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
-import ChevronDown from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
 
-export function BlockCard(props: BlockCard.Props) {
+export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 	const { block } = props
 	const {
 		number: blockNumber,
@@ -72,8 +75,6 @@ export function BlockCard(props: BlockCard.Props) {
 		{ label: 'receipts', value: receiptsRoot },
 	]
 
-	const showAdvancedSection = true
-
 	return (
 		<InfoCard
 			sections={[
@@ -84,13 +85,10 @@ export function BlockCard(props: BlockCard.Props) {
 					{...cx(styles.copyButton(), pressDown())}
 					title={String(blockNumber ?? 0n)}
 				>
-					<div {...styles.copyHeader()}>
+					<span {...styles.copyHeader()}>
 						<span>Block</span>
-						<div {...styles.copyIconSlot()}>
-							<CopyIcon {...styles.icon({ size: 'small' })} />
-							{copyBlock.notifying && <span {...styles.copied()}>copied</span>}
-						</div>
-					</div>
+						<BlockCard.CopyIcon copied={copyBlock.notifying} />
+					</span>
 					<BlockCard.BlockNumber value={blockNumber ?? 0n} />
 				</button>,
 				<div key="time" {...styles.stack({ gap: 'compact' })}>
@@ -113,22 +111,17 @@ export function BlockCard(props: BlockCard.Props) {
 							{...cx(styles.copyButton(), pressDown())}
 							title={hash}
 						>
-							<div {...styles.copyHeader()}>
-								<span {...styles.fieldName()}>Hash</span>
-								<div {...styles.copyIconSlot()}>
-									<CopyIcon {...styles.icon({ size: 'small' })} />
-									{copyHash.notifying && (
-										<span {...styles.copied()}>copied</span>
-									)}
-								</div>
-							</div>
+							<span {...styles.copyHeader()}>
+								<span>Hash</span>
+								<BlockCard.CopyIcon copied={copyHash.notifying} />
+							</span>
 							{/* 22 chars/line: mono.inline has no tracking */}
-							<div {...styles.hash()}>{hash}</div>
+							<span {...styles.hash()}>{hash}</span>
 						</button>
 					)}
 					<div {...styles.infoRow()}>
 						<span {...styles.parentLabel()}>
-							<ArrowUp10 {...styles.icon({ size: 'medium' })} />
+							<FilterDescending {...styles.icon()} />
 							Parent
 						</span>
 						<Link
@@ -146,7 +139,7 @@ export function BlockCard(props: BlockCard.Props) {
 						{miner ? (
 							<ValidatorTag address={miner} />
 						) : (
-							<span {...styles.tertiary()}>—</span>
+							<span {...styles.secondary()}>—</span>
 						)}
 					</BlockCard.InfoRow>
 					<BlockCard.InfoRow label="Confirmations">
@@ -155,60 +148,54 @@ export function BlockCard(props: BlockCard.Props) {
 						</span>
 					</BlockCard.InfoRow>
 				</div>,
-				showAdvancedSection && (
-					<div key="advanced" {...styles.advanced()}>
-						<button
-							type="button"
-							{...cx(styles.advancedToggle(), pressDown())}
-							onClick={() => setShowAdvanced((prev) => !prev)}
-						>
-							<span>Advanced</span>
-							<ChevronDown
-								{...styles.advancedChevron({ open: showAdvanced })}
-							/>
-						</button>
+				<div key="advanced" {...styles.advanced()}>
+					<button
+						type="button"
+						aria-expanded={showAdvanced}
+						{...cx(styles.advancedToggle(), pressDown())}
+						onClick={() => setShowAdvanced((prev) => !prev)}
+					>
+						<span>Advanced</span>
+						<ChevronDown {...styles.advancedChevron({ open: showAdvanced })} />
+					</button>
 
-						{showAdvanced && (
-							// Contain inline size so full-length root hashes don't widen the card.
-							<div {...styles.advancedContent()}>
-								<div {...styles.gas()}>
-									<div {...styles.spread()}>
-										<span {...styles.secondary()}>Gas Usage</span>
-										<span {...styles.numeric()}>
-											{gasUsage !== undefined
-												? `${gasUsage.toFixed(2)}%`
-												: '0.00%'}
-										</span>
-									</div>
-									<div {...styles.gasTrack()}>
-										<div
-											{...styles.gasFill({
-												style: {
-													width: `max(4px, ${Math.min(100, gasUsage ?? 0)}%)`,
-												},
-											})}
-										/>
-									</div>
-									<div {...styles.gasValues()}>
-										<BlockCard.GasValue value={gasUsed} />
-										<BlockCard.GasValue value={gasLimit} highlight={false} />
-									</div>
+					{showAdvanced && (
+						// Contain inline size so full-length root hashes don't widen the card.
+						<div {...styles.advancedContent()}>
+							<div {...styles.gas()}>
+								{/* Base UI formats Progress values as whole percents, and most
+								    blocks use well under 1% of the limit, so the label row
+								    shows two decimals. */}
+								<div {...styles.spread()}>
+									<span>Gas Usage</span>
+									<span {...styles.numeric()}>
+										{`${(gasUsage ?? 0).toFixed(2)}%`}
+									</span>
 								</div>
-
-								<div {...styles.roots()}>
-									<div {...styles.secondary()}>Roots</div>
-									{roots.map((root) => (
-										<BlockCard.RootRow
-											key={root.label}
-											label={root.label}
-											hash={root.value}
-										/>
-									))}
+								<Progress
+									aria-label="Gas usage"
+									value={Math.min(100, gasUsage ?? 0)}
+									style={{ width: '100%' }}
+								/>
+								<div {...styles.gasValues()}>
+									<BlockCard.GasValue value={gasUsed} />
+									<BlockCard.GasValue value={gasLimit} highlight={false} />
 								</div>
 							</div>
-						)}
-					</div>
-				),
+
+							<div {...styles.roots()}>
+								<div>Roots</div>
+								{roots.map((root) => (
+									<BlockCard.RootRow
+										key={root.label}
+										label={root.label}
+										hash={root.value}
+									/>
+								))}
+							</div>
+						</div>
+					)}
+				</div>,
 			]}
 		/>
 	)
@@ -219,7 +206,22 @@ export namespace BlockCard {
 		block: BlockWithTransactions
 	}
 
-	export function TimeRow(props: TimeRow.Props) {
+	/** Copy glyph that confirms with a check while the copy is announced. */
+	export function CopyIcon(props: CopyIcon.Props): React.JSX.Element {
+		return props.copied ? (
+			<Check {...styles.icon()} />
+		) : (
+			<Copy {...styles.icon()} />
+		)
+	}
+
+	export namespace CopyIcon {
+		export interface Props {
+			copied: boolean
+		}
+	}
+
+	export function TimeRow(props: TimeRow.Props): React.JSX.Element {
 		const { label, value } = props
 		return (
 			<div {...styles.timeRow()}>
@@ -236,23 +238,21 @@ export namespace BlockCard {
 		}
 	}
 
-	export function BlockNumber(props: BlockNumber.Props) {
+	export function BlockNumber(props: BlockNumber.Props): React.JSX.Element {
 		const { value } = props
 		const str = String(value).padStart(15, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			<div {...styles.blockNumber()}>
-				<span {...styles.blockNumberDigits()}>
-					{str.split('').map((char, index) => (
-						<span
-							key={`${index}-${char}`}
-							{...styles.digit({ significant: index >= zerosEnd })}
-						>
-							{char}
-						</span>
-					))}
-				</span>
-			</div>
+			<span {...styles.blockNumberDigits()}>
+				{str.split('').map((char, index) => (
+					<span
+						key={`${index}-${char}`}
+						{...styles.digit({ significant: index >= zerosEnd })}
+					>
+						{char}
+					</span>
+				))}
+			</span>
 		)
 	}
 
@@ -262,7 +262,7 @@ export namespace BlockCard {
 		}
 	}
 
-	export function InfoRow(props: InfoRow.Props) {
+	export function InfoRow(props: InfoRow.Props): React.JSX.Element {
 		const { label, children } = props
 		return (
 			<div {...styles.infoRow()}>
@@ -279,16 +279,17 @@ export namespace BlockCard {
 		}
 	}
 
-	export function GasValue(props: GasValue.Props) {
-		const { value, digits = 9, highlight = true } = props
+	/** A zero-padded gas amount; the leading zeros are dimmed. */
+	export function GasValue(props: GasValue.Props): React.JSX.Element {
+		const { value, highlight = true } = props
 		if (value === undefined) return <span>—</span>
-		const str = String(value).padStart(digits, '0')
+		const str = String(value).padStart(9, '0')
 		const zeros = str.match(/^0*/)?.[0] ?? ''
 		const number = str.slice(zeros.length)
 		return (
 			<span>
-				{zeros}
-				{highlight ? <span {...styles.primary()}>{number}</span> : number}
+				<span {...styles.tertiary()}>{zeros}</span>
+				<span {...styles.gasNumber({ highlight })}>{number}</span>
 			</span>
 		)
 	}
@@ -296,12 +297,11 @@ export namespace BlockCard {
 	export namespace GasValue {
 		export interface Props {
 			value?: bigint
-			digits?: number
 			highlight?: boolean
 		}
 	}
 
-	export function RootRow(props: RootRow.Props) {
+	export function RootRow(props: RootRow.Props): React.JSX.Element {
 		const { label, hash } = props
 		const { copy, notifying } = useCopy()
 
@@ -309,7 +309,7 @@ export namespace BlockCard {
 			return (
 				<div {...styles.rootRow()}>
 					<span {...styles.rootLabel()}>{label}</span>
-					<span {...styles.tertiary()}>—</span>
+					<span {...styles.secondary()}>—</span>
 				</div>
 			)
 		}
@@ -321,11 +321,11 @@ export namespace BlockCard {
 				{...cx(styles.rootRow(), styles.rootButton(), pressDown())}
 				title={hash}
 			>
-				<span {...styles.rootLabel()}>{notifying ? 'copied' : label}</span>
-				<div {...styles.rootHash()}>
+				<span {...styles.rootLabel()}>{label}</span>
+				<span {...styles.rootHash()}>
 					<Midcut value={hash} prefix="0x" align="end" min={4} />
-					<CopyIcon {...styles.icon({ size: 'small' })} />
-				</div>
+					<BlockCard.CopyIcon copied={notifying} />
+				</span>
 			</button>
 		)
 	}
@@ -358,20 +358,17 @@ namespace styles {
 		fontVariantNumeric: 'tabular-nums',
 	})
 
-	export const icon = variants({
-		base: { color: 'content.tertiary', flexShrink: 0 },
-		defaultVariants: { size: 'small' },
-		variants: {
-			size: {
-				small: { height: '12px !custom', width: '12px !custom' },
-				medium: { height: '14px !custom', width: '14px !custom' },
-			},
-		},
+	export const icon = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		height: '12',
+		width: '12',
 	})
 
 	export const copyButton = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
+		display: 'block',
 		textAlign: 'left',
 		width: '100% !custom',
 	})
@@ -383,21 +380,9 @@ namespace styles {
 		marginBottom: '8',
 	})
 
-	export const copyIconSlot = style({
-		alignItems: 'center',
-		display: 'flex',
-		position: 'relative',
-	})
-
-	export const copied = style({
-		left: 'calc(100% + 8px) !custom',
-		position: 'absolute',
-	})
-
-	export const fieldName = style({ textTransform: 'capitalize' })
-
 	export const hash = style({
 		color: 'content.primary',
+		display: 'block',
 		maxWidth: '22ch !custom',
 		typography: 'mono.inline',
 		wordBreak: 'break-all',
@@ -422,18 +407,16 @@ namespace styles {
 	})
 
 	export const infoLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: 0,
-		textTransform: 'capitalize',
 	})
 
 	export const parentLabel = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexShrink: 0,
 		gap: '8',
-		textTransform: 'capitalize',
 	})
 
 	export const parentLink = style({
@@ -457,7 +440,7 @@ namespace styles {
 
 	export const advancedToggle = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		display: 'flex',
 		justifyContent: 'space-between',
@@ -466,15 +449,16 @@ namespace styles {
 
 	export const advancedChevron = variants({
 		base: {
-			color: 'content.tertiary',
-			height: '14px !custom',
-			width: '14px !custom',
+			color: 'content.secondary',
+			height: '16',
+			width: '16',
 		},
 		defaultVariants: { open: false },
 		variants: { open: { true: { rotate: '180deg' }, false: {} } },
 	})
 
 	export const advancedContent = style({
+		color: 'content.secondary',
 		contain: 'inline-size',
 		marginTop: '16',
 		paddingBottom: '16',
@@ -492,28 +476,22 @@ namespace styles {
 		justifyContent: 'space-between',
 	})
 
-	export const gasTrack = style({
-		alignItems: 'center',
-		backgroundColor: 'line.secondary',
-		borderRadius: 'full',
-		display: 'flex',
-		height: '6px !custom',
-		overflow: 'hidden',
-		paddingInline: '1px !custom',
-	})
-
-	export const gasFill = style({
-		backgroundColor: 'component.button.primary.fill',
-		borderRadius: 'full',
-		height: '100% !custom',
-	})
-
 	export const gasValues = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
 		display: 'flex',
 		fontVariantNumeric: 'tabular-nums',
 		justifyContent: 'space-between',
+	})
+
+	export const gasNumber = variants({
+		base: {},
+		defaultVariants: { highlight: true },
+		variants: {
+			highlight: {
+				true: { color: 'content.primary' },
+				false: { color: 'content.secondary' },
+			},
+		},
 	})
 
 	export const roots = style({
@@ -530,7 +508,7 @@ namespace styles {
 	export const timeLabel = style({
 		backgroundColor: 'container.subtle',
 		borderRadius: '3xs',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '2',
 		paddingInline: '4',
 		typography: 'body.b3',
@@ -542,11 +520,10 @@ namespace styles {
 		textAlign: 'right',
 	})
 
-	export const blockNumber = style({ fontVariantNumeric: 'tabular-nums' })
-
 	export const blockNumberDigits = style({
 		color: 'content.tertiary',
 		display: 'flex',
+		fontVariantNumeric: 'tabular-nums',
 		gap: '1px !custom',
 		justifyContent: 'space-between',
 		typography: 'heading.h2',
@@ -567,7 +544,6 @@ namespace styles {
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'space-between',
-		textTransform: 'lowercase',
 	})
 
 	export const rootButton = style({
@@ -576,7 +552,7 @@ namespace styles {
 	})
 
 	export const rootLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: 0,
 	})
 

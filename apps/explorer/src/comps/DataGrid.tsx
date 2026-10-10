@@ -1,14 +1,15 @@
+/** biome-ignore-all lint/a11y/useSemanticElements: rows are CSS subgrids, which native table rows cannot be, so the grid takes table roles instead */
+/** biome-ignore-all lint/a11y/useFocusableInteractive: role="table" rows and headers are static, not interactive grid cells */
 import { Link, useRouterState } from '@tanstack/react-router'
-import { style, vars } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds/platform'
+import { ChevronDown } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
-import { keyframes } from 'zyzz/web'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { Empty } from '#comps/ui/Empty'
 import { useNewLiveRows } from '#lib/use-new-live-rows'
-import { pulse } from '#styles/explorer'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
+import { animatePulse, rowShimmer, transitionColors } from '#styles/explorer'
 
 export function DataGrid(props: DataGrid.Props) {
 	const {
@@ -51,7 +52,7 @@ export function DataGrid(props: DataGrid.Props) {
 					const cellKey = `skeleton-${index}-${colIndex}`
 					return (
 						<div key={cellKey} {...styles.skeletonCell()}>
-							<div {...styles.skeletonBar()} />
+							<div {...cx(styles.skeletonBar(), animatePulse())} />
 						</div>
 					)
 				}),
@@ -92,9 +93,10 @@ export function DataGrid(props: DataGrid.Props) {
 						flexible && styles.gridFlexible(),
 						mode === 'tabs' && styles.gridTabs(),
 					)}
+					role="table"
 					aria-busy={effectiveLoading}
 				>
-					<div {...styles.headerRow()}>
+					<div role="row" {...styles.headerRow()}>
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
 							const sortDir = column.sortDirection
@@ -106,6 +108,14 @@ export function DataGrid(props: DataGrid.Props) {
 							return (
 								<div
 									key={key}
+									role="columnheader"
+									aria-sort={
+										sortDir === 'asc'
+											? 'ascending'
+											: sortDir === 'desc'
+												? 'descending'
+												: undefined
+									}
 									{...cx(
 										styles.headerCell(),
 										column.align === 'end' && styles.headerCellEnd(),
@@ -114,7 +124,7 @@ export function DataGrid(props: DataGrid.Props) {
 									<span {...styles.headerLabel()}>
 										{label}
 										{hasSort && (
-											<ChevronDownIcon
+											<ChevronDown
 												{...cx(
 													styles.sortIcon(),
 													sortDir === 'asc' && styles.sortIconAsc(),
@@ -127,13 +137,10 @@ export function DataGrid(props: DataGrid.Props) {
 						})}
 					</div>
 					{activeItems.length === 0 ? (
-						<div {...styles.empty()}>
-							{/* Empty owns its min-height and padding, so the compact
-								override goes through inline style, which always wins. */}
-							<Empty
-								title={emptyState}
-								style={{ minHeight: 0, paddingBlock: 32 }}
-							/>
+						<div role="row" {...styles.empty()}>
+							<div role="cell" aria-colspan={activeColumns.length}>
+								<Empty compact title={emptyState} />
+							</div>
 						</div>
 					) : null}
 					{activeItems.map((item, rowIndex) => {
@@ -145,24 +152,17 @@ export function DataGrid(props: DataGrid.Props) {
 						return (
 							<div
 								key={item.key ?? `row-${rowIndex}-${page}`}
+								role="row"
 								{...cx(
 									styles.row({ className: item.className }),
 									Boolean(item.link) && styles.rowLinked(),
+									Boolean(item.link) && transitionColors(),
 									Boolean(item.expanded) && styles.rowExpanded(),
 									item.key !== undefined &&
 										newLiveRows.has(item.key) &&
-										styles.rowShimmer(),
+										styles.rowNew(),
 								)}
 							>
-								{item.link && (
-									<Link
-										to={item.link.href}
-										search={item.link.search}
-										title={item.link.title}
-										preload="intent"
-										{...styles.rowLink()}
-									/>
-								)}
 								{Array.from({ length: maxLines }, (_, lineIndex) => {
 									const key = `line-${rowIndex}-${lineIndex}`
 									return (
@@ -178,6 +178,7 @@ export function DataGrid(props: DataGrid.Props) {
 												return (
 													<div
 														key={key}
+														role="cell"
 														{...cx(
 															styles.cell(),
 															isFirstColumn && styles.cellFirst(),
@@ -187,18 +188,36 @@ export function DataGrid(props: DataGrid.Props) {
 															mode === 'tabs' && styles.cellTabs(),
 														)}
 													>
+														{/* The row link covers the whole row from inside the
+															first cell, so the row holds only cells. */}
+														{item.link && isFirstColumn && lineIndex === 0 && (
+															<Link
+																to={item.link.href}
+																search={item.link.search}
+																title={item.link.title}
+																preload="intent"
+																data-row-link=""
+																{...styles.rowLink()}
+															/>
+														)}
 														{content}
 													</div>
 												)
 											})}
 											{lineIndex < maxLines - 1 && (
-												<div {...styles.lineDivider()} />
+												<div aria-hidden="true" {...styles.lineDivider()} />
 											)}
 										</React.Fragment>
 									)
 								})}
 								{item.expanded && typeof item.expanded !== 'boolean' && (
-									<div {...styles.expanded()}>{item.expanded}</div>
+									<div
+										role="cell"
+										aria-colspan={activeColumns.length}
+										{...styles.expanded()}
+									>
+										{item.expanded}
+									</div>
 								)}
 							</div>
 						)
@@ -311,12 +330,6 @@ export namespace DataGrid {
 	}
 }
 
-// Highlights rows that arrive in a live feed.
-const dataGridRowShimmer = keyframes({
-	from: { backgroundColor: vars.color.container.positive },
-	to: { backgroundColor: 'transparent' },
-})
-
 namespace styles {
 	export const skeletonCell = style({
 		alignItems: 'center',
@@ -327,7 +340,6 @@ namespace styles {
 	})
 
 	export const skeletonBar = style({
-		animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
 		backgroundColor: 'container.regular',
 		borderRadius: '3xs',
 		height: '12',
@@ -347,8 +359,6 @@ namespace styles {
 	})
 
 	export const grid = style({
-		borderTopLeftRadius: '2px !custom',
-		borderTopRightRadius: '2px !custom',
 		display: 'grid',
 		typography: 'body.b2',
 		width: '100% !custom',
@@ -390,7 +400,7 @@ namespace styles {
 	})
 
 	export const sortIcon = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		height: '12',
 		width: '12',
 	})
@@ -399,7 +409,7 @@ namespace styles {
 
 	export const empty = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		gridColumn: '1 / -1',
 		justifyContent: 'center',
@@ -424,30 +434,34 @@ namespace styles {
 	})
 
 	export const rowLinked = style({
-		transitionDuration: '100ms',
-		transitionProperty:
-			'color, background-color, border-color, outline-color, text-decoration-color, fill, stroke',
-		transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'container.regular' },
+		},
+		selectors: {
+			// Shift cell contents, not cells: a transformed cell would contain
+			// the absolutely positioned row link mid-click.
+			'&:has([data-row-link]:active) > * > :not([data-row-link])': {
+				translate: '0 0.5px !custom',
+			},
 		},
 	})
 
 	export const rowExpanded = style({ borderLeftColor: 'line.secondary' })
 
-	export const rowShimmer = style({
-		animation: `${dataGridRowShimmer} 0.5s ease-out 1`,
+	export const rowNew = style({
+		animation: `${rowShimmer} 0.5s ease-out 1`,
 	})
 
+	// Positioned against the row (cells are static), so it covers the row and
+	// its left border from inside the first cell.
 	export const rowLink = style({
-		inset: '0px !custom',
+		bottom: '0px !custom',
 		left: '-3px !custom',
-		outlineOffset: '-2px !important',
+		outlineOffset: '-2px !custom',
 		position: 'absolute',
+		right: '0px !custom',
+		top: '0px !custom',
 		zIndex: 0,
-		selectors: {
-			'&:active ~ div': { translate: '0 0.5px !custom' },
-		},
 	})
 
 	export const cell = style({
@@ -472,12 +486,25 @@ namespace styles {
 	export const cellLinked = style({
 		pointerEvents: 'none',
 		selectors: {
-			'& a': { pointerEvents: 'auto', position: 'relative', zIndex: 1 },
+			'& a:not([data-row-link])': {
+				pointerEvents: 'auto',
+				position: 'relative',
+				zIndex: 1,
+			},
 			'& button': { pointerEvents: 'auto', position: 'relative', zIndex: 1 },
+			'& [data-row-link]': { pointerEvents: 'auto' },
 		},
 	})
 
-	export const cellTabs = style({ minWidth: '0 !custom', overflow: 'hidden' })
+	// Cells clip, so focus rings inside them are drawn inset.
+	export const cellTabs = style({
+		minWidth: '0 !custom',
+		overflow: 'hidden',
+		selectors: {
+			'& a:focus-visible': { outlineOffset: '-2px !custom' },
+			'& button:focus-visible': { outlineOffset: '-2px !custom' },
+		},
+	})
 
 	export const lineDivider = style({
 		borderBottomColor: 'line.secondary',
@@ -501,7 +528,7 @@ namespace styles {
 		borderTopColor: 'line.secondary',
 		borderTopStyle: 'solid',
 		borderTopWidth: 'regular',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '12',

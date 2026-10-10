@@ -33,9 +33,9 @@ namespace styles {
 	export const root = style({ textWrap: 'nowrap' })
 
 	export const link = style({
-		color: 'content.tertiary',
-		'@media (hover: hover)': { ':hover': { color: 'content.secondary' } },
+		color: 'content.secondary',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 	})
 
-	export const timestamp = style({ color: 'content.tertiary' })
+	export const timestamp = style({ color: 'content.secondary' })
 }

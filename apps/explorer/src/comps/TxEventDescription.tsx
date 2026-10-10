@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds/platform'
+import {
+	Badge,
+	StatusIndicator,
+	TextButton,
+	style,
+	vars,
+} from '@tempoxyz/ds/platform'
 import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
@@ -21,7 +27,7 @@ import {
 	RoleFormatter,
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
-import { link, pressDown, truncate } from '#styles/explorer'
+import { link, linkHover, mono, pressDown, truncate } from '#styles/explorer'
 
 export function TxEventMemoLine(
 	props: TxEventMemoLine.Props,
@@ -145,7 +151,7 @@ export namespace TxEventDescription {
 		switch (part.type) {
 			case 'account': {
 				if (!OxAddress.validate(part.value))
-					return <span {...styles.tertiary()}>{String(part.value)}</span>
+					return <span {...styles.secondary()}>{String(part.value)}</span>
 				return (
 					<span {...styles.addressSlot()}>
 						<Address
@@ -158,19 +164,28 @@ export namespace TxEventDescription {
 				)
 			}
 			case 'action': {
-				const isFailed = part.value === 'Failed'
-				const isBlocked = part.value === 'Blocked'
-				const isPrivateZoneAction =
+				if (part.value === 'Failed' || part.value === 'Blocked')
+					return (
+						<StatusIndicator
+							tone={part.value === 'Failed' ? 'negative' : 'warning'}
+						>
+							{part.value}
+						</StatusIndicator>
+					)
+				if (
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
-				const tone = isPrivateZoneAction
-					? 'zone'
-					: isBlocked
-						? 'blocked'
-						: isFailed
-							? 'failed'
-							: 'neutral'
-				return <span {...styles.action({ tone })}>{part.value}</span>
+				)
+					return (
+						<span {...cx(vars({ set: 'inverse' }), styles.zoneChip())}>
+							{part.value}
+						</span>
+					)
+				return (
+					<Badge scale="small" variant="gray" {...styles.action()}>
+						{part.value}
+					</Badge>
+				)
 			}
 			case 'amount':
 				return <Amount {...part.value} />
@@ -189,7 +204,7 @@ export namespace TxEventDescription {
 						: Value.format(BigInt(part.value)),
 				)
 				return (
-					<span {...cx(styles.end(), truncate())} title={formatted}>
+					<span {...truncate()} title={formatted}>
 						{formatted}
 					</span>
 				)
@@ -198,16 +213,14 @@ export namespace TxEventDescription {
 				return (
 					<span {...styles.role()} title={part.value}>
 						{RoleFormatter.getRoleName(part.value) || (
-							<span {...styles.mono()}>
-								{HexFormatter.shortenHex(part.value)}
-							</span>
+							<span {...mono()}>{HexFormatter.shortenHex(part.value)}</span>
 						)}
 					</span>
 				)
 			case 'text':
-				return <span {...styles.tertiary()}>{part.value}</span>
+				return <span {...styles.secondary()}>{part.value}</span>
 			case 'tick':
-				return <span {...styles.end()}>{part.value}</span>
+				return <span>{part.value}</span>
 			case 'token':
 				return (
 					<Link
@@ -216,12 +229,14 @@ export namespace TxEventDescription {
 						title={part.value.address}
 						{...cx(
 							styles.token(),
+							link(),
+							linkHover(),
 							pressDown(),
 							!part.value.symbol && styles.tokenFill(),
 						)}
 					>
-						<TokenIcon address={part.value.address} name={part.value.symbol} />
-						<span {...styles.tokenSymbol()}>
+						<TokenIcon address={part.value.address} />
+						<span>
 							{part.value.symbol || (
 								<Midcut value={part.value.address} prefix="0x" />
 							)}
@@ -275,22 +290,20 @@ export namespace TxEventDescription {
 					</React.Fragment>
 				))}
 				{remainingCount > 0 && (
-					<button
-						type="button"
+					<TextButton
 						onClick={() => setExpanded(true)}
-						{...cx(styles.groupToggle(), link(), pressDown())}
+						{...styles.groupToggle()}
 					>
-						+ Show {remainingCount} more
-					</button>
+						Show {remainingCount} more
+					</TextButton>
 				)}
 				{expanded && events.length > limit && (
-					<button
-						type="button"
+					<TextButton
 						onClick={() => setExpanded(false)}
-						{...cx(styles.groupToggle(), link(), pressDown())}
+						{...styles.groupToggle()}
 					>
-						− View less
-					</button>
+						View less
+					</TextButton>
 				)}
 			</div>
 		)
@@ -318,28 +331,22 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const memoLabel = style({
-		color: 'content.tertiary',
-		flexShrink: '0 !custom',
-	})
+	export const memoLabel = style({ flexShrink: '0 !custom' })
 
 	export const memoText = style({ minWidth: '0 !custom' })
 
-	export const functionName = style({
-		alignItems: 'flex-end',
-		whiteSpace: 'nowrap',
-	})
+	export const functionName = style({ whiteSpace: 'nowrap' })
 
 	export const secondary = style({ color: 'content.secondary' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
-
+	// The slot clips, so the link's focus ring is drawn inside it.
 	export const addressSlot = style({
 		flex: 1,
 		flexBasis: '11ch !custom',
 		maxWidth: '100% !custom',
 		minWidth: '11ch !custom',
 		overflow: 'hidden',
+		selectors: { '& a:focus-visible': { outlineOffset: '-2px' } },
 	})
 
 	export const contractAddress = style({
@@ -367,50 +374,34 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const action = variants({
-		base: {
-			alignItems: 'center',
-			borderRadius: '3xs',
-			display: 'inline-flex',
-			height: '24px !custom',
-			paddingInline: '8',
-			textTransform: 'capitalize',
-		},
-		defaultVariants: { tone: 'neutral' },
-		variants: {
-			tone: {
-				blocked: {
-					backgroundColor: 'container.warning',
-					color: 'content.warning',
-				},
-				failed: {
-					backgroundColor: 'container.negative',
-					color: 'content.primary',
-				},
-				neutral: {
-					backgroundColor: 'container.regular',
-					color: 'content.primary',
-				},
-				zone: {
-					backgroundColor: 'component.button.primary.fill',
-					color: 'background.secondary',
-				},
-			},
-		},
+	// Badge leaves text case unset.
+	export const action = style({ textTransform: 'capitalize' })
+
+	// Badge small geometry on an inverse fill (black in light mode, white in
+	// dark), which Badge's variants cannot express.
+	export const zoneChip = style({
+		alignItems: 'center',
+		backgroundColor: 'background.primary',
+		borderRadius: '6px !custom',
+		color: 'content.primary',
+		columnGap: '4',
+		display: 'inline-flex',
+		height: '28px !custom',
+		justifyContent: 'center',
+		minWidth: '80px !custom',
+		paddingBlock: '4',
+		paddingInline: '8',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
 	})
 
 	export const hex = style({
-		alignItems: 'flex-end',
 		flex: 1,
 		minWidth: '0 !custom',
 		whiteSpace: 'nowrap',
 	})
 
-	export const end = style({ alignItems: 'flex-end' })
-
-	export const role = style({ alignItems: 'flex-end', whiteSpace: 'nowrap' })
-
-	export const mono = style({ fontFamily: '"JetBrains Mono", monospace' })
+	export const role = style({ whiteSpace: 'nowrap' })
 
 	export const token = style({
 		alignItems: 'center',
@@ -421,14 +412,9 @@ namespace styles {
 
 	export const tokenFill = style({ flex: 1, minWidth: '0 !custom' })
 
-	export const tokenSymbol = style({
-		alignItems: 'flex-end',
-		color: 'content.positive',
-	})
-
 	export const empty = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 	})
 
@@ -441,9 +427,6 @@ namespace styles {
 		gap: '4',
 	})
 
-	export const groupToggle = style({
-		alignSelf: 'flex-start',
-		cursor: 'pointer',
-		typography: 'body.b3',
-	})
+	// TextButton leaves its alignment in a column unset.
+	export const groupToggle = style({ alignSelf: 'flex-start' })
 }

@@ -1,8 +1,22 @@
-import { IconButton, style } from '@tempoxyz/ds/platform'
+import { Link } from '@tanstack/react-router'
+import {
+	Alert,
+	Badge,
+	IconButton,
+	Tooltip,
+	style,
+	variants,
+} from '@tempoxyz/ds/platform'
+import {
+	Check,
+	ChevronDown,
+	Copy,
+	Download,
+	ExternalLink,
+} from '@tempoxyz/ds/platform/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
-import { Link } from '@tanstack/react-router'
 import { useBytecode, usePublicClient } from 'wagmi'
 import { cx } from 'zyzz'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
@@ -26,10 +40,6 @@ import {
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
 import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
-import DownloadIcon from '~icons/lucide/download'
-import ExternalLinkIcon from '~icons/lucide/external-link'
 
 const proxyTypeUrls: Record<ProxyType, string> = {
 	'EIP-1967': 'https://eips.ethereum.org/EIPS/eip-1967',
@@ -50,6 +60,27 @@ function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
 			may be incomplete or incorrect. Verify the contract source for an accurate
 			ABI.
 		</p>
+	)
+}
+
+/** Small tertiary icon action in a section header. */
+function SectionAction(props: {
+	children: React.ReactElement
+	label: string
+	onClick: () => void
+}): React.JSX.Element {
+	return (
+		<Tooltip content={props.label}>
+			<IconButton
+				aria-label={props.label}
+				onClick={props.onClick}
+				scale="small"
+				variant="tertiary"
+				{...cx(styles.actionButton(), pressDown(), transitionColors())}
+			>
+				{props.children}
+			</IconButton>
+		</Tooltip>
 	)
 }
 
@@ -127,32 +158,17 @@ export function ContractTabContent(props: {
 			<InferredAbiNotice abi={abi} />
 			<CollapsibleSection
 				first={!isTip20}
-				title={<span title="Contract ABI">ABI</span>}
+				title="ABI"
 				expanded={abiExpanded}
 				onToggle={() => setAbiExpanded(!abiExpanded)}
 				actions={
 					<>
-						{copiedAbi && <span {...styles.copied()}>copied</span>}
-						<IconButton
-							aria-label="Copy ABI"
-							onClick={handleCopyAbi}
-							scale="small"
-							title="Copy ABI"
-							variant="tertiary"
-							{...cx(styles.actionButton(), pressDown(), transitionColors())}
-						>
-							<CopyIcon />
-						</IconButton>
-						<IconButton
-							aria-label="Download ABI"
-							onClick={downloadAbi}
-							scale="small"
-							title="Download ABI"
-							variant="tertiary"
-							{...cx(styles.actionButton(), pressDown(), transitionColors())}
-						>
-							<DownloadIcon />
-						</IconButton>
+						<SectionAction label="Copy ABI" onClick={handleCopyAbi}>
+							{copiedAbi ? <Check /> : <Copy />}
+						</SectionAction>
+						<SectionAction label="Download ABI" onClick={downloadAbi}>
+							<Download />
+						</SectionAction>
 						{docsUrl && !source && (
 							<a
 								href={docsUrl}
@@ -161,7 +177,7 @@ export function ContractTabContent(props: {
 								{...cx(styles.docsLink(), link(), linkHover(), pressDown())}
 							>
 								Docs
-								<ExternalLinkIcon {...styles.docsIcon()} />
+								<ExternalLink />
 							</a>
 						)}
 					</>
@@ -194,6 +210,7 @@ export function CollapsibleSection(props: {
 			<div {...styles.sectionHeader()}>
 				<button
 					type="button"
+					aria-expanded={expanded}
 					onClick={onToggle}
 					{...cx(
 						styles.sectionToggle(),
@@ -205,9 +222,7 @@ export function CollapsibleSection(props: {
 					)}
 				>
 					<span {...styles.sectionTitle()}>{title}</span>
-					<ChevronDownIcon
-						{...cx(styles.chevron(), !expanded && styles.chevronCollapsed())}
-					/>
+					<ChevronDown {...styles.chevron({ expanded })} />
 				</button>
 				{actions && <div {...styles.sectionActions()}>{actions}</div>}
 			</div>
@@ -243,27 +258,12 @@ function BytecodeSection(props: { address: Address.Address }) {
 			onToggle={() => setExpanded(!expanded)}
 			actions={
 				<>
-					{notifying && <span {...styles.copied()}>copied</span>}
-					<IconButton
-						aria-label="Copy bytecode"
-						onClick={handleCopy}
-						scale="small"
-						title="Copy bytecode"
-						variant="tertiary"
-						{...cx(styles.actionButton(), pressDown(), transitionColors())}
-					>
-						<CopyIcon />
-					</IconButton>
-					<IconButton
-						aria-label="Download bytecode"
-						onClick={downloadBytecode}
-						scale="small"
-						title="Download bytecode"
-						variant="tertiary"
-						{...cx(styles.actionButton(), pressDown(), transitionColors())}
-					>
-						<DownloadIcon />
-					</IconButton>
+					<SectionAction label="Copy bytecode" onClick={handleCopy}>
+						{notifying ? <Check /> : <Copy />}
+					</SectionAction>
+					<SectionAction label="Download bytecode" onClick={downloadBytecode}>
+						<Download />
+					</SectionAction>
 				</>
 			}
 		>
@@ -287,7 +287,7 @@ export function InteractTabContent(props: {
 	docsUrl?: string
 	isLoadingContractInfo?: boolean
 }) {
-	const { address, docsUrl } = props
+	const { address } = props
 	const publicClient = usePublicClient()
 
 	const [readExpanded, setReadExpanded] = React.useState(true)
@@ -363,10 +363,12 @@ export function InteractTabContent(props: {
 						href={proxyTypeUrl(proxyInfo?.type)}
 						target="_blank"
 						rel="noopener noreferrer"
-						{...cx(styles.proxyType(), transitionColors())}
+						{...styles.badgeLink()}
 					>
-						{proxyInfo?.type} Proxy
-						<ExternalLinkIcon {...styles.proxyTypeIcon()} />
+						<Badge scale="small" variant="white">
+							{proxyInfo?.type} Proxy
+							<ExternalLink />
+						</Badge>
 					</a>
 					<span {...styles.implementationLabel()}>Implementation:</span>
 					<Link
@@ -402,7 +404,7 @@ export function InteractTabContent(props: {
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
 				<div {...styles.sectionBody()}>
-					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+					<ContractReader address={address} abi={abi} />
 				</div>
 			</CollapsibleSection>
 
@@ -417,10 +419,11 @@ export function InteractTabContent(props: {
 					}
 				>
 					<div {...styles.proxyFunctionsBody()}>
-						<div {...styles.proxyFunctionsWarning()}>
-							These are functions defined on the proxy contract itself, not the
-							implementation.
-						</div>
+						<Alert
+							tone="warning"
+							title="These are functions defined on the proxy contract itself, not the implementation."
+							style={fullWidth}
+						/>
 						<InferredAbiNotice abi={proxyAbi} />
 						<ContractReader address={address} abi={proxyAbi} />
 						<ContractWriter address={address} abi={proxyAbi} />
@@ -430,6 +433,8 @@ export function InteractTabContent(props: {
 		</div>
 	)
 }
+
+const fullWidth = { width: '100%' } satisfies React.CSSProperties
 
 namespace styles {
 	export const inferredNotice = style({
@@ -450,7 +455,7 @@ namespace styles {
 	})
 
 	export const emptyMessage = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b2',
 	})
 
@@ -481,15 +486,6 @@ namespace styles {
 
 	export const separator = style({ color: 'content.tertiary' })
 
-	export const copied = style({
-		alignItems: 'center',
-		display: 'flex',
-		typography: 'body.b3',
-		userSelect: 'none',
-	})
-
-	// TDS IconButton owns size, color, radius, and focus ring; this only adds
-	// the hover fill it leaves unset.
 	export const actionButton = style({
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'container.regular' },
@@ -503,8 +499,6 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const docsIcon = style({ height: '12', width: '12' })
-
 	export const section = style({
 		borderBottomWidth: 'regular',
 		borderColor: 'line.secondary',
@@ -516,10 +510,11 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		height: 'auto !custom',
 		paddingBlock: '4',
 	})
 
+	// The panel clips overflow, so the ring is drawn inside, following the
+	// panel's top corners on the first section.
 	export const sectionToggle = style({
 		alignItems: 'center',
 		cursor: 'pointer',
@@ -527,9 +522,8 @@ namespace styles {
 		gap: '8',
 		height: '100% !custom',
 		paddingBlock: '8',
-		paddingLeft: '16',
-		paddingRight: '16',
-		':focus-visible': { outlineOffset: '-2px !important' },
+		paddingInline: '16',
+		':focus-visible': { outlineOffset: '-2px' },
 	})
 
 	export const sectionToggleWithActions = style({ paddingRight: '12' })
@@ -537,30 +531,30 @@ namespace styles {
 	export const sectionToggleFill = style({ flex: 1 })
 
 	export const sectionToggleFirst = style({
-		':focus-visible': { borderTopLeftRadius: 'xs !important' },
+		':focus-visible': { borderTopLeftRadius: 'xs' },
 	})
 
 	export const sectionToggleFirstEnd = style({
-		':focus-visible': { borderTopRightRadius: 'xs !important' },
+		':focus-visible': { borderTopRightRadius: 'xs' },
 	})
 
 	export const sectionTitle = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b2',
 		whiteSpace: 'nowrap',
 	})
 
-	export const chevron = style({
-		color: 'content.tertiary',
-		height: '14px !custom',
-		width: '14px !custom',
+	export const chevron = variants({
+		base: { color: 'content.secondary', height: '16', width: '16' },
+		defaultVariants: { expanded: false },
+		variants: {
+			expanded: { true: {}, false: { rotate: '-90deg' } },
+		},
 	})
-
-	export const chevronCollapsed = style({ rotate: '-90deg' })
 
 	export const sectionActions = style({
 		alignItems: 'stretch',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flex: 1,
 		gap: '8',
@@ -591,33 +585,23 @@ namespace styles {
 		borderBottomWidth: 'regular',
 		borderColor: 'line.secondary',
 		display: 'flex',
+		flexWrap: 'wrap',
 		gap: '8',
 		paddingBlock: '12',
 		paddingInline: '16',
 		typography: 'body.b3',
 	})
 
-	// Mirrors a small white TDS Badge; Badge renders a span, not a link.
-	export const proxyType = style({
-		alignItems: 'center',
-		backgroundColor: 'background.secondary',
-		borderRadius: 'full',
-		color: 'content.primary',
+	// Wraps a small TDS Badge, which renders a span; the ring follows its
+	// corners.
+	export const badgeLink = style({
+		borderRadius: '6px !custom',
 		display: 'inline-flex',
-		gap: '4',
-		paddingBlock: '2',
-		paddingInline: '8',
-		typography: 'body.b3Strong',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
+			selectors: {
+				'&:hover > span': { backgroundColor: 'container.strong' },
+			},
 		},
-		// The document focus ring squares focused links off at 8px.
-		':focus-visible': { borderRadius: 'full' },
-	})
-
-	export const proxyTypeIcon = style({
-		height: '10px !custom',
-		width: '10px !custom',
 	})
 
 	export const implementationLabel = style({ color: 'content.secondary' })
@@ -642,16 +626,5 @@ namespace styles {
 		gap: '12',
 		paddingBottom: '12',
 		paddingInline: '12',
-	})
-
-	export const proxyFunctionsWarning = style({
-		backgroundColor: 'container.warning',
-		borderColor: 'border.warning',
-		borderRadius: '3xs',
-		borderWidth: 'regular',
-		color: 'content.secondary',
-		paddingBlock: '4',
-		paddingInline: '8',
-		typography: 'body.b3',
 	})
 }

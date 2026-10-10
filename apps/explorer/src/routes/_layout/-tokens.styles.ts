@@ -3,6 +3,12 @@ import { style } from '@tempoxyz/ds/platform'
 // Route components are code-split into modules that zyzz does not compile,
 // so the tokens route's styles live here.
 
+const truncated = {
+	overflow: 'hidden',
+	textOverflow: 'ellipsis',
+	whiteSpace: 'nowrap',
+} as const
+
 export namespace styles {
 	export const page = style({
 		display: 'flex',
@@ -25,23 +31,23 @@ export namespace styles {
 
 	export const symbol = style({
 		alignItems: 'center',
-		color: 'content.positive',
+		color: 'content.primary',
 		display: 'inline-flex',
 		gap: '8',
 		minWidth: '0 !custom',
 		typography: 'body.b2Strong',
 	})
 
-	export const name = style({ maxWidth: '40ch !custom' })
+	export const truncate = style({ ...truncated })
+
+	export const name = style({ ...truncated, maxWidth: '40ch !custom' })
+
+	export const stackedName = style({
+		...truncated,
+		color: 'content.secondary',
+	})
 
 	export const secondary = style({ color: 'content.secondary' })
-
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const holders = style({
-		color: 'content.secondary',
-		fontFamily: 'Pilat, Arial, sans-serif',
-	})
 
 	export const address = style({ width: '100% !custom' })
 }

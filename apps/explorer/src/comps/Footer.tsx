@@ -1,5 +1,5 @@
-import { Link as RouterLink } from '@tanstack/react-router'
-import { IconButton, style } from '@tempoxyz/ds/platform'
+import { IconButton, style, Tooltip } from '@tempoxyz/ds/platform'
+import { DarkMode, LightMode } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import {
@@ -15,8 +15,6 @@ import {
 	type ThemeMode,
 } from '#lib/theme'
 import { pressDown, transitionColors } from '#styles/explorer'
-import MoonIcon from '~icons/lucide/moon'
-import SunIcon from '~icons/lucide/sun'
 
 export function Footer(): React.JSX.Element {
 	return (
@@ -24,19 +22,10 @@ export function Footer(): React.JSX.Element {
 			<div {...styles.row()}>
 				<Footer.ThemeToggle />
 				<ul {...styles.links()}>
-					<Footer.Link to="https://tempo.xyz" external>
-						About
-					</Footer.Link>
-					<Footer.Link to="https://docs.tempo.xyz" external>
-						Docs
-					</Footer.Link>
-					<Footer.Link to="https://github.com/tempoxyz" external>
-						GitHub
-					</Footer.Link>
-					<Footer.Link
-						to="https://github.com/tempoxyz/tempo-apps/discussions/categories/explorer"
-						external
-					>
+					<Footer.Link href="https://tempo.xyz">About</Footer.Link>
+					<Footer.Link href="https://docs.tempo.xyz">Docs</Footer.Link>
+					<Footer.Link href="https://github.com/tempoxyz">GitHub</Footer.Link>
+					<Footer.Link href="https://github.com/tempoxyz/tempo-apps/discussions/categories/explorer">
 						Feedback
 					</Footer.Link>
 				</ul>
@@ -80,49 +69,48 @@ export namespace Footer {
 			}
 		}, [])
 
-		// TDS IconButton owns size, fill, radius, and focus ring. The local
-		// style only adds what IconButton leaves unset (placement, hover, motion),
-		// because an external class cannot reliably override its own properties.
+		const label = `Switch to ${nextTheme} mode`
+
+		// The local style only adds what IconButton leaves unset.
 		return (
-			<IconButton
-				{...cx(styles.themeToggle(), pressDown(), transitionColors())}
-				aria-label={`Switch to ${nextTheme} mode`}
-				onClick={() => {
-					persistThemeMode(nextTheme)
-					setTheme(nextTheme)
-				}}
-				scale="medium"
-				title={`Switch to ${nextTheme} mode`}
-				variant="secondary"
-			>
-				{nextTheme === 'light' ? <SunIcon /> : <MoonIcon />}
-			</IconButton>
+			<Tooltip content={label}>
+				<IconButton
+					{...cx(styles.themeToggle(), pressDown(), transitionColors())}
+					aria-label={label}
+					onClick={() => {
+						persistThemeMode(nextTheme)
+						setTheme(nextTheme)
+					}}
+					scale="medium"
+					variant="secondary"
+				>
+					{nextTheme === 'light' ? <LightMode /> : <DarkMode />}
+				</IconButton>
+			</Tooltip>
 		)
 	}
 
+	/** An external footer link, opened in a new tab. */
 	export function Link(props: Link.Props): React.JSX.Element {
-		const { to, params, children, external } = props
+		const { href, children } = props
 		return (
 			<li {...styles.item()}>
-				<RouterLink
-					to={to}
-					params={params}
+				<a
+					href={href}
+					target="_blank"
+					rel="noopener noreferrer"
 					{...cx(styles.link(), pressDown(), transitionColors())}
-					target={external ? '_blank' : undefined}
-					rel={external ? 'noopener noreferrer' : undefined}
 				>
 					{children}
-				</RouterLink>
+				</a>
 			</li>
 		)
 	}
 
 	export namespace Link {
-		export interface Props {
-			to: string
-			params?: Record<string, string>
+		export type Props = {
+			href: string
 			children: React.ReactNode
-			external?: boolean
 		}
 	}
 }

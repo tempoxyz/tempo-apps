@@ -93,13 +93,11 @@ export const truncate = style({
 	whiteSpace: 'nowrap',
 })
 
-export const spin = keyframes({ to: { transform: 'rotate(360deg)' } })
-
-export const ping = keyframes({
+const ping = keyframes({
 	'75%, 100%': { opacity: 0, transform: 'scale(2)' },
 })
 
-export const pulse = keyframes({ '50%': { opacity: 0.5 } })
+const pulse = keyframes({ '50%': { opacity: 0.5 } })
 
 export const rowShimmer = keyframes({
 	from: { backgroundColor: vars.color.container.positive },

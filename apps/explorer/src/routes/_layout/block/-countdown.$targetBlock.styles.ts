@@ -62,12 +62,7 @@ export namespace styles {
 		gap: '8',
 	})
 
-	export const dateIcon = style({
-		color: 'content.tertiary',
-		flexShrink: 0,
-		height: '14px !custom',
-		width: '14px !custom',
-	})
+	export const dateIcon = style({ flexShrink: 0, height: '16', width: '16' })
 
 	export const dateLabelLong = style({
 		display: 'none',
@@ -98,7 +93,7 @@ export namespace styles {
 	})
 
 	export const unitLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 

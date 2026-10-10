@@ -13,8 +13,8 @@ import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
+import { Button, TextButton } from '@tempoxyz/ds/platform'
 import { useChains } from 'wagmi'
-import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -24,7 +24,6 @@ import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
 import { TxBalanceChanges } from '#comps/TxBalanceChanges'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
@@ -35,6 +34,7 @@ import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
+import { Empty } from '#comps/ui/Empty'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { withKeyAuthorizationDescription } from '#lib/domain/access-key'
@@ -44,7 +44,6 @@ import {
 	groupRelatedEvents,
 } from '#lib/domain/tx-event-groups'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
-import { isTip20Address } from '#lib/domain/tip20'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
@@ -73,8 +72,7 @@ import {
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
+import { link } from '#styles/explorer'
 import { styles } from './-$hash.styles'
 
 const defaultSearchValues = {
@@ -294,6 +292,9 @@ function RouteComponent() {
 				keyTokenMetadata={keyTokenMetadata}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
+				onShowBalances={() =>
+					navigate({ to: '.', search: { tab: 'balances' } })
+				}
 			/>
 		),
 	})
@@ -392,6 +393,7 @@ function OverviewSection(props: {
 	keyTokenMetadata: TxData['keyTokenMetadata']
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
+	onShowBalances: () => void
 }) {
 	const {
 		receipt,
@@ -402,6 +404,7 @@ function OverviewSection(props: {
 		keyTokenMetadata,
 		feeBreakdown,
 		balanceChangesData,
+		onShowBalances,
 	} = props
 
 	const [chain] = useChains()
@@ -468,7 +471,10 @@ function OverviewSection(props: {
 				</InfoRow>
 			)}
 			{balanceChangesData.total > 0 && (
-				<BalanceChangesOverview data={balanceChangesData} />
+				<BalanceChangesOverview
+					data={balanceChangesData}
+					onShowAll={onShowBalances}
+				/>
 			)}
 			<InfoRow label="Transaction Fee">
 				{feeBreakdown.length > 0 ? (
@@ -481,12 +487,12 @@ function OverviewSection(props: {
 										<Link
 											to="/token/$address"
 											params={{ address: item.token }}
-											{...cx(styles.positive(), pressDown())}
+											{...link()}
 										>
 											{item.symbol}
 										</Link>
 									) : (
-										<span {...styles.positive()}>{item.symbol}</span>
+										item.symbol
 									)}
 								</span>
 							)
@@ -510,7 +516,7 @@ function OverviewSection(props: {
 			<InfoRow label="Gas Used">
 				<span {...styles.primary()}>
 					{gasUsed.toLocaleString()} / {gasLimit.toLocaleString()}{' '}
-					<span {...styles.tertiary()}>({gasUsedPercentage.toFixed(2)}%)</span>
+					<span {...styles.secondary()}>({gasUsedPercentage.toFixed(2)}%)</span>
 				</span>
 			</InfoRow>
 			<InfoRow label="Gas Price">
@@ -541,7 +547,7 @@ function OverviewSection(props: {
 							href="https://docs.tempo.xyz/protocol/tips/tip-1009"
 							target="_blank"
 							rel="noopener noreferrer"
-							{...cx(styles.positive(), pressDown())}
+							{...link()}
 						>
 							Expiring Nonce
 						</a>
@@ -581,19 +587,17 @@ function InputDataRow(props: {
 	const { input, to } = props
 
 	return (
-		<div {...styles.infoRowLast()}>
-			<div {...styles.infoRowBody()}>
-				<span {...styles.infoRowLabel()}>Input Data</span>
-				<div {...styles.infoRowValue()}>
-					<TxDecodedCalldata address={to} data={input} />
-				</div>
-			</div>
-		</div>
+		<InfoRow label="Input Data">
+			<TxDecodedCalldata address={to} data={input} />
+		</InfoRow>
 	)
 }
 
-function BalanceChangesOverview(props: { data: BalanceChangesData }) {
-	const { data } = props
+function BalanceChangesOverview(props: {
+	data: BalanceChangesData
+	onShowAll: () => void
+}) {
+	const { data, onShowAll } = props
 
 	const groupedByAccount = React.useMemo(() => {
 		const grouped = new Map<
@@ -609,84 +613,52 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 	}, [data.changes])
 
 	return (
-		<div {...styles.infoRow()}>
-			<div {...styles.infoRowBody()}>
-				<span {...styles.infoRowLabel()}>Balance Updates</span>
-				<div {...styles.balances()}>
-					<div {...styles.balanceAccounts()}>
-						{Array.from(groupedByAccount.entries()).map(
-							([address, changes]) => (
-								<div key={address} {...styles.balanceAccount()}>
-									<Address address={address} />
-									<div {...styles.balanceChanges()}>
-										{changes.map((change) => {
-											const metadata = data.tokenMetadata[change.token]
-											const isTip20 = isTip20Address(change.token)
+		<InfoRow label="Balance Updates">
+			<div {...styles.balances()}>
+				<div {...styles.balanceAccounts()}>
+					{Array.from(groupedByAccount.entries()).map(([address, changes]) => (
+						<div key={address} {...styles.balanceAccount()}>
+							<Address address={address} />
+							<div {...styles.balanceChanges()}>
+								{changes.map((change) => {
+									const metadata = data.tokenMetadata[change.token]
 
-											let diff: bigint
-											try {
-												diff = BigInt(change.diff)
-											} catch {
-												return null
-											}
+									let diff: bigint
+									try {
+										diff = BigInt(change.diff)
+									} catch {
+										return null
+									}
 
-											const isPositive = diff > 0n
-											const raw = metadata
-												? Value.format(diff, metadata.decimals)
-												: change.diff
-											const formatted = metadata
-												? PriceFormatter.formatAmount(raw)
-												: raw
+									const raw = metadata
+										? Value.format(diff, metadata.decimals)
+										: change.diff
+									const formatted = metadata
+										? PriceFormatter.formatAmount(raw)
+										: raw
 
-											return (
-												<div key={change.token} {...styles.balanceChange()}>
-													<span
-														{...cx(
-															styles.balanceDiff(),
-															isPositive && styles.positive(),
-														)}
-													>
-														{isPositive ? '+' : ''}
-														{formatted}
-													</span>
-													<Link
-														{...cx(styles.balanceToken(), pressDown())}
-														params={{ address: change.token }}
-														to={
-															isTip20 ? '/token/$address' : '/address/$address'
-														}
-													>
-														<TokenIcon
-															address={change.token}
-															name={metadata?.symbol}
-															className={styles.balanceTokenIcon().className}
-														/>
-														<span>{metadata?.symbol ?? '…'}</span>
-													</Link>
-												</div>
-											)
-										})}
-									</div>
-								</div>
-							),
-						)}
-					</div>
-					<Link
-						to="."
-						search={{ tab: 'balances' }}
-						{...cx(
-							styles.pill(),
-							styles.seeAll(),
-							transitionColors(),
-							pressDown(),
-						)}
-					>
-						See all ({data.total})
-						<ChevronDownIcon {...styles.seeAllIcon()} />
-					</Link>
+									return (
+										<div key={change.token} {...styles.balanceChange()}>
+											<TxBalanceChanges.Diff
+												value={diff}
+												formatted={formatted}
+											/>
+											<TxBalanceChanges.TokenSymbol
+												token={change.token}
+												metadata={metadata}
+											/>
+										</div>
+									)
+								})}
+							</div>
+						</div>
+					))}
 				</div>
+				<TextButton onClick={onShowAll} {...styles.seeAll()}>
+					See all ({data.total})
+				</TextButton>
 			</div>
-		</div>
+		</InfoRow>
 	)
 }
 
@@ -747,18 +719,12 @@ function CallItem(props: {
 			<div {...styles.callHeader()}>
 				<span {...styles.primary()}>#{index}</span>
 				{call.to ? (
-					<Link
-						to="/address/$address"
-						params={{ address: call.to }}
-						{...cx(link(), linkHover(), pressDown())}
-					>
-						<Midcut value={call.to} prefix="0x" />
-					</Link>
+					<Address address={call.to} />
 				) : (
-					<span {...styles.tertiary()}>Contract Creation</span>
+					<span {...styles.secondary()}>Contract Creation</span>
 				)}
 				{data && data !== '0x' && (
-					<span {...styles.tertiary()}>({data.length} bytes)</span>
+					<span {...styles.secondary()}>({data.length} bytes)</span>
 				)}
 			</div>
 			{data && data !== '0x' && (
@@ -809,7 +775,7 @@ function EventsSection(props: {
 	}
 
 	if (logs.length === 0)
-		return <div {...styles.empty()}>No events emitted in this transaction</div>
+		return <Empty compact title="No events emitted in this transaction." />
 
 	const cols = [
 		{ label: '#', align: 'start', width: '0.5fr' },
@@ -831,7 +797,7 @@ function EventsSection(props: {
 
 					return {
 						cells: [
-							<span key="index" {...styles.tertiary()}>
+							<span key="index" {...styles.secondary()}>
 								{indexLabel}
 							</span>,
 							<EventGroupCell
@@ -884,11 +850,11 @@ function EventGroupCell(props: {
 				<EventFallbackName log={logs[0]} />
 			)}
 			<div>
-				<button
-					type="button"
-					onClick={onToggle}
+				<Button
 					aria-expanded={expanded}
-					{...cx(styles.pill(), transitionColors(), pressDown())}
+					onClick={onToggle}
+					scale="small"
+					variant="secondary"
 				>
 					{expanded
 						? eventCount > 1
@@ -897,7 +863,7 @@ function EventGroupCell(props: {
 						: eventCount > 1
 							? `Show details (${eventCount})`
 							: 'Show details'}
-				</button>
+				</Button>
 			</div>
 		</div>
 	)

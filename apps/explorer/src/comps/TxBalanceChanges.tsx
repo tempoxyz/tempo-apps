@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style, variants } from '@tempoxyz/ds/platform'
 import type { Address as OxAddress } from 'ox'
 import * as Value from 'ox/Value'
 import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { TokenIcon } from '#comps/TokenIcon'
+import { Empty } from '#comps/ui/Empty'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import {
@@ -13,7 +14,7 @@ import {
 	LIMIT,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
-import { pressDown, truncate } from '#styles/explorer'
+import { link, linkHover, pressDown, truncate } from '#styles/explorer'
 
 export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 	const { data, loading = false, page } = props
@@ -27,9 +28,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 	]
 
 	if (data.total === 0 && !loading)
-		return (
-			<div {...styles.empty()}>No balance changes for this transaction.</div>
-		)
+		return <Empty compact title="No balance changes for this transaction." />
 
 	return (
 		<DataGrid
@@ -93,12 +92,12 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				{...cx(styles.tokenLink(), pressDown())}
+				{...cx(styles.tokenLink(), link(), linkHover(), pressDown())}
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
 			>
-				<TokenIcon address={token} name={metadata?.symbol} />
+				<TokenIcon address={token} />
 				{metadata?.symbol ?? '…'}
 			</Link>
 		)
@@ -155,22 +154,13 @@ export namespace TxBalanceChanges {
 			return <span {...styles.invalid()}>Invalid</span>
 		}
 
-		const isPositive = diff > 0n
-		const raw = Value.format(diff, metadata.decimals)
-		const formatted = PriceFormatter.formatAmount(raw)
-
 		return (
-			<span
-				{...cx(
-					styles.amount(),
-					truncate(),
-					isPositive && styles.positive(),
-					diff < 0n && styles.negative(),
+			<Diff
+				value={diff}
+				formatted={PriceFormatter.formatAmount(
+					Value.format(diff, metadata.decimals),
 				)}
-				title={formatted}
-			>
-				{formatted}
-			</span>
+			/>
 		)
 	}
 
@@ -180,36 +170,78 @@ export namespace TxBalanceChanges {
 			metadata: TokenMetadata | undefined
 		}
 	}
+
+	/**
+	 * A signed balance change. Direction is carried by the sign and a coloured
+	 * dot; the text stays `content.primary`, since the status colours fail
+	 * contrast as text in light mode.
+	 */
+	export function Diff(props: Diff.Props): React.JSX.Element {
+		const { formatted, value } = props
+		const tone = value > 0n ? 'positive' : value < 0n ? 'negative' : 'neutral'
+
+		return (
+			<span {...styles.diff()} title={formatted}>
+				<span aria-hidden="true" {...styles.diffDot({ tone })} />
+				<span {...truncate()}>
+					{value > 0n ? '+' : ''}
+					{formatted}
+				</span>
+			</span>
+		)
+	}
+
+	export namespace Diff {
+		export interface Props {
+			/** Formatted amount, already signed when negative. */
+			formatted: string
+			value: bigint
+		}
+	}
 }
 
 namespace styles {
-	export const empty = style({
-		color: 'content.tertiary',
-		paddingBlock: '24',
-		paddingInline: '20',
-		textAlign: 'center',
-		typography: 'body.b3',
-	})
-
 	export const tokenLink = style({
 		alignItems: 'center',
-		color: 'content.positive',
 		display: 'inline-flex',
-		fontFamily: 'Pilat, Arial, sans-serif',
+		flexShrink: '0 !custom',
 		gap: '4',
 	})
 
-	export const invalid = style({ color: 'content.tertiary' })
+	export const invalid = style({ color: 'content.secondary' })
 
 	export const amount = style({
-		fontFamily: 'Pilat, Arial, sans-serif',
 		fontVariantNumeric: 'tabular-nums',
 		minWidth: '0 !custom',
 	})
 
 	export const balance = style({ color: 'content.secondary' })
 
-	export const positive = style({ color: 'content.positive' })
+	export const diff = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		columnGap: '8',
+		display: 'inline-flex',
+		fontVariantNumeric: 'tabular-nums',
+		maxWidth: '100% !custom',
+		minWidth: '0 !custom',
+	})
 
-	export const negative = style({ color: 'content.negative' })
+	// StatusIndicator's dot, without its label styling.
+	export const diffDot = variants({
+		base: {
+			borderRadius: 'full',
+			flexShrink: '0 !custom',
+			height: '8',
+			width: '8',
+		},
+		defaultVariants: { tone: 'neutral' },
+		variants: {
+			tone: {
+				negative: { backgroundColor: 'content.negative' },
+				neutral: { display: 'none' },
+				positive: { backgroundColor: 'content.positive' },
+			},
+		},
+	})
 }

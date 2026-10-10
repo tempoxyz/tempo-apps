@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { Alert, SimpleTable, style } from '@tempoxyz/ds/platform'
+import { ArrowRight } from '@tempoxyz/ds/platform/icons'
 import type { Address } from 'ox'
 import type * as React from 'react'
 import { cx } from 'zyzz'
@@ -12,7 +13,6 @@ import { PriceFormatter } from '#lib/formatting'
 import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
 import type { FeeAmmPage, FeeAmmPool } from '#lib/server/fee-amm'
 import { link, linkHover } from '#styles/explorer'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
 
 export function FeeAmmQueryState({
 	query,
@@ -25,20 +25,21 @@ export function FeeAmmQueryState({
 		)
 	if (!query.isError) return null
 	return (
-		<div role="alert" {...styles.alert()}>
-			<p {...styles.secondary()}>
-				{query.data
-					? 'Could not refresh liquidity. Showing the last successful result.'
-					: 'Fee AMM liquidity is temporarily unavailable.'}
-			</p>
-			<button
-				type="button"
-				onClick={() => void query.refetch()}
-				disabled={query.isFetching}
-				{...cx(styles.retry(), link(), linkHover())}
-			>
-				{query.isFetching ? 'Retrying…' : 'Try again'}
-			</button>
+		<div {...styles.alert()}>
+			<Alert
+				role="alert"
+				tone={query.data ? 'warning' : 'negative'}
+				title={
+					query.data
+						? 'Could not refresh liquidity. Showing the last successful result.'
+						: 'Fee AMM liquidity is temporarily unavailable.'
+				}
+				action={{
+					disabled: query.isFetching,
+					label: query.isFetching ? 'Retrying…' : 'Try again',
+					onClick: () => void query.refetch(),
+				}}
+			/>
 		</div>
 	)
 }
@@ -73,10 +74,7 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 						address={pool.userToken}
 						symbol={pool.userTokenSymbol}
 					/>
-					<ArrowRightIcon
-						{...styles.pairArrow()}
-						aria-label="converts fees to"
-					/>
+					<ArrowRight {...styles.pairArrow()} aria-label="converts fees to" />
 					<PoolTokenLink
 						address={pool.validatorToken}
 						symbol={pool.validatorTokenSymbol}
@@ -91,10 +89,10 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 						: 'Fee token → Validator token'}
 				</p>
 			</div>
-			<dl {...styles.reserves()}>
-				<div>
-					<dt {...styles.term()}>Fee-token reserve</dt>
-					<dd {...styles.value()}>
+			<SimpleTable>
+				<SimpleTable.Row style={compactRow}>
+					<SimpleTable.Dt>Fee-token reserve</SimpleTable.Dt>
+					<SimpleTable.Dd {...styles.value()}>
 						{pool.reserveUserToken === null ? (
 							'Unavailable'
 						) : (
@@ -105,11 +103,11 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 								symbol={pool.userTokenSymbol}
 							/>
 						)}
-					</dd>
-				</div>
-				<div>
-					<dt {...styles.term()}>Validator-token reserve</dt>
-					<dd {...styles.value()}>
+					</SimpleTable.Dd>
+				</SimpleTable.Row>
+				<SimpleTable.Row style={compactRow}>
+					<SimpleTable.Dt>Validator-token reserve</SimpleTable.Dt>
+					<SimpleTable.Dd {...styles.value()}>
 						{pool.reserveValidatorToken === null ? (
 							'Unavailable'
 						) : (
@@ -120,34 +118,34 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 								symbol={pool.validatorTokenSymbol}
 							/>
 						)}
-					</dd>
-				</div>
-			</dl>
-			<dl {...styles.stat()}>
-				<dt {...styles.term()}>Estimated liquidity</dt>
-				<dd {...styles.value()}>
-					{pool.liquidityUsd === null
-						? 'Unavailable'
-						: PriceFormatter.format(pool.liquidityUsd)}
-				</dd>
-			</dl>
-			<dl {...styles.stat()}>
-				<dt {...styles.term()}>Last liquidity added</dt>
-				<dd {...styles.primary()}>
-					{pool.latestMintAt === null ? (
-						'Unknown'
-					) : (
-						<FormattedTimestamp
-							timestamp={BigInt(pool.latestMintAt)}
-							format="relative"
-						/>
-					)}
-				</dd>
-				<dd {...styles.term()}>
-					{pool.mintCount.toLocaleString()} liquidity{' '}
-					{pool.mintCount === 1 ? 'deposit' : 'deposits'}
-				</dd>
-			</dl>
+					</SimpleTable.Dd>
+				</SimpleTable.Row>
+				<SimpleTable.Row style={compactRow}>
+					<SimpleTable.Dt>Estimated liquidity</SimpleTable.Dt>
+					<SimpleTable.Dd {...styles.value()}>
+						{pool.liquidityUsd === null
+							? 'Unavailable'
+							: PriceFormatter.format(pool.liquidityUsd)}
+					</SimpleTable.Dd>
+				</SimpleTable.Row>
+				<SimpleTable.Row style={compactRow}>
+					<SimpleTable.Dt>Last liquidity added</SimpleTable.Dt>
+					<SimpleTable.Dd>
+						{pool.latestMintAt === null ? (
+							'Unknown'
+						) : (
+							<FormattedTimestamp
+								timestamp={BigInt(pool.latestMintAt)}
+								format="relative"
+							/>
+						)}
+						<span {...styles.deposits()}>
+							{pool.mintCount.toLocaleString()} liquidity{' '}
+							{pool.mintCount === 1 ? 'deposit' : 'deposits'}
+						</span>
+					</SimpleTable.Dd>
+				</SimpleTable.Row>
+			</SimpleTable>
 		</div>
 	)
 }
@@ -164,7 +162,7 @@ export function PoolTokenLink({
 		<Link
 			to="/fee-amm"
 			search={{ token: address, page: 1, limit: 10 }}
-			title={`View ${symbol} Fee AMM liquidity`}
+			aria-label={`View ${symbol} Fee AMM liquidity`}
 			{...cx(styles.tokenLink(), link(), linkHover())}
 		>
 			<TokenIcon address={address} />
@@ -195,7 +193,7 @@ export function TokenFeeAmm({ address }: TokenFeeAmm.Props): React.JSX.Element {
 					search={{ token: address, page: 1, limit: 10 }}
 					{...cx(styles.viewAll(), link(), linkHover())}
 				>
-					View all pools <ArrowRightIcon {...styles.icon()} />
+					View all pools <ArrowRight />
 				</Link>
 			</div>
 			<FeeAmmQueryState query={query} />
@@ -218,32 +216,18 @@ export declare namespace TokenFeeAmm {
 	type Props = { address: Address.Address }
 }
 
+// Pool rows list many values, so their table rows are compact.
+const compactRow = { paddingBlock: 8 } satisfies React.CSSProperties
+
 namespace styles {
 	export const loading = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '32',
 		paddingInline: '16',
 		typography: 'body.b2',
 	})
 
-	export const alert = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '12',
-		paddingBlock: '24',
-		paddingInline: '16',
-		typography: 'body.b2',
-	})
-
-	export const secondary = style({ color: 'content.secondary' })
-
-	export const primary = style({ color: 'content.primary' })
-
-	export const retry = style({
-		cursor: 'pointer',
-		':disabled': { opacity: 0.5 },
-	})
+	export const alert = style({ padding: '16' })
 
 	export const row = style({
 		borderBottomWidth: 'regular',
@@ -251,13 +235,11 @@ namespace styles {
 		borderStyle: 'dashed',
 		display: 'grid',
 		gap: '16',
-		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-		paddingBlock: '12',
+		paddingBlock: '16',
 		paddingInline: '16',
-		typography: 'body.b2',
 		':last-child': { borderBottomWidth: 'none' },
 		'@media (width >= 768px)': {
-			gridTemplateColumns: '1.6fr 1.5fr 1fr 1fr',
+			gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)',
 		},
 	})
 
@@ -265,9 +247,7 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '8',
-		gridColumn: 'span 2 / span 2',
 		minWidth: '0px !custom',
-		'@media (width >= 768px)': { gridColumn: 'span 1 / span 1' },
 	})
 
 	export const tokens = style({
@@ -275,47 +255,22 @@ namespace styles {
 		display: 'flex',
 		flexWrap: 'wrap',
 		gap: '8',
+		typography: 'body.b2',
 	})
 
-	export const pairArrow = style({
-		color: 'content.tertiary',
-		height: '14px !custom',
-		width: '14px !custom',
-	})
+	export const pairArrow = style({ color: 'content.tertiary', flexShrink: 0 })
 
 	export const caption = style({
 		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
-	export const reserves = style({
-		display: 'grid',
-		gap: '8',
-		gridColumn: 'span 2 / span 2',
-		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-		minWidth: '0px !custom',
-		'@media (width >= 768px)': {
-			display: 'flex',
-			flexDirection: 'column',
-			gridColumn: 'span 1 / span 1',
-		},
-	})
+	export const value = style({ fontVariantNumeric: 'tabular-nums' })
 
-	export const term = style({
-		color: 'content.tertiary',
+	export const deposits = style({
+		color: 'content.secondary',
+		display: 'block',
 		typography: 'body.b3',
-	})
-
-	export const value = style({
-		color: 'content.primary',
-		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b2',
-	})
-
-	export const stat = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
 	})
 
 	export const tokenLink = style({
@@ -352,8 +307,6 @@ namespace styles {
 		typography: 'body.b2',
 	})
 
-	export const icon = style({ height: '14px !custom', width: '14px !custom' })
-
 	export const empty = style({
 		color: 'content.secondary',
 		paddingBottom: '20',
@@ -362,7 +315,7 @@ namespace styles {
 	})
 
 	export const more = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBottom: '12',
 		paddingInline: '16',
 		typography: 'body.b3',

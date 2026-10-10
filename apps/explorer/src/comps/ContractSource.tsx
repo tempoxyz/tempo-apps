@@ -1,4 +1,4 @@
-import { Button, style } from '@tempoxyz/ds/platform'
+import { Alert, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import type {
 	ContractSource,
@@ -62,17 +62,18 @@ function SourceBrowser(props: {
 	if (Viewer) return <Viewer entries={props.entries} />
 	return (
 		<div {...styles.placeholder()}>
-			<p role={failed ? 'alert' : 'status'}>
-				{failed ? 'Unable to load source viewer.' : 'Loading source viewer…'}
-			</p>
-			{failed && (
-				<Button
-					onClick={() => window.location.reload()}
-					scale="small"
-					variant="secondary"
-				>
-					Reload
-				</Button>
+			{failed ? (
+				<Alert
+					role="alert"
+					tone="negative"
+					title="Unable to load source viewer."
+					action={{
+						label: 'Reload',
+						onClick: () => window.location.reload(),
+					}}
+				/>
+			) : (
+				<p role="status">Loading source viewer…</p>
 			)}
 		</div>
 	)
@@ -85,10 +86,9 @@ namespace styles {
 		borderColor: 'line.secondary',
 		borderRadius: 'xs',
 		borderWidth: 'regular',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
 		height: 'calc(min(620px, 70svh) + 96px) !custom',
 		justifyContent: 'center',
 		minHeight: '416px !custom',

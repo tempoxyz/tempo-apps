@@ -1,12 +1,10 @@
 import { Link, useRouterState } from '@tanstack/react-router'
+import { style, Tooltip, variants } from '@tempoxyz/ds/platform'
+import { ChevronRight, Close, Home } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
-import { style, variants } from '@tempoxyz/ds/platform'
 import { createPortal } from 'react-dom'
 import { cx } from 'zyzz'
-import { pressDown, pulse } from '#styles/explorer'
-import ChevronRight from '~icons/lucide/chevron-right'
-import Home from '~icons/lucide/home'
-import X from '~icons/lucide/x'
+import { animatePulse, mono, pressDown } from '#styles/explorer'
 
 const MAX_CRUMBS = 3
 
@@ -180,8 +178,7 @@ function useBreadcrumbs() {
 	return context
 }
 
-export function Breadcrumbs(props: Breadcrumbs.Props) {
-	const { className } = props
+export function Breadcrumbs(): React.JSX.Element {
 	const { crumbs, pendingCrumb, clearCrumbs } = useBreadcrumbs()
 
 	const resolvedPathname = useRouterState({
@@ -200,11 +197,11 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 		<nav
 			aria-label="Breadcrumb"
 			aria-hidden={isEmpty}
-			{...styles.nav({ className, empty: isEmpty })}
+			{...styles.nav({ empty: isEmpty })}
 		>
 			{!isEmpty && (
 				<>
-					<Link to="/" {...cx(styles.home(), pressDown())} title="Home">
+					<Link to="/" aria-label="Home" {...cx(styles.home(), pressDown())}>
 						<Home {...styles.homeIcon()} />
 					</Link>
 
@@ -216,7 +213,10 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 								<ChevronRight {...styles.separator()} />
 								{isLast ? (
 									<span
-										{...styles.current({ pending: isPending })}
+										{...cx(
+											styles.current({ pending: isPending }),
+											isPending && animatePulse(),
+										)}
 										title={crumb.path}
 									>
 										<CrumbLabel label={crumb.label} />
@@ -235,25 +235,21 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 					})}
 
 					{crumbs.length > 1 && (
-						<button
-							type="button"
-							onClick={clearCrumbs}
-							{...cx(styles.clear(), pressDown())}
-							title="Clear navigation history"
-						>
-							<X {...styles.clearIcon()} />
-						</button>
+						<Tooltip content="Clear navigation history">
+							<button
+								type="button"
+								aria-label="Clear navigation history"
+								onClick={clearCrumbs}
+								{...cx(styles.clear(), pressDown())}
+							>
+								<Close {...styles.clearIcon()} />
+							</button>
+						</Tooltip>
 					)}
 				</>
 			)}
 		</nav>
 	)
-}
-
-export namespace Breadcrumbs {
-	export interface Props {
-		className?: string
-	}
 }
 
 export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
@@ -292,22 +288,26 @@ function CrumbLabel(props: { label: string }): React.JSX.Element {
 	return (
 		<>
 			{props.label.slice(0, index)}
-			<span {...styles.hash()}>{props.label.slice(index)}</span>
+			<span {...mono()}>{props.label.slice(index)}</span>
 		</>
 	)
 }
 
 namespace styles {
+	// The padding gives focus rings room inside the scroll clip; the negative
+	// margins keep the row at 20px.
 	export const nav = variants({
 		base: {
 			alignItems: 'center',
 			color: 'content.secondary',
 			display: 'flex',
 			gap: '4',
-			height: '20',
+			height: '24',
+			marginBlock: '-2px !custom',
+			marginInline: '-4px !custom',
 			overflowX: 'auto',
 			overflowY: 'hidden',
-			paddingLeft: '2',
+			paddingInline: '4',
 			transformOrigin: 'left',
 			transitionDuration: '80ms',
 			transitionProperty: 'opacity, scale',
@@ -329,24 +329,20 @@ namespace styles {
 
 	export const home = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '4',
 		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 		':focus-visible': { color: 'content.primary' },
 	})
 
-	export const homeIcon = style({
-		height: '14px !custom',
-		width: '14px !custom',
-	})
+	export const homeIcon = style({ height: '16', width: '16' })
 
 	export const separator = style({
 		color: 'content.tertiary',
 		flexShrink: 0,
-		height: '12px !custom',
-		width: '12px !custom',
+		height: '12',
+		width: '12',
 	})
 
 	export const current = variants({
@@ -359,10 +355,7 @@ namespace styles {
 		defaultVariants: { pending: false },
 		variants: {
 			pending: {
-				true: {
-					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
-					color: 'content.secondary',
-				},
+				true: { color: 'content.secondary' },
 				false: { color: 'content.primary' },
 			},
 		},
@@ -379,23 +372,16 @@ namespace styles {
 	})
 
 	export const clear = style({
-		color: 'content.tertiary',
+		alignItems: 'center',
+		color: 'content.secondary',
 		cursor: 'pointer',
+		display: 'flex',
 		flexShrink: 0,
 		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 		':focus-visible': { color: 'content.primary' },
 	})
 
-	export const clearIcon = style({
-		height: '12px !custom',
-		width: '12px !custom',
-	})
+	export const clearIcon = style({ height: '12', width: '12' })
 
 	export const slot = style({ minHeight: '20' })
-
-	export const hash = style({
-		fontFamily: '"JetBrains Mono", monospace',
-		fontWeight: 400,
-		letterSpacing: '0px',
-	})
 }

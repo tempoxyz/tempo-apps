@@ -8,7 +8,27 @@
  * on the empty page. Nothing is visible unless it was asked for.
  */
 
-import { IconButton, style } from '@tempoxyz/ds/platform'
+import {
+	Alert,
+	Badge,
+	Button,
+	Checkbox,
+	IconButton,
+	NativeSelect,
+	Tooltip,
+	style,
+} from '@tempoxyz/ds/platform'
+import {
+	Check,
+	ChevronDown,
+	Close,
+	Copy,
+	Delete,
+	Download,
+	Layers,
+	Lightning,
+	Plus,
+} from '@tempoxyz/ds/platform/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -36,26 +56,19 @@ import {
 import { HexFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi } from '#lib/queries'
-import { pressDown, transitionColors, truncate } from '#styles/explorer'
 import {
-	Button,
-	buttonIcon,
-	Chip,
+	pressDown,
+	textField,
+	transitionColors,
+	truncate,
+} from '#styles/explorer'
+import { ViewToggle } from './PanelToolbar'
+import {
+	ErrorText,
 	Field,
-	fieldInput,
-	fieldInputInvalid,
+	fieldHintId,
 	inputValueToString,
-	SegmentedControl,
 } from './SimulateShared'
-import CheckIcon from '~icons/lucide/check'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
-import DownloadIcon from '~icons/lucide/download'
-import LayersIcon from '~icons/lucide/layers'
-import PlusIcon from '~icons/lucide/plus'
-import Trash2Icon from '~icons/lucide/trash-2'
-import XIcon from '~icons/lucide/x'
-import ZapIcon from '~icons/lucide/zap'
 
 export function SimulateCallForm(
 	props: SimulateCallForm.Props,
@@ -68,6 +81,8 @@ export function SimulateCallForm(
 		[],
 	)
 	const shows = (key: string, invalid: boolean) => invalid && touched.has(key)
+	const fromId = React.useId()
+	const gasId = React.useId()
 
 	const updateCall = React.useCallback(
 		(index: number, patch: Partial<CallDraft>) =>
@@ -102,8 +117,13 @@ export function SimulateCallForm(
 					error={props.loadError}
 				/>
 
-				<Field label="From" invalid={shows('from', errors.from)}>
+				<Field
+					label="From"
+					htmlFor={fromId}
+					invalid={shows('from', errors.from)}
+				>
 					<AddressInput
+						id={fromId}
 						value={form.from}
 						onChange={(value) =>
 							setForm((current) => ({ ...current, from: value }))
@@ -148,7 +168,7 @@ export function SimulateCallForm(
 				/>
 
 				<OptionalRow
-					icon={<ZapIcon {...styles.rowIcon()} />}
+					icon={<Lightning />}
 					label="Gas limit"
 					summary={
 						form.gas !== props.defaultGas
@@ -161,6 +181,7 @@ export function SimulateCallForm(
 				>
 					<Field
 						label="Gas limit"
+						htmlFor={gasId}
 						invalid={shows('gas', errors.gas)}
 						hint={
 							shows('gas', errors.gas)
@@ -169,15 +190,16 @@ export function SimulateCallForm(
 						}
 					>
 						<input
+							id={gasId}
 							value={form.gas}
+							inputMode="numeric"
 							onChange={(event) =>
 								setForm((current) => ({ ...current, gas: event.target.value }))
 							}
 							onBlur={() => touch('gas')}
-							{...cx(
-								fieldInput(),
-								shows('gas', errors.gas) && fieldInputInvalid(),
-							)}
+							aria-invalid={shows('gas', errors.gas) || undefined}
+							aria-describedby={fieldHintId(gasId)}
+							{...textField()}
 						/>
 					</Field>
 				</OptionalRow>
@@ -186,6 +208,8 @@ export function SimulateCallForm(
 				    stays unbroken and the batch action reads as its own step. */}
 				{!isBatch && (
 					<Button
+						scale="small"
+						variant="secondary"
 						onClick={() => {
 							setForm((current) => ({
 								...current,
@@ -194,22 +218,25 @@ export function SimulateCallForm(
 							props.onStepChange(1)
 						}}
 						{...styles.addCall()}
-						title="Run several calls in order against each other's state, the way a Tempo batch transaction executes"
 					>
-						<PlusIcon {...buttonIcon()} />
+						<Plus />
 						Add a call
 					</Button>
 				)}
 
 				{isBatch && (
-					<p {...cx(styles.text(), styles.tertiary())}>
+					<p {...cx(styles.text(), styles.secondary())}>
 						Calls run in order against each other{'’'}s state, the way a Tempo
 						batch transaction executes.
 					</p>
 				)}
 
 				{props.formError && (
-					<p {...cx(styles.text(), styles.negative())}>{props.formError}</p>
+					<Alert
+						tone="negative"
+						title={props.formError}
+						style={{ width: '100%' }}
+					/>
 				)}
 			</div>
 		</div>
@@ -250,21 +277,13 @@ function ContextBar(props: {
 	return (
 		<div {...styles.context()}>
 			<div {...styles.contextRow()}>
-				<span {...cx(styles.text(), styles.tertiary())}>Simulate against</span>
-				<SegmentedControl
-					size="sm"
+				<span {...cx(styles.text(), styles.secondary())}>Simulate against</span>
+				<ViewToggle
+					label="Simulate against"
 					value={pinned ? 'pinned' : 'latest'}
 					options={[
-						{
-							value: 'latest',
-							label: 'Latest',
-							title: 'The current chain tip',
-						},
-						{
-							value: 'pinned',
-							label: 'Pinned block',
-							title: 'A specific block hash',
-						},
+						{ value: 'latest', label: 'Latest' },
+						{ value: 'pinned', label: 'Pinned block' },
 					]}
 					onChange={(value) =>
 						setForm((current) => ({
@@ -282,7 +301,10 @@ function ContextBar(props: {
 					}
 					onBlur={props.onBlockBlur}
 					placeholder="0x block hash"
-					{...cx(fieldInput(), props.blockInvalid && fieldInputInvalid())}
+					aria-label="Pinned block hash"
+					aria-invalid={props.blockInvalid || undefined}
+					spellCheck={false}
+					{...textField()}
 				/>
 			)}
 		</div>
@@ -303,7 +325,7 @@ function LoadTransaction(props: {
 	const id = React.useId()
 	return (
 		<div {...styles.load()}>
-			<label {...cx(styles.text(), styles.tertiary())} htmlFor={id}>
+			<label {...cx(styles.text(), styles.secondary())} htmlFor={id}>
 				Replay an existing transaction
 			</label>
 			<div {...styles.loadRow()}>
@@ -313,16 +335,22 @@ function LoadTransaction(props: {
 					onChange={(event) => props.onChange(event.target.value)}
 					onKeyDown={(event) => event.key === 'Enter' && props.onLoad()}
 					placeholder="0x transaction hash"
-					{...fieldInput()}
+					spellCheck={false}
+					aria-invalid={props.error ? true : undefined}
+					aria-describedby={props.error ? fieldHintId(id) : undefined}
+					{...textField()}
 				/>
-				<Button onClick={props.onLoad} disabled={props.loading}>
-					<DownloadIcon {...buttonIcon()} />
+				<Button
+					scale="large"
+					variant="secondary"
+					onClick={props.onLoad}
+					disabled={props.loading}
+				>
+					<Download />
 					{props.loading ? 'Loading…' : 'Load'}
 				</Button>
 			</div>
-			{props.error && (
-				<span {...cx(styles.text(), styles.negative())}>{props.error}</span>
-			)}
+			{props.error && <ErrorText id={fieldHintId(id)}>{props.error}</ErrorText>}
 		</div>
 	)
 }
@@ -341,26 +369,23 @@ function StepTabs(props: {
 }): React.JSX.Element {
 	return (
 		<div {...styles.steps()}>
-			<span {...cx(styles.text(), styles.tertiary())}>
+			<span {...cx(styles.text(), styles.secondary())}>
 				Calls
 				<span {...styles.stepsCount()}>{props.calls.length} in order</span>
 			</span>
-			<div {...styles.stepList()}>
+			{/* biome-ignore lint/a11y/useSemanticElements: a row of toggle buttons, not a form fieldset */}
+			<div role="group" aria-label="Calls" {...styles.stepList()}>
 				{props.calls.map((call, index) => {
 					const selected = index === props.step
 					return (
 						<div key={index} {...styles.stepItem()}>
-							<button
-								type="button"
+							<Button
+								scale="small"
+								variant={selected ? 'secondary' : 'tertiary'}
+								aria-pressed={selected}
 								onClick={() => props.onSelect(index)}
-								title={call.to || `Call ${index + 1}`}
-								{...cx(
-									styles.stepTab(),
-									pressDown(),
-									transitionColors(),
-									!selected && styles.stepTabIdle(),
-									selected && styles.stepTabSelected(),
-								)}
+								title={call.to || undefined}
+								{...cx(pressDown(), transitionColors())}
 							>
 								<span {...styles.stepIndex()}>{index + 1}</span>
 								<span {...styles.mono()}>
@@ -368,28 +393,33 @@ function StepTabs(props: {
 										? HexFormatter.truncate(call.to as OxHex.Hex)
 										: 'empty'}
 								</span>
-							</button>
+							</Button>
 							{props.calls.length > 1 && (
-								<button
-									type="button"
-									onClick={() => props.onRemove(index)}
-									title="Remove this call"
-									{...styles.stepRemove()}
-								>
-									<XIcon {...styles.stepRemoveIcon()} />
-								</button>
+								<Tooltip content={`Remove call ${index + 1}`}>
+									<button
+										type="button"
+										aria-label={`Remove call ${index + 1}`}
+										onClick={() => props.onRemove(index)}
+										{...cx(styles.stepRemove(), transitionColors())}
+									>
+										<Close {...styles.stepRemoveIcon()} />
+									</button>
+								</Tooltip>
 							)}
 						</div>
 					)
 				})}
-				<button
-					type="button"
-					onClick={props.onAdd}
-					title="Add a call"
-					{...cx(styles.stepAdd(), pressDown(), transitionColors())}
-				>
-					<PlusIcon {...styles.icon12()} />
-				</button>
+				<Tooltip content="Add a call">
+					<IconButton
+						aria-label="Add a call"
+						onClick={props.onAdd}
+						scale="small"
+						variant="secondary"
+						{...cx(styles.iconButton(), pressDown())}
+					>
+						<Plus />
+					</IconButton>
+				</Tooltip>
 			</div>
 		</div>
 	)
@@ -410,6 +440,8 @@ function CallFields(props: {
 	const { data: abi } = useAutoloadAbi({ address, enabled: Boolean(address) })
 	const toKey = `to-${index}`
 	const valueKey = `value-${index}`
+	const toId = React.useId()
+	const valueId = React.useId()
 	const shows = (key: string, invalid: boolean) =>
 		invalid && props.touched.has(key)
 
@@ -432,16 +464,25 @@ function CallFields(props: {
 			    also where the calldata field puts its mode toggle. */}
 			<Field
 				label="To"
+				htmlFor={toId}
 				invalid={shows(toKey, props.errors.to)}
 				action={
 					resolvedName ? (
-						<Chip tone="accent" title={call.to}>
-							{resolvedName}
-						</Chip>
+						<Badge
+							scale="small"
+							variant="gray"
+							title={call.to}
+							{...styles.nameBadge()}
+						>
+							<span {...cx(truncate(), styles.nameBadgeText())}>
+								{resolvedName}
+							</span>
+						</Badge>
 					) : undefined
 				}
 			>
 				<AddressInput
+					id={toId}
 					value={call.to}
 					onChange={(value) => props.onChange({ to: value })}
 					onBlur={() => props.onTouch(toKey)}
@@ -462,13 +503,14 @@ function CallFields(props: {
 			/>
 
 			<OptionalRow
-				icon={<LayersIcon {...styles.rowIcon()} />}
+				icon={<Layers />}
 				label="Value"
 				summary={call.value !== '0' ? call.value : undefined}
 				onReset={() => props.onChange({ value: '0' })}
 			>
 				<Field
 					label="Value"
+					htmlFor={valueId}
 					invalid={shows(valueKey, props.errors.value)}
 					hint={
 						shows(valueKey, props.errors.value)
@@ -477,13 +519,18 @@ function CallFields(props: {
 					}
 				>
 					<input
+						id={valueId}
 						value={call.value}
+						inputMode="numeric"
 						onChange={(event) => props.onChange({ value: event.target.value })}
 						onBlur={() => props.onTouch(valueKey)}
-						{...cx(
-							fieldInput(),
-							shows(valueKey, props.errors.value) && fieldInputInvalid(),
-						)}
+						aria-invalid={shows(valueKey, props.errors.value) || undefined}
+						aria-describedby={
+							shows(valueKey, props.errors.value)
+								? fieldHintId(valueId)
+								: undefined
+						}
+						{...textField()}
 					/>
 				</Field>
 			</OptionalRow>
@@ -492,6 +539,7 @@ function CallFields(props: {
 }
 
 function AddressInput(props: {
+	id: string
 	value: string
 	onChange: (value: string) => void
 	onBlur: () => void
@@ -500,12 +548,14 @@ function AddressInput(props: {
 }): React.JSX.Element {
 	return (
 		<input
+			id={props.id}
 			value={props.value}
 			onChange={(event) => props.onChange(event.target.value)}
 			onBlur={props.onBlur}
 			placeholder={props.placeholder}
 			spellCheck={false}
-			{...cx(fieldInput(), props.invalid && fieldInputInvalid())}
+			aria-invalid={props.invalid || undefined}
+			{...textField()}
 		/>
 	)
 }
@@ -527,6 +577,7 @@ export function CalldataField(props: {
 	onChange: (data: string) => void
 }): React.JSX.Element {
 	const { abi, data, onChange } = props
+	const id = React.useId()
 	// Every function, not just the writes: "what does this return" is a
 	// first-class reason to simulate, and read calls are the cheapest way in.
 	const functions = React.useMemo(
@@ -575,6 +626,14 @@ export function CalldataField(props: {
 		[onChange],
 	)
 
+	const setValue = (fn: AbiFunction, index: number, value: string) => {
+		const next = values.map((current, itemIndex) =>
+			itemIndex === index ? value : current,
+		)
+		setValues(next)
+		encode(fn, next)
+	}
+
 	const canDecode = functions.length > 0
 	const showDecoded = canDecode && mode === 'decoded' && !mismatch
 	const byteLength = OxHex.validate(data) ? OxHex.size(data) : 0
@@ -582,10 +641,11 @@ export function CalldataField(props: {
 	return (
 		<Field
 			label="Calldata"
+			htmlFor={id}
 			action={
 				canDecode ? (
-					<SegmentedControl
-						size="sm"
+					<ViewToggle
+						label="Calldata format"
 						value={mode}
 						options={[
 							{ value: 'decoded', label: 'Decoded' },
@@ -595,22 +655,25 @@ export function CalldataField(props: {
 					/>
 				) : props.hasTarget && !abi ? (
 					// No ABI is a fact, not an error — say it once and stay usable.
-					<span {...cx(styles.text(), styles.tertiary())}>
+					<span {...cx(styles.text(), styles.secondary())}>
 						no ABI · hex only
 					</span>
 				) : undefined
 			}
 		>
 			{mismatch && mode === 'decoded' && (
-				<div {...styles.mismatch()}>
-					This calldata doesn{'’'}t match any function in the contract{'’'}s ABI
-					— showing hex.
-				</div>
+				<Alert
+					tone="warning"
+					title="This calldata doesn’t match any function in the contract’s ABI"
+					description="Showing hex."
+					style={{ width: '100%' }}
+				/>
 			)}
 
 			{showDecoded ? (
 				<div {...styles.decoded()}>
-					<select
+					<NativeSelect
+						id={id}
 						value={selector}
 						onChange={(event) => {
 							const next = event.target.value
@@ -623,7 +686,7 @@ export function CalldataField(props: {
 							setValues(blank)
 							if (fn.inputs.length === 0) encode(fn, blank)
 						}}
-						{...fieldInput()}
+						style={{ width: '100%' }}
 					>
 						<option value="">Select a function…</option>
 						{functions.map((fn) => (
@@ -635,89 +698,102 @@ export function CalldataField(props: {
 								{fn.inputs.map((input) => input.type).join(', ')})
 							</option>
 						))}
-					</select>
+					</NativeSelect>
 
-					{selected?.inputs.map((input, index) => (
-						<div key={`${input.name}-${input.type}-${index}`} {...styles.arg()}>
-							<span {...cx(styles.text(), styles.tertiary())}>
+					{selected?.inputs.map((input, index) => {
+						const argId = `${id}-arg-${index}`
+						const type = getInputType(input.type)
+						const name = (
+							<>
 								{input.name || `arg ${index}`}
 								<span {...styles.argType()}>{input.type}</span>
-							</span>
-							{getInputType(input.type) === 'textarea' ? (
-								<textarea
-									value={values[index] ?? ''}
-									onChange={(event) => {
-										const next = values.map((value, itemIndex) =>
-											itemIndex === index ? event.target.value : value,
-										)
-										setValues(next)
-										encode(selected, next)
-									}}
-									placeholder={getPlaceholder(input)}
-									{...cx(fieldInput(), styles.argTextarea())}
-								/>
-							) : (
-								<input
-									type={getInputType(input.type)}
-									checked={
-										getInputType(input.type) === 'checkbox'
-											? values[index] === 'true'
-											: undefined
+							</>
+						)
+						if (type === 'checkbox')
+							return (
+								<Checkbox
+									key={`${input.name}-${input.type}-${index}`}
+									checked={values[index] === 'true'}
+									onCheckedChange={(checked) =>
+										setValue(selected, index, String(checked))
 									}
-									value={values[index] ?? ''}
-									onChange={(event) => {
-										const value =
-											event.target.type === 'checkbox'
-												? String(event.target.checked)
-												: event.target.value
-										const next = values.map((current, itemIndex) =>
-											itemIndex === index ? value : current,
-										)
-										setValues(next)
-										encode(selected, next)
-									}}
-									placeholder={getPlaceholder(input)}
-									{...fieldInput()}
+									// TDS Checkbox draws its label black; keep it on the theme.
+									label={<span {...styles.checkboxLabel()}>{name}</span>}
 								/>
-							)}
-						</div>
-					))}
+							)
+						return (
+							<div
+								key={`${input.name}-${input.type}-${index}`}
+								{...styles.arg()}
+							>
+								<label
+									htmlFor={argId}
+									{...cx(styles.text(), styles.secondary())}
+								>
+									{name}
+								</label>
+								{type === 'textarea' ? (
+									<textarea
+										id={argId}
+										value={values[index] ?? ''}
+										onChange={(event) =>
+											setValue(selected, index, event.target.value)
+										}
+										placeholder={getPlaceholder(input)}
+										spellCheck={false}
+										{...cx(textField(), styles.argTextarea())}
+									/>
+								) : (
+									<input
+										id={argId}
+										type={type}
+										value={values[index] ?? ''}
+										onChange={(event) =>
+											setValue(selected, index, event.target.value)
+										}
+										placeholder={getPlaceholder(input)}
+										spellCheck={false}
+										{...textField()}
+									/>
+								)}
+							</div>
+						)
+					})}
 
 					{data && data !== '0x' && (
 						<div {...styles.encoded()}>
 							<span {...cx(styles.encodedData(), truncate())}>{data}</span>
-							<span {...cx(styles.shrink(), styles.tertiary())}>
+							<span {...cx(styles.shrink(), styles.secondary())}>
 								{byteLength} bytes
 							</span>
-							<IconButton
-								aria-label="Copy calldata"
-								onClick={() => copy.copy(data)}
-								scale="small"
-								title="Copy calldata"
-								variant="tertiary"
-								{...cx(styles.iconButton(), pressDown())}
-							>
-								{copy.notifying ? <CheckIcon /> : <CopyIcon />}
-							</IconButton>
+							<Tooltip content="Copy calldata">
+								<IconButton
+									aria-label="Copy calldata"
+									onClick={() => copy.copy(data)}
+									scale="small"
+									variant="tertiary"
+									{...cx(styles.iconButton(), pressDown())}
+								>
+									{copy.notifying ? <Check /> : <Copy />}
+								</IconButton>
+							</Tooltip>
 						</div>
 					)}
 				</div>
 			) : (
 				<>
 					<textarea
+						id={id}
 						value={data}
 						onChange={(event) => onChange(event.target.value)}
 						onBlur={props.onBlur}
 						placeholder="0x…"
 						spellCheck={false}
-						{...cx(
-							fieldInput(),
-							props.invalid && fieldInputInvalid(),
-							styles.hexTextarea(),
-						)}
+						aria-invalid={props.invalid || undefined}
+						{...cx(textField(), styles.hexTextarea())}
 					/>
 					{byteLength > 0 && (
-						<span {...cx(styles.text(), styles.tertiary())}>
+						<span {...cx(styles.text(), styles.secondary())}>
 							{byteLength} bytes
 							{byteLength > MAX_URL_CALLDATA_BYTES &&
 								' · too long for a shareable link'}
@@ -751,35 +827,33 @@ export function OptionalRow(props: {
 			<div {...styles.optional()}>
 				<button
 					type="button"
+					aria-expanded={false}
 					onClick={() => setOpen(true)}
 					{...cx(styles.optionalToggle(), pressDown(), transitionColors())}
 				>
-					<span {...cx(styles.shrink(), styles.tertiary())}>{props.icon}</span>
+					<span {...styles.optionalIcon()}>{props.icon}</span>
 					<span {...styles.shrink()}>{props.label}</span>
 					{set && (
 						<span {...cx(styles.optionalSummary(), truncate())}>
 							{props.summary}
 						</span>
 					)}
-					<span {...cx(styles.shrink(), styles.tertiary(), styles.pushRight())}>
-						{set ? (
-							<ChevronDownIcon {...styles.icon12()} />
-						) : (
-							<PlusIcon {...styles.icon12()} />
-						)}
+					<span {...cx(styles.optionalIcon(), styles.pushRight())}>
+						{set ? <ChevronDown /> : <Plus />}
 					</span>
 				</button>
 				{set && props.onReset && (
-					<IconButton
-						aria-label={`Reset ${props.label.toLowerCase()}`}
-						onClick={props.onReset}
-						scale="small"
-						title={`Reset ${props.label.toLowerCase()}`}
-						variant="tertiary"
-						{...cx(styles.iconButton(), styles.resetButton(), pressDown())}
-					>
-						<Trash2Icon />
-					</IconButton>
+					<Tooltip content={`Reset ${props.label.toLowerCase()}`}>
+						<IconButton
+							aria-label={`Reset ${props.label.toLowerCase()}`}
+							onClick={props.onReset}
+							scale="small"
+							variant="tertiary"
+							{...cx(styles.iconButton(), styles.resetButton(), pressDown())}
+						>
+							<Delete />
+						</IconButton>
+					</Tooltip>
 				)}
 			</div>
 		)
@@ -787,18 +861,20 @@ export function OptionalRow(props: {
 	return (
 		<div {...styles.optionalOpen()}>
 			<div {...styles.optional()}>
-				<span {...cx(styles.shrink(), styles.tertiary())}>{props.icon}</span>
+				<span {...styles.optionalIcon()}>{props.icon}</span>
 				<span {...cx(styles.text(), styles.secondary())}>{props.label}</span>
-				<IconButton
-					aria-label="Collapse"
-					onClick={() => setOpen(false)}
-					scale="small"
-					title="Collapse"
-					variant="tertiary"
-					{...cx(styles.iconButton(), styles.pushRight(), pressDown())}
-				>
-					<XIcon />
-				</IconButton>
+				<Tooltip content={`Collapse ${props.label.toLowerCase()}`}>
+					<IconButton
+						aria-label={`Collapse ${props.label.toLowerCase()}`}
+						aria-expanded
+						onClick={() => setOpen(false)}
+						scale="small"
+						variant="tertiary"
+						{...cx(styles.iconButton(), styles.pushRight(), pressDown())}
+					>
+						<Close />
+					</IconButton>
+				</Tooltip>
 			</div>
 			{props.children}
 		</div>
@@ -810,32 +886,17 @@ namespace styles {
 
 	export const secondary = style({ color: 'content.secondary' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const negative = style({ color: 'content.negative' })
-
 	export const mono = style({ typography: 'mono.inline' })
 
 	export const shrink = style({ flexShrink: 0 })
 
 	export const pushRight = style({ marginLeft: 'auto !custom' })
 
-	export const icon12 = style({
-		flexShrink: 0,
-		height: '12px !custom',
-		width: '12px !custom',
-	})
-
-	export const rowIcon = style({
-		height: '13px !custom',
-		width: '13px !custom',
-	})
-
 	// IconButton owns size and fill; this adds only hover and placement.
 	export const iconButton = style({
 		flexShrink: 0,
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'container.strong' },
 		},
 	})
 
@@ -856,14 +917,11 @@ namespace styles {
 		gap: '16',
 		minWidth: '0 !custom',
 		overflowY: 'auto',
-		paddingBlock: '16',
-		paddingInline: '16',
+		padding: '16',
 	})
 
-	export const addCall = style({
-		marginTop: '2',
-		width: 'fit-content !custom',
-	})
+	// A flex column stretches its items; the button keeps its own width.
+	export const addCall = style({ alignSelf: 'flex-start' })
 
 	export const context = style({
 		borderBottomWidth: 'regular',
@@ -890,12 +948,15 @@ namespace styles {
 		borderWidth: 'regular',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		paddingBlock: '8',
-		paddingInline: '12',
+		gap: '8',
+		padding: '12',
 	})
 
-	export const loadRow = style({ display: 'flex', gap: '8' })
+	export const loadRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
 
 	export const steps = style({
 		display: 'flex',
@@ -904,7 +965,7 @@ namespace styles {
 	})
 
 	export const stepsCount = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		marginLeft: '8',
 	})
 
@@ -915,48 +976,24 @@ namespace styles {
 		gap: '8',
 	})
 
-	// Marks the call for the remove button's hover reveal.
+	// Marks the call for the remove button's reveal.
 	export const stepItem = style({ position: 'relative' })
-
-	export const stepTab = style({
-		alignItems: 'center',
-		borderRadius: '2xs',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
-		boxSizing: 'border-box',
-		cursor: 'pointer',
-		display: 'flex',
-		gap: '8',
-		height: '28px !custom',
-		paddingInline: '8',
-		typography: 'body.b2',
-	})
-
-	export const stepTabIdle = style({
-		borderColor: 'line.secondary',
-		color: 'content.tertiary',
-		'@media (hover: hover)': { ':hover': { color: 'content.secondary' } },
-	})
-
-	export const stepTabSelected = style({
-		backgroundColor: 'container.regular',
-		borderColor: 'border.focus',
-		color: 'content.primary',
-	})
 
 	export const stepIndex = style({
 		alignItems: 'center',
 		backgroundColor: 'container.strong',
 		borderRadius: 'full',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexShrink: 0,
-		height: '15px !custom',
+		height: '16',
 		justifyContent: 'center',
 		typography: 'body.b3',
-		width: '15px !custom',
+		width: '16',
 	})
 
+	// Shown while the call is hovered or holds focus, so it is reachable by
+	// keyboard: tabbing onto the call reveals it as the next stop.
 	export const stepRemove = style({
 		alignItems: 'center',
 		backgroundColor: 'background.secondary',
@@ -964,62 +1001,37 @@ namespace styles {
 		borderRadius: 'full',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
-		boxSizing: 'border-box',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		display: 'none',
-		height: '15px !custom',
+		height: '16',
 		justifyContent: 'center',
 		position: 'absolute',
-		right: '-5px !custom',
-		top: '-5px !custom',
-		width: '15px !custom',
+		right: '-4px !custom',
+		top: '-4px !custom',
+		width: '16',
 		'@media (hover: hover)': {
 			':hover': { color: 'content.negative' },
 			selectors: { [`${stepItem}:hover &`]: { display: 'flex' } },
 		},
+		selectors: { [`${stepItem}:focus-within &`]: { display: 'flex' } },
 	})
 
 	export const stepRemoveIcon = style({
-		height: '9px !custom',
-		width: '9px !custom',
-	})
-
-	export const stepAdd = style({
-		alignItems: 'center',
-		borderColor: 'line.secondary',
-		borderRadius: '2xs',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
-		boxSizing: 'border-box',
-		color: 'content.tertiary',
-		cursor: 'pointer',
-		display: 'flex',
-		height: '26px !custom',
-		justifyContent: 'center',
-		width: '26px !custom',
-		'@media (hover: hover)': {
-			':hover': { borderColor: 'border.focus', color: 'content.primary' },
-		},
+		height: '10px !custom',
+		width: '10px !custom',
 	})
 
 	export const callFields = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '16',
 	})
 
-	export const mismatch = style({
-		backgroundColor: 'container.warning',
-		borderColor: 'border.warning',
-		borderRadius: '2xs',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
-		color: 'content.secondary',
-		paddingBlock: '8',
-		paddingInline: '8',
-		typography: 'body.b2',
-	})
+	// Badge leaves its maximum width unset, so a long name truncates.
+	export const nameBadge = style({ maxWidth: '100% !custom' })
+
+	export const nameBadgeText = style({ minWidth: '0 !custom' })
 
 	export const decoded = style({
 		borderColor: 'line.secondary',
@@ -1028,24 +1040,28 @@ namespace styles {
 		borderWidth: 'regular',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		padding: '8',
+		gap: '12',
+		padding: '12',
 	})
 
 	export const arg = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '8',
 	})
 
 	export const argType = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		marginLeft: '8',
 		typography: 'mono.inline',
 	})
 
+	export const checkboxLabel = style({ color: 'content.primary' })
+
 	export const argTextarea = style({
-		minHeight: '56px !custom',
+		height: 'auto !custom',
+		minHeight: '64',
+		paddingBlock: '12',
 		resize: 'vertical',
 	})
 
@@ -1061,16 +1077,18 @@ namespace styles {
 	})
 
 	export const encodedData = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flex: 1,
-		fontVariantNumeric: 'tabular-nums',
 		minWidth: '0 !custom',
-		typography: 'body.b2',
+		typography: 'mono.inline',
 	})
 
 	export const hexTextarea = style({
-		minHeight: '76px !custom',
+		height: 'auto !custom',
+		minHeight: '80px !custom',
+		paddingBlock: '12',
 		resize: 'vertical',
+		typography: 'mono.inline',
 		wordBreak: 'break-all',
 	})
 
@@ -1082,7 +1100,7 @@ namespace styles {
 
 	export const optionalToggle = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		display: 'flex',
 		flex: 1,
@@ -1090,8 +1108,10 @@ namespace styles {
 		minWidth: '0 !custom',
 		textAlign: 'left',
 		typography: 'body.b2',
-		'@media (hover: hover)': { ':hover': { color: 'content.secondary' } },
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 	})
+
+	export const optionalIcon = style({ display: 'flex', flexShrink: 0 })
 
 	export const optionalSummary = style({
 		color: 'content.primary',
@@ -1109,6 +1129,6 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '8',
-		padding: '8',
+		padding: '12',
 	})
 }

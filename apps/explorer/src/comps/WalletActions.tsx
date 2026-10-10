@@ -1,5 +1,6 @@
 import type { Address } from 'ox'
-import { IconButton, style, variants } from '@tempoxyz/ds/platform'
+import { IconButton, TextButton, Tooltip, style } from '@tempoxyz/ds/platform'
+import { LogOut } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import {
 	useConnect,
@@ -14,9 +15,7 @@ import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
-import { pressDown, pulse, transitionColors } from '#styles/explorer'
-import LucideLogOut from '~icons/lucide/log-out'
-import LucideWallet from '~icons/lucide/wallet'
+import { animatePulse, pressDown } from '#styles/explorer'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 
@@ -72,7 +71,6 @@ export function WalletActions(
 			: !isConnected
 				? `Connect ${walletName}`
 				: `Switch to Tempo`
-	const actionState = busy ? 'busy' : 'idle'
 
 	return (
 		<InfoCard
@@ -81,16 +79,17 @@ export function WalletActions(
 				<InfoCard.Title className={styles.title().className}>
 					Wallet actions
 					{isConnected && (
-						<IconButton
-							aria-label="Disconnect"
-							onClick={() => disconnect.mutate({ connector })}
-							scale="small"
-							title="Disconnect"
-							variant="tertiary"
-							{...cx(styles.disconnect(), pressDown())}
-						>
-							<LucideLogOut />
-						</IconButton>
+						<Tooltip content="Disconnect">
+							<IconButton
+								aria-label="Disconnect"
+								onClick={() => disconnect.mutate({ connector })}
+								scale="small"
+								variant="tertiary"
+								{...cx(styles.disconnect(), pressDown())}
+							>
+								<LogOut />
+							</IconButton>
+						</Tooltip>
 					)}
 				</InfoCard.Title>
 			}
@@ -100,7 +99,6 @@ export function WalletActions(
 							<AddToWallet
 								key="add"
 								address={props.address}
-								connectors={supported}
 								symbol={props.symbol}
 								decimals={props.decimals}
 								image={props.image}
@@ -108,25 +106,18 @@ export function WalletActions(
 							<SetAsFeeToken
 								key="fee"
 								address={props.address}
-								connectors={supported}
 								symbol={props.symbol}
 							/>,
 						]
 					: [
-							<button
+							<TextButton
 								key="connect"
-								type="button"
 								disabled={busy}
-								{...cx(
-									styles.action({ state: actionState }),
-									transitionColors(),
-									!busy && pressDown(),
-								)}
 								onClick={handleConnectOrSwitch}
+								{...cx(busy && animatePulse())}
 							>
-								<LucideWallet {...styles.actionIcon()} />
 								{connectLabel}
-							</button>,
+							</TextButton>,
 						]
 			}
 		/>
@@ -145,7 +136,7 @@ export declare namespace WalletActions {
 namespace styles {
 	// InfoCard fits its content from 1240px; the wallet card fills the column.
 	export const card = style({
-		'@media (width >= 1240px)': { width: '100% !custom !important' },
+		'@media (width >= 1240px)': { width: '100% !custom' },
 	})
 
 	export const title = style({
@@ -153,42 +144,9 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	// TDS IconButton owns size, color, radius, and focus ring.
 	export const disconnect = style({
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'container.regular' },
 		},
-	})
-
-	export const action = variants({
-		base: {
-			alignItems: 'center',
-			display: 'flex',
-			gap: '8',
-			typography: 'body.b3',
-			width: '100% !custom',
-		},
-		defaultVariants: { state: 'idle' },
-		variants: {
-			state: {
-				busy: {
-					animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
-					color: 'content.secondary',
-				},
-				current: { color: 'content.tertiary', cursor: 'default' },
-				idle: {
-					color: 'content.secondary',
-					cursor: 'pointer',
-					'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-				},
-				success: { color: 'content.positive' },
-			},
-		},
-	})
-
-	export const actionIcon = style({
-		flexShrink: 0,
-		height: '14px !custom',
-		width: '14px !custom',
 	})
 }

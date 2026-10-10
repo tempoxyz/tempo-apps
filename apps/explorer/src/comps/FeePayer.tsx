@@ -1,11 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { Badge, style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as AddressUtil from 'ox/Address'
 import type * as React from 'react'
 import { cx } from 'zyzz'
 import { Midcut } from '#comps/Midcut'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 const TEMPO_API_FEE_PAYER = AddressUtil.from(
 	'0x58aa7ce42e1d13b2919e2ac7e006c4fbc171442c',
@@ -32,15 +32,17 @@ export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 			href="https://api.tempo.xyz"
 			target="_blank"
 			rel="noopener noreferrer"
-			{...cx(styles.badge(), transitionColors())}
+			{...styles.badgeLink()}
 		>
-			<span {...styles.glyph()} aria-hidden="true">
-				<span {...styles.glyphCell()} />
-				<span {...styles.glyphCell()} />
-				<span {...styles.glyphCell()} />
-				<span {...styles.glyphCell()} />
-			</span>
-			Tempo API
+			<Badge scale="small" variant="outline">
+				<span {...styles.glyph()} aria-hidden="true">
+					<span {...styles.glyphCell()} />
+					<span {...styles.glyphCell()} />
+					<span {...styles.glyphCell()} />
+					<span {...styles.glyphCell()} />
+				</span>
+				Tempo API
+			</Badge>
 		</a>
 	)
 }
@@ -58,27 +60,16 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	// Mirrors a small outline TDS Badge; Badge renders a span, not a link.
-	export const badge = style({
-		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderColor: 'line.secondary',
-		borderRadius: 'full',
-		borderWidth: 'regular',
-		color: 'content.primary',
+	// Wraps a small TDS Badge, which renders a span; the ring follows its
+	// corners.
+	export const badgeLink = style({
+		borderRadius: '6px !custom',
 		display: 'inline-flex',
-		gap: '4',
-		paddingBlock: '4',
-		paddingInline: '8',
-		typography: 'body.b3',
 		'@media (hover: hover)': {
-			':hover': {
-				backgroundColor: 'container.strong',
-				borderColor: 'line.primary',
+			selectors: {
+				'&:hover > span': { backgroundColor: 'container.regular' },
 			},
 		},
-		// The document focus ring squares focused links off at 8px.
-		':focus-visible': { borderRadius: 'full' },
 	})
 
 	export const glyph = style({
@@ -89,8 +80,5 @@ namespace styles {
 		width: '10px !custom',
 	})
 
-	export const glyphCell = style({
-		backgroundColor: 'currentColor !custom',
-		borderRadius: '1px !custom',
-	})
+	export const glyphCell = style({ backgroundColor: 'currentColor !custom' })
 }

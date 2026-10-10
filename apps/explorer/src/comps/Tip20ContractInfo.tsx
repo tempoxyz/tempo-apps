@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { Alert, SimpleTable, style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
@@ -67,27 +67,25 @@ export function Tip20TokenTabContent(
 			>
 				<div {...styles.config()}>
 					{query.isError && (
-						<p role="status" {...styles.unavailable()}>
-							Token configuration unavailable.{' '}
-							<button
-								type="button"
-								onClick={() => void query.refetch()}
-								{...cx(link(), linkHover())}
-							>
-								Try again
-							</button>
-						</p>
+						<Alert
+							role="status"
+							tone="warning"
+							title="Token configuration unavailable."
+							action={{
+								label: 'Try again',
+								onClick: () => void query.refetch(),
+							}}
+							style={{ marginBottom: 16, width: '100%' }}
+						/>
 					)}
-					<section aria-label="Metadata" {...styles.metadata()}>
+					<section aria-label="Metadata">
 						<h3 {...styles.metadataTitle()}>Metadata</h3>
-						<dl {...styles.metadataFields()}>
-							<MetadataField label="Currency" value={config?.currency} />
-							<MetadataField label="Decimals" value={config?.decimals} />
-							<MetadataField label="Total supply" value={config?.totalSupply} />
-							<MetadataField label="Supply cap" value={config?.supplyCap} />
-						</dl>
-						<div {...styles.metadataRows()}>
-							<ConfigRow
+						<SimpleTable>
+							<MetadataRow label="Currency" value={config?.currency} />
+							<MetadataRow label="Decimals" value={config?.decimals} />
+							<MetadataRow label="Total supply" value={config?.totalSupply} />
+							<MetadataRow label="Supply cap" value={config?.supplyCap} />
+							<MetadataRow
 								label="Created"
 								value={
 									<span {...styles.created()}>
@@ -109,7 +107,7 @@ export function Tip20TokenTabContent(
 								}
 							/>
 							{metadataData?.createdBy && (
-								<ConfigRow
+								<MetadataRow
 									label="Created by"
 									value={
 										<AddressComp
@@ -119,7 +117,7 @@ export function Tip20TokenTabContent(
 									}
 								/>
 							)}
-						</div>
+						</SimpleTable>
 					</section>
 					<TokenTrust
 						address={address}
@@ -160,31 +158,17 @@ export function Tip20TokenTabContent(
 	)
 }
 
-function ConfigRow(props: {
+function MetadataRow(props: {
 	label: string
 	value: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div {...styles.configRow()}>
-			<span {...styles.configLabel()}>{props.label}</span>
-			<span {...styles.configValue()}>
-				{props.value ?? <span {...styles.tertiary()}>&mdash;</span>}
-			</span>
-		</div>
-	)
-}
-
-function MetadataField(props: {
-	label: string
-	value: React.ReactNode
-}): React.JSX.Element {
-	return (
-		<div {...styles.field()}>
-			<dt {...styles.fieldLabel()}>{props.label}</dt>
-			<dd {...styles.fieldValue()}>
-				{props.value ?? <span {...styles.tertiary()}>&mdash;</span>}
-			</dd>
-		</div>
+		<SimpleTable.Row>
+			<SimpleTable.Dt>{props.label}</SimpleTable.Dt>
+			<SimpleTable.Dd {...styles.value()}>
+				{props.value ?? <span {...styles.placeholder()}>&mdash;</span>}
+			</SimpleTable.Dd>
+		</SimpleTable.Row>
 	)
 }
 
@@ -208,48 +192,14 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const unavailable = style({
-		color: 'content.tertiary',
-		paddingBottom: '12',
-	})
-
-	export const metadata = style({
-		borderColor: 'line.secondary',
-		borderRadius: '2xs',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
-		overflow: 'hidden',
-	})
-
 	export const metadataTitle = style({
-		borderBottomColor: 'line.secondary',
-		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
-		paddingBlock: '12',
-		paddingInline: '12',
+		paddingBottom: '8',
 		typography: 'body.b3Strong',
 	})
 
-	export const metadataFields = style({
-		display: 'grid',
-		gap: '16',
-		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-		padding: '12',
-		'@media (width >= 1024px)': {
-			gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-		},
-	})
+	export const value = style({ fontVariantNumeric: 'tabular-nums' })
 
-	export const metadataRows = style({
-		borderTopColor: 'line.secondary',
-		borderTopStyle: 'dashed',
-		borderTopWidth: 'regular',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		padding: '12',
-		typography: 'body.b3',
-	})
+	export const placeholder = style({ color: 'content.secondary' })
 
 	export const created = style({
 		alignItems: 'center',
@@ -263,50 +213,11 @@ namespace styles {
 
 	export const footer = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '12',
 		paddingBlock: '12',
 		paddingInline: '20',
 		typography: 'body.b3',
-	})
-
-	export const configRow = style({
-		alignItems: 'baseline',
-		columnGap: '12',
-		display: 'flex',
-		flexWrap: 'wrap',
-		rowGap: '4',
-	})
-
-	export const configLabel = style({
-		color: 'content.secondary',
-		flexShrink: '0 !custom',
-	})
-
-	export const configValue = style({
-		color: 'content.primary',
-		minWidth: '0 !custom',
-	})
-
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const field = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const fieldLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
-	})
-
-	export const fieldValue = style({
-		color: 'content.primary',
-		fontVariantNumeric: 'tabular-nums',
-		overflowWrap: 'anywhere',
-		typography: 'body.b2',
 	})
 }

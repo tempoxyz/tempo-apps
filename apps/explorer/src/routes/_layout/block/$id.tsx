@@ -11,7 +11,6 @@ import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
-import { cx } from 'zyzz'
 import { Abis } from '#lib/abis'
 import { useChains } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
@@ -45,11 +44,14 @@ import {
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
-import { link, linkHover, pressDown } from '#styles/explorer'
+import { link, linkHover } from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import { styles } from './-$id.styles'
 
 const defaultSearchValues = { page: 1 } as const
+
+// Explorer link color and hover underline, for route styles that cannot use `cx`.
+const linkClassName = link({ className: linkHover().className }).className
 
 const combinedAbi = Object.values(Abis).flat()
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -351,7 +353,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 
 					return {
 						cells: [
-							<span key="index" {...styles.index()}>
+							<span key="index" {...styles.secondary()}>
 								[{transactionIndex}]
 							</span>,
 							<TransactionDescription
@@ -378,17 +380,17 @@ function TransactionsSection(props: TransactionsSectionProps) {
 									key="hash"
 									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
-									{...cx(styles.hashLink(), link(), linkHover(), pressDown())}
+									{...styles.hashLink({ className: linkClassName })}
 									title={transaction.hash}
 								>
 									<Midcut value={transaction.hash} prefix="0x" align="end" />
 								</Link>
 							) : (
-								<span key="hash" {...styles.tertiary()}>
+								<span key="hash" {...styles.secondary()}>
 									—
 								</span>
 							),
-							<span key="fee" {...styles.tertiary()}>
+							<span key="fee" {...styles.secondary()}>
 								{feeDisplay}
 							</span>,
 							<TransactionTotalCell
@@ -442,7 +444,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 
 	if (loading && !knownEvents) {
 		return (
-			<span {...styles.tertiary()} title="Loading…">
+			<span {...styles.secondary()} title="Loading…">
 				…
 			</span>
 		)
@@ -459,7 +461,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 		const eventTotal = calculateKnownEventsTotal(events ?? [])
 		if (eventTotal === undefined || !showUsdPrefix)
 			return (
-				<span {...styles.tertiary()} title="No comparable payment total">
+				<span {...styles.secondary()} title="No comparable payment total">
 					—
 				</span>
 			)
@@ -479,7 +481,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 	}
 
 	const value = (transaction.value ?? 0n) + fee
-	if (value === 0n) return <span {...styles.tertiary()}>—</span>
+	if (value === 0n) return <span {...styles.secondary()}>—</span>
 	return (
 		<Amount.Base
 			value={value}
@@ -524,25 +526,13 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	const selector = transaction.input?.slice(0, 10)
 
-	const { title, subtitle } = React.useMemo(() => {
-		if (!decodedCall)
-			return {
-				title: selector ?? 'Call',
-				subtitle: undefined,
-			}
-
-		return {
-			title: decodedCall.functionName
-				? `${decodedCall.functionName}()`
-				: (selector ?? 'Call'),
-			subtitle: undefined,
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [decodedCall?.functionName, decodedCall?.args, selector, decodedCall])
+	const title = decodedCall?.functionName
+		? `${decodedCall.functionName}()`
+		: (selector ?? 'Call')
 
 	if (loading && !knownEvents) {
 		return (
-			<span {...styles.tertiary()} title="Loading…">
+			<span {...styles.secondary()} title="Loading…">
 				…
 			</span>
 		)
@@ -572,18 +562,14 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 	if (transaction.value === 0n)
 		return (
 			<div {...styles.call()}>
-				<div {...styles.callTitle()}>
-					<div>{title} </div>
-					<AddressLink address={transaction.to} chars={4} />
-				</div>
-				{subtitle && <span {...styles.callSubtitle()}>{subtitle}</span>}
+				<div>{title} </div>
+				<AddressLink address={transaction.to} chars={4} />
 			</div>
 		)
 
 	return (
 		<span {...styles.send()}>
-			Send <span {...styles.amount()}>{amountDisplay}</span> to{' '}
-			<AddressLink address={transaction.to} chars={4} />
+			Send {amountDisplay} to <AddressLink address={transaction.to} chars={4} />
 		</span>
 	)
 }

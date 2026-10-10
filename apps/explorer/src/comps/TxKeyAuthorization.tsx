@@ -1,5 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import {
+	InlineCode,
+	SimpleTable,
+	TextButton,
+	style,
+} from '@tempoxyz/ds/platform'
 import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
@@ -12,7 +17,11 @@ import {
 } from '#lib/domain/access-key'
 import { isTip20Address } from '#lib/domain/tip20'
 import { useAutoloadAbi } from '#lib/queries'
-import { link, linkHover, pressDown } from '#styles/explorer'
+import { link, linkHover } from '#styles/explorer'
+
+// InlineCode keeps code on one line; long signatures must wrap in narrow
+// description columns.
+const wrap = { overflowWrap: 'anywhere', whiteSpace: 'normal' } as const
 
 const tokenFunctions: Record<string, string> = {
 	'0x095ea7b3': 'approve(address,uint256)',
@@ -27,7 +36,7 @@ export function TxKeyAuthorization(
 	const targets = groupKeyScopes(authorization.scopes)
 	return (
 		<section aria-label="Access key permissions" {...styles.root()}>
-			<dl {...styles.rows()}>
+			<SimpleTable>
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -62,21 +71,20 @@ export function TxKeyAuthorization(
 						</ul>
 					)}
 				</PermissionRow>
-			</dl>
+			</SimpleTable>
 		</section>
 	)
 }
 
-// Match the compact label/value rows in decoded event and calldata details.
 function PermissionRow(props: {
 	label: string
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div {...styles.row()}>
-			<dt {...styles.label()}>{props.label}</dt>
-			<dd {...styles.value()}>{props.children}</dd>
-		</div>
+		<SimpleTable.Row>
+			<SimpleTable.Dt>{props.label}</SimpleTable.Dt>
+			<SimpleTable.Dd {...styles.value()}>{props.children}</SimpleTable.Dd>
+		</SimpleTable.Row>
 	)
 }
 
@@ -93,15 +101,13 @@ export namespace TxKeyAuthorization {
 		const id = useId()
 		return (
 			<div {...styles.disclosure()}>
-				<button
-					type="button"
+				<TextButton
 					aria-expanded={expanded}
 					aria-controls={id}
 					onClick={() => setExpanded(!expanded)}
-					{...cx(styles.toggle(), link(), pressDown())}
 				>
 					{expanded ? 'Hide permissions' : 'Show permissions'}
-				</button>
+				</TextButton>
 				<div id={id} hidden={!expanded} {...styles.panel()}>
 					{expanded && <TxKeyAuthorization {...props} />}
 				</div>
@@ -182,8 +188,8 @@ function CallScope(props: {
 					return (
 						<li key={`${rule.selector}-${index}`} {...styles.stack()}>
 							<div {...styles.ruleLine()}>
-								<code
-									{...styles.code()}
+								<InlineCode
+									style={wrap}
 									title={
 										abiFunction?.type === 'function'
 											? toFunctionSignature(abiFunction)
@@ -191,11 +197,9 @@ function CallScope(props: {
 									}
 								>
 									{functionName ?? rule.selector ?? 'Any function'}
-								</code>
+								</InlineCode>
 								{functionName && (
-									<code {...cx(styles.code(), styles.tertiary())}>
-										{rule.selector}
-									</code>
+									<InlineCode style={wrap}>{rule.selector}</InlineCode>
 								)}
 							</div>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
@@ -231,42 +235,16 @@ function CallScope(props: {
 }
 
 namespace styles {
-	export const root = style({
-		borderColor: 'line.secondary',
-		borderLeftWidth: 'regular',
-		color: 'content.primary',
-		minWidth: '0 !custom',
-		paddingLeft: '12',
-		typography: 'body.b3',
-	})
+	export const root = style({ minWidth: '0 !custom' })
 
-	export const rows = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-	})
-
-	export const row = style({
-		display: 'grid',
-		gap: '4',
-		gridTemplateColumns: 'minmax(0, 1fr)',
-	})
-
-	export const label = style({
-		color: 'content.tertiary',
-		typography: 'body.b3',
-	})
-
+	// SimpleTable.Dd leaves its layout unset.
 	export const value = style({
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '8',
-		minWidth: '0 !custom',
 	})
 
 	export const secondary = style({ color: 'content.secondary' })
-
-	export const tertiary = style({ color: 'content.tertiary' })
 
 	export const targets = style({
 		display: 'flex',
@@ -280,11 +258,6 @@ namespace styles {
 		flexDirection: 'column',
 		gap: '8',
 		minWidth: '0 !custom',
-	})
-
-	export const toggle = style({
-		cursor: 'pointer',
-		typography: 'body.b3',
 	})
 
 	export const panel = style({
@@ -339,12 +312,7 @@ namespace styles {
 		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '2',
-	})
-
-	export const code = style({
-		typography: 'mono.inline',
-		wordBreak: 'break-all',
+		rowGap: '4',
 	})
 
 	export const recipients = style({

@@ -51,7 +51,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	const { receipt } = props
 	const { isTokenListed } = useTokenListMembership()
 
-	if (!receipt) return <span {...styles.tertiary()}>…</span>
+	if (!receipt) return <span {...styles.secondary()}>…</span>
 
 	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
@@ -61,7 +61,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 		? PriceFormatter.format(Number(feeRaw))
 		: PriceFormatter.formatAmountShort(feeRaw)
 
-	return <span {...styles.tertiary()}>{feeDisplay}</span>
+	return <span {...styles.secondary()}>{feeDisplay}</span>
 }
 
 export function TransactionDescription(props: {
@@ -124,14 +124,14 @@ export function TransactionTimestamp(props: {
 	return (
 		<div {...styles.nowrap()}>
 			{link ? (
-				<Link to={link} preload="intent" {...styles.tertiary()}>
+				<Link to={link} preload="intent" {...styles.secondary()}>
 					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (
 				<FormattedTimestamp
 					timestamp={timestamp}
 					format={format}
-					className={styles.tertiary().className}
+					className={styles.secondary().className}
 				/>
 			)}
 		</div>
@@ -182,14 +182,14 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	const totalValue = calculateKnownEventsTotal(events)
 	if (totalValue === undefined || !showUsdPrefix)
 		return (
-			<span {...styles.tertiary()} title="No comparable payment total">
+			<span {...styles.secondary()} title="No comparable payment total">
 				—
 			</span>
 		)
 
 	if (totalValue === 0n) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
-		if (value === 0n) return <span {...styles.tertiary()}>—</span>
+		if (value === 0n) return <span {...styles.secondary()}>—</span>
 		return (
 			<Amount.Base
 				value={value}
@@ -213,8 +213,6 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 }
 
 namespace styles {
-	export const tertiary = style({ color: 'content.tertiary' })
-
 	export const secondary = style({ color: 'content.secondary' })
 
 	export const nowrap = style({ textWrap: 'nowrap' })

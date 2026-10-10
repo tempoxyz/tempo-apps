@@ -1,4 +1,6 @@
 import { style } from '@tempoxyz/ds/platform'
+import { cx } from 'zyzz'
+import { pressDown } from '#styles/explorer'
 
 // Route components are code-split into modules that zyzz does not compile, so
 // the demo address route's styles live here.
@@ -24,13 +26,6 @@ export namespace styles {
 
 	export const accountCard = style({ alignSelf: 'flex-start' })
 
-	export const addressButton = style({
-		color: 'content.tertiary',
-		cursor: 'pointer',
-		textAlign: 'left',
-		width: '100% !custom',
-	})
-
 	export const addressHeader = style({
 		alignItems: 'center',
 		display: 'flex',
@@ -43,22 +38,7 @@ export namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const copyWrap = style({
-		alignItems: 'center',
-		display: 'flex',
-		position: 'relative',
-	})
-
-	export const copyIcon = style({
-		height: '12px !custom',
-		width: '12px !custom',
-	})
-
-	export const copied = style({
-		left: 'calc(100% + 8px) !custom',
-		position: 'absolute',
-		typography: 'body.b3',
-	})
+	export const copyIcon = style({ height: '12', width: '12' })
 
 	export const addressValue = style({
 		color: 'content.primary',
@@ -68,7 +48,7 @@ export namespace styles {
 	})
 
 	export const pending = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
@@ -77,16 +57,10 @@ export namespace styles {
 		typography: 'body.b3',
 	})
 
-	// TxEventDescription already lays its parts out as a wrapping flex row;
-	// these only add what it leaves unset.
-	export const expandedEvent = style({ width: 'auto !custom' })
-
-	// `flex-nowrap` has to beat the component's own `flex-wrap`, which
-	// tailwind-merge used to settle.
+	// TxEventDescription sets flexWrap on the same element.
 	export const collapsedEvent = style({
 		flexWrap: 'nowrap !important',
 		justifyContent: 'center',
-		width: 'auto !custom',
 	})
 
 	export const collapsed = style({
@@ -96,11 +70,27 @@ export namespace styles {
 		height: '20',
 		whiteSpace: 'nowrap',
 	})
+}
 
-	export const more = style({
-		color: 'content.secondary',
-		cursor: 'pointer',
-		flexShrink: 0,
-		marginLeft: '4',
-	})
+// Compositions with the shared recipes. The route file cannot call `cx` (zyzz
+// does not compile its chunks), so they are resolved here and spread as-is.
+
+const addressButton = style({
+	color: 'content.secondary',
+	cursor: 'pointer',
+	textAlign: 'left',
+	width: '100% !custom',
+})
+
+const more = style({
+	color: 'content.secondary',
+	cursor: 'pointer',
+	flexShrink: 0,
+	marginLeft: '4',
+})
+
+export namespace composed {
+	export const accountAddress = cx(addressButton(), pressDown())
+
+	export const moreEvents = cx(more(), pressDown())
 }

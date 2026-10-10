@@ -1,12 +1,14 @@
-import SearchXIcon from '~icons/lucide/search-x'
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { vars as core } from '@tempoxyz/ds/core'
+import { style, vars } from '@tempoxyz/ds/platform'
+import { Search } from '@tempoxyz/ds/platform/icons'
 import type { Hex } from 'ox'
+import type * as React from 'react'
 import { cx } from 'zyzz'
 import { Empty } from '#comps/ui/Empty'
 import { apostrophe } from '#lib/chars'
 import { useMarkNotFoundPage } from '#lib/not-found'
-import { pressDown, transitionColors } from '#styles/explorer'
+import { pressDown } from '#styles/explorer'
 
 export function NotFound({
 	title = 'Page Not Found',
@@ -19,12 +21,12 @@ export function NotFound({
 		<section {...styles.section()}>
 			<div {...styles.card()}>
 				<Empty
-					icon={<SearchXIcon />}
+					icon={<Search />}
 					title={<span {...styles.title()}>{title}</span>}
 					action={
 						<Link
 							to="/"
-							{...cx(styles.homeLink(), transitionColors(), pressDown())}
+							{...cx(vars({ set: 'inverse' }), styles.homeLink(), pressDown())}
 						>
 							Return home
 						</Link>
@@ -73,13 +75,15 @@ namespace styles {
 
 	export const title = style({ typography: 'heading.h2' })
 
-	// A link in the TDS medium primary Button style.
+	// TDS Button medium primary geometry on a link, in the inverse set. The
+	// ring uses the page's primary content color because the inverse one
+	// matches the page background.
 	export const homeLink = style({
 		alignItems: 'center',
-		backgroundColor: 'component.button.primary.fill',
+		backgroundColor: 'background.primary',
 		borderRadius: 'full',
-		boxSizing: 'border-box',
-		color: 'background.secondary',
+		color: 'content.primary',
+		columnGap: '4',
 		display: 'inline-flex',
 		height: '40',
 		justifyContent: 'center',
@@ -88,6 +92,9 @@ namespace styles {
 		textDecorationLine: 'none',
 		typography: 'body.b2',
 		whiteSpace: 'nowrap',
+		':focus-visible': {
+			outlineColor: `light-dark(${core.color.neutral['100']}, ${core.color.neutral['000']}) !custom`,
+		},
 	})
 
 	export const hash = style({

@@ -1,12 +1,12 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { Button, style, variants } from '@tempoxyz/ds/platform'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import * as Json from 'ox/Json'
 import { useMemo } from 'react'
 import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { useCopy } from '#lib/hooks'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 export function TxRawTransaction(props: TxRawTransaction.Props) {
 	const { data } = props
@@ -85,21 +85,15 @@ export namespace TxRawTransaction {
 			<div {...styles.section({ border: Boolean(showBorder) })}>
 				<div {...styles.sectionHeader()}>
 					<div {...styles.sectionTitle()}>{title}</div>
-					<button
-						type="button"
+					<Button
+						aria-label={`Copy ${title.toLowerCase()} data`}
 						onClick={() => copy(stringify(data))}
-						{...cx(styles.copyButton(), pressDown(), transitionColors())}
-						title={`Copy ${title.toLowerCase()} data`}
+						scale="small"
+						variant="tertiary"
 					>
-						{notifying ? (
-							<span {...styles.primary()}>copied</span>
-						) : (
-							<>
-								<CopyIcon {...styles.copyIcon()} />
-								<span>Copy</span>
-							</>
-						)}
-					</button>
+						{notifying ? <Check /> : <Copy />}
+						Copy
+					</Button>
 				</div>
 				<div {...styles.column()}>
 					{entries.map(([key, value]) => (
@@ -140,7 +134,7 @@ export namespace TxRawTransaction {
 	export function Row(props: Row.Props) {
 		const { label, value, pad = 21, depth = 0 } = props
 
-		const { copy, notifying } = useCopy()
+		const { copy } = useCopy()
 
 		const isArray = Array.isArray(value)
 		const isFilledArray = isArray && value.length > 0
@@ -164,7 +158,7 @@ export namespace TxRawTransaction {
 						onClick={() => copy(stringify(value))}
 						type="button"
 					>
-						{notifying ? <span {...styles.primary()}>copied</span> : label}
+						{label}
 					</button>
 					{value.map((item, index) => (
 						<ArrayItem
@@ -197,7 +191,7 @@ export namespace TxRawTransaction {
 						onClick={() => copy(stringify(value))}
 						type="button"
 					>
-						{notifying ? <span {...styles.primary()}>copied</span> : label}
+						{label}
 					</button>
 					{entries.map(([key, val]) => (
 						<Row
@@ -231,9 +225,7 @@ export namespace TxRawTransaction {
 					type="button"
 					onClick={() => copy(formattedValue)}
 				>
-					<span {...styles.key()}>
-						{notifying ? <span {...styles.primary()}>copied</span> : label}
-					</span>
+					<span {...styles.key()}>{label}</span>
 				</button>
 				{isLinkable ? (
 					<Link
@@ -267,7 +259,7 @@ export namespace TxRawTransaction {
 	export function ArrayItem(props: ArrayItem.Props) {
 		const { index, value, pad = 21, depth = 0 } = props
 
-		const { copy, notifying } = useCopy()
+		const { copy } = useCopy()
 
 		const isObject =
 			typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -314,7 +306,7 @@ export namespace TxRawTransaction {
 					onClick={() => copy(TxRawTransaction.formatValue(value))}
 					type="button"
 				>
-					{notifying ? <span {...styles.primary()}>copied</span> : `[${index}]`}
+					[{index}]
 				</button>
 				<button
 					{...cx(styles.value(), pressDown())}
@@ -381,29 +373,10 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const copyButton = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		cursor: 'pointer',
-		display: 'flex',
-		gap: '8',
-		typography: 'body.b3',
-		'@media (hover: hover)': {
-			':hover': { color: 'content.secondary' },
-		},
-	})
-
-	export const copyIcon = style({
-		height: '12px !custom',
-		width: '12px !custom',
-	})
-
-	export const primary = style({ color: 'content.primary' })
-
 	export const column = style({ display: 'flex', flexDirection: 'column' })
 
 	export const groupKey = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		cursor: 'pointer',
 		paddingBlock: '4',
 		textAlign: 'left',
@@ -423,17 +396,17 @@ namespace styles {
 	})
 
 	export const key = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 	})
 
 	export const indexLabel = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '4',
 	})
 
 	export const indexKey = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		textAlign: 'left',
 	})
 

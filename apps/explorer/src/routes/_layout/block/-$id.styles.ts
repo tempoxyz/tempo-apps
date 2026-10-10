@@ -29,13 +29,8 @@ export namespace styles {
 		'@media (width < 800px)': { alignSelf: 'stretch' },
 	})
 
-	export const index = style({
-		color: 'content.tertiary',
-		fontVariantNumeric: 'tabular-nums',
-	})
-
 	export const systemFrom = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		overflow: 'hidden',
 		textAlign: 'right',
 		textOverflow: 'ellipsis',
@@ -47,34 +42,20 @@ export namespace styles {
 
 	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'content.secondary' })
-
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const call = style({
-		display: 'flex',
-		flex: 1,
-		flexDirection: 'column',
-		gap: '2',
+	export const secondary = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
 	})
 
-	export const callTitle = style({
+	export const call = style({
 		color: 'content.primary',
 		display: 'flex',
 		flex: 1,
-		flexWrap: 'nowrap',
 		gap: '8',
-	})
-
-	export const callSubtitle = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
 	})
 
 	export const send = style({
 		color: 'content.primary',
 		whiteSpace: 'nowrap',
 	})
-
-	export const amount = style({ color: 'content.positive' })
 }

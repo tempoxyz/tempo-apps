@@ -3,7 +3,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { cx } from 'zyzz'
+import { Check, Copy } from '@tempoxyz/ds/platform/icons'
 import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
@@ -41,9 +41,7 @@ import {
 } from '#lib/demo'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { pressDown } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
-import { styles } from './-address.styles'
+import { composed, styles } from './-address.styles'
 
 type MockTransactionData = {
 	hash: Hex.Hex
@@ -901,15 +899,15 @@ function Component() {
 						key="address"
 						type="button"
 						onClick={() => copy(accountAddress)}
-						{...cx(styles.addressButton(), pressDown())}
-						title={accountAddress}
+						{...composed.accountAddress}
 					>
 						<div {...styles.addressHeader()}>
 							<span {...styles.addressLabel()}>Address</span>
-							<div {...styles.copyWrap()}>
-								<CopyIcon {...styles.copyIcon()} />
-								{notifying && <span {...styles.copied()}>copied</span>}
-							</div>
+							{notifying ? (
+								<Check {...styles.copyIcon()} />
+							) : (
+								<Copy {...styles.copyIcon()} />
+							)}
 						</div>
 						<p {...styles.addressValue()}>{accountAddress}</p>
 					</button>,
@@ -974,7 +972,6 @@ function Component() {
 														key={key}
 														event={event}
 														seenAs={accountAddress}
-														className={styles.expandedEvent().className}
 													/>
 												)
 											})
@@ -997,7 +994,7 @@ function Component() {
 																new Set(prev).add(tx.hash),
 															)
 														}}
-														{...cx(styles.more(), pressDown())}
+														{...composed.moreEvents}
 													>
 														and {events.length - 1} more
 													</button>

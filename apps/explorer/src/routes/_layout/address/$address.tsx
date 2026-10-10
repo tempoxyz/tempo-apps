@@ -16,8 +16,25 @@ import * as React from 'react'
 import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions, Hooks } from 'wagmi/tempo'
-import { Button } from '@tempoxyz/ds/platform'
-import { cx } from 'zyzz'
+import {
+	Alert,
+	Button,
+	IconButton,
+	StatusIndicator,
+	Tooltip,
+} from '@tempoxyz/ds/platform'
+import {
+	Check,
+	ChevronLeft,
+	ChevronRight,
+	ChevronsLeft,
+	ChevronsRight,
+	Close,
+	Copy,
+	Eye,
+	EyeOff,
+	InfoCircle,
+} from '@tempoxyz/ds/platform/icons'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
@@ -126,25 +143,11 @@ import {
 	zonePortalActivityQueryOptions,
 	zonePortalOverviewQueryOptions,
 } from '#lib/zone-portal'
-import {
-	link,
-	linkHover,
-	pressDown,
-	transitionColors,
-	truncate,
-} from '#styles/explorer'
+import { LiveIndicator } from '#comps/ui/LiveIndicator'
+import { truncate } from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
-import ChevronFirst from '~icons/lucide/chevron-first'
-import ChevronLast from '~icons/lucide/chevron-last'
-import ChevronLeft from '~icons/lucide/chevron-left'
-import ChevronRight from '~icons/lucide/chevron-right'
-import EyeIcon from '~icons/lucide/eye'
-import EyeOffIcon from '~icons/lucide/eye-off'
-import CopyIcon from '~icons/lucide/copy'
-import PlayIcon from '~icons/lucide/play'
-import XIcon from '~icons/lucide/x'
-import { styles } from './-$address.styles'
+import { composed, styles } from './-$address.styles'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -932,15 +935,15 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 					key="address"
 					type="button"
 					onClick={() => copy(address)}
-					{...cx(styles.addressButton(), pressDown())}
-					title={address}
+					{...composed.zoneAddress}
 				>
 					<div {...styles.addressHeader()}>
 						<span {...styles.addressLabel()}>Address</span>
-						<div {...styles.copyWrap()}>
-							<CopyIcon {...styles.icon12()} />
-							{notifying && <span {...styles.copied()}>copied</span>}
-						</div>
+						{notifying ? (
+							<Check {...styles.icon12()} />
+						) : (
+							<Copy {...styles.icon12()} />
+						)}
 					</div>
 					<p {...styles.addressValue()}>{address}</p>
 				</button>,
@@ -953,9 +956,9 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 									<Link
 										to="/token/$address"
 										params={{ address: asset.address }}
-										{...cx(styles.balanceToken(), pressDown())}
+										{...composed.zoneBalanceToken}
 									>
-										<TokenIcon address={asset.address} name={asset.symbol} />
+										<TokenIcon address={asset.address} />
 										<span {...truncate()}>{asset.symbol}</span>
 									</Link>
 									<Amount.Base
@@ -1386,14 +1389,16 @@ function SectionsWrapper(props: {
 	const liveControl = (
 		<>
 			{streamError && (
-				<span role="status" {...styles.streamError()}>
+				<StatusIndicator role="status" tone="negative">
 					{streamError}
-				</span>
+				</StatusIndicator>
 			)}
-			<button
-				type="button"
+			<Button
+				{...styles.feedToggle()}
 				aria-pressed={feed.live}
 				disabled={!feedEligible}
+				// A Tooltip would replace the visible "Live"/"Paused" name and stays
+				// hidden on a disabled button; `title` only describes it.
 				title={
 					!feedEligible
 						? 'Live updates are available on the newest page'
@@ -1408,23 +1413,16 @@ function SectionsWrapper(props: {
 					}
 					feed.start()
 				}}
-				{...cx(styles.liveToggle({ live: feed.live, feed: true }), pressDown())}
+				scale="small"
+				variant="secondary"
 			>
-				{feed.live ? (
-					<>
-						<span {...styles.pingWrap()}>
-							<span {...styles.pingRing()} />
-							<span {...styles.pingDot()} />
-						</span>
-						<span>Live</span>
-					</>
-				) : (
-					<>
-						<PlayIcon {...styles.icon12()} />
-						<span>Paused</span>
-					</>
-				)}
-			</button>
+				<LiveIndicator
+					pinging={feed.live}
+					tone={feed.live ? 'positive' : 'neutral'}
+				>
+					{feed.live ? 'Live' : 'Paused'}
+				</LiveIndicator>
+			</Button>
 		</>
 	)
 
@@ -1614,11 +1612,12 @@ function SectionsWrapper(props: {
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const transactionsError = error ? (
-		<div {...styles.errorCard()}>
-			<p {...styles.errorTitle()}>Failed to load transaction history</p>
-			<p {...styles.errorDetail()}>
-				{error instanceof Error ? error.message : 'Unknown error'}
-			</p>
+		<div {...styles.alertWrap()}>
+			<Alert
+				tone="negative"
+				title="Failed to load transaction history"
+				description={error instanceof Error ? error.message : 'Unknown error'}
+			/>
 		</div>
 	) : null
 
@@ -1629,7 +1628,7 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className={cx(styles.timeHeader(), transitionColors()).className}
+					className={composed.timeColumnHeader.className}
 				/>
 			),
 			align: 'start',
@@ -1649,7 +1648,7 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className={cx(styles.timeHeader(), transitionColors()).className}
+					className={composed.timeColumnHeader.className}
 				/>
 			),
 			align: 'start',
@@ -1679,7 +1678,7 @@ function SectionsWrapper(props: {
 				label="Time"
 				formatLabel={formatLabel}
 				onCycle={cycleTimeFormat}
-				className={cx(styles.timeHeader(), transitionColors()).className}
+				className={composed.timeColumnHeader.className}
 			/>
 		),
 		align: 'start',
@@ -1748,7 +1747,7 @@ function SectionsWrapper(props: {
 					label="Submitted"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className={cx(styles.timeHeader(), transitionColors()).className}
+					className={composed.timeColumnHeader.className}
 				/>
 			),
 		},
@@ -1777,37 +1776,33 @@ function SectionsWrapper(props: {
 	]
 
 	const zonePortalContextual = (
-		<button
-			type="button"
+		<Button
+			aria-pressed={portalLive}
 			onClick={() => onPortalLiveChange(!portalLive)}
-			{...cx(styles.liveToggle({ live: portalLive }), pressDown())}
 			title={portalLive ? 'Pause live updates' : 'Resume live updates'}
+			scale="small"
+			variant="secondary"
 		>
-			{portalLive ? (
-				<>
-					<span {...styles.pingWrap()}>
-						<span {...styles.pingRing()} />
-						<span {...styles.pingDot()} />
-					</span>
-					<span>Live</span>
-				</>
-			) : (
-				<>
-					<PlayIcon {...styles.icon12()} />
-					<span>Paused</span>
-				</>
-			)}
-		</button>
+			<LiveIndicator
+				pinging={portalLive}
+				tone={portalLive ? 'positive' : 'neutral'}
+			>
+				{portalLive ? 'Live' : 'Paused'}
+			</LiveIndicator>
+		</Button>
 	)
 
 	const zonePortalError = zonePortalActivityQuery.error ? (
-		<div {...styles.errorCard()}>
-			<p {...styles.errorTitle()}>Zone activity is temporarily unavailable</p>
-			<p {...styles.errorDetail()}>
-				{zonePortalActivityQuery.error instanceof Error
-					? zonePortalActivityQuery.error.message
-					: 'Unknown error'}
-			</p>
+		<div {...styles.alertWrap()}>
+			<Alert
+				tone="negative"
+				title="Zone activity is temporarily unavailable"
+				description={
+					zonePortalActivityQuery.error instanceof Error
+						? zonePortalActivityQuery.error.message
+						: 'Unknown error'
+				}
+			/>
 		</div>
 	) : null
 
@@ -2266,21 +2261,16 @@ function SectionsWrapper(props: {
 							</div>
 						),
 						content: (
-							<div {...styles.errorCard()}>
-								<p {...styles.errorTitle()}>
-									Transfers are temporarily unavailable
-								</p>
-								<p {...styles.errorDetail()}>
-									The Tempo API could not complete this request.
-								</p>
-								<Button
-									{...cx(styles.retryButton(), transitionColors())}
-									onClick={() => void refetchActiveTransfers()}
-									scale="small"
-									variant="secondary"
-								>
-									Try again
-								</Button>
+							<div {...styles.alertWrap()}>
+								<Alert
+									tone="negative"
+									title="Transfers are temporarily unavailable"
+									description="The Tempo API could not complete this request."
+									action={{
+										label: 'Try again',
+										onClick: () => void refetchActiveTransfers(),
+									}}
+								/>
 							</div>
 						),
 					}
@@ -2361,12 +2351,7 @@ function SectionsWrapper(props: {
 														params={{ address: transfer.token.address }}
 														title={transfer.token.address}
 														preload="intent"
-														{...cx(
-															styles.assetLink(),
-															linkHover(),
-															transitionColors(),
-															pressDown(),
-														)}
+														{...composed.transferAsset}
 													>
 														<TokenIcon address={transfer.token.address} />
 														<span>
@@ -2530,7 +2515,7 @@ function SectionsWrapper(props: {
 												balance={holder.balance}
 												decimals={tokenMetadata?.decimals}
 											/>,
-											<span key="percentage" {...styles.percentage()}>
+											<span key="percentage" {...styles.value()}>
 												{percentage.toFixed(2)}%
 											</span>,
 										],
@@ -2631,14 +2616,16 @@ function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 	return (
 		<span {...styles.infoLabel()}>
 			<span>{props.label}</span>
-			<span
-				{...styles.infoIcon()}
-				title={props.info}
-				role="img"
-				aria-label={props.info}
-			>
-				ⓘ
-			</span>
+			<Tooltip content={props.info} {...styles.infoTooltip()}>
+				<IconButton
+					aria-label={props.info}
+					scale="small"
+					style={{ color: 'inherit' }}
+					variant="tertiary"
+				>
+					<InfoCircle />
+				</IconButton>
+			</Tooltip>
 		</span>
 	)
 }
@@ -2662,8 +2649,7 @@ function ProcessedInBatchCell(
 				to="/receipt/$hash"
 				params={{ hash: props.batch.transactionHash }}
 				preload="intent"
-				{...cx(link(), linkHover(), transitionColors(), pressDown())}
-				title={`View checkpoint #${props.batch.index}`}
+				{...composed.batchLink}
 			>
 				#{props.batch.index}
 			</Link>
@@ -2681,13 +2667,7 @@ function LinkedTransactionHash(
 			to="/receipt/$hash"
 			params={{ hash: props.hash }}
 			preload="intent"
-			{...cx(
-				styles.hashLink({ prominent: props.prominent === true }),
-				pressDown(),
-				props.prominent && link(),
-				props.prominent && linkHover(),
-				props.prominent && transitionColors(),
-			)}
+			{...(props.prominent ? composed.txHashProminent : composed.txHash)}
 			title={props.hash}
 		>
 			<Midcut
@@ -2782,7 +2762,7 @@ function TransactionFeeCell(props: {
 	const feeDisplay = showUsdPrefix
 		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
 		: PriceFormatter.formatAmountShort(feeRaw)
-	return <span {...styles.tertiary()}>{feeDisplay}</span>
+	return <span {...styles.secondary()}>{feeDisplay}</span>
 }
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
@@ -2828,7 +2808,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const totalValue = calculateKnownEventsTotal(events)
 	if (totalValue === undefined || !showUsdPrefix)
 		return (
-			<span {...styles.tertiary()} title="No comparable payment total">
+			<span {...styles.placeholder()} title="No comparable payment total">
 				—
 			</span>
 		)
@@ -2837,7 +2817,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 		const value = transaction.value
 			? Hex.toBigInt(transaction.value as Hex.Hex)
 			: 0n
-		if (value === 0n) return <span {...styles.tertiary()}>—</span>
+		if (value === 0n) return <span {...styles.placeholder()}>—</span>
 		return (
 			<Amount.Base
 				value={value}
@@ -2878,49 +2858,51 @@ export function HistoryPagination(
 			: getHistoryStatePage(location.state)
 	return (
 		<div {...styles.pageNav()}>
-			<Link
-				to="."
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: undefined,
-					order: 'desc',
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage: 1,
-				})}
-				disabled={isFirst || isOnlyPage}
-				{...cx(styles.pageLink(), pressDown())}
-				title="First page"
-			>
-				<ChevronFirst {...styles.icon14()} />
-			</Link>
-			<Link
-				ref={previousRef}
-				to="."
-				preload="viewport"
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: navigation.previous?.cursor,
-					order: navigation.previous?.order,
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage:
-						currentPage === undefined
-							? undefined
-							: Math.max(1, currentPage - 1),
-				})}
-				disabled={!navigation.previous}
-				{...cx(styles.pageLink(), pressDown())}
-				title="Previous page"
-			>
-				<ChevronLeft {...styles.icon14()} />
-			</Link>
+			<Tooltip content="First page">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: undefined,
+						order: 'desc',
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage: 1,
+					})}
+					disabled={isFirst || isOnlyPage}
+					{...composed.historyPageLink}
+				>
+					<ChevronsLeft />
+				</Link>
+			</Tooltip>
+			<Tooltip content="Previous page">
+				<Link
+					ref={previousRef}
+					to="."
+					preload="viewport"
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: navigation.previous?.cursor,
+						order: navigation.previous?.order,
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage:
+							currentPage === undefined
+								? undefined
+								: Math.max(1, currentPage - 1),
+					})}
+					disabled={!navigation.previous}
+					{...composed.historyPageLink}
+				>
+					<ChevronLeft />
+				</Link>
+			</Tooltip>
 			<span {...styles.pageLabel()}>
 				<span {...styles.primary()}>
 					{currentPage === undefined
@@ -2937,47 +2919,49 @@ export function HistoryPagination(
 					</>
 				)}
 			</span>
-			<Link
-				ref={nextRef}
-				to="."
-				preload="viewport"
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: navigation.next?.cursor,
-					order: navigation.next?.order,
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage:
-						currentPage === undefined ? undefined : currentPage + 1,
-				})}
-				disabled={!navigation.next}
-				{...cx(styles.pageLink(), pressDown())}
-				title="Next page"
-			>
-				<ChevronRight {...styles.icon14()} />
-			</Link>
-			<Link
-				to="."
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: undefined,
-					order: 'asc',
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage: pageCountCapped ? undefined : pageCount,
-				})}
-				disabled={isLast || isOnlyPage}
-				{...cx(styles.pageLink(), pressDown())}
-				title="Last page"
-			>
-				<ChevronLast {...styles.icon14()} />
-			</Link>
+			<Tooltip content="Next page">
+				<Link
+					ref={nextRef}
+					to="."
+					preload="viewport"
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: navigation.next?.cursor,
+						order: navigation.next?.order,
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage:
+							currentPage === undefined ? undefined : currentPage + 1,
+					})}
+					disabled={!navigation.next}
+					{...composed.historyPageLink}
+				>
+					<ChevronRight />
+				</Link>
+			</Tooltip>
+			<Tooltip content="Last page">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: undefined,
+						order: 'asc',
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage: pageCountCapped ? undefined : pageCount,
+					})}
+					disabled={isLast || isOnlyPage}
+					{...composed.historyPageLink}
+				>
+					<ChevronsRight />
+				</Link>
+			</Tooltip>
 		</div>
 	)
 }
@@ -3041,24 +3025,20 @@ function HoldingsFooter(props: {
 			{pages > 1 && (
 				<div {...styles.holdingsPagination()}>
 					<div {...styles.pageNav()}>
-						<button
-							type="button"
+						<HoldingsPageButton
+							label="First page"
+							disabled={page <= 1}
 							onClick={() => onPageChange(1)}
-							disabled={page <= 1}
-							{...cx(styles.pageButton(), pressDown())}
-							title="First page"
 						>
-							<ChevronFirst {...styles.icon14()} />
-						</button>
-						<button
-							type="button"
+							<ChevronsLeft />
+						</HoldingsPageButton>
+						<HoldingsPageButton
+							label="Previous page"
+							disabled={page <= 1}
 							onClick={() => onPageChange(page - 1)}
-							disabled={page <= 1}
-							{...cx(styles.pageButton(), pressDown())}
-							title="Previous page"
 						>
-							<ChevronLeft {...styles.icon14()} />
-						</button>
+							<ChevronLeft />
+						</HoldingsPageButton>
 						<span {...styles.pageLabel()}>
 							<span {...styles.primary()}>
 								{Pagination.numFormat.format(page)}
@@ -3066,24 +3046,20 @@ function HoldingsFooter(props: {
 							{' of '}
 							{Pagination.numFormat.format(pages)}
 						</span>
-						<button
-							type="button"
+						<HoldingsPageButton
+							label="Next page"
+							disabled={page >= pages}
 							onClick={() => onPageChange(page + 1)}
-							disabled={page >= pages}
-							{...cx(styles.pageButton(), pressDown())}
-							title="Next page"
 						>
-							<ChevronRight {...styles.icon14()} />
-						</button>
-						<button
-							type="button"
+							<ChevronRight />
+						</HoldingsPageButton>
+						<HoldingsPageButton
+							label="Last page"
+							disabled={page >= pages}
 							onClick={() => onPageChange(pages)}
-							disabled={page >= pages}
-							{...cx(styles.pageButton(), pressDown())}
-							title="Last page"
 						>
-							<ChevronLast {...styles.icon14()} />
-						</button>
+							<ChevronsRight />
+						</HoldingsPageButton>
 					</div>
 					<Pagination.Count
 						totalItems={totalItems}
@@ -3092,29 +3068,42 @@ function HoldingsFooter(props: {
 				</div>
 			)}
 			{hasUnlisted && (
-				<div {...styles.unlistedRow({ divided: pages > 1 })}>
-					<button
-						type="button"
+				<div {...styles.unlistedRow()}>
+					<Button
+						{...styles.unlistedToggle()}
 						onClick={onToggleShowAll}
-						{...cx(styles.unlistedToggle(), transitionColors())}
+						scale="small"
+						variant="tertiary"
 					>
-						{showAll ? (
-							<>
-								<EyeOffIcon {...styles.icon14()} />
-								Hide {unlistedCount} unverified{' '}
-								{unlistedCount === 1 ? 'token' : 'tokens'}
-							</>
-						) : (
-							<>
-								<EyeIcon {...styles.icon14()} />
-								Show {unlistedCount} unverified{' '}
-								{unlistedCount === 1 ? 'token' : 'tokens'}
-							</>
-						)}
-					</button>
+						{showAll ? <EyeOff /> : <Eye />}
+						{showAll ? 'Hide' : 'Show'} {unlistedCount} unverified{' '}
+						{unlistedCount === 1 ? 'token' : 'tokens'}
+					</Button>
 				</div>
 			)}
 		</div>
+	)
+}
+
+function HoldingsPageButton(props: {
+	label: string
+	disabled: boolean
+	onClick: () => void
+	children: React.ReactElement
+}): React.JSX.Element {
+	return (
+		<Tooltip content={props.label}>
+			<IconButton
+				{...styles.pagerButton()}
+				aria-label={props.label}
+				disabled={props.disabled}
+				onClick={props.onClick}
+				scale="small"
+				variant="secondary"
+			>
+				{props.children}
+			</IconButton>
+		</Tooltip>
 	)
 }
 
@@ -3125,24 +3114,25 @@ function FilterIndicator(props: {
 	const { account, tokenAddress } = props
 	return (
 		<div {...styles.filter()}>
-			<span {...styles.tertiary()}>Filtered:</span>
+			<span {...styles.secondary()}>Filtered:</span>
 			<Link
 				to="/address/$address"
 				params={{ address: account }}
-				{...cx(styles.filterAccount(), link(), pressDown())}
+				{...composed.filterAccountLink}
 				title={account}
 			>
 				<Midcut value={account} prefix="0x" />
 			</Link>
-			<Link
-				to="/address/$address"
-				params={{ address: tokenAddress }}
-				search={{ tab: 'transfers' }}
-				{...cx(styles.tertiary(), pressDown())}
-				title="Clear filter"
-			>
-				<XIcon {...styles.clearIcon()} />
-			</Link>
+			<Tooltip content="Clear filter">
+				<Link
+					to="/address/$address"
+					params={{ address: tokenAddress }}
+					search={{ tab: 'transfers' }}
+					{...composed.clearFilterLink}
+				>
+					<Close />
+				</Link>
+			</Tooltip>
 		</div>
 	)
 }
@@ -3198,7 +3188,7 @@ function StreamedPaymentReceipt(props: {
 				<span {...styles.rowIndex({ style: { minWidth: `${digits}ch` } })}>
 					↓
 				</span>
-				<span {...cx(styles.onChainLabel(), link())}>on-chain</span>
+				<span {...styles.onChainLabel()}>on-chain</span>
 				{transaction.knownEvents
 					.filter(
 						(e) => e.type === 'settle channel' || e.type === 'close channel',

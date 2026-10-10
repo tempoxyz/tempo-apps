@@ -1,9 +1,9 @@
 import type { ErrorComponentProps } from '@tanstack/react-router'
-import { Button, IconButton, style } from '@tempoxyz/ds/platform'
+import { Button, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
+import { CopyButton } from '#comps/CopyButton'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
-import { useCopy } from '#lib/hooks'
 import {
 	captureEvent,
 	getNavigationId,
@@ -11,7 +11,6 @@ import {
 	ProfileEvents,
 } from '#lib/profiling'
 import { pressDown } from '#styles/explorer'
-import CopyIcon from '~icons/lucide/copy'
 
 export class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
@@ -56,7 +55,11 @@ export class ErrorBoundary extends React.Component<
 					{this.state.error?.message && (
 						<div {...styles.details()}>
 							<pre {...styles.message()}>{this.state.error.message}</pre>
-							<CopyButton text={this.state.error.message} />
+							<CopyButton
+								value={this.state.error.message}
+								ariaLabel="Copy error details"
+								className={styles.copy().className}
+							/>
 						</div>
 					)}
 					<Button
@@ -72,26 +75,6 @@ export class ErrorBoundary extends React.Component<
 			</main>
 		)
 	}
-}
-
-function CopyButton({ text }: { text: string }) {
-	const copy = useCopy()
-	return (
-		<>
-			{copy.notifying && <span {...styles.copied()}>copied</span>}
-			{/* TDS IconButton owns the size and focus ring; the local style only
-			    places it in the corner of the details box. */}
-			<IconButton
-				aria-label="Copy error details"
-				onClick={() => copy.copy(text)}
-				scale="small"
-				variant="tertiary"
-				{...styles.copy()}
-			>
-				<CopyIcon />
-			</IconButton>
-		</>
-	)
 }
 
 namespace styles {
@@ -156,15 +139,7 @@ namespace styles {
 		whiteSpace: 'pre-wrap',
 	})
 
-	export const copied = style({
-		bottom: '12',
-		color: 'content.secondary',
-		position: 'absolute',
-		right: '40',
-		typography: 'body.b3',
-		whiteSpace: 'nowrap',
-	})
-
+	// Placement only, in the corner of the details box.
 	export const copy = style({
 		bottom: '4',
 		position: 'absolute',

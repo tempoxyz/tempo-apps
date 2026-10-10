@@ -1,4 +1,6 @@
-import { style, variants } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds/platform'
+import { cx } from 'zyzz'
+import { link, linkHover } from '#styles/explorer'
 
 // Route components are code-split into modules that zyzz does not compile,
 // so the policy route's styles live here.
@@ -57,62 +59,17 @@ export namespace styles {
 		gap: '8',
 	})
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const typeLabel = style({ textTransform: 'capitalize' })
 
-	export const typeBadge = variants({
-		base: {
-			borderRadius: '3xs',
-			paddingBlock: '2',
-			paddingInline: '8',
-			textTransform: 'capitalize',
-			typography: 'body.b3',
-		},
-		defaultVariants: { tone: 'neutral' },
-		variants: {
-			tone: {
-				negative: {
-					backgroundColor: 'container.negative',
-					color: 'content.negative',
-				},
-				neutral: {
-					backgroundColor: 'container.regular',
-					color: 'content.primary',
-				},
-				positive: {
-					backgroundColor: 'container.positive',
-					color: 'content.positive',
-				},
-			},
-		},
-	})
+	export const builtIn = style({ color: 'content.secondary' })
 
+	// Touch devices keep 16px text so iOS does not zoom on focus.
 	export const search = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-	})
-
-	// Mirrors TDS TextInput (filled) at the small button height.
-	export const searchInput = style({
-		backgroundColor: 'component.input.primary.fill',
-		borderColor: 'transparent !custom',
-		borderRadius: '2xs',
-		borderWidth: 'regular',
-		color: 'content.primary',
-		height: '32',
-		paddingInline: '12',
-		typography: 'mono.inline',
-		width: '220px !custom',
-		'::placeholder': { color: 'content.tertiary' },
-		':focus': { borderColor: 'border.focus' },
-	})
-
-	export const status = variants({
-		variants: {
-			tone: {
-				negative: { color: 'content.negative' },
-				positive: { color: 'content.positive' },
-			},
+		selectors: {
+			'& input::placeholder': { color: 'content.secondary' },
+		},
+		'@media (pointer: coarse)': {
+			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
 	})
 
@@ -123,4 +80,10 @@ export namespace styles {
 		display: 'flex',
 		gap: '4',
 	})
+}
+
+// The route file cannot call `cx` (zyzz does not compile its chunks), so the
+// link recipe composition is resolved here.
+export namespace composed {
+	export const textLink = cx(link(), linkHover())
 }

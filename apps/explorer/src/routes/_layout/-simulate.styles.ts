@@ -1,7 +1,7 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style, variants } from '@tempoxyz/ds/platform'
 
 // Route components are code-split into modules that zyzz does not compile,
-// so the route's styles live here.
+// so the route's styles live here, and route-level toggles are variants.
 
 export namespace styles {
 	export const page = style({
@@ -20,7 +20,7 @@ export namespace styles {
 		columnGap: '16',
 		display: 'flex',
 		flexWrap: 'wrap',
-		marginBottom: '12',
+		marginBottom: '16',
 		rowGap: '8',
 	})
 
@@ -32,7 +32,7 @@ export namespace styles {
 	})
 
 	export const summary = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		flex: 1,
 		fontVariantNumeric: 'tabular-nums',
 		margin: 'none',
@@ -43,19 +43,31 @@ export namespace styles {
 		whiteSpace: 'nowrap',
 	})
 
-	export const shortcut = style({ opacity: 0.7, typography: 'body.b3' })
-
-	export const panes = style({
-		alignItems: 'start',
-		display: 'grid',
-		gap: '16',
-		minHeight: '560px !custom',
-		minWidth: '0 !custom',
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
 	})
 
-	export const panesSplit = style({
-		'@media (width >= 1100px)': {
-			gridTemplateColumns: 'minmax(360px, 420px) minmax(0, 1fr)',
+	export const panes = variants({
+		base: {
+			alignItems: 'start',
+			display: 'grid',
+			gap: '16',
+			minHeight: '560px !custom',
+			minWidth: '0 !custom',
+		},
+		defaultVariants: { split: false },
+		variants: {
+			split: {
+				false: {},
+				true: {
+					'@media (width >= 1100px)': {
+						gridTemplateColumns: 'minmax(360px, 420px) minmax(0, 1fr)',
+					},
+				},
+			},
 		},
 	})
 
@@ -71,22 +83,33 @@ export namespace styles {
 		overflow: 'hidden',
 	})
 
-	export const evidence = style({
-		display: 'flex',
-		flexDirection: 'column',
-		minWidth: '0 !custom',
-		transitionDuration: '150ms',
-		transitionProperty: 'opacity',
-		transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+	// Only the evidence dims when inputs change. Dimming the header too made
+	// every shared link's first impression a greyed-out screen.
+	export const evidence = variants({
+		base: {
+			display: 'flex',
+			flexDirection: 'column',
+			minWidth: '0 !custom',
+			transitionDuration: '150ms',
+			transitionProperty: 'opacity',
+			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+		},
+		defaultVariants: { stale: false },
+		variants: {
+			stale: { false: {}, true: { opacity: 0.6 } },
+		},
 	})
 
-	export const stale = style({ opacity: 0.6 })
+	// A tab panel takes focus; the card clips overflow, so the ring sits inside.
+	export const panel = style({
+		minWidth: '0 !custom',
+		':focus-visible': {
+			outline: '2px solid currentColor !custom',
+			outlineOffset: '-2px !custom',
+		},
+	})
 
-	export const panel = style({ minWidth: '0 !custom' })
-
-	export const column = style({ display: 'flex', flexDirection: 'column' })
-
-	export const stack = style({
+	export const column = style({
 		display: 'flex',
 		flexDirection: 'column',
 		minWidth: '0 !custom',
@@ -104,15 +127,11 @@ export namespace styles {
 	})
 
 	export const emptyTitle = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b2',
 	})
 
-	export const emptyPreview = style({
-		opacity: 0.4,
-		pointerEvents: 'none',
-		userSelect: 'none',
-	})
+	export const emptyPreview = style({ opacity: 0.4, userSelect: 'none' })
 
 	export const emptyBody = style({
 		display: 'flex',
@@ -122,7 +141,7 @@ export namespace styles {
 	})
 
 	export const emptyText = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		margin: 'none',
 		maxWidth: '520px !custom',
 		typography: 'body.b2',

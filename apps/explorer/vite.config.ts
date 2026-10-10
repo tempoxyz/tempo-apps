@@ -18,6 +18,17 @@ import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 const [, , , ...args] = process.argv
 
+// The zyzz compiler adds `zyzz/runtime` imports after Vite scans dependencies,
+// and TDS entry points sit behind lazily loaded routes. Discovering either
+// mid-session re-bundles React and breaks SSR, so pre-bundle them up front.
+const prebundled = [
+	'zyzz/runtime',
+	'@tempoxyz/ds/brand/logos',
+	'@tempoxyz/ds/core',
+	'@tempoxyz/ds/platform',
+	'@tempoxyz/ds/platform/icons',
+]
+
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
 	const {
@@ -75,12 +86,10 @@ export default defineConfig((config) => {
 	)
 
 	return {
-		// The zyzz compiler adds `zyzz/runtime` imports after Vite scans
-		// dependencies. Discovering it mid-session re-bundles React and breaks SSR.
-		optimizeDeps: { include: ['zyzz/runtime', '@tempoxyz/ds/platform'] },
+		optimizeDeps: { include: prebundled },
 		environments: {
 			ssr: {
-				optimizeDeps: { include: ['zyzz/runtime', '@tempoxyz/ds/platform'] },
+				optimizeDeps: { include: prebundled },
 			},
 		},
 		resolve: {

@@ -1,4 +1,6 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style, vars } from '@tempoxyz/ds/platform'
+import { cx } from 'zyzz'
+import { link, linkHover } from '#styles/explorer'
 
 // Route components are code-split into modules that zyzz does not compile,
 // so the Fee AMM route's styles live here.
@@ -75,14 +77,6 @@ export namespace styles {
 		gap: '8',
 	})
 
-	export const filteredAddress = style({
-		typography: 'mono.inline',
-		wordBreak: 'break-all',
-	})
-
-	// CopyButton is a TDS IconButton, which owns its size, fill, and radius.
-	export const copyLink = style({ typography: 'body.b3' })
-
 	export const form = style({
 		alignItems: 'flex-end',
 		display: 'flex',
@@ -90,59 +84,41 @@ export namespace styles {
 		gap: '12',
 	})
 
+	// TextInput caps itself at 320px; addresses need the full row. Touch
+	// devices keep 16px text so iOS does not zoom on focus.
 	export const field = style({
-		display: 'flex',
 		flex: 1,
-		flexDirection: 'column',
-		gap: '8',
 		minWidth: '220px !custom',
+		selectors: { '& > div': { width: '100% !custom' } },
+		'@media (pointer: coarse)': {
+			selectors: { '& input': { fontSize: '16px !custom' } },
+		},
 	})
 
-	export const label = style({
-		color: 'content.tertiary',
-		typography: 'body.b2',
-	})
-
-	// Mirrors TDS TextInput (filled) at the medium button height. Mobile keeps
-	// 16px text so iOS does not zoom the page on focus.
-	export const input = style({
-		backgroundColor: 'component.input.primary.fill',
-		borderColor: 'transparent !custom',
-		borderRadius: 'xs',
-		borderWidth: 'regular',
-		color: 'content.primary',
-		fontFamily: '"JetBrains Mono", monospace',
-		fontSize: '16px',
-		height: '40',
-		lineHeight: '22px',
-		minWidth: '0px !custom',
-		paddingInline: '16',
-		width: '100% !custom',
-		'::placeholder': { color: 'content.tertiary' },
-		':focus': { borderColor: 'border.focus' },
-		'@media (width >= 640px)': { typography: 'mono.inline' },
+	export const control = style({
+		'::placeholder': { color: 'content.secondary' },
 		selectors: {
-			'&[aria-invalid="true"]': { borderColor: 'border.negative' },
+			'&[aria-invalid="true"]': {
+				boxShadow: `inset 0 0 0 1px ${vars.color.border.negative} !custom`,
+			},
 		},
 	})
 
 	// TDS Button sizes SVG children itself only in IconButton.
 	export const buttonIcon = style({ height: '16', width: '16' })
 
-	export const clear = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '8',
-		paddingBlock: '8',
-		typography: 'body.b2',
-	})
-
-	export const icon = style({ height: '14px !custom', width: '14px !custom' })
-
 	export const filterError = style({
-		color: 'content.negative',
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '4',
 		typography: 'body.b2',
 		width: '100% !custom',
+	})
+
+	export const filterErrorIcon = style({
+		color: 'content.negative',
+		flexShrink: 0,
 	})
 
 	export const summary = style({
@@ -158,14 +134,8 @@ export namespace styles {
 		paddingInline: '16',
 	})
 
-	export const summaryNote = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-	})
-
 	export const meta = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
@@ -213,21 +183,12 @@ export namespace styles {
 
 	export const limit = style({
 		alignItems: 'center',
-		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
-		typography: 'body.b3',
 	})
 
-	// Mirrors TDS NativeSelect at a compact height.
-	export const select = style({
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: '2xs',
-		borderWidth: 'regular',
-		color: 'content.primary',
-		height: '32',
-		paddingInline: '8',
+	export const limitLabel = style({
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
 
@@ -239,7 +200,31 @@ export namespace styles {
 	})
 
 	export const footnote = style({
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		typography: 'body.b3',
 	})
+}
+
+// Compositions with the shared link recipes. The route file cannot call `cx`
+// (zyzz does not compile its chunks), so they are resolved here.
+
+const filteredAddress = style({
+	typography: 'mono.inline',
+	wordBreak: 'break-all',
+})
+
+const clearFilter = style({
+	alignItems: 'center',
+	display: 'inline-flex',
+	gap: '8',
+	paddingBlock: '8',
+	typography: 'body.b2',
+})
+
+export namespace composed {
+	export const textLink = cx(link(), linkHover())
+
+	export const filteredAddressLink = cx(filteredAddress(), link(), linkHover())
+
+	export const clearFilterLink = cx(clearFilter(), link(), linkHover())
 }

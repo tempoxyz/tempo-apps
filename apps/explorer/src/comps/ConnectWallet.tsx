@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { IconButton, Button as TdsButton, style } from '@tempoxyz/ds/platform'
+import {
+	Avatar,
+	Button,
+	IconButton,
+	StatusIndicator,
+	Tooltip,
+	style,
+} from '@tempoxyz/ds/platform'
+import { LogOut, Wallet } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
 import {
@@ -21,10 +29,8 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
-import { link, linkHover, pressDown, pulse } from '#styles/explorer'
+import { animatePulse, link, linkHover, pressDown } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
-import LucideLogOut from '~icons/lucide/log-out'
-import LucideWalletCards from '~icons/lucide/wallet-cards'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -87,8 +93,6 @@ function ConnectWalletInner({
 			<div {...styles.connectors()}>
 				{prioritizedConnectors.map((connector) => (
 					<Button
-						type="button"
-						variant="default"
 						key={connector.id}
 						onClick={() => {
 							setPendingId(connector.id)
@@ -99,24 +103,20 @@ function ConnectWalletInner({
 								},
 							)
 						}}
-						className={
-							cx(
-								styles.connect(),
-								pendingId === connector.id &&
-									connect.isPending &&
-									styles.pending(),
-							).className
-						}
-					>
-						{connector.icon ? (
-							<img
-								{...styles.connectorIcon()}
-								src={connector.icon}
-								alt={connector.name}
-							/>
-						) : (
-							<LucideWalletCards {...styles.walletIcon()} />
+						scale="small"
+						variant="secondary"
+						{...cx(
+							styles.action(),
+							pendingId === connector.id && connect.isPending && animatePulse(),
 						)}
+					>
+						<Avatar
+							alt=""
+							aria-hidden
+							fallback={<Wallet />}
+							scale="16"
+							src={connector.icon}
+						/>
 						{connector.name && connector.name !== 'Injected'
 							? `Connect ${connector.name}`
 							: 'Connect Wallet'}
@@ -131,8 +131,9 @@ function ConnectWalletInner({
 			{TEMPO_CHAIN_ID !== 4217 && <FundAccountButton />}
 			{showAddChain && !isSupported && (
 				<Button
-					className={styles.addChain().className}
-					variant="accent"
+					scale="small"
+					variant="primary"
+					{...styles.action()}
 					onClick={() =>
 						switchChain.mutate({
 							chainId: chains[0].id,
@@ -149,9 +150,9 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<span {...styles.added()}>
-					Added Tempo to {connector?.name ?? 'Wallet'}!
-				</span>
+				<StatusIndicator tone="positive">
+					Added Tempo to {connector?.name ?? 'Wallet'}
+				</StatusIndicator>
 			)}
 			<SignOut />
 		</div>
@@ -228,7 +229,7 @@ function ConnectedAddress() {
 				<span {...styles.addressTail()}>{address.slice(-10)}</span>
 			</Link>
 			{totalUsd !== null && (
-				<span {...styles.balance()}>
+				<span>
 					(${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })})
 				</span>
 			)}
@@ -290,7 +291,7 @@ function FundAccountButton() {
 	if (!address) return null
 
 	if (status === 'done') {
-		return <span {...styles.funded()}>Funded!</span>
+		return <StatusIndicator tone="positive">Funded</StatusIndicator>
 	}
 
 	const isPending = status === 'funding' || status === 'setting-fee'
@@ -302,22 +303,17 @@ function FundAccountButton() {
 				: 'Fund'
 
 	return (
-		<button
-			type="button"
-			title="Fund from faucet and set fee token"
-			disabled={isPending}
-			{...cx(
-				styles.walletAction(),
-				styles.fund(),
-				isPending && styles.pending(),
-				pressDown(),
-			)}
-			onClick={handleFund}
-		>
-			<span {...styles.bracket()}>[</span>
-			<span {...styles.fundLabel()}>{label}</span>
-			<span {...styles.bracket()}>]</span>
-		</button>
+		<Tooltip content="Fund from faucet and set fee token">
+			<Button
+				disabled={isPending}
+				onClick={handleFund}
+				scale="small"
+				variant="secondary"
+				{...cx(styles.action(), isPending && animatePulse())}
+			>
+				{label}
+			</Button>
+		</Tooltip>
 	)
 }
 
@@ -326,48 +322,17 @@ function SignOut() {
 	const { connector } = useConnection()
 
 	return (
-		<IconButton
-			aria-label="Disconnect"
-			onClick={() => disconnect.mutate({ connector })}
-			scale="small"
-			title="Disconnect"
-			variant="tertiary"
-			{...cx(styles.signOut(), pressDown())}
-		>
-			<LucideLogOut />
-		</IconButton>
-	)
-}
-
-export function Button(
-	props: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> & {
-		className?: string
-		disabled?: boolean
-		static?: boolean
-		variant?: 'accent' | 'default' | 'destructive'
-		render?: React.ReactElement
-	},
-) {
-	const {
-		className,
-		disabled,
-		render,
-		static: static_,
-		variant,
-		...rest
-	} = props
-	return (
-		<TdsButton
-			type="button"
-			{...rest}
-			// TDS Button forwards `render` to its Base UI button.
-			{...(render ? { render } : {})}
-			disabled={disabled || static_}
-			scale="small"
-			// TDS has no negative button, so destructive actions use secondary.
-			variant={variant === 'accent' ? 'primary' : 'secondary'}
-			className={className}
-		/>
+		<Tooltip content="Disconnect">
+			<IconButton
+				aria-label="Disconnect"
+				onClick={() => disconnect.mutate({ connector })}
+				scale="small"
+				variant="tertiary"
+				{...cx(styles.signOut(), pressDown())}
+			>
+				<LogOut />
+			</IconButton>
+		</Tooltip>
 	)
 }
 
@@ -394,38 +359,15 @@ namespace styles {
 		gap: '8',
 	})
 
-	// TDS Button owns size, fill, radius, and type; only placement is added.
-	export const connect = style({ flexShrink: 0 })
-
-	export const pending = style({
-		animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
-	})
-
-	export const connectorIcon = style({
-		borderRadius: '2px !custom',
-		height: '12',
-		width: '12',
-	})
-
-	export const walletIcon = style({ height: '12', width: '12' })
+	export const action = style({ flexShrink: 0 })
 
 	export const connected = style({
-		alignItems: 'stretch',
+		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
 		gap: '8',
 		justifyContent: 'flex-end',
 		minWidth: '0px !custom',
-	})
-
-	export const addChain = style({ width: 'fit-content !custom' })
-
-	export const added = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		display: 'flex',
-		typography: 'body.b3',
-		whiteSpace: 'nowrap',
 	})
 
 	export const address = style({
@@ -459,38 +401,6 @@ namespace styles {
 
 	export const addressTail = style({ flexShrink: 0 })
 
-	export const balance = style({ color: 'content.tertiary' })
-
-	export const funded = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		display: 'flex',
-		gap: '4',
-		typography: 'body.b3',
-	})
-
-	export const walletAction = style({
-		color: 'content.secondary',
-		cursor: 'pointer',
-		height: '100% !custom',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-	})
-
-	export const fund = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '4',
-	})
-
-	export const bracket = style({ color: 'content.tertiary' })
-
-	export const fundLabel = style({
-		marginBlock: 'auto !custom',
-		textAlign: 'center',
-		typography: 'body.b3Strong',
-	})
-
-	// TDS IconButton owns size, color, radius, and focus ring.
 	export const signOut = style({
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'container.regular' },

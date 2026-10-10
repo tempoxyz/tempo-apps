@@ -1,12 +1,13 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { style, vars } from '@tempoxyz/ds/platform'
+import { TempoLogoWordmark } from '@tempoxyz/ds/brand/logos'
+import { StatusIndicator, style, vars } from '@tempoxyz/ds/platform'
+import { Document, Download, Share } from '@tempoxyz/ds/platform/icons'
 import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
 import { cx } from 'zyzz'
 import { Amount } from '#comps/Amount'
 import { CopyButton } from '#comps/CopyButton'
 import { Midcut } from '#comps/Midcut'
-import { ReceiptMark } from '#comps/ReceiptMark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -25,12 +26,15 @@ import {
 	isUsdPricedToken,
 } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
-import { link, pressDown, transitionColors } from '#styles/explorer'
+import {
+	link,
+	linkHover,
+	mono,
+	pressDown,
+	transitionColors,
+} from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
 import BracesIcon from '~icons/lucide/braces'
-import DownloadIcon from '~icons/lucide/download'
-import FileTextIcon from '~icons/lucide/file-text'
-import ShareIcon from '~icons/lucide/share-2'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -50,7 +54,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 		feeBreakdown = [],
 		exportSearch = '',
 	} = props
-	const copyShare = useCopy({ timeout: 2_000 })
+	const copyShare = useCopy({ message: 'Link copied' })
 	const { isTokenListed } = useTokenListMembership()
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
@@ -86,45 +90,58 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 			<div data-receipt {...styles.card()}>
 				<div {...styles.head()}>
 					<div {...styles.mark()}>
-						<ReceiptMark />
+						<TempoLogoWordmark
+							aria-label="Tempo"
+							height={16}
+							width={73}
+							{...styles.wordmark()}
+						/>
 					</div>
 					<div {...styles.fields()}>
 						<div {...styles.field()}>
-							<span {...styles.tertiary()}>Block</span>
+							<span {...styles.label()}>Block</span>
 							<Link
 								to="/block/$id"
 								params={{ id: blockNumber.toString() }}
-								{...cx(styles.blockLink(), link(), pressDown())}
+								{...cx(styles.blockLink(), link(), linkHover())}
 							>
 								{String(blockNumber)}
 							</Link>
 						</div>
 						<div {...cx(styles.field(), styles.fieldGap())}>
-							<span {...styles.fieldLabel()}>Sender</span>
+							<span {...styles.label()}>Sender</span>
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
-								{...cx(styles.hashLink(), link(), pressDown())}
+								{...cx(
+									styles.hashLink(),
+									mono(),
+									link(),
+									linkHover(),
+									pressDown(),
+								)}
 							>
 								<Midcut value={sender} prefix="0x" align="end" min={4} />
 							</Link>
 						</div>
 						<div {...cx(styles.field(), styles.fieldGap(), styles.centered())}>
-							<span {...styles.fieldLabel()}>Hash</span>
+							<span {...styles.label()}>Hash</span>
 							<div {...styles.hashValue()}>
 								<Link
 									to="/tx/$hash"
 									params={{ hash }}
-									{...cx(styles.hashLink(), link(), pressDown())}
+									{...cx(
+										styles.hashLink(),
+										mono(),
+										link(),
+										linkHover(),
+										pressDown(),
+									)}
 									title={hash}
 								>
 									<Midcut value={hash} prefix="0x" align="end" min={4} />
 								</Link>
-								<CopyButton
-									value={hash}
-									ariaLabel="Copy transaction hash"
-									className={styles.copyHash().className}
-								/>
+								<CopyButton value={hash} ariaLabel="Copy transaction hash" />
 							</div>
 						</div>
 						<ClientOnly
@@ -133,9 +150,9 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 							<Receipt.TimeRows timestamp={timestamp} />
 						</ClientOnly>
 						{status === 'reverted' && (
-							<div {...styles.field()}>
-								<span {...styles.tertiary()}>Status</span>
-								<span {...styles.failed()}>Failed</span>
+							<div {...cx(styles.field(), styles.centered())}>
+								<span {...styles.label()}>Status</span>
+								<StatusIndicator tone="negative">Failed</StatusIndicator>
 							</div>
 						)}
 					</div>
@@ -232,7 +249,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 
 																	return (
 																		<div key={key} {...styles.noteItem()}>
-																			<div {...styles.fieldLabel()}>
+																			<div {...styles.label()}>
 																				{note.kind === 'time' ? (
 																					<ClientOnly fallback="Time (UTC)">
 																						{note.label}
@@ -291,7 +308,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 												key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
 												{...styles.feeRow()}
 											>
-												<span {...styles.tertiary()}>
+												<span {...styles.label()}>
 													Fee{' '}
 													{item.symbol && (
 														<span>
@@ -300,14 +317,12 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 																<Link
 																	to="/token/$address"
 																	params={{ address: item.token }}
-																	{...cx(styles.positive(), pressDown())}
+																	{...cx(link(), linkHover())}
 																>
 																	{item.symbol}
 																</Link>
 															) : (
-																<span {...styles.positive()}>
-																	{item.symbol}
-																</span>
+																item.symbol
 															)}
 															)
 														</span>
@@ -321,7 +336,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 									})
 								: showSingleFee && (
 										<div {...cx(styles.field(), styles.centered())}>
-											<span {...styles.tertiary()}>Fee</span>
+											<span {...styles.label()}>Fee</span>
 											<span {...styles.end()}>
 												{feeDisplay ??
 													(showUsdFeePrefix
@@ -358,8 +373,8 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 							onClick={() => void handleShare()}
 							{...cx(styles.action(), transitionColors(), pressDown())}
 						>
-							<ShareIcon {...styles.actionIcon()} />
-							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
+							<Share {...styles.actionIcon()} />
+							<span>Share</span>
 						</button>
 						<Receipt.ExportLink
 							hash={hash}
@@ -380,7 +395,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						{...cx(styles.viewTransaction(), pressDown())}
+						{...cx(styles.viewTransaction(), transitionColors(), pressDown())}
 					>
 						<span>View transaction</span>
 						<span aria-hidden="true">→</span>
@@ -404,16 +419,16 @@ export namespace Receipt {
 		return (
 			<>
 				<div {...styles.field()}>
-					<span {...styles.tertiary()}>Date</span>
+					<span {...styles.label()}>Date</span>
 					<time dateTime={iso} {...styles.end()}>
 						{date}
 					</time>
 				</div>
 				<div {...styles.field()}>
-					<span {...styles.tertiary()}>Time</span>
+					<span {...styles.label()}>Time</span>
 					<time dateTime={iso} {...styles.end()}>
 						{time.time} {time.timezone}
-						<span {...styles.tertiary()}>{time.offset}</span>
+						<span {...styles.label()}>{time.offset}</span>
 					</time>
 				</div>
 			</>
@@ -458,7 +473,7 @@ export namespace Receipt {
 				<Link
 					to="/block/$id"
 					params={{ id: note.id }}
-					{...cx(link(), pressDown())}
+					{...cx(link(), linkHover())}
 				>
 					{BigInt(note.id).toLocaleString()}
 				</Link>
@@ -468,7 +483,7 @@ export namespace Receipt {
 				<Link
 					to="/tx/$hash"
 					params={{ hash: note.hash }}
-					{...cx(styles.noteHash(), link(), pressDown())}
+					{...cx(styles.noteHash(), mono(), link(), linkHover(), pressDown())}
 					title={note.hash}
 				>
 					<Midcut value={note.hash} prefix="0x" min={4} />
@@ -522,11 +537,11 @@ export namespace Receipt {
 		const { hash, format, exportSearch = '' } = props
 		const icon =
 			format === 'pdf' ? (
-				<DownloadIcon {...styles.actionIcon()} />
+				<Download {...styles.actionIcon()} />
 			) : format === 'txt' ? (
-				<FileTextIcon {...styles.actionIcon()} />
+				<Document {...styles.actionIcon()} />
 			) : (
-				<BracesIcon {...styles.actionIcon()} />
+				<BracesIcon aria-hidden {...styles.actionIcon()} />
 			)
 
 		return (
@@ -576,6 +591,13 @@ namespace styles {
 
 	export const mark = style({ flexShrink: '0 !custom' })
 
+	// The brand artwork hard-codes a black fill.
+	export const wordmark = style({
+		color: 'content.primary',
+		display: 'block',
+		selectors: { '& path': { fill: 'currentColor !custom' } },
+	})
+
 	export const fields = style({
 		display: 'flex',
 		flex: 1,
@@ -595,10 +617,8 @@ namespace styles {
 
 	export const centered = style({ alignItems: 'center' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
-
-	export const fieldLabel = style({
-		color: 'content.tertiary',
+	export const label = style({
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 	})
 
@@ -610,12 +630,12 @@ namespace styles {
 	export const hashLink = style({
 		display: 'flex',
 		flex: 1,
-		fontFamily: '"JetBrains Mono", monospace',
 		justifyContent: 'flex-end',
 		minWidth: '0 !custom',
 		textAlign: 'right',
 	})
 
+	// The descendant selector outranks CopyButton's own display.
 	export const hashValue = style({
 		alignItems: 'center',
 		display: 'flex',
@@ -623,17 +643,7 @@ namespace styles {
 		gap: '4',
 		justifyContent: 'flex-end',
 		minWidth: '0 !custom',
-	})
-
-	// CopyButton sets its own display, so the print rule needs !important.
-	export const copyHash = style({
-		flexShrink: '0 !custom',
-		'@media print': { display: 'none !important' },
-	})
-
-	export const failed = style({
-		color: 'content.negative',
-		typography: 'body.b3',
+		'@media print': { selectors: { '& > button': { display: 'none' } } },
 	})
 
 	export const divider = style({
@@ -673,7 +683,7 @@ namespace styles {
 
 	export const eventLine = style({
 		alignItems: 'flex-start',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexDirection: 'row',
 		flexGrow: 1,
@@ -683,10 +693,10 @@ namespace styles {
 
 	export const eventCounter = style({
 		alignItems: 'center',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		flexShrink: '0 !custom',
-		minWidth: '20px !custom',
+		minWidth: '20',
 		'::before': { content: 'counter(event) "."' },
 	})
 
@@ -733,11 +743,7 @@ namespace styles {
 
 	export const noteValue = style({ flex: 1, minWidth: '0 !custom' })
 
-	export const noteHash = style({
-		display: 'flex',
-		fontFamily: '"JetBrains Mono", monospace',
-		minWidth: '0 !custom',
-	})
+	export const noteHash = style({ display: 'flex', minWidth: '0 !custom' })
 
 	export const totals = style({
 		display: 'flex',
@@ -755,8 +761,6 @@ namespace styles {
 		gap: '8',
 		justifyContent: 'space-between',
 	})
-
-	export const positive = style({ color: 'content.positive' })
 
 	export const feeAmount = style({
 		alignItems: 'center',
@@ -818,8 +822,9 @@ namespace styles {
 	})
 
 	export const actionIcon = style({
-		height: '13px !custom',
-		width: '13px !custom',
+		flexShrink: '0 !custom',
+		height: '16',
+		width: '16',
 	})
 
 	export const viewTransaction = style({
@@ -829,15 +834,12 @@ namespace styles {
 		borderBottomRightRadius: 'xs',
 		borderColor: 'line.secondary',
 		borderWidth: 'regular',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'center',
 		marginTop: '-1px !custom',
 		padding: '12',
-		transitionDuration: '100ms',
-		transitionProperty: 'background-color, color',
-		transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
 		typography: 'body.b2',
 		'@media (hover: hover)': {
 			':hover': {

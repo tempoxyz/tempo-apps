@@ -15,7 +15,7 @@ export namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const title = style({ color: 'content.tertiary' })
+	export const title = style({ color: 'content.secondary' })
 
 	export const examples = style({
 		display: 'flex',
@@ -35,7 +35,7 @@ export namespace styles {
 
 	export const exampleLabel = style({
 		backgroundColor: 'background.secondary',
-		color: 'content.tertiary',
+		color: 'content.secondary',
 		paddingBlock: '8',
 		paddingInline: '16',
 		typography: 'body.b3',
