@@ -42,10 +42,6 @@
 		// AI Search instance id within the namespace. Must already exist and
 		// be created after 2026-04-16 to have built-in storage support.
 		"AI_SEARCH_INSTANCE_ID": "tempo-global",
-		// Public MCP endpoint URL for the AI Search instance above. We
-		// transparently proxy mcp.tempo.xyz -> this upstream so clients
-		// connect to a stable branded URL instead of the opaque hostname.
-		"AI_SEARCH_MCP_URL": "https://99c10de8-0264-4978-8212-176265f5de96.search.ai.cloudflare.com/mcp",
 		"PUBLIC_MCP_ENDPOINT": "https://mcp.tempo.xyz/",
 		// PostHog host for MCP analytics. Set POSTHOG_PROJECT_API_KEY as a
 		// Worker secret to enable event capture.
@@ -56,7 +52,7 @@
 			{
 				"id": "tempo",
 				"base": "https://tempo.xyz/developers",
-				"description": "Tempo network, protocol, and integration documentation"
+				"description": "Tempo docs: Accounts, Earn, Routes, Zones, Machine Payments, Tempo EVM, APIs & SDKs, and Partners"
 			},
 			{
 				"id": "viem",
@@ -81,7 +77,7 @@
 			{
 				"id": "accounts",
 				"base": "https://accounts.tempo.xyz",
-				"description": "Tempo Accounts SDK documentation"
+				"description": "Tempo Accounts SDK reference; Accounts product guides are in tempo"
 			},
 			{
 				"id": "tips",

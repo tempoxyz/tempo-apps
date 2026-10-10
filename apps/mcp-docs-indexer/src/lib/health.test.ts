@@ -9,6 +9,7 @@ beforeEach(() => {
 	vi.stubGlobal('fetch', fetchMock)
 	vi.spyOn(console, 'log').mockImplementation(() => {})
 	vi.spyOn(console, 'error').mockImplementation(() => {})
+	vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -25,7 +26,12 @@ describe('healthMetrics', () => {
 		})
 		fetchMock
 			.mockResolvedValueOnce(
-				json({ result: { serverInfo: { name: 'ai-search' } } }),
+				json({
+					result: {
+						serverInfo: { name: 'tempo-docs' },
+						capabilities: { tools: {}, resources: {} },
+					},
+				}),
 			)
 			.mockResolvedValueOnce(
 				json({
@@ -46,7 +52,9 @@ describe('healthMetrics', () => {
 			.mockResolvedValueOnce(
 				json({
 					result: {
-						structuredContent: { result: { chunks: [{ text: 'Tempo' }] } },
+						structuredContent: {
+							result: { retrieval: 'ai_search', chunks: [{ text: 'Tempo' }] },
+						},
 					},
 				}),
 			)
@@ -85,7 +93,12 @@ describe('healthMetrics', () => {
 	it('parses server-sent JSON-RPC responses', async () => {
 		fetchMock
 			.mockResolvedValueOnce(
-				sse({ result: { serverInfo: { name: 'ai-search' } } }),
+				sse({
+					result: {
+						serverInfo: { name: 'tempo-docs' },
+						capabilities: { tools: {}, resources: {} },
+					},
+				}),
 			)
 			.mockResolvedValueOnce(
 				json({
@@ -104,7 +117,9 @@ describe('healthMetrics', () => {
 			.mockResolvedValueOnce(
 				json({
 					result: {
-						structuredContent: { result: { chunks: [{ text: 'Tempo' }] } },
+						structuredContent: {
+							result: { retrieval: 'ai_search', chunks: [{ text: 'Tempo' }] },
+						},
 					},
 				}),
 			)
@@ -128,6 +143,87 @@ describe('healthMetrics', () => {
 		await healthMetrics({ PUBLIC_MCP_ENDPOINT: 'https://mcp.tempo.xyz/' })
 
 		expect(console.error).not.toHaveBeenCalled()
+	})
+})
+
+describe('healthMetrics failures', () => {
+	it('reports fallback-only Tempo search as degraded, not down', async () => {
+		const logs: string[] = []
+		vi.mocked(console.log).mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		fetchMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+			const { method, params } = JSON.parse(String(init?.body))
+			if (method === 'initialize') {
+				return json({
+					result: {
+						serverInfo: { name: 'tempo-docs' },
+						capabilities: { tools: {}, resources: {} },
+					},
+				})
+			}
+			if (method === 'tools/list') {
+				return json({
+					result: {
+						tools: [
+							{ name: 'search' },
+							{ name: 'find_pages' },
+							{ name: 'read_page' },
+						],
+					},
+				})
+			}
+			if (method === 'resources/list') {
+				return json({
+					result: { resources: [{ uri: 'tempo-docs://sources' }] },
+				})
+			}
+			if (params?.name === 'search') {
+				return json({
+					result: {
+						structuredContent: {
+							result: {
+								retrieval: 'source_index',
+								chunks: [{ text: 'Tempo' }],
+							},
+						},
+					},
+				})
+			}
+			if (params?.name === 'find_pages') {
+				return json({
+					result: {
+						structuredContent: {
+							result: { pages: [{ url: 'https://tempo.xyz/developers/a' }] },
+						},
+					},
+				})
+			}
+			return json({
+				result: { structuredContent: { result: { text: 'Tempo docs page' } } },
+			})
+		})
+
+		await healthMetrics({ PUBLIC_MCP_ENDPOINT: 'https://mcp.tempo.xyz/' })
+		flushWorkerMetrics()
+
+		const metrics = logs
+			.filter((message) => message.startsWith('cwm-'))
+			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({ n: 'tempo_docs_mcp_health_ok', v: 1 }),
+		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_health_check_ok',
+				v: 0,
+				tags: expect.objectContaining({ check: 'search_tempo_indexed' }),
+			}),
+		)
+		expect(console.error).not.toHaveBeenCalled()
+		expect(String(vi.mocked(console.warn).mock.calls[0]?.[0])).toContain(
+			'search used source_index retrieval',
+		)
 	})
 })
 

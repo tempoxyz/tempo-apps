@@ -10,7 +10,8 @@ import { resolveSourcePageUrl } from './sources.js'
 export function parseLlmsTxt(body: string, base: string): string[] {
 	const urls = new Set<string>()
 	if (new URL(base).hostname === 'tips.sh') {
-		for (const match of body.matchAll(/\bhref=["']\/(\d{4}(?:-\d+)?)["']/g)) {
+		// Suffixed TIP revisions (`/1000-1`) are served only as HTML.
+		for (const match of body.matchAll(/\bhref=["']\/(\d{4})["']/g)) {
 			addUrl(urls, `/${match[1]}.md`, base)
 		}
 	}
@@ -21,7 +22,7 @@ export function parseLlmsTxt(body: string, base: string): string[] {
 		const match = line.match(/^\s*[-*]\s+(https?:\/\/\S+|\/\S+)/)
 		const raw = match?.[1]?.replace(/:$/, '')
 		addUrl(urls, raw, base)
-		const tip = line.match(/^\s*[-*]\s+\*\*TIP-(\d{4}(?:-\d+)?)\*\*:/)
+		const tip = line.match(/^\s*[-*]\s+\*\*TIP-(\d{4})\*\*:/)
 		addUrl(urls, tip ? `/${tip[1]}.md` : undefined, base)
 	}
 	return [...urls]

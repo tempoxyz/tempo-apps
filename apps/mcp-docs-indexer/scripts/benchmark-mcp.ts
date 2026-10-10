@@ -129,12 +129,12 @@ const pageFixtures: PageFixture[] = [
 	{
 		name: 'read_tempo_virtual_addresses',
 		source: 'tempo',
-		path: '/guide/payments/virtual-addresses',
+		path: '/docs/guide/payments/virtual-addresses',
 		query: 'virtual addresses deposits',
 		expectedUrlIncludes: [
 			'tempo.xyz/developers/docs/guide/payments/virtual-addresses',
 		],
-		expectedTextIncludes: ['# Use virtual addresses for deposits'],
+		expectedTextIncludes: ['# Customer deposit addresses'],
 	},
 	{
 		name: 'read_vocs_mcp_server',
