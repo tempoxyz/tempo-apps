@@ -55,7 +55,6 @@
 		"accounts": "catalog:",
 		"animejs": "catalog:",
 		"hono": "^4.12.31",
-		"lucide-react": "catalog:",
 		"midcut": "catalog:",
 		"ox": "catalog:",
 		"react": "catalog:",

@@ -1,8 +1,7 @@
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { variants } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds/platform'
 import type * as React from 'react'
-import type { Props as StyleProps } from 'zyzz'
 
 /**
  * Segmented radio group in the Tempo Design System style. TDS's own
@@ -16,7 +15,6 @@ export function Choices<const value extends string>(
 		items,
 		label,
 		onChange,
-		scale,
 		style: inlineStyle,
 		value,
 		...rest
@@ -31,7 +29,7 @@ export function Choices<const value extends string>(
 			}}
 			value={value ?? null}
 			{...rest}
-			{...styles.root({ className, scale, style: inlineStyle })}
+			{...styles.root({ className, style: inlineStyle })}
 		>
 			{items.map((item) => (
 				<Radio.Root
@@ -44,7 +42,7 @@ export function Choices<const value extends string>(
 					}}
 					render={<button type="button" />}
 					value={item.value}
-					{...styles.item({ scale })}
+					{...styles.item()}
 				>
 					{item.label}
 				</Radio.Root>
@@ -63,78 +61,54 @@ export declare namespace Choices {
 	type Props<value extends string = string> = Omit<
 		React.HTMLAttributes<HTMLDivElement>,
 		'children' | 'className' | 'defaultValue' | 'onChange' | 'style'
-	> &
-		Pick<StyleProps.Variants<typeof styles.root>, 'scale'> & {
-			className?: string | undefined
-			items: readonly Item<value>[]
-			/** Accessible label for the group. */
-			label: string
-			onChange: (value: value) => void
-			style?: React.CSSProperties | undefined
-			/** Selected value. Leave undefined when nothing is selected. */
-			value?: value | undefined
-		}
+	> & {
+		className?: string | undefined
+		items: readonly Item<value>[]
+		/** Accessible label for the group. */
+		label: string
+		onChange: (value: value) => void
+		style?: React.CSSProperties | undefined
+		/** Selected value. Leave undefined when nothing is selected. */
+		value?: value | undefined
+	}
 }
 
 namespace styles {
-	export const root = variants({
-		base: {
-			backgroundColor: 'container.regular',
-			boxSizing: 'border-box',
-			display: 'flex',
-			maxWidth: '100% !custom',
-			overflow: 'hidden',
-		},
-		defaultVariants: { scale: 'medium' },
-		variants: {
-			scale: {
-				medium: { borderRadius: 'xs', padding: '4' },
-				small: { borderRadius: '2xs', padding: '2' },
-			},
-		},
+	// TDS SegmentedControl's treatment at toolbar density.
+	export const root = style({
+		backgroundColor: 'container.regular',
+		borderRadius: '2xs',
+		display: 'flex',
+		maxWidth: '100% !custom',
+		overflow: 'hidden',
+		padding: '2',
 	})
 
-	export const item = variants({
-		base: {
-			alignItems: 'center',
-			backgroundColor: 'transparent !custom',
-			border: 'none !custom',
-			boxSizing: 'border-box',
-			color: 'content.secondary',
-			cursor: 'pointer',
-			display: 'flex',
-			flex: '1 !custom',
-			justifyContent: 'center',
-			whiteSpace: 'nowrap',
-			'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-			selectors: {
-				'&[data-checked]': {
-					backgroundColor: 'background.secondary',
-					color: 'content.primary',
-				},
-				'&:focus-visible': {
-					outline: '2px solid currentColor !custom',
-					outlineOffset: '-2px !custom',
-				},
-				'&[data-disabled]': { cursor: 'default', opacity: 0.5 },
+	export const item = style({
+		alignItems: 'center',
+		backgroundColor: 'transparent !custom',
+		border: 'none !custom',
+		borderRadius: '3xs',
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'flex',
+		flex: '1 !custom',
+		height: '24',
+		justifyContent: 'center',
+		paddingInline: '8',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		selectors: {
+			'&[data-checked]': {
+				backgroundColor: 'background.secondary',
+				color: 'content.primary',
 			},
-		},
-		defaultVariants: { scale: 'medium' },
-		variants: {
-			scale: {
-				medium: {
-					borderRadius: '2xs',
-					height: '32px !custom',
-					paddingInline: '12',
-					typography: 'body.b3',
-				},
-				small: {
-					borderRadius: '6px !custom',
-					height: '24px !custom',
-					paddingInline: '8',
-					typography: 'body.b3',
-				},
+			'&:focus-visible': {
+				outline: '2px solid currentColor !custom',
+				outlineOffset: '-2px !custom',
 			},
+			'&[data-disabled]': { cursor: 'default', opacity: 0.5 },
 		},
 	})
 }

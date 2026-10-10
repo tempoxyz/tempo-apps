@@ -14,6 +14,7 @@ import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
+import { CopyFeedbackProvider } from '#comps/CopyFeedback'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
@@ -437,7 +438,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<TokenListMembershipProvider>
 							<BreadcrumbsProvider>
 								<AddressHighlightProvider>
-									<IntroSeenProvider>{children}</IntroSeenProvider>
+									<IntroSeenProvider>
+										<CopyFeedbackProvider>{children}</CopyFeedbackProvider>
+									</IntroSeenProvider>
 								</AddressHighlightProvider>
 							</BreadcrumbsProvider>
 						</TokenListMembershipProvider>

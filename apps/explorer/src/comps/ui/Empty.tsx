@@ -1,16 +1,16 @@
-import { style } from '@tempoxyz/ds/platform'
+import { IconBadge, style, variants } from '@tempoxyz/ds/platform'
 import type * as React from 'react'
 
 /** Centered empty, blocked, or recoverable state in the TDS Platform style. */
 export function Empty(props: Empty.Props): React.JSX.Element {
-	const { action, children, className, icon, style: inlineStyle, title } = props
+	const { action, children, compact, icon, title } = props
 
 	return (
-		<div {...styles.root({ className, style: inlineStyle })}>
+		<div {...styles.root({ compact })}>
 			{icon && (
-				<div aria-hidden {...styles.icon()}>
+				<IconBadge aria-hidden appearance="gray" scale="medium">
 					{icon}
-				</div>
+				</IconBadge>
 			)}
 			<div {...styles.copy()}>
 				<p {...styles.title()}>{title}</p>
@@ -27,38 +27,33 @@ export declare namespace Empty {
 		action?: React.ReactNode | undefined
 		/** Supporting copy. */
 		children?: React.ReactNode | undefined
-		className?: string | undefined
+		/** Drop the minimum height and use tighter padding inside lists. */
+		compact?: boolean | undefined
 		/** Decorative icon above the title. */
-		icon?: React.ReactNode | undefined
-		style?: React.CSSProperties | undefined
+		icon?: React.ReactElement | undefined
 		/** Primary empty-state message. */
 		title: React.ReactNode
 	}
 }
 
 namespace styles {
-	export const root = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		justifyContent: 'center',
-		minHeight: '180px !custom',
-		paddingBlock: '48',
-		paddingInline: '24',
-		textAlign: 'center',
-	})
-
-	export const icon = style({
-		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderRadius: 'xs',
-		color: 'content.secondary',
-		display: 'flex',
-		height: '40',
-		justifyContent: 'center',
-		width: '40',
-		selectors: { '& > svg': { height: '20', width: '20' } },
+	export const root = variants({
+		base: {
+			alignItems: 'center',
+			display: 'flex',
+			flexDirection: 'column',
+			gap: '16',
+			justifyContent: 'center',
+			paddingInline: '24',
+			textAlign: 'center',
+		},
+		defaultVariants: { compact: false },
+		variants: {
+			compact: {
+				false: { minHeight: '180px !custom', paddingBlock: '48' },
+				true: { paddingBlock: '32' },
+			},
+		},
 	})
 
 	export const copy = style({

@@ -63,13 +63,7 @@
 				"useComponentExportOnlyModules": "off"
 			},
 			"suspicious": {
-				"noArrayIndexKey": "off",
-				"noUnknownAtRules": {
-					"level": "warn",
-					"options": {
-						"ignore": ["@custom-variant", "@theme"]
-					}
-				}
+				"noArrayIndexKey": "off"
 			},
 			"a11y": {
 				"noAutofocus": "off"

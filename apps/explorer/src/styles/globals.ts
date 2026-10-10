@@ -1,8 +1,10 @@
+import { vars as core } from '@tempoxyz/ds/core'
 import { vars } from '@tempoxyz/ds/platform'
 import { global } from 'zyzz/web'
 
-// Tempo Design System supplies the Pilat and JetBrains Mono faces through
-// `@tempoxyz/ds/platform.css`. These rules set document defaults on top.
+// Tempo Design System supplies the Pilat and JetBrains Mono faces and body
+// font smoothing through `@tempoxyz/ds/platform.css`. These rules set the
+// remaining document defaults.
 global({
 	'@layer base': {
 		'html, :host': {
@@ -14,11 +16,7 @@ global({
 		},
 		':root': { touchAction: 'manipulation' },
 		'html[data-theme="light"]': { colorScheme: 'light' },
-		'html[data-theme="dark"]': { colorScheme: 'dark' },
 		body: {
-			MozOsxFontSmoothing: 'grayscale',
-			WebkitFontSmoothing: 'antialiased',
-			fontFamily: 'Pilat, Arial, sans-serif',
 			fontSize: '14px',
 			fontWeight: 500,
 			letterSpacing: '0.14px',
@@ -26,10 +24,10 @@ global({
 			minWidth: '320px',
 		},
 		'pre, code': { fontFamily: '"JetBrains Mono", monospace', fontWeight: 400 },
+		// Matches the focus ring TDS components draw.
 		'a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible':
 			{
-				borderRadius: '8px',
-				outlineColor: vars.color.border.focus,
+				outlineColor: 'currentColor',
 				outlineOffset: '2px',
 				outlineStyle: 'solid',
 				outlineWidth: '2px',
@@ -38,12 +36,14 @@ global({
 			{ appearance: 'none' },
 		'input[type="number"]': { appearance: 'textfield' },
 	},
+	// Component styles are unlayered classes, so the preference needs
+	// importance to win over their animations and transitions.
 	'@media (prefers-reduced-motion: reduce)': {
 		'*, ::before, ::after': {
-			animationDuration: '0.01ms',
-			animationIterationCount: 1,
-			scrollBehavior: 'auto',
-			transitionDuration: '0.01ms',
+			animationDuration: '0.01ms !important',
+			animationIterationCount: '1 !important',
+			scrollBehavior: 'auto !important',
+			transitionDuration: '0.01ms !important',
 		},
 	},
 })
@@ -93,7 +93,6 @@ global({
 global({
 	'.shiki-block, .shiki-block.shiki': {
 		backgroundColor: vars.color.background.secondary,
-		boxSizing: 'border-box',
 		fontFamily: '"JetBrains Mono", monospace',
 		fontSize: '12px',
 		fontWeight: 400,
@@ -112,16 +111,19 @@ global({
 	'pre .shiki, .shiki pre': { backgroundColor: 'transparent !important' },
 })
 
-// `usePermalinkHighlight` marks the linked element while it scrolls into view.
+// `usePermalinkHighlight` marks the linked element while it scrolls into view,
+// then fades the ring out.
 global({
 	'[data-permalink-highlight]': {
-		outlineColor: 'transparent',
 		outlineOffset: '1px',
 		outlineStyle: 'solid',
 		outlineWidth: '1px',
-		transition: 'outline-color 500ms',
 	},
 	'[data-permalink-highlight="on"]': {
-		outlineColor: 'light-dark(rgb(68 113 237), rgb(116 152 251))',
+		outlineColor: `light-dark(${core.color.accent.blueLight}, ${core.color.accent.blueDark})`,
+	},
+	'[data-permalink-highlight="fading"]': {
+		outlineColor: 'transparent',
+		transition: 'outline-color 500ms',
 	},
 })

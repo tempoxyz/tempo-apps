@@ -177,9 +177,6 @@ catalogs:
     kysely:
       specifier: ^0.28.15
       version: 0.28.15
-    lucide-react:
-      specifier: ^1.48.0
-      version: 1.48.0
     midcut:
       specifier: ^0.2.0
       version: 0.2.0
@@ -465,9 +462,6 @@ importers:
       hono:
         specifier: ^4.12.31
         version: 4.12.31
-      lucide-react:
-        specifier: 'catalog:'
-        version: 1.48.0(react@19.2.5)
       midcut:
         specifier: 'catalog:'
         version: 0.2.0(react@19.2.5)
@@ -6712,11 +6706,6 @@ packages:
 
   lru_map@0.4.1:
     resolution: {integrity: sha512-I+lBvqMMFfqaV8CJCISjI3wbjmwVu/VyOoU7+qtu9d7ioW5klMgsTTiUOUp+DJvfTTzKXoPbyC6YfgkNcyPSOg==}
-
-  lucide-react@1.48.0:
-    resolution: {integrity: sha512-R0CIKY/fXiC6y9xRBADgsK+VW2p/pcTJOMhLZf1T+uG+vJUvyUR02nGOgmIIC7MPkiNK4Ox8QDnbqF8rJYWPZQ==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -14654,10 +14643,6 @@ snapshots:
   lru-cache@7.18.3: {}
 
   lru_map@0.4.1: {}
-
-  lucide-react@1.48.0(react@19.2.5):
-    dependencies:
-      react: 19.2.5
 
   lz-string@1.5.0: {}
 

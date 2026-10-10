@@ -8,10 +8,7 @@ export default defineConfig({
 	// and vitest reports a failed suite with zero tests — easy to miss, since
 	// `pnpm test` uses the other config, which excludes these files entirely.
 	// Components author styles that only exist after compilation.
-	plugins: [
-		...explorerZyzz({ builtins: 'all' }),
-		Icons({ compiler: 'jsx', jsx: 'react' }),
-	],
+	plugins: [...explorerZyzz(), Icons({ compiler: 'jsx', jsx: 'react' })],
 	resolve: {
 		tsconfigPaths: true,
 	},

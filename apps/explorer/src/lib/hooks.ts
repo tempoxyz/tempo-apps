@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/react-router'
 import * as React from 'react'
+import { useCopyFeedback } from '#lib/copy-feedback'
 
 export function useIsMounted() {
 	const [isMounted, setIsMounted] = React.useState(false)
@@ -12,8 +13,9 @@ export function useIsMounted() {
 }
 
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {
-	const { timeout } = props
+	const { message = 'Copied', timeout } = props
 
+	const notify = useCopyFeedback()
 	const [notifying, setNotifying] = React.useState(false)
 	const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -23,13 +25,14 @@ export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 			try {
 				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
 				await navigator.clipboard.writeText(value)
+				notify(message)
 				setNotifying(true)
 				timer.current = setTimeout(() => setNotifying(false), timeout)
 			} catch (error) {
 				console.error('Failed to copy text: ', error)
 			}
 		},
-		[timeout],
+		[message, notify, timeout],
 	)
 
 	return { copy, notifying }
@@ -37,6 +40,8 @@ export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 
 export declare namespace useCopy {
 	type Props = {
+		/** Toast title announced after copying. */
+		message?: string | undefined
 		timeout?: number | undefined
 	}
 
@@ -67,6 +72,7 @@ export function useCopyPermalink(props: useCopyPermalink.Props) {
 	const { fragment } = props
 
 	const { copy: copyLink, notifying: linkNotifying } = useCopy({
+		message: 'Link copied',
 		timeout: 2_000,
 	})
 
