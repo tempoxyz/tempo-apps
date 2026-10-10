@@ -36,6 +36,8 @@ import {
 } from '#lib/profiling'
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
+import jetBrainsMono from '@tempoxyz/ds/fonts/JetBrainsMono-Regular.woff2?url'
+import pilatBook from '@tempoxyz/ds/fonts/Pilat-Book.woff2?url'
 import dsCss from '@tempoxyz/ds/platform.css?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
@@ -126,6 +128,21 @@ export const Route = createRootRouteWithContext<{
 		],
 		links: [
 			...getExplorerCanonicalLinks(),
+			// TDS body text is Pilat Book (weight 500); identifiers use JetBrains Mono.
+			{
+				rel: 'preload',
+				href: pilatBook,
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'preload',
+				href: jetBrainsMono,
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
 			{
 				rel: 'stylesheet',
 				href: dsCss,

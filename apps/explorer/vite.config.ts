@@ -77,9 +77,11 @@ export default defineConfig((config) => {
 	return {
 		// The zyzz compiler adds `zyzz/runtime` imports after Vite scans
 		// dependencies. Discovering it mid-session re-bundles React and breaks SSR.
-		optimizeDeps: { include: ['zyzz/runtime'] },
+		optimizeDeps: { include: ['zyzz/runtime', '@tempoxyz/ds/platform'] },
 		environments: {
-			ssr: { optimizeDeps: { include: ['zyzz/runtime'] } },
+			ssr: {
+				optimizeDeps: { include: ['zyzz/runtime', '@tempoxyz/ds/platform'] },
+			},
 		},
 		resolve: {
 			tsconfigPaths: true,

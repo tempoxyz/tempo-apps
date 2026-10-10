@@ -3,8 +3,9 @@ import { zyzz } from 'zyzz/vite'
 
 /**
  * The zyzz compiler for the explorer, shared by Vite and both Vitest configs.
- * The excluded modules hold no styles. Leaving them out of the source graph
- * keeps the compiler from resolving their server- and test-only imports.
+ * The excluded modules hold no styles. zyzz recompiles each module's import
+ * closure, so leaving them out of the source graph speeds up builds and keeps
+ * the compiler from resolving their server- and test-only imports.
  */
 export function explorerZyzz(options: explorerZyzz.Options = {}): Plugin[] {
 	return [
@@ -14,15 +15,14 @@ export function explorerZyzz(options: explorerZyzz.Options = {}): Plugin[] {
 				'test',
 				'vitest.config.ts',
 				'vitest.node.config.ts',
-				// Server and worker modules.
+				// Server, worker, and library modules.
 				'src/index.server.ts',
-				'src/lib/server',
+				'src/lib',
 				'src/routes/api',
 				'src/workers',
 				// Import `@tanstack/react-start/server` or `cloudflare:workers`, which
 				// do not resolve for the browser. The receipt route's styles live in
 				// its sibling `-$hash.styles.ts`.
-				'src/lib/env.ts',
 				'src/routes/_layout/receipt/$hash.tsx',
 				'src/wagmi.config.ts',
 			],
