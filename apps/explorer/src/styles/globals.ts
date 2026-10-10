@@ -74,6 +74,8 @@ global({
 	'.midcut__findable': { color: 'inherit' },
 	'.midcut[data-align="end"] .midcut__findable': { textAlign: 'end' },
 	'.midcut[data-cut="true"] .midcut__findable': {
+		// Hide inherited underlines along with the searchable full value.
+		clipPath: 'inset(50%)',
 		color: 'transparent',
 		textAlign: 'start',
 	},
