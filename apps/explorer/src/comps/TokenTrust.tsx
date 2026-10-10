@@ -185,20 +185,11 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 												permission.policyId !== undefined && (
 													<div
 														key={`${permission.policyId}:${index}`}
-														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
+														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)] md:gap-3"
 													>
 														<dt>{permission.label}</dt>
 														<dd className="text-secondary">
 															{permission.description}
-														</dd>
-														<dd className="md:text-right label-12">
-															<Link
-																to="/policy/$id"
-																params={{ id: permission.policyId }}
-																className="text-accent hover:underline"
-															>
-																Policy #{permission.policyId} activity ↗
-															</Link>
 														</dd>
 													</div>
 												),

@@ -117,25 +117,6 @@ export function Tip20TokenTabContent(
 				onRetry={() => void query.refetch()}
 			/>
 			<TokenFeeAmm address={address} />
-			<div className="flex items-center gap-3 px-[18px] py-[10px] label-12 text-tertiary">
-				<span>TIP-20</span>
-				<a
-					href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-accent hover:underline"
-				>
-					Spec
-				</a>
-				<a
-					href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-accent hover:underline"
-				>
-					Rust
-				</a>
-			</div>
 		</div>
 	)
 }
