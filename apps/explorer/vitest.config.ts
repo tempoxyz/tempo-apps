@@ -1,8 +1,9 @@
 import { defineConfig } from 'vitest/config'
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
-import { zyzz } from 'zyzz/vite'
+import Icons from 'unplugin-icons/vite'
 
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
+import { explorerZyzz } from './scripts/zyzz.ts'
 
 export default defineConfig({
 	resolve: {
@@ -14,7 +15,8 @@ export default defineConfig({
 	},
 	plugins: [
 		// Components under test author styles that only exist after compilation.
-		zyzz({ script: false }),
+		...explorerZyzz({ builtins: 'none' }),
+		Icons({ compiler: 'jsx', jsx: 'react' }),
 		cloudflareTest({
 			miniflare: {
 				compatibilityFlags: [

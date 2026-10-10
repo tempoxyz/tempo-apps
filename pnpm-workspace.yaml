@@ -4,6 +4,7 @@ packages:
   - '!**/_/**'
 
 catalog:
+  '@base-ui/react': 1.8.0
   '@biomejs/biome': ^2.4.10
   '@cloudflare/codemode': ^0.4.1
   '@cloudflare/puppeteer': ^1.0.6
@@ -31,6 +32,7 @@ catalog:
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.2.2
+  '@tempoxyz/ds': 0.0.5
   '@tanstack/devtools-vite': ^0.6.0
   '@tanstack/query-async-storage-persister': ^5.96.2
   '@tanstack/react-devtools': ^0.10.2

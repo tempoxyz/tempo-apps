@@ -1,6 +1,6 @@
 import Icons from 'unplugin-icons/vite'
 import { defineConfig } from 'vitest/config'
-import { zyzz } from 'zyzz/vite'
+import { explorerZyzz } from './scripts/zyzz.ts'
 
 export default defineConfig({
 	// Node tests import domain modules that transitively reach components, and
@@ -8,7 +8,10 @@ export default defineConfig({
 	// and vitest reports a failed suite with zero tests — easy to miss, since
 	// `pnpm test` uses the other config, which excludes these files entirely.
 	// Components author styles that only exist after compilation.
-	plugins: [zyzz({ script: false }), Icons({ compiler: 'jsx', jsx: 'react' })],
+	plugins: [
+		...explorerZyzz({ builtins: 'all' }),
+		Icons({ compiler: 'jsx', jsx: 'react' }),
+	],
 	resolve: {
 		tsconfigPaths: true,
 	},

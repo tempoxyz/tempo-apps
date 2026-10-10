@@ -1,5 +1,7 @@
 import { Link as RouterLink } from '@tanstack/react-router'
+import { IconButton, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import {
 	applyThemeMode,
 	defaultThemeMode,
@@ -12,15 +14,16 @@ import {
 	themeStorageKey,
 	type ThemeMode,
 } from '#lib/theme'
+import { pressDown, transitionColors } from '#styles/explorer'
 import MoonIcon from '~icons/lucide/moon'
 import SunIcon from '~icons/lucide/sun'
 
 export function Footer(): React.JSX.Element {
 	return (
-		<footer className="@container px-[24px] @min-[1240px]:px-[84px] pt-[24px] pb-[48px] relative print:hidden">
-			<div className="relative flex min-h-[34px] flex-wrap items-center justify-center gap-5 @max-[399px]:flex-col-reverse">
+		<footer {...styles.footer()}>
+			<div {...styles.row()}>
 				<Footer.ThemeToggle />
-				<ul className="text-ui-meta flex items-center justify-center gap-5 sm:gap-6 select-none">
+				<ul {...styles.links()}>
 					<Footer.Link to="https://tempo.xyz" external>
 						About
 					</Footer.Link>
@@ -77,34 +80,34 @@ export namespace Footer {
 			}
 		}, [])
 
+		// TDS IconButton owns size, fill, radius, and focus ring. The local
+		// style only adds what IconButton leaves unset (placement, hover, motion),
+		// because an external class cannot reliably override its own properties.
 		return (
-			<button
-				type="button"
+			<IconButton
+				{...cx(styles.themeToggle(), pressDown(), transitionColors())}
+				aria-label={`Switch to ${nextTheme} mode`}
 				onClick={() => {
 					persistThemeMode(nextTheme)
 					setTheme(nextTheme)
 				}}
-				className="@min-[400px]:absolute @min-[400px]:left-0 @min-[400px]:top-1/2 grid size-11 sm:size-[34px] @min-[400px]:-translate-y-1/2 cursor-pointer place-items-center rounded-body border border-base-border bg-base-plane-interactive text-secondary transition-colors press-down hover:bg-surface hover:text-primary"
-				aria-label={`Switch to ${nextTheme} mode`}
+				scale="medium"
 				title={`Switch to ${nextTheme} mode`}
+				variant="secondary"
 			>
-				{nextTheme === 'light' ? (
-					<SunIcon className="size-[15px]" />
-				) : (
-					<MoonIcon className="size-[15px]" />
-				)}
-			</button>
+				{nextTheme === 'light' ? <SunIcon /> : <MoonIcon />}
+			</IconButton>
 		)
 	}
 
 	export function Link(props: Link.Props): React.JSX.Element {
 		const { to, params, children, external } = props
 		return (
-			<li className="flex">
+			<li {...styles.item()}>
 				<RouterLink
 					to={to}
 					params={params}
-					className="press-down inline-flex min-h-11 sm:min-h-8 items-center hover:text-secondary transition-colors"
+					{...cx(styles.link(), pressDown(), transitionColors())}
 					target={external ? '_blank' : undefined}
 					rel={external ? 'noopener noreferrer' : undefined}
 				>
@@ -122,4 +125,63 @@ export namespace Footer {
 			external?: boolean
 		}
 	}
+}
+
+namespace styles {
+	export const footer = style({
+		containerType: 'inline-size',
+		paddingBottom: '48',
+		paddingInline: 'page.margin',
+		paddingTop: '24',
+		position: 'relative',
+		'@media print': { display: 'none' },
+	})
+
+	export const row = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '20',
+		justifyContent: 'center',
+		minHeight: '40',
+		position: 'relative',
+		'@container (width < 399px)': { flexDirection: 'column-reverse' },
+	})
+
+	export const links = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '20',
+		justifyContent: 'center',
+		listStyle: 'none',
+		margin: 'none',
+		padding: 'none',
+		typography: 'body.b2',
+		userSelect: 'none',
+		'@media (width >= 640px)': { gap: '24' },
+	})
+
+	export const item = style({ display: 'flex' })
+
+	export const link = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'inline-flex',
+		minHeight: '44px !custom',
+		textDecorationLine: 'none',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		'@media (width >= 640px)': { minHeight: '32' },
+	})
+
+	export const themeToggle = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+		'@container (width >= 400px)': {
+			left: '0px !custom',
+			position: 'absolute',
+			top: '50% !custom',
+			translate: '0 -50% !custom',
+		},
+	})
 }

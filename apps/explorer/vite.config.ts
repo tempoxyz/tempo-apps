@@ -6,13 +6,13 @@ import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
-import { defineConfig, loadEnv, type Plugin } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
-import { zyzz } from 'zyzz/vite'
 
 import { getVendorChunk } from './scripts/chunk-config.ts'
+import { explorerZyzz } from './scripts/zyzz.ts'
 import { buildEnvSchema, tempoEnvSchema } from './src/lib/build-env.ts'
 
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
@@ -91,23 +91,7 @@ export default defineConfig((config) => {
 			config.mode === 'development' &&
 				envConfig.VITE_ENABLE_DEVTOOLS &&
 				vitePluginChromiumDevTools(),
-			cloudflareBuiltins(),
-			zyzz({
-				// Tooling and server-only modules hold no styles. Keeping them out of
-				// the source graph stops the compiler from resolving worker-only and
-				// test dependencies through the browser and SSR optimizers.
-				exclude: [
-					'scripts',
-					'test',
-					'vitest.config.ts',
-					'vitest.node.config.ts',
-					'src/index.server.ts',
-					'src/lib/server',
-					'src/routes/api',
-					'src/workers',
-				],
-				script: false,
-			}),
+			...explorerZyzz(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
@@ -212,17 +196,3 @@ export default defineConfig((config) => {
 		},
 	}
 })
-
-// Zyzz walks physical source in every environment. Server-only modules import
-// `cloudflare:*` builtins, which only the worker environment can resolve; the
-// client build strips those imports, so treat them as external there.
-function cloudflareBuiltins(): Plugin {
-	return {
-		name: 'explorer:cloudflare-builtins',
-		enforce: 'pre',
-		applyToEnvironment: (environment) => environment.name === 'client',
-		resolveId(id) {
-			if (id.startsWith('cloudflare:')) return { id, external: true }
-		},
-	}
-}

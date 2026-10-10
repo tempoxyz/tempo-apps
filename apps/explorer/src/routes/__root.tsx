@@ -34,6 +34,7 @@ import {
 } from '#lib/profiling'
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
+import dsCss from '@tempoxyz/ds/platform.css?url'
 import css from './styles.css?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
@@ -137,6 +138,10 @@ export const Route = createRootRouteWithContext<{
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'stylesheet',
+				href: dsCss,
 			},
 			{
 				rel: 'stylesheet',
