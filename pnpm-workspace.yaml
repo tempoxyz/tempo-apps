@@ -91,6 +91,7 @@ catalog:
   wagmi: ^3.7.7
   wrangler: ^4.131.0
   zod: ^4.3.6
+  zyzz: 0.0.27
 
 catalogMode: strict
 
@@ -155,6 +156,7 @@ overrides:
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
+  zyzz@0.0.27: patches/zyzz@0.0.27.patch
 
 strictDepBuilds: true
 

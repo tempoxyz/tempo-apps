@@ -65,7 +65,8 @@
 		"tidx.ts": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:",
-		"zod": "catalog:"
+		"zod": "catalog:",
+		"zyzz": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/puppeteer": "catalog:",

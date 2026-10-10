@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
+import { zyzz } from 'zyzz/vite'
 
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
@@ -12,6 +13,8 @@ export default defineConfig({
 		exclude: ['test/**/*.node.test.ts'],
 	},
 	plugins: [
+		// Components under test author styles that only exist after compilation.
+		zyzz({ script: false }),
 		cloudflareTest({
 			miniflare: {
 				compatibilityFlags: [
