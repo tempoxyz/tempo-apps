@@ -67,7 +67,7 @@ export namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '4',
-		typography: 'body.b3',
+		typography: 'body.b2',
 	})
 
 	export const balanceChanges = style({

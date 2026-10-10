@@ -56,7 +56,7 @@ export declare namespace FeePayer {
 namespace styles {
 	export const address = style({
 		maxWidth: '50ch !custom',
-		typography: 'mono.inline',
+		typography: 'body.b2',
 		width: '100% !custom',
 	})
 
