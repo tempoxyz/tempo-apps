@@ -126,11 +126,11 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 					'shadow-none',
 				)}
 			>
-				<div className="min-h-11 flex flex-wrap items-center justify-between gap-x-3">
+				<div className="min-h-11 flex items-center justify-between gap-x-3">
 					<div
 						role="tablist"
 						aria-label="Details"
-						className="flex min-w-0 overflow-x-auto items-center self-stretch font-sans"
+						className="flex min-w-0 flex-1 overflow-x-auto items-center self-stretch font-sans"
 					>
 						{sections.length === 1 ? (
 							<div
@@ -200,7 +200,10 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 					{sections.map((section, index) => (
 						<div
 							key={section.title}
-							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
+							className={cx(
+								'shrink-0 pr-[18px]',
+								activeSection !== index && 'hidden',
+							)}
 						>
 							{section.contextual}
 						</div>
