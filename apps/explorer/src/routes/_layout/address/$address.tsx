@@ -106,6 +106,7 @@ import {
 } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { type HistoryResponse, historyQueryOptions } from '#lib/queries/account'
+import { downloadTransactionsCsv } from '#lib/transactions-csv'
 import { validatorFeesQueryOptions } from '#lib/queries/validator-fees'
 import {
 	accountTransfersQueryOptions,
@@ -134,6 +135,7 @@ import ChevronRight from '~icons/lucide/chevron-right'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
 import CopyIcon from '~icons/lucide/copy'
+import DownloadIcon from '~icons/lucide/download'
 import PlayIcon from '~icons/lucide/play'
 import XIcon from '~icons/lucide/x'
 
@@ -1117,6 +1119,12 @@ function SectionsWrapper(props: {
 		? activeTab
 		: 'deposits'
 	const queryClient = useQueryClient()
+	const [isExporting, setIsExporting] = React.useState(false)
+	const [exportProgress, setExportProgress] = React.useState<{
+		pages: number
+		transactions: number
+	} | null>(null)
+	const [exportError, setExportError] = React.useState<string | null>(null)
 	const zonePortalActivityQuery = useQuery({
 		...zonePortalActivityQueryOptions({
 			address,
@@ -1191,6 +1199,51 @@ function SectionsWrapper(props: {
 			}),
 		[address, after, include, status, hideSubmitBatches],
 	)
+
+	const exportTransactions = React.useCallback(async () => {
+		if (isExporting) return
+		setIsExporting(true)
+		setExportError(null)
+		setExportProgress({ pages: 0, transactions: 0 })
+		try {
+			const exported: EnrichedTransaction[] = []
+			const hashes = new Set<string>()
+			const cursors = new Set<string>()
+			let position: HistoryPosition = { order: 'desc' }
+			let pages = 0
+
+			while (true) {
+				if (position.cursor) {
+					if (cursors.has(position.cursor))
+						throw new Error('Transaction history returned a repeated cursor.')
+					cursors.add(position.cursor)
+				}
+				const result = await queryClient.fetchQuery(
+					getHistoryQueryOptions(position),
+				)
+				if (result.error) throw new Error(result.error)
+				pages += 1
+				for (const transaction of result.transactions) {
+					if (hashes.has(transaction.hash)) continue
+					hashes.add(transaction.hash)
+					exported.push(transaction)
+				}
+				setExportProgress({ pages, transactions: exported.length })
+				if (!result.nextCursor) break
+				position = { order: 'desc', cursor: result.nextCursor }
+			}
+
+			downloadTransactionsCsv(exported, `transactions-${address}.csv`)
+		} catch (error) {
+			setExportError(
+				error instanceof Error
+					? error.message
+					: 'Failed to export transactions.',
+			)
+		} finally {
+			setIsExporting(false)
+		}
+	}, [address, getHistoryQueryOptions, isExporting, queryClient])
 
 	const feedScope = JSON.stringify([
 		address,
@@ -2079,7 +2132,7 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex items-center gap-3">
+						<div className="flex flex-wrap items-center gap-3">
 							<TransactionFilters
 								status={status}
 								period={period}
@@ -2089,7 +2142,28 @@ function SectionsWrapper(props: {
 								onHideSubmitBatchesChange={onHideSubmitBatchesChange}
 								onClearAll={onClearTransactionFilters}
 							/>
+							<button
+								type="button"
+								onClick={() => void exportTransactions()}
+								disabled={isExporting || isTransactionsLoading}
+								aria-busy={isExporting}
+								className="flex shrink-0 items-center gap-[6px] rounded-[4px] bg-base-alt px-[8px] py-[4px] label-12 font-medium text-secondary hover:bg-base-alt/80 press-down disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<DownloadIcon className="size-3" />
+								{isExporting ? 'Exporting…' : 'Export CSV'}
+							</button>
 							{liveControl}
+							{isExporting && exportProgress && (
+								<span role="status" className="label-12 text-tertiary">
+									Fetching page {exportProgress.pages} (
+									{exportProgress.transactions} transactions)…
+								</span>
+							)}
+							{exportError && (
+								<span role="alert" className="label-12 text-negative">
+									{exportError}
+								</span>
+							)}
 						</div>
 					),
 					content: transactionsError ?? (
