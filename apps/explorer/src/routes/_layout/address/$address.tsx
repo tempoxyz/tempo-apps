@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-	ClientOnly,
 	createFileRoute,
 	Link,
 	notFound,
@@ -19,7 +18,6 @@ import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
-import { WalletActions } from '#comps/WalletActions'
 import { ValidatorFees } from '#comps/ValidatorFees'
 import { ValidatorCard } from '#comps/ValidatorCard'
 import { AddressCell } from '#comps/AddressCell'
@@ -893,16 +891,6 @@ function AccountCardWithTimestamps(props: {
 				virtualAddressParts={virtualAddressParts}
 			/>
 			{!isTip20 && <ValidatorCard address={address} />}
-			{isToken && (
-				<ClientOnly fallback={null}>
-					<WalletActions
-						address={address}
-						symbol={tokenMetadata?.symbol}
-						decimals={tokenMetadata?.decimals}
-						image={Tip20.resolveLogoURI(tokenLogoURI)}
-					/>
-				</ClientOnly>
-			)}
 		</div>
 	)
 }

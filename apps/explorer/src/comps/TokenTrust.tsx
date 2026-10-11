@@ -3,7 +3,6 @@ import { Link } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
-import { Address as AddressLink } from '#comps/Address'
 import { cx } from '#lib/css'
 import {
 	groupTokenAuthorities,
@@ -32,17 +31,14 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 		policy,
 	)
 	return (
-		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
-			<h3 className="copy-13 text-tertiary">Trust & permissions</h3>
-			<section
-				aria-label="Transfer policy"
-				className="rounded-[6px] border border-distinct overflow-hidden"
-			>
-				<div className="flex items-start justify-between gap-2 border-b border-distinct px-3 py-2.5">
-					<h4 className="font-medium">Transfer policy</h4>
+		<div className="grid gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] border-t border-distinct px-[18px] py-5">
+			<h2 className="heading-16 col-span-full">Permissions</h2>
+			<section aria-label="Transfer policy" className="min-w-0">
+				<div className="flex items-start justify-between gap-2 mb-3">
+					<h3 className="font-medium">Transfer policy</h3>
 					{policy && <PolicyLink policy={policy.policy} />}
 				</div>
-				<div className="flex flex-col gap-3 p-3">
+				<div className="flex flex-col gap-3">
 					<div className="flex flex-col items-start gap-3 md:flex-row-reverse md:justify-between">
 						<span
 							role="status"
@@ -92,14 +88,9 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 					/>
 				</div>
 			</section>
-			<section
-				aria-label="Privileged addresses"
-				className="rounded-[6px] border border-distinct overflow-hidden"
-			>
-				<h4 className="border-b border-distinct px-3 py-2.5 font-medium">
-					Privileged addresses
-				</h4>
-				<div className="flex flex-col gap-3 p-3">
+			<section aria-label="Privileged addresses" className="min-w-0">
+				<h3 className="font-medium mb-3">Privileged addresses</h3>
+				<div className="flex flex-col gap-3">
 					{props.loading ? (
 						<p className="text-tertiary" role="status">
 							Loading token roles…
@@ -117,72 +108,88 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 						)
 					)}
 					{groups.length > 0 && (
-						<div className="flex flex-col divide-y divide-dashed divide-distinct">
+						<div className="flex flex-col divide-y divide-distinct">
 							{groups.map((group) => (
 								<div
 									key={group.account}
 									className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
 								>
-									<AddressLink
-										address={group.account}
-										className="label-12 break-all"
-									/>
+									<p className="copy-13 font-medium">
+										{group.permissions
+											.filter((permission) => permission.policyId === undefined)
+											.map((permission) =>
+												permission.label.startsWith('Can ') ||
+												permission.description.startsWith('Custom token role.')
+													? permission.label
+													: `Can ${permission.label.charAt(0).toLowerCase()}${permission.label.slice(1)}`,
+											)
+											.join(' · ') || 'Policy administration'}
+									</p>
+									<Link
+										to="/address/$address"
+										params={{ address: group.account }}
+										className="font-mono label-12 break-all text-accent hover:underline"
+									>
+										{group.account}
+									</Link>
+									{group.roles.length > 0 && (
+										<details className="label-12">
+											<summary className="cursor-pointer text-secondary hover:text-primary">
+												Roles & grant history
+											</summary>
+											<dl className="flex flex-col gap-3 pt-3">
+												{group.roles.map((role) => (
+													<div
+														key={role.roleHash}
+														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
+													>
+														<dt className="font-mono label-12 break-all">
+															{role.role}
+														</dt>
+														<dd className="text-secondary">
+															{tokenRoleDescription(role.role)}
+														</dd>
+														<dd className="flex items-baseline gap-2 md:justify-end label-12 whitespace-nowrap">
+															{role.grantedAt != null && (
+																<span className="text-tertiary">
+																	{new Date(
+																		role.grantedAt * 1000,
+																	).toLocaleDateString('en-US')}
+																</span>
+															)}
+															{role.grantedTx ? (
+																<Link
+																	to="/tx/$hash"
+																	params={{
+																		hash: role.grantedTx as `0x${string}`,
+																	}}
+																	className="text-accent hover:underline"
+																	aria-label={`View ${role.role} grant transaction for ${group.account}`}
+																>
+																	Grant tx ↗
+																</Link>
+															) : (
+																<span className="text-tertiary">
+																	Grant transaction unavailable
+																</span>
+															)}
+														</dd>
+													</div>
+												))}
+											</dl>
+										</details>
+									)}
 									<dl className="flex flex-col gap-3 label-12">
-										{group.roles.map((role) => (
-											<div
-												key={role.roleHash}
-												className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
-											>
-												<dt className="font-mono label-12 break-all">
-													{role.role}
-												</dt>
-												<dd className="text-secondary">
-													{tokenRoleDescription(role.role)}
-												</dd>
-												<dd className="flex items-baseline gap-2 md:justify-end label-12 whitespace-nowrap">
-													{role.grantedAt != null && (
-														<span className="text-tertiary">
-															{new Date(
-																role.grantedAt * 1000,
-															).toLocaleDateString('en-US')}
-														</span>
-													)}
-													{role.grantedTx ? (
-														<Link
-															to="/tx/$hash"
-															params={{ hash: role.grantedTx as `0x${string}` }}
-															className="text-accent hover:underline"
-															aria-label={`View ${role.role} grant transaction for ${group.account}`}
-														>
-															Grant tx ↗
-														</Link>
-													) : (
-														<span className="text-tertiary">
-															Grant transaction unavailable
-														</span>
-													)}
-												</dd>
-											</div>
-										))}
 										{group.permissions.map(
 											(permission, index) =>
 												permission.policyId !== undefined && (
 													<div
 														key={`${permission.policyId}:${index}`}
-														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
+														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)] md:gap-3"
 													>
 														<dt>{permission.label}</dt>
 														<dd className="text-secondary">
 															{permission.description}
-														</dd>
-														<dd className="md:text-right label-12">
-															<Link
-																to="/policy/$id"
-																params={{ id: permission.policyId }}
-																className="text-accent hover:underline"
-															>
-																Policy #{permission.policyId} activity ↗
-															</Link>
 														</dd>
 													</div>
 												),
