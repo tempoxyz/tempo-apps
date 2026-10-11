@@ -1,0 +1,49 @@
+name: Build preview runtime
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      PUSH: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.user.login != 'dependabot[bot]') }}
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Log in to GHCR
+        if: env.PUSH == 'true'
+        uses: tempoxyz/gh-actions/vendor/docker/login-action@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        id: build
+        uses: tempoxyz/gh-actions/actions/docker-build-push@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+        with:
+          context: .
+          file: apps/explorer/Dockerfile.preview
+          image: ghcr.io/tempoxyz/tempo-explorer-preview
+          include-sha-tag: 'false'
+          tags: ghcr.io/tempoxyz/tempo-explorer-preview:sha-${{ github.event.pull_request.head.sha || github.sha }}
+          push: ${{ env.PUSH }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Record preview image
+        if: env.PUSH == 'true'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          echo "Preview image: ghcr.io/tempoxyz/tempo-explorer-preview@${DIGEST}" >> "$GITHUB_STEP_SUMMARY"

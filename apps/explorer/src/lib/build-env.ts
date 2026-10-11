@@ -8,6 +8,7 @@ const canonicalTempoEnvSchema = z.union([
 	z.literal('zone-prover'),
 	z.literal('testnet'),
 	z.literal('mainnet'),
+	z.literal('preview'),
 ])
 
 export const tempoEnvSchema = z.prefault(

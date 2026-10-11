@@ -45,12 +45,8 @@ const BatchCallSchema = z.object({
 export const MAX_BATCH_CALLS = 32
 
 export const SimulationRequestSchema = z.object({
-	chainId: z.union([
-		z.literal(4217),
-		z.literal(42431),
-		z.literal(31318),
-		z.literal(31319),
-	]),
+	// The configured backend below authorizes the selected chain.
+	chainId: z.number().check(z.int(), z.positive()),
 	from: zAddress({ lowercase: true }),
 	to: zAddress({ lowercase: true }),
 	data: CalldataSchema,

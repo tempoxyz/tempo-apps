@@ -61,6 +61,7 @@ function getLanguageFromFileName(fileName: string): string {
 }
 
 async function processHighlightedHtml(html: string): Promise<string> {
+	if (typeof HTMLRewriter === 'undefined') return html
 	const response = new Response(html, {
 		headers: { 'content-type': 'text/html' },
 	})

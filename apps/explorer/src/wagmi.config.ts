@@ -11,6 +11,7 @@ import {
 	tempoZoneProver,
 } from './lib/chains'
 import { getApiUrl, getTempoEnv } from './lib/env'
+import { getPreviewChain } from './lib/preview-chain'
 import { getExplorerRpcBackend } from './lib/server/network'
 import {
 	cookieStorage,
@@ -34,8 +35,14 @@ const chains = {
 }
 
 export const getTempoChain = createIsomorphicFn()
-	.client(() => chains[getTempoEnv()])
-	.server(() => chains[getTempoEnv()])
+	.client(() => {
+		const environment = getTempoEnv()
+		return environment === 'preview' ? getPreviewChain() : chains[environment]
+	})
+	.server(() => {
+		const environment = getTempoEnv()
+		return environment === 'preview' ? getPreviewChain() : chains[environment]
+	})
 
 function rpcHttp(
 	url: string | undefined,
@@ -72,16 +79,19 @@ export function getWagmiConfig() {
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
 	const chain = getTempoChain()
 	const transport = getTempoTransport()
+	const preview = getTempoEnv() === 'preview'
 
 	wagmiConfigSingleton = createConfig({
 		ssr: true,
 		multiInjectedProviderDiscovery: true,
-		chains: [chain, tempoLocalnet],
+		chains: preview ? [chain] : [chain, tempoLocalnet],
 		connectors: [tempoWallet()],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[chain.id]: transport,
-			[tempoLocalnet.id]: http(undefined, { batch: true }),
+			...(!preview
+				? { [tempoLocalnet.id]: http(undefined, { batch: true }) }
+				: {}),
 		} as never,
 	})
 

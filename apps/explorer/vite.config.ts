@@ -7,6 +7,7 @@ import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
+import { fileURLToPath } from 'node:url'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
@@ -27,7 +28,16 @@ export default defineConfig((config) => {
 	} = buildEnvSchema.safeParse({ ...env, ...process.env })
 	if (!success) throw new Error(z.prettifyError(error))
 
-	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV].vars
+	const preview = envConfig.VITE_TEMPO_ENV === 'preview'
+	const wranglerVars = preview
+		? {
+				...wranglerJSON.env.testnet.vars,
+				VITE_TEMPO_ENV: 'preview',
+				VITE_DATADOG_ENABLED: 'false',
+			}
+		: wranglerJSON.env[
+				envConfig.VITE_TEMPO_ENV as keyof typeof wranglerJSON.env
+			].vars
 	const datadogEnv = {
 		VITE_DATADOG_ALLOWED_TRACING_URLS:
 			wranglerVars.VITE_DATADOG_ALLOWED_TRACING_URLS ??
@@ -78,6 +88,16 @@ export default defineConfig((config) => {
 		resolve: {
 			tsconfigPaths: true,
 			alias: {
+				...(preview
+					? {
+							'cloudflare:workers': fileURLToPath(
+								new URL('./scripts/preview-cloudflare.ts', import.meta.url),
+							),
+							'@sentry/cloudflare': fileURLToPath(
+								new URL('./scripts/preview-sentry.ts', import.meta.url),
+							),
+						}
+					: {}),
 				'#': './src',
 				'#package.json': './package.json',
 				'#wrangler.json': './wrangler.json',
@@ -90,13 +110,17 @@ export default defineConfig((config) => {
 			config.mode === 'development' &&
 				envConfig.VITE_ENABLE_DEVTOOLS &&
 				vitePluginChromiumDevTools(),
-			cloudflare({ viteEnvironment: { name: 'ssr' } }),
+			!preview && cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
 			tanstack({
 				srcDirectory: './src',
 				start: { entry: './src/index.start.ts' },
-				server: { entry: './src/index.server.ts' },
+				server: {
+					entry: preview
+						? './src/index.preview.server.ts'
+						: './src/index.server.ts',
+				},
 				client: { entry: './src/index.client.tsx' },
 			}),
 			react(),
