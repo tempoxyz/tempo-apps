@@ -1,0 +1,27 @@
+name: Pull request audit
+
+on:
+  pull_request:
+    types: [labeled, opened, synchronize, reopened, ready_for_review]
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  pr-audit:
+    permissions:
+      contents: read
+      pull-requests: read
+      statuses: write
+      id-token: write
+    uses: tempoxyz/gh-actions/.github/workflows/pr-audit.yml@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+    with:
+      required-labels: |
+        cyclops
+        agentic-audit
+      audit-on-push: true
+    secrets:
+      EVENTS_KEY: ${{ secrets.EVENTS_KEY }}
+      EVENTS_CERT: ${{ secrets.EVENTS_CERT }}
+      EVENTS_ARGS: ${{ secrets.EVENTS_ARGS }}
