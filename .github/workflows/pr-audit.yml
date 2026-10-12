@@ -5,6 +5,8 @@ on:
     types: [labeled, opened, synchronize, reopened, ready_for_review]
   pull_request_target: # zizmor: ignore[dangerous-triggers]
     types: [opened, reopened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
 
 permissions: {}
 
@@ -13,19 +15,56 @@ jobs:
     # Never forward secrets to fork PRs via pull_request_target.
     if: >-
       github.event_name == 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      (
+        github.event_name == 'pull_request_target' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
     permissions:
       contents: read
       pull-requests: read
       statuses: write
       id-token: write
-    uses: tempoxyz/gh-actions/.github/workflows/pr-audit.yml@2ab28a31ae569be9f780c7675b684471060afa40 # 2026-10-09T21-43-19Z-2ab28a31
+    uses: tempoxyz/gh-actions/.github/workflows/pr-audit.yml@252d87d9636b94551796b4b8a5cb4e27b8916cf6 # 2026-10-12T22-06-06Z-252d87d9
     with:
       required-labels: |
         cyclops
         agentic-audit
       audit-on-push: true
+      audit-on-command: true
     secrets:
       EVENTS_KEY: ${{ secrets.EVENTS_KEY }}
       EVENTS_CERT: ${{ secrets.EVENTS_CERT }}
       EVENTS_ARGS: ${{ secrets.EVENTS_ARGS }}
+
+  pr-audit-comment:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.issue.pull_request &&
+      (
+        startsWith(github.event.comment.body, 'cyclops audit') ||
+        startsWith(github.event.comment.body, 'cyclops private audit') ||
+        startsWith(github.event.comment.body, '@decofe cyclops audit') ||
+        startsWith(github.event.comment.body, '@decofe cyclops private audit') ||
+        startsWith(github.event.comment.body, 'derek audit')
+      )
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@252d87d9636b94551796b4b8a5cb4e27b8916cf6 # 2026-10-12T22-06-06Z-252d87d9
+
+      - name: Handle audit command
+        uses: tempoxyz/gh-actions/actions/pr-audit-comment@252d87d9636b94551796b4b8a5cb4e27b8916cf6 # 2026-10-12T22-06-06Z-252d87d9
+        with:
+          command-regex: '^(?:@decofe\s+)?(?:cyclops\s+(?:private\s+)?audit|derek\s+audit)\b'
+          permission-check-mode: association
+          allowed-associations: OWNER,MEMBER
+          organization: tempoxyz
+          events-key: ${{ secrets.EVENTS_KEY }}
+          events-cert: ${{ secrets.EVENTS_CERT }}
+          events-args: ${{ secrets.EVENTS_ARGS }}
+          github-token: ${{ github.token }}
