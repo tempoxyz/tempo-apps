@@ -136,9 +136,13 @@
 									"$ref": "#/components/schemas/TokenList"
 								},
 								"example": {
-									"schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
 									"name": "Tempo Testnet",
-									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
+									"timestamp": "2026-08-25T00:00:00Z",
+									"version": {
+										"major": 1,
+										"minor": 0,
+										"patch": 0
+									},
 									"tokens": [
 										{
 											"name": "pathUSD",
@@ -146,7 +150,7 @@
 											"decimals": 6,
 											"chainId": 42431,
 											"address": "0x20c0000000000000000000000000000000000000",
-											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
+											"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
 											"extensions": {
 												"chain": "tempo",
 												"label": "pathUSD",
@@ -201,7 +205,7 @@
 									"decimals": 6,
 									"chainId": 42431,
 									"address": "0x20c0000000000000000000000000000000000000",
-									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
+									"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
 									"extensions": {
 										"chain": "tempo",
 										"label": "pathUSD"
@@ -230,30 +234,27 @@
 								"schema": {
 									"$ref": "#/components/schemas/AllTokenLists"
 								},
-								"example": {
-									"chains": {
-										"42431": {
-											"schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
-											"name": "Tempo Testnet",
-											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
-											"tokens": [
-												{
-													"name": "pathUSD",
-													"symbol": "pathUSD",
-													"decimals": 6,
-													"chainId": 42431,
-													"address": "0x20c0000000000000000000000000000000000000",
-													"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
-													"extensions": {
-														"chain": "tempo",
-														"label": "pathUSD"
-													}
-												}
-											],
-											"keywords": ["tempo", "testnet"]
-										}
+								"example": [
+									{
+										"name": "Tempo Testnet",
+										"timestamp": "2026-08-25T00:00:00Z",
+										"version": {
+											"major": 1,
+											"minor": 0,
+											"patch": 0
+										},
+										"tokens": [
+											{
+												"name": "pathUSD",
+												"symbol": "pathUSD",
+												"decimals": 6,
+												"chainId": 42431,
+												"address": "0x20c0000000000000000000000000000000000000",
+												"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg"
+											}
+										]
 									}
-								}
+								]
 							}
 						}
 					}
@@ -298,16 +299,21 @@
 							"application/json": {
 								"schema": {
 									"type": "object",
+									"required": ["timestamp", "source", "rev", "chains"],
 									"properties": {
 										"chains": {
 											"type": "array",
 											"items": {
-												"type": "string"
+												"type": "integer"
 											}
 										},
 										"timestamp": {
+											"type": "integer",
+											"format": "int64"
+										},
+										"source": {
 											"type": "string",
-											"format": "date-time"
+											"format": "uri"
 										},
 										"rev": {
 											"type": "string"
@@ -315,9 +321,10 @@
 									}
 								},
 								"example": {
-									"chains": ["42431"],
-									"timestamp": "2023-04-10T12:34:56Z",
-									"rev": "1.0.0"
+									"chains": [31318, 42431, 4217],
+									"timestamp": 1787613015295,
+									"source": "https://github.com/tempoxyz/tempo-apps",
+									"rev": "e932cab9"
 								}
 							}
 						}
@@ -440,17 +447,10 @@
 				}
 			},
 			"AllTokenLists": {
-				"type": "object",
-				"description": "Collection of token lists keyed by chain ID (e.g., '1', '137').",
-				"required": ["chains"],
-				"properties": {
-					"chains": {
-						"type": "object",
-						"description": "Mapping of chain IDs to their respective token lists",
-						"additionalProperties": {
-							"$ref": "#/components/schemas/TokenList"
-						}
-					}
+				"type": "array",
+				"description": "Token lists for all supported chains that returned successfully.",
+				"items": {
+					"$ref": "#/components/schemas/TokenList"
 				}
 			},
 			"TagsMap": {
@@ -460,27 +460,11 @@
 					"$ref": "#/components/schemas/TagDefinition"
 				}
 			},
-			"TokenMap": {
-				"type": "object",
-				"description": "Mapping of 'chainId_tokenAddress' to token objects",
-				"additionalProperties": {
-					"$ref": "#/components/schemas/TokenInfo"
-				}
-			},
 			"TokenList": {
 				"type": "object",
 				"description": "Token list for a specific blockchain network",
-				"required": ["name", "tokens", "keywords"],
+				"required": ["name", "timestamp", "version", "tokens"],
 				"properties": {
-					"schema": {
-						"type": "string",
-						"format": "url",
-						"description": "JSON Schema reference",
-						"minLength": 1,
-						"maxLength": 500,
-						"pattern": "^https?://.+$",
-						"example": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json"
-					},
 					"name": {
 						"type": "string",
 						"description": "Name of the token list",
@@ -499,7 +483,7 @@
 					"version": {
 						"$ref": "#/components/schemas/Version"
 					},
-					"logo_uri": {
+					"logoURI": {
 						"type": "string",
 						"format": "url",
 						"minLength": 1,
@@ -532,9 +516,6 @@
 						"minItems": 1,
 						"maxItems": 10000,
 						"description": "List of tokens included in the list"
-					},
-					"token_map": {
-						"$ref": "#/components/schemas/TokenMap"
 					}
 				}
 			},
@@ -569,16 +550,9 @@
 			"TokenInfo": {
 				"type": "object",
 				"description": "Information about a specific token",
-				"required": [
-					"chain_id",
-					"address",
-					"decimals",
-					"name",
-					"symbol",
-					"tags"
-				],
+				"required": ["chainId", "address", "decimals", "name", "symbol"],
 				"properties": {
-					"chain_id": {
+					"chainId": {
 						"type": "integer",
 						"format": "int32",
 						"minimum": 1,
@@ -618,7 +592,7 @@
 						"description": "Symbol of the token",
 						"example": "USDC.e"
 					},
-					"logo_uri": {
+					"logoURI": {
 						"type": "string",
 						"format": "url",
 						"minLength": 1,
