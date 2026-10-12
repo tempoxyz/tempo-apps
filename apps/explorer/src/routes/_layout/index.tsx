@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { TempoLogoWordmark } from '@tempoxyz/ds/brand/logos'
 import {
 	Coins,
 	Files,
@@ -60,9 +61,12 @@ function Component() {
 	return (
 		<div {...styles.page()}>
 			<div {...styles.hero()}>
-				<div {...styles.words()}>
-					<LandingWords />
-				</div>
+				<h1 {...styles.logo()}>
+					<TempoLogoWordmark
+						aria-label="Tempo Explorer"
+						{...styles.wordmark()}
+					/>
+				</h1>
 			</div>
 			<div {...styles.body()}>
 				<div {...styles.search()}>
@@ -173,15 +177,5 @@ function SpotlightPill(props: {
 			{icon}
 			<span>{children}</span>
 		</Link>
-	)
-}
-
-function LandingWords(): React.JSX.Element {
-	return (
-		<h1 {...styles.landingWords()}>
-			<span {...styles.wordLead()}>Search</span>
-			<span {...styles.wordLead()}>Explore</span>
-			<span {...styles.wordDiscover()}>Discover</span>
-		</h1>
 	)
 }

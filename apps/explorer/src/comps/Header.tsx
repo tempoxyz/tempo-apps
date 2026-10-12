@@ -33,14 +33,21 @@ import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
+	// The landing page shows the wordmark above its search instead.
+	const isHome = useRouterState({
+		select: (state) =>
+			(state.resolvedLocation?.pathname ?? state.location.pathname) === '/',
+	})
 
 	return (
 		<header {...styles.header()}>
 			<div {...styles.bar()}>
 				<div {...styles.brand()}>
-					<Link to="/" {...cx(styles.homeLink(), pressDown())}>
-						<TempoLogoWordmark aria-label="Tempo" {...styles.wordmark()} />
-					</Link>
+					{!isHome && (
+						<Link to="/" {...cx(styles.homeLink(), pressDown())}>
+							<TempoLogoWordmark aria-label="Tempo" {...styles.wordmark()} />
+						</Link>
+					)}
 					<Header.NetworkBadge tempoEnv={tempoEnv} />
 				</div>
 				<Header.Search />

@@ -19,11 +19,21 @@ export namespace styles {
 		minHeight: '42svh !custom',
 	})
 
-	export const words = style({
+	export const logo = style({
+		color: 'content.primary',
 		display: 'flex',
 		justifyContent: 'center',
+		margin: 'none',
 		userSelect: 'none',
 		'@media (height <= 360px)': { display: 'none' },
+	})
+
+	// Sized like a search engine's home logo; the header hides its own on this page.
+	export const wordmark = style({
+		display: 'block',
+		height: '48',
+		width: 'auto !custom',
+		'@media (width >= 800px)': { height: '64' },
 	})
 
 	export const body = style({
@@ -75,24 +85,5 @@ export namespace styles {
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'container.strong' },
 		},
-	})
-
-	export const landingWords = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-	})
-
-	// The hero steps up to the last word. TDS has two display sizes, so the
-	// first two words share the smaller one.
-	export const wordLead = style({
-		color: 'content.secondary',
-		typography: 'display.d2',
-	})
-
-	export const wordDiscover = style({
-		color: 'content.primary',
-		typography: 'display.d1',
 	})
 }
