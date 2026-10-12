@@ -1,8 +1,0 @@
-name: tempo-apps-explorer-change
-steps:
-  - uses: plan
-  - uses: implement
-    with:
-      task: "{{task}}"
-  - uses: autofix_ci
-  - uses: review
