@@ -65,7 +65,7 @@ export declare namespace MyComponent {
 
 * Function components only (no classes)
 * Explicit return type `React.JSX.Element`
-* Icons from `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
+* Icons from `@tempoxyz/ds/platform/icons`: `import { Copy } from '@tempoxyz/ds/platform/icons'`. For icons TDS lacks, use `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
 
 ### Styling (zyzz + Tempo Design System)
 
