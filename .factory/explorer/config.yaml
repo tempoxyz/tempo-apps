@@ -1,0 +1,5 @@
+paths:
+  - apps/explorer
+  - packages/rpc-utils
+checks:
+  - pnpm --filter explorer check:env
