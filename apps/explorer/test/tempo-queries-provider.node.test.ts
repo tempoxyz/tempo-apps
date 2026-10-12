@@ -17,6 +17,10 @@ vi.mock('#lib/server/env', () => ({
 		TEMPO_API_KEY: 'tempo-api-secret',
 		ZONE_PROVER_TIDX_AUTH: 'Basic dGlkeDp0ZXN0',
 	},
+	tempoApi: {
+		url: 'https://api.tempo.xyz',
+		headers: { 'tempo-api-key': 'tempo-api-secret' },
+	},
 	tempoApiUrl: 'https://api.tempo.xyz',
 }))
 

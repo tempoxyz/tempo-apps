@@ -51,6 +51,15 @@ export default defineConfig((config) => {
 			wranglerVars.VITE_DATADOG_TRACE_SAMPLE_RATE ??
 			envConfig.VITE_DATADOG_TRACE_SAMPLE_RATE,
 	}
+	// A devnet build pointed at another devnet (DEVNET_RPC_URL, see
+	// src/lib/server/env.ts) must not follow the default devnet's public
+	// WebSocket in the browser.
+	const devnetRpcOverridden =
+		envConfig.VITE_TEMPO_ENV === 'devnet' &&
+		Boolean(
+			(wranglerVars as { DEVNET_RPC_URL?: string }).DEVNET_RPC_URL ??
+				env.DEVNET_RPC_URL,
+		)
 	const tempoEnv = tempoEnvSchema.safeParse(wranglerVars.VITE_TEMPO_ENV)
 	if (!tempoEnv.success) throw new Error(z.prettifyError(tempoEnv.error))
 
@@ -182,6 +191,9 @@ export default defineConfig((config) => {
 			),
 			'import.meta.env.VITE_DATADOG_TRACE_SAMPLE_RATE': JSON.stringify(
 				datadogEnv.VITE_DATADOG_TRACE_SAMPLE_RATE,
+			),
+			'import.meta.env.VITE_DEVNET_RPC_OVERRIDDEN': JSON.stringify(
+				String(devnetRpcOverridden),
 			),
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				wranglerVars.VITE_TEMPO_ENV || envConfig.VITE_TEMPO_ENV,

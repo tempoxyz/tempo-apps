@@ -25,6 +25,11 @@ export const tempoTestnet = tempoModerato.extend({
 
 export const tempoDevnet = tempoDevnet_.extend({
 	feeToken: '0x20c0000000000000000000000000000000000002',
+	// Pointed at another devnet: follow its head by polling /api/rpc instead of
+	// the default devnet's public WebSocket.
+	...(import.meta.env.VITE_DEVNET_RPC_OVERRIDDEN === 'true'
+		? { rpcUrls: { default: { http: tempoDevnet_.rpcUrls.default.http } } }
+		: {}),
 })
 
 export const tempoNextfork = tempoDevnet_.extend({
