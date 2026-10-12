@@ -90,6 +90,7 @@ type McpContext = {
 
 const CODE_TOOL_NAME = 'code'
 const CODEMODE_TOOL_NAMES = new Set(['search', 'find_pages', 'read_page'])
+const MAX_CODE_TOOL_CALLS = 10
 const MAX_QUERY_LENGTH = 4096
 const MAX_QUERY_TOKENS = 128
 const DEFAULT_MAX_RESULTS = 5
@@ -321,6 +322,7 @@ async function createCodeServer(
 Available read-only docs tools:
 {{types}}
 
+Each execution may call at most ${MAX_CODE_TOOL_CALLS} docs tools total, including parallel calls and retries.
 Write an async arrow function in JavaScript that returns the result.
 Do not use TypeScript syntax, type annotations, interfaces, or generics.
 Do not define a named function and then call it.
@@ -346,9 +348,20 @@ function createReadOnlyDocsServer(
 	server.server.setRequestHandler(ListToolsRequestSchema, () => ({
 		tools: docsTools,
 	}))
-	server.server.setRequestHandler(CallToolRequestSchema, (request) =>
-		callLocalDocsTool(context, request.params.name, request.params.arguments),
-	)
+	let remainingCalls = MAX_CODE_TOOL_CALLS
+	server.server.setRequestHandler(CallToolRequestSchema, (request) => {
+		if (remainingCalls === 0)
+			return toolCallError(
+				`Code execution exceeded its ${MAX_CODE_TOOL_CALLS}-call docs tool budget`,
+			)
+		// Reserve before dispatch so concurrent calls and failed attempts share the limit.
+		remainingCalls -= 1
+		return callLocalDocsTool(
+			context,
+			request.params.name,
+			request.params.arguments,
+		)
+	})
 	return server
 }
 
