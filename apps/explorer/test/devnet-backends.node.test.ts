@@ -136,21 +136,20 @@ describe('resolveTempoApi', () => {
 	})
 })
 
-describe('devnet chain', () => {
+describe('connected devnet chain', () => {
 	it('polls /api/rpc instead of the default WebSocket when the RPC is overridden', async () => {
 		vi.stubEnv('VITE_DEVNET_RPC_OVERRIDDEN', 'true')
 		vi.resetModules()
-		const { tempoDevnet } = await import('#lib/chains')
-		expect(tempoDevnet.rpcUrls.default).toEqual({
+		const { connectedTempoDevnet } = await import('#lib/chains')
+		expect(connectedTempoDevnet.rpcUrls.default).toEqual({
 			http: ['https://rpc.devnet.tempoxyz.dev'],
 		})
 	})
 
-	it('keeps the default WebSocket otherwise', async () => {
+	it("is viem's devnet chain otherwise", async () => {
 		vi.resetModules()
-		const { tempoDevnet } = await import('#lib/chains')
-		expect(tempoDevnet.rpcUrls.default.webSocket).toEqual([
-			'wss://rpc.devnet.tempoxyz.dev',
-		])
+		const { connectedTempoDevnet } = await import('#lib/chains')
+		const { tempoDevnet } = await import('viem/chains')
+		expect(connectedTempoDevnet).toBe(tempoDevnet)
 	})
 })
