@@ -8,9 +8,13 @@ import {
 	ChevronsRight,
 } from '@tempoxyz/ds/platform/icons'
 import * as React from 'react'
-import { type Block, createPublicClient, webSocket } from 'viem'
-import { watchBlocks as subscribeToBlocks } from 'viem/actions'
-import { getTempoChain } from '#wagmi.config'
+import { type Block, type Client, createPublicClient, webSocket } from 'viem'
+import {
+	getBlock,
+	getBlockNumber,
+	watchBlocks as subscribeToBlocks,
+} from 'viem/actions'
+import { getBatchedClient, getTempoChain } from '#wagmi.config'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -63,6 +67,44 @@ export const Route = createFileRoute('/_layout/blocks')({
 		),
 })
 
+const BLOCK_POLL_INTERVAL_MS = 2_000
+
+/**
+ * Follow the chain head over HTTP: every poll emits the blocks since the last
+ * one, at most a page of them. Returns a cleanup function.
+ */
+function pollBlocks(client: Client, onBlock: (block: Block) => void) {
+	let cancelled = false
+	let inFlight = false
+	let last: bigint | undefined
+	const poll = async () => {
+		if (inFlight) return
+		inFlight = true
+		try {
+			const latest = await getBlockNumber(client, { cacheTime: 0 })
+			const oldest = latest - BigInt(BLOCKS_PER_PAGE) + 1n
+			const from = last == null || last < oldest ? oldest : last + 1n
+			const numbers: bigint[] = []
+			for (let number = from; number <= latest; number++) numbers.push(number)
+			const blocks = await Promise.all(
+				numbers.map((blockNumber) => getBlock(client, { blockNumber })),
+			)
+			last = latest
+			if (!cancelled) for (const block of blocks) onBlock(block)
+		} catch {
+			// Keep the current blocks and retry on the next polling interval.
+		} finally {
+			inFlight = false
+		}
+	}
+	void poll()
+	const id = setInterval(poll, BLOCK_POLL_INTERVAL_MS)
+	return () => {
+		cancelled = true
+		clearInterval(id)
+	}
+}
+
 function RouteComponent() {
 	const search = Route.useSearch()
 	const from = search.from
@@ -110,35 +152,36 @@ function RouteComponent() {
 
 	// Live feed: stream new blocks over a WebSocket subscription (eth_subscribe
 	// newHeads) — viem hydrates each head into a full block (incl. tx hashes) via
-	// getBlock. While paused (hover) we buffer incoming blocks and flush them on
-	// resume so the view stays frozen.
+	// getBlock. Chains without a WebSocket poll same-origin /api/rpc instead.
+	// While paused (hover) we buffer incoming blocks and flush them on resume so
+	// the view stays frozen.
 	React.useEffect(() => {
 		if (!live || !isAtLatest) return
+
+		const onBlock = (block: Block) => {
+			const number = block.number
+			if (number != null) {
+				setLatestBlockNumber((prev) =>
+					prev == null || number > prev ? number : prev,
+				)
+				syncBlockNumberAtLeast(number)
+			}
+			if (pausedRef.current) {
+				pendingBlocksRef.current.push(block)
+				return
+			}
+			const buffered = pendingBlocksRef.current
+			pendingBlocksRef.current = []
+			mergeBlocks([...buffered, block])
+		}
 
 		const chain = getTempoChain()
 		const wsUrl = (chain.rpcUrls.default as { webSocket?: readonly string[] })
 			.webSocket?.[0]
-		if (!wsUrl) return
+		if (!wsUrl) return pollBlocks(getBatchedClient(), onBlock)
 
 		const client = createPublicClient({ chain, transport: webSocket(wsUrl) })
-		return subscribeToBlocks(client, {
-			onBlock: (block) => {
-				const number = block.number
-				if (number != null) {
-					setLatestBlockNumber((prev) =>
-						prev == null || number > prev ? number : prev,
-					)
-					syncBlockNumberAtLeast(number)
-				}
-				if (pausedRef.current) {
-					pendingBlocksRef.current.push(block)
-					return
-				}
-				const buffered = pendingBlocksRef.current
-				pendingBlocksRef.current = []
-				mergeBlocks([...buffered, block])
-			},
-		})
+		return subscribeToBlocks(client, { onBlock })
 	}, [live, isAtLatest, mergeBlocks])
 
 	// Flush blocks buffered during a pause as soon as we resume.

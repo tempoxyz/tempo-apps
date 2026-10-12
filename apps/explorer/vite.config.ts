@@ -12,7 +12,11 @@ import Sonda from 'sonda/vite'
 
 import { getVendorChunk } from './scripts/chunk-config.ts'
 import { explorerZyzz } from './scripts/zyzz.ts'
-import { buildEnvSchema, tempoEnvSchema } from './src/lib/build-env.ts'
+import {
+	buildEnvSchema,
+	devnetUrlsSchema,
+	tempoEnvSchema,
+} from './src/lib/build-env.ts'
 
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
@@ -62,6 +66,26 @@ export default defineConfig((config) => {
 			wranglerVars.VITE_DATADOG_TRACE_SAMPLE_RATE ??
 			envConfig.VITE_DATADOG_TRACE_SAMPLE_RATE,
 	}
+	// A devnet build can point at another devnet (`devnetUrls` in
+	// src/lib/server/env.ts). The URLs are compiled in from this build's
+	// wrangler.json vars or build environment, because `keep_vars` carries
+	// runtime vars from one uploaded version into the next. Such a build must
+	// not follow the default devnet's public WebSocket in the browser either.
+	const devnetUrls = devnetUrlsSchema.parse(
+		Object.fromEntries(
+			(['DEVNET_API_URL', 'DEVNET_RPC_URL', 'DEVNET_TIDX_URL'] as const).map(
+				(key) => [
+					key,
+					envConfig.VITE_TEMPO_ENV === 'devnet'
+						? (wranglerVars as Record<string, string | undefined>)[key] ||
+							env[key] ||
+							undefined
+						: undefined,
+				],
+			),
+		),
+	)
+	const devnetRpcOverridden = Boolean(devnetUrls.DEVNET_RPC_URL)
 	const tempoEnv = tempoEnvSchema.safeParse(wranglerVars.VITE_TEMPO_ENV)
 	if (!tempoEnv.success) throw new Error(z.prettifyError(tempoEnv.error))
 
@@ -199,6 +223,18 @@ export default defineConfig((config) => {
 			),
 			'import.meta.env.VITE_DATADOG_TRACE_SAMPLE_RATE': JSON.stringify(
 				datadogEnv.VITE_DATADOG_TRACE_SAMPLE_RATE,
+			),
+			'import.meta.env.DEVNET_API_URL': JSON.stringify(
+				devnetUrls.DEVNET_API_URL ?? '',
+			),
+			'import.meta.env.DEVNET_RPC_URL': JSON.stringify(
+				devnetUrls.DEVNET_RPC_URL ?? '',
+			),
+			'import.meta.env.DEVNET_TIDX_URL': JSON.stringify(
+				devnetUrls.DEVNET_TIDX_URL ?? '',
+			),
+			'import.meta.env.VITE_DEVNET_RPC_OVERRIDDEN': JSON.stringify(
+				String(devnetRpcOverridden),
 			),
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				wranglerVars.VITE_TEMPO_ENV || envConfig.VITE_TEMPO_ENV,

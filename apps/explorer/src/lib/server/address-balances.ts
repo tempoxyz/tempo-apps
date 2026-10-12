@@ -6,7 +6,7 @@ import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 
 import type { BalancesResponse, TokenBalance } from '#lib/address-balances'
-import { serverEnv, tempoApiUrl } from '#lib/server/env'
+import { tempoApi, tempoApiUrl } from '#lib/server/env'
 import { api } from '#lib/server/tempo-api'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -107,9 +107,7 @@ async function fetchEarnPositions(params: {
 		url.searchParams.set('limit', String(params.limit))
 		url.searchParams.set('verified', 'true')
 		const response = await fetch(url, {
-			headers: serverEnv.TEMPO_API_KEY
-				? { 'tempo-api-key': serverEnv.TEMPO_API_KEY }
-				: undefined,
+			headers: tempoApi.headers,
 			signal: AbortSignal.timeout(4_000),
 		})
 		if (!response.ok) throw new Error(`Tempo API returned ${response.status}`)

@@ -1,6 +1,6 @@
 import * as Sentry from '@sentry/cloudflare'
 import { create } from 'tapimo/client'
-import { serverEnv, tempoApiUrl } from './env.ts'
+import { tempoApi } from './env.ts'
 
 const ALERTABLE_STATUSES = new Set([402, 403, 429])
 const REPORT_THROTTLE_MS = 60_000
@@ -56,10 +56,11 @@ const instrumentedFetch: typeof fetch = async (input, init) => {
  * success body), or narrow manually with `response.status === 200`.
  *
  * Anonymous requests are rate-limited; deployments set `TEMPO_API_KEY`
- * (scopes: `data:read`, `indexer:query`).
+ * (scopes: `data:read`, `indexer:query`). A `devnet` build with
+ * `DEVNET_API_URL` calls that API without it (see `resolveTempoApi`).
  */
 export const api = create({
-	apiKey: serverEnv.TEMPO_API_KEY,
 	fetch: instrumentedFetch,
-	url: tempoApiUrl,
+	headers: tempoApi.headers,
+	url: tempoApi.url,
 })

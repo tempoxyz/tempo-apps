@@ -1,10 +1,11 @@
 import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { createPublicClient } from 'viem'
-import { tempoDevnet, tempoLocalnet } from 'viem/chains'
+import { tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import {
+	connectedTempoDevnet,
 	tempoMainnet,
 	tempoNextfork,
 	tempoTestnet,
@@ -28,7 +29,7 @@ let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 const chains = {
 	mainnet: tempoMainnet,
 	testnet: tempoTestnet,
-	devnet: tempoDevnet,
+	devnet: connectedTempoDevnet,
 	nextfork: tempoNextfork,
 	'zone-prover': tempoZoneProver,
 }

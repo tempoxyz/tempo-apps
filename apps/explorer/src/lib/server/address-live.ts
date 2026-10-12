@@ -10,7 +10,7 @@ import {
 import { readSse } from '#lib/sse'
 import { parseTimestamp } from '#lib/timestamp'
 import { api } from './tempo-api'
-import { serverEnv, tempoApiUrl } from './env'
+import { tempoApi, tempoApiUrl } from './env'
 import { getChainBackend } from './network'
 import {
 	buildTokenMetadataLookup,
@@ -85,10 +85,7 @@ export async function addressLiveResponse(
 					signal: abort.signal,
 					headers: {
 						Accept: 'text/event-stream',
-						...(backend?.headers ??
-							(serverEnv.TEMPO_API_KEY
-								? { 'tempo-api-key': serverEnv.TEMPO_API_KEY }
-								: {})),
+						...(backend?.headers ?? tempoApi.headers),
 					},
 				})
 				if (!response.ok || !response.body)
@@ -107,10 +104,7 @@ export async function addressLiveResponse(
 							headers: {
 								Accept: 'application/json',
 								'Cache-Control': 'no-cache',
-								...(backend?.headers ??
-									(serverEnv.TEMPO_API_KEY
-										? { 'tempo-api-key': serverEnv.TEMPO_API_KEY }
-										: {})),
+								...(backend?.headers ?? tempoApi.headers),
 							},
 						})
 						if (!snapshot.ok) throw new Error('Live resynchronization failed')
