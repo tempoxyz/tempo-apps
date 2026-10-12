@@ -10,6 +10,10 @@ permissions: {}
 
 jobs:
   pr-audit:
+    # Never forward secrets to fork PRs via pull_request_target.
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
       pull-requests: read
