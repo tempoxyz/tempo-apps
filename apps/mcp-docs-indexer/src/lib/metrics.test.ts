@@ -5,6 +5,7 @@ import {
 	recordHealthMetrics,
 	recordHttpRequestMetrics,
 	recordIngestMetrics,
+	recordSourceIndexStatus,
 	recordToolCall,
 } from './metrics.js'
 
@@ -62,6 +63,28 @@ describe('worker metrics', () => {
 			expect.objectContaining({
 				n: 'tempo_docs_mcp_health_ok',
 				v: 1,
+			}),
+		)
+	})
+
+	it('emits source indexing state counts', () => {
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) =>
+			logs.push(String(message)),
+		)
+		recordSourceIndexStatus({
+			source: 'tempo',
+			counts: { completed: 5, error: 2 },
+		})
+		flushWorkerMetrics()
+		const metrics = logs
+			.filter((message) => message.startsWith('cwm-'))
+			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_source_items',
+				tags: expect.objectContaining({ source: 'tempo', status: 'error' }),
+				v: 2,
 			}),
 		)
 	})

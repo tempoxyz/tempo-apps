@@ -914,6 +914,7 @@ describe('handleMcp', () => {
 
 		expect(seen?.ai_search_options?.retrieval?.max_num_results).toBe(2)
 		const text = await textContent(res)
+		expect(text.result.retrieval).toBe('ai_search')
 		expect(text.result.chunks).toEqual([
 			{
 				score: 1,
@@ -1239,6 +1240,7 @@ describe('handleMcp', () => {
 			'https://docs.tempo.xyz/guide/payments/virtual-addresses.md',
 		])
 		const text = await textContent(res)
+		expect(text.result.retrieval).toBe('source_index')
 		expect(text.result.chunks).toEqual([
 			{
 				score: 0.6471,

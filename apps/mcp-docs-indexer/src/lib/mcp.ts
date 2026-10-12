@@ -115,6 +115,9 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
 } as const
 
 type SearchResultChunk = AiSearchSearchResponse['chunks'][number]
+type SearchResult = AiSearchSearchResponse & {
+	retrieval?: 'ai_search' | 'source_index'
+}
 const sourceFilterFallbackUntil = new Map<string, number>()
 const searchResultCache = new Map<
 	string,
@@ -788,7 +791,7 @@ async function localSourceSearch(
 	sourceIds: string[],
 	sources: Source[],
 	emptyResult: AiSearchSearchResponse,
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	if (sourceIds.length !== 1) return emptyResult
 	if (args?.include_raw === true) return emptyResult
 
@@ -820,7 +823,7 @@ async function localSourceSearch(
 		)
 		.map((result) => result.value)
 	if (chunks.length === 0) return emptyResult
-	return { ...emptyResult, chunks }
+	return { ...emptyResult, chunks, retrieval: 'source_index' }
 }
 
 async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
@@ -1076,15 +1079,18 @@ function normalizeOptions(
 }
 
 async function formatResult(
-	result: AiSearchSearchResponse,
+	result: SearchResult,
 	args: SearchArguments | undefined,
 	sources: Source[],
 ): Promise<
-	AiSearchSearchResponse | { search_query: string; chunks: unknown[] }
+	SearchResult | { search_query: string; retrieval: string; chunks: unknown[] }
 > {
+	const retrieval =
+		result.chunks.length === 0 ? 'none' : (result.retrieval ?? 'ai_search')
 	if (args?.include_raw === true) {
 		return {
 			...result,
+			retrieval,
 			chunks: result.chunks.map((chunk) => ({
 				...chunk,
 				text: cleanChunkText(chunk.text),
@@ -1100,6 +1106,7 @@ async function formatResult(
 	await annotateChunkSections(chunks, sources)
 	return {
 		search_query: result.search_query,
+		retrieval,
 		chunks,
 	}
 }

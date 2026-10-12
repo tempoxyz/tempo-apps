@@ -1,5 +1,5 @@
 import { createMetrics } from 'cloudflare-worker-metrics'
-import type { SyncReport } from './ingest.js'
+import type { SourceIndexStatus, SyncReport } from './ingest.js'
 
 type EmptyTags = Record<string, never>
 type HttpTags = { method: string; route: string; status_class: string }
@@ -15,6 +15,7 @@ type AiSearchTags = { path: string; source_filter: string }
 type ProxyTags = { status_class: string }
 type SourceTags = { force: string; source: string; status: string }
 type PendingTags = { source: string }
+type SourceItemTags = { source: string; status: string }
 
 type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_http_request_count: HttpTags
@@ -39,6 +40,7 @@ type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_source_pages_failed: SourceTags
 	tempo_docs_mcp_source_pages_deleted: SourceTags
 	tempo_docs_mcp_source_items_pending: PendingTags
+	tempo_docs_mcp_source_items: SourceItemTags
 }
 
 export type HealthMetricResult = {
@@ -46,6 +48,7 @@ export type HealthMetricResult = {
 	ok: boolean
 	durationMs: number
 	error?: string
+	informational?: boolean
 }
 
 const KNOWN_METHODS = new Set([
@@ -104,7 +107,9 @@ export function recordHealthMetrics(args: {
 	durationMs: number
 }): void {
 	const endpoint = 'public'
-	const ok = args.checks.every((check) => check.ok)
+	const ok = args.checks
+		.filter((check) => !check.informational)
+		.every((check) => check.ok)
 	workerMetrics.gauge('tempo_docs_mcp_health_ok', ok ? 1 : 0, { endpoint })
 	workerMetrics.histogram(
 		'tempo_docs_mcp_health_duration_ms',
@@ -228,6 +233,15 @@ export function recordIngestMetrics(args: {
 		if (report.status === 'error') {
 			workerMetrics.count('tempo_docs_mcp_source_pages_failed', 1, tags)
 		}
+	}
+}
+
+export function recordSourceIndexStatus(status: SourceIndexStatus): void {
+	for (const [itemStatus, count] of Object.entries(status.counts)) {
+		workerMetrics.gauge('tempo_docs_mcp_source_items', count, {
+			source: status.source,
+			status: itemStatus,
+		})
 	}
 }
 

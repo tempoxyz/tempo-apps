@@ -1,6 +1,6 @@
 import { DynamicWorkerExecutor } from '@cloudflare/codemode'
 import { healthMetrics } from './lib/health.js'
-import { syncSource } from './lib/ingest.js'
+import { sourceIndexStatus, syncSource } from './lib/ingest.js'
 import { log } from './lib/log.js'
 import { handleMcp } from './lib/mcp.js'
 import {
@@ -8,6 +8,7 @@ import {
 	isFailedSyncReport,
 	recordHttpRequestMetrics,
 	recordIngestMetrics,
+	recordSourceIndexStatus,
 } from './lib/metrics.js'
 import { captureMcpAnalytics, parseJsonRpcRequest } from './lib/posthog-mcp.js'
 import { proxyMcp } from './lib/proxy.js'
@@ -122,6 +123,20 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			log.info('source.pending_index', report)
 		else log.info('source.complete', report)
 		reports.push(report)
+	}
+	const statusSource =
+		sources[new Date(event.scheduledTime).getUTCHours() % sources.length]
+	if (statusSource) {
+		try {
+			const status = await sourceIndexStatus(instance, statusSource.id)
+			log.info('source.index_status', status)
+			recordSourceIndexStatus(status)
+		} catch (error) {
+			log.warn('source.index_status_failed', {
+				source: statusSource.id,
+				error: error instanceof Error ? error.message : String(error),
+			})
+		}
 	}
 	const durationMs = Math.round(performance.now() - startedAt)
 	recordIngestMetrics({ durationMs, force, reports })
