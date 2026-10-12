@@ -82,11 +82,6 @@ export const textField = style({
 	},
 })
 
-/** Data-visualisation fill: TDS core violet, outside the status colors. */
-export const vizFill = style({
-	backgroundColor: `light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) !custom`,
-})
-
 export const truncate = style({
 	overflow: 'hidden',
 	textOverflow: 'ellipsis',

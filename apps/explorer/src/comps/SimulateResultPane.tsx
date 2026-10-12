@@ -105,7 +105,7 @@ export function SimulateResultHeader(
 				</span>
 			) : (
 				<span {...cx(styles.verdict(), styles.secondary())}>
-					<Spinner {...styles.spinner()} />
+					<Spinner />
 					Simulating…
 				</span>
 			)}
@@ -814,11 +814,6 @@ namespace styles {
 				},
 			},
 		},
-	})
-
-	// TDS Spinner draws a black glyph; follow the theme instead.
-	export const spinner = style({
-		selectors: { '& svg': { color: 'content.primary' } },
 	})
 
 	export const tabs = style({

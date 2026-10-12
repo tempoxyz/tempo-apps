@@ -313,11 +313,9 @@ namespace styles {
 		paddingBlock: '4',
 	})
 
-	// TDS draws the wordmark in black.
 	export const wordmark = style({
 		height: '24',
 		width: 'auto !custom',
-		selectors: { '& path': { fill: 'currentColor !custom' } },
 	})
 
 	export const actions = style({

@@ -1,5 +1,5 @@
 import type { ErrorComponentProps } from '@tanstack/react-router'
-import { Button, style } from '@tempoxyz/ds/platform'
+import { Button, Card, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { CopyButton } from '#comps/CopyButton'
 import { Footer } from '#comps/Footer'
@@ -53,14 +53,14 @@ export class ErrorBoundary extends React.Component<
 						</p>
 					</div>
 					{this.state.error?.message && (
-						<div {...styles.details()}>
+						<Card padding="16" {...styles.details()}>
 							<pre {...styles.message()}>{this.state.error.message}</pre>
 							<CopyButton
 								value={this.state.error.message}
 								ariaLabel="Copy error details"
 								className={styles.copy().className}
 							/>
-						</div>
+						</Card>
 					)}
 					<Button
 						variant="primary"
@@ -119,14 +119,11 @@ namespace styles {
 	})
 
 	export const details = style({
-		backgroundColor: 'background.secondary',
 		borderColor: 'line.secondary',
-		borderRadius: 'xs',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
 		maxWidth: '100% !custom',
 		overflow: 'hidden',
-		padding: '16',
 		position: 'relative',
 	})
 

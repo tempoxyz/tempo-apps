@@ -1,4 +1,3 @@
-import { vars as core } from '@tempoxyz/ds/core'
 import { Badge, StatusIndicator, style, vars } from '@tempoxyz/ds/platform'
 import { Database } from '@tempoxyz/ds/platform/icons'
 import { useEffect, useMemo, useState } from 'react'
@@ -427,11 +426,12 @@ namespace styles {
 		typography: 'mono.inline',
 	})
 
-	// The data-visualisation violet (`vizFill`), mixed per frame by gas share.
+	// The TDS violet chart series, mixed per frame by gas share. Matches the
+	// simulation gas bars.
 	export const barFill = style(
 		(values: { border: `${number}%`; fill: `${number}%` }) => ({
-			backgroundColor: `color-mix(in oklab, light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) ${values.fill}, transparent) !custom`,
-			borderColor: `color-mix(in oklab, light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) ${values.border}, transparent) !custom`,
+			backgroundColor: `color-mix(in oklab, ${vars.color.chart.series[6]} ${values.fill}, transparent) !custom`,
+			borderColor: `color-mix(in oklab, ${vars.color.chart.series[6]} ${values.border}, transparent) !custom`,
 		}),
 	)
 

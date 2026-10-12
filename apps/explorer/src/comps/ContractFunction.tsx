@@ -1,4 +1,5 @@
 import {
+	Card,
 	Checkbox,
 	IconButton,
 	TextInput,
@@ -41,7 +42,7 @@ export function FunctionCard(props: FunctionCard.Props): React.JSX.Element {
 	)
 
 	return (
-		<div id={id} {...styles.card()}>
+		<Card id={id} {...styles.card()}>
 			<div {...styles.header()}>
 				{onToggle ? (
 					<button
@@ -81,7 +82,7 @@ export function FunctionCard(props: FunctionCard.Props): React.JSX.Element {
 				</div>
 			</div>
 			{children && <div {...styles.body()}>{children}</div>}
-		</div>
+		</Card>
 	)
 }
 
@@ -204,9 +205,7 @@ function getMethodWithSelector(fn: AbiFunction): string {
 
 namespace styles {
 	export const card = style({
-		backgroundColor: 'background.secondary',
 		borderColor: 'line.secondary',
-		borderRadius: 'xs',
 		borderWidth: 'regular',
 		overflow: 'hidden',
 	})

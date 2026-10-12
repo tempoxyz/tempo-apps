@@ -595,7 +595,6 @@ namespace styles {
 	export const wordmark = style({
 		color: 'content.primary',
 		display: 'block',
-		selectors: { '& path': { fill: 'currentColor !custom' } },
 	})
 
 	export const fields = style({

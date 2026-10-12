@@ -112,8 +112,8 @@ catalogs:
       specifier: ^1.167.12
       version: 1.167.12
     '@tempoxyz/ds':
-      specifier: 0.0.5
-      version: 0.0.5
+      specifier: 0.0.0-canary-20261012203304
+      version: 0.0.0-canary-20261012203304
     '@total-typescript/ts-reset':
       specifier: ^0.6.1
       version: 0.6.1
@@ -449,7 +449,7 @@ importers:
         version: link:../../packages/rpc-utils
       '@tempoxyz/ds':
         specifier: 'catalog:'
-        version: 0.0.5(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.27(patch_hash=a1abd3956a98fee11af678f1f7118b0afd7193e8d1c2fdce1d9afbc1e23a860a)(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))
+        version: 0.0.0-canary-20261012203304(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.27(patch_hash=a1abd3956a98fee11af678f1f7118b0afd7193e8d1c2fdce1d9afbc1e23a860a)(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))
       abitype:
         specifier: 'catalog:'
         version: 1.2.4(typescript@6.0.2)(zod@4.3.6)
@@ -4400,8 +4400,8 @@ packages:
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
 
-  '@tempoxyz/ds@0.0.5':
-    resolution: {integrity: sha512-PopnT++7S8q2B/IBU+c3XvKut8FjCgrhAZ1Ggba4nL96n48kTEaMVFzcLoWfynR1/mZpJFOejmVkOkpzraMKZA==}
+  '@tempoxyz/ds@0.0.0-canary-20261012203304':
+    resolution: {integrity: sha512-CdN6EkNsWHiYEWmCDsuzFSom7cl0SbnQGPxdER7rrOk9TycDpIIRCCMGHrlT8uU/DNzp7megR66oKuueUN8K4w==}
     peerDependencies:
       expo-haptics: '>=57.0.0'
       react: ^19.0.0
@@ -12165,7 +12165,7 @@ snapshots:
       '@tanstack/virtual-core': 3.17.5
       vue: 3.5.40(typescript@6.0.2)
 
-  '@tempoxyz/ds@0.0.5(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.27(patch_hash=a1abd3956a98fee11af678f1f7118b0afd7193e8d1c2fdce1d9afbc1e23a860a)(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))':
+  '@tempoxyz/ds@0.0.0-canary-20261012203304(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.27(patch_hash=a1abd3956a98fee11af678f1f7118b0afd7193e8d1c2fdce1d9afbc1e23a860a)(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))':
     dependencies:
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react: 19.2.5

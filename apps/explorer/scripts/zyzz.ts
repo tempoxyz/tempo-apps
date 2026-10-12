@@ -15,7 +15,9 @@ export function explorerZyzz(options: explorerZyzz.Options = {}): Plugin[] {
 				'test',
 				'vitest.config.ts',
 				'vitest.node.config.ts',
-				// Server, worker, and library modules.
+				// Entry, server, worker, and library modules. Resolving the client
+				// entry's `react-dom/client` in SSR made Vite re-bundle React mid-session.
+				'src/index.client.tsx',
 				'src/index.server.ts',
 				'src/lib',
 				'src/routes/api',

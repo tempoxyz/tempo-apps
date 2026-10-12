@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import {
 	Alert,
 	Badge,
+	Card,
 	IconButton,
 	Tooltip,
 	style,
@@ -115,13 +116,13 @@ export function ContractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<div {...styles.emptyCard()}>
+			<Card padding="20" {...styles.emptyCard()}>
 				<p {...styles.emptyMessage()}>
 					{props.isLoadingContractInfo
 						? `Loading contract information${ellipsis}`
 						: 'No ABI available for this contract.'}
 				</p>
-			</div>
+			</Card>
 		)
 	}
 
@@ -336,17 +337,17 @@ export function InteractTabContent(props: {
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
-			<div {...styles.emptyCard()}>
+			<Card padding="20" {...styles.emptyCard()}>
 				<p {...styles.emptyMessage()}>Loading contract information{ellipsis}</p>
-			</div>
+			</Card>
 		)
 	}
 
 	if (!abi) {
 		return (
-			<div {...styles.emptyCard()}>
+			<Card padding="20" {...styles.emptyCard()}>
 				<p {...styles.emptyMessage()}>No ABI available for this contract.</p>
-			</div>
+			</Card>
 		)
 	}
 
@@ -447,12 +448,7 @@ namespace styles {
 		typography: 'body.b3',
 	})
 
-	export const emptyCard = style({
-		backgroundColor: 'background.secondary',
-		borderRadius: 'xs',
-		height: '100% !custom',
-		padding: '20',
-	})
+	export const emptyCard = style({ height: '100% !custom' })
 
 	export const emptyMessage = style({
 		color: 'content.secondary',

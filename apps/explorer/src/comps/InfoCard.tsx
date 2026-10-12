@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { Card, style } from '@tempoxyz/ds/platform'
 import type { ReactNode } from 'react'
 import { cx } from 'zyzz'
 
@@ -31,14 +31,14 @@ export function InfoCard(props: InfoCard.Props) {
 	})
 
 	return (
-		<section {...styles.root({ className })}>
+		<Card render={<section />} {...styles.root({ className })}>
 			{hasTitle && <div {...styles.header()}>{title}</div>}
 			{hasTitle ? (
 				<div {...styles.body()}>{sectionsContent}</div>
 			) : (
 				sectionsContent
 			)}
-		</section>
+		</Card>
 	)
 }
 
@@ -60,11 +60,10 @@ export declare namespace InfoCard {
 }
 
 namespace styles {
-	// Width sits in `:where()` so the caller's `className` decides it.
+	// TDS `Card` draws the surface. Width sits in `:where()` so the caller's
+	// `className` decides it.
 	export const root = style({
-		backgroundColor: 'background.secondary',
 		borderColor: 'line.secondary',
-		borderRadius: 'xs',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
 		overflow: 'hidden',

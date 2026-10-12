@@ -16,7 +16,7 @@ import { DenseTable, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
-import { srOnly, transitionColors, truncate, vizFill } from '#styles/explorer'
+import { srOnly, transitionColors, truncate } from '#styles/explorer'
 import { formatGas, GasMeter, PanelEmpty } from './SimulateShared'
 import { MIN_FLAMEGRAPH_FRAMES, TxTraceFlamegraph } from './TxTraceFlamegraph'
 import { TxTraceTree } from './TxTraceTree'
@@ -204,12 +204,9 @@ function FrameTable(props: {
 									<span {...styles.share()}>
 										<span {...styles.shareTrack()}>
 											<span
-												{...cx(
-													styles.shareFill({
-														style: { width: `${Math.min(share, 100)}%` },
-													}),
-													vizFill(),
-												)}
+												{...styles.shareFill({
+													style: { width: `${Math.min(share, 100)}%` },
+												})}
 											/>
 										</span>
 										<span {...styles.sharePercent()}>
@@ -358,6 +355,7 @@ namespace styles {
 	})
 
 	export const shareFill = style({
+		backgroundColor: 'chart.series.6',
 		borderRadius: 'full',
 		display: 'block',
 		height: '100% !custom',

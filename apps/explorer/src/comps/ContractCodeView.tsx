@@ -6,7 +6,14 @@ import {
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import { Button, IconButton, Tooltip, style, vars } from '@tempoxyz/ds/platform'
+import {
+	Button,
+	Card,
+	IconButton,
+	Tooltip,
+	style,
+	vars,
+} from '@tempoxyz/ds/platform'
 import {
 	Check,
 	Copy,
@@ -206,7 +213,7 @@ export function ContractCodeView(
 	}
 
 	return (
-		<div ref={container} {...styles.root()}>
+		<Card ref={container} {...styles.root()}>
 			<div {...styles.toolbar()}>
 				<div {...styles.toolbarStart()}>
 					<ToolbarAction
@@ -303,7 +310,7 @@ export function ContractCodeView(
 				</span>
 				<span {...styles.wideLabel()}>Read only</span>
 			</div>
-		</div>
+		</Card>
 	)
 }
 
@@ -367,9 +374,7 @@ namespace styles {
 	export const root = style({
 		// Read by the viewer's shadow DOM through `unsafeCSS`.
 		'--contract-source-background': vars.color.background.secondary,
-		backgroundColor: 'background.secondary',
 		borderColor: 'line.secondary',
-		borderRadius: 'xs',
 		borderWidth: 'regular',
 		containerName: 'source',
 		containerType: 'inline-size',

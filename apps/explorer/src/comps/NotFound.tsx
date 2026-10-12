@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { vars as core } from '@tempoxyz/ds/core'
-import { style, vars } from '@tempoxyz/ds/platform'
+import { Card, style, vars } from '@tempoxyz/ds/platform'
 import { Search } from '@tempoxyz/ds/platform/icons'
 import type { Hex } from 'ox'
 import type * as React from 'react'
@@ -19,7 +19,7 @@ export function NotFound({
 
 	return (
 		<section {...styles.section()}>
-			<div {...styles.card()}>
+			<Card {...styles.card()}>
 				<Empty
 					icon={<Search />}
 					title={<span {...styles.title()}>{title}</span>}
@@ -35,7 +35,7 @@ export function NotFound({
 					{message}
 				</Empty>
 				{data?.type === 'hash' && <pre {...styles.hash()}>{data.value}</pre>}
-			</div>
+			</Card>
 		</section>
 	)
 }
@@ -63,9 +63,7 @@ namespace styles {
 	})
 
 	export const card = style({
-		backgroundColor: 'background.secondary',
 		borderColor: 'line.secondary',
-		borderRadius: 'xs',
 		borderStyle: 'solid',
 		borderWidth: 'regular',
 		maxWidth: '600px !custom',
