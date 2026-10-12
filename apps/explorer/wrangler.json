@@ -133,6 +133,8 @@
 				}
 			],
 			"vars": {
+				"DEVNET_RPC_URL": "https://rpc-full-stack-test.devnet.tempoxyz.dev",
+				"DEVNET_TIDX_URL": "https://tidx-full-stack-test.devnet.tempoxyz.dev",
 				"DATADOG_SITE": "us5.datadoghq.com",
 				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
 				"VITE_DATADOG_ENABLED": "true",
