@@ -55,7 +55,8 @@ export function getChainBackend(chainId: number, kind: 'rpc' | 'tidx') {
 
 /**
  * A `devnet` build's `DEVNET_RPC_URL` or `DEVNET_TIDX_URL` backend, with its
- * complete `Basic ...` header from `DEVNET_RPC_AUTH` or `DEVNET_TIDX_AUTH`.
+ * complete `Basic ...` or `Bearer ...` header from `DEVNET_RPC_AUTH` or
+ * `DEVNET_TIDX_AUTH`.
  * Undefined when the build isn't `devnet` or the URL is unset, which keeps the
  * default devnet backends. A set URL without valid credentials fails closed.
  */
@@ -69,7 +70,12 @@ export function getDevnetBackend(
 	if (!url) return undefined
 	const authorization =
 		kind === 'rpc' ? serverEnv.DEVNET_RPC_AUTH : serverEnv.DEVNET_TIDX_AUTH
-	if (!authorization || !/^Basic [A-Za-z0-9+/]+=*$/.test(authorization))
+	if (
+		!authorization ||
+		!/^(Basic [A-Za-z0-9+/]+=*|Bearer [A-Za-z0-9._~+/-]+=*)$/.test(
+			authorization,
+		)
+	)
 		throw new Error(`Devnet ${kind} credentials are not configured`)
 	return { url, headers: { Authorization: authorization } }
 }

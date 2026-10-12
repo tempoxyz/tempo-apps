@@ -65,12 +65,24 @@ describe('devnet backend overrides', () => {
 		}
 	})
 
+	it('accepts Bearer API keys', () => {
+		serverEnv.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
+		serverEnv.DEVNET_TIDX_AUTH = 'Bearer devnet-key_1'
+		vi.stubEnv('VITE_TEMPO_ENV', 'devnet')
+		expect(getChainBackend(31318, 'tidx')).toEqual({
+			url: 'https://tidx-my-stack.devnet.tempoxyz.dev',
+			headers: { Authorization: 'Bearer devnet-key_1' },
+		})
+		serverEnv.DEVNET_TIDX_AUTH = 'Bearer key\r\nInjected: value'
+		expect(() => getChainBackend(31318, 'tidx')).toThrow('credentials')
+	})
+
 	it('fails closed when an override has no valid credentials', () => {
 		serverEnv.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
 		expect(() => getExplorerRpcBackend('devnet', 'explorer:test')).toThrow(
 			'credentials',
 		)
-		serverEnv.DEVNET_RPC_AUTH = 'Bearer wrong'
+		serverEnv.DEVNET_RPC_AUTH = 'Token wrong'
 		expect(() => getDevnetBackend('devnet', 'rpc')).toThrow('credentials')
 	})
 })
