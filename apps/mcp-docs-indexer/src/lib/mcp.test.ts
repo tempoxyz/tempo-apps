@@ -1,9 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
-import { handleMcp } from './mcp.js'
-import { captureMcpAnalytics, parseJsonRpcRequest } from './posthog-mcp.js'
+import { handleMcp as handleParsedMcp } from './mcp.js'
+import { captureMcpAnalytics } from './posthog-mcp.js'
+import { readMcpRequest } from './request.js'
 import type { Source } from './sources.js'
+
+async function handleMcp(
+	req: Request,
+	context: Parameters<typeof handleParsedMcp>[1],
+) {
+	const parsed = await readMcpRequest(req)
+	if (parsed instanceof Response) return parsed
+	return handleParsedMcp(parsed.request, context, parsed.body)
+}
 
 function instance(
 	search: (params: AiSearchSearchRequest) => Promise<AiSearchSearchResponse>,
@@ -2152,7 +2162,9 @@ describe('captureMcpAnalytics', () => {
 				method: 'tools/list',
 			}),
 		})
-		const body = await parseJsonRpcRequest(req)
+		const parsed = await readMcpRequest(req)
+		if (parsed instanceof Response) throw new Error('unexpected response')
+		const { body } = parsed
 
 		captureMcpAnalytics(
 			req,
@@ -2187,7 +2199,9 @@ describe('captureMcpAnalytics', () => {
 				},
 			}),
 		})
-		const body = await parseJsonRpcRequest(req)
+		const parsed = await readMcpRequest(req)
+		if (parsed instanceof Response) throw new Error('unexpected response')
+		const { body } = parsed
 
 		captureMcpAnalytics(
 			req,

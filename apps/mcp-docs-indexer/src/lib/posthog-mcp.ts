@@ -45,17 +45,6 @@ export function captureMcpAnalytics(
 	)
 }
 
-export async function parseJsonRpcRequest(
-	req: Request,
-): Promise<JsonRpcRequest | undefined> {
-	if (req.method !== 'POST') return undefined
-	try {
-		return (await req.clone().json()) as JsonRpcRequest
-	} catch {
-		return undefined
-	}
-}
-
 async function captureMcpAnalyticsAsync(
 	req: Request,
 	body: JsonRpcRequest,

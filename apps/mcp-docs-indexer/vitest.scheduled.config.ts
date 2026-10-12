@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
 	test: {
-		include: ['test/scheduled.test.ts'],
+		include: ['test/scheduled.test.ts', 'test/request.test.ts'],
 	},
 	plugins: [
 		cloudflareTest({

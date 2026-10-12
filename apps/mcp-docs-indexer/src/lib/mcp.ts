@@ -23,7 +23,7 @@ import {
 import type { Source } from './sources.js'
 import { resolveSourcePageUrl, sourceIndexUrl } from './sources.js'
 
-type JsonRpcRequest = {
+export type JsonRpcRequest = {
 	jsonrpc?: string
 	id?: string | number | null
 	method?: string
@@ -174,15 +174,9 @@ const SOURCE_QUERY_HINTS: Record<
 export async function handleMcp(
 	req: Request,
 	context: McpContext,
+	body: JsonRpcRequest | undefined,
 ): Promise<Response | undefined> {
-	if (req.method !== 'POST') return undefined
-
-	let body: JsonRpcRequest
-	try {
-		body = (await req.clone().json()) as JsonRpcRequest
-	} catch {
-		return undefined
-	}
+	if (req.method !== 'POST' || !body) return undefined
 
 	if (body.method === 'tools/list') {
 		const tools = toolSchemas(context.sources ?? [])
@@ -397,14 +391,14 @@ async function callLocalDocsTool(
 	const response = await handleMcp(
 		new Request('https://mcp.tempo.xyz/', {
 			method: 'POST',
-			body: JSON.stringify({
-				jsonrpc: '2.0',
-				id: 1,
-				method: 'tools/call',
-				params: { name, arguments: args },
-			}),
 		}),
 		context,
+		{
+			jsonrpc: '2.0',
+			id: 1,
+			method: 'tools/call',
+			params: { name, arguments: args },
+		},
 	)
 	if (!response) return toolCallError(`unknown tool: ${name}`)
 	const payload = (await response.json()) as {
