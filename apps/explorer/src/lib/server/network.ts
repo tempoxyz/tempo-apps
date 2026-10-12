@@ -3,7 +3,7 @@ import {
 	ZONE_PROVER_RPC_URL,
 	ZONE_PROVER_TIDX_URL,
 } from '#lib/zone-prover'
-import { serverEnv } from './env'
+import { devnetUrls, serverEnv } from './env'
 
 const DEVNET_CHAIN_ID = 31318
 
@@ -54,9 +54,9 @@ export function getChainBackend(chainId: number, kind: 'rpc' | 'tidx') {
 }
 
 /**
- * A `devnet` build's `DEVNET_RPC_URL` or `DEVNET_TIDX_URL` backend, with its
- * complete `Basic ...` or `Bearer ...` header from `DEVNET_RPC_AUTH` or
- * `DEVNET_TIDX_AUTH`.
+ * A `devnet` build's compiled-in `DEVNET_RPC_URL` or `DEVNET_TIDX_URL` backend
+ * (see `devnetUrls`), with its complete `Basic ...` or `Bearer ...` header
+ * from `DEVNET_RPC_AUTH` or `DEVNET_TIDX_AUTH`.
  * Undefined when the build isn't `devnet` or the URL is unset, which keeps the
  * default devnet backends. A set URL without valid credentials fails closed.
  */
@@ -66,7 +66,7 @@ export function getDevnetBackend(
 ) {
 	if (environment !== 'devnet') return undefined
 	const url =
-		kind === 'rpc' ? serverEnv.DEVNET_RPC_URL : serverEnv.DEVNET_TIDX_URL
+		kind === 'rpc' ? devnetUrls.DEVNET_RPC_URL : devnetUrls.DEVNET_TIDX_URL
 	if (!url) return undefined
 	const authorization =
 		kind === 'rpc' ? serverEnv.DEVNET_RPC_AUTH : serverEnv.DEVNET_TIDX_AUTH

@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { resolveTempoApi, serverEnv } from '#lib/server/env'
+import {
+	devnetUrls,
+	resolveTempoApi,
+	serverEnv,
+	serverEnvSchema,
+} from '#lib/server/env'
 import {
 	getChainBackend,
 	getDevnetBackend,
@@ -8,6 +13,7 @@ import {
 
 vi.mock('#lib/server/env', async (importOriginal) => ({
 	...(await importOriginal<typeof import('#lib/server/env')>()),
+	devnetUrls: {},
 	serverEnv: {},
 }))
 
@@ -17,6 +23,8 @@ const TIDX_AUTH = 'Basic dGlkeDp0ZXN0'
 afterEach(() => {
 	for (const key of Object.keys(serverEnv))
 		delete serverEnv[key as keyof typeof serverEnv]
+	for (const key of Object.keys(devnetUrls))
+		delete devnetUrls[key as keyof typeof devnetUrls]
 	vi.unstubAllEnvs()
 })
 
@@ -32,9 +40,9 @@ describe('devnet backend overrides', () => {
 	})
 
 	it('routes a devnet build to the configured RPC and TIDX', () => {
-		serverEnv.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
+		devnetUrls.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
 		serverEnv.DEVNET_RPC_AUTH = RPC_AUTH
-		serverEnv.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
+		devnetUrls.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
 		serverEnv.DEVNET_TIDX_AUTH = TIDX_AUTH
 
 		expect(getExplorerRpcBackend('devnet', undefined)).toEqual({
@@ -50,9 +58,9 @@ describe('devnet backend overrides', () => {
 	})
 
 	it('ignores the overrides in every other build', () => {
-		serverEnv.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
+		devnetUrls.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
 		serverEnv.DEVNET_RPC_AUTH = RPC_AUTH
-		serverEnv.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
+		devnetUrls.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
 		serverEnv.DEVNET_TIDX_AUTH = TIDX_AUTH
 
 		expect(getExplorerRpcBackend('nextfork', 'explorer:test')).toMatchObject({
@@ -65,8 +73,27 @@ describe('devnet backend overrides', () => {
 		}
 	})
 
+	it('ignores backend URLs from runtime Worker vars', () => {
+		const runtime = {
+			DEVNET_API_URL: 'https://api-pr-12.example.workers.dev',
+			DEVNET_RPC_URL: 'https://rpc-my-stack.devnet.tempoxyz.dev',
+			DEVNET_RPC_AUTH: RPC_AUTH,
+			DEVNET_TIDX_URL: 'https://tidx-my-stack.devnet.tempoxyz.dev',
+		}
+		expect(serverEnvSchema.parse(runtime)).toEqual({
+			DEVNET_RPC_AUTH: RPC_AUTH,
+		})
+		Object.assign(serverEnv, runtime)
+		vi.stubEnv('VITE_TEMPO_ENV', 'devnet')
+		expect(getDevnetBackend('devnet', 'rpc')).toBeUndefined()
+		expect(getChainBackend(31318, 'tidx')).toBeUndefined()
+		expect(getExplorerRpcBackend('devnet', 'explorer:test')).toMatchObject({
+			url: 'https://rpc.devnet.tempoxyz.dev',
+		})
+	})
+
 	it('accepts Bearer API keys', () => {
-		serverEnv.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
+		devnetUrls.DEVNET_TIDX_URL = 'https://tidx-my-stack.devnet.tempoxyz.dev'
 		serverEnv.DEVNET_TIDX_AUTH = 'Bearer devnet-key_1'
 		vi.stubEnv('VITE_TEMPO_ENV', 'devnet')
 		expect(getChainBackend(31318, 'tidx')).toEqual({
@@ -78,7 +105,7 @@ describe('devnet backend overrides', () => {
 	})
 
 	it('fails closed when an override has no valid credentials', () => {
-		serverEnv.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
+		devnetUrls.DEVNET_RPC_URL = 'https://rpc-my-stack.devnet.tempoxyz.dev'
 		expect(() => getExplorerRpcBackend('devnet', 'explorer:test')).toThrow(
 			'credentials',
 		)

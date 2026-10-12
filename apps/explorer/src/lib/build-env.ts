@@ -27,6 +27,13 @@ export const tempoEnvSchema = z.prefault(
 	'testnet',
 )
 
+/** A `devnet` build's compiled-in backend overrides (see vite.config.ts). */
+export const devnetUrlsSchema = z.object({
+	DEVNET_API_URL: z.optional(z.url({ protocol: /^https?$/ })),
+	DEVNET_RPC_URL: z.optional(z.url({ protocol: /^https?$/ })),
+	DEVNET_TIDX_URL: z.optional(z.url({ protocol: /^https?$/ })),
+})
+
 export const buildEnvSchema = z.object({
 	ALLOWED_HOSTS: z.prefault(
 		z.pipe(
