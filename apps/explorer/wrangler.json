@@ -145,7 +145,10 @@
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
-				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
+				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz",
+				"DEVNET_API_URL": "https://api-pr-1755.tempo-dev.workers.dev",
+				"DEVNET_RPC_URL": "https://rpc-full-stack-test.devnet.tempoxyz.dev",
+				"DEVNET_TIDX_URL": "https://tidx-full-stack-test.devnet.tempoxyz.dev"
 			},
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
