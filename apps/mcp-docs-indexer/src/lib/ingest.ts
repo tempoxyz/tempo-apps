@@ -46,6 +46,8 @@ const CONCURRENCY = 8
 const MAX_PAGE_BYTES = 3_500_000
 const DELETION_CONFIRMATION_MS = 5 * 60_000
 const MAX_PENDING_CHECKS = 20
+const CHECKPOINT_INTERVAL_MS = 30_000
+const KV_SAME_KEY_WRITE_GAP_MS = 1_100
 
 export async function syncSource(args: {
 	source: Source
@@ -84,6 +86,7 @@ export async function syncSource(args: {
 			(entry) => entry.index_retry,
 		)
 		const retryForce = (await etagCache.get(retryForceKey)) === '1'
+		if (force && !retryForce) await etagCache.put(retryForceKey, '1')
 		const prevSourceEtag =
 			force || sourceChanged || hasRetries || retryForce
 				? null
@@ -99,7 +102,7 @@ export async function syncSource(args: {
 			if (await etagCache.get(pendingDeletionKey)) {
 				await etagCache.delete(pendingDeletionKey)
 			}
-			if ((hasRetries || retryForce) && reconciled.pending === 0) {
+			if ((force || hasRetries || retryForce) && reconciled.pending === 0) {
 				return {
 					source: source.id,
 					status: 'error',
@@ -171,6 +174,17 @@ export async function syncSource(args: {
 		let pages = 0
 		let unchanged = 0
 		let failed = 0
+		let checkpointed = false
+		let lastIndexWriteAt = reconciled.lastIndexWriteAt
+		let lastCheckpointAt = Date.now()
+		const saveIndex = async (index: SourceIndex) => {
+			if (lastIndexWriteAt !== undefined) {
+				const gap = KV_SAME_KEY_WRITE_GAP_MS - (Date.now() - lastIndexWriteAt)
+				if (gap > 0) await new Promise((resolve) => setTimeout(resolve, gap))
+			}
+			await etagCache.put(indexKey, JSON.stringify(index))
+			lastIndexWriteAt = Date.now()
+		}
 
 		for (let i = 0; i < pageUrls.length; i += CONCURRENCY) {
 			const batch = pageUrls.slice(i, i + CONCURRENCY)
@@ -197,6 +211,17 @@ export async function syncSource(args: {
 				if (out.outcome === 'uploaded') pages++
 				else if (out.outcome === 'unchanged') unchanged++
 				else failed++
+			}
+			if (
+				i + batch.length < pageUrls.length &&
+				Date.now() - lastCheckpointAt >= CHECKPOINT_INTERVAL_MS
+			) {
+				if (!force && !retryForce && !checkpointed)
+					await etagCache.put(retryForceKey, '1')
+				// Retain old entries until deletion is confirmed at the end.
+				await saveIndex({ ...prevIndex, ...next })
+				checkpointed = true
+				lastCheckpointAt = Date.now()
 			}
 		}
 
@@ -236,14 +261,17 @@ export async function syncSource(args: {
 		// partial index could re-delete items on the following run.
 		if (failed === 0) {
 			const etag = res.headers.get('etag')
-			await etagCache.put(indexKey, JSON.stringify(next))
+			await saveIndex(next)
 			await etagCache.put(sourceUrlKey, indexUrl)
 			if (hasRemovals) await etagCache.delete(pendingDeletionKey)
-			if (retryForce) await etagCache.delete(retryForceKey)
+			if (force || retryForce || checkpointed)
+				await etagCache.delete(retryForceKey)
 			if (etag) await etagCache.put(etagKey, etag)
 		} else {
 			await etagCache.put(retryForceKey, '1')
 			await etagCache.delete(etagKey)
+			if (Object.keys(next).length > 0)
+				await saveIndex({ ...prevIndex, ...next })
 		}
 		await etagCache.put(`last_sync:${source.id}`, new Date().toISOString())
 		const pending = Object.values(next).filter(
@@ -291,7 +319,7 @@ async function reconcilePendingItems(args: {
 	indexKey: string
 	cursorKey: string
 	sourceId: string
-}): Promise<{ pending: number }> {
+}): Promise<{ pending: number; lastIndexWriteAt?: number }> {
 	const { index, instance, etagCache, indexKey, cursorKey, sourceId } = args
 	const pendingKeys = Object.keys(index).filter(
 		(key) => index[key]?.index_pending,
@@ -346,6 +374,7 @@ async function reconcilePendingItems(args: {
 	}
 	return {
 		pending: Object.values(index).filter((entry) => entry.index_pending).length,
+		...(changed ? { lastIndexWriteAt: Date.now() } : {}),
 	}
 }
 
