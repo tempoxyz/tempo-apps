@@ -3,15 +3,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isPostHogHost, posthogBootScript } from '#lib/posthog'
 import wrangler from '#wrangler.json' with { type: 'json' }
 
-const approvedHosts = Object.values(wrangler.env).flatMap((env) =>
-	env.routes.map((route) => route.pattern),
-)
+const approvedHosts = [
+	...Object.values(wrangler.env).flatMap((env) =>
+		env.routes.map((route) => route.pattern),
+	),
+	'explore.tempoxyz.dev',
+	'preview.explore.tempoxyz.dev',
+	'branch.preview.explore.tempoxyz.dev',
+	'other.tempo.xyz',
+	'branch.preview.explore.tempo.xyz',
+	'evil-explore.tempo.xyz',
+]
 const rejectedHosts = [
 	'exp.tokclaw.com',
 	'explore.tempo.xyz.evil.com',
-	'evil-explore.tempo.xyz',
+	'explore.tempoxyz.dev.evil.com',
+	'eviltempo.xyz',
+	'eviltempoxyz.dev',
 	'tempo.xyz',
-	'other.tempo.xyz',
+	'tempoxyz.dev',
 	'explorer-mainnet.example.workers.dev',
 	'localhost',
 	'127.0.0.1',
@@ -57,7 +67,9 @@ afterEach(() => {
 })
 
 describe('PostHog bootstrap host policy', () => {
-	it.each(approvedHosts)('loads the SDK on deployed host %s', (hostname) => {
+	it.each(
+		approvedHosts,
+	)('loads the SDK on approved subdomain %s', (hostname) => {
 		expect(isPostHogHost(hostname)).toBe(true)
 		const { insertedScripts, idleCallbacks, window } = bootstrap(hostname)
 		expect(idleCallbacks).toHaveLength(1)
@@ -90,6 +102,19 @@ describe('PostHog bootstrap host policy', () => {
 })
 
 describe('Profiling host policy', () => {
+	it.each(
+		approvedHosts,
+	)('captures profiling events on approved subdomain %s', async (hostname) => {
+		const capture = vi.fn()
+		vi.stubGlobal('window', { location: { hostname }, posthog: { capture } })
+		const { captureEvent } = await import('#lib/profiling')
+		captureEvent('explorer.availability.app_boot')
+		expect(capture).toHaveBeenCalledExactlyOnceWith(
+			'explorer.availability.app_boot',
+			{ timestamp: expect.any(Number) },
+		)
+	})
+
 	it.each(
 		rejectedHosts,
 	)('does not capture or buffer profiling events on %s', async (hostname) => {
