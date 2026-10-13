@@ -2,12 +2,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
 	buildAddressTxMetadata,
 	fetchAddressTxMetadata,
+	getAddressMetadata,
 	pickTip20CreatedTimestamp,
 } from '#lib/server/address-metadata'
 
-const { getTransactions } = vi.hoisted(() => ({
+const { getTransactions, getCode, getCreation } = vi.hoisted(() => ({
 	getTransactions: vi.fn(),
+	getCode: vi.fn(),
+	getCreation: vi.fn(),
 }))
+
+vi.mock('viem/actions', async (importOriginal) => ({
+	...(await importOriginal<typeof import('viem/actions')>()),
+	getCode,
+}))
+vi.mock('#wagmi.config.ts', () => ({
+	getBatchedClient: () => ({}),
+	getTempoChain: () => ({ id: 4217 }),
+}))
+vi.mock('#lib/server/contract-creation', () => ({
+	fetchContractCreationData: getCreation,
+}))
+vi.mock('#lib/server/tempo-queries', () => ({}))
 
 vi.mock('#lib/server/tempo-api', () => ({
 	api: { v1: { transactions: { $get: getTransactions } } },
@@ -15,6 +31,88 @@ vi.mock('#lib/server/tempo-api', () => ({
 
 beforeEach(() => {
 	getTransactions.mockReset()
+	getCode.mockReset()
+	getCreation.mockReset()
+})
+
+describe('contract creation metadata', () => {
+	let addressId = 10
+	function nextAddress() {
+		return `0x${(++addressId).toString(16).padStart(40, '0')}` as const
+	}
+
+	beforeEach(() => {
+		getCode.mockResolvedValue('0x6000')
+		getTransactions.mockImplementation(() =>
+			Promise.resolve(
+				Response.json({
+					data: [{ timestamp: 1791919668, hash: '0xcall', sender: '0xcaller' }],
+					meta: { totalCount: 1 },
+				}),
+			),
+		)
+	})
+
+	it('uses January deployment even when the only indexed call is in October', async () => {
+		getCreation.mockResolvedValue({
+			timestamp: 1767225600n,
+			hash: '0xdeployment',
+			from: '0xdeployer',
+		})
+		expect(await getAddressMetadata(nextAddress())).toMatchObject({
+			accountType: 'contract',
+			createdTimestamp: 1767225600,
+			createdTxHash: '0xdeployment',
+			createdBy: '0xdeployer',
+			lastActivityTimestamp: 1791919668,
+			txCount: 1,
+		})
+	})
+
+	it('uses a factory deployment block without inventing a creator or transaction', async () => {
+		getCreation.mockResolvedValue({
+			timestamp: 1767225600n,
+			hash: null,
+			from: null,
+		})
+		expect(await getAddressMetadata(nextAddress())).toMatchObject({
+			createdTimestamp: 1767225600,
+			createdTxHash: undefined,
+			createdBy: undefined,
+		})
+	})
+
+	it.each([
+		'missing',
+		'unavailable',
+	])('does not substitute activity when deployment is %s', async (reason) => {
+		const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+		if (reason === 'missing') getCreation.mockResolvedValue(null)
+		else
+			getCreation.mockRejectedValue(new Error('Historical state unavailable'))
+		try {
+			expect(await getAddressMetadata(nextAddress())).toMatchObject({
+				createdTimestamp: undefined,
+				createdTxHash: undefined,
+				createdBy: undefined,
+				lastActivityTimestamp: 1791919668,
+			})
+		} finally {
+			log.mockRestore()
+		}
+	})
+
+	it.each([
+		'0x',
+		`0xef0100${'11'.repeat(20)}`,
+	])('preserves first activity for non-contract code %s', async (code) => {
+		getCode.mockResolvedValue(code)
+		expect(await getAddressMetadata(nextAddress())).toMatchObject({
+			createdTimestamp: 1791919668,
+			createdTxHash: '0xcall',
+		})
+		expect(getCreation).not.toHaveBeenCalled()
+	})
 })
 
 describe('address metadata', () => {
