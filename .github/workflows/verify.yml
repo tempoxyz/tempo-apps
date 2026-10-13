@@ -32,6 +32,10 @@ jobs:
       - name: Check code and types
         run: pnpm gen:types && pnpm check
 
+      - name: Test explorer analytics host policy
+        run: pnpm exec vitest run --config vitest.node.config.ts test/posthog.node.test.ts
+        working-directory: apps/explorer
+
       - name: Rebuild trusted lint dependency
         run: pnpm rebuild @ast-grep/cli
 
