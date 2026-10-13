@@ -7,8 +7,9 @@ import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
-import { useMediaQuery } from '#lib/hooks'
+import { useDownload, useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
+import { serializeTokenCsv } from '#lib/token-csv'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { OG_BASE_URL } from '#lib/og'
@@ -52,8 +53,9 @@ function TokensPage() {
 	const { page = 1 } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 	const queryClient = useQueryClient()
+	const csvHelpId = React.useId()
 
-	const { data, isPending, isFetching } = useQuery({
+	const { data, isPending, isFetching, isError } = useQuery({
 		...tokensListQueryOptions({
 			page,
 			limit: TOKENS_PER_PAGE,
@@ -63,6 +65,13 @@ function TokensPage() {
 
 	const tokens = data?.tokens ?? []
 	const total = data?.total ?? 0
+	const { download: downloadCsv } = useDownload({
+		contentType: 'text/csv',
+		value: serializeTokenCsv(tokens),
+		filename: `tokens-page-${page}.csv`,
+	})
+	const isCsvDisabled =
+		isPending || isFetching || isError || tokens.length === 0
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -144,6 +153,22 @@ function TokensPage() {
 						totalItems: `${total}`,
 						itemsLabel: 'tokens',
 						autoCollapse: false,
+						contextual: (
+							<div className="flex flex-wrap items-center gap-3">
+								<p id={csvHelpId} className="copy-13 text-secondary">
+									Only the current page is exported.
+								</p>
+								<button
+									type="button"
+									onClick={downloadCsv}
+									disabled={isCsvDisabled}
+									aria-describedby={csvHelpId}
+									className="inline-flex min-h-9 items-center justify-center rounded-button border border-base-border px-3 button-14 text-primary transition-colors hover:bg-alt cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-focus"
+								>
+									Download CSV
+								</button>
+							</div>
+						),
 						content: (
 							<DataGrid
 								columns={{ stacked: stackedColumns, tabs: columns }}
