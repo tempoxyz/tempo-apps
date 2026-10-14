@@ -632,6 +632,30 @@ describe('matchBytecode', () => {
 		)
 	})
 
+	it('does not verify a library when its executable opcode differs', () => {
+		const address = '12'.repeat(20)
+		const cbor = Hex.fromBytes(
+			CBOR.encode({ ipfs: 'QmTest', solc: [0, 8, 20] }),
+		).slice(2)
+		const suffix = `602a60005260206000f3${cbor}${(cbor.length / 2).toString(16).padStart(4, '0')}`
+		const recompiledBytecode = `0x73${'00'.repeat(20)}${suffix}`
+
+		expect(
+			matchBytecode({
+				recompiledBytecode,
+				onchainBytecode: `0x73${address}${suffix}`,
+				isCreation: false,
+			}).match,
+		).toBe('exact_match')
+		expect(
+			matchBytecode({
+				recompiledBytecode,
+				onchainBytecode: `0x00${address}${suffix}`,
+				isCreation: false,
+			}).match,
+		).toBeNull()
+	})
+
 	it('handles library transformations', () => {
 		const linkReferences: LinkReferences = {
 			'lib.sol': {

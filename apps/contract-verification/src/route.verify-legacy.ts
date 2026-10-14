@@ -9,7 +9,6 @@ import {
 	getDb,
 	formatError,
 	sourcifyError,
-	normalizeSourcePath,
 	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
@@ -360,6 +359,19 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			)
 		}
 
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
+			files,
+			compiledContract.metadata,
+		)
+		if (filteredSourceEntries === null) {
+			return sourcifyError(
+				context,
+				400,
+				'source_path_collision',
+				'Compiler source paths collide after normalization',
+			)
+		}
+
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'
 		const contractIdentifier = `${contractPath}:${contractName}`
@@ -568,10 +580,6 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
-		const filteredSourceEntries = filterSourcesByCompilerMetadata(
-			files,
-			compiledContract.metadata,
-		)
 		const shouldInsertSources =
 			existingCompilation.length === 0 || shouldReplaceExistingSources
 
@@ -584,7 +592,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		// ast-grep-ignore-start: Sequential DB operations are intentional
 		// Insert sources referenced by the compiler metadata
 		if (shouldInsertSources) {
-			for (const [sourcePath, sourceContent] of filteredSourceEntries) {
+			for (const [path, sourceContent] of filteredSourceEntries) {
 				const contentBytes = new TextEncoder().encode(sourceContent)
 				const sourceHashSha256 = new Uint8Array(
 					await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
@@ -603,15 +611,13 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 
 				await db.insert(sourcesTable).values(sourceInsert).onConflictDoNothing()
 
-				// Normalize path (convert absolute to relative)
-				const normalizedPath = normalizeSourcePath(sourcePath)
 				await db
 					.insert(compiledContractsSourcesTable)
 					.values({
 						id: globalThis.crypto.randomUUID(),
 						compilationId: compilationId,
 						sourceHash: sourceHashSha256,
-						path: normalizedPath,
+						path,
 					})
 					.onConflictDoNothing()
 			}

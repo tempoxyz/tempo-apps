@@ -221,4 +221,71 @@ describe('POST /verify/vyper', () => {
 		expect(deployments[0]?.transactionIndex).toBeNull()
 		expect(deployments[0]?.deployer).toBeNull()
 	})
+
+	it('rejects colliding Vyper source paths without publishing a verification', async () => {
+		const chainId = staticChains[0].id
+		const address = '0x1111111111111111111111111111111111111111' as const
+		const runtimeBytecode = createVyperBytecode('6000')
+		const decoyPath = '/decoy/src/vault.vy'
+		const compiledPath = '/attacker/src/vault.vy'
+		mockCreatePublicClient.mockReturnValue({
+			getCode: async () => runtimeBytecode,
+		})
+		mockGetRandom.mockResolvedValue({
+			fetch: async () =>
+				Response.json({
+					contracts: {
+						[compiledPath]: {
+							Vault: {
+								abi: [],
+								evm: {
+									bytecode: {
+										object: createVyperBytecode('60016000').slice(2),
+									},
+									deployedBytecode: { object: runtimeBytecode.slice(2) },
+								},
+								metadata: JSON.stringify({
+									sources: { [decoyPath]: {}, [compiledPath]: {} },
+								}),
+							},
+						},
+					},
+				}),
+		})
+		const { legacyVerifyRoute } = await import('#route.verify-legacy.ts')
+		const app = new Hono<AppEnv>()
+		app.use(async (c, next) => {
+			c.set('chainRegistry', ChainRegistry.fromStatic(staticChains))
+			await next()
+		})
+		app.route('/verify', legacyVerifyRoute)
+
+		const response = await app.request(
+			'/verify/vyper',
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					address,
+					chain: chainId,
+					files: {
+						[decoyPath]: '# @version ^0.3.10\n# benign',
+						[compiledPath]: '# @version ^0.3.10\n# compiled',
+					},
+					contractPath: compiledPath,
+					contractName: 'Vault',
+					compilerVersion: '0.3.10',
+				}),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(400)
+		expect(await response.json()).toMatchObject({
+			customCode: 'source_path_collision',
+		})
+		const db = drizzle(env.CONTRACTS_DB)
+		expect(await db.select().from(DB.compiledContractsTable)).toHaveLength(0)
+		expect(await db.select().from(DB.verifiedContractsTable)).toHaveLength(0)
+	})
 })

@@ -80,11 +80,18 @@ export function getCompilerMetadataSourcePaths(
 export function filterSourcesByCompilerMetadata<T>(
 	sources: Record<string, T>,
 	metadata: string | undefined,
-): Array<[string, T]> {
+): Array<[string, T]> | null {
 	const metadataSourcePaths = getCompilerMetadataSourcePaths(metadata)
-	return Object.entries(sources).filter(([sourcePath]) =>
-		metadataSourcePaths.has(sourcePath),
-	)
+	const normalizedPaths = new Set<string>()
+	const entries: Array<[string, T]> = []
+	for (const [sourcePath, source] of Object.entries(sources)) {
+		if (!metadataSourcePaths.has(sourcePath)) continue
+		const path = normalizeSourcePath(sourcePath)
+		if (normalizedPaths.has(path)) return null
+		normalizedPaths.add(path)
+		entries.push([path, source])
+	}
+	return entries
 }
 
 export function sourcifyError(

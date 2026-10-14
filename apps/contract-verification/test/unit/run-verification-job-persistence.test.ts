@@ -441,6 +441,61 @@ describe('runVerificationJob – source path normalization persistence', () => {
 		// No recognized pattern → falls back to filename
 		expect(sources[0]?.path).toBe('Counter.sol')
 	})
+
+	it('does not publish a compilation when compiler source paths collide', async () => {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+
+		const decoyPath = '/decoy/src/Counter.sol'
+		const compiledPath = '/attacker/src/Counter.sol'
+		const output = solcOutputWithMetadataSource(compiledPath)
+		const contract = output.contracts['Counter.sol']?.Counter
+		if (!contract) throw new Error('fixture contract entry missing')
+		const metadata = JSON.parse(contract.metadata) as {
+			sources: Record<string, unknown>
+		}
+		metadata.sources = {
+			[decoyPath]: metadata.sources[compiledPath],
+			[compiledPath]: metadata.sources[compiledPath],
+		}
+
+		await runVerificationJob(
+			env,
+			{
+				...JOB_DEFAULTS,
+				jobId,
+				stdJsonInput: {
+					...counterFixture.stdJsonInput,
+					sources: {
+						[decoyPath]: {
+							content:
+								'contract Counter { function count() public pure returns (uint256) { return 0; } }',
+						},
+						[compiledPath]: { content: counterSource },
+					},
+				},
+			},
+			{
+				...makeClientStub(),
+				...makeContainerStub({
+					...output,
+					contracts: {
+						'Counter.sol': {
+							Counter: { ...contract, metadata: JSON.stringify(metadata) },
+						},
+					},
+				}),
+			},
+		)
+
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBe('source_path_collision')
+		expect(job?.verifiedContractId).toBeNull()
+
+		const db = drizzle(env.CONTRACTS_DB)
+		expect(await db.select().from(DB.verifiedContractsTable)).toHaveLength(0)
+		expect(await db.select().from(DB.compiledContractsTable)).toHaveLength(0)
+	})
 })
 
 // ---------------------------------------------------------------------------
