@@ -269,6 +269,13 @@ const zoneVerifierT13Abi = parseAbi([
 	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
 ])
 
+// viem 2.57 replaced the pre-T13 verify with the tempoxyz/zones#1320 signature
+// (adds nextZoneHeight), so the earlier one is no longer in viem.
+const zoneVerifierPreT13Abi = parseAbi([
+	...zoneT13Transitions,
+	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
+])
+
 const zonePortalT13FunctionsAbi = parseAbi([
 	...zoneT13Transitions,
 	'function submitBatch(uint64 tempoBlockNumber, uint64 recentTempoBlockNumber, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof, uint256 zoneHeight, bytes[] signatures)',
@@ -276,6 +283,7 @@ const zonePortalT13FunctionsAbi = parseAbi([
 
 export const zoneVerifierAbi = [
 	...ViemTempoAbis.zoneVerifier,
+	...zoneVerifierPreT13Abi,
 	...zoneVerifierT13Abi,
 ] as const
 
