@@ -264,6 +264,11 @@ const zoneT13Transitions = [
 	'struct TokenEnablementTransition { uint64 prevProcessedTokenCount; uint64 nextProcessedTokenCount; }',
 ] as const
 
+const zoneVerifierLegacyAbi = parseAbi([
+	...zoneT13Transitions.slice(0, 2),
+	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
+])
+
 const zoneVerifierT13Abi = parseAbi([
 	...zoneT13Transitions,
 	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
@@ -276,6 +281,7 @@ const zonePortalT13FunctionsAbi = parseAbi([
 
 export const zoneVerifierAbi = [
 	...ViemTempoAbis.zoneVerifier,
+	...zoneVerifierLegacyAbi,
 	...zoneVerifierT13Abi,
 ] as const
 

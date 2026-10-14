@@ -136,6 +136,8 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import CopyIcon from '~icons/lucide/copy'
 import PlayIcon from '~icons/lucide/play'
 import XIcon from '~icons/lucide/x'
+import DownloadIcon from '~icons/lucide/download'
+import LoaderIcon from '~icons/lucide/loader-circle'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -161,6 +163,48 @@ function getHistoryStatePage(state: object): number | undefined {
 	return typeof state.addressHistoryPage === 'number'
 		? state.addressHistoryPage
 		: undefined
+}
+
+function csvCell(value: string | number | null | undefined): string {
+	return `"${String(value ?? '').replaceAll('"', '""')}"`
+}
+
+function csvQuantity(value: string): string {
+	try {
+		return BigInt(value).toString()
+	} catch {
+		return value
+	}
+}
+
+function transactionsToCsv(transactions: EnrichedTransaction[]): string {
+	const rows: (string | number | null | undefined)[][] = [
+		[
+			'Transaction hash',
+			'Block number',
+			'Transaction index',
+			'Timestamp (UTC)',
+			'From',
+			'To',
+			'Value (wei)',
+			'Status',
+			'Gas used',
+			'Effective gas price (wei)',
+		],
+		...transactions.map((transaction) => [
+			transaction.hash,
+			csvQuantity(transaction.blockNumber),
+			transaction.transactionIndex,
+			new Date(transaction.timestamp * 1000).toISOString(),
+			transaction.from,
+			transaction.to,
+			csvQuantity(transaction.value),
+			transaction.status,
+			csvQuantity(transaction.gasUsed),
+			csvQuantity(transaction.effectiveGasPrice),
+		]),
+	]
+	return rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
 }
 
 function getHistoryNavigation(
@@ -1117,6 +1161,13 @@ function SectionsWrapper(props: {
 		? activeTab
 		: 'deposits'
 	const queryClient = useQueryClient()
+	const [isExportingTransactions, setIsExportingTransactions] =
+		React.useState(false)
+	const [transactionsExportError, setTransactionsExportError] = React.useState<
+		string | null
+	>(null)
+	const exportInProgress = React.useRef(false)
+
 	const zonePortalActivityQuery = useQuery({
 		...zonePortalActivityQueryOptions({
 			address,
@@ -1191,6 +1242,52 @@ function SectionsWrapper(props: {
 			}),
 		[address, after, include, status, hideSubmitBatches],
 	)
+
+	const exportTransactions = React.useCallback(async () => {
+		if (exportInProgress.current) return
+		exportInProgress.current = true
+		setIsExportingTransactions(true)
+		setTransactionsExportError(null)
+		try {
+			const exported: EnrichedTransaction[] = []
+			const seenCursors = new Set<string>()
+			let pageCursor: string | undefined
+			while (true) {
+				const result = await queryClient.fetchQuery({
+					...getHistoryQueryOptions({ order: 'desc', cursor: pageCursor }),
+					staleTime: 0,
+				})
+				if (result.error) throw new Error(result.error)
+				exported.push(...result.transactions)
+				const nextCursor = result.nextCursor
+				if (!nextCursor) break
+				if (seenCursors.has(nextCursor) || nextCursor === pageCursor)
+					throw new Error('Transaction history pagination did not advance')
+				seenCursors.add(nextCursor)
+				pageCursor = nextCursor
+			}
+			const blob = new Blob([`\uFEFF${transactionsToCsv(exported)}`], {
+				type: 'text/csv;charset=utf-8',
+			})
+			const url = URL.createObjectURL(blob)
+			const link = document.createElement('a')
+			link.href = url
+			link.download = `${address.toLowerCase()}-transactions.csv`
+			document.body.appendChild(link)
+			link.click()
+			link.remove()
+			window.setTimeout(() => URL.revokeObjectURL(url), 0)
+		} catch (error) {
+			setTransactionsExportError(
+				error instanceof Error
+					? error.message
+					: 'Unable to export transactions',
+			)
+		} finally {
+			exportInProgress.current = false
+			setIsExportingTransactions(false)
+		}
+	}, [address, getHistoryQueryOptions, queryClient])
 
 	const feedScope = JSON.stringify([
 		address,
@@ -2079,17 +2176,42 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex items-center gap-3">
-							<TransactionFilters
-								status={status}
-								period={period}
-								onStatusChange={onStatusChange}
-								onPeriodChange={onPeriodChange}
-								hideSubmitBatches={hideSubmitBatches}
-								onHideSubmitBatchesChange={onHideSubmitBatchesChange}
-								onClearAll={onClearTransactionFilters}
-							/>
-							{liveControl}
+						<div className="flex flex-col gap-2">
+							<div className="flex items-center gap-3">
+								<TransactionFilters
+									status={status}
+									period={period}
+									onStatusChange={onStatusChange}
+									onPeriodChange={onPeriodChange}
+									hideSubmitBatches={hideSubmitBatches}
+									onHideSubmitBatchesChange={onHideSubmitBatchesChange}
+									onClearAll={onClearTransactionFilters}
+								/>
+								<button
+									type="button"
+									onClick={() => void exportTransactions()}
+									disabled={isExportingTransactions}
+									className="flex shrink-0 items-center gap-[5px] px-[6px] py-[2px] rounded-[4px] label-12 font-medium text-tertiary hover:text-primary hover:bg-base-alt press-down disabled:opacity-50 disabled:cursor-not-allowed"
+									aria-label={
+										isExportingTransactions
+											? 'Exporting transactions'
+											: 'Export transactions as CSV'
+									}
+								>
+									{isExportingTransactions ? (
+										<LoaderIcon className="size-[13px] animate-spin" />
+									) : (
+										<DownloadIcon className="size-[13px]" />
+									)}
+									{isExportingTransactions ? 'Exporting…' : 'Export CSV'}
+								</button>
+								{liveControl}
+							</div>
+							{transactionsExportError && (
+								<p role="alert" className="copy-13 text-negative">
+									Failed to export transactions: {transactionsExportError}
+								</p>
+							)}
 						</div>
 					),
 					content: transactionsError ?? (
