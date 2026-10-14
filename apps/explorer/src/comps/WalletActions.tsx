@@ -69,7 +69,7 @@ export function WalletActions(
 			? 'Switching network…'
 			: !isConnected
 				? `Connect ${walletName}`
-				: `Switch to Tempo`
+				: 'Switch to Tempo'
 
 	return (
 		<InfoCard
