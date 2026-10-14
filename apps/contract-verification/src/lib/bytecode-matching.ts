@@ -783,6 +783,8 @@ export interface MatchBytecodeOptions {
 	onchainBytecode: string
 	recompiledBytecode: string
 	isCreation: boolean
+	/** Required when matching a deployed library's call-protection address. */
+	deploymentAddress?: string
 	linkReferences?: LinkReferences
 	immutableReferences?: ImmutableReferences
 	cborAuxdataPositions?: CborAuxdataPositions
@@ -804,6 +806,7 @@ export function matchBytecode(
 		onchainBytecode,
 		recompiledBytecode,
 		isCreation,
+		deploymentAddress,
 		linkReferences,
 		immutableReferences,
 		cborAuxdataPositions,
@@ -822,6 +825,19 @@ export function matchBytecode(
 			populatedBytecode,
 			onchainBytecode,
 		)
+		if (
+			callProtectionResult.transformations.length > 0 &&
+			callProtectionResult.transformationValues.callProtection?.toLowerCase() !==
+				deploymentAddress?.toLowerCase()
+		) {
+			return {
+				match: null,
+				transformations: [],
+				transformationValues: {},
+				message:
+					'Library call protection address does not match deployment address',
+			}
+		}
 		populatedBytecode = callProtectionResult.populatedBytecode
 		allTransformations.push(...callProtectionResult.transformations)
 		Object.assign(

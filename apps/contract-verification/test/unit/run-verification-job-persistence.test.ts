@@ -601,3 +601,55 @@ describe('runVerificationJob – ABI with unsupported/malformed items', () => {
 		expect(signatures).toEqual(['CountChanged(uint256)', 'count()'])
 	})
 })
+
+describe('runVerificationJob – library call protection', () => {
+	it.each([
+		{ embeddedAddress: counterFixture.address.slice(2), expectedError: null },
+		{ embeddedAddress: 'ff'.repeat(20), expectedError: 'no_match' },
+	])('only verifies a library whose embedded address belongs to its deployment ($expectedError)', async ({
+		embeddedAddress,
+		expectedError,
+	}) => {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+
+		const contract = counterFixture.solcOutput.contracts['Counter.sol']?.Counter
+		if (!contract) throw new Error('fixture contract entry missing')
+		const runtime = contract.evm.deployedBytecode.object
+		const onchainBytecode = `0x73${embeddedAddress}${runtime}` as const
+		const output = {
+			...counterFixture.solcOutput,
+			contracts: {
+				'Counter.sol': {
+					Counter: {
+						...contract,
+						evm: {
+							...contract.evm,
+							deployedBytecode: {
+								...contract.evm.deployedBytecode,
+								object: `73${'00'.repeat(20)}${runtime}`,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		await runVerificationJob(
+			env,
+			{ ...JOB_DEFAULTS, jobId },
+			{
+				createPublicClient: () => ({ getCode: async () => onchainBytecode }),
+				...makeContainerStub(output),
+			},
+		)
+
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBe(expectedError)
+		expect(job?.verifiedContractId === null).toBe(expectedError !== null)
+		const db = drizzle(env.CONTRACTS_DB)
+		expect(await db.select().from(DB.verifiedContractsTable)).toHaveLength(
+			expectedError === null ? 1 : 0,
+		)
+	})
+})

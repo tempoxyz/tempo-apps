@@ -644,6 +644,7 @@ describe('matchBytecode', () => {
 			matchBytecode({
 				recompiledBytecode,
 				onchainBytecode: `0x73${address}${suffix}`,
+				deploymentAddress: `0x${address}`,
 				isCreation: false,
 			}).match,
 		).toBe('exact_match')
@@ -651,6 +652,15 @@ describe('matchBytecode', () => {
 			matchBytecode({
 				recompiledBytecode,
 				onchainBytecode: `0x00${address}${suffix}`,
+				deploymentAddress: `0x${address}`,
+				isCreation: false,
+			}).match,
+		).toBeNull()
+		expect(
+			matchBytecode({
+				recompiledBytecode,
+				onchainBytecode: `0x73${'ff'.repeat(20)}${suffix}`,
+				deploymentAddress: `0x${address}`,
 				isCreation: false,
 			}).match,
 		).toBeNull()

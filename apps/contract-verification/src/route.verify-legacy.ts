@@ -342,6 +342,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			onchainBytecode: onchainBytecode,
 			recompiledBytecode: compiledBytecode,
 			isCreation: false,
+			deploymentAddress: address,
 			linkReferences: undefined,
 			immutableReferences,
 			auxdataStyle,

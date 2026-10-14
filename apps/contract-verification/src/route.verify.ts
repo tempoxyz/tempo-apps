@@ -862,6 +862,7 @@ async function runVerificationJob(
 			onchainBytecode: onchainBytecode,
 			recompiledBytecode: compiledBytecode,
 			isCreation: false,
+			deploymentAddress: address,
 			linkReferences,
 			immutableReferences,
 			auxdataStyle,
