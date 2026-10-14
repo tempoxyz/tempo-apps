@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { buildEnvSchema } from '../src/lib/build-env'
+import { buildEnvSchema, devnetUrlsSchema } from '../src/lib/build-env'
 import { serverEnvSchema } from '../src/lib/server/env'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -30,6 +30,7 @@ function schemaKeys(schema: { shape: Record<string, unknown> }): string[] {
 
 const ALL_VARS = new Set([
 	...schemaKeys(buildEnvSchema),
+	...schemaKeys(devnetUrlsSchema),
 	...schemaKeys(serverEnvSchema),
 	...CLIENT_AND_BINDING_VARS,
 ])
