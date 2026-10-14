@@ -696,9 +696,6 @@ export namespace ExploreInput {
 							<span className="label-16 text-base-content truncate">
 								{suggestion.name}
 							</span>
-							<span className="label-12 font-medium text-base-content bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-								{suggestion.symbol}
-							</span>
 							<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
 								TIP-20
 							</span>
