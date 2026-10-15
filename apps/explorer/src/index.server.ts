@@ -68,6 +68,13 @@ const serverEntry = createServerEntry({
 			return handleDatadogProxy(request)
 		}
 
+		if (url.pathname === '/llms.txt' || url.pathname === '/llms-full.txt') {
+			const { llmsResponse } = await import('#lib/llms/serve')
+			return llmsResponse(
+				url.pathname === '/llms.txt' ? 'llms.txt' : 'llms-full.txt',
+			)
+		}
+
 		for (const { from, to } of redirects) {
 			const match = url.pathname.match(from)
 			if (match) {

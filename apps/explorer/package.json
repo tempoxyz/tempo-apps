@@ -19,9 +19,8 @@
 		"bundle:analyze:json": "ANALYZE_JSON=true pnpm build",
 		"bundle:diff": "pnpm node scripts/bundle-diff.ts",
 		"bundle:save": "pnpm node scripts/bundle-diff.ts --save",
-		"check": "pnpm check:biome && pnpm check:types && pnpm check:env && pnpm check:llms",
+		"check": "pnpm check:biome && pnpm check:types && pnpm check:env",
 		"check:env": "vitest run --config vitest.node.config.ts",
-		"check:llms": "node scripts/llms/generate.ts --check",
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"check:types:test": "tsc --project test/tsconfig.json --noEmit",
@@ -31,7 +30,6 @@
 		"deploy:nextfork": "pnpm deploy --env nextfork",
 		"deploy:testnet": "pnpm deploy --env testnet",
 		"deploy:mainnet": "pnpm deploy --env mainnet",
-		"gen:llms": "node scripts/llms/generate.ts",
 		"gen:types": "CLOUDFLARE_ENV='mainnet' wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
 		"preview": "vite preview --mode='preview'",
 		"test": "vitest"

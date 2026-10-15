@@ -20,7 +20,13 @@ For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 
 ## Networks
 
-{{networks}}
+| Network | URL | Redirects from |
+| --- | --- | --- |
+| testnet | https://explore.testnet.tempo.xyz | explore.42431.tempo.xyz, explore.moderato.tempo.xyz |
+| devnet | https://explore.31318.tempo.xyz, https://explore.devnet.tempo.xyz | - |
+| zone-prover | https://explore.zone-prover.devnet.tempo.xyz | - |
+| nextfork | https://explore.nextfork.devnet.tempo.xyz | - |
+| mainnet | https://explore.tempo.xyz | explore.4217.tempo.xyz, explore.mainnet.tempo.xyz, explore.presto.tempo.xyz |
 
 ## Pages
 

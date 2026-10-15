@@ -5,6 +5,7 @@ import * as Hex from 'ox/Hex'
 import { formatUnits } from 'viem'
 import { Abis } from '#lib/abis'
 import { getChainId, readContracts } from 'wagmi/actions'
+import * as z from 'zod/mini'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
@@ -67,16 +68,19 @@ export type Tip20RolesResponse = {
 	config: Tip20Config
 }
 
+export const Tip20RolesQuerySchema = z.object({
+	address: zAddress({ lowercase: true }),
+	chainId: z.optional(z.string()),
+})
+
 export const Route = createFileRoute('/api/tip20-roles')({
 	server: {
 		handlers: {
 			GET: async ({ request }) => {
 				try {
 					const url = new URL(request.url)
-					const address = zAddress({ lowercase: true }).parse(
-						url.searchParams.get('address'),
-					)
-					const chainIdParam = url.searchParams.get('chainId')
+					const { address, chainId: chainIdParam } =
+						Tip20RolesQuerySchema.parse(Object.fromEntries(url.searchParams))
 					const config = getWagmiConfig()
 					const chainId = chainIdParam
 						? Number(chainIdParam)

@@ -36,10 +36,6 @@ jobs:
         run: pnpm check:env
         working-directory: apps/explorer
 
-      - name: Check explorer llms.txt
-        run: pnpm check:llms
-        working-directory: apps/explorer
-
       - name: Rebuild trusted lint dependency
         run: pnpm rebuild @ast-grep/cli
 

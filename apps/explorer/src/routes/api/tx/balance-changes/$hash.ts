@@ -208,7 +208,7 @@ export async function fetchBalanceChanges(params: {
 	})
 }
 
-const querySchema = z.object({
+export const BalanceChangesQuerySchema = z.object({
 	limit: z.optional(z.coerce.number()),
 	offset: z.optional(z.coerce.number()),
 })
@@ -220,10 +220,9 @@ export const Route = createFileRoute('/api/tx/balance-changes/$hash')({
 				try {
 					const hash = zHash().parse(params.hash)
 					const url = new URL(request.url)
-					const query = querySchema.parse({
-						limit: url.searchParams.get('limit') ?? undefined,
-						offset: url.searchParams.get('offset') ?? undefined,
-					})
+					const query = BalanceChangesQuerySchema.parse(
+						Object.fromEntries(url.searchParams),
+					)
 					const limit = normalizeLimit(query.limit ?? DEFAULT_LIMIT)
 					const offset = normalizeOffset(query.offset ?? 0)
 

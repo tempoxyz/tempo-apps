@@ -36,7 +36,7 @@ export const Route = createFileRoute('/_layout/tokens')({
 	}),
 	validateSearch: z.object({
 		page: z.optional(z.number()),
-	}).parse,
+	}),
 	loader: ({ context }) =>
 		withLoaderTiming('/_layout/tokens', async () =>
 			context.queryClient.ensureQueryData(

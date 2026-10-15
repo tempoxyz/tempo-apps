@@ -6,7 +6,7 @@ import { numberToHex } from 'viem'
 import * as z from 'zod/mini'
 import { getExplorerRpcBackend } from '#lib/server/network'
 import { checkRateLimit } from '#lib/server/rate-limit'
-import { zAddress, zHash } from '#lib/zod'
+import { hex, zAddress, zHash } from '#lib/zod'
 
 export const MAX_SIMULATION_CALLDATA_BYTES = 64 * 1024
 const MAX_REQUEST_BYTES = MAX_SIMULATION_CALLDATA_BYTES * 2 + 16 * 1024
@@ -15,7 +15,7 @@ const SIMULATION_TIMEOUT_MS = 15_000
 const DecimalSchema = z.string().check(z.regex(/^\d+$/))
 
 const CalldataSchema = z.pipe(
-	z.string().check((ctx) => {
+	z.string().check(hex(), (ctx) => {
 		if (!OxHex.validate(ctx.value)) {
 			ctx.issues.push({
 				code: 'custom',

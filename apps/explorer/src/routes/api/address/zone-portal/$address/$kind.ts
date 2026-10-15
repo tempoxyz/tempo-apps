@@ -7,7 +7,7 @@ import { fetchZonePortalActivity } from '#lib/server/zone-portal'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
-const SearchSchema = z.object({
+export const SearchSchema = z.object({
 	page: z.prefault(z.coerce.number(), 1),
 	limit: z.prefault(z.coerce.number(), 10),
 })

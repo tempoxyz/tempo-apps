@@ -1,31 +1,58 @@
 /**
- * Hand-written descriptions merged into the generated `llms.txt` and
- * `llms-full.txt`. Paths, methods, parameter names, types, values, and
- * defaults come from `src/routes`; `generate.ts` fails when an entry here is
- * missing or no longer matches a route.
+ * Descriptions for `/llms.txt` and `/llms-full.txt`. Paths, methods, and
+ * parameter types, values, and defaults are read from the routes when the
+ * files are served. The types below make `check:types` fail when a route or
+ * parameter has no entry here, or an entry names one that no longer exists.
  */
 
-import { PUBLIC_METHODS, READ_METHODS } from '../../src/lib/server/rpc.ts'
+import type { z } from 'zod/mini'
+import { liveQuerySchema } from '#lib/live-query'
+import { RequestParametersSchema } from '#lib/server/address-history'
+import { PUBLIC_METHODS, READ_METHODS } from '#lib/server/rpc'
+import type { FileRoutesByFullPath } from '#routeTree.gen.ts'
+import { BatchAbiRequestSchema } from '#routes/api/abi/batch'
+import { SearchSchema as ZonePortalActivitySchema } from '#routes/api/address/zone-portal/$address/$kind'
+import { CodeQuerySchema } from '#routes/api/code'
+import { SearchQuerySchema } from '#routes/api/search'
+import { SimulationRequestSchema } from '#routes/api/simulate'
+import { Tip20RolesQuerySchema } from '#routes/api/tip20-roles'
+import { BalanceChangesQuerySchema } from '#routes/api/tx/balance-changes/$hash'
+import type { RouteDoc } from './render'
 
-/**
- * A string describes the parameter and `null` marks one the route parses but
- * agents should not use. The object form can also describe each allowed value
- * (in display order), or mark a parameter required when the route accepts its
- * absence but returns nothing useful without it.
- */
-export type ParamDoc =
+type Routes = FileRoutesByFullPath
+
+/** Like `render.ts`'s `ParamDoc`, with `values` keyed by the schema's literals. */
+type ParamDoc<Value> =
 	| string
 	| {
 			description: string
-			values?: Record<string, string>
+			values?: Record<Extract<NonNullable<Value>, string>, string>
 			required?: true
 	  }
 	| null
 
-export type RouteDoc = {
-	title: string
-	description: string
-	params?: Record<string, ParamDoc>
+/** Every parameter the schema parses needs an entry, and no others. */
+type Params<T> = [keyof T] extends [never]
+	? { params?: never }
+	: { params: { [K in keyof T]-?: ParamDoc<T[K]> } }
+
+type Base = { title: string; description: string }
+
+declare const checked: unique symbol
+type ApiDoc = RouteDoc & { [checked]: true }
+
+type Entry<Path extends keyof Routes> =
+	| { hidden: string }
+	| (Path extends `/api/${string}`
+			? (Base & { input?: never; params?: never }) | ApiDoc
+			: Base & Params<Routes[Path]['types']['searchSchema']>)
+
+/** An API route whose handler parses `input`. */
+function api<Schema extends z.core.$ZodType>(
+	input: Schema,
+	doc: Base & Params<z.output<Schema>>,
+): ApiDoc {
+	return { ...doc, input } as RouteDoc as ApiDoc
 }
 
 const methodList = (methods: Iterable<string>) =>
@@ -36,8 +63,8 @@ const pagination = {
 	limit: 'Rows per page.',
 }
 
-/** Pages, in display order. */
-export const pages: Record<string, RouteDoc> = {
+/** Routes in display order: pages, then API routes, then hidden routes. */
+export const docs = {
 	'/': {
 		title: 'Home',
 		description:
@@ -50,7 +77,7 @@ export const pages: Record<string, RouteDoc> = {
 			'Redirects to the matching block, address, receipt, or unique token for `q`, or back to the home search when there is no single match.',
 		params: { q: 'Address, transaction hash, block number, or token query.' },
 	},
-	'/address/{address}': {
+	'/address/$address': {
 		title: 'Address',
 		description:
 			'Shows an account, contract, or TIP-20 token: type, balances, activity, and creation or last-activity metadata. Transactions and balances can be exported as CSV. The tabs shown depend on the address type.',
@@ -91,7 +118,7 @@ export const pages: Record<string, RouteDoc> = {
 			voucher: null,
 		},
 	},
-	'/token/{address}': {
+	'/token/$address': {
 		title: 'Token redirect',
 		description:
 			'Redirects to `/address/{address}`. Without `tab`, TIP-20 tokens open on `tab=token`; links with `a`, and other tokens, open on `tab=transfers`. `holders`, `token`, and `contract` are kept, and `interact` opens `contract`.',
@@ -101,7 +128,7 @@ export const pages: Record<string, RouteDoc> = {
 			...pagination,
 		},
 	},
-	'/tx/{hash}': {
+	'/tx/$hash': {
 		title: 'Transaction',
 		description: 'Shows transaction details.',
 		params: {
@@ -120,11 +147,11 @@ export const pages: Record<string, RouteDoc> = {
 			r: null,
 		},
 	},
-	'/receipt/{hash}': {
+	'/receipt/$hash': {
 		title: 'Receipt',
 		description:
 			'The canonical receipt view of what a transaction did. Append `.json`, `.txt`, or `.pdf` to the hash, or send a matching `Accept` header, for a machine-readable export; `curl` and `wget` receive plain text.',
-		params: { r: null, voucher: null },
+		params: { voucher: null },
 	},
 	'/blocks': {
 		title: 'Blocks',
@@ -135,13 +162,13 @@ export const pages: Record<string, RouteDoc> = {
 			live: 'Follow new blocks (`true`) or pause the list (`false`).',
 		},
 	},
-	'/block/{id}': {
+	'/block/$id': {
 		title: 'Block',
 		description:
 			'`id` is a block number, block hash, or `latest`. Shows hash, number, timestamp, gas usage, proposer, parent hash, and the block’s transactions.',
 		params: { page: 'Page of the block’s transactions.' },
 	},
-	'/block/countdown/{targetBlock}': {
+	'/block/countdown/$targetBlock': {
 		title: 'Block countdown',
 		description: 'Estimated time until a future block number.',
 	},
@@ -160,7 +187,7 @@ export const pages: Record<string, RouteDoc> = {
 			...pagination,
 		},
 	},
-	'/policy/{id}': {
+	'/policy/$id': {
 		title: 'TIP-403 policy',
 		description:
 			'A TIP-403 transfer policy: type, administrator, members, composed policies, and policy events.',
@@ -193,11 +220,8 @@ export const pages: Record<string, RouteDoc> = {
 			originBalances: null,
 		},
 	},
-}
 
-/** API routes, in display order. */
-export const api: Record<string, RouteDoc> = {
-	'/api/search': {
+	'/api/search': api(SearchQuerySchema, {
 		title: 'Search',
 		description:
 			'Searches blocks, addresses, transactions, and tokens. Returns `{ results, query }`, where each result has a `type` of `block`, `address`, `token`, or `transaction`. Use it when the input type is unknown.',
@@ -207,17 +231,17 @@ export const api: Record<string, RouteDoc> = {
 				required: true,
 			},
 		},
-	},
-	'/api/address/metadata/{address}': {
+	}),
+	'/api/address/metadata/$address': {
 		title: 'Address metadata',
 		description:
 			'Account type, transaction and holder counts, and creation and last-activity details.',
 	},
-	'/api/address/balances/{address}': {
+	'/api/address/balances/$address': {
 		title: 'Address balances',
 		description: 'Token balances held by the address.',
 	},
-	'/api/address/history/{address}': {
+	'/api/address/history/$address': api(RequestParametersSchema, {
 		title: 'Address history',
 		description: 'Paginated transaction history with decoded activity.',
 		params: {
@@ -229,11 +253,12 @@ export const api: Record<string, RouteDoc> = {
 			after: 'Only transactions after this Unix timestamp, in seconds.',
 			hideSubmitBatches: 'Hide zone batch submissions.',
 		},
-	},
-	'/api/address/live/{address}': {
+	}),
+	'/api/address/live/$address': api(liveQuerySchema, {
 		title: 'Address live feed',
 		description: 'Server-sent events stream of new activity for the address.',
 		params: {
+			address: null, // the path param
 			kind: 'Activity to stream.',
 			limit: 'Maximum initial rows.',
 			account: 'With `kind=token-transfers`, only transfers of this account.',
@@ -243,21 +268,21 @@ export const api: Record<string, RouteDoc> = {
 			after: 'Only activity after this Unix timestamp, in seconds.',
 			hideSubmitBatches: 'Hide zone batch submissions.',
 		},
-	},
-	'/api/address/zone-portal/{address}': {
+	}),
+	'/api/address/zone-portal/$address': {
 		title: 'Zone portal overview',
 		description: 'Summary of a zone portal contract.',
 	},
-	'/api/address/zone-portal/{address}/{kind}': {
+	'/api/address/zone-portal/$address/$kind': api(ZonePortalActivitySchema, {
 		title: 'Zone portal activity',
 		description: 'Paginated zone portal deposits, withdrawals, or batches.',
 		params: pagination,
-	},
-	'/api/contract/creation/{address}': {
+	}),
+	'/api/contract/creation/$address': {
 		title: 'Contract creation',
 		description: 'Creation transaction and block for a contract.',
 	},
-	'/api/code': {
+	'/api/code': api(CodeQuerySchema, {
 		title: 'Contract source',
 		description: 'Verified contract source and ABI.',
 		params: {
@@ -265,8 +290,8 @@ export const api: Record<string, RouteDoc> = {
 			address: 'Contract address.',
 			highlight: 'Include syntax-highlighted source.',
 		},
-	},
-	'/api/abi/batch': {
+	}),
+	'/api/abi/batch': api(BatchAbiRequestSchema, {
 		title: 'ABI lookup',
 		description:
 			'Resolves ABIs for contract addresses and signatures for 4-byte selectors in one request.',
@@ -274,20 +299,20 @@ export const api: Record<string, RouteDoc> = {
 			addresses: 'Contract addresses.',
 			selectors: 'Function or event selectors.',
 		},
-	},
-	'/api/tx/balance-changes/{hash}': {
+	}),
+	'/api/tx/balance-changes/$hash': api(BalanceChangesQuerySchema, {
 		title: 'Transaction balance changes',
 		description: 'Token balance changes caused by the transaction.',
 		params: {
 			limit: 'Maximum changes to return.',
 			offset: 'Changes to skip.',
 		},
-	},
-	'/api/tx/trace/{hash}': {
+	}),
+	'/api/tx/trace/$hash': {
 		title: 'Transaction trace',
 		description: 'Call trace and prestate diff.',
 	},
-	'/api/simulate': {
+	'/api/simulate': api(SimulationRequestSchema, {
 		title: 'Simulate',
 		description:
 			'Simulates a call or batch. Returns the result, or a single `panel` when one is requested.',
@@ -304,20 +329,20 @@ export const api: Record<string, RouteDoc> = {
 			calls:
 				'The whole ordered batch as `{ to, data, value }` objects. When set, it replaces the top-level `to`, `data`, and `value`, which are still required.',
 		},
-	},
-	'/api/tip20-roles': {
+	}),
+	'/api/tip20-roles': api(Tip20RolesQuerySchema, {
 		title: 'TIP-20 roles',
 		description: 'Role holders and configuration of a TIP-20 token.',
 		params: {
 			address: 'Token address.',
 			chainId: 'Chain ID. Defaults to the explorer’s chain.',
 		},
-	},
+	}),
 	'/api/verified-tokens': {
 		title: 'Verified tokens',
 		description: 'Curated verified token addresses for the chain.',
 	},
-	'/api/token/logo/{address}': {
+	'/api/token/logo/$address': {
 		title: 'Token logo',
 		description: 'The token’s curated logo image.',
 	},
@@ -329,14 +354,9 @@ export const api: Record<string, RouteDoc> = {
 		title: 'Health',
 		description: 'Returns `ok` when the service is up.',
 	},
-}
-
-/** Routes left out of the reference, with the reason. */
-export const hidden: Record<string, string> = {
-	'/_layout': 'Pathless layout; its `plain` flag only drops the page chrome.',
-	'/demo': 'Development-only component demos.',
-	'/demo/address': 'Development-only component demos.',
-	'/demo/empty-state': 'Development-only component demos.',
-	'/demo/pagination': 'Development-only component demos.',
-	'/demo/tx': 'Development-only component demos.',
-}
+	'/demo/': { hidden: 'Development-only component demos.' },
+	'/demo/address': { hidden: 'Development-only component demos.' },
+	'/demo/empty-state': { hidden: 'Development-only component demos.' },
+	'/demo/pagination': { hidden: 'Development-only component demos.' },
+	'/demo/tx': { hidden: 'Development-only component demos.' },
+} satisfies { [Path in keyof Routes]: Entry<Path> }
