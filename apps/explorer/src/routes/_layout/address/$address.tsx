@@ -1673,13 +1673,13 @@ function SectionsWrapper(props: {
 		{ label: 'Transaction', align: 'start', minWidth: 120 },
 		{ label: 'From', align: 'start', minWidth: 140 },
 		{ label: 'To', align: 'start', minWidth: 140 },
-		{ label: 'Amount', align: 'end', minWidth: 100 },
+		{ label: 'Amount', align: 'end', width: 'max-content' },
 	]
 
 	const accountTransfersColumns: DataGrid.Column[] = [
 		...transfersColumns.slice(0, 4),
 		{ label: 'Asset', align: 'start', minWidth: 90 },
-		{ label: 'Amount', align: 'end', minWidth: 100 },
+		{ label: 'Amount', align: 'end', width: 'max-content' },
 	]
 
 	const holdersColumns: DataGrid.Column[] = [
