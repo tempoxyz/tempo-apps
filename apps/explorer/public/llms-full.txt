@@ -6,294 +6,400 @@ Tempo Explorer is a blockchain explorer for the Tempo network. It helps users in
 
 For a shorter overview, see [`/llms.txt`](/llms.txt).
 
+## Networks
+
+Each network has its own deployment. Routes and parameters are the same on every network.
+
+| Network | URL | Redirects from |
+| --- | --- | --- |
+| testnet | https://explore.testnet.tempo.xyz | explore.42431.tempo.xyz, explore.moderato.tempo.xyz |
+| devnet | https://explore.31318.tempo.xyz, https://explore.devnet.tempo.xyz | - |
+| zone-prover | https://explore.zone-prover.devnet.tempo.xyz | - |
+| nextfork | https://explore.nextfork.devnet.tempo.xyz | - |
+| mainnet | https://explore.tempo.xyz | explore.4217.tempo.xyz, explore.mainnet.tempo.xyz, explore.presto.tempo.xyz |
+
 ## Page Routes
 
 ### Home
 
 - `/`
 
-Displays the main search experience.
+Search for an address, transaction hash, block number, or token symbol, name, or address. Results are grouped by blocks, addresses, tokens, and transactions.
 
-Search accepts:
+Query parameters:
 
-- Tempo address
-- Transaction hash
-- Block number
-- Token symbol, name, or address
+- `q` (string): Prefills the search input.
 
-The search UI groups results by entity type:
+### Search redirect
 
-- Blocks
-- Addresses
-- Tokens
-- Transactions
+- `/search`
 
-Search supports keyboard navigation and `Cmd/Ctrl + K`.
+Redirects to the matching block, address, receipt, or unique token for `q`, or back to the home search when there is no single match.
 
-### Search API
+Query parameters:
 
-- `/api/search?q={query}`
+- `q` (string): Address, transaction hash, block number, or token query.
 
-Returns JSON search results. Use this endpoint when the input type is unknown.
-
-```ts
-type SearchResult =
-  | { type: 'token'; address: string; symbol: string; name: string; isTip20: boolean }
-  | { type: 'address'; address: string; isTip20: boolean }
-  | { type: 'transaction'; hash: string; timestamp?: number }
-  | { type: 'block'; blockNumber: number }
-```
-
-Route based on result type:
-
-- `block` → `/block/{blockNumber}`
-- `address` → `/address/{address}`
-- `token` → `/address/{address}?tab=transfers`
-- `transaction` → `/tx/{hash}` or `/receipt/{hash}`
-
-### Address Pages
+### Address
 
 - `/address/{address}`
 
-Default tab:
+Shows an account, contract, or TIP-20 token: type, balances, activity, and creation or last-activity metadata. Transactions and balances can be exported as CSV. The tabs shown depend on the address type.
 
-- `transactions`
+Query parameters:
 
-Supported tabs:
+- `tab`: Address view. Defaults to `token` for TIP-20 tokens and `transactions` otherwise.
+  - `transactions`: Transaction history.
+  - `transfers`: Token transfers. For a token, every transfer of that token.
+  - `holdings`: Current token balances.
+  - `fees`: Unclaimed validator fees, when the address has any.
+  - `holders`: Holders of the token, when the address is a token.
+  - `token`: TIP-20 token metadata and configuration.
+  - `contract`: Contract source, ABI, and bytecode, when available.
+  - `interact`: Read and write contract functions, when an ABI is available.
+  - `deposits`: Zone portal deposits.
+  - `withdrawals`: Zone portal withdrawals.
+  - `batches`: Zone portal batches.
+- `status` (`reverted` | `success`): Filter transactions by status.
+- `period` (`24h` | `7d`): Filter transactions to the last 24 hours or 7 days.
+- `dir` (`received` | `sent`): Filter transactions sent or received by the address.
+- `a` (string): Filter a token’s transfers to one account address.
+- `transferDirection` (`in` | `out`): With `a`, filter transfers into or out of that account.
+- `hideSubmitBatches` (boolean): Hide zone batch submissions from transactions.
+- `page` (number, default `1`): Page number.
+- `limit` (number, default `10`): Rows per page.
 
-- `?tab=transactions` — transaction history
-- `?tab=holdings` — current token balances
-- `?tab=transfers` — TIP20 token transfer history, when the address is a token
-- `?tab=holders` — TIP20 token holders, when the address is a token
-- `?tab=token` — TIP20 token metadata, when the address is a token
-- `?tab=contract` — contract ABI, bytecode, and source when available
-- `?tab=interact` — read and write contract functions when ABI is available
-
-Transaction filters:
-
-- `?status=success`
-- `?status=reverted`
-- `?period=24h`
-- `?period=7d`
-- `?dir=sent`
-- `?dir=received`
-
-Pagination:
-
-- `?page={number}`
-- `?limit={number}`
-
-Address pages show account type, transaction count, holdings, and creation or last-activity metadata when available. Balances and transactions can be exported as CSV.
-
-Examples:
-
-```txt
-/address/0xabc...
-/address/0xabc...?tab=holdings
-/address/0xabc...?tab=transactions&status=success&period=7d
-/address/0xtoken...?tab=holders
-/address/0xcontract...?tab=contract
-/address/0xcontract...?tab=interact
-```
-
-### Token Pages
+### Token redirect
 
 - `/token/{address}`
 
-Token pages redirect to address pages because TIP20 tokens are represented by contract addresses.
+Redirects to `/address/{address}`. TIP-20 tokens open on `tab=token`, other tokens on `tab=transfers`; `holders` and `contract` tabs are preserved.
 
-Tab mapping:
+Query parameters:
 
-- `/token/{address}` → `/address/{address}?tab=transfers`
-- `/token/{address}?tab=holders` → `/address/{address}?tab=holders`
-- `/token/{address}?tab=contract` → `/address/{address}?tab=contract`
+- `tab` (string): Address tab to open.
+- `a` (string): Account filter, passed through.
+- `page` (number): Page number.
+- `limit` (number): Rows per page.
 
-### Transaction Pages
+### Transaction
 
 - `/tx/{hash}`
 
 Shows transaction details.
 
-Supported tabs:
+Query parameters:
 
-- `?tab=overview` — high-level receipt and transaction summary
-- `?tab=balances` — balance changes
-- `?tab=calls` — structured call data, when available
-- `?tab=events` — raw and decoded logs/events
-- `?tab=trace` — call trace and prestate diff, when available
-- `?tab=raw` — raw transaction and receipt JSON
+- `tab` (default `overview`): Transaction view.
+  - `overview`: Receipt and transaction summary.
+  - `balances`: Balance changes.
+  - `calls`: Decoded calls, when available.
+  - `events`: Raw and decoded logs.
+  - `trace`: Call trace and prestate diff, when available.
+  - `raw`: Raw transaction and receipt JSON.
+- `page` (number, default `1`): Page number for paginated tabs.
 
-Pagination:
-
-- `?page={number}` for paginated sections where applicable
-
-Examples:
-
-```txt
-/tx/0xabc...
-/tx/0xabc...?tab=events
-/tx/0xabc...?tab=trace
-/tx/0xabc...?tab=raw
-```
-
-### Receipt Pages
+### Receipt
 
 - `/receipt/{hash}`
 
-Shows receipt-oriented transaction details. Use this page when the user asks what happened in a transaction or wants the canonical receipt view.
+The canonical receipt view of what a transaction did. Append `.json`, `.txt`, or `.pdf` to the hash, or send a matching `Accept` header, for a machine-readable export; `curl` and `wget` receive plain text.
 
-### Blocks List
+### Blocks
 
 - `/blocks`
 
-Shows recent blocks.
+Recent blocks with number, hash, time, and transaction count. Follows the chain head live unless `from` is set.
 
 Query parameters:
 
-- `?from={blockNumber}` — paginate from a block number
-- `?live=true` — live-updating latest blocks
-- `?live=false` — paused or static block list
+- `from` (number): Start the list at this block number.
+- `live` (boolean): Follow new blocks (`true`) or pause the list (`false`).
 
-Columns include:
-
-- Block number
-- Block hash
-- Time
-- Transaction count
-
-Examples:
-
-```txt
-/blocks
-/blocks?live=true
-/blocks?from=123456
-```
-
-### Block Detail
+### Block
 
 - `/block/{id}`
 
-`id` may be:
+`id` is a block number, block hash, or `latest`. Shows hash, number, timestamp, gas usage, proposer, parent hash, and the block’s transactions.
 
-- Block number
-- Block hash
-- `latest`
+Query parameters:
 
-Shows:
+- `page` (number, default `1`): Page of the block’s transactions.
 
-- Block hash
-- Block number
-- Timestamp
-- Gas usage
-- Miner or proposer address when available
-- Parent hash
-- Transaction list
-- Known event summaries for transactions
-
-Pagination:
-
-- `?page={number}`
-
-Examples:
-
-```txt
-/block/latest
-/block/123456
-/block/0xabc...
-```
-
-### Block Countdown
+### Block countdown
 
 - `/block/countdown/{targetBlock}`
 
-Shows estimated time until a future block. Use this page when the user asks when a target block will happen.
+Estimated time until a future block number.
 
-### Tokens List
+### Tokens
 
 - `/tokens`
 
-Shows discovered TIP20 tokens.
+Discovered TIP-20 tokens with symbol, name, currency, holders, address, and creation time.
 
-Columns include:
+Query parameters:
 
-- Symbol
-- Name
-- Currency
-- Holders
-- Address
-- Creation time
-
-Pagination:
-
-- `?page={number}`
-
-Examples:
-
-```txt
-/tokens
-/tokens?page=2
-```
+- `page` (number): Page number.
 
 ### Fee AMM
 
 - `/fee-amm`
 
-Shows Fee AMM liquidity discovered from Fee AMM mint activity.
+Fee AMM pools discovered from mint activity: pool pair, reserves, liquidity, creation and latest mint time, and mint count. Each pool pairs a fee token with a validator token.
 
-Sections:
+Query parameters:
 
-- Tokens
-- Pools
+- `token` (hex): Show only pools that include this token address.
+- `page` (number, default `1`): Page number.
+- `limit` (`10` | `25` | `50`, default `10`): Rows per page.
 
-Pool information includes:
+### TIP-403 policy
 
-- Pool pair
-- Reserves
-- Liquidity
-- Creation time
-- Latest mint time
-- Mint count
+- `/policy/{id}`
 
-Use this page for questions about fee-token routing, validator-token liquidity, or Fee AMM pools.
+A TIP-403 transfer policy: type, administrator, members, composed policies, and policy events.
+
+Query parameters:
+
+- `q` (string): Search members by address.
+- `page` (number, default `1`): Page of members.
+- `limit` (number, default `10`): Members per page.
+
+### Simulate
+
+- `/simulate`
+
+Simulate a call or batch against the chain and inspect the result, trace, state changes, events, and gas. Every input is kept in the URL, so links reproduce the simulation.
+
+Query parameters:
+
+- `from` (hex, default `0x0000000000000000000000000000000000000000`): Sender address.
+- `to` (hex): Target contract address.
+- `data` (hex, default `0x`): Calldata.
+- `value` (string, default `0`): Value in base units.
+- `gas` (string, default `50000000`): Gas limit.
+- `block` (hex | `latest`, default `latest`): Block to simulate against.
+- `tx` (hex): Load the inputs of an existing transaction.
+- `calls` (string[][]): Additional batch calls as `[[to, data, value], ...]`.
+- `tab` (`events` | `gas` | `overview` | `state` | `trace`, default `overview`): Result view.
+- `step` (number): Narrow results to one call of a batch, by index.
 
 ## Public API Routes
 
-### Health
-
-- `/api/health`
-
-Returns service health.
+API routes return JSON unless noted. Parameters marked required are rejected when missing.
 
 ### Search
 
-- `/api/search?q={query}`
+- `GET /api/search`
 
-Searches for blocks, addresses, transactions, and tokens.
+Searches blocks, addresses, transactions, and tokens. Returns `{ results, query }`, where each result has a `type` of `block`, `address`, `token`, or `transaction`. Use it when the input type is unknown.
 
-### Address APIs
+Query parameters:
 
-- `/api/address/{address}`
-- `/api/address/balances/{address}`
-- `/api/address/history/{address}`
-- `/api/address/metadata/{address}`
-- `/api/address/total-value/{address}`
-- `/api/address/txs-count/{address}`
+- `q` (string): Search query.
 
-### Contract APIs
+### Address metadata
 
-- `/api/contract/creation/{address}`
-- `/api/abi/batch`
-- `/api/code`
+- `GET /api/address/metadata/{address}`
 
-### Transaction APIs
+Account type, transaction and holder counts, and creation and last-activity details.
 
-- `/api/tx/balance-changes/{hash}`
-- `/api/tx/trace/{hash}`
+Path parameters:
 
-### Token APIs
+- `address` (hex)
 
-- `/api/tokens/count`
-- `/api/tip20-roles`
+### Address balances
+
+- `GET /api/address/balances/{address}`
+
+Token balances held by the address.
+
+Path parameters:
+
+- `address` (hex)
+
+### Address history
+
+- `GET /api/address/history/{address}`
+
+Paginated transaction history with decoded activity.
+
+Path parameters:
+
+- `address` (hex)
+
+Query parameters:
+
+- `limit` (number): Maximum transactions to return.
+- `sort` (`asc` | `desc`, default `desc`): Sort order by block.
+- `cursor` (string): Cursor from the previous response.
+- `include` (`all` | `received` | `sent`, default `all`): Transactions sent, received, or both.
+- `status` (`reverted` | `success`): Filter by transaction status.
+- `after` (number): Only transactions after this Unix timestamp, in seconds.
+- `hideSubmitBatches` (`false` | `true`): Hide zone batch submissions.
+
+### Address live feed
+
+- `GET /api/address/live/{address}`
+
+Server-sent events stream of new activity for the address.
+
+Path parameters:
+
+- `address` (string)
+
+Query parameters:
+
+- `kind` (`account-transfers` | `token-transfers` | `transactions`, required): Activity to stream.
+- `limit` (number, default `10`): Maximum initial rows.
+- `account` (hex): With `kind=token-transfers`, only transfers of this account.
+- `direction` (`in` | `out`): Transfers into or out of the account.
+- `include` (`all` | `received` | `sent`, default `all`): Transactions sent, received, or both.
+- `status` (`reverted` | `success`): Filter by transaction status.
+- `after` (number): Only activity after this Unix timestamp, in seconds.
+- `hideSubmitBatches` (`false` | `true`): Hide zone batch submissions.
+
+### Zone portal overview
+
+- `GET /api/address/zone-portal/{address}`
+
+Summary of a zone portal contract.
+
+Path parameters:
+
+- `address` (hex)
+
+### Zone portal activity
+
+- `GET /api/address/zone-portal/{address}/{kind}`
+
+Paginated zone portal deposits, withdrawals, or batches.
+
+Path parameters:
+
+- `address` (hex)
+- `kind` (`batches` | `deposits` | `withdrawals`)
+
+Query parameters:
+
+- `page` (number, default `1`): Page number.
+- `limit` (number, default `10`): Rows per page.
+
+### Contract creation
+
+- `GET /api/contract/creation/{address}`
+
+Creation transaction and block for a contract.
+
+Path parameters:
+
+- `address` (hex)
+
+### Contract source
+
+- `GET /api/code`
+
+Verified contract source and ABI.
+
+Query parameters:
+
+- `chainid` (number, required): Chain ID.
+- `address` (hex, required): Contract address.
+- `highlight` (boolean): Include syntax-highlighted source.
+
+### ABI lookup
+
+- `POST /api/abi/batch`
+
+Resolves ABIs for contract addresses and signatures for 4-byte selectors in one request.
+
+JSON body:
+
+- `addresses` (string[], required): Contract addresses.
+- `selectors` (string[], required): Function or event selectors.
+
+### Transaction balance changes
+
+- `GET /api/tx/balance-changes/{hash}`
+
+Token balance changes caused by the transaction.
+
+Path parameters:
+
+- `hash` (hex)
+
+Query parameters:
+
+- `limit` (number): Maximum changes to return.
+- `offset` (number): Changes to skip.
+
+### Transaction trace
+
+- `GET /api/tx/trace/{hash}`
+
+Call trace and prestate diff.
+
+Path parameters:
+
+- `hash` (hex)
+
+### Simulate
+
+- `POST /api/simulate`
+
+Simulates a call or batch. Returns the result, or a single `panel` when one is requested.
+
+JSON body:
+
+- `chainId` (`4217` | `31318` | `31319` | `42431`, required): Chain ID of the network being simulated.
+- `from` (hex, required): Sender address.
+- `to` (hex, required): Target address.
+- `data` (hex, required): Calldata.
+- `value` (string, default `0`): Value in base units.
+- `gas` (string, required): Gas limit.
+- `block` (hex | `latest`, default `latest`): Block to simulate against.
+- `panel` (`execution` | `prestate` | `trace`): Return only this part of the result.
+- `calls` (object[]): Additional batch calls as `{ to, data, value }` objects.
+
+### TIP-20 roles
+
+- `GET /api/tip20-roles`
+
+Role holders and configuration of a TIP-20 token.
+
+Query parameters:
+
+- `address` (hex, required): Token address.
+- `chainId` (string): Chain ID. Defaults to the explorer’s chain.
+
+### Verified tokens
+
+- `GET /api/verified-tokens`
+
+Curated verified token addresses for the chain.
+
+### Token logo
+
+- `GET /api/token/logo/{address}`
+
+The token’s curated logo image.
+
+Path parameters:
+
+- `address` (string)
+
+### JSON-RPC
+
+- `POST /api/rpc`
+
+Proxies allowlisted JSON-RPC 2.0 requests, single or batched, to the network’s node: standard `eth_*` reads, raw transaction submission, `eth_simulateV1`, and `debug_trace*`.
+
+### Health
+
+- `GET /api/health`
+
+Returns `ok` when the service is up.
 
 ## Common Tasks
 
@@ -311,6 +417,8 @@ Then route based on result type:
 - `address` → `/address/{address}`
 - `token` → `/address/{address}?tab=transfers`
 - `transaction` → `/tx/{hash}` or `/receipt/{hash}`
+
+Or open `/search?q={input}`, which redirects to the single match.
 
 ### Show an address's balance
 
@@ -378,6 +486,23 @@ Use:
 /tx/{hash}?tab=events
 /tx/{hash}?tab=trace
 /tx/{hash}?tab=raw
+```
+
+### Read a receipt as data
+
+Use:
+
+```txt
+/receipt/{hash}.json
+/receipt/{hash}.txt
+```
+
+### Simulate a call before sending it
+
+Use:
+
+```txt
+/simulate?from={address}&to={address}&data={calldata}&value={value}
 ```
 
 ## Current Limitations
