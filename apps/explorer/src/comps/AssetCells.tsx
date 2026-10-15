@@ -4,20 +4,31 @@ import { formatUnits } from 'viem'
 import { TokenIcon } from '#comps/TokenIcon'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { type AssetData, getAssetValue } from '#lib/address-balances'
+import { cx } from '#lib/css'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { getTempoChain } from '#wagmi.config'
 
-export function AssetName(props: { asset: AssetData }): React.JSX.Element {
-	const { asset } = props
+export function AssetName(props: {
+	asset: AssetData
+	multiline?: boolean
+}): React.JSX.Element {
+	const { asset, multiline = false } = props
 	if (!asset.metadata?.name) return <span className="text-tertiary">…</span>
 	return (
-		<span className="inline-flex items-center gap-2 min-w-0">
+		<span
+			className={cx(
+				'inline-flex gap-2 min-w-0',
+				multiline ? 'items-start' : 'items-center',
+			)}
+		>
 			<TokenIcon
 				address={asset.address}
 				name={asset.metadata.name}
 				className="size-5 shrink-0"
 			/>
-			<span className="truncate">{asset.metadata.name}</span>
+			<span className={multiline ? 'min-w-0 wrap-anywhere' : 'truncate'}>
+				{asset.metadata.name}
+			</span>
 		</span>
 	)
 }
@@ -50,14 +61,20 @@ export function AssetCurrency(props: { asset: AssetData }): React.JSX.Element {
 	return <span>{asset.metadata.currency}</span>
 }
 
-export function AssetAmount(props: { asset: AssetData }): React.JSX.Element {
-	const { asset } = props
+export function AssetAmount(props: {
+	asset: AssetData
+	multiline?: boolean
+}): React.JSX.Element {
+	const { asset, multiline = false } = props
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>
 	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
 	const display = PriceFormatter.formatAmountFull(formatted)
 	return (
-		<span className="truncate" title={display}>
+		<span
+			className={multiline ? 'min-w-0 wrap-anywhere tabular-nums' : 'truncate'}
+			title={display}
+		>
 			{display}
 		</span>
 	)
@@ -77,6 +94,21 @@ export function AssetValue(props: { asset: AssetData }): React.JSX.Element {
 				decimals: value.decimals,
 				format: 'short',
 			})}
+		</span>
+	)
+}
+
+export function AssetIdentity(props: { asset: AssetData }): React.JSX.Element {
+	const { asset } = props
+	return (
+		<span className="flex min-w-0 flex-col gap-1">
+			<AssetName asset={asset} multiline />
+			<span
+				className="font-mono copy-11 text-accent wrap-anywhere"
+				title={asset.address}
+			>
+				{HexFormatter.truncate(asset.address)}
+			</span>
 		</span>
 	)
 }

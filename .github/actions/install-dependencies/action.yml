@@ -5,7 +5,7 @@ runs:
   using: 'composite'
   steps:
     - name: Set up pnpm
-      uses: tempoxyz/gh-actions/vendor/pnpm/action-setup@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+      uses: tempoxyz/gh-actions/vendor/pnpm/action-setup@947d9a3ccb2425a9c94d563fd721cc0e33c89e26 # 2026-10-15T00-15-06Z-947d9a3c
 
     - name: Set up Node
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0

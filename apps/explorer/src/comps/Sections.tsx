@@ -19,8 +19,19 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 				props.defaultExpandedSection ? [props.defaultExpandedSection] : [],
 			),
 	)
+	const [collapsedSection, setCollapsedSection] = React.useState<string | null>(
+		null,
+	)
 
-	const toggleSection = (title: string) => {
+	const toggleSection = (title: string, index: number) => {
+		if (onSectionChange) {
+			// Controlled sections share the URL's tab and page with their data queries.
+			setCollapsedSection(
+				activeSection === index && collapsedSection !== title ? title : null,
+			)
+			if (activeSection !== index) onSectionChange(index)
+			return
+		}
 		setExpandedSections((expanded) => {
 			const next = new Set(expanded)
 			if (next.has(title)) next.delete(title)
@@ -33,11 +44,13 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 		return (
 			<Sections.Context.Provider value={{ mode }}>
 				<div className="flex flex-col gap-[14px]">
-					{sections.map((section) => {
+					{sections.map((section, index) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
 						const isCollapsed =
 							section.autoCollapse !== false &&
-							!expandedSections.has(section.title)
+							(onSectionChange
+								? activeSection !== index || collapsedSection === section.title
+								: !expandedSections.has(section.title))
 
 						const canCollapse = section.autoCollapse !== false
 
@@ -54,7 +67,7 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 									<button
 										type="button"
 										aria-expanded={!isCollapsed}
-										onClick={() => toggleSection(section.title)}
+										onClick={() => toggleSection(section.title, index)}
 										className={cx(
 											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
 											isCollapsed ? 'rounded-body!' : 'rounded-t-body!',
@@ -231,6 +244,7 @@ export namespace Sections {
 		defaultExpandedSection?: string
 		activeSection?: number
 		mode?: Mode
+		/** Controls the selected section in both tabbed and stacked layouts. */
 		onSectionChange?: (index: number) => void
 		sections: Section[]
 	}

@@ -69,7 +69,7 @@ export function TransferAmountCell(props: {
 			type="button"
 			title="Toggle currency/token amounts"
 			className={cx(
-				'label-12 cursor-pointer tabular-nums',
+				'label-12 cursor-pointer tabular-nums whitespace-nowrap',
 				direction === 'out'
 					? 'text-negative'
 					: direction === 'in'
