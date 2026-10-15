@@ -132,6 +132,21 @@ jobs:
             pnpm build
           fi
 
+      # fee-payer has no preview URL, so check the built Worker locally.
+      - name: Verify fee-payer llms.txt
+        if: steps.changes.outputs.relevant == 'true' && matrix.app == 'fee-payer'
+        working-directory: apps/fee-payer
+        run: |
+          ./node_modules/.bin/wrangler dev --env-file .env.example --port 8787 \
+            --show-interactive-dev-session=false &
+          pid=$!
+          trap 'kill "$pid"' EXIT
+          for file in llms.txt llms-full.txt; do
+            curl --fail --silent --show-error \
+              --retry 10 --retry-all-errors --retry-delay 3 --max-time 20 \
+              --output /dev/null "http://localhost:8787/$file"
+          done
+
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
         id: deploy
