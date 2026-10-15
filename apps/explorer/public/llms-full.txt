@@ -73,7 +73,7 @@ Query parameters:
 
 - `/token/{address}`
 
-Redirects to `/address/{address}`. TIP-20 tokens open on `tab=token`, other tokens on `tab=transfers`; `holders` and `contract` tabs are preserved.
+Redirects to `/address/{address}`. Without `tab`, TIP-20 tokens open on `tab=token`; links with `a`, and other tokens, open on `tab=transfers`. `holders`, `token`, and `contract` are kept, and `interact` opens `contract`.
 
 Query parameters:
 
@@ -170,7 +170,7 @@ Query parameters:
 
 - `/simulate`
 
-Simulate a call or batch against the chain and inspect the result, trace, state changes, events, and gas. Every input is kept in the URL, so links reproduce the simulation.
+Simulate a call or batch against the chain and inspect the result, trace, state changes, events, and gas. Inputs are kept in the URL, so links reproduce the simulation, except calldata or batches too large for a URL.
 
 Query parameters:
 
@@ -197,7 +197,7 @@ Searches blocks, addresses, transactions, and tokens. Returns `{ results, query 
 
 Query parameters:
 
-- `q` (string): Search query.
+- `q` (string, required): Search query. Without it the response has no results.
 
 ### Address metadata
 
@@ -247,7 +247,7 @@ Server-sent events stream of new activity for the address.
 
 Path parameters:
 
-- `address` (string)
+- `address` (hex)
 
 Query parameters:
 
@@ -352,7 +352,7 @@ Simulates a call or batch. Returns the result, or a single `panel` when one is r
 
 JSON body:
 
-- `chainId` (`4217` | `31318` | `31319` | `42431`, required): Chain ID of the network being simulated.
+- `chainId` (`4217` | `31318` | `31319` | `42431`, required): Chain ID of the explorer host’s network; other networks are rejected.
 - `from` (hex, required): Sender address.
 - `to` (hex, required): Target address.
 - `data` (hex, required): Calldata.
@@ -360,7 +360,7 @@ JSON body:
 - `gas` (string, required): Gas limit.
 - `block` (hex | `latest`, default `latest`): Block to simulate against.
 - `panel` (`execution` | `prestate` | `trace`): Return only this part of the result.
-- `calls` (object[]): Additional batch calls as `{ to, data, value }` objects.
+- `calls` (object[]): The whole ordered batch as `{ to, data, value }` objects. When set, it replaces the top-level `to`, `data`, and `value`, which are still required.
 
 ### TIP-20 roles
 
@@ -387,13 +387,13 @@ The token’s curated logo image.
 
 Path parameters:
 
-- `address` (string)
+- `address` (hex)
 
 ### JSON-RPC
 
 - `POST /api/rpc`
 
-Proxies allowlisted JSON-RPC 2.0 requests, single or batched, to the network’s node: standard `eth_*` reads, raw transaction submission, `eth_simulateV1`, and `debug_trace*`.
+Proxies JSON-RPC 2.0 requests, single or batched, to the network’s node. Accepts `eth_chainId`, `eth_blockNumber`, `eth_getBlockByNumber`, `eth_getBlockByHash`, `eth_getBlockTransactionCountByNumber`, `eth_getBlockTransactionCountByHash`, `eth_getTransactionByHash`, `eth_getTransactionReceipt`, `eth_getBlockReceipts`, `eth_getTransactionByBlockHashAndIndex`, `eth_getTransactionByBlockNumberAndIndex`, `eth_getBalance`, `eth_getCode`, `eth_getStorageAt`, `eth_getProof`, `eth_getTransactionCount`, `eth_getLogs`, `eth_call`, `eth_estimateGas`, `eth_gasPrice`, `eth_maxPriorityFeePerGas`, `eth_feeHistory`, `net_version`, `web3_clientVersion`. Every network except zone-prover also accepts `eth_sendRawTransaction`, `eth_sendRawTransactionSync`, `eth_getRawTransactionByHash`, `eth_simulateV1`, `debug_traceTransaction`, `debug_traceCall`, `debug_traceCallMany`.
 
 ### Health
 

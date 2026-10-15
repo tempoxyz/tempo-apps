@@ -77,12 +77,30 @@ describe('route extraction', () => {
 		).toEqual(required)
 	})
 
-	it('types path params parsed by the handler', () => {
-		const [address, kind] = route(
+	it.each([
+		// `zAddress().parse(params.address)`
+		['/api/address/zone-portal/$address/$kind', 'address', ['hex'], []],
+		// `KindSchema.parse(params.kind)`
+		[
 			'/api/address/zone-portal/$address/$kind',
-		).pathParams
-		expect(address?.types).toEqual(['hex'])
-		expect(kind?.values).toEqual(['batches', 'deposits', 'withdrawals'])
+			'kind',
+			[],
+			['batches', 'deposits', 'withdrawals'],
+		],
+		// an object schema field in a helper that receives `request`
+		['/api/address/live/$address', 'address', ['hex'], []],
+		// the `Address.validate(params.address)` type guard
+		['/api/token/logo/$address', 'address', ['hex'], []],
+	])('types the %s path param %s', (path, name, types, values) => {
+		const param = route(path).pathParams.find((item) => item.name === name)
+		expect(param).toMatchObject({ types, values, required: true })
+	})
+
+	it('keeps path params out of query params', () => {
+		const names = route('/api/address/live/$address').params.map(
+			(param) => param.name,
+		)
+		expect(names).not.toContain('address')
 	})
 })
 

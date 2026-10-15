@@ -84,7 +84,7 @@ function paramErrors(path: string, route: Route, doc: RouteDoc): string[] {
 			errors.push(`${path}: documented parameter ${code(name)} does not exist`)
 			continue
 		}
-		if (!paramDoc || typeof paramDoc === 'string') continue
+		if (!paramDoc || typeof paramDoc === 'string' || !paramDoc.values) continue
 		const actual = [...param.values].sort().join(', ')
 		const listed = Object.keys(paramDoc.values).sort().join(', ')
 		if (actual !== listed)
@@ -103,8 +103,17 @@ function visibleParams(route: DocumentedRoute) {
 	})
 }
 
+function describedValues(doc: Exclude<ParamDoc, null>) {
+	return typeof doc === 'string' ? undefined : doc.values
+}
+
 function allowedValues(param: Param, doc: Exclude<ParamDoc, null>): string[] {
-	return typeof doc === 'string' ? param.values : Object.keys(doc.values)
+	const described = describedValues(doc)
+	return described ? Object.keys(described) : param.values
+}
+
+function isRequired(param: Param, doc: Exclude<ParamDoc, null>): boolean {
+	return param.required || (typeof doc === 'object' && doc.required === true)
 }
 
 function typeSummary(param: Param, values: string[]): string {
@@ -112,11 +121,11 @@ function typeSummary(param: Param, values: string[]): string {
 }
 
 function renderParam(param: Param, doc: Exclude<ParamDoc, null>): string[] {
-	const listed = typeof doc === 'object'
+	const listed = describedValues(doc)
 	const meta = [
 		typeSummary(param, listed ? [] : param.values),
 		param.default ? `default ${code(param.default)}` : '',
-		param.required ? 'required' : '',
+		isRequired(param, doc) ? 'required' : '',
 	]
 		.filter(Boolean)
 		.join(', ')
@@ -124,9 +133,8 @@ function renderParam(param: Param, doc: Exclude<ParamDoc, null>): string[] {
 	const lines = [
 		`- ${code(param.name)}${meta ? ` (${meta})` : ''}: ${description}`,
 	]
-	if (listed)
-		for (const [value, text] of Object.entries(doc.values))
-			lines.push(`  - ${code(value)}: ${text}`)
+	for (const [value, text] of Object.entries(listed ?? {}))
+		lines.push(`  - ${code(value)}: ${text}`)
 	return lines
 }
 
@@ -214,7 +222,9 @@ function renderApiIndex(routes: DocumentedRoute[]): string {
 	return routes
 		.map((route) => {
 			const required = route.methods.includes('GET')
-				? visibleParams(route).filter(({ param }) => param.required)
+				? visibleParams(route).filter(({ param, doc }) =>
+						isRequired(param, doc),
+					)
 				: []
 			const query = required
 				.map(({ param, doc }) => queryTemplate(param, doc).slice(1))
@@ -280,7 +290,7 @@ function checkReference(
 	routes: DocumentedRoute[],
 ): string | undefined {
 	const [path = '', query = ''] = reference.split('?')
-	if (path in outputs || existsSync(join(root, 'public', path))) return
+	if (path.slice(1) in outputs || existsSync(join(root, 'public', path))) return
 	const segments = path.split('/')
 	const route = routes
 		.filter((item) => {

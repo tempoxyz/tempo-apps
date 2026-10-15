@@ -100,7 +100,7 @@ For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 
 ## Public APIs
 
-- Search: `GET /api/search`
+- Search: `GET /api/search?q={string}`
 - Address metadata: `GET /api/address/metadata/{address}`
 - Address balances: `GET /api/address/balances/{address}`
 - Address history: `GET /api/address/history/{address}`

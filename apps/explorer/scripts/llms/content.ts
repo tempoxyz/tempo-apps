@@ -5,14 +5,21 @@
  * missing or no longer matches a route.
  */
 
+import { PUBLIC_METHODS, READ_METHODS } from '../../src/lib/server/rpc.ts'
+
 /**
- * A string describes the parameter, `values` also describes each allowed
- * value (in display order), and `null` marks a parameter the route parses but
- * agents should not use.
+ * A string describes the parameter and `null` marks one the route parses but
+ * agents should not use. The object form can also describe each allowed value
+ * (in display order), or mark a parameter required when the route accepts its
+ * absence but returns nothing useful without it.
  */
 export type ParamDoc =
 	| string
-	| { description: string; values: Record<string, string> }
+	| {
+			description: string
+			values?: Record<string, string>
+			required?: true
+	  }
 	| null
 
 export type RouteDoc = {
@@ -20,6 +27,9 @@ export type RouteDoc = {
 	description: string
 	params?: Record<string, ParamDoc>
 }
+
+const methodList = (methods: Iterable<string>) =>
+	[...methods].map((method) => `\`${method}\``).join(', ')
 
 const pagination = {
 	page: 'Page number.',
@@ -84,7 +94,7 @@ export const pages: Record<string, RouteDoc> = {
 	'/token/{address}': {
 		title: 'Token redirect',
 		description:
-			'Redirects to `/address/{address}`. TIP-20 tokens open on `tab=token`, other tokens on `tab=transfers`; `holders` and `contract` tabs are preserved.',
+			'Redirects to `/address/{address}`. Without `tab`, TIP-20 tokens open on `tab=token`; links with `a`, and other tokens, open on `tab=transfers`. `holders`, `token`, and `contract` are kept, and `interact` opens `contract`.',
 		params: {
 			tab: 'Address tab to open.',
 			a: 'Account filter, passed through.',
@@ -163,7 +173,7 @@ export const pages: Record<string, RouteDoc> = {
 	'/simulate': {
 		title: 'Simulate',
 		description:
-			'Simulate a call or batch against the chain and inspect the result, trace, state changes, events, and gas. Every input is kept in the URL, so links reproduce the simulation.',
+			'Simulate a call or batch against the chain and inspect the result, trace, state changes, events, and gas. Inputs are kept in the URL, so links reproduce the simulation, except calldata or batches too large for a URL.',
 		params: {
 			from: 'Sender address.',
 			to: 'Target contract address.',
@@ -191,7 +201,12 @@ export const api: Record<string, RouteDoc> = {
 		title: 'Search',
 		description:
 			'Searches blocks, addresses, transactions, and tokens. Returns `{ results, query }`, where each result has a `type` of `block`, `address`, `token`, or `transaction`. Use it when the input type is unknown.',
-		params: { q: 'Search query.' },
+		params: {
+			q: {
+				description: 'Search query. Without it the response has no results.',
+				required: true,
+			},
+		},
 	},
 	'/api/address/metadata/{address}': {
 		title: 'Address metadata',
@@ -277,7 +292,8 @@ export const api: Record<string, RouteDoc> = {
 		description:
 			'Simulates a call or batch. Returns the result, or a single `panel` when one is requested.',
 		params: {
-			chainId: 'Chain ID of the network being simulated.',
+			chainId:
+				'Chain ID of the explorer host’s network; other networks are rejected.',
 			from: 'Sender address.',
 			to: 'Target address.',
 			data: 'Calldata.',
@@ -285,7 +301,8 @@ export const api: Record<string, RouteDoc> = {
 			gas: 'Gas limit.',
 			block: 'Block to simulate against.',
 			panel: 'Return only this part of the result.',
-			calls: 'Additional batch calls as `{ to, data, value }` objects.',
+			calls:
+				'The whole ordered batch as `{ to, data, value }` objects. When set, it replaces the top-level `to`, `data`, and `value`, which are still required.',
 		},
 	},
 	'/api/tip20-roles': {
@@ -306,8 +323,7 @@ export const api: Record<string, RouteDoc> = {
 	},
 	'/api/rpc': {
 		title: 'JSON-RPC',
-		description:
-			'Proxies allowlisted JSON-RPC 2.0 requests, single or batched, to the network’s node: standard `eth_*` reads, raw transaction submission, `eth_simulateV1`, and `debug_trace*`.',
+		description: `Proxies JSON-RPC 2.0 requests, single or batched, to the network’s node. Accepts ${methodList(READ_METHODS)}. Every network except zone-prover also accepts ${methodList([...PUBLIC_METHODS].filter((method) => !READ_METHODS.has(method)))}.`,
 	},
 	'/api/health': {
 		title: 'Health',

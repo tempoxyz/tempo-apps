@@ -161,6 +161,7 @@ function readHandler(
 	const visit = (child: ts.Node) => {
 		if (ts.isCallExpression(child)) {
 			readParse(checker, route, child)
+			readTypeGuard(checker, route, child)
 			const name = searchParamName(child)
 			if (name) addParam(route, untypedParam(name, false), false)
 			if (
@@ -199,20 +200,9 @@ function readParse(
 
 	const target = unwrapNullish(input)
 	// `Schema.parse(params.kind)` types a path param.
-	if (
-		ts.isPropertyAccessExpression(target) &&
-		ts.isIdentifier(target.expression) &&
-		target.expression.text === 'params'
-	) {
-		const index = route.pathParams.findIndex(
-			(param) => param.name === target.name.text,
-		)
-		if (index !== -1)
-			route.pathParams[index] = {
-				...describe(checker, output),
-				name: target.name.text,
-				required: true,
-			}
+	const pathParam = pathParamName(target)
+	if (pathParam) {
+		setPathParam(route, pathParam, describe(checker, output))
 		return
 	}
 	// `Schema.parse(url.searchParams.get('address'))` types a single param.
@@ -227,8 +217,48 @@ function readParse(
 	}
 	if (!output.getProperties().length) return
 	for (const param of objectParams(checker, schema))
-		if (!route.pathParams.some((item) => item.name === param.name))
-			addParam(route, param)
+		if (route.pathParams.some((item) => item.name === param.name))
+			setPathParam(route, param.name, param)
+		else addParam(route, param)
+}
+
+/** `Address.validate(params.address)` types a path param by its type predicate. */
+function readTypeGuard(
+	checker: ts.TypeChecker,
+	route: Route,
+	call: ts.CallExpression,
+) {
+	const signature = checker.getResolvedSignature(call)
+	const predicate = signature && checker.getTypePredicateOfSignature(signature)
+	if (!predicate?.type || predicate.parameterIndex === undefined) return
+	const arg = call.arguments[predicate.parameterIndex]
+	const name = arg && pathParamName(arg)
+	if (name) setPathParam(route, name, describe(checker, predicate.type))
+}
+
+function pathParamName(node: ts.Expression): string | undefined {
+	if (
+		ts.isPropertyAccessExpression(node) &&
+		ts.isIdentifier(node.expression) &&
+		node.expression.text === 'params'
+	)
+		return node.name.text
+	return undefined
+}
+
+function setPathParam(
+	route: Route,
+	name: string,
+	type: Pick<Param, 'types' | 'values'>,
+) {
+	const index = route.pathParams.findIndex((param) => param.name === name)
+	if (index !== -1)
+		route.pathParams[index] = {
+			name,
+			types: type.types,
+			values: type.values,
+			required: true,
+		}
 }
 
 /** Schema-typed params replace bare `searchParams.get` reads of the same name. */
