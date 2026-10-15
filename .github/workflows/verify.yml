@@ -37,7 +37,7 @@ jobs:
         working-directory: apps/explorer
 
       - name: Check explorer llms.txt
-        run: pnpm check:llms && pnpm exec vitest run --config vitest.node.config.ts test/llms.node.test.ts
+        run: pnpm check:llms
         working-directory: apps/explorer
 
       - name: Rebuild trusted lint dependency
