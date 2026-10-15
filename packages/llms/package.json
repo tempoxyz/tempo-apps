@@ -11,6 +11,10 @@
 		"./tanstack": {
 			"types": "./src/tanstack.ts",
 			"default": "./src/tanstack.ts"
+		},
+		"./hono": {
+			"types": "./src/hono.ts",
+			"default": "./src/hono.ts"
 		}
 	},
 	"scripts": {
@@ -22,8 +26,18 @@
 	"dependencies": {
 		"zod": "catalog:"
 	},
+	"peerDependencies": {
+		"hono": "catalog:"
+	},
+	"peerDependenciesMeta": {
+		"hono": {
+			"optional": true
+		}
+	},
 	"devDependencies": {
+		"@hono/zod-validator": "catalog:",
 		"@types/node": "catalog:",
+		"hono": "catalog:",
 		"vitest": "catalog:"
 	}
 }

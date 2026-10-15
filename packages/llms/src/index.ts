@@ -1,5 +1,6 @@
 export {
 	type ApiDoc,
+	type ApiDocFor,
 	api,
 	type DocBase,
 	type Docs,

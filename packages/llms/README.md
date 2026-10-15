@@ -6,5 +6,6 @@ Renders `llms.txt` and `llms-full.txt` from the zod schemas an app's routes alre
 - `api(schema, doc)` documents an API route by the schema its handler parses.
 - `llmsResponder(build)` serves the rendered files, built once per isolate.
 - `@tempo/llms/tanstack` reads routes from a TanStack Router instance, and `TanStackDocs<FileRoutesByFullPath>` makes type checking fail on undocumented routes and params.
+- `@tempo/llms/hono` reads routes from a Hono app's `app.routes`, and `HonoDocs<typeof app>` makes type checking fail on undocumented routes, or a route whose validated query or body is not documented by `api()` with a schema of the same keys. Hono only types routes registered by chaining.
 
-See `apps/explorer/src/lib/llms` for a complete setup.
+See `apps/explorer/src/lib/llms` (TanStack) and `apps/fee-payer/src/lib/llms` (Hono) for complete setups.

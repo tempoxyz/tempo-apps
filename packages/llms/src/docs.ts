@@ -47,10 +47,19 @@ declare const checked: unique symbol
 /** A `RouteDoc` whose params were checked against its `input` by `api()`. */
 export type ApiDoc = RouteDoc & { [checked]: true }
 
+declare const inputKeys: unique symbol
+/**
+ * An `ApiDoc` whose `input` has exactly `Keys`, held invariantly so an adapter
+ * can require the keys its router validates.
+ */
+export type ApiDocFor<Keys extends PropertyKey> = ApiDoc & {
+	[inputKeys]: (keys: Keys) => Keys
+}
+
 /** Documents an API route whose handler parses `input`; params must match its keys. */
 export function api<Schema extends z.core.$ZodType>(
 	input: Schema,
 	doc: DocBase & Params<z.output<Schema>>,
-): ApiDoc {
-	return { ...doc, input } as RouteDoc as ApiDoc
+): ApiDocFor<keyof z.input<Schema>> {
+	return { ...doc, input } as RouteDoc as ApiDocFor<keyof z.input<Schema>>
 }
