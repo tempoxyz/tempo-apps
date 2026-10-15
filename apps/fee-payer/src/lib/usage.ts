@@ -5,6 +5,7 @@ import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { pathusd } from 'viem/tokens'
+import * as z from 'zod'
 import { tempoChain } from './chain.js'
 
 const IS = IDX.IndexSupply.create({
@@ -15,6 +16,12 @@ const QB = IDX.QueryBuilder.from(IS)
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+
+/** Query parameters of `GET /usage`. */
+export const UsageQuerySchema = z.object({
+	blockTimestampFrom: z.optional(z.coerce.number()),
+	blockTimestampTo: z.optional(z.coerce.number()),
+})
 
 const epochToTimestamp = (epoch: number): string =>
 	new Date(epoch * 1000).toISOString()

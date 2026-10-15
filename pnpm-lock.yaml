@@ -605,6 +605,9 @@ importers:
       '@hono/zod-validator':
         specifier: 'catalog:'
         version: 0.7.6(hono@4.12.25)(zod@4.3.6)
+      '@tempo/llms':
+        specifier: workspace:*
+        version: link:../../packages/llms
       accounts:
         specifier: 'catalog:'
         version: 0.18.0(@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))(@types/react@19.2.14)(@wagmi/core@3.6.5)(express@5.2.1)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.57.4(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))(wagmi@3.7.7)

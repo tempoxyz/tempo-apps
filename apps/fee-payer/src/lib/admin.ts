@@ -15,93 +15,92 @@ import {
 } from './api-keys.js'
 
 const admin = new Hono()
+	/** Reject early if the KV binding is not configured (non-mainnet envs). */
+	.use('*', async (c, next) => {
+		if (!env.SponsorApiKeyStore) {
+			return c.json(
+				{ error: 'API key management not available in this environment' },
+				503,
+			)
+		}
+		if (!env.ADMIN_SECRET) {
+			console.error('ADMIN_SECRET is not configured')
+			return c.json({ error: 'Service misconfigured' }, 503)
+		}
+		const auth = c.req.header('Authorization')
+		if (!auth || auth !== `Bearer ${env.ADMIN_SECRET}`) {
+			return c.json({ error: 'Unauthorized' }, 401)
+		}
+		await next()
+	})
 
-/** Reject early if the KV binding is not configured (non-mainnet envs). */
-admin.use('*', async (c, next) => {
-	if (!env.SponsorApiKeyStore) {
-		return c.json(
-			{ error: 'API key management not available in this environment' },
-			503,
-		)
-	}
-	if (!env.ADMIN_SECRET) {
-		console.error('ADMIN_SECRET is not configured')
-		return c.json({ error: 'Service misconfigured' }, 503)
-	}
-	const auth = c.req.header('Authorization')
-	if (!auth || auth !== `Bearer ${env.ADMIN_SECRET}`) {
-		return c.json({ error: 'Unauthorized' }, 401)
-	}
-	await next()
-})
-
-/** POST /admin/keys — create a new API key. */
-admin.post(
-	'/keys',
-	zValidator(
-		'json',
-		z.object({
-			label: z.string(),
-			callerService: z.string().optional(),
-			dailyLimitUsd: z.string().nullable().optional().default(null),
-			allowedDestinations: z.array(z.string()).optional().default([]),
-		}),
-	),
-	async (c) => {
-		const body = c.req.valid('json')
-		const key = await createApiKey({
-			label: body.label,
-			callerService: body.callerService ?? body.label,
-			dailyLimitUsd: body.dailyLimitUsd,
-			allowedDestinations: body.allowedDestinations,
-		})
-		return c.json({ key }, 201)
-	},
-)
-
-/** GET /admin/keys — list all API keys with daily + lifetime spend in USD. */
-admin.get('/keys', async (c) => {
-	const cursor = c.req.query('cursor') ?? undefined
-	const result = await listApiKeys(cursor)
-	const keys = await Promise.all(
-		result.keys.map(async ({ key, record }) => ({
-			key,
-			record,
-			dailySpentUsd: formatMicrodollarUsd(await getDailySpend(key)),
-			lifetimeSpentUsd: formatMicrodollarUsd(await getLifetimeSpend(key)),
-		})),
+	/** POST /admin/keys — create a new API key. */
+	.post(
+		'/keys',
+		zValidator(
+			'json',
+			z.object({
+				label: z.string(),
+				callerService: z.string().optional(),
+				dailyLimitUsd: z.string().nullable().optional().default(null),
+				allowedDestinations: z.array(z.string()).optional().default([]),
+			}),
+		),
+		async (c) => {
+			const body = c.req.valid('json')
+			const key = await createApiKey({
+				label: body.label,
+				callerService: body.callerService ?? body.label,
+				dailyLimitUsd: body.dailyLimitUsd,
+				allowedDestinations: body.allowedDestinations,
+			})
+			return c.json({ key }, 201)
+		},
 	)
-	return c.json({ keys, cursor: result.cursor })
-})
 
-/** PATCH /admin/keys/:key — update an API key. */
-admin.patch(
-	'/keys/:key',
-	zValidator(
-		'json',
-		z.object({
-			label: z.string().optional(),
-			callerService: z.string().optional(),
-			dailyLimitUsd: z.string().nullable().optional(),
-			allowedDestinations: z.array(z.string()).optional(),
-			active: z.boolean().optional(),
-		}),
-	),
-	async (c) => {
+	/** GET /admin/keys — list all API keys with daily + lifetime spend in USD. */
+	.get('/keys', async (c) => {
+		const cursor = c.req.query('cursor') ?? undefined
+		const result = await listApiKeys(cursor)
+		const keys = await Promise.all(
+			result.keys.map(async ({ key, record }) => ({
+				key,
+				record,
+				dailySpentUsd: formatMicrodollarUsd(await getDailySpend(key)),
+				lifetimeSpentUsd: formatMicrodollarUsd(await getLifetimeSpend(key)),
+			})),
+		)
+		return c.json({ keys, cursor: result.cursor })
+	})
+
+	/** PATCH /admin/keys/:key — update an API key. */
+	.patch(
+		'/keys/:key',
+		zValidator(
+			'json',
+			z.object({
+				label: z.string().optional(),
+				callerService: z.string().optional(),
+				dailyLimitUsd: z.string().nullable().optional(),
+				allowedDestinations: z.array(z.string()).optional(),
+				active: z.boolean().optional(),
+			}),
+		),
+		async (c) => {
+			const key = c.req.param('key')
+			const body = c.req.valid('json')
+			const ok = await updateApiKey(key, body)
+			if (!ok) return c.json({ error: 'Key not found' }, 404)
+			return c.json({ ok: true })
+		},
+	)
+
+	/** DELETE /admin/keys/:key — revoke an API key. */
+	.delete('/keys/:key', async (c) => {
 		const key = c.req.param('key')
-		const body = c.req.valid('json')
-		const ok = await updateApiKey(key, body)
+		const ok = await revokeApiKey(key)
 		if (!ok) return c.json({ error: 'Key not found' }, 404)
 		return c.json({ ok: true })
-	},
-)
-
-/** DELETE /admin/keys/:key — revoke an API key. */
-admin.delete('/keys/:key', async (c) => {
-	const key = c.req.param('key')
-	const ok = await revokeApiKey(key)
-	if (!ok) return c.json({ error: 'Key not found' }, 404)
-	return c.json({ ok: true })
-})
+	})
 
 export { admin }
