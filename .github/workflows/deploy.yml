@@ -68,7 +68,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
       - name: Generate Worker types
         if: steps.changes.outputs.relevant == 'true'

@@ -42,7 +42,7 @@ jobs:
           persist-credentials: false
 
       - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
       - name: Generate Worker types
         run: pnpm gen:types
@@ -69,7 +69,7 @@ jobs:
           persist-credentials: false
 
       - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
       - name: Generate Worker types
         run: pnpm gen:types
@@ -96,7 +96,7 @@ jobs:
           persist-credentials: false
 
       - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
       - name: Run tests
         run: pnpm check:types && pnpm test && pnpm test:scheduled

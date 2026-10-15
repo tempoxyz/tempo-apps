@@ -47,7 +47,7 @@ jobs:
     permissions:
       id-token: write
     name: Verify
-    uses: ./.github/workflows/verify.yml
+    uses: ./.github/workflows/verify.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
   deploy-preview:
     name: Deploy Preview (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
@@ -113,7 +113,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
       - name: Generate Worker types
         if: steps.changes.outputs.relevant == 'true'
@@ -223,7 +223,7 @@ jobs:
           merge-multiple: true
 
       - name: Post Deployment Table
-        uses: ./.github/actions/post-deployment-table
+        uses: ./.github/actions/post-deployment-table # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deployments-path: deployments
