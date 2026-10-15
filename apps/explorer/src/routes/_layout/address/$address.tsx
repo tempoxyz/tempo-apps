@@ -44,7 +44,7 @@ import { TokenIcon } from '#comps/TokenIcon'
 import {
 	AssetName,
 	AssetSymbol,
-	AssetContract,
+	AssetIdentity,
 	AssetCurrency,
 	AssetAmount,
 	AssetValue,
@@ -2203,9 +2203,8 @@ function SectionsWrapper(props: {
 						<DataGrid
 							columns={{
 								stacked: [
-									{ label: 'Name', align: 'start', width: '1fr' },
-									{ label: 'Contract', align: 'start', width: '1fr' },
-									{ label: 'Amount', align: 'end', width: '0.5fr' },
+									{ label: 'Token', align: 'start', width: '1fr' },
+									{ label: 'Amount', align: 'end', width: '1fr' },
 								],
 								tabs: [
 									{ label: 'Name', align: 'start', width: '1fr' },
@@ -2226,9 +2225,12 @@ function SectionsWrapper(props: {
 										cells:
 											mode === 'stacked'
 												? [
-														<AssetName key="name" asset={asset} />,
-														<AssetContract key="contract" asset={asset} />,
-														<AssetAmount key="amount" asset={asset} />,
+														<AssetIdentity key="name" asset={asset} />,
+														<AssetAmount
+															key="amount"
+															asset={asset}
+															multiline
+														/>,
 													]
 												: [
 														<AssetName key="name" asset={asset} />,
