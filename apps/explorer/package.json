@@ -49,6 +49,7 @@
 		"@tanstack/react-router-ssr-query": "catalog:",
 		"@tanstack/react-start": "catalog:",
 		"@tanstack/router-plugin": "catalog:",
+		"@tempo/llms": "workspace:*",
 		"@tempo/rpc-utils": "workspace:*",
 		"abitype": "catalog:",
 		"accounts": "catalog:",

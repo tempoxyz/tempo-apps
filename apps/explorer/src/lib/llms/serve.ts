@@ -1,20 +1,16 @@
+import { llmsResponder, render } from '@tempo/llms'
+import { fromTanStackRouter } from '@tempo/llms/tanstack'
 import { getRouter } from '#router'
 import { docs } from './content'
-import { type RuntimeRoute, render } from './render'
-
-let files: ReturnType<typeof render> | undefined
+import fullTemplate from './llms-full.template.md?raw'
+import indexTemplate from './llms.template.md?raw'
 
 /** Renders both files once per isolate, from the routes this worker serves. */
-export function llmsResponse(file: keyof ReturnType<typeof render>) {
-	// A router, not the bare route tree, so each route's `fullPath` is resolved.
-	files ??= render(
+export const llmsResponse = llmsResponder(() =>
+	render({
 		docs,
-		Object.values(getRouter().routesById) as RuntimeRoute[],
-	)
-	return new Response(files[file], {
-		headers: {
-			'Content-Type': 'text/plain; charset=utf-8',
-			'Cache-Control': 'public, max-age=3600',
-		},
-	})
-}
+		// A router, not the bare route tree, so each route's `fullPath` is resolved.
+		routes: fromTanStackRouter(getRouter()),
+		templates: { 'llms.txt': indexTemplate, 'llms-full.txt': fullTemplate },
+	}),
+)

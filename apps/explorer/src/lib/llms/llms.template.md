@@ -30,7 +30,7 @@ For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 
 ## Pages
 
-{{pages}}
+{{pageIndex}}
 
 ## Example Queries
 
@@ -51,4 +51,4 @@ For a full reference, see [`/llms-full.txt`](/llms-full.txt).
 
 ## Public APIs
 
-{{api}}
+{{apiIndex}}

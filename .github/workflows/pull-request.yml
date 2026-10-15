@@ -154,6 +154,18 @@ jobs:
             --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
             --output /dev/null "$PREVIEW_URL"
 
+      - name: Verify explorer llms.txt
+        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          test -n "$PREVIEW_URL"
+          for file in llms.txt llms-full.txt; do
+            curl --fail --silent --show-error --location \
+              --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+              --output /dev/null "$PREVIEW_URL/$file"
+          done
+
       - name: Save Deployment Info
         if: always()
         env:

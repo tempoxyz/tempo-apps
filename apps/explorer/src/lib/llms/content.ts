@@ -5,7 +5,8 @@
  * parameter has no entry here, or an entry names one that no longer exists.
  */
 
-import type { z } from 'zod/mini'
+import { api } from '@tempo/llms'
+import type { TanStackDocs } from '@tempo/llms/tanstack'
 import { liveQuerySchema } from '#lib/live-query'
 import { RequestParametersSchema } from '#lib/server/address-history'
 import { PUBLIC_METHODS, READ_METHODS } from '#lib/server/rpc'
@@ -17,43 +18,6 @@ import { SearchQuerySchema } from '#routes/api/search'
 import { SimulationRequestSchema } from '#routes/api/simulate'
 import { Tip20RolesQuerySchema } from '#routes/api/tip20-roles'
 import { BalanceChangesQuerySchema } from '#routes/api/tx/balance-changes/$hash'
-import type { RouteDoc } from './render'
-
-type Routes = FileRoutesByFullPath
-
-/** Like `render.ts`'s `ParamDoc`, with `values` keyed by the schema's literals. */
-type ParamDoc<Value> =
-	| string
-	| {
-			description: string
-			values?: Record<Extract<NonNullable<Value>, string>, string>
-			required?: true
-	  }
-	| null
-
-/** Every parameter the schema parses needs an entry, and no others. */
-type Params<T> = [keyof T] extends [never]
-	? { params?: never }
-	: { params: { [K in keyof T]-?: ParamDoc<T[K]> } }
-
-type Base = { title: string; description: string }
-
-declare const checked: unique symbol
-type ApiDoc = RouteDoc & { [checked]: true }
-
-type Entry<Path extends keyof Routes> =
-	| { hidden: string }
-	| (Path extends `/api/${string}`
-			? (Base & { input?: never; params?: never }) | ApiDoc
-			: Base & Params<Routes[Path]['types']['searchSchema']>)
-
-/** An API route whose handler parses `input`. */
-function api<Schema extends z.core.$ZodType>(
-	input: Schema,
-	doc: Base & Params<z.output<Schema>>,
-): ApiDoc {
-	return { ...doc, input } as RouteDoc as ApiDoc
-}
 
 const methodList = (methods: Iterable<string>) =>
 	[...methods].map((method) => `\`${method}\``).join(', ')
@@ -359,4 +323,4 @@ export const docs = {
 	'/demo/empty-state': { hidden: 'Development-only component demos.' },
 	'/demo/pagination': { hidden: 'Development-only component demos.' },
 	'/demo/tx': { hidden: 'Development-only component demos.' },
-} satisfies { [Path in keyof Routes]: Entry<Path> }
+} satisfies TanStackDocs<FileRoutesByFullPath>
