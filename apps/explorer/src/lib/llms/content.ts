@@ -142,13 +142,15 @@ export const docs = {
 			'Discovered TIP-20 tokens with symbol, name, currency, holders, address, and creation time.',
 		params: { page: 'Page number.' },
 	},
-	'/dex': {
+	'/dex/': {
+		title: 'Stablecoin DEX',
+		description: 'Redirects to the mainnet USDT0 → pathUSD route.',
+	},
+	'/dex/$from/$to': {
 		title: 'Stablecoin DEX route',
 		description:
-			'Inspect a directional Stablecoin DEX route, its quote-token path, a block-pinned quote, and each orderbook leg.',
+			'`from` and `to` are input and output TIP-20 token addresses. Shows the directional Stablecoin DEX route, its quote-token path, a block-pinned quote, and each orderbook leg.',
 		params: {
-			from: 'Input TIP-20 token address. Defaults to mainnet USDT0.',
-			to: 'Output TIP-20 token address. Defaults to pathUSD.',
 			amount: 'Exact input amount in human-readable token units.',
 		},
 	},

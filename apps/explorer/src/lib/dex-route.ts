@@ -4,19 +4,39 @@ import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
 import { zAddress } from '#lib/zod'
 
+const routeAmount = z.string().check(z.regex(/^\d{1,33}(\.\d{1,18})?$/))
+
+export const defaultDexRoute = {
+	from: '0x20c00000000000000000000014f22ca97301eb73',
+	to: Addresses.pathUsd,
+	amount: '10000',
+} as const
+
+export const dexRouteParamsSchema = z.object({
+	from: zAddress({ lowercase: true }),
+	to: zAddress({ lowercase: true }),
+})
+
+/** Hand-typed `?amount=100` arrives as a number, so accept both forms. */
 export const dexRouteSearchSchema = z.object({
-	from: z._default(
-		zAddress({ lowercase: true }),
-		'0x20c00000000000000000000014f22ca97301eb73',
-	),
-	to: z._default(zAddress({ lowercase: true }), Addresses.pathUsd),
 	amount: z._default(
-		z.string().check(z.regex(/^\d{1,33}(\.\d{1,18})?$/)),
-		'10000',
+		z.pipe(
+			z.pipe(
+				z.union([z.string(), z.number()]),
+				z.transform((value) => String(value)),
+			),
+			routeAmount,
+		),
+		defaultDexRoute.amount,
 	),
 })
 
-export type DexRouteSearch = z.infer<typeof dexRouteSearchSchema>
+export const dexRouteInputSchema = z.object({
+	...dexRouteParamsSchema.shape,
+	amount: routeAmount,
+})
+
+export type DexRouteInput = z.infer<typeof dexRouteInputSchema>
 
 /** Reject precision loss rather than letting parseUnits round a user's input. */
 export function parseRouteAmount(amount: string, decimals: number): bigint {

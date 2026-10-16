@@ -8,11 +8,11 @@ import {
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
 import {
-	dexRouteSearchSchema,
+	dexRouteInputSchema,
 	parseRouteAmount,
 	resolveDexPath,
 	type DexQuote,
-	type DexRouteSearch,
+	type DexRouteInput,
 	type DexToken,
 } from '#lib/dex-route'
 import { getBatchedClient } from '#wagmi.config'
@@ -44,7 +44,7 @@ function reverted(error: unknown): ContractFunctionRevertedError | undefined {
 }
 
 export async function getDexRoute(
-	input: DexRouteSearch,
+	input: DexRouteInput,
 ): Promise<DexRouteSnapshot> {
 	const client = getBatchedClient()
 	const blockNumber = await client.getBlockNumber()
@@ -163,7 +163,7 @@ export async function getDexRoute(
 }
 
 export const fetchDexRoute = createServerFn({ method: 'POST' })
-	.inputValidator((input) => dexRouteSearchSchema.parse(input))
+	.inputValidator((input) => dexRouteInputSchema.parse(input))
 	.handler(async ({ data }) => {
 		try {
 			return await withDeadline(getDexRoute(data))

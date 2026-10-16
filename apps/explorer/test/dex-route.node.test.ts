@@ -102,6 +102,9 @@ describe('Stablecoin DEX route', () => {
 		expect(dexRouteSearchSchema.safeParse({ amount: '1e10' }).success).toBe(
 			false,
 		)
+		expect(dexRouteSearchSchema.parse({ amount: 100 })).toEqual({
+			amount: '100',
+		})
 	})
 	it('pins metadata, books and every size quote to one block', async () => {
 		const snapshot = await getDexRoute({

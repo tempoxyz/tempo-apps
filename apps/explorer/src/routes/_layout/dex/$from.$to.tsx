@@ -10,6 +10,8 @@ import { CopyButton } from '#comps/CopyButton'
 import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import {
+	defaultDexRoute,
+	dexRouteParamsSchema,
 	dexRouteSearchSchema,
 	parseRouteAmount,
 	quoteImpact,
@@ -23,17 +25,15 @@ import ArrowRightIcon from '~icons/lucide/arrow-right'
 import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
 import RefreshCwIcon from '~icons/lucide/refresh-cw'
 
-export const Route = createFileRoute('/_layout/dex')({
+export const Route = createFileRoute('/_layout/dex/$from/$to')({
 	component: DexRoutePage,
+	params: {
+		parse: (params) => dexRouteParamsSchema.parse(params),
+		stringify: (params) => params,
+	},
 	validateSearch: dexRouteSearchSchema,
 	search: {
-		middlewares: [
-			stripSearchParams({
-				from: '0x20c00000000000000000000014f22ca97301eb73',
-				to: '0x20c0000000000000000000000000000000000000',
-				amount: '10000',
-			}),
-		],
+		middlewares: [stripSearchParams({ amount: defaultDexRoute.amount })],
 	},
 	errorComponent: () => (
 		<div className="max-w-[1200px] mx-auto px-4 pt-20 flex flex-col gap-3">
@@ -42,12 +42,8 @@ export const Route = createFileRoute('/_layout/dex')({
 				Use two token addresses and a positive decimal amount.
 			</p>
 			<Link
-				to="/dex"
-				search={{
-					from: '0x20c00000000000000000000014f22ca97301eb73',
-					to: '0x20c0000000000000000000000000000000000000',
-					amount: '10000',
-				}}
+				to="/dex/$from/$to"
+				params={{ from: defaultDexRoute.from, to: defaultDexRoute.to }}
 				className="text-accent hover:underline"
 			>
 				View USDT0 → pathUSD
@@ -56,8 +52,10 @@ export const Route = createFileRoute('/_layout/dex')({
 	),
 	head: () => ({ meta: [{ title: 'Stablecoin DEX – Tempo Explorer' }] }),
 	loaderDeps: ({ search }) => search,
-	loader: ({ context, deps }) =>
-		context.queryClient.prefetchQuery(dexRouteQueryOptions(deps)),
+	loader: ({ context, deps, params }) =>
+		context.queryClient.prefetchQuery(
+			dexRouteQueryOptions({ ...params, ...deps }),
+		),
 })
 
 const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 })
@@ -84,7 +82,8 @@ function quoteMessage(quote: DexQuote): string {
 }
 
 function DexRoutePage(): React.JSX.Element {
-	const search = Route.useSearch()
+	const params = Route.useParams()
+	const search = { ...params, ...Route.useSearch() }
 	const navigate = Route.useNavigate()
 	const amountId = useId()
 	const [validationError, setValidationError] = useState<string | null>(null)
@@ -148,8 +147,9 @@ function DexRoutePage(): React.JSX.Element {
 				</div>
 				<div className="flex flex-wrap items-center gap-2">
 					<Link
-						to="/dex"
-						search={{ from: search.to, to: search.from, amount: search.amount }}
+						to="/dex/$from/$to"
+						params={{ from: search.to, to: search.from }}
+						search={{ amount: search.amount }}
 						className={headerButton}
 						onClick={() => setValidationError(null)}
 					>
@@ -233,7 +233,7 @@ function DexRoutePage(): React.JSX.Element {
 										}
 										setValidationError(null)
 										if (amount === search.amount) void query.refetch()
-										else void navigate({ search: { ...search, amount } })
+										else void navigate({ search: { amount } })
 									}}
 								>
 									<label htmlFor={amountId} className="copy-13 text-secondary">

@@ -133,8 +133,8 @@ export function Tip20TokenTabContent(
 					/>
 					{address.toLowerCase() !== Addresses.pathUsd && (
 						<Link
-							to="/dex"
-							search={{ from: address, to: Addresses.pathUsd, amount: '10000' }}
+							to="/dex/$from/$to"
+							params={{ from: address, to: Addresses.pathUsd }}
 							className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
 						>
 							View Stablecoin DEX route →

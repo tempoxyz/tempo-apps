@@ -1,9 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
-import type { DexRouteSearch } from '#lib/dex-route'
+import type { DexRouteInput } from '#lib/dex-route'
 import { fetchDexRoute } from '#lib/server/dex-route'
 import { getTempoChain } from '#wagmi.config'
 
-export function dexRouteQueryOptions(input: DexRouteSearch) {
+export function dexRouteQueryOptions(input: DexRouteInput) {
 	return queryOptions({
 		queryKey: ['dex-route', getTempoChain().id, input],
 		queryFn: () => fetchDexRoute({ data: input }),
