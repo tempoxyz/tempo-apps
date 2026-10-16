@@ -411,7 +411,11 @@ function DexRoutePage(): React.JSX.Element {
 	)
 }
 
-function LegRow(props: LegRow.Props): React.JSX.Element {
+function LegRow(props: {
+	blockNumber: string
+	index: number
+	leg: DexLeg
+}): React.JSX.Element {
 	const { blockNumber, index, leg } = props
 	const [open, setOpen] = useState(false)
 	const depth = useQuery({
@@ -520,14 +524,6 @@ function LegRow(props: LegRow.Props): React.JSX.Element {
 			)}
 		</div>
 	)
-}
-
-declare namespace LegRow {
-	type Props = {
-		blockNumber: string
-		index: number
-		leg: DexLeg
-	}
 }
 
 function TokenLink(props: { token: DexToken }): React.JSX.Element {
