@@ -13,7 +13,7 @@ import {
 	quoteImpact,
 	resolveDexPath,
 } from '#lib/dex-route'
-import { getDexRoute } from '#lib/server/dex-route'
+import { getDexLegDepth, getDexRoute } from '#lib/server/dex-route'
 
 const { readContract, getMetadata } = vi.hoisted(() => ({
 	readContract: vi.fn(),
@@ -142,10 +142,8 @@ describe('Stablecoin DEX route', () => {
 			[OUSD, ROOT],
 			[USDT, OUSD],
 		])
-		expect(snapshot.legs.map((leg) => leg.side)).toEqual([
-			'Buy base',
-			'Buy base',
-		])
+		expect(snapshot.legs.map((leg) => leg.isBid)).toEqual([false, false])
+		expect(snapshot.legs.map((leg) => leg.bestTick)).toEqual([20, 20])
 		expect(snapshot.legs.map((leg) => leg.bestRate)).toEqual([
 			1 / 1.0002,
 			1 / 1.0002,
@@ -215,5 +213,55 @@ describe('Stablecoin DEX route', () => {
 				reference,
 			),
 		).toBeNull()
+	})
+	it('reports depth in input-token units from the best tick outward', async () => {
+		const previous = readContract.getMockImplementation()
+		readContract.mockImplementation(async (request) => {
+			if (request.functionName === 'TICK_SPACING') return 10
+			if (request.functionName === 'getTickLevel') {
+				const [, tick] = request.args
+				return [0n, 0n, tick === 20 || tick === 40 ? 1_000_000n : 0n]
+			}
+			return previous?.(request)
+		})
+		const asks = await getDexLegDepth({
+			from: OUSD,
+			to: USDT,
+			tick: 20,
+			blockNumber: '100',
+		})
+		expect(asks).toEqual([
+			{
+				tick: 20,
+				rate: 1 / 1.0002,
+				amountIn: '1.0002',
+				cumulativeIn: '1.0002',
+			},
+			{
+				tick: 40,
+				rate: 1 / 1.0004,
+				amountIn: '1.0004',
+				cumulativeIn: '2.0006',
+			},
+		])
+		expect(
+			readContract.mock.calls
+				.filter(([request]) => request.functionName === 'getTickLevel')
+				.map(([request]) => request.args),
+		).toContainEqual([USDT, 30, false])
+		for (const [request] of readContract.mock.calls)
+			expect(request.blockNumber).toBe(100n)
+
+		readContract.mockClear()
+		const bids = await getDexLegDepth({
+			from: USDT,
+			to: OUSD,
+			tick: 40,
+			blockNumber: '100',
+		})
+		expect(bids.map((level) => [level.tick, level.amountIn])).toEqual([
+			[40, '1'],
+			[20, '1'],
+		])
 	})
 })

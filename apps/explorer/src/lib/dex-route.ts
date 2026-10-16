@@ -116,3 +116,6 @@ export function quoteImpact(
 	const referenceRate = Number(reference.amountOut) / Number(reference.amountIn)
 	return referenceRate > 0 ? (1 - rate / referenceRate) * 10_000 : null
 }
+
+/** Price levels scanned from the best price when showing a leg's depth. */
+export const depthTicks = 20

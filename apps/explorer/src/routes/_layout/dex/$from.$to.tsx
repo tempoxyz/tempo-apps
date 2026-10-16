@@ -11,6 +11,7 @@ import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import {
 	defaultDexRoute,
+	depthTicks,
 	dexRouteParamsSchema,
 	dexRouteSearchSchema,
 	parseRouteAmount,
@@ -19,7 +20,11 @@ import {
 	type DexToken,
 } from '#lib/dex-route'
 import { useMediaQuery } from '#lib/hooks'
-import { dexRouteQueryOptions } from '#lib/queries/dex-route'
+import {
+	dexLegDepthQueryOptions,
+	dexRouteQueryOptions,
+} from '#lib/queries/dex-route'
+import type { DexLeg } from '#lib/server/dex-route'
 import { getTempoChain } from '#wagmi.config'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
@@ -368,45 +373,12 @@ function DexRoutePage(): React.JSX.Element {
 							content: (
 								<div className="flex flex-col">
 									{snapshot.legs.map((leg, index) => (
-										<div
-											key={leg.bookKey}
-											className="px-[18px] py-4 border-b last:border-b-0 border-dashed border-card-border flex flex-col gap-3"
-										>
-											<div className="flex flex-wrap justify-between gap-3">
-												<div className="flex flex-wrap items-center gap-2">
-													<span className="copy-13 text-tertiary">
-														{index + 1}.
-													</span>
-													<TokenLink token={leg.from} />
-													<ArrowRightIcon className="size-3.5 text-tertiary" />
-													<TokenLink token={leg.to} />
-												</div>
-												<span className="copy-13 text-secondary">
-													{!leg.exists
-														? 'Book not created'
-														: leg.bestRate === null
-															? 'No resting liquidity on this side'
-															: `Best rate: ${rate.format(leg.bestRate)} ${leg.to.symbol} / ${leg.from.symbol}`}
-												</span>
-											</div>
-											<details className="copy-13 text-tertiary">
-												<summary className="cursor-pointer hover:text-primary">
-													Orderbook details
-												</summary>
-												<dl className="pt-3 flex flex-col gap-2">
-													<div>
-														<dt>Direction</dt>
-														<dd className="text-secondary">{leg.side}</dd>
-													</div>
-													<div>
-														<dt>Book key</dt>
-														<dd className="font-mono break-all text-secondary">
-															{leg.bookKey}
-														</dd>
-													</div>
-												</dl>
-											</details>
-										</div>
+										<LegRow
+											key={`${leg.from.address}:${leg.to.address}`}
+											blockNumber={snapshot.blockNumber}
+											index={index}
+											leg={leg}
+										/>
 									))}
 								</div>
 							),
@@ -437,6 +409,125 @@ function DexRoutePage(): React.JSX.Element {
 			)}
 		</div>
 	)
+}
+
+function LegRow(props: LegRow.Props): React.JSX.Element {
+	const { blockNumber, index, leg } = props
+	const [open, setOpen] = useState(false)
+	const depth = useQuery({
+		...dexLegDepthQueryOptions({
+			from: leg.from.address,
+			to: leg.to.address,
+			tick: leg.bestTick ?? 0,
+			blockNumber,
+		}),
+		enabled: open && leg.bestTick !== null,
+	})
+	const spread =
+		leg.bid !== null && leg.ask !== null
+			? ((leg.ask - leg.bid) / leg.ask) * 10_000
+			: null
+
+	return (
+		<div className="px-[18px] py-4 border-b last:border-b-0 border-dashed border-card-border flex flex-col gap-2">
+			<div className="flex flex-wrap justify-between gap-3">
+				<div className="flex flex-wrap items-center gap-2">
+					<span className="copy-13 text-tertiary">{index + 1}.</span>
+					<TokenLink token={leg.from} />
+					<ArrowRightIcon className="size-3.5 text-tertiary" />
+					<TokenLink token={leg.to} />
+				</div>
+				<span className="copy-13 text-secondary tabular-nums">
+					{!leg.exists
+						? 'Book not created'
+						: leg.bestRate === null
+							? `No ${leg.isBid ? 'bids' : 'asks'} to fill`
+							: `Best rate: ${rate.format(leg.bestRate)} ${leg.to.symbol} / ${leg.from.symbol}`}
+				</span>
+			</div>
+			{leg.exists && (
+				<div className="copy-13 text-tertiary tabular-nums">
+					Bid {leg.bid === null ? '—' : rate.format(leg.bid)} · Ask{' '}
+					{leg.ask === null ? '—' : rate.format(leg.ask)} {leg.quote.symbol} per{' '}
+					{leg.base.symbol}
+					{spread !== null && ` · Spread ${spread.toFixed(1)} bps`}
+				</div>
+			)}
+			{leg.bestTick !== null && (
+				<details
+					className="copy-13 text-tertiary"
+					onToggle={(event) => setOpen(event.currentTarget.open)}
+				>
+					<summary className="cursor-pointer hover:text-primary">Depth</summary>
+					<div className="pt-3" aria-live="polite">
+						{depth.isPending ? (
+							<p role="status">Loading depth…</p>
+						) : depth.isError ? (
+							<p role="status">
+								Depth is unavailable.{' '}
+								<button
+									type="button"
+									className="text-accent hover:underline cursor-pointer"
+									onClick={() => void depth.refetch()}
+								>
+									Try again
+								</button>
+							</p>
+						) : depth.data.length === 0 ? (
+							<p>
+								No resting liquidity in the {depthTicks} price levels from the
+								best price.
+							</p>
+						) : (
+							<div className="overflow-x-auto">
+								<table className="w-full text-left tabular-nums whitespace-nowrap">
+									<thead>
+										<tr>
+											<th className="py-1.5 pr-4 font-normal">
+												Rate · {leg.to.symbol} / {leg.from.symbol}
+											</th>
+											<th className="py-1.5 pr-4 font-normal text-right">
+												Fills · {leg.from.symbol}
+											</th>
+											<th className="py-1.5 font-normal text-right">
+												Cumulative · {leg.from.symbol}
+											</th>
+										</tr>
+									</thead>
+									<tbody className="text-secondary">
+										{depth.data.map((level) => (
+											<tr
+												key={level.tick}
+												className="border-t border-dashed border-card-border"
+											>
+												<td className="py-1.5 pr-4">
+													{rate.format(level.rate)}
+												</td>
+												<td className="py-1.5 pr-4 text-right">
+													{formatAmount(level.amountIn)}
+												</td>
+												<td className="py-1.5 text-right text-primary">
+													{formatAmount(level.cumulativeIn)}
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						)}
+					</div>
+				</details>
+			)}
+		</div>
+	)
+}
+
+declare namespace LegRow {
+	type Props = {
+		blockNumber: string
+		index: number
+		leg: DexLeg
+	}
 }
 
 function TokenLink(props: { token: DexToken }): React.JSX.Element {
