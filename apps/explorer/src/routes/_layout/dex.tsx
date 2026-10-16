@@ -122,11 +122,18 @@ function DexRoutePage(): React.JSX.Element {
 					<h1 className="flex flex-wrap items-center gap-3 text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
 						{from && to ? (
 							<>
-								<TokenIcon address={from.address} className="size-7" />
-								{from.symbol}
+								<span className="inline-flex items-center gap-3 whitespace-nowrap">
+									<TokenIcon
+										address={from.address}
+										className="size-7 shrink-0"
+									/>
+									{from.symbol}
+								</span>
 								<ArrowRightIcon className="size-6 text-tertiary" />
-								<TokenIcon address={to.address} className="size-7" />
-								{to.symbol}
+								<span className="inline-flex items-center gap-3 whitespace-nowrap">
+									<TokenIcon address={to.address} className="size-7 shrink-0" />
+									{to.symbol}
+								</span>
 							</>
 						) : (
 							<>
