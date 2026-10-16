@@ -146,6 +146,29 @@ describe('native DEX route', () => {
 		for (const [request] of getMetadata.mock.calls)
 			expect(request.blockNumber).toBe(100n)
 	})
+	it('looks up reverse legs with the same base and quote order', async () => {
+		const snapshot = await getDexRoute({
+			from: ROOT,
+			to: USDT,
+			amount: '10000',
+		})
+		expect(
+			readContract.mock.calls
+				.filter(([request]) => request.functionName === 'pairKey')
+				.map(([request]) => request.args),
+		).toEqual([
+			[OUSD, ROOT],
+			[USDT, OUSD],
+		])
+		expect(snapshot.legs.map((leg) => leg.side)).toEqual([
+			'Buy base',
+			'Buy base',
+		])
+		expect(snapshot.legs.map((leg) => leg.bestRate)).toEqual([
+			1 / 1.0002,
+			1 / 1.0002,
+		])
+	})
 	it('does not turn RPC failures into zero liquidity or zero output', async () => {
 		const previous = readContract.getMockImplementation()
 		readContract.mockImplementation(async (request) => {

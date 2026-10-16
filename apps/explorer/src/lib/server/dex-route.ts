@@ -95,7 +95,9 @@ export async function getDexRoute(
 			const bookKey = await client.readContract({
 				...dex,
 				functionName: 'pairKey',
-				args: [from.address, to.address],
+				args: sellBase
+					? [from.address, to.address]
+					: [to.address, from.address],
 			})
 			const book = await client.readContract({
 				...dex,
