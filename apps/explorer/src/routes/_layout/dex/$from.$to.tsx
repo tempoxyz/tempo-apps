@@ -386,7 +386,7 @@ export function AmountInput(props: AmountInput.Props): React.JSX.Element {
 			if (value === amount) return
 			submittedAmount.current = value
 			void navigate({ search: { amount: value }, replace: true })
-		}, 400)
+		}, 250)
 		return () => clearTimeout(timeout)
 	}, [draft, amount, token.decimals, navigate, isNavigating])
 
