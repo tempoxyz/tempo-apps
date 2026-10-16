@@ -28,6 +28,8 @@ import { getBatchedClient, getTempoChain } from '#wagmi.config'
 
 /** Fills read per page; a swap is one or more fills. */
 const FILLS = 400
+/** Safety bound on one block's fills; block gas keeps it far lower. */
+const BLOCK_FILLS = 10_000
 /** Pages scanned for enough matching swaps before giving up. */
 const PAGES = 5
 const SWAPS = 25
@@ -87,10 +89,16 @@ async function readFills(
 	if (rows.length < FILLS) return { fills, next: undefined }
 	const oldest = Math.min(...fills.map((fill) => fill.block))
 	const complete = fills.filter((fill) => fill.block > oldest)
-	// A page inside one block can't end on a boundary; move past it.
-	return complete.length > 0
-		? { fills: complete, next: oldest + 1 }
-		: { fills, next: oldest }
+	if (complete.length > 0) return { fills: complete, next: oldest + 1 }
+	// The whole page is one block: read all of it, which gas bounds, then
+	// move past it.
+	const block = await indexer(
+		chainId,
+		`SELECT ${fillColumns} FROM dex_fills
+		WHERE address = '${stablecoinDex}' ${onBooks} AND block_num = ${oldest}
+		ORDER BY log_idx DESC LIMIT ${BLOCK_FILLS}`,
+	)
+	return { fills: parseFills(block), next: oldest }
 }
 
 /**

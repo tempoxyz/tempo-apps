@@ -39,6 +39,7 @@ const PATH = Addresses.pathUsd
 const USDC = '0x20c000000000000000000000b9537d11c60e8b50'
 const ACTIVE = `0x${'a'.repeat(64)}` as const
 const RETIRED = `0x${'b'.repeat(64)}` as const
+const MISSING = `0x${'c'.repeat(64)}` as const
 const SWITCH_AT = Math.floor(Date.now() / 1000) - 10 * 86_400
 
 function rows(columns: string[], values: unknown[][]) {
@@ -68,6 +69,8 @@ beforeEach(() => {
 				[
 					[RETIRED, USDT, PATH],
 					[ACTIVE, USDT, OUSD],
+					// Indexed, but never created onchain.
+					[MISSING, USDT, USDC],
 				],
 			)
 		if (sql.includes('topic2'))
@@ -111,7 +114,14 @@ beforeEach(() => {
 				return success(
 					args[0] === ACTIVE
 						? { base: USDT, quote: OUSD, bestBidTick: -10, bestAskTick: 10 }
-						: { base: USDT, quote: PATH, bestBidTick: -50, bestAskTick: -30 },
+						: args[0] === MISSING
+							? {
+									base: `0x${'0'.repeat(40)}`,
+									quote: `0x${'0'.repeat(40)}`,
+									bestBidTick: 0,
+									bestAskTick: 0,
+								}
+							: { base: USDT, quote: PATH, bestBidTick: -50, bestAskTick: -30 },
 				)
 			if (functionName === 'getTickLevel') {
 				const [, tick, isBid] = args as [Address, number, boolean]
@@ -294,6 +304,20 @@ describe('Stablecoin DEX pairs', () => {
 			status: 'retired',
 			liquidity: null,
 			volume: { day: 0, month: 4 },
+		})
+		expect(snapshot.pools.some((pool) => pool.key === MISSING)).toBe(false)
+	})
+
+	it('keeps a base’s volume on its routed book when its split fails', async () => {
+		const fallback = query.getMockImplementation()
+		query.mockImplementation(async (sql: string) => {
+			if (sql.includes('AS d0')) throw new Error('query too large')
+			return fallback?.(sql)
+		})
+		const snapshot = await getDexPools()
+		expect(snapshot.pools.find((pool) => pool.key === ACTIVE)?.volume).toEqual({
+			day: 1,
+			month: 5,
 		})
 	})
 })

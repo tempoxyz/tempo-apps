@@ -146,8 +146,6 @@ export async function getDexPools(): Promise<DexPoolsSnapshot> {
 		if (!hexKey.test(key) || !base || !quote) return []
 		return [{ key: key as Hex, base, quote }]
 	})
-	const booksByBase = new Map<Address, Address[]>()
-	for (const pair of pairs) append(booksByBase, pair.base, pair.quote)
 
 	const tokens = [...new Set(pairs.flatMap((pair) => [pair.base, pair.quote]))]
 	const [metadata, books, levelRows] = await Promise.all([
@@ -187,6 +185,19 @@ export async function getDexPools(): Promise<DexPoolsSnapshot> {
 	}
 
 	const totals = volumesByToken(volumeRows)
+	const valid = (tick: number) => tick >= Tick.minTick && tick <= Tick.maxTick
+	const entries = pairs.flatMap((pair, index) => {
+		const base = metadata.get(pair.base)
+		const quote = metadata.get(pair.quote)
+		const book = books[index]
+		if (!base || !quote || book?.status !== 'success') return []
+		// A book that was never created reads back as zeros.
+		if (/^0x0{40}$/i.test(book.result.base)) return []
+		return [{ pair, base, quote, book: book.result }]
+	})
+	// Only books that exist onchain can have held a base's earlier fills.
+	const booksByBase = new Map<Address, Address[]>()
+	for (const { pair } of entries) append(booksByBase, pair.base, pair.quote)
 	// A base that switched quote tokens inside the window split its fills
 	// between books; each stretch between switches is summed separately.
 	const intervals = new Map(
@@ -220,22 +231,22 @@ export async function getDexPools(): Promise<DexPoolsSnapshot> {
 				const day = `sumIf(quote_volume, ${[...within, `bucket >= '${windows.day}'`].join(' AND ')})`
 				return `toString(${day}) AS d${index}, toString(${month}) AS m${index}`
 			})
-			const [row] = await indexer(
+			// One failed split leaves that base's fills on its routed book
+			// rather than failing every pair.
+			const row = await indexer(
 				chainId,
 				`SELECT ${columns.join(', ')} FROM dex_ohlc_1m
 					WHERE token = '${base}' AND bucket >= '${windows.month}'`,
+			).then(
+				([row]) => row,
+				(error) => {
+					console.error('Failed to split DEX volume:', base, error)
+					return null
+				},
 			)
 			return [base, split, row] as const
 		}),
 	)
-	const valid = (tick: number) => tick >= Tick.minTick && tick <= Tick.maxTick
-	const entries = pairs.flatMap((pair, index) => {
-		const base = metadata.get(pair.base)
-		const quote = metadata.get(pair.quote)
-		const book = books[index]
-		if (!base || !quote || book?.status !== 'success') return []
-		return [{ pair, base, quote, book: book.result }]
-	})
 	// Only the routed book is listed; `getTickLevel` can read no other.
 	const [depths, splitRows] = await Promise.all([
 		Promise.all(
@@ -263,16 +274,20 @@ export async function getDexPools(): Promise<DexPoolsSnapshot> {
 		splitReads,
 	])
 	const splits = new Map(
-		splitRows.map(([base, split, row]) => [
-			base,
-			split.map((interval, index) => ({
-				quote: interval.quote,
-				raw: {
-					day: BigInt(String(row?.[`d${index}`] ?? 0)),
-					month: BigInt(String(row?.[`m${index}`] ?? 0)),
-				},
-			})),
-		]),
+		splitRows
+			.flatMap(([base, split, row]) =>
+				row ? [[base, split, row] as const] : [],
+			)
+			.map(([base, split, row]) => [
+				base,
+				split.map((interval, index) => ({
+					quote: interval.quote,
+					raw: {
+						day: BigInt(String(row?.[`d${index}`] ?? 0)),
+						month: BigInt(String(row?.[`m${index}`] ?? 0)),
+					},
+				})),
+			]),
 	)
 
 	const pools = entries.map(({ pair, base, quote, book }, index): DexPool => {
