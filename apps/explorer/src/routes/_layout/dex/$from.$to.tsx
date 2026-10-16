@@ -3,8 +3,9 @@ import {
 	createFileRoute,
 	Link,
 	stripSearchParams,
+	useRouterState,
 } from '@tanstack/react-router'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 import { CopyButton } from '#comps/CopyButton'
 import { Sections } from '#comps/Sections'
@@ -89,9 +90,6 @@ function quoteMessage(quote: DexQuote): string {
 function DexRoutePage(): React.JSX.Element {
 	const params = Route.useParams()
 	const search = { ...params, ...Route.useSearch() }
-	const navigate = Route.useNavigate()
-	const amountId = useId()
-	const [validationError, setValidationError] = useState<string | null>(null)
 	const query = useQuery(dexRouteQueryOptions(search))
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const snapshot = query.data
@@ -156,7 +154,6 @@ function DexRoutePage(): React.JSX.Element {
 						params={{ from: search.to, to: search.from }}
 						search={{ amount: search.amount }}
 						className={headerButton}
-						onClick={() => setValidationError(null)}
 					>
 						<ArrowLeftRightIcon className="size-3.75" />
 						Reverse
@@ -218,67 +215,12 @@ function DexRoutePage(): React.JSX.Element {
 								))}
 							</ol>
 							<div className="grid md:grid-cols-2">
-								<form
-									key={`${search.from}:${search.amount}`}
-									className="flex flex-col gap-3 p-[18px] md:border-r border-b md:border-b-0 border-dashed border-card-border"
-									onSubmit={(event) => {
-										event.preventDefault()
-										const amount = String(
-											new FormData(event.currentTarget).get('amount') ?? '',
-										).trim()
-										try {
-											parseRouteAmount(amount, from.decimals)
-										} catch (error) {
-											setValidationError(
-												error instanceof Error
-													? error.message
-													: 'Invalid amount.',
-											)
-											return
-										}
-										setValidationError(null)
-										if (amount === search.amount) void query.refetch()
-										else void navigate({ search: { amount } })
-									}}
-								>
-									<label htmlFor={amountId} className="copy-13 text-secondary">
-										Amount in · {from.symbol}
-									</label>
-									<div className="flex flex-wrap gap-2">
-										<input
-											id={amountId}
-											name="amount"
-											inputMode="decimal"
-											autoComplete="off"
-											defaultValue={search.amount}
-											aria-invalid={Boolean(
-												validationError || snapshot.inputError,
-											)}
-											aria-describedby={`${amountId}-error`}
-											className="w-full min-w-0 flex-1 basis-40 rounded-[6px] border border-card-border bg-base-plane px-3 py-2.5 text-xl tabular-nums text-primary outline-none focus:border-accent"
-										/>
-										<button
-											type="submit"
-											disabled={query.isFetching}
-											className={button}
-										>
-											{query.isFetching ? 'Quoting…' : 'Get quote'}
-										</button>
-									</div>
-									{(validationError || snapshot.inputError) && (
-										<p
-											id={`${amountId}-error`}
-											role={
-												validationError || snapshot.inputError
-													? 'alert'
-													: undefined
-											}
-											className="copy-13 text-negative"
-										>
-											{validationError || snapshot.inputError}
-										</p>
-									)}
-								</form>
+								<AmountInput
+									key={`${search.from}:${search.to}`}
+									amount={search.amount}
+									token={from}
+									inputError={snapshot.inputError}
+								/>
 								<div
 									className="flex flex-col gap-3 p-[18px]"
 									aria-live="polite"
@@ -409,6 +351,85 @@ function DexRoutePage(): React.JSX.Element {
 			)}
 		</div>
 	)
+}
+
+export function AmountInput(props: AmountInput.Props): React.JSX.Element {
+	const { amount, token, inputError } = props
+	const navigate = Route.useNavigate()
+	const isNavigating = useRouterState({
+		select: (state) => state.status === 'pending',
+	})
+	const amountId = useId()
+	const [draft, setDraft] = useState(amount)
+	const [validationError, setValidationError] = useState<string | null>(null)
+	const submittedAmount = useRef(amount)
+
+	useEffect(() => {
+		// Keep newer typing when an earlier quote finishes loading.
+		if (amount !== submittedAmount.current) setDraft(amount)
+		submittedAmount.current = amount
+	}, [amount])
+
+	useEffect(() => {
+		if (isNavigating) return
+		const timeout = setTimeout(() => {
+			const value = draft.trim()
+			try {
+				parseRouteAmount(value, token.decimals)
+			} catch (error) {
+				setValidationError(
+					error instanceof Error ? error.message : 'Invalid amount.',
+				)
+				return
+			}
+			setValidationError(null)
+			if (value === amount) return
+			submittedAmount.current = value
+			void navigate({ search: { amount: value }, replace: true })
+		}, 400)
+		return () => clearTimeout(timeout)
+	}, [draft, amount, token.decimals, navigate, isNavigating])
+
+	const error = validationError || (draft.trim() === amount ? inputError : null)
+
+	return (
+		<div className="flex flex-col gap-3 p-[18px] md:border-r border-b md:border-b-0 border-dashed border-card-border">
+			<label htmlFor={amountId} className="copy-13 text-secondary">
+				Amount in · {token.symbol}
+			</label>
+			<input
+				id={amountId}
+				name="amount"
+				inputMode="decimal"
+				autoComplete="off"
+				value={draft}
+				onChange={(event) => {
+					setDraft(event.target.value)
+					setValidationError(null)
+				}}
+				aria-invalid={Boolean(error)}
+				aria-describedby={error ? `${amountId}-error` : undefined}
+				className="w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-3 py-2.5 text-xl tabular-nums text-primary outline-none focus:border-accent"
+			/>
+			{error && (
+				<p
+					id={`${amountId}-error`}
+					role="alert"
+					className="copy-13 text-negative"
+				>
+					{error}
+				</p>
+			)}
+		</div>
+	)
+}
+
+export declare namespace AmountInput {
+	type Props = {
+		amount: string
+		token: DexToken
+		inputError: string | null
+	}
 }
 
 function LegRow(props: {
