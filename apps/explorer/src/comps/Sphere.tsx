@@ -1,3 +1,4 @@
+import { style } from '@tempoxyz/ds/platform'
 import { useEffect, useRef, useState } from 'react'
 import letters from '#lib/tempo-globe.json' with { type: 'json' }
 
@@ -97,17 +98,58 @@ export function Sphere(): React.JSX.Element {
 	}, [turn])
 
 	return (
-		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[194px] z-0 print:hidden hidden sm:block [@media(max-height:760px)]:hidden">
-			<div className="absolute top-0 w-full flex justify-center">
+		<div {...styles.root()}>
+			<div {...styles.stage()}>
 				<button
 					type="button"
 					aria-label="Rotate Tempo globe rings"
 					onClick={() => setTurn((value) => value + 1)}
-					className="pointer-events-auto cursor-pointer w-[656px] max-w-[120vw] aspect-[656/285] rounded-body focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-[-4px]"
+					{...styles.button()}
 				>
-					<canvas ref={canvasRef} className="block size-full" />
+					<canvas ref={canvasRef} {...styles.canvas()} />
 				</button>
 			</div>
 		</div>
 	)
+}
+
+namespace styles {
+	export const root = style({
+		bottom: '0px !custom',
+		display: 'none',
+		height: '194px !custom',
+		overflow: 'hidden',
+		pointerEvents: 'none',
+		position: 'fixed',
+		width: '100% !custom',
+		zIndex: 0,
+		'@media (width >= 640px)': { display: 'block' },
+		'@media print': { display: 'none' },
+		'@media (height <= 760px)': { display: 'none' },
+	})
+
+	export const stage = style({
+		display: 'flex',
+		justifyContent: 'center',
+		position: 'absolute',
+		top: '0px !custom',
+		width: '100% !custom',
+	})
+
+	// The root clips overflow, so the document focus ring is drawn inside.
+	export const button = style({
+		aspectRatio: '656 / 285',
+		borderRadius: 'xs',
+		cursor: 'pointer',
+		maxWidth: '120vw !custom',
+		pointerEvents: 'auto',
+		width: '656px !custom',
+		':focus-visible': { outlineOffset: '-4px' },
+	})
+
+	export const canvas = style({
+		display: 'block',
+		height: '100% !custom',
+		width: '100% !custom',
+	})
 }

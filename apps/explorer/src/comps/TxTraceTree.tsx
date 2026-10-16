@@ -1,11 +1,29 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { Button, Search, style } from '@tempoxyz/ds/platform'
+import {
+	AlertCircle,
+	ArrowCornerDownLeft,
+	ArrowCornerDownRight,
+	ArrowRight,
+	Check,
+	Copy,
+	Expand,
+	Shrink,
+} from '@tempoxyz/ds/platform/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
+import { cx } from 'zyzz'
 import { blockHashHistoryAbi } from '#lib/abis'
-import { cx } from '#lib/css'
-import { PanelToolbar, SegmentedControl } from './PanelToolbar'
+import {
+	codeIdentifier,
+	link,
+	linkHover,
+	pressDown,
+	transitionColors,
+} from '#styles/explorer'
+import { PanelToolbar, ViewToggle } from './PanelToolbar'
 import {
 	blockHashHistoryAddress,
 	formatAbiValue,
@@ -27,14 +45,6 @@ import { HexFormatter } from '#lib/formatting'
 import { useCopy, usePermalinkHighlight } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
 import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
-import CheckIcon from '~icons/lucide/check'
-import FoldIcon from '~icons/lucide/fold-vertical'
-import UnfoldIcon from '~icons/lucide/unfold-vertical'
-import CircleAlertIcon from '~icons/lucide/circle-alert'
-import CopyIcon from '~icons/lucide/copy'
-import WrapIcon from '~icons/lucide/corner-down-left'
-import ReturnIcon from '~icons/lucide/corner-down-right'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
 	const { trace, tree: treeProp, label = 'Execution Trace', toolbar } = props
@@ -77,113 +87,101 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	const showToolbar = toolbar && isTree
 	const failedNode = showToolbar ? findDeepestFailedNode(tree) : null
 
+	const modeToggle = (
+		<ViewToggle
+			label="Trace format"
+			value={raw ? 'raw' : 'decoded'}
+			options={[
+				{ value: 'decoded', label: 'Decoded' },
+				{ value: 'raw', label: 'Raw' },
+			]}
+			onChange={(value) => setRaw(value === 'raw')}
+		/>
+	)
+	const wrapToggle = (
+		<PanelToolbar.IconButton
+			onClick={() => setWrap(!wrap)}
+			active={wrap}
+			label={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+		>
+			<ArrowCornerDownLeft />
+		</PanelToolbar.IconButton>
+	)
+	const copyButton = (
+		<PanelToolbar.IconButton onClick={handleCopy} label="Copy trace">
+			{copy.notifying ? <Check /> : <Copy />}
+		</PanelToolbar.IconButton>
+	)
+
 	return (
-		<div className="flex min-w-0 flex-col">
+		<div {...styles.root()}>
 			{showToolbar ? (
 				<PanelToolbar>
-					{
-						<input
-							value={query}
-							onChange={(event) => setQuery(event.target.value)}
-							placeholder="Filter frames…"
-							spellCheck={false}
-							className="h-[24px] w-full max-w-[240px] min-w-0 mr-auto rounded-body border border-card-border bg-base-plane px-[8px] font-mono label-12 text-primary outline-none placeholder:text-field-content-secondary focus:border-focus"
-						/>
-					}
-					{failedNode && (
-						<button
-							type="button"
-							onClick={() => props.onSelect?.(failedNode.id)}
-							className="flex h-[24px] shrink-0 items-center gap-[5px] rounded-body border border-negative/40 px-[8px] label-12 text-negative cursor-pointer press-down hover:bg-negative/8"
-							title="Jump to the frame that reverted"
-						>
-							<CircleAlertIcon className="size-[11px]" />
-							Go to revert
-						</button>
-					)}
-					{
-						<>
-							<PanelToolbar.IconButton
-								onClick={() =>
-									setCollapseKey({
-										all: false,
-										nonce: (collapseKey?.nonce ?? 0) + 1,
-									})
-								}
-								title="Expand all frames"
-							>
-								<UnfoldIcon className="size-[12px]" />
-							</PanelToolbar.IconButton>
-							<PanelToolbar.IconButton
-								onClick={() =>
-									setCollapseKey({
-										all: true,
-										nonce: (collapseKey?.nonce ?? 0) + 1,
-									})
-								}
-								title="Collapse all frames"
-							>
-								<FoldIcon className="size-[12px]" />
-							</PanelToolbar.IconButton>
-						</>
-					}
-					<PanelToolbar.IconButton
-						onClick={() => setWrap(!wrap)}
-						active={wrap}
-						title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-					>
-						<WrapIcon className="size-[12px]" />
-					</PanelToolbar.IconButton>
-					<PanelToolbar.IconButton onClick={handleCopy} title="Copy trace">
-						{copy.notifying ? (
-							<CheckIcon className="size-[12px]" />
-						) : (
-							<CopyIcon className="size-[12px]" />
-						)}
-					</PanelToolbar.IconButton>
-					<SegmentedControl
-						size="sm"
-						value={raw ? 'raw' : 'decoded'}
-						options={[
-							{ value: 'decoded', label: 'Decoded' },
-							{ value: 'raw', label: 'Raw' },
-						]}
-						onChange={(value) => setRaw(value === 'raw')}
+					<Search
+						value={query}
+						onValueChange={setQuery}
+						placeholder="Filter frames…"
+						aria-label="Filter frames"
+						spellCheck={false}
+						// Sized to the toolbar's 32px controls; inline wins over Search's own.
+						{...styles.filter({
+							style: {
+								height: 32,
+								marginRight: 'auto',
+								paddingBlock: 0,
+								paddingInline: 12,
+								width: 240,
+							},
+						})}
 					/>
+					{failedNode && (
+						<Button
+							scale="small"
+							variant="secondary"
+							onClick={() => props.onSelect?.(failedNode.id)}
+							{...cx(pressDown(), transitionColors())}
+						>
+							<AlertCircle {...styles.revertIcon()} />
+							Go to revert
+						</Button>
+					)}
+					<PanelToolbar.IconButton
+						onClick={() =>
+							setCollapseKey({
+								all: false,
+								nonce: (collapseKey?.nonce ?? 0) + 1,
+							})
+						}
+						label="Expand all frames"
+					>
+						<Expand />
+					</PanelToolbar.IconButton>
+					<PanelToolbar.IconButton
+						onClick={() =>
+							setCollapseKey({
+								all: true,
+								nonce: (collapseKey?.nonce ?? 0) + 1,
+							})
+						}
+						label="Collapse all frames"
+					>
+						<Shrink />
+					</PanelToolbar.IconButton>
+					{wrapToggle}
+					{copyButton}
+					{modeToggle}
 				</PanelToolbar>
 			) : label ? (
-				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-b border-solid border-distinct">
-					<span className="copy-13">
-						<span className="text-tertiary">{label} </span>
-						<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
-					</span>
-					<div className="flex items-center gap-[8px] text-tertiary">
-						{copy.notifying && (
-							<span className="label-12 select-none">copied</span>
-						)}
-						<button
-							type="button"
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
-							onClick={handleCopy}
-							title="Copy trace"
-						>
-							<CopyIcon className="size-[14px]" />
-						</button>
-						<button
-							type="button"
-							onClick={() => setWrap(!wrap)}
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
-							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-						>
-							<WrapIcon className={cx('size-[14px]', wrap && 'text-primary')} />
-						</button>
+				<div {...styles.header()}>
+					<span {...styles.headerLabel()}>{label}</span>
+					<div {...styles.headerActions()}>
+						{copyButton}
+						{wrapToggle}
+						{modeToggle}
 					</div>
 				</div>
 			) : null}
-			<div
-				tabIndex={wrap ? undefined : 0}
-				className="px-[14px] py-[10px] font-mono label-12 overflow-x-auto grid grid-cols-[auto_auto_1fr] gap-x-[10px] items-start rounded-b-body focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2!"
-			>
+			<div tabIndex={wrap ? undefined : 0} {...styles.frames()}>
 				<TxTraceTree.NodeView
 					node={tree}
 					depth={0}
@@ -221,21 +219,6 @@ export function findDeepestFailedNode(
 	}
 
 	return failed?.node ?? null
-}
-
-function RawToggle(props: {
-	raw: boolean
-	onToggle: () => void
-}): React.JSX.Element {
-	return (
-		<button
-			type="button"
-			onClick={props.onToggle}
-			className="copy-13 text-accent hover:underline cursor-pointer press-down"
-		>
-			{props.raw ? '(raw)' : '(decoded)'}
-		</button>
-	)
 }
 
 /** Keep byte arguments and return values compact; the raw view preserves them. */
@@ -668,28 +651,25 @@ export namespace TxTraceTree {
 		return (
 			<>
 				<span
-					className={cx(
-						'label-12 font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+					{...cx(
 						// Neutral by default: the opcode is a label, not a link and not a
 						// status. Accent stays reserved for things you can click.
-						node.hasError
-							? 'bg-negative/15 text-negative'
-							: 'bg-distinct text-tertiary',
-						depth > 0 && 'mt-[4px]',
+						styles.opcode(),
+						node.hasError && styles.opcodeError(),
+						depth > 0 && styles.nested(),
 					)}
 					title={trace.type}
 				>
 					{opLabel}
 				</span>
 				<span
-					className={cx(
-						'text-right tabular-nums select-none',
+					{...cx(
 						// The gas column is a scale, so the eye needs the big numbers to
 						// pop out of it — the small ones are noise by definition.
-						node.gasUsed >= 100_000 ? 'text-secondary' : 'text-tertiary',
-						depth > 0 && 'mt-[4px]',
+						styles.gas(),
+						node.gasUsed >= 100_000 && styles.gasLarge(),
+						depth > 0 && styles.nested(),
 					)}
-					title={`Gas used: ${node.gasUsed.toLocaleString()}`}
 				>
 					{node.gasUsed.toLocaleString()}
 				</span>
@@ -710,61 +690,53 @@ export namespace TxTraceTree {
 								},
 							}
 						: {})}
-					className={cx(
-						'inline-flex items-start min-w-0 -mx-[4px] px-[4px] rounded-[3px] transition-colors',
-						!wrap && 'whitespace-nowrap',
-						depth > 0 && 'mt-[4px]',
+					{...cx(
+						styles.frame(),
+						transitionColors(),
+						!wrap && styles.nowrap(),
+						depth > 0 && styles.nested(),
 						// Hover has to be visible or the click is undiscoverable; it stays
 						// fainter than selection so the two never read as the same state.
-						onSelect && !selected && 'hover:bg-base-plane-interactive',
-						selected && 'bg-accent/10',
-						node.onFailurePath && 'border-l-2 border-negative pl-[6px]',
+						onSelect !== undefined && !selected && styles.frameHover(),
+						selected && styles.frameSelected(),
+						node.onFailurePath && styles.frameFailure(),
 					)}
 				>
 					<span
-						className={cx(
-							'inline-flex items-start',
-							depth > 0 && 'border-l border-tertiary/40 pl-[8px]',
+						{...cx(
+							styles.indent(),
+							depth > 0 &&
+								styles.indentNested({
+									style: { marginLeft: 16 + (indentDepth - 1) * 20 },
+								}),
 						)}
-						style={
-							depth > 0
-								? { marginLeft: 16 + (indentDepth - 1) * 20 }
-								: undefined
-						}
 					>
 						{overflowDepth > 0 && (
-							<span
-								className="mr-[5px] mt-[1px] shrink-0 rounded bg-distinct px-[3px] label-12 text-tertiary select-none"
-								title={`Depth ${overflowDepth}`}
-							>
+							<span {...styles.depthBadge()} title={`Depth ${overflowDepth}`}>
 								{overflowDepth}
 							</span>
 						)}
-						<button
-							type="button"
-							onClick={() => node.children.length > 0 && setExpanded(!expanded)}
-							className={cx(
-								'shrink-0 size-[16px] text-tertiary mr-[2px] press-down',
-								node.children.length > 0 && 'cursor-pointer hover:text-primary',
-							)}
-							title={expanded ? 'Collapse frame' : 'Expand frame'}
-						>
-							{node.children.length > 0 ? (
-								expanded ? (
-									'−'
-								) : (
-									'+'
-								)
-							) : (
-								<ArrowRightIcon className="size-[12px] mt-[2px]" />
-							)}
-						</button>
-						<span className={cx(wrap && 'break-all', 'min-w-0')}>
+						{node.children.length > 0 ? (
+							<button
+								type="button"
+								aria-expanded={expanded}
+								aria-label={expanded ? 'Collapse frame' : 'Expand frame'}
+								onClick={() => setExpanded(!expanded)}
+								{...cx(styles.toggle(), styles.toggleEnabled(), pressDown())}
+							>
+								{expanded ? '−' : '+'}
+							</button>
+						) : (
+							<span {...styles.toggle()}>
+								<ArrowRight {...styles.leafIcon()} />
+							</span>
+						)}
+						<span {...cx(styles.label(), wrap && styles.breakAll())}>
 							{trace.to ? (
 								<Link
 									to="/address/$address"
 									params={{ address: trace.to }}
-									className="text-accent hover:underline press-down inline-block"
+									{...cx(styles.address(), link(), linkHover(), pressDown())}
 									title={trace.to}
 								>
 									{raw
@@ -774,22 +746,14 @@ export namespace TxTraceTree {
 											: trace.to}
 								</Link>
 							) : (
-								<span className="text-tertiary">[contract creation]</span>
+								<span {...styles.secondary()}>[contract creation]</span>
 							)}
-							<span className="text-tertiary">{raw ? '::' : '.'}</span>
-							<span
-								className={
-									raw
-										? 'text-primary'
-										: node.hasError
-											? 'text-negative'
-											: 'text-code-identifier'
-								}
-							>
+							<span {...styles.tertiary()}>{raw ? '::' : '.'}</span>
+							<span {...cx(raw && styles.primary(), !raw && codeIdentifier())}>
 								{displayName}
 							</span>
 							{node.hasError && (
-								<span className="text-negative ml-[4px]" title={errorTitle}>
+								<span {...styles.errorText()} title={errorTitle}>
 									[{errorDisplay}]
 								</span>
 							)}
@@ -797,7 +761,7 @@ export namespace TxTraceTree {
 								<button
 									type="button"
 									onClick={() => setExpanded(true)}
-									className="ml-[6px] text-accent hover:underline cursor-pointer"
+									{...cx(styles.moreFrames(), link(), linkHover())}
 								>
 									+{node.subtreeSize - 1} frames
 								</button>
@@ -826,29 +790,19 @@ export namespace TxTraceTree {
 					<>
 						<span />
 						<span />
-						<span
-							className={cx(
-								'inline-flex items-start min-w-0',
-								!wrap && 'whitespace-nowrap',
-							)}
-						>
+						<span {...cx(styles.output(), !wrap && styles.nowrap())}>
 							<span
-								className={cx(
-									'inline-flex items-start',
-									depth > 0
-										? 'border-l border-tertiary/40 pl-[24px]'
-										: 'ml-[40px]',
+								{...cx(
+									styles.indent(),
+									depth === 0 && styles.outputRoot(),
+									depth > 0 &&
+										styles.outputNested({
+											style: { marginLeft: 16 + (indentDepth - 1) * 20 },
+										}),
 								)}
-								style={
-									depth > 0
-										? { marginLeft: 16 + (indentDepth - 1) * 20 }
-										: undefined
-								}
 							>
-								<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[4px] mt-[4px]" />
-								<span
-									className={cx(wrap && 'break-all', 'min-w-0 text-primary')}
-								>
+								<ArrowCornerDownRight {...styles.returnIcon()} />
+								<span {...cx(styles.outputValue(), wrap && styles.breakAll())}>
 									{raw
 										? trace.output
 										: (node.decodedOutput ??
@@ -940,4 +894,217 @@ export namespace TxTraceTree {
 
 		return render(node, '', true, true)
 	}
+}
+
+namespace styles {
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minWidth: '0 !custom',
+	})
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const primary = style({ color: 'content.primary' })
+
+	// Search leaves the inner input's size to TDS; touch screens get 16px text
+	// so iOS does not zoom on focus.
+	export const filter = style({
+		'@media (pointer: coarse)': {
+			selectors: { '& input': { fontSize: '16px !custom' } },
+		},
+	})
+
+	export const revertIcon = style({ color: 'content.negative' })
+
+	export const header = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'solid',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		minHeight: '48',
+		paddingBlock: '8',
+		paddingLeft: '16',
+		paddingRight: '8',
+	})
+
+	export const headerLabel = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const headerActions = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+	})
+
+	export const frames = style({
+		alignItems: 'start',
+		borderBottomLeftRadius: 'xs',
+		borderBottomRightRadius: 'xs',
+		columnGap: '8',
+		display: 'grid',
+		gridTemplateColumns: 'auto auto 1fr',
+		overflowX: 'auto',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'mono.inline',
+		// Focusable so it can be scrolled by keyboard; an inset ring is not
+		// clipped by its own overflow.
+		':focus-visible': {
+			outline: '2px solid currentColor !custom',
+			outlineOffset: '-2px !custom',
+		},
+	})
+
+	export const nested = style({ marginTop: '4' })
+
+	export const nowrap = style({ whiteSpace: 'nowrap' })
+
+	export const breakAll = style({ wordBreak: 'break-all' })
+
+	// Rows inherit the grid's mono face; only weight and colour change here.
+	export const opcode = style({
+		backgroundColor: 'container.regular',
+		borderRadius: '3xs',
+		color: 'content.secondary',
+		fontWeight: 500,
+		paddingBlock: '1px !custom',
+		paddingInline: '4',
+		textAlign: 'center',
+		userSelect: 'none',
+		whiteSpace: 'nowrap',
+	})
+
+	export const opcodeError = style({
+		backgroundColor: 'container.negative',
+		color: 'content.primary',
+	})
+
+	export const gas = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+		userSelect: 'none',
+	})
+
+	export const gasLarge = style({ color: 'content.primary' })
+
+	export const frame = style({
+		alignItems: 'flex-start',
+		borderRadius: '3xs',
+		display: 'inline-flex',
+		marginInline: '-4px !custom',
+		minWidth: '0 !custom',
+		paddingLeft: '4',
+		paddingRight: '4',
+		':focus-visible': {
+			outline: '2px solid currentColor !custom',
+			outlineOffset: '0px !custom',
+		},
+	})
+
+	export const frameHover = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+	})
+
+	export const frameSelected = style({ backgroundColor: 'container.strong' })
+
+	export const frameFailure = style({
+		borderColor: 'content.negative',
+		borderLeftWidth: 'thick',
+		borderStyle: 'solid',
+		paddingLeft: '6px !custom',
+	})
+
+	export const indent = style({
+		alignItems: 'flex-start',
+		display: 'inline-flex',
+	})
+
+	export const indentNested = style({
+		borderColor: 'line.primary',
+		borderLeftWidth: 'regular',
+		borderStyle: 'solid',
+		paddingLeft: '8',
+	})
+
+	export const depthBadge = style({
+		backgroundColor: 'container.regular',
+		borderRadius: '3xs',
+		color: 'content.secondary',
+		flexShrink: 0,
+		marginRight: '4',
+		marginTop: '1px !custom',
+		paddingInline: '2',
+		userSelect: 'none',
+	})
+
+	export const toggle = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		height: '16',
+		marginRight: '2',
+		width: '16',
+	})
+
+	export const toggleEnabled = style({
+		cursor: 'pointer',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const leafIcon = style({
+		color: 'content.tertiary',
+		height: '12',
+		marginTop: '2',
+		width: '12',
+	})
+
+	export const label = style({ minWidth: '0 !custom' })
+
+	export const address = style({ display: 'inline-block' })
+
+	export const errorText = style({
+		color: 'content.primary',
+		marginLeft: '4',
+	})
+
+	export const moreFrames = style({ cursor: 'pointer', marginLeft: '8' })
+
+	export const output = style({
+		alignItems: 'flex-start',
+		display: 'inline-flex',
+		minWidth: '0 !custom',
+	})
+
+	export const outputRoot = style({ marginLeft: '40' })
+
+	export const outputNested = style({
+		borderColor: 'line.primary',
+		borderLeftWidth: 'regular',
+		borderStyle: 'solid',
+		paddingLeft: '24',
+	})
+
+	export const returnIcon = style({
+		color: 'content.tertiary',
+		flexShrink: 0,
+		height: '12',
+		marginRight: '4',
+		marginTop: '4',
+		width: '12',
+	})
+
+	export const outputValue = style({
+		color: 'content.primary',
+		minWidth: '0 !custom',
+	})
 }

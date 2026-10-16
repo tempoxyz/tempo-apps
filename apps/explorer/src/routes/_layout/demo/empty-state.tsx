@@ -2,6 +2,7 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { useMediaQuery } from '#lib/hooks'
+import { style } from '@tempoxyz/ds/platform'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -24,7 +25,7 @@ function Component() {
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+		<div {...styles.page()}>
 			<Sections
 				mode={mode}
 				sections={[
@@ -48,4 +49,18 @@ function Component() {
 			/>
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		marginInline: 'auto !custom',
+		maxWidth: '1200px !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
+		width: '100% !custom',
+	})
 }

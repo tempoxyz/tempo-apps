@@ -1,55 +1,71 @@
+import { Avatar, style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as React from 'react'
-import { cx } from '#lib/css'
 import { resolveLogoURI } from '#lib/domain/tip20'
 
 const TOKEN_ICON_FALLBACK_SRC = '/token-fallback.svg'
 
-export function TokenIcon(props: TokenIcon.Props) {
-	const { address, className, logoURI } = props
-	const fallbackSrc = `/api/token/logo/${address}`
-	const primarySrc = resolveLogoURI(logoURI)
-	const [src, setSrc] = React.useState(primarySrc ?? fallbackSrc)
-	const imageRef = React.useRef<HTMLImageElement>(null)
-	const handleError = React.useCallback(
-		(failedSrc: string) => {
-			setSrc((current) => {
-				// Ignore stale errors after a token change, and never retry a
-				// failed fallback asset in a loop.
-				if (current !== failedSrc || current === TOKEN_ICON_FALLBACK_SRC)
-					return current
-				return current === fallbackSrc ? TOKEN_ICON_FALLBACK_SRC : fallbackSrc
-			})
-		},
-		[fallbackSrc],
-	)
+/**
+ * Decorative token logo. The TDS Avatar shows the token's own `logoURI` once
+ * it loads. Until then, or when it is missing or broken, the fallback shows
+ * the curated logo from `/api/token/logo`, then a generic coin.
+ */
+export function TokenIcon(props: TokenIcon.Props): React.JSX.Element {
+	const { address, logoURI, size = 16 } = props
 
-	React.useEffect(() => {
-		setSrc(primarySrc ?? fallbackSrc)
-	}, [primarySrc, fallbackSrc])
+	return (
+		<Avatar
+			alt=""
+			aria-hidden="true"
+			fallback={<LogoFallback key={address} address={address} />}
+			src={resolveLogoURI(logoURI)}
+			style={{ height: size, width: size }}
+		/>
+	)
+}
+
+export declare namespace TokenIcon {
+	type Props = {
+		address: Address.Address
+		logoURI?: string | null | undefined
+		/** Width and height in pixels. */
+		size?: number | undefined
+	}
+}
+
+function LogoFallback(props: { address: Address.Address }): React.JSX.Element {
+	const [src, setSrc] = React.useState(`/api/token/logo/${props.address}`)
+	const imageRef = React.useRef<HTMLImageElement>(null)
+
+	// Only the source that failed falls back, so the generic coin never retries.
+	const fail = React.useCallback((failed: string) => {
+		setSrc((current) =>
+			current === failed ? TOKEN_ICON_FALLBACK_SRC : current,
+		)
+	}, [])
 
 	React.useEffect(() => {
 		// An SSR image can fail before React attaches its onError listener.
 		const image = imageRef.current
-		if (image?.complete && image.naturalWidth === 0) handleError(src)
-	}, [src, handleError])
+		if (image?.complete && image.naturalWidth === 0) fail(src)
+	}, [src, fail])
 
 	return (
 		<img
 			ref={imageRef}
 			src={src}
 			alt=""
-			className={cx('size-4 rounded-full shrink-0', className)}
-			onError={() => handleError(src)}
+			{...styles.image()}
+			onError={() => fail(src)}
 		/>
 	)
 }
 
-export namespace TokenIcon {
-	export interface Props {
-		address: Address.Address
-		name?: string
-		className?: string
-		logoURI?: string | null | undefined
-	}
+namespace styles {
+	export const image = style({
+		display: 'block',
+		height: '100% !custom',
+		objectFit: 'cover',
+		width: '100% !custom',
+	})
 }

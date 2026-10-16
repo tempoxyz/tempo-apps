@@ -1,15 +1,19 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { TempoLogoWordmark } from '@tempoxyz/ds/brand/logos'
+import {
+	Coins,
+	Files,
+	Package,
+	Receipt,
+	User,
+} from '@tempoxyz/ds/platform/icons'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
-import { cx } from '#lib/css'
 import { getTempoEnv } from '#lib/env'
-import BoxIcon from '~icons/lucide/box'
-import CoinsIcon from '~icons/lucide/coins'
-import FileIcon from '~icons/lucide/file'
-import ReceiptIcon from '~icons/lucide/receipt'
-import UserIcon from '~icons/lucide/user'
+import { link, pressDown } from '#styles/explorer'
+import { style } from '@tempoxyz/ds/platform'
 
 const SPOTLIGHT_DATA: Record<
 	string,
@@ -55,19 +59,21 @@ function Component() {
 	}, [query])
 
 	return (
-		<div className="flex flex-1 w-full flex-col copy-16">
-			<div className="flex min-h-[42svh] flex-col justify-end">
-				<div className="flex justify-center select-none [@media(max-height:360px)]:hidden">
-					<LandingWords />
-				</div>
+		<div {...styles.page()}>
+			<div {...styles.hero()}>
+				<h1 {...styles.logo()}>
+					<TempoLogoWordmark
+						aria-label="Tempo Explorer"
+						{...styles.wordmark()}
+					/>
+				</h1>
 			</div>
-			<div className="flex grow flex-col items-center px-4 pt-8 gap-8">
-				<div className="w-full max-w-[560px] relative z-20">
+			<div {...styles.body()}>
+				<div {...styles.search()}>
 					<ExploreInput
 						autoFocus
 						size="large"
 						wide
-						className="bg-pane"
 						value={inputValue}
 						onChange={setInputValue}
 						onActivate={(data) => {
@@ -112,14 +118,14 @@ function SpotlightLinks() {
 	const spotlightData = getSpotlightData()
 
 	return (
-		<section className="text-center max-w-[560px] px-4">
-			<div className="group/pills flex items-center gap-2 copy-13 flex-wrap justify-center">
+		<section {...styles.spotlight()}>
+			<div {...styles.pills()}>
 				{spotlightData && (
 					<>
 						<SpotlightPill
 							to="/address/$address"
 							params={{ address: spotlightData.accountAddress }}
-							icon={<UserIcon className="size-[14px] text-accent" />}
+							icon={<User {...link()} />}
 						>
 							Account
 						</SpotlightPill>
@@ -129,29 +135,23 @@ function SpotlightLinks() {
 								address: spotlightData.contractAddress,
 							}}
 							search={{ tab: 'contract' }}
-							icon={<FileIcon className="size-[14px] text-accent" />}
+							icon={<Files {...link()} />}
 						>
 							Contract
 						</SpotlightPill>
 						<SpotlightPill
 							to="/receipt/$hash"
 							params={{ hash: spotlightData.receiptHash }}
-							icon={<ReceiptIcon className="size-[14px] text-accent" />}
+							icon={<Receipt {...link()} />}
 						>
 							Receipt
 						</SpotlightPill>
 					</>
 				)}
-				<SpotlightPill
-					to="/blocks"
-					icon={<BoxIcon className="size-[14px] text-accent" />}
-				>
+				<SpotlightPill to="/blocks" icon={<Package {...link()} />}>
 					Blocks
 				</SpotlightPill>
-				<SpotlightPill
-					to="/tokens"
-					icon={<CoinsIcon className="size-[14px] text-accent" />}
-				>
+				<SpotlightPill to="/tokens" icon={<Coins {...link()} />}>
 					Tokens
 				</SpotlightPill>
 			</div>
@@ -160,23 +160,19 @@ function SpotlightLinks() {
 }
 
 function SpotlightPill(props: {
-	className?: string
 	to: string
 	params?: Record<string, string>
 	search?: Record<string, string>
 	icon: React.ReactNode
 	children: React.ReactNode
 }) {
-	const { className, to, params, search, icon, children } = props
+	const { to, params, search, icon, children } = props
 	return (
 		<Link
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
-			className={cx(
-				'flex h-9 items-center gap-2 text-secondary hover:text-primary border hover:border-border-hover px-3 rounded-button press-down bg-surface border-base-border transition-colors',
-				className,
-			)}
+			{...styles.pill({ className: pressDown().className })}
 		>
 			{icon}
 			<span>{children}</span>
@@ -184,12 +180,87 @@ function SpotlightPill(props: {
 	)
 }
 
-function LandingWords(): React.JSX.Element {
-	return (
-		<h1 className="flex flex-col items-center gap-1">
-			<span className="heading-32 text-primary/50">Search</span>
-			<span className="heading-40 text-primary/70">Explore</span>
-			<span className="heading-48 text-primary">Discover</span>
-		</h1>
-	)
+namespace styles {
+	export const page = style({
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		typography: 'body.b1',
+		width: '100% !custom',
+	})
+
+	export const hero = style({
+		display: 'flex',
+		flexDirection: 'column',
+		justifyContent: 'flex-end',
+		minHeight: '42svh !custom',
+	})
+
+	export const logo = style({
+		color: 'content.primary',
+		display: 'flex',
+		justifyContent: 'center',
+		margin: 'none',
+		userSelect: 'none',
+		'@media (height <= 360px)': { display: 'none' },
+	})
+
+	// Sized like a search engine's home logo; the header hides its own on this page.
+	export const wordmark = style({
+		display: 'block',
+		height: '48',
+		width: 'auto !custom',
+		'@media (width >= 800px)': { height: '64' },
+	})
+
+	export const body = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		flexGrow: 1,
+		gap: '32',
+		paddingInline: '16',
+		paddingTop: '32',
+	})
+
+	export const search = style({
+		maxWidth: '560px !custom',
+		position: 'relative',
+		width: '100% !custom',
+		zIndex: 20,
+	})
+
+	export const spotlight = style({
+		maxWidth: '560px !custom',
+		paddingInline: '16',
+		textAlign: 'center',
+	})
+
+	export const pills = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+		justifyContent: 'center',
+	})
+
+	// TDS Button small secondary geometry on a link.
+	export const pill = style({
+		alignItems: 'center',
+		backgroundColor: 'container.regular',
+		borderRadius: 'full',
+		color: 'content.primary',
+		columnGap: '4',
+		display: 'inline-flex',
+		height: '32',
+		justifyContent: 'center',
+		minWidth: '80px !custom',
+		paddingInline: '16',
+		textDecorationLine: 'none',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.strong' },
+		},
+	})
 }

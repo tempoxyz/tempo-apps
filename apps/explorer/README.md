@@ -17,7 +17,9 @@ pnpm dev:devnet
 
 ### Styling
 
-This project uses [Tailwind CSS](https://tailwindcss.com) for styling.
+The UI is built on [Tempo Design System](https://github.com/tempoxyz/ds) (`@tempoxyz/ds` Platform) and styled with [zyzz](https://zyzz.style), which compiles typed style definitions to static CSS. See the styling section of the repository `AGENTS.md` for conventions.
+
+zyzz relies on native CSS `light-dark()` and nesting, so the explorer supports Chrome and Edge 123+, Firefox 120+, and Safari 17.5+.
 
 ### Linting, Formatting & Type Checking
 

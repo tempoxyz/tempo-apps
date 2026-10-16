@@ -4,6 +4,14 @@ import {
 	Link,
 	stripSearchParams,
 } from '@tanstack/react-router'
+import {
+	Button,
+	NativeSelect,
+	style,
+	TextInput,
+	vars,
+} from '@tempoxyz/ds/platform'
+import { AlertCircle, ArrowRight, Close } from '@tempoxyz/ds/platform/icons'
 import * as Address from 'ox/Address'
 import { useId, useState } from 'react'
 import type * as React from 'react'
@@ -14,22 +22,22 @@ import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { FEE_AMM_MAX_ROWS, feeAmmSearchSchema } from '#lib/fee-amm'
 import { PriceFormatter } from '#lib/formatting'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
-import XIcon from '~icons/lucide/x'
 import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
+import { cx } from 'zyzz'
+import { link, linkHover } from '#styles/explorer'
 
 export const Route = createFileRoute('/_layout/fee-amm')({
 	component: FeeAmmPage,
 	errorComponent: () => (
-		<div className="mx-auto max-w-[1200px] px-4 pt-20 flex flex-col gap-3">
-			<h1 className="text-xl text-primary">Invalid Fee AMM link</h1>
-			<p className="copy-14 text-secondary">
+		<div {...styles.error()}>
+			<h1 {...styles.errorTitle()}>Invalid Fee AMM link</h1>
+			<p {...styles.description()}>
 				Check the token address and page number, or start from all pools.
 			</p>
 			<Link
 				to="/fee-amm"
 				search={{ page: 1, limit: 10 }}
-				className="text-accent hover:underline"
+				{...cx(link(), linkHover())}
 			>
 				View all pools
 			</Link>
@@ -46,8 +54,8 @@ export const Route = createFileRoute('/_layout/fee-amm')({
 
 function FeeAmmPage(): React.JSX.Element {
 	const search = Route.useSearch()
-	const filterId = useId()
 	const errorId = useId()
+	const limitId = useId()
 	const navigate = Route.useNavigate()
 	const query = useQuery(feeAmmPoolsQueryOptions(search))
 	const [filterError, setFilterError] = useState<string>()
@@ -68,19 +76,17 @@ function FeeAmmPage(): React.JSX.Element {
 			: null
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
-			<div className="flex flex-wrap items-start justify-between gap-4">
-				<div className="flex flex-col gap-3 min-w-0">
-					<h1 className="flex items-center gap-3 text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
-						Fee AMM
-					</h1>
-					<p className="copy-14 text-secondary max-w-[680px]">
+		<div {...styles.page()}>
+			<div {...styles.header()}>
+				<div {...styles.intro()}>
+					<h1 {...styles.title()}>Fee AMM</h1>
+					<p {...styles.description()}>
 						Liquidity that converts transaction fees into a validator’s
 						preferred token. Each pool has a fee token and a validator token.
 					</p>
 					{search.token && (
-						<div className="flex flex-col gap-2 type-card">
-							<span className="inline-flex items-center gap-2 text-secondary">
+						<div {...styles.filtered()}>
+							<span {...styles.filteredToken()}>
 								<TokenIcon address={search.token} />
 								Filtered by {symbol ?? 'token'}
 							</span>
@@ -88,25 +94,21 @@ function FeeAmmPage(): React.JSX.Element {
 								to="/address/$address"
 								params={{ address: search.token }}
 								search={{ tab: 'token' }}
-								className="label-12 font-mono text-accent hover:underline break-all"
+								{...cx(styles.filteredAddress(), link(), linkHover())}
 							>
 								{search.token}
 							</Link>
 						</div>
 					)}
 				</div>
-				<CopyButton
-					value={() => window.location.href}
-					ariaLabel="Copy link"
-					className="h-7 rounded-[7px] border border-card-border px-2.5 type-card cursor-pointer"
-				>
+				<CopyButton value={() => window.location.href} ariaLabel="Copy link">
 					Copy link
 				</CopyButton>
 			</div>
 
 			<form
 				key={search.token ?? 'all'}
-				className="flex flex-wrap items-end gap-3"
+				{...styles.form()}
 				onSubmit={(event) => {
 					event.preventDefault()
 					const value = String(
@@ -126,12 +128,9 @@ function FeeAmmPage(): React.JSX.Element {
 					})
 				}}
 			>
-				<div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
-					<label htmlFor={filterId} className="type-card text-tertiary">
-						Find pools by token address
-					</label>
-					<input
-						id={filterId}
+				<div {...styles.field()}>
+					<TextInput
+						label="Find pools by token address"
 						name="token"
 						defaultValue={search.token ?? ''}
 						placeholder="0x…"
@@ -139,27 +138,25 @@ function FeeAmmPage(): React.JSX.Element {
 						autoComplete="off"
 						aria-invalid={Boolean(filterError)}
 						aria-describedby={filterError ? errorId : undefined}
-						className="w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-3 py-2 font-mono text-base sm:copy-13 text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-accent aria-invalid:border-negative"
+						className={styles.control().className}
 					/>
 				</div>
-				<button
-					type="submit"
-					className="inline-flex items-center gap-1.5 rounded-[7px] border border-card-border px-3 py-2 type-card text-secondary hover:text-primary cursor-pointer press-down transition-colors"
-				>
-					Find pools <ArrowRightIcon className="size-3.5" />
-				</button>
+				<Button type="submit" scale="large" variant="secondary">
+					Find pools <ArrowRight {...styles.buttonIcon()} />
+				</Button>
 				{search.token && (
 					<Link
 						to="/fee-amm"
 						search={{ page: 1, limit: search.limit }}
 						onClick={() => setFilterError(undefined)}
-						className="inline-flex items-center gap-1.5 py-2 type-card text-accent hover:underline"
+						{...cx(styles.clearFilter(), link(), linkHover())}
 					>
-						<XIcon className="size-3.5" /> Clear filter
+						<Close /> Clear filter
 					</Link>
 				)}
 				{filterError && (
-					<p id={errorId} role="alert" className="w-full copy-14 text-negative">
+					<p id={errorId} role="alert" {...styles.filterError()}>
+						<AlertCircle {...styles.filterErrorIcon()} />
 						{filterError}
 					</p>
 				)}
@@ -171,20 +168,18 @@ function FeeAmmPage(): React.JSX.Element {
 						title: 'Liquidity pools',
 						content: (
 							<>
-								<div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-b border-dashed border-card-border">
-									<div className="flex flex-col gap-1">
-										<p className="label-12 text-tertiary">
-											Most active first · Reserves shown in each token’s units
-										</p>
-									</div>
+								<div {...styles.summary()}>
+									<p {...styles.meta()}>
+										Most active first · Reserves shown in each token’s units
+									</p>
 									{query.data && pools.length > 0 && (
-										<div className="text-right">
-											<div className="type-card-data tabular-nums text-primary">
+										<div {...styles.total()}>
+											<div {...styles.totalValue()}>
 												{liquidity === null
 													? 'Unavailable'
 													: PriceFormatter.format(liquidity)}
 											</div>
-											<div className="label-12 text-tertiary">
+											<div {...styles.meta()}>
 												Estimated liquidity · {pools.length}{' '}
 												{pools.length === 1 ? 'pool' : 'pools'} on this page
 											</div>
@@ -196,7 +191,7 @@ function FeeAmmPage(): React.JSX.Element {
 									<>
 										<FeeAmmPoolList pools={pools} token={search.token} />
 										{pools.length === 0 && !query.isError && (
-											<div className="px-4 py-10 text-center copy-14 text-secondary">
+											<div {...styles.empty()}>
 												{search.page > 1
 													? 'No more pools on this page.'
 													: search.token
@@ -206,11 +201,8 @@ function FeeAmmPage(): React.JSX.Element {
 										)}
 									</>
 								)}
-								<nav
-									aria-label="Fee AMM pagination"
-									className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-dashed border-card-border type-card"
-								>
-									<div className="flex items-center gap-2">
+								<nav aria-label="Fee AMM pagination" {...styles.pagination()}>
+									<div {...styles.pager()}>
 										<Pagination.Simple
 											page={search.page}
 											pages={{
@@ -223,17 +215,16 @@ function FeeAmmPage(): React.JSX.Element {
 											fetching={query.isFetching}
 											showPageLabel={false}
 										/>
-										<span
-											className="px-2 text-secondary tabular-nums"
-											aria-live="polite"
-										>
+										<span {...styles.pageLabel()} aria-live="polite">
 											Page {search.page}
 										</span>
 									</div>
-									<label className="flex items-center gap-2 label-12 text-secondary">
-										Pools per page
-										<select
-											aria-label="Pools per page"
+									<div {...styles.limit()}>
+										<label htmlFor={limitId} {...styles.limitLabel()}>
+											Pools per page
+										</label>
+										<NativeSelect
+											id={limitId}
 											value={search.limit}
 											onChange={(event) =>
 												void navigate({
@@ -245,18 +236,18 @@ function FeeAmmPage(): React.JSX.Element {
 													resetScroll: false,
 												})
 											}
-											className="h-7 rounded-[6px] border border-card-border bg-base-plane px-2 text-primary"
+											style={{ width: 96 }}
 										>
 											{[10, 25, 50].map((limit) => (
 												<option key={limit} value={limit}>
 													{limit}
 												</option>
 											))}
-										</select>
-									</label>
+										</NativeSelect>
+									</div>
 								</nav>
 								{search.page >= maxPage && query.data?.hasMore && (
-									<p className="px-4 pb-4 copy-14 text-secondary">
+									<p {...styles.capped()}>
 										Showing the first 10,000 pools. Filter by token address to
 										narrow the results.
 									</p>
@@ -266,11 +257,224 @@ function FeeAmmPage(): React.JSX.Element {
 					},
 				]}
 			/>
-			<p className="label-12 text-tertiary">
+			<p {...styles.footnote()}>
 				USD estimates assume USD-denominated tokens trade at par. Pool reserves
 				do not guarantee fee payment: token policies and the validator’s fee
 				token also apply.
 			</p>
 		</div>
 	)
+}
+
+namespace styles {
+	export const error = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		marginInline: 'auto !custom',
+		maxWidth: '1200px !custom',
+		paddingInline: '16',
+		paddingTop: '64',
+	})
+
+	export const errorTitle = style({
+		color: 'content.primary',
+		typography: 'heading.h3',
+	})
+
+	export const page = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		marginInline: 'auto !custom',
+		maxWidth: '1200px !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '32',
+		width: '100% !custom',
+		'@media (width >= 640px)': { paddingTop: '64' },
+	})
+
+	export const header = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '16',
+		justifyContent: 'space-between',
+	})
+
+	export const intro = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		minWidth: '0px !custom',
+	})
+
+	export const title = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '12',
+		typography: 'heading.h1',
+	})
+
+	export const description = style({
+		color: 'content.secondary',
+		maxWidth: '680px !custom',
+		typography: 'body.b2',
+	})
+
+	export const filtered = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		typography: 'body.b2',
+	})
+
+	export const filteredToken = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'inline-flex',
+		gap: '8',
+	})
+
+	export const form = style({
+		alignItems: 'flex-end',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '12',
+	})
+
+	// TextInput caps itself at 320px; addresses need the full row. Touch
+	// devices keep 16px text so iOS does not zoom on focus.
+	export const field = style({
+		flex: 1,
+		minWidth: '220px !custom',
+		selectors: { '& > div': { width: '100% !custom' } },
+		'@media (pointer: coarse)': {
+			selectors: { '& input': { fontSize: '16px !custom' } },
+		},
+	})
+
+	export const control = style({
+		'::placeholder': { color: 'content.secondary' },
+		selectors: {
+			'&[aria-invalid="true"]': {
+				boxShadow: `inset 0 0 0 1px ${vars.color.border.negative} !custom`,
+			},
+		},
+	})
+
+	// TDS Button sizes SVG children itself only in IconButton.
+	export const buttonIcon = style({ height: '16', width: '16' })
+
+	export const filterError = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '4',
+		typography: 'body.b2',
+		width: '100% !custom',
+	})
+
+	export const filterErrorIcon = style({
+		color: 'content.negative',
+		flexShrink: 0,
+	})
+
+	export const summary = style({
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '16',
+		justifyContent: 'space-between',
+		paddingBlock: '12',
+		paddingInline: '16',
+	})
+
+	export const meta = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const total = style({ textAlign: 'right' })
+
+	export const totalValue = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+		typography: 'body.b2',
+	})
+
+	export const empty = style({
+		color: 'content.secondary',
+		paddingBlock: '40',
+		paddingInline: '16',
+		textAlign: 'center',
+		typography: 'body.b2',
+	})
+
+	export const pagination = style({
+		alignItems: 'center',
+		borderColor: 'line.secondary',
+		borderStyle: 'dashed',
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '16',
+		justifyContent: 'space-between',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const pager = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const pageLabel = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+		paddingInline: '8',
+	})
+
+	export const limit = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const limitLabel = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const capped = style({
+		color: 'content.secondary',
+		paddingBottom: '16',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const footnote = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const filteredAddress = style({
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const clearFilter = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '8',
+		paddingBlock: '8',
+		typography: 'body.b2',
+	})
 }

@@ -1,5 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Pagination } from '#comps/Pagination'
+import { style } from '@tempoxyz/ds/platform'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -36,18 +37,13 @@ const examples = [
 
 function Component() {
 	return (
-		<div className="font-sans copy-13 flex flex-col items-center gap-8 pt-16 pb-8 grow">
-			<h1 className="text-tertiary ">Pagination</h1>
-			<div className="flex flex-col gap-6 w-full max-w-[800px]">
+		<div {...styles.page()}>
+			<h1 {...styles.title()}>Pagination</h1>
+			<div {...styles.examples()}>
 				{examples.map((example) => (
-					<div
-						key={example.label}
-						className="border border-card-border rounded-body overflow-hidden"
-					>
-						<div className="px-[16px] py-[8px] bg-card-header text-tertiary label-12">
-							{example.label}
-						</div>
-						<div className="bg-card">
+					<div key={example.label} {...styles.example()}>
+						<div {...styles.exampleLabel()}>{example.label}</div>
+						<div {...styles.exampleBody()}>
 							<Pagination
 								page={example.page}
 								pages={example.pages}
@@ -62,4 +58,45 @@ function Component() {
 			</div>
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		flexGrow: 1,
+		gap: '32',
+		paddingBottom: '32',
+		paddingTop: '64',
+		typography: 'body.b3',
+	})
+
+	export const title = style({ color: 'content.secondary' })
+
+	export const examples = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		maxWidth: '800px !custom',
+		width: '100% !custom',
+	})
+
+	export const example = style({
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		overflow: 'hidden',
+	})
+
+	export const exampleLabel = style({
+		backgroundColor: 'background.secondary',
+		color: 'content.secondary',
+		paddingBlock: '8',
+		paddingInline: '16',
+		typography: 'body.b3',
+	})
+
+	export const exampleBody = style({ backgroundColor: 'background.secondary' })
 }

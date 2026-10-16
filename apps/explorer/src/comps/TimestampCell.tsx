@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 
 export function TimestampCell(props: {
@@ -11,12 +12,8 @@ export function TimestampCell(props: {
 
 	if (link) {
 		return (
-			<div className="text-nowrap">
-				<Link
-					to={link}
-					preload="intent"
-					className="text-tertiary hover:text-secondary"
-				>
+			<div {...styles.root()}>
+				<Link to={link} preload="intent" {...styles.link()}>
 					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			</div>
@@ -27,7 +24,18 @@ export function TimestampCell(props: {
 		<FormattedTimestamp
 			timestamp={timestamp}
 			format={format}
-			className={className ?? 'text-tertiary'}
+			className={className ?? styles.timestamp().className}
 		/>
 	)
+}
+
+namespace styles {
+	export const root = style({ textWrap: 'nowrap' })
+
+	export const link = style({
+		color: 'content.secondary',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const timestamp = style({ color: 'content.secondary' })
 }

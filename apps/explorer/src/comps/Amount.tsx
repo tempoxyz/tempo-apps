@@ -1,14 +1,17 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
 import * as Value from 'ox/Value'
 import { maxUint256 } from 'viem'
 import { Abis } from '#lib/abis'
 import { useReadContracts } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
+import { cx } from 'zyzz'
 import { TokenIcon } from '#comps/TokenIcon.tsx'
 import { ellipsis } from '#lib/chars'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { PriceFormatter } from '#lib/formatting.ts'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 export function Amount(props: Amount.Props) {
 	const {
@@ -62,9 +65,9 @@ export function Amount(props: Amount.Props) {
 			before={before}
 			after={
 				<>
-					<TokenIcon address={token} name={symbol_} />
+					<TokenIcon address={token} />
 					<Link
-						className="text-base-content-positive press-down inline-flex shrink-0"
+						{...cx(styles.symbol(), link(), linkHover(), pressDown())}
 						params={{ address: token }}
 						title={token}
 						to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
@@ -114,7 +117,7 @@ export namespace Amount {
 
 		if (isInfinite)
 			return (
-				<span className="inline-flex items-center gap-1 min-w-0">
+				<span {...styles.root()}>
 					{before}
 					{infinite === true ? 'infinite' : infinite}
 					{after}
@@ -136,11 +139,13 @@ export namespace Amount {
 		const isSmall = formatted.startsWith('<')
 
 		return (
-			<span className="inline-flex items-center gap-1 min-w-0">
+			<span {...styles.root()}>
 				{before}
 				<span
-					className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSmall ? 'text-tertiary' : ''}`}
-					style={{ maxWidth: `${maxWidth}ch` }}
+					{...cx(
+						styles.value({ style: { maxWidth: `${maxWidth}ch` } }),
+						isSmall && styles.small(),
+					)}
 					title={`${prefix ?? ''}${fullFormatted}${suffix ?? ''}`}
 				>
 					{`${prefix ?? ''}${formatted}${suffix ?? ''}`}
@@ -171,4 +176,27 @@ export namespace Amount {
 			value: bigint
 		}
 	}
+}
+
+namespace styles {
+	export const symbol = style({
+		display: 'inline-flex',
+		flexShrink: '0 !custom',
+	})
+
+	export const root = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+		minWidth: '0 !custom',
+	})
+
+	export const value = style({
+		minWidth: '0 !custom',
+		overflow: 'hidden',
+		textOverflow: 'ellipsis',
+		whiteSpace: 'nowrap',
+	})
+
+	export const small = style({ color: 'content.secondary' })
 }

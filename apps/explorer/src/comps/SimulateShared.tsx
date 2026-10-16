@@ -1,51 +1,57 @@
-import { Button as RegenButton, Tag } from 'regen-ui'
-/** Shared simulator controls use Regen copy/label scales and semantic colors.
- * Pilat is the UI face; explicit code and hash values use JetBrains Mono Light.
+/** Shared simulator controls use Tempo Design System type scales and semantic
+ * colors. Pilat is the UI face; explicit code and hash values use JetBrains Mono.
  */
 
+import {
+	Alert,
+	InlineCode,
+	KeyboardKey,
+	Progress,
+	style,
+	vars,
+} from '@tempoxyz/ds/platform'
+import { AlertCircle } from '@tempoxyz/ds/platform/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import type * as React from 'react'
 import type { Abi } from 'viem'
 import { decodeFunctionData } from 'viem'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
 import { formatAbiValue, getContractInfo } from '#lib/domain/contracts'
 import type { FormState } from '#lib/domain/simulate-calls'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { SimulationApiError } from '#lib/queries'
+import { animatePulse } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
-
-// Lives with the panel chrome so the toolbar toggles and this one are literally
-// the same control; re-exported here because the simulator imports it from the
-// shared-primitives module alongside everything else it uses.
-export { SegmentedControl } from './PanelToolbar'
-import CircleAlertIcon from '~icons/lucide/circle-alert'
-import RotateCcwIcon from '~icons/lucide/rotate-ccw'
 
 /* -------------------------------------------------------------------------- */
 /* Controls                                                                   */
 /* -------------------------------------------------------------------------- */
 
-/** Label above a control. */
+/**
+ * Label above a control. The label names the control with id `htmlFor`; the
+ * hint, when there is one, has the id `fieldHintId(htmlFor)` so the control
+ * can point `aria-describedby` at it.
+ */
 export function Field(props: Field.Props): React.JSX.Element {
 	return (
-		<div className="flex min-w-0 flex-col gap-[5px]">
-			<div className="flex items-center justify-between gap-[8px]">
-				<span className="font-sans label-12 text-tertiary">{props.label}</span>
+		<div {...styles.field()}>
+			<div {...styles.fieldHeader()}>
+				<label htmlFor={props.htmlFor} {...styles.fieldLabel()}>
+					{props.label}
+				</label>
 				{props.action}
 			</div>
 			{props.children}
-			{props.hint && (
-				<span
-					className={cx(
-						'type-card',
-						props.invalid ? 'text-negative' : 'text-content-dimmed',
-					)}
-				>
-					{props.hint}
-				</span>
-			)}
+			{props.hint &&
+				(props.invalid ? (
+					<ErrorText id={fieldHintId(props.htmlFor)}>{props.hint}</ErrorText>
+				) : (
+					<span id={fieldHintId(props.htmlFor)} {...styles.fieldHint()}>
+						{props.hint}
+					</span>
+				))}
 		</div>
 	)
 }
@@ -53,6 +59,8 @@ export function Field(props: Field.Props): React.JSX.Element {
 export declare namespace Field {
 	interface Props {
 		label: React.ReactNode
+		/** Id of the control the label names. */
+		htmlFor: string
 		children: React.ReactNode
 		/** Right-aligned control on the label line — a mode toggle, a link. */
 		action?: React.ReactNode
@@ -61,110 +69,65 @@ export declare namespace Field {
 	}
 }
 
-const inputClassName =
-	'w-full min-w-0 rounded-body border border-card-border bg-pane px-[12px] py-[9px] type-card-data text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-focus'
-
-/** Invalid state is applied on blur, never on mount — see `draftFieldErrors`. */
-export function inputClass(invalid?: boolean): string {
-	return cx(inputClassName, invalid && 'border-negative focus:border-negative')
+export function fieldHintId(htmlFor: string): string {
+	return `${htmlFor}-hint`
 }
 
-/** A primary action. There is at most one per pane. */
-export function Button(props: Button.Props): React.JSX.Element {
-	const { tone = 'default', ...rest } = props
+/**
+ * An inline error. Status colours fail contrast as text in the light theme,
+ * so the text stays primary and the icon carries the tone.
+ */
+export function ErrorText(props: {
+	children: React.ReactNode
+	id?: string | undefined
+}): React.JSX.Element {
 	return (
-		<RegenButton
-			type="button"
-			{...rest}
-			size="small"
-			variant={tone === 'primary' ? 'primary' : 'secondary'}
-		/>
+		<span id={props.id} {...styles.errorText()}>
+			<AlertCircle {...styles.errorIcon()} />
+			<span>{props.children}</span>
+		</span>
 	)
 }
 
-export declare namespace Button {
-	interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-		tone?: 'default' | 'primary'
-	}
+/**
+ * A keyboard shortcut drawn inside a primary button. The button is an inverse
+ * ground, so the key takes the inverse set to stay legible. Hidden from
+ * assistive tech: the button announces it through `aria-keyshortcuts`.
+ */
+export function ButtonShortcut(props: {
+	children: React.ReactNode
+}): React.JSX.Element {
+	return (
+		<KeyboardKey aria-hidden {...cx(vars({ set: 'inverse' }))}>
+			{props.children}
+		</KeyboardKey>
+	)
 }
 
 /* -------------------------------------------------------------------------- */
 /* Data display                                                               */
 /* -------------------------------------------------------------------------- */
 
-/** Small status/meta pill. Tone is the only thing that carries colour. */
-export function Chip(props: Chip.Props): React.JSX.Element {
-	const { tone = 'neutral' } = props
-	return (
-		<Tag intent={tone} title={props.title} className={props.className}>
-			{props.children}
-		</Tag>
-	)
-}
-
-export declare namespace Chip {
-	interface Props {
-		children: React.ReactNode
-		tone?: 'neutral' | 'positive' | 'negative' | 'warning' | 'accent'
-		title?: string
-		className?: string
-	}
-}
-
-/**
- * A label/value pair in the result header using the shared card roles.
- */
-export function Fact(props: Fact.Props): React.JSX.Element {
-	return (
-		<div className="flex min-w-0 items-baseline gap-[8px]">
-			<span
-				className="w-[72px] shrink-0 type-card text-tertiary"
-				title={props.hint}
-			>
-				{props.label}
-			</span>
-			<span className="min-w-0 truncate type-card-data text-primary">
-				{props.children}
-			</span>
-		</div>
-	)
-}
-
-export declare namespace Fact {
-	interface Props {
-		label: React.ReactNode
-		children: React.ReactNode
-		hint?: string
-	}
-}
-
 /**
  * Gas used against the limit it ran under.
  *
  * A bare "273,270 gas" answers nothing — the actionable question is whether
- * the call is anywhere near running out, which is the ratio. Tone only turns
- * warm past 80%, so a normal call has no colour here at all.
+ * the call is anywhere near running out, which is the ratio.
  */
 export function GasMeter(props: GasMeter.Props): React.JSX.Element {
 	const pct = gasPercent(props.used, props.limit)
-	const warm = pct >= GAS_PRESSURE_THRESHOLD
 	return (
-		<div className="flex flex-col gap-[6px]">
-			<div className="flex items-baseline justify-between gap-[8px]">
-				<span className="type-card text-tertiary">Gas used</span>
-				<GasRatio used={props.used} limit={props.limit} />
-			</div>
-			<div className="h-[4px] w-full overflow-hidden rounded-full bg-distinct">
-				<div
-					className={cx(
-						'h-full rounded-full transition-[width]',
-						warm ? 'bg-warning' : 'bg-viz-base',
-					)}
-					// Always show a sliver, so "it ran" is visually distinct from "it didn't".
-					style={{ width: `max(${Math.min(pct, 100)}%, 2px)` }}
-				/>
-			</div>
-		</div>
+		<Progress
+			label={
+				<span {...styles.gasMeterLabel()}>
+					<span>Gas used</span>
+					<GasRatio used={props.used} limit={props.limit} />
+				</span>
+			}
+			showValue={false}
+			value={Math.min(pct, 100)}
+			style={{ width: '100%' }}
+		/>
 	)
 }
 
@@ -175,12 +138,6 @@ export declare namespace GasMeter {
 	}
 }
 
-/**
- * Above this share of the gas limit the limit starts to matter and the
- * percentage earns colour. Below it, it is shown but stays out of the way.
- */
-export const GAS_PRESSURE_THRESHOLD = 80
-
 /** Share of the limit a run consumed, as a percentage. */
 export function gasPercent(used: bigint, limit: bigint): number {
 	return limit > 0n ? Number((used * 10_000n) / limit) / 100 : 0
@@ -188,34 +145,21 @@ export function gasPercent(used: bigint, limit: bigint): number {
 
 /**
  * `used / limit (pct)` — the transaction page's format, one implementation.
- *
- * Warning, never negative: red on this page means the call failed, and a
- * succeeded-at-99% result printing a red number reads as a contradiction.
- * Running out of gas shows up as a revert anyway.
+ * It takes its type size from the surrounding text.
  */
 export function GasRatio(props: {
 	used: bigint
 	limit: bigint
-	className?: string
 }): React.JSX.Element {
 	const pct = gasPercent(props.used, props.limit)
 	return (
-		<span className={cx('type-card-data', props.className)}>
-			<span className="text-primary">{props.used.toLocaleString()}</span>
-			<span className="text-content-dimmed">
+		<span {...styles.gasRatio()}>
+			<span {...styles.gasRatioUsed()}>{props.used.toLocaleString()}</span>
+			<span {...styles.gasRatioLimit()}>
 				{' / '}
 				{props.limit.toLocaleString()}
 			</span>
-			<span
-				className={cx(
-					'ml-[5px]',
-					pct >= GAS_PRESSURE_THRESHOLD
-						? 'text-warning'
-						: 'text-content-dimmed',
-				)}
-			>
-				({formatGasPercent(pct)})
-			</span>
+			<span {...styles.gasRatioPercent()}>({formatGasPercent(pct)})</span>
 		</span>
 	)
 }
@@ -235,12 +179,13 @@ export function formatGasPercent(pct: number): string {
 
 export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
 	return (
-		<div className="flex animate-pulse flex-col gap-[9px] px-[16px] py-[14px]">
+		<div {...cx(styles.skeleton(), animatePulse())}>
 			{Array.from({ length: props.rows }, (_, index) => (
 				<div
 					key={index}
-					className="h-[10px] rounded bg-distinct"
-					style={{ width: `${88 - (index % 3) * 14}%` }}
+					{...styles.skeletonRow({
+						style: { width: `${88 - (index % 3) * 14}%` },
+					})}
 				/>
 			))}
 		</div>
@@ -251,11 +196,7 @@ export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
 export function PanelEmpty(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
-	return (
-		<div className="px-[16px] py-[18px] type-card text-tertiary">
-			{props.children}
-		</div>
-	)
+	return <div {...styles.panelEmpty()}>{props.children}</div>
 }
 
 export function PanelError(props: {
@@ -265,13 +206,13 @@ export function PanelError(props: {
 	const rateLimited =
 		props.error instanceof SimulationApiError && props.error.status === 429
 	return (
-		<div className="flex flex-col gap-[4px] px-[16px] py-[14px] type-card">
-			<span className="text-negative">
-				{rateLimited ? 'Rate limited' : props.title}
-			</span>
-			<span className="type-card-data break-all text-tertiary">
-				{props.error.message}
-			</span>
+		<div {...styles.panelError()}>
+			<Alert
+				tone="negative"
+				title={rateLimited ? 'Rate limited' : props.title}
+				description={props.error.message}
+				style={{ width: '100%' }}
+			/>
 		</div>
 	)
 }
@@ -293,27 +234,27 @@ export function SimulationFailure(props: {
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
 	return (
-		<div className="flex items-start gap-[10px] rounded-body border border-negative/40 bg-card px-[16px] py-[14px]">
-			<CircleAlertIcon className="mt-[2px] size-[14px] shrink-0 text-negative" />
-			<div className="flex min-w-0 flex-1 flex-col gap-[6px]">
-				<h2 className="label-13 text-negative">{title}</h2>
-				<p className="type-card text-secondary">{hint}</p>
-				<div className="flex flex-col gap-[4px]">
+		<Alert
+			tone="negative"
+			title={title}
+			description={
+				<>
+					{hint}
 					{messages.map((message) => (
-						<code
-							key={message}
-							className="block rounded-body bg-distinct px-[9px] py-[6px] type-card-data break-all text-tertiary"
-						>
-							{message}
-						</code>
+						<span key={message} {...styles.failureMessage()}>
+							{/* Node errors run long; let them wrap inside the alert. */}
+							<InlineCode
+								style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}
+							>
+								{message}
+							</InlineCode>
+						</span>
 					))}
-				</div>
-				<Button onClick={props.onRetry} className="mt-[2px]">
-					<RotateCcwIcon className="size-[12px]" />
-					Try again
-				</Button>
-			</div>
-		</div>
+				</>
+			}
+			action={{ label: 'Try again', onClick: props.onRetry }}
+			style={{ width: '100%' }}
+		/>
 	)
 }
 
@@ -346,7 +287,6 @@ function describeFailure(status: number | undefined): {
 /* Formatting                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)`, or `→ 2 calls`. */
 /**
  * Longest argument list worth inlining in the header.
  *
@@ -357,6 +297,7 @@ function describeFailure(status: number | undefined): {
  */
 const MAX_SUMMARY_ARG_CHARS = 32
 
+/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)`, or `→ 2 calls`. */
 export function describeCall(form: FormState, abi: Abi | undefined): string {
 	const first = form.calls[0]
 	if (!first || (!first.to.trim() && !first.data.trim())) return 'New call'
@@ -449,4 +390,86 @@ export function formatGas(gas: number): string {
 	if (gas >= 1_000_000) return `${(gas / 1_000_000).toFixed(2)}M`
 	if (gas >= 100_000) return `${Math.round(gas / 1_000)}k`
 	return gas.toLocaleString()
+}
+
+namespace styles {
+	export const field = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const fieldHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+	})
+
+	export const fieldLabel = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const fieldHint = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const errorText = style({
+		alignItems: 'flex-start',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '4',
+		typography: 'body.b3',
+	})
+
+	export const errorIcon = style({
+		color: 'content.negative',
+		flexShrink: 0,
+		height: '16',
+		width: '16',
+	})
+
+	export const gasMeterLabel = style({
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+	})
+
+	export const gasRatio = style({ fontVariantNumeric: 'tabular-nums' })
+
+	export const gasRatioUsed = style({ color: 'content.primary' })
+
+	export const gasRatioLimit = style({ color: 'content.secondary' })
+
+	export const gasRatioPercent = style({
+		color: 'content.secondary',
+		marginLeft: '4',
+	})
+
+	export const skeleton = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		padding: '16',
+	})
+
+	export const skeletonRow = style({
+		backgroundColor: 'container.strong',
+		borderRadius: '3xs',
+		height: '12',
+	})
+
+	export const panelEmpty = style({
+		color: 'content.secondary',
+		paddingBlock: '20',
+		paddingInline: '16',
+		typography: 'body.b2',
+	})
+
+	export const panelError = style({ padding: '16' })
+
+	export const failureMessage = style({ display: 'block', marginTop: '8' })
 }

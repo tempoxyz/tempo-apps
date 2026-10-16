@@ -47,6 +47,7 @@ import { getFeeTokenForChain } from '#lib/fee-token'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
+import { styles } from './-$hash.styles'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -541,7 +542,7 @@ function Component() {
 	const presentation = getReceiptPresentation(data, voucherData, isTokenListed)
 
 	return (
-		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
+		<div {...styles.page()}>
 			<Receipt
 				blockNumber={receipt.blockNumber}
 				events={presentation.events}

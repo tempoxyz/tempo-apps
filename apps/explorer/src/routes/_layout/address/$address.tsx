@@ -16,6 +16,26 @@ import * as React from 'react'
 import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions, Hooks } from 'wagmi/tempo'
+import {
+	Alert,
+	Button,
+	IconButton,
+	StatusIndicator,
+	style,
+	Tooltip,
+} from '@tempoxyz/ds/platform'
+import {
+	Check,
+	ChevronLeft,
+	ChevronRight,
+	ChevronsLeft,
+	ChevronsRight,
+	Close,
+	Copy,
+	Eye,
+	EyeOff,
+	InfoCircle,
+} from '@tempoxyz/ds/platform/icons'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
@@ -62,7 +82,6 @@ import {
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
 import { TransactionFilters, TransferFilters } from '#comps/TransactionFilters'
-import { cx } from '#lib/css'
 import { useLiveFeed } from '#lib/use-live-feed'
 import { useAddressLive } from '#lib/use-address-live'
 import { mergeLiveRows } from '#lib/sse'
@@ -125,17 +144,17 @@ import {
 	zonePortalActivityQueryOptions,
 	zonePortalOverviewQueryOptions,
 } from '#lib/zone-portal'
+import { LiveIndicator } from '#comps/ui/LiveIndicator'
+import {
+	link,
+	linkHover,
+	pressDown,
+	transitionColors,
+	truncate,
+} from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
-import ChevronFirst from '~icons/lucide/chevron-first'
-import ChevronLast from '~icons/lucide/chevron-last'
-import ChevronLeft from '~icons/lucide/chevron-left'
-import ChevronRight from '~icons/lucide/chevron-right'
-import EyeIcon from '~icons/lucide/eye'
-import EyeOffIcon from '~icons/lucide/eye-off'
-import CopyIcon from '~icons/lucide/copy'
-import PlayIcon from '~icons/lucide/play'
-import XIcon from '~icons/lucide/x'
+import { cx } from 'zyzz'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -748,13 +767,8 @@ function RouteComponent() {
 	])
 
 	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
-			)}
-		>
-			<BreadcrumbsSlot className="col-span-full" />
+		<div {...styles.page()}>
+			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
 			<AccountCardWithTimestamps
 				address={address}
 				assetsData={assetsData}
@@ -874,7 +888,7 @@ function AccountCardWithTimestamps(props: {
 		)
 
 	return (
-		<div className="min-[800px]:self-start flex flex-col gap-2">
+		<div {...styles.accountColumn()}>
 			<AccountCard
 				address={address}
 				createdTimestamp={createdTimestamp}
@@ -922,46 +936,42 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 	return (
 		<InfoCard
 			title={<InfoCard.Title>Zone Portal</InfoCard.Title>}
-			className="min-[800px]:self-start min-[1240px]:w-[258px]"
+			className={styles.zonePortalCard().className}
 			sections={[
 				<button
 					key="address"
 					type="button"
 					onClick={() => copy(address)}
-					className="w-full text-left cursor-pointer press-down text-tertiary"
-					title={address}
+					{...cx(styles.addressButton(), pressDown())}
 				>
-					<div className="flex items-center gap-[8px] mb-[8px]">
-						<span className="copy-13 font-normal">Address</span>
-						<div className="relative flex items-center">
-							<CopyIcon className="size-3" />
-							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] copy-13 ">
-									copied
-								</span>
-							)}
-						</div>
+					<div {...styles.addressHeader()}>
+						<span {...styles.addressLabel()}>Address</span>
+						{notifying ? (
+							<Check {...styles.icon12()} />
+						) : (
+							<Copy {...styles.icon12()} />
+						)}
 					</div>
-					<p className="max-w-[21ch] break-all font-mono copy-14 text-primary">
-						{address}
-					</p>
+					<p {...styles.addressValue()}>{address}</p>
 				</button>,
-				<div key="balances" className="w-full min-w-0">
-					<p className="mb-2 copy-13 text-tertiary">Balances</p>
-					<div className="flex flex-col gap-2">
+				<div key="balances" {...styles.balances()}>
+					<p {...styles.balancesLabel()}>Balances</p>
+					<div {...styles.balanceList()}>
 						{overview ? (
 							overview.assets.map((asset) => (
-								<div
-									key={asset.address}
-									className="flex min-w-0 items-center justify-between gap-2 copy-13"
-								>
+								<div key={asset.address} {...styles.balanceRow()}>
 									<Link
 										to="/token/$address"
 										params={{ address: asset.address }}
-										className="flex min-w-0 items-center gap-1.5 text-base-content-positive press-down"
+										{...cx(
+											styles.balanceToken(),
+											link(),
+											linkHover(),
+											pressDown(),
+										)}
 									>
-										<TokenIcon address={asset.address} name={asset.symbol} />
-										<span className="truncate">{asset.symbol}</span>
+										<TokenIcon address={asset.address} />
+										<span {...truncate()}>{asset.symbol}</span>
 									</Link>
 									<Amount.Base
 										value={BigInt(asset.balance)}
@@ -972,28 +982,28 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 								</div>
 							))
 						) : (
-							<span className="copy-13 text-tertiary">…</span>
+							<span {...styles.pending()}>…</span>
 						)}
 					</div>
 				</div>,
 				{
 					label: 'Deposits',
 					value: overview ? (
-						<span className="copy-13 text-primary">
+						<span {...styles.value()}>
 							{numberFormat.format(overview.counts.deposits)}
 						</span>
 					) : (
-						<span className="copy-13 text-tertiary">…</span>
+						<span {...styles.pending()}>…</span>
 					),
 				},
 				{
 					label: 'Withdrawals',
 					value: overview ? (
-						<span className="copy-13 text-primary">
+						<span {...styles.value()}>
 							{numberFormat.format(overview.counts.withdrawals)}
 						</span>
 					) : (
-						<span className="copy-13 text-tertiary">…</span>
+						<span {...styles.pending()}>…</span>
 					),
 				},
 				{
@@ -1001,21 +1011,18 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 					value: lastActivityTimestamp ? (
 						<RelativeTime
 							timestamp={lastActivityTimestamp}
-							className="copy-13 text-primary"
+							{...styles.value()}
 						/>
 					) : (
-						<span className="copy-13 text-tertiary">…</span>
+						<span {...styles.pending()}>…</span>
 					),
 				},
 				{
 					label: 'Created',
 					value: createdTimestamp ? (
-						<RelativeTime
-							timestamp={createdTimestamp}
-							className="copy-13 text-primary"
-						/>
+						<RelativeTime timestamp={createdTimestamp} {...styles.value()} />
 					) : (
-						<span className="copy-13 text-tertiary">…</span>
+						<span {...styles.pending()}>…</span>
 					),
 				},
 			]}
@@ -1394,14 +1401,16 @@ function SectionsWrapper(props: {
 	const liveControl = (
 		<>
 			{streamError && (
-				<span role="status" className="label-12 text-negative">
+				<StatusIndicator role="status" tone="negative">
 					{streamError}
-				</span>
+				</StatusIndicator>
 			)}
-			<button
-				type="button"
+			<Button
+				{...styles.feedToggle()}
 				aria-pressed={feed.live}
 				disabled={!feedEligible}
+				// A Tooltip would replace the visible "Live"/"Paused" name and stays
+				// hidden on a disabled button; `title` only describes it.
 				title={
 					!feedEligible
 						? 'Live updates are available on the newest page'
@@ -1416,28 +1425,16 @@ function SectionsWrapper(props: {
 					}
 					feed.start()
 				}}
-				className={cx(
-					'ml-auto flex shrink-0 items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] label-12 font-medium press-down disabled:opacity-50 disabled:cursor-not-allowed',
-					feed.live
-						? 'bg-positive/10 text-positive hover:bg-positive/20'
-						: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
-				)}
+				scale="small"
+				variant="secondary"
 			>
-				{feed.live ? (
-					<>
-						<span className="relative flex size-2">
-							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
-							<span className="relative inline-flex rounded-full size-2 bg-positive" />
-						</span>
-						<span>Live</span>
-					</>
-				) : (
-					<>
-						<PlayIcon className="size-3" />
-						<span>Paused</span>
-					</>
-				)}
-			</button>
+				<LiveIndicator
+					pinging={feed.live}
+					tone={feed.live ? 'positive' : 'neutral'}
+				>
+					{feed.live ? 'Live' : 'Paused'}
+				</LiveIndicator>
+			</Button>
 		</>
 	)
 
@@ -1627,13 +1624,12 @@ function SectionsWrapper(props: {
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const transactionsError = error ? (
-		<div className="rounded-body bg-card-header p-4.5">
-			<p className="copy-14 font-medium text-negative">
-				Failed to load transaction history
-			</p>
-			<p className="label-12 text-tertiary mt-1">
-				{error instanceof Error ? error.message : 'Unknown error'}
-			</p>
+		<div {...styles.alertWrap()}>
+			<Alert
+				tone="negative"
+				title="Failed to load transaction history"
+				description={error instanceof Error ? error.message : 'Unknown error'}
+			/>
 		</div>
 	) : null
 
@@ -1644,7 +1640,7 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className="text-secondary hover:text-accent cursor-pointer transition-colors"
+					className={cx(styles.timeHeader(), transitionColors()).className}
 				/>
 			),
 			align: 'start',
@@ -1664,7 +1660,7 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className="text-secondary hover:text-accent cursor-pointer transition-colors"
+					className={cx(styles.timeHeader(), transitionColors()).className}
 				/>
 			),
 			align: 'start',
@@ -1694,7 +1690,7 @@ function SectionsWrapper(props: {
 				label="Time"
 				formatLabel={formatLabel}
 				onCycle={cycleTimeFormat}
-				className="cursor-pointer text-secondary transition-colors hover:text-accent"
+				className={cx(styles.timeHeader(), transitionColors()).className}
 			/>
 		),
 		align: 'start',
@@ -1763,7 +1759,7 @@ function SectionsWrapper(props: {
 					label="Submitted"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className="cursor-pointer text-secondary transition-colors hover:text-accent"
+					className={cx(styles.timeHeader(), transitionColors()).className}
 				/>
 			),
 		},
@@ -1792,44 +1788,33 @@ function SectionsWrapper(props: {
 	]
 
 	const zonePortalContextual = (
-		<button
-			type="button"
+		<Button
+			aria-pressed={portalLive}
 			onClick={() => onPortalLiveChange(!portalLive)}
-			className={cx(
-				'flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 label-12 font-medium press-down',
-				portalLive
-					? 'bg-positive/10 text-positive hover:bg-positive/20'
-					: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
-			)}
 			title={portalLive ? 'Pause live updates' : 'Resume live updates'}
+			scale="small"
+			variant="secondary"
 		>
-			{portalLive ? (
-				<>
-					<span className="relative flex size-2">
-						<span className="absolute inline-flex size-full animate-ping rounded-full bg-positive opacity-75" />
-						<span className="relative inline-flex size-2 rounded-full bg-positive" />
-					</span>
-					<span>Live</span>
-				</>
-			) : (
-				<>
-					<PlayIcon className="size-3" />
-					<span>Paused</span>
-				</>
-			)}
-		</button>
+			<LiveIndicator
+				pinging={portalLive}
+				tone={portalLive ? 'positive' : 'neutral'}
+			>
+				{portalLive ? 'Live' : 'Paused'}
+			</LiveIndicator>
+		</Button>
 	)
 
 	const zonePortalError = zonePortalActivityQuery.error ? (
-		<div className="rounded-body bg-card-header p-4.5">
-			<p className="copy-14 font-medium text-negative">
-				Zone activity is temporarily unavailable
-			</p>
-			<p className="mt-1 label-12 text-tertiary">
-				{zonePortalActivityQuery.error instanceof Error
-					? zonePortalActivityQuery.error.message
-					: 'Unknown error'}
-			</p>
+		<div {...styles.alertWrap()}>
+			<Alert
+				tone="negative"
+				title="Zone activity is temporarily unavailable"
+				description={
+					zonePortalActivityQuery.error instanceof Error
+						? zonePortalActivityQuery.error.message
+						: 'Unknown error'
+				}
+			/>
 		</div>
 	) : null
 
@@ -2029,7 +2014,7 @@ function SectionsWrapper(props: {
 								batches.map((batch) => ({
 									key: batch.transactionHash,
 									cells: [
-										<span key="batch" className="whitespace-nowrap font-mono">
+										<span key="batch" {...styles.batchIndex()}>
 											#{batch.batchIndex}
 										</span>,
 										<LinkedTransactionHash
@@ -2043,12 +2028,12 @@ function SectionsWrapper(props: {
 											link={`/receipt/${batch.transactionHash}`}
 											format={timeFormat}
 										/>,
-										<span key="deposit" className="copy-13 text-primary">
+										<span key="deposit" {...styles.value()}>
 											{batch.lastProcessedDepositNumber === '0'
 												? '—'
 												: `#${batch.lastProcessedDepositNumber}`}
 										</span>,
-										<span key="queue" className="copy-13 text-primary">
+										<span key="queue" {...styles.value()}>
 											{batch.withdrawalQueueIndex
 												? `#${batch.withdrawalQueueIndex}`
 												: '—'}
@@ -2079,7 +2064,7 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex items-center gap-3">
+						<div {...styles.contextual()}>
 							<TransactionFilters
 								status={status}
 								period={period}
@@ -2158,7 +2143,7 @@ function SectionsWrapper(props: {
 							itemsLabel="transactions"
 							itemsPerPage={HISTORY_PAGE_SIZE}
 							pagination={
-								<div className="flex flex-col items-center sm:flex-row gap-[12px] border-t border-solid border-card-border px-[16px] py-[12px] label-12 text-tertiary sm:justify-between">
+								<div {...styles.paginationBar()}>
 									<HistoryPagination
 										position={{ order: historyOrder, cursor }}
 										data={historyData}
@@ -2221,7 +2206,7 @@ function SectionsWrapper(props: {
 										holdingsPage * ASSETS_PER_PAGE,
 									)
 									.map((asset) => ({
-										className: 'copy-13',
+										className: styles.holdingRow().className,
 										cells:
 											mode === 'stacked'
 												? [
@@ -2284,26 +2269,22 @@ function SectionsWrapper(props: {
 						title: 'Transfers',
 						itemsLabel: 'transfers',
 						contextual: (
-							<div className="flex items-center gap-3">
+							<div {...styles.contextual()}>
 								{filters}
 								{liveControl}
 							</div>
 						),
 						content: (
-							<div className="rounded-body bg-card-header p-4.5">
-								<p className="copy-14 font-medium text-negative">
-									Transfers are temporarily unavailable
-								</p>
-								<p className="mt-1 label-12 text-tertiary">
-									The Tempo API could not complete this request.
-								</p>
-								<button
-									type="button"
-									className="mt-3 rounded-body bg-distinct px-3 py-1.5 label-12 text-primary transition-colors hover:bg-base-alt"
-									onClick={() => void refetchActiveTransfers()}
-								>
-									Try again
-								</button>
+							<div {...styles.alertWrap()}>
+								<Alert
+									tone="negative"
+									title="Transfers are temporarily unavailable"
+									description="The Tempo API could not complete this request."
+									action={{
+										label: 'Try again',
+										onClick: () => void refetchActiveTransfers(),
+									}}
+								/>
 							</div>
 						),
 					}
@@ -2321,7 +2302,7 @@ function SectionsWrapper(props: {
 							(accountTotalCapped ? '10k+' : accountTotal),
 						itemsLabel: 'transfers',
 						contextual: (
-							<div className="flex items-center gap-3">
+							<div {...styles.contextual()}>
 								{filters}
 								{liveControl}
 							</div>
@@ -2384,7 +2365,12 @@ function SectionsWrapper(props: {
 														params={{ address: transfer.token.address }}
 														title={transfer.token.address}
 														preload="intent"
-														className="flex items-center gap-[6px] label-12 text-primary hover:text-accent transition-colors press-down"
+														{...cx(
+															styles.assetLink(),
+															linkHover(),
+															transitionColors(),
+															pressDown(),
+														)}
 													>
 														<TokenIcon address={transfer.token.address} />
 														<span>
@@ -2436,7 +2422,7 @@ function SectionsWrapper(props: {
 						transfersData && (transfersTotalCapped ? '100k+' : transfersTotal),
 					itemsLabel: 'transfers',
 					contextual: (
-						<div className="flex items-center gap-3">
+						<div {...styles.contextual()}>
 							{account && (
 								<FilterIndicator account={account} tokenAddress={address} />
 							)}
@@ -2548,7 +2534,7 @@ function SectionsWrapper(props: {
 												balance={holder.balance}
 												decimals={tokenMetadata?.decimals}
 											/>,
-											<span key="percentage" className="label-12 text-primary">
+											<span key="percentage" {...styles.value()}>
 												{percentage.toFixed(2)}%
 											</span>,
 										],
@@ -2647,16 +2633,18 @@ type InfoColumnLabelProps = { label: string; info: string }
 
 function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 	return (
-		<span className="inline-flex items-center gap-1">
+		<span {...styles.infoLabel()}>
 			<span>{props.label}</span>
-			<span
-				className="cursor-help label-12 text-tertiary"
-				title={props.info}
-				role="img"
-				aria-label={props.info}
-			>
-				ⓘ
-			</span>
+			<Tooltip content={props.info} {...styles.infoTooltip()}>
+				<IconButton
+					aria-label={props.info}
+					scale="small"
+					style={{ color: 'inherit' }}
+					variant="tertiary"
+				>
+					<InfoCircle />
+				</IconButton>
+			</Tooltip>
 		</span>
 	)
 }
@@ -2670,22 +2658,17 @@ function ProcessedInBatchCell(
 	props: ProcessedInBatchCellProps,
 ): React.JSX.Element {
 	if (!props.batch) {
-		return (
-			<span className="whitespace-nowrap copy-13 text-tertiary">
-				{props.fallback}
-			</span>
-		)
+		return <span {...styles.batchPending()}>{props.fallback}</span>
 	}
 
 	return (
-		<span className="whitespace-nowrap copy-13">
+		<span {...styles.batchCell()}>
 			Checkpoint{' '}
 			<Link
 				to="/receipt/$hash"
 				params={{ hash: props.batch.transactionHash }}
 				preload="intent"
-				className="text-accent transition-colors hover:text-accent/80 press-down"
-				title={`View checkpoint #${props.batch.index}`}
+				{...cx(link(), linkHover(), transitionColors(), pressDown())}
 			>
 				#{props.batch.index}
 			</Link>
@@ -2703,11 +2686,13 @@ function LinkedTransactionHash(
 			to="/receipt/$hash"
 			params={{ hash: props.hash }}
 			preload="intent"
-			className={cx(
-				'w-full copy-13 press-down',
-				props.prominent
-					? 'font-medium text-accent transition-colors hover:text-accent/80'
-					: 'text-tertiary',
+			{...cx(
+				props.prominent && styles.hashLinkProminent(),
+				props.prominent && link(),
+				props.prominent && linkHover(),
+				props.prominent && transitionColors(),
+				!props.prominent && styles.hashLink(),
+				pressDown(),
 			)}
 			title={props.hash}
 		>
@@ -2772,7 +2757,7 @@ function TransactionDescCell(props: {
 }) {
 	const { transaction, accountAddress } = props
 	if (!transaction.knownEvents.length) {
-		return <span className="text-secondary">No events</span>
+		return <span {...styles.secondary()}>No events</span>
 	}
 	return (
 		<TransactionDescription
@@ -2803,7 +2788,7 @@ function TransactionFeeCell(props: {
 	const feeDisplay = showUsdPrefix
 		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
 		: PriceFormatter.formatAmountShort(feeRaw)
-	return <span className="text-tertiary">{feeDisplay}</span>
+	return <span {...styles.secondary()}>{feeDisplay}</span>
 }
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
@@ -2829,7 +2814,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true
 
-	const infiniteLabel = <span className="text-secondary">−</span>
+	const infiniteLabel = <span {...styles.secondary()}>−</span>
 
 	const hasAmounts = events.some((event) =>
 		event.parts.some((part) => part.type === 'amount'),
@@ -2849,7 +2834,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const totalValue = calculateKnownEventsTotal(events)
 	if (totalValue === undefined || !showUsdPrefix)
 		return (
-			<span className="text-tertiary" title="No comparable payment total">
+			<span {...styles.placeholder()} title="No comparable payment total">
 				—
 			</span>
 		)
@@ -2858,7 +2843,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 		const value = transaction.value
 			? Hex.toBigInt(transaction.value as Hex.Hex)
 			: 0n
-		if (value === 0n) return <span className="text-tertiary">—</span>
+		if (value === 0n) return <span {...styles.placeholder()}>—</span>
 		return (
 			<Amount.Base
 				value={value}
@@ -2897,57 +2882,55 @@ export function HistoryPagination(
 		: isLast && !pageCountCapped
 			? pageCount
 			: getHistoryStatePage(location.state)
-	const buttonClass = cx(
-		'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
-	)
-
 	return (
-		<div className="flex items-center justify-center sm:justify-start gap-[6px]">
-			<Link
-				to="."
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: undefined,
-					order: 'desc',
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage: 1,
-				})}
-				disabled={isFirst || isOnlyPage}
-				className={buttonClass}
-				title="First page"
-			>
-				<ChevronFirst className="size-[14px]" />
-			</Link>
-			<Link
-				ref={previousRef}
-				to="."
-				preload="viewport"
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: navigation.previous?.cursor,
-					order: navigation.previous?.order,
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage:
-						currentPage === undefined
-							? undefined
-							: Math.max(1, currentPage - 1),
-				})}
-				disabled={!navigation.previous}
-				className={buttonClass}
-				title="Previous page"
-			>
-				<ChevronLeft className="size-[14px]" />
-			</Link>
-			<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
-				<span className="text-primary">
+		<div {...styles.pageNav()}>
+			<Tooltip content="First page">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: undefined,
+						order: 'desc',
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage: 1,
+					})}
+					disabled={isFirst || isOnlyPage}
+					{...cx(styles.pageLink(), pressDown())}
+				>
+					<ChevronsLeft />
+				</Link>
+			</Tooltip>
+			<Tooltip content="Previous page">
+				<Link
+					ref={previousRef}
+					to="."
+					preload="viewport"
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: navigation.previous?.cursor,
+						order: navigation.previous?.order,
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage:
+							currentPage === undefined
+								? undefined
+								: Math.max(1, currentPage - 1),
+					})}
+					disabled={!navigation.previous}
+					{...cx(styles.pageLink(), pressDown())}
+				>
+					<ChevronLeft />
+				</Link>
+			</Tooltip>
+			<span {...styles.pageLabel()}>
+				<span {...styles.primary()}>
 					{currentPage === undefined
 						? '?'
 						: Pagination.numFormat.format(currentPage)}
@@ -2962,47 +2945,49 @@ export function HistoryPagination(
 					</>
 				)}
 			</span>
-			<Link
-				ref={nextRef}
-				to="."
-				preload="viewport"
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: navigation.next?.cursor,
-					order: navigation.next?.order,
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage:
-						currentPage === undefined ? undefined : currentPage + 1,
-				})}
-				disabled={!navigation.next}
-				className={buttonClass}
-				title="Next page"
-			>
-				<ChevronRight className="size-[14px]" />
-			</Link>
-			<Link
-				to="."
-				resetScroll={false}
-				search={(previous) => ({
-					...previous,
-					page: 1,
-					cursor: undefined,
-					order: 'asc',
-				})}
-				state={(previous) => ({
-					...previous,
-					addressHistoryPage: pageCountCapped ? undefined : pageCount,
-				})}
-				disabled={isLast || isOnlyPage}
-				className={buttonClass}
-				title="Last page"
-			>
-				<ChevronLast className="size-[14px]" />
-			</Link>
+			<Tooltip content="Next page">
+				<Link
+					ref={nextRef}
+					to="."
+					preload="viewport"
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: navigation.next?.cursor,
+						order: navigation.next?.order,
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage:
+							currentPage === undefined ? undefined : currentPage + 1,
+					})}
+					disabled={!navigation.next}
+					{...cx(styles.pageLink(), pressDown())}
+				>
+					<ChevronRight />
+				</Link>
+			</Tooltip>
+			<Tooltip content="Last page">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: 1,
+						cursor: undefined,
+						order: 'asc',
+					})}
+					state={(previous) => ({
+						...previous,
+						addressHistoryPage: pageCountCapped ? undefined : pageCount,
+					})}
+					disabled={isLast || isOnlyPage}
+					{...cx(styles.pageLink(), pressDown())}
+				>
+					<ChevronsRight />
+				</Link>
+			</Tooltip>
 		</div>
 	)
 }
@@ -3061,57 +3046,46 @@ function HoldingsFooter(props: {
 		unlistedCount,
 		onToggleShowAll,
 	} = props
-	const btnClass = cx(
-		'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-	)
 	return (
-		<div className="flex flex-col gap-0 border-t border-solid border-card-border">
+		<div {...styles.holdingsFooter()}>
 			{pages > 1 && (
-				<div className="flex flex-col items-center sm:flex-row gap-[12px] px-[16px] py-[12px] label-12 text-tertiary sm:justify-between">
-					<div className="flex items-center justify-center sm:justify-start gap-[6px]">
-						<button
-							type="button"
+				<div {...styles.holdingsPagination()}>
+					<div {...styles.pageNav()}>
+						<HoldingsPageButton
+							label="First page"
+							disabled={page <= 1}
 							onClick={() => onPageChange(1)}
-							disabled={page <= 1}
-							className={btnClass}
-							title="First page"
 						>
-							<ChevronFirst className="size-[14px]" />
-						</button>
-						<button
-							type="button"
+							<ChevronsLeft />
+						</HoldingsPageButton>
+						<HoldingsPageButton
+							label="Previous page"
+							disabled={page <= 1}
 							onClick={() => onPageChange(page - 1)}
-							disabled={page <= 1}
-							className={btnClass}
-							title="Previous page"
 						>
-							<ChevronLeft className="size-[14px]" />
-						</button>
-						<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
-							<span className="text-primary">
+							<ChevronLeft />
+						</HoldingsPageButton>
+						<span {...styles.pageLabel()}>
+							<span {...styles.primary()}>
 								{Pagination.numFormat.format(page)}
 							</span>
 							{' of '}
 							{Pagination.numFormat.format(pages)}
 						</span>
-						<button
-							type="button"
+						<HoldingsPageButton
+							label="Next page"
+							disabled={page >= pages}
 							onClick={() => onPageChange(page + 1)}
-							disabled={page >= pages}
-							className={btnClass}
-							title="Next page"
 						>
-							<ChevronRight className="size-[14px]" />
-						</button>
-						<button
-							type="button"
+							<ChevronRight />
+						</HoldingsPageButton>
+						<HoldingsPageButton
+							label="Last page"
+							disabled={page >= pages}
 							onClick={() => onPageChange(pages)}
-							disabled={page >= pages}
-							className={btnClass}
-							title="Last page"
 						>
-							<ChevronLast className="size-[14px]" />
-						</button>
+							<ChevronsRight />
+						</HoldingsPageButton>
 					</div>
 					<Pagination.Count
 						totalItems={totalItems}
@@ -3120,34 +3094,42 @@ function HoldingsFooter(props: {
 				</div>
 			)}
 			{hasUnlisted && (
-				<div
-					className={cx(
-						'flex items-center justify-center px-[16px] py-[10px] label-12',
-						pages > 1 && 'border-t border-solid border-card-border',
-					)}
-				>
-					<button
-						type="button"
+				<div {...styles.unlistedRow()}>
+					<Button
+						{...styles.unlistedToggle()}
 						onClick={onToggleShowAll}
-						className="inline-flex items-center gap-1.5 text-tertiary hover:text-secondary transition-colors cursor-pointer"
+						scale="small"
+						variant="tertiary"
 					>
-						{showAll ? (
-							<>
-								<EyeOffIcon className="size-[14px]" />
-								Hide {unlistedCount} unverified{' '}
-								{unlistedCount === 1 ? 'token' : 'tokens'}
-							</>
-						) : (
-							<>
-								<EyeIcon className="size-[14px]" />
-								Show {unlistedCount} unverified{' '}
-								{unlistedCount === 1 ? 'token' : 'tokens'}
-							</>
-						)}
-					</button>
+						{showAll ? <EyeOff /> : <Eye />}
+						{showAll ? 'Hide' : 'Show'} {unlistedCount} unverified{' '}
+						{unlistedCount === 1 ? 'token' : 'tokens'}
+					</Button>
 				</div>
 			)}
 		</div>
+	)
+}
+
+function HoldingsPageButton(props: {
+	label: string
+	disabled: boolean
+	onClick: () => void
+	children: React.ReactElement
+}): React.JSX.Element {
+	return (
+		<Tooltip content={props.label}>
+			<IconButton
+				{...styles.pagerButton()}
+				aria-label={props.label}
+				disabled={props.disabled}
+				onClick={props.onClick}
+				scale="small"
+				variant="secondary"
+			>
+				{props.children}
+			</IconButton>
+		</Tooltip>
 	)
 }
 
@@ -3157,25 +3139,26 @@ function FilterIndicator(props: {
 }) {
 	const { account, tokenAddress } = props
 	return (
-		<div className="flex items-center gap-2 label-12">
-			<span className="text-tertiary">Filtered:</span>
+		<div {...styles.filter()}>
+			<span {...styles.secondary()}>Filtered:</span>
 			<Link
 				to="/address/$address"
 				params={{ address: account }}
-				className="text-accent press-down font-mono"
+				{...cx(styles.filterAccount(), link(), linkHover(), pressDown())}
 				title={account}
 			>
 				<Midcut value={account} prefix="0x" />
 			</Link>
-			<Link
-				to="/address/$address"
-				params={{ address: tokenAddress }}
-				search={{ tab: 'transfers' }}
-				className="text-tertiary press-down"
-				title="Clear filter"
-			>
-				<XIcon className="size-3.5 translate-y-px" />
-			</Link>
+			<Tooltip content="Clear filter">
+				<Link
+					to="/address/$address"
+					params={{ address: tokenAddress }}
+					search={{ tab: 'transfers' }}
+					{...cx(styles.clearFilter(), pressDown())}
+				>
+					<Close />
+				</Link>
+			</Tooltip>
 		</div>
 	)
 }
@@ -3225,18 +3208,13 @@ function StreamedPaymentReceipt(props: {
 	const digits = String(packetCount).length
 
 	return (
-		<div className="pb-4 font-sans copy-13">
+		<div {...styles.receipt()}>
 			{/* On-chain settlement — visually part of the main row */}
-			<div className="bg-base-alt -mx-[16px] px-[16px] py-[10px] border-b-2 border-base-border flex items-center">
-				<span
-					className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
-					style={{ minWidth: `${digits}ch` }}
-				>
+			<div {...styles.settlement()}>
+				<span {...styles.rowIndex({ style: { minWidth: `${digits}ch` } })}>
 					↓
 				</span>
-				<span className="label-12 text-accent shrink-0 w-[64px] italic">
-					on-chain
-				</span>
+				<span {...styles.onChainLabel()}>on-chain</span>
 				{transaction.knownEvents
 					.filter(
 						(e) => e.type === 'settle channel' || e.type === 'close channel',
@@ -3247,9 +3225,9 @@ function StreamedPaymentReceipt(props: {
 			</div>
 
 			{/* Off-chain section header */}
-			<div className="flex items-center gap-[8px] pt-[12px] pb-[6px] label-12 text-tertiary r">
+			<div {...styles.offChainHeader()}>
 				<span>off-chain vouchers</span>
-				<span className="flex-1 border-t border-solid border-distinct" />
+				<span {...styles.divider()} />
 				<span>{packetCount.toLocaleString()}</span>
 			</div>
 
@@ -3261,20 +3239,12 @@ function StreamedPaymentReceipt(props: {
 						: outputAmountParts
 					: defaultAmountParts
 				return (
-					<div
-						key={i}
-						className="flex items-center py-[9px] border-b border-solid border-distinct"
-					>
-						<span
-							className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
-							style={{ minWidth: `${digits}ch` }}
-						>
+					<div key={i} {...styles.voucherRow()}>
+						<span {...styles.rowIndex({ style: { minWidth: `${digits}ch` } })}>
 							{i + 1}
 						</span>
-						<span className="label-12 text-tertiary shrink-0 w-[64px]">
-							off-chain
-						</span>
-						<div className="flex items-center gap-[10px] ml-auto">
+						<span {...styles.offChainLabel()}>off-chain</span>
+						<div {...styles.voucherParts()}>
 							<TxEventDescription.Part
 								part={{ type: 'action', value: 'Pay' }}
 							/>
@@ -3287,4 +3257,380 @@ function StreamedPaymentReceipt(props: {
 			})}
 		</div>
 	)
+}
+
+const paginationRowBase = {
+	alignItems: 'center',
+	color: 'content.secondary',
+	display: 'flex',
+	flexDirection: 'column',
+	gap: '12',
+	paddingBlock: '12',
+	paddingInline: '16',
+	typography: 'body.b3',
+	'@media (width >= 640px)': {
+		flexDirection: 'row',
+		justifyContent: 'space-between',
+	},
+} as const
+
+// Pager controls share TDS IconButton `small` `secondary` geometry. The holdings
+// pager uses IconButton itself; the history pager's controls are links.
+const pagerHover = {
+	'@media (hover: hover)': {
+		':hover': { backgroundColor: 'container.strong' },
+	},
+} as const
+
+// Divider borders: the reset leaves every border at width 0, so each use sets
+// only the edge it draws.
+const dividerLine = {
+	borderColor: 'line.secondary',
+	borderStyle: 'solid',
+} as const
+
+namespace styles {
+	export const page = style({
+		display: 'grid',
+		gap: '16',
+		gridTemplateColumns: 'auto 1fr',
+		minWidth: '0 !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
+		width: '100% !custom',
+		'@media (width < 800px)': {
+			display: 'flex',
+			flexDirection: 'column',
+			paddingBottom: '32',
+			paddingTop: '40',
+		},
+		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
+	})
+
+	export const breadcrumbs = style({ gridColumn: '1 / -1' })
+
+	export const accountColumn = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		'@media (width >= 800px)': { alignSelf: 'flex-start' },
+	})
+
+	export const zonePortalCard = style({
+		'@media (width >= 800px)': { alignSelf: 'flex-start' },
+		'@media (width >= 1240px)': { width: '258px !custom' },
+	})
+
+	export const addressHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		marginBottom: '8',
+	})
+
+	export const addressLabel = style({ typography: 'body.b3' })
+
+	export const icon12 = style({ height: '12', width: '12' })
+
+	export const addressValue = style({
+		color: 'content.primary',
+		maxWidth: '21ch !custom',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const balances = style({
+		minWidth: '0 !custom',
+		width: '100% !custom',
+	})
+
+	export const balancesLabel = style({
+		color: 'content.secondary',
+		marginBottom: '8',
+		typography: 'body.b3',
+	})
+
+	export const balanceList = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const balanceRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		minWidth: '0 !custom',
+		typography: 'body.b3',
+	})
+
+	export const pending = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const value = style({
+		color: 'content.primary',
+		typography: 'body.b3',
+	})
+
+	export const primary = style({ color: 'content.primary' })
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	// Dashes that stand in for a missing value.
+	export const placeholder = style({ color: 'content.tertiary' })
+
+	// Added to a TDS Button: only properties it leaves unset. The history and
+	// transfers feed toggle sits at the end of its toolbar and is disabled away
+	// from the newest page.
+	export const feedToggle = style({
+		flexShrink: 0,
+		marginLeft: 'auto !custom',
+		':disabled': { opacity: 0.5 },
+	})
+
+	export const alertWrap = style({ padding: '16' })
+
+	export const batchIndex = style({
+		typography: 'mono.inline',
+		whiteSpace: 'nowrap',
+	})
+
+	export const contextual = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '12',
+	})
+
+	export const paginationBar = style({
+		...paginationRowBase,
+		...dividerLine,
+		borderTopWidth: 'regular',
+	})
+
+	export const holdingRow = style({ typography: 'body.b3' })
+
+	export const infoLabel = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+	})
+
+	// TDS Tooltip keeps its label on one line; the column hints are sentences.
+	export const infoTooltip = style({
+		selectors: { '& > span': { whiteSpace: 'normal' } },
+	})
+
+	export const batchPending = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+	})
+
+	export const batchCell = style({
+		typography: 'body.b3',
+		whiteSpace: 'nowrap',
+	})
+
+	export const pageNav = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'center',
+		'@media (width >= 640px)': { justifyContent: 'flex-start' },
+	})
+
+	// Added to a TDS IconButton: only properties it leaves unset, plus a hover
+	// (which outranks its resting fill).
+	export const pagerButton = style({
+		...pagerHover,
+		':disabled': { opacity: 0.5 },
+	})
+
+	export const pageLabel = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+		paddingInline: '4',
+		whiteSpace: 'nowrap',
+	})
+
+	export const holdingsFooter = style({
+		...dividerLine,
+		borderTopWidth: 'regular',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: 'none',
+	})
+
+	export const holdingsPagination = style({ ...paginationRowBase })
+
+	export const unlistedRow = style({
+		...dividerLine,
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'center',
+		paddingBlock: '8',
+		paddingInline: '16',
+		selectors: { '&:not(:first-child)': { borderTopWidth: 'regular' } },
+	})
+
+	// Added to a TDS Button: an icon size and a hover fill, both unset by it.
+	export const unlistedToggle = style({
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+		selectors: { '& > svg': { height: '16', width: '16' } },
+	})
+
+	export const filter = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b3',
+	})
+
+	export const receipt = style({
+		paddingBottom: '16',
+		typography: 'body.b3',
+	})
+
+	export const settlement = style({
+		...dividerLine,
+		alignItems: 'center',
+		backgroundColor: 'container.subtle',
+		borderBottomWidth: 'thick',
+		display: 'flex',
+		marginInline: '-16px !custom',
+		paddingBlock: '12',
+		paddingInline: '16',
+	})
+
+	export const rowIndex = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		fontVariantNumeric: 'tabular-nums',
+		marginRight: '12',
+		textAlign: 'right',
+	})
+
+	export const onChainLabel = style({
+		color: 'content.primary',
+		flexShrink: 0,
+		fontStyle: 'italic',
+		typography: 'body.b3',
+		width: '64',
+	})
+
+	export const offChainHeader = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		gap: '8',
+		paddingBottom: '8',
+		paddingTop: '12',
+		typography: 'body.b3',
+	})
+
+	export const divider = style({
+		...dividerLine,
+		borderTopWidth: 'regular',
+		flex: 1,
+	})
+
+	export const voucherRow = style({
+		...dividerLine,
+		alignItems: 'center',
+		borderBottomWidth: 'regular',
+		display: 'flex',
+		paddingBlock: '8',
+	})
+
+	export const offChainLabel = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		typography: 'body.b3',
+		width: '64',
+	})
+
+	export const voucherParts = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		marginLeft: 'auto !custom',
+	})
+
+	export const addressButton = style({
+		color: 'content.secondary',
+		cursor: 'pointer',
+		textAlign: 'left',
+		width: '100% !custom',
+	})
+
+	export const balanceToken = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const timeHeader = style({
+		color: 'content.secondary',
+		cursor: 'pointer',
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+	})
+
+	export const assetLink = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '8',
+		typography: 'body.b3',
+	})
+
+	export const hashLink = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+		width: '100% !custom',
+	})
+
+	export const hashLinkProminent = style({
+		typography: 'body.b3Strong',
+		width: '100% !custom',
+	})
+
+	export const pageLink = style({
+		...pagerHover,
+		alignItems: 'center',
+		backgroundColor: 'container.regular',
+		borderRadius: 'full',
+		color: 'content.primary',
+		display: 'inline-flex',
+		height: '32',
+		justifyContent: 'center',
+		width: '32',
+		selectors: {
+			'& > svg': { height: '16', width: '16' },
+			'&[aria-disabled="true"]': { cursor: 'default', opacity: 0.5 },
+		},
+	})
+
+	export const filterAccount = style({ typography: 'mono.inline' })
+
+	// TDS IconButton `small` `tertiary` geometry on a link.
+	export const clearFilter = style({
+		alignItems: 'center',
+		borderRadius: 'full',
+		color: 'content.primary',
+		display: 'inline-flex',
+		height: '32',
+		justifyContent: 'center',
+		width: '32',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+		selectors: { '& > svg': { height: '16', width: '16' } },
+	})
 }

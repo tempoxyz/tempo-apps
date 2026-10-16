@@ -1,28 +1,28 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { Alert, StatusIndicator, Tooltip, style } from '@tempoxyz/ds/platform'
+import { Play } from '@tempoxyz/ds/platform/icons'
 import type { Address } from 'ox'
-import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
-import type { Abi, AbiFunction, Hex } from 'viem'
+import type { Abi, Hex } from 'viem'
 import { encodeFunctionData } from 'viem'
 import { useConnection, useWriteContract } from 'wagmi'
-import { cx } from '#lib/css'
+import { cx } from 'zyzz'
+import {
+	FunctionAction,
+	FunctionCard,
+	FunctionInput,
+	functionInputKey,
+} from '#comps/ContractFunction'
 import {
 	getFunctionSelector,
-	getInputType,
-	getPlaceholder,
 	getWriteFunctions,
-	isArrayType,
 	parseInputValue,
 	type WriteFunction,
 } from '#lib/domain/contracts'
-import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
-import CheckIcon from '~icons/lucide/check'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
+import { usePermalinkHighlight } from '#lib/hooks'
+import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
 import FlaskIcon from '~icons/lucide/flask-conical'
-import LinkIcon from '~icons/lucide/link'
-import PlayIcon from '~icons/lucide/play'
 
 function getWriteErrorMessage(err: Error): string {
 	// Walk the cause chain to find the deepest shortMessage/message
@@ -60,7 +60,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 	const writeFunctions = getWriteFunctions(abi)
 
 	return (
-		<div className="flex flex-col gap-[12px]">
+		<div {...styles.list()}>
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -71,7 +71,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 			))}
 
 			{writeFunctions.length === 0 && (
-				<p className="copy-13 text-tertiary">No write functions available.</p>
+				<p {...styles.emptyMessage()}>No write functions available.</p>
 			)}
 		</div>
 	)
@@ -84,19 +84,6 @@ export declare namespace ContractWriter {
 	}
 }
 
-function getFunctionDisplaySignature(fn: AbiFunction): string {
-	if (fn.name) return getSignature(fn).replace(/,/g, ', ')
-	const selector = getFunctionSelector(fn)
-	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
-	return `${selector}(${inputs})`
-}
-
-function getMethodWithSelector(fn: AbiFunction): string {
-	const selector = getFunctionSelector(fn)
-	const name = fn.name || selector
-	return `${name} (${selector})`
-}
-
 function WriteContractFunction(props: {
 	address: Address.Address
 	abi: Abi
@@ -104,7 +91,6 @@ function WriteContractFunction(props: {
 }) {
 	const { fn } = props
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
-	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
 	const fnId = `write-${fn.name || selector}`
@@ -120,18 +106,20 @@ function WriteContractFunction(props: {
 		setInputs((prev) => ({ ...prev, [name]: value }))
 	}
 
-	const allInputsFilled = (fn.inputs ?? []).every((input) => {
-		const value = inputs[input.name ?? '']
+	const allInputsFilled = (fn.inputs ?? []).every((input, index) => {
+		const value = inputs[functionInputKey(input, index)]
 		return value !== undefined && value.trim() !== ''
 	})
 
 	const parsedArgs = React.useMemo(() => {
 		if (!allInputsFilled) return { args: [], error: null }
 		try {
-			const args = (fn.inputs ?? []).map((input) => {
-				const value = inputs[input.name ?? ''] ?? ''
-				return parseInputValue(value, input.type)
-			})
+			const args = (fn.inputs ?? []).map((input, index) =>
+				parseInputValue(
+					inputs[functionInputKey(input, index)] ?? '',
+					input.type,
+				),
+			)
 			return { args, error: null }
 		} catch (error) {
 			return {
@@ -141,11 +129,6 @@ function WriteContractFunction(props: {
 			}
 		}
 	}, [fn.inputs, inputs, allInputsFilled])
-
-	const handleCopyMethod = (event: React.MouseEvent) => {
-		event.stopPropagation()
-		void copy(getMethodWithSelector(fn))
-	}
 
 	/**
 	 * Calldata for the Simulate link. Falls back to the bare selector when the
@@ -165,10 +148,6 @@ function WriteContractFunction(props: {
 		return selector as Hex
 	}, [allInputsFilled, parsedArgs, props.abi, fn.name, selector])
 
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: fnId,
-	})
-
 	const isPayable = fn.stateMutability === 'payable'
 	const hasInputs = fn.inputs.length > 0 || isPayable
 
@@ -187,98 +166,42 @@ function WriteContractFunction(props: {
 	})
 
 	return (
-		<div
+		<FunctionCard
 			id={fnId}
-			className="rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="w-full flex items-center justify-between">
-				<button
-					type="button"
-					onClick={() => hasInputs && setIsExpanded(!isExpanded)}
-					className={cx(
-						'min-w-0 flex-1 text-left flex flex-wrap items-center gap-[8px] h-full py-[10px] pl-[12px] focus-visible:-outline-offset-2! focus-visible:rounded-l-body!',
-						hasInputs && 'cursor-pointer press-down',
-					)}
-				>
-					<span className="min-w-0 label-12 text-secondary font-mono [overflow-wrap:anywhere]">
-						{getFunctionDisplaySignature(fn)}
-					</span>
-					{isPayable && (
-						<span className="shrink-0 label-12 px-[6px] py-[2px] rounded-[4px] bg-warning-subtle text-warning font-medium">
-							payable
-						</span>
-					)}
-				</button>
-				<div className="flex items-center pl-[12px] shrink-0">
-					<button
-						type="button"
-						onClick={handleCopyMethod}
-						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation()
-							void handleCopyPermalink()
-						}}
-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className={cx(
-							'cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							connection.status !== 'connected' && !hasInputs
-								? 'pr-[12px]'
-								: 'pr-[4px]',
-						)}
-					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
+			fn={fn}
+			expanded={isExpanded}
+			onToggle={hasInputs ? () => setIsExpanded(!isExpanded) : undefined}
+			tag={
+				isPayable && <StatusIndicator tone="warning">payable</StatusIndicator>
+			}
+			actions={
+				<>
 					{/* Simulate is available whether or not a wallet is connected —
 					    checking what a write would do is the step *before* signing, and
 					    gating it on a connection put the safe option behind the risky
 					    one. Args are optional: an unfilled form still simulates the
 					    selector, which is enough to see who is allowed to call it. */}
-					<Link
-						to="/simulate"
-						search={{
-							to: props.address,
-							data: simulateCalldata,
-							...(connection.address ? { from: connection.address } : {}),
-							...(isPayable && inputs.value ? { value: inputs.value } : {}),
-						}}
-						title="Simulate this call without signing"
-						onClick={(event) => event.stopPropagation()}
-						className={cx(
-							'text-tertiary hover:text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							connection.status === 'connected' || hasInputs
-								? 'pr-[4px]'
-								: 'pr-[12px]',
-						)}
-					>
-						<FlaskIcon className="size-[14px]" />
-					</Link>
+					<Tooltip content="Simulate this call without signing">
+						<Link
+							to="/simulate"
+							search={{
+								to: props.address,
+								data: simulateCalldata,
+								...(connection.address ? { from: connection.address } : {}),
+								...(isPayable && inputs.value ? { value: inputs.value } : {}),
+							}}
+							aria-label="Simulate this call without signing"
+							{...cx(styles.simulate(), pressDown(), transitionColors())}
+						>
+							<FlaskIcon {...styles.simulateIcon()} />
+						</Link>
+					</Tooltip>
 					{connection.status === 'connected' && (
-						<button
-							type="button"
-							title="Execute"
+						<FunctionAction
+							label="Execute"
 							disabled={
 								writeContract.isPending || (hasInputs && !allInputsFilled)
 							}
-							className={cx(
-								'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-								hasInputs ? 'pr-[4px]' : 'pr-[12px]',
-								(writeContract.isPending || (hasInputs && !allInputsFilled)) &&
-									'opacity-50 cursor-not-allowed',
-							)}
 							onClick={() =>
 								writeContract.mutate({
 									address: props.address,
@@ -293,145 +216,112 @@ function WriteContractFunction(props: {
 								})
 							}
 						>
-							<PlayIcon className="size-[14px]" />
-						</button>
+							<Play />
+						</FunctionAction>
 					)}
-					{hasInputs && (
-						<button
-							type="button"
-							className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
-							aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
-							aria-expanded={isExpanded}
-							onClick={() => setIsExpanded(!isExpanded)}
-						>
-							<ChevronDownIcon
-								className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
-							/>
-						</button>
-					)}
-				</div>
-			</div>
-
-			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+				</>
+			}
+		>
+			{hasInputs && isExpanded && (
+				<>
 					{isPayable && (
 						<FunctionInput
 							label="Value (wei)"
-							value={inputs.value}
+							value={inputs.value ?? ''}
 							input={{ name: 'value', type: 'uint256' }}
 							onChange={(value) => handleInputChange('value', value)}
 						/>
 					)}
 
-					{fn.inputs.map((input, index) => (
-						<FunctionInput
-							key={input.name ?? index}
-							input={input}
-							value={inputs[input.name ?? ''] ?? ''}
-							onChange={(value) =>
-								handleInputChange(input.name ?? `arg${index}`, value)
-							}
-						/>
-					))}
+					{fn.inputs.map((input, index) => {
+						const key = functionInputKey(input, index)
+						return (
+							<FunctionInput
+								key={key}
+								input={input}
+								value={inputs[key] ?? ''}
+								onChange={(value) => handleInputChange(key, value)}
+							/>
+						)
+					})}
 
 					{parsedArgs.error && (
-						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
-							<p className="label-12 text-negative">{parsedArgs.error}</p>
-						</div>
+						<Alert
+							tone="negative"
+							title="Invalid arguments"
+							description={parsedArgs.error}
+							style={fullWidth}
+						/>
 					)}
 
 					{writeContract.error && (
-						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
-							<p className="label-12 text-negative">
-								{getWriteErrorMessage(writeContract.error)}
-							</p>
-						</div>
+						<Alert
+							role="alert"
+							tone="negative"
+							title="Transaction failed"
+							description={getWriteErrorMessage(writeContract.error)}
+							style={fullWidth}
+						/>
 					)}
 
 					{writeContract.isSuccess && writeContract.data && (
-						<div className="p-2.5 rounded-body bg-positive-subtle border border-positive/20">
-							<p className="label-12 text-positive font-mono break-all">
-								tx:{' '}
+						<Alert
+							role="status"
+							tone="positive"
+							title="Transaction sent"
+							description={
 								<Link
 									to="/receipt/$hash"
 									params={{ hash: writeContract.data }}
-									className="underline hover:text-positive"
+									{...cx(styles.receipt(), link(), linkHover())}
 								>
 									{writeContract.data}
 								</Link>
-							</p>
-						</div>
+							}
+							style={fullWidth}
+						/>
 					)}
-				</div>
+				</>
 			)}
-		</div>
+		</FunctionCard>
 	)
 }
 
-function FunctionInput(props: {
-	input: { name?: string; type: string }
-	value: string
-	onChange: (value: string) => void
-	label?: string
-}) {
-	const { input, value, onChange, label } = props
-	const inputId = React.useId()
-	const inputType = getInputType(input.type)
-	const placeholder = getPlaceholder(input as { name: string; type: string })
+const fullWidth = { width: '100%' } satisfies React.CSSProperties
 
-	const displayLabel = label ?? input.name ?? 'value'
+namespace styles {
+	export const list = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+	})
 
-	if (inputType === 'checkbox') {
-		return (
-			<div className="flex items-center gap-[8px]">
-				<input
-					id={inputId}
-					type="checkbox"
-					checked={value === 'true'}
-					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
-					className="w-[16px] h-[16px] rounded border-base-border"
-				/>
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{displayLabel} <span className="text-secondary">({input.type})</span>
-				</label>
-			</div>
-		)
-	}
+	export const emptyMessage = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 
-	if (inputType === 'textarea' || isArrayType(input.type)) {
-		return (
-			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{displayLabel} <span className="text-secondary">({input.type})</span>
-				</label>
-				<textarea
-					id={inputId}
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					placeholder={placeholder}
-					rows={3}
-					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
-				/>
-			</div>
-		)
-	}
+	// A small tertiary IconButton's geometry; it navigates, so it stays a
+	// router link. The card clips overflow, so the ring is drawn inside.
+	export const simulate = style({
+		alignItems: 'center',
+		borderRadius: 'full',
+		color: 'content.primary',
+		display: 'inline-flex',
+		flexShrink: 0,
+		height: '32',
+		justifyContent: 'center',
+		width: '32',
+		'@media (hover: hover)': {
+			':hover': { backgroundColor: 'container.regular' },
+		},
+		':focus-visible': { outlineOffset: '-2px' },
+	})
 
-	return (
-		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="label-12 text-primary font-sans">
-				{displayLabel} <span className="text-secondary">({input.type})</span>
-			</label>
-			<input
-				autoCorrect="off"
-				autoComplete="off"
-				spellCheck={false}
-				autoCapitalize="off"
-				type="text"
-				id={inputId}
-				placeholder={placeholder}
-				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
-			/>
-		</div>
-	)
+	export const simulateIcon = style({ height: '16', width: '16' })
+
+	export const receipt = style({
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
 }

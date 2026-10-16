@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/react-router'
 import * as React from 'react'
+import { useCopyFeedback } from '#lib/copy-feedback'
 
 export function useIsMounted() {
 	const [isMounted, setIsMounted] = React.useState(false)
@@ -12,8 +13,9 @@ export function useIsMounted() {
 }
 
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {
-	const { timeout } = props
+	const { message = 'Copied', timeout } = props
 
+	const notify = useCopyFeedback()
 	const [notifying, setNotifying] = React.useState(false)
 	const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -23,13 +25,14 @@ export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 			try {
 				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
 				await navigator.clipboard.writeText(value)
+				notify(message)
 				setNotifying(true)
 				timer.current = setTimeout(() => setNotifying(false), timeout)
 			} catch (error) {
 				console.error('Failed to copy text: ', error)
 			}
 		},
-		[timeout],
+		[message, notify, timeout],
 	)
 
 	return { copy, notifying }
@@ -37,6 +40,8 @@ export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 
 export declare namespace useCopy {
 	type Props = {
+		/** Toast title announced after copying. */
+		message?: string | undefined
 		timeout?: number | undefined
 	}
 
@@ -67,6 +72,7 @@ export function useCopyPermalink(props: useCopyPermalink.Props) {
 	const { fragment } = props
 
 	const { copy: copyLink, notifying: linkNotifying } = useCopy({
+		message: 'Link copied',
 		timeout: 2_000,
 	})
 
@@ -176,37 +182,26 @@ export function usePermalinkHighlight(props: usePermalinkHighlight.Props) {
 
 		onTargetChange?.(true)
 
-		const highlightClasses = [
-			'ring-1',
-			'ring-accent',
-			'ring-offset-1',
-			'transition-shadow',
-			'duration-500',
-		] as const
-
 		let highlightTimer: ReturnType<typeof setTimeout> | undefined
 		let fadeTimer: ReturnType<typeof setTimeout> | undefined
 		let initialTimer: ReturnType<typeof setTimeout> | undefined
 		let observerCleanup: (() => void) | undefined
 		let highlightedElement: HTMLElement | undefined
 
-		const removeHighlightClasses = () => {
+		// `src/styles/globals.ts` draws the ring for each `data-permalink-highlight` state.
+		const removeHighlight = () => {
 			if (!highlightedElement) return
-			highlightedElement.classList.remove(
-				...highlightClasses,
-				'ring-transparent',
-			)
+			delete highlightedElement.dataset.permalinkHighlight
 		}
 
 		const scrollAndHighlight = (element: HTMLElement) => {
 			highlightedElement = element
 			element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-			element.classList.add(...highlightClasses)
+			element.dataset.permalinkHighlight = 'on'
 			highlightTimer = setTimeout(() => {
-				element.classList.remove('ring-accent')
-				element.classList.add('ring-transparent')
+				element.dataset.permalinkHighlight = 'fading'
 				fadeTimer = setTimeout(() => {
-					element.classList.remove(...highlightClasses, 'ring-transparent')
+					delete element.dataset.permalinkHighlight
 				}, 500)
 			}, highlightDuration)
 		}
@@ -231,7 +226,7 @@ export function usePermalinkHighlight(props: usePermalinkHighlight.Props) {
 			clearTimeout(initialTimer)
 			clearTimeout(highlightTimer)
 			clearTimeout(fadeTimer)
-			removeHighlightClasses()
+			removeHighlight()
 			observerCleanup?.()
 		}
 	}, [elementId, highlightDuration, onTargetChange, hash])

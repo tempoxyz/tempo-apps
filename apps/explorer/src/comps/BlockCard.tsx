@@ -1,19 +1,24 @@
 import { Link } from '@tanstack/react-router'
+import { Progress, style, variants } from '@tempoxyz/ds/platform'
+import {
+	Check,
+	ChevronDown,
+	Copy,
+	FilterDescending,
+} from '@tempoxyz/ds/platform/icons'
 import type { Hex } from 'ox'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { ValidatorTag } from '#comps/ValidatorTag'
 import { useAnimatedBlockNumber } from '#lib/block-number'
-import { cx } from '#lib/css'
 import { DateFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
-import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
-import ChevronDown from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
-export function BlockCard(props: BlockCard.Props) {
+export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 	const { block } = props
 	const {
 		number: blockNumber,
@@ -70,161 +75,127 @@ export function BlockCard(props: BlockCard.Props) {
 		{ label: 'receipts', value: receiptsRoot },
 	]
 
-	const showAdvancedSection = true
-
 	return (
 		<InfoCard
-			className="type-card"
 			sections={[
 				<button
 					key="block-number"
 					type="button"
 					onClick={() => copyBlock.copy(String(blockNumber ?? 0n))}
-					className="w-full text-left cursor-pointer press-down text-tertiary"
+					{...cx(styles.copyButton(), pressDown())}
 					title={String(blockNumber ?? 0n)}
 				>
-					<div className="flex items-center gap-[8px] mb-[8px]">
+					<span {...styles.copyHeader()}>
 						<span>Block</span>
-						<div className="relative flex items-center">
-							<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
-							{copyBlock.notifying && (
-								<span className="absolute left-[calc(100%+8px)]">copied</span>
-							)}
-						</div>
-					</div>
+						<BlockCard.CopyIcon copied={copyBlock.notifying} />
+					</span>
 					<BlockCard.BlockNumber value={blockNumber ?? 0n} />
 				</button>,
-				<div key="time" className="w-full flex flex-col gap-[8px]">
+				<div key="time" {...styles.stack({ gap: 'compact' })}>
 					<BlockCard.TimeRow
 						label="UTC"
 						value={
 							<time dateTime={new Date(Number(timestamp) * 1000).toISOString()}>
-								<span className="text-primary">{utcDate}</span>
+								<span {...styles.primary()}>{utcDate}</span>
 								{utcTime && <> {utcTime}</>}
 							</time>
 						}
 					/>
 					<BlockCard.TimeRow label="UNIX" value={String(timestamp)} />
 				</div>,
-				<div key="hash-parent" className="w-full flex flex-col gap-[12px]">
+				<div key="hash-parent" {...styles.stack({ gap: 'relaxed' })}>
 					{hash && (
 						<button
 							type="button"
 							onClick={() => copyHash.copy(hash)}
-							className="w-full text-left cursor-pointer press-down text-tertiary"
+							{...cx(styles.copyButton(), pressDown())}
 							title={hash}
 						>
-							<div className="flex items-center gap-[8px] mb-[8px]">
-								<span className="font-normal capitalize">Hash</span>
-								<div className="relative flex items-center">
-									<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
-									{copyHash.notifying && (
-										<span className="absolute left-[calc(100%+8px)] ">
-											copied
-										</span>
-									)}
-								</div>
-							</div>
-							{/* 22 chars/line * (1ch + 1px tracking) */}
-							<div className="font-mono copy-13 text-primary break-all max-w-[calc(22ch+22px)]">
-								{hash}
-							</div>
+							<span {...styles.copyHeader()}>
+								<span>Hash</span>
+								<BlockCard.CopyIcon copied={copyHash.notifying} />
+							</span>
+							{/* 22 chars/line: mono.inline has no tracking */}
+							<span {...styles.hash()}>{hash}</span>
 						</button>
 					)}
-					<div className="w-full flex items-center justify-between gap-[8px]">
-						<span className="flex items-center gap-[6px] font-normal capitalize text-tertiary shrink-0">
-							<ArrowUp10 className="size-[14px] text-content-dimmed" />
+					<div {...styles.infoRow()}>
+						<span {...styles.parentLabel()}>
+							<FilterDescending {...styles.icon()} />
 							Parent
 						</span>
 						<Link
 							to="/block/$id"
 							params={{ id: parentHash }}
-							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono max-w-[18ch]"
+							{...cx(styles.parentLink(), link(), linkHover(), pressDown())}
 							title={parentHash}
 						>
 							<Midcut value={parentHash} prefix="0x" align="end" min={4} />
 						</Link>
 					</div>
 				</div>,
-				<div
-					key="miner-confirmations"
-					className="w-full flex flex-col gap-[8px]"
-				>
+				<div key="miner-confirmations" {...styles.stack({ gap: 'compact' })}>
 					<BlockCard.InfoRow label="Miner">
 						{miner ? (
 							<ValidatorTag address={miner} />
 						) : (
-							<span className="text-tertiary">—</span>
+							<span {...styles.secondary()}>—</span>
 						)}
 					</BlockCard.InfoRow>
 					<BlockCard.InfoRow label="Confirmations">
-						<span
-							ref={confirmationsRef}
-							className="text-primary font-sans tabular-nums"
-						>
-							<span className="text-secondary">—</span>
+						<span ref={confirmationsRef} {...styles.numeric()}>
+							<span {...styles.secondary()}>—</span>
 						</span>
 					</BlockCard.InfoRow>
 				</div>,
-				showAdvancedSection && (
-					<div
-						key="advanced"
-						className="w-[calc(100%+36px)] -mx-[18px] -my-[12px] px-[18px] py-[12px]"
+				<div key="advanced" {...styles.advanced()}>
+					<button
+						type="button"
+						aria-expanded={showAdvanced}
+						{...cx(styles.advancedToggle(), pressDown())}
+						onClick={() => setShowAdvanced((prev) => !prev)}
 					>
-						<button
-							type="button"
-							className="flex w-full items-center justify-between text-tertiary cursor-pointer press-down"
-							onClick={() => setShowAdvanced((prev) => !prev)}
-						>
-							<span>Advanced</span>
-							<ChevronDown
-								className={cx(
-									'size-[14px] text-content-dimmed',
-									showAdvanced && 'rotate-180',
-								)}
-							/>
-						</button>
+						<span>Advanced</span>
+						<ChevronDown {...styles.advancedChevron({ open: showAdvanced })} />
+					</button>
 
-						{showAdvanced && (
-							// Contain inline size so full-length root hashes don't widen the card.
-							<div className="mt-[14px] space-y-[20px] pb-4 w-full [contain:inline-size]">
-								<div className="space-y-[12px]">
-									<div className="flex items-center justify-between">
-										<span className="text-secondary">Gas Usage</span>
-										<span className="text-primary font-sans tabular-nums">
-											{gasUsage !== undefined
-												? `${gasUsage.toFixed(2)}%`
-												: '0.00%'}
-										</span>
-									</div>
-									<div className="flex items-center h-[6px] px-px bg-card-border">
-										<div
-											className="h-full bg-accent"
-											style={{
-												width: `max(4px, ${Math.min(100, gasUsage ?? 0)}%)`,
-											}}
-										/>
-									</div>
-									<div className="flex items-center justify-between text-tertiary font-sans tabular-nums">
-										<BlockCard.GasValue value={gasUsed} />
-										<BlockCard.GasValue value={gasLimit} highlight={false} />
-									</div>
+					{showAdvanced && (
+						// Contain inline size so full-length root hashes don't widen the card.
+						<div {...styles.advancedContent()}>
+							<div {...styles.gas()}>
+								{/* Base UI formats Progress values as whole percents, and most
+								    blocks use well under 1% of the limit, so the label row
+								    shows two decimals. */}
+								<div {...styles.spread()}>
+									<span>Gas Usage</span>
+									<span {...styles.numeric()}>
+										{`${(gasUsage ?? 0).toFixed(2)}%`}
+									</span>
 								</div>
-
-								<div className="space-y-[8px]">
-									<div className="text-secondary">Roots</div>
-									{roots.map((root) => (
-										<BlockCard.RootRow
-											key={root.label}
-											label={root.label}
-											hash={root.value}
-										/>
-									))}
+								<Progress
+									aria-label="Gas usage"
+									value={Math.min(100, gasUsage ?? 0)}
+									style={{ width: '100%' }}
+								/>
+								<div {...styles.gasValues()}>
+									<BlockCard.GasValue value={gasUsed} />
+									<BlockCard.GasValue value={gasLimit} highlight={false} />
 								</div>
 							</div>
-						)}
-					</div>
-				),
+
+							<div {...styles.roots()}>
+								<div>Roots</div>
+								{roots.map((root) => (
+									<BlockCard.RootRow
+										key={root.label}
+										label={root.label}
+										hash={root.value}
+									/>
+								))}
+							</div>
+						</div>
+					)}
+				</div>,
 			]}
 		/>
 	)
@@ -235,16 +206,27 @@ export namespace BlockCard {
 		block: BlockWithTransactions
 	}
 
-	export function TimeRow(props: TimeRow.Props) {
+	/** Copy glyph that confirms with a check while the copy is announced. */
+	export function CopyIcon(props: CopyIcon.Props): React.JSX.Element {
+		return props.copied ? (
+			<Check {...styles.icon()} />
+		) : (
+			<Copy {...styles.icon()} />
+		)
+	}
+
+	export namespace CopyIcon {
+		export interface Props {
+			copied: boolean
+		}
+	}
+
+	export function TimeRow(props: TimeRow.Props): React.JSX.Element {
 		const { label, value } = props
 		return (
-			<div className="w-full flex items-center justify-between">
-				<span className="label-12 text-tertiary bg-base-alt/65 px-[4px] py-[2px]">
-					{label}
-				</span>
-				<span className="text-right text-base-content-secondary font-sans tabular-nums">
-					{value}
-				</span>
+			<div {...styles.timeRow()}>
+				<span {...styles.timeLabel()}>{label}</span>
+				<span {...styles.timeValue()}>{value}</span>
 			</div>
 		)
 	}
@@ -256,23 +238,21 @@ export namespace BlockCard {
 		}
 	}
 
-	export function BlockNumber(props: BlockNumber.Props) {
+	export function BlockNumber(props: BlockNumber.Props): React.JSX.Element {
 		const { value } = props
 		const str = String(value).padStart(15, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			<div className="font-sans tabular-nums">
-				<span className="flex justify-between gap-px heading-24 text-tertiary select-none">
-					{str.split('').map((char, index) => (
-						<span
-							key={`${index}-${char}`}
-							className={index >= zerosEnd ? 'text-primary' : undefined}
-						>
-							{char}
-						</span>
-					))}
-				</span>
-			</div>
+			<span {...styles.blockNumberDigits()}>
+				{str.split('').map((char, index) => (
+					<span
+						key={`${index}-${char}`}
+						{...styles.digit({ significant: index >= zerosEnd })}
+					>
+						{char}
+					</span>
+				))}
+			</span>
 		)
 	}
 
@@ -282,13 +262,11 @@ export namespace BlockCard {
 		}
 	}
 
-	export function InfoRow(props: InfoRow.Props) {
+	export function InfoRow(props: InfoRow.Props): React.JSX.Element {
 		const { label, children } = props
 		return (
-			<div className="w-full flex items-center justify-between gap-[8px]">
-				<span className="font-normal capitalize text-tertiary shrink-0">
-					{label}
-				</span>
+			<div {...styles.infoRow()}>
+				<span {...styles.infoLabel()}>{label}</span>
 				{children}
 			</div>
 		)
@@ -301,16 +279,17 @@ export namespace BlockCard {
 		}
 	}
 
-	export function GasValue(props: GasValue.Props) {
-		const { value, digits = 9, highlight = true } = props
+	/** A zero-padded gas amount; the leading zeros are dimmed. */
+	export function GasValue(props: GasValue.Props): React.JSX.Element {
+		const { value, highlight = true } = props
 		if (value === undefined) return <span>—</span>
-		const str = String(value).padStart(digits, '0')
+		const str = String(value).padStart(9, '0')
 		const zeros = str.match(/^0*/)?.[0] ?? ''
 		const number = str.slice(zeros.length)
 		return (
 			<span>
-				{zeros}
-				{highlight ? <span className="text-primary">{number}</span> : number}
+				<span {...styles.tertiary()}>{zeros}</span>
+				<span {...styles.gasNumber({ highlight })}>{number}</span>
 			</span>
 		)
 	}
@@ -318,20 +297,19 @@ export namespace BlockCard {
 	export namespace GasValue {
 		export interface Props {
 			value?: bigint
-			digits?: number
 			highlight?: boolean
 		}
 	}
 
-	export function RootRow(props: RootRow.Props) {
+	export function RootRow(props: RootRow.Props): React.JSX.Element {
 		const { label, hash } = props
 		const { copy, notifying } = useCopy()
 
 		if (!hash) {
 			return (
-				<div className="flex items-center justify-between gap-[8px] text-primary lowercase">
-					<span className="text-tertiary shrink-0">{label}</span>
-					<span className="text-tertiary">—</span>
+				<div {...styles.rootRow()}>
+					<span {...styles.rootLabel()}>{label}</span>
+					<span {...styles.secondary()}>—</span>
 				</div>
 			)
 		}
@@ -340,16 +318,14 @@ export namespace BlockCard {
 			<button
 				type="button"
 				onClick={() => copy(hash)}
-				className="w-full flex items-center justify-between gap-[8px] text-primary lowercase cursor-pointer press-down"
+				{...cx(styles.rootRow(), styles.rootButton(), pressDown())}
 				title={hash}
 			>
-				<span className="text-tertiary shrink-0 font-sans">
-					{notifying ? 'copied' : label}
-				</span>
-				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end font-mono">
+				<span {...styles.rootLabel()}>{label}</span>
+				<span {...styles.rootHash()}>
 					<Midcut value={hash} prefix="0x" align="end" min={4} />
-					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed shrink-0" />
-				</div>
+					<BlockCard.CopyIcon copied={notifying} />
+				</span>
 			</button>
 		)
 	}
@@ -368,4 +344,225 @@ export namespace BlockCard {
 		if (!limit) return undefined
 		return (used / limit) * 100
 	}
+}
+
+namespace styles {
+	export const primary = style({ color: 'content.primary' })
+
+	export const secondary = style({ color: 'content.secondary' })
+
+	export const tertiary = style({ color: 'content.tertiary' })
+
+	export const numeric = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums',
+	})
+
+	export const icon = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		height: '12',
+		width: '12',
+	})
+
+	export const copyButton = style({
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'block',
+		textAlign: 'left',
+		width: '100% !custom',
+	})
+
+	export const copyHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		marginBottom: '8',
+	})
+
+	export const hash = style({
+		color: 'content.primary',
+		display: 'block',
+		maxWidth: '22ch !custom',
+		typography: 'mono.inline',
+		wordBreak: 'break-all',
+	})
+
+	export const stack = variants({
+		base: {
+			display: 'flex',
+			flexDirection: 'column',
+			width: '100% !custom',
+		},
+		defaultVariants: { gap: 'compact' },
+		variants: { gap: { compact: { gap: '8' }, relaxed: { gap: '12' } } },
+	})
+
+	export const infoRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const infoLabel = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+	})
+
+	export const parentLabel = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		display: 'flex',
+		flexShrink: 0,
+		gap: '8',
+	})
+
+	export const parentLink = style({
+		display: 'flex',
+		flex: 1,
+		justifyContent: 'flex-end',
+		maxWidth: '18ch !custom',
+		minWidth: '0px !custom',
+		typography: 'mono.inline',
+	})
+
+	// Spans the whole InfoCard section (12px / 20px padding) so the toggle row
+	// reads as one target, then restores the padding inside.
+	export const advanced = style({
+		marginBlock: '-12px !custom',
+		marginInline: '-20px !custom',
+		paddingBlock: '12',
+		paddingInline: '20',
+		width: 'calc(100% + 40px) !custom',
+	})
+
+	export const advancedToggle = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'flex',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const advancedChevron = variants({
+		base: {
+			color: 'content.secondary',
+			height: '16',
+			width: '16',
+		},
+		defaultVariants: { open: false },
+		variants: { open: { true: { rotate: '180deg' }, false: {} } },
+	})
+
+	export const advancedContent = style({
+		color: 'content.secondary',
+		contain: 'inline-size',
+		marginTop: '16',
+		paddingBottom: '16',
+		width: '100% !custom',
+		selectors: { '& > :not(:last-child)': { marginBottom: '20' } },
+	})
+
+	export const gas = style({
+		selectors: { '& > :not(:last-child)': { marginBottom: '12' } },
+	})
+
+	export const spread = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+	})
+
+	export const gasValues = style({
+		alignItems: 'center',
+		display: 'flex',
+		fontVariantNumeric: 'tabular-nums',
+		justifyContent: 'space-between',
+	})
+
+	export const gasNumber = variants({
+		base: {},
+		defaultVariants: { highlight: true },
+		variants: {
+			highlight: {
+				true: { color: 'content.primary' },
+				false: { color: 'content.secondary' },
+			},
+		},
+	})
+
+	export const roots = style({
+		selectors: { '& > :not(:last-child)': { marginBottom: '8' } },
+	})
+
+	export const timeRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		width: '100% !custom',
+	})
+
+	export const timeLabel = style({
+		backgroundColor: 'container.subtle',
+		borderRadius: '3xs',
+		color: 'content.secondary',
+		paddingBlock: '2',
+		paddingInline: '4',
+		typography: 'body.b3',
+	})
+
+	export const timeValue = style({
+		color: 'content.secondary',
+		fontVariantNumeric: 'tabular-nums',
+		textAlign: 'right',
+	})
+
+	export const blockNumberDigits = style({
+		color: 'content.tertiary',
+		display: 'flex',
+		fontVariantNumeric: 'tabular-nums',
+		gap: '1px !custom',
+		justifyContent: 'space-between',
+		typography: 'heading.h2',
+		userSelect: 'none',
+	})
+
+	export const digit = variants({
+		base: {},
+		defaultVariants: { significant: false },
+		variants: {
+			significant: { true: { color: 'content.primary' }, false: {} },
+		},
+	})
+
+	export const rootRow = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+	})
+
+	export const rootButton = style({
+		cursor: 'pointer',
+		width: '100% !custom',
+	})
+
+	export const rootLabel = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+	})
+
+	export const rootHash = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+		justifyContent: 'flex-end',
+		minWidth: '0px !custom',
+		typography: 'mono.inline',
+	})
 }
