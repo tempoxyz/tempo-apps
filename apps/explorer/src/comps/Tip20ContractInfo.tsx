@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
+import { Addresses } from 'viem/tempo'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
 import { Address as AddressComp } from '#comps/Address.tsx'
@@ -130,6 +131,15 @@ export function Tip20TokenTabContent(
 						unavailable={query.isError || Boolean(query.data?.rolesUnavailable)}
 						onRetry={() => void query.refetch()}
 					/>
+					{address.toLowerCase() !== Addresses.pathUsd && (
+						<Link
+							to="/dex"
+							search={{ from: address, to: Addresses.pathUsd, amount: '10000' }}
+							className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
+						>
+							Explore native DEX route →
+						</Link>
+					)}
 				</div>
 			</CollapsibleSection>
 			<CollapsibleSection

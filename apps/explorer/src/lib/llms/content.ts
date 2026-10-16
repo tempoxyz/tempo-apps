@@ -142,6 +142,16 @@ export const docs = {
 			'Discovered TIP-20 tokens with symbol, name, currency, holders, address, and creation time.',
 		params: { page: 'Page number.' },
 	},
+	'/dex': {
+		title: 'Native DEX route',
+		description:
+			'Inspect a directional stablecoin route, its actual quote-token path, block-pinned quotes by size, orderbooks, and recent direct exact-input swaps.',
+		params: {
+			from: 'Input TIP-20 token address. Defaults to mainnet USDT0.',
+			to: 'Output TIP-20 token address. Defaults to pathUSD.',
+			amount: 'Exact input amount in human-readable token units.',
+		},
+	},
 	'/fee-amm': {
 		title: 'Fee AMM',
 		description:
