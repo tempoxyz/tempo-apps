@@ -91,5 +91,6 @@ namespace styles {
 		cursor: 'pointer',
 		fontVariantNumeric: 'tabular-nums',
 		typography: 'body.b3',
+		whiteSpace: 'nowrap',
 	})
 }

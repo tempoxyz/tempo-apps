@@ -634,9 +634,6 @@ export namespace ExploreInput {
 							<span {...cx(styles.tokenName(), truncate())}>
 								{suggestion.name}
 							</span>
-							<Badge scale="small" variant="gray" {...styles.badge()}>
-								{suggestion.symbol}
-							</Badge>
 							<Badge scale="small" variant="outline" {...styles.badge()}>
 								TIP-20
 							</Badge>

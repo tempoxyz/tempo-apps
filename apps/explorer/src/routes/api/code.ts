@@ -113,6 +113,12 @@ function withHighlightedSources(
 	}
 }
 
+export const CodeQuerySchema = z.object({
+	chainid: z.coerce.number(),
+	address: zAddress({ lowercase: true }),
+	highlight: z.prefault(z.coerce.boolean(), z.literal(false)),
+})
+
 export const Route = createFileRoute('/api/code')({
 	server: {
 		handlers: {
@@ -129,14 +135,7 @@ export const Route = createFileRoute('/api/code')({
 					data: parsedSearchParams,
 					error: parsedSearchParamsError,
 					success: parsedSearchParamsSuccess,
-				} = z.safeParse(
-					z.object({
-						chainid: z.coerce.number(),
-						address: zAddress({ lowercase: true }),
-						highlight: z.prefault(z.coerce.boolean(), z.literal(false)),
-					}),
-					normalizedParams,
-				)
+				} = z.safeParse(CodeQuerySchema, normalizedParams)
 
 				if (!parsedSearchParamsSuccess)
 					return Response.json(

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+mkdir -p "$HOME/.local/bin"
+corepack enable pnpm --install-directory "$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH" CI=1 WRANGLER_SEND_METRICS=false
+
+pnpm install --frozen-lockfile --ignore-scripts --prod=false
+pnpm gen:types
+pnpm rebuild @ast-grep/cli

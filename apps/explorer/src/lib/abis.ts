@@ -264,8 +264,11 @@ const zoneT13Transitions = [
 	'struct TokenEnablementTransition { uint64 prevProcessedTokenCount; uint64 nextProcessedTokenCount; }',
 ] as const
 
-const zoneVerifierT13Abi = parseAbi([
+// viem only ships the latest verify signature, so the pre-T13 one is kept here
+// too (viem 2.57 dropped it).
+const zoneVerifierLegacyAbi = parseAbi([
 	...zoneT13Transitions,
+	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
 	'function verify(uint32 zoneId, uint64 tempoBlockNumber, uint64 anchorBlockNumber, bytes32 anchorBlockHash, uint64 expectedWithdrawalBatchIndex, BlockTransition blockTransition, DepositQueueTransition depositQueueTransition, TokenEnablementTransition tokenEnablementTransition, bytes32 withdrawalQueueHash, bytes verifierConfig, bytes proof) view returns (bool)',
 ])
 
@@ -276,7 +279,7 @@ const zonePortalT13FunctionsAbi = parseAbi([
 
 export const zoneVerifierAbi = [
 	...ViemTempoAbis.zoneVerifier,
-	...zoneVerifierT13Abi,
+	...zoneVerifierLegacyAbi,
 ] as const
 
 export const stablecoinDexAbi = ViemTempoAbis.stablecoinDex

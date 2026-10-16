@@ -9,7 +9,6 @@ import {
 	getDb,
 	formatError,
 	sourcifyError,
-	normalizeSourcePath,
 	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
@@ -343,6 +342,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			onchainBytecode: onchainBytecode,
 			recompiledBytecode: compiledBytecode,
 			isCreation: false,
+			deploymentAddress: address,
 			linkReferences: undefined,
 			immutableReferences,
 			auxdataStyle,
@@ -357,6 +357,19 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 						"The deployed and recompiled bytecode don't match.",
 				},
 				500,
+			)
+		}
+
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
+			files,
+			compiledContract.metadata,
+		)
+		if (filteredSourceEntries === null) {
+			return sourcifyError(
+				context,
+				400,
+				'source_path_collision',
+				'Compiler source paths collide after normalization',
 			)
 		}
 
@@ -568,10 +581,6 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
-		const filteredSourceEntries = filterSourcesByCompilerMetadata(
-			files,
-			compiledContract.metadata,
-		)
 		const shouldInsertSources =
 			existingCompilation.length === 0 || shouldReplaceExistingSources
 
@@ -584,7 +593,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		// ast-grep-ignore-start: Sequential DB operations are intentional
 		// Insert sources referenced by the compiler metadata
 		if (shouldInsertSources) {
-			for (const [sourcePath, sourceContent] of filteredSourceEntries) {
+			for (const [path, sourceContent] of filteredSourceEntries) {
 				const contentBytes = new TextEncoder().encode(sourceContent)
 				const sourceHashSha256 = new Uint8Array(
 					await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
@@ -603,15 +612,13 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 
 				await db.insert(sourcesTable).values(sourceInsert).onConflictDoNothing()
 
-				// Normalize path (convert absolute to relative)
-				const normalizedPath = normalizeSourcePath(sourcePath)
 				await db
 					.insert(compiledContractsSourcesTable)
 					.values({
 						id: globalThis.crypto.randomUUID(),
 						compilationId: compilationId,
 						sourceHash: sourceHashSha256,
-						path: normalizedPath,
+						path,
 					})
 					.onConflictDoNothing()
 			}

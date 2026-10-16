@@ -75,7 +75,7 @@ import {
 	type SimulationCallResult,
 	useAutoloadAbi,
 } from '#lib/queries'
-import { zAddress, zHash } from '#lib/zod'
+import { hex, zAddress, zHash } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 import EraserIcon from '~icons/lucide/eraser'
 import { styles } from './-simulate.styles'
@@ -116,7 +116,7 @@ const DecimalSchema = z.pipe(
 )
 
 const HexSchema = z.pipe(
-	z.string().check((ctx) => {
+	z.string().check(hex(), (ctx) => {
 		if (!OxHex.validate(ctx.value))
 			ctx.issues.push({
 				code: 'custom',

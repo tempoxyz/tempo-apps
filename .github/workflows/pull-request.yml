@@ -25,7 +25,7 @@ jobs:
       is-member: ${{ steps.check.outputs.is-member }}
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+        uses: tempoxyz/gh-actions/actions/secure-runner@947d9a3ccb2425a9c94d563fd721cc0e33c89e26 # 2026-10-15T00-15-06Z-947d9a3c
 
       - name: Check if PR author is org member
         id: check
@@ -47,7 +47,7 @@ jobs:
     permissions:
       id-token: write
     name: Verify
-    uses: ./.github/workflows/verify.yml
+    uses: ./.github/workflows/verify.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
   deploy-preview:
     name: Deploy Preview (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
@@ -88,7 +88,7 @@ jobs:
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+        uses: tempoxyz/gh-actions/actions/secure-runner@947d9a3ccb2425a9c94d563fd721cc0e33c89e26 # 2026-10-15T00-15-06Z-947d9a3c
 
       - name: Clone repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -113,7 +113,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
-        uses: ./.github/actions/install-dependencies
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
       - name: Generate Worker types
         if: steps.changes.outputs.relevant == 'true'
@@ -132,10 +132,25 @@ jobs:
             pnpm build
           fi
 
+      # fee-payer has no preview URL, so check the built Worker locally.
+      - name: Verify fee-payer llms.txt
+        if: steps.changes.outputs.relevant == 'true' && matrix.app == 'fee-payer'
+        working-directory: apps/fee-payer
+        run: |
+          ./node_modules/.bin/wrangler dev --env-file .env.example --port 8787 \
+            --show-interactive-dev-session=false &
+          pid=$!
+          trap 'kill "$pid"' EXIT
+          for file in llms.txt llms-full.txt; do
+            curl --fail --silent --show-error \
+              --retry 10 --retry-all-errors --retry-delay 3 --max-time 20 \
+              --output /dev/null "http://localhost:8787/$file"
+          done
+
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
         id: deploy
-        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@947d9a3ccb2425a9c94d563fd721cc0e33c89e26 # 2026-10-15T00-15-06Z-947d9a3c
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -153,6 +168,18 @@ jobs:
           curl --fail --silent --show-error --location \
             --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
             --output /dev/null "$PREVIEW_URL"
+
+      - name: Verify explorer llms.txt
+        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: |
+          test -n "$PREVIEW_URL"
+          for file in llms.txt llms-full.txt; do
+            curl --fail --silent --show-error --location \
+              --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+              --output /dev/null "$PREVIEW_URL/$file"
+          done
 
       - name: Save Deployment Info
         if: always()
@@ -208,7 +235,7 @@ jobs:
       contents: read
     steps:
       - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@55fe3b63d9612623cc51e6c62d9d62fbcb175fb0 # 2026-09-29T01-25-15Z-55fe3b63
+        uses: tempoxyz/gh-actions/actions/secure-runner@947d9a3ccb2425a9c94d563fd721cc0e33c89e26 # 2026-10-15T00-15-06Z-947d9a3c
 
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -223,7 +250,7 @@ jobs:
           merge-multiple: true
 
       - name: Post Deployment Table
-        uses: ./.github/actions/post-deployment-table
+        uses: ./.github/actions/post-deployment-table # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deployments-path: deployments

@@ -23,7 +23,7 @@ import {
 import type { Source } from './sources.js'
 import { resolveSourcePageUrl, sourceIndexUrl } from './sources.js'
 
-type JsonRpcRequest = {
+export type JsonRpcRequest = {
 	jsonrpc?: string
 	id?: string | number | null
 	method?: string
@@ -90,6 +90,7 @@ type McpContext = {
 
 const CODE_TOOL_NAME = 'code'
 const CODEMODE_TOOL_NAMES = new Set(['search', 'find_pages', 'read_page'])
+const MAX_CODE_TOOL_CALLS = 10
 const MAX_QUERY_LENGTH = 4096
 const MAX_QUERY_TOKENS = 128
 const DEFAULT_MAX_RESULTS = 5
@@ -174,15 +175,9 @@ const SOURCE_QUERY_HINTS: Record<
 export async function handleMcp(
 	req: Request,
 	context: McpContext,
+	body: JsonRpcRequest | undefined,
 ): Promise<Response | undefined> {
-	if (req.method !== 'POST') return undefined
-
-	let body: JsonRpcRequest
-	try {
-		body = (await req.clone().json()) as JsonRpcRequest
-	} catch {
-		return undefined
-	}
+	if (req.method !== 'POST' || !body) return undefined
 
 	if (body.method === 'tools/list') {
 		const tools = toolSchemas(context.sources ?? [])
@@ -321,6 +316,7 @@ async function createCodeServer(
 Available read-only docs tools:
 {{types}}
 
+Each execution may call at most ${MAX_CODE_TOOL_CALLS} docs tools total, including parallel calls and retries.
 Write an async arrow function in JavaScript that returns the result.
 Do not use TypeScript syntax, type annotations, interfaces, or generics.
 Do not define a named function and then call it.
@@ -346,9 +342,20 @@ function createReadOnlyDocsServer(
 	server.server.setRequestHandler(ListToolsRequestSchema, () => ({
 		tools: docsTools,
 	}))
-	server.server.setRequestHandler(CallToolRequestSchema, (request) =>
-		callLocalDocsTool(context, request.params.name, request.params.arguments),
-	)
+	let remainingCalls = MAX_CODE_TOOL_CALLS
+	server.server.setRequestHandler(CallToolRequestSchema, (request) => {
+		if (remainingCalls === 0)
+			return toolCallError(
+				`Code execution exceeded its ${MAX_CODE_TOOL_CALLS}-call docs tool budget`,
+			)
+		// Reserve before dispatch so concurrent calls and failed attempts share the limit.
+		remainingCalls -= 1
+		return callLocalDocsTool(
+			context,
+			request.params.name,
+			request.params.arguments,
+		)
+	})
 	return server
 }
 
@@ -397,14 +404,14 @@ async function callLocalDocsTool(
 	const response = await handleMcp(
 		new Request('https://mcp.tempo.xyz/', {
 			method: 'POST',
-			body: JSON.stringify({
-				jsonrpc: '2.0',
-				id: 1,
-				method: 'tools/call',
-				params: { name, arguments: args },
-			}),
 		}),
 		context,
+		{
+			jsonrpc: '2.0',
+			id: 1,
+			method: 'tools/call',
+			params: { name, arguments: args },
+		},
 	)
 	if (!response) return toolCallError(`unknown tool: ${name}`)
 	const payload = (await response.json()) as {

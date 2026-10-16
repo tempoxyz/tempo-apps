@@ -45,7 +45,7 @@ export const Route = createFileRoute('/_layout/')({
 	component: Component,
 	validateSearch: z.object({
 		q: z.optional(z.coerce.string()),
-	}).parse,
+	}),
 })
 
 function Component() {

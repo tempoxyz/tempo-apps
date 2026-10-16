@@ -9,6 +9,7 @@
 	},
 	"include": [
 		"./scheduled.test.ts",
+		"./request.test.ts",
 		"../worker-configuration.d.ts",
 		"../env.d.ts"
 	],

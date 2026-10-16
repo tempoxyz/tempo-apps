@@ -441,6 +441,61 @@ describe('runVerificationJob – source path normalization persistence', () => {
 		// No recognized pattern → falls back to filename
 		expect(sources[0]?.path).toBe('Counter.sol')
 	})
+
+	it('does not publish a compilation when compiler source paths collide', async () => {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+
+		const decoyPath = '/decoy/src/Counter.sol'
+		const compiledPath = '/attacker/src/Counter.sol'
+		const output = solcOutputWithMetadataSource(compiledPath)
+		const contract = output.contracts['Counter.sol']?.Counter
+		if (!contract) throw new Error('fixture contract entry missing')
+		const metadata = JSON.parse(contract.metadata) as {
+			sources: Record<string, unknown>
+		}
+		metadata.sources = {
+			[decoyPath]: metadata.sources[compiledPath],
+			[compiledPath]: metadata.sources[compiledPath],
+		}
+
+		await runVerificationJob(
+			env,
+			{
+				...JOB_DEFAULTS,
+				jobId,
+				stdJsonInput: {
+					...counterFixture.stdJsonInput,
+					sources: {
+						[decoyPath]: {
+							content:
+								'contract Counter { function count() public pure returns (uint256) { return 0; } }',
+						},
+						[compiledPath]: { content: counterSource },
+					},
+				},
+			},
+			{
+				...makeClientStub(),
+				...makeContainerStub({
+					...output,
+					contracts: {
+						'Counter.sol': {
+							Counter: { ...contract, metadata: JSON.stringify(metadata) },
+						},
+					},
+				}),
+			},
+		)
+
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBe('source_path_collision')
+		expect(job?.verifiedContractId).toBeNull()
+
+		const db = drizzle(env.CONTRACTS_DB)
+		expect(await db.select().from(DB.verifiedContractsTable)).toHaveLength(0)
+		expect(await db.select().from(DB.compiledContractsTable)).toHaveLength(0)
+	})
 })
 
 // ---------------------------------------------------------------------------
@@ -544,5 +599,57 @@ describe('runVerificationJob – ABI with unsupported/malformed items', () => {
 		expect(sigLinks).toHaveLength(2)
 		const signatures = sigLinks.map((s) => s.signature).sort()
 		expect(signatures).toEqual(['CountChanged(uint256)', 'count()'])
+	})
+})
+
+describe('runVerificationJob – library call protection', () => {
+	it.each([
+		{ embeddedAddress: counterFixture.address.slice(2), expectedError: null },
+		{ embeddedAddress: 'ff'.repeat(20), expectedError: 'no_match' },
+	])('only verifies a library whose embedded address belongs to its deployment ($expectedError)', async ({
+		embeddedAddress,
+		expectedError,
+	}) => {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+
+		const contract = counterFixture.solcOutput.contracts['Counter.sol']?.Counter
+		if (!contract) throw new Error('fixture contract entry missing')
+		const runtime = contract.evm.deployedBytecode.object
+		const onchainBytecode = `0x73${embeddedAddress}${runtime}` as const
+		const output = {
+			...counterFixture.solcOutput,
+			contracts: {
+				'Counter.sol': {
+					Counter: {
+						...contract,
+						evm: {
+							...contract.evm,
+							deployedBytecode: {
+								...contract.evm.deployedBytecode,
+								object: `73${'00'.repeat(20)}${runtime}`,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		await runVerificationJob(
+			env,
+			{ ...JOB_DEFAULTS, jobId },
+			{
+				createPublicClient: () => ({ getCode: async () => onchainBytecode }),
+				...makeContainerStub(output),
+			},
+		)
+
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBe(expectedError)
+		expect(job?.verifiedContractId === null).toBe(expectedError !== null)
+		const db = drizzle(env.CONTRACTS_DB)
+		expect(await db.select().from(DB.verifiedContractsTable)).toHaveLength(
+			expectedError === null ? 1 : 0,
+		)
 	})
 })

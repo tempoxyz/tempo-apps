@@ -11,7 +11,6 @@ import {
 	getDb,
 	formatError,
 	sourcifyError,
-	normalizeSourcePath,
 	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
 } from '#lib/utilities.ts'
@@ -863,6 +862,7 @@ async function runVerificationJob(
 			onchainBytecode: onchainBytecode,
 			recompiledBytecode: compiledBytecode,
 			isCreation: false,
+			deploymentAddress: address,
 			linkReferences,
 			immutableReferences,
 			auxdataStyle,
@@ -879,6 +879,25 @@ async function runVerificationJob(
 						message:
 							runtimeMatchResult.message ??
 							'Compiled bytecode does not match on-chain bytecode',
+					}),
+					compilationTime: Date.now() - startTime,
+				})
+				.where(eq(verificationJobsTable.id, jobId))
+			return
+		}
+
+		const filteredSourceEntries = filterSourcesByCompilerMetadata(
+			stdJsonInput.sources,
+			compiledContract.metadata,
+		)
+		if (filteredSourceEntries === null) {
+			await db
+				.update(verificationJobsTable)
+				.set({
+					completedAt: new Date().toISOString(),
+					errorCode: 'source_path_collision',
+					errorData: JSON.stringify({
+						message: 'Compiler source paths collide after normalization',
 					}),
 					compilationTime: Date.now() - startTime,
 				})
@@ -1124,10 +1143,6 @@ async function runVerificationJob(
 			})
 		}
 
-		const filteredSourceEntries = filterSourcesByCompilerMetadata(
-			stdJsonInput.sources,
-			compiledContract.metadata,
-		)
 		const shouldInsertSources =
 			existingCompilation.length === 0 || shouldReplaceExistingSources
 
@@ -1139,7 +1154,7 @@ async function runVerificationJob(
 
 		// Insert sources referenced by the compiler metadata and link them to the compilation.
 		if (shouldInsertSources) {
-			for (const [sourcePath, sourceData] of filteredSourceEntries) {
+			for (const [path, sourceData] of filteredSourceEntries) {
 				const content = sourceData.content
 				const contentBytes = new TextEncoder().encode(content)
 				const sourceHashSha256 = new Uint8Array(
@@ -1160,14 +1175,13 @@ async function runVerificationJob(
 					})
 					.onConflictDoNothing()
 
-				const normalizedPath = normalizeSourcePath(sourcePath)
 				await db
 					.insert(compiledContractsSourcesTable)
 					.values({
 						id: globalThis.crypto.randomUUID(),
 						compilationId: compilationId,
 						sourceHash: sourceHashSha256,
-						path: normalizedPath,
+						path,
 					})
 					.onConflictDoNothing()
 			}

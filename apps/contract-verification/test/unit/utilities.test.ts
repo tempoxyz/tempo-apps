@@ -123,6 +123,21 @@ describe('compiler metadata source filtering', () => {
 			['contracts/Token.sol', { content: 'contract Token {}' }],
 		])
 	})
+
+	it('rejects compiler sources that collide after path normalization', () => {
+		const sources = {
+			'/decoy/src/Vault.sol': { content: 'benign' },
+			'/attacker/src/Vault.sol': { content: 'malicious' },
+		}
+		const metadata = JSON.stringify({
+			sources: {
+				'/decoy/src/Vault.sol': {},
+				'/attacker/src/Vault.sol': {},
+			},
+		})
+
+		expect(filterSourcesByCompilerMetadata(sources, metadata)).toBeNull()
+	})
 })
 
 describe('log', () => {

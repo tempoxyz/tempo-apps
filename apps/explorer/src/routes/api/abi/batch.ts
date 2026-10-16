@@ -3,7 +3,7 @@ import type { Address, Hex } from 'viem'
 import * as z from 'zod/mini'
 import { autoloadAbi, lookupSignature } from '#lib/domain/contracts'
 
-const BatchAbiRequestSchema = z.object({
+export const BatchAbiRequestSchema = z.object({
 	addresses: z.array(z.string()),
 	selectors: z.array(z.string()),
 })

@@ -1,9 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
-import { handleMcp } from './mcp.js'
-import { captureMcpAnalytics, parseJsonRpcRequest } from './posthog-mcp.js'
+import { handleMcp as handleParsedMcp } from './mcp.js'
+import { captureMcpAnalytics } from './posthog-mcp.js'
+import { readMcpRequest } from './request.js'
 import type { Source } from './sources.js'
+
+async function handleMcp(
+	req: Request,
+	context: Parameters<typeof handleParsedMcp>[1],
+) {
+	const parsed = await readMcpRequest(req)
+	if (parsed instanceof Response) return parsed
+	return handleParsedMcp(parsed.request, context, parsed.body)
+}
 
 function instance(
 	search: (params: AiSearchSearchRequest) => Promise<AiSearchSearchResponse>,
@@ -561,6 +571,86 @@ describe('handleMcp', () => {
 		const result = JSON.parse(body.result.content[0].text)
 		expect(result.search.success).toBe(true)
 		expect(result.page.result.text).toBe('# Account keys\n\nKey docs')
+	})
+
+	it.each([
+		'sequential',
+		'parallel',
+	])('bounds %s codemode calls per execution', async (mode) => {
+		const fetchPage = vi.fn(async () => new Response('# Account keys'))
+		vi.stubGlobal('fetch', fetchPage)
+		const search = vi.fn(async () => ({
+			search_query: 'keys',
+			chunks: [
+				{
+					id: '1',
+					type: 'text' as const,
+					score: 1,
+					text: 'key docs',
+					item: { key: 'viem/keys' },
+				},
+			],
+		}))
+		const execute = vi.fn<Executor['execute']>(async (_code, providers) => {
+			const docs = providers[0]?.fns ?? {}
+			const call = (index: number) => {
+				const id = `${mode}-${execute.mock.calls.length}-${index}`
+				const result =
+					index % 2 === 0
+						? docs.search({
+								query: `budget ${id}`,
+								response_format: 'structured',
+							})
+						: docs.read_page({
+								source: 'viem',
+								path: `/budget-${id}`,
+								response_format: 'structured',
+							})
+				return result.catch((error: unknown) => ({
+					success: false,
+					error: String(error),
+				}))
+			}
+			const results = []
+			if (mode === 'parallel')
+				results.push(
+					...(await Promise.all(Array.from({ length: 12 }, (_, i) => call(i)))),
+				)
+			else for (let i = 0; i < 12; i++) results.push(await call(i))
+			return { result: results }
+		})
+		// Each external invocation receives its own budget.
+		for (let invocation = 0; invocation < 2; invocation++) {
+			const res = await handleMcp(
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: invocation,
+						method: 'tools/call',
+						params: { name: 'code', arguments: { code: 'async () => {}' } },
+					}),
+				}),
+				{
+					instance: instance(search),
+					sources,
+					executor: { execute } as unknown as Executor,
+				},
+			)
+			const body = await res?.json()
+			const results = JSON.parse(body.result.content[0].text)
+			expect(
+				results
+					.slice(0, 10)
+					.every((result: { success: boolean }) => result.success),
+			).toBe(true)
+			for (const result of results.slice(10)) {
+				expect(result.success).toBe(false)
+				expect(JSON.stringify(result)).toContain('10-call docs tool budget')
+			}
+		}
+		expect(fetchPage).toHaveBeenCalledTimes(10)
+		expect(search).toHaveBeenCalledTimes(10)
 	})
 
 	it('returns codemode executor errors as MCP tool errors', async () => {
@@ -2152,7 +2242,9 @@ describe('captureMcpAnalytics', () => {
 				method: 'tools/list',
 			}),
 		})
-		const body = await parseJsonRpcRequest(req)
+		const parsed = await readMcpRequest(req)
+		if (parsed instanceof Response) throw new Error('unexpected response')
+		const { body } = parsed
 
 		captureMcpAnalytics(
 			req,
@@ -2187,7 +2279,9 @@ describe('captureMcpAnalytics', () => {
 				},
 			}),
 		})
-		const body = await parseJsonRpcRequest(req)
+		const parsed = await readMcpRequest(req)
+		if (parsed instanceof Response) throw new Error('unexpected response')
+		const { body } = parsed
 
 		captureMcpAnalytics(
 			req,

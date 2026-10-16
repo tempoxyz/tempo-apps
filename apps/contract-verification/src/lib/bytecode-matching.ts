@@ -582,13 +582,15 @@ export function extractCallProtectionTransformation(
 	// PUSH20 opcode (0x73) followed by 20 zero bytes
 	const callProtectionPlaceholder = `0x73${'00'.repeat(20)}`
 
-	if (recompiledBytecode.toLowerCase().startsWith(callProtectionPlaceholder)) {
-		// Extract actual address from onchain bytecode
-		const actualProtection = onchainBytecode.slice(
-			0,
+	if (
+		recompiledBytecode.toLowerCase().startsWith(callProtectionPlaceholder) &&
+		onchainBytecode.slice(0, 4).toLowerCase() === '0x73' &&
+		onchainBytecode.length >= callProtectionPlaceholder.length
+	) {
+		const actualAddress = onchainBytecode.slice(
+			4,
 			callProtectionPlaceholder.length,
 		)
-		const actualAddress = actualProtection.slice(4) // Remove 0x73
 
 		transformations.push({
 			type: 'replace',
@@ -598,7 +600,8 @@ export function extractCallProtectionTransformation(
 		transformationValues.callProtection = `0x${actualAddress}`
 
 		const populatedBytecode =
-			actualProtection +
+			recompiledBytecode.slice(0, 4) +
+			actualAddress +
 			recompiledBytecode.slice(callProtectionPlaceholder.length)
 
 		return { populatedBytecode, transformations, transformationValues }
@@ -780,6 +783,8 @@ export interface MatchBytecodeOptions {
 	onchainBytecode: string
 	recompiledBytecode: string
 	isCreation: boolean
+	/** Required when matching a deployed library's call-protection address. */
+	deploymentAddress?: string
 	linkReferences?: LinkReferences
 	immutableReferences?: ImmutableReferences
 	cborAuxdataPositions?: CborAuxdataPositions
@@ -801,6 +806,7 @@ export function matchBytecode(
 		onchainBytecode,
 		recompiledBytecode,
 		isCreation,
+		deploymentAddress,
 		linkReferences,
 		immutableReferences,
 		cborAuxdataPositions,
@@ -819,6 +825,19 @@ export function matchBytecode(
 			populatedBytecode,
 			onchainBytecode,
 		)
+		if (
+			callProtectionResult.transformations.length > 0 &&
+			callProtectionResult.transformationValues.callProtection?.toLowerCase() !==
+				deploymentAddress?.toLowerCase()
+		) {
+			return {
+				match: null,
+				transformations: [],
+				transformationValues: {},
+				message:
+					'Library call protection address does not match deployment address',
+			}
+		}
 		populatedBytecode = callProtectionResult.populatedBytecode
 		allTransformations.push(...callProtectionResult.transformations)
 		Object.assign(

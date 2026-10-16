@@ -24,7 +24,7 @@ export const READ_METHODS = new Set([
 	'net_version',
 	'web3_clientVersion',
 ])
-const PUBLIC_METHODS = new Set([
+export const PUBLIC_METHODS = new Set([
 	...READ_METHODS,
 	'eth_sendRawTransaction',
 	'eth_sendRawTransactionSync',

@@ -9,8 +9,9 @@ import {
 	recordHttpRequestMetrics,
 	recordIngestMetrics,
 } from './lib/metrics.js'
-import { captureMcpAnalytics, parseJsonRpcRequest } from './lib/posthog-mcp.js'
+import { captureMcpAnalytics } from './lib/posthog-mcp.js'
 import { proxyMcp } from './lib/proxy.js'
+import { readMcpRequest } from './lib/request.js'
 import { isForcedHour } from './lib/schedule.js'
 import { parseSources } from './lib/sources.js'
 import type { Source } from './lib/sources.js'
@@ -22,24 +23,30 @@ export default {
 	async fetch(req, env, ctx) {
 		const url = new URL(req.url)
 		return trackRequest(req, routeName(url.pathname, req.method), async () => {
-			const jsonRpcRequest = await parseJsonRpcRequest(req)
+			const parsed = await readMcpRequest(req)
+			if (parsed instanceof Response) return parsed
+			const { request, body } = parsed
 			let response: Response | undefined
 			try {
-				response = await handleMcp(req, {
-					instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
-					sources: sourcesFor(env.SOURCES),
-					executor: new DynamicWorkerExecutor({ loader: env.LOADER }),
-				})
+				response = await handleMcp(
+					request,
+					{
+						instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
+						sources: sourcesFor(env.SOURCES),
+						executor: new DynamicWorkerExecutor({ loader: env.LOADER }),
+					},
+					body,
+				)
 			} catch (error) {
 				log.error('mcp.local_failed', {
 					error: error instanceof Error ? error.message : String(error),
 				})
 			}
 			if (response) {
-				captureMcpAnalytics(req, jsonRpcRequest, response, env, ctx)
+				captureMcpAnalytics(request, body, response, env, ctx)
 				return response
 			}
-			return proxyMcp(req, env.AI_SEARCH_MCP_URL)
+			return proxyMcp(request, env.AI_SEARCH_MCP_URL)
 		})
 	},
 	async scheduled(event, env, ctx) {

@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
+import * as z from 'zod/mini'
 import {
 	getBlock,
 	getBlockNumber,
@@ -255,12 +256,17 @@ function dedupeSearchResults(results: SearchResult[]): SearchResult[] {
 	return deduped
 }
 
+export const SearchQuerySchema = z.object({ q: z.optional(z.string()) })
+
 export const Route = createFileRoute('/api/search')({
 	server: {
 		handlers: {
 			GET: async ({ request }) => {
 				const url = new URL(request.url)
-				const rawQuery = url.searchParams.get('q')?.trim() ?? ''
+				const { q } = SearchQuerySchema.parse(
+					Object.fromEntries(url.searchParams),
+				)
+				const rawQuery = q?.trim() ?? ''
 				const query = normalizeSearchInput(rawQuery)
 
 				if (!query)

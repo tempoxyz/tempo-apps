@@ -1,3 +1,5 @@
+import { isPostHogHost } from '#lib/posthog'
+
 declare global {
 	interface Window {
 		posthog?: {
@@ -63,7 +65,12 @@ export function captureEvent(
 	name: string,
 	properties: Record<string, unknown> = {},
 ) {
-	if (typeof window === 'undefined') return
+	if (
+		typeof window === 'undefined' ||
+		!isPostHogHost(window.location.hostname)
+	) {
+		return
+	}
 
 	const props = { ...properties, timestamp: Date.now() }
 

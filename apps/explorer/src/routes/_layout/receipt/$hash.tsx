@@ -226,7 +226,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				number: z.optional(z.coerce.number()),
 			}),
 		),
-	}).parse,
+	}),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
