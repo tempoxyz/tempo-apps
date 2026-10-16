@@ -31,7 +31,7 @@ catalog:
   '@shikijs/themes': ^4.0.2
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
-  '@tempoxyz/ds': 0.0.0-canary-20261012203304
+  '@tempoxyz/ds': 0.0.7
   '@tanstack/devtools-vite': ^0.6.0
   '@tanstack/query-async-storage-persister': ^5.96.2
   '@tanstack/react-devtools': ^0.10.2
@@ -86,7 +86,7 @@ catalog:
   wagmi: ^3.7.7
   wrangler: ^4.131.0
   zod: ^4.3.6
-  zyzz: 0.0.27
+  zyzz: 0.0.33
 
 catalogMode: strict
 
@@ -121,10 +121,10 @@ workspaceConcurrency: -1
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - 'accounts'
-  - '@tempoxyz/ds'
   - 'ox'
   - 'viem'
   - 'wagmi'
+  - 'zyzz'
   - 'tidx.ts'
   - '@wagmi/core'
   - '@wagmi/connectors'
@@ -150,7 +150,6 @@ overrides:
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
-  zyzz@0.0.27: patches/zyzz@0.0.27.patch
 
 strictDepBuilds: true
 
