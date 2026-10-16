@@ -4,8 +4,8 @@ import { style } from '@tempoxyz/ds/platform'
 import type * as React from 'react'
 
 /**
- * Segmented radio group in the Tempo Design System style. TDS's own
- * SegmentedControl takes exactly three items; the explorer needs two to four.
+ * Compact segmented radio group in the Tempo Design System style, for small
+ * toolbars. TDS's own SegmentedControl has no compact size.
  */
 export function Choices<const value extends string>(
 	props: Choices.Props<value>,

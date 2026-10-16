@@ -1,4 +1,3 @@
-import { vars as core } from '@tempoxyz/ds/core'
 import { vars } from '@tempoxyz/ds/platform'
 import { global } from 'zyzz/web'
 
@@ -120,7 +119,7 @@ global({
 		outlineWidth: '1px',
 	},
 	'[data-permalink-highlight="on"]': {
-		outlineColor: `light-dark(${core.color.accent.blueLight}, ${core.color.accent.blueDark})`,
+		outlineColor: vars.color.content.accent,
 	},
 	'[data-permalink-highlight="fading"]': {
 		outlineColor: 'transparent',

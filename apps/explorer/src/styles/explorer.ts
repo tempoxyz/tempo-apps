@@ -2,13 +2,11 @@ import { vars as core } from '@tempoxyz/ds/core'
 import { style, vars } from '@tempoxyz/ds/platform'
 import { keyframes } from 'zyzz/web'
 
-// Explorer additions on top of Tempo Design System Platform. TDS has no link
-// or code colors, so links use the core blue pair and code uses violet.
+// Explorer additions on top of Tempo Design System Platform. Links use the TDS
+// accent; TDS has no code color, so code uses the core violet pair.
 // Combine with `cx(styles.x(), link())`.
 
-export const link = style({
-	color: `light-dark(${core.color.accent.blueLight}, ${core.color.accent.blueDark}) !custom`,
-})
+export const link = style({ color: 'content.accent' })
 
 export const linkHover = style({
 	'@media (hover: hover)': {
@@ -58,8 +56,8 @@ export const mono = style({
 })
 
 /**
- * TDS TextInput's field, for inputs that cannot use the component (it caps
- * its wrapper at 320px). Combine with a height override for compact rows.
+ * TDS TextInput's field, for inputs that show an invalid state, which the
+ * component lacks. Combine with a height override for compact rows.
  */
 export const textField = style({
 	backgroundColor: 'container.regular',
@@ -77,7 +75,7 @@ export const textField = style({
 			outlineOffset: '2px !custom',
 		},
 		'&[aria-invalid="true"]': {
-			boxShadow: `inset 0 0 0 1px ${core.color.accent.redLight} !custom`,
+			boxShadow: `inset 0 0 0 1px ${vars.color.content.negative} !custom`,
 		},
 	},
 })
