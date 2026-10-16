@@ -3,13 +3,8 @@ import type { Address } from 'viem'
 import {
 	BaseError,
 	ContractFunctionRevertedError,
-	encodeAbiParameters,
 	encodeErrorResult,
-	encodeEventTopics,
-	encodeFunctionData,
-	parseAbiItem,
 } from 'viem'
-import { QB } from 'tidx.ts'
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
 import {
@@ -18,34 +13,18 @@ import {
 	quoteImpact,
 	resolveDexPath,
 } from '#lib/dex-route'
-import { getDexRoute, getDexRouteSwaps } from '#lib/server/dex-route'
+import { getDexRoute } from '#lib/server/dex-route'
 
-const {
-	readContract,
-	getMetadata,
-	getTransaction,
-	getTransactionReceipt,
-	queryIndex,
-} = vi.hoisted(() => ({
+const { readContract, getMetadata } = vi.hoisted(() => ({
 	readContract: vi.fn(),
 	getMetadata: vi.fn(),
-	getTransaction: vi.fn(),
-	getTransactionReceipt: vi.fn(),
-	queryIndex: vi.fn(),
 }))
 vi.mock('#wagmi.config', () => ({
 	getBatchedClient: () => ({
 		getBlockNumber: async () => 100n,
 		token: { getMetadata },
 		readContract,
-		getTransaction,
-		getTransactionReceipt,
 	}),
-	getTempoChain: () => ({ id: 4217 }),
-}))
-vi.mock('#lib/server/tempo-queries-provider', () => ({
-	tempoQueryBuilder: (chainId: number, options: { engine: string }) =>
-		QB.from({ chainId, ...options, fetch: queryIndex, live: vi.fn() }),
 }))
 
 const USDT = '0x20c00000000000000000000014f22ca97301eb73'
@@ -77,7 +56,7 @@ beforeEach(() => {
 	})
 })
 
-describe('native DEX route', () => {
+describe('Stablecoin DEX route', () => {
 	it('follows the active quote token instead of an old direct book', async () => {
 		expect(
 			await resolveDexPath(USDT, ROOT, async (token) => parents.get(token)),
@@ -186,9 +165,7 @@ describe('native DEX route', () => {
 			amountOut: null,
 			status: 'unavailable',
 		})
-		expect(
-			snapshot.depth.every((quote) => quote.status === 'unavailable'),
-		).toBe(true)
+		expect(snapshot.reference.status).toBe('unavailable')
 	})
 	it('distinguishes insufficient liquidity from unavailable RPC', async () => {
 		const previous = readContract.getMockImplementation()
@@ -235,46 +212,5 @@ describe('native DEX route', () => {
 				reference,
 			),
 		).toBeNull()
-	})
-	it('only labels verified direct swaps in the requested direction', async () => {
-		const hash = `0x${'1'.repeat(64)}`
-		const wallet = '0x1111111111111111111111111111111111111111'
-		queryIndex.mockResolvedValue({
-			rows: [{ tx_hash: hash, block_timestamp: 1000 }],
-		})
-		getTransaction.mockResolvedValue({
-			to: Addresses.stablecoinDex,
-			from: wallet,
-			input: encodeFunctionData({
-				abi: Abis.stablecoinDex,
-				functionName: 'swapExactAmountIn',
-				args: [USDT, ROOT, 10_000_000n, 0n],
-			}),
-		})
-		getTransactionReceipt.mockResolvedValue({
-			status: 'success',
-			logs: [
-				{
-					address: ROOT,
-					topics: encodeEventTopics({
-						abi: [
-							parseAbiItem(
-								'event Transfer(address indexed from, address indexed to, uint256 value)',
-							),
-						],
-						eventName: 'Transfer',
-						args: { from: Addresses.stablecoinDex, to: wallet },
-					}),
-					data: encodeAbiParameters([{ type: 'uint256' }], [9_990_000n]),
-				},
-			],
-		})
-		expect(
-			await getDexRouteSwaps({ from: USDT, to: ROOT, amount: '10' }),
-		).toEqual([{ hash, timestamp: 1000, amountIn: '10', amountOut: '9.99' }])
-		getTransaction.mockResolvedValue({ to: wallet })
-		expect(
-			await getDexRouteSwaps({ from: USDT, to: ROOT, amount: '10' }),
-		).toEqual([])
 	})
 })

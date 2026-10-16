@@ -143,9 +143,9 @@ export const docs = {
 		params: { page: 'Page number.' },
 	},
 	'/dex': {
-		title: 'Native DEX route',
+		title: 'Stablecoin DEX route',
 		description:
-			'Inspect a directional stablecoin route, its actual quote-token path, block-pinned quotes by size, orderbooks, and recent direct exact-input swaps.',
+			'Inspect a directional Stablecoin DEX route, its quote-token path, a block-pinned quote, and each orderbook leg.',
 		params: {
 			from: 'Input TIP-20 token address. Defaults to mainnet USDT0.',
 			to: 'Output TIP-20 token address. Defaults to pathUSD.',

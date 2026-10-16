@@ -137,7 +137,7 @@ export function Tip20TokenTabContent(
 							search={{ from: address, to: Addresses.pathUsd, amount: '10000' }}
 							className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
 						>
-							Explore native DEX route →
+							View Stablecoin DEX route →
 						</Link>
 					)}
 				</div>
