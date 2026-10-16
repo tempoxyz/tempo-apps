@@ -41,7 +41,9 @@ import {
 } from '#lib/demo'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { composed, styles } from './-address.styles'
+import { style } from '@tempoxyz/ds/platform'
+import { cx } from 'zyzz'
+import { pressDown } from '#styles/explorer'
 
 type MockTransactionData = {
 	hash: Hex.Hex
@@ -899,7 +901,7 @@ function Component() {
 						key="address"
 						type="button"
 						onClick={() => copy(accountAddress)}
-						{...composed.accountAddress}
+						{...cx(styles.addressButton(), pressDown())}
 					>
 						<div {...styles.addressHeader()}>
 							<span {...styles.addressLabel()}>Address</span>
@@ -994,7 +996,7 @@ function Component() {
 																new Set(prev).add(tx.hash),
 															)
 														}}
-														{...composed.moreEvents}
+														{...cx(styles.more(), pressDown())}
 													>
 														and {events.length - 1} more
 													</button>
@@ -1038,4 +1040,85 @@ function Component() {
 			/>
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		display: 'grid',
+		gap: '16',
+		gridTemplateColumns: 'auto 1fr',
+		minWidth: '0 !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
+		width: '100% !custom',
+		'@media (width < 800px)': {
+			display: 'flex',
+			flexDirection: 'column',
+			paddingBottom: '32',
+			paddingTop: '40',
+		},
+		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
+	})
+
+	export const accountCard = style({ alignSelf: 'flex-start' })
+
+	export const addressHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		marginBottom: '8',
+	})
+
+	export const addressLabel = style({
+		textTransform: 'capitalize',
+		typography: 'body.b3',
+	})
+
+	export const copyIcon = style({ height: '12', width: '12' })
+
+	export const addressValue = style({
+		color: 'content.primary',
+		maxWidth: '21ch !custom',
+		typography: 'body.b2',
+		wordBreak: 'break-all',
+	})
+
+	export const pending = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
+
+	export const value = style({
+		color: 'content.primary',
+		typography: 'body.b3',
+	})
+
+	// TxEventDescription sets flexWrap on the same element.
+	export const collapsedEvent = style({
+		flexWrap: 'nowrap !important',
+		justifyContent: 'center',
+	})
+
+	export const collapsed = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		height: '20',
+		whiteSpace: 'nowrap',
+	})
+
+	export const addressButton = style({
+		color: 'content.secondary',
+		cursor: 'pointer',
+		textAlign: 'left',
+		width: '100% !custom',
+	})
+
+	export const more = style({
+		color: 'content.secondary',
+		cursor: 'pointer',
+		flexShrink: 0,
+		marginLeft: '4',
+	})
 }

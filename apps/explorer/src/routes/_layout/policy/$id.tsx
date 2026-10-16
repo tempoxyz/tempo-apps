@@ -5,7 +5,7 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { Search, StatusIndicator } from '@tempoxyz/ds/platform'
+import { Search, StatusIndicator, style } from '@tempoxyz/ds/platform'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
@@ -26,8 +26,8 @@ import type {
 import { fetchTip403Policy } from '#lib/server/tip403'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
-import { srOnly } from '#styles/explorer'
-import { composed, styles } from './-$id.styles'
+import { link, linkHover, srOnly } from '#styles/explorer'
+import { cx } from 'zyzz'
 
 const defaultSearchValues = { page: 1, limit: 10, q: '' } as const
 
@@ -158,7 +158,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[0] }}
-										{...composed.textLink}
+										{...cx(link(), linkHover())}
 									>
 										#{policy.componentPolicies[0]}
 									</Link>
@@ -170,7 +170,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[1] }}
-										{...composed.textLink}
+										{...cx(link(), linkHover())}
 									>
 										#{policy.componentPolicies[1]}
 									</Link>
@@ -182,7 +182,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[2] }}
-										{...composed.textLink}
+										{...cx(link(), linkHover())}
 									>
 										#{policy.componentPolicies[2]}
 									</Link>
@@ -367,4 +367,81 @@ function activityRow(
 			</div>,
 		],
 	}
+}
+
+namespace styles {
+	export const notFound = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		justifyContent: 'center',
+		paddingInline: '16',
+		paddingTop: '64',
+	})
+
+	export const notFoundContent = style({ textAlign: 'center' })
+
+	export const notFoundTitle = style({
+		color: 'content.primary',
+		typography: 'heading.h1',
+	})
+
+	export const notFoundMessage = style({
+		color: 'content.secondary',
+		marginTop: '8',
+		typography: 'body.b2',
+	})
+
+	export const page = style({
+		display: 'grid',
+		gap: '16',
+		gridTemplateColumns: 'auto 1fr',
+		minWidth: '0px !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
+		width: '100% !custom',
+		'@media (width < 800px)': {
+			display: 'flex',
+			flexDirection: 'column',
+			paddingBottom: '32',
+			paddingTop: '40',
+		},
+		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
+	})
+
+	export const breadcrumbs = style({ gridColumn: '1 / -1' })
+
+	export const card = style({
+		alignSelf: 'start',
+		'@media (width < 800px)': { width: '100% !custom' },
+	})
+
+	export const type = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const typeLabel = style({ textTransform: 'capitalize' })
+
+	export const builtIn = style({ color: 'content.secondary' })
+
+	// Touch devices keep 16px text so iOS does not zoom on focus.
+	export const search = style({
+		selectors: {
+			'& input::placeholder': { color: 'content.secondary' },
+		},
+		'@media (pointer: coarse)': {
+			selectors: { '& input': { fontSize: '16px !custom' } },
+		},
+	})
+
+	export const event = style({ color: 'content.primary' })
+
+	export const transaction = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+	})
 }

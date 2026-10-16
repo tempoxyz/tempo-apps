@@ -77,7 +77,7 @@ The explorer is built on [Tempo Design System](https://github.com/tempoxyz/ds) P
 * Keep a component's definitions in a module-level `namespace styles` at the bottom of its file and spread them onto elements: `<div {...styles.card()} />`. Combine with `cx` from `zyzz`, one spread per element.
 * Use `variants` for finite choices and `data-*`/ARIA attribute selectors for state, not class-name logic.
 * Import style modules by name; `import * as` from a style module does not compile. Declare shared partial records at module scope, not inside `namespace styles`. Variant axis names are lowercase.
-* Route files keep their styles in a sibling `-<route>.styles.ts`: TanStack Router code-splits route components into modules that zyzz does not compile.
+* Route files keep their `namespace styles` at the bottom like any component. The receipt route is the exception: zyzz excludes it because it imports server-only modules, so its styles live in the sibling `-$hash.styles.ts`.
 
 ## Making Changes to an Application
 

@@ -32,7 +32,7 @@ import {
 	validatorTokenAddress,
 } from '#lib/demo'
 import { parseKnownEvents } from '#lib/domain/known-events'
-import { styles } from './-tx.styles'
+import { style } from '@tempoxyz/ds/platform'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -608,4 +608,18 @@ function Component() {
 			<Receipt {...data} />
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		flexGrow: 1,
+		gap: '32',
+		justifyContent: 'center',
+		paddingBottom: '32',
+		paddingTop: '64',
+		typography: 'body.b3',
+	})
 }

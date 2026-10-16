@@ -1,7 +1,7 @@
 import { style } from '@tempoxyz/ds/platform'
 
-// Route components are code-split into modules that zyzz does not compile, so
-// the receipt route's styles live here.
+// zyzz excludes the receipt route because it imports server-only modules, so
+// the route's styles live here.
 
 export namespace styles {
 	export const page = style({
