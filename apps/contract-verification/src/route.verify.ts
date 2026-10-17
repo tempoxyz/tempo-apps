@@ -51,6 +51,9 @@ import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 /** Jobs older than this are considered stale and can be retried (15 minutes). */
 const JOB_TTL_MS = 15 * 60 * 1_000
+/** Bound compiler work for a single request while allowing typical multi-file projects. */
+const MAX_SOURCE_FILES = 256
+const MAX_SOURCE_CONTENT_CHARACTERS = 3 * 1024 * 1024
 /** Number of container instances to load-balance across. */
 const CONTAINER_INSTANCE_COUNT =
 	wranglerJSON.containers.at(0)?.max_instances ?? 10
@@ -171,6 +174,29 @@ verifyRoute
 					'missing_params',
 					'stdJsonInput, compilerVersion, and contractIdentifier are required',
 				)
+			}
+
+			const sourceEntries = Object.values(parsedBody.data.stdJsonInput.sources)
+			if (sourceEntries.length > MAX_SOURCE_FILES) {
+				return sourcifyError(
+					context,
+					400,
+					'invalid_std_json_input',
+					`stdJsonInput.sources cannot contain more than ${MAX_SOURCE_FILES} files`,
+				)
+			}
+
+			let sourceContentCharacters = 0
+			for (const source of sourceEntries) {
+				sourceContentCharacters += source.content.length
+				if (sourceContentCharacters > MAX_SOURCE_CONTENT_CHARACTERS) {
+					return sourcifyError(
+						context,
+						400,
+						'invalid_std_json_input',
+						`Combined source content cannot exceed ${MAX_SOURCE_CONTENT_CHARACTERS} characters`,
+					)
+				}
 			}
 
 			const parsedChainId = z.safeParse(zChainId(), _chainId)
