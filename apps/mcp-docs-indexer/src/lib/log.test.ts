@@ -49,6 +49,38 @@ describe('log', () => {
 		expect(typeof payload.timestamp).toBe('string')
 	})
 
+	it('does not allow props to overwrite reserved fields', () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date('2024-01-02T03:04:05.000Z'))
+
+		const props = {
+			timestamp: 'overridden',
+			level: 'overridden',
+			logger: 'overridden',
+			event: 'overridden',
+			custom: 'kept',
+		}
+		log.info('cron.start', props)
+		log.warn('page.empty', props)
+		log.error('source.failed', props)
+
+		for (const [spy, level, event] of [
+			[infoSpy, 'info', 'cron.start'],
+			[warnSpy, 'warn', 'page.empty'],
+			[errorSpy, 'error', 'source.failed'],
+		] as const) {
+			const call = callOf(spy)
+			expect(call.event).toBe(event)
+			expect(call.payload).toMatchObject({
+				timestamp: '2024-01-02T03:04:05.000Z',
+				level,
+				logger: 'mcp-docs-indexer',
+				event,
+				custom: 'kept',
+			})
+		}
+	})
+
 	it('routes warn through console.warn', () => {
 		log.warn('page.empty', { url: 'https://x/y' })
 		expect(warnSpy).toHaveBeenCalledTimes(1)
