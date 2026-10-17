@@ -618,11 +618,15 @@ function DepthLadder(props: {
 		<table className="block w-full tabular-nums whitespace-nowrap copy-13 pb-2">
 			<thead className="block">
 				<tr className={cx(row, 'py-2 label-12 text-tertiary')}>
-					<th className="text-left font-normal">
+					<th className="text-left font-normal whitespace-normal break-words">
 						Price · {leg.to.symbol} per {leg.from.symbol}
 					</th>
-					<th className="text-right font-normal">Size · {leg.from.symbol}</th>
-					<th className="text-right font-normal">Total · {leg.from.symbol}</th>
+					<th className="text-right font-normal whitespace-normal break-words">
+						Size · {leg.from.symbol}
+					</th>
+					<th className="text-right font-normal whitespace-normal break-words">
+						Total · {leg.from.symbol}
+					</th>
 				</tr>
 			</thead>
 			<tbody className="block">
