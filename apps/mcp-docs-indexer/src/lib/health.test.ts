@@ -144,8 +144,46 @@ describe('healthMetrics', () => {
 
 		expect(console.error).not.toHaveBeenCalled()
 		expect(console.warn).toHaveBeenCalledWith(
-			expect.stringContaining('search_tempo_indexed'),
+			'mcp.health_degraded',
+			expect.objectContaining({
+				checks: [expect.objectContaining({ check: 'search_tempo_indexed' })],
+			}),
 		)
+	})
+	it('times out stalled response bodies and continues the remaining probes', async () => {
+		vi.useFakeTimers()
+		fetchMock.mockImplementation(
+			async (_url, init) =>
+				new Response(
+					new ReadableStream({
+						start(controller) {
+							init.signal.addEventListener('abort', () =>
+								controller.error(new Error('body aborted')),
+							)
+						},
+					}),
+				),
+		)
+		try {
+			const run = healthMetrics({})
+			await vi.advanceTimersByTimeAsync(30000)
+			await run
+			expect(fetchMock).toHaveBeenCalledTimes(5)
+			expect(console.error).toHaveBeenCalledWith(
+				'mcp.health_failed',
+				expect.objectContaining({
+					failures: expect.arrayContaining([
+						expect.objectContaining({
+							check: 'initialize',
+							error: 'body aborted',
+						}),
+					]),
+				}),
+			)
+			expect(vi.getTimerCount()).toBe(0)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 })
 

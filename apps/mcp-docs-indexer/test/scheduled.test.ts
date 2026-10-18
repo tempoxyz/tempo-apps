@@ -65,12 +65,16 @@ beforeEach(async () => {
 		'index:fixture',
 		'source_url:fixture',
 		'last_sync:fixture',
+		'last_ready:fixture',
+		'pending_since:fixture',
 		'retry_force:fixture',
 		'pending_deletion:fixture',
 		'etag:other',
 		'index:other',
 		'source_url:other',
 		'last_sync:other',
+		'last_ready:other',
+		'pending_since:other',
 		'retry_force:other',
 		'pending_deletion:other',
 	]) {
@@ -84,6 +88,30 @@ afterEach(() => {
 })
 
 describe('scheduled Worker', () => {
+	it('flushes failed ingestion health when setup throws', async () => {
+		const logs: string[] = []
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		const workerEnv = testEnv([])
+		workerEnv.AI_SEARCH = {
+			get: () => {
+				throw new Error('dependency unavailable')
+			},
+		} as unknown as Env['AI_SEARCH']
+		await expect(runScheduled('0 * * * *', workerEnv)).rejects.toThrow(
+			'dependency unavailable',
+		)
+		const metrics = logs
+			.filter((line) => line.startsWith('cwm-'))
+			.flatMap((line) => JSON.parse(line.slice(4)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({ n: 'tempo_docs_mcp_ingest_ok', v: 0 }),
+		)
+	})
+
 	it('runs the hourly ingestion through fetch, AI Search upload, and KV state', async () => {
 		const uploads: string[] = []
 		const metricLogs: string[] = []

@@ -1,23 +1,32 @@
 import { createMetrics } from 'cloudflare-worker-metrics'
+import { requestTraffic } from './log.js'
 import type { SourceIndexStatus, SyncReport } from './ingest.js'
 
 type EmptyTags = Record<string, never>
-type HttpTags = { method: string; route: string; status_class: string }
+type HttpTags = {
+	method: string
+	route: string
+	status_class: string
+	traffic: string
+}
 type EndpointTags = { endpoint: string }
 type HealthCheckTags = EndpointTags & { check: string }
 type JsonRpcErrorTags = {
+	traffic: string
 	error_code: string
 	mcp_method: string
 	tool_name: string
 }
-type ToolTags = { outcome: string; tool_name: string }
-type AiSearchTags = { path: string; source_filter: string }
+type ToolTags = { outcome: string; tool_name: string; traffic: string }
+type AiSearchTags = { path: string; source_filter: string; outcome: string }
 type ProxyTags = { status_class: string }
 type SourceTags = { force: string; source: string; status: string }
 type PendingTags = { source: string }
 type SourceItemTags = { source: string; status: string }
 
 type DocsMcpMetricRegistry = {
+	tempo_docs_mcp_source_ready_age_seconds: PendingTags
+	tempo_docs_mcp_source_pending_age_seconds: PendingTags
 	tempo_docs_mcp_http_request_count: HttpTags
 	tempo_docs_mcp_http_response_duration_ms: HttpTags
 	tempo_docs_mcp_http_error_count: HttpTags & { error_class: string }
@@ -29,6 +38,8 @@ type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_tool_call_count: ToolTags
 	tempo_docs_mcp_tool_duration_ms: ToolTags
 	tempo_docs_mcp_ai_search_request_count: AiSearchTags
+	tempo_docs_mcp_ai_search_error_count: AiSearchTags
+	tempo_docs_mcp_retrieval_count: { mode: string; traffic: string }
 	tempo_docs_mcp_ai_search_duration_ms: AiSearchTags
 	tempo_docs_mcp_ai_search_empty_result_count: AiSearchTags
 	tempo_docs_mcp_proxy_fallback_count: ProxyTags
@@ -67,6 +78,7 @@ const KNOWN_TOOLS = new Set(['search', 'find_pages', 'read_page', 'code'])
 export const workerMetrics = createMetrics<DocsMcpMetricRegistry>({
 	globalTags: {
 		component: 'docs_mcp',
+		env: 'prod',
 		repository: 'tempo-apps',
 		service: 'tempo-docs-mcp',
 	},
@@ -85,6 +97,7 @@ export function recordHttpRequestMetrics(args: {
 }): void {
 	const tags = {
 		method: args.method,
+		traffic: requestTraffic(),
 		route: args.route,
 		status_class: statusClass(args.status),
 	}
@@ -142,6 +155,7 @@ export function recordJsonRpcError(
 		error_code: String(errorCode),
 		mcp_method: metricMcpMethod(method),
 		tool_name: metricToolName(toolName),
+		traffic: requestTraffic(),
 	})
 }
 
@@ -153,13 +167,15 @@ export function recordToolCall(
 	const tags = {
 		outcome,
 		tool_name: metricToolName(toolName),
+		traffic: requestTraffic(),
 	}
 	workerMetrics.count('tempo_docs_mcp_tool_call_count', 1, tags)
 	workerMetrics.histogram('tempo_docs_mcp_tool_duration_ms', durationMs, tags)
 }
 
 export function recordAiSearchRequest(args: {
-	chunks: number
+	chunks?: number
+	outcome?: 'success' | 'error'
 	durationMs: number
 	path: string
 	sourceCount: number
@@ -167,6 +183,7 @@ export function recordAiSearchRequest(args: {
 	const tags = {
 		path: args.path,
 		source_filter: sourceFilterTag(args.sourceCount),
+		outcome: args.outcome ?? 'success',
 	}
 	workerMetrics.count('tempo_docs_mcp_ai_search_request_count', 1, tags)
 	workerMetrics.histogram(
@@ -174,9 +191,26 @@ export function recordAiSearchRequest(args: {
 		args.durationMs,
 		tags,
 	)
-	if (args.chunks === 0) {
+	if (args.outcome === 'error')
+		workerMetrics.count('tempo_docs_mcp_ai_search_error_count', 1, tags)
+	if (args.chunks === 0 && args.outcome !== 'error') {
 		workerMetrics.count('tempo_docs_mcp_ai_search_empty_result_count', 1, tags)
 	}
+}
+
+export function recordRetrieval(mode: string): void {
+	workerMetrics.count('tempo_docs_mcp_retrieval_count', 1, {
+		mode: ['ai_search', 'source_index', 'empty'].includes(mode)
+			? mode
+			: 'other',
+		traffic: requestTraffic(),
+	})
+}
+
+export function recordScheduledFailure(kind: 'health' | 'ingest'): void {
+	if (kind === 'health')
+		workerMetrics.gauge('tempo_docs_mcp_health_ok', 0, { endpoint: 'public' })
+	else workerMetrics.gauge('tempo_docs_mcp_ingest_ok', 0, {})
 }
 
 export function recordProxyFallback(status: number, durationMs: number): void {
@@ -208,11 +242,12 @@ export function recordIngestMetrics(args: {
 			status: report.status,
 		}
 		workerMetrics.count('tempo_docs_mcp_source_sync_count', 1, tags)
-		workerMetrics.gauge(
-			'tempo_docs_mcp_source_items_pending',
-			report.status === 'pending_index' ? report.pending : 0,
-			{ source: report.source },
-		)
+		if (report.status !== 'error' && report.status !== 'pending_deletion')
+			workerMetrics.gauge(
+				'tempo_docs_mcp_source_items_pending',
+				report.status === 'pending_index' ? report.pending : 0,
+				{ source: report.source },
+			)
 		if (report.status === 'synced' || report.status === 'pending_index') {
 			workerMetrics.count(
 				'tempo_docs_mcp_source_pages_uploaded',
@@ -253,12 +288,12 @@ export function isFailedSyncReport(report: SyncReport): boolean {
 	)
 }
 
-function metricMcpMethod(method: unknown): string {
+export function metricMcpMethod(method: unknown): string {
 	if (typeof method !== 'string' || method.trim() === '') return 'none'
 	return KNOWN_METHODS.has(method) ? method : 'other'
 }
 
-function metricToolName(name: unknown): string {
+export function metricToolName(name: unknown): string {
 	if (typeof name !== 'string' || name.trim() === '') return 'none'
 	return KNOWN_TOOLS.has(name) ? name : 'unknown'
 }

@@ -1,3 +1,4 @@
+import { errorFields, log } from './log.js'
 import { codeMcpServer } from '@cloudflare/codemode/mcp'
 import type { Executor } from '@cloudflare/codemode'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -17,6 +18,8 @@ import {
 } from './markdown.js'
 import {
 	recordAiSearchRequest,
+	recordRetrieval,
+	metricToolName,
 	recordJsonRpcError,
 	recordToolCall,
 } from './metrics.js'
@@ -122,9 +125,9 @@ type SearchResult = AiSearchSearchResponse & {
 const sourceFilterFallbackUntil = new Map<string, number>()
 const searchResultCache = new Map<
 	string,
-	{ expiresAt: number; result: AiSearchSearchResponse }
+	{ expiresAt: number; result: SearchResult }
 >()
-const searchInFlight = new Map<string, Promise<AiSearchSearchResponse>>()
+const searchInFlight = new Map<string, Promise<SearchResult>>()
 const pageCache = new Map<string, { expiresAt: number; text: string }>()
 const pageInFlight = new Map<string, Promise<string>>()
 const sourceIndexCache = new Map<
@@ -287,6 +290,11 @@ export async function handleMcp(
 				effectiveArgs,
 				context.instance,
 				context.sources ?? [],
+			)
+			recordRetrieval(
+				result.chunks.length === 0
+					? 'empty'
+					: (result.retrieval ?? 'ai_search'),
 			)
 			const formatted = await formatResult(
 				result,
@@ -627,7 +635,7 @@ async function cachedSearch(
 	args: SearchArguments | undefined,
 	instance: AiSearchInstance,
 	sources: Source[],
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const key = searchCacheKey(query, args)
 	const cached = searchResultCache.get(key)
 	if (cached && cached.expiresAt > Date.now()) return cached.result
@@ -651,7 +659,7 @@ async function runAndCacheSearch(
 	args: SearchArguments | undefined,
 	instance: AiSearchInstance,
 	sources: Source[],
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const result = await runSearch(query, args, instance, sources)
 	cacheSearchResult(key, result)
 	const postFallbackKey = searchCacheKey(query, args)
@@ -664,7 +672,7 @@ async function runSearch(
 	args: SearchArguments | undefined,
 	instance: AiSearchInstance,
 	sources: Source[],
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const wantedSources = selectedSources(args)
 	const skipSourceFilter = shouldSkipSourceFilter(wantedSources)
 	let result = await searchWithMetrics(
@@ -723,16 +731,24 @@ async function searchWithMetrics(
 	instance: AiSearchInstance,
 	request: AiSearchSearchRequest,
 	tags: { path: string; sourceCount: number },
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const startedAt = performance.now()
-	const result = await instance.search(request)
-	recordAiSearchRequest({
-		chunks: result.chunks.length,
-		durationMs: Math.round(performance.now() - startedAt),
-		path: tags.path,
-		sourceCount: tags.sourceCount,
-	})
-	return result
+	let result: SearchResult | undefined
+	try {
+		result = await instance.search(request)
+		return result
+	} catch (error) {
+		log.error('ai_search.failed', { path: tags.path, ...errorFields(error) })
+		throw error
+	} finally {
+		recordAiSearchRequest({
+			chunks: result?.chunks.length,
+			outcome: result ? 'success' : 'error',
+			durationMs: Math.round(performance.now() - startedAt),
+			path: tags.path,
+			sourceCount: tags.sourceCount,
+		})
+	}
 }
 
 function searchCacheKey(
@@ -752,7 +768,7 @@ function searchCacheKey(
 	})
 }
 
-function cacheSearchResult(key: string, result: AiSearchSearchResponse): void {
+function cacheSearchResult(key: string, result: SearchResult): void {
 	searchResultCache.set(key, {
 		expiresAt: Date.now() + SEARCH_RESULT_CACHE_TTL_MS,
 		result,
@@ -776,7 +792,7 @@ function rememberStaleSourceFilters(sources: string[]): void {
 }
 
 function filterSourceChunks(
-	result: AiSearchSearchResponse,
+	result: SearchResult,
 	sources: string[],
 	maxResults: number,
 ): AiSearchSearchResponse {
@@ -1658,13 +1674,19 @@ async function trackToolCall(
 	const startedAt = performance.now()
 	try {
 		const response = await handler()
-		recordToolCall(
-			toolName,
-			(await responseIsError(response)) ? 'error' : 'success',
-			Math.round(performance.now() - startedAt),
-		)
+		const outcome = (await responseIsError(response)) ? 'error' : 'success'
+		log.info('mcp.tool_complete', {
+			tool_name: metricToolName(toolName),
+			outcome,
+			duration_ms: Math.round(performance.now() - startedAt),
+		})
+		recordToolCall(toolName, outcome, Math.round(performance.now() - startedAt))
 		return response
 	} catch (error) {
+		log.error('mcp.tool_failed', {
+			tool_name: metricToolName(toolName),
+			...errorFields(error),
+		})
 		recordToolCall(toolName, 'error', Math.round(performance.now() - startedAt))
 		throw error
 	}

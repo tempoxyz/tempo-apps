@@ -1,3 +1,4 @@
+import { log } from './log.js'
 import { recordHealthMetrics, type HealthMetricResult } from './metrics.js'
 
 type JsonObject = Record<string, unknown>
@@ -28,31 +29,17 @@ export async function healthMetrics(env: {
 	})
 
 	const failures = checks.filter((check) => !check.ok && !check.informational)
-	if (failures.length > 0) {
-		console.error(
-			JSON.stringify({
-				message: 'mcp.health_failed',
-				endpoint,
-				failures: failures.map((failure) => ({
-					check: failure.name,
-					error: failure.error,
-				})),
-			}),
-		)
-	}
+	if (failures.length > 0)
+		log.error('mcp.health_failed', {
+			endpoint,
+			failures: failures.map(({ name, error }) => ({ check: name, error })),
+		})
 	const degraded = checks.filter((check) => !check.ok && check.informational)
-	if (degraded.length > 0) {
-		console.warn(
-			JSON.stringify({
-				message: 'mcp.health_degraded',
-				endpoint,
-				checks: degraded.map((check) => ({
-					check: check.name,
-					error: check.error,
-				})),
-			}),
-		)
-	}
+	if (degraded.length > 0)
+		log.warn('mcp.health_degraded', {
+			endpoint,
+			checks: degraded.map(({ name, error }) => ({ check: name, error })),
+		})
 }
 
 async function runChecks(endpoint: string): Promise<HealthMetricResult[]> {
@@ -231,6 +218,7 @@ async function rpc(
 		headers: {
 			accept: 'application/json, text/event-stream',
 			'content-type': 'application/json',
+			'x-tempo-mcp-probe': 'health',
 		},
 		body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
 	})
@@ -246,21 +234,14 @@ async function fetchJsonRpc(
 	url: string,
 	init: RequestInit,
 ): Promise<JsonObject> {
-	const res = await fetchWithTimeout(url, init)
-	if (!res.ok) throw new Error(`HTTP ${res.status}`)
-	const text = await res.text()
-	const data = sseData(text) ?? text
-	return object(JSON.parse(data))
-}
-
-async function fetchWithTimeout(
-	url: string,
-	init: RequestInit,
-): Promise<Response> {
 	const controller = new AbortController()
 	const timeout = setTimeout(() => controller.abort(), HEALTH_FETCH_TIMEOUT_MS)
 	try {
-		return await fetch(url, { ...init, signal: controller.signal })
+		const res = await fetch(url, { ...init, signal: controller.signal })
+		if (!res.ok) throw new Error(`HTTP ${res.status}`)
+		const text = await res.text()
+		const data = sseData(text) ?? text
+		return object(JSON.parse(data))
 	} finally {
 		clearTimeout(timeout)
 	}

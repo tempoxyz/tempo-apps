@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { handleMcp as handleParsedMcp } from './mcp.js'
+import { flushWorkerMetrics } from './metrics.js'
 import { captureMcpAnalytics } from './posthog-mcp.js'
 import { readMcpRequest } from './request.js'
 import type { Source } from './sources.js'
@@ -2333,3 +2334,79 @@ async function textContent(res: Response | undefined) {
 	const payload = JSON.parse(data ?? '{}')
 	return JSON.parse(payload.result.content[0].text)
 }
+
+describe('dependency metrics', () => {
+	it.each([
+		'success',
+		'error',
+	] as const)('records AI Search %s attempts', async (outcome) => {
+		flushWorkerMetrics()
+		const logs: string[] = []
+		const spy = vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+		try {
+			await handleMcp(
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'tools/call',
+						params: {
+							name: 'search',
+							arguments: {
+								query: `metrics-${outcome}`,
+								response_format: 'structured',
+							},
+						},
+					}),
+				}),
+				{
+					instance: instance(async () => {
+						if (outcome === 'error') throw new Error('upstream unavailable')
+						return {
+							search_query: 'metrics',
+							chunks: [{ id: '1', text: 'a', score: 1, metadata: {} }],
+						} as AiSearchSearchResponse
+					}),
+					sources: [],
+				},
+			)
+			flushWorkerMetrics()
+			const metrics = logs
+				.filter((x) => x.startsWith('cwm-'))
+				.flatMap((x) => JSON.parse(x.slice(4)))
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_ai_search_request_count',
+					v: 1,
+					tags: expect.objectContaining({ outcome }),
+				}),
+			)
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_ai_search_duration_ms',
+					tags: expect.objectContaining({ outcome }),
+				}),
+			)
+			if (outcome === 'error') {
+				expect(metrics).toContainEqual(
+					expect.objectContaining({
+						n: 'tempo_docs_mcp_ai_search_error_count',
+						v: 1,
+					}),
+				)
+				expect(
+					metrics.some(
+						(x) => x.n === 'tempo_docs_mcp_ai_search_empty_result_count',
+					),
+				).toBe(false)
+			}
+		} finally {
+			spy.mockRestore()
+			errorSpy.mockRestore()
+		}
+	})
+})

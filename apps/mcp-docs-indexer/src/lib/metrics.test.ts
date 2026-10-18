@@ -1,3 +1,4 @@
+import { withLogContext } from './log.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	flushWorkerMetrics,
@@ -7,12 +8,45 @@ import {
 	recordIngestMetrics,
 	recordSourceIndexStatus,
 	recordToolCall,
+	recordRetrieval,
+	recordScheduledFailure,
 } from './metrics.js'
 
 describe('worker metrics', () => {
 	afterEach(() => {
 		flushWorkerMetrics()
 		vi.restoreAllMocks()
+	})
+
+	it('separates synthetic traffic, bounds retrieval labels, and records cron failures', () => {
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		withLogContext({ traffic: 'synthetic' }, () =>
+			recordToolCall('search', 'success', 1),
+		)
+		recordRetrieval('untrusted value')
+		recordScheduledFailure('health')
+		recordScheduledFailure('ingest')
+		flushWorkerMetrics()
+		const metrics = logs
+			.filter((line) => line.startsWith('cwm-'))
+			.flatMap((line) => JSON.parse(line.slice(4)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_tool_call_count',
+				tags: expect.objectContaining({ traffic: 'synthetic' }),
+			}),
+		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_retrieval_count',
+				tags: expect.objectContaining({ mode: 'other', traffic: 'user' }),
+			}),
+		)
+		for (const n of ['tempo_docs_mcp_health_ok', 'tempo_docs_mcp_ingest_ok'])
+			expect(metrics).toContainEqual(expect.objectContaining({ n, v: 0 }))
 	})
 
 	it('flushes cwm lines with docs MCP global tags', () => {

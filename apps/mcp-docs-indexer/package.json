@@ -5,6 +5,7 @@
 	"scripts": {
 		"benchmark": "tsx scripts/benchmark-mcp.ts",
 		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"configure:source": "tsx scripts/configure-ai-search-source.ts",
 		"configure:metadata": "tsx scripts/configure-ai-search-metadata.ts",
 		"eval": "tsx scripts/eval-mcp.ts",
 		"eval:promptfoo": "tsx scripts/run-promptfoo.ts",

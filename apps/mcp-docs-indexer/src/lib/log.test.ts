@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { log } from './log.js'
+import { errorFields, log, withLogContext } from './log.js'
 
 const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {})
 const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -65,6 +65,38 @@ describe('log', () => {
 			event: 'source.failed',
 			source: 'viem',
 			error: 'oops',
+		})
+	})
+})
+
+describe('log context', () => {
+	it('isolates overlapping requests and restores the outer context', async () => {
+		await Promise.all(
+			['one', 'two'].map((request_id) =>
+				withLogContext({ request_id }, async () => {
+					await Promise.resolve()
+					log.info('request.done')
+				}),
+			),
+		)
+		expect(
+			infoSpy.mock.calls.map(
+				(call) => (call[1] as Record<string, unknown>).request_id,
+			),
+		).toEqual(['one', 'two'])
+		log.info('outside')
+		expect(infoSpy.mock.calls[2][1]).not.toHaveProperty('request_id')
+	})
+	it('redacts URL credentials, query parameters and bearer tokens', () => {
+		expect(
+			errorFields(
+				new Error(
+					'fetch https://user:pass@example.com/a?token=secret Bearer secret api_key=secret',
+				),
+			),
+		).toEqual({
+			error_class: 'Error',
+			error: 'fetch https://example.com/a Bearer [redacted] api_key=[redacted]',
 		})
 	})
 })
