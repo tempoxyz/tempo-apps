@@ -5,7 +5,7 @@ AI Search instance: `default/tempo-global`. Metrics: `service:tempo-docs-mcp`.
 
 ## Signals and dashboard
 
-[Service dashboard](https://us5.datadoghq.com/dashboard/ds9-dur-5ta) uses existing metrics. `dashboard.json` is its portable definition, with additional panels for the instrumentation in this change. Import only after deployment. `monitors.json` contains proposed monitors, not active alerts. Review thresholds and the notification destination before importing each object through Datadog's monitor API. Public health follows the existing MPP Discovery MCP five-minute availability pattern; ingestion uses a three-hour window for hourly samples.
+[Service dashboard](https://us5.datadoghq.com/dashboard/ds9-dur-5ta) uses existing metrics. `monitors.json` contains proposed monitors, not active alerts. Review thresholds and the notification destination before importing each object through Datadog's monitor API. Public health follows the existing MPP Discovery MCP five-minute availability pattern; ingestion uses a three-hour window for hourly samples.
 
 - Public health is protocol/tool availability; it can pass while AI Search is degraded.
 - `health_check_ok{check:search_tempo_indexed}` tests indexed retrieval independently.
@@ -48,7 +48,7 @@ Triage order:
 
 ## Remaining rollout and pipeline work
 
-No production source update or monitor creation is performed by this PR. Merge/deploy the Worker and Regen route fix, review/apply the crawler change, then import the dashboard updates and monitors and verify recovery over multiple hourly syncs.
+No production source update or monitor creation is performed by this PR. Merge/deploy the Worker and Regen route fix, review/apply the crawler change, then import the monitors and verify recovery over multiple hourly syncs.
 
 The existing R2 exporter forwards `cwm-` metric lines; it is not an application-log drain. Application logs were available in Workers Logs, but not observed in Datadog. Adding structured fields does not make them appear in Datadog. Configure a separately reviewed Workers application-log destination to Datadog with service/source tags, parsing for the existing two-argument console format, redaction, retention, and a single-event delivery test. Keep metric lines out of the application-log index to avoid duplicate ingestion.
 
