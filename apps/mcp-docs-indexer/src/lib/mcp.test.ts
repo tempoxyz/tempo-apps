@@ -2410,3 +2410,67 @@ describe('dependency metrics', () => {
 		}
 	})
 })
+
+describe('bounded search dependencies', () => {
+	it('records a stuck AI Search call as an error at its deadline and permits retry', async () => {
+		vi.useFakeTimers()
+		flushWorkerMetrics()
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		try {
+			const search = vi
+				.fn()
+				.mockImplementationOnce(() => new Promise<never>(() => {}))
+				.mockResolvedValue({ search_query: 'bounded-dependency', chunks: [] })
+			const context = { instance: instance(search), sources: [] }
+			const request = () =>
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'tools/call',
+						params: {
+							name: 'search',
+							arguments: {
+								query: 'bounded-dependency',
+								response_format: 'structured',
+							},
+						},
+					}),
+				})
+			const pending = handleMcp(request(), context)
+			await vi.waitFor(() => expect(search).toHaveBeenCalledOnce())
+			await vi.advanceTimersByTimeAsync(5001)
+			const response = await pending
+			expect(await response?.json()).toMatchObject({
+				result: { isError: true },
+			})
+			flushWorkerMetrics()
+			const metrics = logs
+				.filter((line) => line.startsWith('cwm-'))
+				.flatMap((line) => JSON.parse(line.slice(4)))
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_ai_search_error_count',
+					v: 1,
+				}),
+			)
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_tool_call_count',
+					tags: expect.objectContaining({ outcome: 'error' }),
+				}),
+			)
+			await handleMcp(request(), context)
+			expect(search).toHaveBeenCalledTimes(2)
+			expect(vi.getTimerCount()).toBe(0)
+		} finally {
+			vi.useRealTimers()
+			vi.restoreAllMocks()
+		}
+	})
+})

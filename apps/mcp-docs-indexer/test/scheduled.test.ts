@@ -112,6 +112,71 @@ describe('scheduled Worker', () => {
 		)
 	})
 
+	it.each([
+		'index error',
+		'page error',
+		'index timeout',
+	])('continues to a healthy source after %s', async (failure) => {
+		const uploads: string[] = []
+		const logs: string[] = []
+		const workerEnv = {
+			...testEnv(uploads),
+			SOURCES: JSON.stringify([
+				SOURCE,
+				{ id: 'other', base: 'https://other.example' },
+			]),
+		} as unknown as Env
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		let stalled = false
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (input: string) => {
+				if (input.startsWith(SOURCE.base)) {
+					if (failure === 'index timeout') {
+						stalled = true
+						return new Promise<Response>(() => {})
+					}
+					if (failure === 'index error' || !input.endsWith('/llms.txt'))
+						return new Response('failure', { status: 503 })
+				}
+				return new Response(
+					input.endsWith('/llms.txt') ? '- [Page](/page)' : '# Page',
+				)
+			}),
+		)
+		if (failure === 'index timeout') vi.useFakeTimers()
+		try {
+			const pending = runScheduled('0 * * * *', workerEnv)
+			if (failure === 'index timeout') {
+				await vi.waitFor(() => expect(stalled).toBe(true))
+				await vi.advanceTimersByTimeAsync(15_001)
+			}
+			await pending
+			expect(uploads).toEqual(['other/page.md'])
+			const metrics = logs
+				.filter((line) => line.startsWith('cwm-'))
+				.flatMap((line) => JSON.parse(line.slice(4)))
+			for (const [source, v] of [
+				['fixture', 0],
+				['other', 1],
+			])
+				expect(metrics).toContainEqual(
+					expect.objectContaining({
+						n: 'tempo_docs_mcp_source_sync_ok',
+						v,
+						tags: expect.objectContaining({ source }),
+					}),
+				)
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
 	it('runs the hourly ingestion through fetch, AI Search upload, and KV state', async () => {
 		const uploads: string[] = []
 		const metricLogs: string[] = []
@@ -229,7 +294,9 @@ describe('scheduled Worker', () => {
 
 		expect(uploads).toEqual([])
 		expect(await env.ETAG_CACHE.get('etag:fixture')).toBeNull()
-		expect(await env.ETAG_CACHE.get('index:fixture')).toBeNull()
+		expect(
+			JSON.parse((await env.ETAG_CACHE.get('index:fixture')) ?? '{}'),
+		).toEqual({})
 		expect(await env.ETAG_CACHE.get('last_sync:fixture')).toBeTruthy()
 	})
 

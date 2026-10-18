@@ -5,12 +5,23 @@ import {
 	isFailedSyncReport,
 	recordHealthMetrics,
 	recordHttpRequestMetrics,
-	recordIngestMetrics,
+	recordIngestSummary,
+	recordSourceIngestMetrics,
 	recordSourceIndexStatus,
 	recordToolCall,
 	recordRetrieval,
 	recordScheduledFailure,
 } from './metrics.js'
+
+function recordIngestMetrics(
+	args: Parameters<typeof recordIngestSummary>[0] & {
+		forced: ReadonlySet<string>
+	},
+): void {
+	for (const report of args.reports)
+		recordSourceIngestMetrics(report, args.forced.has(report.source))
+	recordIngestSummary(args)
+}
 
 describe('worker metrics', () => {
 	afterEach(() => {
@@ -221,6 +232,20 @@ describe('worker metrics', () => {
 			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
 		expect(metrics).toContainEqual(
 			expect.objectContaining({ n: 'tempo_docs_mcp_ingest_ok', v: expected }),
+		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_source_sync_ok',
+				v: expected,
+				tags: expect.objectContaining({ source: 'docs' }),
+			}),
+		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_source_ready',
+				v: expected && status !== 'pending_index' ? 1 : 0,
+				tags: expect.objectContaining({ source: 'docs' }),
+			}),
 		)
 	})
 

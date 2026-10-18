@@ -15,7 +15,8 @@ vi.mock('../src/lib/metrics.js', () => ({
 	flushWorkerMetrics: vi.fn(),
 	isFailedSyncReport: vi.fn(),
 	recordHttpRequestMetrics: vi.fn(),
-	recordIngestMetrics: vi.fn(),
+	recordIngestSummary: vi.fn(),
+	recordSourceIngestMetrics: vi.fn(),
 	recordHealthMetrics: vi.fn(),
 	recordProxyFallback: vi.fn(),
 }))

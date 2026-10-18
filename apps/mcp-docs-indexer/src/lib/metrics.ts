@@ -47,6 +47,9 @@ type DocsMcpMetricRegistry = {
 	tempo_docs_mcp_ingest_ok: EmptyTags
 	tempo_docs_mcp_ingest_duration_ms: EmptyTags
 	tempo_docs_mcp_source_sync_count: SourceTags
+	tempo_docs_mcp_source_sync_ok: PendingTags
+	tempo_docs_mcp_source_sync_duration_ms: PendingTags
+	tempo_docs_mcp_source_ready: PendingTags
 	tempo_docs_mcp_source_pages_uploaded: SourceTags
 	tempo_docs_mcp_source_pages_failed: SourceTags
 	tempo_docs_mcp_source_pages_deleted: SourceTags
@@ -223,9 +226,8 @@ export function recordProxyFallback(status: number, durationMs: number): void {
 	)
 }
 
-export function recordIngestMetrics(args: {
+export function recordIngestSummary(args: {
 	durationMs: number
-	forced: ReadonlySet<string>
 	reports: SyncReport[]
 }): void {
 	const ok = args.reports.every((report) => !isFailedSyncReport(report))
@@ -235,39 +237,61 @@ export function recordIngestMetrics(args: {
 		args.durationMs,
 		{},
 	)
-	for (const report of args.reports) {
-		const tags = {
-			force: String(args.forced.has(report.source)),
-			source: report.source,
-			status: report.status,
-		}
-		workerMetrics.count('tempo_docs_mcp_source_sync_count', 1, tags)
-		if (report.status !== 'error' && report.status !== 'pending_deletion')
-			workerMetrics.gauge(
-				'tempo_docs_mcp_source_items_pending',
-				report.status === 'pending_index' ? report.pending : 0,
-				{ source: report.source },
-			)
-		if (report.status === 'synced' || report.status === 'pending_index') {
-			workerMetrics.count(
-				'tempo_docs_mcp_source_pages_uploaded',
-				report.pages,
-				tags,
-			)
-			workerMetrics.count(
-				'tempo_docs_mcp_source_pages_failed',
-				report.failed,
-				tags,
-			)
-			workerMetrics.count(
-				'tempo_docs_mcp_source_pages_deleted',
-				report.deleted,
-				tags,
-			)
-		}
-		if (report.status === 'error') {
-			workerMetrics.count('tempo_docs_mcp_source_pages_failed', 1, tags)
-		}
+}
+
+export function recordSourceIngestMetrics(
+	report: SyncReport,
+	forced: boolean,
+): void {
+	const tags = {
+		force: String(forced),
+		source: report.source,
+		status: report.status,
+	}
+	workerMetrics.count('tempo_docs_mcp_source_sync_count', 1, tags)
+	workerMetrics.gauge(
+		'tempo_docs_mcp_source_sync_ok',
+		isFailedSyncReport(report) ? 0 : 1,
+		{ source: report.source },
+	)
+	workerMetrics.gauge(
+		'tempo_docs_mcp_source_ready',
+		!isFailedSyncReport(report) &&
+			(report.status === 'synced' || report.status === 'unchanged')
+			? 1
+			: 0,
+		{ source: report.source },
+	)
+	workerMetrics.gauge(
+		'tempo_docs_mcp_source_sync_duration_ms',
+		report.duration_ms,
+		{ source: report.source },
+	)
+	if (report.status !== 'error' && report.status !== 'pending_deletion')
+		workerMetrics.gauge(
+			'tempo_docs_mcp_source_items_pending',
+			report.status === 'pending_index' ? report.pending : 0,
+			{ source: report.source },
+		)
+	if (report.status === 'synced' || report.status === 'pending_index') {
+		workerMetrics.count(
+			'tempo_docs_mcp_source_pages_uploaded',
+			report.pages,
+			tags,
+		)
+		workerMetrics.count(
+			'tempo_docs_mcp_source_pages_failed',
+			report.failed,
+			tags,
+		)
+		workerMetrics.count(
+			'tempo_docs_mcp_source_pages_deleted',
+			report.deleted,
+			tags,
+		)
+	}
+	if (report.status === 'error') {
+		workerMetrics.count('tempo_docs_mcp_source_pages_failed', 1, tags)
 	}
 }
 

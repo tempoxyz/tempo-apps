@@ -9,7 +9,8 @@ import {
 	recordScheduledFailure,
 	isFailedSyncReport,
 	recordHttpRequestMetrics,
-	recordIngestMetrics,
+	recordIngestSummary,
+	recordSourceIngestMetrics,
 	recordSourceIndexStatus,
 } from './lib/metrics.js'
 import { captureMcpAnalytics } from './lib/posthog-mcp.js'
@@ -167,6 +168,8 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			etagCache: env.ETAG_CACHE,
 			force: forced.has(source.id),
 		})
+		recordSourceIngestMetrics(report, forced.has(source.id))
+		flushWorkerMetrics()
 		if (isFailedSyncReport(report)) log.error('source.failed', report)
 		else if (report.status === 'pending_deletion')
 			log.info('source.pending_deletion', report)
@@ -198,7 +201,7 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		}
 	}
 	const durationMs = Math.round(performance.now() - startedAt)
-	recordIngestMetrics({ durationMs, forced, reports })
+	recordIngestSummary({ durationMs, reports })
 	flushWorkerMetrics()
 	log.info('cron.complete', {
 		cron: event.cron,

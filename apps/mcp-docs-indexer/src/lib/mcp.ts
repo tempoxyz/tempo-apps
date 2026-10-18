@@ -1,3 +1,4 @@
+import { withTimeout } from './timeout.js'
 import { errorFields, log } from './log.js'
 import { codeMcpServer } from '@cloudflare/codemode/mcp'
 import type { Executor } from '@cloudflare/codemode'
@@ -101,6 +102,9 @@ const DEFAULT_MATCH_THRESHOLD = 0.45
 const DEFAULT_MAX_CHARS_PER_CHUNK = 1200
 const DEFAULT_MAX_TOTAL_CHARS = 2400
 const FILTER_FALLBACK_TTL_MS = 10 * 60_000
+const AI_SEARCH_TIMEOUT_MS = 5000
+const DOC_FETCH_TIMEOUT_MS = 5000
+const SEARCH_TIMEOUT_MS = 15_000
 const SEARCH_RESULT_CACHE_TTL_MS = 60_000
 const SEARCH_RESULT_CACHE_MAX_ENTRIES = 128
 const PAGE_CACHE_TTL_MS = 60_000
@@ -285,11 +289,15 @@ export async function handleMcp(
 				args,
 				context.sources ?? [],
 			)
-			const result = await cachedSearch(
-				query.trim(),
-				effectiveArgs,
-				context.instance,
-				context.sources ?? [],
+			const result = await withTimeout(
+				() =>
+					cachedSearch(
+						query.trim(),
+						effectiveArgs,
+						context.instance,
+						context.sources ?? [],
+					),
+				SEARCH_TIMEOUT_MS,
 			)
 			recordRetrieval(
 				result.chunks.length === 0
@@ -609,12 +617,15 @@ async function readCleanPage(pageUrl: string): Promise<string> {
 }
 
 async function fetchCleanPage(markdownUrl: string): Promise<string> {
-	const res = await fetch(markdownUrl, {
-		headers: { accept: MARKDOWN_ACCEPT },
-		cf: { cacheTtl: 60 },
-	})
-	if (!res.ok) throw new Error(`page fetch ${res.status}`)
-	const body = await res.text()
+	const { res, body } = await withTimeout(async (signal) => {
+		const res = await fetch(markdownUrl, {
+			signal,
+			headers: { accept: MARKDOWN_ACCEPT },
+			cf: { cacheTtl: 60 },
+		})
+		if (!res.ok) throw new Error(`page fetch ${res.status}`)
+		return { res, body: await res.text() }
+	}, DOC_FETCH_TIMEOUT_MS)
 	if (isHtmlDocument(body, res.headers.get('content-type')))
 		throw new Error('page is HTML, not Markdown')
 	const text = normalizeDocsMarkdown(body)
@@ -735,7 +746,10 @@ async function searchWithMetrics(
 	const startedAt = performance.now()
 	let result: SearchResult | undefined
 	try {
-		result = await instance.search(request)
+		result = await withTimeout(
+			() => instance.search(request),
+			AI_SEARCH_TIMEOUT_MS,
+		)
 		return result
 	} catch (error) {
 		log.error('ai_search.failed', { path: tags.path, ...errorFields(error) })
@@ -868,11 +882,15 @@ async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
 }
 
 async function fetchSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
-	const res = await fetch(sourceIndexUrl(source), {
-		cf: { cacheTtl: 60 },
-	})
-	if (!res.ok) return []
-	const entries = parseSourceIndex(await res.text(), source.base)
+	const entries = await withTimeout(async (signal) => {
+		const res = await fetch(sourceIndexUrl(source), {
+			signal,
+			cf: { cacheTtl: 60 },
+		})
+		if (!res.ok) return undefined
+		return parseSourceIndex(await res.text(), source.base)
+	}, DOC_FETCH_TIMEOUT_MS)
+	if (!entries) return []
 	cacheSourceIndex(`${source.id}:${sourceIndexUrl(source)}`, entries)
 	return entries
 }
