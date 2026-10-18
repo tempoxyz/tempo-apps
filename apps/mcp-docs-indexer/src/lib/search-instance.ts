@@ -25,7 +25,7 @@ export function searchInstance(
 	return {
 		async search(request) {
 			const results = await Promise.allSettled(
-				ids.map(async (instance) => {
+				[...new Set([...ids, fallbackId])].map(async (instance) => {
 					try {
 						return await withTimeout(
 							() => namespace.get(instance).search(request),
@@ -40,22 +40,15 @@ export function searchInstance(
 					}
 				}),
 			)
-			const chunks = results.flatMap((result) =>
+			const primary = results.slice(0, ids.length)
+			const chunks = primary.flatMap((result) =>
 				result.status === 'fulfilled' ? result.value.chunks : [],
 			)
-			// Include the previous index during migration: a nonempty new index may
-			// still be only partially populated.
-			if (!ids.includes(fallbackId)) {
-				try {
-					const fallback = await withTimeout(
-						() => namespace.get(fallbackId).search(request),
-						4000,
-					)
-					chunks.push(...fallback.chunks)
-					workerMetrics.count('tempo_docs_mcp_index_fallback_count', 1, {})
-				} catch (error) {
-					log.warn('search.previous_index_failed', errorFields(error))
-				}
+			// A populated destination is authoritative; do not merge frozen legacy copies.
+			const fallback = results[ids.length]
+			if (chunks.length === 0 && fallback?.status === 'fulfilled') {
+				chunks.push(...fallback.value.chunks)
+				workerMetrics.count('tempo_docs_mcp_index_fallback_count', 1, {})
 			}
 			if (
 				chunks.length === 0 &&
@@ -70,7 +63,9 @@ export function searchInstance(
 			}
 			return {
 				search_query: request.query ?? '',
-				chunks: [...unique.values()].sort((a, b) => b.score - a.score),
+				chunks: [...unique.values()]
+					.sort((a, b) => b.score - a.score)
+					.slice(0, request.ai_search_options?.retrieval?.max_num_results ?? 5),
 			}
 		},
 	}

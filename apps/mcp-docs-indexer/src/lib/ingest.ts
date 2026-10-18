@@ -74,6 +74,7 @@ export async function syncSource(args: {
 	const retryForceKey = `retry_force:${stateId}`
 	const cursorKey = `index_cursor:${stateId}`
 	const retriesKey = `page_retries:${stateId}`
+	const retryBase = Date.now()
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 	const controller = new AbortController()
@@ -206,6 +207,7 @@ export async function syncSource(args: {
 		let unchanged = 0
 		let failed = 0
 		let deferred = 0
+		const failedKeys: string[] = []
 
 		for (let i = 0; i < pageUrls.length; i += CONCURRENCY) {
 			if (controller.signal.aborted) {
@@ -246,13 +248,21 @@ export async function syncSource(args: {
 				if (out.outcome === 'uploaded') pages++
 				else if (out.outcome === 'unchanged') unchanged++
 				else if (out.outcome === 'failed') failed++
-				if (out.outcome === 'failed') {
-					const attempts = Math.min(6, (retries[out.key]?.attempts ?? 0) + 1)
-					retries[out.key] = {
-						attempts,
-						after: Date.now() + Math.min(24, 2 ** (attempts - 1)) * 60 * 60_000,
-					}
-				} else if (out.outcome !== 'deferred') delete retries[out.key]
+				if (out.outcome === 'failed') failedKeys.push(out.key)
+				else if (out.outcome !== 'deferred') delete retries[out.key]
+			}
+		}
+
+		for (const key of failedKeys) {
+			// Whole-source outages and source deadlines should retry on the next run.
+			if (controller.signal.aborted || pages + unchanged === 0) {
+				delete retries[key]
+				continue
+			}
+			const attempts = Math.min(6, (retries[key]?.attempts ?? 0) + 1)
+			retries[key] = {
+				attempts,
+				after: retryBase + Math.min(24, 2 ** (attempts - 1)) * 60 * 60_000,
 			}
 		}
 

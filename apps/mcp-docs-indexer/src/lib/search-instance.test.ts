@@ -34,7 +34,7 @@ describe('independent indexes', () => {
 	it.each([
 		'empty',
 		'failed',
-	])('retains healthy results and consults legacy for an %s source', async (mode) => {
+	])('retains healthy results without stale legacy copies when another source is %s', async (mode) => {
 		vi.spyOn(console, 'warn').mockImplementation(() => {})
 		const ns = namespace({
 			'docs-a': response(chunk('a/page')),
@@ -49,8 +49,8 @@ describe('independent indexes', () => {
 		const result = await searchInstance(ns, 'legacy', sources, []).search({
 			query: 'test',
 		})
-		expect(result.chunks.map((c) => c.item?.key)).toEqual(['a/page', 'b/page'])
-		expect(result.chunks[0].score).toBe(0.8)
+		expect(result.chunks.map((c) => c.item?.key)).toEqual(['a/page'])
+		expect(result.chunks[0].score).toBe(0.5)
 		expect(ns.get.mock.calls.flat()).toEqual(['docs-a', 'docs-b', 'legacy'])
 	})
 	it('queries only requested sources plus legacy during migration', async () => {
@@ -77,7 +77,7 @@ describe('independent indexes', () => {
 		const ns = namespace({
 			'docs-a': response(chunk('a/page')),
 			'docs-b': () => new Promise(() => {}),
-			legacy: response(),
+			legacy: () => new Promise(() => {}),
 		})
 		const pending = searchInstance(ns, 'legacy', sources, []).search({
 			query: 'test',
@@ -96,4 +96,38 @@ describe('independent indexes', () => {
 			searchInstance(ns, 'legacy', sources, []).search({ query: 'test' }),
 		).rejects.toThrow('All selected')
 	})
+})
+
+it.each([
+	undefined,
+	2,
+])('caps merged results globally at %s (default five)', async (limit) => {
+	const ns = namespace({
+		'docs-a': response(
+			...Array.from({ length: 5 }, (_, i) => chunk(`a/${i}`, i / 10)),
+		),
+		'docs-b': response(
+			...Array.from({ length: 5 }, (_, i) => chunk(`b/${i}`, 0.5 + i / 10)),
+		),
+		legacy: response(chunk('deleted', 1)),
+	})
+	const result = await searchInstance(ns, 'legacy', sources, []).search({
+		query: 'test',
+		ai_search_options: { retrieval: { max_num_results: limit } },
+	})
+	expect(result.chunks).toHaveLength(limit ?? 5)
+	expect(result.chunks[0].item?.key).toBe('b/4')
+	expect(result.chunks.some((c) => c.item?.key === 'deleted')).toBe(false)
+})
+it('uses the previous index while destinations return no results', async () => {
+	const ns = namespace({
+		'docs-a': response(),
+		'docs-b': response(),
+		legacy: response(chunk('old')),
+	})
+	expect(
+		(
+			await searchInstance(ns, 'legacy', sources, []).search({ query: 'test' })
+		).chunks.map((c) => c.item?.key),
+	).toEqual(['old'])
 })

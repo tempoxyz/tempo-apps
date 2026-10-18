@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { unstable_readConfig } from 'wrangler'
+import { parseSources } from '../src/lib/sources.js'
 
 type MetadataField = {
 	field_name: string
@@ -10,42 +12,55 @@ const schemaPath = resolve('ai-search-custom-metadata.json')
 const accountId = expectEnv('CLOUDFLARE_ACCOUNT_ID')
 const apiToken = expectEnv('CLOUDFLARE_API_TOKEN')
 const namespace = process.env.AI_SEARCH_NAMESPACE ?? 'default'
-const instanceId = process.env.AI_SEARCH_INSTANCE_ID ?? 'tempo-global'
+const config = unstable_readConfig({ config: resolve('wrangler.jsonc') })
+const instanceIds = process.env.AI_SEARCH_INSTANCE_ID
+	? [process.env.AI_SEARCH_INSTANCE_ID]
+	: [
+			...new Set([
+				String(config.vars.AI_SEARCH_INSTANCE_ID),
+				...parseSources(config.vars.SOURCES).map(
+					(source) =>
+						source.instanceId ?? String(config.vars.AI_SEARCH_INSTANCE_ID),
+				),
+			]),
+		]
 
 const schema = validateSchema(
 	JSON.parse(await readFile(schemaPath, 'utf8')) as unknown,
 )
-const endpoint = new URL(
-	`/client/v4/accounts/${accountId}/ai-search/namespaces/${namespace}/instances/${instanceId}`,
-	'https://api.cloudflare.com',
-)
+for (const instanceId of instanceIds) {
+	const endpoint = new URL(
+		`/client/v4/accounts/${accountId}/ai-search/namespaces/${namespace}/instances/${instanceId}`,
+		'https://api.cloudflare.com',
+	)
 
-const response = await fetch(endpoint, {
-	method: 'PUT',
-	headers: {
-		Authorization: `Bearer ${apiToken}`,
-		'Content-Type': 'application/json',
-	},
-	body: JSON.stringify({ custom_metadata: schema }),
-})
+	const response = await fetch(endpoint, {
+		method: 'PUT',
+		headers: {
+			Authorization: `Bearer ${apiToken}`,
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({ custom_metadata: schema }),
+	})
 
-const body = (await response.json().catch(() => null)) as {
-	success?: boolean
-	errors?: Array<{ message?: string }>
-} | null
+	const body = (await response.json().catch(() => null)) as {
+		success?: boolean
+		errors?: Array<{ message?: string }>
+	} | null
 
-if (!response.ok || body?.success === false) {
-	const message =
-		body?.errors
-			?.map((error) => error.message)
-			.filter(Boolean)
-			.join('; ') || `HTTP ${response.status}`
-	throw new Error(`Failed to configure AI Search metadata: ${message}`)
+	if (!response.ok || body?.success === false) {
+		const message =
+			body?.errors
+				?.map((error) => error.message)
+				.filter(Boolean)
+				.join('; ') || `HTTP ${response.status}`
+		throw new Error(`Failed to configure AI Search metadata: ${message}`)
+	}
+
+	console.info(
+		`Configured ${schema.length} AI Search metadata fields on ${namespace}/${instanceId}`,
+	)
 }
-
-console.info(
-	`Configured ${schema.length} AI Search metadata fields on ${namespace}/${instanceId}`,
-)
 
 function expectEnv(name: string): string {
 	const value = process.env[name]
