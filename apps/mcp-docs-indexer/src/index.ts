@@ -1,5 +1,6 @@
+import { searchInstance } from './lib/search-instance.js'
 import { DynamicWorkerExecutor } from '@cloudflare/codemode'
-import { recordSourceFreshness } from './lib/freshness.js'
+import { recordSourceFreshness, recordIndexProgress } from './lib/freshness.js'
 import { healthMetrics } from './lib/health.js'
 import { sourceIndexStatus, syncSource } from './lib/ingest.js'
 import { errorFields, log, withLogContext } from './lib/log.js'
@@ -46,6 +47,13 @@ export default {
 							request,
 							{
 								instance: env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID),
+								instanceForSources: (ids) =>
+									searchInstance(
+										env.AI_SEARCH,
+										env.AI_SEARCH_INSTANCE_ID,
+										sourcesFor(env.SOURCES),
+										ids,
+									),
 								sources: sourcesFor(env.SOURCES),
 								executor: new DynamicWorkerExecutor({ loader: env.LOADER }),
 							},
@@ -159,9 +167,11 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		forced_sources: [...forced],
 	})
 
-	const instance = env.AI_SEARCH.get(env.AI_SEARCH_INSTANCE_ID)
 	const reports = []
 	for (const source of sources) {
+		const instance = env.AI_SEARCH.get(
+			source.instanceId ?? env.AI_SEARCH_INSTANCE_ID,
+		)
 		const report = await syncSource({
 			source,
 			instance,
@@ -177,7 +187,12 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 			log.info('source.pending_index', report)
 		else log.info('source.complete', report)
 		try {
-			await recordSourceFreshness(env.ETAG_CACHE, report)
+			await recordSourceFreshness(
+				env.ETAG_CACHE,
+				report,
+				Date.now(),
+				source.instanceId ? `${source.id}:${source.instanceId}` : source.id,
+			)
 		} catch (error) {
 			log.warn('source.freshness_failed', {
 				source: source.id,
@@ -186,18 +201,26 @@ async function runSync(event: ScheduledController, env: Env): Promise<void> {
 		}
 		reports.push(report)
 	}
-	const statusSource =
-		sources[new Date(event.scheduledTime).getUTCHours() % sources.length]
-	if (statusSource) {
+	for (const source of sources) {
 		try {
-			const status = await sourceIndexStatus(instance, statusSource.id)
-			log.info('source.index_status', status)
+			const status = await sourceIndexStatus(
+				env.AI_SEARCH.get(source.instanceId ?? env.AI_SEARCH_INSTANCE_ID),
+				source.id,
+			)
 			recordSourceIndexStatus(status)
+			await recordIndexProgress(
+				env.ETAG_CACHE,
+				status,
+				source.instanceId ? `${source.id}:${source.instanceId}` : source.id,
+			)
+			log.info('source.index_status', status)
 		} catch (error) {
 			log.warn('source.index_status_failed', {
-				source: statusSource.id,
+				source: source.id,
 				...errorFields(error),
 			})
+		} finally {
+			flushWorkerMetrics()
 		}
 	}
 	const durationMs = Math.round(performance.now() - startedAt)

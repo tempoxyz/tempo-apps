@@ -1,3 +1,4 @@
+import type { SearchInstance } from './search-instance.js'
 import { withTimeout } from './timeout.js'
 import { errorFields, log } from './log.js'
 import { codeMcpServer } from '@cloudflare/codemode/mcp'
@@ -87,7 +88,8 @@ type LegacySearchOptions = {
 }
 
 type McpContext = {
-	instance: AiSearchInstance
+	instanceForSources?: (sources: string[]) => SearchInstance
+	instance: SearchInstance
 	sources?: Source[]
 	executor?: Executor
 }
@@ -102,9 +104,9 @@ const DEFAULT_MATCH_THRESHOLD = 0.45
 const DEFAULT_MAX_CHARS_PER_CHUNK = 1200
 const DEFAULT_MAX_TOTAL_CHARS = 2400
 const FILTER_FALLBACK_TTL_MS = 10 * 60_000
-const AI_SEARCH_TIMEOUT_MS = 5000
+const AI_SEARCH_TIMEOUT_MS = 9000
 const DOC_FETCH_TIMEOUT_MS = 5000
-const SEARCH_TIMEOUT_MS = 15_000
+const SEARCH_TIMEOUT_MS = 25_000
 const SEARCH_RESULT_CACHE_TTL_MS = 60_000
 const SEARCH_RESULT_CACHE_MAX_ENTRIES = 128
 const PAGE_CACHE_TTL_MS = 60_000
@@ -294,7 +296,8 @@ export async function handleMcp(
 					cachedSearch(
 						query.trim(),
 						effectiveArgs,
-						context.instance,
+						context.instanceForSources?.(selectedSources(effectiveArgs)) ??
+							context.instance,
 						context.sources ?? [],
 					),
 				SEARCH_TIMEOUT_MS,
@@ -644,10 +647,10 @@ function cachePage(key: string, text: string): void {
 async function cachedSearch(
 	query: string,
 	args: SearchArguments | undefined,
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	sources: Source[],
 ): Promise<SearchResult> {
-	const key = searchCacheKey(query, args)
+	const key = JSON.stringify(sources) + searchCacheKey(query, args)
 	const cached = searchResultCache.get(key)
 	if (cached && cached.expiresAt > Date.now()) return cached.result
 	if (cached) searchResultCache.delete(key)
@@ -668,12 +671,12 @@ async function runAndCacheSearch(
 	key: string,
 	query: string,
 	args: SearchArguments | undefined,
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	sources: Source[],
 ): Promise<SearchResult> {
 	const result = await runSearch(query, args, instance, sources)
 	cacheSearchResult(key, result)
-	const postFallbackKey = searchCacheKey(query, args)
+	const postFallbackKey = JSON.stringify(sources) + searchCacheKey(query, args)
 	if (postFallbackKey !== key) cacheSearchResult(postFallbackKey, result)
 	return result
 }
@@ -681,50 +684,63 @@ async function runAndCacheSearch(
 async function runSearch(
 	query: string,
 	args: SearchArguments | undefined,
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	sources: Source[],
 ): Promise<SearchResult> {
 	const wantedSources = selectedSources(args)
 	const skipSourceFilter = shouldSkipSourceFilter(wantedSources)
-	let result = await searchWithMetrics(
-		instance,
-		{
-			query,
-			ai_search_options: normalizeOptions(args, {
-				includeSourceFilter: !skipSourceFilter,
-				maxResults: upstreamMaxResultsFor(args),
-				...(skipSourceFilter
-					? { maxResults: fallbackMaxResultsFor(args) }
-					: {}),
-			}),
-		},
-		{ path: 'primary', sourceCount: wantedSources.length },
-	)
-	if (skipSourceFilter) {
-		result = filterSourceChunks(
-			result,
-			wantedSources,
-			upstreamMaxResultsFor(args),
-		)
-	} else if (result.chunks.length === 0 && wantedSources.length > 0) {
-		rememberStaleSourceFilters(wantedSources)
-		const fallback = await searchWithMetrics(
+	let result: SearchResult
+	try {
+		result = await searchWithMetrics(
 			instance,
 			{
 				query,
 				ai_search_options: normalizeOptions(args, {
-					includeSourceFilter: false,
-					maxResults: fallbackMaxResultsFor(args),
+					includeSourceFilter: !skipSourceFilter,
+					maxResults: upstreamMaxResultsFor(args),
+					...(skipSourceFilter
+						? { maxResults: fallbackMaxResultsFor(args) }
+						: {}),
 				}),
 			},
-			{ path: 'unfiltered_fallback', sourceCount: wantedSources.length },
+			{ path: 'primary', sourceCount: wantedSources.length },
 		)
-		const filtered = filterSourceChunks(
-			fallback,
+		if (skipSourceFilter) {
+			result = filterSourceChunks(
+				result,
+				wantedSources,
+				upstreamMaxResultsFor(args),
+			)
+		} else if (result.chunks.length === 0 && wantedSources.length > 0) {
+			rememberStaleSourceFilters(wantedSources)
+			const fallback = await searchWithMetrics(
+				instance,
+				{
+					query,
+					ai_search_options: normalizeOptions(args, {
+						includeSourceFilter: false,
+						maxResults: fallbackMaxResultsFor(args),
+					}),
+				},
+				{ path: 'unfiltered_fallback', sourceCount: wantedSources.length },
+			)
+			const filtered = filterSourceChunks(
+				fallback,
+				wantedSources,
+				upstreamMaxResultsFor(args),
+			)
+			if (filtered.chunks.length > 0) result = filtered
+		}
+	} catch (error) {
+		const fallback = await localSourceSearch(
+			query,
+			args,
 			wantedSources,
-			upstreamMaxResultsFor(args),
+			sources,
+			{ search_query: query, chunks: [] },
 		)
-		if (filtered.chunks.length > 0) result = filtered
+		if (fallback.chunks.length === 0) throw error
+		return fallback
 	}
 	if (result.chunks.length === 0) {
 		result = await localSourceSearch(
@@ -739,7 +755,7 @@ async function runSearch(
 }
 
 async function searchWithMetrics(
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	request: AiSearchSearchRequest,
 	tags: { path: string; sourceCount: number },
 ): Promise<SearchResult> {
@@ -829,7 +845,28 @@ async function localSourceSearch(
 	sources: Source[],
 	emptyResult: AiSearchSearchResponse,
 ): Promise<SearchResult> {
-	if (sourceIds.length !== 1) return emptyResult
+	if (sourceIds.length !== 1) {
+		const selected = sources.filter(
+			(source) => sourceIds.length === 0 || sourceIds.includes(source.id),
+		)
+		const results = await Promise.allSettled(
+			selected.map((source) =>
+				localSourceSearch(query, args, [source.id], [source], emptyResult),
+			),
+		)
+		const chunks = results.flatMap((result) =>
+			result.status === 'fulfilled' ? result.value.chunks : [],
+		)
+		return chunks.length
+			? {
+					...emptyResult,
+					chunks: chunks
+						.sort((a, b) => b.score - a.score)
+						.slice(0, localSourceMaxResultsFor(args)),
+					retrieval: 'source_index',
+				}
+			: emptyResult
+	}
 	if (args?.include_raw === true) return emptyResult
 
 	const source = sources.find((entry) => entry.id === sourceIds[0])

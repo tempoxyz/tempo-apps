@@ -25,6 +25,11 @@ type PendingTags = { source: string }
 type SourceItemTags = { source: string; status: string }
 
 type DocsMcpMetricRegistry = {
+	tempo_docs_mcp_index_search_error_count: { instance: string }
+	tempo_docs_mcp_index_fallback_count: EmptyTags
+	tempo_docs_mcp_source_index_stalled_seconds: PendingTags
+	tempo_docs_mcp_source_index_completed_growth: PendingTags
+	tempo_docs_mcp_source_pages_deferred: SourceTags
 	tempo_docs_mcp_source_ready_age_seconds: PendingTags
 	tempo_docs_mcp_source_pending_age_seconds: PendingTags
 	tempo_docs_mcp_http_request_count: HttpTags
@@ -275,6 +280,11 @@ export function recordSourceIngestMetrics(
 		)
 	if (report.status === 'synced' || report.status === 'pending_index') {
 		workerMetrics.count(
+			'tempo_docs_mcp_source_pages_deferred',
+			report.deferred ?? 0,
+			tags,
+		)
+		workerMetrics.count(
 			'tempo_docs_mcp_source_pages_uploaded',
 			report.pages,
 			tags,
@@ -308,7 +318,7 @@ export function isFailedSyncReport(report: SyncReport): boolean {
 	return (
 		report.status === 'error' ||
 		((report.status === 'synced' || report.status === 'pending_index') &&
-			report.failed > 0)
+			(report.failed > 0 || (report.deferred ?? 0) > 0))
 	)
 }
 

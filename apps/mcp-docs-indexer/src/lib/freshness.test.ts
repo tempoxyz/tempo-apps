@@ -54,3 +54,48 @@ describe('source freshness', () => {
 		}
 	})
 })
+
+it('tracks stalled backlogs and resets only on completed growth or an empty backlog', async () => {
+	const { recordIndexProgress } = await import('./freshness.js')
+	const store = new Map<string, string>()
+	const kv = {
+		get: async (key: string) => store.get(key) ?? null,
+		put: async (key: string, value: string) => {
+			store.set(key, value)
+		},
+	} as unknown as KVNamespace
+	const gauge = vi.spyOn(workerMetrics, 'gauge').mockImplementation(() => {})
+	try {
+		for (const [now, completed, queued, stalled] of [
+			[1000, 2, 10, 0],
+			[11000, 2, 9, 10],
+			[21000, 3, 8, 0],
+			[31000, 2, 9, 10],
+			[41000, 2, 0, 0],
+		]) {
+			await recordIndexProgress(
+				kv,
+				{ source: 'tempo', counts: { completed, queued, running: 0 } },
+				'tempo:new',
+				now,
+			)
+			expect(gauge).toHaveBeenLastCalledWith(
+				'tempo_docs_mcp_source_index_stalled_seconds',
+				stalled,
+				{ source: 'tempo' },
+			)
+		}
+		const before = store.get('index_progress:tempo:new')
+		gauge.mockClear()
+		await recordIndexProgress(
+			kv,
+			{ source: 'tempo', counts: { completed: 10 } },
+			'tempo:new',
+			51000,
+		)
+		expect(store.get('index_progress:tempo:new')).toBe(before)
+		expect(gauge).not.toHaveBeenCalled()
+	} finally {
+		gauge.mockRestore()
+	}
+})

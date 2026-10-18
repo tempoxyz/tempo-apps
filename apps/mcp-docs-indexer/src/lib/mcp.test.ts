@@ -1273,10 +1273,13 @@ describe('handleMcp', () => {
 		expect(calls[0]?.ai_search_options?.retrieval?.max_num_results).toBe(20)
 	})
 
-	it('falls back to source llms.txt when filtered search returns no chunks', async () => {
+	it.each([
+		'empty',
+		'unavailable',
+	])('falls back to source llms.txt when search is %s', async (mode) => {
 		const tempoSource: Source = {
 			id: 'tempo',
-			base: 'https://docs.tempo.xyz',
+			base: `https://${mode}.tempo.example`,
 			description: 'Tempo docs',
 		}
 		const fetches: string[] = []
@@ -1284,13 +1287,14 @@ describe('handleMcp', () => {
 			'fetch',
 			vi.fn(async (url: string) => {
 				fetches.push(url)
-				if (url === 'https://docs.tempo.xyz/llms.txt') {
+				if (url === `https://${mode}.tempo.example/llms.txt`) {
 					return new Response(
 						'- [Use virtual addresses for deposits](/guide/payments/virtual-addresses): Register a virtual-address master and derive deposit addresses.',
 					)
 				}
 				if (
-					url === 'https://docs.tempo.xyz/guide/payments/virtual-addresses.md'
+					url ===
+					`https://${mode}.tempo.example/guide/payments/virtual-addresses.md`
 				) {
 					return new Response(
 						'# Use virtual addresses for deposits\n\nRegister a virtual-address master and watch deposits.',
@@ -1318,17 +1322,17 @@ describe('handleMcp', () => {
 				}),
 			}),
 			{
-				instance: instance(async () => ({
-					search_query: 'virtual',
-					chunks: [],
-				})),
+				instance: instance(async () => {
+					if (mode === 'unavailable') throw new Error('backend unavailable')
+					return { search_query: 'virtual', chunks: [] }
+				}),
 				sources: [tempoSource],
 			},
 		)
 
 		expect(fetches).toEqual([
-			'https://docs.tempo.xyz/llms.txt',
-			'https://docs.tempo.xyz/guide/payments/virtual-addresses.md',
+			`https://${mode}.tempo.example/llms.txt`,
+			`https://${mode}.tempo.example/guide/payments/virtual-addresses.md`,
 		])
 		const text = await textContent(res)
 		expect(text.result.retrieval).toBe('source_index')
@@ -1336,7 +1340,7 @@ describe('handleMcp', () => {
 			{
 				score: 0.6471,
 				source: 'tempo',
-				url: 'https://docs.tempo.xyz/guide/payments/virtual-addresses',
+				url: `https://${mode}.tempo.example/guide/payments/virtual-addresses`,
 				text: '# Use virtual addresses for deposits\n\nRegister a virtual-address master and watch deposits.',
 			},
 		])
@@ -2444,7 +2448,7 @@ describe('bounded search dependencies', () => {
 				})
 			const pending = handleMcp(request(), context)
 			await vi.waitFor(() => expect(search).toHaveBeenCalledOnce())
-			await vi.advanceTimersByTimeAsync(5001)
+			await vi.advanceTimersByTimeAsync(9001)
 			const response = await pending
 			expect(await response?.json()).toMatchObject({
 				result: { isError: true },

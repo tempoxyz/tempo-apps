@@ -21,6 +21,7 @@ type IndexEntry = {
 }
 /** Per-source map of AI Search item key → {item id, last-seen ETag}. */
 type SourceIndex = Record<string, IndexEntry>
+type PageRetry = { attempts: number; after: number }
 
 export type SyncReport =
 	| { source: string; status: 'unchanged'; duration_ms: number }
@@ -36,6 +37,7 @@ export type SyncReport =
 			pages: number
 			unchanged: number
 			failed: number
+			deferred?: number
 			deleted: number
 			pending: number
 			duration_ms: number
@@ -62,12 +64,16 @@ export async function syncSource(args: {
 	force?: boolean
 }): Promise<SyncReport> {
 	const { source, instance, etagCache, force = false } = args
-	const indexKey = `index:${source.id}`
-	const etagKey = `etag:${source.id}`
-	const sourceUrlKey = `source_url:${source.id}`
-	const pendingDeletionKey = `pending_deletion:${source.id}`
-	const retryForceKey = `retry_force:${source.id}`
-	const cursorKey = `index_cursor:${source.id}`
+	const stateId = source.instanceId
+		? `${source.id}:${source.instanceId}`
+		: source.id
+	const indexKey = `index:${stateId}`
+	const etagKey = `etag:${stateId}`
+	const sourceUrlKey = `source_url:${stateId}`
+	const pendingDeletionKey = `pending_deletion:${stateId}`
+	const retryForceKey = `retry_force:${stateId}`
+	const cursorKey = `index_cursor:${stateId}`
+	const retriesKey = `page_retries:${stateId}`
 	const startedAt = performance.now()
 	const elapsed = () => Math.round(performance.now() - startedAt)
 	const controller = new AbortController()
@@ -86,6 +92,9 @@ export async function syncSource(args: {
 				? new URL(source.base).pathname !== '/'
 				: previousIndexUrl !== indexUrl
 		const prevIndex = await call(() => loadIndex(etagCache, indexKey))
+		const retries: Record<string, PageRetry> = JSON.parse(
+			(await call(() => etagCache.get(retriesKey))) ?? '{}',
+		)
 		const reconciled = await reconcilePendingItems({
 			index: prevIndex,
 			instance,
@@ -100,7 +109,11 @@ export async function syncSource(args: {
 		)
 		const retryForce = (await call(() => etagCache.get(retryForceKey))) === '1'
 		const prevSourceEtag =
-			force || sourceChanged || hasRetries || retryForce
+			force ||
+			sourceChanged ||
+			hasRetries ||
+			retryForce ||
+			Object.keys(retries).length > 0
 				? null
 				: await call(() => etagCache.get(etagKey))
 		const { res, body } = await call(async (signal) => {
@@ -192,6 +205,7 @@ export async function syncSource(args: {
 		let pages = 0
 		let unchanged = 0
 		let failed = 0
+		let deferred = 0
 
 		for (let i = 0; i < pageUrls.length; i += CONCURRENCY) {
 			if (controller.signal.aborted) {
@@ -200,18 +214,27 @@ export async function syncSource(args: {
 			}
 			const batch = pageUrls.slice(i, i + CONCURRENCY)
 			const results = await Promise.allSettled(
-				batch.map((url) =>
-					syncPage({
+				batch.map((url) => {
+					const key = pageKey(url, source.id)
+					if ((retries[key]?.after ?? 0) > Date.now()) {
+						deferred++
+						return Promise.resolve({
+							key,
+							outcome: 'deferred' as const,
+							entry: prevIndex[key],
+						})
+					}
+					return syncPage({
 						url,
 						source,
 						instance,
 						prevIndex,
-						force: force || sourceChanged || retryForce,
+						force: force || sourceChanged,
 						refreshMetadata: sourceChanged,
 						metadataHash,
 						call,
-					}),
-				),
+					})
+				}),
 			)
 			for (const r of results) {
 				if (r.status !== 'fulfilled') {
@@ -222,7 +245,14 @@ export async function syncSource(args: {
 				if (out.entry) next[out.key] = out.entry
 				if (out.outcome === 'uploaded') pages++
 				else if (out.outcome === 'unchanged') unchanged++
-				else failed++
+				else if (out.outcome === 'failed') failed++
+				if (out.outcome === 'failed') {
+					const attempts = Math.min(6, (retries[out.key]?.attempts ?? 0) + 1)
+					retries[out.key] = {
+						attempts,
+						after: Date.now() + Math.min(24, 2 ** (attempts - 1)) * 60 * 60_000,
+					}
+				} else if (out.outcome !== 'deferred') delete retries[out.key]
 			}
 		}
 
@@ -230,7 +260,7 @@ export async function syncSource(args: {
 		// every intended page was accounted for — otherwise a transient page
 		// failure would look like a removal.
 		let deleted = 0
-		if (failed === 0) {
+		if (failed === 0 && deferred === 0) {
 			for (const [key, entry] of Object.entries(prevIndex)) {
 				if (next[key]) continue
 				try {
@@ -261,8 +291,12 @@ export async function syncSource(args: {
 		const save: IngestCall = (operation) => withTimeout(operation, 5000)
 		// Advance the source ETag only after a clean sync. Preserve successful
 		// uploads on partial runs without dropping stale entries awaiting deletion.
-		const savedIndex = failed === 0 ? next : { ...prevIndex, ...next }
-		if (failed === 0) {
+		const savedIndex =
+			failed === 0 && deferred === 0 ? next : { ...prevIndex, ...next }
+		for (const key of Object.keys(retries))
+			if (!intendedKeys.has(key)) delete retries[key]
+		await save(() => etagCache.put(retriesKey, JSON.stringify(retries)))
+		if (failed === 0 && deferred === 0) {
 			const etag = res.headers.get('etag')
 			await save(() => etagCache.put(indexKey, JSON.stringify(next)))
 			await save(() => etagCache.put(sourceUrlKey, indexUrl))
@@ -275,7 +309,7 @@ export async function syncSource(args: {
 			await save(() => etagCache.delete(etagKey))
 		}
 		await save(() =>
-			etagCache.put(`last_sync:${source.id}`, new Date().toISOString()),
+			etagCache.put(`last_sync:${stateId}`, new Date().toISOString()),
 		)
 		const pending = Object.values(savedIndex).filter(
 			(entry) => entry.index_pending,
@@ -286,6 +320,7 @@ export async function syncSource(args: {
 			pages,
 			unchanged,
 			failed,
+			...(deferred ? { deferred } : {}),
 			deleted,
 			pending,
 			duration_ms: elapsed(),

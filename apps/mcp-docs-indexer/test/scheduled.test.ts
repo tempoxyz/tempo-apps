@@ -61,6 +61,10 @@ async function runScheduled(
 
 beforeEach(async () => {
 	for (const key of [
+		'page_retries:fixture',
+		'index_progress:fixture',
+		'page_retries:other',
+		'index_progress:other',
 		'etag:fixture',
 		'index:fixture',
 		'source_url:fixture',
@@ -225,7 +229,7 @@ describe('scheduled Worker', () => {
 		)
 	})
 
-	it('checks indexing status for one source per run', async () => {
+	it('checks indexing status for every source per run', async () => {
 		const uploads: string[] = []
 		const lists: string[] = []
 		await env.ETAG_CACHE.put('etag:fixture', '"fixture-v1"')
@@ -250,9 +254,12 @@ describe('scheduled Worker', () => {
 			Date.parse('2026-10-09T14:00:00Z'),
 		)
 
-		expect(lists).toHaveLength(6)
+		expect(lists).toHaveLength(12)
 		expect(new Set(lists)).toEqual(
-			new Set([JSON.stringify({ source: 'fixture' })]),
+			new Set([
+				JSON.stringify({ source: 'fixture' }),
+				JSON.stringify({ source: 'other' }),
+			]),
 		)
 	})
 

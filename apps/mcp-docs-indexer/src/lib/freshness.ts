@@ -7,9 +7,10 @@ export async function recordSourceFreshness(
 	kv: KVNamespace,
 	report: SyncReport,
 	now = Date.now(),
+	stateId = report.source,
 ): Promise<void> {
-	const readyKey = `last_ready:${report.source}`
-	const pendingKey = `pending_since:${report.source}`
+	const readyKey = `last_ready:${stateId}`
+	const pendingKey = `pending_since:${stateId}`
 	let ready = await withTimeout(() => kv.get(readyKey), 5000)
 	let pending = await withTimeout(() => kv.get(pendingKey), 5000)
 	if (
@@ -51,4 +52,36 @@ export async function recordSourceFreshness(
 	) {
 		workerMetrics.gauge('tempo_docs_mcp_source_pending_age_seconds', 0, tags)
 	}
+}
+
+/** Track actual completed-item growth; uploads and queue churn are not progress. */
+export async function recordIndexProgress(
+	kv: KVNamespace,
+	status: import('./ingest.js').SourceIndexStatus,
+	stateId: string,
+	now = Date.now(),
+): Promise<void> {
+	const { completed, queued, running } = status.counts
+	if (completed === undefined || queued === undefined || running === undefined)
+		return
+	const key = `index_progress:${stateId}`
+	const raw = await withTimeout(() => kv.get(key), 5000)
+	const previous = raw
+		? (JSON.parse(raw) as { completed: number; advanced: number })
+		: undefined
+	const growth = previous ? Math.max(0, completed - previous.completed) : 0
+	const advanced =
+		!previous || growth > 0 || queued + running === 0 ? now : previous.advanced
+	await withTimeout(
+		() => kv.put(key, JSON.stringify({ completed, advanced })),
+		5000,
+	)
+	workerMetrics.gauge('tempo_docs_mcp_source_index_completed_growth', growth, {
+		source: status.source,
+	})
+	workerMetrics.gauge(
+		'tempo_docs_mcp_source_index_stalled_seconds',
+		queued + running > 0 ? Math.max(0, (now - advanced) / 1000) : 0,
+		{ source: status.source },
+	)
 }
