@@ -173,6 +173,27 @@ describe('Stablecoin DEX transaction fills', () => {
 		})
 	})
 
+	it('leaves a fill older than the kept switch history unlabelled', async () => {
+		const lookup = query.getMockImplementation()
+		// 50 switches back and forth, all after the fill.
+		query.mockImplementation(async (sql: string) =>
+			sql.includes('topic2')
+				? rows(
+						['address', 'topic2', 'ts'],
+						Array.from({ length: 50 }, (_, index) => [
+							USDC,
+							`0x${'0'.repeat(24)}${(index % 2 ? PATH : OUSD).slice(2)}`,
+							SWITCH_AT + 50 - index,
+						]),
+					)
+				: lookup?.(sql),
+		)
+		expect(await getDexTransactionFills(TX)).toEqual({
+			fills: [],
+			complete: true,
+		})
+	})
+
 	it('reads nothing for a malformed hash', async () => {
 		expect(await getDexTransactionFills('0x1234')).toEqual({
 			fills: [],

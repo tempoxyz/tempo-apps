@@ -17,6 +17,7 @@ import {
 	addressOf,
 	indexer,
 	list,
+	MAX_SWITCHES,
 	type Row,
 	readQuoteSwitches,
 	readTokens,
@@ -202,18 +203,19 @@ type FillBook = {
 
 /**
  * The book each fill filled on: its order's base token, and the quote token
- * that base routed through when it filled.
+ * that base routed through when it filled. `undetermined` counts fills that
+ * predate the switch history kept for their base, whose book can't be known.
  */
 async function readFillBooks(
 	chainId: number,
 	fills: readonly DexFill[],
 	blockNumber: bigint,
-): Promise<FillBook[]> {
+): Promise<{ books: FillBook[]; undetermined: number }> {
 	const states = await readOrderStates(chainId, fills)
 	const bases = new Set(
 		[...states.values()].flatMap((list) => list.map((state) => state.token)),
 	)
-	if (bases.size === 0) return []
+	if (bases.size === 0) return { books: [], undetermined: 0 }
 	const [switches, pairRows] = await Promise.all([
 		readQuoteSwitches(chainId, bases),
 		indexer(
@@ -233,11 +235,22 @@ async function readFillBooks(
 		blockNumber,
 	)
 
-	return fills.flatMap((fill) => {
+	let undetermined = 0
+	const resolved = fills.flatMap((fill) => {
 		const order = orderAt(states.get(fill.orderId) ?? [], fill)
 		const base = order && tokens.get(order.token)
 		if (!order || !base) return []
 		const history = switches.get(order.token) ?? []
+		// Only the newest switches are kept, so an older fill's book is unknown.
+		const oldest = history[history.length - 1]
+		if (
+			history.length >= MAX_SWITCHES &&
+			oldest &&
+			fill.timestamp < oldest.at
+		) {
+			undetermined++
+			return []
+		}
 		const original = history.length
 			? originalQuote({
 					books: books.get(order.token) ?? [],
@@ -260,6 +273,7 @@ async function readFillBooks(
 			},
 		]
 	})
+	return { books: resolved, undetermined }
 }
 
 /** One page of fills as swaps, newest first. */
@@ -268,7 +282,7 @@ async function assembleSwaps(
 	fills: readonly DexFill[],
 	blockNumber: bigint,
 ): Promise<DexSwap[]> {
-	const books = await readFillBooks(chainId, fills, blockNumber)
+	const { books } = await readFillBooks(chainId, fills, blockNumber)
 	const tokens = new Map(
 		books.flatMap(({ base, quote }) => [
 			[base.address, base],
@@ -405,7 +419,7 @@ export async function getDexTransactionFills(
 		),
 	)
 	if (fills.length === 0) return { fills: [], complete: false }
-	const books = await readFillBooks(
+	const { books, undetermined } = await readFillBooks(
 		chainId,
 		fills,
 		await getBatchedClient().getBlockNumber(),
@@ -418,8 +432,10 @@ export async function getDexTransactionFills(
 			active,
 			amount: String(fill.amount),
 		})),
+		// An undetermined fill never resolves, so it doesn't hold up caching.
 		complete:
-			books.length === fills.length && books.every((book) => book.exact),
+			books.length + undetermined === fills.length &&
+			books.every((book) => book.exact),
 	}
 }
 
