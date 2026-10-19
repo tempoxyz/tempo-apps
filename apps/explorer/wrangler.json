@@ -323,7 +323,6 @@
 		},
 		"mainnet": {
 			"name": "explorer-mainnet",
-			"secrets": { "required": ["RPC_AUTH"] },
 			"routes": [
 				{
 					"custom_domain": true,
