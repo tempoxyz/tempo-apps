@@ -2063,8 +2063,14 @@ export type KnownEventPart =
 	| { type: 'token'; value: Token }
 	/** A swap's route through the Stablecoin DEX, linked to its route page. */
 	| { type: 'dexRoute'; value: { from: Address.Address; to: Address.Address } }
-	/** The Stablecoin DEX book an order rests on, linked to its pair page. */
-	| { type: 'dexPair'; value: { base: Token; quote: Token } }
+	/**
+	 * The Stablecoin DEX book an order rests on. An active book links to its
+	 * pair page; a retired one has none, as swaps no longer route through it.
+	 */
+	| {
+			type: 'dexPair'
+			value: { base: Token; quote: Token; active: boolean }
+	  }
 
 export interface KnownEvent {
 	type: Exclude<string, FeeTransferEvent['type']>

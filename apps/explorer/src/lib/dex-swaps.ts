@@ -28,6 +28,8 @@ export type DexTransactionFill = {
 	log: number
 	base: DexPoolToken
 	quote: DexPoolToken
+	/** The book is still the base's active one; a retired book has no page. */
+	active: boolean
 	/** Filled base-token units. */
 	amount: string
 }
@@ -251,6 +253,7 @@ export function describeDexFill(
 				value: {
 					base: { address: base.address, symbol: base.symbol },
 					quote: { address: quote.address, symbol: quote.symbol },
+					active: fill.active,
 				},
 			},
 		],

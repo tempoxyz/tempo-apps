@@ -13,6 +13,7 @@ import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
+import { Addresses } from 'viem/tempo'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
@@ -799,7 +800,12 @@ function EventsSection(props: {
 	const queryClient = useQueryClient()
 	const { data: dexFillLookup } = useQuery({
 		...dexTransactionFillsQueryOptions(hash),
-		enabled: props.knownEvents.some((event) => event?.type === 'order filled'),
+		// Only fills the DEX emitted are indexed, and polled for until they are.
+		enabled: logs.some(
+			(log, index) =>
+				props.knownEvents[index]?.type === 'order filled' &&
+				OxAddressUtil.isEqual(log.address, Addresses.stablecoinDex),
+		),
 	})
 	// An OrderFilled log names only its order; the indexer supplies its book.
 	const dexFills = dexFillLookup?.fills

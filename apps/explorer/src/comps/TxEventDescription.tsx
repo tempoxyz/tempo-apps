@@ -276,6 +276,15 @@ export namespace TxEventDescription {
 					</Link>
 				)
 			case 'dexPair':
+				if (!part.value.active)
+					return (
+						<span
+							className="whitespace-nowrap text-primary"
+							title="A retired Stablecoin DEX book"
+						>
+							{dexPairLabel(part.value, ' / ')}
+						</span>
+					)
 				return (
 					<Link
 						to="/dex/$from/$to"

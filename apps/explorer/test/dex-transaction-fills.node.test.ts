@@ -107,6 +107,8 @@ describe('Stablecoin DEX transaction fills', () => {
 			log: 14,
 			base: { address: USDC, symbol: 'USDC.e', decimals: 6 },
 			quote: { address: PATH, symbol: 'pathUSD' },
+			// USDC.e has since moved to OUSD, retiring this book.
+			active: false,
 			amount: '5016012',
 		})
 		if (!fill) return
@@ -138,6 +140,7 @@ describe('Stablecoin DEX transaction fills', () => {
 				value: {
 					base: { address: USDC, symbol: 'USDC.e' },
 					quote: { address: PATH, symbol: 'pathUSD' },
+					active: false,
 				},
 			},
 		])

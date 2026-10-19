@@ -196,6 +196,8 @@ type FillBook = {
 	quote: DexPoolToken
 	/** The base's quote tokens were read rather than assumed. */
 	exact: boolean
+	/** The book is the one the base routes through now. */
+	active: boolean
 }
 
 /**
@@ -254,6 +256,7 @@ async function readFillBooks(
 				base: base.token,
 				quote: quote.token,
 				exact: !base.assumedQuote,
+				active: quote.token.address === base.quoteToken,
 			},
 		]
 	})
@@ -408,10 +411,11 @@ export async function getDexTransactionFills(
 		await getBatchedClient().getBlockNumber(),
 	)
 	return {
-		fills: books.map(({ fill, base, quote }) => ({
+		fills: books.map(({ fill, base, quote, active }) => ({
 			log: fill.log,
 			base,
 			quote,
+			active,
 			amount: String(fill.amount),
 		})),
 		complete:
@@ -426,7 +430,7 @@ export const fetchDexTransactionFills = createServerFn({ method: 'GET' })
 	.handler(async ({ data }): Promise<DexTransactionFills> => {
 		try {
 			return await withImmutableDataCache({
-				key: `dex-transaction-fills:v2:${getTempoChain().id}:${data.hash.toLowerCase()}`,
+				key: `dex-transaction-fills:v3:${getTempoChain().id}:${data.hash.toLowerCase()}`,
 				load: () => withDeadline(getDexTransactionFills(data.hash)),
 				// Retry an incomplete result rather than keep it.
 				shouldCache: (result) => result.complete,
