@@ -1,7 +1,7 @@
-import type { Address } from 'viem'
+import type { Address, Hex } from 'viem'
 import { queryOptions } from '@tanstack/react-query'
 import { fetchDexPools } from '#lib/server/dex-pools'
-import { fetchDexSwaps } from '#lib/server/dex-swaps'
+import { fetchDexSwaps, fetchDexTransactionFills } from '#lib/server/dex-swaps'
 import { getTempoChain } from '#wagmi.config'
 
 export function dexPoolsQueryOptions() {
@@ -33,5 +33,18 @@ export function dexSwapsQueryOptions(
 		staleTime: 4_000,
 		refetchInterval: live ? 5_000 : false,
 		retry: 1,
+	})
+}
+
+export function dexTransactionFillsQueryOptions(hash: Hex) {
+	return queryOptions({
+		queryKey: ['dex-transaction-fills', getTempoChain().id, hash],
+		queryFn: () => fetchDexTransactionFills({ data: { hash } }),
+		staleTime: Number.POSITIVE_INFINITY,
+		// The indexer can trail a transaction by a few blocks.
+		refetchInterval: (query) =>
+			query.state.data?.length || query.state.dataUpdateCount >= 5
+				? false
+				: 3_000,
 	})
 }

@@ -40,6 +40,7 @@ export async function getTransactionActivities(
 		const response = await parseResponse(Promise.resolve(upstream))
 		return response.data.map((activity) => ({
 			id: activity.id,
+			logIndex: activity.logIndex,
 			title: activity.title,
 			type: activity.type,
 			data: normalizeActivityData(activity.data),

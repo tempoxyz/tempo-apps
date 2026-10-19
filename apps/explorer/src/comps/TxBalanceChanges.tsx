@@ -3,6 +3,7 @@ import type { Address as OxAddress } from 'ox'
 import * as Value from 'ox/Value'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
+import { getAccountTag } from '#lib/account'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { isTip20Address } from '#lib/domain/tip20'
@@ -43,7 +44,11 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 							title: `View ${change.token} transfers for ${change.address}`,
 						},
 						cells: [
-							<Address key="addr" address={change.address} />,
+							<Address
+								key="addr"
+								address={change.address}
+								label={getAccountTag(change.address)?.label}
+							/>,
 							<TxBalanceChanges.TokenSymbol
 								key="token"
 								token={change.token}

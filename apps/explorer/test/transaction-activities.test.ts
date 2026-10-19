@@ -1,10 +1,53 @@
 import { describe, expect, test } from 'vitest'
+import { encodeEventTopics, type Hex } from 'viem'
+import { Addresses } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
 } from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
+	test('names the Stablecoin DEX only for swaps indexed from its transfers', () => {
+		const OUSD = '0x20c0000000000000000000006a37da5c996874be'
+		const USDC = '0x20c000000000000000000000b9537d11c60e8b50'
+		const taker = `0x${'9'.repeat(40)}` as const
+		const transfer = (logIndex: number, from: Hex, to: Hex) => ({
+			logIndex,
+			topics: encodeEventTopics({
+				abi: Abis.tip20,
+				eventName: 'Transfer',
+				args: { from, to },
+			}),
+		})
+		const swap = (logIndex: number) => ({
+			id: `0x${'1'.repeat(64)}-${logIndex}`,
+			logIndex,
+			title: 'Tokens swapped',
+			type: 'swap',
+			data: {
+				sourceAmount: { baseUnits: '5016012', decimals: 6 },
+				sourceToken: { address: OUSD, symbol: 'OUSD' },
+				destinationAmount: { baseUnits: '5016012', decimals: 6 },
+				destinationToken: { address: USDC, symbol: 'USDC.e' },
+			},
+		})
+		const logs = [
+			transfer(13, taker, Addresses.stablecoinDex),
+			// Another venue's settlement in the same transaction.
+			transfer(20, taker, `0x${'7'.repeat(40)}`),
+		]
+
+		const [dex, other] = activitiesToKnownEvents([swap(13), swap(20)], {
+			logs,
+		})
+		expect(dex?.parts.slice(-2)).toEqual([
+			{ type: 'text', value: 'on' },
+			{ type: 'dexRoute', value: { from: OUSD, to: USDC } },
+		])
+		expect(other?.parts.some((part) => part.type === 'dexRoute')).toBe(false)
+	})
+
 	test('omits unknown activities so local descriptions can be used', () => {
 		expect(
 			activitiesToKnownEvents([

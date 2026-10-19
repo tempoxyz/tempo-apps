@@ -103,6 +103,7 @@ async function fetchReceiptDataUncached(params: {
 	const knownCalls = decodeKnownTransactionCalls(transaction, receipt.status)
 	const activityEvents = activitiesToKnownEvents(activities, {
 		portal: receipt.to,
+		logs: receipt.logs,
 	})
 	const knownEvents = enrichReceiptEventAmounts(
 		selectTransactionDescriptionEvents({

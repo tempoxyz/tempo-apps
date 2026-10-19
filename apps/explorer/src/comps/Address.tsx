@@ -5,7 +5,16 @@ import { Midcut } from '#comps/Midcut'
 import { cx } from '#lib/css'
 
 export function Address(props: Address.Props) {
-	const { address, align, chars = 3, className, search, self, title } = props
+	const {
+		address,
+		align,
+		chars = 3,
+		className,
+		label,
+		search,
+		self,
+		title,
+	} = props
 	const { isHighlighted, handlers } = useAddressHighlight(address)
 	return (
 		<>
@@ -13,7 +22,7 @@ export function Address(props: Address.Props) {
 				to="/address/$address"
 				params={{ address }}
 				search={search}
-				title={title}
+				title={title ?? (label ? address : undefined)}
 				preload="intent"
 				className={cx(
 					'text-accent press-down hover:underline font-mono inline-flex min-w-0',
@@ -23,7 +32,11 @@ export function Address(props: Address.Props) {
 				)}
 				{...handlers}
 			>
-				<Midcut align={align} min={chars} prefix="0x" value={address} />
+				{label ? (
+					<span className="font-sans truncate">{label}</span>
+				) : (
+					<Midcut align={align} min={chars} prefix="0x" value={address} />
+				)}
 			</Link>
 			{self && <span className="text-tertiary"> (self)</span>}
 		</>
@@ -36,6 +49,8 @@ export namespace Address {
 		align?: Midcut.Props['align']
 		chars?: number
 		className?: string
+		/** A known name shown instead of the address, such as a system contract's. */
+		label?: string | undefined
 		search?: Record<string, unknown>
 		self?: boolean
 		title?: string

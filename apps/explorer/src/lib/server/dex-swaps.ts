@@ -2,11 +2,12 @@ import { createServerFn } from '@tanstack/react-start'
 import { type Address, formatUnits, type Hex } from 'viem'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
-import { append, originalQuote } from '#lib/dex-pools'
+import { append, type DexPoolToken, originalQuote } from '#lib/dex-pools'
 import {
 	type DexFill,
 	type DexOrderState,
 	type DexSwap,
+	type DexTransactionFill,
 	fillHop,
 	groupSwaps,
 	orderAt,
@@ -23,7 +24,7 @@ import {
 } from '#lib/server/dex-indexer'
 import { withDeadline } from '#lib/server/dex-route'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
-import { zAddress } from '#lib/zod'
+import { zAddress, zHash } from '#lib/zod'
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
 
 /** Fills read per page; a swap is one or more fills. */
@@ -188,12 +189,22 @@ async function readOrderStates(
 	return states
 }
 
-/** One page of fills as swaps, newest first. */
-async function assembleSwaps(
+type FillBook = {
+	fill: DexFill
+	order: DexOrderState
+	base: DexPoolToken
+	quote: DexPoolToken
+}
+
+/**
+ * The book each fill filled on: its order's base token, and the quote token
+ * that base routed through when it filled.
+ */
+async function readFillBooks(
 	chainId: number,
 	fills: readonly DexFill[],
 	blockNumber: bigint,
-): Promise<DexSwap[]> {
+): Promise<FillBook[]> {
 	const states = await readOrderStates(chainId, fills)
 	const bases = new Set(
 		[...states.values()].flatMap((list) => list.map((state) => state.token)),
@@ -218,7 +229,7 @@ async function assembleSwaps(
 		blockNumber,
 	)
 
-	const hops = fills.flatMap((fill) => {
+	return fills.flatMap((fill) => {
 		const order = orderAt(states.get(fill.orderId) ?? [], fill)
 		const base = order && tokens.get(order.token)
 		if (!order || !base) return []
@@ -234,19 +245,33 @@ async function assembleSwaps(
 		const routed = quoteAt(history, original, fill.timestamp)
 		const quote = routed && tokens.get(routed)
 		if (!quote) return []
-		return [
-			{
-				...fillHop(fill.amount, order, quote.token, base.token.decimals),
-				transactionHash: fill.transactionHash,
-				taker: fill.taker,
-				timestamp: fill.timestamp,
-				log: fill.log,
-			},
-		]
+		return [{ fill, order, base: base.token, quote: quote.token }]
 	})
+}
+
+/** One page of fills as swaps, newest first. */
+async function assembleSwaps(
+	chainId: number,
+	fills: readonly DexFill[],
+	blockNumber: bigint,
+): Promise<DexSwap[]> {
+	const books = await readFillBooks(chainId, fills, blockNumber)
+	const tokens = new Map(
+		books.flatMap(({ base, quote }) => [
+			[base.address, base],
+			[quote.address, quote],
+		]),
+	)
+	const hops = books.map(({ fill, order, base, quote }) => ({
+		...fillHop(fill.amount, order, quote, base.decimals),
+		transactionHash: fill.transactionHash,
+		taker: fill.taker,
+		timestamp: fill.timestamp,
+		log: fill.log,
+	}))
 	return groupSwaps(hops).flatMap((row): DexSwap[] => {
-		const from = tokens.get(row.from)?.token
-		const to = tokens.get(row.to)?.token
+		const from = tokens.get(row.from)
+		const to = tokens.get(row.to)
 		if (!from || !to) return []
 		return [
 			{
@@ -344,5 +369,52 @@ export const fetchDexSwaps = createServerFn({ method: 'GET' })
 			throw new Error(
 				'Stablecoin DEX swaps are temporarily unavailable. Please try again.',
 			)
+		}
+	})
+
+/** A transaction's Stablecoin DEX fills, each with the book it filled on. */
+export async function getDexTransactionFills(
+	hash: Hex,
+): Promise<DexTransactionFill[]> {
+	const chainId = getTempoChain().id
+	const transactionHash = hash.toLowerCase()
+	if (!hexHash.test(transactionHash)) return []
+	const fills = parseFills(
+		await indexer(
+			chainId,
+			`SELECT ${fillColumns} FROM dex_fills
+			WHERE address = '${stablecoinDex}' AND tx_hash = '${transactionHash}'
+			ORDER BY log_idx`,
+		),
+	)
+	if (fills.length === 0) return []
+	const books = await readFillBooks(
+		chainId,
+		fills,
+		await getBatchedClient().getBlockNumber(),
+	)
+	return books.map(({ fill, base, quote }) => ({
+		log: fill.log,
+		base,
+		quote,
+		amount: String(fill.amount),
+	}))
+}
+
+export const fetchDexTransactionFills = createServerFn({ method: 'GET' })
+	.inputValidator((input: { hash: Hex }) =>
+		z.object({ hash: zHash() }).parse(input),
+	)
+	.handler(async ({ data }): Promise<DexTransactionFill[]> => {
+		try {
+			return await withImmutableDataCache({
+				key: `dex-transaction-fills:v1:${getTempoChain().id}:${data.hash.toLowerCase()}`,
+				load: () => withDeadline(getDexTransactionFills(data.hash)),
+				// The indexer can trail a new transaction; retry until it has it.
+				shouldCache: (fills) => fills.length > 0,
+			})
+		} catch (error) {
+			console.error('Failed to load Stablecoin DEX fills:', error)
+			return []
 		}
 	})

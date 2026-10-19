@@ -447,6 +447,47 @@ describe('parseKnownEvents', () => {
 		])
 	})
 
+	it('names the Stablecoin DEX as a paired swap’s venue', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const transfer = (token: Hex.Hex, from: Hex.Hex, to: Hex.Hex) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [1_000_000n]),
+				},
+				hash,
+			)
+		const [swap] = parseKnownEvents(
+			mockReceipt(
+				[
+					transfer(userTokenAddress, accountAddress, Addresses.stablecoinDex),
+					transfer(
+						PROP_AMM_OUTPUT_TOKEN,
+						Addresses.stablecoinDex,
+						accountAddress,
+					),
+				],
+				accountAddress,
+				hash,
+			),
+			{ getTokenMetadata },
+		)
+
+		expect(swap?.type).toBe('swap')
+		expect(swap?.parts.slice(-2)).toEqual([
+			{ type: 'text', value: 'on' },
+			{
+				type: 'dexRoute',
+				value: { from: userTokenAddress, to: PROP_AMM_OUTPUT_TOKEN },
+			},
+		])
+	})
+
 	it('preserves tip20 approvals for zone portals', () => {
 		const hash = `0x${'4'.repeat(64)}` as const
 		const amount = 500_000n

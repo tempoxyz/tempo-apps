@@ -1,0 +1,148 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Address } from 'viem'
+import { Addresses } from 'viem/tempo'
+import { describeDexFill } from '#lib/dex-swaps'
+import { getDexTransactionFills } from '#lib/server/dex-swaps'
+
+const { query, multicall } = vi.hoisted(() => ({
+	query: vi.fn(),
+	multicall: vi.fn(),
+}))
+vi.mock('#lib/server/env', () => ({
+	tempoApi: { url: 'https://api.test', headers: undefined },
+	tempoApiUrl: 'https://api.test',
+}))
+vi.mock('#lib/server/network', () => ({ getChainBackend: () => undefined }))
+vi.mock('#lib/server/verified-tokens', () => ({
+	getVerifiedTokenAddresses: async () => new Set([USDC, OUSD, PATH]),
+}))
+vi.mock('#wagmi.config', () => ({
+	getTempoChain: () => ({ id: 4217 }),
+	getBatchedClient: () => ({ getBlockNumber: async () => 200n, multicall }),
+}))
+
+const USDC = '0x20c000000000000000000000b9537d11c60e8b50'
+const OUSD = '0x20c0000000000000000000006a37da5c996874be'
+const PATH = Addresses.pathUsd
+const TX = `0x${'1'.repeat(64)}` as const
+const SWITCH_AT = 1_000_000
+
+function rows(columns: string[], values: unknown[][]) {
+	return new Response(JSON.stringify({ ok: true, columns, rows: values }), {
+		headers: { 'content-type': 'application/json' },
+	})
+}
+
+beforeEach(() => {
+	vi.resetAllMocks()
+	vi.stubGlobal('fetch', async (url: URL) =>
+		query(new URL(url).searchParams.get('sql') ?? ''),
+	)
+	query.mockImplementation(async (sql: string) => {
+		if (sql.includes('FROM dex_fills'))
+			return rows(
+				['block_num', 'log_idx', 'tx_hash', 'ts', 'id', 'taker', 'amount'],
+				// Filled while USDC.e still quoted pathUSD.
+				[
+					[
+						150,
+						14,
+						TX,
+						SWITCH_AT - 100,
+						'5782',
+						`0x${'9'.repeat(40)}`,
+						'5016012',
+					],
+				],
+			)
+		if (sql.includes('FROM dex_orders'))
+			return rows(
+				['id', 'token', 'bid', 'tick', 'block_num', 'log_idx'],
+				[['5782', USDC, 0, 0, 100, 2]],
+			)
+		if (sql.includes('FROM orderflipped')) return rows(['id'], [])
+		if (sql.includes('topic2'))
+			return rows(
+				['address', 'topic2', 'ts'],
+				[[USDC, `0x${'0'.repeat(24)}${OUSD.slice(2)}`, SWITCH_AT]],
+			)
+		if (sql.includes('FROM dex_pairs'))
+			return rows(
+				['base', 'quote'],
+				[
+					[USDC, PATH],
+					[USDC, OUSD],
+				],
+			)
+		throw new Error(`Unexpected query: ${sql}`)
+	})
+	multicall.mockImplementation(async ({ contracts }) =>
+		contracts.map(
+			({
+				address,
+				functionName,
+			}: {
+				address: Address
+				functionName: string
+			}) => {
+				const success = (result: unknown) => ({ status: 'success', result })
+				if (functionName === 'symbol')
+					return success(
+						address === USDC ? 'USDC.e' : address === OUSD ? 'OUSD' : 'pathUSD',
+					)
+				if (functionName === 'decimals') return success(6)
+				return success(address === USDC ? OUSD : PATH)
+			},
+		),
+	)
+})
+
+describe('Stablecoin DEX transaction fills', () => {
+	it('resolves each fill’s book at the time it filled', async () => {
+		const [fill, ...rest] = await getDexTransactionFills(TX)
+		expect(rest).toEqual([])
+		expect(fill).toMatchObject({
+			log: 14,
+			base: { address: USDC, symbol: 'USDC.e', decimals: 6 },
+			quote: { address: PATH, symbol: 'pathUSD' },
+			amount: '5016012',
+		})
+		if (!fill) return
+
+		const event = describeDexFill(
+			{
+				type: 'order filled',
+				parts: [
+					{ type: 'action', value: 'Partial Fill' },
+					{ type: 'text', value: '5016012' },
+				],
+			},
+			fill,
+		)
+		expect(event.parts).toEqual([
+			{ type: 'action', value: 'Partial Fill' },
+			{
+				type: 'amount',
+				value: {
+					token: USDC,
+					value: 5_016_012n,
+					decimals: 6,
+					symbol: 'USDC.e',
+				},
+			},
+			{ type: 'text', value: 'on' },
+			{
+				type: 'dexPair',
+				value: {
+					base: { address: USDC, symbol: 'USDC.e' },
+					quote: { address: PATH, symbol: 'pathUSD' },
+				},
+			},
+		])
+	})
+
+	it('reads nothing for a malformed hash', async () => {
+		expect(await getDexTransactionFills('0x1234')).toEqual([])
+		expect(query).not.toHaveBeenCalled()
+	})
+})

@@ -12,7 +12,11 @@ import { Midcut } from '#comps/Midcut'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
-import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
+import {
+	dexPairLabel,
+	type KnownEvent,
+	type KnownEventPart,
+} from '#lib/domain/known-events.ts'
 import {
 	DateFormatter,
 	HexFormatter,
@@ -20,6 +24,7 @@ import {
 	RoleFormatter,
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
+import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
 
 export function TxEventMemoLine(
 	props: TxEventMemoLine.Props,
@@ -122,6 +127,11 @@ function ContractCallPart(props: {
 			</span>
 		</>
 	)
+}
+
+/** DEX route params are lowercase addresses. */
+function lower(address: AddressType.Address): AddressType.Address {
+	return address.toLowerCase() as AddressType.Address
 }
 
 export function TxEventDescription(props: TxEventDescription.Props) {
@@ -253,6 +263,32 @@ export namespace TxEventDescription {
 				)
 			case 'contractCall':
 				return <ContractCallPart {...part.value} seenAs={seenAs} />
+			case 'dexRoute':
+				return (
+					<Link
+						to="/dex/$from/$to"
+						params={{ from: lower(part.value.from), to: lower(part.value.to) }}
+						title="View this route on the Stablecoin DEX"
+						className="inline-flex h-[24px] items-center gap-[4px] rounded-[2px] px-[6px] whitespace-nowrap bg-accent/10 text-accent hover:bg-accent/15 press-down"
+					>
+						<ArrowLeftRightIcon className="size-[12px]" />
+						Stablecoin DEX
+					</Link>
+				)
+			case 'dexPair':
+				return (
+					<Link
+						to="/dex/$from/$to"
+						params={{
+							from: lower(part.value.base.address),
+							to: lower(part.value.quote.address),
+						}}
+						title="View this pair on the Stablecoin DEX"
+						className="whitespace-nowrap text-accent hover:underline press-down"
+					>
+						{dexPairLabel(part.value, ' / ')}
+					</Link>
+				)
 			default:
 				return null
 		}

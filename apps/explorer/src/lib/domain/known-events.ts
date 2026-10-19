@@ -26,6 +26,7 @@ import {
 	isZonePortalAddress as isDeterministicZonePortalAddress,
 } from '#lib/domain/zones'
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
+import { HexFormatter } from '#lib/formatting'
 import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
 import type * as Tip20 from './tip20'
 
@@ -2027,6 +2028,16 @@ type ContractCall = {
 	input: Hex.Hex
 }
 
+/** A Stablecoin DEX book as text, such as "USDC.e/OUSD". */
+export function dexPairLabel(
+	pair: { base: Token; quote: Token },
+	separator = '/',
+): string {
+	const symbol = (token: Token) =>
+		token.symbol ?? HexFormatter.truncate(token.address)
+	return `${symbol(pair.base)}${separator}${symbol(pair.quote)}`
+}
+
 export type KnownEventPart =
 	| { type: 'account'; value: Address.Address }
 	| { type: 'action'; value: string }
@@ -2042,6 +2053,10 @@ export type KnownEventPart =
 	| { type: 'text'; value: string }
 	| { type: 'tick'; value: number }
 	| { type: 'token'; value: Token }
+	/** A swap's route through the Stablecoin DEX, linked to its route page. */
+	| { type: 'dexRoute'; value: { from: Address.Address; to: Address.Address } }
+	/** The Stablecoin DEX book an order rests on, linked to its pair page. */
+	| { type: 'dexPair'; value: { base: Token; quote: Token } }
 
 export interface KnownEvent {
 	type: Exclude<string, FeeTransferEvent['type']>
@@ -2668,6 +2683,11 @@ export function parseKnownEvents(
 							{
 								type: 'amount',
 								value: createAmount(args2.amount, event2.address),
+							},
+							{ type: 'text', value: 'on' },
+							{
+								type: 'dexRoute',
+								value: { from: event1.address, to: event2.address },
 							},
 						],
 					})
