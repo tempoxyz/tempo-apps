@@ -14,6 +14,9 @@ const RPC_BACKENDS = {
 	nextfork: { chainId: 31318, url: 'https://rpc-nextfork.devnet.tempoxyz.dev' },
 }
 
+/** Public RPCs that also serve unauthenticated requests, at public limits. */
+const PUBLIC_RPC_BACKENDS = new Set(['mainnet', 'testnet'])
+
 /** Select the upstream from deployment configuration, never caller input. */
 export function getExplorerRpcBackend(
 	environment: string | undefined,
@@ -28,6 +31,13 @@ export function getExplorerRpcBackend(
 	if (devnetTarget) return { ...devnetTarget, chainId: DEVNET_CHAIN_ID }
 	if (!environment || !Object.hasOwn(RPC_BACKENDS, environment))
 		throw new Error('RPC network is not configured')
+	// Without an Orchestra credential, public networks fall back to the
+	// unauthenticated endpoint rather than failing every read.
+	if (!auth && PUBLIC_RPC_BACKENDS.has(environment))
+		return {
+			...RPC_BACKENDS[environment as keyof typeof RPC_BACKENDS],
+			headers: {} as Record<string, string>,
+		}
 	if (!auth || !/^[^:\s]+:[^\s]+$/.test(auth))
 		throw new Error('RPC credentials are not configured')
 	return {
