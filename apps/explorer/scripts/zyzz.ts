@@ -20,11 +20,6 @@ export function explorerZyzz(options: explorerZyzz.Options = {}): Plugin[] {
 				'src/lib/**',
 				'src/routes/api/**',
 				'src/workers/**',
-				// Import `@tanstack/react-start/server` or `cloudflare:workers`, which
-				// do not resolve for the browser. The receipt route's styles live in
-				// its sibling `-$hash.styles.ts`.
-				'src/routes/_layout/receipt/$hash.tsx',
-				'src/wagmi.config.ts',
 			],
 			reset: options.reset,
 			script: false,

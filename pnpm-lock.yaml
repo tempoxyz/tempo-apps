@@ -241,8 +241,8 @@ catalogs:
       specifier: ^4.3.6
       version: 4.3.6
     zyzz:
-      specifier: 0.0.33
-      version: 0.0.33
+      specifier: 0.0.34
+      version: 0.0.34
 
 overrides:
   sharp@<0.35.4: 0.35.4
@@ -449,7 +449,7 @@ importers:
         version: link:../../packages/rpc-utils
       '@tempoxyz/ds':
         specifier: 'catalog:'
-        version: 0.0.7(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.33(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))
+        version: 0.0.7(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))
       abitype:
         specifier: 'catalog:'
         version: 1.2.4(typescript@6.0.2)(zod@4.3.6)
@@ -488,7 +488,7 @@ importers:
         version: 4.3.6
       zyzz:
         specifier: 'catalog:'
-        version: 0.0.33(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+        version: 0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
     devDependencies:
       '@cloudflare/puppeteer':
         specifier: 'catalog:'
@@ -8934,8 +8934,8 @@ packages:
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
-  zyzz@0.0.33:
-    resolution: {integrity: sha512-auiwvTtF0cZyQmcEL0JIFXSSnd/WV6JD6nfoq8iTC9snBhMY+x/rUTYc8vIVBXQYYZIEwN72hBQqNrf90pRvpQ==}
+  zyzz@0.0.34:
+    resolution: {integrity: sha512-LVZuRAM9DIxz2DG7CNeiwhOYPsZwIJJtDuCBf75spQTH1wnuu/1YPcTF2WIPgWjeB8sCUzbeB9aucLIs/LpPZw==}
     hasBin: true
     peerDependencies:
       '@babel/core': ^7.29.7
@@ -12170,11 +12170,11 @@ snapshots:
       '@tanstack/virtual-core': 3.17.5
       vue: 3.5.40(typescript@6.0.2)
 
-  '@tempoxyz/ds@0.0.7(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.33(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))':
+  '@tempoxyz/ds@0.0.7(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(zyzz@0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))':
     dependencies:
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react: 19.2.5
-      zyzz: 0.0.33(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      zyzz: 0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
     optionalDependencies:
       react-dom: 19.2.5(react@19.2.5)
     transitivePeerDependencies:
@@ -17660,7 +17660,7 @@ snapshots:
 
   zwitch@2.0.4: {}
 
-  zyzz@0.0.33(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
+  zyzz@0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@emnapi/core': 2.0.0-alpha.6
       '@emnapi/runtime': 2.0.0-alpha.6

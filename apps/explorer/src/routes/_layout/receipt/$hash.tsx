@@ -47,7 +47,7 @@ import { getFeeTokenForChain } from '#lib/fee-token'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
-import { styles } from './-$hash.styles'
+import { style } from '@tempoxyz/ds/platform'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -559,4 +559,19 @@ function Component() {
 			/>
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		flexGrow: 1,
+		gap: '32',
+		justifyContent: 'center',
+		paddingBottom: '32',
+		paddingTop: '64',
+		typography: 'body.b3',
+		'@media print': { flexGrow: 0, paddingBottom: 'none', paddingTop: '32' },
+	})
 }

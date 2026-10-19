@@ -86,7 +86,7 @@ catalog:
   wagmi: ^3.7.7
   wrangler: ^4.131.0
   zod: ^4.3.6
-  zyzz: 0.0.33
+  zyzz: 0.0.34
 
 catalogMode: strict
 
