@@ -21,15 +21,16 @@ describe('activitiesToKnownEvents', () => {
 				args: { from, to },
 			}),
 		})
-		const fill = {
+		const fillFor = (logIndex: number, filledTaker: Hex) => ({
 			address: Addresses.stablecoinDex,
-			logIndex: 14,
+			logIndex,
 			topics: encodeEventTopics({
 				abi: Abis.stablecoinDex,
 				eventName: 'OrderFilled',
-				args: { orderId: 1n },
+				args: { orderId: 1n, taker: filledTaker },
 			}),
-		}
+		})
+		const fill = fillFor(14, taker)
 		const swap = (logIndex: number) => ({
 			id: `0x${'1'.repeat(64)}-${logIndex}`,
 			logIndex,
@@ -64,14 +65,15 @@ describe('activitiesToKnownEvents', () => {
 		expect(
 			venue(activitiesToKnownEvents([swap(20), swap(21)], { logs })),
 		).toEqual([false, false])
-		// Without a fill the DEX emitted, nothing filled on its books.
-		expect(
-			venue(
-				activitiesToKnownEvents([swap(13)], {
-					logs: logs.filter((log) => log !== fill),
-				}),
-			),
-		).toEqual([false])
+		// Without a fill the DEX emitted for this taker after taking its
+		// tokens, nothing filled on its books for this swap.
+		const others = logs.filter((log) => log !== fill)
+		for (const fills of [[], [fillFor(14, attacker)], [fillFor(12, taker)]])
+			expect(
+				venue(
+					activitiesToKnownEvents([swap(13)], { logs: [...others, ...fills] }),
+				),
+			).toEqual([false])
 	})
 
 	test('omits unknown activities so local descriptions can be used', () => {

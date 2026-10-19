@@ -43,6 +43,7 @@ const transferTopics = new Set(
 	].map((signature) => toEventSelector(signature).toLowerCase()),
 )
 
+const dex = Addresses.stablecoinDex.toLowerCase()
 const orderFilledTopic = toEventSelector(
 	getAbiItem({ abi: Abis.stablecoinDex, name: 'OrderFilled' }),
 ).toLowerCase()
@@ -363,10 +364,11 @@ function activityParts(activity: TransactionActivity): KnownEventPart[] {
 }
 
 /**
- * A swap indexed from a TIP-20 transfer into or out of the Stablecoin DEX,
- * in a transaction the DEX itself emitted a fill in, filled on its books.
- * A transaction can route through other venues too, so only those swaps
- * are labelled, and any contract can emit a Transfer naming the DEX.
+ * A swap indexed from a TIP-20 transfer into or out of the Stablecoin DEX
+ * filled on its books when the DEX itself emitted a fill for the same
+ * taker: after taking its tokens in, or before paying it out. A transaction
+ * can route through other venues too, so only those swaps are labelled,
+ * and any contract can emit a Transfer naming the DEX.
  */
 function dexRoute(
 	activity: TransactionActivity,
@@ -374,25 +376,34 @@ function dexRoute(
 	logs: readonly ReceiptLog[],
 ): KnownEventPart | null {
 	if (activity.type !== 'swap') return null
-	const filled = logs.some(
-		(log) =>
-			log.topics[0]?.toLowerCase() === orderFilledTopic &&
-			Address.isEqual(log.address, Addresses.stablecoinDex),
-	)
 	const log = logs.find((log) => log.logIndex === activity.logIndex)
-	if (!filled || !log || !isTip20Token(log.address)) return null
+	if (!log || log.logIndex === null || !isTip20Token(log.address)) return null
 	const [topic, from, to] = log.topics
-	if (!topic || !transferTopics.has(topic.toLowerCase())) return null
-	const dex = [from, to].some(
-		(party) =>
-			party &&
-			Address.isEqual(`0x${party.slice(-40)}`, Addresses.stablecoinDex),
+	if (!topic || !from || !to || !transferTopics.has(topic.toLowerCase()))
+		return null
+	const into = topicAddress(to) === dex
+	if (!into && topicAddress(from) !== dex) return null
+	const taker = topicAddress(into ? from : to)
+	const transfer = log.logIndex
+	const filled = logs.some(
+		(fill) =>
+			fill.logIndex !== null &&
+			(into ? fill.logIndex > transfer : fill.logIndex < transfer) &&
+			fill.topics[0]?.toLowerCase() === orderFilledTopic &&
+			Address.isEqual(fill.address, Addresses.stablecoinDex) &&
+			fill.topics[3] !== undefined &&
+			topicAddress(fill.topics[3]) === taker,
 	)
 	const [source, destination] = parts.flatMap((part) =>
 		part.type === 'amount' ? [part.value.token] : [],
 	)
-	if (!dex || !source || !destination) return null
+	if (!filled || !source || !destination) return null
 	return { type: 'dexRoute', value: { from: source, to: destination } }
+}
+
+/** An indexed address topic as a lowercase address. */
+function topicAddress(topic: Hex.Hex): string {
+	return `0x${topic.slice(-40)}`.toLowerCase()
 }
 
 function amountPart(

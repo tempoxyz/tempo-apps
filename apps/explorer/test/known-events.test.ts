@@ -465,18 +465,14 @@ describe('parseKnownEvents', () => {
 				},
 				hash,
 			)
-		const fill = (emitter: Hex.Hex) =>
+		const fill = (emitter: Hex.Hex, taker: Hex.Hex = accountAddress) =>
 			mockLog(
 				{
 					address: emitter,
 					topics: encodeEventTopics({
 						abi: stablecoinDexAbi,
 						eventName: 'OrderFilled',
-						args: {
-							orderId: 1n,
-							maker: recipientAddress,
-							taker: accountAddress,
-						},
+						args: { orderId: 1n, maker: recipientAddress, taker },
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
 						[{ type: 'uint128' }, { type: 'bool' }],
@@ -501,8 +497,20 @@ describe('parseKnownEvents', () => {
 			{ type: 'text', value: 'on' },
 			{ type: 'dexRoute', value: { from: OUSD, to: USDC } },
 		])
-		// Any contract can emit a Transfer or OrderFilled naming the DEX.
+		// Any contract can emit a Transfer or OrderFilled naming the DEX, and
+		// a fill elsewhere in the transaction or for another taker isn't this
+		// pair's.
 		for (const logs of [
+			[
+				transfer(OUSD, accountAddress, dex),
+				transfer(USDC, dex, accountAddress),
+				fill(dex),
+			],
+			[
+				transfer(OUSD, accountAddress, dex),
+				fill(dex, attacker),
+				transfer(USDC, dex, accountAddress),
+			],
 			[
 				transfer(OUSD, accountAddress, dex),
 				transfer(USDC, dex, accountAddress),

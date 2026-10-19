@@ -2665,13 +2665,22 @@ export function parseKnownEvents(
 		}
 	}
 
-	// Only TIP-20 transfers beside a fill the DEX itself emitted name it as
-	// the venue; any contract can emit a Transfer naming the DEX.
-	const dexFilled = dedupedEvents.some(
-		(event) =>
-			event.eventName === 'OrderFilled' &&
-			Address.isEqual(event.address, STABLECOIN_EXCHANGE),
-	)
+	// The DEX takes a taker's tokens in, fills orders for it, then pays it
+	// out. Only TIP-20 transfers around a fill the DEX itself emitted for the
+	// same taker name it as the venue: any contract can emit a Transfer
+	// naming the DEX, and tokens can pass through it for other reasons.
+	const dexFillBetween = (start: number, end: number, taker: Address.Address) =>
+		dedupedEvents
+			.slice(start + 1, end)
+			.some(
+				(event) =>
+					event.eventName === 'OrderFilled' &&
+					Address.isEqual(event.address, STABLECOIN_EXCHANGE) &&
+					Address.isEqual(
+						(event.args as { taker: Address.Address }).taker,
+						taker,
+					),
+			)
 
 	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
 	for (let index = 0; index < transferEvents.length - 1; index++) {
@@ -2706,9 +2715,10 @@ export function parseKnownEvents(
 								type: 'amount',
 								value: createAmount(args2.amount, event2.address),
 							},
-							...(dexFilled &&
-							isTip20Token(event1.address) &&
-							isTip20Token(event2.address)
+							...(isTip20Token(event1.address) &&
+							isTip20Token(event2.address) &&
+							Address.isEqual(args1.from, args2.to) &&
+							dexFillBetween(idx1, idx2, args1.from)
 								? ([
 										{ type: 'text', value: 'on' },
 										{
