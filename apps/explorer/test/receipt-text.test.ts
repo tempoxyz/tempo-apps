@@ -10,6 +10,53 @@ const dlusd = '0x20c0000000000000000000006fD9A167923ba194'
 const feeToken = '0x20c0000000000000000000000000000000000000'
 
 describe('renderReceiptText', () => {
+	test.each([
+		['out', 'SENT'],
+		['in', 'RECEIVED'],
+	])('uses %s direction as the %s action without repeating direction metadata', (direction, action) => {
+		const text = renderReceiptText(
+			{
+				block: { timestamp: 1_790_884_010n },
+				receipt: {
+					blockNumber: 42149803n,
+					from: sender,
+					status: 'success',
+					transactionHash: hash,
+				},
+			},
+			{
+				events: [
+					{
+						type: 'transfer',
+						parts: [
+							{ type: 'action', value: 'Token transferred' },
+							{
+								type: 'amount',
+								value: {
+									token: dlusd,
+									value: 15000000n,
+									decimals: 6,
+									symbol: 'DLUSD',
+								},
+							},
+						],
+						note: [
+							['Direction', { type: 'text', value: direction }],
+							['Memo', { type: 'text', value: 'Invoice 42' }],
+						],
+					},
+				],
+				fee: 0,
+				feeBreakdown: [],
+				feeDisplay: '0',
+			},
+		)
+		expect(text).toContain(`1. ${action}`)
+		expect(text).toContain('MEMO: INVOICE 42')
+		expect(text).not.toContain('TOKEN TRANSFERRED')
+		expect(text).not.toContain('DIRECTION:')
+	})
+
 	test('renders the same high-level events as the receipt card', () => {
 		const block = { timestamp: 1_788_390_666n }
 		const feeBreakdown = [

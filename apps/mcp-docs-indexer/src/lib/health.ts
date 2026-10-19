@@ -1,7 +1,17 @@
+import { log } from './log.js'
 import { recordHealthMetrics, type HealthMetricResult } from './metrics.js'
 
 type JsonObject = Record<string, unknown>
 type CheckFn = () => Promise<void>
+type Check = {
+	name: string
+	run: CheckFn
+	/**
+	 * Informational checks report quality signals, such as whether Tempo search
+	 * is served by AI Search, without failing the availability metric.
+	 */
+	informational?: boolean
+}
 
 const DEFAULT_ENDPOINT = 'https://mcp.tempo.xyz/'
 const HEALTH_FETCH_TIMEOUT_MS = 5000
@@ -18,53 +28,70 @@ export async function healthMetrics(env: {
 		durationMs: Math.round(performance.now() - startedAt),
 	})
 
-	const failures = checks.filter((check) => !check.ok)
-	if (failures.length > 0) {
-		console.error(
-			JSON.stringify({
-				message: 'mcp.health_failed',
-				endpoint,
-				failures: failures.map((failure) => ({
-					check: failure.name,
-					error: failure.error,
-				})),
-			}),
-		)
-	}
+	const failures = checks.filter((check) => !check.ok && !check.informational)
+	if (failures.length > 0)
+		log.error('mcp.health_failed', {
+			endpoint,
+			failures: failures.map(({ name, error }) => ({ check: name, error })),
+		})
+	const degraded = checks.filter((check) => !check.ok && check.informational)
+	if (degraded.length > 0)
+		log.warn('mcp.health_degraded', {
+			endpoint,
+			checks: degraded.map(({ name, error }) => ({ check: name, error })),
+		})
 }
 
 async function runChecks(endpoint: string): Promise<HealthMetricResult[]> {
 	let tempoPage: JsonObject | undefined
-	const checks: Array<[string, CheckFn]> = [
-		['initialize', () => assertInitialize(endpoint)],
-		['tools_list', () => assertTools(endpoint)],
-		['resources_list', () => assertResources(endpoint)],
-		['search_tempo', () => assertSearch(endpoint)],
-		[
-			'find_pages_tempo',
-			async () => {
+	let tempoSearch: JsonObject | undefined
+	const checks: Check[] = [
+		{ name: 'initialize', run: () => assertInitialize(endpoint) },
+		{ name: 'tools_list', run: () => assertTools(endpoint) },
+		{ name: 'resources_list', run: () => assertResources(endpoint) },
+		{
+			name: 'search_tempo',
+			run: async () => {
+				tempoSearch = await assertSearch(endpoint)
+			},
+		},
+		{
+			name: 'search_tempo_indexed',
+			informational: true,
+			run: async () => assertIndexedRetrieval(tempoSearch),
+		},
+		{
+			name: 'find_pages_tempo',
+			run: async () => {
 				tempoPage = await firstTempoPage(endpoint)
 			},
-		],
-		['read_page_tempo', () => assertReadPage(endpoint, tempoPage)],
+		},
+		{
+			name: 'read_page_tempo',
+			run: () => assertReadPage(endpoint, tempoPage),
+		},
 	]
 	const results: HealthMetricResult[] = []
-	for (const [name, fn] of checks) results.push(await measure(name, fn))
+	for (const check of checks) results.push(await measure(check))
 	return results
 }
 
-async function measure(name: string, fn: CheckFn): Promise<HealthMetricResult> {
+async function measure(check: Check): Promise<HealthMetricResult> {
 	const startedAt = performance.now()
+	const result = {
+		name: check.name,
+		...(check.informational ? { informational: true } : {}),
+	}
 	try {
-		await fn()
+		await check.run()
 		return {
-			name,
+			...result,
 			ok: true,
 			durationMs: Math.round(performance.now() - startedAt),
 		}
 	} catch (error) {
 		return {
-			name,
+			...result,
 			ok: false,
 			durationMs: Math.round(performance.now() - startedAt),
 			error: error instanceof Error ? error.message : String(error),
@@ -107,17 +134,32 @@ async function assertResources(endpoint: string): Promise<void> {
 	}
 }
 
-async function assertSearch(endpoint: string): Promise<void> {
-	const result = structuredResult(
-		await callTool(endpoint, 'search', {
-			query: 'Tempo transactions',
-			source: 'tempo',
-			max_results: 1,
-			response_format: 'structured',
-		}),
+async function assertSearch(endpoint: string): Promise<JsonObject> {
+	const result = object(
+		structuredResult(
+			await callTool(endpoint, 'search', {
+				query: 'Tempo transactions',
+				source: 'tempo',
+				max_results: 1,
+				response_format: 'structured',
+			}),
+		),
 	)
-	if (arrayValue(object(result).chunks).length === 0) {
+	if (arrayValue(result.chunks).length === 0) {
 		throw new Error('search returned no chunks')
+	}
+	return result
+}
+
+/**
+ * Chunks from the llms.txt title fallback mean AI Search has nothing indexed
+ * for the source, even though the tool still answers.
+ */
+function assertIndexedRetrieval(result: JsonObject | undefined): void {
+	if (!result) throw new Error('search_tempo failed')
+	const retrieval = stringValue(result.retrieval)
+	if (retrieval !== 'ai_search') {
+		throw new Error(`search used ${retrieval || 'unknown'} retrieval`)
 	}
 }
 
@@ -176,6 +218,7 @@ async function rpc(
 		headers: {
 			accept: 'application/json, text/event-stream',
 			'content-type': 'application/json',
+			'x-tempo-mcp-probe': 'health',
 		},
 		body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
 	})
@@ -191,21 +234,14 @@ async function fetchJsonRpc(
 	url: string,
 	init: RequestInit,
 ): Promise<JsonObject> {
-	const res = await fetchWithTimeout(url, init)
-	if (!res.ok) throw new Error(`HTTP ${res.status}`)
-	const text = await res.text()
-	const data = sseData(text) ?? text
-	return object(JSON.parse(data))
-}
-
-async function fetchWithTimeout(
-	url: string,
-	init: RequestInit,
-): Promise<Response> {
 	const controller = new AbortController()
 	const timeout = setTimeout(() => controller.abort(), HEALTH_FETCH_TIMEOUT_MS)
 	try {
-		return await fetch(url, { ...init, signal: controller.signal })
+		const res = await fetch(url, { ...init, signal: controller.signal })
+		if (!res.ok) throw new Error(`HTTP ${res.status}`)
+		const text = await res.text()
+		const data = sseData(text) ?? text
+		return object(JSON.parse(data))
 	} finally {
 		clearTimeout(timeout)
 	}

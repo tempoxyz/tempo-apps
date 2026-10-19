@@ -38,9 +38,11 @@ Cron ──▶ mcp-docs-indexer Worker ──▶ AI Search items.upload() (inges
                                 8. save new index + llms.txt ETag to KV
 ```
 
-Once per UTC day (00:00 cron tick) the worker does a **forced deep sync** that
-bypasses every ETag, as a backstop for sources whose `llms.txt` ETag doesn't
-roll over when individual pages change.
+Each source gets one **forced deep sync** per UTC day that bypasses its ETags,
+as a backstop for `llms.txt` ETags that do not change with individual pages.
+Sources are assigned by their configured order modulo 24: the first source
+runs at 00:00 UTC, the second at 01:00 UTC, and so on. All sources still get
+their normal hourly sync.
 
 Uploaded pages are normalized before indexing: repeated Vocs sitemap comments
 and common docs UI chrome are stripped so AI Search embeds documentation text
@@ -282,12 +284,12 @@ with `invocation_logs: true`). Every cron run emits structured JSON lines via
 
 | Event                | When                                | Useful fields                                                              |
 | -------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
-| `cron.start`         | scheduled handler invoked           | `cron`, `scheduled_time`, `instance`, `sources`, `force`                   |
+| `cron.start`         | scheduled handler invoked           | `cron`, `scheduled_time`, `instance`, `sources`, `forced_sources`          |
 | `source.complete`    | source synced without failures or 304-unchanged | `source`, `status`, `pages`, `unchanged`, `failed`, `deleted`, `duration_ms` |
 | `source.pending_deletion` | index removals awaiting confirmation | `source`, `status`, `removed`, `duration_ms` |
 | `source.pending_index` | uploads accepted, AI Search indexing is pending | `source`, `status`, `pages`, `pending`, `duration_ms` |
 | `source.failed`      | source error or partial page failure | `source`, `status`, `duration_ms`; error reports have `error`, partial reports have `pages`, `unchanged`, `failed`, `deleted` |
-| `cron.complete`      | all sources processed               | `duration_ms`, `sources`, `synced`, `unchanged`, `pending`, `errors`, `force` |
+| `cron.complete`      | all sources processed               | `duration_ms`, `sources`, `synced`, `unchanged`, `pending`, `errors`, `forced_sources` |
 | `page.fetch_failed`  | per-page `<page>.md` GET non-OK     | `source`, `url`, `status`                                                  |
 | `page.empty`         | empty markdown body                 | `source`, `url`                                                            |
 | `page.too_large`     | page exceeds 3.5MB upload cap       | `source`, `url`, `bytes`                                                   |

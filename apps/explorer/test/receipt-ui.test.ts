@@ -4,6 +4,7 @@ import {
 	getReceiptDistinctSideAmount,
 	getReceiptEventNote,
 	getReceiptNotePresentation,
+	getReceiptTransferPresentation,
 } from '#lib/domain/receipt-ui'
 
 const token = '0x20c0000000000000000000000000000000000000'
@@ -143,6 +144,63 @@ describe('receipt details', () => {
 				label,
 				part,
 			})
+	})
+})
+
+describe('receipt transfer labels', () => {
+	test.each([
+		['out', 'Sent'],
+		['in', 'Received'],
+	])('promotes %s direction to the %s action without mutating the source', (direction, action) => {
+		const event: KnownEvent = {
+			...transfer,
+			note: [['Direction', { type: 'text', value: direction }]],
+		}
+		expect(getReceiptTransferPresentation(event)).toEqual({
+			...event,
+			parts: [
+				{ type: 'action', value: action },
+				{ type: 'amount', value: amount },
+			],
+			note: undefined,
+		})
+		expect(event.parts).toEqual(transfer.parts)
+		expect(event.note).toEqual([
+			['Direction', { type: 'text', value: direction }],
+		])
+	})
+
+	test('preserves other transfer details', () => {
+		const memo: [string, KnownEventPart] = [
+			'Memo',
+			{ type: 'text', value: 'Invoice 42' },
+		]
+		const event: KnownEvent = {
+			...transfer,
+			note: [['Direction', { type: 'text', value: 'out' }], memo],
+		}
+		expect(getReceiptTransferPresentation(event).note).toEqual([memo])
+	})
+
+	test('leaves transfers with missing or unknown direction and other events unchanged', () => {
+		const examples: KnownEvent[] = [
+			transfer,
+			{ ...transfer, note: 'Invoice 42' },
+			{ ...transfer, note: [['Direction', { type: 'text', value: 'self' }]] },
+			{ ...transfer, note: [['Direction', { type: 'number', value: 1 }]] },
+			{
+				...transfer,
+				parts: [],
+				note: [['Direction', { type: 'text', value: 'out' }]],
+			},
+			{
+				...transfer,
+				type: 'mint',
+				note: [['Direction', { type: 'text', value: 'in' }]],
+			},
+		]
+		for (const event of examples)
+			expect(getReceiptTransferPresentation(event)).toBe(event)
 	})
 })
 

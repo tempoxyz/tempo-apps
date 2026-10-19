@@ -110,3 +110,26 @@ export function getReceiptEventNote(
 	})
 	return filtered.length ? filtered : undefined
 }
+
+export function getReceiptTransferPresentation(event: KnownEvent): KnownEvent {
+	if (event.type !== 'transfer' || !Array.isArray(event.note)) return event
+	const direction = event.note.find(
+		([label]) => label.toLowerCase() === 'direction',
+	)?.[1]
+	if (direction?.type !== 'text') return event
+	const value = direction.value.toLowerCase()
+	if (value !== 'out' && value !== 'in') return event
+	if (!event.parts.some((part) => part.type === 'action')) return event
+	const note = event.note.filter(
+		([label]) => label.toLowerCase() !== 'direction',
+	)
+	return {
+		...event,
+		parts: event.parts.map((part) =>
+			part.type === 'action'
+				? { ...part, value: value === 'out' ? 'Sent' : 'Received' }
+				: part,
+		),
+		note: note.length ? note : undefined,
+	}
+}

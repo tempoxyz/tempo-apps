@@ -5,6 +5,7 @@ import {
 	Files,
 	Package,
 	Receipt,
+	SwapHorizontal,
 	User,
 } from '@tempoxyz/ds/platform/icons'
 import type { Address, Hex } from 'ox'
@@ -154,6 +155,9 @@ function SpotlightLinks() {
 				<SpotlightPill to="/tokens" icon={<Coins {...link()} />}>
 					Tokens
 				</SpotlightPill>
+				<SpotlightPill to="/dex" icon={<SwapHorizontal {...link()} />}>
+					DEX
+				</SpotlightPill>
 			</div>
 		</section>
 	)
@@ -231,7 +235,7 @@ namespace styles {
 	})
 
 	export const spotlight = style({
-		maxWidth: '560px !custom',
+		maxWidth: '680px !custom',
 		paddingInline: '16',
 		textAlign: 'center',
 	})

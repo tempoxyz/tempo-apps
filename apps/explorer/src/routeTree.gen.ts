@@ -23,6 +23,7 @@ import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
+import { Route as LayoutDexIndexRouteImport } from './routes/_layout/dex/index'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
 import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
@@ -44,6 +45,7 @@ import { Route as ApiAddressMetadataAddressRouteImport } from './routes/api/addr
 import { Route as ApiAddressLiveAddressRouteImport } from './routes/api/address/live.$address'
 import { Route as ApiAddressHistoryAddressRouteImport } from './routes/api/address/history/$address'
 import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
+import { Route as LayoutDexFromToRouteImport } from './routes/_layout/dex/$from.$to'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 import { Route as ApiAddressZonePortalAddressKindRouteImport } from './routes/api/address/zone-portal/$address/$kind'
 
@@ -114,6 +116,11 @@ const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
 const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDexIndexRoute = LayoutDexIndexRouteImport.update({
+  id: '/dex/',
+  path: '/dex/',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
@@ -226,6 +233,11 @@ const ApiAddressBalancesAddressRoute =
     path: '/api/address/balances/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LayoutDexFromToRoute = LayoutDexFromToRouteImport.update({
+  id: '/dex/$from/$to',
+  path: '/dex/$from/$to',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutBlockCountdownTargetBlockRoute =
   LayoutBlockCountdownTargetBlockRouteImport.update({
     id: '/block/countdown/$targetBlock',
@@ -265,7 +277,9 @@ export interface FileRoutesByFullPath {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo/': typeof LayoutDemoIndexRoute
+  '/dex/': typeof LayoutDexIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
+  '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/live/$address': typeof ApiAddressLiveAddressRoute
@@ -303,7 +317,9 @@ export interface FileRoutesByTo {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/dex': typeof LayoutDexIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
+  '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/live/$address': typeof ApiAddressLiveAddressRoute
@@ -343,7 +359,9 @@ export interface FileRoutesById {
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
+  '/_layout/dex/': typeof LayoutDexIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
+  '/_layout/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/live/$address': typeof ApiAddressLiveAddressRoute
@@ -383,7 +401,9 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/abi/batch'
     | '/demo/'
+    | '/dex/'
     | '/block/countdown/$targetBlock'
+    | '/dex/$from/$to'
     | '/api/address/balances/$address'
     | '/api/address/history/$address'
     | '/api/address/live/$address'
@@ -421,7 +441,9 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/abi/batch'
     | '/demo'
+    | '/dex'
     | '/block/countdown/$targetBlock'
+    | '/dex/$from/$to'
     | '/api/address/balances/$address'
     | '/api/address/history/$address'
     | '/api/address/live/$address'
@@ -460,7 +482,9 @@ export interface FileRouteTypes {
     | '/_layout/tx/$hash'
     | '/api/abi/batch'
     | '/_layout/demo/'
+    | '/_layout/dex/'
     | '/_layout/block/countdown/$targetBlock'
+    | '/_layout/dex/$from/$to'
     | '/api/address/balances/$address'
     | '/api/address/history/$address'
     | '/api/address/live/$address'
@@ -593,6 +617,13 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/blocks'
       preLoaderRoute: typeof LayoutBlocksRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/dex/': {
+      id: '/_layout/dex/'
+      path: '/dex'
+      fullPath: '/dex/'
+      preLoaderRoute: typeof LayoutDexIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/demo/': {
@@ -742,6 +773,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressBalancesAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/dex/$from/$to': {
+      id: '/_layout/dex/$from/$to'
+      path: '/dex/$from/$to'
+      fullPath: '/dex/$from/$to'
+      preLoaderRoute: typeof LayoutDexFromToRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/block/countdown/$targetBlock': {
       id: '/_layout/block/countdown/$targetBlock'
       path: '/block/countdown/$targetBlock'
@@ -776,7 +814,9 @@ interface LayoutRouteChildren {
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
+  LayoutDexIndexRoute: typeof LayoutDexIndexRoute
   LayoutBlockCountdownTargetBlockRoute: typeof LayoutBlockCountdownTargetBlockRoute
+  LayoutDexFromToRoute: typeof LayoutDexFromToRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -796,7 +836,9 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
+  LayoutDexIndexRoute: LayoutDexIndexRoute,
   LayoutBlockCountdownTargetBlockRoute: LayoutBlockCountdownTargetBlockRoute,
+  LayoutDexFromToRoute: LayoutDexFromToRoute,
 }
 
 const LayoutRouteWithChildren =

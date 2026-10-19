@@ -9,7 +9,7 @@ import worker from '../src/index.js'
 
 const SOURCE = { id: 'fixture', base: 'https://docs.example' }
 
-function testEnv(uploads: string[]): Env {
+function testEnv(uploads: string[], lists: string[] = []): Env {
 	return {
 		ETAG_CACHE: env.ETAG_CACHE,
 		SOURCES: JSON.stringify([SOURCE]),
@@ -18,6 +18,19 @@ function testEnv(uploads: string[]): Env {
 		AI_SEARCH: {
 			get: () => ({
 				items: {
+					list: async (options: {
+						status: string
+						metadata_filter: string
+					}) => {
+						lists.push(options.metadata_filter)
+						return {
+							result: [],
+							result_info: {
+								total_count:
+									options.status === 'completed' ? uploads.length : 0,
+							},
+						}
+					},
 					upload: async (key: string) => {
 						uploads.push(key)
 						return { id: `item-${key}`, key }
@@ -48,10 +61,26 @@ async function runScheduled(
 
 beforeEach(async () => {
 	for (const key of [
+		'page_retries:fixture',
+		'index_progress:fixture',
+		'page_retries:other',
+		'index_progress:other',
 		'etag:fixture',
 		'index:fixture',
 		'source_url:fixture',
 		'last_sync:fixture',
+		'last_ready:fixture',
+		'pending_since:fixture',
+		'retry_force:fixture',
+		'pending_deletion:fixture',
+		'etag:other',
+		'index:other',
+		'source_url:other',
+		'last_sync:other',
+		'last_ready:other',
+		'pending_since:other',
+		'retry_force:other',
+		'pending_deletion:other',
 	]) {
 		await env.ETAG_CACHE.delete(key)
 	}
@@ -63,8 +92,98 @@ afterEach(() => {
 })
 
 describe('scheduled Worker', () => {
+	it('flushes failed ingestion health when setup throws', async () => {
+		const logs: string[] = []
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		const workerEnv = testEnv([])
+		workerEnv.AI_SEARCH = {
+			get: () => {
+				throw new Error('dependency unavailable')
+			},
+		} as unknown as Env['AI_SEARCH']
+		await expect(runScheduled('0 * * * *', workerEnv)).rejects.toThrow(
+			'dependency unavailable',
+		)
+		const metrics = logs
+			.filter((line) => line.startsWith('cwm-'))
+			.flatMap((line) => JSON.parse(line.slice(4)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({ n: 'tempo_docs_mcp_ingest_ok', v: 0 }),
+		)
+	})
+
+	it.each([
+		'index error',
+		'page error',
+		'index timeout',
+	])('continues to a healthy source after %s', async (failure) => {
+		const uploads: string[] = []
+		const logs: string[] = []
+		const workerEnv = {
+			...testEnv(uploads),
+			SOURCES: JSON.stringify([
+				SOURCE,
+				{ id: 'other', base: 'https://other.example' },
+			]),
+		} as unknown as Env
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		vi.spyOn(console, 'warn').mockImplementation(() => {})
+		let stalled = false
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (input: string) => {
+				if (input.startsWith(SOURCE.base)) {
+					if (failure === 'index timeout') {
+						stalled = true
+						return new Promise<Response>(() => {})
+					}
+					if (failure === 'index error' || !input.endsWith('/llms.txt'))
+						return new Response('failure', { status: 503 })
+				}
+				return new Response(
+					input.endsWith('/llms.txt') ? '- [Page](/page)' : '# Page',
+				)
+			}),
+		)
+		if (failure === 'index timeout') vi.useFakeTimers()
+		try {
+			const pending = runScheduled('0 * * * *', workerEnv)
+			if (failure === 'index timeout') {
+				await vi.waitFor(() => expect(stalled).toBe(true))
+				await vi.advanceTimersByTimeAsync(15_001)
+			}
+			await pending
+			expect(uploads).toEqual(['other/page.md'])
+			const metrics = logs
+				.filter((line) => line.startsWith('cwm-'))
+				.flatMap((line) => JSON.parse(line.slice(4)))
+			for (const [source, v] of [
+				['fixture', 0],
+				['other', 1],
+			])
+				expect(metrics).toContainEqual(
+					expect.objectContaining({
+						n: 'tempo_docs_mcp_source_sync_ok',
+						v,
+						tags: expect.objectContaining({ source }),
+					}),
+				)
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
 	it('runs the hourly ingestion through fetch, AI Search upload, and KV state', async () => {
 		const uploads: string[] = []
+		const metricLogs: string[] = []
 		const fetchMock = vi.fn(async (input: string, _init?: RequestInit) =>
 			input === 'https://docs.example/llms.txt'
 				? new Response('- [Page](/page)', {
@@ -78,7 +197,9 @@ describe('scheduled Worker', () => {
 		)
 		vi.stubGlobal('fetch', fetchMock)
 		vi.spyOn(console, 'info').mockImplementation(() => {})
-		vi.spyOn(console, 'log').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			metricLogs.push(String(message))
+		})
 
 		await runScheduled('0 * * * *', testEnv(uploads))
 
@@ -93,6 +214,53 @@ describe('scheduled Worker', () => {
 		).toMatchObject({
 			'fixture/page.md': { id: 'item-fixture/page.md' },
 		})
+		const metrics = metricLogs
+			.filter((message) => message.startsWith('cwm-'))
+			.flatMap((message) => JSON.parse(message.slice('cwm-'.length)))
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_source_items',
+				tags: expect.objectContaining({
+					source: 'fixture',
+					status: 'completed',
+				}),
+				v: 1,
+			}),
+		)
+	})
+
+	it('checks indexing status for every source per run', async () => {
+		const uploads: string[] = []
+		const lists: string[] = []
+		await env.ETAG_CACHE.put('etag:fixture', '"fixture-v1"')
+		await env.ETAG_CACHE.put('etag:other', '"other-v1"')
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async () => new Response(null, { status: 304 })),
+		)
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation(() => {})
+		const workerEnv = {
+			...testEnv(uploads, lists),
+			SOURCES: JSON.stringify([
+				SOURCE,
+				{ id: 'other', base: 'https://other.example' },
+			]),
+		} as unknown as Env
+
+		await runScheduled(
+			'0 * * * *',
+			workerEnv,
+			Date.parse('2026-10-09T14:00:00Z'),
+		)
+
+		expect(lists).toHaveLength(12)
+		expect(new Set(lists)).toEqual(
+			new Set([
+				JSON.stringify({ source: 'fixture' }),
+				JSON.stringify({ source: 'other' }),
+			]),
+		)
 	})
 
 	it('uses the persisted source ETag on the next hourly run', async () => {
@@ -133,8 +301,54 @@ describe('scheduled Worker', () => {
 
 		expect(uploads).toEqual([])
 		expect(await env.ETAG_CACHE.get('etag:fixture')).toBeNull()
-		expect(await env.ETAG_CACHE.get('index:fixture')).toBeNull()
+		expect(
+			JSON.parse((await env.ETAG_CACHE.get('index:fixture')) ?? '{}'),
+		).toEqual({})
 		expect(await env.ETAG_CACHE.get('last_sync:fixture')).toBeTruthy()
+	})
+
+	it('forces only the source assigned to the current UTC hour', async () => {
+		const uploads: string[] = []
+		await env.ETAG_CACHE.put('etag:fixture', '"fixture-v1"')
+		await env.ETAG_CACHE.put('etag:other', '"other-v1"')
+		const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+			if (input.endsWith('/llms.txt')) {
+				return (init?.headers as Record<string, string>)?.['If-None-Match']
+					? new Response(null, { status: 304 })
+					: new Response('- [Page](/page)')
+			}
+			return new Response('# Page')
+		})
+		vi.stubGlobal('fetch', fetchMock)
+		vi.spyOn(console, 'info').mockImplementation(() => {})
+		vi.spyOn(console, 'log').mockImplementation(() => {})
+		const workerEnv = {
+			...testEnv(uploads),
+			SOURCES: JSON.stringify([
+				SOURCE,
+				{ id: 'other', base: 'https://other.example' },
+			]),
+		} as unknown as Env
+
+		await runScheduled(
+			'0 * * * *',
+			workerEnv,
+			Date.parse('2026-10-10T01:00:00Z'),
+		)
+
+		expect(
+			fetchMock.mock.calls.map(([input, init]) => [
+				input,
+				(init?.headers as Record<string, string> | undefined)?.[
+					'If-None-Match'
+				],
+			]),
+		).toEqual([
+			['https://docs.example/llms.txt', '"fixture-v1"'],
+			['https://other.example/llms.txt', undefined],
+			['https://other.example/page.md', undefined],
+		])
+		expect(uploads).toEqual(['other/page.md'])
 	})
 
 	it('bypasses the source ETag at the midnight forced run', async () => {

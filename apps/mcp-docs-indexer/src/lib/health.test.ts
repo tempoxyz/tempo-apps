@@ -9,6 +9,7 @@ beforeEach(() => {
 	vi.stubGlobal('fetch', fetchMock)
 	vi.spyOn(console, 'log').mockImplementation(() => {})
 	vi.spyOn(console, 'error').mockImplementation(() => {})
+	vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -46,7 +47,9 @@ describe('healthMetrics', () => {
 			.mockResolvedValueOnce(
 				json({
 					result: {
-						structuredContent: { result: { chunks: [{ text: 'Tempo' }] } },
+						structuredContent: {
+							result: { retrieval: 'ai_search', chunks: [{ text: 'Tempo' }] },
+						},
 					},
 				}),
 			)
@@ -79,6 +82,13 @@ describe('healthMetrics', () => {
 				v: 1,
 			}),
 		)
+		expect(metrics).toContainEqual(
+			expect.objectContaining({
+				n: 'tempo_docs_mcp_health_check_ok',
+				tags: expect.objectContaining({ check: 'search_tempo_indexed' }),
+				v: 1,
+			}),
+		)
 		expect(fetchMock).toHaveBeenCalledTimes(6)
 	})
 
@@ -104,7 +114,12 @@ describe('healthMetrics', () => {
 			.mockResolvedValueOnce(
 				json({
 					result: {
-						structuredContent: { result: { chunks: [{ text: 'Tempo' }] } },
+						structuredContent: {
+							result: {
+								retrieval: 'source_index',
+								chunks: [{ text: 'Tempo' }],
+							},
+						},
 					},
 				}),
 			)
@@ -128,6 +143,47 @@ describe('healthMetrics', () => {
 		await healthMetrics({ PUBLIC_MCP_ENDPOINT: 'https://mcp.tempo.xyz/' })
 
 		expect(console.error).not.toHaveBeenCalled()
+		expect(console.warn).toHaveBeenCalledWith(
+			'mcp.health_degraded',
+			expect.objectContaining({
+				checks: [expect.objectContaining({ check: 'search_tempo_indexed' })],
+			}),
+		)
+	})
+	it('times out stalled response bodies and continues the remaining probes', async () => {
+		vi.useFakeTimers()
+		fetchMock.mockImplementation(
+			async (_url, init) =>
+				new Response(
+					new ReadableStream({
+						start(controller) {
+							init.signal.addEventListener('abort', () =>
+								controller.error(new Error('body aborted')),
+							)
+						},
+					}),
+				),
+		)
+		try {
+			const run = healthMetrics({})
+			await vi.advanceTimersByTimeAsync(30000)
+			await run
+			expect(fetchMock).toHaveBeenCalledTimes(5)
+			expect(console.error).toHaveBeenCalledWith(
+				'mcp.health_failed',
+				expect.objectContaining({
+					failures: expect.arrayContaining([
+						expect.objectContaining({
+							check: 'initialize',
+							error: 'body aborted',
+						}),
+					]),
+				}),
+			)
+			expect(vi.getTimerCount()).toBe(0)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 })
 

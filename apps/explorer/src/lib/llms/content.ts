@@ -142,6 +142,26 @@ export const docs = {
 			'Discovered TIP-20 tokens with symbol, name, currency, holders, address, and creation time.',
 		params: { page: 'Page number.' },
 	},
+	'/dex/': {
+		title: 'Stablecoin DEX',
+		description:
+			'Stablecoin DEX overview: liquidity and volume totals, the orderbooks swaps route through with liquidity, spread, and 1-day and 30-day volume, and a live feed of recent swaps.',
+		params: {
+			tab: 'Show `pairs` or recent `swaps`.',
+			sort: 'Sort pairs by `liquidity`, `spread`, `day` volume, or `month` volume.',
+			dir: 'Sort direction: `asc` or `desc`.',
+			unverified:
+				'Include pairs and swaps with a token outside the verified token list.',
+		},
+	},
+	'/dex/$from/$to': {
+		title: 'Stablecoin DEX route',
+		description:
+			'`from` and `to` are input and output TIP-20 token addresses. Shows the directional Stablecoin DEX route, its quote-token path, a block-pinned quote, and each orderbook leg.',
+		params: {
+			amount: 'Exact input amount in human-readable token units.',
+		},
+	},
 	'/fee-amm': {
 		title: 'Fee AMM',
 		description:

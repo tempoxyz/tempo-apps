@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { Alert, SimpleTable, style } from '@tempoxyz/ds/platform'
 import type { Address } from 'ox'
+import { Addresses } from 'viem/tempo'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
 import { cx } from 'zyzz'
@@ -126,6 +127,15 @@ export function Tip20TokenTabContent(
 						unavailable={query.isError || Boolean(query.data?.rolesUnavailable)}
 						onRetry={() => void query.refetch()}
 					/>
+					{address.toLowerCase() !== Addresses.pathUsd && (
+						<Link
+							to="/dex/$from/$to"
+							params={{ from: address, to: Addresses.pathUsd }}
+							{...cx(styles.dexRoute(), link(), linkHover())}
+						>
+							View Stablecoin DEX route →
+						</Link>
+					)}
 				</div>
 			</CollapsibleSection>
 			<CollapsibleSection
@@ -177,6 +187,13 @@ export declare namespace Tip20TokenTabContent {
 }
 
 namespace styles {
+	export const dexRoute = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '8',
+		marginTop: '16',
+	})
+
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',

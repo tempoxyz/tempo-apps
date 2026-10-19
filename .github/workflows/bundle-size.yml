@@ -9,6 +9,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
+      - ".github/workflows/bundle-size.yml"
       - "apps/explorer/**"
       - "pnpm-lock.yaml"
 
@@ -28,7 +29,7 @@ jobs:
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     permissions:
       id-token: write
-      actions: write
+      actions: read
       pull-requests: write
       contents: write
     steps:
@@ -54,12 +55,14 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: apps/explorer/bundle-stats.json
-          key: bundle-stats-explorer-main-latest
+          # Prefer the PR base commit, then the newest main snapshot. The v2
+          # namespace excludes the old immutable main-latest cache.
+          key: bundle-stats-explorer-v2-main-${{ github.event.pull_request.base.sha }}
           restore-keys: |
-            bundle-stats-explorer-main-
+            bundle-stats-explorer-v2-main-
 
       - name: Move baseline if exists
-        if: github.event_name == 'pull_request' && steps.cache-restore.outputs.cache-hit == 'true'
+        if: github.event_name == 'pull_request' && steps.cache-restore.outputs.cache-matched-key != ''
         run: mv apps/explorer/bundle-stats.json apps/explorer/baseline-stats.json
 
       - name: Build with bundle analysis
@@ -82,21 +85,7 @@ jobs:
         uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: apps/explorer/bundle-stats.json
-          key: bundle-stats-explorer-main-${{ github.sha }}
-
-      - name: Delete old latest cache (main branch)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh cache delete bundle-stats-explorer-main-latest --repo ${{ github.repository }}
-
-      - name: Save bundle stats with stable key (main branch)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          path: apps/explorer/bundle-stats.json
-          key: bundle-stats-explorer-main-latest
+          key: bundle-stats-explorer-v2-main-${{ github.sha }}
 
       - name: Generate bundle report (PR)
         if: github.event_name == 'pull_request'

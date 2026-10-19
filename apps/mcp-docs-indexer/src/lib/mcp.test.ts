@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Executor } from '@cloudflare/codemode'
 import type { Tool } from '@modelcontextprotocol/sdk/types.js'
 import { handleMcp as handleParsedMcp } from './mcp.js'
+import { flushWorkerMetrics } from './metrics.js'
 import { captureMcpAnalytics } from './posthog-mcp.js'
 import { readMcpRequest } from './request.js'
 import type { Source } from './sources.js'
@@ -1004,6 +1005,7 @@ describe('handleMcp', () => {
 
 		expect(seen?.ai_search_options?.retrieval?.max_num_results).toBe(2)
 		const text = await textContent(res)
+		expect(text.result.retrieval).toBe('ai_search')
 		expect(text.result.chunks).toEqual([
 			{
 				score: 1,
@@ -1271,10 +1273,13 @@ describe('handleMcp', () => {
 		expect(calls[0]?.ai_search_options?.retrieval?.max_num_results).toBe(20)
 	})
 
-	it('falls back to source llms.txt when filtered search returns no chunks', async () => {
+	it.each([
+		'empty',
+		'unavailable',
+	])('falls back to source llms.txt when search is %s', async (mode) => {
 		const tempoSource: Source = {
 			id: 'tempo',
-			base: 'https://docs.tempo.xyz',
+			base: `https://${mode}.tempo.example`,
 			description: 'Tempo docs',
 		}
 		const fetches: string[] = []
@@ -1282,13 +1287,14 @@ describe('handleMcp', () => {
 			'fetch',
 			vi.fn(async (url: string) => {
 				fetches.push(url)
-				if (url === 'https://docs.tempo.xyz/llms.txt') {
+				if (url === `https://${mode}.tempo.example/llms.txt`) {
 					return new Response(
 						'- [Use virtual addresses for deposits](/guide/payments/virtual-addresses): Register a virtual-address master and derive deposit addresses.',
 					)
 				}
 				if (
-					url === 'https://docs.tempo.xyz/guide/payments/virtual-addresses.md'
+					url ===
+					`https://${mode}.tempo.example/guide/payments/virtual-addresses.md`
 				) {
 					return new Response(
 						'# Use virtual addresses for deposits\n\nRegister a virtual-address master and watch deposits.',
@@ -1316,24 +1322,25 @@ describe('handleMcp', () => {
 				}),
 			}),
 			{
-				instance: instance(async () => ({
-					search_query: 'virtual',
-					chunks: [],
-				})),
+				instance: instance(async () => {
+					if (mode === 'unavailable') throw new Error('backend unavailable')
+					return { search_query: 'virtual', chunks: [] }
+				}),
 				sources: [tempoSource],
 			},
 		)
 
 		expect(fetches).toEqual([
-			'https://docs.tempo.xyz/llms.txt',
-			'https://docs.tempo.xyz/guide/payments/virtual-addresses.md',
+			`https://${mode}.tempo.example/llms.txt`,
+			`https://${mode}.tempo.example/guide/payments/virtual-addresses.md`,
 		])
 		const text = await textContent(res)
+		expect(text.result.retrieval).toBe('source_index')
 		expect(text.result.chunks).toEqual([
 			{
 				score: 0.6471,
 				source: 'tempo',
-				url: 'https://docs.tempo.xyz/guide/payments/virtual-addresses',
+				url: `https://${mode}.tempo.example/guide/payments/virtual-addresses`,
 				text: '# Use virtual addresses for deposits\n\nRegister a virtual-address master and watch deposits.',
 			},
 		])
@@ -2331,3 +2338,143 @@ async function textContent(res: Response | undefined) {
 	const payload = JSON.parse(data ?? '{}')
 	return JSON.parse(payload.result.content[0].text)
 }
+
+describe('dependency metrics', () => {
+	it.each([
+		'success',
+		'error',
+	] as const)('records AI Search %s attempts', async (outcome) => {
+		flushWorkerMetrics()
+		const logs: string[] = []
+		const spy = vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+		try {
+			await handleMcp(
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'tools/call',
+						params: {
+							name: 'search',
+							arguments: {
+								query: `metrics-${outcome}`,
+								response_format: 'structured',
+							},
+						},
+					}),
+				}),
+				{
+					instance: instance(async () => {
+						if (outcome === 'error') throw new Error('upstream unavailable')
+						return {
+							search_query: 'metrics',
+							chunks: [{ id: '1', text: 'a', score: 1, metadata: {} }],
+						} as AiSearchSearchResponse
+					}),
+					sources: [],
+				},
+			)
+			flushWorkerMetrics()
+			const metrics = logs
+				.filter((x) => x.startsWith('cwm-'))
+				.flatMap((x) => JSON.parse(x.slice(4)))
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_ai_search_request_count',
+					v: 1,
+					tags: expect.objectContaining({ outcome }),
+				}),
+			)
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_ai_search_duration_ms',
+					tags: expect.objectContaining({ outcome }),
+				}),
+			)
+			if (outcome === 'error') {
+				expect(metrics).toContainEqual(
+					expect.objectContaining({
+						n: 'tempo_docs_mcp_ai_search_error_count',
+						v: 1,
+					}),
+				)
+				expect(
+					metrics.some(
+						(x) => x.n === 'tempo_docs_mcp_ai_search_empty_result_count',
+					),
+				).toBe(false)
+			}
+		} finally {
+			spy.mockRestore()
+			errorSpy.mockRestore()
+		}
+	})
+})
+
+describe('bounded search dependencies', () => {
+	it('records a stuck AI Search call as an error at its deadline and permits retry', async () => {
+		vi.useFakeTimers()
+		flushWorkerMetrics()
+		const logs: string[] = []
+		vi.spyOn(console, 'log').mockImplementation((message) => {
+			logs.push(String(message))
+		})
+		vi.spyOn(console, 'error').mockImplementation(() => {})
+		try {
+			const search = vi
+				.fn()
+				.mockImplementationOnce(() => new Promise<never>(() => {}))
+				.mockResolvedValue({ search_query: 'bounded-dependency', chunks: [] })
+			const context = { instance: instance(search), sources: [] }
+			const request = () =>
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'tools/call',
+						params: {
+							name: 'search',
+							arguments: {
+								query: 'bounded-dependency',
+								response_format: 'structured',
+							},
+						},
+					}),
+				})
+			const pending = handleMcp(request(), context)
+			await vi.waitFor(() => expect(search).toHaveBeenCalledOnce())
+			await vi.advanceTimersByTimeAsync(9001)
+			const response = await pending
+			expect(await response?.json()).toMatchObject({
+				result: { isError: true },
+			})
+			flushWorkerMetrics()
+			const metrics = logs
+				.filter((line) => line.startsWith('cwm-'))
+				.flatMap((line) => JSON.parse(line.slice(4)))
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_ai_search_error_count',
+					v: 1,
+				}),
+			)
+			expect(metrics).toContainEqual(
+				expect.objectContaining({
+					n: 'tempo_docs_mcp_tool_call_count',
+					tags: expect.objectContaining({ outcome: 'error' }),
+				}),
+			)
+			await handleMcp(request(), context)
+			expect(search).toHaveBeenCalledTimes(2)
+			expect(vi.getTimerCount()).toBe(0)
+		} finally {
+			vi.useRealTimers()
+			vi.restoreAllMocks()
+		}
+	})
+})

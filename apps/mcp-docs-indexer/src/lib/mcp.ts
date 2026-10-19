@@ -1,3 +1,6 @@
+import type { SearchInstance } from './search-instance.js'
+import { withTimeout } from './timeout.js'
+import { errorFields, log } from './log.js'
 import { codeMcpServer } from '@cloudflare/codemode/mcp'
 import type { Executor } from '@cloudflare/codemode'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
@@ -17,6 +20,8 @@ import {
 } from './markdown.js'
 import {
 	recordAiSearchRequest,
+	recordRetrieval,
+	metricToolName,
 	recordJsonRpcError,
 	recordToolCall,
 } from './metrics.js'
@@ -83,7 +88,8 @@ type LegacySearchOptions = {
 }
 
 type McpContext = {
-	instance: AiSearchInstance
+	instanceForSources?: (sources: string[]) => SearchInstance
+	instance: SearchInstance
 	sources?: Source[]
 	executor?: Executor
 }
@@ -98,6 +104,9 @@ const DEFAULT_MATCH_THRESHOLD = 0.45
 const DEFAULT_MAX_CHARS_PER_CHUNK = 1200
 const DEFAULT_MAX_TOTAL_CHARS = 2400
 const FILTER_FALLBACK_TTL_MS = 10 * 60_000
+const AI_SEARCH_TIMEOUT_MS = 9000
+const DOC_FETCH_TIMEOUT_MS = 5000
+const SEARCH_TIMEOUT_MS = 25_000
 const SEARCH_RESULT_CACHE_TTL_MS = 60_000
 const SEARCH_RESULT_CACHE_MAX_ENTRIES = 128
 const PAGE_CACHE_TTL_MS = 60_000
@@ -116,12 +125,15 @@ const READ_ONLY_TOOL_ANNOTATIONS = {
 } as const
 
 type SearchResultChunk = AiSearchSearchResponse['chunks'][number]
+type SearchResult = AiSearchSearchResponse & {
+	retrieval?: 'ai_search' | 'source_index'
+}
 const sourceFilterFallbackUntil = new Map<string, number>()
 const searchResultCache = new Map<
 	string,
-	{ expiresAt: number; result: AiSearchSearchResponse }
+	{ expiresAt: number; result: SearchResult }
 >()
-const searchInFlight = new Map<string, Promise<AiSearchSearchResponse>>()
+const searchInFlight = new Map<string, Promise<SearchResult>>()
 const pageCache = new Map<string, { expiresAt: number; text: string }>()
 const pageInFlight = new Map<string, Promise<string>>()
 const sourceIndexCache = new Map<
@@ -279,11 +291,21 @@ export async function handleMcp(
 				args,
 				context.sources ?? [],
 			)
-			const result = await cachedSearch(
-				query.trim(),
-				effectiveArgs,
-				context.instance,
-				context.sources ?? [],
+			const result = await withTimeout(
+				() =>
+					cachedSearch(
+						query.trim(),
+						effectiveArgs,
+						context.instanceForSources?.(selectedSources(effectiveArgs)) ??
+							context.instance,
+						context.sources ?? [],
+					),
+				SEARCH_TIMEOUT_MS,
+			)
+			recordRetrieval(
+				result.chunks.length === 0
+					? 'empty'
+					: (result.retrieval ?? 'ai_search'),
 			)
 			const formatted = await formatResult(
 				result,
@@ -598,12 +620,15 @@ async function readCleanPage(pageUrl: string): Promise<string> {
 }
 
 async function fetchCleanPage(markdownUrl: string): Promise<string> {
-	const res = await fetch(markdownUrl, {
-		headers: { accept: MARKDOWN_ACCEPT },
-		cf: { cacheTtl: 60 },
-	})
-	if (!res.ok) throw new Error(`page fetch ${res.status}`)
-	const body = await res.text()
+	const { res, body } = await withTimeout(async (signal) => {
+		const res = await fetch(markdownUrl, {
+			signal,
+			headers: { accept: MARKDOWN_ACCEPT },
+			cf: { cacheTtl: 60 },
+		})
+		if (!res.ok) throw new Error(`page fetch ${res.status}`)
+		return { res, body: await res.text() }
+	}, DOC_FETCH_TIMEOUT_MS)
 	if (isHtmlDocument(body, res.headers.get('content-type')))
 		throw new Error('page is HTML, not Markdown')
 	const text = normalizeDocsMarkdown(body)
@@ -622,10 +647,10 @@ function cachePage(key: string, text: string): void {
 async function cachedSearch(
 	query: string,
 	args: SearchArguments | undefined,
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	sources: Source[],
-): Promise<AiSearchSearchResponse> {
-	const key = searchCacheKey(query, args)
+): Promise<SearchResult> {
+	const key = JSON.stringify(sources) + searchCacheKey(query, args)
 	const cached = searchResultCache.get(key)
 	if (cached && cached.expiresAt > Date.now()) return cached.result
 	if (cached) searchResultCache.delete(key)
@@ -646,12 +671,12 @@ async function runAndCacheSearch(
 	key: string,
 	query: string,
 	args: SearchArguments | undefined,
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	sources: Source[],
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const result = await runSearch(query, args, instance, sources)
 	cacheSearchResult(key, result)
-	const postFallbackKey = searchCacheKey(query, args)
+	const postFallbackKey = JSON.stringify(sources) + searchCacheKey(query, args)
 	if (postFallbackKey !== key) cacheSearchResult(postFallbackKey, result)
 	return result
 }
@@ -659,50 +684,63 @@ async function runAndCacheSearch(
 async function runSearch(
 	query: string,
 	args: SearchArguments | undefined,
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	sources: Source[],
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const wantedSources = selectedSources(args)
 	const skipSourceFilter = shouldSkipSourceFilter(wantedSources)
-	let result = await searchWithMetrics(
-		instance,
-		{
-			query,
-			ai_search_options: normalizeOptions(args, {
-				includeSourceFilter: !skipSourceFilter,
-				maxResults: upstreamMaxResultsFor(args),
-				...(skipSourceFilter
-					? { maxResults: fallbackMaxResultsFor(args) }
-					: {}),
-			}),
-		},
-		{ path: 'primary', sourceCount: wantedSources.length },
-	)
-	if (skipSourceFilter) {
-		result = filterSourceChunks(
-			result,
-			wantedSources,
-			upstreamMaxResultsFor(args),
-		)
-	} else if (result.chunks.length === 0 && wantedSources.length > 0) {
-		rememberStaleSourceFilters(wantedSources)
-		const fallback = await searchWithMetrics(
+	let result: SearchResult
+	try {
+		result = await searchWithMetrics(
 			instance,
 			{
 				query,
 				ai_search_options: normalizeOptions(args, {
-					includeSourceFilter: false,
-					maxResults: fallbackMaxResultsFor(args),
+					includeSourceFilter: !skipSourceFilter,
+					maxResults: upstreamMaxResultsFor(args),
+					...(skipSourceFilter
+						? { maxResults: fallbackMaxResultsFor(args) }
+						: {}),
 				}),
 			},
-			{ path: 'unfiltered_fallback', sourceCount: wantedSources.length },
+			{ path: 'primary', sourceCount: wantedSources.length },
 		)
-		const filtered = filterSourceChunks(
-			fallback,
+		if (skipSourceFilter) {
+			result = filterSourceChunks(
+				result,
+				wantedSources,
+				upstreamMaxResultsFor(args),
+			)
+		} else if (result.chunks.length === 0 && wantedSources.length > 0) {
+			rememberStaleSourceFilters(wantedSources)
+			const fallback = await searchWithMetrics(
+				instance,
+				{
+					query,
+					ai_search_options: normalizeOptions(args, {
+						includeSourceFilter: false,
+						maxResults: fallbackMaxResultsFor(args),
+					}),
+				},
+				{ path: 'unfiltered_fallback', sourceCount: wantedSources.length },
+			)
+			const filtered = filterSourceChunks(
+				fallback,
+				wantedSources,
+				upstreamMaxResultsFor(args),
+			)
+			if (filtered.chunks.length > 0) result = filtered
+		}
+	} catch (error) {
+		const fallback = await localSourceSearch(
+			query,
+			args,
 			wantedSources,
-			upstreamMaxResultsFor(args),
+			sources,
+			{ search_query: query, chunks: [] },
 		)
-		if (filtered.chunks.length > 0) result = filtered
+		if (fallback.chunks.length === 0) throw error
+		return fallback
 	}
 	if (result.chunks.length === 0) {
 		result = await localSourceSearch(
@@ -717,19 +755,30 @@ async function runSearch(
 }
 
 async function searchWithMetrics(
-	instance: AiSearchInstance,
+	instance: SearchInstance,
 	request: AiSearchSearchRequest,
 	tags: { path: string; sourceCount: number },
-): Promise<AiSearchSearchResponse> {
+): Promise<SearchResult> {
 	const startedAt = performance.now()
-	const result = await instance.search(request)
-	recordAiSearchRequest({
-		chunks: result.chunks.length,
-		durationMs: Math.round(performance.now() - startedAt),
-		path: tags.path,
-		sourceCount: tags.sourceCount,
-	})
-	return result
+	let result: SearchResult | undefined
+	try {
+		result = await withTimeout(
+			() => instance.search(request),
+			AI_SEARCH_TIMEOUT_MS,
+		)
+		return result
+	} catch (error) {
+		log.error('ai_search.failed', { path: tags.path, ...errorFields(error) })
+		throw error
+	} finally {
+		recordAiSearchRequest({
+			chunks: result?.chunks.length,
+			outcome: result ? 'success' : 'error',
+			durationMs: Math.round(performance.now() - startedAt),
+			path: tags.path,
+			sourceCount: tags.sourceCount,
+		})
+	}
 }
 
 function searchCacheKey(
@@ -749,7 +798,7 @@ function searchCacheKey(
 	})
 }
 
-function cacheSearchResult(key: string, result: AiSearchSearchResponse): void {
+function cacheSearchResult(key: string, result: SearchResult): void {
 	searchResultCache.set(key, {
 		expiresAt: Date.now() + SEARCH_RESULT_CACHE_TTL_MS,
 		result,
@@ -773,7 +822,7 @@ function rememberStaleSourceFilters(sources: string[]): void {
 }
 
 function filterSourceChunks(
-	result: AiSearchSearchResponse,
+	result: SearchResult,
 	sources: string[],
 	maxResults: number,
 ): AiSearchSearchResponse {
@@ -795,8 +844,29 @@ async function localSourceSearch(
 	sourceIds: string[],
 	sources: Source[],
 	emptyResult: AiSearchSearchResponse,
-): Promise<AiSearchSearchResponse> {
-	if (sourceIds.length !== 1) return emptyResult
+): Promise<SearchResult> {
+	if (sourceIds.length !== 1) {
+		const selected = sources.filter(
+			(source) => sourceIds.length === 0 || sourceIds.includes(source.id),
+		)
+		const results = await Promise.allSettled(
+			selected.map((source) =>
+				localSourceSearch(query, args, [source.id], [source], emptyResult),
+			),
+		)
+		const chunks = results.flatMap((result) =>
+			result.status === 'fulfilled' ? result.value.chunks : [],
+		)
+		return chunks.length
+			? {
+					...emptyResult,
+					chunks: chunks
+						.sort((a, b) => b.score - a.score)
+						.slice(0, localSourceMaxResultsFor(args)),
+					retrieval: 'source_index',
+				}
+			: emptyResult
+	}
 	if (args?.include_raw === true) return emptyResult
 
 	const source = sources.find((entry) => entry.id === sourceIds[0])
@@ -827,7 +897,7 @@ async function localSourceSearch(
 		)
 		.map((result) => result.value)
 	if (chunks.length === 0) return emptyResult
-	return { ...emptyResult, chunks }
+	return { ...emptyResult, chunks, retrieval: 'source_index' }
 }
 
 async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
@@ -849,11 +919,15 @@ async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
 }
 
 async function fetchSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
-	const res = await fetch(sourceIndexUrl(source), {
-		cf: { cacheTtl: 60 },
-	})
-	if (!res.ok) return []
-	const entries = parseSourceIndex(await res.text(), source.base)
+	const entries = await withTimeout(async (signal) => {
+		const res = await fetch(sourceIndexUrl(source), {
+			signal,
+			cf: { cacheTtl: 60 },
+		})
+		if (!res.ok) return undefined
+		return parseSourceIndex(await res.text(), source.base)
+	}, DOC_FETCH_TIMEOUT_MS)
+	if (!entries) return []
 	cacheSourceIndex(`${source.id}:${sourceIndexUrl(source)}`, entries)
 	return entries
 }
@@ -1083,15 +1157,18 @@ function normalizeOptions(
 }
 
 async function formatResult(
-	result: AiSearchSearchResponse,
+	result: SearchResult,
 	args: SearchArguments | undefined,
 	sources: Source[],
 ): Promise<
-	AiSearchSearchResponse | { search_query: string; chunks: unknown[] }
+	SearchResult | { search_query: string; retrieval: string; chunks: unknown[] }
 > {
+	const retrieval =
+		result.chunks.length === 0 ? 'none' : (result.retrieval ?? 'ai_search')
 	if (args?.include_raw === true) {
 		return {
 			...result,
+			retrieval,
 			chunks: result.chunks.map((chunk) => ({
 				...chunk,
 				text: cleanChunkText(chunk.text),
@@ -1107,6 +1184,7 @@ async function formatResult(
 	await annotateChunkSections(chunks, sources)
 	return {
 		search_query: result.search_query,
+		retrieval,
 		chunks,
 	}
 }
@@ -1651,13 +1729,19 @@ async function trackToolCall(
 	const startedAt = performance.now()
 	try {
 		const response = await handler()
-		recordToolCall(
-			toolName,
-			(await responseIsError(response)) ? 'error' : 'success',
-			Math.round(performance.now() - startedAt),
-		)
+		const outcome = (await responseIsError(response)) ? 'error' : 'success'
+		log.info('mcp.tool_complete', {
+			tool_name: metricToolName(toolName),
+			outcome,
+			duration_ms: Math.round(performance.now() - startedAt),
+		})
+		recordToolCall(toolName, outcome, Math.round(performance.now() - startedAt))
 		return response
 	} catch (error) {
+		log.error('mcp.tool_failed', {
+			tool_name: metricToolName(toolName),
+			...errorFields(error),
+		})
 		recordToolCall(toolName, 'error', Math.round(performance.now() - startedAt))
 		throw error
 	}

@@ -1,5 +1,6 @@
 export type Source = {
 	id: string
+	instanceId?: string
 	base: string
 	indexPath?: string
 	description?: string
@@ -7,6 +8,7 @@ export type Source = {
 
 type SourceConfig = {
 	id?: unknown
+	instanceId?: unknown
 	base?: unknown
 	indexPath?: unknown
 	description?: unknown
@@ -43,6 +45,14 @@ function normalizeSource(source: SourceConfig, index: number): Source {
 
 	return {
 		id,
+		...(source.instanceId === undefined
+			? {}
+			: {
+					instanceId: expectString(
+						source.instanceId,
+						`SOURCES[${index}].instanceId`,
+					),
+				}),
 		base,
 		indexPath: indexPath.startsWith('/') ? indexPath : `/${indexPath}`,
 		...(description ? { description } : {}),

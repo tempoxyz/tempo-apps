@@ -15,11 +15,15 @@ vi.mock('../src/lib/metrics.js', () => ({
 	flushWorkerMetrics: vi.fn(),
 	isFailedSyncReport: vi.fn(),
 	recordHttpRequestMetrics: vi.fn(),
-	recordIngestMetrics: vi.fn(),
+	recordIngestSummary: vi.fn(),
+	recordSourceIngestMetrics: vi.fn(),
 	recordHealthMetrics: vi.fn(),
 	recordProxyFallback: vi.fn(),
 }))
-vi.mock('../src/lib/log.js', () => ({ log: { error: vi.fn() } }))
+vi.mock('../src/lib/log.js', async (importOriginal) => ({
+	...(await importOriginal<typeof import('../src/lib/log.js')>()),
+	log: { error: vi.fn(), info: vi.fn() },
+}))
 
 const env = Object.assign({}, bindings, {
 	AI_SEARCH: { get: vi.fn() },
