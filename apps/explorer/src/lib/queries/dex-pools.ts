@@ -40,10 +40,10 @@ export function dexTransactionFillsQueryOptions(hash: Hex) {
 	return queryOptions({
 		queryKey: ['dex-transaction-fills', getTempoChain().id, hash],
 		queryFn: () => fetchDexTransactionFills({ data: { hash } }),
-		// A complete result never changes. Until then the indexer can trail
-		// the transaction or a read can fail, so keep retrying with backoff.
-		staleTime: (query) =>
-			query.state.data?.complete ? Number.POSITIVE_INFINITY : 0,
+		// A complete result's fills never change, though whether their books
+		// are still active can. Until then the indexer can trail the
+		// transaction or a read can fail, so keep retrying with backoff.
+		staleTime: (query) => (query.state.data?.complete ? 60_000 : 0),
 		refetchInterval: (query) =>
 			query.state.data?.complete
 				? false

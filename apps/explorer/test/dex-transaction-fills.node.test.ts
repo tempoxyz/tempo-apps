@@ -173,6 +173,28 @@ describe('Stablecoin DEX transaction fills', () => {
 		})
 	})
 
+	it('reads whether a book is still active fresh on every lookup', async () => {
+		const reads = multicall.getMockImplementation()
+		const routeThrough = (quote: Address) =>
+			multicall.mockImplementation(async (options) => {
+				const results = await reads?.(options)
+				return results.map((result: unknown, index: number) => {
+					const { address, functionName } = options.contracts[index]
+					return address === USDC && functionName === 'quoteToken'
+						? { status: 'success', result: quote }
+						: result
+				})
+			})
+		const active = async () =>
+			(await getDexTransactionFills(TX)).fills.map((fill) => fill.active)
+
+		// USDC.e still routes through pathUSD, the book this fill used.
+		routeThrough(PATH)
+		expect(await active()).toEqual([true])
+		routeThrough(OUSD)
+		expect(await active()).toEqual([false])
+	})
+
 	it('leaves a fill older than the kept switch history unlabelled', async () => {
 		const lookup = query.getMockImplementation()
 		// 50 switches back and forth, all after the fill.
