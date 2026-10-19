@@ -12,7 +12,8 @@ describe('activitiesToKnownEvents', () => {
 		const OUSD = '0x20c0000000000000000000006a37da5c996874be'
 		const USDC = '0x20c000000000000000000000b9537d11c60e8b50'
 		const taker = `0x${'9'.repeat(40)}` as const
-		const transfer = (logIndex: number, from: Hex, to: Hex) => ({
+		const transfer = (logIndex: number, from: Hex, to: Hex, token = OUSD) => ({
+			address: token as Hex,
 			logIndex,
 			topics: encodeEventTopics({
 				abi: Abis.tip20,
@@ -20,6 +21,15 @@ describe('activitiesToKnownEvents', () => {
 				args: { from, to },
 			}),
 		})
+		const fill = {
+			address: Addresses.stablecoinDex,
+			logIndex: 14,
+			topics: encodeEventTopics({
+				abi: Abis.stablecoinDex,
+				eventName: 'OrderFilled',
+				args: { orderId: 1n },
+			}),
+		}
 		const swap = (logIndex: number) => ({
 			id: `0x${'1'.repeat(64)}-${logIndex}`,
 			logIndex,
@@ -32,20 +42,36 @@ describe('activitiesToKnownEvents', () => {
 				destinationToken: { address: USDC, symbol: 'USDC.e' },
 			},
 		})
+		const attacker = `0x${'7'.repeat(40)}` as const
 		const logs = [
 			transfer(13, taker, Addresses.stablecoinDex),
+			fill,
 			// Another venue's settlement in the same transaction.
-			transfer(20, taker, `0x${'7'.repeat(40)}`),
+			transfer(20, taker, attacker),
+			// A contract's own Transfer event naming the DEX.
+			transfer(21, taker, Addresses.stablecoinDex, attacker),
 		]
+		const venue = (events: ReturnType<typeof activitiesToKnownEvents>) =>
+			events.map((event) =>
+				event.parts.some((part) => part.type === 'dexRoute'),
+			)
 
-		const [dex, other] = activitiesToKnownEvents([swap(13), swap(20)], {
-			logs,
-		})
+		const [dex] = activitiesToKnownEvents([swap(13)], { logs })
 		expect(dex?.parts.slice(-2)).toEqual([
 			{ type: 'text', value: 'on' },
 			{ type: 'dexRoute', value: { from: OUSD, to: USDC } },
 		])
-		expect(other?.parts.some((part) => part.type === 'dexRoute')).toBe(false)
+		expect(
+			venue(activitiesToKnownEvents([swap(20), swap(21)], { logs })),
+		).toEqual([false, false])
+		// Without a fill the DEX emitted, nothing filled on its books.
+		expect(
+			venue(
+				activitiesToKnownEvents([swap(13)], {
+					logs: logs.filter((log) => log !== fill),
+				}),
+			),
+		).toEqual([false])
 	})
 
 	test('omits unknown activities so local descriptions can be used', () => {

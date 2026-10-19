@@ -7,7 +7,7 @@ import {
 	type DexFill,
 	type DexOrderState,
 	type DexSwap,
-	type DexTransactionFill,
+	type DexTransactionFills,
 	fillHop,
 	groupSwaps,
 	orderAt,
@@ -194,6 +194,8 @@ type FillBook = {
 	order: DexOrderState
 	base: DexPoolToken
 	quote: DexPoolToken
+	/** The base's quote tokens were read rather than assumed. */
+	exact: boolean
 }
 
 /**
@@ -245,7 +247,15 @@ async function readFillBooks(
 		const routed = quoteAt(history, original, fill.timestamp)
 		const quote = routed && tokens.get(routed)
 		if (!quote) return []
-		return [{ fill, order, base: base.token, quote: quote.token }]
+		return [
+			{
+				fill,
+				order,
+				base: base.token,
+				quote: quote.token,
+				exact: !base.assumedQuote,
+			},
+		]
 	})
 }
 
@@ -372,13 +382,17 @@ export const fetchDexSwaps = createServerFn({ method: 'GET' })
 		}
 	})
 
-/** A transaction's Stablecoin DEX fills, each with the book it filled on. */
+/**
+ * A transaction's Stablecoin DEX fills, each with the book it filled on.
+ * `complete` is false while any fill's book is unresolved or assumed, such
+ * as when the indexer trails the transaction or a token read failed.
+ */
 export async function getDexTransactionFills(
 	hash: Hex,
-): Promise<DexTransactionFill[]> {
+): Promise<DexTransactionFills> {
 	const chainId = getTempoChain().id
 	const transactionHash = hash.toLowerCase()
-	if (!hexHash.test(transactionHash)) return []
+	if (!hexHash.test(transactionHash)) return { fills: [], complete: false }
 	const fills = parseFills(
 		await indexer(
 			chainId,
@@ -387,34 +401,38 @@ export async function getDexTransactionFills(
 			ORDER BY log_idx`,
 		),
 	)
-	if (fills.length === 0) return []
+	if (fills.length === 0) return { fills: [], complete: false }
 	const books = await readFillBooks(
 		chainId,
 		fills,
 		await getBatchedClient().getBlockNumber(),
 	)
-	return books.map(({ fill, base, quote }) => ({
-		log: fill.log,
-		base,
-		quote,
-		amount: String(fill.amount),
-	}))
+	return {
+		fills: books.map(({ fill, base, quote }) => ({
+			log: fill.log,
+			base,
+			quote,
+			amount: String(fill.amount),
+		})),
+		complete:
+			books.length === fills.length && books.every((book) => book.exact),
+	}
 }
 
 export const fetchDexTransactionFills = createServerFn({ method: 'GET' })
 	.inputValidator((input: { hash: Hex }) =>
 		z.object({ hash: zHash() }).parse(input),
 	)
-	.handler(async ({ data }): Promise<DexTransactionFill[]> => {
+	.handler(async ({ data }): Promise<DexTransactionFills> => {
 		try {
 			return await withImmutableDataCache({
-				key: `dex-transaction-fills:v1:${getTempoChain().id}:${data.hash.toLowerCase()}`,
+				key: `dex-transaction-fills:v2:${getTempoChain().id}:${data.hash.toLowerCase()}`,
 				load: () => withDeadline(getDexTransactionFills(data.hash)),
-				// The indexer can trail a new transaction; retry until it has it.
-				shouldCache: (fills) => fills.length > 0,
+				// Retry an incomplete result rather than keep it.
+				shouldCache: (result) => result.complete,
 			})
 		} catch (error) {
 			console.error('Failed to load Stablecoin DEX fills:', error)
-			return []
+			return { fills: [], complete: false }
 		}
 	})

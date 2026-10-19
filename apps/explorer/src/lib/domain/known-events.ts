@@ -580,6 +580,14 @@ const RECEIVE_POLICY_GUARD = Address.from(
 	'0xB10C000000000000000000000000000000000000',
 )
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
+
+/**
+ * TIP-20 tokens live under a 12-byte address prefix, far too long for a
+ * deployed contract's address to be ground to, so their logs are genuine.
+ */
+export function isTip20Token(address: string): boolean {
+	return address.toLowerCase().startsWith('0x20c000000000000000000000')
+}
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
 export const STREAM_CHANNELS = [
 	STREAM_CHANNEL,
@@ -2651,6 +2659,14 @@ export function parseKnownEvents(
 		}
 	}
 
+	// Only TIP-20 transfers beside a fill the DEX itself emitted name it as
+	// the venue; any contract can emit a Transfer naming the DEX.
+	const dexFilled = dedupedEvents.some(
+		(event) =>
+			event.eventName === 'OrderFilled' &&
+			Address.isEqual(event.address, STABLECOIN_EXCHANGE),
+	)
+
 	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
@@ -2684,11 +2700,17 @@ export function parseKnownEvents(
 								type: 'amount',
 								value: createAmount(args2.amount, event2.address),
 							},
-							{ type: 'text', value: 'on' },
-							{
-								type: 'dexRoute',
-								value: { from: event1.address, to: event2.address },
-							},
+							...(dexFilled &&
+							isTip20Token(event1.address) &&
+							isTip20Token(event2.address)
+								? ([
+										{ type: 'text', value: 'on' },
+										{
+											type: 'dexRoute',
+											value: { from: event1.address, to: event2.address },
+										},
+									] as const)
+								: []),
 						],
 					})
 

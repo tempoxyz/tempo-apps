@@ -99,7 +99,9 @@ beforeEach(() => {
 
 describe('Stablecoin DEX transaction fills', () => {
 	it('resolves each fill’s book at the time it filled', async () => {
-		const [fill, ...rest] = await getDexTransactionFills(TX)
+		const { fills, complete } = await getDexTransactionFills(TX)
+		expect(complete).toBe(true)
+		const [fill, ...rest] = fills
 		expect(rest).toEqual([])
 		expect(fill).toMatchObject({
 			log: 14,
@@ -141,8 +143,38 @@ describe('Stablecoin DEX transaction fills', () => {
 		])
 	})
 
+	it('marks a result incomplete when a book is unresolved or assumed', async () => {
+		const reads = multicall.getMockImplementation()
+		multicall.mockImplementation(async (options) => {
+			const results = await reads?.(options)
+			// The base's quote token read fails, so pathUSD is assumed.
+			return results.map((result: unknown, index: number) =>
+				options.contracts[index].functionName === 'quoteToken'
+					? { status: 'failure', error: new Error('reverted') }
+					: result,
+			)
+		})
+		expect((await getDexTransactionFills(TX)).complete).toBe(false)
+
+		multicall.mockImplementation(reads)
+		const lookup = query.getMockImplementation()
+		// The order's placement is not indexed yet.
+		query.mockImplementation(async (sql: string) =>
+			sql.includes('FROM dex_orders')
+				? rows(['id', 'token', 'bid', 'tick', 'block_num', 'log_idx'], [])
+				: lookup?.(sql),
+		)
+		expect(await getDexTransactionFills(TX)).toEqual({
+			fills: [],
+			complete: false,
+		})
+	})
+
 	it('reads nothing for a malformed hash', async () => {
-		expect(await getDexTransactionFills('0x1234')).toEqual([])
+		expect(await getDexTransactionFills('0x1234')).toEqual({
+			fills: [],
+			complete: false,
+		})
 		expect(query).not.toHaveBeenCalled()
 	})
 })

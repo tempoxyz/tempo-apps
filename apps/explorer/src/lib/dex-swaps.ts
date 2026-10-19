@@ -32,6 +32,12 @@ export type DexTransactionFill = {
 	amount: string
 }
 
+export type DexTransactionFills = {
+	fills: DexTransactionFill[]
+	/** Every fill's book resolved; an incomplete result is retried. */
+	complete: boolean
+}
+
 /** An order's base token, side and tick, from its placement or a flip. */
 export type DexOrderState = {
 	block: number

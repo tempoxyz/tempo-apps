@@ -797,11 +797,12 @@ function EventsSection(props: {
 }) {
 	const { hash, logs } = props
 	const queryClient = useQueryClient()
-	const { data: dexFills } = useQuery({
+	const { data: dexFillLookup } = useQuery({
 		...dexTransactionFillsQueryOptions(hash),
 		enabled: props.knownEvents.some((event) => event?.type === 'order filled'),
 	})
 	// An OrderFilled log names only its order; the indexer supplies its book.
+	const dexFills = dexFillLookup?.fills
 	const knownEvents = React.useMemo(() => {
 		if (!dexFills?.length) return props.knownEvents
 		return props.knownEvents.map((event, index) => {

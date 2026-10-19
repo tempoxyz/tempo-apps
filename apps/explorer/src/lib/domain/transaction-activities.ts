@@ -1,8 +1,13 @@
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import { toEventSelector } from 'viem'
+import { getAbiItem, toEventSelector } from 'viem'
 import { Addresses } from 'viem/tempo'
-import type { KnownEvent, KnownEventPart } from './known-events'
+import { Abis } from '#lib/abis'
+import {
+	isTip20Token,
+	type KnownEvent,
+	type KnownEventPart,
+} from './known-events'
 import {
 	composeCallAndLogEvents,
 	isZoneBatchEvent,
@@ -17,7 +22,11 @@ export type TransactionActivity = {
 	data: Record<string, ActivityDataValue>
 }
 
-type ReceiptLog = { logIndex: number | null; topics: readonly Hex.Hex[] }
+type ReceiptLog = {
+	address: Address.Address
+	logIndex: number | null
+	topics: readonly Hex.Hex[]
+}
 
 export type ActivityDataValue =
 	| string
@@ -33,6 +42,10 @@ const transferTopics = new Set(
 		'TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
 	].map((signature) => toEventSelector(signature).toLowerCase()),
 )
+
+const orderFilledTopic = toEventSelector(
+	getAbiItem({ abi: Abis.stablecoinDex, name: 'OrderFilled' }),
+).toLowerCase()
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
 const GENERIC_ACTIVITY_TYPES = new Set(['approval', 'burn', 'mint', 'transfer'])
@@ -350,9 +363,10 @@ function activityParts(activity: TransactionActivity): KnownEventPart[] {
 }
 
 /**
- * A swap indexed from a transfer into or out of the Stablecoin DEX filled
- * on its books. A transaction can route through other venues too, so only
- * those swaps are labelled.
+ * A swap indexed from a TIP-20 transfer into or out of the Stablecoin DEX,
+ * in a transaction the DEX itself emitted a fill in, filled on its books.
+ * A transaction can route through other venues too, so only those swaps
+ * are labelled, and any contract can emit a Transfer naming the DEX.
  */
 function dexRoute(
 	activity: TransactionActivity,
@@ -360,8 +374,14 @@ function dexRoute(
 	logs: readonly ReceiptLog[],
 ): KnownEventPart | null {
 	if (activity.type !== 'swap') return null
+	const filled = logs.some(
+		(log) =>
+			log.topics[0]?.toLowerCase() === orderFilledTopic &&
+			Address.isEqual(log.address, Addresses.stablecoinDex),
+	)
 	const log = logs.find((log) => log.logIndex === activity.logIndex)
-	const [topic, from, to] = log?.topics ?? []
+	if (!filled || !log || !isTip20Token(log.address)) return null
+	const [topic, from, to] = log.topics
 	if (!topic || !transferTopics.has(topic.toLowerCase())) return null
 	const dex = [from, to].some(
 		(party) =>

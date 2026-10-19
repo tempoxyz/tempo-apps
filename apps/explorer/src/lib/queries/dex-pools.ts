@@ -41,9 +41,10 @@ export function dexTransactionFillsQueryOptions(hash: Hex) {
 		queryKey: ['dex-transaction-fills', getTempoChain().id, hash],
 		queryFn: () => fetchDexTransactionFills({ data: { hash } }),
 		staleTime: Number.POSITIVE_INFINITY,
-		// The indexer can trail a transaction by a few blocks.
+		// The indexer can trail a transaction by a few blocks, and a token
+		// read can fail; retry an incomplete result a few times.
 		refetchInterval: (query) =>
-			query.state.data?.length || query.state.dataUpdateCount >= 5
+			query.state.data?.complete || query.state.dataUpdateCount >= 5
 				? false
 				: 3_000,
 	})

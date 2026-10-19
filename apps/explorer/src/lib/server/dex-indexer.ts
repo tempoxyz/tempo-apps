@@ -109,6 +109,8 @@ export type TokenState = {
 	token: DexPoolToken
 	quoteToken: Address
 	nextQuoteToken: Address
+	/** A quote token read failed, so pathUSD was assumed for it. */
+	assumedQuote: boolean
 }
 
 /** Lowercased verified token addresses; empty when the registry is down. */
@@ -156,6 +158,9 @@ export async function readTokens(
 			},
 			quoteToken: lower(quoteToken),
 			nextQuoteToken: lower(nextQuoteToken),
+			assumedQuote:
+				quoteToken?.status !== 'success' ||
+				nextQuoteToken?.status !== 'success',
 		})
 	})
 	return tokens
