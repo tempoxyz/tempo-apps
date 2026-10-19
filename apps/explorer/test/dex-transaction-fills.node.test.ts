@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Address } from 'viem'
+import { type Address, encodeEventTopics } from 'viem'
 import { Addresses } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import { describeDexFill } from '#lib/dex-swaps'
 import { getDexTransactionFills } from '#lib/server/dex-swaps'
 
-const { query, multicall } = vi.hoisted(() => ({
+const { query, multicall, receipt } = vi.hoisted(() => ({
 	query: vi.fn(),
 	multicall: vi.fn(),
+	receipt: vi.fn(),
 }))
 vi.mock('#lib/server/env', () => ({
 	tempoApi: { url: 'https://api.test', headers: undefined },
@@ -18,7 +20,11 @@ vi.mock('#lib/server/verified-tokens', () => ({
 }))
 vi.mock('#wagmi.config', () => ({
 	getTempoChain: () => ({ id: 4217 }),
-	getBatchedClient: () => ({ getBlockNumber: async () => 200n, multicall }),
+	getBatchedClient: () => ({
+		getBlockNumber: async () => 200n,
+		getTransactionReceipt: receipt,
+		multicall,
+	}),
 }))
 
 const USDC = '0x20c000000000000000000000b9537d11c60e8b50'
@@ -33,8 +39,21 @@ function rows(columns: string[], values: unknown[][]) {
 	})
 }
 
+/** A receipt with `count` fills the DEX emitted. */
+function dexFills(count: number) {
+	const fill = {
+		address: Addresses.stablecoinDex,
+		topics: encodeEventTopics({
+			abi: Abis.stablecoinDex,
+			eventName: 'OrderFilled',
+		}),
+	}
+	return { logs: Array.from({ length: count }, () => fill) }
+}
+
 beforeEach(() => {
 	vi.resetAllMocks()
+	receipt.mockResolvedValue(dexFills(1))
 	vi.stubGlobal('fetch', async (url: URL) =>
 		query(new URL(url).searchParams.get('sql') ?? ''),
 	)
@@ -171,6 +190,13 @@ describe('Stablecoin DEX transaction fills', () => {
 			fills: [],
 			complete: false,
 		})
+	})
+
+	it('stays incomplete until the indexer has every fill in the receipt', async () => {
+		receipt.mockResolvedValue(dexFills(2))
+		const { fills, complete } = await getDexTransactionFills(TX)
+		expect(fills).toHaveLength(1)
+		expect(complete).toBe(false)
 	})
 
 	it('reads whether a book is still active fresh on every lookup', async () => {

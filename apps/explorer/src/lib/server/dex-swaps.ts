@@ -1,5 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
-import { type Address, formatUnits, type Hex } from 'viem'
+import {
+	type Address,
+	formatUnits,
+	getAbiItem,
+	type Hex,
+	toEventSelector,
+} from 'viem'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
 import { Abis } from '#lib/abis'
@@ -40,6 +46,9 @@ const PAGES = 5
 const SWAPS = 25
 
 const stablecoinDex = Addresses.stablecoinDex.toLowerCase()
+const orderFilledTopic = toEventSelector(
+	getAbiItem({ abi: Abis.stablecoinDex, name: 'OrderFilled' }),
+).toLowerCase()
 const orderFlipped =
 	'OrderFlipped(uint128 indexed orderId, address indexed maker, address indexed token, uint128 amount, bool isBid, int16 tick, int16 flipTick)'
 const hexHash = /^0x[0-9a-f]{64}$/
@@ -407,21 +416,30 @@ type TransactionBooks = {
 
 /**
  * A transaction's Stablecoin DEX fills, each with the book it filled on.
- * `complete` is false while any fill's book is unresolved or assumed, such
- * as when the indexer trails the transaction or a token read failed.
+ * `complete` is false until the indexer has every fill the receipt holds
+ * and each fill's book is resolved rather than assumed, such as when the
+ * indexer trails the transaction or a token read failed.
  */
 async function readTransactionBooks(hash: Hex): Promise<TransactionBooks> {
 	const chainId = getTempoChain().id
 	const transactionHash = hash.toLowerCase()
 	if (!hexHash.test(transactionHash)) return { fills: [], complete: false }
-	const fills = parseFills(
-		await indexer(
+	const [rows, receipt] = await Promise.all([
+		indexer(
 			chainId,
 			`SELECT ${fillColumns} FROM dex_fills
 			WHERE address = '${stablecoinDex}' AND tx_hash = '${transactionHash}'
 			ORDER BY log_idx`,
 		),
-	)
+		getBatchedClient().getTransactionReceipt({ hash: transactionHash as Hex }),
+	])
+	const fills = parseFills(rows)
+	// The indexer can expose part of a transaction while it catches up.
+	const expected = receipt.logs.filter(
+		(log) =>
+			log.address.toLowerCase() === stablecoinDex &&
+			log.topics[0]?.toLowerCase() === orderFilledTopic,
+	).length
 	if (fills.length === 0) return { fills: [], complete: false }
 	const { books, undetermined } = await readFillBooks(
 		chainId,
@@ -437,6 +455,7 @@ async function readTransactionBooks(hash: Hex): Promise<TransactionBooks> {
 		})),
 		// An undetermined fill never resolves, so it doesn't hold up caching.
 		complete:
+			fills.length === expected &&
 			books.length + undetermined === fills.length &&
 			books.every((book) => book.exact),
 	}
