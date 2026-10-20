@@ -71,7 +71,6 @@ namespace styles {
 	export const empty = style({
 		justifyContent: 'center',
 		minHeight: '180px !custom',
-		paddingBlock: '12',
 	})
 
 	export const title = style({

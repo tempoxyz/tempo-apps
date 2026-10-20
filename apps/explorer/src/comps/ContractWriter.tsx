@@ -326,11 +326,7 @@ namespace styles {
 		typography: 'label.12',
 	})
 
-	// The card clips overflow, so the ring is drawn inside the link.
-	export const simulate = style({
-		flexShrink: 0,
-		':focus-visible': { outlineOffset: '-2px' },
-	})
+	export const simulate = style({ flexShrink: 0 })
 
 	export const simulateIcon = style({ height: '4', width: '4' })
 

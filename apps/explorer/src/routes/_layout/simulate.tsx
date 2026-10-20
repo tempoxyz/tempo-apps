@@ -604,7 +604,7 @@ function SimulatePage(): React.JSX.Element {
 					>
 						<Play />
 						{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
-						<ButtonShortcut>⌘↵</ButtonShortcut>
+						<ButtonShortcut meta>↵</ButtonShortcut>
 					</Button>
 				</div>
 			</div>

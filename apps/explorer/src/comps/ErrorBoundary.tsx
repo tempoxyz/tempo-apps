@@ -54,11 +54,12 @@ export class ErrorBoundary extends React.Component<
 					{this.state.error?.message && (
 						<Surface size="small" {...styles.details()}>
 							<pre {...styles.message()}>{this.state.error.message}</pre>
-							<CopyButton
-								value={this.state.error.message}
-								ariaLabel="Copy error details"
-								className={styles.copy().className}
-							/>
+							<div {...styles.copy()}>
+								<CopyButton
+									value={this.state.error.message}
+									ariaLabel="Copy error details"
+								/>
+							</div>
 						</Surface>
 					)}
 					<Button
@@ -131,9 +132,10 @@ namespace styles {
 		whiteSpace: 'pre-wrap',
 	})
 
-	// Placement only, in the corner of the details box.
+	// Places the copy Button in the corner of the details box.
 	export const copy = style({
 		bottom: '1',
+		display: 'flex',
 		position: 'absolute',
 		right: '1',
 	})

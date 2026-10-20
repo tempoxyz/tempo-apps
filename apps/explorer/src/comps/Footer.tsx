@@ -71,27 +71,28 @@ export namespace Footer {
 
 		const label = `Switch to ${nextTheme} mode`
 
-		// The local style only positions the Button.
+		// The wrapper positions the Button, which keeps its own layout.
 		return (
-			<Tooltip.Root>
-				<Tooltip.Trigger
-					render={
-						<Button
-							{...styles.themeToggle()}
-							aria-label={label}
-							onClick={() => {
-								persistThemeMode(nextTheme)
-								setTheme(nextTheme)
-							}}
-							shape="icon"
-							variant="secondary"
-						/>
-					}
-				>
-					{nextTheme === 'light' ? <LightMode /> : <DarkMode />}
-				</Tooltip.Trigger>
-				<Tooltip.Popup>{label}</Tooltip.Popup>
-			</Tooltip.Root>
+			<div {...styles.themeToggle()}>
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Button
+								aria-label={label}
+								onClick={() => {
+									persistThemeMode(nextTheme)
+									setTheme(nextTheme)
+								}}
+								shape="icon"
+								variant="secondary"
+							/>
+						}
+					>
+						{nextTheme === 'light' ? <LightMode /> : <DarkMode />}
+					</Tooltip.Trigger>
+					<Tooltip.Popup>{label}</Tooltip.Popup>
+				</Tooltip.Root>
+			</div>
 		)
 	}
 
@@ -166,6 +167,7 @@ namespace styles {
 	})
 
 	export const themeToggle = style({
+		display: 'flex',
 		'@container (width >= 400px)': {
 			left: '0px !custom',
 			position: 'absolute',

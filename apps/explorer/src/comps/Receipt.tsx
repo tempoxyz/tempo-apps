@@ -578,9 +578,7 @@ namespace styles {
 		borderTopLeftRadius: 'xl',
 		borderTopRightRadius: 'xl',
 		borderWidth: '1px',
-		// Black shadows in both schemes, deeper in dark mode.
-		boxShadow:
-			'0 1px 2px light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.16)), 0 8px 24px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.32)) !custom',
+		boxShadow: 'lg',
 		color: 'foreground',
 		display: 'flex',
 		flexDirection: 'column',

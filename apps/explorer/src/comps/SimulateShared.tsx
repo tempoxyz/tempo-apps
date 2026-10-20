@@ -81,25 +81,26 @@ export function ErrorText(props: {
 }
 
 /**
- * A keyboard shortcut drawn inside a primary button. The button is an inverse
- * ground and TDS Web has no inverse set, so the key takes the button's own ink
- * (inline, so it wins over the key's resting colors) to stay legible. Hidden
- * from assistive tech: the button announces it through `aria-keyshortcuts`.
+ * A keyboard shortcut drawn inside a primary button. The button fills with the
+ * page's foreground, so the key takes the opposite color scheme and reads as it
+ * would on a page of that color. Hidden from assistive tech: the button
+ * announces it through `aria-keyshortcuts`.
  */
 export function ButtonShortcut(props: {
 	children: React.ReactNode
+	meta?: boolean | undefined
 }): React.JSX.Element {
 	return (
-		<Kbd aria-hidden size="small" style={buttonShortcutInk}>
+		<Kbd
+			aria-hidden
+			meta={props.meta}
+			size="small"
+			{...styles.buttonShortcut()}
+		>
 			{props.children}
 		</Kbd>
 	)
 }
-
-const buttonShortcutInk = {
-	backgroundColor: 'color-mix(in oklab, currentColor 16%, transparent)',
-	color: 'inherit',
-} as const
 
 /* -------------------------------------------------------------------------- */
 /* Data display                                                               */
@@ -406,6 +407,12 @@ namespace styles {
 	export const fieldHint = style({
 		color: 'gray.900',
 		typography: 'label.12',
+	})
+
+	// The page's scheme is dark unless `data-theme` says light (`#styles/globals`).
+	export const buttonShortcut = style({
+		colorScheme: 'light',
+		selectors: { 'html[data-theme="light"] &': { colorScheme: 'dark' } },
 	})
 
 	export const errorText = style({

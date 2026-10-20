@@ -2639,7 +2639,6 @@ function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 							aria-label={props.info}
 							shape="icon"
 							size="small"
-							style={{ color: 'inherit' }}
 							variant="text"
 						/>
 					}

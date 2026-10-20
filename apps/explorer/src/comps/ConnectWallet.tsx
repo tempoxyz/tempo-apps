@@ -22,7 +22,7 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
-import { animatePulse, link, linkHover, pressDown } from '#styles/explorer'
+import { link, linkHover, pressDown } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -96,12 +96,10 @@ function ConnectWalletInner({
 								},
 							)
 						}}
+						loading={pendingId === connector.id && connect.isPending}
 						size="small"
 						variant="secondary"
-						{...cx(
-							styles.action(),
-							pendingId === connector.id && connect.isPending && animatePulse(),
-						)}
+						{...styles.action()}
 					>
 						{/* TDS Avatar starts at 24px; the connector logo stays 16px. */}
 						<Avatar aria-hidden size="24" style={{ height: 16, width: 16 }}>
@@ -306,11 +304,12 @@ function FundAccountButton() {
 			<Tooltip.Trigger
 				render={
 					<Button
-						disabled={isPending}
+						focusableWhenDisabled
+						loading={isPending}
 						onClick={handleFund}
 						size="small"
 						variant="secondary"
-						{...cx(styles.action(), isPending && animatePulse())}
+						{...styles.action()}
 					/>
 				}
 			>

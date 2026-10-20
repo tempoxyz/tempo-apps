@@ -178,6 +178,10 @@ function useBreadcrumbs() {
 	return context
 }
 
+/**
+ * A trail of recently viewed pages. It follows browsing history, not the site
+ * hierarchy, so it is not a TDS `Breadcrumbs` landmark.
+ */
 export function Breadcrumbs(): React.JSX.Element {
 	const { crumbs, pendingCrumb, clearCrumbs } = useBreadcrumbs()
 
@@ -195,7 +199,7 @@ export function Breadcrumbs(): React.JSX.Element {
 
 	return (
 		<nav
-			aria-label="Breadcrumb"
+			aria-label="Recently viewed"
 			aria-hidden={isEmpty}
 			{...styles.nav({ empty: isEmpty })}
 		>

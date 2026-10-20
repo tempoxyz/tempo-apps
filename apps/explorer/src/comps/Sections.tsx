@@ -134,7 +134,9 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 						</h2>
 						{section.contextual}
 					</div>
-					<div {...styles.content()}>{section.content}</div>
+					<div {...cx(styles.content(), styles.contentGap())}>
+						{section.content}
+					</div>
 				</section>
 			</Sections.Context.Provider>
 		)
@@ -297,7 +299,6 @@ namespace styles {
 		paddingInline: '5',
 	})
 
-	// On `Tabs.Panel`, which sets a 12px top margin: the panel meets the header.
 	export const content = style({
 		backgroundColor: 'background.surface',
 		borderTopColor: 'grayAlpha.200',
@@ -305,11 +306,13 @@ namespace styles {
 		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		marginBlockStart: '0',
 		minHeight: '0 !custom',
 		overflowX: 'auto',
 		selectors: { '&[hidden]': { display: 'none' } },
 	})
+
+	// `Tabs.Panel` sets this 12px top margin itself; a single section matches it.
+	export const contentGap = style({ marginBlockStart: '3' })
 
 	export const contentStacked = style({
 		borderColor: 'grayAlpha.200',
@@ -329,15 +332,16 @@ namespace styles {
 		paddingInline: '5',
 	})
 
+	// No bottom padding: the content's 12px top margin spaces the header.
 	export const tabsHeader = style({
 		alignItems: 'center',
 		columnGap: '3',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		minHeight: '12',
-		paddingBlock: '2',
+		minHeight: '11',
 		paddingInline: '4',
+		paddingTop: '3',
 		rowGap: '2',
 	})
 

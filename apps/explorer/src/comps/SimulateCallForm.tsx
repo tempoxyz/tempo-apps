@@ -866,7 +866,7 @@ export function OptionalRow(props: {
 									shape="icon"
 									size="small"
 									variant="text"
-									{...cx(styles.iconButton(), styles.resetButton())}
+									{...styles.iconButton()}
 								/>
 							}
 						>
@@ -920,11 +920,6 @@ namespace styles {
 
 	// TDS Button owns size, fill, hover, and press; this adds only placement.
 	export const iconButton = style({ flexShrink: 0 })
-
-	// The text variant leaves the hover ink unset; reset reads as destructive.
-	export const resetButton = style({
-		'@media (hover: hover)': { ':hover': { color: 'red.900' } },
-	})
 
 	export const calloutTitle = style({
 		display: 'block',

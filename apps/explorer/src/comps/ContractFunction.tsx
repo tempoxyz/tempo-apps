@@ -259,18 +259,19 @@ namespace styles {
 		typography: 'label.12.mono',
 	})
 
+	// The card clips overflow, so the row leaves room on the right and above
+	// and below for the TDS Buttons' focus rings (2px outside each button).
 	export const actions = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
+		paddingBlock: '1',
 		paddingLeft: '3',
 		paddingRight: '1',
 	})
 
-	// The card clips overflow, so the ring is drawn inside the button. TDS
-	// Button leaves icon size to the icon.
+	// TDS Button leaves icon size to the icon.
 	export const action = style({
-		':focus-visible': { outlineOffset: '-2px' },
 		selectors: { '& svg': { height: '4', width: '4' } },
 	})
 

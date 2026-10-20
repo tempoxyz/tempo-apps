@@ -1,53 +1,34 @@
-import { Radio } from '@base-ui/react/radio'
-import { RadioGroup } from '@base-ui/react/radio-group'
-import { style } from '@tempoxyz/ds'
+import { ChoiceGroup } from '@tempoxyz/ds'
 import type * as React from 'react'
 
-/**
- * Compact segmented radio group in the Tempo Design System style, for small
- * toolbars. TDS's own SegmentedControl has no compact size.
- */
+/** A TDS small `ChoiceGroup` for toolbars, labelled by `label`. */
 export function Choices<const value extends string>(
 	props: Choices.Props<value>,
 ): React.JSX.Element {
-	const {
-		className,
-		items,
-		label,
-		onChange,
-		style: inlineStyle,
-		value,
-		...rest
-	} = props
+	const { className, items, label, onChange, style, value, ...rest } = props
 
 	return (
-		<RadioGroup<value | null>
-			aria-label={label}
-			onValueChange={(next) => {
-				if (next === null) return
-				if (next !== value) onChange(next)
-			}}
-			value={value ?? null}
+		<ChoiceGroup.Root<value | null>
 			{...rest}
-			{...styles.root({ className, style: inlineStyle })}
+			aria-label={label}
+			className={className}
+			onValueChange={(next) => {
+				if (next !== null && next !== value) onChange(next)
+			}}
+			size="small"
+			style={style}
+			value={value ?? null}
 		>
 			{items.map((item) => (
-				<Radio.Root
+				<ChoiceGroup.Item
 					disabled={item.disabled}
 					key={item.value}
-					nativeButton
-					onPointerDown={(event) => {
-						if (event.button !== 0 || item.disabled) return
-						if (item.value !== value) onChange(item.value)
-					}}
-					render={<button type="button" />}
 					value={item.value}
-					{...styles.item()}
 				>
 					{item.label}
-				</Radio.Root>
+				</ChoiceGroup.Item>
 			))}
-		</RadioGroup>
+		</ChoiceGroup.Root>
 	)
 }
 
@@ -71,44 +52,4 @@ export declare namespace Choices {
 		/** Selected value. Leave undefined when nothing is selected. */
 		value?: value | undefined
 	}
-}
-
-namespace styles {
-	// TDS SegmentedControl's treatment at toolbar density.
-	export const root = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'lg',
-		display: 'flex',
-		maxWidth: '100% !custom',
-		overflow: 'hidden',
-		padding: '2px !custom',
-	})
-
-	export const item = style({
-		alignItems: 'center',
-		backgroundColor: 'transparent !custom',
-		border: 'none !custom',
-		borderRadius: 'sm',
-		color: 'gray.900',
-		cursor: 'pointer',
-		display: 'flex',
-		flex: '1 !custom',
-		height: '6',
-		justifyContent: 'center',
-		paddingInline: '2',
-		typography: 'label.12',
-		whiteSpace: 'nowrap',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
-		selectors: {
-			'&[data-checked]': {
-				backgroundColor: 'background.surface',
-				color: 'foreground',
-			},
-			'&:focus-visible': {
-				outline: '2px solid currentColor !custom',
-				outlineOffset: '-2px !custom',
-			},
-			'&[data-disabled]': { cursor: 'default', opacity: 0.5 },
-		},
-	})
 }
