@@ -1,17 +1,16 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
-	Alert,
 	Button,
-	IconButton,
-	SimpleTable,
-	StatusIndicator,
-	TextInput,
+	Callout,
+	Field,
+	Input,
+	Rows,
+	Tag,
 	Tooltip,
 	style,
-	vars,
-} from '@tempoxyz/ds/platform'
-import { AlertCircle, InfoCircle } from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds'
+import { AlertCircle, InfoCircle } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
@@ -61,25 +60,33 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 				<div {...styles.panelBody()}>
 					<div {...styles.status()}>
 						<span {...styles.pause()}>
-							<StatusIndicator
+							<Tag
 								role="status"
 								aria-label="Token pause status"
-								tone={pauseTone}
+								intent={pauseTone}
+								variant="plain"
 							>
+								<Tag.Dot />
 								{policyQuery.isPending
 									? 'Loading status…'
 									: pauseStatusLabel(policy?.paused)}
-							</StatusIndicator>
+							</Tag>
 							{policy?.paused === false && (
-								<Tooltip content="Policy restrictions still apply">
-									<IconButton
-										aria-label="Policy restrictions still apply"
-										scale="small"
-										variant="tertiary"
+								<Tooltip.Root>
+									<Tooltip.Trigger
+										render={
+											<Button
+												aria-label="Policy restrictions still apply"
+												shape="icon"
+												size="small"
+												variant="text"
+											/>
+										}
 									>
-										<InfoCircle />
-									</IconButton>
-								</Tooltip>
+										<InfoCircle {...styles.infoIcon()} />
+									</Tooltip.Trigger>
+									<Tooltip.Popup>Policy restrictions still apply</Tooltip.Popup>
+								</Tooltip.Root>
 							)}
 						</span>
 						{policyQuery.isPending ? (
@@ -139,67 +146,72 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 										address={group.account}
 										className={styles.groupAddress().className}
 									/>
-									<SimpleTable>
+									<Rows dividers="full" size="small">
 										{group.roles.map((role) => (
-											<SimpleTable.Row key={role.roleHash}>
-												<SimpleTable.Dt>
-													<span {...styles.roleName()}>{role.role}</span>
-												</SimpleTable.Dt>
-												<SimpleTable.Dd>
-													<span {...styles.block()}>
-														{tokenRoleDescription(role.role)}
-													</span>
-													<span {...styles.meta()}>
-														{role.grantedAt != null && (
-															<span>
-																{new Date(
-																	role.grantedAt * 1000,
-																).toLocaleDateString('en-US')}
-															</span>
-														)}
-														{role.grantedTx ? (
-															<Link
-																to="/tx/$hash"
-																params={{
-																	hash: role.grantedTx as `0x${string}`,
-																}}
-																{...cx(link(), linkHover())}
-																aria-label={`View ${role.role} grant transaction for ${group.account}`}
-															>
-																Grant tx ↗
-															</Link>
-														) : (
-															<span>Grant transaction unavailable</span>
-														)}
-													</span>
-												</SimpleTable.Dd>
-											</SimpleTable.Row>
+											<Rows.Row key={role.roleHash} spacing="none">
+												<Rows.Info>
+													<Rows.Title>
+														<span {...styles.roleName()}>{role.role}</span>
+													</Rows.Title>
+													<Rows.Description>
+														<span {...styles.block()}>
+															{tokenRoleDescription(role.role)}
+														</span>
+														<span {...styles.meta()}>
+															{role.grantedAt != null && (
+																<span>
+																	{new Date(
+																		role.grantedAt * 1000,
+																	).toLocaleDateString('en-US')}
+																</span>
+															)}
+															{role.grantedTx ? (
+																<Link
+																	to="/tx/$hash"
+																	params={{
+																		hash: role.grantedTx as `0x${string}`,
+																	}}
+																	{...cx(link(), linkHover())}
+																	aria-label={`View ${role.role} grant transaction for ${group.account}`}
+																>
+																	Grant tx ↗
+																</Link>
+															) : (
+																<span>Grant transaction unavailable</span>
+															)}
+														</span>
+													</Rows.Description>
+												</Rows.Info>
+											</Rows.Row>
 										))}
 										{group.permissions.map(
 											(permission, index) =>
 												permission.policyId !== undefined && (
-													<SimpleTable.Row
+													<Rows.Row
 														key={`${permission.policyId}:${index}`}
+														spacing="none"
 													>
-														<SimpleTable.Dt>{permission.label}</SimpleTable.Dt>
-														<SimpleTable.Dd>
-															<span {...styles.block()}>
-																{permission.description}
-															</span>
-															<span {...styles.meta()}>
-																<Link
-																	to="/policy/$id"
-																	params={{ id: permission.policyId }}
-																	{...cx(link(), linkHover())}
-																>
-																	Policy #{permission.policyId} activity ↗
-																</Link>
-															</span>
-														</SimpleTable.Dd>
-													</SimpleTable.Row>
+														<Rows.Info>
+															<Rows.Title>{permission.label}</Rows.Title>
+															<Rows.Description>
+																<span {...styles.block()}>
+																	{permission.description}
+																</span>
+																<span {...styles.meta()}>
+																	<Link
+																		to="/policy/$id"
+																		params={{ id: permission.policyId }}
+																		{...cx(link(), linkHover())}
+																	>
+																		Policy #{permission.policyId} activity ↗
+																	</Link>
+																</span>
+															</Rows.Description>
+														</Rows.Info>
+													</Rows.Row>
 												),
 										)}
-									</SimpleTable>
+									</Rows>
 								</div>
 							))}
 						</div>
@@ -240,12 +252,11 @@ function Unavailable(props: {
 	onRetry: () => void
 }): React.JSX.Element {
 	return (
-		<Alert
-			role="status"
-			tone="negative"
-			title={props.message}
-			action={{ label: 'Try again', onClick: props.onRetry }}
-		/>
+		<Callout intent="negative" role="status" size="small">
+			<Callout.Icon />
+			<Callout.Content>{props.message}</Callout.Content>
+			<Callout.Action onClick={props.onRetry}>Try again</Callout.Action>
+		</Callout>
 	)
 }
 
@@ -302,26 +313,29 @@ function AddressPolicyChecker(props: {
 				}}
 			>
 				<div {...styles.inputRow()}>
-					<TextInput
-						id={id}
-						label="Send, receive and mint receipt permissions"
-						value={value}
-						onChange={(event) => {
-							setValue(event.target.value)
-							setAccount(undefined)
-							setInvalid(false)
-						}}
-						placeholder="0x…"
-						autoComplete="off"
-						spellCheck={false}
-						aria-invalid={invalid}
-						aria-describedby={invalid ? `${id}-error` : undefined}
-						className={styles.control().className}
-					/>
+					<Field.Root invalid={invalid} {...styles.field()}>
+						<Field.Label>
+							Send, receive and mint receipt permissions
+						</Field.Label>
+						<Input.Group>
+							<Input.Control
+								id={id}
+								value={value}
+								onValueChange={(next) => {
+									setValue(next)
+									setAccount(undefined)
+									setInvalid(false)
+								}}
+								placeholder="0x…"
+								autoComplete="off"
+								spellCheck={false}
+								aria-describedby={invalid ? `${id}-error` : undefined}
+							/>
+						</Input.Group>
+					</Field.Root>
 					<Button
 						type="submit"
 						disabled={query.isFetching}
-						scale="large"
 						variant="secondary"
 						{...styles.submit()}
 					>
@@ -362,35 +376,42 @@ function PolicyCheckResult({
 	return (
 		<div {...styles.result()}>
 			{(result.components.length > 0 || result.checks) && (
-				<SimpleTable aria-label="Policy permissions">
+				<Rows
+					aria-label="Policy permissions"
+					dividers="full"
+					role="group"
+					size="small"
+				>
 					{tokenPolicyRows(result).map((row) => (
-						<SimpleTable.Row key={row.scope}>
-							<SimpleTable.Dt>{row.label}</SimpleTable.Dt>
-							<SimpleTable.Dd {...styles.resultValue()}>
+						<Rows.Row key={row.scope} spacing="none">
+							<Rows.Label>{row.label}</Rows.Label>
+							<span {...styles.resultValue()}>
 								{result.components.length > 0 && (
 									<PolicyLink policy={row.policy} />
 								)}
 								{result.checks && (
-									<StatusIndicator
-										tone={
+									<Tag
+										intent={
 											row.allowed === null
 												? 'neutral'
 												: row.allowed
 													? 'positive'
 													: 'negative'
 										}
+										variant="plain"
 									>
+										<Tag.Dot />
 										{row.allowed === null
 											? 'Unavailable'
 											: row.allowed
 												? 'Permitted by policy'
 												: 'Blocked by policy'}
-									</StatusIndicator>
+									</Tag>
 								)}
-							</SimpleTable.Dd>
-						</SimpleTable.Row>
+							</span>
+						</Rows.Row>
 					))}
-				</SimpleTable>
+				</Rows>
 			)}
 			{result.checks && (
 				<p {...styles.secondary()}>Checked at block {result.blockNumber}.</p>
@@ -401,73 +422,75 @@ function PolicyCheckResult({
 
 namespace styles {
 	export const root = style({
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
-		marginTop: '16',
-		paddingTop: '16',
+		gap: '4',
+		marginTop: '4',
+		paddingTop: '4',
 	})
 
 	export const heading = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const panel = style({
-		borderColor: 'line.secondary',
-		borderRadius: '2xs',
-		borderWidth: 'regular',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'lg',
+		borderWidth: '1px',
 		overflow: 'hidden',
 	})
 
 	export const panelHeader = style({
 		alignItems: 'flex-start',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		padding: '12',
+		padding: '3',
 	})
 
-	export const panelTitle = style({ typography: 'body.b2Strong' })
+	export const panelTitle = style({ typography: 'copy.14.strong' })
 
 	export const panelBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		padding: '12',
+		gap: '3',
+		padding: '3',
 	})
 
 	export const status = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 		'@media (width >= 768px)': {
 			flexDirection: 'row-reverse',
 			justifyContent: 'space-between',
 		},
 	})
 
+	export const infoIcon = style({ height: '4', width: '4' })
+
 	export const pause = style({
 		alignItems: 'center',
 		display: 'inline-flex',
 		flexShrink: 0,
-		gap: '4',
+		gap: '1',
 	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const policyDescription = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		typography: 'body.b3',
+		gap: '2',
+		typography: 'label.12',
 	})
 
 	export const groups = style({
@@ -475,8 +498,8 @@ namespace styles {
 		flexDirection: 'column',
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: 'regular',
-				borderColor: 'line.secondary',
+				borderBottomWidth: '1px',
+				borderColor: 'grayAlpha.200',
 				borderStyle: 'dashed',
 			},
 		},
@@ -485,48 +508,48 @@ namespace styles {
 	export const group = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '12',
-		typography: 'body.b3',
-		':first-child': { paddingTop: 'none' },
-		':last-child': { paddingBottom: 'none' },
+		gap: '2',
+		paddingBlock: '3',
+		typography: 'label.12',
+		':first-child': { paddingTop: '0' },
+		':last-child': { paddingBottom: '0' },
 	})
 
 	export const groupAddress = style({ wordBreak: 'break-all' })
 
 	export const roleName = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const block = style({ display: 'block' })
 
 	export const meta = style({
-		color: 'content.secondary',
-		columnGap: '8',
+		color: 'gray.900',
+		columnGap: '2',
 		display: 'flex',
 		flexWrap: 'wrap',
-		marginTop: '4',
-		typography: 'body.b3',
+		marginTop: '1',
+		typography: 'label.12',
 	})
 
 	export const policyLink = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const policyLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const details = style({
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
-		borderTopWidth: 'regular',
-		paddingTop: '12',
-		typography: 'body.b3',
+		borderTopWidth: '1px',
+		paddingTop: '3',
+		typography: 'label.12',
 	})
 
 	export const summary = style({ cursor: 'pointer' })
@@ -534,63 +557,52 @@ namespace styles {
 	export const form = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingTop: '12',
+		gap: '2',
+		paddingTop: '3',
 	})
 
-	// TextInput caps itself at 320px; addresses need the full row.
 	export const inputRow = style({
 		alignItems: 'flex-end',
 		display: 'flex',
-		gap: '8',
-		selectors: { '& > div': { flex: 1 } },
+		gap: '2',
 	})
 
-	export const control = style({
-		'::placeholder': { color: 'content.secondary' },
-		selectors: {
-			'&[aria-invalid="true"]': {
-				boxShadow: `inset 0 0 0 1px ${vars.color.border.negative} !custom`,
-			},
-		},
-	})
+	export const field = style({ flex: 1, minWidth: '0px !custom' })
 
-	// TDS Button has no disabled treatment of its own.
-	export const submit = style({
-		flexShrink: 0,
-		':disabled': { opacity: 0.5 },
-	})
+	export const submit = style({ flexShrink: 0 })
 
 	export const fieldError = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const fieldErrorIcon = style({
-		color: 'content.negative',
+		color: 'red.900',
 		flexShrink: 0,
 	})
 
-	export const live = style({ paddingTop: '12' })
+	export const live = style({ paddingTop: '3' })
 
 	export const disclaimer = style({
-		color: 'content.secondary',
-		paddingTop: '8',
+		color: 'gray.900',
+		paddingTop: '2',
 	})
 
 	export const result = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const resultValue = style({
 		alignItems: 'center',
-		columnGap: '12',
+		columnGap: '3',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '4',
+		justifyContent: 'flex-end',
+		minWidth: '0px !custom',
+		rowGap: '1',
 	})
 }

@@ -1,10 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
-import {
-	AlertCircle,
-	ArrowCornerDownRight,
-	Play,
-} from '@tempoxyz/ds/platform/icons'
+import { style } from '@tempoxyz/ds'
+import { AlertCircle, ArrowCornerDownRight, Play } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
@@ -522,51 +518,51 @@ namespace styles {
 	export const list = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 	})
 
 	export const emptyMessage = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
-	export const resultRow = style({ display: 'flex', gap: '8' })
+	export const resultRow = style({ display: 'flex', gap: '2' })
 
 	export const resultIcon = style({
-		color: 'content.tertiary',
+		color: 'gray.700',
 		flexShrink: 0,
-		height: '12',
-		marginTop: '2',
-		width: '12',
+		height: '3',
+		marginTop: '2px !custom',
+		width: '3',
 	})
 
-	export const errorIcon = style({ color: 'content.negative' })
+	export const errorIcon = style({ color: 'red.900' })
 
 	export const pending = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const address = style({
 		minWidth: '0px !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const error = style({
-		color: 'content.primary',
+		color: 'foreground',
 		minWidth: '0px !custom',
 		overflowWrap: 'anywhere',
-		typography: 'body.b3',
+		typography: 'label.12',
 		whiteSpace: 'pre-wrap',
 	})
 
 	export const output = style({
-		color: 'content.primary',
+		color: 'foreground',
 		flex: 1,
 		minWidth: '0px !custom',
 		overflowX: 'auto',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		whiteSpace: 'pre',
 	})
 }

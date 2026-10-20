@@ -65,9 +65,10 @@ describe('validator address card', () => {
 		expect(html).toContain('aria-label="Copy fee recipient"')
 		const recipientSection = ValidatorCard({ address })?.props.sections[1]
 		const copyButton = recipientSection.props.children[0].props.children[1]
-		// CopyButton renders a TDS IconButton inside a Tooltip.
-		const iconButton = copyButton.type(copyButton.props).props.children
-		iconButton.props.onClick()
+		// CopyButton renders a TDS icon Button as its Tooltip trigger.
+		const tooltip = copyButton.type(copyButton.props)
+		const [trigger] = tooltip.props.children
+		trigger.props.render.props.onClick()
 		expect(copy).toHaveBeenCalledExactlyOnceWith(validator.feeRecipient)
 		expect(html).toContain(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Button, style, variants } from '@tempoxyz/ds/platform'
+import { Button, style, variants } from '@tempoxyz/ds'
 import type * as React from 'react'
 import type { Address as TokenAddress } from 'viem'
 import { cx } from 'zyzz'
@@ -135,7 +135,7 @@ export function LivePill(props: LivePill.Props): React.JSX.Element {
 			aria-pressed={live}
 			onClick={onToggle}
 			title={live ? 'Pause live updates' : 'Resume live updates'}
-			scale="small"
+			size="small"
 			variant="secondary"
 		>
 			<LiveIndicator pinging={live} tone={live ? 'positive' : 'neutral'}>
@@ -205,54 +205,54 @@ namespace styles {
 	export const stackedSwap = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
 	export const stackedTime = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const time = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		whiteSpace: 'nowrap',
 	})
 
 	export const value = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const label = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 		whiteSpace: 'nowrap',
 	})
 
 	export const side = variants({
-		base: { fontWeight: 500 },
+		base: { fontWeight: 'medium' },
 		defaultVariants: { buy: true },
 		variants: {
 			buy: {
-				true: { color: 'content.positive' },
-				false: { color: 'content.negative' },
+				true: { color: 'green.900' },
+				false: { color: 'red.900' },
 			},
 		},
 	})
 
 	export const chip = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: 500,
-		gap: '4',
+		fontWeight: 'medium',
+		gap: '1',
 	})
 }

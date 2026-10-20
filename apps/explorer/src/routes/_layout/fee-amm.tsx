@@ -4,14 +4,8 @@ import {
 	Link,
 	stripSearchParams,
 } from '@tanstack/react-router'
-import {
-	Button,
-	NativeSelect,
-	style,
-	TextInput,
-	vars,
-} from '@tempoxyz/ds/platform'
-import { AlertCircle, ArrowRight, Close } from '@tempoxyz/ds/platform/icons'
+import { Button, Field, Input, Select, style } from '@tempoxyz/ds'
+import { AlertCircle, ArrowRight, Close } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import { useId, useState } from 'react'
 import type * as React from 'react'
@@ -128,20 +122,20 @@ function FeeAmmPage(): React.JSX.Element {
 					})
 				}}
 			>
-				<div {...styles.field()}>
-					<TextInput
-						label="Find pools by token address"
-						name="token"
-						defaultValue={search.token ?? ''}
-						placeholder="0x…"
-						spellCheck={false}
-						autoComplete="off"
-						aria-invalid={Boolean(filterError)}
-						aria-describedby={filterError ? errorId : undefined}
-						className={styles.control().className}
-					/>
-				</div>
-				<Button type="submit" scale="large" variant="secondary">
+				<Field.Root invalid={Boolean(filterError)} {...styles.field()}>
+					<Field.Label>Find pools by token address</Field.Label>
+					<Input.Group>
+						<Input.Control
+							name="token"
+							defaultValue={search.token ?? ''}
+							placeholder="0x…"
+							spellCheck={false}
+							autoComplete="off"
+							aria-describedby={filterError ? errorId : undefined}
+						/>
+					</Input.Group>
+				</Field.Root>
+				<Button type="submit" variant="secondary">
 					Find pools <ArrowRight {...styles.buttonIcon()} />
 				</Button>
 				{search.token && (
@@ -223,27 +217,30 @@ function FeeAmmPage(): React.JSX.Element {
 										<label htmlFor={limitId} {...styles.limitLabel()}>
 											Pools per page
 										</label>
-										<NativeSelect
-											id={limitId}
+										<Select.Root
 											value={search.limit}
-											onChange={(event) =>
+											onValueChange={(limit) => {
+												if (limit === null) return
 												void navigate({
-													search: {
-														...search,
-														page: 1,
-														limit: Number(event.target.value) as 10 | 25 | 50,
-													},
+													search: { ...search, page: 1, limit },
 													resetScroll: false,
 												})
-											}
-											style={{ width: 96 }}
+											}}
 										>
-											{[10, 25, 50].map((limit) => (
-												<option key={limit} value={limit}>
-													{limit}
-												</option>
-											))}
-										</NativeSelect>
+											<span {...styles.limitSelect()}>
+												<Select.Trigger id={limitId} size="small">
+													<Select.Value />
+													<Select.Icon />
+												</Select.Trigger>
+											</span>
+											<Select.Popup size="small">
+												{limits.map((limit) => (
+													<Select.Item key={limit} value={limit}>
+														<Select.ItemText>{limit}</Select.ItemText>
+													</Select.Item>
+												))}
+											</Select.Popup>
+										</Select.Root>
 									</div>
 								</nav>
 								{search.page >= maxPage && query.data?.hasMore && (
@@ -266,215 +263,209 @@ function FeeAmmPage(): React.JSX.Element {
 	)
 }
 
+const limits = [10, 25, 50] as const
+
 namespace styles {
 	export const error = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingInline: '4',
+		paddingTop: '16',
 	})
 
 	export const errorTitle = style({
-		color: 'content.primary',
-		typography: 'heading.h3',
+		color: 'foreground',
+		typography: 'heading.20.subtle',
 	})
 
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '32',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '8',
 		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '64' },
+		'@media (width >= 640px)': { paddingTop: '16' },
 	})
 
 	export const header = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '16',
+		gap: '4',
 		justifyContent: 'space-between',
 	})
 
 	export const intro = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 		minWidth: '0px !custom',
 	})
 
 	export const title = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '12',
-		typography: 'heading.h1',
+		gap: '3',
+		typography: 'heading.32.subtle',
 	})
 
 	export const description = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		maxWidth: '680px !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const filtered = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		typography: 'body.b2',
+		gap: '2',
+		typography: 'copy.14',
 	})
 
 	export const filteredToken = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'inline-flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const form = style({
 		alignItems: 'flex-end',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '12',
+		gap: '3',
 	})
 
-	// TextInput caps itself at 320px; addresses need the full row. Touch
-	// devices keep 16px text so iOS does not zoom on focus.
+	// Touch devices keep 16px text so iOS does not zoom on focus.
 	export const field = style({
 		flex: 1,
 		minWidth: '220px !custom',
-		selectors: { '& > div': { width: '100% !custom' } },
 		'@media (pointer: coarse)': {
 			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
 	})
 
-	export const control = style({
-		'::placeholder': { color: 'content.secondary' },
-		selectors: {
-			'&[aria-invalid="true"]': {
-				boxShadow: `inset 0 0 0 1px ${vars.color.border.negative} !custom`,
-			},
-		},
-	})
-
-	// TDS Button sizes SVG children itself only in IconButton.
-	export const buttonIcon = style({ height: '16', width: '16' })
+	// TDS Button leaves icon size to the icon.
+	export const buttonIcon = style({ height: '4', width: '4' })
 
 	export const filterError = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '4',
-		typography: 'body.b2',
+		gap: '1',
+		typography: 'copy.14',
 		width: '100% !custom',
 	})
 
 	export const filterErrorIcon = style({
-		color: 'content.negative',
+		color: 'red.900',
 		flexShrink: 0,
 	})
 
 	export const summary = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '16',
+		gap: '4',
 		justifyContent: 'space-between',
-		paddingBlock: '12',
-		paddingInline: '16',
+		paddingBlock: '3',
+		paddingInline: '4',
 	})
 
 	export const meta = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const total = style({ textAlign: 'right' })
 
 	export const totalValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const empty = style({
-		color: 'content.secondary',
-		paddingBlock: '40',
-		paddingInline: '16',
+		color: 'gray.900',
+		paddingBlock: '10',
+		paddingInline: '4',
 		textAlign: 'center',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const pagination = style({
 		alignItems: 'center',
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '16',
+		gap: '4',
 		justifyContent: 'space-between',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b2',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
 	export const pager = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const pageLabel = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '8',
+		paddingInline: '2',
 	})
 
 	export const limit = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const limitLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
+	// The Select trigger fills its container.
+	export const limitSelect = style({ display: 'flex', width: '96px !custom' })
+
 	export const capped = style({
-		color: 'content.secondary',
-		paddingBottom: '16',
-		paddingInline: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		paddingBottom: '4',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
 	export const footnote = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const filteredAddress = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const clearFilter = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '8',
-		paddingBlock: '8',
-		typography: 'body.b2',
+		gap: '2',
+		paddingBlock: '2',
+		typography: 'copy.14',
 	})
 }

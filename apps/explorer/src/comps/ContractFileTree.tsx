@@ -1,5 +1,6 @@
 import { FileTree, useFileTree, useFileTreeSearch } from '@pierre/trees/react'
-import { Search, style, vars } from '@tempoxyz/ds/platform'
+import { Field, Input, style, vars } from '@tempoxyz/ds'
+import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 
 export function ContractFileTree(
@@ -90,15 +91,21 @@ export function ContractFileTree(
 
 	return (
 		<nav aria-label="Source files" {...styles.nav()}>
-			<div {...styles.search()}>
-				<Search
-					aria-label="Filter source files"
-					placeholder="Find a file…"
-					value={search.value ?? ''}
-					onValueChange={(value) => search.setValue(value || null)}
-					style={fullWidth}
-				/>
-			</div>
+			<Field.Root {...styles.search()}>
+				<Input.Group variant="search">
+					<Input.Prefix>
+						<Search />
+					</Input.Prefix>
+					<Input.Control
+						aria-label="Filter source files"
+						placeholder="Find a file…"
+						type="search"
+						value={search.value ?? ''}
+						onValueChange={(value) => search.setValue(value || null)}
+					/>
+					<Input.Clear aria-label="Clear search" />
+				</Input.Group>
+			</Field.Root>
 			{search.value && search.matchingPaths.length === 0 && (
 				<p {...styles.empty()} role="status">
 					No files found.
@@ -121,61 +128,56 @@ export declare namespace ContractFileTree {
 	}
 }
 
-const fullWidth = { width: '100%' } satisfies React.CSSProperties
-
 namespace styles {
 	export const nav = style({
 		// Read by the tree's shadow DOM through `unsafeCSS`. The selected row's
 		// outline is decorative; focus rings use the text color for contrast.
-		'--contract-tree-accent': vars.color.border.focus,
-		'--contract-tree-background': vars.color.background.secondary,
-		'--contract-tree-border': vars.color.line.secondary,
-		'--contract-tree-focus': vars.color.content.primary,
-		'--contract-tree-font': 'Pilat, Arial, sans-serif',
-		'--contract-tree-foreground': vars.color.content.primary,
-		'--contract-tree-muted': vars.color.content.tertiary,
-		'--contract-tree-muted-background': vars.color.container.subtle,
-		'--contract-tree-pressed-background': vars.color.container.strong,
-		'--contract-tree-selected-background': vars.color.container.regular,
-		backgroundColor: 'background.secondary',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		'--contract-tree-accent': vars.color.blue[700],
+		'--contract-tree-background': vars.color.background.surface,
+		'--contract-tree-border': vars.color.grayAlpha[200],
+		'--contract-tree-focus': vars.color.foreground,
+		'--contract-tree-font': vars.fontFamily.sans,
+		'--contract-tree-foreground': vars.color.foreground,
+		'--contract-tree-muted': vars.color.gray[700],
+		'--contract-tree-muted-background': vars.color.grayAlpha[100],
+		'--contract-tree-pressed-background': vars.color.grayAlpha[200],
+		'--contract-tree-selected-background': vars.color.grayAlpha[100],
+		backgroundColor: 'background.surface',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		flexShrink: 0,
 		minWidth: '0px !custom',
 		'@container source (width >= 42rem)': {
-			borderBottomWidth: 'none',
-			borderRightWidth: 'regular',
+			borderBottomWidth: '0px',
+			borderRightWidth: '1px',
 			height: '100% !custom',
 		},
 	})
 
 	// Touch devices keep 16px text so iOS does not zoom on focus.
 	export const search = style({
-		padding: '8',
-		selectors: {
-			'& input::placeholder': { color: 'content.secondary' },
-		},
+		padding: '2',
 		'@media (pointer: coarse)': {
 			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
 	})
 
 	export const empty = style({
-		color: 'content.secondary',
-		paddingInline: '12',
-		typography: 'body.b3',
+		color: 'gray.900',
+		paddingInline: '3',
+		typography: 'label.12',
 	})
 
-	// With the 68px search block, the sidebar stays as tall as the code pane
+	// With the 56px search block, the sidebar stays as tall as the code pane
 	// plus its 16px scrollbar.
 	export const tree = style({
 		display: 'block',
 		height: '180px !custom',
 		overflow: 'auto',
-		paddingBottom: '8',
+		paddingBottom: '2',
 		'@container source (width >= 42rem)': {
-			height: 'calc(min(620px, 70svh) - 52px) !custom',
-			minHeight: '268px !custom',
+			height: 'calc(min(620px, 70svh) - 40px) !custom',
+			minHeight: '280px !custom',
 		},
 	})
 }

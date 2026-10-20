@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { style, Tooltip } from '@tempoxyz/ds/platform'
+import { Button, style, Tooltip } from '@tempoxyz/ds'
 import {
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { type Block, type Client, createPublicClient, webSocket } from 'viem'
 import {
@@ -242,23 +242,29 @@ function RouteComponent() {
 						totalItems: totalBlocks || undefined,
 						autoCollapse: false,
 						contextual: (
-							<Link
-								to="."
-								resetScroll={false}
-								search={(prev) => ({
-									...prev,
-									// at latest defaults to live, otherwise defaults to not live
-									live: isAtLatest
-										? !live
-											? undefined
-											: false
-										: !live
-											? true
-											: undefined,
-								})}
+							<Button.Link
+								render={
+									<Link
+										to="."
+										resetScroll={false}
+										search={(prev) => ({
+											...prev,
+											// at latest defaults to live, otherwise defaults to not live
+											live: isAtLatest
+												? !live
+													? undefined
+													: false
+												: !live
+													? true
+													: undefined,
+										})}
+									/>
+								}
 								aria-label={
 									live ? 'Live, pause updates' : 'Paused, resume updates'
 								}
+								size="small"
+								variant="secondary"
 								{...styles.liveToggle()}
 							>
 								{live && !paused ? (
@@ -266,7 +272,7 @@ function RouteComponent() {
 								) : (
 									<LiveIndicator tone="neutral">Paused</LiveIndicator>
 								)}
-							</Link>
+							</Button.Link>
 						),
 						content: (
 							// biome-ignore lint/a11y/noStaticElementInteractions: pause on hover
@@ -367,57 +373,77 @@ function BlocksPagination({
 	return (
 		<div {...styles.pagination()}>
 			<div {...styles.paginationControls()}>
-				<Tooltip content="Latest blocks">
-					<Link
-						to="."
-						resetScroll={false}
-						search={{ from: undefined, live: undefined }}
-						disabled={!canGoNewer}
-						aria-label="Latest blocks"
-						{...styles.pageButton()}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								to="."
+								resetScroll={false}
+								search={{ from: undefined, live: undefined }}
+								disabled={!canGoNewer}
+								aria-label="Latest blocks"
+								{...styles.pageButton()}
+							/>
+						}
 					>
 						<ChevronsLeft />
-					</Link>
-				</Tooltip>
-				<Tooltip content="Newer blocks">
-					<Link
-						to="."
-						resetScroll={false}
-						search={{ from: newerFrom, live: undefined }}
-						disabled={!canGoNewer}
-						aria-label="Newer blocks"
-						{...styles.pageButton()}
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Latest blocks</Tooltip.Popup>
+				</Tooltip.Root>
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								to="."
+								resetScroll={false}
+								search={{ from: newerFrom, live: undefined }}
+								disabled={!canGoNewer}
+								aria-label="Newer blocks"
+								{...styles.pageButton()}
+							/>
+						}
 					>
 						<ChevronLeft />
-					</Link>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Newer blocks</Tooltip.Popup>
+				</Tooltip.Root>
 				<span {...styles.pageRange()}>
 					{displayedFrom != null ? `#${displayedFrom}-#${displayedEnd}` : '…'}
 				</span>
-				<Tooltip content="Older blocks">
-					<Link
-						to="."
-						resetScroll={false}
-						search={{ from: olderFrom, live: undefined }}
-						disabled={!canGoOlder}
-						aria-label="Older blocks"
-						{...styles.pageButton()}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								to="."
+								resetScroll={false}
+								search={{ from: olderFrom, live: undefined }}
+								disabled={!canGoOlder}
+								aria-label="Older blocks"
+								{...styles.pageButton()}
+							/>
+						}
 					>
 						<ChevronRight />
-					</Link>
-				</Tooltip>
-				<Tooltip content="Oldest blocks">
-					<Link
-						to="."
-						resetScroll={false}
-						search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
-						disabled={displayedEnd === 0n}
-						aria-label="Oldest blocks"
-						{...styles.pageButton()}
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Older blocks</Tooltip.Popup>
+				</Tooltip.Root>
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								to="."
+								resetScroll={false}
+								search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
+								disabled={displayedEnd === 0n}
+								aria-label="Oldest blocks"
+								{...styles.pageButton()}
+							/>
+						}
 					>
 						<ChevronsRight />
-					</Link>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Oldest blocks</Tooltip.Popup>
+				</Tooltip.Root>
 			</div>
 			<span {...styles.pageCount()}>
 				{latestBlockNumber != null
@@ -432,50 +458,37 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 	})
 
-	// TDS Button small secondary geometry on a link.
-	export const liveToggle = style({
-		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderRadius: 'full',
-		display: 'inline-flex',
-		height: '32',
-		justifyContent: 'center',
-		minWidth: '80px !custom',
-		paddingInline: '16',
-		textDecorationLine: 'none',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
-	})
+	// Keeps the toggle's width steady between "Live" and "Paused".
+	export const liveToggle = style({ minWidth: '80px !custom' })
 
 	export const number = style({
 		fontVariantNumeric: 'tabular-nums',
-		fontWeight: 500,
+		fontWeight: 'medium',
 	})
 
 	export const hash = style({
 		minWidth: '0px !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		width: '100% !custom',
 	})
 
 	export const time = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		whiteSpace: 'nowrap',
 	})
 
 	export const txns = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
@@ -483,21 +496,21 @@ namespace styles {
 	// tint keeps it smooth when a new block interrupts it. Passed to the
 	// DataGrid row, which sets no animation of its own.
 	export const liveRow = style({
-		animation: `${rowShimmer} 0.5s ease-out 1`,
+		animation: `${rowShimmer} 0.5s ease-out 1 !custom`,
 	})
 
 	export const pagination = style({
 		alignItems: 'center',
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopWidth: 'regular',
-		color: 'content.secondary',
+		borderTopWidth: '1px',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		gap: '3',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 		'@media (width >= 640px)': {
 			flexDirection: 'row',
 			justifyContent: 'space-between',
@@ -507,40 +520,41 @@ namespace styles {
 	export const paginationControls = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-start' },
 	})
 
-	// TDS IconButton small secondary geometry on a link.
+	// TDS Button small secondary icon geometry on a link. Kept local because
+	// `Button.Link` has no style for a disabled (`aria-disabled`) link.
 	export const pageButton = style({
 		alignItems: 'center',
-		backgroundColor: 'container.regular',
+		backgroundColor: 'grayAlpha.100',
 		borderRadius: 'full',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'inline-flex',
 		flexShrink: 0,
-		height: '32',
+		height: '8',
 		justifyContent: 'center',
-		width: '32',
+		width: '8',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
+			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
 		selectors: {
-			'& > svg': { height: '16', width: '16' },
+			'& > svg': { height: '4', width: '4' },
 			'&[aria-disabled="true"]': {
-				backgroundColor: 'container.subtle',
-				color: 'content.tertiary',
+				backgroundColor: 'grayAlpha.100',
+				color: 'gray.700',
 				cursor: 'default',
 			},
 		},
 	})
 
 	export const pageRange = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '4',
-		typography: 'body.b3Strong',
+		paddingInline: '1',
+		typography: 'label.12.strong',
 		whiteSpace: 'nowrap',
 	})
 

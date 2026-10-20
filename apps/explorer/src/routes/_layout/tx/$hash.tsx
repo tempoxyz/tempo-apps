@@ -13,10 +13,12 @@ import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
-import { Button, style, TextButton } from '@tempoxyz/ds/platform'
+import { Button, style } from '@tempoxyz/ds'
+import { ChevronRight } from '@tempoxyz/ds/icons'
 import { Addresses } from 'viem/tempo'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
+import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
@@ -76,7 +78,7 @@ import {
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
-import { link } from '#styles/explorer'
+import { link, textAction } from '#styles/explorer'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -665,9 +667,14 @@ function BalanceChangesOverview(props: {
 						</div>
 					))}
 				</div>
-				<TextButton onClick={onShowAll} {...styles.seeAll()}>
-					See all ({data.total})
-				</TextButton>
+				<button
+					onClick={onShowAll}
+					type="button"
+					{...cx(textAction(), styles.seeAll())}
+				>
+					<span>See all ({data.total})</span>
+					<ChevronRight />
+				</button>
 			</div>
 		</InfoRow>
 	)
@@ -885,7 +892,7 @@ function EventGroupCell(props: {
 				<Button
 					aria-expanded={expanded}
 					onClick={onToggle}
-					scale="small"
+					size="small"
 					variant="secondary"
 				>
 					{expanded
@@ -952,18 +959,18 @@ function RawSection(props: {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '16',
+		gap: '4',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+			paddingBottom: '8',
+			paddingTop: '10',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
 	})
@@ -977,24 +984,24 @@ namespace styles {
 	export const description = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const stack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const balances = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
@@ -1002,36 +1009,35 @@ namespace styles {
 	export const balanceAccounts = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 		maxHeight: '360px !custom',
 		overflowY: 'auto',
-		paddingBottom: '8',
+		paddingBottom: '2',
 		selectors: { '& a:focus-visible': { outlineOffset: '-2px' } },
 	})
 
 	export const balanceAccount = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		typography: 'body.b2',
+		gap: '1',
+		typography: 'copy.14',
 	})
 
 	export const balanceChanges = style({
-		borderColor: 'line.secondary',
-		borderLeftWidth: 'regular',
+		borderColor: 'grayAlpha.200',
+		borderLeftWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingLeft: '12',
+		gap: '2px !custom',
+		paddingLeft: '3',
 	})
 
 	export const balanceChange = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
-	// TextButton leaves its alignment in a column unset.
 	export const seeAll = style({ alignSelf: 'flex-start' })
 
 	export const calls = style({
@@ -1039,8 +1045,8 @@ namespace styles {
 		flexDirection: 'column',
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: 'regular',
-				borderColor: 'line.secondary',
+				borderBottomWidth: '1px',
+				borderColor: 'grayAlpha.200',
 			},
 		},
 	})
@@ -1048,35 +1054,35 @@ namespace styles {
 	export const call = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '16',
-		paddingInline: '20',
+		gap: '3',
+		paddingBlock: '4',
+		paddingInline: '5',
 	})
 
 	export const callHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		typography: 'body.b3',
+		gap: '2',
+		typography: 'label.12',
 	})
 
 	export const eventLogs = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
+		gap: '4',
 	})
 
 	export const eventCell = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		width: '100% !custom',
 	})
 
 	export const raw = style({
-		paddingBlock: '12',
-		paddingInline: '20',
-		typography: 'body.b3',
+		paddingBlock: '3',
+		paddingInline: '5',
+		typography: 'label.12',
 		wordBreak: 'break-all',
 	})
 }

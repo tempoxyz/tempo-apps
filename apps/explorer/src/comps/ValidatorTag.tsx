@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import { cx } from 'zyzz'
 import { Midcut } from '#comps/Midcut'

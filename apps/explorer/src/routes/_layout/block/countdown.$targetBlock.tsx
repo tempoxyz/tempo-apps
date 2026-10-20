@@ -5,7 +5,7 @@ import {
 	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
-import { Calendar } from '@tempoxyz/ds/platform/icons'
+import { Calendar } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
@@ -13,7 +13,7 @@ import { useAnimatedBlockNumber } from '#lib/block-number'
 import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
 import { link, linkHover } from '#styles/explorer'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
 
@@ -258,12 +258,12 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '32',
+		gap: '8',
 		justifyContent: 'center',
 		minHeight: 'calc(100vh - 200px) !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 	})
 
@@ -271,7 +271,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		maxWidth: '600px !custom',
 		width: '100% !custom',
 	})
@@ -279,21 +279,21 @@ namespace styles {
 	export const heading = style({ textAlign: 'center' })
 
 	export const title = style({
-		color: 'content.primary',
-		marginBottom: '8',
-		typography: 'heading.h2',
+		color: 'foreground',
+		marginBottom: '2',
+		typography: 'heading.24.subtle',
 	})
 
 	export const description = style({
-		color: 'content.secondary',
-		typography: 'body.b2',
+		color: 'gray.900',
+		typography: 'copy.14',
 	})
 
-	export const target = style({ typography: 'mono.inline' })
+	export const target = style({ typography: 'label.12.mono' })
 
 	export const units = style({
 		display: 'grid',
-		gap: '12',
+		gap: '3',
 		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
 		maxWidth: '400px !custom',
 		width: '100% !custom',
@@ -302,17 +302,17 @@ namespace styles {
 	export const blockLink = style({ fontVariantNumeric: 'tabular-nums' })
 
 	export const remaining = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const dateLabel = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
-	export const dateIcon = style({ flexShrink: 0, height: '16', width: '16' })
+	export const dateIcon = style({ flexShrink: 0, height: '4', width: '4' })
 
 	export const dateLabelLong = style({
 		display: 'none',
@@ -325,30 +325,30 @@ namespace styles {
 
 	export const unit = style({
 		alignItems: 'center',
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		padding: '12',
+		gap: '1',
+		padding: '3',
 	})
 
 	export const unitValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'heading.h1',
+		typography: 'heading.32.subtle',
 	})
 
 	export const unitLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const date = style({
-		color: 'content.primary',
+		color: 'foreground',
 		whiteSpace: 'nowrap',
 	})
 

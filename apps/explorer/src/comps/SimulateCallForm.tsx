@@ -9,26 +9,26 @@
  */
 
 import {
-	Alert,
-	Badge,
 	Button,
+	Callout,
 	Checkbox,
-	IconButton,
-	NativeSelect,
+	Field as TdsField,
+	Input,
+	Select,
+	Tag,
+	Textarea,
 	Tooltip,
 	style,
-} from '@tempoxyz/ds/platform'
+} from '@tempoxyz/ds'
 import {
-	Check,
 	ChevronDown,
 	Close,
-	Copy,
 	Delete,
 	Download,
 	Layers,
 	Lightning,
 	Plus,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -39,6 +39,7 @@ import {
 	getFunctionSelector,
 } from 'viem'
 import { cx } from 'zyzz'
+import { CopyButton } from '#comps/CopyButton'
 import {
 	getContractInfo,
 	getInputType,
@@ -54,7 +55,6 @@ import {
 	MAX_URL_CALLDATA_BYTES,
 } from '#lib/domain/simulate-calls'
 import { HexFormatter } from '#lib/formatting'
-import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi } from '#lib/queries'
 import {
 	pressDown,
@@ -189,18 +189,18 @@ export function SimulateCallForm(
 								: `Block limit is ${Number(props.defaultGas).toLocaleString()}.`
 						}
 					>
-						<input
-							id={gasId}
-							value={form.gas}
-							inputMode="numeric"
-							onChange={(event) =>
-								setForm((current) => ({ ...current, gas: event.target.value }))
-							}
-							onBlur={() => touch('gas')}
-							aria-invalid={shows('gas', errors.gas) || undefined}
-							aria-describedby={fieldHintId(gasId)}
-							{...textField()}
-						/>
+						<Input.Group invalid={shows('gas', errors.gas)}>
+							<Input.Control
+								id={gasId}
+								value={form.gas}
+								inputMode="numeric"
+								onValueChange={(gas) =>
+									setForm((current) => ({ ...current, gas }))
+								}
+								onBlur={() => touch('gas')}
+								aria-describedby={fieldHintId(gasId)}
+							/>
+						</Input.Group>
 					</Field>
 				</OptionalRow>
 
@@ -208,7 +208,7 @@ export function SimulateCallForm(
 				    stays unbroken and the batch action reads as its own step. */}
 				{!isBatch && (
 					<Button
-						scale="small"
+						size="small"
 						variant="secondary"
 						onClick={() => {
 							setForm((current) => ({
@@ -232,11 +232,10 @@ export function SimulateCallForm(
 				)}
 
 				{props.formError && (
-					<Alert
-						tone="negative"
-						title={props.formError}
-						style={{ width: '100%' }}
-					/>
+					<Callout intent="negative">
+						<Callout.Icon />
+						<Callout.Content>{props.formError}</Callout.Content>
+					</Callout>
 				)}
 			</div>
 		</div>
@@ -294,18 +293,18 @@ function ContextBar(props: {
 				/>
 			</div>
 			{pinned && (
-				<input
-					value={form.block}
-					onChange={(event) =>
-						setForm((current) => ({ ...current, block: event.target.value }))
-					}
-					onBlur={props.onBlockBlur}
-					placeholder="0x block hash"
-					aria-label="Pinned block hash"
-					aria-invalid={props.blockInvalid || undefined}
-					spellCheck={false}
-					{...textField()}
-				/>
+				<Input.Group invalid={props.blockInvalid}>
+					<Input.Control
+						value={form.block}
+						onValueChange={(block) =>
+							setForm((current) => ({ ...current, block }))
+						}
+						onBlur={props.onBlockBlur}
+						placeholder="0x block hash"
+						aria-label="Pinned block hash"
+						spellCheck={false}
+					/>
+				</Input.Group>
 			)}
 		</div>
 	)
@@ -329,19 +328,18 @@ function LoadTransaction(props: {
 				Replay an existing transaction
 			</label>
 			<div {...styles.loadRow()}>
-				<input
-					id={id}
-					value={props.value}
-					onChange={(event) => props.onChange(event.target.value)}
-					onKeyDown={(event) => event.key === 'Enter' && props.onLoad()}
-					placeholder="0x transaction hash"
-					spellCheck={false}
-					aria-invalid={props.error ? true : undefined}
-					aria-describedby={props.error ? fieldHintId(id) : undefined}
-					{...textField()}
-				/>
+				<Input.Group invalid={Boolean(props.error)} {...styles.loadInput()}>
+					<Input.Control
+						id={id}
+						value={props.value}
+						onValueChange={props.onChange}
+						onKeyDown={(event) => event.key === 'Enter' && props.onLoad()}
+						placeholder="0x transaction hash"
+						spellCheck={false}
+						aria-describedby={props.error ? fieldHintId(id) : undefined}
+					/>
+				</Input.Group>
 				<Button
-					scale="large"
 					variant="secondary"
 					onClick={props.onLoad}
 					disabled={props.loading}
@@ -380,12 +378,11 @@ function StepTabs(props: {
 					return (
 						<div key={index} {...styles.stepItem()}>
 							<Button
-								scale="small"
-								variant={selected ? 'secondary' : 'tertiary'}
+								size="small"
+								variant={selected ? 'secondary' : 'text'}
 								aria-pressed={selected}
 								onClick={() => props.onSelect(index)}
 								title={call.to || undefined}
-								{...cx(pressDown(), transitionColors())}
 							>
 								<span {...styles.stepIndex()}>{index + 1}</span>
 								<span {...styles.mono()}>
@@ -395,31 +392,42 @@ function StepTabs(props: {
 								</span>
 							</Button>
 							{props.calls.length > 1 && (
-								<Tooltip content={`Remove call ${index + 1}`}>
-									<button
-										type="button"
-										aria-label={`Remove call ${index + 1}`}
-										onClick={() => props.onRemove(index)}
-										{...cx(styles.stepRemove(), transitionColors())}
+								<Tooltip.Root>
+									<Tooltip.Trigger
+										render={
+											<button
+												type="button"
+												aria-label={`Remove call ${index + 1}`}
+												onClick={() => props.onRemove(index)}
+												{...cx(styles.stepRemove(), transitionColors())}
+											/>
+										}
 									>
 										<Close {...styles.stepRemoveIcon()} />
-									</button>
-								</Tooltip>
+									</Tooltip.Trigger>
+									<Tooltip.Popup>{`Remove call ${index + 1}`}</Tooltip.Popup>
+								</Tooltip.Root>
 							)}
 						</div>
 					)
 				})}
-				<Tooltip content="Add a call">
-					<IconButton
-						aria-label="Add a call"
-						onClick={props.onAdd}
-						scale="small"
-						variant="secondary"
-						{...cx(styles.iconButton(), pressDown())}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Button
+								aria-label="Add a call"
+								onClick={props.onAdd}
+								shape="icon"
+								size="small"
+								variant="secondary"
+								{...styles.iconButton()}
+							/>
+						}
 					>
 						<Plus />
-					</IconButton>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Add a call</Tooltip.Popup>
+				</Tooltip.Root>
 			</div>
 		</div>
 	)
@@ -468,16 +476,11 @@ function CallFields(props: {
 				invalid={shows(toKey, props.errors.to)}
 				action={
 					resolvedName ? (
-						<Badge
-							scale="small"
-							variant="gray"
-							title={call.to}
-							{...styles.nameBadge()}
-						>
+						<Tag intent="neutral" title={call.to} {...styles.nameBadge()}>
 							<span {...cx(truncate(), styles.nameBadgeText())}>
 								{resolvedName}
 							</span>
-						</Badge>
+						</Tag>
 					) : undefined
 				}
 			>
@@ -518,20 +521,20 @@ function CallFields(props: {
 							: undefined
 					}
 				>
-					<input
-						id={valueId}
-						value={call.value}
-						inputMode="numeric"
-						onChange={(event) => props.onChange({ value: event.target.value })}
-						onBlur={() => props.onTouch(valueKey)}
-						aria-invalid={shows(valueKey, props.errors.value) || undefined}
-						aria-describedby={
-							shows(valueKey, props.errors.value)
-								? fieldHintId(valueId)
-								: undefined
-						}
-						{...textField()}
-					/>
+					<Input.Group invalid={shows(valueKey, props.errors.value)}>
+						<Input.Control
+							id={valueId}
+							value={call.value}
+							inputMode="numeric"
+							onValueChange={(value) => props.onChange({ value })}
+							onBlur={() => props.onTouch(valueKey)}
+							aria-describedby={
+								shows(valueKey, props.errors.value)
+									? fieldHintId(valueId)
+									: undefined
+							}
+						/>
+					</Input.Group>
 				</Field>
 			</OptionalRow>
 		</div>
@@ -547,16 +550,16 @@ function AddressInput(props: {
 	placeholder: string
 }): React.JSX.Element {
 	return (
-		<input
-			id={props.id}
-			value={props.value}
-			onChange={(event) => props.onChange(event.target.value)}
-			onBlur={props.onBlur}
-			placeholder={props.placeholder}
-			spellCheck={false}
-			aria-invalid={props.invalid || undefined}
-			{...textField()}
-		/>
+		<Input.Group invalid={props.invalid}>
+			<Input.Control
+				id={props.id}
+				value={props.value}
+				onValueChange={props.onChange}
+				onBlur={props.onBlur}
+				placeholder={props.placeholder}
+				spellCheck={false}
+			/>
+		</Input.Group>
 	)
 }
 
@@ -591,7 +594,6 @@ export function CalldataField(props: {
 	const [selector, setSelector] = React.useState('')
 	const [values, setValues] = React.useState<string[]>([])
 	const [mismatch, setMismatch] = React.useState(false)
-	const copy = useCopy({ timeout: 1_500 })
 
 	const selected = functions.find((fn) => getFunctionSelector(fn) === selector)
 
@@ -634,6 +636,17 @@ export function CalldataField(props: {
 		encode(fn, next)
 	}
 
+	// Labels for the function picker, so the trigger shows `name(types)` rather
+	// than the selector it stores.
+	const functionItems = React.useMemo(
+		() =>
+			functions.map((fn) => ({
+				value: getFunctionSelector(fn),
+				label: `${fn.name || getFunctionSelector(fn)}(${fn.inputs.map((input) => input.type).join(', ')})`,
+			})),
+		[functions],
+	)
+
 	const canDecode = functions.length > 0
 	const showDecoded = canDecode && mode === 'decoded' && !mismatch
 	const byteLength = OxHex.validate(data) ? OxHex.size(data) : 0
@@ -662,21 +675,24 @@ export function CalldataField(props: {
 			}
 		>
 			{mismatch && mode === 'decoded' && (
-				<Alert
-					tone="warning"
-					title="This calldata doesn’t match any function in the contract’s ABI"
-					description="Showing hex."
-					style={{ width: '100%' }}
-				/>
+				<Callout intent="warning">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong {...styles.calloutTitle()}>
+							This calldata doesn’t match any function in the contract’s ABI
+						</strong>
+						Showing hex.
+					</Callout.Content>
+				</Callout>
 			)}
 
 			{showDecoded ? (
 				<div {...styles.decoded()}>
-					<NativeSelect
-						id={id}
-						value={selector}
-						onChange={(event) => {
-							const next = event.target.value
+					<Select.Root
+						items={functionItems}
+						value={selector || null}
+						onValueChange={(value) => {
+							const next = value ?? ''
 							setSelector(next)
 							const fn = functions.find(
 								(candidate) => getFunctionSelector(candidate) === next,
@@ -686,19 +702,19 @@ export function CalldataField(props: {
 							setValues(blank)
 							if (fn.inputs.length === 0) encode(fn, blank)
 						}}
-						style={{ width: '100%' }}
 					>
-						<option value="">Select a function…</option>
-						{functions.map((fn) => (
-							<option
-								key={getFunctionSelector(fn)}
-								value={getFunctionSelector(fn)}
-							>
-								{fn.name || getFunctionSelector(fn)}(
-								{fn.inputs.map((input) => input.type).join(', ')})
-							</option>
-						))}
-					</NativeSelect>
+						<Select.Trigger id={id}>
+							<Select.Value placeholder="Select a function…" />
+							<Select.Icon />
+						</Select.Trigger>
+						<Select.Popup>
+							{functionItems.map((item) => (
+								<Select.Item key={item.value} value={item.value}>
+									<Select.ItemText>{item.label}</Select.ItemText>
+								</Select.Item>
+							))}
+						</Select.Popup>
+					</Select.Root>
 
 					{selected?.inputs.map((input, index) => {
 						const argId = `${id}-arg-${index}`
@@ -711,15 +727,18 @@ export function CalldataField(props: {
 						)
 						if (type === 'checkbox')
 							return (
-								<Checkbox
-									key={`${input.name}-${input.type}-${index}`}
-									checked={values[index] === 'true'}
-									onCheckedChange={(checked) =>
-										setValue(selected, index, String(checked))
-									}
-									// TDS Checkbox draws its label black; keep it on the theme.
-									label={<span {...styles.checkboxLabel()}>{name}</span>}
-								/>
+								// TDS Checkbox has no label of its own; the field links one.
+								<TdsField.Root key={`${input.name}-${input.type}-${index}`}>
+									<TdsField.Item>
+										<Checkbox
+											checked={values[index] === 'true'}
+											onCheckedChange={(checked) =>
+												setValue(selected, index, String(checked))
+											}
+										/>
+										<TdsField.Label>{name}</TdsField.Label>
+									</TdsField.Item>
+								</TdsField.Root>
 							)
 						return (
 							<div
@@ -733,28 +752,29 @@ export function CalldataField(props: {
 									{name}
 								</label>
 								{type === 'textarea' ? (
-									<textarea
+									<Textarea
 										id={argId}
+										rows={2}
 										value={values[index] ?? ''}
 										onChange={(event) =>
 											setValue(selected, index, event.target.value)
 										}
 										placeholder={getPlaceholder(input)}
 										spellCheck={false}
-										{...cx(textField(), styles.argTextarea())}
 									/>
 								) : (
-									<input
-										id={argId}
-										type={type}
-										value={values[index] ?? ''}
-										onChange={(event) =>
-											setValue(selected, index, event.target.value)
-										}
-										placeholder={getPlaceholder(input)}
-										spellCheck={false}
-										{...textField()}
-									/>
+									<Input.Group>
+										<Input.Control
+											id={argId}
+											type={type}
+											value={values[index] ?? ''}
+											onValueChange={(value) =>
+												setValue(selected, index, value)
+											}
+											placeholder={getPlaceholder(input)}
+											spellCheck={false}
+										/>
+									</Input.Group>
 								)}
 							</div>
 						)
@@ -766,17 +786,11 @@ export function CalldataField(props: {
 							<span {...cx(styles.shrink(), styles.secondary())}>
 								{byteLength} bytes
 							</span>
-							<Tooltip content="Copy calldata">
-								<IconButton
-									aria-label="Copy calldata"
-									onClick={() => copy.copy(data)}
-									scale="small"
-									variant="tertiary"
-									{...cx(styles.iconButton(), pressDown())}
-								>
-									{copy.notifying ? <Check /> : <Copy />}
-								</IconButton>
-							</Tooltip>
+							<CopyButton
+								ariaLabel="Copy calldata"
+								value={data}
+								className={styles.iconButton().className}
+							/>
 						</div>
 					)}
 				</div>
@@ -843,17 +857,23 @@ export function OptionalRow(props: {
 					</span>
 				</button>
 				{set && props.onReset && (
-					<Tooltip content={`Reset ${props.label.toLowerCase()}`}>
-						<IconButton
-							aria-label={`Reset ${props.label.toLowerCase()}`}
-							onClick={props.onReset}
-							scale="small"
-							variant="tertiary"
-							{...cx(styles.iconButton(), styles.resetButton(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Button
+									aria-label={`Reset ${props.label.toLowerCase()}`}
+									onClick={props.onReset}
+									shape="icon"
+									size="small"
+									variant="text"
+									{...cx(styles.iconButton(), styles.resetButton())}
+								/>
+							}
 						>
 							<Delete />
-						</IconButton>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>{`Reset ${props.label.toLowerCase()}`}</Tooltip.Popup>
+					</Tooltip.Root>
 				)}
 			</div>
 		)
@@ -863,18 +883,24 @@ export function OptionalRow(props: {
 			<div {...styles.optional()}>
 				<span {...styles.optionalIcon()}>{props.icon}</span>
 				<span {...cx(styles.text(), styles.secondary())}>{props.label}</span>
-				<Tooltip content={`Collapse ${props.label.toLowerCase()}`}>
-					<IconButton
-						aria-label={`Collapse ${props.label.toLowerCase()}`}
-						aria-expanded
-						onClick={() => setOpen(false)}
-						scale="small"
-						variant="tertiary"
-						{...cx(styles.iconButton(), styles.pushRight(), pressDown())}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Button
+								aria-label={`Collapse ${props.label.toLowerCase()}`}
+								aria-expanded
+								onClick={() => setOpen(false)}
+								shape="icon"
+								size="small"
+								variant="text"
+								{...cx(styles.iconButton(), styles.pushRight())}
+							/>
+						}
 					>
 						<Close />
-					</IconButton>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>{`Collapse ${props.label.toLowerCase()}`}</Tooltip.Popup>
+				</Tooltip.Root>
 			</div>
 			{props.children}
 		</div>
@@ -882,26 +908,27 @@ export function OptionalRow(props: {
 }
 
 namespace styles {
-	export const text = style({ margin: 'none', typography: 'body.b2' })
+	export const text = style({ margin: '0', typography: 'copy.14' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	export const mono = style({ typography: 'mono.inline' })
+	export const mono = style({ typography: 'label.12.mono' })
 
 	export const shrink = style({ flexShrink: 0 })
 
 	export const pushRight = style({ marginLeft: 'auto !custom' })
 
-	// IconButton owns size and fill; this adds only hover and placement.
-	export const iconButton = style({
-		flexShrink: 0,
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
+	// TDS Button owns size, fill, hover, and press; this adds only placement.
+	export const iconButton = style({ flexShrink: 0 })
+
+	// The text variant leaves the hover ink unset; reset reads as destructive.
+	export const resetButton = style({
+		'@media (hover: hover)': { ':hover': { color: 'red.900' } },
 	})
 
-	export const resetButton = style({
-		'@media (hover: hover)': { ':hover': { color: 'content.negative' } },
+	export const calloutTitle = style({
+		display: 'block',
+		typography: 'copy.14.strong',
 	})
 
 	export const root = style({
@@ -914,66 +941,69 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '16',
+		gap: '4',
 		minWidth: '0 !custom',
 		overflowY: 'auto',
-		padding: '16',
+		padding: '4',
 	})
 
 	// A flex column stretches its items; the button keeps its own width.
 	export const addCall = style({ alignSelf: 'flex-start' })
 
 	export const context = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '12',
-		paddingInline: '16',
+		gap: '2',
+		paddingBlock: '3',
+		paddingInline: '4',
 	})
 
 	export const contextRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 	})
 
 	export const load = style({
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		padding: '12',
+		gap: '2',
+		padding: '3',
 	})
 
 	export const loadRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
+
+	// Input.Group sizes to its content in a row; let it take the free width.
+	export const loadInput = style({ flex: 1, minWidth: '0 !custom' })
 
 	export const steps = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const stepsCount = style({
-		color: 'content.secondary',
-		marginLeft: '8',
+		color: 'gray.900',
+		marginLeft: '2',
 	})
 
 	export const stepList = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 	})
 
 	// Marks the call for the remove button's reveal.
@@ -981,37 +1011,37 @@ namespace styles {
 
 	export const stepIndex = style({
 		alignItems: 'center',
-		backgroundColor: 'container.strong',
+		backgroundColor: 'grayAlpha.200',
 		borderRadius: 'full',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexShrink: 0,
-		height: '16',
+		height: '4',
 		justifyContent: 'center',
-		typography: 'body.b3',
-		width: '16',
+		typography: 'label.12',
+		width: '4',
 	})
 
 	// Shown while the call is hovered or holds focus, so it is reachable by
 	// keyboard: tabbing onto the call reveals it as the next stop.
 	export const stepRemove = style({
 		alignItems: 'center',
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
 		borderRadius: 'full',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
-		color: 'content.secondary',
+		borderWidth: '1px',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'none',
-		height: '16',
+		height: '4',
 		justifyContent: 'center',
 		position: 'absolute',
 		right: '-4px !custom',
 		top: '-4px !custom',
-		width: '16',
+		width: '4',
 		'@media (hover: hover)': {
-			':hover': { color: 'content.negative' },
+			':hover': { color: 'red.900' },
 			selectors: { [`${stepItem}:hover &`]: { display: 'flex' } },
 		},
 		selectors: { [`${stepItem}:focus-within &`]: { display: 'flex' } },
@@ -1025,110 +1055,101 @@ namespace styles {
 	export const callFields = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
+		gap: '4',
 	})
 
-	// Badge leaves its maximum width unset, so a long name truncates.
+	// Tag leaves its maximum width unset, so a long name truncates.
 	export const nameBadge = style({ maxWidth: '100% !custom' })
 
 	export const nameBadgeText = style({ minWidth: '0 !custom' })
 
 	export const decoded = style({
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		padding: '12',
+		gap: '3',
+		padding: '3',
 	})
 
 	export const arg = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const argType = style({
-		color: 'content.secondary',
-		marginLeft: '8',
-		typography: 'mono.inline',
-	})
-
-	export const checkboxLabel = style({ color: 'content.primary' })
-
-	export const argTextarea = style({
-		height: 'auto !custom',
-		minHeight: '64',
-		paddingBlock: '12',
-		resize: 'vertical',
+		color: 'gray.900',
+		marginLeft: '2',
+		typography: 'label.12.mono',
 	})
 
 	export const encoded = style({
 		alignItems: 'center',
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
-		gap: '8',
-		paddingTop: '8',
-		typography: 'body.b2',
+		gap: '2',
+		paddingTop: '2',
+		typography: 'copy.14',
 	})
 
 	export const encodedData = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flex: 1,
 		minWidth: '0 !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	export const hexTextarea = style({
 		height: 'auto !custom',
 		minHeight: '80px !custom',
-		paddingBlock: '12',
+		paddingBlock: '3',
 		resize: 'vertical',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const optional = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const optionalToggle = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'flex',
 		flex: 1,
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 		textAlign: 'left',
-		typography: 'body.b2',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		typography: 'copy.14',
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
 	export const optionalIcon = style({ display: 'flex', flexShrink: 0 })
 
 	export const optionalSummary = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 		minWidth: '0 !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const optionalOpen = style({
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		padding: '12',
+		gap: '2',
+		padding: '3',
 	})
 }

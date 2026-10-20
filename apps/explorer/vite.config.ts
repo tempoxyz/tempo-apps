@@ -25,13 +25,7 @@ const [, , , ...args] = process.argv
 // The zyzz compiler adds `zyzz/runtime` imports after Vite scans dependencies,
 // and TDS entry points sit behind lazily loaded routes. Discovering either
 // mid-session re-bundles React and breaks SSR, so pre-bundle them up front.
-const prebundled = [
-	'zyzz/runtime',
-	'@tempoxyz/ds/brand/logos',
-	'@tempoxyz/ds/core',
-	'@tempoxyz/ds/platform',
-	'@tempoxyz/ds/platform/icons',
-]
+const prebundled = ['zyzz/runtime', '@tempoxyz/ds', '@tempoxyz/ds/icons']
 
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
@@ -111,6 +105,8 @@ export default defineConfig((config) => {
 
 	return {
 		optimizeDeps: { include: prebundled },
+		// TDS ships compiled modules with zyzz contracts that the server build reads.
+		ssr: { noExternal: ['@tempoxyz/ds', 'zyzz'] },
 		environments: {
 			ssr: {
 				optimizeDeps: { include: prebundled },

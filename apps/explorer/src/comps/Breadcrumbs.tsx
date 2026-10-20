@@ -1,6 +1,6 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { style, Tooltip, variants } from '@tempoxyz/ds/platform'
-import { ChevronRight, Close, Home } from '@tempoxyz/ds/platform/icons'
+import { style, Tooltip, variants } from '@tempoxyz/ds'
+import { ChevronRight, Close, Home } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { cx } from 'zyzz'
@@ -235,16 +235,21 @@ export function Breadcrumbs(): React.JSX.Element {
 					})}
 
 					{crumbs.length > 1 && (
-						<Tooltip content="Clear navigation history">
-							<button
-								type="button"
-								aria-label="Clear navigation history"
-								onClick={clearCrumbs}
-								{...cx(styles.clear(), pressDown())}
+						<Tooltip.Root>
+							<Tooltip.Trigger
+								render={
+									<button
+										type="button"
+										aria-label="Clear navigation history"
+										onClick={clearCrumbs}
+										{...cx(styles.clear(), pressDown())}
+									/>
+								}
 							>
 								<Close {...styles.clearIcon()} />
-							</button>
-						</Tooltip>
+							</Tooltip.Trigger>
+							<Tooltip.Popup>Clear navigation history</Tooltip.Popup>
+						</Tooltip.Root>
 					)}
 				</>
 			)}
@@ -299,20 +304,20 @@ namespace styles {
 	export const nav = variants({
 		base: {
 			alignItems: 'center',
-			color: 'content.secondary',
+			color: 'gray.900',
 			display: 'flex',
-			gap: '4',
-			height: '24',
+			gap: '1',
+			height: '6',
 			marginBlock: '-2px !custom',
 			marginInline: '-4px !custom',
 			overflowX: 'auto',
 			overflowY: 'hidden',
-			paddingInline: '4',
+			paddingInline: '1',
 			transformOrigin: 'left',
 			transitionDuration: '80ms',
 			transitionProperty: 'opacity, scale',
-			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-			typography: 'body.b3',
+			transitionTimingFunction: 'in-out',
+			typography: 'label.12',
 		},
 		defaultVariants: { empty: false },
 		variants: {
@@ -329,20 +334,20 @@ namespace styles {
 
 	export const home = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexShrink: 0,
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-		':focus-visible': { color: 'content.primary' },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		':focus-visible': { color: 'foreground' },
 	})
 
-	export const homeIcon = style({ height: '16', width: '16' })
+	export const homeIcon = style({ height: '4', width: '4' })
 
 	export const separator = style({
-		color: 'content.tertiary',
+		color: 'gray.700',
 		flexShrink: 0,
-		height: '12',
-		width: '12',
+		height: '3',
+		width: '3',
 	})
 
 	export const current = variants({
@@ -355,33 +360,33 @@ namespace styles {
 		defaultVariants: { pending: false },
 		variants: {
 			pending: {
-				true: { color: 'content.secondary' },
-				false: { color: 'content.primary' },
+				true: { color: 'gray.900' },
+				false: { color: 'foreground' },
 			},
 		},
 	})
 
 	export const crumb = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		maxWidth: '120px !custom',
 		overflow: 'hidden',
 		textOverflow: 'ellipsis',
 		whiteSpace: 'nowrap',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-		':focus-visible': { color: 'content.primary' },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		':focus-visible': { color: 'foreground' },
 	})
 
 	export const clear = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'flex',
 		flexShrink: 0,
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-		':focus-visible': { color: 'content.primary' },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		':focus-visible': { color: 'foreground' },
 	})
 
-	export const clearIcon = style({ height: '12', width: '12' })
+	export const clearIcon = style({ height: '3', width: '3' })
 
-	export const slot = style({ minHeight: '20' })
+	export const slot = style({ minHeight: '5' })
 }

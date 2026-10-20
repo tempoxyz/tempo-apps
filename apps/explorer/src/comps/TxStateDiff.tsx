@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: cells are laid out by one CSS grid per account, which native table rows cannot join, so the grid takes table roles instead */
 /** biome-ignore-all lint/a11y/useFocusableInteractive: role="table" rows and headers are static, not interactive grid cells */
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
-import { ArrowCornerDownLeft, Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { style } from '@tempoxyz/ds'
+import { ArrowCornerDownLeft, Check, Copy } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import type { Hex } from 'viem'
 import { cx } from 'zyzz'
@@ -468,74 +468,74 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		minHeight: '48',
-		paddingBlock: '8',
-		paddingLeft: '16',
-		paddingRight: '8',
+		minHeight: '12',
+		paddingBlock: '2',
+		paddingLeft: '4',
+		paddingRight: '2',
 	})
 
 	export const headerLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const headerActions = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const empty = style({
-		color: 'content.secondary',
-		paddingBlock: '24',
-		paddingInline: '20',
+		color: 'gray.900',
+		paddingBlock: '6',
+		paddingInline: '5',
 		textAlign: 'center',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const accountHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		paddingBottom: '8',
-		paddingInline: '16',
-		paddingTop: '12',
+		gap: '2',
+		paddingBottom: '2',
+		paddingInline: '4',
+		paddingTop: '3',
 	})
 
 	export const accountLink = style({
 		minWidth: '0 !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	export const accountCount = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
 		marginLeft: 'auto !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const gridScroll = style({
 		overflowX: 'auto',
-		paddingBottom: '12',
-		paddingInline: '16',
+		paddingBottom: '3',
+		paddingInline: '4',
 	})
 
 	export const grid = style({
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'grid',
 		overflow: 'hidden',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	export const gridWrap = style({
@@ -552,19 +552,19 @@ namespace styles {
 	export const row = style({ display: 'contents' })
 
 	export const gridHead = style({
-		backgroundColor: 'container.subtle',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		color: 'content.secondary',
-		paddingBlock: '8',
-		paddingInline: '12',
+		color: 'gray.900',
+		paddingBlock: '2',
+		paddingInline: '3',
 	})
 
 	export const cell = style({
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
 	})
 
@@ -575,21 +575,21 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		minWidth: '0 !custom',
-		paddingBlock: '8',
-		paddingInline: '12',
+		paddingBlock: '2',
+		paddingInline: '3',
 		textAlign: 'left',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 		// The grid clips its overflow, which would cut an outset ring.
 		':focus-visible': { outlineOffset: '-2px !custom' },
 	})
 
-	export const cellSlot = style({ color: 'content.secondary' })
+	export const cellSlot = style({ color: 'gray.900' })
 
-	export const cellBefore = style({ color: 'content.secondary' })
+	export const cellBefore = style({ color: 'gray.900' })
 
-	export const cellAfter = style({ color: 'content.primary' })
+	export const cellAfter = style({ color: 'foreground' })
 
 	export const diffCell = style({ flexDirection: 'column' })
 
@@ -597,5 +597,5 @@ namespace styles {
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
-	export const diff = style({ color: 'content.secondary' })
+	export const diff = style({ color: 'gray.900' })
 }

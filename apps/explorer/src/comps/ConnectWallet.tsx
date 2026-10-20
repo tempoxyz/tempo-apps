@@ -1,14 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClientOnly, Link } from '@tanstack/react-router'
-import {
-	Avatar,
-	Button,
-	IconButton,
-	StatusIndicator,
-	Tooltip,
-	style,
-} from '@tempoxyz/ds/platform'
-import { LogOut, Wallet } from '@tempoxyz/ds/platform/icons'
+import { Avatar, Button, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { LogOut, Wallet } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
 import {
@@ -103,20 +96,20 @@ function ConnectWalletInner({
 								},
 							)
 						}}
-						scale="small"
+						size="small"
 						variant="secondary"
 						{...cx(
 							styles.action(),
 							pendingId === connector.id && connect.isPending && animatePulse(),
 						)}
 					>
-						<Avatar
-							alt=""
-							aria-hidden
-							fallback={<Wallet />}
-							scale="16"
-							src={connector.icon}
-						/>
+						{/* TDS Avatar starts at 24px; the connector logo stays 16px. */}
+						<Avatar aria-hidden size="24" style={{ height: 16, width: 16 }}>
+							<Avatar.Image alt="" src={connector.icon} />
+							<Avatar.Fallback>
+								<Wallet />
+							</Avatar.Fallback>
+						</Avatar>
 						{connector.name && connector.name !== 'Injected'
 							? `Connect ${connector.name}`
 							: 'Connect Wallet'}
@@ -131,7 +124,7 @@ function ConnectWalletInner({
 			{TEMPO_CHAIN_ID !== 4217 && <FundAccountButton />}
 			{showAddChain && !isSupported && (
 				<Button
-					scale="small"
+					size="small"
 					variant="primary"
 					{...styles.action()}
 					onClick={() =>
@@ -150,9 +143,10 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<StatusIndicator tone="positive">
+				<Tag intent="positive" variant="plain">
+					<Tag.Dot />
 					Added Tempo to {connector?.name ?? 'Wallet'}
-				</StatusIndicator>
+				</Tag>
 			)}
 			<SignOut />
 		</div>
@@ -291,7 +285,12 @@ function FundAccountButton() {
 	if (!address) return null
 
 	if (status === 'done') {
-		return <StatusIndicator tone="positive">Funded</StatusIndicator>
+		return (
+			<Tag intent="positive" variant="plain">
+				<Tag.Dot />
+				Funded
+			</Tag>
+		)
 	}
 
 	const isPending = status === 'funding' || status === 'setting-fee'
@@ -303,17 +302,22 @@ function FundAccountButton() {
 				: 'Fund'
 
 	return (
-		<Tooltip content="Fund from faucet and set fee token">
-			<Button
-				disabled={isPending}
-				onClick={handleFund}
-				scale="small"
-				variant="secondary"
-				{...cx(styles.action(), isPending && animatePulse())}
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						disabled={isPending}
+						onClick={handleFund}
+						size="small"
+						variant="secondary"
+						{...cx(styles.action(), isPending && animatePulse())}
+					/>
+				}
 			>
 				{label}
-			</Button>
-		</Tooltip>
+			</Tooltip.Trigger>
+			<Tooltip.Popup>Fund from faucet and set fee token</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
@@ -322,33 +326,40 @@ function SignOut() {
 	const { connector } = useConnection()
 
 	return (
-		<Tooltip content="Disconnect">
-			<IconButton
-				aria-label="Disconnect"
-				onClick={() => disconnect.mutate({ connector })}
-				scale="small"
-				variant="tertiary"
-				{...cx(styles.signOut(), pressDown())}
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						aria-label="Disconnect"
+						onClick={() => disconnect.mutate({ connector })}
+						shape="icon"
+						size="small"
+						variant="text"
+					/>
+				}
 			>
-				<LogOut />
-			</IconButton>
-		</Tooltip>
+				<LogOut {...styles.icon()} />
+			</Tooltip.Trigger>
+			<Tooltip.Popup>Disconnect</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
 namespace styles {
+	export const icon = style({ fontSize: 'base' })
+
 	export const detecting = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		typography: 'body.b3',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 
 	export const noWallet = style({
 		alignItems: 'center',
 		display: 'flex',
-		typography: 'body.b3',
+		typography: 'label.12',
 		userSelect: 'none',
 		whiteSpace: 'nowrap',
 	})
@@ -356,7 +367,7 @@ namespace styles {
 	export const connectors = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const action = style({ flexShrink: 0 })
@@ -365,20 +376,20 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '8',
+		gap: '2',
 		justifyContent: 'flex-end',
 		minWidth: '0px !custom',
 	})
 
 	export const address = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flex: 1,
-		gap: '4',
+		gap: '1',
 		justifyContent: 'flex-end',
 		minWidth: '0px !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 
@@ -391,7 +402,7 @@ namespace styles {
 	export const addressLink = style({
 		display: 'flex',
 		minWidth: '0px !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	export const addressHead = style({
@@ -400,10 +411,4 @@ namespace styles {
 	})
 
 	export const addressTail = style({ flexShrink: 0 })
-
-	export const signOut = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
-	})
 }

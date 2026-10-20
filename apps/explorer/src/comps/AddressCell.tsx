@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
@@ -49,7 +49,7 @@ export function AddressCell(props: {
 
 namespace styles {
 	export const address = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		width: '100% !custom',
 	})
 

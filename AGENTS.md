@@ -65,15 +65,16 @@ export declare namespace MyComponent {
 
 * Function components only (no classes)
 * Explicit return type `React.JSX.Element`
-* Icons from `@tempoxyz/ds/platform/icons`: `import { Copy } from '@tempoxyz/ds/platform/icons'`. For icons TDS lacks, use `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
+* Icons from `@tempoxyz/ds/icons`: `import { Copy } from '@tempoxyz/ds/icons'`. For icons TDS lacks, use `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
 
 ### Styling (zyzz + Tempo Design System)
 
-The explorer is built on [Tempo Design System](https://github.com/tempoxyz/ds) Platform (`@tempoxyz/ds`) and styles components with [zyzz](https://zyzz.style), which compiles typed style definitions to static CSS.
+The explorer is built on [Tempo Design System](https://github.com/tempoxyz/ds) Web (`@tempoxyz/ds`) and styles components with [zyzz](https://zyzz.style), which compiles typed style definitions to static CSS.
 
-* Use TDS components (`Button`, `IconButton`, `Badge`, …) from `@tempoxyz/ds/platform` for controls. Do not restyle them through `className`; add only properties they leave unset.
-* Import `style`, `variants`, and `vars` from `@tempoxyz/ds/platform` and use TDS tokens (`color: 'content.secondary'`, `gap: '8'`, `typography: 'body.b3'`). Literal values on token-mapped properties (including sizes) take the ` !custom` suffix.
-* Explorer additions TDS lacks (link and code colors, `pressDown`, `transitionColors`, keyframes) live in `#styles/explorer`; document-level rules live in `#styles/globals`.
+* Use TDS components (`Button`, `Tag`, `Tabs`, `Tooltip`, `Empty`, …) from `@tempoxyz/ds` for controls. Do not restyle them through `className`; add only properties they leave unset. Router links go through `render`: `<Button.Link render={<Link to="/" />}>Home</Button.Link>`.
+* Import `style`, `variants`, and `vars` from `@tempoxyz/ds` and use TDS tokens (`color: 'gray.900'`, `gap: '2'`, `typography: 'label.12'`). Spacing keys are quarter-rem steps (`'4'` is 16px). Literal values on token-mapped properties (including sizes) take the ` !custom` suffix.
+* TDS has no inverse token set. Invert a surface with `backgroundColor: 'foreground', color: 'background.primary'`, or scope a scheme with `vars({ colorScheme: 'dark' })`.
+* Explorer additions TDS lacks (link and code colors, `pageMargin`, `pressDown`, `transitionColors`, keyframes) live in `#styles/explorer`; document-level rules, including the mono face, live in `#styles/globals`.
 * Keep a component's definitions in a module-level `namespace styles` at the bottom of its file and spread them onto elements: `<div {...styles.card()} />`. Combine with `cx` from `zyzz`, one spread per element.
 * Use `variants` for finite choices and `data-*`/ARIA attribute selectors for state, not class-name logic.
 * Import style modules by name; `import * as` from a style module does not compile. Declare shared partial records at module scope, not inside `namespace styles`. Variant axis names are lowercase.

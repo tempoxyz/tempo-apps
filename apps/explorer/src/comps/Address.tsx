@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { Address as AddressType } from 'ox'
 import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
@@ -65,8 +65,8 @@ export namespace Address {
 namespace styles {
 	// A known name reads as text, not as a mono address.
 	export const label = style({
-		fontFamily: 'Pilat, Arial, sans-serif',
-		letterSpacing: 'normal !custom',
+		fontFamily: 'sans',
+		letterSpacing: 'normal',
 	})
 
 	export const link = style({
@@ -81,5 +81,5 @@ namespace styles {
 
 	export const highlighted = style({ textDecorationLine: 'underline' })
 
-	export const self = style({ color: 'content.secondary' })
+	export const self = style({ color: 'gray.900' })
 }

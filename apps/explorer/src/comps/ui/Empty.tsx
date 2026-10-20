@@ -1,23 +1,17 @@
-import { IconBadge, style, variants } from '@tempoxyz/ds/platform'
+import { Empty as TdsEmpty, style } from '@tempoxyz/ds'
 import type * as React from 'react'
 
-/** Centered empty, blocked, or recoverable state in the TDS Platform style. */
+/** Centered empty, blocked, or recoverable state, built on TDS `Empty`. */
 export function Empty(props: Empty.Props): React.JSX.Element {
 	const { action, children, compact, icon, title } = props
 
 	return (
-		<div {...styles.root({ compact })}>
-			{icon && (
-				<IconBadge aria-hidden appearance="gray" scale="medium">
-					{icon}
-				</IconBadge>
-			)}
-			<div {...styles.copy()}>
-				<p {...styles.title()}>{title}</p>
-				{children && <p {...styles.description()}>{children}</p>}
-			</div>
-			{action && <div {...styles.actions()}>{action}</div>}
-		</div>
+		<TdsEmpty.Root {...(compact ? {} : styles.root())}>
+			{icon && <TdsEmpty.Icon>{icon}</TdsEmpty.Icon>}
+			<TdsEmpty.Title>{title}</TdsEmpty.Title>
+			{children && <TdsEmpty.Description>{children}</TdsEmpty.Description>}
+			{action && <TdsEmpty.Actions>{action}</TdsEmpty.Actions>}
+		</TdsEmpty.Root>
 	)
 }
 
@@ -27,58 +21,19 @@ export declare namespace Empty {
 		action?: React.ReactNode | undefined
 		/** Supporting copy. */
 		children?: React.ReactNode | undefined
-		/** Drop the minimum height and use tighter padding inside lists. */
+		/** Drop the minimum height inside lists. */
 		compact?: boolean | undefined
 		/** Decorative icon above the title. */
 		icon?: React.ReactElement | undefined
-		/** Primary empty-state message. */
+		/** Primary empty-state message, rendered as an `h3`. */
 		title: React.ReactNode
 	}
 }
 
 namespace styles {
-	export const root = variants({
-		base: {
-			alignItems: 'center',
-			display: 'flex',
-			flexDirection: 'column',
-			gap: '16',
-			justifyContent: 'center',
-			paddingInline: '24',
-			textAlign: 'center',
-		},
-		defaultVariants: { compact: false },
-		variants: {
-			compact: {
-				false: { minHeight: '180px !custom', paddingBlock: '48' },
-				true: { paddingBlock: '32' },
-			},
-		},
-	})
-
-	export const copy = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		maxWidth: '384px !custom',
-	})
-
-	export const title = style({
-		color: 'content.primary',
-		typography: 'body.b2Strong',
-	})
-
-	export const description = style({
-		color: 'content.secondary',
-		typography: 'body.b2',
-	})
-
-	export const actions = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '8',
+	// TDS `Empty.Root` sets no height or main-axis alignment.
+	export const root = style({
 		justifyContent: 'center',
+		minHeight: '180px !custom',
 	})
 }

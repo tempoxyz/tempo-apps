@@ -1,10 +1,10 @@
-import { IconButton, Tooltip, style } from '@tempoxyz/ds/platform'
-import { Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { style } from '@tempoxyz/ds'
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeEventLog, getAbiItem, parseAbiItem } from 'viem'
 import type { Abi, Hex, Log } from 'viem'
 import { cx } from 'zyzz'
+import { CopyButton } from '#comps/CopyButton'
 import { Abis } from '#lib/abis'
 import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
@@ -97,7 +97,6 @@ export namespace TxDecodedTopics {
 
 	export function SignatureHeader(props: SignatureHeader.Props) {
 		const { abiItem } = props
-		const { copy, notifying } = useCopy()
 
 		const signatureText = useMemo(
 			() =>
@@ -130,17 +129,11 @@ export namespace TxDecodedTopics {
 					))}
 					<span {...styles.secondary()}>)</span>
 				</code>
-				<Tooltip content="Copy signature">
-					<IconButton
-						{...styles.copyButton()}
-						aria-label="Copy signature"
-						onClick={() => copy(signatureText)}
-						scale="small"
-						variant="tertiary"
-					>
-						{notifying ? <Check /> : <Copy />}
-					</IconButton>
-				</Tooltip>
+				<CopyButton
+					ariaLabel="Copy signature"
+					className={styles.copyButton().className}
+					value={signatureText}
+				/>
 			</div>
 		)
 	}
@@ -338,13 +331,13 @@ const argumentViews = [
 // Copyable rows sit flush with the surrounding text: the padding that gives
 // them a hover fill is pulled back out with a negative inline margin.
 const copyRow = {
-	borderRadius: '3xs',
+	borderRadius: 'sm',
 	cursor: 'pointer',
 	marginInline: '-4px !custom',
-	paddingInline: '4',
+	paddingInline: '1',
 	textAlign: 'left',
 	'@media (hover: hover)': {
-		':hover': { backgroundColor: 'container.regular' },
+		':hover': { backgroundColor: 'grayAlpha.100' },
 	},
 } as const
 
@@ -352,7 +345,7 @@ namespace styles {
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
@@ -361,10 +354,10 @@ namespace styles {
 
 	// An opaque well that matches the decoded calldata panel. It clips, so
 	// focus rings inside it are drawn inset (the element type beats
-	// IconButton's own offset).
+	// Button's own offset).
 	export const panel = style({
 		backgroundColor: 'background.primary',
-		borderRadius: '2xs',
+		borderRadius: 'lg',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
 		width: '100% !custom',
@@ -373,61 +366,58 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'flex-start',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		paddingBlock: '8',
-		paddingInline: '12',
+		paddingBlock: '2',
+		paddingInline: '3',
 	})
 
 	export const signature = style({
-		color: 'content.primary',
-		typography: 'mono.inline',
+		color: 'foreground',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	// Negative margins let the 32px IconButton sit in a 16px text row without
-	// growing it. Only properties IconButton leaves unset.
+	// Negative margins let the 32px icon Button sit in a 16px text row without
+	// growing it. Only properties Button leaves unset.
 	export const copyButton = style({
 		flexShrink: '0 !custom',
 		marginBlock: '-8px !custom',
 		marginRight: '-8px !custom',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
 	})
 
 	export const section = style({
 		minWidth: '0 !custom',
-		paddingBlock: '8',
-		paddingInline: '12',
+		paddingBlock: '2',
+		paddingInline: '3',
 	})
 
 	export const argumentsLabel = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
-		typography: 'body.b3',
+		gap: '2',
+		marginBottom: '2',
+		typography: 'label.12',
 	})
 
 	export const rawStack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const topics = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const argumentGrid = style({
@@ -439,63 +429,63 @@ namespace styles {
 		...copyRow,
 		alignItems: 'start',
 		display: 'grid',
-		gap: '8',
+		gap: '2',
 		gridColumn: 'span 2 / span 2',
 		gridTemplateColumns: 'subgrid',
-		paddingBlock: '4',
+		paddingBlock: '1',
 	})
 
 	export const argumentLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 		whiteSpace: 'pre',
 	})
 
 	export const hex = style({
-		color: 'content.primary',
+		color: 'foreground',
 		minWidth: '0 !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const label = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
-	export const inlineLabel = style({ marginBottom: '4' })
+	export const inlineLabel = style({ marginBottom: '1' })
 
-	export const sectionLabel = style({ marginBottom: '8' })
+	export const sectionLabel = style({ marginBottom: '2' })
 
 	export const dataButton = style({
 		...copyRow,
 		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
-		paddingBlock: '2',
+		paddingBlock: '2px !custom',
 		width: '100% !custom',
 	})
 
 	export const data = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'block',
 		minWidth: '0 !custom',
 		overflowWrap: 'anywhere',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const rawHeader = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
-		paddingBlock: '8',
-		paddingInline: '12',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
+		paddingBlock: '2',
+		paddingInline: '3',
 	})
 
 	export const divided = style({
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: 'regular',
-				borderColor: 'line.secondary',
+				borderBottomWidth: '1px',
+				borderColor: 'grayAlpha.200',
 			},
 		},
 	})
@@ -504,13 +494,13 @@ namespace styles {
 		...copyRow,
 		alignItems: 'flex-start',
 		display: 'flex',
-		gap: '8',
-		paddingBlock: '2',
+		gap: '2',
+		paddingBlock: '2px !custom',
 	})
 
 	export const topicLabel = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 }

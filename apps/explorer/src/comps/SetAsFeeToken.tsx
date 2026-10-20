@@ -1,10 +1,11 @@
 import type { Address } from 'ox'
-import { StatusIndicator, TextButton } from '@tempoxyz/ds/platform'
+import { Tag } from '@tempoxyz/ds'
+import { ChevronRight } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from 'zyzz'
-import { animatePulse } from '#styles/explorer'
+import { animatePulse, textAction } from '#styles/explorer'
 
 export function SetAsFeeToken(
 	props: SetAsFeeToken.Props,
@@ -44,21 +45,24 @@ export function SetAsFeeToken(
 
 	if (isAlreadyFeeToken)
 		return (
-			<StatusIndicator tone="positive">
+			<Tag intent="positive" variant="plain">
+				<Tag.Dot />
 				{showSuccess ? 'Fee token set!' : 'Currently your fee token'}
-			</StatusIndicator>
+			</Tag>
 		)
 
 	return (
-		<TextButton
+		<button
 			disabled={setFeeToken.isPending}
 			onClick={handleClick}
-			{...cx(setFeeToken.isPending && animatePulse())}
+			type="button"
+			{...cx(textAction(), setFeeToken.isPending && animatePulse())}
 		>
 			{setFeeToken.isPending
 				? 'Setting…'
 				: `Set ${symbol ?? 'token'} as fee token`}
-		</TextButton>
+			<ChevronRight />
+		</button>
 	)
 }
 

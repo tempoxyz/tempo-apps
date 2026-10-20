@@ -1,5 +1,5 @@
 /** biome-ignore-all lint/a11y/noNoninteractiveTabindex: native overflow region must be keyboard-scrollable */
-import { style, vars } from '@tempoxyz/ds/platform'
+import { style, vars } from '@tempoxyz/ds'
 import * as React from 'react'
 
 /** Keep the active file's native horizontal scroll reachable below the viewport. */
@@ -63,13 +63,13 @@ namespace styles {
 	export const track = style({
 		// zyzz types reject a color pair for `scrollbarColor`, so the element
 		// applies it inline from these properties.
-		'--contract-source-scrollbar-thumb': vars.color.content.tertiary,
-		'--contract-source-scrollbar-track': vars.color.background.secondary,
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderTopWidth: 'regular',
+		'--contract-source-scrollbar-thumb': vars.color.gray[700],
+		'--contract-source-scrollbar-track': vars.color.background.surface,
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderTopWidth: '1px',
 		flexShrink: 0,
-		height: '16',
+		height: '4',
 		overflowX: 'scroll',
 		overflowY: 'hidden',
 		':focus-visible': {
@@ -78,10 +78,10 @@ namespace styles {
 			outlineStyle: 'solid',
 			outlineWidth: '2px',
 		},
-		'::-webkit-scrollbar': { height: '12' },
+		'::-webkit-scrollbar': { height: '3' },
 		'::-webkit-scrollbar-thumb': {
-			backgroundColor: 'content.tertiary',
-			borderColor: 'background.secondary',
+			backgroundColor: 'gray.700',
+			borderColor: 'background.surface',
 			borderRadius: 'full',
 			borderStyle: 'solid',
 			borderWidth: '3px !custom',

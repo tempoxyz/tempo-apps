@@ -12,7 +12,7 @@
  * any depth.
  */
 
-import { DenseTable, style } from '@tempoxyz/ds/platform'
+import { style, Table } from '@tempoxyz/ds'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
@@ -116,37 +116,25 @@ function FrameTable(props: {
 
 	return (
 		<div {...styles.tableWrap()}>
-			<DenseTable>
-				<DenseTable.Thead>
-					<DenseTable.Tr>
+			<Table size="small" {...styles.table()}>
+				<Table.Head>
+					<Table.Row>
 						{props.showCall && (
-							<DenseTable.Th scope="col" {...styles.callColumn()}>
-								Call
-							</DenseTable.Th>
+							<Table.HeaderCell {...styles.callColumn()}>Call</Table.HeaderCell>
 						)}
-						<DenseTable.Th scope="col">Frame</DenseTable.Th>
-						{/* TDS left-aligns header cells; inline wins for number columns. */}
-						<DenseTable.Th
-							scope="col"
-							{...styles.gasColumn({ style: { textAlign: 'right' } })}
-						>
+						<Table.HeaderCell>Frame</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.gasColumn()}>
 							Self
-						</DenseTable.Th>
-						<DenseTable.Th
-							scope="col"
-							{...styles.gasColumn({ style: { textAlign: 'right' } })}
-						>
+						</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.gasColumn()}>
 							Total
-						</DenseTable.Th>
-						<DenseTable.Th
-							scope="col"
-							{...styles.shareColumn({ style: { textAlign: 'right' } })}
-						>
+						</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.shareColumn()}>
 							Share
-						</DenseTable.Th>
-					</DenseTable.Tr>
-				</DenseTable.Thead>
-				<DenseTable.Tbody>
+						</Table.HeaderCell>
+					</Table.Row>
+				</Table.Head>
+				<Table.Body>
 					{sorted.map((frame) => {
 						const share =
 							props.rootGas > 0 ? (frame.selfGas / props.rootGas) * 100 : 0
@@ -154,7 +142,7 @@ function FrameTable(props: {
 						return (
 							// The row is the click target; the frame button inside makes it
 							// reachable by keyboard, and its click bubbles up to here.
-							<DenseTable.Tr
+							<Table.Row
 								key={frame.node.id}
 								onClick={() => props.onSelect(frame.node.id)}
 								{...cx(
@@ -165,11 +153,11 @@ function FrameTable(props: {
 								)}
 							>
 								{props.showCall && (
-									<DenseTable.Td {...styles.callCell()}>
+									<Table.Cell {...styles.tabular()}>
 										{frame.call ?? ''}
-									</DenseTable.Td>
+									</Table.Cell>
 								)}
-								<DenseTable.Td>
+								<Table.Cell>
 									<button
 										type="button"
 										aria-pressed={selected}
@@ -193,14 +181,14 @@ function FrameTable(props: {
 											<span {...srOnly()}>, reverted</span>
 										)}
 									</button>
-								</DenseTable.Td>
-								<DenseTable.Td {...styles.selfGas()}>
+								</Table.Cell>
+								<Table.Cell justify="end" numeric>
 									{formatGas(frame.selfGas)}
-								</DenseTable.Td>
-								<DenseTable.Td {...styles.totalGas()}>
+								</Table.Cell>
+								<Table.Cell justify="end" {...styles.tabular()}>
 									{formatGas(frame.node.gasUsed)}
-								</DenseTable.Td>
-								<DenseTable.Td>
+								</Table.Cell>
+								<Table.Cell>
 									<span {...styles.share()}>
 										<span {...styles.shareTrack()}>
 											<span
@@ -213,12 +201,12 @@ function FrameTable(props: {
 											{share >= 10 ? share.toFixed(0) : share.toFixed(1)}%
 										</span>
 									</span>
-								</DenseTable.Td>
-							</DenseTable.Tr>
+								</Table.Cell>
+							</Table.Row>
 						)
 					})}
-				</DenseTable.Tbody>
-			</DenseTable>
+				</Table.Body>
+			</Table>
 		</div>
 	)
 }
@@ -251,27 +239,32 @@ namespace styles {
 	export const root = style({ display: 'flex', flexDirection: 'column' })
 
 	export const meter = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		paddingBlock: '16',
-		paddingInline: '16',
+		paddingBlock: '4',
+		paddingInline: '4',
 	})
 
 	export const note = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		color: 'content.secondary',
-		margin: 'none',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		margin: '0',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
-	export const tableWrap = style({ padding: '16' })
+	// TDS cells pad their own sides, so the wrap pads only the block and
+	// scrolls sideways.
+	export const tableWrap = style({ overflowX: 'auto', paddingBlock: '4' })
 
-	export const callColumn = style({ width: '64' })
+	// Fixed columns, so frame labels truncate instead of widening the table.
+	export const table = style({ tableLayout: 'fixed' })
+
+	export const callColumn = style({ width: '16' })
 
 	export const gasColumn = style({ width: '80px !custom' })
 
@@ -281,23 +274,21 @@ namespace styles {
 
 	export const rowHover = style({
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 	})
 
-	export const rowSelected = style({ backgroundColor: 'container.strong' })
+	export const rowSelected = style({ backgroundColor: 'grayAlpha.200' })
 
-	export const callCell = style({
-		color: 'content.secondary',
-		fontVariantNumeric: 'tabular-nums',
-	})
+	// Cells are gray.900 already; `numeric` would also make them primary.
+	export const tabular = style({ fontVariantNumeric: 'tabular-nums' })
 
 	export const frame = style({
 		alignItems: 'center',
 		color: 'inherit !custom',
 		cursor: 'pointer',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -306,65 +297,53 @@ namespace styles {
 	})
 
 	export const depth = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
 		textAlign: 'right',
-		typography: 'mono.inline',
-		width: '16',
+		typography: 'label.12.mono',
+		width: '4',
 	})
 
 	export const errorDot = style({
-		backgroundColor: 'content.negative',
+		backgroundColor: 'red.900',
 		borderRadius: 'full',
 		flexShrink: 0,
-		height: '8',
-		width: '8',
+		height: '2',
+		width: '2',
 	})
 
 	export const label = style({
-		color: 'content.primary',
+		color: 'foreground',
 		minWidth: '0 !custom',
-		typography: 'mono.inline',
-	})
-
-	export const selfGas = style({
-		color: 'content.primary',
-		fontVariantNumeric: 'tabular-nums',
-		textAlign: 'right',
-	})
-
-	export const totalGas = style({
-		color: 'content.secondary',
-		fontVariantNumeric: 'tabular-nums',
-		textAlign: 'right',
+		typography: 'label.12.mono',
 	})
 
 	export const share = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'flex-end',
 	})
 
 	export const shareTrack = style({
-		backgroundColor: 'container.strong',
+		backgroundColor: 'grayAlpha.200',
 		borderRadius: 'full',
-		height: '4',
+		height: '1',
 		overflow: 'hidden',
-		width: '32',
+		width: '8',
 	})
 
 	export const shareFill = style({
-		backgroundColor: 'chart.series.6',
+		backgroundColor: 'purple.700',
 		borderRadius: 'full',
 		display: 'block',
 		height: '100% !custom',
 	})
 
 	export const sharePercent = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
-		width: '40',
+		width: '10',
 	})
 }

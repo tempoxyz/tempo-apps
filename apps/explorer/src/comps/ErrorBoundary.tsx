@@ -1,5 +1,5 @@
 import type { ErrorComponentProps } from '@tanstack/react-router'
-import { Button, Card, style } from '@tempoxyz/ds/platform'
+import { Button, style, Surface } from '@tempoxyz/ds'
 import * as React from 'react'
 import { CopyButton } from '#comps/CopyButton'
 import { Footer } from '#comps/Footer'
@@ -10,7 +10,6 @@ import {
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
-import { pressDown } from '#styles/explorer'
 
 export class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
@@ -53,20 +52,19 @@ export class ErrorBoundary extends React.Component<
 						</p>
 					</div>
 					{this.state.error?.message && (
-						<Card padding="16" {...styles.details()}>
+						<Surface size="small" {...styles.details()}>
 							<pre {...styles.message()}>{this.state.error.message}</pre>
 							<CopyButton
 								value={this.state.error.message}
 								ariaLabel="Copy error details"
 								className={styles.copy().className}
 							/>
-						</Card>
+						</Surface>
 					)}
 					<Button
 						variant="primary"
 						type="button"
 						onClick={() => window.location.assign('/')}
-						{...pressDown()}
 					>
 						Return home
 					</Button>
@@ -89,12 +87,12 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '16',
+		gap: '4',
 		height: '100% !custom',
 		justifyContent: 'center',
 		margin: 'auto !custom',
 		maxWidth: '600px !custom',
-		paddingInline: '16',
+		paddingInline: '4',
 		width: '100% !custom',
 	})
 
@@ -102,44 +100,41 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const title = style({
-		color: 'content.primary',
-		typography: 'heading.h2',
-		'@media (width >= 1024px)': { typography: 'heading.h1' },
+		color: 'foreground',
+		typography: 'heading.24.subtle',
+		'@media (width >= 1024px)': { typography: 'heading.32.subtle' },
 	})
 
 	export const description = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		textAlign: 'center',
-		typography: 'body.b2',
-		'@media (width >= 1024px)': { typography: 'body.b1' },
+		typography: 'copy.14',
+		'@media (width >= 1024px)': { typography: 'copy.16' },
 	})
 
 	export const details = style({
-		borderColor: 'line.secondary',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
 		maxWidth: '100% !custom',
 		overflow: 'hidden',
 		position: 'relative',
 	})
 
 	export const message = style({
-		color: 'content.secondary',
-		margin: 'none',
-		minHeight: '40',
-		paddingRight: '32',
-		typography: 'mono.inline',
+		color: 'gray.900',
+		margin: '0',
+		minHeight: '10',
+		paddingRight: '8',
+		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 	})
 
 	// Placement only, in the corner of the details box.
 	export const copy = style({
-		bottom: '4',
+		bottom: '1',
 		position: 'absolute',
-		right: '4',
+		right: '1',
 	})
 }

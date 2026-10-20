@@ -2,27 +2,18 @@
  * colors. Pilat is the UI face; explicit code and hash values use JetBrains Mono.
  */
 
-import {
-	Alert,
-	InlineCode,
-	KeyboardKey,
-	Progress,
-	style,
-	vars,
-} from '@tempoxyz/ds/platform'
-import { AlertCircle } from '@tempoxyz/ds/platform/icons'
+import { Callout, Kbd, Progress, Skeleton, style } from '@tempoxyz/ds'
+import { AlertCircle } from '@tempoxyz/ds/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import type * as React from 'react'
 import type { Abi } from 'viem'
 import { decodeFunctionData } from 'viem'
-import { cx } from 'zyzz'
 import { formatAbiValue, getContractInfo } from '#lib/domain/contracts'
 import type { FormState } from '#lib/domain/simulate-calls'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { SimulationApiError } from '#lib/queries'
-import { animatePulse } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
 
 /* -------------------------------------------------------------------------- */
@@ -91,18 +82,24 @@ export function ErrorText(props: {
 
 /**
  * A keyboard shortcut drawn inside a primary button. The button is an inverse
- * ground, so the key takes the inverse set to stay legible. Hidden from
- * assistive tech: the button announces it through `aria-keyshortcuts`.
+ * ground and TDS Web has no inverse set, so the key takes the button's own ink
+ * (inline, so it wins over the key's resting colors) to stay legible. Hidden
+ * from assistive tech: the button announces it through `aria-keyshortcuts`.
  */
 export function ButtonShortcut(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<KeyboardKey aria-hidden {...cx(vars({ set: 'inverse' }))}>
+		<Kbd aria-hidden size="small" style={buttonShortcutInk}>
 			{props.children}
-		</KeyboardKey>
+		</Kbd>
 	)
 }
+
+const buttonShortcutInk = {
+	backgroundColor: 'color-mix(in oklab, currentColor 16%, transparent)',
+	color: 'inherit',
+} as const
 
 /* -------------------------------------------------------------------------- */
 /* Data display                                                               */
@@ -117,17 +114,15 @@ export function ButtonShortcut(props: {
 export function GasMeter(props: GasMeter.Props): React.JSX.Element {
 	const pct = gasPercent(props.used, props.limit)
 	return (
-		<Progress
-			label={
-				<span {...styles.gasMeterLabel()}>
-					<span>Gas used</span>
-					<GasRatio used={props.used} limit={props.limit} />
-				</span>
-			}
-			showValue={false}
-			value={Math.min(pct, 100)}
-			style={{ width: '100%' }}
-		/>
+		<Progress.Root value={Math.min(pct, 100)}>
+			<Progress.Label {...styles.gasMeterLabel()}>
+				<span>Gas used</span>
+				<GasRatio used={props.used} limit={props.limit} />
+			</Progress.Label>
+			<Progress.Track>
+				<Progress.Indicator />
+			</Progress.Track>
+		</Progress.Root>
 	)
 }
 
@@ -179,9 +174,9 @@ export function formatGasPercent(pct: number): string {
 
 export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
 	return (
-		<div {...cx(styles.skeleton(), animatePulse())}>
+		<div {...styles.skeleton()}>
 			{Array.from({ length: props.rows }, (_, index) => (
-				<div
+				<Skeleton
 					key={index}
 					{...styles.skeletonRow({
 						style: { width: `${88 - (index % 3) * 14}%` },
@@ -207,12 +202,15 @@ export function PanelError(props: {
 		props.error instanceof SimulationApiError && props.error.status === 429
 	return (
 		<div {...styles.panelError()}>
-			<Alert
-				tone="negative"
-				title={rateLimited ? 'Rate limited' : props.title}
-				description={props.error.message}
-				style={{ width: '100%' }}
-			/>
+			<Callout intent="negative">
+				<Callout.Icon />
+				<Callout.Content>
+					<strong {...styles.calloutTitle()}>
+						{rateLimited ? 'Rate limited' : props.title}
+					</strong>
+					<span {...styles.calloutText()}>{props.error.message}</span>
+				</Callout.Content>
+			</Callout>
 		</div>
 	)
 }
@@ -234,27 +232,20 @@ export function SimulationFailure(props: {
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
 	return (
-		<Alert
-			tone="negative"
-			title={title}
-			description={
-				<>
-					{hint}
-					{messages.map((message) => (
-						<span key={message} {...styles.failureMessage()}>
-							{/* Node errors run long; let them wrap inside the alert. */}
-							<InlineCode
-								style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}
-							>
-								{message}
-							</InlineCode>
-						</span>
-					))}
-				</>
-			}
-			action={{ label: 'Try again', onClick: props.onRetry }}
-			style={{ width: '100%' }}
-		/>
+		<Callout intent="negative">
+			<Callout.Icon />
+			<Callout.Content>
+				<strong {...styles.calloutTitle()}>{title}</strong>
+				<span {...styles.calloutText()}>{hint}</span>
+				{messages.map((message) => (
+					<span key={message} {...styles.failureMessage()}>
+						{/* Node errors run long; let them wrap inside the callout. */}
+						<code {...styles.inlineCode()}>{message}</code>
+					</span>
+				))}
+			</Callout.Content>
+			<Callout.Action onClick={props.onRetry}>Try again</Callout.Action>
+		</Callout>
 	)
 }
 
@@ -396,80 +387,99 @@ namespace styles {
 	export const field = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
 	export const fieldHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 	})
 
 	export const fieldLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const fieldHint = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const errorText = style({
 		alignItems: 'flex-start',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '4',
-		typography: 'body.b3',
+		gap: '1',
+		typography: 'label.12',
 	})
 
 	export const errorIcon = style({
-		color: 'content.negative',
+		color: 'red.900',
 		flexShrink: 0,
-		height: '16',
-		width: '16',
+		height: '4',
+		width: '4',
 	})
 
 	export const gasMeterLabel = style({
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 	})
 
 	export const gasRatio = style({ fontVariantNumeric: 'tabular-nums' })
 
-	export const gasRatioUsed = style({ color: 'content.primary' })
+	export const gasRatioUsed = style({ color: 'foreground' })
 
-	export const gasRatioLimit = style({ color: 'content.secondary' })
+	export const gasRatioLimit = style({ color: 'gray.900' })
 
 	export const gasRatioPercent = style({
-		color: 'content.secondary',
-		marginLeft: '4',
+		color: 'gray.900',
+		marginLeft: '1',
 	})
 
 	export const skeleton = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		padding: '16',
+		gap: '2',
+		padding: '4',
 	})
 
-	export const skeletonRow = style({
-		backgroundColor: 'container.strong',
-		borderRadius: '3xs',
-		height: '12',
-	})
+	// TDS Skeleton owns the fill, radius, and sweep; an empty one needs a size.
+	export const skeletonRow = style({ height: '3' })
 
 	export const panelEmpty = style({
-		color: 'content.secondary',
-		paddingBlock: '20',
-		paddingInline: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		paddingBlock: '5',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
-	export const panelError = style({ padding: '16' })
+	export const panelError = style({ padding: '4' })
 
-	export const failureMessage = style({ display: 'block', marginTop: '8' })
+	export const calloutTitle = style({
+		display: 'block',
+		typography: 'copy.14.strong',
+	})
+
+	export const calloutText = style({
+		display: 'block',
+		overflowWrap: 'anywhere',
+	})
+
+	export const failureMessage = style({ display: 'block', marginTop: '2' })
+
+	// TDS Web has no inline code; this is the old InlineCode chip, wrapping.
+	export const inlineCode = style({
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'sm',
+		color: 'foreground',
+		fontFeatureSettings: '"zero" 1 !custom',
+		overflowWrap: 'anywhere',
+		paddingBlock: '2px !custom',
+		paddingInline: '1',
+		typography: 'label.12.mono',
+	})
 }

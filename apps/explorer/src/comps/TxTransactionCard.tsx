@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { StatusIndicator, style } from '@tempoxyz/ds/platform'
-import { Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { style, Tag } from '@tempoxyz/ds'
+import { Check, Copy } from '@tempoxyz/ds/icons'
 import type { Address, Hex } from 'ox'
 import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
@@ -28,11 +28,13 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 				{
 					label: 'Status',
 					value: (
-						<StatusIndicator
-							tone={status === 'success' ? 'positive' : 'negative'}
+						<Tag
+							intent={status === 'success' ? 'positive' : 'negative'}
+							variant="plain"
 						>
+							<Tag.Dot />
 							{status === 'success' ? 'Success' : 'Failed'}
-						</StatusIndicator>
+						</Tag>
 					),
 				},
 				...(status === 'reverted' && error
@@ -188,13 +190,13 @@ export declare namespace TxTransactionCard {
 
 namespace styles {
 	export const error = style({
-		color: 'content.primary',
+		color: 'foreground',
 		textAlign: 'right',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const copyHash = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -203,16 +205,16 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
-		selectors: { '& > svg': { height: '12', width: '12' } },
+		gap: '2',
+		marginBottom: '2',
+		selectors: { '& > svg': { height: '3', width: '3' } },
 	})
 
 	export const hashValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'block',
 		maxWidth: '34ch !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
@@ -222,29 +224,29 @@ namespace styles {
 
 	export const timeToggle = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'inline-flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const timeFormat = style({
-		backgroundColor: 'container.subtle',
+		backgroundColor: 'grayAlpha.100',
 		borderRadius: 'full',
-		color: 'content.primary',
-		paddingBlock: '2',
-		paddingInline: '8',
+		color: 'foreground',
+		paddingBlock: '2px !custom',
+		paddingInline: '2',
 		textTransform: 'capitalize',
-		typography: 'body.b3',
+		typography: 'label.12',
 		'@media (hover: hover)': {
 			selectors: {
-				[`${timeGroup}:hover &`]: { backgroundColor: 'container.regular' },
+				[`${timeGroup}:hover &`]: { backgroundColor: 'grayAlpha.200' },
 			},
 		},
 	})
 
 	export const timestamp = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
@@ -253,32 +255,32 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const action = style({
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'space-between',
-		paddingBlock: '8',
+		paddingBlock: '2',
 		width: '100% !custom',
 		'@media print': { display: 'none' },
 	})
 
 	export const actionPill = style({
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderRadius: 'full',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
-		color: 'content.secondary',
-		paddingBlock: '2',
-		paddingInline: '8',
-		typography: 'body.b3',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		borderWidth: '1px',
+		color: 'gray.900',
+		paddingBlock: '2px !custom',
+		paddingInline: '2',
+		typography: 'label.12',
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
 	// Red outline only: red text fails contrast on the light card.
 	export const actionPillNegative = style({
-		borderColor: 'border.negative',
-		color: 'content.primary',
+		borderColor: 'red.800',
+		color: 'foreground',
 	})
 }

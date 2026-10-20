@@ -16,14 +16,7 @@ import * as React from 'react'
 import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions, Hooks } from 'wagmi/tempo'
-import {
-	Alert,
-	Button,
-	IconButton,
-	StatusIndicator,
-	style,
-	Tooltip,
-} from '@tempoxyz/ds/platform'
+import { Button, Callout, style, Tag, Tooltip } from '@tempoxyz/ds'
 import {
 	Check,
 	ChevronLeft,
@@ -35,7 +28,7 @@ import {
 	Eye,
 	EyeOff,
 	InfoCircle,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
@@ -1401,9 +1394,10 @@ function SectionsWrapper(props: {
 	const liveControl = (
 		<>
 			{streamError && (
-				<StatusIndicator role="status" tone="negative">
+				<Tag intent="negative" role="status" variant="plain">
+					<Tag.Dot />
 					{streamError}
-				</StatusIndicator>
+				</Tag>
 			)}
 			<Button
 				{...styles.feedToggle()}
@@ -1425,7 +1419,7 @@ function SectionsWrapper(props: {
 					}
 					feed.start()
 				}}
-				scale="small"
+				size="small"
 				variant="secondary"
 			>
 				<LiveIndicator
@@ -1625,11 +1619,13 @@ function SectionsWrapper(props: {
 	// Show error state for API failures (instead of crashing the whole page)
 	const transactionsError = error ? (
 		<div {...styles.alertWrap()}>
-			<Alert
-				tone="negative"
-				title="Failed to load transaction history"
-				description={error instanceof Error ? error.message : 'Unknown error'}
-			/>
+			<Callout intent="negative">
+				<Callout.Icon />
+				<Callout.Content>
+					<strong>Failed to load transaction history</strong>{' '}
+					{error instanceof Error ? error.message : 'Unknown error'}
+				</Callout.Content>
+			</Callout>
 		</div>
 	) : null
 
@@ -1792,7 +1788,7 @@ function SectionsWrapper(props: {
 			aria-pressed={portalLive}
 			onClick={() => onPortalLiveChange(!portalLive)}
 			title={portalLive ? 'Pause live updates' : 'Resume live updates'}
-			scale="small"
+			size="small"
 			variant="secondary"
 		>
 			<LiveIndicator
@@ -1806,15 +1802,15 @@ function SectionsWrapper(props: {
 
 	const zonePortalError = zonePortalActivityQuery.error ? (
 		<div {...styles.alertWrap()}>
-			<Alert
-				tone="negative"
-				title="Zone activity is temporarily unavailable"
-				description={
-					zonePortalActivityQuery.error instanceof Error
+			<Callout intent="negative">
+				<Callout.Icon />
+				<Callout.Content>
+					<strong>Zone activity is temporarily unavailable</strong>{' '}
+					{zonePortalActivityQuery.error instanceof Error
 						? zonePortalActivityQuery.error.message
-						: 'Unknown error'
-				}
-			/>
+						: 'Unknown error'}
+				</Callout.Content>
+			</Callout>
 		</div>
 	) : null
 
@@ -2276,15 +2272,16 @@ function SectionsWrapper(props: {
 						),
 						content: (
 							<div {...styles.alertWrap()}>
-								<Alert
-									tone="negative"
-									title="Transfers are temporarily unavailable"
-									description="The Tempo API could not complete this request."
-									action={{
-										label: 'Try again',
-										onClick: () => void refetchActiveTransfers(),
-									}}
-								/>
+								<Callout intent="negative">
+									<Callout.Icon />
+									<Callout.Content>
+										<strong>Transfers are temporarily unavailable</strong> The
+										Tempo API could not complete this request.
+									</Callout.Content>
+									<Callout.Action onClick={() => void refetchActiveTransfers()}>
+										Try again
+									</Callout.Action>
+								</Callout>
 							</div>
 						),
 					}
@@ -2635,16 +2632,22 @@ function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 	return (
 		<span {...styles.infoLabel()}>
 			<span>{props.label}</span>
-			<Tooltip content={props.info} {...styles.infoTooltip()}>
-				<IconButton
-					aria-label={props.info}
-					scale="small"
-					style={{ color: 'inherit' }}
-					variant="tertiary"
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Button
+							aria-label={props.info}
+							shape="icon"
+							size="small"
+							style={{ color: 'inherit' }}
+							variant="text"
+						/>
+					}
 				>
-					<InfoCircle />
-				</IconButton>
-			</Tooltip>
+					<InfoCircle {...styles.buttonIcon()} />
+				</Tooltip.Trigger>
+				<Tooltip.Popup>{props.info}</Tooltip.Popup>
+			</Tooltip.Root>
 		</span>
 	)
 }
@@ -2884,51 +2887,63 @@ export function HistoryPagination(
 			: getHistoryStatePage(location.state)
 	return (
 		<div {...styles.pageNav()}>
-			<Tooltip content="First page">
-				<Link
-					to="."
-					resetScroll={false}
-					search={(previous) => ({
-						...previous,
-						page: 1,
-						cursor: undefined,
-						order: 'desc',
-					})}
-					state={(previous) => ({
-						...previous,
-						addressHistoryPage: 1,
-					})}
-					disabled={isFirst || isOnlyPage}
-					{...cx(styles.pageLink(), pressDown())}
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Link
+							aria-label="First page"
+							to="."
+							resetScroll={false}
+							search={(previous) => ({
+								...previous,
+								page: 1,
+								cursor: undefined,
+								order: 'desc',
+							})}
+							state={(previous) => ({
+								...previous,
+								addressHistoryPage: 1,
+							})}
+							disabled={isFirst || isOnlyPage}
+							{...cx(styles.pageLink(), pressDown())}
+						/>
+					}
 				>
 					<ChevronsLeft />
-				</Link>
-			</Tooltip>
-			<Tooltip content="Previous page">
-				<Link
-					ref={previousRef}
-					to="."
-					preload="viewport"
-					resetScroll={false}
-					search={(previous) => ({
-						...previous,
-						page: 1,
-						cursor: navigation.previous?.cursor,
-						order: navigation.previous?.order,
-					})}
-					state={(previous) => ({
-						...previous,
-						addressHistoryPage:
-							currentPage === undefined
-								? undefined
-								: Math.max(1, currentPage - 1),
-					})}
-					disabled={!navigation.previous}
-					{...cx(styles.pageLink(), pressDown())}
+				</Tooltip.Trigger>
+				<Tooltip.Popup>First page</Tooltip.Popup>
+			</Tooltip.Root>
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Link
+							aria-label="Previous page"
+							ref={previousRef}
+							to="."
+							preload="viewport"
+							resetScroll={false}
+							search={(previous) => ({
+								...previous,
+								page: 1,
+								cursor: navigation.previous?.cursor,
+								order: navigation.previous?.order,
+							})}
+							state={(previous) => ({
+								...previous,
+								addressHistoryPage:
+									currentPage === undefined
+										? undefined
+										: Math.max(1, currentPage - 1),
+							})}
+							disabled={!navigation.previous}
+							{...cx(styles.pageLink(), pressDown())}
+						/>
+					}
 				>
 					<ChevronLeft />
-				</Link>
-			</Tooltip>
+				</Tooltip.Trigger>
+				<Tooltip.Popup>Previous page</Tooltip.Popup>
+			</Tooltip.Root>
 			<span {...styles.pageLabel()}>
 				<span {...styles.primary()}>
 					{currentPage === undefined
@@ -2945,49 +2960,61 @@ export function HistoryPagination(
 					</>
 				)}
 			</span>
-			<Tooltip content="Next page">
-				<Link
-					ref={nextRef}
-					to="."
-					preload="viewport"
-					resetScroll={false}
-					search={(previous) => ({
-						...previous,
-						page: 1,
-						cursor: navigation.next?.cursor,
-						order: navigation.next?.order,
-					})}
-					state={(previous) => ({
-						...previous,
-						addressHistoryPage:
-							currentPage === undefined ? undefined : currentPage + 1,
-					})}
-					disabled={!navigation.next}
-					{...cx(styles.pageLink(), pressDown())}
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Link
+							aria-label="Next page"
+							ref={nextRef}
+							to="."
+							preload="viewport"
+							resetScroll={false}
+							search={(previous) => ({
+								...previous,
+								page: 1,
+								cursor: navigation.next?.cursor,
+								order: navigation.next?.order,
+							})}
+							state={(previous) => ({
+								...previous,
+								addressHistoryPage:
+									currentPage === undefined ? undefined : currentPage + 1,
+							})}
+							disabled={!navigation.next}
+							{...cx(styles.pageLink(), pressDown())}
+						/>
+					}
 				>
 					<ChevronRight />
-				</Link>
-			</Tooltip>
-			<Tooltip content="Last page">
-				<Link
-					to="."
-					resetScroll={false}
-					search={(previous) => ({
-						...previous,
-						page: 1,
-						cursor: undefined,
-						order: 'asc',
-					})}
-					state={(previous) => ({
-						...previous,
-						addressHistoryPage: pageCountCapped ? undefined : pageCount,
-					})}
-					disabled={isLast || isOnlyPage}
-					{...cx(styles.pageLink(), pressDown())}
+				</Tooltip.Trigger>
+				<Tooltip.Popup>Next page</Tooltip.Popup>
+			</Tooltip.Root>
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Link
+							aria-label="Last page"
+							to="."
+							resetScroll={false}
+							search={(previous) => ({
+								...previous,
+								page: 1,
+								cursor: undefined,
+								order: 'asc',
+							})}
+							state={(previous) => ({
+								...previous,
+								addressHistoryPage: pageCountCapped ? undefined : pageCount,
+							})}
+							disabled={isLast || isOnlyPage}
+							{...cx(styles.pageLink(), pressDown())}
+						/>
+					}
 				>
 					<ChevronsRight />
-				</Link>
-			</Tooltip>
+				</Tooltip.Trigger>
+				<Tooltip.Popup>Last page</Tooltip.Popup>
+			</Tooltip.Root>
 		</div>
 	)
 }
@@ -3056,14 +3083,14 @@ function HoldingsFooter(props: {
 							disabled={page <= 1}
 							onClick={() => onPageChange(1)}
 						>
-							<ChevronsLeft />
+							<ChevronsLeft {...styles.buttonIcon()} />
 						</HoldingsPageButton>
 						<HoldingsPageButton
 							label="Previous page"
 							disabled={page <= 1}
 							onClick={() => onPageChange(page - 1)}
 						>
-							<ChevronLeft />
+							<ChevronLeft {...styles.buttonIcon()} />
 						</HoldingsPageButton>
 						<span {...styles.pageLabel()}>
 							<span {...styles.primary()}>
@@ -3077,14 +3104,14 @@ function HoldingsFooter(props: {
 							disabled={page >= pages}
 							onClick={() => onPageChange(page + 1)}
 						>
-							<ChevronRight />
+							<ChevronRight {...styles.buttonIcon()} />
 						</HoldingsPageButton>
 						<HoldingsPageButton
 							label="Last page"
 							disabled={page >= pages}
 							onClick={() => onPageChange(pages)}
 						>
-							<ChevronsRight />
+							<ChevronsRight {...styles.buttonIcon()} />
 						</HoldingsPageButton>
 					</div>
 					<Pagination.Count
@@ -3095,13 +3122,12 @@ function HoldingsFooter(props: {
 			)}
 			{hasUnlisted && (
 				<div {...styles.unlistedRow()}>
-					<Button
-						{...styles.unlistedToggle()}
-						onClick={onToggleShowAll}
-						scale="small"
-						variant="tertiary"
-					>
-						{showAll ? <EyeOff /> : <Eye />}
+					<Button onClick={onToggleShowAll} size="small" variant="text">
+						{showAll ? (
+							<EyeOff {...styles.buttonIcon()} />
+						) : (
+							<Eye {...styles.buttonIcon()} />
+						)}
 						{showAll ? 'Hide' : 'Show'} {unlistedCount} unverified{' '}
 						{unlistedCount === 1 ? 'token' : 'tokens'}
 					</Button>
@@ -3118,18 +3144,23 @@ function HoldingsPageButton(props: {
 	children: React.ReactElement
 }): React.JSX.Element {
 	return (
-		<Tooltip content={props.label}>
-			<IconButton
-				{...styles.pagerButton()}
-				aria-label={props.label}
-				disabled={props.disabled}
-				onClick={props.onClick}
-				scale="small"
-				variant="secondary"
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						aria-label={props.label}
+						disabled={props.disabled}
+						onClick={props.onClick}
+						shape="icon"
+						size="small"
+						variant="secondary"
+					/>
+				}
 			>
 				{props.children}
-			</IconButton>
-		</Tooltip>
+			</Tooltip.Trigger>
+			<Tooltip.Popup>{props.label}</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
@@ -3149,16 +3180,28 @@ function FilterIndicator(props: {
 			>
 				<Midcut value={account} prefix="0x" />
 			</Link>
-			<Tooltip content="Clear filter">
-				<Link
-					to="/address/$address"
-					params={{ address: tokenAddress }}
-					search={{ tab: 'transfers' }}
-					{...cx(styles.clearFilter(), pressDown())}
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Button.Link
+							aria-label="Clear filter"
+							render={
+								<Link
+									to="/address/$address"
+									params={{ address: tokenAddress }}
+									search={{ tab: 'transfers' }}
+								/>
+							}
+							shape="icon"
+							size="small"
+							variant="text"
+						/>
+					}
 				>
-					<Close />
-				</Link>
-			</Tooltip>
+					<Close {...styles.buttonIcon()} />
+				</Tooltip.Trigger>
+				<Tooltip.Popup>Clear filter</Tooltip.Popup>
+			</Tooltip.Root>
 		</div>
 	)
 }
@@ -3261,49 +3304,41 @@ function StreamedPaymentReceipt(props: {
 
 const paginationRowBase = {
 	alignItems: 'center',
-	color: 'content.secondary',
+	color: 'gray.900',
 	display: 'flex',
 	flexDirection: 'column',
-	gap: '12',
-	paddingBlock: '12',
-	paddingInline: '16',
-	typography: 'body.b3',
+	gap: '3',
+	paddingBlock: '3',
+	paddingInline: '4',
+	typography: 'label.12',
 	'@media (width >= 640px)': {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 	},
 } as const
 
-// Pager controls share TDS IconButton `small` `secondary` geometry. The holdings
-// pager uses IconButton itself; the history pager's controls are links.
-const pagerHover = {
-	'@media (hover: hover)': {
-		':hover': { backgroundColor: 'container.strong' },
-	},
-} as const
-
 // Divider borders: the reset leaves every border at width 0, so each use sets
 // only the edge it draws.
 const dividerLine = {
-	borderColor: 'line.secondary',
+	borderColor: 'grayAlpha.200',
 	borderStyle: 'solid',
 } as const
 
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '16',
+		gap: '4',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+			paddingBottom: '8',
+			paddingTop: '10',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -3313,7 +3348,7 @@ namespace styles {
 	export const accountColumn = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		'@media (width >= 800px)': { alignSelf: 'flex-start' },
 	})
 
@@ -3325,18 +3360,18 @@ namespace styles {
 	export const addressHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
+		gap: '2',
+		marginBottom: '2',
 	})
 
-	export const addressLabel = style({ typography: 'body.b3' })
+	export const addressLabel = style({ typography: 'label.12' })
 
-	export const icon12 = style({ height: '12', width: '12' })
+	export const icon12 = style({ height: '3', width: '3' })
 
 	export const addressValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		maxWidth: '21ch !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
@@ -3346,123 +3381,112 @@ namespace styles {
 	})
 
 	export const balancesLabel = style({
-		color: 'content.secondary',
-		marginBottom: '8',
-		typography: 'body.b3',
+		color: 'gray.900',
+		marginBottom: '2',
+		typography: 'label.12',
 	})
 
 	export const balanceList = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const balanceRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 		minWidth: '0 !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const pending = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const value = style({
-		color: 'content.primary',
-		typography: 'body.b3',
+		color: 'foreground',
+		typography: 'label.12',
 	})
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	// Dashes that stand in for a missing value.
-	export const placeholder = style({ color: 'content.tertiary' })
+	export const placeholder = style({ color: 'gray.700' })
 
 	// Added to a TDS Button: only properties it leaves unset. The history and
-	// transfers feed toggle sits at the end of its toolbar and is disabled away
-	// from the newest page.
+	// transfers feed toggle sits at the end of its toolbar.
 	export const feedToggle = style({
 		flexShrink: 0,
 		marginLeft: 'auto !custom',
-		':disabled': { opacity: 0.5 },
 	})
 
-	export const alertWrap = style({ padding: '16' })
+	// Icons in small TDS Buttons, at the TDS CopyButton icon size.
+	export const buttonIcon = style({ flexShrink: '0 !custom', fontSize: 'base' })
+
+	export const alertWrap = style({ padding: '4' })
 
 	export const batchIndex = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		whiteSpace: 'nowrap',
 	})
 
 	export const contextual = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '12',
+		gap: '3',
 	})
 
 	export const paginationBar = style({
 		...paginationRowBase,
 		...dividerLine,
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 	})
 
-	export const holdingRow = style({ typography: 'body.b3' })
+	export const holdingRow = style({ typography: 'label.12' })
 
 	export const infoLabel = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
-	})
-
-	// TDS Tooltip keeps its label on one line; the column hints are sentences.
-	export const infoTooltip = style({
-		selectors: { '& > span': { whiteSpace: 'normal' } },
+		gap: '1',
 	})
 
 	export const batchPending = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 
 	export const batchCell = style({
-		typography: 'body.b3',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 
 	export const pageNav = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-start' },
 	})
 
-	// Added to a TDS IconButton: only properties it leaves unset, plus a hover
-	// (which outranks its resting fill).
-	export const pagerButton = style({
-		...pagerHover,
-		':disabled': { opacity: 0.5 },
-	})
-
 	export const pageLabel = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '4',
+		paddingInline: '1',
 		whiteSpace: 'nowrap',
 	})
 
 	export const holdingsFooter = style({
 		...dividerLine,
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: 'none',
+		gap: '0',
 	})
 
 	export const holdingsPagination = style({ ...paginationRowBase })
@@ -3472,98 +3496,90 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'center',
-		paddingBlock: '8',
-		paddingInline: '16',
-		selectors: { '&:not(:first-child)': { borderTopWidth: 'regular' } },
-	})
-
-	// Added to a TDS Button: an icon size and a hover fill, both unset by it.
-	export const unlistedToggle = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
-		selectors: { '& > svg': { height: '16', width: '16' } },
+		paddingBlock: '2',
+		paddingInline: '4',
+		selectors: { '&:not(:first-child)': { borderTopWidth: '1px' } },
 	})
 
 	export const filter = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		typography: 'body.b3',
+		gap: '2',
+		typography: 'label.12',
 	})
 
 	export const receipt = style({
-		paddingBottom: '16',
-		typography: 'body.b3',
+		paddingBottom: '4',
+		typography: 'label.12',
 	})
 
 	export const settlement = style({
 		...dividerLine,
 		alignItems: 'center',
-		backgroundColor: 'container.subtle',
-		borderBottomWidth: 'thick',
+		backgroundColor: 'grayAlpha.100',
+		borderBottomWidth: '2px',
 		display: 'flex',
 		marginInline: '-16px !custom',
-		paddingBlock: '12',
-		paddingInline: '16',
+		paddingBlock: '3',
+		paddingInline: '4',
 	})
 
 	export const rowIndex = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
-		marginRight: '12',
+		marginRight: '3',
 		textAlign: 'right',
 	})
 
 	export const onChainLabel = style({
-		color: 'content.primary',
+		color: 'foreground',
 		flexShrink: 0,
 		fontStyle: 'italic',
-		typography: 'body.b3',
-		width: '64',
+		typography: 'label.12',
+		width: '16',
 	})
 
 	export const offChainHeader = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '8',
-		paddingBottom: '8',
-		paddingTop: '12',
-		typography: 'body.b3',
+		gap: '2',
+		paddingBottom: '2',
+		paddingTop: '3',
+		typography: 'label.12',
 	})
 
 	export const divider = style({
 		...dividerLine,
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		flex: 1,
 	})
 
 	export const voucherRow = style({
 		...dividerLine,
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 		display: 'flex',
-		paddingBlock: '8',
+		paddingBlock: '2',
 	})
 
 	export const offChainLabel = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
-		typography: 'body.b3',
-		width: '64',
+		typography: 'label.12',
+		width: '16',
 	})
 
 	export const voucherParts = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		marginLeft: 'auto !custom',
 	})
 
 	export const addressButton = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -3572,65 +3588,55 @@ namespace styles {
 	export const balanceToken = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
 	export const timeHeader = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
 	export const assetLink = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '8',
-		typography: 'body.b3',
+		gap: '2',
+		typography: 'label.12',
 	})
 
 	export const hashLink = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 		width: '100% !custom',
 	})
 
 	export const hashLinkProminent = style({
-		typography: 'body.b3Strong',
+		typography: 'label.12.strong',
 		width: '100% !custom',
 	})
 
+	// The history pager's links take TDS Button `small` `secondary` `icon`
+	// geometry; the holdings pager uses that Button itself. Links have no
+	// `:disabled`, so TanStack Router's `aria-disabled` drives the disabled look.
 	export const pageLink = style({
-		...pagerHover,
 		alignItems: 'center',
-		backgroundColor: 'container.regular',
+		backgroundColor: 'grayAlpha.100',
 		borderRadius: 'full',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'inline-flex',
-		height: '32',
+		height: '8',
 		justifyContent: 'center',
-		width: '32',
-		selectors: {
-			'& > svg': { height: '16', width: '16' },
-			'&[aria-disabled="true"]': { cursor: 'default', opacity: 0.5 },
-		},
-	})
-
-	export const filterAccount = style({ typography: 'mono.inline' })
-
-	// TDS IconButton `small` `tertiary` geometry on a link.
-	export const clearFilter = style({
-		alignItems: 'center',
-		borderRadius: 'full',
-		color: 'content.primary',
-		display: 'inline-flex',
-		height: '32',
-		justifyContent: 'center',
-		width: '32',
+		width: '8',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
-		selectors: { '& > svg': { height: '16', width: '16' } },
+		selectors: {
+			'& > svg': { height: '4', width: '4' },
+			'&[aria-disabled="true"]': { cursor: 'default', opacity: 0.4 },
+		},
 	})
+
+	export const filterAccount = style({ typography: 'label.12.mono' })
 }

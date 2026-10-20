@@ -1,6 +1,5 @@
 import { useMatchRoute, useRouterState } from '@tanstack/react-router'
-import { vars as core } from '@tempoxyz/ds/core'
-import { style, vars } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
@@ -32,10 +31,7 @@ export function Layout(props: Layout.Props): React.JSX.Element {
 		<NotFoundProvider>
 			<BlockNumberProvider>
 				<div {...styles.root()}>
-					<a
-						href={`#${mainId}`}
-						{...cx(vars({ set: 'inverse' }), srOnly(), styles.skipLink())}
-					>
+					<a href={`#${mainId}`} {...cx(srOnly(), styles.skipLink())}>
 						Skip to content
 					</a>
 					<div {...cx(styles.header(), isReceipt && styles.printHidden())}>
@@ -79,29 +75,26 @@ namespace styles {
 		'@media print': { display: 'block', minHeight: '0px !custom' },
 	})
 
-	// Applied over `srOnly` in the inverse set: fixed and padded while clipped,
-	// so focusing it only releases the clip. The ring uses the page's primary
-	// content color because the inverse one matches the page background.
+	// Applied over `srOnly`: fixed and padded while clipped, so focusing it
+	// only releases the clip. Inverted against the page, like a TDS primary
+	// button.
 	export const skipLink = style({
-		backgroundColor: 'background.primary',
+		backgroundColor: 'foreground',
 		borderRadius: 'full',
-		color: 'content.primary',
-		left: '12',
-		paddingBlock: '12',
-		paddingInline: '24',
+		color: 'background.primary',
+		left: '3',
+		paddingBlock: '3',
+		paddingInline: '6',
 		position: 'fixed',
-		top: '12',
-		typography: 'body.b2',
+		top: '3',
+		typography: 'copy.14',
 		zIndex: 50,
 		':focus': {
 			clipPath: 'none',
 			height: 'auto !custom',
-			margin: 'none',
+			margin: '0',
 			overflow: 'visible',
 			width: 'auto !custom',
-		},
-		':focus-visible': {
-			outlineColor: `light-dark(${core.color.neutral['100']}, ${core.color.neutral['000']}) !custom`,
 		},
 	})
 
@@ -124,7 +117,7 @@ namespace styles {
 	})
 
 	export const footer = style({
-		marginTop: '24',
+		marginTop: '6',
 		position: 'relative',
 		width: '100% !custom',
 		zIndex: 2,

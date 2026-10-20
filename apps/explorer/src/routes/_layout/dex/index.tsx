@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import {
-	Alert,
-	Card,
+	Callout,
 	Checkbox,
+	Field,
+	Input,
+	Skeleton,
 	style,
 	variants,
 	vars,
-} from '@tempoxyz/ds/platform'
-import { Search as SearchIcon } from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds'
+import { Search as SearchIcon } from '@tempoxyz/ds/icons'
 import { useMemo, useState } from 'react'
 import type * as React from 'react'
 import { cx } from 'zyzz'
@@ -29,7 +31,7 @@ import {
 import { PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { dexPoolsQueryOptions } from '#lib/queries/dex-pools'
-import { animatePulse, srOnly, textField, truncate } from '#styles/explorer'
+import { truncate } from '#styles/explorer'
 
 export const Route = createFileRoute('/_layout/dex/')({
 	component: DexPoolsPage,
@@ -130,7 +132,7 @@ function DexPoolsPage(): React.JSX.Element {
 		<div {...styles.page()}>
 			<h1 {...styles.title()}>Stablecoin DEX</h1>
 
-			<Card render={<section aria-label="Totals" />} {...styles.totals()}>
+			<section aria-label="Totals" {...styles.totals()}>
 				<div {...styles.stats()}>
 					<Stat
 						label="Liquidity"
@@ -145,7 +147,7 @@ function DexPoolsPage(): React.JSX.Element {
 					<Stat label="1D volume" value={pools && usd(totals.day)} />
 					<Stat label="30D volume" value={pools && usd(totals.month)} />
 				</div>
-			</Card>
+			</section>
 
 			<Sections
 				mode={isMobile ? 'stacked' : 'tabs'}
@@ -168,18 +170,19 @@ function DexPoolsPage(): React.JSX.Element {
 						autoCollapse: false,
 						contextual: (
 							<div {...styles.contextual()}>
-								<label {...styles.filter()}>
-									<span {...srOnly()}>Search pairs</span>
-									<SearchIcon aria-hidden="true" {...styles.filterIcon()} />
-									<input
+								<Input.Group size="small" variant="search" {...styles.filter()}>
+									<Input.Prefix>
+										<SearchIcon aria-hidden="true" />
+									</Input.Prefix>
+									<Input.Control
+										aria-label="Search pairs"
 										value={filter}
-										onChange={(event) => setFilter(event.target.value)}
+										onValueChange={(value) => setFilter(value)}
 										placeholder="Search"
 										spellCheck={false}
 										autoComplete="off"
-										{...cx(textField(), styles.filterInput())}
 									/>
-								</label>
+								</Input.Group>
 								<VerifiedToggle
 									checked={!search.unverified}
 									onChange={setVerifiedOnly}
@@ -300,12 +303,12 @@ function VerifiedToggle(props: {
 	onChange: (checked: boolean) => void
 }): React.JSX.Element {
 	return (
-		<Checkbox
-			checked={props.checked}
-			onCheckedChange={props.onChange}
-			// TDS Checkbox draws its label black; keep it on the theme.
-			label={<span {...styles.checkboxLabel()}>Verified only</span>}
-		/>
+		<Field.Root>
+			<Field.Item {...styles.verified()}>
+				<Checkbox checked={props.checked} onCheckedChange={props.onChange} />
+				<Field.Label>Verified only</Field.Label>
+			</Field.Item>
+		</Field.Root>
 	)
 }
 
@@ -316,16 +319,13 @@ function LoadError(props: {
 }): React.JSX.Element {
 	return (
 		<div {...styles.alert()}>
-			<Alert
-				role="alert"
-				tone="negative"
-				title={props.message}
-				action={{
-					disabled: props.retrying,
-					label: props.retrying ? 'Retrying…' : 'Try again',
-					onClick: props.onRetry,
-				}}
-			/>
+			<Callout intent="negative">
+				<Callout.Icon />
+				<Callout.Content>{props.message}</Callout.Content>
+				<Callout.Action disabled={props.retrying} onClick={props.onRetry}>
+					{props.retrying ? 'Retrying…' : 'Try again'}
+				</Callout.Action>
+			</Callout>
 		</div>
 	)
 }
@@ -357,9 +357,10 @@ function Stat(props: {
 	return (
 		<div {...styles.stat()}>
 			<div {...styles.statLabel()}>{props.label}</div>
-			<div {...styles.statValue()}>
-				{props.value ?? <span {...cx(styles.statLoading(), animatePulse())} />}
-			</div>
+			{/* The placeholder text sizes the skeleton to the value it awaits. */}
+			<Skeleton show={props.value === undefined} {...styles.statSkeleton()}>
+				<span {...styles.statValue()}>{props.value ?? '$0.00M'}</span>
+			</Skeleton>
 		</div>
 	)
 }
@@ -422,26 +423,32 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '32',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '8',
 		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '64' },
+		'@media (width >= 640px)': { paddingTop: '16' },
 	})
 
 	export const title = style({
-		color: 'content.primary',
-		typography: 'heading.h2',
-		'@media (width >= 640px)': { typography: 'heading.h1' },
+		color: 'foreground',
+		typography: 'heading.24.subtle',
+		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
 	})
 
+	// An unpadded bordered card: TDS `Surface` always pads its content, and the
+	// stat dividers run edge to edge.
 	export const totals = style({
-		borderColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
+		boxSizing: 'border-box',
+		color: 'foreground',
 		overflow: 'hidden',
 	})
 
@@ -453,96 +460,70 @@ namespace styles {
 	export const stat = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '16',
-		paddingInline: '16',
+		gap: '2',
+		paddingBlock: '4',
+		paddingInline: '4',
 		selectors: {
 			'&:not(:last-child)': {
-				borderColor: 'line.secondary',
+				borderColor: 'grayAlpha.200',
 				borderRightStyle: 'dashed',
-				borderRightWidth: 'regular',
+				borderRightWidth: '1px',
 			},
 		},
 	})
 
 	export const statLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const statValue = style({
-		color: 'content.primary',
+		color: 'foreground',
+		display: 'block',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'heading.h3',
-		'@media (width >= 640px)': { typography: 'heading.h2' },
+		typography: 'heading.20.subtle',
+		'@media (width >= 640px)': { typography: 'heading.24.subtle' },
 	})
 
-	export const statLoading = style({
-		backgroundColor: 'container.strong',
-		borderRadius: '3xs',
-		display: 'inline-block',
-		height: '20',
-		verticalAlign: 'top',
-		width: '80px !custom',
-		'@media (width >= 640px)': { height: '24' },
-	})
+	// Shrinks the skeleton to its value instead of the whole column.
+	export const statSkeleton = style({ alignSelf: 'flex-start' })
 
 	export const contextual = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '16',
+		gap: '4',
 	})
 
-	export const filter = style({
-		alignItems: 'center',
-		display: 'flex',
-		position: 'relative',
-	})
+	export const filter = style({ width: '160px !custom' })
 
-	export const filterIcon = style({
-		color: 'content.secondary',
-		height: '16',
-		left: '8px !custom',
-		pointerEvents: 'none',
-		position: 'absolute',
-		width: '16',
-	})
+	// Keeps "Verified only" on one line in the section header.
+	export const verified = style({ whiteSpace: 'nowrap' })
 
-	export const filterInput = style({
-		height: '32',
-		paddingLeft: '32',
-		paddingRight: '8',
-		typography: 'body.b3',
-		width: '160px !custom',
-	})
-
-	export const checkboxLabel = style({ color: 'content.primary' })
-
-	export const alert = style({ padding: '16' })
+	export const alert = style({ padding: '4' })
 
 	export const sort = variants({
 		base: {
 			cursor: 'pointer',
-			'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+			'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 		},
 		defaultVariants: { active: false },
 		variants: {
 			active: {
-				true: { color: 'content.primary' },
-				false: { color: 'content.secondary' },
+				true: { color: 'foreground' },
+				false: { color: 'gray.900' },
 			},
 		},
 	})
 
 	export const rank = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const pair = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
@@ -556,7 +537,7 @@ namespace styles {
 	export const pairIcon = variants({
 		base: {
 			borderRadius: 'full',
-			boxShadow: `0 0 0 2px ${vars.color.background.secondary}`,
+			boxShadow: `0 0 0 2px ${vars.color.background.surface} !custom`,
 			display: 'inline-flex',
 		},
 		defaultVariants: { overlap: false },
@@ -569,19 +550,19 @@ namespace styles {
 	})
 
 	export const pairName = style({
-		color: 'content.primary',
-		fontWeight: 500,
+		color: 'foreground',
+		fontWeight: 'medium',
 	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const number = variants({
 		base: { fontVariantNumeric: 'tabular-nums' },
 		defaultVariants: { tone: 'primary' },
 		variants: {
 			tone: {
-				primary: { color: 'content.primary' },
-				secondary: { color: 'content.secondary' },
+				primary: { color: 'foreground' },
+				secondary: { color: 'gray.900' },
 			},
 		},
 	})

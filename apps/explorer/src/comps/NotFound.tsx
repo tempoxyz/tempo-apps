@@ -1,14 +1,10 @@
 import { Link } from '@tanstack/react-router'
-import { vars as core } from '@tempoxyz/ds/core'
-import { Card, style, vars } from '@tempoxyz/ds/platform'
-import { Search } from '@tempoxyz/ds/platform/icons'
+import { Button, Empty, style } from '@tempoxyz/ds'
+import { Search } from '@tempoxyz/ds/icons'
 import type { Hex } from 'ox'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { Empty } from '#comps/ui/Empty'
 import { apostrophe } from '#lib/chars'
 import { useMarkNotFoundPage } from '#lib/not-found'
-import { pressDown } from '#styles/explorer'
 
 export function NotFound({
 	title = 'Page Not Found',
@@ -19,23 +15,20 @@ export function NotFound({
 
 	return (
 		<section {...styles.section()}>
-			<Card {...styles.card()}>
-				<Empty
-					icon={<Search />}
-					title={<span {...styles.title()}>{title}</span>}
-					action={
-						<Link
-							to="/"
-							{...cx(vars({ set: 'inverse' }), styles.homeLink(), pressDown())}
-						>
-							Return home
-						</Link>
-					}
-				>
-					{message}
-				</Empty>
+			<div {...styles.card()}>
+				{/* The page's own heading, so not `Empty.Title`'s `h3`. */}
+				<Empty.Root {...styles.empty()}>
+					<Empty.Icon>
+						<Search />
+					</Empty.Icon>
+					<h1 {...styles.title()}>{title}</h1>
+					<Empty.Description>{message}</Empty.Description>
+					<Empty.Actions>
+						<Button.Link render={<Link to="/" />}>Return home</Button.Link>
+					</Empty.Actions>
+				</Empty.Root>
 				{data?.type === 'hash' && <pre {...styles.hash()}>{data.value}</pre>}
-			</Card>
+			</div>
 		</section>
 	)
 }
@@ -57,54 +50,47 @@ namespace styles {
 		flex: 1,
 		height: '100% !custom',
 		justifyContent: 'center',
-		paddingBlock: '64',
-		paddingInline: '16',
+		paddingBlock: '16',
+		paddingInline: '4',
 		width: '100% !custom',
 	})
 
+	// An unpadded bordered surface, so the hash row can run edge to edge.
 	export const card = style({
-		borderColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		maxWidth: '600px !custom',
 		overflow: 'hidden',
 		width: '100% !custom',
 	})
 
-	export const title = style({ typography: 'heading.h2' })
-
-	// TDS Button medium primary geometry on a link, in the inverse set. The
-	// ring uses the page's primary content color because the inverse one
-	// matches the page background.
-	export const homeLink = style({
-		alignItems: 'center',
-		backgroundColor: 'background.primary',
-		borderRadius: 'full',
-		color: 'content.primary',
-		columnGap: '4',
-		display: 'inline-flex',
-		height: '40',
+	// TDS `Empty.Root` sets no height or main-axis alignment.
+	export const empty = style({
 		justifyContent: 'center',
-		minWidth: '80px !custom',
-		paddingInline: '24',
-		textDecorationLine: 'none',
-		typography: 'body.b2',
-		whiteSpace: 'nowrap',
-		':focus-visible': {
-			outlineColor: `light-dark(${core.color.neutral['100']}, ${core.color.neutral['000']}) !custom`,
-		},
+		minHeight: '180px !custom',
+		paddingBlock: '12',
+	})
+
+	export const title = style({
+		color: 'foreground',
+		margin: '0',
+		marginBlockStart: '3',
+		typography: 'heading.24.subtle',
 	})
 
 	export const hash = style({
-		backgroundColor: 'container.subtle',
-		borderColor: 'line.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopWidth: 'regular',
-		color: 'content.secondary',
-		margin: 'none',
-		padding: '16',
+		borderTopWidth: '1px',
+		color: 'gray.900',
+		margin: '0',
+		padding: '4',
 		textAlign: 'center',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})

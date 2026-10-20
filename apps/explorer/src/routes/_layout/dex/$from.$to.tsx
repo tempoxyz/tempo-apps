@@ -5,20 +5,13 @@ import {
 	stripSearchParams,
 	useRouterState,
 } from '@tanstack/react-router'
-import {
-	Alert,
-	Card,
-	Spinner,
-	style,
-	TextButton,
-	variants,
-} from '@tempoxyz/ds/platform'
+import { Button, Callout, style, variants } from '@tempoxyz/ds'
 import {
 	ArrowRight,
 	ChevronLeft,
 	Refresh,
 	SwapHorizontal,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 import { cx } from 'zyzz'
@@ -185,22 +178,19 @@ function DexRoutePage(): React.JSX.Element {
 				</CopyButton>
 			</div>
 
-			<Card
-				render={<section aria-label="Route and quote" />}
-				{...styles.quote()}
-			>
+			<section aria-label="Route and quote" {...styles.quote()}>
 				{query.isError && !snapshot ? (
 					<div {...styles.alert()}>
-						<Alert
-							role="alert"
-							tone="negative"
-							title={query.error.message}
-							action={{
-								disabled: query.isFetching,
-								label: query.isFetching ? 'Retrying…' : 'Try again',
-								onClick: () => void query.refetch(),
-							}}
-						/>
+						<Callout intent="negative">
+							<Callout.Icon />
+							<Callout.Content>{query.error.message}</Callout.Content>
+							<Callout.Action
+								disabled={query.isFetching}
+								onClick={() => void query.refetch()}
+							>
+								{query.isFetching ? 'Retrying…' : 'Try again'}
+							</Callout.Action>
+						</Callout>
 					</div>
 				) : query.isPending ? (
 					<p role="status" {...styles.status()}>
@@ -305,19 +295,16 @@ function DexRoutePage(): React.JSX.Element {
 								>
 									Block {snapshot.blockNumber}
 								</Link>
-								<TextButton
+								<Button
 									onClick={() => void query.refetch()}
-									disabled={query.isFetching}
+									loading={query.isFetching}
 									aria-label="Refresh quote"
-									{...styles.refresh()}
+									size="small"
+									variant="text"
 								>
-									{query.isFetching ? (
-										<Spinner />
-									) : (
-										<Refresh aria-hidden="true" {...styles.refreshIcon()} />
-									)}
+									<Refresh aria-hidden="true" {...styles.refreshIcon()} />
 									Refresh
-								</TextButton>
+								</Button>
 							</div>
 							{query.isRefetchError && (
 								<p role="alert" {...styles.refreshError()}>
@@ -327,7 +314,7 @@ function DexRoutePage(): React.JSX.Element {
 						</>
 					)
 				)}
-			</Card>
+			</section>
 
 			{snapshot && from && to && (
 				<Sections
@@ -560,9 +547,13 @@ function LegRow(props: {
 					) : depth.isError ? (
 						<p role="status" {...styles.depthNote()}>
 							Depth is unavailable.{' '}
-							<TextButton onClick={() => void depth.refetch()}>
+							<button
+								type="button"
+								onClick={() => void depth.refetch()}
+								{...cx(styles.textAction(), transitionColors())}
+							>
 								Try again
-							</TextButton>
+							</button>
 						</p>
 					) : depth.data.length === 0 ? (
 						<p {...styles.depthNote()}>
@@ -657,7 +648,7 @@ function TokenLink(props: { token: DexToken }): React.JSX.Element {
 
 // Dashed dividers between panels and rows.
 const dashed = {
-	borderColor: 'line.secondary',
+	borderColor: 'grayAlpha.200',
 	borderStyle: 'dashed',
 } as const
 
@@ -665,136 +656,142 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '32',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '8',
 		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '64' },
+		'@media (width >= 640px)': { paddingTop: '16' },
 	})
 
 	export const error = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 	})
 
 	export const errorTitle = style({
-		color: 'content.primary',
-		typography: 'heading.h3',
+		color: 'foreground',
+		typography: 'heading.20.subtle',
 	})
 
 	export const header = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '16',
+		gap: '4',
 		justifyContent: 'space-between',
 	})
 
 	export const intro = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 		minWidth: '0 !custom',
 	})
 
 	export const back = style({
 		alignItems: 'center',
 		alignSelf: 'flex-start',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'inline-flex',
-		gap: '4',
+		gap: '1',
 		textDecorationLine: 'none',
-		typography: 'body.b3',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		typography: 'label.12',
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
-	export const backIcon = style({ height: '16', width: '16' })
+	export const backIcon = style({ height: '4', width: '4' })
 
 	export const title = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '12',
-		typography: 'heading.h2',
-		'@media (width >= 640px)': { typography: 'heading.h1' },
+		gap: '3',
+		typography: 'heading.24.subtle',
+		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
 	})
 
 	export const titleToken = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '12',
+		gap: '3',
 		whiteSpace: 'nowrap',
 	})
 
 	export const titleArrow = style({
-		color: 'content.secondary',
-		height: '24',
-		width: '24',
+		color: 'gray.900',
+		height: '6',
+		width: '6',
 	})
 
 	export const unresolved = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		typography: 'body.b3',
+		gap: '2',
+		typography: 'label.12',
 	})
 
 	export const breakAll = style({ wordBreak: 'break-all' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
+	// An unpadded bordered card: TDS `Surface` always pads its content, and the
+	// panel dividers run edge to edge.
 	export const quote = style({
-		borderColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
+		boxSizing: 'border-box',
+		color: 'foreground',
 		overflow: 'hidden',
 	})
 
-	export const alert = style({ padding: '16' })
+	export const alert = style({ padding: '4' })
 
 	export const status = style({
-		color: 'content.secondary',
-		padding: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		padding: '4',
+		typography: 'copy.14',
 	})
 
 	export const path = style({
 		...dashed,
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		columnGap: '8',
+		borderBottomWidth: '1px',
+		columnGap: '2',
 		display: 'flex',
 		flexWrap: 'wrap',
-		paddingBlock: '12',
-		paddingInline: '16',
-		rowGap: '12',
+		paddingBlock: '3',
+		paddingInline: '4',
+		rowGap: '3',
 	})
 
 	export const pathItem = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
 	export const arrow = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
-		height: '16',
-		width: '16',
+		height: '4',
+		width: '4',
 	})
 
 	export const panels = style({
@@ -808,39 +805,39 @@ namespace styles {
 
 	export const payFields = style({
 		...dashed,
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
+		gap: '4',
 		height: '100% !custom',
-		padding: '16',
+		padding: '4',
 		'@media (width >= 768px)': {
-			borderBottomWidth: 'none',
-			borderRightWidth: 'regular',
-			paddingRight: '48',
+			borderBottomWidth: '0px',
+			borderRightWidth: '1px',
+			paddingRight: '12',
 		},
 	})
 
 	// The reverse control straddles the divider between the two panels.
 	export const reverse = style({
 		alignItems: 'center',
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
 		borderRadius: 'full',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		bottom: '0px !custom',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'inline-flex',
-		height: '40',
+		height: '10',
 		justifyContent: 'center',
 		left: '50% !custom',
 		position: 'absolute',
 		translate: '-50% 50% !custom',
-		width: '40',
+		width: '10',
 		zIndex: 10,
 		'@media (hover: hover)': {
-			':hover': { borderColor: 'border.accent', color: 'content.primary' },
+			':hover': { borderColor: 'blue.700', color: 'foreground' },
 		},
 		'@media (width >= 768px)': {
 			bottom: 'auto !custom',
@@ -852,54 +849,54 @@ namespace styles {
 	})
 
 	export const reverseIcon = style({
-		height: '16',
+		height: '4',
 		rotate: '90deg',
-		width: '16',
+		width: '4',
 		'@media (width >= 768px)': { rotate: '0deg' },
 	})
 
 	export const receivePanel = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
-		padding: '16',
-		'@media (width >= 768px)': { paddingLeft: '48' },
+		gap: '4',
+		padding: '4',
+		'@media (width >= 768px)': { paddingLeft: '12' },
 	})
 
 	export const panelLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const amountRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '16',
+		gap: '4',
 		justifyContent: 'space-between',
-		minHeight: '48',
+		minHeight: '12',
 	})
 
 	export const amountInput = style({
 		backgroundColor: 'transparent !custom',
 		border: 'none !custom',
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 		minWidth: '0 !custom',
 		outline: 'none !custom',
-		padding: 'none',
-		typography: 'heading.h1',
+		padding: '0',
+		typography: 'heading.32.subtle',
 		width: '100% !custom',
-		'::placeholder': { color: 'content.secondary' },
-		selectors: { '&[aria-invalid="true"]': { color: 'content.negative' } },
+		'::placeholder': { color: 'gray.900' },
+		selectors: { '&[aria-invalid="true"]': { color: 'red.900' } },
 	})
 
 	export const amountOut = variants({
 		base: {
-			color: 'content.primary',
+			color: 'foreground',
 			fontVariantNumeric: 'tabular-nums',
 			transitionDuration: '150ms !custom',
 			transitionProperty: 'opacity',
-			typography: 'heading.h1',
+			typography: 'heading.32.subtle',
 			wordBreak: 'break-all',
 		},
 		defaultVariants: { fetching: false },
@@ -909,68 +906,86 @@ namespace styles {
 	})
 
 	export const quoteMessage = style({
-		color: 'content.secondary',
-		typography: 'heading.h3',
+		color: 'gray.900',
+		typography: 'heading.20.subtle',
 	})
 
 	export const facts = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		typography: 'body.b3',
+		gap: '2',
+		typography: 'label.12',
 	})
 
 	export const fact = style({
-		columnGap: '16',
+		columnGap: '4',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		rowGap: '4',
+		rowGap: '1',
 	})
 
 	export const factValue = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const fieldError = style({
-		color: 'content.negative',
-		typography: 'body.b3',
+		color: 'red.900',
+		typography: 'label.12',
 	})
 
+	// The end inset plus the refresh button's own 12px padding lines its label
+	// up with the 16px panel edge.
 	export const footer = style({
 		...dashed,
 		alignItems: 'center',
-		borderTopWidth: 'regular',
-		color: 'content.secondary',
+		borderTopWidth: '1px',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '12',
+		gap: '3',
 		justifyContent: 'space-between',
-		paddingBlock: '8',
-		paddingInline: '16',
-		typography: 'body.b3',
+		paddingBlock: '1',
+		paddingInlineEnd: '1',
+		paddingInlineStart: '4',
+		typography: 'label.12',
 	})
 
 	export const blockLink = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		textDecorationLine: 'none',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
-	export const refresh = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '4',
-	})
+	export const refreshIcon = style({ height: '4', width: '4' })
 
-	export const refreshIcon = style({ height: '16', width: '16' })
+	// An unpadded text action inside a line of copy, where a TDS `Button`
+	// would add height and padding.
+	export const textAction = style({
+		backgroundColor: 'transparent !custom',
+		border: 'none !custom',
+		borderRadius: 'sm',
+		color: 'gray.900',
+		cursor: 'pointer',
+		padding: '0',
+		typography: 'label.12.strong',
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		selectors: {
+			'&:focus-visible': {
+				outlineColor: 'blue.700',
+				outlineOffset: '2px !custom',
+				outlineStyle: 'solid',
+				outlineWidth: '2px !custom',
+			},
+		},
+	})
 
 	export const refreshError = style({
-		color: 'content.negative',
-		paddingBottom: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		color: 'red.900',
+		paddingBottom: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
 	export const legs = style({ display: 'flex', flexDirection: 'column' })
@@ -979,86 +994,86 @@ namespace styles {
 		...dashed,
 		display: 'flex',
 		flexDirection: 'column',
-		selectors: { '&:not(:last-child)': { borderBottomWidth: 'regular' } },
+		selectors: { '&:not(:last-child)': { borderBottomWidth: '1px' } },
 	})
 
 	export const legHeader = style({
 		alignItems: 'center',
-		columnGap: '24',
+		columnGap: '6',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		paddingBlock: '16',
-		paddingInline: '16',
-		rowGap: '16',
+		paddingBlock: '4',
+		paddingInline: '4',
+		rowGap: '4',
 	})
 
 	export const legTokens = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
 	export const legIndex = style({
 		alignItems: 'center',
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderRadius: 'full',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
-		color: 'content.secondary',
+		borderWidth: '1px',
+		color: 'gray.900',
 		display: 'inline-flex',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
-		height: '20',
+		height: '5',
 		justifyContent: 'center',
-		typography: 'body.b3',
-		width: '20',
+		typography: 'label.12',
+		width: '5',
 	})
 
 	export const legStats = style({
-		columnGap: '32',
+		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '12',
+		rowGap: '3',
 	})
 
 	export const legStat = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const legStatLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const legStatValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const note = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
-	export const depth = style({ ...dashed, borderTopWidth: 'regular' })
+	export const depth = style({ ...dashed, borderTopWidth: '1px' })
 
 	export const depthNote = style({
-		color: 'content.secondary',
-		paddingBlock: '16',
-		paddingInline: '16',
-		typography: 'body.b3',
+		color: 'gray.900',
+		paddingBlock: '4',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
 	export const ladder = style({
 		display: 'block',
 		fontVariantNumeric: 'tabular-nums',
-		paddingBottom: '8',
-		typography: 'body.b3',
+		paddingBottom: '2',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 		width: '100% !custom',
 	})
@@ -1067,24 +1082,24 @@ namespace styles {
 
 	export const ladderRow = style({
 		display: 'grid',
-		gap: '16',
+		gap: '4',
 		gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-		paddingInline: '16',
+		paddingInline: '4',
 	})
 
 	export const ladderHead = style({
-		color: 'content.secondary',
-		paddingBlock: '8',
+		color: 'gray.900',
+		paddingBlock: '2',
 	})
 
 	export const ladderLevel = style({
-		paddingBlock: '4',
+		paddingBlock: '1',
 		position: 'relative',
 	})
 
-	export const cellStart = style({ fontWeight: 400, textAlign: 'left' })
+	export const cellStart = style({ fontWeight: 'normal', textAlign: 'left' })
 
-	export const cellEnd = style({ fontWeight: 400, textAlign: 'right' })
+	export const cellEnd = style({ fontWeight: 'normal', textAlign: 'right' })
 
 	export const raised = style({ position: 'relative' })
 
@@ -1092,8 +1107,8 @@ namespace styles {
 		defaultVariants: { bid: true },
 		variants: {
 			bid: {
-				true: { color: 'content.positive' },
-				false: { color: 'content.negative' },
+				true: { color: 'green.900' },
+				false: { color: 'red.900' },
 			},
 		},
 	})
@@ -1108,8 +1123,8 @@ namespace styles {
 		defaultVariants: { bid: true },
 		variants: {
 			bid: {
-				true: { backgroundColor: 'container.positive' },
-				false: { backgroundColor: 'container.negative' },
+				true: { backgroundColor: 'green.100' },
+				false: { backgroundColor: 'red.100' },
 			},
 		},
 	})
@@ -1119,59 +1134,59 @@ namespace styles {
 	export const detail = style({
 		...dashed,
 		alignItems: 'center',
-		columnGap: '24',
+		columnGap: '6',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		paddingBlock: '12',
-		paddingInline: '16',
-		rowGap: '4',
-		selectors: { '&:not(:last-child)': { borderBottomWidth: 'regular' } },
+		paddingBlock: '3',
+		paddingInline: '4',
+		rowGap: '1',
+		selectors: { '&:not(:last-child)': { borderBottomWidth: '1px' } },
 	})
 
 	export const detailToken = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: 500,
-		gap: '8',
-		typography: 'body.b2',
+		fontWeight: 'medium',
+		gap: '2',
+		typography: 'copy.14',
 	})
 
 	export const detailAddress = style({
 		minWidth: '0 !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const badge = style({
 		alignItems: 'center',
 		backgroundColor: 'background.primary',
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderRadius: 'full',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
-		color: 'content.primary',
+		borderWidth: '1px',
+		color: 'foreground',
 		display: 'inline-flex',
 		flexShrink: 0,
-		fontWeight: 500,
-		gap: '8',
-		height: '40',
-		paddingLeft: '8',
-		paddingRight: '12',
+		fontWeight: 'medium',
+		gap: '2',
+		height: '10',
+		paddingLeft: '2',
+		paddingRight: '3',
 		textDecorationLine: 'none',
-		typography: 'body.b2',
-		'@media (hover: hover)': { ':hover': { borderColor: 'border.accent' } },
+		typography: 'copy.14',
+		'@media (hover: hover)': { ':hover': { borderColor: 'blue.700' } },
 	})
 
 	export const tokenLink = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: 500,
-		gap: '8',
+		fontWeight: 'medium',
+		gap: '2',
 		minWidth: '0 !custom',
 		textDecorationLine: 'none',
-		typography: 'body.b2',
-		'@media (hover: hover)': { ':hover': { color: 'content.accent' } },
+		typography: 'copy.14',
+		'@media (hover: hover)': { ':hover': { color: 'blue.900' } },
 	})
 }

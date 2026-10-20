@@ -1,8 +1,8 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: rows are CSS subgrids, which native table rows cannot be, so the grid takes table roles instead */
 /** biome-ignore-all lint/a11y/useFocusableInteractive: role="table" rows and headers are static, not interactive grid cells */
 import { Link, useRouterState } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
-import { ChevronDown } from '@tempoxyz/ds/platform/icons'
+import { style } from '@tempoxyz/ds'
+import { ChevronDown } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import { Pagination } from '#comps/Pagination'
@@ -335,14 +335,14 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		maxWidth: '180px !custom',
-		minHeight: '24',
+		minHeight: '6',
 		width: '100% !custom',
 	})
 
 	export const skeletonBar = style({
-		backgroundColor: 'container.regular',
-		borderRadius: '3xs',
-		height: '12',
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'sm',
+		height: '3',
 		width: '100% !custom',
 	})
 
@@ -360,7 +360,7 @@ namespace styles {
 
 	export const grid = style({
 		display: 'grid',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		width: '100% !custom',
 	})
 
@@ -369,9 +369,9 @@ namespace styles {
 	export const gridTabs = style({ maxWidth: '100% !custom' })
 
 	export const headerRow = style({
-		borderBottomColor: 'line.secondary',
+		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 		display: 'grid',
 		gridColumn: '1 / -1',
 		gridTemplateColumns: 'subgrid',
@@ -379,16 +379,16 @@ namespace styles {
 
 	export const headerCell = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		height: '36px !custom',
 		justifyContent: 'flex-start',
-		paddingInline: '12',
-		typography: 'body.b3',
+		paddingInline: '3',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
-		':first-child': { paddingLeft: '16' },
-		':last-child': { paddingRight: '16' },
+		':first-child': { paddingLeft: '4' },
+		':last-child': { paddingRight: '4' },
 	})
 
 	export const headerCellEnd = style({ justifyContent: 'flex-end' })
@@ -396,32 +396,32 @@ namespace styles {
 	export const headerLabel = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const sortIcon = style({
-		color: 'content.secondary',
-		height: '12',
-		width: '12',
+		color: 'gray.900',
+		height: '3',
+		width: '3',
 	})
 
 	export const sortIconAsc = style({ rotate: '180deg' })
 
 	export const empty = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		gridColumn: '1 / -1',
 		justifyContent: 'center',
 		minHeight: '220px !custom',
-		paddingBlock: '32',
-		paddingInline: '16',
+		paddingBlock: '8',
+		paddingInline: '4',
 	})
 
 	export const row = style({
-		borderBottomColor: 'line.secondary',
+		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 		borderLeftColor: 'transparent !custom',
 		borderLeftStyle: 'solid',
 		borderLeftWidth: '3px !custom',
@@ -430,12 +430,12 @@ namespace styles {
 		gridColumn: '1 / -1',
 		gridTemplateColumns: 'subgrid',
 		position: 'relative',
-		':last-child': { borderBottomWidth: 'none' },
+		':last-child': { borderBottomWidth: '0px' },
 	})
 
 	export const rowLinked = style({
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 		selectors: {
 			// Shift cell contents, not cells: a transformed cell would contain
@@ -446,10 +446,10 @@ namespace styles {
 		},
 	})
 
-	export const rowExpanded = style({ borderLeftColor: 'line.secondary' })
+	export const rowExpanded = style({ borderLeftColor: 'grayAlpha.200' })
 
 	export const rowNew = style({
-		animation: `${rowShimmer} 0.5s ease-out 1`,
+		animation: `${rowShimmer} 0.5s ease-out 1 !custom`,
 	})
 
 	// Positioned against the row (cells are static), so it covers the row and
@@ -466,17 +466,17 @@ namespace styles {
 
 	export const cell = style({
 		alignItems: 'flex-start',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		justifyContent: 'flex-start',
-		minHeight: '48',
-		paddingBlock: '12',
-		paddingInline: '12',
+		minHeight: '12',
+		paddingBlock: '3',
+		paddingInline: '3',
 	})
 
-	export const cellFirst = style({ paddingLeft: '16' })
+	export const cellFirst = style({ paddingLeft: '4' })
 
-	export const cellLast = style({ paddingRight: '16' })
+	export const cellLast = style({ paddingRight: '4' })
 
 	export const cellEnd = style({
 		justifyContent: 'flex-end',
@@ -507,9 +507,9 @@ namespace styles {
 	})
 
 	export const lineDivider = style({
-		borderBottomColor: 'line.secondary',
+		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 		gridColumn: '1 / -1',
 	})
 
@@ -517,24 +517,24 @@ namespace styles {
 		contain: 'inline-size',
 		gridColumn: '1 / -1',
 		marginTop: '-4px !custom',
-		paddingBottom: '12',
-		paddingInline: '16',
+		paddingBottom: '3',
+		paddingInline: '4',
 	})
 
 	export const footer = style({ marginTop: 'auto !custom' })
 
 	export const simpleFooter = style({
 		alignItems: 'center',
-		borderTopColor: 'line.secondary',
+		borderTopColor: 'grayAlpha.200',
 		borderTopStyle: 'solid',
-		borderTopWidth: 'regular',
-		color: 'content.secondary',
+		borderTopWidth: '1px',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		gap: '3',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 		'@media (width >= 640px)': {
 			flexDirection: 'row',
 			justifyContent: 'flex-start',

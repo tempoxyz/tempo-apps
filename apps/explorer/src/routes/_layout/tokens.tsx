@@ -12,7 +12,7 @@ import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { OG_BASE_URL } from '#lib/og'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
@@ -235,29 +235,29 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 	})
 
 	export const tokenCell = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
 	export const symbol = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'inline-flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
-		typography: 'body.b2Strong',
+		typography: 'copy.14.strong',
 	})
 
 	export const truncate = style({ ...truncated })
@@ -266,10 +266,10 @@ namespace styles {
 
 	export const stackedName = style({
 		...truncated,
-		color: 'content.secondary',
+		color: 'gray.900',
 	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const address = style({ width: '100% !custom' })
 }

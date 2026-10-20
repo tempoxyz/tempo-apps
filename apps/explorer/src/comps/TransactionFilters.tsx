@@ -1,13 +1,6 @@
-import {
-	Button,
-	Checkbox,
-	SegmentedControl,
-	style,
-	vars,
-} from '@tempoxyz/ds/platform'
-import { Filter } from '@tempoxyz/ds/platform/icons'
+import { Button, Checkbox, ChoiceGroup, Field, style } from '@tempoxyz/ds'
+import { Filter } from '@tempoxyz/ds/icons'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import { Sections } from './Sections'
 
 type FilterOption<V extends string> = { value: V | undefined; label: string }
@@ -68,11 +61,15 @@ export function TransactionFilters(
 			onClearAll={handleClearAll}
 		>
 			{onHideSubmitBatchesChange && (
-				<Checkbox
-					checked={hideSubmitBatches ?? false}
-					onCheckedChange={(checked) => onHideSubmitBatchesChange(checked)}
-					label={<span {...styles.checkboxLabel()}>Hide submit batches</span>}
-				/>
+				<Field.Root>
+					<Field.Item>
+						<Checkbox
+							checked={hideSubmitBatches ?? false}
+							onCheckedChange={(checked) => onHideSubmitBatchesChange(checked)}
+						/>
+						<Field.Label>Hide submit batches</Field.Label>
+					</Field.Item>
+				</Field.Root>
 			)}
 			<SegmentedRow
 				label="Status"
@@ -155,22 +152,17 @@ export function TableFilters(props: TableFilters.Props): React.JSX.Element {
 			aria-label={label}
 			aria-expanded={open}
 			onClick={toggleOpen}
-			scale="small"
-			variant={activeCount > 0 || open ? 'secondary' : 'tertiary'}
-			{...styles.trigger()}
+			size="small"
+			variant={activeCount > 0 || open ? 'secondary' : 'text'}
 		>
-			<Filter />
+			<Filter {...styles.icon()} />
 			Filter
-			{activeCount > 0 && (
-				<span {...cx(vars({ set: 'inverse' }), styles.count())}>
-					{activeCount}
-				</span>
-			)}
+			{activeCount > 0 && <span {...styles.count()}>{activeCount}</span>}
 		</Button>
 	)
 
 	const clearAll = (
-		<Button onClick={onClearAll} scale="small" variant="tertiary">
+		<Button onClick={onClearAll} size="small" variant="text">
 			Clear all
 		</Button>
 	)
@@ -217,29 +209,30 @@ function SegmentedRow<V extends string>(props: {
 }): React.JSX.Element {
 	const { label, options, value, onChange } = props
 	const labelId = React.useId()
-	// SegmentedControl values are strings, so "no filter" is `all`.
-	const toItem = (option: FilterOption<V>) => ({
-		label: option.label,
-		value: option.value ?? ('all' as const),
-	})
-	const items = [
-		toItem(options[0]),
-		toItem(options[1]),
-		toItem(options[2]),
-	] as const
 
 	return (
 		<div {...styles.segmentedRow()}>
 			<span id={labelId} {...styles.segmentedLabel()}>
 				{label}
 			</span>
-			<SegmentedControl
+			{/* ChoiceGroup values are strings, so "no filter" is `all`. */}
+			<ChoiceGroup.Root<V | 'all'>
 				aria-labelledby={labelId}
-				items={items}
-				value={value ?? 'all'}
 				onValueChange={(next) => onChange(next === 'all' ? undefined : next)}
-				style={{ width: '100%' }}
-			/>
+				size="small"
+				value={value ?? 'all'}
+				{...styles.choiceGroup()}
+			>
+				{options.map((option) => (
+					<ChoiceGroup.Item
+						key={option.value ?? 'all'}
+						value={option.value ?? 'all'}
+						{...styles.choice()}
+					>
+						{option.label}
+					</ChoiceGroup.Item>
+				))}
+			</ChoiceGroup.Root>
 		</div>
 	)
 }
@@ -257,13 +250,10 @@ export declare namespace TransactionFilters {
 }
 
 namespace styles {
-	// TDS Checkbox colours its label black, which disappears in dark mode.
-	export const checkboxLabel = style({ color: 'content.primary' })
-
 	export const stacked = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const stackedHeader = style({
@@ -275,27 +265,24 @@ namespace styles {
 	export const stackedBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
-		paddingTop: '8',
+		gap: '4',
+		paddingTop: '2',
 	})
 
-	export const trigger = style({
-		selectors: {
-			'& > svg': { flexShrink: '0 !custom', height: '16', width: '16' },
-		},
-	})
+	export const icon = style({ flexShrink: '0 !custom', fontSize: 'base' })
 
+	// Inverted pill: the page background on the foreground color.
 	export const count = style({
 		alignItems: 'center',
-		backgroundColor: 'background.primary',
+		backgroundColor: 'foreground',
 		borderRadius: 'full',
-		color: 'content.primary',
+		color: 'background.primary',
 		display: 'inline-flex',
-		height: '16',
+		height: '4',
 		justifyContent: 'center',
-		minWidth: '16',
-		paddingInline: '4',
-		typography: 'body.b3Strong',
+		minWidth: '4',
+		paddingInline: '1',
+		typography: 'label.12.strong',
 	})
 
 	export const anchor = style({
@@ -305,13 +292,13 @@ namespace styles {
 	})
 
 	export const popover = style({
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
-		boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary} !custom`,
-		marginTop: '8',
+		borderWidth: '1px',
+		boxShadow: 'popover',
+		marginTop: '2',
 		maxWidth: 'calc(100vw - 32px) !custom',
 		position: 'absolute',
 		right: '0px !custom',
@@ -323,26 +310,31 @@ namespace styles {
 	export const popoverBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
-		padding: '16',
+		gap: '4',
+		padding: '4',
 	})
 
 	export const popoverFooter = style({
-		borderTopColor: 'line.secondary',
+		borderTopColor: 'grayAlpha.200',
 		borderTopStyle: 'solid',
-		borderTopWidth: 'regular',
-		paddingBlock: '8',
-		paddingInline: '8',
+		borderTopWidth: '1px',
+		paddingBlock: '2',
+		paddingInline: '2',
 	})
 
 	export const segmentedRow = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const segmentedLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
+
+	// The choices share the popover width, as the segmented control did.
+	export const choiceGroup = style({ width: '100% !custom' })
+
+	export const choice = style({ flexGrow: '1 !custom' })
 }

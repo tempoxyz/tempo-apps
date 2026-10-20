@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Pagination } from '#comps/Pagination'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -66,37 +66,37 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '32',
-		paddingBottom: '32',
-		paddingTop: '64',
-		typography: 'body.b3',
+		gap: '8',
+		paddingBottom: '8',
+		paddingTop: '16',
+		typography: 'label.12',
 	})
 
-	export const title = style({ color: 'content.secondary' })
+	export const title = style({ color: 'gray.900' })
 
 	export const examples = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
+		gap: '6',
 		maxWidth: '800px !custom',
 		width: '100% !custom',
 	})
 
 	export const example = style({
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		overflow: 'hidden',
 	})
 
 	export const exampleLabel = style({
-		backgroundColor: 'background.secondary',
-		color: 'content.secondary',
-		paddingBlock: '8',
-		paddingInline: '16',
-		typography: 'body.b3',
+		backgroundColor: 'background.surface',
+		color: 'gray.900',
+		paddingBlock: '2',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
-	export const exampleBody = style({ backgroundColor: 'background.secondary' })
+	export const exampleBody = style({ backgroundColor: 'background.surface' })
 }

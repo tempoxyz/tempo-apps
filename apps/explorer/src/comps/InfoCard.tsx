@@ -1,4 +1,4 @@
-import { Card, style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { ReactNode } from 'react'
 import { cx } from 'zyzz'
 
@@ -31,14 +31,14 @@ export function InfoCard(props: InfoCard.Props) {
 	})
 
 	return (
-		<Card render={<section />} {...styles.root({ className })}>
+		<section {...styles.root({ className })}>
 			{hasTitle && <div {...styles.header()}>{title}</div>}
 			{hasTitle ? (
 				<div {...styles.body()}>{sectionsContent}</div>
 			) : (
 				sectionsContent
 			)}
-		</Card>
+		</section>
 	)
 }
 
@@ -60,14 +60,16 @@ export declare namespace InfoCard {
 }
 
 namespace styles {
-	// TDS `Card` draws the surface. Width sits in `:where()` so the caller's
-	// `className` decides it.
+	// An unpadded bordered surface: TDS `Surface` always pads. Width sits in
+	// `:where()` so the caller's `className` decides it.
 	export const root = style({
-		borderColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		overflow: 'hidden',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		selectors: { ':where(&)': { width: '100% !custom' } },
 		'@media (width >= 1240px)': {
 			selectors: { ':where(&)': { width: 'fit-content !custom' } },
@@ -76,20 +78,20 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		backgroundColor: 'background.secondary',
-		color: 'content.primary',
+		backgroundColor: 'background.surface',
+		color: 'foreground',
 		display: 'flex',
 		minHeight: '44px !custom',
-		paddingInline: '16',
+		paddingInline: '4',
 	})
 
 	export const body = style({
-		backgroundColor: 'background.secondary',
-		borderTopColor: 'line.secondary',
-		borderTopLeftRadius: 'xs',
-		borderTopRightRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderTopColor: 'grayAlpha.200',
+		borderTopLeftRadius: 'xl',
+		borderTopRightRadius: 'xl',
 		borderTopStyle: 'solid',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		marginBottom: '-1px !custom',
 		marginInline: '-1px !custom',
 	})
@@ -97,48 +99,48 @@ namespace styles {
 	export const section = style({
 		alignItems: 'center',
 		display: 'flex',
-		paddingBlock: '12',
-		paddingInline: '20',
-		typography: 'body.b2',
+		paddingBlock: '3',
+		paddingInline: '5',
+		typography: 'copy.14',
 	})
 
 	export const sectionDivider = style({
-		borderBottomColor: 'line.secondary',
+		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 	})
 
 	export const entry = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 		width: '100% !custom',
 	})
 
 	export const label = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
 		textTransform: 'capitalize',
 	})
 
 	export const value = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		flex: 1,
 		fontVariantNumeric: 'tabular-nums',
 		justifyContent: 'flex-end',
 		minWidth: '0 !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	// Gap sits in `:where()` so the caller's `className` can widen it.
 	export const title = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		typography: 'heading.h4',
+		typography: 'copy.18.strong',
 		userSelect: 'none',
-		selectors: { ':where(&)': { gap: '8' } },
+		selectors: { ':where(&)': { gap: '2' } },
 	})
 }

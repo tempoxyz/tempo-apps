@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Alert, SimpleTable, style } from '@tempoxyz/ds/platform'
+import { Callout, Rows, style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import { Addresses } from 'viem/tempo'
 import * as React from 'react'
@@ -68,20 +68,24 @@ export function Tip20TokenTabContent(
 			>
 				<div {...styles.config()}>
 					{query.isError && (
-						<Alert
+						<Callout
+							intent="warning"
 							role="status"
-							tone="warning"
-							title="Token configuration unavailable."
-							action={{
-								label: 'Try again',
-								onClick: () => void query.refetch(),
-							}}
-							style={{ marginBottom: 16, width: '100%' }}
-						/>
+							size="small"
+							{...styles.unavailable()}
+						>
+							<Callout.Icon />
+							<Callout.Content>
+								Token configuration unavailable.
+							</Callout.Content>
+							<Callout.Action onClick={() => void query.refetch()}>
+								Try again
+							</Callout.Action>
+						</Callout>
 					)}
 					<section aria-label="Metadata">
 						<h3 {...styles.metadataTitle()}>Metadata</h3>
-						<SimpleTable>
+						<Rows dividers="full">
 							<MetadataRow label="Currency" value={config?.currency} />
 							<MetadataRow label="Decimals" value={config?.decimals} />
 							<MetadataRow label="Total supply" value={config?.totalSupply} />
@@ -118,7 +122,7 @@ export function Tip20TokenTabContent(
 									}
 								/>
 							)}
-						</SimpleTable>
+						</Rows>
 					</section>
 					<TokenTrust
 						address={address}
@@ -173,12 +177,12 @@ function MetadataRow(props: {
 	value: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<SimpleTable.Row>
-			<SimpleTable.Dt>{props.label}</SimpleTable.Dt>
-			<SimpleTable.Dd {...styles.value()}>
+		<Rows.Row spacing="none">
+			<Rows.Label>{props.label}</Rows.Label>
+			<span {...styles.value()}>
 				{props.value ?? <span {...styles.placeholder()}>&mdash;</span>}
-			</SimpleTable.Dd>
-		</SimpleTable.Row>
+			</span>
+		</Rows.Row>
 	)
 }
 
@@ -190,8 +194,8 @@ namespace styles {
 	export const dexRoute = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '8',
-		marginTop: '16',
+		gap: '2',
+		marginTop: '4',
 	})
 
 	export const root = style({
@@ -203,38 +207,46 @@ namespace styles {
 	})
 
 	export const config = style({
-		paddingBottom: '16',
-		paddingInline: '20',
-		paddingTop: '8',
-		typography: 'body.b3',
+		paddingBottom: '4',
+		paddingInline: '5',
+		paddingTop: '2',
+		typography: 'label.12',
 	})
+
+	export const unavailable = style({ marginBottom: '4' })
 
 	export const metadataTitle = style({
-		paddingBottom: '8',
-		typography: 'body.b3Strong',
+		paddingBottom: '2',
+		typography: 'label.12.strong',
 	})
 
-	export const value = style({ fontVariantNumeric: 'tabular-nums' })
+	export const value = style({
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		textAlign: 'end',
+	})
 
-	export const placeholder = style({ color: 'content.secondary' })
+	export const placeholder = style({ color: 'gray.900' })
 
 	export const created = style({
 		alignItems: 'center',
-		columnGap: '12',
+		columnGap: '3',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '4',
+		justifyContent: 'flex-end',
+		rowGap: '1',
 	})
 
-	export const createdBy = style({ typography: 'mono.inline' })
+	export const createdBy = style({ typography: 'label.12.mono' })
 
 	export const footer = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '20',
-		typography: 'body.b3',
+		gap: '3',
+		paddingBlock: '3',
+		paddingInline: '5',
+		typography: 'label.12',
 	})
 }

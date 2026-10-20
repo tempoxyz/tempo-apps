@@ -14,5 +14,9 @@ export default defineConfig({
 	},
 	test: {
 		include: ['test/**/*.node.test.ts'],
+		// TDS components import their own CSS and ship zyzz contracts, so they go
+		// through Vite like the app's server build (`ssr.noExternal`) instead of
+		// Node's loader, which rejects `.css`.
+		server: { deps: { inline: ['@tempoxyz/ds', 'zyzz'] } },
 	},
 })

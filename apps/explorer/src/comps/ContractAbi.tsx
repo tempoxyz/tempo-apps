@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import * as React from 'react'
 import type { Abi } from 'viem'
 
@@ -173,12 +173,12 @@ function useHighlightedJson(json: string, enabled: boolean): string | null {
 
 namespace styles {
 	export const viewer = style({
-		marginBottom: '8',
-		marginInline: '12',
+		marginBottom: '2',
+		marginInline: '3',
 		maxHeight: '280px !custom',
 		overflow: 'auto',
 	})
 
 	// `shiki` and `shiki-block` are global classes for the highlighter's markup.
-	export const code = style({ color: 'content.primary', whiteSpace: 'pre' })
+	export const code = style({ color: 'foreground', whiteSpace: 'pre' })
 }

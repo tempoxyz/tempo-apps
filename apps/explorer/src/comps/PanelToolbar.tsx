@@ -7,15 +7,11 @@
  * field, so "same value, different representation" always looks the same.
  */
 
-import {
-	IconButton as TdsIconButton,
-	Tooltip,
-	style,
-} from '@tempoxyz/ds/platform'
+import { Button, Tooltip, style } from '@tempoxyz/ds'
 import type * as React from 'react'
 import { cx } from 'zyzz'
 import { Choices } from '#comps/ui/Choices'
-import { pressDown, transitionColors, truncate } from '#styles/explorer'
+import { truncate } from '#styles/explorer'
 
 /**
  * One control, N mutually exclusive states — Decoded/Raw in a panel toolbar,
@@ -67,8 +63,8 @@ export declare namespace PanelToolbar {
 export namespace PanelToolbar {
 	/**
 	 * A toggle that is on gets the filled `secondary` variant; everything else
-	 * stays `tertiary`. The local style only adds hover and motion, which
-	 * IconButton leaves unset.
+	 * stays `text`. TDS Button owns hover, press, and motion; the local style
+	 * only keeps it from shrinking in the wrapping toolbar.
 	 */
 	export function IconButton(props: {
 		onClick: () => void
@@ -77,17 +73,23 @@ export namespace PanelToolbar {
 		children: React.ReactElement
 	}): React.JSX.Element {
 		return (
-			<Tooltip content={props.label}>
-				<TdsIconButton
-					aria-label={props.label}
-					onClick={props.onClick}
-					scale="small"
-					variant={props.active ? 'secondary' : 'tertiary'}
-					{...cx(styles.iconButton(), pressDown(), transitionColors())}
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Button
+							aria-label={props.label}
+							onClick={props.onClick}
+							shape="icon"
+							size="small"
+							variant={props.active ? 'secondary' : 'text'}
+							{...styles.iconButton()}
+						/>
+					}
 				>
 					{props.children}
-				</TdsIconButton>
-			</Tooltip>
+				</Tooltip.Trigger>
+				<Tooltip.Popup>{props.label}</Tooltip.Popup>
+			</Tooltip.Root>
 		)
 	}
 }
@@ -95,27 +97,22 @@ export namespace PanelToolbar {
 namespace styles {
 	export const toolbar = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '12',
+		gap: '2',
+		paddingBlock: '2',
+		paddingInline: '3',
 	})
 
 	export const summary = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		marginRight: 'auto !custom',
 		minWidth: '0 !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
-	export const iconButton = style({
-		flexShrink: 0,
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
-	})
+	export const iconButton = style({ flexShrink: 0 })
 }

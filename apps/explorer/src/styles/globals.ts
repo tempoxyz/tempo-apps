@@ -1,32 +1,50 @@
-import { vars } from '@tempoxyz/ds/platform'
-import { global } from 'zyzz/web'
+import { vars } from '@tempoxyz/ds'
+import { fontFace, global } from 'zyzz/web'
 
-// Tempo Design System supplies the Pilat and JetBrains Mono faces and body
-// font smoothing through `@tempoxyz/ds/platform.css`. These rules set the
-// remaining document defaults.
+// Tempo Design System emits its variables, the Pilat faces, and body font
+// smoothing. Its mono typography names "Geist Mono" but ships no mono face, so
+// the explorer serves JetBrains Mono (Tempo's mono face) under that family
+// from `public/fonts` (SIL Open Font License, see `JetBrainsMono-OFL.txt`).
+// TDS components such as Hex and the explorer's `mono()` recipe then match.
+fontFace({
+	fontDisplay: 'swap',
+	fontFamily: 'Geist Mono',
+	fontStyle: 'normal',
+	fontWeight: 400,
+	src: "url('/fonts/JetBrainsMono-Regular.woff2') format('woff2')",
+})
+
+fontFace({
+	fontDisplay: 'swap',
+	fontFamily: 'Geist Mono',
+	fontStyle: 'normal',
+	fontWeight: 500,
+	src: "url('/fonts/JetBrainsMono-Medium.woff2') format('woff2')",
+})
+
+// These rules set the remaining document defaults.
 global({
 	'@layer base': {
 		'html, :host': {
 			backgroundColor: vars.color.background.primary,
-			color: vars.color.content.primary,
+			color: vars.color.foreground,
 			colorScheme: 'dark',
-			fontFamily: 'Pilat, Arial, sans-serif',
+			fontFamily: vars.fontFamily.sans,
 			scrollbarGutter: 'stable',
 		},
 		':root': { touchAction: 'manipulation' },
 		'html[data-theme="light"]': { colorScheme: 'light' },
 		body: {
 			fontSize: '14px',
-			fontWeight: 500,
-			letterSpacing: '0.14px',
+			fontWeight: 400,
 			lineHeight: '20px',
 			minWidth: '320px',
 		},
-		'pre, code': { fontFamily: '"JetBrains Mono", monospace', fontWeight: 400 },
+		'pre, code': { fontFamily: vars.fontFamily.mono, fontWeight: 400 },
 		// Matches the focus ring TDS components draw.
 		'a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible':
 			{
-				outlineColor: 'currentColor',
+				outlineColor: vars.color.blue[700],
 				outlineOffset: '2px',
 				outlineStyle: 'solid',
 				outlineWidth: '2px',
@@ -91,8 +109,8 @@ global({
 // class. Its inline backgrounds need !important, which only takes literals.
 global({
 	'.shiki-block, .shiki-block.shiki': {
-		backgroundColor: vars.color.background.secondary,
-		fontFamily: '"JetBrains Mono", monospace',
+		backgroundColor: vars.color.background.surface,
+		fontFamily: vars.fontFamily.mono,
 		fontSize: '12px',
 		fontWeight: 400,
 		letterSpacing: '0',
@@ -118,9 +136,7 @@ global({
 		outlineStyle: 'solid',
 		outlineWidth: '1px',
 	},
-	'[data-permalink-highlight="on"]': {
-		outlineColor: vars.color.content.accent,
-	},
+	'[data-permalink-highlight="on"]': { outlineColor: vars.color.blue[900] },
 	'[data-permalink-highlight="fading"]': {
 		outlineColor: 'transparent',
 		transition: 'outline-color 500ms',

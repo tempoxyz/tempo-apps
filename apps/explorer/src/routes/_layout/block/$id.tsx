@@ -46,7 +46,7 @@ import {
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
 import { link, linkHover } from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 
 const defaultSearchValues = { page: 1 } as const
 
@@ -593,18 +593,18 @@ function getEstimatedFee(transaction: BlockTransaction) {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '16',
+		gap: '4',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+			paddingBottom: '8',
+			paddingTop: '10',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -617,7 +617,7 @@ namespace styles {
 	})
 
 	export const systemFrom = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		overflow: 'hidden',
 		textAlign: 'right',
 		textOverflow: 'ellipsis',
@@ -627,22 +627,22 @@ namespace styles {
 
 	export const hashLink = style({ width: '100% !custom' })
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
 	export const secondary = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const call = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		flex: 1,
-		gap: '8',
+		gap: '2',
 	})
 
 	export const send = style({
-		color: 'content.primary',
+		color: 'foreground',
 		whiteSpace: 'nowrap',
 	})
 }

@@ -1,4 +1,4 @@
-import { StatusIndicator, style } from '@tempoxyz/ds/platform'
+import { style, Tag } from '@tempoxyz/ds'
 import { formatUnits } from 'viem'
 import { PriceFormatter } from '#lib/formatting'
 
@@ -62,9 +62,15 @@ export function TransferAmountCell(props: {
 			}}
 		>
 			{direction === 'out' ? (
-				<StatusIndicator tone="negative">{`-${text}`}</StatusIndicator>
+				<Tag intent="negative" variant="plain">
+					<Tag.Dot />
+					{`-${text}`}
+				</Tag>
 			) : direction === 'in' ? (
-				<StatusIndicator tone="positive">{text}</StatusIndicator>
+				<Tag intent="positive" variant="plain">
+					<Tag.Dot />
+					{text}
+				</Tag>
 			) : (
 				text
 			)}
@@ -82,15 +88,15 @@ export function BalanceCell(props: { balance: string; decimals?: number }) {
 
 namespace styles {
 	export const amount = style({
-		color: 'content.primary',
-		typography: 'body.b3',
+		color: 'foreground',
+		typography: 'label.12',
 	})
 
 	export const transfer = style({
-		color: 'content.primary',
+		color: 'foreground',
 		cursor: 'pointer',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b3',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 }

@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import { cx } from 'zyzz'
 
 export function InfoRow(props: InfoRow.Props): React.JSX.Element {
@@ -22,31 +22,31 @@ export declare namespace InfoRow {
 namespace styles {
 	export const row = style({
 		alignItems: 'flex-start',
-		borderBottomColor: 'line.secondary',
+		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
+		borderBottomWidth: '1px',
 		display: 'flex',
-		gap: '16',
-		paddingBlock: '12',
-		paddingInline: '20',
-		':last-child': { borderBottomWidth: 'none' },
+		gap: '4',
+		paddingBlock: '3',
+		paddingInline: '5',
+		':last-child': { borderBottomWidth: '0px' },
 	})
 
 	export const stackOnMobile = style({
-		'@media (width < 600px)': { flexDirection: 'column', gap: '8' },
+		'@media (width < 600px)': { flexDirection: 'column', gap: '2' },
 	})
 
 	export const label = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
 		minWidth: '100px !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		'@media (width >= 640px)': { minWidth: '140px !custom' },
 	})
 
 	export const value = style({
 		minWidth: '0 !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		width: '100% !custom',
 		wordBreak: 'break-all',
 	})

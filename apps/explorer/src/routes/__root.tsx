@@ -9,7 +9,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
@@ -36,9 +36,7 @@ import {
 } from '#lib/profiling'
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
-import jetBrainsMono from '@tempoxyz/ds/fonts/JetBrainsMono-Regular.woff2?url'
-import pilatBook from '@tempoxyz/ds/fonts/Pilat-Book.woff2?url'
-import dsCss from '@tempoxyz/ds/platform.css?url'
+import pilatRegular from '@tempoxyz/ds/fonts/Pilat-Regular.woff2?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
 	const pathname =
@@ -128,24 +126,21 @@ export const Route = createRootRouteWithContext<{
 		],
 		links: [
 			...getExplorerCanonicalLinks(),
-			// TDS body text is Pilat Book (weight 500); identifiers use JetBrains Mono.
+			// TDS body copy is Pilat Regular (weight 400); identifiers use JetBrains
+			// Mono, served from `public/fonts`.
 			{
 				rel: 'preload',
-				href: pilatBook,
+				href: pilatRegular,
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
 			},
 			{
 				rel: 'preload',
-				href: jetBrainsMono,
+				href: '/fonts/JetBrainsMono-Regular.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
-			},
-			{
-				rel: 'stylesheet',
-				href: dsCss,
 			},
 			{
 				rel: 'icon',

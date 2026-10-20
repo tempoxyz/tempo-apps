@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { style, variants } from '@tempoxyz/ds'
 import type { Address as OxAddress } from 'ox'
 import * as Value from 'ox/Value'
 import { cx } from 'zyzz'
@@ -178,7 +178,7 @@ export namespace TxBalanceChanges {
 
 	/**
 	 * A signed balance change. Direction is carried by the sign and a coloured
-	 * dot; the text stays `content.primary`, since the status colours fail
+	 * dot; the text stays `foreground`, since the status colours fail
 	 * contrast as text in light mode.
 	 */
 	export function Diff(props: Diff.Props): React.JSX.Element {
@@ -210,42 +210,42 @@ namespace styles {
 		alignItems: 'center',
 		display: 'inline-flex',
 		flexShrink: '0 !custom',
-		gap: '4',
+		gap: '1',
 	})
 
-	export const invalid = style({ color: 'content.secondary' })
+	export const invalid = style({ color: 'gray.900' })
 
 	export const amount = style({
 		fontVariantNumeric: 'tabular-nums',
 		minWidth: '0 !custom',
 	})
 
-	export const balance = style({ color: 'content.secondary' })
+	export const balance = style({ color: 'gray.900' })
 
 	export const diff = style({
 		alignItems: 'center',
-		color: 'content.primary',
-		columnGap: '8',
+		color: 'foreground',
+		columnGap: '2',
 		display: 'inline-flex',
 		fontVariantNumeric: 'tabular-nums',
 		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
 	})
 
-	// StatusIndicator's dot, without its label styling.
+	// A status dot in the intent icon colours, without a label.
 	export const diffDot = variants({
 		base: {
 			borderRadius: 'full',
 			flexShrink: '0 !custom',
-			height: '8',
-			width: '8',
+			height: '2',
+			width: '2',
 		},
 		defaultVariants: { tone: 'neutral' },
 		variants: {
 			tone: {
-				negative: { backgroundColor: 'content.negative' },
+				negative: { backgroundColor: 'red.800' },
 				neutral: { display: 'none' },
-				positive: { backgroundColor: 'content.positive' },
+				positive: { backgroundColor: 'green.700' },
 			},
 		},
 	})

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 
 const demoPages = [
 	{ path: '/demo/tx', label: 'Transaction' },
@@ -37,17 +37,17 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '16',
+		gap: '4',
 		justifyContent: 'center',
-		paddingBottom: '32',
-		paddingTop: '64',
-		typography: 'body.b3',
+		paddingBottom: '8',
+		paddingTop: '16',
+		typography: 'label.12',
 	})
 
-	export const title = style({ color: 'content.secondary' })
+	export const title = style({ color: 'gray.900' })
 
 	export const link = style({
-		color: 'content.primary',
+		color: 'foreground',
 		selectors: { '&:active': { transform: 'translateY(0.5px)' } },
 	})
 }

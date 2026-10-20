@@ -1,7 +1,8 @@
-import { Badge, StatusIndicator, style, vars } from '@tempoxyz/ds/platform'
-import { Database } from '@tempoxyz/ds/platform/icons'
+import { style, Tag, vars } from '@tempoxyz/ds'
+import { Database } from '@tempoxyz/ds/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from 'zyzz'
+import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import type { PrestateDiff } from '#lib/queries'
 import {
 	codeIdentifier,
@@ -332,9 +333,7 @@ export namespace TxTraceFlamegraph {
 				<div {...styles.detailsPanel()}>
 					<div {...styles.detailsMain()}>
 						<div {...styles.detailsHeading()}>
-							<Badge scale="small" variant="gray">
-								{node.trace.type}
-							</Badge>
+							<Tag intent="neutral">{node.trace.type}</Tag>
 							{node.trace.to && (
 								<span {...cx(link(), truncate())}>
 									{node.contractName
@@ -345,13 +344,12 @@ export namespace TxTraceFlamegraph {
 						</div>
 						<span {...cx(codeIdentifier(), truncate())}>{displayName}</span>
 						{node.hasError && (
-							<StatusIndicator
-								tone="negative"
-								// Revert reasons can be long; let them wrap.
-								style={{ height: 'auto', whiteSpace: 'normal' }}
-							>
-								{node.trace.revertReason || node.trace.error || 'reverted'}
-							</StatusIndicator>
+							<LiveIndicator tone="negative">
+								{/* Revert reasons can be long; let them wrap. */}
+								<span {...styles.revertReason()}>
+									{node.trace.revertReason || node.trace.error || 'reverted'}
+								</span>
+							</LiveIndicator>
 						)}
 					</div>
 					<div {...styles.detailsStats()}>
@@ -387,23 +385,23 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
-		paddingBlock: '8',
-		paddingInline: '16',
+		paddingBlock: '2',
+		paddingInline: '4',
 	})
 
 	export const headerLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const chart = style({
 		overflowX: 'auto',
-		paddingBlock: '12',
-		paddingInline: '16',
+		paddingBlock: '3',
+		paddingInline: '4',
 	})
 
 	export const rows = style({
@@ -416,22 +414,22 @@ namespace styles {
 	export const row = style({ position: 'relative', width: '100% !custom' })
 
 	export const bar = style({
-		borderRadius: '3xs',
+		borderRadius: 'sm',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		height: '100% !custom',
 		overflow: 'hidden',
 		position: 'absolute',
-		top: 'none',
-		typography: 'mono.inline',
+		top: '0',
+		typography: 'label.12.mono',
 	})
 
-	// The TDS violet chart series, mixed per frame by gas share. Matches the
-	// simulation gas bars.
+	// The TDS purple ramp's accent step, mixed per frame by gas share. Matches
+	// the simulation gas bars.
 	export const barFill = style(
 		(values: { border: `${number}%`; fill: `${number}%` }) => ({
-			backgroundColor: `color-mix(in oklab, ${vars.color.chart.series[6]} ${values.fill}, transparent) !custom`,
-			borderColor: `color-mix(in oklab, ${vars.color.chart.series[6]} ${values.border}, transparent) !custom`,
+			backgroundColor: `color-mix(in oklab, ${vars.color.purple[700]} ${values.fill}, transparent) !custom`,
+			borderColor: `color-mix(in oklab, ${vars.color.purple[700]} ${values.border}, transparent) !custom`,
 		}),
 	)
 
@@ -440,71 +438,71 @@ namespace styles {
 	export const clickable = style({ cursor: 'pointer' })
 
 	export const selected = style({
-		boxShadow: `inset 0 0 0 1px ${vars.color.content.primary}`,
+		boxShadow: `inset 0 0 0 1px ${vars.color.foreground} !custom`,
 	})
 
 	export const failed = style({
-		borderLeftColor: 'content.negative',
-		borderLeftWidth: 'thick',
+		borderLeftColor: 'red.900',
+		borderLeftWidth: '2px',
 	})
 
 	export const barContent = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
-		inset: 'none',
+		gap: '1',
+		inset: '0',
 		overflow: 'hidden',
-		paddingInline: '8',
+		paddingInline: '2',
 		position: 'absolute',
 		userSelect: 'none',
 	})
 
 	export const barLabel = style({
-		color: 'content.primary',
+		color: 'foreground',
 		minWidth: '0 !custom',
 	})
 
 	export const barShare = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
 	})
 
 	export const barIcon = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
-		height: '12',
-		width: '12',
+		height: '3',
+		width: '3',
 	})
 
-	export const details = style({ paddingBottom: '12', paddingInline: '16' })
+	export const details = style({ paddingBottom: '3', paddingInline: '4' })
 
 	export const detailsPanel = style({
 		alignItems: 'flex-start',
 		backgroundColor: 'background.primary',
-		borderColor: 'line.secondary',
-		borderRadius: '2xs',
-		borderWidth: 'regular',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'lg',
+		borderWidth: '1px',
 		display: 'flex',
-		gap: '12',
+		gap: '3',
 		minHeight: '72px !custom',
 		overflow: 'hidden',
-		paddingBlock: '12',
-		paddingInline: '12',
-		typography: 'mono.inline',
+		paddingBlock: '3',
+		paddingInline: '3',
+		typography: 'label.12.mono',
 	})
 
 	export const detailsMain = style({
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
 	export const detailsHeading = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
@@ -513,25 +511,31 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexShrink: '0 !custom',
-		gap: '2',
+		gap: '2px !custom',
 		textAlign: 'right',
 	})
 
-	export const primary = style({ color: 'content.primary' })
+	export const revertReason = style({
+		minWidth: '0 !custom',
+		overflowWrap: 'anywhere',
+		whiteSpace: 'normal',
+	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const primary = style({ color: 'foreground' })
+
+	export const secondary = style({ color: 'gray.900' })
 
 	export const storage = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '4',
-		marginTop: '2',
+		gap: '1',
+		marginTop: '2px !custom',
 	})
 
 	export const icon = style({
 		flexShrink: '0 !custom',
-		height: '12',
-		width: '12',
+		height: '3',
+		width: '3',
 	})
 }

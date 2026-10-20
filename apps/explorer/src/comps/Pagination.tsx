@@ -1,11 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { style, Tooltip, vars } from '@tempoxyz/ds/platform'
+import { Pagination as TdsPagination, style, Tooltip } from '@tempoxyz/ds'
 import {
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import { cx } from 'zyzz'
 import { useMediaQuery } from '#lib/hooks'
 import { pressDown } from '#styles/explorer'
@@ -45,32 +45,44 @@ export function Pagination(props: Pagination.Props): React.JSX.Element {
 		return (
 			<div {...styles.compact()}>
 				<div {...styles.compactNav()}>
-					<Tooltip content="First page">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(previous) => ({ ...previous, page: 1 })}
-							disabled={page <= 1 || isPending}
-							{...cx(styles.navButton(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Link
+									aria-label="First page"
+									to="."
+									resetScroll={false}
+									search={(previous) => ({ ...previous, page: 1 })}
+									disabled={page <= 1 || isPending}
+									{...cx(styles.navButton(), pressDown())}
+								/>
+							}
 						>
 							<ChevronsLeft />
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>First page</Tooltip.Popup>
+					</Tooltip.Root>
 
-					<Tooltip content="Previous page">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(previous) => ({
-								...previous,
-								page: (previous?.page ?? 1) - 1,
-							})}
-							disabled={page <= 1 || isPending}
-							{...cx(styles.navButton(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Link
+									aria-label="Previous page"
+									to="."
+									resetScroll={false}
+									search={(previous) => ({
+										...previous,
+										page: (previous?.page ?? 1) - 1,
+									})}
+									disabled={page <= 1 || isPending}
+									{...cx(styles.navButton(), pressDown())}
+								/>
+							}
 						>
 							<ChevronLeft />
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Previous page</Tooltip.Popup>
+					</Tooltip.Root>
 
 					<span {...styles.compactLabel()}>
 						Page{' '}
@@ -80,32 +92,44 @@ export function Pagination(props: Pagination.Props): React.JSX.Element {
 						of {Pagination.numFormat.format(pages)}
 					</span>
 
-					<Tooltip content="Next page">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(previous) => ({
-								...previous,
-								page: (previous?.page ?? 1) + 1,
-							})}
-							disabled={page >= pages || isPending}
-							{...cx(styles.navButton(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Link
+									aria-label="Next page"
+									to="."
+									resetScroll={false}
+									search={(previous) => ({
+										...previous,
+										page: (previous?.page ?? 1) + 1,
+									})}
+									disabled={page >= pages || isPending}
+									{...cx(styles.navButton(), pressDown())}
+								/>
+							}
 						>
 							<ChevronRight />
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Next page</Tooltip.Popup>
+					</Tooltip.Root>
 
-					<Tooltip content="Last page">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(previous) => ({ ...previous, page: pages })}
-							disabled={page >= pages || isPending}
-							{...cx(styles.navButton(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Link
+									aria-label="Last page"
+									to="."
+									resetScroll={false}
+									search={(previous) => ({ ...previous, page: pages })}
+									disabled={page >= pages || isPending}
+									{...cx(styles.navButton(), pressDown())}
+								/>
+							}
 						>
 							<ChevronsRight />
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Last page</Tooltip.Popup>
+					</Tooltip.Root>
 				</div>
 
 				<Pagination.Count totalItems={totalItems} itemsLabel={itemsLabel} />
@@ -115,72 +139,76 @@ export function Pagination(props: Pagination.Props): React.JSX.Element {
 	return (
 		<div {...styles.full()}>
 			<div {...styles.fullNav()}>
-				<Tooltip content="Previous page">
-					<Link
-						to="."
-						resetScroll={false}
-						search={(previous) => ({
-							...previous,
-							page: (previous?.page ?? 1) - 1,
-						})}
-						disabled={page <= 1 || isPending}
-						{...cx(styles.navButton(), pressDown())}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								aria-label="Previous page"
+								to="."
+								resetScroll={false}
+								search={(previous) => ({
+									...previous,
+									page: (previous?.page ?? 1) - 1,
+								})}
+								disabled={page <= 1 || isPending}
+								{...cx(styles.navButton(), pressDown())}
+							/>
+						}
 					>
 						<ChevronLeft />
-					</Link>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Previous page</Tooltip.Popup>
+				</Tooltip.Root>
 
-				<div {...styles.pageList()}>
+				<TdsPagination size="small">
 					{(() => {
 						const pageNumbers = Pagination.getPagination(page, pages)
 						let ellipsisCount = 0
 
 						return pageNumbers.map((p) =>
 							p === Pagination.Ellipsis ? (
-								<span
-									key={`ellipsis-${ellipsisCount++}`}
-									{...styles.ellipsis()}
-								>
-									…
-								</span>
+								<TdsPagination.Ellipsis key={`ellipsis-${ellipsisCount++}`} />
 							) : (
-								<Link
+								<TdsPagination.Page
 									key={p}
-									to="."
-									resetScroll={false}
-									disabled={page === p || isPending}
-									search={(previous) => ({ ...previous, page: p })}
-									aria-current={page === p ? 'page' : undefined}
-									{...cx(
-										styles.pageLink(),
-										page === p && vars({ set: 'inverse' }),
-										page === p && styles.pageCurrent(),
-										page !== p && styles.pageIdle(),
-										page !== p && pressDown(),
-										isPending && page !== p && styles.pagePending(),
-									)}
+									current={page === p}
+									render={
+										<Link
+											to="."
+											resetScroll={false}
+											disabled={page === p || isPending}
+											search={(previous) => ({ ...previous, page: p })}
+										/>
+									}
+									{...(isPending && page !== p ? styles.pagePending() : {})}
 								>
 									{p}
-								</Link>
+								</TdsPagination.Page>
 							),
 						)
 					})()}
-				</div>
+				</TdsPagination>
 
-				<Tooltip content="Next page">
-					<Link
-						to="."
-						resetScroll={false}
-						search={(previous) => ({
-							...previous,
-							page: (previous?.page ?? 1) + 1,
-						})}
-						disabled={page >= pages || isPending}
-						{...cx(styles.navButton(), pressDown())}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								aria-label="Next page"
+								to="."
+								resetScroll={false}
+								search={(previous) => ({
+									...previous,
+									page: (previous?.page ?? 1) + 1,
+								})}
+								disabled={page >= pages || isPending}
+								{...cx(styles.navButton(), pressDown())}
+							/>
+						}
 					>
 						<ChevronRight />
-					</Link>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Next page</Tooltip.Popup>
+				</Tooltip.Root>
 			</div>
 
 			<Pagination.Count
@@ -282,31 +310,43 @@ export namespace Pagination {
 
 		return (
 			<div {...styles.simple()}>
-				<Tooltip content="First page">
-					<Link
-						to="."
-						resetScroll={false}
-						search={(prev) => ({ ...prev, page: 1 })}
-						disabled={page <= 1}
-						{...cx(styles.navButton(), pressDown())}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								aria-label="First page"
+								to="."
+								resetScroll={false}
+								search={(prev) => ({ ...prev, page: 1 })}
+								disabled={page <= 1}
+								{...cx(styles.navButton(), pressDown())}
+							/>
+						}
 					>
 						<ChevronsLeft />
-					</Link>
-				</Tooltip>
-				<Tooltip content="Previous page">
-					<Link
-						to="."
-						resetScroll={false}
-						search={(prev) => ({
-							...prev,
-							page: (prev?.page ?? 1) - 1,
-						})}
-						disabled={page <= 1}
-						{...cx(styles.navButton(), pressDown())}
+					</Tooltip.Trigger>
+					<Tooltip.Popup>First page</Tooltip.Popup>
+				</Tooltip.Root>
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								aria-label="Previous page"
+								to="."
+								resetScroll={false}
+								search={(prev) => ({
+									...prev,
+									page: (prev?.page ?? 1) - 1,
+								})}
+								disabled={page <= 1}
+								{...cx(styles.navButton(), pressDown())}
+							/>
+						}
 					>
 						<ChevronLeft />
-					</Link>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Previous page</Tooltip.Popup>
+				</Tooltip.Root>
 				{showPageLabel && (
 					<span {...styles.simpleLabel()}>
 						<span {...cx(styles.primary(), fetching && styles.fetching())}>
@@ -316,36 +356,48 @@ export namespace Pagination {
 						{totalPagesLabel}
 					</span>
 				)}
-				<Tooltip content="Next page">
-					<Link
-						to="."
-						resetScroll={false}
-						search={(prev) => ({
-							...prev,
-							page: (prev?.page ?? 1) + 1,
-						})}
-						onMouseEnter={handlePrefetchNext}
-						onFocus={handlePrefetchNext}
-						onMouseLeave={onCancelPrefetchNext}
-						onBlur={onCancelPrefetchNext}
-						disabled={disableNext}
-						{...cx(styles.navButton(), pressDown())}
+				<Tooltip.Root>
+					<Tooltip.Trigger
+						render={
+							<Link
+								aria-label="Next page"
+								to="."
+								resetScroll={false}
+								search={(prev) => ({
+									...prev,
+									page: (prev?.page ?? 1) + 1,
+								})}
+								onMouseEnter={handlePrefetchNext}
+								onFocus={handlePrefetchNext}
+								onMouseLeave={onCancelPrefetchNext}
+								onBlur={onCancelPrefetchNext}
+								disabled={disableNext}
+								{...cx(styles.navButton(), pressDown())}
+							/>
+						}
 					>
 						<ChevronRight />
-					</Link>
-				</Tooltip>
+					</Tooltip.Trigger>
+					<Tooltip.Popup>Next page</Tooltip.Popup>
+				</Tooltip.Root>
 				{typeof pages === 'number' && !pagesCapped && (
-					<Tooltip content="Last page">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(prev) => ({ ...prev, page: pages })}
-							disabled={page >= pages || disableLastPage}
-							{...cx(styles.navButton(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Link
+									aria-label="Last page"
+									to="."
+									resetScroll={false}
+									search={(prev) => ({ ...prev, page: pages })}
+									disabled={page >= pages || disableLastPage}
+									{...cx(styles.navButton(), pressDown())}
+								/>
+							}
 						>
 							<ChevronsRight />
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Last page</Tooltip.Popup>
+					</Tooltip.Root>
 				)}
 			</div>
 		)
@@ -424,62 +476,62 @@ export namespace Pagination {
 namespace styles {
 	export const single = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		justifyContent: 'flex-end',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
-	export const singleLabel = style({ marginLeft: '8' })
+	export const singleLabel = style({ marginLeft: '2' })
 
 	export const number = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const separator = style({ color: 'content.tertiary' })
+	export const separator = style({ color: 'gray.700' })
 
 	export const fetching = style({ opacity: 0.5 })
 
-	// TDS IconButton small secondary geometry on TanStack `<Link>`s, which keep
-	// `disabled` and search updates.
+	// TDS small secondary icon Button geometry on TanStack `<Link>`s, which
+	// keep `disabled` and search updates. TDS Button styles only `:disabled`.
 	export const navButton = style({
 		alignItems: 'center',
-		backgroundColor: 'container.regular',
+		backgroundColor: 'grayAlpha.100',
 		borderRadius: 'full',
-		color: 'content.primary',
+		color: 'foreground',
 		cursor: 'pointer',
 		display: 'inline-flex',
 		flexShrink: '0 !custom',
-		height: '32',
+		height: '8',
 		justifyContent: 'center',
-		width: '32',
+		width: '8',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
+			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
 		selectors: {
-			'& > svg': { height: '16', width: '16' },
+			'& > svg': { height: '4', width: '4' },
 			'&[aria-disabled="true"]': {
-				backgroundColor: 'container.regular',
+				backgroundColor: 'grayAlpha.100',
 				cursor: 'default',
-				opacity: 0.5,
+				opacity: 0.4,
 			},
 		},
 	})
 
 	export const compact = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		gap: '3',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 		width: '100% !custom',
 		'@media (width >= 640px)': {
 			flexDirection: 'row',
@@ -489,7 +541,7 @@ namespace styles {
 
 	export const compactNav = style({
 		display: 'grid',
-		gap: '8',
+		gap: '2',
 		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
 		justifyItems: 'center',
 		'@media (width >= 480px)': { alignItems: 'center', display: 'flex' },
@@ -499,19 +551,19 @@ namespace styles {
 		fontVariantNumeric: 'tabular-nums',
 		gridColumn: 'span 4 / span 4',
 		gridRowStart: '1',
-		paddingInline: '4',
+		paddingInline: '1',
 		textAlign: 'center',
 		whiteSpace: 'nowrap',
 	})
 
 	export const full = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		gap: '3',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 		'@media (width >= 768px)': {
 			alignItems: 'center',
 			flexDirection: 'row',
@@ -523,71 +575,32 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'row',
-		gap: '8',
+		gap: '2',
 		marginInline: 'auto !custom',
-		'@media (width >= 768px)': { marginInline: 'none' },
+		'@media (width >= 768px)': { marginInline: '0' },
 	})
 
-	export const pageList = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '4',
-	})
-
-	export const ellipsis = style({
-		alignItems: 'center',
-		color: 'content.tertiary',
-		display: 'flex',
-		height: '32',
-		justifyContent: 'center',
-		width: '32',
-	})
-
-	export const pageLink = style({
-		alignItems: 'center',
-		borderRadius: 'full',
-		display: 'flex',
-		height: '32',
-		justifyContent: 'center',
-		minWidth: '32',
-		paddingInline: '8',
-	})
-
-	// Applied with the inverse token set, so it fills with the opposite theme.
-	export const pageCurrent = style({
-		backgroundColor: 'background.primary',
-		color: 'content.primary',
-		cursor: 'default',
-	})
-
-	export const pageIdle = style({
-		color: 'content.primary',
-		cursor: 'pointer',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
-	})
-
-	export const pagePending = style({ cursor: 'not-allowed', opacity: 0.5 })
+	// TDS `Pagination.Page` has no pending state.
+	export const pagePending = style({ opacity: 0.5 })
 
 	export const simple = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-start' },
 	})
 
 	export const simpleLabel = style({
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '4',
+		paddingInline: '1',
 		whiteSpace: 'nowrap',
 	})
 
 	export const count = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-end' },
 	})

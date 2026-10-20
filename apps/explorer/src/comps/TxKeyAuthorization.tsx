@@ -1,10 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import {
-	InlineCode,
-	SimpleTable,
-	TextButton,
-	style,
-} from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
+import { ChevronRight } from '@tempoxyz/ds/icons'
 import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
@@ -17,11 +13,7 @@ import {
 } from '#lib/domain/access-key'
 import { isTip20Address } from '#lib/domain/tip20'
 import { useAutoloadAbi } from '#lib/queries'
-import { link, linkHover } from '#styles/explorer'
-
-// InlineCode keeps code on one line; long signatures must wrap in narrow
-// description columns.
-const wrap = { overflowWrap: 'anywhere', whiteSpace: 'normal' } as const
+import { link, linkHover, textAction } from '#styles/explorer'
 
 const tokenFunctions: Record<string, string> = {
 	'0x095ea7b3': 'approve(address,uint256)',
@@ -36,7 +28,7 @@ export function TxKeyAuthorization(
 	const targets = groupKeyScopes(authorization.scopes)
 	return (
 		<section aria-label="Access key permissions" {...styles.root()}>
-			<SimpleTable>
+			<dl {...styles.table()}>
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -71,7 +63,7 @@ export function TxKeyAuthorization(
 						</ul>
 					)}
 				</PermissionRow>
-			</SimpleTable>
+			</dl>
 		</section>
 	)
 }
@@ -81,10 +73,10 @@ function PermissionRow(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<SimpleTable.Row>
-			<SimpleTable.Dt>{props.label}</SimpleTable.Dt>
-			<SimpleTable.Dd {...styles.value()}>{props.children}</SimpleTable.Dd>
-		</SimpleTable.Row>
+		<div {...styles.row()}>
+			<dt {...styles.label()}>{props.label}</dt>
+			<dd {...styles.value()}>{props.children}</dd>
+		</div>
 	)
 }
 
@@ -101,13 +93,16 @@ export namespace TxKeyAuthorization {
 		const id = useId()
 		return (
 			<div {...styles.disclosure()}>
-				<TextButton
+				<button
 					aria-expanded={expanded}
 					aria-controls={id}
 					onClick={() => setExpanded(!expanded)}
+					type="button"
+					{...textAction()}
 				>
-					{expanded ? 'Hide permissions' : 'Show permissions'}
-				</TextButton>
+					<span>{expanded ? 'Hide permissions' : 'Show permissions'}</span>
+					<ChevronRight />
+				</button>
 				<div id={id} hidden={!expanded} {...styles.panel()}>
 					{expanded && <TxKeyAuthorization {...props} />}
 				</div>
@@ -188,8 +183,8 @@ function CallScope(props: {
 					return (
 						<li key={`${rule.selector}-${index}`} {...styles.stack()}>
 							<div {...styles.ruleLine()}>
-								<InlineCode
-									style={wrap}
+								<code
+									{...styles.code()}
 									title={
 										abiFunction?.type === 'function'
 											? toFunctionSignature(abiFunction)
@@ -197,9 +192,9 @@ function CallScope(props: {
 									}
 								>
 									{functionName ?? rule.selector ?? 'Any function'}
-								</InlineCode>
+								</code>
 								{functionName && (
-									<InlineCode style={wrap}>{rule.selector}</InlineCode>
+									<code {...styles.code()}>{rule.selector}</code>
 								)}
 							</div>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
@@ -237,26 +232,61 @@ function CallScope(props: {
 namespace styles {
 	export const root = style({ minWidth: '0 !custom' })
 
-	// SimpleTable.Dd leaves its layout unset.
-	export const value = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
+	// A definition list of labelled rows, each with a hairline above it.
+	export const table = style({
+		color: 'foreground',
+		margin: '0',
+		width: '100% !custom',
 	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const row = style({
+		columnGap: '4',
+		display: 'flex',
+		paddingBlock: '4',
+		position: 'relative',
+		selectors: {
+			'&::before': {
+				backgroundColor: 'grayAlpha.300',
+				content: '"" !custom',
+				height: '1px !custom',
+				left: '0px !custom',
+				position: 'absolute',
+				right: '0px !custom',
+				top: '-1px !custom',
+			},
+		},
+	})
+
+	export const label = style({
+		flex: '0 0 39.0278% !custom',
+		overflowWrap: 'anywhere',
+		typography: 'copy.14.strong',
+	})
+
+	export const value = style({
+		display: 'flex',
+		flex: '1 !custom',
+		flexDirection: 'column',
+		gap: '2',
+		margin: '0',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		typography: 'copy.14',
+	})
+
+	export const secondary = style({ color: 'gray.900' })
 
 	export const targets = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 	})
 
 	export const disclosure = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
@@ -265,31 +295,43 @@ namespace styles {
 		width: '100% !custom',
 	})
 
+	// Inline code that wraps, since long signatures sit in narrow columns.
+	export const code = style({
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'sm',
+		color: 'foreground',
+		fontFeatureSettings: '"zero" 1 !custom',
+		overflowWrap: 'anywhere',
+		paddingBlock: '2px !custom',
+		paddingInline: '1',
+		typography: 'label.12.mono',
+	})
+
 	export const address = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const stack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
 	export const limitLine = style({
 		alignItems: 'baseline',
-		columnGap: '8',
+		columnGap: '2',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '2',
+		rowGap: '2px !custom',
 	})
 
 	export const limitAmount = style({
 		alignItems: 'baseline',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
@@ -299,24 +341,24 @@ namespace styles {
 	})
 
 	export const rules = style({
-		borderColor: 'line.secondary',
-		borderLeftWidth: 'regular',
+		borderColor: 'grayAlpha.200',
+		borderLeftWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingLeft: '8',
+		gap: '2',
+		paddingLeft: '2',
 	})
 
 	export const ruleLine = style({
 		alignItems: 'baseline',
-		columnGap: '8',
+		columnGap: '2',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '4',
+		rowGap: '1',
 	})
 
 	export const recipients = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 }

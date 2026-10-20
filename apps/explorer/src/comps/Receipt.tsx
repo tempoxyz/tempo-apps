@@ -1,13 +1,13 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { TempoLogoWordmark } from '@tempoxyz/ds/brand/logos'
-import { StatusIndicator, style, vars } from '@tempoxyz/ds/platform'
-import { Document, Download, Share } from '@tempoxyz/ds/platform/icons'
+import { style, Tag } from '@tempoxyz/ds'
+import { Document, Download, Share } from '@tempoxyz/ds/icons'
 import type { Address, Hex } from 'ox'
 import * as Value from 'ox/Value'
 import { cx } from 'zyzz'
 import { Amount } from '#comps/Amount'
 import { CopyButton } from '#comps/CopyButton'
 import { Midcut } from '#comps/Midcut'
+import { TempoWordmark } from '#comps/TempoWordmark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -93,7 +93,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 			<div data-receipt {...styles.card()}>
 				<div {...styles.head()}>
 					<div {...styles.mark()}>
-						<TempoLogoWordmark
+						<TempoWordmark
 							aria-label="Tempo"
 							height={16}
 							width={73}
@@ -155,7 +155,10 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 						{status === 'reverted' && (
 							<div {...cx(styles.field(), styles.centered())}>
 								<span {...styles.label()}>Status</span>
-								<StatusIndicator tone="negative">Failed</StatusIndicator>
+								<Tag intent="negative" variant="plain">
+									<Tag.Dot />
+									Failed
+								</Tag>
 							</div>
 						)}
 					</div>
@@ -569,14 +572,16 @@ export namespace Receipt {
 
 namespace styles {
 	export const card = style({
-		backgroundColor: 'background.secondary',
-		borderBottomWidth: 'none',
-		borderColor: 'line.secondary',
-		borderTopLeftRadius: 'xs',
-		borderTopRightRadius: 'xs',
-		borderWidth: 'regular',
-		boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary}`,
-		color: 'content.primary',
+		backgroundColor: 'background.surface',
+		borderBottomWidth: '0px',
+		borderColor: 'grayAlpha.200',
+		borderTopLeftRadius: 'xl',
+		borderTopRightRadius: 'xl',
+		borderWidth: '1px',
+		// Black shadows in both schemes, deeper in dark mode.
+		boxShadow:
+			'0 1px 2px light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.16)), 0 8px 24px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.32)) !custom',
+		color: 'foreground',
 		display: 'flex',
 		flexDirection: 'column',
 		width: 'min(480px, calc(100vw - 32px)) !custom',
@@ -585,18 +590,18 @@ namespace styles {
 	export const head = style({
 		alignItems: 'flex-start',
 		display: 'flex',
-		gap: '16',
-		paddingBottom: '16',
-		paddingInline: '24',
-		paddingTop: '24',
-		'@media (width >= 640px)': { gap: '32' },
+		gap: '4',
+		paddingBottom: '4',
+		paddingInline: '6',
+		paddingTop: '6',
+		'@media (width >= 640px)': { gap: '8' },
 	})
 
 	export const mark = style({ flexShrink: '0 !custom' })
 
-	// The brand artwork hard-codes a black fill.
+	// The wordmark paints with `currentColor`.
 	export const wordmark = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'block',
 	})
 
@@ -604,9 +609,9 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
-		typography: 'body.b1',
+		typography: 'copy.16',
 	})
 
 	export const field = style({
@@ -615,12 +620,12 @@ namespace styles {
 		justifyContent: 'space-between',
 	})
 
-	export const fieldGap = style({ gap: '16' })
+	export const fieldGap = style({ gap: '4' })
 
 	export const centered = style({ alignItems: 'center' })
 
 	export const label = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
 	})
 
@@ -642,26 +647,26 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '4',
+		gap: '1',
 		justifyContent: 'flex-end',
 		minWidth: '0 !custom',
 		'@media print': { selectors: { '& > button': { display: 'none' } } },
 	})
 
 	export const divider = style({
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 	})
 
 	export const events = style({
 		counterReset: 'event',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
-		paddingBlock: '24',
-		paddingInline: '24',
-		typography: 'body.b1',
+		gap: '4',
+		paddingBlock: '6',
+		paddingInline: '6',
+		typography: 'copy.16',
 	})
 
 	export const event = style({ counterIncrement: 'event' })
@@ -669,12 +674,12 @@ namespace styles {
 	export const eventBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const eventSplit = style({
 		display: 'grid',
-		gap: '8',
+		gap: '2',
 		gridTemplateColumns: 'minmax(0, 1fr)',
 		'@media (width >= 640px)': {
 			gridTemplateColumns: 'minmax(0, 1fr) auto',
@@ -685,20 +690,20 @@ namespace styles {
 
 	export const eventLine = style({
 		alignItems: 'flex-start',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'row',
 		flexGrow: 1,
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
 	export const eventCounter = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexShrink: '0 !custom',
-		minWidth: '20',
+		minWidth: '5',
 		'::before': { content: 'counter(event) "."' },
 	})
 
@@ -709,37 +714,37 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const noteIndent = style({ paddingLeft: '24' })
+	export const noteIndent = style({ paddingLeft: '6' })
 
 	export const note = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'row',
-		gap: '12',
+		gap: '3',
 		overflow: 'hidden',
-		paddingLeft: '24',
+		paddingLeft: '6',
 	})
 
 	export const noteRule = style({
-		borderColor: 'line.secondary',
-		borderLeftWidth: 'regular',
-		paddingLeft: '12',
+		borderColor: 'grayAlpha.200',
+		borderLeftWidth: '1px',
+		paddingLeft: '3',
 		width: '100% !custom',
 	})
 
 	export const noteList = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		typography: 'body.b2',
+		gap: '1',
+		typography: 'copy.14',
 	})
 
 	export const minWidth = style({ minWidth: '0 !custom' })
 
 	export const noteItem = style({
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
@@ -750,37 +755,37 @@ namespace styles {
 	export const totals = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '24',
-		paddingInline: '24',
-		typography: 'body.b2',
+		gap: '2',
+		paddingBlock: '6',
+		paddingInline: '6',
+		typography: 'copy.14',
 	})
 
 	export const feeRow = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 	})
 
 	export const feeAmount = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const end = style({ textAlign: 'right' })
 
 	export const totalLabel = style({
-		color: 'content.primary',
-		typography: 'heading.h4',
+		color: 'foreground',
+		typography: 'copy.18.strong',
 	})
 
 	export const totalValue = style({
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
-		typography: 'heading.h3',
+		typography: 'heading.20.subtle',
 	})
 
 	export const actions = style({
@@ -797,56 +802,56 @@ namespace styles {
 	})
 
 	export const actionBar = style({
-		backgroundColor: 'container.regular',
-		borderColor: 'line.secondary',
-		borderWidth: 'regular',
-		color: 'content.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderColor: 'grayAlpha.200',
+		borderWidth: '1px',
+		color: 'gray.900',
 		display: 'grid',
 		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const action = style({
 		alignItems: 'center',
-		borderColor: 'line.secondary',
-		borderRightWidth: 'regular',
+		borderColor: 'grayAlpha.200',
+		borderRightWidth: '1px',
 		display: 'inline-flex',
-		gap: '8',
-		height: '40',
+		gap: '2',
+		height: '10',
 		justifyContent: 'center',
 		'@media (hover: hover)': {
 			':hover': {
-				backgroundColor: 'background.secondary',
-				color: 'content.primary',
+				backgroundColor: 'background.surface',
+				color: 'foreground',
 			},
 		},
-		':last-child': { borderRightWidth: 'none' },
+		':last-child': { borderRightWidth: '0px' },
 	})
 
 	export const actionIcon = style({
 		flexShrink: '0 !custom',
-		height: '16',
-		width: '16',
+		height: '4',
+		width: '4',
 	})
 
 	export const viewTransaction = style({
 		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderBottomLeftRadius: 'xs',
-		borderBottomRightRadius: 'xs',
-		borderColor: 'line.secondary',
-		borderWidth: 'regular',
-		color: 'content.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderBottomLeftRadius: 'xl',
+		borderBottomRightRadius: 'xl',
+		borderColor: 'grayAlpha.200',
+		borderWidth: '1px',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'center',
 		marginTop: '-1px !custom',
-		padding: '12',
-		typography: 'body.b2',
+		padding: '3',
+		typography: 'copy.14',
 		'@media (hover: hover)': {
 			':hover': {
-				backgroundColor: 'background.secondary',
-				color: 'content.primary',
+				backgroundColor: 'background.surface',
+				color: 'foreground',
 			},
 		},
 		':focus-visible': { outlineOffset: '-2px' },

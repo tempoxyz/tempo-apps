@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Button, style, variants } from '@tempoxyz/ds/platform'
-import { Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { Button, style, variants } from '@tempoxyz/ds'
+import { Check, Copy } from '@tempoxyz/ds/icons'
 import * as Json from 'ox/Json'
 import { useMemo } from 'react'
 import { cx } from 'zyzz'
@@ -88,8 +88,8 @@ export namespace TxRawTransaction {
 					<Button
 						aria-label={`Copy ${title.toLowerCase()} data`}
 						onClick={() => copy(stringify(data))}
-						scale="small"
-						variant="tertiary"
+						size="small"
+						variant="text"
 					>
 						{notifying ? <Check /> : <Copy />}
 						Copy
@@ -342,8 +342,8 @@ namespace styles {
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '24',
-		typography: 'mono.inline',
+		gap: '6',
+		typography: 'label.12.mono',
 	})
 
 	export const section = variants({
@@ -353,9 +353,9 @@ namespace styles {
 			border: {
 				false: {},
 				true: {
-					borderColor: 'line.secondary',
-					borderTopWidth: 'regular',
-					paddingTop: '24',
+					borderColor: 'grayAlpha.200',
+					borderTopWidth: '1px',
+					paddingTop: '6',
 				},
 			},
 		},
@@ -365,27 +365,27 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'space-between',
-		marginBottom: '12',
+		marginBottom: '3',
 	})
 
 	export const sectionTitle = style({
-		color: 'content.primary',
-		typography: 'body.b3',
+		color: 'foreground',
+		typography: 'label.12',
 	})
 
 	export const column = style({ display: 'flex', flexDirection: 'column' })
 
 	export const groupKey = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
-		paddingBlock: '4',
+		paddingBlock: '1',
 		textAlign: 'left',
 	})
 
 	export const entry = style({
 		display: 'flex',
-		gap: '16',
-		paddingBlock: '4',
+		gap: '4',
+		paddingBlock: '1',
 	})
 
 	export const copyable = style({
@@ -396,17 +396,17 @@ namespace styles {
 	})
 
 	export const key = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: '0 !custom',
 	})
 
 	export const indexLabel = style({
-		color: 'content.secondary',
-		paddingBlock: '4',
+		color: 'gray.900',
+		paddingBlock: '1',
 	})
 
 	export const indexKey = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		textAlign: 'left',
 	})
 

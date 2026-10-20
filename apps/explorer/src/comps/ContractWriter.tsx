@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Alert, StatusIndicator, Tooltip, style } from '@tempoxyz/ds/platform'
-import { Play } from '@tempoxyz/ds/platform/icons'
+import { Button, Callout, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { Play } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi, Hex } from 'viem'
@@ -21,7 +21,7 @@ import {
 	type WriteFunction,
 } from '#lib/domain/contracts'
 import { usePermalinkHighlight } from '#lib/hooks'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
+import { link, linkHover } from '#styles/explorer'
 import FlaskIcon from '~icons/lucide/flask-conical'
 
 function getWriteErrorMessage(err: Error): string {
@@ -172,7 +172,12 @@ function WriteContractFunction(props: {
 			expanded={isExpanded}
 			onToggle={hasInputs ? () => setIsExpanded(!isExpanded) : undefined}
 			tag={
-				isPayable && <StatusIndicator tone="warning">payable</StatusIndicator>
+				isPayable && (
+					<Tag intent="warning" variant="plain">
+						<Tag.Dot />
+						payable
+					</Tag>
+				)
 			}
 			actions={
 				<>
@@ -181,21 +186,37 @@ function WriteContractFunction(props: {
 					    gating it on a connection put the safe option behind the risky
 					    one. Args are optional: an unfilled form still simulates the
 					    selector, which is enough to see who is allowed to call it. */}
-					<Tooltip content="Simulate this call without signing">
-						<Link
-							to="/simulate"
-							search={{
-								to: props.address,
-								data: simulateCalldata,
-								...(connection.address ? { from: connection.address } : {}),
-								...(isPayable && inputs.value ? { value: inputs.value } : {}),
-							}}
-							aria-label="Simulate this call without signing"
-							{...cx(styles.simulate(), pressDown(), transitionColors())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Button.Link
+									aria-label="Simulate this call without signing"
+									render={
+										<Link
+											to="/simulate"
+											search={{
+												to: props.address,
+												data: simulateCalldata,
+												...(connection.address
+													? { from: connection.address }
+													: {}),
+												...(isPayable && inputs.value
+													? { value: inputs.value }
+													: {}),
+											}}
+										/>
+									}
+									shape="icon"
+									size="small"
+									variant="text"
+									{...styles.simulate()}
+								/>
+							}
 						>
 							<FlaskIcon {...styles.simulateIcon()} />
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Simulate this call without signing</Tooltip.Popup>
+					</Tooltip.Root>
 					{connection.status === 'connected' && (
 						<FunctionAction
 							label="Execute"
@@ -246,40 +267,46 @@ function WriteContractFunction(props: {
 					})}
 
 					{parsedArgs.error && (
-						<Alert
-							tone="negative"
-							title="Invalid arguments"
-							description={parsedArgs.error}
-							style={fullWidth}
-						/>
+						<Callout intent="negative" role="status" size="small">
+							<Callout.Icon />
+							<Callout.Content>
+								<strong>Invalid arguments</strong>
+								<span {...styles.calloutDescription()}>{parsedArgs.error}</span>
+							</Callout.Content>
+						</Callout>
 					)}
 
 					{writeContract.error && (
-						<Alert
-							role="alert"
-							tone="negative"
-							title="Transaction failed"
-							description={getWriteErrorMessage(writeContract.error)}
-							style={fullWidth}
-						/>
+						<Callout intent="negative" size="small">
+							<Callout.Icon />
+							<Callout.Content>
+								<strong>Transaction failed</strong>
+								<span {...styles.calloutDescription()}>
+									{getWriteErrorMessage(writeContract.error)}
+								</span>
+							</Callout.Content>
+						</Callout>
 					)}
 
 					{writeContract.isSuccess && writeContract.data && (
-						<Alert
-							role="status"
-							tone="positive"
-							title="Transaction sent"
-							description={
+						<Callout intent="positive" size="small">
+							<Callout.Icon />
+							<Callout.Content>
+								<strong>Transaction sent</strong>
 								<Link
 									to="/receipt/$hash"
 									params={{ hash: writeContract.data }}
-									{...cx(styles.receipt(), link(), linkHover())}
+									{...cx(
+										styles.calloutDescription(),
+										styles.receipt(),
+										link(),
+										linkHover(),
+									)}
 								>
 									{writeContract.data}
 								</Link>
-							}
-							style={fullWidth}
-						/>
+							</Callout.Content>
+						</Callout>
 					)}
 				</>
 			)}
@@ -287,41 +314,33 @@ function WriteContractFunction(props: {
 	)
 }
 
-const fullWidth = { width: '100%' } satisfies React.CSSProperties
-
 namespace styles {
 	export const list = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
+		gap: '3',
 	})
 
 	export const emptyMessage = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
-	// A small tertiary IconButton's geometry; it navigates, so it stays a
-	// router link. The card clips overflow, so the ring is drawn inside.
+	// The card clips overflow, so the ring is drawn inside the link.
 	export const simulate = style({
-		alignItems: 'center',
-		borderRadius: 'full',
-		color: 'content.primary',
-		display: 'inline-flex',
 		flexShrink: 0,
-		height: '32',
-		justifyContent: 'center',
-		width: '32',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
 		':focus-visible': { outlineOffset: '-2px' },
 	})
 
-	export const simulateIcon = style({ height: '16', width: '16' })
+	export const simulateIcon = style({ height: '4', width: '4' })
+
+	export const calloutDescription = style({
+		display: 'block',
+		overflowWrap: 'anywhere',
+	})
 
 	export const receipt = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 }

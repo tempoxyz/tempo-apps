@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds/platform'
+import { style, variants } from '@tempoxyz/ds'
 import type * as React from 'react'
 import { formatUnits } from 'viem'
 import { cx } from 'zyzz'
@@ -112,12 +112,12 @@ export function AssetIdentity(props: { asset: AssetData }): React.JSX.Element {
 }
 
 namespace styles {
-	export const placeholder = style({ color: 'content.secondary' })
+	export const placeholder = style({ color: 'gray.900' })
 
 	export const name = variants({
 		base: {
 			display: 'inline-flex',
-			gap: '8',
+			gap: '2',
 			minWidth: '0 !custom',
 		},
 		defaultVariants: { multiline: false },
@@ -136,9 +136,9 @@ namespace styles {
 	export const identity = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
-	export const address = style({ typography: 'mono.inline' })
+	export const address = style({ typography: 'label.12.mono' })
 }

@@ -1,4 +1,4 @@
-import { Alert, style } from '@tempoxyz/ds/platform'
+import { Callout, style } from '@tempoxyz/ds'
 import * as React from 'react'
 import type {
 	ContractSource,
@@ -63,15 +63,13 @@ function SourceBrowser(props: {
 	return (
 		<div {...styles.placeholder()}>
 			{failed ? (
-				<Alert
-					role="alert"
-					tone="negative"
-					title="Unable to load source viewer."
-					action={{
-						label: 'Reload',
-						onClick: () => window.location.reload(),
-					}}
-				/>
+				<Callout intent="negative" size="small">
+					<Callout.Icon />
+					<Callout.Content>Unable to load source viewer.</Callout.Content>
+					<Callout.Action onClick={() => window.location.reload()}>
+						Reload
+					</Callout.Action>
+				</Callout>
 			) : (
 				<p role="status">Loading source viewer…</p>
 			)}
@@ -82,16 +80,16 @@ function SourceBrowser(props: {
 namespace styles {
 	export const placeholder = style({
 		alignItems: 'center',
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
-		borderWidth: 'regular',
-		color: 'content.secondary',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
+		borderWidth: '1px',
+		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
 		height: 'calc(min(620px, 70svh) + 96px) !custom',
 		justifyContent: 'center',
 		minHeight: '416px !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 }

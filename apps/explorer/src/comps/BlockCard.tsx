@@ -1,11 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { Progress, style, variants } from '@tempoxyz/ds/platform'
-import {
-	Check,
-	ChevronDown,
-	Copy,
-	FilterDescending,
-} from '@tempoxyz/ds/platform/icons'
+import { Progress, style, variants } from '@tempoxyz/ds'
+import { Check, ChevronDown, Copy, FilterDescending } from '@tempoxyz/ds/icons'
 import type { Hex } from 'ox'
 import * as React from 'react'
 import { cx } from 'zyzz'
@@ -115,7 +110,7 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 								<span>Hash</span>
 								<BlockCard.CopyIcon copied={copyHash.notifying} />
 							</span>
-							{/* 22 chars/line: mono.inline has no tracking */}
+							{/* 22 chars/line: label.12.mono has no tracking */}
 							<span {...styles.hash()}>{hash}</span>
 						</button>
 					)}
@@ -172,11 +167,14 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 										{`${(gasUsage ?? 0).toFixed(2)}%`}
 									</span>
 								</div>
-								<Progress
+								<Progress.Root
 									aria-label="Gas usage"
 									value={Math.min(100, gasUsage ?? 0)}
-									style={{ width: '100%' }}
-								/>
+								>
+									<Progress.Track>
+										<Progress.Indicator />
+									</Progress.Track>
+								</Progress.Root>
 								<div {...styles.gasValues()}>
 									<BlockCard.GasValue value={gasUsed} />
 									<BlockCard.GasValue value={gasLimit} highlight={false} />
@@ -347,26 +345,26 @@ export namespace BlockCard {
 }
 
 namespace styles {
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const tertiary = style({ color: 'gray.700' })
 
 	export const numeric = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const icon = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
-		height: '12',
-		width: '12',
+		height: '3',
+		width: '3',
 	})
 
 	export const copyButton = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'block',
 		textAlign: 'left',
@@ -376,15 +374,15 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
+		gap: '2',
+		marginBottom: '2',
 	})
 
 	export const hash = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'block',
 		maxWidth: '22ch !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
@@ -395,28 +393,28 @@ namespace styles {
 			width: '100% !custom',
 		},
 		defaultVariants: { gap: 'compact' },
-		variants: { gap: { compact: { gap: '8' }, relaxed: { gap: '12' } } },
+		variants: { gap: { compact: { gap: '2' }, relaxed: { gap: '3' } } },
 	})
 
 	export const infoRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 		width: '100% !custom',
 	})
 
 	export const infoLabel = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
 	})
 
 	export const parentLabel = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '8',
+		gap: '2',
 	})
 
 	export const parentLink = style({
@@ -425,7 +423,7 @@ namespace styles {
 		justifyContent: 'flex-end',
 		maxWidth: '18ch !custom',
 		minWidth: '0px !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	// Spans the whole InfoCard section (12px / 20px padding) so the toggle row
@@ -433,14 +431,14 @@ namespace styles {
 	export const advanced = style({
 		marginBlock: '-12px !custom',
 		marginInline: '-20px !custom',
-		paddingBlock: '12',
-		paddingInline: '20',
+		paddingBlock: '3',
+		paddingInline: '5',
 		width: 'calc(100% + 40px) !custom',
 	})
 
 	export const advancedToggle = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'flex',
 		justifyContent: 'space-between',
@@ -449,25 +447,25 @@ namespace styles {
 
 	export const advancedChevron = variants({
 		base: {
-			color: 'content.secondary',
-			height: '16',
-			width: '16',
+			color: 'gray.900',
+			height: '4',
+			width: '4',
 		},
 		defaultVariants: { open: false },
 		variants: { open: { true: { rotate: '180deg' }, false: {} } },
 	})
 
 	export const advancedContent = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		contain: 'inline-size',
-		marginTop: '16',
-		paddingBottom: '16',
+		marginTop: '4',
+		paddingBottom: '4',
 		width: '100% !custom',
-		selectors: { '& > :not(:last-child)': { marginBottom: '20' } },
+		selectors: { '& > :not(:last-child)': { marginBottom: '5' } },
 	})
 
 	export const gas = style({
-		selectors: { '& > :not(:last-child)': { marginBottom: '12' } },
+		selectors: { '& > :not(:last-child)': { marginBottom: '3' } },
 	})
 
 	export const spread = style({
@@ -488,14 +486,14 @@ namespace styles {
 		defaultVariants: { highlight: true },
 		variants: {
 			highlight: {
-				true: { color: 'content.primary' },
-				false: { color: 'content.secondary' },
+				true: { color: 'foreground' },
+				false: { color: 'gray.900' },
 			},
 		},
 	})
 
 	export const roots = style({
-		selectors: { '& > :not(:last-child)': { marginBottom: '8' } },
+		selectors: { '& > :not(:last-child)': { marginBottom: '2' } },
 	})
 
 	export const timeRow = style({
@@ -506,27 +504,27 @@ namespace styles {
 	})
 
 	export const timeLabel = style({
-		backgroundColor: 'container.subtle',
-		borderRadius: '3xs',
-		color: 'content.secondary',
-		paddingBlock: '2',
-		paddingInline: '4',
-		typography: 'body.b3',
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'sm',
+		color: 'gray.900',
+		paddingBlock: '2px !custom',
+		paddingInline: '1',
+		typography: 'label.12',
 	})
 
 	export const timeValue = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
 	})
 
 	export const blockNumberDigits = style({
-		color: 'content.tertiary',
+		color: 'gray.700',
 		display: 'flex',
 		fontVariantNumeric: 'tabular-nums',
 		gap: '1px !custom',
 		justifyContent: 'space-between',
-		typography: 'heading.h2',
+		typography: 'heading.24.subtle',
 		userSelect: 'none',
 	})
 
@@ -534,15 +532,15 @@ namespace styles {
 		base: {},
 		defaultVariants: { significant: false },
 		variants: {
-			significant: { true: { color: 'content.primary' }, false: {} },
+			significant: { true: { color: 'foreground' }, false: {} },
 		},
 	})
 
 	export const rootRow = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
 	})
 
@@ -552,7 +550,7 @@ namespace styles {
 	})
 
 	export const rootLabel = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
 	})
 
@@ -560,9 +558,9 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '8',
+		gap: '2',
 		justifyContent: 'flex-end',
 		minWidth: '0px !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 }

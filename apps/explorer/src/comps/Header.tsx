@@ -4,19 +4,12 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { TempoLogoWordmark } from '@tempoxyz/ds/brand/logos'
-import {
-	Button,
-	StatusIndicator,
-	style,
-	Tooltip,
-	variants,
-	vars,
-} from '@tempoxyz/ds/platform'
-import { ChevronDown } from '@tempoxyz/ds/platform/icons'
+import { Button, Menu, style, Tooltip, variants } from '@tempoxyz/ds'
+import { ChevronDown } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import { ExploreInput } from '#comps/ExploreInput'
+import { TempoWordmark } from '#comps/TempoWordmark'
 import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { type TempoEnv, getTempoEnv, isTestnet } from '#lib/env'
@@ -27,7 +20,7 @@ import {
 	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
-import { link, pressDown, transitionColors } from '#styles/explorer'
+import { link, pageMargin, pressDown } from '#styles/explorer'
 import FlaskConicalIcon from '~icons/lucide/flask-conical'
 import SquareSquare from '~icons/lucide/square-square'
 
@@ -41,27 +34,32 @@ export function Header(): React.JSX.Element {
 
 	return (
 		<header {...styles.header()}>
-			<div {...styles.bar()}>
+			<div {...cx(styles.bar(), pageMargin())}>
 				<div {...styles.brand()}>
 					{!isHome && (
 						<Link to="/" {...cx(styles.homeLink(), pressDown())}>
-							<TempoLogoWordmark aria-label="Tempo" {...styles.wordmark()} />
+							<TempoWordmark aria-label="Tempo" {...styles.wordmark()} />
 						</Link>
 					)}
 					<Header.NetworkBadge tempoEnv={tempoEnv} />
 				</div>
 				<Header.Search />
 				<div {...styles.actions()}>
-					<Tooltip content="Simulate transaction">
-						<Link
-							to="/simulate"
-							aria-label="Simulate transaction"
-							{...cx(styles.simulate(), pressDown())}
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Link
+									to="/simulate"
+									aria-label="Simulate transaction"
+									{...cx(styles.simulate(), pressDown())}
+								/>
+							}
 						>
 							<FlaskConicalIcon aria-hidden {...styles.simulateIcon()} />
 							<span {...styles.simulateLabel()}>Simulate</span>
-						</Link>
-					</Tooltip>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Simulate transaction</Tooltip.Popup>
+					</Tooltip.Root>
 					<Header.BlockNumber />
 				</div>
 			</div>
@@ -141,13 +139,9 @@ export namespace Header {
 		}
 	}
 
-	/** Network switcher: a disclosure button and a list of network links. */
+	/** Network switcher: a TDS menu of links to the other explorers. */
 	export function NetworkBadge(props: NetworkBadge.Props): React.JSX.Element {
 		const { tempoEnv } = props
-		const [isOpen, setIsOpen] = React.useState(false)
-		const listId = React.useId()
-		const rootRef = React.useRef<HTMLDivElement>(null)
-		const triggerRef = React.useRef<HTMLButtonElement>(null)
 		const activeOption = getActiveExplorerNetworkOption(tempoEnv)
 		const isNotFoundPage = useIsNotFoundPage()
 		const currentPath = useRouterState({
@@ -158,83 +152,44 @@ export namespace Header {
 			},
 		})
 
-		React.useEffect(() => {
-			if (!isOpen) return
-
-			function handlePointerDown(event: PointerEvent) {
-				if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false)
-			}
-
-			function handleKeyDown(event: KeyboardEvent) {
-				if (event.key !== 'Escape') return
-				setIsOpen(false)
-				if (rootRef.current?.contains(document.activeElement))
-					triggerRef.current?.focus()
-			}
-
-			function handleFocusOut(event: FocusEvent) {
-				const next = event.relatedTarget as Node | null
-				if (next && !rootRef.current?.contains(next)) setIsOpen(false)
-			}
-
-			const root = rootRef.current
-			window.addEventListener('pointerdown', handlePointerDown)
-			window.addEventListener('keydown', handleKeyDown)
-			root?.addEventListener('focusout', handleFocusOut)
-
-			return () => {
-				window.removeEventListener('pointerdown', handlePointerDown)
-				window.removeEventListener('keydown', handleKeyDown)
-				root?.removeEventListener('focusout', handleFocusOut)
-			}
-		}, [isOpen])
-
 		return (
-			<div ref={rootRef} {...styles.network()}>
-				{/* The local style only adds what Button leaves unset. */}
-				<Button
-					ref={triggerRef}
-					type="button"
-					aria-controls={isOpen ? listId : undefined}
-					aria-expanded={isOpen}
-					aria-label={`Network: ${activeOption.label}`}
-					scale="small"
-					variant="secondary"
-					{...cx(styles.networkTrigger(), transitionColors(), pressDown())}
-					onClick={() => setIsOpen((value) => !value)}
+			<Menu.Root>
+				<Menu.Trigger
+					render={
+						<Button
+							aria-label={`Network: ${activeOption.label}`}
+							size="small"
+							variant="secondary"
+							{...styles.networkTrigger()}
+						/>
+					}
 				>
 					<LiveIndicator tone={activeOption.dotTone} pinging>
 						{activeOption.label}
 					</LiveIndicator>
-					<ChevronDown {...styles.networkChevron({ open: isOpen })} />
-				</Button>
-				{isOpen && (
-					<ul id={listId} {...styles.networkList()}>
-						{EXPLORER_NETWORK_OPTIONS.map((option) => {
-							const isActive = option.env === activeOption.env
-
-							return (
-								<li key={option.env}>
-									<a
-										href={buildExplorerNetworkHref(option.host, currentPath, {
-											fallbackToHome:
-												isNotFoundPage &&
-												!isExplorerNetworkPathPreservable(currentPath),
-										})}
-										aria-current={isActive ? 'page' : undefined}
-										{...cx(styles.networkOption(), transitionColors())}
-										onClick={() => setIsOpen(false)}
-									>
-										<StatusIndicator tone={option.dotTone}>
-											{option.label}
-										</StatusIndicator>
-									</a>
-								</li>
-							)
-						})}
-					</ul>
-				)}
-			</div>
+					<ChevronDown {...styles.networkChevron()} />
+				</Menu.Trigger>
+				<Menu.Popup align="start" size="small">
+					{EXPLORER_NETWORK_OPTIONS.map((option) => (
+						<Menu.LinkItem
+							key={option.env}
+							aria-current={
+								option.env === activeOption.env ? 'page' : undefined
+							}
+							closeOnClick
+							href={buildExplorerNetworkHref(option.host, currentPath, {
+								fallbackToHome:
+									isNotFoundPage &&
+									!isExplorerNetworkPathPreservable(currentPath),
+							})}
+						>
+							<LiveIndicator tone={option.dotTone}>
+								{option.label}
+							</LiveIndicator>
+						</Menu.LinkItem>
+					))}
+				</Menu.Popup>
+			</Menu.Root>
 		)
 	}
 
@@ -275,11 +230,6 @@ export namespace Header {
 	}
 }
 
-// Floating panels use the TDS popover elevation.
-const panelShadow = {
-	boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary}`,
-} as const
-
 namespace styles {
 	export const header = style({
 		containerType: 'inline-size',
@@ -291,78 +241,77 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'space-between',
-		minHeight: '64',
-		paddingInline: 'page.margin',
-		paddingTop: '32',
+		minHeight: '16',
+		paddingTop: '8',
 		position: 'relative',
 		userSelect: 'none',
 		zIndex: 20,
 		'@container (width >= 800px) and (width < 1239px)': {
 			height: '88px !custom',
 		},
-		'@container (width >= 1240px)': { paddingTop: '48' },
+		'@container (width >= 1240px)': { paddingTop: '12' },
 		'@media print': { justifyContent: 'center' },
 	})
 
 	export const brand = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '12',
-		height: '32',
+		gap: '3',
+		height: '8',
 		position: 'relative',
 		zIndex: 1,
 	})
 
 	export const homeLink = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		paddingBlock: '4',
+		paddingBlock: '1',
 	})
 
 	export const wordmark = style({
-		height: '24',
+		height: '6',
 		width: 'auto !custom',
 	})
 
 	export const actions = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		position: 'relative',
 		zIndex: 1,
 		'@media print': { display: 'none' },
 	})
 
-	// TDS Button small secondary geometry on a link. Below 800px only the
-	// icon shows, as an IconButton small.
+	// TDS Button small secondary geometry on a link, which `Button.Link`
+	// cannot switch by container width. Below 800px only the icon shows, as a
+	// small icon Button.
 	export const simulate = style({
 		alignItems: 'center',
-		backgroundColor: 'container.regular',
+		backgroundColor: 'grayAlpha.100',
 		borderRadius: 'full',
-		color: 'content.primary',
-		columnGap: '4',
+		color: 'foreground',
+		columnGap: '1',
 		display: 'inline-flex',
-		height: '32',
+		height: '8',
 		justifyContent: 'center',
-		minWidth: '80px !custom',
-		paddingInline: '16',
+		paddingInline: '3',
 		textDecorationLine: 'none',
-		typography: 'body.b3',
+		typography: 'button.12',
 		whiteSpace: 'nowrap',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
+			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
+		':active': { backgroundColor: 'grayAlpha.300' },
 		'@container (width < 799px)': {
-			minWidth: '0px !custom',
-			paddingInline: 'none',
-			width: '32',
+			paddingInline: '0',
+			width: '8',
 		},
 	})
 
 	export const simulateIcon = style({
 		flexShrink: 0,
-		'@container (width < 799px)': { height: '16', width: '16' },
+		'@container (width < 799px)': { height: '4', width: '4' },
 	})
 
 	export const simulateLabel = style({
@@ -370,9 +319,9 @@ namespace styles {
 	})
 
 	export const searchCompact = style({
-		paddingBottom: '12',
-		paddingInline: '16',
-		paddingTop: '16',
+		paddingBottom: '3',
+		paddingInline: '4',
+		paddingTop: '4',
 		position: 'sticky',
 		top: '0px !custom',
 		zIndex: 10,
@@ -383,7 +332,7 @@ namespace styles {
 	export const searchCentered = style({
 		alignItems: 'center',
 		display: 'flex',
-		height: 'none',
+		height: '0',
 		justifyContent: 'center',
 		left: '0px !custom',
 		position: 'absolute',
@@ -397,77 +346,35 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		justifyContent: 'center',
-		paddingInline: '24',
+		paddingInline: '6',
 		'@container (width < 799px)': { display: 'none' },
 		'@container (width >= 1240px)': { display: 'none' },
 		'@media print': { display: 'none' },
 	})
 
-	export const network = style({ position: 'relative' })
+	export const networkTrigger = style({ flexShrink: 0 })
 
-	export const networkTrigger = style({
+	export const networkChevron = style({
+		color: 'gray.900',
 		flexShrink: 0,
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
-	})
-
-	export const networkChevron = variants({
-		base: {
-			color: 'content.secondary',
-			flexShrink: 0,
-			transitionDuration: '100ms',
-			transitionProperty: 'rotate',
-			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-		},
-		defaultVariants: { open: false },
-		variants: { open: { true: { rotate: '180deg' }, false: {} } },
-	})
-
-	export const networkList = style({
-		...panelShadow,
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
-		borderStyle: 'solid',
-		borderWidth: 'regular',
-		left: '0px !custom',
-		listStyle: 'none',
-		margin: 'none',
-		padding: '4',
-		position: 'absolute',
-		top: 'calc(100% + 8px) !custom',
-		width: '160px !custom',
-		zIndex: 50,
-	})
-
-	export const networkOption = style({
-		alignItems: 'center',
-		borderRadius: '2xs',
-		display: 'flex',
-		paddingBlock: '4',
-		paddingInline: '12',
-		textDecorationLine: 'none',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
-		selectors: {
-			'&[aria-current="page"]': { backgroundColor: 'container.regular' },
-		},
+		transitionDuration: '100ms',
+		transitionProperty: 'rotate',
+		transitionTimingFunction: 'in-out',
+		selectors: { '[data-popup-open] &': { rotate: '180deg' } },
 	})
 
 	export const blockNumber = variants({
 		base: {
 			alignItems: 'center',
-			color: 'content.primary',
+			color: 'foreground',
 			display: 'flex',
-			gap: '8',
+			gap: '2',
 			textDecorationLine: 'none',
 			transformOrigin: 'right',
 			transitionDuration: '80ms',
 			transitionProperty: 'opacity, scale',
-			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-			typography: 'body.b2',
+			transitionTimingFunction: 'in-out',
+			typography: 'copy.14',
 			'@container (width < 399px)': { display: 'none' },
 		},
 		defaultVariants: { ready: false },
@@ -481,8 +388,8 @@ namespace styles {
 
 	export const blockNumberIcon = style({
 		flexShrink: 0,
-		height: '16',
-		width: '16',
+		height: '4',
+		width: '4',
 	})
 
 	export const blockNumberValue = style({

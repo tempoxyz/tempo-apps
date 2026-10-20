@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import { useEffect, useRef, useState } from 'react'
 import letters from '#lib/tempo-globe.json' with { type: 'json' }
 
@@ -138,8 +138,8 @@ namespace styles {
 
 	// The root clips overflow, so the document focus ring is drawn inside.
 	export const button = style({
-		aspectRatio: '656 / 285',
-		borderRadius: 'xs',
+		aspectRatio: '656 / 285 !custom',
+		borderRadius: 'xl',
 		cursor: 'pointer',
 		maxWidth: '120vw !custom',
 		pointerEvents: 'auto',

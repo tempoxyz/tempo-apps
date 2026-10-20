@@ -12,19 +12,17 @@
 
 import { Link } from '@tanstack/react-router'
 import {
-	Alert,
 	Button,
-	DenseTable,
-	SimpleTable,
+	Callout,
+	Rows,
 	Spinner,
-	StatusIndicator,
-	Tab,
-	TextButton,
+	Table,
+	Tabs,
 	style,
 	variants,
 	vars,
-} from '@tempoxyz/ds/platform'
-import { AlertCircle, Check } from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds'
+import { AlertCircle, Check, ChevronRight } from '@tempoxyz/ds/icons'
 import type * as OxAddress from 'ox/Address'
 import type * as React from 'react'
 import type { Log } from 'viem'
@@ -32,6 +30,7 @@ import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TxEventDescription } from '#comps/TxEventDescription'
+import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import type { parseKnownEvents } from '#lib/domain/known-events'
 import { preferredEventsFilter } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
@@ -48,9 +47,10 @@ import {
 	link,
 	linkHover,
 	mono,
+	noScrollbar,
 	pressDown,
 	srOnly,
-	transitionColors,
+	textAction,
 	truncate,
 } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
@@ -111,7 +111,7 @@ export function SimulateResultHeader(
 			)}
 
 			{props.stale && (
-				<StatusIndicator tone="warning">Inputs changed</StatusIndicator>
+				<LiveIndicator tone="warning">Inputs changed</LiveIndicator>
 			)}
 
 			{execution && (
@@ -176,35 +176,42 @@ function networkName(chainId: number): string {
  * disabled, not hidden: sections that come and go between runs make the layout
  * jump and stop anyone learning where things are.
  *
- * Panels are passed as children so they sit inside the same `Tab.Root`.
+ * Panels are passed as children so they sit inside the same `Tabs.Root`.
  */
 export function SimulateTabs(props: SimulateTabs.Props): React.JSX.Element {
 	return (
-		<Tab.Root
+		<Tabs.Root
 			value={props.value}
 			onValueChange={(value) => {
 				const tab = props.tabs.find((candidate) => candidate.id === value)
 				if (tab) props.onChange(tab.id)
 			}}
 		>
-			<Tab.List activateOnFocus aria-label="Result" {...styles.tabs()}>
-				{props.tabs.map((tab) => (
-					<Tab
-						key={tab.id}
-						value={tab.id}
-						scale="small"
-						disabled={tab.count === 0 && tab.id !== 'overview'}
-						{...styles.tab()}
-					>
-						{tab.label}
-						{tab.count !== undefined && (
-							<span {...styles.tabCount()}>{tab.count}</span>
-						)}
-					</Tab>
-				))}
-			</Tab.List>
+			{/* The bar carries the divider; the TDS list inside is its own track. */}
+			<div {...styles.tabs()}>
+				<Tabs.List
+					activateOnFocus
+					aria-label="Result"
+					size="small"
+					{...noScrollbar()}
+				>
+					{props.tabs.map((tab) => (
+						<Tabs.Tab
+							key={tab.id}
+							value={tab.id}
+							disabled={tab.count === 0 && tab.id !== 'overview'}
+						>
+							{tab.label}
+							{tab.count !== undefined && (
+								<span {...styles.tabCount()}>{tab.count}</span>
+							)}
+						</Tabs.Tab>
+					))}
+					<Tabs.Indicator />
+				</Tabs.List>
+			</div>
 			{props.children}
-		</Tab.Root>
+		</Tabs.Root>
 	)
 }
 
@@ -217,7 +224,7 @@ export declare namespace SimulateTabs {
 		}>
 		value: OutputTab
 		onChange: (tab: OutputTab) => void
-		/** `Tab.Panel`s for the tabs above. */
+		/** `Tabs.Panel`s for the tabs above. */
 		children?: React.ReactNode
 	}
 }
@@ -334,50 +341,53 @@ function FailureAnswer(props: {
 
 	return (
 		<div {...styles.failure()}>
-			<Alert
-				tone="negative"
-				title={
-					call ? (
-						<>
-							<span {...mono()}>{call}</span> reverted
-						</>
-					) : (
-						'Reverted'
-					)
-				}
-				description={
-					errorName ? (
-						<span {...mono()}>{errorName}</span>
-					) : raw && raw !== '0x' ? (
-						<span {...mono()}>{raw}</span>
-					) : (
-						'No revert data returned.'
-					)
-				}
-				style={{ width: '100%' }}
-			/>
+			<Callout intent="negative">
+				<Callout.Icon />
+				<Callout.Content>
+					<strong {...styles.calloutTitle()}>
+						{call ? (
+							<>
+								<span {...mono()}>{call}</span> reverted
+							</>
+						) : (
+							'Reverted'
+						)}
+					</strong>
+					<span {...styles.calloutText()}>
+						{errorName ? (
+							<span {...mono()}>{errorName}</span>
+						) : raw && raw !== '0x' ? (
+							<span {...mono()}>{raw}</span>
+						) : (
+							'No revert data returned.'
+						)}
+					</span>
+				</Callout.Content>
+			</Callout>
 
 			{errorName && errorArgs.length > 0 && (
-				<SimpleTable>
+				<Rows dividers="full">
 					{errorArgs.map((arg) => (
-						<SimpleTable.Row key={arg.label}>
-							<SimpleTable.Dt>{arg.label}</SimpleTable.Dt>
-							<SimpleTable.Dd title={arg.title}>
+						<Rows.Row key={arg.label} spacing="none">
+							<Rows.Label>{arg.label}</Rows.Label>
+							<span title={arg.title} {...styles.rowValue()}>
 								<span {...mono()}>{arg.value}</span>
 								{arg.note && <span {...styles.errorArgNote()}>{arg.note}</span>}
-							</SimpleTable.Dd>
-						</SimpleTable.Row>
+							</span>
+						</Rows.Row>
 					))}
-				</SimpleTable>
+				</Rows>
 			)}
 
 			{failedNode?.hasFailure && failedNode.frameIndex > 0 && (
-				<TextButton
+				<button
+					type="button"
 					onClick={() => props.onJump(failedNode.id)}
-					{...styles.jump()}
+					{...cx(textAction(), styles.jump())}
 				>
 					Show {call ?? 'the failing frame'} in the trace
-				</TextButton>
+					<ChevronRight />
+				</button>
 			)}
 		</div>
 	)
@@ -402,7 +412,7 @@ export function SimulateDiff(props: {
 		return (
 			<div {...styles.diff()}>
 				<span {...styles.secondary()}>{props.label}</span>
-				<StatusIndicator tone="neutral">no change</StatusIndicator>
+				<LiveIndicator tone="neutral">no change</LiveIndicator>
 			</div>
 		)
 
@@ -410,24 +420,24 @@ export function SimulateDiff(props: {
 		<div {...styles.diff()}>
 			<span {...styles.secondary()}>{props.label}</span>
 			{statusChanged && (
-				<StatusIndicator tone="negative">
+				<LiveIndicator tone="negative">
 					{props.original.status} → {props.execution.status}
-				</StatusIndicator>
+				</LiveIndicator>
 			)}
 			{gasDiff !== 0n && (
-				<StatusIndicator tone={gasDiff < 0n ? 'positive' : 'neutral'}>
+				<LiveIndicator tone={gasDiff < 0n ? 'positive' : 'neutral'}>
 					gas {signed(gasDiff)}
-				</StatusIndicator>
+				</LiveIndicator>
 			)}
 			{eventDiff !== 0 && (
-				<StatusIndicator tone="neutral">
+				<LiveIndicator tone="neutral">
 					events {signed(BigInt(eventDiff))}
-				</StatusIndicator>
+				</LiveIndicator>
 			)}
 			{balanceDiff !== 0 && (
-				<StatusIndicator tone="neutral">
+				<LiveIndicator tone="neutral">
 					balances {signed(BigInt(balanceDiff))}
-				</StatusIndicator>
+				</LiveIndicator>
 			)}
 		</div>
 	)
@@ -454,39 +464,43 @@ export function SimulateOverview(props: {
 	const limit = props.gasLimit
 	return (
 		<div {...styles.column()}>
-			<SimpleTable {...styles.facts()}>
-				<Fact label="From">
-					<Address address={input.from} />
-				</Fact>
-				<Fact label="Function">
-					{props.functionLabel ?? (
-						<span {...styles.secondary()}>unknown selector</span>
-					)}
-				</Fact>
-				<Fact label="To">
-					<Address address={input.to} />
-				</Fact>
-				<Fact label="Value">
-					{input.value === '0' ? (
-						<span {...styles.secondary()}>0</span>
-					) : (
-						input.value
-					)}
-				</Fact>
-				<Fact label="Gas used">
-					{execution.gasUsed.toLocaleString()}
-					<span {...styles.secondary()}>
-						{' / '}
-						{limit.toLocaleString()}
-					</span>
-				</Fact>
-				<Fact label="Block">
-					{execution.blockNumber.toLocaleString()}
-					<span {...styles.secondary()}>
-						{input.block === 'latest' ? ' latest' : ' pinned'}
-					</span>
-				</Fact>
-			</SimpleTable>
+			{/* Two columns from 720px. The grid is a local wrapper inside Rows, so
+			    the rows keep their TDS look and every row draws its divider. */}
+			<Rows dividers="full">
+				<div {...styles.facts()}>
+					<Fact label="From">
+						<Address address={input.from} align="end" />
+					</Fact>
+					<Fact label="Function">
+						{props.functionLabel ?? (
+							<span {...styles.secondary()}>unknown selector</span>
+						)}
+					</Fact>
+					<Fact label="To">
+						<Address address={input.to} align="end" />
+					</Fact>
+					<Fact label="Value">
+						{input.value === '0' ? (
+							<span {...styles.secondary()}>0</span>
+						) : (
+							input.value
+						)}
+					</Fact>
+					<Fact label="Gas used">
+						{execution.gasUsed.toLocaleString()}
+						<span {...styles.secondary()}>
+							{' / '}
+							{limit.toLocaleString()}
+						</span>
+					</Fact>
+					<Fact label="Block">
+						{execution.blockNumber.toLocaleString()}
+						<span {...styles.secondary()}>
+							{input.block === 'latest' ? ' latest' : ' pinned'}
+						</span>
+					</Fact>
+				</div>
+			</Rows>
 			<div {...styles.section()}>
 				<span {...styles.sectionTitle()}>Balance changes</span>
 				<span {...cx(styles.data(), styles.secondary())}>
@@ -506,10 +520,12 @@ function Fact(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<SimpleTable.Row>
-			<SimpleTable.Dt>{props.label}</SimpleTable.Dt>
-			<SimpleTable.Dd {...styles.factValue()}>{props.children}</SimpleTable.Dd>
-		</SimpleTable.Row>
+		<Rows.Row spacing="none">
+			<Rows.Label>{props.label}</Rows.Label>
+			<span {...cx(styles.rowValue(), styles.factValue())}>
+				{props.children}
+			</span>
+		</Rows.Row>
 	)
 }
 
@@ -536,15 +552,14 @@ export function SimulateStepBar(props: {
 			    per-call buttons narrow the evidence rather than switching between
 			    unrelated views. */}
 			<Button
-				scale="small"
-				variant={props.step === undefined ? 'secondary' : 'tertiary'}
+				size="small"
+				variant={props.step === undefined ? 'secondary' : 'text'}
 				aria-pressed={props.step === undefined}
 				onClick={() => props.onSelect(undefined)}
-				{...cx(pressDown(), transitionColors())}
 			>
 				All {props.calls.length}
 				{failed > 0 && (
-					<StatusIndicator tone="negative">{failed} failed</StatusIndicator>
+					<LiveIndicator tone="negative">{failed} failed</LiveIndicator>
 				)}
 			</Button>
 			<span aria-hidden {...cx(styles.shrink(), styles.tertiary())}>
@@ -582,10 +597,10 @@ export function SimulateCallHeading(props: {
 
 	return (
 		<div {...styles.callHeading()}>
-			<StatusIndicator tone={failed ? 'negative' : 'positive'}>
+			<LiveIndicator tone={failed ? 'negative' : 'positive'}>
 				Call {call.index + 1} of {props.total}
 				<span {...srOnly()}>{failed ? ', reverted' : ', succeeded'}</span>
-			</StatusIndicator>
+			</LiveIndicator>
 			<span
 				{...cx(styles.data(), styles.primary(), truncate(), styles.minWidth())}
 			>
@@ -601,9 +616,14 @@ export function SimulateCallHeading(props: {
 			>
 				{call.gasUsed.toLocaleString()} gas
 			</span>
-			<TextButton onClick={props.onIsolate} {...styles.shrink()}>
+			<button
+				type="button"
+				onClick={props.onIsolate}
+				{...cx(textAction(), styles.shrink())}
+			>
 				Isolate
-			</TextButton>
+				<ChevronRight />
+			</button>
 		</div>
 	)
 }
@@ -619,16 +639,15 @@ function StepChip(props: {
 
 	return (
 		<Button
-			scale="small"
-			variant={selected ? 'secondary' : 'tertiary'}
+			size="small"
+			variant={selected ? 'secondary' : 'text'}
 			aria-pressed={selected}
 			onClick={props.onSelect}
-			{...cx(pressDown(), transitionColors())}
 		>
-			<StatusIndicator tone={failed ? 'negative' : 'positive'}>
+			<LiveIndicator tone={failed ? 'negative' : 'positive'}>
 				{call.index + 1}
 				<span {...srOnly()}>{failed ? ', reverted' : ', succeeded'}</span>
-			</StatusIndicator>
+			</LiveIndicator>
 			<span {...styles.code()}>{label}</span>
 		</Button>
 	)
@@ -656,31 +675,28 @@ export function SimulateBalances(props: {
 
 	return (
 		<div {...styles.tableWrap()}>
-			<DenseTable>
-				<DenseTable.Thead>
-					<DenseTable.Tr>
-						<DenseTable.Th scope="col">Account</DenseTable.Th>
-						<DenseTable.Th scope="col">Token</DenseTable.Th>
-						{/* TDS left-aligns header cells; inline wins for the number column. */}
-						<DenseTable.Th scope="col" style={{ textAlign: 'right' }}>
-							Change
-						</DenseTable.Th>
-					</DenseTable.Tr>
-				</DenseTable.Thead>
-				<DenseTable.Tbody>
+			<Table size="small" {...styles.table()}>
+				<Table.Head>
+					<Table.Row>
+						<Table.HeaderCell>Account</Table.HeaderCell>
+						<Table.HeaderCell>Token</Table.HeaderCell>
+						<Table.HeaderCell justify="end">Change</Table.HeaderCell>
+					</Table.Row>
+				</Table.Head>
+				<Table.Body>
 					{[...byAccount.entries()].flatMap(([account, changes]) =>
 						changes.map((change, index) => {
 							const metadata =
 								props.tokenMetadata[change.token] ??
 								props.tokenMetadata[change.token.toLowerCase()]
 							return (
-								<DenseTable.Tr key={`${account}-${change.token}`}>
+								<Table.Row key={`${account}-${change.token}`}>
 									{index === 0 && (
-										<DenseTable.Td rowSpan={changes.length}>
+										<Table.Cell rowSpan={changes.length}>
 											<Address address={account} />
-										</DenseTable.Td>
+										</Table.Cell>
 									)}
-									<DenseTable.Td>
+									<Table.Cell>
 										<Link
 											to={
 												Tip20.isTip20Address(change.token)
@@ -697,19 +713,20 @@ export function SimulateBalances(props: {
 												</span>
 											)}
 										</Link>
-									</DenseTable.Td>
-									<DenseTable.Td
+									</Table.Cell>
+									<Table.Cell
+										justify="end"
+										numeric
 										title={`${change.diff.toString()} (raw)`}
-										{...styles.numeric()}
 									>
 										{formatBalanceDelta(change.diff, metadata?.decimals)}
-									</DenseTable.Td>
-								</DenseTable.Tr>
+									</Table.Cell>
+								</Table.Row>
 							)
 						}),
 					)}
-				</DenseTable.Tbody>
-			</DenseTable>
+				</Table.Body>
+			</Table>
 		</div>
 	)
 }
@@ -741,20 +758,20 @@ export function SimulateEvents(props: {
 }
 
 namespace styles {
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const tertiary = style({ color: 'gray.700' })
 
-	export const text = style({ typography: 'body.b2' })
+	export const text = style({ typography: 'copy.14' })
 
 	export const data = style({
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
-	export const code = style({ typography: 'mono.inline' })
+	export const code = style({ typography: 'label.12.mono' })
 
 	export const shrink = style({ flexShrink: 0 })
 
@@ -767,28 +784,28 @@ namespace styles {
 	export const header = style({
 		alignItems: 'center',
 		backdropFilter: 'blur(8px)',
-		backgroundColor: `color-mix(in oklab, ${vars.color.background.secondary} 95%, transparent) !custom`,
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		backgroundColor: `color-mix(in oklab, ${vars.color.background.surface} 95%, transparent) !custom`,
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		columnGap: '16',
+		columnGap: '4',
 		display: 'flex',
 		flexWrap: 'wrap',
-		paddingBlock: '12',
-		paddingInline: '16',
+		paddingBlock: '3',
+		paddingInline: '4',
 		position: 'sticky',
-		rowGap: '8',
-		top: 'none',
+		rowGap: '2',
+		top: '0',
 		zIndex: 10,
 	})
 
 	export const verdict = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '8',
-		typography: 'body.b2Strong',
+		gap: '2',
+		typography: 'copy.14.strong',
 	})
 
 	export const verdictIcon = variants({
@@ -796,84 +813,95 @@ namespace styles {
 			alignItems: 'center',
 			borderRadius: 'full',
 			display: 'flex',
-			height: '20',
+			height: '5',
 			justifyContent: 'center',
-			typography: 'body.b3',
-			width: '20',
+			typography: 'label.12',
+			width: '5',
 		},
 		defaultVariants: { tone: 'positive' },
 		variants: {
 			tone: {
 				negative: {
-					backgroundColor: 'container.negative',
-					color: 'content.negative',
+					backgroundColor: 'red.100',
+					color: 'red.900',
 				},
 				positive: {
-					backgroundColor: 'container.positive',
-					color: 'content.positive',
+					backgroundColor: 'green.100',
+					color: 'green.900',
 				},
 			},
 		},
 	})
 
 	export const tabs = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		paddingBlock: '8',
-		paddingInline: '16',
-		rowGap: '4',
-	})
-
-	// TDS Tab has no disabled look; an empty tab reads as unavailable.
-	export const tab = style({
-		columnGap: '4',
-		selectors: {
-			'&[data-disabled]:not([data-active])': { color: 'content.tertiary' },
-		},
+		paddingBlock: '2',
+		paddingInline: '4',
 	})
 
 	export const tabCount = style({ fontVariantNumeric: 'tabular-nums' })
 
-	export const answer = style({ paddingBlock: '12', paddingInline: '16' })
+	export const answer = style({ paddingBlock: '3', paddingInline: '4' })
 
-	export const answerText = style({ margin: 'none', typography: 'body.b3' })
+	export const answerText = style({ margin: '0', typography: 'label.12' })
 
 	export const failure = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '16',
+		gap: '3',
+		paddingBlock: '3',
+		paddingInline: '4',
+	})
+
+	export const calloutTitle = style({
+		display: 'block',
+		typography: 'copy.14.strong',
+	})
+
+	// Revert data runs long; let it wrap inside the callout.
+	export const calloutText = style({
+		display: 'block',
+		overflowWrap: 'anywhere',
+	})
+
+	// The value side of a `Rows` key-value row: it takes the free width and
+	// sits at the end, wrapping rather than overflowing.
+	export const rowValue = style({
+		flex: 1,
+		minWidth: '0 !custom',
+		overflowWrap: 'anywhere',
+		textAlign: 'end',
 	})
 
 	export const errorArgNote = style({
-		color: 'content.secondary',
-		marginLeft: '8',
+		color: 'gray.900',
+		marginLeft: '2',
 	})
 
-	// TextButton is inline; keep it from stretching in the column.
+	// The action is inline; keep it from stretching in the column.
 	export const jump = style({ alignSelf: 'flex-start' })
 
 	export const diff = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
-		typography: 'body.b2',
+		gap: '2',
+		paddingBlock: '2',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
 	export const facts = style({
-		columnGap: '32',
-		paddingInline: '16',
+		columnGap: '8',
+		paddingInline: '4',
 		'@media (width >= 720px)': {
 			display: 'grid',
 			gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -884,45 +912,48 @@ namespace styles {
 
 	export const section = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
+		gap: '2',
+		paddingBlock: '2',
+		paddingInline: '4',
 	})
 
 	export const sectionTitle = style({
-		color: 'content.primary',
-		typography: 'body.b2Strong',
+		color: 'foreground',
+		typography: 'copy.14.strong',
 	})
 
 	export const callHeading = style({
 		alignItems: 'center',
-		backgroundColor: 'container.subtle',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
+		gap: '2',
+		paddingBlock: '2',
+		paddingInline: '4',
 	})
 
-	export const tableWrap = style({ padding: '16' })
+	// TDS cells pad their own sides, so the wrap pads only the block and
+	// scrolls sideways.
+	export const tableWrap = style({ overflowX: 'auto', paddingBlock: '4' })
 
-	export const numeric = style({
-		fontVariantNumeric: 'tabular-nums',
-		textAlign: 'right',
+	// Fixed columns, so long values wrap instead of widening the table.
+	export const table = style({
+		overflowWrap: 'anywhere',
+		tableLayout: 'fixed',
 	})
 
 	export const token = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const events = style({
@@ -930,8 +961,8 @@ namespace styles {
 		flexDirection: 'column',
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: 'regular',
-				borderColor: 'line.secondary',
+				borderBottomWidth: '1px',
+				borderColor: 'grayAlpha.200',
 				borderStyle: 'solid',
 			},
 		},
@@ -940,17 +971,17 @@ namespace styles {
 	export const event = style({
 		alignItems: 'flex-start',
 		display: 'flex',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
-		typography: 'body.b3',
+		gap: '2',
+		paddingBlock: '2',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
 	export const eventIndex = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
-		marginTop: '2',
-		typography: 'body.b3',
+		marginTop: '2px !custom',
+		typography: 'label.12',
 	})
 }

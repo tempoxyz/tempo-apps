@@ -1,13 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import {
-	Badge,
-	StatusIndicator,
-	TextButton,
-	style,
-	vars,
-} from '@tempoxyz/ds/platform'
-import { SwapHorizontal } from '@tempoxyz/ds/platform/icons'
+import { style, Tag, vars } from '@tempoxyz/ds'
+import { ChevronRight, SwapHorizontal } from '@tempoxyz/ds/icons'
 import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
@@ -32,7 +26,14 @@ import {
 	RoleFormatter,
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
-import { link, linkHover, mono, pressDown, truncate } from '#styles/explorer'
+import {
+	link,
+	linkHover,
+	mono,
+	pressDown,
+	textAction,
+	truncate,
+} from '#styles/explorer'
 
 export function TxEventMemoLine(
 	props: TxEventMemoLine.Props,
@@ -176,26 +177,20 @@ export namespace TxEventDescription {
 			case 'action': {
 				if (part.value === 'Failed' || part.value === 'Blocked')
 					return (
-						<StatusIndicator
-							tone={part.value === 'Failed' ? 'negative' : 'warning'}
+						<Tag
+							intent={part.value === 'Failed' ? 'negative' : 'warning'}
+							variant="plain"
 						>
+							<Tag.Dot />
 							{part.value}
-						</StatusIndicator>
+						</Tag>
 					)
 				if (
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
 				)
-					return (
-						<span {...cx(vars({ set: 'inverse' }), styles.zoneChip())}>
-							{part.value}
-						</span>
-					)
-				return (
-					<Badge scale="small" variant="gray" {...styles.action()}>
-						{part.value}
-					</Badge>
-				)
+					return <span {...styles.zoneChip()}>{part.value}</span>
+				return <Tag {...styles.action()}>{part.value}</Tag>
 			}
 			case 'amount':
 				return <Amount {...part.value} />
@@ -335,20 +330,24 @@ export namespace TxEventDescription {
 					</React.Fragment>
 				))}
 				{remainingCount > 0 && (
-					<TextButton
+					<button
 						onClick={() => setExpanded(true)}
-						{...styles.groupToggle()}
+						type="button"
+						{...cx(textAction(), styles.groupToggle())}
 					>
-						Show {remainingCount} more
-					</TextButton>
+						<span>Show {remainingCount} more</span>
+						<ChevronRight />
+					</button>
 				)}
 				{expanded && events.length > limit && (
-					<TextButton
+					<button
 						onClick={() => setExpanded(false)}
-						{...styles.groupToggle()}
+						type="button"
+						{...cx(textAction(), styles.groupToggle())}
 					>
-						View less
-					</TextButton>
+						<span>View less</span>
+						<ChevronRight />
+					</button>
 				)}
 			</div>
 		)
@@ -369,36 +368,38 @@ export namespace TxEventDescription {
 namespace styles {
 	export const dexRoute = style({
 		alignItems: 'center',
-		backgroundColor: 'container.accent',
-		borderRadius: '3xs',
-		color: 'content.accent',
+		backgroundColor: 'blue.100',
+		borderRadius: 'sm',
+		color: 'blue.900',
 		display: 'inline-flex',
-		gap: '4',
-		height: '24',
-		paddingInline: '8',
+		gap: '1',
+		height: '6',
+		paddingInline: '2',
 		textDecorationLine: 'none',
 		whiteSpace: 'nowrap',
 		'@media (hover: hover)': {
-			':hover': { boxShadow: `inset 0 0 0 1px ${vars.color.border.accent}` },
+			':hover': {
+				boxShadow: `inset 0 0 0 1px ${vars.color.blue[700]} !custom`,
+			},
 		},
 	})
 
-	export const dexRouteIcon = style({ height: '12', width: '12' })
+	export const dexRouteIcon = style({ height: '3', width: '3' })
 
 	export const dexPair = style({ whiteSpace: 'nowrap' })
 
 	export const dexPairRetired = style({
-		color: 'content.primary',
+		color: 'foreground',
 		whiteSpace: 'nowrap',
 	})
 
 	export const memo = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const memoLabel = style({ flexShrink: '0 !custom' })
@@ -407,7 +408,7 @@ namespace styles {
 
 	export const functionName = style({ whiteSpace: 'nowrap' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	// The slot clips, so the link's focus ring is drawn inside it.
 	export const addressSlot = style({
@@ -440,28 +441,25 @@ namespace styles {
 		flex: 1,
 		flexDirection: 'row',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
-	// Badge leaves text case unset.
+	// Tag leaves text case unset.
 	export const action = style({ textTransform: 'capitalize' })
 
-	// Badge small geometry on an inverse fill (black in light mode, white in
-	// dark), which Badge's variants cannot express.
+	// Tag geometry on an inverse fill (black in light mode, white in dark),
+	// which Tag's intents cannot express.
 	export const zoneChip = style({
 		alignItems: 'center',
-		backgroundColor: 'background.primary',
-		borderRadius: '6px !custom',
-		color: 'content.primary',
-		columnGap: '4',
+		backgroundColor: 'foreground',
+		borderRadius: 'full',
+		boxSizing: 'border-box',
+		color: 'background.primary',
 		display: 'inline-flex',
-		height: '28px !custom',
-		justifyContent: 'center',
-		minWidth: '80px !custom',
-		paddingBlock: '4',
-		paddingInline: '8',
-		typography: 'body.b3',
+		height: '6',
+		paddingInline: '2',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 
@@ -476,7 +474,7 @@ namespace styles {
 	export const token = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
+		gap: '1',
 		whiteSpace: 'nowrap',
 	})
 
@@ -484,7 +482,7 @@ namespace styles {
 
 	export const empty = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 	})
 
@@ -494,9 +492,8 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '4',
+		gap: '1',
 	})
 
-	// TextButton leaves its alignment in a column unset.
 	export const groupToggle = style({ alignSelf: 'flex-start' })
 }

@@ -1,8 +1,8 @@
-import { style, Tab } from '@tempoxyz/ds/platform'
-import { ChevronDown } from '@tempoxyz/ds/platform/icons'
+import { style, Tabs } from '@tempoxyz/ds'
+import { ChevronDown } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
-import { pressDown } from '#styles/explorer'
+import { noScrollbar, pressDown } from '#styles/explorer'
 import { Pagination } from './Pagination'
 
 export function Sections(props: Sections.Props): React.JSX.Element {
@@ -142,7 +142,7 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 
 	return (
 		<Sections.Context.Provider value={{ mode }}>
-			<Tab.Root
+			<Tabs.Root
 				value={String(activeSection)}
 				onValueChange={(value) => {
 					if (value === null || Number(value) === activeSection) return
@@ -151,13 +151,19 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 				{...cx(styles.section(), styles.sectionTabs())}
 			>
 				<div {...styles.tabsHeader()}>
-					<Tab.List activateOnFocus aria-label="Details" {...styles.tabList()}>
+					<Tabs.List
+						activateOnFocus
+						aria-label="Details"
+						size="small"
+						{...cx(styles.tabList(), noScrollbar())}
+					>
 						{sections.map((section, index) => (
-							<Tab key={section.title} scale="small" value={String(index)}>
+							<Tabs.Tab key={section.title} value={String(index)}>
 								{section.title}
-							</Tab>
+							</Tabs.Tab>
 						))}
-					</Tab.List>
+						<Tabs.Indicator />
+					</Tabs.List>
 					{sections.map((section, index) => (
 						<div
 							key={section.title}
@@ -170,16 +176,16 @@ export function Sections(props: Sections.Props): React.JSX.Element {
 				</div>
 
 				{sections.map((section, index) => (
-					<Tab.Panel
+					<Tabs.Panel
 						key={section.title}
 						keepMounted
 						value={String(index)}
 						{...styles.content()}
 					>
 						{section.content}
-					</Tab.Panel>
+					</Tabs.Panel>
 				))}
-			</Tab.Root>
+			</Tabs.Root>
 		</Sections.Context.Provider>
 	)
 }
@@ -221,15 +227,15 @@ namespace styles {
 	export const stack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
+		gap: '4',
 	})
 
 	export const section = style({
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
 		overflow: 'hidden',
@@ -244,41 +250,41 @@ namespace styles {
 	// Rounded like the card, so the inset focus ring follows its corners.
 	export const toggle = style({
 		alignItems: 'center',
-		borderRadius: 'xs',
+		borderRadius: 'xl',
 		cursor: 'pointer',
 		display: 'flex',
 		height: '52px !custom',
 		justifyContent: 'space-between',
 		outlineOffset: '-2px !custom',
-		paddingInline: '20',
+		paddingInline: '5',
 		width: '100% !custom',
 	})
 
 	export const toggleExpanded = style({
-		borderBottomLeftRadius: 'none',
-		borderBottomRightRadius: 'none',
+		borderBottomLeftRadius: '0px !custom',
+		borderBottomRightRadius: '0px !custom',
 	})
 
 	export const title = style({
-		color: 'content.primary',
-		typography: 'heading.h4',
+		color: 'foreground',
+		typography: 'copy.18.strong',
 	})
 
 	export const toggleMeta = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '12',
+		gap: '3',
 	})
 
 	export const count = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const chevron = style({
-		color: 'content.secondary',
-		height: '16',
-		width: '16',
+		color: 'gray.900',
+		height: '4',
+		width: '4',
 	})
 
 	export const chevronExpanded = style({ rotate: '180deg' })
@@ -288,59 +294,61 @@ namespace styles {
 		display: 'flex',
 		height: '52px !custom',
 		justifyContent: 'space-between',
-		paddingInline: '20',
+		paddingInline: '5',
 	})
 
+	// On `Tabs.Panel`, which sets a 12px top margin: the panel meets the header.
 	export const content = style({
-		backgroundColor: 'background.secondary',
-		borderTopColor: 'line.secondary',
+		backgroundColor: 'background.surface',
+		borderTopColor: 'grayAlpha.200',
 		borderTopStyle: 'solid',
-		borderTopWidth: 'regular',
+		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
+		marginBlockStart: '0',
 		minHeight: '0 !custom',
 		overflowX: 'auto',
 		selectors: { '&[hidden]': { display: 'none' } },
 	})
 
 	export const contentStacked = style({
-		borderColor: 'line.secondary',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopLeftRadius: 'xs',
-		borderTopRightRadius: 'xs',
-		borderWidth: 'regular',
+		borderTopLeftRadius: 'xl',
+		borderTopRightRadius: 'xl',
+		borderWidth: '1px',
 		marginBottom: '-1px !custom',
 		marginInline: '-1px !custom',
 	})
 
 	export const contextual = style({
-		borderBottomColor: 'line.secondary',
+		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
-		borderBottomWidth: 'regular',
-		paddingBlock: '12',
-		paddingInline: '20',
+		borderBottomWidth: '1px',
+		paddingBlock: '3',
+		paddingInline: '5',
 	})
 
 	export const tabsHeader = style({
 		alignItems: 'center',
-		columnGap: '12',
+		columnGap: '3',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		minHeight: '48',
-		paddingBlock: '8',
-		paddingInline: '16',
-		rowGap: '8',
+		minHeight: '12',
+		paddingBlock: '2',
+		paddingInline: '4',
+		rowGap: '2',
 	})
 
-	export const tabList = style({ minWidth: '0 !custom', rowGap: '4' })
+	export const tabList = style({ minWidth: '0 !custom' })
 
 	export const singleTitle = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		gap: '8',
-		typography: 'body.b2',
+		gap: '2',
+		typography: 'copy.14',
 	})
 
 	export const contextualSlot = style({

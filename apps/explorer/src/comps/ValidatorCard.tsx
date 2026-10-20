@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { Address } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { useReadContract } from 'wagmi'
@@ -94,21 +94,21 @@ namespace styles {
 	export const recipient = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		minWidth: '0 !custom',
 	})
 
 	export const recipientHeader = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const recipientLink = style({
-		color: 'content.primary',
+		color: 'foreground',
 		maxWidth: '32ch !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 

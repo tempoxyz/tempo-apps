@@ -1,4 +1,4 @@
-import { Avatar, style } from '@tempoxyz/ds/platform'
+import { Avatar, style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import * as React from 'react'
 import { resolveLogoURI } from '#lib/domain/tip20'
@@ -13,14 +13,14 @@ const TOKEN_ICON_FALLBACK_SRC = '/token-fallback.svg'
 export function TokenIcon(props: TokenIcon.Props): React.JSX.Element {
 	const { address, logoURI, size = 16 } = props
 
+	// Token logos come in sizes off the Avatar scale, so the size is inline.
 	return (
-		<Avatar
-			alt=""
-			aria-hidden="true"
-			fallback={<LogoFallback key={address} address={address} />}
-			src={resolveLogoURI(logoURI)}
-			style={{ height: size, width: size }}
-		/>
+		<Avatar.Root aria-hidden="true" style={{ height: size, width: size }}>
+			<Avatar.Image alt="" src={resolveLogoURI(logoURI)} />
+			<Avatar.Fallback>
+				<LogoFallback key={address} address={address} />
+			</Avatar.Fallback>
+		</Avatar.Root>
 	)
 }
 

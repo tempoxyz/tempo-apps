@@ -1,19 +1,17 @@
-import { Button, IconButton, Tooltip, style } from '@tempoxyz/ds/platform'
-import { Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { Button, style } from '@tempoxyz/ds'
 import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
 import { AbiArgument } from '#comps/AbiArgument'
+import { CopyButton } from '#comps/CopyButton'
 import { getAbiItem, getContractInfo } from '#lib/domain/contracts'
-import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import { codeIdentifier, mono } from '#styles/explorer'
 
 export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 	const { address, data } = props
 	const selector = slice(data, 0, 4)
-	const copySignature = useCopy()
 	const [showRaw, setShowRaw] = useState(false)
 
 	const { data: autoloadAbi } = useAutoloadAbi({
@@ -100,21 +98,13 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 						))}
 						<span {...styles.secondary()}>)</span>
 					</code>
-					<Tooltip content="Copy signature">
-						<IconButton
-							{...styles.copyButton()}
-							aria-label="Copy signature"
-							onClick={() =>
-								copySignature.copy(
-									`${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`,
-								)
-							}
-							scale="small"
-							variant="tertiary"
-						>
-							{copySignature.notifying ? <Check /> : <Copy />}
-						</IconButton>
-					</Tooltip>
+					<CopyButton
+						ariaLabel="Copy signature"
+						className={styles.copyButton().className}
+						value={() =>
+							`${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`
+						}
+					/>
 				</div>
 				{args && args.length > 0 && (
 					<div {...styles.argumentList()}>
@@ -131,7 +121,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 			<Button
 				aria-expanded={showRaw}
 				onClick={() => setShowRaw(!showRaw)}
-				scale="small"
+				size="small"
 				variant="secondary"
 				{...styles.toggle()}
 			>
@@ -154,23 +144,16 @@ export namespace TxDecodedCalldata {
 
 	export function RawData(props: RawData.Props): React.JSX.Element {
 		const { data } = props
-		const { copy, notifying } = useCopy()
 
 		return (
 			<div {...styles.raw()}>
 				<pre {...styles.rawData()}>{data}</pre>
 				<div {...styles.rawActions()}>
-					<Tooltip content="Copy raw data">
-						<IconButton
-							{...styles.copyButton()}
-							aria-label="Copy raw data"
-							onClick={() => copy(data)}
-							scale="small"
-							variant="tertiary"
-						>
-							{notifying ? <Check /> : <Copy />}
-						</IconButton>
-					</Tooltip>
+					<CopyButton
+						ariaLabel="Copy raw data"
+						className={styles.copyButton().className}
+						value={data}
+					/>
 				</div>
 			</div>
 		)
@@ -187,15 +170,15 @@ namespace styles {
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 	})
 
 	// An opaque well, so the copy control can mask the text it overlaps. It
 	// clips, so focus rings inside it are drawn inset (the element type beats
-	// IconButton's own offset).
+	// Button's own offset).
 	export const panel = style({
 		backgroundColor: 'background.primary',
-		borderRadius: '2xs',
+		borderRadius: 'lg',
 		overflow: 'hidden',
 		selectors: {
 			'& a:focus-visible': { outlineOffset: '-2px' },
@@ -205,17 +188,17 @@ namespace styles {
 	})
 
 	export const raw = style({
-		paddingBlock: '8',
-		paddingInline: '12',
+		paddingBlock: '2',
+		paddingInline: '3',
 		position: 'relative',
 	})
 
 	export const rawData = style({
-		color: 'content.primary',
+		color: 'foreground',
 		maxHeight: '300px !custom',
 		overflow: 'auto',
-		paddingRight: '40',
-		typography: 'mono.inline',
+		paddingRight: '10',
+		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})
@@ -223,48 +206,45 @@ namespace styles {
 	export const rawActions = style({
 		backgroundColor: 'background.primary',
 		display: 'flex',
-		paddingLeft: '8',
+		paddingLeft: '2',
 		position: 'absolute',
-		right: '12',
-		top: '8',
+		right: '3',
+		top: '2',
 	})
 
-	// Negative margins let the 32px IconButton sit in a 16px text row without
-	// growing it. Only properties IconButton leaves unset.
+	// Negative margins let the 32px icon Button sit in a 16px text row without
+	// growing it. Only properties Button leaves unset.
 	export const copyButton = style({
 		flexShrink: '0 !custom',
 		marginBlock: '-8px !custom',
 		marginRight: '-8px !custom',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
 	})
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		paddingBlock: '8',
-		paddingInline: '12',
+		paddingBlock: '2',
+		paddingInline: '3',
 	})
 
 	export const signature = style({
-		color: 'content.primary',
-		typography: 'body.b3',
+		color: 'foreground',
+		typography: 'label.12',
 	})
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
 	export const argumentList = style({
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: 'regular',
-				borderColor: 'line.secondary',
+				borderBottomWidth: '1px',
+				borderColor: 'grayAlpha.200',
 			},
 		},
 	})

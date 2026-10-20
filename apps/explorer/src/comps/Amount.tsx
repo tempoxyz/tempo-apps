@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import * as Value from 'ox/Value'
 import { maxUint256 } from 'viem'
@@ -187,7 +187,7 @@ namespace styles {
 	export const root = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
@@ -198,5 +198,5 @@ namespace styles {
 		whiteSpace: 'nowrap',
 	})
 
-	export const small = style({ color: 'content.secondary' })
+	export const small = style({ color: 'gray.900' })
 }

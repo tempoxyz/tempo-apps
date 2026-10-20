@@ -4,14 +4,8 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import {
-	Button,
-	SegmentedControl,
-	style,
-	Tab,
-	variants,
-} from '@tempoxyz/ds/platform'
-import { Check, Link, Play } from '@tempoxyz/ds/platform/icons'
+import { Button, ChoiceGroup, style, Tabs, variants } from '@tempoxyz/ds'
+import { Check, Link, Play } from '@tempoxyz/ds/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -20,6 +14,7 @@ import { zeroAddress } from 'viem'
 import { useConnection } from 'wagmi'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { cx } from 'zyzz'
 import { ViewToggle } from '#comps/PanelToolbar'
 import { SimulateCallForm } from '#comps/SimulateCallForm'
 import { SimulateGasPanel } from '#comps/SimulateGasPanel'
@@ -82,6 +77,7 @@ import {
 	useAutoloadAbi,
 } from '#lib/queries'
 import { hex, zAddress, zHash } from '#lib/zod'
+import { pageMargin } from '#styles/explorer'
 import { getWagmiConfig } from '#wagmi.config'
 import EraserIcon from '~icons/lucide/eraser'
 
@@ -548,7 +544,7 @@ function SimulatePage(): React.JSX.Element {
 	const showOutput = pane === 'output' || pane === 'split'
 
 	return (
-		<div {...styles.page()}>
+		<div {...cx(styles.page(), pageMargin())}>
 			<div {...styles.toolbar()}>
 				<h1 {...styles.title()}>Simulate</h1>
 				<p {...styles.summary()} title={summary}>
@@ -565,24 +561,22 @@ function SimulatePage(): React.JSX.Element {
 						onChange={(value) => setSearch({ pane: value })}
 					/>
 				) : (
-					<SegmentedControl
+					<ChoiceGroup.Root
 						aria-label="Panes"
 						value={pane}
-						items={[
-							{ value: 'input', label: 'Input' },
-							{ value: 'split', label: 'Split' },
-							{ value: 'output', label: 'Result' },
-						]}
 						onValueChange={(value) => setSearch({ pane: value })}
-						style={{ width: 264 }}
-					/>
+					>
+						<ChoiceGroup.Item value="input">Input</ChoiceGroup.Item>
+						<ChoiceGroup.Item value="split">Split</ChoiceGroup.Item>
+						<ChoiceGroup.Item value="output">Result</ChoiceGroup.Item>
+					</ChoiceGroup.Root>
 				)}
 				{/* Both page-scoped: Share copies the whole URL — inputs, tab, and
 				    selected frame — not just the result. Keeping them here means one
 				    action bar rather than a second Run inside the result header. */}
 				<div {...styles.actions()}>
 					{hasDraft && (
-						<Button scale="medium" variant="secondary" onClick={clear}>
+						<Button size="medium" variant="secondary" onClick={clear}>
 							{/* No TDS equivalent; sized to match the TDS icons beside it. */}
 							<EraserIcon width="1em" height="1em" aria-hidden />
 							Clear
@@ -590,7 +584,7 @@ function SimulatePage(): React.JSX.Element {
 					)}
 					{runInput && (
 						<Button
-							scale="medium"
+							size="medium"
 							variant="secondary"
 							onClick={() =>
 								shareLink.copy(
@@ -603,7 +597,7 @@ function SimulatePage(): React.JSX.Element {
 						</Button>
 					)}
 					<Button
-						scale="medium"
+						size="medium"
 						variant="primary"
 						onClick={run}
 						aria-keyshortcuts="Meta+Enter Control+Enter"
@@ -999,7 +993,7 @@ function SimulationResults(props: {
 					value={props.tab}
 					onChange={(tab) => props.onSearchChange({ tab })}
 				>
-					<Tab.Panel value="overview" {...styles.panel()}>
+					<Tabs.Panel value="overview" {...styles.panel()}>
 						{execution ? (
 							<SimulateOverview
 								input={input}
@@ -1016,9 +1010,9 @@ function SimulationResults(props: {
 						) : (
 							<PanelSkeleton rows={5} />
 						)}
-					</Tab.Panel>
+					</Tabs.Panel>
 
-					<Tab.Panel value="trace" {...styles.panel()}>
+					<Tabs.Panel value="trace" {...styles.panel()}>
 						{traceQuery.isPending ? (
 							<PanelSkeleton rows={7} />
 						) : traceQuery.error ? (
@@ -1058,9 +1052,9 @@ function SimulationResults(props: {
 						) : (
 							<PanelEmpty>No trace returned for this call.</PanelEmpty>
 						)}
-					</Tab.Panel>
+					</Tabs.Panel>
 
-					<Tab.Panel value="state" {...styles.panel()}>
+					<Tabs.Panel value="state" {...styles.panel()}>
 						{prestateQuery.isPending ? (
 							<PanelSkeleton rows={5} />
 						) : prestateQuery.error ? (
@@ -1081,9 +1075,9 @@ function SimulationResults(props: {
 						) : (
 							<PanelEmpty>No state changed.</PanelEmpty>
 						)}
-					</Tab.Panel>
+					</Tabs.Panel>
 
-					<Tab.Panel value="events" {...styles.panel()}>
+					<Tabs.Panel value="events" {...styles.panel()}>
 						{executionQuery.isPending ? (
 							<PanelSkeleton rows={4} />
 						) : executionQuery.error ? (
@@ -1097,9 +1091,9 @@ function SimulationResults(props: {
 								knownEvents={visibleKnownEvents}
 							/>
 						)}
-					</Tab.Panel>
+					</Tabs.Panel>
 
-					<Tab.Panel value="gas" {...styles.panel()}>
+					<Tabs.Panel value="gas" {...styles.panel()}>
 						{traceQuery.isPending ? (
 							<PanelSkeleton rows={5} />
 						) : (
@@ -1116,7 +1110,7 @@ function SimulationResults(props: {
 								onSelectFrame={selectFrame}
 							/>
 						)}
-					</Tab.Panel>
+					</Tabs.Panel>
 				</SimulateTabs>
 			</div>
 		</section>
@@ -1203,20 +1197,20 @@ function SimulationEmptyState(props: {
 				    primary button competing with Run is a coin toss, not a hierarchy. */}
 				<div {...styles.emptyActions()}>
 					<Button
-						scale="small"
+						size="small"
 						variant="secondary"
 						onClick={() => props.onExample('read')}
 					>
 						Read a token name
 					</Button>
 					<Button
-						scale="small"
+						size="small"
 						variant="secondary"
 						onClick={() => props.onExample('failing')}
 					>
 						See a failing transfer
 					</Button>
-					<Button scale="small" variant="secondary" onClick={props.onEdit}>
+					<Button size="small" variant="secondary" onClick={props.onEdit}>
 						Compose a call
 					</Button>
 				</div>
@@ -1260,39 +1254,38 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		paddingBottom: '48',
-		paddingInline: 'page.margin',
-		paddingTop: '32',
-		typography: 'body.b2',
+		paddingBottom: '12',
+		paddingTop: '8',
+		typography: 'copy.14',
 		width: '100% !custom',
-		'@media (width >= 800px)': { paddingTop: '48' },
+		'@media (width >= 800px)': { paddingTop: '12' },
 	})
 
 	export const toolbar = style({
 		alignItems: 'center',
-		columnGap: '16',
+		columnGap: '4',
 		display: 'flex',
 		flexWrap: 'wrap',
-		marginBottom: '16',
-		rowGap: '8',
+		marginBottom: '4',
+		rowGap: '2',
 	})
 
 	export const title = style({
-		color: 'content.primary',
+		color: 'foreground',
 		flexShrink: 0,
-		margin: 'none',
-		typography: 'heading.h3',
+		margin: '0',
+		typography: 'heading.20.subtle',
 	})
 
 	export const summary = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flex: 1,
 		fontVariantNumeric: 'tabular-nums',
-		margin: 'none',
+		margin: '0',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
 		textOverflow: 'ellipsis',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		whiteSpace: 'nowrap',
 	})
 
@@ -1300,14 +1293,14 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const panes = variants({
 		base: {
 			alignItems: 'start',
 			display: 'grid',
-			gap: '16',
+			gap: '4',
 			minHeight: '560px !custom',
 			minWidth: '0 !custom',
 		},
@@ -1325,11 +1318,11 @@ namespace styles {
 	})
 
 	export const card = style({
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
 		minWidth: '0 !custom',
@@ -1345,7 +1338,7 @@ namespace styles {
 			minWidth: '0 !custom',
 			transitionDuration: '150ms',
 			transitionProperty: 'opacity',
-			transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
+			transitionTimingFunction: 'in-out',
 		},
 		defaultVariants: { stale: false },
 		variants: {
@@ -1353,14 +1346,8 @@ namespace styles {
 		},
 	})
 
-	// A tab panel takes focus; the card clips overflow, so the ring sits inside.
-	export const panel = style({
-		minWidth: '0 !custom',
-		':focus-visible': {
-			outline: '2px solid currentColor !custom',
-			outlineOffset: '-2px !custom',
-		},
-	})
+	// TDS Tabs.Panel draws its own focus ring; this only lets it shrink.
+	export const panel = style({ minWidth: '0 !custom' })
 
 	export const column = style({
 		display: 'flex',
@@ -1370,18 +1357,18 @@ namespace styles {
 
 	export const emptyHeader = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
-		gap: '8',
-		paddingBlock: '12',
-		paddingInline: '16',
+		gap: '2',
+		paddingBlock: '3',
+		paddingInline: '4',
 	})
 
 	export const emptyTitle = style({
-		color: 'content.secondary',
-		typography: 'body.b2',
+		color: 'gray.900',
+		typography: 'copy.14',
 	})
 
 	export const emptyPreview = style({ opacity: 0.4, userSelect: 'none' })
@@ -1389,20 +1376,20 @@ namespace styles {
 	export const emptyBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		padding: '16',
+		gap: '3',
+		padding: '4',
 	})
 
 	export const emptyText = style({
-		color: 'content.secondary',
-		margin: 'none',
+		color: 'gray.900',
+		margin: '0',
 		maxWidth: '520px !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const emptyActions = style({
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 	})
 }

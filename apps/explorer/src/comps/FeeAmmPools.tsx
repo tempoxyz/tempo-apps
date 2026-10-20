@@ -1,7 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Alert, SimpleTable, style } from '@tempoxyz/ds/platform'
-import { ArrowRight } from '@tempoxyz/ds/platform/icons'
+import { Callout, Rows, style } from '@tempoxyz/ds'
+import { ArrowRight } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import type * as React from 'react'
 import { cx } from 'zyzz'
@@ -26,20 +26,24 @@ export function FeeAmmQueryState({
 	if (!query.isError) return null
 	return (
 		<div {...styles.alert()}>
-			<Alert
+			<Callout
+				intent={query.data ? 'warning' : 'negative'}
 				role="alert"
-				tone={query.data ? 'warning' : 'negative'}
-				title={
-					query.data
+				size="small"
+			>
+				<Callout.Icon />
+				<Callout.Content>
+					{query.data
 						? 'Could not refresh liquidity. Showing the last successful result.'
-						: 'Fee AMM liquidity is temporarily unavailable.'
-				}
-				action={{
-					disabled: query.isFetching,
-					label: query.isFetching ? 'Retrying…' : 'Try again',
-					onClick: () => void query.refetch(),
-				}}
-			/>
+						: 'Fee AMM liquidity is temporarily unavailable.'}
+				</Callout.Content>
+				<Callout.Action
+					disabled={query.isFetching}
+					onClick={() => void query.refetch()}
+				>
+					{query.isFetching ? 'Retrying…' : 'Try again'}
+				</Callout.Action>
+			</Callout>
 		</div>
 	)
 }
@@ -89,10 +93,10 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 						: 'Fee token → Validator token'}
 				</p>
 			</div>
-			<SimpleTable>
-				<SimpleTable.Row style={compactRow}>
-					<SimpleTable.Dt>Fee-token reserve</SimpleTable.Dt>
-					<SimpleTable.Dd {...styles.value()}>
+			<Rows dividers="full" size="small">
+				<Rows.Row spacing="none">
+					<Rows.Label>Fee-token reserve</Rows.Label>
+					<span {...styles.value()}>
 						{pool.reserveUserToken === null ? (
 							'Unavailable'
 						) : (
@@ -103,11 +107,11 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 								symbol={pool.userTokenSymbol}
 							/>
 						)}
-					</SimpleTable.Dd>
-				</SimpleTable.Row>
-				<SimpleTable.Row style={compactRow}>
-					<SimpleTable.Dt>Validator-token reserve</SimpleTable.Dt>
-					<SimpleTable.Dd {...styles.value()}>
+					</span>
+				</Rows.Row>
+				<Rows.Row spacing="none">
+					<Rows.Label>Validator-token reserve</Rows.Label>
+					<span {...styles.value()}>
 						{pool.reserveValidatorToken === null ? (
 							'Unavailable'
 						) : (
@@ -118,19 +122,19 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 								symbol={pool.validatorTokenSymbol}
 							/>
 						)}
-					</SimpleTable.Dd>
-				</SimpleTable.Row>
-				<SimpleTable.Row style={compactRow}>
-					<SimpleTable.Dt>Estimated liquidity</SimpleTable.Dt>
-					<SimpleTable.Dd {...styles.value()}>
+					</span>
+				</Rows.Row>
+				<Rows.Row spacing="none">
+					<Rows.Label>Estimated liquidity</Rows.Label>
+					<span {...styles.value()}>
 						{pool.liquidityUsd === null
 							? 'Unavailable'
 							: PriceFormatter.format(pool.liquidityUsd)}
-					</SimpleTable.Dd>
-				</SimpleTable.Row>
-				<SimpleTable.Row style={compactRow}>
-					<SimpleTable.Dt>Last liquidity added</SimpleTable.Dt>
-					<SimpleTable.Dd>
+					</span>
+				</Rows.Row>
+				<Rows.Row spacing="none">
+					<Rows.Label>Last liquidity added</Rows.Label>
+					<span {...styles.lastAdded()}>
 						{pool.latestMintAt === null ? (
 							'Unknown'
 						) : (
@@ -143,9 +147,9 @@ export function PoolRow({ pool, token }: PoolRow.Props): React.JSX.Element {
 							{pool.mintCount.toLocaleString()} liquidity{' '}
 							{pool.mintCount === 1 ? 'deposit' : 'deposits'}
 						</span>
-					</SimpleTable.Dd>
-				</SimpleTable.Row>
-			</SimpleTable>
+					</span>
+				</Rows.Row>
+			</Rows>
 		</div>
 	)
 }
@@ -216,28 +220,25 @@ export declare namespace TokenFeeAmm {
 	type Props = { address: Address.Address }
 }
 
-// Pool rows list many values, so their table rows are compact.
-const compactRow = { paddingBlock: 8 } satisfies React.CSSProperties
-
 namespace styles {
 	export const loading = style({
-		color: 'content.secondary',
-		paddingBlock: '32',
-		paddingInline: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		paddingBlock: '8',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
-	export const alert = style({ padding: '16' })
+	export const alert = style({ padding: '4' })
 
 	export const row = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
 		display: 'grid',
-		gap: '16',
-		paddingBlock: '16',
-		paddingInline: '16',
-		':last-child': { borderBottomWidth: 'none' },
+		gap: '4',
+		paddingBlock: '4',
+		paddingInline: '4',
+		':last-child': { borderBottomWidth: '0px' },
 		'@media (width >= 768px)': {
 			gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)',
 		},
@@ -246,7 +247,7 @@ namespace styles {
 	export const pair = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '2',
 		minWidth: '0px !custom',
 	})
 
@@ -254,34 +255,41 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
-		typography: 'body.b2',
+		gap: '2',
+		typography: 'copy.14',
 	})
 
-	export const pairArrow = style({ color: 'content.tertiary', flexShrink: 0 })
+	export const pairArrow = style({ color: 'gray.700', flexShrink: 0 })
 
 	export const caption = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
-	export const value = style({ fontVariantNumeric: 'tabular-nums' })
+	export const value = style({
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0px !custom',
+		overflowWrap: 'anywhere',
+		textAlign: 'end',
+	})
+
+	export const lastAdded = style({ minWidth: '0px !custom', textAlign: 'end' })
 
 	export const deposits = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'block',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const tokenLink = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const section = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
 		scrollMarginTop: '80px !custom',
 	})
@@ -290,34 +298,34 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '12',
+		gap: '3',
 		justifyContent: 'space-between',
-		padding: '16',
+		padding: '4',
 	})
 
 	export const sectionTitle = style({
-		color: 'content.primary',
-		typography: 'body.b2Strong',
+		color: 'foreground',
+		typography: 'copy.14.strong',
 	})
 
 	export const viewAll = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
-		typography: 'body.b2',
+		gap: '1',
+		typography: 'copy.14',
 	})
 
 	export const empty = style({
-		color: 'content.secondary',
-		paddingBottom: '20',
-		paddingInline: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		paddingBottom: '5',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
 	export const more = style({
-		color: 'content.secondary',
-		paddingBottom: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		color: 'gray.900',
+		paddingBottom: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 }

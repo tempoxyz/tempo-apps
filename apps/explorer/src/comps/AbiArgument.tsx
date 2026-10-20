@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type { AbiParameter } from 'viem'
 import { cx } from 'zyzz'
 import { useCopy } from '#lib/hooks'
@@ -77,73 +77,73 @@ export declare namespace AbiArgument {
 namespace styles {
 	export const details = style({
 		minWidth: '0 !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	export const summary = style({
-		color: 'content.primary',
+		color: 'foreground',
 		cursor: 'pointer',
-		paddingBlock: '12',
-		paddingInline: '12',
+		paddingBlock: '3',
+		paddingInline: '3',
 		wordBreak: 'break-all',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 	})
 
-	export const meta = style({ color: 'content.secondary', marginLeft: '8' })
+	export const meta = style({ color: 'gray.900', marginLeft: '2' })
 
 	export const children = style({
-		borderColor: 'line.secondary',
-		borderLeftWidth: 'regular',
-		marginBottom: '8',
-		marginLeft: '16',
-		paddingLeft: '8',
+		borderColor: 'grayAlpha.200',
+		borderLeftWidth: '1px',
+		marginBottom: '2',
+		marginLeft: '4',
+		paddingLeft: '2',
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: 'regular',
-				borderColor: 'line.secondary',
+				borderBottomWidth: '1px',
+				borderColor: 'grayAlpha.200',
 			},
 		},
 	})
 
 	export const empty = style({
-		color: 'content.secondary',
-		paddingBottom: '12',
-		paddingInline: '24',
+		color: 'gray.900',
+		paddingBottom: '3',
+		paddingInline: '6',
 	})
 
 	export const value = style({
-		color: 'content.primary',
+		color: 'foreground',
 		cursor: 'pointer',
 		display: 'grid',
-		gap: '4',
+		gap: '1',
 		gridTemplateColumns: 'minmax(0, 1fr)',
-		paddingBlock: '8',
-		paddingInline: '12',
+		paddingBlock: '2',
+		paddingInline: '3',
 		textAlign: 'left',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		width: '100% !custom',
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 		'@media (width >= 640px)': {
-			gap: '12',
+			gap: '3',
 			gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
 		},
 	})
 
 	export const label = style({ minWidth: '0 !custom', wordBreak: 'break-all' })
 
-	export const labelName = style({ color: 'content.primary', display: 'block' })
+	export const labelName = style({ color: 'foreground', display: 'block' })
 
 	export const labelType = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'block',
 	})
 
 	export const valueText = style({
-		color: 'content.primary',
+		color: 'foreground',
 		maxHeight: '160px !custom',
 		minWidth: '0 !custom',
 		overflow: 'auto',

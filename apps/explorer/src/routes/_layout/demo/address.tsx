@@ -3,7 +3,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { Check, Copy } from '@tempoxyz/ds/icons'
 import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
@@ -41,7 +41,7 @@ import {
 } from '#lib/demo'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import { cx } from 'zyzz'
 import { pressDown } from '#styles/explorer'
 
@@ -1045,18 +1045,18 @@ function Component() {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '16',
+		gap: '4',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+			paddingBottom: '8',
+			paddingTop: '10',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
 	})
@@ -1066,32 +1066,32 @@ namespace styles {
 	export const addressHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
+		gap: '2',
+		marginBottom: '2',
 	})
 
 	export const addressLabel = style({
 		textTransform: 'capitalize',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
-	export const copyIcon = style({ height: '12', width: '12' })
+	export const copyIcon = style({ height: '3', width: '3' })
 
 	export const addressValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		maxWidth: '21ch !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		wordBreak: 'break-all',
 	})
 
 	export const pending = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const value = style({
-		color: 'content.primary',
-		typography: 'body.b3',
+		color: 'foreground',
+		typography: 'label.12',
 	})
 
 	// TxEventDescription sets flexWrap on the same element.
@@ -1102,23 +1102,23 @@ namespace styles {
 
 	export const collapsed = style({
 		alignItems: 'center',
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
-		height: '20',
+		height: '5',
 		whiteSpace: 'nowrap',
 	})
 
 	export const addressButton = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		textAlign: 'left',
 		width: '100% !custom',
 	})
 
 	export const more = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		flexShrink: 0,
-		marginLeft: '4',
+		marginLeft: '1',
 	})
 }

@@ -5,7 +5,8 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { Search, StatusIndicator, style } from '@tempoxyz/ds/platform'
+import { Field, Input, Tag, style } from '@tempoxyz/ds'
+import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
@@ -196,16 +197,17 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 }
 
 function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
-	const tone =
+	const intent =
 		props.type === 'whitelist'
 			? 'positive'
 			: props.type === 'blacklist'
 				? 'negative'
 				: 'neutral'
 	return (
-		<StatusIndicator tone={tone} {...styles.typeLabel()}>
+		<Tag intent={intent} variant="plain" {...styles.typeLabel()}>
+			<Tag.Dot />
 			{props.type}
-		</StatusIndicator>
+		</Tag>
 	)
 }
 
@@ -228,17 +230,26 @@ function MembersSearch(props: { query: string }) {
 				search(new FormData(event.currentTarget).get('query')?.toString() ?? '')
 			}}
 		>
-			<Search
-				name="query"
-				defaultValue={props.query}
-				placeholder="Search addresses"
-				aria-label="Search policy members"
-				enterKeyHint="search"
-				// Clearing the field also clears an applied filter.
-				onValueChange={(value) => {
-					if (!value && props.query) search('')
-				}}
-			/>
+			<Field.Root>
+				<Input.Group variant="search">
+					<Input.Prefix>
+						<Search />
+					</Input.Prefix>
+					<Input.Control
+						name="query"
+						type="search"
+						defaultValue={props.query}
+						placeholder="Search addresses"
+						aria-label="Search policy members"
+						enterKeyHint="search"
+						// Clearing the field also clears an applied filter.
+						onValueChange={(value) => {
+							if (!value && props.query) search('')
+						}}
+					/>
+					<Input.Clear aria-label="Clear search" />
+				</Input.Group>
+			</Field.Root>
 		</form>
 	)
 }
@@ -251,7 +262,7 @@ function MembersGrid(props: {
 	const { policy, page, limit } = props
 	const pages = Math.max(1, Math.ceil(policy.membersTotal / limit))
 	const status = policy.type === 'whitelist' ? 'Authorized' : 'Restricted'
-	const statusTone = policy.type === 'whitelist' ? 'positive' : 'negative'
+	const statusIntent = policy.type === 'whitelist' ? 'positive' : 'negative'
 
 	return (
 		<DataGrid
@@ -270,9 +281,10 @@ function MembersGrid(props: {
 					key: address,
 					cells: [
 						<AddressLink key="address" address={address} chars={5} />,
-						<StatusIndicator key="status" tone={statusTone}>
+						<Tag key="status" intent={statusIntent} variant="plain">
+							<Tag.Dot />
 							{status}
-						</StatusIndicator>,
+						</Tag>,
 					],
 				}))
 			}
@@ -375,37 +387,37 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		justifyContent: 'center',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingInline: '4',
+		paddingTop: '16',
 	})
 
 	export const notFoundContent = style({ textAlign: 'center' })
 
 	export const notFoundTitle = style({
-		color: 'content.primary',
-		typography: 'heading.h1',
+		color: 'foreground',
+		typography: 'heading.32.subtle',
 	})
 
 	export const notFoundMessage = style({
-		color: 'content.secondary',
-		marginTop: '8',
-		typography: 'body.b2',
+		color: 'gray.900',
+		marginTop: '2',
+		typography: 'copy.14',
 	})
 
 	export const page = style({
 		display: 'grid',
-		gap: '16',
+		gap: '4',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
+		paddingBottom: '16',
+		paddingInline: '4',
+		paddingTop: '16',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+			paddingBottom: '8',
+			paddingTop: '10',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -420,28 +432,25 @@ namespace styles {
 	export const type = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 	})
 
 	export const typeLabel = style({ textTransform: 'capitalize' })
 
-	export const builtIn = style({ color: 'content.secondary' })
+	export const builtIn = style({ color: 'gray.900' })
 
 	// Touch devices keep 16px text so iOS does not zoom on focus.
 	export const search = style({
-		selectors: {
-			'& input::placeholder': { color: 'content.secondary' },
-		},
 		'@media (pointer: coarse)': {
 			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
 	})
 
-	export const event = style({ color: 'content.primary' })
+	export const event = style({ color: 'foreground' })
 
 	export const transaction = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
+		gap: '1',
 	})
 }

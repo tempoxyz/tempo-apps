@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Alert, style } from '@tempoxyz/ds/platform'
+import { Callout, style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import type * as React from 'react'
 import { cx } from 'zyzz'
@@ -44,13 +44,13 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 	if (query.isError)
 		return (
 			<div {...styles.error()}>
-				<Alert
-					role="alert"
-					tone="negative"
-					title="Unable to load all unclaimed fees."
-					description="Please reload the page to try again."
-					style={{ width: '100%' }}
-				/>
+				<Callout intent="negative">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong>Unable to load all unclaimed fees.</strong> Please reload
+						the page to try again.
+					</Callout.Content>
+				</Callout>
 			</div>
 		)
 
@@ -124,14 +124,14 @@ export declare namespace ValidatorFees {
 }
 
 namespace styles {
-	export const error = style({ padding: '16' })
+	export const error = style({ padding: '4' })
 
-	export const row = style({ typography: 'body.b3' })
+	export const row = style({ typography: 'label.12' })
 
 	export const note = style({
-		color: 'content.secondary',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		color: 'gray.900',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 }

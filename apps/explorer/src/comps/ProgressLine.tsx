@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import * as React from 'react'
 
 const endDelay = 200
@@ -77,7 +77,7 @@ export declare namespace ProgressLine {
 
 namespace styles {
 	export const line = style({
-		backgroundColor: 'content.primary',
+		backgroundColor: 'foreground',
 		height: '1px !custom',
 		pointerEvents: 'none',
 	})

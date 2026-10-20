@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { TempoLogoWordmark } from '@tempoxyz/ds/brand/logos'
 import {
 	Coins,
 	Files,
@@ -7,14 +6,15 @@ import {
 	Receipt,
 	SwapHorizontal,
 	User,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import * as z from 'zod/mini'
+import { Button, style } from '@tempoxyz/ds'
 import { ExploreInput } from '#comps/ExploreInput'
+import { TempoWordmark } from '#comps/TempoWordmark'
 import { getTempoEnv } from '#lib/env'
-import { link, pressDown } from '#styles/explorer'
-import { style } from '@tempoxyz/ds/platform'
+import { link } from '#styles/explorer'
 
 const SPOTLIGHT_DATA: Record<
 	string,
@@ -63,10 +63,7 @@ function Component() {
 		<div {...styles.page()}>
 			<div {...styles.hero()}>
 				<h1 {...styles.logo()}>
-					<TempoLogoWordmark
-						aria-label="Tempo Explorer"
-						{...styles.wordmark()}
-					/>
+					<TempoWordmark aria-label="Tempo Explorer" {...styles.wordmark()} />
 				</h1>
 			</div>
 			<div {...styles.body()}>
@@ -172,15 +169,20 @@ function SpotlightPill(props: {
 }) {
 	const { to, params, search, icon, children } = props
 	return (
-		<Link
-			to={to}
-			{...(params ? { params } : {})}
-			{...(search ? { search } : {})}
-			{...styles.pill({ className: pressDown().className })}
+		<Button.Link
+			render={
+				<Link
+					to={to}
+					{...(params ? { params } : {})}
+					{...(search ? { search } : {})}
+				/>
+			}
+			size="small"
+			variant="secondary"
 		>
 			{icon}
 			<span>{children}</span>
-		</Link>
+		</Button.Link>
 	)
 }
 
@@ -189,7 +191,7 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		typography: 'body.b1',
+		typography: 'copy.16',
 		width: '100% !custom',
 	})
 
@@ -201,10 +203,10 @@ namespace styles {
 	})
 
 	export const logo = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'flex',
 		justifyContent: 'center',
-		margin: 'none',
+		margin: '0',
 		userSelect: 'none',
 		'@media (height <= 360px)': { display: 'none' },
 	})
@@ -212,9 +214,9 @@ namespace styles {
 	// Sized like a search engine's home logo; the header hides its own on this page.
 	export const wordmark = style({
 		display: 'block',
-		height: '48',
+		height: '12',
 		width: 'auto !custom',
-		'@media (width >= 800px)': { height: '64' },
+		'@media (width >= 800px)': { height: '16' },
 	})
 
 	export const body = style({
@@ -222,9 +224,9 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '32',
-		paddingInline: '16',
-		paddingTop: '32',
+		gap: '8',
+		paddingInline: '4',
+		paddingTop: '8',
 	})
 
 	export const search = style({
@@ -236,7 +238,7 @@ namespace styles {
 
 	export const spotlight = style({
 		maxWidth: '680px !custom',
-		paddingInline: '16',
+		paddingInline: '4',
 		textAlign: 'center',
 	})
 
@@ -244,27 +246,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'center',
-	})
-
-	// TDS Button small secondary geometry on a link.
-	export const pill = style({
-		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderRadius: 'full',
-		color: 'content.primary',
-		columnGap: '4',
-		display: 'inline-flex',
-		height: '32',
-		justifyContent: 'center',
-		minWidth: '80px !custom',
-		paddingInline: '16',
-		textDecorationLine: 'none',
-		typography: 'body.b3',
-		whiteSpace: 'nowrap',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
 	})
 }

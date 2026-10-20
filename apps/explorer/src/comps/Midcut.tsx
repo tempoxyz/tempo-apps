@@ -1,4 +1,4 @@
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import { mono } from '#styles/explorer'

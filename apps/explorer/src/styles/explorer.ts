@@ -1,12 +1,11 @@
-import { vars as core } from '@tempoxyz/ds/core'
-import { style, vars } from '@tempoxyz/ds/platform'
+import { style, vars } from '@tempoxyz/ds'
 import { keyframes } from 'zyzz/web'
 
-// Explorer additions on top of Tempo Design System Platform. Links use the TDS
-// accent; TDS has no code color, so code uses the core violet pair.
+// Explorer additions on top of Tempo Design System Web: link and code colors
+// from the TDS ramps, and shared interaction recipes.
 // Combine with `cx(styles.x(), link())`.
 
-export const link = style({ color: 'content.accent' })
+export const link = style({ color: 'blue.900' })
 
 export const linkHover = style({
 	'@media (hover: hover)': {
@@ -14,13 +13,33 @@ export const linkHover = style({
 	},
 })
 
-export const codeIdentifier = style({
-	color: `light-dark(${core.color.accent.violetLight}, ${core.color.accent.violetDark}) !custom`,
-})
+export const codeIdentifier = style({ color: 'purple.900' })
 
 export const pressDown = style({
 	selectors: {
 		'&:active:not([aria-disabled="true"])': { transform: 'translateY(0.5px)' },
+	},
+})
+
+/**
+ * An unpadded text button with a trailing 12px icon, for actions that line up
+ * with the text or card row around them, where the padding of a TDS text
+ * `Button` would not. The global rule draws its focus ring.
+ */
+export const textAction = style({
+	alignItems: 'center',
+	backgroundColor: 'transparent !custom',
+	border: 'none !custom',
+	color: 'gray.900',
+	columnGap: '1',
+	cursor: 'pointer',
+	display: 'inline-flex',
+	padding: '0',
+	typography: 'label.14.strong',
+	whiteSpace: 'nowrap',
+	selectors: {
+		'& > svg': { flexShrink: '0 !custom', height: '3', width: '3' },
+		'&:disabled': { cursor: 'default' },
 	},
 })
 
@@ -30,52 +49,66 @@ export const noScrollbar = style({
 })
 
 export const srOnly = style({
-	borderWidth: '0 !custom',
+	borderWidth: '0px',
 	clipPath: 'inset(50%)',
 	height: '1px !custom',
 	margin: '-1px !custom',
 	overflow: 'hidden',
-	padding: 'none',
+	padding: '0',
 	position: 'absolute',
 	whiteSpace: 'nowrap',
 	width: '1px !custom',
+})
+
+/**
+ * The page's inline margin from TDS Platform, which TDS Web dropped: 24px,
+ * growing to 48, 64 and 80px at 768, 1024 and 1536px.
+ */
+export const pageMargin = style({
+	paddingInline: '6',
+	'@media (min-width: 768px)': { paddingInline: '12' },
+	'@media (min-width: 1024px)': { paddingInline: '16' },
+	'@media (min-width: 1536px)': { paddingInline: '20' },
 })
 
 export const transitionColors = style({
 	transitionDuration: '150ms',
 	transitionProperty:
 		'color, background-color, border-color, outline-color, text-decoration-color, fill, stroke',
-	transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-})
-
-/** JetBrains Mono at the surrounding size, for hashes, addresses, and values. */
-export const mono = style({
-	fontFamily: '"JetBrains Mono", monospace',
-	fontWeight: 400,
-	letterSpacing: '0px !custom',
+	transitionTimingFunction: 'in-out',
 })
 
 /**
- * TDS TextInput's field, for inputs that show an invalid state, which the
- * component lacks. Combine with a height override for compact rows.
+ * The TDS mono face (JetBrains Mono, see `#styles/globals`) at the surrounding
+ * size, for hashes, addresses, and values.
+ */
+export const mono = style({
+	fontFamily: 'mono',
+	fontWeight: 'normal',
+	letterSpacing: 'normal',
+})
+
+/**
+ * A text field in the TDS Input style, for inputs that show an invalid state.
+ * Combine with a height override for compact rows.
  */
 export const textField = style({
-	backgroundColor: 'container.regular',
-	border: 'none !custom',
-	borderRadius: 'xs',
-	color: 'content.primary',
-	height: '48',
-	paddingInline: '20',
-	typography: 'body.b2',
+	backgroundColor: 'grayAlpha.100',
+	border: 'none',
+	borderRadius: 'xl',
+	color: 'foreground',
+	height: '12',
+	paddingInline: '5',
+	typography: 'copy.14',
 	width: '100% !custom',
-	'::placeholder': { color: 'content.secondary' },
+	'::placeholder': { color: 'gray.900' },
 	selectors: {
 		'&:focus-visible': {
-			outline: '2px solid currentColor !custom',
-			outlineOffset: '2px !custom',
+			outline: `2px solid ${vars.color.blue[700]}`,
+			outlineOffset: '2px',
 		},
 		'&[aria-invalid="true"]': {
-			boxShadow: `inset 0 0 0 1px ${vars.color.content.negative} !custom`,
+			boxShadow: `inset 0 0 0 1px ${vars.color.red[900]} !custom`,
 		},
 	},
 })
@@ -86,27 +119,21 @@ export const truncate = style({
 	whiteSpace: 'nowrap',
 })
 
-const ping = keyframes({
-	'75%, 100%': { opacity: 0, transform: 'scale(2)' },
-})
-
-const pulse = keyframes({ '50%': { opacity: 0.5 } })
-
 export const rowShimmer = keyframes({
-	from: { backgroundColor: vars.color.container.positive },
+	from: { backgroundColor: vars.color.green[100] },
 	to: { backgroundColor: 'transparent' },
 })
 
 /** Loading placeholder pulse. Off when the user prefers reduced motion. */
 export const animatePulse = style({
 	'@media (prefers-reduced-motion: no-preference)': {
-		animation: `${pulse} 2s cubic-bezier(0.4, 0, 0.6, 1) infinite`,
+		animation: 'pulse',
 	},
 })
 
 /** Live-status ping ring. Off when the user prefers reduced motion. */
 export const animatePing = style({
 	'@media (prefers-reduced-motion: no-preference)': {
-		animation: `${ping} 1s cubic-bezier(0, 0, 0.2, 1) infinite`,
+		animation: 'ping',
 	},
 })

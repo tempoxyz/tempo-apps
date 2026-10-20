@@ -1,6 +1,6 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
-import { Check, Copy } from '@tempoxyz/ds/platform/icons'
+import { style } from '@tempoxyz/ds'
+import { Check, Copy } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
@@ -202,31 +202,30 @@ export declare namespace AccountCard {
 
 namespace styles {
 	export const tokenTitle = style({
-		gap: '12',
+		gap: '3',
 		minWidth: '0 !custom',
-		paddingBlock: '12',
+		paddingBlock: '3',
 		width: '100% !custom',
 	})
 
 	export const tokenText = style({ flex: 1, minWidth: '0 !custom' })
 
 	export const tokenName = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'block',
 		overflowWrap: 'anywhere',
 	})
 
 	export const tokenSymbol = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'block',
-		marginTop: '2',
+		marginTop: '2px !custom',
 		overflowWrap: 'anywhere',
-		typography: 'body.b3',
-		fontWeight: 400,
+		typography: 'label.12',
 	})
 
 	export const copyAddress = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -235,20 +234,20 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
-		selectors: { '& > svg': { height: '12', width: '12' } },
+		gap: '2',
+		marginBottom: '2',
+		selectors: { '& > svg': { height: '3', width: '3' } },
 	})
 
 	export const addressValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		display: 'block',
 		maxWidth: '32ch !custom',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 }

@@ -32,7 +32,7 @@ import {
 	validatorTokenAddress,
 } from '#lib/demo'
 import { parseKnownEvents } from '#lib/domain/known-events'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -616,10 +616,10 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '32',
+		gap: '8',
 		justifyContent: 'center',
-		paddingBottom: '32',
-		paddingTop: '64',
-		typography: 'body.b3',
+		paddingBottom: '8',
+		paddingTop: '16',
+		typography: 'label.12',
 	})
 }

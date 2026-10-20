@@ -1,5 +1,5 @@
-import { IconButton, style, Tooltip } from '@tempoxyz/ds/platform'
-import { DarkMode, LightMode } from '@tempoxyz/ds/platform/icons'
+import { Button, style, Tooltip } from '@tempoxyz/ds'
+import { DarkMode, LightMode } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import {
@@ -14,11 +14,11 @@ import {
 	themeStorageKey,
 	type ThemeMode,
 } from '#lib/theme'
-import { pressDown, transitionColors } from '#styles/explorer'
+import { pageMargin, pressDown, transitionColors } from '#styles/explorer'
 
 export function Footer(): React.JSX.Element {
 	return (
-		<footer {...styles.footer()}>
+		<footer {...cx(styles.footer(), pageMargin())}>
 			<div {...styles.row()}>
 				<Footer.ThemeToggle />
 				<ul {...styles.links()}>
@@ -71,22 +71,27 @@ export namespace Footer {
 
 		const label = `Switch to ${nextTheme} mode`
 
-		// The local style only adds what IconButton leaves unset.
+		// The local style only positions the Button.
 		return (
-			<Tooltip content={label}>
-				<IconButton
-					{...cx(styles.themeToggle(), pressDown(), transitionColors())}
-					aria-label={label}
-					onClick={() => {
-						persistThemeMode(nextTheme)
-						setTheme(nextTheme)
-					}}
-					scale="medium"
-					variant="secondary"
+			<Tooltip.Root>
+				<Tooltip.Trigger
+					render={
+						<Button
+							{...styles.themeToggle()}
+							aria-label={label}
+							onClick={() => {
+								persistThemeMode(nextTheme)
+								setTheme(nextTheme)
+							}}
+							shape="icon"
+							variant="secondary"
+						/>
+					}
 				>
 					{nextTheme === 'light' ? <LightMode /> : <DarkMode />}
-				</IconButton>
-			</Tooltip>
+				</Tooltip.Trigger>
+				<Tooltip.Popup>{label}</Tooltip.Popup>
+			</Tooltip.Root>
 		)
 	}
 
@@ -118,9 +123,8 @@ export namespace Footer {
 namespace styles {
 	export const footer = style({
 		containerType: 'inline-size',
-		paddingBottom: '48',
-		paddingInline: 'page.margin',
-		paddingTop: '24',
+		paddingBottom: '12',
+		paddingTop: '6',
 		position: 'relative',
 		'@media print': { display: 'none' },
 	})
@@ -129,9 +133,9 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '20',
+		gap: '5',
 		justifyContent: 'center',
-		minHeight: '40',
+		minHeight: '10',
 		position: 'relative',
 		'@container (width < 399px)': { flexDirection: 'column-reverse' },
 	})
@@ -139,32 +143,29 @@ namespace styles {
 	export const links = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '20',
+		gap: '5',
 		justifyContent: 'center',
 		listStyle: 'none',
-		margin: 'none',
-		padding: 'none',
-		typography: 'body.b2',
+		margin: '0',
+		padding: '0',
+		typography: 'copy.14',
 		userSelect: 'none',
-		'@media (width >= 640px)': { gap: '24' },
+		'@media (width >= 640px)': { gap: '6' },
 	})
 
 	export const item = style({ display: 'flex' })
 
 	export const link = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'inline-flex',
 		minHeight: '44px !custom',
 		textDecorationLine: 'none',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
-		'@media (width >= 640px)': { minHeight: '32' },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		'@media (width >= 640px)': { minHeight: '8' },
 	})
 
 	export const themeToggle = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.strong' },
-		},
 		'@container (width >= 400px)': {
 			left: '0px !custom',
 			position: 'absolute',

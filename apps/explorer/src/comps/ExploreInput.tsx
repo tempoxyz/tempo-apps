@@ -1,5 +1,6 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
-import { Badge, Search, style, variants, vars } from '@tempoxyz/ds/platform'
+import { Field, Input, style, Tag, variants } from '@tempoxyz/ds'
+import { Search } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as React from 'react'
@@ -22,10 +23,6 @@ import type {
 
 const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
 const recentSearchesLimit = 6
-
-// TDS Search is 52px tall; the header uses the 40px control height.
-const largeSearchSize = { width: '100%' } as const
-const mediumSearchSize = { height: 40, paddingBlock: 0, width: '100%' } as const
 
 type ManualActivation =
 	| { value: Address.Address; type: 'address' }
@@ -431,73 +428,83 @@ export function ExploreInput(props: ExploreInput.Props): React.JSX.Element {
 				{...styles.form()}
 			>
 				{/* Enter submits the form; the clear button empties the field. */}
-				<Search
-					ref={inputRef}
-					value={value}
-					onValueChange={(next) => {
-						setHasFocus(true)
-						onChange(next)
-					}}
-					style={size === 'medium' ? mediumSearchSize : largeSearchSize}
-					autoCapitalize="none"
-					autoComplete="off"
-					autoCorrect="off"
-					data-1p-ignore
-					name="explore-query"
-					placeholder="Search address, hash, block, token"
-					aria-label="Search by address, transaction hash, block, or token"
-					aria-keyshortcuts="Meta+K Control+K"
-					enterKeyHint="search"
-					spellCheck={false}
-					onKeyDown={(event) => {
-						if (event.key === 'Escape' && showResults) {
-							event.preventDefault()
-							setShowResults(false)
-							setSelectedIndex(-1)
-							return
-						}
+				<Field.Root>
+					<Input.Group size={size} variant="search">
+						<Input.Prefix>
+							<Search />
+						</Input.Prefix>
+						<Input.Control
+							ref={inputRef}
+							type="search"
+							value={value}
+							onValueChange={(next) => {
+								setHasFocus(true)
+								onChange(next)
+							}}
+							autoCapitalize="none"
+							autoComplete="off"
+							autoCorrect="off"
+							data-1p-ignore
+							name="explore-query"
+							placeholder="Search address, hash, block, token"
+							aria-label="Search by address, transaction hash, block, or token"
+							aria-keyshortcuts="Meta+K Control+K"
+							enterKeyHint="search"
+							spellCheck={false}
+							onKeyDown={(event) => {
+								if (event.key === 'Escape' && showResults) {
+									event.preventDefault()
+									setShowResults(false)
+									setSelectedIndex(-1)
+									return
+								}
 
-						if (!showResults || flatSuggestions.length === 0) return
+								if (!showResults || flatSuggestions.length === 0) return
 
-						if (event.key === 'ArrowDown') {
-							event.preventDefault()
-							setSelectedIndex((prev) =>
-								prev < flatSuggestions.length - 1 ? prev + 1 : 0,
-							)
-							return
-						}
+								if (event.key === 'ArrowDown') {
+									event.preventDefault()
+									setSelectedIndex((prev) =>
+										prev < flatSuggestions.length - 1 ? prev + 1 : 0,
+									)
+									return
+								}
 
-						if (event.key === 'ArrowUp') {
-							event.preventDefault()
-							setSelectedIndex((prev) =>
-								prev > 0 ? prev - 1 : flatSuggestions.length - 1,
-							)
-							return
-						}
+								if (event.key === 'ArrowUp') {
+									event.preventDefault()
+									setSelectedIndex((prev) =>
+										prev > 0 ? prev - 1 : flatSuggestions.length - 1,
+									)
+									return
+								}
 
-						if (event.key === 'Enter') {
-							const index = selectedIndex >= 0 ? selectedIndex : 0
-							if (index < flatSuggestions.length) {
-								event.preventDefault()
-								handleSelect(flatSuggestions[index])
+								if (event.key === 'Enter') {
+									const index = selectedIndex >= 0 ? selectedIndex : 0
+									if (index < flatSuggestions.length) {
+										event.preventDefault()
+										handleSelect(flatSuggestions[index])
+									}
+									return
+								}
+							}}
+							onFocus={() => {
+								setHasFocus(true)
+								if (query.length > 0 || recentSearches.length > 0)
+									setShowResults(true)
+							}}
+							role="combobox"
+							aria-expanded={showResults}
+							aria-haspopup="listbox"
+							aria-autocomplete="list"
+							aria-controls={resultsId}
+							aria-activedescendant={
+								selectedIndex !== -1
+									? `${resultsId}-${selectedIndex}`
+									: undefined
 							}
-							return
-						}
-					}}
-					onFocus={() => {
-						setHasFocus(true)
-						if (query.length > 0 || recentSearches.length > 0)
-							setShowResults(true)
-					}}
-					role="combobox"
-					aria-expanded={showResults}
-					aria-haspopup="listbox"
-					aria-autocomplete="list"
-					aria-controls={resultsId}
-					aria-activedescendant={
-						selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
-					}
-				/>
+						/>
+						<Input.Clear aria-label="Clear search" />
+					</Input.Group>
+				</Field.Root>
 			</form>
 
 			{menuMounted && (
@@ -587,7 +594,7 @@ export namespace ExploreInput {
 		) => void
 		value: string
 		onChange: (value: string) => void
-		/** `large` keeps the TDS Search height; `medium` fits the header. */
+		/** TDS search field height: `large` (56px) on the home page, `medium` (40px) in the header. */
 		size?: 'large' | 'medium'
 		wide?: boolean
 		autoFocus?: boolean
@@ -634,9 +641,14 @@ export namespace ExploreInput {
 							<span {...cx(styles.tokenName(), truncate())}>
 								{suggestion.name}
 							</span>
-							<Badge scale="small" variant="outline" {...styles.badge()}>
+							<Tag
+								intent="neutral"
+								size="medium"
+								variant="outlined"
+								{...styles.badge()}
+							>
 								TIP-20
-							</Badge>
+							</Tag>
 						</div>
 						<span {...cx(styles.tokenAddress(), link())}>
 							<Midcut value={suggestion.address} prefix="0x" align="end" />
@@ -657,13 +669,23 @@ export namespace ExploreInput {
 									</span>
 								)}
 								{suggestion.category ? (
-									<Badge scale="small" variant="outline" {...styles.badge()}>
+									<Tag
+										intent="neutral"
+										size="medium"
+										variant="outlined"
+										{...styles.badge()}
+									>
 										{suggestion.category}
-									</Badge>
+									</Tag>
 								) : suggestion.isTip20 ? (
-									<Badge scale="small" variant="outline" {...styles.badge()}>
+									<Tag
+										intent="neutral"
+										size="medium"
+										variant="outlined"
+										{...styles.badge()}
+									>
 										TIP-20
-									</Badge>
+									</Tag>
 								) : null}
 							</div>
 							{suggestion.label && (
@@ -708,22 +730,13 @@ export namespace ExploreInput {
 	}
 }
 
-// Floating panels use the TDS popover elevation.
-const panelShadow = {
-	boxShadow: `0 1px 2px ${vars.color.shadow.secondary}, 0 8px 24px ${vars.color.shadow.primary}`,
-} as const
-
 namespace styles {
-	// 16px input text stops iOS Safari from zooming on focus. Search's
-	// placeholder inherits its full text color.
+	// 16px input text stops iOS Safari from zooming on focus.
 	export const root = variants({
 		base: {
 			position: 'relative',
 			width: '100% !custom',
 			zIndex: 10,
-			selectors: {
-				'& input::placeholder': { color: 'content.secondary' },
-			},
 			'@supports (-webkit-touch-callout: none)': {
 				selectors: { '& input': { fontSize: '16px !custom' } },
 			},
@@ -734,15 +747,16 @@ namespace styles {
 
 	export const form = style({ width: '100% !custom' })
 
+	// Floating panels use the TDS popover elevation.
 	export const results = style({
-		...panelShadow,
-		backgroundColor: 'background.secondary',
-		borderColor: 'line.secondary',
-		borderRadius: 'xs',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
 		borderStyle: 'solid',
-		borderWidth: 'regular',
+		borderWidth: '1px',
+		boxShadow: 'popover',
 		left: '0px !custom',
-		marginTop: '8',
+		marginTop: '2',
 		maxHeight: 'min(420px, 50dvh) !custom',
 		overflowX: 'hidden',
 		overflowY: 'auto',
@@ -760,16 +774,16 @@ namespace styles {
 	})
 
 	export const resultsEmpty = style({
-		color: 'content.secondary',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b2',
+		color: 'gray.900',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'copy.14',
 	})
 
 	export const groups = style({
 		display: 'flex',
 		flexDirection: 'column',
-		paddingBlock: '4',
+		paddingBlock: '1',
 	})
 
 	export const group = style({ display: 'flex', flexDirection: 'column' })
@@ -779,28 +793,28 @@ namespace styles {
 			alignItems: 'center',
 			display: 'flex',
 			justifyContent: 'space-between',
-			paddingBlock: '8',
-			paddingInline: '12',
+			paddingBlock: '2',
+			paddingInline: '3',
 		},
 		defaultVariants: { spaced: false },
-		variants: { spaced: { true: { paddingTop: '12' }, false: {} } },
+		variants: { spaced: { true: { paddingTop: '3' }, false: {} } },
 	})
 
 	export const groupTitle = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const groupMeta = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const clearRecent = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		cursor: 'pointer',
-		typography: 'body.b3',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		typography: 'label.12',
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
 	export const suggestion = variants({
@@ -808,49 +822,49 @@ namespace styles {
 			alignItems: 'center',
 			cursor: 'pointer',
 			display: 'flex',
-			gap: '8',
+			gap: '2',
 			justifyContent: 'space-between',
 			overflow: 'hidden',
-			paddingBlock: '8',
-			paddingInline: '12',
+			paddingBlock: '2',
+			paddingInline: '3',
 			textAlign: 'left',
 			width: '100% !custom',
 			'@media (hover: hover)': {
-				':hover': { backgroundColor: 'container.regular' },
+				':hover': { backgroundColor: 'grayAlpha.100' },
 			},
 		},
 		defaultVariants: { selected: false },
 		variants: {
 			selected: {
-				true: { backgroundColor: 'container.regular' },
+				true: { backgroundColor: 'grayAlpha.100' },
 				false: {},
 			},
 		},
 	})
 
 	export const blockNumber = style({
-		color: 'content.primary',
+		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'body.b1',
+		typography: 'copy.16',
 	})
 
 	export const tokenInfo = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 1,
-		gap: '8',
+		gap: '2',
 		minWidth: '0px !custom',
 	})
 
 	export const tokenName = style({
-		color: 'content.primary',
-		typography: 'body.b1',
+		color: 'foreground',
+		typography: 'copy.16',
 	})
 
 	export const badge = style({ flexShrink: 0 })
 
 	export const tokenAddress = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		flex: 1,
 		textAlign: 'right',
 	})
@@ -866,20 +880,20 @@ namespace styles {
 	export const addressHeading = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		maxWidth: '100% !custom',
 		minWidth: '0px !custom',
 	})
 
 	export const addressLabel = style({
-		color: 'content.primary',
+		color: 'foreground',
 		minWidth: '0px !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 	})
 
 	export const addressHash = variants({
 		base: {
-			typography: 'mono.inline',
+			typography: 'label.12.mono',
 			display: 'block',
 			maxWidth: '100% !custom',
 			minWidth: '0px !custom',
@@ -890,23 +904,23 @@ namespace styles {
 	})
 
 	export const addressDescription = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'none',
 		flexShrink: 0,
 		textAlign: 'right',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		width: '44% !custom',
 		'@media (width >= 640px)': { display: 'block' },
 	})
 
 	export const transactionHash = style({
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 		flex: 1,
 		minWidth: '0px !custom',
 	})
 
 	export const meta = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 }

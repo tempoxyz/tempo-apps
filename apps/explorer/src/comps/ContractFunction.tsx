@@ -1,18 +1,14 @@
 import {
-	Card,
+	Button,
 	Checkbox,
-	IconButton,
-	TextInput,
+	Field,
+	Input,
+	Textarea,
 	Tooltip,
 	style,
 	variants,
-} from '@tempoxyz/ds/platform'
-import {
-	Check,
-	ChevronDown,
-	Copy,
-	Link as LinkIcon,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds'
+import { Check, ChevronDown, Copy, Link as LinkIcon } from '@tempoxyz/ds/icons'
 import { getSignature } from 'ox/AbiItem'
 import type * as React from 'react'
 import type { AbiFunction, AbiParameter } from 'viem'
@@ -24,7 +20,7 @@ import {
 	isArrayType,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink } from '#lib/hooks'
-import { pressDown, transitionColors } from '#styles/explorer'
+import { pressDown } from '#styles/explorer'
 
 /** Card for one read or write function: signature, copy actions, and body. */
 export function FunctionCard(props: FunctionCard.Props): React.JSX.Element {
@@ -42,7 +38,7 @@ export function FunctionCard(props: FunctionCard.Props): React.JSX.Element {
 	)
 
 	return (
-		<Card id={id} {...styles.card()}>
+		<div id={id} {...styles.card()}>
 			<div {...styles.header()}>
 				{onToggle ? (
 					<button
@@ -82,7 +78,7 @@ export function FunctionCard(props: FunctionCard.Props): React.JSX.Element {
 				</div>
 			</div>
 			{children && <div {...styles.body()}>{children}</div>}
-		</Card>
+		</div>
 	)
 }
 
@@ -102,29 +98,35 @@ export declare namespace FunctionCard {
 	}
 }
 
-/** Small tertiary icon action in a function card header. */
+/** Small text icon button with a tooltip in a function card header. */
 export function FunctionAction(props: FunctionAction.Props): React.JSX.Element {
 	const { children, label, ...rest } = props
 	return (
-		<Tooltip content={label}>
-			<IconButton
-				{...rest}
-				aria-label={label}
-				scale="small"
-				variant="tertiary"
-				{...cx(styles.action(), pressDown(), transitionColors())}
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						{...rest}
+						aria-label={label}
+						shape="icon"
+						size="small"
+						variant="text"
+						{...styles.action()}
+					/>
+				}
 			>
 				{children}
-			</IconButton>
-		</Tooltip>
+			</Tooltip.Trigger>
+			<Tooltip.Popup>{label}</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
 export declare namespace FunctionAction {
 	type Props = Omit<
-		IconButton.Props,
-		'aria-label' | 'className' | 'scale' | 'variant'
-	> & { label: string }
+		Button.Props,
+		'aria-label' | 'children' | 'className' | 'shape' | 'size' | 'variant'
+	> & { children: React.ReactElement; label: string }
 }
 
 /** Argument field for a function input, typed by its ABI parameter. */
@@ -133,44 +135,49 @@ export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
 
 	if (getInputType(input.type) === 'checkbox')
 		return (
-			<Checkbox
-				checked={value === 'true'}
-				onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
-				label={
-					<span {...styles.checkboxLabel()}>
+			<Field.Root>
+				<Field.Item>
+					<Checkbox
+						checked={value === 'true'}
+						onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+					/>
+					<Field.Label>
 						{label} <span {...styles.inputType()}>{input.type}</span>
-					</span>
-				}
-			/>
+					</Field.Label>
+				</Field.Item>
+			</Field.Root>
 		)
 
-	const field = {
+	const control = {
 		autoCapitalize: 'off',
 		autoComplete: 'off',
 		autoCorrect: 'off',
-		className: styles.control().className,
-		label,
 		placeholder: getPlaceholder(input),
-		secondaryLabel: input.type,
 		spellCheck: false,
 		value,
 	} as const
 
 	return (
-		<div {...styles.field()}>
+		<Field.Root {...styles.field()}>
+			<div {...styles.labels()}>
+				<Field.Label>{label}</Field.Label>
+				<span {...styles.inputType()}>{input.type}</span>
+			</div>
 			{getInputType(input.type) === 'textarea' || isArrayType(input.type) ? (
-				<TextInput
-					{...field}
-					extended
+				<Textarea
+					{...control}
+					resize="none"
 					onChange={(event) => onChange(event.target.value)}
 				/>
 			) : (
-				<TextInput
-					{...field}
-					onChange={(event) => onChange(event.target.value)}
-				/>
+				<Input.Group>
+					<Input.Control
+						{...control}
+						onValueChange={(next) => onChange(next)}
+					/>
+				</Input.Group>
 			)}
-		</div>
+		</Field.Root>
 	)
 }
 
@@ -204,9 +211,15 @@ function getMethodWithSelector(fn: AbiFunction): string {
 }
 
 namespace styles {
+	// A bordered, unpadded card; TDS Surface always pads its content.
 	export const card = style({
-		borderColor: 'line.secondary',
-		borderWidth: 'regular',
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
+		borderStyle: 'solid',
+		borderWidth: '1px',
+		boxSizing: 'border-box',
+		color: 'foreground',
 		overflow: 'hidden',
 	})
 
@@ -221,10 +234,10 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 		minWidth: '0px !custom',
-		paddingBlock: '8',
-		paddingLeft: '12',
+		paddingBlock: '2',
+		paddingLeft: '3',
 		textAlign: 'left',
 	})
 
@@ -233,35 +246,32 @@ namespace styles {
 	export const toggle = style({
 		cursor: 'pointer',
 		':focus-visible': {
-			borderBottomLeftRadius: 'xs',
-			borderTopLeftRadius: 'xs',
+			borderBottomLeftRadius: 'xl',
+			borderTopLeftRadius: 'xl',
 			outlineOffset: '-2px',
 		},
 	})
 
 	export const signature = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		minWidth: '0px !custom',
 		overflowWrap: 'anywhere',
-		typography: 'mono.inline',
+		typography: 'label.12.mono',
 	})
 
 	export const actions = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		paddingLeft: '12',
-		paddingRight: '4',
+		paddingLeft: '3',
+		paddingRight: '1',
 	})
 
-	// The card clips overflow, so the ring is drawn inside the button. It
-	// needs importance to beat IconButton's own equal-specificity offset.
+	// The card clips overflow, so the ring is drawn inside the button. TDS
+	// Button leaves icon size to the icon.
 	export const action = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
-		':focus-visible': { outlineOffset: '-2px !important' },
-		':disabled': { opacity: 0.5 },
+		':focus-visible': { outlineOffset: '-2px' },
+		selectors: { '& svg': { height: '4', width: '4' } },
 	})
 
 	export const chevron = variants({
@@ -272,18 +282,16 @@ namespace styles {
 	})
 
 	export const body = style({
-		borderColor: 'line.secondary',
-		borderTopWidth: 'regular',
+		borderColor: 'grayAlpha.200',
+		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '16',
-		padding: '12',
+		gap: '4',
+		padding: '3',
 	})
 
-	// TextInput caps itself at 320px; arguments such as addresses need the
-	// full card. Touch devices keep 16px text so iOS does not zoom on focus.
+	// Touch devices keep 16px text so iOS does not zoom on focus.
 	export const field = style({
-		selectors: { '& > div': { width: '100% !custom' } },
 		'@media (pointer: coarse)': {
 			selectors: {
 				'& input': { fontSize: '16px !custom' },
@@ -292,11 +300,13 @@ namespace styles {
 		},
 	})
 
-	export const control = style({
-		'::placeholder': { color: 'content.secondary' },
+	export const labels = style({
+		alignItems: 'center',
+		columnGap: '1',
+		display: 'flex',
+		flexWrap: 'wrap',
+		typography: 'label.14',
 	})
 
-	export const checkboxLabel = style({ color: 'content.primary' })
-
-	export const inputType = style({ color: 'content.secondary' })
+	export const inputType = style({ color: 'gray.900' })
 }

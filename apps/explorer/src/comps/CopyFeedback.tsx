@@ -1,4 +1,4 @@
-import { style, Toast } from '@tempoxyz/ds/platform'
+import { Toast } from '@tempoxyz/ds'
 import * as React from 'react'
 import { CopyFeedbackContext } from '#lib/copy-feedback'
 
@@ -9,7 +9,7 @@ export function CopyFeedbackProvider(
 	return (
 		<Toast.Provider limit={1} timeout={1_500}>
 			<Notifier>{props.children}</Notifier>
-			<Toasts />
+			<Toast.Viewport />
 		</Toast.Provider>
 	)
 }
@@ -19,12 +19,12 @@ export declare namespace CopyFeedbackProvider {
 }
 
 function Notifier(props: { children: React.ReactNode }): React.JSX.Element {
-	// `useManager` returns new functions each render; keep the context stable.
-	const current = Toast.useManager()
-	const manager = React.useRef(current)
-	manager.current = current
+	// `useToast` returns a new object each render; keep the context stable.
+	const current = Toast.useToast()
+	const toast = React.useRef(current)
+	toast.current = current
 	const notify = React.useCallback(
-		(title: string) => manager.current.add({ title }),
+		(title: string) => toast.current.add({ title }),
 		[],
 	)
 
@@ -33,26 +33,4 @@ function Notifier(props: { children: React.ReactNode }): React.JSX.Element {
 			{props.children}
 		</CopyFeedbackContext.Provider>
 	)
-}
-
-function Toasts(): React.JSX.Element {
-	const { toasts } = Toast.useManager()
-
-	return (
-		<Toast.Viewport {...styles.viewport()}>
-			{toasts.map((toast) => (
-				<Toast key={toast.id} toast={toast} />
-			))}
-		</Toast.Viewport>
-	)
-}
-
-namespace styles {
-	export const viewport = style({
-		bottom: '24',
-		left: '50% !custom',
-		position: 'fixed',
-		translate: '-50% 0 !custom',
-		zIndex: 50,
-	})
 }

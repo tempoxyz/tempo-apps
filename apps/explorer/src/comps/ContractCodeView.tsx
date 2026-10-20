@@ -6,22 +6,14 @@ import {
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import {
-	Button,
-	Card,
-	IconButton,
-	Tooltip,
-	style,
-	vars,
-} from '@tempoxyz/ds/platform'
+import { Button, Tooltip, style, vars } from '@tempoxyz/ds'
 import {
 	Check,
 	Copy,
 	LayoutSidebar,
 	Link as LinkIcon,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
@@ -31,7 +23,6 @@ import {
 } from '#lib/domain/contract-source-link'
 import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
-import { pressDown, transitionColors } from '#styles/explorer'
 import WrapIcon from '~icons/lucide/wrap-text'
 
 export function ContractCodeView(
@@ -152,7 +143,7 @@ export function ContractCodeView(
 			layout: { paddingTop: 0, paddingBottom: 16, gap: 16 },
 			onPostRender: syncScrollCode,
 			unsafeCSS:
-				':host { --diffs-font-family: "JetBrains Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--contract-source-background); }',
+				':host { --diffs-font-family: var(--contract-source-font); --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--contract-source-background); }',
 		}),
 		[theme, wrap, syncScrollCode],
 	)
@@ -213,7 +204,7 @@ export function ContractCodeView(
 	}
 
 	return (
-		<Card ref={container} {...styles.root()}>
+		<div ref={container} {...styles.root()}>
 			<div {...styles.toolbar()}>
 				<div {...styles.toolbarStart()}>
 					<ToolbarAction
@@ -310,7 +301,7 @@ export function ContractCodeView(
 				</span>
 				<span {...styles.wideLabel()}>Read only</span>
 			</div>
-		</Card>
+		</div>
 	)
 }
 
@@ -320,7 +311,7 @@ export declare namespace ContractCodeView {
 	}
 }
 
-/** Small toolbar action: a labelled Button, or an IconButton without `text`. */
+/** Small toolbar action: a labelled Button, or an icon Button without `text`. */
 function ToolbarAction(
 	props: Pick<
 		React.ComponentProps<'button'>,
@@ -333,31 +324,37 @@ function ToolbarAction(
 	},
 ): React.JSX.Element {
 	const { active, children, label, text, ...rest } = props
-	const variant = active ? 'secondary' : 'tertiary'
+	const variant = active ? 'secondary' : 'text'
 	if (text)
 		return (
 			<Button
 				{...rest}
-				scale="small"
+				size="small"
 				variant={variant}
-				{...cx(styles.toolbarAction(), transitionColors(), pressDown())}
+				{...styles.toolbarAction()}
 			>
 				{children}
 				{text}
 			</Button>
 		)
 	return (
-		<Tooltip content={label}>
-			<IconButton
-				{...rest}
-				aria-label={label}
-				scale="small"
-				variant={variant}
-				{...cx(styles.toolbarAction(), transitionColors(), pressDown())}
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						{...rest}
+						aria-label={label}
+						shape="icon"
+						size="small"
+						variant={variant}
+						{...styles.toolbarAction()}
+					/>
+				}
 			>
 				{children}
-			</IconButton>
-		</Tooltip>
+			</Tooltip.Trigger>
+			<Tooltip.Popup>{label}</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
@@ -371,11 +368,18 @@ const highlightOptions = {
 let sourceRevision = 0
 
 namespace styles {
+	// A bordered, unpadded card; TDS Surface always pads its content.
 	export const root = style({
 		// Read by the viewer's shadow DOM through `unsafeCSS`.
-		'--contract-source-background': vars.color.background.secondary,
-		borderColor: 'line.secondary',
-		borderWidth: 'regular',
+		'--contract-source-background': vars.color.background.surface,
+		'--contract-source-font': vars.fontFamily.mono,
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderRadius: 'xl',
+		borderStyle: 'solid',
+		borderWidth: '1px',
+		boxSizing: 'border-box',
+		color: 'foreground',
 		containerName: 'source',
 		containerType: 'inline-size',
 		overflow: 'hidden',
@@ -383,30 +387,25 @@ namespace styles {
 
 	export const toolbar = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		padding: '8',
-		typography: 'body.b3',
+		padding: '2',
+		typography: 'label.12',
 	})
 
 	export const toolbarStart = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		minWidth: '0px !custom',
 	})
 
-	export const toolbarAction = style({
-		flexShrink: 0,
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
-	})
+	export const toolbarAction = style({ flexShrink: 0 })
 
-	export const toolbarIcon = style({ height: '16', width: '16' })
+	export const toolbarIcon = style({ height: '4', width: '4' })
 
 	export const fileCount = style({ whiteSpace: 'nowrap' })
 
@@ -419,7 +418,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '4',
+		gap: '1',
 	})
 
 	export const panes = style({
@@ -444,15 +443,15 @@ namespace styles {
 	})
 
 	export const footer = style({
-		borderColor: 'line.secondary',
-		borderTopWidth: 'regular',
-		color: 'content.secondary',
+		borderColor: 'grayAlpha.200',
+		borderTopWidth: '1px',
+		color: 'gray.900',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		paddingBlock: '8',
-		paddingInline: '12',
-		typography: 'body.b3',
+		paddingBlock: '2',
+		paddingInline: '3',
+		typography: 'label.12',
 	})
 }

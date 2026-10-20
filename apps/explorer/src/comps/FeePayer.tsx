@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Badge, style } from '@tempoxyz/ds/platform'
+import { style, Tag } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import * as AddressUtil from 'ox/Address'
 import type * as React from 'react'
@@ -28,22 +28,25 @@ export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 	}
 
 	return (
-		<a
-			href="https://api.tempo.xyz"
-			target="_blank"
-			rel="noopener noreferrer"
-			{...styles.badgeLink()}
+		<Tag
+			render={
+				// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
+				<a
+					href="https://api.tempo.xyz"
+					rel="noopener noreferrer"
+					target="_blank"
+				/>
+			}
+			variant="outlined"
 		>
-			<Badge scale="small" variant="outline">
-				<span {...styles.glyph()} aria-hidden="true">
-					<span {...styles.glyphCell()} />
-					<span {...styles.glyphCell()} />
-					<span {...styles.glyphCell()} />
-					<span {...styles.glyphCell()} />
-				</span>
-				Tempo API
-			</Badge>
-		</a>
+			<span {...styles.glyph()} aria-hidden="true">
+				<span {...styles.glyphCell()} />
+				<span {...styles.glyphCell()} />
+				<span {...styles.glyphCell()} />
+				<span {...styles.glyphCell()} />
+			</span>
+			Tempo API
+		</Tag>
 	)
 }
 
@@ -56,20 +59,8 @@ export declare namespace FeePayer {
 namespace styles {
 	export const address = style({
 		maxWidth: '50ch !custom',
-		typography: 'body.b2',
+		typography: 'copy.14',
 		width: '100% !custom',
-	})
-
-	// Wraps a small TDS Badge, which renders a span; the ring follows its
-	// corners.
-	export const badgeLink = style({
-		borderRadius: '6px !custom',
-		display: 'inline-flex',
-		'@media (hover: hover)': {
-			selectors: {
-				'&:hover > span': { backgroundColor: 'container.regular' },
-			},
-		},
 	})
 
 	export const glyph = style({

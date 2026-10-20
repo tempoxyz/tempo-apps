@@ -1,20 +1,20 @@
 import { Link } from '@tanstack/react-router'
 import {
-	Alert,
-	Badge,
-	Card,
-	IconButton,
+	Button,
+	Callout,
+	Surface,
+	Tag,
 	Tooltip,
 	style,
 	variants,
-} from '@tempoxyz/ds/platform'
+} from '@tempoxyz/ds'
 import {
 	Check,
 	ChevronDown,
 	Copy,
 	Download,
 	ExternalLink,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
@@ -40,7 +40,7 @@ import {
 } from '#lib/domain/proxy.ts'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
+import { link, linkHover, pressDown } from '#styles/explorer'
 
 const proxyTypeUrls: Record<ProxyType, string> = {
 	'EIP-1967': 'https://eips.ethereum.org/EIPS/eip-1967',
@@ -64,24 +64,30 @@ function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
 	)
 }
 
-/** Small tertiary icon action in a section header. */
+/** Small text icon button with a tooltip in a section header. */
 function SectionAction(props: {
 	children: React.ReactElement
 	label: string
 	onClick: () => void
 }): React.JSX.Element {
 	return (
-		<Tooltip content={props.label}>
-			<IconButton
-				aria-label={props.label}
-				onClick={props.onClick}
-				scale="small"
-				variant="tertiary"
-				{...cx(styles.actionButton(), pressDown(), transitionColors())}
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						aria-label={props.label}
+						onClick={props.onClick}
+						shape="icon"
+						size="small"
+						variant="text"
+						{...styles.actionButton()}
+					/>
+				}
 			>
 				{props.children}
-			</IconButton>
-		</Tooltip>
+			</Tooltip.Trigger>
+			<Tooltip.Popup>{props.label}</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
@@ -116,13 +122,13 @@ export function ContractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<Card padding="20" {...styles.emptyCard()}>
+			<Surface size="medium" {...styles.emptyCard()}>
 				<p {...styles.emptyMessage()}>
 					{props.isLoadingContractInfo
 						? `Loading contract information${ellipsis}`
 						: 'No ABI available for this contract.'}
 				</p>
-			</Card>
+			</Surface>
 		)
 	}
 
@@ -337,17 +343,17 @@ export function InteractTabContent(props: {
 
 	if (props.isLoadingContractInfo || isLoadingProxy) {
 		return (
-			<Card padding="20" {...styles.emptyCard()}>
+			<Surface size="medium" {...styles.emptyCard()}>
 				<p {...styles.emptyMessage()}>Loading contract information{ellipsis}</p>
-			</Card>
+			</Surface>
 		)
 	}
 
 	if (!abi) {
 		return (
-			<Card padding="20" {...styles.emptyCard()}>
+			<Surface size="medium" {...styles.emptyCard()}>
 				<p {...styles.emptyMessage()}>No ABI available for this contract.</p>
-			</Card>
+			</Surface>
 		)
 	}
 
@@ -360,17 +366,21 @@ export function InteractTabContent(props: {
 			{/* Proxy Info Banner */}
 			{isProxy && implementationAddress && (
 				<div {...styles.proxyBanner()}>
-					<a
-						href={proxyTypeUrl(proxyInfo?.type)}
-						target="_blank"
-						rel="noopener noreferrer"
-						{...styles.badgeLink()}
+					<Tag
+						render={
+							// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
+							<a
+								href={proxyTypeUrl(proxyInfo?.type)}
+								target="_blank"
+								rel="noopener noreferrer"
+							/>
+						}
+						intent="neutral"
+						size="medium"
 					>
-						<Badge scale="small" variant="white">
-							{proxyInfo?.type} Proxy
-							<ExternalLink />
-						</Badge>
-					</a>
+						{proxyInfo?.type} Proxy
+						<ExternalLink />
+					</Tag>
 					<span {...styles.implementationLabel()}>Implementation:</span>
 					<Link
 						to="/address/$address"
@@ -420,11 +430,13 @@ export function InteractTabContent(props: {
 					}
 				>
 					<div {...styles.proxyFunctionsBody()}>
-						<Alert
-							tone="warning"
-							title="These are functions defined on the proxy contract itself, not the implementation."
-							style={fullWidth}
-						/>
+						<Callout intent="warning" role="note" size="small">
+							<Callout.Icon />
+							<Callout.Content>
+								These are functions defined on the proxy contract itself, not
+								the implementation.
+							</Callout.Content>
+						</Callout>
 						<InferredAbiNotice abi={proxyAbi} />
 						<ContractReader address={address} abi={proxyAbi} />
 						<ContractWriter address={address} abi={proxyAbi} />
@@ -435,24 +447,22 @@ export function InteractTabContent(props: {
 	)
 }
 
-const fullWidth = { width: '100%' } satisfies React.CSSProperties
-
 namespace styles {
 	export const inferredNotice = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
-		color: 'content.secondary',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		color: 'gray.900',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
 	export const emptyCard = style({ height: '100% !custom' })
 
 	export const emptyMessage = style({
-		color: 'content.secondary',
-		typography: 'body.b2',
+		color: 'gray.900',
+		typography: 'copy.14',
 	})
 
 	export const tabContent = style({
@@ -466,38 +476,37 @@ namespace styles {
 
 	export const tip20Banner = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
-		color: 'content.secondary',
-		columnGap: '8',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
+		color: 'gray.900',
+		columnGap: '2',
 		display: 'flex',
 		flexWrap: 'wrap',
-		paddingBlock: '12',
-		paddingInline: '16',
-		rowGap: '4',
-		typography: 'body.b3',
+		paddingBlock: '3',
+		paddingInline: '4',
+		rowGap: '1',
+		typography: 'label.12',
 	})
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
-	export const separator = style({ color: 'content.tertiary' })
+	export const separator = style({ color: 'gray.700' })
 
+	// TDS Button leaves icon size to the icon.
 	export const actionButton = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
+		selectors: { '& svg': { height: '4', width: '4' } },
 	})
 
 	export const docsLink = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '4',
-		typography: 'body.b3',
+		gap: '1',
+		typography: 'label.12',
 	})
 
 	export const section = style({
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		display: 'flex',
 		flexDirection: 'column',
 	})
@@ -506,7 +515,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		paddingBlock: '4',
+		paddingBlock: '1',
 	})
 
 	// The panel clips overflow, so the ring is drawn inside, following the
@@ -515,33 +524,33 @@ namespace styles {
 		alignItems: 'center',
 		cursor: 'pointer',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		height: '100% !custom',
-		paddingBlock: '8',
-		paddingInline: '16',
+		paddingBlock: '2',
+		paddingInline: '4',
 		':focus-visible': { outlineOffset: '-2px' },
 	})
 
-	export const sectionToggleWithActions = style({ paddingRight: '12' })
+	export const sectionToggleWithActions = style({ paddingRight: '3' })
 
 	export const sectionToggleFill = style({ flex: 1 })
 
 	export const sectionToggleFirst = style({
-		':focus-visible': { borderTopLeftRadius: 'xs' },
+		':focus-visible': { borderTopLeftRadius: 'xl' },
 	})
 
 	export const sectionToggleFirstEnd = style({
-		':focus-visible': { borderTopRightRadius: 'xs' },
+		':focus-visible': { borderTopRightRadius: 'xl' },
 	})
 
 	export const sectionTitle = style({
-		color: 'content.secondary',
-		typography: 'body.b2',
+		color: 'gray.900',
+		typography: 'copy.14',
 		whiteSpace: 'nowrap',
 	})
 
 	export const chevron = variants({
-		base: { color: 'content.secondary', height: '16', width: '16' },
+		base: { color: 'gray.900', height: '4', width: '4' },
 		defaultVariants: { expanded: false },
 		variants: {
 			expanded: { true: {}, false: { rotate: '-90deg' } },
@@ -550,13 +559,13 @@ namespace styles {
 
 	export const sectionActions = style({
 		alignItems: 'stretch',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
 		flex: 1,
-		gap: '8',
+		gap: '2',
 		justifyContent: 'flex-end',
 		minWidth: '0px !custom',
-		paddingInline: '12',
+		paddingInline: '3',
 	})
 
 	export const hidden = style({ display: 'none' })
@@ -564,63 +573,51 @@ namespace styles {
 	export const bytecode = style({
 		maxHeight: '280px !custom',
 		overflow: 'auto',
-		paddingBlock: '12',
-		paddingInline: '20',
+		paddingBlock: '3',
+		paddingInline: '5',
 	})
 
 	export const bytecodeText = style({
-		color: 'content.primary',
-		typography: 'mono.inline',
+		color: 'foreground',
+		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})
 
 	export const proxyBanner = style({
 		alignItems: 'center',
-		backgroundColor: 'container.regular',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'body.b3',
+		gap: '2',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12',
 	})
 
-	// Wraps a small TDS Badge, which renders a span; the ring follows its
-	// corners.
-	export const badgeLink = style({
-		borderRadius: '6px !custom',
-		display: 'inline-flex',
-		'@media (hover: hover)': {
-			selectors: {
-				'&:hover > span': { backgroundColor: 'container.strong' },
-			},
-		},
-	})
+	export const implementationLabel = style({ color: 'gray.900' })
 
-	export const implementationLabel = style({ color: 'content.secondary' })
-
-	export const implementationLink = style({ typography: 'mono.inline' })
+	export const implementationLink = style({ typography: 'label.12.mono' })
 
 	export const sectionBody = style({
-		paddingBottom: '12',
-		paddingInline: '12',
+		paddingBottom: '3',
+		paddingInline: '3',
 	})
 
 	export const proxyFunctionsNote = style({
 		alignItems: 'center',
-		color: 'content.secondary',
+		color: 'gray.900',
 		display: 'flex',
-		typography: 'body.b3',
+		typography: 'label.12',
 	})
 
 	export const proxyFunctionsBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBottom: '12',
-		paddingInline: '12',
+		gap: '3',
+		paddingBottom: '3',
+		paddingInline: '3',
 	})
 }

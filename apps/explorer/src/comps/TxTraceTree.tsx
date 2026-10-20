@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Search, style } from '@tempoxyz/ds/platform'
+import { Button, Field, Input, style } from '@tempoxyz/ds'
 import {
 	AlertCircle,
 	ArrowCornerDownLeft,
@@ -9,8 +9,9 @@ import {
 	Check,
 	Copy,
 	Expand,
+	Search,
 	Shrink,
-} from '@tempoxyz/ds/platform/icons'
+} from '@tempoxyz/ds/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
@@ -117,29 +118,28 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 		<div {...styles.root()}>
 			{showToolbar ? (
 				<PanelToolbar>
-					<Search
-						value={query}
-						onValueChange={setQuery}
-						placeholder="Filter frames…"
-						aria-label="Filter frames"
-						spellCheck={false}
-						// Sized to the toolbar's 32px controls; inline wins over Search's own.
-						{...styles.filter({
-							style: {
-								height: 32,
-								marginRight: 'auto',
-								paddingBlock: 0,
-								paddingInline: 12,
-								width: 240,
-							},
-						})}
-					/>
+					{/* The field root reports the filled state that shows Clear. */}
+					<Field.Root {...styles.filter()}>
+						<Input.Group size="small" variant="search">
+							<Input.Prefix>
+								<Search />
+							</Input.Prefix>
+							<Input.Control
+								type="search"
+								value={query}
+								onValueChange={setQuery}
+								placeholder="Filter frames…"
+								aria-label="Filter frames"
+								spellCheck={false}
+							/>
+							<Input.Clear aria-label="Clear search" />
+						</Input.Group>
+					</Field.Root>
 					{failedNode && (
 						<Button
-							scale="small"
+							size="small"
 							variant="secondary"
 							onClick={() => props.onSelect?.(failedNode.id)}
-							{...cx(pressDown(), transitionColors())}
 						>
 							<AlertCircle {...styles.revertIcon()} />
 							Go to revert
@@ -903,58 +903,61 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const tertiary = style({ color: 'content.tertiary' })
+	export const tertiary = style({ color: 'gray.700' })
 
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
-	export const primary = style({ color: 'content.primary' })
+	export const primary = style({ color: 'foreground' })
 
-	// Search leaves the inner input's size to TDS; touch screens get 16px text
-	// so iOS does not zoom on focus.
+	// Sized beside the toolbar's 32px controls. The input takes its type from
+	// TDS; touch screens get 16px text so iOS does not zoom on focus.
 	export const filter = style({
+		marginRight: 'auto !custom',
+		maxWidth: '100% !custom',
+		width: '240px !custom',
 		'@media (pointer: coarse)': {
 			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
 	})
 
-	export const revertIcon = style({ color: 'content.negative' })
+	export const revertIcon = style({ color: 'red.900' })
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: 'regular',
-		borderColor: 'line.secondary',
+		borderBottomWidth: '1px',
+		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
-		gap: '8',
+		gap: '2',
 		justifyContent: 'space-between',
-		minHeight: '48',
-		paddingBlock: '8',
-		paddingLeft: '16',
-		paddingRight: '8',
+		minHeight: '12',
+		paddingBlock: '2',
+		paddingLeft: '4',
+		paddingRight: '2',
 	})
 
 	export const headerLabel = style({
-		color: 'content.secondary',
-		typography: 'body.b3',
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const headerActions = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
+		gap: '1',
 	})
 
 	export const frames = style({
 		alignItems: 'start',
-		borderBottomLeftRadius: 'xs',
-		borderBottomRightRadius: 'xs',
-		columnGap: '8',
+		borderBottomLeftRadius: 'xl',
+		borderBottomRightRadius: 'xl',
+		columnGap: '2',
 		display: 'grid',
 		gridTemplateColumns: 'auto auto 1fr',
 		overflowX: 'auto',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'mono.inline',
+		paddingBlock: '3',
+		paddingInline: '4',
+		typography: 'label.12.mono',
 		// Focusable so it can be scrolled by keyboard; an inset ring is not
 		// clipped by its own overflow.
 		':focus-visible': {
@@ -963,7 +966,7 @@ namespace styles {
 		},
 	})
 
-	export const nested = style({ marginTop: '4' })
+	export const nested = style({ marginTop: '1' })
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
@@ -971,39 +974,39 @@ namespace styles {
 
 	// Rows inherit the grid's mono face; only weight and colour change here.
 	export const opcode = style({
-		backgroundColor: 'container.regular',
-		borderRadius: '3xs',
-		color: 'content.secondary',
-		fontWeight: 500,
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'sm',
+		color: 'gray.900',
+		fontWeight: 'medium',
 		paddingBlock: '1px !custom',
-		paddingInline: '4',
+		paddingInline: '1',
 		textAlign: 'center',
 		userSelect: 'none',
 		whiteSpace: 'nowrap',
 	})
 
 	export const opcodeError = style({
-		backgroundColor: 'container.negative',
-		color: 'content.primary',
+		backgroundColor: 'red.100',
+		color: 'foreground',
 	})
 
 	export const gas = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
 		userSelect: 'none',
 	})
 
-	export const gasLarge = style({ color: 'content.primary' })
+	export const gasLarge = style({ color: 'foreground' })
 
 	export const frame = style({
 		alignItems: 'flex-start',
-		borderRadius: '3xs',
+		borderRadius: 'sm',
 		display: 'inline-flex',
 		marginInline: '-4px !custom',
 		minWidth: '0 !custom',
-		paddingLeft: '4',
-		paddingRight: '4',
+		paddingLeft: '1',
+		paddingRight: '1',
 		':focus-visible': {
 			outline: '2px solid currentColor !custom',
 			outlineOffset: '0px !custom',
@@ -1012,15 +1015,15 @@ namespace styles {
 
 	export const frameHover = style({
 		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
+			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 	})
 
-	export const frameSelected = style({ backgroundColor: 'container.strong' })
+	export const frameSelected = style({ backgroundColor: 'grayAlpha.200' })
 
 	export const frameFailure = style({
-		borderColor: 'content.negative',
-		borderLeftWidth: 'thick',
+		borderColor: 'red.900',
+		borderLeftWidth: '2px',
 		borderStyle: 'solid',
 		paddingLeft: '6px !custom',
 	})
@@ -1031,41 +1034,41 @@ namespace styles {
 	})
 
 	export const indentNested = style({
-		borderColor: 'line.primary',
-		borderLeftWidth: 'regular',
+		borderColor: 'grayAlpha.300',
+		borderLeftWidth: '1px',
 		borderStyle: 'solid',
-		paddingLeft: '8',
+		paddingLeft: '2',
 	})
 
 	export const depthBadge = style({
-		backgroundColor: 'container.regular',
-		borderRadius: '3xs',
-		color: 'content.secondary',
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'sm',
+		color: 'gray.900',
 		flexShrink: 0,
-		marginRight: '4',
+		marginRight: '1',
 		marginTop: '1px !custom',
-		paddingInline: '2',
+		paddingInline: '2px !custom',
 		userSelect: 'none',
 	})
 
 	export const toggle = style({
-		color: 'content.secondary',
+		color: 'gray.900',
 		flexShrink: 0,
-		height: '16',
-		marginRight: '2',
-		width: '16',
+		height: '4',
+		marginRight: '2px !custom',
+		width: '4',
 	})
 
 	export const toggleEnabled = style({
 		cursor: 'pointer',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
 	export const leafIcon = style({
-		color: 'content.tertiary',
-		height: '12',
-		marginTop: '2',
-		width: '12',
+		color: 'gray.700',
+		height: '3',
+		marginTop: '2px !custom',
+		width: '3',
 	})
 
 	export const label = style({ minWidth: '0 !custom' })
@@ -1073,11 +1076,11 @@ namespace styles {
 	export const address = style({ display: 'inline-block' })
 
 	export const errorText = style({
-		color: 'content.primary',
-		marginLeft: '4',
+		color: 'foreground',
+		marginLeft: '1',
 	})
 
-	export const moreFrames = style({ cursor: 'pointer', marginLeft: '8' })
+	export const moreFrames = style({ cursor: 'pointer', marginLeft: '2' })
 
 	export const output = style({
 		alignItems: 'flex-start',
@@ -1085,26 +1088,26 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const outputRoot = style({ marginLeft: '40' })
+	export const outputRoot = style({ marginLeft: '10' })
 
 	export const outputNested = style({
-		borderColor: 'line.primary',
-		borderLeftWidth: 'regular',
+		borderColor: 'grayAlpha.300',
+		borderLeftWidth: '1px',
 		borderStyle: 'solid',
-		paddingLeft: '24',
+		paddingLeft: '6',
 	})
 
 	export const returnIcon = style({
-		color: 'content.tertiary',
+		color: 'gray.700',
 		flexShrink: 0,
-		height: '12',
-		marginRight: '4',
-		marginTop: '4',
-		width: '12',
+		height: '3',
+		marginRight: '1',
+		marginTop: '1',
+		width: '3',
 	})
 
 	export const outputValue = style({
-		color: 'content.primary',
+		color: 'foreground',
 		minWidth: '0 !custom',
 	})
 }

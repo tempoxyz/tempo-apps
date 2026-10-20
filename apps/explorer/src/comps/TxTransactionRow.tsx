@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
@@ -213,7 +213,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 }
 
 namespace styles {
-	export const secondary = style({ color: 'content.secondary' })
+	export const secondary = style({ color: 'gray.900' })
 
 	export const nowrap = style({ textWrap: 'nowrap' })
 }

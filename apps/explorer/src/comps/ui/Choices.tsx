@@ -1,6 +1,6 @@
 import { Radio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
-import { style } from '@tempoxyz/ds/platform'
+import { style } from '@tempoxyz/ds'
 import type * as React from 'react'
 
 /**
@@ -76,33 +76,33 @@ export declare namespace Choices {
 namespace styles {
 	// TDS SegmentedControl's treatment at toolbar density.
 	export const root = style({
-		backgroundColor: 'container.regular',
-		borderRadius: '2xs',
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: 'lg',
 		display: 'flex',
 		maxWidth: '100% !custom',
 		overflow: 'hidden',
-		padding: '2',
+		padding: '2px !custom',
 	})
 
 	export const item = style({
 		alignItems: 'center',
 		backgroundColor: 'transparent !custom',
 		border: 'none !custom',
-		borderRadius: '3xs',
-		color: 'content.secondary',
+		borderRadius: 'sm',
+		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'flex',
 		flex: '1 !custom',
-		height: '24',
+		height: '6',
 		justifyContent: 'center',
-		paddingInline: '8',
-		typography: 'body.b3',
+		paddingInline: '2',
+		typography: 'label.12',
 		whiteSpace: 'nowrap',
-		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 		selectors: {
 			'&[data-checked]': {
-				backgroundColor: 'background.secondary',
-				color: 'content.primary',
+				backgroundColor: 'background.surface',
+				color: 'foreground',
 			},
 			'&:focus-visible': {
 				outline: '2px solid currentColor !custom',

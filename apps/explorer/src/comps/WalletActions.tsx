@@ -1,6 +1,6 @@
 import type { Address } from 'ox'
-import { IconButton, TextButton, Tooltip, style } from '@tempoxyz/ds/platform'
-import { LogOut } from '@tempoxyz/ds/platform/icons'
+import { Button, Tooltip, style } from '@tempoxyz/ds'
+import { ChevronRight, LogOut } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import {
 	useConnect,
@@ -15,7 +15,7 @@ import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
-import { animatePulse, pressDown } from '#styles/explorer'
+import { animatePulse, textAction } from '#styles/explorer'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 
@@ -79,17 +79,22 @@ export function WalletActions(
 				<InfoCard.Title className={styles.title().className}>
 					Wallet actions
 					{isConnected && (
-						<Tooltip content="Disconnect">
-							<IconButton
-								aria-label="Disconnect"
-								onClick={() => disconnect.mutate({ connector })}
-								scale="small"
-								variant="tertiary"
-								{...cx(styles.disconnect(), pressDown())}
+						<Tooltip.Root>
+							<Tooltip.Trigger
+								render={
+									<Button
+										aria-label="Disconnect"
+										onClick={() => disconnect.mutate({ connector })}
+										shape="icon"
+										size="small"
+										variant="text"
+									/>
+								}
 							>
-								<LogOut />
-							</IconButton>
-						</Tooltip>
+								<LogOut {...styles.icon()} />
+							</Tooltip.Trigger>
+							<Tooltip.Popup>Disconnect</Tooltip.Popup>
+						</Tooltip.Root>
 					)}
 				</InfoCard.Title>
 			}
@@ -110,14 +115,16 @@ export function WalletActions(
 							/>,
 						]
 					: [
-							<TextButton
+							<button
 								key="connect"
 								disabled={busy}
 								onClick={handleConnectOrSwitch}
-								{...cx(busy && animatePulse())}
+								type="button"
+								{...cx(textAction(), busy && animatePulse())}
 							>
 								{connectLabel}
-							</TextButton>,
+								<ChevronRight />
+							</button>,
 						]
 			}
 		/>
@@ -134,6 +141,8 @@ export declare namespace WalletActions {
 }
 
 namespace styles {
+	export const icon = style({ fontSize: 'base' })
+
 	// InfoCard fits its content from 1240px; the wallet card fills the column.
 	export const card = style({
 		'@media (width >= 1240px)': { width: '100% !custom' },
@@ -142,11 +151,5 @@ namespace styles {
 	export const title = style({
 		justifyContent: 'space-between',
 		width: '100% !custom',
-	})
-
-	export const disconnect = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'container.regular' },
-		},
 	})
 }
