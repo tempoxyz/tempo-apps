@@ -32,6 +32,15 @@ describe('Explorer Orchestra routing', () => {
 	it.each([
 		undefined,
 		'',
+	])('uses the public endpoint without credentials %s', (auth) => {
+		expect(getExplorerRpcBackend('testnet', auth)).toEqual({
+			chainId: 42431,
+			url: 'https://rpc.testnet.tempo.xyz',
+			headers: {},
+		})
+		expect(() => getExplorerRpcBackend('devnet', auth)).toThrow('credentials')
+	})
+	it.each([
 		'bare-key',
 		':key',
 		'client:',

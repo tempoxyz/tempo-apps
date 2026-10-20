@@ -1,6 +1,13 @@
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import type { KnownEvent, KnownEventPart } from './known-events'
+import { getAbiItem, toEventSelector } from 'viem'
+import { Addresses } from 'viem/tempo'
+import { Abis } from '#lib/abis'
+import {
+	isTip20Token,
+	type KnownEvent,
+	type KnownEventPart,
+} from './known-events'
 import {
 	composeCallAndLogEvents,
 	isZoneBatchEvent,
@@ -8,9 +15,17 @@ import {
 
 export type TransactionActivity = {
 	id: string
+	/** The log the activity was indexed from. */
+	logIndex?: number | undefined
 	title: string
 	type: string
 	data: Record<string, ActivityDataValue>
+}
+
+type ReceiptLog = {
+	address: Address.Address
+	logIndex: number | null
+	topics: readonly Hex.Hex[]
 }
 
 export type ActivityDataValue =
@@ -20,6 +35,18 @@ export type ActivityDataValue =
 	| null
 	| ActivityDataValue[]
 	| { [key: string]: ActivityDataValue }
+
+const transferTopics = new Set(
+	[
+		'Transfer(address indexed, address indexed, uint256)',
+		'TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
+	].map((signature) => toEventSelector(signature).toLowerCase()),
+)
+
+const dex = Addresses.stablecoinDex.toLowerCase()
+const orderFilledTopic = toEventSelector(
+	getAbiItem({ abi: Abis.stablecoinDex, name: 'OrderFilled' }),
+).toLowerCase()
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
 const GENERIC_ACTIVITY_TYPES = new Set(['approval', 'burn', 'mint', 'transfer'])
@@ -42,7 +69,11 @@ type ZoneDirection = 'deposit' | 'withdrawal'
 
 export function activitiesToKnownEvents(
 	activities: readonly TransactionActivity[],
-	options: { portal?: Address.Address | null } = {},
+	options: {
+		portal?: Address.Address | null
+		/** The receipt's logs, to tell which swaps used the Stablecoin DEX. */
+		logs?: readonly ReceiptLog[] | undefined
+	} = {},
 ): KnownEvent[] {
 	return activities.flatMap((activity) => {
 		if (
@@ -77,6 +108,8 @@ export function activitiesToKnownEvents(
 		if (vaultEvent) return [vaultEvent]
 
 		const parts = activityParts(activity)
+		const route = options.logs && dexRoute(activity, parts, options.logs)
+		if (route) parts.push({ type: 'text', value: 'on' }, route)
 		const representedFields = new Set([
 			'sourceAmount',
 			'sourceToken',
@@ -328,6 +361,49 @@ function activityParts(activity: TransactionActivity): KnownEventPart[] {
 		)
 	}
 	return parts
+}
+
+/**
+ * A swap indexed from a TIP-20 transfer into or out of the Stablecoin DEX
+ * filled on its books when the DEX itself emitted a fill for the same
+ * taker: after taking its tokens in, or before paying it out. A transaction
+ * can route through other venues too, so only those swaps are labelled,
+ * and any contract can emit a Transfer naming the DEX.
+ */
+function dexRoute(
+	activity: TransactionActivity,
+	parts: readonly KnownEventPart[],
+	logs: readonly ReceiptLog[],
+): KnownEventPart | null {
+	if (activity.type !== 'swap') return null
+	const log = logs.find((log) => log.logIndex === activity.logIndex)
+	if (!log || log.logIndex === null || !isTip20Token(log.address)) return null
+	const [topic, from, to] = log.topics
+	if (!topic || !from || !to || !transferTopics.has(topic.toLowerCase()))
+		return null
+	const into = topicAddress(to) === dex
+	if (!into && topicAddress(from) !== dex) return null
+	const taker = topicAddress(into ? from : to)
+	const transfer = log.logIndex
+	const filled = logs.some(
+		(fill) =>
+			fill.logIndex !== null &&
+			(into ? fill.logIndex > transfer : fill.logIndex < transfer) &&
+			fill.topics[0]?.toLowerCase() === orderFilledTopic &&
+			Address.isEqual(fill.address, Addresses.stablecoinDex) &&
+			fill.topics[3] !== undefined &&
+			topicAddress(fill.topics[3]) === taker,
+	)
+	const [source, destination] = parts.flatMap((part) =>
+		part.type === 'amount' ? [part.value.token] : [],
+	)
+	if (!filled || !source || !destination) return null
+	return { type: 'dexRoute', value: { from: source, to: destination } }
+}
+
+/** An indexed address topic as a lowercase address. */
+function topicAddress(topic: Hex.Hex): string {
+	return `0x${topic.slice(-40)}`.toLowerCase()
 }
 
 function amountPart(

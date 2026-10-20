@@ -14,6 +14,7 @@ import * as Value from 'ox/Value'
 import * as React from 'react'
 import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
 import { Button, style, TextButton } from '@tempoxyz/ds/platform'
+import { Addresses } from 'viem/tempo'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
@@ -35,6 +36,7 @@ import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
 import { Empty } from '#comps/ui/Empty'
+import { getAccountTag } from '#lib/account'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { withKeyAuthorizationDescription } from '#lib/domain/access-key'
@@ -51,6 +53,8 @@ import {
 import { PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
+import { describeDexFill } from '#lib/dex-swaps'
+import { dexTransactionFillsQueryOptions } from '#lib/queries/dex-pools'
 import {
 	autoloadAbiQueryOptions,
 	lookupSignatureQueryOptions,
@@ -130,6 +134,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 
 				const activityEvents = activitiesToKnownEvents(activities, {
 					portal: txData.receipt.to,
+					logs: txData.receipt.logs,
 				})
 				return { ...txData, activityEvents }
 			} catch (error) {
@@ -328,7 +333,11 @@ function RouteComponent() {
 		totalItems: receipt.logs.length,
 		itemsLabel: 'events',
 		content: (
-			<EventsSection logs={receipt.logs} knownEvents={knownEventsByLog} />
+			<EventsSection
+				hash={hash}
+				logs={receipt.logs}
+				knownEvents={knownEventsByLog}
+			/>
 		),
 	})
 
@@ -617,7 +626,10 @@ function BalanceChangesOverview(props: {
 				<div {...styles.balanceAccounts()}>
 					{Array.from(groupedByAccount.entries()).map(([address, changes]) => (
 						<div key={address} {...styles.balanceAccount()}>
-							<Address address={address} />
+							<Address
+								address={address}
+								label={getAccountTag(address)?.label}
+							/>
 							<div {...styles.balanceChanges()}>
 								{changes.map((change) => {
 									const metadata = data.tokenMetadata[change.token]
@@ -734,11 +746,32 @@ function CallItem(props: {
 }
 
 function EventsSection(props: {
+	hash: Hex.Hex
 	logs: Log[]
 	knownEvents: (KnownEvent | null)[]
 }) {
-	const { logs, knownEvents } = props
+	const { hash, logs } = props
 	const queryClient = useQueryClient()
+	const { data: dexFillLookup } = useQuery({
+		...dexTransactionFillsQueryOptions(hash),
+		// Only fills the DEX emitted are indexed, and polled for until they are.
+		enabled: logs.some(
+			(log, index) =>
+				props.knownEvents[index]?.type === 'order filled' &&
+				OxAddressUtil.isEqual(log.address, Addresses.stablecoinDex),
+		),
+	})
+	// An OrderFilled log names only its order; the indexer supplies its book.
+	const dexFills = dexFillLookup?.fills
+	const knownEvents = React.useMemo(() => {
+		if (!dexFills?.length) return props.knownEvents
+		return props.knownEvents.map((event, index) => {
+			const fill = dexFills.find((fill) => fill.log === logs[index]?.logIndex)
+			return event?.type === 'order filled' && fill
+				? describeDexFill(event, fill)
+				: event
+		})
+	}, [props.knownEvents, dexFills, logs])
 	const [expandedGroups, setExpandedGroups] = React.useState<Set<number>>(
 		new Set(),
 	)

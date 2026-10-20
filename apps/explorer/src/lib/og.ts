@@ -3,7 +3,11 @@ import * as Value from 'ox/Value'
 import type { AccountType } from '#lib/account'
 import { getTempoChain } from '#wagmi.config.ts'
 import { getTempoEnv } from '#lib/env'
-import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
+import {
+	dexPairLabel,
+	type KnownEvent,
+	type KnownEventPart,
+} from '#lib/domain/known-events'
 import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getReceiptEventSideAmount } from '#lib/domain/receipt-presentation'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -138,6 +142,10 @@ function formatEventPart(part: KnownEventPart): string {
 			return formatAmount(part.value)
 		case 'token':
 			return part.value.symbol || HexFormatter.truncate(part.value.address)
+		case 'dexRoute':
+			return 'Stablecoin DEX'
+		case 'dexPair':
+			return dexPairLabel(part.value)
 		case 'number': {
 			if (Array.isArray(part.value)) {
 				const [val, dec] = part.value

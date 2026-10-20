@@ -26,6 +26,7 @@ import {
 	isZonePortalAddress as isDeterministicZonePortalAddress,
 } from '#lib/domain/zones'
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
+import { HexFormatter } from '#lib/formatting'
 import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
 import type * as Tip20 from './tip20'
 
@@ -579,6 +580,14 @@ const RECEIVE_POLICY_GUARD = Address.from(
 	'0xB10C000000000000000000000000000000000000',
 )
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
+
+/**
+ * TIP-20 tokens live under a 12-byte address prefix, far too long for a
+ * deployed contract's address to be ground to, so their logs are genuine.
+ */
+export function isTip20Token(address: string): boolean {
+	return address.toLowerCase().startsWith('0x20c000000000000000000000')
+}
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
 export const STREAM_CHANNELS = [
 	STREAM_CHANNEL,
@@ -2027,6 +2036,16 @@ type ContractCall = {
 	input: Hex.Hex
 }
 
+/** A Stablecoin DEX book as text, such as "USDC.e/OUSD". */
+export function dexPairLabel(
+	pair: { base: Token; quote: Token },
+	separator = '/',
+): string {
+	const symbol = (token: Token) =>
+		token.symbol ?? HexFormatter.truncate(token.address)
+	return `${symbol(pair.base)}${separator}${symbol(pair.quote)}`
+}
+
 export type KnownEventPart =
 	| { type: 'account'; value: Address.Address }
 	| { type: 'action'; value: string }
@@ -2042,6 +2061,16 @@ export type KnownEventPart =
 	| { type: 'text'; value: string }
 	| { type: 'tick'; value: number }
 	| { type: 'token'; value: Token }
+	/** A swap's route through the Stablecoin DEX, linked to its route page. */
+	| { type: 'dexRoute'; value: { from: Address.Address; to: Address.Address } }
+	/**
+	 * The Stablecoin DEX book an order rests on. An active book links to its
+	 * pair page; a retired one has none, as swaps no longer route through it.
+	 */
+	| {
+			type: 'dexPair'
+			value: { base: Token; quote: Token; active: boolean }
+	  }
 
 export interface KnownEvent {
 	type: Exclude<string, FeeTransferEvent['type']>
@@ -2636,6 +2665,23 @@ export function parseKnownEvents(
 		}
 	}
 
+	// The DEX takes a taker's tokens in, fills orders for it, then pays it
+	// out. Only TIP-20 transfers around a fill the DEX itself emitted for the
+	// same taker name it as the venue: any contract can emit a Transfer
+	// naming the DEX, and tokens can pass through it for other reasons.
+	const dexFillBetween = (start: number, end: number, taker: Address.Address) =>
+		dedupedEvents
+			.slice(start + 1, end)
+			.some(
+				(event) =>
+					event.eventName === 'OrderFilled' &&
+					Address.isEqual(event.address, STABLECOIN_EXCHANGE) &&
+					Address.isEqual(
+						(event.args as { taker: Address.Address }).taker,
+						taker,
+					),
+			)
+
 	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
@@ -2669,6 +2715,18 @@ export function parseKnownEvents(
 								type: 'amount',
 								value: createAmount(args2.amount, event2.address),
 							},
+							...(isTip20Token(event1.address) &&
+							isTip20Token(event2.address) &&
+							Address.isEqual(args1.from, args2.to) &&
+							dexFillBetween(idx1, idx2, args1.from)
+								? ([
+										{ type: 'text', value: 'on' },
+										{
+											type: 'dexRoute',
+											value: { from: event1.address, to: event2.address },
+										},
+									] as const)
+								: []),
 						],
 					})
 

@@ -1,5 +1,6 @@
 import type { Address, Hex } from 'viem'
 import { append, type DexPoolToken } from '#lib/dex-pools'
+import type { KnownEvent } from '#lib/domain/known-events'
 
 export type DexSwap = {
 	id: string
@@ -20,6 +21,23 @@ export type DexFill = {
 	orderId: string
 	taker: Address
 	amount: bigint
+}
+
+/** A transaction's fill and the book it filled on, keyed by its log. */
+export type DexTransactionFill = {
+	log: number
+	base: DexPoolToken
+	quote: DexPoolToken
+	/** The book is still the base's active one; a retired book has no page. */
+	active: boolean
+	/** Filled base-token units. */
+	amount: string
+}
+
+export type DexTransactionFills = {
+	fills: DexTransactionFill[]
+	/** Every fill's book resolved; an incomplete result is retried. */
+	complete: boolean
 }
 
 /** An order's base token, side and tick, from its placement or a flip. */
@@ -205,4 +223,39 @@ function balanced(received: bigint, spent: bigint): boolean {
 	const larger = received > spent ? received : spent
 	const difference = received > spent ? received - spent : spent - received
 	return difference <= 10n + larger / 10_000n
+}
+
+/**
+ * An OrderFilled log names only its order, so the indexer supplies the book
+ * the fill happened on: "Partial Fill 5 USDC.e on USDC.e/OUSD".
+ */
+export function describeDexFill(
+	event: KnownEvent,
+	fill: DexTransactionFill,
+): KnownEvent {
+	const { base, quote } = fill
+	return {
+		...event,
+		parts: [
+			...event.parts.filter((part) => part.type === 'action'),
+			{
+				type: 'amount',
+				value: {
+					token: base.address,
+					value: BigInt(fill.amount),
+					decimals: base.decimals,
+					symbol: base.symbol,
+				},
+			},
+			{ type: 'text', value: 'on' },
+			{
+				type: 'dexPair',
+				value: {
+					base: { address: base.address, symbol: base.symbol },
+					quote: { address: quote.address, symbol: quote.symbol },
+					active: fill.active,
+				},
+			},
+		],
+	}
 }

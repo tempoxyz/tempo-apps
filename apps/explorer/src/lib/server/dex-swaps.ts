@@ -1,12 +1,21 @@
 import { createServerFn } from '@tanstack/react-start'
-import { type Address, formatUnits, type Hex } from 'viem'
+import {
+	type Address,
+	formatUnits,
+	getAbiItem,
+	type Hex,
+	toEventSelector,
+} from 'viem'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
-import { append, originalQuote } from '#lib/dex-pools'
+import { Abis } from '#lib/abis'
+import { append, type DexPoolToken, originalQuote } from '#lib/dex-pools'
 import {
 	type DexFill,
 	type DexOrderState,
 	type DexSwap,
+	type DexTransactionFill,
+	type DexTransactionFills,
 	fillHop,
 	groupSwaps,
 	orderAt,
@@ -16,14 +25,16 @@ import {
 	addressOf,
 	indexer,
 	list,
+	MAX_SWITCHES,
 	type Row,
+	readContracts,
 	readQuoteSwitches,
 	readTokens,
 	readVerified,
 } from '#lib/server/dex-indexer'
 import { withDeadline } from '#lib/server/dex-route'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
-import { zAddress } from '#lib/zod'
+import { zAddress, zHash } from '#lib/zod'
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
 
 /** Fills read per page; a swap is one or more fills. */
@@ -35,6 +46,9 @@ const PAGES = 5
 const SWAPS = 25
 
 const stablecoinDex = Addresses.stablecoinDex.toLowerCase()
+const orderFilledTopic = toEventSelector(
+	getAbiItem({ abi: Abis.stablecoinDex, name: 'OrderFilled' }),
+).toLowerCase()
 const orderFlipped =
 	'OrderFlipped(uint128 indexed orderId, address indexed maker, address indexed token, uint128 amount, bool isBid, int16 tick, int16 flipTick)'
 const hexHash = /^0x[0-9a-f]{64}$/
@@ -188,17 +202,30 @@ async function readOrderStates(
 	return states
 }
 
-/** One page of fills as swaps, newest first. */
-async function assembleSwaps(
+type FillBook = {
+	fill: DexFill
+	order: DexOrderState
+	base: DexPoolToken
+	quote: DexPoolToken
+	/** The base's quote tokens were read rather than assumed. */
+	exact: boolean
+}
+
+/**
+ * The book each fill filled on: its order's base token, and the quote token
+ * that base routed through when it filled. `undetermined` counts fills that
+ * predate the switch history kept for their base, whose book can't be known.
+ */
+async function readFillBooks(
 	chainId: number,
 	fills: readonly DexFill[],
 	blockNumber: bigint,
-): Promise<DexSwap[]> {
+): Promise<{ books: FillBook[]; undetermined: number }> {
 	const states = await readOrderStates(chainId, fills)
 	const bases = new Set(
 		[...states.values()].flatMap((list) => list.map((state) => state.token)),
 	)
-	if (bases.size === 0) return []
+	if (bases.size === 0) return { books: [], undetermined: 0 }
 	const [switches, pairRows] = await Promise.all([
 		readQuoteSwitches(chainId, bases),
 		indexer(
@@ -218,11 +245,22 @@ async function assembleSwaps(
 		blockNumber,
 	)
 
-	const hops = fills.flatMap((fill) => {
+	let undetermined = 0
+	const resolved = fills.flatMap((fill) => {
 		const order = orderAt(states.get(fill.orderId) ?? [], fill)
 		const base = order && tokens.get(order.token)
 		if (!order || !base) return []
 		const history = switches.get(order.token) ?? []
+		// Only the newest switches are kept, so an older fill's book is unknown.
+		const oldest = history[history.length - 1]
+		if (
+			history.length >= MAX_SWITCHES &&
+			oldest &&
+			fill.timestamp < oldest.at
+		) {
+			undetermined++
+			return []
+		}
 		const original = history.length
 			? originalQuote({
 					books: books.get(order.token) ?? [],
@@ -236,17 +274,40 @@ async function assembleSwaps(
 		if (!quote) return []
 		return [
 			{
-				...fillHop(fill.amount, order, quote.token, base.token.decimals),
-				transactionHash: fill.transactionHash,
-				taker: fill.taker,
-				timestamp: fill.timestamp,
-				log: fill.log,
+				fill,
+				order,
+				base: base.token,
+				quote: quote.token,
+				exact: !base.assumedQuote,
 			},
 		]
 	})
+	return { books: resolved, undetermined }
+}
+
+/** One page of fills as swaps, newest first. */
+async function assembleSwaps(
+	chainId: number,
+	fills: readonly DexFill[],
+	blockNumber: bigint,
+): Promise<DexSwap[]> {
+	const { books } = await readFillBooks(chainId, fills, blockNumber)
+	const tokens = new Map(
+		books.flatMap(({ base, quote }) => [
+			[base.address, base],
+			[quote.address, quote],
+		]),
+	)
+	const hops = books.map(({ fill, order, base, quote }) => ({
+		...fillHop(fill.amount, order, quote, base.decimals),
+		transactionHash: fill.transactionHash,
+		taker: fill.taker,
+		timestamp: fill.timestamp,
+		log: fill.log,
+	}))
 	return groupSwaps(hops).flatMap((row): DexSwap[] => {
-		const from = tokens.get(row.from)?.token
-		const to = tokens.get(row.to)?.token
+		const from = tokens.get(row.from)
+		const to = tokens.get(row.to)
 		if (!from || !to) return []
 		return [
 			{
@@ -344,5 +405,125 @@ export const fetchDexSwaps = createServerFn({ method: 'GET' })
 			throw new Error(
 				'Stablecoin DEX swaps are temporarily unavailable. Please try again.',
 			)
+		}
+	})
+
+/** A transaction's fills and their books, which never change once complete. */
+type TransactionBooks = {
+	fills: Omit<DexTransactionFill, 'active'>[]
+	complete: boolean
+}
+
+/**
+ * A transaction's Stablecoin DEX fills, each with the book it filled on.
+ * `complete` is false until the indexer has every fill the receipt holds
+ * and each fill's book is resolved rather than assumed, such as when the
+ * indexer trails the transaction or a token read failed.
+ */
+async function readTransactionBooks(hash: Hex): Promise<TransactionBooks> {
+	const chainId = getTempoChain().id
+	const transactionHash = hash.toLowerCase()
+	if (!hexHash.test(transactionHash)) return { fills: [], complete: false }
+	const [rows, receipt] = await Promise.all([
+		indexer(
+			chainId,
+			`SELECT ${fillColumns} FROM dex_fills
+			WHERE address = '${stablecoinDex}' AND tx_hash = '${transactionHash}'
+			ORDER BY log_idx`,
+		),
+		getBatchedClient().getTransactionReceipt({ hash: transactionHash as Hex }),
+	])
+	const fills = parseFills(rows)
+	// The indexer can expose part of a transaction while it catches up.
+	const expected = receipt.logs.filter(
+		(log) =>
+			log.address.toLowerCase() === stablecoinDex &&
+			log.topics[0]?.toLowerCase() === orderFilledTopic,
+	).length
+	if (fills.length === 0) return { fills: [], complete: false }
+	const { books, undetermined } = await readFillBooks(
+		chainId,
+		fills,
+		await getBatchedClient().getBlockNumber(),
+	)
+	return {
+		fills: books.map(({ fill, base, quote }) => ({
+			log: fill.log,
+			base,
+			quote,
+			amount: String(fill.amount),
+		})),
+		// An undetermined fill never resolves, so it doesn't hold up caching.
+		complete:
+			fills.length === expected &&
+			books.length + undetermined === fills.length &&
+			books.every((book) => book.exact),
+	}
+}
+
+/**
+ * Whether a fill's book is still active changes when its base switches
+ * quote tokens, so it is read fresh rather than cached with the fills. A
+ * failed read leaves the book unlinked.
+ */
+async function withActiveBooks(
+	result: TransactionBooks,
+): Promise<DexTransactionFills> {
+	const bases = [...new Set(result.fills.map((fill) => fill.base.address))]
+	const quotes = bases.length
+		? await getBatchedClient()
+				.getBlockNumber()
+				.then((blockNumber) =>
+					readContracts(
+						bases.map((address) => ({
+							address,
+							abi: Abis.tip20,
+							functionName: 'quoteToken' as const,
+						})),
+						blockNumber,
+					),
+				)
+				.catch(() => [])
+		: []
+	const current = new Map(
+		bases.map((base, index) => {
+			const quote = quotes[index]
+			return [
+				base,
+				quote?.status === 'success' ? String(quote.result).toLowerCase() : null,
+			]
+		}),
+	)
+	return {
+		...result,
+		fills: result.fills.map((fill) => ({
+			...fill,
+			active: current.get(fill.base.address) === fill.quote.address,
+		})),
+	}
+}
+
+export async function getDexTransactionFills(
+	hash: Hex,
+): Promise<DexTransactionFills> {
+	return withActiveBooks(await readTransactionBooks(hash))
+}
+
+export const fetchDexTransactionFills = createServerFn({ method: 'GET' })
+	.inputValidator((input: { hash: Hex }) =>
+		z.object({ hash: zHash() }).parse(input),
+	)
+	.handler(async ({ data }): Promise<DexTransactionFills> => {
+		try {
+			const books = await withImmutableDataCache({
+				key: `dex-transaction-fills:v4:${getTempoChain().id}:${data.hash.toLowerCase()}`,
+				load: () => withDeadline(readTransactionBooks(data.hash)),
+				// Retry an incomplete result rather than keep it.
+				shouldCache: (result) => result.complete,
+			})
+			return await withActiveBooks(books)
+		} catch (error) {
+			console.error('Failed to load Stablecoin DEX fills:', error)
+			return { fills: [], complete: false }
 		}
 	})

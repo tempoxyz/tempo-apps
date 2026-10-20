@@ -1,6 +1,10 @@
 import * as Value from 'ox/Value'
 import { maxUint256, type TransactionReceipt } from 'viem'
-import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
+import {
+	dexPairLabel,
+	type KnownEvent,
+	type KnownEventPart,
+} from '#lib/domain/known-events'
 import {
 	getReceiptEventSideAmount,
 	type ReceiptPresentation,
@@ -138,6 +142,10 @@ function formatPart(part: KnownEventPart): string {
 			return part.value.toLocaleString()
 		case 'token':
 			return part.value.symbol ?? HexFormatter.truncate(part.value.address)
+		case 'dexRoute':
+			return 'Stablecoin DEX'
+		case 'dexPair':
+			return dexPairLabel(part.value)
 	}
 }
 

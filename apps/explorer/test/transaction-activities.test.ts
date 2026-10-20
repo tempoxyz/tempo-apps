@@ -1,10 +1,81 @@
 import { describe, expect, test } from 'vitest'
+import { encodeEventTopics, type Hex } from 'viem'
+import { Addresses } from 'viem/tempo'
+import { Abis } from '#lib/abis'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
 } from '#lib/domain/transaction-activities'
 
 describe('activitiesToKnownEvents', () => {
+	test('names the Stablecoin DEX only for swaps indexed from its transfers', () => {
+		const OUSD = '0x20c0000000000000000000006a37da5c996874be'
+		const USDC = '0x20c000000000000000000000b9537d11c60e8b50'
+		const taker = `0x${'9'.repeat(40)}` as const
+		const transfer = (logIndex: number, from: Hex, to: Hex, token = OUSD) => ({
+			address: token as Hex,
+			logIndex,
+			topics: encodeEventTopics({
+				abi: Abis.tip20,
+				eventName: 'Transfer',
+				args: { from, to },
+			}),
+		})
+		const fillFor = (logIndex: number, filledTaker: Hex) => ({
+			address: Addresses.stablecoinDex,
+			logIndex,
+			topics: encodeEventTopics({
+				abi: Abis.stablecoinDex,
+				eventName: 'OrderFilled',
+				args: { orderId: 1n, taker: filledTaker },
+			}),
+		})
+		const fill = fillFor(14, taker)
+		const swap = (logIndex: number) => ({
+			id: `0x${'1'.repeat(64)}-${logIndex}`,
+			logIndex,
+			title: 'Tokens swapped',
+			type: 'swap',
+			data: {
+				sourceAmount: { baseUnits: '5016012', decimals: 6 },
+				sourceToken: { address: OUSD, symbol: 'OUSD' },
+				destinationAmount: { baseUnits: '5016012', decimals: 6 },
+				destinationToken: { address: USDC, symbol: 'USDC.e' },
+			},
+		})
+		const attacker = `0x${'7'.repeat(40)}` as const
+		const logs = [
+			transfer(13, taker, Addresses.stablecoinDex),
+			fill,
+			// Another venue's settlement in the same transaction.
+			transfer(20, taker, attacker),
+			// A contract's own Transfer event naming the DEX.
+			transfer(21, taker, Addresses.stablecoinDex, attacker),
+		]
+		const venue = (events: ReturnType<typeof activitiesToKnownEvents>) =>
+			events.map((event) =>
+				event.parts.some((part) => part.type === 'dexRoute'),
+			)
+
+		const [dex] = activitiesToKnownEvents([swap(13)], { logs })
+		expect(dex?.parts.slice(-2)).toEqual([
+			{ type: 'text', value: 'on' },
+			{ type: 'dexRoute', value: { from: OUSD, to: USDC } },
+		])
+		expect(
+			venue(activitiesToKnownEvents([swap(20), swap(21)], { logs })),
+		).toEqual([false, false])
+		// Without a fill the DEX emitted for this taker after taking its
+		// tokens, nothing filled on its books for this swap.
+		const others = logs.filter((log) => log !== fill)
+		for (const fills of [[], [fillFor(14, attacker)], [fillFor(12, taker)]])
+			expect(
+				venue(
+					activitiesToKnownEvents([swap(13)], { logs: [...others, ...fills] }),
+				),
+			).toEqual([false])
+	})
+
 	test('omits unknown activities so local descriptions can be used', () => {
 		expect(
 			activitiesToKnownEvents([

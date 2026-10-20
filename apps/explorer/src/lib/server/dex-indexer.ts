@@ -17,7 +17,7 @@ import { getBatchedClient } from '#wagmi.config'
 const READ_CHUNK = 50
 
 /** Switches kept per base; only recent ones affect what is shown. */
-const MAX_SWITCHES = 50
+export const MAX_SWITCHES = 50
 
 const quoteTokenUpdate = toEventSelector('QuoteTokenUpdate(address,address)')
 const hexAddress = /^0x[0-9a-f]{40}$/
@@ -109,6 +109,8 @@ export type TokenState = {
 	token: DexPoolToken
 	quoteToken: Address
 	nextQuoteToken: Address
+	/** A quote token read failed, so pathUSD was assumed for it. */
+	assumedQuote: boolean
 }
 
 /** Lowercased verified token addresses; empty when the registry is down. */
@@ -156,6 +158,9 @@ export async function readTokens(
 			},
 			quoteToken: lower(quoteToken),
 			nextQuoteToken: lower(nextQuoteToken),
+			assumedQuote:
+				quoteToken?.status !== 'success' ||
+				nextQuoteToken?.status !== 'success',
 		})
 	})
 	return tokens

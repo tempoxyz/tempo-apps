@@ -6,6 +6,7 @@ import { decodeErrorResult, decodeFunctionData, parseAbi } from 'viem'
 import { allAbis } from '#lib/abis'
 import { getContractInfo } from '#lib/domain/contracts'
 import {
+	dexPairLabel,
 	preferredEventsFilter,
 	type KnownEvent,
 	type KnownEventPart,
@@ -315,6 +316,10 @@ function formatKnownEventPart(part: KnownEventPart): string {
 			return part.value.toLocaleString()
 		case 'token':
 			return part.value.symbol ?? HexFormatter.truncate(part.value.address)
+		case 'dexRoute':
+			return 'Stablecoin DEX'
+		case 'dexPair':
+			return dexPairLabel(part.value)
 	}
 }
 

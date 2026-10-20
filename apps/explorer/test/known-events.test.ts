@@ -447,6 +447,85 @@ describe('parseKnownEvents', () => {
 		])
 	})
 
+	it('names the Stablecoin DEX only beside a fill it emitted', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const OUSD = '0x20c0000000000000000000006a37da5c996874be' as const
+		const USDC = '0x20c000000000000000000000b9537d11c60e8b50' as const
+		const attacker = `0x${'7'.repeat(40)}` as const
+		const transfer = (token: Hex.Hex, from: Hex.Hex, to: Hex.Hex) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [1_000_000n]),
+				},
+				hash,
+			)
+		const fill = (emitter: Hex.Hex, taker: Hex.Hex = accountAddress) =>
+			mockLog(
+				{
+					address: emitter,
+					topics: encodeEventTopics({
+						abi: stablecoinDexAbi,
+						eventName: 'OrderFilled',
+						args: { orderId: 1n, maker: recipientAddress, taker },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[{ type: 'uint128' }, { type: 'bool' }],
+						[1_000_000n, true],
+					),
+				},
+				hash,
+			)
+		const swap = (logs: ReturnType<typeof mockLog>[]) =>
+			parseKnownEvents(mockReceipt(logs, accountAddress, hash), {
+				getTokenMetadata,
+			}).find((event) => event.type === 'swap')
+		const dex = Addresses.stablecoinDex
+
+		expect(
+			swap([
+				transfer(OUSD, accountAddress, dex),
+				fill(dex),
+				transfer(USDC, dex, accountAddress),
+			])?.parts.slice(-2),
+		).toEqual([
+			{ type: 'text', value: 'on' },
+			{ type: 'dexRoute', value: { from: OUSD, to: USDC } },
+		])
+		// Any contract can emit a Transfer or OrderFilled naming the DEX, and
+		// a fill elsewhere in the transaction or for another taker isn't this
+		// pair's.
+		for (const logs of [
+			[
+				transfer(OUSD, accountAddress, dex),
+				transfer(USDC, dex, accountAddress),
+				fill(dex),
+			],
+			[
+				transfer(OUSD, accountAddress, dex),
+				fill(dex, attacker),
+				transfer(USDC, dex, accountAddress),
+			],
+			[
+				transfer(OUSD, accountAddress, dex),
+				transfer(USDC, dex, accountAddress),
+			],
+			[
+				transfer(attacker, accountAddress, dex),
+				fill(attacker),
+				transfer(attacker, dex, accountAddress),
+			],
+		])
+			expect(swap(logs)?.parts.some((part) => part.type === 'dexRoute')).toBe(
+				false,
+			)
+	})
+
 	it('preserves tip20 approvals for zone portals', () => {
 		const hash = `0x${'4'.repeat(64)}` as const
 		const amount = 500_000n

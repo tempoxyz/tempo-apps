@@ -7,6 +7,7 @@ import {
 	style,
 	vars,
 } from '@tempoxyz/ds/platform'
+import { SwapHorizontal } from '@tempoxyz/ds/platform/icons'
 import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
@@ -19,7 +20,11 @@ import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { TokenIcon } from '#comps/TokenIcon'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
-import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
+import {
+	dexPairLabel,
+	type KnownEvent,
+	type KnownEventPart,
+} from '#lib/domain/known-events.ts'
 import {
 	DateFormatter,
 	HexFormatter,
@@ -120,6 +125,11 @@ function ContractCallPart(props: {
 			</span>
 		</>
 	)
+}
+
+/** DEX route params are lowercase addresses. */
+function lower(address: AddressType.Address): AddressType.Address {
+	return address.toLowerCase() as AddressType.Address
 }
 
 export function TxEventDescription(props: TxEventDescription.Props) {
@@ -245,6 +255,41 @@ export namespace TxEventDescription {
 				)
 			case 'contractCall':
 				return <ContractCallPart {...part.value} seenAs={seenAs} />
+			case 'dexRoute':
+				return (
+					<Link
+						to="/dex/$from/$to"
+						params={{ from: lower(part.value.from), to: lower(part.value.to) }}
+						title="View this route on the Stablecoin DEX"
+						{...cx(styles.dexRoute(), pressDown())}
+					>
+						<SwapHorizontal aria-hidden="true" {...styles.dexRouteIcon()} />
+						Stablecoin DEX
+					</Link>
+				)
+			case 'dexPair':
+				if (!part.value.active)
+					return (
+						<span
+							{...styles.dexPairRetired()}
+							title="A retired Stablecoin DEX book"
+						>
+							{dexPairLabel(part.value, ' / ')}
+						</span>
+					)
+				return (
+					<Link
+						to="/dex/$from/$to"
+						params={{
+							from: lower(part.value.base.address),
+							to: lower(part.value.quote.address),
+						}}
+						title="View this pair on the Stablecoin DEX"
+						{...cx(styles.dexPair(), link(), linkHover(), pressDown())}
+					>
+						{dexPairLabel(part.value, ' / ')}
+					</Link>
+				)
 			default:
 				return null
 		}
@@ -322,6 +367,31 @@ export namespace TxEventDescription {
 }
 
 namespace styles {
+	export const dexRoute = style({
+		alignItems: 'center',
+		backgroundColor: 'container.accent',
+		borderRadius: '3xs',
+		color: 'content.accent',
+		display: 'inline-flex',
+		gap: '4',
+		height: '24',
+		paddingInline: '8',
+		textDecorationLine: 'none',
+		whiteSpace: 'nowrap',
+		'@media (hover: hover)': {
+			':hover': { boxShadow: `inset 0 0 0 1px ${vars.color.border.accent}` },
+		},
+	})
+
+	export const dexRouteIcon = style({ height: '12', width: '12' })
+
+	export const dexPair = style({ whiteSpace: 'nowrap' })
+
+	export const dexPairRetired = style({
+		color: 'content.primary',
+		whiteSpace: 'nowrap',
+	})
+
 	export const memo = style({
 		alignItems: 'center',
 		color: 'content.secondary',
