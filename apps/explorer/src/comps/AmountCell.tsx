@@ -1,10 +1,10 @@
-import { style, Tag } from '@tempoxyz/ds'
+import { style, variants } from '@tempoxyz/ds'
 import { formatUnits } from 'viem'
 import { PriceFormatter } from '#lib/formatting'
 
 /**
- * Directional transfer amount: outgoing shows a red marker and a minus,
- * incoming a green marker. Clicking toggles between currency display
+ * Directional transfer amount at the table's size: outgoing is red with a
+ * minus, incoming green. Clicking toggles between currency display
  * (`$1.23`, via `Intl.NumberFormat` when the token has an ISO currency) and
  * the token amount (`1.23 USDC`).
  */
@@ -61,19 +61,9 @@ export function TransferAmountCell(props: {
 				onToggleDisplay()
 			}}
 		>
-			{direction === 'out' ? (
-				<Tag intent="negative" variant="plain">
-					<Tag.Dot />
-					{`-${text}`}
-				</Tag>
-			) : direction === 'in' ? (
-				<Tag intent="positive" variant="plain">
-					<Tag.Dot />
-					{text}
-				</Tag>
-			) : (
-				text
-			)}
+			<span {...styles.direction({ direction: direction ?? 'none' })}>
+				{direction === 'out' ? `-${text}` : text}
+			</span>
 		</button>
 	)
 }
@@ -87,16 +77,24 @@ export function BalanceCell(props: { balance: string; decimals?: number }) {
 }
 
 namespace styles {
-	export const amount = style({
-		color: 'foreground',
-		typography: 'label.12',
-	})
+	export const amount = style({ color: 'foreground' })
 
 	export const transfer = style({
 		color: 'foreground',
 		cursor: 'pointer',
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'label.12',
 		whiteSpace: 'nowrap',
+	})
+
+	export const direction = variants({
+		defaultVariants: { direction: 'none' },
+		variants: {
+			direction: {
+				in: { color: 'green.900' },
+				none: {},
+				out: { color: 'red.900' },
+				self: {},
+			},
+		},
 	})
 }

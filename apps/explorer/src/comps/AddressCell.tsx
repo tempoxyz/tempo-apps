@@ -4,7 +4,13 @@ import type { Address } from 'ox'
 import { cx } from 'zyzz'
 import { useAddressHighlight } from '#comps/AddressHighlight'
 import { Midcut } from '#comps/Midcut'
-import { link, linkHover, pressDown, transitionColors } from '#styles/explorer'
+import {
+	link,
+	linkHover,
+	mono,
+	pressDown,
+	transitionColors,
+} from '#styles/explorer'
 
 export function AddressCell(props: {
 	address: Address.Address
@@ -18,7 +24,12 @@ export function AddressCell(props: {
 	if (!asLink)
 		return (
 			<span
-				{...cx(styles.address(), link(), isHighlighted && styles.highlighted())}
+				{...cx(
+					styles.address(),
+					mono(),
+					link(),
+					isHighlighted && styles.highlighted(),
+				)}
 				title={title}
 				{...handlers}
 			>
@@ -33,6 +44,7 @@ export function AddressCell(props: {
 			preload="intent"
 			{...cx(
 				styles.address(),
+				mono(),
 				link(),
 				linkHover(),
 				transitionColors(),
@@ -48,10 +60,8 @@ export function AddressCell(props: {
 }
 
 namespace styles {
-	export const address = style({
-		typography: 'label.12.mono',
-		width: '100% !custom',
-	})
+	// The mono face at the table's size.
+	export const address = style({ width: '100% !custom' })
 
 	export const highlighted = style({ textDecorationLine: 'underline' })
 }

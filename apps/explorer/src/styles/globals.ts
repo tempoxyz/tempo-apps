@@ -14,13 +14,6 @@ global({
 		},
 		':root': { touchAction: 'manipulation' },
 		'html[data-theme="light"]': { colorScheme: 'light' },
-		body: {
-			fontSize: '14px',
-			// TDS's Inter weight for copy.
-			fontWeight: 450,
-			lineHeight: '20px',
-			minWidth: '320px',
-		},
 		'pre, code': { fontFamily: vars.fontFamily.mono, fontWeight: 400 },
 		// Matches the focus ring TDS components draw.
 		'a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible':
@@ -43,6 +36,19 @@ global({
 			scrollBehavior: 'auto !important',
 			transitionDuration: '0.01ms !important',
 		},
+	},
+})
+
+// TDS sets the body to its 15px `copy.15` in gray, unlayered. The explorer's
+// data is denser and reads in the foreground color, so this rule outranks it:
+// 14px Inter at TDS's copy weight.
+global({
+	'html body': {
+		color: vars.color.foreground,
+		fontSize: '14px',
+		fontWeight: 450,
+		lineHeight: '20px',
+		minWidth: '320px',
 	},
 })
 

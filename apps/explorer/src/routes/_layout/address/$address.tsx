@@ -2191,7 +2191,7 @@ function SectionsWrapper(props: {
 									{ label: 'Name', align: 'start', width: '1fr' },
 									{ label: 'Ticker', align: 'start', width: '0.5fr' },
 									{ label: 'Currency', align: 'start', width: '0.5fr' },
-									{ label: 'Amount', align: 'end', width: '0.5fr' },
+									{ label: 'Amount', align: 'end', width: 'max-content' },
 									{ label: 'Value', align: 'end', width: '0.5fr' },
 								],
 							}}
@@ -2202,7 +2202,6 @@ function SectionsWrapper(props: {
 										holdingsPage * ASSETS_PER_PAGE,
 									)
 									.map((asset) => ({
-										className: styles.holdingRow().className,
 										cells:
 											mode === 'stacked'
 												? [
@@ -3446,8 +3445,6 @@ namespace styles {
 		borderTopWidth: '1px',
 	})
 
-	export const holdingRow = style({ typography: 'label.12' })
-
 	export const infoLabel = style({
 		alignItems: 'center',
 		display: 'inline-flex',
@@ -3602,17 +3599,15 @@ namespace styles {
 		color: 'foreground',
 		display: 'flex',
 		gap: '8',
-		typography: 'label.12',
 	})
 
 	export const hashLink = style({
 		color: 'gray.900',
-		typography: 'label.12',
 		width: '100% !custom',
 	})
 
 	export const hashLinkProminent = style({
-		typography: 'label.12.strong',
+		typography: 'copy.14.strong',
 		width: '100% !custom',
 	})
 
