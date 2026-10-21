@@ -1,26 +1,23 @@
 import * as React from 'react'
 import { RelativeTime } from '#comps/RelativeTime'
+import {
+	cycleTimeFormat,
+	getServerTimeFormat,
+	getTimeFormat,
+	setTimeFormat,
+	subscribeTimeFormat,
+	type TimeFormat,
+} from '#lib/time-format'
 
-export type TimeFormat = 'relative' | 'local' | 'utc' | 'unix'
+export type { TimeFormat } from '#lib/time-format'
 
-export function useTimeFormat(initialFormat: TimeFormat = 'relative') {
-	const [timeFormat, setTimeFormat] = React.useState<TimeFormat>(initialFormat)
-
-	const cycleTimeFormat = React.useCallback(() => {
-		setTimeFormat((current) => {
-			if (current === 'relative') return 'local'
-			if (current === 'local') return 'utc'
-			if (current === 'utc') return 'unix'
-			return 'relative'
-		})
-	}, [])
-
-	const formatLabel = React.useMemo(() => {
-		if (timeFormat === 'relative') return 'relative'
-		if (timeFormat === 'local') return 'local'
-		if (timeFormat === 'utc') return 'UTC'
-		return 'unix'
-	}, [timeFormat])
+export function useTimeFormat() {
+	const timeFormat = React.useSyncExternalStore(
+		subscribeTimeFormat,
+		getTimeFormat,
+		getServerTimeFormat,
+	)
+	const formatLabel = timeFormat === 'utc' ? 'UTC' : timeFormat
 
 	return { timeFormat, setTimeFormat, cycleTimeFormat, formatLabel }
 }
