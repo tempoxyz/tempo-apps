@@ -1,10 +1,11 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { env } from 'cloudflare:test'
-import { Hex } from 'ox'
+import { Hash, Hex } from 'ox'
 import { describe, expect, it } from 'vitest'
 
 import * as DB from '#database/schema.ts'
+import { app } from '#index.tsx'
 import { ChainRegistry } from '#lib/chain-registry.ts'
 import { runVerificationJob as runVerificationJobWithRegistry } from '#route.verify.ts'
 import { staticChains } from '#wagmi.config.ts'
@@ -207,6 +208,136 @@ describe('runVerificationJob – suffix-path contract lookup fallback', () => {
 // 2. Signature persistence for mixed ABI items (function/event/error)
 // ---------------------------------------------------------------------------
 describe('runVerificationJob – compiled_contracts_signatures persistence', () => {
+	it.each([
+		{
+			type: 'function',
+			name: 'submit',
+			parameter: {
+				type: 'tuple',
+				components: [{ type: 'address' }, { type: 'uint256' }],
+			},
+			signature: 'submit((address,uint256))',
+		},
+		{
+			type: 'function',
+			name: 'complex',
+			parameter: {
+				type: 'tuple',
+				components: [
+					{ type: 'bytes32' },
+					{
+						type: 'tuple[]',
+						components: [{ type: 'address' }, { type: 'uint256' }],
+					},
+				],
+			},
+			signature: 'complex((bytes32,(address,uint256)[]))',
+		},
+		{
+			type: 'event',
+			name: 'Orders',
+			parameter: {
+				type: 'tuple[]',
+				components: [{ type: 'address' }, { type: 'uint256' }],
+			},
+			signature: 'Orders((address,uint256)[])',
+		},
+		{
+			type: 'error',
+			name: 'InvalidOrders',
+			parameter: {
+				type: 'tuple[2][]',
+				components: [
+					{ type: 'address' },
+					{
+						type: 'tuple',
+						components: [{ type: 'uint256' }, { type: 'bool' }],
+					},
+				],
+			},
+			signature: 'InvalidOrders((address,(uint256,bool))[2][])',
+		},
+	] as const)('persists and returns canonical $type signature $signature', async ({
+		type,
+		name,
+		parameter,
+		signature,
+	}) => {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+
+		const originalEntry =
+			counterFixture.solcOutput.contracts['Counter.sol'].Counter
+		const solcOutput = {
+			...counterFixture.solcOutput,
+			contracts: {
+				'Counter.sol': {
+					Counter: {
+						...originalEntry,
+						abi: [{ type, name, inputs: [parameter] }],
+					},
+				},
+			},
+		}
+
+		await runVerificationJob(
+			env,
+			{ ...JOB_DEFAULTS, jobId },
+			{ ...makeClientStub(), ...makeContainerStub(solcOutput) },
+		)
+
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBeNull()
+		expect(job?.verifiedContractId).not.toBeNull()
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const signatures = await db
+			.select({
+				signature: DB.signaturesTable.signature,
+				signatureType: DB.compiledContractsSignaturesTable.signatureType,
+				signatureHash32: DB.signaturesTable.signatureHash32,
+			})
+			.from(DB.compiledContractsSignaturesTable)
+			.innerJoin(
+				DB.signaturesTable,
+				eq(
+					DB.compiledContractsSignaturesTable.signatureHash32,
+					DB.signaturesTable.signatureHash32,
+				),
+			)
+
+		const signatureHash32 = Hash.keccak256(Hex.fromString(signature))
+		expect(
+			signatures.map((row) => ({
+				...row,
+				signatureHash32: Hex.fromBytes(
+					new Uint8Array(row.signatureHash32 as ArrayBuffer),
+				),
+			})),
+		).toEqual([{ signature, signatureType: type, signatureHash32 }])
+
+		const response = await app.request(
+			`/v2/contract/${JOB_DEFAULTS.chainId}/${JOB_DEFAULTS.address}?fields=signatures`,
+			{},
+			env,
+		)
+		expect(response.status).toBe(200)
+		expect(await response.json()).toMatchObject({
+			signatures: {
+				function: [],
+				event: [],
+				error: [],
+				[type]: [
+					{
+						signature,
+						signatureHash32,
+						signatureHash4: signatureHash32.slice(0, 10),
+					},
+				],
+			},
+		})
+	})
+
 	it('persists function, event, and error signatures from ABI', async () => {
 		const jobId = globalThis.crypto.randomUUID()
 		await insertJobRow(jobId)
