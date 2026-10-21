@@ -30,9 +30,6 @@ catalogs:
     '@cloudflare/workers-types':
       specifier: ^5.20260926.1
       version: 5.20260928.1
-    '@datadog/browser-rum-slim':
-      specifier: ^7.2.0
-      version: 7.3.0
     '@hono/zod-validator':
       specifier: ^0.7.6
       version: 0.7.6
@@ -402,9 +399,6 @@ importers:
       '@base-ui/react':
         specifier: 'catalog:'
         version: 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@datadog/browser-rum-slim':
-        specifier: 'catalog:'
-        version: 7.3.0
       '@pierre/diffs':
         specifier: 'catalog:'
         version: 1.2.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -1407,23 +1401,6 @@ packages:
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
-
-  '@datadog/browser-core@7.3.0':
-    resolution: {integrity: sha512-bP6QuYyxdjaKYHwqpvYRihSEXgz/8P1iPr1ZI6OJVeDSJ7Zz/kAqK3dU5O7y6FrP9u99CbFG+rRGDtb4ytyJiw==}
-
-  '@datadog/browser-rum-core@7.3.0':
-    resolution: {integrity: sha512-E+lBOxaE7UazwhBA3/i8qc0080MQZgxBmpdQsVxkt/UWmql523U8Hf8u/0D4eIauVCOeB6faBhNJhfa/lsRxVg==}
-
-  '@datadog/browser-rum-slim@7.3.0':
-    resolution: {integrity: sha512-Vgb/nmO8alhQA03d6vnJ/KTXyaV/Ul12Y52eaSQlHrkIMSofUfsuTzvsmBVgHBiOJWrWwkW7cJWYku4Hbwo9Fw==}
-    peerDependencies:
-      '@datadog/browser-logs': 7.3.0
-    peerDependenciesMeta:
-      '@datadog/browser-logs':
-        optional: true
-
-  '@datadog/js-core@0.0.2':
-    resolution: {integrity: sha512-tubNtQXlHiDovBB04M16MWQbUj4j0F7eu6lWMUmFo/+SD5j8adzSGcVxtSNdSR/u++IaghkCpqcAaR3ZAJh2jQ==}
 
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
@@ -9585,22 +9562,6 @@ snapshots:
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
-
-  '@datadog/browser-core@7.3.0':
-    dependencies:
-      '@datadog/js-core': 0.0.2
-
-  '@datadog/browser-rum-core@7.3.0':
-    dependencies:
-      '@datadog/browser-core': 7.3.0
-      '@datadog/js-core': 0.0.2
-
-  '@datadog/browser-rum-slim@7.3.0':
-    dependencies:
-      '@datadog/browser-core': 7.3.0
-      '@datadog/browser-rum-core': 7.3.0
-
-  '@datadog/js-core@0.0.2': {}
 
   '@date-fns/tz@1.5.0':
     optional: true

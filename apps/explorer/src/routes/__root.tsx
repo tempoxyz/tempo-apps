@@ -25,7 +25,6 @@ import { OG_BASE_URL } from '#lib/og'
 import { posthogBootScript } from '#lib/posthog'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
-import { initDatadogRum } from '#lib/telemetry/datadog'
 import {
 	getTempoChain,
 	getWagmiConfig,
@@ -226,15 +225,8 @@ export const Route = createRootRouteWithContext<{
 	shellComponent: RootDocument,
 })
 
-function useDatadogRum() {
-	React.useEffect(() => {
-		void initDatadogRum().catch(() => {})
-	}, [])
-}
-
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
-	useDatadogRum()
 
 	const { queryClient } = Route.useRouteContext()
 	const [config] = React.useState(() => getWagmiConfig())

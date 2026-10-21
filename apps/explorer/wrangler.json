@@ -53,14 +53,6 @@
 				}
 			],
 			"vars": {
-				"DATADOG_SITE": "us5.datadoghq.com",
-				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
-				"VITE_DATADOG_ENABLED": "true",
-				"VITE_DATADOG_ENV": "testnet",
-				"VITE_DATADOG_SERVICE": "explorer",
-				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
-				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
-				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "testnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
@@ -70,8 +62,6 @@
 			"secrets": {
 				"required": [
 					"BLOCKED_ASNS",
-					"DATADOG_APPLICATION_ID",
-					"DATADOG_CLIENT_TOKEN",
 					"INDEXER_API_KEY",
 					"TEMPO_API_KEY",
 					"TEMPO_API_URL",
@@ -132,14 +122,6 @@
 				}
 			],
 			"vars": {
-				"DATADOG_SITE": "us5.datadoghq.com",
-				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
-				"VITE_DATADOG_ENABLED": "true",
-				"VITE_DATADOG_ENV": "devnet",
-				"VITE_DATADOG_SERVICE": "explorer",
-				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
-				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
-				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "devnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
@@ -193,14 +175,6 @@
 				}
 			],
 			"vars": {
-				"DATADOG_SITE": "us5.datadoghq.com",
-				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
-				"VITE_DATADOG_ENABLED": "false",
-				"VITE_DATADOG_ENV": "zone-prover",
-				"VITE_DATADOG_SERVICE": "explorer",
-				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
-				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
-				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "zone-prover",
 				"VITE_SENTRY_DSN": "",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
@@ -269,14 +243,6 @@
 				}
 			],
 			"vars": {
-				"DATADOG_SITE": "us5.datadoghq.com",
-				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
-				"VITE_DATADOG_ENABLED": "true",
-				"VITE_DATADOG_ENV": "nextfork",
-				"VITE_DATADOG_SERVICE": "explorer",
-				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
-				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
-				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "nextfork",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
@@ -346,14 +312,6 @@
 				}
 			],
 			"vars": {
-				"DATADOG_SITE": "us5.datadoghq.com",
-				"VITE_DATADOG_ALLOWED_TRACING_URLS": "",
-				"VITE_DATADOG_ENABLED": "true",
-				"VITE_DATADOG_ENV": "mainnet",
-				"VITE_DATADOG_SERVICE": "explorer",
-				"VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE": "0",
-				"VITE_DATADOG_SESSION_SAMPLE_RATE": "100",
-				"VITE_DATADOG_TRACE_SAMPLE_RATE": "20",
 				"VITE_TEMPO_ENV": "mainnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",

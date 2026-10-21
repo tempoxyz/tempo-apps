@@ -4,7 +4,6 @@ import {
 	getExplorerHostPolicy,
 	withExplorerIndexingHeaders,
 } from '#lib/explorer-indexing'
-import { handleDatadogProxy } from '#lib/server/datadog-proxy'
 import { checkRateLimit } from '#lib/server/rate-limit'
 import { checkRequestGuard } from '#lib/server/request-guard'
 
@@ -63,10 +62,6 @@ function sanitizeUrl(rawUrl: string): string {
 const serverEntry = createServerEntry({
 	fetch: async (request, opts) => {
 		const url = new URL(request.url)
-
-		if (url.pathname === '/dd-proxy') {
-			return handleDatadogProxy(request)
-		}
 
 		if (url.pathname === '/llms.txt' || url.pathname === '/llms-full.txt') {
 			const { llmsResponse } = await import('#lib/llms/serve')
