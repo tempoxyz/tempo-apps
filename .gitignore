@@ -8,6 +8,7 @@ count.txt
 .nitro
 .tanstack
 .wrangler
+.turbo
 .output
 .vinxi
 worker-configuration.d.ts

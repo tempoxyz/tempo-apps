@@ -1,0 +1,43 @@
+{
+	"$schema": "https://turborepo.com/schema.json",
+	"envMode": "loose",
+	"tasks": {
+		"transit": {
+			"dependsOn": ["^transit"]
+		},
+		"build": {
+			"dependsOn": ["^build"],
+			"env": [
+				"ANALYZE",
+				"ANALYZE_JSON",
+				"CF_PAGES_COMMIT_SHA",
+				"CLOUDFLARE_ENV",
+				"DEVNET_*",
+				"NODE_ENV",
+				"SENTRY_*",
+				"VITE_*"
+			],
+			"inputs": ["$TURBO_DEFAULT$", ".env*"],
+			"outputs": ["dist/**", ".wrangler/deploy/**"]
+		},
+		"gen:types": {
+			"env": ["CLOUDFLARE_ENV"],
+			"outputs": ["worker-configuration.d.ts"]
+		},
+		"check:biome": {
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/biome.json"]
+		},
+		"check:types": {
+			"dependsOn": ["gen:types", "transit"]
+		},
+		"check:env": {
+			"dependsOn": ["transit"]
+		},
+		"test": {
+			"dependsOn": ["gen:types", "transit"]
+		},
+		"test:scheduled": {
+			"dependsOn": ["gen:types", "transit"]
+		}
+	}
+}

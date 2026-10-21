@@ -1,47 +1,72 @@
 name: Verify
 on:
-  workflow_call:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
-  NODE_ENV: production
+  TURBO_TELEMETRY_DISABLED: 1
+  TURBO_CACHE_MAX_SIZE: 100MB
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
   checks:
     permissions:
-      id-token: write
+      contents: read
     name: Checks
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
 
     steps:
-      - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
-
       - name: Clone repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: 'recursive'
+          fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
-      - name: Check code and types
-        run: pnpm gen:types && pnpm check
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-verify-${{ github.sha }}
+          restore-keys: |
+            turbo-verify-
 
-      - name: Test explorer node suite
-        run: pnpm check:env
-        working-directory: apps/explorer
+      # workflow_dispatch and pushes without a usable `before` check everything
+      - name: Select affected packages
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            base=$(git rev-parse HEAD^1)
+          elif [[ "$EVENT_NAME" == push && -n "$BEFORE_SHA" && ! "$BEFORE_SHA" =~ ^0+$ ]]; then
+            base=$BEFORE_SHA
+          else
+            exit 0
+          fi
+          {
+            echo "TURBO_SCM_BASE=$base"
+            echo "TURBO_SCM_HEAD=$GITHUB_SHA"
+          } >> "$GITHUB_ENV"
 
-      - name: Test llms package
-        run: pnpm test
-        working-directory: packages/llms
+      - name: Check and test
+        run: pnpm turbo run check:biome check:types check:env test test:scheduled ${TURBO_SCM_BASE:+--affected}
 
       - name: Rebuild trusted lint dependency
+        if: ${{ !cancelled() }}
         run: pnpm rebuild @ast-grep/cli
 
       - name: Run Tempo Lints
+        if: ${{ !cancelled() }}
         run: pnpm lint:tempo

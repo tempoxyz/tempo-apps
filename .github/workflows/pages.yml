@@ -28,18 +28,13 @@ env:
 jobs:
   pages-directory-listing:
     permissions:
-      id-token: write
+      contents: read
     name: "Directory Listing Index"
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
-      - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
-
       - name: "Checkout"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: "recursive"
-          fetch-depth: 0
           persist-credentials: false
 
       - name: "Generate Directory Listings"
@@ -60,15 +55,15 @@ jobs:
     permissions:
       pages: "write"
       id-token: "write"
+    concurrency:
+      group: "tokenlist-github-pages"
+      cancel-in-progress: false
 
     environment:
       name: "tokenlist-github-pages"
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
-      - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
-
       - name: "Deploy Pages"
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

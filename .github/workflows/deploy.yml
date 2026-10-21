@@ -1,110 +1,117 @@
 name: Deploy
-
 on:
-  workflow_call:
-    inputs:
-      app:
-        required: true
-        type: string
-      environments:
-        required: true
-        type: string
-        description: 'JSON array of environments to deploy (e.g. ["testnet","devnet"] or [""])'
-    secrets:
-      CLOUDFLARE_API_TOKEN:
-        required: true
-      CLOUDFLARE_ACCOUNT_ID:
-        required: true
-      # Compiled into the explorer client bundle. Unset means no PostHog.
-      VITE_EXPLORER_POSTHOG_KEY:
-        required: false
-      VITE_POSTHOG_HOST:
-        required: false
-
-concurrency:
-  group: deploy-${{ inputs.app }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_dispatch:
+  push:
+    branches: [main]
 
 permissions: {}
 
 env:
   NODE_ENV: production
   WRANGLER_SEND_METRICS: false
+  TURBO_TELEMETRY_DISABLED: 1
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
-  deploy:
-    permissions:
-      id-token: write
-    name: ${{ inputs.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
+  plan:
+    name: Plan
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      matrix:
-        env: ${{ fromJson(inputs.environments) }}
-
+    permissions:
+      contents: read
+    outputs:
+      targets: ${{ steps.affected.outputs.targets }}
     steps:
-      - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Clone repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          submodules: "recursive"
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
 
-      - name: Check for relevant changes
-        id: changes
+      - name: Set up Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: '24.22.1'
+
+      # workflow_dispatch and pushes without a usable `before` deploy everything
+      - name: Find affected apps
+        id: affected
         env:
-          APP_NAME: ${{ inputs.app }}
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
-          CURRENT_SHA: ${{ github.sha }}
         run: |
-          # if workflow_dispatch, always deploy all
-          #
-          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          targets='[
+            {"app":"contract-verification","env":""},
+            {"app":"explorer","env":"devnet"},
+            {"app":"explorer","env":"mainnet"},
+            {"app":"explorer","env":"nextfork"},
+            {"app":"explorer","env":"testnet"},
+            {"app":"explorer","env":"zone-prover"},
+            {"app":"fee-payer","env":"devnet"},
+            {"app":"fee-payer","env":"mainnet"},
+            {"app":"fee-payer","env":"moderato"},
+            {"app":"key-manager","env":""},
+            {"app":"mcp-docs-indexer","env":""},
+            {"app":"og","env":""},
+            {"app":"reth-snapshots-viewer","env":""},
+            {"app":"tempo-snapshots-viewer","env":""},
+            {"app":"tokenlist","env":""}
+          ]'
+          if [[ "$EVENT_NAME" != push || -z "$BEFORE_SHA" || "$BEFORE_SHA" =~ ^0+$ ]]; then
+            apps=$(jq -c 'map(.app)' <<< "$targets")
           else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            apps=$(TURBO_SCM_BASE="$BEFORE_SHA" TURBO_SCM_HEAD="$GITHUB_SHA" \
+              npx --yes "turbo@$(jq -r .devDependencies.turbo package.json)" ls --affected --output=json |
+              jq -c '.packages.items | map(.path | ltrimstr("apps/"))')
           fi
+          targets=$(jq -c --argjson apps "$apps" 'map(select(.app as $app | $apps | index($app)))' <<< "$targets")
+          echo "$targets" | jq .
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: ${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
+    needs: plan
+    if: needs.plan.outputs.targets != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    concurrency:
+      group: deploy-${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.targets) }}
+    env:
+      CLOUDFLARE_ENV: ${{ matrix.env }}
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
-        if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
-      - name: Generate Worker types
-        if: steps.changes.outputs.relevant == 'true'
-        working-directory: apps/${{ inputs.app }}
-        run: pnpm gen:types
-
+      # explorer bakes the network into the bundle, mirroring apps/explorer/scripts/build.sh
       - name: Build
-        if: steps.changes.outputs.relevant == 'true'
-        working-directory: apps/${{ inputs.app }}
         env:
-          NODE_ENV: production
-          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
-          APP_NAME: ${{ inputs.app }}
-          VITE_EXPLORER_POSTHOG_KEY: ${{ secrets.VITE_EXPLORER_POSTHOG_KEY }}
-          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+          APP_NAME: ${{ matrix.app }}
+          # Compiled into the explorer client bundle. Unset means no PostHog.
+          VITE_EXPLORER_POSTHOG_KEY: ${{ matrix.app == 'explorer' && secrets.VITE_EXPLORER_POSTHOG_KEY || '' }}
+          VITE_POSTHOG_HOST: ${{ matrix.app == 'explorer' && secrets.VITE_POSTHOG_HOST || '' }}
         run: |
           if [[ "$APP_NAME" == "explorer" ]]; then
-            bash scripts/build.sh
+            VITE_TEMPO_ENV="$CLOUDFLARE_ENV" pnpm turbo run build --filter="./apps/$APP_NAME" -- --mode="$CLOUDFLARE_ENV"
           else
-            pnpm build
+            pnpm turbo run build --filter="./apps/$APP_NAME"
           fi
 
-      - name: Deploy Workers
-        if: steps.changes.outputs.relevant == 'true'
-        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+      - name: Deploy Worker
+        working-directory: apps/${{ matrix.app }}
         env:
-          NODE_ENV: production
-          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/${{ inputs.app }}
-          packageManager: pnpm
-          command: deploy ${{ matrix.env && format('--env {0}', matrix.env) || '' }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm exec wrangler deploy ${CLOUDFLARE_ENV:+--env "$CLOUDFLARE_ENV"}

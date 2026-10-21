@@ -3,14 +3,18 @@ name: Bundle Size
 on:
   push:
     branches: [main]
-    # No path filter on main - we need to generate baseline on every push
-    # so PRs always compare against the latest main, even if main has
-    # commits that don't touch explorer (e.g., workflow changes, other apps)
+    # PRs fall back to the newest main baseline when their base commit has none
+    paths:
+      - ".github/workflows/bundle-size.yml"
+      - "apps/explorer/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
       - ".github/workflows/bundle-size.yml"
       - "apps/explorer/**"
+      - "packages/**"
       - "pnpm-lock.yaml"
 
 permissions: {}
@@ -28,14 +32,10 @@ jobs:
     name: Bundle Size
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     permissions:
-      id-token: write
       actions: read
       pull-requests: write
       contents: write
     steps:
-      - name: Secure runner
-        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
-
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,10 +44,6 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-
-      - name: Generate Worker types
-        run: pnpm gen:types
-        working-directory: apps/explorer
 
       - name: Restore baseline from cache
         if: github.event_name == 'pull_request'

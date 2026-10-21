@@ -4,18 +4,36 @@ description: 'Prepare repository and all dependencies'
 runs:
   using: 'composite'
   steps:
-    - name: Set up pnpm
-      uses: tempoxyz/gh-actions/vendor/pnpm/action-setup@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
-
     - name: Set up Node
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
-        cache: 'pnpm'
         # `lts/*` lags a few days to a week
         # up to date LTS can be found here https://endoflife.date/nodejs
         node-version: '24.22.1'
+
+    - name: Set up pnpm
+      id: pnpm
+      shell: bash
+      run: |
+        corepack enable pnpm
+        echo "store-path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    # Fall back to the previous store so a lockfile change only downloads what changed.
+    - name: Restore pnpm store
+      id: cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.pnpm.outputs.store-path }}
+        key: pnpm-store-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          pnpm-store-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install dependencies
       shell: bash
       # Keep install-time hooks out of CI and run any required follow-up steps explicitly.
       run: pnpm install --frozen-lockfile --ignore-scripts
+
+    - name: Prune pnpm store
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: pnpm store prune
