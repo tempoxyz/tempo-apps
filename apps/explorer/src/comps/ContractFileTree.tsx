@@ -1,7 +1,6 @@
 import { FileTree, useFileTree, useFileTreeSearch } from '@pierre/trees/react'
-import { Empty, Field, Input, style, vars } from '@tempoxyz/ds'
-import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
+import SearchIcon from '~icons/lucide/search'
 
 export function ContractFileTree(
 	props: ContractFileTree.Props,
@@ -21,30 +20,30 @@ export function ContractFileTree(
 		},
 		unsafeCSS: `:host {
 			color-scheme: inherit;
-			--trees-font-family-override: var(--contract-tree-font);
-			--trees-font-size-override: 12px;
-			--trees-bg-override: var(--contract-tree-background);
-			--trees-fg-override: var(--contract-tree-foreground);
-			--trees-fg-muted-override: var(--contract-tree-muted);
-			--trees-bg-muted-override: var(--contract-tree-muted-background);
-			--trees-accent-override: var(--contract-tree-accent);
-			--trees-selected-bg-override: var(--contract-tree-selected-background);
-			--trees-selected-fg-override: var(--contract-tree-foreground);
-			--trees-focus-ring-color-override: var(--contract-tree-focus);
-			--trees-selected-focused-border-color-override: var(--contract-tree-focus);
+			--trees-font-family-override: var(--font-pilat);
+			--trees-font-size-override: 13px;
+			--trees-bg-override: var(--color-source-background);
+			--trees-fg-override: var(--color-primary);
+			--trees-fg-muted-override: var(--color-tertiary);
+			--trees-bg-muted-override: var(--color-base-alt);
+			--trees-accent-override: var(--color-accent);
+			--trees-selected-bg-override: var(--color-base-background);
+			--trees-selected-fg-override: var(--color-primary);
+			--trees-focus-ring-color-override: var(--color-focus);
+			--trees-selected-focused-border-color-override: var(--color-focus);
 			--trees-focus-ring-width-override: 2px;
-			--trees-border-color-override: var(--contract-tree-border);
-			--trees-border-radius-override: 8px;
+			--trees-border-color-override: var(--color-card-border);
+			--trees-border-radius-override: 6px;
 			--trees-padding-inline-override: 8px;
 			--trees-item-padding-x-override: 4px;
 			--trees-item-row-gap-override: 4px;
-			letter-spacing: 0.15px;
+			letter-spacing: 0.01em;
 		}
 		[data-type="item"]:active:not([data-item-selected="true"]) {
-			background: var(--contract-tree-pressed-background);
+			background: var(--color-distinct);
 		}
 		[data-item-selected="true"] {
-			box-shadow: inset 0 0 0 1px var(--contract-tree-accent);
+			box-shadow: inset 0 0 0 1px var(--color-accent);
 		}
 		[data-item-selected="true"] [data-icon-token] {
 			color: var(--trees-selected-fg);
@@ -90,36 +89,31 @@ export function ContractFileTree(
 	}, [model, selectedPath])
 
 	return (
-		<nav aria-label="Source files" {...styles.nav()}>
-			<Field.Root {...styles.search()}>
-				<Input.Group>
-					<Input.Prefix>
-						<Search />
-					</Input.Prefix>
-					<Input.Control
+		<nav
+			aria-label="Source files"
+			className="min-w-0 shrink-0 border-b border-card-border bg-source-background font-pilat @2xl/source:h-full @2xl/source:border-r @2xl/source:border-b-0"
+		>
+			<div className="p-2">
+				<label className="flex h-8 items-center gap-2 rounded-md border border-card-border bg-source-background px-2 text-tertiary focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-[-2px]">
+					<SearchIcon className="size-3.5 shrink-0" />
+					<input
 						aria-label="Filter source files"
 						placeholder="Find a file…"
-						type="search"
-						value={search.value ?? ''}
-						onValueChange={(value) => search.setValue(value || null)}
+						value={search.value}
+						onChange={(event) => search.setValue(event.target.value || null)}
+						className="min-w-0 w-full bg-transparent copy-13 tracking-[0.01em] text-primary placeholder:text-tertiary outline-none"
 					/>
-					<Input.Clear aria-label="Clear search" />
-				</Input.Group>
-			</Field.Root>
-			<div role="status">
-				{search.value && search.matchingPaths.length === 0 && (
-					<Empty.Root>
-						<Empty.Title>No matching files</Empty.Title>
-						<Empty.Description>
-							No file path contains “{search.value}”.
-						</Empty.Description>
-					</Empty.Root>
-				)}
+				</label>
 			</div>
+			{search.value && search.matchingPaths.length === 0 && (
+				<p className="px-3 label-12 text-tertiary" role="status">
+					No files found.
+				</p>
+			)}
 			<FileTree
 				model={model}
 				aria-label="Contract source files"
-				{...styles.tree()}
+				className="block h-[180px] overflow-auto pb-2 @2xl/source:h-[calc(min(620px,70svh)-32px)] @2xl/source:min-h-[288px]"
 			/>
 		</nav>
 	)
@@ -131,46 +125,4 @@ export declare namespace ContractFileTree {
 		selectedPath: string
 		onSelect: (path: string) => void
 	}
-}
-
-namespace styles {
-	export const nav = style({
-		// Read by the tree's shadow DOM through `unsafeCSS`. The selected row's
-		// outline is decorative; focus rings use the text color for contrast.
-		'--contract-tree-accent': vars.color.blue[700],
-		'--contract-tree-background': vars.color.background.surface,
-		'--contract-tree-border': vars.color.grayAlpha[200],
-		'--contract-tree-focus': vars.color.foreground,
-		'--contract-tree-font': vars.fontFamily.sans,
-		'--contract-tree-foreground': vars.color.foreground,
-		'--contract-tree-muted': vars.color.gray[700],
-		'--contract-tree-muted-background': vars.color.grayAlpha[100],
-		'--contract-tree-pressed-background': vars.color.grayAlpha[200],
-		'--contract-tree-selected-background': vars.color.grayAlpha[100],
-		backgroundColor: 'background.surface',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		flexShrink: 0,
-		minWidth: '0',
-		'@container source (width >= 42rem)': {
-			borderBottomWidth: '0px',
-			borderRightWidth: '1px',
-			height: '100% !custom',
-		},
-	})
-
-	export const search = style({ padding: '8' })
-
-	// With the 56px search block, the sidebar stays as tall as the code pane
-	// plus its 16px scrollbar.
-	export const tree = style({
-		display: 'block',
-		height: '180px !custom',
-		overflow: 'auto',
-		paddingBottom: '8',
-		'@container source (width >= 42rem)': {
-			height: 'calc(min(620px, 70svh) - 40px) !custom',
-			minHeight: '280px !custom',
-		},
-	})
 }

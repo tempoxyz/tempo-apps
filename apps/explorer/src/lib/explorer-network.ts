@@ -5,13 +5,13 @@ export const EXPLORER_NETWORK_OPTIONS = [
 		env: 'mainnet',
 		label: 'Mainnet',
 		host: 'https://explore.tempo.xyz',
-		dotTone: 'positive',
+		dotClassName: 'bg-positive',
 	},
 	{
 		env: 'testnet',
 		label: 'Testnet',
 		host: 'https://explore.testnet.tempo.xyz',
-		dotTone: 'warning',
+		dotClassName: 'bg-warning',
 	},
 ] as const
 
@@ -22,8 +22,8 @@ export function getActiveExplorerNetworkOption(tempoEnv: TempoEnv) {
 	return {
 		env: tempoEnv,
 		label: tempoEnv === 'nextfork' ? 'Nextfork' : 'Devnet',
-		dotTone: 'warning',
-	} as const
+		dotClassName: 'bg-warning',
+	}
 }
 
 export function buildExplorerNetworkHref(

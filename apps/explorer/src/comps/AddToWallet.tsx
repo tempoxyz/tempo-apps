@@ -1,9 +1,10 @@
 import type { Address } from 'ox'
-import { Button, Tag } from '@tempoxyz/ds'
 import * as React from 'react'
-import { useConnection, useWatchAsset } from 'wagmi'
+import { type Connector, useConnection, useWatchAsset } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
+import { cx } from '#lib/css'
 import { supportsWatchAsset } from '#lib/wallets'
+import LucideWallet from '~icons/lucide/wallet'
 
 export function AddToWallet(
 	props: AddToWallet.Props,
@@ -56,31 +57,38 @@ export function AddToWallet(
 	if (!isSupportedConnector) return null
 
 	const walletName =
-		connector?.name && connector.name !== 'Injected' ? connector.name : 'wallet'
+		connector?.name && connector.name !== 'Injected' ? connector.name : 'Wallet'
 
-	if (isSuccess)
-		return (
-			<Tag intent="positive" variant="plain">
-				<Tag.Dot />
-				Added to {walletName}
-			</Tag>
-		)
+	const label = isSuccess
+		? 'Added!'
+		: isPending
+			? 'Adding…'
+			: `Add ${symbol ?? 'token'} to ${walletName}`
 
 	return (
-		<Button
-			loading={isPending}
+		<button
+			type="button"
+			disabled={isPending || isSuccess}
+			className={cx(
+				'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
+				isSuccess
+					? 'text-positive'
+					: isPending
+						? 'text-secondary animate-pulse'
+						: 'text-secondary hover:text-primary cursor-pointer press-down',
+			)}
 			onClick={handleClick}
-			size="small"
-			variant="secondary"
 		>
-			Add {symbol ?? 'token'} to {walletName}
-		</Button>
+			<LucideWallet className="size-3.5" />
+			{label}
+		</button>
 	)
 }
 
 export declare namespace AddToWallet {
 	type Props = {
 		address: Address.Address
+		connectors: readonly Connector[]
 		symbol?: string | undefined
 		decimals?: number | undefined
 		image?: string | undefined

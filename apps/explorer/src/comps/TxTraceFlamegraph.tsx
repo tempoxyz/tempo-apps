@@ -1,30 +1,39 @@
-import { Hex, style, Tag, vars } from '@tempoxyz/ds'
-import { Database } from '@tempoxyz/ds/icons'
 import { useEffect, useMemo, useState } from 'react'
-import { cx } from 'zyzz'
+import { cx } from '#lib/css'
 import type { PrestateDiff } from '#lib/queries'
-import { codeIdentifier, truncate } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
+import DatabaseIcon from '~icons/lucide/database'
 
 const BAR_HEIGHT = 32
 const MIN_WIDTH_PX = 6
 
 /**
- * Below this a flamegraph is a rectangle, not a chart: nearly every TIP-20
- * call on Tempo is one frame. The gate lives here so the transaction page and
- * the simulator cannot disagree about it.
+ * Below this a flamegraph is a rectangle, not a chart.
+ *
+ * Nearly every TIP-20 call on Tempo is one frame, which rendered as a single
+ * 100%-wide bar — the largest and least informative element on the screen. The
+ * gate lives here rather than in each caller so the transaction page and the
+ * simulator can't disagree about it.
  */
 export const MIN_FLAMEGRAPH_FRAMES = 3
 
 /**
- * A flamegraph encodes one quantitative variable, share of total gas, so it
- * gets a single-hue ramp from the data-visualisation colour and no semantic
- * colour. Failure is marked structurally instead: a red left edge, the same
- * idiom the trace tree uses for the failure path.
+ * A flamegraph encodes one quantitative variable: share of total gas. So it
+ * gets a single-hue ramp from the data-visualisation token, and no semantic
+ * colour at all — filling failed frames red put the chart in a three-way fight
+ * with the error state above it and the links beside it, and colouring by
+ * depth (the previous behaviour) made every shallow trace solid red.
+ *
+ * Failure is marked structurally instead: a red left edge, the same idiom the
+ * trace tree uses for the failure path.
  */
-function getFlameMix(gasShare: number) {
+function getFlameColor(gasShare: number) {
 	const intensity = 16 + Math.min(Math.max(gasShare, 0), 1) * 30
-	return { border: intensity + 22, fill: intensity, hover: intensity + 16 }
+	return {
+		bg: `color-mix(in oklab, var(--color-viz-base) ${intensity}%, transparent)`,
+		hover: `color-mix(in oklab, var(--color-viz-base) ${intensity + 16}%, transparent)`,
+		border: `color-mix(in oklab, var(--color-viz-base) ${intensity + 22}%, transparent)`,
+	}
 }
 
 export function TxTraceFlamegraph(
@@ -72,20 +81,25 @@ export function TxTraceFlamegraph(
 	if (root.subtreeSize < MIN_FLAMEGRAPH_FRAMES) return null
 
 	return (
-		<div {...styles.root()}>
-			<div {...styles.header()}>
-				<span {...styles.headerLabel()}>
-					{onSelect
-						? 'Gas by frame. Select a bar to show it in the trace.'
-						: 'Gas by frame'}
+		<div className="flex flex-col">
+			<div className="flex items-center pl-[16px] pr-[12px] h-[34px] border-b border-solid border-distinct">
+				<span className="label-12 text-tertiary">
+					{onSelect ? 'Gas by frame — click to select' : 'Gas flamegraph'}
 				</span>
 			</div>
 
-			<div {...styles.chart()}>
+			<div className="px-[16px] py-[12px] overflow-x-auto">
 				{/* biome-ignore lint/a11y/noStaticElementInteractions: mouse tracking for details panel */}
-				<div {...styles.rows()} onMouseLeave={() => setHoveredNode(null)}>
+				<div
+					className="flex flex-col gap-px min-w-0"
+					onMouseLeave={() => setHoveredNode(null)}
+				>
 					{rows.map((row, depth) => (
-						<div key={depth} {...styles.row({ style: { height: BAR_HEIGHT } })}>
+						<div
+							key={depth}
+							className="relative w-full"
+							style={{ height: BAR_HEIGHT }}
+						>
 							{row.map((span, index) => {
 								// Clamp: child gas can exceed the parent's gasUsed in
 								// unusual traces, which would push bars past the container.
@@ -245,30 +259,26 @@ export namespace TxTraceFlamegraph {
 		const hasStorage =
 			storageSlots && (storageSlots.reads > 0 || storageSlots.writes > 0)
 
-		const mix = getFlameMix(rootGas > 0 ? node.gasUsed / rootGas : 0)
+		const color = getFlameColor(rootGas > 0 ? node.gasUsed / rootGas : 0)
 
 		return (
 			// biome-ignore lint/a11y/noStaticElementInteractions: hover drives the details panel below
 			<div
-				{...cx(
-					styles.bar({
-						style: {
-							left: `${leftPct}%`,
-							width: `max(${widthPct}%, ${MIN_WIDTH_PX}px)`,
-						},
-					}),
-					styles.barFill({
-						border: `${mix.border}%`,
-						fill: `${hovered ? mix.hover : mix.fill}%`,
-					}),
-					(hovered || selected) && styles.raised(),
-					onSelect && styles.clickable(),
+				className={cx(
+					'absolute top-0 h-full rounded-[3px] label-12 font-mono overflow-hidden transition-colors border',
+					(hovered || selected) && 'z-10',
+					onSelect && 'cursor-pointer',
 					// Selection reads as an outline rather than a fill, so it never
 					// competes with the fill that encodes gas share.
-					selected && styles.selected(),
-					// After the fill, so a failed frame keeps its red left edge.
-					node.hasError && styles.failed(),
+					selected && 'ring-1 ring-accent ring-inset',
+					node.hasError && 'border-l-2 border-l-negative!',
 				)}
+				style={{
+					left: `${leftPct}%`,
+					width: `max(${widthPct}%, ${MIN_WIDTH_PX}px)`,
+					backgroundColor: hovered ? color.hover : color.bg,
+					borderColor: color.border,
+				}}
 				{...(onSelect
 					? {
 							role: 'button' as const,
@@ -286,12 +296,21 @@ export namespace TxTraceFlamegraph {
 				title={`${label} — ${node.gasUsed.toLocaleString()} gas (${gasPct.toFixed(1)}%)${hasStorage ? ` · ${storageSlots.writes} SSTORE, ${storageSlots.reads} SLOAD` : ''}`}
 			>
 				{!isNarrow && (
-					<span {...styles.barContent()}>
-						<span {...cx(styles.barLabel(), truncate())}>{label}</span>
-						<span {...styles.barShare()}>
+					<span className="absolute inset-0 flex items-center gap-[4px] px-[6px] overflow-hidden select-none">
+						<span
+							className={cx(
+								'truncate font-medium min-w-0',
+								node.hasError ? 'text-negative' : 'text-primary',
+							)}
+						>
+							{label}
+						</span>
+						<span className="shrink-0 label-12 text-tertiary">
 							{`${gasPct.toFixed(gasPct >= 10 ? 0 : 1)}%`}
 						</span>
-						{hasStorage && widthPct > 8 && <Database {...styles.barIcon()} />}
+						{hasStorage && widthPct > 8 && (
+							<DatabaseIcon className="shrink-0 size-[10px] text-tertiary" />
+						)}
 					</span>
 				)}
 			</div>
@@ -305,7 +324,9 @@ export namespace TxTraceFlamegraph {
 	}): React.JSX.Element | null {
 		const { node, rootGas, storageSlots } = props
 
-		// Nothing hovered or selected renders nothing rather than an empty box.
+		// Nothing hovered or selected renders nothing. This box used to reserve
+		// ~150px to say "Hover a call to see details", which on a shallow trace
+		// was the largest thing in the panel and always empty.
 		if (!node) return null
 
 		const gasPct = rootGas > 0 ? (node.gasUsed / rootGas) * 100 : 0
@@ -322,54 +343,51 @@ export namespace TxTraceFlamegraph {
 			storageSlots && (storageSlots.reads > 0 || storageSlots.writes > 0)
 
 		return (
-			<div {...styles.details()}>
-				{/* A minimum height, not a fixed one: it stops the panel twitching as
-				    the row count (self gas, storage) varies between frames. */}
-				<div {...styles.detailsPanel()}>
-					<div {...styles.detailsMain()}>
-						<div {...styles.detailsHeading()}>
-							<Tag intent="neutral" size="small" {...styles.shrink()}>
+			<div className="px-[16px] pb-[12px]">
+				{/* min-h, not h: enough to stop the panel twitching as the row count
+				    (self gas, storage) varies between frames, without a floor of
+				    empty space when there is little to say. */}
+				<div className="flex items-start gap-[12px] min-h-[72px] overflow-hidden bg-distinct border border-card-border rounded-body px-[12px] py-[10px] label-12 font-mono">
+					<div className="flex flex-col gap-[4px] min-w-0 flex-1">
+						<div className="flex items-center gap-[6px]">
+							<span
+								className={cx(
+									'label-12 font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+									node.hasError
+										? 'bg-negative/15 text-negative'
+										: 'bg-distinct text-tertiary',
+								)}
+							>
 								{node.trace.type}
-							</Tag>
-							{node.contractName && (
-								<span {...cx(styles.primary(), styles.shrink())}>
-									{node.contractName}
+							</span>
+							{node.trace.to && (
+								<span className="text-accent truncate">
+									{node.contractName
+										? `${node.contractName}(${node.trace.to})`
+										: node.trace.to}
 								</span>
 							)}
-							{node.trace.to && <Hex value={node.trace.to} />}
 						</div>
-						<span {...cx(codeIdentifier(), truncate())}>{displayName}</span>
+						<span className="text-code-identifier truncate">{displayName}</span>
 						{node.hasError && (
-							<span {...styles.revert()}>
-								<Tag
-									intent="negative"
-									size="small"
-									variant="plain"
-									{...styles.shrink()}
-								>
-									<Tag.Dot />
-									Failed
-								</Tag>
-								{/* Revert reasons can be long; let them wrap. */}
-								<span {...styles.revertReason()}>
-									{node.trace.revertReason || node.trace.error}
-								</span>
+							<span className="text-negative label-12">
+								{node.trace.revertReason || node.trace.error || 'reverted'}
 							</span>
 						)}
 					</div>
-					<div {...styles.detailsStats()}>
-						<span {...styles.primary()}>
+					<div className="flex flex-col items-end gap-[2px] shrink-0 text-right">
+						<span className="text-primary">
 							{node.gasUsed.toLocaleString()} gas
 						</span>
-						<span {...styles.secondary()}>{gasPct.toFixed(1)}% total</span>
+						<span className="text-tertiary">{gasPct.toFixed(1)}% total</span>
 						{node.children.length > 0 && (
-							<span {...styles.secondary()}>
+							<span className="text-tertiary">
 								{selfGas.toLocaleString()} self ({selfPct.toFixed(1)}%)
 							</span>
 						)}
 						{hasStorage && (
-							<span {...styles.storage()}>
-								<Database {...styles.icon()} />
+							<span className="flex items-center gap-[4px] text-tertiary mt-[2px]">
+								<DatabaseIcon className="size-[10px]" />
 								{storageSlots.writes > 0 && (
 									<span>{storageSlots.writes} SSTORE</span>
 								)}
@@ -383,173 +401,4 @@ export namespace TxTraceFlamegraph {
 			</div>
 		)
 	}
-}
-
-namespace styles {
-	export const root = style({ display: 'flex', flexDirection: 'column' })
-
-	export const header = style({
-		alignItems: 'center',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		display: 'flex',
-		paddingBlock: '8',
-		paddingInline: '16',
-	})
-
-	export const headerLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const chart = style({
-		overflowX: 'auto',
-		paddingBlock: '12',
-		paddingInline: '16',
-	})
-
-	export const rows = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '1',
-		minWidth: '0 !custom',
-	})
-
-	export const row = style({ position: 'relative', width: '100% !custom' })
-
-	export const bar = style({
-		borderRadius: '4',
-		borderStyle: 'solid',
-		borderWidth: '1px',
-		height: '100% !custom',
-		overflow: 'hidden',
-		position: 'absolute',
-		top: '0',
-		typography: 'label.12.mono',
-	})
-
-	// The TDS purple ramp's accent step, mixed per frame by gas share. Matches
-	// the simulation gas bars.
-	export const barFill = style(
-		(values: { border: `${number}%`; fill: `${number}%` }) => ({
-			backgroundColor: `color-mix(in oklab, ${vars.color.purple[700]} ${values.fill}, transparent) !custom`,
-			borderColor: `color-mix(in oklab, ${vars.color.purple[700]} ${values.border}, transparent) !custom`,
-		}),
-	)
-
-	export const raised = style({ zIndex: 10 })
-
-	export const clickable = style({ cursor: 'pointer' })
-
-	export const selected = style({
-		boxShadow: `inset 0 0 0 1px ${vars.color.foreground} !custom`,
-	})
-
-	export const failed = style({
-		borderLeftColor: 'red.900',
-		borderLeftWidth: '2px',
-	})
-
-	export const barContent = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '4',
-		inset: '0',
-		overflow: 'hidden',
-		paddingInline: '8',
-		position: 'absolute',
-		userSelect: 'none',
-	})
-
-	export const barLabel = style({
-		color: 'foreground',
-		minWidth: '0 !custom',
-	})
-
-	export const barShare = style({
-		color: 'gray.900',
-		flexShrink: '0 !custom',
-	})
-
-	export const barIcon = style({
-		color: 'gray.900',
-		flexShrink: '0 !custom',
-		height: '12',
-		width: '12',
-	})
-
-	export const details = style({ paddingBottom: '12', paddingInline: '16' })
-
-	export const detailsPanel = style({
-		alignItems: 'flex-start',
-		backgroundColor: 'background.primary',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '8',
-		borderWidth: '1px',
-		display: 'flex',
-		gap: '12',
-		minHeight: '72px !custom',
-		overflow: 'hidden',
-		paddingBlock: '12',
-		paddingInline: '12',
-		typography: 'label.12.mono',
-	})
-
-	export const detailsMain = style({
-		display: 'flex',
-		flex: 1,
-		flexDirection: 'column',
-		gap: '4',
-		minWidth: '0 !custom',
-	})
-
-	export const detailsHeading = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const detailsStats = style({
-		alignItems: 'flex-end',
-		display: 'flex',
-		flexDirection: 'column',
-		flexShrink: '0 !custom',
-		gap: '2px !custom',
-		textAlign: 'right',
-	})
-
-	export const revert = style({
-		alignItems: 'flex-start',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const revertReason = style({
-		color: 'foreground',
-		minWidth: '0 !custom',
-		overflowWrap: 'anywhere',
-	})
-
-	export const shrink = style({ flexShrink: 0 })
-
-	export const primary = style({ color: 'foreground' })
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const storage = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		gap: '4',
-		marginTop: '2px !custom',
-	})
-
-	export const icon = style({
-		flexShrink: '0 !custom',
-		height: '12',
-		width: '12',
-	})
 }

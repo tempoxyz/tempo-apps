@@ -1,9 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { Amount, Button, Hex, Rows, style } from '@tempoxyz/ds'
 import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from 'zyzz'
 import {
 	formatKeyExpiry,
 	formatKeyPeriod,
@@ -12,7 +10,6 @@ import {
 } from '#lib/domain/access-key'
 import { isTip20Address } from '#lib/domain/tip20'
 import { useAutoloadAbi } from '#lib/queries'
-import { link, linkHover } from '#styles/explorer'
 
 const tokenFunctions: Record<string, string> = {
 	'0x095ea7b3': 'approve(address,uint256)',
@@ -20,15 +17,17 @@ const tokenFunctions: Record<string, string> = {
 	'0x95777d59': 'transferWithMemo(address,uint256,bytes32)',
 }
 
-/** An access key's permissions, as labelled TDS `Rows`. */
 export function TxKeyAuthorization(
 	props: TxKeyAuthorization.Props,
 ): React.JSX.Element {
 	const { authorization, tokenMetadata } = props
 	const targets = groupKeyScopes(authorization.scopes)
 	return (
-		<section aria-label="Access key permissions" {...styles.root()}>
-			<Rows.Root dividers="full">
+		<section
+			aria-label="Access key permissions"
+			className="min-w-0 border-l border-base-border pl-[10px] font-sans label-12 text-primary"
+		>
+			<dl className="flex flex-col gap-[10px]">
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -37,9 +36,9 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Spend limits">
 					{authorization.limits === undefined ? (
-						<span {...styles.secondary()}>Unrestricted</span>
+						<p className="text-secondary">Unrestricted</p>
 					) : authorization.limits.length === 0 ? (
-						<span {...styles.secondary()}>No spending allowed</span>
+						<p className="text-secondary">No spending allowed</p>
 					) : (
 						authorization.limits.map((limit) => (
 							<SpendingLimit
@@ -52,31 +51,32 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Allowed calls">
 					{targets === undefined ? (
-						<span {...styles.secondary()}>Any contract and function</span>
+						<p className="text-secondary">Any contract and function</p>
 					) : targets.length === 0 ? (
-						<span {...styles.secondary()}>No calls allowed</span>
+						<p className="text-secondary">No calls allowed</p>
 					) : (
-						<ul {...styles.list()}>
+						<ul className="flex flex-col gap-[12px]">
 							{targets.map((target) => (
 								<CallScope key={target.address} target={target} />
 							))}
 						</ul>
 					)}
 				</PermissionRow>
-			</Rows.Root>
+			</dl>
 		</section>
 	)
 }
 
+// Match the compact label/value rows in decoded event and calldata details.
 function PermissionRow(props: {
 	label: string
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<Rows.Row spacing="none">
-			<Rows.Label>{props.label}</Rows.Label>
-			<span {...styles.value()}>{props.children}</span>
-		</Rows.Row>
+		<div className="grid grid-cols-1 gap-[4px]">
+			<dt className="label-12 text-tertiary">{props.label}</dt>
+			<dd className="flex min-w-0 flex-col gap-[6px]">{props.children}</dd>
+		</div>
 	)
 }
 
@@ -88,22 +88,21 @@ export namespace TxKeyAuthorization {
 			| undefined
 	}
 
-	/** A text button that shows the permissions below it, mounted on first open. */
 	export function Disclosure(props: Props): React.JSX.Element {
 		const [expanded, setExpanded] = useState(false)
 		const id = useId()
 		return (
-			<div {...styles.disclosure()}>
-				<Button
-					aria-controls={id}
+			<div className="flex min-w-0 flex-col items-start gap-[8px] font-sans">
+				<button
+					type="button"
 					aria-expanded={expanded}
+					aria-controls={id}
 					onClick={() => setExpanded(!expanded)}
-					size="small"
-					variant="text"
+					className="label-12 text-accent cursor-pointer press-down"
 				>
 					{expanded ? 'Hide permissions' : 'Show permissions'}
-				</Button>
-				<div id={id} hidden={!expanded} {...styles.panel()}>
+				</button>
+				<div id={id} hidden={!expanded} className="w-full min-w-0">
 					{expanded && <TxKeyAuthorization {...props} />}
 				</div>
 			</div>
@@ -111,21 +110,17 @@ export namespace TxKeyAuthorization {
 	}
 }
 
-/** An address in TDS `Hex`, linking to its page, with a copy button. */
 function PermissionAddress(props: {
 	address: `0x${string}`
 }): React.JSX.Element {
 	return (
-		<Hex.Root value={props.address} {...styles.address()}>
-			<Link
-				to="/address/$address"
-				params={{ address: props.address }}
-				{...cx(styles.addressLink(), link(), linkHover())}
-			>
-				<Hex.Text />
-			</Link>
-			<Hex.Copy aria-label="Copy address" />
-		</Hex.Root>
+		<Link
+			to="/address/$address"
+			params={{ address: props.address }}
+			className="break-all font-mono label-12 text-accent hover:underline"
+		>
+			{props.address}
+		</Link>
 	)
 }
 
@@ -139,22 +134,23 @@ function SpendingLimit(props: {
 		query: { enabled: !props.metadata },
 	})
 	const metadata = props.metadata ?? data
+	const amount = metadata
+		? formatUnits(limit.limit, metadata.decimals)
+		: limit.limit.toString()
+	// Group only the integer part; never round away a small allowance.
+	const [integer, fraction] = amount.split('.')
+	const formatted = `${BigInt(integer).toLocaleString('en-US')}${fraction ? `.${fraction}` : ''}`
 	return (
-		<span {...styles.stack()}>
-			<span {...styles.limitLine()}>
-				{/* The full allowance, never rounded; base units when the token is unknown. */}
-				<Amount
-					symbol={metadata?.symbol ?? 'base units'}
-					value={
-						metadata
-							? formatUnits(limit.limit, metadata.decimals)
-							: limit.limit.toString()
-					}
-				/>
-				<span {...styles.secondary()}>{formatKeyPeriod(limit.period)}</span>
-			</span>
+		<div className="flex min-w-0 flex-col gap-[4px]">
+			<div className="flex flex-wrap items-baseline gap-x-[8px] gap-y-[2px]">
+				<div className="flex min-w-0 flex-wrap items-baseline gap-[4px]">
+					<span className="break-all tabular-nums">{formatted}</span>
+					<span>{metadata?.symbol ?? 'base units'}</span>
+				</div>
+				<span className="text-secondary">{formatKeyPeriod(limit.period)}</span>
+			</div>
 			<PermissionAddress address={limit.token} />
-		</span>
+		</div>
 	)
 }
 
@@ -167,9 +163,9 @@ function CallScope(props: {
 		enabled: true,
 	})
 	return (
-		<li {...styles.stack()}>
+		<li className="flex min-w-0 flex-col gap-[4px]">
 			<PermissionAddress address={target.address} />
-			<ul {...styles.rules()}>
+			<ul className="flex flex-col gap-[8px] border-l border-card-border pl-[8px]">
 				{target.rules.map((rule, index) => {
 					const selector = rule.selector?.toLowerCase()
 					const abiFunction = abi?.find(
@@ -184,10 +180,13 @@ function CallScope(props: {
 						signature ??
 						(abiFunction?.type === 'function' ? abiFunction.name : undefined)
 					return (
-						<li key={`${rule.selector}-${index}`} {...styles.stack()}>
-							<span {...styles.ruleLine()}>
+						<li
+							key={`${rule.selector}-${index}`}
+							className="flex min-w-0 flex-col gap-[4px]"
+						>
+							<div className="flex flex-wrap items-baseline gap-x-[6px] gap-y-[2px]">
 								<code
-									{...styles.code()}
+									className="break-all label-12"
 									title={
 										abiFunction?.type === 'function'
 											? toFunctionSignature(abiFunction)
@@ -197,16 +196,16 @@ function CallScope(props: {
 									{functionName ?? rule.selector ?? 'Any function'}
 								</code>
 								{functionName && (
-									<code {...cx(styles.code(), styles.secondary())}>
+									<code className="label-12 text-tertiary">
 										{rule.selector}
 									</code>
 								)}
-							</span>
+							</div>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
 							{signature && (
-								<span {...styles.recipients()}>
+								<div className="label-12 text-secondary">
 									{rule.recipients?.length ? (
-										<span {...styles.stack()}>
+										<div className="flex min-w-0 flex-col gap-1">
 											<span>
 												{selector === '0x095ea7b3' ? 'Spenders' : 'Recipients'}
 											</span>
@@ -216,7 +215,7 @@ function CallScope(props: {
 													address={recipient}
 												/>
 											))}
-										</span>
+										</div>
 									) : (
 										<span>
 											{selector === '0x095ea7b3'
@@ -224,7 +223,7 @@ function CallScope(props: {
 												: 'Any recipient'}
 										</span>
 									)}
-								</span>
+								</div>
 							)}
 						</li>
 					)
@@ -232,97 +231,4 @@ function CallScope(props: {
 			</ul>
 		</li>
 	)
-}
-
-namespace styles {
-	export const root = style({ minWidth: '0 !custom' })
-
-	// The value fills the row after its label, so lists keep their width.
-	export const value = style({
-		display: 'flex',
-		flex: '1 !custom',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0',
-		overflowWrap: 'anywhere',
-		typography: 'copy.14',
-	})
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const list = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		listStyle: 'none !custom',
-		margin: '0',
-		padding: '0',
-	})
-
-	export const disclosure = style({
-		alignItems: 'flex-start',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const panel = style({
-		minWidth: '0 !custom',
-		width: '100% !custom',
-	})
-
-	// Function names and selectors are code, so they wrap in a mono set.
-	export const code = style({
-		overflowWrap: 'anywhere',
-		typography: 'copy.13.mono',
-	})
-
-	// Hex leaves its width in a column unset.
-	export const address = style({ alignSelf: 'flex-start' })
-
-	export const addressLink = style({
-		display: 'inline-flex',
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-	})
-
-	export const stack = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		minWidth: '0 !custom',
-	})
-
-	export const limitLine = style({
-		alignItems: 'baseline',
-		columnGap: '8',
-		display: 'flex',
-		flexWrap: 'wrap',
-		rowGap: '4',
-	})
-
-	export const rules = style({
-		borderColor: 'grayAlpha.200',
-		borderLeftWidth: '1px',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		listStyle: 'none !custom',
-		margin: '0',
-		paddingLeft: '8',
-	})
-
-	export const ruleLine = style({
-		alignItems: 'baseline',
-		columnGap: '8',
-		display: 'flex',
-		flexWrap: 'wrap',
-		rowGap: '4',
-	})
-
-	export const recipients = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
 }

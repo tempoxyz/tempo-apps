@@ -8,13 +8,12 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { style, Token } from '@tempoxyz/ds'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
+import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
-import { Layout } from '#comps/Layout'
-import { NotFound } from '#comps/NotFound'
+import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import {
 	getCanonicalExplorerUrl,
@@ -25,13 +24,8 @@ import { OG_BASE_URL } from '#lib/og'
 import { posthogBootScript } from '#lib/posthog'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
-import {
-	getTempoChain,
-	getWagmiConfig,
-	getWagmiStateSSR,
-} from '#wagmi.config.ts'
-import geistMono from '@tempoxyz/ds/fonts/GeistMono-Variable.woff2?url'
-import inter from '@tempoxyz/ds/fonts/Inter-Variable.woff2?url'
+import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
+import css from './styles.css?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
 	const pathname =
@@ -121,20 +115,23 @@ export const Route = createRootRouteWithContext<{
 		],
 		links: [
 			...getExplorerCanonicalLinks(),
-			// The TDS faces: Inter for copy, Geist Mono for hashes and addresses.
 			{
 				rel: 'preload',
-				href: inter,
+				href: '/fonts/pilat/Pilat-Regular.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
 			},
 			{
 				rel: 'preload',
-				href: geistMono,
+				href: '/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'stylesheet',
+				href: css,
 			},
 			{
 				rel: 'icon',
@@ -216,12 +213,6 @@ export const Route = createRootRouteWithContext<{
 		</RootDocument>
 	),
 	loader: () => getWagmiStateSSR(),
-	// An unmatched URL renders here, outside `_layout`, so it brings the layout.
-	notFoundComponent: () => (
-		<Layout>
-			<NotFound />
-		</Layout>
-	),
 	shellComponent: RootDocument,
 })
 
@@ -243,29 +234,30 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html lang="en" data-theme={defaultThemeMode} suppressHydrationWarning>
+		<html
+			lang="en"
+			className="scrollbar-gutter-stable"
+			data-theme={defaultThemeMode}
+			suppressHydrationWarning
+		>
 			<head>
 				<script>{themeBootScript}</script>
 				<HeadContent />
 			</head>
-			<body>
+			<body className="antialiased">
 				<ProgressLine
 					loading={isLoading}
 					start={800}
-					className={styles.progress().className}
+					className="fixed top-0 left-0 right-0 z-1"
 				/>
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
 						<TokenListMembershipProvider>
-							<AddressHighlightProvider>
-								{/* Token logos come from the explorer's curated logo route. */}
-								<Token.Provider
-									chainId={getTempoChain().id}
-									resolveSrc={resolveTokenLogo}
-								>
-									{children}
-								</Token.Provider>
-							</AddressHighlightProvider>
+							<BreadcrumbsProvider>
+								<AddressHighlightProvider>
+									<IntroSeenProvider>{children}</IntroSeenProvider>
+								</AddressHighlightProvider>
+							</BreadcrumbsProvider>
 						</TokenListMembershipProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools
@@ -306,18 +298,4 @@ function useDevTools() {
 			return () => eruda?.destroy()
 		}
 	}, [])
-}
-
-namespace styles {
-	export const progress = style({
-		left: '0',
-		position: 'fixed',
-		right: '0',
-		top: '0',
-		zIndex: 1,
-	})
-}
-
-function resolveTokenLogo(options: Token.ResolveSrc.Options): string {
-	return `/api/token/logo/${options.address}`
 }

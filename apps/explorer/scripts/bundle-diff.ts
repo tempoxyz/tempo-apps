@@ -14,15 +14,8 @@
  */
 
 import { execSync } from 'node:child_process'
-import {
-	existsSync,
-	readdirSync,
-	readFileSync,
-	unlinkSync,
-	writeFileSync,
-} from 'node:fs'
-import { join, resolve } from 'node:path'
-import { gzipSync } from 'node:zlib'
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 const BASELINE_FILE = '.bundle-baseline.json'
 const STATS_FILE = 'stats.json'
@@ -72,8 +65,6 @@ interface ChunkInfo {
 interface BundleStats {
 	timestamp: string
 	total: { size: number; gzip: number; brotli: number }
-	/** Client CSS, which the visualizer stats do not include. */
-	css?: { size: number; gzip: number } | undefined
 	chunks: ChunkInfo[]
 }
 
@@ -159,26 +150,8 @@ function parseStats(statsPath: string): BundleStats {
 	return {
 		timestamp: new Date().toISOString(),
 		total: { size: totalSize, gzip: totalGzip, brotli: totalBrotli },
-		css: cssTotals(resolve(process.cwd(), 'dist/client')),
 		chunks,
 	}
-}
-
-function cssTotals(directory: string): BundleStats['css'] {
-	if (!existsSync(directory)) return undefined
-
-	let size = 0
-	let gzip = 0
-	for (const entry of readdirSync(directory, {
-		recursive: true,
-		withFileTypes: true,
-	})) {
-		if (!entry.isFile() || !entry.name.endsWith('.css')) continue
-		const contents = readFileSync(join(entry.parentPath, entry.name))
-		size += contents.length
-		gzip += gzipSync(contents).length
-	}
-	return { size, gzip }
 }
 
 function collectUids(node: TreeNode): string[] {
@@ -313,7 +286,7 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
 
 		if (changes.length > 0) {
 			console.log('\n  Chunk changes (>1KB):')
-			changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+			changes.sort((a, b) => a.delta - b.delta)
 			for (const change of changes.slice(0, 15)) {
 				const name =
 					change.name.length > 35
@@ -374,16 +347,6 @@ function generateMarkdown(stats: BundleStats, baseline?: BundleStats): string {
 				baseline.total.brotli,
 			)} |`,
 		)
-		if (stats.css)
-			lines.push(
-				`| CSS (gzip) | ${formatBytes(stats.css.size)} (${formatBytes(
-					stats.css.gzip,
-				)}) | ${
-					baseline.css
-						? `${formatDeltaMd(stats.css.size, baseline.css.size)} (gzip ${formatDeltaMd(stats.css.gzip, baseline.css.gzip)})`
-						: 'no baseline'
-				} |`,
-			)
 
 		const changes: { name: string; delta: number }[] = []
 
@@ -436,7 +399,7 @@ function generateMarkdown(stats: BundleStats, baseline?: BundleStats): string {
 			lines.push('| Chunk | Change |')
 			lines.push('|-------|--------|')
 
-			changes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+			changes.sort((a, b) => a.delta - b.delta)
 			for (const change of changes.slice(0, 20)) {
 				const sign = change.delta >= 0 ? '+' : ''
 				lines.push(`| ${change.name} | ${sign}${formatBytes(change.delta)} |`)
@@ -462,12 +425,6 @@ function generateMarkdown(stats: BundleStats, baseline?: BundleStats): string {
 				stats.total.gzip,
 			)}, brotli: ${formatBytes(stats.total.brotli)})`,
 		)
-		if (stats.css)
-			lines.push(
-				`**Client CSS:** ${formatBytes(stats.css.size)} (gzip: ${formatBytes(
-					stats.css.gzip,
-				)})`,
-			)
 	}
 
 	return lines.join('\n')

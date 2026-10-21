@@ -71,18 +71,19 @@ try {
 	browser(
 		'wait',
 		'--fn',
-		'[...document.querySelectorAll("main img")].length > 0 && [...document.querySelectorAll("main img")].every(i => i.complete && i.dataset.status !== "loading")',
+		'[...document.querySelectorAll("main img")].length > 0 && [...document.querySelectorAll("main img")].every(i => i.complete && i.naturalWidth > 0 && i.getAttribute("src") === "/token-fallback.svg")',
 	)
 	browser('click', 'button[aria-label="Copy link"]')
 	assert.equal(
-		evaluate('document.querySelector("button[data-copied]").title'),
-		'Copied',
+		evaluate(
+			'document.querySelector("button[aria-label=\\"Copy link\\"]").title',
+		),
+		'Copied!',
 	)
 	click('main a[href*="/address/"]')
 	await contains('Fee AMM liquidity')
 	assert.ok(browser('get', 'url').includes('tab=token'))
-	// The Fee AMM section's View all pools link comes before its pool links.
-	click('main a[href^="/fee-amm?token="]')
+	click('section[aria-label="Fee AMM liquidity"] a')
 	await contains('Filtered by OUSD')
 	assert.ok(browser('get', 'url').includes(`token=${token}`))
 	click('main form a')
@@ -113,13 +114,13 @@ try {
 	assert.ok(!browser('get', 'text', 'main').includes('49.999977'))
 	await control()
 	await open('/fee-amm?token=0x20c0000000000000000000000000000000000099')
-	await contains('No Fee AMM pools for this token')
+	await contains('No Fee AMM pools found for this token.')
 	await open('/fee-amm?page=0')
 	await contains('Invalid Fee AMM link')
 	await open(scoped)
 	browser('fill', 'input[name="token"]', 'invalid')
 	click('main form button[type="submit"]')
-	await contains('Enter a token contract address that starts with 0x.')
+	await contains('Enter a valid token contract address.')
 	await open(scoped)
 	browser('set', 'viewport', '390', '844')
 	assert.ok(
@@ -127,13 +128,13 @@ try {
 	)
 	click('button[aria-label="Switch to dark mode"]')
 	assert.equal(evaluate('document.documentElement.dataset.theme'), 'dark')
-	// A failed logo settles on the TDS Token placeholder instead of retrying.
+	// Even if the bundled fallback fails, do not bounce back to the API forever.
 	evaluate(
 		'document.querySelector("main img").dispatchEvent(new Event("error"))',
 	)
 	assert.equal(
-		evaluate('document.querySelector("main img").dataset.status'),
-		'error',
+		evaluate('document.querySelector("main img").getAttribute("src")'),
+		'/token-fallback.svg',
 	)
 	console.log(
 		'Fee AMM browser checks passed: pagination, direct links, Token tab, retry, missing reserves, validation, and mobile layout.',

@@ -1,43 +1,24 @@
-import { Rows, style } from '@tempoxyz/ds'
+import { cx } from '#lib/css'
 
-/** A key-value row of one record. Place it in a `Rows.Root`. */
-export function InfoRow(props: InfoRow.Props): React.JSX.Element {
-	const { label, children, stackOnMobile = false } = props
-	const content = (
-		<>
-			<Rows.Label>{label}</Rows.Label>
-			{children}
-		</>
-	)
+export function InfoRow(props: {
+	label: string
+	children: React.ReactNode
+	stackOnMobile?: boolean
+}) {
+	const { label, children, stackOnMobile } = props
 	return (
-		<Rows.Row>
-			{stackOnMobile ? <span {...styles.stack()}>{content}</span> : content}
-		</Rows.Row>
+		<div
+			className={cx(
+				'flex items-start gap-[16px] px-[18px] py-[12px] border-b border-solid border-card-border last:border-b-0',
+				stackOnMobile && 'max-[600px]:flex-col max-[600px]:gap-[8px]',
+			)}
+		>
+			<span className="copy-14 text-tertiary min-w-[100px] sm:min-w-[140px] shrink-0 font-sans">
+				{label}
+			</span>
+			<div className="copy-14 break-all w-full min-w-0 font-sans">
+				{children}
+			</div>
+		</div>
 	)
-}
-
-export declare namespace InfoRow {
-	type Props = {
-		label: string
-		children: React.ReactNode
-		/** Puts a long value under its label below 640px. */
-		stackOnMobile?: boolean | undefined
-	}
-}
-
-namespace styles {
-	// `Rows.Row` keeps the label and value on one line. Below 640px a long
-	// value gets the full row width under its label instead.
-	export const stack = style({
-		display: 'flex',
-		flexDirection: 'column',
-		flexGrow: '1 !custom',
-		minWidth: '0',
-		rowGap: '8',
-		'@media 640': {
-			alignItems: 'center',
-			columnGap: '12',
-			flexDirection: 'row',
-		},
-	})
 }

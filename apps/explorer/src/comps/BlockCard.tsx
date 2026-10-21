@@ -1,32 +1,19 @@
 import { Link } from '@tanstack/react-router'
-import { CopyButton, Gauge, Hex, Rows, style, Surface } from '@tempoxyz/ds'
-import type { Hex as HexType } from 'ox'
+import type { Hex } from 'ox'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import { InfoCard } from '#comps/InfoCard'
-import { RelativeTime } from '#comps/RelativeTime'
+import { Midcut } from '#comps/Midcut'
 import { ValidatorTag } from '#comps/ValidatorTag'
 import { useAnimatedBlockNumber } from '#lib/block-number'
-import { useIsMounted } from '#lib/hooks'
+import { cx } from '#lib/css'
+import { DateFormatter } from '#lib/formatting'
+import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
-import { link, linkHover } from '#styles/explorer'
+import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
+import ChevronDown from '~icons/lucide/chevron-down'
+import CopyIcon from '~icons/lucide/copy'
 
-const utc = new Intl.DateTimeFormat('en-US', {
-	day: 'numeric',
-	hour: '2-digit',
-	hourCycle: 'h23',
-	minute: '2-digit',
-	month: 'short',
-	second: '2-digit',
-	timeZone: 'UTC',
-	year: 'numeric',
-})
-
-/**
- * A block's receipt: the block number as the card's main value, its age
- * beneath, then its fields as rows. The roots expand under the last row.
- */
-export function BlockCard(props: BlockCard.Props): React.JSX.Element {
+export function BlockCard(props: BlockCard.Props) {
 	const { block } = props
 	const {
 		number: blockNumber,
@@ -41,8 +28,11 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 		receiptsRoot,
 	} = block
 
-	const [showRoots, setShowRoots] = React.useState(false)
-	const rootsId = React.useId()
+	const [showAdvanced, setShowAdvanced] = React.useState(false)
+
+	const copyBlock = useCopy()
+	const copyHash = useCopy()
+
 	const confirmationsRef = React.useRef<HTMLSpanElement>(null)
 	const latestBlockRef = React.useRef(blockNumber ?? 0n)
 	const isMounted = useIsMounted()
@@ -63,106 +53,180 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 			const confirmations = getConfirmations(liveBlockNumber)
 			if (confirmationsRef.current) {
 				confirmationsRef.current.textContent =
-					confirmations !== undefined
-						? confirmations.toLocaleString('en-US')
-						: '—'
+					confirmations !== undefined ? String(confirmations) : '—'
 			}
 		}
 	}, [isMounted, liveBlockNumber, getConfirmations])
 
-	const date = new Date(Number(timestamp) * 1000)
+	const utcFormatted = timestamp
+		? DateFormatter.formatUtcTimestamp(timestamp)
+		: undefined
+	const [utcDate, utcTime] = utcFormatted?.split(', ') ?? []
+
+	const gasUsage = BlockCard.getGasUsagePercent(gasUsed, gasLimit)
 	const roots = [
-		{ label: 'State root', value: stateRoot },
-		{ label: 'Transactions root', value: transactionsRoot },
-		{ label: 'Receipts root', value: receiptsRoot },
+		{ label: 'state', value: stateRoot },
+		{ label: 'txns', value: transactionsRoot },
+		{ label: 'receipts', value: receiptsRoot },
 	]
 
+	const showAdvancedSection = true
+
 	return (
-		<Surface>
-			<Surface.Header>
-				<InfoCard.Title>Block</InfoCard.Title>
-				<CopyButton
-					aria-label="Copy block number"
-					value={String(blockNumber ?? 0n)}
-				/>
-			</Surface.Header>
-			<p {...styles.number()}>{(blockNumber ?? 0n).toLocaleString('en-US')}</p>
-			<RelativeTime timestamp={timestamp} {...styles.age()} />
-			<div {...styles.rows()}>
-				<Rows.Root dividers="full">
-					<Rows.Row>
-						<Rows.Label>Time</Rows.Label>
-						<time dateTime={date.toISOString()} {...styles.numeric()}>
-							{utc.format(date)} UTC
-						</time>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Unix time</Rows.Label>
-						<span {...styles.numeric()}>{String(timestamp)}</span>
-					</Rows.Row>
+		<InfoCard
+			className="type-card"
+			sections={[
+				<button
+					key="block-number"
+					type="button"
+					onClick={() => copyBlock.copy(String(blockNumber ?? 0n))}
+					className="w-full text-left cursor-pointer press-down text-tertiary"
+					title={String(blockNumber ?? 0n)}
+				>
+					<div className="flex items-center gap-[8px] mb-[8px]">
+						<span>Block</span>
+						<div className="relative flex items-center">
+							<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
+							{copyBlock.notifying && (
+								<span className="absolute left-[calc(100%+8px)]">copied</span>
+							)}
+						</div>
+					</div>
+					<BlockCard.BlockNumber value={blockNumber ?? 0n} />
+				</button>,
+				<div key="time" className="w-full flex flex-col gap-[8px]">
+					<BlockCard.TimeRow
+						label="UTC"
+						value={
+							<time dateTime={new Date(Number(timestamp) * 1000).toISOString()}>
+								<span className="text-primary">{utcDate}</span>
+								{utcTime && <> {utcTime}</>}
+							</time>
+						}
+					/>
+					<BlockCard.TimeRow label="UNIX" value={String(timestamp)} />
+				</div>,
+				<div key="hash-parent" className="w-full flex flex-col gap-[12px]">
 					{hash && (
-						<Rows.Row>
-							<Rows.Label>Hash</Rows.Label>
-							<Hex.Root value={hash} {...styles.hex()}>
-								<Hex.Text />
-								<Hex.Copy aria-label="Copy block hash" />
-							</Hex.Root>
-						</Rows.Row>
+						<button
+							type="button"
+							onClick={() => copyHash.copy(hash)}
+							className="w-full text-left cursor-pointer press-down text-tertiary"
+							title={hash}
+						>
+							<div className="flex items-center gap-[8px] mb-[8px]">
+								<span className="font-normal capitalize">Hash</span>
+								<div className="relative flex items-center">
+									<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
+									{copyHash.notifying && (
+										<span className="absolute left-[calc(100%+8px)] ">
+											copied
+										</span>
+									)}
+								</div>
+							</div>
+							{/* 22 chars/line * (1ch + 1px tracking) */}
+							<div className="font-mono copy-13 text-primary break-all max-w-[calc(22ch+22px)]">
+								{hash}
+							</div>
+						</button>
 					)}
-					<Rows.Row>
-						<Rows.Label>Parent</Rows.Label>
-						<Hex.Root value={parentHash} {...styles.hex()}>
-							<Link
-								to="/block/$id"
-								params={{ id: parentHash }}
-								{...cx(styles.hexLink(), link(), linkHover())}
-							>
-								<Hex.Text />
-							</Link>
-							<Hex.Copy aria-label="Copy parent block hash" />
-						</Hex.Root>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Miner</Rows.Label>
+					<div className="w-full flex items-center justify-between gap-[8px]">
+						<span className="flex items-center gap-[6px] font-normal capitalize text-tertiary shrink-0">
+							<ArrowUp10 className="size-[14px] text-content-dimmed" />
+							Parent
+						</span>
+						<Link
+							to="/block/$id"
+							params={{ id: parentHash }}
+							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono max-w-[18ch]"
+							title={parentHash}
+						>
+							<Midcut value={parentHash} prefix="0x" align="end" min={4} />
+						</Link>
+					</div>
+				</div>,
+				<div
+					key="miner-confirmations"
+					className="w-full flex flex-col gap-[8px]"
+				>
+					<BlockCard.InfoRow label="Miner">
 						{miner ? (
 							<ValidatorTag address={miner} />
 						) : (
-							<span {...styles.secondary()}>—</span>
+							<span className="text-tertiary">—</span>
 						)}
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Confirmations</Rows.Label>
-						<span ref={confirmationsRef} {...styles.numeric()}>
-							<span {...styles.secondary()}>—</span>
+					</BlockCard.InfoRow>
+					<BlockCard.InfoRow label="Confirmations">
+						<span
+							ref={confirmationsRef}
+							className="text-primary font-sans tabular-nums"
+						>
+							<span className="text-secondary">—</span>
 						</span>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Gas used</Rows.Label>
-						<BlockCard.GasUsed gasLimit={gasLimit} gasUsed={gasUsed} />
-					</Rows.Row>
-					<Rows.Row
-						action="expand"
-						aria-controls={rootsId}
-						aria-expanded={showRoots}
-						onClick={() => setShowRoots((open) => !open)}
+					</BlockCard.InfoRow>
+				</div>,
+				showAdvancedSection && (
+					<div
+						key="advanced"
+						className="w-[calc(100%+36px)] -mx-[18px] -my-[12px] px-[18px] py-[12px]"
 					>
-						Roots
-					</Rows.Row>
-					{showRoots && (
-						<Rows.Panel id={rootsId}>
-							<Rows.Root dividers="none" size="small">
-								{roots.map((root) => (
-									<Rows.Row key={root.label} spacing="none">
-										<Rows.Label>{root.label}</Rows.Label>
-										<BlockCard.Root label={root.label} hash={root.value} />
-									</Rows.Row>
-								))}
-							</Rows.Root>
-						</Rows.Panel>
-					)}
-				</Rows.Root>
-			</div>
-		</Surface>
+						<button
+							type="button"
+							className="flex w-full items-center justify-between text-tertiary cursor-pointer press-down"
+							onClick={() => setShowAdvanced((prev) => !prev)}
+						>
+							<span>Advanced</span>
+							<ChevronDown
+								className={cx(
+									'size-[14px] text-content-dimmed',
+									showAdvanced && 'rotate-180',
+								)}
+							/>
+						</button>
+
+						{showAdvanced && (
+							// Contain inline size so full-length root hashes don't widen the card.
+							<div className="mt-[14px] space-y-[20px] pb-4 w-full [contain:inline-size]">
+								<div className="space-y-[12px]">
+									<div className="flex items-center justify-between">
+										<span className="text-secondary">Gas Usage</span>
+										<span className="text-primary font-sans tabular-nums">
+											{gasUsage !== undefined
+												? `${gasUsage.toFixed(2)}%`
+												: '0.00%'}
+										</span>
+									</div>
+									<div className="flex items-center h-[6px] px-px bg-card-border">
+										<div
+											className="h-full bg-accent"
+											style={{
+												width: `max(4px, ${Math.min(100, gasUsage ?? 0)}%)`,
+											}}
+										/>
+									</div>
+									<div className="flex items-center justify-between text-tertiary font-sans tabular-nums">
+										<BlockCard.GasValue value={gasUsed} />
+										<BlockCard.GasValue value={gasLimit} highlight={false} />
+									</div>
+								</div>
+
+								<div className="space-y-[8px]">
+									<div className="text-secondary">Roots</div>
+									{roots.map((root) => (
+										<BlockCard.RootRow
+											key={root.label}
+											label={root.label}
+											hash={root.value}
+										/>
+									))}
+								</div>
+							</div>
+						)}
+					</div>
+				),
+			]}
+		/>
 	)
 }
 
@@ -171,101 +235,137 @@ export namespace BlockCard {
 		block: BlockWithTransactions
 	}
 
-	/** Gas used as a share of the gas limit: a ring, then the exact values. */
-	export function GasUsed(props: GasUsed.Props): React.JSX.Element {
-		const { gasLimit, gasUsed } = props
-		if (gasUsed === undefined || !gasLimit)
-			return <span {...styles.secondary()}>—</span>
-		// Most blocks use well under 1% of the limit, so keep two decimals.
-		const percent = `${((Number(gasUsed) / Number(gasLimit)) * 100).toFixed(2)}%`
+	export function TimeRow(props: TimeRow.Props) {
+		const { label, value } = props
 		return (
-			<span {...styles.gas()}>
-				<Gauge
-					aria-label="Gas used"
-					getAriaValueText={() =>
-						`${percent} of ${gasLimit.toLocaleString('en-US')}`
-					}
-					max={Number(gasLimit)}
-					size="small"
-					value={Number(gasUsed)}
-				/>
-				<span {...styles.numeric()}>
-					{gasUsed.toLocaleString('en-US')}{' '}
-					<span {...styles.secondary()}>({percent})</span>
+			<div className="w-full flex items-center justify-between">
+				<span className="label-12 text-tertiary bg-base-alt/65 px-[4px] py-[2px]">
+					{label}
 				</span>
+				<span className="text-right text-base-content-secondary font-sans tabular-nums">
+					{value}
+				</span>
+			</div>
+		)
+	}
+
+	export namespace TimeRow {
+		export interface Props {
+			label: string
+			value?: React.ReactNode
+		}
+	}
+
+	export function BlockNumber(props: BlockNumber.Props) {
+		const { value } = props
+		const str = String(value).padStart(15, '0')
+		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
+		return (
+			<div className="font-sans tabular-nums">
+				<span className="flex justify-between gap-px heading-24 text-tertiary select-none">
+					{str.split('').map((char, index) => (
+						<span
+							key={`${index}-${char}`}
+							className={index >= zerosEnd ? 'text-primary' : undefined}
+						>
+							{char}
+						</span>
+					))}
+				</span>
+			</div>
+		)
+	}
+
+	export namespace BlockNumber {
+		export interface Props {
+			value: bigint
+		}
+	}
+
+	export function InfoRow(props: InfoRow.Props) {
+		const { label, children } = props
+		return (
+			<div className="w-full flex items-center justify-between gap-[8px]">
+				<span className="font-normal capitalize text-tertiary shrink-0">
+					{label}
+				</span>
+				{children}
+			</div>
+		)
+	}
+
+	export namespace InfoRow {
+		export interface Props {
+			label: string
+			children: React.ReactNode
+		}
+	}
+
+	export function GasValue(props: GasValue.Props) {
+		const { value, digits = 9, highlight = true } = props
+		if (value === undefined) return <span>—</span>
+		const str = String(value).padStart(digits, '0')
+		const zeros = str.match(/^0*/)?.[0] ?? ''
+		const number = str.slice(zeros.length)
+		return (
+			<span>
+				{zeros}
+				{highlight ? <span className="text-primary">{number}</span> : number}
 			</span>
 		)
 	}
 
-	export namespace GasUsed {
+	export namespace GasValue {
 		export interface Props {
-			gasLimit?: bigint | undefined
-			gasUsed?: bigint | undefined
+			value?: bigint
+			digits?: number
+			highlight?: boolean
 		}
 	}
 
-	export function Root(props: Root.Props): React.JSX.Element {
+	export function RootRow(props: RootRow.Props) {
 		const { label, hash } = props
-		if (!hash) return <span {...styles.secondary()}>—</span>
+		const { copy, notifying } = useCopy()
+
+		if (!hash) {
+			return (
+				<div className="flex items-center justify-between gap-[8px] text-primary lowercase">
+					<span className="text-tertiary shrink-0">{label}</span>
+					<span className="text-tertiary">—</span>
+				</div>
+			)
+		}
+
 		return (
-			<Hex.Root value={hash} {...styles.hex()}>
-				<Hex.Text />
-				<Hex.Copy aria-label={`Copy ${label.toLowerCase()}`} />
-			</Hex.Root>
+			<button
+				type="button"
+				onClick={() => copy(hash)}
+				className="w-full flex items-center justify-between gap-[8px] text-primary lowercase cursor-pointer press-down"
+				title={hash}
+			>
+				<span className="text-tertiary shrink-0 font-sans">
+					{notifying ? 'copied' : label}
+				</span>
+				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end font-mono">
+					<Midcut value={hash} prefix="0x" align="end" min={4} />
+					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed shrink-0" />
+				</div>
+			</button>
 		)
 	}
 
-	export namespace Root {
+	export namespace RootRow {
 		export interface Props {
 			label: string
-			hash?: HexType.Hex | undefined
+			hash?: Hex.Hex
 		}
 	}
-}
 
-namespace styles {
-	export const secondary = style({ color: 'gray.900' })
-
-	export const numeric = style({
-		color: 'foreground',
-		fontVariantNumeric: 'tabular-nums !custom',
-	})
-
-	// The card's main value, at the size of a receipt's large `Amount`.
-	export const number = style({
-		color: 'foreground',
-		fontVariantNumeric: 'tabular-nums !custom',
-		margin: '0',
-		typography: 'heading.32',
-	})
-
-	export const age = style({
-		color: 'gray.900',
-		display: 'block',
-		marginBlockStart: '4',
-		// Holds the line until the age renders after hydration.
-		minHeight: '20',
-		typography: 'copy.14',
-	})
-
-	// Surface pads 24px, so the rows reach its edges and keep their own inset.
-	// They follow the number, so a wrapper sets the margins.
-	export const rows = style({
-		marginBlockStart: '16',
-		marginInline: '-24px !custom',
-	})
-
-	export const hex = style({ minWidth: '0 !custom' })
-
-	export const hexLink = style({
-		display: 'inline-flex',
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-	})
-
-	export const gas = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-	})
+	export function getGasUsagePercent(gasUsed?: bigint, gasLimit?: bigint) {
+		if (!gasUsed || !gasLimit) return undefined
+		const used = Number(gasUsed)
+		const limit = Number(gasLimit)
+		if (!limit) return undefined
+		return (used / limit) * 100
+	}
 }

@@ -5,19 +5,19 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { CopyButton, Field, Input, Tag, style } from '@tempoxyz/ds'
-import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
+import { CopyButton } from '#comps/CopyButton'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TransactionCell } from '#comps/TransactionCell'
+import { cx } from '#lib/css'
 import { parseTip403PolicyId } from '#lib/domain/tip403'
 import type {
 	Tip403PolicyResponse,
@@ -25,21 +25,19 @@ import type {
 } from '#lib/server/tip403'
 import { fetchTip403Policy } from '#lib/server/tip403'
 import { useMediaQuery } from '#lib/hooks'
-import { link, linkHover, srOnly } from '#styles/explorer'
-import { cx } from 'zyzz'
 
 const defaultSearchValues = { page: 1, limit: 10, q: '' } as const
 
 export const Route = createFileRoute('/_layout/policy/$id')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
-		<div {...styles.notFound()}>
-			<div {...styles.notFoundContent()}>
-				<h1 {...styles.notFoundTitle()}>Policy not found</h1>
-				<p {...styles.notFoundMessage()}>
+		<div className="flex flex-1 items-center justify-center px-4 pt-20">
+			<div className="text-center">
+				<h1 className="heading-32 text-primary">Policy Not Found</h1>
+				<p className="mt-2 copy-15 text-secondary">
 					The TIP-403 policy does not exist or could not be loaded.
 				</p>
-				{data ? <span {...srOnly()}>{String(data)}</span> : null}
+				{data ? <span className="sr-only">{String(data)}</span> : null}
 			</div>
 		</div>
 	),
@@ -89,8 +87,8 @@ function RouteComponent() {
 	const [activeSection, setActiveSection] = React.useState(0)
 
 	return (
-		<div {...styles.page()}>
-			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
+		<div className="max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 grid w-full grid-cols-[auto_1fr] gap-[14px] px-4 pt-20 pb-16 min-w-0 min-[1240px]:max-w-[1280px]">
+			<BreadcrumbsSlot className="col-span-full" />
 			<PolicyCard policy={policy} />
 			<Sections
 				mode={mode}
@@ -99,11 +97,15 @@ function RouteComponent() {
 				sections={[
 					{
 						title: 'Members',
+						totalItems: policy.membersTotal,
+						autoCollapse: false,
 						contextual: <MembersSearch query={q} />,
 						content: <MembersGrid policy={policy} page={page} limit={limit} />,
 					},
 					{
 						title: 'Activity',
+						totalItems: policy.activity.length,
+						autoCollapse: false,
 						content: <ActivityGrid policy={policy} />,
 					},
 				]}
@@ -123,25 +125,28 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 
 	return (
 		<InfoCard
-			title={<InfoCard.Title>TIP-403 policy</InfoCard.Title>}
+			title={<InfoCard.Title>TIP-403 Policy</InfoCard.Title>}
+			className="self-start max-[800px]:w-full"
 			sections={[
 				{ label: 'Policy ID', value: <span>#{policy.policyId}</span> },
 				{
 					label: 'Type',
 					value: (
-						<span {...styles.type()}>
+						<span className="flex items-center gap-2">
 							<PolicyTypeBadge type={policy.type} />
-							{builtIn ? <span {...styles.builtIn()}>{builtIn}</span> : null}
+							{builtIn ? (
+								<span className="text-tertiary">{builtIn}</span>
+							) : null}
 						</span>
 					),
 				},
 				{
 					label: 'Admin',
-					value: <AddressLink address={policy.admin} />,
+					value: <AddressLink address={policy.admin} chars={4} />,
 				},
 				{
 					label: 'Registry',
-					value: <AddressLink address={Addresses.tip403Registry} />,
+					value: <AddressLink address={Addresses.tip403Registry} chars={4} />,
 				},
 				...(policy.type === 'compound' && policy.componentPolicies
 					? [
@@ -151,7 +156,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[0] }}
-										{...cx(link(), linkHover())}
+										className="text-accent hover:underline"
 									>
 										#{policy.componentPolicies[0]}
 									</Link>
@@ -163,7 +168,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[1] }}
-										{...cx(link(), linkHover())}
+										className="text-accent hover:underline"
 									>
 										#{policy.componentPolicies[1]}
 									</Link>
@@ -175,7 +180,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 									<Link
 										to="/policy/$id"
 										params={{ id: policy.componentPolicies[2] }}
-										{...cx(link(), linkHover())}
+										className="text-accent hover:underline"
 									>
 										#{policy.componentPolicies[2]}
 									</Link>
@@ -189,64 +194,54 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 }
 
 function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
-	const intent =
-		props.type === 'whitelist'
-			? 'positive'
-			: props.type === 'blacklist'
-				? 'negative'
-				: 'neutral'
 	return (
-		<Tag intent={intent} variant="plain">
-			<Tag.Dot />
-			{policyTypeLabels[props.type]}
-		</Tag>
+		<span
+			className={cx(
+				'rounded-[4px] px-1.5 py-0.5 label-12 font-medium capitalize',
+				props.type === 'whitelist'
+					? 'bg-positive/10 text-positive'
+					: props.type === 'blacklist'
+						? 'bg-negative/10 text-negative'
+						: 'bg-accent/10 text-accent',
+			)}
+		>
+			{props.type}
+		</span>
 	)
 }
 
-const policyTypeLabels = {
-	blacklist: 'Blacklist',
-	compound: 'Compound',
-	whitelist: 'Whitelist',
-} satisfies Record<Tip403PolicyResponse['type'], string>
-
 function MembersSearch(props: { query: string }) {
 	const navigate = useNavigate()
-	const search = (query: string) =>
-		void navigate({
-			to: '.',
-			search: (previous) => ({
-				...previous,
-				page: 1,
-				q: query || undefined,
-			}),
-		})
 	return (
 		<form
+			className="flex items-center gap-2"
 			onSubmit={(event) => {
 				event.preventDefault()
-				search(new FormData(event.currentTarget).get('query')?.toString() ?? '')
+				const query =
+					new FormData(event.currentTarget).get('query')?.toString() ?? ''
+				void navigate({
+					to: '.',
+					search: (previous) => ({
+						...previous,
+						page: 1,
+						q: query || undefined,
+					}),
+				})
 			}}
 		>
-			<Field.Root>
-				<Input.Group>
-					<Input.Prefix>
-						<Search />
-					</Input.Prefix>
-					<Input.Control
-						name="query"
-						type="search"
-						defaultValue={props.query}
-						placeholder="Search addresses"
-						aria-label="Search policy members"
-						enterKeyHint="search"
-						// Clearing the field also clears an applied filter.
-						onValueChange={(value) => {
-							if (!value && props.query) search('')
-						}}
-					/>
-					<Input.Clear aria-label="Clear search" />
-				</Input.Group>
-			</Field.Root>
+			<input
+				name="query"
+				defaultValue={props.query}
+				placeholder="Search addresses"
+				aria-label="Search policy members"
+				className="h-7 w-[220px] rounded-[4px] border border-base-border bg-base px-2 label-12 font-mono text-primary outline-none placeholder:text-tertiary focus:border-accent"
+			/>
+			<button
+				type="submit"
+				className="h-7 rounded-[4px] border border-base-border px-2 label-12 text-secondary hover:bg-base-alt press-down"
+			>
+				Search
+			</button>
 		</form>
 	)
 }
@@ -259,29 +254,32 @@ function MembersGrid(props: {
 	const { policy, page, limit } = props
 	const pages = Math.max(1, Math.ceil(policy.membersTotal / limit))
 	const status = policy.type === 'whitelist' ? 'Authorized' : 'Restricted'
-	const statusIntent = policy.type === 'whitelist' ? 'positive' : 'negative'
 
 	return (
 		<DataGrid
 			columns={{
 				stacked: [
-					{ label: 'Address', width: '1fr' },
-					{ label: 'Status', width: '1fr' },
+					{ label: 'Address', width: '1fr', minWidth: 220 },
+					{ label: 'Status', width: '1fr', minWidth: 110 },
 				],
 				tabs: [
-					{ label: 'Address', width: '1fr' },
-					{ label: 'Status', width: '1fr' },
+					{ label: 'Address', width: '1fr', minWidth: 220 },
+					{ label: 'Status', width: '1fr', minWidth: 110 },
 				],
 			}}
 			items={() =>
 				policy.members.map((address) => ({
 					key: address,
 					cells: [
-						<AddressLink key="address" address={address} />,
-						<Tag key="status" intent={statusIntent} variant="plain">
-							<Tag.Dot />
+						<AddressLink key="address" address={address} chars={5} />,
+						<span
+							key="status"
+							className={
+								policy.type === 'whitelist' ? 'text-positive' : 'text-negative'
+							}
+						>
 							{status}
-						</Tag>,
+						</span>,
 					],
 				}))
 			}
@@ -310,16 +308,16 @@ function ActivityGrid(props: { policy: Tip403PolicyResponse }) {
 		<DataGrid
 			columns={{
 				stacked: [
-					{ label: 'Event', width: '2fr' },
-					{ label: 'Account', width: '2fr' },
-					{ label: timeColumn, width: '1fr' },
-					{ label: 'Transaction', width: '2fr' },
+					{ label: 'Event', width: '2fr', minWidth: 150 },
+					{ label: 'Account', width: '2fr', minWidth: 200 },
+					{ label: timeColumn, width: '1fr', minWidth: 90 },
+					{ label: 'Transaction', width: '2fr', minWidth: 150 },
 				],
 				tabs: [
-					{ label: 'Event', width: '2fr' },
-					{ label: 'Account', width: '2fr' },
-					{ label: timeColumn, width: '1fr' },
-					{ label: 'Transaction', width: '2fr' },
+					{ label: 'Event', width: '2fr', minWidth: 150 },
+					{ label: 'Account', width: '2fr', minWidth: 200 },
+					{ label: timeColumn, width: '1fr', minWidth: 90 },
+					{ label: 'Transaction', width: '2fr', minWidth: 150 },
 				],
 			}}
 			items={() =>
@@ -353,11 +351,11 @@ function activityRow(
 	return {
 		key: `${event.txHash}-${event.logIndex}`,
 		cells: [
-			<span key="event" {...styles.event()}>
+			<span key="event" className="text-primary">
 				{eventLabel}
 			</span>,
 			account ? (
-				<AddressLink key="account" address={account} />
+				<AddressLink key="account" address={account} chars={4} />
 			) : (
 				<span key="account">—</span>
 			),
@@ -370,72 +368,10 @@ function activityRow(
 			) : (
 				<span key="time">—</span>
 			),
-			<div key="transaction" {...styles.transaction()}>
+			<div key="transaction" className="flex items-center gap-1">
 				<TransactionCell hash={event.txHash} />
-				<CopyButton aria-label="Copy transaction hash" value={event.txHash} />
+				<CopyButton value={event.txHash} ariaLabel="Copy transaction hash" />
 			</div>,
 		],
 	}
-}
-
-namespace styles {
-	export const notFound = style({
-		alignItems: 'center',
-		display: 'flex',
-		flex: 1,
-		justifyContent: 'center',
-		paddingInline: '16',
-		paddingTop: '64',
-	})
-
-	export const notFoundContent = style({ textAlign: 'center' })
-
-	export const notFoundTitle = style({
-		color: 'foreground',
-		typography: 'heading.32.subtle',
-	})
-
-	export const notFoundMessage = style({
-		color: 'gray.900',
-		marginTop: '8',
-		typography: 'copy.14',
-	})
-
-	// Stacked until the members table has room beside the policy card; the
-	// card's column is capped so long values truncate instead of widening it.
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		minWidth: '0 !custom',
-		paddingBottom: '32',
-		paddingInline: '16',
-		paddingTop: '40',
-		width: '100% !custom',
-		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
-		'@media (width >= 1024px)': {
-			alignItems: 'start',
-			display: 'grid',
-			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
-		},
-		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
-	})
-
-	export const breadcrumbs = style({ gridColumn: '1 / -1' })
-
-	export const type = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-	})
-
-	export const builtIn = style({ color: 'gray.900' })
-
-	export const event = style({ color: 'foreground' })
-
-	export const transaction = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '4',
-	})
 }

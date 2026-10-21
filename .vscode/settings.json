@@ -58,7 +58,8 @@
 		"*.sql": "sql",
 		"*.svg": "html",
 		".env.*": "properties",
-		"biome.json": "jsonc"
+		"biome.json": "jsonc",
+		"*.css": "tailwindcss"
 	},
 	"files.exclude": {
 		"**/.tanstack": true,
@@ -71,6 +72,13 @@
 	"markdownlint.config": {
 		"no-inline-html": false
 	},
+	"tailwindCSS.showPixelEquivalents": true,
+	"tailwindCSS.lint.cssConflict": "warning",
+	"tailwindCSS.lint.suggestCanonicalClasses": "warning",
+	"tailwindCSS.experimental.classRegex": [
+		"cx\\(([^)]+)\\)",
+		"twMerge\\(([^)]+)\\)"
+	],
 	"yaml.schemaStore.enable": true,
 	"redhat.telemetry.enabled": false,
 	"yaml.schemas": {

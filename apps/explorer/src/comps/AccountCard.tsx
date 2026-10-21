@@ -1,11 +1,13 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
-import { Amount, Hex, style, Token } from '@tempoxyz/ds'
 import type { Address } from 'ox'
-import type * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
+import { TokenIcon } from '#comps/TokenIcon'
 import type { AccountType } from '#lib/account'
-import { resolveLogoURI } from '#lib/domain/tip20'
+import { cx } from '#lib/css'
+import { PriceFormatter } from '#lib/formatting'
+import { useCopy } from '#lib/hooks'
+import CopyIcon from '~icons/lucide/copy'
 
 const Route = getRouteApi('/_layout/address/$address')
 
@@ -26,8 +28,10 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 		virtualAddressParts,
 	} = props
 
+	const { copy, notifying } = useCopy()
+
 	const titleLabel = virtualAddressParts
-		? 'Virtual address'
+		? 'Virtual Address'
 		: isToken
 			? 'Token'
 			: accountType === 'contract'
@@ -43,19 +47,24 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 			title={
 				titleVisible ? (
 					<InfoCard.Title
-						className={isToken ? styles.tokenTitle().className : undefined}
+						className={cx(isToken && 'min-w-0 w-full py-3 gap-3')}
 					>
 						{isToken ? (
 							<>
-								<Token
-									address={address}
-									size="large"
-									src={resolveLogoURI(tokenLogoURI)}
+								<TokenIcon
+									address={address as Address.Address}
+									name={tokenLabel}
+									className="size-8"
+									logoURI={tokenLogoURI}
 								/>
-								<span {...styles.tokenText()}>
-									<span {...styles.tokenName()}>{tokenLabel}</span>
+								<span className="min-w-0 flex-1">
+									<span className="block wrap-anywhere text-primary">
+										{tokenLabel}
+									</span>
 									{tokenSymbol && tokenSymbol !== tokenLabel && (
-										<span {...styles.tokenSymbol()}>{tokenSymbol}</span>
+										<span className="block wrap-anywhere label-12 text-tertiary font-normal mt-0.5">
+											{tokenSymbol}
+										</span>
 									)}
 								</span>
 							</>
@@ -67,22 +76,44 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 			}
 			className={className}
 			sections={[
-				<div key="address" {...styles.address()}>
-					<span {...styles.secondary()}>Address</span>
-					<Hex.Root size="small" value={address} variant="filled">
-						<Hex.Text />
-						<Hex.Copy aria-label="Copy address" />
-					</Hex.Root>
-				</div>,
+				<button
+					key="address"
+					type="button"
+					onClick={() => copy(address)}
+					className="w-full text-left cursor-pointer press-down text-tertiary"
+					title={address}
+					aria-label={notifying ? 'Address copied' : 'Copy address'}
+				>
+					<div className="flex items-center gap-[8px] mb-[8px]">
+						<span className="capitalize">Address</span>
+						<div className="relative flex items-center">
+							<CopyIcon className="w-[12px] h-[12px]" />
+							{notifying && (
+								<span className="absolute left-[calc(100%+8px)]">copied</span>
+							)}
+						</div>
+					</div>
+					<p className="font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch]">
+						{address}
+					</p>
+				</button>,
 				...(virtualAddressParts
 					? [
 							{
 								label: 'Master ID',
-								value: <Hex value={virtualAddressParts.masterId} />,
+								value: (
+									<span className="text-primary font-mono">
+										{virtualAddressParts.masterId}
+									</span>
+								),
 							},
 							{
-								label: <span {...styles.normalCase()}>User tag</span>,
-								value: <Hex value={virtualAddressParts.userTag} />,
+								label: 'User Tag',
+								value: (
+									<span className="text-primary font-mono">
+										{virtualAddressParts.userTag}
+									</span>
+								),
 							},
 						]
 					: []),
@@ -90,7 +121,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 					? [
 							{
 								label: 'Holdings',
-								value: <span {...styles.secondary()}>Forwarded</span>,
+								value: <span className="text-tertiary">Forwarded</span>,
 							},
 						]
 					: !hideHoldings
@@ -99,12 +130,19 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 									label: 'Holdings',
 									value: (
 										<ClientOnly
-											fallback={<span {...styles.secondary()}>…</span>}
+											fallback={<span className="text-tertiary">…</span>}
 										>
 											{totalValue !== undefined ? (
-												<Amount currency="USD" value={totalValue} />
+												<span
+													className="text-primary"
+													title={PriceFormatter.format(totalValue)}
+												>
+													{PriceFormatter.format(totalValue, {
+														format: 'short',
+													})}
+												</span>
 											) : (
-												<span {...styles.secondary()}>…</span>
+												<span className="text-tertiary">…</span>
 											)}
 										</ClientOnly>
 									),
@@ -114,14 +152,17 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 				{
 					label: 'Active',
 					value: (
-						<ClientOnly fallback={<span {...styles.secondary()}>…</span>}>
+						<ClientOnly fallback={<span className="text-tertiary">…</span>}>
 							{lastActivityTimestamp ? (
 								<RelativeTime
 									timestamp={lastActivityTimestamp}
-									className={styles.primary().className}
+									className="text-primary"
 								/>
 							) : (
-								<span {...styles.secondary()} title="Last activity unavailable">
+								<span
+									className="text-tertiary"
+									title="Last activity unavailable"
+								>
 									—
 								</span>
 							)}
@@ -131,14 +172,17 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 				{
 					label: 'Created',
 					value: (
-						<ClientOnly fallback={<span {...styles.secondary()}>…</span>}>
+						<ClientOnly fallback={<span className="text-tertiary">…</span>}>
 							{createdTimestamp ? (
 								<RelativeTime
 									timestamp={createdTimestamp}
-									className={styles.primary().className}
+									className="text-primary"
 								/>
 							) : (
-								<span {...styles.secondary()} title="Creation time unavailable">
+								<span
+									className="text-tertiary"
+									title="Creation time unavailable"
+								>
 									—
 								</span>
 							)}
@@ -170,43 +214,4 @@ export declare namespace AccountCard {
 			  }
 			| undefined
 	}
-}
-
-namespace styles {
-	export const tokenTitle = style({
-		gap: '12',
-		minWidth: '0 !custom',
-		paddingBlock: '12',
-		width: '100% !custom',
-	})
-
-	export const tokenText = style({ flex: 1, minWidth: '0 !custom' })
-
-	export const tokenName = style({
-		color: 'foreground',
-		display: 'block',
-		overflowWrap: 'anywhere',
-	})
-
-	export const tokenSymbol = style({
-		color: 'gray.900',
-		display: 'block',
-		marginTop: '2px !custom',
-		overflowWrap: 'anywhere',
-		typography: 'label.12',
-	})
-
-	export const address = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0 !custom',
-		width: '100% !custom',
-	})
-
-	export const normalCase = style({ textTransform: 'none' })
-
-	export const primary = style({ color: 'foreground' })
-
-	export const secondary = style({ color: 'gray.900' })
 }

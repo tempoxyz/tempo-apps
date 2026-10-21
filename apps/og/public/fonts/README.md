@@ -2,9 +2,14 @@
 
 Fonts are served through the Worker's ASSETS binding so image rendering does not depend on a third-party CDN at runtime.
 
-The cards use the Tempo Design System (`@tempoxyz/ds` 0.2.2) faces, copied unchanged from its `dist/fonts`:
+Current cards use the bundled Regen typography assets:
 
-- `Inter-Variable.woff2`: Inter 4.1 variable font, for all text (see `Inter-LICENSE.txt`, SIL OFL 1.1).
-- `GeistMono-Variable.woff2`: Geist Mono variable font (`geist` 1.8.1), for addresses and hashes (see `Geist-LICENSE.txt`, SIL OFL 1.1).
+- `Pilat-Regular.woff2`: Pilat Regular, weight 400, from the Tempo Regen reference.
+- `Pilat-Demi.woff2`: Pilat Demi, used for weights 500 and 600.
+- `JetBrainsMono-Light.woff2`: JetBrains Mono Light, weight 300, for hashes and code.
 
-Takumi maps each requested weight onto the `wght` axis, so one file per family covers the TDS weights 450, 500, 550 and 600.
+The following assets remain from the previous design and are not loaded by current card templates:
+
+- `GeistMono-Regular.woff2`: `geist@1.4.2`, `dist/fonts/geist-mono/GeistMono-Regular.woff2` (see `Geist-LICENSE.txt`).
+- `inter-latin-500-normal.woff2`: `@fontsource/inter@5.2.8`, `files/inter-latin-500-normal.woff2` (see `Inter-LICENSE.txt`).
+- `Pilat-Book.otf`: existing Tempo brand font.

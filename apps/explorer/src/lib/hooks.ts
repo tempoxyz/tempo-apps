@@ -11,6 +11,41 @@ export function useIsMounted() {
 	return isMounted
 }
 
+export function useCopy(props: useCopy.Props = { timeout: 800 }) {
+	const { timeout } = props
+
+	const [notifying, setNotifying] = React.useState(false)
+	const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	const copy: useCopy.Result['copy'] = React.useCallback(
+		async (value: string) => {
+			if (timer.current) clearTimeout(timer.current)
+			try {
+				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
+				await navigator.clipboard.writeText(value)
+				setNotifying(true)
+				timer.current = setTimeout(() => setNotifying(false), timeout)
+			} catch (error) {
+				console.error('Failed to copy text: ', error)
+			}
+		},
+		[timeout],
+	)
+
+	return { copy, notifying }
+}
+
+export declare namespace useCopy {
+	type Props = {
+		timeout?: number | undefined
+	}
+
+	type Result = {
+		copy: (value: string) => Promise<void>
+		notifying: boolean
+	}
+}
+
 export function useMediaQuery(query: string) {
 	// Use null to indicate "unknown" state during SSR
 	const [matches, setMatches] = React.useState<boolean | null>(null)
@@ -26,6 +61,34 @@ export function useMediaQuery(query: string) {
 
 	// Return false during SSR/initial render to ensure consistent hydration
 	return matches ?? false
+}
+
+export function useCopyPermalink(props: useCopyPermalink.Props) {
+	const { fragment } = props
+
+	const { copy: copyLink, notifying: linkNotifying } = useCopy({
+		timeout: 2_000,
+	})
+
+	const handleCopyPermalink = React.useCallback(() => {
+		const url = new URL(window.location.href)
+		url.hash = fragment
+		void copyLink(url.toString())
+	}, [fragment, copyLink])
+
+	return { copyLink, linkNotifying, handleCopyPermalink }
+}
+
+export declare namespace useCopyPermalink {
+	type Props = {
+		fragment: string
+	}
+
+	type Result = {
+		linkNotifying: boolean
+		handleCopyPermalink: () => Promise<void>
+		copyLink?: (value: string) => Promise<void>
+	}
 }
 
 export function useDownload(props: useDownload.Props) {
@@ -113,26 +176,37 @@ export function usePermalinkHighlight(props: usePermalinkHighlight.Props) {
 
 		onTargetChange?.(true)
 
+		const highlightClasses = [
+			'ring-1',
+			'ring-accent',
+			'ring-offset-1',
+			'transition-shadow',
+			'duration-500',
+		] as const
+
 		let highlightTimer: ReturnType<typeof setTimeout> | undefined
 		let fadeTimer: ReturnType<typeof setTimeout> | undefined
 		let initialTimer: ReturnType<typeof setTimeout> | undefined
 		let observerCleanup: (() => void) | undefined
 		let highlightedElement: HTMLElement | undefined
 
-		// `src/styles/globals.ts` draws the ring for each `data-permalink-highlight` state.
-		const removeHighlight = () => {
+		const removeHighlightClasses = () => {
 			if (!highlightedElement) return
-			delete highlightedElement.dataset.permalinkHighlight
+			highlightedElement.classList.remove(
+				...highlightClasses,
+				'ring-transparent',
+			)
 		}
 
 		const scrollAndHighlight = (element: HTMLElement) => {
 			highlightedElement = element
 			element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-			element.dataset.permalinkHighlight = 'on'
+			element.classList.add(...highlightClasses)
 			highlightTimer = setTimeout(() => {
-				element.dataset.permalinkHighlight = 'fading'
+				element.classList.remove('ring-accent')
+				element.classList.add('ring-transparent')
 				fadeTimer = setTimeout(() => {
-					delete element.dataset.permalinkHighlight
+					element.classList.remove(...highlightClasses, 'ring-transparent')
 				}, 500)
 			}, highlightDuration)
 		}
@@ -157,7 +231,7 @@ export function usePermalinkHighlight(props: usePermalinkHighlight.Props) {
 			clearTimeout(initialTimer)
 			clearTimeout(highlightTimer)
 			clearTimeout(fadeTimer)
-			removeHighlight()
+			removeHighlightClasses()
 			observerCleanup?.()
 		}
 	}, [elementId, highlightDuration, onTargetChange, hash])

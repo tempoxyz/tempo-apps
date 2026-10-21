@@ -1,58 +1,49 @@
 /**
- * The simulator's result pane, in reading order:
- *   1. the status, in the card header.
- *   2. the answer: the decoded error, the return value, or the primary event,
- *      as a callout. It is what the reader came for, so no tab hides it.
- *   3. headline metrics, compared with the on-chain transaction or the
- *      previous run when there is one.
- *   4. the evidence: Overview / Trace / State / Events / Gas, as tabs whose
- *      value lives in the URL. An empty tab is disabled rather than removed,
- *      so the layout does not rearrange itself between runs.
+ * The simulator's output pane.
+ *
+ * Three layers, in reading order:
+ *   1. the header — status, gas against its limit, block. Sticky, one line.
+ *   2. the answer — the decoded error, the return value, or the primary event.
+ *      This is the thing the user came for and it is never behind a tab.
+ *   3. the evidence — Trace / State / Events / Gas, as tabs whose index lives in
+ *      the URL. Tabs are disabled when empty rather than removed, so the layout
+ *      does not rearrange itself between runs.
  */
 
 import { Link } from '@tanstack/react-router'
-import {
-	Amount,
-	Button,
-	Callout,
-	ChoiceGroup,
-	formatHex,
-	Gauge,
-	Hex,
-	Rows,
-	style,
-	Table,
-	Tabs,
-	Tag,
-	Token,
-} from '@tempoxyz/ds'
 import type * as OxAddress from 'ox/Address'
-import * as Value from 'ox/Value'
 import * as React from 'react'
 import type { Log } from 'viem'
-import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
+import { TokenIcon } from '#comps/TokenIcon'
 import { TxEventDescription } from '#comps/TxEventDescription'
+import { cx } from '#lib/css'
 import type { parseKnownEvents } from '#lib/domain/known-events'
 import { preferredEventsFilter } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import type { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
 import { formatDecodedTraceErrorShort } from '#lib/domain/trace-errors'
+import { HexFormatter } from '#lib/formatting'
 import type {
 	SimulationAssetChange,
 	SimulationCallResult,
 	SimulationExecutionResult,
 	SimulationInput,
 } from '#lib/queries'
-import { link, linkHover, truncate } from '#styles/explorer'
+import type { TxTraceTree } from './TxTraceTree'
 import {
 	callLabel,
-	formatGasPercent,
-	gasPercent,
+	Chip,
+	Fact,
+	formatBalanceDelta,
+	GasRatio,
 	PanelEmpty,
 	signed,
 } from './SimulateShared'
-import type { TxTraceTree } from './TxTraceTree'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
+import CheckIcon from '~icons/lucide/check'
+import CircleAlertIcon from '~icons/lucide/circle-alert'
+import LoaderIcon from '~icons/lucide/loader-circle'
 
 export type OutputTab = 'overview' | 'trace' | 'state' | 'events' | 'gas'
 
@@ -64,124 +55,123 @@ export type OriginalMetrics = {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Status and metrics                                                         */
+/* Header                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** The run's state as one tag, for the card header. */
-export function SimulateStatus(props: {
-	execution: SimulationExecutionResult | undefined
-}): React.JSX.Element {
-	if (!props.execution)
-		return (
-			<Tag intent="info">
-				<Tag.Dot />
-				Simulating
-			</Tag>
-		)
-	const succeeded = props.execution.status === 'success'
-	return (
-		<Tag intent={succeeded ? 'positive' : 'negative'}>
-			<Tag.Dot />
-			{succeeded ? 'Succeeded' : 'Failed'}
-		</Tag>
-	)
-}
-
 /**
- * Headline numbers as metric tiles. With a baseline, each tile states its
- * change in words, such as `−1,200 vs on-chain`.
+ * Status, gas, and block on one line, with the actions.
+ *
+ * This replaces a 120px-tall card whose only job was to hold a check mark. The
+ * gas figure is `used / limit (percent)`: a bare "273,270 gas" answers nothing,
+ * and the ratio is the one number that tells you whether the call is close to
+ * running out.
  */
-export function SimulateMetrics(
-	props: SimulateMetrics.Props,
+export function SimulateResultHeader(
+	props: SimulateResultHeader.Props,
 ): React.JSX.Element {
-	const { baseline } = props
-	const against =
-		baseline?.kind === 'on-chain' ? 'vs on-chain' : 'vs previous run'
-	const change = (current: bigint, before: bigint | undefined) =>
-		before === undefined
-			? undefined
-			: current === before
-				? `No change ${against}`
-				: `${signed(current - before)} ${against}`
-	const statusChanged =
-		baseline && baseline.metrics.status !== props.status
-			? `${baseline.kind === 'on-chain' ? 'The on-chain transaction' : 'The previous run'} ${baseline.metrics.status === 'success' ? 'succeeded' : 'failed'}.`
-			: undefined
+	const { execution, input } = props
+	const succeeded = execution?.status === 'success'
+	const limit = props.gasLimit
 
 	return (
-		<div {...styles.metricsSection()}>
-			<dl {...styles.metrics()}>
-				<div {...styles.metric()}>
-					<dt {...styles.metricLabel()}>Gas used</dt>
-					<dd {...styles.metricValue()}>
-						<Gauge
-							aria-label="Gas used of the limit"
-							max={Math.max(Number(props.gasLimit), 1)}
-							size="small"
-							value={Math.min(Number(props.gasUsed), Number(props.gasLimit))}
-						/>
-						<span>
-							{props.gasUsed.toLocaleString()}
-							<span {...styles.metricUnit()}>
-								{' '}
-								{formatGasPercent(gasPercent(props.gasUsed, props.gasLimit))}
-							</span>
+		<div className="sticky top-0 z-10 flex flex-wrap items-center gap-x-[14px] gap-y-[8px] border-b border-card-border bg-card-header/95 px-[16px] py-[10px] backdrop-blur">
+			{execution ? (
+				<span
+					className={cx(
+						'flex shrink-0 items-center gap-[6px] label-14',
+						succeeded ? 'text-primary' : 'text-negative',
+					)}
+				>
+					<span
+						className={cx(
+							'flex size-[18px] items-center justify-center rounded-full',
+							succeeded
+								? 'bg-base-content-positive/15 text-base-content-positive'
+								: 'bg-negative/15 text-negative',
+						)}
+					>
+						{succeeded ? (
+							<CheckIcon className="size-[11px]" />
+						) : (
+							<CircleAlertIcon className="size-[11px]" />
+						)}
+					</span>
+					{verdictHeadline(execution)}
+				</span>
+			) : (
+				<span className="flex shrink-0 items-center gap-[6px] label-14 text-tertiary">
+					<LoaderIcon className="size-[13px] animate-spin" />
+					Simulating…
+				</span>
+			)}
+
+			{props.stale && (
+				<Chip tone="warning" title="Inputs changed since this ran">
+					stale
+				</Chip>
+			)}
+
+			{execution && (
+				<>
+					{/* Same shape as the transaction page's Gas Used row, rendered by
+					    the one component the Gas tab's meter also uses. */}
+					<span
+						className="shrink-0"
+						title={`Gas used by the simulated call, out of a ${limit.toLocaleString()} limit. Estimated — no fee is charged or synthesized.`}
+					>
+						<span className="type-card-data text-tertiary">gas </span>
+						<GasRatio used={execution.gasUsed} limit={limit} />
+					</span>
+
+					<span
+						className="shrink-0 type-card-data"
+						title={
+							input.block === 'latest'
+								? 'Executed at the end of the latest block.'
+								: 'Executed at the end of this block. Later transactions in the next block are not applied.'
+						}
+					>
+						<span className="text-tertiary">
+							{input.block === 'latest' ? 'after ' : 'after block '}
 						</span>
-					</dd>
-					<dd {...styles.metricNote()}>
-						{change(props.gasUsed, baseline?.metrics.gasUsed) ??
-							`Limit ${props.gasLimit.toLocaleString()}`}
-					</dd>
-				</div>
-				<div {...styles.metric()}>
-					<dt {...styles.metricLabel()}>Events</dt>
-					<dd {...styles.metricValue()}>{props.events.toLocaleString()}</dd>
-					{baseline && (
-						<dd {...styles.metricNote()}>
-							{change(BigInt(props.events), BigInt(baseline.metrics.events))}
-						</dd>
-					)}
-				</div>
-				<div {...styles.metric()}>
-					<dt {...styles.metricLabel()}>Balance changes</dt>
-					<dd {...styles.metricValue()}>{props.balances.toLocaleString()}</dd>
-					{baseline && (
-						<dd {...styles.metricNote()}>
-							{change(
-								BigInt(props.balances),
-								BigInt(baseline.metrics.balances),
-							)}
-						</dd>
-					)}
-				</div>
-				<div {...styles.metric()}>
-					<dt {...styles.metricLabel()}>Block</dt>
-					<dd {...styles.metricValue()}>
-						{props.blockNumber > 0n ? props.blockNumber.toLocaleString() : '—'}
-					</dd>
-					<dd {...styles.metricNote()}>{props.pinned ? 'Pinned' : 'Latest'}</dd>
-				</div>
-			</dl>
-			{statusChanged && <p {...styles.metricNote()}>{statusChanged}</p>}
+						<span className="text-secondary">
+							{execution.blockNumber > 0n
+								? execution.blockNumber.toLocaleString()
+								: '—'}
+						</span>
+					</span>
+
+					<span className="shrink-0 type-card text-content-dimmed">
+						{networkName(input.chainId)}
+					</span>
+				</>
+			)}
 		</div>
 	)
 }
 
-export declare namespace SimulateMetrics {
+export declare namespace SimulateResultHeader {
 	interface Props {
-		status: 'success' | 'reverted'
-		gasUsed: bigint
+		execution: SimulationExecutionResult | undefined
+		input: SimulationInput
 		/** Gas available to everything in view; a batch's is per call × calls. */
 		gasLimit: bigint
-		events: number
-		balances: number
-		blockNumber: bigint
-		pinned: boolean
-		/** What the run is compared with, when there is something to compare. */
-		baseline?:
-			| { kind: 'on-chain' | 'previous'; metrics: OriginalMetrics }
-			| undefined
+		stale: boolean
 	}
+}
+
+function verdictHeadline(execution: SimulationExecutionResult): string {
+	if (execution.calls.length <= 1)
+		return execution.status === 'success' ? 'Succeeded' : 'Reverted'
+	const failed = execution.calls.find((call) => call.status === 'reverted')
+	if (!failed) return `All ${execution.calls.length} calls succeeded`
+	return `Reverted in call ${failed.index + 1} of ${execution.calls.length}`
+}
+
+function networkName(chainId: number): string {
+	if (chainId === 4217) return 'mainnet'
+	if (chainId === 42431) return 'moderato'
+	return 'devnet'
 }
 
 /* -------------------------------------------------------------------------- */
@@ -189,37 +179,55 @@ export declare namespace SimulateMetrics {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Counts live in the labels, so the tab bar is also the summary. An empty tab
- * is disabled, not hidden, so the layout stays put between runs.
- *
- * Panels are passed as children so they sit inside the same `Tabs.Root`.
+ * Counts live in the label so the tab bar is also the summary. An empty tab is
+ * disabled, not hidden: sections that come and go between runs make the layout
+ * jump and stop anyone learning where things are.
  */
 export function SimulateTabs(props: SimulateTabs.Props): React.JSX.Element {
 	return (
-		<Tabs.Root
-			value={props.value}
-			onValueChange={(value) => {
-				const tab = props.tabs.find((candidate) => candidate.id === value)
-				if (tab) props.onChange(tab.id)
-			}}
+		<div
+			role="tablist"
+			className="flex shrink-0 items-center gap-[2px] overflow-x-auto border-b border-card-border px-[10px] no-scrollbar"
 		>
-			<Tabs.List activateOnFocus aria-label="Evidence" size="small">
-				{props.tabs.map((tab) => (
-					<Tabs.Tab
+			{props.tabs.map((tab) => {
+				const active = tab.id === props.value
+				const empty = tab.count === 0 && tab.id !== 'overview'
+				return (
+					<button
 						key={tab.id}
-						value={tab.id}
-						disabled={tab.count === 0 && tab.id !== 'overview'}
+						type="button"
+						role="tab"
+						aria-selected={active}
+						disabled={empty}
+						onClick={() => props.onChange(tab.id)}
+						className={cx(
+							'relative flex h-[34px] shrink-0 items-center gap-[6px] px-[8px] copy-13 transition-colors',
+							empty
+								? 'cursor-default text-content-dimmed'
+								: 'cursor-pointer press-down',
+							active
+								? 'font-medium text-primary'
+								: !empty && 'text-tertiary hover:text-secondary',
+						)}
 					>
 						{tab.label}
 						{tab.count !== undefined && (
-							<span {...styles.tabCount()}>{tab.count}</span>
+							<span
+								className={cx(
+									'type-card-data',
+									active ? 'text-tertiary' : 'text-content-dimmed',
+								)}
+							>
+								{tab.count}
+							</span>
 						)}
-					</Tabs.Tab>
-				))}
-				<Tabs.Indicator />
-			</Tabs.List>
-			{props.children}
-		</Tabs.Root>
+						{active && (
+							<span className="absolute inset-x-[4px] -bottom-px h-[2px] rounded-full bg-accent" />
+						)}
+					</button>
+				)
+			})}
+		</div>
 	)
 }
 
@@ -232,8 +240,6 @@ export declare namespace SimulateTabs {
 		}>
 		value: OutputTab
 		onChange: (tab: OutputTab) => void
-		/** `Tabs.Panel`s for the tabs above. */
-		children?: React.ReactNode
 	}
 }
 
@@ -242,45 +248,37 @@ export declare namespace SimulateTabs {
 /* -------------------------------------------------------------------------- */
 
 /**
- * The one thing the reader came for, as a callout beside the result.
+ * The one thing the user came for, above the evidence and never behind a tab.
  *
- * For a read call the return value is the answer. For a revert it is the
- * decoded error with named arguments. For a state change it is the
- * interpreted event.
+ * For a read call the return value *is* the answer. For a revert it is the
+ * decoded error with named arguments. For a state change it is the interpreted
+ * event.
  */
 export function SimulateAnswer(props: SimulateAnswer.Props): React.JSX.Element {
 	const { execution, tree, failedNode } = props
+	const succeeded = execution.status === 'success'
 
-	if (execution.status !== 'success') {
-		const failed = execution.calls.find((call) => call.status === 'reverted')
+	if (!succeeded)
 		return (
 			<FailureAnswer
-				position={
-					failed && execution.calls.length > 1
-						? `In call ${failed.index + 1} of ${execution.calls.length}, `
-						: undefined
-				}
 				failedNode={failedNode}
 				errorArgs={props.errorArgs}
 				returnData={execution.returnData}
 				onJump={props.onJumpToFrame}
 			/>
 		)
-	}
-
-	const events =
-		execution.logs.length === 0
-			? 'no events'
-			: plural(execution.logs.length, 'event')
 
 	if (execution.calls.length > 1)
 		return (
-			<Success>
-				All {execution.calls.length} calls ran in order and emitted {events}
-				{execution.assetChanges.length > 0 &&
-					`, with ${plural(execution.assetChanges.length, 'balance change')}`}
-				.
-			</Success>
+			<AnswerShell>
+				<p className="copy-13 text-secondary">
+					{execution.calls.length} calls ran in order · {execution.logs.length}{' '}
+					event
+					{execution.logs.length === 1 ? '' : 's'}
+					{execution.assetChanges.length > 0 &&
+						` · ${execution.assetChanges.length} balance change${execution.assetChanges.length === 1 ? '' : 's'}`}
+				</p>
+			</AnswerShell>
 		)
 
 	const event =
@@ -288,27 +286,41 @@ export function SimulateAnswer(props: SimulateAnswer.Props): React.JSX.Element {
 	const call = tree ? callLabel(tree) : undefined
 	const returned = tree?.decodedOutput
 
-	// A read call's return value is the entire answer, so it leads.
+	// A read call's return value is the entire answer — lead with it.
 	if (returned)
 		return (
-			<Success>
-				<span {...styles.code()}>{call}</span> returned{' '}
-				<span {...styles.code()}>{returned}</span>.
-			</Success>
+			<AnswerShell>
+				<p className="font-sans copy-13">
+					<span className="text-tertiary">
+						<span className="font-mono">{call}</span> returned{' '}
+					</span>
+					<span className="font-mono text-primary">{returned}</span>
+				</p>
+			</AnswerShell>
 		)
 
 	if (event)
 		return (
-			<Success>
-				<TxEventDescription event={event} />
-			</Success>
+			<AnswerShell>
+				<div className="copy-13 text-secondary">
+					<TxEventDescription event={event} />
+				</div>
+			</AnswerShell>
 		)
 
 	return (
-		<Success>
-			{call ? <span {...styles.code()}>{call}</span> : 'The call'} completed and
-			emitted {events}.
-		</Success>
+		<AnswerShell>
+			<p className="copy-13 text-tertiary">
+				{call && (
+					<>
+						<span className="font-mono">{call}</span> completed.{' '}
+					</>
+				)}
+				{execution.logs.length === 0
+					? 'No events emitted.'
+					: `${execution.logs.length} event${execution.logs.length === 1 ? '' : 's'} emitted.`}
+			</p>
+		</AnswerShell>
 	)
 }
 
@@ -323,25 +335,11 @@ export declare namespace SimulateAnswer {
 	}
 }
 
-function plural(count: number, noun: string): string {
-	return `${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`
-}
-
-function Success(props: { children: React.ReactNode }): React.JSX.Element {
-	return (
-		<Callout intent="positive">
-			<Callout.Icon />
-			{/* Return values run long, so the message wraps anywhere. */}
-			<Callout.Content {...styles.calloutText()}>
-				{props.children}
-			</Callout.Content>
-		</Callout>
-	)
+function AnswerShell(props: { children: React.ReactNode }): React.JSX.Element {
+	return <div className="px-[16px] py-[12px]">{props.children}</div>
 }
 
 function FailureAnswer(props: {
-	/** Which call of a batch failed, as the sentence's opening words. */
-	position: string | undefined
 	failedNode: TxTraceTree.Node | null
 	errorArgs: ReturnType<typeof formatTraceErrorArgs>
 	returnData: string
@@ -350,75 +348,190 @@ function FailureAnswer(props: {
 	const { failedNode, errorArgs } = props
 	const decoded = failedNode?.decodedError
 	const call = failedNode ? callLabel(failedNode) : undefined
-	const errorName =
-		decoded && !decoded.undecoded
-			? formatDecodedTraceErrorShort(decoded)
-			: undefined
-	const raw = decoded?.raw ?? props.returnData
+	const errorName = decoded
+		? decoded.undecoded
+			? undefined
+			: formatDecodedTraceErrorShort(decoded)
+		: undefined
 
 	return (
-		<div {...styles.failure()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				{/* Revert data runs long, so the message wraps anywhere. */}
-				<Callout.Content {...styles.calloutText()}>
-					{props.position}
-					{call ? (
-						<span {...styles.code()}>{call}</span>
-					) : props.position ? (
-						'the call'
-					) : (
-						'The call'
-					)}{' '}
-					reverted
-					{errorName ? (
-						<>
-							{' with '}
-							<span {...styles.code()}>{errorName}</span>.
-						</>
-					) : raw && raw !== '0x' ? (
-						<>
-							{' with revert data that no known ABI decodes.'}
-							<Hex.Root value={raw} {...styles.revertData()}>
-								<Hex.Text />
-								<Hex.Copy aria-label="Copy revert data" />
-							</Hex.Root>
-						</>
-					) : (
-						' and returned no revert data.'
-					)}
-				</Callout.Content>
-				{failedNode?.hasFailure && failedNode.frameIndex > 0 && (
-					<Callout.Action onClick={() => props.onJump(failedNode.id)}>
-						Show in trace
-					</Callout.Action>
-				)}
-			</Callout>
+		<div className="flex flex-col gap-[8px] border-b border-card-border bg-negative/[0.03] px-[16px] py-[12px]">
+			<p className="font-sans copy-13 text-secondary">
+				{call && <span className="font-mono">{call} </span>}
+				<span className="text-tertiary">reverted</span>
+			</p>
 
-			{errorName && errorArgs.length > 0 && (
-				<Rows.Root dividers="full" size="small">
-					{errorArgs.map((arg) => (
-						<Rows.Row key={arg.label} spacing="none">
-							<Rows.Label>{arg.label}</Rows.Label>
-							<span title={arg.title} {...styles.rowValue()}>
-								<span {...styles.code()}>{arg.value}</span>
-								{arg.note && <span {...styles.argNote()}>{arg.note}</span>}
-							</span>
-						</Rows.Row>
-					))}
-				</Rows.Root>
+			{errorName ? (
+				<div className="flex flex-col gap-[6px] rounded-body border border-negative/25 bg-negative/6 px-[11px] py-[9px]">
+					<span className="font-sans label-13 text-negative">{errorName}</span>
+					{errorArgs.length > 0 && (
+						<dl className="grid gap-x-[14px] gap-y-[3px] type-card-data min-[520px]:grid-cols-[max-content_minmax(0,1fr)]">
+							{errorArgs.map((arg) => (
+								<React.Fragment key={arg.label}>
+									<dt className="text-tertiary">{arg.label}</dt>
+									<dd
+										className="min-w-0 break-all text-primary"
+										title={arg.title}
+									>
+										<span className="font-mono">{arg.value}</span>
+										{arg.note && (
+											<span className="ml-[8px] text-content-dimmed">
+												{arg.note}
+											</span>
+										)}
+									</dd>
+								</React.Fragment>
+							))}
+						</dl>
+					)}
+				</div>
+			) : (
+				<div className="rounded-body border border-negative/25 bg-negative/6 px-[11px] py-[9px] type-card-data break-all text-secondary font-mono">
+					{decoded?.raw ?? props.returnData ?? 'No revert data returned.'}
+				</div>
+			)}
+
+			{failedNode?.hasFailure && failedNode.frameIndex > 0 && (
+				<button
+					type="button"
+					onClick={() => props.onJump(failedNode.id)}
+					className="inline-flex w-fit items-center gap-[4px] type-card text-accent cursor-pointer press-down hover:underline"
+				>
+					<ArrowRightIcon className="size-[11px]" />
+					Show {call ?? 'the failing frame'} in the trace
+				</button>
 			)}
 		</div>
 	)
 }
 
 /* -------------------------------------------------------------------------- */
-/* Batch controls                                                             */
+/* Panels                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/** `vs. on-chain` / `vs. previous run` chips beside the answer. */
+export function SimulateDiff(props: {
+	label: string
+	original: OriginalMetrics
+	execution: SimulationExecutionResult
+}): React.JSX.Element | null {
+	const gasDiff = props.execution.gasUsed - props.original.gasUsed
+	const eventDiff = props.execution.logs.length - props.original.events
+	const balanceDiff =
+		props.execution.assetChanges.length - props.original.balances
+	const statusChanged = props.execution.status !== props.original.status
+	if (!statusChanged && gasDiff === 0n && eventDiff === 0 && balanceDiff === 0)
+		return (
+			<div className="flex items-center gap-[6px] border-b border-solid border-card-border px-[16px] py-[7px] type-card">
+				<span className="text-tertiary">{props.label}</span>
+				<Chip tone="neutral">no change</Chip>
+			</div>
+		)
+
+	return (
+		<div className="flex flex-wrap items-center gap-[6px] border-b border-solid border-card-border px-[16px] py-[7px] type-card">
+			<span className="mr-[2px] text-tertiary">{props.label}</span>
+			{statusChanged && (
+				<Chip tone="negative">
+					{props.original.status} → {props.execution.status}
+				</Chip>
+			)}
+			{gasDiff !== 0n && (
+				<Chip tone={gasDiff < 0n ? 'positive' : 'neutral'}>
+					gas {signed(gasDiff)}
+				</Chip>
+			)}
+			{eventDiff !== 0 && <Chip>events {signed(BigInt(eventDiff))}</Chip>}
+			{balanceDiff !== 0 && <Chip>balances {signed(BigInt(balanceDiff))}</Chip>}
+		</div>
+	)
+}
+
 /**
- * Which call of a batch every tab below shows. All calls is the default,
- * because a batch is one transaction; picking a call narrows the evidence.
+ * What was actually run, as a two-column fact grid.
+ *
+ * Overview used to hold only balance changes, so a reverting call with no
+ * transfers landed on an empty default tab. These are the facts you check when
+ * a result surprises you — "did it run what I think it ran" — and they belong
+ * in front of the evidence, not behind it.
+ */
+export function SimulateOverview(props: {
+	input: SimulationInput
+	execution: SimulationExecutionResult
+	/** Same allowance the header uses, so the two never disagree. */
+	gasLimit: bigint
+	functionLabel: string | undefined
+	assetChanges: readonly SimulationAssetChange[]
+	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
+}): React.JSX.Element {
+	const { input, execution } = props
+	const limit = props.gasLimit
+	return (
+		<div className="flex flex-col">
+			<dl className="grid gap-x-[28px] gap-y-[7px] px-[16px] py-[12px] min-[720px]:grid-cols-2">
+				<Fact label="From">
+					<Address address={input.from} />
+				</Fact>
+				<Fact label="Function">
+					{props.functionLabel ?? (
+						<span className="text-tertiary">unknown selector</span>
+					)}
+				</Fact>
+				<Fact label="To">
+					<Address address={input.to} />
+				</Fact>
+				<Fact label="Value">
+					{input.value === '0' ? (
+						<span className="text-tertiary">0</span>
+					) : (
+						input.value
+					)}
+				</Fact>
+				<Fact label="Gas used">
+					{execution.gasUsed.toLocaleString()}
+					<span className="text-content-dimmed">
+						{' / '}
+						{limit.toLocaleString()}
+					</span>
+				</Fact>
+				<Fact
+					label="Block"
+					hint={
+						input.block === 'latest'
+							? 'Executed at the end of the latest block.'
+							: 'Executed at the end of this block. Later transactions in the next block are not applied.'
+					}
+				>
+					{execution.blockNumber.toLocaleString()}
+					<span className="text-content-dimmed">
+						{input.block === 'latest' ? ' latest' : ' pinned'}
+					</span>
+				</Fact>
+			</dl>
+			{/* A section title, not another column label. The two used to be the same
+			    13px tertiary and stacked directly on top of each other, so the table
+			    read as four grey label rows with data somewhere in it. */}
+			<div className="flex items-center gap-[8px] border-y border-solid border-card-border px-[16px] py-[8px]">
+				<span className="label-13 text-primary">Balance changes</span>
+				<span className="type-card-data text-tertiary">
+					{props.assetChanges.length}
+				</span>
+			</div>
+			<SimulateBalances
+				assetChanges={props.assetChanges}
+				tokenMetadata={props.tokenMetadata}
+			/>
+		</div>
+	)
+}
+
+/**
+ * Which call of a batch every tab below is showing.
+ *
+ * A row of numbered squares told you nothing: not what a call does, not which
+ * one failed without reading the colour of a 22px glyph, and not that clicking
+ * one filters the whole pane. Each chip now names its function, carries its
+ * outcome, and the selected one is filled rather than outlined.
  */
 export function SimulateStepBar(props: {
 	calls: readonly SimulationCallResult[]
@@ -428,42 +541,50 @@ export function SimulateStepBar(props: {
 	step: number | undefined
 	onSelect: (index: number | undefined) => void
 }): React.JSX.Element {
-	const labelId = React.useId()
 	const failed = props.calls.filter((call) => call.status === 'reverted').length
 	return (
-		<div {...styles.stepBar()}>
-			<span id={labelId} {...styles.stepLabel()}>
-				Showing
-			</span>
-			<ChoiceGroup.Root
-				aria-labelledby={labelId}
-				onValueChange={(value) =>
-					props.onSelect(value === 'all' ? undefined : Number(value))
-				}
-				size="small"
-				value={props.step === undefined ? 'all' : String(props.step)}
-				variant="chips"
-				{...styles.chips()}
+		<div className="flex flex-wrap items-center gap-[6px] border-b border-card-border px-[16px] py-[8px]">
+			<span className="mr-[2px] shrink-0 type-card text-tertiary">Showing</span>
+			{/* A batch is one transaction, so seeing all of it is the default; the
+			    per-call chips narrow the evidence rather than switching between
+			    unrelated views. */}
+			<button
+				type="button"
+				onClick={() => props.onSelect(undefined)}
+				title="Every call of the batch, in order"
+				className={cx(
+					'flex h-[28px] shrink-0 items-center gap-[6px] rounded-body border px-[8px] type-card cursor-pointer press-down transition-colors',
+					props.step === undefined
+						? 'border-accent bg-accent/10 font-medium text-primary'
+						: 'border-card-border text-tertiary hover:border-tertiary/40 hover:text-secondary',
+				)}
 			>
-				<ChoiceGroup.Item value="all">
-					All {props.calls.length}
-					{failed > 0 && `, ${failed} failed`}
-				</ChoiceGroup.Item>
-				{props.calls.map((call) => (
-					<ChoiceGroup.Item key={call.index} value={String(call.index)}>
-						{call.index + 1}. {props.labels[call.index] ?? 'call()'}
-						{call.status === 'reverted' && ', failed'}
-					</ChoiceGroup.Item>
-				))}
-			</ChoiceGroup.Root>
+				All {props.calls.length}
+				{failed > 0 && (
+					<span className="font-sans text-negative">{failed} failed</span>
+				)}
+			</button>
+			<span className="shrink-0 text-content-dimmed">·</span>
+			{props.calls.map((call) => (
+				<StepChip
+					key={call.index}
+					call={call}
+					label={props.labels[call.index] ?? 'call()'}
+					total={props.calls.length}
+					selected={call.index === props.step}
+					onSelect={() => props.onSelect(call.index)}
+				/>
+			))}
 		</div>
 	)
 }
 
 /**
- * A call's heading above its own trace, when every call of a batch shows at
- * once. The batch stays visibly N calls rather than being stitched into one
- * synthetic tree.
+ * A call's heading above its own trace, when every call is shown at once.
+ *
+ * The batch stays visibly N calls rather than being stitched into one synthetic
+ * tree: which call you are looking at is never in question, and no gas total or
+ * target address has to be invented for a root frame that does not exist.
  */
 export function SimulateCallHeading(props: {
 	call: SimulationCallResult
@@ -476,124 +597,100 @@ export function SimulateCallHeading(props: {
 	const failed = call.status === 'reverted'
 
 	return (
-		<div {...styles.callHeading()}>
-			<h3 {...styles.callTitle()}>
-				Call {call.index + 1} of {props.total}
-			</h3>
-			<Tag
-				intent={failed ? 'negative' : 'positive'}
-				size="small"
-				{...styles.shrink()}
+		<div className="flex flex-wrap items-center gap-[8px] border-b border-solid border-card-border bg-base-alt px-[16px] py-[7px]">
+			<span
+				className={cx(
+					'flex size-[16px] shrink-0 items-center justify-center rounded-[4px] font-mono label-12',
+					failed
+						? 'bg-negative/15 text-negative'
+						: 'bg-base-content-positive/15 text-base-content-positive',
+				)}
+				title={failed ? 'This call reverted' : 'This call succeeded'}
 			>
-				<Tag.Dot />
-				{failed ? 'Failed' : 'Succeeded'}
-			</Tag>
-			<span {...cx(styles.code(), styles.primary(), truncate())}>{label}</span>
-			<span {...cx(styles.number(), styles.secondary(), styles.pushRight())}>
+				{failed ? '✗' : '✓'}
+			</span>
+			<span className="shrink-0 type-card text-tertiary">
+				Call {call.index + 1} of {props.total}
+			</span>
+			<span
+				className={cx(
+					'min-w-0 truncate type-card-data',
+					failed ? 'text-negative' : 'text-primary',
+				)}
+			>
+				{label}
+			</span>
+			<span className="ml-auto shrink-0 type-card-data text-tertiary">
 				{call.gasUsed.toLocaleString()} gas
 			</span>
-			<Button
-				size="small"
-				variant="text"
+			<button
+				type="button"
 				onClick={props.onIsolate}
-				{...styles.shrink()}
+				title="Show only this call"
+				className="shrink-0 type-card text-accent cursor-pointer press-down hover:underline"
 			>
-				Show only this call
-			</Button>
+				Isolate
+			</button>
 		</div>
 	)
 }
 
-/* -------------------------------------------------------------------------- */
-/* Panels                                                                     */
-/* -------------------------------------------------------------------------- */
-
-/**
- * What ran, as the details of one record, then the balance changes. These are
- * the facts to check when a result surprises you.
- */
-export function SimulateOverview(props: {
-	input: SimulationInput
-	execution: SimulationExecutionResult
-	functionLabel: string | undefined
-	network: string
-	assetChanges: readonly SimulationAssetChange[]
-	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
+function StepChip(props: {
+	call: SimulationCallResult
+	label: string
+	total: number
+	selected: boolean
+	onSelect: () => void
 }): React.JSX.Element {
-	const { input, execution } = props
-	const balancesId = React.useId()
+	const { call, label, selected } = props
+	const failed = call.status === 'reverted'
+
 	return (
-		<div {...styles.column()}>
-			<Rows.Root dividers="full" size="small">
-				<Rows.Row>
-					<Rows.Label>From</Rows.Label>
-					<span {...styles.address()}>
-						<Address address={input.from} align="end" />
-					</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>To</Rows.Label>
-					<span {...styles.address()}>
-						<Address address={input.to} align="end" />
-					</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Function</Rows.Label>
-					{props.functionLabel ? (
-						<span {...cx(styles.code(), styles.rowValue())}>
-							{props.functionLabel}
-						</span>
-					) : (
-						<span {...styles.secondary()}>Unknown selector</span>
-					)}
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Value</Rows.Label>
-					<span {...styles.number()}>{input.value}</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Block</Rows.Label>
-					<span {...styles.number()}>
-						{execution.blockNumber.toLocaleString()}
-						<span {...styles.secondary()}>
-							{input.block === 'latest' ? ' (latest)' : ' (pinned)'}
-						</span>
-					</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Network</Rows.Label>
-					{props.network}
-				</Rows.Row>
-				{props.assetChanges.length === 0 && (
-					<Rows.Row>
-						<Rows.Label>Balance changes</Rows.Label>
-						<span {...styles.secondary()}>None</span>
-					</Rows.Row>
-				)}
-			</Rows.Root>
-			{props.assetChanges.length > 0 && (
-				<section aria-labelledby={balancesId}>
-					<h3 id={balancesId} {...styles.sectionTitle()}>
-						Balance changes
-					</h3>
-					<SimulateBalances
-						assetChanges={props.assetChanges}
-						tokenMetadata={props.tokenMetadata}
-					/>
-				</section>
+		<button
+			type="button"
+			onClick={props.onSelect}
+			title={`Call ${call.index + 1} of ${props.total} — ${call.to}${failed ? ' · reverted' : ' · succeeded'}`}
+			className={cx(
+				'flex h-[28px] shrink-0 items-center gap-[6px] rounded-body border pr-[8px] pl-[5px] type-card cursor-pointer press-down transition-colors',
+				selected
+					? 'border-accent bg-accent/10 text-primary'
+					: 'border-card-border text-tertiary hover:border-tertiary/40 hover:text-secondary',
 			)}
-		</div>
+		>
+			<span
+				className={cx(
+					'flex size-[15px] shrink-0 items-center justify-center rounded-[4px] font-mono label-12',
+					failed
+						? 'bg-negative/15 text-negative'
+						: 'bg-base-content-positive/15 text-base-content-positive',
+				)}
+			>
+				{failed ? '✗' : '✓'}
+			</span>
+			<span className="font-sans text-content-dimmed">{call.index + 1}</span>
+			<span className={cx('font-mono', selected && 'font-medium')}>
+				{label}
+			</span>
+		</button>
 	)
 }
 
 /**
- * Net token movement per account. Grouped by account because "what happened
- * to me" is the question; the account cell spans its rows.
+ * Net token movement per account.
+ *
+ * Grouped by account because "what happened to me" is the question. The account
+ * cell spans its rows rather than repeating, and rules are drawn only *between*
+ * accounts — a uniform rule on every row made a six-row table look like six
+ * unrelated facts, and the `↳` continuation glyph was doing the grouping work
+ * that a `rowSpan` does properly.
  */
 export function SimulateBalances(props: {
 	assetChanges: readonly SimulationAssetChange[]
 	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
 }): React.JSX.Element {
+	if (props.assetChanges.length === 0)
+		return <PanelEmpty>No balance changes.</PanelEmpty>
+
 	const byAccount = new Map<OxAddress.Address, SimulationAssetChange[]>()
 	for (const change of props.assetChanges) {
 		const existing = byAccount.get(change.address)
@@ -602,28 +699,45 @@ export function SimulateBalances(props: {
 	}
 
 	return (
-		<Table.Root aria-label="Balance changes" size="small" {...styles.table()}>
-			<Table.Head>
-				<Table.Row>
-					<Table.HeaderCell>Account</Table.HeaderCell>
-					<Table.HeaderCell>Token</Table.HeaderCell>
-					<Table.HeaderCell justify="end">Change</Table.HeaderCell>
-				</Table.Row>
-			</Table.Head>
-			<Table.Body>
-				{[...byAccount.entries()].flatMap(([account, changes]) =>
+		<table className="w-full type-card">
+			<thead>
+				{/* Tinted card text with its own bottom rule: a column header has to look
+				    like chrome, not like the first row of data. */}
+				<tr className="border-b border-card-border bg-base-alt type-card text-tertiary">
+					<th className="px-[16px] py-[6px] text-left font-normal">Account</th>
+					<th className="px-[10px] py-[6px] text-left font-normal">Token</th>
+					<th className="px-[16px] py-[6px] text-right font-normal">Change</th>
+				</tr>
+			</thead>
+			<tbody>
+				{[...byAccount.entries()].flatMap(([account, changes], groupIndex) =>
 					changes.map((change, index) => {
 						const metadata =
 							props.tokenMetadata[change.token] ??
 							props.tokenMetadata[change.token.toLowerCase()]
+						const positive = change.diff > 0n
+						const startsGroup = index === 0
+						// Only the boundary between accounts gets a rule.
+						const rule = startsGroup && groupIndex > 0
 						return (
-							<Table.Row key={`${account}-${change.token}`}>
-								{index === 0 && (
-									<Table.Cell rowSpan={changes.length}>
+							<tr key={`${account}-${change.token}`}>
+								{startsGroup && (
+									<td
+										rowSpan={changes.length}
+										className={cx(
+											'px-[16px] py-[7px] align-top',
+											rule && 'border-t border-card-border',
+										)}
+									>
 										<Address address={account} />
-									</Table.Cell>
+									</td>
 								)}
-								<Table.Cell>
+								<td
+									className={cx(
+										'px-[10px] py-[7px] align-top',
+										rule && 'border-t border-card-border',
+									)}
+								>
 									<Link
 										to={
 											Tip20.isTip20Address(change.token)
@@ -631,54 +745,36 @@ export function SimulateBalances(props: {
 												: '/address/$address'
 										}
 										params={{ address: change.token }}
-										title={change.token}
-										{...cx(styles.token(), link(), linkHover())}
+										className="inline-flex items-center gap-[5px] text-accent press-down hover:underline"
 									>
-										<Token address={change.token} size="small" />
-										{metadata?.symbol ?? formatHex(change.token)}
+										<TokenIcon
+											address={change.token}
+											name={metadata?.symbol}
+											className="size-[14px]!"
+										/>
+										{metadata?.symbol ?? (
+											<span className="font-mono">
+												{HexFormatter.truncate(change.token)}
+											</span>
+										)}
 									</Link>
-								</Table.Cell>
-								<Table.Cell
-									justify="end"
-									numeric
-									title={`${change.diff.toString()} in base units`}
+								</td>
+								<td
+									className={cx(
+										'px-[16px] py-[7px] text-right align-top font-sans tabular-nums',
+										rule && 'border-t border-card-border',
+										positive ? 'text-base-content-positive' : 'text-primary',
+									)}
+									title={`${change.diff.toString()} (raw)`}
 								>
-									<BalanceChange
-										diff={change.diff}
-										decimals={metadata?.decimals}
-										symbol={metadata?.symbol}
-									/>
-								</Table.Cell>
-							</Table.Row>
+									{formatBalanceDelta(change.diff, metadata?.decimals)}
+								</td>
+							</tr>
 						)
 					}),
 				)}
-			</Table.Body>
-		</Table.Root>
-	)
-}
-
-/**
- * A signed balance change in the token's units. Without decimals it stays in
- * base units, since a guessed scale reads as a wrong amount.
- */
-function BalanceChange(props: {
-	diff: bigint
-	decimals: number | undefined
-	symbol: string | undefined
-}): React.JSX.Element {
-	const magnitude = props.diff < 0n ? -props.diff : props.diff
-	return (
-		<Amount
-			align="right"
-			sign={props.diff > 0n ? '+' : props.diff < 0n ? '−' : undefined}
-			symbol={props.decimals === undefined ? undefined : props.symbol}
-			value={
-				props.decimals === undefined
-					? magnitude.toString()
-					: Value.format(magnitude, props.decimals)
-			}
-		/>
+			</tbody>
+		</table>
 	)
 }
 
@@ -687,212 +783,28 @@ export function SimulateEvents(props: {
 	knownEvents: ReturnType<typeof parseKnownEvents>
 }): React.JSX.Element {
 	if (props.logs.length === 0)
-		return (
-			<PanelEmpty
-				title="No events"
-				description="This call emitted no events."
-			/>
-		)
+		return <PanelEmpty>No events emitted.</PanelEmpty>
 	if (props.knownEvents.length === 0)
 		return (
-			<PanelEmpty
-				title="No recognized events"
-				description={`This call emitted ${plural(props.logs.length, 'event')}, and none match a known event.`}
-			/>
+			<PanelEmpty>
+				{props.logs.length} raw event{props.logs.length === 1 ? '' : 's'}{' '}
+				emitted, none recognised.
+			</PanelEmpty>
 		)
 
 	return (
-		<ol {...styles.events()}>
+		<div className="flex flex-col divide-y divide-card-border">
 			{props.knownEvents.map((event, index) => (
-				<li key={`${event.type}-${index}`} {...styles.event()}>
-					<span {...styles.eventIndex()}>{index + 1}</span>
+				<div
+					key={`${event.type}-${index}`}
+					className="flex items-start gap-[10px] px-[16px] py-[9px] copy-13"
+				>
+					<span className="mt-[3px] shrink-0 type-card-data text-content-dimmed tabular-nums">
+						{index + 1}
+					</span>
 					<TxEventDescription event={event} />
-				</li>
+				</div>
 			))}
-		</ol>
+		</div>
 	)
-}
-
-namespace styles {
-	export const primary = style({ color: 'foreground' })
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const number = style({ fontVariantNumeric: 'tabular-nums' })
-
-	export const code = style({ typography: 'label.13.mono' })
-
-	export const shrink = style({ flexShrink: 0 })
-
-	export const pushRight = style({ marginLeft: 'auto !custom' })
-
-	export const column = style({ display: 'flex', flexDirection: 'column' })
-
-	export const metricsSection = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '20',
-	})
-
-	// The Dashboards pattern's metric tiles: a label, a value, and a note.
-	export const metrics = style({
-		columnGap: '24',
-		display: 'grid',
-		gridTemplateColumns: 'repeat(auto-fit, minmax(7.5rem, 1fr)) !custom',
-		margin: '0',
-		rowGap: '16',
-	})
-
-	export const metric = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		minWidth: '0 !custom',
-	})
-
-	export const metricLabel = style({
-		color: 'gray.900',
-		typography: 'label.13',
-	})
-
-	export const metricValue = style({
-		alignItems: 'center',
-		color: 'foreground',
-		display: 'flex',
-		fontVariantNumeric: 'tabular-nums !custom',
-		gap: '8',
-		margin: '0',
-		minHeight: '32',
-		typography: 'heading.20',
-	})
-
-	export const metricUnit = style({ color: 'gray.900', typography: 'label.14' })
-
-	export const metricNote = style({
-		color: 'gray.900',
-		fontVariantNumeric: 'tabular-nums !custom',
-		margin: '0',
-		typography: 'label.12',
-	})
-
-	export const tabCount = style({
-		color: 'gray.900',
-		fontVariantNumeric: 'tabular-nums',
-		marginLeft: '4',
-	})
-
-	export const failure = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-	})
-
-	export const calloutText = style({ overflowWrap: 'anywhere' })
-
-	// Revert data takes its own line, truncated in the middle to fit.
-	export const revertData = style({ display: 'flex', marginTop: '4' })
-
-	// The value side of a key-value row: it takes the free width and sits at
-	// the end, wrapping rather than overflowing.
-	export const rowValue = style({
-		minWidth: '0 !custom',
-		overflowWrap: 'anywhere',
-		textAlign: 'end',
-	})
-
-	export const argNote = style({ color: 'gray.900', marginLeft: '8' })
-
-	// Rows guidance: cap an address so it ends with the other values.
-	export const address = style({
-		display: 'flex',
-		justifyContent: 'flex-end',
-		maxWidth: '160',
-		minWidth: '0 !custom',
-	})
-
-	export const sectionTitle = style({
-		color: 'foreground',
-		margin: '0',
-		paddingBottom: '8',
-		paddingInline: '16',
-		paddingTop: '24',
-		typography: 'heading.16',
-	})
-
-	export const stepBar = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '12',
-		paddingBottom: '16',
-	})
-
-	export const stepLabel = style({
-		color: 'foreground',
-		flexShrink: 0,
-		typography: 'label.13.strong',
-	})
-
-	export const chips = style({ minWidth: '0 !custom' })
-
-	export const callHeading = style({
-		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
-		typography: 'copy.14',
-	})
-
-	export const callTitle = style({
-		color: 'foreground',
-		flexShrink: 0,
-		margin: '0',
-		typography: 'label.14.strong',
-	})
-
-	// Fixed columns, so long values wrap instead of widening the table.
-	export const table = style({
-		overflowWrap: 'anywhere',
-		tableLayout: 'fixed',
-	})
-
-	export const token = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '4',
-	})
-
-	export const events = style({
-		display: 'flex',
-		flexDirection: 'column',
-		listStyle: 'none',
-		margin: '0',
-		padding: '0',
-		selectors: {
-			'& > :not(:last-child)': {
-				borderBottomWidth: '1px',
-				borderColor: 'grayAlpha.200',
-				borderStyle: 'solid',
-			},
-		},
-	})
-
-	export const event = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
-		typography: 'copy.14',
-	})
-
-	export const eventIndex = style({
-		color: 'gray.900',
-		flexShrink: 0,
-		fontVariantNumeric: 'tabular-nums',
-		typography: 'label.13',
-	})
 }

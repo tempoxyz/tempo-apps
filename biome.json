@@ -9,6 +9,9 @@
 		"assist": {
 			"enabled": true
 		},
+		"parser": {
+			"tailwindDirectives": true
+		},
 		"formatter": {
 			"enabled": true
 		},
@@ -63,7 +66,13 @@
 				"useComponentExportOnlyModules": "off"
 			},
 			"suspicious": {
-				"noArrayIndexKey": "off"
+				"noArrayIndexKey": "off",
+				"noUnknownAtRules": {
+					"level": "warn",
+					"options": {
+						"ignore": ["@custom-variant", "@theme"]
+					}
+				}
 			},
 			"a11y": {
 				"noAutofocus": "off"

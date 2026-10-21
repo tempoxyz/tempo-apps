@@ -93,6 +93,10 @@ const receipt = new URLSearchParams({
 })
 for (const [name, path] of [
 	['homepage', '/explorer'],
+	['legacy homepage image', '/bg-default.webp'],
+	['legacy block image', '/og-blocks.webp'],
+	['legacy token image', '/og-tokens.webp'],
+	['legacy transaction image', '/og-transactions.webp'],
 	['block listing', '/blocks'],
 	['token listing', '/tokens'],
 	['transaction fallback', '/tx'],
@@ -101,7 +105,6 @@ for (const [name, path] of [
 	['failed receipt', `/receipt/${hash}?status=reverted&eventsFailed=true`],
 	['empty receipt', `/receipt/${hash}`],
 	['block', '/block/8188645?number=8188645&txCount=42&gasUsage=52'],
-	['block by hash', `/block/${hash}?txCount=42`],
 	[
 		'token',
 		`/token/${address}?name=AlphaUSD&symbol=AlphaUSD&currency=USD&supply=1000000&holders=1234`,
@@ -118,26 +121,6 @@ for (const [name, path] of [
 	[
 		'long receipt',
 		`/receipt/${hash}?${receipt}&ev2=${encodeURIComponent(`Transfer|${'Long details '.repeat(30)}`)}&ev3=Mint|1000%20USD&ev4=Burn|100%20USD`,
-	],
-	[
-		'six-step receipt',
-		`/receipt/${hash}?${receipt}&eventCount=12&${[2, 3, 4, 5, 6].map((n) => `ev${n}=Send|${n}.00%20AlphaUSD%20to%200x71C7…976F|$${n}.00`).join('&')}`,
-	],
-	[
-		'max-length receipt',
-		`/tx/${hash}?block=123456789012&total=${encodeURIComponent(`$${'9'.repeat(18)}.99`)}&fee=${encodeURIComponent(`1.234567 ${'X'.repeat(24)}`)}&ev1=${encodeURIComponent(`${'A'.repeat(40)}|${'word '.repeat(36)}|$${'9'.repeat(24)}`)}`,
-	],
-	[
-		'block with history',
-		`/block/8188645?number=8188645&unixTimestamp=1792489267&txCount=42&gasUsage=52.3%25&miner=${address}&parentHash=${hash}&prevBlocks=12,30,8,45,22,0,18,40,33,27,15,38`,
-	],
-	[
-		'long token',
-		`/token/${address}?name=${'Long Token Name '.repeat(3)}&symbol=${'S'.repeat(24)}&supply=${'9'.repeat(32)}&holders=999999&isFeeToken=true`,
-	],
-	[
-		'long contract',
-		`/address/${address}?accountType=contract&contractName=${'N'.repeat(64)}&contractDescription=${'Words '.repeat(30)}`,
 	],
 ])
 	test(`renders ${name}`, async () => {
@@ -156,27 +139,12 @@ for (const [name, path] of [
 		assert.equal(body.toString('ascii', 8, 12), 'WEBP')
 		assert.ok(body.length > 1000, 'Rendered image must contain content')
 	})
-// Asserting the redirect keeps these off the rate limiter the rendering tests share.
-for (const [path, destination] of [
-	['/bg-default.webp', '/explorer'],
-	['/og-blocks.webp', '/blocks'],
-	['/og-tokens.webp', '/tokens'],
-	['/og-transactions.webp', '/tx'],
-])
-	test(`redirects legacy ${path}`, async () => {
-		const response = await fetch(origin + path, { redirect: 'manual' })
-		assert.equal(response.status, 302)
-		const location = new URL(response.headers.get('location'), origin + path)
-		assert.equal(location.pathname, destination)
-	})
 for (const path of [
 	'/receipt/invalid',
 	'/tx/invalid',
 	'/address/invalid',
 	'/token/invalid',
-	'/block/invalid',
-	`/block/${'9'.repeat(12_000)}`,
 ])
-	test(`rejects ${path.slice(0, 40)}`, async () => {
+	test(`rejects ${path}`, async () => {
 		assert.equal((await fetch(origin + path)).status, 400)
 	})

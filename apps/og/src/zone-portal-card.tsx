@@ -14,12 +14,10 @@ export function ZonePortalCard({
 	overview?: PortalOverview
 }) {
 	const number = new Intl.NumberFormat('en-US')
-	const [asset, ...others] = overview?.assets ?? []
 	return (
 		<AddressCard
 			data={{
 				address,
-				kind: 'Zone Portal',
 				accountType: 'contract',
 				contractName: `Zone Portal Proxy #${String(portalId(address))}`,
 				holdings: '',
@@ -44,15 +42,15 @@ export function ZonePortalCard({
 								label: 'Batches',
 								value: number.format(overview.counts.batches),
 							},
-							...(asset
+							...overview.assets.slice(0, 2).map((asset) => ({
+								label: `${asset.symbol.slice(0, 16)} balance`,
+								value: formatPortalBalance(asset.balance, asset.decimals),
+							})),
+							...(overview.assets.length > 2
 								? [
 										{
-											label:
-												others.length > 0
-													? `Balance · ${others.length + 1} assets`
-													: 'Balance',
-											value: formatPortalBalance(asset.balance, asset.decimals),
-											unit: asset.symbol.slice(0, 16),
+											label: 'Other assets',
+											value: number.format(overview.assets.length - 2),
 										},
 									]
 								: []),

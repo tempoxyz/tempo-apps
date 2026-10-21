@@ -20,7 +20,7 @@ describe('decoded ABI argument tree', () => {
 		const html = renderToStaticMarkup(
 			createElement(AbiArgument, { input, value }),
 		)
-		expect(html).toContain('aria-expanded="true"')
+		expect(html).toContain('<details open=""')
 		expect(html).toContain('Copy count')
 		expect(html).toContain('Copy enabled')
 		expect(html).toContain('>0</span>')
@@ -50,8 +50,8 @@ describe('decoded ABI argument tree', () => {
 		const html = renderToStaticMarkup(
 			createElement(AbiArgument, { input, value }),
 		)
-		expect(html.match(/aria-expanded=/g)).toHaveLength(4)
-		expect(html.match(/aria-expanded="true"/g)).toHaveLength(3)
+		expect(html.match(/<details/g)).toHaveLength(4)
+		expect(html.match(/<details open=""/g)).toHaveLength(3)
 		expect(html).toContain('Copy [0]')
 		expect(html).toContain('>7</span>')
 		expect(html).toContain('>11</span>')
@@ -64,9 +64,9 @@ describe('decoded ABI argument tree', () => {
 		const html = renderToStaticMarkup(
 			createElement(AbiArgument, { input, value: [[12n], []] }),
 		)
-		expect(html.match(/aria-expanded=/g)).toHaveLength(3)
+		expect(html.match(/<details/g)).toHaveLength(3)
 		expect(html).toContain('>12</span>')
 		expect(html).toContain('Empty array')
-		expect(html).not.toContain('aria-expanded="true"')
+		expect(html).not.toContain('open=""')
 	})
 })

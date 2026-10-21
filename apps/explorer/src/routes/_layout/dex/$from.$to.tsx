@@ -5,32 +5,13 @@ import {
 	stripSearchParams,
 	useRouterState,
 } from '@tanstack/react-router'
-import {
-	Amount,
-	AmountInput,
-	Button,
-	Callout,
-	CopyButton,
-	Field,
-	Hex,
-	Rows,
-	Separator,
-	Skeleton,
-	Surface,
-	style,
-	Table,
-	Tag,
-	Token,
-	Tooltip,
-	variants,
-} from '@tempoxyz/ds'
-import { ArrowLeft, ArrowRight, SwapVertical } from '@tempoxyz/ds/icons'
-import { Fragment, useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { Address } from '#comps/Address'
+import { CopyButton } from '#comps/CopyButton'
 import { DexSwapsGrid, LivePill, useDexSwaps } from '#comps/DexSwaps'
 import { Sections } from '#comps/Sections'
+import { TokenIcon } from '#comps/TokenIcon'
+import { cx } from '#lib/css'
 import {
 	defaultDexRoute,
 	depthTicks,
@@ -47,8 +28,11 @@ import {
 	dexRouteQueryOptions,
 } from '#lib/queries/dex-route'
 import type { DexDepthLevel, DexLeg } from '#lib/server/dex-route'
-import { link, linkHover } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
+import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
+import ChevronLeftIcon from '~icons/lucide/chevron-left'
+import RefreshCwIcon from '~icons/lucide/refresh-cw'
 
 export const Route = createFileRoute('/_layout/dex/$from/$to')({
 	component: DexRoutePage,
@@ -61,15 +45,15 @@ export const Route = createFileRoute('/_layout/dex/$from/$to')({
 		middlewares: [stripSearchParams({ amount: defaultDexRoute.amount })],
 	},
 	errorComponent: () => (
-		<div {...styles.error()}>
-			<h1 {...styles.errorTitle()}>Invalid route link</h1>
-			<p {...styles.secondary()}>
+		<div className="max-w-[1200px] mx-auto px-4 pt-20 flex flex-col gap-3">
+			<h1 className="heading-20 text-primary">Invalid route link</h1>
+			<p className="copy-14 text-secondary">
 				Use two token addresses and a positive decimal amount.
 			</p>
 			<Link
 				to="/dex/$from/$to"
 				params={{ from: defaultDexRoute.from, to: defaultDexRoute.to }}
-				{...cx(link(), linkHover())}
+				className="text-accent hover:underline"
 			>
 				View USDT0 → pathUSD
 			</Link>
@@ -83,12 +67,23 @@ export const Route = createFileRoute('/_layout/dex/$from/$to')({
 		),
 })
 
+const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 })
 const rate = new Intl.NumberFormat('en-US', { maximumFractionDigits: 8 })
 const bps = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const size = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const mainnetSymbols: Record<string, string> = {
 	'0x20c00000000000000000000014f22ca97301eb73': 'USDT0',
 	'0x20c0000000000000000000000000000000000000': 'pathUSD',
+}
+const button =
+	'inline-flex items-center justify-center gap-2 rounded-[7px] border border-card-border px-3 py-2 copy-13 text-secondary hover:text-primary cursor-pointer press-down disabled:opacity-50 disabled:cursor-wait'
+const headerButton =
+	// `!` beats regen Button.Icon's sizing inside CopyButton so both buttons match.
+	'inline-flex h-7! items-center gap-1.5 rounded-[7px]! border border-card-border px-2.5! copy-13 text-secondary hover:text-primary hover:bg-transparent! active:bg-transparent! [&>svg]:size-3.75! cursor-pointer press-down'
+
+function formatAmount(value: string): string {
+	const numeric = Number(value)
+	return numeric > 0 && numeric < 0.000001 ? value : number.format(numeric)
 }
 
 function quoteMessage(quote: DexQuote): string {
@@ -102,14 +97,12 @@ function DexRoutePage(): React.JSX.Element {
 	const search = { ...params, ...Route.useSearch() }
 	const query = useQuery(dexRouteQueryOptions(search))
 	const isMobile = useMediaQuery('(max-width: 799px)')
-	const quoteTitleId = useId()
-	const bookTitleId = useId()
 	const [section, setSection] = useState(0)
 	const [live, setLive] = useState(true)
 	const [paused, setPaused] = useState(false)
 	// Poll only while the feed is on screen.
 	const swaps = useDexSwaps(
-		live && !paused && (isMobile || section === 0),
+		live && !paused && (isMobile || section === 1),
 		// Someone who opened this pair wants its swaps, verified or not.
 		{
 			path: query.data?.path.map((token) => token.address),
@@ -118,265 +111,234 @@ function DexRoutePage(): React.JSX.Element {
 		},
 		Boolean(query.data),
 	)
-	// Copies the full URL, so the link keeps the amount.
-	const href = useRouterState({ select: (state) => state.location.href })
-	const shareUrl =
-		typeof window === 'undefined' ? href : `${window.location.origin}${href}`
 	const snapshot = query.data
 	const from = snapshot?.path[0]
 	const to = snapshot?.path[snapshot.path.length - 1]
 	const impact = snapshot
 		? quoteImpact(snapshot.quote, snapshot.reference)
 		: null
-	const mainnet = getTempoChain().id === 4217
 
 	return (
-		<div {...styles.page()}>
-			<header {...styles.header()}>
-				<Button.Link
-					render={<Link to="/dex" />}
-					size="small"
-					variant="secondary"
-					{...styles.back()}
-				>
-					<ArrowLeft />
-					Stablecoin DEX
-				</Button.Link>
-				<div {...styles.titleRow()}>
-					<h1 {...styles.title()}>
+		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+			<div className="flex flex-wrap items-start justify-between gap-4">
+				<div className="flex flex-col gap-3 min-w-0">
+					<Link
+						to="/dex"
+						className="inline-flex items-center gap-1 self-start copy-13 text-tertiary hover:text-primary"
+					>
+						<ChevronLeftIcon className="size-3.5" />
+						Stablecoin DEX
+					</Link>
+					<h1 className="flex flex-wrap items-center gap-3 text-[24px] sm:text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
 						{from && to ? (
 							<>
-								<span {...styles.titleToken()}>
-									<Token address={from.address} size="large" />
+								<span className="inline-flex items-center gap-3 whitespace-nowrap">
+									<TokenIcon
+										address={from.address}
+										className="size-6 sm:size-7 shrink-0"
+									/>
 									{from.symbol}
 								</span>
-								<span {...styles.titleToken()}>
-									<ArrowRight aria-hidden="true" {...styles.titleArrow()} />
-									<Token address={to.address} size="large" />
+								<span className="inline-flex items-center gap-3 whitespace-nowrap">
+									<ArrowRightIcon className="size-5 sm:size-6 text-tertiary" />
+									<TokenIcon
+										address={to.address}
+										className="size-6 sm:size-7 shrink-0"
+									/>
 									{to.symbol}
 								</span>
 							</>
 						) : (
 							<>
-								{mainnet
+								{getTempoChain().id === 4217
 									? (mainnetSymbols[search.from] ?? 'Input token')
 									: 'Input token'}
-								<ArrowRight aria-hidden="true" {...styles.titleArrow()} />
-								{mainnet
+								<ArrowRightIcon className="size-6 text-tertiary" />
+								{getTempoChain().id === 4217
 									? (mainnetSymbols[search.to] ?? 'Output token')
 									: 'Output token'}
 							</>
 						)}
 					</h1>
-					<CopyButton
-						aria-label="Copy route link"
-						size="medium"
-						value={shareUrl}
-						variant="secondary"
-					/>
+					{query.isError && !snapshot && (
+						<dl className="copy-13 text-secondary flex flex-col gap-2">
+							<div>
+								<dt className="text-tertiary">Input token</dt>
+								<dd className="font-mono break-all">{search.from}</dd>
+							</div>
+							<div>
+								<dt className="text-tertiary">Output token</dt>
+								<dd className="font-mono break-all">{search.to}</dd>
+							</div>
+						</dl>
+					)}
 				</div>
-				{query.isError && !snapshot && (
-					<Rows.Root dividers="none" size="small" {...styles.unresolved()}>
-						<Rows.Row>
-							<Rows.Label>Input token</Rows.Label>
-							<Hex.Root value={search.from}>
-								<Hex.Text />
-								<Hex.Copy aria-label="Copy input token address" />
-							</Hex.Root>
-						</Rows.Row>
-						<Rows.Row>
-							<Rows.Label>Output token</Rows.Label>
-							<Hex.Root value={search.to}>
-								<Hex.Text />
-								<Hex.Copy aria-label="Copy output token address" />
-							</Hex.Root>
-						</Rows.Row>
-					</Rows.Root>
-				)}
-			</header>
+				<div className="flex flex-wrap items-center gap-2">
+					<CopyButton
+						value={() => window.location.href}
+						ariaLabel="Copy route link"
+						className={headerButton}
+					>
+						Copy link
+					</CopyButton>
+				</div>
+			</div>
 
-			<div {...styles.market()}>
-				<Surface render={<section aria-labelledby={quoteTitleId} />}>
-					<Surface.Header>
-						<Surface.Title id={quoteTitleId}>Quote</Surface.Title>
-						{snapshot && (
-							<Tooltip.Root>
-								<Tooltip.Trigger
-									render={
-										<Button.Link
-											aria-label="Reverse route"
-											render={
-												<Link
-													to="/dex/$from/$to"
-													params={{ from: search.to, to: search.from }}
-													search={{ amount: search.amount }}
-												/>
-											}
-											shape="icon"
-											size="small"
-											variant="secondary"
-										/>
-									}
+			<section
+				aria-label="Route and quote"
+				className="rounded-body border border-card-border bg-card overflow-hidden"
+			>
+				{query.isError && !snapshot ? (
+					<div
+						role="alert"
+						className="p-[18px] copy-14 text-secondary flex flex-col items-start gap-3"
+					>
+						<p>{query.error.message}</p>
+						<button
+							type="button"
+							className={button}
+							onClick={() => void query.refetch()}
+						>
+							Try again
+						</button>
+					</div>
+				) : query.isPending ? (
+					<p role="status" className="p-[18px] copy-14 text-secondary">
+						Loading the token path and live quotes…
+					</p>
+				) : (
+					snapshot &&
+					from &&
+					to && (
+						<>
+							{snapshot.path.length > 2 && (
+								<ol
+									aria-label="Token path"
+									className="flex flex-wrap items-center gap-x-2.5 gap-y-3 px-[18px] py-3 border-b border-dashed border-card-border"
 								>
-									<SwapVertical />
-								</Tooltip.Trigger>
-								<Tooltip.Popup>Reverse route</Tooltip.Popup>
-							</Tooltip.Root>
-						)}
-					</Surface.Header>
-					{query.isError && !snapshot ? (
-						<Callout intent="negative">
-							<Callout.Icon />
-							<Callout.Content>{query.error.message}</Callout.Content>
-							<Callout.Action
-								disabled={query.isFetching}
-								onClick={() => void query.refetch()}
-							>
-								{query.isFetching ? 'Retrying…' : 'Try again'}
-							</Callout.Action>
-						</Callout>
-					) : query.isPending ? (
-						<p role="status" {...styles.pending()}>
-							Loading the token path and live quotes…
-						</p>
-					) : (
-						snapshot &&
-						from &&
-						to && (
-							<>
-								<div {...styles.amounts()}>
-									<AmountField
+									{snapshot.path.map((token, index) => (
+										<li
+											key={token.address}
+											className="flex items-center gap-2.5 min-w-0"
+										>
+											{index > 0 && (
+												<ArrowRightIcon
+													aria-hidden="true"
+													className="size-3.5 text-tertiary shrink-0"
+												/>
+											)}
+											<TokenLink token={token} />
+										</li>
+									))}
+								</ol>
+							)}
+							<div className="grid md:grid-cols-2">
+								<div className="relative">
+									<AmountInput
 										key={`${search.from}:${search.to}`}
 										amount={search.amount}
 										token={from}
 										inputError={snapshot.inputError}
 									/>
-									<div
-										{...styles.receive()}
-										aria-live="polite"
-										aria-busy={query.isFetching}
+									{/* Sits on the divider: below the pay panel when stacked,
+									    and level with the amounts side by side. */}
+									<Link
+										to="/dex/$from/$to"
+										params={{ from: search.to, to: search.from }}
+										search={{ amount: search.amount }}
+										aria-label="Reverse route"
+										title="Reverse route"
+										className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 md:left-auto md:bottom-auto md:right-0 md:top-[81px] md:translate-x-1/2 md:-translate-y-1/2 inline-flex size-9 items-center justify-center rounded-full border border-card-border bg-card text-secondary hover:text-primary hover:border-accent press-down"
 									>
-										<span {...styles.receiveLabel()}>You receive</span>
+										<ArrowLeftRightIcon className="size-4 max-md:rotate-90" />
+									</Link>
+								</div>
+								<div
+									className="flex flex-col gap-4 p-[18px] md:pl-14"
+									aria-live="polite"
+									aria-busy={query.isFetching}
+								>
+									<div className="copy-13 text-tertiary">You receive</div>
+									<div className="flex items-center justify-between gap-4 min-h-[48px]">
 										{snapshot.quote.amountOut !== null ? (
 											<div
-												{...styles.amountOut({ fetching: query.isFetching })}
+												className={cx(
+													'text-[32px] sm:text-[40px] leading-none tracking-[-0.02em] font-medium tabular-nums text-primary break-all transition-opacity',
+													query.isFetching && 'opacity-60',
+												)}
 											>
-												<Amount
-													size="lg"
-													symbol={to.symbol}
-													value={snapshot.quote.amountOut}
-												/>
+												{formatAmount(snapshot.quote.amountOut)}
 											</div>
 										) : (
-											<p {...styles.quoteMessage()}>
+											<p className="heading-20 text-secondary">
 												{snapshot.inputError
 													? 'Enter a valid amount'
 													: quoteMessage(snapshot.quote)}
 											</p>
 										)}
+										<TokenBadge token={to} />
 									</div>
+									{snapshot.quote.amountOut !== null && (
+										<dl className="flex flex-col gap-2 copy-13">
+											<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+												<dt className="text-tertiary">Rate</dt>
+												<dd className="text-secondary tabular-nums">
+													1 {from.symbol} ={' '}
+													{rate.format(
+														Number(snapshot.quote.amountOut) /
+															Number(snapshot.quote.amountIn),
+													)}{' '}
+													{to.symbol}
+												</dd>
+											</div>
+											<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+												<dt
+													className="text-tertiary"
+													title={`Compared with the rate for 1 ${from.symbol} at the same block`}
+												>
+													Price impact
+												</dt>
+												<dd className="text-secondary tabular-nums">
+													{impact === null ? '—' : `${bps.format(impact)} bps`}
+												</dd>
+											</div>
+										</dl>
+									)}
 								</div>
-								<div {...styles.rows()}>
-									<Rows.Root dividers="full">
-										{snapshot.path.length > 2 && (
-											<Rows.Row>
-												<Rows.Label>Route</Rows.Label>
-												<ol aria-label="Token path" {...styles.path()}>
-													{snapshot.path.map((token, index) => (
-														<li key={token.address} {...styles.pathItem()}>
-															{index > 0 && (
-																<ArrowRight
-																	aria-hidden="true"
-																	{...styles.arrow()}
-																/>
-															)}
-															<TokenLink token={token} />
-														</li>
-													))}
-												</ol>
-											</Rows.Row>
-										)}
-										{snapshot.quote.amountOut !== null && (
-											<>
-												<Rows.Row>
-													<Rows.Label>Rate</Rows.Label>
-													<span {...styles.numeric()}>
-														1 {from.symbol} ={' '}
-														{rate.format(
-															Number(snapshot.quote.amountOut) /
-																Number(snapshot.quote.amountIn),
-														)}{' '}
-														{to.symbol}
-													</span>
-												</Rows.Row>
-												<Rows.Row>
-													<Rows.Label
-														title={`Compared with the rate for 1 ${from.symbol} at the same block`}
-													>
-														Price impact
-													</Rows.Label>
-													<span {...styles.numeric()}>
-														{impact === null
-															? '—'
-															: `${bps.format(impact)} bps`}
-													</span>
-												</Rows.Row>
-											</>
-										)}
-										<Rows.Row>
-											<Rows.Label>Block</Rows.Label>
-											<Link
-												to="/block/$id"
-												params={{ id: snapshot.blockNumber }}
-												{...cx(styles.numeric(), link(), linkHover())}
-											>
-												{BigInt(snapshot.blockNumber).toLocaleString('en-US')}
-											</Link>
-										</Rows.Row>
-									</Rows.Root>
-								</div>
-								{query.isRefetchError && (
-									<Callout intent="warning" {...styles.refreshError()}>
-										<Callout.Icon />
-										<Callout.Content>
-											Refresh failed. Showing the previous block’s snapshot.
-										</Callout.Content>
-									</Callout>
-								)}
-								<div {...styles.footer()}>
-									<Button
-										loading={query.isFetching}
-										onClick={() => void query.refetch()}
-										size="large"
-									>
-										Refresh quote
-									</Button>
-								</div>
-							</>
-						)
-					)}
-				</Surface>
-
-				{snapshot && (
-					<Surface render={<section aria-labelledby={bookTitleId} />}>
-						<Surface.Header>
-							<Surface.Title id={bookTitleId}>
-								{snapshot.legs.length === 1 ? 'Order book' : 'Order books'}
-							</Surface.Title>
-						</Surface.Header>
-						{snapshot.legs.map((leg, index) => (
-							<Fragment key={`${leg.from.address}:${leg.to.address}`}>
-								{index > 0 && <Separator {...styles.legSeparator()} />}
-								<LegRow
-									blockNumber={snapshot.blockNumber}
-									index={snapshot.legs.length > 1 ? index : undefined}
-									leg={leg}
-								/>
-							</Fragment>
-						))}
-					</Surface>
+							</div>
+							<div className="flex items-center justify-between gap-3 px-[18px] py-2.5 border-t border-dashed border-card-border label-12 text-tertiary">
+								<Link
+									to="/block/$id"
+									params={{ id: snapshot.blockNumber }}
+									className="tabular-nums hover:text-primary"
+								>
+									Block {snapshot.blockNumber}
+								</Link>
+								<button
+									type="button"
+									onClick={() => void query.refetch()}
+									disabled={query.isFetching}
+									aria-label="Refresh quote"
+									className="inline-flex items-center gap-1.5 hover:text-primary cursor-pointer disabled:cursor-wait"
+								>
+									<RefreshCwIcon
+										className={cx('size-3', query.isFetching && 'animate-spin')}
+									/>
+									Refresh
+								</button>
+							</div>
+							{query.isRefetchError && (
+								<p
+									role="alert"
+									className="px-[18px] pb-3 copy-13 text-negative"
+								>
+									Refresh failed. Showing the previous block’s snapshot.
+								</p>
+							)}
+						</>
+					)
 				)}
-			</div>
+			</section>
 
 			{snapshot && from && to && (
 				<Sections
@@ -385,7 +347,24 @@ function DexRoutePage(): React.JSX.Element {
 					onSectionChange={setSection}
 					sections={[
 						{
+							title: snapshot.legs.length === 1 ? 'Order book' : 'Order books',
+							autoCollapse: false,
+							content: (
+								<div className="flex flex-col">
+									{snapshot.legs.map((leg, index) => (
+										<LegRow
+											key={`${leg.from.address}:${leg.to.address}`}
+											blockNumber={snapshot.blockNumber}
+											index={snapshot.legs.length > 1 ? index : undefined}
+											leg={leg}
+										/>
+									))}
+								</div>
+							),
+						},
+						{
 							title: 'Swaps',
+							autoCollapse: false,
 							contextual: (
 								<LivePill
 									live={live && !paused}
@@ -394,18 +373,9 @@ function DexRoutePage(): React.JSX.Element {
 							),
 							content:
 								swaps.isError && !swaps.data ? (
-									<div {...styles.alert()}>
-										<Callout intent="negative">
-											<Callout.Icon />
-											<Callout.Content>{swaps.error.message}</Callout.Content>
-											<Callout.Action
-												disabled={swaps.isFetching}
-												onClick={() => void swaps.refetch()}
-											>
-												{swaps.isFetching ? 'Retrying…' : 'Try again'}
-											</Callout.Action>
-										</Callout>
-									</div>
+									<p role="alert" className="p-[18px] copy-14 text-secondary">
+										{swaps.error.message}
+									</p>
 								) : (
 									// biome-ignore lint/a11y/noStaticElementInteractions: pause on hover
 									<div
@@ -428,25 +398,28 @@ function DexRoutePage(): React.JSX.Element {
 						{
 							title: 'Details',
 							content: (
-								<Rows.Root dividers="full">
+								<dl className="flex flex-col">
 									{snapshot.path.map((token) => (
-										<Rows.Row key={token.address}>
-											<Rows.Label>
-												<span {...styles.detailToken()}>
-													<Token address={token.address} size="small" />
-													{token.symbol}
-												</span>
-											</Rows.Label>
-											<span {...styles.detailAddress()}>
-												<Address address={token.address} align="end" />
-												<CopyButton
-													aria-label={`Copy ${token.symbol} address`}
-													value={token.address}
-												/>
-											</span>
-										</Rows.Row>
+										<div
+											key={token.address}
+											className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-[18px] py-3.5 border-b last:border-b-0 border-dashed border-card-border"
+										>
+											<dt className="inline-flex items-center gap-2 copy-14 font-medium text-primary">
+												<TokenIcon address={token.address} />
+												{token.symbol}
+											</dt>
+											<dd className="min-w-0">
+												<Link
+													to="/address/$address"
+													params={{ address: token.address }}
+													className="font-mono copy-13 text-accent hover:underline break-all"
+												>
+													{token.address}
+												</Link>
+											</dd>
+										</div>
 									))}
-								</Rows.Root>
+								</dl>
 							),
 						},
 					]}
@@ -456,17 +429,13 @@ function DexRoutePage(): React.JSX.Element {
 	)
 }
 
-/** The amount to quote, written to the URL once it parses for the token. */
-function AmountField(props: {
-	amount: string
-	token: DexToken
-	inputError: string | null
-}): React.JSX.Element {
+export function AmountInput(props: AmountInput.Props): React.JSX.Element {
 	const { amount, token, inputError } = props
 	const navigate = Route.useNavigate()
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
+	const amountId = useId()
 	const [draft, setDraft] = useState(amount)
 	const [validationError, setValidationError] = useState<string | null>(null)
 	const submittedAmount = useRef(amount)
@@ -500,23 +469,47 @@ function AmountField(props: {
 	const error = validationError || (draft.trim() === amount ? inputError : null)
 
 	return (
-		<Field.Root invalid={Boolean(error)}>
-			<Field.Label>You send</Field.Label>
-			<AmountInput.Root
-				onValueChange={(value) => {
-					setDraft(value)
-					setValidationError(null)
-				}}
-				size="large"
-				value={draft}
-				variant="card"
-			>
-				<AmountInput.Control autoComplete="off" name="amount" placeholder="0" />
-				<AmountInput.Suffix>{token.symbol}</AmountInput.Suffix>
-			</AmountInput.Root>
-			<Field.Error match={Boolean(error)}>{error}</Field.Error>
-		</Field.Root>
+		<div className="flex flex-col gap-4 p-[18px] md:pr-14 h-full md:border-r border-b md:border-b-0 border-dashed border-card-border">
+			<label htmlFor={amountId} className="copy-13 text-tertiary">
+				You pay
+			</label>
+			<div className="flex items-center justify-between gap-4 min-h-[48px]">
+				<input
+					id={amountId}
+					name="amount"
+					inputMode="decimal"
+					autoComplete="off"
+					placeholder="0"
+					value={draft}
+					onChange={(event) => {
+						setDraft(event.target.value)
+						setValidationError(null)
+					}}
+					aria-invalid={Boolean(error)}
+					aria-describedby={error ? `${amountId}-error` : undefined}
+					className="w-full min-w-0 bg-transparent p-0 text-[32px] sm:text-[40px] leading-none tracking-[-0.02em] font-medium tabular-nums text-primary outline-none placeholder:text-tertiary aria-invalid:text-negative"
+				/>
+				<TokenBadge token={token} />
+			</div>
+			{error && (
+				<p
+					id={`${amountId}-error`}
+					role="alert"
+					className="copy-13 text-negative"
+				>
+					{error}
+				</p>
+			)}
+		</div>
 	)
+}
+
+export declare namespace AmountInput {
+	type Props = {
+		amount: string
+		token: DexToken
+		inputError: string | null
+	}
 }
 
 function LegRow(props: {
@@ -548,50 +541,62 @@ function LegRow(props: {
 	]
 
 	return (
-		<div {...styles.leg()}>
-			<div {...styles.legHeader()}>
-				<div {...styles.legTokens()}>
-					{index !== undefined && <Tag size="small">Leg {index + 1}</Tag>}
+		<div className="flex flex-col border-b last:border-b-0 border-dashed border-card-border">
+			<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 px-[18px] py-4">
+				<div className="flex items-center gap-2.5 min-w-0">
+					{index !== undefined && (
+						<span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-card-border label-12 text-tertiary tabular-nums">
+							{index + 1}
+						</span>
+					)}
 					<TokenLink token={leg.from} />
-					<ArrowRight aria-hidden="true" {...styles.arrow()} />
+					<ArrowRightIcon className="size-3.5 text-tertiary shrink-0" />
 					<TokenLink token={leg.to} />
 				</div>
 				{leg.exists ? (
-					<dl {...styles.legStats()}>
-						{stats.map((stat) => (
-							<div key={stat.label}>
-								<dt {...styles.legStatLabel()}>{stat.label}</dt>
-								<dd {...styles.legStatValue()}>{stat.value}</dd>
-							</div>
-						))}
-					</dl>
+					<div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+						<dl className="flex flex-wrap gap-x-8 gap-y-3">
+							{stats.map((stat) => (
+								<div key={stat.label} className="flex flex-col gap-1">
+									<dt className="label-12 text-tertiary">{stat.label}</dt>
+									<dd className="copy-14 tabular-nums text-primary">
+										{stat.value}
+									</dd>
+								</div>
+							))}
+						</dl>
+					</div>
 				) : (
-					<Tag variant="outlined">Book not created</Tag>
+					<span className="copy-13 text-tertiary">Book not created</span>
 				)}
 			</div>
 			{leg.bestTick !== null && (
-				<div aria-live="polite">
+				<div
+					className="border-t border-dashed border-card-border"
+					aria-live="polite"
+				>
 					{depth.isPending ? (
-						<Skeleton {...styles.depthSkeleton()}>
-							<p role="status">Loading depth…</p>
-						</Skeleton>
+						<p role="status" className="px-[18px] py-4 copy-13 text-tertiary">
+							Loading depth…
+						</p>
 					) : depth.isError ? (
-						<Callout intent="negative">
-							<Callout.Icon />
-							<Callout.Content>Depth is unavailable.</Callout.Content>
-							<Callout.Action onClick={() => void depth.refetch()}>
+						<p role="status" className="px-[18px] py-4 copy-13 text-tertiary">
+							Depth is unavailable.{' '}
+							<button
+								type="button"
+								className="text-accent hover:underline cursor-pointer"
+								onClick={() => void depth.refetch()}
+							>
 								Try again
-							</Callout.Action>
-						</Callout>
+							</button>
+						</p>
 					) : depth.data.length === 0 ? (
-						<p {...styles.depthNote()}>
+						<p className="px-[18px] py-4 copy-13 text-tertiary">
 							No resting orders within {depthTicks} price levels of the best
 							price.
 						</p>
 					) : (
-						<div {...styles.ladder()}>
-							<DepthLadder levels={depth.data} leg={leg} />
-						</div>
+						<DepthLadder levels={depth.data} leg={leg} />
 					)}
 				</div>
 			)}
@@ -606,55 +611,59 @@ function DepthLadder(props: {
 }): React.JSX.Element {
 	const { levels, leg } = props
 	const total = Number(levels[levels.length - 1]?.cumulativeIn ?? 0)
+	// Grid rows let one bar span the whole row; a row's background would
+	// repaint per cell.
+	const row = 'grid grid-cols-3 gap-4 px-[18px]'
 	return (
-		<Table.Root size="small">
-			<Table.Caption>
-				Depth within {depthTicks} price levels of the best{' '}
-				{leg.isBid ? 'bid' : 'ask'}
-			</Table.Caption>
-			<Table.Head>
-				<Table.Row>
-					<Table.HeaderCell>
-						Price ({leg.to.symbol} per {leg.from.symbol})
-					</Table.HeaderCell>
-					<Table.HeaderCell justify="end">
-						Size ({leg.from.symbol})
-					</Table.HeaderCell>
-					<Table.HeaderCell justify="end">
-						Total ({leg.from.symbol})
-					</Table.HeaderCell>
-				</Table.Row>
-			</Table.Head>
-			<Table.Body>
+		<table className="block w-full tabular-nums whitespace-nowrap copy-13 pb-2">
+			<thead className="block">
+				<tr className={cx(row, 'py-2 label-12 text-tertiary')}>
+					<th className="text-left font-normal">
+						Price · {leg.to.symbol} per {leg.from.symbol}
+					</th>
+					<th className="text-right font-normal">Size · {leg.from.symbol}</th>
+					<th className="text-right font-normal">Total · {leg.from.symbol}</th>
+				</tr>
+			</thead>
+			<tbody className="block">
 				{levels.map((level) => (
-					// The row positions the bar, so it spans every cell.
-					<Table.Row key={level.tick} {...styles.level()}>
-						<Table.Cell numeric status={leg.isBid ? 'positive' : 'negative'}>
+					<tr key={level.tick} className={cx(row, 'relative py-1.5')}>
+						<td className={cx(leg.isBid ? 'text-positive' : 'text-negative')}>
 							<span
 								aria-hidden="true"
-								{...styles.bar({
-									bid: leg.isBid,
-									style: {
-										width: `${total > 0 ? (Number(level.cumulativeIn) / total) * 100 : 0}%`,
-									},
-								})}
+								className={cx(
+									'absolute inset-y-px left-0',
+									leg.isBid ? 'bg-positive/10' : 'bg-negative/10',
+								)}
+								style={{
+									width: `${total > 0 ? (Number(level.cumulativeIn) / total) * 100 : 0}%`,
+								}}
 							/>
-							<span {...styles.raised()}>{rate.format(level.rate)}</span>
-						</Table.Cell>
-						<Table.Cell justify="end" numeric>
-							<span {...styles.raised()}>
-								{size.format(Number(level.amountIn))}
-							</span>
-						</Table.Cell>
-						<Table.Cell justify="end" numeric>
-							<span {...styles.raised()}>
-								{size.format(Number(level.cumulativeIn))}
-							</span>
-						</Table.Cell>
-					</Table.Row>
+							<span className="relative">{rate.format(level.rate)}</span>
+						</td>
+						<td className="relative text-right text-secondary">
+							{size.format(Number(level.amountIn))}
+						</td>
+						<td className="relative text-right text-primary">
+							{size.format(Number(level.cumulativeIn))}
+						</td>
+					</tr>
 				))}
-			</Table.Body>
-		</Table.Root>
+			</tbody>
+		</table>
+	)
+}
+
+function TokenBadge(props: { token: DexToken }): React.JSX.Element {
+	return (
+		<Link
+			to="/address/$address"
+			params={{ address: props.token.address }}
+			className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-card-border bg-base-plane pl-1.5 pr-3 copy-14 font-medium text-primary hover:border-accent press-down"
+		>
+			<TokenIcon address={props.token.address} className="size-6" />
+			{props.token.symbol}
+		</Link>
 	)
 }
 
@@ -663,281 +672,10 @@ function TokenLink(props: { token: DexToken }): React.JSX.Element {
 		<Link
 			to="/address/$address"
 			params={{ address: props.token.address }}
-			{...cx(styles.tokenLink(), link(), linkHover())}
+			className="inline-flex items-center gap-2 copy-14 font-medium text-primary hover:text-accent min-w-0"
 		>
-			<Token address={props.token.address} size="small" />
-			<span {...styles.breakAll()}>{props.token.symbol}</span>
+			<TokenIcon address={props.token.address} />
+			<span className="break-all">{props.token.symbol}</span>
 		</Link>
 	)
-}
-
-namespace styles {
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '24',
-		marginInline: 'auto !custom',
-		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '32',
-		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '64' },
-	})
-
-	export const error = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		marginInline: 'auto !custom',
-		maxWidth: '1200px !custom',
-		paddingInline: '16',
-		paddingTop: '64',
-		width: '100% !custom',
-	})
-
-	export const errorTitle = style({
-		color: 'foreground',
-		typography: 'heading.20.subtle',
-	})
-
-	export const header = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		minWidth: '0 !custom',
-	})
-
-	export const back = style({ alignSelf: 'flex-start' })
-
-	export const titleRow = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '16',
-		justifyContent: 'space-between',
-	})
-
-	export const title = style({
-		alignItems: 'center',
-		color: 'foreground',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '12',
-		margin: '0',
-		minWidth: '0 !custom',
-		typography: 'heading.24.subtle',
-		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
-	})
-
-	export const titleToken = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '12',
-		whiteSpace: 'nowrap',
-	})
-
-	export const titleArrow = style({
-		color: 'gray.900',
-		height: '24',
-		width: '24',
-	})
-
-	export const unresolved = style({ maxWidth: '576' })
-
-	// The quote card, at the width of a payment flow, beside the order book.
-	// A lone card (while the route loads or fails) takes the whole row.
-	export const market = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		'@media (width >= 1024px)': {
-			alignItems: 'start',
-			display: 'grid',
-			gridTemplateColumns: 'minmax(0, 416px) minmax(0, 1fr)',
-			selectors: { '& > :only-child': { gridColumn: '1 / -1' } },
-		},
-	})
-
-	export const breakAll = style({ wordBreak: 'break-all' })
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const numeric = style({ fontVariantNumeric: 'tabular-nums !custom' })
-
-	export const pending = style({
-		color: 'gray.900',
-		margin: '0',
-		typography: 'copy.14',
-	})
-
-	export const amounts = style({ display: 'grid', rowGap: '20' })
-
-	export const receive = style({ display: 'grid', rowGap: '8' })
-
-	// Matches the `Field.Label` above it.
-	export const receiveLabel = style({
-		color: 'foreground',
-		typography: 'label.14.strong',
-	})
-
-	export const amountOut = variants({
-		base: {
-			minWidth: '0 !custom',
-			overflowWrap: 'anywhere',
-			transitionDuration: '160ms',
-			transitionProperty: 'opacity',
-		},
-		defaultVariants: { fetching: false },
-		variants: {
-			fetching: { true: { opacity: '0.6 !custom' }, false: {} },
-		},
-	})
-
-	export const quoteMessage = style({
-		color: 'gray.900',
-		margin: '0',
-		typography: 'heading.20.subtle',
-	})
-
-	// Surface pads 24px, so the review rows reach its edges and keep their own
-	// inset. They follow the amounts, so a wrapper sets the margins.
-	export const rows = style({
-		marginBlockStart: '16',
-		marginInline: '-24px !custom',
-	})
-
-	export const path = style({
-		alignItems: 'center',
-		columnGap: '8',
-		display: 'flex',
-		flexWrap: 'wrap',
-		justifyContent: 'flex-end',
-		listStyle: 'none !custom',
-		margin: '0',
-		padding: '0',
-		rowGap: '8',
-	})
-
-	export const pathItem = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const arrow = style({
-		color: 'gray.900',
-		flexShrink: 0,
-		height: '16',
-		width: '16',
-	})
-
-	export const refreshError = style({ marginBlockStart: '16' })
-
-	// A grid cell, so the one large action spans the card.
-	export const footer = style({ display: 'grid', marginBlockStart: '24' })
-
-	export const alert = style({ padding: '16' })
-
-	export const legSeparator = style({ marginBlock: '24' })
-
-	export const leg = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-	})
-
-	export const legHeader = style({
-		alignItems: 'center',
-		columnGap: '24',
-		display: 'flex',
-		flexWrap: 'wrap',
-		justifyContent: 'space-between',
-		rowGap: '16',
-	})
-
-	export const legTokens = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const legStats = style({
-		columnGap: '32',
-		display: 'flex',
-		flexWrap: 'wrap',
-		margin: '0',
-		rowGap: '12',
-	})
-
-	export const legStatLabel = style({
-		color: 'gray.900',
-		marginBlockEnd: '4',
-		typography: 'label.13',
-	})
-
-	export const legStatValue = style({
-		color: 'foreground',
-		fontVariantNumeric: 'tabular-nums !custom',
-		margin: '0',
-		typography: 'heading.20',
-	})
-
-	export const depthSkeleton = style({ height: '192' })
-
-	export const depthNote = style({
-		color: 'gray.900',
-		margin: '0',
-		typography: 'copy.14',
-	})
-
-	// Bleeds like a table placed directly in the surface.
-	export const ladder = style({ marginInline: '-24px !custom' })
-
-	export const level = style({ position: 'relative' })
-
-	// Text sits above the depth bar.
-	export const raised = style({ position: 'relative' })
-
-	export const bar = variants({
-		base: {
-			bottom: '1',
-			left: '0',
-			pointerEvents: 'none',
-			position: 'absolute',
-			top: '1',
-		},
-		defaultVariants: { bid: true },
-		variants: {
-			bid: {
-				true: { backgroundColor: 'green.100' },
-				false: { backgroundColor: 'red.100' },
-			},
-		},
-	})
-
-	export const detailToken = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '8',
-	})
-
-	export const detailAddress = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '4',
-		justifyContent: 'flex-end',
-		minWidth: '0 !custom',
-	})
-
-	export const tokenLink = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '8',
-		minWidth: '0 !custom',
-		textDecorationLine: 'none',
-		typography: 'copy.14.strong',
-	})
 }

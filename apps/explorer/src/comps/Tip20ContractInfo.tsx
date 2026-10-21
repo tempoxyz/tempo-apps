@@ -1,18 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Callout, Rows, Skeleton, style } from '@tempoxyz/ds'
-import { ArrowRight } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import { Addresses } from 'viem/tempo'
-import type * as React from 'react'
+import * as React from 'react'
 import { useChainId } from 'wagmi'
-import { cx } from 'zyzz'
 import { Address as AddressComp } from '#comps/Address.tsx'
-import { ContractSection, Tip20Links } from '#comps/Contract.tsx'
+import { CollapsibleSection } from '#comps/Contract.tsx'
 import { TokenFeeAmm } from '#comps/FeeAmmPools'
 import { TokenTrust } from '#comps/TokenTrust'
 import { getApiUrl } from '#lib/env.ts'
-import { link, linkHover } from '#styles/explorer'
 import type { Tip20RolesResponse } from '#routes/api/tip20-roles'
 
 function formatDate(timestamp: number): string {
@@ -28,7 +24,9 @@ export function Tip20TokenTabContent(
 ): React.JSX.Element {
 	const { address } = props
 	const chainId = useChainId()
-	const { data: metadataData, isPending: metadataPending } = useQuery<{
+	const [configExpanded, setConfigExpanded] = React.useState(true)
+	const [liquidityExpanded, setLiquidityExpanded] = React.useState(true)
+	const { data: metadataData } = useQuery<{
 		createdTimestamp: number | null
 		createdTxHash: `0x${string}` | null
 		createdBy: Address.Address | null
@@ -58,187 +56,150 @@ export function Tip20TokenTabContent(
 	})
 	const config = query.isError ? undefined : query.data?.config
 	return (
-		<div {...styles.root()}>
-			{query.isError && (
-				<Callout intent="warning" role="status" size="small">
-					<Callout.Icon />
-					<Callout.Content>Token configuration unavailable.</Callout.Content>
-					<Callout.Action onClick={() => void query.refetch()}>
-						Try again
-					</Callout.Action>
-				</Callout>
-			)}
-			<ContractSection
-				title="Metadata"
-				description={<Tip20Links />}
-				actions={
-					address.toLowerCase() !== Addresses.pathUsd && (
-						<Button.Link
-							render={
-								<Link
-									to="/dex/$from/$to"
-									params={{ from: address, to: Addresses.pathUsd }}
-								/>
-							}
-							size="small"
-							variant="secondary"
-						>
-							View DEX route
-							<ArrowRight />
-						</Button.Link>
-					)
-				}
+		<div className="flex flex-col [&>*:last-child]:border-b-transparent">
+			<CollapsibleSection
+				first
+				title="Token configuration"
+				expanded={configExpanded}
+				onToggle={() => setConfigExpanded(!configExpanded)}
 			>
-				<Rows dividers="full">
-					<MetadataRow
-						label="Currency"
-						loading={query.isPending}
-						value={config?.currency}
-					/>
-					<MetadataRow
-						label="Decimals"
-						loading={query.isPending}
-						value={config?.decimals}
-					/>
-					<MetadataRow
-						label="Total supply"
-						loading={query.isPending}
-						value={config?.totalSupply}
-					/>
-					<MetadataRow
-						label="Supply cap"
-						loading={query.isPending}
-						value={config?.supplyCap}
-					/>
-					<MetadataRow
-						label="Created"
-						loading={metadataPending}
-						value={
-							metadataData?.createdTimestamp != null && (
-								<span {...styles.created()}>
-									<time
-										dateTime={new Date(
-											metadataData.createdTimestamp * 1000,
-										).toISOString()}
-									>
-										{formatDate(metadataData.createdTimestamp)}
-									</time>
-									{metadataData.createdTxHash && (
-										<Link
-											to="/tx/$hash"
-											params={{ hash: metadataData.createdTxHash }}
-											{...cx(link(), linkHover())}
-										>
-											View transaction
-										</Link>
-									)}
-								</span>
-							)
-						}
-					/>
-					{metadataData?.createdBy && (
-						<MetadataRow
-							label="Created by"
-							value={
-								<span {...styles.address()}>
-									<AddressComp address={metadataData.createdBy} align="end" />
-								</span>
-							}
-						/>
+				<div className="px-[18px] pb-[14px] pt-[6px] copy-13">
+					{query.isError && (
+						<p role="status" className="text-tertiary pb-3">
+							Token configuration unavailable.{' '}
+							<button
+								type="button"
+								onClick={() => void query.refetch()}
+								className="text-accent hover:underline"
+							>
+								Try again
+							</button>
+						</p>
 					)}
-				</Rows>
-			</ContractSection>
-			<TokenTrust
-				address={address}
-				roles={query.data?.roles ?? []}
-				loading={query.isPending}
-				unavailable={query.isError || Boolean(query.data?.rolesUnavailable)}
-				onRetry={() => void query.refetch()}
-			/>
-			<ContractSection
-				title="Fee AMM liquidity"
-				description="Pools that use this token to pay or receive transaction fees."
-				actions={
-					<Button.Link
-						render={
-							<Link
-								to="/fee-amm"
-								search={{ token: address, page: 1, limit: 10 }}
-							/>
-						}
-						size="small"
-						variant="secondary"
+					<section
+						aria-label="Metadata"
+						className="rounded-[6px] border border-distinct overflow-hidden"
 					>
-						View all pools
-						<ArrowRight />
-					</Button.Link>
-				}
+						<h3 className="border-b border-distinct px-3 py-2.5 font-medium">
+							Metadata
+						</h3>
+						<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
+							<MetadataField label="Currency" value={config?.currency} />
+							<MetadataField label="Decimals" value={config?.decimals} />
+							<MetadataField label="Total supply" value={config?.totalSupply} />
+							<MetadataField label="Supply cap" value={config?.supplyCap} />
+						</dl>
+						<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 label-12">
+							<ConfigRow
+								label="Created"
+								value={
+									<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+										<span>
+											{metadataData?.createdTimestamp != null
+												? formatDate(metadataData.createdTimestamp)
+												: '—'}
+										</span>
+										{metadataData?.createdTxHash && (
+											<Link
+												to="/tx/$hash"
+												params={{ hash: metadataData.createdTxHash }}
+												className="text-accent hover:underline"
+											>
+												Creation tx ↗
+											</Link>
+										)}
+									</span>
+								}
+							/>
+							{metadataData?.createdBy && (
+								<ConfigRow
+									label="Created by"
+									value={
+										<AddressComp
+											address={metadataData.createdBy}
+											className="label-12"
+										/>
+									}
+								/>
+							)}
+						</div>
+					</section>
+					<TokenTrust
+						address={address}
+						roles={query.data?.roles ?? []}
+						loading={query.isPending}
+						unavailable={query.isError || Boolean(query.data?.rolesUnavailable)}
+						onRetry={() => void query.refetch()}
+					/>
+					{address.toLowerCase() !== Addresses.pathUsd && (
+						<Link
+							to="/dex/$from/$to"
+							params={{ from: address, to: Addresses.pathUsd }}
+							className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
+						>
+							View Stablecoin DEX route →
+						</Link>
+					)}
+				</div>
+			</CollapsibleSection>
+			<CollapsibleSection
+				title="Fee AMM liquidity"
+				expanded={liquidityExpanded}
+				onToggle={() => setLiquidityExpanded(!liquidityExpanded)}
 			>
-				<TokenFeeAmm address={address} />
-			</ContractSection>
+				{liquidityExpanded && <TokenFeeAmm address={address} />}
+			</CollapsibleSection>
+			<div className="flex items-center gap-3 px-[18px] py-[10px] label-12 text-tertiary">
+				<span>TIP-20</span>
+				<a
+					href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-accent hover:underline"
+				>
+					Spec
+				</a>
+				<a
+					href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="text-accent hover:underline"
+				>
+					Rust
+				</a>
+			</div>
 		</div>
 	)
 }
 
-/** A metadata value: a placeholder while it loads, then None if it is missing. */
-function MetadataRow(props: {
+function ConfigRow(props: {
 	label: string
-	loading?: boolean | undefined
 	value: React.ReactNode
 }): React.JSX.Element {
-	const missing =
-		props.value === undefined || props.value === null || props.value === false
 	return (
-		<Rows.Row spacing="none">
-			<Rows.Label>{props.label}</Rows.Label>
-			<span {...styles.value()}>
-				{props.loading ? (
-					<Skeleton shape="pill" {...styles.skeleton()} />
-				) : missing ? (
-					<span {...styles.placeholder()}>None</span>
-				) : (
-					props.value
-				)}
+		<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+			<span className="text-secondary shrink-0">{props.label}</span>
+			<span className="text-primary min-w-0">
+				{props.value ?? <span className="text-tertiary">&mdash;</span>}
 			</span>
-		</Rows.Row>
+		</div>
+	)
+}
+
+function MetadataField(props: {
+	label: string
+	value: React.ReactNode
+}): React.JSX.Element {
+	return (
+		<div className="min-w-0 flex flex-col gap-1.5">
+			<dt className="label-12 text-secondary">{props.label}</dt>
+			<dd className="copy-14 text-primary tabular-nums wrap-anywhere">
+				{props.value ?? <span className="text-tertiary">&mdash;</span>}
+			</dd>
+		</div>
 	)
 }
 
 export declare namespace Tip20TokenTabContent {
 	type Props = { address: Address.Address }
-}
-
-namespace styles {
-	export const root = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '32',
-	})
-
-	export const value = style({
-		fontVariantNumeric: 'tabular-nums',
-		minWidth: '0',
-		overflowWrap: 'anywhere',
-		textAlign: 'end',
-	})
-
-	export const placeholder = style({ color: 'gray.900' })
-
-	export const skeleton = style({ height: '12', width: '6rem !custom' })
-
-	export const created = style({
-		alignItems: 'baseline',
-		columnGap: '12',
-		display: 'flex',
-		flexWrap: 'wrap',
-		justifyContent: 'flex-end',
-		rowGap: '4',
-	})
-
-	// Rows guidance: cap a Hex so it ends with the other values.
-	export const address = style({
-		display: 'inline-flex',
-		maxWidth: '12rem !custom',
-		minWidth: '0',
-	})
 }

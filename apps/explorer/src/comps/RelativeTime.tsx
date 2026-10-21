@@ -39,9 +39,6 @@ export namespace RelativeTime {
 			title: fullDate,
 			children: text,
 			dateTime: iso,
-			// The age and the local-time title depend on the clock and time zone, so
-			// the server's render can differ; the effect above corrects it on mount.
-			suppressHydrationWarning: true,
 		}
 	}
 }

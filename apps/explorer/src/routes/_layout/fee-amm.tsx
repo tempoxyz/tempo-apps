@@ -3,47 +3,33 @@ import {
 	createFileRoute,
 	Link,
 	stripSearchParams,
-	useLocation,
 } from '@tanstack/react-router'
-import {
-	Amount,
-	Button,
-	CopyButton,
-	Field,
-	Input,
-	Select,
-	Token,
-	style,
-} from '@tempoxyz/ds'
-import { ArrowRight, Close } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { Address as AddressLink } from '#comps/Address'
-import {
-	FeeAmmEmpty,
-	FeeAmmPoolList,
-	FeeAmmQueryState,
-} from '#comps/FeeAmmPools'
+import { FeeAmmPoolList, FeeAmmQueryState } from '#comps/FeeAmmPools'
+import { CopyButton } from '#comps/CopyButton'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
+import { TokenIcon } from '#comps/TokenIcon'
 import { FEE_AMM_MAX_ROWS, feeAmmSearchSchema } from '#lib/fee-amm'
+import { PriceFormatter } from '#lib/formatting'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
+import XIcon from '~icons/lucide/x'
 import { feeAmmPoolsQueryOptions } from '#lib/queries/fee-amm'
-import { link, linkHover } from '#styles/explorer'
 
 export const Route = createFileRoute('/_layout/fee-amm')({
 	component: FeeAmmPage,
 	errorComponent: () => (
-		<div {...styles.error()}>
-			<h1 {...styles.errorTitle()}>Invalid Fee AMM link</h1>
-			<p {...styles.description()}>
+		<div className="mx-auto max-w-[1200px] px-4 pt-20 flex flex-col gap-3">
+			<h1 className="text-xl text-primary">Invalid Fee AMM link</h1>
+			<p className="copy-14 text-secondary">
 				Check the token address and page number, or start from all pools.
 			</p>
 			<Link
 				to="/fee-amm"
 				search={{ page: 1, limit: 10 }}
-				{...cx(link(), linkHover())}
+				className="text-accent hover:underline"
 			>
 				View all pools
 			</Link>
@@ -60,8 +46,9 @@ export const Route = createFileRoute('/_layout/fee-amm')({
 
 function FeeAmmPage(): React.JSX.Element {
 	const search = Route.useSearch()
+	const filterId = useId()
+	const errorId = useId()
 	const navigate = Route.useNavigate()
-	const href = useLocation({ select: (location) => location.href })
 	const query = useQuery(feeAmmPoolsQueryOptions(search))
 	const [filterError, setFilterError] = useState<string>()
 	const pools = query.data?.pools ?? []
@@ -81,47 +68,52 @@ function FeeAmmPage(): React.JSX.Element {
 			: null
 
 	return (
-		<div {...styles.page()}>
-			<div {...styles.header()}>
-				<div {...styles.intro()}>
-					<h1 {...styles.title()}>Fee AMM</h1>
-					<p {...styles.description()}>
+		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+			<div className="flex flex-wrap items-start justify-between gap-4">
+				<div className="flex flex-col gap-3 min-w-0">
+					<h1 className="flex items-center gap-3 text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
+						Fee AMM
+					</h1>
+					<p className="copy-14 text-secondary max-w-[680px]">
 						Liquidity that converts transaction fees into a validator’s
 						preferred token. Each pool has a fee token and a validator token.
 					</p>
 					{search.token && (
-						<div {...styles.filtered()}>
-							<span {...styles.filteredToken()}>
-								<Token address={search.token} size="small" />
+						<div className="flex flex-col gap-2 type-card">
+							<span className="inline-flex items-center gap-2 text-secondary">
+								<TokenIcon address={search.token} />
 								Filtered by {symbol ?? 'token'}
 							</span>
-							<AddressLink address={search.token} search={{ tab: 'token' }} />
+							<Link
+								to="/address/$address"
+								params={{ address: search.token }}
+								search={{ tab: 'token' }}
+								className="label-12 font-mono text-accent hover:underline break-all"
+							>
+								{search.token}
+							</Link>
 						</div>
 					)}
 				</div>
 				<CopyButton
-					aria-label="Copy link"
-					size="medium"
-					value={
-						typeof window === 'undefined'
-							? href
-							: new URL(href, window.location.origin).href
-					}
-					variant="secondary"
-				/>
+					value={() => window.location.href}
+					ariaLabel="Copy link"
+					className="h-7 rounded-[7px] border border-card-border px-2.5 type-card cursor-pointer"
+				>
+					Copy link
+				</CopyButton>
 			</div>
 
 			<form
 				key={search.token ?? 'all'}
+				className="flex flex-wrap items-end gap-3"
 				onSubmit={(event) => {
 					event.preventDefault()
 					const value = String(
 						new FormData(event.currentTarget).get('token') ?? '',
 					).trim()
 					if (value && !Address.validate(value)) {
-						setFilterError(
-							'Enter a token contract address that starts with 0x.',
-						)
+						setFilterError('Enter a valid token contract address.')
 						return
 					}
 					setFilterError(undefined)
@@ -134,89 +126,91 @@ function FeeAmmPage(): React.JSX.Element {
 					})
 				}}
 			>
-				<Field.Root invalid={Boolean(filterError)}>
-					<Field.Label>Find pools by token address</Field.Label>
-					<div {...styles.inputRow()}>
-						<Input.Group {...styles.input()}>
-							<Input.Control
-								name="token"
-								defaultValue={search.token ?? ''}
-								placeholder="0x…"
-								autoCapitalize="off"
-								autoComplete="off"
-								autoCorrect="off"
-								spellCheck={false}
-							/>
-						</Input.Group>
-						<Button type="submit" variant="secondary">
-							Find pools
-							<ArrowRight />
-						</Button>
-						{search.token && (
-							<Button.Link
-								render={
-									<Link
-										to="/fee-amm"
-										search={{ page: 1, limit: search.limit }}
-										onClick={() => setFilterError(undefined)}
-									/>
-								}
-								variant="text"
-							>
-								<Close />
-								Clear filter
-							</Button.Link>
-						)}
-					</div>
-					<Field.Error match={Boolean(filterError)}>{filterError}</Field.Error>
-				</Field.Root>
+				<div className="flex flex-col gap-1.5 flex-1 min-w-[220px]">
+					<label htmlFor={filterId} className="type-card text-tertiary">
+						Find pools by token address
+					</label>
+					<input
+						id={filterId}
+						name="token"
+						defaultValue={search.token ?? ''}
+						placeholder="0x…"
+						spellCheck={false}
+						autoComplete="off"
+						aria-invalid={Boolean(filterError)}
+						aria-describedby={filterError ? errorId : undefined}
+						className="w-full min-w-0 rounded-[6px] border border-card-border bg-base-plane px-3 py-2 font-mono text-base sm:copy-13 text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-accent aria-invalid:border-negative"
+					/>
+				</div>
+				<button
+					type="submit"
+					className="inline-flex items-center gap-1.5 rounded-[7px] border border-card-border px-3 py-2 type-card text-secondary hover:text-primary cursor-pointer press-down transition-colors"
+				>
+					Find pools <ArrowRightIcon className="size-3.5" />
+				</button>
+				{search.token && (
+					<Link
+						to="/fee-amm"
+						search={{ page: 1, limit: search.limit }}
+						onClick={() => setFilterError(undefined)}
+						className="inline-flex items-center gap-1.5 py-2 type-card text-accent hover:underline"
+					>
+						<XIcon className="size-3.5" /> Clear filter
+					</Link>
+				)}
+				{filterError && (
+					<p id={errorId} role="alert" className="w-full copy-14 text-negative">
+						{filterError}
+					</p>
+				)}
 			</form>
 
 			<Sections
 				sections={[
 					{
 						title: 'Liquidity pools',
-						contextual: query.data && pools.length > 0 && (
-							<span {...styles.total()}>
-								<span {...styles.meta()}>Estimated liquidity</span>
-								{liquidity === null ? (
-									<span {...styles.meta()}>Unavailable</span>
-								) : (
-									<Amount currency="USD" value={liquidity} />
-								)}
-							</span>
-						),
 						content: (
-							<div {...styles.content()}>
+							<>
+								<div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-b border-dashed border-card-border">
+									<div className="flex flex-col gap-1">
+										<p className="label-12 text-tertiary">
+											Most active first · Reserves shown in each token’s units
+										</p>
+									</div>
+									{query.data && pools.length > 0 && (
+										<div className="text-right">
+											<div className="type-card-data tabular-nums text-primary">
+												{liquidity === null
+													? 'Unavailable'
+													: PriceFormatter.format(liquidity)}
+											</div>
+											<div className="label-12 text-tertiary">
+												Estimated liquidity · {pools.length}{' '}
+												{pools.length === 1 ? 'pool' : 'pools'} on this page
+											</div>
+										</div>
+									)}
+								</div>
 								<FeeAmmQueryState query={query} />
-								{query.data &&
-									(pools.length > 0 ? (
+								{query.data && (
+									<>
 										<FeeAmmPoolList pools={pools} token={search.token} />
-									) : (
-										!query.isError && (
-											<FeeAmmEmpty
-												{...(search.page > 1
-													? {
-															title: 'No more pools',
-															description:
-																'Every pool appears on the earlier pages.',
-														}
+										{pools.length === 0 && !query.isError && (
+											<div className="px-4 py-10 text-center copy-14 text-secondary">
+												{search.page > 1
+													? 'No more pools on this page.'
 													: search.token
-														? {
-																title: 'No Fee AMM pools for this token',
-																description:
-																	'Pools appear here once liquidity is added for this token.',
-															}
-														: {
-																title: 'No Fee AMM pools',
-																description:
-																	'Pools appear here once liquidity is added.',
-															})}
-											/>
-										)
-									))}
-								<nav aria-label="Fee AMM pagination" {...styles.pagination()}>
-									<div {...styles.pager()}>
+														? 'No Fee AMM pools found for this token.'
+														: 'No Fee AMM pools found.'}
+											</div>
+										)}
+									</>
+								)}
+								<nav
+									aria-label="Fee AMM pagination"
+									className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-dashed border-card-border type-card"
+								>
+									<div className="flex items-center gap-2">
 										<Pagination.Simple
 											page={search.page}
 											pages={{
@@ -226,190 +220,57 @@ function FeeAmmPage(): React.JSX.Element {
 													!query.isError &&
 													search.page < maxPage,
 											}}
+											fetching={query.isFetching}
 											showPageLabel={false}
 										/>
-										<span {...styles.pageLabel()} aria-live="polite">
+										<span
+											className="px-2 text-secondary tabular-nums"
+											aria-live="polite"
+										>
 											Page {search.page}
 										</span>
 									</div>
-									<Field.Root variant="setting" size="small">
-										<Field.Label>Pools per page</Field.Label>
-										<Select.Root
+									<label className="flex items-center gap-2 label-12 text-secondary">
+										Pools per page
+										<select
+											aria-label="Pools per page"
 											value={search.limit}
-											onValueChange={(limit) => {
-												if (limit === null) return
+											onChange={(event) =>
 												void navigate({
-													search: { ...search, page: 1, limit },
+													search: {
+														...search,
+														page: 1,
+														limit: Number(event.target.value) as 10 | 25 | 50,
+													},
 													resetScroll: false,
 												})
-											}}
+											}
+											className="h-7 rounded-[6px] border border-card-border bg-base-plane px-2 text-primary"
 										>
-											<Select.Trigger size="small" {...styles.limit()}>
-												<Select.Value />
-												<Select.Icon />
-											</Select.Trigger>
-											<Select.Popup size="small">
-												{limits.map((limit) => (
-													<Select.Item key={limit} value={limit}>
-														<Select.ItemText>{limit}</Select.ItemText>
-													</Select.Item>
-												))}
-											</Select.Popup>
-										</Select.Root>
-									</Field.Root>
+											{[10, 25, 50].map((limit) => (
+												<option key={limit} value={limit}>
+													{limit}
+												</option>
+											))}
+										</select>
+									</label>
 								</nav>
 								{search.page >= maxPage && query.data?.hasMore && (
-									<p {...styles.meta()}>
+									<p className="px-4 pb-4 copy-14 text-secondary">
 										Showing the first 10,000 pools. Filter by token address to
 										narrow the results.
 									</p>
 								)}
-							</div>
+							</>
 						),
 					},
 				]}
 			/>
-			<p {...styles.footnote()}>
-				Most active pools first. Reserves are in each token’s own units. USD
-				estimates assume USD-denominated tokens trade at par. Pool reserves do
-				not guarantee fee payment: token policies and the validator’s fee token
-				also apply.
+			<p className="label-12 text-tertiary">
+				USD estimates assume USD-denominated tokens trade at par. Pool reserves
+				do not guarantee fee payment: token policies and the validator’s fee
+				token also apply.
 			</p>
 		</div>
 	)
-}
-
-const limits = [10, 25, 50] as const
-
-namespace styles {
-	export const error = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		marginInline: 'auto !custom',
-		maxWidth: '1200px !custom',
-		paddingInline: '16',
-		paddingTop: '64',
-	})
-
-	export const errorTitle = style({
-		color: 'foreground',
-		typography: 'heading.20.subtle',
-	})
-
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '24',
-		marginInline: 'auto !custom',
-		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '32',
-		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '64' },
-	})
-
-	export const header = style({
-		alignItems: 'flex-start',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '16',
-		justifyContent: 'space-between',
-	})
-
-	export const intro = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		minWidth: '0',
-	})
-
-	export const title = style({
-		alignItems: 'center',
-		color: 'foreground',
-		display: 'flex',
-		gap: '12',
-		typography: 'heading.32.subtle',
-	})
-
-	export const description = style({
-		color: 'gray.900',
-		maxWidth: '680px !custom',
-		typography: 'copy.14',
-	})
-
-	export const filtered = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0',
-		typography: 'copy.14',
-	})
-
-	export const filteredToken = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'inline-flex',
-		gap: '8',
-	})
-
-	export const inputRow = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '12',
-	})
-
-	export const input = style({ flex: 1, minWidth: '220px !custom' })
-
-	export const meta = style({
-		color: 'gray.900',
-		typography: 'label.13',
-	})
-
-	export const total = style({
-		alignItems: 'baseline',
-		display: 'inline-flex',
-		gap: '8',
-		typography: 'label.14.strong',
-	})
-
-	export const content = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-	})
-
-	export const pagination = style({
-		alignItems: 'center',
-		borderColor: 'grayAlpha.200',
-		borderTopWidth: '1px',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '16',
-		justifyContent: 'space-between',
-		paddingTop: '12',
-	})
-
-	export const pager = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-	})
-
-	export const pageLabel = style({
-		color: 'gray.900',
-		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '8',
-		typography: 'label.13',
-	})
-
-	// Sized to its value, per the Select docs.
-	export const limit = style({ width: '96' })
-
-	export const footnote = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
 }

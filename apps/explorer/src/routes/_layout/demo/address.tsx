@@ -3,13 +3,12 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Amount, Button, Hex as HexValue, style } from '@tempoxyz/ds'
 import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
+import { Midcut } from '#comps/Midcut'
 import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
-import { TransactionCell } from '#comps/TransactionCell'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import {
 	getPerspectiveEvent,
@@ -17,6 +16,7 @@ import {
 	TransactionTimestamp,
 	TransactionTotal,
 } from '#comps/TxTransactionRow'
+import { cx } from '#lib/css'
 import {
 	accountAddress,
 	adminAddress,
@@ -40,7 +40,8 @@ import {
 	validatorTokenAddress,
 } from '#lib/demo'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
-import { useMediaQuery } from '#lib/hooks'
+import { useCopy, useMediaQuery } from '#lib/hooks'
+import CopyIcon from '~icons/lucide/copy'
 
 type MockTransactionData = {
 	hash: Hex.Hex
@@ -877,10 +878,11 @@ function Component() {
 	const { transactions, total, knownEvents } = Route.useLoaderData()
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+	const { copy, notifying } = useCopy()
 	const [expandedTxs, setExpandedTxs] = React.useState<Set<Hex.Hex>>(new Set())
 
 	const historyColumns: DataGrid.Column[] = [
-		{ label: 'Time', align: 'start' },
+		{ label: 'Time', align: 'start', minWidth: 100 },
 		{ label: 'Description', align: 'start' },
 		{ label: 'Hash', align: 'end' },
 		{ label: 'Fee', align: 'end' },
@@ -888,26 +890,47 @@ function Component() {
 	]
 
 	return (
-		<div {...styles.page()}>
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+			)}
+		>
 			<InfoCard
 				title={<InfoCard.Title>Account</InfoCard.Title>}
+				className="self-start"
 				sections={[
-					{
-						label: 'Address',
-						value: (
-							<HexValue.Root value={accountAddress} {...styles.hex()}>
-								<HexValue.Text />
-								<HexValue.Copy aria-label="Copy address" />
-							</HexValue.Root>
-						),
-					},
+					<button
+						key="address"
+						type="button"
+						onClick={() => copy(accountAddress)}
+						className="w-full text-left cursor-pointer press-down text-tertiary"
+						title={accountAddress}
+					>
+						<div className="flex items-center gap-[8px] mb-[8px]">
+							<span className="copy-13 font-normal capitalize">Address</span>
+							<div className="relative flex items-center">
+								<CopyIcon className="w-[12px] h-[12px]" />
+								{notifying && (
+									<span className="absolute left-[calc(100%+8px)] copy-13 ">
+										copied
+									</span>
+								)}
+							</div>
+						</div>
+						<p className="copy-14 font-normal text-primary break-all max-w-[21ch]">
+							{accountAddress}
+						</p>
+					</button>,
 					{
 						label: 'Active',
 						value: (
-							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
+							<ClientOnly
+								fallback={<span className="text-tertiary copy-13">…</span>}
+							>
 								<RelativeTime
 									timestamp={baseTimestamp - 60n}
-									{...styles.value()}
+									className="copy-13 text-primary"
 								/>
 							</ClientOnly>
 						),
@@ -915,18 +938,22 @@ function Component() {
 					{
 						label: 'Holdings',
 						value: (
-							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
-								<Amount currency="USD" value="1234567.00" {...styles.value()} />
+							<ClientOnly
+								fallback={<span className="text-tertiary copy-13">…</span>}
+							>
+								<span className="copy-13 text-primary">$1,234,567.00</span>
 							</ClientOnly>
 						),
 					},
 					{
 						label: 'Created',
 						value: (
-							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
+							<ClientOnly
+								fallback={<span className="text-tertiary copy-13">…</span>}
+							>
 								<RelativeTime
 									timestamp={baseTimestamp - 518400n}
-									{...styles.value()}
+									className="copy-13 text-primary"
 								/>
 							</ClientOnly>
 						),
@@ -938,6 +965,8 @@ function Component() {
 				sections={[
 					{
 						title: 'History',
+						totalItems: total,
+						itemsLabel: 'transactions',
 						content: (
 							<DataGrid
 								columns={{
@@ -960,20 +989,25 @@ function Component() {
 														key={key}
 														event={event}
 														seenAs={accountAddress}
+														className="flex flex-row items-center gap-[6px] w-auto flex-wrap"
 													/>
 												)
 											})
 										) : (
-											<div key="collapsed" {...styles.collapsed()}>
+											<div
+												key="collapsed"
+												className="text-primary h-[20px] flex items-center whitespace-nowrap"
+											>
 												{perspectiveEvents[0] && (
 													<TxEventDescription
 														event={perspectiveEvents[0]}
 														seenAs={accountAddress}
-														className={styles.collapsedEvent().className}
+														className="flex flex-row items-center gap-[6px] w-auto justify-center flex-nowrap"
 													/>
 												)}
 												{events.length > 1 && (
-													<Button
+													<button
+														type="button"
 														onClick={(e) => {
 															e.preventDefault()
 															e.stopPropagation()
@@ -981,12 +1015,10 @@ function Component() {
 																new Set(prev).add(tx.hash),
 															)
 														}}
-														size="small"
-														variant="text"
-														{...styles.more()}
+														className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
 													>
-														Show {events.length - 1} more
-													</Button>
+														and {events.length - 1} more
+													</button>
 												)}
 											</div>
 										)
@@ -999,7 +1031,7 @@ function Component() {
 													link={`/receipt/${tx.hash}`}
 												/>,
 												descriptionCell,
-												<TransactionCell key="hash" hash={tx.hash} />,
+												<Midcut key="hash" value={tx.hash} prefix="0x" />,
 												<TransactionFee key="fee" receipt={tx.receipt} />,
 												<TransactionTotal
 													key="total"
@@ -1027,54 +1059,4 @@ function Component() {
 			/>
 		</div>
 	)
-}
-
-namespace styles {
-	// Stacked below 1024px; beside it, the card's column is capped so the
-	// history keeps its room.
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		minWidth: '0 !custom',
-		paddingBottom: '32',
-		paddingInline: '16',
-		paddingTop: '40',
-		width: '100% !custom',
-		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
-		'@media (width >= 1024px)': {
-			alignItems: 'start',
-			display: 'grid',
-			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
-		},
-		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
-	})
-
-	export const hex = style({ minWidth: '0 !custom' })
-
-	export const pending = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const value = style({
-		color: 'foreground',
-		typography: 'label.12',
-	})
-
-	// TxEventDescription sets flexWrap on the same element.
-	export const collapsedEvent = style({
-		flexWrap: 'nowrap !important',
-		justifyContent: 'center',
-	})
-
-	export const collapsed = style({
-		alignItems: 'center',
-		color: 'foreground',
-		display: 'flex',
-		height: '20',
-		whiteSpace: 'nowrap',
-	})
-
-	export const more = style({ flexShrink: 0, marginLeft: '4' })
 }

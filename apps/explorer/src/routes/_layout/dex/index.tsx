@@ -1,25 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
-import {
-	Callout,
-	Checkbox,
-	Field,
-	Grid,
-	Input,
-	Skeleton,
-	style,
-	Surface,
-	Token,
-	variants,
-} from '@tempoxyz/ds'
-import { Search as SearchIcon } from '@tempoxyz/ds/icons'
 import { useMemo, useState } from 'react'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { DataGrid } from '#comps/DataGrid'
 import { DexSwapsGrid, LivePill, useDexSwaps } from '#comps/DexSwaps'
-import { RelativeTime } from '#comps/RelativeTime'
+import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
+import { TokenIcon } from '#comps/TokenIcon'
+import { cx } from '#lib/css'
 import {
 	type DexPool,
 	type DexPoolSort,
@@ -33,7 +20,7 @@ import {
 import { PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { dexPoolsQueryOptions } from '#lib/queries/dex-pools'
-import { truncate } from '#styles/explorer'
+import SearchIcon from '~icons/lucide/search'
 
 export const Route = createFileRoute('/_layout/dex/')({
 	component: DexPoolsPage,
@@ -45,7 +32,6 @@ export const Route = createFileRoute('/_layout/dex/')({
 		context.queryClient.prefetchQuery(dexPoolsQueryOptions()),
 })
 
-// Metrics in compact dollars, such as $1.2M: TDS `Amount` has no compact notation.
 const usd = (value: number) => PriceFormatter.format(value, { format: 'short' })
 const bps = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 })
 
@@ -127,29 +113,19 @@ function DexPoolsPage(): React.JSX.Element {
 		),
 		align: 'end',
 		width: '1fr',
+		minWidth: 96,
 		sortDirection: search.sort === sort ? search.dir : undefined,
 	})
 
 	return (
-		<div {...styles.page()}>
-			<header {...styles.header()}>
-				<h1 {...styles.title()}>Stablecoin DEX</h1>
-				{query.data && (
-					<p {...styles.meta()}>
-						Block {BigInt(query.data.blockNumber).toLocaleString('en-US')} ·
-						Updated{' '}
-						<RelativeTime
-							timestamp={BigInt(Math.floor(query.data.generatedAt / 1000))}
-						/>
-					</p>
-				)}
-			</header>
+		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+			<h1 className="text-[24px] sm:text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
+				Stablecoin DEX
+			</h1>
 
-			<Grid
-				fit="small"
-				gap="12"
-				render={<dl aria-label="Totals" />}
-				{...styles.stats()}
+			<section
+				aria-label="Totals"
+				className="grid grid-cols-3 rounded-body border border-card-border bg-card overflow-hidden"
 			>
 				<Stat
 					label="Liquidity"
@@ -163,7 +139,7 @@ function DexPoolsPage(): React.JSX.Element {
 				/>
 				<Stat label="1D volume" value={pools && usd(totals.day)} />
 				<Stat label="30D volume" value={pools && usd(totals.month)} />
-			</Grid>
+			</section>
 
 			<Sections
 				mode={isMobile ? 'stacked' : 'tabs'}
@@ -181,21 +157,26 @@ function DexPoolsPage(): React.JSX.Element {
 				sections={[
 					{
 						title: 'Pairs',
+						totalItems: pools ? rows.length : undefined,
+						itemsLabel: 'pairs',
+						autoCollapse: false,
 						contextual: (
-							<div {...styles.contextual()}>
-								<Input.Group size="small" {...styles.filter()}>
-									<Input.Prefix>
-										<SearchIcon aria-hidden="true" />
-									</Input.Prefix>
-									<Input.Control
-										aria-label="Search pairs"
+							<div className="flex items-center gap-4">
+								<label className="relative flex items-center">
+									<span className="sr-only">Search pairs</span>
+									<SearchIcon
+										aria-hidden="true"
+										className="absolute left-2 size-3.5 text-tertiary pointer-events-none"
+									/>
+									<input
 										value={filter}
-										onValueChange={(value) => setFilter(value)}
+										onChange={(event) => setFilter(event.target.value)}
 										placeholder="Search"
 										spellCheck={false}
 										autoComplete="off"
+										className="h-7 w-[160px] rounded-[6px] border border-card-border bg-base-plane pl-7 pr-2 text-base sm:label-12 text-primary outline-none placeholder:text-tertiary focus:border-accent"
 									/>
-								</Input.Group>
+								</label>
 								<VerifiedToggle
 									checked={!search.unverified}
 									onChange={setVerifiedOnly}
@@ -225,6 +206,7 @@ function DexPoolsPage(): React.JSX.Element {
 												label: 'Pair',
 												align: 'start',
 												width: '2fr',
+												minWidth: 200,
 											},
 											sortable('liquidity', 'Liquidity'),
 											sortable('spread', 'Spread'),
@@ -242,7 +224,10 @@ function DexPoolsPage(): React.JSX.Element {
 															<LiquidityValue key="liquidity" pool={pool} />,
 														]
 													: [
-															<span key="rank" {...styles.rank()}>
+															<span
+																key="rank"
+																className="text-tertiary tabular-nums"
+															>
 																{index + 1}
 															</span>,
 															<PairCell key="pair" pool={pool} />,
@@ -270,8 +255,9 @@ function DexPoolsPage(): React.JSX.Element {
 					},
 					{
 						title: 'Swaps',
+						autoCollapse: false,
 						contextual: (
-							<div {...styles.contextual()}>
+							<div className="flex items-center gap-4">
 								<LivePill
 									live={live && !paused}
 									onToggle={() => setLive(!live)}
@@ -314,12 +300,15 @@ function VerifiedToggle(props: {
 	onChange: (checked: boolean) => void
 }): React.JSX.Element {
 	return (
-		<Field.Root>
-			<Field.Item {...styles.verified()}>
-				<Checkbox checked={props.checked} onCheckedChange={props.onChange} />
-				<Field.Label>Verified only</Field.Label>
-			</Field.Item>
-		</Field.Root>
+		<label className="inline-flex items-center gap-2 label-12 text-secondary whitespace-nowrap cursor-pointer select-none">
+			<input
+				type="checkbox"
+				checked={props.checked}
+				onChange={(event) => props.onChange(event.target.checked)}
+				className="accent-(--color-accent) cursor-pointer"
+			/>
+			Verified only
+		</label>
 	)
 }
 
@@ -329,22 +318,23 @@ function LoadError(props: {
 	onRetry: () => void
 }): React.JSX.Element {
 	return (
-		<div {...styles.alert()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				<Callout.Content>{props.message}</Callout.Content>
-				<Callout.Action disabled={props.retrying} onClick={props.onRetry}>
-					{props.retrying ? 'Retrying…' : 'Try again'}
-				</Callout.Action>
-			</Callout>
+		<div
+			role="alert"
+			className="p-[18px] copy-14 text-secondary flex flex-col items-start gap-3"
+		>
+			<p>{props.message}</p>
+			<button
+				type="button"
+				className="inline-flex items-center rounded-[7px] border border-card-border px-3 py-2 copy-13 text-secondary hover:text-primary cursor-pointer press-down disabled:opacity-50"
+				disabled={props.retrying}
+				onClick={props.onRetry}
+			>
+				{props.retrying ? 'Retrying…' : 'Try again'}
+			</button>
 		</div>
 	)
 }
 
-/**
- * A sort button inside the column header, as TDS Tables and Lists prescribes:
- * the header carries `aria-sort` and the direction icon.
- */
 function SortLabel(props: {
 	sort: DexPoolSort
 	label: string
@@ -356,42 +346,53 @@ function SortLabel(props: {
 		<button
 			type="button"
 			onClick={() => props.onSort(props.sort)}
-			{...styles.sort({ active })}
+			aria-label={`Sort by ${props.label}`}
+			aria-pressed={active}
+			className={cx(
+				'cursor-pointer hover:text-primary',
+				active && 'text-primary',
+			)}
 		>
 			{props.label}
 		</button>
 	)
 }
 
-/** A metric tile: the label in a `dt`, the value in a `dd`. */
 function Stat(props: {
 	label: string
 	value: string | undefined
 }): React.JSX.Element {
 	return (
-		<Surface size="small">
-			<dt {...styles.statLabel()}>{props.label}</dt>
-			<dd {...styles.statValue()}>
-				{/* The placeholder text sizes the skeleton to the value it awaits. */}
-				<Skeleton show={props.value === undefined}>
-					<span>{props.value ?? '$0.00M'}</span>
-				</Skeleton>
-			</dd>
-		</Surface>
+		<div className="flex flex-col gap-2 px-[18px] py-4 border-card-border border-dashed not-last:border-r">
+			<div className="copy-13 text-tertiary">{props.label}</div>
+			<div className="text-[20px] sm:text-[28px] leading-none tracking-[-0.02em] font-medium tabular-nums text-primary">
+				{props.value ?? (
+					<span className="inline-block h-[20px] sm:h-[28px] w-20 rounded-[4px] bg-distinct/70 animate-pulse align-top" />
+				)}
+			</div>
+		</div>
 	)
 }
 
 function PairCell(props: { pool: DexPool }): React.JSX.Element {
 	const { base, quote } = props.pool
 	return (
-		<div {...styles.pair()}>
-			<span {...styles.pairIcons()}>
-				<Token address={base.address} />
-				<Token address={quote.address} />
+		<div className="flex items-center gap-2.5 min-w-0">
+			<span className="inline-flex shrink-0 items-center">
+				<TokenIcon
+					address={base.address}
+					name={base.symbol}
+					className="size-5 ring-2 ring-card relative z-1"
+				/>
+				<TokenIcon
+					address={quote.address}
+					name={quote.symbol}
+					className="size-5 -ml-1.5 ring-2 ring-card"
+				/>
 			</span>
-			<span {...cx(styles.pairName(), truncate())}>
+			<span className="truncate font-medium text-primary">
 				{base.symbol}
-				<span {...styles.secondary()}> / </span>
+				<span className="text-tertiary"> / </span>
 				{quote.symbol}
 			</span>
 		</div>
@@ -402,9 +403,9 @@ function LiquidityValue(props: { pool: DexPool }): React.JSX.Element {
 	const { liquidity } = props.pool
 	// A partial zero means no level could be read, not an empty book.
 	if (!liquidity || (liquidity.partial && liquidity.total === 0))
-		return <span {...styles.secondary()}>—</span>
+		return <span className="text-tertiary">—</span>
 	return (
-		<span {...styles.number({ tone: 'primary' })}>
+		<span className="tabular-nums text-primary">
 			{liquidity.partial && '≥'}
 			{usd(liquidity.total)}
 		</span>
@@ -413,9 +414,9 @@ function LiquidityValue(props: { pool: DexPool }): React.JSX.Element {
 
 function SpreadValue(props: { pool: DexPool }): React.JSX.Element {
 	const spread = spreadBps(props.pool.bid, props.pool.ask)
-	if (spread === null) return <span {...styles.secondary()}>—</span>
+	if (spread === null) return <span className="text-tertiary">—</span>
 	return (
-		<span {...styles.number({ tone: 'secondary' })}>
+		<span className="tabular-nums text-secondary">
 			{spread < 0 ? 'Crossed' : `${bps.format(spread)} bps`}
 		</span>
 	)
@@ -424,142 +425,12 @@ function SpreadValue(props: { pool: DexPool }): React.JSX.Element {
 function Volume(props: { value: number }): React.JSX.Element {
 	return (
 		<span
-			{...styles.number({ tone: props.value > 0 ? 'primary' : 'secondary' })}
+			className={cx(
+				'tabular-nums',
+				props.value > 0 ? 'text-primary' : 'text-tertiary',
+			)}
 		>
 			{props.value > 0 ? usd(props.value) : '—'}
 		</span>
 	)
-}
-
-namespace styles {
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '24',
-		marginInline: 'auto !custom',
-		maxWidth: '1200px !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '32',
-		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '64' },
-	})
-
-	export const header = style({
-		display: 'flex',
-		flexDirection: 'column',
-		rowGap: '8',
-	})
-
-	export const title = style({
-		color: 'foreground',
-		margin: '0',
-		typography: 'heading.24.subtle',
-		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
-	})
-
-	export const meta = style({
-		color: 'gray.900',
-		fontVariantNumeric: 'tabular-nums !custom',
-		margin: '0',
-		typography: 'copy.13',
-	})
-
-	export const stats = style({ margin: '0' })
-
-	export const statLabel = style({
-		color: 'gray.900',
-		marginBlockEnd: '8',
-		typography: 'label.13',
-	})
-
-	// A flex row, so the skeleton shrinks to the value instead of the tile.
-	export const statValue = style({
-		color: 'foreground',
-		display: 'flex',
-		fontVariantNumeric: 'tabular-nums !custom',
-		margin: '0',
-		typography: 'heading.20',
-		'@media (width >= 640px)': { typography: 'heading.24' },
-	})
-
-	export const contextual = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '16',
-	})
-
-	export const filter = style({ width: '160' })
-
-	// Keeps "Verified only" on one line in the section header.
-	export const verified = style({ whiteSpace: 'nowrap' })
-
-	export const alert = style({ padding: '16' })
-
-	export const sort = variants({
-		base: {
-			appearance: 'none !custom',
-			backgroundColor: 'transparent !custom',
-			border: 'none !custom',
-			borderRadius: '2',
-			cursor: 'pointer',
-			font: 'inherit !custom',
-			outlineColor: 'transparent !custom',
-			outlineOffset: '2px !custom',
-			outlineStyle: 'solid !custom',
-			outlineWidth: '2px !custom',
-			padding: '0',
-			transitionDuration: '160ms',
-			transitionProperty: 'color, outline-color',
-			transitionTimingFunction: 'snappy',
-			selectors: {
-				'&:focus-visible': { outlineColor: 'blue.700' },
-				'&:hover': { color: 'foreground' },
-			},
-		},
-		defaultVariants: { active: false },
-		variants: {
-			active: {
-				true: { color: 'foreground' },
-				false: { color: 'gray.900' },
-			},
-		},
-	})
-
-	export const rank = style({
-		color: 'gray.900',
-		fontVariantNumeric: 'tabular-nums',
-	})
-
-	export const pair = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	export const pairIcons = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		flexShrink: 0,
-		gap: '4',
-	})
-
-	export const pairName = style({
-		color: 'foreground',
-		typography: 'copy.14.strong',
-	})
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const number = variants({
-		base: { fontVariantNumeric: 'tabular-nums' },
-		defaultVariants: { tone: 'primary' },
-		variants: {
-			tone: {
-				primary: { color: 'foreground' },
-				secondary: { color: 'gray.900' },
-			},
-		},
-	})
 }

@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Hex as HexDisplay, style, Tag, Token } from '@tempoxyz/ds'
 import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { decodeFunctionData, isAddressEqual } from 'viem'
-import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
+import { Midcut } from '#comps/Midcut'
+import { TokenIcon } from '#comps/TokenIcon'
+import { cx } from '#lib/css'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
 import {
 	dexPairLabel,
@@ -18,20 +19,29 @@ import {
 } from '#lib/domain/known-events.ts'
 import {
 	DateFormatter,
+	HexFormatter,
 	PriceFormatter,
 	RoleFormatter,
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
-import { codeIdentifier, link, linkHover, truncate } from '#styles/explorer'
+import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
 
 export function TxEventMemoLine(
 	props: TxEventMemoLine.Props,
 ): React.JSX.Element {
 	const { memo, className } = props
 	return (
-		<div {...styles.memo({ className })}>
-			<span {...styles.memoLabel()}>Memo:</span>
-			<span {...cx(styles.memoText(), truncate())} title={memo}>
+		<div
+			className={cx(
+				'flex min-w-0 items-center gap-2 copy-13 text-secondary',
+				className,
+			)}
+		>
+			<span className="text-tertiary shrink-0">Memo:</span>
+			<span
+				className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+				title={memo}
+			>
 				{memo}
 			</span>
 		</div>
@@ -54,7 +64,7 @@ function ContractCallPart(props: {
 	address: AddressType.Address
 	input: Hex.Hex
 	seenAs?: AddressType.Address
-}): React.JSX.Element {
+}) {
 	const { address, input, seenAs } = props
 	const selector = Hex.slice(input, 0, 4)
 	const isViewingAsContract = seenAs && isAddressEqual(seenAs, address)
@@ -96,20 +106,23 @@ function ContractCallPart(props: {
 		? selector
 		: (functionName ?? signatureFnName ?? selector)
 
-	const name = (
-		<code {...cx(styles.functionName(), codeIdentifier())}>{fnName}</code>
-	)
-	if (isViewingAsContract) return name
+	if (isViewingAsContract) {
+		return (
+			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
+		)
+	}
 
 	return (
 		<>
-			{name}
-			<span {...styles.secondary()}>on</span>
-			<span {...styles.addressSlot()}>
+			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
+			<span className="text-secondary">on</span>
+			<span className="min-w-[11ch] basis-[11ch] max-w-full flex-1 overflow-hidden">
 				<Address
 					address={address}
+					chars={4}
 					search={{ tab: 'contract' }}
 					title={address}
+					className="whitespace-nowrap w-full max-w-full"
 				/>
 			</span>
 		</>
@@ -121,17 +134,15 @@ function lower(address: AddressType.Address): AddressType.Address {
 	return address.toLowerCase() as AddressType.Address
 }
 
-/** Action names start with a capital, as sentence case asks. */
-function sentenceCase(value: string): string {
-	return value.charAt(0).toUpperCase() + value.slice(1)
-}
-
-export function TxEventDescription(
-	props: TxEventDescription.Props,
-): React.JSX.Element {
+export function TxEventDescription(props: TxEventDescription.Props) {
 	const { event, seenAs, className, suffix } = props
 	return (
-		<div {...styles.root({ className })}>
+		<div
+			className={cx(
+				'flex flex-row items-center gap-[6px] flex-wrap min-w-0 flex-1',
+				className,
+			)}
+		>
 			{event.parts.map((part, index) => (
 				<TxEventDescription.Part
 					key={`${part.type}${index}`}
@@ -152,45 +163,56 @@ export namespace TxEventDescription {
 		suffix?: React.ReactNode
 	}
 
-	export function Part(props: Part.Props): React.JSX.Element | null {
+	export function Part(props: Part.Props) {
 		const { part, seenAs } = props
 		switch (part.type) {
 			case 'account': {
 				if (!OxAddress.validate(part.value))
-					return <span {...styles.secondary()}>{String(part.value)}</span>
+					return <span className="text-tertiary">{String(part.value)}</span>
 				return (
-					<span {...styles.addressSlot()}>
+					<span className="min-w-[11ch] basis-[11ch] max-w-full flex-1 overflow-hidden">
 						<Address
 							address={part.value}
+							chars={4}
+							className="text-accent items-end press-down whitespace-nowrap w-full max-w-full"
 							self={seenAs ? isAddressEqual(part.value, seenAs) : false}
 						/>
 					</span>
 				)
 			}
 			case 'action': {
-				if (part.value === 'Failed' || part.value === 'Blocked')
-					return (
-						<Tag
-							intent={part.value === 'Failed' ? 'negative' : 'warning'}
-							variant="plain"
-						>
-							<Tag.Dot />
-							{part.value}
-						</Tag>
-					)
-				if (
+				const isFailed = part.value === 'Failed'
+				const isBlocked = part.value === 'Blocked'
+				const isPrivateZoneAction =
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
+				return (
+					<span
+						className={cx(
+							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
+							isPrivateZoneAction
+								? 'bg-inverse text-content-inverse'
+								: isBlocked
+									? 'bg-warning-subtle text-warning'
+									: isFailed
+										? 'bg-negative/[0.06] text-primary'
+										: 'bg-distinct/70 text-primary',
+						)}
+					>
+						{part.value}
+					</span>
 				)
-					return <Tag intent="accent">{part.value}</Tag>
-				return <Tag>{sentenceCase(part.value)}</Tag>
 			}
 			case 'amount':
 				return <Amount {...part.value} />
 			case 'duration':
 				return <span>{DateFormatter.formatDuration(part.value)}</span>
 			case 'hex':
-				return <HexDisplay value={part.value} {...styles.fill()} />
+				return (
+					<span className="items-end whitespace-nowrap min-w-0 flex-1">
+						<Midcut value={part.value} prefix="0x" />
+					</span>
+				)
 			case 'number': {
 				const formatted = PriceFormatter.formatAmount(
 					Array.isArray(part.value)
@@ -198,45 +220,47 @@ export namespace TxEventDescription {
 						: Value.format(BigInt(part.value)),
 				)
 				return (
-					<span {...truncate()} title={formatted}>
+					<span
+						className="items-end overflow-hidden text-ellipsis whitespace-nowrap"
+						title={formatted}
+					>
 						{formatted}
 					</span>
 				)
 			}
-			case 'role': {
-				const name = RoleFormatter.getRoleName(part.value)
-				if (!name) return <HexDisplay value={part.value} {...styles.fill()} />
+			case 'role':
 				return (
-					<span {...styles.role()} title={part.value}>
-						{name}
+					<span className="items-end whitespace-nowrap" title={part.value}>
+						{RoleFormatter.getRoleName(part.value) || (
+							<span className="font-mono">
+								{HexFormatter.shortenHex(part.value)}
+							</span>
+						)}
 					</span>
 				)
-			}
 			case 'text':
-				return <span {...styles.secondary()}>{part.value}</span>
+				return <span className="text-tertiary">{part.value}</span>
 			case 'tick':
-				return <span>{part.value}</span>
-			case 'token': {
-				const { address, symbol } = part.value
-				const token = (children: React.ReactNode) => (
+				return <span className="items-end">{part.value}</span>
+			case 'token':
+				return (
 					<Link
 						to="/token/$address"
-						params={{ address }}
-						title={address}
-						{...cx(styles.token(), link(), linkHover())}
+						params={{ address: part.value.address }}
+						title={part.value.address}
+						className={cx(
+							'press-down whitespace-nowrap inline-flex items-center gap-1',
+							!part.value.symbol && 'min-w-0 flex-1',
+						)}
 					>
-						<Token address={address} size="small" />
-						{children}
+						<TokenIcon address={part.value.address} name={part.value.symbol} />
+						<span className="text-base-content-positive items-end">
+							{part.value.symbol || (
+								<Midcut value={part.value.address} prefix="0x" />
+							)}
+						</span>
 					</Link>
 				)
-				if (symbol) return token(symbol)
-				// The link sits inside `Hex.Root` so it takes the link color.
-				return (
-					<HexDisplay.Root value={address} {...styles.fill()}>
-						{token(<HexDisplay.Text />)}
-					</HexDisplay.Root>
-				)
-			}
 			case 'contractCall':
 				return <ContractCallPart {...part.value} seenAs={seenAs} />
 			case 'dexRoute':
@@ -245,8 +269,9 @@ export namespace TxEventDescription {
 						to="/dex/$from/$to"
 						params={{ from: lower(part.value.from), to: lower(part.value.to) }}
 						title="View this route on the Stablecoin DEX"
-						{...cx(styles.dexPair(), link(), linkHover())}
+						className="inline-flex h-[24px] items-center gap-[4px] rounded-[2px] px-[6px] whitespace-nowrap bg-accent/10 text-accent hover:bg-accent/15 press-down"
 					>
+						<ArrowLeftRightIcon className="size-[12px]" />
 						Stablecoin DEX
 					</Link>
 				)
@@ -254,7 +279,7 @@ export namespace TxEventDescription {
 				if (!part.value.active)
 					return (
 						<span
-							{...styles.dexPairRetired()}
+							className="whitespace-nowrap text-primary"
 							title="A retired Stablecoin DEX book"
 						>
 							{dexPairLabel(part.value, ' / ')}
@@ -268,7 +293,7 @@ export namespace TxEventDescription {
 							to: lower(part.value.quote.address),
 						}}
 						title="View this pair on the Stablecoin DEX"
-						{...cx(styles.dexPair(), link(), linkHover())}
+						className="whitespace-nowrap text-accent hover:underline press-down"
 					>
 						{dexPairLabel(part.value, ' / ')}
 					</Link>
@@ -285,7 +310,7 @@ export namespace TxEventDescription {
 		}
 	}
 
-	export function ExpandGroup(props: ExpandGroup.Props): React.JSX.Element {
+	export function ExpandGroup(props: ExpandGroup.Props) {
 		const {
 			events,
 			seenAs,
@@ -298,8 +323,8 @@ export namespace TxEventDescription {
 
 		if (!events || events.length === 0)
 			return (
-				<div {...styles.empty()}>
-					<span {...styles.emptyContent()}>{emptyContent}</span>
+				<div className="text-tertiary flex items-center">
+					<span className="inline-block">{emptyContent}</span>
 				</div>
 			)
 
@@ -310,32 +335,34 @@ export namespace TxEventDescription {
 			: eventsToShow
 
 		return (
-			<div {...styles.group()}>
+			<div className="flex flex-col gap-[4px] flex-1">
 				{displayEvents.map((event, index) => (
 					<React.Fragment key={`${event.type}-${index}`}>
-						<TxEventDescription event={event} seenAs={seenAs} />
+						<TxEventDescription
+							event={event}
+							seenAs={seenAs}
+							className="flex flex-row items-center gap-[6px]"
+						/>
 						{renderDetails?.(event)}
 					</React.Fragment>
 				))}
 				{remainingCount > 0 && (
-					<Button
+					<button
+						type="button"
 						onClick={() => setExpanded(true)}
-						size="small"
-						variant="text"
-						{...styles.groupToggle()}
+						className="label-12 text-accent cursor-pointer press-down self-start"
 					>
-						Show {remainingCount} more
-					</Button>
+						+ Show {remainingCount} more
+					</button>
 				)}
 				{expanded && events.length > limit && (
-					<Button
+					<button
+						type="button"
 						onClick={() => setExpanded(false)}
-						size="small"
-						variant="text"
-						{...styles.groupToggle()}
+						className="label-12 text-accent cursor-pointer press-down self-start"
 					>
-						Show fewer
-					</Button>
+						− View less
+					</button>
 				)}
 			</div>
 		)
@@ -351,84 +378,4 @@ export namespace TxEventDescription {
 			limit?: number
 		}
 	}
-}
-
-namespace styles {
-	export const dexPair = style({ whiteSpace: 'nowrap' })
-
-	export const dexPairRetired = style({
-		color: 'foreground',
-		whiteSpace: 'nowrap',
-	})
-
-	export const memo = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-		typography: 'label.12',
-	})
-
-	export const memoLabel = style({ flexShrink: '0 !custom' })
-
-	export const memoText = style({ minWidth: '0 !custom' })
-
-	export const functionName = style({
-		typography: 'copy.13.mono',
-		whiteSpace: 'nowrap',
-	})
-
-	export const secondary = style({ color: 'gray.900' })
-
-	// The slot clips, so the link's focus ring is drawn inside it.
-	export const addressSlot = style({
-		flex: 1,
-		flexBasis: '11ch !custom',
-		maxWidth: '100% !custom',
-		minWidth: '11ch !custom',
-		overflow: 'hidden',
-		selectors: { '& a:focus-visible': { outlineOffset: '-2px' } },
-	})
-
-	export const root = style({
-		alignItems: 'center',
-		display: 'flex',
-		flex: 1,
-		flexDirection: 'row',
-		flexWrap: 'wrap',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
-
-	// Hex leaves its flex sizing unset; a long value takes the rest of the line.
-	export const fill = style({ flex: '1 !custom', minWidth: '0 !custom' })
-
-	export const role = style({ whiteSpace: 'nowrap' })
-
-	export const token = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '4',
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-		whiteSpace: 'nowrap',
-	})
-
-	export const empty = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-	})
-
-	export const emptyContent = style({ display: 'inline-block' })
-
-	export const group = style({
-		display: 'flex',
-		flex: 1,
-		flexDirection: 'column',
-		gap: '4',
-	})
-
-	export const groupToggle = style({ alignSelf: 'flex-start' })
 }

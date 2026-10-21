@@ -3,21 +3,7 @@ import {
 	createFileRoute,
 	stripSearchParams,
 	useNavigate,
-	useRouterState,
 } from '@tanstack/react-router'
-import {
-	Button,
-	ChoiceGroup,
-	Container,
-	CopyButton,
-	Empty,
-	style,
-	Surface,
-	Tabs,
-	Tag,
-	variants,
-} from '@tempoxyz/ds'
-import { Play } from '@tempoxyz/ds/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -33,18 +19,20 @@ import {
 	type OutputTab,
 	SimulateAnswer,
 	SimulateCallHeading,
+	SimulateDiff,
 	SimulateEvents,
-	SimulateMetrics,
 	SimulateOverview,
-	SimulateStatus,
+	SimulateResultHeader,
 	SimulateStepBar,
 	SimulateTabs,
 } from '#comps/SimulateResultPane'
 import {
+	Button,
 	describeCall,
 	PanelEmpty,
 	PanelError,
 	PanelSkeleton,
+	SegmentedControl,
 	SimulationFailure,
 } from '#comps/SimulateShared'
 import { TxStateDiff } from '#comps/TxStateDiff'
@@ -53,6 +41,7 @@ import {
 	TxTraceTree,
 	useTraceTrees,
 } from '#comps/TxTraceTree'
+import { cx } from '#lib/css'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import {
 	type CallDraft,
@@ -74,7 +63,7 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
 import { getFeeTokenForChain } from '#lib/fee-token'
-import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
+import { useCopy, useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import {
 	type CallTrace,
 	mergePrestateDiffs,
@@ -87,6 +76,9 @@ import {
 } from '#lib/queries'
 import { hex, zAddress, zHash } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
+import EraserIcon from '~icons/lucide/eraser'
+import LinkIcon from '~icons/lucide/link'
+import PlayIcon from '~icons/lucide/play'
 
 const EXAMPLE_TOKEN = '0x20c0000000000000000000000000000000000001'
 const EXAMPLE_CALLDATA = '0x06fdde03'
@@ -235,12 +227,7 @@ function SimulatePage(): React.JSX.Element {
 	const [runInput, setRunInput] = React.useState<SimulationInput | null>(
 		initialInput,
 	)
-	// The link carries the inputs, the tab, and the selected frame.
-	const href = useRouterState({ select: (state) => state.location.href })
-	const shareUrl =
-		typeof window === 'undefined'
-			? href
-			: new URL(href, window.location.origin).toString()
+	const shareLink = useCopy({ timeout: 1_500 })
 	// The form always edits exactly one call, even while the result pane shows
 	// them all — so "which call am I editing" is separate from "which call am I
 	// looking at", and clearing the filter does not yank the form elsewhere.
@@ -312,13 +299,8 @@ function SimulatePage(): React.JSX.Element {
 	const run = React.useCallback(() => {
 		const input = parseForm(form, chainId, blockGasLimit)
 		if (!input) {
-			const missingTo = form.calls.some(
-				(call) => !OxAddress.validate(call.to.trim()),
-			)
 			setFormError(
-				missingTo
-					? `Enter a contract address in To${form.calls.length > 1 ? ' for every call' : ''}, then run it again.`
-					: 'Fix the fields marked below, then run it again.',
+				'Enter a valid target address, hexadecimal calldata, and numeric gas and value fields.',
 			)
 			return
 		}
@@ -442,9 +424,7 @@ function SimulatePage(): React.JSX.Element {
 	const loadTransaction = React.useCallback(
 		async (hashValue: string) => {
 			if (!OxHex.validate(hashValue) || OxHex.size(hashValue) !== 32) {
-				setLoadError(
-					'Enter a 66-character transaction hash that starts with 0x.',
-				)
+				setLoadError('Enter a valid transaction hash.')
 				return
 			}
 			setLoadError(null)
@@ -488,9 +468,7 @@ function SimulatePage(): React.JSX.Element {
 							},
 						]
 				if (drafts.some((call) => !call.to))
-					throw new Error(
-						'This transaction creates a contract, which the simulator can’t replay yet.',
-					)
+					throw new Error('Contract creation simulation is not supported yet.')
 				const comparableLogs = withoutFeeTransferLogs(receipt.logs)
 				const nextForm: FormState = {
 					from: transaction.from,
@@ -521,9 +499,7 @@ function SimulatePage(): React.JSX.Element {
 				})
 			} catch (error) {
 				setLoadError(
-					error instanceof Error
-						? error.message
-						: 'Couldn’t load this transaction. Check the hash, then try again.',
+					error instanceof Error ? error.message : 'Failed to load transaction',
 				)
 			} finally {
 				setLoadingTransaction(false)
@@ -567,45 +543,86 @@ function SimulatePage(): React.JSX.Element {
 	const showOutput = pane === 'output' || pane === 'split'
 
 	return (
-		<Container size="full" {...styles.page()}>
-			<div {...styles.toolbar()}>
-				<h1 {...styles.title()}>Simulate</h1>
-				<p {...styles.summary()} title={summary}>
+		<div className="flex w-full flex-col px-[24px] pt-8 pb-12 type-card min-[800px]:pt-14 min-[1240px]:px-[84px]">
+			<div className="mb-[12px] flex flex-wrap items-center gap-x-[14px] gap-y-[8px]">
+				<h1 className="shrink-0 heading-20 text-primary">Simulate</h1>
+				<p
+					className="min-w-0 flex-1 truncate type-card-data text-tertiary"
+					title={summary}
+				>
 					{summary}
 				</p>
-				{/* Split is not offered on a narrow screen, where two panes do not fit. */}
-				<ChoiceGroup.Root
-					aria-label="Panes"
+				<SegmentedControl
 					value={pane}
-					onValueChange={(value) => setSearch({ pane: value })}
-				>
-					<ChoiceGroup.Item value="input">Input</ChoiceGroup.Item>
-					{!narrow && <ChoiceGroup.Item value="split">Split</ChoiceGroup.Item>}
-					<ChoiceGroup.Item value="output">Result</ChoiceGroup.Item>
-				</ChoiceGroup.Root>
+					options={
+						narrow
+							? [
+									{ value: 'input', label: 'Input' },
+									{ value: 'output', label: 'Result' },
+								]
+							: [
+									{ value: 'input', label: 'Input' },
+									{ value: 'split', label: 'Split' },
+									{ value: 'output', label: 'Result' },
+								]
+					}
+					onChange={(value) => setSearch({ pane: value })}
+				/>
+				{/* Both page-scoped: Share copies the whole URL — inputs, tab, and
+				    selected frame — not just the result. Keeping them here means one
+				    action bar rather than a second Run inside the result header. */}
+				{hasDraft && (
+					<Button onClick={clear} title="Start over with an empty call">
+						<EraserIcon className="size-[12px]" />
+						Clear
+					</Button>
+				)}
+				{runInput && (
+					<Button
+						onClick={() =>
+							shareLink.copy(
+								typeof window === 'undefined' ? '' : window.location.href,
+							)
+						}
+						title="Copy a link that reproduces this screen"
+					>
+						<LinkIcon className="size-[12px]" />
+						{shareLink.notifying ? 'Copied' : 'Share'}
+					</Button>
+				)}
+				<Button tone="primary" onClick={run} title="Run this simulation (⌘↵)">
+					<PlayIcon className="size-[12px]" />
+					{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
+					<span className="label-12 opacity-70">⌘↵</span>
+				</Button>
 			</div>
 
-			<div {...styles.panes({ split: pane === 'split' })}>
+			<div
+				className={cx(
+					'grid min-h-[560px] min-w-0 items-start gap-[14px]',
+					pane === 'split' &&
+						'min-[1100px]:grid-cols-[minmax(360px,420px)_minmax(0,1fr)]',
+				)}
+			>
 				{showInput && (
-					<SimulateCallForm
-						onRun={run}
-						canClear={hasDraft}
-						onClear={clear}
-						form={form}
-						setForm={setForm}
-						step={editIndex}
-						onStepChange={(index) => {
-							setEditIndex(index)
-							setSearch({ step: index })
-						}}
-						defaultGas={blockGasLimit}
-						formError={formError}
-						loadHash={loadHash}
-						setLoadHash={setLoadHash}
-						loadError={loadError}
-						loadingTransaction={loadingTransaction}
-						onLoad={() => void loadTransaction(loadHash)}
-					/>
+					<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
+						<SimulateCallForm
+							form={form}
+							setForm={setForm}
+							step={editIndex}
+							onStepChange={(index) => {
+								setEditIndex(index)
+								setSearch({ step: index })
+							}}
+							defaultGas={blockGasLimit}
+							formError={formError}
+							loadHash={loadHash}
+							setLoadHash={setLoadHash}
+							loadError={loadError}
+							loadingTransaction={loadingTransaction}
+							onLoad={() => void loadTransaction(loadHash)}
+						/>
+					</section>
 				)}
 
 				{showOutput && (
@@ -621,13 +638,12 @@ function SimulatePage(): React.JSX.Element {
 							setSearch({ step: index, frame: undefined })
 						}}
 						onSearchChange={setSearch}
-						shareUrl={shareUrl}
 						onExample={runExample}
 						onEdit={() => setSearch({ pane: narrow ? 'input' : 'split' })}
 					/>
 				)}
 			</div>
-		</Container>
+		</div>
 	)
 }
 
@@ -641,8 +657,6 @@ function SimulationResults(props: {
 	step: number | undefined
 	onStepChange: (index: number | undefined) => void
 	onSearchChange: (patch: Record<string, unknown>) => void
-	/** The page URL, which carries the inputs, the tab, and the frame. */
-	shareUrl: string
 	onExample: (kind: 'read' | 'failing') => void
 	onEdit: () => void
 }): React.JSX.Element {
@@ -829,8 +843,6 @@ function SimulationResults(props: {
 		}
 	}, [execution, props.input])
 
-	// Count what actually renders, not raw prestate keys — the diff drops
-	// accounts with no real change and the caller's simulation-only nonce tick.
 	const stateAccounts = React.useMemo(
 		() =>
 			stepPrestate
@@ -863,17 +875,18 @@ function SimulationResults(props: {
 	].filter((error): error is Error => Boolean(error))
 	if (panelErrors.length === (isBatch ? 1 : 3))
 		return (
-			<ResultCard stale={props.stale}>
-				<SimulationFailure
-					errors={panelErrors}
-					onRetry={() => {
-						void traceQuery.refetch()
-						void prestateQuery.refetch()
-						void executionQuery.refetch()
-					}}
-				/>
-			</ResultCard>
+			<SimulationFailure
+				errors={panelErrors}
+				onRetry={() => {
+					void traceQuery.refetch()
+					void prestateQuery.refetch()
+					void executionQuery.refetch()
+				}}
+			/>
 		)
+
+	// Count what actually renders, not raw prestate keys — the diff drops
+	// accounts with no real change and the caller's simulation-only nonce tick.
 
 	const tabs = [
 		{ id: 'overview' as const, label: 'Overview' },
@@ -909,21 +922,23 @@ function SimulationResults(props: {
 		})
 	}
 
-	// On-chain is the more meaningful comparison when it exists, so it wins;
-	// otherwise the previous run.
-	const baseline = props.original
-		? { kind: 'on-chain' as const, metrics: props.original }
-		: previous
-			? { kind: 'previous' as const, metrics: previous }
-			: undefined
-
 	return (
-		<ResultCard
-			status={<SimulateStatus execution={execution} />}
-			shareUrl={props.shareUrl}
-			stale={props.stale}
-		>
-			<div {...styles.evidence({ stale: props.stale })}>
+		<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
+			<SimulateResultHeader
+				execution={execution}
+				input={input}
+				gasLimit={gasAllowance}
+				stale={props.stale}
+			/>
+
+			<div
+				className={cx(
+					'flex min-w-0 flex-col transition-opacity',
+					// Only the evidence dims when inputs change. Dimming the header too
+					// made every shared link's first impression a greyed-out screen.
+					props.stale && 'opacity-60',
+				)}
+			>
 				{execution ? (
 					<>
 						<SimulateAnswer
@@ -942,25 +957,28 @@ function SimulationResults(props: {
 							knownEvents={knownEvents}
 							onJumpToFrame={selectFrame}
 						/>
-						<SimulateMetrics
-							status={execution.status}
-							gasUsed={
-								showingAll ? execution.gasUsed : BigInt(tree?.gasUsed ?? 0)
-							}
-							gasLimit={gasAllowance}
-							events={visibleLogs.length}
-							balances={execution.assetChanges.length}
-							blockNumber={execution.blockNumber}
-							pinned={input.block !== 'latest'}
-							baseline={showingAll ? baseline : undefined}
-						/>
+						{/* On-chain is the more meaningful comparison when it exists, so
+						    it wins; otherwise fall back to the previous run. */}
+						{props.original ? (
+							<SimulateDiff
+								label="vs. on-chain"
+								original={props.original}
+								execution={execution}
+							/>
+						) : previous ? (
+							<SimulateDiff
+								label="vs. previous run"
+								original={previous}
+								execution={execution}
+							/>
+						) : null}
 					</>
 				) : (
-					<PanelSkeleton inset={false} rows={3} />
+					<PanelSkeleton rows={2} />
 				)}
 
 				{/* Waits for results rather than rendering a bare "Showing" with no
-				    buttons: they are labelled by outcome, so there is nothing to
+				    chips: the chips are labelled by outcome, so there is nothing to
 				    draw until the run lands. */}
 				{isBatch && execution && execution.calls.length > 1 && (
 					<SimulateStepBar
@@ -971,18 +989,19 @@ function SimulationResults(props: {
 					/>
 				)}
 
-				{/* Inactive panels unmount, so only the open tab renders its view. */}
 				<SimulateTabs
 					tabs={tabs}
 					value={props.tab}
 					onChange={(tab) => props.onSearchChange({ tab })}
-				>
-					<Tabs.Panel value="overview" {...styles.panel()}>
-						{execution ? (
+				/>
+
+				<div className="min-w-0">
+					{props.tab === 'overview' &&
+						(execution ? (
 							<SimulateOverview
 								input={input}
 								execution={execution}
-								network={networkName(input.chainId)}
+								gasLimit={gasAllowance}
 								functionLabel={
 									tree?.functionName
 										? `${tree.functionName}()`
@@ -993,20 +1012,22 @@ function SimulationResults(props: {
 							/>
 						) : (
 							<PanelSkeleton rows={5} />
-						)}
-					</Tabs.Panel>
+						))}
 
-					<Tabs.Panel value="trace" {...styles.panel()}>
-						{traceQuery.isPending ? (
+					{props.tab === 'trace' &&
+						(traceQuery.isPending ? (
 							<PanelSkeleton rows={7} />
 						) : traceQuery.error ? (
-							<PanelError subject="the call trace" error={traceQuery.error} />
+							<PanelError
+								title="Call trace unavailable"
+								error={traceQuery.error}
+							/>
 						) : showingAll && isBatch ? (
 							// One tree per call, in order, each under its own heading.
 							// Keeping them separate is the point: which call a frame
 							// belongs to is never in question, and nothing has to be
 							// invented for a batch-level root frame that does not exist.
-							<div {...styles.column()}>
+							<div className="flex flex-col">
 								{(execution?.calls ?? []).map((call) => (
 									<CallTracePanel
 										key={call.index}
@@ -1031,19 +1052,15 @@ function SimulationResults(props: {
 								onSelect={selectFrame}
 							/>
 						) : (
-							<PanelEmpty
-								title="No trace"
-								description="The node returned no trace for this call."
-							/>
-						)}
-					</Tabs.Panel>
+							<PanelEmpty>No trace returned for this call.</PanelEmpty>
+						))}
 
-					<Tabs.Panel value="state" {...styles.panel()}>
-						{prestateQuery.isPending ? (
+					{props.tab === 'state' &&
+						(prestateQuery.isPending ? (
 							<PanelSkeleton rows={5} />
 						) : prestateQuery.error ? (
 							<PanelError
-								subject="the state changes"
+								title="State diff unavailable"
 								error={prestateQuery.error}
 							/>
 						) : stateAccounts > 0 ? (
@@ -1057,88 +1074,47 @@ function SimulationResults(props: {
 								omitSenderNonceFor={input.from}
 							/>
 						) : (
-							<PanelEmpty
-								title="No state changes"
-								description="This call changed no balance, nonce, code, or storage."
-							/>
-						)}
-					</Tabs.Panel>
+							<PanelEmpty>No state changed.</PanelEmpty>
+						))}
 
-					<Tabs.Panel value="events" {...styles.panel()}>
-						{executionQuery.isPending ? (
+					{props.tab === 'events' &&
+						(executionQuery.isPending ? (
 							<PanelSkeleton rows={4} />
 						) : executionQuery.error ? (
-							<PanelError subject="the events" error={executionQuery.error} />
+							<PanelError
+								title="Execution result unavailable"
+								error={executionQuery.error}
+							/>
 						) : (
 							<SimulateEvents
 								logs={visibleLogs}
 								knownEvents={visibleKnownEvents}
 							/>
-						)}
-					</Tabs.Panel>
+						))}
 
-					<Tabs.Panel value="gas" {...styles.panel()}>
-						{traceQuery.isPending ? (
+					{props.tab === 'gas' &&
+						(traceQuery.isPending ? (
 							<PanelSkeleton rows={5} />
 						) : (
 							<SimulateGasPanel
 								trees={gasTrees}
 								prestate={stepPrestate}
+								gasUsed={
+									showingAll && execution
+										? execution.gasUsed
+										: BigInt(tree?.gasUsed ?? 0)
+								}
+								gasLimit={
+									BigInt(input.gas || '0') * BigInt(showingAll ? callCount : 1)
+								}
 								selectedFrameId={props.frame}
 								onSelectFrame={selectFrame}
 							/>
-						)}
-					</Tabs.Panel>
-				</SimulateTabs>
+						))}
+				</div>
 			</div>
-		</ResultCard>
+		</section>
 	)
-}
-
-/**
- * The result pane's card: the title and the run's status, then a warning when
- * the inputs no longer match, then the link to share.
- */
-function ResultCard(props: {
-	status?: React.ReactNode
-	stale?: boolean | undefined
-	/** The page URL to share, once there is a result. */
-	shareUrl?: string | undefined
-	children: React.ReactNode
-}): React.JSX.Element {
-	const titleId = React.useId()
-	return (
-		<Surface
-			render={<section aria-labelledby={titleId} />}
-			size="medium"
-			{...styles.card()}
-		>
-			<Surface.Header>
-				<div {...styles.heading()}>
-					<Surface.Title id={titleId}>Result</Surface.Title>
-					{props.status}
-				</div>
-				<div {...styles.headerActions()}>
-					{props.stale && (
-						<Tag intent="warning" variant="plain">
-							<Tag.Dot />
-							Inputs changed
-						</Tag>
-					)}
-					{props.shareUrl !== undefined && (
-						<CopyButton aria-label="Copy link" value={props.shareUrl} />
-					)}
-				</div>
-			</Surface.Header>
-			{props.children}
-		</Surface>
-	)
-}
-
-function networkName(chainId: number): string {
-	if (chainId === 4217) return 'Mainnet'
-	if (chainId === 42431) return 'Moderato testnet'
-	return 'Devnet'
 }
 
 /**
@@ -1160,7 +1136,7 @@ function CallTracePanel(props: {
 }): React.JSX.Element {
 	const { tree } = props
 	return (
-		<div {...styles.column()}>
+		<div className="flex min-w-0 flex-col">
 			<SimulateCallHeading
 				call={props.call}
 				label={props.label}
@@ -1177,48 +1153,59 @@ function CallTracePanel(props: {
 					onSelect={props.onSelect}
 				/>
 			) : (
-				<PanelEmpty
-					title="No trace"
-					description="The node returned no trace for this call."
-				/>
+				<PanelEmpty>No trace returned for this call.</PanelEmpty>
 			)}
 		</div>
 	)
 }
 
-/** Before the first run: what will appear here, and a way to start. */
+/**
+ * The empty pane teaches the layout rather than apologising for being empty:
+ * the shape of the result is visible, greyed, before anything has run.
+ */
 function SimulationEmptyState(props: {
 	onExample: (kind: 'read' | 'failing') => void
 	onEdit: () => void
 }): React.JSX.Element {
 	return (
-		<ResultCard>
-			<Empty.Root>
-				<Empty.Icon>
-					<Play />
-				</Empty.Icon>
-				<Empty.Title>Nothing simulated yet</Empty.Title>
-				<Empty.Description>
-					Run a call or replay a transaction to see its trace, state changes,
-					and events. Nothing is signed or broadcast.
-				</Empty.Description>
-				<Empty.Actions>
-					<Button size="small" onClick={() => props.onExample('read')}>
+		<section className="flex min-w-0 flex-col overflow-hidden rounded-body border border-card-border bg-card-header">
+			<div className="flex items-center gap-[8px] border-b border-card-border px-[16px] py-[10px]">
+				<span className="label-14 text-content-dimmed">
+					Nothing simulated yet
+				</span>
+			</div>
+			<div className="pointer-events-none select-none opacity-40">
+				<SimulateTabs
+					tabs={[
+						{ id: 'overview', label: 'Overview' },
+						{ id: 'trace', label: 'Trace' },
+						{ id: 'state', label: 'State' },
+						{ id: 'events', label: 'Events' },
+						{ id: 'gas', label: 'Gas' },
+					]}
+					value="overview"
+					onChange={() => {}}
+				/>
+			</div>
+			<div className="flex flex-col gap-[12px] px-[16px] py-[16px]">
+				<p className="max-w-[520px] type-card text-tertiary">
+					Fill in a call and run it, or replay an existing transaction by hash
+					against the state of its parent block. Nothing is signed and nothing
+					is broadcast.
+				</p>
+				{/* All secondary: the page already has one primary action, and a second
+				    blue button competing with Run is a coin toss, not a hierarchy. */}
+				<div className="flex flex-wrap gap-[8px]">
+					<Button onClick={() => props.onExample('read')}>
 						Read a token name
 					</Button>
-					<Button
-						size="small"
-						variant="secondary"
-						onClick={() => props.onExample('failing')}
-					>
-						Simulate a failing transfer
+					<Button onClick={() => props.onExample('failing')}>
+						See a failing transfer
 					</Button>
-					<Button size="small" variant="secondary" onClick={props.onEdit}>
-						Compose a call
-					</Button>
-				</Empty.Actions>
-			</Empty.Root>
-		</ResultCard>
+					<Button onClick={props.onEdit}>Compose a call</Button>
+				</div>
+			</div>
+		</section>
 	)
 }
 
@@ -1251,113 +1238,4 @@ function emptySimulationInput(): SimulationInput {
 		gas: DEFAULT_GAS,
 		block: 'latest',
 	}
-}
-
-namespace styles {
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		paddingBottom: '48',
-		paddingTop: '32',
-		typography: 'copy.14',
-		'@media (width >= 800px)': { paddingTop: '48' },
-	})
-
-	export const toolbar = style({
-		alignItems: 'center',
-		columnGap: '16',
-		display: 'flex',
-		flexWrap: 'wrap',
-		marginBottom: '16',
-		rowGap: '8',
-	})
-
-	export const title = style({
-		color: 'foreground',
-		flexShrink: 0,
-		margin: '0',
-		typography: 'heading.20.subtle',
-	})
-
-	export const summary = style({
-		color: 'gray.900',
-		flex: 1,
-		fontVariantNumeric: 'tabular-nums',
-		margin: '0',
-		minWidth: '0 !custom',
-		overflow: 'hidden',
-		textOverflow: 'ellipsis',
-		typography: 'copy.14',
-		whiteSpace: 'nowrap',
-	})
-
-	export const heading = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '12',
-		minWidth: '0 !custom',
-	})
-
-	export const headerActions = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-	})
-
-	export const panes = variants({
-		base: {
-			alignItems: 'start',
-			display: 'grid',
-			gap: '16',
-			minHeight: '560px !custom',
-			minWidth: '0 !custom',
-		},
-		defaultVariants: { split: false },
-		variants: {
-			split: {
-				false: {},
-				true: {
-					'@media (width >= 1100px)': {
-						gridTemplateColumns: 'minmax(360px, 420px) minmax(0, 1fr)',
-					},
-				},
-			},
-		},
-	})
-
-	// Surface owns the fill, border, radius, and padding; as a grid item it
-	// also needs to shrink.
-	export const card = style({ minWidth: '0 !custom' })
-
-	// Only the evidence dims when inputs change. Dimming the header too made
-	// every shared link's first impression a greyed-out screen.
-	export const evidence = variants({
-		base: {
-			display: 'flex',
-			flexDirection: 'column',
-			minWidth: '0 !custom',
-			transitionDuration: '150ms',
-			transitionProperty: 'opacity',
-			transitionTimingFunction: 'in-out',
-		},
-		defaultVariants: { stale: false },
-		variants: {
-			stale: { false: {}, true: { opacity: 0.6 } },
-		},
-	})
-
-	// Panels reach the card's edges, as a Surface's direct Rows and tables do,
-	// so their toolbars and dividers run edge to edge. The margin matches the
-	// medium Surface's padding.
-	export const panel = style({
-		marginInline: '-16px !custom',
-		minWidth: '0 !custom',
-	})
-
-	export const column = style({
-		display: 'flex',
-		flexDirection: 'column',
-		minWidth: '0 !custom',
-	})
 }

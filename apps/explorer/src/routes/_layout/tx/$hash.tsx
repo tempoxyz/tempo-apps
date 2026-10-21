@@ -13,27 +13,18 @@ import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
-import {
-	Amount,
-	Button,
-	Empty,
-	formatHex,
-	Hex as HexDisplay,
-	Rows,
-	style,
-	Token,
-} from '@tempoxyz/ds'
 import { Addresses } from 'viem/tempo'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
-import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
 import { FeePayer } from '#comps/FeePayer'
 import { InfoRow } from '#comps/InfoRow'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
+import { TokenIcon } from '#comps/TokenIcon'
 import { TxBalanceChanges } from '#comps/TxBalanceChanges'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
@@ -44,6 +35,7 @@ import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
+import { cx } from '#lib/css'
 import { getAccountTag } from '#lib/account'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -54,10 +46,12 @@ import {
 	groupRelatedEvents,
 } from '#lib/domain/tx-event-groups'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
+import { isTip20Address } from '#lib/domain/tip20'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
 } from '#lib/domain/transaction-activities'
+import { PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import { describeDexFill } from '#lib/dex-swaps'
@@ -82,8 +76,7 @@ import {
 } from '#lib/queries/trace'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
-import { isTip20Address } from '#lib/domain/tip20'
-import { link, linkHover } from '#styles/explorer'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -106,7 +99,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Transaction not found"
+			title="Transaction Not Found"
 			message={`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
 			data={data as NotFound.NotFoundData}
 		/>
@@ -155,7 +148,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		hash: zHash(),
 	}),
 	head: ({ params, loaderData }) => {
-		const title = `Transaction ${formatHex(params.hash)} ⋅ Tempo Explorer`
+		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
 		const descriptionEvents = loaderData
 			? selectTransactionDescriptionEvents({
 					activityEvents: loaderData.activityEvents,
@@ -290,6 +283,8 @@ function RouteComponent() {
 	tabs.push('overview')
 	sections.push({
 		title: 'Overview',
+		itemsLabel: 'fields',
+		autoCollapse: false,
 		content: (
 			<OverviewSection
 				receipt={receipt}
@@ -307,6 +302,8 @@ function RouteComponent() {
 	tabs.push('balances')
 	sections.push({
 		title: 'Balances',
+		totalItems: balanceChangesData.total,
+		itemsLabel: 'balances',
 		content: (
 			<TxBalanceChanges
 				data={balanceChangesData}
@@ -320,6 +317,8 @@ function RouteComponent() {
 		tabs.push('calls')
 		sections.push({
 			title: 'Calls',
+			totalItems: calls.length,
+			itemsLabel: 'calls',
 			content: <CallsSection calls={calls} />,
 		})
 	}
@@ -327,6 +326,8 @@ function RouteComponent() {
 	tabs.push('events')
 	sections.push({
 		title: 'Events',
+		totalItems: receipt.logs.length,
+		itemsLabel: 'events',
 		content: (
 			<EventsSection
 				hash={hash}
@@ -340,6 +341,7 @@ function RouteComponent() {
 		tabs.push('trace')
 		sections.push({
 			title: 'Trace',
+			itemsLabel: 'views',
 			content: (
 				<TraceSection
 					trace={traceData.trace}
@@ -355,6 +357,8 @@ function RouteComponent() {
 	tabs.push('raw')
 	sections.push({
 		title: 'Raw',
+		totalItems: 0,
+		itemsLabel: 'data',
 		content: <RawSection transaction={transaction} receipt={receipt} />,
 	})
 
@@ -362,8 +366,13 @@ function RouteComponent() {
 	const activeSection = tabIndex !== -1 ? tabIndex : 0
 
 	return (
-		<div {...styles.page()}>
-			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+			)}
+		>
+			<BreadcrumbsSlot className="col-span-full" />
 			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
@@ -372,7 +381,7 @@ function RouteComponent() {
 				timestamp={block.timestamp}
 				from={receipt.from}
 				to={receipt.to}
-				className={styles.card().className}
+				className="self-start"
 			/>
 			<Sections
 				mode={mode}
@@ -393,7 +402,7 @@ function OverviewSection(props: {
 	keyTokenMetadata: TxData['keyTokenMetadata']
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
-}): React.JSX.Element {
+}) {
 	const {
 		receipt,
 		transaction,
@@ -442,10 +451,10 @@ function OverviewSection(props: {
 	)
 
 	return (
-		<Rows.Root dividers="full">
+		<div className="flex flex-col">
 			{description.events.length > 0 && (
 				<InfoRow label="Description" stackOnMobile={Boolean(keyAuthorization)}>
-					<div {...styles.description()}>
+					<div className="flex flex-col gap-[6px]">
 						<TxEventDescription.ExpandGroup
 							events={description.events}
 							renderDetails={(event) =>
@@ -459,7 +468,7 @@ function OverviewSection(props: {
 							}
 						/>
 						{memos.length > 0 && (
-							<div {...styles.stack()}>
+							<div className="flex flex-col gap-[4px] min-w-0">
 								{memos.map((memo, index) => (
 									<TxEventMemoLine key={`${memo}-${index}`} memo={memo} />
 								))}
@@ -469,128 +478,138 @@ function OverviewSection(props: {
 				</InfoRow>
 			)}
 			{balanceChangesData.total > 0 && (
-				<BalanceChangesOverview
-					data={balanceChangesData}
-					hash={receipt.transactionHash}
-				/>
+				<BalanceChangesOverview data={balanceChangesData} />
 			)}
-			<InfoRow label="Network fee">
+			<InfoRow label="Transaction Fee">
 				{feeBreakdown.length > 0 ? (
-					<div {...styles.stack()}>
+					<div className="flex flex-col gap-[4px]">
 						{feeBreakdown.map((item, index) => {
-							const value = Value.format(item.amount, item.decimals)
-							return item.token ? (
-								<TokenAmount
-									key={`${index}${item.token}`}
-									symbol={item.symbol}
-									token={item.token}
-									value={value}
-								/>
-							) : (
-								<Amount key={`${index}`} symbol={item.symbol} value={value} />
+							return (
+								<span key={`${index}${item.token}`} className="text-primary">
+									{Value.format(item.amount, item.decimals)}{' '}
+									{item.token ? (
+										<Link
+											to="/token/$address"
+											params={{ address: item.token }}
+											className="text-base-content-positive press-down"
+										>
+											{item.symbol}
+										</Link>
+									) : (
+										<span className="text-base-content-positive">
+											{item.symbol}
+										</span>
+									)}
+								</span>
 							)
 						})}
 					</div>
 				) : (
-					<Amount
-						symbol={symbol}
-						value={Value.format(
+					<span className="text-primary">
+						{Value.format(
 							receipt.effectiveGasPrice * receipt.gasUsed,
 							decimals,
-						)}
-					/>
+						)}{' '}
+						{symbol}
+					</span>
 				)}
 			</InfoRow>
 			{feePayer && (
-				<InfoRow label="Fee payer">
+				<InfoRow label="Fee Payer">
 					<FeePayer address={feePayer} />
 				</InfoRow>
 			)}
-			<InfoRow label="Gas used">
-				<span {...styles.primary()}>
+			<InfoRow label="Gas Used">
+				<span className="text-primary">
 					{gasUsed.toLocaleString()} / {gasLimit.toLocaleString()}{' '}
-					<span {...styles.secondary()}>({gasUsedPercentage.toFixed(2)}%)</span>
+					<span className="text-tertiary">
+						({gasUsedPercentage.toFixed(2)}%)
+					</span>
 				</span>
 			</InfoRow>
-			<InfoRow label="Gas price">
-				<span {...styles.primary()}>{gasPrice}</span>
+			<InfoRow label="Gas Price">
+				<span className="text-primary">{gasPrice}</span>
 			</InfoRow>
 			{baseFee !== undefined && baseFee !== null && (
-				<InfoRow label="Base fee">
-					<span {...styles.primary()}>{baseFee}</span>
+				<InfoRow label="Base Fee">
+					<span className="text-primary">{baseFee}</span>
 				</InfoRow>
 			)}
 			{maxFee !== undefined && (
-				<InfoRow label="Max fee">
-					<span {...styles.primary()}>{maxFee}</span>
+				<InfoRow label="Max Fee">
+					<span className="text-primary">{maxFee}</span>
 				</InfoRow>
 			)}
 			{maxPriorityFee !== undefined && (
-				<InfoRow label="Max priority fee">
-					<span {...styles.primary()}>{maxPriorityFee}</span>
+				<InfoRow label="Max Priority Fee">
+					<span className="text-primary">{maxPriorityFee}</span>
 				</InfoRow>
 			)}
-			<InfoRow label="Transaction type">
-				<span {...styles.primary()}>{receipt.type}</span>
+			<InfoRow label="Transaction Type">
+				<span className="text-primary">{receipt.type}</span>
 			</InfoRow>
 			{isExpiringNonce ? (
 				<>
-					<InfoRow label="Nonce key">
+					<InfoRow label="Nonce Key">
 						<a
 							href="https://docs.tempo.xyz/protocol/tips/tip-1009"
 							target="_blank"
 							rel="noopener noreferrer"
-							{...cx(link(), linkHover())}
+							className="text-base-content-positive press-down"
 						>
-							Expiring nonce
+							Expiring Nonce
 						</a>
 					</InfoRow>
 					<InfoRow label="Nonce">
-						<span {...styles.primary()}>{nonce}</span>
+						<span className="text-primary">{nonce}</span>
 					</InfoRow>
 				</>
 			) : nonceKey !== undefined ? (
 				<>
-					<InfoRow label="Nonce key">
-						<span {...styles.primary()}>{nonceKey.toString()}</span>
+					<InfoRow label="Nonce Key">
+						<span className="text-primary">{nonceKey.toString()}</span>
 					</InfoRow>
 					<InfoRow label="Nonce">
-						<span {...styles.primary()}>{nonce}</span>
+						<span className="text-primary">{nonce}</span>
 					</InfoRow>
 				</>
 			) : (
 				<InfoRow label="Nonce">
-					<span {...styles.primary()}>{nonce}</span>
+					<span className="text-primary">{nonce}</span>
 				</InfoRow>
 			)}
-			<InfoRow label="Position in block">
-				<span {...styles.primary()}>{positionInBlock}</span>
+			<InfoRow label="Position in Block">
+				<span className="text-primary">{positionInBlock}</span>
 			</InfoRow>
 			{input && input !== '0x' && (
 				<InputDataRow input={input} to={transaction.to} />
 			)}
-		</Rows.Root>
+		</div>
 	)
 }
 
 function InputDataRow(props: {
 	input: Hex.Hex
 	to?: OxAddress.Address | null
-}): React.JSX.Element {
+}) {
 	const { input, to } = props
 
 	return (
-		<InfoRow label="Input data">
-			<TxDecodedCalldata address={to} data={input} />
-		</InfoRow>
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-solid border-card-border last:border-b-0">
+			<div className="flex items-start gap-[16px]">
+				<span className="copy-13 text-tertiary min-w-[140px] shrink-0">
+					Input Data
+				</span>
+				<div className="flex-1">
+					<TxDecodedCalldata address={to} data={input} />
+				</div>
+			</div>
+		</div>
 	)
 }
 
-function BalanceChangesOverview(props: {
-	data: BalanceChangesData
-	hash: Hex.Hex
-}): React.JSX.Element {
-	const { data, hash } = props
+function BalanceChangesOverview(props: { data: BalanceChangesData }) {
+	const { data } = props
 
 	const groupedByAccount = React.useMemo(() => {
 		const grouped = new Map<
@@ -606,88 +625,89 @@ function BalanceChangesOverview(props: {
 	}, [data.changes])
 
 	return (
-		<InfoRow label="Balance updates">
-			<div {...styles.balances()}>
-				<div {...styles.balanceAccounts()}>
-					{Array.from(groupedByAccount.entries()).map(([address, changes]) => (
-						<div key={address} {...styles.balanceAccount()}>
-							<Address
-								address={address}
-								label={getAccountTag(address)?.label}
-							/>
-							<div {...styles.balanceChanges()}>
-								{changes.map((change) => {
-									const metadata = data.tokenMetadata[change.token]
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-solid border-card-border">
+			<div className="flex items-start gap-[16px]">
+				<span className="copy-13 text-tertiary min-w-[140px] shrink-0">
+					Balance Updates
+				</span>
+				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
+					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-sans">
+						{Array.from(groupedByAccount.entries()).map(
+							([address, changes]) => (
+								<div key={address} className="flex flex-col gap-[4px] copy-13">
+									<Address
+										address={address}
+										label={getAccountTag(address)?.label}
+									/>
+									<div className="flex flex-col gap-[2px] pl-[12px] border-l border-base-border">
+										{changes.map((change) => {
+											const metadata = data.tokenMetadata[change.token]
+											const isTip20 = isTip20Address(change.token)
 
-									let diff: bigint
-									try {
-										diff = BigInt(change.diff)
-									} catch {
-										return null
-									}
-									const units = diff < 0n ? -diff : diff
-
-									return (
-										<TokenAmount
-											key={change.token}
-											sign={diff > 0n ? '+' : diff < 0n ? '−' : undefined}
-											symbol={metadata?.symbol}
-											token={change.token}
-											value={
-												metadata
-													? Value.format(units, metadata.decimals)
-													: units.toString()
+											let diff: bigint
+											try {
+												diff = BigInt(change.diff)
+											} catch {
+												return null
 											}
-										/>
-									)
-								})}
-							</div>
-						</div>
-					))}
-				</div>
-				<Button.Link
-					render={
-						<Link
-							to="/tx/$hash"
-							params={{ hash }}
-							search={{ tab: 'balances' }}
-						/>
-					}
-					size="small"
-					variant="text"
-					{...styles.seeAll()}
-				>
-					View all balance changes ({data.total})
-				</Button.Link>
-			</div>
-		</InfoRow>
-	)
-}
 
-/**
- * A TDS `Amount` followed by its token, whose icon and symbol link to the
- * token's page. The symbol is the link, so `Amount` carries no `symbol`.
- */
-function TokenAmount(props: {
-	sign?: '+' | '−' | undefined
-	symbol?: string | undefined
-	token: OxAddress.Address
-	value: string
-}): React.JSX.Element {
-	const { sign, symbol, token, value } = props
-	return (
-		<span {...styles.tokenAmount()}>
-			<Amount sign={sign} value={value} />
-			<Link
-				to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
-				params={{ address: token }}
-				title={token}
-				{...cx(styles.token(), link(), linkHover())}
-			>
-				<Token address={token} size="small" />
-				{symbol ?? formatHex(token)}
-			</Link>
-		</span>
+											const isPositive = diff > 0n
+											const raw = metadata
+												? Value.format(diff, metadata.decimals)
+												: change.diff
+											const formatted = metadata
+												? PriceFormatter.formatAmount(raw)
+												: raw
+
+											return (
+												<div
+													key={change.token}
+													className="flex items-center gap-[8px]"
+												>
+													<span
+														className={cx(
+															'shrink-0 tabular-nums',
+															isPositive
+																? 'text-base-content-positive'
+																: 'text-secondary',
+														)}
+													>
+														{isPositive ? '+' : ''}
+														{formatted}
+													</span>
+													<Link
+														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0"
+														params={{ address: change.token }}
+														to={
+															isTip20 ? '/token/$address' : '/address/$address'
+														}
+													>
+														<TokenIcon
+															address={change.token}
+															name={metadata?.symbol}
+															className="size-[16px]!"
+														/>
+														<span>{metadata?.symbol ?? '…'}</span>
+													</Link>
+												</div>
+											)
+										})}
+									</div>
+								</div>
+							),
+						)}
+					</div>
+					<Link
+						to="."
+						search={{ tab: 'balances' }}
+						className="inline-flex items-center gap-[4px] label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] press-down w-fit"
+					>
+						See all ({data.total})
+						<ChevronDownIcon className="size-[12px]" />
+					</Link>
+				</div>
+			</div>
+		</div>
 	)
 }
 
@@ -702,7 +722,7 @@ function TraceSection(props: {
 	const tree = useTraceTree(trace)
 
 	return (
-		<div {...styles.column()}>
+		<div className="flex flex-col">
 			<TxTraceTree trace={trace} tree={tree} />
 			<TxStateDiff
 				prestate={prestate}
@@ -725,7 +745,7 @@ function CallsSection(props: {
 }) {
 	const { calls } = props
 	return (
-		<div {...styles.calls()}>
+		<div className="flex flex-col divide-y divide-card-border">
 			{calls.map((call, i) => (
 				<CallItem key={`${call.to}-${i}`} call={call} index={i} />
 			))}
@@ -744,16 +764,22 @@ function CallItem(props: {
 	const { call, index } = props
 	const data = call.data
 	return (
-		<div {...styles.call()}>
-			<div {...styles.callHeader()}>
-				<span {...styles.primary()}>Call {index}</span>
+		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
+			<div className="flex items-center gap-[8px] copy-13">
+				<span className="text-primary">#{index}</span>
 				{call.to ? (
-					<Address address={call.to} />
+					<Link
+						to="/address/$address"
+						params={{ address: call.to }}
+						className="text-accent hover:underline press-down"
+					>
+						<Midcut value={call.to} prefix="0x" />
+					</Link>
 				) : (
-					<span {...styles.secondary()}>Contract creation</span>
+					<span className="text-tertiary">Contract Creation</span>
 				)}
 				{data && data !== '0x' && (
-					<span {...styles.secondary()}>({(data.length - 2) / 2} bytes)</span>
+					<span className="text-tertiary">({data.length} bytes)</span>
 				)}
 			</div>
 			{data && data !== '0x' && (
@@ -826,12 +852,9 @@ function EventsSection(props: {
 
 	if (logs.length === 0)
 		return (
-			<Empty.Root>
-				<Empty.Title>No events</Empty.Title>
-				<Empty.Description>
-					This transaction emitted no events.
-				</Empty.Description>
-			</Empty.Root>
+			<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
+				No events emitted in this transaction
+			</div>
 		)
 
 	const cols = [
@@ -854,7 +877,7 @@ function EventsSection(props: {
 
 					return {
 						cells: [
-							<span key="index" {...styles.secondary()}>
+							<span key="index" className="text-tertiary">
 								{indexLabel}
 							</span>,
 							<EventGroupCell
@@ -870,7 +893,7 @@ function EventsSection(props: {
 							/>,
 						],
 						expanded: isExpanded ? (
-							<div {...styles.eventLogs()}>
+							<div className="flex flex-col gap-4">
 								{group.logs.map((log, i) => (
 									<TxDecodedTopics key={log.logIndex ?? i} log={log} />
 								))}
@@ -885,7 +908,7 @@ function EventsSection(props: {
 			page={1}
 			itemsLabel="events"
 			itemsPerPage={groups.length}
-			emptyState="No events"
+			emptyState="No events emitted."
 		/>
 	)
 }
@@ -900,18 +923,21 @@ function EventGroupCell(props: {
 	const eventCount = logs.length
 
 	return (
-		<div {...styles.eventCell()}>
+		<div className="flex flex-col gap-[4px] w-full">
 			{knownEvent ? (
-				<TxEventDescription event={knownEvent} />
+				<TxEventDescription
+					event={knownEvent}
+					className="flex flex-row items-center gap-[6px] "
+				/>
 			) : (
 				<EventFallbackName log={logs[0]} />
 			)}
 			<div>
-				<Button
-					aria-expanded={expanded}
+				<button
+					type="button"
 					onClick={onToggle}
-					size="small"
-					variant="secondary"
+					aria-expanded={expanded}
+					className="inline-flex items-center gap-[4px] label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded
 						? eventCount > 1
@@ -920,7 +946,7 @@ function EventGroupCell(props: {
 						: eventCount > 1
 							? `Show details (${eventCount})`
 							: 'Show details'}
-				</Button>
+				</button>
 			</div>
 		</div>
 	)
@@ -947,11 +973,11 @@ function EventFallbackName(props: { log: Log }) {
 	const eventName = abiEventName ?? signatureEventName
 
 	return (
-		<span {...styles.primary()}>
+		<span className="text-primary">
 			{eventName ? (
 				eventName.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
 			) : selector ? (
-				<HexDisplay value={selector} />
+				<Midcut value={selector} prefix="0x" />
 			) : (
 				'Unknown'
 			)}
@@ -968,148 +994,8 @@ function RawSection(props: {
 	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
 
 	return (
-		<div {...styles.raw()}>
+		<div className="px-[18px] py-[12px] copy-13 break-all">
 			<TxRawTransaction data={rawData} />
 		</div>
 	)
-}
-
-namespace styles {
-	// Stacked below 1024px; beside it, the card takes a capped column.
-	export const page = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		minWidth: '0 !custom',
-		paddingBottom: '64',
-		paddingInline: '16',
-		paddingTop: '64',
-		width: '100% !custom',
-		'@media (width < 800px)': { paddingBottom: '32', paddingTop: '40' },
-		'@media (width >= 1024px)': {
-			alignItems: 'start',
-			display: 'grid',
-			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr) !custom',
-		},
-		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
-	})
-
-	export const breadcrumbs = style({ gridColumn: '1 / -1' })
-
-	export const card = style({ alignSelf: 'flex-start' })
-
-	export const column = style({ display: 'flex', flexDirection: 'column' })
-
-	export const description = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-	})
-
-	export const stack = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		minWidth: '0 !custom',
-	})
-
-	export const primary = style({ color: 'foreground' })
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const balances = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		minWidth: '0 !custom',
-	})
-
-	// The list scrolls, so link focus rings inside it are drawn inset.
-	export const balanceAccounts = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		maxHeight: '360px !custom',
-		overflowY: 'auto',
-		paddingBottom: '8',
-		selectors: { '& a:focus-visible': { outlineOffset: '-2px' } },
-	})
-
-	export const balanceAccount = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		typography: 'copy.14',
-	})
-
-	export const balanceChanges = style({
-		borderColor: 'grayAlpha.200',
-		borderLeftWidth: '1px',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '2px !custom',
-		paddingLeft: '12',
-	})
-
-	export const tokenAmount = style({
-		alignItems: 'center',
-		columnGap: '8',
-		display: 'flex',
-		flexWrap: 'wrap',
-	})
-
-	export const token = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '4',
-	})
-
-	// Button.Link leaves its alignment in a column unset.
-	export const seeAll = style({ alignSelf: 'flex-start' })
-
-	export const calls = style({
-		display: 'flex',
-		flexDirection: 'column',
-		selectors: {
-			'& > :not(:last-child)': {
-				borderBottomWidth: '1px',
-				borderColor: 'grayAlpha.200',
-			},
-		},
-	})
-
-	export const call = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '16',
-		paddingInline: '20',
-	})
-
-	export const callHeader = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		typography: 'label.12',
-	})
-
-	export const eventLogs = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-	})
-
-	export const eventCell = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '4',
-		width: '100% !custom',
-	})
-
-	export const raw = style({
-		paddingBlock: '12',
-		paddingInline: '20',
-		typography: 'label.12',
-		wordBreak: 'break-all',
-	})
 }

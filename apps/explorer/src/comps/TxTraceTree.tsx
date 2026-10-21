@@ -1,33 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import {
-	Button,
-	CopyButton,
-	Field,
-	formatHex,
-	Input,
-	style,
-	Tooltip,
-	variants,
-} from '@tempoxyz/ds'
-import {
-	AlertCircle,
-	ArrowCornerDownLeft,
-	ArrowCornerDownRight,
-	ArrowRight,
-	ChevronDown,
-	ChevronRight,
-	Expand,
-	Search,
-	Shrink,
-} from '@tempoxyz/ds/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { decodeAbiParameters, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
-import { cx } from 'zyzz'
 import { blockHashHistoryAbi } from '#lib/abis'
-import { codeIdentifier, link, linkHover } from '#styles/explorer'
-import { PanelToolbar, ViewToggle } from './PanelToolbar'
+import { cx } from '#lib/css'
+import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import {
 	blockHashHistoryAddress,
 	formatAbiValue,
@@ -45,12 +23,21 @@ import {
 	type DecodedTraceError,
 } from '#lib/domain/trace-errors'
 import { getKnownTraceAbiItem } from '#lib/domain/trace-abi'
-import { usePermalinkHighlight } from '#lib/hooks'
+import { HexFormatter } from '#lib/formatting'
+import { useCopy, usePermalinkHighlight } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
 import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
+import CheckIcon from '~icons/lucide/check'
+import FoldIcon from '~icons/lucide/fold-vertical'
+import UnfoldIcon from '~icons/lucide/unfold-vertical'
+import CircleAlertIcon from '~icons/lucide/circle-alert'
+import CopyIcon from '~icons/lucide/copy'
+import WrapIcon from '~icons/lucide/corner-down-left'
+import ReturnIcon from '~icons/lucide/corner-down-right'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
-	const { trace, tree: treeProp, label = 'Execution trace', toolbar } = props
+	const { trace, tree: treeProp, label = 'Execution Trace', toolbar } = props
 	const [raw, setRaw] = useState(false)
 	// A trace line is a sentence with a fixed left edge. Wrapping it turns a
 	// deep frame into a four-line paragraph and destroys the depth read, so the
@@ -61,12 +48,10 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 		all: boolean
 		nonce: number
 	} | null>(null)
+	const copy = useCopy()
+
 	const builtTree = useTraceTree(treeProp ? null : trace)
 	const tree = treeProp ?? builtTree
-	const ascii = useMemo(
-		() => (tree ? TxTraceTree.toAscii(tree, { raw }) : ''),
-		[tree, raw],
-	)
 
 	const trimmed = query.trim().toLowerCase()
 	const matches = useMemo(
@@ -81,6 +66,10 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 
 	if (!tree) return null
 
+	const handleCopy = () => {
+		copy.copy(TxTraceTree.toAscii(tree, { raw }))
+	}
+
 	const isTree = tree.subtreeSize > 1
 	// A one-frame trace has nothing to filter, expand, or collapse, and inside a
 	// batch it already has a heading above it — so the panel variant draws its
@@ -88,157 +77,126 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	const showToolbar = toolbar && isTree
 	const failedNode = showToolbar ? findDeepestFailedNode(tree) : null
 
-	const modeToggle = (
-		<ViewToggle
-			label="Trace format"
-			value={raw ? 'raw' : 'decoded'}
-			options={[
-				{ value: 'decoded', label: 'Decoded' },
-				{ value: 'raw', label: 'Raw' },
-			]}
-			onChange={(value) => setRaw(value === 'raw')}
-		/>
-	)
-	const wrapToggle = (
-		<PanelToolbar.IconButton
-			onClick={() => setWrap(!wrap)}
-			active={wrap}
-			label={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-		>
-			<ArrowCornerDownLeft />
-		</PanelToolbar.IconButton>
-	)
-	const copyButton = (
-		<CopyButton aria-label="Copy trace" value={ascii} {...styles.shrink()} />
-	)
-
 	return (
-		<div {...styles.root()}>
+		<div className="flex min-w-0 flex-col">
 			{showToolbar ? (
 				<PanelToolbar>
-					{/* The field root reports the filled state that shows Clear. */}
-					<Field.Root {...styles.filter()}>
-						<Input.Group size="small">
-							<Input.Prefix>
-								<Search />
-							</Input.Prefix>
-							<Input.Control
-								type="search"
-								value={query}
-								onValueChange={setQuery}
-								placeholder="Filter frames…"
-								aria-label="Filter frames"
-								spellCheck={false}
-							/>
-							<Input.Clear aria-label="Clear search" />
-						</Input.Group>
-					</Field.Root>
+					{
+						<input
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder="Filter frames…"
+							spellCheck={false}
+							className="h-[24px] w-full max-w-[240px] min-w-0 mr-auto rounded-body border border-card-border bg-base-plane px-[8px] font-mono label-12 text-primary outline-none placeholder:text-field-content-secondary focus:border-focus"
+						/>
+					}
 					{failedNode && (
-						<Button
-							size="small"
-							variant="secondary"
+						<button
+							type="button"
 							onClick={() => props.onSelect?.(failedNode.id)}
+							className="flex h-[24px] shrink-0 items-center gap-[5px] rounded-body border border-negative/40 px-[8px] label-12 text-negative cursor-pointer press-down hover:bg-negative/8"
+							title="Jump to the frame that reverted"
 						>
-							<AlertCircle />
+							<CircleAlertIcon className="size-[11px]" />
 							Go to revert
-						</Button>
+						</button>
 					)}
+					{
+						<>
+							<PanelToolbar.IconButton
+								onClick={() =>
+									setCollapseKey({
+										all: false,
+										nonce: (collapseKey?.nonce ?? 0) + 1,
+									})
+								}
+								title="Expand all frames"
+							>
+								<UnfoldIcon className="size-[12px]" />
+							</PanelToolbar.IconButton>
+							<PanelToolbar.IconButton
+								onClick={() =>
+									setCollapseKey({
+										all: true,
+										nonce: (collapseKey?.nonce ?? 0) + 1,
+									})
+								}
+								title="Collapse all frames"
+							>
+								<FoldIcon className="size-[12px]" />
+							</PanelToolbar.IconButton>
+						</>
+					}
 					<PanelToolbar.IconButton
-						onClick={() =>
-							setCollapseKey({
-								all: false,
-								nonce: (collapseKey?.nonce ?? 0) + 1,
-							})
-						}
-						label="Expand all frames"
+						onClick={() => setWrap(!wrap)}
+						active={wrap}
+						title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
 					>
-						<Expand />
+						<WrapIcon className="size-[12px]" />
 					</PanelToolbar.IconButton>
-					<PanelToolbar.IconButton
-						onClick={() =>
-							setCollapseKey({
-								all: true,
-								nonce: (collapseKey?.nonce ?? 0) + 1,
-							})
-						}
-						label="Collapse all frames"
-					>
-						<Shrink />
+					<PanelToolbar.IconButton onClick={handleCopy} title="Copy trace">
+						{copy.notifying ? (
+							<CheckIcon className="size-[12px]" />
+						) : (
+							<CopyIcon className="size-[12px]" />
+						)}
 					</PanelToolbar.IconButton>
-					{wrapToggle}
-					{copyButton}
-					{modeToggle}
+					<SegmentedControl
+						size="sm"
+						value={raw ? 'raw' : 'decoded'}
+						options={[
+							{ value: 'decoded', label: 'Decoded' },
+							{ value: 'raw', label: 'Raw' },
+						]}
+						onChange={(value) => setRaw(value === 'raw')}
+					/>
 				</PanelToolbar>
 			) : label ? (
-				<Tooltip.Provider>
-					<div {...styles.header()}>
-						<span {...styles.headerLabel()}>{label}</span>
-						<div {...styles.headerActions()}>
-							{copyButton}
-							{wrapToggle}
-							{modeToggle}
-						</div>
+				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-b border-solid border-distinct">
+					<span className="copy-13">
+						<span className="text-tertiary">{label} </span>
+						<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
+					</span>
+					<div className="flex items-center gap-[8px] text-tertiary">
+						{copy.notifying && (
+							<span className="label-12 select-none">copied</span>
+						)}
+						<button
+							type="button"
+							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							onClick={handleCopy}
+							title="Copy trace"
+						>
+							<CopyIcon className="size-[14px]" />
+						</button>
+						<button
+							type="button"
+							onClick={() => setWrap(!wrap)}
+							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+						>
+							<WrapIcon className={cx('size-[14px]', wrap && 'text-primary')} />
+						</button>
 					</div>
-				</Tooltip.Provider>
+				</div>
 			) : null}
-			<Tooltip.Provider>
-				{/* Unwrapped lines scroll sideways, so the region then takes focus for
-				    the keyboard. */}
-				<section
-					aria-label="Call trace"
-					tabIndex={wrap ? undefined : 0}
-					{...styles.frames()}
-				>
-					<TxTraceTree.NodeView
-						node={tree}
-						depth={0}
-						wrap={wrap}
-						raw={raw}
-						matches={matches}
-						ancestorsOfSelection={ancestorsOfSelection}
-						collapseKey={collapseKey}
-						selectedId={props.selectedId}
-						onSelect={props.onSelect}
-					/>
-				</section>
-			</Tooltip.Provider>
-		</div>
-	)
-}
-
-/** Shows or hides a frame's children. */
-function FrameToggle(props: {
-	expanded: boolean
-	/** Frames under this one, named in the label while they are hidden. */
-	frames: number
-	onToggle: () => void
-}): React.JSX.Element {
-	const label = props.expanded
-		? 'Collapse frame'
-		: `Expand ${props.frames} ${props.frames === 1 ? 'frame' : 'frames'}`
-	return (
-		<Tooltip.Root>
-			<Tooltip.Trigger
-				render={
-					<Button
-						aria-expanded={props.expanded}
-						aria-label={label}
-						onClick={(event) => {
-							// The frame around it selects on click; a toggle only toggles.
-							event.stopPropagation()
-							props.onToggle()
-						}}
-						shape="icon"
-						size="small"
-						variant="text"
-						{...styles.shrink()}
-					/>
-				}
+			<div
+				tabIndex={wrap ? undefined : 0}
+				className="px-[14px] py-[10px] font-mono label-12 overflow-x-auto grid grid-cols-[auto_auto_1fr] gap-x-[10px] items-start rounded-b-body focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2!"
 			>
-				{props.expanded ? <ChevronDown /> : <ChevronRight />}
-			</Tooltip.Trigger>
-			<Tooltip.Popup>{label}</Tooltip.Popup>
-		</Tooltip.Root>
+				<TxTraceTree.NodeView
+					node={tree}
+					depth={0}
+					wrap={wrap}
+					raw={raw}
+					matches={matches}
+					ancestorsOfSelection={ancestorsOfSelection}
+					collapseKey={collapseKey}
+					selectedId={props.selectedId}
+					onSelect={props.onSelect}
+				/>
+			</div>
+		</div>
 	)
 }
 
@@ -263,6 +221,21 @@ export function findDeepestFailedNode(
 	}
 
 	return failed?.node ?? null
+}
+
+function RawToggle(props: {
+	raw: boolean
+	onToggle: () => void
+}): React.JSX.Element {
+	return (
+		<button
+			type="button"
+			onClick={props.onToggle}
+			className="copy-13 text-accent hover:underline cursor-pointer press-down"
+		>
+			{props.raw ? '(raw)' : '(decoded)'}
+		</button>
+	)
 }
 
 /** Keep byte arguments and return values compact; the raw view preserves them. */
@@ -617,7 +590,7 @@ export namespace TxTraceTree {
 	export function label(node: Node): string {
 		const contract =
 			node.contractName ??
-			(node.trace.to ? formatHex(node.trace.to) : '[create]')
+			(node.trace.to ? HexFormatter.truncate(node.trace.to) : '[create]')
 		const fn = node.functionName ?? node.selector
 		return fn ? `${contract}.${fn}()` : contract
 	}
@@ -694,13 +667,30 @@ export namespace TxTraceTree {
 
 		return (
 			<>
-				{/* Neutral by default: the opcode is a label, not a link and not a
-				    status. Accent stays reserved for things you can click. */}
-				<span {...styles.opcode({ failed: node.hasError })} title={trace.type}>
+				<span
+					className={cx(
+						'label-12 font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+						// Neutral by default: the opcode is a label, not a link and not a
+						// status. Accent stays reserved for things you can click.
+						node.hasError
+							? 'bg-negative/15 text-negative'
+							: 'bg-distinct text-tertiary',
+						depth > 0 && 'mt-[4px]',
+					)}
+					title={trace.type}
+				>
 					{opLabel}
 				</span>
-				{/* The gas column is a scale, so the big numbers stand out of it. */}
-				<span {...styles.gas({ large: node.gasUsed >= 100_000 })}>
+				<span
+					className={cx(
+						'text-right tabular-nums select-none',
+						// The gas column is a scale, so the eye needs the big numbers to
+						// pop out of it — the small ones are noise by definition.
+						node.gasUsed >= 100_000 ? 'text-secondary' : 'text-tertiary',
+						depth > 0 && 'mt-[4px]',
+					)}
+					title={`Gas used: ${node.gasUsed.toLocaleString()}`}
+				>
 					{node.gasUsed.toLocaleString()}
 				</span>
 				<span
@@ -714,71 +704,103 @@ export namespace TxTraceTree {
 								'aria-pressed': selected,
 								onClick: () => onSelect(node.id),
 								onKeyDown: (event: React.KeyboardEvent) => {
-									// Keys on the toggle or the address link are theirs.
-									if (event.target !== event.currentTarget) return
 									if (event.key !== 'Enter' && event.key !== ' ') return
 									event.preventDefault()
 									onSelect(node.id)
 								},
 							}
 						: {})}
-					{...styles.frame({ failure: node.onFailurePath, wrap })}
+					className={cx(
+						'inline-flex items-start min-w-0 -mx-[4px] px-[4px] rounded-[3px] transition-colors',
+						!wrap && 'whitespace-nowrap',
+						depth > 0 && 'mt-[4px]',
+						// Hover has to be visible or the click is undiscoverable; it stays
+						// fainter than selection so the two never read as the same state.
+						onSelect && !selected && 'hover:bg-base-plane-interactive',
+						selected && 'bg-accent/10',
+						node.onFailurePath && 'border-l-2 border-negative pl-[6px]',
+					)}
 				>
 					<span
-						{...cx(
-							styles.indent(),
-							depth > 0 &&
-								styles.indentNested({
-									style: { marginLeft: 16 + (indentDepth - 1) * 20 },
-								}),
+						className={cx(
+							'inline-flex items-start',
+							depth > 0 && 'border-l border-tertiary/40 pl-[8px]',
 						)}
+						style={
+							depth > 0
+								? { marginLeft: 16 + (indentDepth - 1) * 20 }
+								: undefined
+						}
 					>
 						{overflowDepth > 0 && (
-							<span {...styles.depthBadge()} title={`Depth ${overflowDepth}`}>
+							<span
+								className="mr-[5px] mt-[1px] shrink-0 rounded bg-distinct px-[3px] label-12 text-tertiary select-none"
+								title={`Depth ${overflowDepth}`}
+							>
 								{overflowDepth}
 							</span>
 						)}
-						{node.children.length > 0 ? (
-							<FrameToggle
-								expanded={showChildren}
-								frames={node.subtreeSize - 1}
-								onToggle={() => setExpanded(!expanded)}
-							/>
-						) : (
-							<span {...styles.leaf()}>
-								<ArrowRight {...styles.leafIcon()} />
-							</span>
-						)}
-						<span {...cx(styles.label(), wrap && styles.breakAll())}>
+						<button
+							type="button"
+							onClick={() => node.children.length > 0 && setExpanded(!expanded)}
+							className={cx(
+								'shrink-0 size-[16px] text-tertiary mr-[2px] press-down',
+								node.children.length > 0 && 'cursor-pointer hover:text-primary',
+							)}
+							title={expanded ? 'Collapse frame' : 'Expand frame'}
+						>
+							{node.children.length > 0 ? (
+								expanded ? (
+									'−'
+								) : (
+									'+'
+								)
+							) : (
+								<ArrowRightIcon className="size-[12px] mt-[2px]" />
+							)}
+						</button>
+						<span className={cx(wrap && 'break-all', 'min-w-0')}>
 							{trace.to ? (
 								<Link
 									to="/address/$address"
 									params={{ address: trace.to }}
-									{...cx(styles.address(), link(), linkHover())}
+									className="text-accent hover:underline press-down inline-block"
 									title={trace.to}
 								>
 									{raw
 										? trace.to
 										: node.contractName
-											? `${node.contractName}(${formatHex(trace.to)})`
+											? `${node.contractName}(${HexFormatter.truncate(trace.to)})`
 											: trace.to}
 								</Link>
 							) : (
-								<span {...styles.secondary()}>[contract creation]</span>
+								<span className="text-tertiary">[contract creation]</span>
 							)}
-							<span {...styles.tertiary()}>{raw ? '::' : '.'}</span>
-							<span {...cx(raw && styles.primary(), !raw && codeIdentifier())}>
+							<span className="text-tertiary">{raw ? '::' : '.'}</span>
+							<span
+								className={
+									raw
+										? 'text-primary'
+										: node.hasError
+											? 'text-negative'
+											: 'text-code-identifier'
+								}
+							>
 								{displayName}
 							</span>
 							{node.hasError && (
-								<span {...styles.errorText()} title={errorTitle}>
+								<span className="text-negative ml-[4px]" title={errorTitle}>
 									[{errorDisplay}]
 								</span>
 							)}
 							{!showChildren && node.subtreeSize > 1 && (
-								<span {...styles.hiddenFrames()}>
-									{node.subtreeSize - 1} hidden
-								</span>
+								<button
+									type="button"
+									onClick={() => setExpanded(true)}
+									className="ml-[6px] text-accent hover:underline cursor-pointer"
+								>
+									+{node.subtreeSize - 1} frames
+								</button>
 							)}
 						</span>
 					</span>
@@ -804,19 +826,29 @@ export namespace TxTraceTree {
 					<>
 						<span />
 						<span />
-						<span {...styles.output({ wrap })}>
+						<span
+							className={cx(
+								'inline-flex items-start min-w-0',
+								!wrap && 'whitespace-nowrap',
+							)}
+						>
 							<span
-								{...cx(
-									styles.indent(),
-									depth === 0 && styles.outputRoot(),
-									depth > 0 &&
-										styles.outputNested({
-											style: { marginLeft: 16 + (indentDepth - 1) * 20 },
-										}),
+								className={cx(
+									'inline-flex items-start',
+									depth > 0
+										? 'border-l border-tertiary/40 pl-[24px]'
+										: 'ml-[40px]',
 								)}
+								style={
+									depth > 0
+										? { marginLeft: 16 + (indentDepth - 1) * 20 }
+										: undefined
+								}
 							>
-								<ArrowCornerDownRight {...styles.returnIcon()} />
-								<span {...cx(styles.outputValue(), wrap && styles.breakAll())}>
+								<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[4px] mt-[4px]" />
+								<span
+									className={cx(wrap && 'break-all', 'min-w-0 text-primary')}
+								>
 									{raw
 										? trace.output
 										: (node.decodedOutput ??
@@ -908,234 +940,4 @@ export namespace TxTraceTree {
 
 		return render(node, '', true, true)
 	}
-}
-
-namespace styles {
-	export const root = style({
-		display: 'flex',
-		flexDirection: 'column',
-		minWidth: '0 !custom',
-	})
-
-	export const tertiary = style({ color: 'gray.700' })
-
-	export const secondary = style({ color: 'gray.900' })
-
-	export const primary = style({ color: 'foreground' })
-
-	export const shrink = style({ flexShrink: 0 })
-
-	// Sized beside the toolbar's 32px controls.
-	export const filter = style({
-		marginRight: 'auto !custom',
-		maxWidth: '100% !custom',
-		width: '240',
-	})
-
-	export const header = style({
-		alignItems: 'center',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		display: 'flex',
-		gap: '8',
-		justifyContent: 'space-between',
-		minHeight: '48',
-		paddingBlock: '8',
-		paddingLeft: '16',
-		paddingRight: '8',
-	})
-
-	export const headerLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const headerActions = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '4',
-	})
-
-	export const frames = style({
-		alignItems: 'center',
-		borderBottomLeftRadius: '12',
-		borderBottomRightRadius: '12',
-		columnGap: '8',
-		display: 'grid',
-		gridTemplateColumns: 'auto auto 1fr',
-		overflowX: 'auto',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'label.12.mono',
-		// Focusable so it can be scrolled by keyboard; an inset ring is not
-		// clipped by its own overflow.
-		':focus-visible': {
-			outline: '2px solid currentColor !custom',
-			outlineOffset: '-2px !custom',
-		},
-	})
-
-	export const breakAll = style({ wordBreak: 'break-all' })
-
-	// Rows inherit the grid's mono face; only the colour changes here.
-	export const opcode = variants({
-		base: {
-			backgroundColor: 'grayAlpha.100',
-			borderRadius: '4',
-			color: 'gray.900',
-			paddingBlock: '1',
-			paddingInline: '4',
-			textAlign: 'center',
-			userSelect: 'none',
-			whiteSpace: 'nowrap',
-		},
-		defaultVariants: { failed: false },
-		variants: {
-			failed: {
-				false: {},
-				true: { backgroundColor: 'red.100', color: 'foreground' },
-			},
-		},
-	})
-
-	export const gas = variants({
-		base: {
-			color: 'gray.900',
-			fontVariantNumeric: 'tabular-nums',
-			textAlign: 'right',
-			userSelect: 'none',
-		},
-		defaultVariants: { large: false },
-		variants: {
-			large: { false: {}, true: { color: 'foreground' } },
-		},
-	})
-
-	// Selectable frames (role="button") show hover fainter than selection, so
-	// the two never read as the same state.
-	export const frame = variants({
-		base: {
-			alignItems: 'center',
-			borderRadius: '4',
-			display: 'inline-flex',
-			marginInline: '-4px !custom',
-			minWidth: '0 !custom',
-			paddingLeft: '4',
-			paddingRight: '4',
-			':focus-visible': {
-				outline: '2px solid currentColor !custom',
-				outlineOffset: '0px !custom',
-			},
-			'@media (hover: hover)': {
-				selectors: {
-					'&[role="button"]:not([aria-pressed="true"]):hover': {
-						backgroundColor: 'grayAlpha.100',
-					},
-				},
-			},
-			selectors: {
-				'&[aria-pressed="true"]': { backgroundColor: 'grayAlpha.200' },
-			},
-		},
-		defaultVariants: { failure: false, wrap: true },
-		variants: {
-			failure: {
-				false: {},
-				true: {
-					borderColor: 'red.900',
-					borderLeftWidth: '2px',
-					borderStyle: 'solid',
-					paddingLeft: '6px !custom',
-				},
-			},
-			wrap: { false: { whiteSpace: 'nowrap' }, true: {} },
-		},
-	})
-
-	export const indent = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-	})
-
-	export const indentNested = style({
-		alignSelf: 'stretch',
-		borderColor: 'grayAlpha.300',
-		borderLeftWidth: '1px',
-		borderStyle: 'solid',
-		paddingLeft: '8',
-	})
-
-	export const depthBadge = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '4',
-		color: 'gray.900',
-		flexShrink: 0,
-		marginRight: '4',
-		paddingInline: '2px !custom',
-		userSelect: 'none',
-	})
-
-	// Takes a toggle's place on a leaf, so labels line up.
-	export const leaf = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexShrink: 0,
-		height: '32',
-		justifyContent: 'center',
-		width: '32',
-	})
-
-	export const leafIcon = style({
-		color: 'gray.700',
-		height: '12',
-		width: '12',
-	})
-
-	export const label = style({ minWidth: '0 !custom' })
-
-	export const address = style({ display: 'inline-block' })
-
-	export const errorText = style({
-		color: 'foreground',
-		marginLeft: '4',
-	})
-
-	export const hiddenFrames = style({ color: 'gray.900', marginLeft: '8' })
-
-	export const output = variants({
-		base: {
-			alignItems: 'flex-start',
-			display: 'inline-flex',
-			minWidth: '0 !custom',
-		},
-		defaultVariants: { wrap: true },
-		variants: {
-			wrap: { false: { whiteSpace: 'nowrap' }, true: {} },
-		},
-	})
-
-	// Return values start under the frame label, past its toggle.
-	export const outputRoot = style({ marginLeft: '32' })
-
-	export const outputNested = style({
-		borderColor: 'grayAlpha.300',
-		borderLeftWidth: '1px',
-		borderStyle: 'solid',
-		paddingLeft: '40',
-	})
-
-	export const returnIcon = style({
-		color: 'gray.700',
-		flexShrink: 0,
-		height: '12',
-		marginRight: '4',
-		marginTop: '2px !custom',
-		width: '12',
-	})
-
-	export const outputValue = style({
-		color: 'foreground',
-		minWidth: '0 !custom',
-	})
 }

@@ -1,33 +1,226 @@
-/** Displays, states, and formatting shared by the simulator's panes. */
+import { Button as RegenButton, Tag } from 'regen-ui'
+/** Shared simulator controls use Regen copy/label scales and semantic colors.
+ * Pilat is the UI face; explicit code and hash values use JetBrains Mono Light.
+ */
 
-import {
-	Callout,
-	Empty,
-	formatHex,
-	Skeleton,
-	style,
-	variants,
-} from '@tempoxyz/ds'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
+import * as Value from 'ox/Value'
 import type * as React from 'react'
 import type { Abi } from 'viem'
 import { decodeFunctionData } from 'viem'
+import { cx } from '#lib/css'
 import { formatAbiValue, getContractInfo } from '#lib/domain/contracts'
 import type { FormState } from '#lib/domain/simulate-calls'
+import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { SimulationApiError } from '#lib/queries'
 import type { TxTraceTree } from './TxTraceTree'
 
+// Lives with the panel chrome so the toolbar toggles and this one are literally
+// the same control; re-exported here because the simulator imports it from the
+// shared-primitives module alongside everything else it uses.
+export { SegmentedControl } from './PanelToolbar'
+import CircleAlertIcon from '~icons/lucide/circle-alert'
+import RotateCcwIcon from '~icons/lucide/rotate-ccw'
+
 /* -------------------------------------------------------------------------- */
-/* Gas                                                                        */
+/* Controls                                                                   */
 /* -------------------------------------------------------------------------- */
+
+/** Label above a control. */
+export function Field(props: Field.Props): React.JSX.Element {
+	return (
+		<div className="flex min-w-0 flex-col gap-[5px]">
+			<div className="flex items-center justify-between gap-[8px]">
+				<span className="font-sans label-12 text-tertiary">{props.label}</span>
+				{props.action}
+			</div>
+			{props.children}
+			{props.hint && (
+				<span
+					className={cx(
+						'type-card',
+						props.invalid ? 'text-negative' : 'text-content-dimmed',
+					)}
+				>
+					{props.hint}
+				</span>
+			)}
+		</div>
+	)
+}
+
+export declare namespace Field {
+	interface Props {
+		label: React.ReactNode
+		children: React.ReactNode
+		/** Right-aligned control on the label line — a mode toggle, a link. */
+		action?: React.ReactNode
+		hint?: React.ReactNode
+		invalid?: boolean
+	}
+}
+
+const inputClassName =
+	'w-full min-w-0 rounded-body border border-card-border bg-pane px-[12px] py-[9px] type-card-data text-primary outline-none transition-colors placeholder:text-field-content-secondary focus:border-focus'
+
+/** Invalid state is applied on blur, never on mount — see `draftFieldErrors`. */
+export function inputClass(invalid?: boolean): string {
+	return cx(inputClassName, invalid && 'border-negative focus:border-negative')
+}
+
+/** A primary action. There is at most one per pane. */
+export function Button(props: Button.Props): React.JSX.Element {
+	const { tone = 'default', ...rest } = props
+	return (
+		<RegenButton
+			type="button"
+			{...rest}
+			size="small"
+			variant={tone === 'primary' ? 'primary' : 'secondary'}
+		/>
+	)
+}
+
+export declare namespace Button {
+	interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+		tone?: 'default' | 'primary'
+	}
+}
+
+/* -------------------------------------------------------------------------- */
+/* Data display                                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Small status/meta pill. Tone is the only thing that carries colour. */
+export function Chip(props: Chip.Props): React.JSX.Element {
+	const { tone = 'neutral' } = props
+	return (
+		<Tag intent={tone} title={props.title} className={props.className}>
+			{props.children}
+		</Tag>
+	)
+}
+
+export declare namespace Chip {
+	interface Props {
+		children: React.ReactNode
+		tone?: 'neutral' | 'positive' | 'negative' | 'warning' | 'accent'
+		title?: string
+		className?: string
+	}
+}
+
+/**
+ * A label/value pair in the result header using the shared card roles.
+ */
+export function Fact(props: Fact.Props): React.JSX.Element {
+	return (
+		<div className="flex min-w-0 items-baseline gap-[8px]">
+			<span
+				className="w-[72px] shrink-0 type-card text-tertiary"
+				title={props.hint}
+			>
+				{props.label}
+			</span>
+			<span className="min-w-0 truncate type-card-data text-primary">
+				{props.children}
+			</span>
+		</div>
+	)
+}
+
+export declare namespace Fact {
+	interface Props {
+		label: React.ReactNode
+		children: React.ReactNode
+		hint?: string
+	}
+}
+
+/**
+ * Gas used against the limit it ran under.
+ *
+ * A bare "273,270 gas" answers nothing — the actionable question is whether
+ * the call is anywhere near running out, which is the ratio. Tone only turns
+ * warm past 80%, so a normal call has no colour here at all.
+ */
+export function GasMeter(props: GasMeter.Props): React.JSX.Element {
+	const pct = gasPercent(props.used, props.limit)
+	const warm = pct >= GAS_PRESSURE_THRESHOLD
+	return (
+		<div className="flex flex-col gap-[6px]">
+			<div className="flex items-baseline justify-between gap-[8px]">
+				<span className="type-card text-tertiary">Gas used</span>
+				<GasRatio used={props.used} limit={props.limit} />
+			</div>
+			<div className="h-[4px] w-full overflow-hidden rounded-full bg-distinct">
+				<div
+					className={cx(
+						'h-full rounded-full transition-[width]',
+						warm ? 'bg-warning' : 'bg-viz-base',
+					)}
+					// Always show a sliver, so "it ran" is visually distinct from "it didn't".
+					style={{ width: `max(${Math.min(pct, 100)}%, 2px)` }}
+				/>
+			</div>
+		</div>
+	)
+}
+
+export declare namespace GasMeter {
+	interface Props {
+		used: bigint
+		limit: bigint
+	}
+}
+
+/**
+ * Above this share of the gas limit the limit starts to matter and the
+ * percentage earns colour. Below it, it is shown but stays out of the way.
+ */
+export const GAS_PRESSURE_THRESHOLD = 80
 
 /** Share of the limit a run consumed, as a percentage. */
 export function gasPercent(used: bigint, limit: bigint): number {
 	return limit > 0n ? Number((used * 10_000n) / limit) / 100 : 0
 }
 
-/** `0.45%`, `1%`, `<0.01%`, and never `0%` for a call that used gas. */
+/**
+ * `used / limit (pct)` — the transaction page's format, one implementation.
+ *
+ * Warning, never negative: red on this page means the call failed, and a
+ * succeeded-at-99% result printing a red number reads as a contradiction.
+ * Running out of gas shows up as a revert anyway.
+ */
+export function GasRatio(props: {
+	used: bigint
+	limit: bigint
+	className?: string
+}): React.JSX.Element {
+	const pct = gasPercent(props.used, props.limit)
+	return (
+		<span className={cx('type-card-data', props.className)}>
+			<span className="text-primary">{props.used.toLocaleString()}</span>
+			<span className="text-content-dimmed">
+				{' / '}
+				{props.limit.toLocaleString()}
+			</span>
+			<span
+				className={cx(
+					'ml-[5px]',
+					pct >= GAS_PRESSURE_THRESHOLD
+						? 'text-warning'
+						: 'text-content-dimmed',
+				)}
+			>
+				({formatGasPercent(pct)})
+			</span>
+		</span>
+	)
+}
+
+/** `0.45%`, `1%`, `<0.01%` — never `0%` for a call that actually used gas. */
 export function formatGasPercent(pct: number): string {
 	if (pct === 0) return '0%'
 	if (pct < 0.01) return '<0.01%'
@@ -40,68 +233,54 @@ export function formatGasPercent(pct: number): string {
 /* States                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Placeholder lines while a panel loads. Panels reach the card's edges, so
- * they pad their own content; `inset={false}` drops that padding for content
- * that sits inside the card's padding.
- */
-export function PanelSkeleton(props: {
-	rows: number
-	inset?: boolean | undefined
-}): React.JSX.Element {
+export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
 	return (
-		<div {...styles.skeleton({ inset: props.inset ?? true })}>
+		<div className="flex animate-pulse flex-col gap-[9px] px-[16px] py-[14px]">
 			{Array.from({ length: props.rows }, (_, index) => (
-				<Skeleton
+				<div
 					key={index}
-					{...styles.skeletonRow({
-						style: { width: `${88 - (index % 3) * 14}%` },
-					})}
+					className="h-[10px] rounded bg-distinct"
+					style={{ width: `${88 - (index % 3) * 14}%` }}
 				/>
 			))}
 		</div>
 	)
 }
 
-/** A panel with nothing to show: what is missing, and why. */
+/** Nothing to show, said in one line rather than in a centred hero. */
 export function PanelEmpty(props: {
-	title: string
-	description: string
+	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<Empty.Root>
-			<Empty.Title>{props.title}</Empty.Title>
-			<Empty.Description>{props.description}</Empty.Description>
-		</Empty.Root>
+		<div className="px-[16px] py-[18px] type-card text-tertiary">
+			{props.children}
+		</div>
 	)
 }
 
-/** One panel's request failed; the others may still have loaded. */
 export function PanelError(props: {
-	/** What failed to load, such as `the call trace`. */
-	subject: string
+	title: string
 	error: Error
 }): React.JSX.Element {
 	const rateLimited =
 		props.error instanceof SimulationApiError && props.error.status === 429
 	return (
-		<div {...styles.panelError()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				<Callout.Content>
-					{rateLimited
-						? `Couldn't load ${props.subject}: too many simulations in a short window. Wait a few seconds, then run it again.`
-						: `Couldn't load ${props.subject}. ${props.error.message}`}
-				</Callout.Content>
-			</Callout>
+		<div className="flex flex-col gap-[4px] px-[16px] py-[14px] type-card">
+			<span className="text-negative">
+				{rateLimited ? 'Rate limited' : props.title}
+			</span>
+			<span className="type-card-data break-all text-tertiary">
+				{props.error.message}
+			</span>
 		</div>
 	)
 }
 
 /**
- * Whole-simulation failure: one message, not one per panel. The panels share
- * one endpoint and one node, so anything wrong with the request fails them all
- * identically. It leads with what the reader can do about it.
+ * Whole-simulation failure: one box, not one per panel. The three panels share
+ * one endpoint and one node, so anything wrong with the request fails all three
+ * identically, and repeating it says nothing extra. Titled by what the user can
+ * do about it rather than by which query object threw.
  */
 export function SimulationFailure(props: {
 	errors: Error[]
@@ -110,59 +289,89 @@ export function SimulationFailure(props: {
 	const status = props.errors.find(
 		(error): error is SimulationApiError => error instanceof SimulationApiError,
 	)?.status
+	const { title, hint } = describeFailure(status)
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
 	return (
-		<Callout intent="negative">
-			<Callout.Icon />
-			<Callout.Content>
-				{describeFailure(status)}
-				{messages.map((message) => (
-					<span key={message} {...styles.failureMessage()}>
-						{message}
-					</span>
-				))}
-			</Callout.Content>
-			<Callout.Action onClick={props.onRetry}>Try again</Callout.Action>
-		</Callout>
+		<div className="flex items-start gap-[10px] rounded-body border border-negative/40 bg-card px-[16px] py-[14px]">
+			<CircleAlertIcon className="mt-[2px] size-[14px] shrink-0 text-negative" />
+			<div className="flex min-w-0 flex-1 flex-col gap-[6px]">
+				<h2 className="label-13 text-negative">{title}</h2>
+				<p className="type-card text-secondary">{hint}</p>
+				<div className="flex flex-col gap-[4px]">
+					{messages.map((message) => (
+						<code
+							key={message}
+							className="block rounded-body bg-distinct px-[9px] py-[6px] type-card-data break-all text-tertiary"
+						>
+							{message}
+						</code>
+					))}
+				</div>
+				<Button onClick={props.onRetry} className="mt-[2px]">
+					<RotateCcwIcon className="size-[12px]" />
+					Try again
+				</Button>
+			</div>
+		</div>
 	)
 }
 
-function describeFailure(status: number | undefined): string {
+function describeFailure(status: number | undefined): {
+	title: string
+	hint: string
+} {
 	if (status === 429)
-		return 'Too many simulations in a short window. Wait a few seconds, then try again.'
+		return {
+			title: 'Rate limited',
+			hint: 'Too many simulations in a short window. Wait a few seconds and run it again.',
+		}
 	if (status === 504)
-		return 'The node took too long to trace this call. Lower the gas limit or pin a block, then try again.'
+		return {
+			title: 'Simulation timed out',
+			hint: 'The node took too long to trace this call. A lower gas limit or a pinned block may help.',
+		}
 	if (status === 400)
-		return 'The request was rejected before it reached the node. Check the addresses, calldata, and gas limit.'
-	return 'The node rejected this simulation, so nothing was traced. Check that the target supports the call and that the block still has state.'
+		return {
+			title: 'This call could not be simulated',
+			hint: 'The request was rejected before it reached the node. Check the addresses, calldata, and gas limit.',
+		}
+	return {
+		title: 'The node rejected this simulation',
+		hint: 'Nothing was traced. This is usually the call itself — an unsupported target, or a block the node no longer has state for.',
+	}
 }
 
 /* -------------------------------------------------------------------------- */
 /* Formatting                                                                 */
 /* -------------------------------------------------------------------------- */
 
+/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)`, or `→ 2 calls`. */
 /**
- * Longest argument list worth inlining in the summary. Past this the count
- * says more than a row of truncated values.
+ * Longest argument list worth inlining in the header.
+ *
+ * Two short arguments read as a sentence. Six truncated hashes read as noise —
+ * every one of them is elided to `0x…` anyway, so the list costs the width of
+ * the whole header and tells you nothing you could act on. Past this the count
+ * says more than the values.
  */
 const MAX_SUMMARY_ARG_CHARS = 32
 
-/** `0xdEaD…dEaD → pathUSD.transfer(0x…0002, …)`, or `→ 2 calls`. */
 export function describeCall(form: FormState, abi: Abi | undefined): string {
 	const first = form.calls[0]
 	if (!first || (!first.to.trim() && !first.data.trim())) return 'New call'
 
 	const from = OxAddress.validate(form.from)
-		? formatHex(form.from)
+		? HexFormatter.truncate(form.from as OxHex.Hex)
 		: form.from || 'anyone'
 
 	if (form.calls.length > 1) return `${from} → ${form.calls.length} calls`
 
-	// A resolved name is shorter and says more than the address it stands for.
+	// A resolved name is both shorter and more informative than the address it
+	// stands for; the form's `To` field already names the same contract.
 	const to = OxAddress.validate(first.to)
 		? (getContractInfo(first.to as OxAddress.Address)?.name ??
-			formatHex(first.to))
+			HexFormatter.truncate(first.to as OxHex.Hex))
 		: first.to || '—'
 
 	let call =
@@ -182,7 +391,7 @@ export function describeCall(form: FormState, abi: Abi | undefined): string {
 					: `…${values.length} args`
 			call = `${decoded.functionName}(${args})`
 		} catch {
-			// Unknown selector: the hex form above is a fine fallback.
+			// Unknown selector — the hex form above is a fine fallback.
 		}
 	}
 
@@ -190,14 +399,14 @@ export function describeCall(form: FormState, abi: Abi | undefined): string {
 }
 
 function shorten(value: string): string {
-	if (OxHex.validate(value) && value.length > 14) return formatHex(value)
 	if (value.length <= 14) return value
 	return `${value.slice(0, 6)}…${value.slice(-4)}`
 }
 
 export function callLabel(node: TxTraceTree.Node): string {
 	const contract =
-		node.contractName ?? (node.trace.to ? formatHex(node.trace.to) : 'contract')
+		node.contractName ??
+		(node.trace.to ? HexFormatter.truncate(node.trace.to) : 'contract')
 	const fn = node.functionName ?? node.selector ?? 'call'
 	return `${contract}.${fn}()`
 }
@@ -220,30 +429,24 @@ export function signed(value: bigint): string {
 	return `${value > 0n ? '+' : '−'}${(value < 0n ? -value : value).toLocaleString()}`
 }
 
-namespace styles {
-	export const skeleton = variants({
-		base: {
-			display: 'flex',
-			flexDirection: 'column',
-			gap: '8',
-			paddingBlock: '16',
-		},
-		defaultVariants: { inset: true },
-		variants: {
-			inset: { false: {}, true: { paddingInline: '16' } },
-		},
-	})
+/**
+ * Formats with the token's decimals, or falls back to the raw integer. A raw
+ * integer here reads as a wildly wrong number (0.1 USDC.e shows as 100,000),
+ * which is worse than showing nothing.
+ */
+export function formatBalanceDelta(
+	diff: bigint,
+	decimals: number | undefined,
+): string {
+	const sign = diff > 0n ? '+' : '−'
+	const magnitude = diff < 0n ? -diff : diff
+	if (decimals === undefined) return `${sign}${magnitude.toLocaleString()}`
+	return `${sign}${PriceFormatter.formatAmount(Value.format(magnitude, decimals))}`
+}
 
-	// Skeleton owns the fill, radius, and sweep; an empty one needs a size.
-	export const skeletonRow = style({ height: '12' })
-
-	export const panelError = style({ padding: '16' })
-
-	// Node errors run long; each takes its own line and wraps.
-	export const failureMessage = style({
-		display: 'block',
-		marginTop: '4',
-		overflowWrap: 'anywhere',
-		typography: 'label.13.mono',
-	})
+/** Abbreviates large gas counts the way a trace gutter needs: `7.97M`. */
+export function formatGas(gas: number): string {
+	if (gas >= 1_000_000) return `${(gas / 1_000_000).toFixed(2)}M`
+	if (gas >= 100_000) return `${Math.round(gas / 1_000)}k`
+	return gas.toLocaleString()
 }

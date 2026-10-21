@@ -1,81 +1,194 @@
 import { Link } from '@tanstack/react-router'
-import { LoadingDots, style, Pagination as TdsPagination } from '@tempoxyz/ds'
+import { cx } from '#lib/css'
+import { useMediaQuery } from '#lib/hooks'
+import ChevronFirst from '~icons/lucide/chevron-first'
+import ChevronLast from '~icons/lucide/chevron-last'
+import ChevronLeft from '~icons/lucide/chevron-left'
+import ChevronRight from '~icons/lucide/chevron-right'
 
 /**
- * Page links for a paged list, with the item count beside them. Each page is
- * a URL (`?page=n`), so pages survive a reload and work with Back.
+ * useful links:
+ * - `<Link search />` https://tanstack.com/router/v1/docs/framework/react/guide/search-params#link-search-
  */
-export function Pagination(props: Pagination.Props): React.JSX.Element {
+
+export function Pagination(props: Pagination.Props) {
 	const {
 		page,
 		pages,
-		range,
 		totalItems,
-		itemsLabel,
-		compact = false,
+		itemsLabel: itemsLabel_,
+		isPending,
+		compact: compact_,
 		hideOnSinglePage = true,
 	} = props
 
-	const count = (
-		<Pagination.Count
-			range={pages > 1 ? range : undefined}
-			totalItems={totalItems}
-			itemsLabel={itemsLabel}
-		/>
-	)
+	const isNarrow = useMediaQuery('(max-width: 479px)')
+	const compact = compact_ || pages > 999 || isNarrow
+
+	const itemsLabel = Pagination.pluralize(totalItems, itemsLabel_)
 
 	if (hideOnSinglePage && pages <= 1)
-		return <div {...styles.root()}>{count}</div>
-
-	const previous = page > 1 ? page - 1 : undefined
-	const next = page < pages ? page + 1 : undefined
-	let gaps = 0
-	// Below 640px, and for ranges too long for page links, Previous and Next
-	// frame a "Page 1 of 3" label instead.
-	const narrow = (
-		<TdsPagination size="small">
-			<Pagination.Step direction="previous" page={previous} />
-			<TdsPagination.Ellipsis>
-				Page {Pagination.numFormat.format(page)} of{' '}
-				{Pagination.numFormat.format(pages)}
-			</TdsPagination.Ellipsis>
-			<Pagination.Step direction="next" page={next} />
-		</TdsPagination>
-	)
-
-	if (compact || pages > 999)
 		return (
-			<div {...styles.root()}>
-				{count}
-				{narrow}
+			<div className="flex items-center justify-end px-[16px] py-[12px] label-12 text-tertiary">
+				<span className="text-primary tabular-nums">
+					{Pagination.numFormat.format(totalItems)}
+				</span>
+				<span className="ml-[8px]">{itemsLabel}</span>
+			</div>
+		)
+
+	if (compact)
+		return (
+			<div className="flex flex-col items-center gap-[12px] sm:flex-row sm:justify-between px-[16px] py-[12px] label-12 text-tertiary w-full">
+				<div className="grid grid-cols-4 justify-items-center gap-2 min-[480px]:flex min-[480px]:items-center min-[480px]:gap-[6px]">
+					<Link
+						to="."
+						resetScroll={false}
+						search={(previous) => ({ ...previous, page: 1 })}
+						disabled={page <= 1 || isPending}
+						className={cx(
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
+						)}
+						title="First page"
+					>
+						<ChevronFirst className="size-[14px]" />
+					</Link>
+
+					<Link
+						to="."
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: (previous?.page ?? 1) - 1,
+						})}
+						disabled={page <= 1 || isPending}
+						className={cx(
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
+						)}
+						title="Previous page"
+					>
+						<ChevronLeft className="size-[14px]" />
+					</Link>
+
+					<span className="col-span-4 row-start-1 text-center text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+						Page{' '}
+						<span className="text-primary">
+							{Pagination.numFormat.format(page)}
+						</span>{' '}
+						of {Pagination.numFormat.format(pages)}
+					</span>
+
+					<Link
+						to="."
+						type="button"
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: (previous?.page ?? 1) + 1,
+						})}
+						disabled={page >= pages || isPending}
+						className={cx(
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
+						)}
+						title="Next page"
+					>
+						<ChevronRight className="size-[14px]" />
+					</Link>
+
+					<Link
+						to="."
+						type="button"
+						resetScroll={false}
+						search={(previous) => ({ ...previous, page: pages })}
+						disabled={page >= pages || isPending}
+						className={cx(
+							'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] max-[479px]:size-8 text-primary',
+						)}
+						title="Last page"
+					>
+						<ChevronLast className="size-[14px]" />
+					</Link>
+				</div>
+
+				<Pagination.Count totalItems={totalItems} itemsLabel={itemsLabel} />
 			</div>
 		)
 
 	return (
-		<div {...styles.root()}>
-			{count}
-			{/* Both layouts render, and `display: none` keeps only the visible one in the accessibility tree. */}
-			<div {...styles.wide()}>
-				<TdsPagination size="small">
-					<Pagination.Step direction="previous" page={previous} />
-					{Pagination.getPagination(page, pages).map((item) =>
-						item === Pagination.Ellipsis ? (
-							<TdsPagination.Ellipsis key={`gap-${gaps++}`} />
-						) : (
-							<TdsPagination.Page
-								key={item}
-								aria-label={`Page ${Pagination.numFormat.format(item)}`}
-								current={item === page}
-								render={<Pagination.PageLink page={item} />}
-							>
-								{Pagination.numFormat.format(item)}
-							</TdsPagination.Page>
-						),
+		<div className="flex flex-col gap-[12px] px-[16px] py-[12px] label-12 text-tertiary md:flex-row md:items-center md:justify-between">
+			<div className="flex flex-row items-center gap-[8px] mx-auto md:mx-0">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) - 1,
+					})}
+					disabled={page <= 1 || isPending}
+					className={cx(
+						'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
-					<Pagination.Step direction="next" page={next} />
-				</TdsPagination>
+					title="Previous page"
+				>
+					<ChevronLeft className="size-[16px]" />
+				</Link>
+
+				<div className="flex items-center gap-[6px]">
+					{(() => {
+						const pageNumbers = Pagination.getPagination(page, pages)
+						let ellipsisCount = 0
+
+						return pageNumbers.map((p) =>
+							p === Pagination.Ellipsis ? (
+								<span
+									key={`ellipsis-${ellipsisCount++}`}
+									className="text-tertiary flex w-[28px] h-[28px] items-center justify-center"
+								>
+									…
+								</span>
+							) : (
+								<Link
+									key={p}
+									to="."
+									resetScroll={false}
+									disabled={page === p || isPending}
+									search={(previous) => ({ ...previous, page: p })}
+									className={`rounded-button flex w-[28px] h-[28px] items-center justify-center ${
+										page === p
+											? 'bg-accent text-on-accent cursor-default'
+											: 'cursor-pointer press-down hover:bg-alt text-primary'
+									} ${isPending && page !== p ? 'opacity-50 cursor-not-allowed' : ''}`}
+								>
+									{p}
+								</Link>
+							),
+						)
+					})()}
+				</div>
+
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) + 1,
+					})}
+					disabled={page >= pages || isPending}
+					className={cx(
+						'rounded-button! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
+					)}
+					title="Next page"
+				>
+					<ChevronRight className="size-[16px]" />
+				</Link>
 			</div>
-			<div {...styles.narrow()}>{narrow}</div>
+
+			<Pagination.Count
+				page={page}
+				pages={pages}
+				totalItems={totalItems}
+				itemsLabel={itemsLabel}
+			/>
 		</div>
 	)
 }
@@ -84,11 +197,9 @@ export namespace Pagination {
 	export interface Props {
 		page: number
 		pages: number
-		/** The first and last item numbers on screen, shown before the total. */
-		range?: readonly [number, number] | undefined
 		totalItems: number
 		itemsLabel: string
-		/** Shows Previous and Next around a "Page 1 of 3" label at every width. */
+		isPending: boolean
 		compact?: boolean
 		hideOnSinglePage?: boolean
 	}
@@ -112,7 +223,6 @@ export namespace Pagination {
 		maximumFractionDigits: 0,
 	})
 
-	/** The first, last and current pages with the current page's neighbors, about seven items. */
 	export function getPagination(page: number, pages: number): number[] {
 		if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1)
 
@@ -129,85 +239,119 @@ export namespace Pagination {
 		return [1, Ellipsis, page - 1, page, page + 1, Ellipsis, pages]
 	}
 
-	/** A router link to `page`, keeping the other search params and the scroll position. */
-	export function PageLink(props: PageLink.Props): React.JSX.Element {
-		const { page, ...rest } = props
-		return (
-			<Link
-				to="."
-				resetScroll={false}
-				search={(previous) => ({ ...previous, page })}
-				{...rest}
-			/>
-		)
-	}
-
-	export declare namespace PageLink {
-		type Props = Omit<React.ComponentProps<'a'>, 'href'> & { page: number }
-	}
-
-	/**
-	 * Previous or Next, linking to `page`. Without a page it renders disabled,
-	 * in place, so the page links do not shift.
-	 */
-	export function Step(props: Step.Props): React.JSX.Element {
-		const { direction, page, ...rest } = props
-		const Part =
-			direction === 'previous' ? TdsPagination.Previous : TdsPagination.Next
-		if (page === undefined) return <Part disabled />
-		return <Part render={<PageLink page={page} {...rest} />} />
-	}
-
-	export declare namespace Step {
-		type Props = Omit<PageLink.Props, 'page'> & {
-			direction: 'previous' | 'next'
-			page: number | undefined
-		}
-	}
-
-	/** Previous and Next around a "Page 1 of 3" label, for lists without page links. */
-	export function Simple(props: Simple.Props): React.JSX.Element | null {
+	export function Simple(props: Simple.Props) {
 		const {
 			page,
 			pages,
 			pagesCapped = false,
-			countLoading = false,
+			fetching,
+			countLoading,
+			disableLastPage,
 			onPrefetchNext,
 			onCancelPrefetchNext,
 			showPageLabel = true,
 		} = props
-		const total = typeof pages === 'number' ? pages : undefined
-
-		if (total !== undefined && total <= 1 && page === 1 && !countLoading)
-			return null
+		const isIndefinite = typeof pages !== 'number'
 
 		// When capped, `pages` reflects the cap (e.g. 1,000) but its final page
-		// isn't addressable upstream, so show it as "1,000+" and stop Next at
-		// `pages - 1` (the last requestable page).
-		const hasNext =
-			typeof pages === 'number'
-				? page < (pagesCapped ? pages - 1 : pages)
-				: Boolean(pages?.hasMore)
-		const label =
-			total === undefined || countLoading || total < 1
-				? `Page ${numFormat.format(page)}`
-				: `Page ${numFormat.format(page)} of ${numFormat.format(total)}${pagesCapped ? '+' : ''}`
+		// isn't addressable upstream, so show it as "1,000+" and clamp navigation
+		// to `pages - 1` (the last requestable page).
+		const totalPagesLabel =
+			isIndefinite || countLoading
+				? '…'
+				: typeof pages === 'number' && pages > 0
+					? pagesCapped
+						? `${Pagination.numFormat.format(pages)}+`
+						: Pagination.numFormat.format(pages)
+					: '…'
+		const disableNext = isIndefinite
+			? !(pages as { hasMore: boolean } | undefined)?.hasMore
+			: pagesCapped
+				? page >= pages - 1
+				: page >= pages
+
+		const handlePrefetchNext = () => {
+			if (disableNext) return
+			onPrefetchNext?.()
+		}
+
+		// Hide pagination controls on single page (but not during indefinite loading)
+		const isSinglePage =
+			!isIndefinite && typeof pages === 'number' && pages <= 1 && page === 1
+		if (isSinglePage && !countLoading) return <div />
 
 		return (
-			<TdsPagination size="small">
-				<Step direction="previous" page={page > 1 ? page - 1 : undefined} />
+			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({ ...prev, page: 1 })}
+					disabled={page <= 1}
+					className={cx(
+						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="First page"
+				>
+					<ChevronFirst className="size-[14px]" />
+				</Link>
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({
+						...prev,
+						page: (prev?.page ?? 1) - 1,
+					})}
+					disabled={page <= 1}
+					className={cx(
+						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="Previous page"
+				>
+					<ChevronLeft className="size-[14px]" />
+				</Link>
 				{showPageLabel && (
-					<TdsPagination.Ellipsis>{label}</TdsPagination.Ellipsis>
+					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+						<span className={cx('text-primary', fetching && 'opacity-50')}>
+							{Pagination.numFormat.format(page)}
+						</span>
+						{' of '}
+						{totalPagesLabel}
+					</span>
 				)}
-				<Step
-					direction="next"
-					page={hasNext ? page + 1 : undefined}
-					onMouseEnter={onPrefetchNext}
-					onFocus={onPrefetchNext}
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({
+						...prev,
+						page: (prev?.page ?? 1) + 1,
+					})}
+					onMouseEnter={handlePrefetchNext}
+					onFocus={handlePrefetchNext}
 					onMouseLeave={onCancelPrefetchNext}
 					onBlur={onCancelPrefetchNext}
-				/>
-			</TdsPagination>
+					disabled={disableNext}
+					className={cx(
+						'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="Next page"
+				>
+					<ChevronRight className="size-[14px]" />
+				</Link>
+				{typeof pages === 'number' && !pagesCapped && (
+					<Link
+						to="."
+						resetScroll={false}
+						search={(prev) => ({ ...prev, page: pages })}
+						disabled={page >= pages || disableLastPage}
+						className={cx(
+							'rounded-button border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						)}
+						title="Last page"
+					>
+						<ChevronLast className="size-[14px]" />
+					</Link>
+				)}
+			</div>
 		)
 	}
 
@@ -218,49 +362,63 @@ export namespace Pagination {
 			pages?: number | { hasMore: boolean }
 			/** Show the total page count as a capped value (e.g. "1,000+"). */
 			pagesCapped?: boolean
+			fetching?: boolean
 			countLoading?: boolean
+			/** Disable "Last page" button when we can't reliably navigate there */
+			disableLastPage?: boolean
 			onPrefetchNext?: () => void
 			onCancelPrefetchNext?: () => void
 			showPageLabel?: boolean | undefined
 		}
 	}
 
-	/**
-	 * The rows on screen and the total, such as "51–75 of 1,204 transactions",
-	 * or the total alone without a `range`.
-	 */
-	export function Count(props: Count.Props): React.JSX.Element {
+	export function Count(props: Count.Props) {
 		const {
-			range,
+			page,
+			pages,
 			totalItems,
-			itemsLabel,
-			loading = false,
-			capped = false,
+			itemsLabel: itemsLabel_,
+			loading,
+			capped,
 			className,
 		} = props
-		const shown = range
-			? `${numFormat.format(range[0])}–${numFormat.format(range[1])} of `
-			: ''
+		const itemsLabel = loading
+			? itemsLabel_
+			: Pagination.pluralize(totalItems, itemsLabel_)
 
 		return (
-			<div {...styles.count({ className })}>
-				{loading ? (
-					<>
-						{shown}
-						<LoadingDots aria-label={`Counting ${itemsLabel}`} size="small" />
-						{` ${itemsLabel}`}
-					</>
-				) : (
-					`${shown}${numFormat.format(totalItems)}${capped ? '+' : ''} ${pluralize(totalItems, itemsLabel)}`
+			<div
+				className={cx(
+					'flex items-center justify-center sm:justify-end gap-[8px]',
+					className,
 				)}
+			>
+				{page != null && pages != null && (
+					<>
+						<span className="text-primary tabular-nums">
+							{Pagination.numFormat.format(page)}
+						</span>
+						<span className="text-tertiary">of</span>
+						<span className="text-primary tabular-nums">
+							{Pagination.numFormat.format(pages)}
+						</span>
+						<span className="text-tertiary">•</span>
+					</>
+				)}
+				<span className="text-primary tabular-nums">
+					{loading
+						? '…'
+						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
+				</span>
+				<span className="text-tertiary font-sans">{itemsLabel}</span>
 			</div>
 		)
 	}
 
 	export namespace Count {
 		export interface Props {
-			/** The first and last item numbers on screen, from 1. */
-			range?: readonly [number, number] | undefined
+			page?: number
+			pages?: number
 			totalItems: number
 			itemsLabel: string
 			loading?: boolean
@@ -268,23 +426,4 @@ export namespace Pagination {
 			className?: string
 		}
 	}
-}
-
-namespace styles {
-	export const root = style({
-		alignItems: 'center',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '12',
-		justifyContent: 'space-between',
-	})
-
-	export const wide = style({
-		display: 'none',
-		'@media 640': { display: 'block' },
-	})
-
-	export const narrow = style({ '@media 640': { display: 'none' } })
-
-	export const count = style({ color: 'gray.900', typography: 'label.13' })
 }

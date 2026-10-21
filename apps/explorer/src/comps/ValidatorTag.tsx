@@ -1,14 +1,36 @@
-import type { Address as AddressType } from 'ox'
-import type * as React from 'react'
-import { Address } from '#comps/Address'
+import { Link } from '@tanstack/react-router'
+import type { Address } from 'ox'
+import { Midcut } from '#comps/Midcut'
 
-/** A block's validator, right-aligned and linking to its address. */
-export function ValidatorTag(props: ValidatorTag.Props): React.JSX.Element {
-	return <Address address={props.address} align="end" />
+export function ValidatorTag(props: ValidatorTag.Props) {
+	const { address, name, showAddress = true, align = 'end' } = props
+
+	return (
+		<Link
+			to="/address/$address"
+			params={{ address }}
+			className="text-accent hover:underline press-down min-w-0 flex-1 flex items-center gap-2 justify-end"
+			title={address}
+		>
+			{name && (
+				<span className="label-12 px-[6px] py-[2px] rounded bg-base-alt/65 text-tertiary whitespace-nowrap">
+					{name}
+				</span>
+			)}
+			{showAddress && (
+				<span className="font-mono">
+					<Midcut value={address} prefix="0x" align={align} min={4} />
+				</span>
+			)}
+		</Link>
+	)
 }
 
-export declare namespace ValidatorTag {
-	type Props = {
-		address: AddressType.Address
+export namespace ValidatorTag {
+	export interface Props {
+		address: Address.Address
+		name?: string
+		showAddress?: boolean
+		align?: 'start' | 'end'
 	}
 }

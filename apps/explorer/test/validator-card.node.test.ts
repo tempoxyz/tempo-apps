@@ -3,11 +3,16 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ValidatorCard } from '#comps/ValidatorCard'
 
-const { readContract } = vi.hoisted(() => ({
+const { readContract, copy, copyState } = vi.hoisted(() => ({
 	readContract: vi.fn(),
+	copy: vi.fn(),
+	copyState: { notifying: false },
 }))
 vi.mock('wagmi', () => ({ useReadContract: readContract }))
-vi.mock('#lib/hooks', () => ({ useIsMounted: () => true }))
+vi.mock('#lib/hooks', () => ({
+	useIsMounted: () => true,
+	useCopy: () => ({ copy, notifying: copyState.notifying }),
+}))
 vi.mock('@tanstack/react-router', () => ({
 	Link: ({
 		children,
@@ -50,38 +55,42 @@ const render = () =>
 
 beforeEach(() => {
 	readContract.mockReturnValue({ data: validator })
+	copy.mockClear()
+	copyState.notifying = false
 })
 
 describe('validator address card', () => {
-	it('copies the full fee recipient from a button beside its link', () => {
+	it('copies the full fee recipient without navigating the address link', () => {
 		const html = render()
-		const recipientLink = `href="/address/${validator.feeRecipient}?tab=holdings"`
-		const linkStart = html.indexOf(recipientLink)
-		const linkEnd = html.indexOf('</a>', linkStart)
-		expect(linkStart).toBeGreaterThan(-1)
-		// TDS `Hex.Copy` sits after the link, so a copy never navigates.
-		expect(html.indexOf('aria-label="Copy fee recipient"')).toBeGreaterThan(
-			linkEnd,
+		expect(html).toContain('aria-label="Copy fee recipient"')
+		const recipientSection = ValidatorCard({ address })?.props.sections[1]
+		const copyButton = recipientSection.props.children[0].props.children[1]
+		copyButton.props.onClick()
+		expect(copy).toHaveBeenCalledExactlyOnceWith(validator.feeRecipient)
+		expect(html).toContain(
+			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
 	})
 
-	it('confirms copies in place, without a toast', () => {
+	it('confirms when the fee recipient was copied', () => {
+		copyState.notifying = true
 		const html = render()
-		expect(html).toContain('role="status"')
-		expect(html).not.toContain('Copied')
+		expect(html).toContain('aria-label="Fee recipient copied"')
+		expect(html).toContain('>copied</span>')
 	})
 
-	it('links the full fee recipient to holdings and preserves genesis height', () => {
+	it('links the full fee recipient to holdings, matches address typography and preserves genesis height', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
 		expect(html).not.toContain('>Index<')
-		// TDS `Hex` truncates the recipient on screen and keeps the full value for screen readers.
-		const linkStart = html.indexOf(
+		expect(html).toContain(
+			'font-mono copy-13 text-primary break-all leading-relaxed max-w-[32ch]',
+		)
+		expect(html).toContain('class="normal-case">Added at height</span>')
+		expect(html).toContain(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
-		const link = html.slice(linkStart, html.indexOf('</a>', linkStart))
-		expect(link).toContain(`>${validator.feeRecipient}<`)
-		expect(html).toMatch(/<span class="[^"]+">Added at height<\/span>/)
+		expect(html).toContain(`>${validator.feeRecipient}</a>`)
 		expect(html).toContain('href="/block/0"')
 		expect(html).not.toContain('Deactivated')
 		expect(readContract.mock.lastCall?.[0]).toMatchObject({
@@ -103,12 +112,9 @@ describe('validator address card', () => {
 		expect(html).toContain('>No<')
 		expect(html).not.toContain('>Index<')
 		expect(html).not.toContain('>15<')
-		expect(html).toMatch(/<span class="[^"]+">Deactivated at height<\/span>/)
+		expect(html).toContain('class="normal-case">Deactivated at height</span>')
 		expect(html).toContain('href="/block/9007199254740993"')
 		expect(html).toContain('href="/block/9007199254740995"')
-		// Block numbers group their digits on screen.
-		expect(html).toContain('>9,007,199,254,740,993<')
-		expect(html).toContain('>9,007,199,254,740,995<')
 	})
 
 	it('never renders public keys or networking information', () => {

@@ -1,49 +1,311 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Breadcrumbs as TdsBreadcrumbs, formatHex } from '@tempoxyz/ds'
-import type * as React from 'react'
+import * as React from 'react'
+import { createPortal } from 'react-dom'
+import { cx } from '#lib/css'
+import ChevronRight from '~icons/lucide/chevron-right'
+import Home from '~icons/lucide/home'
+import X from '~icons/lucide/x'
 
-/** Where the current page sits: Home, its section when it has one, then the page. */
-export function BreadcrumbsSlot(
-	props: BreadcrumbsSlot.Props,
-): React.JSX.Element | null {
-	const pathname = useRouterState({
+const MAX_CRUMBS = 3
+
+export interface Crumb {
+	path: string
+	label: string
+	type:
+		| 'home'
+		| 'tx'
+		| 'receipt'
+		| 'address'
+		| 'token'
+		| 'block'
+		| 'policy'
+		| 'other'
+}
+
+function truncateHash(hash: string, prefixLen = 6, suffixLen = 4): string {
+	if (hash.length <= prefixLen + suffixLen + 2) return hash
+	return `${hash.slice(0, prefixLen)}…${hash.slice(-suffixLen)}`
+}
+
+function getLabelForPath(pathname: string): {
+	label: string
+	type: Crumb['type']
+} {
+	if (pathname === '/') {
+		return { label: 'Home', type: 'home' }
+	}
+
+	const txMatch = pathname.match(/^\/tx\/(0x[a-fA-F0-9]+)$/)
+	if (txMatch) {
+		return { label: `Tx ${truncateHash(txMatch[1])}`, type: 'tx' }
+	}
+
+	const receiptMatch = pathname.match(/^\/receipt\/(0x[a-fA-F0-9]+)$/)
+	if (receiptMatch) {
+		return {
+			label: `Receipt ${truncateHash(receiptMatch[1])}`,
+			type: 'receipt',
+		}
+	}
+
+	const addressMatch = pathname.match(/^\/address\/(0x[a-fA-F0-9]+)$/)
+	if (addressMatch) {
+		return { label: `Addr ${truncateHash(addressMatch[1])}`, type: 'address' }
+	}
+
+	const tokenMatch = pathname.match(/^\/token\/(0x[a-fA-F0-9]+)$/)
+	if (tokenMatch) {
+		return { label: `Token ${truncateHash(tokenMatch[1])}`, type: 'token' }
+	}
+
+	const blockMatch = pathname.match(/^\/block\/(\d+|latest)$/)
+	if (blockMatch) {
+		return { label: `Block ${blockMatch[1]}`, type: 'block' }
+	}
+
+	const policyMatch = pathname.match(/^\/policy\/(\d+)$/)
+	if (policyMatch) {
+		return { label: `Policy #${policyMatch[1]}`, type: 'policy' }
+	}
+
+	if (pathname === '/blocks') {
+		return { label: 'Blocks', type: 'other' }
+	}
+
+	if (pathname === '/tokens') {
+		return { label: 'Tokens', type: 'other' }
+	}
+
+	return { label: pathname, type: 'other' }
+}
+
+interface BreadcrumbsContextValue {
+	crumbs: Crumb[]
+	pendingCrumb: Crumb | null
+	clearCrumbs: () => void
+	slotEl: HTMLElement | null
+	setSlotEl: (el: HTMLElement | null) => void
+}
+
+const BreadcrumbsContext = React.createContext<BreadcrumbsContextValue | null>(
+	null,
+)
+
+export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
+	const { children } = props
+	const [crumbs, setCrumbs] = React.useState<Crumb[]>([])
+	const [slotEl, setSlotEl] = React.useState<HTMLElement | null>(null)
+
+	// Track resolved location for committing to history
+	// Fall back to current location if resolvedLocation is not yet available
+	const resolvedPathname = useRouterState({
+		select: (state) =>
+			state.resolvedLocation?.pathname ?? state.location.pathname,
+	})
+
+	// Track current location for pending/optimistic display
+	const currentPathname = useRouterState({
 		select: (state) => state.location.pathname,
 	})
-	const trail = getTrail(pathname)
-	if (!trail) return null
+
+	// Track previous resolved pathname to detect changes
+	const prevResolvedRef = React.useRef<string | null>(null)
+
+	// Commit crumbs when navigation resolves successfully
+	React.useEffect(() => {
+		// Skip if pathname hasn't changed
+		if (prevResolvedRef.current === resolvedPathname) return
+		prevResolvedRef.current = resolvedPathname
+
+		const { label, type } = getLabelForPath(resolvedPathname)
+
+		setCrumbs((prev) => {
+			if (resolvedPathname === '/') {
+				return []
+			}
+
+			const existingIndex = prev.findIndex((c) => c.path === resolvedPathname)
+			if (existingIndex !== -1) {
+				return prev.slice(0, existingIndex + 1)
+			}
+
+			const newCrumb: Crumb = { path: resolvedPathname, label, type }
+			return [...prev, newCrumb].slice(-MAX_CRUMBS)
+		})
+	}, [resolvedPathname])
+
+	// Compute pending crumb for immediate UI feedback during navigation
+	const pendingCrumb = React.useMemo<Crumb | null>(() => {
+		// Only show pending crumb if navigating to a different path
+		if (currentPathname === resolvedPathname || currentPathname === '/') {
+			return null
+		}
+		// Don't show if it's already in crumbs
+		if (crumbs.some((c) => c.path === currentPathname)) {
+			return null
+		}
+		const { label, type } = getLabelForPath(currentPathname)
+		return { path: currentPathname, label, type }
+	}, [currentPathname, resolvedPathname, crumbs])
+
+	const clearCrumbs = React.useCallback(() => {
+		// Keep only the current page as a single crumb
+		if (resolvedPathname === '/') {
+			setCrumbs([])
+		} else {
+			const { label, type } = getLabelForPath(resolvedPathname)
+			setCrumbs([{ path: resolvedPathname, label, type }])
+		}
+	}, [resolvedPathname])
+
+	const value = React.useMemo(
+		() => ({ crumbs, pendingCrumb, clearCrumbs, slotEl, setSlotEl }),
+		[crumbs, pendingCrumb, clearCrumbs, slotEl],
+	)
 
 	return (
-		<TdsBreadcrumbs className={props.className}>
-			<TdsBreadcrumbs.Item render={<Link to="/" />}>Home</TdsBreadcrumbs.Item>
-			{trail.section && (
-				<TdsBreadcrumbs.Item render={<Link to={trail.section.to} />}>
-					{trail.section.label}
-				</TdsBreadcrumbs.Item>
-			)}
-			<TdsBreadcrumbs.Item current>{trail.label}</TdsBreadcrumbs.Item>
-		</TdsBreadcrumbs>
+		<BreadcrumbsContext.Provider value={value}>
+			{children}
+		</BreadcrumbsContext.Provider>
 	)
 }
 
-export declare namespace BreadcrumbsSlot {
-	type Props = { className?: string | undefined }
+function useBreadcrumbs() {
+	const context = React.useContext(BreadcrumbsContext)
+	if (!context) {
+		throw new Error('useBreadcrumbs must be used within BreadcrumbsProvider')
+	}
+	return context
 }
 
-type Trail = {
-	label: string
-	section?: { label: string; to: '/blocks' | '/tokens' } | undefined
+export function Breadcrumbs(props: Breadcrumbs.Props) {
+	const { className } = props
+	const { crumbs, pendingCrumb, clearCrumbs } = useBreadcrumbs()
+
+	const resolvedPathname = useRouterState({
+		select: (state) =>
+			state.resolvedLocation?.pathname ?? state.location.pathname,
+	})
+
+	// Combine committed crumbs with pending crumb for display
+	const displayCrumbs = pendingCrumb ? [...crumbs, pendingCrumb] : crumbs
+	const hasPendingCrumb = pendingCrumb !== null
+
+	const isEmpty =
+		(resolvedPathname === '/' && !hasPendingCrumb) || displayCrumbs.length === 0
+
+	return (
+		<nav
+			aria-label="Breadcrumb"
+			aria-hidden={isEmpty}
+			className={cx(
+				'flex items-center gap-1 label-12 text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5 origin-left transition-[opacity,scale] duration-[80ms] starting:opacity-0 starting:scale-[0.97]',
+				isEmpty
+					? 'opacity-0 scale-[0.97] pointer-events-none'
+					: 'opacity-100 scale-100',
+				className,
+			)}
+		>
+			{!isEmpty && (
+				<>
+					<Link
+						to="/"
+						className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
+						title="Home"
+					>
+						<Home className="size-3.5" />
+					</Link>
+
+					{displayCrumbs.map((crumb, index) => {
+						const isLast = index === displayCrumbs.length - 1
+						const isPending = isLast && hasPendingCrumb
+						return (
+							<React.Fragment key={crumb.path}>
+								<ChevronRight className="size-3 text-tertiary shrink-0" />
+								{isLast ? (
+									<span
+										className={cx(
+											'font-medium truncate max-w-[120px]',
+											isPending
+												? 'text-secondary animate-pulse'
+												: 'text-primary',
+										)}
+										title={crumb.path}
+									>
+										<CrumbLabel label={crumb.label} />
+									</span>
+								) : (
+									<Link
+										to={crumb.path}
+										className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
+										title={crumb.path}
+									>
+										<CrumbLabel label={crumb.label} />
+									</Link>
+								)}
+							</React.Fragment>
+						)
+					})}
+
+					{crumbs.length > 1 && (
+						<button
+							type="button"
+							onClick={clearCrumbs}
+							className="text-tertiary hover:text-primary press-down shrink-0 outline-none focus-visible:text-accent cursor-pointer"
+							title="Clear navigation history"
+						>
+							<X className="size-3" />
+						</button>
+					)}
+				</>
+			)}
+		</nav>
+	)
 }
 
-function getTrail(pathname: string): Trail | undefined {
-	const [, kind, id] = pathname.split('/')
-	if (!id) return undefined
-	if (kind === 'block')
-		return { label: `Block ${id}`, section: { label: 'Blocks', to: '/blocks' } }
-	if (kind === 'token')
-		return { label: formatHex(id), section: { label: 'Tokens', to: '/tokens' } }
-	if (kind === 'tx') return { label: `Transaction ${formatHex(id)}` }
-	if (kind === 'receipt') return { label: `Receipt ${formatHex(id)}` }
-	if (kind === 'address') return { label: `Address ${formatHex(id)}` }
-	if (kind === 'policy') return { label: `Policy ${id}` }
-	return undefined
+export namespace Breadcrumbs {
+	export interface Props {
+		className?: string
+	}
+}
+
+export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
+	const { className } = props
+	const { setSlotEl } = useBreadcrumbs()
+	const ref = React.useRef<HTMLDivElement | null>(null)
+
+	React.useLayoutEffect(() => {
+		setSlotEl(ref.current)
+		return () => setSlotEl(null)
+	}, [setSlotEl])
+
+	return <div ref={ref} className={cx('min-h-5', className)} />
+}
+
+export namespace BreadcrumbsSlot {
+	export interface Props {
+		className?: string
+	}
+}
+
+export function BreadcrumbsPortal() {
+	const { slotEl } = useBreadcrumbs()
+
+	if (slotEl) {
+		return createPortal(<Breadcrumbs />, slotEl)
+	}
+
+	// No slot registered - BreadcrumbsSlot handles the loading fallback
+	return null
+}
+
+function CrumbLabel(props: { label: string }): React.JSX.Element {
+	const index = props.label.indexOf('0x')
+	if (index === -1) return <>{props.label}</>
+	return (
+		<>
+			{props.label.slice(0, index)}
+			<span className="font-mono">{props.label.slice(index)}</span>
+		</>
+	)
 }

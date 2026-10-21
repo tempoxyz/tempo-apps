@@ -1,41 +1,17 @@
 import { Link } from '@tanstack/react-router'
-import { Hex, style } from '@tempoxyz/ds'
-import type { Hex as HexType } from 'ox'
-import type * as React from 'react'
+import type { Hex } from 'ox'
+import { Midcut } from '#comps/Midcut'
 
-/** A transaction hash in TDS `Hex`, linking to its receipt. */
-export function TransactionCell(
-	props: TransactionCell.Props,
-): React.JSX.Element {
+export function TransactionCell(props: { hash: Hex.Hex }) {
 	const { hash } = props
 	return (
-		<Hex.Root value={hash} {...styles.root()}>
-			<Link
-				to="/receipt/$hash"
-				params={{ hash }}
-				preload="intent"
-				{...styles.link()}
-			>
-				<Hex.Text />
-			</Link>
-		</Hex.Root>
+		<Link
+			to="/receipt/$hash"
+			params={{ hash }}
+			preload="intent"
+			className="copy-13 text-tertiary press-down w-full"
+		>
+			<Midcut value={hash} prefix="0x" />
+		</Link>
 	)
-}
-
-export declare namespace TransactionCell {
-	type Props = { hash: HexType.Hex }
-}
-
-namespace styles {
-	export const root = style({ minWidth: '0 !custom' })
-
-	// Secondary to the row's own link, so it reads in gray.
-	export const link = style({
-		color: 'gray.900',
-		display: 'inline-flex',
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-		textDecorationLine: 'none',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
-	})
 }

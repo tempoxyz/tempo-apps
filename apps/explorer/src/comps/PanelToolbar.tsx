@@ -1,58 +1,67 @@
+import { Choices } from 'regen-ui'
 /**
  * The control strip above a data panel.
  *
  * Shared by the trace tree and the state diff so the two read as siblings.
+ * Before this, passing `label={null}` (which the simulator does, because the tab
+ * already names the panel) left a 40px strip holding nothing but a bare
+ * `(decoded)` link and two unlabelled icons — the same empty band in two places,
+ * styled slightly differently in each.
+ *
  * Left side is a summary of what is below. Right side is the view controls,
- * with the format toggle last.
+ * heaviest last: mode toggle at the end, where it also sits in the calldata
+ * field, so "same value, different representation" always looks the same.
  */
 
-import { Button, ChoiceGroup, style, Tooltip } from '@tempoxyz/ds'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { truncate } from '#styles/explorer'
+import { cx } from '#lib/css'
 
 /**
- * A small `ChoiceGroup` for a panel's format, such as Decoded or Raw.
+ * One control, N mutually exclusive states — the pane split, Decoded/Raw in a
+ * panel toolbar, Decoded/Hex in the calldata field. One implementation so
+ * "same value, different representation" always looks the same.
  */
-export function ViewToggle<T extends string>(
-	props: ViewToggle.Props<T>,
+export function SegmentedControl<T extends string>(
+	props: SegmentedControl.Props<T>,
 ): React.JSX.Element {
+	const { value, options, onChange, size = 'md' } = props
 	return (
-		<ChoiceGroup.Root<T>
-			aria-label={props.label}
-			onValueChange={props.onChange}
-			size="small"
-			value={props.value}
-		>
-			{props.options.map((option) => (
-				<ChoiceGroup.Item key={option.value} value={option.value}>
-					{option.label}
-				</ChoiceGroup.Item>
-			))}
-		</ChoiceGroup.Root>
+		<Choices
+			label={options.map((option) => option.label).join(' / ')}
+			value={value}
+			onChange={onChange}
+			variant="compact"
+			className={cx(
+				'rounded-body bg-pane',
+				size === 'sm' && '[&_[role=radio]]:h-5',
+			)}
+			items={options.map((option) => ({
+				value: option.value,
+				label: <span title={option.title}>{option.label}</span>,
+			}))}
+		/>
 	)
 }
 
-export declare namespace ViewToggle {
+export declare namespace SegmentedControl {
 	interface Props<T extends string> {
-		/** Accessible name for the group. */
-		label: string
 		value: T
-		options: ReadonlyArray<{ value: T; label: string }>
+		options: ReadonlyArray<{ value: T; label: string; title?: string }>
 		onChange: (value: T) => void
+		size?: 'sm' | 'md'
 	}
 }
 
 export function PanelToolbar(props: PanelToolbar.Props): React.JSX.Element {
 	return (
-		<Tooltip.Provider>
-			<div {...styles.toolbar()}>
-				{props.summary && (
-					<span {...cx(styles.summary(), truncate())}>{props.summary}</span>
-				)}
-				{props.children}
-			</div>
-		</Tooltip.Provider>
+		<div className="flex flex-wrap items-center gap-[6px] border-b border-solid border-distinct px-[12px] py-[7px]">
+			{props.summary && (
+				<span className="mr-auto min-w-0 truncate label-12 text-tertiary">
+					{props.summary}
+				</span>
+			)}
+			{props.children}
+		</div>
 	)
 }
 
@@ -65,57 +74,24 @@ export declare namespace PanelToolbar {
 }
 
 export namespace PanelToolbar {
-	/**
-	 * An icon button with its label in a tooltip. A toggle that is on takes the
-	 * `secondary` variant; everything else stays `text`.
-	 */
 	export function IconButton(props: {
 		onClick: () => void
-		label: string
+		title: string
 		active?: boolean | undefined
-		children: React.ReactElement
+		children: React.ReactNode
 	}): React.JSX.Element {
 		return (
-			<Tooltip.Root>
-				<Tooltip.Trigger
-					render={
-						<Button
-							aria-label={props.label}
-							onClick={props.onClick}
-							shape="icon"
-							size="small"
-							variant={props.active ? 'secondary' : 'text'}
-							{...styles.iconButton()}
-						/>
-					}
-				>
-					{props.children}
-				</Tooltip.Trigger>
-				<Tooltip.Popup>{props.label}</Tooltip.Popup>
-			</Tooltip.Root>
+			<button
+				type="button"
+				onClick={props.onClick}
+				title={props.title}
+				className={cx(
+					'flex size-[24px] shrink-0 items-center justify-center rounded-body border border-card-border cursor-pointer press-down transition-colors',
+					props.active ? 'text-primary' : 'text-tertiary hover:text-primary',
+				)}
+			>
+				{props.children}
+			</button>
 		)
 	}
-}
-
-namespace styles {
-	export const toolbar = style({
-		alignItems: 'center',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '8',
-		paddingInline: '16',
-	})
-
-	export const summary = style({
-		color: 'gray.900',
-		marginRight: 'auto !custom',
-		minWidth: '0 !custom',
-		typography: 'label.13',
-	})
-
-	export const iconButton = style({ flexShrink: 0 })
 }
