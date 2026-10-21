@@ -93,10 +93,6 @@ const receipt = new URLSearchParams({
 })
 for (const [name, path] of [
 	['homepage', '/explorer'],
-	['legacy homepage image', '/bg-default.webp'],
-	['legacy block image', '/og-blocks.webp'],
-	['legacy token image', '/og-tokens.webp'],
-	['legacy transaction image', '/og-transactions.webp'],
 	['block listing', '/blocks'],
 	['token listing', '/tokens'],
 	['transaction fallback', '/tx'],
@@ -105,6 +101,7 @@ for (const [name, path] of [
 	['failed receipt', `/receipt/${hash}?status=reverted&eventsFailed=true`],
 	['empty receipt', `/receipt/${hash}`],
 	['block', '/block/8188645?number=8188645&txCount=42&gasUsage=52'],
+	['block by hash', `/block/${hash}?txCount=42`],
 	[
 		'token',
 		`/token/${address}?name=AlphaUSD&symbol=AlphaUSD&currency=USD&supply=1000000&holders=1234`,
@@ -159,12 +156,27 @@ for (const [name, path] of [
 		assert.equal(body.toString('ascii', 8, 12), 'WEBP')
 		assert.ok(body.length > 1000, 'Rendered image must contain content')
 	})
+// Asserting the redirect keeps these off the rate limiter the rendering tests share.
+for (const [path, destination] of [
+	['/bg-default.webp', '/explorer'],
+	['/og-blocks.webp', '/blocks'],
+	['/og-tokens.webp', '/tokens'],
+	['/og-transactions.webp', '/tx'],
+])
+	test(`redirects legacy ${path}`, async () => {
+		const response = await fetch(origin + path, { redirect: 'manual' })
+		assert.equal(response.status, 302)
+		const location = new URL(response.headers.get('location'), origin + path)
+		assert.equal(location.pathname, destination)
+	})
 for (const path of [
 	'/receipt/invalid',
 	'/tx/invalid',
 	'/address/invalid',
 	'/token/invalid',
+	'/block/invalid',
+	`/block/${'9'.repeat(12_000)}`,
 ])
-	test(`rejects ${path}`, async () => {
+	test(`rejects ${path.slice(0, 40)}`, async () => {
 		assert.equal((await fetch(origin + path)).status, 400)
 	})

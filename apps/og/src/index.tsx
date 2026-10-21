@@ -38,6 +38,7 @@ import {
 import {
 	fetchTokenIcon,
 	type Images,
+	isBlockId,
 	isTxHash,
 	loadFonts,
 	loadImages,
@@ -242,9 +243,13 @@ app.get(
 	'/block/:id',
 	zValidator('query', blockOgQuerySchema),
 	async (context) => {
+		const id = context.req.param('id')
+		if (!isBlockId(id))
+			throw new HTTPException(400, { message: 'Invalid block id' })
+
 		const blockParams = context.req.valid('query')
 		const blockData: BlockData = {
-			id: context.req.param('id'),
+			id,
 			number: blockParams.number,
 			timestamp: blockParams.timestamp,
 			unixTimestamp: blockParams.unixTimestamp,

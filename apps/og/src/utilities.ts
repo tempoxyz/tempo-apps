@@ -39,6 +39,10 @@ let imagesInFlight: Promise<Images> | null = null
 export const isTxHash = (value: string): boolean =>
 	Hex.validate(value) && Hex.size(value as Hex.Hex) === 32
 
+/** A block number (at most 20 digits, the uint64 range) or a 32-byte block hash. */
+export const isBlockId = (value: string): boolean =>
+	/^\d{1,20}$/.test(value) || isTxHash(value)
+
 export const toBase64DataUrl = (
 	data: ArrayBuffer,
 	mime = 'image/webp',
