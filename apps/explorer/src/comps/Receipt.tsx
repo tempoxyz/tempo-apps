@@ -113,7 +113,12 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 	// Only a payment or a swap moves the amount it names; an approval does not.
 	const singleAmount =
 		single && movesFunds(single) ? getReceiptEventSideAmount(single) : undefined
-	const send = single ? getSimpleSend(single) : null
+	// A plain send folds into the From and To rows only when the hero can show
+	// its amount; with unknown decimals it stays a line item, which reads them.
+	const send =
+		single && singleAmount?.decimals !== undefined
+			? getSimpleSend(single)
+			: null
 	const sendNote =
 		single && send ? getReceiptEventNote(single.note, context) : undefined
 	const firstFee = visibleFeeBreakdown[0]
