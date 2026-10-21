@@ -24,6 +24,94 @@ afterEach(() => {
 })
 
 describe('Datadog proxy', () => {
+	it.each([
+		undefined,
+		'1',
+		'invalid',
+	])('rejects oversized streams with content-length %s before reading the rest', async (contentLength) => {
+		const fetch = vi.fn<typeof globalThis.fetch>()
+		vi.stubGlobal('fetch', fetch)
+		const cancel = vi.fn()
+		let reads = 0
+		const body = new ReadableStream<Uint8Array>(
+			{
+				pull(controller) {
+					reads++
+					controller.enqueue(new Uint8Array(reads === 1 ? 10_000_000 : 1))
+				},
+				cancel,
+			},
+			{ highWaterMark: 0 },
+		)
+		const url = new URL('https://explore.tempo.xyz/dd-proxy')
+		url.searchParams.set(
+			'ddforward',
+			'/api/v2/rum?dd-api-key=explorer-dd-proxy',
+		)
+		const request = new Request(url, {
+			body,
+			duplex: 'half',
+			headers: contentLength ? { 'content-length': contentLength } : {},
+			method: 'POST',
+		} as RequestInit)
+
+		const res = await handleDatadogProxy(request)
+
+		expect(res.status).toBe(413)
+		expect(await res.text()).toBe('Payload too large')
+		expect(reads).toBe(2)
+		expect(cancel).toHaveBeenCalledOnce()
+		expect(body.locked).toBe(false)
+		expect(fetch).not.toHaveBeenCalled()
+	})
+
+	it.each([
+		10_000_000, 10_000_001,
+	])('enforces the byte limit for a %i-byte UTF-8 batch', async (size) => {
+		const fetch = vi.fn<typeof globalThis.fetch>(
+			async () => new Response('ok', { status: 202 }),
+		)
+		vi.stubGlobal('fetch', fetch)
+		const event = JSON.stringify({
+			application: { id: '00000000-0000-0000-0000-000000000000' },
+			message: 'é',
+		})
+		const encoded = new TextEncoder().encode(event)
+		const payload = new Uint8Array(size).fill(32)
+		payload.set(encoded)
+		const split = encoded.indexOf(0xc3) + 1
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(payload.subarray(0, split))
+				controller.enqueue(payload.subarray(split))
+				controller.close()
+			},
+		})
+		const url = new URL('https://explore.tempo.xyz/dd-proxy')
+		url.searchParams.set(
+			'ddforward',
+			'/api/v2/rum?dd-api-key=explorer-dd-proxy',
+		)
+		const request = new Request(url, {
+			body,
+			duplex: 'half',
+			method: 'POST',
+		} as RequestInit)
+
+		const res = await handleDatadogProxy(request)
+
+		expect(res.status).toBe(size === 10_000_000 ? 202 : 413)
+		if (size === 10_000_000) {
+			expect(fetch).toHaveBeenCalledOnce()
+			expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toEqual({
+				application: { id: 'real-application-id' },
+				message: 'é',
+			})
+		} else {
+			expect(fetch).not.toHaveBeenCalled()
+		}
+	})
+
 	it('forwards RUM batches to the configured Datadog site', async () => {
 		const fetch = vi.fn<typeof globalThis.fetch>(
 			async () => new Response('ok', { status: 202 }),

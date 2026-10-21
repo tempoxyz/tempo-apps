@@ -11,6 +11,7 @@ const hosts = {
 
 const placeholderApplicationId = '00000000-0000-0000-0000-000000000000'
 const placeholderClientToken = 'explorer-dd-proxy'
+const maxBodyBytes = 10_000_000
 
 type Config = {
 	applicationId: string
@@ -33,7 +34,7 @@ export async function handleDatadogProxy(request: Request): Promise<Response> {
 		return new Response('Datadog proxy misconfigured', { status: 503 })
 
 	const contentLength = request.headers.get('content-length')
-	if (contentLength && Number.parseInt(contentLength, 10) > 10_000_000) {
+	if (contentLength && Number.parseInt(contentLength, 10) > maxBodyBytes) {
 		return new Response('Payload too large', { status: 413 })
 	}
 
@@ -51,6 +52,7 @@ export async function handleDatadogProxy(request: Request): Promise<Response> {
 	}
 
 	const body = await getBody(request, config.applicationId)
+	if (body instanceof Response) return body
 	if (body === undefined)
 		return new Response('Invalid Datadog payload', { status: 400 })
 
@@ -130,8 +132,29 @@ function getUrl(config: Config, forward: Forward): string {
 async function getBody(
 	request: Request,
 	applicationId: string,
-): Promise<string | undefined> {
-	const body = await request.text()
+): Promise<string | Response | undefined> {
+	const reader = request.body?.getReader()
+	const decoder = new TextDecoder()
+	const chunks: string[] = []
+	let bytes = 0
+	if (reader) {
+		try {
+			while (true) {
+				const { done, value } = await reader.read()
+				if (done) break
+				bytes += value.byteLength
+				if (bytes > maxBodyBytes) {
+					await reader.cancel().catch(() => {})
+					return new Response('Payload too large', { status: 413 })
+				}
+				chunks.push(decoder.decode(value, { stream: true }))
+			}
+		} finally {
+			reader.releaseLock()
+		}
+	}
+	chunks.push(decoder.decode())
+	const body = chunks.join('')
 	const lines: string[] = []
 	for (const line of body.split('\n')) {
 		const rewritten = rewriteEvent(line, applicationId)
