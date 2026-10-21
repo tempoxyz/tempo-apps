@@ -1,162 +1,33 @@
-/** Shared simulator controls use Tempo Design System type scales and semantic
- * colors. Inter is the UI face; explicit code and hash values use Geist Mono.
- */
+/** Displays, states, and formatting shared by the simulator's panes. */
 
-import { Callout, Kbd, Progress, Skeleton, style } from '@tempoxyz/ds'
-import { AlertCircle } from '@tempoxyz/ds/icons'
+import {
+	Callout,
+	Empty,
+	formatHex,
+	Skeleton,
+	style,
+	variants,
+} from '@tempoxyz/ds'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
-import * as Value from 'ox/Value'
 import type * as React from 'react'
 import type { Abi } from 'viem'
 import { decodeFunctionData } from 'viem'
 import { formatAbiValue, getContractInfo } from '#lib/domain/contracts'
 import type { FormState } from '#lib/domain/simulate-calls'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { SimulationApiError } from '#lib/queries'
 import type { TxTraceTree } from './TxTraceTree'
 
 /* -------------------------------------------------------------------------- */
-/* Controls                                                                   */
+/* Gas                                                                        */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Label above a control. The label names the control with id `htmlFor`; the
- * hint, when there is one, has the id `fieldHintId(htmlFor)` so the control
- * can point `aria-describedby` at it.
- */
-export function Field(props: Field.Props): React.JSX.Element {
-	return (
-		<div {...styles.field()}>
-			<div {...styles.fieldHeader()}>
-				<label htmlFor={props.htmlFor} {...styles.fieldLabel()}>
-					{props.label}
-				</label>
-				{props.action}
-			</div>
-			{props.children}
-			{props.hint &&
-				(props.invalid ? (
-					<ErrorText id={fieldHintId(props.htmlFor)}>{props.hint}</ErrorText>
-				) : (
-					<span id={fieldHintId(props.htmlFor)} {...styles.fieldHint()}>
-						{props.hint}
-					</span>
-				))}
-		</div>
-	)
-}
-
-export declare namespace Field {
-	interface Props {
-		label: React.ReactNode
-		/** Id of the control the label names. */
-		htmlFor: string
-		children: React.ReactNode
-		/** Right-aligned control on the label line — a mode toggle, a link. */
-		action?: React.ReactNode
-		hint?: React.ReactNode
-		invalid?: boolean
-	}
-}
-
-export function fieldHintId(htmlFor: string): string {
-	return `${htmlFor}-hint`
-}
-
-/**
- * An inline error. Status colours fail contrast as text in the light theme,
- * so the text stays primary and the icon carries the tone.
- */
-export function ErrorText(props: {
-	children: React.ReactNode
-	id?: string | undefined
-}): React.JSX.Element {
-	return (
-		<span id={props.id} {...styles.errorText()}>
-			<AlertCircle {...styles.errorIcon()} />
-			<span>{props.children}</span>
-		</span>
-	)
-}
-
-/**
- * A keyboard shortcut drawn inside a primary button. The button fills with the
- * page's foreground, so the key takes the opposite color scheme and reads as it
- * would on a page of that color. Hidden from assistive tech: the button
- * announces it through `aria-keyshortcuts`.
- */
-export function ButtonShortcut(props: {
-	children: React.ReactNode
-	/** Shows ⌘ on Apple platforms and Ctrl elsewhere. */
-	mod?: boolean | undefined
-}): React.JSX.Element {
-	return (
-		<Kbd aria-hidden mod={props.mod} size="small" {...styles.buttonShortcut()}>
-			{props.children}
-		</Kbd>
-	)
-}
-
-/* -------------------------------------------------------------------------- */
-/* Data display                                                               */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Gas used against the limit it ran under.
- *
- * A bare "273,270 gas" answers nothing — the actionable question is whether
- * the call is anywhere near running out, which is the ratio.
- */
-export function GasMeter(props: GasMeter.Props): React.JSX.Element {
-	const pct = gasPercent(props.used, props.limit)
-	return (
-		<Progress.Root value={Math.min(pct, 100)}>
-			<Progress.Label {...styles.gasMeterLabel()}>
-				<span>Gas used</span>
-				<GasRatio used={props.used} limit={props.limit} />
-			</Progress.Label>
-			<Progress.Track>
-				<Progress.Indicator />
-			</Progress.Track>
-		</Progress.Root>
-	)
-}
-
-export declare namespace GasMeter {
-	interface Props {
-		used: bigint
-		limit: bigint
-	}
-}
 
 /** Share of the limit a run consumed, as a percentage. */
 export function gasPercent(used: bigint, limit: bigint): number {
 	return limit > 0n ? Number((used * 10_000n) / limit) / 100 : 0
 }
 
-/**
- * `used / limit (pct)` — the transaction page's format, one implementation.
- * It takes its type size from the surrounding text.
- */
-export function GasRatio(props: {
-	used: bigint
-	limit: bigint
-}): React.JSX.Element {
-	const pct = gasPercent(props.used, props.limit)
-	return (
-		<span {...styles.gasRatio()}>
-			<span {...styles.gasRatioUsed()}>{props.used.toLocaleString()}</span>
-			<span {...styles.gasRatioLimit()}>
-				{' / '}
-				{props.limit.toLocaleString()}
-			</span>
-			<span {...styles.gasRatioPercent()}>({formatGasPercent(pct)})</span>
-		</span>
-	)
-}
-
-/** `0.45%`, `1%`, `<0.01%` — never `0%` for a call that actually used gas. */
+/** `0.45%`, `1%`, `<0.01%`, and never `0%` for a call that used gas. */
 export function formatGasPercent(pct: number): string {
 	if (pct === 0) return '0%'
 	if (pct < 0.01) return '<0.01%'
@@ -169,9 +40,17 @@ export function formatGasPercent(pct: number): string {
 /* States                                                                     */
 /* -------------------------------------------------------------------------- */
 
-export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
+/**
+ * Placeholder lines while a panel loads. Panels reach the card's edges, so
+ * they pad their own content; `inset={false}` drops that padding for content
+ * that sits inside the card's padding.
+ */
+export function PanelSkeleton(props: {
+	rows: number
+	inset?: boolean | undefined
+}): React.JSX.Element {
 	return (
-		<div {...styles.skeleton()}>
+		<div {...styles.skeleton({ inset: props.inset ?? true })}>
 			{Array.from({ length: props.rows }, (_, index) => (
 				<Skeleton
 					key={index}
@@ -184,15 +63,23 @@ export function PanelSkeleton(props: { rows: number }): React.JSX.Element {
 	)
 }
 
-/** Nothing to show, said in one line rather than in a centred hero. */
+/** A panel with nothing to show: what is missing, and why. */
 export function PanelEmpty(props: {
-	children: React.ReactNode
+	title: string
+	description: string
 }): React.JSX.Element {
-	return <div {...styles.panelEmpty()}>{props.children}</div>
+	return (
+		<Empty.Root>
+			<Empty.Title>{props.title}</Empty.Title>
+			<Empty.Description>{props.description}</Empty.Description>
+		</Empty.Root>
+	)
 }
 
+/** One panel's request failed; the others may still have loaded. */
 export function PanelError(props: {
-	title: string
+	/** What failed to load, such as `the call trace`. */
+	subject: string
 	error: Error
 }): React.JSX.Element {
 	const rateLimited =
@@ -202,10 +89,9 @@ export function PanelError(props: {
 			<Callout intent="negative">
 				<Callout.Icon />
 				<Callout.Content>
-					<strong {...styles.calloutTitle()}>
-						{rateLimited ? 'Rate limited' : props.title}
-					</strong>
-					<span {...styles.calloutText()}>{props.error.message}</span>
+					{rateLimited
+						? `Couldn't load ${props.subject}: too many simulations in a short window. Wait a few seconds, then run it again.`
+						: `Couldn't load ${props.subject}. ${props.error.message}`}
 				</Callout.Content>
 			</Callout>
 		</div>
@@ -213,10 +99,9 @@ export function PanelError(props: {
 }
 
 /**
- * Whole-simulation failure: one box, not one per panel. The three panels share
- * one endpoint and one node, so anything wrong with the request fails all three
- * identically, and repeating it says nothing extra. Titled by what the user can
- * do about it rather than by which query object threw.
+ * Whole-simulation failure: one message, not one per panel. The panels share
+ * one endpoint and one node, so anything wrong with the request fails them all
+ * identically. It leads with what the reader can do about it.
  */
 export function SimulationFailure(props: {
 	errors: Error[]
@@ -225,19 +110,16 @@ export function SimulationFailure(props: {
 	const status = props.errors.find(
 		(error): error is SimulationApiError => error instanceof SimulationApiError,
 	)?.status
-	const { title, hint } = describeFailure(status)
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
 	return (
 		<Callout intent="negative">
 			<Callout.Icon />
 			<Callout.Content>
-				<strong {...styles.calloutTitle()}>{title}</strong>
-				<span {...styles.calloutText()}>{hint}</span>
+				{describeFailure(status)}
 				{messages.map((message) => (
 					<span key={message} {...styles.failureMessage()}>
-						{/* Node errors run long; let them wrap inside the callout. */}
-						<code {...styles.inlineCode()}>{message}</code>
+						{message}
 					</span>
 				))}
 			</Callout.Content>
@@ -246,29 +128,14 @@ export function SimulationFailure(props: {
 	)
 }
 
-function describeFailure(status: number | undefined): {
-	title: string
-	hint: string
-} {
+function describeFailure(status: number | undefined): string {
 	if (status === 429)
-		return {
-			title: 'Rate limited',
-			hint: 'Too many simulations in a short window. Wait a few seconds and run it again.',
-		}
+		return 'Too many simulations in a short window. Wait a few seconds, then try again.'
 	if (status === 504)
-		return {
-			title: 'Simulation timed out',
-			hint: 'The node took too long to trace this call. A lower gas limit or a pinned block may help.',
-		}
+		return 'The node took too long to trace this call. Lower the gas limit or pin a block, then try again.'
 	if (status === 400)
-		return {
-			title: 'This call could not be simulated',
-			hint: 'The request was rejected before it reached the node. Check the addresses, calldata, and gas limit.',
-		}
-	return {
-		title: 'The node rejected this simulation',
-		hint: 'Nothing was traced. This is usually the call itself — an unsupported target, or a block the node no longer has state for.',
-	}
+		return 'The request was rejected before it reached the node. Check the addresses, calldata, and gas limit.'
+	return 'The node rejected this simulation, so nothing was traced. Check that the target supports the call and that the block still has state.'
 }
 
 /* -------------------------------------------------------------------------- */
@@ -276,12 +143,8 @@ function describeFailure(status: number | undefined): {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Longest argument list worth inlining in the header.
- *
- * Two short arguments read as a sentence. Six truncated hashes read as noise —
- * every one of them is elided to `0x…` anyway, so the list costs the width of
- * the whole header and tells you nothing you could act on. Past this the count
- * says more than the values.
+ * Longest argument list worth inlining in the summary. Past this the count
+ * says more than a row of truncated values.
  */
 const MAX_SUMMARY_ARG_CHARS = 32
 
@@ -291,16 +154,15 @@ export function describeCall(form: FormState, abi: Abi | undefined): string {
 	if (!first || (!first.to.trim() && !first.data.trim())) return 'New call'
 
 	const from = OxAddress.validate(form.from)
-		? HexFormatter.truncate(form.from as OxHex.Hex)
+		? formatHex(form.from)
 		: form.from || 'anyone'
 
 	if (form.calls.length > 1) return `${from} → ${form.calls.length} calls`
 
-	// A resolved name is both shorter and more informative than the address it
-	// stands for; the form's `To` field already names the same contract.
+	// A resolved name is shorter and says more than the address it stands for.
 	const to = OxAddress.validate(first.to)
 		? (getContractInfo(first.to as OxAddress.Address)?.name ??
-			HexFormatter.truncate(first.to as OxHex.Hex))
+			formatHex(first.to))
 		: first.to || '—'
 
 	let call =
@@ -320,7 +182,7 @@ export function describeCall(form: FormState, abi: Abi | undefined): string {
 					: `…${values.length} args`
 			call = `${decoded.functionName}(${args})`
 		} catch {
-			// Unknown selector — the hex form above is a fine fallback.
+			// Unknown selector: the hex form above is a fine fallback.
 		}
 	}
 
@@ -328,14 +190,14 @@ export function describeCall(form: FormState, abi: Abi | undefined): string {
 }
 
 function shorten(value: string): string {
+	if (OxHex.validate(value) && value.length > 14) return formatHex(value)
 	if (value.length <= 14) return value
 	return `${value.slice(0, 6)}…${value.slice(-4)}`
 }
 
 export function callLabel(node: TxTraceTree.Node): string {
 	const contract =
-		node.contractName ??
-		(node.trace.to ? HexFormatter.truncate(node.trace.to) : 'contract')
+		node.contractName ?? (node.trace.to ? formatHex(node.trace.to) : 'contract')
 	const fn = node.functionName ?? node.selector ?? 'call'
 	return `${contract}.${fn}()`
 }
@@ -358,131 +220,30 @@ export function signed(value: bigint): string {
 	return `${value > 0n ? '+' : '−'}${(value < 0n ? -value : value).toLocaleString()}`
 }
 
-/**
- * Formats with the token's decimals, or falls back to the raw integer. A raw
- * integer here reads as a wildly wrong number (0.1 USDC.e shows as 100,000),
- * which is worse than showing nothing.
- */
-export function formatBalanceDelta(
-	diff: bigint,
-	decimals: number | undefined,
-): string {
-	const sign = diff > 0n ? '+' : '−'
-	const magnitude = diff < 0n ? -diff : diff
-	if (decimals === undefined) return `${sign}${magnitude.toLocaleString()}`
-	return `${sign}${PriceFormatter.formatAmount(Value.format(magnitude, decimals))}`
-}
-
-/** Abbreviates large gas counts the way a trace gutter needs: `7.97M`. */
-export function formatGas(gas: number): string {
-	if (gas >= 1_000_000) return `${(gas / 1_000_000).toFixed(2)}M`
-	if (gas >= 100_000) return `${Math.round(gas / 1_000)}k`
-	return gas.toLocaleString()
-}
-
 namespace styles {
-	export const field = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0 !custom',
+	export const skeleton = variants({
+		base: {
+			display: 'flex',
+			flexDirection: 'column',
+			gap: '8',
+			paddingBlock: '16',
+		},
+		defaultVariants: { inset: true },
+		variants: {
+			inset: { false: {}, true: { paddingInline: '16' } },
+		},
 	})
 
-	export const fieldHeader = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		justifyContent: 'space-between',
-	})
-
-	export const fieldLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const fieldHint = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	// The page's scheme is dark unless `data-theme` says light (`#styles/globals`).
-	export const buttonShortcut = style({
-		colorScheme: 'light',
-		selectors: { 'html[data-theme="light"] &': { colorScheme: 'dark' } },
-	})
-
-	export const errorText = style({
-		alignItems: 'flex-start',
-		color: 'foreground',
-		display: 'flex',
-		gap: '4',
-		typography: 'label.12',
-	})
-
-	export const errorIcon = style({
-		color: 'red.900',
-		flexShrink: 0,
-		height: '16',
-		width: '16',
-	})
-
-	export const gasMeterLabel = style({
-		display: 'flex',
-		gap: '8',
-		justifyContent: 'space-between',
-	})
-
-	export const gasRatio = style({ fontVariantNumeric: 'tabular-nums' })
-
-	export const gasRatioUsed = style({ color: 'foreground' })
-
-	export const gasRatioLimit = style({ color: 'gray.900' })
-
-	export const gasRatioPercent = style({
-		color: 'gray.900',
-		marginLeft: '4',
-	})
-
-	export const skeleton = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		padding: '16',
-	})
-
-	// TDS Skeleton owns the fill, radius, and sweep; an empty one needs a size.
+	// Skeleton owns the fill, radius, and sweep; an empty one needs a size.
 	export const skeletonRow = style({ height: '12' })
-
-	export const panelEmpty = style({
-		color: 'gray.900',
-		paddingBlock: '20',
-		paddingInline: '16',
-		typography: 'copy.14',
-	})
 
 	export const panelError = style({ padding: '16' })
 
-	export const calloutTitle = style({
+	// Node errors run long; each takes its own line and wraps.
+	export const failureMessage = style({
 		display: 'block',
-		typography: 'copy.14.strong',
-	})
-
-	export const calloutText = style({
-		display: 'block',
+		marginTop: '4',
 		overflowWrap: 'anywhere',
-	})
-
-	export const failureMessage = style({ display: 'block', marginTop: '8' })
-
-	// TDS Web has no inline code; this is the old InlineCode chip, wrapping.
-	export const inlineCode = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '4',
-		color: 'foreground',
-		fontFeatureSettings: '"zero" 1 !custom',
-		overflowWrap: 'anywhere',
-		paddingBlock: '2px !custom',
-		paddingInline: '4',
-		typography: 'label.12.mono',
+		typography: 'label.13.mono',
 	})
 }

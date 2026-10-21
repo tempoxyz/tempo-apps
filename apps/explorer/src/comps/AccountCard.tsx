@@ -1,15 +1,11 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
-import { Check, Copy } from '@tempoxyz/ds/icons'
+import { Amount, Hex, style, Token } from '@tempoxyz/ds'
 import type { Address } from 'ox'
-import { cx } from 'zyzz'
+import type * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
-import { TokenIcon } from '#comps/TokenIcon'
 import type { AccountType } from '#lib/account'
-import { PriceFormatter } from '#lib/formatting'
-import { useCopy } from '#lib/hooks'
-import { mono, pressDown } from '#styles/explorer'
+import { resolveLogoURI } from '#lib/domain/tip20'
 
 const Route = getRouteApi('/_layout/address/$address')
 
@@ -30,10 +26,8 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 		virtualAddressParts,
 	} = props
 
-	const { copy, notifying } = useCopy()
-
 	const titleLabel = virtualAddressParts
-		? 'Virtual Address'
+		? 'Virtual address'
 		: isToken
 			? 'Token'
 			: accountType === 'contract'
@@ -53,10 +47,10 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 					>
 						{isToken ? (
 							<>
-								<TokenIcon
-									address={address as Address.Address}
-									logoURI={tokenLogoURI}
-									size={32}
+								<Token
+									address={address}
+									size="large"
+									src={resolveLogoURI(tokenLogoURI)}
 								/>
 								<span {...styles.tokenText()}>
 									<span {...styles.tokenName()}>{tokenLabel}</span>
@@ -73,37 +67,22 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 			}
 			className={className}
 			sections={[
-				<button
-					key="address"
-					type="button"
-					onClick={() => copy(address)}
-					{...cx(styles.copyAddress(), pressDown())}
-					title={address}
-					aria-label="Copy address"
-				>
-					<span {...styles.copyHeader()}>
-						Address
-						{notifying ? <Check /> : <Copy />}
-					</span>
-					<span {...styles.addressValue()}>{address}</span>
-				</button>,
+				<div key="address" {...styles.address()}>
+					<span {...styles.secondary()}>Address</span>
+					<Hex.Root size="small" value={address} variant="filled">
+						<Hex.Text />
+						<Hex.Copy aria-label="Copy address" />
+					</Hex.Root>
+				</div>,
 				...(virtualAddressParts
 					? [
 							{
 								label: 'Master ID',
-								value: (
-									<span {...cx(styles.primary(), mono())}>
-										{virtualAddressParts.masterId}
-									</span>
-								),
+								value: <Hex value={virtualAddressParts.masterId} />,
 							},
 							{
-								label: 'User Tag',
-								value: (
-									<span {...cx(styles.primary(), mono())}>
-										{virtualAddressParts.userTag}
-									</span>
-								),
+								label: <span {...styles.normalCase()}>User tag</span>,
+								value: <Hex value={virtualAddressParts.userTag} />,
 							},
 						]
 					: []),
@@ -123,14 +102,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 											fallback={<span {...styles.secondary()}>…</span>}
 										>
 											{totalValue !== undefined ? (
-												<span
-													{...styles.primary()}
-													title={PriceFormatter.format(totalValue)}
-												>
-													{PriceFormatter.format(totalValue, {
-														format: 'short',
-													})}
-												</span>
+												<Amount currency="USD" value={totalValue} />
 											) : (
 												<span {...styles.secondary()}>…</span>
 											)}
@@ -224,28 +196,15 @@ namespace styles {
 		typography: 'label.12',
 	})
 
-	export const copyAddress = style({
-		color: 'gray.900',
-		cursor: 'pointer',
-		textAlign: 'left',
+	export const address = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0 !custom',
 		width: '100% !custom',
 	})
 
-	export const copyHeader = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
-		selectors: { '& > svg': { height: '12', width: '12' } },
-	})
-
-	export const addressValue = style({
-		color: 'foreground',
-		display: 'block',
-		maxWidth: '32ch !custom',
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
-	})
+	export const normalCase = style({ textTransform: 'none' })
 
 	export const primary = style({ color: 'foreground' })
 

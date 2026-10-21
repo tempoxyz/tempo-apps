@@ -1,35 +1,34 @@
-import { Link } from '@tanstack/react-router'
 import {
 	Button,
 	Callout,
-	Surface,
+	CopyButton,
+	Empty,
+	Rows,
+	Skeleton,
+	Spinner,
 	Tag,
-	Tooltip,
 	style,
-	variants,
 } from '@tempoxyz/ds'
-import {
-	Check,
-	ChevronDown,
-	Copy,
-	Download,
-	ExternalLink,
-} from '@tempoxyz/ds/icons'
+import { Download, ExternalLink } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
 import { useBytecode, usePublicClient } from 'wagmi'
 import { cx } from 'zyzz'
+import { Address as AddressLink } from '#comps/Address'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
+import { IconAction } from '#comps/ContractFunction'
 import { ContractReader } from '#comps/ContractReader.tsx'
 import { SourceSection } from '#comps/ContractSource.tsx'
 import { ContractWriter } from '#comps/ContractWriter.tsx'
-import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import {
 	autoloadAbi,
 	getContractAbi,
+	getInputFunctions,
+	getNoInputFunctions,
+	getWriteFunctions,
 	isInferredAbi,
 	resolveInteractAbi,
 } from '#lib/domain/contracts.ts'
@@ -39,8 +38,8 @@ import {
 	type ProxyType,
 } from '#lib/domain/proxy.ts'
 import { isTip20Address } from '#lib/domain/tip20.ts'
-import { useCopy, useDownload } from '#lib/hooks.ts'
-import { link, linkHover, pressDown } from '#styles/explorer'
+import { useDownload } from '#lib/hooks.ts'
+import { link, linkHover } from '#styles/explorer'
 
 const proxyTypeUrls: Record<ProxyType, string> = {
 	'EIP-1967': 'https://eips.ethereum.org/EIPS/eip-1967',
@@ -53,46 +52,106 @@ function proxyTypeUrl(type: ProxyType | undefined): string {
 	return type ? proxyTypeUrls[type] : proxyTypeUrls['EIP-1967']
 }
 
+/**
+ * One headed group of a tab, such as Read or Bytecode: a title with an
+ * optional description and actions, then its content.
+ */
+export function ContractSection(
+	props: ContractSection.Props,
+): React.JSX.Element {
+	const { actions, children, description, title } = props
+	const titleId = React.useId()
+	return (
+		<section aria-labelledby={titleId} {...styles.section()}>
+			<div {...styles.sectionHeader()}>
+				<div {...styles.sectionHeading()}>
+					<h3 id={titleId} {...styles.sectionTitle()}>
+						{title}
+					</h3>
+					{description && <p {...styles.sectionDescription()}>{description}</p>}
+				</div>
+				{actions && <div {...styles.sectionActions()}>{actions}</div>}
+			</div>
+			{children}
+		</section>
+	)
+}
+
+export declare namespace ContractSection {
+	type Props = {
+		/** Controls at the end of the header. */
+		actions?: React.ReactNode
+		children: React.ReactNode
+		/** One line under the title, such as a count. */
+		description?: React.ReactNode
+		title: React.ReactNode
+	}
+}
+
+/** The TIP-20 precompile's spec and source, as a section description. */
+export function Tip20Links(): React.JSX.Element {
+	return (
+		<>
+			TIP-20 native precompile ·{' '}
+			<a
+				href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
+				target="_blank"
+				rel="noopener noreferrer"
+				{...cx(link(), linkHover())}
+			>
+				Spec
+			</a>{' '}
+			·{' '}
+			<a
+				href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+				target="_blank"
+				rel="noopener noreferrer"
+				{...cx(link(), linkHover())}
+			>
+				Rust source
+			</a>
+		</>
+	)
+}
+
 function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
 	if (!isInferredAbi(abi)) return null
 	return (
-		<p {...styles.inferredNotice()}>
-			Inferred ABI: function names, read/write classifications, and return types
-			may be incomplete or incorrect. Verify the contract source for an accurate
-			ABI.
-		</p>
+		<Callout intent="warning" role="note" size="small">
+			<Callout.Icon />
+			<Callout.Content>
+				Inferred ABI: function names, read/write classifications, and return
+				types may be incomplete or incorrect. Verify the contract source for an
+				accurate ABI.
+			</Callout.Content>
+		</Callout>
 	)
 }
 
-/** Small text icon button with a tooltip in a section header. */
-function SectionAction(props: {
-	children: React.ReactElement
-	label: string
-	onClick: () => void
-}): React.JSX.Element {
+/** Loading or missing ABI, in place of a tab's sections. */
+function AbiState(props: { loading: boolean }): React.JSX.Element {
+	if (props.loading)
+		return (
+			<div aria-busy {...styles.state()}>
+				<Spinner aria-label="Loading contract information" />
+			</div>
+		)
 	return (
-		<Tooltip.Root>
-			<Tooltip.Trigger
-				render={
-					<Button
-						aria-label={props.label}
-						onClick={props.onClick}
-						shape="icon"
-						size="small"
-						variant="text"
-						{...styles.actionButton()}
-					/>
-				}
-			>
-				{props.children}
-			</Tooltip.Trigger>
-			<Tooltip.Popup>{props.label}</Tooltip.Popup>
-		</Tooltip.Root>
+		<Empty.Root>
+			<Empty.Title>No ABI available</Empty.Title>
+			<Empty.Description>
+				This contract has no verified source or known ABI.
+			</Empty.Description>
+		</Empty.Root>
 	)
+}
+
+function pluralize(count: number, noun: string): string {
+	return `${count.toLocaleString('en-US')} ${noun}${count === 1 ? '' : 's'}`
 }
 
 /**
- * Contract tab content - shows ABI and Source
+ * Contract tab content - shows Source, ABI and Bytecode
  */
 export function ContractTabContent(props: {
 	address: Address.Address
@@ -104,136 +163,77 @@ export function ContractTabContent(props: {
 	const { address, docsUrl, source } = props
 	const isTip20 = isTip20Address(address)
 
-	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2_000 })
-
-	const [abiExpanded, setAbiExpanded] = React.useState(false)
 	const abi = props.abi ?? getContractAbi(address)
-
-	const handleCopyAbi = React.useCallback(() => {
-		if (!abi) return
-		void copyAbi(JSON.stringify(abi, null, 2))
-	}, [abi, copyAbi])
+	const json = React.useMemo(() => JSON.stringify(abi, null, 2), [abi])
 
 	const { download: downloadAbi } = useDownload({
 		contentType: 'application/json',
-		value: JSON.stringify(abi, null, 2),
+		value: json,
 		filename: `${address.toLowerCase()}-abi.json`,
 	})
 
-	if (!abi) {
-		return (
-			<Surface size="medium" {...styles.emptyCard()}>
-				<p {...styles.emptyMessage()}>
-					{props.isLoadingContractInfo
-						? `Loading contract information${ellipsis}`
-						: 'No ABI available for this contract.'}
-				</p>
-			</Surface>
-		)
-	}
+	if (!abi) return <AbiState loading={Boolean(props.isLoadingContractInfo)} />
+
+	const functions = abi.filter((item) => item.type === 'function').length
+	const events = abi.filter((item) => item.type === 'event').length
 
 	return (
 		<div {...styles.tabContent()}>
-			{/* TIP-20 Banner */}
-			{isTip20 && (
-				<div {...styles.tip20Banner()}>
-					<span {...styles.nowrap()}>TIP-20 Native Precompile</span>
-					<span {...styles.separator()}>·</span>
-					<a
-						href="https://tempo.xyz/developers/docs/protocol/tip20/spec/#tip20"
-						target="_blank"
-						rel="noopener noreferrer"
-						{...cx(styles.nowrap(), link(), linkHover())}
-					>
-						Spec
-					</a>
-					<a
-						href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
-						target="_blank"
-						rel="noopener noreferrer"
-						{...cx(styles.nowrap(), link(), linkHover())}
-					>
-						Rust
-					</a>
-				</div>
+			{source && (
+				<ContractSection
+					title="Source code"
+					description={
+						isTip20 ? (
+							<Tip20Links />
+						) : source.kind === 'verified' ? (
+							`Verified · ${source.compilation.compiler} ${source.compilation.compilerVersion}`
+						) : (
+							'Native precompile source'
+						)
+					}
+				>
+					<SourceSection {...source} docsUrl={docsUrl} />
+				</ContractSection>
 			)}
 
-			{/* Source Section */}
-			{source && <SourceSection {...source} docsUrl={docsUrl} />}
-
-			{/* ABI Section */}
-			<InferredAbiNotice abi={abi} />
-			<CollapsibleSection
-				first={!isTip20}
+			<ContractSection
 				title="ABI"
-				expanded={abiExpanded}
-				onToggle={() => setAbiExpanded(!abiExpanded)}
+				description={
+					!source && isTip20 ? (
+						<Tip20Links />
+					) : (
+						`${pluralize(functions, 'function')} · ${pluralize(events, 'event')}`
+					)
+				}
 				actions={
 					<>
-						<SectionAction label="Copy ABI" onClick={handleCopyAbi}>
-							{copiedAbi ? <Check /> : <Copy />}
-						</SectionAction>
-						<SectionAction label="Download ABI" onClick={downloadAbi}>
-							<Download />
-						</SectionAction>
 						{docsUrl && !source && (
-							<a
+							<Button.Link
 								href={docsUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								{...cx(styles.docsLink(), link(), linkHover(), pressDown())}
+								size="small"
+								variant="text"
 							>
 								Docs
 								<ExternalLink />
-							</a>
+							</Button.Link>
 						)}
+						<IconAction
+							icon={Download}
+							label="Download ABI"
+							onClick={downloadAbi}
+						/>
+						<CopyButton aria-label="Copy ABI" value={json} />
 					</>
 				}
 			>
-				<AbiViewer abi={abi} enabled={abiExpanded} />
-			</CollapsibleSection>
+				<InferredAbiNotice abi={abi} />
+				<AbiViewer abi={abi} />
+			</ContractSection>
 
-			{/* Bytecode Section - hidden for TIP-20 */}
+			{/* TIP-20 precompiles have no bytecode. */}
 			{!isTip20 && <BytecodeSection address={address} />}
-		</div>
-	)
-}
-
-/**
- * Collapsible section component
- */
-export function CollapsibleSection(props: {
-	title: React.ReactNode
-	expanded: boolean
-	onToggle: () => void
-	actions?: React.ReactNode
-	children: React.ReactNode
-	first?: boolean
-}) {
-	const { title, expanded, onToggle, actions, children, first } = props
-
-	return (
-		<div {...styles.section()}>
-			<div {...styles.sectionHeader()}>
-				<button
-					type="button"
-					aria-expanded={expanded}
-					onClick={onToggle}
-					{...cx(
-						styles.sectionToggle(),
-						Boolean(actions) && styles.sectionToggleWithActions(),
-						!actions && styles.sectionToggleFill(),
-						first && styles.sectionToggleFirst(),
-						first && !actions && styles.sectionToggleFirstEnd(),
-						pressDown(),
-					)}
-				>
-					<span {...styles.sectionTitle()}>{title}</span>
-					<ChevronDown {...styles.chevron({ expanded })} />
-				</button>
-				{actions && <div {...styles.sectionActions()}>{actions}</div>}
-			</div>
-			<div {...cx(!expanded && styles.hidden())}>{children}</div>
 		</div>
 	)
 }
@@ -243,14 +243,8 @@ export function CollapsibleSection(props: {
  */
 function BytecodeSection(props: { address: Address.Address }) {
 	const { address } = props
-	const [expanded, setExpanded] = React.useState(false)
-	const { copy, notifying } = useCopy({ timeout: 2000 })
 
 	const { data: bytecode } = useBytecode({ address })
-
-	const handleCopy = React.useCallback(() => {
-		if (bytecode) void copy(bytecode)
-	}, [bytecode, copy])
 
 	const { download: downloadBytecode } = useDownload({
 		value: bytecode ?? '',
@@ -259,27 +253,40 @@ function BytecodeSection(props: { address: Address.Address }) {
 	})
 
 	return (
-		<CollapsibleSection
+		<ContractSection
 			title="Bytecode"
-			expanded={expanded}
-			onToggle={() => setExpanded(!expanded)}
+			description={
+				bytecode
+					? `${pluralize((bytecode.length - 2) / 2, 'byte')} deployed`
+					: 'Deployed code'
+			}
 			actions={
 				<>
-					<SectionAction label="Copy bytecode" onClick={handleCopy}>
-						{notifying ? <Check /> : <Copy />}
-					</SectionAction>
-					<SectionAction label="Download bytecode" onClick={downloadBytecode}>
-						<Download />
-					</SectionAction>
+					<IconAction
+						disabled={!bytecode}
+						icon={Download}
+						label="Download bytecode"
+						onClick={downloadBytecode}
+					/>
+					<CopyButton
+						aria-label="Copy bytecode"
+						disabled={!bytecode}
+						value={bytecode ?? ''}
+					/>
 				</>
 			}
 		>
-			<div {...styles.bytecode()}>
-				<pre {...styles.bytecodeText()} suppressHydrationWarning>
-					{bytecode ?? `Loading${ellipsis}`}
-				</pre>
-			</div>
-		</CollapsibleSection>
+			{bytecode ? (
+				<div {...styles.well()}>
+					<pre {...styles.bytecode()}>{bytecode}</pre>
+				</div>
+			) : (
+				<Skeleton
+					aria-label="Loading bytecode"
+					{...styles.bytecodeSkeleton()}
+				/>
+			)}
+		</ContractSection>
 	)
 }
 
@@ -297,10 +304,6 @@ export function InteractTabContent(props: {
 	const { address } = props
 	const publicClient = usePublicClient()
 
-	const [readExpanded, setReadExpanded] = React.useState(true)
-	const [writeExpanded, setWriteExpanded] = React.useState(true)
-	const [proxyFunctionsExpanded, setProxyFunctionsExpanded] =
-		React.useState(false)
 	const [proxyInfo, setProxyInfo] = React.useState<ProxyInfo | null>(null)
 	const [implAbi, setImplAbi] = React.useState<Abi | null>(null)
 	const [proxyAbi, setProxyAbi] = React.useState<Abi | null>(null)
@@ -341,283 +344,169 @@ export function InteractTabContent(props: {
 		implementationAbi: implAbi,
 	})
 
-	if (props.isLoadingContractInfo || isLoadingProxy) {
+	if (props.isLoadingContractInfo || isLoadingProxy || !abi)
 		return (
-			<Surface size="medium" {...styles.emptyCard()}>
-				<p {...styles.emptyMessage()}>Loading contract information{ellipsis}</p>
-			</Surface>
+			<AbiState
+				loading={Boolean(props.isLoadingContractInfo || isLoadingProxy)}
+			/>
 		)
-	}
-
-	if (!abi) {
-		return (
-			<Surface size="medium" {...styles.emptyCard()}>
-				<p {...styles.emptyMessage()}>No ABI available for this contract.</p>
-			</Surface>
-		)
-	}
 
 	const isProxy = proxyInfo?.isProxy ?? false
 	const implementationAddress = proxyInfo?.implementationAddress
 	const hasProxyFunctions = proxyAbi && proxyAbi.length > 0
+	const readCount =
+		getNoInputFunctions(abi).length + getInputFunctions(abi).length
+	const writeCount = getWriteFunctions(abi).length
 
 	return (
 		<div {...styles.tabContent()}>
-			{/* Proxy Info Banner */}
 			{isProxy && implementationAddress && (
-				<div {...styles.proxyBanner()}>
-					<Tag
-						render={
-							// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
-							<a
-								href={proxyTypeUrl(proxyInfo?.type)}
-								target="_blank"
-								rel="noopener noreferrer"
-							/>
-						}
-						intent="neutral"
-						size="medium"
-					>
-						{proxyInfo?.type} Proxy
-						<ExternalLink />
-					</Tag>
-					<span {...styles.implementationLabel()}>Implementation:</span>
-					<Link
-						to="/address/$address"
-						params={{ address: implementationAddress }}
-						search={{ tab: 'interact' }}
-						{...cx(styles.implementationLink(), link(), linkHover())}
-					>
-						{implementationAddress.slice(0, 10)}...
-						{implementationAddress.slice(-8)}
-					</Link>
-				</div>
+				<ContractSection
+					title="Proxy"
+					description="Reads and writes go through the proxy to its implementation."
+				>
+					<Rows dividers="full">
+						<Rows.Row spacing="none">
+							<Rows.Label>Standard</Rows.Label>
+							<Tag
+								render={
+									// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
+									<a
+										href={proxyTypeUrl(proxyInfo?.type)}
+										target="_blank"
+										rel="noopener noreferrer"
+									/>
+								}
+								intent="neutral"
+								size="small"
+							>
+								{proxyInfo?.type}
+								<ExternalLink />
+							</Tag>
+						</Rows.Row>
+						<Rows.Row spacing="none">
+							<Rows.Label>Implementation</Rows.Label>
+							<span {...styles.address()}>
+								<AddressLink
+									address={implementationAddress}
+									align="end"
+									search={{ tab: 'interact' }}
+								/>
+							</span>
+						</Rows.Row>
+					</Rows>
+				</ContractSection>
 			)}
 
-			{/* Write Contract Section (Implementation functions via proxy) */}
 			<InferredAbiNotice abi={abi} />
-			<CollapsibleSection
-				first={!isProxy}
-				title={isProxy ? 'Write (via Proxy)' : 'Write'}
-				expanded={writeExpanded}
-				onToggle={() => setWriteExpanded(!writeExpanded)}
+
+			<ContractSection
+				title={isProxy ? 'Read via proxy' : 'Read'}
+				description={`${pluralize(readCount, 'function')} · No wallet needed`}
+			>
+				<ContractReader address={address} abi={abi} />
+			</ContractSection>
+
+			<ContractSection
+				title={isProxy ? 'Write via proxy' : 'Write'}
+				description={`${pluralize(writeCount, 'function')} · Simulate a call before you sign it`}
 				actions={<ConnectWallet />}
 			>
-				<div {...styles.sectionBody()}>
-					<ContractWriter address={address} abi={abi} />
-				</div>
-			</CollapsibleSection>
+				<ContractWriter address={address} abi={abi} />
+			</ContractSection>
 
-			{/* Read Contract Section (Implementation functions via proxy) */}
-			<CollapsibleSection
-				title={isProxy ? 'Read (via Proxy)' : 'Read'}
-				expanded={readExpanded}
-				onToggle={() => setReadExpanded(!readExpanded)}
-			>
-				<div {...styles.sectionBody()}>
-					<ContractReader address={address} abi={abi} />
-				</div>
-			</CollapsibleSection>
-
-			{/* Proxy Contract Functions Section */}
 			{isProxy && hasProxyFunctions && (
-				<CollapsibleSection
-					title="Proxy Contract Functions"
-					expanded={proxyFunctionsExpanded}
-					onToggle={() => setProxyFunctionsExpanded(!proxyFunctionsExpanded)}
-					actions={
-						<span {...styles.proxyFunctionsNote()}>Direct proxy functions</span>
-					}
+				<ContractSection
+					title="Proxy contract functions"
+					description="Functions defined on the proxy contract itself, not the implementation."
 				>
-					<div {...styles.proxyFunctionsBody()}>
-						<Callout intent="warning" role="note" size="small">
-							<Callout.Icon />
-							<Callout.Content>
-								These are functions defined on the proxy contract itself, not
-								the implementation.
-							</Callout.Content>
-						</Callout>
-						<InferredAbiNotice abi={proxyAbi} />
-						<ContractReader address={address} abi={proxyAbi} />
-						<ContractWriter address={address} abi={proxyAbi} />
-					</div>
-				</CollapsibleSection>
+					<InferredAbiNotice abi={proxyAbi} />
+					<ContractReader address={address} abi={proxyAbi} />
+					<ContractWriter address={address} abi={proxyAbi} />
+				</ContractSection>
 			)}
 		</div>
 	)
 }
 
 namespace styles {
-	export const inferredNotice = style({
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'dashed',
-		color: 'gray.900',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'label.12',
-	})
-
-	export const emptyCard = style({ height: '100% !custom' })
-
-	export const emptyMessage = style({
-		color: 'gray.900',
-		typography: 'copy.14',
+	export const state = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'center',
+		minHeight: '160',
 	})
 
 	export const tabContent = style({
 		display: 'flex',
 		flexDirection: 'column',
-		height: '100% !custom',
-		selectors: {
-			'& > :last-child': { borderBottomColor: 'transparent !custom' },
-		},
-	})
-
-	export const tip20Banner = style({
-		alignItems: 'center',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		color: 'gray.900',
-		columnGap: '8',
-		display: 'flex',
-		flexWrap: 'wrap',
-		paddingBlock: '12',
-		paddingInline: '16',
-		rowGap: '4',
-		typography: 'label.12',
-	})
-
-	export const nowrap = style({ whiteSpace: 'nowrap' })
-
-	export const separator = style({ color: 'gray.700' })
-
-	// TDS Button leaves icon size to the icon.
-	export const actionButton = style({
-		selectors: { '& svg': { height: '16', width: '16' } },
-	})
-
-	export const docsLink = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		gap: '4',
-		typography: 'label.12',
+		gap: '32',
 	})
 
 	export const section = style({
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
 		display: 'flex',
 		flexDirection: 'column',
+		gap: '12',
+		minWidth: '0',
 	})
 
 	export const sectionHeader = style({
 		alignItems: 'center',
+		columnGap: '16',
 		display: 'flex',
-		flexShrink: 0,
-		paddingBlock: '4',
+		flexWrap: 'wrap',
+		justifyContent: 'space-between',
+		rowGap: '8',
 	})
 
-	// The panel clips overflow, so the ring is drawn inside, following the
-	// panel's top corners on the first section.
-	export const sectionToggle = style({
-		alignItems: 'center',
-		cursor: 'pointer',
+	export const sectionHeading = style({
 		display: 'flex',
-		gap: '8',
-		height: '100% !custom',
-		paddingBlock: '8',
-		paddingInline: '16',
-		':focus-visible': { outlineOffset: '-2px' },
-	})
-
-	export const sectionToggleWithActions = style({ paddingRight: '12' })
-
-	export const sectionToggleFill = style({ flex: 1 })
-
-	export const sectionToggleFirst = style({
-		':focus-visible': { borderTopLeftRadius: '12' },
-	})
-
-	export const sectionToggleFirstEnd = style({
-		':focus-visible': { borderTopRightRadius: '12' },
+		flexDirection: 'column',
+		gap: '4',
+		minWidth: '0',
 	})
 
 	export const sectionTitle = style({
-		color: 'gray.900',
-		typography: 'copy.14',
-		whiteSpace: 'nowrap',
+		color: 'foreground',
+		typography: 'heading.16',
 	})
 
-	export const chevron = variants({
-		base: { color: 'gray.900', height: '16', width: '16' },
-		defaultVariants: { expanded: false },
-		variants: {
-			expanded: { true: {}, false: { rotate: '-90deg' } },
-		},
+	export const sectionDescription = style({
+		color: 'gray.900',
+		typography: 'copy.13',
 	})
 
 	export const sectionActions = style({
-		alignItems: 'stretch',
-		color: 'gray.900',
+		alignItems: 'center',
 		display: 'flex',
-		flex: 1,
-		gap: '8',
-		justifyContent: 'flex-end',
-		minWidth: '0',
-		paddingInline: '12',
+		gap: '4',
 	})
 
-	export const hidden = style({ display: 'none' })
+	// A bordered well for code, inside the tab's card.
+	export const well = style({
+		borderColor: 'grayAlpha.200',
+		borderRadius: '12',
+		borderStyle: 'solid',
+		borderWidth: '1px',
+		overflow: 'hidden',
+	})
+
+	export const bytecodeSkeleton = style({ height: '128' })
 
 	export const bytecode = style({
-		maxHeight: '280px !custom',
-		overflow: 'auto',
-		paddingBlock: '12',
-		paddingInline: '20',
-	})
-
-	export const bytecodeText = style({
 		color: 'foreground',
-		typography: 'label.12.mono',
+		maxHeight: '240px !custom',
+		overflow: 'auto',
+		padding: '16',
+		typography: 'copy.13.mono',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})
 
-	export const proxyBanner = style({
-		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '8',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'label.12',
-	})
-
-	export const implementationLabel = style({ color: 'gray.900' })
-
-	export const implementationLink = style({ typography: 'label.12.mono' })
-
-	export const sectionBody = style({
-		paddingBottom: '12',
-		paddingInline: '12',
-	})
-
-	export const proxyFunctionsNote = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		typography: 'label.12',
-	})
-
-	export const proxyFunctionsBody = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		paddingBottom: '12',
-		paddingInline: '12',
+	// Rows guidance: cap a Hex so it ends with the other values.
+	export const address = style({
+		display: 'inline-flex',
+		maxWidth: '12rem !custom',
+		minWidth: '0',
 	})
 }

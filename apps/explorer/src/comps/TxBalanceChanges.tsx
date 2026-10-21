@@ -1,35 +1,41 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds'
+import { Amount, Empty, style, Token } from '@tempoxyz/ds'
 import type { Address as OxAddress } from 'ox'
 import * as Value from 'ox/Value'
 import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { getAccountTag } from '#lib/account'
-import { TokenIcon } from '#comps/TokenIcon'
-import { Empty } from '#comps/ui/Empty'
 import { isTip20Address } from '#lib/domain/tip20'
-import { PriceFormatter } from '#lib/formatting'
 import {
 	type BalanceChangesData,
 	LIMIT,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
-import { link, linkHover, pressDown, truncate } from '#styles/explorer'
+import { link, linkHover } from '#styles/explorer'
 
-export function TxBalanceChanges(props: TxBalanceChanges.Props) {
+export function TxBalanceChanges(
+	props: TxBalanceChanges.Props,
+): React.JSX.Element {
 	const { data, loading = false, page } = props
 
 	const cols: DataGrid.Column[] = [
-		{ label: 'Address', align: 'start', width: '2fr', minWidth: 140 },
-		{ label: 'Token', align: 'start', width: '1fr', minWidth: 120 },
-		{ label: 'Before', align: 'end', width: '2fr', minWidth: 160 },
-		{ label: 'After', align: 'end', width: '2fr', minWidth: 160 },
-		{ label: 'Change', align: 'end', width: '2fr', minWidth: 160 },
+		{ label: 'Address', align: 'start', width: '2fr' },
+		{ label: 'Token', align: 'start', width: '1fr' },
+		{ label: 'Before', align: 'end', width: '2fr' },
+		{ label: 'After', align: 'end', width: '2fr' },
+		{ label: 'Change', align: 'end', width: '2fr' },
 	]
 
 	if (data.total === 0 && !loading)
-		return <Empty compact title="No balance changes for this transaction." />
+		return (
+			<Empty.Root>
+				<Empty.Title>No balance changes</Empty.Title>
+				<Empty.Description>
+					This transaction moved no token balances.
+				</Empty.Description>
+			</Empty.Root>
+		)
 
 	return (
 		<DataGrid
@@ -53,19 +59,20 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 								token={change.token}
 								metadata={metadata}
 							/>,
-							<TxBalanceChanges.BalanceCell
+							<TxBalanceChanges.Balance
 								key="before"
 								value={change.balanceBefore}
 								metadata={metadata}
 							/>,
-							<TxBalanceChanges.BalanceCell
+							<TxBalanceChanges.Balance
 								key="after"
 								value={change.balanceAfter}
 								metadata={metadata}
 							/>,
-							<TxBalanceChanges.DiffCell
+							<TxBalanceChanges.Balance
 								key="diff"
-								diff={change.diff}
+								change
+								value={change.diff}
 								metadata={metadata}
 							/>,
 						],
@@ -76,7 +83,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 			page={page}
 			itemsLabel="changes"
 			itemsPerPage={LIMIT}
-			emptyState="No balance changes detected."
+			emptyState="No balance changes"
 			loading={loading}
 			pagination="simple"
 			showSimpleCount={false}
@@ -91,18 +98,18 @@ export namespace TxBalanceChanges {
 		page: number
 	}
 
-	export function TokenSymbol(props: TokenSymbol.Props) {
+	/** The token's icon and symbol, linking to its page. */
+	export function TokenSymbol(props: TokenSymbol.Props): React.JSX.Element {
 		const { token, metadata } = props
-		const isTip20 = isTip20Address(token)
 
 		return (
 			<Link
-				{...cx(styles.tokenLink(), link(), linkHover(), pressDown())}
+				{...cx(styles.token(), link(), linkHover())}
 				params={{ address: token }}
 				title={token}
-				to={isTip20 ? '/token/$address' : '/address/$address'}
+				to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
 			>
-				<TokenIcon address={token} />
+				<Token address={token} size="small" />
 				{metadata?.symbol ?? '…'}
 			</Link>
 		)
@@ -115,138 +122,63 @@ export namespace TxBalanceChanges {
 		}
 	}
 
-	export function BalanceCell(props: BalanceCell.Props) {
-		const { value: valueStr, metadata } = props
+	/**
+	 * A balance in base units, as a TDS `Amount` in the token's symbol. With
+	 * `change`, it is a signed difference: "+" for money in, "−" for money out.
+	 */
+	export function Balance(props: Balance.Props): React.JSX.Element {
+		const { change = false, metadata, value } = props
 
 		if (!metadata) return <span>…</span>
 
-		let value: bigint
+		let units: bigint
 		try {
-			value = BigInt(valueStr)
+			units = BigInt(value)
 		} catch {
-			return <span {...styles.invalid()}>Invalid</span>
+			return <span {...styles.secondary()}>Unreadable value</span>
 		}
 
-		const raw = Value.format(value, metadata.decimals)
-		const formatted = PriceFormatter.formatAmount(raw)
+		const sign = !change
+			? undefined
+			: units > 0n
+				? '+'
+				: units < 0n
+					? '−'
+					: undefined
 
 		return (
-			<span
-				{...cx(styles.amount(), styles.balance(), truncate())}
-				title={formatted}
-			>
-				{formatted}
-			</span>
-		)
-	}
-
-	export namespace BalanceCell {
-		export interface Props {
-			value: string
-			metadata: TokenMetadata | undefined
-		}
-	}
-
-	export function DiffCell(props: DiffCell.Props) {
-		const { diff: diffStr, metadata } = props
-
-		if (!metadata) return <span>…</span>
-
-		let diff: bigint
-		try {
-			diff = BigInt(diffStr)
-		} catch {
-			return <span {...styles.invalid()}>Invalid</span>
-		}
-
-		return (
-			<Diff
-				value={diff}
-				formatted={PriceFormatter.formatAmount(
-					Value.format(diff, metadata.decimals),
-				)}
+			<Amount
+				align="right"
+				sign={sign}
+				symbol={metadata.symbol}
+				value={Value.format(units < 0n ? -units : units, metadata.decimals)}
+				{...cx(styles.amount(), !change && styles.secondary())}
 			/>
 		)
 	}
 
-	export namespace DiffCell {
+	export namespace Balance {
 		export interface Props {
-			diff: string
+			/** Shows the value as a signed change. */
+			change?: boolean | undefined
 			metadata: TokenMetadata | undefined
-		}
-	}
-
-	/**
-	 * A signed balance change. Direction is carried by the sign and a coloured
-	 * dot; the text stays `foreground`, since the status colours fail
-	 * contrast as text in light mode.
-	 */
-	export function Diff(props: Diff.Props): React.JSX.Element {
-		const { formatted, value } = props
-		const tone = value > 0n ? 'positive' : value < 0n ? 'negative' : 'neutral'
-
-		return (
-			<span {...styles.diff()} title={formatted}>
-				<span aria-hidden="true" {...styles.diffDot({ tone })} />
-				<span {...truncate()}>
-					{value > 0n ? '+' : ''}
-					{formatted}
-				</span>
-			</span>
-		)
-	}
-
-	export namespace Diff {
-		export interface Props {
-			/** Formatted amount, already signed when negative. */
-			formatted: string
-			value: bigint
+			/** Base units, as a decimal integer string. */
+			value: string
 		}
 	}
 }
 
 namespace styles {
-	export const tokenLink = style({
+	export const token = style({
 		alignItems: 'center',
 		display: 'inline-flex',
 		flexShrink: '0 !custom',
 		gap: '4',
 	})
 
-	export const invalid = style({ color: 'gray.900' })
+	// Balances before and after read secondary to the change.
+	export const secondary = style({ color: 'gray.900' })
 
-	export const amount = style({
-		fontVariantNumeric: 'tabular-nums',
-		minWidth: '0 !custom',
-	})
-
-	export const balance = style({ color: 'gray.900' })
-
-	export const diff = style({
-		alignItems: 'center',
-		color: 'foreground',
-		columnGap: '8',
-		display: 'inline-flex',
-		fontVariantNumeric: 'tabular-nums',
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-	})
-
-	// A status dot in the intent icon colours, without a label.
-	export const diffDot = variants({
-		base: {
-			borderRadius: 'full',
-			flexShrink: '0 !custom',
-			height: '8',
-			width: '8',
-		},
-		defaultVariants: { tone: 'neutral' },
-		variants: {
-			tone: {
-				negative: { backgroundColor: 'red.800' },
-				neutral: { display: 'none' },
-				positive: { backgroundColor: 'green.700' },
-			},
-		},
-	})
+	// Amount leaves wrapping unset; long balances break instead of overflowing.
+	export const amount = style({ minWidth: '0', overflowWrap: 'anywhere' })
 }

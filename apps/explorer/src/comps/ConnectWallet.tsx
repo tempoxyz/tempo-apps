@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClientOnly, Link } from '@tanstack/react-router'
-import { Avatar, Button, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { ClientOnly } from '@tanstack/react-router'
+import { Amount, Button, Tag, Tooltip, style } from '@tempoxyz/ds'
 import { LogOut, Wallet } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
@@ -17,34 +17,33 @@ import { tempoModerato } from 'viem/chains'
 import { Actions } from 'viem/tempo'
 import { alphausd } from 'viem/tokens'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from 'zyzz'
+import { Address } from '#comps/Address'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
-import { link, linkHover, pressDown } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
-export function ConnectWallet({
-	showAddChain = true,
-}: {
-	showAddChain?: boolean
-}) {
+export function ConnectWallet(props: ConnectWallet.Props): React.JSX.Element {
 	return (
 		<ClientOnly fallback={<div {...styles.detecting()}>Detecting wallet…</div>}>
-			<ConnectWalletInner showAddChain={showAddChain} />
+			<ConnectWalletInner showAddChain={props.showAddChain ?? true} />
 		</ClientOnly>
 	)
 }
 
-function ConnectWalletInner({
-	showAddChain = true,
-}: {
-	showAddChain?: boolean
-}) {
+export declare namespace ConnectWallet {
+	type Props = {
+		/** Offers to add Tempo when the wallet is on another network. */
+		showAddChain?: boolean | undefined
+	}
+}
+
+function ConnectWalletInner(props: { showAddChain: boolean }) {
+	const { showAddChain } = props
 	const connect = useConnect()
 	const connectors = useConnectors()
 	const { address, chain, connector } = useConnection()
@@ -101,16 +100,14 @@ function ConnectWalletInner({
 						variant="secondary"
 						{...styles.action()}
 					>
-						{/* TDS Avatar starts at 24px; the connector logo stays 16px. */}
-						<Avatar aria-hidden size="24" style={{ height: 16, width: 16 }}>
-							<Avatar.Image alt="" src={connector.icon} />
-							<Avatar.Fallback>
-								<Wallet />
-							</Avatar.Fallback>
-						</Avatar>
+						{connector.icon ? (
+							<img alt="" src={connector.icon} {...styles.connectorIcon()} />
+						) : (
+							<Wallet {...styles.icon()} />
+						)}
 						{connector.name && connector.name !== 'Injected'
 							? `Connect ${connector.name}`
-							: 'Connect Wallet'}
+							: 'Connect wallet'}
 					</Button>
 				))}
 			</div>
@@ -137,13 +134,13 @@ function ConnectWalletInner({
 						})
 					}
 				>
-					Add Tempo to {connector?.name ?? 'Wallet'}
+					Add Tempo to {connector?.name ?? 'wallet'}
 				</Button>
 			)}
 			{switchChain.isSuccess && (
 				<Tag intent="positive" variant="plain">
 					<Tag.Dot />
-					Added Tempo to {connector?.name ?? 'Wallet'}
+					Added Tempo to {connector?.name ?? 'wallet'}
 				</Tag>
 			)}
 			<SignOut />
@@ -211,20 +208,8 @@ function ConnectedAddress() {
 	return (
 		<div {...styles.address()}>
 			<span {...styles.addressPrefix()}>Connected as</span>
-			<Link
-				to="/address/$address"
-				params={{ address }}
-				title={address}
-				{...cx(styles.addressLink(), link(), linkHover(), pressDown())}
-			>
-				<span {...styles.addressHead()}>{address.slice(0, -10)}</span>
-				<span {...styles.addressTail()}>{address.slice(-10)}</span>
-			</Link>
-			{totalUsd !== null && (
-				<span>
-					(${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })})
-				</span>
-			)}
+			<Address address={address} />
+			{totalUsd !== null && <Amount currency="USD" value={totalUsd} />}
 		</div>
 	)
 }
@@ -292,12 +277,6 @@ function FundAccountButton() {
 	}
 
 	const isPending = status === 'funding' || status === 'setting-fee'
-	const label =
-		status === 'funding'
-			? 'Funding…'
-			: status === 'setting-fee'
-				? 'Setting fee token…'
-				: 'Fund'
 
 	return (
 		<Tooltip.Root>
@@ -313,7 +292,7 @@ function FundAccountButton() {
 					/>
 				}
 			>
-				{label}
+				Fund account
 			</Tooltip.Trigger>
 			<Tooltip.Popup>Fund from faucet and set fee token</Tooltip.Popup>
 		</Tooltip.Root>
@@ -329,7 +308,7 @@ function SignOut() {
 			<Tooltip.Trigger
 				render={
 					<Button
-						aria-label="Disconnect"
+						aria-label="Disconnect wallet"
 						onClick={() => disconnect.mutate({ connector })}
 						shape="icon"
 						size="small"
@@ -339,7 +318,7 @@ function SignOut() {
 			>
 				<LogOut {...styles.icon()} />
 			</Tooltip.Trigger>
-			<Tooltip.Popup>Disconnect</Tooltip.Popup>
+			<Tooltip.Popup>Disconnect wallet</Tooltip.Popup>
 		</Tooltip.Root>
 	)
 }
@@ -398,16 +377,9 @@ namespace styles {
 		'@media (width >= 640px)': { display: 'inline' },
 	})
 
-	export const addressLink = style({
-		display: 'flex',
-		minWidth: '0',
-		typography: 'label.12.mono',
+	export const connectorIcon = style({
+		flexShrink: '0 !custom',
+		height: '16',
+		width: '16',
 	})
-
-	export const addressHead = style({
-		overflow: 'hidden',
-		textOverflow: 'ellipsis',
-	})
-
-	export const addressTail = style({ flexShrink: 0 })
 }

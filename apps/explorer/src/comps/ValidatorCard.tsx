@@ -1,14 +1,14 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
+import { Hex, style } from '@tempoxyz/ds'
+import type * as React from 'react'
 import type { Address } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { useReadContract } from 'wagmi'
 import { cx } from 'zyzz'
-import { CopyButton } from '#comps/CopyButton'
 import { InfoCard } from '#comps/InfoCard'
 import { Abis } from '#lib/abis'
 import { useIsMounted } from '#lib/hooks'
-import { linkHover } from '#styles/explorer'
+import { link, linkHover } from '#styles/explorer'
 
 export function ValidatorCard(
 	props: ValidatorCard.Props,
@@ -32,34 +32,25 @@ export function ValidatorCard(
 			title={<InfoCard.Title>Validator</InfoCard.Title>}
 			sections={[
 				{ label: 'Active', value: active ? 'Yes' : 'No' },
-				<div key="recipient" {...styles.recipient()}>
-					<div {...styles.recipientHeader()}>
-						<span>Fee recipient</span>
-						<CopyButton
-							value={validator.feeRecipient}
-							ariaLabel="Copy fee recipient"
-						/>
-					</div>
-					<Link
-						to="/address/$address"
-						params={{ address: validator.feeRecipient }}
-						search={{ tab: 'holdings' }}
-						{...cx(styles.recipientLink(), linkHover())}
-					>
-						{validator.feeRecipient}
-					</Link>
-				</div>,
+				{
+					label: <span {...styles.normalCase()}>Fee recipient</span>,
+					value: (
+						<Hex.Root value={validator.feeRecipient} {...styles.recipient()}>
+							<Link
+								to="/address/$address"
+								params={{ address: validator.feeRecipient }}
+								search={{ tab: 'holdings' }}
+								{...cx(styles.recipientLink(), link(), linkHover())}
+							>
+								<Hex.Text />
+							</Link>
+							<Hex.Copy aria-label="Copy fee recipient" />
+						</Hex.Root>
+					),
+				},
 				{
 					label: <span {...styles.normalCase()}>Added at height</span>,
-					value: (
-						<Link
-							to="/block/$id"
-							params={{ id: validator.addedAtHeight.toString() }}
-							{...cx(styles.height(), linkHover())}
-						>
-							{validator.addedAtHeight.toString()}
-						</Link>
-					),
+					value: <BlockLink height={validator.addedAtHeight} />,
 				},
 				...(!active
 					? [
@@ -67,15 +58,7 @@ export function ValidatorCard(
 								label: (
 									<span {...styles.normalCase()}>Deactivated at height</span>
 								),
-								value: (
-									<Link
-										to="/block/$id"
-										params={{ id: validator.deactivatedAtHeight.toString() }}
-										{...cx(styles.height(), linkHover())}
-									>
-										{validator.deactivatedAtHeight.toString()}
-									</Link>
-								),
+								value: <BlockLink height={validator.deactivatedAtHeight} />,
 							},
 						]
 					: []),
@@ -88,31 +71,27 @@ export declare namespace ValidatorCard {
 	type Props = { address: Address }
 }
 
+/** A block number, digits grouped, linking to the block. */
+function BlockLink(props: { height: bigint }): React.JSX.Element {
+	const id = props.height.toString()
+	return (
+		<Link to="/block/$id" params={{ id }} {...cx(link(), linkHover())}>
+			{props.height.toLocaleString('en-US')}
+		</Link>
+	)
+}
+
 namespace styles {
 	export const card = style({ width: '100% !custom' })
 
-	export const recipient = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
+	export const recipient = style({ minWidth: '0 !custom' })
+
+	// The link sits inside `Hex.Root`, so the value truncates to fit.
+	export const recipientLink = style({
+		display: 'inline-flex',
+		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
 	})
 
-	export const recipientHeader = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		gap: '8',
-	})
-
-	export const recipientLink = style({
-		color: 'foreground',
-		maxWidth: '32ch !custom',
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
-	})
-
 	export const normalCase = style({ textTransform: 'none' })
-
-	export const height = style({ wordBreak: 'break-all' })
 }

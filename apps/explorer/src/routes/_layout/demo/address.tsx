@@ -3,13 +3,13 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Check, Copy } from '@tempoxyz/ds/icons'
+import { Amount, Button, Hex as HexValue, style } from '@tempoxyz/ds'
 import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
-import { Midcut } from '#comps/Midcut'
 import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
+import { TransactionCell } from '#comps/TransactionCell'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import {
 	getPerspectiveEvent,
@@ -40,10 +40,7 @@ import {
 	validatorTokenAddress,
 } from '#lib/demo'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
-import { useCopy, useMediaQuery } from '#lib/hooks'
-import { style } from '@tempoxyz/ds'
-import { cx } from 'zyzz'
-import { pressDown } from '#styles/explorer'
+import { useMediaQuery } from '#lib/hooks'
 
 type MockTransactionData = {
 	hash: Hex.Hex
@@ -880,11 +877,10 @@ function Component() {
 	const { transactions, total, knownEvents } = Route.useLoaderData()
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
-	const { copy, notifying } = useCopy()
 	const [expandedTxs, setExpandedTxs] = React.useState<Set<Hex.Hex>>(new Set())
 
 	const historyColumns: DataGrid.Column[] = [
-		{ label: 'Time', align: 'start', minWidth: 100 },
+		{ label: 'Time', align: 'start' },
 		{ label: 'Description', align: 'start' },
 		{ label: 'Hash', align: 'end' },
 		{ label: 'Fee', align: 'end' },
@@ -895,24 +891,16 @@ function Component() {
 		<div {...styles.page()}>
 			<InfoCard
 				title={<InfoCard.Title>Account</InfoCard.Title>}
-				className={styles.accountCard().className}
 				sections={[
-					<button
-						key="address"
-						type="button"
-						onClick={() => copy(accountAddress)}
-						{...cx(styles.addressButton(), pressDown())}
-					>
-						<div {...styles.addressHeader()}>
-							<span {...styles.addressLabel()}>Address</span>
-							{notifying ? (
-								<Check {...styles.copyIcon()} />
-							) : (
-								<Copy {...styles.copyIcon()} />
-							)}
-						</div>
-						<p {...styles.addressValue()}>{accountAddress}</p>
-					</button>,
+					{
+						label: 'Address',
+						value: (
+							<HexValue.Root value={accountAddress} {...styles.hex()}>
+								<HexValue.Text />
+								<HexValue.Copy aria-label="Copy address" />
+							</HexValue.Root>
+						),
+					},
 					{
 						label: 'Active',
 						value: (
@@ -928,7 +916,7 @@ function Component() {
 						label: 'Holdings',
 						value: (
 							<ClientOnly fallback={<span {...styles.pending()}>…</span>}>
-								<span {...styles.value()}>$1,234,567.00</span>
+								<Amount currency="USD" value="1234567.00" {...styles.value()} />
 							</ClientOnly>
 						),
 					},
@@ -950,8 +938,6 @@ function Component() {
 				sections={[
 					{
 						title: 'History',
-						totalItems: total,
-						itemsLabel: 'transactions',
 						content: (
 							<DataGrid
 								columns={{
@@ -987,8 +973,7 @@ function Component() {
 													/>
 												)}
 												{events.length > 1 && (
-													<button
-														type="button"
+													<Button
 														onClick={(e) => {
 															e.preventDefault()
 															e.stopPropagation()
@@ -996,10 +981,12 @@ function Component() {
 																new Set(prev).add(tx.hash),
 															)
 														}}
-														{...cx(styles.more(), pressDown())}
+														size="small"
+														variant="text"
+														{...styles.more()}
 													>
-														and {events.length - 1} more
-													</button>
+														Show {events.length - 1} more
+													</Button>
 												)}
 											</div>
 										)
@@ -1012,7 +999,7 @@ function Component() {
 													link={`/receipt/${tx.hash}`}
 												/>,
 												descriptionCell,
-												<Midcut key="hash" value={tx.hash} prefix="0x" />,
+												<TransactionCell key="hash" hash={tx.hash} />,
 												<TransactionFee key="fee" receipt={tx.receipt} />,
 												<TransactionTotal
 													key="total"
@@ -1043,46 +1030,27 @@ function Component() {
 }
 
 namespace styles {
+	// Stacked below 1024px; beside it, the card's column is capped so the
+	// history keeps its room.
 	export const page = style({
-		display: 'grid',
+		display: 'flex',
+		flexDirection: 'column',
 		gap: '16',
-		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '64',
+		paddingBottom: '32',
 		paddingInline: '16',
-		paddingTop: '64',
+		paddingTop: '40',
 		width: '100% !custom',
-		'@media (width < 800px)': {
-			display: 'flex',
-			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
+		'@media (width >= 1024px)': {
+			alignItems: 'start',
+			display: 'grid',
+			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
 	})
 
-	export const accountCard = style({ alignSelf: 'flex-start' })
-
-	export const addressHeader = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		marginBottom: '8',
-	})
-
-	export const addressLabel = style({
-		textTransform: 'capitalize',
-		typography: 'label.12',
-	})
-
-	export const copyIcon = style({ height: '12', width: '12' })
-
-	export const addressValue = style({
-		color: 'foreground',
-		maxWidth: '21ch !custom',
-		typography: 'copy.14',
-		wordBreak: 'break-all',
-	})
+	export const hex = style({ minWidth: '0 !custom' })
 
 	export const pending = style({
 		color: 'gray.900',
@@ -1108,17 +1076,5 @@ namespace styles {
 		whiteSpace: 'nowrap',
 	})
 
-	export const addressButton = style({
-		color: 'gray.900',
-		cursor: 'pointer',
-		textAlign: 'left',
-		width: '100% !custom',
-	})
-
-	export const more = style({
-		color: 'gray.900',
-		cursor: 'pointer',
-		flexShrink: 0,
-		marginLeft: '4',
-	})
+	export const more = style({ flexShrink: 0, marginLeft: '4' })
 }

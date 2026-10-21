@@ -5,20 +5,20 @@ import {
 	Callout,
 	Field,
 	Input,
+	LoadingDots,
 	Rows,
+	Skeleton,
 	Tag,
-	Tooltip,
 	style,
 } from '@tempoxyz/ds'
-import { AlertCircle, InfoCircle } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
 import { cx } from 'zyzz'
 import { Address as AddressLink } from '#comps/Address'
+import { ContractSection } from '#comps/Contract'
 import {
 	groupTokenAuthorities,
-	pauseStatusLabel,
 	policyDescriptions,
 	policyLabel,
 	tokenPolicyRows,
@@ -30,6 +30,7 @@ import { fetchTokenPolicy } from '#lib/server/token-trust'
 import type { RoleHolder } from '#routes/api/tip20-roles'
 import { link, linkHover } from '#styles/explorer'
 
+/** The token's transfer policy and privileged addresses, as two sections. */
 export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	const chainId = useChainId()
 	const policyQuery = useQuery({
@@ -43,182 +44,163 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 		props.unavailable ? [] : props.roles,
 		policy,
 	)
-	const pauseTone =
-		policy?.paused === true
-			? 'warning'
-			: policy?.paused === false
-				? 'positive'
-				: 'neutral'
 	return (
-		<div {...styles.root()}>
-			<h3 {...styles.heading()}>Trust & permissions</h3>
-			<section aria-label="Transfer policy" {...styles.panel()}>
-				<div {...styles.panelHeader()}>
-					<h4 {...styles.panelTitle()}>Transfer policy</h4>
-					{policy && <PolicyLink policy={policy.policy} />}
-				</div>
-				<div {...styles.panelBody()}>
-					<div {...styles.status()}>
-						<span {...styles.pause()}>
-							<Tag
-								role="status"
-								aria-label="Token pause status"
-								intent={pauseTone}
-								variant="plain"
-							>
-								<Tag.Dot />
-								{policyQuery.isPending
-									? 'Loading status…'
-									: pauseStatusLabel(policy?.paused)}
-							</Tag>
-							{policy?.paused === false && (
-								<Tooltip.Root>
-									<Tooltip.Trigger
-										render={
-											<Button
-												aria-label="Policy restrictions still apply"
-												shape="icon"
-												size="small"
-												variant="text"
-											/>
-										}
-									>
-										<InfoCircle {...styles.infoIcon()} />
-									</Tooltip.Trigger>
-									<Tooltip.Popup>Policy restrictions still apply</Tooltip.Popup>
-								</Tooltip.Root>
-							)}
-						</span>
-						{policyQuery.isPending ? (
-							<p {...styles.secondary()} role="status">
-								Loading transfer policy…
-							</p>
-						) : policyQuery.isError ? (
-							<Unavailable
-								message="Transfer policy unavailable."
-								onRetry={() => void policyQuery.refetch()}
-							/>
-						) : (
-							policy && (
-								<div {...styles.policyDescription()}>
-									<p>{policyDescriptions[policy.policy.type]}</p>
-									<p {...styles.secondary()}>
-										Token admins can replace this policy.
-									</p>
-								</div>
-							)
-						)}
-					</div>
-					<AddressPolicyChecker
-						key={`${chainId}:${props.address}`}
-						address={props.address}
-						chainId={chainId}
-						policy={policy}
+		<>
+			<ContractSection
+				title="Transfer policy"
+				description="Who may send, receive and mint this token. Token admins can replace the policy."
+			>
+				{policyQuery.isError ? (
+					<Unavailable
+						message="Transfer policy unavailable."
+						onRetry={() => void policyQuery.refetch()}
 					/>
-				</div>
-			</section>
-			<section aria-label="Privileged addresses" {...styles.panel()}>
-				<h4 {...cx(styles.panelHeader(), styles.panelTitle())}>
-					Privileged addresses
-				</h4>
-				<div {...styles.panelBody()}>
-					{props.loading ? (
-						<p {...styles.secondary()} role="status">
-							Loading token roles…
-						</p>
-					) : props.unavailable ? (
-						<Unavailable
-							message="Token roles unavailable. Policy permissions below may still be shown."
-							onRetry={props.onRetry}
-						/>
-					) : (
-						props.roles.length === 0 && (
-							<p {...styles.secondary()}>
-								No current token role holders found.
+				) : (
+					<>
+						<Rows dividers="full">
+							<Rows.Row spacing="none">
+								<Rows.Label>Policy</Rows.Label>
+								{policy ? (
+									<PolicyLink policy={policy.policy} />
+								) : (
+									<Skeleton shape="pill" {...styles.skeleton()} />
+								)}
+							</Rows.Row>
+							<Rows.Row spacing="none">
+								<Rows.Label>Transfers</Rows.Label>
+								{policy ? (
+									<Tag
+										role="status"
+										aria-label="Token pause status"
+										intent={
+											policy.paused === true
+												? 'warning'
+												: policy.paused === false
+													? 'positive'
+													: 'neutral'
+										}
+										size="small"
+									>
+										<Tag.Dot />
+										{policy.paused === true
+											? 'Paused'
+											: policy.paused === false
+												? 'Active'
+												: 'Unavailable'}
+									</Tag>
+								) : (
+									<Skeleton shape="pill" {...styles.skeleton()} />
+								)}
+							</Rows.Row>
+						</Rows>
+						{policy && (
+							<p {...styles.description()}>
+								{policyDescriptions[policy.policy.type]}
+								{policy.paused === false &&
+									' Transfers aren’t paused, but the policy still applies.'}
 							</p>
-						)
-					)}
-					{groups.length > 0 && (
-						<div {...styles.groups()}>
-							{groups.map((group) => (
-								<div key={group.account} {...styles.group()}>
-									<AddressLink
-										address={group.account}
-										className={styles.groupAddress().className}
-									/>
-									<Rows dividers="full" size="small">
-										{group.roles.map((role) => (
-											<Rows.Row key={role.roleHash} spacing="none">
-												<Rows.Info>
-													<Rows.Title>
-														<span {...styles.roleName()}>{role.role}</span>
-													</Rows.Title>
-													<Rows.Description>
-														<span {...styles.block()}>
-															{tokenRoleDescription(role.role)}
-														</span>
-														<span {...styles.meta()}>
-															{role.grantedAt != null && (
-																<span>
-																	{new Date(
-																		role.grantedAt * 1000,
-																	).toLocaleDateString('en-US')}
-																</span>
-															)}
-															{role.grantedTx ? (
-																<Link
-																	to="/tx/$hash"
-																	params={{
-																		hash: role.grantedTx as `0x${string}`,
-																	}}
-																	{...cx(link(), linkHover())}
-																	aria-label={`View ${role.role} grant transaction for ${group.account}`}
-																>
-																	Grant tx ↗
-																</Link>
-															) : (
-																<span>Grant transaction unavailable</span>
-															)}
-														</span>
-													</Rows.Description>
-												</Rows.Info>
-											</Rows.Row>
-										))}
-										{group.permissions.map(
-											(permission, index) =>
-												permission.policyId !== undefined && (
-													<Rows.Row
-														key={`${permission.policyId}:${index}`}
-														spacing="none"
-													>
-														<Rows.Info>
-															<Rows.Title>{permission.label}</Rows.Title>
-															<Rows.Description>
-																<span {...styles.block()}>
-																	{permission.description}
-																</span>
-																<span {...styles.meta()}>
-																	<Link
-																		to="/policy/$id"
-																		params={{ id: permission.policyId }}
-																		{...cx(link(), linkHover())}
-																	>
-																		Policy #{permission.policyId} activity ↗
-																	</Link>
-																</span>
-															</Rows.Description>
-														</Rows.Info>
-													</Rows.Row>
-												),
+						)}
+					</>
+				)}
+				<AddressPolicyChecker
+					key={`${chainId}:${props.address}`}
+					address={props.address}
+					chainId={chainId}
+					policy={policy}
+				/>
+			</ContractSection>
+			<ContractSection
+				title="Privileged addresses"
+				description="Accounts that hold a token role or manage one of its policies."
+			>
+				{props.loading ? (
+					<Rows dividers="full">
+						<Rows.RowGroupLoader aria-label="Loading token roles" />
+					</Rows>
+				) : props.unavailable ? (
+					<Unavailable
+						message="Token roles unavailable. Policy permissions below may still be shown."
+						onRetry={props.onRetry}
+					/>
+				) : (
+					props.roles.length === 0 && (
+						<p {...styles.description()}>
+							No current token role holders found.
+						</p>
+					)
+				)}
+				{groups.map((group) => (
+					<div key={group.account} {...styles.account()}>
+						<h4 {...styles.accountTitle()}>
+							<AddressLink address={group.account} />
+						</h4>
+						<Rows dividers="full">
+							{group.roles.map((role) => (
+								<Rows.Row key={role.roleHash} spacing="none">
+									<Rows.Info>
+										<Rows.Title>
+											<span {...styles.roleName()}>{role.role}</span>
+										</Rows.Title>
+										<Rows.Description>
+											{tokenRoleDescription(role.role)}
+										</Rows.Description>
+									</Rows.Info>
+									<span {...styles.grant()}>
+										{role.grantedAt != null && (
+											<time
+												dateTime={new Date(role.grantedAt * 1000).toISOString()}
+											>
+												{new Date(role.grantedAt * 1000).toLocaleDateString(
+													'en-US',
+													{ day: 'numeric', month: 'short', year: 'numeric' },
+												)}
+											</time>
 										)}
-									</Rows>
-								</div>
+										{role.grantedTx ? (
+											<Link
+												to="/tx/$hash"
+												params={{ hash: role.grantedTx as `0x${string}` }}
+												{...cx(link(), linkHover())}
+												aria-label={`View ${role.role} grant transaction for ${group.account}`}
+											>
+												View grant
+											</Link>
+										) : (
+											<span>Grant unavailable</span>
+										)}
+									</span>
+								</Rows.Row>
 							))}
-						</div>
-					)}
-				</div>
-			</section>
-		</div>
+							{group.permissions.map(
+								(permission, index) =>
+									permission.policyId !== undefined && (
+										<Rows.Row
+											key={`${permission.policyId}:${index}`}
+											spacing="none"
+										>
+											<Rows.Info>
+												<Rows.Title>{permission.label}</Rows.Title>
+												<Rows.Description>
+													{permission.description}
+												</Rows.Description>
+											</Rows.Info>
+											<span {...styles.grant()}>
+												<Link
+													to="/policy/$id"
+													params={{ id: permission.policyId }}
+													{...cx(link(), linkHover())}
+												>
+													Policy #{permission.policyId} activity
+												</Link>
+											</span>
+										</Rows.Row>
+									),
+							)}
+						</Rows>
+					</div>
+				))}
+			</ContractSection>
+		</>
 	)
 }
 
@@ -242,7 +224,7 @@ function PolicyLink({ policy }: { policy: TransferPolicy }): React.JSX.Element {
 			>
 				#{policy.id}
 			</Link>
-			<span {...styles.policyLabel()}>{policyLabel(policy)}</span>
+			<span {...styles.secondary()}>{policyLabel(policy)}</span>
 		</span>
 	)
 }
@@ -269,7 +251,6 @@ function AddressPolicyChecker(props: {
 	const [value, setValue] = React.useState('')
 	const [account, setAccount] = React.useState<Address.Address>()
 	const [invalid, setInvalid] = React.useState(false)
-	const id = React.useId()
 	const query = useQuery({
 		queryKey: ['token-policy-check', props.chainId, props.address, account],
 		queryFn: async () => {
@@ -295,10 +276,9 @@ function AddressPolicyChecker(props: {
 		account && !query.isFetching && !query.isError ? query.data : undefined
 	const displayedPolicy = result ?? props.policy
 	return (
-		<details {...styles.details()}>
-			<summary {...cx(styles.summary(), link())}>Check an address</summary>
+		<div {...styles.checker()}>
 			<form
-				{...styles.form()}
+				noValidate
 				onSubmit={(event) => {
 					event.preventDefault()
 					const input = value.trim()
@@ -312,14 +292,11 @@ function AddressPolicyChecker(props: {
 					else setAccount(input)
 				}}
 			>
-				<div {...styles.inputRow()}>
-					<Field.Root invalid={invalid} {...styles.field()}>
-						<Field.Label>
-							Send, receive and mint receipt permissions
-						</Field.Label>
-						<Input.Group>
+				<Field.Root invalid={invalid}>
+					<Field.Label>Address to check</Field.Label>
+					<div {...styles.inputRow()}>
+						<Input.Group {...styles.input()}>
 							<Input.Control
-								id={id}
 								value={value}
 								onValueChange={(next) => {
 									setValue(next)
@@ -327,31 +304,33 @@ function AddressPolicyChecker(props: {
 									setInvalid(false)
 								}}
 								placeholder="0x…"
+								autoCapitalize="off"
 								autoComplete="off"
+								autoCorrect="off"
 								spellCheck={false}
-								aria-describedby={invalid ? `${id}-error` : undefined}
 							/>
 						</Input.Group>
-					</Field.Root>
-					<Button
-						type="submit"
-						disabled={query.isFetching}
-						variant="secondary"
-						{...styles.submit()}
-					>
-						{query.isFetching ? 'Checking…' : 'Check'}
-					</Button>
-				</div>
-				{invalid && (
-					<p id={`${id}-error`} role="alert" {...styles.fieldError()}>
-						<AlertCircle {...styles.fieldErrorIcon()} />
-						Enter a valid address.
-					</p>
-				)}
+						<Button
+							type="submit"
+							loading={query.isFetching}
+							variant="secondary"
+						>
+							Check address
+						</Button>
+					</div>
+					<Field.Description>
+						Checks the policy only, without simulating a transfer.
+					</Field.Description>
+					<Field.Error match={invalid}>
+						Enter an address that starts with 0x and has 40 hex characters.
+					</Field.Error>
+				</Field.Root>
 			</form>
-			<div aria-live="polite" {...styles.live()}>
+			<div aria-live="polite">
 				{account && query.isFetching ? (
-					<p {...styles.secondary()}>Checking current policy…</p>
+					<p {...styles.secondary()}>
+						Checking current policy <LoadingDots aria-label="Checking" />
+					</p>
 				) : account && query.isError ? (
 					<Unavailable
 						message="Could not check this address."
@@ -361,10 +340,7 @@ function AddressPolicyChecker(props: {
 					<PolicyCheckResult result={displayedPolicy} />
 				) : null}
 			</div>
-			<p {...styles.disclaimer()}>
-				Token policy only; this does not simulate a transfer.
-			</p>
-		</details>
+		</div>
 	)
 }
 
@@ -398,7 +374,7 @@ function PolicyCheckResult({
 													? 'positive'
 													: 'negative'
 										}
-										variant="plain"
+										size="small"
 									>
 										<Tag.Dot />
 										{row.allowed === null
@@ -421,116 +397,38 @@ function PolicyCheckResult({
 }
 
 namespace styles {
-	export const root = style({
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'dashed',
-		borderTopWidth: '1px',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '16',
-		marginTop: '16',
-		paddingTop: '16',
-	})
-
-	export const heading = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const panel = style({
-		borderColor: 'grayAlpha.200',
-		borderRadius: '8',
-		borderWidth: '1px',
-		overflow: 'hidden',
-	})
-
-	export const panelHeader = style({
-		alignItems: 'flex-start',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		display: 'flex',
-		gap: '8',
-		justifyContent: 'space-between',
-		padding: '12',
-	})
-
-	export const panelTitle = style({ typography: 'copy.14.strong' })
-
-	export const panelBody = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		padding: '12',
-	})
-
-	export const status = style({
-		alignItems: 'flex-start',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		'@media (width >= 768px)': {
-			flexDirection: 'row-reverse',
-			justifyContent: 'space-between',
-		},
-	})
-
-	export const infoIcon = style({ height: '16', width: '16' })
-
-	export const pause = style({
-		alignItems: 'center',
-		display: 'inline-flex',
-		flexShrink: 0,
-		gap: '4',
-	})
+	export const skeleton = style({ height: '12', width: '6rem !custom' })
 
 	export const secondary = style({ color: 'gray.900' })
 
-	export const policyDescription = style({
+	export const description = style({
 		color: 'gray.900',
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		typography: 'label.12',
+		typography: 'copy.13',
 	})
 
-	export const groups = style({
+	export const account = style({
 		display: 'flex',
 		flexDirection: 'column',
-		selectors: {
-			'& > :not(:last-child)': {
-				borderBottomWidth: '1px',
-				borderColor: 'grayAlpha.200',
-				borderStyle: 'dashed',
-			},
-		},
+		gap: '4',
+		minWidth: '0',
 	})
 
-	export const group = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '12',
-		typography: 'label.12',
-		':first-child': { paddingTop: '0' },
-		':last-child': { paddingBottom: '0' },
-	})
-
-	export const groupAddress = style({ wordBreak: 'break-all' })
+	// The account heads its rows; Hex sets the type.
+	export const accountTitle = style({ display: 'flex', minWidth: '0' })
 
 	export const roleName = style({
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
+		overflowWrap: 'anywhere',
+		typography: 'copy.13.mono',
 	})
 
-	export const block = style({ display: 'block' })
-
-	export const meta = style({
+	export const grant = style({
+		alignItems: 'flex-end',
 		color: 'gray.900',
-		columnGap: '8',
 		display: 'flex',
-		flexWrap: 'wrap',
-		marginTop: '4',
-		typography: 'label.12',
+		flexDirection: 'column',
+		flexShrink: 0,
+		gap: '4',
+		typography: 'copy.13',
 	})
 
 	export const policyLink = style({
@@ -539,56 +437,20 @@ namespace styles {
 		gap: '8',
 	})
 
-	export const policyLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const details = style({
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'dashed',
-		borderTopWidth: '1px',
-		paddingTop: '12',
-		typography: 'label.12',
-	})
-
-	export const summary = style({ cursor: 'pointer' })
-
-	export const form = style({
+	export const checker = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
-		paddingTop: '12',
+		gap: '12',
+		paddingTop: '8',
 	})
 
 	export const inputRow = style({
-		alignItems: 'flex-end',
+		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
 	})
 
-	export const field = style({ flex: 1, minWidth: '0' })
-
-	export const submit = style({ flexShrink: 0 })
-
-	export const fieldError = style({
-		alignItems: 'center',
-		color: 'foreground',
-		display: 'flex',
-		gap: '4',
-	})
-
-	export const fieldErrorIcon = style({
-		color: 'red.900',
-		flexShrink: 0,
-	})
-
-	export const live = style({ paddingTop: '12' })
-
-	export const disclaimer = style({
-		color: 'gray.900',
-		paddingTop: '8',
-	})
+	export const input = style({ flex: 1, minWidth: '0' })
 
 	export const result = style({
 		display: 'flex',

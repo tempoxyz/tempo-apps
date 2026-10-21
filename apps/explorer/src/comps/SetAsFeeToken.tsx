@@ -1,11 +1,8 @@
 import type { Address } from 'ox'
-import { Tag } from '@tempoxyz/ds'
-import { ChevronRight } from '@tempoxyz/ds/icons'
+import { Button, Tag } from '@tempoxyz/ds'
 import * as React from 'react'
 import { useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from 'zyzz'
-import { animatePulse, textAction } from '#styles/explorer'
 
 export function SetAsFeeToken(
 	props: SetAsFeeToken.Props,
@@ -47,22 +44,19 @@ export function SetAsFeeToken(
 		return (
 			<Tag intent="positive" variant="plain">
 				<Tag.Dot />
-				{showSuccess ? 'Fee token set!' : 'Currently your fee token'}
+				{showSuccess ? 'Fee token set' : 'Your fee token'}
 			</Tag>
 		)
 
 	return (
-		<button
-			disabled={setFeeToken.isPending}
+		<Button
+			loading={setFeeToken.isPending}
 			onClick={handleClick}
-			type="button"
-			{...cx(textAction(), setFeeToken.isPending && animatePulse())}
+			size="small"
+			variant="secondary"
 		>
-			{setFeeToken.isPending
-				? 'Setting…'
-				: `Set ${symbol ?? 'token'} as fee token`}
-			<ChevronRight />
-		</button>
+			Set {symbol ?? 'token'} as fee token
+		</Button>
 	)
 }
 

@@ -1,34 +1,47 @@
-/** biome-ignore-all lint/a11y/useSemanticElements: rows are CSS subgrids, which native table rows cannot be, so the grid takes table roles instead */
-/** biome-ignore-all lint/a11y/useFocusableInteractive: role="table" rows and headers are static, not interactive grid cells */
 import { Link, useRouterState } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
-import { ChevronDown } from '@tempoxyz/ds/icons'
+import { Empty, Rows, Skeleton, style, Table, variants } from '@tempoxyz/ds'
+import { ArrowDown, ArrowUp } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
-import { Empty } from '#comps/ui/Empty'
 import { useNewLiveRows } from '#lib/use-new-live-rows'
-import { animatePulse, rowShimmer, transitionColors } from '#styles/explorer'
+import { rowShimmer } from '#styles/explorer'
 
-export function DataGrid(props: DataGrid.Props) {
+const skeletonWidths = ['60%', '45%', '70%', '50%'] as const
+
+/** Lifts a linked row's own links and buttons above its row link. */
+const raised = {
+	'& :is(a, button):not([data-row-link])': {
+		pointerEvents: 'auto',
+		position: 'relative',
+		zIndex: 1,
+	},
+} as const
+
+/**
+ * The records of a `Sections` card: a dense table with its pagination below,
+ * following the TDS Tables and Lists pattern. In the stacked layout a table
+ * with more than three columns turns into a list, one stacked item per row.
+ * A row with `link` opens its record from anywhere in the row, and links and
+ * buttons inside the row keep working.
+ */
+export function DataGrid(props: DataGrid.Props): React.JSX.Element {
 	const {
-		columns,
+		columns: columns_,
 		items,
 		totalItems,
 		pages: pagesProp,
 		displayCount,
 		displayCountCapped = false,
 		page,
-		fetching = false,
 		loading = false,
 		countLoading = false,
-		disableLastPage = false,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
 		showSimpleCount = true,
-		emptyState = 'No items found.',
+		emptyState = 'No items found',
 		flexible = false,
 		onPrefetchNextPage,
 		onCancelPrefetchNextPage,
@@ -44,229 +57,284 @@ export function DataGrid(props: DataGrid.Props) {
 			return state.location.pathname === state.resolvedLocation.pathname
 		},
 	})
-	const effectiveLoading = loading || isSearchNavigationPending
-	const activeColumns = mode === 'stacked' ? columns.stacked : columns.tabs
-	const activeItems: DataGrid.Row[] = effectiveLoading
-		? Array.from({ length: itemsPerPage }, (_, index) => ({
-				cells: activeColumns.map((_, colIndex) => {
-					const cellKey = `skeleton-${index}-${colIndex}`
-					return (
-						<div key={cellKey} {...styles.skeletonCell()}>
-							<div {...cx(styles.skeletonBar(), animatePulse())} />
-						</div>
-					)
-				}),
-			}))
-		: items(mode)
+	const busy = loading || isSearchNavigationPending
+	const columns = mode === 'stacked' ? columns_.stacked : columns_.tabs
+	const rows = busy ? [] : items(mode)
 	const newLiveRows = useNewLiveRows(
-		activeItems.map((item) => item.key),
-		effectiveLoading ? undefined : props.liveScope,
+		rows.map((row) => row.key),
+		busy ? undefined : props.liveScope,
 	)
 	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
-	const isSimpleSinglePage =
-		pagination === 'simple' &&
-		typeof pages === 'number' &&
-		pages <= 1 &&
-		page === 1
-	const shouldRenderSimpleFooter =
-		!isSimpleSinglePage || countLoading || showSimpleCount
+	const label = itemsLabel.charAt(0).toUpperCase() + itemsLabel.slice(1)
+	// TDS Tables and Lists, Below 640px: tables with more than two or three
+	// columns do not fit a phone, so each row becomes a stacked list item.
+	const list = mode === 'stacked' && columns.length > 3
+	const first = (page - 1) * itemsPerPage + 1
+	const range =
+		rows.length > 0 ? ([first, first + rows.length - 1] as const) : undefined
 
-	const gridTemplateColumns = activeColumns
-		.map((col) => {
-			if (typeof col.width === 'number') return `${col.width}px`
-			if (col.width === 'max-content') return col.width
-			if (typeof col.width === 'string')
-				return col.minWidth
-					? `minmax(${col.minWidth}px, ${col.width})`
-					: `minmax(0, ${col.width})`
-			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
-			return mode === 'tabs' ? 'minmax(0, auto)' : 'auto'
-		})
-		.join(' ')
+	const footer = (() => {
+		if (pagination === 'default')
+			return (
+				<Pagination
+					page={page}
+					pages={typeof pages === 'number' ? pages : 1}
+					range={range}
+					totalItems={totalItems}
+					itemsLabel={itemsLabel}
+					compact={mode === 'stacked'}
+				/>
+			)
+		if (pagination !== 'simple') return pagination
+		const singlePage = typeof pages === 'number' && pages <= 1 && page === 1
+		if (singlePage && !countLoading && !showSimpleCount) return null
+		return (
+			<div {...styles.bar()}>
+				{showSimpleCount && (
+					<Pagination.Count
+						range={singlePage ? undefined : range}
+						totalItems={displayCount ?? 0}
+						itemsLabel={itemsLabel}
+						loading={busy || displayCount == null}
+						capped={displayCountCapped}
+					/>
+				)}
+				<Pagination.Simple
+					page={page}
+					pages={pages}
+					pagesCapped={displayCountCapped}
+					countLoading={countLoading}
+					onPrefetchNext={onPrefetchNextPage}
+					onCancelPrefetchNext={onCancelPrefetchNextPage}
+					showPageLabel={showSimplePageLabel}
+				/>
+			</div>
+		)
+	})()
+
+	const empty = (
+		<Empty.Root>
+			<Empty.Title>{emptyState}</Empty.Title>
+		</Empty.Root>
+	)
+
+	const rowLink = (link: DataGrid.RowLink) => (
+		<Link
+			to={link.href}
+			search={link.search}
+			title={link.title}
+			aria-label={link.title}
+			preload="intent"
+			data-row-link=""
+			{...styles.rowLink()}
+		/>
+	)
 
 	return (
 		<div {...styles.root()}>
-			<div {...styles.scroller()}>
-				<div
-					{...cx(
-						styles.grid({ style: { gridTemplateColumns } }),
-						flexible && styles.gridFlexible(),
-						mode === 'tabs' && styles.gridTabs(),
-					)}
-					role="table"
-					aria-busy={effectiveLoading}
-				>
-					<div role="row" {...styles.headerRow()}>
-						{activeColumns.map((column, index) => {
-							const key = `header-${index}`
-							const sortDir = column.sortDirection
-							const hasSort = sortDir === 'asc' || sortDir === 'desc'
-							const label =
-								typeof column.label === 'string'
-									? column.label.charAt(0) + column.label.slice(1).toLowerCase()
-									: column.label
-							return (
-								<div
-									key={key}
-									role="columnheader"
-									aria-sort={
-										sortDir === 'asc'
-											? 'ascending'
-											: sortDir === 'desc'
-												? 'descending'
-												: undefined
-									}
-									{...cx(
-										styles.headerCell(),
-										column.align === 'end' && styles.headerCellEnd(),
-									)}
-								>
-									<span {...styles.headerLabel()}>
-										{label}
-										{hasSort && (
-											<ChevronDown
-												{...cx(
-													styles.sortIcon(),
-													sortDir === 'asc' && styles.sortIconAsc(),
-												)}
-											/>
-										)}
-									</span>
-								</div>
-							)
-						})}
-					</div>
-					{activeItems.length === 0 ? (
-						<div role="row" {...styles.empty()}>
-							<div role="cell" aria-colspan={activeColumns.length}>
-								<Empty compact title={emptyState} />
-							</div>
-						</div>
-					) : null}
-					{activeItems.map((item, rowIndex) => {
-						let maxLines = 1
-						for (const cell of item.cells) {
-							if (Array.isArray(cell) && cell.length > maxLines)
-								maxLines = cell.length
-						}
-						return (
-							<div
-								key={item.key ?? `row-${rowIndex}-${page}`}
-								role="row"
-								{...cx(
-									styles.row({ className: item.className }),
-									Boolean(item.link) && styles.rowLinked(),
-									Boolean(item.link) && transitionColors(),
-									Boolean(item.expanded) && styles.rowExpanded(),
-									item.key !== undefined &&
-										newLiveRows.has(item.key) &&
-										styles.rowNew(),
-								)}
-							>
-								{Array.from({ length: maxLines }, (_, lineIndex) => {
-									const key = `line-${rowIndex}-${lineIndex}`
-									return (
-										<React.Fragment key={key}>
-											{item.cells.map((cell, cellIndex) => {
-												const key = `cell-${rowIndex}-${cellIndex}-${lineIndex}`
-												const column = activeColumns[cellIndex]
-												const lines = Array.isArray(cell) ? cell : [cell]
-												const content = lines[lineIndex] ?? null
-												const isFirstColumn = cellIndex === 0
-												const isLastColumn =
-													cellIndex === activeColumns.length - 1
-												return (
-													<div
-														key={key}
-														role="cell"
-														{...cx(
-															styles.cell(),
-															isFirstColumn && styles.cellFirst(),
-															isLastColumn && styles.cellLast(),
-															column?.align === 'end' && styles.cellEnd(),
-															Boolean(item.link) && styles.cellLinked(),
-															mode === 'tabs' && styles.cellTabs(),
-														)}
-													>
-														{/* The row link covers the whole row from inside the
-															first cell, so the row holds only cells. */}
-														{item.link && isFirstColumn && lineIndex === 0 && (
-															<Link
-																to={item.link.href}
-																search={item.link.search}
-																title={item.link.title}
-																preload="intent"
-																data-row-link=""
-																{...styles.rowLink()}
-															/>
-														)}
-														{content}
-													</div>
-												)
-											})}
-											{lineIndex < maxLines - 1 && (
-												<div aria-hidden="true" {...styles.lineDivider()} />
+			<div {...styles.bleed()}>
+				{list ? (
+					busy ? (
+						<Rows.Root dividers="full" size="small">
+							<Rows.RowGroupLoader aria-label={`Loading ${itemsLabel}`} />
+						</Rows.Root>
+					) : rows.length === 0 ? (
+						empty
+					) : (
+						<Rows.Root
+							aria-label={label}
+							dividers="full"
+							role="list"
+							size="small"
+						>
+							{rows.map((row, rowIndex) => {
+								// Values beside the first of each side keep their column
+								// name, since the list has no header row.
+								const labelled = (side: 'start' | 'end') =>
+									row.cells.flatMap((cell, index) => {
+										const column = columns[index]
+										if ((column?.align ?? 'start') !== side) return []
+										const key = `cell-${index}`
+										return [
+											{
+												cell,
+												key,
+												label: column?.label,
+												primary: column?.primary,
+											},
+										] as const
+									})
+								// The primary column titles the item; stable sort keeps the rest in order.
+								const [main, ...details] = labelled('start').sort(
+									(a, b) =>
+										Number(Boolean(b.primary)) - Number(Boolean(a.primary)),
+								)
+								const [amount, ...extras] = labelled('end')
+								const named = (item: (typeof details)[number]) =>
+									typeof item.label === 'string' ? (
+										<span {...styles.named()}>
+											<span {...styles.name()}>{item.label}</span>
+											{item.cell}
+										</span>
+									) : (
+										item.cell
+									)
+								return (
+									<React.Fragment key={row.key ?? `row-${rowIndex}-${page}`}>
+										<Rows.Row
+											role="listitem"
+											{...cx(
+												styles.row({ className: row.className }),
+												Boolean(row.link) && styles.linkedItem(),
+												row.key !== undefined &&
+													newLiveRows.has(row.key) &&
+													styles.added(),
 											)}
-										</React.Fragment>
+										>
+											{row.link && rowLink(row.link)}
+											<Rows.Info>
+												<Rows.Title>{main?.cell}</Rows.Title>
+												{details.map((detail) => (
+													<Rows.Description key={detail.key}>
+														{named(detail)}
+													</Rows.Description>
+												))}
+											</Rows.Info>
+											{amount && (
+												<span {...styles.end()}>
+													{amount.cell}
+													{extras.map((extra) => (
+														<Rows.Description key={extra.key}>
+															{named(extra)}
+														</Rows.Description>
+													))}
+												</span>
+											)}
+										</Rows.Row>
+										{row.expanded && typeof row.expanded !== 'boolean' && (
+											<Rows.Panel role="listitem">{row.expanded}</Rows.Panel>
+										)}
+									</React.Fragment>
+								)
+							})}
+						</Rows.Root>
+					)
+				) : (
+					<Table.Root
+						aria-busy={busy}
+						aria-label={label}
+						interactive={rows.some((row) => row.link)}
+						size="small"
+						{...cx(flexible && styles.flexible())}
+					>
+						<Table.Head>
+							<Table.Row>
+								{columns.map((column, index) => {
+									const key = `column-${index}`
+									const SortIcon =
+										column.sortDirection === 'asc'
+											? ArrowUp
+											: column.sortDirection === 'desc'
+												? ArrowDown
+												: undefined
+									return (
+										<Table.HeaderCell
+											key={key}
+											aria-sort={
+												column.sortDirection === 'asc'
+													? 'ascending'
+													: column.sortDirection === 'desc'
+														? 'descending'
+														: undefined
+											}
+											justify={column.align ?? 'start'}
+											style={DataGrid.columnStyle(column)}
+										>
+											<span {...styles.label()}>
+												{column.label}
+												{SortIcon && <SortIcon aria-hidden="true" />}
+											</span>
+										</Table.HeaderCell>
 									)
 								})}
-								{item.expanded && typeof item.expanded !== 'boolean' && (
-									<div
-										role="cell"
-										aria-colspan={activeColumns.length}
-										{...styles.expanded()}
-									>
-										{item.expanded}
-									</div>
-								)}
-							</div>
-						)
-					})}
-				</div>
-			</div>
-			<div {...styles.footer()}>
-				{pagination !== 'default' && pagination !== 'simple' ? (
-					pagination
-				) : pagination === 'simple' ? (
-					shouldRenderSimpleFooter ? (
-						<div
-							{...cx(
-								styles.simpleFooter(),
-								showSimpleCount && styles.simpleFooterSpread(),
+							</Table.Row>
+						</Table.Head>
+						<Table.Body>
+							{busy ? (
+								Array.from(
+									{ length: Math.min(itemsPerPage, 5) },
+									(_, rowIndex) => (
+										<Table.Row key={`skeleton-${rowIndex.toString()}`}>
+											{columns.map((column, index) => {
+												const key = `skeleton-${index}`
+												const align = column.align ?? 'start'
+												const width =
+													index === 0
+														? skeletonWidths[rowIndex % skeletonWidths.length]
+														: align === 'end'
+															? '5rem'
+															: '4rem'
+												return (
+													<Table.Cell key={key} justify={align}>
+														<Skeleton
+															shape="pill"
+															{...styles.skeleton({ align, style: { width } })}
+														/>
+													</Table.Cell>
+												)
+											})}
+										</Table.Row>
+									),
+								)
+							) : rows.length === 0 ? (
+								<Table.Row>
+									<Table.Cell colSpan={columns.length}>{empty}</Table.Cell>
+								</Table.Row>
+							) : (
+								rows.map((row, rowIndex) => (
+									<React.Fragment key={row.key ?? `row-${rowIndex}-${page}`}>
+										<Table.Row
+											{...cx(
+												styles.row({ className: row.className }),
+												Boolean(row.link) && styles.linked(),
+												row.key !== undefined &&
+													newLiveRows.has(row.key) &&
+													styles.added(),
+											)}
+										>
+											{row.cells.map((cell, index) => {
+												const key = `cell-${index}`
+												const column = columns[index]
+												return (
+													<Table.Cell
+														key={key}
+														justify={column?.align ?? 'start'}
+														{...cx(
+															column?.width === 'max-content' &&
+																styles.nowrap(),
+														)}
+													>
+														{row.link && index === 0 && rowLink(row.link)}
+														{cell}
+													</Table.Cell>
+												)
+											})}
+										</Table.Row>
+										{row.expanded && typeof row.expanded !== 'boolean' && (
+											<Table.Row>
+												<Table.Cell colSpan={columns.length}>
+													<div {...styles.expanded()}>{row.expanded}</div>
+												</Table.Cell>
+											</Table.Row>
+										)}
+									</React.Fragment>
+								))
 							)}
-						>
-							<Pagination.Simple
-								page={page}
-								pages={pages}
-								pagesCapped={displayCountCapped}
-								fetching={fetching && !effectiveLoading}
-								countLoading={countLoading}
-								disableLastPage={disableLastPage}
-								onPrefetchNext={onPrefetchNextPage}
-								onCancelPrefetchNext={onCancelPrefetchNextPage}
-								showPageLabel={showSimplePageLabel}
-							/>
-							{showSimpleCount ? (
-								<Pagination.Count
-									totalItems={displayCount ?? 0}
-									itemsLabel={itemsLabel}
-									loading={effectiveLoading || displayCount == null}
-									capped={displayCountCapped}
-								/>
-							) : null}
-						</div>
-					) : null
-				) : (
-					<Pagination
-						page={page}
-						pages={typeof pages === 'number' ? pages : 1}
-						totalItems={totalItems}
-						itemsLabel={itemsLabel}
-						isPending={fetching}
-						compact={mode === 'stacked'}
-					/>
+						</Table.Body>
+					</Table.Root>
 				)}
 			</div>
+			{footer ? <div {...styles.footer()}>{footer}</div> : null}
 		</div>
 	)
 }
@@ -274,10 +342,16 @@ export function DataGrid(props: DataGrid.Props) {
 export namespace DataGrid {
 	export interface Column {
 		label: React.ReactNode
+		/** `end` aligns the column and its header to the end, for amounts and counts. */
 		align?: 'start' | 'end'
-		minWidth?: number
+		/**
+		 * A px width, `max-content` to keep the content on one line, or a share
+		 * such as `1fr`, which leaves the column to size to its content.
+		 */
 		width?: number | `${number}fr` | 'max-content'
 		sortDirection?: 'asc' | 'desc'
+		/** Titles each item in the narrow list layout. Defaults to the first start column. */
+		primary?: boolean
 	}
 
 	export interface RowLink {
@@ -286,13 +360,16 @@ export namespace DataGrid {
 		title: string
 	}
 
+	/** A cell's content. An array renders its items in order. */
 	export type Cell = React.ReactNode | React.ReactNode[]
 
 	export interface Row {
 		/** Stable identity for the row; falls back to the row index when omitted. */
 		key?: string
 		cells: Cell[]
+		/** Opens the record from anywhere in the row. */
 		link?: RowLink
+		/** Details shown below the row, across its full width. */
 		expanded?: boolean | React.ReactNode
 		className?: string
 	}
@@ -300,6 +377,13 @@ export namespace DataGrid {
 	export interface Props {
 		/** Enables new-row highlights, resetting when the feed scope changes. */
 		liveScope?: string | undefined
+		/**
+		 * Columns for the wide layout (`tabs`) and the narrow one (`stacked`).
+		 * More than three stacked columns render as a list: the first start
+		 * column is the title, other start columns sit beneath it, and end
+		 * columns stack at the end, the first one on top. Values other than
+		 * the title and the first end value show their string column labels.
+		 */
 		columns: {
 			stacked: Column[]
 			tabs: Column[]
@@ -310,14 +394,11 @@ export namespace DataGrid {
 		pages?: number | { hasMore: boolean }
 		/** Optional separate count for display (e.g., exact transaction count) */
 		displayCount?: number
-		/** Whether the display count is capped (shows "> X" prefix) */
+		/** Whether the display count is capped (shows "1,000+") */
 		displayCountCapped?: boolean
 		page: number
-		fetching?: boolean
 		loading?: boolean
 		countLoading?: boolean
-		/** Disable "Last page" button when we can't reliably navigate there */
-		disableLastPage?: boolean
 		onPrefetchNextPage?: () => void
 		onCancelPrefetchNextPage?: () => void
 		showSimplePageLabel?: boolean
@@ -326,222 +407,118 @@ export namespace DataGrid {
 		pagination?: 'default' | 'simple' | React.ReactNode
 		showSimpleCount?: boolean
 		emptyState?: React.ReactNode
+		/** Keeps every column at its content width and scrolls instead of truncating. */
 		flexible?: boolean
+	}
+
+	/** The header cell width for a column. Shares (`1fr`) leave sizing to the table. */
+	export function columnStyle(column: Column): React.CSSProperties | undefined {
+		if (typeof column.width === 'number') return { width: column.width }
+		if (column.width === 'max-content') return { width: 1 }
+		return undefined
 	}
 }
 
 namespace styles {
-	export const skeletonCell = style({
-		alignItems: 'center',
-		display: 'flex',
-		maxWidth: '180px !custom',
-		minHeight: '24',
-		width: '100% !custom',
-	})
-
-	export const skeletonBar = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '4',
-		height: '12',
-		width: '100% !custom',
-	})
-
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		minHeight: '0 !custom',
+		minHeight: '0',
+		minWidth: '0',
 	})
 
-	export const scroller = style({
+	// `Surface` bleeds a direct child table or `Rows` into its padding, so row
+	// fills and dividers reach its edges. The records sit one level down, so
+	// they bleed the same way into the medium `Sections` card. A table wider
+	// than the card scrolls here rather than widening the page.
+	export const bleed = style({
+		marginInline: '-16px !custom',
 		overflowX: 'auto',
-		position: 'relative',
-		width: '100% !custom',
 	})
 
-	export const grid = style({
-		display: 'grid',
-		typography: 'copy.14',
-		width: '100% !custom',
-	})
+	export const flexible = style({ minWidth: 'max-content !custom' })
 
-	export const gridFlexible = style({ minWidth: 'max-content !custom' })
-
-	export const gridTabs = style({ maxWidth: '100% !custom' })
-
-	export const headerRow = style({
-		borderBottomColor: 'grayAlpha.200',
-		borderBottomStyle: 'solid',
-		borderBottomWidth: '1px',
-		display: 'grid',
-		gridColumn: '1 / -1',
-		gridTemplateColumns: 'subgrid',
-	})
-
-	export const headerCell = style({
+	export const label = style({
 		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		gap: '8',
-		height: '36',
-		justifyContent: 'flex-start',
-		paddingInline: '12',
-		typography: 'label.12',
-		whiteSpace: 'nowrap',
-		':first-child': { paddingLeft: '16' },
-		':last-child': { paddingRight: '16' },
-	})
-
-	export const headerCellEnd = style({ justifyContent: 'flex-end' })
-
-	export const headerLabel = style({
-		alignItems: 'center',
+		columnGap: '4',
 		display: 'inline-flex',
-		gap: '4',
 	})
 
-	export const sortIcon = style({
-		color: 'gray.900',
-		height: '12',
-		width: '12',
-	})
+	export const nowrap = style({ whiteSpace: 'nowrap' })
 
-	export const sortIconAsc = style({ rotate: '180deg' })
-
-	export const empty = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		gridColumn: '1 / -1',
-		justifyContent: 'center',
-		minHeight: '220px !custom',
-		paddingBlock: '32',
-		paddingInline: '16',
-	})
-
-	export const row = style({
-		borderBottomColor: 'grayAlpha.200',
-		borderBottomStyle: 'solid',
-		borderBottomWidth: '1px',
-		borderLeftColor: 'transparent !custom',
-		borderLeftStyle: 'solid',
-		borderLeftWidth: '3px !custom',
-		display: 'grid',
-		gridAutoFlow: 'row',
-		gridColumn: '1 / -1',
-		gridTemplateColumns: 'subgrid',
-		position: 'relative',
-		':last-child': { borderBottomWidth: '0px' },
-	})
-
-	export const rowLinked = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.100' },
-		},
-		selectors: {
-			// Shift cell contents, not cells: a transformed cell would contain
-			// the absolutely positioned row link mid-click.
-			'&:has([data-row-link]:active) > * > :not([data-row-link])': {
-				translate: '0 0.5px !custom',
+	export const skeleton = variants({
+		base: { height: '12' },
+		defaultVariants: { align: 'start' },
+		variants: {
+			align: {
+				end: { marginInlineStart: 'auto !custom' },
+				start: {},
 			},
 		},
 	})
 
-	export const rowExpanded = style({ borderLeftColor: 'grayAlpha.200' })
+	// Positions the row link, which covers the row.
+	export const row = style({ position: 'relative' })
 
-	export const rowNew = style({
+	// Clicks on plain content reach the row link; links and buttons in the row
+	// sit above it and keep their own targets.
+	export const linked = style({
+		selectors: { '& > td': { pointerEvents: 'none' }, ...raised },
+	})
+
+	// The hover fill of a pressable `Rows.Row`.
+	export const linkedItem = style({
+		selectors: {
+			'& > *': { pointerEvents: 'none' },
+			'&:hover': { backgroundColor: 'grayAlpha.100' },
+			...raised,
+		},
+	})
+
+	export const rowLink = style({
+		inset: '0',
+		outlineOffset: '-2px !custom',
+		pointerEvents: 'auto',
+		position: 'absolute',
+	})
+
+	export const added = style({
 		animation: `${rowShimmer} 0.5s ease-out 1 !custom`,
 	})
 
-	// Positioned against the row (cells are static), so it covers the row and
-	// its left border from inside the first cell.
-	export const rowLink = style({
-		bottom: '0',
-		left: '-3px !custom',
-		outlineOffset: '-2px !custom',
-		position: 'absolute',
-		right: '0',
-		top: '0',
-		zIndex: 0,
-	})
+	// Wide details wrap inside the row instead of widening the table.
+	export const expanded = style({ contain: 'inline-size' })
 
-	export const cell = style({
-		alignItems: 'flex-start',
-		color: 'foreground',
-		display: 'flex',
-		justifyContent: 'flex-start',
-		minHeight: '48',
-		paddingBlock: '12',
-		paddingInline: '12',
-	})
-
-	export const cellFirst = style({ paddingLeft: '16' })
-
-	export const cellLast = style({ paddingRight: '16' })
-
-	export const cellEnd = style({
-		justifyContent: 'flex-end',
-		textAlign: 'right',
-	})
-
-	export const cellLinked = style({
-		pointerEvents: 'none',
-		selectors: {
-			'& a:not([data-row-link])': {
-				pointerEvents: 'auto',
-				position: 'relative',
-				zIndex: 1,
-			},
-			'& button': { pointerEvents: 'auto', position: 'relative', zIndex: 1 },
-			'& [data-row-link]': { pointerEvents: 'auto' },
-		},
-	})
-
-	// Cells clip, so focus rings inside them are drawn inset.
-	export const cellTabs = style({
-		minWidth: '0 !custom',
-		overflow: 'hidden',
-		selectors: {
-			'& a:focus-visible': { outlineOffset: '-2px !custom' },
-			'& button:focus-visible': { outlineOffset: '-2px !custom' },
-		},
-	})
-
-	export const lineDivider = style({
-		borderBottomColor: 'grayAlpha.200',
-		borderBottomStyle: 'solid',
-		borderBottomWidth: '1px',
-		gridColumn: '1 / -1',
-	})
-
-	export const expanded = style({
-		contain: 'inline-size',
-		gridColumn: '1 / -1',
-		marginTop: '-4px !custom',
-		paddingBottom: '12',
-		paddingInline: '16',
-	})
-
-	export const footer = style({ marginTop: 'auto !custom' })
-
-	export const simpleFooter = style({
-		alignItems: 'center',
-		borderTopColor: 'grayAlpha.200',
-		borderTopStyle: 'solid',
-		borderTopWidth: '1px',
-		color: 'gray.900',
+	// The end of a stacked item, as in the TDS Below 640px example. It keeps
+	// its width up to half the item, where a hash truncates.
+	export const end = style({
+		alignItems: 'flex-end',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '12',
-		paddingBlock: '12',
-		paddingInline: '16',
-		typography: 'label.12',
-		'@media (width >= 640px)': {
-			flexDirection: 'row',
-			justifyContent: 'flex-start',
-		},
+		flexShrink: '0 !custom',
+		maxWidth: '50% !custom',
+		rowGap: '4',
+		textAlign: 'end',
 	})
 
-	export const simpleFooterSpread = style({
-		'@media (width >= 640px)': { justifyContent: 'space-between' },
+	// A column name before its value in a stacked item, on one line: a hash
+	// truncates to the space left beside the name.
+	export const named = style({
+		alignItems: 'baseline',
+		columnGap: '4',
+		display: 'flex',
+		minWidth: '0',
+	})
+
+	export const name = style({ flexShrink: '0 !custom' })
+
+	export const footer = style({ marginTop: 'auto !custom', paddingTop: '12' })
+
+	export const bar = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '12',
+		justifyContent: 'space-between',
 	})
 }

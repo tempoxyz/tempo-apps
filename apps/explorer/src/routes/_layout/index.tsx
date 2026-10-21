@@ -14,7 +14,6 @@ import { Button, style } from '@tempoxyz/ds'
 import { ExploreInput } from '#comps/ExploreInput'
 import { TempoWordmark } from '#comps/TempoWordmark'
 import { getTempoEnv } from '#lib/env'
-import { link } from '#styles/explorer'
 
 const SPOTLIGHT_DATA: Record<
 	string,
@@ -123,7 +122,7 @@ function SpotlightLinks() {
 						<SpotlightPill
 							to="/address/$address"
 							params={{ address: spotlightData.accountAddress }}
-							icon={<User {...link()} />}
+							icon={<User />}
 						>
 							Account
 						</SpotlightPill>
@@ -133,26 +132,26 @@ function SpotlightLinks() {
 								address: spotlightData.contractAddress,
 							}}
 							search={{ tab: 'contract' }}
-							icon={<Files {...link()} />}
+							icon={<Files />}
 						>
 							Contract
 						</SpotlightPill>
 						<SpotlightPill
 							to="/receipt/$hash"
 							params={{ hash: spotlightData.receiptHash }}
-							icon={<Receipt {...link()} />}
+							icon={<Receipt />}
 						>
 							Receipt
 						</SpotlightPill>
 					</>
 				)}
-				<SpotlightPill to="/blocks" icon={<Package {...link()} />}>
+				<SpotlightPill to="/blocks" icon={<Package />}>
 					Blocks
 				</SpotlightPill>
-				<SpotlightPill to="/tokens" icon={<Coins {...link()} />}>
+				<SpotlightPill to="/tokens" icon={<Coins />}>
 					Tokens
 				</SpotlightPill>
-				<SpotlightPill to="/dex" icon={<SwapHorizontal {...link()} />}>
+				<SpotlightPill to="/dex" icon={<SwapHorizontal />}>
 					DEX
 				</SpotlightPill>
 			</div>

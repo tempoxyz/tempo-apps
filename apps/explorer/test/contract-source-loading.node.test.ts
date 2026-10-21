@@ -33,8 +33,8 @@ it('server-renders a loading state instead of the legacy source explorer', () =>
 			},
 		}),
 	)
-	expect(markup).toContain('role="status"')
-	expect(markup).toContain('Loading source viewer…')
+	expect(markup).toContain('role="progressbar"')
+	expect(markup).toContain('aria-label="Loading source viewer"')
 	expect(markup).not.toContain('Token.sol')
 	expect(markup).not.toContain('contract Token')
 	expect(markup).not.toContain('<pre')

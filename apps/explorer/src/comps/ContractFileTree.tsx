@@ -1,5 +1,5 @@
 import { FileTree, useFileTree, useFileTreeSearch } from '@pierre/trees/react'
-import { Field, Input, style, vars } from '@tempoxyz/ds'
+import { Empty, Field, Input, style, vars } from '@tempoxyz/ds'
 import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 
@@ -106,11 +106,16 @@ export function ContractFileTree(
 					<Input.Clear aria-label="Clear search" />
 				</Input.Group>
 			</Field.Root>
-			{search.value && search.matchingPaths.length === 0 && (
-				<p {...styles.empty()} role="status">
-					No files found.
-				</p>
-			)}
+			<div role="status">
+				{search.value && search.matchingPaths.length === 0 && (
+					<Empty.Root>
+						<Empty.Title>No matching files</Empty.Title>
+						<Empty.Description>
+							No file path contains “{search.value}”.
+						</Empty.Description>
+					</Empty.Root>
+				)}
+			</div>
 			<FileTree
 				model={model}
 				aria-label="Contract source files"
@@ -154,19 +159,7 @@ namespace styles {
 		},
 	})
 
-	// Touch devices keep 16px text so iOS does not zoom on focus.
-	export const search = style({
-		padding: '8',
-		'@media (pointer: coarse)': {
-			selectors: { '& input': { fontSize: '16px !custom' } },
-		},
-	})
-
-	export const empty = style({
-		color: 'gray.900',
-		paddingInline: '12',
-		typography: 'label.12',
-	})
+	export const search = style({ padding: '8' })
 
 	// With the 56px search block, the sidebar stays as tall as the code pane
 	// plus its 16px scrollbar.

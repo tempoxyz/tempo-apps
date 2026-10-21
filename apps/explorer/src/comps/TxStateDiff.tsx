@@ -1,11 +1,8 @@
-/** biome-ignore-all lint/a11y/useSemanticElements: cells are laid out by one CSS grid per account, which native table rows cannot join, so the grid takes table roles instead */
-/** biome-ignore-all lint/a11y/useFocusableInteractive: role="table" rows and headers are static, not interactive grid cells */
-import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
-import { ArrowCornerDownLeft, Check, Copy } from '@tempoxyz/ds/icons'
+import { CopyButton, Empty, style, Table, variants } from '@tempoxyz/ds'
+import { ArrowCornerDownLeft } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import type { Hex } from 'viem'
-import { cx } from 'zyzz'
+import { Address } from '#comps/Address'
 import { getContractInfo } from '#lib/domain/contracts'
 import {
 	decodeStorageChange,
@@ -13,23 +10,20 @@ import {
 	type DecodedStorageChange,
 	type StorageDecodeContext,
 } from '#lib/domain/storage-decode'
-import { useCopy } from '#lib/hooks'
-import { PanelToolbar, ViewToggle } from './PanelToolbar'
 import type { CallTrace, PrestateDiff } from '#lib/queries'
-import { link, linkHover, pressDown, truncate } from '#styles/explorer'
+import { PanelToolbar, ViewToggle } from './PanelToolbar'
 
-export function TxStateDiff(props: TxStateDiff.Props) {
+export function TxStateDiff(props: TxStateDiff.Props): React.JSX.Element {
 	const {
 		prestate,
 		trace,
 		receipt,
 		logs,
 		tokenMetadata,
-		label = 'State Changes',
+		label = 'State changes',
 	} = props
 	const [wrap, setWrap] = React.useState(true)
 	const [raw, setRaw] = React.useState(false)
-	const copy = useCopy()
 
 	const candidateAddresses = React.useMemo(() => {
 		const fromTrace = extractCandidateAddresses(
@@ -54,15 +48,14 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 	}, [prestate, candidateAddresses, tokenMetadata, props.omitSenderNonceFor])
 
 	const hasData = data && data.accounts.length > 0
+	const ascii = React.useMemo(
+		() => (data ? TxStateDiff.toAscii(data, { raw }) : ''),
+		[data, raw],
+	)
 
 	const controls = data && (
 		<>
-			<PanelToolbar.IconButton
-				onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
-				label="Copy state changes"
-			>
-				{copy.notifying ? <Check /> : <Copy />}
-			</PanelToolbar.IconButton>
+			<CopyButton aria-label="Copy state changes" value={ascii} />
 			<PanelToolbar.IconButton
 				onClick={() => setWrap(!wrap)}
 				active={wrap}
@@ -103,9 +96,19 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 				</div>
 			)}
 			{!prestate || !data ? (
-				<div {...styles.empty()}>No state diff available.</div>
+				<Empty.Root>
+					<Empty.Title>No state diff</Empty.Title>
+					<Empty.Description>
+						The node returned no state trace.
+					</Empty.Description>
+				</Empty.Root>
 			) : data.accounts.length === 0 ? (
-				<div {...styles.empty()}>No state changes.</div>
+				<Empty.Root>
+					<Empty.Title>No state changes</Empty.Title>
+					<Empty.Description>
+						No account's storage or nonce changed.
+					</Empty.Description>
+				</Empty.Root>
 			) : (
 				<div {...styles.root()}>
 					{data.accounts.map((account) => (
@@ -242,26 +245,17 @@ export namespace TxStateDiff {
 		return { accounts }
 	}
 
-	export function AccountView(props: AccountView.Props) {
+	export function AccountView(props: AccountView.Props): React.JSX.Element {
 		const { account, wrap, raw } = props
 		const { address, contractName, nonceChange, storageChanges } = account
 
 		return (
 			<div {...styles.root()}>
 				<div {...styles.accountHeader()}>
-					<Link
-						to="/address/$address"
-						params={{ address }}
-						{...cx(
-							styles.accountLink(),
-							truncate(),
-							link(),
-							linkHover(),
-							pressDown(),
-						)}
-					>
-						{contractName ? `${contractName} (${address})` : address}
-					</Link>
+					{contractName && (
+						<span {...styles.contractName()}>{contractName}</span>
+					)}
+					<Address address={address} />
 					<span {...styles.accountCount()}>
 						{nonceChange && 'nonce'}
 						{nonceChange && storageChanges.length > 0 && ' + '}
@@ -270,75 +264,71 @@ export namespace TxStateDiff {
 					</span>
 				</div>
 
-				<div {...styles.gridScroll()}>
-					<div
-						role="table"
+				<div {...styles.scroll()}>
+					<Table.Root
 						aria-label={`State changes for ${contractName ?? address}`}
-						{...cx(
-							styles.grid(),
-							wrap && styles.gridWrap(),
-							!wrap && styles.gridNoWrap(),
-						)}
+						size="small"
+						{...styles.table({ wrap })}
 					>
-						<div role="row" {...styles.row()}>
-							<div role="columnheader" {...styles.gridHead()}>
-								Slot
-							</div>
-							<div role="columnheader" {...styles.gridHead()}>
-								Before
-							</div>
-							<div role="columnheader" {...styles.gridHead()}>
-								After
-							</div>
-						</div>
-						{nonceChange && (
-							<div role="row" {...styles.row()}>
-								<CopyCell
-									value="nonce"
-									className={styles.cellSlot().className}
-									wrap={wrap}
-								/>
-								<CopyCell
-									value={String(nonceChange.before)}
-									className={styles.cellBefore().className}
-									wrap={wrap}
-								/>
-								<CopyCell
-									value={String(nonceChange.after)}
-									className={styles.cellAfter().className}
-									wrap={wrap}
-								/>
-							</div>
-						)}
-						{storageChanges.map((change) => {
-							const decoded = !raw ? change.decoded : undefined
-							return (
-								<div role="row" key={change.slot} {...styles.row()}>
-									<CopyCell
-										value={decoded?.slotLabel ?? change.slot}
-										copyValue={change.slot}
-										className={styles.cellSlot().className}
-										wrap={wrap}
-										isDecoded={Boolean(decoded?.slotLabel)}
-									/>
-									<CopyCell
-										value={decoded?.beforeDisplay ?? change.before}
-										copyValue={decoded?.beforeRaw ?? change.before}
-										className={styles.cellBefore().className}
-										wrap={wrap}
-										isDecoded={Boolean(decoded?.beforeDisplay)}
-									/>
-									<DiffCell
-										value={decoded?.afterDisplay ?? change.after}
-										copyValue={decoded?.afterRaw ?? change.after}
-										diff={decoded?.diff}
-										wrap={wrap}
-										isDecoded={Boolean(decoded?.afterDisplay)}
-									/>
-								</div>
-							)
-						})}
-					</div>
+						<Table.Head>
+							<Table.Row>
+								<Table.HeaderCell>Slot</Table.HeaderCell>
+								<Table.HeaderCell>Before</Table.HeaderCell>
+								<Table.HeaderCell>After</Table.HeaderCell>
+							</Table.Row>
+						</Table.Head>
+						<Table.Body>
+							{nonceChange && (
+								<Table.Row>
+									<Table.Cell mono>nonce</Table.Cell>
+									<Table.Cell mono>{nonceChange.before}</Table.Cell>
+									<Table.Cell mono numeric>
+										{nonceChange.after}
+									</Table.Cell>
+								</Table.Row>
+							)}
+							{storageChanges.map((change) => {
+								const decoded = !raw ? change.decoded : undefined
+								return (
+									<Table.Row key={change.slot}>
+										{/* A decoded value names its raw value in a tooltip. */}
+										<Table.Cell
+											mono
+											title={decoded?.slotLabel ? change.slot : undefined}
+										>
+											{decoded?.slotLabel ?? change.slot}
+										</Table.Cell>
+										<Table.Cell
+											mono
+											title={
+												decoded?.beforeDisplay
+													? (decoded.beforeRaw ?? change.before)
+													: undefined
+											}
+										>
+											{decoded?.beforeDisplay ?? change.before}
+										</Table.Cell>
+										<Table.Cell
+											mono
+											numeric
+											title={
+												decoded?.afterDisplay
+													? (decoded.afterRaw ?? change.after)
+													: undefined
+											}
+										>
+											<span {...styles.after()}>
+												<span>{decoded?.afterDisplay ?? change.after}</span>
+												{decoded?.diff && (
+													<span {...styles.diff()}>{decoded.diff.display}</span>
+												)}
+											</span>
+										</Table.Cell>
+									</Table.Row>
+								)
+							})}
+						</Table.Body>
+					</Table.Root>
 				</div>
 			</div>
 		)
@@ -349,77 +339,6 @@ export namespace TxStateDiff {
 			account: AccountData
 			wrap: boolean
 			raw: boolean
-		}
-	}
-
-	/** A cell whose value copies on click; the toast confirms the copy. */
-	export function CopyCell(props: CopyCell.Props) {
-		const { value, copyValue, className, wrap, isDecoded } = props
-		const copy = useCopy()
-		const valueToCopy = copyValue ?? value
-
-		return (
-			<div role="cell" {...styles.cell({ className })}>
-				<button
-					type="button"
-					{...cx(
-						styles.cellButton(),
-						pressDown(),
-						wrap && styles.breakAll(),
-						!wrap && styles.nowrap(),
-					)}
-					onClick={() => copy.copy(valueToCopy)}
-					title={isDecoded ? valueToCopy : undefined}
-				>
-					{value}
-				</button>
-			</div>
-		)
-	}
-
-	export namespace CopyCell {
-		export interface Props {
-			value: string
-			copyValue?: string
-			className?: string
-			wrap: boolean
-			isDecoded?: boolean
-		}
-	}
-
-	export function DiffCell(props: DiffCell.Props) {
-		const { value, copyValue, diff, wrap, isDecoded } = props
-		const copy = useCopy()
-		const valueToCopy = copyValue ?? value
-
-		return (
-			<div role="cell" {...cx(styles.cell(), styles.cellAfter())}>
-				<button
-					type="button"
-					{...cx(
-						styles.cellButton(),
-						styles.diffCell(),
-						pressDown(),
-						wrap && styles.breakAll(),
-						!wrap && styles.nowrap(),
-					)}
-					onClick={() => copy.copy(valueToCopy)}
-					title={isDecoded ? valueToCopy : undefined}
-				>
-					<span>{value}</span>
-					{diff && <span {...styles.diff()}>{diff.display}</span>}
-				</button>
-			</div>
-		)
-	}
-
-	export namespace DiffCell {
-		export interface Props {
-			value: string
-			copyValue?: string
-			diff?: { display: string; isPositive: boolean }
-			wrap: boolean
-			isDecoded?: boolean
 		}
 	}
 
@@ -492,110 +411,49 @@ namespace styles {
 		gap: '4',
 	})
 
-	export const empty = style({
-		color: 'gray.900',
-		paddingBlock: '24',
-		paddingInline: '20',
-		textAlign: 'center',
-		typography: 'label.12',
-	})
-
 	export const accountHeader = style({
 		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
+		minWidth: '0 !custom',
 		paddingBottom: '8',
 		paddingInline: '16',
 		paddingTop: '12',
+		typography: 'copy.14',
 	})
 
-	export const accountLink = style({
-		minWidth: '0 !custom',
-		typography: 'label.12.mono',
+	export const contractName = style({
+		flexShrink: '0 !custom',
+		typography: 'label.14.strong',
 	})
 
 	export const accountCount = style({
 		color: 'gray.900',
-		flexShrink: 0,
+		flexShrink: '0 !custom',
 		marginLeft: 'auto !custom',
 		typography: 'label.12',
 	})
 
-	export const gridScroll = style({
+	export const scroll = style({
 		overflowX: 'auto',
 		paddingBottom: '12',
 		paddingInline: '16',
 	})
 
-	export const grid = style({
-		backgroundColor: 'background.surface',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
-		borderStyle: 'solid',
-		borderWidth: '1px',
-		display: 'grid',
-		overflow: 'hidden',
-		typography: 'label.12.mono',
-	})
-
-	export const gridWrap = style({
-		gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-	})
-
-	export const gridNoWrap = style({
-		gridTemplateColumns: 'auto auto auto',
-		minWidth: '100% !custom',
-		width: 'fit-content !custom',
-	})
-
-	// Rows only group cells for assistive tech; the grid lays the cells out.
-	export const row = style({ display: 'contents' })
-
-	export const gridHead = style({
-		backgroundColor: 'grayAlpha.100',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		color: 'gray.900',
-		paddingBlock: '8',
-		paddingInline: '12',
-	})
-
-	export const cell = style({
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		borderTopWidth: '1px',
-		display: 'flex',
-	})
-
-	export const cellButton = style({
-		alignItems: 'flex-start',
-		color: 'inherit !custom',
-		cursor: 'pointer',
-		display: 'flex',
-		flex: 1,
-		minWidth: '0 !custom',
-		paddingBlock: '8',
-		paddingInline: '12',
-		textAlign: 'left',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.100' },
+	// Table leaves wrapping unset: wrapped values break anywhere to fit the
+	// width, unwrapped ones keep one line and scroll.
+	export const table = variants({
+		base: {},
+		defaultVariants: { wrap: true },
+		variants: {
+			wrap: {
+				false: { whiteSpace: 'nowrap' },
+				true: { wordBreak: 'break-all' },
+			},
 		},
-		// The grid clips its overflow, which would cut an outset ring.
-		':focus-visible': { outlineOffset: '-2px !custom' },
 	})
 
-	export const cellSlot = style({ color: 'gray.900' })
-
-	export const cellBefore = style({ color: 'gray.900' })
-
-	export const cellAfter = style({ color: 'foreground' })
-
-	export const diffCell = style({ flexDirection: 'column' })
-
-	export const breakAll = style({ wordBreak: 'break-all' })
-
-	export const nowrap = style({ whiteSpace: 'nowrap' })
+	export const after = style({ display: 'flex', flexDirection: 'column' })
 
 	export const diff = style({ color: 'gray.900' })
 }

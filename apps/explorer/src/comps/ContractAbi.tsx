@@ -105,12 +105,11 @@ function scheduleWhenIdle(callback: () => void): () => void {
 	return () => window.clearTimeout(id)
 }
 
-// ABI Viewer
-
+/** The ABI as JSON, highlighted off the main thread once it mounts. */
 export function AbiViewer(props: AbiViewer.Props): React.JSX.Element {
-	const { abi, enabled } = props
+	const { abi } = props
 	const json = React.useMemo(() => JSON.stringify(abi, null, 2), [abi])
-	const highlightedHtml = useHighlightedJson(json, enabled)
+	const highlightedHtml = useHighlightedJson(json)
 
 	return (
 		<div {...styles.viewer()}>
@@ -118,20 +117,10 @@ export function AbiViewer(props: AbiViewer.Props): React.JSX.Element {
 				<div
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: trusted shiki output
 					dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-					{...styles.code({
-						className: 'shiki shiki-block',
-						style: { padding: 16, maxHeight: 'none', overflow: 'visible' },
-					})}
+					{...styles.code({ className: 'shiki shiki-block' })}
 				/>
 			) : (
-				<pre
-					{...styles.code({
-						className: 'shiki-block',
-						style: { padding: 16, maxHeight: 'none', overflow: 'visible' },
-					})}
-				>
-					{json}
-				</pre>
+				<pre {...styles.code({ className: 'shiki-block' })}>{json}</pre>
 			)}
 		</div>
 	)
@@ -140,19 +129,16 @@ export function AbiViewer(props: AbiViewer.Props): React.JSX.Element {
 export declare namespace AbiViewer {
 	type Props = {
 		abi: Abi
-		enabled: boolean
 	}
 }
 
-function useHighlightedJson(json: string, enabled: boolean): string | null {
+function useHighlightedJson(json: string): string | null {
 	const [highlighted, setHighlighted] = React.useState<{
 		json: string
 		html: string
 	} | null>(null)
 
 	React.useEffect(() => {
-		if (!enabled) return
-
 		let cancelled = false
 		const cancelScheduledHighlight = scheduleWhenIdle(() => {
 			void highlightJson(json).then(
@@ -166,19 +152,34 @@ function useHighlightedJson(json: string, enabled: boolean): string | null {
 			cancelled = true
 			cancelScheduledHighlight()
 		}
-	}, [enabled, json])
+	}, [json])
 
 	return highlighted?.json === json ? highlighted.html : null
 }
 
 namespace styles {
+	// A bordered well for code, inside the tab's card.
 	export const viewer = style({
-		marginBottom: '8',
-		marginInline: '12',
+		borderColor: 'grayAlpha.200',
+		borderRadius: '12',
+		borderStyle: 'solid',
+		borderWidth: '1px',
 		maxHeight: '280px !custom',
 		overflow: 'auto',
 	})
 
-	// `shiki` and `shiki-block` are global classes for the highlighter's markup.
-	export const code = style({ color: 'foreground', whiteSpace: 'pre' })
+	// `shiki` and `shiki-block` are global classes for the highlighter's
+	// markup. The viewer scrolls, so the block keeps its full height.
+	export const code = style({
+		color: 'foreground',
+		whiteSpace: 'pre',
+		selectors: {
+			'&.shiki-block': {
+				marginBottom: '0',
+				maxHeight: 'none !custom',
+				overflow: 'visible',
+				paddingBlock: '16',
+			},
+		},
+	})
 }

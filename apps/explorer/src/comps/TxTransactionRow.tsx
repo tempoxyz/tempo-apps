@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import { style } from '@tempoxyz/ds'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import * as Value from 'ox/Value'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { GetBlockReturnType } from 'wagmi/actions'
@@ -16,13 +15,15 @@ import {
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
 import { isNonceIncrementedEvent } from '#lib/domain/transaction-activities'
-import { PriceFormatter } from '#lib/formatting'
 import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
+// Fees are attodollars: gas used times the gas price, at 18 decimals.
+const FEE_DECIMALS = 18
+const FEE_SYMBOL = getTempoChain().nativeCurrency.symbol
 
 export type TransactionData = {
 	receipt: TransactionReceipt
@@ -53,15 +54,21 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 
 	if (!receipt) return <span {...styles.secondary()}>…</span>
 
-	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
-	const feeDisplay = showUsdPrefix
-		? PriceFormatter.format(Number(feeRaw))
-		: PriceFormatter.formatAmountShort(feeRaw)
 
-	return <span {...styles.secondary()}>{feeDisplay}</span>
+	return (
+		<span {...styles.secondary()}>
+			<Amount.Base
+				decimals={FEE_DECIMALS}
+				prefix={showUsdPrefix ? '$' : undefined}
+				short
+				symbol={FEE_SYMBOL}
+				value={receipt.effectiveGasPrice * receipt.gasUsed}
+			/>
+		</span>
+	)
 }
 
 export function TransactionDescription(props: {

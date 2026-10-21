@@ -1,19 +1,21 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Callout, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { Button, Callout, Empty, Rows, Tag, Tooltip, style } from '@tempoxyz/ds'
 import { Play } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi, Hex } from 'viem'
 import { encodeFunctionData } from 'viem'
 import { useConnection, useWriteContract } from 'wagmi'
-import { cx } from 'zyzz'
 import {
-	FunctionAction,
-	FunctionCard,
+	FunctionDisclosure,
+	FunctionForm,
 	FunctionInput,
+	FunctionRow,
+	IconAction,
 	functionInputKey,
 } from '#comps/ContractFunction'
+import { TransactionCell } from '#comps/TransactionCell'
 import {
 	getFunctionSelector,
 	getWriteFunctions,
@@ -21,7 +23,6 @@ import {
 	type WriteFunction,
 } from '#lib/domain/contracts'
 import { usePermalinkHighlight } from '#lib/hooks'
-import { link, linkHover } from '#styles/explorer'
 import FlaskIcon from '~icons/lucide/flask-conical'
 
 function getWriteErrorMessage(err: Error): string {
@@ -59,8 +60,18 @@ export function ContractWriter(props: ContractWriter.Props) {
 
 	const writeFunctions = getWriteFunctions(abi)
 
+	if (writeFunctions.length === 0)
+		return (
+			<Empty.Root>
+				<Empty.Title>No write functions</Empty.Title>
+				<Empty.Description>
+					This ABI has no functions that change state.
+				</Empty.Description>
+			</Empty.Root>
+		)
+
 	return (
-		<div {...styles.list()}>
+		<Rows.Root dividers="full">
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -69,11 +80,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 					fn={fn}
 				/>
 			))}
-
-			{writeFunctions.length === 0 && (
-				<p {...styles.emptyMessage()}>No write functions available.</p>
-			)}
-		</div>
+		</Rows.Root>
 	)
 }
 
@@ -96,6 +103,7 @@ function WriteContractFunction(props: {
 	const fnId = `write-${fn.name || selector}`
 
 	const [isExpanded, setIsExpanded] = React.useState(false)
+	const [submitted, setSubmitted] = React.useState(false)
 	const handleTargetChange = React.useCallback(
 		(isTarget: boolean) => isTarget && setIsExpanded(true),
 		[],
@@ -152,6 +160,7 @@ function WriteContractFunction(props: {
 	const hasInputs = fn.inputs.length > 0 || isPayable
 
 	const connection = useConnection()
+	const connected = connection.status === 'connected'
 	const queryClient = useQueryClient()
 
 	const writeContract = useWriteContract({
@@ -165,178 +174,186 @@ function WriteContractFunction(props: {
 		},
 	})
 
+	const execute = () =>
+		writeContract.mutate({
+			address: props.address,
+			abi: props.abi,
+			functionName: fn.name,
+			args: parsedArgs.args,
+			value: isPayable
+				? inputs.value
+					? BigInt(inputs.value)
+					: undefined
+				: undefined,
+		})
+
+	// Simulate works without a wallet: checking what a write would do comes
+	// before signing. Unfilled arguments still simulate the selector, which
+	// shows who may call the function.
+	const simulateLink = (
+		<Link
+			to="/simulate"
+			search={{
+				to: props.address,
+				data: simulateCalldata,
+				...(connection.address ? { from: connection.address } : {}),
+				...(isPayable && inputs.value ? { value: inputs.value } : {}),
+			}}
+		/>
+	)
+
+	if (!hasInputs)
+		return (
+			<FunctionRow
+				id={fnId}
+				fn={fn}
+				actions={
+					<>
+						<Tooltip.Root>
+							<Tooltip.Trigger
+								render={
+									<Button.Link
+										aria-label="Simulate this call without signing"
+										render={simulateLink}
+										shape="icon"
+										size="small"
+										variant="text"
+									/>
+								}
+							>
+								<FlaskIcon {...styles.icon()} />
+							</Tooltip.Trigger>
+							<Tooltip.Popup>Simulate this call without signing</Tooltip.Popup>
+						</Tooltip.Root>
+						{connected && (
+							<IconAction
+								icon={Play}
+								label="Execute"
+								loading={writeContract.isPending}
+								onClick={execute}
+							/>
+						)}
+					</>
+				}
+			/>
+		)
+
+	const missing = (key: string) => submitted && !inputs[key]?.trim()
+
 	return (
-		<FunctionCard
+		<FunctionDisclosure
 			id={fnId}
 			fn={fn}
 			expanded={isExpanded}
-			onToggle={hasInputs ? () => setIsExpanded(!isExpanded) : undefined}
+			onToggle={() => setIsExpanded(!isExpanded)}
 			tag={
 				isPayable && (
-					<Tag intent="warning" variant="plain">
+					<Tag intent="warning" size="small" variant="plain">
 						<Tag.Dot />
-						payable
+						Payable
 					</Tag>
 				)
 			}
-			actions={
-				<>
-					{/* Simulate is available whether or not a wallet is connected —
-					    checking what a write would do is the step *before* signing, and
-					    gating it on a connection put the safe option behind the risky
-					    one. Args are optional: an unfilled form still simulates the
-					    selector, which is enough to see who is allowed to call it. */}
-					<Tooltip.Root>
-						<Tooltip.Trigger
-							render={
-								<Button.Link
-									aria-label="Simulate this call without signing"
-									render={
-										<Link
-											to="/simulate"
-											search={{
-												to: props.address,
-												data: simulateCalldata,
-												...(connection.address
-													? { from: connection.address }
-													: {}),
-												...(isPayable && inputs.value
-													? { value: inputs.value }
-													: {}),
-											}}
-										/>
-									}
-									shape="icon"
-									size="small"
-									variant="text"
-									{...styles.simulate()}
-								/>
-							}
-						>
-							<FlaskIcon {...styles.simulateIcon()} />
-						</Tooltip.Trigger>
-						<Tooltip.Popup>Simulate this call without signing</Tooltip.Popup>
-					</Tooltip.Root>
-					{connection.status === 'connected' && (
-						<FunctionAction
-							label="Execute"
-							disabled={
-								writeContract.isPending || (hasInputs && !allInputsFilled)
-							}
-							onClick={() =>
-								writeContract.mutate({
-									address: props.address,
-									abi: props.abi,
-									functionName: fn.name,
-									args: parsedArgs.args,
-									value: isPayable
-										? inputs.value
-											? BigInt(inputs.value)
-											: undefined
-										: undefined,
-								})
-							}
-						>
-							<Play />
-						</FunctionAction>
-					)}
-				</>
-			}
 		>
-			{hasInputs && isExpanded && (
-				<>
-					{isPayable && (
+			<FunctionForm
+				fn={fn}
+				id={fnId}
+				note={!connected && 'Connect a wallet to execute.'}
+				onSubmit={() => {
+					setSubmitted(true)
+					if (connected && allInputsFilled && !parsedArgs.error) execute()
+				}}
+				secondary={
+					<Button.Link
+						render={simulateLink}
+						size="small"
+						variant={connected ? 'secondary' : 'primary'}
+					>
+						<FlaskIcon />
+						Simulate
+					</Button.Link>
+				}
+				primary={
+					connected && (
+						<Button
+							loading={writeContract.isPending}
+							size="small"
+							type="submit"
+						>
+							Execute
+						</Button>
+					)
+				}
+				result={
+					<>
+						{parsedArgs.error && (
+							<Callout intent="negative" role="status" size="small">
+								<Callout.Icon />
+								<Callout.Content>
+									<strong>Invalid arguments</strong>
+									<span {...styles.calloutDescription()}>
+										{parsedArgs.error}
+									</span>
+								</Callout.Content>
+							</Callout>
+						)}
+
+						{writeContract.error && (
+							<Callout intent="negative" size="small">
+								<Callout.Icon />
+								<Callout.Content>
+									<strong>Transaction failed</strong>
+									<span {...styles.calloutDescription()}>
+										{getWriteErrorMessage(writeContract.error)}
+									</span>
+								</Callout.Content>
+							</Callout>
+						)}
+
+						{writeContract.isSuccess && writeContract.data && (
+							<Callout intent="positive" size="small">
+								<Callout.Icon />
+								<Callout.Content>
+									<strong>Transaction sent</strong>
+									<TransactionCell hash={writeContract.data} />
+								</Callout.Content>
+							</Callout>
+						)}
+					</>
+				}
+			>
+				{fn.inputs.map((input, index) => {
+					const key = functionInputKey(input, index)
+					return (
 						<FunctionInput
-							label="Value (wei)"
-							value={inputs.value ?? ''}
-							input={{ name: 'value', type: 'uint256' }}
-							onChange={(value) => handleInputChange('value', value)}
+							key={key}
+							input={input}
+							invalid={missing(key)}
+							value={inputs[key] ?? ''}
+							onChange={(value) => handleInputChange(key, value)}
 						/>
-					)}
+					)
+				})}
 
-					{fn.inputs.map((input, index) => {
-						const key = functionInputKey(input, index)
-						return (
-							<FunctionInput
-								key={key}
-								input={input}
-								value={inputs[key] ?? ''}
-								onChange={(value) => handleInputChange(key, value)}
-							/>
-						)
-					})}
-
-					{parsedArgs.error && (
-						<Callout intent="negative" role="status" size="small">
-							<Callout.Icon />
-							<Callout.Content>
-								<strong>Invalid arguments</strong>
-								<span {...styles.calloutDescription()}>{parsedArgs.error}</span>
-							</Callout.Content>
-						</Callout>
-					)}
-
-					{writeContract.error && (
-						<Callout intent="negative" size="small">
-							<Callout.Icon />
-							<Callout.Content>
-								<strong>Transaction failed</strong>
-								<span {...styles.calloutDescription()}>
-									{getWriteErrorMessage(writeContract.error)}
-								</span>
-							</Callout.Content>
-						</Callout>
-					)}
-
-					{writeContract.isSuccess && writeContract.data && (
-						<Callout intent="positive" size="small">
-							<Callout.Icon />
-							<Callout.Content>
-								<strong>Transaction sent</strong>
-								<Link
-									to="/receipt/$hash"
-									params={{ hash: writeContract.data }}
-									{...cx(
-										styles.calloutDescription(),
-										styles.receipt(),
-										link(),
-										linkHover(),
-									)}
-								>
-									{writeContract.data}
-								</Link>
-							</Callout.Content>
-						</Callout>
-					)}
-				</>
-			)}
-		</FunctionCard>
+				{isPayable && (
+					<FunctionInput
+						label="Value (wei)"
+						value={inputs.value ?? ''}
+						input={{ name: 'value', type: 'uint256' }}
+						onChange={(value) => handleInputChange('value', value)}
+					/>
+				)}
+			</FunctionForm>
+		</FunctionDisclosure>
 	)
 }
 
 namespace styles {
-	export const list = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-	})
-
-	export const emptyMessage = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const simulate = style({ flexShrink: 0 })
-
-	export const simulateIcon = style({ height: '16', width: '16' })
+	// The flask comes from Lucide, so it takes the 16px glyph of the TDS icons.
+	export const icon = style({ fontSize: '16' })
 
 	export const calloutDescription = style({
 		display: 'block',
 		overflowWrap: 'anywhere',
-	})
-
-	export const receipt = style({
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
 	})
 }

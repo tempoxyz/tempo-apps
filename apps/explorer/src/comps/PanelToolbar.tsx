@@ -3,31 +3,33 @@
  *
  * Shared by the trace tree and the state diff so the two read as siblings.
  * Left side is a summary of what is below. Right side is the view controls,
- * heaviest last: mode toggle at the end, where it also sits in the calldata
- * field, so "same value, different representation" always looks the same.
+ * with the format toggle last.
  */
 
-import { Button, Tooltip, style } from '@tempoxyz/ds'
+import { Button, ChoiceGroup, style, Tooltip } from '@tempoxyz/ds'
 import type * as React from 'react'
 import { cx } from 'zyzz'
-import { Choices } from '#comps/ui/Choices'
 import { truncate } from '#styles/explorer'
 
 /**
- * One control, N mutually exclusive states — Decoded/Raw in a panel toolbar,
- * Decoded/Hex in the calldata field, Latest/Pinned block. One implementation
- * so "same value, different representation" always looks the same.
+ * A small `ChoiceGroup` for a panel's format, such as Decoded or Raw.
  */
 export function ViewToggle<T extends string>(
 	props: ViewToggle.Props<T>,
 ): React.JSX.Element {
 	return (
-		<Choices
-			label={props.label}
+		<ChoiceGroup.Root<T>
+			aria-label={props.label}
+			onValueChange={props.onChange}
+			size="small"
 			value={props.value}
-			onChange={props.onChange}
-			items={props.options}
-		/>
+		>
+			{props.options.map((option) => (
+				<ChoiceGroup.Item key={option.value} value={option.value}>
+					{option.label}
+				</ChoiceGroup.Item>
+			))}
+		</ChoiceGroup.Root>
 	)
 }
 
@@ -43,12 +45,14 @@ export declare namespace ViewToggle {
 
 export function PanelToolbar(props: PanelToolbar.Props): React.JSX.Element {
 	return (
-		<div {...styles.toolbar()}>
-			{props.summary && (
-				<span {...cx(styles.summary(), truncate())}>{props.summary}</span>
-			)}
-			{props.children}
-		</div>
+		<Tooltip.Provider>
+			<div {...styles.toolbar()}>
+				{props.summary && (
+					<span {...cx(styles.summary(), truncate())}>{props.summary}</span>
+				)}
+				{props.children}
+			</div>
+		</Tooltip.Provider>
 	)
 }
 
@@ -62,9 +66,8 @@ export declare namespace PanelToolbar {
 
 export namespace PanelToolbar {
 	/**
-	 * A toggle that is on gets the filled `secondary` variant; everything else
-	 * stays `text`. TDS Button owns hover, press, and motion; the local style
-	 * only keeps it from shrinking in the wrapping toolbar.
+	 * An icon button with its label in a tooltip. A toggle that is on takes the
+	 * `secondary` variant; everything else stays `text`.
 	 */
 	export function IconButton(props: {
 		onClick: () => void
@@ -104,14 +107,14 @@ namespace styles {
 		flexWrap: 'wrap',
 		gap: '8',
 		paddingBlock: '8',
-		paddingInline: '12',
+		paddingInline: '16',
 	})
 
 	export const summary = style({
 		color: 'gray.900',
 		marginRight: 'auto !custom',
 		minWidth: '0 !custom',
-		typography: 'label.12',
+		typography: 'label.13',
 	})
 
 	export const iconButton = style({ flexShrink: 0 })

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
-	Link,
 	notFound,
 	redirect,
 	rootRouteId,
@@ -20,10 +19,10 @@ import { Amount } from '#comps/Amount'
 import { BlockCard } from '#comps/BlockCard'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
-import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { useTokenListMembership } from '#comps/TokenListMembership'
+import { TransactionCell } from '#comps/TransactionCell'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
@@ -44,14 +43,10 @@ import {
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
-import { link, linkHover } from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
-import { style } from '@tempoxyz/ds'
+import { Amount as TdsAmount, style } from '@tempoxyz/ds'
 
 const defaultSearchValues = { page: 1 } as const
-
-// Explorer link color and hover underline, for route styles that cannot use `cx`.
-const linkClassName = link({ className: linkHover().className }).className
 
 const combinedAbi = Object.values(Abis).flat()
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -66,7 +61,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Block Not Found"
+			title="Block not found"
 			message="The block does not exist or could not be found."
 			data={data as NotFound.NotFoundData}
 		/>
@@ -232,17 +227,12 @@ function RouteComponent() {
 	return (
 		<div {...styles.page()}>
 			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
-			<div {...styles.card()}>
-				<BlockCard block={block} />
-			</div>
+			<BlockCard block={block} />
 			<Sections
 				mode={mode}
 				sections={[
 					{
 						title: 'Transactions',
-						totalItems: allTransactions.length,
-						itemsLabel: 'txns',
-						autoCollapse: false,
 						content: (
 							<TransactionsSection
 								transactions={transactions}
@@ -311,12 +301,12 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		: true
 
 	const cols = [
-		{ label: 'Index', align: 'start', minWidth: 60, width: '0.5fr' },
-		{ label: 'Description', align: 'start', minWidth: 260, width: '3fr' },
-		{ label: 'From', align: 'end', minWidth: 112, width: '1fr' },
-		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
-		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
-		{ label: 'Total', align: 'end', minWidth: 96, width: 96 },
+		{ label: 'Index', align: 'start', width: '0.5fr' },
+		{ label: 'Description', align: 'start', width: '3fr' },
+		{ label: 'From', align: 'end', width: '1fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
+		{ label: 'Fee', align: 'end', width: '0.5fr' },
+		{ label: 'Total', align: 'end', width: 96 },
 	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
@@ -335,21 +325,8 @@ function TransactionsSection(props: TransactionsSectionProps) {
 						: undefined
 
 					const fee = getEstimatedFee(transaction)
-					const feeValue = fee ? Number(Value.format(fee, GAS_DECIMALS)) : 0
 					const feeRaw = fee ? Value.format(fee, GAS_DECIMALS) : '0'
-					const feeDisplay =
-						feeValue > 0
-							? showUsdPrefix
-								? PriceFormatter.format(feeValue)
-								: PriceFormatter.formatAmountShort(feeRaw)
-							: '—'
-
-					const txValue = transaction.value ?? 0n
-					const amountDisplay = PriceFormatter.formatNativeAmount(
-						txValue,
-						decimals,
-						symbol,
-					)
+					const amount = Value.format(transaction.value ?? 0n, decimals)
 
 					return {
 						cells: [
@@ -359,7 +336,8 @@ function TransactionsSection(props: TransactionsSectionProps) {
 							<TransactionDescription
 								key="desc"
 								transaction={transaction}
-								amountDisplay={amountDisplay}
+								amount={amount}
+								symbol={symbol}
 								knownEvents={knownEvents}
 								loading={knownEventsLoading}
 							/>,
@@ -371,28 +349,34 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								<AddressLink
 									key="from"
 									address={transaction.from}
-									chars={1}
 									align="end"
 								/>
 							),
 							transaction.hash ? (
-								<Link
-									key="hash"
-									to="/receipt/$hash"
-									params={{ hash: transaction.hash }}
-									{...styles.hashLink({ className: linkClassName })}
-									title={transaction.hash}
-								>
-									<Midcut value={transaction.hash} prefix="0x" align="end" />
-								</Link>
+								<TransactionCell key="hash" hash={transaction.hash} />
 							) : (
 								<span key="hash" {...styles.secondary()}>
 									—
 								</span>
 							),
-							<span key="fee" {...styles.secondary()}>
-								{feeDisplay}
-							</span>,
+							fee === 0n ? (
+								<span key="fee" {...styles.secondary()}>
+									—
+								</span>
+							) : showUsdPrefix ? (
+								<TdsAmount
+									key="fee"
+									align="right"
+									currency="USD"
+									precise
+									value={feeRaw}
+									{...styles.secondary()}
+								/>
+							) : (
+								<span key="fee" {...styles.secondary()}>
+									{PriceFormatter.formatAmountShort(feeRaw)}
+								</span>
+							),
 							<TransactionTotalCell
 								key="total"
 								transaction={transaction}
@@ -512,7 +496,7 @@ interface TransactionsSectionProps {
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {
-	const { transaction, amountDisplay, knownEvents, loading } = props
+	const { transaction, amount, symbol, knownEvents, loading } = props
 
 	const decodedCall = React.useMemo(() => {
 		const data = transaction.input
@@ -563,20 +547,22 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		return (
 			<div {...styles.call()}>
 				<div>{title} </div>
-				<AddressLink address={transaction.to} chars={4} />
+				<AddressLink address={transaction.to} />
 			</div>
 		)
 
 	return (
 		<span {...styles.send()}>
-			Send {amountDisplay} to <AddressLink address={transaction.to} chars={4} />
+			Send <TdsAmount symbol={symbol} value={amount} /> to{' '}
+			<AddressLink address={transaction.to} />
 		</span>
 	)
 }
 
 interface TransactionDescriptionProps {
 	transaction: BlockTransaction
-	amountDisplay: string
+	amount: string
+	symbol: string
 	knownEvents?: KnownEvent[]
 	loading?: boolean
 }
@@ -591,30 +577,27 @@ function getEstimatedFee(transaction: BlockTransaction) {
 }
 
 namespace styles {
+	// Stacked below 1024px; beside it, the card's column is capped so the
+	// transactions keep their room.
 	export const page = style({
-		display: 'grid',
+		display: 'flex',
+		flexDirection: 'column',
 		gap: '16',
-		gridTemplateColumns: 'auto 1fr',
-		minWidth: '0',
-		paddingBottom: '64',
+		minWidth: '0 !custom',
+		paddingBottom: '32',
 		paddingInline: '16',
-		paddingTop: '64',
+		paddingTop: '40',
 		width: '100% !custom',
-		'@media (width < 800px)': {
-			display: 'flex',
-			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
+		'@media (width >= 1024px)': {
+			alignItems: 'start',
+			display: 'grid',
+			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
 
 	export const breadcrumbs = style({ gridColumn: '1 / -1' })
-
-	export const card = style({
-		alignSelf: 'start',
-		'@media (width < 800px)': { alignSelf: 'stretch' },
-	})
 
 	export const systemFrom = style({
 		color: 'gray.900',
@@ -624,8 +607,6 @@ namespace styles {
 		whiteSpace: 'nowrap',
 		width: '100% !custom',
 	})
-
-	export const hashLink = style({ width: '100% !custom' })
 
 	export const primary = style({ color: 'foreground' })
 
@@ -641,8 +622,12 @@ namespace styles {
 		gap: '8',
 	})
 
+	// `Amount` is a block, so the sentence lays out as a row.
 	export const send = style({
+		alignItems: 'baseline',
 		color: 'foreground',
+		columnGap: '4',
+		display: 'flex',
 		whiteSpace: 'nowrap',
 	})
 }

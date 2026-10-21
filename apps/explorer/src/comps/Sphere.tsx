@@ -1,5 +1,5 @@
 import { style } from '@tempoxyz/ds'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import letters from '#lib/tempo-globe.json' with { type: 'json' }
 
 const TAU = Math.PI * 2
@@ -8,7 +8,6 @@ const DURATION = 1800
 const STAGGER = 110
 
 export function Sphere(): React.JSX.Element {
-	const [turn, setTurn] = useState(0)
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 
 	useEffect(() => {
@@ -46,7 +45,7 @@ export function Sphere(): React.JSX.Element {
 				const restingAngle = -TAU * 0.395 - ring * 0.055
 				const angle = -TAU * (1 - eased) + restingAngle
 				const radiusY = 318 - ring * 34
-				context.globalAlpha = turn === 0 ? Math.min(1, progress * 5) : 1
+				context.globalAlpha = Math.min(1, progress * 5)
 				for (const letter of letters) {
 					context.beginPath()
 					for (const contour of letter) {
@@ -95,19 +94,14 @@ export function Sphere(): React.JSX.Element {
 			visible.removeEventListener('change', refresh)
 			document.removeEventListener('visibilitychange', refresh)
 		}
-	}, [turn])
+	}, [])
 
 	return (
 		<div {...styles.root()}>
 			<div {...styles.stage()}>
-				<button
-					type="button"
-					aria-label="Rotate Tempo globe rings"
-					onClick={() => setTurn((value) => value + 1)}
-					{...styles.button()}
-				>
+				<div aria-hidden="true" {...styles.frame()}>
 					<canvas ref={canvasRef} {...styles.canvas()} />
-				</button>
+				</div>
 			</div>
 		</div>
 	)
@@ -136,15 +130,10 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	// The root clips overflow, so the document focus ring is drawn inside.
-	export const button = style({
+	export const frame = style({
 		aspectRatio: '656 / 285 !custom',
-		borderRadius: '12',
-		cursor: 'pointer',
 		maxWidth: '120vw !custom',
-		pointerEvents: 'auto',
 		width: '656px !custom',
-		':focus-visible': { outlineOffset: '-4px' },
 	})
 
 	export const canvas = style({

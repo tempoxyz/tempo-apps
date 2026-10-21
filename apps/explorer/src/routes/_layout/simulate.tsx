@@ -3,9 +3,21 @@ import {
 	createFileRoute,
 	stripSearchParams,
 	useNavigate,
+	useRouterState,
 } from '@tanstack/react-router'
-import { Button, ChoiceGroup, style, Tabs, variants } from '@tempoxyz/ds'
-import { Check, Link, Play } from '@tempoxyz/ds/icons'
+import {
+	Button,
+	ChoiceGroup,
+	Container,
+	CopyButton,
+	Empty,
+	style,
+	Surface,
+	Tabs,
+	Tag,
+	variants,
+} from '@tempoxyz/ds'
+import { Play } from '@tempoxyz/ds/icons'
 import * as OxAddress from 'ox/Address'
 import * as OxHex from 'ox/Hex'
 import * as React from 'react'
@@ -14,8 +26,6 @@ import { zeroAddress } from 'viem'
 import { useConnection } from 'wagmi'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { cx } from 'zyzz'
-import { ViewToggle } from '#comps/PanelToolbar'
 import { SimulateCallForm } from '#comps/SimulateCallForm'
 import { SimulateGasPanel } from '#comps/SimulateGasPanel'
 import {
@@ -23,15 +33,14 @@ import {
 	type OutputTab,
 	SimulateAnswer,
 	SimulateCallHeading,
-	SimulateDiff,
 	SimulateEvents,
+	SimulateMetrics,
 	SimulateOverview,
-	SimulateResultHeader,
+	SimulateStatus,
 	SimulateStepBar,
 	SimulateTabs,
 } from '#comps/SimulateResultPane'
 import {
-	ButtonShortcut,
 	describeCall,
 	PanelEmpty,
 	PanelError,
@@ -65,7 +74,7 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { formatTraceErrorArgs } from '#lib/domain/trace-error-args'
 import { getFeeTokenForChain } from '#lib/fee-token'
-import { useCopy, useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
+import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import {
 	type CallTrace,
 	mergePrestateDiffs,
@@ -77,9 +86,7 @@ import {
 	useAutoloadAbi,
 } from '#lib/queries'
 import { hex, zAddress, zHash } from '#lib/zod'
-import { pageMargin } from '#styles/explorer'
 import { getWagmiConfig } from '#wagmi.config'
-import EraserIcon from '~icons/lucide/eraser'
 
 const EXAMPLE_TOKEN = '0x20c0000000000000000000000000000000000001'
 const EXAMPLE_CALLDATA = '0x06fdde03'
@@ -228,7 +235,12 @@ function SimulatePage(): React.JSX.Element {
 	const [runInput, setRunInput] = React.useState<SimulationInput | null>(
 		initialInput,
 	)
-	const shareLink = useCopy({ message: 'Link copied', timeout: 1_500 })
+	// The link carries the inputs, the tab, and the selected frame.
+	const href = useRouterState({ select: (state) => state.location.href })
+	const shareUrl =
+		typeof window === 'undefined'
+			? href
+			: new URL(href, window.location.origin).toString()
 	// The form always edits exactly one call, even while the result pane shows
 	// them all — so "which call am I editing" is separate from "which call am I
 	// looking at", and clearing the filter does not yank the form elsewhere.
@@ -300,8 +312,13 @@ function SimulatePage(): React.JSX.Element {
 	const run = React.useCallback(() => {
 		const input = parseForm(form, chainId, blockGasLimit)
 		if (!input) {
+			const missingTo = form.calls.some(
+				(call) => !OxAddress.validate(call.to.trim()),
+			)
 			setFormError(
-				'Enter a valid target address, hexadecimal calldata, and numeric gas and value fields.',
+				missingTo
+					? `Enter a contract address in To${form.calls.length > 1 ? ' for every call' : ''}, then run it again.`
+					: 'Fix the fields marked below, then run it again.',
 			)
 			return
 		}
@@ -425,7 +442,9 @@ function SimulatePage(): React.JSX.Element {
 	const loadTransaction = React.useCallback(
 		async (hashValue: string) => {
 			if (!OxHex.validate(hashValue) || OxHex.size(hashValue) !== 32) {
-				setLoadError('Enter a valid transaction hash.')
+				setLoadError(
+					'Enter a 66-character transaction hash that starts with 0x.',
+				)
 				return
 			}
 			setLoadError(null)
@@ -469,7 +488,9 @@ function SimulatePage(): React.JSX.Element {
 							},
 						]
 				if (drafts.some((call) => !call.to))
-					throw new Error('Contract creation simulation is not supported yet.')
+					throw new Error(
+						'This transaction creates a contract, which the simulator can’t replay yet.',
+					)
 				const comparableLogs = withoutFeeTransferLogs(receipt.logs)
 				const nextForm: FormState = {
 					from: transaction.from,
@@ -500,7 +521,9 @@ function SimulatePage(): React.JSX.Element {
 				})
 			} catch (error) {
 				setLoadError(
-					error instanceof Error ? error.message : 'Failed to load transaction',
+					error instanceof Error
+						? error.message
+						: 'Couldn’t load this transaction. Check the hash, then try again.',
 				)
 			} finally {
 				setLoadingTransaction(false)
@@ -544,91 +567,45 @@ function SimulatePage(): React.JSX.Element {
 	const showOutput = pane === 'output' || pane === 'split'
 
 	return (
-		<div {...cx(styles.page(), pageMargin())}>
+		<Container size="full" {...styles.page()}>
 			<div {...styles.toolbar()}>
 				<h1 {...styles.title()}>Simulate</h1>
 				<p {...styles.summary()} title={summary}>
 					{summary}
 				</p>
-				{narrow ? (
-					<ViewToggle
-						label="Panes"
-						value={pane}
-						options={[
-							{ value: 'input', label: 'Input' },
-							{ value: 'output', label: 'Result' },
-						]}
-						onChange={(value) => setSearch({ pane: value })}
-					/>
-				) : (
-					<ChoiceGroup.Root
-						aria-label="Panes"
-						value={pane}
-						onValueChange={(value) => setSearch({ pane: value })}
-					>
-						<ChoiceGroup.Item value="input">Input</ChoiceGroup.Item>
-						<ChoiceGroup.Item value="split">Split</ChoiceGroup.Item>
-						<ChoiceGroup.Item value="output">Result</ChoiceGroup.Item>
-					</ChoiceGroup.Root>
-				)}
-				{/* Both page-scoped: Share copies the whole URL — inputs, tab, and
-				    selected frame — not just the result. Keeping them here means one
-				    action bar rather than a second Run inside the result header. */}
-				<div {...styles.actions()}>
-					{hasDraft && (
-						<Button size="medium" variant="secondary" onClick={clear}>
-							{/* No TDS equivalent; sized to match the TDS icons beside it. */}
-							<EraserIcon width="1em" height="1em" aria-hidden />
-							Clear
-						</Button>
-					)}
-					{runInput && (
-						<Button
-							size="medium"
-							variant="secondary"
-							onClick={() =>
-								shareLink.copy(
-									typeof window === 'undefined' ? '' : window.location.href,
-								)
-							}
-						>
-							{shareLink.notifying ? <Check /> : <Link />}
-							Share
-						</Button>
-					)}
-					<Button
-						size="medium"
-						variant="primary"
-						onClick={run}
-						aria-keyshortcuts="Meta+Enter Control+Enter"
-					>
-						<Play />
-						{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
-						<ButtonShortcut mod>↵</ButtonShortcut>
-					</Button>
-				</div>
+				{/* Split is not offered on a narrow screen, where two panes do not fit. */}
+				<ChoiceGroup.Root
+					aria-label="Panes"
+					value={pane}
+					onValueChange={(value) => setSearch({ pane: value })}
+				>
+					<ChoiceGroup.Item value="input">Input</ChoiceGroup.Item>
+					{!narrow && <ChoiceGroup.Item value="split">Split</ChoiceGroup.Item>}
+					<ChoiceGroup.Item value="output">Result</ChoiceGroup.Item>
+				</ChoiceGroup.Root>
 			</div>
 
 			<div {...styles.panes({ split: pane === 'split' })}>
 				{showInput && (
-					<section {...styles.card()}>
-						<SimulateCallForm
-							form={form}
-							setForm={setForm}
-							step={editIndex}
-							onStepChange={(index) => {
-								setEditIndex(index)
-								setSearch({ step: index })
-							}}
-							defaultGas={blockGasLimit}
-							formError={formError}
-							loadHash={loadHash}
-							setLoadHash={setLoadHash}
-							loadError={loadError}
-							loadingTransaction={loadingTransaction}
-							onLoad={() => void loadTransaction(loadHash)}
-						/>
-					</section>
+					<SimulateCallForm
+						onRun={run}
+						canClear={hasDraft}
+						onClear={clear}
+						form={form}
+						setForm={setForm}
+						step={editIndex}
+						onStepChange={(index) => {
+							setEditIndex(index)
+							setSearch({ step: index })
+						}}
+						defaultGas={blockGasLimit}
+						formError={formError}
+						loadHash={loadHash}
+						setLoadHash={setLoadHash}
+						loadError={loadError}
+						loadingTransaction={loadingTransaction}
+						onLoad={() => void loadTransaction(loadHash)}
+					/>
 				)}
 
 				{showOutput && (
@@ -644,12 +621,13 @@ function SimulatePage(): React.JSX.Element {
 							setSearch({ step: index, frame: undefined })
 						}}
 						onSearchChange={setSearch}
+						shareUrl={shareUrl}
 						onExample={runExample}
 						onEdit={() => setSearch({ pane: narrow ? 'input' : 'split' })}
 					/>
 				)}
 			</div>
-		</div>
+		</Container>
 	)
 }
 
@@ -663,6 +641,8 @@ function SimulationResults(props: {
 	step: number | undefined
 	onStepChange: (index: number | undefined) => void
 	onSearchChange: (patch: Record<string, unknown>) => void
+	/** The page URL, which carries the inputs, the tab, and the frame. */
+	shareUrl: string
 	onExample: (kind: 'read' | 'failing') => void
 	onEdit: () => void
 }): React.JSX.Element {
@@ -883,14 +863,16 @@ function SimulationResults(props: {
 	].filter((error): error is Error => Boolean(error))
 	if (panelErrors.length === (isBatch ? 1 : 3))
 		return (
-			<SimulationFailure
-				errors={panelErrors}
-				onRetry={() => {
-					void traceQuery.refetch()
-					void prestateQuery.refetch()
-					void executionQuery.refetch()
-				}}
-			/>
+			<ResultCard stale={props.stale}>
+				<SimulationFailure
+					errors={panelErrors}
+					onRetry={() => {
+						void traceQuery.refetch()
+						void prestateQuery.refetch()
+						void executionQuery.refetch()
+					}}
+				/>
+			</ResultCard>
 		)
 
 	const tabs = [
@@ -927,15 +909,20 @@ function SimulationResults(props: {
 		})
 	}
 
-	return (
-		<section {...styles.card()}>
-			<SimulateResultHeader
-				execution={execution}
-				input={input}
-				gasLimit={gasAllowance}
-				stale={props.stale}
-			/>
+	// On-chain is the more meaningful comparison when it exists, so it wins;
+	// otherwise the previous run.
+	const baseline = props.original
+		? { kind: 'on-chain' as const, metrics: props.original }
+		: previous
+			? { kind: 'previous' as const, metrics: previous }
+			: undefined
 
+	return (
+		<ResultCard
+			status={<SimulateStatus execution={execution} />}
+			shareUrl={props.shareUrl}
+			stale={props.stale}
+		>
 			<div {...styles.evidence({ stale: props.stale })}>
 				{execution ? (
 					<>
@@ -955,24 +942,21 @@ function SimulationResults(props: {
 							knownEvents={knownEvents}
 							onJumpToFrame={selectFrame}
 						/>
-						{/* On-chain is the more meaningful comparison when it exists, so
-						    it wins; otherwise fall back to the previous run. */}
-						{props.original ? (
-							<SimulateDiff
-								label="vs. on-chain"
-								original={props.original}
-								execution={execution}
-							/>
-						) : previous ? (
-							<SimulateDiff
-								label="vs. previous run"
-								original={previous}
-								execution={execution}
-							/>
-						) : null}
+						<SimulateMetrics
+							status={execution.status}
+							gasUsed={
+								showingAll ? execution.gasUsed : BigInt(tree?.gasUsed ?? 0)
+							}
+							gasLimit={gasAllowance}
+							events={visibleLogs.length}
+							balances={execution.assetChanges.length}
+							blockNumber={execution.blockNumber}
+							pinned={input.block !== 'latest'}
+							baseline={showingAll ? baseline : undefined}
+						/>
 					</>
 				) : (
-					<PanelSkeleton rows={2} />
+					<PanelSkeleton inset={false} rows={3} />
 				)}
 
 				{/* Waits for results rather than rendering a bare "Showing" with no
@@ -998,7 +982,7 @@ function SimulationResults(props: {
 							<SimulateOverview
 								input={input}
 								execution={execution}
-								gasLimit={gasAllowance}
+								network={networkName(input.chainId)}
 								functionLabel={
 									tree?.functionName
 										? `${tree.functionName}()`
@@ -1016,10 +1000,7 @@ function SimulationResults(props: {
 						{traceQuery.isPending ? (
 							<PanelSkeleton rows={7} />
 						) : traceQuery.error ? (
-							<PanelError
-								title="Call trace unavailable"
-								error={traceQuery.error}
-							/>
+							<PanelError subject="the call trace" error={traceQuery.error} />
 						) : showingAll && isBatch ? (
 							// One tree per call, in order, each under its own heading.
 							// Keeping them separate is the point: which call a frame
@@ -1050,7 +1031,10 @@ function SimulationResults(props: {
 								onSelect={selectFrame}
 							/>
 						) : (
-							<PanelEmpty>No trace returned for this call.</PanelEmpty>
+							<PanelEmpty
+								title="No trace"
+								description="The node returned no trace for this call."
+							/>
 						)}
 					</Tabs.Panel>
 
@@ -1059,7 +1043,7 @@ function SimulationResults(props: {
 							<PanelSkeleton rows={5} />
 						) : prestateQuery.error ? (
 							<PanelError
-								title="State diff unavailable"
+								subject="the state changes"
 								error={prestateQuery.error}
 							/>
 						) : stateAccounts > 0 ? (
@@ -1073,7 +1057,10 @@ function SimulationResults(props: {
 								omitSenderNonceFor={input.from}
 							/>
 						) : (
-							<PanelEmpty>No state changed.</PanelEmpty>
+							<PanelEmpty
+								title="No state changes"
+								description="This call changed no balance, nonce, code, or storage."
+							/>
 						)}
 					</Tabs.Panel>
 
@@ -1081,10 +1068,7 @@ function SimulationResults(props: {
 						{executionQuery.isPending ? (
 							<PanelSkeleton rows={4} />
 						) : executionQuery.error ? (
-							<PanelError
-								title="Execution result unavailable"
-								error={executionQuery.error}
-							/>
+							<PanelError subject="the events" error={executionQuery.error} />
 						) : (
 							<SimulateEvents
 								logs={visibleLogs}
@@ -1100,12 +1084,6 @@ function SimulationResults(props: {
 							<SimulateGasPanel
 								trees={gasTrees}
 								prestate={stepPrestate}
-								gasUsed={
-									showingAll && execution
-										? execution.gasUsed
-										: BigInt(tree?.gasUsed ?? 0)
-								}
-								gasLimit={gasAllowance}
 								selectedFrameId={props.frame}
 								onSelectFrame={selectFrame}
 							/>
@@ -1113,8 +1091,54 @@ function SimulationResults(props: {
 					</Tabs.Panel>
 				</SimulateTabs>
 			</div>
-		</section>
+		</ResultCard>
 	)
+}
+
+/**
+ * The result pane's card: the title and the run's status, then a warning when
+ * the inputs no longer match, then the link to share.
+ */
+function ResultCard(props: {
+	status?: React.ReactNode
+	stale?: boolean | undefined
+	/** The page URL to share, once there is a result. */
+	shareUrl?: string | undefined
+	children: React.ReactNode
+}): React.JSX.Element {
+	const titleId = React.useId()
+	return (
+		<Surface
+			render={<section aria-labelledby={titleId} />}
+			size="medium"
+			{...styles.card()}
+		>
+			<Surface.Header>
+				<div {...styles.heading()}>
+					<Surface.Title id={titleId}>Result</Surface.Title>
+					{props.status}
+				</div>
+				<div {...styles.headerActions()}>
+					{props.stale && (
+						<Tag intent="warning" variant="plain">
+							<Tag.Dot />
+							Inputs changed
+						</Tag>
+					)}
+					{props.shareUrl !== undefined && (
+						<CopyButton aria-label="Copy link" value={props.shareUrl} />
+					)}
+				</div>
+			</Surface.Header>
+			{props.children}
+		</Surface>
+	)
+}
+
+function networkName(chainId: number): string {
+	if (chainId === 4217) return 'Mainnet'
+	if (chainId === 42431) return 'Moderato testnet'
+	return 'Devnet'
 }
 
 /**
@@ -1153,54 +1177,33 @@ function CallTracePanel(props: {
 					onSelect={props.onSelect}
 				/>
 			) : (
-				<PanelEmpty>No trace returned for this call.</PanelEmpty>
+				<PanelEmpty
+					title="No trace"
+					description="The node returned no trace for this call."
+				/>
 			)}
 		</div>
 	)
 }
 
-/**
- * The empty pane teaches the layout rather than apologising for being empty:
- * the shape of the result is visible, greyed, before anything has run.
- */
+/** Before the first run: what will appear here, and a way to start. */
 function SimulationEmptyState(props: {
 	onExample: (kind: 'read' | 'failing') => void
 	onEdit: () => void
 }): React.JSX.Element {
 	return (
-		<section {...styles.card()}>
-			<div {...styles.emptyHeader()}>
-				<span {...styles.emptyTitle()}>Nothing simulated yet</span>
-			</div>
-			{/* A picture of the tab bar, not a working one: inert keeps it out of
-			    the tab order and away from assistive tech. */}
-			<div inert {...styles.emptyPreview()}>
-				<SimulateTabs
-					tabs={[
-						{ id: 'overview', label: 'Overview' },
-						{ id: 'trace', label: 'Trace' },
-						{ id: 'state', label: 'State' },
-						{ id: 'events', label: 'Events' },
-						{ id: 'gas', label: 'Gas' },
-					]}
-					value="overview"
-					onChange={() => {}}
-				/>
-			</div>
-			<div {...styles.emptyBody()}>
-				<p {...styles.emptyText()}>
-					Fill in a call and run it, or replay an existing transaction by hash
-					against the state of its parent block. Nothing is signed and nothing
-					is broadcast.
-				</p>
-				{/* All secondary: the page already has one primary action, and a second
-				    primary button competing with Run is a coin toss, not a hierarchy. */}
-				<div {...styles.emptyActions()}>
-					<Button
-						size="small"
-						variant="secondary"
-						onClick={() => props.onExample('read')}
-					>
+		<ResultCard>
+			<Empty.Root>
+				<Empty.Icon>
+					<Play />
+				</Empty.Icon>
+				<Empty.Title>Nothing simulated yet</Empty.Title>
+				<Empty.Description>
+					Run a call or replay a transaction to see its trace, state changes,
+					and events. Nothing is signed or broadcast.
+				</Empty.Description>
+				<Empty.Actions>
+					<Button size="small" onClick={() => props.onExample('read')}>
 						Read a token name
 					</Button>
 					<Button
@@ -1208,14 +1211,14 @@ function SimulationEmptyState(props: {
 						variant="secondary"
 						onClick={() => props.onExample('failing')}
 					>
-						See a failing transfer
+						Simulate a failing transfer
 					</Button>
 					<Button size="small" variant="secondary" onClick={props.onEdit}>
 						Compose a call
 					</Button>
-				</div>
-			</div>
-		</section>
+				</Empty.Actions>
+			</Empty.Root>
+		</ResultCard>
 	)
 }
 
@@ -1257,7 +1260,6 @@ namespace styles {
 		paddingBottom: '48',
 		paddingTop: '32',
 		typography: 'copy.14',
-		width: '100% !custom',
 		'@media (width >= 800px)': { paddingTop: '48' },
 	})
 
@@ -1289,10 +1291,17 @@ namespace styles {
 		whiteSpace: 'nowrap',
 	})
 
-	export const actions = style({
+	export const heading = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
+		gap: '12',
+		minWidth: '0 !custom',
+	})
+
+	export const headerActions = style({
+		alignItems: 'center',
+		display: 'flex',
 		gap: '8',
 	})
 
@@ -1317,17 +1326,9 @@ namespace styles {
 		},
 	})
 
-	export const card = style({
-		backgroundColor: 'background.surface',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
-		borderStyle: 'solid',
-		borderWidth: '1px',
-		display: 'flex',
-		flexDirection: 'column',
-		minWidth: '0 !custom',
-		overflow: 'hidden',
-	})
+	// Surface owns the fill, border, radius, and padding; as a grid item it
+	// also needs to shrink.
+	export const card = style({ minWidth: '0 !custom' })
 
 	// Only the evidence dims when inputs change. Dimming the header too made
 	// every shared link's first impression a greyed-out screen.
@@ -1346,50 +1347,17 @@ namespace styles {
 		},
 	})
 
-	// TDS Tabs.Panel draws its own focus ring; this only lets it shrink.
-	export const panel = style({ minWidth: '0 !custom' })
+	// Panels reach the card's edges, as a Surface's direct Rows and tables do,
+	// so their toolbars and dividers run edge to edge. The margin matches the
+	// medium Surface's padding.
+	export const panel = style({
+		marginInline: '-16px !custom',
+		minWidth: '0 !custom',
+	})
 
 	export const column = style({
 		display: 'flex',
 		flexDirection: 'column',
 		minWidth: '0 !custom',
-	})
-
-	export const emptyHeader = style({
-		alignItems: 'center',
-		borderBottomWidth: '1px',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		display: 'flex',
-		gap: '8',
-		paddingBlock: '12',
-		paddingInline: '16',
-	})
-
-	export const emptyTitle = style({
-		color: 'gray.900',
-		typography: 'copy.14',
-	})
-
-	export const emptyPreview = style({ opacity: 0.4, userSelect: 'none' })
-
-	export const emptyBody = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-		padding: '16',
-	})
-
-	export const emptyText = style({
-		color: 'gray.900',
-		margin: '0',
-		maxWidth: '520px !custom',
-		typography: 'copy.14',
-	})
-
-	export const emptyActions = style({
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '8',
 	})
 }

@@ -1,41 +1,30 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
+import { style, Amount as TdsAmount, Token } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import * as Value from 'ox/Value'
+import type * as React from 'react'
 import { maxUint256 } from 'viem'
-import { Abis } from '#lib/abis'
 import { useReadContracts } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from 'zyzz'
-import { TokenIcon } from '#comps/TokenIcon.tsx'
+import { Abis } from '#lib/abis'
 import { ellipsis } from '#lib/chars'
-import { isTip20Address } from '#lib/domain/tip20.ts'
-import { PriceFormatter } from '#lib/formatting.ts'
-import { link, linkHover, pressDown } from '#styles/explorer'
+import { isTip20Address } from '#lib/domain/tip20'
+import { linkHover } from '#styles/explorer'
 
-export function Amount(props: Amount.Props) {
-	const {
-		value: rawValue,
-		token,
-		decimals,
-		symbol,
-		before,
-		after,
-		prefix,
-		suffix,
-		short,
-		maxWidth,
-		infinite,
-	} = props
+/**
+ * A token amount: the token's icon and TDS `Amount`, linking to the token.
+ * Reads the token's decimals and symbol when they aren't passed.
+ */
+export function Amount(props: Amount.Props): React.JSX.Element | null {
+	const { decimals, symbol, token, value: rawValue, ...rest } = props
 
 	const value = typeof rawValue === 'bigint' ? rawValue : BigInt(rawValue)
 	const isTip20 = isTip20Address(token)
 
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token,
-		query: {
-			enabled: decimals === undefined && isTip20,
-		},
+		query: { enabled: decimals === undefined && isTip20 },
 	})
 
 	const { data: nonTip20Data } = useReadContracts({
@@ -48,155 +37,123 @@ export function Amount(props: Amount.Props) {
 		},
 	})
 
-	const nonTip20Decimals = nonTip20Data?.[0]?.result
-	const nonTip20Symbol = nonTip20Data?.[1]?.result
+	const decimals_ = decimals ?? metadata?.decimals ?? nonTip20Data?.[0]?.result
+	const symbol_ = symbol ?? metadata?.symbol ?? nonTip20Data?.[1]?.result
 
-	const decimals_ = decimals ?? metadata?.decimals ?? nonTip20Decimals
-	const symbol_ = symbol ?? metadata?.symbol ?? nonTip20Symbol
-
-	const isLoading = decimals_ === undefined
-
-	if (isLoading) return <span>{ellipsis}</span>
+	if (decimals_ === undefined)
+		return <span {...styles.pending()}>{ellipsis}</span>
+	if (rest.infinite === null && Amount.isInfinite(value)) return null
 
 	return (
-		<Amount.Base
-			value={value}
-			decimals={decimals_}
-			before={before}
-			after={
-				<>
-					<TokenIcon address={token} />
-					<Link
-						{...cx(styles.symbol(), link(), linkHover(), pressDown())}
-						params={{ address: token }}
-						title={token}
-						to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
-					>
-						{symbol_}
-					</Link>
-					{after}
-				</>
-			}
-			prefix={prefix}
-			suffix={suffix}
-			short={short}
-			maxWidth={maxWidth}
-			infinite={infinite}
-		/>
+		<Link
+			params={{ address: token }}
+			title={token}
+			to={isTip20 ? '/token/$address' : '/address/$address'}
+			{...cx(styles.token(), linkHover())}
+		>
+			{/* In dollars the icon stands alone, so it names the token. */}
+			<Token
+				address={token}
+				alt={rest.prefix === '$' ? symbol_ : undefined}
+				size="small"
+			/>
+			<Amount.Base
+				{...rest}
+				decimals={decimals_}
+				symbol={symbol_}
+				value={value}
+			/>
+		</Link>
 	)
 }
 
 export namespace Amount {
-	export interface Props extends Omit<Base.Props, 'decimals' | 'value'> {
+	export type Props = Omit<Base.Props, 'decimals' | 'symbol' | 'value'> & {
+		/** The amount in base units. */
 		value: bigint | string
 		token: Address.Address
-		decimals?: number
-		symbol?: string
+		decimals?: number | undefined
+		symbol?: string | undefined
 	}
 
-	export function Base(props: Base.Props) {
+	// Amounts this close to the uint256 maximum are unlimited approvals.
+	const precisionLossTolerance = 10n ** 64n
+	const infiniteThreshold =
+		(maxUint256 / precisionLossTolerance) * precisionLossTolerance
+
+	export function isInfinite(value: bigint): boolean {
+		return value > infiniteThreshold
+	}
+
+	/**
+	 * An amount in base units in TDS `Amount`: in US dollars with `prefix="$"`,
+	 * otherwise followed by `symbol`.
+	 */
+	export function Base(props: Base.Props): React.JSX.Element | null {
 		const {
-			value,
 			decimals,
-			before,
-			after,
-			prefix,
-			suffix,
-			short,
-			shortMaximumFractionDigits,
-			maxWidth = 24,
 			infinite = true,
+			prefix,
+			short,
+			shortMaximumFractionDigits = 2,
+			symbol,
+			value,
 		} = props
 
-		const precisionLossTolerance = 10n ** 64n
-		const isInfinite =
-			infinite !== false &&
-			value > (maxUint256 / precisionLossTolerance) * precisionLossTolerance
-
-		if (isInfinite && infinite === null) return null
-
-		if (isInfinite)
+		if (infinite !== false && isInfinite(value)) {
+			if (infinite === null) return null
 			return (
-				<span {...styles.root()}>
-					{before}
+				<span>
 					{infinite === true ? 'infinite' : infinite}
-					{after}
+					{symbol && ` ${symbol}`}
 				</span>
 			)
+		}
 
-		const rawFormatted = Value.format(value, decimals)
-		const fullFormatted = PriceFormatter.formatAmount(rawFormatted)
-		const numericValue = Number(rawFormatted)
-		const isCurrencySmall =
-			prefix === '$' && numericValue > 0 && numericValue < 0.01
-		const formatted = isCurrencySmall
-			? '<0.01'
-			: short
-				? PriceFormatter.formatAmountShort(rawFormatted, {
-						maximumFractionDigits: shortMaximumFractionDigits,
-					})
-				: fullFormatted
-		const isSmall = formatted.startsWith('<')
-
+		const decimal = Value.format(value, decimals)
+		if (prefix === '$')
+			return <TdsAmount currency="USD" precise value={decimal} />
 		return (
-			<span {...styles.root()}>
-				{before}
-				<span
-					{...cx(
-						styles.value({ style: { maxWidth: `${maxWidth}ch` } }),
-						isSmall && styles.small(),
-					)}
-					title={`${prefix ?? ''}${fullFormatted}${suffix ?? ''}`}
-				>
-					{`${prefix ?? ''}${formatted}${suffix ?? ''}`}
-				</span>
-				{after}
-			</span>
+			<TdsAmount
+				maxDecimals={short ? shortMaximumFractionDigits : undefined}
+				symbol={symbol}
+				value={decimal}
+			/>
 		)
 	}
 
 	export namespace Base {
-		export interface Props {
-			after?: React.ReactNode
-			before?: React.ReactNode
+		export type Props = {
 			decimals: number
 			/**
-			 * Controls infinite value detection (uint256 max):
-			 * - `true` (default): detect and show "infinite"
-			 * - `false`: no detection, show the raw value
-			 * - `ReactNode`: detect and show custom label
-			 * - `null`: detect and render nothing
+			 * Unlimited amounts (near the uint256 maximum):
+			 * - `true` (default): show "infinite"
+			 * - `false`: show the number
+			 * - `ReactNode`: show this label
+			 * - `null`: render nothing
 			 */
-			infinite?: boolean | null | React.ReactNode
-			maxWidth?: number
-			prefix?: string
-			short?: boolean
-			shortMaximumFractionDigits?: number
-			suffix?: string
+			infinite?: React.ReactNode
+			/** `$` shows the amount in US dollars. */
+			prefix?: '$' | undefined
+			/** Caps a token amount at `shortMaximumFractionDigits` (2) decimals. */
+			short?: boolean | undefined
+			shortMaximumFractionDigits?: number | undefined
+			/** The token symbol after the number. */
+			symbol?: string | undefined
 			value: bigint
 		}
 	}
 }
 
 namespace styles {
-	export const symbol = style({
-		display: 'inline-flex',
-		flexShrink: '0 !custom',
-	})
-
-	export const root = style({
+	export const token = style({
 		alignItems: 'center',
+		color: 'foreground',
 		display: 'inline-flex',
 		gap: '4',
 		minWidth: '0 !custom',
+		textDecorationLine: 'none',
 	})
 
-	export const value = style({
-		minWidth: '0 !custom',
-		overflow: 'hidden',
-		textOverflow: 'ellipsis',
-		whiteSpace: 'nowrap',
-	})
-
-	export const small = style({ color: 'gray.900' })
+	export const pending = style({ color: 'gray.900' })
 }

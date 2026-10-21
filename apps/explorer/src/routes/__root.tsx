@@ -9,13 +9,13 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { style } from '@tempoxyz/ds'
+import { style, Token } from '@tempoxyz/ds'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
-import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
-import { CopyFeedbackProvider } from '#comps/CopyFeedback'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
+import { Layout } from '#comps/Layout'
+import { NotFound } from '#comps/NotFound'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import {
 	getCanonicalExplorerUrl,
@@ -35,7 +35,11 @@ import {
 	ProfileEvents,
 } from '#lib/profiling'
 import { initDatadogRum } from '#lib/telemetry/datadog'
-import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
+import {
+	getTempoChain,
+	getWagmiConfig,
+	getWagmiStateSSR,
+} from '#wagmi.config.ts'
 import geistMono from '@tempoxyz/ds/fonts/GeistMono-Variable.woff2?url'
 import inter from '@tempoxyz/ds/fonts/Inter-Variable.woff2?url'
 
@@ -221,6 +225,12 @@ export const Route = createRootRouteWithContext<{
 		</RootDocument>
 	),
 	loader: () => getWagmiStateSSR(),
+	// An unmatched URL renders here, outside `_layout`, so it brings the layout.
+	notFoundComponent: () => (
+		<Layout>
+			<NotFound />
+		</Layout>
+	),
 	shellComponent: RootDocument,
 })
 
@@ -448,11 +458,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
 						<TokenListMembershipProvider>
-							<BreadcrumbsProvider>
-								<AddressHighlightProvider>
-									<CopyFeedbackProvider>{children}</CopyFeedbackProvider>
-								</AddressHighlightProvider>
-							</BreadcrumbsProvider>
+							<AddressHighlightProvider>
+								{/* Token logos come from the explorer's curated logo route. */}
+								<Token.Provider
+									chainId={getTempoChain().id}
+									resolveSrc={resolveTokenLogo}
+								>
+									{children}
+								</Token.Provider>
+							</AddressHighlightProvider>
 						</TokenListMembershipProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools
@@ -503,4 +517,8 @@ namespace styles {
 		top: '0',
 		zIndex: 1,
 	})
+}
+
+function resolveTokenLogo(options: Token.ResolveSrc.Options): string {
+	return `/api/token/logo/${options.address}`
 }

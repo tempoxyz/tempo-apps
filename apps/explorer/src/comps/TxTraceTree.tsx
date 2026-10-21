@@ -1,13 +1,22 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Field, Input, style } from '@tempoxyz/ds'
+import {
+	Button,
+	CopyButton,
+	Field,
+	formatHex,
+	Input,
+	style,
+	Tooltip,
+	variants,
+} from '@tempoxyz/ds'
 import {
 	AlertCircle,
 	ArrowCornerDownLeft,
 	ArrowCornerDownRight,
 	ArrowRight,
-	Check,
-	Copy,
+	ChevronDown,
+	ChevronRight,
 	Expand,
 	Search,
 	Shrink,
@@ -17,13 +26,7 @@ import { decodeAbiParameters, slice } from 'viem'
 import type { Abi, Hex } from 'viem'
 import { cx } from 'zyzz'
 import { blockHashHistoryAbi } from '#lib/abis'
-import {
-	codeIdentifier,
-	link,
-	linkHover,
-	pressDown,
-	transitionColors,
-} from '#styles/explorer'
+import { codeIdentifier, link, linkHover } from '#styles/explorer'
 import { PanelToolbar, ViewToggle } from './PanelToolbar'
 import {
 	blockHashHistoryAddress,
@@ -42,13 +45,12 @@ import {
 	type DecodedTraceError,
 } from '#lib/domain/trace-errors'
 import { getKnownTraceAbiItem } from '#lib/domain/trace-abi'
-import { HexFormatter } from '#lib/formatting'
-import { useCopy, usePermalinkHighlight } from '#lib/hooks'
+import { usePermalinkHighlight } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
 import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
-	const { trace, tree: treeProp, label = 'Execution Trace', toolbar } = props
+	const { trace, tree: treeProp, label = 'Execution trace', toolbar } = props
 	const [raw, setRaw] = useState(false)
 	// A trace line is a sentence with a fixed left edge. Wrapping it turns a
 	// deep frame into a four-line paragraph and destroys the depth read, so the
@@ -59,10 +61,12 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 		all: boolean
 		nonce: number
 	} | null>(null)
-	const copy = useCopy()
-
 	const builtTree = useTraceTree(treeProp ? null : trace)
 	const tree = treeProp ?? builtTree
+	const ascii = useMemo(
+		() => (tree ? TxTraceTree.toAscii(tree, { raw }) : ''),
+		[tree, raw],
+	)
 
 	const trimmed = query.trim().toLowerCase()
 	const matches = useMemo(
@@ -76,10 +80,6 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 	)
 
 	if (!tree) return null
-
-	const handleCopy = () => {
-		copy.copy(TxTraceTree.toAscii(tree, { raw }))
-	}
 
 	const isTree = tree.subtreeSize > 1
 	// A one-frame trace has nothing to filter, expand, or collapse, and inside a
@@ -109,9 +109,7 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 		</PanelToolbar.IconButton>
 	)
 	const copyButton = (
-		<PanelToolbar.IconButton onClick={handleCopy} label="Copy trace">
-			{copy.notifying ? <Check /> : <Copy />}
-		</PanelToolbar.IconButton>
+		<CopyButton aria-label="Copy trace" value={ascii} {...styles.shrink()} />
 	)
 
 	return (
@@ -141,7 +139,7 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 							variant="secondary"
 							onClick={() => props.onSelect?.(failedNode.id)}
 						>
-							<AlertCircle {...styles.revertIcon()} />
+							<AlertCircle />
 							Go to revert
 						</Button>
 					)}
@@ -172,29 +170,75 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 					{modeToggle}
 				</PanelToolbar>
 			) : label ? (
-				<div {...styles.header()}>
-					<span {...styles.headerLabel()}>{label}</span>
-					<div {...styles.headerActions()}>
-						{copyButton}
-						{wrapToggle}
-						{modeToggle}
+				<Tooltip.Provider>
+					<div {...styles.header()}>
+						<span {...styles.headerLabel()}>{label}</span>
+						<div {...styles.headerActions()}>
+							{copyButton}
+							{wrapToggle}
+							{modeToggle}
+						</div>
 					</div>
-				</div>
+				</Tooltip.Provider>
 			) : null}
-			<div tabIndex={wrap ? undefined : 0} {...styles.frames()}>
-				<TxTraceTree.NodeView
-					node={tree}
-					depth={0}
-					wrap={wrap}
-					raw={raw}
-					matches={matches}
-					ancestorsOfSelection={ancestorsOfSelection}
-					collapseKey={collapseKey}
-					selectedId={props.selectedId}
-					onSelect={props.onSelect}
-				/>
-			</div>
+			<Tooltip.Provider>
+				{/* Unwrapped lines scroll sideways, so the region then takes focus for
+				    the keyboard. */}
+				<section
+					aria-label="Call trace"
+					tabIndex={wrap ? undefined : 0}
+					{...styles.frames()}
+				>
+					<TxTraceTree.NodeView
+						node={tree}
+						depth={0}
+						wrap={wrap}
+						raw={raw}
+						matches={matches}
+						ancestorsOfSelection={ancestorsOfSelection}
+						collapseKey={collapseKey}
+						selectedId={props.selectedId}
+						onSelect={props.onSelect}
+					/>
+				</section>
+			</Tooltip.Provider>
 		</div>
+	)
+}
+
+/** Shows or hides a frame's children. */
+function FrameToggle(props: {
+	expanded: boolean
+	/** Frames under this one, named in the label while they are hidden. */
+	frames: number
+	onToggle: () => void
+}): React.JSX.Element {
+	const label = props.expanded
+		? 'Collapse frame'
+		: `Expand ${props.frames} ${props.frames === 1 ? 'frame' : 'frames'}`
+	return (
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						aria-expanded={props.expanded}
+						aria-label={label}
+						onClick={(event) => {
+							// The frame around it selects on click; a toggle only toggles.
+							event.stopPropagation()
+							props.onToggle()
+						}}
+						shape="icon"
+						size="small"
+						variant="text"
+						{...styles.shrink()}
+					/>
+				}
+			>
+				{props.expanded ? <ChevronDown /> : <ChevronRight />}
+			</Tooltip.Trigger>
+			<Tooltip.Popup>{label}</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
@@ -573,7 +617,7 @@ export namespace TxTraceTree {
 	export function label(node: Node): string {
 		const contract =
 			node.contractName ??
-			(node.trace.to ? HexFormatter.truncate(node.trace.to) : '[create]')
+			(node.trace.to ? formatHex(node.trace.to) : '[create]')
 		const fn = node.functionName ?? node.selector
 		return fn ? `${contract}.${fn}()` : contract
 	}
@@ -650,27 +694,13 @@ export namespace TxTraceTree {
 
 		return (
 			<>
-				<span
-					{...cx(
-						// Neutral by default: the opcode is a label, not a link and not a
-						// status. Accent stays reserved for things you can click.
-						styles.opcode(),
-						node.hasError && styles.opcodeError(),
-						depth > 0 && styles.nested(),
-					)}
-					title={trace.type}
-				>
+				{/* Neutral by default: the opcode is a label, not a link and not a
+				    status. Accent stays reserved for things you can click. */}
+				<span {...styles.opcode({ failed: node.hasError })} title={trace.type}>
 					{opLabel}
 				</span>
-				<span
-					{...cx(
-						// The gas column is a scale, so the eye needs the big numbers to
-						// pop out of it — the small ones are noise by definition.
-						styles.gas(),
-						node.gasUsed >= 100_000 && styles.gasLarge(),
-						depth > 0 && styles.nested(),
-					)}
-				>
+				{/* The gas column is a scale, so the big numbers stand out of it. */}
+				<span {...styles.gas({ large: node.gasUsed >= 100_000 })}>
 					{node.gasUsed.toLocaleString()}
 				</span>
 				<span
@@ -684,23 +714,15 @@ export namespace TxTraceTree {
 								'aria-pressed': selected,
 								onClick: () => onSelect(node.id),
 								onKeyDown: (event: React.KeyboardEvent) => {
+									// Keys on the toggle or the address link are theirs.
+									if (event.target !== event.currentTarget) return
 									if (event.key !== 'Enter' && event.key !== ' ') return
 									event.preventDefault()
 									onSelect(node.id)
 								},
 							}
 						: {})}
-					{...cx(
-						styles.frame(),
-						transitionColors(),
-						!wrap && styles.nowrap(),
-						depth > 0 && styles.nested(),
-						// Hover has to be visible or the click is undiscoverable; it stays
-						// fainter than selection so the two never read as the same state.
-						onSelect !== undefined && !selected && styles.frameHover(),
-						selected && styles.frameSelected(),
-						node.onFailurePath && styles.frameFailure(),
-					)}
+					{...styles.frame({ failure: node.onFailurePath, wrap })}
 				>
 					<span
 						{...cx(
@@ -717,17 +739,13 @@ export namespace TxTraceTree {
 							</span>
 						)}
 						{node.children.length > 0 ? (
-							<button
-								type="button"
-								aria-expanded={expanded}
-								aria-label={expanded ? 'Collapse frame' : 'Expand frame'}
-								onClick={() => setExpanded(!expanded)}
-								{...cx(styles.toggle(), styles.toggleEnabled(), pressDown())}
-							>
-								{expanded ? '−' : '+'}
-							</button>
+							<FrameToggle
+								expanded={showChildren}
+								frames={node.subtreeSize - 1}
+								onToggle={() => setExpanded(!expanded)}
+							/>
 						) : (
-							<span {...styles.toggle()}>
+							<span {...styles.leaf()}>
 								<ArrowRight {...styles.leafIcon()} />
 							</span>
 						)}
@@ -736,13 +754,13 @@ export namespace TxTraceTree {
 								<Link
 									to="/address/$address"
 									params={{ address: trace.to }}
-									{...cx(styles.address(), link(), linkHover(), pressDown())}
+									{...cx(styles.address(), link(), linkHover())}
 									title={trace.to}
 								>
 									{raw
 										? trace.to
 										: node.contractName
-											? `${node.contractName}(${HexFormatter.truncate(trace.to)})`
+											? `${node.contractName}(${formatHex(trace.to)})`
 											: trace.to}
 								</Link>
 							) : (
@@ -758,13 +776,9 @@ export namespace TxTraceTree {
 								</span>
 							)}
 							{!showChildren && node.subtreeSize > 1 && (
-								<button
-									type="button"
-									onClick={() => setExpanded(true)}
-									{...cx(styles.moreFrames(), link(), linkHover())}
-								>
-									+{node.subtreeSize - 1} frames
-								</button>
+								<span {...styles.hiddenFrames()}>
+									{node.subtreeSize - 1} hidden
+								</span>
 							)}
 						</span>
 					</span>
@@ -790,7 +804,7 @@ export namespace TxTraceTree {
 					<>
 						<span />
 						<span />
-						<span {...cx(styles.output(), !wrap && styles.nowrap())}>
+						<span {...styles.output({ wrap })}>
 							<span
 								{...cx(
 									styles.indent(),
@@ -909,18 +923,14 @@ namespace styles {
 
 	export const primary = style({ color: 'foreground' })
 
-	// Sized beside the toolbar's 32px controls. The input takes its type from
-	// TDS; touch screens get 16px text so iOS does not zoom on focus.
+	export const shrink = style({ flexShrink: 0 })
+
+	// Sized beside the toolbar's 32px controls.
 	export const filter = style({
 		marginRight: 'auto !custom',
 		maxWidth: '100% !custom',
 		width: '240',
-		'@media (pointer: coarse)': {
-			selectors: { '& input': { fontSize: '16px !custom' } },
-		},
 	})
-
-	export const revertIcon = style({ color: 'red.900' })
 
 	export const header = style({
 		alignItems: 'center',
@@ -948,7 +958,7 @@ namespace styles {
 	})
 
 	export const frames = style({
-		alignItems: 'start',
+		alignItems: 'center',
 		borderBottomLeftRadius: '12',
 		borderBottomRightRadius: '12',
 		columnGap: '8',
@@ -966,74 +976,90 @@ namespace styles {
 		},
 	})
 
-	export const nested = style({ marginTop: '4' })
-
-	export const nowrap = style({ whiteSpace: 'nowrap' })
-
 	export const breakAll = style({ wordBreak: 'break-all' })
 
-	// Rows inherit the grid's mono face; only weight and colour change here.
-	export const opcode = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '4',
-		color: 'gray.900',
-		fontWeight: '550 !custom',
-		paddingBlock: '1',
-		paddingInline: '4',
-		textAlign: 'center',
-		userSelect: 'none',
-		whiteSpace: 'nowrap',
-	})
-
-	export const opcodeError = style({
-		backgroundColor: 'red.100',
-		color: 'foreground',
-	})
-
-	export const gas = style({
-		color: 'gray.900',
-		fontVariantNumeric: 'tabular-nums',
-		textAlign: 'right',
-		userSelect: 'none',
-	})
-
-	export const gasLarge = style({ color: 'foreground' })
-
-	export const frame = style({
-		alignItems: 'flex-start',
-		borderRadius: '4',
-		display: 'inline-flex',
-		marginInline: '-4px !custom',
-		minWidth: '0 !custom',
-		paddingLeft: '4',
-		paddingRight: '4',
-		':focus-visible': {
-			outline: '2px solid currentColor !custom',
-			outlineOffset: '0px !custom',
+	// Rows inherit the grid's mono face; only the colour changes here.
+	export const opcode = variants({
+		base: {
+			backgroundColor: 'grayAlpha.100',
+			borderRadius: '4',
+			color: 'gray.900',
+			paddingBlock: '1',
+			paddingInline: '4',
+			textAlign: 'center',
+			userSelect: 'none',
+			whiteSpace: 'nowrap',
+		},
+		defaultVariants: { failed: false },
+		variants: {
+			failed: {
+				false: {},
+				true: { backgroundColor: 'red.100', color: 'foreground' },
+			},
 		},
 	})
 
-	export const frameHover = style({
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.100' },
+	export const gas = variants({
+		base: {
+			color: 'gray.900',
+			fontVariantNumeric: 'tabular-nums',
+			textAlign: 'right',
+			userSelect: 'none',
+		},
+		defaultVariants: { large: false },
+		variants: {
+			large: { false: {}, true: { color: 'foreground' } },
 		},
 	})
 
-	export const frameSelected = style({ backgroundColor: 'grayAlpha.200' })
-
-	export const frameFailure = style({
-		borderColor: 'red.900',
-		borderLeftWidth: '2px',
-		borderStyle: 'solid',
-		paddingLeft: '6px !custom',
+	// Selectable frames (role="button") show hover fainter than selection, so
+	// the two never read as the same state.
+	export const frame = variants({
+		base: {
+			alignItems: 'center',
+			borderRadius: '4',
+			display: 'inline-flex',
+			marginInline: '-4px !custom',
+			minWidth: '0 !custom',
+			paddingLeft: '4',
+			paddingRight: '4',
+			':focus-visible': {
+				outline: '2px solid currentColor !custom',
+				outlineOffset: '0px !custom',
+			},
+			'@media (hover: hover)': {
+				selectors: {
+					'&[role="button"]:not([aria-pressed="true"]):hover': {
+						backgroundColor: 'grayAlpha.100',
+					},
+				},
+			},
+			selectors: {
+				'&[aria-pressed="true"]': { backgroundColor: 'grayAlpha.200' },
+			},
+		},
+		defaultVariants: { failure: false, wrap: true },
+		variants: {
+			failure: {
+				false: {},
+				true: {
+					borderColor: 'red.900',
+					borderLeftWidth: '2px',
+					borderStyle: 'solid',
+					paddingLeft: '6px !custom',
+				},
+			},
+			wrap: { false: { whiteSpace: 'nowrap' }, true: {} },
+		},
 	})
 
 	export const indent = style({
-		alignItems: 'flex-start',
+		alignItems: 'center',
 		display: 'inline-flex',
 	})
 
 	export const indentNested = style({
+		alignSelf: 'stretch',
 		borderColor: 'grayAlpha.300',
 		borderLeftWidth: '1px',
 		borderStyle: 'solid',
@@ -1046,28 +1072,23 @@ namespace styles {
 		color: 'gray.900',
 		flexShrink: 0,
 		marginRight: '4',
-		marginTop: '1',
 		paddingInline: '2px !custom',
 		userSelect: 'none',
 	})
 
-	export const toggle = style({
-		color: 'gray.900',
+	// Takes a toggle's place on a leaf, so labels line up.
+	export const leaf = style({
+		alignItems: 'center',
+		display: 'flex',
 		flexShrink: 0,
-		height: '16',
-		marginRight: '2px !custom',
-		width: '16',
-	})
-
-	export const toggleEnabled = style({
-		cursor: 'pointer',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		height: '32',
+		justifyContent: 'center',
+		width: '32',
 	})
 
 	export const leafIcon = style({
 		color: 'gray.700',
 		height: '12',
-		marginTop: '2px !custom',
 		width: '12',
 	})
 
@@ -1080,21 +1101,28 @@ namespace styles {
 		marginLeft: '4',
 	})
 
-	export const moreFrames = style({ cursor: 'pointer', marginLeft: '8' })
+	export const hiddenFrames = style({ color: 'gray.900', marginLeft: '8' })
 
-	export const output = style({
-		alignItems: 'flex-start',
-		display: 'inline-flex',
-		minWidth: '0 !custom',
+	export const output = variants({
+		base: {
+			alignItems: 'flex-start',
+			display: 'inline-flex',
+			minWidth: '0 !custom',
+		},
+		defaultVariants: { wrap: true },
+		variants: {
+			wrap: { false: { whiteSpace: 'nowrap' }, true: {} },
+		},
 	})
 
-	export const outputRoot = style({ marginLeft: '40' })
+	// Return values start under the frame label, past its toggle.
+	export const outputRoot = style({ marginLeft: '32' })
 
 	export const outputNested = style({
 		borderColor: 'grayAlpha.300',
 		borderLeftWidth: '1px',
 		borderStyle: 'solid',
-		paddingLeft: '24',
+		paddingLeft: '40',
 	})
 
 	export const returnIcon = style({
@@ -1102,7 +1130,7 @@ namespace styles {
 		flexShrink: 0,
 		height: '12',
 		marginRight: '4',
-		marginTop: '4',
+		marginTop: '2px !custom',
 		width: '12',
 	})
 

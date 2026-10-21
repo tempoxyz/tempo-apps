@@ -15,17 +15,18 @@ global({
 		':root': { touchAction: 'manipulation' },
 		'html[data-theme="light"]': { colorScheme: 'light' },
 		'pre, code': { fontFamily: vars.fontFamily.mono, fontWeight: 400 },
-		// Matches the focus ring TDS components draw.
-		'a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible':
-			{
-				outlineColor: vars.color.blue[700],
-				outlineOffset: '2px',
-				outlineStyle: 'solid',
-				outlineWidth: '2px',
-			},
-		'input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button':
-			{ appearance: 'none' },
-		'input[type="number"]': { appearance: 'textfield' },
+		// TDS controls draw their own ring; the explorer's links match it.
+		'a:focus-visible, button:focus-visible': {
+			outlineColor: vars.color.blue[700],
+			outlineOffset: '2px',
+			outlineStyle: 'solid',
+			outlineWidth: '2px',
+		},
+	},
+	// iOS Safari zooms into a focused field whose text is under 16px. `:root`
+	// outranks the single class that sets a TDS control's type.
+	'@supports (-webkit-touch-callout: none)': {
+		':root :is(input, select, textarea)': { fontSize: '16px' },
 	},
 	// Component styles are unlayered classes, so the preference needs
 	// importance to win over their animations and transitions.
@@ -50,46 +51,6 @@ global({
 		lineHeight: '20px',
 		minWidth: '320px',
 	},
-})
-
-// `midcut` renders these class names itself.
-global({
-	'.midcut': {
-		display: 'inline-grid',
-		gridTemplateAreas: '"content"',
-		gridTemplateColumns: 'minmax(0, 1fr)',
-		maxWidth: '100%',
-		minWidth: '0',
-		overflow: 'hidden',
-		textDecoration: 'inherit',
-		verticalAlign: 'bottom',
-		whiteSpace: 'nowrap',
-		width: '100%',
-	},
-	'.midcut__findable, .midcut__visual': {
-		gridArea: 'content',
-		justifySelf: 'stretch',
-		maxWidth: '100%',
-		minWidth: '0',
-		overflow: 'hidden',
-		textDecoration: 'inherit',
-		whiteSpace: 'nowrap',
-	},
-	'.midcut__findable': { color: 'inherit' },
-	'.midcut[data-align="end"] .midcut__findable': { textAlign: 'end' },
-	'.midcut[data-cut="true"] .midcut__findable': {
-		// Hide inherited underlines along with the searchable full value.
-		clipPath: 'inset(50%)',
-		color: 'transparent',
-		textAlign: 'start',
-	},
-	'.midcut__visual': { display: 'none', pointerEvents: 'none' },
-	'.midcut[data-cut="true"] .midcut__visual': {
-		color: 'inherit',
-		display: 'block',
-	},
-	'.midcut[data-align="end"] .midcut__visual': { textAlign: 'end' },
-	'.midcut__visual::before': { content: 'attr(data-text)' },
 })
 
 // Shiki renders highlighted source as markup, so its blocks are styled by

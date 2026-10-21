@@ -1,19 +1,28 @@
-import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
-import { AlertCircle, ArrowCornerDownRight, Play } from '@tempoxyz/ds/icons'
+import {
+	Button,
+	Callout,
+	Empty,
+	Hex,
+	Rows,
+	Skeleton,
+	style,
+} from '@tempoxyz/ds'
+import { AlertCircle, Refresh } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 import type { Abi, AbiFunction } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { cx } from 'zyzz'
+import { Address as AddressLink } from '#comps/Address'
 import {
-	FunctionAction,
-	FunctionCard,
+	FunctionDisclosure,
+	FunctionForm,
 	FunctionInput,
+	FunctionResult,
+	FunctionRow,
+	IconAction,
 	functionInputKey,
 } from '#comps/ContractFunction'
-import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,
 	getFunctionSelector,
@@ -22,7 +31,6 @@ import {
 	parseInputValue,
 } from '#lib/domain/contracts'
 import { usePermalinkHighlight } from '#lib/hooks'
-import { link, linkHover } from '#styles/explorer'
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
@@ -177,9 +185,19 @@ export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 	const noInputFunctions = getNoInputFunctions(abi)
 	const inputFunctions = getInputFunctions(abi)
 
+	if (noInputFunctions.length === 0 && inputFunctions.length === 0)
+		return (
+			<Empty.Root>
+				<Empty.Title>No read functions</Empty.Title>
+				<Empty.Description>
+					This ABI has no view or pure functions.
+				</Empty.Description>
+			</Empty.Root>
+		)
+
 	return (
-		<div {...styles.list()}>
-			{/* Functions without inputs - show as static values */}
+		<Rows.Root dividers="full">
+			{/* Functions without inputs show their value in the row. */}
 			{noInputFunctions.map((fn) => (
 				<StaticReadFunction
 					key={`${fn.name}-${fn.inputs?.length ?? 0}-${address}`}
@@ -189,7 +207,7 @@ export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 				/>
 			))}
 
-			{/* Functions with inputs - show as expandable forms */}
+			{/* Functions with inputs expand into a form. */}
 			{inputFunctions.map((fn) => (
 				<DynamicReadFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -198,27 +216,7 @@ export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 					fn={fn}
 				/>
 			))}
-
-			{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
-				<p {...styles.emptyMessage()}>No read functions available.</p>
-			)}
-		</div>
-	)
-}
-
-function ResultRow(props: {
-	children: React.ReactNode
-	error?: boolean | undefined
-}): React.JSX.Element {
-	return (
-		<div {...styles.resultRow()}>
-			{props.error ? (
-				<AlertCircle {...cx(styles.resultIcon(), styles.errorIcon())} />
-			) : (
-				<ArrowCornerDownRight {...styles.resultIcon()} />
-			)}
-			{props.children}
-		</div>
+		</Rows.Root>
 	)
 }
 
@@ -296,51 +294,42 @@ function StaticReadFunction(props: {
 	const isLoading = !mounted || (hasOutputs ? typedLoading : rawLoading)
 	const result = hasOutputs ? typedResult : decodedRawResult
 	const queryError = hasOutputs ? typedError : rawError
-	const error = queryError ? queryError.message : null
 	const pending = isFetching || isLoading
 
 	const isResultAddress = typeof result === 'string' && Address.validate(result)
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
 
-	// Format address outputs as links (only after mount to avoid hydration mismatch)
-	const isAddressOutput = outputType === 'address' || isResultAddress
-	const isValidAddress = mounted && isAddressOutput && isResultAddress
-
 	return (
-		<FunctionCard
+		<FunctionRow
 			id={fnId}
 			fn={fn}
-			actions={
-				<FunctionAction
-					label="Refresh"
-					disabled={isFetching}
-					onClick={() => void refetch()}
-				>
-					<Play />
-				</FunctionAction>
-			}
-		>
-			<ResultRow error={!pending && Boolean(error)}>
-				{pending ? (
-					<span {...styles.pending()}>{ellipsis}</span>
-				) : error ? (
-					<p {...styles.error()}>{error}</p>
-				) : isValidAddress ? (
-					<Link
-						to="/address/$address"
-						params={{ address: result as Address.Address }}
-						{...cx(styles.address(), link(), linkHover())}
-					>
-						{formatOutputValue(result, outputType)}
-					</Link>
+			value={
+				// Values render after mount, so the server and the first client render match.
+				pending ? (
+					<Skeleton
+						aria-label={`Reading ${fnId}`}
+						shape="pill"
+						{...styles.skeleton()}
+					/>
+				) : queryError ? (
+					<span title={queryError.message} {...styles.error()}>
+						<AlertCircle {...styles.errorIcon()} />
+						{getShortMessage(queryError)}
+					</span>
 				) : (
-					<pre {...styles.output()}>
-						{formatOutputValue(result, outputType)}
-					</pre>
-				)}
-			</ResultRow>
-		</FunctionCard>
+					<ReadValue value={result} type={outputType} />
+				)
+			}
+			actions={
+				<IconAction
+					icon={Refresh}
+					label="Refresh"
+					loading={isFetching}
+					onClick={() => void refetch()}
+				/>
+			}
+		/>
 	)
 }
 
@@ -461,108 +450,117 @@ function DynamicReadFunction(props: {
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'uint256')
 
+	const [submitted, setSubmitted] = React.useState(false)
+
 	return (
-		<FunctionCard
+		<FunctionDisclosure
 			id={fnId}
 			fn={fn}
 			expanded={isExpanded}
 			onToggle={() => setIsExpanded(!isExpanded)}
-			actions={
-				<FunctionAction
-					label="Refresh"
-					disabled={isFetching || !allInputsFilled}
-					onClick={() => void refetch()}
-				>
-					<Play />
-				</FunctionAction>
-			}
 		>
-			{isExpanded && (
-				<>
-					{fn.inputs.map((input, index) => {
-						const key = functionInputKey(input, index)
-						return (
-							<FunctionInput
-								key={key}
-								input={input}
-								value={inputs[key] ?? ''}
-								onChange={(value) => handleInputChange(key, value)}
-							/>
-						)
-					})}
-
-					{isFetching ? (
-						<ResultRow>
-							<span {...styles.pending()}>{ellipsis}</span>
-						</ResultRow>
+			<FunctionForm
+				fn={fn}
+				id={fnId}
+				onSubmit={() => {
+					setSubmitted(true)
+					if (allInputsFilled && !parsedArgs.error) void refetch()
+				}}
+				primary={
+					<Button loading={isFetching} size="small" type="submit">
+						Query
+					</Button>
+				}
+				result={
+					!isFetching &&
+					(error ? (
+						<Callout intent="negative" role="status" size="small">
+							<Callout.Icon />
+							<Callout.Content>{error}</Callout.Content>
+						</Callout>
 					) : (
-						(result !== undefined || error) && (
-							<ResultRow error={Boolean(error)}>
-								{error ? (
-									<p {...styles.error()}>{error}</p>
-								) : (
-									<pre {...styles.output()}>
-										{formatOutputValue(result, outputType)}
-									</pre>
-								)}
-							</ResultRow>
+						result !== undefined && (
+							<FunctionResult>
+								<ReadValue value={result} type={outputType} />
+							</FunctionResult>
 						)
-					)}
-				</>
-			)}
-		</FunctionCard>
+					))
+				}
+			>
+				{fn.inputs.map((input, index) => {
+					const key = functionInputKey(input, index)
+					return (
+						<FunctionInput
+							key={key}
+							input={input}
+							invalid={submitted && !inputs[key]?.trim()}
+							value={inputs[key] ?? ''}
+							onChange={(value) => handleInputChange(key, value)}
+						/>
+					)
+				})}
+			</FunctionForm>
+		</FunctionDisclosure>
 	)
 }
 
+/**
+ * A returned value in the TDS Blockchain Values style: addresses link through
+ * `Address`, other long hex values show in `Hex` with a copy button.
+ */
+function ReadValue(props: { type: string; value: unknown }): React.JSX.Element {
+	const { type, value } = props
+	if (value === '') return <span {...styles.empty()}>Empty</span>
+	if (typeof value === 'string' && Address.validate(value))
+		return (
+			<span {...styles.hex()}>
+				<AddressLink address={value} align="end" />
+			</span>
+		)
+	if (typeof value === 'string' && /^0x[0-9a-f]{41,}$/i.test(value))
+		return (
+			<Hex.Root value={value} {...styles.hex()}>
+				<Hex.Text />
+				<Hex.Copy aria-label="Copy value" />
+			</Hex.Root>
+		)
+	return <span {...styles.text()}>{formatOutputValue(value, type)}</span>
+}
+
+/** The first line of a call error; viem errors carry it as `shortMessage`. */
+function getShortMessage(error: Error): string {
+	const short = (error as Error & { shortMessage?: string }).shortMessage
+	return short ?? error.message.split('\n')[0] ?? error.message
+}
+
 namespace styles {
-	export const list = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '12',
-	})
-
-	export const emptyMessage = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const resultRow = style({ display: 'flex', gap: '8' })
-
-	export const resultIcon = style({
-		color: 'gray.700',
-		flexShrink: 0,
-		height: '12',
-		marginTop: '2px !custom',
-		width: '12',
-	})
-
-	export const errorIcon = style({ color: 'red.900' })
-
-	export const pending = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const address = style({
-		minWidth: '0',
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
-	})
+	export const skeleton = style({ height: '12', width: '5rem !custom' })
 
 	export const error = style({
-		color: 'foreground',
+		alignItems: 'center',
+		color: 'gray.900',
+		display: 'inline-flex',
+		gap: '4',
 		minWidth: '0',
-		overflowWrap: 'anywhere',
-		typography: 'label.12',
-		whiteSpace: 'pre-wrap',
+		typography: 'copy.13',
 	})
 
-	export const output = style({
-		color: 'foreground',
-		flex: 1,
+	export const errorIcon = style({ color: 'red.900', flexShrink: 0 })
+
+	export const empty = style({ color: 'gray.900' })
+
+	// Rows guidance: cap a Hex so it ends with the other values.
+	export const hex = style({
+		display: 'inline-flex',
+		justifyContent: 'flex-end',
+		maxWidth: '12rem !custom',
 		minWidth: '0',
-		overflowX: 'auto',
-		typography: 'label.12.mono',
-		whiteSpace: 'pre',
+	})
+
+	export const text = style({
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0',
+		overflowWrap: 'anywhere',
+		whiteSpace: 'pre-wrap',
 	})
 }

@@ -1,15 +1,9 @@
-import { style, Tag, vars } from '@tempoxyz/ds'
+import { Hex, style, Tag, vars } from '@tempoxyz/ds'
 import { Database } from '@tempoxyz/ds/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from 'zyzz'
-import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import type { PrestateDiff } from '#lib/queries'
-import {
-	codeIdentifier,
-	link,
-	transitionColors,
-	truncate,
-} from '#styles/explorer'
+import { codeIdentifier, truncate } from '#styles/explorer'
 import type { TxTraceTree } from './TxTraceTree'
 
 const BAR_HEIGHT = 32
@@ -81,7 +75,9 @@ export function TxTraceFlamegraph(
 		<div {...styles.root()}>
 			<div {...styles.header()}>
 				<span {...styles.headerLabel()}>
-					{onSelect ? 'Gas by frame — click to select' : 'Gas flamegraph'}
+					{onSelect
+						? 'Gas by frame. Select a bar to show it in the trace.'
+						: 'Gas by frame'}
 				</span>
 			</div>
 
@@ -265,7 +261,6 @@ export namespace TxTraceFlamegraph {
 						border: `${mix.border}%`,
 						fill: `${hovered ? mix.hover : mix.fill}%`,
 					}),
-					transitionColors(),
 					(hovered || selected) && styles.raised(),
 					onSelect && styles.clickable(),
 					// Selection reads as an outline rather than a fill, so it never
@@ -333,23 +328,33 @@ export namespace TxTraceFlamegraph {
 				<div {...styles.detailsPanel()}>
 					<div {...styles.detailsMain()}>
 						<div {...styles.detailsHeading()}>
-							<Tag intent="neutral">{node.trace.type}</Tag>
-							{node.trace.to && (
-								<span {...cx(link(), truncate())}>
-									{node.contractName
-										? `${node.contractName}(${node.trace.to})`
-										: node.trace.to}
+							<Tag intent="neutral" size="small" {...styles.shrink()}>
+								{node.trace.type}
+							</Tag>
+							{node.contractName && (
+								<span {...cx(styles.primary(), styles.shrink())}>
+									{node.contractName}
 								</span>
 							)}
+							{node.trace.to && <Hex value={node.trace.to} />}
 						</div>
 						<span {...cx(codeIdentifier(), truncate())}>{displayName}</span>
 						{node.hasError && (
-							<LiveIndicator tone="negative">
+							<span {...styles.revert()}>
+								<Tag
+									intent="negative"
+									size="small"
+									variant="plain"
+									{...styles.shrink()}
+								>
+									<Tag.Dot />
+									Failed
+								</Tag>
 								{/* Revert reasons can be long; let them wrap. */}
 								<span {...styles.revertReason()}>
-									{node.trace.revertReason || node.trace.error || 'reverted'}
+									{node.trace.revertReason || node.trace.error}
 								</span>
-							</LiveIndicator>
+							</span>
 						)}
 					</div>
 					<div {...styles.detailsStats()}>
@@ -515,11 +520,20 @@ namespace styles {
 		textAlign: 'right',
 	})
 
+	export const revert = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+	})
+
 	export const revertReason = style({
+		color: 'foreground',
 		minWidth: '0 !custom',
 		overflowWrap: 'anywhere',
-		whiteSpace: 'normal',
 	})
+
+	export const shrink = style({ flexShrink: 0 })
 
 	export const primary = style({ color: 'foreground' })
 

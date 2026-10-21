@@ -4,13 +4,20 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Button, Menu, style, Tooltip, variants } from '@tempoxyz/ds'
+import {
+	Button,
+	Container,
+	Menu,
+	style,
+	Tag,
+	Tooltip,
+	variants,
+} from '@tempoxyz/ds'
 import { ChevronDown } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import { ExploreInput } from '#comps/ExploreInput'
 import { TempoWordmark } from '#comps/TempoWordmark'
-import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { type TempoEnv, getTempoEnv, isTestnet } from '#lib/env'
 import {
@@ -20,7 +27,7 @@ import {
 	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
-import { link, pageMargin, pressDown } from '#styles/explorer'
+import { link } from '#styles/explorer'
 import FlaskConicalIcon from '~icons/lucide/flask-conical'
 import SquareSquare from '~icons/lucide/square-square'
 
@@ -34,10 +41,10 @@ export function Header(): React.JSX.Element {
 
 	return (
 		<header {...styles.header()}>
-			<div {...cx(styles.bar(), pageMargin())}>
+			<Container size="full" {...styles.bar()}>
 				<div {...styles.brand()}>
 					{!isHome && (
-						<Link to="/" {...cx(styles.homeLink(), pressDown())}>
+						<Link to="/" {...styles.homeLink()}>
 							<TempoWordmark aria-label="Tempo" {...styles.wordmark()} />
 						</Link>
 					)}
@@ -48,21 +55,22 @@ export function Header(): React.JSX.Element {
 					<Tooltip.Root>
 						<Tooltip.Trigger
 							render={
-								<Link
-									to="/simulate"
+								<Button.Link
 									aria-label="Simulate transaction"
-									{...cx(styles.simulate(), pressDown())}
+									render={<Link to="/simulate" />}
+									size="small"
+									variant="secondary"
 								/>
 							}
 						>
-							<FlaskConicalIcon aria-hidden {...styles.simulateIcon()} />
+							<FlaskConicalIcon aria-hidden />
 							<span {...styles.simulateLabel()}>Simulate</span>
 						</Tooltip.Trigger>
 						<Tooltip.Popup>Simulate transaction</Tooltip.Popup>
 					</Tooltip.Root>
 					<Header.BlockNumber />
 				</div>
-			</div>
+			</Container>
 			<Header.Search compact />
 		</header>
 	)
@@ -164,9 +172,10 @@ export namespace Header {
 						/>
 					}
 				>
-					<LiveIndicator tone={activeOption.dotTone} pinging>
+					<Tag intent={activeOption.dotTone} size="small" variant="plain">
+						<Tag.Dot />
 						{activeOption.label}
-					</LiveIndicator>
+					</Tag>
 					<ChevronDown {...styles.networkChevron()} />
 				</Menu.Trigger>
 				<Menu.Popup align="start" size="small">
@@ -183,9 +192,10 @@ export namespace Header {
 									!isExplorerNetworkPathPreservable(currentPath),
 							})}
 						>
-							<LiveIndicator tone={option.dotTone}>
+							<Tag intent={option.dotTone} size="small" variant="plain">
+								<Tag.Dot />
 								{option.label}
-							</LiveIndicator>
+							</Tag>
 						</Menu.LinkItem>
 					))}
 				</Menu.Popup>
@@ -219,7 +229,7 @@ export namespace Header {
 				aria-label={
 					blockNumber != null ? `Latest block ${blockNumber}` : 'Latest block'
 				}
-				{...cx(styles.blockNumber({ ready: isReady }), pressDown())}
+				{...styles.blockNumber({ ready: isReady })}
 			>
 				<SquareSquare aria-hidden {...cx(styles.blockNumberIcon(), link())} />
 				<span {...styles.blockNumberValue()}>
@@ -283,37 +293,7 @@ namespace styles {
 		'@media print': { display: 'none' },
 	})
 
-	// TDS Button small secondary geometry on a link, which `Button.Link`
-	// cannot switch by container width. Below 800px only the icon shows, as a
-	// small icon Button.
-	export const simulate = style({
-		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '8',
-		color: 'foreground',
-		columnGap: '4',
-		display: 'inline-flex',
-		height: '32',
-		justifyContent: 'center',
-		paddingInline: '12',
-		textDecorationLine: 'none',
-		typography: 'button.12',
-		whiteSpace: 'nowrap',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.200' },
-		},
-		':active': { backgroundColor: 'grayAlpha.300' },
-		'@container (width < 799px)': {
-			paddingInline: '0',
-			width: '32',
-		},
-	})
-
-	export const simulateIcon = style({
-		flexShrink: 0,
-		'@container (width < 799px)': { height: '16', width: '16' },
-	})
-
+	// Below 800px only the Button's icon shows.
 	export const simulateLabel = style({
 		'@container (width < 799px)': { display: 'none' },
 	})

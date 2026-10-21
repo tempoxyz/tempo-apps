@@ -1,18 +1,16 @@
-import { style } from '@tempoxyz/ds'
+import { ChoiceGroup, CopyButton, Hex, style, variants } from '@tempoxyz/ds'
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeEventLog, getAbiItem, parseAbiItem } from 'viem'
-import type { Abi, Hex, Log } from 'viem'
-import { cx } from 'zyzz'
-import { CopyButton } from '#comps/CopyButton'
+import type { Abi, Hex as HexType, Log } from 'viem'
 import { Abis } from '#lib/abis'
 import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
-import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
-import { Choices } from '#comps/ui/Choices'
-import { codeIdentifier, pressDown, transitionColors } from '#styles/explorer'
+import { codeIdentifier } from '#styles/explorer'
 
-export function TxDecodedTopics(props: TxDecodedTopics.Props) {
+export function TxDecodedTopics(
+	props: TxDecodedTopics.Props,
+): React.JSX.Element {
 	const { log } = props
 	const eventSelector = log.topics[0]
 
@@ -59,7 +57,7 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		try {
 			return decodeEventLog({
 				abi: [abiItem],
-				topics: log.topics as [Hex, ...Hex[]],
+				topics: log.topics as [HexType, ...HexType[]],
 				data: log.data,
 			})
 		} catch {
@@ -73,19 +71,16 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		}
 	}, [abiItem, log.topics, log.data])
 
-	if (!isFetched) return <TxDecodedTopics.RawTopics log={log} />
-	if (!abiItem) return <TxDecodedTopics.RawTopics log={log} />
+	if (!isFetched || !abiItem) return <TxDecodedTopics.RawTopics log={log} />
 
 	return (
-		<div {...styles.root()}>
-			<div {...styles.panel()}>
-				<TxDecodedTopics.SignatureHeader abiItem={abiItem} />
-				<TxDecodedTopics.ArgumentsSection
-					abiItem={abiItem}
-					args={decoded?.args}
-					log={log}
-				/>
-			</div>
+		<div {...styles.panel()}>
+			<TxDecodedTopics.SignatureHeader abiItem={abiItem} />
+			<TxDecodedTopics.ArgumentsSection
+				abiItem={abiItem}
+				args={decoded?.args}
+				log={log}
+			/>
 		</div>
 	)
 }
@@ -95,7 +90,9 @@ export namespace TxDecodedTopics {
 		log: Log
 	}
 
-	export function SignatureHeader(props: SignatureHeader.Props) {
+	export function SignatureHeader(
+		props: SignatureHeader.Props,
+	): React.JSX.Element {
 		const { abiItem } = props
 
 		const signatureText = useMemo(
@@ -130,9 +127,9 @@ export namespace TxDecodedTopics {
 					<span {...styles.secondary()}>)</span>
 				</code>
 				<CopyButton
-					ariaLabel="Copy signature"
-					className={styles.copyButton().className}
+					aria-label="Copy signature"
 					value={signatureText}
+					{...styles.copy()}
 				/>
 			</div>
 		)
@@ -143,7 +140,9 @@ export namespace TxDecodedTopics {
 		}
 	}
 
-	export function ArgumentsSection(props: ArgumentsSection.Props) {
+	export function ArgumentsSection(
+		props: ArgumentsSection.Props,
+	): React.JSX.Element | null {
 		const { abiItem, args, log } = props
 		const [view, setView] = useState<'decoded' | 'raw'>('decoded')
 
@@ -153,12 +152,15 @@ export namespace TxDecodedTopics {
 			<div {...styles.section()}>
 				<div {...styles.argumentsLabel()}>
 					<span>Arguments</span>
-					<Choices
-						items={argumentViews}
-						label="Arguments view"
-						onChange={setView}
+					<ChoiceGroup.Root
+						aria-label="Arguments view"
+						onValueChange={setView}
+						size="small"
 						value={view}
-					/>
+					>
+						<ChoiceGroup.Item value="decoded">Decoded</ChoiceGroup.Item>
+						<ChoiceGroup.Item value="raw">Raw</ChoiceGroup.Item>
+					</ChoiceGroup.Root>
 				</div>
 				{view === 'raw' ? (
 					<div {...styles.rawStack()}>
@@ -167,7 +169,9 @@ export namespace TxDecodedTopics {
 								<RawTopicRow key={topic} index={i} topic={topic} />
 							))}
 						</div>
-						{log.data && log.data !== '0x' && <RawDataInline data={log.data} />}
+						{log.data && log.data !== '0x' && (
+							<RawData data={log.data} inline />
+						)}
 					</div>
 				) : (
 					<div {...styles.argumentGrid()}>
@@ -197,22 +201,22 @@ export namespace TxDecodedTopics {
 		}
 	}
 
-	export function ArgumentRow(props: ArgumentRow.Props) {
+	export function ArgumentRow(props: ArgumentRow.Props): React.JSX.Element {
 		const { input, value } = props
-		const { copy } = useCopy()
 
 		const displayValue = value !== undefined ? formatAbiValue(value) : ''
 		const label = input.name || input.type
 
 		return (
-			<button
-				type="button"
-				onClick={() => copy(displayValue)}
-				{...cx(styles.argumentRow(), pressDown(), transitionColors())}
-			>
-				<span {...styles.argumentLabel()}>{label}:</span>
-				<span {...styles.hex()}>{displayValue}</span>
-			</button>
+			<div {...styles.argumentRow()}>
+				<span {...styles.argumentLabel()}>{label}</span>
+				<span {...styles.value()}>{displayValue}</span>
+				<CopyButton
+					aria-label={`Copy ${label}`}
+					value={displayValue}
+					{...styles.copy()}
+				/>
+			</div>
 		)
 	}
 	export namespace ArgumentRow {
@@ -222,51 +226,46 @@ export namespace TxDecodedTopics {
 		}
 	}
 
-	export function RawDataInline(props: RawDataInline.Props) {
-		const { data } = props
-		const { copy } = useCopy()
+	/** The log's data, in full, with a button that copies it. */
+	export function RawData(props: RawData.Props): React.JSX.Element {
+		const { data, inline = false } = props
 
 		return (
-			<div>
-				<div {...cx(styles.label(), styles.inlineLabel())}>Data</div>
-				<button
-					type="button"
-					onClick={() => copy(data)}
-					{...cx(styles.dataButton(), pressDown(), transitionColors())}
-				>
-					<span {...styles.data()}>{data}</span>
-				</button>
+			<div {...styles.data({ inline })}>
+				<div {...styles.label({ inline })}>Data</div>
+				<div {...styles.dataRow()}>
+					<span {...styles.value()}>{data}</span>
+					<CopyButton aria-label="Copy data" value={data} {...styles.copy()} />
+				</div>
 			</div>
 		)
 	}
-	export namespace RawDataInline {
+	export namespace RawData {
 		export interface Props {
-			data: Hex
+			data: HexType
+			/** Sits under the raw topics of the arguments view. */
+			inline?: boolean | undefined
 		}
 	}
 
-	export function RawTopics(props: RawTopics.Props) {
+	export function RawTopics(props: RawTopics.Props): React.JSX.Element {
 		const { log } = props
 
 		return (
-			<div {...styles.root()}>
-				<div {...styles.panel()}>
-					<div {...styles.rawHeader()}>
-						<span {...styles.label()}>Raw event</span>
-					</div>
-					<div {...styles.divided()}>
-						<div {...styles.section()}>
-							<div {...cx(styles.label(), styles.sectionLabel())}>Topics</div>
-							<div {...styles.topics()}>
-								{log.topics.map((topic, i) => (
-									<RawTopicRow key={topic} index={i} topic={topic} />
-								))}
-							</div>
+			<div {...styles.panel()}>
+				<div {...styles.rawHeader()}>
+					<span {...styles.label()}>Raw event</span>
+				</div>
+				<div {...styles.divided()}>
+					<div {...styles.section()}>
+						<div {...styles.label()}>Topics</div>
+						<div {...styles.topics()}>
+							{log.topics.map((topic, i) => (
+								<RawTopicRow key={topic} index={i} topic={topic} />
+							))}
 						</div>
-						{log.data && log.data !== '0x' && (
-							<RawDataSection data={log.data} />
-						)}
 					</div>
+					{log.data && log.data !== '0x' && <RawData data={log.data} />}
 				</div>
 			</div>
 		)
@@ -277,91 +276,34 @@ export namespace TxDecodedTopics {
 		}
 	}
 
-	export function RawTopicRow(props: RawTopicRow.Props) {
+	export function RawTopicRow(props: RawTopicRow.Props): React.JSX.Element {
 		const { index, topic } = props
-		const { copy } = useCopy()
 
 		return (
-			<button
-				type="button"
-				onClick={() => copy(topic)}
-				{...cx(styles.topicRow(), pressDown(), transitionColors())}
-			>
+			<div {...styles.topicRow()}>
 				<span {...styles.topicLabel()}>topic[{index}]</span>
-				<span {...styles.hex()}>{topic}</span>
-			</button>
+				<Hex.Root value={topic} {...styles.topic()}>
+					<Hex.Text />
+					<Hex.Copy aria-label={`Copy topic ${index}`} />
+				</Hex.Root>
+			</div>
 		)
 	}
 	export namespace RawTopicRow {
 		export interface Props {
 			index: number
-			topic: Hex
-		}
-	}
-
-	export function RawDataSection(props: RawDataSection.Props) {
-		const { data } = props
-		const { copy } = useCopy()
-
-		return (
-			<div {...styles.section()}>
-				<div {...cx(styles.label(), styles.sectionLabel())}>Data</div>
-				<button
-					type="button"
-					onClick={() => copy(data)}
-					{...cx(styles.dataButton(), pressDown(), transitionColors())}
-				>
-					<span {...styles.data()}>{data}</span>
-				</button>
-			</div>
-		)
-	}
-	export namespace RawDataSection {
-		export interface Props {
-			data: Hex
+			topic: HexType
 		}
 	}
 }
 
-const argumentViews = [
-	{ label: 'Decoded', value: 'decoded' },
-	{ label: 'Raw', value: 'raw' },
-] as const
-
-// Copyable rows sit flush with the surrounding text: the padding that gives
-// them a hover fill is pulled back out with a negative inline margin.
-const copyRow = {
-	borderRadius: '4',
-	cursor: 'pointer',
-	marginInline: '-4px !custom',
-	paddingInline: '4',
-	textAlign: 'left',
-	'@media (hover: hover)': {
-		':hover': { backgroundColor: 'grayAlpha.100' },
-	},
-} as const
-
 namespace styles {
-	export const root = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-		overflow: 'hidden',
-		width: '100% !custom',
-	})
-
-	// An opaque well that matches the decoded calldata panel. It clips, so
-	// focus rings inside it are drawn inset (the element type beats
-	// Button's own offset).
+	// A well on the section surface, matching the decoded calldata panel.
 	export const panel = style({
 		backgroundColor: 'background.primary',
 		borderRadius: '8',
 		minWidth: '0 !custom',
-		overflow: 'hidden',
 		width: '100% !custom',
-		selectors: { '& button:focus-visible': { outlineOffset: '-2px' } },
 	})
 
 	export const header = style({
@@ -385,9 +327,9 @@ namespace styles {
 
 	export const secondary = style({ color: 'gray.900' })
 
-	// Negative margins let the 32px icon Button sit in a 16px text row without
-	// growing it. Only properties Button leaves unset.
-	export const copyButton = style({
+	// Negative margins let the 32px copy button sit in a 16px text row without
+	// growing it.
+	export const copy = style({
 		flexShrink: '0 !custom',
 		marginBlock: '-8px !custom',
 		marginRight: '-8px !custom',
@@ -420,19 +362,19 @@ namespace styles {
 		gap: '4',
 	})
 
+	// Label, value and copy button; each row joins the columns as a subgrid.
 	export const argumentGrid = style({
+		columnGap: '8',
 		display: 'grid',
-		gridTemplateColumns: 'auto 1fr',
+		gridTemplateColumns: 'auto minmax(0, 1fr) auto !custom',
+		rowGap: '8',
 	})
 
 	export const argumentRow = style({
-		...copyRow,
 		alignItems: 'start',
 		display: 'grid',
-		gap: '8',
-		gridColumn: 'span 2 / span 2',
+		gridColumn: '1 / -1',
 		gridTemplateColumns: 'subgrid',
-		paddingBlock: '4',
 	})
 
 	export const argumentLabel = style({
@@ -441,37 +383,39 @@ namespace styles {
 		whiteSpace: 'pre',
 	})
 
-	export const hex = style({
+	export const value = style({
 		color: 'foreground',
-		minWidth: '0 !custom',
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
-	})
-
-	export const label = style({
-		color: 'gray.900',
-		typography: 'label.12',
-	})
-
-	export const inlineLabel = style({ marginBottom: '4' })
-
-	export const sectionLabel = style({ marginBottom: '8' })
-
-	export const dataButton = style({
-		...copyRow,
-		maxWidth: '100% !custom',
-		minWidth: '0 !custom',
-		paddingBlock: '2px !custom',
-		width: '100% !custom',
-	})
-
-	export const data = style({
-		color: 'foreground',
-		display: 'block',
+		flex: '1 !custom',
 		minWidth: '0 !custom',
 		overflowWrap: 'anywhere',
 		typography: 'label.12.mono',
 		wordBreak: 'break-all',
+	})
+
+	export const label = variants({
+		base: {
+			color: 'gray.900',
+			marginBottom: '8',
+			typography: 'label.12',
+		},
+		defaultVariants: { inline: false },
+		variants: {
+			inline: { false: {}, true: { marginBottom: '4' } },
+		},
+	})
+
+	export const data = variants({
+		base: { minWidth: '0 !custom' },
+		defaultVariants: { inline: false },
+		variants: {
+			inline: { false: { paddingBlock: '8', paddingInline: '12' }, true: {} },
+		},
+	})
+
+	export const dataRow = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		gap: '8',
 	})
 
 	export const rawHeader = style({
@@ -491,11 +435,10 @@ namespace styles {
 	})
 
 	export const topicRow = style({
-		...copyRow,
-		alignItems: 'flex-start',
+		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
-		paddingBlock: '2px !custom',
+		minWidth: '0 !custom',
 	})
 
 	export const topicLabel = style({
@@ -503,4 +446,7 @@ namespace styles {
 		flexShrink: '0 !custom',
 		typography: 'label.12',
 	})
+
+	// Hex leaves its flex sizing unset; the topic takes the rest of the row.
+	export const topic = style({ flex: '1 !custom', minWidth: '0 !custom' })
 }

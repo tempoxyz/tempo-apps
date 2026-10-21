@@ -47,7 +47,7 @@ import { getFeeTokenForChain } from '#lib/fee-token'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
-import { style } from '@tempoxyz/ds'
+import { formatHex, style } from '@tempoxyz/ds'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -214,7 +214,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 	component: Component,
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Receipt Not Found"
+			title="Receipt not found"
 			message={`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
 			data={data as NotFound.NotFoundData}
 		/>
@@ -409,7 +409,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 		),
 	}),
 	head: ({ params, loaderData, match }) => {
-		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const title = `Receipt ${formatHex(params.hash)} ⋅ Tempo Explorer`
 		const voucherData = parseVoucherParam(match.search.voucher)
 		const presentation = loaderData
 			? getReceiptPresentation(loaderData, voucherData, () => true)
@@ -564,15 +564,13 @@ function Component() {
 
 namespace styles {
 	export const page = style({
-		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '32',
 		justifyContent: 'center',
 		paddingBottom: '32',
+		paddingInline: '16',
 		paddingTop: '64',
-		typography: 'label.12',
 		'@media print': { flexGrow: 0, paddingBottom: '0', paddingTop: '32' },
 	})
 }

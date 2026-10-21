@@ -3,16 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ValidatorCard } from '#comps/ValidatorCard'
 
-const { readContract, copy, copyState } = vi.hoisted(() => ({
+const { readContract } = vi.hoisted(() => ({
 	readContract: vi.fn(),
-	copy: vi.fn(),
-	copyState: { notifying: false },
 }))
 vi.mock('wagmi', () => ({ useReadContract: readContract }))
-vi.mock('#lib/hooks', () => ({
-	useIsMounted: () => true,
-	useCopy: () => ({ copy, notifying: copyState.notifying }),
-}))
+vi.mock('#lib/hooks', () => ({ useIsMounted: () => true }))
 vi.mock('@tanstack/react-router', () => ({
 	Link: ({
 		children,
@@ -55,48 +50,38 @@ const render = () =>
 
 beforeEach(() => {
 	readContract.mockReturnValue({ data: validator })
-	copy.mockClear()
-	copyState.notifying = false
 })
 
 describe('validator address card', () => {
-	it('copies the full fee recipient without navigating the address link', () => {
+	it('copies the full fee recipient from a button beside its link', () => {
 		const html = render()
-		expect(html).toContain('aria-label="Copy fee recipient"')
-		const recipientSection = ValidatorCard({ address })?.props.sections[1]
-		const copyButton = recipientSection.props.children[0].props.children[1]
-		// CopyButton renders a TDS icon Button as its Tooltip trigger.
-		const tooltip = copyButton.type(copyButton.props)
-		const [trigger] = tooltip.props.children
-		trigger.props.render.props.onClick()
-		expect(copy).toHaveBeenCalledExactlyOnceWith(validator.feeRecipient)
-		expect(html).toContain(
-			`href="/address/${validator.feeRecipient}?tab=holdings"`,
+		const recipientLink = `href="/address/${validator.feeRecipient}?tab=holdings"`
+		const linkStart = html.indexOf(recipientLink)
+		const linkEnd = html.indexOf('</a>', linkStart)
+		expect(linkStart).toBeGreaterThan(-1)
+		// TDS `Hex.Copy` sits after the link, so a copy never navigates.
+		expect(html.indexOf('aria-label="Copy fee recipient"')).toBeGreaterThan(
+			linkEnd,
 		)
 	})
 
-	it('leaves the copy confirmation to the toast', () => {
-		copyState.notifying = true
+	it('confirms copies in place, without a toast', () => {
 		const html = render()
-		expect(html).toContain('aria-label="Copy fee recipient"')
-		expect(html).not.toContain('copied')
+		expect(html).toContain('role="status"')
+		expect(html).not.toContain('Copied')
 	})
 
-	it('links the full fee recipient to holdings, matches address typography and preserves genesis height', () => {
+	it('links the full fee recipient to holdings and preserves genesis height', () => {
 		const html = render()
 		expect(html).toContain('>Yes<')
 		expect(html).not.toContain('>Index<')
-		// The recipient link carries its own styles and shows the full address.
-		expect(html).toMatch(
-			new RegExp(
-				`<a class="[^"]+" href="/address/${validator.feeRecipient}\\?tab=holdings">${validator.feeRecipient}</a>`,
-			),
-		)
-		expect(html).toMatch(/<span class="[^"]+">Added at height<\/span>/)
-		expect(html).toContain(
+		// TDS `Hex` truncates the recipient on screen and keeps the full value for screen readers.
+		const linkStart = html.indexOf(
 			`href="/address/${validator.feeRecipient}?tab=holdings"`,
 		)
-		expect(html).toContain(`>${validator.feeRecipient}</a>`)
+		const link = html.slice(linkStart, html.indexOf('</a>', linkStart))
+		expect(link).toContain(`>${validator.feeRecipient}<`)
+		expect(html).toMatch(/<span class="[^"]+">Added at height<\/span>/)
 		expect(html).toContain('href="/block/0"')
 		expect(html).not.toContain('Deactivated')
 		expect(readContract.mock.lastCall?.[0]).toMatchObject({
@@ -121,6 +106,9 @@ describe('validator address card', () => {
 		expect(html).toMatch(/<span class="[^"]+">Deactivated at height<\/span>/)
 		expect(html).toContain('href="/block/9007199254740993"')
 		expect(html).toContain('href="/block/9007199254740995"')
+		// Block numbers group their digits on screen.
+		expect(html).toContain('>9,007,199,254,740,993<')
+		expect(html).toContain('>9,007,199,254,740,995<')
 	})
 
 	it('never renders public keys or networking information', () => {

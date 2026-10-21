@@ -1,6 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
-import { ChevronRight } from '@tempoxyz/ds/icons'
+import { Amount, Button, Hex, Rows, style } from '@tempoxyz/ds'
 import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
@@ -13,7 +12,7 @@ import {
 } from '#lib/domain/access-key'
 import { isTip20Address } from '#lib/domain/tip20'
 import { useAutoloadAbi } from '#lib/queries'
-import { link, linkHover, textAction } from '#styles/explorer'
+import { link, linkHover } from '#styles/explorer'
 
 const tokenFunctions: Record<string, string> = {
 	'0x095ea7b3': 'approve(address,uint256)',
@@ -21,6 +20,7 @@ const tokenFunctions: Record<string, string> = {
 	'0x95777d59': 'transferWithMemo(address,uint256,bytes32)',
 }
 
+/** An access key's permissions, as labelled TDS `Rows`. */
 export function TxKeyAuthorization(
 	props: TxKeyAuthorization.Props,
 ): React.JSX.Element {
@@ -28,7 +28,7 @@ export function TxKeyAuthorization(
 	const targets = groupKeyScopes(authorization.scopes)
 	return (
 		<section aria-label="Access key permissions" {...styles.root()}>
-			<dl {...styles.table()}>
+			<Rows.Root dividers="full">
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -37,9 +37,9 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Spend limits">
 					{authorization.limits === undefined ? (
-						<p {...styles.secondary()}>Unrestricted</p>
+						<span {...styles.secondary()}>Unrestricted</span>
 					) : authorization.limits.length === 0 ? (
-						<p {...styles.secondary()}>No spending allowed</p>
+						<span {...styles.secondary()}>No spending allowed</span>
 					) : (
 						authorization.limits.map((limit) => (
 							<SpendingLimit
@@ -52,18 +52,18 @@ export function TxKeyAuthorization(
 				</PermissionRow>
 				<PermissionRow label="Allowed calls">
 					{targets === undefined ? (
-						<p {...styles.secondary()}>Any contract and function</p>
+						<span {...styles.secondary()}>Any contract and function</span>
 					) : targets.length === 0 ? (
-						<p {...styles.secondary()}>No calls allowed</p>
+						<span {...styles.secondary()}>No calls allowed</span>
 					) : (
-						<ul {...styles.targets()}>
+						<ul {...styles.list()}>
 							{targets.map((target) => (
 								<CallScope key={target.address} target={target} />
 							))}
 						</ul>
 					)}
 				</PermissionRow>
-			</dl>
+			</Rows.Root>
 		</section>
 	)
 }
@@ -73,10 +73,10 @@ function PermissionRow(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<div {...styles.row()}>
-			<dt {...styles.label()}>{props.label}</dt>
-			<dd {...styles.value()}>{props.children}</dd>
-		</div>
+		<Rows.Row spacing="none">
+			<Rows.Label>{props.label}</Rows.Label>
+			<span {...styles.value()}>{props.children}</span>
+		</Rows.Row>
 	)
 }
 
@@ -88,21 +88,21 @@ export namespace TxKeyAuthorization {
 			| undefined
 	}
 
+	/** A text button that shows the permissions below it, mounted on first open. */
 	export function Disclosure(props: Props): React.JSX.Element {
 		const [expanded, setExpanded] = useState(false)
 		const id = useId()
 		return (
 			<div {...styles.disclosure()}>
-				<button
-					aria-expanded={expanded}
+				<Button
 					aria-controls={id}
+					aria-expanded={expanded}
 					onClick={() => setExpanded(!expanded)}
-					type="button"
-					{...textAction()}
+					size="small"
+					variant="text"
 				>
-					<span>{expanded ? 'Hide permissions' : 'Show permissions'}</span>
-					<ChevronRight />
-				</button>
+					{expanded ? 'Hide permissions' : 'Show permissions'}
+				</Button>
 				<div id={id} hidden={!expanded} {...styles.panel()}>
 					{expanded && <TxKeyAuthorization {...props} />}
 				</div>
@@ -111,17 +111,21 @@ export namespace TxKeyAuthorization {
 	}
 }
 
+/** An address in TDS `Hex`, linking to its page, with a copy button. */
 function PermissionAddress(props: {
 	address: `0x${string}`
 }): React.JSX.Element {
 	return (
-		<Link
-			to="/address/$address"
-			params={{ address: props.address }}
-			{...cx(styles.address(), link(), linkHover())}
-		>
-			{props.address}
-		</Link>
+		<Hex.Root value={props.address} {...styles.address()}>
+			<Link
+				to="/address/$address"
+				params={{ address: props.address }}
+				{...cx(styles.addressLink(), link(), linkHover())}
+			>
+				<Hex.Text />
+			</Link>
+			<Hex.Copy aria-label="Copy address" />
+		</Hex.Root>
 	)
 }
 
@@ -135,23 +139,22 @@ function SpendingLimit(props: {
 		query: { enabled: !props.metadata },
 	})
 	const metadata = props.metadata ?? data
-	const amount = metadata
-		? formatUnits(limit.limit, metadata.decimals)
-		: limit.limit.toString()
-	// Group only the integer part; never round away a small allowance.
-	const [integer, fraction] = amount.split('.')
-	const formatted = `${BigInt(integer).toLocaleString('en-US')}${fraction ? `.${fraction}` : ''}`
 	return (
-		<div {...styles.stack()}>
-			<div {...styles.limitLine()}>
-				<div {...styles.limitAmount()}>
-					<span {...styles.amount()}>{formatted}</span>
-					<span>{metadata?.symbol ?? 'base units'}</span>
-				</div>
+		<span {...styles.stack()}>
+			<span {...styles.limitLine()}>
+				{/* The full allowance, never rounded; base units when the token is unknown. */}
+				<Amount
+					symbol={metadata?.symbol ?? 'base units'}
+					value={
+						metadata
+							? formatUnits(limit.limit, metadata.decimals)
+							: limit.limit.toString()
+					}
+				/>
 				<span {...styles.secondary()}>{formatKeyPeriod(limit.period)}</span>
-			</div>
+			</span>
 			<PermissionAddress address={limit.token} />
-		</div>
+		</span>
 	)
 }
 
@@ -182,7 +185,7 @@ function CallScope(props: {
 						(abiFunction?.type === 'function' ? abiFunction.name : undefined)
 					return (
 						<li key={`${rule.selector}-${index}`} {...styles.stack()}>
-							<div {...styles.ruleLine()}>
+							<span {...styles.ruleLine()}>
 								<code
 									{...styles.code()}
 									title={
@@ -194,14 +197,16 @@ function CallScope(props: {
 									{functionName ?? rule.selector ?? 'Any function'}
 								</code>
 								{functionName && (
-									<code {...styles.code()}>{rule.selector}</code>
+									<code {...cx(styles.code(), styles.secondary())}>
+										{rule.selector}
+									</code>
 								)}
-							</div>
+							</span>
 							{/* TIP-1011 only supports recipient scoping for these TIP-20 methods. */}
 							{signature && (
-								<div {...styles.recipients()}>
+								<span {...styles.recipients()}>
 									{rule.recipients?.length ? (
-										<div {...styles.stack()}>
+										<span {...styles.stack()}>
 											<span>
 												{selector === '0x095ea7b3' ? 'Spenders' : 'Recipients'}
 											</span>
@@ -211,7 +216,7 @@ function CallScope(props: {
 													address={recipient}
 												/>
 											))}
-										</div>
+										</span>
 									) : (
 										<span>
 											{selector === '0x095ea7b3'
@@ -219,7 +224,7 @@ function CallScope(props: {
 												: 'Any recipient'}
 										</span>
 									)}
-								</div>
+								</span>
 							)}
 						</li>
 					)
@@ -232,43 +237,12 @@ function CallScope(props: {
 namespace styles {
 	export const root = style({ minWidth: '0 !custom' })
 
-	// A definition list of labelled rows, each with a hairline above it.
-	export const table = style({
-		color: 'foreground',
-		margin: '0',
-		width: '100% !custom',
-	})
-
-	export const row = style({
-		columnGap: '16',
-		display: 'flex',
-		paddingBlock: '16',
-		position: 'relative',
-		selectors: {
-			'&::before': {
-				backgroundColor: 'grayAlpha.300',
-				content: '"" !custom',
-				height: '1',
-				left: '0',
-				position: 'absolute',
-				right: '0',
-				top: '-1px !custom',
-			},
-		},
-	})
-
-	export const label = style({
-		flex: '0 0 39.0278% !custom',
-		overflowWrap: 'anywhere',
-		typography: 'copy.14.strong',
-	})
-
+	// The value fills the row after its label, so lists keep their width.
 	export const value = style({
 		display: 'flex',
 		flex: '1 !custom',
 		flexDirection: 'column',
 		gap: '8',
-		margin: '0',
 		minWidth: '0',
 		overflowWrap: 'anywhere',
 		typography: 'copy.14',
@@ -276,10 +250,13 @@ namespace styles {
 
 	export const secondary = style({ color: 'gray.900' })
 
-	export const targets = style({
+	export const list = style({
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '12',
+		listStyle: 'none !custom',
+		margin: '0',
+		padding: '0',
 	})
 
 	export const disclosure = style({
@@ -295,21 +272,19 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	// Inline code that wraps, since long signatures sit in narrow columns.
+	// Function names and selectors are code, so they wrap in a mono set.
 	export const code = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '4',
-		color: 'foreground',
-		fontFeatureSettings: '"zero" 1 !custom',
 		overflowWrap: 'anywhere',
-		paddingBlock: '2px !custom',
-		paddingInline: '4',
-		typography: 'label.12.mono',
+		typography: 'copy.13.mono',
 	})
 
-	export const address = style({
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
+	// Hex leaves its width in a column unset.
+	export const address = style({ alignSelf: 'flex-start' })
+
+	export const addressLink = style({
+		display: 'inline-flex',
+		maxWidth: '100% !custom',
+		minWidth: '0 !custom',
 	})
 
 	export const stack = style({
@@ -324,20 +299,7 @@ namespace styles {
 		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '2px !custom',
-	})
-
-	export const limitAmount = style({
-		alignItems: 'baseline',
-		display: 'flex',
-		flexWrap: 'wrap',
-		gap: '4',
-		minWidth: '0 !custom',
-	})
-
-	export const amount = style({
-		fontVariantNumeric: 'tabular-nums',
-		wordBreak: 'break-all',
+		rowGap: '4',
 	})
 
 	export const rules = style({
@@ -346,6 +308,8 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '8',
+		listStyle: 'none !custom',
+		margin: '0',
 		paddingLeft: '8',
 	})
 

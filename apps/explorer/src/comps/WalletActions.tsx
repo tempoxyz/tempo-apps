@@ -1,6 +1,6 @@
 import type { Address } from 'ox'
 import { Button, Tooltip, style } from '@tempoxyz/ds'
-import { ChevronRight, LogOut } from '@tempoxyz/ds/icons'
+import { LogOut } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import {
 	useConnect,
@@ -9,13 +9,11 @@ import {
 	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
-import { cx } from 'zyzz'
 import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
-import { animatePulse, textAction } from '#styles/explorer'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 
@@ -45,7 +43,7 @@ export function WalletActions(
 		(supported[0]?.name && supported[0].name !== 'Injected'
 			? supported[0].name
 			: undefined) ??
-		'Wallet'
+		'wallet'
 
 	const handleConnectOrSwitch = () => {
 		if (!isConnected) {
@@ -63,40 +61,29 @@ export function WalletActions(
 		}
 	}
 
-	const busy = connect.isPending || switchChain.isPending
-	const connectLabel = connect.isPending
-		? 'Connecting…'
-		: switchChain.isPending
-			? 'Switching network…'
-			: !isConnected
-				? `Connect ${walletName}`
-				: 'Switch to Tempo'
-
 	return (
 		<InfoCard
 			className={styles.card().className}
-			title={
-				<InfoCard.Title className={styles.title().className}>
-					Wallet actions
-					{isConnected && (
-						<Tooltip.Root>
-							<Tooltip.Trigger
-								render={
-									<Button
-										aria-label="Disconnect"
-										onClick={() => disconnect.mutate({ connector })}
-										shape="icon"
-										size="small"
-										variant="text"
-									/>
-								}
-							>
-								<LogOut {...styles.icon()} />
-							</Tooltip.Trigger>
-							<Tooltip.Popup>Disconnect</Tooltip.Popup>
-						</Tooltip.Root>
-					)}
-				</InfoCard.Title>
+			title={<InfoCard.Title>Wallet actions</InfoCard.Title>}
+			action={
+				isConnected ? (
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Button
+									aria-label="Disconnect wallet"
+									onClick={() => disconnect.mutate({ connector })}
+									shape="icon"
+									size="small"
+									variant="text"
+								/>
+							}
+						>
+							<LogOut {...styles.icon()} />
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Disconnect wallet</Tooltip.Popup>
+					</Tooltip.Root>
+				) : undefined
 			}
 			sections={
 				isReady
@@ -115,16 +102,15 @@ export function WalletActions(
 							/>,
 						]
 					: [
-							<button
+							<Button
 								key="connect"
-								disabled={busy}
+								loading={connect.isPending || switchChain.isPending}
 								onClick={handleConnectOrSwitch}
-								type="button"
-								{...cx(textAction(), busy && animatePulse())}
+								size="small"
+								variant="secondary"
 							>
-								{connectLabel}
-								<ChevronRight />
-							</button>,
+								{isConnected ? 'Switch to Tempo' : `Connect ${walletName}`}
+							</Button>,
 						]
 			}
 		/>
@@ -146,10 +132,5 @@ namespace styles {
 	// InfoCard fits its content from 1240px; the wallet card fills the column.
 	export const card = style({
 		'@media (width >= 1240px)': { width: '100% !custom' },
-	})
-
-	export const title = style({
-		justifyContent: 'space-between',
-		width: '100% !custom',
 	})
 }

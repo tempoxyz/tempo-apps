@@ -1,7 +1,6 @@
 import type { ErrorComponentProps } from '@tanstack/react-router'
-import { Button, style, Surface } from '@tempoxyz/ds'
+import { Button, CopyButton, style, Surface } from '@tempoxyz/ds'
 import * as React from 'react'
-import { CopyButton } from '#comps/CopyButton'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import {
@@ -53,13 +52,14 @@ export class ErrorBoundary extends React.Component<
 					</div>
 					{this.state.error?.message && (
 						<Surface size="small" {...styles.details()}>
-							<pre {...styles.message()}>{this.state.error.message}</pre>
-							<div {...styles.copy()}>
+							<Surface.Header>
+								<Surface.Title>Error details</Surface.Title>
 								<CopyButton
+									aria-label="Copy error details"
 									value={this.state.error.message}
-									ariaLabel="Copy error details"
 								/>
-							</div>
+							</Surface.Header>
+							<pre {...styles.message()}>{this.state.error.message}</pre>
 						</Surface>
 					)}
 					<Button
@@ -67,7 +67,7 @@ export class ErrorBoundary extends React.Component<
 						type="button"
 						onClick={() => window.location.assign('/')}
 					>
-						Return home
+						Go home
 					</Button>
 				</section>
 				<Footer />
@@ -117,26 +117,13 @@ namespace styles {
 		'@media (width >= 1024px)': { typography: 'copy.16' },
 	})
 
-	export const details = style({
-		maxWidth: '100% !custom',
-		overflow: 'hidden',
-		position: 'relative',
-	})
+	export const details = style({ width: '100% !custom' })
 
 	export const message = style({
 		color: 'gray.900',
 		margin: '0',
-		minHeight: '40',
-		paddingRight: '32',
-		typography: 'label.12.mono',
+		typography: 'copy.13.mono',
 		whiteSpace: 'pre-wrap',
-	})
-
-	// Places the copy Button in the corner of the details box.
-	export const copy = style({
-		bottom: '4',
-		display: 'flex',
-		position: 'absolute',
-		right: '4',
+		wordBreak: 'break-word',
 	})
 }

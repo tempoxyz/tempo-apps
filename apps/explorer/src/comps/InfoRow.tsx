@@ -1,13 +1,18 @@
-import { style } from '@tempoxyz/ds'
-import { cx } from 'zyzz'
+import { Rows, style } from '@tempoxyz/ds'
 
+/** A key-value row of one record. Place it in a `Rows.Root`. */
 export function InfoRow(props: InfoRow.Props): React.JSX.Element {
-	const { label, children, stackOnMobile } = props
+	const { label, children, stackOnMobile = false } = props
+	const content = (
+		<>
+			<Rows.Label>{label}</Rows.Label>
+			{children}
+		</>
+	)
 	return (
-		<div {...cx(styles.row(), stackOnMobile && styles.stackOnMobile())}>
-			<span {...styles.label()}>{label}</span>
-			<div {...styles.value()}>{children}</div>
-		</div>
+		<Rows.Row>
+			{stackOnMobile ? <span {...styles.stack()}>{content}</span> : content}
+		</Rows.Row>
 	)
 }
 
@@ -15,39 +20,24 @@ export declare namespace InfoRow {
 	type Props = {
 		label: string
 		children: React.ReactNode
+		/** Puts a long value under its label below 640px. */
 		stackOnMobile?: boolean | undefined
 	}
 }
 
 namespace styles {
-	export const row = style({
-		alignItems: 'flex-start',
-		borderBottomColor: 'grayAlpha.200',
-		borderBottomStyle: 'solid',
-		borderBottomWidth: '1px',
+	// `Rows.Row` keeps the label and value on one line. Below 640px a long
+	// value gets the full row width under its label instead.
+	export const stack = style({
 		display: 'flex',
-		gap: '16',
-		paddingBlock: '12',
-		paddingInline: '20',
-		':last-child': { borderBottomWidth: '0px' },
-	})
-
-	export const stackOnMobile = style({
-		'@media (width < 600px)': { flexDirection: 'column', gap: '8' },
-	})
-
-	export const label = style({
-		color: 'gray.900',
-		flexShrink: '0 !custom',
-		minWidth: '100px !custom',
-		typography: 'copy.14',
-		'@media (width >= 640px)': { minWidth: '140px !custom' },
-	})
-
-	export const value = style({
-		minWidth: '0 !custom',
-		typography: 'copy.14',
-		width: '100% !custom',
-		wordBreak: 'break-all',
+		flexDirection: 'column',
+		flexGrow: '1 !custom',
+		minWidth: '0',
+		rowGap: '8',
+		'@media 640': {
+			alignItems: 'center',
+			columnGap: '12',
+			flexDirection: 'row',
+		},
 	})
 }

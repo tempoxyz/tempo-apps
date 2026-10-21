@@ -4,11 +4,13 @@ import {
 	Callout,
 	Checkbox,
 	Field,
+	Grid,
 	Input,
 	Skeleton,
 	style,
+	Surface,
+	Token,
 	variants,
-	vars,
 } from '@tempoxyz/ds'
 import { Search as SearchIcon } from '@tempoxyz/ds/icons'
 import { useMemo, useState } from 'react'
@@ -16,8 +18,8 @@ import type * as React from 'react'
 import { cx } from 'zyzz'
 import { DataGrid } from '#comps/DataGrid'
 import { DexSwapsGrid, LivePill, useDexSwaps } from '#comps/DexSwaps'
+import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
 import {
 	type DexPool,
 	type DexPoolSort,
@@ -43,6 +45,7 @@ export const Route = createFileRoute('/_layout/dex/')({
 		context.queryClient.prefetchQuery(dexPoolsQueryOptions()),
 })
 
+// Metrics in compact dollars, such as $1.2M: TDS `Amount` has no compact notation.
 const usd = (value: number) => PriceFormatter.format(value, { format: 'short' })
 const bps = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 })
 
@@ -124,30 +127,43 @@ function DexPoolsPage(): React.JSX.Element {
 		),
 		align: 'end',
 		width: '1fr',
-		minWidth: 96,
 		sortDirection: search.sort === sort ? search.dir : undefined,
 	})
 
 	return (
 		<div {...styles.page()}>
-			<h1 {...styles.title()}>Stablecoin DEX</h1>
+			<header {...styles.header()}>
+				<h1 {...styles.title()}>Stablecoin DEX</h1>
+				{query.data && (
+					<p {...styles.meta()}>
+						Block {BigInt(query.data.blockNumber).toLocaleString('en-US')} ·
+						Updated{' '}
+						<RelativeTime
+							timestamp={BigInt(Math.floor(query.data.generatedAt / 1000))}
+						/>
+					</p>
+				)}
+			</header>
 
-			<section aria-label="Totals" {...styles.totals()}>
-				<div {...styles.stats()}>
-					<Stat
-						label="Liquidity"
-						value={
-							!pools
-								? undefined
-								: totals.partial && totals.liquidity === 0
-									? '—'
-									: `${totals.partial ? '≥' : ''}${usd(totals.liquidity)}`
-						}
-					/>
-					<Stat label="1D volume" value={pools && usd(totals.day)} />
-					<Stat label="30D volume" value={pools && usd(totals.month)} />
-				</div>
-			</section>
+			<Grid
+				fit="small"
+				gap="12"
+				render={<dl aria-label="Totals" />}
+				{...styles.stats()}
+			>
+				<Stat
+					label="Liquidity"
+					value={
+						!pools
+							? undefined
+							: totals.partial && totals.liquidity === 0
+								? '—'
+								: `${totals.partial ? '≥' : ''}${usd(totals.liquidity)}`
+					}
+				/>
+				<Stat label="1D volume" value={pools && usd(totals.day)} />
+				<Stat label="30D volume" value={pools && usd(totals.month)} />
+			</Grid>
 
 			<Sections
 				mode={isMobile ? 'stacked' : 'tabs'}
@@ -165,9 +181,6 @@ function DexPoolsPage(): React.JSX.Element {
 				sections={[
 					{
 						title: 'Pairs',
-						totalItems: pools ? rows.length : undefined,
-						itemsLabel: 'pairs',
-						autoCollapse: false,
 						contextual: (
 							<div {...styles.contextual()}>
 								<Input.Group size="small" {...styles.filter()}>
@@ -212,7 +225,6 @@ function DexPoolsPage(): React.JSX.Element {
 												label: 'Pair',
 												align: 'start',
 												width: '2fr',
-												minWidth: 200,
 											},
 											sortable('liquidity', 'Liquidity'),
 											sortable('spread', 'Spread'),
@@ -258,7 +270,6 @@ function DexPoolsPage(): React.JSX.Element {
 					},
 					{
 						title: 'Swaps',
-						autoCollapse: false,
 						contextual: (
 							<div {...styles.contextual()}>
 								<LivePill
@@ -330,6 +341,10 @@ function LoadError(props: {
 	)
 }
 
+/**
+ * A sort button inside the column header, as TDS Tables and Lists prescribes:
+ * the header carries `aria-sort` and the direction icon.
+ */
 function SortLabel(props: {
 	sort: DexPoolSort
 	label: string
@@ -341,8 +356,6 @@ function SortLabel(props: {
 		<button
 			type="button"
 			onClick={() => props.onSort(props.sort)}
-			aria-label={`Sort by ${props.label}`}
-			aria-pressed={active}
 			{...styles.sort({ active })}
 		>
 			{props.label}
@@ -350,18 +363,21 @@ function SortLabel(props: {
 	)
 }
 
+/** A metric tile: the label in a `dt`, the value in a `dd`. */
 function Stat(props: {
 	label: string
 	value: string | undefined
 }): React.JSX.Element {
 	return (
-		<div {...styles.stat()}>
-			<div {...styles.statLabel()}>{props.label}</div>
-			{/* The placeholder text sizes the skeleton to the value it awaits. */}
-			<Skeleton show={props.value === undefined} {...styles.statSkeleton()}>
-				<span {...styles.statValue()}>{props.value ?? '$0.00M'}</span>
-			</Skeleton>
-		</div>
+		<Surface size="small">
+			<dt {...styles.statLabel()}>{props.label}</dt>
+			<dd {...styles.statValue()}>
+				{/* The placeholder text sizes the skeleton to the value it awaits. */}
+				<Skeleton show={props.value === undefined}>
+					<span>{props.value ?? '$0.00M'}</span>
+				</Skeleton>
+			</dd>
+		</Surface>
 	)
 }
 
@@ -370,12 +386,8 @@ function PairCell(props: { pool: DexPool }): React.JSX.Element {
 	return (
 		<div {...styles.pair()}>
 			<span {...styles.pairIcons()}>
-				<span {...styles.pairIcon({ overlap: false })}>
-					<TokenIcon address={base.address} size={20} />
-				</span>
-				<span {...styles.pairIcon({ overlap: true })}>
-					<TokenIcon address={quote.address} size={20} />
-				</span>
+				<Token address={base.address} />
+				<Token address={quote.address} />
 			</span>
 			<span {...cx(styles.pairName(), truncate())}>
 				{base.symbol}
@@ -433,60 +445,43 @@ namespace styles {
 		'@media (width >= 640px)': { paddingTop: '64' },
 	})
 
+	export const header = style({
+		display: 'flex',
+		flexDirection: 'column',
+		rowGap: '8',
+	})
+
 	export const title = style({
 		color: 'foreground',
+		margin: '0',
 		typography: 'heading.24.subtle',
 		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
 	})
 
-	// An unpadded bordered card: TDS `Surface` always pads its content, and the
-	// stat dividers run edge to edge.
-	export const totals = style({
-		backgroundColor: 'background.surface',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
-		borderStyle: 'solid',
-		borderWidth: '1px',
-		boxSizing: 'border-box',
-		color: 'foreground',
-		overflow: 'hidden',
+	export const meta = style({
+		color: 'gray.900',
+		fontVariantNumeric: 'tabular-nums !custom',
+		margin: '0',
+		typography: 'copy.13',
 	})
 
-	export const stats = style({
-		display: 'grid',
-		gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-	})
-
-	export const stat = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		paddingBlock: '16',
-		paddingInline: '16',
-		selectors: {
-			'&:not(:last-child)': {
-				borderColor: 'grayAlpha.200',
-				borderRightStyle: 'dashed',
-				borderRightWidth: '1px',
-			},
-		},
-	})
+	export const stats = style({ margin: '0' })
 
 	export const statLabel = style({
 		color: 'gray.900',
-		typography: 'label.12',
+		marginBlockEnd: '8',
+		typography: 'label.13',
 	})
 
+	// A flex row, so the skeleton shrinks to the value instead of the tile.
 	export const statValue = style({
 		color: 'foreground',
-		display: 'block',
-		fontVariantNumeric: 'tabular-nums',
-		typography: 'heading.20.subtle',
-		'@media (width >= 640px)': { typography: 'heading.24.subtle' },
+		display: 'flex',
+		fontVariantNumeric: 'tabular-nums !custom',
+		margin: '0',
+		typography: 'heading.20',
+		'@media (width >= 640px)': { typography: 'heading.24' },
 	})
-
-	// Shrinks the skeleton to its value instead of the whole column.
-	export const statSkeleton = style({ alignSelf: 'flex-start' })
 
 	export const contextual = style({
 		alignItems: 'center',
@@ -503,8 +498,24 @@ namespace styles {
 
 	export const sort = variants({
 		base: {
+			appearance: 'none !custom',
+			backgroundColor: 'transparent !custom',
+			border: 'none !custom',
+			borderRadius: '2',
 			cursor: 'pointer',
-			'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+			font: 'inherit !custom',
+			outlineColor: 'transparent !custom',
+			outlineOffset: '2px !custom',
+			outlineStyle: 'solid !custom',
+			outlineWidth: '2px !custom',
+			padding: '0',
+			transitionDuration: '160ms',
+			transitionProperty: 'color, outline-color',
+			transitionTimingFunction: 'snappy',
+			selectors: {
+				'&:focus-visible': { outlineColor: 'blue.700' },
+				'&:hover': { color: 'foreground' },
+			},
 		},
 		defaultVariants: { active: false },
 		variants: {
@@ -531,27 +542,12 @@ namespace styles {
 		alignItems: 'center',
 		display: 'inline-flex',
 		flexShrink: 0,
-	})
-
-	// The ring separates the overlapping icons on the card surface.
-	export const pairIcon = variants({
-		base: {
-			borderRadius: 'full',
-			boxShadow: `0 0 0 2px ${vars.color.background.surface} !custom`,
-			display: 'inline-flex',
-		},
-		defaultVariants: { overlap: false },
-		variants: {
-			overlap: {
-				true: { marginLeft: '-6px !custom' },
-				false: { position: 'relative', zIndex: 1 },
-			},
-		},
+		gap: '4',
 	})
 
 	export const pairName = style({
 		color: 'foreground',
-		fontWeight: '550 !custom',
+		typography: 'copy.14.strong',
 	})
 
 	export const secondary = style({ color: 'gray.900' })

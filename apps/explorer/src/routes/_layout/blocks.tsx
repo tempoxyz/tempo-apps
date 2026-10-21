@@ -1,12 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Button, style, Tooltip } from '@tempoxyz/ds'
-import {
-	ChevronLeft,
-	ChevronRight,
-	ChevronsLeft,
-	ChevronsRight,
-} from '@tempoxyz/ds/icons'
+import { Button, Hex, Pagination, style, Tag } from '@tempoxyz/ds'
 import * as React from 'react'
 import { type Block, type Client, createPublicClient, webSocket } from 'viem'
 import {
@@ -17,9 +11,7 @@ import {
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
-import { Midcut } from '#comps/Midcut'
 import { Sections } from '#comps/Sections'
-import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import {
 	FormattedTimestamp,
 	TimeColumnHeader,
@@ -215,7 +207,7 @@ function RouteComponent() {
 	const displayedEnd = blocks[blocks.length - 1]?.number ?? undefined
 
 	const columns: DataGrid.Column[] = [
-		{ label: 'Block', width: '1fr', minWidth: 100 },
+		{ label: 'Block', width: '1fr' },
 		{ label: 'Hash', width: '8fr' },
 		{
 			align: 'end',
@@ -227,9 +219,8 @@ function RouteComponent() {
 				/>
 			),
 			width: '1fr',
-			minWidth: 80,
 		},
-		{ align: 'end', label: 'Txns', width: '1fr', minWidth: 56 },
+		{ align: 'end', label: 'Txns', width: '1fr' },
 	]
 
 	return (
@@ -239,8 +230,6 @@ function RouteComponent() {
 				sections={[
 					{
 						title: 'Blocks',
-						totalItems: totalBlocks || undefined,
-						autoCollapse: false,
 						contextual: (
 							<Button.Link
 								render={
@@ -265,13 +254,14 @@ function RouteComponent() {
 								}
 								size="small"
 								variant="secondary"
-								{...styles.liveToggle()}
 							>
-								{live && !paused ? (
-									<LiveIndicator pinging>Live</LiveIndicator>
-								) : (
-									<LiveIndicator tone="neutral">Paused</LiveIndicator>
-								)}
+								<Tag
+									intent={live && !paused ? 'positive' : 'neutral'}
+									variant="plain"
+								>
+									<Tag.Dot />
+									{live && !paused ? 'Live' : 'Paused'}
+								</Tag>
 							</Button.Link>
 						),
 						content: (
@@ -290,7 +280,8 @@ function RouteComponent() {
 									columns={{ stacked: columns, tabs: columns }}
 									items={() =>
 										blocks.map((block, index) => {
-											const blockNumber = block.number?.toString() ?? '0'
+											const number = block.number ?? 0n
+											const blockNumber = number.toString()
 											const blockHash = block.hash ?? '0x'
 											const txCount = block.transactions?.length ?? 0
 											const isActive = isAtLatest && live && index === 0
@@ -302,11 +293,13 @@ function RouteComponent() {
 														key="number"
 														{...styles.number({ className: link().className })}
 													>
-														#{blockNumber}
+														{number.toLocaleString('en-US')}
 													</span>,
-													<span key="hash" {...styles.hash()}>
-														<Midcut value={blockHash} prefix="0x" />
-													</span>,
+													<Hex
+														key="hash"
+														value={blockHash}
+														{...styles.hash()}
+													/>,
 													<span key="time" {...styles.time()}>
 														<FormattedTimestamp
 															timestamp={block.timestamp}
@@ -319,7 +312,7 @@ function RouteComponent() {
 												],
 												link: {
 													href: `/block/${blockNumber}`,
-													title: `View block #${blockNumber}`,
+													title: `View block ${blockNumber}`,
 												},
 												className: isActive
 													? styles.liveRow().className
@@ -332,7 +325,7 @@ function RouteComponent() {
 									loading={isLoading}
 									itemsLabel="blocks"
 									itemsPerPage={BLOCKS_PER_PAGE}
-									emptyState="No blocks found."
+									emptyState="No blocks"
 									pagination={
 										<BlocksPagination
 											displayedFrom={displayedFrom}
@@ -352,18 +345,18 @@ function RouteComponent() {
 	)
 }
 
-function BlocksPagination({
-	displayedFrom,
-	displayedEnd,
-	latestBlockNumber,
-	isAtLatest,
-}: {
+/**
+ * Pages through blocks from the chain head. Latest and Oldest are the first and
+ * last pages, and Newer and Older step one page either way.
+ */
+function BlocksPagination(props: {
 	displayedFrom: bigint | undefined
 	displayedEnd: bigint | undefined
 	latestBlockNumber: bigint | undefined
 	isAtLatest: boolean
-}) {
-	const canGoNewer = !isAtLatest
+}): React.JSX.Element {
+	const { displayedFrom, displayedEnd, latestBlockNumber, isAtLatest } = props
+	const isAtOldest = displayedEnd === 0n
 	const canGoOlder = displayedEnd != null && displayedEnd > 0n
 
 	const newerFrom =
@@ -372,82 +365,66 @@ function BlocksPagination({
 
 	return (
 		<div {...styles.pagination()}>
-			<div {...styles.paginationControls()}>
-				<Tooltip.Root>
-					<Tooltip.Trigger
-						render={
-							<Link
-								to="."
-								resetScroll={false}
-								search={{ from: undefined, live: undefined }}
-								disabled={!canGoNewer}
-								aria-label="Latest blocks"
-								{...styles.pageButton()}
-							/>
-						}
-					>
-						<ChevronsLeft />
-					</Tooltip.Trigger>
-					<Tooltip.Popup>Latest blocks</Tooltip.Popup>
-				</Tooltip.Root>
-				<Tooltip.Root>
-					<Tooltip.Trigger
-						render={
+			<Pagination aria-label="Blocks pagination" size="small">
+				<Pagination.Previous
+					disabled={isAtLatest}
+					render={
+						isAtLatest ? undefined : (
 							<Link
 								to="."
 								resetScroll={false}
 								search={{ from: newerFrom, live: undefined }}
-								disabled={!canGoNewer}
-								aria-label="Newer blocks"
-								{...styles.pageButton()}
 							/>
-						}
-					>
-						<ChevronLeft />
-					</Tooltip.Trigger>
-					<Tooltip.Popup>Newer blocks</Tooltip.Popup>
-				</Tooltip.Root>
-				<span {...styles.pageRange()}>
-					{displayedFrom != null ? `#${displayedFrom}-#${displayedEnd}` : '…'}
-				</span>
-				<Tooltip.Root>
-					<Tooltip.Trigger
-						render={
+						)
+					}
+				>
+					Newer
+				</Pagination.Previous>
+				<Pagination.Page
+					current={isAtLatest}
+					render={
+						<Link
+							to="."
+							resetScroll={false}
+							search={{ from: undefined, live: undefined }}
+						/>
+					}
+				>
+					Latest
+				</Pagination.Page>
+				<Pagination.Ellipsis />
+				<Pagination.Page
+					current={isAtOldest}
+					render={
+						<Link
+							to="."
+							resetScroll={false}
+							search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
+						/>
+					}
+				>
+					Oldest
+				</Pagination.Page>
+				<Pagination.Next
+					disabled={!canGoOlder}
+					render={
+						canGoOlder ? (
 							<Link
 								to="."
 								resetScroll={false}
 								search={{ from: olderFrom, live: undefined }}
-								disabled={!canGoOlder}
-								aria-label="Older blocks"
-								{...styles.pageButton()}
 							/>
-						}
-					>
-						<ChevronRight />
-					</Tooltip.Trigger>
-					<Tooltip.Popup>Older blocks</Tooltip.Popup>
-				</Tooltip.Root>
-				<Tooltip.Root>
-					<Tooltip.Trigger
-						render={
-							<Link
-								to="."
-								resetScroll={false}
-								search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
-								disabled={displayedEnd === 0n}
-								aria-label="Oldest blocks"
-								{...styles.pageButton()}
-							/>
-						}
-					>
-						<ChevronsRight />
-					</Tooltip.Trigger>
-					<Tooltip.Popup>Oldest blocks</Tooltip.Popup>
-				</Tooltip.Root>
-			</div>
+						) : undefined
+					}
+				>
+					Older
+				</Pagination.Next>
+			</Pagination>
 			<span {...styles.pageCount()}>
-				{latestBlockNumber != null
-					? `${(Number(latestBlockNumber) + 1).toLocaleString()} blocks`
+				{displayedFrom != null &&
+				displayedEnd != null &&
+				latestBlockNumber != null
+					? `Showing blocks ${displayedEnd.toLocaleString('en-US')}–${displayedFrom.toLocaleString('en-US')} of ${(latestBlockNumber + 1n).toLocaleString('en-US')}`
 					: '…'}
 			</span>
 		</div>
@@ -467,19 +444,12 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	// Keeps the toggle's width steady between "Live" and "Paused".
-	export const liveToggle = style({ minWidth: '80' })
-
 	export const number = style({
-		fontVariantNumeric: 'tabular-nums',
-		fontWeight: '550 !custom',
+		fontVariantNumeric: 'tabular-nums !custom',
+		typography: 'copy.14.strong',
 	})
 
-	export const hash = style({
-		minWidth: '0',
-		typography: 'label.12.mono',
-		width: '100% !custom',
-	})
+	export const hash = style({ minWidth: '0 !custom' })
 
 	export const time = style({
 		color: 'gray.900',
@@ -517,46 +487,5 @@ namespace styles {
 		},
 	})
 
-	export const paginationControls = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		justifyContent: 'center',
-		'@media (width >= 640px)': { justifyContent: 'flex-start' },
-	})
-
-	// TDS Button small secondary icon geometry on a link. Kept local because
-	// `Button.Link` has no style for a disabled (`aria-disabled`) link.
-	export const pageButton = style({
-		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '8',
-		color: 'foreground',
-		display: 'inline-flex',
-		flexShrink: 0,
-		height: '32',
-		justifyContent: 'center',
-		width: '32',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.200' },
-		},
-		selectors: {
-			'& > svg': { height: '16', width: '16' },
-			'&[aria-disabled="true"]': {
-				backgroundColor: 'grayAlpha.100',
-				color: 'gray.700',
-				cursor: 'default',
-			},
-		},
-	})
-
-	export const pageRange = style({
-		color: 'foreground',
-		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '4',
-		typography: 'label.12.strong',
-		whiteSpace: 'nowrap',
-	})
-
-	export const pageCount = style({ fontVariantNumeric: 'tabular-nums' })
+	export const pageCount = style({ fontVariantNumeric: 'tabular-nums !custom' })
 }

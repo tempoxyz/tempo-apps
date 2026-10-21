@@ -1,31 +1,19 @@
-import { Link } from '@tanstack/react-router'
 import { style, Tag } from '@tempoxyz/ds'
-import type { Address } from 'ox'
+import type { Address as OxAddress } from 'ox'
 import * as AddressUtil from 'ox/Address'
 import type * as React from 'react'
-import { cx } from 'zyzz'
-import { Midcut } from '#comps/Midcut'
-import { link, linkHover, pressDown } from '#styles/explorer'
+import { Address } from '#comps/Address'
 
 const TEMPO_API_FEE_PAYER = AddressUtil.from(
 	'0x58aa7ce42e1d13b2919e2ac7e006c4fbc171442c',
 )
 
+/** The account that sponsored a transaction's network fee. */
 export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 	const { address } = props
 
-	if (!AddressUtil.isEqual(address, TEMPO_API_FEE_PAYER)) {
-		return (
-			<Link
-				to="/address/$address"
-				params={{ address }}
-				{...cx(styles.address(), link(), linkHover(), pressDown())}
-				title={address}
-			>
-				<Midcut value={address} prefix="0x" min={4} align="end" />
-			</Link>
-		)
-	}
+	if (!AddressUtil.isEqual(address, TEMPO_API_FEE_PAYER))
+		return <Address address={address} />
 
 	return (
 		<Tag
@@ -52,17 +40,12 @@ export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 
 export declare namespace FeePayer {
 	type Props = {
-		address: Address.Address
+		address: OxAddress.Address
 	}
 }
 
 namespace styles {
-	export const address = style({
-		maxWidth: '50ch !custom',
-		typography: 'copy.14',
-		width: '100% !custom',
-	})
-
+	// The Tempo API mark: a 2×2 grid of squares in the tag's text color.
 	export const glyph = style({
 		display: 'grid',
 		gap: '1',

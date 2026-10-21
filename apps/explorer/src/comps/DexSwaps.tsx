@@ -1,19 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Button, style, variants } from '@tempoxyz/ds'
+import { Amount, Button, style, Tag, Token, variants } from '@tempoxyz/ds'
 import type * as React from 'react'
 import type { Address as TokenAddress } from 'viem'
-import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { RelativeTime } from '#comps/RelativeTime'
-import { TokenIcon } from '#comps/TokenIcon'
-import { LiveIndicator } from '#comps/ui/LiveIndicator'
 import type { DexPoolToken } from '#lib/dex-pools'
 import type { DexSwap } from '#lib/dex-swaps'
-import { PriceFormatter } from '#lib/formatting'
 import { dexSwapsQueryOptions } from '#lib/queries/dex-pools'
 
-const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const LIVE_SCOPE = 'dex-swaps'
 
 /** Recent swaps, or only those between a route's two ends. */
@@ -47,12 +42,11 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 						label: base ? 'Type' : 'Swap',
 						align: 'start',
 						width: '2fr',
-						minWidth: 240,
 					},
-					{ label: 'Value', align: 'end', width: '1fr', minWidth: 96 },
-					{ label: 'Sent', align: 'end', width: '1fr', minWidth: 140 },
-					{ label: 'Received', align: 'end', width: '1fr', minWidth: 140 },
-					{ label: 'Wallet', align: 'end', width: '1fr', minWidth: 120 },
+					{ label: 'Value', align: 'end', width: '1fr' },
+					{ label: 'Sent', align: 'end', width: '1fr' },
+					{ label: 'Received', align: 'end', width: '1fr' },
+					{ label: 'Wallet', align: 'end', width: '1fr' },
 				],
 			}}
 			items={(mode) =>
@@ -68,9 +62,12 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 											{...styles.stackedTime()}
 										/>
 									</div>,
-									<span key="value" {...styles.value()}>
-										{PriceFormatter.format(swap.amountIn)}
-									</span>,
+									<Amount
+										key="value"
+										align="right"
+										currency="USD"
+										value={swap.amountIn}
+									/>,
 								]
 							: [
 									<RelativeTime
@@ -79,9 +76,12 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 										{...styles.time()}
 									/>,
 									<span key="swap">{label(swap)}</span>,
-									<span key="value" {...styles.value()}>
-										{PriceFormatter.format(swap.amountIn)}
-									</span>,
+									<Amount
+										key="value"
+										align="right"
+										currency="USD"
+										value={swap.amountIn}
+									/>,
 									<TokenAmount
 										key="sent"
 										value={swap.amountIn}
@@ -92,12 +92,7 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 										value={swap.amountOut}
 										token={swap.to}
 									/>,
-									<Address
-										key="wallet"
-										address={swap.taker}
-										align="end"
-										chars={4}
-									/>,
+									<Address key="wallet" address={swap.taker} align="end" />,
 								],
 					link: {
 						href: `/tx/${swap.transactionHash}`,
@@ -127,7 +122,7 @@ export declare namespace DexSwapsGrid {
 	}
 }
 
-/** Live feed toggle, matching the address page's transaction feed. */
+/** Live feed toggle: a pressed button whose tag names the feed's state. */
 export function LivePill(props: LivePill.Props): React.JSX.Element {
 	const { live, onToggle } = props
 	return (
@@ -138,9 +133,10 @@ export function LivePill(props: LivePill.Props): React.JSX.Element {
 			size="small"
 			variant="secondary"
 		>
-			<LiveIndicator pinging={live} tone={live ? 'positive' : 'neutral'}>
+			<Tag intent={live ? 'positive' : 'neutral'} variant="plain">
+				<Tag.Dot />
 				{live ? 'Live' : 'Paused'}
-			</LiveIndicator>
+			</Tag>
 		</Button>
 	)
 }
@@ -181,23 +177,27 @@ function SideLabel(props: {
 function TokenChip(props: { token: DexPoolToken }): React.JSX.Element {
 	return (
 		<span {...styles.chip()}>
-			<TokenIcon address={props.token.address} size={16} />
+			<Token address={props.token.address} size="small" />
 			{props.token.symbol}
 		</span>
 	)
 }
 
+/** Two decimals down the column; a sub-cent amount keeps two significant digits. */
 function TokenAmount(props: {
 	value: number
 	token: DexPoolToken
 }): React.JSX.Element {
+	const { token, value } = props
 	return (
-		<span {...cx(styles.value(), styles.nowrap())}>
-			{props.value > 0 && props.value < 0.01
-				? '<0.01'
-				: amount.format(props.value)}{' '}
-			<span {...styles.secondary()}>{props.token.symbol}</span>
-		</span>
+		<Amount
+			align="right"
+			symbol={token.symbol}
+			value={
+				value > 0 && value < 0.01 ? value.toPrecision(2) : value.toFixed(2)
+			}
+			{...styles.nowrap()}
+		/>
 	)
 }
 
@@ -220,11 +220,6 @@ namespace styles {
 		whiteSpace: 'nowrap',
 	})
 
-	export const value = style({
-		color: 'foreground',
-		fontVariantNumeric: 'tabular-nums',
-	})
-
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
 	export const secondary = style({ color: 'gray.900' })
@@ -238,7 +233,7 @@ namespace styles {
 	})
 
 	export const side = variants({
-		base: { fontWeight: '550 !custom' },
+		base: { typography: 'copy.14.strong' },
 		defaultVariants: { buy: true },
 		variants: {
 			buy: {
@@ -252,7 +247,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: '550 !custom',
 		gap: '4',
+		typography: 'copy.14.strong',
 	})
 }

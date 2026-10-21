@@ -1,67 +1,25 @@
-import { Link } from '@tanstack/react-router'
-import { style } from '@tempoxyz/ds'
-import type { Address } from 'ox'
-import { cx } from 'zyzz'
-import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from '#comps/Midcut'
-import {
-	link,
-	linkHover,
-	mono,
-	pressDown,
-	transitionColors,
-} from '#styles/explorer'
+import { Hex } from '@tempoxyz/ds'
+import type { Address as AddressType } from 'ox'
+import type * as React from 'react'
+import { Address } from '#comps/Address'
 
-export function AddressCell(props: {
-	address: Address.Address
-	label?: string
-	asLink?: boolean
-}) {
+/** A table cell's address: a linked `Address`, or plain TDS `Hex`. */
+export function AddressCell(props: AddressCell.Props): React.JSX.Element {
 	const { address, label, asLink = true } = props
-	const { isHighlighted, handlers } = useAddressHighlight(address)
-	const title = `${label ? `${label}: ` : ''}${address}`
-
-	if (!asLink)
-		return (
-			<span
-				{...cx(
-					styles.address(),
-					mono(),
-					link(),
-					isHighlighted && styles.highlighted(),
-				)}
-				title={title}
-				{...handlers}
-			>
-				<Midcut value={address} prefix="0x" />
-			</span>
-		)
-
+	if (!asLink) return <Hex value={address} />
 	return (
-		<Link
-			to="/address/$address"
-			params={{ address }}
-			preload="intent"
-			{...cx(
-				styles.address(),
-				mono(),
-				link(),
-				linkHover(),
-				transitionColors(),
-				pressDown(),
-				isHighlighted && styles.highlighted(),
-			)}
-			title={title}
-			{...handlers}
-		>
-			<Midcut value={address} prefix="0x" />
-		</Link>
+		<Address
+			address={address}
+			title={`${label ? `${label}: ` : ''}${address}`}
+		/>
 	)
 }
 
-namespace styles {
-	// The mono face at the table's size.
-	export const address = style({ width: '100% !custom' })
-
-	export const highlighted = style({ textDecorationLine: 'underline' })
+export declare namespace AddressCell {
+	type Props = {
+		address: AddressType.Address
+		/** Prefixes the tooltip, such as `From`. */
+		label?: string | undefined
+		asLink?: boolean | undefined
+	}
 }

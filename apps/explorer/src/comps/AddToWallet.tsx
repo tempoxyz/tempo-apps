@@ -1,12 +1,9 @@
 import type { Address } from 'ox'
-import { Tag } from '@tempoxyz/ds'
-import { ChevronRight } from '@tempoxyz/ds/icons'
+import { Button, Tag } from '@tempoxyz/ds'
 import * as React from 'react'
 import { useConnection, useWatchAsset } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from 'zyzz'
 import { supportsWatchAsset } from '#lib/wallets'
-import { animatePulse, textAction } from '#styles/explorer'
 
 export function AddToWallet(
 	props: AddToWallet.Props,
@@ -58,27 +55,26 @@ export function AddToWallet(
 
 	if (!isSupportedConnector) return null
 
+	const walletName =
+		connector?.name && connector.name !== 'Injected' ? connector.name : 'wallet'
+
 	if (isSuccess)
 		return (
 			<Tag intent="positive" variant="plain">
 				<Tag.Dot />
-				Added!
+				Added to {walletName}
 			</Tag>
 		)
 
-	const walletName =
-		connector?.name && connector.name !== 'Injected' ? connector.name : 'Wallet'
-
 	return (
-		<button
-			disabled={isPending}
+		<Button
+			loading={isPending}
 			onClick={handleClick}
-			type="button"
-			{...cx(textAction(), isPending && animatePulse())}
+			size="small"
+			variant="secondary"
 		>
-			{isPending ? 'Adding…' : `Add ${symbol ?? 'token'} to ${walletName}`}
-			<ChevronRight />
-		</button>
+			Add {symbol ?? 'token'} to {walletName}
+		</Button>
 	)
 }
 

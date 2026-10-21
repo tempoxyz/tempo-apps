@@ -1,13 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { style } from '@tempoxyz/ds'
+import type * as React from 'react'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 
-export function TimestampCell(props: {
-	timestamp: bigint
-	link?: string
-	format?: TimeFormat
-	className?: string
-}) {
+export function TimestampCell(props: TimestampCell.Props): React.JSX.Element {
 	const { timestamp, link, format = 'relative', className } = props
 
 	if (link) {
@@ -27,6 +23,15 @@ export function TimestampCell(props: {
 			className={className ?? styles.timestamp().className}
 		/>
 	)
+}
+
+export declare namespace TimestampCell {
+	type Props = {
+		timestamp: bigint
+		link?: string | undefined
+		format?: TimeFormat | undefined
+		className?: string | undefined
+	}
 }
 
 namespace styles {

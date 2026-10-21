@@ -1,106 +1,189 @@
+import { useLocation } from '@tanstack/react-router'
 import {
 	Button,
 	Checkbox,
+	CopyButton,
 	Field,
 	Input,
+	Rows,
 	Textarea,
 	Tooltip,
 	style,
-	variants,
 } from '@tempoxyz/ds'
-import { Check, ChevronDown, Copy, Link as LinkIcon } from '@tempoxyz/ds/icons'
 import { getSignature } from 'ox/AbiItem'
-import type * as React from 'react'
+import * as React from 'react'
 import type { AbiFunction, AbiParameter } from 'viem'
-import { cx } from 'zyzz'
 import {
 	getFunctionSelector,
 	getInputType,
 	getPlaceholder,
 	isArrayType,
 } from '#lib/domain/contracts'
-import { useCopy, useCopyPermalink } from '#lib/hooks'
-import { pressDown } from '#styles/explorer'
 
-/** Card for one read or write function: signature, copy actions, and body. */
-export function FunctionCard(props: FunctionCard.Props): React.JSX.Element {
-	const { actions, children, expanded = false, fn, id, onToggle, tag } = props
-	const { copy, notifying } = useCopy({ timeout: 2_000 })
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: id,
-	})
-
-	const signature = (
-		<>
-			<span {...styles.signature()}>{getFunctionDisplaySignature(fn)}</span>
-			{tag}
-		</>
-	)
-
+/**
+ * A function without arguments as a key-value `Rows.Row`: its signature, its
+ * value or status, then its actions.
+ */
+export function FunctionRow(props: FunctionRow.Props): React.JSX.Element {
+	const { actions, fn, id, tag, value } = props
 	return (
-		<div id={id} {...styles.card()}>
-			<div {...styles.header()}>
-				{onToggle ? (
-					<button
-						type="button"
-						aria-expanded={expanded}
-						onClick={onToggle}
-						{...cx(styles.title(), styles.toggle(), pressDown())}
-					>
-						{signature}
-					</button>
-				) : (
-					<div {...styles.title()}>{signature}</div>
-				)}
-				<div {...styles.actions()}>
-					<FunctionAction
-						label="Copy method name"
-						onClick={() => void copy(getMethodWithSelector(fn))}
-					>
-						{notifying ? <Check /> : <Copy />}
-					</FunctionAction>
-					<FunctionAction
-						label="Copy permalink"
-						onClick={() => void handleCopyPermalink()}
-					>
-						{linkNotifying ? <Check /> : <LinkIcon />}
-					</FunctionAction>
-					{actions}
-					{onToggle && (
-						<FunctionAction
-							label={expanded ? 'Collapse function' : 'Expand function'}
-							aria-expanded={expanded}
-							onClick={onToggle}
-						>
-							<ChevronDown {...styles.chevron({ expanded })} />
-						</FunctionAction>
-					)}
-				</div>
-			</div>
-			{children && <div {...styles.body()}>{children}</div>}
-		</div>
+		<Rows.Row id={id} spacing="none">
+			<Rows.Label>
+				<span {...styles.label()}>
+					<span {...styles.signature()}>{getFunctionDisplaySignature(fn)}</span>
+					{tag}
+				</span>
+			</Rows.Label>
+			{value !== undefined && <span {...styles.value()}>{value}</span>}
+			<span {...styles.actions()}>
+				{actions}
+				<FunctionCopyActions fn={fn} id={id} />
+			</span>
+		</Rows.Row>
 	)
 }
 
-export declare namespace FunctionCard {
+export declare namespace FunctionRow {
 	type Props = {
-		/** Extra header actions, placed after the copy actions. */
+		/** Buttons before the copy actions. */
 		actions?: React.ReactNode
-		children?: React.ReactNode
-		expanded?: boolean | undefined
 		fn: AbiFunction
 		/** Element id, also the permalink fragment. */
 		id: string
-		/** Makes the signature a disclosure button for the body. */
-		onToggle?: (() => void) | undefined
 		/** Shown after the signature. */
+		tag?: React.ReactNode
+		/** The function's current value. */
+		value?: React.ReactNode
+	}
+}
+
+/**
+ * A function with arguments as an expandable `Rows.Row`. Its panel holds the
+ * function's form.
+ */
+export function FunctionDisclosure(
+	props: FunctionDisclosure.Props,
+): React.JSX.Element {
+	const { children, expanded, fn, id, onToggle, tag } = props
+	const panelId = React.useId()
+	return (
+		<>
+			<Rows.Row
+				action="expand"
+				aria-controls={panelId}
+				aria-expanded={expanded}
+				id={id}
+				onClick={onToggle}
+				spacing="none"
+			>
+				<Rows.Info>
+					<Rows.Title>
+						<span {...styles.label()}>
+							<span {...styles.signature()}>
+								{fn.name || getFunctionSelector(fn)}
+							</span>
+							{tag}
+						</span>
+					</Rows.Title>
+					<Rows.Description>
+						<span {...styles.parameters()}>{getParameterList(fn)}</span>
+					</Rows.Description>
+				</Rows.Info>
+			</Rows.Row>
+			{expanded && <Rows.Panel id={panelId}>{children}</Rows.Panel>}
+		</>
+	)
+}
+
+export declare namespace FunctionDisclosure {
+	type Props = {
+		/** The function's form, shown while expanded. */
+		children: React.ReactNode
+		expanded: boolean
+		fn: AbiFunction
+		/** Element id, also the permalink fragment. */
+		id: string
+		onToggle: () => void
+		/** Shown after the function name. */
 		tag?: React.ReactNode
 	}
 }
 
-/** Small text icon button with a tooltip in a function card header. */
-export function FunctionAction(props: FunctionAction.Props): React.JSX.Element {
-	const { children, label, ...rest } = props
+/**
+ * The form for one function's arguments, following the TDS Forms pattern:
+ * fields in one column, then the actions aligned to the end with the primary
+ * action last, then the result.
+ */
+export function FunctionForm(props: FunctionForm.Props): React.JSX.Element {
+	const { children, fn, id, note, onSubmit, primary, result, secondary } = props
+	return (
+		<form
+			noValidate
+			onSubmit={(event) => {
+				event.preventDefault()
+				onSubmit()
+			}}
+			{...styles.form()}
+		>
+			{children}
+			<div {...styles.footer()}>
+				<span {...styles.utilities()}>
+					<FunctionCopyActions fn={fn} id={id} />
+					{note && <span {...styles.note()}>{note}</span>}
+				</span>
+				<span {...styles.formActions()}>
+					{secondary}
+					{primary}
+				</span>
+			</div>
+			{result}
+		</form>
+	)
+}
+
+export declare namespace FunctionForm {
+	type Props = {
+		/** The argument fields. */
+		children: React.ReactNode
+		fn: AbiFunction
+		id: string
+		/** Short text beside the copy actions, such as why an action is missing. */
+		note?: React.ReactNode
+		onSubmit: () => void
+		/** The submit button, named by its result. */
+		primary?: React.ReactNode
+		/** The outcome of the last call. */
+		result?: React.ReactNode
+		/** Actions before the primary action. */
+		secondary?: React.ReactNode
+	}
+}
+
+/** Copies the method name with its selector, and a link to the function. */
+function FunctionCopyActions(props: {
+	fn: AbiFunction
+	id: string
+}): React.JSX.Element {
+	const { fn, id } = props
+	const href = useLocation({ select: (location) => location.href })
+	const permalink =
+		typeof window === 'undefined'
+			? `#${id}`
+			: new URL(`#${id}`, new URL(href, window.location.origin)).href
+	return (
+		<>
+			<CopyButton
+				aria-label="Copy method name"
+				value={getMethodWithSelector(fn)}
+			/>
+			<CopyButton aria-label="Copy link" value={permalink} />
+		</>
+	)
+}
+
+/** A small icon `Button` named by `label`, which its tooltip repeats. */
+export function IconAction(props: IconAction.Props): React.JSX.Element {
+	const { icon: Icon, label, ...rest } = props
 	return (
 		<Tooltip.Root>
 			<Tooltip.Trigger
@@ -111,27 +194,49 @@ export function FunctionAction(props: FunctionAction.Props): React.JSX.Element {
 						shape="icon"
 						size="small"
 						variant="text"
-						{...styles.action()}
 					/>
 				}
 			>
-				{children}
+				<Icon {...styles.icon()} />
 			</Tooltip.Trigger>
 			<Tooltip.Popup>{label}</Tooltip.Popup>
 		</Tooltip.Root>
 	)
 }
 
-export declare namespace FunctionAction {
+export declare namespace IconAction {
 	type Props = Omit<
 		Button.Props,
 		'aria-label' | 'children' | 'className' | 'shape' | 'size' | 'variant'
-	> & { children: React.ReactElement; label: string }
+	> & {
+		icon: (props: React.SVGProps<SVGSVGElement>) => React.ReactNode
+		label: string
+	}
+}
+
+/** The value a call returned, under a Result label and announced as it changes. */
+export function FunctionResult(props: {
+	children: React.ReactNode
+}): React.JSX.Element {
+	return (
+		<div {...styles.result()}>
+			<span {...styles.resultLabel()}>Result</span>
+			<output aria-live="polite" {...styles.output()}>
+				{props.children}
+			</output>
+		</div>
+	)
 }
 
 /** Argument field for a function input, typed by its ABI parameter. */
 export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
-	const { input, label = input.name || 'value', onChange, value } = props
+	const {
+		input,
+		invalid = false,
+		label = input.name || 'value',
+		onChange,
+		value,
+	} = props
 
 	if (getInputType(input.type) === 'checkbox')
 		return (
@@ -141,10 +246,9 @@ export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
 						checked={value === 'true'}
 						onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
 					/>
-					<Field.Label>
-						{label} <span {...styles.inputType()}>{input.type}</span>
-					</Field.Label>
+					<Field.Label>{label}</Field.Label>
 				</Field.Item>
+				<Field.Description>{input.type}</Field.Description>
 			</Field.Root>
 		)
 
@@ -153,16 +257,14 @@ export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
 		autoComplete: 'off',
 		autoCorrect: 'off',
 		placeholder: getPlaceholder(input),
+		required: true,
 		spellCheck: false,
 		value,
 	} as const
 
 	return (
-		<Field.Root {...styles.field()}>
-			<div {...styles.labels()}>
-				<Field.Label>{label}</Field.Label>
-				<span {...styles.inputType()}>{input.type}</span>
-			</div>
+		<Field.Root invalid={invalid}>
+			<Field.Label>{label}</Field.Label>
 			{getInputType(input.type) === 'textarea' || isArrayType(input.type) ? (
 				<Textarea
 					{...control}
@@ -173,10 +275,13 @@ export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
 				<Input.Group>
 					<Input.Control
 						{...control}
+						inputMode={/^uint\d*$/.test(input.type) ? 'numeric' : undefined}
 						onValueChange={(next) => onChange(next)}
 					/>
 				</Input.Group>
 			)}
+			<Field.Description>{input.type}</Field.Description>
+			<Field.Error match={invalid}>{getMissingValueError(input)}</Field.Error>
 		</Field.Root>
 	)
 }
@@ -184,6 +289,8 @@ export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
 export declare namespace FunctionInput {
 	type Props = {
 		input: AbiParameter
+		/** Marks an empty required value after a submit. */
+		invalid?: boolean | undefined
 		/** Defaults to the parameter name. */
 		label?: string | undefined
 		onChange: (value: string) => void
@@ -194,6 +301,21 @@ export declare namespace FunctionInput {
 /** State key for an argument; unnamed (inferred ABI) arguments use their index. */
 export function functionInputKey(input: AbiParameter, index: number): string {
 	return input.name || `arg${index}`
+}
+
+/** Error for an empty argument, naming the value it needs. */
+function getMissingValueError(input: AbiParameter): string {
+	if (input.type === 'address') return 'Enter an address that starts with 0x.'
+	if (/^u?int\d*$/.test(input.type)) return 'Enter a whole number.'
+	if (isArrayType(input.type)) return 'Enter a JSON array, such as [1, 2].'
+	return `Enter a ${input.type} value.`
+}
+
+/** Argument types and names, e.g. "address to, uint256 amount". */
+function getParameterList(fn: AbiFunction): string {
+	return fn.inputs
+		.map((input) => (input.name ? `${input.type} ${input.name}` : input.type))
+		.join(', ')
 }
 
 /** Display signature; unnamed (inferred ABI) functions show their selector. */
@@ -211,103 +333,96 @@ function getMethodWithSelector(fn: AbiFunction): string {
 }
 
 namespace styles {
-	// A bordered, unpadded card; TDS Surface always pads its content.
-	export const card = style({
-		backgroundColor: 'background.surface',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
-		borderStyle: 'solid',
-		borderWidth: '1px',
-		boxSizing: 'border-box',
-		color: 'foreground',
-		overflow: 'hidden',
-	})
-
-	export const header = style({
+	export const label = style({
 		alignItems: 'center',
-		display: 'flex',
-		justifyContent: 'space-between',
-	})
-
-	export const title = style({
-		alignItems: 'center',
-		display: 'flex',
-		flex: 1,
+		columnGap: '8',
+		display: 'inline-flex',
 		flexWrap: 'wrap',
-		gap: '8',
-		minWidth: '0',
-		paddingBlock: '8',
-		paddingLeft: '12',
-		textAlign: 'left',
-	})
-
-	// The card clips overflow, so the ring is drawn inside, following the
-	// card's corners.
-	export const toggle = style({
-		cursor: 'pointer',
-		':focus-visible': {
-			borderBottomLeftRadius: '12',
-			borderTopLeftRadius: '12',
-			outlineOffset: '-2px',
-		},
+		rowGap: '4',
 	})
 
 	export const signature = style({
-		color: 'gray.900',
-		minWidth: '0',
-		overflowWrap: 'anywhere',
-		typography: 'label.12.mono',
+		color: 'foreground',
+		typography: 'copy.13.mono',
 	})
 
-	// The card clips overflow, so the row leaves room on the right and above
-	// and below for the TDS Buttons' focus rings (2px outside each button).
+	export const parameters = style({
+		overflowWrap: 'anywhere',
+		typography: 'copy.13.mono',
+	})
+
+	// The value fills the space between the label and the actions.
+	export const value = style({
+		display: 'flex',
+		flex: 1,
+		justifyContent: 'flex-end',
+		minWidth: '0',
+		overflowWrap: 'anywhere',
+		textAlign: 'end',
+	})
+
 	export const actions = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		paddingBlock: '4',
-		paddingLeft: '12',
-		paddingRight: '4',
 	})
 
-	// TDS Button leaves icon size to the icon.
-	export const action = style({
-		selectors: { '& svg': { height: '16', width: '16' } },
-	})
-
-	export const chevron = variants({
-		defaultVariants: { expanded: false },
-		variants: {
-			expanded: { true: { rotate: '180deg' }, false: {} },
-		},
-	})
-
-	export const body = style({
-		borderColor: 'grayAlpha.200',
-		borderTopWidth: '1px',
+	export const form = style({
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '16',
-		padding: '12',
 	})
 
-	// Touch devices keep 16px text so iOS does not zoom on focus.
-	export const field = style({
-		'@media (pointer: coarse)': {
-			selectors: {
-				'& input': { fontSize: '16px !custom' },
-				'& textarea': { fontSize: '16px !custom' },
-			},
-		},
-	})
-
-	export const labels = style({
+	export const footer = style({
 		alignItems: 'center',
-		columnGap: '4',
 		display: 'flex',
 		flexWrap: 'wrap',
-		typography: 'label.14',
+		gap: '12',
+		justifyContent: 'space-between',
 	})
 
-	export const inputType = style({ color: 'gray.900' })
+	export const utilities = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+	})
+
+	export const note = style({
+		color: 'gray.900',
+		paddingInlineStart: '4',
+		typography: 'copy.13',
+	})
+
+	export const formActions = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		marginInlineStart: 'auto !custom',
+	})
+
+	// Icons match the 16px glyph of TDS CopyButton beside them.
+	export const icon = style({ fontSize: '16' })
+
+	export const result = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+	})
+
+	export const resultLabel = style({
+		color: 'gray.900',
+		typography: 'label.13',
+	})
+
+	export const output = style({
+		backgroundColor: 'grayAlpha.100',
+		borderRadius: '8',
+		color: 'foreground',
+		display: 'block',
+		overflowWrap: 'anywhere',
+		paddingBlock: '8',
+		paddingInline: '12',
+		typography: 'copy.13.mono',
+		whiteSpace: 'pre-wrap',
+	})
 }

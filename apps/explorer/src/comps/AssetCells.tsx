@@ -1,83 +1,73 @@
 import { Link } from '@tanstack/react-router'
-import { style, variants } from '@tempoxyz/ds'
+import { Amount, Hex, style, Token, variants } from '@tempoxyz/ds'
 import type * as React from 'react'
 import { formatUnits } from 'viem'
 import { cx } from 'zyzz'
-import { TokenIcon } from '#comps/TokenIcon'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { type AssetData, getAssetValue } from '#lib/address-balances'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { link, linkHover, mono, pressDown, truncate } from '#styles/explorer'
+import { link, linkHover, truncate } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config'
 
-export function AssetName(props: {
-	asset: AssetData
-	multiline?: boolean
-}): React.JSX.Element {
+export function AssetName(props: AssetName.Props): React.JSX.Element {
 	const { asset, multiline = false } = props
 	if (!asset.metadata?.name) return <span {...styles.placeholder()}>…</span>
 	return (
 		<span {...styles.name({ multiline })}>
-			<TokenIcon address={asset.address} size={20} />
-			<span {...cx(multiline && styles.wrap(), !multiline && truncate())}>
+			<Token address={asset.address} />
+			<span {...(multiline ? styles.wrap() : truncate())}>
 				{asset.metadata.name}
 			</span>
 		</span>
 	)
 }
 
-export function AssetSymbol(props: { asset: AssetData }): React.JSX.Element {
+export declare namespace AssetName {
+	type Props = {
+		asset: AssetData
+		/** Wraps a long name instead of truncating it. */
+		multiline?: boolean | undefined
+	}
+}
+
+export function AssetSymbol(props: AssetCell.Props): React.JSX.Element {
 	const { asset } = props
 	if (!asset.metadata?.symbol) return <span {...styles.placeholder()}>…</span>
 	return (
 		<Link
 			to="/token/$address"
 			params={{ address: asset.address }}
-			{...cx(link(), linkHover(), pressDown(), truncate())}
+			{...cx(link(), linkHover(), truncate())}
 		>
 			{asset.metadata.symbol}
 		</Link>
 	)
 }
 
-export function AssetContract(props: { asset: AssetData }): React.JSX.Element {
-	return (
-		<span {...cx(link(), mono())}>
-			{HexFormatter.truncate(props.asset.address, 10)}
-		</span>
-	)
+export function AssetContract(props: AssetCell.Props): React.JSX.Element {
+	return <Hex value={props.asset.address} />
 }
 
-export function AssetCurrency(props: { asset: AssetData }): React.JSX.Element {
+export function AssetCurrency(props: AssetCell.Props): React.JSX.Element {
 	const { asset } = props
 	if (!asset.metadata?.currency) return <span {...styles.placeholder()}>—</span>
 	return <span>{asset.metadata.currency}</span>
 }
 
-export function AssetAmount(props: {
-	asset: AssetData
-	multiline?: boolean
-}): React.JSX.Element {
-	const { asset, multiline = false } = props
+export function AssetAmount(props: AssetCell.Props): React.JSX.Element {
+	const { asset } = props
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span {...styles.placeholder()}>…</span>
-	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
-	const display = PriceFormatter.formatAmountFull(formatted)
 	return (
-		<span
-			{...cx(
-				multiline && styles.wrap(),
-				multiline && styles.numeric(),
-				!multiline && truncate(),
-			)}
-			title={display}
-		>
-			{display}
-		</span>
+		<Amount
+			align="right"
+			symbol={asset.metadata.symbol}
+			value={formatUnits(asset.balance, asset.metadata.decimals)}
+			{...styles.wrap()}
+		/>
 	)
 }
 
-export function AssetValue(props: { asset: AssetData }): React.JSX.Element {
+export function AssetValue(props: AssetCell.Props): React.JSX.Element {
 	const { asset } = props
 	const { isTokenListed } = useTokenListMembership()
 	if (!isTokenListed(getTempoChain().id, asset.address))
@@ -86,29 +76,27 @@ export function AssetValue(props: { asset: AssetData }): React.JSX.Element {
 	if (!value) return <span {...styles.placeholder()}>…</span>
 	if (value.currency !== 'USD') return <span {...styles.placeholder()}>—</span>
 	return (
-		<span>
-			{PriceFormatter.format(value.amount, {
-				decimals: value.decimals,
-				format: 'short',
-			})}
-		</span>
+		<Amount
+			align="right"
+			currency="USD"
+			value={formatUnits(value.amount, value.decimals)}
+		/>
 	)
 }
 
 /** Token name above its address, for narrow layouts. */
-export function AssetIdentity(props: { asset: AssetData }): React.JSX.Element {
+export function AssetIdentity(props: AssetCell.Props): React.JSX.Element {
 	const { asset } = props
 	return (
 		<span {...styles.identity()}>
 			<AssetName asset={asset} multiline />
-			<span
-				{...cx(link(), styles.wrap(), styles.address())}
-				title={asset.address}
-			>
-				{HexFormatter.truncate(asset.address)}
-			</span>
+			<Hex value={asset.address} />
 		</span>
 	)
+}
+
+export declare namespace AssetCell {
+	type Props = { asset: AssetData }
 }
 
 namespace styles {
@@ -131,14 +119,10 @@ namespace styles {
 
 	export const wrap = style({ minWidth: '0 !custom', overflowWrap: 'anywhere' })
 
-	export const numeric = style({ fontVariantNumeric: 'tabular-nums' })
-
 	export const identity = style({
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '4',
 		minWidth: '0 !custom',
 	})
-
-	export const address = style({ typography: 'label.12.mono' })
 }

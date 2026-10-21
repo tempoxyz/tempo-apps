@@ -1,15 +1,16 @@
-import { Button, style } from '@tempoxyz/ds'
+import { Button, CopyButton, style } from '@tempoxyz/ds'
 import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
 import { AbiArgument } from '#comps/AbiArgument'
-import { CopyButton } from '#comps/CopyButton'
 import { getAbiItem, getContractInfo } from '#lib/domain/contracts'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import { codeIdentifier, mono } from '#styles/explorer'
 
-export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
+export function TxDecodedCalldata(
+	props: TxDecodedCalldata.Props,
+): React.JSX.Element {
 	const { address, data } = props
 	const selector = slice(data, 0, 4)
 	const [showRaw, setShowRaw] = useState(false)
@@ -76,6 +77,8 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 			</div>
 		)
 
+	const signatureText = `${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`
+
 	return (
 		<div {...styles.root()}>
 			<div {...styles.panel()}>
@@ -99,11 +102,9 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 						<span {...styles.secondary()}>)</span>
 					</code>
 					<CopyButton
-						ariaLabel="Copy signature"
-						className={styles.copyButton().className}
-						value={() =>
-							`${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`
-						}
+						aria-label="Copy signature"
+						value={signatureText}
+						{...styles.copy()}
 					/>
 				</div>
 				{args && args.length > 0 && (
@@ -125,7 +126,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				variant="secondary"
 				{...styles.toggle()}
 			>
-				{showRaw ? 'Hide' : 'Show'} raw
+				{showRaw ? 'Hide raw data' : 'Show raw data'}
 			</Button>
 			{showRaw && (
 				<div {...styles.panel()}>
@@ -148,13 +149,11 @@ export namespace TxDecodedCalldata {
 		return (
 			<div {...styles.raw()}>
 				<pre {...styles.rawData()}>{data}</pre>
-				<div {...styles.rawActions()}>
-					<CopyButton
-						ariaLabel="Copy raw data"
-						className={styles.copyButton().className}
-						value={data}
-					/>
-				</div>
+				<CopyButton
+					aria-label="Copy input data"
+					value={data}
+					{...styles.copy()}
+				/>
 			</div>
 		)
 	}
@@ -173,48 +172,36 @@ namespace styles {
 		gap: '8',
 	})
 
-	// An opaque well, so the copy control can mask the text it overlaps. It
-	// clips, so focus rings inside it are drawn inset (the element type beats
-	// Button's own offset).
+	// A well on the section surface that holds the decoded call.
 	export const panel = style({
 		backgroundColor: 'background.primary',
 		borderRadius: '8',
-		overflow: 'hidden',
-		selectors: {
-			'& a:focus-visible': { outlineOffset: '-2px' },
-			'& button:focus-visible': { outlineOffset: '-2px' },
-			'& summary:focus-visible': { outlineOffset: '-2px' },
-		},
+		minWidth: '0 !custom',
 	})
 
 	export const raw = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		gap: '8',
 		paddingBlock: '8',
 		paddingInline: '12',
-		position: 'relative',
 	})
 
 	export const rawData = style({
 		color: 'foreground',
+		flex: '1 !custom',
+		margin: '0',
 		maxHeight: '300px !custom',
+		minWidth: '0 !custom',
 		overflow: 'auto',
-		paddingRight: '40',
 		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})
 
-	export const rawActions = style({
-		backgroundColor: 'background.primary',
-		display: 'flex',
-		paddingLeft: '8',
-		position: 'absolute',
-		right: '12',
-		top: '8',
-	})
-
-	// Negative margins let the 32px icon Button sit in a 16px text row without
-	// growing it. Only properties Button leaves unset.
-	export const copyButton = style({
+	// Negative margins let the 32px copy button sit in a 16px text row without
+	// growing it.
+	export const copy = style({
 		flexShrink: '0 !custom',
 		marginBlock: '-8px !custom',
 		marginRight: '-8px !custom',
@@ -233,7 +220,8 @@ namespace styles {
 
 	export const signature = style({
 		color: 'foreground',
-		typography: 'label.12',
+		typography: 'label.12.mono',
+		wordBreak: 'break-all',
 	})
 
 	export const secondary = style({ color: 'gray.900' })

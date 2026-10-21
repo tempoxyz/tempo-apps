@@ -16,15 +16,23 @@ import * as React from 'react'
 import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions, Hooks } from 'wagmi/tempo'
-import { Button, Callout, style, Tag, Tooltip } from '@tempoxyz/ds'
 import {
-	Check,
+	Button,
+	Callout,
+	Popover,
+	formatHex,
+	Hex as HexValue,
+	style,
+	Tag,
+	Token,
+	Tooltip,
+} from '@tempoxyz/ds'
+import {
 	ChevronLeft,
 	ChevronRight,
 	ChevronsLeft,
 	ChevronsRight,
 	Close,
-	Copy,
 	Eye,
 	EyeOff,
 	InfoCircle,
@@ -43,7 +51,6 @@ import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Pagination } from '#comps/Pagination'
-import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
@@ -53,7 +60,6 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
-import { TokenIcon } from '#comps/TokenIcon'
 import {
 	AssetName,
 	AssetSymbol,
@@ -107,8 +113,7 @@ import {
 	resolveContractHashTab,
 	type AddressTab as TabValue,
 } from '#lib/domain/address-tabs'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
+import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import {
 	buildAddressDescription,
 	buildAddressOgImageUrl,
@@ -137,14 +142,7 @@ import {
 	zonePortalActivityQueryOptions,
 	zonePortalOverviewQueryOptions,
 } from '#lib/zone-portal'
-import { LiveIndicator } from '#comps/ui/LiveIndicator'
-import {
-	link,
-	linkHover,
-	pressDown,
-	transitionColors,
-	truncate,
-} from '#styles/explorer'
+import { link, linkHover, truncate } from '#styles/explorer'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import { cx } from 'zyzz'
@@ -153,6 +151,9 @@ type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
+// Fees are attodollars: gas used times the gas price, at 18 decimals.
+const FEE_DECIMALS = 18
+const FEE_SYMBOL = getTempoChain().nativeCurrency.symbol
 
 const defaultSearchValues = {
 	page: 1,
@@ -220,7 +221,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	},
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Address Not Found"
+			title="Address not found"
 			message="The address is invalid or could not be found."
 			data={data as NotFound.NotFoundData}
 		/>
@@ -381,7 +382,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					: 'Address'
 		const contractInfo = loaderData?.contractInfo
 		const contractName = !isToken ? contractInfo?.name : undefined
-		const title = `${contractName ?? `${label} ${HexFormatter.truncate(params.address as Hex.Hex)}`} ⋅ Tempo Explorer`
+		const title = `${contractName ?? `${label} ${formatHex(params.address)}`} ⋅ Tempo Explorer`
 
 		let description: string
 		let ogImageUrl: string
@@ -804,7 +805,6 @@ function RouteComponent() {
 					isZonePortal ? setHideSubmitBatches : undefined
 				}
 				onClearTransactionFilters={clearTransactionFilters}
-				zonePortalOverview={zonePortalOverview}
 				portalLive={portalLive}
 				onPortalLiveChange={setPortalLive}
 			/>
@@ -923,7 +923,6 @@ type ZonePortalCardProps = {
 
 function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 	const { address, createdTimestamp, lastActivityTimestamp, overview } = props
-	const { copy, notifying } = useCopy()
 	const numberFormat = React.useMemo(() => new Intl.NumberFormat('en-US'), [])
 
 	return (
@@ -931,22 +930,13 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 			title={<InfoCard.Title>Zone Portal</InfoCard.Title>}
 			className={styles.zonePortalCard().className}
 			sections={[
-				<button
-					key="address"
-					type="button"
-					onClick={() => copy(address)}
-					{...cx(styles.addressButton(), pressDown())}
-				>
-					<div {...styles.addressHeader()}>
-						<span {...styles.addressLabel()}>Address</span>
-						{notifying ? (
-							<Check {...styles.icon12()} />
-						) : (
-							<Copy {...styles.icon12()} />
-						)}
-					</div>
-					<p {...styles.addressValue()}>{address}</p>
-				</button>,
+				<div key="address" {...styles.address()}>
+					<span {...styles.addressLabel()}>Address</span>
+					<HexValue.Root size="small" value={address} variant="filled">
+						<HexValue.Text />
+						<HexValue.Copy aria-label="Copy address" />
+					</HexValue.Root>
+				</div>,
 				<div key="balances" {...styles.balances()}>
 					<p {...styles.balancesLabel()}>Balances</p>
 					<div {...styles.balanceList()}>
@@ -956,14 +946,9 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 									<Link
 										to="/token/$address"
 										params={{ address: asset.address }}
-										{...cx(
-											styles.balanceToken(),
-											link(),
-											linkHover(),
-											pressDown(),
-										)}
+										{...cx(styles.balanceToken(), link(), linkHover())}
 									>
-										<TokenIcon address={asset.address} />
+										<Token address={asset.address} size="small" />
 										<span {...truncate()}>{asset.symbol}</span>
 									</Link>
 									<Amount.Base
@@ -971,6 +956,7 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 										decimals={asset.decimals}
 										short
 										shortMaximumFractionDigits={6}
+										symbol={asset.symbol}
 									/>
 								</div>
 							))
@@ -1052,7 +1038,6 @@ function SectionsWrapper(props: {
 	hideSubmitBatches: boolean
 	onHideSubmitBatchesChange?: ((hide: boolean) => void) | undefined
 	onClearTransactionFilters: () => void
-	zonePortalOverview?: ZonePortalOverview | undefined
 	portalLive: boolean
 	onPortalLiveChange: (live: boolean) => void
 }) {
@@ -1085,7 +1070,6 @@ function SectionsWrapper(props: {
 		hideSubmitBatches,
 		onHideSubmitBatchesChange,
 		onClearTransactionFilters,
-		zonePortalOverview,
 		portalLive,
 		onPortalLiveChange,
 	} = props
@@ -1248,7 +1232,6 @@ function SectionsWrapper(props: {
 	const {
 		data: transfersData,
 		isPending: isTransfersPending,
-		isFetching: isTransfersFetching,
 		error: tokenTransfersError,
 		refetch: refetchTransfers,
 	} = useQuery({
@@ -1269,7 +1252,6 @@ function SectionsWrapper(props: {
 	const {
 		data: accountTransfersData,
 		isPending: isAccountTransfersPending,
-		isFetching: isAccountTransfersFetching,
 		error: accountTransfersError,
 		refetch: refetchAccountTransfers,
 	} = useQuery({
@@ -1422,12 +1404,7 @@ function SectionsWrapper(props: {
 				size="small"
 				variant="secondary"
 			>
-				<LiveIndicator
-					pinging={feed.live}
-					tone={feed.live ? 'positive' : 'neutral'}
-				>
-					{feed.live ? 'Live' : 'Paused'}
-				</LiveIndicator>
+				<LiveTag live={feed.live} />
 			</Button>
 		</>
 	)
@@ -1445,11 +1422,7 @@ function SectionsWrapper(props: {
 
 	// Token holders query
 	const holdersPage = isHoldersTabActive ? page : 1
-	const {
-		data: holdersData,
-		isPending: isHoldersPending,
-		isFetching: isHoldersFetching,
-	} = useQuery({
+	const { data: holdersData, isPending: isHoldersPending } = useQuery({
 		...holdersQueryOptions({
 			address,
 			page: holdersPage,
@@ -1477,10 +1450,6 @@ function SectionsWrapper(props: {
 		isTransactionsTabActive &&
 		!error &&
 		(activeHistoryQuery.isPending || !historyData)
-	const isTransactionsFetching =
-		isTransactionsTabActive &&
-		activeHistoryQuery.isFetching &&
-		!isTransactionsLoading
 	const transfersError = isToken ? tokenTransfersError : accountTransfersError
 	const refetchActiveTransfers = isToken
 		? refetchTransfers
@@ -1492,13 +1461,8 @@ function SectionsWrapper(props: {
 		: isTransfersTabActive &&
 			!transfersError &&
 			(isAccountTransfersPending || !accountTransfersData)
-	const isTransfersFetchingNext = isToken
-		? isTransfersTabActive && isTransfersFetching && !isTransfersLoading
-		: isTransfersTabActive && isAccountTransfersFetching && !isTransfersLoading
 	const isHoldersLoading =
 		isHoldersTabActive && (isHoldersPending || !holdersData)
-	const isHoldersFetchingNext =
-		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
 
 	const prefetchTransactionPages = React.useCallback(
 		(initialPosition: HistoryPosition) => {
@@ -1636,17 +1600,15 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className={cx(styles.timeHeader(), transitionColors()).className}
 				/>
 			),
 			align: 'start',
-			minWidth: 86,
 			width: '0.5fr',
 		},
-		{ label: 'Description', align: 'start', minWidth: 260, width: '2fr' },
-		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
-		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
-		{ label: 'Total', align: 'end', minWidth: 72, width: '0.5fr' },
+		{ label: 'Description', align: 'start', primary: true, width: '2fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
+		{ label: 'Fee', align: 'end', width: '0.5fr' },
+		{ label: 'Total', align: 'end', width: '0.5fr' },
 	]
 
 	const transfersColumns: DataGrid.Column[] = [
@@ -1656,28 +1618,26 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className={cx(styles.timeHeader(), transitionColors()).className}
 				/>
 			),
 			align: 'start',
-			minWidth: 100,
 		},
-		{ label: 'Transaction', align: 'start', minWidth: 120 },
-		{ label: 'From', align: 'start', minWidth: 140 },
-		{ label: 'To', align: 'start', minWidth: 140 },
+		{ label: 'Transaction', align: 'start' },
+		{ label: 'From', align: 'start' },
+		{ label: 'To', align: 'start' },
 		{ label: 'Amount', align: 'end', width: 'max-content' },
 	]
 
 	const accountTransfersColumns: DataGrid.Column[] = [
 		...transfersColumns.slice(0, 4),
-		{ label: 'Asset', align: 'start', minWidth: 90 },
+		{ label: 'Asset', align: 'start' },
 		{ label: 'Amount', align: 'end', width: 'max-content' },
 	]
 
 	const holdersColumns: DataGrid.Column[] = [
-		{ label: 'Address', align: 'start', minWidth: 140 },
-		{ label: 'Balance', align: 'end', minWidth: 120 },
-		{ label: 'Percentage', align: 'end', minWidth: 100 },
+		{ label: 'Address', align: 'start' },
+		{ label: 'Balance', align: 'end' },
+		{ label: 'Percentage', align: 'end' },
 	]
 
 	const zoneTimeColumn: DataGrid.Column = {
@@ -1686,18 +1646,16 @@ function SectionsWrapper(props: {
 				label="Time"
 				formatLabel={formatLabel}
 				onCycle={cycleTimeFormat}
-				className={cx(styles.timeHeader(), transitionColors()).className}
 			/>
 		),
 		align: 'start',
-		minWidth: 86,
 		width: '0.6fr',
 	}
 
 	const zoneDepositColumns: DataGrid.Column[] = [
 		zoneTimeColumn,
-		{ label: 'Asset / amount', align: 'start', minWidth: 160, width: '1.2fr' },
-		{ label: 'From', align: 'start', minWidth: 135, width: '1fr' },
+		{ label: 'Asset / amount', align: 'start', width: '1.2fr' },
+		{ label: 'From', align: 'start', width: '1fr' },
 		{
 			label: (
 				<InfoColumnLabel
@@ -1706,16 +1664,15 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 145,
 			width: '0.8fr',
 		},
-		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
 	]
 
 	const zoneWithdrawalColumns: DataGrid.Column[] = [
 		zoneTimeColumn,
-		{ label: 'Asset / amount', align: 'start', minWidth: 160, width: '1.2fr' },
-		{ label: 'Recipient', align: 'start', minWidth: 135, width: '1fr' },
+		{ label: 'Asset / amount', align: 'start', width: '1.2fr' },
+		{ label: 'Recipient', align: 'start', width: '1fr' },
 		{
 			label: (
 				<InfoColumnLabel
@@ -1724,10 +1681,9 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 145,
 			width: '0.8fr',
 		},
-		{ label: 'Hash', align: 'end', minWidth: 120, width: '1fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
 	]
 
 	const zoneBatchColumns: DataGrid.Column[] = [
@@ -1739,13 +1695,11 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 115,
 			width: '0.7fr',
 		},
 		{
 			label: 'Transaction hash',
 			align: 'start',
-			minWidth: 180,
 			width: '1.5fr',
 		},
 		{
@@ -1755,7 +1709,6 @@ function SectionsWrapper(props: {
 					label="Submitted"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className={cx(styles.timeHeader(), transitionColors()).className}
 				/>
 			),
 		},
@@ -1767,7 +1720,6 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 200,
 			width: '0.9fr',
 		},
 		{
@@ -1778,7 +1730,6 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 145,
 			width: '1.1fr',
 		},
 	]
@@ -1791,12 +1742,7 @@ function SectionsWrapper(props: {
 			size="small"
 			variant="secondary"
 		>
-			<LiveIndicator
-				pinging={portalLive}
-				tone={portalLive ? 'positive' : 'neutral'}
-			>
-				{portalLive ? 'Live' : 'Paused'}
-			</LiveIndicator>
+			<LiveTag live={portalLive} />
 		</Button>
 	)
 
@@ -1817,10 +1763,6 @@ function SectionsWrapper(props: {
 	// Holdings uses local pagination state (decoupled from URL `page` param)
 	const [holdingsPage, setHoldingsPage] = React.useState(1)
 	const [showAllHoldings, setShowAllHoldings] = React.useState(false)
-	// Account transfers amount column: currency display ($1.23) vs token amount.
-	const [transferAmountDisplay, setTransferAmountDisplay] = React.useState<
-		'currency' | 'token'
-	>('currency')
 	const prevAddressRef = React.useRef(address)
 	if (prevAddressRef.current !== address) {
 		prevAddressRef.current = address
@@ -1865,8 +1807,6 @@ function SectionsWrapper(props: {
 				const total = zonePortalActivityQuery.data?.total ?? 0
 				return {
 					title: 'Deposits',
-					totalItems: zonePortalOverview?.counts.deposits,
-					itemsLabel: 'deposits',
 					contextual: zonePortalContextual,
 					content: zonePortalError ?? (
 						<DataGrid
@@ -1899,7 +1839,7 @@ function SectionsWrapper(props: {
 											batch={deposit.processedInBatch}
 											fallback="Pending"
 										/>,
-										<LinkedTransactionHash
+										<TransactionCell
 											key="hash"
 											hash={deposit.transactionHash}
 										/>,
@@ -1913,7 +1853,6 @@ function SectionsWrapper(props: {
 							totalItems={total}
 							displayCount={total}
 							page={page}
-							fetching={zonePortalActivityQuery.isFetching}
 							loading={zonePortalActivityQuery.isPending}
 							itemsLabel="deposits"
 							itemsPerPage={limit}
@@ -1931,8 +1870,6 @@ function SectionsWrapper(props: {
 				const total = zonePortalActivityQuery.data?.total ?? 0
 				return {
 					title: 'Withdrawals',
-					totalItems: zonePortalOverview?.counts.withdrawals,
-					itemsLabel: 'withdrawals',
 					contextual: zonePortalContextual,
 					content: zonePortalError ?? (
 						<DataGrid
@@ -1965,7 +1902,7 @@ function SectionsWrapper(props: {
 											batch={withdrawal.processedInBatch}
 											fallback="—"
 										/>,
-										<LinkedTransactionHash
+										<TransactionCell
 											key="hash"
 											hash={withdrawal.transactionHash}
 										/>,
@@ -1979,7 +1916,6 @@ function SectionsWrapper(props: {
 							totalItems={total}
 							displayCount={total}
 							page={page}
-							fetching={zonePortalActivityQuery.isFetching}
 							loading={zonePortalActivityQuery.isPending}
 							itemsLabel="withdrawals"
 							itemsPerPage={limit}
@@ -1997,8 +1933,6 @@ function SectionsWrapper(props: {
 				const total = zonePortalActivityQuery.data?.total ?? 0
 				return {
 					title: 'Checkpoints',
-					totalItems: zonePortalOverview?.counts.batches,
-					itemsLabel: 'checkpoints',
 					contextual: zonePortalContextual,
 					content: zonePortalError ?? (
 						<DataGrid
@@ -2013,11 +1947,7 @@ function SectionsWrapper(props: {
 										<span key="batch" {...styles.batchIndex()}>
 											#{batch.batchIndex}
 										</span>,
-										<LinkedTransactionHash
-											key="hash"
-											hash={batch.transactionHash}
-											prominent
-										/>,
+										<CheckpointHash key="hash" hash={batch.transactionHash} />,
 										<TimestampCell
 											key="time"
 											timestamp={BigInt(batch.timestamp)}
@@ -2044,7 +1974,6 @@ function SectionsWrapper(props: {
 							totalItems={total}
 							displayCount={total}
 							page={page}
-							fetching={zonePortalActivityQuery.isFetching}
 							loading={zonePortalActivityQuery.isPending}
 							itemsLabel="checkpoints"
 							itemsPerPage={limit}
@@ -2057,8 +1986,6 @@ function SectionsWrapper(props: {
 			case 'transactions':
 				return {
 					title: 'Transactions',
-					totalItems: totalTrxCount ?? transactions.length,
-					itemsLabel: 'transactions',
 					contextual: (
 						<div {...styles.contextual()}>
 							<TransactionFilters
@@ -2100,12 +2027,7 @@ function SectionsWrapper(props: {
 												transaction={transaction}
 												accountAddress={address}
 											/>,
-											<Midcut
-												key="hash"
-												value={transaction.hash}
-												prefix="0x"
-												align="end"
-											/>,
+											<HexValue key="hash" value={transaction.hash} />,
 											<TransactionFeeCell
 												key="fee"
 												gasUsed={transaction.gasUsed}
@@ -2134,7 +2056,6 @@ function SectionsWrapper(props: {
 							}
 							totalItems={totalTrxCount ?? transactions.length}
 							page={1}
-							fetching={isTransactionsFetching}
 							loading={isTransactionsLoading}
 							itemsLabel="transactions"
 							itemsPerPage={HISTORY_PAGE_SIZE}
@@ -2169,7 +2090,7 @@ function SectionsWrapper(props: {
 				}
 			case 'fees':
 				return {
-					title: 'Unclaimed Fees',
+					title: 'Unclaimed fees',
 					content: (
 						<ValidatorFees address={address} active={activeTab === 'fees'} />
 					),
@@ -2178,8 +2099,6 @@ function SectionsWrapper(props: {
 				const holdingsPages = Math.ceil(visibleAssets.length / ASSETS_PER_PAGE)
 				return {
 					title: 'Holdings',
-					totalItems: visibleAssets.length,
-					itemsLabel: 'assets',
 					content: (
 						<DataGrid
 							columns={{
@@ -2206,11 +2125,7 @@ function SectionsWrapper(props: {
 											mode === 'stacked'
 												? [
 														<AssetIdentity key="name" asset={asset} />,
-														<AssetAmount
-															key="amount"
-															asset={asset}
-															multiline
-														/>,
+														<AssetAmount key="amount" asset={asset} />,
 													]
 												: [
 														<AssetName key="name" asset={asset} />,
@@ -2262,7 +2177,6 @@ function SectionsWrapper(props: {
 				if (transfersError) {
 					return {
 						title: 'Transfers',
-						itemsLabel: 'transfers',
 						contextual: (
 							<div {...styles.contextual()}>
 								{filters}
@@ -2296,7 +2210,6 @@ function SectionsWrapper(props: {
 						totalItems:
 							accountTransfersData &&
 							(accountTotalCapped ? '10k+' : accountTotal),
-						itemsLabel: 'transfers',
 						contextual: (
 							<div {...styles.contextual()}>
 								{filters}
@@ -2361,32 +2274,23 @@ function SectionsWrapper(props: {
 														params={{ address: transfer.token.address }}
 														title={transfer.token.address}
 														preload="intent"
-														{...cx(
-															styles.assetLink(),
-															linkHover(),
-															transitionColors(),
-															pressDown(),
-														)}
+														{...cx(styles.assetLink(), linkHover())}
 													>
-														<TokenIcon address={transfer.token.address} />
+														<Token
+															address={transfer.token.address}
+															size="small"
+														/>
 														<span>
 															{transfer.token.symbol ??
-																`${transfer.token.address.slice(0, 6)}…${transfer.token.address.slice(-4)}`}
+																formatHex(transfer.token.address)}
 														</span>
 													</Link>,
 													<TransferAmountCell
 														key="amount"
 														value={value}
 														direction={direction}
-														display={transferAmountDisplay}
-														onToggleDisplay={() =>
-															setTransferAmountDisplay((previous) =>
-																previous === 'currency' ? 'token' : 'currency',
-															)
-														}
 														decimals={transfer.token.decimals}
 														symbol={transfer.token.symbol}
-														currency={transfer.token.currency}
 													/>,
 												],
 												link: {
@@ -2401,7 +2305,6 @@ function SectionsWrapper(props: {
 								displayCount={accountTotal}
 								displayCountCapped={accountTotalCapped}
 								page={page}
-								fetching={isTransfersFetchingNext}
 								loading={isTransfersLoading}
 								itemsLabel="transfers"
 								itemsPerPage={limit}
@@ -2416,7 +2319,6 @@ function SectionsWrapper(props: {
 					title: 'Transfers',
 					totalItems:
 						transfersData && (transfersTotalCapped ? '100k+' : transfersTotal),
-					itemsLabel: 'transfers',
 					contextual: (
 						<div {...styles.contextual()}>
 							{account && (
@@ -2463,15 +2365,8 @@ function SectionsWrapper(props: {
 										<TransferAmountCell
 											key="amount"
 											value={value}
-											display={transferAmountDisplay}
-											onToggleDisplay={() =>
-												setTransferAmountDisplay((previous) =>
-													previous === 'currency' ? 'token' : 'currency',
-												)
-											}
 											decimals={tokenMetadata?.decimals}
 											symbol={tokenMetadata?.symbol}
-											currency={tokenMetadata?.currency}
 										/>,
 									],
 									link: {
@@ -2484,7 +2379,6 @@ function SectionsWrapper(props: {
 							displayCount={transfersTotal}
 							displayCountCapped={transfersTotalCapped}
 							page={page}
-							fetching={isTransfersFetchingNext}
 							loading={isTransfersLoading}
 							itemsLabel="transfers"
 							itemsPerPage={limit}
@@ -2500,7 +2394,6 @@ function SectionsWrapper(props: {
 					title: 'Holders',
 					totalItems:
 						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
-					itemsLabel: 'holders',
 					content: (
 						<DataGrid
 							columns={{
@@ -2529,6 +2422,7 @@ function SectionsWrapper(props: {
 												key="balance"
 												balance={holder.balance}
 												decimals={tokenMetadata?.decimals}
+												symbol={tokenMetadata?.symbol}
 											/>,
 											<span key="percentage" {...styles.value()}>
 												{percentage.toFixed(2)}%
@@ -2545,7 +2439,6 @@ function SectionsWrapper(props: {
 							displayCount={holdersTotal}
 							displayCountCapped={holdersTotalCapped}
 							page={page}
-							fetching={isHoldersFetchingNext}
 							loading={isHoldersLoading}
 							itemsLabel="holders"
 							itemsPerPage={limit}
@@ -2558,15 +2451,11 @@ function SectionsWrapper(props: {
 			case 'token':
 				return {
 					title: 'Token',
-					totalItems: 0,
-					itemsLabel: 'items',
 					content: <Tip20TokenTabContent address={address} />,
 				}
 			case 'contract':
 				return {
 					title: 'Contract',
-					totalItems: 0,
-					itemsLabel: 'items',
 					content: (
 						<ContractTabContent
 							address={address}
@@ -2584,8 +2473,6 @@ function SectionsWrapper(props: {
 			case 'interact':
 				return {
 					title: 'Interact',
-					totalItems: 0,
-					itemsLabel: 'functions',
 					content: (
 						<InteractTabContent
 							address={address}
@@ -2602,8 +2489,6 @@ function SectionsWrapper(props: {
 			default:
 				return {
 					title: 'Unknown',
-					totalItems: 0,
-					itemsLabel: 'items',
 					content: null,
 				}
 		}
@@ -2614,14 +2499,19 @@ function SectionsWrapper(props: {
 			key={address}
 			mode={mode}
 			sections={sections}
-			defaultExpandedSection={
-				Tip20.isTip20Address(address)
-					? sections[activeSection]?.title
-					: undefined
-			}
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
 		/>
+	)
+}
+
+/** The live toggle's label: a TDS `Tag` dot, green while updates stream. */
+function LiveTag(props: { live: boolean }): React.JSX.Element {
+	return (
+		<Tag intent={props.live ? 'positive' : 'neutral'} variant="plain">
+			<Tag.Dot />
+			{props.live ? 'Live' : 'Paused'}
+		</Tag>
 	)
 }
 
@@ -2631,11 +2521,12 @@ function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 	return (
 		<span {...styles.infoLabel()}>
 			<span>{props.label}</span>
-			<Tooltip.Root>
-				<Tooltip.Trigger
+			<Popover.Root>
+				<Popover.Trigger
+					openOnHover
 					render={
 						<Button
-							aria-label={props.info}
+							aria-label={`About ${props.label.toLowerCase()}`}
 							shape="icon"
 							size="small"
 							variant="text"
@@ -2643,9 +2534,13 @@ function InfoColumnLabel(props: InfoColumnLabelProps): React.JSX.Element {
 					}
 				>
 					<InfoCircle {...styles.buttonIcon()} />
-				</Tooltip.Trigger>
-				<Tooltip.Popup>{props.info}</Tooltip.Popup>
-			</Tooltip.Root>
+				</Popover.Trigger>
+				<Popover.Popup {...styles.infoPopup()}>
+					<Popover.Arrow />
+					<Popover.Title>{props.label}</Popover.Title>
+					<Popover.Description>{props.info}</Popover.Description>
+				</Popover.Popup>
+			</Popover.Root>
 		</span>
 	)
 }
@@ -2669,7 +2564,7 @@ function ProcessedInBatchCell(
 				to="/receipt/$hash"
 				params={{ hash: props.batch.transactionHash }}
 				preload="intent"
-				{...cx(link(), linkHover(), transitionColors(), pressDown())}
+				{...cx(link(), linkHover())}
 			>
 				#{props.batch.index}
 			</Link>
@@ -2677,32 +2572,19 @@ function ProcessedInBatchCell(
 	)
 }
 
-type LinkedTransactionHashProps = { hash: Hex.Hex; prominent?: boolean }
-
-function LinkedTransactionHash(
-	props: LinkedTransactionHashProps,
-): React.JSX.Element {
+/** A checkpoint's transaction hash, the row's main identifier. */
+function CheckpointHash(props: { hash: Hex.Hex }): React.JSX.Element {
 	return (
-		<Link
-			to="/receipt/$hash"
-			params={{ hash: props.hash }}
-			preload="intent"
-			{...cx(
-				props.prominent && styles.hashLinkProminent(),
-				props.prominent && link(),
-				props.prominent && linkHover(),
-				props.prominent && transitionColors(),
-				!props.prominent && styles.hashLink(),
-				pressDown(),
-			)}
-			title={props.hash}
-		>
-			<Midcut
-				value={props.hash}
-				prefix="0x"
-				align={props.prominent ? 'start' : 'end'}
-			/>
-		</Link>
+		<HexValue.Root value={props.hash} {...styles.hash()}>
+			<Link
+				to="/receipt/$hash"
+				params={{ hash: props.hash }}
+				preload="intent"
+				{...cx(styles.hashLink(), link(), linkHover())}
+			>
+				<HexValue.Text />
+			</Link>
+		</HexValue.Root>
 	)
 }
 
@@ -2782,14 +2664,20 @@ function TransactionFeeCell(props: {
 	const fee =
 		Hex.toBigInt(props.gasUsed as Hex.Hex) *
 		Hex.toBigInt(props.effectiveGasPrice as Hex.Hex)
-	const feeRaw = formatUnits(fee, 18)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
-	const feeDisplay = showUsdPrefix
-		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
-		: PriceFormatter.formatAmountShort(feeRaw)
-	return <span {...styles.secondary()}>{feeDisplay}</span>
+	return (
+		<span {...styles.secondary()}>
+			<Amount.Base
+				decimals={FEE_DECIMALS}
+				prefix={showUsdPrefix ? '$' : undefined}
+				short
+				symbol={FEE_SYMBOL}
+				value={fee}
+			/>
+		</span>
+	)
 }
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
@@ -2885,63 +2773,55 @@ export function HistoryPagination(
 			: getHistoryStatePage(location.state)
 	return (
 		<div {...styles.pageNav()}>
-			<Tooltip.Root>
-				<Tooltip.Trigger
-					render={
-						<Link
-							aria-label="First page"
-							to="."
-							resetScroll={false}
-							search={(previous) => ({
-								...previous,
-								page: 1,
-								cursor: undefined,
-								order: 'desc',
-							})}
-							state={(previous) => ({
-								...previous,
-								addressHistoryPage: 1,
-							})}
-							disabled={isFirst || isOnlyPage}
-							{...cx(styles.pageLink(), pressDown())}
-						/>
-					}
-				>
-					<ChevronsLeft />
-				</Tooltip.Trigger>
-				<Tooltip.Popup>First page</Tooltip.Popup>
-			</Tooltip.Root>
-			<Tooltip.Root>
-				<Tooltip.Trigger
-					render={
-						<Link
-							aria-label="Previous page"
-							ref={previousRef}
-							to="."
-							preload="viewport"
-							resetScroll={false}
-							search={(previous) => ({
-								...previous,
-								page: 1,
-								cursor: navigation.previous?.cursor,
-								order: navigation.previous?.order,
-							})}
-							state={(previous) => ({
-								...previous,
-								addressHistoryPage:
-									currentPage === undefined
-										? undefined
-										: Math.max(1, currentPage - 1),
-							})}
-							disabled={!navigation.previous}
-							{...cx(styles.pageLink(), pressDown())}
-						/>
-					}
-				>
-					<ChevronLeft />
-				</Tooltip.Trigger>
-				<Tooltip.Popup>Previous page</Tooltip.Popup>
-			</Tooltip.Root>
+			<PageButton
+				disabled={isFirst || isOnlyPage}
+				label="First page"
+				link={
+					<Link
+						to="."
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: 1,
+							cursor: undefined,
+							order: 'desc',
+						})}
+						state={(previous) => ({
+							...previous,
+							addressHistoryPage: 1,
+						})}
+					/>
+				}
+			>
+				<ChevronsLeft {...styles.buttonIcon()} />
+			</PageButton>
+			<PageButton
+				disabled={!navigation.previous}
+				label="Previous page"
+				link={
+					<Link
+						to="."
+						preload="viewport"
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: 1,
+							cursor: navigation.previous?.cursor,
+							order: navigation.previous?.order,
+						})}
+						state={(previous) => ({
+							...previous,
+							addressHistoryPage:
+								currentPage === undefined
+									? undefined
+									: Math.max(1, currentPage - 1),
+						})}
+					/>
+				}
+				linkRef={previousRef}
+			>
+				<ChevronLeft {...styles.buttonIcon()} />
+			</PageButton>
 			<span {...styles.pageLabel()}>
 				<span {...styles.primary()}>
 					{currentPage === undefined
@@ -2958,61 +2838,53 @@ export function HistoryPagination(
 					</>
 				)}
 			</span>
-			<Tooltip.Root>
-				<Tooltip.Trigger
-					render={
-						<Link
-							aria-label="Next page"
-							ref={nextRef}
-							to="."
-							preload="viewport"
-							resetScroll={false}
-							search={(previous) => ({
-								...previous,
-								page: 1,
-								cursor: navigation.next?.cursor,
-								order: navigation.next?.order,
-							})}
-							state={(previous) => ({
-								...previous,
-								addressHistoryPage:
-									currentPage === undefined ? undefined : currentPage + 1,
-							})}
-							disabled={!navigation.next}
-							{...cx(styles.pageLink(), pressDown())}
-						/>
-					}
-				>
-					<ChevronRight />
-				</Tooltip.Trigger>
-				<Tooltip.Popup>Next page</Tooltip.Popup>
-			</Tooltip.Root>
-			<Tooltip.Root>
-				<Tooltip.Trigger
-					render={
-						<Link
-							aria-label="Last page"
-							to="."
-							resetScroll={false}
-							search={(previous) => ({
-								...previous,
-								page: 1,
-								cursor: undefined,
-								order: 'asc',
-							})}
-							state={(previous) => ({
-								...previous,
-								addressHistoryPage: pageCountCapped ? undefined : pageCount,
-							})}
-							disabled={isLast || isOnlyPage}
-							{...cx(styles.pageLink(), pressDown())}
-						/>
-					}
-				>
-					<ChevronsRight />
-				</Tooltip.Trigger>
-				<Tooltip.Popup>Last page</Tooltip.Popup>
-			</Tooltip.Root>
+			<PageButton
+				disabled={!navigation.next}
+				label="Next page"
+				link={
+					<Link
+						to="."
+						preload="viewport"
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: 1,
+							cursor: navigation.next?.cursor,
+							order: navigation.next?.order,
+						})}
+						state={(previous) => ({
+							...previous,
+							addressHistoryPage:
+								currentPage === undefined ? undefined : currentPage + 1,
+						})}
+					/>
+				}
+				linkRef={nextRef}
+			>
+				<ChevronRight {...styles.buttonIcon()} />
+			</PageButton>
+			<PageButton
+				disabled={isLast || isOnlyPage}
+				label="Last page"
+				link={
+					<Link
+						to="."
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: 1,
+							cursor: undefined,
+							order: 'asc',
+						})}
+						state={(previous) => ({
+							...previous,
+							addressHistoryPage: pageCountCapped ? undefined : pageCount,
+						})}
+					/>
+				}
+			>
+				<ChevronsRight {...styles.buttonIcon()} />
+			</PageButton>
 		</div>
 	)
 }
@@ -3076,20 +2948,20 @@ function HoldingsFooter(props: {
 			{pages > 1 && (
 				<div {...styles.holdingsPagination()}>
 					<div {...styles.pageNav()}>
-						<HoldingsPageButton
+						<PageButton
 							label="First page"
 							disabled={page <= 1}
 							onClick={() => onPageChange(1)}
 						>
 							<ChevronsLeft {...styles.buttonIcon()} />
-						</HoldingsPageButton>
-						<HoldingsPageButton
+						</PageButton>
+						<PageButton
 							label="Previous page"
 							disabled={page <= 1}
 							onClick={() => onPageChange(page - 1)}
 						>
 							<ChevronLeft {...styles.buttonIcon()} />
-						</HoldingsPageButton>
+						</PageButton>
 						<span {...styles.pageLabel()}>
 							<span {...styles.primary()}>
 								{Pagination.numFormat.format(page)}
@@ -3097,20 +2969,20 @@ function HoldingsFooter(props: {
 							{' of '}
 							{Pagination.numFormat.format(pages)}
 						</span>
-						<HoldingsPageButton
+						<PageButton
 							label="Next page"
 							disabled={page >= pages}
 							onClick={() => onPageChange(page + 1)}
 						>
 							<ChevronRight {...styles.buttonIcon()} />
-						</HoldingsPageButton>
-						<HoldingsPageButton
+						</PageButton>
+						<PageButton
 							label="Last page"
 							disabled={page >= pages}
 							onClick={() => onPageChange(pages)}
 						>
 							<ChevronsRight {...styles.buttonIcon()} />
-						</HoldingsPageButton>
+						</PageButton>
 					</div>
 					<Pagination.Count
 						totalItems={totalItems}
@@ -3135,31 +3007,52 @@ function HoldingsFooter(props: {
 	)
 }
 
-function HoldingsPageButton(props: {
-	label: string
-	disabled: boolean
-	onClick: () => void
-	children: React.ReactElement
-}): React.JSX.Element {
+/**
+ * A pager step: a TDS icon `Button`, or a `Button.Link` when it renders a
+ * router `link` and isn't disabled.
+ */
+function PageButton(props: PageButtonProps): React.JSX.Element {
+	const { children, disabled = false, label, link, linkRef, onClick } = props
 	return (
 		<Tooltip.Root>
 			<Tooltip.Trigger
 				render={
-					<Button
-						aria-label={props.label}
-						disabled={props.disabled}
-						onClick={props.onClick}
-						shape="icon"
-						size="small"
-						variant="secondary"
-					/>
+					link && !disabled ? (
+						<Button.Link
+							aria-label={label}
+							ref={linkRef}
+							render={link}
+							shape="icon"
+							size="small"
+							variant="secondary"
+						/>
+					) : (
+						<Button
+							aria-label={label}
+							disabled={disabled}
+							onClick={onClick}
+							shape="icon"
+							size="small"
+							variant="secondary"
+						/>
+					)
 				}
 			>
-				{props.children}
+				{children}
 			</Tooltip.Trigger>
-			<Tooltip.Popup>{props.label}</Tooltip.Popup>
+			<Tooltip.Popup>{label}</Tooltip.Popup>
 		</Tooltip.Root>
 	)
+}
+
+type PageButtonProps = {
+	children: React.ReactElement
+	disabled?: boolean | undefined
+	label: string
+	/** A router link to the page; without it the step calls `onClick`. */
+	link?: React.ReactElement | undefined
+	linkRef?: React.Ref<HTMLAnchorElement> | undefined
+	onClick?: (() => void) | undefined
 }
 
 function FilterIndicator(props: {
@@ -3170,14 +3063,7 @@ function FilterIndicator(props: {
 	return (
 		<div {...styles.filter()}>
 			<span {...styles.secondary()}>Filtered:</span>
-			<Link
-				to="/address/$address"
-				params={{ address: account }}
-				{...cx(styles.filterAccount(), link(), linkHover(), pressDown())}
-				title={account}
-			>
-				<Midcut value={account} prefix="0x" />
-			</Link>
+			<AddressCell address={account} />
 			<Tooltip.Root>
 				<Tooltip.Trigger
 					render={
@@ -3323,20 +3209,22 @@ const dividerLine = {
 } as const
 
 namespace styles {
+	// Stacked until the activity table has room beside the account card; the
+	// card's column is capped so long values truncate instead of widening it.
 	export const page = style({
-		display: 'grid',
+		display: 'flex',
+		flexDirection: 'column',
 		gap: '16',
-		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '64',
+		paddingBottom: '32',
 		paddingInline: '16',
-		paddingTop: '64',
+		paddingTop: '40',
 		width: '100% !custom',
-		'@media (width < 800px)': {
-			display: 'flex',
-			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
+		'@media (width >= 1024px)': {
+			alignItems: 'start',
+			display: 'grid',
+			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -3355,22 +3243,17 @@ namespace styles {
 		'@media (width >= 1240px)': { width: '258px !custom' },
 	})
 
-	export const addressHeader = style({
-		alignItems: 'center',
+	export const address = style({
 		display: 'flex',
+		flexDirection: 'column',
 		gap: '8',
-		marginBottom: '8',
+		minWidth: '0 !custom',
+		width: '100% !custom',
 	})
 
-	export const addressLabel = style({ typography: 'label.12' })
-
-	export const icon12 = style({ height: '12', width: '12' })
-
-	export const addressValue = style({
-		color: 'foreground',
-		maxWidth: '21ch !custom',
-		typography: 'label.12.mono',
-		wordBreak: 'break-all',
+	export const addressLabel = style({
+		color: 'gray.900',
+		typography: 'label.12',
 	})
 
 	export const balances = style({
@@ -3450,6 +3333,9 @@ namespace styles {
 		display: 'inline-flex',
 		gap: '4',
 	})
+
+	// TDS Popover asks text popovers for a max width.
+	export const infoPopup = style({ maxWidth: '20rem !custom' })
 
 	export const batchPending = style({
 		color: 'gray.900',
@@ -3574,24 +3460,11 @@ namespace styles {
 		marginLeft: 'auto !custom',
 	})
 
-	export const addressButton = style({
-		color: 'gray.900',
-		cursor: 'pointer',
-		textAlign: 'left',
-		width: '100% !custom',
-	})
-
 	export const balanceToken = style({
 		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
 		minWidth: '0 !custom',
-	})
-
-	export const timeHeader = style({
-		color: 'gray.900',
-		cursor: 'pointer',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
 	export const assetLink = style({
@@ -3601,36 +3474,12 @@ namespace styles {
 		gap: '8',
 	})
 
+	export const hash = style({ minWidth: '0 !custom' })
+
+	// The link sits inside `Hex.Root`, so the hash truncates to fit.
 	export const hashLink = style({
-		color: 'gray.900',
-		width: '100% !custom',
-	})
-
-	export const hashLinkProminent = style({
-		typography: 'copy.14.strong',
-		width: '100% !custom',
-	})
-
-	// The history pager's links take TDS Button `small` `secondary` `icon`
-	// geometry; the holdings pager uses that Button itself. Links have no
-	// `:disabled`, so TanStack Router's `aria-disabled` drives the disabled look.
-	export const pageLink = style({
-		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '8',
-		color: 'foreground',
 		display: 'inline-flex',
-		height: '32',
-		justifyContent: 'center',
-		width: '32',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.200' },
-		},
-		selectors: {
-			'& > svg': { height: '16', width: '16' },
-			'&[aria-disabled="true"]': { cursor: 'default', opacity: 0.4 },
-		},
+		maxWidth: '100% !custom',
+		minWidth: '0 !custom',
 	})
-
-	export const filterAccount = style({ typography: 'label.12.mono' })
 }

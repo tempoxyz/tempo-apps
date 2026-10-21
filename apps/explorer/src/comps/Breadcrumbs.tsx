@@ -1,396 +1,49 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { style, Tooltip, variants } from '@tempoxyz/ds'
-import { ChevronRight, Close, Home } from '@tempoxyz/ds/icons'
-import * as React from 'react'
-import { createPortal } from 'react-dom'
-import { cx } from 'zyzz'
-import { animatePulse, mono, pressDown } from '#styles/explorer'
+import { Breadcrumbs as TdsBreadcrumbs, formatHex } from '@tempoxyz/ds'
+import type * as React from 'react'
 
-const MAX_CRUMBS = 3
-
-export interface Crumb {
-	path: string
-	label: string
-	type:
-		| 'home'
-		| 'tx'
-		| 'receipt'
-		| 'address'
-		| 'token'
-		| 'block'
-		| 'policy'
-		| 'other'
-}
-
-function truncateHash(hash: string, prefixLen = 6, suffixLen = 4): string {
-	if (hash.length <= prefixLen + suffixLen + 2) return hash
-	return `${hash.slice(0, prefixLen)}…${hash.slice(-suffixLen)}`
-}
-
-function getLabelForPath(pathname: string): {
-	label: string
-	type: Crumb['type']
-} {
-	if (pathname === '/') {
-		return { label: 'Home', type: 'home' }
-	}
-
-	const txMatch = pathname.match(/^\/tx\/(0x[a-fA-F0-9]+)$/)
-	if (txMatch) {
-		return { label: `Tx ${truncateHash(txMatch[1])}`, type: 'tx' }
-	}
-
-	const receiptMatch = pathname.match(/^\/receipt\/(0x[a-fA-F0-9]+)$/)
-	if (receiptMatch) {
-		return {
-			label: `Receipt ${truncateHash(receiptMatch[1])}`,
-			type: 'receipt',
-		}
-	}
-
-	const addressMatch = pathname.match(/^\/address\/(0x[a-fA-F0-9]+)$/)
-	if (addressMatch) {
-		return { label: `Addr ${truncateHash(addressMatch[1])}`, type: 'address' }
-	}
-
-	const tokenMatch = pathname.match(/^\/token\/(0x[a-fA-F0-9]+)$/)
-	if (tokenMatch) {
-		return { label: `Token ${truncateHash(tokenMatch[1])}`, type: 'token' }
-	}
-
-	const blockMatch = pathname.match(/^\/block\/(\d+|latest)$/)
-	if (blockMatch) {
-		return { label: `Block ${blockMatch[1]}`, type: 'block' }
-	}
-
-	const policyMatch = pathname.match(/^\/policy\/(\d+)$/)
-	if (policyMatch) {
-		return { label: `Policy #${policyMatch[1]}`, type: 'policy' }
-	}
-
-	if (pathname === '/blocks') {
-		return { label: 'Blocks', type: 'other' }
-	}
-
-	if (pathname === '/tokens') {
-		return { label: 'Tokens', type: 'other' }
-	}
-
-	return { label: pathname, type: 'other' }
-}
-
-interface BreadcrumbsContextValue {
-	crumbs: Crumb[]
-	pendingCrumb: Crumb | null
-	clearCrumbs: () => void
-	slotEl: HTMLElement | null
-	setSlotEl: (el: HTMLElement | null) => void
-}
-
-const BreadcrumbsContext = React.createContext<BreadcrumbsContextValue | null>(
-	null,
-)
-
-export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
-	const { children } = props
-	const [crumbs, setCrumbs] = React.useState<Crumb[]>([])
-	const [slotEl, setSlotEl] = React.useState<HTMLElement | null>(null)
-
-	// Track resolved location for committing to history
-	// Fall back to current location if resolvedLocation is not yet available
-	const resolvedPathname = useRouterState({
-		select: (state) =>
-			state.resolvedLocation?.pathname ?? state.location.pathname,
-	})
-
-	// Track current location for pending/optimistic display
-	const currentPathname = useRouterState({
+/** Where the current page sits: Home, its section when it has one, then the page. */
+export function BreadcrumbsSlot(
+	props: BreadcrumbsSlot.Props,
+): React.JSX.Element | null {
+	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	})
-
-	// Track previous resolved pathname to detect changes
-	const prevResolvedRef = React.useRef<string | null>(null)
-
-	// Commit crumbs when navigation resolves successfully
-	React.useEffect(() => {
-		// Skip if pathname hasn't changed
-		if (prevResolvedRef.current === resolvedPathname) return
-		prevResolvedRef.current = resolvedPathname
-
-		const { label, type } = getLabelForPath(resolvedPathname)
-
-		setCrumbs((prev) => {
-			if (resolvedPathname === '/') {
-				return []
-			}
-
-			const existingIndex = prev.findIndex((c) => c.path === resolvedPathname)
-			if (existingIndex !== -1) {
-				return prev.slice(0, existingIndex + 1)
-			}
-
-			const newCrumb: Crumb = { path: resolvedPathname, label, type }
-			return [...prev, newCrumb].slice(-MAX_CRUMBS)
-		})
-	}, [resolvedPathname])
-
-	// Compute pending crumb for immediate UI feedback during navigation
-	const pendingCrumb = React.useMemo<Crumb | null>(() => {
-		// Only show pending crumb if navigating to a different path
-		if (currentPathname === resolvedPathname || currentPathname === '/') {
-			return null
-		}
-		// Don't show if it's already in crumbs
-		if (crumbs.some((c) => c.path === currentPathname)) {
-			return null
-		}
-		const { label, type } = getLabelForPath(currentPathname)
-		return { path: currentPathname, label, type }
-	}, [currentPathname, resolvedPathname, crumbs])
-
-	const clearCrumbs = React.useCallback(() => {
-		// Keep only the current page as a single crumb
-		if (resolvedPathname === '/') {
-			setCrumbs([])
-		} else {
-			const { label, type } = getLabelForPath(resolvedPathname)
-			setCrumbs([{ path: resolvedPathname, label, type }])
-		}
-	}, [resolvedPathname])
-
-	const value = React.useMemo(
-		() => ({ crumbs, pendingCrumb, clearCrumbs, slotEl, setSlotEl }),
-		[crumbs, pendingCrumb, clearCrumbs, slotEl],
-	)
+	const trail = getTrail(pathname)
+	if (!trail) return null
 
 	return (
-		<BreadcrumbsContext.Provider value={value}>
-			{children}
-		</BreadcrumbsContext.Provider>
-	)
-}
-
-function useBreadcrumbs() {
-	const context = React.useContext(BreadcrumbsContext)
-	if (!context) {
-		throw new Error('useBreadcrumbs must be used within BreadcrumbsProvider')
-	}
-	return context
-}
-
-/**
- * A trail of recently viewed pages. It follows browsing history, not the site
- * hierarchy, so it is not a TDS `Breadcrumbs` landmark.
- */
-export function Breadcrumbs(): React.JSX.Element {
-	const { crumbs, pendingCrumb, clearCrumbs } = useBreadcrumbs()
-
-	const resolvedPathname = useRouterState({
-		select: (state) =>
-			state.resolvedLocation?.pathname ?? state.location.pathname,
-	})
-
-	// Combine committed crumbs with pending crumb for display
-	const displayCrumbs = pendingCrumb ? [...crumbs, pendingCrumb] : crumbs
-	const hasPendingCrumb = pendingCrumb !== null
-
-	const isEmpty =
-		(resolvedPathname === '/' && !hasPendingCrumb) || displayCrumbs.length === 0
-
-	return (
-		<nav
-			aria-label="Recently viewed"
-			aria-hidden={isEmpty}
-			{...styles.nav({ empty: isEmpty })}
-		>
-			{!isEmpty && (
-				<>
-					<Link to="/" aria-label="Home" {...cx(styles.home(), pressDown())}>
-						<Home {...styles.homeIcon()} />
-					</Link>
-
-					{displayCrumbs.map((crumb, index) => {
-						const isLast = index === displayCrumbs.length - 1
-						const isPending = isLast && hasPendingCrumb
-						return (
-							<React.Fragment key={crumb.path}>
-								<ChevronRight {...styles.separator()} />
-								{isLast ? (
-									<span
-										{...cx(
-											styles.current({ pending: isPending }),
-											isPending && animatePulse(),
-										)}
-										title={crumb.path}
-									>
-										<CrumbLabel label={crumb.label} />
-									</span>
-								) : (
-									<Link
-										to={crumb.path}
-										{...cx(styles.crumb(), pressDown())}
-										title={crumb.path}
-									>
-										<CrumbLabel label={crumb.label} />
-									</Link>
-								)}
-							</React.Fragment>
-						)
-					})}
-
-					{crumbs.length > 1 && (
-						<Tooltip.Root>
-							<Tooltip.Trigger
-								render={
-									<button
-										type="button"
-										aria-label="Clear navigation history"
-										onClick={clearCrumbs}
-										{...cx(styles.clear(), pressDown())}
-									/>
-								}
-							>
-								<Close {...styles.clearIcon()} />
-							</Tooltip.Trigger>
-							<Tooltip.Popup>Clear navigation history</Tooltip.Popup>
-						</Tooltip.Root>
-					)}
-				</>
+		<TdsBreadcrumbs className={props.className}>
+			<TdsBreadcrumbs.Item render={<Link to="/" />}>Home</TdsBreadcrumbs.Item>
+			{trail.section && (
+				<TdsBreadcrumbs.Item render={<Link to={trail.section.to} />}>
+					{trail.section.label}
+				</TdsBreadcrumbs.Item>
 			)}
-		</nav>
+			<TdsBreadcrumbs.Item current>{trail.label}</TdsBreadcrumbs.Item>
+		</TdsBreadcrumbs>
 	)
 }
 
-export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
-	const { className } = props
-	const { setSlotEl } = useBreadcrumbs()
-	const ref = React.useRef<HTMLDivElement | null>(null)
-
-	React.useLayoutEffect(() => {
-		setSlotEl(ref.current)
-		return () => setSlotEl(null)
-	}, [setSlotEl])
-
-	return <div ref={ref} {...styles.slot({ className })} />
+export declare namespace BreadcrumbsSlot {
+	type Props = { className?: string | undefined }
 }
 
-export namespace BreadcrumbsSlot {
-	export interface Props {
-		className?: string
-	}
+type Trail = {
+	label: string
+	section?: { label: string; to: '/blocks' | '/tokens' } | undefined
 }
 
-export function BreadcrumbsPortal() {
-	const { slotEl } = useBreadcrumbs()
-
-	if (slotEl) {
-		return createPortal(<Breadcrumbs />, slotEl)
-	}
-
-	// No slot registered - BreadcrumbsSlot handles the loading fallback
-	return null
-}
-
-function CrumbLabel(props: { label: string }): React.JSX.Element {
-	const index = props.label.indexOf('0x')
-	if (index === -1) return <>{props.label}</>
-	return (
-		<>
-			{props.label.slice(0, index)}
-			<span {...mono()}>{props.label.slice(index)}</span>
-		</>
-	)
-}
-
-namespace styles {
-	// The padding gives focus rings room inside the scroll clip; the negative
-	// margins keep the row at 20px.
-	export const nav = variants({
-		base: {
-			alignItems: 'center',
-			color: 'gray.900',
-			display: 'flex',
-			gap: '4',
-			height: '24',
-			marginBlock: '-2px !custom',
-			marginInline: '-4px !custom',
-			overflowX: 'auto',
-			overflowY: 'hidden',
-			paddingInline: '4',
-			transformOrigin: 'left',
-			transitionDuration: '80ms',
-			transitionProperty: 'opacity, scale',
-			transitionTimingFunction: 'in-out',
-			typography: 'label.12',
-		},
-		defaultVariants: { empty: false },
-		variants: {
-			empty: {
-				true: { opacity: 0, pointerEvents: 'none', scale: 0.97 },
-				false: {
-					opacity: 1,
-					scale: 1,
-					'@starting-style': { opacity: 0, scale: 0.97 },
-				},
-			},
-		},
-	})
-
-	export const home = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		display: 'flex',
-		flexShrink: 0,
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
-		':focus-visible': { color: 'foreground' },
-	})
-
-	export const homeIcon = style({ height: '16', width: '16' })
-
-	export const separator = style({
-		color: 'gray.700',
-		flexShrink: 0,
-		height: '12',
-		width: '12',
-	})
-
-	export const current = variants({
-		base: {
-			maxWidth: '120px !custom',
-			overflow: 'hidden',
-			textOverflow: 'ellipsis',
-			whiteSpace: 'nowrap',
-		},
-		defaultVariants: { pending: false },
-		variants: {
-			pending: {
-				true: { color: 'gray.900' },
-				false: { color: 'foreground' },
-			},
-		},
-	})
-
-	export const crumb = style({
-		color: 'gray.900',
-		maxWidth: '120px !custom',
-		overflow: 'hidden',
-		textOverflow: 'ellipsis',
-		whiteSpace: 'nowrap',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
-		':focus-visible': { color: 'foreground' },
-	})
-
-	export const clear = style({
-		alignItems: 'center',
-		color: 'gray.900',
-		cursor: 'pointer',
-		display: 'flex',
-		flexShrink: 0,
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
-		':focus-visible': { color: 'foreground' },
-	})
-
-	export const clearIcon = style({ height: '12', width: '12' })
-
-	export const slot = style({ minHeight: '20' })
+function getTrail(pathname: string): Trail | undefined {
+	const [, kind, id] = pathname.split('/')
+	if (!id) return undefined
+	if (kind === 'block')
+		return { label: `Block ${id}`, section: { label: 'Blocks', to: '/blocks' } }
+	if (kind === 'token')
+		return { label: formatHex(id), section: { label: 'Tokens', to: '/tokens' } }
+	if (kind === 'tx') return { label: `Transaction ${formatHex(id)}` }
+	if (kind === 'receipt') return { label: `Receipt ${formatHex(id)}` }
+	if (kind === 'address') return { label: `Address ${formatHex(id)}` }
+	if (kind === 'policy') return { label: `Policy ${id}` }
+	return undefined
 }

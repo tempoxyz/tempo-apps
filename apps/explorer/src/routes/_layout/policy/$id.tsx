@@ -5,14 +5,13 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { Field, Input, Tag, style } from '@tempoxyz/ds'
+import { CopyButton, Field, Input, Tag, style } from '@tempoxyz/ds'
 import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
 import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
-import { CopyButton } from '#comps/CopyButton'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Sections } from '#comps/Sections'
@@ -37,7 +36,7 @@ export const Route = createFileRoute('/_layout/policy/$id')({
 	notFoundComponent: ({ data }) => (
 		<div {...styles.notFound()}>
 			<div {...styles.notFoundContent()}>
-				<h1 {...styles.notFoundTitle()}>Policy Not Found</h1>
+				<h1 {...styles.notFoundTitle()}>Policy not found</h1>
 				<p {...styles.notFoundMessage()}>
 					The TIP-403 policy does not exist or could not be loaded.
 				</p>
@@ -102,15 +101,11 @@ function RouteComponent() {
 				sections={[
 					{
 						title: 'Members',
-						totalItems: policy.membersTotal,
-						autoCollapse: false,
 						contextual: <MembersSearch query={q} />,
 						content: <MembersGrid policy={policy} page={page} limit={limit} />,
 					},
 					{
 						title: 'Activity',
-						totalItems: policy.activity.length,
-						autoCollapse: false,
 						content: <ActivityGrid policy={policy} />,
 					},
 				]}
@@ -130,8 +125,7 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 
 	return (
 		<InfoCard
-			title={<InfoCard.Title>TIP-403 Policy</InfoCard.Title>}
-			className={styles.card().className}
+			title={<InfoCard.Title>TIP-403 policy</InfoCard.Title>}
 			sections={[
 				{ label: 'Policy ID', value: <span>#{policy.policyId}</span> },
 				{
@@ -145,11 +139,11 @@ function PolicyCard(props: { policy: Tip403PolicyResponse }) {
 				},
 				{
 					label: 'Admin',
-					value: <AddressLink address={policy.admin} chars={4} />,
+					value: <AddressLink address={policy.admin} />,
 				},
 				{
 					label: 'Registry',
-					value: <AddressLink address={Addresses.tip403Registry} chars={4} />,
+					value: <AddressLink address={Addresses.tip403Registry} />,
 				},
 				...(policy.type === 'compound' && policy.componentPolicies
 					? [
@@ -204,12 +198,18 @@ function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
 				? 'negative'
 				: 'neutral'
 	return (
-		<Tag intent={intent} variant="plain" {...styles.typeLabel()}>
+		<Tag intent={intent} variant="plain">
 			<Tag.Dot />
-			{props.type}
+			{policyTypeLabels[props.type]}
 		</Tag>
 	)
 }
+
+const policyTypeLabels = {
+	blacklist: 'Blacklist',
+	compound: 'Compound',
+	whitelist: 'Whitelist',
+} satisfies Record<Tip403PolicyResponse['type'], string>
 
 function MembersSearch(props: { query: string }) {
 	const navigate = useNavigate()
@@ -224,7 +224,6 @@ function MembersSearch(props: { query: string }) {
 		})
 	return (
 		<form
-			{...styles.search()}
 			onSubmit={(event) => {
 				event.preventDefault()
 				search(new FormData(event.currentTarget).get('query')?.toString() ?? '')
@@ -268,19 +267,19 @@ function MembersGrid(props: {
 		<DataGrid
 			columns={{
 				stacked: [
-					{ label: 'Address', width: '1fr', minWidth: 220 },
-					{ label: 'Status', width: '1fr', minWidth: 110 },
+					{ label: 'Address', width: '1fr' },
+					{ label: 'Status', width: '1fr' },
 				],
 				tabs: [
-					{ label: 'Address', width: '1fr', minWidth: 220 },
-					{ label: 'Status', width: '1fr', minWidth: 110 },
+					{ label: 'Address', width: '1fr' },
+					{ label: 'Status', width: '1fr' },
 				],
 			}}
 			items={() =>
 				policy.members.map((address) => ({
 					key: address,
 					cells: [
-						<AddressLink key="address" address={address} chars={5} />,
+						<AddressLink key="address" address={address} />,
 						<Tag key="status" intent={statusIntent} variant="plain">
 							<Tag.Dot />
 							{status}
@@ -313,16 +312,16 @@ function ActivityGrid(props: { policy: Tip403PolicyResponse }) {
 		<DataGrid
 			columns={{
 				stacked: [
-					{ label: 'Event', width: '2fr', minWidth: 150 },
-					{ label: 'Account', width: '2fr', minWidth: 200 },
-					{ label: timeColumn, width: '1fr', minWidth: 90 },
-					{ label: 'Transaction', width: '2fr', minWidth: 150 },
+					{ label: 'Event', width: '2fr' },
+					{ label: 'Account', width: '2fr' },
+					{ label: timeColumn, width: '1fr' },
+					{ label: 'Transaction', width: '2fr' },
 				],
 				tabs: [
-					{ label: 'Event', width: '2fr', minWidth: 150 },
-					{ label: 'Account', width: '2fr', minWidth: 200 },
-					{ label: timeColumn, width: '1fr', minWidth: 90 },
-					{ label: 'Transaction', width: '2fr', minWidth: 150 },
+					{ label: 'Event', width: '2fr' },
+					{ label: 'Account', width: '2fr' },
+					{ label: timeColumn, width: '1fr' },
+					{ label: 'Transaction', width: '2fr' },
 				],
 			}}
 			items={() =>
@@ -360,7 +359,7 @@ function activityRow(
 				{eventLabel}
 			</span>,
 			account ? (
-				<AddressLink key="account" address={account} chars={4} />
+				<AddressLink key="account" address={account} />
 			) : (
 				<span key="account">—</span>
 			),
@@ -375,7 +374,7 @@ function activityRow(
 			),
 			<div key="transaction" {...styles.transaction()}>
 				<TransactionCell hash={event.txHash} />
-				<CopyButton value={event.txHash} ariaLabel="Copy transaction hash" />
+				<CopyButton aria-label="Copy transaction hash" value={event.txHash} />
 			</div>,
 		],
 	}
@@ -404,30 +403,27 @@ namespace styles {
 		typography: 'copy.14',
 	})
 
+	// Stacked until the members table has room beside the policy card; the
+	// card's column is capped so long values truncate instead of widening it.
 	export const page = style({
-		display: 'grid',
+		display: 'flex',
+		flexDirection: 'column',
 		gap: '16',
-		gridTemplateColumns: 'auto 1fr',
-		minWidth: '0',
-		paddingBottom: '64',
+		minWidth: '0 !custom',
+		paddingBottom: '32',
 		paddingInline: '16',
-		paddingTop: '64',
+		paddingTop: '40',
 		width: '100% !custom',
-		'@media (width < 800px)': {
-			display: 'flex',
-			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
+		'@media (width >= 1024px)': {
+			alignItems: 'start',
+			display: 'grid',
+			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
 
 	export const breadcrumbs = style({ gridColumn: '1 / -1' })
-
-	export const card = style({
-		alignSelf: 'start',
-		'@media (width < 800px)': { width: '100% !custom' },
-	})
 
 	export const type = style({
 		alignItems: 'center',
@@ -435,16 +431,7 @@ namespace styles {
 		gap: '8',
 	})
 
-	export const typeLabel = style({ textTransform: 'capitalize' })
-
 	export const builtIn = style({ color: 'gray.900' })
-
-	// Touch devices keep 16px text so iOS does not zoom on focus.
-	export const search = style({
-		'@media (pointer: coarse)': {
-			selectors: { '& input': { fontSize: '16px !custom' } },
-		},
-	})
 
 	export const event = style({ color: 'foreground' })
 

@@ -61,8 +61,8 @@ const scrollbarColors = {
 
 namespace styles {
 	export const track = style({
-		// zyzz types reject a color pair for `scrollbarColor`, so the element
-		// applies it inline from these properties.
+		// The zyzz compiler rejects theme colors in `scrollbarColor`, so the
+		// element applies the pair inline from these properties.
 		'--contract-source-scrollbar-thumb': vars.color.gray[700],
 		'--contract-source-scrollbar-track': vars.color.background.surface,
 		backgroundColor: 'background.surface',

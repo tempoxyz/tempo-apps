@@ -1,7 +1,6 @@
-import { Button, style, Tooltip } from '@tempoxyz/ds'
+import { Button, Container, style, Tooltip } from '@tempoxyz/ds'
 import { DarkMode, LightMode } from '@tempoxyz/ds/icons'
 import * as React from 'react'
-import { cx } from 'zyzz'
 import {
 	applyThemeMode,
 	defaultThemeMode,
@@ -14,11 +13,10 @@ import {
 	themeStorageKey,
 	type ThemeMode,
 } from '#lib/theme'
-import { pageMargin, pressDown, transitionColors } from '#styles/explorer'
 
 export function Footer(): React.JSX.Element {
 	return (
-		<footer {...cx(styles.footer(), pageMargin())}>
+		<Container render={<footer />} size="full" {...styles.footer()}>
 			<div {...styles.row()}>
 				<Footer.ThemeToggle />
 				<ul {...styles.links()}>
@@ -30,7 +28,7 @@ export function Footer(): React.JSX.Element {
 					</Footer.Link>
 				</ul>
 			</div>
-		</footer>
+		</Container>
 	)
 }
 
@@ -105,7 +103,7 @@ export namespace Footer {
 					href={href}
 					target="_blank"
 					rel="noopener noreferrer"
-					{...cx(styles.link(), pressDown(), transitionColors())}
+					{...styles.link()}
 				>
 					{children}
 				</a>

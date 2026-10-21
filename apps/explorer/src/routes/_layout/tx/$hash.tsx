@@ -13,8 +13,16 @@ import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import { getAbiItem, type Abi, type Log, type TransactionReceipt } from 'viem'
-import { Button, style } from '@tempoxyz/ds'
-import { ChevronRight } from '@tempoxyz/ds/icons'
+import {
+	Amount,
+	Button,
+	Empty,
+	formatHex,
+	Hex as HexDisplay,
+	Rows,
+	style,
+	Token,
+} from '@tempoxyz/ds'
 import { Addresses } from 'viem/tempo'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
@@ -24,7 +32,6 @@ import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
 import { FeePayer } from '#comps/FeePayer'
 import { InfoRow } from '#comps/InfoRow'
-import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TxBalanceChanges } from '#comps/TxBalanceChanges'
@@ -37,7 +44,6 @@ import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
-import { Empty } from '#comps/ui/Empty'
 import { getAccountTag } from '#lib/account'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -52,7 +58,6 @@ import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
 } from '#lib/domain/transaction-activities'
-import { PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import { describeDexFill } from '#lib/dex-swaps'
@@ -78,7 +83,8 @@ import {
 import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
-import { link, textAction } from '#styles/explorer'
+import { isTip20Address } from '#lib/domain/tip20'
+import { link, linkHover } from '#styles/explorer'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -101,7 +107,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Transaction Not Found"
+			title="Transaction not found"
 			message={`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
 			data={data as NotFound.NotFoundData}
 		/>
@@ -151,7 +157,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		hash: zHash(),
 	}),
 	head: ({ params, loaderData }) => {
-		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const title = `Transaction ${formatHex(params.hash)} ⋅ Tempo Explorer`
 		const descriptionEvents = loaderData
 			? selectTransactionDescriptionEvents({
 					activityEvents: loaderData.activityEvents,
@@ -286,8 +292,6 @@ function RouteComponent() {
 	tabs.push('overview')
 	sections.push({
 		title: 'Overview',
-		itemsLabel: 'fields',
-		autoCollapse: false,
 		content: (
 			<OverviewSection
 				receipt={receipt}
@@ -298,9 +302,6 @@ function RouteComponent() {
 				keyTokenMetadata={keyTokenMetadata}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
-				onShowBalances={() =>
-					navigate({ to: '.', search: { tab: 'balances' } })
-				}
 			/>
 		),
 	})
@@ -308,8 +309,6 @@ function RouteComponent() {
 	tabs.push('balances')
 	sections.push({
 		title: 'Balances',
-		totalItems: balanceChangesData.total,
-		itemsLabel: 'balances',
 		content: (
 			<TxBalanceChanges
 				data={balanceChangesData}
@@ -323,8 +322,6 @@ function RouteComponent() {
 		tabs.push('calls')
 		sections.push({
 			title: 'Calls',
-			totalItems: calls.length,
-			itemsLabel: 'calls',
 			content: <CallsSection calls={calls} />,
 		})
 	}
@@ -332,8 +329,6 @@ function RouteComponent() {
 	tabs.push('events')
 	sections.push({
 		title: 'Events',
-		totalItems: receipt.logs.length,
-		itemsLabel: 'events',
 		content: (
 			<EventsSection
 				hash={hash}
@@ -347,7 +342,6 @@ function RouteComponent() {
 		tabs.push('trace')
 		sections.push({
 			title: 'Trace',
-			itemsLabel: 'views',
 			content: (
 				<TraceSection
 					trace={traceData.trace}
@@ -363,8 +357,6 @@ function RouteComponent() {
 	tabs.push('raw')
 	sections.push({
 		title: 'Raw',
-		totalItems: 0,
-		itemsLabel: 'data',
 		content: <RawSection transaction={transaction} receipt={receipt} />,
 	})
 
@@ -403,8 +395,7 @@ function OverviewSection(props: {
 	keyTokenMetadata: TxData['keyTokenMetadata']
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
-	onShowBalances: () => void
-}) {
+}): React.JSX.Element {
 	const {
 		receipt,
 		transaction,
@@ -414,7 +405,6 @@ function OverviewSection(props: {
 		keyTokenMetadata,
 		feeBreakdown,
 		balanceChangesData,
-		onShowBalances,
 	} = props
 
 	const [chain] = useChains()
@@ -454,7 +444,7 @@ function OverviewSection(props: {
 	)
 
 	return (
-		<div {...styles.column()}>
+		<Rows.Root dividers="full">
 			{description.events.length > 0 && (
 				<InfoRow label="Description" stackOnMobile={Boolean(keyAuthorization)}>
 					<div {...styles.description()}>
@@ -483,83 +473,78 @@ function OverviewSection(props: {
 			{balanceChangesData.total > 0 && (
 				<BalanceChangesOverview
 					data={balanceChangesData}
-					onShowAll={onShowBalances}
+					hash={receipt.transactionHash}
 				/>
 			)}
-			<InfoRow label="Transaction Fee">
+			<InfoRow label="Network fee">
 				{feeBreakdown.length > 0 ? (
 					<div {...styles.stack()}>
 						{feeBreakdown.map((item, index) => {
-							return (
-								<span key={`${index}${item.token}`} {...styles.primary()}>
-									{Value.format(item.amount, item.decimals)}{' '}
-									{item.token ? (
-										<Link
-											to="/token/$address"
-											params={{ address: item.token }}
-											{...link()}
-										>
-											{item.symbol}
-										</Link>
-									) : (
-										item.symbol
-									)}
-								</span>
+							const value = Value.format(item.amount, item.decimals)
+							return item.token ? (
+								<TokenAmount
+									key={`${index}${item.token}`}
+									symbol={item.symbol}
+									token={item.token}
+									value={value}
+								/>
+							) : (
+								<Amount key={`${index}`} symbol={item.symbol} value={value} />
 							)
 						})}
 					</div>
 				) : (
-					<span {...styles.primary()}>
-						{Value.format(
+					<Amount
+						symbol={symbol}
+						value={Value.format(
 							receipt.effectiveGasPrice * receipt.gasUsed,
 							decimals,
-						)}{' '}
-						{symbol}
-					</span>
+						)}
+					/>
 				)}
 			</InfoRow>
 			{feePayer && (
-				<InfoRow label="Fee Payer">
+				<InfoRow label="Fee payer">
 					<FeePayer address={feePayer} />
 				</InfoRow>
 			)}
-			<InfoRow label="Gas Used">
+			<InfoRow label="Gas used">
 				<span {...styles.primary()}>
 					{gasUsed.toLocaleString()} / {gasLimit.toLocaleString()}{' '}
 					<span {...styles.secondary()}>({gasUsedPercentage.toFixed(2)}%)</span>
 				</span>
 			</InfoRow>
-			<InfoRow label="Gas Price">
+			<InfoRow label="Gas price">
 				<span {...styles.primary()}>{gasPrice}</span>
 			</InfoRow>
 			{baseFee !== undefined && baseFee !== null && (
-				<InfoRow label="Base Fee">
+				<InfoRow label="Base fee">
 					<span {...styles.primary()}>{baseFee}</span>
 				</InfoRow>
 			)}
 			{maxFee !== undefined && (
-				<InfoRow label="Max Fee">
+				<InfoRow label="Max fee">
 					<span {...styles.primary()}>{maxFee}</span>
 				</InfoRow>
 			)}
 			{maxPriorityFee !== undefined && (
-				<InfoRow label="Max Priority Fee">
+				<InfoRow label="Max priority fee">
 					<span {...styles.primary()}>{maxPriorityFee}</span>
 				</InfoRow>
 			)}
-			<InfoRow label="Transaction Type">
+			<InfoRow label="Transaction type">
 				<span {...styles.primary()}>{receipt.type}</span>
 			</InfoRow>
 			{isExpiringNonce ? (
 				<>
-					<InfoRow label="Nonce Key">
+					<InfoRow label="Nonce key">
 						<a
 							href="https://docs.tempo.xyz/protocol/tips/tip-1009"
 							target="_blank"
 							rel="noopener noreferrer"
-							{...link()}
+							{...cx(link(), linkHover())}
 						>
-							Expiring Nonce
+							Expiring nonce
 						</a>
 					</InfoRow>
 					<InfoRow label="Nonce">
@@ -568,7 +553,7 @@ function OverviewSection(props: {
 				</>
 			) : nonceKey !== undefined ? (
 				<>
-					<InfoRow label="Nonce Key">
+					<InfoRow label="Nonce key">
 						<span {...styles.primary()}>{nonceKey.toString()}</span>
 					</InfoRow>
 					<InfoRow label="Nonce">
@@ -580,24 +565,24 @@ function OverviewSection(props: {
 					<span {...styles.primary()}>{nonce}</span>
 				</InfoRow>
 			)}
-			<InfoRow label="Position in Block">
+			<InfoRow label="Position in block">
 				<span {...styles.primary()}>{positionInBlock}</span>
 			</InfoRow>
 			{input && input !== '0x' && (
 				<InputDataRow input={input} to={transaction.to} />
 			)}
-		</div>
+		</Rows.Root>
 	)
 }
 
 function InputDataRow(props: {
 	input: Hex.Hex
 	to?: OxAddress.Address | null
-}) {
+}): React.JSX.Element {
 	const { input, to } = props
 
 	return (
-		<InfoRow label="Input Data">
+		<InfoRow label="Input data">
 			<TxDecodedCalldata address={to} data={input} />
 		</InfoRow>
 	)
@@ -605,9 +590,9 @@ function InputDataRow(props: {
 
 function BalanceChangesOverview(props: {
 	data: BalanceChangesData
-	onShowAll: () => void
-}) {
-	const { data, onShowAll } = props
+	hash: Hex.Hex
+}): React.JSX.Element {
+	const { data, hash } = props
 
 	const groupedByAccount = React.useMemo(() => {
 		const grouped = new Map<
@@ -623,7 +608,7 @@ function BalanceChangesOverview(props: {
 	}, [data.changes])
 
 	return (
-		<InfoRow label="Balance Updates">
+		<InfoRow label="Balance updates">
 			<div {...styles.balances()}>
 				<div {...styles.balanceAccounts()}>
 					{Array.from(groupedByAccount.entries()).map(([address, changes]) => (
@@ -642,41 +627,69 @@ function BalanceChangesOverview(props: {
 									} catch {
 										return null
 									}
-
-									const raw = metadata
-										? Value.format(diff, metadata.decimals)
-										: change.diff
-									const formatted = metadata
-										? PriceFormatter.formatAmount(raw)
-										: raw
+									const units = diff < 0n ? -diff : diff
 
 									return (
-										<div key={change.token} {...styles.balanceChange()}>
-											<TxBalanceChanges.Diff
-												value={diff}
-												formatted={formatted}
-											/>
-											<TxBalanceChanges.TokenSymbol
-												token={change.token}
-												metadata={metadata}
-											/>
-										</div>
+										<TokenAmount
+											key={change.token}
+											sign={diff > 0n ? '+' : diff < 0n ? '−' : undefined}
+											symbol={metadata?.symbol}
+											token={change.token}
+											value={
+												metadata
+													? Value.format(units, metadata.decimals)
+													: units.toString()
+											}
+										/>
 									)
 								})}
 							</div>
 						</div>
 					))}
 				</div>
-				<button
-					onClick={onShowAll}
-					type="button"
-					{...cx(textAction(), styles.seeAll())}
+				<Button.Link
+					render={
+						<Link
+							to="/tx/$hash"
+							params={{ hash }}
+							search={{ tab: 'balances' }}
+						/>
+					}
+					size="small"
+					variant="text"
+					{...styles.seeAll()}
 				>
-					<span>See all ({data.total})</span>
-					<ChevronRight />
-				</button>
+					View all balance changes ({data.total})
+				</Button.Link>
 			</div>
 		</InfoRow>
+	)
+}
+
+/**
+ * A TDS `Amount` followed by its token, whose icon and symbol link to the
+ * token's page. The symbol is the link, so `Amount` carries no `symbol`.
+ */
+function TokenAmount(props: {
+	sign?: '+' | '−' | undefined
+	symbol?: string | undefined
+	token: OxAddress.Address
+	value: string
+}): React.JSX.Element {
+	const { sign, symbol, token, value } = props
+	return (
+		<span {...styles.tokenAmount()}>
+			<Amount sign={sign} value={value} />
+			<Link
+				to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
+				params={{ address: token }}
+				title={token}
+				{...cx(styles.token(), link(), linkHover())}
+			>
+				<Token address={token} size="small" />
+				{symbol ?? formatHex(token)}
+			</Link>
+		</span>
 	)
 }
 
@@ -735,14 +748,14 @@ function CallItem(props: {
 	return (
 		<div {...styles.call()}>
 			<div {...styles.callHeader()}>
-				<span {...styles.primary()}>#{index}</span>
+				<span {...styles.primary()}>Call {index}</span>
 				{call.to ? (
 					<Address address={call.to} />
 				) : (
-					<span {...styles.secondary()}>Contract Creation</span>
+					<span {...styles.secondary()}>Contract creation</span>
 				)}
 				{data && data !== '0x' && (
-					<span {...styles.secondary()}>({data.length} bytes)</span>
+					<span {...styles.secondary()}>({(data.length - 2) / 2} bytes)</span>
 				)}
 			</div>
 			{data && data !== '0x' && (
@@ -814,7 +827,14 @@ function EventsSection(props: {
 	}
 
 	if (logs.length === 0)
-		return <Empty compact title="No events emitted in this transaction." />
+		return (
+			<Empty.Root>
+				<Empty.Title>No events</Empty.Title>
+				<Empty.Description>
+					This transaction emitted no events.
+				</Empty.Description>
+			</Empty.Root>
+		)
 
 	const cols = [
 		{ label: '#', align: 'start', width: '0.5fr' },
@@ -867,7 +887,7 @@ function EventsSection(props: {
 			page={1}
 			itemsLabel="events"
 			itemsPerPage={groups.length}
-			emptyState="No events emitted."
+			emptyState="No events"
 		/>
 	)
 }
@@ -933,7 +953,7 @@ function EventFallbackName(props: { log: Log }) {
 			{eventName ? (
 				eventName.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
 			) : selector ? (
-				<Midcut value={selector} prefix="0x" />
+				<HexDisplay value={selector} />
 			) : (
 				'Unknown'
 			)}
@@ -957,20 +977,21 @@ function RawSection(props: {
 }
 
 namespace styles {
+	// Stacked below 1024px; beside it, the card takes a capped column.
 	export const page = style({
-		display: 'grid',
+		display: 'flex',
+		flexDirection: 'column',
 		gap: '16',
-		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
 		paddingBottom: '64',
 		paddingInline: '16',
 		paddingTop: '64',
 		width: '100% !custom',
-		'@media (width < 800px)': {
-			display: 'flex',
-			flexDirection: 'column',
-			paddingBottom: '32',
-			paddingTop: '40',
+		'@media (width < 800px)': { paddingBottom: '32', paddingTop: '40' },
+		'@media (width >= 1024px)': {
+			alignItems: 'start',
+			display: 'grid',
+			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr) !custom',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
 	})
@@ -1032,12 +1053,20 @@ namespace styles {
 		paddingLeft: '12',
 	})
 
-	export const balanceChange = style({
+	export const tokenAmount = style({
 		alignItems: 'center',
+		columnGap: '8',
 		display: 'flex',
-		gap: '8',
+		flexWrap: 'wrap',
 	})
 
+	export const token = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '4',
+	})
+
+	// Button.Link leaves its alignment in a column unset.
 	export const seeAll = style({ alignSelf: 'flex-start' })
 
 	export const calls = style({

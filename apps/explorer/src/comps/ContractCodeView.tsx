@@ -6,13 +6,8 @@ import {
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import { Button, Tooltip, style, vars } from '@tempoxyz/ds'
-import {
-	Check,
-	Copy,
-	LayoutSidebar,
-	Link as LinkIcon,
-} from '@tempoxyz/ds/icons'
+import { Button, CopyButton, Tooltip, style, vars } from '@tempoxyz/ds'
+import { LayoutSidebar } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
@@ -21,7 +16,6 @@ import {
 	createContractSourceLink,
 	parseContractSourceLink,
 } from '#lib/domain/contract-source-link'
-import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
 import WrapIcon from '~icons/lucide/wrap-text'
 
@@ -42,8 +36,6 @@ export function ContractCodeView(
 	const container = React.useRef<HTMLDivElement>(null)
 	const sidebarId = React.useId()
 	const [compact, setCompact] = React.useState(true)
-	// Toolbar actions collapse to icons below 32rem.
-	const [narrow, setNarrow] = React.useState(true)
 	const [sidebarPreference, setSidebarPreference] = React.useState<
 		boolean | null
 	>(null)
@@ -54,7 +46,6 @@ export function ContractCodeView(
 		const observer = new ResizeObserver(([entry]) => {
 			if (!entry) return
 			setCompact(entry.contentRect.width < 1000)
-			setNarrow(entry.contentRect.width < 512)
 		})
 		observer.observe(element)
 		return () => observer.disconnect()
@@ -73,8 +64,6 @@ export function ContractCodeView(
 	}, [activeFile])
 	React.useEffect(syncScrollCode, [syncScrollCode])
 	const [theme, setTheme] = React.useState(getInitialThemeMode)
-	const sourceCopy = useCopy({ message: 'File copied', timeout: 2_000 })
-	const linkCopy = useCopy({ message: 'Link copied', timeout: 2_000 })
 	const paths = React.useMemo(() => entries.map(([name]) => name), [entries])
 	const updateSelectionUrl = React.useCallback(
 		(target: Parameters<typeof createContractSourceLink>[1]) => {
@@ -194,14 +183,11 @@ export function ContractCodeView(
 	const currentSource =
 		entries.find(([name]) => name === selectedPath)?.[1].content ?? ''
 
-	function copyPermalink() {
-		void linkCopy.copy(
-			createContractSourceLink(new URL(window.location.href), {
-				id: selectedPath,
-				range: selection?.range ?? null,
-			}),
-		)
-	}
+	// The viewer renders only in the browser, so `window` is defined.
+	const permalink = createContractSourceLink(
+		new URL(locationHref, window.location.origin),
+		{ id: selectedPath, range: selection?.range ?? null },
+	)
 
 	return (
 		<div ref={container} {...styles.root()}>
@@ -224,35 +210,14 @@ export function ContractCodeView(
 				<div {...styles.toolbarEnd()}>
 					<ToolbarAction
 						label="Wrap lines"
-						text={narrow ? undefined : 'Wrap'}
 						active={wrap}
 						aria-pressed={wrap}
 						onClick={() => setWrap(!wrap)}
 					>
 						<WrapIcon {...styles.toolbarIcon()} />
 					</ToolbarAction>
-					<ToolbarAction
-						label="Copy link"
-						text={narrow ? undefined : 'Copy link'}
-						onClick={copyPermalink}
-					>
-						{linkCopy.notifying ? (
-							<Check {...styles.toolbarIcon()} />
-						) : (
-							<LinkIcon {...styles.toolbarIcon()} />
-						)}
-					</ToolbarAction>
-					<ToolbarAction
-						label="Copy file"
-						text={narrow ? undefined : 'Copy file'}
-						onClick={() => void sourceCopy.copy(currentSource)}
-					>
-						{sourceCopy.notifying ? (
-							<Check {...styles.toolbarIcon()} />
-						) : (
-							<Copy {...styles.toolbarIcon()} />
-						)}
-					</ToolbarAction>
+					<CopyButton aria-label="Copy link" value={permalink} />
+					<CopyButton aria-label="Copy file" value={currentSource} />
 				</div>
 			</div>
 			<div {...styles.panes()}>
@@ -311,7 +276,7 @@ export declare namespace ContractCodeView {
 	}
 }
 
-/** Small toolbar action: a labelled Button, or an icon Button without `text`. */
+/** A small icon toggle in the toolbar, filled while `active`. */
 function ToolbarAction(
 	props: Pick<
 		React.ComponentProps<'button'>,
@@ -320,23 +285,9 @@ function ToolbarAction(
 		active?: boolean | undefined
 		children: React.ReactElement
 		label: string
-		text?: string | undefined
 	},
 ): React.JSX.Element {
-	const { active, children, label, text, ...rest } = props
-	const variant = active ? 'secondary' : 'text'
-	if (text)
-		return (
-			<Button
-				{...rest}
-				size="small"
-				variant={variant}
-				{...styles.toolbarAction()}
-			>
-				{children}
-				{text}
-			</Button>
-		)
+	const { active, children, label, ...rest } = props
 	return (
 		<Tooltip.Root>
 			<Tooltip.Trigger
@@ -346,7 +297,7 @@ function ToolbarAction(
 						aria-label={label}
 						shape="icon"
 						size="small"
-						variant={variant}
+						variant={active ? 'secondary' : 'text'}
 						{...styles.toolbarAction()}
 					/>
 				}
@@ -368,18 +319,15 @@ const highlightOptions = {
 let sourceRevision = 0
 
 namespace styles {
-	// A bordered, unpadded card; TDS Surface always pads its content.
+	// A bordered well inside the tab's card, not a nested card.
 	export const root = style({
 		// Read by the viewer's shadow DOM through `unsafeCSS`.
 		'--contract-source-background': vars.color.background.surface,
 		'--contract-source-font': vars.fontFamily.mono,
-		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
 		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
-		boxSizing: 'border-box',
-		color: 'foreground',
 		containerName: 'source',
 		containerType: 'inline-size',
 		overflow: 'hidden',
@@ -405,7 +353,8 @@ namespace styles {
 
 	export const toolbarAction = style({ flexShrink: 0 })
 
-	export const toolbarIcon = style({ height: '16', width: '16' })
+	// The toolbar icons match the 16px glyph of TDS CopyButton.
+	export const toolbarIcon = style({ fontSize: '16' })
 
 	export const fileCount = style({ whiteSpace: 'nowrap' })
 

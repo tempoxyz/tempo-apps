@@ -2,7 +2,6 @@ import { useMatchRoute, useRouterState } from '@tanstack/react-router'
 import { style } from '@tempoxyz/ds'
 import * as React from 'react'
 import { cx } from 'zyzz'
-import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { BlockNumberProvider } from '#lib/block-number'
@@ -38,7 +37,6 @@ export function Layout(props: Layout.Props): React.JSX.Element {
 						<Header />
 					</div>
 					<main id={mainId} tabIndex={-1} {...styles.main()}>
-						<BreadcrumbsPortal />
 						{children}
 					</main>
 					<div
@@ -112,7 +110,6 @@ namespace styles {
 		position: 'relative',
 		width: '100% !custom',
 		zIndex: 1,
-		selectors: { '&:has([role="listbox"])': { zIndex: 3 } },
 		'@media print': { display: 'block', flex: 'none' },
 	})
 

@@ -1,69 +1,16 @@
-import { style } from '@tempoxyz/ds'
+import { CopyButton, Rows, style } from '@tempoxyz/ds'
+import * as React from 'react'
 import type { AbiParameter } from 'viem'
-import { cx } from 'zyzz'
-import { useCopy } from '#lib/hooks'
-import { pressDown, transitionColors } from '#styles/explorer'
 
-/** Render decoded ABI values using their structure, including unnamed tuples. */
+/**
+ * A decoded ABI value as TDS `Rows`, including unnamed tuples. Tuples and
+ * arrays expand into nested rows; other values sit beside a copy button.
+ */
 export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
-	const { input, value } = props
-	const { copy } = useCopy()
-	const name = input.name || '(unnamed)'
-	const array = /^(.*)\[\d*\]$/.exec(input.type)
-	const children =
-		array && Array.isArray(value)
-			? value.map((item, index) => ({
-					input: {
-						...input,
-						type: array[1],
-						name: `[${index}]`,
-					} as AbiParameter,
-					value: item,
-				}))
-			: input.type === 'tuple' && 'components' in input && value != null
-				? input.components.map((component, index) => ({
-						input: { ...component, name: component.name || `[${index}]` },
-						value: Array.isArray(value)
-							? value[index]
-							: (value as Record<string, unknown>)[component.name ?? ''],
-					}))
-				: undefined
-
-	if (children)
-		return (
-			<details open={input.type === 'tuple'} {...styles.details()}>
-				<summary {...styles.summary()}>
-					<span>{name}</span>
-					<span {...styles.meta()}>{input.type}</span>
-					<span {...styles.meta()}>
-						{children.length} {array ? 'items' : 'fields'}
-					</span>
-				</summary>
-				{children.length ? (
-					<div {...styles.children()}>
-						{children.map((child, index) => (
-							<AbiArgument key={`${index}-${child.input.name}`} {...child} />
-						))}
-					</div>
-				) : (
-					<div {...styles.empty()}>Empty {array ? 'array' : 'tuple'}</div>
-				)}
-			</details>
-		)
-
 	return (
-		<button
-			type="button"
-			onClick={() => copy(String(value))}
-			title={`Copy ${name}`}
-			{...cx(styles.value(), pressDown(), transitionColors())}
-		>
-			<span {...styles.label()}>
-				<span {...styles.labelName()}>{name}</span>
-				<span {...styles.labelType()}>{input.type}</span>
-			</span>
-			<span {...styles.valueText()}>{String(value)}</span>
-		</button>
+		<Rows.Root dividers="full" size="small">
+			<ArgumentRow {...props} />
+		</Rows.Root>
 	)
 }
 
@@ -74,79 +21,95 @@ export declare namespace AbiArgument {
 	}
 }
 
+function ArgumentRow(props: AbiArgument.Props): React.JSX.Element {
+	const { input, value } = props
+	const name = input.name || '(unnamed)'
+	const array = /^(.*)\[\d*\]$/.exec(input.type)
+	const children = getChildren(input, value, array?.[1])
+	// Tuples open by default; arrays, which can be long, start closed.
+	const [open, setOpen] = React.useState(input.type === 'tuple')
+	const panelId = React.useId()
+
+	const info = (
+		<Rows.Info>
+			<Rows.Title>
+				<span {...styles.mono()}>{name}</span>
+			</Rows.Title>
+			<Rows.Description>
+				<span {...styles.mono()}>{input.type}</span>
+				{children && ` · ${children.length} ${array ? 'items' : 'fields'}`}
+			</Rows.Description>
+		</Rows.Info>
+	)
+
+	if (!children)
+		return (
+			<Rows.Row>
+				{info}
+				<span {...styles.value()}>{String(value)}</span>
+				<CopyButton aria-label={`Copy ${name}`} value={String(value)} />
+			</Rows.Row>
+		)
+
+	return (
+		<>
+			<Rows.Row
+				action="expand"
+				aria-controls={panelId}
+				aria-expanded={open}
+				onClick={() => setOpen(!open)}
+			>
+				{info}
+			</Rows.Row>
+			{/* Closed panels stay in the markup, so the page can render them on the server. */}
+			<Rows.Panel hidden={!open} id={panelId}>
+				{children.length ? (
+					<Rows.Root dividers="full" size="small">
+						{children.map((child, index) => (
+							<ArgumentRow key={`${index}-${child.input.name}`} {...child} />
+						))}
+					</Rows.Root>
+				) : (
+					`Empty ${array ? 'array' : 'tuple'}`
+				)}
+			</Rows.Panel>
+		</>
+	)
+}
+
+/** Child values of an array or tuple, or `undefined` for a single value. */
+function getChildren(
+	input: AbiParameter,
+	value: unknown,
+	itemType: string | undefined,
+): AbiArgument.Props[] | undefined {
+	if (itemType !== undefined && Array.isArray(value))
+		return value.map((item, index) => ({
+			input: { ...input, type: itemType, name: `[${index}]` } as AbiParameter,
+			value: item,
+		}))
+	if (input.type === 'tuple' && 'components' in input && value != null)
+		return input.components.map((component, index) => ({
+			input: { ...component, name: component.name || `[${index}]` },
+			value: Array.isArray(value)
+				? value[index]
+				: (value as Record<string, unknown>)[component.name ?? ''],
+		}))
+	return undefined
+}
+
 namespace styles {
-	export const details = style({
-		minWidth: '0 !custom',
-		typography: 'label.12.mono',
-	})
+	export const mono = style({ typography: 'copy.13.mono' })
 
-	export const summary = style({
-		color: 'foreground',
-		cursor: 'pointer',
-		paddingBlock: '12',
-		paddingInline: '12',
-		wordBreak: 'break-all',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.100' },
-		},
-	})
-
-	export const meta = style({ color: 'gray.900', marginLeft: '8' })
-
-	export const children = style({
-		borderColor: 'grayAlpha.200',
-		borderLeftWidth: '1px',
-		marginBottom: '8',
-		marginLeft: '16',
-		paddingLeft: '8',
-		selectors: {
-			'& > :not(:last-child)': {
-				borderBottomWidth: '1px',
-				borderColor: 'grayAlpha.200',
-			},
-		},
-	})
-
-	export const empty = style({
-		color: 'gray.900',
-		paddingBottom: '12',
-		paddingInline: '24',
-	})
-
+	// The value takes twice the label's share of the row and scrolls when tall.
 	export const value = style({
 		color: 'foreground',
-		cursor: 'pointer',
-		display: 'grid',
-		gap: '4',
-		gridTemplateColumns: 'minmax(0, 1fr)',
-		paddingBlock: '8',
-		paddingInline: '12',
-		textAlign: 'left',
-		typography: 'label.12.mono',
-		width: '100% !custom',
-		'@media (hover: hover)': {
-			':hover': { backgroundColor: 'grayAlpha.100' },
-		},
-		'@media (width >= 640px)': {
-			gap: '12',
-			gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
-		},
-	})
-
-	export const label = style({ minWidth: '0 !custom', wordBreak: 'break-all' })
-
-	export const labelName = style({ color: 'foreground', display: 'block' })
-
-	export const labelType = style({
-		color: 'gray.900',
-		display: 'block',
-	})
-
-	export const valueText = style({
-		color: 'foreground',
+		flexBasis: '0',
+		flexGrow: 2,
 		maxHeight: '160',
-		minWidth: '0 !custom',
+		minWidth: '0',
 		overflow: 'auto',
-		wordBreak: 'break-all',
+		overflowWrap: 'anywhere',
+		typography: 'copy.13.mono',
 	})
 }

@@ -1,46 +1,47 @@
 import { Link } from '@tanstack/react-router'
-import { Button, Empty, style } from '@tempoxyz/ds'
+import { Button, Empty, Hex, style, Surface } from '@tempoxyz/ds'
 import { Search } from '@tempoxyz/ds/icons'
-import type { Hex } from 'ox'
+import type { Hex as HexType } from 'ox'
 import type * as React from 'react'
 import { apostrophe } from '#lib/chars'
 import { useMarkNotFoundPage } from '#lib/not-found'
 
-export function NotFound({
-	title = 'Page Not Found',
-	message = `The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
-	data,
-}: NotFound.Props): React.JSX.Element {
+export function NotFound(props: NotFound.Props): React.JSX.Element {
+	const {
+		title = 'Page not found',
+		message = `The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
+		data,
+	} = props
 	useMarkNotFoundPage()
 
 	return (
 		<section {...styles.section()}>
-			<div {...styles.card()}>
-				{/* The page's own heading, so not `Empty.Title`'s `h3`. */}
-				<Empty.Root {...styles.empty()}>
+			<Surface size="medium" {...styles.card()}>
+				<Empty.Root>
 					<Empty.Icon>
 						<Search />
 					</Empty.Icon>
+					{/* The page's own heading, so not `Empty.Title`'s `h3`. */}
 					<h1 {...styles.title()}>{title}</h1>
 					<Empty.Description>{message}</Empty.Description>
+					{data?.type === 'hash' && <Hex copy value={data.value} />}
 					<Empty.Actions>
-						<Button.Link render={<Link to="/" />}>Return home</Button.Link>
+						<Button.Link render={<Link to="/" />}>Go home</Button.Link>
 					</Empty.Actions>
 				</Empty.Root>
-				{data?.type === 'hash' && <pre {...styles.hash()}>{data.value}</pre>}
-			</div>
+			</Surface>
 		</section>
 	)
 }
 
-export namespace NotFound {
-	export interface Props {
-		title?: string
-		message?: string
-		data?: NotFoundData
+export declare namespace NotFound {
+	type Props = {
+		title?: string | undefined
+		message?: string | undefined
+		data?: NotFoundData | undefined
 	}
 
-	export type NotFoundData = { type: 'hash'; value: Hex.Hex }
+	type NotFoundData = { type: 'hash'; value: HexType.Hex }
 }
 
 namespace styles {
@@ -48,49 +49,20 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		height: '100% !custom',
 		justifyContent: 'center',
 		paddingBlock: '64',
 		paddingInline: '16',
 		width: '100% !custom',
 	})
 
-	// An unpadded bordered surface, so the hash row can run edge to edge.
 	export const card = style({
-		backgroundColor: 'background.surface',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
-		borderStyle: 'solid',
-		borderWidth: '1px',
 		maxWidth: '600px !custom',
-		overflow: 'hidden',
 		width: '100% !custom',
-	})
-
-	// TDS `Empty.Root` sets no height or main-axis alignment.
-	export const empty = style({
-		justifyContent: 'center',
-		minHeight: '180px !custom',
 	})
 
 	export const title = style({
 		color: 'foreground',
 		margin: '0',
-		marginBlockStart: '12',
-		typography: 'heading.24.subtle',
-	})
-
-	export const hash = style({
-		backgroundColor: 'grayAlpha.100',
-		borderColor: 'grayAlpha.200',
-		borderStyle: 'solid',
-		borderTopWidth: '1px',
-		color: 'gray.900',
-		margin: '0',
-		padding: '16',
-		textAlign: 'center',
-		typography: 'label.12.mono',
-		whiteSpace: 'pre-wrap',
-		wordBreak: 'break-all',
+		typography: 'heading.24',
 	})
 }

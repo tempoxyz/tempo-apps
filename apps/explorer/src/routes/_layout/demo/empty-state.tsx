@@ -1,8 +1,8 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { useMediaQuery } from '#lib/hooks'
-import { style } from '@tempoxyz/ds'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -30,9 +30,7 @@ function Component() {
 				mode={mode}
 				sections={[
 					{
-						title: 'Empty State Demo',
-						totalItems: 0,
-						itemsLabel: 'transactions',
+						title: 'Empty state',
 						content: (
 							<DataGrid
 								columns={{ stacked: columns, tabs: columns }}
@@ -40,7 +38,7 @@ function Component() {
 								totalItems={0}
 								page={1}
 								itemsLabel="transactions"
-								emptyState="No transactions found."
+								emptyState="No transactions yet"
 							/>
 						),
 					},
