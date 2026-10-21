@@ -11,6 +11,7 @@ See the [Tempo developer documentation](https://tempo.xyz/developers/docs) for i
 | **Explorer** | [`apps/explorer`](apps/explorer) | Mainnet, testnet, and devnet explorer | [`explore.tempo.xyz`](<https://explore.tempo.xyz>) |
 | **Wallet and account management** | [`apps/fee-payer`](apps/fee-payer) | Transaction fee sponsorship service | [`sponsor.testnet.tempo.xyz`](<https://sponsor.testnet.tempo.xyz>) |
 | **Wallet and account management** | [`apps/key-manager`](apps/key-manager) | WebAuthn key management service | [`keys.tempo.xyz`](<https://keys.tempo.xyz>) |
+| **Wallet and account management** | [`apps/access-keys`](apps/access-keys) | Encrypted managed access-key signer | Private Tempo API service binding |
 | **Developer services** | [`apps/tokenlist`](apps/tokenlist) | Tokenlist registry and API | [`tokenlist.tempo.xyz`](<https://tokenlist.tempo.xyz/docs>) |
 | **Developer services** | [`apps/contract-verification`](apps/contract-verification) | Smart contract verification service | [`contracts.tempo.xyz`](<https://contracts.tempo.xyz/docs>) |
 | **Developer services** | [`apps/og`](apps/og) | Open Graph image generation worker | [`og.tempo.xyz`](<https://og.tempo.xyz>) |
