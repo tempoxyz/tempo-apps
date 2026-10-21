@@ -170,7 +170,7 @@ function DexPoolsPage(): React.JSX.Element {
 						autoCollapse: false,
 						contextual: (
 							<div {...styles.contextual()}>
-								<Input.Group size="small" variant="search" {...styles.filter()}>
+								<Input.Group size="small" {...styles.filter()}>
 									<Input.Prefix>
 										<SearchIcon aria-hidden="true" />
 									</Input.Prefix>
@@ -423,14 +423,14 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '8',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '32',
 		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '16' },
+		'@media (width >= 640px)': { paddingTop: '64' },
 	})
 
 	export const title = style({
@@ -444,7 +444,7 @@ namespace styles {
 	export const totals = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		boxSizing: 'border-box',
@@ -460,9 +460,9 @@ namespace styles {
 	export const stat = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingBlock: '4',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '16',
+		paddingInline: '16',
 		selectors: {
 			'&:not(:last-child)': {
 				borderColor: 'grayAlpha.200',
@@ -491,15 +491,15 @@ namespace styles {
 	export const contextual = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
+		gap: '16',
 	})
 
-	export const filter = style({ width: '160px !custom' })
+	export const filter = style({ width: '160' })
 
 	// Keeps "Verified only" on one line in the section header.
 	export const verified = style({ whiteSpace: 'nowrap' })
 
-	export const alert = style({ padding: '4' })
+	export const alert = style({ padding: '16' })
 
 	export const sort = variants({
 		base: {
@@ -523,7 +523,7 @@ namespace styles {
 	export const pair = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -551,7 +551,7 @@ namespace styles {
 
 	export const pairName = style({
 		color: 'foreground',
-		fontWeight: 'medium',
+		fontWeight: '550 !custom',
 	})
 
 	export const secondary = style({ color: 'gray.900' })

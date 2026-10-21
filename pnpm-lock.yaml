@@ -112,8 +112,8 @@ catalogs:
       specifier: ^1.167.12
       version: 1.167.12
     '@tempoxyz/ds':
-      specifier: 0.1.3
-      version: 0.1.3
+      specifier: 0.2.2
+      version: 0.2.2
     '@total-typescript/ts-reset':
       specifier: ^0.6.1
       version: 0.6.1
@@ -241,8 +241,8 @@ catalogs:
       specifier: ^4.3.6
       version: 4.3.6
     zyzz:
-      specifier: 0.0.34
-      version: 0.0.34
+      specifier: 0.0.36
+      version: 0.0.36
 
 overrides:
   sharp@<0.35.4: 0.35.4
@@ -449,7 +449,7 @@ importers:
         version: link:../../packages/rpc-utils
       '@tempoxyz/ds':
         specifier: 'catalog:'
-        version: 0.1.3(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)(vue@3.5.40(typescript@6.0.2))(zyzz@0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))
+        version: 0.2.2(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)(vue@3.5.40(typescript@6.0.2))(zyzz@0.0.36(@babel/core@7.29.0)(@base-ui/react@1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))
       abitype:
         specifier: 'catalog:'
         version: 1.2.4(typescript@6.0.2)(zod@4.3.6)
@@ -488,7 +488,7 @@ importers:
         version: 4.3.6
       zyzz:
         specifier: 'catalog:'
-        version: 0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+        version: 0.0.36(@babel/core@7.29.0)(@base-ui/react@1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
     devDependencies:
       '@cloudflare/puppeteer':
         specifier: 'catalog:'
@@ -3111,6 +3111,10 @@ packages:
     resolution: {integrity: sha512-titLmukUt/h8ho7Svlf0xSBjoy2ccZKrXjpXpZCj+v6V4CJccC2KyP45BLSCMx8YIpifMyiDyUptM4+5sruKbQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@oxlint/plugins@1.79.0':
+    resolution: {integrity: sha512-S0uyoxakDINJ4DPgqxGlEEvrdSMeQb7Z2lKVjxoY2gwsbZbfg2Xr8Klfeo5ZeraHmmdBCELFUHkSe6KEmBpMvg==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
   '@phosphor-icons/core@2.1.1':
     resolution: {integrity: sha512-v4ARvrip4qBCImOE5rmPUylOEK4iiED9ZyKjcvzuezqMaiRASCHKcRIuvvxL/twvLpkfnEODCOJp5dM4eZilxQ==}
 
@@ -4425,8 +4429,8 @@ packages:
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
 
-  '@tempoxyz/ds@0.1.3':
-    resolution: {integrity: sha512-ldvdXiDxUbZvXWHqck79H6X9XsjoEGAK/+jOuBn7bI2LddAmPXAkP3rMhp4mnm9yB+DEnoXpylooy6BX9OnQYg==}
+  '@tempoxyz/ds@0.2.2':
+    resolution: {integrity: sha512-BRFqJBs2Ag+8FtcIgGBDPAav256AVEj93vFJAy841brX9fkta3jiLV6Y08Azsk9r3CzhWU5iwdB8TIycyXw88g==}
     peerDependencies:
       expo-haptics: '>=57.0.0'
       react: ^19.0.0
@@ -8965,11 +8969,12 @@ packages:
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
-  zyzz@0.0.34:
-    resolution: {integrity: sha512-LVZuRAM9DIxz2DG7CNeiwhOYPsZwIJJtDuCBf75spQTH1wnuu/1YPcTF2WIPgWjeB8sCUzbeB9aucLIs/LpPZw==}
+  zyzz@0.0.36:
+    resolution: {integrity: sha512-dYqK8omLlyKxrWvXIVbcaH7cgoj8xdUQ21pS4Xu/qrWP2SqI8VAVJe0mmX4Hsrq4Ms9gbpiYBJvzwlR/OIm66g==}
     hasBin: true
     peerDependencies:
       '@babel/core': ^7.29.7
+      '@base-ui/react': 1.8.0
       next: ^16.3.5
       react: ^19.0.0
       react-native: '>=0.86.0 <1.0.0'
@@ -8977,6 +8982,8 @@ packages:
       vite: ^8.0.0
     peerDependenciesMeta:
       '@babel/core':
+        optional: true
+      '@base-ui/react':
         optional: true
       next:
         optional: true
@@ -10799,6 +10806,8 @@ snapshots:
 
   '@oxlint/plugins@1.68.0': {}
 
+  '@oxlint/plugins@1.79.0': {}
+
   '@phosphor-icons/core@2.1.1': {}
 
   '@pierre/diffs@1.2.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)':
@@ -12201,14 +12210,15 @@ snapshots:
       '@tanstack/virtual-core': 3.17.5
       vue: 3.5.40(typescript@6.0.2)
 
-  '@tempoxyz/ds@0.1.3(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)(vue@3.5.40(typescript@6.0.2))(zyzz@0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))':
+  '@tempoxyz/ds@0.2.2(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)(vue@3.5.40(typescript@6.0.2))(zyzz@0.0.36(@babel/core@7.29.0)(@base-ui/react@1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)))':
     dependencies:
       '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@oxlint/plugins': 1.79.0
       cuer: 0.0.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(typescript@6.0.2)
       midcut: 0.2.0(react@19.2.5)
       react: 19.2.5
       torph: 0.1.3(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(vue@3.5.40(typescript@6.0.2))
-      zyzz: 0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
+      zyzz: 0.0.36(@babel/core@7.29.0)(@base-ui/react@1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
     optionalDependencies:
       react-dom: 19.2.5(react@19.2.5)
     transitivePeerDependencies:
@@ -17713,7 +17723,7 @@ snapshots:
 
   zwitch@2.0.4: {}
 
-  zyzz@0.0.34(@babel/core@7.29.0)(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
+  zyzz@0.0.36(@babel/core@7.29.0)(@base-ui/react@1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(esbuild@0.28.1)(react@19.2.5)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@emnapi/core': 2.0.0-alpha.6
       '@emnapi/runtime': 2.0.0-alpha.6
@@ -17732,6 +17742,7 @@ snapshots:
       unplugin: 3.4.0(esbuild@0.28.1)(rollup@4.59.0)(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3))
     optionalDependencies:
       '@babel/core': 7.29.0
+      '@base-ui/react': 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       react: 19.2.5
       vite: 8.0.7(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.8.3)
     transitivePeerDependencies:

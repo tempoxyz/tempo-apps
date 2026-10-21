@@ -55,12 +55,12 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 	})
 }

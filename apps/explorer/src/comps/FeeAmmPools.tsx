@@ -223,21 +223,21 @@ export declare namespace TokenFeeAmm {
 namespace styles {
 	export const loading = style({
 		color: 'gray.900',
-		paddingBlock: '8',
-		paddingInline: '4',
+		paddingBlock: '32',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
-	export const alert = style({ padding: '4' })
+	export const alert = style({ padding: '16' })
 
 	export const row = style({
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
 		display: 'grid',
-		gap: '4',
-		paddingBlock: '4',
-		paddingInline: '4',
+		gap: '16',
+		paddingBlock: '16',
+		paddingInline: '16',
 		':last-child': { borderBottomWidth: '0px' },
 		'@media (width >= 768px)': {
 			gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 3fr)',
@@ -247,15 +247,15 @@ namespace styles {
 	export const pair = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		minWidth: '0px !custom',
+		gap: '8',
+		minWidth: '0',
 	})
 
 	export const tokens = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 		typography: 'copy.14',
 	})
 
@@ -268,12 +268,12 @@ namespace styles {
 
 	export const value = style({
 		fontVariantNumeric: 'tabular-nums',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflowWrap: 'anywhere',
 		textAlign: 'end',
 	})
 
-	export const lastAdded = style({ minWidth: '0px !custom', textAlign: 'end' })
+	export const lastAdded = style({ minWidth: '0', textAlign: 'end' })
 
 	export const deposits = style({
 		color: 'gray.900',
@@ -284,23 +284,23 @@ namespace styles {
 	export const tokenLink = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const section = style({
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
-		scrollMarginTop: '80px !custom',
+		scrollMarginTop: '80',
 	})
 
 	export const sectionHeader = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '3',
+		gap: '12',
 		justifyContent: 'space-between',
-		padding: '4',
+		padding: '16',
 	})
 
 	export const sectionTitle = style({
@@ -311,21 +311,21 @@ namespace styles {
 	export const viewAll = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 		typography: 'copy.14',
 	})
 
 	export const empty = style({
 		color: 'gray.900',
-		paddingBottom: '5',
-		paddingInline: '4',
+		paddingBottom: '20',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
 	export const more = style({
 		color: 'gray.900',
-		paddingBottom: '3',
-		paddingInline: '4',
+		paddingBottom: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 }

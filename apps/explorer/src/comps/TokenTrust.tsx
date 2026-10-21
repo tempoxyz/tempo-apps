@@ -427,9 +427,9 @@ namespace styles {
 		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		marginTop: '4',
-		paddingTop: '4',
+		gap: '16',
+		marginTop: '16',
+		paddingTop: '16',
 	})
 
 	export const heading = style({
@@ -439,7 +439,7 @@ namespace styles {
 
 	export const panel = style({
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'lg',
+		borderRadius: '8',
 		borderWidth: '1px',
 		overflow: 'hidden',
 	})
@@ -449,9 +449,9 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		padding: '3',
+		padding: '12',
 	})
 
 	export const panelTitle = style({ typography: 'copy.14.strong' })
@@ -459,28 +459,28 @@ namespace styles {
 	export const panelBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		padding: '3',
+		gap: '12',
+		padding: '12',
 	})
 
 	export const status = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 		'@media (width >= 768px)': {
 			flexDirection: 'row-reverse',
 			justifyContent: 'space-between',
 		},
 	})
 
-	export const infoIcon = style({ height: '4', width: '4' })
+	export const infoIcon = style({ height: '16', width: '16' })
 
 	export const pause = style({
 		alignItems: 'center',
 		display: 'inline-flex',
 		flexShrink: 0,
-		gap: '1',
+		gap: '4',
 	})
 
 	export const secondary = style({ color: 'gray.900' })
@@ -489,7 +489,7 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		typography: 'label.12',
 	})
 
@@ -508,8 +508,8 @@ namespace styles {
 	export const group = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingBlock: '3',
+		gap: '8',
+		paddingBlock: '12',
 		typography: 'label.12',
 		':first-child': { paddingTop: '0' },
 		':last-child': { paddingBottom: '0' },
@@ -526,17 +526,17 @@ namespace styles {
 
 	export const meta = style({
 		color: 'gray.900',
-		columnGap: '2',
+		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		marginTop: '1',
+		marginTop: '4',
 		typography: 'label.12',
 	})
 
 	export const policyLink = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const policyLabel = style({
@@ -548,7 +548,7 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
 		borderTopWidth: '1px',
-		paddingTop: '3',
+		paddingTop: '12',
 		typography: 'label.12',
 	})
 
@@ -557,17 +557,17 @@ namespace styles {
 	export const form = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingTop: '3',
+		gap: '8',
+		paddingTop: '12',
 	})
 
 	export const inputRow = style({
 		alignItems: 'flex-end',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
-	export const field = style({ flex: 1, minWidth: '0px !custom' })
+	export const field = style({ flex: 1, minWidth: '0' })
 
 	export const submit = style({ flexShrink: 0 })
 
@@ -575,7 +575,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const fieldErrorIcon = style({
@@ -583,26 +583,26 @@ namespace styles {
 		flexShrink: 0,
 	})
 
-	export const live = style({ paddingTop: '3' })
+	export const live = style({ paddingTop: '12' })
 
 	export const disclaimer = style({
 		color: 'gray.900',
-		paddingTop: '2',
+		paddingTop: '8',
 	})
 
 	export const result = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const resultValue = style({
 		alignItems: 'center',
-		columnGap: '3',
+		columnGap: '12',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'flex-end',
-		minWidth: '0px !custom',
-		rowGap: '1',
+		minWidth: '0',
+		rowGap: '4',
 	})
 }

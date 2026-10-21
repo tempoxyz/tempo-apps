@@ -124,8 +124,8 @@ export namespace Footer {
 namespace styles {
 	export const footer = style({
 		containerType: 'inline-size',
-		paddingBottom: '12',
-		paddingTop: '6',
+		paddingBottom: '48',
+		paddingTop: '24',
 		position: 'relative',
 		'@media print': { display: 'none' },
 	})
@@ -134,9 +134,9 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '5',
+		gap: '20',
 		justifyContent: 'center',
-		minHeight: '10',
+		minHeight: '40',
 		position: 'relative',
 		'@container (width < 399px)': { flexDirection: 'column-reverse' },
 	})
@@ -144,14 +144,14 @@ namespace styles {
 	export const links = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '5',
+		gap: '20',
 		justifyContent: 'center',
 		listStyle: 'none',
 		margin: '0',
 		padding: '0',
 		typography: 'copy.14',
 		userSelect: 'none',
-		'@media (width >= 640px)': { gap: '6' },
+		'@media (width >= 640px)': { gap: '24' },
 	})
 
 	export const item = style({ display: 'flex' })
@@ -160,16 +160,16 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'inline-flex',
-		minHeight: '44px !custom',
+		minHeight: '44',
 		textDecorationLine: 'none',
 		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
-		'@media (width >= 640px)': { minHeight: '8' },
+		'@media (width >= 640px)': { minHeight: '32' },
 	})
 
 	export const themeToggle = style({
 		display: 'flex',
 		'@container (width >= 400px)': {
-			left: '0px !custom',
+			left: '0',
 			position: 'absolute',
 			top: '50% !custom',
 			translate: '0 -50% !custom',

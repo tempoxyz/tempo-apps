@@ -214,9 +214,9 @@ namespace styles {
 	// Sized like a search engine's home logo; the header hides its own on this page.
 	export const wordmark = style({
 		display: 'block',
-		height: '12',
+		height: '48',
 		width: 'auto !custom',
-		'@media (width >= 800px)': { height: '16' },
+		'@media (width >= 800px)': { height: '64' },
 	})
 
 	export const body = style({
@@ -224,9 +224,9 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '8',
-		paddingInline: '4',
-		paddingTop: '8',
+		gap: '32',
+		paddingInline: '16',
+		paddingTop: '32',
 	})
 
 	export const search = style({
@@ -238,7 +238,7 @@ namespace styles {
 
 	export const spotlight = style({
 		maxWidth: '680px !custom',
-		paddingInline: '4',
+		paddingInline: '16',
 		textAlign: 'center',
 	})
 
@@ -246,7 +246,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'center',
 	})
 }

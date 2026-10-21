@@ -94,7 +94,7 @@ namespace styles {
 	export const recipient = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -102,7 +102,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const recipientLink = style({

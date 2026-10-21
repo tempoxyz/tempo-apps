@@ -231,7 +231,7 @@ function MembersSearch(props: { query: string }) {
 			}}
 		>
 			<Field.Root>
-				<Input.Group variant="search">
+				<Input.Group>
 					<Input.Prefix>
 						<Search />
 					</Input.Prefix>
@@ -387,8 +387,8 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		justifyContent: 'center',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingInline: '16',
+		paddingTop: '64',
 	})
 
 	export const notFoundContent = style({ textAlign: 'center' })
@@ -400,24 +400,24 @@ namespace styles {
 
 	export const notFoundMessage = style({
 		color: 'gray.900',
-		marginTop: '2',
+		marginTop: '8',
 		typography: 'copy.14',
 	})
 
 	export const page = style({
 		display: 'grid',
-		gap: '4',
+		gap: '16',
 		gridTemplateColumns: 'auto 1fr',
-		minWidth: '0px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		minWidth: '0',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '8',
-			paddingTop: '10',
+			paddingBottom: '32',
+			paddingTop: '40',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -432,7 +432,7 @@ namespace styles {
 	export const type = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const typeLabel = style({ textTransform: 'capitalize' })
@@ -451,6 +451,6 @@ namespace styles {
 	export const transaction = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 	})
 }

@@ -1,28 +1,8 @@
 import { vars } from '@tempoxyz/ds'
-import { fontFace, global } from 'zyzz/web'
+import { global } from 'zyzz/web'
 
-// Tempo Design System emits its variables, the Pilat faces, and body font
-// smoothing. Its mono typography names "Geist Mono" but ships no mono face, so
-// the explorer serves JetBrains Mono (Tempo's mono face) under that family
-// from `public/fonts` (SIL Open Font License, see `JetBrainsMono-OFL.txt`).
-// TDS components such as Hex and the explorer's `mono()` recipe then match.
-fontFace({
-	fontDisplay: 'swap',
-	fontFamily: 'Geist Mono',
-	fontStyle: 'normal',
-	fontWeight: 400,
-	src: "url('/fonts/JetBrainsMono-Regular.woff2') format('woff2')",
-})
-
-fontFace({
-	fontDisplay: 'swap',
-	fontFamily: 'Geist Mono',
-	fontStyle: 'normal',
-	fontWeight: 500,
-	src: "url('/fonts/JetBrainsMono-Medium.woff2') format('woff2')",
-})
-
-// These rules set the remaining document defaults.
+// Tempo Design System emits its variables, the Inter and Geist Mono faces,
+// and body font smoothing. These rules set the remaining document defaults.
 global({
 	'@layer base': {
 		'html, :host': {
@@ -36,7 +16,8 @@ global({
 		'html[data-theme="light"]': { colorScheme: 'light' },
 		body: {
 			fontSize: '14px',
-			fontWeight: 400,
+			// TDS's Inter weight for copy.
+			fontWeight: 450,
 			lineHeight: '20px',
 			minWidth: '320px',
 		},

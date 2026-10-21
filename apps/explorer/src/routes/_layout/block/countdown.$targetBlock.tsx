@@ -258,12 +258,12 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '8',
+		gap: '32',
 		justifyContent: 'center',
 		minHeight: 'calc(100vh - 200px) !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 	})
 
@@ -271,7 +271,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		maxWidth: '600px !custom',
 		width: '100% !custom',
 	})
@@ -280,7 +280,7 @@ namespace styles {
 
 	export const title = style({
 		color: 'foreground',
-		marginBottom: '2',
+		marginBottom: '8',
 		typography: 'heading.24.subtle',
 	})
 
@@ -293,7 +293,7 @@ namespace styles {
 
 	export const units = style({
 		display: 'grid',
-		gap: '3',
+		gap: '12',
 		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
 		maxWidth: '400px !custom',
 		width: '100% !custom',
@@ -309,10 +309,10 @@ namespace styles {
 	export const dateLabel = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
-	export const dateIcon = style({ flexShrink: 0, height: '4', width: '4' })
+	export const dateIcon = style({ flexShrink: 0, height: '16', width: '16' })
 
 	export const dateLabelLong = style({
 		display: 'none',
@@ -327,13 +327,13 @@ namespace styles {
 		alignItems: 'center',
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
-		padding: '3',
+		gap: '4',
+		padding: '12',
 	})
 
 	export const unitValue = style({

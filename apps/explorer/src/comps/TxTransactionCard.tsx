@@ -205,9 +205,9 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		marginBottom: '2',
-		selectors: { '& > svg': { height: '3', width: '3' } },
+		gap: '8',
+		marginBottom: '8',
+		selectors: { '& > svg': { height: '12', width: '12' } },
 	})
 
 	export const hashValue = style({
@@ -227,7 +227,7 @@ namespace styles {
 		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'inline-flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const timeFormat = style({
@@ -235,7 +235,7 @@ namespace styles {
 		borderRadius: 'full',
 		color: 'foreground',
 		paddingBlock: '2px !custom',
-		paddingInline: '2',
+		paddingInline: '8',
 		textTransform: 'capitalize',
 		typography: 'label.12',
 		'@media (hover: hover)': {
@@ -261,7 +261,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'space-between',
-		paddingBlock: '2',
+		paddingBlock: '8',
 		width: '100% !custom',
 		'@media print': { display: 'none' },
 	})
@@ -273,7 +273,7 @@ namespace styles {
 		borderWidth: '1px',
 		color: 'gray.900',
 		paddingBlock: '2px !custom',
-		paddingInline: '2',
+		paddingInline: '8',
 		typography: 'label.12',
 		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})

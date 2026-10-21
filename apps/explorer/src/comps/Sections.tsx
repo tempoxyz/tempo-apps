@@ -229,13 +229,13 @@ namespace styles {
 	export const stack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '16',
 	})
 
 	export const section = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'flex',
@@ -252,13 +252,13 @@ namespace styles {
 	// Rounded like the card, so the inset focus ring follows its corners.
 	export const toggle = style({
 		alignItems: 'center',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		cursor: 'pointer',
 		display: 'flex',
 		height: '52px !custom',
 		justifyContent: 'space-between',
 		outlineOffset: '-2px !custom',
-		paddingInline: '5',
+		paddingInline: '20',
 		width: '100% !custom',
 	})
 
@@ -275,7 +275,7 @@ namespace styles {
 	export const toggleMeta = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '3',
+		gap: '12',
 	})
 
 	export const count = style({
@@ -285,8 +285,8 @@ namespace styles {
 
 	export const chevron = style({
 		color: 'gray.900',
-		height: '4',
-		width: '4',
+		height: '16',
+		width: '16',
 	})
 
 	export const chevronExpanded = style({ rotate: '180deg' })
@@ -296,7 +296,7 @@ namespace styles {
 		display: 'flex',
 		height: '52px !custom',
 		justifyContent: 'space-between',
-		paddingInline: '5',
+		paddingInline: '20',
 	})
 
 	export const content = style({
@@ -312,13 +312,13 @@ namespace styles {
 	})
 
 	// `Tabs.Panel` sets this 12px top margin itself; a single section matches it.
-	export const contentGap = style({ marginBlockStart: '3' })
+	export const contentGap = style({ marginBlockStart: '12' })
 
 	export const contentStacked = style({
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		borderTopLeftRadius: 'xl',
-		borderTopRightRadius: 'xl',
+		borderTopLeftRadius: '12',
+		borderTopRightRadius: '12',
 		borderWidth: '1px',
 		marginBottom: '-1px !custom',
 		marginInline: '-1px !custom',
@@ -328,21 +328,21 @@ namespace styles {
 		borderBottomColor: 'grayAlpha.200',
 		borderBottomStyle: 'solid',
 		borderBottomWidth: '1px',
-		paddingBlock: '3',
-		paddingInline: '5',
+		paddingBlock: '12',
+		paddingInline: '20',
 	})
 
 	// No bottom padding: the content's 12px top margin spaces the header.
 	export const tabsHeader = style({
 		alignItems: 'center',
-		columnGap: '3',
+		columnGap: '12',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		minHeight: '11',
-		paddingInline: '4',
-		paddingTop: '3',
-		rowGap: '2',
+		minHeight: '44',
+		paddingInline: '16',
+		paddingTop: '12',
+		rowGap: '8',
 	})
 
 	export const tabList = style({ minWidth: '0 !custom' })
@@ -351,7 +351,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		typography: 'copy.14',
 	})
 

@@ -331,10 +331,10 @@ const argumentViews = [
 // Copyable rows sit flush with the surrounding text: the padding that gives
 // them a hover fill is pulled back out with a negative inline margin.
 const copyRow = {
-	borderRadius: 'sm',
+	borderRadius: '4',
 	cursor: 'pointer',
 	marginInline: '-4px !custom',
-	paddingInline: '1',
+	paddingInline: '4',
 	textAlign: 'left',
 	'@media (hover: hover)': {
 		':hover': { backgroundColor: 'grayAlpha.100' },
@@ -345,7 +345,7 @@ namespace styles {
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
@@ -357,7 +357,7 @@ namespace styles {
 	// Button's own offset).
 	export const panel = style({
 		backgroundColor: 'background.primary',
-		borderRadius: 'lg',
+		borderRadius: '8',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
 		width: '100% !custom',
@@ -369,10 +369,10 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 	})
 
 	export const signature = style({
@@ -395,29 +395,29 @@ namespace styles {
 
 	export const section = style({
 		minWidth: '0 !custom',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 	})
 
 	export const argumentsLabel = style({
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '2',
-		marginBottom: '2',
+		gap: '8',
+		marginBottom: '8',
 		typography: 'label.12',
 	})
 
 	export const rawStack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const topics = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const argumentGrid = style({
@@ -429,10 +429,10 @@ namespace styles {
 		...copyRow,
 		alignItems: 'start',
 		display: 'grid',
-		gap: '2',
+		gap: '8',
 		gridColumn: 'span 2 / span 2',
 		gridTemplateColumns: 'subgrid',
-		paddingBlock: '1',
+		paddingBlock: '4',
 	})
 
 	export const argumentLabel = style({
@@ -453,9 +453,9 @@ namespace styles {
 		typography: 'label.12',
 	})
 
-	export const inlineLabel = style({ marginBottom: '1' })
+	export const inlineLabel = style({ marginBottom: '4' })
 
-	export const sectionLabel = style({ marginBottom: '2' })
+	export const sectionLabel = style({ marginBottom: '8' })
 
 	export const dataButton = style({
 		...copyRow,
@@ -477,8 +477,8 @@ namespace styles {
 	export const rawHeader = style({
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 	})
 
 	export const divided = style({
@@ -494,7 +494,7 @@ namespace styles {
 		...copyRow,
 		alignItems: 'flex-start',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		paddingBlock: '2px !custom',
 	})
 

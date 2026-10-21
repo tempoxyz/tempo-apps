@@ -369,12 +369,12 @@ namespace styles {
 	export const dexRoute = style({
 		alignItems: 'center',
 		backgroundColor: 'blue.100',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'blue.900',
 		display: 'inline-flex',
-		gap: '1',
-		height: '6',
-		paddingInline: '2',
+		gap: '4',
+		height: '24',
+		paddingInline: '8',
 		textDecorationLine: 'none',
 		whiteSpace: 'nowrap',
 		'@media (hover: hover)': {
@@ -384,7 +384,7 @@ namespace styles {
 		},
 	})
 
-	export const dexRouteIcon = style({ height: '3', width: '3' })
+	export const dexRouteIcon = style({ height: '12', width: '12' })
 
 	export const dexPair = style({ whiteSpace: 'nowrap' })
 
@@ -397,7 +397,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 		typography: 'label.12',
 	})
@@ -441,7 +441,7 @@ namespace styles {
 		flex: 1,
 		flexDirection: 'row',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -457,8 +457,8 @@ namespace styles {
 		boxSizing: 'border-box',
 		color: 'background.primary',
 		display: 'inline-flex',
-		height: '6',
-		paddingInline: '2',
+		height: '24',
+		paddingInline: '8',
 		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
@@ -474,7 +474,7 @@ namespace styles {
 	export const token = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 		whiteSpace: 'nowrap',
 	})
 
@@ -492,7 +492,7 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const groupToggle = style({ alignSelf: 'flex-start' })

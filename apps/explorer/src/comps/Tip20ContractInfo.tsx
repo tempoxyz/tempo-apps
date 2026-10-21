@@ -194,8 +194,8 @@ namespace styles {
 	export const dexRoute = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '2',
-		marginTop: '4',
+		gap: '8',
+		marginTop: '16',
 	})
 
 	export const root = style({
@@ -207,22 +207,22 @@ namespace styles {
 	})
 
 	export const config = style({
-		paddingBottom: '4',
-		paddingInline: '5',
-		paddingTop: '2',
+		paddingBottom: '16',
+		paddingInline: '20',
+		paddingTop: '8',
 		typography: 'label.12',
 	})
 
-	export const unavailable = style({ marginBottom: '4' })
+	export const unavailable = style({ marginBottom: '16' })
 
 	export const metadataTitle = style({
-		paddingBottom: '2',
+		paddingBottom: '8',
 		typography: 'label.12.strong',
 	})
 
 	export const value = style({
 		fontVariantNumeric: 'tabular-nums',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflowWrap: 'anywhere',
 		textAlign: 'end',
 	})
@@ -231,11 +231,11 @@ namespace styles {
 
 	export const created = style({
 		alignItems: 'center',
-		columnGap: '3',
+		columnGap: '12',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'flex-end',
-		rowGap: '1',
+		rowGap: '4',
 	})
 
 	export const createdBy = style({ typography: 'label.12.mono' })
@@ -244,9 +244,9 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '3',
-		paddingBlock: '3',
-		paddingInline: '5',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '20',
 		typography: 'label.12',
 	})
 }

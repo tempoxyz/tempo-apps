@@ -170,7 +170,7 @@ namespace styles {
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	// An opaque well, so the copy control can mask the text it overlaps. It
@@ -178,7 +178,7 @@ namespace styles {
 	// Button's own offset).
 	export const panel = style({
 		backgroundColor: 'background.primary',
-		borderRadius: 'lg',
+		borderRadius: '8',
 		overflow: 'hidden',
 		selectors: {
 			'& a:focus-visible': { outlineOffset: '-2px' },
@@ -188,8 +188,8 @@ namespace styles {
 	})
 
 	export const raw = style({
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 		position: 'relative',
 	})
 
@@ -197,7 +197,7 @@ namespace styles {
 		color: 'foreground',
 		maxHeight: '300px !custom',
 		overflow: 'auto',
-		paddingRight: '10',
+		paddingRight: '40',
 		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
@@ -206,10 +206,10 @@ namespace styles {
 	export const rawActions = style({
 		backgroundColor: 'background.primary',
 		display: 'flex',
-		paddingLeft: '2',
+		paddingLeft: '8',
 		position: 'absolute',
-		right: '3',
-		top: '2',
+		right: '12',
+		top: '8',
 	})
 
 	// Negative margins let the 32px icon Button sit in a 16px text row without
@@ -225,10 +225,10 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 	})
 
 	export const signature = style({

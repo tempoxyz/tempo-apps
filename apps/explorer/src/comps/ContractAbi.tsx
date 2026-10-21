@@ -173,8 +173,8 @@ function useHighlightedJson(json: string, enabled: boolean): string | null {
 
 namespace styles {
 	export const viewer = style({
-		marginBottom: '2',
-		marginInline: '3',
+		marginBottom: '8',
+		marginInline: '12',
 		maxHeight: '280px !custom',
 		overflow: 'auto',
 	})

@@ -205,7 +205,7 @@ namespace styles {
 	export const stackedSwap = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
@@ -232,13 +232,13 @@ namespace styles {
 	export const label = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 		whiteSpace: 'nowrap',
 	})
 
 	export const side = variants({
-		base: { fontWeight: 'medium' },
+		base: { fontWeight: '550 !custom' },
 		defaultVariants: { buy: true },
 		variants: {
 			buy: {
@@ -252,7 +252,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: 'medium',
-		gap: '1',
+		fontWeight: '550 !custom',
+		gap: '4',
 	})
 }

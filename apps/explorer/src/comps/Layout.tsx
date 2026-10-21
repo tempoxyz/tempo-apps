@@ -72,7 +72,7 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		minHeight: '100dvh !custom',
-		'@media print': { display: 'block', minHeight: '0px !custom' },
+		'@media print': { display: 'block', minHeight: '0' },
 	})
 
 	// Applied over `srOnly`: fixed and padded while clipped, so focusing it
@@ -80,13 +80,13 @@ namespace styles {
 	// button.
 	export const skipLink = style({
 		backgroundColor: 'foreground',
-		borderRadius: 'full',
+		borderRadius: '12',
 		color: 'background.primary',
-		left: '3',
-		paddingBlock: '3',
-		paddingInline: '6',
+		left: '12',
+		paddingBlock: '12',
+		paddingInline: '24',
 		position: 'fixed',
-		top: '3',
+		top: '12',
 		typography: 'copy.14',
 		zIndex: 50,
 		':focus': {
@@ -117,7 +117,7 @@ namespace styles {
 	})
 
 	export const footer = style({
-		marginTop: '6',
+		marginTop: '24',
 		position: 'relative',
 		width: '100% !custom',
 		zIndex: 2,

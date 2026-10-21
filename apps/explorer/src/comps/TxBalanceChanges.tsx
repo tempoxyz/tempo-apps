@@ -210,7 +210,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'inline-flex',
 		flexShrink: '0 !custom',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const invalid = style({ color: 'gray.900' })
@@ -225,7 +225,7 @@ namespace styles {
 	export const diff = style({
 		alignItems: 'center',
 		color: 'foreground',
-		columnGap: '2',
+		columnGap: '8',
 		display: 'inline-flex',
 		fontVariantNumeric: 'tabular-nums',
 		maxWidth: '100% !custom',
@@ -237,8 +237,8 @@ namespace styles {
 		base: {
 			borderRadius: 'full',
 			flexShrink: '0 !custom',
-			height: '2',
-			width: '2',
+			height: '8',
+			width: '8',
 		},
 		defaultVariants: { tone: 'neutral' },
 		variants: {

@@ -604,7 +604,7 @@ function SimulatePage(): React.JSX.Element {
 					>
 						<Play />
 						{runInput && !stale ? 'Run' : runInput ? 'Re-run' : 'Simulate'}
-						<ButtonShortcut meta>↵</ButtonShortcut>
+						<ButtonShortcut mod>↵</ButtonShortcut>
 					</Button>
 				</div>
 			</div>
@@ -1254,20 +1254,20 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		paddingBottom: '12',
-		paddingTop: '8',
+		paddingBottom: '48',
+		paddingTop: '32',
 		typography: 'copy.14',
 		width: '100% !custom',
-		'@media (width >= 800px)': { paddingTop: '12' },
+		'@media (width >= 800px)': { paddingTop: '48' },
 	})
 
 	export const toolbar = style({
 		alignItems: 'center',
-		columnGap: '4',
+		columnGap: '16',
 		display: 'flex',
 		flexWrap: 'wrap',
-		marginBottom: '4',
-		rowGap: '2',
+		marginBottom: '16',
+		rowGap: '8',
 	})
 
 	export const title = style({
@@ -1293,14 +1293,14 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const panes = variants({
 		base: {
 			alignItems: 'start',
 			display: 'grid',
-			gap: '4',
+			gap: '16',
 			minHeight: '560px !custom',
 			minWidth: '0 !custom',
 		},
@@ -1320,7 +1320,7 @@ namespace styles {
 	export const card = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'flex',
@@ -1361,9 +1361,9 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
-		gap: '2',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '16',
 	})
 
 	export const emptyTitle = style({
@@ -1376,8 +1376,8 @@ namespace styles {
 	export const emptyBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		padding: '4',
+		gap: '12',
+		padding: '16',
 	})
 
 	export const emptyText = style({
@@ -1390,6 +1390,6 @@ namespace styles {
 	export const emptyActions = style({
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 	})
 }

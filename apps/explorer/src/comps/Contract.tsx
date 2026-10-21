@@ -453,8 +453,8 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'dashed',
 		color: 'gray.900',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 
@@ -479,12 +479,12 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		color: 'gray.900',
-		columnGap: '2',
+		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		paddingBlock: '3',
-		paddingInline: '4',
-		rowGap: '1',
+		paddingBlock: '12',
+		paddingInline: '16',
+		rowGap: '4',
 		typography: 'label.12',
 	})
 
@@ -494,13 +494,13 @@ namespace styles {
 
 	// TDS Button leaves icon size to the icon.
 	export const actionButton = style({
-		selectors: { '& svg': { height: '4', width: '4' } },
+		selectors: { '& svg': { height: '16', width: '16' } },
 	})
 
 	export const docsLink = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 		typography: 'label.12',
 	})
 
@@ -515,7 +515,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		paddingBlock: '1',
+		paddingBlock: '4',
 	})
 
 	// The panel clips overflow, so the ring is drawn inside, following the
@@ -524,23 +524,23 @@ namespace styles {
 		alignItems: 'center',
 		cursor: 'pointer',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		height: '100% !custom',
-		paddingBlock: '2',
-		paddingInline: '4',
+		paddingBlock: '8',
+		paddingInline: '16',
 		':focus-visible': { outlineOffset: '-2px' },
 	})
 
-	export const sectionToggleWithActions = style({ paddingRight: '3' })
+	export const sectionToggleWithActions = style({ paddingRight: '12' })
 
 	export const sectionToggleFill = style({ flex: 1 })
 
 	export const sectionToggleFirst = style({
-		':focus-visible': { borderTopLeftRadius: 'xl' },
+		':focus-visible': { borderTopLeftRadius: '12' },
 	})
 
 	export const sectionToggleFirstEnd = style({
-		':focus-visible': { borderTopRightRadius: 'xl' },
+		':focus-visible': { borderTopRightRadius: '12' },
 	})
 
 	export const sectionTitle = style({
@@ -550,7 +550,7 @@ namespace styles {
 	})
 
 	export const chevron = variants({
-		base: { color: 'gray.900', height: '4', width: '4' },
+		base: { color: 'gray.900', height: '16', width: '16' },
 		defaultVariants: { expanded: false },
 		variants: {
 			expanded: { true: {}, false: { rotate: '-90deg' } },
@@ -562,10 +562,10 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flex: 1,
-		gap: '2',
+		gap: '8',
 		justifyContent: 'flex-end',
-		minWidth: '0px !custom',
-		paddingInline: '3',
+		minWidth: '0',
+		paddingInline: '12',
 	})
 
 	export const hidden = style({ display: 'none' })
@@ -573,8 +573,8 @@ namespace styles {
 	export const bytecode = style({
 		maxHeight: '280px !custom',
 		overflow: 'auto',
-		paddingBlock: '3',
-		paddingInline: '5',
+		paddingBlock: '12',
+		paddingInline: '20',
 	})
 
 	export const bytecodeText = style({
@@ -591,9 +591,9 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 
@@ -602,8 +602,8 @@ namespace styles {
 	export const implementationLink = style({ typography: 'label.12.mono' })
 
 	export const sectionBody = style({
-		paddingBottom: '3',
-		paddingInline: '3',
+		paddingBottom: '12',
+		paddingInline: '12',
 	})
 
 	export const proxyFunctionsNote = style({
@@ -616,8 +616,8 @@ namespace styles {
 	export const proxyFunctionsBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBottom: '3',
-		paddingInline: '3',
+		gap: '12',
+		paddingBottom: '12',
+		paddingInline: '12',
 	})
 }

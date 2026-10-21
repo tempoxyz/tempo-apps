@@ -92,7 +92,7 @@ export function ContractFileTree(
 	return (
 		<nav aria-label="Source files" {...styles.nav()}>
 			<Field.Root {...styles.search()}>
-				<Input.Group variant="search">
+				<Input.Group>
 					<Input.Prefix>
 						<Search />
 					</Input.Prefix>
@@ -146,7 +146,7 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		flexShrink: 0,
-		minWidth: '0px !custom',
+		minWidth: '0',
 		'@container source (width >= 42rem)': {
 			borderBottomWidth: '0px',
 			borderRightWidth: '1px',
@@ -156,7 +156,7 @@ namespace styles {
 
 	// Touch devices keep 16px text so iOS does not zoom on focus.
 	export const search = style({
-		padding: '2',
+		padding: '8',
 		'@media (pointer: coarse)': {
 			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
@@ -164,7 +164,7 @@ namespace styles {
 
 	export const empty = style({
 		color: 'gray.900',
-		paddingInline: '3',
+		paddingInline: '12',
 		typography: 'label.12',
 	})
 
@@ -174,7 +174,7 @@ namespace styles {
 		display: 'block',
 		height: '180px !custom',
 		overflow: 'auto',
-		paddingBottom: '2',
+		paddingBottom: '8',
 		'@container source (width >= 42rem)': {
 			height: 'calc(min(620px, 70svh) - 40px) !custom',
 			minHeight: '280px !custom',

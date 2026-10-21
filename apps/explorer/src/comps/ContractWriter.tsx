@@ -318,7 +318,7 @@ namespace styles {
 	export const list = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 	})
 
 	export const emptyMessage = style({
@@ -328,7 +328,7 @@ namespace styles {
 
 	export const simulate = style({ flexShrink: 0 })
 
-	export const simulateIcon = style({ height: '4', width: '4' })
+	export const simulateIcon = style({ height: '16', width: '16' })
 
 	export const calloutDescription = style({
 		display: 'block',

@@ -788,13 +788,13 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		columnGap: '4',
+		columnGap: '16',
 		display: 'flex',
 		flexWrap: 'wrap',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		position: 'sticky',
-		rowGap: '2',
+		rowGap: '8',
 		top: '0',
 		zIndex: 10,
 	})
@@ -804,7 +804,7 @@ namespace styles {
 		color: 'foreground',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '2',
+		gap: '8',
 		typography: 'copy.14.strong',
 	})
 
@@ -813,10 +813,10 @@ namespace styles {
 			alignItems: 'center',
 			borderRadius: 'full',
 			display: 'flex',
-			height: '5',
+			height: '20',
 			justifyContent: 'center',
 			typography: 'label.12',
-			width: '5',
+			width: '20',
 		},
 		defaultVariants: { tone: 'positive' },
 		variants: {
@@ -837,13 +837,13 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		paddingBlock: '2',
-		paddingInline: '4',
+		paddingBlock: '8',
+		paddingInline: '16',
 	})
 
 	export const tabCount = style({ fontVariantNumeric: 'tabular-nums' })
 
-	export const answer = style({ paddingBlock: '3', paddingInline: '4' })
+	export const answer = style({ paddingBlock: '12', paddingInline: '16' })
 
 	export const answerText = style({ margin: '0', typography: 'label.12' })
 
@@ -853,9 +853,9 @@ namespace styles {
 		borderStyle: 'solid',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
 	})
 
 	export const calloutTitle = style({
@@ -880,7 +880,7 @@ namespace styles {
 
 	export const errorArgNote = style({
 		color: 'gray.900',
-		marginLeft: '2',
+		marginLeft: '8',
 	})
 
 	// The action is inline; keep it from stretching in the column.
@@ -893,15 +893,15 @@ namespace styles {
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
-		paddingBlock: '2',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '8',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
 	export const facts = style({
-		columnGap: '8',
-		paddingInline: '4',
+		columnGap: '32',
+		paddingInline: '16',
 		'@media (width >= 720px)': {
 			display: 'grid',
 			gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
@@ -917,9 +917,9 @@ namespace styles {
 		borderStyle: 'solid',
 		borderTopWidth: '1px',
 		display: 'flex',
-		gap: '2',
-		paddingBlock: '2',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '8',
+		paddingInline: '16',
 	})
 
 	export const sectionTitle = style({
@@ -935,14 +935,14 @@ namespace styles {
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
-		paddingBlock: '2',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '8',
+		paddingInline: '16',
 	})
 
 	// TDS cells pad their own sides, so the wrap pads only the block and
 	// scrolls sideways.
-	export const tableWrap = style({ overflowX: 'auto', paddingBlock: '4' })
+	export const tableWrap = style({ overflowX: 'auto', paddingBlock: '16' })
 
 	// Fixed columns, so long values wrap instead of widening the table.
 	export const table = style({
@@ -953,7 +953,7 @@ namespace styles {
 	export const token = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const events = style({
@@ -971,9 +971,9 @@ namespace styles {
 	export const event = style({
 		alignItems: 'flex-start',
 		display: 'flex',
-		gap: '2',
-		paddingBlock: '2',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '8',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 

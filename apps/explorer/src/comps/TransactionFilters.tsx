@@ -253,7 +253,7 @@ namespace styles {
 	export const stacked = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const stackedHeader = style({
@@ -265,11 +265,11 @@ namespace styles {
 	export const stackedBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		paddingTop: '2',
+		gap: '16',
+		paddingTop: '8',
 	})
 
-	export const icon = style({ flexShrink: '0 !custom', fontSize: 'base' })
+	export const icon = style({ flexShrink: '0 !custom', fontSize: '16' })
 
 	// Inverted pill: the page background on the foreground color.
 	export const count = style({
@@ -278,10 +278,10 @@ namespace styles {
 		borderRadius: 'full',
 		color: 'background.primary',
 		display: 'inline-flex',
-		height: '4',
+		height: '16',
 		justifyContent: 'center',
-		minWidth: '4',
-		paddingInline: '1',
+		minWidth: '16',
+		paddingInline: '4',
 		typography: 'label.12.strong',
 	})
 
@@ -294,14 +294,14 @@ namespace styles {
 	export const popover = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		boxShadow: 'popover',
-		marginTop: '2',
+		marginTop: '8',
 		maxWidth: 'calc(100vw - 32px) !custom',
 		position: 'absolute',
-		right: '0px !custom',
+		right: '0',
 		top: '100% !custom',
 		width: '296px !custom',
 		zIndex: 50,
@@ -310,22 +310,22 @@ namespace styles {
 	export const popoverBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		padding: '4',
+		gap: '16',
+		padding: '16',
 	})
 
 	export const popoverFooter = style({
 		borderTopColor: 'grayAlpha.200',
 		borderTopStyle: 'solid',
 		borderTopWidth: '1px',
-		paddingBlock: '2',
-		paddingInline: '2',
+		paddingBlock: '8',
+		paddingInline: '8',
 	})
 
 	export const segmentedRow = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const segmentedLabel = style({

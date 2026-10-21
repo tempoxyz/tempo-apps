@@ -345,7 +345,7 @@ function SignOut() {
 }
 
 namespace styles {
-	export const icon = style({ fontSize: 'base' })
+	export const icon = style({ fontSize: '16' })
 
 	export const detecting = style({
 		alignItems: 'center',
@@ -366,7 +366,7 @@ namespace styles {
 	export const connectors = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const action = style({ flexShrink: 0 })
@@ -375,9 +375,9 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '2',
+		gap: '8',
 		justifyContent: 'flex-end',
-		minWidth: '0px !custom',
+		minWidth: '0',
 	})
 
 	export const address = style({
@@ -385,9 +385,9 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flex: 1,
-		gap: '1',
+		gap: '4',
 		justifyContent: 'flex-end',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
@@ -400,7 +400,7 @@ namespace styles {
 
 	export const addressLink = style({
 		display: 'flex',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'label.12.mono',
 	})
 

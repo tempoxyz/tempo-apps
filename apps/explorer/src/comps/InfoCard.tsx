@@ -65,7 +65,7 @@ namespace styles {
 	export const root = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		overflow: 'hidden',
@@ -81,15 +81,15 @@ namespace styles {
 		backgroundColor: 'background.surface',
 		color: 'foreground',
 		display: 'flex',
-		minHeight: '44px !custom',
-		paddingInline: '4',
+		minHeight: '44',
+		paddingInline: '16',
 	})
 
 	export const body = style({
 		backgroundColor: 'background.surface',
 		borderTopColor: 'grayAlpha.200',
-		borderTopLeftRadius: 'xl',
-		borderTopRightRadius: 'xl',
+		borderTopLeftRadius: '12',
+		borderTopRightRadius: '12',
 		borderTopStyle: 'solid',
 		borderTopWidth: '1px',
 		marginBottom: '-1px !custom',
@@ -99,8 +99,8 @@ namespace styles {
 	export const section = style({
 		alignItems: 'center',
 		display: 'flex',
-		paddingBlock: '3',
-		paddingInline: '5',
+		paddingBlock: '12',
+		paddingInline: '20',
 		typography: 'copy.14',
 	})
 
@@ -113,7 +113,7 @@ namespace styles {
 	export const entry = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 		width: '100% !custom',
 	})
@@ -141,6 +141,6 @@ namespace styles {
 		display: 'flex',
 		typography: 'copy.18.strong',
 		userSelect: 'none',
-		selectors: { ':where(&)': { gap: '2' } },
+		selectors: { ':where(&)': { gap: '8' } },
 	})
 }

@@ -202,9 +202,9 @@ export declare namespace AccountCard {
 
 namespace styles {
 	export const tokenTitle = style({
-		gap: '3',
+		gap: '12',
 		minWidth: '0 !custom',
-		paddingBlock: '3',
+		paddingBlock: '12',
 		width: '100% !custom',
 	})
 
@@ -234,9 +234,9 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		marginBottom: '2',
-		selectors: { '& > svg': { height: '3', width: '3' } },
+		gap: '8',
+		marginBottom: '8',
+		selectors: { '& > svg': { height: '12', width: '12' } },
 	})
 
 	export const addressValue = style({

@@ -26,14 +26,14 @@ namespace styles {
 		borderBottomStyle: 'solid',
 		borderBottomWidth: '1px',
 		display: 'flex',
-		gap: '4',
-		paddingBlock: '3',
-		paddingInline: '5',
+		gap: '16',
+		paddingBlock: '12',
+		paddingInline: '20',
 		':last-child': { borderBottomWidth: '0px' },
 	})
 
 	export const stackOnMobile = style({
-		'@media (width < 600px)': { flexDirection: 'column', gap: '2' },
+		'@media (width < 600px)': { flexDirection: 'column', gap: '8' },
 	})
 
 	export const label = style({

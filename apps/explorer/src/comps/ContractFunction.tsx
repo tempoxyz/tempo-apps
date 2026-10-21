@@ -215,7 +215,7 @@ namespace styles {
 	export const card = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		boxSizing: 'border-box',
@@ -234,10 +234,10 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexWrap: 'wrap',
-		gap: '2',
-		minWidth: '0px !custom',
-		paddingBlock: '2',
-		paddingLeft: '3',
+		gap: '8',
+		minWidth: '0',
+		paddingBlock: '8',
+		paddingLeft: '12',
 		textAlign: 'left',
 	})
 
@@ -246,15 +246,15 @@ namespace styles {
 	export const toggle = style({
 		cursor: 'pointer',
 		':focus-visible': {
-			borderBottomLeftRadius: 'xl',
-			borderTopLeftRadius: 'xl',
+			borderBottomLeftRadius: '12',
+			borderTopLeftRadius: '12',
 			outlineOffset: '-2px',
 		},
 	})
 
 	export const signature = style({
 		color: 'gray.900',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflowWrap: 'anywhere',
 		typography: 'label.12.mono',
 	})
@@ -265,14 +265,14 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		paddingBlock: '1',
-		paddingLeft: '3',
-		paddingRight: '1',
+		paddingBlock: '4',
+		paddingLeft: '12',
+		paddingRight: '4',
 	})
 
 	// TDS Button leaves icon size to the icon.
 	export const action = style({
-		selectors: { '& svg': { height: '4', width: '4' } },
+		selectors: { '& svg': { height: '16', width: '16' } },
 	})
 
 	export const chevron = variants({
@@ -287,8 +287,8 @@ namespace styles {
 		borderTopWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		padding: '3',
+		gap: '16',
+		padding: '12',
 	})
 
 	// Touch devices keep 16px text so iOS does not zoom on focus.
@@ -303,7 +303,7 @@ namespace styles {
 
 	export const labels = style({
 		alignItems: 'center',
-		columnGap: '1',
+		columnGap: '4',
 		display: 'flex',
 		flexWrap: 'wrap',
 		typography: 'label.14',

@@ -575,10 +575,10 @@ namespace styles {
 		backgroundColor: 'background.surface',
 		borderBottomWidth: '0px',
 		borderColor: 'grayAlpha.200',
-		borderTopLeftRadius: 'xl',
-		borderTopRightRadius: 'xl',
+		borderTopLeftRadius: '12',
+		borderTopRightRadius: '12',
 		borderWidth: '1px',
-		boxShadow: 'lg',
+		boxShadow: '15',
 		color: 'foreground',
 		display: 'flex',
 		flexDirection: 'column',
@@ -588,11 +588,11 @@ namespace styles {
 	export const head = style({
 		alignItems: 'flex-start',
 		display: 'flex',
-		gap: '4',
-		paddingBottom: '4',
-		paddingInline: '6',
-		paddingTop: '6',
-		'@media (width >= 640px)': { gap: '8' },
+		gap: '16',
+		paddingBottom: '16',
+		paddingInline: '24',
+		paddingTop: '24',
+		'@media (width >= 640px)': { gap: '32' },
 	})
 
 	export const mark = style({ flexShrink: '0 !custom' })
@@ -607,7 +607,7 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 		typography: 'copy.16',
 	})
@@ -618,7 +618,7 @@ namespace styles {
 		justifyContent: 'space-between',
 	})
 
-	export const fieldGap = style({ gap: '4' })
+	export const fieldGap = style({ gap: '16' })
 
 	export const centered = style({ alignItems: 'center' })
 
@@ -645,7 +645,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '1',
+		gap: '4',
 		justifyContent: 'flex-end',
 		minWidth: '0 !custom',
 		'@media print': { selectors: { '& > button': { display: 'none' } } },
@@ -661,9 +661,9 @@ namespace styles {
 		counterReset: 'event',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		paddingBlock: '6',
-		paddingInline: '6',
+		gap: '16',
+		paddingBlock: '24',
+		paddingInline: '24',
 		typography: 'copy.16',
 	})
 
@@ -672,12 +672,12 @@ namespace styles {
 	export const eventBody = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const eventSplit = style({
 		display: 'grid',
-		gap: '2',
+		gap: '8',
 		gridTemplateColumns: 'minmax(0, 1fr)',
 		'@media (width >= 640px)': {
 			gridTemplateColumns: 'minmax(0, 1fr) auto',
@@ -692,7 +692,7 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'row',
 		flexGrow: 1,
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
@@ -701,7 +701,7 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexShrink: '0 !custom',
-		minWidth: '5',
+		minWidth: '20',
 		'::before': { content: 'counter(event) "."' },
 	})
 
@@ -712,21 +712,21 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const noteIndent = style({ paddingLeft: '6' })
+	export const noteIndent = style({ paddingLeft: '24' })
 
 	export const note = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'row',
-		gap: '3',
+		gap: '12',
 		overflow: 'hidden',
-		paddingLeft: '6',
+		paddingLeft: '24',
 	})
 
 	export const noteRule = style({
 		borderColor: 'grayAlpha.200',
 		borderLeftWidth: '1px',
-		paddingLeft: '3',
+		paddingLeft: '12',
 		width: '100% !custom',
 	})
 
@@ -734,7 +734,7 @@ namespace styles {
 		color: 'foreground',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		typography: 'copy.14',
 	})
 
@@ -742,7 +742,7 @@ namespace styles {
 
 	export const noteItem = style({
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -753,9 +753,9 @@ namespace styles {
 	export const totals = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingBlock: '6',
-		paddingInline: '6',
+		gap: '8',
+		paddingBlock: '24',
+		paddingInline: '24',
 		typography: 'copy.14',
 	})
 
@@ -763,14 +763,14 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 	})
 
 	export const feeAmount = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const end = style({ textAlign: 'right' })
@@ -814,8 +814,8 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderRightWidth: '1px',
 		display: 'inline-flex',
-		gap: '2',
-		height: '10',
+		gap: '8',
+		height: '40',
 		justifyContent: 'center',
 		'@media (hover: hover)': {
 			':hover': {
@@ -828,23 +828,23 @@ namespace styles {
 
 	export const actionIcon = style({
 		flexShrink: '0 !custom',
-		height: '4',
-		width: '4',
+		height: '16',
+		width: '16',
 	})
 
 	export const viewTransaction = style({
 		alignItems: 'center',
 		backgroundColor: 'grayAlpha.100',
-		borderBottomLeftRadius: 'xl',
-		borderBottomRightRadius: 'xl',
+		borderBottomLeftRadius: '12',
+		borderBottomRightRadius: '12',
 		borderColor: 'grayAlpha.200',
 		borderWidth: '1px',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'center',
 		marginTop: '-1px !custom',
-		padding: '3',
+		padding: '12',
 		typography: 'copy.14',
 		'@media (hover: hover)': {
 			':hover': {

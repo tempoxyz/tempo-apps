@@ -656,24 +656,24 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '8',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '32',
 		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '16' },
+		'@media (width >= 640px)': { paddingTop: '64' },
 	})
 
 	export const error = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 	})
 
@@ -686,14 +686,14 @@ namespace styles {
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '4',
+		gap: '16',
 		justifyContent: 'space-between',
 	})
 
 	export const intro = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 		minWidth: '0 !custom',
 	})
 
@@ -702,20 +702,20 @@ namespace styles {
 		alignSelf: 'flex-start',
 		color: 'gray.900',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 		textDecorationLine: 'none',
 		typography: 'label.12',
 		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
-	export const backIcon = style({ height: '4', width: '4' })
+	export const backIcon = style({ height: '16', width: '16' })
 
 	export const title = style({
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '3',
+		gap: '12',
 		typography: 'heading.24.subtle',
 		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
 	})
@@ -723,21 +723,21 @@ namespace styles {
 	export const titleToken = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '3',
+		gap: '12',
 		whiteSpace: 'nowrap',
 	})
 
 	export const titleArrow = style({
 		color: 'gray.900',
-		height: '6',
-		width: '6',
+		height: '24',
+		width: '24',
 	})
 
 	export const unresolved = style({
 		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		typography: 'label.12',
 	})
 
@@ -752,7 +752,7 @@ namespace styles {
 	export const quote = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		boxSizing: 'border-box',
@@ -760,11 +760,11 @@ namespace styles {
 		overflow: 'hidden',
 	})
 
-	export const alert = style({ padding: '4' })
+	export const alert = style({ padding: '16' })
 
 	export const status = style({
 		color: 'gray.900',
-		padding: '4',
+		padding: '16',
 		typography: 'copy.14',
 	})
 
@@ -772,26 +772,26 @@ namespace styles {
 		...dashed,
 		alignItems: 'center',
 		borderBottomWidth: '1px',
-		columnGap: '2',
+		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		paddingBlock: '3',
-		paddingInline: '4',
-		rowGap: '3',
+		paddingBlock: '12',
+		paddingInline: '16',
+		rowGap: '12',
 	})
 
 	export const pathItem = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
 	export const arrow = style({
 		color: 'gray.900',
 		flexShrink: 0,
-		height: '4',
-		width: '4',
+		height: '16',
+		width: '16',
 	})
 
 	export const panels = style({
@@ -808,13 +808,13 @@ namespace styles {
 		borderBottomWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '16',
 		height: '100% !custom',
-		padding: '4',
+		padding: '16',
 		'@media (width >= 768px)': {
 			borderBottomWidth: '0px',
 			borderRightWidth: '1px',
-			paddingRight: '12',
+			paddingRight: '48',
 		},
 	})
 
@@ -826,15 +826,15 @@ namespace styles {
 		borderRadius: 'full',
 		borderStyle: 'solid',
 		borderWidth: '1px',
-		bottom: '0px !custom',
+		bottom: '0',
 		color: 'gray.900',
 		display: 'inline-flex',
-		height: '10',
+		height: '40',
 		justifyContent: 'center',
 		left: '50% !custom',
 		position: 'absolute',
 		translate: '-50% 50% !custom',
-		width: '10',
+		width: '40',
 		zIndex: 10,
 		'@media (hover: hover)': {
 			':hover': { borderColor: 'blue.700', color: 'foreground' },
@@ -842,25 +842,25 @@ namespace styles {
 		'@media (width >= 768px)': {
 			bottom: 'auto !custom',
 			left: 'auto !custom',
-			right: '0px !custom',
+			right: '0',
 			top: '81px !custom',
 			translate: '50% -50% !custom',
 		},
 	})
 
 	export const reverseIcon = style({
-		height: '4',
+		height: '16',
 		rotate: '90deg',
-		width: '4',
+		width: '16',
 		'@media (width >= 768px)': { rotate: '0deg' },
 	})
 
 	export const receivePanel = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
-		padding: '4',
-		'@media (width >= 768px)': { paddingLeft: '12' },
+		gap: '16',
+		padding: '16',
+		'@media (width >= 768px)': { paddingLeft: '48' },
 	})
 
 	export const panelLabel = style({
@@ -871,9 +871,9 @@ namespace styles {
 	export const amountRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '4',
+		gap: '16',
 		justifyContent: 'space-between',
-		minHeight: '12',
+		minHeight: '48',
 	})
 
 	export const amountInput = style({
@@ -913,16 +913,16 @@ namespace styles {
 	export const facts = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		typography: 'label.12',
 	})
 
 	export const fact = style({
-		columnGap: '4',
+		columnGap: '16',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		rowGap: '1',
+		rowGap: '4',
 	})
 
 	export const factValue = style({
@@ -943,11 +943,11 @@ namespace styles {
 		borderTopWidth: '1px',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '3',
+		gap: '12',
 		justifyContent: 'space-between',
-		paddingBlock: '1',
-		paddingInlineEnd: '1',
-		paddingInlineStart: '4',
+		paddingBlock: '4',
+		paddingInlineEnd: '4',
+		paddingInlineStart: '16',
 		typography: 'label.12',
 	})
 
@@ -958,14 +958,14 @@ namespace styles {
 		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
 	})
 
-	export const refreshIcon = style({ height: '4', width: '4' })
+	export const refreshIcon = style({ height: '16', width: '16' })
 
 	// An unpadded text action inside a line of copy, where a TDS `Button`
 	// would add height and padding.
 	export const textAction = style({
 		backgroundColor: 'transparent !custom',
 		border: 'none !custom',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'gray.900',
 		cursor: 'pointer',
 		padding: '0',
@@ -983,8 +983,8 @@ namespace styles {
 
 	export const refreshError = style({
 		color: 'red.900',
-		paddingBottom: '3',
-		paddingInline: '4',
+		paddingBottom: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 
@@ -999,19 +999,19 @@ namespace styles {
 
 	export const legHeader = style({
 		alignItems: 'center',
-		columnGap: '6',
+		columnGap: '24',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		paddingBlock: '4',
-		paddingInline: '4',
-		rowGap: '4',
+		paddingBlock: '16',
+		paddingInline: '16',
+		rowGap: '16',
 	})
 
 	export const legTokens = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -1025,23 +1025,23 @@ namespace styles {
 		display: 'inline-flex',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
-		height: '5',
+		height: '20',
 		justifyContent: 'center',
 		typography: 'label.12',
-		width: '5',
+		width: '20',
 	})
 
 	export const legStats = style({
-		columnGap: '8',
+		columnGap: '32',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '3',
+		rowGap: '12',
 	})
 
 	export const legStat = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const legStatLabel = style({
@@ -1064,15 +1064,15 @@ namespace styles {
 
 	export const depthNote = style({
 		color: 'gray.900',
-		paddingBlock: '4',
-		paddingInline: '4',
+		paddingBlock: '16',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 
 	export const ladder = style({
 		display: 'block',
 		fontVariantNumeric: 'tabular-nums',
-		paddingBottom: '2',
+		paddingBottom: '8',
 		typography: 'label.12',
 		whiteSpace: 'nowrap',
 		width: '100% !custom',
@@ -1082,18 +1082,18 @@ namespace styles {
 
 	export const ladderRow = style({
 		display: 'grid',
-		gap: '4',
+		gap: '16',
 		gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-		paddingInline: '4',
+		paddingInline: '16',
 	})
 
 	export const ladderHead = style({
 		color: 'gray.900',
-		paddingBlock: '2',
+		paddingBlock: '8',
 	})
 
 	export const ladderLevel = style({
-		paddingBlock: '1',
+		paddingBlock: '4',
 		position: 'relative',
 	})
 
@@ -1115,10 +1115,10 @@ namespace styles {
 
 	export const bar = variants({
 		base: {
-			bottom: '1px !custom',
-			left: '0px !custom',
+			bottom: '1',
+			left: '0',
 			position: 'absolute',
-			top: '1px !custom',
+			top: '1',
 		},
 		defaultVariants: { bid: true },
 		variants: {
@@ -1134,13 +1134,13 @@ namespace styles {
 	export const detail = style({
 		...dashed,
 		alignItems: 'center',
-		columnGap: '6',
+		columnGap: '24',
 		display: 'flex',
 		flexWrap: 'wrap',
 		justifyContent: 'space-between',
-		paddingBlock: '3',
-		paddingInline: '4',
-		rowGap: '1',
+		paddingBlock: '12',
+		paddingInline: '16',
+		rowGap: '4',
 		selectors: { '&:not(:last-child)': { borderBottomWidth: '1px' } },
 	})
 
@@ -1148,9 +1148,8 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: 'medium',
-		gap: '2',
-		typography: 'copy.14',
+		gap: '8',
+		typography: 'copy.14.strong',
 	})
 
 	export const detailAddress = style({
@@ -1168,13 +1167,12 @@ namespace styles {
 		color: 'foreground',
 		display: 'inline-flex',
 		flexShrink: 0,
-		fontWeight: 'medium',
-		gap: '2',
-		height: '10',
-		paddingLeft: '2',
-		paddingRight: '3',
+		gap: '8',
+		height: '40',
+		paddingLeft: '8',
+		paddingRight: '12',
 		textDecorationLine: 'none',
-		typography: 'copy.14',
+		typography: 'copy.14.strong',
 		'@media (hover: hover)': { ':hover': { borderColor: 'blue.700' } },
 	})
 
@@ -1182,11 +1180,10 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'inline-flex',
-		fontWeight: 'medium',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 		textDecorationLine: 'none',
-		typography: 'copy.14',
+		typography: 'copy.14.strong',
 		'@media (hover: hover)': { ':hover': { color: 'blue.900' } },
 	})
 }

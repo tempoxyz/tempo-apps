@@ -959,18 +959,18 @@ function RawSection(props: {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '4',
+		gap: '16',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '8',
-			paddingTop: '10',
+			paddingBottom: '32',
+			paddingTop: '40',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
 	})
@@ -984,13 +984,13 @@ namespace styles {
 	export const description = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const stack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
@@ -1001,7 +1001,7 @@ namespace styles {
 	export const balances = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
@@ -1009,17 +1009,17 @@ namespace styles {
 	export const balanceAccounts = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 		maxHeight: '360px !custom',
 		overflowY: 'auto',
-		paddingBottom: '2',
+		paddingBottom: '8',
 		selectors: { '& a:focus-visible': { outlineOffset: '-2px' } },
 	})
 
 	export const balanceAccount = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		typography: 'copy.14',
 	})
 
@@ -1029,13 +1029,13 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '2px !custom',
-		paddingLeft: '3',
+		paddingLeft: '12',
 	})
 
 	export const balanceChange = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const seeAll = style({ alignSelf: 'flex-start' })
@@ -1054,34 +1054,34 @@ namespace styles {
 	export const call = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBlock: '4',
-		paddingInline: '5',
+		gap: '12',
+		paddingBlock: '16',
+		paddingInline: '20',
 	})
 
 	export const callHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		typography: 'label.12',
 	})
 
 	export const eventLogs = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '16',
 	})
 
 	export const eventCell = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		width: '100% !custom',
 	})
 
 	export const raw = style({
-		paddingBlock: '3',
-		paddingInline: '5',
+		paddingBlock: '12',
+		paddingInline: '20',
 		typography: 'label.12',
 		wordBreak: 'break-all',
 	})

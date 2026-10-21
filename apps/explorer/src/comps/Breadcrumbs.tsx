@@ -310,13 +310,13 @@ namespace styles {
 			alignItems: 'center',
 			color: 'gray.900',
 			display: 'flex',
-			gap: '1',
-			height: '6',
+			gap: '4',
+			height: '24',
 			marginBlock: '-2px !custom',
 			marginInline: '-4px !custom',
 			overflowX: 'auto',
 			overflowY: 'hidden',
-			paddingInline: '1',
+			paddingInline: '4',
 			transformOrigin: 'left',
 			transitionDuration: '80ms',
 			transitionProperty: 'opacity, scale',
@@ -345,13 +345,13 @@ namespace styles {
 		':focus-visible': { color: 'foreground' },
 	})
 
-	export const homeIcon = style({ height: '4', width: '4' })
+	export const homeIcon = style({ height: '16', width: '16' })
 
 	export const separator = style({
 		color: 'gray.700',
 		flexShrink: 0,
-		height: '3',
-		width: '3',
+		height: '12',
+		width: '12',
 	})
 
 	export const current = variants({
@@ -390,7 +390,7 @@ namespace styles {
 		':focus-visible': { color: 'foreground' },
 	})
 
-	export const clearIcon = style({ height: '3', width: '3' })
+	export const clearIcon = style({ height: '12', width: '12' })
 
-	export const slot = style({ minHeight: '5' })
+	export const slot = style({ minHeight: '20' })
 }

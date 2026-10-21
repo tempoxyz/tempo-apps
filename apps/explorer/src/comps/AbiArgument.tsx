@@ -83,22 +83,22 @@ namespace styles {
 	export const summary = style({
 		color: 'foreground',
 		cursor: 'pointer',
-		paddingBlock: '3',
-		paddingInline: '3',
+		paddingBlock: '12',
+		paddingInline: '12',
 		wordBreak: 'break-all',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 	})
 
-	export const meta = style({ color: 'gray.900', marginLeft: '2' })
+	export const meta = style({ color: 'gray.900', marginLeft: '8' })
 
 	export const children = style({
 		borderColor: 'grayAlpha.200',
 		borderLeftWidth: '1px',
-		marginBottom: '2',
-		marginLeft: '4',
-		paddingLeft: '2',
+		marginBottom: '8',
+		marginLeft: '16',
+		paddingLeft: '8',
 		selectors: {
 			'& > :not(:last-child)': {
 				borderBottomWidth: '1px',
@@ -109,18 +109,18 @@ namespace styles {
 
 	export const empty = style({
 		color: 'gray.900',
-		paddingBottom: '3',
-		paddingInline: '6',
+		paddingBottom: '12',
+		paddingInline: '24',
 	})
 
 	export const value = style({
 		color: 'foreground',
 		cursor: 'pointer',
 		display: 'grid',
-		gap: '1',
+		gap: '4',
 		gridTemplateColumns: 'minmax(0, 1fr)',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 		textAlign: 'left',
 		typography: 'label.12.mono',
 		width: '100% !custom',
@@ -128,7 +128,7 @@ namespace styles {
 			':hover': { backgroundColor: 'grayAlpha.100' },
 		},
 		'@media (width >= 640px)': {
-			gap: '3',
+			gap: '12',
 			gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)',
 		},
 	})
@@ -144,7 +144,7 @@ namespace styles {
 
 	export const valueText = style({
 		color: 'foreground',
-		maxHeight: '160px !custom',
+		maxHeight: '160',
 		minWidth: '0 !custom',
 		overflow: 'auto',
 		wordBreak: 'break-all',

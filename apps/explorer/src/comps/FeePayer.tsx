@@ -65,7 +65,7 @@ namespace styles {
 
 	export const glyph = style({
 		display: 'grid',
-		gap: '1px !custom',
+		gap: '1',
 		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
 		height: '10px !custom',
 		width: '10px !custom',

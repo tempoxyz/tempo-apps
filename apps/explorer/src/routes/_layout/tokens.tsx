@@ -235,19 +235,19 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 	})
 
 	export const tokenCell = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
@@ -255,7 +255,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'inline-flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 		typography: 'copy.14.strong',
 	})

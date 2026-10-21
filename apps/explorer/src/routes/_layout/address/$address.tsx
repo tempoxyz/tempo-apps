@@ -3306,9 +3306,9 @@ const paginationRowBase = {
 	color: 'gray.900',
 	display: 'flex',
 	flexDirection: 'column',
-	gap: '3',
-	paddingBlock: '3',
-	paddingInline: '4',
+	gap: '12',
+	paddingBlock: '12',
+	paddingInline: '16',
 	typography: 'label.12',
 	'@media (width >= 640px)': {
 		flexDirection: 'row',
@@ -3326,18 +3326,18 @@ const dividerLine = {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '4',
+		gap: '16',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '8',
-			paddingTop: '10',
+			paddingBottom: '32',
+			paddingTop: '40',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -3347,7 +3347,7 @@ namespace styles {
 	export const accountColumn = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		'@media (width >= 800px)': { alignSelf: 'flex-start' },
 	})
 
@@ -3359,13 +3359,13 @@ namespace styles {
 	export const addressHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		marginBottom: '2',
+		gap: '8',
+		marginBottom: '8',
 	})
 
 	export const addressLabel = style({ typography: 'label.12' })
 
-	export const icon12 = style({ height: '3', width: '3' })
+	export const icon12 = style({ height: '12', width: '12' })
 
 	export const addressValue = style({
 		color: 'foreground',
@@ -3381,20 +3381,20 @@ namespace styles {
 
 	export const balancesLabel = style({
 		color: 'gray.900',
-		marginBottom: '2',
+		marginBottom: '8',
 		typography: 'label.12',
 	})
 
 	export const balanceList = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const balanceRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 		minWidth: '0 !custom',
 		typography: 'label.12',
@@ -3425,9 +3425,9 @@ namespace styles {
 	})
 
 	// Icons in small TDS Buttons, at the TDS CopyButton icon size.
-	export const buttonIcon = style({ flexShrink: '0 !custom', fontSize: 'base' })
+	export const buttonIcon = style({ flexShrink: '0 !custom', fontSize: '16' })
 
-	export const alertWrap = style({ padding: '4' })
+	export const alertWrap = style({ padding: '16' })
 
 	export const batchIndex = style({
 		typography: 'label.12.mono',
@@ -3437,7 +3437,7 @@ namespace styles {
 	export const contextual = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '3',
+		gap: '12',
 	})
 
 	export const paginationBar = style({
@@ -3451,7 +3451,7 @@ namespace styles {
 	export const infoLabel = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const batchPending = style({
@@ -3468,7 +3468,7 @@ namespace styles {
 	export const pageNav = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-start' },
 	})
@@ -3476,7 +3476,7 @@ namespace styles {
 	export const pageLabel = style({
 		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '1',
+		paddingInline: '4',
 		whiteSpace: 'nowrap',
 	})
 
@@ -3495,20 +3495,20 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'center',
-		paddingBlock: '2',
-		paddingInline: '4',
+		paddingBlock: '8',
+		paddingInline: '16',
 		selectors: { '&:not(:first-child)': { borderTopWidth: '1px' } },
 	})
 
 	export const filter = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		typography: 'label.12',
 	})
 
 	export const receipt = style({
-		paddingBottom: '4',
+		paddingBottom: '16',
 		typography: 'label.12',
 	})
 
@@ -3519,15 +3519,15 @@ namespace styles {
 		borderBottomWidth: '2px',
 		display: 'flex',
 		marginInline: '-16px !custom',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 	})
 
 	export const rowIndex = style({
 		color: 'gray.900',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
-		marginRight: '3',
+		marginRight: '12',
 		textAlign: 'right',
 	})
 
@@ -3536,16 +3536,16 @@ namespace styles {
 		flexShrink: 0,
 		fontStyle: 'italic',
 		typography: 'label.12',
-		width: '16',
+		width: '64',
 	})
 
 	export const offChainHeader = style({
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '2',
-		paddingBottom: '2',
-		paddingTop: '3',
+		gap: '8',
+		paddingBottom: '8',
+		paddingTop: '12',
 		typography: 'label.12',
 	})
 
@@ -3560,20 +3560,20 @@ namespace styles {
 		alignItems: 'center',
 		borderBottomWidth: '1px',
 		display: 'flex',
-		paddingBlock: '2',
+		paddingBlock: '8',
 	})
 
 	export const offChainLabel = style({
 		color: 'gray.900',
 		flexShrink: 0,
 		typography: 'label.12',
-		width: '16',
+		width: '64',
 	})
 
 	export const voucherParts = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		marginLeft: 'auto !custom',
 	})
 
@@ -3587,7 +3587,7 @@ namespace styles {
 	export const balanceToken = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -3601,7 +3601,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		typography: 'label.12',
 	})
 
@@ -3622,17 +3622,17 @@ namespace styles {
 	export const pageLink = style({
 		alignItems: 'center',
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'full',
+		borderRadius: '8',
 		color: 'foreground',
 		display: 'inline-flex',
-		height: '8',
+		height: '32',
 		justifyContent: 'center',
-		width: '8',
+		width: '32',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
 		selectors: {
-			'& > svg': { height: '4', width: '4' },
+			'& > svg': { height: '16', width: '16' },
 			'&[aria-disabled="true"]': { cursor: 'default', opacity: 0.4 },
 		},
 	})

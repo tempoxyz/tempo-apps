@@ -141,7 +141,7 @@ export declare namespace WalletActions {
 }
 
 namespace styles {
-	export const icon = style({ fontSize: 'base' })
+	export const icon = style({ fontSize: '16' })
 
 	// InfoCard fits its content from 1240px; the wallet card fills the column.
 	export const card = style({

@@ -389,8 +389,8 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
-		paddingBlock: '2',
-		paddingInline: '4',
+		paddingBlock: '8',
+		paddingInline: '16',
 	})
 
 	export const headerLabel = style({
@@ -400,21 +400,21 @@ namespace styles {
 
 	export const chart = style({
 		overflowX: 'auto',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 	})
 
 	export const rows = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1px !custom',
+		gap: '1',
 		minWidth: '0 !custom',
 	})
 
 	export const row = style({ position: 'relative', width: '100% !custom' })
 
 	export const bar = style({
-		borderRadius: 'sm',
+		borderRadius: '4',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		height: '100% !custom',
@@ -449,10 +449,10 @@ namespace styles {
 	export const barContent = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 		inset: '0',
 		overflow: 'hidden',
-		paddingInline: '2',
+		paddingInline: '8',
 		position: 'absolute',
 		userSelect: 'none',
 	})
@@ -470,24 +470,24 @@ namespace styles {
 	export const barIcon = style({
 		color: 'gray.900',
 		flexShrink: '0 !custom',
-		height: '3',
-		width: '3',
+		height: '12',
+		width: '12',
 	})
 
-	export const details = style({ paddingBottom: '3', paddingInline: '4' })
+	export const details = style({ paddingBottom: '12', paddingInline: '16' })
 
 	export const detailsPanel = style({
 		alignItems: 'flex-start',
 		backgroundColor: 'background.primary',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'lg',
+		borderRadius: '8',
 		borderWidth: '1px',
 		display: 'flex',
-		gap: '3',
+		gap: '12',
 		minHeight: '72px !custom',
 		overflow: 'hidden',
-		paddingBlock: '3',
-		paddingInline: '3',
+		paddingBlock: '12',
+		paddingInline: '12',
 		typography: 'label.12.mono',
 	})
 
@@ -495,14 +495,14 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
 	export const detailsHeading = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -529,13 +529,13 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 		marginTop: '2px !custom',
 	})
 
 	export const icon = style({
 		flexShrink: '0 !custom',
-		height: '3',
-		width: '3',
+		height: '12',
+		width: '12',
 	})
 }

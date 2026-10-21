@@ -616,10 +616,10 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '8',
+		gap: '32',
 		justifyContent: 'center',
-		paddingBottom: '8',
-		paddingTop: '16',
+		paddingBottom: '32',
+		paddingTop: '64',
 		typography: 'label.12',
 	})
 }

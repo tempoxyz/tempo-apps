@@ -375,7 +375,7 @@ namespace styles {
 		'--contract-source-font': vars.fontFamily.mono,
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		boxSizing: 'border-box',
@@ -390,22 +390,22 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		padding: '2',
+		padding: '8',
 		typography: 'label.12',
 	})
 
 	export const toolbarStart = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		minWidth: '0px !custom',
+		gap: '8',
+		minWidth: '0',
 	})
 
 	export const toolbarAction = style({ flexShrink: 0 })
 
-	export const toolbarIcon = style({ height: '4', width: '4' })
+	export const toolbarIcon = style({ height: '16', width: '16' })
 
 	export const fileCount = style({ whiteSpace: 'nowrap' })
 
@@ -418,27 +418,27 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '1',
+		gap: '4',
 	})
 
 	export const panes = style({
 		display: 'flex',
 		flexDirection: 'column',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		'@container source (width >= 42rem)': { flexDirection: 'row' },
 	})
 
 	export const sidebar = style({
 		flexShrink: 0,
-		'@container source (width >= 42rem)': { width: '240px !custom' },
+		'@container source (width >= 42rem)': { width: '240' },
 	})
 
-	export const code = style({ flex: 1, minWidth: '0px !custom' })
+	export const code = style({ flex: 1, minWidth: '0' })
 
 	export const codeView = style({
 		height: 'min(620px, 70svh) !custom',
-		minHeight: '320px !custom',
-		minWidth: '0px !custom',
+		minHeight: '320',
+		minWidth: '0',
 		overflow: 'auto',
 	})
 
@@ -448,10 +448,10 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 		typography: 'label.12',
 	})
 }

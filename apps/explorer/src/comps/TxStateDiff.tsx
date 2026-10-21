@@ -473,12 +473,12 @@ namespace styles {
 		borderStyle: 'solid',
 		borderTopWidth: '1px',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		minHeight: '12',
-		paddingBlock: '2',
-		paddingLeft: '4',
-		paddingRight: '2',
+		minHeight: '48',
+		paddingBlock: '8',
+		paddingLeft: '16',
+		paddingRight: '8',
 	})
 
 	export const headerLabel = style({
@@ -489,13 +489,13 @@ namespace styles {
 	export const headerActions = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const empty = style({
 		color: 'gray.900',
-		paddingBlock: '6',
-		paddingInline: '5',
+		paddingBlock: '24',
+		paddingInline: '20',
 		textAlign: 'center',
 		typography: 'label.12',
 	})
@@ -503,10 +503,10 @@ namespace styles {
 	export const accountHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		paddingBottom: '2',
-		paddingInline: '4',
-		paddingTop: '3',
+		gap: '8',
+		paddingBottom: '8',
+		paddingInline: '16',
+		paddingTop: '12',
 	})
 
 	export const accountLink = style({
@@ -523,14 +523,14 @@ namespace styles {
 
 	export const gridScroll = style({
 		overflowX: 'auto',
-		paddingBottom: '3',
-		paddingInline: '4',
+		paddingBottom: '12',
+		paddingInline: '16',
 	})
 
 	export const grid = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'grid',
@@ -557,8 +557,8 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		color: 'gray.900',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 	})
 
 	export const cell = style({
@@ -575,8 +575,8 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		minWidth: '0 !custom',
-		paddingBlock: '2',
-		paddingInline: '3',
+		paddingBlock: '8',
+		paddingInline: '12',
 		textAlign: 'left',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'grayAlpha.100' },

@@ -479,12 +479,12 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		justifyContent: 'flex-end',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 
-	export const singleLabel = style({ marginLeft: '2' })
+	export const singleLabel = style({ marginLeft: '8' })
 
 	export const number = style({
 		color: 'foreground',
@@ -502,19 +502,19 @@ namespace styles {
 	export const navButton = style({
 		alignItems: 'center',
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'full',
+		borderRadius: '8',
 		color: 'foreground',
 		cursor: 'pointer',
 		display: 'inline-flex',
 		flexShrink: '0 !custom',
-		height: '8',
+		height: '32',
 		justifyContent: 'center',
-		width: '8',
+		width: '32',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
 		selectors: {
-			'& > svg': { height: '4', width: '4' },
+			'& > svg': { height: '16', width: '16' },
 			'&[aria-disabled="true"]': {
 				backgroundColor: 'grayAlpha.100',
 				cursor: 'default',
@@ -528,9 +528,9 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 		width: '100% !custom',
 		'@media (width >= 640px)': {
@@ -541,7 +541,7 @@ namespace styles {
 
 	export const compactNav = style({
 		display: 'grid',
-		gap: '2',
+		gap: '8',
 		gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
 		justifyItems: 'center',
 		'@media (width >= 480px)': { alignItems: 'center', display: 'flex' },
@@ -551,7 +551,7 @@ namespace styles {
 		fontVariantNumeric: 'tabular-nums',
 		gridColumn: 'span 4 / span 4',
 		gridRowStart: '1',
-		paddingInline: '1',
+		paddingInline: '4',
 		textAlign: 'center',
 		whiteSpace: 'nowrap',
 	})
@@ -560,9 +560,9 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 		'@media (width >= 768px)': {
 			alignItems: 'center',
@@ -575,7 +575,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'row',
-		gap: '2',
+		gap: '8',
 		marginInline: 'auto !custom',
 		'@media (width >= 768px)': { marginInline: '0' },
 	})
@@ -586,21 +586,21 @@ namespace styles {
 	export const simple = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-start' },
 	})
 
 	export const simpleLabel = style({
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '1',
+		paddingInline: '4',
 		whiteSpace: 'nowrap',
 	})
 
 	export const count = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-end' },
 	})

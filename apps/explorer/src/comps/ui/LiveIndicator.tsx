@@ -44,17 +44,17 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'inline-flex',
-		gap: '2',
-		minHeight: '6',
+		gap: '8',
+		minHeight: '24',
 		typography: 'label.12',
 		whiteSpace: 'nowrap',
 	})
 
 	export const dot = style({
 		flexShrink: 0,
-		height: '2',
+		height: '8',
 		position: 'relative',
-		width: '2',
+		width: '8',
 	})
 
 	export const fill = variants({

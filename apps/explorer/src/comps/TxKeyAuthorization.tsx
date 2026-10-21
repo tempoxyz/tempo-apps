@@ -240,18 +240,18 @@ namespace styles {
 	})
 
 	export const row = style({
-		columnGap: '4',
+		columnGap: '16',
 		display: 'flex',
-		paddingBlock: '4',
+		paddingBlock: '16',
 		position: 'relative',
 		selectors: {
 			'&::before': {
 				backgroundColor: 'grayAlpha.300',
 				content: '"" !custom',
-				height: '1px !custom',
-				left: '0px !custom',
+				height: '1',
+				left: '0',
 				position: 'absolute',
-				right: '0px !custom',
+				right: '0',
 				top: '-1px !custom',
 			},
 		},
@@ -267,9 +267,9 @@ namespace styles {
 		display: 'flex',
 		flex: '1 !custom',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		margin: '0',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflowWrap: 'anywhere',
 		typography: 'copy.14',
 	})
@@ -279,14 +279,14 @@ namespace styles {
 	export const targets = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 	})
 
 	export const disclosure = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
@@ -298,12 +298,12 @@ namespace styles {
 	// Inline code that wraps, since long signatures sit in narrow columns.
 	export const code = style({
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'foreground',
 		fontFeatureSettings: '"zero" 1 !custom',
 		overflowWrap: 'anywhere',
 		paddingBlock: '2px !custom',
-		paddingInline: '1',
+		paddingInline: '4',
 		typography: 'label.12.mono',
 	})
 
@@ -315,13 +315,13 @@ namespace styles {
 	export const stack = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
 	export const limitLine = style({
 		alignItems: 'baseline',
-		columnGap: '2',
+		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
 		rowGap: '2px !custom',
@@ -331,7 +331,7 @@ namespace styles {
 		alignItems: 'baseline',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 
@@ -345,16 +345,16 @@ namespace styles {
 		borderLeftWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingLeft: '2',
+		gap: '8',
+		paddingLeft: '8',
 	})
 
 	export const ruleLine = style({
 		alignItems: 'baseline',
-		columnGap: '2',
+		columnGap: '8',
 		display: 'flex',
 		flexWrap: 'wrap',
-		rowGap: '1',
+		rowGap: '4',
 	})
 
 	export const recipients = style({

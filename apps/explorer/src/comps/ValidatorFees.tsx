@@ -124,14 +124,14 @@ export declare namespace ValidatorFees {
 }
 
 namespace styles {
-	export const error = style({ padding: '4' })
+	export const error = style({ padding: '16' })
 
 	export const row = style({ typography: 'label.12' })
 
 	export const note = style({
 		color: 'gray.900',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 }

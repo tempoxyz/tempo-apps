@@ -429,7 +429,7 @@ export function ExploreInput(props: ExploreInput.Props): React.JSX.Element {
 			>
 				{/* Enter submits the form; the clear button empties the field. */}
 				<Field.Root>
-					<Input.Group size={size} variant="search">
+					<Input.Group size={size}>
 						<Input.Prefix>
 							<Search />
 						</Input.Prefix>
@@ -751,39 +751,39 @@ namespace styles {
 	export const results = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		boxShadow: 'popover',
-		left: '0px !custom',
-		marginTop: '2',
+		left: '0',
+		marginTop: '8',
 		maxHeight: 'min(420px, 50dvh) !custom',
 		overflowX: 'hidden',
 		overflowY: 'auto',
 		overscrollBehavior: 'contain',
 		position: 'absolute',
-		right: '0px !custom',
+		right: '0',
 		zIndex: 50,
 	})
 
 	export const resultsProgress = style({
-		left: '0px !custom',
+		left: '0',
 		position: 'absolute',
-		right: '0px !custom',
-		top: '0px !custom',
+		right: '0',
+		top: '0',
 	})
 
 	export const resultsEmpty = style({
 		color: 'gray.900',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
 	export const groups = style({
 		display: 'flex',
 		flexDirection: 'column',
-		paddingBlock: '1',
+		paddingBlock: '4',
 	})
 
 	export const group = style({ display: 'flex', flexDirection: 'column' })
@@ -793,11 +793,11 @@ namespace styles {
 			alignItems: 'center',
 			display: 'flex',
 			justifyContent: 'space-between',
-			paddingBlock: '2',
-			paddingInline: '3',
+			paddingBlock: '8',
+			paddingInline: '12',
 		},
 		defaultVariants: { spaced: false },
-		variants: { spaced: { true: { paddingTop: '3' }, false: {} } },
+		variants: { spaced: { true: { paddingTop: '12' }, false: {} } },
 	})
 
 	export const groupTitle = style({
@@ -822,11 +822,11 @@ namespace styles {
 			alignItems: 'center',
 			cursor: 'pointer',
 			display: 'flex',
-			gap: '2',
+			gap: '8',
 			justifyContent: 'space-between',
 			overflow: 'hidden',
-			paddingBlock: '2',
-			paddingInline: '3',
+			paddingBlock: '8',
+			paddingInline: '12',
 			textAlign: 'left',
 			width: '100% !custom',
 			'@media (hover: hover)': {
@@ -852,8 +852,8 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexShrink: 1,
-		gap: '2',
-		minWidth: '0px !custom',
+		gap: '8',
+		minWidth: '0',
 	})
 
 	export const tokenName = style({
@@ -873,21 +873,21 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflow: 'hidden',
 	})
 
 	export const addressHeading = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		maxWidth: '100% !custom',
-		minWidth: '0px !custom',
+		minWidth: '0',
 	})
 
 	export const addressLabel = style({
 		color: 'foreground',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'copy.14',
 	})
 
@@ -896,7 +896,7 @@ namespace styles {
 			typography: 'label.12.mono',
 			display: 'block',
 			maxWidth: '100% !custom',
-			minWidth: '0px !custom',
+			minWidth: '0',
 			overflow: 'hidden',
 		},
 		defaultVariants: { grow: false },
@@ -916,7 +916,7 @@ namespace styles {
 	export const transactionHash = style({
 		typography: 'label.12.mono',
 		flex: 1,
-		minWidth: '0px !custom',
+		minWidth: '0',
 	})
 
 	export const meta = style({

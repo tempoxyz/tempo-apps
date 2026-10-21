@@ -458,25 +458,25 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 	})
 
 	// Keeps the toggle's width steady between "Live" and "Paused".
-	export const liveToggle = style({ minWidth: '80px !custom' })
+	export const liveToggle = style({ minWidth: '80' })
 
 	export const number = style({
 		fontVariantNumeric: 'tabular-nums',
-		fontWeight: 'medium',
+		fontWeight: '550 !custom',
 	})
 
 	export const hash = style({
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'label.12.mono',
 		width: '100% !custom',
 	})
@@ -507,9 +507,9 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 		'@media (width >= 640px)': {
 			flexDirection: 'row',
@@ -520,7 +520,7 @@ namespace styles {
 	export const paginationControls = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'center',
 		'@media (width >= 640px)': { justifyContent: 'flex-start' },
 	})
@@ -530,18 +530,18 @@ namespace styles {
 	export const pageButton = style({
 		alignItems: 'center',
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'full',
+		borderRadius: '8',
 		color: 'foreground',
 		display: 'inline-flex',
 		flexShrink: 0,
-		height: '8',
+		height: '32',
 		justifyContent: 'center',
-		width: '8',
+		width: '32',
 		'@media (hover: hover)': {
 			':hover': { backgroundColor: 'grayAlpha.200' },
 		},
 		selectors: {
-			'& > svg': { height: '4', width: '4' },
+			'& > svg': { height: '16', width: '16' },
 			'&[aria-disabled="true"]': {
 				backgroundColor: 'grayAlpha.100',
 				color: 'gray.700',
@@ -553,7 +553,7 @@ namespace styles {
 	export const pageRange = style({
 		color: 'foreground',
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '1',
+		paddingInline: '4',
 		typography: 'label.12.strong',
 		whiteSpace: 'nowrap',
 	})

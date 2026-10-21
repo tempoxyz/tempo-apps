@@ -335,14 +335,14 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		maxWidth: '180px !custom',
-		minHeight: '6',
+		minHeight: '24',
 		width: '100% !custom',
 	})
 
 	export const skeletonBar = style({
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'sm',
-		height: '3',
+		borderRadius: '4',
+		height: '12',
 		width: '100% !custom',
 	})
 
@@ -381,14 +381,14 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'flex',
-		gap: '2',
-		height: '36px !custom',
+		gap: '8',
+		height: '36',
 		justifyContent: 'flex-start',
-		paddingInline: '3',
+		paddingInline: '12',
 		typography: 'label.12',
 		whiteSpace: 'nowrap',
-		':first-child': { paddingLeft: '4' },
-		':last-child': { paddingRight: '4' },
+		':first-child': { paddingLeft: '16' },
+		':last-child': { paddingRight: '16' },
 	})
 
 	export const headerCellEnd = style({ justifyContent: 'flex-end' })
@@ -396,13 +396,13 @@ namespace styles {
 	export const headerLabel = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const sortIcon = style({
 		color: 'gray.900',
-		height: '3',
-		width: '3',
+		height: '12',
+		width: '12',
 	})
 
 	export const sortIconAsc = style({ rotate: '180deg' })
@@ -414,8 +414,8 @@ namespace styles {
 		gridColumn: '1 / -1',
 		justifyContent: 'center',
 		minHeight: '220px !custom',
-		paddingBlock: '8',
-		paddingInline: '4',
+		paddingBlock: '32',
+		paddingInline: '16',
 	})
 
 	export const row = style({
@@ -455,12 +455,12 @@ namespace styles {
 	// Positioned against the row (cells are static), so it covers the row and
 	// its left border from inside the first cell.
 	export const rowLink = style({
-		bottom: '0px !custom',
+		bottom: '0',
 		left: '-3px !custom',
 		outlineOffset: '-2px !custom',
 		position: 'absolute',
-		right: '0px !custom',
-		top: '0px !custom',
+		right: '0',
+		top: '0',
 		zIndex: 0,
 	})
 
@@ -469,14 +469,14 @@ namespace styles {
 		color: 'foreground',
 		display: 'flex',
 		justifyContent: 'flex-start',
-		minHeight: '12',
-		paddingBlock: '3',
-		paddingInline: '3',
+		minHeight: '48',
+		paddingBlock: '12',
+		paddingInline: '12',
 	})
 
-	export const cellFirst = style({ paddingLeft: '4' })
+	export const cellFirst = style({ paddingLeft: '16' })
 
-	export const cellLast = style({ paddingRight: '4' })
+	export const cellLast = style({ paddingRight: '16' })
 
 	export const cellEnd = style({
 		justifyContent: 'flex-end',
@@ -517,8 +517,8 @@ namespace styles {
 		contain: 'inline-size',
 		gridColumn: '1 / -1',
 		marginTop: '-4px !custom',
-		paddingBottom: '3',
-		paddingInline: '4',
+		paddingBottom: '12',
+		paddingInline: '16',
 	})
 
 	export const footer = style({ marginTop: 'auto !custom' })
@@ -531,9 +531,9 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '12',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12',
 		'@media (width >= 640px)': {
 			flexDirection: 'row',

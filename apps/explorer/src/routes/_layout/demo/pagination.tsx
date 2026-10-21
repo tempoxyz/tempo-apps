@@ -66,9 +66,9 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		flexGrow: 1,
-		gap: '8',
-		paddingBottom: '8',
-		paddingTop: '16',
+		gap: '32',
+		paddingBottom: '32',
+		paddingTop: '64',
 		typography: 'label.12',
 	})
 
@@ -77,14 +77,14 @@ namespace styles {
 	export const examples = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		maxWidth: '800px !custom',
 		width: '100% !custom',
 	})
 
 	export const example = style({
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		overflow: 'hidden',
@@ -93,8 +93,8 @@ namespace styles {
 	export const exampleLabel = style({
 		backgroundColor: 'background.surface',
 		color: 'gray.900',
-		paddingBlock: '2',
-		paddingInline: '4',
+		paddingBlock: '8',
+		paddingInline: '16',
 		typography: 'label.12',
 	})
 

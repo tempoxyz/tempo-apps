@@ -242,8 +242,8 @@ namespace styles {
 		borderBottomWidth: '1px',
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
-		paddingBlock: '4',
-		paddingInline: '4',
+		paddingBlock: '16',
+		paddingInline: '16',
 	})
 
 	export const note = style({
@@ -252,23 +252,23 @@ namespace styles {
 		borderStyle: 'solid',
 		color: 'gray.900',
 		margin: '0',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
 	// TDS cells pad their own sides, so the wrap pads only the block and
 	// scrolls sideways.
-	export const tableWrap = style({ overflowX: 'auto', paddingBlock: '4' })
+	export const tableWrap = style({ overflowX: 'auto', paddingBlock: '16' })
 
 	// Fixed columns, so frame labels truncate instead of widening the table.
 	export const table = style({ tableLayout: 'fixed' })
 
-	export const callColumn = style({ width: '16' })
+	export const callColumn = style({ width: '64' })
 
-	export const gasColumn = style({ width: '80px !custom' })
+	export const gasColumn = style({ width: '80' })
 
-	export const shareColumn = style({ width: '96px !custom' })
+	export const shareColumn = style({ width: '96' })
 
 	export const row = style({ cursor: 'pointer' })
 
@@ -288,7 +288,7 @@ namespace styles {
 		color: 'inherit !custom',
 		cursor: 'pointer',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 		textAlign: 'left',
 		width: '100% !custom',
@@ -301,15 +301,15 @@ namespace styles {
 		flexShrink: 0,
 		textAlign: 'right',
 		typography: 'label.12.mono',
-		width: '4',
+		width: '16',
 	})
 
 	export const errorDot = style({
 		backgroundColor: 'red.900',
 		borderRadius: 'full',
 		flexShrink: 0,
-		height: '2',
-		width: '2',
+		height: '8',
+		width: '8',
 	})
 
 	export const label = style({
@@ -321,16 +321,16 @@ namespace styles {
 	export const share = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'flex-end',
 	})
 
 	export const shareTrack = style({
 		backgroundColor: 'grayAlpha.200',
 		borderRadius: 'full',
-		height: '1',
+		height: '4',
 		overflow: 'hidden',
-		width: '8',
+		width: '32',
 	})
 
 	export const shareFill = style({
@@ -344,6 +344,6 @@ namespace styles {
 		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'right',
-		width: '10',
+		width: '40',
 	})
 }

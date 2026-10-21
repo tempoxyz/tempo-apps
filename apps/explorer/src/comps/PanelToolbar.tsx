@@ -102,9 +102,9 @@ namespace styles {
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
-		paddingBlock: '2',
-		paddingInline: '3',
+		gap: '8',
+		paddingBlock: '8',
+		paddingInline: '12',
 	})
 
 	export const summary = style({

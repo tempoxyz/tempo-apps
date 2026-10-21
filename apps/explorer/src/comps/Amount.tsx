@@ -187,7 +187,7 @@ namespace styles {
 	export const root = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 

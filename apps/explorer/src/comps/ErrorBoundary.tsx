@@ -88,12 +88,12 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '4',
+		gap: '16',
 		height: '100% !custom',
 		justifyContent: 'center',
 		margin: 'auto !custom',
 		maxWidth: '600px !custom',
-		paddingInline: '4',
+		paddingInline: '16',
 		width: '100% !custom',
 	})
 
@@ -101,7 +101,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const title = style({
@@ -126,17 +126,17 @@ namespace styles {
 	export const message = style({
 		color: 'gray.900',
 		margin: '0',
-		minHeight: '10',
-		paddingRight: '8',
+		minHeight: '40',
+		paddingRight: '32',
 		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',
 	})
 
 	// Places the copy Button in the corner of the details box.
 	export const copy = style({
-		bottom: '1',
+		bottom: '4',
 		display: 'flex',
 		position: 'absolute',
-		right: '1',
+		right: '4',
 	})
 }

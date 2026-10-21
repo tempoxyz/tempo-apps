@@ -518,7 +518,7 @@ namespace styles {
 	export const list = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 	})
 
 	export const emptyMessage = style({
@@ -526,14 +526,14 @@ namespace styles {
 		typography: 'label.12',
 	})
 
-	export const resultRow = style({ display: 'flex', gap: '2' })
+	export const resultRow = style({ display: 'flex', gap: '8' })
 
 	export const resultIcon = style({
 		color: 'gray.700',
 		flexShrink: 0,
-		height: '3',
+		height: '12',
 		marginTop: '2px !custom',
-		width: '3',
+		width: '12',
 	})
 
 	export const errorIcon = style({ color: 'red.900' })
@@ -544,14 +544,14 @@ namespace styles {
 	})
 
 	export const address = style({
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'label.12.mono',
 		wordBreak: 'break-all',
 	})
 
 	export const error = style({
 		color: 'foreground',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflowWrap: 'anywhere',
 		typography: 'label.12',
 		whiteSpace: 'pre-wrap',
@@ -560,7 +560,7 @@ namespace styles {
 	export const output = style({
 		color: 'foreground',
 		flex: 1,
-		minWidth: '0px !custom',
+		minWidth: '0',
 		overflowX: 'auto',
 		typography: 'label.12.mono',
 		whiteSpace: 'pre',

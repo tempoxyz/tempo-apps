@@ -1045,18 +1045,18 @@ function Component() {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '4',
+		gap: '16',
 		gridTemplateColumns: 'auto 1fr',
 		minWidth: '0 !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '8',
-			paddingTop: '10',
+			paddingBottom: '32',
+			paddingTop: '40',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1080px !custom' },
 	})
@@ -1066,8 +1066,8 @@ namespace styles {
 	export const addressHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		marginBottom: '2',
+		gap: '8',
+		marginBottom: '8',
 	})
 
 	export const addressLabel = style({
@@ -1075,7 +1075,7 @@ namespace styles {
 		typography: 'label.12',
 	})
 
-	export const copyIcon = style({ height: '3', width: '3' })
+	export const copyIcon = style({ height: '12', width: '12' })
 
 	export const addressValue = style({
 		color: 'foreground',
@@ -1104,7 +1104,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		height: '5',
+		height: '20',
 		whiteSpace: 'nowrap',
 	})
 
@@ -1119,6 +1119,6 @@ namespace styles {
 		color: 'gray.900',
 		cursor: 'pointer',
 		flexShrink: 0,
-		marginLeft: '1',
+		marginLeft: '4',
 	})
 }

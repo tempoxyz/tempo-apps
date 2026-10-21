@@ -69,7 +69,7 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderTopWidth: '1px',
 		flexShrink: 0,
-		height: '4',
+		height: '16',
 		overflowX: 'scroll',
 		overflowY: 'hidden',
 		':focus-visible': {
@@ -78,7 +78,7 @@ namespace styles {
 			outlineStyle: 'solid',
 			outlineWidth: '2px',
 		},
-		'::-webkit-scrollbar': { height: '3' },
+		'::-webkit-scrollbar': { height: '12' },
 		'::-webkit-scrollbar-thumb': {
 			backgroundColor: 'gray.700',
 			borderColor: 'background.surface',
@@ -88,5 +88,5 @@ namespace styles {
 		},
 	})
 
-	export const spacer = style({ height: '1px !custom' })
+	export const spacer = style({ height: '1' })
 }

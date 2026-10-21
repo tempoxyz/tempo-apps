@@ -82,7 +82,7 @@ namespace styles {
 		alignItems: 'center',
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderWidth: '1px',
 		color: 'gray.900',
 		display: 'flex',

@@ -115,7 +115,7 @@ export function Sphere(): React.JSX.Element {
 
 namespace styles {
 	export const root = style({
-		bottom: '0px !custom',
+		bottom: '0',
 		display: 'none',
 		height: '194px !custom',
 		overflow: 'hidden',
@@ -132,14 +132,14 @@ namespace styles {
 		display: 'flex',
 		justifyContent: 'center',
 		position: 'absolute',
-		top: '0px !custom',
+		top: '0',
 		width: '100% !custom',
 	})
 
 	// The root clips overflow, so the document focus ring is drawn inside.
 	export const button = style({
 		aspectRatio: '656 / 285 !custom',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		cursor: 'pointer',
 		maxWidth: '120vw !custom',
 		pointerEvents: 'auto',

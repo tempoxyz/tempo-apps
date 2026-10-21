@@ -241,23 +241,23 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'space-between',
-		minHeight: '16',
-		paddingTop: '8',
+		minHeight: '64',
+		paddingTop: '32',
 		position: 'relative',
 		userSelect: 'none',
 		zIndex: 20,
 		'@container (width >= 800px) and (width < 1239px)': {
 			height: '88px !custom',
 		},
-		'@container (width >= 1240px)': { paddingTop: '12' },
+		'@container (width >= 1240px)': { paddingTop: '48' },
 		'@media print': { justifyContent: 'center' },
 	})
 
 	export const brand = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '3',
-		height: '8',
+		gap: '12',
+		height: '32',
 		position: 'relative',
 		zIndex: 1,
 	})
@@ -266,18 +266,18 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		paddingBlock: '1',
+		paddingBlock: '4',
 	})
 
 	export const wordmark = style({
-		height: '6',
+		height: '24',
 		width: 'auto !custom',
 	})
 
 	export const actions = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		position: 'relative',
 		zIndex: 1,
 		'@media print': { display: 'none' },
@@ -289,13 +289,13 @@ namespace styles {
 	export const simulate = style({
 		alignItems: 'center',
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'full',
+		borderRadius: '8',
 		color: 'foreground',
-		columnGap: '1',
+		columnGap: '4',
 		display: 'inline-flex',
-		height: '8',
+		height: '32',
 		justifyContent: 'center',
-		paddingInline: '3',
+		paddingInline: '12',
 		textDecorationLine: 'none',
 		typography: 'button.12',
 		whiteSpace: 'nowrap',
@@ -305,13 +305,13 @@ namespace styles {
 		':active': { backgroundColor: 'grayAlpha.300' },
 		'@container (width < 799px)': {
 			paddingInline: '0',
-			width: '8',
+			width: '32',
 		},
 	})
 
 	export const simulateIcon = style({
 		flexShrink: 0,
-		'@container (width < 799px)': { height: '4', width: '4' },
+		'@container (width < 799px)': { height: '16', width: '16' },
 	})
 
 	export const simulateLabel = style({
@@ -319,11 +319,11 @@ namespace styles {
 	})
 
 	export const searchCompact = style({
-		paddingBottom: '3',
-		paddingInline: '4',
-		paddingTop: '4',
+		paddingBottom: '12',
+		paddingInline: '16',
+		paddingTop: '16',
 		position: 'sticky',
-		top: '0px !custom',
+		top: '0',
 		zIndex: 10,
 		'@container (width >= 800px)': { display: 'none' },
 		'@media print': { display: 'none' },
@@ -334,9 +334,9 @@ namespace styles {
 		display: 'flex',
 		height: '0',
 		justifyContent: 'center',
-		left: '0px !custom',
+		left: '0',
 		position: 'absolute',
-		right: '0px !custom',
+		right: '0',
 		zIndex: 1,
 		'@container (width < 1239px)': { display: 'none' },
 		'@media print': { display: 'none' },
@@ -346,7 +346,7 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		justifyContent: 'center',
-		paddingInline: '6',
+		paddingInline: '24',
 		'@container (width < 799px)': { display: 'none' },
 		'@container (width >= 1240px)': { display: 'none' },
 		'@media print': { display: 'none' },
@@ -368,7 +368,7 @@ namespace styles {
 			alignItems: 'center',
 			color: 'foreground',
 			display: 'flex',
-			gap: '2',
+			gap: '8',
 			textDecorationLine: 'none',
 			transformOrigin: 'right',
 			transitionDuration: '80ms',
@@ -388,8 +388,8 @@ namespace styles {
 
 	export const blockNumberIcon = style({
 		flexShrink: 0,
-		height: '4',
-		width: '4',
+		height: '16',
+		width: '16',
 	})
 
 	export const blockNumberValue = style({

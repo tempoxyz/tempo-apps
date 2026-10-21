@@ -117,7 +117,7 @@ namespace styles {
 	export const name = variants({
 		base: {
 			display: 'inline-flex',
-			gap: '2',
+			gap: '8',
 			minWidth: '0 !custom',
 		},
 		defaultVariants: { multiline: false },
@@ -136,7 +136,7 @@ namespace styles {
 	export const identity = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '1',
+		gap: '4',
 		minWidth: '0 !custom',
 	})
 

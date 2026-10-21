@@ -342,7 +342,7 @@ namespace styles {
 	export const root = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		typography: 'label.12.mono',
 	})
 
@@ -355,7 +355,7 @@ namespace styles {
 				true: {
 					borderColor: 'grayAlpha.200',
 					borderTopWidth: '1px',
-					paddingTop: '6',
+					paddingTop: '24',
 				},
 			},
 		},
@@ -365,7 +365,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		justifyContent: 'space-between',
-		marginBottom: '3',
+		marginBottom: '12',
 	})
 
 	export const sectionTitle = style({
@@ -378,14 +378,14 @@ namespace styles {
 	export const groupKey = style({
 		color: 'gray.900',
 		cursor: 'pointer',
-		paddingBlock: '1',
+		paddingBlock: '4',
 		textAlign: 'left',
 	})
 
 	export const entry = style({
 		display: 'flex',
-		gap: '4',
-		paddingBlock: '1',
+		gap: '16',
+		paddingBlock: '4',
 	})
 
 	export const copyable = style({
@@ -402,7 +402,7 @@ namespace styles {
 
 	export const indexLabel = style({
 		color: 'gray.900',
-		paddingBlock: '1',
+		paddingBlock: '4',
 	})
 
 	export const indexKey = style({

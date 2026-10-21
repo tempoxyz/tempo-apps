@@ -120,7 +120,7 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 				<PanelToolbar>
 					{/* The field root reports the filled state that shows Clear. */}
 					<Field.Root {...styles.filter()}>
-						<Input.Group size="small" variant="search">
+						<Input.Group size="small">
 							<Input.Prefix>
 								<Search />
 							</Input.Prefix>
@@ -914,7 +914,7 @@ namespace styles {
 	export const filter = style({
 		marginRight: 'auto !custom',
 		maxWidth: '100% !custom',
-		width: '240px !custom',
+		width: '240',
 		'@media (pointer: coarse)': {
 			selectors: { '& input': { fontSize: '16px !custom' } },
 		},
@@ -928,12 +928,12 @@ namespace styles {
 		borderColor: 'grayAlpha.200',
 		borderStyle: 'solid',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
-		minHeight: '12',
-		paddingBlock: '2',
-		paddingLeft: '4',
-		paddingRight: '2',
+		minHeight: '48',
+		paddingBlock: '8',
+		paddingLeft: '16',
+		paddingRight: '8',
 	})
 
 	export const headerLabel = style({
@@ -944,19 +944,19 @@ namespace styles {
 	export const headerActions = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 	})
 
 	export const frames = style({
 		alignItems: 'start',
-		borderBottomLeftRadius: 'xl',
-		borderBottomRightRadius: 'xl',
-		columnGap: '2',
+		borderBottomLeftRadius: '12',
+		borderBottomRightRadius: '12',
+		columnGap: '8',
 		display: 'grid',
 		gridTemplateColumns: 'auto auto 1fr',
 		overflowX: 'auto',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'label.12.mono',
 		// Focusable so it can be scrolled by keyboard; an inset ring is not
 		// clipped by its own overflow.
@@ -966,7 +966,7 @@ namespace styles {
 		},
 	})
 
-	export const nested = style({ marginTop: '1' })
+	export const nested = style({ marginTop: '4' })
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
@@ -975,11 +975,11 @@ namespace styles {
 	// Rows inherit the grid's mono face; only weight and colour change here.
 	export const opcode = style({
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'gray.900',
-		fontWeight: 'medium',
-		paddingBlock: '1px !custom',
-		paddingInline: '1',
+		fontWeight: '550 !custom',
+		paddingBlock: '1',
+		paddingInline: '4',
 		textAlign: 'center',
 		userSelect: 'none',
 		whiteSpace: 'nowrap',
@@ -1001,12 +1001,12 @@ namespace styles {
 
 	export const frame = style({
 		alignItems: 'flex-start',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		display: 'inline-flex',
 		marginInline: '-4px !custom',
 		minWidth: '0 !custom',
-		paddingLeft: '1',
-		paddingRight: '1',
+		paddingLeft: '4',
+		paddingRight: '4',
 		':focus-visible': {
 			outline: '2px solid currentColor !custom',
 			outlineOffset: '0px !custom',
@@ -1037,16 +1037,16 @@ namespace styles {
 		borderColor: 'grayAlpha.300',
 		borderLeftWidth: '1px',
 		borderStyle: 'solid',
-		paddingLeft: '2',
+		paddingLeft: '8',
 	})
 
 	export const depthBadge = style({
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'gray.900',
 		flexShrink: 0,
-		marginRight: '1',
-		marginTop: '1px !custom',
+		marginRight: '4',
+		marginTop: '1',
 		paddingInline: '2px !custom',
 		userSelect: 'none',
 	})
@@ -1054,9 +1054,9 @@ namespace styles {
 	export const toggle = style({
 		color: 'gray.900',
 		flexShrink: 0,
-		height: '4',
+		height: '16',
 		marginRight: '2px !custom',
-		width: '4',
+		width: '16',
 	})
 
 	export const toggleEnabled = style({
@@ -1066,9 +1066,9 @@ namespace styles {
 
 	export const leafIcon = style({
 		color: 'gray.700',
-		height: '3',
+		height: '12',
 		marginTop: '2px !custom',
-		width: '3',
+		width: '12',
 	})
 
 	export const label = style({ minWidth: '0 !custom' })
@@ -1077,10 +1077,10 @@ namespace styles {
 
 	export const errorText = style({
 		color: 'foreground',
-		marginLeft: '1',
+		marginLeft: '4',
 	})
 
-	export const moreFrames = style({ cursor: 'pointer', marginLeft: '2' })
+	export const moreFrames = style({ cursor: 'pointer', marginLeft: '8' })
 
 	export const output = style({
 		alignItems: 'flex-start',
@@ -1088,22 +1088,22 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const outputRoot = style({ marginLeft: '10' })
+	export const outputRoot = style({ marginLeft: '40' })
 
 	export const outputNested = style({
 		borderColor: 'grayAlpha.300',
 		borderLeftWidth: '1px',
 		borderStyle: 'solid',
-		paddingLeft: '6',
+		paddingLeft: '24',
 	})
 
 	export const returnIcon = style({
 		color: 'gray.700',
 		flexShrink: 0,
-		height: '3',
-		marginRight: '1',
-		marginTop: '1',
-		width: '3',
+		height: '12',
+		marginRight: '4',
+		marginTop: '4',
+		width: '12',
 	})
 
 	export const outputValue = style({

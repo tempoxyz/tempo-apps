@@ -269,11 +269,11 @@ namespace styles {
 	export const error = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
+		gap: '12',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingInline: '4',
-		paddingTop: '16',
+		paddingInline: '16',
+		paddingTop: '64',
 	})
 
 	export const errorTitle = style({
@@ -284,36 +284,36 @@ namespace styles {
 	export const page = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '6',
+		gap: '24',
 		marginInline: 'auto !custom',
 		maxWidth: '1200px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '8',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '32',
 		width: '100% !custom',
-		'@media (width >= 640px)': { paddingTop: '16' },
+		'@media (width >= 640px)': { paddingTop: '64' },
 	})
 
 	export const header = style({
 		alignItems: 'flex-start',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '4',
+		gap: '16',
 		justifyContent: 'space-between',
 	})
 
 	export const intro = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		minWidth: '0px !custom',
+		gap: '12',
+		minWidth: '0',
 	})
 
 	export const title = style({
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		gap: '3',
+		gap: '12',
 		typography: 'heading.32.subtle',
 	})
 
@@ -326,7 +326,7 @@ namespace styles {
 	export const filtered = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		typography: 'copy.14',
 	})
 
@@ -334,14 +334,14 @@ namespace styles {
 		alignItems: 'center',
 		color: 'gray.900',
 		display: 'inline-flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const form = style({
 		alignItems: 'flex-end',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '3',
+		gap: '12',
 	})
 
 	// Touch devices keep 16px text so iOS does not zoom on focus.
@@ -354,13 +354,13 @@ namespace styles {
 	})
 
 	// TDS Button leaves icon size to the icon.
-	export const buttonIcon = style({ height: '4', width: '4' })
+	export const buttonIcon = style({ height: '16', width: '16' })
 
 	export const filterError = style({
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 		typography: 'copy.14',
 		width: '100% !custom',
 	})
@@ -377,10 +377,10 @@ namespace styles {
 		borderStyle: 'dashed',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '4',
+		gap: '16',
 		justifyContent: 'space-between',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 	})
 
 	export const meta = style({
@@ -398,8 +398,8 @@ namespace styles {
 
 	export const empty = style({
 		color: 'gray.900',
-		paddingBlock: '10',
-		paddingInline: '4',
+		paddingBlock: '40',
+		paddingInline: '16',
 		textAlign: 'center',
 		typography: 'copy.14',
 	})
@@ -411,29 +411,29 @@ namespace styles {
 		borderTopWidth: '1px',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '4',
+		gap: '16',
 		justifyContent: 'space-between',
-		paddingBlock: '3',
-		paddingInline: '4',
+		paddingBlock: '12',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
 	export const pager = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const pageLabel = style({
 		color: 'gray.900',
 		fontVariantNumeric: 'tabular-nums',
-		paddingInline: '2',
+		paddingInline: '8',
 	})
 
 	export const limit = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const limitLabel = style({
@@ -442,12 +442,12 @@ namespace styles {
 	})
 
 	// The Select trigger fills its container.
-	export const limitSelect = style({ display: 'flex', width: '96px !custom' })
+	export const limitSelect = style({ display: 'flex', width: '96' })
 
 	export const capped = style({
 		color: 'gray.900',
-		paddingBottom: '4',
-		paddingInline: '4',
+		paddingBottom: '16',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
@@ -464,8 +464,8 @@ namespace styles {
 	export const clearFilter = style({
 		alignItems: 'center',
 		display: 'inline-flex',
-		gap: '2',
-		paddingBlock: '2',
+		gap: '8',
+		paddingBlock: '8',
 		typography: 'copy.14',
 	})
 }

@@ -359,8 +359,8 @@ namespace styles {
 	export const icon = style({
 		color: 'gray.900',
 		flexShrink: 0,
-		height: '3',
-		width: '3',
+		height: '12',
+		width: '12',
 	})
 
 	export const copyButton = style({
@@ -374,8 +374,8 @@ namespace styles {
 	export const copyHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
-		marginBottom: '2',
+		gap: '8',
+		marginBottom: '8',
 	})
 
 	export const hash = style({
@@ -393,13 +393,13 @@ namespace styles {
 			width: '100% !custom',
 		},
 		defaultVariants: { gap: 'compact' },
-		variants: { gap: { compact: { gap: '2' }, relaxed: { gap: '3' } } },
+		variants: { gap: { compact: { gap: '8' }, relaxed: { gap: '12' } } },
 	})
 
 	export const infoRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 		width: '100% !custom',
 	})
@@ -414,7 +414,7 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexShrink: 0,
-		gap: '2',
+		gap: '8',
 	})
 
 	export const parentLink = style({
@@ -422,7 +422,7 @@ namespace styles {
 		flex: 1,
 		justifyContent: 'flex-end',
 		maxWidth: '18ch !custom',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'label.12.mono',
 	})
 
@@ -431,8 +431,8 @@ namespace styles {
 	export const advanced = style({
 		marginBlock: '-12px !custom',
 		marginInline: '-20px !custom',
-		paddingBlock: '3',
-		paddingInline: '5',
+		paddingBlock: '12',
+		paddingInline: '20',
 		width: 'calc(100% + 40px) !custom',
 	})
 
@@ -448,8 +448,8 @@ namespace styles {
 	export const advancedChevron = variants({
 		base: {
 			color: 'gray.900',
-			height: '4',
-			width: '4',
+			height: '16',
+			width: '16',
 		},
 		defaultVariants: { open: false },
 		variants: { open: { true: { rotate: '180deg' }, false: {} } },
@@ -458,14 +458,14 @@ namespace styles {
 	export const advancedContent = style({
 		color: 'gray.900',
 		contain: 'inline-size',
-		marginTop: '4',
-		paddingBottom: '4',
+		marginTop: '16',
+		paddingBottom: '16',
 		width: '100% !custom',
-		selectors: { '& > :not(:last-child)': { marginBottom: '5' } },
+		selectors: { '& > :not(:last-child)': { marginBottom: '20' } },
 	})
 
 	export const gas = style({
-		selectors: { '& > :not(:last-child)': { marginBottom: '3' } },
+		selectors: { '& > :not(:last-child)': { marginBottom: '12' } },
 	})
 
 	export const spread = style({
@@ -493,7 +493,7 @@ namespace styles {
 	})
 
 	export const roots = style({
-		selectors: { '& > :not(:last-child)': { marginBottom: '2' } },
+		selectors: { '& > :not(:last-child)': { marginBottom: '8' } },
 	})
 
 	export const timeRow = style({
@@ -505,10 +505,10 @@ namespace styles {
 
 	export const timeLabel = style({
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'gray.900',
 		paddingBlock: '2px !custom',
-		paddingInline: '1',
+		paddingInline: '4',
 		typography: 'label.12',
 	})
 
@@ -522,7 +522,7 @@ namespace styles {
 		color: 'gray.700',
 		display: 'flex',
 		fontVariantNumeric: 'tabular-nums',
-		gap: '1px !custom',
+		gap: '1',
 		justifyContent: 'space-between',
 		typography: 'heading.24.subtle',
 		userSelect: 'none',
@@ -540,7 +540,7 @@ namespace styles {
 		alignItems: 'center',
 		color: 'foreground',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 	})
 
@@ -558,9 +558,9 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		flex: 1,
-		gap: '2',
+		gap: '8',
 		justifyContent: 'flex-end',
-		minWidth: '0px !custom',
+		minWidth: '0',
 		typography: 'label.12.mono',
 	})
 }

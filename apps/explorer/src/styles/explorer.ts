@@ -31,14 +31,14 @@ export const textAction = style({
 	backgroundColor: 'transparent !custom',
 	border: 'none !custom',
 	color: 'gray.900',
-	columnGap: '1',
+	columnGap: '4',
 	cursor: 'pointer',
 	display: 'inline-flex',
 	padding: '0',
 	typography: 'label.14.strong',
 	whiteSpace: 'nowrap',
 	selectors: {
-		'& > svg': { flexShrink: '0 !custom', height: '3', width: '3' },
+		'& > svg': { flexShrink: '0 !custom', height: '12', width: '12' },
 		'&:disabled': { cursor: 'default' },
 	},
 })
@@ -51,13 +51,13 @@ export const noScrollbar = style({
 export const srOnly = style({
 	borderWidth: '0px',
 	clipPath: 'inset(50%)',
-	height: '1px !custom',
+	height: '1',
 	margin: '-1px !custom',
 	overflow: 'hidden',
 	padding: '0',
 	position: 'absolute',
 	whiteSpace: 'nowrap',
-	width: '1px !custom',
+	width: '1',
 })
 
 /**
@@ -65,10 +65,10 @@ export const srOnly = style({
  * growing to 48, 64 and 80px at 768, 1024 and 1536px.
  */
 export const pageMargin = style({
-	paddingInline: '6',
-	'@media (min-width: 768px)': { paddingInline: '12' },
-	'@media (min-width: 1024px)': { paddingInline: '16' },
-	'@media (min-width: 1536px)': { paddingInline: '20' },
+	paddingInline: '24',
+	'@media (min-width: 768px)': { paddingInline: '48' },
+	'@media (min-width: 1024px)': { paddingInline: '64' },
+	'@media (min-width: 1536px)': { paddingInline: '80' },
 })
 
 export const transitionColors = style({
@@ -79,8 +79,8 @@ export const transitionColors = style({
 })
 
 /**
- * The TDS mono face (JetBrains Mono, see `#styles/globals`) at the surrounding
- * size, for hashes, addresses, and values.
+ * The TDS mono face (Geist Mono) at the surrounding size, for hashes,
+ * addresses, and values.
  */
 export const mono = style({
 	fontFamily: 'mono',
@@ -95,10 +95,10 @@ export const mono = style({
 export const textField = style({
 	backgroundColor: 'grayAlpha.100',
 	border: 'none',
-	borderRadius: 'xl',
+	borderRadius: '12',
 	color: 'foreground',
-	height: '12',
-	paddingInline: '5',
+	height: '48',
+	paddingInline: '20',
 	typography: 'copy.14',
 	width: '100% !custom',
 	'::placeholder': { color: 'gray.900' },

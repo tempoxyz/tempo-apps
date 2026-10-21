@@ -936,10 +936,10 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		gap: '4',
+		gap: '16',
 		minWidth: '0 !custom',
 		overflowY: 'auto',
-		padding: '4',
+		padding: '16',
 	})
 
 	// A flex column stretches its items; the button keeps its own width.
@@ -951,33 +951,33 @@ namespace styles {
 		borderStyle: 'solid',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		paddingBlock: '3',
-		paddingInline: '4',
+		gap: '8',
+		paddingBlock: '12',
+		paddingInline: '16',
 	})
 
 	export const contextRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 	})
 
 	export const load = style({
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		padding: '3',
+		gap: '8',
+		padding: '12',
 	})
 
 	export const loadRow = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	// Input.Group sizes to its content in a row; let it take the free width.
@@ -986,19 +986,19 @@ namespace styles {
 	export const steps = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const stepsCount = style({
 		color: 'gray.900',
-		marginLeft: '2',
+		marginLeft: '8',
 	})
 
 	export const stepList = style({
 		alignItems: 'center',
 		display: 'flex',
 		flexWrap: 'wrap',
-		gap: '2',
+		gap: '8',
 	})
 
 	// Marks the call for the remove button's reveal.
@@ -1011,10 +1011,10 @@ namespace styles {
 		color: 'gray.900',
 		display: 'flex',
 		flexShrink: 0,
-		height: '4',
+		height: '16',
 		justifyContent: 'center',
 		typography: 'label.12',
-		width: '4',
+		width: '16',
 	})
 
 	// Shown while the call is hovered or holds focus, so it is reachable by
@@ -1029,12 +1029,12 @@ namespace styles {
 		color: 'gray.900',
 		cursor: 'pointer',
 		display: 'none',
-		height: '4',
+		height: '16',
 		justifyContent: 'center',
 		position: 'absolute',
 		right: '-4px !custom',
 		top: '-4px !custom',
-		width: '4',
+		width: '16',
 		'@media (hover: hover)': {
 			':hover': { color: 'red.900' },
 			selectors: { [`${stepItem}:hover &`]: { display: 'flex' } },
@@ -1050,7 +1050,7 @@ namespace styles {
 	export const callFields = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '4',
+		gap: '16',
 	})
 
 	// Tag leaves its maximum width unset, so a long name truncates.
@@ -1060,24 +1060,24 @@ namespace styles {
 
 	export const decoded = style({
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '3',
-		padding: '3',
+		gap: '12',
+		padding: '12',
 	})
 
 	export const arg = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const argType = style({
 		color: 'gray.900',
-		marginLeft: '2',
+		marginLeft: '8',
 		typography: 'label.12.mono',
 	})
 
@@ -1087,8 +1087,8 @@ namespace styles {
 		borderStyle: 'solid',
 		borderTopWidth: '1px',
 		display: 'flex',
-		gap: '2',
-		paddingTop: '2',
+		gap: '8',
+		paddingTop: '8',
 		typography: 'copy.14',
 	})
 
@@ -1101,8 +1101,8 @@ namespace styles {
 
 	export const hexTextarea = style({
 		height: 'auto !custom',
-		minHeight: '80px !custom',
-		paddingBlock: '3',
+		minHeight: '80',
+		paddingBlock: '12',
 		resize: 'vertical',
 		typography: 'label.12.mono',
 		wordBreak: 'break-all',
@@ -1111,7 +1111,7 @@ namespace styles {
 	export const optional = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 	})
 
 	export const optionalToggle = style({
@@ -1120,7 +1120,7 @@ namespace styles {
 		cursor: 'pointer',
 		display: 'flex',
 		flex: 1,
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 		textAlign: 'left',
 		typography: 'copy.14',
@@ -1139,12 +1139,12 @@ namespace styles {
 	export const optionalOpen = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		padding: '3',
+		gap: '8',
+		padding: '12',
 	})
 }

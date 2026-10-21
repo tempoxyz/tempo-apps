@@ -593,18 +593,18 @@ function getEstimatedFee(transaction: BlockTransaction) {
 namespace styles {
 	export const page = style({
 		display: 'grid',
-		gap: '4',
+		gap: '16',
 		gridTemplateColumns: 'auto 1fr',
-		minWidth: '0px !custom',
-		paddingBottom: '16',
-		paddingInline: '4',
-		paddingTop: '16',
+		minWidth: '0',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
 		width: '100% !custom',
 		'@media (width < 800px)': {
 			display: 'flex',
 			flexDirection: 'column',
-			paddingBottom: '8',
-			paddingTop: '10',
+			paddingBottom: '32',
+			paddingTop: '40',
 		},
 		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
 	})
@@ -638,7 +638,7 @@ namespace styles {
 		color: 'foreground',
 		display: 'flex',
 		flex: 1,
-		gap: '2',
+		gap: '8',
 	})
 
 	export const send = style({

@@ -1,5 +1,5 @@
 /** Shared simulator controls use Tempo Design System type scales and semantic
- * colors. Pilat is the UI face; explicit code and hash values use JetBrains Mono.
+ * colors. Inter is the UI face; explicit code and hash values use Geist Mono.
  */
 
 import { Callout, Kbd, Progress, Skeleton, style } from '@tempoxyz/ds'
@@ -88,15 +88,11 @@ export function ErrorText(props: {
  */
 export function ButtonShortcut(props: {
 	children: React.ReactNode
-	meta?: boolean | undefined
+	/** Shows ⌘ on Apple platforms and Ctrl elsewhere. */
+	mod?: boolean | undefined
 }): React.JSX.Element {
 	return (
-		<Kbd
-			aria-hidden
-			meta={props.meta}
-			size="small"
-			{...styles.buttonShortcut()}
-		>
+		<Kbd aria-hidden mod={props.mod} size="small" {...styles.buttonShortcut()}>
 			{props.children}
 		</Kbd>
 	)
@@ -388,14 +384,14 @@ namespace styles {
 	export const field = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
+		gap: '8',
 		minWidth: '0 !custom',
 	})
 
 	export const fieldHeader = style({
 		alignItems: 'center',
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 	})
 
@@ -419,20 +415,20 @@ namespace styles {
 		alignItems: 'flex-start',
 		color: 'foreground',
 		display: 'flex',
-		gap: '1',
+		gap: '4',
 		typography: 'label.12',
 	})
 
 	export const errorIcon = style({
 		color: 'red.900',
 		flexShrink: 0,
-		height: '4',
-		width: '4',
+		height: '16',
+		width: '16',
 	})
 
 	export const gasMeterLabel = style({
 		display: 'flex',
-		gap: '2',
+		gap: '8',
 		justifyContent: 'space-between',
 	})
 
@@ -444,27 +440,27 @@ namespace styles {
 
 	export const gasRatioPercent = style({
 		color: 'gray.900',
-		marginLeft: '1',
+		marginLeft: '4',
 	})
 
 	export const skeleton = style({
 		display: 'flex',
 		flexDirection: 'column',
-		gap: '2',
-		padding: '4',
+		gap: '8',
+		padding: '16',
 	})
 
 	// TDS Skeleton owns the fill, radius, and sweep; an empty one needs a size.
-	export const skeletonRow = style({ height: '3' })
+	export const skeletonRow = style({ height: '12' })
 
 	export const panelEmpty = style({
 		color: 'gray.900',
-		paddingBlock: '5',
-		paddingInline: '4',
+		paddingBlock: '20',
+		paddingInline: '16',
 		typography: 'copy.14',
 	})
 
-	export const panelError = style({ padding: '4' })
+	export const panelError = style({ padding: '16' })
 
 	export const calloutTitle = style({
 		display: 'block',
@@ -476,17 +472,17 @@ namespace styles {
 		overflowWrap: 'anywhere',
 	})
 
-	export const failureMessage = style({ display: 'block', marginTop: '2' })
+	export const failureMessage = style({ display: 'block', marginTop: '8' })
 
 	// TDS Web has no inline code; this is the old InlineCode chip, wrapping.
 	export const inlineCode = style({
 		backgroundColor: 'grayAlpha.100',
-		borderRadius: 'sm',
+		borderRadius: '4',
 		color: 'foreground',
 		fontFeatureSettings: '"zero" 1 !custom',
 		overflowWrap: 'anywhere',
 		paddingBlock: '2px !custom',
-		paddingInline: '1',
+		paddingInline: '4',
 		typography: 'label.12.mono',
 	})
 }

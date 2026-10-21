@@ -50,8 +50,8 @@ namespace styles {
 		flex: 1,
 		height: '100% !custom',
 		justifyContent: 'center',
-		paddingBlock: '16',
-		paddingInline: '4',
+		paddingBlock: '64',
+		paddingInline: '16',
 		width: '100% !custom',
 	})
 
@@ -59,7 +59,7 @@ namespace styles {
 	export const card = style({
 		backgroundColor: 'background.surface',
 		borderColor: 'grayAlpha.200',
-		borderRadius: 'xl',
+		borderRadius: '12',
 		borderStyle: 'solid',
 		borderWidth: '1px',
 		maxWidth: '600px !custom',
@@ -76,7 +76,7 @@ namespace styles {
 	export const title = style({
 		color: 'foreground',
 		margin: '0',
-		marginBlockStart: '3',
+		marginBlockStart: '12',
 		typography: 'heading.24.subtle',
 	})
 
@@ -87,7 +87,7 @@ namespace styles {
 		borderTopWidth: '1px',
 		color: 'gray.900',
 		margin: '0',
-		padding: '4',
+		padding: '16',
 		textAlign: 'center',
 		typography: 'label.12.mono',
 		whiteSpace: 'pre-wrap',

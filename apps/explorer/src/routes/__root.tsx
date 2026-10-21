@@ -36,7 +36,8 @@ import {
 } from '#lib/profiling'
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
-import pilatRegular from '@tempoxyz/ds/fonts/Pilat-Regular.woff2?url'
+import geistMono from '@tempoxyz/ds/fonts/GeistMono-Variable.woff2?url'
+import inter from '@tempoxyz/ds/fonts/Inter-Variable.woff2?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
 	const pathname =
@@ -126,18 +127,17 @@ export const Route = createRootRouteWithContext<{
 		],
 		links: [
 			...getExplorerCanonicalLinks(),
-			// TDS body copy is Pilat Regular (weight 400); identifiers use JetBrains
-			// Mono, served from `public/fonts`.
+			// The TDS faces: Inter for copy, Geist Mono for hashes and addresses.
 			{
 				rel: 'preload',
-				href: pilatRegular,
+				href: inter,
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
 			},
 			{
 				rel: 'preload',
-				href: '/fonts/JetBrainsMono-Regular.woff2',
+				href: geistMono,
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
@@ -496,10 +496,10 @@ function useDevTools() {
 
 namespace styles {
 	export const progress = style({
-		left: '0px !custom',
+		left: '0',
 		position: 'fixed',
-		right: '0px !custom',
-		top: '0px !custom',
+		right: '0',
+		top: '0',
 		zIndex: 1,
 	})
 }
