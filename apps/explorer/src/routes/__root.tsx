@@ -198,10 +198,10 @@ export const Route = createRootRouteWithContext<{
 		})
 
 		// PostHog page views. Deferred so it never blocks the initial render.
-		// The key and host are compiled in at build time from VITE_POSTHOG_KEY and
+		// The key and host are compiled in at build time from VITE_EXPLORER_POSTHOG_KEY and
 		// VITE_POSTHOG_HOST. Without them the page loads nothing PostHog related.
 		const posthog = posthogBootScript({
-			key: import.meta.env.VITE_POSTHOG_KEY,
+			key: import.meta.env.VITE_EXPLORER_POSTHOG_KEY,
 			host: import.meta.env.VITE_POSTHOG_HOST,
 		})
 		if (posthog) scripts.push({ children: posthog, type: 'text/javascript' })
