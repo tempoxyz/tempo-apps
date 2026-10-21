@@ -42,7 +42,6 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { withLoaderTiming } from '#lib/profiling'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
@@ -235,28 +234,27 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 			: {}),
 	}),
-	loader: ({ params, context }) =>
-		withLoaderTiming('/_layout/receipt/$hash', async () => {
-			const hash = parseHashFromParams(params)
-			if (!hash)
-				throw notFound({
-					routeId: rootRouteId,
-					data: { type: 'hash', value: params.hash },
-				})
+	loader: async ({ params, context }) => {
+		const hash = parseHashFromParams(params)
+		if (!hash)
+			throw notFound({
+				routeId: rootRouteId,
+				data: { type: 'hash', value: params.hash },
+			})
 
-			try {
-				return (await context.queryClient.ensureQueryData(
-					receiptDetailQueryOptions({ hash }),
-					// biome-ignore lint/suspicious/noExplicitAny: TanStack loader typing mismatches viem log args shape.
-				)) as any
-			} catch (error) {
-				console.error(error)
-				throw notFound({
-					routeId: rootRouteId,
-					data: { type: 'hash', value: hash },
-				})
-			}
-		}),
+		try {
+			return (await context.queryClient.ensureQueryData(
+				receiptDetailQueryOptions({ hash }),
+				// biome-ignore lint/suspicious/noExplicitAny: TanStack loader typing mismatches viem log args shape.
+			)) as any
+		} catch (error) {
+			console.error(error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: { type: 'hash', value: hash },
+			})
+		}
+	},
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {

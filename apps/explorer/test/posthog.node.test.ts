@@ -1,7 +1,10 @@
 import { runInNewContext } from 'node:vm'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { isPostHogHost, posthogBootScript } from '#lib/posthog'
 import wrangler from '#wrangler.json' with { type: 'json' }
+
+const key = 'phc_test'
+const host = 'https://us.i.posthog.com'
 
 const approvedHosts = [
 	...Object.values(wrangler.env).flatMap((env) =>
@@ -33,7 +36,7 @@ function bootstrap(hostname: string, idle = true) {
 	const idleCallbacks: Array<() => void> = []
 	const window = {
 		location: { hostname },
-		posthog: undefined,
+		posthog: undefined as undefined | { _i: Array<[string, unknown]> },
 		requestIdleCallback: idle
 			? (callback: () => void) => idleCallbacks.push(callback)
 			: undefined,
@@ -55,15 +58,49 @@ function bootstrap(hostname: string, idle = true) {
 	}
 	// In a browser, window.posthog is also the global posthog binding.
 	Object.defineProperty(context, 'posthog', { get: () => window.posthog })
-	runInNewContext(posthogBootScript, context)
+	const script = posthogBootScript({ key, host })
+	if (!script) throw new Error('expected a boot script')
+	runInNewContext(script, context)
 	for (const callback of idleCallbacks) callback()
 	return { insertedScripts, idleCallbacks, window }
 }
 
-afterEach(() => {
-	vi.useRealTimers()
-	vi.unstubAllGlobals()
-	vi.resetModules()
+describe('PostHog bootstrap', () => {
+	it('emits nothing without a key and host', () => {
+		expect(posthogBootScript({ key: undefined, host })).toBeUndefined()
+		expect(posthogBootScript({ key, host: undefined })).toBeUndefined()
+		expect(posthogBootScript({ key: '', host: '' })).toBeUndefined()
+	})
+
+	it('initializes with page views only', () => {
+		const { window } = bootstrap('explore.tempo.xyz')
+		const [initKey, config] = window.posthog?._i[0] ?? []
+		expect(initKey).toBe(key)
+		expect(config).toEqual({
+			api_host: host,
+			defaults: '2025-11-30',
+			capture_pageview: 'history_change',
+			capture_pageleave: false,
+			autocapture: false,
+			capture_dead_clicks: false,
+			capture_exceptions: false,
+			capture_heatmaps: false,
+			capture_performance: false,
+			rageclick: false,
+			disable_session_recording: true,
+			disable_surveys: true,
+			disable_web_experiments: true,
+			advanced_disable_flags: true,
+			disable_external_dependency_loading: true,
+			person_profiles: 'identified_only',
+		})
+	})
+
+	it('initializes with the timer fallback when requestIdleCallback is unavailable', () => {
+		expect(bootstrap('explore.tempo.xyz', false).insertedScripts).toHaveLength(
+			1,
+		)
+	})
 })
 
 describe('PostHog bootstrap host policy', () => {
@@ -92,73 +129,5 @@ describe('PostHog bootstrap host policy', () => {
 		expect(insertedScripts).toEqual([])
 		expect(idleCallbacks).toEqual([])
 		expect(window.posthog).toBeUndefined()
-	})
-
-	it('initializes with the timer fallback when requestIdleCallback is unavailable', () => {
-		expect(bootstrap('explore.tempo.xyz', false).insertedScripts).toHaveLength(
-			1,
-		)
-	})
-})
-
-describe('Profiling host policy', () => {
-	it.each(
-		approvedHosts,
-	)('captures profiling events on approved subdomain %s', async (hostname) => {
-		const capture = vi.fn()
-		vi.stubGlobal('window', { location: { hostname }, posthog: { capture } })
-		const { captureEvent } = await import('#lib/profiling')
-		captureEvent('explorer.availability.app_boot')
-		expect(capture).toHaveBeenCalledExactlyOnceWith(
-			'explorer.availability.app_boot',
-			{ timestamp: expect.any(Number) },
-		)
-	})
-
-	it.each(
-		rejectedHosts,
-	)('does not capture or buffer profiling events on %s', async (hostname) => {
-		vi.useFakeTimers()
-		const capture = vi.fn()
-		const window = { location: { hostname }, posthog: { capture } }
-		vi.stubGlobal('window', window)
-		const { captureEvent } = await import('#lib/profiling')
-		captureEvent('explorer.availability.app_boot')
-		expect(capture).not.toHaveBeenCalled()
-		vi.stubGlobal('window', { location: { hostname } })
-		captureEvent('explorer.profiling.ttfb')
-		expect(vi.getTimerCount()).toBe(0)
-	})
-
-	it('buffers on an approved host and flushes once PostHog is available', async () => {
-		vi.useFakeTimers()
-		vi.setSystemTime(1000)
-		const window: {
-			location: { hostname: string }
-			posthog?: { capture: ReturnType<typeof vi.fn> }
-		} = {
-			location: { hostname: 'explore.tempo.xyz' },
-		}
-		vi.stubGlobal('window', window)
-		const { captureEvent } = await import('#lib/profiling')
-		captureEvent('explorer.availability.app_boot', { status: 'success' })
-		const capture = vi.fn()
-		window.posthog = { capture }
-		vi.advanceTimersByTime(250)
-		expect(capture).toHaveBeenCalledExactlyOnceWith(
-			'explorer.availability.app_boot',
-			{
-				status: 'success',
-				timestamp: 1000,
-			},
-		)
-		expect(vi.getTimerCount()).toBe(0)
-	})
-
-	it('does not capture or start a timer during SSR', async () => {
-		vi.useFakeTimers()
-		const { captureEvent } = await import('#lib/profiling')
-		captureEvent('explorer.availability.app_boot')
-		expect(vi.getTimerCount()).toBe(0)
 	})
 })

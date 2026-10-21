@@ -121,7 +121,6 @@ import {
 	buildTokenDescription,
 	buildTokenOgImageUrl,
 } from '#lib/og'
-import { withLoaderTiming } from '#lib/profiling'
 import { type HistoryResponse, historyQueryOptions } from '#lib/queries/account'
 import { validatorFeesQueryOptions } from '#lib/queries/validator-fees'
 import {
@@ -273,98 +272,96 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		dir,
 		period,
 	}),
-	loader: ({ deps: { page, limit, live, a }, params }) =>
-		withLoaderTiming('/_layout/address/$address', async () => {
-			const { address } = params
-			// Only throw notFound for truly invalid addresses
-			if (!Address.validate(address))
-				throw notFound({
-					routeId: rootRouteId,
-					data: { error: 'Invalid address format' },
-				})
+	loader: async ({ deps: { page, limit, live, a }, params }) => {
+		const { address } = params
+		// Only throw notFound for truly invalid addresses
+		if (!Address.validate(address))
+			throw notFound({
+				routeId: rootRouteId,
+				data: { error: 'Invalid address format' },
+			})
 
-			const offset = (page - 1) * limit
-			const account =
-				a && Address.validate(a) ? (a as Address.Address) : undefined
+		const offset = (page - 1) * limit
+		const account =
+			a && Address.validate(a) ? (a as Address.Address) : undefined
 
-			const knownContractInfo = getContractInfo(address)
-			const isKnownTokenAddress =
-				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
+		const knownContractInfo = getContractInfo(address)
+		const isKnownTokenAddress =
+			Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
 
-			// Add timeout to prevent SSR from hanging on slow queries
-			const QUERY_TIMEOUT_MS = 3_000
-			const timeout = <T,>(
-				promise: Promise<T>,
-				ms: number,
-			): Promise<T | undefined> =>
-				Promise.race([
-					promise,
-					new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
-				])
-
-			const config = getWagmiConfig()
-
-			// TIP-20 addresses have a reserved prefix, and legacy tokens are listed in
-			// the contract registry. Avoid probing arbitrary accounts for token methods:
-			// those calls run until the full timeout and block the initial Worker HTML.
-			const tokenMetadataPromise = isKnownTokenAddress
-				? timeout(
-						Actions.token
-							.getMetadata(config as Config, { token: address })
-							.catch(() => null),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(null)
-			const tokenLogoURIPromise = isKnownTokenAddress
-				? timeout(
-						Tip20.fetchLogoURI(config as Config, address as Address.Address),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
-
-			const [tokenMetadata, tokenLogoURI] = await Promise.all([
-				tokenMetadataPromise,
-				tokenLogoURIPromise,
+		// Add timeout to prevent SSR from hanging on slow queries
+		const QUERY_TIMEOUT_MS = 3_000
+		const timeout = <T,>(
+			promise: Promise<T>,
+			ms: number,
+		): Promise<T | undefined> =>
+			Promise.race([
+				promise,
+				new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
 			])
 
-			// Unknown account types are enriched after hydration by address metadata.
-			// A bytecode RPC here would put that enrichment back on the critical path.
-			const accountType = (
-				knownContractInfo ? 'contract' : 'empty'
-			) as AccountType
+		const config = getWagmiConfig()
 
-			// check if it's a known contract from our registry
-			const contractInfo = knownContractInfo
-			const isKnownToken = isKnownTokenAddress
-			const isToken =
-				isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
-			const contractSource: ContractSource | undefined = undefined
-			// History is fetched in the browser. A Worker self-fetch here reaches the
-			// timeout and delays the entire HTML response.
-			const transactionsData: HistoryResponse | undefined = undefined
-			const balancesData: BalancesResponse | undefined = undefined
-			const ogMeta:
-				| Awaited<ReturnType<typeof fetchAddressMetadata>>
-				| undefined = undefined
+		// TIP-20 addresses have a reserved prefix, and legacy tokens are listed in
+		// the contract registry. Avoid probing arbitrary accounts for token methods:
+		// those calls run until the full timeout and block the initial Worker HTML.
+		const tokenMetadataPromise = isKnownTokenAddress
+			? timeout(
+					Actions.token
+						.getMetadata(config as Config, { token: address })
+						.catch(() => null),
+					QUERY_TIMEOUT_MS,
+				)
+			: Promise.resolve(null)
+		const tokenLogoURIPromise = isKnownTokenAddress
+			? timeout(
+					Tip20.fetchLogoURI(config as Config, address as Address.Address),
+					QUERY_TIMEOUT_MS,
+				)
+			: Promise.resolve(undefined)
 
-			return {
-				live,
-				address,
-				page,
-				limit,
-				offset,
-				account,
-				accountType,
-				isToken,
-				tokenMetadata,
-				tokenLogoURI,
-				contractInfo,
-				contractSource,
-				transactionsData,
-				balancesData,
-				ogMeta,
-			}
-		}),
+		const [tokenMetadata, tokenLogoURI] = await Promise.all([
+			tokenMetadataPromise,
+			tokenLogoURIPromise,
+		])
+
+		// Unknown account types are enriched after hydration by address metadata.
+		// A bytecode RPC here would put that enrichment back on the critical path.
+		const accountType = (
+			knownContractInfo ? 'contract' : 'empty'
+		) as AccountType
+
+		// check if it's a known contract from our registry
+		const contractInfo = knownContractInfo
+		const isKnownToken = isKnownTokenAddress
+		const isToken =
+			isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
+		const contractSource: ContractSource | undefined = undefined
+		// History is fetched in the browser. A Worker self-fetch here reaches the
+		// timeout and delays the entire HTML response.
+		const transactionsData: HistoryResponse | undefined = undefined
+		const balancesData: BalancesResponse | undefined = undefined
+		const ogMeta: Awaited<ReturnType<typeof fetchAddressMetadata>> | undefined =
+			undefined
+
+		return {
+			live,
+			address,
+			page,
+			limit,
+			offset,
+			account,
+			accountType,
+			isToken,
+			tokenMetadata,
+			tokenLogoURI,
+			contractInfo,
+			contractSource,
+			transactionsData,
+			balancesData,
+			ogMeta,
+		}
+	},
 	head: ({ params, loaderData }) => {
 		// Never retry timed-out enrichment while generating metadata. The head
 		// must be available with the initial response; richer data can load in

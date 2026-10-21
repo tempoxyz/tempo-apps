@@ -5,7 +5,6 @@ import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
-	useMatches,
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
@@ -26,14 +25,6 @@ import { OG_BASE_URL } from '#lib/og'
 import { posthogBootScript } from '#lib/posthog'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
-import {
-	type LoaderTiming,
-	captureEvent,
-	getNavigationId,
-	nextNavigationId,
-	normalizePathPattern,
-	ProfileEvents,
-} from '#lib/profiling'
 import { initDatadogRum } from '#lib/telemetry/datadog'
 import {
 	getTempoChain,
@@ -209,13 +200,14 @@ export const Route = createRootRouteWithContext<{
 			type: 'text/javascript',
 		})
 
-		if (import.meta.env.PROD) {
-			scripts.push({
-				// PostHog analytics - deferred to avoid blocking initial render
-				children: posthogBootScript,
-				type: 'text/javascript',
-			})
-		}
+		// PostHog page views. Deferred so it never blocks the initial render.
+		// The key and host are compiled in at build time from VITE_EXPLORER_POSTHOG_KEY and
+		// VITE_POSTHOG_HOST. Without them the page loads nothing PostHog related.
+		const posthog = posthogBootScript({
+			key: import.meta.env.VITE_EXPLORER_POSTHOG_KEY,
+			host: import.meta.env.VITE_POSTHOG_HOST,
+		})
+		if (posthog) scripts.push({ children: posthog, type: 'text/javascript' })
 
 		return scripts
 	},
@@ -234,199 +226,14 @@ export const Route = createRootRouteWithContext<{
 	shellComponent: RootDocument,
 })
 
-function useTTFBTiming() {
-	React.useEffect(() => {
-		const navigation = performance.getEntriesByType('navigation')[0] as
-			| PerformanceNavigationTiming
-			| undefined
-		if (!navigation) return
-
-		captureEvent(ProfileEvents.TTFB, {
-			ttfb_ms: Math.round(navigation.responseStart - navigation.requestStart),
-			path: window.location.pathname,
-			route_pattern: normalizePathPattern(window.location.pathname),
-		})
-	}, [])
-}
-
-function usePageLoadTiming() {
-	React.useEffect(() => {
-		function capture() {
-			const navigation = performance.getEntriesByType('navigation')[0] as
-				| PerformanceNavigationTiming
-				| undefined
-			if (!navigation) return
-
-			captureEvent(ProfileEvents.PAGE_LOAD, {
-				duration_ms: Math.round(navigation.domInteractive),
-				load_event_ms: Math.round(navigation.loadEventEnd || 0),
-				ttfb_ms: Math.round(navigation.responseStart - navigation.requestStart),
-				path: window.location.pathname,
-				route_pattern: normalizePathPattern(window.location.pathname),
-				navigation_type: navigation.type,
-			})
-		}
-
-		if (document.readyState === 'complete') {
-			capture()
-		} else {
-			window.addEventListener('load', capture, { once: true })
-			return () => window.removeEventListener('load', capture)
-		}
-	}, [])
-}
-
-function useErrorTracking() {
-	React.useEffect(() => {
-		const reported = new Set<string>()
-
-		function dedupeKey(message: string, stack?: string): string {
-			return `${message}::${stack?.slice(0, 200) ?? ''}`
-		}
-
-		function handleError(event: ErrorEvent) {
-			const key = dedupeKey(event.message, event.error?.stack)
-			if (reported.size > 50 || reported.has(key)) return
-			reported.add(key)
-
-			captureEvent(ProfileEvents.ERROR, {
-				error_type: 'window_error',
-				message: event.message,
-				stack: event.error?.stack?.slice(0, 1000),
-				filename: event.filename,
-				lineno: event.lineno,
-				colno: event.colno,
-				path: window.location.pathname,
-				route_pattern: normalizePathPattern(window.location.pathname),
-				navigation_id: getNavigationId(),
-			})
-		}
-
-		function handleRejection(event: PromiseRejectionEvent) {
-			const message =
-				event.reason instanceof Error
-					? event.reason.message
-					: String(event.reason)
-			const stack =
-				event.reason instanceof Error ? event.reason.stack : undefined
-			const key = dedupeKey(message, stack)
-			if (reported.size > 50 || reported.has(key)) return
-			reported.add(key)
-
-			captureEvent(ProfileEvents.ERROR, {
-				error_type: 'unhandled_rejection',
-				message,
-				stack: stack?.slice(0, 1000),
-				path: window.location.pathname,
-				route_pattern: normalizePathPattern(window.location.pathname),
-				navigation_id: getNavigationId(),
-			})
-		}
-
-		window.addEventListener('error', handleError)
-		window.addEventListener('unhandledrejection', handleRejection)
-		return () => {
-			window.removeEventListener('error', handleError)
-			window.removeEventListener('unhandledrejection', handleRejection)
-		}
-	}, [])
-}
-
-function useAppBoot() {
-	React.useEffect(() => {
-		captureEvent(ProfileEvents.APP_BOOT, { status: 'success' })
-	}, [])
-}
-
 function useDatadogRum() {
 	React.useEffect(() => {
 		void initDatadogRum().catch(() => {})
 	}, [])
 }
 
-function useLoaderTiming() {
-	const matches = useMatches()
-	const reportedRef = React.useRef<Set<string>>(new Set())
-
-	React.useEffect(() => {
-		for (const match of matches) {
-			const loaderData = match.loaderData as
-				| { __loaderTiming?: LoaderTiming }
-				| undefined
-			const timing = loaderData?.__loaderTiming
-			if (!timing) continue
-
-			if (reportedRef.current.has(timing.timing_id)) continue
-			reportedRef.current.add(timing.timing_id)
-
-			captureEvent(ProfileEvents.LOADER_DURATION, {
-				duration_ms: timing.duration_ms,
-				route_id: timing.route_id,
-				status: timing.status,
-				error_message: timing.error_message,
-				navigation_id: getNavigationId(),
-				path: window.location.pathname,
-				route_pattern: normalizePathPattern(window.location.pathname),
-			})
-		}
-	}, [matches])
-}
-
-function useFirstDrawTiming() {
-	const navigationStartRef = React.useRef<number | null>(null)
-	const previousPathRef = React.useRef<string | null>(null)
-	const navIdRef = React.useRef<number>(0)
-
-	const routerState = useRouterState({
-		select: (state) => ({
-			status: state.status,
-			pathname: state.location.pathname,
-		}),
-	})
-
-	React.useEffect(() => {
-		// Navigation started
-		if (routerState.status === 'pending' && !navigationStartRef.current) {
-			navigationStartRef.current = performance.now()
-			previousPathRef.current = routerState.pathname
-			navIdRef.current = nextNavigationId()
-		}
-
-		// Navigation completed
-		if (routerState.status === 'idle' && navigationStartRef.current) {
-			const start = navigationStartRef.current
-			const fromPath = previousPathRef.current
-			const toPath = routerState.pathname
-			const navId = navIdRef.current
-
-			navigationStartRef.current = null
-
-			// Double rAF ensures the browser has actually painted
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					const duration = performance.now() - start
-
-					captureEvent(ProfileEvents.PAGE_FIRST_DRAW, {
-						duration_ms: Math.round(duration),
-						from_path: fromPath,
-						to_path: toPath,
-						navigation_id: navId,
-						route_pattern: normalizePathPattern(toPath),
-					})
-				})
-			})
-		}
-	}, [routerState.status, routerState.pathname])
-}
-
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
-	useTTFBTiming()
-	usePageLoadTiming()
-	useLoaderTiming()
-	useFirstDrawTiming()
-	useErrorTracking()
-	useAppBoot()
 	useDatadogRum()
 
 	const { queryClient } = Route.useRouteContext()

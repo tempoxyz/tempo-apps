@@ -15,6 +15,11 @@ on:
         required: true
       CLOUDFLARE_ACCOUNT_ID:
         required: true
+      # Compiled into the explorer client bundle. Unset means no PostHog.
+      VITE_EXPLORER_POSTHOG_KEY:
+        required: false
+      VITE_POSTHOG_HOST:
+        required: false
 
 concurrency:
   group: deploy-${{ inputs.app }}-${{ github.ref }}
@@ -82,6 +87,8 @@ jobs:
           NODE_ENV: production
           CLOUDFLARE_ENV: ${{ matrix.env || '' }}
           APP_NAME: ${{ inputs.app }}
+          VITE_EXPLORER_POSTHOG_KEY: ${{ secrets.VITE_EXPLORER_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
         run: |
           if [[ "$APP_NAME" == "explorer" ]]; then
             bash scripts/build.sh

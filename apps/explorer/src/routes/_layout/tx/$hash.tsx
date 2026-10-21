@@ -80,7 +80,6 @@ import {
 	type PrestateDiff,
 	traceQueryOptions,
 } from '#lib/queries/trace'
-import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { isTip20Address } from '#lib/domain/tip20'
@@ -130,29 +129,28 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loader: ({ params, context }) =>
-		withLoaderTiming('/_layout/tx/$hash', async () => {
-			const { hash } = params
+	loader: async ({ params, context }) => {
+		const { hash } = params
 
-			try {
-				const [txData, activities] = await Promise.all([
-					context.queryClient.ensureQueryData(txQueryOptions({ hash })),
-					fetchTransactionActivities({ data: { hash } }),
-				])
+		try {
+			const [txData, activities] = await Promise.all([
+				context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+				fetchTransactionActivities({ data: { hash } }),
+			])
 
-				const activityEvents = activitiesToKnownEvents(activities, {
-					portal: txData.receipt.to,
-					logs: txData.receipt.logs,
-				})
-				return { ...txData, activityEvents }
-			} catch (error) {
-				console.error(error)
-				throw notFound({
-					routeId: rootRouteId,
-					data: { type: 'hash', value: hash },
-				})
-			}
-		}),
+			const activityEvents = activitiesToKnownEvents(activities, {
+				portal: txData.receipt.to,
+				logs: txData.receipt.logs,
+			})
+			return { ...txData, activityEvents }
+		} catch (error) {
+			console.error(error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: { type: 'hash', value: hash },
+			})
+		}
+	},
 	params: z.object({
 		hash: zHash(),
 	}),

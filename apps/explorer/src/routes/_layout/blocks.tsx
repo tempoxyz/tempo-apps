@@ -19,7 +19,6 @@ import {
 } from '#comps/TimeFormat'
 import { syncBlockNumberAtLeast } from '#lib/block-number'
 import { OG_BASE_URL } from '#lib/og'
-import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import { link, rowShimmer } from '#styles/explorer'
 
@@ -53,9 +52,7 @@ export const Route = createFileRoute('/_layout/blocks')({
 		live: live ?? from == null,
 	}),
 	loader: ({ deps, context }) =>
-		withLoaderTiming('/_layout/blocks', async () =>
-			context.queryClient.ensureQueryData(blocksQueryOptions(deps.from)),
-		),
+		context.queryClient.ensureQueryData(blocksQueryOptions(deps.from)),
 })
 
 const BLOCK_POLL_INTERVAL_MS = 2_000

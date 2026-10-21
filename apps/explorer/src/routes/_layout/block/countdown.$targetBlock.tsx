@@ -9,7 +9,6 @@ import * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { useAnimatedBlockNumber } from '#lib/block-number'
-import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
 import { link, linkHover } from '#styles/explorer'
 import { style, Surface } from '@tempoxyz/ds'
@@ -48,10 +47,7 @@ export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 			})
 		}
 
-		const data = await withLoaderTiming(
-			'/_layout/block/countdown/$targetBlock',
-			() => context.queryClient.ensureQueryData(blocksQueryOptions()),
-		)
+		const data = await context.queryClient.ensureQueryData(blocksQueryOptions())
 
 		const targetBlockNumber = BigInt(parsedNumber)
 		if (data.latestBlockNumber >= targetBlockNumber) {

@@ -31,7 +31,6 @@ import {
 } from '#lib/domain/known-event-totals'
 import { PriceFormatter } from '#lib/formatting.ts'
 import { OG_BASE_URL } from '#lib/og'
-import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
 import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
@@ -72,64 +71,63 @@ export const Route = createFileRoute('/_layout/block/$id')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loader: ({ params, context }) =>
-		withLoaderTiming('/_layout/block/$id', async () => {
-			const { id } = params
+	loader: async ({ params, context }) => {
+		const { id } = params
 
-			if (id === 'latest') {
-				const blockNumber = await fetchLatestBlock()
-				throw redirect({
-					to: '/block/$id',
-					params: { id: String(blockNumber) },
-				})
+		if (id === 'latest') {
+			const blockNumber = await fetchLatestBlock()
+			throw redirect({
+				to: '/block/$id',
+				params: { id: String(blockNumber) },
+			})
+		}
+
+		try {
+			let blockRef: BlockIdentifier
+			if (isHex(id)) {
+				Hex.assert(id)
+				blockRef = { kind: 'hash', blockHash: id }
+			} else {
+				const parsedNumber = Number(id)
+				if (!Number.isSafeInteger(parsedNumber)) throw notFound()
+				blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
 			}
 
+			const result = await context.queryClient.ensureQueryData(
+				blockDetailQueryOptions(blockRef),
+			)
+
+			let prevBlockTxCounts: number[] | undefined
 			try {
-				let blockRef: BlockIdentifier
-				if (isHex(id)) {
-					Hex.assert(id)
-					blockRef = { kind: 'hash', blockHash: id }
-				} else {
-					const parsedNumber = Number(id)
-					if (!Number.isSafeInteger(parsedNumber)) throw notFound()
-					blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
+				if (result.block.number != null) {
+					const bn = result.block.number
+					const config = getWagmiConfig()
+					const prevBlocks = await Promise.all(
+						Array.from({ length: 7 }, (_, i) =>
+							getBlock(config, {
+								blockNumber: bn - BigInt(i + 1),
+							})
+								.then((b) => b.transactions.length)
+								.catch(() => 0),
+						),
+					)
+					prevBlockTxCounts = prevBlocks.reverse()
 				}
-
-				const result = await context.queryClient.ensureQueryData(
-					blockDetailQueryOptions(blockRef),
-				)
-
-				let prevBlockTxCounts: number[] | undefined
-				try {
-					if (result.block.number != null) {
-						const bn = result.block.number
-						const config = getWagmiConfig()
-						const prevBlocks = await Promise.all(
-							Array.from({ length: 7 }, (_, i) =>
-								getBlock(config, {
-									blockNumber: bn - BigInt(i + 1),
-								})
-									.then((b) => b.transactions.length)
-									.catch(() => 0),
-							),
-						)
-						prevBlockTxCounts = prevBlocks.reverse()
-					}
-				} catch {
-					// Ignore errors fetching prev blocks
-				}
-
-				return { ...result, prevBlockTxCounts }
-			} catch (error) {
-				console.error(error)
-				throw notFound({
-					routeId: rootRouteId,
-					data: {
-						error: error instanceof Error ? error.message : 'Invalid block ID',
-					},
-				})
+			} catch {
+				// Ignore errors fetching prev blocks
 			}
-		}),
+
+			return { ...result, prevBlockTxCounts }
+		} catch (error) {
+			console.error(error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: {
+					error: error instanceof Error ? error.message : 'Invalid block ID',
+				},
+			})
+		}
+	},
 	head: ({ params, loaderData }) => {
 		const blockNumber = loaderData?.block?.number
 		const title = blockNumber

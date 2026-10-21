@@ -24,7 +24,6 @@ import type {
 	Tip403PolicyEvent,
 } from '#lib/server/tip403'
 import { fetchTip403Policy } from '#lib/server/tip403'
-import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
 import { link, linkHover, srOnly } from '#styles/explorer'
 import { cx } from 'zyzz'
@@ -57,16 +56,15 @@ export const Route = createFileRoute('/_layout/policy/$id')({
 	}),
 	search: { middlewares: [stripSearchParams(defaultSearchValues)] },
 	loaderDeps: ({ search: { page, limit, q } }) => ({ page, limit, q }),
-	loader: ({ params, deps }) =>
-		withLoaderTiming('/_layout/policy/$id', async () => {
-			const policyId = parseTip403PolicyId(params.id)
-			if (!policyId) throw notFound()
-			const policy = await fetchTip403Policy({
-				data: { policyId, page: deps.page, limit: deps.limit, query: deps.q },
-			})
-			if (!policy) throw notFound()
-			return policy
-		}),
+	loader: async ({ params, deps }) => {
+		const policyId = parseTip403PolicyId(params.id)
+		if (!policyId) throw notFound()
+		const policy = await fetchTip403Policy({
+			data: { policyId, page: deps.page, limit: deps.limit, query: deps.q },
+		})
+		if (!policy) throw notFound()
+		return policy
+	},
 	head: ({ params, loaderData }) => {
 		const policyId = loaderData?.policyId ?? params.id
 		const title = `TIP-403 Policy #${policyId} ⋅ Tempo Explorer`
