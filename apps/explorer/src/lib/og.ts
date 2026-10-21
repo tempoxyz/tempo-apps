@@ -238,7 +238,7 @@ export function buildTxDescription(
 	txData: { timestamp: number; from: string; events: KnownEvent[] } | null,
 ): string {
 	if (!txData) {
-		return `View transaction details on Tempo Explorer.`
+		return 'View transaction details on Tempo Explorer.'
 	}
 
 	const date = formatDate(txData.timestamp)
@@ -273,7 +273,7 @@ export function buildTokenDescription(
 	tokenData: { name: string; symbol?: string; supply?: string } | null,
 ): string {
 	if (!tokenData || tokenData.name === '—') {
-		return `View token details and activity on Tempo Explorer.`
+		return 'View token details and activity on Tempo Explorer.'
 	}
 
 	const name = truncateOgText(tokenData.name, 30)
@@ -302,7 +302,7 @@ export function buildAddressDescription(
 	_address: string,
 ): string {
 	if (!addressData) {
-		return `View address activity & holdings on Tempo Explorer.`
+		return 'View address activity & holdings on Tempo Explorer.'
 	}
 
 	const parts: string[] = []
@@ -320,7 +320,7 @@ export function buildAddressDescription(
 		)
 	}
 
-	return `View address activity & holdings on Tempo Explorer.`
+	return 'View address activity & holdings on Tempo Explorer.'
 }
 
 export function buildTokenOgImageUrl(params: {
