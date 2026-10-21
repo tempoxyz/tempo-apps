@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Callout, Empty, Rows, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { Button, Callout, Empty, Rows, style, Tag, Tooltip } from '@tempoxyz/ds'
 import { Play } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
@@ -202,40 +202,75 @@ function WriteContractFunction(props: {
 		/>
 	)
 
+	// Every write shows its outcome, with or without arguments.
+	const writeResult = (
+		<>
+			{writeContract.error && (
+				<Callout intent="negative" size="small">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong>Transaction failed</strong>
+						<span {...styles.calloutDescription()}>
+							{getWriteErrorMessage(writeContract.error)}
+						</span>
+					</Callout.Content>
+				</Callout>
+			)}
+			{writeContract.isSuccess && writeContract.data && (
+				<Callout intent="positive" size="small">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong>Transaction sent</strong>
+						<TransactionCell hash={writeContract.data} />
+					</Callout.Content>
+				</Callout>
+			)}
+		</>
+	)
+
 	if (!hasInputs)
 		return (
-			<FunctionRow
-				id={fnId}
-				fn={fn}
-				actions={
-					<>
-						<Tooltip.Root>
-							<Tooltip.Trigger
-								render={
-									<Button.Link
-										aria-label="Simulate this call without signing"
-										render={simulateLink}
-										shape="icon"
-										size="small"
-										variant="text"
-									/>
-								}
-							>
-								<FlaskIcon {...styles.icon()} />
-							</Tooltip.Trigger>
-							<Tooltip.Popup>Simulate this call without signing</Tooltip.Popup>
-						</Tooltip.Root>
-						{connected && (
-							<IconAction
-								icon={Play}
-								label="Execute"
-								loading={writeContract.isPending}
-								onClick={execute}
-							/>
-						)}
-					</>
-				}
-			/>
+			<>
+				<FunctionRow
+					id={fnId}
+					fn={fn}
+					actions={
+						<>
+							<Tooltip.Root>
+								<Tooltip.Trigger
+									render={
+										<Button.Link
+											aria-label="Simulate this call without signing"
+											render={simulateLink}
+											shape="icon"
+											size="small"
+											variant="text"
+										/>
+									}
+								>
+									<FlaskIcon {...styles.icon()} />
+								</Tooltip.Trigger>
+								<Tooltip.Popup>
+									Simulate this call without signing
+								</Tooltip.Popup>
+							</Tooltip.Root>
+							{connected && (
+								<IconAction
+									icon={Play}
+									label="Execute"
+									loading={writeContract.isPending}
+									onClick={execute}
+								/>
+							)}
+						</>
+					}
+				/>
+				{(writeContract.error || writeContract.isSuccess) && (
+					<Rows.Row spacing="none" {...styles.result()}>
+						{writeResult}
+					</Rows.Row>
+				)}
+			</>
 		)
 
 	const missing = (key: string) => submitted && !inputs[key]?.trim()
@@ -298,27 +333,7 @@ function WriteContractFunction(props: {
 							</Callout>
 						)}
 
-						{writeContract.error && (
-							<Callout intent="negative" size="small">
-								<Callout.Icon />
-								<Callout.Content>
-									<strong>Transaction failed</strong>
-									<span {...styles.calloutDescription()}>
-										{getWriteErrorMessage(writeContract.error)}
-									</span>
-								</Callout.Content>
-							</Callout>
-						)}
-
-						{writeContract.isSuccess && writeContract.data && (
-							<Callout intent="positive" size="small">
-								<Callout.Icon />
-								<Callout.Content>
-									<strong>Transaction sent</strong>
-									<TransactionCell hash={writeContract.data} />
-								</Callout.Content>
-							</Callout>
-						)}
+						{writeResult}
 					</>
 				}
 			>
@@ -349,6 +364,14 @@ function WriteContractFunction(props: {
 }
 
 namespace styles {
+	// A no-argument function's outcome, under its row.
+	export const result = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlockEnd: '12',
+	})
+
 	// The flask comes from Lucide, so it takes the 16px glyph of the TDS icons.
 	export const icon = style({ fontSize: '16' })
 

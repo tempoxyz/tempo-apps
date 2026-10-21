@@ -207,7 +207,6 @@ namespace styles {
 		justifyContent: 'center',
 		margin: '0',
 		userSelect: 'none',
-		'@media (height <= 360px)': { display: 'none' },
 	})
 
 	// Sized like a search engine's home logo; the header hides its own on this page.
@@ -216,6 +215,8 @@ namespace styles {
 		height: '48',
 		width: 'auto !custom',
 		'@media (width >= 800px)': { height: '64' },
+		// Short screens, such as a landscape phone, keep a smaller wordmark.
+		'@media (height <= 360px)': { height: '32' },
 	})
 
 	export const body = style({

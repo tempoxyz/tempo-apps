@@ -299,8 +299,12 @@ export declare namespace FunctionInput {
 }
 
 /** State key for an argument; unnamed (inferred ABI) arguments use their index. */
+/**
+ * The form-state key for an argument. Keyed by position, since a named input
+ * such as `arg1` could otherwise collide with an unnamed one.
+ */
 export function functionInputKey(input: AbiParameter, index: number): string {
-	return input.name || `arg${index}`
+	return `${index}:${input.name ?? ''}`
 }
 
 /** Error for an empty argument, naming the value it needs. */
