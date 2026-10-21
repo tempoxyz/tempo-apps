@@ -8,7 +8,6 @@ import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
 import { useMediaQuery } from '#lib/hooks'
-import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { OG_BASE_URL } from '#lib/og'
@@ -38,13 +37,11 @@ export const Route = createFileRoute('/_layout/tokens')({
 		page: z.optional(z.number()),
 	}),
 	loader: ({ context }) =>
-		withLoaderTiming('/_layout/tokens', async () =>
-			context.queryClient.ensureQueryData(
-				tokensListQueryOptions({
-					page: 1,
-					limit: TOKENS_PER_PAGE,
-				}),
-			),
+		context.queryClient.ensureQueryData(
+			tokensListQueryOptions({
+				page: 1,
+				limit: TOKENS_PER_PAGE,
+			}),
 		),
 })
 

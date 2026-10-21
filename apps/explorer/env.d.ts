@@ -18,6 +18,9 @@ interface EnvironmentVariables {
 	readonly VITE_DATADOG_SESSION_REPLAY_SAMPLE_RATE: string | undefined
 	readonly VITE_DATADOG_SESSION_SAMPLE_RATE: string | undefined
 	readonly VITE_DATADOG_TRACE_SAMPLE_RATE: string | undefined
+	/** Set in CI only (GitHub Actions secret). Unset means no PostHog at all. */
+	readonly VITE_POSTHOG_KEY: string | undefined
+	readonly VITE_POSTHOG_HOST: string | undefined
 	/** Set at build time: "true" when a devnet build has DEVNET_RPC_URL. */
 	readonly VITE_DEVNET_RPC_OVERRIDDEN: string | undefined
 	/** Set at build time for a devnet build, empty otherwise (see vite.config.ts). */
