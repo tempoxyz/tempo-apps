@@ -122,6 +122,26 @@ for (const [name, path] of [
 		'long receipt',
 		`/receipt/${hash}?${receipt}&ev2=${encodeURIComponent(`Transfer|${'Long details '.repeat(30)}`)}&ev3=Mint|1000%20USD&ev4=Burn|100%20USD`,
 	],
+	[
+		'six-step receipt',
+		`/receipt/${hash}?${receipt}&eventCount=12&${[2, 3, 4, 5, 6].map((n) => `ev${n}=Send|${n}.00%20AlphaUSD%20to%200x71C7…976F|$${n}.00`).join('&')}`,
+	],
+	[
+		'max-length receipt',
+		`/tx/${hash}?block=123456789012&total=${encodeURIComponent(`$${'9'.repeat(18)}.99`)}&fee=${encodeURIComponent(`1.234567 ${'X'.repeat(24)}`)}&ev1=${encodeURIComponent(`${'A'.repeat(40)}|${'word '.repeat(36)}|$${'9'.repeat(24)}`)}`,
+	],
+	[
+		'block with history',
+		`/block/8188645?number=8188645&unixTimestamp=1792489267&txCount=42&gasUsage=52.3%25&miner=${address}&parentHash=${hash}&prevBlocks=12,30,8,45,22,0,18,40,33,27,15,38`,
+	],
+	[
+		'long token',
+		`/token/${address}?name=${'Long Token Name '.repeat(3)}&symbol=${'S'.repeat(24)}&supply=${'9'.repeat(32)}&holders=999999&isFeeToken=true`,
+	],
+	[
+		'long contract',
+		`/address/${address}?accountType=contract&contractName=${'N'.repeat(64)}&contractDescription=${'Words '.repeat(30)}`,
+	],
 ])
 	test(`renders ${name}`, async () => {
 		const response = await fetch(origin + path)

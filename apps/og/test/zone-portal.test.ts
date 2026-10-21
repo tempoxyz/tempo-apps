@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { buildZonePortalOgUrl } from '../../explorer/src/lib/og-params.ts'
-import { AddressImage } from '../src/ui.tsx'
+import { Card, color } from '../src/brand.tsx'
 import { ZonePortalCard } from '../src/zone-portal-card.tsx'
 import {
 	fetchPortalOverview,
@@ -91,20 +91,24 @@ test('real zero counts remain zero; unavailable data is never rendered as zero',
 	assert.doesNotMatch(unavailable, />0</)
 })
 
-test('portal cards retain the shared contract template and label/value layout', () => {
-	const html = AddressImage({
+test('portal cards use the shared frame, network and label/value facts', () => {
+	const html = Card({
 		logo: '/tempo-lockup.svg',
-		artwork: '/bg-template.webp',
+		network: 'Mainnet',
 		children: ZonePortalCard({ address, overview }),
 	}).toString()
 	assert.match(html, /src="\/tempo-lockup.svg"/)
-	assert.match(html, /width:720px/)
-	assert.match(html, /border-radius:0px 24px 0px 0px/)
-	assert.match(html, /font-family:Pilat/)
-	assert.match(html, /left:0px;bottom:0px/)
-	assert.match(html, /text-\[#6b6b6b\]">Deposits/)
-	assert.match(html, /text-\[#181818\]">95/)
-	assert.doesNotMatch(html, /Indexed activity|enabled assets|Mainnet/)
+	assert.match(html, /width:1200px;height:630px/)
+	assert.match(html, new RegExp(`background-color:${color.background}`))
+	assert.match(html, /font-family:Inter/)
+	assert.match(html, />Mainnet</)
+	assert.match(html, />Zone Portal</)
+	assert.match(html, />Deposits<\/span><div[^>]*><span>95</)
+	assert.match(
+		html,
+		/>Balance<\/span><div[^>]*><span>11\.895002<\/span><span[^>]*>DLUSD</,
+	)
+	assert.doesNotMatch(html, /Indexed activity|enabled assets/)
 })
 
 test('rejects unavailable and malformed source data', async () => {

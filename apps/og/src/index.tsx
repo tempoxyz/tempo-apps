@@ -9,24 +9,27 @@ import { HTTPException } from 'hono/http-exception'
 import { Address } from 'ox'
 import {
 	fetchPortalOverview,
+	type PortalNetwork,
 	portalId,
 	portalQuerySchema,
 } from '#zone-portal.ts'
 import { ZonePortalCard } from '#zone-portal-card.tsx'
-import { CardBackground, ListingCard, ReceiptBackground } from '#brand.tsx'
+import { Card, type Network, networkOf } from '#brand.tsx'
 
 import {
 	addressOgQuerySchema,
 	blockOgQuerySchema,
+	type TxOgQueryParams,
 	tokenOgQuerySchema,
 	txOgQuerySchema,
 } from '#params.ts'
 import {
 	AddressCard,
-	AddressImage,
 	type AddressData,
 	BlockCard,
 	type BlockData,
+	HomeCard,
+	ListingCard,
 	ReceiptCard,
 	type ReceiptData,
 	TokenCard,
@@ -34,10 +37,10 @@ import {
 } from '#ui.tsx'
 import {
 	fetchTokenIcon,
+	type Images,
 	isTxHash,
 	loadFonts,
 	loadImages,
-	toBase64DataUrl,
 } from '#utilities.ts'
 
 const CACHE_TTL = 3600
@@ -95,6 +98,28 @@ app.use('/tokens', rateLimiter)
 app.use('/explorer', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
 
+/** Renders a 1200 × 630 WebP with the bundled fonts. */
+async function render(
+	env: Cloudflare.Env,
+	card: (images: Images) => ReturnType<typeof Card>,
+): Promise<ImageResponse> {
+	const [fonts, images] = await Promise.all([loadFonts(env), loadImages(env)])
+	return new ImageResponse(card(images), {
+		width: 1200,
+		height: 630,
+		format: 'webp',
+		module,
+		fonts,
+	})
+}
+
+const PORTAL_NETWORKS: Record<PortalNetwork, Network> = {
+	mainnet: 'Mainnet',
+	testnet: 'Testnet',
+	devnet: 'Devnet',
+	nextfork: 'Nextfork',
+}
+
 app.get(
 	'/zone-portal/:address',
 	zValidator('query', portalQuerySchema),
@@ -104,9 +129,7 @@ app.get(
 			throw new HTTPException(400, { message: 'Invalid Zone Portal address' })
 		const { network } = context.req.valid('query')
 		let dataError = ''
-		const [fonts, images, overview] = await Promise.all([
-			loadFonts(context.env),
-			loadImages(context.env),
+		const [overview] = await Promise.all([
 			fetchPortalOverview(address, network).catch((error) => {
 				console.error('Zone Portal OG data unavailable:', error)
 				dataError =
@@ -119,22 +142,14 @@ app.get(
 								: 'network-error'
 				return undefined
 			}),
+			loadFonts(context.env),
+			loadImages(context.env),
 		])
-		const response = new ImageResponse(
-			<AddressImage
-				artwork={toBase64DataUrl(images.receiptRings)}
-				logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-			>
+		const response = await render(context.env, (images) => (
+			<Card logo={images.logo} network={PORTAL_NETWORKS[network]}>
 				<ZonePortalCard address={address} overview={overview} />
-			</AddressImage>,
-			{
-				width: 1200,
-				height: 630,
-				format: 'webp',
-				module,
-				fonts,
-			},
-		)
+			</Card>
+		))
 		return new Response(response.body, {
 			headers: {
 				'Content-Type': 'image/webp',
@@ -162,25 +177,24 @@ for (const [path, destination] of [
 
 // Dynamic OG image routes
 
-app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
-	const hash = context.req.param('hash')
-	if (!isTxHash(hash))
-		throw new HTTPException(400, { message: 'Invalid transaction hash' })
-
-	const txParams = context.req.valid('query')
+async function receiptData(
+	hash: string,
+	txParams: TxOgQueryParams,
+): Promise<ReceiptData> {
 	const icons: Record<string, string> = {}
-	if (txParams.chainId)
+	const { chainId } = txParams
+	// Logos appear only in a single action's sentence; several actions show as tags.
+	const single =
+		!txParams.eventsFailed &&
+		Math.max(txParams.eventCount, txParams.events.length) === 1
+	if (chainId && single)
 		await Promise.all(
-			[
-				...new Set(
-					txParams.events.slice(0, 3).flatMap((event) => event.tokens ?? []),
-				),
-			].map(async (token) => {
-				const icon = await fetchTokenIcon(token, txParams.chainId!)
+			[...new Set(txParams.events[0]?.tokens ?? [])].map(async (token) => {
+				const icon = await fetchTokenIcon(token, chainId)
 				if (icon) icons[token] = icon
 			}),
 		)
-	const receiptData: ReceiptData = {
+	return {
 		icons,
 		eventCount: txParams.eventCount,
 		hash,
@@ -196,120 +210,33 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 		eventsFailed: txParams.eventsFailed,
 		status: txParams.status,
 	}
+}
 
-	const [fonts, images] = await Promise.all([
-		loadFonts(context.env),
-		loadImages(context.env),
-	])
-
-	const imageResponse = new ImageResponse(
-		<div
-			tw="flex w-full h-full relative"
-			style={{
-				fontFamily: 'Pilat',
-				color: '#181818',
-				backgroundColor: '#fafafa',
-			}}
-		>
-			<ReceiptBackground
-				logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-				artwork={toBase64DataUrl(images.receiptRings)}
-			/>
-			<div tw="absolute flex items-end" style={{ left: '0px', bottom: '0px' }}>
-				<ReceiptCard data={receiptData} />
-			</div>
-		</div>,
-		{
-			width: 1200,
-			height: 630,
-			format: 'webp',
-			module,
-			fonts,
-		},
-	)
-
-	return new Response(imageResponse.body, {
-		headers: { 'Content-Type': 'image/webp' },
-	})
-})
-
-app.get(
-	'/receipt/:hash',
-	zValidator('query', txOgQuerySchema),
-	async (context) => {
+for (const [path, title] of [
+	['/tx/:hash', 'Transaction'],
+	['/receipt/:hash', 'Receipt'],
+] as const)
+	app.get(path, zValidator('query', txOgQuerySchema), async (context) => {
 		const hash = context.req.param('hash')
 		if (!isTxHash(hash))
 			throw new HTTPException(400, { message: 'Invalid transaction hash' })
 
 		const txParams = context.req.valid('query')
-		const icons: Record<string, string> = {}
-		if (txParams.chainId)
-			await Promise.all(
-				[
-					...new Set(
-						txParams.events.slice(0, 3).flatMap((event) => event.tokens ?? []),
-					),
-				].map(async (token) => {
-					const icon = await fetchTokenIcon(token, txParams.chainId!)
-					if (icon) icons[token] = icon
-				}),
-			)
-		const receiptData: ReceiptData = {
-			icons,
-			eventCount: txParams.eventCount,
-			hash,
-			blockNumber: txParams.block,
-			sender: txParams.sender,
-			date: txParams.date,
-			time: txParams.time,
-			fee: txParams.fee,
-			feeToken: txParams.feeToken,
-			feePayer: txParams.feePayer,
-			total: txParams.total,
-			events: txParams.events,
-			eventsFailed: txParams.eventsFailed,
-			status: txParams.status,
-		}
-
-		const [fonts, images] = await Promise.all([
+		const [data] = await Promise.all([
+			receiptData(hash, txParams),
 			loadFonts(context.env),
 			loadImages(context.env),
 		])
-
-		const imageResponse = new ImageResponse(
-			<div
-				tw="flex w-full h-full relative"
-				style={{
-					fontFamily: 'Pilat',
-					color: '#181818',
-					backgroundColor: '#fafafa',
-				}}
-			>
-				<ReceiptBackground
-					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-					artwork={toBase64DataUrl(images.receiptRings)}
-				/>
-				<div
-					tw="absolute flex items-end"
-					style={{ left: '0px', bottom: '0px' }}
-				>
-					<ReceiptCard data={receiptData} />
-				</div>
-			</div>,
-			{
-				width: 1200,
-				height: 630,
-				format: 'webp',
-				module,
-				fonts,
-			},
-		)
+		const imageResponse = await render(context.env, (images) => (
+			<Card logo={images.logo} network={networkOf(txParams.chainId)}>
+				<ReceiptCard data={data} title={title} />
+			</Card>
+		))
 
 		return new Response(imageResponse.body, {
 			headers: { 'Content-Type': 'image/webp' },
 		})
-	},
-)
+	})
 
 app.get(
 	'/block/:id',
@@ -317,6 +244,7 @@ app.get(
 	async (context) => {
 		const blockParams = context.req.valid('query')
 		const blockData: BlockData = {
+			id: context.req.param('id'),
 			number: blockParams.number,
 			timestamp: blockParams.timestamp,
 			unixTimestamp: blockParams.unixTimestamp,
@@ -327,40 +255,11 @@ app.get(
 			prevBlockTxCounts: blockParams.prevBlocks,
 		}
 
-		const [fonts, images] = await Promise.all([
-			loadFonts(context.env),
-			loadImages(context.env),
-		])
-
-		const imageResponse = new ImageResponse(
-			<div
-				tw="flex w-full h-full relative"
-				style={{
-					fontFamily: 'Pilat',
-					color: '#181818',
-					backgroundColor: '#fafafa',
-				}}
-			>
-				<CardBackground
-					artwork={toBase64DataUrl(images.receiptRings)}
-					title="Block"
-					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-				/>
-				<div
-					tw="absolute flex items-end"
-					style={{ left: '0px', bottom: '0px' }}
-				>
-					<BlockCard data={blockData} />
-				</div>
-			</div>,
-			{
-				width: 1200,
-				height: 630,
-				format: 'webp',
-				module,
-				fonts,
-			},
-		)
+		const imageResponse = await render(context.env, (images) => (
+			<Card logo={images.logo}>
+				<BlockCard data={blockData} />
+			</Card>
+		))
 
 		return new Response(imageResponse.body, {
 			headers: { 'Content-Type': 'image/webp' },
@@ -380,44 +279,16 @@ app.get(
 		const tokenParams = context.req.valid('query')
 		const tokenData: TokenData = { address, ...tokenParams }
 
-		const [fonts, images, tokenIcon] = await Promise.all([
+		const [tokenIcon] = await Promise.all([
+			tokenParams.chainId ? fetchTokenIcon(address, tokenParams.chainId) : null,
 			loadFonts(context.env),
 			loadImages(context.env),
-			tokenParams.chainId ? fetchTokenIcon(address, tokenParams.chainId) : null,
 		])
-
-		const imageResponse = new ImageResponse(
-			<div
-				tw="flex w-full h-full relative"
-				style={{
-					fontFamily: 'Pilat',
-					color: '#181818',
-					backgroundColor: '#fafafa',
-				}}
-			>
-				<CardBackground
-					artwork={toBase64DataUrl(images.receiptRings)}
-					title="Token"
-					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-				/>
-				<div
-					tw="absolute flex items-end"
-					style={{ left: '0px', bottom: '0px' }}
-				>
-					<TokenCard
-						data={tokenData}
-						icon={tokenIcon || toBase64DataUrl(images.nullIcon)}
-					/>
-				</div>
-			</div>,
-			{
-				width: 1200,
-				height: 630,
-				format: 'webp',
-				module,
-				fonts,
-			},
-		)
+		const imageResponse = await render(context.env, (images) => (
+			<Card logo={images.logo} network={networkOf(tokenParams.chainId)}>
+				<TokenCard data={tokenData} icon={tokenIcon} />
+			</Card>
+		))
 
 		const body = await imageResponse.arrayBuffer()
 		return new Response(body, {
@@ -451,42 +322,11 @@ app.get(
 			contractDescription: addrParams.contractDescription,
 		}
 
-		const [fonts, images] = await Promise.all([
-			loadFonts(context.env),
-			loadImages(context.env),
-		])
-
-		const imageResponse = new ImageResponse(
-			<div
-				tw="flex w-full h-full relative"
-				style={{
-					fontFamily: 'Pilat',
-					color: '#181818',
-					backgroundColor: '#fafafa',
-				}}
-			>
-				<CardBackground
-					artwork={toBase64DataUrl(images.receiptRings)}
-					title={
-						addressData.accountType === 'contract' ? 'Contract' : 'Account'
-					}
-					logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-				/>
-				<div
-					tw="absolute flex items-end"
-					style={{ left: '0px', bottom: '0px' }}
-				>
-					<AddressCard data={addressData} />
-				</div>
-			</div>,
-			{
-				width: 1200,
-				height: 630,
-				format: 'webp',
-				module,
-				fonts,
-			},
-		)
+		const imageResponse = await render(context.env, (images) => (
+			<Card logo={images.logo}>
+				<AddressCard data={addressData} />
+			</Card>
+		))
 
 		return new Response(imageResponse.body, {
 			headers: { 'Content-Type': 'image/webp' },
@@ -494,28 +334,34 @@ app.get(
 	},
 )
 
-// Listing and fallback cards use the same renderer as detail cards.
-for (const [path, title, subtitle] of [
-	['/explorer', 'Search. Explore. Discover.', 'Tempo Explorer'],
-	['/blocks', 'Blocks', 'Explore activity on Tempo'],
-	['/tokens', 'Tokens', 'Explore assets on Tempo'],
-	['/tx', 'Transactions', 'Explore payments on Tempo'],
+app.get('/explorer', (context) =>
+	render(context.env, (images) => (
+		<HomeCard logo={images.logo} search={images.icons.search} />
+	)),
+)
+
+// Listing and fallback cards share the detail cards' frame.
+for (const [path, title, subtitle, icon] of [
+	['/blocks', 'Blocks', 'The latest blocks produced on Tempo', 'blocks'],
+	['/tokens', 'Tokens', 'Stablecoins and tokens issued on Tempo', 'tokens'],
+	[
+		'/tx',
+		'Transactions',
+		'Payments and transactions settled on Tempo',
+		'transactions',
+	],
 ] as const) {
-	app.get(path, async (context) => {
-		const [fonts, images] = await Promise.all([
-			loadFonts(context.env),
-			loadImages(context.env),
-		])
-		return new ImageResponse(
-			<ListingCard
-				artwork={toBase64DataUrl(images.receiptRings)}
-				title={title}
-				subtitle={subtitle}
-				logo={toBase64DataUrl(images.tempoLockup, 'image/svg+xml')}
-			/>,
-			{ width: 1200, height: 630, format: 'webp', module, fonts },
-		)
-	})
+	app.get(path, (context) =>
+		render(context.env, (images) => (
+			<Card logo={images.logo}>
+				<ListingCard
+					title={title}
+					subtitle={subtitle}
+					icon={images.icons[icon]}
+				/>
+			</Card>
+		)),
+	)
 }
 
 export default app
