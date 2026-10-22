@@ -1,18 +1,14 @@
-import type { Address as TokenAddress } from 'viem'
 import { useQuery } from '@tanstack/react-query'
+import { Amount, Button, style, Tag, Token, variants } from '@tempoxyz/ds'
 import type * as React from 'react'
+import type { Address as TokenAddress } from 'viem'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { RelativeTime } from '#comps/RelativeTime'
-import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
 import type { DexPoolToken } from '#lib/dex-pools'
 import type { DexSwap } from '#lib/dex-swaps'
-import { PriceFormatter } from '#lib/formatting'
 import { dexSwapsQueryOptions } from '#lib/queries/dex-pools'
-import Play from '~icons/lucide/play'
 
-const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const LIVE_SCOPE = 'dex-swaps'
 
 /** Recent swaps, or only those between a route's two ends. */
@@ -46,12 +42,11 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 						label: base ? 'Type' : 'Swap',
 						align: 'start',
 						width: '2fr',
-						minWidth: 240,
 					},
-					{ label: 'Value', align: 'end', width: '1fr', minWidth: 96 },
-					{ label: 'Sent', align: 'end', width: '1fr', minWidth: 140 },
-					{ label: 'Received', align: 'end', width: '1fr', minWidth: 140 },
-					{ label: 'Wallet', align: 'end', width: '1fr', minWidth: 120 },
+					{ label: 'Value', align: 'end', width: '1fr' },
+					{ label: 'Sent', align: 'end', width: '1fr' },
+					{ label: 'Received', align: 'end', width: '1fr' },
+					{ label: 'Wallet', align: 'end', width: '1fr' },
 				],
 			}}
 			items={(mode) =>
@@ -60,27 +55,33 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 					cells:
 						mode === 'stacked'
 							? [
-									<div key="swap" className="flex flex-col gap-1 min-w-0">
+									<div key="swap" {...styles.stackedSwap()}>
 										{label(swap)}
 										<RelativeTime
 											timestamp={BigInt(swap.timestamp)}
-											className="label-12 text-tertiary"
+											{...styles.stackedTime()}
 										/>
 									</div>,
-									<span key="value" className="tabular-nums text-primary">
-										{PriceFormatter.format(swap.amountIn)}
-									</span>,
+									<Amount
+										key="value"
+										align="right"
+										currency="USD"
+										value={swap.amountIn}
+									/>,
 								]
 							: [
 									<RelativeTime
 										key="time"
 										timestamp={BigInt(swap.timestamp)}
-										className="text-secondary tabular-nums whitespace-nowrap"
+										{...styles.time()}
 									/>,
 									<span key="swap">{label(swap)}</span>,
-									<span key="value" className="tabular-nums text-primary">
-										{PriceFormatter.format(swap.amountIn)}
-									</span>,
+									<Amount
+										key="value"
+										align="right"
+										currency="USD"
+										value={swap.amountIn}
+									/>,
 									<TokenAmount
 										key="sent"
 										value={swap.amountIn}
@@ -91,12 +92,7 @@ export function DexSwapsGrid(props: DexSwapsGrid.Props): React.JSX.Element {
 										value={swap.amountOut}
 										token={swap.to}
 									/>,
-									<Address
-										key="wallet"
-										address={swap.taker}
-										align="end"
-										chars={4}
-									/>,
+									<Address key="wallet" address={swap.taker} align="end" />,
 								],
 					link: {
 						href: `/tx/${swap.transactionHash}`,
@@ -126,35 +122,22 @@ export declare namespace DexSwapsGrid {
 	}
 }
 
+/** Live feed toggle: a pressed button whose tag names the feed's state. */
 export function LivePill(props: LivePill.Props): React.JSX.Element {
 	const { live, onToggle } = props
 	return (
-		<button
-			type="button"
+		<Button
+			aria-pressed={live}
 			onClick={onToggle}
-			className={cx(
-				'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] label-12 font-medium press-down cursor-pointer',
-				live
-					? 'bg-positive/10 text-positive hover:bg-positive/20'
-					: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
-			)}
 			title={live ? 'Pause live updates' : 'Resume live updates'}
+			size="small"
+			variant="secondary"
 		>
-			{live ? (
-				<>
-					<span className="relative flex size-2">
-						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
-						<span className="relative inline-flex rounded-full size-2 bg-positive" />
-					</span>
-					<span>Live</span>
-				</>
-			) : (
-				<>
-					<Play className="size-3" />
-					<span>Paused</span>
-				</>
-			)}
-		</button>
+			<Tag intent={live ? 'positive' : 'neutral'} variant="plain">
+				<Tag.Dot />
+				{live ? 'Live' : 'Paused'}
+			</Tag>
+		</Button>
 	)
 }
 
@@ -165,10 +148,10 @@ export declare namespace LivePill {
 function SwapLabel(props: { swap: DexSwap }): React.JSX.Element {
 	const { from, to } = props.swap
 	return (
-		<span className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
-			<span className="text-tertiary">Swap</span>
+		<span {...styles.label()}>
+			<span {...styles.secondary()}>Swap</span>
 			<TokenChip token={from} />
-			<span className="text-tertiary">for</span>
+			<span {...styles.secondary()}>for</span>
 			<TokenChip token={to} />
 		</span>
 	)
@@ -182,14 +165,10 @@ function SideLabel(props: {
 	const { from, to } = props.swap
 	const buy = to.address === props.base
 	return (
-		<span className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
-			<span
-				className={cx('font-medium', buy ? 'text-positive' : 'text-negative')}
-			>
-				{buy ? 'Buy' : 'Sell'}
-			</span>
+		<span {...styles.label()}>
+			<span {...styles.side({ buy })}>{buy ? 'Buy' : 'Sell'}</span>
 			<TokenChip token={buy ? to : from} />
-			<span className="text-tertiary">{buy ? 'with' : 'for'}</span>
+			<span {...styles.secondary()}>{buy ? 'with' : 'for'}</span>
 			<TokenChip token={buy ? from : to} />
 		</span>
 	)
@@ -197,27 +176,78 @@ function SideLabel(props: {
 
 function TokenChip(props: { token: DexPoolToken }): React.JSX.Element {
 	return (
-		<span className="inline-flex items-center gap-1.5 font-medium text-primary">
-			<TokenIcon
-				address={props.token.address}
-				name={props.token.symbol}
-				className="size-4"
-			/>
+		<span {...styles.chip()}>
+			<Token address={props.token.address} size="small" />
 			{props.token.symbol}
 		</span>
 	)
 }
 
+/** Two decimals down the column; a sub-cent amount keeps two significant digits. */
 function TokenAmount(props: {
 	value: number
 	token: DexPoolToken
 }): React.JSX.Element {
+	const { token, value } = props
 	return (
-		<span className="tabular-nums text-primary whitespace-nowrap">
-			{props.value > 0 && props.value < 0.01
-				? '<0.01'
-				: amount.format(props.value)}{' '}
-			<span className="text-tertiary">{props.token.symbol}</span>
-		</span>
+		<Amount
+			align="right"
+			symbol={token.symbol}
+			value={
+				value > 0 && value < 0.01 ? value.toPrecision(2) : value.toFixed(2)
+			}
+			{...styles.nowrap()}
+		/>
 	)
+}
+
+namespace styles {
+	export const stackedSwap = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		minWidth: '0 !custom',
+	})
+
+	export const stackedTime = style({
+		color: 'gray.900',
+		typography: 'label.12',
+	})
+
+	export const time = style({
+		color: 'gray.900',
+		fontVariantNumeric: 'tabular-nums',
+		whiteSpace: 'nowrap',
+	})
+
+	export const nowrap = style({ whiteSpace: 'nowrap' })
+
+	export const secondary = style({ color: 'gray.900' })
+
+	export const label = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+		minWidth: '0 !custom',
+		whiteSpace: 'nowrap',
+	})
+
+	export const side = variants({
+		base: { typography: 'copy.14.strong' },
+		defaultVariants: { buy: true },
+		variants: {
+			buy: {
+				true: { color: 'green.900' },
+				false: { color: 'red.900' },
+			},
+		},
+	})
+
+	export const chip = style({
+		alignItems: 'center',
+		color: 'foreground',
+		display: 'inline-flex',
+		gap: '4',
+		typography: 'copy.14.strong',
+	})
 }

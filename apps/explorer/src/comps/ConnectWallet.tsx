@@ -1,6 +1,7 @@
-import { Button as RegenButton } from 'regen-ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClientOnly, Link } from '@tanstack/react-router'
+import { ClientOnly } from '@tanstack/react-router'
+import { Amount, Button, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { LogOut, Wallet } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
 import {
@@ -16,41 +17,33 @@ import { tempoModerato } from 'viem/chains'
 import { Actions } from 'viem/tempo'
 import { alphausd } from 'viem/tokens'
 import { Hooks } from 'wagmi/tempo'
+import { Address } from '#comps/Address'
 import { useTokenListMembership } from '#comps/TokenListMembership'
-import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import { getTempoChain } from '#wagmi.config.ts'
-import LucideLogOut from '~icons/lucide/log-out'
-import LucideWalletCards from '~icons/lucide/wallet-cards'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
-export function ConnectWallet({
-	showAddChain = true,
-}: {
-	showAddChain?: boolean
-}) {
+export function ConnectWallet(props: ConnectWallet.Props): React.JSX.Element {
 	return (
-		<ClientOnly
-			fallback={
-				<div className="label-12 flex items-center text-secondary whitespace-nowrap">
-					Detecting wallet…
-				</div>
-			}
-		>
-			<ConnectWalletInner showAddChain={showAddChain} />
+		<ClientOnly fallback={<div {...styles.detecting()}>Detecting wallet…</div>}>
+			<ConnectWalletInner showAddChain={props.showAddChain ?? true} />
 		</ClientOnly>
 	)
 }
 
-function ConnectWalletInner({
-	showAddChain = true,
-}: {
-	showAddChain?: boolean
-}) {
+export declare namespace ConnectWallet {
+	type Props = {
+		/** Offers to add Tempo when the wallet is on another network. */
+		showAddChain?: boolean | undefined
+	}
+}
+
+function ConnectWalletInner(props: { showAddChain: boolean }) {
+	const { showAddChain } = props
 	const connect = useConnect()
 	const connectors = useConnectors()
 	const { address, chain, connector } = useConnection()
@@ -68,11 +61,7 @@ function ConnectWalletInner({
 	const hasConnectorOptions = injectedConnectors.length > 0
 
 	if (!hasConnectorOptions)
-		return (
-			<div className="label-12 flex items-center whitespace-nowrap select-none">
-				No wallet found.
-			</div>
-		)
+		return <div {...styles.noWallet()}>No wallet found.</div>
 	if (!address) {
 		const brandedConnectors = injectedConnectors.filter(
 			(candidate) =>
@@ -93,11 +82,9 @@ function ConnectWalletInner({
 			.slice(0, 2)
 
 		return (
-			<div className="flex items-center gap-1.5">
+			<div {...styles.connectors()}>
 				{prioritizedConnectors.map((connector) => (
 					<Button
-						type="button"
-						variant="default"
 						key={connector.id}
 						onClick={() => {
 							setPendingId(connector.id)
@@ -108,38 +95,33 @@ function ConnectWalletInner({
 								},
 							)
 						}}
-						className={cx(
-							'flex gap-[8px] items-center rounded-body bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
-							pendingId === connector.id &&
-								connect.isPending &&
-								'animate-pulse',
-						)}
+						loading={pendingId === connector.id && connect.isPending}
+						size="small"
+						variant="secondary"
+						{...styles.action()}
 					>
 						{connector.icon ? (
-							<img
-								className="size-[12px] rounded-[2px]"
-								src={connector.icon}
-								alt={connector.name}
-							/>
+							<img alt="" src={connector.icon} {...styles.connectorIcon()} />
 						) : (
-							<LucideWalletCards className="size-[12px]" />
+							<Wallet {...styles.icon()} />
 						)}
 						{connector.name && connector.name !== 'Injected'
 							? `Connect ${connector.name}`
-							: 'Connect Wallet'}
+							: 'Connect wallet'}
 					</Button>
 				))}
 			</div>
 		)
 	}
 	return (
-		<div className="flex items-stretch gap-2 justify-end min-w-0 flex-1">
+		<div {...styles.connected()}>
 			<ConnectedAddress />
 			{TEMPO_CHAIN_ID !== 4217 && <FundAccountButton />}
 			{showAddChain && !isSupported && (
 				<Button
-					className="w-fit"
-					variant="accent"
+					size="small"
+					variant="primary"
+					{...styles.action()}
 					onClick={() =>
 						switchChain.mutate({
 							chainId: chains[0].id,
@@ -152,13 +134,14 @@ function ConnectWalletInner({
 						})
 					}
 				>
-					Add Tempo to {connector?.name ?? 'Wallet'}
+					Add Tempo to {connector?.name ?? 'wallet'}
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<span className="label-12 font-normal text-tertiary whitespace-nowrap">
-					Added Tempo to {connector?.name ?? 'Wallet'}!
-				</span>
+				<Tag intent="positive" variant="plain">
+					<Tag.Dot />
+					Added Tempo to {connector?.name ?? 'wallet'}
+				</Tag>
 			)}
 			<SignOut />
 		</div>
@@ -223,24 +206,10 @@ function ConnectedAddress() {
 	if (!address) return null
 
 	return (
-		<div className="label-12 text-secondary whitespace-nowrap flex items-center justify-end gap-[4px] flex-1 min-w-0">
-			<span className="hidden sm:inline shrink-0">Connected as</span>
-			<Link
-				to="/address/$address"
-				params={{ address }}
-				title={address}
-				className="text-accent press-down hover:underline font-mono flex min-w-0"
-			>
-				<span className="overflow-hidden text-ellipsis">
-					{address.slice(0, -10)}
-				</span>
-				<span className="shrink-0">{address.slice(-10)}</span>
-			</Link>
-			{totalUsd !== null && (
-				<span className="text-tertiary">
-					(${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })})
-				</span>
-			)}
+		<div {...styles.address()}>
+			<span {...styles.addressPrefix()}>Connected as</span>
+			<Address address={address} />
+			{totalUsd !== null && <Amount currency="USD" value={totalUsd} />}
 		</div>
 	)
 }
@@ -300,37 +269,33 @@ function FundAccountButton() {
 
 	if (status === 'done') {
 		return (
-			<span className="label-12 text-tertiary flex items-center gap-1">
-				Funded!
-			</span>
+			<Tag intent="positive" variant="plain">
+				<Tag.Dot />
+				Funded
+			</Tag>
 		)
 	}
 
 	const isPending = status === 'funding' || status === 'setting-fee'
-	const label =
-		status === 'funding'
-			? 'Funding…'
-			: status === 'setting-fee'
-				? 'Setting fee token…'
-				: 'Fund'
 
 	return (
-		<button
-			type="button"
-			title="Fund from faucet and set fee token"
-			disabled={isPending}
-			className={cx(
-				'h-full text-secondary hover:text-primary cursor-pointer press-down flex items-center gap-1',
-				isPending && 'animate-pulse',
-			)}
-			onClick={handleFund}
-		>
-			<span className="text-tertiary">[</span>
-			<span className="text-center my-auto font-semibold label-12">
-				{label}
-			</span>
-			<span className="text-tertiary">]</span>
-		</button>
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						focusableWhenDisabled
+						loading={isPending}
+						onClick={handleFund}
+						size="small"
+						variant="secondary"
+						{...styles.action()}
+					/>
+				}
+			>
+				Fund account
+			</Tooltip.Trigger>
+			<Tooltip.Popup>Fund from faucet and set fee token</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
@@ -339,49 +304,82 @@ function SignOut() {
 	const { connector } = useConnection()
 
 	return (
-		<button
-			type="button"
-			title="Disconnect"
-			className="h-full text-secondary hover:text-primary cursor-pointer press-down"
-			onClick={() => disconnect.mutate({ connector })}
-		>
-			<LucideLogOut className="size-[12px] translate-y-px" />
-		</button>
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						aria-label="Disconnect wallet"
+						onClick={() => disconnect.mutate({ connector })}
+						shape="icon"
+						size="small"
+						variant="text"
+					/>
+				}
+			>
+				<LogOut {...styles.icon()} />
+			</Tooltip.Trigger>
+			<Tooltip.Popup>Disconnect wallet</Tooltip.Popup>
+		</Tooltip.Root>
 	)
 }
 
-export function Button(
-	props: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> & {
-		className?: string
-		disabled?: boolean
-		static?: boolean
-		variant?: 'accent' | 'default' | 'destructive'
-		render?: React.ReactElement
-	},
-) {
-	const {
-		className,
-		disabled,
-		render,
-		static: static_,
-		variant,
-		...rest
-	} = props
-	return (
-		<RegenButton
-			type="button"
-			{...rest}
-			render={render}
-			disabled={disabled || static_}
-			size="small"
-			variant={
-				variant === 'accent'
-					? 'primary'
-					: variant === 'destructive'
-						? 'negative'
-						: 'secondary'
-			}
-			className={className}
-		/>
-	)
+namespace styles {
+	export const icon = style({ fontSize: '16' })
+
+	export const detecting = style({
+		alignItems: 'center',
+		color: 'gray.900',
+		display: 'flex',
+		typography: 'label.12',
+		whiteSpace: 'nowrap',
+	})
+
+	export const noWallet = style({
+		alignItems: 'center',
+		display: 'flex',
+		typography: 'label.12',
+		userSelect: 'none',
+		whiteSpace: 'nowrap',
+	})
+
+	export const connectors = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const action = style({ flexShrink: 0 })
+
+	export const connected = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+		justifyContent: 'flex-end',
+		minWidth: '0',
+	})
+
+	export const address = style({
+		alignItems: 'center',
+		color: 'gray.900',
+		display: 'flex',
+		flex: 1,
+		gap: '4',
+		justifyContent: 'flex-end',
+		minWidth: '0',
+		typography: 'label.12',
+		whiteSpace: 'nowrap',
+	})
+
+	export const addressPrefix = style({
+		display: 'none',
+		flexShrink: 0,
+		'@media (width >= 640px)': { display: 'inline' },
+	})
+
+	export const connectorIcon = style({
+		flexShrink: '0 !custom',
+		height: '16',
+		width: '16',
+	})
 }

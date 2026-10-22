@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
-	Link,
 	notFound,
 	redirect,
 	rootRouteId,
@@ -20,12 +19,11 @@ import { Amount } from '#comps/Amount'
 import { BlockCard } from '#comps/BlockCard'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
-import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { useTokenListMembership } from '#comps/TokenListMembership'
+import { TransactionCell } from '#comps/TransactionCell'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import { cx } from '#lib/css'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
 	calculateKnownEventsTotal,
@@ -45,6 +43,7 @@ import {
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
+import { Amount as TdsAmount, style } from '@tempoxyz/ds'
 
 const defaultSearchValues = { page: 1 } as const
 
@@ -61,7 +60,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Block Not Found"
+			title="Block not found"
 			message="The block does not exist or could not be found."
 			data={data as NotFound.NotFoundData}
 		/>
@@ -224,24 +223,14 @@ function RouteComponent() {
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
-			)}
-		>
-			<BreadcrumbsSlot className="col-span-full" />
-			<div className="self-start max-[800px]:self-stretch">
-				<BlockCard block={block} />
-			</div>
+		<div {...styles.page()}>
+			<BreadcrumbsSlot className={styles.breadcrumbs().className} />
+			<BlockCard block={block} />
 			<Sections
 				mode={mode}
 				sections={[
 					{
 						title: 'Transactions',
-						totalItems: allTransactions.length,
-						itemsLabel: 'txns',
-						autoCollapse: false,
 						content: (
 							<TransactionsSection
 								transactions={transactions}
@@ -310,12 +299,12 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		: true
 
 	const cols = [
-		{ label: 'Index', align: 'start', minWidth: 60, width: '0.5fr' },
-		{ label: 'Description', align: 'start', minWidth: 260, width: '3fr' },
-		{ label: 'From', align: 'end', minWidth: 112, width: '1fr' },
-		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
-		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
-		{ label: 'Total', align: 'end', minWidth: 96, width: 96 },
+		{ label: 'Index', align: 'start', width: '0.5fr' },
+		{ label: 'Description', align: 'start', width: '3fr' },
+		{ label: 'From', align: 'end', width: '1fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
+		{ label: 'Fee', align: 'end', width: '0.5fr' },
+		{ label: 'Total', align: 'end', width: 96 },
 	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
@@ -334,67 +323,58 @@ function TransactionsSection(props: TransactionsSectionProps) {
 						: undefined
 
 					const fee = getEstimatedFee(transaction)
-					const feeValue = fee ? Number(Value.format(fee, GAS_DECIMALS)) : 0
 					const feeRaw = fee ? Value.format(fee, GAS_DECIMALS) : '0'
-					const feeDisplay =
-						feeValue > 0
-							? showUsdPrefix
-								? PriceFormatter.format(feeValue)
-								: PriceFormatter.formatAmountShort(feeRaw)
-							: '—'
-
-					const txValue = transaction.value ?? 0n
-					const amountDisplay = PriceFormatter.formatNativeAmount(
-						txValue,
-						decimals,
-						symbol,
-					)
+					const amount = Value.format(transaction.value ?? 0n, decimals)
 
 					return {
 						cells: [
-							<span key="index" className="text-tertiary tabular-nums">
+							<span key="index" {...styles.secondary()}>
 								[{transactionIndex}]
 							</span>,
 							<TransactionDescription
 								key="desc"
 								transaction={transaction}
-								amountDisplay={amountDisplay}
+								amount={amount}
+								symbol={symbol}
 								knownEvents={knownEvents}
 								loading={knownEventsLoading}
 							/>,
 							txType.type === 'system' ? (
-								<span
-									key="from"
-									className="text-tertiary w-full truncate text-right"
-								>
+								<span key="from" {...styles.systemFrom()}>
 									{txType.label}
 								</span>
 							) : (
 								<AddressLink
 									key="from"
 									address={transaction.from}
-									chars={1}
 									align="end"
 								/>
 							),
 							transaction.hash ? (
-								<Link
-									key="hash"
-									to="/receipt/$hash"
-									params={{ hash: transaction.hash }}
-									className="text-accent hover:underline press-down w-full"
-									title={transaction.hash}
-								>
-									<Midcut value={transaction.hash} prefix="0x" align="end" />
-								</Link>
+								<TransactionCell key="hash" hash={transaction.hash} />
 							) : (
-								<span key="hash" className="text-tertiary">
+								<span key="hash" {...styles.secondary()}>
 									—
 								</span>
 							),
-							<span key="fee" className="text-tertiary">
-								{feeDisplay}
-							</span>,
+							fee === 0n ? (
+								<span key="fee" {...styles.secondary()}>
+									—
+								</span>
+							) : showUsdPrefix ? (
+								<TdsAmount
+									key="fee"
+									align="right"
+									currency="USD"
+									precise
+									value={feeRaw}
+									{...styles.secondary()}
+								/>
+							) : (
+								<span key="fee" {...styles.secondary()}>
+									{PriceFormatter.formatAmountShort(feeRaw)}
+								</span>
+							),
 							<TransactionTotalCell
 								key="total"
 								transaction={transaction}
@@ -446,13 +426,13 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary" title="Loading…">
+			<span {...styles.secondary()} title="Loading…">
 				…
 			</span>
 		)
 	}
 
-	const infiniteLabel = <span className="text-secondary">−</span>
+	const infiniteLabel = <span {...styles.secondary()}>−</span>
 	const hasAmounts = events?.some((event) =>
 		event.parts.some((part) => part.type === 'amount'),
 	)
@@ -463,7 +443,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 		const eventTotal = calculateKnownEventsTotal(events ?? [])
 		if (eventTotal === undefined || !showUsdPrefix)
 			return (
-				<span className="text-tertiary" title="No comparable payment total">
+				<span {...styles.secondary()} title="No comparable payment total">
 					—
 				</span>
 			)
@@ -483,7 +463,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 	}
 
 	const value = (transaction.value ?? 0n) + fee
-	if (value === 0n) return <span className="text-tertiary">—</span>
+	if (value === 0n) return <span {...styles.secondary()}>—</span>
 	return (
 		<Amount.Base
 			value={value}
@@ -514,7 +494,7 @@ interface TransactionsSectionProps {
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {
-	const { transaction, amountDisplay, knownEvents, loading } = props
+	const { transaction, amount, symbol, knownEvents, loading } = props
 
 	const decodedCall = React.useMemo(() => {
 		const data = transaction.input
@@ -528,25 +508,13 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	const selector = transaction.input?.slice(0, 10)
 
-	const { title, subtitle } = React.useMemo(() => {
-		if (!decodedCall)
-			return {
-				title: selector ?? 'Call',
-				subtitle: undefined,
-			}
-
-		return {
-			title: decodedCall.functionName
-				? `${decodedCall.functionName}()`
-				: (selector ?? 'Call'),
-			subtitle: undefined,
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [decodedCall?.functionName, decodedCall?.args, selector, decodedCall])
+	const title = decodedCall?.functionName
+		? `${decodedCall.functionName}()`
+		: (selector ?? 'Call')
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary" title="Loading…">
+			<span {...styles.secondary()} title="Loading…">
 				…
 			</span>
 		)
@@ -566,7 +534,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 			return <TxEventDescription.ExpandGroup events={reorderedEvents} />
 		}
-		return <span className="text-primary">Deploy contract</span>
+		return <span {...styles.primary()}>Deploy contract</span>
 	}
 
 	// knownEvents already has decoded calls prepended (from the loader)
@@ -575,35 +543,24 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	if (transaction.value === 0n)
 		return (
-			<div className="flex flex-col gap-[2px] flex-1">
-				<div className="text-primary flex-1 flex-nowrap flex gap-[8px]">
-					<div>{title} </div>
-					<AddressLink address={transaction.to} chars={4} />
-				</div>
-				{subtitle && (
-					<span className="text-base-content-secondary label-12">
-						{subtitle}
-					</span>
-				)}
+			<div {...styles.call()}>
+				<div>{title} </div>
+				<AddressLink address={transaction.to} />
 			</div>
 		)
 
 	return (
-		<span className="text-primary whitespace-nowrap">
-			Send <span className="text-base-content-positive">{amountDisplay}</span>{' '}
-			to{' '}
-			<AddressLink
-				address={transaction.to}
-				chars={4}
-				className="text-accent press-down"
-			/>
+		<span {...styles.send()}>
+			Send <TdsAmount symbol={symbol} value={amount} /> to{' '}
+			<AddressLink address={transaction.to} />
 		</span>
 	)
 }
 
 interface TransactionDescriptionProps {
 	transaction: BlockTransaction
-	amountDisplay: string
+	amount: string
+	symbol: string
 	knownEvents?: KnownEvent[]
 	loading?: boolean
 }
@@ -615,4 +572,60 @@ function getEstimatedFee(transaction: BlockTransaction) {
 			? transaction.maxFeePerGas
 			: 0n)
 	return gasPrice * (transaction.gas ?? 0n)
+}
+
+namespace styles {
+	// Stacked below 1024px; beside it, the card's column is capped so the
+	// transactions keep their room.
+	export const page = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16',
+		minWidth: '0 !custom',
+		paddingBottom: '32',
+		paddingInline: '16',
+		paddingTop: '40',
+		width: '100% !custom',
+		'@media (width >= 800px)': { paddingBottom: '64', paddingTop: '64' },
+		'@media (width >= 1024px)': {
+			alignItems: 'start',
+			display: 'grid',
+			gridTemplateColumns: 'minmax(0, 360px) minmax(0, 1fr)',
+		},
+		'@media (width >= 1240px)': { maxWidth: '1280px !custom' },
+	})
+
+	export const breadcrumbs = style({ gridColumn: '1 / -1' })
+
+	export const systemFrom = style({
+		color: 'gray.900',
+		overflow: 'hidden',
+		textAlign: 'right',
+		textOverflow: 'ellipsis',
+		whiteSpace: 'nowrap',
+		width: '100% !custom',
+	})
+
+	export const primary = style({ color: 'foreground' })
+
+	export const secondary = style({
+		color: 'gray.900',
+		fontVariantNumeric: 'tabular-nums',
+	})
+
+	export const call = style({
+		color: 'foreground',
+		display: 'flex',
+		flex: 1,
+		gap: '8',
+	})
+
+	// `Amount` is a block, so the sentence lays out as a row.
+	export const send = style({
+		alignItems: 'baseline',
+		color: 'foreground',
+		columnGap: '4',
+		display: 'flex',
+		whiteSpace: 'nowrap',
+	})
 }

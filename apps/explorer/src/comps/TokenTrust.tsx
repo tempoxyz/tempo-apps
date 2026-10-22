@@ -1,13 +1,24 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import {
+	Button,
+	Callout,
+	Field,
+	Input,
+	LoadingDots,
+	Rows,
+	Skeleton,
+	Tag,
+	style,
+} from '@tempoxyz/ds'
 import * as Address from 'ox/Address'
 import * as React from 'react'
 import { useChainId } from 'wagmi'
+import { cx } from 'zyzz'
 import { Address as AddressLink } from '#comps/Address'
-import { cx } from '#lib/css'
+import { ContractSection } from '#comps/Contract'
 import {
 	groupTokenAuthorities,
-	pauseStatusLabel,
 	policyDescriptions,
 	policyLabel,
 	tokenPolicyRows,
@@ -17,7 +28,9 @@ import {
 } from '#lib/domain/token-trust'
 import { fetchTokenPolicy } from '#lib/server/token-trust'
 import type { RoleHolder } from '#routes/api/tip20-roles'
+import { link, linkHover } from '#styles/explorer'
 
+/** The token's transfer policy and privileged addresses, as two sections. */
 export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 	const chainId = useChainId()
 	const policyQuery = useQuery({
@@ -32,169 +45,162 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 		policy,
 	)
 	return (
-		<div className="flex flex-col gap-[14px] border-t border-dashed border-distinct pt-[14px] mt-[14px]">
-			<h3 className="copy-13 text-tertiary">Trust & permissions</h3>
-			<section
-				aria-label="Transfer policy"
-				className="rounded-[6px] border border-distinct overflow-hidden"
+		<>
+			<ContractSection
+				title="Transfer policy"
+				description="Who may send, receive and mint this token. Token admins can replace the policy."
 			>
-				<div className="flex items-start justify-between gap-2 border-b border-distinct px-3 py-2.5">
-					<h4 className="font-medium">Transfer policy</h4>
-					{policy && <PolicyLink policy={policy.policy} />}
-				</div>
-				<div className="flex flex-col gap-3 p-3">
-					<div className="flex flex-col items-start gap-3 md:flex-row-reverse md:justify-between">
-						<span
-							role="status"
-							aria-label="Token pause status"
-							title={
-								policy?.paused === false
-									? 'Token is not paused. Transfer policy restrictions still apply.'
-									: undefined
-							}
-							className={cx(
-								'inline-flex shrink-0 items-center rounded-[5px] px-[5px] py-[1px] label-12 whitespace-nowrap',
-								policy?.paused === true && 'bg-warning/15 text-warning',
-								policy?.paused !== true && 'bg-distinct',
-								policy?.paused === false && 'text-inherit',
-								policy?.paused == null && 'text-tertiary',
-							)}
-						>
-							{policyQuery.isPending
-								? 'Loading status…'
-								: pauseStatusLabel(policy?.paused)}
-						</span>
-						{policyQuery.isPending ? (
-							<p className="text-tertiary" role="status">
-								Loading transfer policy…
-							</p>
-						) : policyQuery.isError ? (
-							<Unavailable
-								message="Transfer policy unavailable."
-								onRetry={() => void policyQuery.refetch()}
-							/>
-						) : (
-							policy && (
-								<div className="flex flex-col gap-2 label-12 text-secondary">
-									<p>{policyDescriptions[policy.policy.type]}</p>
-									<p className="text-tertiary">
-										Token admins can replace this policy.
-									</p>
-								</div>
-							)
-						)}
-					</div>
-					<AddressPolicyChecker
-						key={`${chainId}:${props.address}`}
-						address={props.address}
-						chainId={chainId}
-						policy={policy}
+				{policyQuery.isError ? (
+					<Unavailable
+						message="Transfer policy unavailable."
+						onRetry={() => void policyQuery.refetch()}
 					/>
-				</div>
-			</section>
-			<section
-				aria-label="Privileged addresses"
-				className="rounded-[6px] border border-distinct overflow-hidden"
-			>
-				<h4 className="border-b border-distinct px-3 py-2.5 font-medium">
-					Privileged addresses
-				</h4>
-				<div className="flex flex-col gap-3 p-3">
-					{props.loading ? (
-						<p className="text-tertiary" role="status">
-							Loading token roles…
-						</p>
-					) : props.unavailable ? (
-						<Unavailable
-							message="Token roles unavailable. Policy permissions below may still be shown."
-							onRetry={props.onRetry}
-						/>
-					) : (
-						props.roles.length === 0 && (
-							<p className="text-tertiary">
-								No current token role holders found.
+				) : (
+					<>
+						<Rows dividers="full">
+							<Rows.Row spacing="none">
+								<Rows.Label>Policy</Rows.Label>
+								{policy ? (
+									<PolicyLink policy={policy.policy} />
+								) : (
+									<Skeleton shape="pill" {...styles.skeleton()} />
+								)}
+							</Rows.Row>
+							<Rows.Row spacing="none">
+								<Rows.Label>Transfers</Rows.Label>
+								{policy ? (
+									<Tag
+										role="status"
+										aria-label="Token pause status"
+										intent={
+											policy.paused === true
+												? 'warning'
+												: policy.paused === false
+													? 'positive'
+													: 'neutral'
+										}
+										size="small"
+									>
+										<Tag.Dot />
+										{policy.paused === true
+											? 'Paused'
+											: policy.paused === false
+												? 'Active'
+												: 'Unavailable'}
+									</Tag>
+								) : (
+									<Skeleton shape="pill" {...styles.skeleton()} />
+								)}
+							</Rows.Row>
+						</Rows>
+						{policy && (
+							<p {...styles.description()}>
+								{policyDescriptions[policy.policy.type]}
+								{policy.paused === false &&
+									' Transfers aren’t paused, but the policy still applies.'}
 							</p>
-						)
-					)}
-					{groups.length > 0 && (
-						<div className="flex flex-col divide-y divide-dashed divide-distinct">
-							{groups.map((group) => (
-								<div
-									key={group.account}
-									className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0"
-								>
-									<AddressLink
-										address={group.account}
-										className="label-12 break-all"
-									/>
-									<dl className="flex flex-col gap-3 label-12">
-										{group.roles.map((role) => (
-											<div
-												key={role.roleHash}
-												className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
+						)}
+					</>
+				)}
+				<AddressPolicyChecker
+					key={`${chainId}:${props.address}`}
+					address={props.address}
+					chainId={chainId}
+					policy={policy}
+				/>
+			</ContractSection>
+			<ContractSection
+				title="Privileged addresses"
+				description="Accounts that hold a token role or manage one of its policies."
+			>
+				{props.loading ? (
+					<Rows dividers="full">
+						<Rows.RowGroupLoader aria-label="Loading token roles" />
+					</Rows>
+				) : props.unavailable ? (
+					<Unavailable
+						message="Token roles unavailable. Policy permissions below may still be shown."
+						onRetry={props.onRetry}
+					/>
+				) : (
+					props.roles.length === 0 && (
+						<p {...styles.description()}>
+							No current token role holders found.
+						</p>
+					)
+				)}
+				{groups.map((group) => (
+					<div key={group.account} {...styles.account()}>
+						<h4 {...styles.accountTitle()}>
+							<AddressLink address={group.account} />
+						</h4>
+						<Rows dividers="full">
+							{group.roles.map((role) => (
+								<Rows.Row key={role.roleHash} spacing="none">
+									<Rows.Info>
+										<Rows.Title>
+											<span {...styles.roleName()}>{role.role}</span>
+										</Rows.Title>
+										<Rows.Description>
+											{tokenRoleDescription(role.role)}
+										</Rows.Description>
+									</Rows.Info>
+									<span {...styles.grant()}>
+										{role.grantedAt != null && (
+											<time
+												dateTime={new Date(role.grantedAt * 1000).toISOString()}
 											>
-												<dt className="font-mono label-12 break-all">
-													{role.role}
-												</dt>
-												<dd className="text-secondary">
-													{tokenRoleDescription(role.role)}
-												</dd>
-												<dd className="flex items-baseline gap-2 md:justify-end label-12 whitespace-nowrap">
-													{role.grantedAt != null && (
-														<span className="text-tertiary">
-															{new Date(
-																role.grantedAt * 1000,
-															).toLocaleDateString('en-US')}
-														</span>
-													)}
-													{role.grantedTx ? (
-														<Link
-															to="/tx/$hash"
-															params={{ hash: role.grantedTx as `0x${string}` }}
-															className="text-accent hover:underline"
-															aria-label={`View ${role.role} grant transaction for ${group.account}`}
-														>
-															Grant tx ↗
-														</Link>
-													) : (
-														<span className="text-tertiary">
-															Grant transaction unavailable
-														</span>
-													)}
-												</dd>
-											</div>
-										))}
-										{group.permissions.map(
-											(permission, index) =>
-												permission.policyId !== undefined && (
-													<div
-														key={`${permission.policyId}:${index}`}
-														className="grid gap-1 md:grid-cols-[140px_minmax(0,1fr)_auto] md:gap-3"
-													>
-														<dt>{permission.label}</dt>
-														<dd className="text-secondary">
-															{permission.description}
-														</dd>
-														<dd className="md:text-right label-12">
-															<Link
-																to="/policy/$id"
-																params={{ id: permission.policyId }}
-																className="text-accent hover:underline"
-															>
-																Policy #{permission.policyId} activity ↗
-															</Link>
-														</dd>
-													</div>
-												),
+												{new Date(role.grantedAt * 1000).toLocaleDateString(
+													'en-US',
+													{ day: 'numeric', month: 'short', year: 'numeric' },
+												)}
+											</time>
 										)}
-									</dl>
-								</div>
+										{role.grantedTx ? (
+											<Link
+												to="/tx/$hash"
+												params={{ hash: role.grantedTx as `0x${string}` }}
+												{...cx(link(), linkHover())}
+												aria-label={`View ${role.role} grant transaction for ${group.account}`}
+											>
+												View grant
+											</Link>
+										) : (
+											<span>Grant unavailable</span>
+										)}
+									</span>
+								</Rows.Row>
 							))}
-						</div>
-					)}
-				</div>
-			</section>
-		</div>
+							{group.permissions.map(
+								(permission, index) =>
+									permission.policyId !== undefined && (
+										<Rows.Row
+											key={`${permission.policyId}:${index}`}
+											spacing="none"
+										>
+											<Rows.Info>
+												<Rows.Title>{permission.label}</Rows.Title>
+												<Rows.Description>
+													{permission.description}
+												</Rows.Description>
+											</Rows.Info>
+											<span {...styles.grant()}>
+												<Link
+													to="/policy/$id"
+													params={{ id: permission.policyId }}
+													{...cx(link(), linkHover())}
+												>
+													Policy #{permission.policyId} activity
+												</Link>
+											</span>
+										</Rows.Row>
+									),
+							)}
+						</Rows>
+					</div>
+				))}
+			</ContractSection>
+		</>
 	)
 }
 
@@ -210,15 +216,15 @@ export declare namespace TokenTrust {
 
 function PolicyLink({ policy }: { policy: TransferPolicy }): React.JSX.Element {
 	return (
-		<span className="inline-flex items-center gap-2">
+		<span {...styles.policyLink()}>
 			<Link
 				to="/policy/$id"
 				params={{ id: policy.id }}
-				className="text-accent hover:underline"
+				{...cx(link(), linkHover())}
 			>
 				#{policy.id}
 			</Link>
-			<span className="label-12 text-tertiary">{policyLabel(policy)}</span>
+			<span {...styles.secondary()}>{policyLabel(policy)}</span>
 		</span>
 	)
 }
@@ -228,16 +234,11 @@ function Unavailable(props: {
 	onRetry: () => void
 }): React.JSX.Element {
 	return (
-		<div role="status" className="label-12 text-tertiary">
-			{props.message}{' '}
-			<button
-				type="button"
-				onClick={props.onRetry}
-				className="text-accent hover:underline"
-			>
-				Try again
-			</button>
-		</div>
+		<Callout intent="negative" role="status" size="small">
+			<Callout.Icon />
+			<Callout.Content>{props.message}</Callout.Content>
+			<Callout.Action onClick={props.onRetry}>Try again</Callout.Action>
+		</Callout>
 	)
 }
 
@@ -250,7 +251,6 @@ function AddressPolicyChecker(props: {
 	const [value, setValue] = React.useState('')
 	const [account, setAccount] = React.useState<Address.Address>()
 	const [invalid, setInvalid] = React.useState(false)
-	const id = React.useId()
 	const query = useQuery({
 		queryKey: ['token-policy-check', props.chainId, props.address, account],
 		queryFn: async () => {
@@ -276,75 +276,70 @@ function AddressPolicyChecker(props: {
 		account && !query.isFetching && !query.isError ? query.data : undefined
 	const displayedPolicy = result ?? props.policy
 	return (
-		<div className="flex flex-col gap-3 label-12">
-			<details className="border-t border-dashed border-distinct pt-3 label-12">
-				<summary className="cursor-pointer text-accent">
-					Check an address
-				</summary>
-				<form
-					className="flex flex-col gap-2 pt-3"
-					onSubmit={(event) => {
-						event.preventDefault()
-						const input = value.trim()
-						if (!Address.validate(input)) {
-							setInvalid(true)
-							setAccount(undefined)
-							return
-						}
-						setInvalid(false)
-						if (account === input) void query.refetch()
-						else setAccount(input)
-					}}
-				>
-					<label htmlFor={id} className="text-secondary">
-						Send, receive and mint receipt permissions
-					</label>
-					<div className="flex gap-2">
-						<input
-							id={id}
-							value={value}
-							onChange={(event) => {
-								setValue(event.target.value)
-								setAccount(undefined)
-								setInvalid(false)
-							}}
-							placeholder="0x…"
-							autoComplete="off"
-							spellCheck={false}
-							aria-invalid={invalid}
-							aria-describedby={invalid ? `${id}-error` : undefined}
-							className="min-w-0 flex-1 rounded-[5px] border border-distinct bg-transparent px-2 py-1.5 font-mono label-12"
-						/>
-						<button
+		<div {...styles.checker()}>
+			<form
+				noValidate
+				onSubmit={(event) => {
+					event.preventDefault()
+					const input = value.trim()
+					if (!Address.validate(input)) {
+						setInvalid(true)
+						setAccount(undefined)
+						return
+					}
+					setInvalid(false)
+					if (account === input) void query.refetch()
+					else setAccount(input)
+				}}
+			>
+				<Field.Root invalid={invalid}>
+					<Field.Label>Address to check</Field.Label>
+					<div {...styles.inputRow()}>
+						<Input.Group {...styles.input()}>
+							<Input.Control
+								value={value}
+								onValueChange={(next) => {
+									setValue(next)
+									setAccount(undefined)
+									setInvalid(false)
+								}}
+								placeholder="0x…"
+								autoCapitalize="off"
+								autoComplete="off"
+								autoCorrect="off"
+								spellCheck={false}
+							/>
+						</Input.Group>
+						<Button
 							type="submit"
-							disabled={query.isFetching}
-							className="text-accent hover:underline disabled:opacity-50"
+							loading={query.isFetching}
+							variant="secondary"
 						>
-							{query.isFetching ? 'Checking…' : 'Check'}
-						</button>
+							Check address
+						</Button>
 					</div>
-					{invalid && (
-						<p id={`${id}-error`} role="alert" className="text-negative">
-							Enter a valid address.
-						</p>
-					)}
-				</form>
-				<div aria-live="polite" className="pt-3">
-					{account && query.isFetching ? (
-						<p className="text-tertiary">Checking current policy…</p>
-					) : account && query.isError ? (
-						<Unavailable
-							message="Could not check this address."
-							onRetry={() => void query.refetch()}
-						/>
-					) : displayedPolicy ? (
-						<PolicyCheckResult result={displayedPolicy} />
-					) : null}
-				</div>
-				<p className="text-tertiary pt-2">
-					Token policy only; this does not simulate a transfer.
-				</p>
-			</details>
+					<Field.Description>
+						Checks the policy only, without simulating a transfer.
+					</Field.Description>
+					<Field.Error match={invalid}>
+						Enter an address that starts with 0x and has 40 hex characters.
+					</Field.Error>
+				</Field.Root>
+			</form>
+			<div aria-live="polite">
+				{account && query.isFetching ? (
+					<p {...styles.secondary()}>
+						Checking current policy <LoadingDots aria-label="Checking" />
+					</p>
+				) : account && query.isError ? (
+					<Unavailable
+						message="Could not check this address."
+						onRetry={() => void query.refetch()}
+					/>
+				) : displayedPolicy ? (
+					<PolicyCheckResult result={displayedPolicy} />
+				) : null}
+			</div>
 		</div>
 	)
 }
@@ -355,36 +350,121 @@ function PolicyCheckResult({
 	result: TokenPolicy
 }): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-2">
+		<div {...styles.result()}>
 			{(result.components.length > 0 || result.checks) && (
-				<dl className="flex flex-col gap-2" aria-label="Policy permissions">
+				<Rows
+					aria-label="Policy permissions"
+					dividers="full"
+					role="group"
+					size="small"
+				>
 					{tokenPolicyRows(result).map((row) => (
-						<div
-							key={row.scope}
-							className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"
-						>
-							<dt className="text-secondary">{row.label}</dt>
-							<dd className="flex flex-wrap items-baseline justify-end gap-x-3 gap-y-1">
+						<Rows.Row key={row.scope} spacing="none">
+							<Rows.Label>{row.label}</Rows.Label>
+							<span {...styles.resultValue()}>
 								{result.components.length > 0 && (
 									<PolicyLink policy={row.policy} />
 								)}
 								{result.checks && (
-									<span>
+									<Tag
+										intent={
+											row.allowed === null
+												? 'neutral'
+												: row.allowed
+													? 'positive'
+													: 'negative'
+										}
+										size="small"
+									>
+										<Tag.Dot />
 										{row.allowed === null
 											? 'Unavailable'
 											: row.allowed
 												? 'Permitted by policy'
 												: 'Blocked by policy'}
-									</span>
+									</Tag>
 								)}
-							</dd>
-						</div>
+							</span>
+						</Rows.Row>
 					))}
-				</dl>
+				</Rows>
 			)}
 			{result.checks && (
-				<p className="text-tertiary">Checked at block {result.blockNumber}.</p>
+				<p {...styles.secondary()}>Checked at block {result.blockNumber}.</p>
 			)}
 		</div>
 	)
+}
+
+namespace styles {
+	export const skeleton = style({ height: '12', width: '6rem !custom' })
+
+	export const secondary = style({ color: 'gray.900' })
+
+	export const description = style({
+		color: 'gray.900',
+		typography: 'copy.13',
+	})
+
+	export const account = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		minWidth: '0',
+	})
+
+	// The account heads its rows; Hex sets the type.
+	export const accountTitle = style({ display: 'flex', minWidth: '0' })
+
+	export const roleName = style({
+		overflowWrap: 'anywhere',
+		typography: 'copy.13.mono',
+	})
+
+	export const grant = style({
+		alignItems: 'flex-end',
+		color: 'gray.900',
+		display: 'flex',
+		flexDirection: 'column',
+		flexShrink: 0,
+		gap: '4',
+		typography: 'copy.13',
+	})
+
+	export const policyLink = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		gap: '8',
+	})
+
+	export const checker = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '12',
+		paddingTop: '8',
+	})
+
+	export const inputRow = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+	})
+
+	export const input = style({ flex: 1, minWidth: '0' })
+
+	export const result = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	export const resultValue = style({
+		alignItems: 'center',
+		columnGap: '12',
+		display: 'flex',
+		flexWrap: 'wrap',
+		justifyContent: 'flex-end',
+		minWidth: '0',
+		rowGap: '4',
+	})
 }

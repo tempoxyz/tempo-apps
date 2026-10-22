@@ -1,4 +1,6 @@
 import type { Address } from 'ox'
+import { Button, Tooltip, style } from '@tempoxyz/ds'
+import { LogOut } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import {
 	useConnect,
@@ -7,14 +9,11 @@ import {
 	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
-import { cx } from '#lib/css'
 import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
-import LucideLogOut from '~icons/lucide/log-out'
-import LucideWallet from '~icons/lucide/wallet'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 
@@ -44,7 +43,7 @@ export function WalletActions(
 		(supported[0]?.name && supported[0].name !== 'Injected'
 			? supported[0].name
 			: undefined) ??
-		'Wallet'
+		'wallet'
 
 	const handleConnectOrSwitch = () => {
 		if (!isConnected) {
@@ -62,68 +61,51 @@ export function WalletActions(
 		}
 	}
 
-	const busy = connect.isPending || switchChain.isPending
-	const connectLabel = connect.isPending
-		? 'Connecting…'
-		: switchChain.isPending
-			? 'Switching network…'
-			: !isConnected
-				? `Connect ${walletName}`
-				: 'Switch to Tempo'
-
 	return (
 		<InfoCard
-			className="min-[1240px]:w-full"
-			title={
-				<InfoCard.Title className="w-full justify-between">
-					Wallet actions
-					{isConnected && (
-						<button
-							type="button"
-							title="Disconnect"
-							className="text-secondary hover:text-primary cursor-pointer press-down"
-							onClick={() => disconnect.mutate({ connector })}
+			className={styles.card().className}
+			title={<InfoCard.Title>Wallet actions</InfoCard.Title>}
+			action={
+				isConnected ? (
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Button
+									aria-label="Disconnect wallet"
+									onClick={() => disconnect.mutate({ connector })}
+									shape="icon"
+									size="small"
+									variant="text"
+								/>
+							}
 						>
-							<LucideLogOut className="size-3" />
-						</button>
-					)}
-				</InfoCard.Title>
+							<LogOut {...styles.icon()} />
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Disconnect wallet</Tooltip.Popup>
+					</Tooltip.Root>
+				) : undefined
 			}
-			sections={
-				isReady
-					? [
-							<AddToWallet
-								key="add"
-								address={props.address}
-								connectors={supported}
-								symbol={props.symbol}
-								decimals={props.decimals}
-								image={props.image}
-							/>,
-							<SetAsFeeToken
-								key="fee"
-								address={props.address}
-								connectors={supported}
-								symbol={props.symbol}
-							/>,
-						]
-					: [
-							<button
-								key="connect"
-								type="button"
-								disabled={busy}
-								className={cx(
-									'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-									busy
-										? 'text-secondary animate-pulse'
-										: 'text-secondary hover:text-primary cursor-pointer press-down',
-								)}
-								onClick={handleConnectOrSwitch}
-							>
-								<LucideWallet className="size-3.5" />
-								{connectLabel}
-							</button>,
-						]
+			footer={
+				isReady ? (
+					<>
+						<AddToWallet
+							address={props.address}
+							symbol={props.symbol}
+							decimals={props.decimals}
+							image={props.image}
+						/>
+						<SetAsFeeToken address={props.address} symbol={props.symbol} />
+					</>
+				) : (
+					<Button
+						loading={connect.isPending || switchChain.isPending}
+						onClick={handleConnectOrSwitch}
+						size="small"
+						variant="secondary"
+					>
+						{isConnected ? 'Switch to Tempo' : `Connect ${walletName}`}
+					</Button>
+				)
 			}
 		/>
 	)
@@ -136,4 +118,13 @@ export declare namespace WalletActions {
 		decimals?: number | undefined
 		image?: string | undefined
 	}
+}
+
+namespace styles {
+	export const icon = style({ fontSize: '16' })
+
+	// InfoCard fits its content from 1240px; the wallet card fills the column.
+	export const card = style({
+		'@media (width >= 1240px)': { width: '100% !custom' },
+	})
 }

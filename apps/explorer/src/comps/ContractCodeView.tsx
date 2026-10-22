@@ -6,20 +6,17 @@ import {
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
+import { Button, CopyButton, Tooltip, style, vars } from '@tempoxyz/ds'
+import { LayoutSidebar } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
 import { ContractFileTree } from '#comps/ContractFileTree.tsx'
-import { cx } from '#lib/css'
 import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
 import {
 	createContractSourceLink,
 	parseContractSourceLink,
 } from '#lib/domain/contract-source-link'
-import { useCopy } from '#lib/hooks'
 import { getInitialThemeMode } from '#lib/theme'
-import CopyIcon from '~icons/lucide/copy'
-import LinkIcon from '~icons/lucide/link'
-import PanelLeftIcon from '~icons/lucide/panel-left'
 import WrapIcon from '~icons/lucide/wrap-text'
 
 export function ContractCodeView(
@@ -47,7 +44,8 @@ export function ContractCodeView(
 		const element = container.current
 		if (!element) return
 		const observer = new ResizeObserver(([entry]) => {
-			if (entry) setCompact(entry.contentRect.width < 1000)
+			if (!entry) return
+			setCompact(entry.contentRect.width < 1000)
 		})
 		observer.observe(element)
 		return () => observer.disconnect()
@@ -66,8 +64,6 @@ export function ContractCodeView(
 	}, [activeFile])
 	React.useEffect(syncScrollCode, [syncScrollCode])
 	const [theme, setTheme] = React.useState(getInitialThemeMode)
-	const sourceCopy = useCopy()
-	const linkCopy = useCopy()
 	const paths = React.useMemo(() => entries.map(([name]) => name), [entries])
 	const updateSelectionUrl = React.useCallback(
 		(target: Parameters<typeof createContractSourceLink>[1]) => {
@@ -136,7 +132,7 @@ export function ContractCodeView(
 			layout: { paddingTop: 0, paddingBottom: 16, gap: 16 },
 			onPostRender: syncScrollCode,
 			unsafeCSS:
-				':host { --diffs-font-family: "JetBrains Mono", ui-monospace, monospace; --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--color-source-background); }',
+				':host { --diffs-font-family: var(--contract-source-font); --diffs-font-size: 12px; --diffs-line-height: 22px; } :host, [data-file] { --diffs-bg: var(--contract-source-background); }',
 		}),
 		[theme, wrap, syncScrollCode],
 	)
@@ -187,93 +183,45 @@ export function ContractCodeView(
 	const currentSource =
 		entries.find(([name]) => name === selectedPath)?.[1].content ?? ''
 
-	function copyPermalink() {
-		void linkCopy.copy(
-			createContractSourceLink(new URL(window.location.href), {
-				id: selectedPath,
-				range: selection?.range ?? null,
-			}),
-		)
-	}
+	// The viewer renders only in the browser, so `window` is defined.
+	const permalink = createContractSourceLink(
+		new URL(locationHref, window.location.origin),
+		{ id: selectedPath, range: selection?.range ?? null },
+	)
 
 	return (
-		<div
-			ref={container}
-			className="@container/source overflow-hidden rounded-lg border border-card-border bg-source-background"
-		>
-			<div className="flex items-center justify-between gap-2 border-b border-card-border p-2 label-12">
-				<div className="flex min-w-0 items-center gap-2">
-					<button
-						type="button"
-						aria-label={sidebarOpen ? 'Hide source files' : 'Show source files'}
-						title={sidebarOpen ? 'Hide source files' : 'Show source files'}
+		<div ref={container} {...styles.root()}>
+			<div {...styles.toolbar()}>
+				<div {...styles.toolbarStart()}>
+					<ToolbarAction
+						label={sidebarOpen ? 'Hide source files' : 'Show source files'}
+						active={sidebarOpen}
 						aria-expanded={sidebarOpen}
 						aria-controls={sidebarId}
 						onClick={() => setSidebarPreference(!sidebarOpen)}
-						className={cx(
-							toolbarButton,
-							sidebarOpen && 'bg-base-alt text-primary',
-						)}
 					>
-						<PanelLeftIcon className="size-4" />
-					</button>
-					<span className="whitespace-nowrap font-medium">
-						{entries.length}{' '}
-						<span className="hidden @sm/source:inline">source </span>
+						<LayoutSidebar {...styles.toolbarIcon()} />
+					</ToolbarAction>
+					<span {...styles.fileCount()}>
+						{entries.length} <span {...styles.wideLabel()}>source </span>
 						{entries.length === 1 ? 'file' : 'files'}
 					</span>
 				</div>
-				<div className="flex shrink-0 items-center gap-1 text-secondary">
-					<button
-						type="button"
-						aria-label="Wrap lines"
-						title="Wrap lines"
+				<div {...styles.toolbarEnd()}>
+					<ToolbarAction
+						label="Wrap lines"
+						active={wrap}
 						aria-pressed={wrap}
 						onClick={() => setWrap(!wrap)}
-						className={cx(toolbarButton, wrap && 'bg-base-alt text-primary')}
 					>
-						<WrapIcon className="size-4" />
-						<span className="hidden @lg/source:inline">Wrap</span>
-					</button>
-					<button
-						type="button"
-						aria-label={linkCopy.notifying ? 'Link copied' : 'Copy link'}
-						title="Copy link"
-						onClick={copyPermalink}
-						className={toolbarButton}
-					>
-						<LinkIcon className="size-4" />
-						<span className="hidden @lg/source:inline">
-							{linkCopy.notifying ? 'Copied!' : 'Copy link'}
-						</span>
-					</button>
-					<button
-						type="button"
-						aria-label={sourceCopy.notifying ? 'File copied' : 'Copy file'}
-						title="Copy file"
-						onClick={() => void sourceCopy.copy(currentSource)}
-						className={toolbarButton}
-					>
-						<CopyIcon className="size-4" />
-						<span className="hidden @lg/source:inline">
-							{sourceCopy.notifying ? 'Copied!' : 'Copy file'}
-						</span>
-					</button>
-					<span className="sr-only" role="status">
-						{linkCopy.notifying
-							? 'Link copied to clipboard'
-							: sourceCopy.notifying
-								? 'File copied to clipboard'
-								: ''}
-					</span>
+						<WrapIcon {...styles.toolbarIcon()} />
+					</ToolbarAction>
+					<CopyButton aria-label="Copy link" value={permalink} />
+					<CopyButton aria-label="Copy file" value={currentSource} />
 				</div>
 			</div>
-			<div className="flex min-w-0 flex-col @2xl/source:flex-row">
-				<div
-					id={sidebarId}
-					hidden={!sidebarOpen}
-					className="shrink-0 @2xl/source:w-[240px]"
-				>
+			<div {...styles.panes()}>
+				<div id={sidebarId} hidden={!sidebarOpen} {...styles.sidebar()}>
 					<ContractFileTree
 						key={JSON.stringify(paths)}
 						paths={paths}
@@ -285,7 +233,7 @@ export function ContractCodeView(
 					poolOptions={highlightPoolOptions}
 					highlighterOptions={highlightOptions}
 				>
-					<div className="min-w-0 flex-1">
+					<div {...styles.code()}>
 						<CodeView
 							ref={viewer}
 							items={items}
@@ -304,19 +252,19 @@ export function ContractCodeView(
 									)
 								if (visible) setActiveFile(visible.id)
 							}}
-							className="h-[min(620px,70svh)] min-h-[320px] min-w-0 overflow-auto"
+							{...styles.codeView()}
 						/>
 						<ContractCodeScrollbar code={scrollCode} wrap={wrap} />
 					</div>
 				</WorkerPoolContextProvider>
 			</div>
-			<div className="flex flex-wrap justify-between gap-2 border-t border-card-border px-3 py-2 label-12 text-tertiary">
+			<div {...styles.footer()}>
 				<span>
 					{selection
 						? `Lines ${Math.min(selection.range.start, selection.range.end)}–${Math.max(selection.range.start, selection.range.end)}`
 						: 'Select line numbers to link to code'}
 				</span>
-				<span className="hidden @sm/source:inline">Read only</span>
+				<span {...styles.wideLabel()}>Read only</span>
 			</div>
 		</div>
 	)
@@ -328,6 +276,39 @@ export declare namespace ContractCodeView {
 	}
 }
 
+/** A small icon toggle in the toolbar, filled while `active`. */
+function ToolbarAction(
+	props: Pick<
+		React.ComponentProps<'button'>,
+		'aria-controls' | 'aria-expanded' | 'aria-pressed' | 'onClick'
+	> & {
+		active?: boolean | undefined
+		children: React.ReactElement
+		label: string
+	},
+): React.JSX.Element {
+	const { active, children, label, ...rest } = props
+	return (
+		<Tooltip.Root>
+			<Tooltip.Trigger
+				render={
+					<Button
+						{...rest}
+						aria-label={label}
+						shape="icon"
+						size="small"
+						variant={active ? 'secondary' : 'text'}
+						{...styles.toolbarAction()}
+					/>
+				}
+			>
+				{children}
+			</Tooltip.Trigger>
+			<Tooltip.Popup>{label}</Tooltip.Popup>
+		</Tooltip.Root>
+	)
+}
+
 const highlightPoolOptions = {
 	workerFactory: () => new HighlightWorker(),
 	poolSize: 2,
@@ -337,5 +318,89 @@ const highlightOptions = {
 }
 let sourceRevision = 0
 
-const toolbarButton =
-	'flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-md px-2 text-secondary transition-colors hover:bg-base-alt hover:text-primary focus-visible:outline-2 focus-visible:outline-focus'
+namespace styles {
+	// A bordered well inside the tab's card, not a nested card.
+	export const root = style({
+		// Read by the viewer's shadow DOM through `unsafeCSS`.
+		'--contract-source-background': vars.color.background.surface,
+		'--contract-source-font': vars.fontFamily.mono,
+		borderColor: 'grayAlpha.200',
+		borderRadius: '12',
+		borderStyle: 'solid',
+		borderWidth: '1',
+		containerName: 'source',
+		containerType: 'inline-size',
+		overflow: 'hidden',
+	})
+
+	export const toolbar = style({
+		alignItems: 'center',
+		borderBottomWidth: '1',
+		borderColor: 'grayAlpha.200',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		padding: '8',
+		typography: 'label.12',
+	})
+
+	export const toolbarStart = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0',
+	})
+
+	export const toolbarAction = style({ flexShrink: 0 })
+
+	// The toolbar icons match the 16px glyph of TDS CopyButton.
+	export const toolbarIcon = style({ fontSize: '16' })
+
+	export const fileCount = style({ whiteSpace: 'nowrap' })
+
+	export const wideLabel = style({
+		display: 'none',
+		'@container source (width >= 24rem)': { display: 'inline' },
+	})
+
+	export const toolbarEnd = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexShrink: 0,
+		gap: '4',
+	})
+
+	export const panes = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minWidth: '0',
+		'@container source (width >= 42rem)': { flexDirection: 'row' },
+	})
+
+	export const sidebar = style({
+		flexShrink: 0,
+		'@container source (width >= 42rem)': { width: '240' },
+	})
+
+	export const code = style({ flex: 1, minWidth: '0' })
+
+	export const codeView = style({
+		height: 'min(620px, 70svh) !custom',
+		minHeight: '320',
+		minWidth: '0',
+		overflow: 'auto',
+	})
+
+	export const footer = style({
+		borderColor: 'grayAlpha.200',
+		borderTopWidth: '1',
+		color: 'gray.900',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+		justifyContent: 'space-between',
+		paddingBlock: '8',
+		paddingInline: '12',
+		typography: 'label.12',
+	})
+}

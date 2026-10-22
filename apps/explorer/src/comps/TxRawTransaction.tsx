@@ -1,11 +1,18 @@
 import { Link } from '@tanstack/react-router'
+import { CopyButton, style, variants } from '@tempoxyz/ds'
 import * as Json from 'ox/Json'
 import { useMemo } from 'react'
+import { cx } from 'zyzz'
 import * as z from 'zod/mini'
-import { useCopy } from '#lib/hooks'
-import CopyIcon from '~icons/lucide/copy'
+import { link, linkHover } from '#styles/explorer'
 
-export function TxRawTransaction(props: TxRawTransaction.Props) {
+/**
+ * The transaction and its receipt as aligned key and value lines. Each
+ * section copies as JSON; values stay selectable text.
+ */
+export function TxRawTransaction(
+	props: TxRawTransaction.Props,
+): React.JSX.Element {
 	const { data } = props
 	const parsed = useMemo(() => {
 		try {
@@ -22,10 +29,10 @@ export function TxRawTransaction(props: TxRawTransaction.Props) {
 		return Math.max(txMax, receiptMax)
 	}, [parsed])
 
-	if (!parsed.success) return <pre className="whitespace-pre-wrap">{data}</pre>
+	if (!parsed.success) return <pre {...styles.fallback()}>{data}</pre>
 
 	return (
-		<div className="font-mono flex flex-col gap-[24px]">
+		<div {...styles.root()}>
 			<TxRawTransaction.Section
 				title="Transaction"
 				data={parsed.data.tx}
@@ -73,34 +80,21 @@ export namespace TxRawTransaction {
 		return max
 	}
 
-	export function Section(props: Section.Props) {
+	export function Section(props: Section.Props): React.JSX.Element {
 		const { title, data, maxKeyLength, showBorder } = props
-		const { copy, notifying } = useCopy()
 		const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b))
+		const json = useMemo(() => stringify(data), [data])
 
 		return (
-			<div
-				className={showBorder ? 'pt-[24px] border-t border-card-border' : ''}
-			>
-				<div className="flex items-center justify-between mb-[12px]">
-					<div className="text-primary font-sans copy-13">{title}</div>
-					<button
-						type="button"
-						onClick={() => copy(stringify(data))}
-						className="flex items-center gap-[6px] text-tertiary hover:text-secondary cursor-pointer press-down label-12"
-						title={`Copy ${title.toLowerCase()} data`}
-					>
-						{notifying ? (
-							<span className="text-primary">copied</span>
-						) : (
-							<>
-								<CopyIcon className="size-[12px]" />
-								<span className="font-sans">Copy</span>
-							</>
-						)}
-					</button>
+			<section {...styles.section({ border: Boolean(showBorder) })}>
+				<div {...styles.sectionHeader()}>
+					<h3 {...styles.sectionTitle()}>{title}</h3>
+					<CopyButton
+						aria-label={`Copy ${title.toLowerCase()} JSON`}
+						value={json}
+					/>
 				</div>
-				<div className="flex flex-col">
+				<div {...styles.column()}>
 					{entries.map(([key, value]) => (
 						<Row
 							depth={0}
@@ -111,7 +105,7 @@ export namespace TxRawTransaction {
 						/>
 					))}
 				</div>
-			</div>
+			</section>
 		)
 	}
 
@@ -136,31 +130,19 @@ export namespace TxRawTransaction {
 		feeToken: (v) => `/token/${v}`,
 	}
 
-	export function Row(props: Row.Props) {
+	export function Row(props: Row.Props): React.JSX.Element {
 		const { label, value, pad = 21, depth = 0 } = props
 
-		const { copy, notifying } = useCopy()
-
-		const isArray = Array.isArray(value)
-		const isFilledArray = isArray && value.length > 0
+		const isFilledArray = Array.isArray(value) && value.length > 0
 		const isObject =
 			typeof value === 'object' && value !== null && !Array.isArray(value)
-		const indent = depth * 8
+		// Keys line up in one column, indented by depth.
+		const keyStyle = { paddingLeft: `${depth * 8}px`, minWidth: `${pad}ch` }
 
 		if (isFilledArray)
 			return (
-				<div className="flex flex-col">
-					<button
-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
-						onClick={() => copy(stringify(value))}
-						style={{
-							paddingLeft: `${indent}px`,
-							width: `${pad}ch`,
-						}}
-						type="button"
-					>
-						{notifying ? <span className="text-primary">copied</span> : label}
-					</button>
+				<div {...styles.column()}>
+					<span {...styles.groupKey({ style: keyStyle })}>{label}</span>
 					{value.map((item, index) => (
 						<ArrayItem
 							key={`${index}${item}`}
@@ -178,18 +160,8 @@ export namespace TxRawTransaction {
 				([a], [b]) => a.localeCompare(b),
 			)
 			return (
-				<div className="flex flex-col">
-					<button
-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
-						onClick={() => copy(stringify(value))}
-						style={{
-							paddingLeft: `${indent}px`,
-							width: `${pad}ch`,
-						}}
-						type="button"
-					>
-						{notifying ? <span className="text-primary">copied</span> : label}
-					</button>
+				<div {...styles.column()}>
+					<span {...styles.groupKey({ style: keyStyle })}>{label}</span>
 					{entries.map(([key, val]) => (
 						<Row
 							key={key}
@@ -205,38 +177,19 @@ export namespace TxRawTransaction {
 
 		const formattedValue = TxRawTransaction.formatValue(value)
 		const linkTo = label in linkableFields ? linkableFields[label] : null
-		const isLinkable = linkTo && formattedValue && formattedValue !== ''
 
 		return (
-			<div className="flex gap-[16px] py-[4px]">
-				<button
-					className="flex items-start press-down cursor-pointer text-left"
-					type="button"
-					onClick={() => copy(formattedValue)}
-					style={{
-						paddingLeft: `${indent}px`,
-						minWidth: `${pad}ch`,
-					}}
-				>
-					<span className="text-tertiary shrink-0">
-						{notifying ? <span className="text-primary">copied</span> : label}
-					</span>
-				</button>
-				{isLinkable ? (
+			<div {...styles.entry()}>
+				<span {...styles.key({ style: keyStyle })}>{label}</span>
+				{linkTo && formattedValue ? (
 					<Link
 						to={linkTo(formattedValue)}
-						className="text-accent hover:underline press-down"
+						{...cx(styles.value(), link(), linkHover())}
 					>
 						{formattedValue}
 					</Link>
 				) : (
-					<button
-						className="flex items-start press-down cursor-pointer text-left"
-						type="button"
-						onClick={() => copy(formattedValue)}
-					>
-						<span>{formattedValue}</span>
-					</button>
+					<span {...styles.value()}>{formattedValue}</span>
 				)}
 			</div>
 		)
@@ -251,30 +204,20 @@ export namespace TxRawTransaction {
 		}
 	}
 
-	export function ArrayItem(props: ArrayItem.Props) {
+	export function ArrayItem(props: ArrayItem.Props): React.JSX.Element {
 		const { index, value, pad = 21, depth = 0 } = props
-
-		const { copy, notifying } = useCopy()
 
 		const isObject =
 			typeof value === 'object' && value !== null && !Array.isArray(value)
-		const indent = depth * 8
+		const keyStyle = { paddingLeft: `${depth * 8}px`, minWidth: `${pad}ch` }
 
 		if (isObject) {
 			const entries = Object.entries(value as Record<string, unknown>).sort(
 				([a], [b]) => a.localeCompare(b),
 			)
 			return (
-				<div className="flex flex-col">
-					<div
-						className="text-tertiary py-[4px]"
-						style={{
-							paddingLeft: `${indent}px`,
-							width: `${pad}ch`,
-						}}
-					>
-						[{index}]
-					</div>
+				<div {...styles.column()}>
+					<span {...styles.groupKey({ style: keyStyle })}>[{index}]</span>
 					{entries.map(([key, val]) => (
 						<Row
 							key={key}
@@ -289,29 +232,9 @@ export namespace TxRawTransaction {
 		}
 
 		return (
-			<div className="flex gap-[16px] py-[4px]">
-				<button
-					className="text-tertiary text-left"
-					onClick={() => copy(TxRawTransaction.formatValue(value))}
-					style={{
-						paddingLeft: `${indent}px`,
-						width: `${pad}ch`,
-					}}
-					type="button"
-				>
-					{notifying ? (
-						<span className="text-primary">copied</span>
-					) : (
-						`[${index}]`
-					)}
-				</button>
-				<button
-					className="press-down cursor-pointer text-left"
-					type="button"
-					onClick={() => copy(TxRawTransaction.formatValue(value))}
-				>
-					{TxRawTransaction.formatValue(value)}
-				</button>
+			<div {...styles.entry()}>
+				<span {...styles.key({ style: keyStyle })}>[{index}]</span>
+				<span {...styles.value()}>{TxRawTransaction.formatValue(value)}</span>
 			</div>
 		)
 	}
@@ -331,4 +254,57 @@ function stringify(value: unknown): string {
 		if (typeof value === 'bigint') return value.toString()
 		return value
 	})
+}
+
+namespace styles {
+	export const fallback = style({ margin: '0', whiteSpace: 'pre-wrap' })
+
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		typography: 'label.12.mono',
+	})
+
+	export const section = variants({
+		base: {},
+		defaultVariants: { border: false },
+		variants: {
+			border: {
+				false: {},
+				true: {
+					borderColor: 'grayAlpha.200',
+					borderTopWidth: '1',
+					paddingTop: '24',
+				},
+			},
+		},
+	})
+
+	export const sectionHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		marginBottom: '12',
+	})
+
+	export const sectionTitle = style({
+		color: 'foreground',
+		margin: '0',
+		typography: 'label.12',
+	})
+
+	export const column = style({ display: 'flex', flexDirection: 'column' })
+
+	export const groupKey = style({ color: 'gray.900', paddingBlock: '4' })
+
+	export const entry = style({
+		display: 'flex',
+		gap: '16',
+		paddingBlock: '4',
+	})
+
+	export const key = style({ color: 'gray.900', flexShrink: '0 !custom' })
+
+	export const value = style({ minWidth: '0 !custom' })
 }

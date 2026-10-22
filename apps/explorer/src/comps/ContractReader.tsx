@@ -1,29 +1,36 @@
-import { Link } from '@tanstack/react-router'
+import {
+	Button,
+	Callout,
+	Empty,
+	Hex,
+	Rows,
+	Skeleton,
+	style,
+} from '@tempoxyz/ds'
+import { AlertCircle, Refresh } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
-import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 import type { Abi, AbiFunction } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { cx } from '#lib/css'
-import { ellipsis } from '#lib/chars'
+import { Address as AddressLink } from '#comps/Address'
+import {
+	FunctionDisclosure,
+	FunctionForm,
+	FunctionInput,
+	FunctionResult,
+	FunctionRow,
+	IconAction,
+	functionInputKey,
+} from '#comps/ContractFunction'
 import {
 	formatOutputValue,
 	getFunctionSelector,
 	getInputFunctions,
-	getInputType,
 	getNoInputFunctions,
-	getPlaceholder,
-	isArrayType,
 	parseInputValue,
 } from '#lib/domain/contracts'
-import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
-import CheckIcon from '~icons/lucide/check'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
-import ReturnIcon from '~icons/lucide/corner-down-right'
-import LinkIcon from '~icons/lucide/link'
-import PlayIcon from '~icons/lucide/play'
+import { usePermalinkHighlight } from '#lib/hooks'
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
@@ -170,11 +177,7 @@ function decodeRawCallResult(
 	}
 }
 
-export function ContractReader(props: {
-	address: Address.Address
-	abi: Abi
-	docsUrl?: string
-}) {
+export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 	const { address, abi } = props
 
 	const key = React.useId()
@@ -182,9 +185,19 @@ export function ContractReader(props: {
 	const noInputFunctions = getNoInputFunctions(abi)
 	const inputFunctions = getInputFunctions(abi)
 
+	if (noInputFunctions.length === 0 && inputFunctions.length === 0)
+		return (
+			<Empty.Root>
+				<Empty.Title>No read functions</Empty.Title>
+				<Empty.Description>
+					This ABI has no view or pure functions.
+				</Empty.Description>
+			</Empty.Root>
+		)
+
 	return (
-		<div className="flex flex-col gap-[12px]">
-			{/* Functions without inputs - show as static values */}
+		<Rows.Root dividers="full">
+			{/* Functions without inputs show their value in the row. */}
 			{noInputFunctions.map((fn) => (
 				<StaticReadFunction
 					key={`${fn.name}-${fn.inputs?.length ?? 0}-${address}`}
@@ -194,7 +207,7 @@ export function ContractReader(props: {
 				/>
 			))}
 
-			{/* Functions with inputs - show as expandable forms */}
+			{/* Functions with inputs expand into a form. */}
 			{inputFunctions.map((fn) => (
 				<DynamicReadFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -203,47 +216,7 @@ export function ContractReader(props: {
 					fn={fn}
 				/>
 			))}
-
-			{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
-				<p className="copy-13 text-tertiary">No read functions available.</p>
-			)}
-		</div>
-	)
-}
-
-/**
- * Get a display-friendly function signature.
- * Uses getSignature for named functions, falls back to selector for unnamed (whatsabi).
- */
-function getFunctionDisplaySignature(fn: AbiFunction): string {
-	if (fn.name) return getSignature(fn).replace(/,/g, ', ')
-	// Fallback for whatsabi-extracted functions without names
-	const selector = getFunctionSelector(fn)
-	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
-	return `${selector}(${inputs})`
-}
-
-/**
- * Get method name with selector, e.g., "approve (0x095ea7b3)"
- */
-function getMethodWithSelector(fn: AbiFunction): string {
-	const selector = getFunctionSelector(fn)
-	const name = fn.name || selector
-	return `${name} (${selector})`
-}
-
-function ReadResult(props: { className?: string; value: string }) {
-	const { className, value } = props
-
-	return (
-		<div
-			className={cx(
-				'min-w-0 flex-1 text-primary copy-13 font-mono whitespace-pre overflow-x-auto',
-				className,
-			)}
-		>
-			{value}
-		</div>
+		</Rows.Root>
 	)
 }
 
@@ -253,7 +226,6 @@ function StaticReadFunction(props: {
 	fn: ReadFunction
 }) {
 	const { address, abi, fn } = props
-	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const [mounted, setMounted] = React.useState(false)
 	React.useEffect(() => setMounted(true), [])
@@ -322,103 +294,42 @@ function StaticReadFunction(props: {
 	const isLoading = !mounted || (hasOutputs ? typedLoading : rawLoading)
 	const result = hasOutputs ? typedResult : decodedRawResult
 	const queryError = hasOutputs ? typedError : rawError
-	const error = queryError ? queryError.message : null
+	const pending = isFetching || isLoading
 
 	const isResultAddress = typeof result === 'string' && Address.validate(result)
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
 
-	const displayValue = error
-		? error
-		: isLoading
-			? ellipsis
-			: formatOutputValue(result, outputType)
-
-	// Format address outputs as links (only after mount to avoid hydration mismatch)
-	const isAddressOutput = outputType === 'address' || isResultAddress
-	const isValidAddress = mounted && isAddressOutput && isResultAddress
-
-	const handleCopyMethod = () => {
-		void copy(getMethodWithSelector(fn))
-	}
-
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: fnId,
-	})
-
 	return (
-		<div
+		<FunctionRow
 			id={fnId}
-			className="flex flex-col rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="flex items-center justify-between gap-[8px]">
-				<span className="min-w-0 flex-1 label-12 text-secondary font-mono py-[10px] pl-[12px] [overflow-wrap:anywhere]">
-					{getFunctionDisplaySignature(fn)}
-				</span>
-				<div className="flex shrink-0 items-center pl-[12px]">
-					<button
-						type="button"
-						onClick={handleCopyMethod}
-						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation()
-							void handleCopyPermalink()
-						}}
-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={() => void refetch()}
-						title="Refresh"
-						disabled={isFetching}
-						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!',
-							isFetching && 'opacity-50 cursor-not-allowed',
-						)}
-					>
-						<PlayIcon className="size-[14px]" />
-					</button>
-				</div>
-			</div>
-			<div className="border-t border-card-border px-[12px] py-[10px] flex">
-				<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-				{isFetching || isLoading ? (
-					<div className="copy-13 text-secondary ">{ellipsis}</div>
-				) : isValidAddress ? (
-					<div className="min-w-0 copy-13 break-all">
-						<Link
-							to="/address/$address"
-							params={{ address: result as Address.Address }}
-							className="text-accent hover:text-accent/80"
-						>
-							{displayValue}
-						</Link>
-					</div>
-				) : (
-					<ReadResult
-						className={cx(error ? 'text-negative' : 'text-primary')}
-						value={displayValue}
+			fn={fn}
+			value={
+				// Values render after mount, so the server and the first client render match.
+				pending ? (
+					<Skeleton
+						aria-label={`Reading ${fnId}`}
+						shape="pill"
+						{...styles.skeleton()}
 					/>
-				)}
-			</div>
-		</div>
+				) : queryError ? (
+					<span title={queryError.message} {...styles.error()}>
+						<AlertCircle {...styles.errorIcon()} />
+						{getShortMessage(queryError)}
+					</span>
+				) : (
+					<ReadValue value={result} type={outputType} />
+				)
+			}
+			actions={
+				<IconAction
+					icon={Refresh}
+					label="Refresh"
+					loading={isFetching}
+					onClick={() => void refetch()}
+				/>
+			}
+		/>
 	)
 }
 
@@ -429,7 +340,6 @@ function DynamicReadFunction(props: {
 }) {
 	const { address, abi, fn } = props
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
-	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
 	const fnId = fn.name || selector
@@ -446,19 +356,19 @@ function DynamicReadFunction(props: {
 	}
 
 	const allInputsFilled = (fn.inputs ?? []).every((input, index) => {
-		const key = input.name ?? `arg${index}`
-		const value = inputs[key]
+		const value = inputs[functionInputKey(input, index)]
 		return value !== undefined && value.trim() !== ''
 	})
 
 	const parsedArgs = React.useMemo(() => {
 		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
 		try {
-			const args = (fn.inputs ?? []).map((input, index) => {
-				const key = input.name ?? `arg${index}`
-				const value = inputs[key] ?? ''
-				return parseInputValue(value, input.type)
-			})
+			const args = (fn.inputs ?? []).map((input, index) =>
+				parseInputValue(
+					inputs[functionInputKey(input, index)] ?? '',
+					input.type,
+				),
+			)
 			return { args, error: null }
 		} catch (err) {
 			return {
@@ -540,199 +450,117 @@ function DynamicReadFunction(props: {
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'uint256')
 
-	const handleCopyMethod = (e: React.MouseEvent) => {
-		e.stopPropagation()
-		void copy(getMethodWithSelector(fn))
-	}
-
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: fnId,
-	})
+	const [submitted, setSubmitted] = React.useState(false)
 
 	return (
-		<div
+		<FunctionDisclosure
 			id={fnId}
-			className="rounded-body border border-card-border bg-surface overflow-hidden"
+			fn={fn}
+			expanded={isExpanded}
+			onToggle={() => setIsExpanded(!isExpanded)}
 		>
-			<div className="w-full flex items-center justify-between">
-				<button
-					type="button"
-					aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
-					aria-expanded={isExpanded}
-					onClick={() => setIsExpanded(!isExpanded)}
-					className="min-w-0 flex-1 text-left h-full py-[10px] pl-[12px] cursor-pointer press-down focus-visible:-outline-offset-2! focus-visible:rounded-l-body!"
-				>
-					<span className="block label-12 text-secondary font-mono [overflow-wrap:anywhere]">
-						{getFunctionDisplaySignature(fn)}
-					</span>
-				</button>
-				<div className="flex shrink-0 items-center pl-[12px]">
-					<button
-						type="button"
-						onClick={handleCopyMethod}
-						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation()
-							void handleCopyPermalink()
-						}}
-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={() => void refetch()}
-						title="Refresh"
-						disabled={isFetching || !allInputsFilled}
-						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!',
-							(isFetching || !allInputsFilled) &&
-								'opacity-50 cursor-not-allowed',
-						)}
-					>
-						<PlayIcon className="size-[14px]" />
-					</button>
-					<button
-						type="button"
-						aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
-						aria-expanded={isExpanded}
-						onClick={() => setIsExpanded(!isExpanded)}
-						className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
-					>
-						<ChevronDownIcon
-							className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
-						/>
-					</button>
-				</div>
-			</div>
-
-			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
-					{fn.inputs.map((input, index) => {
-						const key = input.name ?? `arg${index}`
-						return (
-							<FunctionInput
-								key={key}
-								input={input}
-								value={inputs[key] ?? ''}
-								onChange={(value) => handleInputChange(key, value)}
-							/>
+			<FunctionForm
+				fn={fn}
+				id={fnId}
+				onSubmit={() => {
+					setSubmitted(true)
+					if (allInputsFilled && !parsedArgs.error) void refetch()
+				}}
+				primary={
+					<Button loading={isFetching} size="small" type="submit">
+						Query
+					</Button>
+				}
+				result={
+					!isFetching &&
+					(error ? (
+						<Callout intent="negative" role="status" size="small">
+							<Callout.Icon />
+							<Callout.Content>{error}</Callout.Content>
+						</Callout>
+					) : (
+						result !== undefined && (
+							<FunctionResult>
+								<ReadValue value={result} type={outputType} />
+							</FunctionResult>
 						)
-					})}
-
-					{isFetching && (
-						<div className="flex">
-							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							<p className="copy-13 text-secondary ">{ellipsis}</p>
-						</div>
-					)}
-
-					{!isFetching && (result !== undefined || error) && (
-						<div className="flex">
-							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							{error ? (
-								<p className="copy-13 break-all text-negative">{error}</p>
-							) : (
-								<pre className="min-w-0 flex-1 copy-13 text-primary whitespace-pre overflow-x-auto font-mono">
-									{formatOutputValue(result, outputType)}
-								</pre>
-							)}
-						</div>
-					)}
-				</div>
-			)}
-		</div>
+					))
+				}
+			>
+				{fn.inputs.map((input, index) => {
+					const key = functionInputKey(input, index)
+					return (
+						<FunctionInput
+							key={key}
+							input={input}
+							invalid={submitted && !inputs[key]?.trim()}
+							value={inputs[key] ?? ''}
+							onChange={(value) => handleInputChange(key, value)}
+						/>
+					)
+				})}
+			</FunctionForm>
+		</FunctionDisclosure>
 	)
 }
 
-function FunctionInput(props: {
-	input: { name?: string; type: string }
-	value: string
-	onChange: (value: string) => void
-}) {
-	const { input, value, onChange } = props
-
-	const inputId = React.useId()
-	const placeholder = getPlaceholder(input)
-	const inputType = getInputType(input.type)
-
-	// Special handling for bool type
-	if (inputType === 'checkbox') {
+/**
+ * A returned value in the TDS Blockchain Values style: addresses link through
+ * `Address`, other long hex values show in `Hex` with a copy button.
+ */
+function ReadValue(props: { type: string; value: unknown }): React.JSX.Element {
+	const { type, value } = props
+	if (value === '') return <span {...styles.empty()}>Empty</span>
+	if (typeof value === 'string' && Address.validate(value))
 		return (
-			<div className="flex items-center gap-[8px]">
-				<input
-					autoCorrect="off"
-					autoComplete="off"
-					spellCheck={false}
-					autoCapitalize="off"
-					id={inputId}
-					type="checkbox"
-					checked={value === 'true'}
-					className="w-[16px] h-[16px] rounded border-base-border"
-					onChange={(event) =>
-						onChange(event.target.checked ? 'true' : 'false')
-					}
-				/>
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{input.name || 'value'}{' '}
-					<span className="text-secondary">({input.type})</span>
-				</label>
-			</div>
+			<span {...styles.hex()}>
+				<AddressLink address={value} align="end" />
+			</span>
 		)
-	}
-
-	// Textarea for complex types
-	if (inputType === 'textarea' || isArrayType(input.type)) {
+	if (typeof value === 'string' && /^0x[0-9a-f]{41,}$/i.test(value))
 		return (
-			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{input.name || 'value'}{' '}
-					<span className="text-secondary">({input.type})</span>
-				</label>
-				<textarea
-					rows={3}
-					id={inputId}
-					placeholder={placeholder}
-					onChange={(event) => onChange(event.target.value)}
-					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
-				/>
-			</div>
+			<Hex.Root value={value} {...styles.hex()}>
+				<Hex.Text />
+				<Hex.Copy aria-label="Copy value" />
+			</Hex.Root>
 		)
-	}
+	return <span {...styles.text()}>{formatOutputValue(value, type)}</span>
+}
 
-	// Standard text input
-	return (
-		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="label-12 text-primary font-sans">
-				{input.name || 'value'}{' '}
-				<span className="text-secondary">({input.type})</span>
-			</label>
-			<input
-				autoCorrect="off"
-				autoComplete="off"
-				spellCheck={false}
-				autoCapitalize="off"
-				type="text"
-				id={inputId}
-				placeholder={placeholder}
-				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
-			/>
-		</div>
-	)
+/** The first line of a call error; viem errors carry it as `shortMessage`. */
+function getShortMessage(error: Error): string {
+	const short = (error as Error & { shortMessage?: string }).shortMessage
+	return short ?? error.message.split('\n')[0] ?? error.message
+}
+
+namespace styles {
+	export const skeleton = style({ height: '12', width: '5rem !custom' })
+
+	export const error = style({
+		alignItems: 'center',
+		color: 'gray.900',
+		display: 'inline-flex',
+		gap: '4',
+		minWidth: '0',
+		typography: 'copy.13',
+	})
+
+	export const errorIcon = style({ color: 'red.900', flexShrink: 0 })
+
+	export const empty = style({ color: 'gray.900' })
+
+	// Rows guidance: cap a Hex so it ends with the other values.
+	export const hex = style({
+		display: 'inline-flex',
+		justifyContent: 'flex-end',
+		maxWidth: '12rem !custom',
+		minWidth: '0',
+	})
+
+	export const text = style({
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '0',
+		overflowWrap: 'anywhere',
+		whiteSpace: 'pre-wrap',
+	})
 }

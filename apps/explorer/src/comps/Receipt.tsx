@@ -1,14 +1,31 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import type { Address, Hex } from 'ox'
+import {
+	Amount,
+	Button,
+	CopyButton,
+	formatHex,
+	Hex,
+	Menu,
+	Rows,
+	style,
+	Surface,
+	Tag,
+	Tooltip,
+} from '@tempoxyz/ds'
+import { ChevronDown, Share } from '@tempoxyz/ds/icons'
+import type { Address as OxAddress, Hex as OxHex } from 'ox'
 import * as Value from 'ox/Value'
-import { Amount } from '#comps/Amount'
-import { CopyButton } from '#comps/CopyButton'
-import { Midcut } from '#comps/Midcut'
-import { ReceiptMark } from '#comps/ReceiptMark'
+import * as React from 'react'
+import { cx } from 'zyzz'
+import { Address } from '#comps/Address'
+import { TempoWordmark } from '#comps/TempoWordmark'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription, TxEventMemoLine } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { isReceiptEventVisible } from '#lib/domain/receipt-presentation'
+import {
+	getReceiptEventSideAmount,
+	isReceiptEventVisible,
+} from '#lib/domain/receipt-presentation'
 import {
 	getReceiptDistinctSideAmount,
 	getReceiptEventNote,
@@ -16,23 +33,37 @@ import {
 	getReceiptTransferPresentation,
 	type ReceiptNotePresentation,
 } from '#lib/domain/receipt-ui'
-import { DateFormatter, PriceFormatter } from '#lib/formatting'
-import { useCopy } from '#lib/hooks'
+import { getFeeTokenForChain } from '#lib/fee-token'
+import { DateFormatter } from '#lib/formatting'
 import {
 	areUsdPricedTokens,
 	hasTokenAmount,
 	isUsdPricedToken,
 } from '#lib/pricing'
-import { getFeeTokenForChain } from '#lib/fee-token'
+import { link, linkHover } from '#styles/explorer'
 import { getTempoChain } from '#wagmi.config.ts'
-import BracesIcon from '~icons/lucide/braces'
-import DownloadIcon from '~icons/lucide/download'
-import FileTextIcon from '~icons/lucide/file-text'
-import ShareIcon from '~icons/lucide/share-2'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
+/** Actions that move tokens to a recipient, summarized as "Sent to …". */
+const SENT_ACTIONS = new Set([
+	'Forwarded',
+	'MPP Payment',
+	'Send',
+	'Sent',
+	'Transfer',
+])
+
+/** Status tags that lead some descriptions; they are not the event's name. */
+const STATUS_ACTIONS = new Set(['Blocked', 'Failed'])
+
+/**
+ * A printable record of a transaction on the TDS Payments receipt: a
+ * `Surface` titled Receipt with its status `Tag`, the amount as the hero
+ * with one line on what happened, then `Rows` with the parties or line
+ * items, the network fee, the total, the date, the block and the hash.
+ */
 export function Receipt(props: Receipt.Props): React.JSX.Element {
 	const {
 		blockNumber,
@@ -48,8 +79,8 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 		feeBreakdown = [],
 		exportSearch = '',
 	} = props
-	const copyShare = useCopy({ timeout: 2_000 })
 	const { isTokenListed } = useTokenListMembership()
+	const titleId = React.useId()
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
@@ -57,385 +88,453 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 	const visibleFeeBreakdown = feeBreakdown.filter(
 		(item) => !item.payer || item.payer.toLowerCase() === sender.toLowerCase(),
 	)
-	const showFeeBreakdown = visibleFeeBreakdown.length > 0
 	const showSingleFee = feeBreakdown.length === 0 && hasFee
-	const showUsdFeePrefix = TEMPO_FEE_TOKEN
+	const usdFee = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
 	const filteredEvents = events
 		.filter(isReceiptEventVisible)
 		.map(getReceiptTransferPresentation)
-	const handleShare = async () => {
-		const url = new URL(
-			`/receipt/${hash}${exportSearch}`,
-			window.location.origin,
-		).toString()
-		if (navigator.share) {
-			try {
-				await navigator.share({ title: 'Tempo receipt', url })
-				return
-			} catch (error) {
-				if (error instanceof DOMException && error.name === 'AbortError') return
-			}
-		}
-		await copyShare.copy(url)
+	const context = { blockNumber, hash, timestamp }
+
+	// An event's amounts read in USD when every token they use is USD-priced.
+	const isUsd = (event: KnownEvent) => {
+		const tokens = event.totalAmount
+			? [event.totalAmount]
+			: event.parts.flatMap((part) =>
+					part.type === 'amount' ? [part.value] : [],
+				)
+		return tokens.length > 0
+			? areUsdPricedTokens(TEMPO_CHAIN_ID, tokens, isTokenListed)
+			: usdFee
 	}
 
+	const single = filteredEvents.length === 1 ? filteredEvents[0] : undefined
+	// Only a payment or a swap moves the amount it names; an approval does not.
+	const singleAmount =
+		single && movesFunds(single) ? getReceiptEventSideAmount(single) : undefined
+	// A plain send folds into the From and To rows only when the hero can show
+	// its amount; with unknown decimals it stays a line item, which reads them.
+	const send =
+		single && singleAmount?.decimals !== undefined
+			? getSimpleSend(single)
+			: null
+	const sendNote =
+		single && send ? getReceiptEventNote(single.note, context) : undefined
+	const firstFee = visibleFeeBreakdown[0]
+
+	// The hero is the amount a single payment moved, else the total, else the fee.
+	const hero =
+		single && singleAmount?.decimals !== undefined ? (
+			<Receipt.TokenAmount
+				amount={singleAmount}
+				size="lg"
+				usd={isUsd(single)}
+			/>
+		) : total !== undefined ? (
+			<Amount currency="USD" size="lg" value={total} />
+		) : usdFee && fee !== undefined ? (
+			<Amount currency="USD" precise size="lg" value={fee} />
+		) : firstFee ? (
+			<Amount
+				size="lg"
+				symbol={firstFee.symbol}
+				value={Value.format(firstFee.amount, firstFee.decimals)}
+			/>
+		) : null
+
 	return (
-		<>
-			<div
-				data-receipt
-				className="flex w-[min(480px,calc(100vw-32px))] flex-col bg-surface border border-base-border border-b-0 shadow-sm rounded-body rounded-br-none rounded-bl-none text-base-content"
-			>
-				<div className="flex items-start gap-4 sm:gap-8 px-[24px] pt-[24px] pb-[16px]">
-					<div className="shrink-0">
-						<ReceiptMark />
-					</div>
-					<div className="flex flex-col gap-[8px] font-sans copy-16 flex-1 min-w-0">
-						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Block</span>
-							<Link
-								to="/block/$id"
-								params={{ id: blockNumber.toString() }}
-								className="text-accent text-right before:content-['#'] press-down"
-							>
-								{String(blockNumber)}
-							</Link>
-						</div>
-						<div className="flex justify-between items-end gap-4">
-							<span className="text-tertiary shrink-0">Sender</span>
-							<Link
-								to="/address/$address"
-								params={{ address: sender }}
-								className="font-mono text-accent text-right press-down min-w-0 flex-1 flex justify-end"
-							>
-								<Midcut value={sender} prefix="0x" align="end" min={4} />
-							</Link>
-						</div>
-						<div className="flex justify-between items-center gap-4">
-							<span className="text-tertiary shrink-0">Hash</span>
-							<div className="flex min-w-0 flex-1 items-center justify-end gap-1">
-								<Link
-									to="/tx/$hash"
-									params={{ hash }}
-									className="font-mono text-accent text-right press-down min-w-0 flex-1 flex justify-end"
-									title={hash}
-								>
-									<Midcut value={hash} prefix="0x" align="end" min={4} />
-								</Link>
-								<CopyButton
-									value={hash}
-									ariaLabel="Copy transaction hash"
-									className="shrink-0 print:hidden"
-								/>
-							</div>
-						</div>
-						<ClientOnly
-							fallback={<Receipt.TimeRows timestamp={timestamp} utc />}
-						>
-							<Receipt.TimeRows timestamp={timestamp} />
-						</ClientOnly>
-						{status === 'reverted' && (
-							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Status</span>
-								<span className="text-base-content-negative label-12">
-									Failed
+		<Surface
+			data-receipt
+			render={<section aria-labelledby={titleId} />}
+			{...styles.card()}
+		>
+			<TempoWordmark
+				aria-label="Tempo"
+				height={16}
+				width={73}
+				{...styles.brand()}
+			/>
+			<Surface.Header>
+				<Surface.Title id={titleId}>Receipt</Surface.Title>
+				<Tag intent={status === 'reverted' ? 'negative' : 'positive'}>
+					<Tag.Dot />
+					{status === 'reverted' ? 'Failed' : 'Confirmed'}
+				</Tag>
+			</Surface.Header>
+			<div {...styles.hero()}>
+				{hero}
+				{summarize(filteredEvents) && (
+					<p {...styles.summary()}>{summarize(filteredEvents)}</p>
+				)}
+			</div>
+			{/* Surface pads 24px, so the rows reach its edges and keep their own inset. */}
+			<div {...styles.rows()}>
+				<Rows.Root dividers="full">
+					<Rows.Row>
+						<Rows.Label>From</Rows.Label>
+						<span {...styles.hex()}>
+							<Address address={sender} align="end" />
+						</span>
+					</Rows.Row>
+					{send ? (
+						<>
+							<Rows.Row>
+								<Rows.Label>To</Rows.Label>
+								<span {...styles.hex()}>
+									<Address address={send.to} align="end" />
 								</span>
-							</div>
-						)}
-					</div>
-				</div>
-				{filteredEvents.length > 0 && (
-					<>
-						<div className="border-t border-dashed border-base-border" />
-						<div className="flex flex-col gap-4 px-[24px] py-[24px] font-sans copy-16 [counter-reset:event]">
-							{filteredEvents.map((event, index) => {
-								// Only a distinct aggregate needs a second amount beside the description.
-								const amountParts = event.parts.filter(
-									(part) => part.type === 'amount',
-								)
-								const displayTotalAmount = event.totalAmount
-								const amountTokens = displayTotalAmount
-									? [displayTotalAmount]
-									: amountParts.flatMap((part) =>
-											part.type === 'amount' ? [part.value] : [],
-										)
-								const showUsdPrefix =
-									amountTokens.length > 0
-										? areUsdPricedTokens(
-												TEMPO_CHAIN_ID,
-												amountTokens,
-												isTokenListed,
-											)
-										: TEMPO_FEE_TOKEN
-											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
-											: true
-								const sideAmount = getReceiptDistinctSideAmount(event)
-								const eventNote = getReceiptEventNote(event.note, {
-									blockNumber,
-									hash,
-									timestamp,
-								})
-								return (
-									<div
-										key={`${event.type}-${index}`}
-										className="[counter-increment:event]"
-									>
-										<div className="flex flex-col gap-[8px]">
-											<div
-												className={
-													sideAmount
-														? 'grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-[10px]'
-														: 'min-w-0'
-												}
-											>
-												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
-													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 min-w-[20px]"></div>
-													<TxEventDescription event={event} />
-												</div>
-												{sideAmount ? (
-													<div className="flex items-start justify-end min-w-0">
-														<Amount
-															{...sideAmount}
-															infinite={null}
-															prefix={showUsdPrefix ? '$' : undefined}
-															short
-														/>
-													</div>
-												) : null}
-											</div>
-											{eventNote &&
-												(typeof eventNote === 'string' ? (
-													<TxEventMemoLine
-														memo={eventNote}
-														className="pl-[24px]"
-													/>
-												) : (
-													<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-														<div className="border-l border-base-border pl-[10px] w-full">
-															<div className="flex flex-col gap-1 text-primary copy-14">
-																{eventNote.map(([label, part], index) => {
-																	const key = `${label}${index}`
-																	const note = getReceiptNotePresentation(
-																		label,
-																		part,
-																	)
-																	if (
-																		(label === 'from' || label === 'to') &&
-																		part.type === 'account'
-																	) {
-																		return (
-																			<div key={key} className="min-w-0">
-																				<TxEventDescription
-																					event={{
-																						type: 'blocked transfer address',
-																						parts: [
-																							{ type: 'text', value: label },
-																							part,
-																						],
-																					}}
-																				/>
-																			</div>
-																		)
-																	}
-
-																	return (
-																		<div
-																			key={key}
-																			className="flex gap-2 min-w-0"
-																		>
-																			<div className="text-tertiary shrink-0">
-																				{note.kind === 'time' ? (
-																					<ClientOnly fallback="Time (UTC)">
-																						{note.label}
-																					</ClientOnly>
-																				) : (
-																					note.label
-																				)}
-																				{!(
-																					part.type === 'text' &&
-																					part.value === ''
-																				) && ':'}
-																			</div>
-																			{!(
-																				part.type === 'text' &&
-																				part.value === ''
-																			) && (
-																				<div className="min-w-0 flex-1">
-																					<Receipt.NoteValue note={note} />
-																				</div>
-																			)}
-																		</div>
-																	)
-																})}
-															</div>
-														</div>
-													</div>
-												))}
-										</div>
-									</div>
-								)
-							})}
-						</div>
-					</>
-				)}
-				{(showFeeBreakdown || showSingleFee || hasTotal) && (
-					<>
-						<div className="border-t border-dashed border-base-border" />
-						<div className="flex flex-col gap-2 px-[24px] py-[24px] font-sans copy-15">
-							{showFeeBreakdown
-								? visibleFeeBreakdown.map((item, index) => {
-										const showUsdPrefix = hasTokenAmount(item)
-											? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
-											: showUsdFeePrefix
-										const formattedAmount =
-											item.display ??
-											(showUsdPrefix
-												? PriceFormatter.format(item.amount, {
-														decimals: item.decimals,
-														format: 'short',
-													})
-												: PriceFormatter.formatAmountShort(
-														Value.format(item.amount, item.decimals),
-													))
-										return (
-											<div
-												key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
-												className="flex flex-wrap gap-2 items-center justify-between"
-											>
-												<span className="text-tertiary">
-													Fee{' '}
-													{item.symbol && (
-														<span>
-															(
-															{item.token ? (
-																<Link
-																	to="/token/$address"
-																	params={{ address: item.token }}
-																	className="text-base-content-positive press-down"
-																>
-																	{item.symbol}
-																</Link>
-															) : (
-																<span className="text-base-content-positive">
-																	{item.symbol}
-																</span>
-															)}
-															)
-														</span>
-													)}
-												</span>
-												<div className="flex items-center gap-2">
-													<span>{formattedAmount}</span>
-												</div>
-											</div>
-										)
-									})
-								: showSingleFee && (
-										<div className="flex justify-between items-center">
-											<span className="text-tertiary">Fee</span>
-											<span className="text-right">
-												{feeDisplay ??
-													(showUsdFeePrefix
-														? PriceFormatter.format(fee ?? 0, {
-																format: 'short',
-															})
-														: PriceFormatter.formatAmountShort(
-																String(fee ?? 0),
-															))}
-											</span>
-										</div>
-									)}
-							{hasTotal && (
-								<div className="flex justify-between items-center">
-									<span className="heading-16 text-primary">Total</span>
-									<span className="heading-20 text-right tabular-nums">
-										{totalDisplay ??
-											(showUsdFeePrefix
-												? PriceFormatter.format(total ?? 0, { format: 'short' })
-												: PriceFormatter.formatAmountShort(String(total ?? 0)))}
+							</Rows.Row>
+							{sendNote && (
+								<Rows.Row>
+									<Rows.Label>
+										{typeof sendNote === 'string' ? 'Memo' : 'Details'}
+									</Rows.Label>
+									<span {...styles.value()}>
+										{typeof sendNote === 'string' ? (
+											sendNote
+										) : (
+											<Receipt.Note note={sendNote} />
+										)}
 									</span>
-								</div>
+								</Rows.Row>
 							)}
-						</div>
-					</>
-				)}
-			</div>
-
-			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
-				<div className="w-[min(480px,calc(100vw-32px))]">
-					<div className="grid grid-cols-4 border border-base-border bg-base-plane-interactive button-14 text-secondary">
-						<button
-							type="button"
-							onClick={() => void handleShare()}
-							className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down hover:bg-base-plane hover:text-primary"
+						</>
+					) : (
+						filteredEvents.map((event, index) => (
+							<Receipt.LineItem
+								context={context}
+								event={event}
+								key={`${event.type}-${index}`}
+								usd={isUsd(event)}
+							/>
+						))
+					)}
+					{visibleFeeBreakdown.map((item, index) => {
+						const usd = hasTokenAmount(item)
+							? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
+							: usdFee
+						const value = Value.format(item.amount, item.decimals)
+						return (
+							<Rows.Row key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}>
+								<Rows.Label>
+									Network fee
+									{item.symbol && (
+										<>
+											{' ('}
+											{item.token ? (
+												<Link
+													to="/token/$address"
+													params={{ address: item.token }}
+													{...cx(link(), linkHover())}
+												>
+													{item.symbol}
+												</Link>
+											) : (
+												item.symbol
+											)}
+											{')'}
+										</>
+									)}
+								</Rows.Label>
+								{usd ? (
+									<Amount currency="USD" precise value={value} />
+								) : (
+									<Amount symbol={item.symbol} value={value} />
+								)}
+							</Rows.Row>
+						)
+					})}
+					{showSingleFee && (
+						<Rows.Row>
+							<Rows.Label>Network fee</Rows.Label>
+							{usdFee && fee !== undefined ? (
+								<Amount currency="USD" precise value={fee} />
+							) : (
+								<span {...styles.number()}>{feeDisplay ?? fee}</span>
+							)}
+						</Rows.Row>
+					)}
+					{hasTotal && (
+						<Rows.Row>
+							<Rows.Label>Total</Rows.Label>
+							{total !== undefined ? (
+								<Amount currency="USD" value={total} />
+							) : (
+								<span {...styles.number()}>{totalDisplay}</span>
+							)}
+						</Rows.Row>
+					)}
+					<ClientOnly fallback={<Receipt.DateRow timestamp={timestamp} utc />}>
+						<Receipt.DateRow timestamp={timestamp} />
+					</ClientOnly>
+					<Rows.Row>
+						<Rows.Label>Block</Rows.Label>
+						<Link
+							to="/block/$id"
+							params={{ id: blockNumber.toString() }}
+							{...cx(styles.number(), link(), linkHover())}
 						>
-							<ShareIcon className="size-[13px]" />
-							<span>{copyShare.notifying ? 'Copied' : 'Share'}</span>
-						</button>
-						<Receipt.ExportLink
-							hash={hash}
-							format="pdf"
-							exportSearch={exportSearch}
-						/>
-						<Receipt.ExportLink
-							hash={hash}
-							format="txt"
-							exportSearch={exportSearch}
-						/>
-						<Receipt.ExportLink
-							hash={hash}
-							format="json"
-							exportSearch={exportSearch}
-						/>
-					</div>
-					<Link
-						to="/tx/$hash"
-						params={{ hash }}
-						className="press-down button-14 font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-body! rounded-br-body! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
-					>
-						<span>View transaction</span>
-						<span aria-hidden="true">→</span>
-					</Link>
-				</div>
+							{blockNumber.toLocaleString('en-US')}
+						</Link>
+					</Rows.Row>
+					<Rows.Row>
+						<Rows.Label>Transaction</Rows.Label>
+						{/* The link sits inside `Hex.Root` so it takes the link color. */}
+						<Hex.Root value={hash} {...styles.hex()}>
+							<Link
+								to="/tx/$hash"
+								params={{ hash }}
+								{...cx(styles.hexLink(), link(), linkHover())}
+							>
+								<Hex.Text />
+							</Link>
+							<span {...styles.screenOnly()}>
+								<Hex.Copy aria-label="Copy transaction hash" />
+							</span>
+						</Hex.Root>
+					</Rows.Row>
+				</Rows.Root>
 			</div>
-		</>
+			<Receipt.Actions hash={hash} exportSearch={exportSearch} />
+		</Surface>
 	)
 }
 
+/** The recipient of an event: its `meta.to`, or the account after "to". */
+function getRecipient(event: KnownEvent): OxAddress.Address | undefined {
+	if (event.meta?.to) return event.meta.to
+	const index = event.parts.findIndex(
+		(part) => part.type === 'text' && part.value === 'to',
+	)
+	const next = index === -1 ? undefined : event.parts[index + 1]
+	return next?.type === 'account' ? next.value : undefined
+}
+
+/** A payment, a receipt of funds, or a swap. */
+function movesFunds(event: KnownEvent): boolean {
+	const action = event.parts.find((part) => part.type === 'action')?.value
+	return (
+		(action !== undefined &&
+			(SENT_ACTIONS.has(action) || action === 'Received')) ||
+		event.type.includes('swap')
+	)
+}
+
+/** A plain "send an amount to an account" event, whose rows are From and To. */
+function getSimpleSend(event: KnownEvent): { to: OxAddress.Address } | null {
+	const [action, amount, text, account] = event.parts
+	if (
+		event.parts.length !== 4 ||
+		action?.type !== 'action' ||
+		!SENT_ACTIONS.has(action.value) ||
+		amount?.type !== 'amount' ||
+		text?.type !== 'text' ||
+		text.value !== 'to' ||
+		account?.type !== 'account'
+	)
+		return null
+	return { to: account.value }
+}
+
+/** One line on what happened, such as "Sent to 0xd92d…16d0" or "3 actions". */
+function summarize(events: KnownEvent[]): string | undefined {
+	if (events.length > 1) return `${events.length} actions`
+	const [event] = events
+	if (!event) return undefined
+	const action = event.parts.find((part) => part.type === 'action')?.value
+	const recipient = getRecipient(event)
+	if (action && SENT_ACTIONS.has(action) && recipient)
+		return `Sent to ${formatHex(recipient)}`
+	if (action === 'Received' && event.meta?.from)
+		return `Received from ${formatHex(event.meta.from)}`
+	const call = event.parts.find((part) => part.type === 'contractCall')
+	if (call?.type === 'contractCall')
+		return `Called ${formatHex(call.value.address)}`
+	return action ? sentenceCase(action) : undefined
+}
+
+function sentenceCase(value: string): string {
+	return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
 export namespace Receipt {
-	export function TimeRows(props: TimeRows.Props): React.JSX.Element {
-		const { timestamp, utc = false } = props
-		const iso = new Date(Number(timestamp) * 1_000).toISOString()
-		const date = utc
-			? iso.slice(0, 10)
-			: DateFormatter.formatTimestampDate(timestamp)
-		const time = utc
-			? { time: iso.slice(11, 19), timezone: 'UTC', offset: '' }
-			: DateFormatter.formatTimestampTime(timestamp)
+	export interface Props {
+		blockNumber: bigint
+		sender: OxAddress.Address
+		hash: OxHex.Hex
+		timestamp: bigint
+		status?: 'success' | 'reverted'
+		events?: KnownEvent[]
+		/** Network fee in USD. */
+		fee?: number
+		/** Shown in place of `fee` when the fee token is not USD-priced. */
+		feeDisplay?: string
+		/** Total in USD. */
+		total?: number
+		/** Shown when `total` is unset. */
+		totalDisplay?: string
+		feeBreakdown?: FeeBreakdownItem[]
+		exportSearch?: string | undefined
+	}
+
+	export interface FeeBreakdownItem {
+		amount: bigint
+		decimals: number
+		currency: string
+		symbol?: string
+		token?: OxAddress.Address
+		payer?: OxAddress.Address
+		display?: string
+	}
+
+	/**
+	 * One action of the transaction: its name as the label, and the rest of
+	 * its description, aggregate amount and details as the value.
+	 */
+	export function LineItem(props: LineItem.Props): React.JSX.Element {
+		const { context, event, usd } = props
+		const [first, ...rest] = event.parts
+		const action =
+			first?.type === 'action' && !STATUS_ACTIONS.has(first.value)
+				? first.value
+				: undefined
+		const parts = action ? rest : event.parts
+		const sideAmount = getReceiptDistinctSideAmount(event)
+		const note = getReceiptEventNote(event.note, context)
 		return (
-			<>
-				<div className="flex justify-between items-end">
-					<span className="text-tertiary">Date</span>
-					<time dateTime={iso} className="text-right">
-						{date}
-					</time>
-				</div>
-				<div className="flex justify-between items-end">
-					<span className="text-tertiary">Time</span>
-					<time dateTime={iso} className="text-right">
-						{time.time} {time.timezone}
-						<span className="text-tertiary">{time.offset}</span>
-					</time>
-				</div>
-			</>
+			<Rows.Row>
+				<Rows.Label>{sentenceCase(action ?? event.type)}</Rows.Label>
+				<span {...styles.value()}>
+					{parts.length > 0 && (
+						<TxEventDescription
+							className={styles.description().className}
+							event={{ ...event, parts }}
+						/>
+					)}
+					{sideAmount && <Receipt.TokenAmount amount={sideAmount} usd={usd} />}
+					{note &&
+						(typeof note === 'string' ? (
+							<TxEventMemoLine memo={note} />
+						) : (
+							<Receipt.Note note={note} />
+						))}
+				</span>
+			</Rows.Row>
 		)
 	}
 
-	export namespace TimeRows {
+	export namespace LineItem {
+		export interface Props {
+			context: { blockNumber: bigint; hash: OxHex.Hex; timestamp: bigint }
+			event: KnownEvent
+			usd: boolean
+		}
+	}
+
+	/**
+	 * The date with seconds and a time zone: UTC on the server, local in the
+	 * browser.
+	 */
+	export function DateRow(props: DateRow.Props): React.JSX.Element {
+		const { timestamp, utc = false } = props
+		const date = new Date(Number(timestamp) * 1_000)
+		const text = new Intl.DateTimeFormat('en-US', {
+			day: 'numeric',
+			hour: '2-digit',
+			hourCycle: 'h23',
+			minute: '2-digit',
+			month: 'short',
+			second: '2-digit',
+			timeZone: utc ? 'UTC' : undefined,
+			timeZoneName: 'short',
+			year: 'numeric',
+		}).format(date)
+		return (
+			<Rows.Row>
+				<Rows.Label>Date</Rows.Label>
+				<time dateTime={date.toISOString()} {...styles.number()}>
+					{text}
+				</time>
+			</Rows.Row>
+		)
+	}
+
+	export namespace DateRow {
 		export interface Props {
 			timestamp: bigint
 			utc?: boolean | undefined
+		}
+	}
+
+	/**
+	 * An event amount in full, in its token's symbol; a token without a known
+	 * symbol reads in USD when it is USD-priced.
+	 */
+	export function TokenAmount(
+		props: TokenAmount.Props,
+	): React.JSX.Element | null {
+		const { amount, size, usd } = props
+		// An unknown precision or an unlimited approval has no amount to show.
+		if (amount.decimals === undefined || amount.value >= 2n ** 255n) return null
+		const value = Value.format(amount.value, amount.decimals)
+		return !amount.symbol && usd ? (
+			<Amount currency="USD" size={size} value={value} />
+		) : (
+			<Amount size={size} symbol={amount.symbol} value={value} />
+		)
+	}
+
+	export namespace TokenAmount {
+		export interface Props {
+			amount: NonNullable<KnownEvent['totalAmount']>
+			size?: 'lg' | undefined
+			usd: boolean
+		}
+	}
+
+	/** An event's labelled details, such as the counterparty of a blocked transfer. */
+	export function Note(props: Note.Props): React.JSX.Element {
+		const { note } = props
+		return (
+			<span {...styles.note()}>
+				{note.map(([label, part], index) => {
+					const key = `${label}${index}`
+					if ((label === 'from' || label === 'to') && part.type === 'account')
+						return (
+							<TxEventDescription
+								className={styles.description().className}
+								key={key}
+								event={{
+									type: 'blocked transfer address',
+									parts: [{ type: 'text', value: label }, part],
+								}}
+							/>
+						)
+
+					const detail = getReceiptNotePresentation(label, part)
+					const empty = part.type === 'text' && part.value === ''
+					return (
+						<span key={key} {...styles.noteItem()}>
+							<span {...styles.noteLabel()}>
+								{detail.kind === 'time' ? (
+									<ClientOnly fallback="Time (UTC)">{detail.label}</ClientOnly>
+								) : (
+									detail.label
+								)}
+								{!empty && ':'}
+							</span>
+							{!empty && <Receipt.NoteValue note={detail} />}
+						</span>
+					)
+				})}
+			</span>
+		)
+	}
+
+	export namespace Note {
+		export interface Props {
+			note: Exclude<NonNullable<KnownEvent['note']>, string>
 		}
 	}
 
@@ -458,8 +557,10 @@ export namespace Receipt {
 	}
 
 	export namespace NoteTime {
-		export interface Props extends TimeRows.Props {
+		export interface Props {
 			iso: string
+			timestamp: bigint
+			utc?: boolean | undefined
 		}
 	}
 
@@ -470,21 +571,22 @@ export namespace Receipt {
 				<Link
 					to="/block/$id"
 					params={{ id: note.id }}
-					className="text-accent press-down"
+					{...cx(styles.number(), link(), linkHover())}
 				>
-					{BigInt(note.id).toLocaleString()}
+					{BigInt(note.id).toLocaleString('en-US')}
 				</Link>
 			)
 		if (note.kind === 'transaction')
 			return (
-				<Link
-					to="/tx/$hash"
-					params={{ hash: note.hash }}
-					className="font-mono text-accent press-down flex min-w-0"
-					title={note.hash}
-				>
-					<Midcut value={note.hash} prefix="0x" min={4} />
-				</Link>
+				<Hex.Root value={note.hash} {...styles.hex()}>
+					<Link
+						to="/tx/$hash"
+						params={{ hash: note.hash }}
+						{...cx(styles.hexLink(), link(), linkHover())}
+					>
+						<Hex.Text />
+					</Link>
+				</Hex.Root>
 			)
 		if (note.kind === 'time')
 			return (
@@ -505,58 +607,189 @@ export namespace Receipt {
 		}
 	}
 
-	export interface Props {
-		blockNumber: bigint
-		sender: Address.Address
-		hash: Hex.Hex
-		timestamp: bigint
-		status?: 'success' | 'reverted'
-		events?: KnownEvent[]
-		fee?: number
-		feeDisplay?: string
-		total?: number
-		totalDisplay?: string
-		feeBreakdown?: FeeBreakdownItem[]
-		exportSearch?: string | undefined
-	}
-
-	export interface FeeBreakdownItem {
-		amount: bigint
-		decimals: number
-		currency: string
-		symbol?: string
-		token?: Address.Address
-		payer?: Address.Address
-		display?: string
-	}
-
-	export function ExportLink(props: ExportLink.Props): React.JSX.Element {
-		const { hash, format, exportSearch = '' } = props
-		const icon =
-			format === 'pdf' ? (
-				<DownloadIcon className="size-[13px]" />
-			) : format === 'txt' ? (
-				<FileTextIcon className="size-[13px]" />
-			) : (
-				<BracesIcon className="size-[13px]" />
-			)
+	/**
+	 * Links to the transaction and the exports, a share button where the
+	 * browser has a share sheet, and a copy of the receipt's link. Hidden in
+	 * print, so the PDF holds only the record.
+	 */
+	export function Actions(props: Actions.Props): React.JSX.Element {
+		const { hash, exportSearch = '' } = props
+		const path = `/receipt/${hash}${exportSearch}`
+		// The origin and the share sheet exist only in the browser.
+		const [origin, setOrigin] = React.useState('')
+		const [canShare, setCanShare] = React.useState(false)
+		React.useEffect(() => {
+			setOrigin(window.location.origin)
+			setCanShare(typeof navigator.share === 'function')
+		}, [])
+		const url = `${origin}${path}`
 
 		return (
-			<a
-				href={`/receipt/${hash}.${format}${exportSearch}`}
-				className="inline-flex h-[40px] items-center justify-center gap-[6px] border-r border-base-border transition-colors press-down last:border-r-0 hover:bg-base-plane hover:text-primary"
-			>
-				{icon}
-				<span>{format.toUpperCase()}</span>
-			</a>
+			<div {...styles.actions()}>
+				<Button.Link
+					render={<Link to="/tx/$hash" params={{ hash }} />}
+					size="small"
+					variant="secondary"
+				>
+					View transaction
+				</Button.Link>
+				<Menu.Root>
+					<Menu.Trigger render={<Button size="small" variant="secondary" />}>
+						Export
+						<ChevronDown aria-hidden="true" />
+					</Menu.Trigger>
+					<Menu.Popup>
+						{(['pdf', 'txt', 'json'] as const).map((format) => (
+							<Menu.LinkItem
+								closeOnClick
+								href={`/receipt/${hash}.${format}${exportSearch}`}
+								key={format}
+							>
+								{formats[format]}
+							</Menu.LinkItem>
+						))}
+					</Menu.Popup>
+				</Menu.Root>
+				<span {...styles.trailing()}>
+					{canShare && (
+						<Tooltip.Root>
+							<Tooltip.Trigger
+								render={
+									<Button
+										aria-label="Share receipt"
+										onClick={() =>
+											navigator
+												.share({ title: 'Tempo receipt', url })
+												.catch(() => undefined)
+										}
+										shape="icon"
+										size="small"
+										variant="text"
+									/>
+								}
+							>
+								<Share />
+							</Tooltip.Trigger>
+							<Tooltip.Popup>Share receipt</Tooltip.Popup>
+						</Tooltip.Root>
+					)}
+					<CopyButton aria-label="Copy receipt link" value={url} />
+				</span>
+			</div>
 		)
 	}
 
-	export namespace ExportLink {
+	export namespace Actions {
 		export interface Props {
-			hash: Hex.Hex
-			format: 'pdf' | 'txt' | 'json'
+			hash: OxHex.Hex
 			exportSearch?: string | undefined
 		}
 	}
+}
+
+const formats = { json: 'JSON', pdf: 'PDF', txt: 'Plain text' } as const
+
+namespace styles {
+	export const card = style({
+		boxSizing: 'border-box',
+		marginInline: 'auto !custom',
+		maxWidth: '448',
+		width: '100% !custom',
+	})
+
+	// The wordmark paints with `currentColor` and sits above the title.
+	export const brand = style({
+		color: 'foreground',
+		display: 'block',
+		marginBlockEnd: '20',
+	})
+
+	export const hero = style({
+		display: 'flex',
+		flexDirection: 'column',
+		rowGap: '4',
+	})
+
+	export const summary = style({
+		color: 'gray.900',
+		margin: '0',
+		typography: 'copy.14',
+	})
+
+	export const rows = style({
+		marginBlockStart: '16',
+		marginInline: '-24px !custom',
+	})
+
+	export const number = style({ fontVariantNumeric: 'tabular-nums !custom' })
+
+	// Rows: cap a Hex so it ends with the other values instead of reaching
+	// back to its label.
+	export const hex = style({
+		display: 'flex',
+		justifyContent: 'flex-end',
+		maxWidth: '256',
+		minWidth: '0 !custom',
+	})
+
+	// Copy buttons have no use on paper.
+	export const screenOnly = style({
+		display: 'contents',
+		'@media print': { display: 'none' },
+	})
+
+	export const hexLink = style({
+		display: 'inline-flex',
+		maxWidth: '100% !custom',
+		minWidth: '0 !custom',
+	})
+
+	// A line item's value: its description, amount and details, end-aligned.
+	export const value = style({
+		alignItems: 'flex-end',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		maxWidth: '288',
+		minWidth: '0',
+		textAlign: 'end',
+		typography: 'copy.14',
+	})
+
+	export const description = style({ justifyContent: 'flex-end' })
+
+	export const note = style({
+		alignItems: 'flex-end',
+		color: 'gray.900',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '4',
+		minWidth: '0 !custom',
+		typography: 'copy.13',
+	})
+
+	export const noteItem = style({
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'flex-end',
+		minWidth: '0 !custom',
+	})
+
+	export const noteLabel = style({ flexShrink: '0 !custom' })
+
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '8',
+		marginBlockStart: '16',
+		'@media print': { display: 'none' },
+	})
+
+	export const trailing = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+		marginInlineStart: 'auto !custom',
+	})
 }

@@ -1,49 +1,58 @@
-import { Link } from '@tanstack/react-router'
-import type { Address } from 'ox'
+import { style, Tag } from '@tempoxyz/ds'
+import type { Address as OxAddress } from 'ox'
 import * as AddressUtil from 'ox/Address'
 import type * as React from 'react'
-import { Midcut } from '#comps/Midcut'
+import { Address } from '#comps/Address'
 
 const TEMPO_API_FEE_PAYER = AddressUtil.from(
 	'0x58aa7ce42e1d13b2919e2ac7e006c4fbc171442c',
 )
 
+/** The account that sponsored a transaction's network fee. */
 export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 	const { address } = props
 
-	if (!AddressUtil.isEqual(address, TEMPO_API_FEE_PAYER)) {
-		return (
-			<Link
-				to="/address/$address"
-				params={{ address }}
-				className="copy-14 text-accent hover:underline press-down w-full font-mono max-w-[50ch]"
-				title={address}
-			>
-				<Midcut value={address} prefix="0x" min={4} align="end" />
-			</Link>
-		)
-	}
+	if (!AddressUtil.isEqual(address, TEMPO_API_FEE_PAYER))
+		return <Address address={address} />
 
 	return (
-		<a
-			href="https://api.tempo.xyz"
-			target="_blank"
-			rel="noopener noreferrer"
-			className="inline-flex items-center gap-[6px] rounded-button border border-accent/25 bg-accent/10 px-[9px] py-[3px] label-12 text-accent transition-colors hover:border-accent/40 hover:bg-accent/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+		<Tag
+			render={
+				// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
+				<a
+					href="https://api.tempo.xyz"
+					rel="noopener noreferrer"
+					target="_blank"
+				/>
+			}
+			variant="outlined"
 		>
-			<span className="grid size-[10px] grid-cols-2 gap-px" aria-hidden="true">
-				<span className="rounded-[1px] bg-current" />
-				<span className="rounded-[1px] bg-current" />
-				<span className="rounded-[1px] bg-current" />
-				<span className="rounded-[1px] bg-current" />
+			<span {...styles.glyph()} aria-hidden="true">
+				<span {...styles.glyphCell()} />
+				<span {...styles.glyphCell()} />
+				<span {...styles.glyphCell()} />
+				<span {...styles.glyphCell()} />
 			</span>
 			Tempo API
-		</a>
+		</Tag>
 	)
 }
 
 export declare namespace FeePayer {
 	type Props = {
-		address: Address.Address
+		address: OxAddress.Address
 	}
+}
+
+namespace styles {
+	// The Tempo API mark: a 2×2 grid of squares in the tag's text color.
+	export const glyph = style({
+		display: 'grid',
+		gap: '1',
+		gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+		height: '10px !custom',
+		width: '10px !custom',
+	})
+
+	export const glyphCell = style({ backgroundColor: 'currentColor !custom' })
 }

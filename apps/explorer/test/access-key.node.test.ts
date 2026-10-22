@@ -67,7 +67,7 @@ describe('access key permissions', () => {
 			'Spend limits',
 			'Allowed calls',
 		])
-			expect(html).toMatch(new RegExp(`<dt[^>]*>${label}</dt>`))
+			expect(html).toMatch(new RegExp(`<span[^>]*>${label}</span>`))
 		expect(html).not.toContain(authorization.address)
 		expect(html).not.toContain('Scoped calls')
 		expect(html).not.toContain('<h3')
@@ -205,7 +205,9 @@ describe('access key permissions', () => {
 	})
 
 	it('displays zero, small allowances, and exact base units when metadata is unavailable', () => {
-		expect(render({ limits: [{ token, limit: 0n }] })).toContain('>0</span>')
+		expect(render({ limits: [{ token, limit: 0n }] })).toMatch(
+			/>0<span[^>]*> PathUSD<\/span>/,
+		)
 		expect(render({ limits: [{ token, limit: 1n }] })).toContain('0.000001')
 		metadata.current = undefined
 		try {

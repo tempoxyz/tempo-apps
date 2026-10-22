@@ -4,7 +4,6 @@
 		"redhat.vscode-yaml",
 		"timonwong.shellcheck",
 		"dorzey.vscode-sqlfluff",
-		"bradlc.vscode-tailwindcss",
 		"wayou.vscode-todo-highlight",
 		"github.vscode-github-actions"
 	],

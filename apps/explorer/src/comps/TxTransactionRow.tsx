@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import * as Value from 'ox/Value'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { GetBlockReturnType } from 'wagmi/actions'
@@ -15,13 +15,15 @@ import {
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
 import { isNonceIncrementedEvent } from '#lib/domain/transaction-activities'
-import { PriceFormatter } from '#lib/formatting'
 import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/fee-token'
 import { getTempoChain } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
+// Fees are attodollars: gas used times the gas price, at 18 decimals.
+const FEE_DECIMALS = 18
+const FEE_SYMBOL = getTempoChain().nativeCurrency.symbol
 
 export type TransactionData = {
 	receipt: TransactionReceipt
@@ -50,17 +52,23 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	const { receipt } = props
 	const { isTokenListed } = useTokenListMembership()
 
-	if (!receipt) return <span className="text-tertiary">…</span>
+	if (!receipt) return <span {...styles.secondary()}>…</span>
 
-	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
 	const showUsdPrefix = TEMPO_FEE_TOKEN
 		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 		: true
-	const feeDisplay = showUsdPrefix
-		? PriceFormatter.format(Number(feeRaw))
-		: PriceFormatter.formatAmountShort(feeRaw)
 
-	return <span className="text-tertiary">{feeDisplay}</span>
+	return (
+		<span {...styles.secondary()}>
+			<Amount.Base
+				decimals={FEE_DECIMALS}
+				prefix={showUsdPrefix ? '$' : undefined}
+				short
+				symbol={FEE_SYMBOL}
+				value={receipt.effectiveGasPrice * receipt.gasUsed}
+			/>
+		</span>
+	)
 }
 
 export function TransactionDescription(props: {
@@ -121,16 +129,16 @@ export function TransactionTimestamp(props: {
 	const { timestamp, link, format = 'relative' } = props
 
 	return (
-		<div className="text-nowrap">
+		<div {...styles.nowrap()}>
 			{link ? (
-				<Link to={link} preload="intent" className="text-tertiary">
+				<Link to={link} preload="intent" {...styles.secondary()}>
 					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (
 				<FormattedTimestamp
 					timestamp={timestamp}
 					format={format}
-					className="text-tertiary"
+					className={styles.secondary().className}
 				/>
 			)}
 		</div>
@@ -162,7 +170,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true
 
-	const infiniteLabel = <span className="text-secondary">−</span>
+	const infiniteLabel = <span {...styles.secondary()}>−</span>
 
 	if (
 		!events?.some((event) => event.parts.some((part) => part.type === 'amount'))
@@ -181,14 +189,14 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	const totalValue = calculateKnownEventsTotal(events)
 	if (totalValue === undefined || !showUsdPrefix)
 		return (
-			<span className="text-tertiary" title="No comparable payment total">
+			<span {...styles.secondary()} title="No comparable payment total">
 				—
 			</span>
 		)
 
 	if (totalValue === 0n) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
-		if (value === 0n) return <span className="text-tertiary">—</span>
+		if (value === 0n) return <span {...styles.secondary()}>—</span>
 		return (
 			<Amount.Base
 				value={value}
@@ -209,4 +217,10 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			short
 		/>
 	)
+}
+
+namespace styles {
+	export const secondary = style({ color: 'gray.900' })
+
+	export const nowrap = style({ textWrap: 'nowrap' })
 }
