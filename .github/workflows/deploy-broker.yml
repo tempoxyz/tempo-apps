@@ -1,0 +1,96 @@
+name: Deploy via Broker
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+        description: 'App directory under apps/; also its Worker name, GitHub environment and broker deployment ID'
+
+permissions: {}
+
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
+
+jobs:
+  changes:
+    permissions:
+      contents: read
+    name: ${{ inputs.app }} changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      relevant: ${{ steps.changes.outputs.relevant }}
+
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for relevant changes
+        id: changes
+        env:
+          APP_NAME: ${{ inputs.app }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          # if workflow_dispatch, always deploy
+          #
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Builds without Cloudflare credentials and attests the module and generated
+  # configuration that the broker checks against cloudflare-deploy-policies.
+  build:
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    name: Build
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    uses: tempoxyz/cloudflare-deploy-broker/.github/workflows/build-worker.yml@3a90e2ed69731e3a897f114d9bafc8d72c4d7b38
+    with:
+      install-directory: .
+      working-directory: apps/${{ inputs.app }}
+      wrangler-config: wrangler.prd.json
+      artifact-name: ${{ inputs.app }}
+
+  deploy:
+    permissions:
+      contents: read
+      id-token: write
+    name: ${{ inputs.app }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # The broker admits only this environment's OIDC subject for the Worker.
+    environment: ${{ inputs.app }}
+    concurrency:
+      group: deploy-${{ inputs.app }}-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - uses: tempoxyz/cloudflare-deploy-broker/.github/actions/deploy@3a90e2ed69731e3a897f114d9bafc8d72c4d7b38
+        with:
+          deployment-id: ${{ inputs.app }}
+          artifact-id: ${{ needs.build.outputs.artifact-id }}
+          archive-digest: ${{ needs.build.outputs.archive-digest }}
+          module-digest: ${{ needs.build.outputs.module-digest }}
