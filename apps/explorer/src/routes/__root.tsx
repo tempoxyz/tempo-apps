@@ -24,7 +24,7 @@ import { OG_BASE_URL } from '#lib/og'
 import { posthogBootScript } from '#lib/posthog'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
-import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
+import { getWagmiConfig, getWagmiState } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
@@ -212,7 +212,7 @@ export const Route = createRootRouteWithContext<{
 			<ErrorBoundary {...props} />
 		</RootDocument>
 	),
-	loader: () => getWagmiStateSSR(),
+	loader: () => getWagmiState(),
 	shellComponent: RootDocument,
 })
 
