@@ -6,6 +6,7 @@ import {
 	AuxdataStyle,
 	getVyperAuxdataStyle,
 	splitAuxdata,
+	getSolarAuxdataVersion,
 	decodeVyperAuxdata,
 	hasContentHash,
 	extractCallProtectionTransformation,
@@ -18,6 +19,7 @@ import {
 	type ImmutableReferences,
 	type CborAuxdataPositions,
 } from '#lib/bytecode-matching.ts'
+import { solarFixture } from '../fixtures/solar.fixture.ts'
 
 function keccakString(str: string): `0x${string}` {
 	return Hash.keccak256(Hex.fromString(str))
@@ -749,5 +751,93 @@ describe('matchBytecode', () => {
 		expect(result.transformationValues.constructorArguments).toBe(
 			`0x${constructorArgs}`,
 		)
+	})
+})
+
+describe('solar output', () => {
+	const compiled =
+		solarFixture.solarCompileOutput.contracts['src/WithImmutables.sol']
+			.WithImmutables
+	const runtime = `0x${compiled.evm.deployedBytecode.object}`
+	const immutableReferences = compiled.evm.deployedBytecode
+		.immutableReferences as ImmutableReferences
+
+	it('splits and decodes the solar CBOR tail', () => {
+		const { auxdata, cborLength } = splitAuxdata(runtime)
+		expect(auxdata).not.toBeNull()
+		// {ipfs: <34 bytes>, solar: 0x000200}: solar records its own version, not solc's
+		expect(cborLength).toBe(0x34)
+		const decoded = CBOR.decode(Hex.toBytes(`0x${auxdata}`)) as Record<
+			string,
+			Uint8Array
+		>
+		expect(decoded.ipfs).toHaveLength(34)
+		expect([...(decoded.solar ?? [])]).toEqual([0, 2, 0])
+		expect(hasContentHash(runtime)).toBe(true)
+	})
+
+	it('reads the solar version from the CBOR tail', () => {
+		expect(getSolarAuxdataVersion(solarFixture.onchainRuntimeBytecode)).toBe(
+			'0.2.0',
+		)
+		// solc output carries a solc key instead
+		const solcRuntime =
+			'0x6080604052348015600e575f5ffd5ba2646970667358221220111111111111111111111111111111111111111111111111111111111111111164736f6c634300081e0033'
+		expect(getSolarAuxdataVersion(solcRuntime)).toBeNull()
+		expect(getSolarAuxdataVersion('0x6080')).toBeNull()
+	})
+
+	it('exact-matches a deployment with its immutables filled in', () => {
+		const result = matchBytecode({
+			onchainBytecode: solarFixture.onchainRuntimeBytecode,
+			recompiledBytecode: runtime,
+			isCreation: false,
+			immutableReferences,
+			auxdataStyle: AuxdataStyle.SOLIDITY,
+		})
+		expect(result.match).toBe('exact_match')
+		expect(result.transformations.map((t) => t.reason)).toEqual([
+			'immutable',
+			'immutable',
+			'immutable',
+			'immutable',
+			'immutable',
+			'immutable',
+			'immutable',
+		])
+	})
+
+	it('partially matches when only the metadata hash differs', () => {
+		const onchain = solarFixture.onchainRuntimeBytecode
+		const { auxdata } = splitAuxdata(onchain)
+		if (!auxdata) throw new Error('expected auxdata')
+		// Flip a byte of the IPFS hash, as editing a comment would.
+		const ipfsStart = auxdata.indexOf('5822') + 4
+		const flipped =
+			auxdata.slice(0, ipfsStart) +
+			(auxdata.slice(ipfsStart, ipfsStart + 2) === 'ff' ? '00' : 'ff') +
+			auxdata.slice(ipfsStart + 2)
+		const result = matchBytecode({
+			onchainBytecode: onchain.replace(auxdata, flipped),
+			recompiledBytecode: runtime,
+			isCreation: false,
+			immutableReferences,
+			auxdataStyle: AuxdataStyle.SOLIDITY,
+		})
+		expect(result.match).toBe('match')
+	})
+
+	it('does not match different execution bytecode', () => {
+		const result = matchBytecode({
+			onchainBytecode: solarFixture.onchainRuntimeBytecode.replace(
+				'60e01c',
+				'60e11c',
+			),
+			recompiledBytecode: runtime,
+			isCreation: false,
+			immutableReferences,
+			auxdataStyle: AuxdataStyle.SOLIDITY,
+		})
+		expect(result.match).toBeNull()
 	})
 })

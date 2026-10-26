@@ -18,6 +18,19 @@ RUN bun build \
   --outfile container \
   /usr/src/app/gg/index.ts
 
+# Build each pinned solar compiler (container/solar-builds.json) from source: solar publishes no
+# binaries for arbitrary commits. Each lands in /opt/solar/<rev>/bin/solar, where compiler.ts finds it.
+FROM rust:1.99-bookworm AS solar
+COPY container/solar-builds.json /tmp/solar-builds.json
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+  --mount=type=cache,target=/usr/local/cargo/git \
+  set -eu; \
+  for rev in $(grep -o '"rev": *"[0-9a-f]\{40\}"' /tmp/solar-builds.json | grep -o '[0-9a-f]\{40\}'); do \
+    cargo install --locked --git https://github.com/paradigmxyz/solar --rev "$rev" \
+      --root "/opt/solar/$rev" solar-compiler; \
+  done; \
+  cp /usr/lib/*-linux-gnu/libgcc_s.so.1 /opt/solar/
+
 # Pull x86_64 libs for cross-arch QEMU execution of amd64 solc/vyper compilers
 FROM --platform=linux/amd64 debian:trixie-slim AS amd64-libs
 RUN apt-get update && apt-get install -y --no-install-recommends zlib1g && rm -rf /var/lib/apt/lists/*
@@ -36,6 +49,9 @@ COPY --from=amd64-libs /lib/x86_64-linux-gnu/libdl.so.2 /lib/x86_64-linux-gnu/li
 COPY --from=amd64-libs /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so.0
 # native-arch libz for any native binaries that need it
 COPY --from=build /usr/lib/*-linux-gnu/libz.so.1 /usr/local/lib/
+# pinned solar builds, and the libgcc_s they link against (distroless/base lacks it)
+COPY --from=solar /opt/solar /opt/solar
+COPY --from=solar /opt/solar/libgcc_s.so.1 /usr/local/lib/
 
 ENV NODE_ENV="production"
 ENV LD_LIBRARY_PATH="/usr/local/lib"

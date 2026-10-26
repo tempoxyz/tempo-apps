@@ -1,6 +1,11 @@
 import * as Bun from 'bun'
 
-import { getSolcPath, getVyperPath } from './compiler.ts'
+import {
+	getSolarPath,
+	getSolcPath,
+	getVyperPath,
+	parseSolarVersion,
+} from './compiler.ts'
 
 const headers = new Headers({
 	'X-Request-Id': Bun.randomUUIDv7(),
@@ -40,10 +45,31 @@ const server = Bun.serve({
 						{ status: 400 },
 					)
 
-				const solcPath = await getSolcPath(body.compilerVersion)
+				// A solar version (e.g. 0.8.36+commit.d83529b.solar.0.2.0) runs that pinned solar build
+				// through its solc-compatible standard JSON interface, the way Forge drives it through a
+				// solc wrapper; every other version runs solc.
+				const solar = parseSolarVersion(body.compilerVersion)
+				let compilerPath: string
+				let env: Record<string, string | undefined> | undefined
+				if (solar) {
+					try {
+						compilerPath = (await getSolarPath(body.compilerVersion)).path
+					} catch (error) {
+						return Response.json(
+							{ error: error instanceof Error ? error.message : String(error) },
+							{ status: 400 },
+						)
+					}
+					env = {
+						...Bun.env,
+						SOLC_WRAPPER: '1',
+						SOLC_WRAPPER_VERSION: solar.solcVersion,
+					}
+				} else compilerPath = await getSolcPath(body.compilerVersion)
 
-				// solc --standard-json reads from stdin
-				const proc = Bun.spawn([solcPath, '--standard-json'], {
+				// solc and solar --standard-json read from stdin
+				const proc = Bun.spawn([compilerPath, '--standard-json'], {
+					env,
 					stdin: new TextEncoder().encode(JSON.stringify(body.input)),
 					stdout: 'pipe',
 					stderr: 'pipe',

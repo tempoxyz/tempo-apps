@@ -217,6 +217,28 @@ export function splitAuxdata(
 }
 
 /**
+ * Returns the solar version recorded in a bytecode's CBOR auxdata (solar writes a `solar` key
+ * where solc writes `solc`), or null when the bytecode was not compiled by solar.
+ */
+export function getSolarAuxdataVersion(bytecode: string): string | null {
+	const { auxdata } = splitAuxdata(bytecode, AuxdataStyle.SOLIDITY)
+	if (!auxdata) return null
+	try {
+		const decoded = CBOR.decode(Hex.toBytes(`0x${auxdata}`)) as unknown
+		const solar =
+			decoded instanceof Map
+				? decoded.get('solar')
+				: typeof decoded === 'object' && decoded !== null
+					? (decoded as Record<string, unknown>).solar
+					: undefined
+		if (!(solar instanceof Uint8Array) || solar.length !== 3) return null
+		return Array.from(solar).join('.')
+	} catch {
+		return null
+	}
+}
+
+/**
  * Attempts to decode the auxdata to verify if it's CBOR-encoded.
  */
 function isCborEncoded(auxdata: string): boolean {

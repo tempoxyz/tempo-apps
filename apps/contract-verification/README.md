@@ -49,6 +49,32 @@ forge script script/Mail.s.sol --verifier-url https://contracts.tempo.xyz --veri
 See [/apps/contract-verification/scripts/verify-solidity.sh](./scripts/verify-solidity.sh)
 and [/apps/contract-verification/scripts/verify-vyper.sh](./scripts/verify-vyper.sh) for small examples you can run.
 
+#### solar
+
+Contracts compiled with [solar](https://github.com/paradigmxyz/solar) verify like solc ones, with
+`compilerVersion` set to the solc-compatible version solar reports as a solc wrapper (the `Version:`
+line of `SOLC_WRAPPER=1 SOLC_WRAPPER_VERSION=<solc> solar --version`), such as
+`0.8.36+commit.d83529b.solar.0.2.0`. The container compiles those with the solar build that names,
+through `solar --standard-json`, and records the compilation as compiler `solar`.
+
+Only builds pinned in [container/solar-builds.json](./container/solar-builds.json) are available:
+solar publishes no binaries for arbitrary commits, so the Dockerfile builds each pinned commit from
+source with `cargo install --locked`. To support a new solar commit, add its full revision and
+solar version there and redeploy before verifying contracts built with it.
+
+Forge sends the real solc version for a solar build unless told otherwise, so pass the solar one
+explicitly; `--compilation-profile default` keeps Forge from dropping its build metadata:
+
+```bash
+forge verify-contract <address> src/Foo.sol:Foo \
+  --verifier sourcify --verifier-url https://contracts.tempo.xyz \
+  --compiler-version "$(./solar-solc --version | sed -n 's/^Version: //p')" \
+  --compilation-profile default
+```
+
+A solar-compiled contract submitted with a solc version fails with
+`solar_compiler_version_required` instead of a misleading `no_match`.
+
 #### Direct API Usage
 
 - Standard JSON: see [/apps/contract-verification/scripts/verify-via-curl.sh](./scripts/verify-via-curl.sh) for a full example.
