@@ -74,6 +74,7 @@ import {
 	type PrestateDiff,
 	traceQueryOptions,
 } from '#lib/queries/trace'
+import { expiringNonceKey, getNonceKey } from '#lib/domain/nonce'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -194,6 +195,7 @@ function RouteComponent() {
 		feeBreakdown,
 		keyAuthorization,
 		keyTokenMetadata,
+		nonce,
 		knownCalls,
 		knownEvents,
 		knownEventsByLog = [],
@@ -293,6 +295,7 @@ function RouteComponent() {
 				knownEvents={descriptionEvents}
 				keyAuthorization={keyAuthorization}
 				keyTokenMetadata={keyTokenMetadata}
+				nonce={nonce}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
@@ -359,7 +362,9 @@ function RouteComponent() {
 		title: 'Raw',
 		totalItems: 0,
 		itemsLabel: 'data',
-		content: <RawSection transaction={transaction} receipt={receipt} />,
+		content: (
+			<RawSection transaction={transaction} receipt={receipt} nonce={nonce} />
+		),
 	})
 
 	const tabIndex = tabs.indexOf(tab)
@@ -400,6 +405,7 @@ function OverviewSection(props: {
 	knownEvents: KnownEvent[]
 	keyAuthorization: TxData['keyAuthorization']
 	keyTokenMetadata: TxData['keyTokenMetadata']
+	nonce: TxData['nonce'] | undefined
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
 }) {
@@ -425,12 +431,9 @@ function OverviewSection(props: {
 	const baseFee = block.baseFeePerGas
 	const maxFee = transaction.maxFeePerGas
 	const maxPriorityFee = transaction.maxPriorityFeePerGas
-	const nonce = transaction.nonce
-	const nonceKey =
-		'nonceKey' in transaction
-			? (transaction.nonceKey as bigint | undefined)
-			: undefined
-	const isExpiringNonce = nonceKey === 2n ** 256n - 1n
+	const nonce = (props.nonce ?? transaction.nonce).toString()
+	const nonceKey = getNonceKey(transaction)
+	const isExpiringNonce = nonceKey === expiringNonceKey
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
 	const feePayer =
@@ -988,10 +991,18 @@ function EventFallbackName(props: { log: Log }) {
 function RawSection(props: {
 	transaction: TxData['transaction']
 	receipt: TransactionReceipt
+	nonce: TxData['nonce'] | undefined
 }) {
-	const { transaction, receipt } = props
+	const { transaction, receipt, nonce } = props
 
-	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
+	const rawData = Json.stringify(
+		{
+			tx: nonce === undefined ? transaction : { ...transaction, nonce },
+			receipt,
+		},
+		null,
+		2,
+	)
 
 	return (
 		<div className="px-[18px] py-[12px] copy-13 break-all">

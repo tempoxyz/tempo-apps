@@ -11,6 +11,7 @@ import {
 	parseKnownEvents,
 	STREAM_CHANNELS,
 } from '#lib/domain/known-events'
+import { exactNonce } from '#lib/domain/nonce'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
@@ -42,6 +43,12 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 		getTransaction(config, { hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
 	])
+	// Only set when the formatted nonce lost precision.
+	const nonce =
+		typeof transaction.nonce === 'number' &&
+		!Number.isSafeInteger(transaction.nonce)
+			? await fetchExactNonce(receipt.transactionHash, transaction.nonce)
+			: undefined
 
 	const parsedEvents = parseKnownEvents(receipt, {
 		transaction,
@@ -137,14 +144,30 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 		knownCalls,
 		knownEvents,
 		knownEventsByLog,
+		nonce,
 		receipt,
 		transaction,
 	}
 }
 
+/**
+ * Viem rounds nonces above 2^53, such as TIP-1106 expiring nonce
+ * discriminators, so read the RPC's hex value for those.
+ */
+async function fetchExactNonce(hash: Hex.Hex, formatted: number) {
+	const client = getWagmiConfig().getClient()
+	const rpcTransaction = (await client
+		.request({
+			method: 'eth_getTransactionByHash',
+			params: [hash],
+		} as Parameters<typeof client.request>[0])
+		.catch(() => null)) as { nonce?: string } | null
+	return exactNonce(formatted, rpcTransaction?.nonce)
+}
+
 async function fetchTxData(params: { hash: Hex.Hex }) {
 	return withImmutableDataCache({
-		key: `tx-detail:v2:${getTempoChain().id}:${params.hash.toLowerCase()}`,
+		key: `tx-detail:v3:${getTempoChain().id}:${params.hash.toLowerCase()}`,
 		load: () => fetchTxDataUncached(params),
 	})
 }
