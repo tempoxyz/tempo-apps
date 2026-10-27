@@ -25,16 +25,15 @@ export function getNonceKey(transaction: object): bigint | undefined {
 }
 
 /**
- * The nonce exactly, given the formatted one and the RPC's hex value.
- * Viem formats nonces as numbers, which rounds the uint64 discriminators
- * expiring nonce transactions may carry since TIP-1106.
+ * The exact nonce from the RPC's hex value, or undefined when the lookup
+ * failed. Viem formats nonces as numbers, which rounds the uint64
+ * discriminators expiring nonce transactions may carry since TIP-1106.
  */
 export function exactNonce(
-	formatted: number,
 	rpcNonce: string | null | undefined,
-): bigint {
-	if (rpcNonce) return BigInt(rpcNonce)
-	return BigInt(formatted)
+): bigint | undefined {
+	if (!rpcNonce) return undefined
+	return BigInt(rpcNonce)
 }
 
 const maxSafeNonce = BigInt(Number.MAX_SAFE_INTEGER)

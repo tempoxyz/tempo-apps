@@ -32,13 +32,12 @@ describe('getNonceKey', () => {
 describe('exactNonce', () => {
 	it('keeps a TIP-1106 uint64 discriminator exact', () => {
 		const rpcNonce = '0xfffffffffffffffd'
-		expect(exactNonce(Number(BigInt(rpcNonce)), rpcNonce)).toBe(
-			18446744073709551613n,
-		)
+		expect(exactNonce(rpcNonce)).toBe(18446744073709551613n)
 	})
 
-	it('falls back to the formatted nonce', () => {
-		expect(exactNonce(5, undefined)).toBe(5n)
+	it('is undefined when the lookup failed', () => {
+		expect(exactNonce(undefined)).toBeUndefined()
+		expect(exactNonce(null)).toBeUndefined()
 	})
 })
 

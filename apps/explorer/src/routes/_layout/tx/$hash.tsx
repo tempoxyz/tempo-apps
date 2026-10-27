@@ -431,7 +431,12 @@ function OverviewSection(props: {
 	const baseFee = block.baseFeePerGas
 	const maxFee = transaction.maxFeePerGas
 	const maxPriorityFee = transaction.maxPriorityFeePerGas
-	const nonce = (props.nonce ?? transaction.nonce).toString()
+	// A rounded nonce means the exact lookup failed; mark it approximate.
+	const nonce =
+		props.nonce?.toString() ??
+		(Number.isSafeInteger(transaction.nonce)
+			? transaction.nonce.toString()
+			: `~${BigInt(transaction.nonce)}`)
 	const nonceKey = getNonceKey(transaction)
 	const isExpiringNonce = nonceKey === expiringNonceKey
 	const positionInBlock = receipt.transactionIndex

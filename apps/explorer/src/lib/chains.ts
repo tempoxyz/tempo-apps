@@ -3,18 +3,20 @@ import { alphausd, pathusd } from 'viem/tokens'
 import { withLargeNonces } from './domain/nonce'
 import { ZONE_PROVER_CHAIN_ID, ZONE_PROVER_EXPLORER_URL } from './zone-prover'
 
-export const tempoZoneProver = tempoDevnet_.extend({
-	id: ZONE_PROVER_CHAIN_ID,
-	feeToken: '0x20c0000000000000000000000000000000000002',
-	name: 'Tempo Prover Devnet',
-	rpcUrls: { default: { http: [`${ZONE_PROVER_EXPLORER_URL}/api/rpc`] } },
-	blockExplorers: {
-		default: {
-			name: 'Tempo Prover Explorer',
-			url: ZONE_PROVER_EXPLORER_URL,
+export const tempoZoneProver = withLargeNonces(
+	tempoDevnet_.extend({
+		id: ZONE_PROVER_CHAIN_ID,
+		feeToken: '0x20c0000000000000000000000000000000000002',
+		name: 'Tempo Prover Devnet',
+		rpcUrls: { default: { http: [`${ZONE_PROVER_EXPLORER_URL}/api/rpc`] } },
+		blockExplorers: {
+			default: {
+				name: 'Tempo Prover Explorer',
+				url: ZONE_PROVER_EXPLORER_URL,
+			},
 		},
-	},
-})
+	}),
+)
 
 export const tempoMainnet = withLargeNonces(
 	tempo.extend({
@@ -39,19 +41,22 @@ export const tempoDevnet = withLargeNonces(
  * WebSocket when the build points at another devnet's RPC
  * (`VITE_DEVNET_RPC_OVERRIDDEN`), so the head is polled through `/api/rpc`.
  */
-export const connectedTempoDevnet =
+export const connectedTempoDevnet = withLargeNonces(
 	import.meta.env.VITE_DEVNET_RPC_OVERRIDDEN === 'true'
 		? {
 				...tempoDevnet_,
 				rpcUrls: { default: { http: tempoDevnet_.rpcUrls.default.http } },
 			}
-		: tempoDevnet_
+		: tempoDevnet_,
+)
 
-export const tempoNextfork = tempoDevnet_.extend({
-	feeToken: '0x20c0000000000000000000000000000000000002',
-	rpcUrls: {
-		default: {
-			http: ['https://rpc-nextfork.devnet.tempoxyz.dev'],
+export const tempoNextfork = withLargeNonces(
+	tempoDevnet_.extend({
+		feeToken: '0x20c0000000000000000000000000000000000002',
+		rpcUrls: {
+			default: {
+				http: ['https://rpc-nextfork.devnet.tempoxyz.dev'],
+			},
 		},
-	},
-})
+	}),
+)

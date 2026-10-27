@@ -47,7 +47,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 	const nonce =
 		typeof transaction.nonce === 'number' &&
 		!Number.isSafeInteger(transaction.nonce)
-			? await fetchExactNonce(receipt.transactionHash, transaction.nonce)
+			? await fetchExactNonce(receipt.transactionHash)
 			: undefined
 
 	const parsedEvents = parseKnownEvents(receipt, {
@@ -154,7 +154,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
  * Viem rounds nonces above 2^53, such as TIP-1106 expiring nonce
  * discriminators, so read the RPC's hex value for those.
  */
-async function fetchExactNonce(hash: Hex.Hex, formatted: number) {
+async function fetchExactNonce(hash: Hex.Hex) {
 	const client = getWagmiConfig().getClient()
 	const rpcTransaction = (await client
 		.request({
@@ -162,13 +162,16 @@ async function fetchExactNonce(hash: Hex.Hex, formatted: number) {
 			params: [hash],
 		} as Parameters<typeof client.request>[0])
 		.catch(() => null)) as { nonce?: string } | null
-	return exactNonce(formatted, rpcTransaction?.nonce)
+	return exactNonce(rpcTransaction?.nonce)
 }
 
 async function fetchTxData(params: { hash: Hex.Hex }) {
 	return withImmutableDataCache({
 		key: `tx-detail:v3:${getTempoChain().id}:${params.hash.toLowerCase()}`,
 		load: () => fetchTxDataUncached(params),
+		// Retry a failed exact-nonce lookup instead of caching a rounded nonce.
+		shouldCache: (data) =>
+			data.nonce !== undefined || Number.isSafeInteger(data.transaction.nonce),
 	})
 }
 
