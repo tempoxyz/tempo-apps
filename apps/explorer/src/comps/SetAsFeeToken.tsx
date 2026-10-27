@@ -1,9 +1,8 @@
 import type { Address } from 'ox'
+import { Button, Tag } from '@tempoxyz/ds'
 import * as React from 'react'
-import { type Connector, useConnection } from 'wagmi'
+import { useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
-import { cx } from '#lib/css'
-import LucideCoins from '~icons/lucide/coins'
 
 export function SetAsFeeToken(
 	props: SetAsFeeToken.Props,
@@ -41,42 +40,29 @@ export function SetAsFeeToken(
 		setFeeToken.mutate({ token: tokenAddress, account })
 	}
 
-	const busy = setFeeToken.isPending || showSuccess
-
-	const label = showSuccess
-		? 'Fee token set!'
-		: isAlreadyFeeToken
-			? 'Currently your fee token'
-			: setFeeToken.isPending
-				? 'Setting…'
-				: `Set ${symbol ?? 'token'} as fee token`
+	if (isAlreadyFeeToken)
+		return (
+			<Tag intent="positive" variant="plain">
+				<Tag.Dot />
+				{showSuccess ? 'Fee token set' : 'Your fee token'}
+			</Tag>
+		)
 
 	return (
-		<button
-			type="button"
-			disabled={busy || isAlreadyFeeToken}
-			className={cx(
-				'flex items-center gap-2 w-full copy-13 font-sans font-medium transition-colors',
-				isAlreadyFeeToken
-					? 'text-tertiary cursor-default'
-					: showSuccess
-						? 'text-positive'
-						: busy
-							? 'text-secondary animate-pulse'
-							: 'text-secondary hover:text-primary cursor-pointer press-down',
-			)}
+		<Button
+			loading={setFeeToken.isPending}
 			onClick={handleClick}
+			size="small"
+			variant="secondary"
 		>
-			<LucideCoins className="size-3.5" />
-			{label}
-		</button>
+			Set {symbol ?? 'token'} as fee token
+		</Button>
 	)
 }
 
 export declare namespace SetAsFeeToken {
 	type Props = {
 		address: Address.Address
-		connectors: readonly Connector[]
 		symbol?: string | undefined
 	}
 }

@@ -1,16 +1,19 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import { style, Token as TokenLogo } from '@tempoxyz/ds'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
 import { PREFETCH_PAGE_COUNT } from '#lib/constants'
+import { resolveLogoURI } from '#lib/domain/tip20'
 import { useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { OG_BASE_URL } from '#lib/og'
+import { truncate } from '#styles/explorer'
 
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
@@ -50,7 +53,7 @@ function TokensPage() {
 	const loaderData = Route.useLoaderData()
 	const queryClient = useQueryClient()
 
-	const { data, isPending, isFetching } = useQuery({
+	const { data, isPending } = useQuery({
 		...tokensListQueryOptions({
 			page,
 			limit: TOKENS_PER_PAGE,
@@ -94,115 +97,68 @@ function TokensPage() {
 	}, [total, page, queryClient])
 
 	const columns: DataGrid.Column[] = [
-		{
-			label: 'Token',
-			align: 'start',
-			width: 'max-content',
-		},
-		{
-			label: 'Name',
-			align: 'start',
-			width: '2fr',
-			minWidth: 180,
-		},
-		{
-			label: 'Currency',
-			align: 'start',
-			width: 110,
-		},
-		{
-			label: 'Holders',
-			align: 'end',
-			width: 110,
-		},
-		{
-			label: 'Address',
-			align: 'end',
-			width: '3fr' as const,
-			minWidth: 200,
-		},
+		{ label: 'Token', align: 'start', width: '2fr' },
+		{ label: 'Currency', align: 'start', width: 100 },
+		{ label: 'Holders', align: 'end', width: 120 },
+		{ label: 'Contract', align: 'end', width: '1fr' },
 	]
 	const stackedColumns: DataGrid.Column[] = [
-		{
-			label: 'Token',
-			align: 'start',
-			width: '1fr',
-			minWidth: 110,
-		},
+		{ label: 'Token', align: 'start', width: '1fr' },
+		{ label: 'Holders', align: 'end', width: 'max-content' },
 	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-[1200px] mx-auto w-full">
+		<div {...styles.page()}>
 			<Sections
 				mode={mode}
 				sections={[
 					{
 						title: 'Tokens',
-						totalItems: `${total}`,
-						itemsLabel: 'tokens',
-						autoCollapse: false,
 						content: (
 							<DataGrid
 								columns={{ stacked: stackedColumns, tabs: columns }}
 								items={(gridMode) =>
 									tokens.map((token: Token) => {
+										// TDS Tables and Lists: the token icon beside its symbol, with the name beneath.
 										const tokenCell = (
-											<div key="token" className="flex flex-col min-w-0 gap-1">
-												<span className="inline-flex min-w-0 items-center gap-2 text-base-content-positive font-medium">
-													<TokenIcon
-														address={token.address}
-														name={token.symbol}
-														logoURI={token.logoURI}
-													/>
-													<span className="truncate" title={token.symbol}>
+											<span key="token" {...styles.token()}>
+												<TokenLogo
+													address={token.address}
+													size="medium"
+													src={resolveLogoURI(token.logoURI)}
+												/>
+												<span {...styles.tokenText()}>
+													<span {...cx(truncate(), styles.symbol())}>
 														{token.symbol}
 													</span>
+													<span {...cx(truncate(), styles.secondary())}>
+														{gridMode === 'stacked'
+															? `${token.name} · ${token.currency}`
+															: token.name}
+													</span>
 												</span>
-												<span className="truncate text-secondary">
-													{token.name}
-												</span>
-												<span className="text-tertiary">
-													{token.currency} · {formatHoldersCount(token)} holders
-												</span>
-											</div>
+											</span>
+										)
+										const holders = (
+											<span key="holders" {...styles.numeric()}>
+												{formatHoldersCount(token)}
+											</span>
 										)
 
 										return {
 											cells:
 												gridMode === 'stacked'
-													? [tokenCell]
+													? [tokenCell, holders]
 													: [
-															<span
-																key="symbol"
-																className="inline-flex items-center gap-2 text-base-content-positive font-medium"
-															>
-																<TokenIcon
-																	address={token.address}
-																	name={token.symbol}
-																	logoURI={token.logoURI}
-																/>
-																{token.symbol}
-															</span>,
-															<span
-																key="name"
-																className="truncate max-w-[40ch]"
-															>
-																{token.name}
-															</span>,
-															<span key="currency" className="text-secondary">
+															tokenCell,
+															<span key="currency" {...styles.secondary()}>
 																{token.currency}
 															</span>,
-															<span
-																key="holders"
-																className="font-sans text-secondary"
-															>
-																{formatHoldersCount(token)}
-															</span>,
+															holders,
 															<Address
 																key="address"
 																address={token.address}
 																align="end"
-																className="w-full"
 															/>,
 														],
 											link: {
@@ -216,7 +172,6 @@ function TokensPage() {
 								displayCount={total}
 								displayCountCapped={false}
 								page={page}
-								fetching={isFetching && !isPending}
 								loading={isPending}
 								countLoading={false}
 								itemsLabel="tokens"
@@ -232,4 +187,43 @@ function TokensPage() {
 			/>
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		marginInline: 'auto !custom',
+		maxWidth: '1200px !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
+		width: '100% !custom',
+	})
+
+	export const token = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '12',
+		minWidth: '0 !custom',
+	})
+
+	export const tokenText = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minWidth: '0 !custom',
+	})
+
+	export const symbol = style({
+		color: 'foreground',
+		typography: 'label.14.strong',
+	})
+
+	export const secondary = style({ color: 'gray.900', typography: 'copy.13' })
+
+	export const numeric = style({
+		color: 'foreground',
+		fontVariantNumeric: 'tabular-nums',
+	})
 }

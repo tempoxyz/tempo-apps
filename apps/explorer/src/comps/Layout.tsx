@@ -1,52 +1,55 @@
-import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
+import { useMatchRoute, useRouterState } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds'
+import * as React from 'react'
+import { cx } from 'zyzz'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
-import { lazy, Suspense, useId } from 'react'
 import { BlockNumberProvider } from '#lib/block-number'
+import { useIsMounted } from '#lib/hooks'
 import { NotFoundProvider } from '#lib/not-found'
-import { useMatchRoute, useRouterState } from '@tanstack/react-router'
+import { srOnly } from '#styles/explorer'
 
-const Sphere = lazy(() =>
+const Sphere = React.lazy(() =>
 	import('#comps/Sphere').then(({ Sphere }) => ({ default: Sphere })),
 )
 
-export function Layout(props: Layout.Props) {
+export function Layout(props: Layout.Props): React.JSX.Element {
 	const { children } = props
-	const mainId = useId()
+	const mainId = React.useId()
 	const matchRoute = useMatchRoute()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
 	const isLanding = useRouterState({
 		select: (state) =>
 			(state.resolvedLocation?.pathname ?? state.location.pathname) === '/',
 	})
+	// The sphere's styles are not in the server-rendered route styles, so it
+	// renders after hydration to avoid a layout shift.
+	const isMounted = useIsMounted()
+
 	return (
 		<NotFoundProvider>
 			<BlockNumberProvider>
-				<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-					<a
-						href={`#${mainId}`}
-						className="sr-only focus:not-sr-only fixed top-3 left-3 z-50 rounded-button bg-accent text-on-accent px-4 py-3"
-					>
+				<div {...styles.root()}>
+					<a href={`#${mainId}`} {...cx(srOnly(), styles.skipLink())}>
 						Skip to content
 					</a>
-					<div className={`relative z-4 ${isReceipt ? 'print:hidden' : ''}`}>
+					<div {...cx(styles.header(), isReceipt && styles.printHidden())}>
 						<Header />
 					</div>
-					<main
-						id={mainId}
-						tabIndex={-1}
-						className="outline-none has-[[role=listbox]]:z-3 flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none"
-					>
-						<BreadcrumbsPortal />
+					<main id={mainId} tabIndex={-1} {...styles.main()}>
 						{children}
 					</main>
 					<div
-						className={`w-full mt-6 relative z-2 print:hidden ${isLanding ? 'pointer-events-none [&_a]:pointer-events-auto [&_button]:pointer-events-auto' : ''}`}
+						{...cx(
+							styles.footer(),
+							styles.printHidden(),
+							isLanding && styles.footerLanding(),
+						)}
 					>
-						{isLanding && (
-							<Suspense fallback={null}>
+						{isLanding && isMounted && (
+							<React.Suspense fallback={null}>
 								<Sphere />
-							</Suspense>
+							</React.Suspense>
 						)}
 						<Footer />
 					</div>
@@ -56,8 +59,72 @@ export function Layout(props: Layout.Props) {
 	)
 }
 
-export namespace Layout {
-	export interface Props {
+export declare namespace Layout {
+	type Props = {
 		children: React.ReactNode
 	}
+}
+
+namespace styles {
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		minHeight: '100dvh !custom',
+		'@media print': { display: 'block', minHeight: '0' },
+	})
+
+	// Applied over `srOnly`: fixed and padded while clipped, so focusing it
+	// only releases the clip. Inverted against the page, like a TDS primary
+	// button.
+	export const skipLink = style({
+		backgroundColor: 'foreground',
+		borderRadius: '12',
+		color: 'background.primary',
+		left: '12',
+		paddingBlock: '12',
+		paddingInline: '24',
+		position: 'fixed',
+		top: '12',
+		typography: 'copy.14',
+		zIndex: '50 !custom',
+		':focus': {
+			clipPath: 'none',
+			height: 'auto !custom',
+			margin: '0',
+			overflow: 'visible',
+			width: 'auto !custom',
+		},
+	})
+
+	export const header = style({ position: 'relative', zIndex: '4 !custom' })
+
+	export const printHidden = style({ '@media print': { display: 'none' } })
+
+	export const main = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		flexDirection: 'column',
+		height: '100% !custom',
+		outlineStyle: 'none',
+		position: 'relative',
+		width: '100% !custom',
+		zIndex: '1 !custom',
+		'@media print': { display: 'block', flex: 'none' },
+	})
+
+	export const footer = style({
+		marginTop: '24',
+		position: 'relative',
+		width: '100% !custom',
+		zIndex: '2 !custom',
+	})
+
+	export const footerLanding = style({
+		pointerEvents: 'none',
+		selectors: {
+			'& a': { pointerEvents: 'auto' },
+			'& button': { pointerEvents: 'auto' },
+		},
+	})
 }

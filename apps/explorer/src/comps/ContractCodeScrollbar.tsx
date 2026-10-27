@@ -1,4 +1,5 @@
 /** biome-ignore-all lint/a11y/noNoninteractiveTabindex: native overflow region must be keyboard-scrollable */
+import { style, vars } from '@tempoxyz/ds'
 import * as React from 'react'
 
 /** Keep the active file's native horizontal scroll reachable below the viewport. */
@@ -46,9 +47,46 @@ export function ContractCodeScrollbar(props: {
 			aria-label="Scroll source code horizontally"
 			tabIndex={0}
 			hidden={wrap}
-			className="source-scrollbar h-4 shrink-0 overflow-x-scroll overflow-y-hidden border-t border-card-border bg-source-background focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-[-2px]"
+			{...styles.track({ style: scrollbarColors })}
 		>
-			<div ref={spacer} className="h-px" />
+			<div ref={spacer} {...styles.spacer()} />
 		</section>
 	)
+}
+
+const scrollbarColors = {
+	scrollbarColor:
+		'var(--contract-source-scrollbar-thumb) var(--contract-source-scrollbar-track)',
+} satisfies React.CSSProperties
+
+namespace styles {
+	export const track = style({
+		// The zyzz compiler rejects theme colors in `scrollbarColor`, so the
+		// element applies the pair inline from these properties.
+		'--contract-source-scrollbar-thumb': vars.color.gray[700],
+		'--contract-source-scrollbar-track': vars.color.background.surface,
+		backgroundColor: 'background.surface',
+		borderColor: 'grayAlpha.200',
+		borderTopWidth: '1',
+		flexShrink: 0,
+		height: '16',
+		overflowX: 'scroll',
+		overflowY: 'hidden',
+		':focus-visible': {
+			outlineColor: 'currentColor !custom',
+			outlineOffset: '-2',
+			outlineStyle: 'solid',
+			outlineWidth: '2',
+		},
+		'::-webkit-scrollbar': { height: '12' },
+		'::-webkit-scrollbar-thumb': {
+			backgroundColor: 'gray.700',
+			borderColor: 'background.surface',
+			borderRadius: 'full',
+			borderStyle: 'solid',
+			borderWidth: '3px !custom',
+		},
+	})
+
+	export const spacer = style({ height: '1' })
 }

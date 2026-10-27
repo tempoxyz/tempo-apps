@@ -9,9 +9,10 @@ import * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { useAnimatedBlockNumber } from '#lib/block-number'
-import { cx } from '#lib/css'
 import { blocksQueryOptions } from '#lib/queries'
-import CalendarIcon from '~icons/lucide/calendar'
+import { link, linkHover } from '#styles/explorer'
+import { style, Surface } from '@tempoxyz/ds'
+import { cx } from 'zyzz'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
 
@@ -19,7 +20,7 @@ export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
 		<NotFound
-			title="Invalid Block Number"
+			title="Invalid block number"
 			message="Please enter a valid block number for the countdown."
 			data={data as NotFound.NotFoundData}
 		/>
@@ -84,12 +85,7 @@ function RouteComponent() {
 	}, [estimatedSeconds])
 
 	return (
-		<div
-			className={cx(
-				'flex flex-col items-center justify-center gap-8 w-full min-h-[calc(100vh-200px)]',
-				'pt-20 pb-16 px-4',
-			)}
-		>
+		<div {...styles.page()}>
 			<CountdownCard
 				targetBlockNumber={targetBlockNumber}
 				currentBlockNumber={currentBlockNumber}
@@ -128,73 +124,61 @@ function CountdownCard(props: {
 	)
 
 	return (
-		<div className="flex flex-col items-center gap-6 w-full max-w-[600px]">
-			<div className="text-center">
-				<h1 className="heading-24 text-primary mb-2">Block Countdown</h1>
-				<p className="text-secondary copy-14">
-					Estimated time for block{' '}
-					<span className="text-accent font-mono">
-						#{targetBlockNumber.toLocaleString()}
+		<div {...styles.card()}>
+			<div {...styles.heading()}>
+				<h1 {...styles.title()}>Block countdown</h1>
+				<p {...styles.description()}>
+					Estimated time until block{' '}
+					<span {...styles.target()}>
+						{targetBlockNumber.toLocaleString('en-US')}
 					</span>{' '}
-					to be created
+					is created
 				</p>
 			</div>
 
-			<div className="grid grid-cols-4 gap-3 w-full max-w-[400px]">
+			<dl aria-label="Time remaining" {...styles.units()}>
 				<CountdownUnit value={countdown.days} label="Days" />
 				<CountdownUnit value={countdown.hours} label="Hours" />
-				<CountdownUnit value={countdown.mins} label="Mins" />
-				<CountdownUnit value={countdown.secs} label="Secs" />
-			</div>
+				<CountdownUnit value={countdown.mins} label="Minutes" />
+				<CountdownUnit value={countdown.secs} label="Seconds" />
+			</dl>
 
 			<InfoCard
-				className="w-full"
 				sections={[
 					{
-						label: 'Target Block',
+						label: 'Target block',
 						value: (
 							<Link
 								to="/block/$id"
 								params={{ id: String(targetBlockNumber) }}
-								className="text-accent hover:underline press-down tabular-nums"
+								{...cx(styles.numeric(), link(), linkHover())}
 							>
-								#{targetBlockNumber.toLocaleString()}
+								{targetBlockNumber.toLocaleString('en-US')}
 							</Link>
 						),
 					},
 					{
-						label: 'Current Block',
+						label: 'Current block',
 						value: (
 							<Link
 								to="/block/$id"
 								params={{ id: String(currentBlockNumber) }}
-								className="text-accent hover:underline press-down tabular-nums"
+								{...cx(styles.numeric(), link(), linkHover())}
 							>
-								#{currentBlockNumber.toLocaleString()}
+								{currentBlockNumber.toLocaleString('en-US')}
 							</Link>
 						),
 					},
 					{
-						label: 'Remaining Blocks',
+						label: 'Remaining blocks',
 						value: (
-							<span className="text-primary tabular-nums">
-								{remainingBlocks.toLocaleString()}
+							<span {...styles.numeric()}>
+								{remainingBlocks.toLocaleString('en-US')}
 							</span>
 						),
 					},
 					{
-						label: (
-							<span
-								className="flex items-center gap-1.5"
-								title="Estimated Target Date"
-							>
-								<CalendarIcon className="size-3.5 text-content-dimmed" />
-								<span className="hidden min-[480px]:inline">
-									Estimated Target Date
-								</span>
-								<span className="min-[480px]:hidden">Est. Target</span>
-							</span>
-						),
+						label: 'Estimated date',
 						value: <EstimatedTargetDateValue date={estimatedTargetDate} />,
 					},
 				]}
@@ -203,45 +187,31 @@ function CountdownCard(props: {
 	)
 }
 
+/** A countdown tile: the unit in a `dt`, the count in a `dd`. */
 function CountdownUnit(props: { value: number; label: string }) {
 	const { value, label } = props
 	return (
-		<div className="flex flex-col items-center gap-1 p-3 rounded-body bg-card border border-card-border">
-			<span className="heading-32 font-sans text-primary tabular-nums">
-				{String(value).padStart(2, '0')}
-			</span>
-			<span className="label-12 text-tertiary ">{label}</span>
-		</div>
+		<Surface size="small" {...styles.unit()}>
+			<dt {...styles.unitLabel()}>{label}</dt>
+			<dd {...styles.unitValue()}>{String(value).padStart(2, '0')}</dd>
+		</Surface>
 	)
 }
 
 function EstimatedTargetDateValue(props: { date: Date }) {
 	const { date } = props
-
-	const fullDate = date.toLocaleString('en-US', {
-		weekday: 'short',
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		timeZoneName: 'short',
-	})
-
-	const shortDate = date.toLocaleString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	})
-
 	return (
-		<span className="text-primary whitespace-nowrap" title={fullDate}>
-			<span className="hidden min-[620px]:inline">{fullDate}</span>
-			<span className="min-[620px]:hidden">{shortDate}</span>
-		</span>
+		<time dateTime={date.toISOString()} {...styles.date()}>
+			{date.toLocaleString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+				second: '2-digit',
+				timeZoneName: 'short',
+			})}
+		</time>
 	)
 }
 
@@ -256,4 +226,79 @@ function calculateCountdown(targetDate: Date, now: number) {
 	const secs = totalSeconds % 60
 
 	return { days, hours, mins, secs }
+}
+
+namespace styles {
+	export const page = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '32',
+		justifyContent: 'center',
+		minHeight: 'calc(100vh - 200px) !custom',
+		paddingBottom: '64',
+		paddingInline: '16',
+		paddingTop: '64',
+		width: '100% !custom',
+	})
+
+	export const card = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '24',
+		maxWidth: '600px !custom',
+		width: '100% !custom',
+	})
+
+	export const heading = style({ textAlign: 'center' })
+
+	export const title = style({
+		color: 'foreground',
+		marginBottom: '8',
+		typography: 'heading.24.subtle',
+	})
+
+	export const description = style({
+		color: 'gray.900',
+		typography: 'copy.14',
+	})
+
+	export const target = style({
+		color: 'foreground',
+		fontVariantNumeric: 'tabular-nums !custom',
+	})
+
+	export const units = style({
+		display: 'grid',
+		gap: '12',
+		gridTemplateColumns: 'repeat(4, minmax(0, 1fr)) !custom',
+		margin: '0',
+		maxWidth: '400px !custom',
+		width: '100% !custom',
+	})
+
+	export const unit = style({ textAlign: 'center' })
+
+	export const unitLabel = style({
+		color: 'gray.900',
+		typography: 'label.12',
+	})
+
+	export const unitValue = style({
+		color: 'foreground',
+		fontVariantNumeric: 'tabular-nums !custom',
+		margin: '0',
+		typography: 'heading.32.subtle',
+	})
+
+	export const numeric = style({
+		color: 'foreground',
+		fontVariantNumeric: 'tabular-nums !custom',
+	})
+
+	export const date = style({
+		color: 'foreground',
+		textAlign: 'right',
+	})
 }

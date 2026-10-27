@@ -1,47 +1,68 @@
-import { Button, Empty } from 'regen-ui'
-import SearchXIcon from '~icons/lucide/search-x'
 import { Link } from '@tanstack/react-router'
-import type { Hex } from 'ox'
+import { Button, Empty, Hex, style, Surface } from '@tempoxyz/ds'
+import { Search } from '@tempoxyz/ds/icons'
+import type { Hex as HexType } from 'ox'
+import type * as React from 'react'
 import { apostrophe } from '#lib/chars'
 import { useMarkNotFoundPage } from '#lib/not-found'
 
-export function NotFound({
-	title = 'Page Not Found',
-	message = `The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
-	data,
-}: NotFound.Props): React.JSX.Element {
+export function NotFound(props: NotFound.Props): React.JSX.Element {
+	const {
+		title = 'Page not found',
+		message = `The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
+		data,
+	} = props
 	useMarkNotFoundPage()
 
 	return (
-		<section className="flex flex-1 size-full items-center justify-center px-4 py-16">
-			<div className="w-full max-w-[600px] rounded-body border border-base-border bg-surface">
-				<Empty
-					icon={<SearchXIcon />}
-					title={<span className="heading-24">{title}</span>}
-					action={
-						<Button render={<Link to="/" />} variant="primary">
-							Return home
-						</Button>
-					}
-				>
-					{message}
-				</Empty>
-				{data?.type === 'hash' && (
-					<pre className="border-t border-base-border bg-pane p-4 copy-13 text-secondary break-all whitespace-pre-wrap text-center">
-						{data.value}
-					</pre>
-				)}
-			</div>
+		<section {...styles.section()}>
+			<Surface size="medium" {...styles.card()}>
+				<Empty.Root>
+					<Empty.Icon>
+						<Search />
+					</Empty.Icon>
+					{/* The page's own heading, so not `Empty.Title`'s `h3`. */}
+					<h1 {...styles.title()}>{title}</h1>
+					<Empty.Description>{message}</Empty.Description>
+					{data?.type === 'hash' && <Hex copy value={data.value} />}
+					<Empty.Actions>
+						<Button.Link render={<Link to="/" />}>Go home</Button.Link>
+					</Empty.Actions>
+				</Empty.Root>
+			</Surface>
 		</section>
 	)
 }
 
-export namespace NotFound {
-	export interface Props {
-		title?: string
-		message?: string
-		data?: NotFoundData
+export declare namespace NotFound {
+	type Props = {
+		title?: string | undefined
+		message?: string | undefined
+		data?: NotFoundData | undefined
 	}
 
-	export type NotFoundData = { type: 'hash'; value: Hex.Hex }
+	type NotFoundData = { type: 'hash'; value: HexType.Hex }
+}
+
+namespace styles {
+	export const section = style({
+		alignItems: 'center',
+		display: 'flex',
+		flex: 1,
+		justifyContent: 'center',
+		paddingBlock: '64',
+		paddingInline: '16',
+		width: '100% !custom',
+	})
+
+	export const card = style({
+		maxWidth: '600px !custom',
+		width: '100% !custom',
+	})
+
+	export const title = style({
+		color: 'foreground',
+		margin: '0',
+		typography: 'heading.24',
+	})
 }

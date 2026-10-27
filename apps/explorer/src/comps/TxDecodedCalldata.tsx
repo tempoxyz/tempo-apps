@@ -1,18 +1,18 @@
+import { Button, CopyButton, style } from '@tempoxyz/ds'
 import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
 import type { Abi, Address, Hex } from 'viem'
 import { AbiArgument } from '#comps/AbiArgument'
 import { getAbiItem, getContractInfo } from '#lib/domain/contracts'
-import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
-import CopyIcon from '~icons/lucide/copy'
+import { codeIdentifier, mono } from '#styles/explorer'
 
-export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
+export function TxDecodedCalldata(
+	props: TxDecodedCalldata.Props,
+): React.JSX.Element {
 	const { address, data } = props
 	const selector = slice(data, 0, 4)
-	const copySignature = useCopy()
-	const copyRaw = useCopy()
 	const [showRaw, setShowRaw] = useState(false)
 
 	const { data: autoloadAbi } = useAutoloadAbi({
@@ -72,72 +72,43 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 
 	if (!isFetched || !abiItem)
 		return (
-			<div className="bg-distinct rounded-body overflow-hidden">
-				<div className="relative px-[10px] py-[8px]">
-					<pre className="label-12 text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
-						{data}
-					</pre>
-					<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
-						{copyRaw.notifying && (
-							<span className="label-12 select-none">copied</span>
-						)}
-						<button
-							type="button"
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
-							onClick={() => copyRaw.copy(data)}
-							title="Copy raw data"
-						>
-							<CopyIcon className="size-[14px]" />
-						</button>
-					</div>
-				</div>
+			<div {...styles.panel()}>
+				<TxDecodedCalldata.RawData data={data} />
 			</div>
 		)
 
+	const signatureText = `${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`
+
 	return (
-		<div className="flex flex-col gap-[8px]">
-			<div className="bg-distinct rounded-body overflow-hidden">
-				<div className="flex items-center justify-between px-[10px] py-[8px] border-b border-card-border">
-					<code className="label-12 text-primary font-sans">
-						<span className="text-base-content-positive">
+		<div {...styles.root()}>
+			<div {...styles.panel()}>
+				<div {...styles.header()}>
+					<code {...styles.signature()}>
+						<span {...codeIdentifier()}>
 							{'name' in abiItem ? (
 								abiItem.name
 							) : (
-								<span className="font-mono">{selector}</span>
+								<span {...mono()}>{selector}</span>
 							)}
 						</span>
-						<span className="text-secondary">(</span>
+						<span {...styles.secondary()}>(</span>
 						{abiItem.inputs?.map((input, i) => (
 							<span key={`${input.type}-${input.name ?? i}`}>
-								{i > 0 && <span className="text-secondary">, </span>}
-								<span className="text-secondary">{input.type}</span>
-								{input.name && (
-									<span className="text-primary"> {input.name}</span>
-								)}
+								{i > 0 && <span {...styles.secondary()}>, </span>}
+								<span {...styles.secondary()}>{input.type}</span>
+								{input.name && <span {...styles.primary()}> {input.name}</span>}
 							</span>
 						))}
-						<span className="text-secondary">)</span>
+						<span {...styles.secondary()}>)</span>
 					</code>
-					<div className="flex items-center gap-[4px] text-tertiary">
-						{copySignature.notifying && (
-							<span className="label-12 select-none">copied</span>
-						)}
-						<button
-							type="button"
-							className="press-down cursor-pointer hover:text-secondary p-[4px]"
-							onClick={() =>
-								copySignature.copy(
-									`${abiItem.name}(${abiItem.inputs?.map((input) => `${input.type}${input.name ? ` ${input.name}` : ''}`).join(', ') ?? ''})`,
-								)
-							}
-							title="Copy signature"
-						>
-							<CopyIcon className="size-[14px]" />
-						</button>
-					</div>
+					<CopyButton
+						aria-label="Copy signature"
+						value={signatureText}
+						{...styles.copy()}
+					/>
 				</div>
 				{args && args.length > 0 && (
-					<div className="divide-y divide-card-border">
+					<div {...styles.argumentList()}>
 						{abiItem.inputs?.map((input, i) => (
 							<AbiArgument
 								key={`${input.type}-${input.name ?? i}`}
@@ -148,33 +119,18 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 					</div>
 				)}
 			</div>
-			<button
-				type="button"
+			<Button
+				aria-expanded={showRaw}
 				onClick={() => setShowRaw(!showRaw)}
-				className="label-12 text-accent bg-accent/10 hover:bg-accent/15 rounded-button px-[10px] py-[4px] cursor-pointer press-down w-fit"
+				size="small"
+				variant="secondary"
+				{...styles.toggle()}
 			>
-				{showRaw ? 'Hide' : 'Show'} raw
-			</button>
+				{showRaw ? 'Hide raw data' : 'Show raw data'}
+			</Button>
 			{showRaw && (
-				<div className="bg-distinct rounded-body overflow-hidden">
-					<div className="relative px-[10px] py-[8px]">
-						<pre className="label-12 text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
-							{data}
-						</pre>
-						<div className="absolute top-[8px] right-[10px] flex items-center gap-[4px] text-tertiary bg-distinct pl-[8px]">
-							{copyRaw.notifying && (
-								<span className="label-12 select-none">copied</span>
-							)}
-							<button
-								type="button"
-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
-								onClick={() => copyRaw.copy(data)}
-								title="Copy raw data"
-							>
-								<CopyIcon className="size-[14px]" />
-							</button>
-						</div>
-					</div>
+				<div {...styles.panel()}>
+					<TxDecodedCalldata.RawData data={data} />
 				</div>
 			)}
 		</div>
@@ -186,4 +142,101 @@ export namespace TxDecodedCalldata {
 		address?: Address | null
 		data: Hex
 	}
+
+	export function RawData(props: RawData.Props): React.JSX.Element {
+		const { data } = props
+
+		return (
+			<div {...styles.raw()}>
+				<pre {...styles.rawData()}>{data}</pre>
+				<CopyButton
+					aria-label="Copy input data"
+					value={data}
+					{...styles.copy()}
+				/>
+			</div>
+		)
+	}
+
+	export namespace RawData {
+		export interface Props {
+			data: Hex
+		}
+	}
+}
+
+namespace styles {
+	export const root = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+	})
+
+	// A well on the section surface that holds the decoded call.
+	export const panel = style({
+		backgroundColor: 'background.primary',
+		borderRadius: '8',
+		minWidth: '0 !custom',
+	})
+
+	export const raw = style({
+		alignItems: 'flex-start',
+		display: 'flex',
+		gap: '8',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const rawData = style({
+		color: 'foreground',
+		flex: '1 !custom',
+		margin: '0',
+		maxHeight: '300px !custom',
+		minWidth: '0 !custom',
+		overflow: 'auto',
+		typography: 'label.12.mono',
+		whiteSpace: 'pre-wrap',
+		wordBreak: 'break-all',
+	})
+
+	// Negative margins let the 32px copy button sit in a 16px text row without
+	// growing it.
+	export const copy = style({
+		flexShrink: '0 !custom',
+		marginBlock: '-8px !custom',
+		marginRight: '-8px !custom',
+	})
+
+	export const header = style({
+		alignItems: 'center',
+		borderBottomWidth: '1',
+		borderColor: 'grayAlpha.200',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		paddingBlock: '8',
+		paddingInline: '12',
+	})
+
+	export const signature = style({
+		color: 'foreground',
+		typography: 'label.12.mono',
+		wordBreak: 'break-all',
+	})
+
+	export const secondary = style({ color: 'gray.900' })
+
+	export const primary = style({ color: 'foreground' })
+
+	export const argumentList = style({
+		selectors: {
+			'& > :not(:last-child)': {
+				borderBottomWidth: '1',
+				borderColor: 'grayAlpha.200',
+			},
+		},
+	})
+
+	// Button leaves its alignment in a column unset.
+	export const toggle = style({ alignSelf: 'flex-start' })
 }

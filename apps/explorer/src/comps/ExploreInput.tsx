@@ -1,12 +1,20 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import {
+	Autocomplete,
+	Button,
+	Combobox,
+	Hex,
+	Spinner,
+	style,
+	Tag,
+	Token,
+	variants,
+} from '@tempoxyz/ds'
+import { Search } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
-import * as Hex from 'ox/Hex'
+import * as OxHex from 'ox/Hex'
 import * as React from 'react'
-import { Midcut } from '#comps/Midcut'
-import { useMountAnim } from '#lib/animation'
-import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
-import { cx } from '#lib/css'
 import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
 import { normalizeSearchInput } from '#lib/tempo-address'
@@ -17,31 +25,57 @@ import type {
 	SearchResult,
 	TokenSearchResult,
 } from '#routes/api/search'
-import ArrowRight from '~icons/lucide/arrow-right'
 
 const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
 const recentSearchesLimit = 6
 
-type ManualActivation =
-	| { value: Address.Address; type: 'address' }
-	| { value: Hex.Hex; type: 'hash' }
-	| { value: string; type: 'block' }
-
-function parseBlockInput(raw: string): string | null {
+function parseBlockInput(raw: string): number | null {
 	const trimmed = raw.trim()
 	const withoutHash = trimmed.startsWith('#')
 		? trimmed.slice(1).trim()
 		: trimmed
 	if (!/^\d+$/.test(withoutHash)) return null
 	const n = Number(withoutHash)
-	if (!Number.isFinite(n) || !Number.isSafeInteger(n) || n < 0) return null
-	return String(n)
+	if (!Number.isSafeInteger(n) || n < 0) return null
+	return n
+}
+
+/** Resolves typed text to a block, address or transaction hash, if it is one. */
+function parseSearchInput(raw: string): SearchResult | null {
+	const input = normalizeSearchInput(raw.trim())
+	if (!input) return null
+
+	const blockNumber = parseBlockInput(input)
+	if (blockNumber !== null) return { type: 'block', blockNumber }
+
+	if (Address.validate(input))
+		return { type: 'address', address: input, isTip20: isTip20Address(input) }
+
+	if (OxHex.validate(input) && OxHex.size(input) === 32)
+		return { type: 'transaction', hash: input }
+
+	return null
 }
 
 function getSearchResultKey(result: SearchResult): string {
 	if (result.type === 'block') return `block-${result.blockNumber}`
 	if (result.type === 'transaction') return `tx-${result.hash.toLowerCase()}`
 	return `${result.type}-${result.address.toLowerCase()}`
+}
+
+/** The text a suggestion puts in the input when chosen. */
+function getSearchResultValue(result: SearchResult): string {
+	if (result.type === 'block') return String(result.blockNumber)
+	if (result.type === 'transaction') return result.hash
+	return result.address
+}
+
+function toActivation(result: SearchResult): ExploreInput.Activation {
+	if (result.type === 'block')
+		return { type: 'block', value: String(result.blockNumber) }
+	if (result.type === 'transaction') return { type: 'hash', value: result.hash }
+	if (result.type === 'token') return { type: 'token', value: result.address }
+	return { type: 'address', value: result.address }
 }
 
 function isPersistedSearchResult(value: unknown): value is SearchResult {
@@ -59,8 +93,8 @@ function isPersistedSearchResult(value: unknown): value is SearchResult {
 	if (
 		result.type === 'transaction' &&
 		typeof result.hash === 'string' &&
-		Hex.validate(result.hash) &&
-		Hex.size(result.hash) === 32 &&
+		OxHex.validate(result.hash) &&
+		OxHex.size(result.hash) === 32 &&
 		(result.timestamp === undefined || typeof result.timestamp === 'number')
 	)
 		return true
@@ -134,62 +168,60 @@ function persistRecentSearches(results: SearchResult[]): void {
 	}
 }
 
-function toManualSearchResult(data: ManualActivation): SearchResult {
-	if (data.type === 'block')
-		return { type: 'block', blockNumber: Number(data.value) }
+/** Recent searches for an empty query, otherwise the results grouped by kind. */
+function groupSuggestions(
+	query: string,
+	recentSearches: SearchResult[],
+	results: SearchResult[],
+): ExploreInput.SuggestionGroup[] {
+	if (query === '')
+		return recentSearches.length > 0
+			? [{ type: 'recent', title: 'Recent searches', items: recentSearches }]
+			: []
 
-	if (data.type === 'hash') return { type: 'transaction', hash: data.value }
+	const tokens: TokenSearchResult[] = []
+	const addresses: AddressSearchResult[] = []
+	const blocks: BlockSearchResult[] = []
 
-	return {
-		type: 'address',
-		address: data.value,
-		isTip20: isTip20Address(data.value),
+	for (const result of results) {
+		if (result.type === 'transaction')
+			return [{ type: 'transaction', title: 'Transactions', items: [result] }]
+
+		if (result.type === 'token') tokens.push(result)
+		else if (result.type === 'address') addresses.push(result)
+		else if (result.type === 'block') blocks.push(result)
 	}
+
+	const groups: ExploreInput.SuggestionGroup[] = []
+	if (blocks.length > 0)
+		groups.push({ type: 'block', title: 'Blocks', items: blocks })
+	if (addresses.length > 0)
+		groups.push({
+			type: 'address',
+			title: 'Contracts and addresses',
+			items: addresses,
+		})
+	if (tokens.length > 0)
+		groups.push({ type: 'token', title: 'Tokens', items: tokens })
+	return groups
 }
 
-export function ExploreInput(props: ExploreInput.Props) {
+export function ExploreInput(props: ExploreInput.Props): React.JSX.Element {
 	const {
 		onActivate,
-		inputRef: externalInputRef,
-		wrapperRef: externalWrapperRef,
 		value,
 		onChange,
 		size = 'medium',
-		className,
 		wide,
-		tabIndex,
 		autoFocus,
 	} = props
-	const formRef = React.useRef<HTMLFormElement>(null)
-	const rootRef = React.useRef<HTMLDivElement>(null)
-	const resultsRef = React.useRef<HTMLDivElement>(null)
-
-	const internalInputRef = React.useRef<HTMLInputElement>(null)
-	const inputRef = externalInputRef ?? internalInputRef
-
-	const [showResults, setShowResults] = React.useState(false)
-	const [selectedIndex, setSelectedIndex] = React.useState(-1)
+	const inputRef = React.useRef<HTMLInputElement>(null)
+	const [open, setOpen] = React.useState(false)
 	const [recentSearches, setRecentSearches] = React.useState<SearchResult[]>([])
-	const [hasFocus, setHasFocus] = React.useState(false)
-	const menuMounted = useMountAnim(showResults, resultsRef)
-	const resultsId = React.useId()
-
-	// prevents the menu from reopening when
-	// activating a menu item fills the input
-	const submittingRef = React.useRef(false)
 
 	const query = value.trim()
 	const normalizedQuery = normalizeSearchInput(query)
-	const isValidInput =
-		query.length > 0 &&
-		(Address.validate(normalizedQuery) ||
-			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
-			parseBlockInput(normalizedQuery) !== null)
-	const {
-		data: searchResults,
-		isFetching,
-		isError,
-	} = useQuery(
+	const { data, isFetching, isError } = useQuery(
 		queryOptions({
 			queryKey: ['search', normalizedQuery],
 			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
@@ -206,63 +238,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 			placeholderData: keepPreviousData,
 		}),
 	)
-	const suggestions = searchResults?.results ?? []
+	const results = data?.results
 
-	const groupedSuggestions = React.useMemo<
-		ExploreInput.SuggestionGroup[]
-	>(() => {
-		if (query.length === 0 && recentSearches.length > 0)
-			return [
-				{
-					type: 'recent',
-					title: 'Recent searches',
-					items: recentSearches,
-				},
-			]
-
-		const tokens: TokenSearchResult[] = []
-		const addresses: AddressSearchResult[] = []
-		const blocks: BlockSearchResult[] = []
-
-		for (const suggestion of suggestions) {
-			if (suggestion.type === 'transaction')
-				return [
-					{ type: 'transaction', title: 'Transactions', items: [suggestion] },
-				]
-
-			if (suggestion.type === 'token') tokens.push(suggestion)
-			else if (suggestion.type === 'address') addresses.push(suggestion)
-			else if (suggestion.type === 'block') blocks.push(suggestion)
-		}
-
-		const groups: ExploreInput.SuggestionGroup[] = []
-
-		if (blocks.length > 0)
-			groups.push({ type: 'block', title: 'Blocks', items: blocks })
-
-		if (addresses.length > 0)
-			groups.push({
-				type: 'address',
-				title: 'Contracts & addresses',
-				items: addresses,
-			})
-
-		if (tokens.length > 0)
-			groups.push({ type: 'token', title: 'Tokens', items: tokens })
-
-		return groups
-	}, [query.length, recentSearches, suggestions])
-
-	const flatSuggestions = React.useMemo(
-		() => groupedSuggestions.flatMap((g) => g.items),
-		[groupedSuggestions],
+	const groups = React.useMemo(
+		() => groupSuggestions(query, recentSearches, results ?? []),
+		[query, recentSearches, results],
 	)
-
-	const closeResults = React.useCallback(() => {
-		setHasFocus(false)
-		setShowResults(false)
-		setSelectedIndex(-1)
-	}, [])
 
 	React.useEffect(() => {
 		setRecentSearches(loadRecentSearches())
@@ -273,75 +254,22 @@ export function ExploreInput(props: ExploreInput.Props) {
 			autoFocus &&
 			matchMedia('(min-width: 640px) and (hover: hover) and (pointer: fine)')
 				.matches
-		) {
+		)
 			inputRef.current?.focus({ preventScroll: true })
-		}
-	}, [autoFocus, inputRef])
+	}, [autoFocus])
 
 	React.useEffect(() => {
-		if (inputRef.current === document.activeElement) setHasFocus(true)
-	}, [inputRef])
-
-	React.useEffect(() => {
-		if (submittingRef.current) {
-			submittingRef.current = false
-			return
-		}
-		setShowResults(hasFocus && (query.length > 0 || recentSearches.length > 0))
-	}, [hasFocus, query.length, recentSearches.length])
-
-	const previousResultsKeyRef = React.useRef('')
-	React.useEffect(() => {
-		const resultsKey = flatSuggestions.map(getSearchResultKey).join('|')
-		if (previousResultsKeyRef.current === resultsKey) return
-		previousResultsKeyRef.current = resultsKey
-		setSelectedIndex(-1)
-	}, [flatSuggestions])
-
-	// click outside (TODO: move focus from input to results menu)
-	React.useEffect(() => {
-		if (!showResults) return
-		const onMouseDown = (event: MouseEvent) => {
-			if (
-				resultsRef.current &&
-				!resultsRef.current.contains(event.target as Node) &&
-				inputRef.current &&
-				!inputRef.current.contains(event.target as Node)
-			) {
-				closeResults()
-			}
-		}
-		document.addEventListener('mousedown', onMouseDown)
-		return () => document.removeEventListener('mousedown', onMouseDown)
-	}, [showResults, inputRef, closeResults])
-
-	React.useEffect(() => {
-		const root = rootRef.current
-		if (!root) return
-
-		const onFocusOut = (event: FocusEvent) => {
-			const nextTarget = event.relatedTarget
-			if (nextTarget && root.contains(nextTarget as Node)) return
-			closeResults()
-		}
-
-		root.addEventListener('focusout', onFocusOut)
-		return () => root.removeEventListener('focusout', onFocusOut)
-	}, [closeResults])
-
-	// cmd+k shortcut
-	React.useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
+		const onKeyDown = (event: KeyboardEvent) => {
 			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 				event.preventDefault()
 				inputRef.current?.focus()
 			}
 		}
-		window.addEventListener('keydown', handleKeyDown)
-		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [inputRef])
+		window.addEventListener('keydown', onKeyDown)
+		return () => window.removeEventListener('keydown', onKeyDown)
+	}, [])
 
-	const rememberSearch = React.useCallback((result: SearchResult) => {
+	const activate = (result: SearchResult) => {
 		setRecentSearches((current) => {
 			const key = getSearchResultKey(result)
 			const next = [
@@ -351,303 +279,114 @@ export function ExploreInput(props: ExploreInput.Props) {
 			persistRecentSearches(next)
 			return next
 		})
-	}, [])
+		setOpen(false)
+		onActivate?.(toActivation(result))
+	}
 
-	const clearRecentSearches = React.useCallback(() => {
+	const clearRecentSearches = () => {
 		persistRecentSearches([])
 		setRecentSearches([])
-		setSelectedIndex(-1)
-		setShowResults(false)
-	}, [])
-
-	const handleActivate = React.useCallback(
-		(data: ManualActivation) => {
-			rememberSearch(toManualSearchResult(data))
-			submittingRef.current = true
-			closeResults()
-			onActivate?.(data)
-		},
-		[onActivate, rememberSearch, closeResults],
-	)
-
-	const handleSelect = React.useCallback(
-		(result: SearchResult) => {
-			rememberSearch(result)
-			submittingRef.current = true
-			closeResults()
-
-			if (result.type === 'block') {
-				const id = String(result.blockNumber)
-				onChange?.(id)
-				onActivate?.({ type: 'block', value: id })
-				return
-			}
-
-			if (result.type === 'token') {
-				onChange?.(result.address)
-				onActivate?.({ type: 'token', value: result.address })
-				return
-			}
-
-			if (result.type === 'address') {
-				onChange?.(result.address)
-				onActivate?.({ type: 'address', value: result.address })
-				return
-			}
-
-			if (result.type === 'transaction') {
-				onChange?.(result.hash)
-				onActivate?.({ type: 'hash', value: result.hash })
-				return
-			}
-		},
-		[onChange, onActivate, rememberSearch, closeResults],
-	)
+		inputRef.current?.focus()
+	}
 
 	return (
-		<div
-			ref={rootRef}
-			className={cx('relative z-10 w-full', !wide && 'max-w-md')}
-		>
-			<div ref={externalWrapperRef} className="overflow-hidden">
-				<form
-					ref={formRef}
-					autoComplete="off"
-					onSubmit={(event) => {
-						event.preventDefault()
-						if (!formRef.current) return
-
-						const data = new FormData(formRef.current)
-						let formValue = data.get('explore-query')
-						if (!formValue || typeof formValue !== 'string') return
-
-						formValue = formValue.trim()
-						if (!formValue) return
-
-						const normalizedFormValue = normalizeSearchInput(formValue)
-
-						const blockId = parseBlockInput(normalizedFormValue)
-						if (blockId !== null) {
-							handleActivate({ type: 'block', value: blockId })
-							return
-						}
-
-						if (Address.validate(normalizedFormValue)) {
-							handleActivate({ type: 'address', value: normalizedFormValue })
-							return
-						}
-
-						if (
-							Hex.validate(normalizedFormValue) &&
-							Hex.size(normalizedFormValue) === 32
-						) {
-							handleActivate({ type: 'hash', value: normalizedFormValue })
-							return
-						}
-					}}
-					className="relative w-full"
-				>
-					<input
+		<div {...styles.root({ wide: Boolean(wide) })}>
+			<Autocomplete.Root<SearchResult>
+				autoHighlight="always"
+				filteredItems={groups}
+				itemToStringValue={getSearchResultValue}
+				onOpenChange={setOpen}
+				onValueChange={onChange}
+				open={open && (query !== '' || recentSearches.length > 0)}
+				openOnInputClick
+				value={value}
+			>
+				<Autocomplete.InputGroup size={size}>
+					<Combobox.Prefix>
+						<Search />
+					</Combobox.Prefix>
+					<Autocomplete.Input
 						ref={inputRef}
-						autoCapitalize="none"
-						autoComplete="off"
-						autoCorrect="off"
-						tabIndex={tabIndex}
-						value={value}
-						className={cx(
-							'text-search-input bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary rounded-body focus-visible:border-focus outline-0',
-							size === 'large' ? 'h-[52px]' : 'h-[42px]',
-							className,
-						)}
+						aria-keyshortcuts="Meta+K Control+K"
+						aria-label="Search by address, transaction hash, block, or token"
 						data-1p-ignore
-						name="explore-query"
-						placeholder="Search address, hash, block, token"
 						enterKeyHint="search"
-						spellCheck={false}
-						type="text"
+						onFocus={() => setOpen(true)}
 						onKeyDown={(event) => {
-							if (event.key === 'Escape' && showResults) {
-								event.preventDefault()
-								setShowResults(false)
-								setSelectedIndex(-1)
+							// Enter on a highlighted suggestion chooses it. Otherwise it
+							// opens the typed address, hash or block number.
+							if (
+								event.key !== 'Enter' ||
+								event.nativeEvent.isComposing ||
+								event.currentTarget.hasAttribute('aria-activedescendant')
+							)
 								return
-							}
-
-							if (!showResults || flatSuggestions.length === 0) return
-
-							if (event.key === 'ArrowDown') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev < flatSuggestions.length - 1 ? prev + 1 : 0,
-								)
-								return
-							}
-
-							if (event.key === 'ArrowUp') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev > 0 ? prev - 1 : flatSuggestions.length - 1,
-								)
-								return
-							}
-
-							if (event.key === 'Enter') {
-								const index = selectedIndex >= 0 ? selectedIndex : 0
-								if (index < flatSuggestions.length) {
-									event.preventDefault()
-									handleSelect(flatSuggestions[index])
-								}
-								return
-							}
+							const result = parseSearchInput(value)
+							if (result) activate(result)
 						}}
-						onChange={(event) => {
-							setHasFocus(true)
-							onChange?.(event.target.value)
-						}}
-						onFocus={() => {
-							setHasFocus(true)
-							if (query.length > 0 || recentSearches.length > 0)
-								setShowResults(true)
-						}}
-						role="combobox"
-						aria-expanded={showResults}
-						aria-haspopup="listbox"
-						aria-autocomplete="list"
-						aria-controls={resultsId}
-						aria-activedescendant={
-							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
-						}
-						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
+						placeholder="Search address, hash, block, token"
 					/>
-					<div
-						className={cx(
-							'absolute top-[50%] -translate-y-[50%]',
-							size === 'large' ? 'right-[16px]' : 'right-[12px]',
+					<Autocomplete.Clear aria-label="Clear search" />
+				</Autocomplete.InputGroup>
+				<Autocomplete.Popup {...styles.popup()}>
+					<Autocomplete.Empty>
+						{isFetching ? (
+							<Spinner aria-label="Searching" />
+						) : isError ? (
+							"Couldn't load suggestions. Enter a full address, hash, or block number."
+						) : (
+							'No results. Enter a full address, hash, or block number.'
 						)}
-					>
-						<button
-							type="submit"
-							aria-label="Search"
-							aria-disabled={!isValidInput}
-							className={cx(
-								'rounded-body! border border-base-border bg-base-background/90 grid place-items-center press-down transition-colors hover:bg-surface',
-								size === 'large' ? 'size-[34px]' : 'size-[30px]',
-								isValidInput
-									? 'text-primary cursor-pointer'
-									: 'text-tertiary cursor-default',
-							)}
-						>
-							<ArrowRight
-								className={size === 'large' ? 'size-[16px]' : 'size-[14px]'}
-							/>
-						</button>
-					</div>
-				</form>
-			</div>
-
-			{menuMounted && (
-				<div
-					ref={resultsRef}
-					id={resultsId}
-					role="listbox"
-					aria-label="Search suggestions"
-					className={cx(
-						'absolute left-0 right-0 mt-2 z-50',
-						'bg-surface border border-base-border rounded-body overflow-hidden',
-						'shadow-sm max-h-[min(420px,50dvh)] overflow-y-auto overscroll-contain',
-					)}
-					style={{ opacity: 0 }}
-				>
-					<ProgressLine
-						loading={isFetching}
-						start={150}
-						className="absolute top-0 left-0 right-0"
-					/>
-					{flatSuggestions.length === 0 ? (
-						<div className="px-[16px] py-[12px] copy-14 text-tertiary">
-							{isError
-								? 'Search unavailable. Paste an address, hash, or block number.'
-								: isFetching
-									? 'Searching…'
-									: 'No results'}
-						</div>
-					) : (
-						<div className="flex flex-col py-[4px]">
-							{groupedSuggestions.map((group, groupIndex) => (
-								<div key={group.type} className="flex flex-col">
-									<div
-										className={cx(
-											'flex justify-between items-center px-[12px] py-[6px]',
-											groupIndex > 0 && 'pt-[12px]',
-										)}
-									>
-										<div className="label-12 text-secondary">{group.title}</div>
-										{group.type === 'recent' ? (
-											<button
-												type="button"
-												className="label-12 text-tertiary hover:text-base-content"
-												onMouseDown={(event) => event.preventDefault()}
-												onClick={clearRecentSearches}
-											>
-												Clear
-											</button>
-										) : (
-											<div className="label-12 text-tertiary">
-												{group.type === 'token'
-													? 'Address'
-													: group.type === 'transaction'
-														? 'Time'
-														: ''}
-											</div>
-										)}
-									</div>
-									{group.items.map((item) => {
-										const flatIndex = flatSuggestions.indexOf(item)
-										const key =
-											item.type === 'transaction'
-												? `tx-${item.hash}`
-												: item.type === 'block'
-													? `block-${item.blockNumber}`
-													: `${item.type}-${item.address}`
-										return (
-											<ExploreInput.SuggestionItem
-												key={key}
-												suggestion={item}
-												isSelected={flatIndex === selectedIndex}
-												onSelect={handleSelect}
-												id={`${resultsId}-${flatIndex}`}
-											/>
-										)
-									})}
+					</Autocomplete.Empty>
+					<Autocomplete.List>
+						{(group: ExploreInput.SuggestionGroup) => (
+							<Autocomplete.Group items={group.items} key={group.type}>
+								<div {...styles.groupHeader()}>
+									<Autocomplete.GroupLabel>
+										{group.title}
+									</Autocomplete.GroupLabel>
+									{group.type === 'recent' && (
+										<Button
+											onClick={clearRecentSearches}
+											size="small"
+											variant="text"
+										>
+											Clear
+										</Button>
+									)}
 								</div>
-							))}
-						</div>
-					)}
-				</div>
-			)}
+								<Autocomplete.Collection>
+									{(result: SearchResult) => (
+										<Suggestion
+											key={getSearchResultKey(result)}
+											onSelect={activate}
+											suggestion={result}
+										/>
+									)}
+								</Autocomplete.Collection>
+							</Autocomplete.Group>
+						)}
+					</Autocomplete.List>
+				</Autocomplete.Popup>
+			</Autocomplete.Root>
 		</div>
 	)
 }
 
 export namespace ExploreInput {
-	export type ValueType = 'address' | 'hash' | 'block'
+	export type Activation =
+		| { value: Address.Address; type: 'address' }
+		| { value: Address.Address; type: 'token' }
+		| { value: OxHex.Hex; type: 'hash' }
+		| { value: string; type: 'block' }
 
 	export interface Props {
-		onActivate?: (
-			data:
-				| { value: Address.Address; type: 'address' }
-				| { value: Address.Address; type: 'token' }
-				| { value: Hex.Hex; type: 'hash' }
-				| { value: string; type: 'block' },
-		) => void
-		inputRef?: React.RefObject<HTMLInputElement | null>
-		wrapperRef?: React.RefObject<HTMLDivElement | null>
+		onActivate?: (data: Activation) => void
 		value: string
 		onChange: (value: string) => void
+		/** TDS field height: `large` (56px) on the home page, `medium` (40px) in the header. */
 		size?: 'large' | 'medium'
-		className?: string
 		wide?: boolean
-		tabIndex?: number
 		autoFocus?: boolean
 	}
 
@@ -656,116 +395,130 @@ export namespace ExploreInput {
 		title: string
 		items: SearchResult[]
 	}
+}
 
-	export function SuggestionItem(props: SuggestionItem.Props) {
-		const { suggestion, isSelected, onSelect, id } = props
-		const itemRef = React.useRef<HTMLButtonElement>(null)
+function Suggestion(props: {
+	suggestion: SearchResult
+	onSelect: (suggestion: SearchResult) => void
+}): React.JSX.Element {
+	const { suggestion, onSelect } = props
 
-		React.useEffect(() => {
-			if (isSelected) itemRef.current?.scrollIntoView({ block: 'nearest' })
-		}, [isSelected])
+	return (
+		<Autocomplete.Item onClick={() => onSelect(suggestion)} value={suggestion}>
+			{suggestion.type === 'block' && (
+				<Combobox.ItemText>{suggestion.blockNumber}</Combobox.ItemText>
+			)}
+			{suggestion.type === 'transaction' && (
+				<>
+					<Combobox.ItemText>
+						<Hex value={suggestion.hash} />
+					</Combobox.ItemText>
+					{suggestion.timestamp !== undefined && (
+						<Combobox.ItemSuffix>
+							<RelativeTime timestamp={BigInt(suggestion.timestamp)} />
+						</Combobox.ItemSuffix>
+					)}
+				</>
+			)}
+			{suggestion.type === 'token' && (
+				<>
+					<Combobox.ItemPrefix>
+						<Token address={suggestion.address} />
+					</Combobox.ItemPrefix>
+					<LabelledAddress
+						address={suggestion.address}
+						label={suggestion.name}
+					/>
+					<Tag size="small">TIP-20</Tag>
+				</>
+			)}
+			{suggestion.type === 'address' && (
+				<>
+					<LabelledAddress
+						address={suggestion.address}
+						label={suggestion.label}
+					/>
+					{suggestion.category ? (
+						<Tag size="small">
+							{suggestion.category.charAt(0).toUpperCase() +
+								suggestion.category.slice(1)}
+						</Tag>
+					) : suggestion.isTip20 ? (
+						<Tag size="small">TIP-20</Tag>
+					) : null}
+					{suggestion.description && (
+						<Combobox.ItemSuffix {...styles.description()}>
+							{suggestion.description}
+						</Combobox.ItemSuffix>
+					)}
+				</>
+			)}
+		</Autocomplete.Item>
+	)
+}
 
+/** A name over its address in gray, or the address alone when there is no name. */
+function LabelledAddress(props: {
+	address: Address.Address
+	label?: string | undefined
+}): React.JSX.Element {
+	const { address, label } = props
+	if (!label)
 		return (
-			<button
-				ref={itemRef}
-				id={id}
-				type="button"
-				role="option"
-				aria-selected={isSelected}
-				onMouseDown={(event) => {
-					event.preventDefault()
-					onSelect(suggestion)
-				}}
-				onClick={(event) => {
-					if (event.detail === 0) onSelect(suggestion)
-				}}
-				className={cx(
-					'w-full flex items-center justify-between gap-[10px] overflow-hidden',
-					'text-left cursor-pointer px-[12px] py-[6px] press-down hover:bg-base-alt/25',
-					isSelected && 'bg-base-alt/25',
-				)}
-			>
-				{suggestion.type === 'block' && (
-					<span className="label-16 text-base-content tabular-nums">
-						#{suggestion.blockNumber}
-					</span>
-				)}
-				{suggestion.type === 'token' && (
-					<>
-						<div className="flex items-center gap-[10px] min-w-0 shrink">
-							<span className="label-16 text-base-content truncate">
-								{suggestion.name}
-							</span>
-							<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-								TIP-20
-							</span>
-						</div>
-						<span className="copy-14 font-mono text-accent flex-1 text-right">
-							<Midcut value={suggestion.address} prefix="0x" align="end" />
-						</span>
-					</>
-				)}
-				{suggestion.type === 'address' && (
-					<>
-						<div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-							<div className="flex min-w-0 max-w-full items-center gap-[8px]">
-								{suggestion.label ? (
-									<span className="min-w-0 truncate label-15 text-base-content">
-										{suggestion.label}
-									</span>
-								) : (
-									<span className="block min-w-0 flex-1 overflow-hidden copy-14 font-mono text-accent">
-										<Midcut value={suggestion.address} prefix="0x" />
-									</span>
-								)}
-								{suggestion.category ? (
-									<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-										{suggestion.category}
-									</span>
-								) : suggestion.isTip20 ? (
-									<span className="label-12 font-medium text-tertiary bg-base-alt px-[4px] py-[2px] rounded-[4px] shrink-0">
-										TIP-20
-									</span>
-								) : null}
-							</div>
-							{suggestion.label && (
-								<span className="block min-w-0 max-w-full overflow-hidden copy-14 font-mono text-accent">
-									<Midcut value={suggestion.address} prefix="0x" />
-								</span>
-							)}
-						</div>
-						{suggestion.description && (
-							<span className="hidden w-[44%] shrink-0 text-right copy-14 text-secondary sm:block">
-								{suggestion.description}
-							</span>
-						)}
-					</>
-				)}
-				{suggestion.type === 'transaction' && (
-					<>
-						<span className="copy-14 font-mono text-accent truncate min-w-0 flex-1">
-							<Midcut value={suggestion.hash} prefix="0x" />
-						</span>
-						{suggestion.timestamp ? (
-							<RelativeTime
-								timestamp={BigInt(suggestion.timestamp)}
-								className="label-12 text-tertiary"
-							/>
-						) : (
-							<span className="label-12 text-tertiary">−</span>
-						)}
-					</>
-				)}
-			</button>
+			<Combobox.ItemText>
+				<Hex value={address} />
+			</Combobox.ItemText>
 		)
-	}
 
-	export namespace SuggestionItem {
-		export interface Props {
-			suggestion: SearchResult
-			isSelected: boolean
-			onSelect: (suggestion: SearchResult) => void
-			id: string
-		}
-	}
+	return (
+		<span {...styles.labelled()}>
+			<Combobox.ItemText>{label}</Combobox.ItemText>
+			<Hex.Root value={address}>
+				<span {...styles.address()}>
+					<Hex.Text />
+				</span>
+			</Hex.Root>
+		</span>
+	)
+}
+
+namespace styles {
+	export const root = variants({
+		base: {
+			width: '100% !custom',
+		},
+		defaultVariants: { wide: false },
+		variants: { wide: { true: {}, false: { maxWidth: '448px !custom' } } },
+	})
+
+	// The suggestions match the field's width instead of growing with long values.
+	export const popup = style({ width: 'var(--anchor-width) !custom' })
+
+	export const groupHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+	})
+
+	// A grid keeps both lines at their content height and lets them truncate.
+	export const labelled = style({
+		display: 'grid',
+		flex: 1,
+		gridTemplateColumns: 'minmax(0, 1fr) !custom',
+		minWidth: '0',
+	})
+
+	export const address = style({
+		color: 'gray.900',
+		display: 'inline-flex',
+		maxWidth: '100% !custom',
+		minWidth: '0',
+	})
+
+	export const description = style({
+		display: 'none',
+		textAlign: 'end',
+		width: '40% !custom',
+		'@media (width >= 640px)': { display: 'block' },
+	})
 }

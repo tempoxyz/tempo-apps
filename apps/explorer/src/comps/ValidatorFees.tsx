@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
+import { Callout, style } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import type * as React from 'react'
+import { cx } from 'zyzz'
 import {
 	AssetName,
 	AssetSymbol,
@@ -13,6 +15,7 @@ import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { useIsMounted } from '#lib/hooks'
 import { validatorFeesQueryOptions } from '#lib/queries/validator-fees'
+import { link, linkHover } from '#styles/explorer'
 
 const columns: Record<'stacked' | 'tabs', DataGrid.Column[]> = {
 	stacked: [
@@ -40,9 +43,15 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 
 	if (query.isError)
 		return (
-			<p role="alert" className="p-[16px] text-[13px] text-red-400">
-				Unable to load all unclaimed fees. Please reload the page to try again.
-			</p>
+			<div {...styles.error()}>
+				<Callout intent="negative">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong>Unable to load all unclaimed fees.</strong> Please reload
+						the page to try again.
+					</Callout.Content>
+				</Callout>
+			</div>
 		)
 
 	const fees = query.data?.fees ?? []
@@ -65,7 +74,7 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 						}
 						return {
 							key: fee.token,
-							className: 'copy-13',
+							className: styles.row().className,
 							cells:
 								mode === 'stacked'
 									? [
@@ -94,13 +103,13 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 				loading={!query.data}
 				emptyState="No unclaimed fees."
 			/>
-			<p className="px-[16px] py-3 text-[13px] text-secondary">
+			<p {...styles.note()}>
 				Fees held in the FeeManager for this recipient,{' '}
 				<a
 					href="https://tempo.xyz/developers/docs/guide/node/validator-lifecycle#claim-validator-fees"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="text-accent hover:underline"
+					{...cx(link(), linkHover())}
 				>
 					available to claim
 				</a>
@@ -112,4 +121,17 @@ export function ValidatorFees(props: ValidatorFees.Props): React.JSX.Element {
 
 export declare namespace ValidatorFees {
 	type Props = { address: Address.Address; active: boolean }
+}
+
+namespace styles {
+	export const error = style({ padding: '16' })
+
+	export const row = style({ typography: 'label.12' })
+
+	export const note = style({
+		color: 'gray.900',
+		paddingBlock: '12',
+		paddingInline: '16',
+		typography: 'label.12',
+	})
 }

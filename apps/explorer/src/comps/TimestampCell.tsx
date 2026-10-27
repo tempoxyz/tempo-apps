@@ -1,22 +1,15 @@
 import { Link } from '@tanstack/react-router'
+import { style } from '@tempoxyz/ds'
+import type * as React from 'react'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 
-export function TimestampCell(props: {
-	timestamp: bigint
-	link?: string
-	format?: TimeFormat
-	className?: string
-}) {
+export function TimestampCell(props: TimestampCell.Props): React.JSX.Element {
 	const { timestamp, link, format = 'relative', className } = props
 
 	if (link) {
 		return (
-			<div className="text-nowrap">
-				<Link
-					to={link}
-					preload="intent"
-					className="text-tertiary hover:text-secondary"
-				>
+			<div {...styles.root()}>
+				<Link to={link} preload="intent" {...styles.link()}>
 					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			</div>
@@ -27,7 +20,27 @@ export function TimestampCell(props: {
 		<FormattedTimestamp
 			timestamp={timestamp}
 			format={format}
-			className={className ?? 'text-tertiary'}
+			className={className ?? styles.timestamp().className}
 		/>
 	)
+}
+
+export declare namespace TimestampCell {
+	type Props = {
+		timestamp: bigint
+		link?: string | undefined
+		format?: TimeFormat | undefined
+		className?: string | undefined
+	}
+}
+
+namespace styles {
+	export const root = style({ textWrap: 'nowrap' })
+
+	export const link = style({
+		color: 'gray.900',
+		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+	})
+
+	export const timestamp = style({ color: 'gray.900' })
 }

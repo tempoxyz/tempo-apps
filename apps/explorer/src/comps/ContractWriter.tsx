@@ -1,28 +1,29 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { Button, Callout, Empty, Rows, style, Tag, Tooltip } from '@tempoxyz/ds'
+import { Play } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
-import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
-import type { Abi, AbiFunction, Hex } from 'viem'
+import type { Abi, Hex } from 'viem'
 import { encodeFunctionData } from 'viem'
 import { useConnection, useWriteContract } from 'wagmi'
-import { cx } from '#lib/css'
+import {
+	FunctionDisclosure,
+	FunctionForm,
+	FunctionInput,
+	FunctionRow,
+	IconAction,
+	functionInputKey,
+} from '#comps/ContractFunction'
+import { TransactionCell } from '#comps/TransactionCell'
 import {
 	getFunctionSelector,
-	getInputType,
-	getPlaceholder,
 	getWriteFunctions,
-	isArrayType,
 	parseInputValue,
 	type WriteFunction,
 } from '#lib/domain/contracts'
-import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
-import CheckIcon from '~icons/lucide/check'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
+import { usePermalinkHighlight } from '#lib/hooks'
 import FlaskIcon from '~icons/lucide/flask-conical'
-import LinkIcon from '~icons/lucide/link'
-import PlayIcon from '~icons/lucide/play'
 
 function getWriteErrorMessage(err: Error): string {
 	// Walk the cause chain to find the deepest shortMessage/message
@@ -59,8 +60,18 @@ export function ContractWriter(props: ContractWriter.Props) {
 
 	const writeFunctions = getWriteFunctions(abi)
 
+	if (writeFunctions.length === 0)
+		return (
+			<Empty.Root>
+				<Empty.Title>No write functions</Empty.Title>
+				<Empty.Description>
+					This ABI has no functions that change state.
+				</Empty.Description>
+			</Empty.Root>
+		)
+
 	return (
-		<div className="flex flex-col gap-[12px]">
+		<Rows.Root dividers="full">
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -69,11 +80,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 					fn={fn}
 				/>
 			))}
-
-			{writeFunctions.length === 0 && (
-				<p className="copy-13 text-tertiary">No write functions available.</p>
-			)}
-		</div>
+		</Rows.Root>
 	)
 }
 
@@ -84,19 +91,6 @@ export declare namespace ContractWriter {
 	}
 }
 
-function getFunctionDisplaySignature(fn: AbiFunction): string {
-	if (fn.name) return getSignature(fn).replace(/,/g, ', ')
-	const selector = getFunctionSelector(fn)
-	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
-	return `${selector}(${inputs})`
-}
-
-function getMethodWithSelector(fn: AbiFunction): string {
-	const selector = getFunctionSelector(fn)
-	const name = fn.name || selector
-	return `${name} (${selector})`
-}
-
 function WriteContractFunction(props: {
 	address: Address.Address
 	abi: Abi
@@ -104,12 +98,12 @@ function WriteContractFunction(props: {
 }) {
 	const { fn } = props
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
-	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
 	const fnId = `write-${fn.name || selector}`
 
 	const [isExpanded, setIsExpanded] = React.useState(false)
+	const [submitted, setSubmitted] = React.useState(false)
 	const handleTargetChange = React.useCallback(
 		(isTarget: boolean) => isTarget && setIsExpanded(true),
 		[],
@@ -120,18 +114,20 @@ function WriteContractFunction(props: {
 		setInputs((prev) => ({ ...prev, [name]: value }))
 	}
 
-	const allInputsFilled = (fn.inputs ?? []).every((input) => {
-		const value = inputs[input.name ?? '']
+	const allInputsFilled = (fn.inputs ?? []).every((input, index) => {
+		const value = inputs[functionInputKey(input, index)]
 		return value !== undefined && value.trim() !== ''
 	})
 
 	const parsedArgs = React.useMemo(() => {
 		if (!allInputsFilled) return { args: [], error: null }
 		try {
-			const args = (fn.inputs ?? []).map((input) => {
-				const value = inputs[input.name ?? ''] ?? ''
-				return parseInputValue(value, input.type)
-			})
+			const args = (fn.inputs ?? []).map((input, index) =>
+				parseInputValue(
+					inputs[functionInputKey(input, index)] ?? '',
+					input.type,
+				),
+			)
 			return { args, error: null }
 		} catch (error) {
 			return {
@@ -141,11 +137,6 @@ function WriteContractFunction(props: {
 			}
 		}
 	}, [fn.inputs, inputs, allInputsFilled])
-
-	const handleCopyMethod = (event: React.MouseEvent) => {
-		event.stopPropagation()
-		void copy(getMethodWithSelector(fn))
-	}
 
 	/**
 	 * Calldata for the Simulate link. Falls back to the bare selector when the
@@ -165,14 +156,11 @@ function WriteContractFunction(props: {
 		return selector as Hex
 	}, [allInputsFilled, parsedArgs, props.abi, fn.name, selector])
 
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: fnId,
-	})
-
 	const isPayable = fn.stateMutability === 'payable'
 	const hasInputs = fn.inputs.length > 0 || isPayable
 
 	const connection = useConnection()
+	const connected = connection.status === 'connected'
 	const queryClient = useQueryClient()
 
 	const writeContract = useWriteContract({
@@ -186,252 +174,209 @@ function WriteContractFunction(props: {
 		},
 	})
 
-	return (
-		<div
-			id={fnId}
-			className="rounded-body border border-card-border bg-surface overflow-hidden"
-		>
-			<div className="w-full flex items-center justify-between">
-				<button
-					type="button"
-					onClick={() => hasInputs && setIsExpanded(!isExpanded)}
-					className={cx(
-						'min-w-0 flex-1 text-left flex flex-wrap items-center gap-[8px] h-full py-[10px] pl-[12px] focus-visible:-outline-offset-2! focus-visible:rounded-l-body!',
-						hasInputs && 'cursor-pointer press-down',
-					)}
-				>
-					<span className="min-w-0 label-12 text-secondary font-mono [overflow-wrap:anywhere]">
-						{getFunctionDisplaySignature(fn)}
-					</span>
-					{isPayable && (
-						<span className="shrink-0 label-12 px-[6px] py-[2px] rounded-[4px] bg-warning-subtle text-warning font-medium">
-							payable
+	const execute = () =>
+		writeContract.mutate({
+			address: props.address,
+			abi: props.abi,
+			functionName: fn.name,
+			args: parsedArgs.args,
+			value: isPayable
+				? inputs.value
+					? BigInt(inputs.value)
+					: undefined
+				: undefined,
+		})
+
+	// Simulate works without a wallet: checking what a write would do comes
+	// before signing. Unfilled arguments still simulate the selector, which
+	// shows who may call the function.
+	const simulateLink = (
+		<Link
+			to="/simulate"
+			search={{
+				to: props.address,
+				data: simulateCalldata,
+				...(connection.address ? { from: connection.address } : {}),
+				...(isPayable && inputs.value ? { value: inputs.value } : {}),
+			}}
+		/>
+	)
+
+	// Every write shows its outcome, with or without arguments.
+	const writeResult = (
+		<>
+			{writeContract.error && (
+				<Callout intent="negative" size="small">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong>Transaction failed</strong>
+						<span {...styles.calloutDescription()}>
+							{getWriteErrorMessage(writeContract.error)}
 						</span>
-					)}
-				</button>
-				<div className="flex items-center pl-[12px] shrink-0">
-					<button
-						type="button"
-						onClick={handleCopyMethod}
-						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
-					>
-						{copyNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation()
-							void handleCopyPermalink()
-						}}
-						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className={cx(
-							'cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							connection.status !== 'connected' && !hasInputs
-								? 'pr-[12px]'
-								: 'pr-[4px]',
-						)}
-					>
-						{linkNotifying ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
-					</button>
-					{/* Simulate is available whether or not a wallet is connected —
-					    checking what a write would do is the step *before* signing, and
-					    gating it on a connection put the safe option behind the risky
-					    one. Args are optional: an unfilled form still simulates the
-					    selector, which is enough to see who is allowed to call it. */}
-					<Link
-						to="/simulate"
-						search={{
-							to: props.address,
-							data: simulateCalldata,
-							...(connection.address ? { from: connection.address } : {}),
-							...(isPayable && inputs.value ? { value: inputs.value } : {}),
-						}}
-						title="Simulate this call without signing"
-						onClick={(event) => event.stopPropagation()}
-						className={cx(
-							'text-tertiary hover:text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							connection.status === 'connected' || hasInputs
-								? 'pr-[4px]'
-								: 'pr-[12px]',
-						)}
-					>
-						<FlaskIcon className="size-[14px]" />
-					</Link>
-					{connection.status === 'connected' && (
-						<button
-							type="button"
-							title="Execute"
-							disabled={
-								writeContract.isPending || (hasInputs && !allInputsFilled)
-							}
-							className={cx(
-								'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-								hasInputs ? 'pr-[4px]' : 'pr-[12px]',
-								(writeContract.isPending || (hasInputs && !allInputsFilled)) &&
-									'opacity-50 cursor-not-allowed',
-							)}
-							onClick={() =>
-								writeContract.mutate({
-									address: props.address,
-									abi: props.abi,
-									functionName: fn.name,
-									args: parsedArgs.args,
-									value: isPayable
-										? inputs.value
-											? BigInt(inputs.value)
-											: undefined
-										: undefined,
-								})
-							}
-						>
-							<PlayIcon className="size-[14px]" />
-						</button>
-					)}
-					{hasInputs && (
-						<button
-							type="button"
-							className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
-							aria-label={isExpanded ? 'Collapse function' : 'Expand function'}
-							aria-expanded={isExpanded}
-							onClick={() => setIsExpanded(!isExpanded)}
-						>
-							<ChevronDownIcon
-								className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
-							/>
-						</button>
-					)}
-				</div>
-			</div>
-
-			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
-					{isPayable && (
-						<FunctionInput
-							label="Value (wei)"
-							value={inputs.value}
-							input={{ name: 'value', type: 'uint256' }}
-							onChange={(value) => handleInputChange('value', value)}
-						/>
-					)}
-
-					{fn.inputs.map((input, index) => (
-						<FunctionInput
-							key={input.name ?? index}
-							input={input}
-							value={inputs[input.name ?? ''] ?? ''}
-							onChange={(value) =>
-								handleInputChange(input.name ?? `arg${index}`, value)
-							}
-						/>
-					))}
-
-					{parsedArgs.error && (
-						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
-							<p className="label-12 text-negative">{parsedArgs.error}</p>
-						</div>
-					)}
-
-					{writeContract.error && (
-						<div className="p-2.5 rounded-body bg-negative-subtle border border-negative">
-							<p className="label-12 text-negative">
-								{getWriteErrorMessage(writeContract.error)}
-							</p>
-						</div>
-					)}
-
-					{writeContract.isSuccess && writeContract.data && (
-						<div className="p-2.5 rounded-body bg-positive-subtle border border-positive/20">
-							<p className="label-12 text-positive font-mono break-all">
-								tx:{' '}
-								<Link
-									to="/receipt/$hash"
-									params={{ hash: writeContract.data }}
-									className="underline hover:text-positive"
-								>
-									{writeContract.data}
-								</Link>
-							</p>
-						</div>
-					)}
-				</div>
+					</Callout.Content>
+				</Callout>
 			)}
-		</div>
+			{writeContract.isSuccess && writeContract.data && (
+				<Callout intent="positive" size="small">
+					<Callout.Icon />
+					<Callout.Content>
+						<strong>Transaction sent</strong>
+						<TransactionCell hash={writeContract.data} />
+					</Callout.Content>
+				</Callout>
+			)}
+		</>
+	)
+
+	if (!hasInputs)
+		return (
+			<>
+				<FunctionRow
+					id={fnId}
+					fn={fn}
+					actions={
+						<>
+							<Tooltip.Root>
+								<Tooltip.Trigger
+									render={
+										<Button.Link
+											aria-label="Simulate this call without signing"
+											render={simulateLink}
+											shape="icon"
+											size="small"
+											variant="text"
+										/>
+									}
+								>
+									<FlaskIcon {...styles.icon()} />
+								</Tooltip.Trigger>
+								<Tooltip.Popup>
+									Simulate this call without signing
+								</Tooltip.Popup>
+							</Tooltip.Root>
+							{connected && (
+								<IconAction
+									icon={Play}
+									label="Execute"
+									loading={writeContract.isPending}
+									onClick={execute}
+								/>
+							)}
+						</>
+					}
+				/>
+				{(writeContract.error || writeContract.isSuccess) && (
+					<Rows.Row spacing="none" {...styles.result()}>
+						{writeResult}
+					</Rows.Row>
+				)}
+			</>
+		)
+
+	const missing = (key: string) => submitted && !inputs[key]?.trim()
+
+	return (
+		<FunctionDisclosure
+			id={fnId}
+			fn={fn}
+			expanded={isExpanded}
+			onToggle={() => setIsExpanded(!isExpanded)}
+			tag={
+				isPayable && (
+					<Tag intent="warning" size="small" variant="plain">
+						<Tag.Dot />
+						Payable
+					</Tag>
+				)
+			}
+		>
+			<FunctionForm
+				fn={fn}
+				id={fnId}
+				note={!connected && 'Connect a wallet to execute.'}
+				onSubmit={() => {
+					setSubmitted(true)
+					if (connected && allInputsFilled && !parsedArgs.error) execute()
+				}}
+				secondary={
+					<Button.Link
+						render={simulateLink}
+						size="small"
+						variant={connected ? 'secondary' : 'primary'}
+					>
+						<FlaskIcon />
+						Simulate
+					</Button.Link>
+				}
+				primary={
+					connected && (
+						<Button
+							loading={writeContract.isPending}
+							size="small"
+							type="submit"
+						>
+							Execute
+						</Button>
+					)
+				}
+				result={
+					<>
+						{parsedArgs.error && (
+							<Callout intent="negative" role="status" size="small">
+								<Callout.Icon />
+								<Callout.Content>
+									<strong>Invalid arguments</strong>
+									<span {...styles.calloutDescription()}>
+										{parsedArgs.error}
+									</span>
+								</Callout.Content>
+							</Callout>
+						)}
+
+						{writeResult}
+					</>
+				}
+			>
+				{fn.inputs.map((input, index) => {
+					const key = functionInputKey(input, index)
+					return (
+						<FunctionInput
+							key={key}
+							input={input}
+							invalid={missing(key)}
+							value={inputs[key] ?? ''}
+							onChange={(value) => handleInputChange(key, value)}
+						/>
+					)
+				})}
+
+				{isPayable && (
+					<FunctionInput
+						label="Value (wei)"
+						value={inputs.value ?? ''}
+						input={{ name: 'value', type: 'uint256' }}
+						onChange={(value) => handleInputChange('value', value)}
+					/>
+				)}
+			</FunctionForm>
+		</FunctionDisclosure>
 	)
 }
 
-function FunctionInput(props: {
-	input: { name?: string; type: string }
-	value: string
-	onChange: (value: string) => void
-	label?: string
-}) {
-	const { input, value, onChange, label } = props
-	const inputId = React.useId()
-	const inputType = getInputType(input.type)
-	const placeholder = getPlaceholder(input as { name: string; type: string })
+namespace styles {
+	// A no-argument function's outcome, under its row.
+	export const result = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		paddingBlockEnd: '12',
+	})
 
-	const displayLabel = label ?? input.name ?? 'value'
+	// The flask comes from Lucide, so it takes the 16px glyph of the TDS icons.
+	export const icon = style({ fontSize: '16' })
 
-	if (inputType === 'checkbox') {
-		return (
-			<div className="flex items-center gap-[8px]">
-				<input
-					id={inputId}
-					type="checkbox"
-					checked={value === 'true'}
-					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
-					className="w-[16px] h-[16px] rounded border-base-border"
-				/>
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{displayLabel} <span className="text-secondary">({input.type})</span>
-				</label>
-			</div>
-		)
-	}
-
-	if (inputType === 'textarea' || isArrayType(input.type)) {
-		return (
-			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="label-12 text-primary font-sans">
-					{displayLabel} <span className="text-secondary">({input.type})</span>
-				</label>
-				<textarea
-					id={inputId}
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					placeholder={placeholder}
-					rows={3}
-					className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus resize-none font-mono"
-				/>
-			</div>
-		)
-	}
-
-	return (
-		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="label-12 text-primary font-sans">
-				{displayLabel} <span className="text-secondary">({input.type})</span>
-			</label>
-			<input
-				autoCorrect="off"
-				autoComplete="off"
-				spellCheck={false}
-				autoCapitalize="off"
-				type="text"
-				id={inputId}
-				placeholder={placeholder}
-				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-body border border-base-border bg-alt px-[10px] py-[6px] copy-13 text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-focus font-mono"
-			/>
-		</div>
-	)
+	export const calloutDescription = style({
+		display: 'block',
+		overflowWrap: 'anywhere',
+	})
 }

@@ -1,75 +1,16 @@
+import { CopyButton, Rows, style } from '@tempoxyz/ds'
+import * as React from 'react'
 import type { AbiParameter } from 'viem'
-import { useCopy } from '#lib/hooks'
 
-/** Render decoded ABI values using their structure, including unnamed tuples. */
+/**
+ * A decoded ABI value as TDS `Rows`, including unnamed tuples. Tuples and
+ * arrays expand into nested rows; other values sit beside a copy button.
+ */
 export function AbiArgument(props: AbiArgument.Props): React.JSX.Element {
-	const { input, value } = props
-	const { copy, notifying } = useCopy()
-	const name = input.name || '(unnamed)'
-	const array = /^(.*)\[\d*\]$/.exec(input.type)
-	const children =
-		array && Array.isArray(value)
-			? value.map((item, index) => ({
-					input: {
-						...input,
-						type: array[1],
-						name: `[${index}]`,
-					} as AbiParameter,
-					value: item,
-				}))
-			: input.type === 'tuple' && 'components' in input && value != null
-				? input.components.map((component, index) => ({
-						input: { ...component, name: component.name || `[${index}]` },
-						value: Array.isArray(value)
-							? value[index]
-							: (value as Record<string, unknown>)[component.name ?? ''],
-					}))
-				: undefined
-
-	if (children)
-		return (
-			<details
-				open={input.type === 'tuple'}
-				className="min-w-0 label-12 font-mono"
-			>
-				<summary className="cursor-pointer px-[10px] py-[10px] text-primary hover:bg-base-alt/50 break-all">
-					<span className="font-medium">{name}</span>
-					<span className="ml-[8px] text-tertiary">{input.type}</span>
-					<span className="ml-[8px] text-tertiary">
-						{children.length} {array ? 'items' : 'fields'}
-					</span>
-				</summary>
-				{children.length ? (
-					<div className="ml-[14px] mb-[6px] border-l border-card-border pl-[6px] divide-y divide-card-border">
-						{children.map((child, index) => (
-							<AbiArgument key={`${index}-${child.input.name}`} {...child} />
-						))}
-					</div>
-				) : (
-					<div className="px-[24px] pb-[10px] text-tertiary">
-						Empty {array ? 'array' : 'tuple'}
-					</div>
-				)}
-			</details>
-		)
-
 	return (
-		<button
-			type="button"
-			onClick={() => copy(String(value))}
-			title={`Copy ${name}`}
-			className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-[4px] sm:gap-[12px] px-[10px] py-[8px] label-12 font-mono w-full text-left cursor-pointer press-down hover:bg-base-alt/50 transition-colors"
-		>
-			<span className="min-w-0 break-all">
-				<span className="block text-primary">
-					{notifying ? 'copied' : name}
-				</span>
-				<span className="block text-tertiary">{input.type}</span>
-			</span>
-			<span className="min-w-0 text-primary break-all max-h-[160px] overflow-auto">
-				{String(value)}
-			</span>
-		</button>
+		<Rows.Root dividers="full" size="small">
+			<ArgumentRow {...props} />
+		</Rows.Root>
 	)
 }
 
@@ -78,4 +19,97 @@ export declare namespace AbiArgument {
 		input: AbiParameter
 		value: unknown
 	}
+}
+
+function ArgumentRow(props: AbiArgument.Props): React.JSX.Element {
+	const { input, value } = props
+	const name = input.name || '(unnamed)'
+	const array = /^(.*)\[\d*\]$/.exec(input.type)
+	const children = getChildren(input, value, array?.[1])
+	// Tuples open by default; arrays, which can be long, start closed.
+	const [open, setOpen] = React.useState(input.type === 'tuple')
+	const panelId = React.useId()
+
+	const info = (
+		<Rows.Info>
+			<Rows.Title>
+				<span {...styles.mono()}>{name}</span>
+			</Rows.Title>
+			<Rows.Description>
+				<span {...styles.mono()}>{input.type}</span>
+				{children && ` · ${children.length} ${array ? 'items' : 'fields'}`}
+			</Rows.Description>
+		</Rows.Info>
+	)
+
+	if (!children)
+		return (
+			<Rows.Row>
+				{info}
+				<span {...styles.value()}>{String(value)}</span>
+				<CopyButton aria-label={`Copy ${name}`} value={String(value)} />
+			</Rows.Row>
+		)
+
+	return (
+		<>
+			<Rows.Row
+				action="expand"
+				aria-controls={panelId}
+				aria-expanded={open}
+				onClick={() => setOpen(!open)}
+			>
+				{info}
+			</Rows.Row>
+			{/* Closed panels stay in the markup, so the page can render them on the server. */}
+			<Rows.Panel hidden={!open} id={panelId}>
+				{children.length ? (
+					<Rows.Root dividers="full" size="small">
+						{children.map((child, index) => (
+							<ArgumentRow key={`${index}-${child.input.name}`} {...child} />
+						))}
+					</Rows.Root>
+				) : (
+					`Empty ${array ? 'array' : 'tuple'}`
+				)}
+			</Rows.Panel>
+		</>
+	)
+}
+
+/** Child values of an array or tuple, or `undefined` for a single value. */
+function getChildren(
+	input: AbiParameter,
+	value: unknown,
+	itemType: string | undefined,
+): AbiArgument.Props[] | undefined {
+	if (itemType !== undefined && Array.isArray(value))
+		return value.map((item, index) => ({
+			input: { ...input, type: itemType, name: `[${index}]` } as AbiParameter,
+			value: item,
+		}))
+	if (input.type === 'tuple' && 'components' in input && value != null)
+		return input.components.map((component, index) => ({
+			input: { ...component, name: component.name || `[${index}]` },
+			value: Array.isArray(value)
+				? value[index]
+				: (value as Record<string, unknown>)[component.name ?? ''],
+		}))
+	return undefined
+}
+
+namespace styles {
+	export const mono = style({ typography: 'copy.13.mono' })
+
+	// The value takes twice the label's share of the row and scrolls when tall.
+	export const value = style({
+		color: 'foreground',
+		flexBasis: '0',
+		flexGrow: 2,
+		maxHeight: '160',
+		minWidth: '0',
+		overflow: 'auto',
+		overflowWrap: 'anywhere',
+		typography: 'copy.13.mono',
+	})
 }

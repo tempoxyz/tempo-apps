@@ -8,28 +8,6 @@ export const springInstant = spring({
 	damping: 40,
 })
 
-// use to put emphasis on an element,
-// slightly faster & bouncier than smooth
-export const springBouncy = spring({
-	mass: 1,
-	stiffness: 600,
-	damping: 28,
-})
-
-// default for most animations
-export const springSmooth = spring({
-	mass: 1,
-	stiffness: 280,
-	damping: 20,
-})
-
-// slow & gentle, e.g. for background elements
-export const springLazy = spring({
-	mass: 1,
-	stiffness: 220,
-	damping: 50,
-})
-
 const defaultEnter = {
 	opacity: [0, 1],
 	scale: [0.99, 1],

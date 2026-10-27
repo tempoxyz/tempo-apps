@@ -1,31 +1,39 @@
-import { Choices } from 'regen-ui'
-import * as React from 'react'
-import { cx } from '#lib/css'
-import { Sections } from './Sections'
-import ListFilterIcon from '~icons/lucide/list-filter'
+import {
+	Button,
+	Checkbox,
+	ChoiceGroup,
+	Field,
+	Popover,
+	style,
+} from '@tempoxyz/ds'
+import { Filter } from '@tempoxyz/ds/icons'
+import type * as React from 'react'
 
-type FilterSection<V extends string> = {
-	label: string
-	options: { value: V | undefined; label: string }[]
-}
+type FilterOption<V extends string> = { value: V | undefined; label: string }
 
-const statusSection: FilterSection<'success' | 'reverted'> = {
-	label: 'Status',
-	options: [
-		{ value: 'success', label: 'Successful' },
-		{ value: 'reverted', label: 'Failed' },
-		{ value: undefined, label: 'All' },
-	],
-}
+type FilterOptions<V extends string> = readonly [
+	FilterOption<V>,
+	FilterOption<V>,
+	FilterOption<V>,
+]
 
-const periodSection: FilterSection<'24h' | '7d'> = {
-	label: 'Period',
-	options: [
-		{ value: '24h', label: '24h' },
-		{ value: '7d', label: '7d' },
-		{ value: undefined, label: 'All' },
-	],
-}
+const statusOptions: FilterOptions<'success' | 'reverted'> = [
+	{ value: 'success', label: 'Successful' },
+	{ value: 'reverted', label: 'Failed' },
+	{ value: undefined, label: 'All' },
+]
+
+const periodOptions: FilterOptions<'24h' | '7d'> = [
+	{ value: '24h', label: '24h' },
+	{ value: '7d', label: '7d' },
+	{ value: undefined, label: 'All' },
+]
+
+const directionOptions: FilterOptions<'in' | 'out'> = [
+	{ value: undefined, label: 'All' },
+	{ value: 'in', label: 'Incoming' },
+	{ value: 'out', label: 'Outgoing' },
+]
 
 export function TransactionFilters(
 	props: TransactionFilters.Props,
@@ -45,24 +53,12 @@ export function TransactionFilters(
 		(period !== undefined ? 1 : 0) +
 		(hideSubmitBatches ? 1 : 0)
 
-	const handleClearAll = React.useCallback(() => {
+	const handleClearAll = () => {
 		if (onClearAll) return onClearAll()
 		onStatusChange(undefined)
 		onPeriodChange(undefined)
 		onHideSubmitBatchesChange?.(false)
-	}, [onStatusChange, onPeriodChange, onHideSubmitBatchesChange, onClearAll])
-
-	const batchFilter = onHideSubmitBatchesChange && (
-		<label className="flex items-center gap-[8px] label-12 text-secondary cursor-pointer">
-			<input
-				type="checkbox"
-				checked={hideSubmitBatches ?? false}
-				onChange={(event) => onHideSubmitBatchesChange(event.target.checked)}
-				className="accent-accent"
-			/>
-			Hide submit batches
-		</label>
-	)
+	}
 
 	return (
 		<TableFilters
@@ -70,16 +66,26 @@ export function TransactionFilters(
 			activeCount={activeCount}
 			onClearAll={handleClearAll}
 		>
-			{batchFilter}
-			<SegmentedRow
-				label={statusSection.label}
-				options={statusSection.options}
+			{onHideSubmitBatchesChange && (
+				<Field.Root>
+					<Field.Item>
+						<Checkbox
+							checked={hideSubmitBatches ?? false}
+							onCheckedChange={(checked) => onHideSubmitBatchesChange(checked)}
+						/>
+						<Field.Label>Hide submit batches</Field.Label>
+					</Field.Item>
+				</Field.Root>
+			)}
+			<FilterChoice
+				label="Status"
+				options={statusOptions}
 				value={status}
 				onChange={onStatusChange}
 			/>
-			<SegmentedRow
-				label={periodSection.label}
-				options={periodSection.options}
+			<FilterChoice
+				label="Period"
+				options={periodOptions}
 				value={period}
 				onChange={onPeriodChange}
 			/>
@@ -97,13 +103,9 @@ export function TransferFilters(
 			activeCount={direction ? 1 : 0}
 			onClearAll={() => onDirectionChange(undefined)}
 		>
-			<SegmentedRow
+			<FilterChoice
 				label="Direction"
-				options={[
-					{ value: undefined, label: 'All' },
-					{ value: 'in', label: 'Incoming' },
-					{ value: 'out', label: 'Outgoing' },
-				]}
+				options={directionOptions}
 				value={direction}
 				onChange={onDirectionChange}
 			/>
@@ -118,149 +120,81 @@ export declare namespace TransferFilters {
 	}
 }
 
-export function TableFilters(props: TableFilters.Props): React.JSX.Element {
-	const { label, activeCount, onClearAll, children } = props
-	const mode = Sections.useSectionsMode()
-	const isStacked = mode === 'stacked'
-	const [open, setOpen] = React.useState(false)
-	const containerRef = React.useRef<HTMLDivElement>(null)
-	const toggleOpen = React.useCallback(() => setOpen((v) => !v), [])
-
-	React.useEffect(() => {
-		if (!open || isStacked) return
-		function onPointerDown(e: PointerEvent) {
-			if (
-				containerRef.current &&
-				!containerRef.current.contains(e.target as Node)
-			) {
-				setOpen(false)
-			}
-		}
-		function onKeyDown(event: KeyboardEvent) {
-			if (event.key === 'Escape') setOpen(false)
-		}
-		document.addEventListener('pointerdown', onPointerDown)
-		document.addEventListener('keydown', onKeyDown)
-		return () => {
-			document.removeEventListener('pointerdown', onPointerDown)
-			document.removeEventListener('keydown', onKeyDown)
-		}
-	}, [open, isStacked])
-
-	if (isStacked) {
-		return (
-			<div className="flex flex-col gap-[10px]">
-				<div className="flex items-center justify-between">
-					<button
-						type="button"
-						onClick={toggleOpen}
-						aria-label={label}
-						aria-expanded={open}
-						className={cx(
-							'flex items-center gap-[6px] border rounded-body px-[8px] py-[4px] label-12 cursor-pointer transition-colors',
-							activeCount > 0
-								? 'border-accent/20 text-accent bg-accent/5'
-								: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
-						)}
-					>
-						<ListFilterIcon className="w-[14px] h-[14px]" />
-						{activeCount > 0 && (
-							<span className="flex items-center justify-center min-w-[16px] h-[16px] rounded-[4px] bg-accent label-12 font-semibold text-base-background px-[4px]">
-								{activeCount}
-							</span>
-						)}
-					</button>
-					{open && activeCount > 0 && (
-						<button
-							type="button"
-							onClick={onClearAll}
-							className="label-12 text-tertiary hover:text-accent cursor-pointer transition-colors"
-						>
-							Clear all
-						</button>
-					)}
-				</div>
-				{open && (
-					<div className="flex flex-col gap-[10px] pt-[6px]">{children}</div>
-				)}
-			</div>
-		)
-	}
-
+/** A Filter button that opens the filters in a TDS `Popover`. */
+function TableFilters(props: TableFiltersProps): React.JSX.Element {
+	const { activeCount, children, label, onClearAll } = props
 	return (
-		<div ref={containerRef} className="relative flex items-center">
-			<button
-				type="button"
-				onClick={toggleOpen}
-				aria-label={label}
-				aria-expanded={open}
-				className={cx(
-					'flex items-center gap-[6px] border rounded-body px-[8px] py-[4px] label-12 cursor-pointer transition-colors',
-					activeCount > 0
-						? 'border-accent/20 text-accent bg-accent/5'
-						: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
-				)}
+		<Popover.Root>
+			<Popover.Trigger
+				render={
+					<Button
+						aria-label={label}
+						size="small"
+						variant={activeCount > 0 ? 'secondary' : 'text'}
+					/>
+				}
 			>
-				<ListFilterIcon className="w-[14px] h-[14px]" />
-				{activeCount > 0 && (
-					<span className="flex items-center justify-center min-w-[16px] h-[16px] rounded-[4px] bg-accent label-12 font-semibold text-base-background px-[4px]">
-						{activeCount}
-					</span>
-				)}
-			</button>
-
-			{open && (
-				<div className="absolute top-full right-0 mt-[6px] z-50 bg-card-header border border-card-border rounded-body shadow-lg w-[280px] max-w-[calc(100vw-32px)]">
-					<div className="flex flex-col gap-[10px] p-[14px]">{children}</div>
+				<Filter {...styles.icon()} />
+				Filter
+				{activeCount > 0 && <span {...styles.count()}>{activeCount}</span>}
+			</Popover.Trigger>
+			<Popover.Popup align="end">
+				<Popover.Title>{label}</Popover.Title>
+				<div {...styles.fields()}>{children}</div>
+				<div {...styles.actions()}>
 					{activeCount > 0 && (
-						<div className="border-t border-card-border px-[14px] py-[10px]">
-							<button
-								type="button"
-								onClick={onClearAll}
-								className="label-12 text-tertiary hover:text-accent cursor-pointer transition-colors"
-							>
-								Clear all
-							</button>
-						</div>
+						<Button onClick={onClearAll} size="small" variant="secondary">
+							Clear filters
+						</Button>
 					)}
+					<Popover.Close render={<Button size="small" variant="text" />}>
+						Done
+					</Popover.Close>
 				</div>
-			)}
-		</div>
+			</Popover.Popup>
+		</Popover.Root>
 	)
 }
 
-export declare namespace TableFilters {
-	type Props = {
-		label: string
-		activeCount: number
-		onClearAll: () => void
-		children: React.ReactNode
-	}
+type TableFiltersProps = {
+	label: string
+	activeCount: number
+	onClearAll: () => void
+	children: React.ReactNode
 }
 
-function SegmentedRow<V extends string>(props: {
+/** One filter: a labelled TDS `ChoiceGroup`. */
+function FilterChoice<V extends string>(
+	props: FilterChoiceProps<V>,
+): React.JSX.Element {
+	const { label, onChange, options, value } = props
+	return (
+		<Field.Root>
+			<Field.Label>{label}</Field.Label>
+			{/* ChoiceGroup values are strings, so "no filter" is `all`. */}
+			<ChoiceGroup.Root<V | 'all'>
+				onValueChange={(next) => onChange(next === 'all' ? undefined : next)}
+				size="small"
+				value={value ?? 'all'}
+			>
+				{options.map((option) => (
+					<ChoiceGroup.Item
+						key={option.value ?? 'all'}
+						value={option.value ?? 'all'}
+					>
+						{option.label}
+					</ChoiceGroup.Item>
+				))}
+			</ChoiceGroup.Root>
+		</Field.Root>
+	)
+}
+
+type FilterChoiceProps<V extends string> = {
 	label: string
-	options: { value: V | undefined; label: string }[]
+	options: FilterOptions<V>
 	value: V | undefined
 	onChange: (value: V | undefined) => void
-}): React.JSX.Element {
-	const { label, options, value, onChange } = props
-	return (
-		<div className="flex flex-col gap-[6px]">
-			<span className="label-12 text-tertiary shrink-0">{label}</span>
-			<Choices
-				className="w-full min-w-0 [&_[role=radio]]:px-1.5"
-				label={label}
-				value={String(options.findIndex((option) => option.value === value))}
-				items={options.map((option, index) => ({
-					value: String(index),
-					label: option.label,
-				}))}
-				variant="compact"
-				onChange={(next) => onChange(options[Number(next)].value)}
-			/>
-		</div>
-	)
 }
 
 export declare namespace TransactionFilters {
@@ -273,4 +207,36 @@ export declare namespace TransactionFilters {
 		onStatusChange: (status: 'success' | 'reverted' | undefined) => void
 		onPeriodChange: (period: '24h' | '7d' | undefined) => void
 	}
+}
+
+namespace styles {
+	export const icon = style({ flexShrink: '0 !custom', fontSize: '16' })
+
+	// Inverted pill: the page background on the foreground color.
+	export const count = style({
+		alignItems: 'center',
+		backgroundColor: 'foreground',
+		borderRadius: 'full',
+		color: 'background.primary',
+		display: 'inline-flex',
+		height: '16',
+		justifyContent: 'center',
+		minWidth: '16',
+		paddingInline: '4',
+		typography: 'label.12.strong',
+	})
+
+	export const fields = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '16',
+		marginTop: '16',
+	})
+
+	export const actions = style({
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'flex-end',
+		marginTop: '24',
+	})
 }

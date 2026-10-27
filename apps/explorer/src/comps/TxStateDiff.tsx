@@ -1,7 +1,8 @@
-import { Link } from '@tanstack/react-router'
+import { CopyButton, Empty, style, Table, variants } from '@tempoxyz/ds'
+import { ArrowCornerDownLeft } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import type { Hex } from 'viem'
-import { cx } from '#lib/css'
+import { Address } from '#comps/Address'
 import { getContractInfo } from '#lib/domain/contracts'
 import {
 	decodeStorageChange,
@@ -9,25 +10,20 @@ import {
 	type DecodedStorageChange,
 	type StorageDecodeContext,
 } from '#lib/domain/storage-decode'
-import { useCopy } from '#lib/hooks'
-import { PanelToolbar, SegmentedControl } from './PanelToolbar'
 import type { CallTrace, PrestateDiff } from '#lib/queries'
-import CheckIcon from '~icons/lucide/check'
-import CopyIcon from '~icons/lucide/copy'
-import WrapIcon from '~icons/lucide/corner-down-left'
+import { PanelToolbar, ViewToggle } from './PanelToolbar'
 
-export function TxStateDiff(props: TxStateDiff.Props) {
+export function TxStateDiff(props: TxStateDiff.Props): React.JSX.Element {
 	const {
 		prestate,
 		trace,
 		receipt,
 		logs,
 		tokenMetadata,
-		label = 'State Changes',
+		label = 'State changes',
 	} = props
 	const [wrap, setWrap] = React.useState(true)
 	const [raw, setRaw] = React.useState(false)
-	const copy = useCopy()
 
 	const candidateAddresses = React.useMemo(() => {
 		const fromTrace = extractCandidateAddresses(
@@ -52,96 +48,69 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 	}, [prestate, candidateAddresses, tokenMetadata, props.omitSenderNonceFor])
 
 	const hasData = data && data.accounts.length > 0
+	const ascii = React.useMemo(
+		() => (data ? TxStateDiff.toAscii(data, { raw }) : ''),
+		[data, raw],
+	)
+
+	const controls = data && (
+		<>
+			<CopyButton aria-label="Copy state changes" value={ascii} />
+			<PanelToolbar.IconButton
+				onClick={() => setWrap(!wrap)}
+				active={wrap}
+				label={wrap ? 'Disable line wrap' : 'Enable line wrap'}
+			>
+				<ArrowCornerDownLeft />
+			</PanelToolbar.IconButton>
+			<ViewToggle
+				label="State format"
+				value={raw ? 'raw' : 'decoded'}
+				options={[
+					{ value: 'decoded', label: 'Decoded' },
+					{ value: 'raw', label: 'Raw' },
+				]}
+				onChange={(value) => setRaw(value === 'raw')}
+			/>
+		</>
+	)
 
 	return (
-		<div className="flex flex-col">
+		<div {...styles.root()}>
 			{/* With a label this is a section header on the transaction page. Without
 			    one — the simulator, where the tab already names the panel — it is the
-			    same toolbar the trace uses, so the two panels are visibly siblings
-			    instead of an empty band with a stray `(decoded)` link in it. */}
+			    same toolbar the trace uses, so the two panels are visibly siblings. */}
 			{label === null ? (
 				hasData &&
 				data && (
 					<PanelToolbar
 						summary={`${data.accounts.length} account${data.accounts.length === 1 ? '' : 's'} changed`}
 					>
-						<PanelToolbar.IconButton
-							onClick={() => setWrap(!wrap)}
-							active={wrap}
-							title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-						>
-							<WrapIcon className="size-[12px]" />
-						</PanelToolbar.IconButton>
-						<PanelToolbar.IconButton
-							onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
-							title="Copy state changes"
-						>
-							{copy.notifying ? (
-								<CheckIcon className="size-[12px]" />
-							) : (
-								<CopyIcon className="size-[12px]" />
-							)}
-						</PanelToolbar.IconButton>
-						<SegmentedControl
-							size="sm"
-							value={raw ? 'raw' : 'decoded'}
-							options={[
-								{ value: 'decoded', label: 'Decoded' },
-								{ value: 'raw', label: 'Raw' },
-							]}
-							onChange={(value) => setRaw(value === 'raw')}
-						/>
+						{controls}
 					</PanelToolbar>
 				)
 			) : (
-				<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-solid border-distinct">
-					<span className="copy-13">
-						{label && (
-							<>
-								<span className="text-tertiary">{label} </span>
-								{hasData && (
-									<RawToggle raw={raw} onToggle={() => setRaw(!raw)} />
-								)}
-							</>
-						)}
-					</span>
-					{hasData && (
-						<div className="flex items-center gap-[8px] text-tertiary">
-							{copy.notifying && (
-								<span className="label-12 select-none">copied</span>
-							)}
-							<button
-								type="button"
-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
-								onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
-								title="Copy state changes"
-							>
-								<CopyIcon className="size-[14px]" />
-							</button>
-							<button
-								type="button"
-								onClick={() => setWrap(!wrap)}
-								className="press-down cursor-pointer hover:text-secondary p-[4px]"
-								title={wrap ? 'Disable line wrap' : 'Enable line wrap'}
-							>
-								<WrapIcon
-									className={cx('size-[14px]', wrap && 'text-primary')}
-								/>
-							</button>
-						</div>
-					)}
+				<div {...styles.header()}>
+					<span {...styles.headerLabel()}>{label}</span>
+					{hasData && <div {...styles.headerActions()}>{controls}</div>}
 				</div>
 			)}
 			{!prestate || !data ? (
-				<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
-					No state diff available.
-				</div>
+				<Empty.Root>
+					<Empty.Title>No state diff</Empty.Title>
+					<Empty.Description>
+						The node returned no state trace.
+					</Empty.Description>
+				</Empty.Root>
 			) : data.accounts.length === 0 ? (
-				<div className="px-[18px] py-[24px] copy-13 text-tertiary text-center">
-					No state changes.
-				</div>
+				<Empty.Root>
+					<Empty.Title>No state changes</Empty.Title>
+					<Empty.Description>
+						No account's storage or nonce changed.
+					</Empty.Description>
+				</Empty.Root>
 			) : (
-				<div className="flex flex-col">
+				<div {...styles.root()}>
 					{data.accounts.map((account) => (
 						<TxStateDiff.AccountView
 							key={account.address}
@@ -153,21 +122,6 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 				</div>
 			)}
 		</div>
-	)
-}
-
-function RawToggle(props: {
-	raw: boolean
-	onToggle: () => void
-}): React.JSX.Element {
-	return (
-		<button
-			type="button"
-			onClick={props.onToggle}
-			className="copy-13 text-accent hover:underline cursor-pointer press-down"
-		>
-			{props.raw ? '(raw)' : '(decoded)'}
-		</button>
 	)
 }
 
@@ -291,21 +245,18 @@ export namespace TxStateDiff {
 		return { accounts }
 	}
 
-	export function AccountView(props: AccountView.Props) {
+	export function AccountView(props: AccountView.Props): React.JSX.Element {
 		const { account, wrap, raw } = props
 		const { address, contractName, nonceChange, storageChanges } = account
 
 		return (
-			<div className="flex flex-col">
-				<div className="flex items-center gap-[8px] px-[16px] pt-[12px] pb-[8px]">
-					<Link
-						to="/address/$address"
-						params={{ address }}
-						className="min-w-0 truncate text-accent hover:underline font-mono label-12 press-down"
-					>
-						{contractName ? `${contractName} (${address})` : address}
-					</Link>
-					<span className="shrink-0 label-12 text-tertiary ml-auto">
+			<div {...styles.root()}>
+				<div {...styles.accountHeader()}>
+					{contractName && (
+						<span {...styles.contractName()}>{contractName}</span>
+					)}
+					<Address address={address} />
+					<span {...styles.accountCount()}>
 						{nonceChange && 'nonce'}
 						{nonceChange && storageChanges.length > 0 && ' + '}
 						{storageChanges.length > 0 &&
@@ -313,72 +264,71 @@ export namespace TxStateDiff {
 					</span>
 				</div>
 
-				<div className="px-[16px] pb-[12px] overflow-x-auto">
-					<div
-						className={cx(
-							'rounded-body overflow-hidden border border-card-border bg-base-plane label-12 font-mono grid',
-							wrap
-								? 'grid-cols-3'
-								: 'grid-cols-[auto_auto_auto] w-fit min-w-full',
-						)}
+				<div {...styles.scroll()}>
+					<Table.Root
+						aria-label={`State changes for ${contractName ?? address}`}
+						size="small"
+						{...styles.table({ wrap })}
 					>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
-							Slot
-						</div>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
-							Before
-						</div>
-						<div className="border-b border-card-border bg-base-alt px-[12px] py-[6px] label-12 text-tertiary">
-							After
-						</div>
-						{nonceChange && (
-							<>
-								<CopyCell
-									value="nonce"
-									className="text-secondary border-t border-card-border"
-									wrap={wrap}
-								/>
-								<CopyCell
-									value={String(nonceChange.before)}
-									className="text-tertiary border-t border-card-border"
-									wrap={wrap}
-								/>
-								<CopyCell
-									value={String(nonceChange.after)}
-									className="text-primary border-t border-card-border"
-									wrap={wrap}
-								/>
-							</>
-						)}
-						{storageChanges.map((change) => {
-							const decoded = !raw ? change.decoded : undefined
-							return (
-								<React.Fragment key={change.slot}>
-									<CopyCell
-										value={decoded?.slotLabel ?? change.slot}
-										copyValue={change.slot}
-										className="text-secondary border-t border-card-border"
-										wrap={wrap}
-										isDecoded={Boolean(decoded?.slotLabel)}
-									/>
-									<CopyCell
-										value={decoded?.beforeDisplay ?? change.before}
-										copyValue={decoded?.beforeRaw ?? change.before}
-										className="text-tertiary border-t border-card-border"
-										wrap={wrap}
-										isDecoded={Boolean(decoded?.beforeDisplay)}
-									/>
-									<DiffCell
-										value={decoded?.afterDisplay ?? change.after}
-										copyValue={decoded?.afterRaw ?? change.after}
-										diff={decoded?.diff}
-										wrap={wrap}
-										isDecoded={Boolean(decoded?.afterDisplay)}
-									/>
-								</React.Fragment>
-							)
-						})}
-					</div>
+						<Table.Head>
+							<Table.Row>
+								<Table.HeaderCell>Slot</Table.HeaderCell>
+								<Table.HeaderCell>Before</Table.HeaderCell>
+								<Table.HeaderCell>After</Table.HeaderCell>
+							</Table.Row>
+						</Table.Head>
+						<Table.Body>
+							{nonceChange && (
+								<Table.Row>
+									<Table.Cell mono>nonce</Table.Cell>
+									<Table.Cell mono>{nonceChange.before}</Table.Cell>
+									<Table.Cell mono numeric>
+										{nonceChange.after}
+									</Table.Cell>
+								</Table.Row>
+							)}
+							{storageChanges.map((change) => {
+								const decoded = !raw ? change.decoded : undefined
+								return (
+									<Table.Row key={change.slot}>
+										{/* A decoded value names its raw value in a tooltip. */}
+										<Table.Cell
+											mono
+											title={decoded?.slotLabel ? change.slot : undefined}
+										>
+											{decoded?.slotLabel ?? change.slot}
+										</Table.Cell>
+										<Table.Cell
+											mono
+											title={
+												decoded?.beforeDisplay
+													? (decoded.beforeRaw ?? change.before)
+													: undefined
+											}
+										>
+											{decoded?.beforeDisplay ?? change.before}
+										</Table.Cell>
+										<Table.Cell
+											mono
+											numeric
+											title={
+												decoded?.afterDisplay
+													? (decoded.afterRaw ?? change.after)
+													: undefined
+											}
+										>
+											<span {...styles.after()}>
+												<span>{decoded?.afterDisplay ?? change.after}</span>
+												{decoded?.diff && (
+													<span {...styles.diff()}>{decoded.diff.display}</span>
+												)}
+											</span>
+										</Table.Cell>
+									</Table.Row>
+								)
+							})}
+						</Table.Body>
+					</Table.Root>
 				</div>
 			</div>
 		)
@@ -389,90 +339,6 @@ export namespace TxStateDiff {
 			account: AccountData
 			wrap: boolean
 			raw: boolean
-		}
-	}
-
-	export function CopyCell(props: CopyCell.Props) {
-		const { value, copyValue, className, wrap, isDecoded } = props
-		const copy = useCopy()
-		const valueToCopy = copyValue ?? value
-
-		return (
-			<button
-				type="button"
-				className={cx(
-					'flex items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group',
-					wrap ? 'break-all' : 'whitespace-nowrap',
-					className,
-				)}
-				onClick={() => copy.copy(valueToCopy)}
-				title={isDecoded ? valueToCopy : undefined}
-			>
-				{value}
-				{copy.notifying && (
-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
-						<div className="translate-y-[-2px]">copied</div>
-					</div>
-				)}
-			</button>
-		)
-	}
-
-	export namespace CopyCell {
-		export interface Props {
-			value: string
-			copyValue?: string
-			className?: string
-			wrap: boolean
-			isDecoded?: boolean
-		}
-	}
-
-	export function DiffCell(props: DiffCell.Props) {
-		const { value, copyValue, diff, wrap, isDecoded } = props
-		const copy = useCopy()
-		const valueToCopy = copyValue ?? value
-
-		return (
-			<button
-				type="button"
-				className={cx(
-					'flex flex-col items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group border-t border-card-border',
-					wrap ? 'break-all' : 'whitespace-nowrap',
-				)}
-				onClick={() => copy.copy(valueToCopy)}
-				title={isDecoded ? valueToCopy : undefined}
-			>
-				<span className="text-primary">{value}</span>
-				{/* A balance going down is not a failure, so it does not get failure
-				    red. Green marks an increase; a decrease is just a value. This is
-				    the same pairing the simulator's balance table uses. */}
-				{diff && (
-					<span
-						className={cx(
-							'label-12',
-							diff.isPositive ? 'text-base-content-positive' : 'text-secondary',
-						)}
-					>
-						{diff.display}
-					</span>
-				)}
-				{copy.notifying && (
-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
-						<div className="translate-y-[-2px]">copied</div>
-					</div>
-				)}
-			</button>
-		)
-	}
-
-	export namespace DiffCell {
-		export interface Props {
-			value: string
-			copyValue?: string
-			diff?: { display: string; isPositive: boolean }
-			wrap: boolean
-			isDecoded?: boolean
 		}
 	}
 
@@ -514,4 +380,80 @@ export namespace TxStateDiff {
 
 		return lines.join('\n').trim()
 	}
+}
+
+namespace styles {
+	export const root = style({ display: 'flex', flexDirection: 'column' })
+
+	export const header = style({
+		alignItems: 'center',
+		borderBottomWidth: '1',
+		borderColor: 'grayAlpha.200',
+		borderStyle: 'solid',
+		borderTopWidth: '1',
+		display: 'flex',
+		gap: '8',
+		justifyContent: 'space-between',
+		minHeight: '48',
+		paddingBlock: '8',
+		paddingLeft: '16',
+		paddingRight: '8',
+	})
+
+	export const headerLabel = style({
+		color: 'gray.900',
+		typography: 'label.12',
+	})
+
+	export const headerActions = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '4',
+	})
+
+	export const accountHeader = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		minWidth: '0 !custom',
+		paddingBottom: '8',
+		paddingInline: '16',
+		paddingTop: '12',
+		typography: 'copy.14',
+	})
+
+	export const contractName = style({
+		flexShrink: '0 !custom',
+		typography: 'label.14.strong',
+	})
+
+	export const accountCount = style({
+		color: 'gray.900',
+		flexShrink: '0 !custom',
+		marginLeft: 'auto !custom',
+		typography: 'label.12',
+	})
+
+	export const scroll = style({
+		overflowX: 'auto',
+		paddingBottom: '12',
+		paddingInline: '16',
+	})
+
+	// Table leaves wrapping unset: wrapped values break anywhere to fit the
+	// width, unwrapped ones keep one line and scroll.
+	export const table = variants({
+		base: {},
+		defaultVariants: { wrap: true },
+		variants: {
+			wrap: {
+				false: { whiteSpace: 'nowrap' },
+				true: { wordBreak: 'break-all' },
+			},
+		},
+	})
+
+	export const after = style({ display: 'flex', flexDirection: 'column' })
+
+	export const diff = style({ color: 'gray.900' })
 }

@@ -32,6 +32,7 @@ import {
 	validatorTokenAddress,
 } from '#lib/demo'
 import { parseKnownEvents } from '#lib/domain/known-events'
+import { style } from '@tempoxyz/ds'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
@@ -603,8 +604,22 @@ function Component() {
 	const data = Route.useLoaderData()
 
 	return (
-		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
+		<div {...styles.page()}>
 			<Receipt {...data} />
 		</div>
 	)
+}
+
+namespace styles {
+	export const page = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexDirection: 'column',
+		flexGrow: 1,
+		gap: '32',
+		justifyContent: 'center',
+		paddingBottom: '32',
+		paddingTop: '64',
+		typography: 'label.12',
+	})
 }

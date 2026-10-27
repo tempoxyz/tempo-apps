@@ -68,16 +68,18 @@ describe('unclaimed fee grid', () => {
 	])('uses the shared grid header in %s mode without block or refresh controls', (mode) => {
 		section.mode = mode
 		const html = render()
-		expect(html).toContain('grid-cols-subgrid')
-		expect(html).toContain(
-			'<a href="https://tempo.xyz/developers/docs/guide/node/validator-lifecycle#claim-validator-fees" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">available to claim</a>.',
+		expect(html).toContain('aria-busy="false"')
+		expect(html).toMatch(
+			/<a href="https:\/\/tempo\.xyz\/developers\/docs\/guide\/node\/validator-lifecycle#claim-validator-fees" target="_blank" rel="noopener noreferrer" class="[^"]+">available to claim<\/a>\./,
 		)
 		expect(html).toContain('>Name</span>')
 		expect(html).toContain('>Amount</span>')
 		expect(html).toContain('>PathUSD</span>')
-		expect(html).toContain(`/api/token/logo/${token}`)
-		expect(html).toContain('size-5 shrink-0')
-		expect(html).toContain('title="1.178057">1.178057</span>')
+		// TDS `Token` and `Amount`: the icon by address, the exact amount with its symbol.
+		expect(html).toMatch(new RegExp(`<img [^>]*src="[^"]+/${token}"`))
+		expect(html).toMatch(
+			/>1\.178057<span class="[^"]+"> (<!-- -->)?pathUSD<\/span>/,
+		)
 		if (mode === 'tabs') {
 			expect(html).toContain('>Ticker</span>')
 			expect(html).toContain('>Currency</span>')
@@ -120,8 +122,8 @@ describe('unclaimed fee grid', () => {
 		})
 		const html = render()
 		expect(html).toContain('>TIP-20</span>')
-		expect(html).toContain(`/api/token/logo/${token}`)
-		expect(html).toContain('title="1.178057">1.178057</span>')
+		expect(html).toMatch(new RegExp(`<img [^>]*src="[^"]+/${token}"`))
+		expect(html).toMatch(/>1\.178057<\/span>/)
 		expect(html).not.toContain('$1.18')
 	})
 })
