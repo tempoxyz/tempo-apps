@@ -1,3 +1,5 @@
+import { type Chain, formatBlock } from 'viem'
+
 /** Nonce key that marks an expiring nonce transaction (TIP-1009). */
 export const expiringNonceKey = 2n ** 256n - 1n
 
@@ -33,4 +35,81 @@ export function exactNonce(
 ): bigint {
 	if (rpcNonce) return BigInt(rpcNonce)
 	return BigInt(formatted)
+}
+
+const maxSafeNonce = BigInt(Number.MAX_SAFE_INTEGER)
+
+type RpcWithNonce = { nonce?: unknown }
+
+/**
+ * Zeroes an RPC nonce viem cannot format: its formatters throw on values
+ * above 2^53, which TIP-1106 expiring nonce discriminators often are.
+ * Returns the sanitized payload and the nonce to restore, rounded.
+ */
+function splitUnsafeNonce<value>(rpc: value): [value, number | undefined] {
+	const nonce = (rpc as RpcWithNonce | null)?.nonce
+	if (typeof nonce !== 'string' || !nonce.startsWith('0x'))
+		return [rpc, undefined]
+	const exact = BigInt(nonce)
+	if (exact <= maxSafeNonce) return [rpc, undefined]
+	return [{ ...rpc, nonce: '0x0' }, Number(exact)]
+}
+
+/**
+ * The chain with transaction and block formatters that accept nonces above
+ * 2^53 instead of throwing, so pages with such transactions load. The
+ * formatted nonce is rounded; read the RPC's hex value where it is shown.
+ */
+export function withLargeNonces<chain extends Chain>(chain: chain): chain {
+	const transaction = chain.formatters?.transaction
+	const block = chain.formatters?.block
+	const formatTransaction = transaction?.format
+	const formatBlockWith = block?.format ?? formatBlock
+	return {
+		...chain,
+		formatters: {
+			...chain.formatters,
+			...(transaction && formatTransaction
+				? {
+						transaction: {
+							...transaction,
+							format: (args: never, action?: string) => {
+								const [safe, nonce] = splitUnsafeNonce(args)
+								const formatted = formatTransaction(safe, action)
+								return nonce === undefined ? formatted : { ...formatted, nonce }
+							},
+						},
+					}
+				: {}),
+			block: {
+				...block,
+				type: 'block',
+				format: (args: never, action?: string) => {
+					const rpcBlock = args as { transactions?: unknown }
+					if (!Array.isArray(rpcBlock.transactions))
+						return formatBlockWith(args, action)
+					const nonces: (number | undefined)[] = []
+					const transactions = rpcBlock.transactions.map((tx) => {
+						const [safe, nonce] = splitUnsafeNonce(tx)
+						nonces.push(nonce)
+						return safe
+					})
+					const formatted = formatBlockWith(
+						{ ...rpcBlock, transactions } as never,
+						action,
+					) as { transactions: unknown[] }
+					if (nonces.every((nonce) => nonce === undefined)) return formatted
+					return {
+						...formatted,
+						transactions: formatted.transactions.map((tx, index) => {
+							const nonce = nonces[index]
+							return nonce === undefined || typeof tx !== 'object'
+								? tx
+								: { ...tx, nonce }
+						}),
+					}
+				},
+			},
+		},
+	} as chain
 }

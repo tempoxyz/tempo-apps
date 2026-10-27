@@ -1,5 +1,6 @@
 import { tempoDevnet as tempoDevnet_, tempo, tempoModerato } from 'viem/chains'
 import { alphausd, pathusd } from 'viem/tokens'
+import { withLargeNonces } from './domain/nonce'
 import { ZONE_PROVER_CHAIN_ID, ZONE_PROVER_EXPLORER_URL } from './zone-prover'
 
 export const tempoZoneProver = tempoDevnet_.extend({
@@ -15,17 +16,23 @@ export const tempoZoneProver = tempoDevnet_.extend({
 	},
 })
 
-export const tempoMainnet = tempo.extend({
-	feeToken: pathusd.addresses[tempo.id],
-})
+export const tempoMainnet = withLargeNonces(
+	tempo.extend({
+		feeToken: pathusd.addresses[tempo.id],
+	}),
+)
 
-export const tempoTestnet = tempoModerato.extend({
-	feeToken: alphausd.addresses[tempoModerato.id],
-})
+export const tempoTestnet = withLargeNonces(
+	tempoModerato.extend({
+		feeToken: alphausd.addresses[tempoModerato.id],
+	}),
+)
 
-export const tempoDevnet = tempoDevnet_.extend({
-	feeToken: '0x20c0000000000000000000000000000000000002',
-})
+export const tempoDevnet = withLargeNonces(
+	tempoDevnet_.extend({
+		feeToken: '0x20c0000000000000000000000000000000000002',
+	}),
+)
 
 /**
  * The devnet chain the app connects with: viem's, without its public
