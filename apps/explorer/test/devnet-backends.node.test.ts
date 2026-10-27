@@ -189,10 +189,6 @@ describe('connected devnet chain', () => {
 		vi.resetModules()
 		const { connectedTempoDevnet } = await import('#lib/chains')
 		const { tempoDevnet } = await import('viem/chains')
-		// Same chain, with formatters that accept TIP-1106 nonces above 2^53.
-		expect({ ...connectedTempoDevnet, formatters: undefined }).toEqual({
-			...tempoDevnet,
-			formatters: undefined,
-		})
+		expect(connectedTempoDevnet).toBe(tempoDevnet)
 	})
 })

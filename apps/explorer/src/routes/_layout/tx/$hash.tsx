@@ -195,7 +195,6 @@ function RouteComponent() {
 		feeBreakdown,
 		keyAuthorization,
 		keyTokenMetadata,
-		nonce,
 		knownCalls,
 		knownEvents,
 		knownEventsByLog = [],
@@ -295,7 +294,6 @@ function RouteComponent() {
 				knownEvents={descriptionEvents}
 				keyAuthorization={keyAuthorization}
 				keyTokenMetadata={keyTokenMetadata}
-				nonce={nonce}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
 			/>
@@ -362,9 +360,7 @@ function RouteComponent() {
 		title: 'Raw',
 		totalItems: 0,
 		itemsLabel: 'data',
-		content: (
-			<RawSection transaction={transaction} receipt={receipt} nonce={nonce} />
-		),
+		content: <RawSection transaction={transaction} receipt={receipt} />,
 	})
 
 	const tabIndex = tabs.indexOf(tab)
@@ -405,7 +401,6 @@ function OverviewSection(props: {
 	knownEvents: KnownEvent[]
 	keyAuthorization: TxData['keyAuthorization']
 	keyTokenMetadata: TxData['keyTokenMetadata']
-	nonce: TxData['nonce'] | undefined
 	feeBreakdown: FeeBreakdownItem[]
 	balanceChangesData: BalanceChangesData
 }) {
@@ -431,12 +426,7 @@ function OverviewSection(props: {
 	const baseFee = block.baseFeePerGas
 	const maxFee = transaction.maxFeePerGas
 	const maxPriorityFee = transaction.maxPriorityFeePerGas
-	// A rounded nonce means the exact lookup failed; mark it approximate.
-	const nonce =
-		props.nonce?.toString() ??
-		(Number.isSafeInteger(transaction.nonce)
-			? transaction.nonce.toString()
-			: `~${BigInt(transaction.nonce)}`)
+	const nonce = transaction.nonce.toString()
 	const nonceKey = getNonceKey(transaction)
 	const isExpiringNonce = nonceKey === expiringNonceKey
 	const positionInBlock = receipt.transactionIndex
@@ -996,18 +986,10 @@ function EventFallbackName(props: { log: Log }) {
 function RawSection(props: {
 	transaction: TxData['transaction']
 	receipt: TransactionReceipt
-	nonce: TxData['nonce'] | undefined
 }) {
-	const { transaction, receipt, nonce } = props
+	const { transaction, receipt } = props
 
-	const rawData = Json.stringify(
-		{
-			tx: nonce === undefined ? transaction : { ...transaction, nonce },
-			receipt,
-		},
-		null,
-		2,
-	)
+	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
 
 	return (
 		<div className="px-[18px] py-[12px] copy-13 break-all">
