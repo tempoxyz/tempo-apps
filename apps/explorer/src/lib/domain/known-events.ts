@@ -42,8 +42,8 @@ const earnEventActionOverrides: Record<string, string> = {
 	'Redeemed(address,address,uint256,uint256)': 'Withdraw from Earn',
 	'Redeemed(address,uint256,uint256)': 'Withdraw from Earn',
 	'VenueSharesDeposited(address,address,uint256,uint256,uint256)':
-		'Move Position to Earn',
-	'VenueSharesDeposited(address,uint256,uint256)': 'Move Position to Earn',
+		'Deposit to Earn',
+	'VenueSharesDeposited(address,uint256,uint256)': 'Deposit to Earn',
 	'WithdrewExact(address,address,uint256,uint256)': 'Withdraw from Earn',
 	'WithdrewExact(address,uint256,uint256)': 'Withdraw from Earn',
 }
@@ -218,9 +218,9 @@ function createEarnReceiptSummary(
 			type: 'earn private redemption',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
-				earnValuePart(earnShares, earnShare, createAmount),
-				{ type: 'text', value: 'for' },
 				{ type: 'amount', value: createAmount(outputAmount, outputToken) },
+				{ type: 'text', value: 'using' },
+				earnValuePart(earnShares, earnShare, createAmount),
 			],
 		}
 	}
@@ -285,9 +285,9 @@ function createEarnReceiptSummary(
 			type: 'earn redemption',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
-				earnValuePart(earnShares, earnShare, createAmount),
-				{ type: 'text', value: 'for' },
 				earnValuePart(assets, asset, createAmount),
+				{ type: 'text', value: 'using' },
+				earnValuePart(earnShares, earnShare, createAmount),
 			],
 		}
 	}
@@ -372,7 +372,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn in-kind deposit',
 			parts: [
-				{ type: 'action', value: 'Move Position to Earn' },
+				{ type: 'action', value: 'Deposit to Earn' },
 				earnValuePart(venueShares, venue, createAmount),
 				{ type: 'text', value: 'for' },
 				earnValuePart(earnShares, earnShare, createAmount),
@@ -516,11 +516,12 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption request',
 			parts: [
-				{ type: 'action', value: 'Request Earn Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
 			],
+			note: [['Status', { type: 'text', value: 'Requested' }]],
 		}
 	}
 
@@ -532,11 +533,12 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption finalized',
 			parts: [
-				{ type: 'action', value: 'Complete Earn Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				{ type: 'amount', value: createAmount(assets, asset) },
 				{ type: 'text', value: 'to' },
 				{ type: 'account', value: receiver },
 			],
+			note: [['Status', { type: 'text', value: 'Completed' }]],
 		}
 	}
 
@@ -547,11 +549,12 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption cancelled',
 			parts: [
-				{ type: 'action', value: 'Cancel Earn Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
 				{ type: 'number', value: earnShares },
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
 			],
+			note: [['Status', { type: 'text', value: 'Cancelled' }]],
 		}
 	}
 
@@ -814,7 +817,26 @@ function createDetectors(
 		payee: Address.Address,
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
+	directTransferKeys: ReadonlySet<string> = new Set(),
 ) {
+	/**
+	 * A transfer is a payment ("Send") only when the sender signed a direct
+	 * `transfer`/`transferWithMemo` call for it. Router legs, vault plumbing
+	 * and other contract-initiated movements stay a neutral "Transfer".
+	 */
+	function isDirectTransfer(
+		token: Address.Address,
+		from: Address.Address,
+		to: Address.Address,
+		amount: bigint,
+	): boolean {
+		return (
+			transactionSender !== undefined &&
+			Address.isEqual(from, transactionSender) &&
+			directTransferKeys.has(directTransferKey(token, to, amount))
+		)
+	}
+
 	function isZonePortalAddress(address: Address.Address): boolean {
 		return zonePortals.has(checksumAddress(address))
 	}
@@ -836,11 +858,12 @@ function createDetectors(
 			return {
 				type: 'propamm swap',
 				parts: [
-					{ type: 'action', value: 'propAMM Swap' },
+					{ type: 'action', value: 'Swap' },
 					{ type: 'amount', value: createAmount(amountIn, tokenIn) },
 					{ type: 'text', value: 'for' },
 					{ type: 'amount', value: createAmount(amountOut, tokenOut) },
 				],
+				note: [['Venue', { type: 'text', value: 'propAMM' }]],
 			}
 		},
 		earn(event: ParsedEvent) {
@@ -1169,8 +1192,10 @@ function createDetectors(
 							value: isMppPayment
 								? 'MPP Payment'
 								: VirtualAddress.validate(args.from)
-									? 'Forwarded'
-									: 'Send',
+									? 'Forward'
+									: isDirectTransfer(address, args.from, args.to, args.amount)
+										? 'Send'
+										: 'Transfer',
 						},
 						{
 							type: 'amount',
@@ -1192,17 +1217,13 @@ function createDetectors(
 				const mintKey = `mint:${address}:${amount}:${to}`
 				const memo = mintBurnMemos?.get(mintKey)
 
-				// Show "Mint to Recipient" when recipient differs from minter (transaction sender)
-				const isMintToRecipient =
-					transactionSender && !Address.isEqual(transactionSender, to)
-
 				return {
 					type: 'mint',
 					note: memo,
 					parts: [
 						{
 							type: 'action',
-							value: isMintToRecipient ? 'Mint to Recipient' : 'Mint',
+							value: 'Mint',
 						},
 						{
 							type: 'amount',
@@ -1244,7 +1265,7 @@ function createDetectors(
 				return {
 					type: 'burn at',
 					parts: [
-						{ type: 'action', value: 'BurnAt' },
+						{ type: 'action', value: 'Admin Burn' },
 						{ type: 'amount', value: createAmount(args.amount, address) },
 						{ type: 'text', value: 'from' },
 						{ type: 'account', value: args.from },
@@ -1283,7 +1304,7 @@ function createDetectors(
 				return {
 					type: 'supply cap update',
 					parts: [
-						{ type: 'action', value: 'Supply Cap Update' },
+						{ type: 'action', value: 'Update Supply Cap' },
 						{ type: 'text', value: 'for' },
 						{
 							type: 'token',
@@ -1334,7 +1355,7 @@ function createDetectors(
 				return {
 					type: 'burn blocked',
 					parts: [
-						{ type: 'action', value: 'Burn Blocked' },
+						{ type: 'action', value: 'Burn Blocked Funds' },
 						{
 							type: 'amount',
 							value: createAmount(args.amount, address),
@@ -1511,8 +1532,7 @@ function createDetectors(
 				return {
 					type: 'transfer blocked',
 					parts: [
-						{ type: 'action', value: 'Blocked' },
-						{ type: 'action', value: 'Send' },
+						{ type: 'action', value: 'Send Blocked' },
 						{ type: 'amount', value: createAmount(args.amount, args.token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: recipient },
@@ -1576,7 +1596,7 @@ function createDetectors(
 				return {
 					type: 'whitelist',
 					parts: [
-						{ type: 'action', value: 'Whitelist' },
+						{ type: 'action', value: args.allowed ? 'Allow' : 'Disallow' },
 						{ type: 'account', value: args.account },
 						{ type: 'text', value: 'on Policy' },
 						{ type: 'text', value: `#${args.policyId}` },
@@ -1587,7 +1607,7 @@ function createDetectors(
 				return {
 					type: 'blacklist',
 					parts: [
-						{ type: 'action', value: 'Blacklist' },
+						{ type: 'action', value: args.restricted ? 'Block' : 'Unblock' },
 						{ type: 'account', value: args.account },
 						{ type: 'text', value: 'on Policy' },
 						{ type: 'text', value: `#${args.policyId}` },
@@ -1598,7 +1618,8 @@ function createDetectors(
 				return {
 					type: 'policy admin updated',
 					parts: [
-						{ type: 'action', value: 'New Admin' },
+						{ type: 'action', value: 'Change Policy Admin' },
+						{ type: 'text', value: 'to' },
 						{ type: 'account', value: args.admin },
 						{ type: 'text', value: 'on Policy' },
 						{ type: 'text', value: `#${args.policyId}` },
@@ -1799,7 +1820,7 @@ function createDetectors(
 				return {
 					type: 'open channel',
 					parts: [
-						{ type: 'action', value: 'MPP Session Opened' },
+						{ type: 'action', value: 'Open MPP Session' },
 						{ type: 'amount', value: createAmount(deposit, token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: payee },
@@ -1907,7 +1928,7 @@ function createDetectors(
 				return {
 					type: 'close channel',
 					parts: [
-						{ type: 'action', value: 'MPP Session Closed' },
+						{ type: 'action', value: 'Close MPP Session' },
 						{ type: 'text', value: 'Paid' },
 						paidAmount
 							? {
@@ -1937,7 +1958,7 @@ function createDetectors(
 				return {
 					type: 'channel expired',
 					parts: [
-						{ type: 'action', value: 'Channel Expired' },
+						{ type: 'action', value: 'Expire Channel' },
 						{ type: 'text', value: 'between' },
 						{ type: 'account', value: payer },
 						{ type: 'text', value: 'and' },
@@ -2094,6 +2115,40 @@ export interface KnownEvent {
 	}[]
 	totalAmount?: Amount
 	failed?: boolean
+}
+
+function directTransferKey(
+	token: Address.Address,
+	to: Address.Address,
+	amount: bigint,
+): string {
+	return `${token.toLowerCase()}:${to.toLowerCase()}:${amount.toString()}`
+}
+
+/** Keys of token transfers the transaction (or one of its calls) makes directly. */
+function findDirectTransferKeys(
+	transaction: TransactionLike | undefined,
+): Set<string> {
+	const keys = new Set<string>()
+	if (!transaction) return keys
+	const calls = [transaction, ...(transaction.calls ?? [])]
+	for (const call of calls) {
+		const input = call.input ?? call.data
+		if (!call.to || !input) continue
+		try {
+			const decoded = decodeFunctionData({ abi: Abis.tip20, data: input })
+			if (
+				decoded.functionName !== 'transfer' &&
+				decoded.functionName !== 'transferWithMemo'
+			)
+				continue
+			const [to, amount] = decoded.args as readonly [Address.Address, bigint]
+			keys.add(directTransferKey(call.to, to, amount))
+		} catch {
+			// Not a TIP-20 call this explorer decodes.
+		}
+	}
+	return keys
 }
 
 type TransactionLike = {
@@ -2437,6 +2492,7 @@ export function parseKnownEvents(
 		transactionSender,
 		getStreamChannelToken,
 		zonePortals,
+		findDirectTransferKeys(options?.transaction),
 	)
 
 	const dedupedEvents = events.filter((event) => {

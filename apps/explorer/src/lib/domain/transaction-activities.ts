@@ -50,6 +50,14 @@ const orderFilledTopic = toEventSelector(
 
 const HIDDEN_FIELDS = new Set(['signer', 'status'])
 const GENERIC_ACTIVITY_TYPES = new Set(['approval', 'burn', 'mint', 'transfer'])
+/** Indexer titles ("Token transferred", "Tokens swapped") as explorer actions. */
+const GENERIC_ACTIVITY_ACTIONS: Record<string, string> = {
+	approval: 'Approve',
+	burn: 'Burn',
+	mint: 'Mint',
+	swap: 'Swap',
+	transfer: 'Transfer',
+}
 const ZONE_EVENT_TYPES = new Set([
 	'zone deposit',
 	'zone encrypted deposit',
@@ -263,10 +271,12 @@ export function selectTransactionDescriptionEvents(params: {
 	const hasMeaningfulActivity = indexedEvents.some(
 		(event) => !isNonceIncrementedEvent(event),
 	)
-	const activityEvents =
+	const activityEvents = labelProvenSends(
 		calls.length > 0 || batchEvents.length > 0 || hasMeaningfulActivity
 			? indexedEvents.filter((event) => !isNonceIncrementedEvent(event))
-			: indexedEvents
+			: indexedEvents,
+		fallbackEvents,
+	)
 	const representedPrivateZoneDirections = new Set(
 		activityEvents.flatMap((event) => {
 			const direction = privateZoneEventDirection(event)
@@ -284,6 +294,52 @@ export function selectTransactionDescriptionEvents(params: {
 	})
 	const events = [...batchEvents, ...supplementalZoneEvents, ...activityEvents]
 	return !hasPrivateZoneActivity ? [...unmatchedCalls, ...events] : events
+}
+
+/**
+ * Indexed transfers carry no intent. Label one "Send" only when the decoded
+ * receipt proved the same movement was a direct transfer call by its sender.
+ */
+function labelProvenSends(
+	events: readonly KnownEvent[],
+	decodedEvents: readonly KnownEvent[],
+): KnownEvent[] {
+	const proven = new Set(
+		decodedEvents.flatMap((event) => {
+			if (event.type !== 'send' || actionOf(event) !== 'Send') return []
+			const key = transferKey(event)
+			return key ? [key] : []
+		}),
+	)
+	if (proven.size === 0) return [...events]
+	return events.map((event) => {
+		if (event.type !== 'transfer' || actionOf(event) !== 'Transfer')
+			return event
+		const key = transferKey(event)
+		if (!key || !proven.has(key)) return event
+		return {
+			...event,
+			parts: event.parts.map((part) =>
+				part.type === 'action' ? { ...part, value: 'Send' } : part,
+			),
+		}
+	})
+}
+
+function actionOf(event: KnownEvent): string | undefined {
+	return event.parts.find((part) => part.type === 'action')?.value
+}
+
+function transferKey(event: KnownEvent): string | undefined {
+	const { from, to } = event.meta ?? {}
+	const amount = event.parts.find((part) => part.type === 'amount')
+	if (!from || !to || amount?.type !== 'amount') return undefined
+	return [
+		from.toLowerCase(),
+		to.toLowerCase(),
+		amount.value.token.toLowerCase(),
+		amount.value.value.toString(),
+	].join(':')
 }
 
 function isEarnReceiptSummary(event: KnownEvent): boolean {
@@ -335,7 +391,12 @@ function activityAddress(
 }
 
 function activityParts(activity: TransactionActivity): KnownEventPart[] {
-	const parts: KnownEventPart[] = [{ type: 'action', value: activity.title }]
+	const parts: KnownEventPart[] = [
+		{
+			type: 'action',
+			value: GENERIC_ACTIVITY_ACTIONS[activity.type] ?? activity.title,
+		},
+	]
 	const source = amountPart(activity.data, 'sourceAmount', 'sourceToken')
 	const destination = amountPart(
 		activity.data,

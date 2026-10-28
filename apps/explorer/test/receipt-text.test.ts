@@ -11,9 +11,9 @@ const feeToken = '0x20c0000000000000000000000000000000000000'
 
 describe('renderReceiptText', () => {
 	test.each([
-		['out', 'SENT'],
-		['in', 'RECEIVED'],
-	])('uses %s direction as the %s action without repeating direction metadata', (direction, action) => {
+		['out', 'TRANSFER'],
+		['in', 'TRANSFER'],
+	])('keeps the canonical action for %s direction (%s) without repeating direction metadata', (direction, action) => {
 		const text = renderReceiptText(
 			{
 				block: { timestamp: 1_790_884_010n },
@@ -29,7 +29,7 @@ describe('renderReceiptText', () => {
 					{
 						type: 'transfer',
 						parts: [
-							{ type: 'action', value: 'Token transferred' },
+							{ type: 'action', value: 'Transfer' },
 							{
 								type: 'amount',
 								value: {

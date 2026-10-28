@@ -78,7 +78,7 @@ describe('BurnAt', () => {
 		expect(event).toEqual({
 			type: 'burn at',
 			parts: [
-				{ type: 'action', value: 'BurnAt' },
+				{ type: 'action', value: 'Admin Burn' },
 				{
 					type: 'amount',
 					value: {
@@ -293,7 +293,7 @@ describe('BurnAt', () => {
 		)
 		expect(
 			parseKnownEvents(receipt).map((event) => event.parts[0].value),
-		).toEqual(['Burn', 'BurnAt'])
+		).toEqual(['Burn', 'Admin Burn'])
 		expect(
 			LineItems.fromReceipt(receipt, { getTokenMetadata }).main.map(
 				(item) => item.ui.left,
@@ -321,7 +321,7 @@ describe('BurnAt', () => {
 		expect(events[0]).toMatchObject({
 			type: 'burn at',
 			parts: [
-				{ type: 'action', value: 'BurnAt' },
+				{ type: 'action', value: 'Admin Burn' },
 				{ type: 'amount', value: { value: 1_000_000n, symbol: 'BATST' } },
 				{ type: 'text', value: 'from' },
 				{ type: 'account', value: burnAtHolder },
@@ -345,7 +345,7 @@ describe('BurnAt', () => {
 			{ block: { timestamp: 0x6ac55fc4n }, receipt: burnAtReceipt },
 			{ events, fee: 0, feeBreakdown: [], feeDisplay: '0' },
 		)
-		expect(text).toContain('1. BURNAT')
+		expect(text).toContain('1. ADMIN BURN')
 		expect(text).not.toContain('2. ')
 		expect(text).not.toContain('BURNER')
 	})

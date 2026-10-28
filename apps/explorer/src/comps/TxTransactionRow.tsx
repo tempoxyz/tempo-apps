@@ -100,6 +100,18 @@ export function getPerspectiveEvent(
 		event.meta?.to && Address.isEqual(event.meta.to, accountAddress)
 	const fromMatches =
 		event.meta?.from && Address.isEqual(event.meta.from, accountAddress)
+	if (fromMatches && !toMatches) {
+		// Seen from the sender: a plain send or transfer reads as "Sent".
+		return {
+			...event,
+			parts: event.parts.map((part) =>
+				part.type === 'action' &&
+				(part.value === 'Send' || part.value === 'Transfer')
+					? { ...part, value: 'Sent' }
+					: part,
+			),
+		}
+	}
 	if (!toMatches || fromMatches) return event
 
 	const sender = event.meta?.from
