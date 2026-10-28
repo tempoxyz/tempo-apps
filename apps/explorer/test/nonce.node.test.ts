@@ -2,6 +2,7 @@ import { tempo } from 'viem/chains'
 import { describe, expect, it } from 'vitest'
 import {
 	expiringNonceKey,
+	getNonce,
 	getNonceKey,
 	isSubblockNonceKey,
 } from '#lib/domain/nonce'
@@ -24,6 +25,18 @@ describe('getNonceKey', () => {
 		expect(getNonceKey({ nonceKey: 7n })).toBe(7n)
 		expect(getNonceKey({ nonceKey: '0x5b' })).toBe(0x5bn)
 		expect(getNonceKey({ nonce: 1 })).toBeUndefined()
+	})
+})
+
+describe('getNonce', () => {
+	it('prefers the exact nonce', () => {
+		expect(
+			getNonce({
+				nonce: Number(0x4fcaa49b83b6fe89n),
+				nonceExact: 0x4fcaa49b83b6fe89n,
+			}),
+		).toBe(0x4fcaa49b83b6fe89n)
+		expect(getNonce({ nonce: 7 })).toBe(7n)
 	})
 })
 
@@ -50,6 +63,6 @@ describe('tempo transaction formatter', () => {
 			signature: { r: '0x1', s: '0x1', type: 'secp256k1', yParity: '0x1' },
 			type: '0x76',
 		} as never)
-		expect(formatted?.nonce).toBe(0x4fcaa49b83b6fe89n)
+		expect(formatted && getNonce(formatted)).toBe(0x4fcaa49b83b6fe89n)
 	})
 })

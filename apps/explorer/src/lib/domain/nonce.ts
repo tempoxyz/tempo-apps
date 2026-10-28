@@ -21,3 +21,14 @@ export function getNonceKey(transaction: object): bigint | undefined {
 	if (typeof nonceKey === 'string' && nonceKey) return BigInt(nonceKey)
 	return undefined
 }
+
+/**
+ * Reads a transaction's exact nonce. Tempo's TIP-1106 expiring nonce
+ * discriminators exceed `Number.MAX_SAFE_INTEGER`, so a formatted `nonce`
+ * rounds them; `nonceExact` carries the exact value.
+ */
+export function getNonce(transaction: { nonce: number | bigint }): bigint {
+	if ('nonceExact' in transaction && typeof transaction.nonceExact === 'bigint')
+		return transaction.nonceExact
+	return BigInt(transaction.nonce)
+}
