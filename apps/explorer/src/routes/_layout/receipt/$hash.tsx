@@ -46,7 +46,6 @@ import { getFeeTokenForChain } from '#lib/fee-token'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
-import { getNonce } from '#lib/domain/nonce'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
@@ -327,10 +326,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 								version: 2,
 								summary,
 								block: data.block,
-								transaction: {
-									...data.transaction,
-									nonce: getNonce(data.transaction),
-								},
+								transaction: data.transaction,
 								receipt: data.receipt,
 								knownEvents: presentation.events,
 								feeBreakdown: presentation.feeBreakdown,

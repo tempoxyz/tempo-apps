@@ -83,7 +83,7 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
-  viem: 0.0.0-pr-5335-a7d0758
+  viem: 0.0.0-pr-5335-a744b58
   vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
@@ -134,7 +134,7 @@ minimumReleaseAgeExclude:
 
 overrides:
   # viem#5335 prerelease (TIP-1106 nonces); return to a release once it ships.
-  viem: 0.0.0-pr-5335-a7d0758
+  viem: 0.0.0-pr-5335-a744b58
   # sharp 0.35.4 bundles libheif 1.23.2 (GHSA-rgj7-g3m4-5g8c).
   'sharp@<0.35.4': 0.35.4
   # Patch vulnerable transitive serializers and HTTP clients without changing majors.
