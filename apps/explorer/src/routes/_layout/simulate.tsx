@@ -763,7 +763,14 @@ function SimulationResults(props: {
 		() =>
 			executionQuery.data
 				? parseKnownEvents(executionQuery.data.receipt, {
-						transaction: { to: input.to, input: input.data },
+						transaction: {
+							to: input.to,
+							input: input.data,
+							calls: input.calls?.map((call) => ({
+								to: call.to,
+								input: call.data,
+							})),
+						},
 						getTokenMetadata: metadataQuery.data,
 					})
 				: [],

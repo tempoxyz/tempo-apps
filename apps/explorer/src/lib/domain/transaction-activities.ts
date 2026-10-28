@@ -179,17 +179,22 @@ function vaultActivityEvent(activity: TransactionActivity): KnownEvent | null {
 		destinationToken,
 	)
 	if (!source || !destination) return null
+	// Withdrawals lead with the assets received; shares are secondary.
 	return {
 		type: activity.type,
-		parts: [
-			{
-				type: 'action',
-				value: isDeposit ? 'Deposit to Earn' : 'Withdraw from Earn',
-			},
-			source,
-			{ type: 'text', value: 'for' },
-			destination,
-		],
+		parts: isDeposit
+			? [
+					{ type: 'action', value: 'Deposit to Earn' },
+					source,
+					{ type: 'text', value: 'for' },
+					destination,
+				]
+			: [
+					{ type: 'action', value: 'Withdraw from Earn' },
+					destination,
+					{ type: 'text', value: 'using' },
+					source,
+				],
 	}
 }
 

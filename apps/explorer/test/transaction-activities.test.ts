@@ -275,15 +275,15 @@ describe('activitiesToKnownEvents', () => {
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000002',
+							token: '0x20c0000000000000000000000000000000000001',
 						},
 					},
-					{ type: 'text', value: 'for' },
+					{ type: 'text', value: 'using' },
 					{
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000001',
+							token: '0x20c0000000000000000000000000000000000002',
 						},
 					},
 				],
@@ -315,15 +315,15 @@ describe('activitiesToKnownEvents', () => {
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000002',
+							token: '0x20c0000000000000000000000000000000000001',
 						},
 					},
-					{ type: 'text', value: 'for' },
+					{ type: 'text', value: 'using' },
 					{
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000001',
+							token: '0x20c0000000000000000000000000000000000002',
 						},
 					},
 				],
@@ -381,22 +381,19 @@ describe('activitiesToKnownEvents', () => {
 					{
 						type: 'amount',
 						value: {
-							value: type === 'private-assets-deposited' ? 1000000n : 500000n,
-							token:
-								type === 'private-assets-deposited'
-									? '0x20c0000000000000000000000000000000000002'
-									: '0x20c0000000000000000000000000000000000003',
+							value: 1000000n,
+							token: '0x20c0000000000000000000000000000000000002',
 						},
 					},
-					{ type: 'text', value: 'for' },
+					{
+						type: 'text',
+						value: type === 'private-assets-deposited' ? 'for' : 'using',
+					},
 					{
 						type: 'amount',
 						value: {
-							value: type === 'private-assets-deposited' ? 500000n : 1000000n,
-							token:
-								type === 'private-assets-deposited'
-									? '0x20c0000000000000000000000000000000000003'
-									: '0x20c0000000000000000000000000000000000002',
+							value: 500000n,
+							token: '0x20c0000000000000000000000000000000000003',
 						},
 					},
 				],
