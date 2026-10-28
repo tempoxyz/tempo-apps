@@ -517,11 +517,11 @@ function createEarnReceiptSummary(
 			type: 'earn async redemption request',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
+				{ type: 'action', value: 'Requested' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
 			],
-			note: [['Status', { type: 'text', value: 'Requested' }]],
 		}
 	}
 
@@ -534,11 +534,11 @@ function createEarnReceiptSummary(
 			type: 'earn async redemption finalized',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
+				{ type: 'action', value: 'Completed' },
 				{ type: 'amount', value: createAmount(assets, asset) },
 				{ type: 'text', value: 'to' },
 				{ type: 'account', value: receiver },
 			],
-			note: [['Status', { type: 'text', value: 'Completed' }]],
 		}
 	}
 
@@ -550,11 +550,11 @@ function createEarnReceiptSummary(
 			type: 'earn async redemption cancelled',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
+				{ type: 'action', value: 'Cancelled' },
 				{ type: 'number', value: earnShares },
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
 			],
-			note: [['Status', { type: 'text', value: 'Cancelled' }]],
 		}
 	}
 

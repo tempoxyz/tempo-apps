@@ -107,9 +107,12 @@ export function renderReceiptText(
 	return lines.join('\n')
 }
 
+/** All action badges, such as "Withdraw from Earn · Requested". */
 function getEventAction(event: KnownEvent): string {
-	const action = event.parts.find((part) => part.type === 'action')
-	return action?.type === 'action' ? action.value : event.type
+	const actions = event.parts.flatMap((part) =>
+		part.type === 'action' ? [part.value] : [],
+	)
+	return actions.length ? actions.join(' · ') : event.type
 }
 
 function formatPart(part: KnownEventPart): string {

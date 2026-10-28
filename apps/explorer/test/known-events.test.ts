@@ -871,6 +871,33 @@ describe('parseKnownEvents', () => {
 	})
 
 	it.each([
+		['RedeemRequested', 'Requested'],
+		['RedeemFinalized', 'Completed'],
+		['RedeemCancelled', 'Cancelled'],
+	] as const)('shows %s as Withdraw from Earn with a visible %s badge', (name, status) => {
+		const abiEvent = earnEventsAbi.find(
+			(event) =>
+				event.name === name &&
+				(name !== 'RedeemRequested' ||
+					event.inputs.some((input) => input.name === 'requester')),
+		)
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+		const [event] = parseKnownEvents(
+			mockReceipt(
+				[mockZoneEventLog(abiEvent, accountAddress)],
+				accountAddress,
+				`0x${'d'.repeat(64)}` as Hex.Hex,
+			),
+			{ getTokenMetadata },
+		)
+		expect(event?.parts.slice(0, 2)).toEqual([
+			{ type: 'action', value: 'Withdraw from Earn' },
+			{ type: 'action', value: status },
+		])
+	})
+
+	it.each([
 		['WhitelistUpdated', { allowed: true }, 'Allow'],
 		['WhitelistUpdated', { allowed: false }, 'Disallow'],
 		['BlacklistUpdated', { restricted: true }, 'Block'],
