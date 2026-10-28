@@ -182,7 +182,8 @@ export namespace TxEventDescription {
 			}
 			case 'action': {
 				const isFailed = part.value === 'Failed'
-				const isBlocked = part.value === 'Blocked'
+				const isBlocked =
+					part.value === 'Blocked' || part.value === 'Send Blocked'
 				const isPrivateZoneAction =
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
