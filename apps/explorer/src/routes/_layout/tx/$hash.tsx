@@ -989,7 +989,11 @@ function RawSection(props: {
 }) {
 	const { transaction, receipt } = props
 
-	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
+	const rawData = Json.stringify(
+		{ tx: { ...transaction, nonce: getNonce(transaction) }, receipt },
+		null,
+		2,
+	)
 
 	return (
 		<div className="px-[18px] py-[12px] copy-13 break-all">
