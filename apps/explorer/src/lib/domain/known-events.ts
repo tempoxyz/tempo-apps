@@ -46,6 +46,19 @@ const earnEventActionOverrides: Record<string, string> = {
 	'VenueSharesDeposited(address,uint256,uint256)': 'Deposit to Earn',
 	'WithdrewExact(address,address,uint256,uint256)': 'Withdraw from Earn',
 	'WithdrewExact(address,uint256,uint256)': 'Withdraw from Earn',
+	// Async withdrawal steps, when the receipt-level Earn summary can't apply.
+	'RedeemRequested(bytes32,address,address,uint256)': 'Request Earn Withdrawal',
+	'RedeemRequested(bytes32,address,uint128)': 'Request Earn Withdrawal',
+	'RedeemFinalized(bytes32,address,uint256,address,uint256)':
+		'Withdraw from Earn',
+	'RedeemClaimed(bytes32,address,uint256)': 'Claim Earn Withdrawal',
+	'RedeemCancelled(bytes32,address,uint256)': 'Cancel Earn Withdrawal',
+	'RedeemCancelledOnQueue(bytes32,uint128)': 'Cancel Earn Withdrawal',
+	'RewardClaimed(address,uint256,uint256)': 'Claim Earn Rewards',
+	'Funded(address,uint256,uint256)': 'Add Funds to Earn',
+	'AssetsFunded(address,uint256,uint256)': 'Add Earn Rewards',
+	'EngineMigrated(address,address,uint256,uint256,uint256,uint256,uint256,uint256)':
+		'Migrate Earn Strategy',
 }
 
 function formatEarnEventAction(event: AbiEvent): string {

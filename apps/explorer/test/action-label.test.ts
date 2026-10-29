@@ -24,6 +24,9 @@ describe('pastTenseAction', () => {
 		['Received', 'Received'],
 		['MPP Payment', 'MPP Payment'],
 		['Nonce Incremented', 'Nonce Incremented'],
+		['Deposit Pause Changed', 'Deposit Pause Changed'],
+		['Claim Earn Withdrawal', 'Claimed Earn Withdrawal'],
+		['Cancel Earn Withdrawal', 'Cancelled Earn Withdrawal'],
 	])('%s -> %s', (value, expected) => {
 		expect(pastTenseAction(value)).toBe(expected)
 	})

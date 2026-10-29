@@ -90,6 +90,9 @@ export function pastTenseAction(value: string): string {
 	if (encrypted) return `Deposited to ${encrypted[1]} (Encrypted)`
 	const order = /^(Limit|Flip) (Buy|Sell)$/.exec(value)
 	if (order) return `Placed ${order[1]} ${order[2]}`
+	// Raw protocol event names are already past tense ("Deposit Pause Changed"):
+	// conjugating their first word would turn a noun into a verb.
+	if (/ed$/.test(value.split(' ').at(-1) ?? '')) return value
 	const [verb, ...rest] = value.split(' ')
 	const past = verb ? VERBS[verb] : undefined
 	return past ? [past, ...rest].join(' ') : value
