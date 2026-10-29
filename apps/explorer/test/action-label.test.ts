@@ -91,6 +91,26 @@ describe('neutral transfers', () => {
 		])
 	})
 
+	test('an Earn-funded payment is neutral too and keeps its source note', () => {
+		const event: KnownEvent = {
+			type: 'earn send',
+			parts: [
+				{ type: 'action', value: 'Send' },
+				{ type: 'amount', value: amount },
+				{ type: 'text', value: 'to' },
+				{ type: 'account', value: to },
+			],
+			note: [['Source', { type: 'text', value: 'Earn balance' }]],
+			meta: { from, to },
+		}
+		const result = toPastTenseEvent(event)
+		expect(result.parts.slice(0, 2)).toEqual([
+			{ type: 'action', value: 'Transferred' },
+			{ type: 'action', value: 'Payment' },
+		])
+		expect(result.note).toEqual(event.note)
+	})
+
 	test('leaves failed, blocked and perspective labels alone', () => {
 		for (const value of ['Send (failed)', 'Send Blocked', 'Sent', 'Received'])
 			expect(

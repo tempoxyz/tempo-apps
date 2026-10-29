@@ -136,7 +136,7 @@ export function toPastTenseEvent(event: KnownEvent): KnownEvent {
  * directly) keeps that signal as a Payment tag.
  */
 function toNeutralTransfer(event: KnownEvent): KnownEvent | null {
-	if (event.type !== 'send' && event.type !== 'transfer') return null
+	if (!['send', 'transfer', 'earn send'].includes(event.type)) return null
 	const action = event.parts.find((part) => part.type === 'action')?.value
 	if (action !== 'Send' && action !== 'Transfer') return null
 	const tags: KnownEventPart[] = [{ type: 'action', value: 'Transferred' }]
