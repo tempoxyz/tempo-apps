@@ -830,7 +830,7 @@ function createDetectors(
 		payee: Address.Address,
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
-	directTransferKeys: ReadonlySet<string> = new Set(),
+	directTransferKeys: Map<string, number> = new Map(),
 ) {
 	/**
 	 * A transfer is a payment ("Send") only when the sender signed a direct
@@ -846,7 +846,10 @@ function createDetectors(
 		return (
 			transactionSender !== undefined &&
 			Address.isEqual(from, transactionSender) &&
-			directTransferKeys.has(directTransferKey(token, to, amount))
+			consumeDirectTransfer(
+				directTransferKeys,
+				directTransferKey(token, to, amount),
+			)
 		)
 	}
 
@@ -2139,10 +2142,24 @@ function directTransferKey(
 }
 
 /** Keys of token transfers the transaction (or one of its calls) makes directly. */
+/**
+ * Each direct call proves one movement: a matching key is used up, so a second
+ * identical transfer made by a contract in the same transaction stays neutral.
+ */
+function consumeDirectTransfer(
+	keys: Map<string, number>,
+	key: string,
+): boolean {
+	const count = keys.get(key) ?? 0
+	if (count <= 0) return false
+	keys.set(key, count - 1)
+	return true
+}
+
 function findDirectTransferKeys(
 	transaction: TransactionLike | undefined,
-): Set<string> {
-	const keys = new Set<string>()
+): Map<string, number> {
+	const keys = new Map<string, number>()
 	if (!transaction) return keys
 	const calls = [transaction, ...(transaction.calls ?? [])]
 	for (const call of calls) {
@@ -2156,7 +2173,8 @@ function findDirectTransferKeys(
 			)
 				continue
 			const [to, amount] = decoded.args as readonly [Address.Address, bigint]
-			keys.add(directTransferKey(call.to, to, amount))
+			const key = directTransferKey(call.to, to, amount)
+			keys.set(key, (keys.get(key) ?? 0) + 1)
 		} catch {
 			// Not a TIP-20 call this explorer decodes.
 		}

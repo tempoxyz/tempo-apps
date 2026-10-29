@@ -24,6 +24,10 @@ describe('pastTenseAction', () => {
 		['Received', 'Received'],
 		['MPP Payment', 'MPP Payment'],
 		['Nonce Incremented', 'Nonce Incremented'],
+		// Object internals are not labels.
+		['__proto__', '__proto__'],
+		['constructor', 'constructor'],
+		['toString Me', 'toString Me'],
 		['Deposit Pause Changed', 'Deposit Pause Changed'],
 		['Claim Earn Withdrawal', 'Claimed Earn Withdrawal'],
 		['Cancel Earn Withdrawal', 'Cancelled Earn Withdrawal'],

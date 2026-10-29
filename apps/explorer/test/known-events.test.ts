@@ -851,6 +851,16 @@ describe('parseKnownEvents', () => {
 				transaction: { calls: [transfer] },
 			})[0]?.parts[0],
 		).toEqual({ type: 'action', value: 'Send' })
+		// One direct call proves one movement, not every identical one.
+		const twice = mockReceipt([...logs, ...logs], accountAddress, hash)
+		expect(
+			parseKnownEvents(twice, { getTokenMetadata, transaction: transfer }).map(
+				(event) => event.parts[0],
+			),
+		).toEqual([
+			{ type: 'action', value: 'Send' },
+			{ type: 'action', value: 'Transfer' },
+		])
 		// A different amount, or no transaction at all, proves no payment intent.
 		expect(
 			parseKnownEvents(receipt, {

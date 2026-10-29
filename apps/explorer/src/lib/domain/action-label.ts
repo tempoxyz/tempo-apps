@@ -78,13 +78,21 @@ const EARN_WITHDRAWAL_STATUS: Record<string, string> = {
 	Completed: 'Withdrew from Earn',
 }
 
+/**
+ * Action strings can come from indexer titles, so only the table's own keys
+ * count: "__proto__" or "constructor" must not resolve to Object internals.
+ */
+function own(table: Record<string, string>, key: string): string | undefined {
+	return Object.hasOwn(table, key) ? table[key] : undefined
+}
+
 const FAILED_SUFFIX = ' (failed)'
 
 export function pastTenseAction(value: string): string {
 	// A reverted call didn't happen: keep its verb and say it failed.
 	if (value.endsWith(FAILED_SUFFIX))
 		return `${value.slice(0, -FAILED_SUFFIX.length)} Failed`
-	const label = LABELS[value]
+	const label = own(LABELS, value)
 	if (label) return label
 	const encrypted = /^Encrypted Deposit to (.+)$/.exec(value)
 	if (encrypted) return `Deposited to ${encrypted[1]} (Encrypted)`
@@ -94,7 +102,7 @@ export function pastTenseAction(value: string): string {
 	// conjugating their first word would turn a noun into a verb.
 	if (/ed$/.test(value.split(' ').at(-1) ?? '')) return value
 	const [verb, ...rest] = value.split(' ')
-	const past = verb ? VERBS[verb] : undefined
+	const past = verb ? own(VERBS, verb) : undefined
 	return past ? [past, ...rest].join(' ') : value
 }
 
@@ -114,7 +122,7 @@ export function toPastTenseEvent(event: KnownEvent): KnownEvent {
 	}
 
 	const [first, second] = actions
-	const status = second ? EARN_WITHDRAWAL_STATUS[second.value] : undefined
+	const status = second ? own(EARN_WITHDRAWAL_STATUS, second.value) : undefined
 	if (first?.value === 'Withdraw from Earn' && second && status) {
 		let seen = 0
 		return {
