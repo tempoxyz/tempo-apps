@@ -249,18 +249,20 @@ export function buildTxDescription(
 	if (eventCount > 0) {
 		const firstEvent = toPastTenseEvent(txData.events[0])
 		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
-		const action = actionPart
+		// Past-tense labels read as a sentence ("Transferred on …"), not a noun.
+		const label = actionPart
 			? truncateOgText(String(actionPart.value).toLowerCase(), 20)
 			: 'transaction'
+		const action = label.charAt(0).toUpperCase() + label.slice(1)
 
 		if (eventCount === 1) {
 			return truncateOgText(
-				`A ${action} on ${date} from ${HexFormatter.truncate(txData.from as Address.Address)}. View full details on Tempo Explorer.`,
+				`${action} on ${date} from ${HexFormatter.truncate(txData.from as Address.Address)}. View full details on Tempo Explorer.`,
 				160,
 			)
 		}
 		return truncateOgText(
-			`A ${action} and ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`,
+			`${action}, plus ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`,
 			160,
 		)
 	}
