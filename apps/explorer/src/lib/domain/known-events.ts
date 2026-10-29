@@ -150,7 +150,7 @@ function findCardPulls(
 			from,
 			token: candidate.address,
 			amount,
-			key: `${candidate.address.toLowerCase()}:${from.toLowerCase()}:${amount}`,
+			key: `${candidate.address.toLowerCase()}:${from.toLowerCase()}:${to.toLowerCase()}:${amount}`,
 		})
 	})
 	return pulls
@@ -1339,7 +1339,7 @@ function createDetectors(
 
 				if (
 					cardPullKeys.has(
-						`${address.toLowerCase()}:${args.from.toLowerCase()}:${args.amount}`,
+						`${address.toLowerCase()}:${args.from.toLowerCase()}:${args.to.toLowerCase()}:${args.amount}`,
 					)
 				)
 					return {
