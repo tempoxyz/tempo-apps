@@ -88,6 +88,36 @@ const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
 
+/**
+ * Tempo Cash card spenders (tempoxyz/cash packages/shared/src/card-funding.ts):
+ * a card purchase pulls the cardholder's funds or Earn shares to one of these
+ * before Bridge settles it. The merchant stays off-chain, in Cash.
+ */
+const CARD_SPENDERS = new Set([
+	'0x3e8f24b686aa8c036038f7d557b70e6ce0e7b56b', // direct
+	'0x3f58d4356cc5785de7962c274c48a748648fddf1', // configurable (Earn)
+	'0x84c3cb0fdf3c620ead0871825aa855340adcdfcd', // retired
+])
+
+function isCardSpender(address: Address.Address | undefined): boolean {
+	return address !== undefined && CARD_SPENDERS.has(address.toLowerCase())
+}
+
+/** The account a card spender pulled from in this receipt, if any. */
+function findCardholder(events: ParsedEvent[]): Address.Address | undefined {
+	for (const candidate of events) {
+		if (
+			candidate.eventName !== 'Transfer' &&
+			candidate.eventName !== 'TransferWithMemo'
+		)
+			continue
+		const from = eventAddress(candidate, 'from')
+		const to = eventAddress(candidate, 'to')
+		if (from && isCardSpender(to) && !isCardSpender(from)) return from
+	}
+	return undefined
+}
+
 function eventArgument(event: ParsedEvent, name: string): unknown {
 	return (event.args as Record<string, unknown>)[name]
 }
@@ -188,6 +218,7 @@ function createEarnReceiptSummary(
 	event: ParsedEvent,
 	events: ParsedEvent[],
 	createAmount: CreateAmount,
+	holder?: Address.Address,
 ): KnownEvent | null {
 	const selector = event.topics[0]?.toLowerCase()
 	const signature = selector ? earnEventSignatures.get(selector) : undefined
@@ -346,6 +377,22 @@ function createEarnReceiptSummary(
 				}
 			}
 		}
+		const cardholder = findCardholder(events)
+		if (cardholder)
+			return {
+				type: 'earn card payment',
+				parts: [
+					{ type: 'action', value: 'Card Payment' },
+					earnValuePart(assets, asset, createAmount),
+					{ type: 'text', value: 'from' },
+					{ type: 'account', value: cardholder },
+				],
+				note: [
+					['Source', { type: 'text', value: 'Earn balance' }],
+					['Settled by', { type: 'text', value: 'Bridge (Tempo Cash card)' }],
+				],
+				meta: { from: cardholder },
+			}
 		return {
 			type: 'earn exact withdrawal',
 			parts: [
@@ -485,6 +532,66 @@ function createEarnReceiptSummary(
 			const from = eventAddress(candidate, 'from')
 			return from ? Address.isEqual(from, event.address) : false
 		})?.address
+		// On an address page, show the holder's own share, not the whole batch.
+		// A transaction can push several batches: only this batch's payouts,
+		// logged after the previous batch, belong to it.
+		const previousBatch = events
+			.filter(
+				(candidate) =>
+					candidate.eventName === 'BatchPushed' &&
+					Address.isEqual(candidate.address, event.address) &&
+					(candidate.logIndex ?? 0) < (event.logIndex ?? 0),
+			)
+			.at(-1)?.logIndex
+		const share =
+			holder && earnShare
+				? events.find(
+						(candidate) =>
+							(candidate.logIndex ?? 0) < (event.logIndex ?? 0) &&
+							(previousBatch === undefined ||
+								(candidate.logIndex ?? 0) > previousBatch) &&
+							(candidate.eventName === 'Transfer' ||
+								candidate.eventName === 'TransferWithMemo') &&
+							Address.isEqual(candidate.address, earnShare) &&
+							Address.isEqual(
+								eventAddress(candidate, 'from') ?? zeroAddress,
+								event.address,
+							) &&
+							Address.isEqual(
+								eventAddress(candidate, 'to') ?? zeroAddress,
+								holder,
+							),
+					)
+				: undefined
+		const shareAmount = share ? eventBigInt(share, 'amount') : undefined
+		// The holder was paid in another batch of this transaction: that batch
+		// already shows their interest, so this one adds nothing for them.
+		const paidElsewhere =
+			holder &&
+			earnShare &&
+			shareAmount === undefined &&
+			events.some(
+				(candidate) =>
+					(candidate.eventName === 'Transfer' ||
+						candidate.eventName === 'TransferWithMemo') &&
+					Address.isEqual(candidate.address, earnShare) &&
+					Address.isEqual(
+						eventAddress(candidate, 'from') ?? zeroAddress,
+						event.address,
+					) &&
+					Address.isEqual(eventAddress(candidate, 'to') ?? zeroAddress, holder),
+			)
+		if (paidElsewhere) return null
+		if (holder && earnShare && shareAmount !== undefined)
+			return {
+				type: 'earn interest',
+				parts: [
+					{ type: 'action', value: 'Earn Interest' },
+					{ type: 'amount', value: createAmount(shareAmount, earnShare) },
+				],
+				note: [['Source', { type: 'text', value: 'Daily Earn rewards' }]],
+				meta: { from: event.address, to: holder },
+			}
 		return {
 			type: 'earn reward distribution',
 			parts: [
@@ -1185,6 +1292,24 @@ function createDetectors(
 					Address.isEqual(args.to, FEE_MANAGER) &&
 					!Address.isEqual(args.from, zeroAddress)
 				const isMppPayment = 'memo' in args && isMppAttributionMemo(args.memo)
+
+				if (isCardSpender(args.to) && !isCardSpender(args.from))
+					return {
+						type: 'card payment',
+						parts: [
+							{ type: 'action', value: 'Card Payment' },
+							{ type: 'amount', value: createAmount(args.amount, address) },
+							{ type: 'text', value: 'from' },
+							{ type: 'account', value: args.from },
+						],
+						note: [
+							[
+								'Settled by',
+								{ type: 'text', value: 'Bridge (Tempo Cash card)' },
+							],
+						],
+						meta: { from: args.from },
+					}
 
 				if (isFeeTransfer) {
 					// When viewer mode is active, let feePayer detector handle fee transfers
@@ -2301,6 +2426,8 @@ export function parseKnownEvents(
 		transaction?: TransactionLike
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		viewer?: Address.Address
+		/** Whose history this is: their own Earn interest replaces the batch payout. */
+		holder?: Address.Address
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
@@ -2901,7 +3028,12 @@ export function parseKnownEvents(
 			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event) ||
 			detectors.streamChannel(event) ||
-			createEarnReceiptSummary(event, dedupedEvents, createAmount)
+			createEarnReceiptSummary(
+				event,
+				dedupedEvents,
+				createAmount,
+				options?.holder,
+			)
 
 		if (!detected) continue
 

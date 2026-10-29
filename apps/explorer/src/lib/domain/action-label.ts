@@ -61,6 +61,7 @@ const VERBS: Record<string, string> = {
 const LABELS: Record<string, string> = {
 	'Admin Burn': 'Burned by Admin',
 	'Complete Fill': 'Filled',
+	'Earn Interest': 'Earned Interest',
 	'Partial Fill': 'Partially Filled',
 	'Private Zone Deposit': 'Deposited to Private Zone',
 	'Private Zone Withdrawal': 'Withdrew from Private Zone',
