@@ -66,7 +66,7 @@ export function buildTxSummary(params: {
 		}
 	}
 
-	const headline = sentenceCase(formatKnownEvent(event))
+	const headline = sentenceCase(formatKnownEvent(toPastTenseEvent(event)))
 	const details =
 		knownEvents.length > 1
 			? [`${knownEvents.length.toLocaleString()} interpreted events detected.`]
@@ -288,11 +288,9 @@ function getRevertData(trace: CallTrace): Hex.Hex | null {
 	return null
 }
 
+/** Callers choose the tense: a reverted call keeps its plain verb ("Send … failed"). */
 function formatKnownEvent(event: KnownEvent): string {
-	return toPastTenseEvent(event)
-		.parts.map(formatKnownEventPart)
-		.filter(Boolean)
-		.join(' ')
+	return event.parts.map(formatKnownEventPart).filter(Boolean).join(' ')
 }
 
 function formatKnownEventPart(part: KnownEventPart): string {

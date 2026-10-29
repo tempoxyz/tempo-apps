@@ -2286,7 +2286,8 @@ function findDirectTransferKeys(
 ): Map<string, number> {
 	const keys = new Map<string, number>()
 	if (!transaction) return keys
-	const calls = [transaction, ...(transaction.calls ?? [])]
+	// A batch's top-level fields can mirror its first call: count each call once.
+	const calls = transaction.calls?.length ? transaction.calls : [transaction]
 	for (const call of calls) {
 		const input = call.input ?? call.data
 		if (!call.to || !input) continue
