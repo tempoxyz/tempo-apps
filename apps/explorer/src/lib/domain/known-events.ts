@@ -103,19 +103,57 @@ function isCardSpender(address: Address.Address | undefined): boolean {
 	return address !== undefined && CARD_SPENDERS.has(address.toLowerCase())
 }
 
-/** The account a card spender pulled from in this receipt, if any. */
-function findCardholder(events: ParsedEvent[]): Address.Address | undefined {
-	for (const candidate of events) {
-		if (
-			candidate.eventName !== 'Transfer' &&
-			candidate.eventName !== 'TransferWithMemo'
-		)
-			continue
+function isTransferEvent_(event: ParsedEvent): boolean {
+	return (
+		event.eventName === 'Transfer' || event.eventName === 'TransferWithMemo'
+	)
+}
+
+/**
+ * Card pulls in this receipt: a card spender took funds the holder didn't send
+ * themselves (the transaction comes from someone else) and moved them on in the
+ * same transaction to settle. A plain transfer to a spender is none of these.
+ */
+function findCardPulls(
+	events: ParsedEvent[],
+	transactionSender: Address.Address | undefined,
+): Array<{
+	from: Address.Address
+	token: Address.Address
+	amount: bigint
+	key: string
+}> {
+	const pulls: Array<{
+		from: Address.Address
+		token: Address.Address
+		amount: bigint
+		key: string
+	}> = []
+	events.forEach((candidate, index) => {
+		if (!isTransferEvent_(candidate)) return
 		const from = eventAddress(candidate, 'from')
 		const to = eventAddress(candidate, 'to')
-		if (from && isCardSpender(to) && !isCardSpender(from)) return from
-	}
-	return undefined
+		const amount = eventBigInt(candidate, 'amount')
+		if (!from || !to || amount === undefined) return
+		if (!isCardSpender(to) || isCardSpender(from)) return
+		if (transactionSender && Address.isEqual(from, transactionSender)) return
+		const forwarded = events
+			.slice(index + 1)
+			.some(
+				(next) =>
+					isTransferEvent_(next) &&
+					Address.isEqual(next.address, candidate.address) &&
+					Address.isEqual(eventAddress(next, 'from') ?? zeroAddress, to),
+			)
+		if (!forwarded) return
+		pulls.push({
+			from,
+			token: candidate.address,
+			amount,
+			key: `${candidate.address.toLowerCase()}:${from.toLowerCase()}:${amount}`,
+		})
+	})
+	return pulls
 }
 
 function eventArgument(event: ParsedEvent, name: string): unknown {
@@ -219,6 +257,7 @@ function createEarnReceiptSummary(
 	events: ParsedEvent[],
 	createAmount: CreateAmount,
 	holder?: Address.Address,
+	transactionSender?: Address.Address,
 ): KnownEvent | null {
 	const selector = event.topics[0]?.toLowerCase()
 	const signature = selector ? earnEventSignatures.get(selector) : undefined
@@ -377,7 +416,11 @@ function createEarnReceiptSummary(
 				}
 			}
 		}
-		const cardholder = findCardholder(events)
+		// A card settlement pays Bridge, not the holder: an ordinary withdrawal to
+		// the holder stays a withdrawal even when a card pull shares the receipt.
+		const cardholder = findCardPulls(events, transactionSender).find(
+			(pull) => !Address.isEqual(pull.from, receiver),
+		)?.from
 		if (cardholder)
 			return {
 				type: 'earn card payment',
@@ -938,6 +981,7 @@ function createDetectors(
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
 	directTransferKeys: Map<string, number> = new Map(),
+	cardPullKeys: ReadonlySet<string> = new Set(),
 ) {
 	/**
 	 * A transfer is a payment ("Send") only when the sender signed a direct
@@ -1293,7 +1337,11 @@ function createDetectors(
 					!Address.isEqual(args.from, zeroAddress)
 				const isMppPayment = 'memo' in args && isMppAttributionMemo(args.memo)
 
-				if (isCardSpender(args.to) && !isCardSpender(args.from))
+				if (
+					cardPullKeys.has(
+						`${address.toLowerCase()}:${args.from.toLowerCase()}:${args.amount}`,
+					)
+				)
 					return {
 						type: 'card payment',
 						parts: [
@@ -2652,6 +2700,7 @@ export function parseKnownEvents(
 		getStreamChannelToken,
 		zonePortals,
 		findDirectTransferKeys(options?.transaction),
+		new Set(findCardPulls(events, transactionSender).map((pull) => pull.key)),
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -3034,6 +3083,7 @@ export function parseKnownEvents(
 				dedupedEvents,
 				createAmount,
 				options?.holder,
+				transactionSender,
 			)
 
 		if (!detected) continue

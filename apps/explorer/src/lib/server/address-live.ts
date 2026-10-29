@@ -240,6 +240,7 @@ async function normalizeRows(
 					includeKnownEvents: true,
 					getTokenMetadata: lookup,
 					activities: await getTransactionActivities(row.hash, chainId),
+					holder: options.address,
 				}),
 			),
 		)

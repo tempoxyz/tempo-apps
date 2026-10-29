@@ -907,6 +907,27 @@ describe('parseKnownEvents', () => {
 		])
 	})
 
+	it('does not call a plain transfer to a card spender a card payment', () => {
+		const spender = '0x3e8f24b686aa8c036038f7d557b70e6ce0e7b56b'
+		const log = mockLog(
+			{
+				address: userTokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from: accountAddress, to: spender },
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [1_000_000n]),
+			},
+			`0x${'e'.repeat(64)}`,
+		)
+		const [event] = parseKnownEvents(
+			mockReceipt([log], accountAddress, `0x${'e'.repeat(64)}`),
+			{ getTokenMetadata },
+		)
+		expect(event?.type).not.toBe('card payment')
+	})
+
 	it.each([
 		['WhitelistUpdated', { allowed: true }, 'Allow'],
 		['WhitelistUpdated', { allowed: false }, 'Disallow'],
