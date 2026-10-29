@@ -22,6 +22,7 @@ import {
 	type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
+import { toPastTenseEvent } from '#lib/domain/action-label'
 
 // ============ Constants ============
 
@@ -169,7 +170,8 @@ function formatEventPart(part: KnownEventPart): string {
 	}
 }
 
-function formatEventForOg(event: KnownEvent): TxOgEvent {
+function formatEventForOg(knownEvent: KnownEvent): TxOgEvent {
+	const event = toPastTenseEvent(knownEvent)
 	const actionPart = event.parts.find((p) => p.type === 'action')
 	const action = actionPart ? formatEventPart(actionPart) : event.type
 
@@ -245,7 +247,7 @@ export function buildTxDescription(
 	const eventCount = txData.events.length
 
 	if (eventCount > 0) {
-		const firstEvent = txData.events[0]
+		const firstEvent = toPastTenseEvent(txData.events[0])
 		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
 		const action = actionPart
 			? truncateOgText(String(actionPart.value).toLowerCase(), 20)

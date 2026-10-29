@@ -303,7 +303,7 @@ export function SimulateAnswer(props: SimulateAnswer.Props): React.JSX.Element {
 		return (
 			<AnswerShell>
 				<div className="copy-13 text-secondary">
-					<TxEventDescription event={event} />
+					<TxEventDescription event={event} tense="plain" />
 				</div>
 			</AnswerShell>
 		)
@@ -802,7 +802,7 @@ export function SimulateEvents(props: {
 					<span className="mt-[3px] shrink-0 type-card-data text-content-dimmed tabular-nums">
 						{index + 1}
 					</span>
-					<TxEventDescription event={event} />
+					<TxEventDescription event={event} tense="plain" />
 				</div>
 			))}
 		</div>

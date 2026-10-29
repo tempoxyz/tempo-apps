@@ -3273,7 +3273,7 @@ function StreamedPaymentReceipt(props: {
 						</span>
 						<div className="flex items-center gap-[10px] ml-auto">
 							<TxEventDescription.Part
-								part={{ type: 'action', value: 'Pay' }}
+								part={{ type: 'action', value: 'Paid' }}
 							/>
 							{amountParts.map((p, j) => (
 								<TxEventDescription.Part key={j} part={p} />

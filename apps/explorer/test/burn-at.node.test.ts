@@ -345,7 +345,7 @@ describe('BurnAt', () => {
 			{ block: { timestamp: 0x6ac55fc4n }, receipt: burnAtReceipt },
 			{ events, fee: 0, feeBreakdown: [], feeDisplay: '0' },
 		)
-		expect(text).toContain('1. ADMIN BURN')
+		expect(text).toContain('1. BURNED BY ADMIN')
 		expect(text).not.toContain('2. ')
 		expect(text).not.toContain('BURNER')
 	})

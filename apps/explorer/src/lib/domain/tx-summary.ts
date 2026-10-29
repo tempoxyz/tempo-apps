@@ -15,6 +15,7 @@ import { isTip20Address } from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import type { CallTrace } from '#lib/queries/trace'
+import { toPastTenseEvent } from '#lib/domain/action-label'
 
 export type TxSummary = {
 	tone: 'success' | 'failure' | 'neutral'
@@ -288,7 +289,10 @@ function getRevertData(trace: CallTrace): Hex.Hex | null {
 }
 
 function formatKnownEvent(event: KnownEvent): string {
-	return event.parts.map(formatKnownEventPart).filter(Boolean).join(' ')
+	return toPastTenseEvent(event)
+		.parts.map(formatKnownEventPart)
+		.filter(Boolean)
+		.join(' ')
 }
 
 function formatKnownEventPart(part: KnownEventPart): string {

@@ -54,9 +54,9 @@ describe('transaction social card actions', () => {
 		})
 
 		expect(cardEvents(selected).map(([action]) => action)).toEqual([
-			'Private Zone Withdrawal',
+			'Withdrew from Private Zone',
 			'Earn Deposit',
-			'Private Zone Deposit',
+			'Deposited to Private Zone',
 		])
 		expect(cardEvents(selected)[0]?.[2]).toBe('')
 		expect(cardEvents(selected)[2]?.[2]).toBe('')
@@ -74,7 +74,7 @@ describe('transaction social card actions', () => {
 			knownCall: event('zone batch submission', 'Submit Zone Batch'),
 		})
 		expect(cardEvents(selected).map(([action]) => action)).toEqual([
-			'Submit Zone Batch',
+			'Submitted Zone Batch',
 		])
 	})
 
@@ -85,7 +85,7 @@ describe('transaction social card actions', () => {
 			knownCall: null,
 		})
 		expect(cardEvents(selected)[0]).toEqual([
-			'Send',
+			'Transferred',
 			'0.10 DLUSD',
 			'$0.10',
 			'',

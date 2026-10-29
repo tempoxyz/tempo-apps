@@ -19,6 +19,7 @@ import {
 	PriceFormatter,
 	RoleFormatter,
 } from '#lib/formatting'
+import { toPastTenseEvent } from '#lib/domain/action-label'
 
 const width = 76
 const indent = '  '
@@ -59,6 +60,7 @@ export function renderReceiptText(
 		lines.push('', '-'.repeat(width), '')
 		for (const [index, event] of events
 			.map(getReceiptTransferPresentation)
+			.map(toPastTenseEvent)
 			.entries()) {
 			const action = getEventAction(event)
 			const sideAmount = getReceiptEventSideAmount(event)
