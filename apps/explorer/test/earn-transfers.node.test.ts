@@ -17,19 +17,10 @@ vi.mock('#lib/server/address-balances', () => ({
 	],
 }))
 
-vi.mock('#wagmi.config.ts', () => ({
-	getBatchedClient: () => ({
-		readContract: async ({ address }: { address: string }) => {
-			if (address === distributor) return vault
-			throw new Error('execution reverted')
-		},
-	}),
-}))
-
 const { annotateEarnTransfers } = await import('#lib/server/earn-transfers')
 
 describe('Earn transfers on the Transfers tab', () => {
-	test('labels the distributor payout as interest and values shares at the vault rate', async () => {
+	test('labels a known distributor payout as interest and values shares at the vault rate', async () => {
 		const [interest, gift, redemption] = await annotateEarnTransfers(
 			account,
 			4217,
@@ -60,7 +51,7 @@ describe('Earn transfers on the Transfers tab', () => {
 			currency: 'USD',
 			decimals: 6,
 		})
-		// Shares from anyone else are not interest.
+		// Shares from anyone else are not interest, even a contract claiming the vault.
 		expect(gift?.kind).toBeUndefined()
 		expect(redemption?.kind).toBeUndefined()
 		expect(redemption?.valuation?.value).toBe('500232')

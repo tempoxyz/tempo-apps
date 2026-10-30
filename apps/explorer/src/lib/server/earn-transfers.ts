@@ -1,9 +1,35 @@
 import type { Address } from 'ox'
-import { parseAbi, zeroAddress } from 'viem'
 import { fetchEarnPositions } from '#lib/server/address-balances'
-import { getBatchedClient } from '#wagmi.config.ts'
 
-const distributorAbi = parseAbi(['function earnVault() view returns (address)'])
+/**
+ * Earn reward distributors, by the vault they pay interest for. Taken from
+ * the MerkleDistributorInstalled events of the distributor factory
+ * 0x04fe080546c7fae60bd41c131600f824d54f464b on mainnet (as of block
+ * 46600664); add new ones from that factory's events. A sender's own answer
+ * to earnVault() can't be trusted: any contract can return a real vault.
+ */
+const KNOWN_EARN_DISTRIBUTORS: ReadonlyMap<string, string> = new Map([
+	[
+		'0x6c857bf1fe7de1bc1d5c639c721b2633f8fe34f3',
+		'0xd730394f3bb85a4828e35fc5e361dcc9f894fa4f',
+	],
+	[
+		'0xa65c6ed737b52543123817977d8d2c0e554bfc2d',
+		'0xd730394f3bb85a4828e35fc5e361dcc9f894fa4f',
+	],
+	[
+		'0x53be019722acea7fff9091f15cb383b4e6dbb0c7',
+		'0xd730394f3bb85a4828e35fc5e361dcc9f894fa4f',
+	],
+	[
+		'0xb7a9dfc2522f4c5d59547ea3b5662109c01fc114',
+		'0x7fc6f9b52e556fea3ac594e5c895b21c828181e3',
+	],
+	[
+		'0xb656837f0192cdee96defda187f176591d04adf4',
+		'0x7fc6f9b52e556fea3ac594e5c895b21c828181e3',
+	],
+])
 
 /** What the Transfers tab adds to an Earn share movement. */
 export type EarnTransferAnnotation = {
@@ -22,10 +48,8 @@ type TransferRow = {
 
 /**
  * Earn shares are worth more than a dollar each (the vault's rate grows), so
- * one share must not read as $1. Interest arrives as shares sent by the
- * vault's reward distributor, a contract whose earnVault() names the vault
- * behind that share token: that, not the sender's address alone, marks a
- * payout as interest.
+ * one share must not read as $1. Interest arrives as shares sent by one of
+ * the vault's known reward distributors.
  */
 export async function annotateEarnTransfers<row extends TransferRow>(
 	account: Address.Address,
@@ -59,33 +83,6 @@ export async function annotateEarnTransfers<row extends TransferRow>(
 	)
 	if (shares.size === 0) return [...rows]
 
-	const candidates = [
-		...new Set(
-			rows.flatMap((row) => {
-				const share = shares.get(row.token.address.toLowerCase())
-				const from = row.from.toLowerCase()
-				if (!share || row.to.toLowerCase() !== account.toLowerCase()) return []
-				if (from === share.vault || from === zeroAddress) return []
-				return [from]
-			}),
-		),
-	]
-	const client = getBatchedClient()
-	const vaultOf = new Map(
-		await Promise.all(
-			candidates.map(async (sender) => {
-				const vault = await client
-					.readContract({
-						address: sender as Address.Address,
-						abi: distributorAbi,
-						functionName: 'earnVault',
-					})
-					.catch(() => undefined)
-				return [sender, vault?.toLowerCase()] as const
-			}),
-		),
-	)
-
 	return rows.map((row) => {
 		const share = shares.get(row.token.address.toLowerCase())
 		if (!share) return row
@@ -96,7 +93,7 @@ export async function annotateEarnTransfers<row extends TransferRow>(
 		}
 		const isInterest =
 			row.to.toLowerCase() === account.toLowerCase() &&
-			vaultOf.get(row.from.toLowerCase()) === share.vault
+			KNOWN_EARN_DISTRIBUTORS.get(row.from.toLowerCase()) === share.vault
 		return {
 			...row,
 			valuation,
