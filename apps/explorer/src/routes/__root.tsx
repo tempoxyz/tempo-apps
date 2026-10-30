@@ -21,7 +21,6 @@ import {
 } from '#lib/explorer-indexing'
 import { getRequestURL, getTempoEnv } from '#lib/env'
 import { OG_BASE_URL } from '#lib/og'
-import { posthogBootScript } from '#lib/posthog'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
 import { getWagmiConfig, getWagmiState } from '#wagmi.config.ts'
@@ -195,15 +194,6 @@ export const Route = createRootRouteWithContext<{
 				'(function(){var o=window.location.protocol+"//"+window.location.host;var F=window.fetch;var R=window.Request;var s=function(i){var u=i instanceof Request?i.url:String(i);try{var a=new URL(u,o);if(a.origin===o){a.username="";a.password="";}return a.href}catch(e){return null}};window.fetch=function(i,n){try{var h=s(i);if(h){if(i instanceof Request)return F.call(this,new R(h,i),n);return F.call(this,h,n)}}catch(e){}return F.call(this,i,n)};var W=function(i,n){var h=s(i);if(h)return new R(h,n||i);return new R(i,n)};W.prototype=R.prototype;window.Request=W;})();',
 			type: 'text/javascript',
 		})
-
-		// PostHog page views. Deferred so it never blocks the initial render.
-		// The key and host are compiled in at build time from VITE_EXPLORER_POSTHOG_KEY and
-		// VITE_POSTHOG_HOST. Without them the page loads nothing PostHog related.
-		const posthog = posthogBootScript({
-			key: import.meta.env.VITE_EXPLORER_POSTHOG_KEY,
-			host: import.meta.env.VITE_POSTHOG_HOST,
-		})
-		if (posthog) scripts.push({ children: posthog, type: 'text/javascript' })
 
 		return scripts
 	},
