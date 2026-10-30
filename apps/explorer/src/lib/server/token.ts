@@ -4,6 +4,10 @@ import type { Address, Hex } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import {
+	annotateEarnTransfers,
+	type EarnTransferAnnotation,
+} from '#lib/server/earn-transfers'
 import { api } from '#lib/server/tempo-api'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -208,21 +212,23 @@ const FetchAccountTransfersInputSchema = z.object({
 })
 
 export type AccountTransfersApiResponse = {
-	transfers: Array<{
-		id: string
-		from: Address.Address
-		to: Address.Address
-		value: string
-		transactionHash: Hex.Hex
-		blockNumber: string
-		timestamp: string | null
-		token: {
-			address: Address.Address
-			symbol: string
-			decimals: number
-			currency: string
-		}
-	}>
+	transfers: Array<
+		{
+			id: string
+			from: Address.Address
+			to: Address.Address
+			value: string
+			transactionHash: Hex.Hex
+			blockNumber: string
+			timestamp: string | null
+			token: {
+				address: Address.Address
+				symbol: string
+				decimals: number
+				currency: string
+			}
+		} & EarnTransferAnnotation
+	>
 	total: number
 	totalCapped: boolean
 }
@@ -262,22 +268,23 @@ export const fetchAccountTransfers = createServerFn({ method: 'POST' })
 				}),
 			)
 
+			const rows = page.data.map((transfer) => ({
+				id: transfer.id,
+				from: transfer.sender as Address.Address,
+				to: transfer.recipient as Address.Address,
+				value: transfer.sourceAmount.baseUnits,
+				transactionHash: transfer.transactionHash as Hex.Hex,
+				blockNumber: String(transfer.blockNumber),
+				timestamp: transfer.timestamp ?? null,
+				token: {
+					address: transfer.sourceToken.address as Address.Address,
+					symbol: transfer.sourceToken.symbol,
+					decimals: transfer.sourceToken.decimals,
+					currency: transfer.sourceToken.currency,
+				},
+			}))
 			return {
-				transfers: page.data.map((transfer) => ({
-					id: transfer.id,
-					from: transfer.sender as Address.Address,
-					to: transfer.recipient as Address.Address,
-					value: transfer.sourceAmount.baseUnits,
-					transactionHash: transfer.transactionHash as Hex.Hex,
-					blockNumber: String(transfer.blockNumber),
-					timestamp: transfer.timestamp ?? null,
-					token: {
-						address: transfer.sourceToken.address as Address.Address,
-						symbol: transfer.sourceToken.symbol,
-						decimals: transfer.sourceToken.decimals,
-						currency: transfer.sourceToken.currency,
-					},
-				})),
+				transfers: await annotateEarnTransfers(data.account, chainId, rows),
 				...resolveTotal({
 					exactCount: page.meta?.totalCount,
 					exactCountCapped: page.meta?.totalCountCapped,

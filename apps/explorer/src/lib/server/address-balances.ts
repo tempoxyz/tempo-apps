@@ -28,6 +28,10 @@ const EarnPositionsResponse = z.object({
 				decimals: z.number(),
 			}),
 			shareToken: z.object({ address: z.string() }),
+			shareAmount: z.optional(
+				z.object({ amount: z.string(), decimals: z.number() }),
+			),
+			vaultAddress: z.optional(z.string()),
 		}),
 	),
 })
@@ -93,7 +97,7 @@ export function applyEarnPositionValues(
 	)
 }
 
-async function fetchEarnPositions(params: {
+export async function fetchEarnPositions(params: {
 	address: Address.Address
 	chainId: number
 	limit: number

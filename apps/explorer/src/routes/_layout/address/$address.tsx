@@ -2365,11 +2365,23 @@ function SectionsWrapper(props: {
 														key="tx"
 														hash={transfer.transactionHash}
 													/>,
-													<AddressCell
-														key="from"
-														address={transfer.from}
-														label="From"
-													/>,
+													transfer.kind === 'earn-interest' ? (
+														<span
+															key="from"
+															className="flex min-w-0 items-center"
+															title={'Earn interest from ' + transfer.from}
+														>
+															<span className="shrink-0 rounded-[2px] bg-distinct/70 px-[6px] py-[1px] label-12 text-primary">
+																Earned Interest
+															</span>
+														</span>
+													) : (
+														<AddressCell
+															key="from"
+															address={transfer.from}
+															label="From"
+														/>
+													),
 													<AddressCell
 														key="to"
 														address={transfer.to}
@@ -2402,6 +2414,7 @@ function SectionsWrapper(props: {
 														decimals={transfer.token.decimals}
 														symbol={transfer.token.symbol}
 														currency={transfer.token.currency}
+														valuation={transfer.valuation}
 													/>,
 												],
 												link: {
