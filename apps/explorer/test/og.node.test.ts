@@ -1,7 +1,11 @@
 import { describe, expect, test, vi } from 'vitest'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
-import { buildOgImageUrl, formatEventForOgServer } from '#lib/og'
+import {
+	buildOgImageUrl,
+	buildTxDescription,
+	formatEventForOgServer,
+} from '#lib/og'
 
 vi.mock('#wagmi.config.ts', () => ({ getTempoChain: () => ({ id: 42431 }) }))
 
@@ -54,9 +58,9 @@ describe('transaction social card actions', () => {
 		})
 
 		expect(cardEvents(selected).map(([action]) => action)).toEqual([
-			'Private Zone Withdrawal',
+			'Withdrew from Private Zone',
 			'Earn Deposit',
-			'Private Zone Deposit',
+			'Deposited to Private Zone',
 		])
 		expect(cardEvents(selected)[0]?.[2]).toBe('')
 		expect(cardEvents(selected)[2]?.[2]).toBe('')
@@ -74,7 +78,7 @@ describe('transaction social card actions', () => {
 			knownCall: event('zone batch submission', 'Submit Zone Batch'),
 		})
 		expect(cardEvents(selected).map(([action]) => action)).toEqual([
-			'Submit Zone Batch',
+			'Submitted Zone Batch',
 		])
 	})
 
@@ -85,7 +89,7 @@ describe('transaction social card actions', () => {
 			knownCall: null,
 		})
 		expect(cardEvents(selected)[0]).toEqual([
-			'Send',
+			'Transferred',
 			'0.10 DLUSD',
 			'$0.10',
 			'',
@@ -198,4 +202,21 @@ test('an ordinary USD payment has one total without counting its fee twice', () 
 		]),
 	)
 	expect(url.searchParams.get('total')).toBe('$0.11')
+})
+
+describe('transaction share description', () => {
+	test('reads as a sentence with the past-tense action', () => {
+		const text = buildTxDescription({
+			timestamp: 1_790_884_010,
+			from: '0x0000000000000000000000000000000000000001',
+			events: [
+				{
+					type: 'swap',
+					parts: [{ type: 'action', value: 'Swap' }],
+				},
+			],
+		})
+		expect(text.startsWith('Swapped on ')).toBe(true)
+		expect(text).not.toMatch(/^A /)
+	})
 })

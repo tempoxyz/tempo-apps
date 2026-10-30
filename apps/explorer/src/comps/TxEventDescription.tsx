@@ -25,6 +25,14 @@ import {
 } from '#lib/formatting.ts'
 import { useLookupSignature } from '#lib/queries'
 import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
+import { toPastTenseEvent } from '#lib/domain/action-label'
+
+const PRIVATE_ZONE_ACTIONS = new Set([
+	'Private Zone Deposit',
+	'Private Zone Withdrawal',
+	'Deposited to Private Zone',
+	'Withdrew from Private Zone',
+])
 
 export function TxEventMemoLine(
 	props: TxEventMemoLine.Props,
@@ -135,7 +143,8 @@ function lower(address: AddressType.Address): AddressType.Address {
 }
 
 export function TxEventDescription(props: TxEventDescription.Props) {
-	const { event, seenAs, className, suffix } = props
+	const { seenAs, className, suffix, tense = 'past' } = props
+	const event = tense === 'past' ? toPastTenseEvent(props.event) : props.event
 	return (
 		<div
 			className={cx(
@@ -161,6 +170,8 @@ export namespace TxEventDescription {
 		seenAs?: AddressType.Address
 		className?: string | undefined
 		suffix?: React.ReactNode
+		/** Simulations haven't happened yet, so they keep the plain verb. */
+		tense?: 'past' | 'plain' | undefined
 	}
 
 	export function Part(props: Part.Props) {
@@ -181,11 +192,11 @@ export namespace TxEventDescription {
 				)
 			}
 			case 'action': {
-				const isFailed = part.value === 'Failed'
-				const isBlocked = part.value === 'Blocked'
-				const isPrivateZoneAction =
-					part.value === 'Private Zone Deposit' ||
-					part.value === 'Private Zone Withdrawal'
+				const isFailed =
+					part.value === 'Failed' || part.value.endsWith(' Failed')
+				const isBlocked =
+					part.value === 'Blocked' || part.value === 'Send Blocked'
+				const isPrivateZoneAction = PRIVATE_ZONE_ACTIONS.has(part.value)
 				return (
 					<span
 						className={cx(

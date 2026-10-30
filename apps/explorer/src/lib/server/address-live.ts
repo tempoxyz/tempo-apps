@@ -7,6 +7,7 @@ import {
 	buildLiveQueries,
 	type LiveQuery,
 } from '#lib/live-query'
+import { annotateEarnTransfers } from '#lib/server/earn-transfers'
 import { readSse } from '#lib/sse'
 import { parseTimestamp } from '#lib/timestamp'
 import { api } from './tempo-api'
@@ -240,11 +241,12 @@ async function normalizeRows(
 					includeKnownEvents: true,
 					getTokenMetadata: lookup,
 					activities: await getTransactionActivities(row.hash, chainId),
+					holder: options.address,
 				}),
 			),
 		)
 	}
-	return Promise.all(
+	const transfers = await Promise.all(
 		rows.map(async (row) => {
 			const tokenAddress = String(row.address)
 			Address.assert(tokenAddress)
@@ -286,5 +288,12 @@ async function normalizeRows(
 				)
 			return { ...transfer, token: await metadata.get(tokenAddress) }
 		}),
+	)
+	// Live rows read the same as a page load: Earn interest and share values.
+	if (options.kind !== 'account-transfers') return transfers
+	return annotateEarnTransfers(
+		options.address as Address.Address,
+		chainId,
+		transfers as never,
 	)
 }

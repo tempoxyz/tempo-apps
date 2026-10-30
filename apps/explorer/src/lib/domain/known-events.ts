@@ -42,10 +42,23 @@ const earnEventActionOverrides: Record<string, string> = {
 	'Redeemed(address,address,uint256,uint256)': 'Withdraw from Earn',
 	'Redeemed(address,uint256,uint256)': 'Withdraw from Earn',
 	'VenueSharesDeposited(address,address,uint256,uint256,uint256)':
-		'Move Position to Earn',
-	'VenueSharesDeposited(address,uint256,uint256)': 'Move Position to Earn',
+		'Deposit to Earn',
+	'VenueSharesDeposited(address,uint256,uint256)': 'Deposit to Earn',
 	'WithdrewExact(address,address,uint256,uint256)': 'Withdraw from Earn',
 	'WithdrewExact(address,uint256,uint256)': 'Withdraw from Earn',
+	// Async withdrawal steps, when the receipt-level Earn summary can't apply.
+	'RedeemRequested(bytes32,address,address,uint256)': 'Request Earn Withdrawal',
+	'RedeemRequested(bytes32,address,uint128)': 'Request Earn Withdrawal',
+	'RedeemFinalized(bytes32,address,uint256,address,uint256)':
+		'Withdraw from Earn',
+	'RedeemClaimed(bytes32,address,uint256)': 'Claim Earn Withdrawal',
+	'RedeemCancelled(bytes32,address,uint256)': 'Cancel Earn Withdrawal',
+	'RedeemCancelledOnQueue(bytes32,uint128)': 'Cancel Earn Withdrawal',
+	'RewardClaimed(address,uint256,uint256)': 'Claim Earn Rewards',
+	'Funded(address,uint256,uint256)': 'Add Funds to Earn',
+	'AssetsFunded(address,uint256,uint256)': 'Add Earn Rewards',
+	'EngineMigrated(address,address,uint256,uint256,uint256,uint256,uint256,uint256)':
+		'Migrate Earn Strategy',
 }
 
 function formatEarnEventAction(event: AbiEvent): string {
@@ -74,6 +87,74 @@ const earnEventSignatures = new Map(
 const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
+
+/**
+ * Tempo Cash card spenders (tempoxyz/cash packages/shared/src/card-funding.ts):
+ * a card purchase pulls the cardholder's funds or Earn shares to one of these
+ * before Bridge settles it. The merchant stays off-chain, in Cash.
+ */
+const CARD_SPENDERS = new Set([
+	'0x3e8f24b686aa8c036038f7d557b70e6ce0e7b56b', // direct
+	'0x3f58d4356cc5785de7962c274c48a748648fddf1', // configurable (Earn)
+	'0x84c3cb0fdf3c620ead0871825aa855340adcdfcd', // retired
+])
+
+function isCardSpender(address: Address.Address | undefined): boolean {
+	return address !== undefined && CARD_SPENDERS.has(address.toLowerCase())
+}
+
+function isTransferEvent_(event: ParsedEvent): boolean {
+	return (
+		event.eventName === 'Transfer' || event.eventName === 'TransferWithMemo'
+	)
+}
+
+/**
+ * Card pulls in this receipt: a card spender took funds the holder didn't send
+ * themselves (the transaction comes from someone else) and moved them on in the
+ * same transaction to settle. A plain transfer to a spender is none of these.
+ */
+function findCardPulls(
+	events: ParsedEvent[],
+	transactionSender: Address.Address | undefined,
+): Array<{
+	from: Address.Address
+	token: Address.Address
+	amount: bigint
+	key: string
+}> {
+	const pulls: Array<{
+		from: Address.Address
+		token: Address.Address
+		amount: bigint
+		key: string
+	}> = []
+	events.forEach((candidate, index) => {
+		if (!isTransferEvent_(candidate)) return
+		const from = eventAddress(candidate, 'from')
+		const to = eventAddress(candidate, 'to')
+		const amount = eventBigInt(candidate, 'amount')
+		if (!from || !to || amount === undefined) return
+		if (!isCardSpender(to) || isCardSpender(from)) return
+		if (transactionSender && Address.isEqual(from, transactionSender)) return
+		const forwarded = events
+			.slice(index + 1)
+			.some(
+				(next) =>
+					isTransferEvent_(next) &&
+					Address.isEqual(next.address, candidate.address) &&
+					Address.isEqual(eventAddress(next, 'from') ?? zeroAddress, to),
+			)
+		if (!forwarded) return
+		pulls.push({
+			from,
+			token: candidate.address,
+			amount,
+			key: `${candidate.address.toLowerCase()}:${from.toLowerCase()}:${to.toLowerCase()}:${amount}`,
+		})
+	})
+	return pulls
+}
 
 function eventArgument(event: ParsedEvent, name: string): unknown {
 	return (event.args as Record<string, unknown>)[name]
@@ -175,6 +256,8 @@ function createEarnReceiptSummary(
 	event: ParsedEvent,
 	events: ParsedEvent[],
 	createAmount: CreateAmount,
+	holder?: Address.Address,
+	transactionSender?: Address.Address,
 ): KnownEvent | null {
 	const selector = event.topics[0]?.toLowerCase()
 	const signature = selector ? earnEventSignatures.get(selector) : undefined
@@ -218,9 +301,9 @@ function createEarnReceiptSummary(
 			type: 'earn private redemption',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
-				earnValuePart(earnShares, earnShare, createAmount),
-				{ type: 'text', value: 'for' },
 				{ type: 'amount', value: createAmount(outputAmount, outputToken) },
+				{ type: 'text', value: 'using' },
+				earnValuePart(earnShares, earnShare, createAmount),
 			],
 		}
 	}
@@ -285,9 +368,9 @@ function createEarnReceiptSummary(
 			type: 'earn redemption',
 			parts: [
 				{ type: 'action', value: 'Withdraw from Earn' },
-				earnValuePart(earnShares, earnShare, createAmount),
-				{ type: 'text', value: 'for' },
 				earnValuePart(assets, asset, createAmount),
+				{ type: 'text', value: 'using' },
+				earnValuePart(earnShares, earnShare, createAmount),
 			],
 		}
 	}
@@ -333,6 +416,26 @@ function createEarnReceiptSummary(
 				}
 			}
 		}
+		// A card settlement pays Bridge, not the holder: an ordinary withdrawal to
+		// the holder stays a withdrawal even when a card pull shares the receipt.
+		const cardholder = findCardPulls(events, transactionSender).find(
+			(pull) => !Address.isEqual(pull.from, receiver),
+		)?.from
+		if (cardholder)
+			return {
+				type: 'earn card payment',
+				parts: [
+					{ type: 'action', value: 'Card Payment' },
+					earnValuePart(assets, asset, createAmount),
+					{ type: 'text', value: 'from' },
+					{ type: 'account', value: cardholder },
+				],
+				note: [
+					['Source', { type: 'text', value: 'Earn balance' }],
+					['Settled by', { type: 'text', value: 'Bridge (Tempo Cash card)' }],
+				],
+				meta: { from: cardholder },
+			}
 		return {
 			type: 'earn exact withdrawal',
 			parts: [
@@ -372,7 +475,7 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn in-kind deposit',
 			parts: [
-				{ type: 'action', value: 'Move Position to Earn' },
+				{ type: 'action', value: 'Deposit to Earn' },
 				earnValuePart(venueShares, venue, createAmount),
 				{ type: 'text', value: 'for' },
 				earnValuePart(earnShares, earnShare, createAmount),
@@ -472,6 +575,66 @@ function createEarnReceiptSummary(
 			const from = eventAddress(candidate, 'from')
 			return from ? Address.isEqual(from, event.address) : false
 		})?.address
+		// On an address page, show the holder's own share, not the whole batch.
+		// A transaction can push several batches: only this batch's payouts,
+		// logged after the previous batch, belong to it.
+		const previousBatch = events
+			.filter(
+				(candidate) =>
+					candidate.eventName === 'BatchPushed' &&
+					Address.isEqual(candidate.address, event.address) &&
+					(candidate.logIndex ?? 0) < (event.logIndex ?? 0),
+			)
+			.at(-1)?.logIndex
+		const share =
+			holder && earnShare
+				? events.find(
+						(candidate) =>
+							(candidate.logIndex ?? 0) < (event.logIndex ?? 0) &&
+							(previousBatch === undefined ||
+								(candidate.logIndex ?? 0) > previousBatch) &&
+							(candidate.eventName === 'Transfer' ||
+								candidate.eventName === 'TransferWithMemo') &&
+							Address.isEqual(candidate.address, earnShare) &&
+							Address.isEqual(
+								eventAddress(candidate, 'from') ?? zeroAddress,
+								event.address,
+							) &&
+							Address.isEqual(
+								eventAddress(candidate, 'to') ?? zeroAddress,
+								holder,
+							),
+					)
+				: undefined
+		const shareAmount = share ? eventBigInt(share, 'amount') : undefined
+		// The holder was paid in another batch of this transaction: that batch
+		// already shows their interest, so this one adds nothing for them.
+		const paidElsewhere =
+			holder &&
+			earnShare &&
+			shareAmount === undefined &&
+			events.some(
+				(candidate) =>
+					(candidate.eventName === 'Transfer' ||
+						candidate.eventName === 'TransferWithMemo') &&
+					Address.isEqual(candidate.address, earnShare) &&
+					Address.isEqual(
+						eventAddress(candidate, 'from') ?? zeroAddress,
+						event.address,
+					) &&
+					Address.isEqual(eventAddress(candidate, 'to') ?? zeroAddress, holder),
+			)
+		if (paidElsewhere) return null
+		if (holder && earnShare && shareAmount !== undefined)
+			return {
+				type: 'earn interest',
+				parts: [
+					{ type: 'action', value: 'Earn Interest' },
+					{ type: 'amount', value: createAmount(shareAmount, earnShare) },
+				],
+				note: [['Source', { type: 'text', value: 'Daily Earn rewards' }]],
+				meta: { from: event.address, to: holder },
+			}
 		return {
 			type: 'earn reward distribution',
 			parts: [
@@ -516,7 +679,8 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption request',
 			parts: [
-				{ type: 'action', value: 'Request Earn Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
+				{ type: 'action', value: 'Requested' },
 				earnValuePart(earnShares, earnShare, createAmount),
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
@@ -532,7 +696,8 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption finalized',
 			parts: [
-				{ type: 'action', value: 'Complete Earn Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
+				{ type: 'action', value: 'Completed' },
 				{ type: 'amount', value: createAmount(assets, asset) },
 				{ type: 'text', value: 'to' },
 				{ type: 'account', value: receiver },
@@ -547,7 +712,8 @@ function createEarnReceiptSummary(
 		return {
 			type: 'earn async redemption cancelled',
 			parts: [
-				{ type: 'action', value: 'Cancel Earn Withdrawal' },
+				{ type: 'action', value: 'Withdraw from Earn' },
+				{ type: 'action', value: 'Cancelled' },
 				{ type: 'number', value: earnShares },
 				{ type: 'text', value: 'for' },
 				{ type: 'account', value: receiver },
@@ -814,7 +980,30 @@ function createDetectors(
 		payee: Address.Address,
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
+	directTransferKeys: Map<string, number> = new Map(),
+	cardPullKeys: ReadonlySet<string> = new Set(),
 ) {
+	/**
+	 * A transfer is a payment ("Send") only when the sender signed a direct
+	 * `transfer`/`transferWithMemo` call for it. Router legs, vault plumbing
+	 * and other contract-initiated movements stay a neutral "Transfer".
+	 */
+	function isDirectTransfer(
+		token: Address.Address,
+		from: Address.Address,
+		to: Address.Address,
+		amount: bigint,
+	): boolean {
+		return (
+			transactionSender !== undefined &&
+			Address.isEqual(from, transactionSender) &&
+			consumeDirectTransfer(
+				directTransferKeys,
+				directTransferKey(token, to, amount),
+			)
+		)
+	}
+
 	function isZonePortalAddress(address: Address.Address): boolean {
 		return zonePortals.has(checksumAddress(address))
 	}
@@ -836,11 +1025,12 @@ function createDetectors(
 			return {
 				type: 'propamm swap',
 				parts: [
-					{ type: 'action', value: 'propAMM Swap' },
+					{ type: 'action', value: 'Swap' },
 					{ type: 'amount', value: createAmount(amountIn, tokenIn) },
 					{ type: 'text', value: 'for' },
 					{ type: 'amount', value: createAmount(amountOut, tokenOut) },
 				],
+				note: [['Venue', { type: 'text', value: 'propAMM' }]],
 			}
 		},
 		earn(event: ParsedEvent) {
@@ -1147,6 +1337,28 @@ function createDetectors(
 					!Address.isEqual(args.from, zeroAddress)
 				const isMppPayment = 'memo' in args && isMppAttributionMemo(args.memo)
 
+				if (
+					cardPullKeys.has(
+						`${address.toLowerCase()}:${args.from.toLowerCase()}:${args.to.toLowerCase()}:${args.amount}`,
+					)
+				)
+					return {
+						type: 'card payment',
+						parts: [
+							{ type: 'action', value: 'Card Payment' },
+							{ type: 'amount', value: createAmount(args.amount, address) },
+							{ type: 'text', value: 'from' },
+							{ type: 'account', value: args.from },
+						],
+						note: [
+							[
+								'Settled by',
+								{ type: 'text', value: 'Bridge (Tempo Cash card)' },
+							],
+						],
+						meta: { from: args.from },
+					}
+
 				if (isFeeTransfer) {
 					// When viewer mode is active, let feePayer detector handle fee transfers
 					// involving the viewer as the payer
@@ -1169,8 +1381,10 @@ function createDetectors(
 							value: isMppPayment
 								? 'MPP Payment'
 								: VirtualAddress.validate(args.from)
-									? 'Forwarded'
-									: 'Send',
+									? 'Forward'
+									: isDirectTransfer(address, args.from, args.to, args.amount)
+										? 'Send'
+										: 'Transfer',
 						},
 						{
 							type: 'amount',
@@ -1192,17 +1406,13 @@ function createDetectors(
 				const mintKey = `mint:${address}:${amount}:${to}`
 				const memo = mintBurnMemos?.get(mintKey)
 
-				// Show "Mint to Recipient" when recipient differs from minter (transaction sender)
-				const isMintToRecipient =
-					transactionSender && !Address.isEqual(transactionSender, to)
-
 				return {
 					type: 'mint',
 					note: memo,
 					parts: [
 						{
 							type: 'action',
-							value: isMintToRecipient ? 'Mint to Recipient' : 'Mint',
+							value: 'Mint',
 						},
 						{
 							type: 'amount',
@@ -1244,7 +1454,7 @@ function createDetectors(
 				return {
 					type: 'burn at',
 					parts: [
-						{ type: 'action', value: 'BurnAt' },
+						{ type: 'action', value: 'Admin Burn' },
 						{ type: 'amount', value: createAmount(args.amount, address) },
 						{ type: 'text', value: 'from' },
 						{ type: 'account', value: args.from },
@@ -1283,7 +1493,7 @@ function createDetectors(
 				return {
 					type: 'supply cap update',
 					parts: [
-						{ type: 'action', value: 'Supply Cap Update' },
+						{ type: 'action', value: 'Update Supply Cap' },
 						{ type: 'text', value: 'for' },
 						{
 							type: 'token',
@@ -1334,7 +1544,7 @@ function createDetectors(
 				return {
 					type: 'burn blocked',
 					parts: [
-						{ type: 'action', value: 'Burn Blocked' },
+						{ type: 'action', value: 'Burn Blocked Funds' },
 						{
 							type: 'amount',
 							value: createAmount(args.amount, address),
@@ -1511,8 +1721,7 @@ function createDetectors(
 				return {
 					type: 'transfer blocked',
 					parts: [
-						{ type: 'action', value: 'Blocked' },
-						{ type: 'action', value: 'Send' },
+						{ type: 'action', value: 'Send Blocked' },
 						{ type: 'amount', value: createAmount(args.amount, args.token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: recipient },
@@ -1576,7 +1785,7 @@ function createDetectors(
 				return {
 					type: 'whitelist',
 					parts: [
-						{ type: 'action', value: 'Whitelist' },
+						{ type: 'action', value: args.allowed ? 'Allow' : 'Disallow' },
 						{ type: 'account', value: args.account },
 						{ type: 'text', value: 'on Policy' },
 						{ type: 'text', value: `#${args.policyId}` },
@@ -1587,7 +1796,7 @@ function createDetectors(
 				return {
 					type: 'blacklist',
 					parts: [
-						{ type: 'action', value: 'Blacklist' },
+						{ type: 'action', value: args.restricted ? 'Block' : 'Unblock' },
 						{ type: 'account', value: args.account },
 						{ type: 'text', value: 'on Policy' },
 						{ type: 'text', value: `#${args.policyId}` },
@@ -1598,7 +1807,8 @@ function createDetectors(
 				return {
 					type: 'policy admin updated',
 					parts: [
-						{ type: 'action', value: 'New Admin' },
+						{ type: 'action', value: 'Change Policy Admin' },
+						{ type: 'text', value: 'to' },
 						{ type: 'account', value: args.admin },
 						{ type: 'text', value: 'on Policy' },
 						{ type: 'text', value: `#${args.policyId}` },
@@ -1799,7 +2009,7 @@ function createDetectors(
 				return {
 					type: 'open channel',
 					parts: [
-						{ type: 'action', value: 'MPP Session Opened' },
+						{ type: 'action', value: 'Open MPP Session' },
 						{ type: 'amount', value: createAmount(deposit, token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: payee },
@@ -1907,7 +2117,7 @@ function createDetectors(
 				return {
 					type: 'close channel',
 					parts: [
-						{ type: 'action', value: 'MPP Session Closed' },
+						{ type: 'action', value: 'Close MPP Session' },
 						{ type: 'text', value: 'Paid' },
 						paidAmount
 							? {
@@ -1937,7 +2147,7 @@ function createDetectors(
 				return {
 					type: 'channel expired',
 					parts: [
-						{ type: 'action', value: 'Channel Expired' },
+						{ type: 'action', value: 'Expire Channel' },
 						{ type: 'text', value: 'between' },
 						{ type: 'account', value: payer },
 						{ type: 'text', value: 'and' },
@@ -2096,6 +2306,56 @@ export interface KnownEvent {
 	failed?: boolean
 }
 
+function directTransferKey(
+	token: Address.Address,
+	to: Address.Address,
+	amount: bigint,
+): string {
+	return `${token.toLowerCase()}:${to.toLowerCase()}:${amount.toString()}`
+}
+
+/** Keys of token transfers the transaction (or one of its calls) makes directly. */
+/**
+ * Each direct call proves one movement: a matching key is used up, so a second
+ * identical transfer made by a contract in the same transaction stays neutral.
+ */
+function consumeDirectTransfer(
+	keys: Map<string, number>,
+	key: string,
+): boolean {
+	const count = keys.get(key) ?? 0
+	if (count <= 0) return false
+	keys.set(key, count - 1)
+	return true
+}
+
+function findDirectTransferKeys(
+	transaction: TransactionLike | undefined,
+): Map<string, number> {
+	const keys = new Map<string, number>()
+	if (!transaction) return keys
+	// A batch's top-level fields can mirror its first call: count each call once.
+	const calls = transaction.calls?.length ? transaction.calls : [transaction]
+	for (const call of calls) {
+		const input = call.input ?? call.data
+		if (!call.to || !input) continue
+		try {
+			const decoded = decodeFunctionData({ abi: Abis.tip20, data: input })
+			if (
+				decoded.functionName !== 'transfer' &&
+				decoded.functionName !== 'transferWithMemo'
+			)
+				continue
+			const [to, amount] = decoded.args as readonly [Address.Address, bigint]
+			const key = directTransferKey(call.to, to, amount)
+			keys.set(key, (keys.get(key) ?? 0) + 1)
+		} catch {
+			// Not a TIP-20 call this explorer decodes.
+		}
+	}
+	return keys
+}
+
 type TransactionLike = {
 	to?: Address.Address | null
 	input?: Hex.Hex | null | undefined
@@ -2215,6 +2475,8 @@ export function parseKnownEvents(
 		transaction?: TransactionLike
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		viewer?: Address.Address
+		/** Whose history this is: their own Earn interest replaces the batch payout. */
+		holder?: Address.Address
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
@@ -2437,6 +2699,8 @@ export function parseKnownEvents(
 		transactionSender,
 		getStreamChannelToken,
 		zonePortals,
+		findDirectTransferKeys(options?.transaction),
+		new Set(findCardPulls(events, transactionSender).map((pull) => pull.key)),
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -2814,7 +3078,13 @@ export function parseKnownEvents(
 			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event) ||
 			detectors.streamChannel(event) ||
-			createEarnReceiptSummary(event, dedupedEvents, createAmount)
+			createEarnReceiptSummary(
+				event,
+				dedupedEvents,
+				createAmount,
+				options?.holder,
+				transactionSender,
+			)
 
 		if (!detected) continue
 
