@@ -67,6 +67,7 @@ catalog:
   lucide-react: ^1.48.0
   midcut: ^0.2.0
   ox: ^0.14.20
+  posthog-js: ^1.442.0
   prool: ^0.2.4
   react: ^19.2.5
   react-dom: ^19.2.5
