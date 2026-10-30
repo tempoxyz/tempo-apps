@@ -101,6 +101,7 @@ ignoredBuiltDependencies:
   - bufferutil
   - cadent
   - cbor-extract
+  - core-js
   - cpu-features
   - es5-ext
   - protobufjs
