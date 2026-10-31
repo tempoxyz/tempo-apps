@@ -28,7 +28,7 @@
 	},
 	"dependencies": {
 		"hono": "catalog:",
-		"svgo": "^4.0.1",
+		"svgo": "^4.1.0",
 		"viem": "catalog:"
 	},
 	"devDependencies": {

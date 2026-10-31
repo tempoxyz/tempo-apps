@@ -54,7 +54,7 @@
 		"accounts": "catalog:",
 		"animejs": "catalog:",
 		"cva": "catalog:",
-		"hono": "^4.12.31",
+		"hono": "catalog:",
 		"lucide-react": "catalog:",
 		"midcut": "catalog:",
 		"ox": "catalog:",

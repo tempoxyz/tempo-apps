@@ -36,34 +36,34 @@ catalog:
   '@tanstack/react-query': ^5.96.2
   '@tanstack/react-query-devtools': ^5.96.2
   '@tanstack/react-query-persist-client': ^5.96.2
-  '@tanstack/react-router': ^1.168.10
+  '@tanstack/react-router': 1.170.42
   '@tanstack/react-router-devtools': ^1.166.11
   '@tanstack/react-router-ssr-query': ^1.166.10
-  '@tanstack/react-start': ^1.167.16
-  '@tanstack/router-plugin': ^1.167.12
+  '@tanstack/react-start': ~1.168.61
+  '@tanstack/router-plugin': 1.168.43
   '@total-typescript/ts-reset': ^0.6.1
   '@types/animejs': ^3.1.13
   '@types/node': ^25.5.2
   '@types/react': ^19.2.14
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^6.0.1
-  '@vitest/ui': 4.1.0
+  '@vitest/ui': 4.1.12
   '@wagmi/core': ^3.6.5
-  '@modelcontextprotocol/sdk': 1.29.0
+  '@modelcontextprotocol/sdk': 1.32.2
   accounts: ~0.18.0
   abitype: ^1.2.4
-  ai: 6.0.202
+  ai: 6.0.319
   animejs: ^4.3.6
   cloudflare-worker-metrics: ^1.4.0
   cva: ^1.0.0-beta.4
   dotenv: ^17.3.1
   eruda: ^3.4.3
-  esbuild: ^0.28.0
+  esbuild: ^0.28.1
   globals: ^17.4.0
-  hono: ^4.12.22
+  hono: ^4.13.11
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
-  kysely: ^0.28.15
+  kysely: ^0.28.17
   lucide-react: ^1.48.0
   midcut: ^0.2.0
   ox: ^0.14.20
@@ -84,12 +84,12 @@ catalog:
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
   viem: 0.0.0-pr-5325-621d5f9
-  vite: ^8.0.7
+  vite: ^8.1.6
   vite-plugin-devtools-json: ^1.0.0
-  vitest: 4.1.0
+  vitest: 4.1.12
   wagmi: ^3.7.7
   wrangler: ^4.131.0
-  zod: ^4.3.6
+  zod: ^4.6.6
 
 catalogMode: strict
 
@@ -106,6 +106,11 @@ ignoredBuiltDependencies:
   - sharp
   - ssh2
   - vue-demi
+
+# unplugin 3 (via @tanstack/router-plugin) imports types from "bun"; keep Bun's globals out of Workers type checks.
+hoistPattern:
+  - '*'
+  - '!@types/bun'
 
 nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 onlyBuiltDependencies:
@@ -135,24 +140,24 @@ minimumReleaseAgeExclude:
 overrides:
   # viem#5325 prerelease (TIP-1106 nonces); return to a release once it ships.
   viem: 0.0.0-pr-5325-621d5f9
-  # sharp 0.35.4 bundles libheif 1.23.2 (GHSA-rgj7-g3m4-5g8c).
-  'sharp@<0.35.4': 0.35.4
+  # sharp 0.35.5 bundles a patched libheif (GHSA-rgj7-g3m4-5g8c).
+  'sharp@<0.35.5': 0.35.5
   # Patch vulnerable transitive serializers and HTTP clients without changing majors.
-  'seroval@<1.5.4': 1.5.4
-  'undici@>=7 <7.29.1': 7.29.1
+  'seroval@<1.6.8': 1.6.8
+  'undici@>=7 <7.30.1': 7.30.1
   # Regen 0.5 uses the preview OTP export renamed in Base UI 1.6.
   regen-ui>@base-ui/react: 1.4.0
-  basic-ftp: 5.3.0
+  basic-ftp: ^6.2.3
   flatted: ^3.4.2
-  'shell-quote@<1.9.0': 1.9.0
+  'shell-quote@<1.11.0': 1.11.0
   tar: ^7.5.19
   picomatch@<3: ^2.3.2
   picomatch@>=4: ^4.0.4
   lodash: ^4.18.1
-  brace-expansion@<3: ^2.0.3
-  brace-expansion@>=5: ^5.0.5
+  brace-expansion@<3: ^2.1.7
+  brace-expansion@>=5: ^5.0.12
   yaml: ^2.8.3
-  protobufjs: 7.5.5
+  protobufjs: 7.6.6
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
@@ -160,3 +165,7 @@ patchedDependencies:
 strictDepBuilds: true
 
 trustPolicy: no-downgrade
+
+trustPolicyExclude:
+  # Published in 2023, after provenance-attested 7.x releases; already locked here.
+  - semver@6.3.1
