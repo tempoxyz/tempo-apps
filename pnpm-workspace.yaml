@@ -143,7 +143,7 @@ overrides:
   # sharp 0.35.5 bundles a patched libheif (GHSA-rgj7-g3m4-5g8c).
   'sharp@<0.35.5': 0.35.5
   # Patch vulnerable transitive serializers and HTTP clients without changing majors.
-  'seroval@<1.6.8': 1.6.8
+  'seroval@<1.6.12': 1.6.12
   'undici@>=7 <7.30.1': 7.30.1
   # Regen 0.5 uses the preview OTP export renamed in Base UI 1.6.
   regen-ui>@base-ui/react: 1.4.0
