@@ -285,7 +285,7 @@ importers:
         version: 0.3.6
       '@tempoxyz/lints':
         specifier: github:tempoxyz/lints
-        version: https://codeload.github.com/tempoxyz/lints/tar.gz/ae12c3702761418f3afe8dbe6e4f37a83fdd899c
+        version: https://codeload.github.com/tempoxyz/lints/tar.gz/f9268eb2b828dbacf9f4b5d4bf6ad4541826567f
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20260319.1
         version: 7.0.0-dev.20260408.1
@@ -4143,8 +4143,8 @@ packages:
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/ae12c3702761418f3afe8dbe6e4f37a83fdd899c':
-    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/ae12c3702761418f3afe8dbe6e4f37a83fdd899c}
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/f9268eb2b828dbacf9f4b5d4bf6ad4541826567f':
+    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/f9268eb2b828dbacf9f4b5d4bf6ad4541826567f}
     version: 0.1.1
     engines: {node: '>=18'}
     hasBin: true
@@ -7791,7 +7791,7 @@ packages:
     engines: {node: '>=6'}
 
   tapimo@https://pkg.pr.new/tempoxyz/api/tapimo@500:
-    resolution: {tarball: https://pkg.pr.new/tempoxyz/api/tapimo@500}
+    resolution: {integrity: sha512-IdWa52xxYx2vAZL7GXB0iYWqFriD7XQlBj+Z1MhP5VjWBrGJ1G4dY5HBvirDNoX4zBIWWiuRl8hNjwqsLxr1RA==, tarball: https://pkg.pr.new/tempoxyz/api/tapimo@500}
     version: 0.6.0
     hasBin: true
 
@@ -11606,7 +11606,7 @@ snapshots:
       '@tanstack/virtual-core': 3.17.5
       vue: 3.5.44(typescript@6.0.3)
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/ae12c3702761418f3afe8dbe6e4f37a83fdd899c':
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/f9268eb2b828dbacf9f4b5d4bf6ad4541826567f':
     dependencies:
       '@ast-grep/cli': 0.40.5
       commander: 12.1.0
