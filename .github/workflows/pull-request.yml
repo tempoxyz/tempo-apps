@@ -167,8 +167,9 @@ jobs:
           environment: ${{ env.CLOUDFLARE_ENV }}
           command: versions upload
 
-      # Fetch server-rendered pages: llms.txt is served before SSR, so it
-      # still returns 200 when every page fails to render.
+      # Fetch a server-rendered page: llms.txt is served before SSR, so it
+      # still returns 200 when every page fails to render. Only / is checked,
+      # since data pages such as /blocks fail whenever a devnet backend is down.
       - name: Verify explorer preview
         if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
         id: preview-health
@@ -176,11 +177,9 @@ jobs:
           PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           test -n "$PREVIEW_URL"
-          for path in / /blocks; do
-            curl --fail --silent --show-error --location \
-              --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
-              --output /dev/null "$PREVIEW_URL$path"
-          done
+          curl --fail --silent --show-error --location \
+            --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+            --output /dev/null "$PREVIEW_URL/"
 
       - name: Verify explorer llms.txt
         if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
