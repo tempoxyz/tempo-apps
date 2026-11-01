@@ -36,6 +36,14 @@ jobs:
         run: pnpm check:env
         working-directory: apps/explorer
 
+      # Type checks and unit tests never render a page, so a dependency
+      # mismatch that breaks SSR passes them. Build mainnet and require 200s.
+      - name: Smoke test explorer SSR
+        run: bash scripts/build.sh && bash scripts/smoke.sh
+        working-directory: apps/explorer
+        env:
+          CLOUDFLARE_ENV: mainnet
+
       - name: Test llms package
         run: pnpm test
         working-directory: packages/llms

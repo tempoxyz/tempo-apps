@@ -32,8 +32,17 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
         run: |
           if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "is-member=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A branch in this repository needs write access to push, so it is
+          # trusted even when the author's org membership is private
+          # (author_association then reads CONTRIBUTOR).
+          if [[ "$HEAD_REPO" == "$REPO" ]]; then
             echo "is-member=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -158,16 +167,20 @@ jobs:
           environment: ${{ env.CLOUDFLARE_ENV }}
           command: versions upload
 
-      - name: Verify zone-prover preview
-        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer' && matrix.env == 'zone-prover'
+      # Fetch server-rendered pages: llms.txt is served before SSR, so it
+      # still returns 200 when every page fails to render.
+      - name: Verify explorer preview
+        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
         id: preview-health
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           test -n "$PREVIEW_URL"
-          curl --fail --silent --show-error --location \
-            --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
-            --output /dev/null "$PREVIEW_URL"
+          for path in / /blocks; do
+            curl --fail --silent --show-error --location \
+              --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+              --output /dev/null "$PREVIEW_URL$path"
+          done
 
       - name: Verify explorer llms.txt
         if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
