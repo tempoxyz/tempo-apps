@@ -3,11 +3,13 @@
 # Smoke test a built explorer: serve dist/ in the Workers runtime and require
 # 200 from server-rendered pages. Catches SSR breakage (such as dependency
 # mismatches) that type checks and unit tests miss. Run after scripts/build.sh.
+# Only pages that render without live RPC or API data are checked, so a slow
+# or rate-limited backend can't fail the build.
 
 set -euo pipefail
 
 port="${PORT:-8788}"
-paths=("/" "/blocks" "/block/1000000")
+paths=("/")
 log="$(mktemp)"
 
 ./node_modules/.bin/wrangler dev \
@@ -18,8 +20,10 @@ log="$(mktemp)"
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true' EXIT
 
+ready=0
 for _ in $(seq 1 60); do
-	if curl --silent --output /dev/null "http://localhost:$port/api/health"; then
+	if curl --silent --max-time 5 --output /dev/null "http://localhost:$port/api/health"; then
+		ready=1
 		break
 	fi
 	if ! kill -0 "$pid" 2>/dev/null; then
@@ -29,6 +33,12 @@ for _ in $(seq 1 60); do
 	fi
 	sleep 1
 done
+
+if [[ "$ready" != "1" ]]; then
+	tail -n 100 "$log"
+	echo "wrangler dev did not become ready" >&2
+	exit 1
+fi
 
 failed=0
 for path in "${paths[@]}"; do

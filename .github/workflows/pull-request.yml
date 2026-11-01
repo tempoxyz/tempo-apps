@@ -32,6 +32,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           REPO: ${{ github.repository }}
         run: |
@@ -41,8 +42,10 @@ jobs:
           fi
           # A branch in this repository needs write access to push, so it is
           # trusted even when the author's org membership is private
-          # (author_association then reads CONTRIBUTOR).
-          if [[ "$HEAD_REPO" == "$REPO" ]]; then
+          # (author_association then reads CONTRIBUTOR). Bots such as
+          # Dependabot also push here but get no Actions secrets, so they
+          # still skip previews.
+          if [[ "$HEAD_REPO" == "$REPO" && "$AUTHOR" != *"[bot]" ]]; then
             echo "is-member=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
