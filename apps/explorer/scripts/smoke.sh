@@ -12,13 +12,14 @@ port="${PORT:-8788}"
 paths=("/")
 log="$(mktemp)"
 
-./node_modules/.bin/wrangler dev \
+# Own process group, so the trap also stops workerd children.
+setsid ./node_modules/.bin/wrangler dev \
 	--config dist/server/wrangler.json \
 	--env-file .env.example \
 	--port "$port" \
 	--show-interactive-dev-session=false >"$log" 2>&1 &
 pid=$!
-trap 'kill "$pid" 2>/dev/null || true' EXIT
+trap 'kill -- -"$pid" 2>/dev/null || true' EXIT
 
 ready=0
 for _ in $(seq 1 60); do

@@ -43,6 +43,7 @@ jobs:
         working-directory: apps/explorer
         env:
           CLOUDFLARE_ENV: mainnet
+          WRANGLER_SEND_METRICS: false
 
       - name: Test llms package
         run: pnpm test

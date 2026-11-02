@@ -32,7 +32,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
-          AUTHOR: ${{ github.event.pull_request.user.login }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           REPO: ${{ github.repository }}
         run: |
@@ -45,7 +45,7 @@ jobs:
           # (author_association then reads CONTRIBUTOR). Bots such as
           # Dependabot also push here but get no Actions secrets, so they
           # still skip previews.
-          if [[ "$HEAD_REPO" == "$REPO" && "$AUTHOR" != *"[bot]" ]]; then
+          if [[ "$HEAD_REPO" == "$REPO" && "$AUTHOR_TYPE" != "Bot" ]]; then
             echo "is-member=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
