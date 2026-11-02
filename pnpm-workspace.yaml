@@ -8,7 +8,7 @@ catalog:
   '@cloudflare/codemode': ^0.4.1
   '@cloudflare/puppeteer': ^1.0.6
   '@cloudflare/vite-plugin': 1.61.0
-  '@cloudflare/vitest-pool-workers': ^0.13.5
+  '@cloudflare/vitest-pool-workers': ^0.22.0
   '@cloudflare/vitest-plugin': 1.3.7
   '@cloudflare/workers-types': ^5.20260926.1
   '@hono/zod-validator': ^0.7.6
@@ -166,6 +166,15 @@ overrides:
   'zod@>=4 <4.6.6': ^4.6.7
   # vocs 2.12 (latest) needs remark-mdx-frontmatter 5, which uses toml 3; toml 5 keeps parse() (GHSA-v5mp-jgw5-2x6j and others).
   'toml@<5.0.1': 5.0.1
+  # archiver 7 (testcontainers) and Sentry/rimraf pull glob 10/13 and minimatch 5/9/10 (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249); bounded at 5 so minimatch 3 consumers stay on 3.
+  'glob@>=9.0.0 <14.0.2': 14.0.3
+  'minimatch@>=5.0.0 <11.0.1': 11.0.3
+  # wata 0.4 (latest) asks for @hono/node-server ^1, all affected by GHSA-rmxm-3fg6-px4f; it only uses getRequestListener, which 2.x keeps.
+  'wata>@hono/node-server': ^2.1.5
+  # dockerode 4.0.12 (testcontainers 11) pins uuid ^10 (GHSA-w5hq-g745-h8pq); 11.1.1 keeps the CommonJS v4 export it requires.
+  'dockerode>uuid': 11.1.1
+  # drizzle-kit (latest) still pulls esbuild 0.18 through @esbuild-kit/core-utils (GHSA-67mh-4wv8-2f99).
+  'esbuild@<0.25.0': 0.25.12
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
