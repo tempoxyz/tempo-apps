@@ -12,13 +12,16 @@ port="${PORT:-8788}"
 paths=("/")
 log="$(mktemp)"
 
-# Own process group, so the trap also stops workerd children.
-setsid ./node_modules/.bin/wrangler dev \
+# Own process group (job control), so the trap also stops workerd children.
+# set -m works in plain bash on Linux and macOS, unlike setsid.
+set -m
+./node_modules/.bin/wrangler dev \
 	--config dist/server/wrangler.json \
 	--env-file .env.example \
 	--port "$port" \
 	--show-interactive-dev-session=false >"$log" 2>&1 &
 pid=$!
+set +m
 trap 'kill -- -"$pid" 2>/dev/null || true' EXIT
 
 ready=0
