@@ -332,7 +332,7 @@ export const docs = {
 	},
 	'/api/rpc': {
 		title: 'JSON-RPC',
-		description: `Proxies JSON-RPC 2.0 requests, single or batched, to the network’s node. Accepts ${methodList(READ_METHODS)}. Every network except zone-prover also accepts ${methodList([...PUBLIC_METHODS].filter((method) => !READ_METHODS.has(method)))}.`,
+		description: `Proxies JSON-RPC 2.0 requests, single or batched, to the network’s node. Accepts ${methodList(READ_METHODS)}. Also accepts ${methodList([...PUBLIC_METHODS].filter((method) => !READ_METHODS.has(method)))}.`,
 	},
 	'/api/health': {
 		title: 'Health',

@@ -1,6 +1,5 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
-import { ZONE_PROVER_CHAIN_ID } from './zone-prover'
 
 export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
@@ -231,13 +230,15 @@ export const zonePortalActivityAbi = parseAbi([
 
 // T13 adds the processed token count to BatchSubmitted, changing its topic.
 // Keep the earlier query signature for networks that have not activated T13.
+/** Chains whose Zone Portals emit the T13 BatchSubmitted event. */
+const T13_ZONE_PORTAL_CHAIN_IDS = new Set<number>()
 const zonePortalT13BatchAbi = parseAbi([
 	'event BatchSubmitted(uint64 indexed withdrawalBatchIndex, uint256 indexed withdrawalQueueIndex, bytes32 nextProcessedDepositQueueHash, bytes32 nextBlockHash, bytes32 withdrawalQueueHash, uint64 lastProcessedDepositNumber, uint64 lastProcessedEnabledTokenCount)',
 ])
 export function getZonePortalActivityAbi(chainId: number) {
 	return [
 		zonePortalActivityAbi[0],
-		chainId === ZONE_PROVER_CHAIN_ID
+		T13_ZONE_PORTAL_CHAIN_IDS.has(chainId)
 			? zonePortalT13BatchAbi[0]
 			: zonePortalActivityAbi[1],
 		zonePortalActivityAbi[2],

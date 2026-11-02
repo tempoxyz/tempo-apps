@@ -8,7 +8,6 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('Zone Portal batch query signatures', () => {
 	it.each([
-		[31319, zoneProverBatchLog.topics[0]],
 		[
 			31318,
 			'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',

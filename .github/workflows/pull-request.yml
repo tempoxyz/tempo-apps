@@ -82,8 +82,6 @@ jobs:
           - app: explorer
             env: nextfork
           - app: explorer
-            env: zone-prover
-          - app: explorer
             env: mainnet
           #### fee-payer
           - app: fee-payer

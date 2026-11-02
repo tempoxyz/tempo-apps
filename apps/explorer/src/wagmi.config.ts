@@ -9,7 +9,6 @@ import {
 	tempoMainnet,
 	tempoNextfork,
 	tempoTestnet,
-	tempoZoneProver,
 } from './lib/chains'
 import { getApiUrl, getTempoEnv } from './lib/env'
 import { getExplorerRpcBackend } from './lib/server/network'
@@ -31,7 +30,6 @@ const chains = {
 	testnet: tempoTestnet,
 	devnet: connectedTempoDevnet,
 	nextfork: tempoNextfork,
-	'zone-prover': tempoZoneProver,
 }
 
 export const getTempoChain = createIsomorphicFn()
