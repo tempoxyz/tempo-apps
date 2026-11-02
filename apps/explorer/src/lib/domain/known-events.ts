@@ -1895,7 +1895,7 @@ function createDetectors(
 				return {
 					type: 'key authorized',
 					parts: [
-						{ type: 'action', value: 'Authorize Key' },
+						{ type: 'action', value: 'Add Access Key' },
 						{ type: 'account', value: args.publicKey },
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.account },
@@ -1906,7 +1906,7 @@ function createDetectors(
 				return {
 					type: 'key revoked',
 					parts: [
-						{ type: 'action', value: 'Revoke Key' },
+						{ type: 'action', value: 'Revoke Access Key' },
 						{ type: 'account', value: args.publicKey },
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.account },

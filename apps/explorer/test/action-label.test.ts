@@ -24,6 +24,8 @@ describe('pastTenseAction', () => {
 		['Received', 'Received'],
 		['MPP Payment', 'MPP Payment'],
 		['Nonce Incremented', 'Nonce Incremented'],
+		['Add Access Key', 'Added Access Key'],
+		['Revoke Access Key', 'Revoked Access Key'],
 		// Object internals are not labels.
 		['__proto__', '__proto__'],
 		['constructor', 'constructor'],
