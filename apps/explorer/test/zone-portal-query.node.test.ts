@@ -1,55 +1,97 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { QB, Tidx } from 'tidx.ts'
 import { parseAbiItem, toEventSelector } from 'viem'
-import { getZonePortalActivityAbi } from '#lib/abis'
+import { zonePortalBatchSubmittedEvents } from '#lib/abis'
+import { SUBMIT_BATCH_SELECTORS } from '#lib/server/address-history'
+import { fetchZonePortalActivity } from '#lib/server/zone-portal'
 import { zoneProverBatchLog } from './fixtures/zone-prover-batch'
 
-afterEach(() => vi.unstubAllGlobals())
+describe('Zone Portal batch signatures', () => {
+	it('covers the pre-T13 and T13 BatchSubmitted topics, oldest first', () => {
+		expect(zonePortalBatchSubmittedEvents.map(toEventSelector)).toEqual([
+			'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
+			zoneProverBatchLog.topics[0],
+		])
+	})
 
-describe('Zone Portal batch query signatures', () => {
-	it.each([
-		[31319, zoneProverBatchLog.topics[0]],
-		[
-			31318,
-			'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
-		],
-		[
-			4217,
-			'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
-		],
-		[
-			42431,
-			'0x5a66941dc92cb865480c966eff640c02b1d00d544b74332fd67c6f1cbfccdf39',
-		],
-	])('requests the correct batch event on chain %s', async (chainId, topic) => {
-		let requestedUrl: URL | undefined
+	it('hides both pre-T13 and T13 submitBatch calls', () => {
+		expect(SUBMIT_BATCH_SELECTORS).toEqual(['0x78fb159b', '0x4cd6c7c7'])
+	})
+})
+
+describe('fetchZonePortalActivity batches', () => {
+	const legacyTopic = toEventSelector(zonePortalBatchSubmittedEvents[0])
+	// 3 pre-T13 batches (0..2) then 2 T13 batches (3..4), newest first.
+	const batches = { legacy: [2, 1, 0], t13: [4, 3] }
+
+	afterEach(() => vi.unstubAllGlobals())
+
+	it('pages newest first across the T13 signature change', async () => {
 		vi.stubGlobal(
 			'fetch',
 			vi.fn(async (request: Request) => {
-				requestedUrl = new URL(request.url)
+				const url = new URL(request.url)
+				const signature = url.searchParams
+					.getAll('signature')
+					.find((s) => s.startsWith('BatchSubmitted('))
+				const era =
+					signature &&
+					toEventSelector(parseAbiItem(`event ${signature}`)) === legacyTopic
+						? 'legacy'
+						: 't13'
+				const query = url.searchParams.get('sql') ?? ''
+				if (/count\(/i.test(query))
+					return Response.json({
+						columns: ['count'],
+						rows: [[batches[era].length]],
+						row_count: 1,
+						ok: true,
+					})
+				const limit = Number(/limit (\d+)/i.exec(query)?.[1] ?? 10)
+				const offset = Number(/offset (\d+)/i.exec(query)?.[1] ?? 0)
+				const rows = batches[era]
+					.slice(offset, offset + limit)
+					.map((index) => [
+						1_700_000_000 + index,
+						`0x${index.toString(16).padStart(64, '0')}`,
+						String(index),
+						'1',
+						`0x${'11'.repeat(32)}`,
+						String(index),
+					])
 				return Response.json({
-					columns: ['count'],
-					rows: [[177]],
-					row_count: 1,
+					columns: [
+						'block_timestamp',
+						'tx_hash',
+						'withdrawalBatchIndex',
+						'withdrawalQueueIndex',
+						'withdrawalQueueHash',
+						'lastProcessedDepositNumber',
+					],
+					rows,
+					row_count: rows.length,
 					ok: true,
 				})
 			}),
 		)
-		await QB.from({
-			...Tidx.create({ baseUrl: 'https://indexer.example' }),
-			chainId,
-		})
-			.withAbi(getZonePortalActivityAbi(chainId))
-			.selectFrom('batchsubmitted')
-			.select((eb) => eb.fn.count('tx_hash').as('count'))
-			.where('address', '=', zoneProverBatchLog.address)
-			.execute()
-		expect(requestedUrl?.searchParams.get('chainId')).toBe(String(chainId))
-		const signatures = requestedUrl?.searchParams.getAll('signature') ?? []
-		const batches = signatures.filter((signature) =>
-			signature.startsWith('BatchSubmitted('),
+		const pages = await Promise.all(
+			[1, 2].map((page) =>
+				fetchZonePortalActivity({
+					address: '0x5Ad0000000000000000000000000000000000003',
+					chainId: 4217,
+					kind: 'batches',
+					page,
+					limit: 3,
+				}),
+			),
 		)
-		expect(batches).toHaveLength(1)
-		expect(toEventSelector(parseAbiItem(`event ${batches[0]}`))).toBe(topic)
+		expect(pages.map((p) => p.total)).toEqual([5, 5])
+		expect(
+			pages.map((p) =>
+				p.items.map((item) => (item as { batchIndex: string }).batchIndex),
+			),
+		).toEqual([
+			['4', '3', '2'],
+			['1', '0'],
+		])
 	})
 })
