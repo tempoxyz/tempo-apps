@@ -45,7 +45,7 @@ const server = Bun.serve({
 						{ status: 400 },
 					)
 
-				// A solar version (e.g. 0.8.36+commit.d83529b.solar.0.2.0) runs that pinned solar build
+				// A solar version (e.g. 0.8.38+commit.e7a91fc7.solar.0.3.0) runs that solar build
 				// through its solc-compatible standard JSON interface, the way Forge drives it through a
 				// solc wrapper; every other version runs solc.
 				const solar = parseSolarVersion(body.compilerVersion)
