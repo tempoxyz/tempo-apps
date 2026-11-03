@@ -231,6 +231,9 @@ export function getSolarAuxdataVersion(bytecode: string): string | null {
 				: typeof decoded === 'object' && decoded !== null
 					? (decoded as Record<string, unknown>).solar
 					: undefined
+		// solar 0.2 writes its version as 3 bytes, like solc; later builds write a string such as
+		// `0.3.0-dev+commit.a2b44354`.
+		if (typeof solar === 'string' && solar.length > 0) return solar
 		if (!(solar instanceof Uint8Array) || solar.length !== 3) return null
 		return Array.from(solar).join('.')
 	} catch {

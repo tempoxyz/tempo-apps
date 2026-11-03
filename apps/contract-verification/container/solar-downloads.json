@@ -1,0 +1,12 @@
+[
+	{
+		"rev": "e7a91fc70f29dc8d0c236d56a2aa7706dc2555cf",
+		"version": "0.3.0",
+		"sha256": "fb4a0aaa5a765ae045ef003c68982420f78f7629c40b1497d2bd0fcae4945fc2"
+	},
+	{
+		"rev": "a2b4435466bff1b91459a1bc64b04e5e8144ed9f",
+		"version": "0.3.0-dev",
+		"sha256": "ec50d9140c4fbfe9d8d59e6ad19f23e7bd5b35666bd0fead6807c5be728f7cd6"
+	}
+]

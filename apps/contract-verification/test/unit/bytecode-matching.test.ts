@@ -787,6 +787,13 @@ describe('solar output', () => {
 		expect(getSolarAuxdataVersion('0x6080')).toBeNull()
 	})
 
+	it('reads the solar version solar 0.3 writes as a string', () => {
+		// Tail of a contract built with forge --use solar (solar 0.3.0-dev+commit.a2b44354)
+		const runtime =
+			'0x6080a2646970667358221220a6f986536a6b3b611bb6566f8a588f1b44d39c6e28657cf529581d5b47d59ccd65736f6c61727819302e332e302d6465762b636f6d6d69742e6132623434333534004b'
+		expect(getSolarAuxdataVersion(runtime)).toBe('0.3.0-dev+commit.a2b44354')
+	})
+
 	it('exact-matches a deployment with its immutables filled in', () => {
 		const result = matchBytecode({
 			onchainBytecode: solarFixture.onchainRuntimeBytecode,
