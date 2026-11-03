@@ -58,11 +58,11 @@ const CONTAINER_INSTANCE_COUNT =
 
 /**
  * solar reports a solc-compatible version with its commit and own version as build metadata, such
- * as `0.8.36+commit.d83529b.solar.0.2.0`, which Forge sends as `compilerVersion` when `solc` points
- * at solar. The container compiles those with the pinned solar build they name.
+ * as `0.8.38+commit.e7a91fc7.solar.0.3.0` (or `0.3.0-dev` for the solar Foundry bundles), which Forge
+ * sends as `compilerVersion` for solar builds. The container compiles those with the solar build they name.
  */
 function isSolarCompilerVersion(compilerVersion: string): boolean {
-	return /^v?\d+\.\d+\.\d+\+commit\.[0-9a-f]{7,40}\.solar\.\d+\.\d+\.\d+$/.test(
+	return /^v?\d+\.\d+\.\d+\+commit\.[0-9a-f]{7,40}\.solar\.\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(
 		compilerVersion,
 	)
 }
@@ -742,7 +742,7 @@ async function runVerificationJob(
 					completedAt: new Date().toISOString(),
 					errorCode: 'solar_compiler_version_required',
 					errorData: JSON.stringify({
-						message: `The bytecode at ${address} was compiled by solar ${onchainSolarVersion}, but compilerVersion ${compilerVersion} names solc. Resubmit with the solar build's solc-compatible version (the Version line of \`SOLC_WRAPPER=1 solar --version\`, e.g. 0.8.36+commit.d83529b.solar.0.2.0); with Forge pass it as --compiler-version together with --compilation-profile default.`,
+						message: `The bytecode at ${address} was compiled by solar ${onchainSolarVersion}, but compilerVersion ${compilerVersion} names solc. Resubmit with the solar build's solc-compatible version (the Version line of \`SOLC_WRAPPER=1 solar --version\`, e.g. 0.8.38+commit.e7a91fc7.solar.0.3.0); with Forge, run forge verify-contract with --use solar.`,
 					}),
 					compilationTime: Date.now() - startTime,
 				})
