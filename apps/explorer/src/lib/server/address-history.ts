@@ -2,8 +2,8 @@ import { type InferResponseType, parseResponse } from 'hono/client'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import {
-	getAbiItem,
 	toFunctionSelector,
+	type AbiFunction,
 	type Log,
 	type TransactionReceipt,
 } from 'viem'
@@ -32,9 +32,14 @@ import { isZonePortalAddress } from '#lib/domain/zones'
 export const [MAX_LIMIT, DEFAULT_LIMIT] = [10, 10]
 const HISTORY_TOTAL_CACHE_TTL = 60_000
 const HISTORY_TOTAL_CACHE_MAX_ENTRIES = 50
-export const SUBMIT_BATCH_SELECTOR = toFunctionSelector(
-	getAbiItem({ abi: zonePortalAbi, name: 'submitBatch' }),
-)
+// One selector per submitBatch signature (T13 added tokenEnablementTransition).
+export const SUBMIT_BATCH_SELECTORS = [
+	...new Set(
+		zonePortalAbi
+			.filter((item) => item.type === 'function' && item.name === 'submitBatch')
+			.map((item) => toFunctionSelector(item as AbiFunction)),
+	),
+]
 
 export type EnrichedTransaction = {
 	hash: `0x${string}`
@@ -194,9 +199,12 @@ async function fetchFilteredHistoryPage(
 	const account = address.toLowerCase()
 	const direction = searchParams.sort === 'asc' ? 'ASC' : 'DESC'
 	const callDestination = `"to"[[:space:]]*:[[:space:]]*"${account}"`
-	const callInput = `"(?:input|data)"[[:space:]]*:[[:space:]]*"${SUBMIT_BATCH_SELECTOR}`
+	const callInput = `"(?:input|data)"[[:space:]]*:[[:space:]]*"(?:${SUBMIT_BATCH_SELECTORS.join('|')})`
+	const startsWithSubmitBatch = SUBMIT_BATCH_SELECTORS.map(
+		(selector) => `startsWith(lower(ifNull(t.input, '')), '${selector}')`,
+	).join(' OR ')
 	const filters = [
-		`NOT (ifNull(t."to", '') = '${account}' AND startsWith(lower(ifNull(t.input, '')), '${SUBMIT_BATCH_SELECTOR}'))`,
+		`NOT (ifNull(t."to", '') = '${account}' AND (${startsWithSubmitBatch}))`,
 		// Indexed calls are flat JSON objects. TIDX's SQL validator does not
 		// support array lambdas, so match the two fields within one object in
 		// either key order. The brace boundary prevents matching different calls.

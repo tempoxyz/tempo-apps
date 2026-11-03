@@ -15,7 +15,7 @@ import { getChainBackend } from './network'
 import {
 	buildTokenMetadataLookup,
 	toEnrichedTransaction,
-	SUBMIT_BATCH_SELECTOR,
+	SUBMIT_BATCH_SELECTORS,
 } from './address-history'
 import { getTransactionActivities } from './transaction-activities'
 import { isZonePortalAddress } from '#lib/domain/zones'
@@ -224,9 +224,11 @@ async function normalizeRows(
 					calls.some(
 						(call) =>
 							call.to?.toLowerCase() === options.address &&
-							(call.input ?? call.data ?? '')
-								.toLowerCase()
-								.startsWith(SUBMIT_BATCH_SELECTOR),
+							SUBMIT_BATCH_SELECTORS.some((selector) =>
+								(call.input ?? call.data ?? '')
+									.toLowerCase()
+									.startsWith(selector),
+							),
 					)
 				)
 					return false
