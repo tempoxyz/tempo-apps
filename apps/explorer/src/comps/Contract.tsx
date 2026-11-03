@@ -52,6 +52,57 @@ function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
 }
 
 /**
+ * One line of how a verified contract was compiled: compiler and version, language, optimizer,
+ * EVM version and how its bytecode matched.
+ */
+function CompilationSummary(props: {
+	source: ContractSource
+}): React.JSX.Element | null {
+	const { source } = props
+	if (source.kind !== 'verified') return null
+	const { compilation } = source
+	const settings = compilation.compilerSettings
+	const items: Array<{ label: string; value: string }> = [
+		{
+			label: 'Compiler',
+			value: `${compilation.compiler} ${compilation.compilerVersion}`,
+		},
+		{ label: 'Language', value: compilation.language },
+	]
+	if (settings.optimizer)
+		items.push({
+			label: 'Optimizer',
+			value: settings.optimizer.enabled
+				? `${settings.optimizer.runs} runs`
+				: 'off',
+		})
+	if (settings.evmVersion)
+		items.push({ label: 'EVM', value: settings.evmVersion })
+	if (settings.viaIR) items.push({ label: 'Via IR', value: 'yes' })
+	const match = source.runtimeMatch ?? source.match
+	if (match)
+		items.push({
+			label: 'Match',
+			value: match === 'exact_match' ? 'exact' : 'partial',
+		})
+	return (
+		<section
+			aria-label="Compilation"
+			className="flex flex-wrap items-center gap-x-[16px] gap-y-[4px] px-[16px] py-[10px] copy-13 border-b border-solid border-distinct"
+		>
+			{items.map((item) => (
+				<span key={item.label} className="whitespace-nowrap">
+					<span className="text-tertiary">{item.label}</span>{' '}
+					<span className="text-secondary font-mono break-all whitespace-normal">
+						{item.value}
+					</span>
+				</span>
+			))}
+		</section>
+	)
+}
+
+/**
  * Contract tab content - shows ABI and Source
  */
 export function ContractTabContent(props: {
@@ -119,6 +170,7 @@ export function ContractTabContent(props: {
 			)}
 
 			{/* Source Section */}
+			{source && <CompilationSummary source={source} />}
 			{source && <SourceSection {...source} docsUrl={docsUrl} />}
 
 			{/* ABI Section */}
