@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	cleanSolcVersion,
 	parseSolarVersion,
+	findDownloadableSolarBuild,
 	findPinnedSolarBuild,
 } from '../../container/compiler.ts'
 
@@ -107,5 +108,34 @@ describe('findPinnedSolarBuild', () => {
 		expect(() =>
 			findPinnedSolarBuild('0.8.36+commit.1835d247', builds),
 		).toThrow('Not a solar compilerVersion')
+	})
+})
+
+describe('findDownloadableSolarBuild', () => {
+	it('finds the solar 0.3.0 release and the build Foundry bundles', () => {
+		expect(
+			findDownloadableSolarBuild('0.8.38+commit.e7a91fc7.solar.0.3.0')?.rev,
+		).toBe('e7a91fc70f29dc8d0c236d56a2aa7706dc2555cf')
+		expect(
+			findDownloadableSolarBuild('0.8.38+commit.a2b44354.solar.0.3.0-dev')
+				?.sha256,
+		).toMatch(/^[0-9a-f]{64}$/)
+	})
+
+	it('accepts a full 40-character commit', () => {
+		expect(
+			findDownloadableSolarBuild(
+				'0.8.38+commit.e7a91fc70f29dc8d0c236d56a2aa7706dc2555cf.solar.0.3.0',
+			)?.version,
+		).toBe('0.3.0')
+	})
+
+	it('refuses builds without a pinned checksum', () => {
+		expect(
+			findDownloadableSolarBuild('0.8.38+commit.deadbeef.solar.0.3.0'),
+		).toBeNull()
+		expect(
+			findDownloadableSolarBuild('0.8.38+commit.e7a91fc7.solar.0.3.1'),
+		).toBeNull()
 	})
 })

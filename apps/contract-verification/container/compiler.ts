@@ -2,6 +2,7 @@ import * as NodeFS from 'node:fs/promises'
 import { gunzipSync } from 'node:zlib'
 
 import solarBuilds from './solar-builds.json' with { type: 'json' }
+import solarDownloads from './solar-downloads.json' with { type: 'json' }
 
 const GITHUB_BASE_URL = 'https://github.com'
 
@@ -165,15 +166,28 @@ export function parseSolarVersion(
 	return { solcVersion, commit, solarVersion }
 }
 
+const SOLAR_CACHE_DIR = '/tmp/solar-cache'
+// Static musl build: runs on the distroless image natively, and through QEMU on arm64 hosts.
+const SOLAR_PLATFORM = 'x86_64-unknown-linux-musl'
+const SOLAR_GITHUB_RELEASES_URL = `${GITHUB_BASE_URL}/paradigmxyz/solar/releases/download`
+// Sourcify's copies of solar builds that are not a release, such as the one Foundry bundles
+// (`forge --use solar`), named solar-<platform>-v<version>+commit.<8-char commit>.
+const SOLAR_DEV_BUILDS_URL =
+	'https://storage.googleapis.com/solar-dev-binary/solar'
+
+export type SolarDownload = SolarBuild & {
+	/** SHA-256 of the x86_64-unknown-linux-musl solar binary (for a release, the one in its archive). */
+	sha256: string
+}
+
 /**
- * Finds the pinned solar build a version string names, among the builds in `solar-builds.json`,
- * which the Dockerfile compiles from source for commits solar published no binary of. Returns null
- * when none is pinned: such a version is downloaded instead (see `getSolarPath`).
+ * Finds the solar build a version string names among `builds`, matching its (possibly abbreviated)
+ * commit against each build's full revision. Returns null when none, or more than one, matches.
  */
-export function findPinnedSolarBuild(
+function findSolarBuild<build extends SolarBuild>(
 	compilerVersion: string,
-	builds: readonly SolarBuild[] = solarBuilds,
-): (SolarBuild & SolarVersion) | null {
+	builds: readonly build[],
+): (build & SolarVersion) | null {
 	const parsed = parseSolarVersion(compilerVersion)
 	if (!parsed)
 		throw new Error(`Not a solar compilerVersion: ${compilerVersion}`)
@@ -187,20 +201,38 @@ export function findPinnedSolarBuild(
 	return { ...build, ...parsed }
 }
 
-const SOLAR_CACHE_DIR = '/tmp/solar-cache'
-// Static musl build: runs on the distroless image natively, and through QEMU on arm64 hosts.
-const SOLAR_PLATFORM = 'x86_64-unknown-linux-musl'
-const SOLAR_GITHUB_RELEASES_URL = `${GITHUB_BASE_URL}/paradigmxyz/solar/releases/download`
-// Sourcify's copies of solar builds that are not a release, such as the one Foundry bundles
-// (`forge --use solar`), named solar-<platform>-v<version>+commit.<commit>.
-const SOLAR_DEV_BUILDS_URL =
-	'https://storage.googleapis.com/solar-dev-binary/solar'
+/**
+ * Finds the pinned solar build a version string names, among the builds in `solar-builds.json`,
+ * which the Dockerfile compiles from source for commits solar published no binary of. Returns null
+ * when none is pinned.
+ */
+export function findPinnedSolarBuild(
+	compilerVersion: string,
+	builds: readonly SolarBuild[] = solarBuilds,
+): (SolarBuild & SolarVersion) | null {
+	return findSolarBuild(compilerVersion, builds)
+}
 
 /**
- * Path to the solar binary for a solar compilerVersion: a pinned build from `solar-builds.json`, or
- * else the release (from solar's GitHub releases) or development build (from Sourcify's copies, as
- * Sourcify itself does) that the version names, downloaded once and checked to report that exact
- * version and commit.
+ * Finds the downloadable solar build a version string names, among the builds in
+ * `solar-downloads.json`: solar releases and Sourcify's copies of development builds, each pinned
+ * to the SHA-256 of its binary. Returns null when none is listed.
+ */
+export function findDownloadableSolarBuild(
+	compilerVersion: string,
+	builds: readonly SolarDownload[] = solarDownloads,
+): (SolarDownload & SolarVersion) | null {
+	return findSolarBuild(compilerVersion, builds)
+}
+
+// One download per build per instance, shared by concurrent requests.
+const solarDownloadsInFlight = new Map<string, Promise<string>>()
+
+/**
+ * Path to the solar binary for a solar compilerVersion: a pinned build from `solar-builds.json`
+ * (built from source by the Dockerfile), or a build listed in `solar-downloads.json`, downloaded once
+ * from solar's GitHub releases or Sourcify's copies of development builds and used only when its
+ * SHA-256 matches the pinned one. Any other solar version is refused without a download.
  */
 export async function getSolarPath(compilerVersion: string) {
 	const pinned = findPinnedSolarBuild(compilerVersion)
@@ -216,43 +248,62 @@ export async function getSolarPath(compilerVersion: string) {
 		return { path: fsPath, version: pinned as SolarVersion }
 	}
 
-	const version = parseSolarVersion(compilerVersion)
-	if (!version)
-		throw new Error(`Not a solar compilerVersion: ${compilerVersion}`)
+	const download = findDownloadableSolarBuild(compilerVersion)
+	if (!download) {
+		const parsed = parseSolarVersion(compilerVersion)
+		const supported = [...solarBuilds, ...solarDownloads]
+			.map((build) => `${build.rev.slice(0, 8)} (${build.version})`)
+			.join(', ')
+		throw new Error(
+			`Unsupported solar build ${parsed?.commit} (${parsed?.solarVersion}); supported builds: ${supported}`,
+		)
+	}
+
+	let path = solarDownloadsInFlight.get(download.rev)
+	if (!path) {
+		path = installSolarDownload(download).finally(() =>
+			solarDownloadsInFlight.delete(download.rev),
+		)
+		solarDownloadsInFlight.set(download.rev, path)
+	}
+	return { path: await path, version: download as SolarVersion }
+}
+
+async function installSolarDownload(download: SolarDownload): Promise<string> {
 	const cacheDir = Bun.env.SOLAR_CACHE_DIR ?? SOLAR_CACHE_DIR
 	await NodeFS.mkdir(cacheDir, { recursive: true })
-	const fileName = `solar-${SOLAR_PLATFORM}-v${version.solarVersion}+commit.${version.commit}`
-	const fsPath = `${cacheDir}/${fileName}`
-	if (await isSolarBuild(fsPath, version)) return { path: fsPath, version }
+	const fsPath = `${cacheDir}/solar-${download.version}-${download.rev}`
+	const cached = await Bun.file(fsPath)
+		.bytes()
+		.catch(() => null)
+	if (cached && sha256Hex(cached) === download.sha256) return fsPath
 
-	const binary = await downloadSolar(version, fileName)
+	const binary = await downloadSolar(download)
+	// Check the binary before it is written executable, let alone run.
+	const digest = sha256Hex(binary)
+	if (digest !== download.sha256)
+		throw new Error(
+			`Downloaded solar ${download.version}+commit.${download.rev.slice(0, 8)} has SHA-256 ${digest}, expected ${download.sha256}`,
+		)
 	// Write under a unique name and rename, so a parallel request never runs a half-written binary.
 	const tmpPath = `${fsPath}.${crypto.randomUUID()}.tmp`
 	try {
 		await Bun.write(tmpPath, binary)
 		await NodeFS.chmod(tmpPath, 0o755)
-		if (!(await isSolarBuild(tmpPath, version)))
-			throw new Error(
-				`Downloaded solar is not ${version.solarVersion}+commit.${version.commit}`,
-			)
 		await NodeFS.rename(tmpPath, fsPath)
 	} finally {
 		await NodeFS.rm(tmpPath, { force: true })
 	}
-	return { path: fsPath, version }
+	return fsPath
 }
 
-async function downloadSolar(
-	version: SolarVersion,
-	fileName: string,
-): Promise<Uint8Array> {
-	// A release tag names only solar's version, so isSolarBuild checks its commit afterwards.
-	if (!version.solarVersion.includes('-')) {
-		const url = `${SOLAR_GITHUB_RELEASES_URL}/v${version.solarVersion}/solar-${SOLAR_PLATFORM}.tar.gz`
+async function downloadSolar(download: SolarDownload): Promise<Uint8Array> {
+	if (!download.version.includes('-')) {
+		const url = `${SOLAR_GITHUB_RELEASES_URL}/v${download.version}/solar-${SOLAR_PLATFORM}.tar.gz`
 		const response = await fetch(url)
 		if (!response.ok)
 			throw new Error(
-				`Failed to download solar ${version.solarVersion}: ${url} returned ${response.status}`,
+				`Failed to download solar ${download.version}: ${url} returned ${response.status}`,
 			)
 		const binary = extractFileFromTarGz(
 			new Uint8Array(await response.arrayBuffer()),
@@ -261,42 +312,18 @@ async function downloadSolar(
 		if (!binary) throw new Error(`No solar binary in ${url}`)
 		return binary
 	}
+	const fileName = `solar-${SOLAR_PLATFORM}-v${download.version}+commit.${download.rev.slice(0, 8)}`
 	const url = `${SOLAR_DEV_BUILDS_URL}/${encodeURIComponent(fileName)}`
 	const response = await fetch(url)
 	if (!response.ok)
 		throw new Error(
-			`Unsupported solar build ${version.solarVersion}+commit.${version.commit}: it is not a release, and no copy of it is published (${response.status})`,
+			`Failed to download solar ${download.version}+commit.${download.rev.slice(0, 8)}: ${url} returned ${response.status}`,
 		)
 	return new Uint8Array(await response.arrayBuffer())
 }
 
-/** Whether the binary at fsPath runs and reports exactly this solar version and commit. */
-async function isSolarBuild(
-	fsPath: string,
-	version: SolarVersion,
-): Promise<boolean> {
-	const stat = await Bun.file(fsPath)
-		.stat()
-		.catch(() => null)
-	if (!stat?.size) return false
-	try {
-		const proc = Bun.spawn([fsPath, '--version'], {
-			stdout: 'pipe',
-			stderr: 'pipe',
-		})
-		const stdout = await new Response(proc.stdout).text()
-		if ((await proc.exited) !== 0) return false
-		// The first line is e.g. `solar 0.3.0+commit.e7a91fc7`.
-		const match = /^solar (\S+)\+commit\.([0-9a-f]+)$/.exec(
-			stdout.split('\n')[0]?.trim() ?? '',
-		)
-		return (
-			match?.[1] === version.solarVersion &&
-			(match[2]?.startsWith(version.commit) ?? false)
-		)
-	} catch {
-		return false
-	}
+function sha256Hex(bytes: Uint8Array): string {
+	return new Bun.CryptoHasher('sha256').update(bytes).digest('hex')
 }
 
 /** Returns one regular file of a .tar.gz archive (ustar, as solar's release archives are). */

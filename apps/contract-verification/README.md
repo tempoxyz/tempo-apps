@@ -64,8 +64,11 @@ Forge sends the solc-compatible version solar reports as a solc wrapper (the `Ve
 container compiles those with the solar build that names, through `solar --standard-json`, and
 records the compilation as compiler `solar`. It downloads releases from solar's GitHub releases
 and development builds, such as the `0.3.0-dev` one Foundry bundles, from the copies Sourcify
-publishes, and checks that each binary reports the requested version and commit. Builds that are
-neither, like the one Earn uses, are pinned in [container/solar-builds.json](./container/solar-builds.json)
+publishes. Only builds listed in [container/solar-downloads.json](./container/solar-downloads.json)
+are downloaded, and each is used only when its SHA-256 matches the one listed there; any other solar
+version is refused. To support a new solar build, add its full revision, version and the SHA-256 of
+its `x86_64-unknown-linux-musl` binary (for a release, the `solar` file in its archive). Builds that
+are neither, like the one Earn uses, are pinned in [container/solar-builds.json](./container/solar-builds.json)
 and built from source by the Dockerfile.
 
 With an older Forge that sends the solc version for a solar build, pass the solar one with
