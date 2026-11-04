@@ -195,9 +195,15 @@ async function loadMeta(
 			index * 3,
 			index * 3 + 3,
 		)
-		if (currency?.status === 'success' && currency.result === 'USD')
-			usd.add(address)
-		if (symbol?.status !== 'success' || decimals?.status !== 'success') return
+		// A failed currency read leaves the token unread, so its pools count as
+		// missing and the snapshot isn't cached, rather than valued as non-USD.
+		if (
+			symbol?.status !== 'success' ||
+			decimals?.status !== 'success' ||
+			currency?.status !== 'success'
+		)
+			return
+		if (currency.result === 'USD') usd.add(address)
 		tokens.set(address, {
 			address,
 			symbol: String(symbol.result),
