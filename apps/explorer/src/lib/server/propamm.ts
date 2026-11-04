@@ -5,7 +5,9 @@ import {
 	decodeEventLog,
 	formatUnits,
 	type Hex,
+	pad,
 	parseAbi,
+	toHex,
 	toEventSelector,
 } from 'viem'
 import { Abis } from '#lib/abis'
@@ -478,18 +480,33 @@ async function readTrades(
 	since: number,
 ): Promise<PropAmmTrade[]> {
 	if (pools.length === 0) return []
-	const addresses = [...new Set(pools.map((pool) => pool.config.address))]
-	// A venue can list pairs that aren't shown, so read a margin past the
-	// trades shown before filtering them out.
+	// Only the listed pairs' fills, so a venue's other pairs can't crowd them
+	// out of the latest trades.
+	const v1 = [
+		...new Set(
+			pools
+				.filter((pool) => pool.config.version === 'v1')
+				.map((pool) => pool.config.address),
+		),
+	]
+	const v2 = pools.filter((pool) => pool.config.version === 'v2')
+	const matches = [
+		...(v1.length > 0
+			? [`(selector = '${tradeExecuted}' AND address IN (${list(v1)}))`]
+			: []),
+		...v2.map(
+			(pool) =>
+				`(selector = '${fill}' AND address = '${pool.config.address}' AND topic1 = '${pad(toHex(pool.config.pairIndex), { size: 32 })}')`,
+		),
+	]
 	const rows = await indexer(
 		chainId,
 		`SELECT tx_hash, log_idx, block_num, toUnixTimestamp(block_timestamp) AS ts,
 			address, topic0, topic1, topic2, topic3, data FROM logs
-		WHERE selector IN ('${tradeExecuted}', '${fill}')
-			AND address IN (${list(addresses)})
+		WHERE (${matches.join(' OR ')})
 			AND block_timestamp >= '${sqlTime(since * 1000)}'
 		ORDER BY block_num DESC, log_idx DESC
-		LIMIT ${SHOWN_TRADES * 5}`,
+		LIMIT ${SHOWN_TRADES}`,
 	)
 	return rows
 		.flatMap((row) => {

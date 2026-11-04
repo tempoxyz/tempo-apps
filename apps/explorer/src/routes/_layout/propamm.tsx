@@ -108,21 +108,25 @@ function PropAmmPage(): React.JSX.Element {
 			totals.month += total.volume.month
 		}
 		// A v2 venue's balances back all of its pairs, so each venue's token
-		// balance counts once.
+		// balance counts once, valued by the first listed pair that holds it so
+		// sorting can't change the total.
 		const held = new Map<string, number>()
-		for (const pool of rows) {
+		const hold = (key: string, value: number) => {
+			if (!held.has(key)) held.set(key, value)
+		}
+		for (const pool of pools ?? []) {
 			if (pool.baseValue === null || pool.quoteValue === null)
 				totals.partial = true
 			if (pool.baseValue !== null)
-				held.set(`${pool.address}-${pool.base.address}`, pool.baseValue)
+				hold(`${pool.address}-${pool.base.address}`, pool.baseValue)
 			if (pool.quoteValue !== null)
-				held.set(`${pool.address}-${pool.quote.address}`, pool.quoteValue)
+				hold(`${pool.address}-${pool.quote.address}`, pool.quoteValue)
 		}
 		for (const value of held.values()) totals.inventory += value
 		// A pool that couldn't be read is missing from the totals.
 		if (query.data && !query.data.complete) totals.partial = true
 		return totals
-	}, [rows, query.data, volumeTotals])
+	}, [pools, query.data, volumeTotals])
 
 	function sortBy(sort: PropAmmSort) {
 		const dir =
