@@ -1,6 +1,6 @@
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
-import { createPublicClient, type Transport } from 'viem'
+import { createClient, createPublicClient, type Transport } from 'viem'
 import { tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
@@ -25,10 +25,12 @@ import { tempoWallet } from 'wagmi/connectors'
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
-// On the server, one config per incoming request: viem batches and dedupes
-// in-flight RPC calls in module-global caches keyed by client and URL, so a
-// config shared across requests lets one request await a promise settled by
-// another request's fetch, which the Workers runtime cancels as hung.
+// On the server, one RPC client per incoming request: viem batches and
+// dedupes in-flight RPC calls in module-global caches keyed by client and URL,
+// so a client shared across requests lets one request await a promise settled
+// by another request's fetch, which the Workers runtime cancels as hung. The
+// config itself (connectors, store) stays one per isolate: building it sets up
+// the wallet connector, which registers itself in a module-global set.
 const serverWagmiConfigs = new WeakMap<
 	Request,
 	ReturnType<typeof createConfig>
@@ -111,13 +113,47 @@ export function getWagmiConfig() {
 		const request = getCurrentRequest()
 		const cached = request && serverWagmiConfigs.get(request)
 		if (cached) return cached
-		const config = createWagmiConfig()
+		const config = withOwnClients(getSharedWagmiConfig())
 		if (request) serverWagmiConfigs.set(request, config)
 		return config
 	}
+	return getSharedWagmiConfig()
+}
+
+function getSharedWagmiConfig() {
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
 	wagmiConfigSingleton = createWagmiConfig()
 	return wagmiConfigSingleton
+}
+
+/**
+ * A view of `config` whose `getClient` builds and memoizes its own viem clients
+ * (as wagmi's `createConfig` does), leaving everything else shared.
+ */
+function withOwnClients(
+	config: ReturnType<typeof createConfig>,
+): ReturnType<typeof createConfig> {
+	const clients = new Map<number, ReturnType<typeof createClient>>()
+	const view = Object.create(config) as ReturnType<typeof createConfig>
+	view.getClient = ((parameters: { chainId?: number | undefined } = {}) => {
+		const chainId = parameters.chainId ?? config.state.chainId
+		const chain = config.chains.find((x) => x.id === chainId)
+		if (!chain) return config.getClient(parameters as never)
+		let client = clients.get(chain.id)
+		if (!client) {
+			client = createClient({
+				batch: { multicall: true },
+				chain,
+				transport:
+					chain.id === tempoLocalnet.id
+						? http(undefined, { batch: true })
+						: getTempoTransport(),
+			})
+			clients.set(chain.id, client)
+		}
+		return client
+	}) as never
+	return view
 }
 
 function createWagmiConfig(): ReturnType<typeof createConfig> {
