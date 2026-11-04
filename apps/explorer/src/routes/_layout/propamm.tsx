@@ -68,8 +68,10 @@ function PropAmmPage(): React.JSX.Element {
 			if (pool.inventory === null) totals.partial = true
 			else totals.inventory += pool.inventory
 		}
+		// A pool that couldn't be read is missing from the totals.
+		if (query.data && !query.data.complete) totals.partial = true
 		return totals
-	}, [pools])
+	}, [pools, query.data])
 
 	function sortBy(sort: PropAmmSort) {
 		const dir =

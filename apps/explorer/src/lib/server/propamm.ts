@@ -189,6 +189,7 @@ async function readTrades(
 	structures: readonly Structure[],
 	tokens: Map<Address, DexPoolToken>,
 	since: number,
+	blockNumber: bigint,
 ): Promise<PropAmmTrade[]> {
 	if (structures.length === 0) return []
 	const addresses = [
@@ -196,6 +197,7 @@ async function readTrades(
 	]
 	// Every trade in the window is read, so volume is never cut short.
 	const rows: Raw[] = []
+	const seen = new Set<string>()
 	for (let page = 0; ; page++) {
 		if (page === MAX_TRADE_PAGES)
 			throw new Error('Too many propAMM trades to total')
@@ -206,10 +208,17 @@ async function readTrades(
 			WHERE selector IN ('${tradeExecuted}', '${fill}')
 				AND address IN (${list(addresses)})
 				AND block_timestamp >= '${sqlTime(since * 1000)}'
+				AND block_num <= ${blockNumber}
 			ORDER BY block_num DESC, log_idx DESC
 			LIMIT ${TRADES_PAGE} OFFSET ${page * TRADES_PAGE}`,
 		)
-		rows.push(...batch)
+		// Pinned to one block, pages can't shift; ids still guard against repeats.
+		for (const row of batch) {
+			const id = `${row.tx_hash}-${row.log_idx}`
+			if (seen.has(id)) continue
+			seen.add(id)
+			rows.push(row)
+		}
 		if (batch.length < TRADES_PAGE) break
 	}
 	return rows.flatMap((row) => {
@@ -366,7 +375,7 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 	})
 
 	const trades = await withDeadline(
-		readTrades(chainId, structures, tokens, now - 30 * 86_400),
+		readTrades(chainId, structures, tokens, now - 30 * 86_400, blockNumber),
 		TRADES_DEADLINE,
 	).catch((error) => {
 		// Pools still show without volume when the indexer is down or slow.
@@ -375,7 +384,8 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 	})
 	const totals = trades ? tradeTotals(trades, now) : null
 
-	let complete = true
+	// A configured pool that couldn't be read leaves the totals partial.
+	let complete = structures.length === configs.length
 	const pools = structures.flatMap((pool, index): PropAmmPool[] => {
 		const base = tokens.get(pool.base)
 		const quote = tokens.get(pool.quote)
@@ -451,6 +461,7 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 		]
 	})
 
+	if (pools.length < configs.length) complete = false
 	return {
 		generatedAt,
 		complete,
