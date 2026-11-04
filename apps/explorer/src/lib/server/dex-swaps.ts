@@ -36,6 +36,7 @@ import { withDeadline } from '#lib/server/dex-route'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { zAddress, zHash } from '#lib/zod'
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
+import { readBlockNumber } from '#lib/server/block-number'
 
 /** Fills read per page; a swap is one or more fills. */
 const FILLS = 400
@@ -339,7 +340,7 @@ export async function getDexSwaps(
 	const bases = input.bases ?? path
 	const [verified, blockNumber] = await Promise.all([
 		readVerified(chainId),
-		getBatchedClient().getBlockNumber(),
+		readBlockNumber(getBatchedClient()),
 	])
 	const [first, last] = path ? [path[0], path[path.length - 1]] : []
 	const matches = (swap: DexSwap) =>
@@ -444,7 +445,7 @@ async function readTransactionBooks(hash: Hex): Promise<TransactionBooks> {
 	const { books, undetermined } = await readFillBooks(
 		chainId,
 		fills,
-		await getBatchedClient().getBlockNumber(),
+		await readBlockNumber(getBatchedClient()),
 	)
 	return {
 		fills: books.map(({ fill, base, quote }) => ({
@@ -471,8 +472,7 @@ async function withActiveBooks(
 ): Promise<DexTransactionFills> {
 	const bases = [...new Set(result.fills.map((fill) => fill.base.address))]
 	const quotes = bases.length
-		? await getBatchedClient()
-				.getBlockNumber()
+		? await readBlockNumber(getBatchedClient())
 				.then((blockNumber) =>
 					readContracts(
 						bases.map((address) => ({

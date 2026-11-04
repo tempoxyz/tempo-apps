@@ -19,6 +19,10 @@ const { readContract, getMetadata } = vi.hoisted(() => ({
 	readContract: vi.fn(),
 	getMetadata: vi.fn(),
 }))
+vi.mock('#lib/server/block-number', () => ({
+	readBlockNumber: (client: { getBlockNumber: () => Promise<bigint> }) =>
+		client.getBlockNumber(),
+}))
 vi.mock('#wagmi.config', () => ({
 	getBatchedClient: () => ({
 		getBlockNumber: async () => 100n,

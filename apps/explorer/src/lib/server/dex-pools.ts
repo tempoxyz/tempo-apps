@@ -30,6 +30,7 @@ import {
 import { withDeadline } from '#lib/server/dex-route'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
+import { readBlockNumber } from '#lib/server/block-number'
 
 /**
  * Pairs are discovered from the indexer rather than listed exhaustively:
@@ -100,7 +101,7 @@ export async function getDexPools(): Promise<DexPoolsSnapshot> {
 			`SELECT token FROM dex_ohlc_1m WHERE bucket >= '${windows.month}'
 			GROUP BY token ORDER BY sum(quote_volume) DESC LIMIT ${BASES_BY_VOLUME}`,
 		),
-		client.getBlockNumber(),
+		readBlockNumber(client),
 		indexer(chainId, 'SELECT max(num) AS head FROM blocks'),
 		readVerified(chainId),
 	])

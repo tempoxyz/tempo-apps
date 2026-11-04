@@ -1,17 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Address } from 'ox'
 import { Addresses } from 'viem/tempo'
-import {
-	getBlockNumber,
-	getChainId,
-	readContract,
-	readContracts,
-} from 'wagmi/actions'
+import { getChainId, readContract, readContracts } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Abis } from '#lib/abis'
 import type { TokenPolicy, TransferPolicy } from '#lib/domain/token-trust'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
+import { readBlockNumber } from '#lib/server/block-number'
 
 const inputSchema = z.object({
 	token: zAddress(),
@@ -25,7 +21,7 @@ export async function readTokenPolicy(
 	const config = getWagmiConfig()
 	if (input.chainId !== getChainId(config))
 		throw new Error('Token policy chain mismatch')
-	const blockNumber = await getBlockNumber(config)
+	const blockNumber = await readBlockNumber(config.getClient())
 	const registry = {
 		address: Addresses.tip403Registry,
 		abi: Abis.tip403Registry,

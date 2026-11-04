@@ -19,6 +19,7 @@ import {
 } from '#lib/dex-route'
 import { zAddress } from '#lib/zod'
 import { getBatchedClient } from '#wagmi.config'
+import { readBlockNumber } from '#lib/server/block-number'
 
 export type DexLeg = {
 	from: DexToken
@@ -65,7 +66,7 @@ export async function getDexRoute(
 	input: DexRouteInput,
 ): Promise<DexRouteSnapshot> {
 	const client = getBatchedClient()
-	const blockNumber = await client.getBlockNumber()
+	const blockNumber = await readBlockNumber(client)
 	const cache = new Map<string, Promise<DexToken>>()
 	function metadata(address: Address) {
 		const key = address.toLowerCase()

@@ -3,6 +3,7 @@ import type * as Hex from 'ox/Hex'
 import { getTransactionReceipt } from 'viem/actions'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { getWagmiConfig } from '#wagmi.config'
+import { readBlockNumber } from '#lib/server/block-number'
 
 export type ContractCreationData = {
 	blockNumber: bigint
@@ -59,7 +60,7 @@ export async function fetchContractCreationData(
 	const bytecode = await client.getCode({ address })
 	if (!bytecode || bytecode === '0x') return null
 
-	const latestBlock = await client.getBlockNumber()
+	const latestBlock = await readBlockNumber(client)
 	const creationBlock = await binarySearchCreationBlock(
 		client,
 		address,

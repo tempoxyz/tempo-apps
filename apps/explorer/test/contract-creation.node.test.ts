@@ -4,6 +4,10 @@ import { fetchContractCreationData } from '#lib/server/contract-creation'
 const { client } = vi.hoisted(() => ({
 	client: { getCode: vi.fn(), getBlockNumber: vi.fn(), getBlock: vi.fn() },
 }))
+vi.mock('#lib/server/block-number', () => ({
+	readBlockNumber: (client: { getBlockNumber: () => Promise<bigint> }) =>
+		client.getBlockNumber(),
+}))
 vi.mock('#wagmi.config', () => ({ getWagmiConfig: () => ({}) }))
 vi.mock('wagmi/actions', () => ({
 	getChainId: () => 4217,
