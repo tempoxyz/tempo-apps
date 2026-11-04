@@ -46,6 +46,39 @@ export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
 			pairIndex: 0,
 		},
 	],
+	// Moderato testnet: the live tEUR and tARS venue pairs.
+	42431: [
+		{
+			// tEUR/pathUSD
+			version: 'v2',
+			address: '0xdc1ac50784c220d8caa587c3ba0f745d6de868c4',
+			pairIndex: 0,
+		},
+		{
+			// tARS/pathUSD
+			version: 'v2',
+			address: '0xdc1ac50784c220d8caa587c3ba0f745d6de868c4',
+			pairIndex: 1,
+		},
+		{
+			// OUSD/tARS
+			version: 'v2',
+			address: '0xdc1ac50784c220d8caa587c3ba0f745d6de868c4',
+			pairIndex: 2,
+		},
+		{
+			// tEUR/pathUSD, a second tEUR token
+			version: 'v2',
+			address: '0xfd9621c4d8262b63d33b39c0f067ccb7cf55d5fa',
+			pairIndex: 0,
+		},
+		{
+			// tEUR/pathUSD, a second tEUR token
+			version: 'v2',
+			address: '0xfdb84a3aceaa00ae4d605ae707f3d936744e1f16',
+			pairIndex: 0,
+		},
+	],
 }
 
 export function propAmmPoolsFor(chainId: number): readonly PropAmmPoolConfig[] {
