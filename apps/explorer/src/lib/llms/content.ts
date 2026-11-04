@@ -168,7 +168,7 @@ export const docs = {
 			'PropAMM pools, permissioned venues where a market maker trades its own inventory with approved takers: each pool’s price, inventory, the most a taker can buy or sell, state, 1-day and 30-day volume, and the last 30 days of trades.',
 		params: {
 			tab: 'Show `pools` or recent `trades`.',
-			sort: 'Sort pools by `inventory`, `maxBuy`, `maxSell`, `day` volume, or `month` volume.',
+			sort: 'Sort pools by `inventory`, `day` volume, or `month` volume.',
 			dir: 'Sort direction: `asc` or `desc`.',
 		},
 	},

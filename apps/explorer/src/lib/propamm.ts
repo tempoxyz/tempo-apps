@@ -157,10 +157,6 @@ export type PropAmmPool = {
 	quoteBalance: number | null
 	/** Base and quote held, valued in the quote token. */
 	inventory: number | null
-	/** What a taker can buy: the base held, valued in the quote token; 0 while asks are off. */
-	maxBuy: number | null
-	/** What a taker can receive for base: the quote held; 0 while bids are off. */
-	maxSell: number | null
 }
 
 /** A pool with its volume: null while unknown, when trades are loading or unavailable. */
@@ -254,38 +250,7 @@ export type PropAmmTotals = {
 	lastTradeAt: number | null
 }
 
-/** Each pool's 1D and 30D volume and trade count. */
-export function tradeTotals(
-	trades: readonly PropAmmTrade[],
-	now: number,
-): Map<string, PropAmmTotals> {
-	const totals = new Map<string, PropAmmTotals>()
-	const dayAgo = now - 86_400
-	for (const trade of trades) {
-		const total = totals.get(trade.poolKey) ?? {
-			volume: { day: 0, month: 0 },
-			trades: { day: 0, month: 0 },
-			lastTradeAt: null,
-		}
-		total.volume.month += trade.quoteAmount
-		total.trades.month += 1
-		if (trade.timestamp >= dayAgo) {
-			total.volume.day += trade.quoteAmount
-			total.trades.day += 1
-		}
-		total.lastTradeAt = Math.max(total.lastTradeAt ?? 0, trade.timestamp)
-		totals.set(trade.poolKey, total)
-	}
-	return totals
-}
-
-export const propAmmSorts = [
-	'inventory',
-	'maxBuy',
-	'maxSell',
-	'day',
-	'month',
-] as const
+export const propAmmSorts = ['inventory', 'day', 'month'] as const
 export type PropAmmSort = (typeof propAmmSorts)[number]
 
 export const propAmmSearchSchema = z.object({
@@ -304,10 +269,6 @@ function sortValue(pool: PropAmmRow, sort: PropAmmSort): number {
 	switch (sort) {
 		case 'inventory':
 			return pool.inventory ?? -1
-		case 'maxBuy':
-			return pool.maxBuy ?? -1
-		case 'maxSell':
-			return pool.maxSell ?? -1
 		case 'day':
 			return pool.volume?.day ?? -1
 		case 'month':

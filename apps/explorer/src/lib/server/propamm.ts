@@ -15,11 +15,11 @@ import {
 	type PropAmmPool,
 	type PropAmmPoolConfig,
 	type PropAmmSnapshot,
+	type PropAmmTotals,
 	type PropAmmTrade,
 	type PropAmmTradesSnapshot,
 	poolKey,
 	propAmmPoolsFor,
-	tradeTotals,
 	v1State,
 	v2State,
 } from '#lib/propamm'
@@ -72,13 +72,7 @@ const META_TTL = 600
 const POOLS_TTL = 15
 const TRADES_TTL = 30
 
-/** Trades read per indexer query; the pools trade a few hundred times a month. */
-const TRADES_PAGE = 5_000
-
-/** Pages read before volume is reported unknown rather than understated. */
-const MAX_TRADE_PAGES = 20
-
-/** Recent trades sent to the page; volume counts every trade read. */
+/** Recent trades sent to the page; volume counts every trade. */
 const SHOWN_TRADES = 100
 
 /** The v2 mid is quote per base at 18 decimals. */
@@ -286,8 +280,6 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 
 		let price: number | null = null
 		let state: PropAmmPool['state']
-		let bidsOff = false
-		let asksOff = false
 		if (pool.config.version === 'v1') {
 			const paused = value(2) as boolean | undefined
 			const maxOracleAge = value(3) as bigint | number | undefined
@@ -310,8 +302,6 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 			const halted = value(4) as boolean | undefined
 			const word = decodeHotWord(hotWord ? BigInt(hotWord) : 0n)
 			if (word.mid > 0n) price = Number(formatUnits(word.mid, MID_DECIMALS))
-			bidsOff = word.bidsOff
-			asksOff = word.asksOff
 			state =
 				pair === undefined || hotWord === undefined || halted === undefined
 					? 'unknown'
@@ -333,9 +323,6 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 			quoteBalance,
 			inventory:
 				held === null || quoteBalance === null ? null : held + quoteBalance,
-			// A side switched off takes no fills.
-			maxBuy: asksOff ? 0 : held,
-			maxSell: bidsOff ? 0 : quoteBalance,
 		}
 	})
 	return { generatedAt, complete, pools }
@@ -343,7 +330,106 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 
 type Raw = Record<string, unknown>
 
-/** The listed pools' trades in the last 30 days, newest first. */
+const fillSignature =
+	'Fill(uint16 indexed pairIndex, address indexed taker, bytes32 indexed ref, uint64 sponsorId, bool baseIn, uint128 amountIn, uint128 amountOut, uint96 makerMid, uint32 seq)'
+const tradeExecutedSignature =
+	'TradeExecuted(address indexed taker, address indexed recipient, bytes32 indexed customerId, bytes32 tradeId, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, uint256 oraclePrice, uint256 oracleUpdatedAt)'
+
+/** Sums the indexer adds up, as strings so large raw amounts stay exact. */
+function sums(day: string): string {
+	return [
+		'count() AS n',
+		`countIf(block_timestamp >= '${day}') AS n_day`,
+		'toString(sum("amountIn")) AS in_month',
+		'toString(sum("amountOut")) AS out_month',
+		`toString(sumIf("amountIn", block_timestamp >= '${day}')) AS in_day`,
+		`toString(sumIf("amountOut", block_timestamp >= '${day}')) AS out_day`,
+		'max(toUnixTimestamp(block_timestamp)) AS last',
+	].join(', ')
+}
+
+function amount(value: unknown, decimals: number): number {
+	try {
+		return Number(formatUnits(BigInt(String(value ?? '0')), decimals))
+	} catch {
+		return 0
+	}
+}
+
+/**
+ * Each pool's 1D and 30D volume and trade count, summed by the indexer: the
+ * testnet pools fill hundreds of thousands of times a month, too many to page.
+ */
+async function readTotals(
+	chainId: number,
+	pools: readonly PoolMeta[],
+	now: number,
+): Promise<Map<string, PropAmmTotals>> {
+	const month = sqlTime((now - 30 * 86_400) * 1000)
+	const day = sqlTime((now - 86_400) * 1000)
+	const v1 = pools.filter((pool) => pool.config.version === 'v1')
+	const v2 = pools.filter((pool) => pool.config.version === 'v2')
+	const [v1Rows, v2Rows] = await Promise.all([
+		v1.length === 0
+			? []
+			: indexer(
+					chainId,
+					`SELECT address, "tokenIn" AS token_in, ${sums(day)}
+					FROM tradeexecuted
+					WHERE address IN (${list(new Set(v1.map((pool) => pool.config.address)))})
+						AND block_timestamp >= '${month}'
+					GROUP BY address, token_in`,
+					tradeExecutedSignature,
+				),
+		v2.length === 0
+			? []
+			: indexer(
+					chainId,
+					`SELECT address, "pairIndex" AS pair, "baseIn" AS base_in, ${sums(day)}
+					FROM fill
+					WHERE address IN (${list(new Set(v2.map((pool) => pool.config.address)))})
+						AND block_timestamp >= '${month}'
+					GROUP BY address, pair, base_in`,
+					fillSignature,
+				),
+	])
+
+	const totals = new Map<string, PropAmmTotals>()
+	const add = (pool: PoolMeta, row: Raw, baseIn: boolean) => {
+		const total = totals.get(pool.key) ?? {
+			volume: { day: 0, month: 0 },
+			trades: { day: 0, month: 0 },
+			lastTradeAt: null,
+		}
+		// Quote paid or received values the trade.
+		const side = baseIn ? 'out' : 'in'
+		total.volume.month += amount(row[`${side}_month`], pool.quote.decimals)
+		total.volume.day += amount(row[`${side}_day`], pool.quote.decimals)
+		total.trades.month += Number(row.n) || 0
+		total.trades.day += Number(row.n_day) || 0
+		const last = Number(row.last)
+		if (Number.isFinite(last) && last > 0)
+			total.lastTradeAt = Math.max(total.lastTradeAt ?? 0, last)
+		totals.set(pool.key, total)
+	}
+	for (const row of v1Rows) {
+		const address = addressOf(row.address)
+		const pool = v1.find((pool) => pool.config.address === address)
+		if (pool) add(pool, row, addressOf(row.token_in) === pool.base.address)
+	}
+	for (const row of v2Rows) {
+		const address = addressOf(row.address)
+		const pair = Number(row.pair)
+		const pool = v2.find(
+			(pool) =>
+				pool.config.address === address && pool.config.pairIndex === pair,
+		)
+		if (pool) add(pool, row, Number(row.base_in) === 1 || row.base_in === true)
+	}
+	return totals
+}
+
+/** The listed pools' latest trades in the last 30 days, newest first. */
 async function readTrades(
 	chainId: number,
 	pools: readonly PoolMeta[],
@@ -351,46 +437,28 @@ async function readTrades(
 ): Promise<PropAmmTrade[]> {
 	if (pools.length === 0) return []
 	const addresses = [...new Set(pools.map((pool) => pool.config.address))]
-	// Every trade in the window is read, so volume is never cut short. Later
-	// pages stop at the first page's newest block, so logs indexed meanwhile
-	// can't shift them; ids still guard against repeats.
-	const rows: Raw[] = []
-	const seen = new Set<string>()
-	let head: number | undefined
-	for (let page = 0; ; page++) {
-		if (page === MAX_TRADE_PAGES)
-			throw new Error('Too many propAMM trades to total')
-		const batch = await indexer(
-			chainId,
-			`SELECT tx_hash, log_idx, block_num, toUnixTimestamp(block_timestamp) AS ts,
-				address, topic0, topic1, topic2, topic3, data FROM logs
-			WHERE selector IN ('${tradeExecuted}', '${fill}')
-				AND address IN (${list(addresses)})
-				AND block_timestamp >= '${sqlTime(since * 1000)}'
-				${head === undefined ? '' : `AND block_num <= ${head}`}
-			ORDER BY block_num DESC, log_idx DESC
-			LIMIT ${TRADES_PAGE} OFFSET ${page * TRADES_PAGE}`,
-		)
-		if (head === undefined && batch[0]) {
-			const newest = Number(batch[0].block_num)
-			if (Number.isSafeInteger(newest)) head = newest
-		}
-		for (const row of batch) {
-			const id = `${row.tx_hash}-${row.log_idx}`
-			if (seen.has(id)) continue
-			seen.add(id)
-			rows.push(row)
-		}
-		if (batch.length < TRADES_PAGE) break
-	}
-	return rows.flatMap((row) => {
-		try {
-			return toTrade(row, pools)
-		} catch (error) {
-			console.error('Failed to decode a propAMM trade:', error)
-			return []
-		}
-	})
+	// A venue can list pairs that aren't shown, so read a margin past the
+	// trades shown before filtering them out.
+	const rows = await indexer(
+		chainId,
+		`SELECT tx_hash, log_idx, block_num, toUnixTimestamp(block_timestamp) AS ts,
+			address, topic0, topic1, topic2, topic3, data FROM logs
+		WHERE selector IN ('${tradeExecuted}', '${fill}')
+			AND address IN (${list(addresses)})
+			AND block_timestamp >= '${sqlTime(since * 1000)}'
+		ORDER BY block_num DESC, log_idx DESC
+		LIMIT ${SHOWN_TRADES * 5}`,
+	)
+	return rows
+		.flatMap((row) => {
+			try {
+				return toTrade(row, pools)
+			} catch (error) {
+				console.error('Failed to decode a propAMM trade:', error)
+				return []
+			}
+		})
+		.slice(0, SHOWN_TRADES)
 }
 
 function toTrade(row: Raw, pools: readonly PoolMeta[]): PropAmmTrade[] {
@@ -457,12 +525,11 @@ export async function getPropAmmTrades(): Promise<PropAmmTradesSnapshot> {
 	const meta = await readMeta(chainId)
 	// Totals from a partial pool list would read as zero volume.
 	if (!meta.complete) throw new Error('Some propAMM pools could not be read')
-	const trades = await readTrades(chainId, meta.pools, now - 30 * 86_400)
-	return {
-		generatedAt,
-		totals: Object.fromEntries(tradeTotals(trades, now)),
-		trades: trades.slice(0, SHOWN_TRADES),
-	}
+	const [totals, trades] = await Promise.all([
+		readTotals(chainId, meta.pools, now),
+		readTrades(chainId, meta.pools, now - 30 * 86_400),
+	])
+	return { generatedAt, totals: Object.fromEntries(totals), trades }
 }
 
 export const fetchPropAmmPools = createServerFn({ method: 'GET' }).handler(
@@ -489,7 +556,7 @@ export const fetchPropAmmTrades = createServerFn({ method: 'GET' }).handler(
 	async (): Promise<PropAmmTradesSnapshot> => {
 		try {
 			return await withImmutableDataCache({
-				key: `propamm-trades:v1:${getTempoChain().id}`,
+				key: `propamm-trades:v2:${getTempoChain().id}`,
 				ttlSeconds: TRADES_TTL,
 				load: () =>
 					withDeadline(getPropAmmTrades(), META_DEADLINE + TRADES_DEADLINE),

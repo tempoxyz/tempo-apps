@@ -229,16 +229,6 @@ function PropAmmPage(): React.JSX.Element {
 												'Inventory',
 												'Base and quote held, valued in the quote token',
 											),
-											sortable(
-												'maxBuy',
-												'Max buy',
-												'The most base a taker can buy, valued in the quote token',
-											),
-											sortable(
-												'maxSell',
-												'Max sell',
-												'The most quote a taker can receive for base',
-											),
 											{
 												label: 'State',
 												align: 'start',
@@ -268,8 +258,6 @@ function PropAmmPage(): React.JSX.Element {
 																key="inventory"
 																value={pool.inventory}
 															/>,
-															<UsdValue key="maxBuy" value={pool.maxBuy} />,
-															<UsdValue key="maxSell" value={pool.maxSell} />,
 															<StateIndicator key="state" state={pool.state} />,
 															<Volume
 																key="day"

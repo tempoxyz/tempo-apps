@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
 	decodeHotWord,
 	type PropAmmPool,
-	type PropAmmTrade,
 	sortPropAmmPools,
-	tradeTotals,
 	v1State,
 	v2State,
 } from '#lib/propamm.ts'
@@ -72,45 +70,11 @@ describe('v1State', () => {
 	})
 })
 
-describe('tradeTotals', () => {
-	const trade = (poolKey: string, timestamp: number, quoteAmount: number) =>
-		({
-			id: String(timestamp),
-			poolKey,
-			transactionHash: '0x',
-			timestamp,
-			taker: '0x0000000000000000000000000000000000000001',
-			baseIn: false,
-			baseAmount: quoteAmount,
-			quoteAmount,
-		}) satisfies PropAmmTrade
-
-	it('splits 1D from 30D volume per pool', () => {
-		const now = 10 * 86_400
-		const totals = tradeTotals(
-			[
-				trade('a', now - 10, 5),
-				trade('a', now - 2 * 86_400, 7),
-				trade('b', now - 1, 1),
-			],
-			now,
-		)
-		expect(totals.get('a')).toEqual({
-			volume: { day: 5, month: 12 },
-			trades: { day: 1, month: 2 },
-			lastTradeAt: now - 10,
-		})
-		expect(totals.get('b')?.volume).toEqual({ day: 1, month: 1 })
-	})
-})
-
 describe('sortPropAmmPools', () => {
 	const pool = (symbol: string, inventory: number | null) =>
 		({
 			base: { symbol },
 			inventory,
-			maxBuy: null,
-			maxSell: 0,
 			volume: { day: 0, month: 0 },
 		}) as unknown as PropAmmPool
 
