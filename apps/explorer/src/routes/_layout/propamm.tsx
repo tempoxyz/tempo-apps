@@ -107,10 +107,18 @@ function PropAmmPage(): React.JSX.Element {
 			totals.day += total.volume.day
 			totals.month += total.volume.month
 		}
+		// A v2 venue's balances back all of its pairs, so each venue's token
+		// balance counts once.
+		const held = new Map<string, number>()
 		for (const pool of rows) {
-			if (pool.inventory === null) totals.partial = true
-			else totals.inventory += pool.inventory
+			if (pool.baseValue === null || pool.quoteValue === null)
+				totals.partial = true
+			if (pool.baseValue !== null)
+				held.set(`${pool.address}-${pool.base.address}`, pool.baseValue)
+			if (pool.quoteValue !== null)
+				held.set(`${pool.address}-${pool.quote.address}`, pool.quoteValue)
 		}
+		for (const value of held.values()) totals.inventory += value
 		// A pool that couldn't be read is missing from the totals.
 		if (query.data && !query.data.complete) totals.partial = true
 		return totals
@@ -227,7 +235,7 @@ function PropAmmPage(): React.JSX.Element {
 											sortable(
 												'inventory',
 												'Inventory',
-												'Base and quote held, valued in the quote token',
+												'Base and quote held, in US dollars. Pairs on one venue share its balances.',
 											),
 											{
 												label: 'State',
@@ -359,7 +367,7 @@ function TradesGrid(props: {
 											className="label-12 text-tertiary"
 										/>
 									</div>,
-									<UsdValue key="value" value={trade.quoteAmount} />,
+									<UsdValue key="value" value={trade.value} />,
 								]
 							: [
 									<RelativeTime
@@ -368,7 +376,7 @@ function TradesGrid(props: {
 										className="text-secondary tabular-nums whitespace-nowrap"
 									/>,
 									<TradeLabel key="trade" trade={trade} pool={pool} />,
-									<UsdValue key="value" value={trade.quoteAmount} />,
+									<UsdValue key="value" value={trade.value} />,
 									<span
 										key="amount"
 										className="tabular-nums text-primary whitespace-nowrap"

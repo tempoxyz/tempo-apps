@@ -87,6 +87,8 @@ type PoolMeta = {
 	/** v1 only. */
 	oracle?: Address
 	oracleDecimals?: number
+	/** The side valued in US dollars: the quote when it is a USD token, else the base when that is; null when neither is. */
+	usdSide: 'base' | 'quote' | null
 }
 
 type MetaSnapshot = { pools: PoolMeta[]; complete: boolean }
@@ -137,7 +139,7 @@ async function loadMeta(
 					],
 		),
 	)
-	type Parsed = Omit<PoolMeta, 'base' | 'quote'> & {
+	type Parsed = Omit<PoolMeta, 'base' | 'quote' | 'usdSide'> & {
 		base: Address
 		quote: Address
 	}
@@ -179,7 +181,7 @@ async function loadMeta(
 	]
 	const tokenResults = await multicall(
 		addresses.flatMap((address) =>
-			(['symbol', 'decimals'] as const).map((functionName) => ({
+			(['symbol', 'decimals', 'currency'] as const).map((functionName) => ({
 				address,
 				abi: Abis.tip20,
 				functionName,
@@ -187,8 +189,14 @@ async function loadMeta(
 		),
 	)
 	const tokens = new Map<Address, DexPoolToken>()
+	const usd = new Set<Address>()
 	addresses.forEach((address, index) => {
-		const [symbol, decimals] = tokenResults.slice(index * 2, index * 2 + 2)
+		const [symbol, decimals, currency] = tokenResults.slice(
+			index * 3,
+			index * 3 + 3,
+		)
+		if (currency?.status === 'success' && currency.result === 'USD')
+			usd.add(address)
 		if (symbol?.status !== 'success' || decimals?.status !== 'success') return
 		tokens.set(address, {
 			address,
@@ -202,7 +210,12 @@ async function loadMeta(
 	const pools = parsed.flatMap((pool): PoolMeta[] => {
 		const base = tokens.get(pool.base)
 		const quote = tokens.get(pool.quote)
-		return base && quote ? [{ ...pool, base, quote }] : []
+		const usdSide = usd.has(pool.quote)
+			? 'quote'
+			: usd.has(pool.base)
+				? 'base'
+				: null
+		return base && quote ? [{ ...pool, base, quote, usdSide }] : []
 	})
 	return { pools, complete: pools.length === configs.length }
 }
@@ -210,7 +223,7 @@ async function loadMeta(
 function readMeta(chainId: number): Promise<MetaSnapshot> {
 	const configs = propAmmPoolsFor(chainId)
 	return withImmutableDataCache({
-		key: `propamm-meta:v1:${chainId}`,
+		key: `propamm-meta:v2:${chainId}`,
 		ttlSeconds: META_TTL,
 		load: () => withDeadline(loadMeta(configs), META_DEADLINE),
 		shouldCache: (meta) => meta.complete,
@@ -310,6 +323,20 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 
 		const held =
 			price === null || baseBalance === null ? null : baseBalance * price
+		// Dollars per quote token: 1 for a USD quote, else through the price
+		// when the base is the USD side.
+		const quoteUsd =
+			pool.usdSide === 'quote'
+				? 1
+				: pool.usdSide === 'base' && price
+					? 1 / price
+					: null
+		const baseValue =
+			held === null || quoteUsd === null ? null : held * quoteUsd
+		const quoteValue =
+			quoteBalance === null || quoteUsd === null
+				? null
+				: quoteBalance * quoteUsd
 		return {
 			key: pool.key,
 			version: pool.config.version,
@@ -321,8 +348,12 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 			state,
 			baseBalance,
 			quoteBalance,
+			baseValue,
+			quoteValue,
 			inventory:
-				held === null || quoteBalance === null ? null : held + quoteBalance,
+				baseValue === null || quoteValue === null
+					? null
+					: baseValue + quoteValue,
 		}
 	})
 	return { generatedAt, complete, pools }
@@ -401,10 +432,15 @@ async function readTotals(
 			trades: { day: 0, month: 0 },
 			lastTradeAt: null,
 		}
-		// Quote paid or received values the trade.
-		const side = baseIn ? 'out' : 'in'
-		total.volume.month += amount(row[`${side}_month`], pool.quote.decimals)
-		total.volume.day += amount(row[`${side}_day`], pool.quote.decimals)
+		// The USD side's amount values the trade; volume in neither is left out.
+		if (pool.usdSide) {
+			const quoteSide = baseIn ? 'out' : 'in'
+			const side =
+				pool.usdSide === 'quote' ? quoteSide : quoteSide === 'in' ? 'out' : 'in'
+			const token = pool.usdSide === 'quote' ? pool.quote : pool.base
+			total.volume.month += amount(row[`${side}_month`], token.decimals)
+			total.volume.day += amount(row[`${side}_day`], token.decimals)
+		}
 		total.trades.month += Number(row.n) || 0
 		total.trades.day += Number(row.n_day) || 0
 		const last = Number(row.last)
@@ -513,7 +549,15 @@ function toTrade(row: Raw, pools: readonly PoolMeta[]): PropAmmTrade[] {
 				formatUnits(trade.baseIn ? trade.out : trade.in, pool.quote.decimals),
 			),
 		},
-	]
+	].map((trade) => ({
+		...trade,
+		value:
+			pool.usdSide === 'quote'
+				? trade.quoteAmount
+				: pool.usdSide === 'base'
+					? trade.baseAmount
+					: null,
+	}))
 }
 
 export async function getPropAmmTrades(): Promise<PropAmmTradesSnapshot> {

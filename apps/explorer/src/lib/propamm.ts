@@ -155,7 +155,10 @@ export type PropAmmPool = {
 	/** Null when the balance couldn't be read. */
 	baseBalance: number | null
 	quoteBalance: number | null
-	/** Base and quote held, valued in the quote token. */
+	/** Base and quote held, in US dollars; null when unknown or neither side is a USD token. */
+	baseValue: number | null
+	quoteValue: number | null
+	/** baseValue plus quoteValue. A v2 venue's balances back all of its pairs. */
 	inventory: number | null
 }
 
@@ -173,8 +176,9 @@ export type PropAmmTrade = {
 	/** The taker sold base for quote. */
 	baseIn: boolean
 	baseAmount: number
-	/** Quote paid or received, which values the trade. */
 	quoteAmount: number
+	/** In US dollars, from the pool's USD side; null when neither side is USD. */
+	value: number | null
 }
 
 export type PropAmmSnapshot = {
