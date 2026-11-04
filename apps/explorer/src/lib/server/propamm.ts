@@ -64,8 +64,11 @@ const fill = toEventSelector(
 	'Fill(uint16,address,bytes32,uint64,bool,uint128,uint128,uint96,uint32)',
 )
 
-/** Trades read per load; the pools trade a few hundred times a month. */
-const MAX_TRADES = 5_000
+/** Trades read per indexer query; the pools trade a few hundred times a month. */
+const TRADES_PAGE = 5_000
+
+/** Pages read before volume is reported unknown rather than understated. */
+const MAX_TRADE_PAGES = 20
 
 /** Recent trades sent to the page; volume counts every trade read. */
 const SHOWN_TRADES = 100
@@ -188,15 +191,24 @@ async function readTrades(
 	const addresses = [
 		...new Set(structures.map((pool) => pool.config.address.toLowerCase())),
 	]
-	const rows = await indexer(
-		chainId,
-		`SELECT tx_hash, log_idx, toUnixTimestamp(block_timestamp) AS ts, address,
-			topic0, topic1, topic2, topic3, data FROM logs
-		WHERE selector IN ('${tradeExecuted}', '${fill}')
-			AND address IN (${list(addresses)})
-			AND block_timestamp >= '${sqlTime(since * 1000)}'
-		ORDER BY block_num DESC, log_idx DESC LIMIT ${MAX_TRADES}`,
-	)
+	// Every trade in the window is read, so volume is never cut short.
+	const rows: Raw[] = []
+	for (let page = 0; ; page++) {
+		if (page === MAX_TRADE_PAGES)
+			throw new Error('Too many propAMM trades to total')
+		const batch = await indexer(
+			chainId,
+			`SELECT tx_hash, log_idx, toUnixTimestamp(block_timestamp) AS ts, address,
+				topic0, topic1, topic2, topic3, data FROM logs
+			WHERE selector IN ('${tradeExecuted}', '${fill}')
+				AND address IN (${list(addresses)})
+				AND block_timestamp >= '${sqlTime(since * 1000)}'
+			ORDER BY block_num DESC, log_idx DESC
+			LIMIT ${TRADES_PAGE} OFFSET ${page * TRADES_PAGE}`,
+		)
+		rows.push(...batch)
+		if (batch.length < TRADES_PAGE) break
+	}
 	return rows.flatMap((row) => {
 		try {
 			return toTrade(row, structures, tokens)
@@ -294,7 +306,8 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 	const configs = propAmmPoolsFor(chainId)
 	const generatedAt = Date.now()
 	const now = Math.floor(generatedAt / 1000)
-	if (configs.length === 0) return { generatedAt, pools: [], trades: [] }
+	if (configs.length === 0)
+		return { generatedAt, complete: true, pools: [], trades: [] }
 
 	const blockNumber = await getBatchedClient().getBlockNumber()
 	const structures = await readStructures(configs, blockNumber)
@@ -361,19 +374,22 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 	})
 	const totals = trades ? tradeTotals(trades, now) : null
 
+	let complete = true
 	const pools = structures.flatMap((pool, index): PropAmmPool[] => {
 		const base = tokens.get(pool.base)
 		const quote = tokens.get(pool.quote)
 		if (!base || !quote) return []
 		const [baseRaw, quoteRaw] = balanceResults.slice(index * 2, index * 2 + 2)
+		// A failed read is unknown, not an empty pool.
 		const baseBalance =
 			baseRaw?.status === 'success'
 				? Number(formatUnits(baseRaw.result as bigint, base.decimals))
-				: 0
+				: null
 		const quoteBalance =
 			quoteRaw?.status === 'success'
 				? Number(formatUnits(quoteRaw.result as bigint, quote.decimals))
-				: 0
+				: null
+		if (baseBalance === null || quoteBalance === null) complete = false
 
 		let price: number | null = null
 		let state: PropAmmPool['state']
@@ -404,7 +420,8 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 
 		const key = poolKey(pool.config)
 		const total = totals?.get(key)
-		const held = price === null ? null : baseBalance * price
+		const held =
+			price === null || baseBalance === null ? null : baseBalance * price
 		const word =
 			pool.config.version === 'v2' ? decodeHotWord(pool.hotWord ?? 0n) : null
 		// A side the maker switched off takes no fills.
@@ -422,7 +439,8 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 				state,
 				baseBalance,
 				quoteBalance,
-				inventory: held === null ? null : held + quoteBalance,
+				inventory:
+					held === null || quoteBalance === null ? null : held + quoteBalance,
 				maxBuy,
 				maxSell: word?.bidsOff ? 0 : quoteBalance,
 				volume: totals ? (total?.volume ?? { day: 0, month: 0 }) : null,
@@ -434,6 +452,7 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 
 	return {
 		generatedAt,
+		complete,
 		pools,
 		trades:
 			trades
@@ -468,7 +487,9 @@ export const fetchPropAmmPools = createServerFn({ method: 'GET' }).handler(
 				load: () => withDeadline(getPropAmmPools()),
 				// A snapshot without trades would show unknown volume for the whole TTL.
 				shouldCache: (snapshot) =>
-					snapshot.pools.length > 0 && snapshot.trades !== null,
+					snapshot.pools.length > 0 &&
+					snapshot.complete &&
+					snapshot.trades !== null,
 			})
 		} catch (error) {
 			console.error('Failed to load propAMM pools:', error)

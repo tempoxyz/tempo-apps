@@ -126,14 +126,15 @@ export type PropAmmPool = {
 	/** Quote per base: the v2 posted mid or the v1 oracle price. */
 	price: number | null
 	state: PropAmmState
-	baseBalance: number
-	quoteBalance: number
+	/** Null when the balance couldn't be read. */
+	baseBalance: number | null
+	quoteBalance: number | null
 	/** Base and quote held, valued in the quote token. */
 	inventory: number | null
 	/** What a taker can buy: the base held, valued in the quote token; 0 while asks are off. */
 	maxBuy: number | null
 	/** What a taker can receive for base: the quote held; 0 while bids are off. */
-	maxSell: number
+	maxSell: number | null
 	/** Null when trades couldn't be read. */
 	volume: { day: number; month: number } | null
 	trades: { day: number; month: number } | null
@@ -156,6 +157,8 @@ export type PropAmmTrade = {
 
 export type PropAmmSnapshot = {
 	generatedAt: number
+	/** Every pool balance was read. */
+	complete: boolean
 	pools: PropAmmPool[]
 	/** Null when the indexer couldn't be read, so volume is unknown, not zero. */
 	trades: PropAmmTrade[] | null
@@ -271,7 +274,7 @@ function sortValue(pool: PropAmmPool, sort: PropAmmSort): number {
 		case 'maxBuy':
 			return pool.maxBuy ?? -1
 		case 'maxSell':
-			return pool.maxSell
+			return pool.maxSell ?? -1
 		case 'day':
 			return pool.volume?.day ?? -1
 		case 'month':
