@@ -21,7 +21,12 @@ vi.mock('wagmi/actions', () => ({
 	getBlockNumber,
 	getChainId: () => 4217,
 }))
-vi.mock('#wagmi.config', () => ({ getWagmiConfig: () => ({}) }))
+vi.mock('#wagmi.config', () => ({
+	getWagmiConfig: () => ({ getClient: () => ({}) }),
+}))
+vi.mock('#lib/server/block-number', () => ({
+	readBlockNumber: () => getBlockNumber(),
+}))
 
 const token = '0x20c0000000000000000000000000000000000000'
 const admin = '0x00000000000000000000000000000000000000ab'
