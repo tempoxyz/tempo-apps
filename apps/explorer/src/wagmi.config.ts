@@ -1,6 +1,6 @@
 import { createIsomorphicFn } from '@tanstack/react-start'
-import { getRequestHeader } from '@tanstack/react-start/server'
-import { createPublicClient } from 'viem'
+import { getRequest, getRequestHeader } from '@tanstack/react-start/server'
+import { createPublicClient, type Transport } from 'viem'
 import { tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
@@ -25,6 +25,14 @@ import { tempoWallet } from 'wagmi/connectors'
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
+// On the server, one config per incoming request: viem batches and dedupes
+// in-flight RPC calls in module-global caches keyed by client and URL, so a
+// config shared across requests lets one request await a promise settled by
+// another request's fetch, which the Workers runtime cancels as hung.
+const serverWagmiConfigs = new WeakMap<
+	Request,
+	ReturnType<typeof createConfig>
+>()
 
 const chains = {
 	mainnet: tempoMainnet,
@@ -66,15 +74,57 @@ const getTempoTransport = createIsomorphicFn()
 			import.meta.env.VITE_TEMPO_ENV,
 			process.env.RPC_AUTH,
 		)
-		return rpcHttp(target.url, { headers: target.headers, timeout: 15_000 })
+		return withOwnBatch(
+			rpcHttp(target.url, { headers: target.headers, timeout: 15_000 }),
+		)
+	})
+
+/**
+ * viem queues batched calls by URL and the call's AbortSignal, across every
+ * client in the isolate. Giving each client its own signal keeps a request's
+ * calls in batches that request's own fetch sends.
+ */
+function withOwnBatch(transport: Transport): Transport {
+	return (config) => {
+		const value = transport(config)
+		const signal = new AbortController().signal
+		return {
+			...value,
+			request: (args, options) =>
+				value.request(args, { ...options, signal: options?.signal ?? signal }),
+		} as ReturnType<Transport>
+	}
+}
+
+const getCurrentRequest = createIsomorphicFn()
+	.client((): Request | undefined => undefined)
+	.server((): Request | undefined => {
+		try {
+			return getRequest()
+		} catch {
+			return undefined
+		}
 	})
 
 export function getWagmiConfig() {
+	if (typeof window === 'undefined') {
+		const request = getCurrentRequest()
+		const cached = request && serverWagmiConfigs.get(request)
+		if (cached) return cached
+		const config = createWagmiConfig()
+		if (request) serverWagmiConfigs.set(request, config)
+		return config
+	}
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
+	wagmiConfigSingleton = createWagmiConfig()
+	return wagmiConfigSingleton
+}
+
+function createWagmiConfig(): ReturnType<typeof createConfig> {
 	const chain = getTempoChain()
 	const transport = getTempoTransport()
 
-	wagmiConfigSingleton = createConfig({
+	return createConfig({
 		ssr: true,
 		multiInjectedProviderDiscovery: true,
 		chains: [chain, tempoLocalnet],
@@ -85,8 +135,6 @@ export function getWagmiConfig() {
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		} as never,
 	})
-
-	return wagmiConfigSingleton
 }
 
 // The root route's loader runs again on every preload (links preload as they
