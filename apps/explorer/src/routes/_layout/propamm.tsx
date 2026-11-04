@@ -28,7 +28,6 @@ import {
 	propAmmPoolsQueryOptions,
 	propAmmTradesQueryOptions,
 } from '#lib/queries/propamm'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export const Route = createFileRoute('/_layout/propamm')({
 	component: PropAmmPage,
@@ -152,19 +151,14 @@ function PropAmmPage(): React.JSX.Element {
 		align: 'end',
 		width: '1fr',
 		minWidth: 96,
+		sortDirection: search.sort === sort ? search.dir : undefined,
 	})
 
 	return (
 		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
-			<div className="flex flex-col gap-3">
-				<h1 className="text-[24px] sm:text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
-					PropAMM
-				</h1>
-				<p className="copy-14 text-secondary max-w-[680px]">
-					Permissioned pools where a market maker trades its own inventory with
-					approved takers, at the maker’s posted quote or an oracle price.
-				</p>
-			</div>
+			<h1 className="text-[24px] sm:text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
+				PropAMM
+			</h1>
 
 			<section
 				aria-label="Totals"
@@ -220,6 +214,7 @@ function PropAmmPage(): React.JSX.Element {
 											},
 										],
 										tabs: [
+											{ label: '#', align: 'start', width: 48 },
 											{
 												label: 'Pool',
 												align: 'start',
@@ -248,7 +243,7 @@ function PropAmmPage(): React.JSX.Element {
 										],
 									}}
 									items={(mode) =>
-										rows.map((pool) => ({
+										rows.map((pool, index) => ({
 											key: pool.key,
 											cells:
 												mode === 'stacked'
@@ -260,6 +255,12 @@ function PropAmmPage(): React.JSX.Element {
 															/>,
 														]
 													: [
+															<span
+																key="rank"
+																className="text-tertiary tabular-nums"
+															>
+																{index + 1}
+															</span>,
 															<PoolCell key="pool" pool={pool} />,
 															<PriceValue key="price" pool={pool} />,
 															<UsdValue
@@ -454,7 +455,7 @@ function PoolCell(props: {
 	pool: PropAmmPool
 	withState?: boolean
 }): React.JSX.Element {
-	const { base, quote, version, state } = props.pool
+	const { base, quote, state } = props.pool
 	return (
 		<div className="flex items-center gap-2.5 min-w-0">
 			<span className="inline-flex shrink-0 items-center">
@@ -475,15 +476,11 @@ function PoolCell(props: {
 					<span className="text-tertiary"> / </span>
 					{quote.symbol}
 				</span>
-				<span className="flex items-center gap-1.5 label-12 text-tertiary truncate">
-					{version}
-					{props.withState && (
-						<>
-							<span aria-hidden="true">·</span>
-							<StateIndicator state={state} />
-						</>
-					)}
-				</span>
+				{props.withState && (
+					<span className="label-12 truncate">
+						<StateIndicator state={state} />
+					</span>
+				)}
 			</span>
 		</div>
 	)
@@ -573,19 +570,7 @@ function SortLabel(props: {
 				active && 'text-primary',
 			)}
 		>
-			<span className="inline-flex items-center gap-[4px]">
-				{/* Before the label, so its text lines up with the right-aligned values. */}
-				{active && (
-					<ChevronDownIcon
-						aria-hidden="true"
-						className={cx(
-							'size-[12px] text-tertiary',
-							props.search.dir === 'asc' && 'rotate-180',
-						)}
-					/>
-				)}
-				{props.label}
-			</span>
+			{props.label}
 		</button>
 	)
 }
