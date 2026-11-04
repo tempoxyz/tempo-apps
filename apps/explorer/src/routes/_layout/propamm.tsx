@@ -28,6 +28,7 @@ import {
 	propAmmPoolsQueryOptions,
 	propAmmTradesQueryOptions,
 } from '#lib/queries/propamm'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export const Route = createFileRoute('/_layout/propamm')({
 	component: PropAmmPage,
@@ -151,7 +152,6 @@ function PropAmmPage(): React.JSX.Element {
 		align: 'end',
 		width: '1fr',
 		minWidth: 96,
-		sortDirection: search.sort === sort ? search.dir : undefined,
 	})
 
 	return (
@@ -237,14 +237,14 @@ function PropAmmPage(): React.JSX.Element {
 												'Inventory',
 												'Base and quote held, in US dollars. Pairs on one venue share its balances.',
 											),
+											sortable('day', '1D vol'),
+											sortable('month', '30D vol'),
 											{
 												label: 'State',
-												align: 'start',
+												align: 'end',
 												width: '1fr',
 												minWidth: 112,
 											},
-											sortable('day', '1D vol'),
-											sortable('month', '30D vol'),
 										],
 									}}
 									items={(mode) =>
@@ -266,7 +266,6 @@ function PropAmmPage(): React.JSX.Element {
 																key="inventory"
 																value={pool.inventory}
 															/>,
-															<StateIndicator key="state" state={pool.state} />,
 															<Volume
 																key="day"
 																state={volumeState}
@@ -277,6 +276,7 @@ function PropAmmPage(): React.JSX.Element {
 																state={volumeState}
 																value={pool.volume?.month}
 															/>,
+															<StateIndicator key="state" state={pool.state} />,
 														],
 											link: {
 												href: `/address/${pool.address}`,
@@ -573,7 +573,19 @@ function SortLabel(props: {
 				active && 'text-primary',
 			)}
 		>
-			{props.label}
+			<span className="inline-flex items-center gap-[4px]">
+				{/* Before the label, so its text lines up with the right-aligned values. */}
+				{active && (
+					<ChevronDownIcon
+						aria-hidden="true"
+						className={cx(
+							'size-[12px] text-tertiary',
+							props.search.dir === 'asc' && 'rotate-180',
+						)}
+					/>
+				)}
+				{props.label}
+			</span>
 		</button>
 	)
 }
