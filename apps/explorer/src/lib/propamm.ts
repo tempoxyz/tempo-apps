@@ -16,8 +16,6 @@ export type PropAmmPoolConfig = {
 	address: Address
 	/** The pair's index on a v2 venue; 0 for a v1 pool. */
 	pairIndex: number
-	/** Who runs the pool. */
-	maker: string
 }
 
 export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
@@ -28,28 +26,24 @@ export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
 			version: 'v2',
 			address: '0x26ec6abf0da64f00e8bd342de9b89e0c7646e3e3',
 			pairIndex: 0,
-			maker: 'Capa',
 		},
 		{
 			// PRIME/USDC.e
 			version: 'v1',
 			address: '0x2c22026217d2275f1883febf161863dc0b0a43b2',
 			pairIndex: 0,
-			maker: 'Lhava',
 		},
 		{
 			// USDY/USDC.e
 			version: 'v1',
 			address: '0xa83da77c096a64ee730c6af28811f6db89ff462a',
 			pairIndex: 0,
-			maker: 'Lhava',
 		},
 		{
 			// PRIME/pathUSD
 			version: 'v1',
 			address: '0x01ced4c2a58e947b2df3c2e0eb69829261fe6c4d',
 			pairIndex: 0,
-			maker: 'Tempo Cash',
 		},
 	],
 }
@@ -120,7 +114,6 @@ export type PropAmmPool = {
 	version: 'v1' | 'v2'
 	address: Address
 	pairIndex: number
-	maker: string
 	base: DexPoolToken
 	quote: DexPoolToken
 	/** Quote per base: the v2 posted mid or the v1 oracle price. */
@@ -135,11 +128,11 @@ export type PropAmmPool = {
 	maxBuy: number | null
 	/** What a taker can receive for base: the quote held; 0 while bids are off. */
 	maxSell: number | null
-	/** Null when trades couldn't be read. */
+}
+
+/** A pool with its volume: null while unknown, when trades are loading or unavailable. */
+export type PropAmmRow = PropAmmPool & {
 	volume: { day: number; month: number } | null
-	trades: { day: number; month: number } | null
-	/** Unix seconds of the latest trade in the last 30 days. */
-	lastTradeAt: number | null
 }
 
 export type PropAmmTrade = {
@@ -157,11 +150,18 @@ export type PropAmmTrade = {
 
 export type PropAmmSnapshot = {
 	generatedAt: number
-	/** Every pool balance was read. */
+	/** Every configured pool and balance was read. */
 	complete: boolean
 	pools: PropAmmPool[]
-	/** Null when the indexer couldn't be read, so volume is unknown, not zero. */
-	trades: PropAmmTrade[] | null
+}
+
+/** Trades load on their own, so a slow indexer never holds up the pools. */
+export type PropAmmTradesSnapshot = {
+	generatedAt: number
+	/** 1D and 30D totals by pool key; a pool without trades has none. */
+	totals: Record<string, PropAmmTotals>
+	/** The latest trades, newest first. */
+	trades: PropAmmTrade[]
 }
 
 /** A v2 hot word's fields (propAMM contracts/src/v2/libraries/HotWord.sol). */
@@ -267,7 +267,7 @@ export const defaultPropAmmSearch: PropAmmSearch = {
 	dir: 'desc',
 }
 
-function sortValue(pool: PropAmmPool, sort: PropAmmSort): number {
+function sortValue(pool: PropAmmRow, sort: PropAmmSort): number {
 	switch (sort) {
 		case 'inventory':
 			return pool.inventory ?? -1
@@ -283,10 +283,10 @@ function sortValue(pool: PropAmmPool, sort: PropAmmSort): number {
 }
 
 export function sortPropAmmPools(
-	pools: readonly PropAmmPool[],
+	pools: readonly PropAmmRow[],
 	sort: PropAmmSort,
 	dir: 'asc' | 'desc',
-): PropAmmPool[] {
+): PropAmmRow[] {
 	const sign = dir === 'asc' ? 1 : -1
 	return [...pools].sort(
 		(a, b) =>

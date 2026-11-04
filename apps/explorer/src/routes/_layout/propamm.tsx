@@ -14,6 +14,7 @@ import { useMediaQuery } from '#lib/hooks'
 import {
 	defaultPropAmmSearch,
 	type PropAmmPool,
+	type PropAmmRow,
 	type PropAmmSearch,
 	type PropAmmSort,
 	type PropAmmState,
@@ -23,17 +24,33 @@ import {
 	stateIntent,
 	stateLabels,
 } from '#lib/propamm'
-import { propAmmPoolsQueryOptions } from '#lib/queries/propamm'
+import {
+	propAmmPoolsQueryOptions,
+	propAmmTradesQueryOptions,
+} from '#lib/queries/propamm'
 
 export const Route = createFileRoute('/_layout/propamm')({
 	component: PropAmmPage,
 	validateSearch: propAmmSearchSchema,
 	search: { middlewares: [stripSearchParams(defaultPropAmmSearch)] },
 	head: () => ({ meta: [{ title: 'PropAMM – Tempo Explorer' }] }),
-	// Prefetch caches failures too, letting the page render its retry state.
-	loader: ({ context }) =>
-		context.queryClient.prefetchQuery(propAmmPoolsQueryOptions()),
+	// Cached data renders with the page; anything slower streams in after it,
+	// so one slow read never holds the page. Prefetch caches failures too,
+	// letting each section render its retry state.
+	loader: async ({ context }) => {
+		const reads = Promise.all([
+			context.queryClient.prefetchQuery(propAmmPoolsQueryOptions()),
+			context.queryClient.prefetchQuery(propAmmTradesQueryOptions()),
+		])
+		await Promise.race([
+			reads,
+			new Promise((resolve) => setTimeout(resolve, LOADER_WAIT)),
+		])
+	},
 })
+
+/** How long navigation waits for data before showing the page without it. */
+const LOADER_WAIT = 300
 
 const usd = (value: number) => PriceFormatter.format(value, { format: 'short' })
 const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
@@ -46,23 +63,36 @@ function PropAmmPage(): React.JSX.Element {
 	const search = Route.useSearch()
 	const navigate = Route.useNavigate()
 	const query = useQuery(propAmmPoolsQueryOptions())
+	const tradesQuery = useQuery(propAmmTradesQueryOptions())
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const pools = query.data?.pools
-	const trades = query.data?.trades ?? []
-	// Volume is unknown, not zero, when the indexer couldn't be read.
-	const tradesKnown = query.data?.trades !== null
+	const trades = tradesQuery.data?.trades ?? []
+	// Volume is unknown while trades load, and when they couldn't be read.
+	const volumeTotals = tradesQuery.data?.totals
+	const volumeState: VolumeState = volumeTotals
+		? 'known'
+		: tradesQuery.isError
+			? 'unknown'
+			: 'loading'
 
-	const rows = useMemo(
-		() => sortPropAmmPools(pools ?? [], search.sort, search.dir),
-		[pools, search.sort, search.dir],
-	)
+	const rows = useMemo(() => {
+		const merged = (pools ?? []).map(
+			(pool): PropAmmRow => ({
+				...pool,
+				volume: volumeTotals
+					? (volumeTotals[pool.key]?.volume ?? { day: 0, month: 0 })
+					: null,
+			}),
+		)
+		return sortPropAmmPools(merged, search.sort, search.dir)
+	}, [pools, volumeTotals, search.sort, search.dir])
 	const poolsByKey = useMemo(
 		() => new Map((pools ?? []).map((pool) => [pool.key, pool])),
 		[pools],
 	)
 	const totals = useMemo(() => {
 		const totals = { inventory: 0, partial: false, day: 0, month: 0 }
-		for (const pool of pools ?? []) {
+		for (const pool of rows) {
 			totals.day += pool.volume?.day ?? 0
 			totals.month += pool.volume?.month ?? 0
 			if (pool.inventory === null) totals.partial = true
@@ -71,7 +101,7 @@ function PropAmmPage(): React.JSX.Element {
 		// A pool that couldn't be read is missing from the totals.
 		if (query.data && !query.data.complete) totals.partial = true
 		return totals
-	}, [pools, query.data])
+	}, [rows, query.data])
 
 	function sortBy(sort: PropAmmSort) {
 		const dir =
@@ -125,13 +155,10 @@ function PropAmmPage(): React.JSX.Element {
 						pools && `${totals.partial ? '≥' : ''}${usd(totals.inventory)}`
 					}
 				/>
-				<Stat
-					label="1D volume"
-					value={pools && (tradesKnown ? usd(totals.day) : '—')}
-				/>
+				<Stat label="1D volume" value={statVolume(volumeState, totals.day)} />
 				<Stat
 					label="30D volume"
-					value={pools && (tradesKnown ? usd(totals.month) : '—')}
+					value={statVolume(volumeState, totals.month)}
 				/>
 			</section>
 
@@ -233,16 +260,18 @@ function PropAmmPage(): React.JSX.Element {
 															<StateIndicator key="state" state={pool.state} />,
 															<Volume
 																key="day"
-																value={pool.volume?.day ?? null}
+																state={volumeState}
+																value={pool.volume?.day}
 															/>,
 															<Volume
 																key="month"
-																value={pool.volume?.month ?? null}
+																state={volumeState}
+																value={pool.volume?.month}
 															/>,
 														],
 											link: {
 												href: `/address/${pool.address}`,
-												title: `${pool.base.symbol}/${pool.quote.symbol} pool by ${pool.maker}`,
+												title: `${pool.base.symbol}/${pool.quote.symbol} pool`,
 											},
 										}))
 									}
@@ -259,22 +288,21 @@ function PropAmmPage(): React.JSX.Element {
 					},
 					{
 						title: 'Trades',
-						totalItems: pools && tradesKnown ? trades.length : undefined,
+						totalItems: tradesQuery.data && pools ? trades.length : undefined,
 						itemsLabel: 'trades',
 						autoCollapse: false,
 						content:
-							query.isError && !pools ? (
+							tradesQuery.isError && !tradesQuery.data ? (
 								<LoadError
-									message={query.error.message}
-									retrying={query.isFetching}
-									onRetry={() => void query.refetch()}
+									message={tradesQuery.error.message}
+									retrying={tradesQuery.isFetching}
+									onRetry={() => void tradesQuery.refetch()}
 								/>
 							) : (
 								<TradesGrid
 									trades={trades}
 									pools={poolsByKey}
-									loading={query.isPending}
-									unavailable={Boolean(pools) && !tradesKnown}
+									loading={tradesQuery.isPending || query.isPending}
 								/>
 							),
 					},
@@ -289,7 +317,6 @@ function TradesGrid(props: {
 	trades: PropAmmTrade[]
 	pools: Map<string, PropAmmPool>
 	loading: boolean
-	unavailable: boolean
 }): React.JSX.Element {
 	const trades = props.trades.flatMap((trade) => {
 		const pool = props.pools.get(trade.poolKey)
@@ -369,11 +396,7 @@ function TradesGrid(props: {
 			itemsLabel="trades"
 			pagination="simple"
 			showSimpleCount={false}
-			emptyState={
-				props.unavailable
-					? 'Trades are temporarily unavailable'
-					: 'No trades in the last 30 days'
-			}
+			emptyState="No trades in the last 30 days"
 		/>
 	)
 }
@@ -394,7 +417,6 @@ function TradeLabel(props: {
 			<TokenChip token={props.pool.base} />
 			<span className="text-tertiary">{buy ? 'with' : 'for'}</span>
 			<TokenChip token={props.pool.quote} />
-			<span className="text-tertiary truncate">· {props.pool.maker}</span>
 		</span>
 	)
 }
@@ -416,7 +438,7 @@ function PoolCell(props: {
 	pool: PropAmmPool
 	withState?: boolean
 }): React.JSX.Element {
-	const { base, quote, maker, version, state } = props.pool
+	const { base, quote, version, state } = props.pool
 	return (
 		<div className="flex items-center gap-2.5 min-w-0">
 			<span className="inline-flex shrink-0 items-center">
@@ -438,8 +460,6 @@ function PoolCell(props: {
 					{quote.symbol}
 				</span>
 				<span className="flex items-center gap-1.5 label-12 text-tertiary truncate">
-					{maker}
-					<span aria-hidden="true">·</span>
 					{version}
 					{props.withState && (
 						<>
@@ -487,8 +507,24 @@ function UsdValue(props: { value: number | null }): React.JSX.Element {
 	return <span className="tabular-nums text-primary">{usd(props.value)}</span>
 }
 
-function Volume(props: { value: number | null }): React.JSX.Element {
-	if (props.value === null) return <span className="text-tertiary">—</span>
+type VolumeState = 'loading' | 'known' | 'unknown'
+
+/** A stat's volume: undefined shows its loading bar. */
+function statVolume(state: VolumeState, value: number): string | undefined {
+	if (state === 'loading') return undefined
+	return state === 'unknown' ? '—' : usd(value)
+}
+
+function Volume(props: {
+	state: VolumeState
+	value: number | undefined
+}): React.JSX.Element {
+	if (props.state === 'loading')
+		return (
+			<span className="inline-block h-3.5 w-12 rounded-[4px] bg-distinct/70 animate-pulse" />
+		)
+	if (props.state === 'unknown' || props.value === undefined)
+		return <span className="text-tertiary">—</span>
 	return (
 		<span
 			className={cx(

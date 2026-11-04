@@ -165,7 +165,7 @@ export const docs = {
 	'/propamm': {
 		title: 'PropAMM',
 		description:
-			'PropAMM pools, permissioned venues where a market maker trades its own inventory with approved takers: each pool’s maker, price, inventory, the most a taker can buy or sell, state, 1-day and 30-day volume, and the last 30 days of trades.',
+			'PropAMM pools, permissioned venues where a market maker trades its own inventory with approved takers: each pool’s price, inventory, the most a taker can buy or sell, state, 1-day and 30-day volume, and the last 30 days of trades.',
 		params: {
 			tab: 'Show `pools` or recent `trades`.',
 			sort: 'Sort pools by `inventory`, `maxBuy`, `maxSell`, `day` volume, or `month` volume.',
