@@ -25,6 +25,10 @@ interface ChunkedArchive {
 	blocks_per_file: number
 	total_blocks: number
 	chunk_sizes: number[]
+	// Shared-layout manifests list every chunk's bucket-relative object key,
+	// because history archives live under a shared prefix and are reused
+	// across snapshots.
+	chunk_files?: string[]
 }
 
 type ComponentManifest = SingleArchive | ChunkedArchive
@@ -602,8 +606,13 @@ function getComponentTerminalObjectKey(
 	comp: ComponentManifest,
 ): string {
 	if (isSingleArchive(comp)) {
-		return `${dirPrefix}/${comp.file}`
+		// Shared-layout manifests store bucket-relative keys (they contain a
+		// '/'); native manifests store names relative to the snapshot directory.
+		return comp.file.includes('/') ? comp.file : `${dirPrefix}/${comp.file}`
 	}
+
+	const lastChunkFile = comp.chunk_files?.at(-1)
+	if (lastChunkFile) return lastChunkFile
 
 	const numChunks = Math.ceil(comp.total_blocks / comp.blocks_per_file)
 	const lastChunkIndex = Math.max(0, numChunks - 1)
