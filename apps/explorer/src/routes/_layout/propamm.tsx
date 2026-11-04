@@ -49,6 +49,8 @@ function PropAmmPage(): React.JSX.Element {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const pools = query.data?.pools
 	const trades = query.data?.trades ?? []
+	// Volume is unknown, not zero, when the indexer couldn't be read.
+	const tradesKnown = query.data?.trades !== null
 
 	const rows = useMemo(
 		() => sortPropAmmPools(pools ?? [], search.sort, search.dir),
@@ -61,8 +63,8 @@ function PropAmmPage(): React.JSX.Element {
 	const totals = useMemo(() => {
 		const totals = { inventory: 0, partial: false, day: 0, month: 0 }
 		for (const pool of pools ?? []) {
-			totals.day += pool.volume.day
-			totals.month += pool.volume.month
+			totals.day += pool.volume?.day ?? 0
+			totals.month += pool.volume?.month ?? 0
 			if (pool.inventory === null) totals.partial = true
 			else totals.inventory += pool.inventory
 		}
@@ -121,8 +123,14 @@ function PropAmmPage(): React.JSX.Element {
 						pools && `${totals.partial ? '≥' : ''}${usd(totals.inventory)}`
 					}
 				/>
-				<Stat label="1D volume" value={pools && usd(totals.day)} />
-				<Stat label="30D volume" value={pools && usd(totals.month)} />
+				<Stat
+					label="1D volume"
+					value={pools && (tradesKnown ? usd(totals.day) : '—')}
+				/>
+				<Stat
+					label="30D volume"
+					value={pools && (tradesKnown ? usd(totals.month) : '—')}
+				/>
 			</section>
 
 			<Sections
@@ -221,8 +229,14 @@ function PropAmmPage(): React.JSX.Element {
 															<UsdValue key="maxBuy" value={pool.maxBuy} />,
 															<UsdValue key="maxSell" value={pool.maxSell} />,
 															<StateIndicator key="state" state={pool.state} />,
-															<Volume key="day" value={pool.volume.day} />,
-															<Volume key="month" value={pool.volume.month} />,
+															<Volume
+																key="day"
+																value={pool.volume?.day ?? null}
+															/>,
+															<Volume
+																key="month"
+																value={pool.volume?.month ?? null}
+															/>,
 														],
 											link: {
 												href: `/address/${pool.address}`,
@@ -243,7 +257,7 @@ function PropAmmPage(): React.JSX.Element {
 					},
 					{
 						title: 'Trades',
-						totalItems: pools ? trades.length : undefined,
+						totalItems: pools && tradesKnown ? trades.length : undefined,
 						itemsLabel: 'trades',
 						autoCollapse: false,
 						content:
@@ -258,6 +272,7 @@ function PropAmmPage(): React.JSX.Element {
 									trades={trades}
 									pools={poolsByKey}
 									loading={query.isPending}
+									unavailable={Boolean(pools) && !tradesKnown}
 								/>
 							),
 					},
@@ -272,6 +287,7 @@ function TradesGrid(props: {
 	trades: PropAmmTrade[]
 	pools: Map<string, PropAmmPool>
 	loading: boolean
+	unavailable: boolean
 }): React.JSX.Element {
 	const trades = props.trades.flatMap((trade) => {
 		const pool = props.pools.get(trade.poolKey)
@@ -351,7 +367,11 @@ function TradesGrid(props: {
 			itemsLabel="trades"
 			pagination="simple"
 			showSimpleCount={false}
-			emptyState="No trades in the last 30 days"
+			emptyState={
+				props.unavailable
+					? 'Trades are temporarily unavailable'
+					: 'No trades in the last 30 days'
+			}
 		/>
 	)
 }
@@ -465,7 +485,8 @@ function UsdValue(props: { value: number | null }): React.JSX.Element {
 	return <span className="tabular-nums text-primary">{usd(props.value)}</span>
 }
 
-function Volume(props: { value: number }): React.JSX.Element {
+function Volume(props: { value: number | null }): React.JSX.Element {
+	if (props.value === null) return <span className="text-tertiary">—</span>
 	return (
 		<span
 			className={cx(

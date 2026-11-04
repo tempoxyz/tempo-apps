@@ -359,7 +359,7 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 		console.error('Failed to read propAMM trades:', error)
 		return null
 	})
-	const totals = tradeTotals(trades ?? [], now)
+	const totals = trades ? tradeTotals(trades, now) : null
 
 	const pools = structures.flatMap((pool, index): PropAmmPool[] => {
 		const base = tokens.get(pool.base)
@@ -403,8 +403,12 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 		}
 
 		const key = poolKey(pool.config)
-		const total = totals.get(key)
-		const maxBuy = price === null ? null : baseBalance * price
+		const total = totals?.get(key)
+		const held = price === null ? null : baseBalance * price
+		const word =
+			pool.config.version === 'v2' ? decodeHotWord(pool.hotWord ?? 0n) : null
+		// A side the maker switched off takes no fills.
+		const maxBuy = word?.asksOff ? 0 : held
 		return [
 			{
 				key,
@@ -418,11 +422,11 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 				state,
 				baseBalance,
 				quoteBalance,
-				inventory: maxBuy === null ? null : maxBuy + quoteBalance,
+				inventory: held === null ? null : held + quoteBalance,
 				maxBuy,
-				maxSell: quoteBalance,
-				volume: total?.volume ?? { day: 0, month: 0 },
-				trades: total?.trades ?? { day: 0, month: 0 },
+				maxSell: word?.bidsOff ? 0 : quoteBalance,
+				volume: totals ? (total?.volume ?? { day: 0, month: 0 }) : null,
+				trades: totals ? (total?.trades ?? { day: 0, month: 0 }) : null,
 				lastTradeAt: total?.lastTradeAt ?? null,
 			},
 		]
@@ -431,9 +435,10 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 	return {
 		generatedAt,
 		pools,
-		trades: (trades ?? [])
-			.filter((trade) => pools.some((pool) => pool.key === trade.poolKey))
-			.slice(0, SHOWN_TRADES),
+		trades:
+			trades
+				?.filter((trade) => pools.some((pool) => pool.key === trade.poolKey))
+				.slice(0, SHOWN_TRADES) ?? null,
 	}
 }
 
@@ -461,7 +466,9 @@ export const fetchPropAmmPools = createServerFn({ method: 'GET' }).handler(
 				key: `propamm-pools:v1:${getTempoChain().id}`,
 				ttlSeconds: 30,
 				load: () => withDeadline(getPropAmmPools()),
-				shouldCache: (snapshot) => snapshot.pools.length > 0,
+				// A snapshot without trades would show unknown volume for the whole TTL.
+				shouldCache: (snapshot) =>
+					snapshot.pools.length > 0 && snapshot.trades !== null,
 			})
 		} catch (error) {
 			console.error('Failed to load propAMM pools:', error)

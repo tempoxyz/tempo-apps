@@ -53,6 +53,8 @@ describe('v2State', () => {
 		expect(v2State({ ...live, validUntil: 99 })).toBe('expired')
 		expect(v2State({ ...live, mid: 0n })).toBe('expired')
 		expect(v2State({ ...live, bidsOff: true, asksOff: true })).toBe('off')
+		expect(v2State({ ...live, asksOff: true })).toBe('bids_only')
+		expect(v2State({ ...live, bidsOff: true })).toBe('asks_only')
 	})
 
 	it('treats a removed pair as unknown', () => {

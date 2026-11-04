@@ -55,7 +55,11 @@ export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
 }
 
 export function propAmmPoolsFor(chainId: number): readonly PropAmmPoolConfig[] {
-	return propAmmPools[chainId] ?? []
+	// Addresses compare lowercase, however a pool is configured.
+	return (propAmmPools[chainId] ?? []).map((pool) => ({
+		...pool,
+		address: pool.address.toLowerCase() as Address,
+	}))
 }
 
 export function poolKey(pool: { address: string; pairIndex: number }): string {
@@ -68,6 +72,7 @@ export function poolKey(pool: { address: string; pairIndex: number }): string {
  * - closed: the v2 pair admits no takers.
  * - expired: the v2 maker's quote ran past its validity.
  * - off: the v2 maker switched both sides off.
+ * - bids_only, asks_only: the v2 maker switched one side off.
  * - stale: the v1 oracle price is older than the pool accepts.
  * - unknown: the state couldn't be read.
  */
@@ -77,6 +82,8 @@ export type PropAmmState =
 	| 'closed'
 	| 'expired'
 	| 'off'
+	| 'bids_only'
+	| 'asks_only'
 	| 'stale'
 	| 'unknown'
 
@@ -86,6 +93,8 @@ export const stateLabels: Record<PropAmmState, string> = {
 	closed: 'Closed',
 	expired: 'Quote expired',
 	off: 'Sides off',
+	bids_only: 'Bids only',
+	asks_only: 'Asks only',
 	stale: 'Price stale',
 	unknown: 'Unknown',
 }
@@ -100,6 +109,8 @@ export const stateIntent: Record<
 	closed: 'neutral',
 	expired: 'warning',
 	off: 'warning',
+	bids_only: 'warning',
+	asks_only: 'warning',
 	stale: 'warning',
 	unknown: 'neutral',
 }
@@ -119,12 +130,13 @@ export type PropAmmPool = {
 	quoteBalance: number
 	/** Base and quote held, valued in the quote token. */
 	inventory: number | null
-	/** What a taker can buy: the base held, valued in the quote token. */
+	/** What a taker can buy: the base held, valued in the quote token; 0 while asks are off. */
 	maxBuy: number | null
-	/** What a taker can receive for base: the quote held. */
+	/** What a taker can receive for base: the quote held; 0 while bids are off. */
 	maxSell: number
-	volume: { day: number; month: number }
-	trades: { day: number; month: number }
+	/** Null when trades couldn't be read. */
+	volume: { day: number; month: number } | null
+	trades: { day: number; month: number } | null
 	/** Unix seconds of the latest trade in the last 30 days. */
 	lastTradeAt: number | null
 }
@@ -145,7 +157,8 @@ export type PropAmmTrade = {
 export type PropAmmSnapshot = {
 	generatedAt: number
 	pools: PropAmmPool[]
-	trades: PropAmmTrade[]
+	/** Null when the indexer couldn't be read, so volume is unknown, not zero. */
+	trades: PropAmmTrade[] | null
 }
 
 /** A v2 hot word's fields (propAMM contracts/src/v2/libraries/HotWord.sol). */
@@ -182,6 +195,8 @@ export function v2State(input: {
 	if (input.access === ACCESS_CLOSED) return 'closed'
 	if (input.mid === 0n || input.validUntil < input.now) return 'expired'
 	if (input.bidsOff && input.asksOff) return 'off'
+	if (input.asksOff) return 'bids_only'
+	if (input.bidsOff) return 'asks_only'
 	return 'live'
 }
 
@@ -197,10 +212,11 @@ export function v1State(input: {
 	return 'live'
 }
 
-export type PropAmmTotals = Pick<
-	PropAmmPool,
-	'volume' | 'trades' | 'lastTradeAt'
->
+export type PropAmmTotals = {
+	volume: { day: number; month: number }
+	trades: { day: number; month: number }
+	lastTradeAt: number | null
+}
 
 /** Each pool's 1D and 30D volume and trade count. */
 export function tradeTotals(
@@ -257,9 +273,9 @@ function sortValue(pool: PropAmmPool, sort: PropAmmSort): number {
 		case 'maxSell':
 			return pool.maxSell
 		case 'day':
-			return pool.volume.day
+			return pool.volume?.day ?? -1
 		case 'month':
-			return pool.volume.month
+			return pool.volume?.month ?? -1
 	}
 }
 
