@@ -67,13 +67,15 @@ function PropAmmPage(): React.JSX.Element {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const pools = query.data?.pools
 	const trades = tradesQuery.data?.trades ?? []
-	// Volume is unknown while trades load, and when they couldn't be read.
+	// Volume sums over pools, so it needs both reads: unknown when either
+	// failed, loading while either is pending.
 	const volumeTotals = tradesQuery.data?.totals
-	const volumeState: VolumeState = volumeTotals
-		? 'known'
-		: tradesQuery.isError
-			? 'unknown'
-			: 'loading'
+	const volumeState: VolumeState =
+		volumeTotals && pools
+			? 'known'
+			: (tradesQuery.isError && !volumeTotals) || (query.isError && !pools)
+				? 'unknown'
+				: 'loading'
 
 	const rows = useMemo(() => {
 		const merged = (pools ?? []).map(
@@ -292,7 +294,14 @@ function PropAmmPage(): React.JSX.Element {
 						itemsLabel: 'trades',
 						autoCollapse: false,
 						content:
-							tradesQuery.isError && !tradesQuery.data ? (
+							// Trades are labelled by their pool, so they need the pools read too.
+							query.isError && !pools ? (
+								<LoadError
+									message={query.error.message}
+									retrying={query.isFetching}
+									onRetry={() => void query.refetch()}
+								/>
+							) : tradesQuery.isError && !tradesQuery.data ? (
 								<LoadError
 									message={tradesQuery.error.message}
 									retrying={tradesQuery.isFetching}
@@ -302,7 +311,7 @@ function PropAmmPage(): React.JSX.Element {
 								<TradesGrid
 									trades={trades}
 									pools={poolsByKey}
-									loading={tradesQuery.isPending || query.isPending}
+									loading={!tradesQuery.data || !pools}
 								/>
 							),
 					},
