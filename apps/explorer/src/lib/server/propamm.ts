@@ -76,6 +76,9 @@ const SHOWN_TRADES = 100
 /** How long the page waits for the chain and the indexer. */
 const DEADLINE = 15_000
 
+/** How long trades may take before pools show with unknown volume. */
+const TRADES_DEADLINE = 8_000
+
 /** The v2 mid is quote per base at 18 decimals. */
 const MID_DECIMALS = 18
 
@@ -362,13 +365,11 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 		})
 	})
 
-	const trades = await readTrades(
-		chainId,
-		structures,
-		tokens,
-		now - 30 * 86_400,
+	const trades = await withDeadline(
+		readTrades(chainId, structures, tokens, now - 30 * 86_400),
+		TRADES_DEADLINE,
 	).catch((error) => {
-		// Pools still show without volume when the indexer is down.
+		// Pools still show without volume when the indexer is down or slow.
 		console.error('Failed to read propAMM trades:', error)
 		return null
 	})
@@ -461,7 +462,7 @@ export async function getPropAmmPools(): Promise<PropAmmSnapshot> {
 	}
 }
 
-async function withDeadline<T>(read: Promise<T>): Promise<T> {
+async function withDeadline<T>(read: Promise<T>, ms = DEADLINE): Promise<T> {
 	let timer: ReturnType<typeof setTimeout> | undefined
 	try {
 		return await Promise.race([
@@ -469,7 +470,7 @@ async function withDeadline<T>(read: Promise<T>): Promise<T> {
 			new Promise<never>((_, reject) => {
 				timer = setTimeout(
 					() => reject(new Error('PropAMM request timed out.')),
-					DEADLINE,
+					ms,
 				)
 			}),
 		])
