@@ -2,12 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as z from 'zod/mini'
-import {
-	getBlock,
-	getBlockNumber,
-	getChainId,
-	getTransaction,
-} from 'wagmi/actions'
+import { getBlock, getChainId, getTransaction } from 'wagmi/actions'
 import { getAccountTag } from '#lib/account'
 import {
 	contractRegistry,
@@ -18,6 +13,7 @@ import { isTip20Address } from '#lib/domain/tip20'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
+import { readBlockNumber } from '#lib/server/block-number'
 
 export type SearchResult =
 	| {
@@ -291,7 +287,7 @@ export const Route = createFileRoute('/api/search')({
 					blockNumber >= 0
 				) {
 					try {
-						const latestBlock = await getBlockNumber(config)
+						const latestBlock = await readBlockNumber(config.getClient())
 						if (blockNumber <= Number(latestBlock))
 							results.push({ type: 'block', blockNumber })
 					} catch {
