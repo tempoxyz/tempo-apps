@@ -14,6 +14,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
+import { Route as LayoutPropammRouteImport } from './routes/_layout/propamm'
 import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
@@ -71,6 +72,11 @@ const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
 const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
   id: '/fee-amm',
   path: '/fee-amm',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPropammRoute = LayoutPropammRouteImport.update({
+  id: '/propamm',
+  path: '/propamm',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSimulateRoute = LayoutSimulateRouteImport.update({
@@ -256,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
+  '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
+  '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -337,6 +345,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
+  '/_layout/propamm': typeof LayoutPropammRoute
   '/_layout/simulate': typeof LayoutSimulateRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -380,6 +389,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/fee-amm'
+    | '/propamm'
     | '/simulate'
     | '/tokens'
     | '/api/code'
@@ -419,6 +429,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/fee-amm'
+    | '/propamm'
     | '/simulate'
     | '/tokens'
     | '/api/code'
@@ -460,6 +471,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/_layout/blocks'
     | '/_layout/fee-amm'
+    | '/_layout/propamm'
     | '/_layout/simulate'
     | '/_layout/tokens'
     | '/api/code'
@@ -554,6 +566,13 @@ declare module '@tanstack/react-router' {
       path: '/fee-amm'
       fullPath: '/fee-amm'
       preLoaderRoute: typeof LayoutFeeAmmRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/propamm': {
+      id: '/_layout/propamm'
+      path: '/propamm'
+      fullPath: '/propamm'
+      preLoaderRoute: typeof LayoutPropammRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/simulate': {
@@ -800,6 +819,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
+  LayoutPropammRoute: typeof LayoutPropammRoute
   LayoutSimulateRoute: typeof LayoutSimulateRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -822,6 +842,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
+  LayoutPropammRoute: LayoutPropammRoute,
   LayoutSimulateRoute: LayoutSimulateRoute,
   LayoutTokensRoute: LayoutTokensRoute,
   LayoutIndexRoute: LayoutIndexRoute,
