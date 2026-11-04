@@ -77,6 +77,13 @@ function PropAmmPage(): React.JSX.Element {
 				? 'unknown'
 				: 'loading'
 
+	// The headline volume needs only trades.
+	const totalsState: VolumeState = volumeTotals
+		? 'known'
+		: tradesQuery.isError
+			? 'unknown'
+			: 'loading'
+
 	const rows = useMemo(() => {
 		const merged = (pools ?? []).map(
 			(pool): PropAmmRow => ({
@@ -94,16 +101,20 @@ function PropAmmPage(): React.JSX.Element {
 	)
 	const totals = useMemo(() => {
 		const totals = { inventory: 0, partial: false, day: 0, month: 0 }
+		// Volume sums every pool's trades, so a pool missing from the pools
+		// read still counts.
+		for (const total of Object.values(volumeTotals ?? {})) {
+			totals.day += total.volume.day
+			totals.month += total.volume.month
+		}
 		for (const pool of rows) {
-			totals.day += pool.volume?.day ?? 0
-			totals.month += pool.volume?.month ?? 0
 			if (pool.inventory === null) totals.partial = true
 			else totals.inventory += pool.inventory
 		}
 		// A pool that couldn't be read is missing from the totals.
 		if (query.data && !query.data.complete) totals.partial = true
 		return totals
-	}, [rows, query.data])
+	}, [rows, query.data, volumeTotals])
 
 	function sortBy(sort: PropAmmSort) {
 		const dir =
@@ -157,10 +168,10 @@ function PropAmmPage(): React.JSX.Element {
 						pools && `${totals.partial ? '≥' : ''}${usd(totals.inventory)}`
 					}
 				/>
-				<Stat label="1D volume" value={statVolume(volumeState, totals.day)} />
+				<Stat label="1D volume" value={statVolume(totalsState, totals.day)} />
 				<Stat
 					label="30D volume"
-					value={statVolume(volumeState, totals.month)}
+					value={statVolume(totalsState, totals.month)}
 				/>
 			</section>
 
