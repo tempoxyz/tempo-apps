@@ -264,6 +264,8 @@ export function marketTotals(input: {
 					value += pool.liquidity?.total ?? 0
 					partial ||= !pool.liquidity || pool.liquidity.partial
 				}
+				// No level could be read: unknown, not a lower bound of zero.
+				if (partial && value === 0) return { state: 'failed' }
 				return { state: 'known', value, partial }
 			}),
 		)

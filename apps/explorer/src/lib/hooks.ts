@@ -292,6 +292,8 @@ export function useRowLink(): (href: string) => useRowLink.Props {
 	return (href) => {
 		const open = (event: React.MouseEvent<HTMLTableRowElement>) => {
 			if ((event.target as HTMLElement).closest('a, button')) return
+			// Right, back and forward buttons keep their own behaviour.
+			if (event.button !== 0 && event.button !== 1) return
 			if (
 				event.button === 1 ||
 				event.metaKey ||
