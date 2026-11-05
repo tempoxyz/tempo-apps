@@ -9,6 +9,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type * as React from 'react'
 import { CopyButton } from '#comps/CopyButton'
 import { DexSwapsGrid, LivePill, useDexSwaps } from '#comps/DexSwaps'
+import { PropAmmPairPools } from '#comps/PropAmmPairPools'
 import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
@@ -123,11 +124,11 @@ function DexRoutePage(): React.JSX.Element {
 			<div className="flex flex-wrap items-start justify-between gap-4">
 				<div className="flex flex-col gap-3 min-w-0">
 					<Link
-						to="/dex"
+						to="/markets"
 						className="inline-flex items-center gap-1 self-start copy-13 text-tertiary hover:text-primary"
 					>
 						<ChevronLeftIcon className="size-3.5" />
-						Stablecoin DEX
+						Markets
 					</Link>
 					<h1 className="flex flex-wrap items-center gap-3 text-[24px] sm:text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
 						{from && to ? (
@@ -339,6 +340,8 @@ function DexRoutePage(): React.JSX.Element {
 					)
 				)}
 			</section>
+
+			<PropAmmPairPools a={search.from} b={search.to} />
 
 			{snapshot && from && to && (
 				<Sections
