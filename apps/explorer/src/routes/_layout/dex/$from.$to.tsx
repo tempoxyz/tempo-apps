@@ -110,11 +110,14 @@ function DexRoutePage(): React.JSX.Element {
 	const query = useQuery(dexRouteQueryOptions(search))
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const [section, setSection] = useState(0)
+	// A route with a missing book can't trade, so its books and swaps aren't
+	// shown; the quote says which book is missing.
+	const dexRoutable = query.data?.legs.every((leg) => leg.exists) ?? false
 	const [live, setLive] = useState(true)
 	const [paused, setPaused] = useState(false)
 	// Poll only while the feed is on screen.
 	const swaps = useDexSwaps(
-		live && !paused && (isMobile || section === 1),
+		dexRoutable && live && !paused && (isMobile || section === 1),
 		// Someone who opened this pair wants its swaps, verified or not.
 		{
 			path: query.data?.path.map((token) => token.address),
@@ -401,7 +404,7 @@ function DexRoutePage(): React.JSX.Element {
 
 			<PropAmmPairPools a={search.from} b={search.to} />
 
-			{snapshot && from && to && (
+			{snapshot && from && to && dexRoutable && (
 				<Sections
 					mode={isMobile ? 'stacked' : 'tabs'}
 					activeSection={section}
