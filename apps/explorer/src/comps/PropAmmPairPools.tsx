@@ -39,6 +39,13 @@ const price = new Intl.NumberFormat('en-US', {
 })
 
 namespace styles {
+	/** Columns a phone leaves out, so the rest keep room to read. */
+	export const wide = style({
+		'@media (max-width: 639px)': { display: 'none !custom' },
+	})
+	export const lead = style({
+		'@media (max-width: 639px)': { width: '44% !custom' },
+	})
 	export const heading = style({
 		color: 'content.primary',
 		margin: '0',
@@ -113,7 +120,7 @@ export function PropAmmPairPools(
 						<Table.Caption>PropAMM pools for this pair</Table.Caption>
 						<Table.Head>
 							<Table.Row>
-								<Table.HeaderCell>Pool</Table.HeaderCell>
+								<Table.HeaderCell {...styles.lead()}>Pool</Table.HeaderCell>
 								<Table.HeaderCell justify="end">Price</Table.HeaderCell>
 								<Table.HeaderCell
 									justify="end"
@@ -121,9 +128,15 @@ export function PropAmmPairPools(
 								>
 									Inventory
 								</Table.HeaderCell>
-								<Table.HeaderCell justify="end">1D vol</Table.HeaderCell>
-								<Table.HeaderCell justify="end">30D vol</Table.HeaderCell>
-								<Table.HeaderCell justify="end">State</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									1D vol
+								</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									30D vol
+								</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									State
+								</Table.HeaderCell>
 							</Table.Row>
 						</Table.Head>
 						<Table.Body>
@@ -154,13 +167,13 @@ export function PropAmmPairPools(
 										<Table.Cell justify="end" numeric>
 											<Inventory pool={pool} />
 										</Table.Cell>
-										<Table.Cell justify="end" numeric>
+										<Table.Cell justify="end" numeric {...styles.wide()}>
 											<Volume state={volumeState} value={poolVolume?.day} />
 										</Table.Cell>
-										<Table.Cell justify="end" numeric>
+										<Table.Cell justify="end" numeric {...styles.wide()}>
 											<Volume state={volumeState} value={poolVolume?.month} />
 										</Table.Cell>
-										<Table.Cell justify="end">
+										<Table.Cell justify="end" {...styles.wide()}>
 											<State pool={pool} />
 										</Table.Cell>
 									</Table.Row>

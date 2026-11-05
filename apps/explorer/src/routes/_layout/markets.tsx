@@ -193,6 +193,17 @@ namespace styles {
 		fontVariantNumeric: 'tabular-nums !custom',
 	})
 	export const panel = style({ paddingBlockStart: '16' })
+	/** Columns a phone leaves out, so the rest keep room to read. */
+	export const wide = style({
+		'@media (max-width: 639px)': { display: 'none !custom' },
+	})
+	/** The leading column, which a phone widens past its equal share. */
+	export const lead = style({
+		'@media (max-width: 639px)': { width: '52% !custom' },
+	})
+	export const leadTrade = style({
+		'@media (max-width: 639px)': { width: '50% !custom' },
+	})
 }
 
 function MarketsPage(): React.JSX.Element {
@@ -497,10 +508,16 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 	if (!loading && rows.length === 0)
 		return hasErrors ? null : <EmptyState title="No pairs" />
 
-	const sortable = (sort: MarketSort, label: string, title?: string) => (
+	const sortable = (
+		sort: MarketSort,
+		label: string,
+		title?: string,
+		wide = true,
+	) => (
 		<Table.HeaderCell
 			justify="end"
 			title={title}
+			{...(wide ? styles.wide() : {})}
 			aria-sort={
 				search.sort === sort
 					? search.dir === 'asc'
@@ -525,12 +542,13 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 				<Table.Caption>Pairs on the Stablecoin DEX and PropAMM</Table.Caption>
 				<Table.Head>
 					<Table.Row>
-						<Table.HeaderCell>Pair</Table.HeaderCell>
+						<Table.HeaderCell {...styles.lead()}>Pair</Table.HeaderCell>
 						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
 						{sortable(
 							'liquidity',
 							'Liquidity',
 							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share.',
+							false,
 						)}
 						{showSpread && sortable('spread', 'Spread')}
 						{sortable('day', '1D vol')}
@@ -559,14 +577,14 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 									)}
 								</Table.Cell>
 								{showSpread && (
-									<Table.Cell justify="end" numeric>
+									<Table.Cell justify="end" numeric {...styles.wide()}>
 										<SpreadValue value={row.spread} />
 									</Table.Cell>
 								)}
-								<Table.Cell justify="end" numeric>
+								<Table.Cell justify="end" numeric {...styles.wide()}>
 									<Volume loading={rowVolumeLoading} value={row.volume?.day} />
 								</Table.Cell>
-								<Table.Cell justify="end" numeric>
+								<Table.Cell justify="end" numeric {...styles.wide()}>
 									<Volume
 										loading={rowVolumeLoading}
 										value={row.volume?.month}
@@ -616,11 +634,17 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 				<Table.Head>
 					<Table.Row>
 						<Table.HeaderCell>Time</Table.HeaderCell>
-						<Table.HeaderCell>Trade</Table.HeaderCell>
+						<Table.HeaderCell {...styles.leadTrade()}>Trade</Table.HeaderCell>
 						<Table.HeaderCell justify="end">Value</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Amount</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Taker</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Amount
+						</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Price
+						</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Taker
+						</Table.HeaderCell>
 					</Table.Row>
 				</Table.Head>
 				<Table.Body>
@@ -651,7 +675,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 							<Table.Cell justify="end" numeric>
 								{trade.value === null ? <Dash /> : usd(trade.value)}
 							</Table.Cell>
-							<Table.Cell justify="end" numeric>
+							<Table.Cell justify="end" {...styles.wide()} numeric>
 								<span {...styles.nowrap()}>
 									{trade.baseAmount > 0 && trade.baseAmount < 0.01
 										? '<0.01'
@@ -659,14 +683,14 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 									<span {...styles.muted()}>{trade.base.symbol}</span>
 								</span>
 							</Table.Cell>
-							<Table.Cell justify="end" numeric>
+							<Table.Cell justify="end" {...styles.wide()} numeric>
 								<span {...styles.secondary()}>
 									{trade.baseAmount > 0
 										? price.format(trade.quoteAmount / trade.baseAmount)
 										: '—'}
 								</span>
 							</Table.Cell>
-							<Table.Cell justify="end">
+							<Table.Cell justify="end" {...styles.wide()}>
 								<Address address={trade.taker} align="end" chars={4} />
 							</Table.Cell>
 						</Table.Row>
@@ -692,7 +716,7 @@ function LoadingRow(props: LoadingRowProps): React.JSX.Element {
 	return (
 		<Table.Row aria-busy="true">
 			{Array.from({ length: props.columns }, (_, index) => (
-				<Table.Cell key={index}>
+				<Table.Cell key={index} {...(index >= 3 ? styles.wide() : {})}>
 					<Skeleton>
 						<span>Loading value</span>
 					</Skeleton>
@@ -830,8 +854,11 @@ function PriceValue(props: PriceValueProps): React.JSX.Element {
 	if (props.value === null) return <Dash />
 	return (
 		<span {...styles.nowrap()}>
-			{price.format(props.value)}{' '}
-			<span {...styles.muted()}>{props.quote.symbol}</span>
+			{price.format(props.value)}
+			<span {...styles.wide()}>
+				{' '}
+				<span {...styles.muted()}>{props.quote.symbol}</span>
+			</span>
 		</span>
 	)
 }
