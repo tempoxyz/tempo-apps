@@ -459,7 +459,7 @@ function PoolCell(props: {
 	pool: PropAmmPool
 	withState?: boolean
 }): React.JSX.Element {
-	const { base, quote, state } = props.pool
+	const { base, quote, version, state } = props.pool
 	return (
 		<div className="flex items-center gap-2.5 min-w-0">
 			<span className="inline-flex shrink-0 items-center">
@@ -480,11 +480,15 @@ function PoolCell(props: {
 					<span className="text-tertiary"> / </span>
 					{quote.symbol}
 				</span>
-				{props.withState && (
-					<span className="label-12 truncate">
-						<StateIndicator state={state} />
-					</span>
-				)}
+				<span className="flex items-center gap-1.5 label-12 text-tertiary truncate">
+					{version}
+					{props.withState && (
+						<>
+							<span aria-hidden="true">·</span>
+							<StateIndicator state={state} />
+						</>
+					)}
+				</span>
 			</span>
 		</div>
 	)
