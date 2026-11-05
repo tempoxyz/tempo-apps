@@ -133,6 +133,7 @@ function DexRoutePage(): React.JSX.Element {
 		...propAmmQuotesQueryOptions(search),
 		enabled: Boolean(snapshot) && !snapshot?.inputError,
 	})
+	const quoteFetching = query.isFetching || propAmmQuotes.isFetching
 	// Every venue quoting the same swap; the page leads with the best.
 	const venues: Venue[] = snapshot
 		? [
@@ -279,7 +280,7 @@ function DexRoutePage(): React.JSX.Element {
 								<div
 									className="flex flex-col gap-4 p-[18px] md:pl-14"
 									aria-live="polite"
-									aria-busy={query.isFetching}
+									aria-busy={quoteFetching}
 								>
 									<div className="copy-13 text-tertiary">You receive</div>
 									<div className="flex items-center justify-between gap-4 min-h-[48px]">
@@ -287,8 +288,7 @@ function DexRoutePage(): React.JSX.Element {
 											<div
 												className={cx(
 													'text-[32px] sm:text-[40px] leading-none tracking-[-0.02em] font-medium tabular-nums text-primary break-all transition-opacity',
-													(query.isFetching || propAmmQuotes.isFetching) &&
-														'opacity-60',
+													quoteFetching && 'opacity-60',
 												)}
 											>
 												{formatAmount(best.amountOut)}
@@ -372,13 +372,16 @@ function DexRoutePage(): React.JSX.Element {
 								</Link>
 								<button
 									type="button"
-									onClick={() => void query.refetch()}
-									disabled={query.isFetching}
+									onClick={() => {
+										void query.refetch()
+										if (propAmmQuotes.isEnabled) void propAmmQuotes.refetch()
+									}}
+									disabled={quoteFetching}
 									aria-label="Refresh quote"
 									className="inline-flex items-center gap-1.5 hover:text-primary cursor-pointer disabled:cursor-wait"
 								>
 									<RefreshCwIcon
-										className={cx('size-3', query.isFetching && 'animate-spin')}
+										className={cx('size-3', quoteFetching && 'animate-spin')}
 									/>
 									Refresh
 								</button>
