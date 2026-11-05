@@ -12,6 +12,7 @@ import {
 } from 'viem'
 import { Abis } from '#lib/abis'
 import type { DexPoolToken } from '#lib/dex-pools'
+import { parseRouteAmount } from '#lib/dex-route'
 import {
 	decodeHotWord,
 	type PropAmmPool,
@@ -28,6 +29,8 @@ import {
 import { addressOf, indexer, list, sqlTime } from '#lib/server/dex-indexer'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
+import { zAddress } from '#lib/zod'
+import * as z from 'zod/mini'
 
 /** propAMM v1 DirectPropAMM (tempoxyz/propAMM contracts/src/DirectPropAMM.sol). */
 const directAbi = parseAbi([
@@ -636,3 +639,151 @@ export const fetchPropAmmTrades = createServerFn({ method: 'GET' }).handler(
 		}
 	},
 )
+
+/** v1's oracle-priced quote (DirectPropAMM.quoteExactInput). */
+const directQuoteAbi = parseAbi([
+	'function quoteExactInput(bool baseToQuote, uint256 amountIn) view returns (uint256 amountOut, uint256 price, uint256 updatedAt)',
+])
+
+/** v2's quote, which refuses a swap its inventory can't fill (IVenue.quote). */
+const venueQuoteAbi = parseAbi([
+	'function quote(uint16 pairIndex, address tokenIn, address tokenOut, uint128 amount, bool exactIn) view returns (uint128 amountIn, uint128 amountOut)',
+	'error InsufficientInventory(address token, uint256 available, uint256 required)',
+	'error VenueHalted()',
+])
+
+export type PropAmmQuote = {
+	key: string
+	version: PropAmmPool['version']
+	address: Address
+	/** Output-token amount, or null when the pool can't fill this swap. */
+	amountOut: string | null
+	status: 'quoted' | 'no-liquidity' | 'unavailable'
+}
+
+const quoteInputSchema = z.object({
+	from: zAddress({ lowercase: true }),
+	to: zAddress({ lowercase: true }),
+	amount: z.string().check(z.regex(/^\d{1,33}(\.\d{1,18})?$/)),
+})
+
+/** Every pool trading from for to quotes the same exact-input swap at the latest block. */
+export async function getPropAmmQuotes(
+	input: z.infer<typeof quoteInputSchema>,
+): Promise<PropAmmQuote[]> {
+	const chainId = getTempoChain().id
+	if (propAmmPoolsFor(chainId).length === 0) return []
+	const meta = await readMeta(chainId)
+	const pools = meta.pools.flatMap((pool) => {
+		const base = pool.base.address.toLowerCase()
+		const quote = pool.quote.address.toLowerCase()
+		if (input.from === base && input.to === quote)
+			return [{ pool, tokenIn: pool.base, tokenOut: pool.quote }]
+		if (input.from === quote && input.to === base)
+			return [{ pool, tokenIn: pool.quote, tokenOut: pool.base }]
+		return []
+	})
+	if (pools.length === 0) return []
+	const reads = pools.map(({ pool, tokenIn, tokenOut }) => {
+		let amountIn: bigint
+		try {
+			amountIn = parseRouteAmount(input.amount, tokenIn.decimals)
+		} catch {
+			return null
+		}
+		const { address, pairIndex } = pool.config
+		const balance: ContractFunctionParameters = {
+			address: tokenOut.address,
+			abi: Abis.tip20,
+			functionName: 'balanceOf',
+			args: [address],
+		}
+		const calls: ContractFunctionParameters[] =
+			pool.config.version === 'v1'
+				? [
+						{
+							address,
+							abi: directQuoteAbi,
+							functionName: 'quoteExactInput',
+							args: [tokenIn.address === pool.base.address, amountIn],
+						},
+						{ address, abi: directAbi, functionName: 'paused' },
+						balance,
+					]
+				: [
+						{
+							address,
+							abi: venueQuoteAbi,
+							functionName: 'quote',
+							args: [
+								pairIndex,
+								tokenIn.address,
+								tokenOut.address,
+								amountIn,
+								true,
+							],
+						},
+					]
+		return calls
+	})
+	const results = await withDeadline(
+		multicall(reads.flatMap((calls) => calls ?? [])),
+		POOLS_DEADLINE,
+	)
+	let offset = 0
+	return pools.map(({ pool, tokenOut }, index): PropAmmQuote => {
+		const calls = reads[index]
+		const base = {
+			key: pool.key,
+			version: pool.config.version,
+			address: pool.config.address,
+		}
+		if (!calls) return { ...base, amountOut: null, status: 'unavailable' }
+		const slice = results.slice(offset, offset + calls.length)
+		offset += calls.length
+		const [quote, paused, balance] = slice
+		if (quote?.status !== 'success') {
+			const inventory = String(quote?.error ?? '').includes(
+				'InsufficientInventory',
+			)
+			return {
+				...base,
+				amountOut: null,
+				status: inventory ? 'no-liquidity' : 'unavailable',
+			}
+		}
+		const amountOut =
+			pool.config.version === 'v1'
+				? (quote.result as readonly [bigint, bigint, bigint])[0]
+				: (quote.result as readonly [bigint, bigint])[1]
+		// v1's quote reads only its oracle, so check the pool can trade and pay out.
+		if (pool.config.version === 'v1') {
+			if (paused?.status !== 'success' || paused.result === true)
+				return { ...base, amountOut: null, status: 'unavailable' }
+			if (
+				balance?.status === 'success' &&
+				(balance.result as bigint) < amountOut
+			)
+				return { ...base, amountOut: null, status: 'no-liquidity' }
+		}
+		return {
+			...base,
+			amountOut: formatUnits(amountOut, tokenOut.decimals),
+			status: 'quoted',
+		}
+	})
+}
+
+export const fetchPropAmmQuotes = createServerFn({ method: 'POST' })
+	.inputValidator((input) => quoteInputSchema.parse(input))
+	.handler(async ({ data }) => {
+		try {
+			return await withDeadline(
+				getPropAmmQuotes(data),
+				META_DEADLINE + POOLS_DEADLINE,
+			)
+		} catch (error) {
+			console.error('Failed to quote propAMM pools:', error)
+			throw new Error('PropAMM quotes are temporarily unavailable.')
+		}
+	})

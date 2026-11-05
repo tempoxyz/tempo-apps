@@ -1,5 +1,9 @@
 import { queryOptions } from '@tanstack/react-query'
-import { fetchPropAmmPools, fetchPropAmmTrades } from '#lib/server/propamm'
+import {
+	fetchPropAmmPools,
+	fetchPropAmmQuotes,
+	fetchPropAmmTrades,
+} from '#lib/server/propamm'
 import { getTempoChain } from '#wagmi.config'
 
 export function propAmmPoolsQueryOptions() {
@@ -18,6 +22,19 @@ export function propAmmTradesQueryOptions() {
 		queryFn: () => fetchPropAmmTrades(),
 		staleTime: 30_000,
 		refetchInterval: 30_000,
+		retry: 1,
+	})
+}
+
+export function propAmmQuotesQueryOptions(input: {
+	from: string
+	to: string
+	amount: string
+}) {
+	return queryOptions({
+		queryKey: ['propamm-quotes', getTempoChain().id, input],
+		queryFn: () => fetchPropAmmQuotes({ data: input }),
+		staleTime: 15_000,
 		retry: 1,
 	})
 }

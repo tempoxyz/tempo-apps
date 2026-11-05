@@ -24,6 +24,7 @@ import {
 	type DexToken,
 } from '#lib/dex-route'
 import { useMediaQuery } from '#lib/hooks'
+import { propAmmQuotesQueryOptions } from '#lib/queries/propamm'
 import {
 	dexLegDepthQueryOptions,
 	dexRouteQueryOptions,
@@ -87,6 +88,13 @@ function formatAmount(value: string): string {
 	return numeric > 0 && numeric < 0.000001 ? value : number.format(numeric)
 }
 
+type Venue = {
+	key: string
+	label: string
+	amountOut: string | null
+	message: string
+}
+
 function quoteMessage(quote: DexQuote, legs: readonly DexLeg[]): string {
 	const missing = legs.find((leg) => !leg.exists)
 	if (missing)
@@ -121,6 +129,38 @@ function DexRoutePage(): React.JSX.Element {
 	const impact = snapshot
 		? quoteImpact(snapshot.quote, snapshot.reference)
 		: null
+	const propAmmQuotes = useQuery({
+		...propAmmQuotesQueryOptions(search),
+		enabled: Boolean(snapshot) && !snapshot?.inputError,
+	})
+	// Every venue quoting the same swap; the page leads with the best.
+	const venues: Venue[] = snapshot
+		? [
+				{
+					key: 'dex',
+					label: 'Stablecoin DEX',
+					amountOut: snapshot.quote.amountOut,
+					message: quoteMessage(snapshot.quote, snapshot.legs),
+				},
+				...(propAmmQuotes.data ?? []).map((quote) => ({
+					key: quote.key,
+					label: `PropAMM ${quote.version}`,
+					amountOut: quote.amountOut,
+					message:
+						quote.status === 'no-liquidity'
+							? 'Not enough inventory'
+							: 'Quote unavailable',
+				})),
+			]
+		: []
+	const best = venues.reduce<(Venue & { amountOut: string }) | undefined>(
+		(top, venue) =>
+			venue.amountOut !== null &&
+			(!top || Number(venue.amountOut) > Number(top.amountOut))
+				? { ...venue, amountOut: venue.amountOut }
+				: top,
+		undefined,
+	)
 
 	return (
 		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
@@ -188,10 +228,8 @@ function DexRoutePage(): React.JSX.Element {
 				</div>
 			</div>
 
-			<PropAmmPairPools a={search.from} b={search.to} />
-
 			<section
-				aria-label="Stablecoin DEX route and quote"
+				aria-label="Quote"
 				className="rounded-body border border-card-border bg-card overflow-hidden"
 			>
 				{query.isError && !snapshot ? (
@@ -217,32 +255,6 @@ function DexRoutePage(): React.JSX.Element {
 					from &&
 					to && (
 						<>
-							<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[18px] py-3 border-b border-dashed border-card-border">
-								<h2 className="copy-14 font-medium text-primary">
-									Stablecoin DEX
-								</h2>
-								{snapshot.path.length > 2 && (
-									<ol
-										aria-label="Token path"
-										className="flex flex-wrap items-center gap-x-2.5 gap-y-3"
-									>
-										{snapshot.path.map((token, index) => (
-											<li
-												key={token.address}
-												className="flex items-center gap-2.5 min-w-0"
-											>
-												{index > 0 && (
-													<ArrowRightIcon
-														aria-hidden="true"
-														className="size-3.5 text-tertiary shrink-0"
-													/>
-												)}
-												<TokenLink token={token} />
-											</li>
-										))}
-									</ol>
-								)}
-							</div>
 							<div className="grid md:grid-cols-2">
 								<div className="relative">
 									<AmountInput
@@ -271,48 +283,81 @@ function DexRoutePage(): React.JSX.Element {
 								>
 									<div className="copy-13 text-tertiary">You receive</div>
 									<div className="flex items-center justify-between gap-4 min-h-[48px]">
-										{snapshot.quote.amountOut !== null ? (
+										{best ? (
 											<div
 												className={cx(
 													'text-[32px] sm:text-[40px] leading-none tracking-[-0.02em] font-medium tabular-nums text-primary break-all transition-opacity',
-													query.isFetching && 'opacity-60',
+													(query.isFetching || propAmmQuotes.isFetching) &&
+														'opacity-60',
 												)}
 											>
-												{formatAmount(snapshot.quote.amountOut)}
+												{formatAmount(best.amountOut)}
 											</div>
 										) : (
 											<p className="heading-20 text-secondary">
 												{snapshot.inputError
 													? 'Enter a valid amount'
-													: quoteMessage(snapshot.quote, snapshot.legs)}
+													: venues.length > 1
+														? 'No venue can fill this amount'
+														: quoteMessage(snapshot.quote, snapshot.legs)}
 											</p>
 										)}
 										<TokenBadge token={to} />
 									</div>
-									{snapshot.quote.amountOut !== null && (
+									{(best || venues.length > 1) && (
 										<dl className="flex flex-col gap-2 copy-13">
-											<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-												<dt className="text-tertiary">Rate</dt>
-												<dd className="text-secondary tabular-nums">
-													1 {from.symbol} ={' '}
-													{rate.format(
-														Number(snapshot.quote.amountOut) /
-															Number(snapshot.quote.amountIn),
-													)}{' '}
-													{to.symbol}
-												</dd>
-											</div>
-											<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
-												<dt
-													className="text-tertiary"
-													title={`Compared with the rate for 1 ${from.symbol} at the same block`}
-												>
-													Price impact
-												</dt>
-												<dd className="text-secondary tabular-nums">
-													{impact === null ? '—' : `${bps.format(impact)} bps`}
-												</dd>
-											</div>
+											{best && (
+												<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+													<dt className="text-tertiary">Rate</dt>
+													<dd className="text-secondary tabular-nums">
+														1 {from.symbol} ={' '}
+														{rate.format(
+															Number(best.amountOut) /
+																Number(snapshot.quote.amountIn),
+														)}{' '}
+														{to.symbol}
+													</dd>
+												</div>
+											)}
+											{best?.key === 'dex' && (
+												<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
+													<dt
+														className="text-tertiary"
+														title={`Compared with the rate for 1 ${from.symbol} at the same block`}
+													>
+														Price impact
+													</dt>
+													<dd className="text-secondary tabular-nums">
+														{impact === null
+															? '—'
+															: `${bps.format(impact)} bps`}
+													</dd>
+												</div>
+											)}
+											{venues.length > 1 &&
+												venues.map((venue) => (
+													<div
+														key={venue.key}
+														className="flex flex-wrap justify-between gap-x-4 gap-y-1"
+													>
+														<dt className="text-tertiary">{venue.label}</dt>
+														<dd
+															className={cx(
+																'tabular-nums',
+																venue.key === best?.key
+																	? 'text-primary'
+																	: 'text-secondary',
+															)}
+														>
+															{venue.amountOut === null
+																? venue.message
+																: `${formatAmount(venue.amountOut)} ${to.symbol}`}
+															{venue.key === best?.key && (
+																<span className="text-positive"> · Best</span>
+															)}
+														</dd>
+													</div>
+												))}
 										</dl>
 									)}
 								</div>
@@ -350,6 +395,8 @@ function DexRoutePage(): React.JSX.Element {
 					)
 				)}
 			</section>
+
+			<PropAmmPairPools a={search.from} b={search.to} />
 
 			{snapshot && from && to && (
 				<Sections
