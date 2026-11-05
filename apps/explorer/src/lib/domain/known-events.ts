@@ -130,7 +130,9 @@ function findCardPulls(
 		key: string
 	}> = []
 	events.forEach((candidate, index) => {
-		if (!isTransferEvent_(candidate)) return
+		// Only a genuine TIP-20's logs prove funds moved; any contract can emit
+		// a Transfer naming a card spender.
+		if (!isTransferEvent_(candidate) || !isTip20Token(candidate.address)) return
 		const from = eventAddress(candidate, 'from')
 		const to = eventAddress(candidate, 'to')
 		const amount = eventBigInt(candidate, 'amount')

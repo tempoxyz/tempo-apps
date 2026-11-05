@@ -5,7 +5,11 @@ import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 
 /** Real mainnet receipts exported from explore.tempo.xyz/receipt/<hash>.json. */
-function describeFixture(name: string, holder?: `0x${string}`): string[] {
+function describeFixture(
+	name: string,
+	holder?: `0x${string}`,
+	emitter?: (address: string) => string,
+): string[] {
 	const json = JSON.parse(
 		readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url), 'utf8'),
 		(_key, value) =>
@@ -17,6 +21,7 @@ function describeFixture(name: string, holder?: `0x${string}`): string[] {
 		...json.receipt,
 		logs: json.receipt.logs.map((log: Record<string, unknown>) => ({
 			...log,
+			address: emitter ? emitter(log.address as string) : log.address,
 			logIndex: Number(log.logIndex),
 		})),
 	}
@@ -40,6 +45,16 @@ function describeFixture(name: string, holder?: `0x${string}`): string[] {
 describe('Tempo Cash Earn receipts', () => {
 	test('a card purchase funded from Earn reads as a card payment', () => {
 		expect(describeFixture('cash-card-earn')).toEqual(['Card Payment'])
+	})
+
+	test('look-alike token logs do not make a card payment', () => {
+		expect(
+			describeFixture('cash-card-earn', undefined, (address) =>
+				address.toLowerCase().startsWith('0x20c0')
+					? '0x1111111111111111111111111111111111111111'
+					: address,
+			),
+		).not.toContain('Card Payment')
 	})
 
 	test('daily interest shows the holder their own share', () => {
