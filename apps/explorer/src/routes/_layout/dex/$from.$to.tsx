@@ -91,6 +91,8 @@ function formatAmount(value: string): string {
 type Venue = {
 	key: string
 	label: string
+	/** The DEX's route when it trades through other books. */
+	detail?: string | undefined
 	amountOut: string | null
 	message: string
 }
@@ -143,6 +145,14 @@ function DexRoutePage(): React.JSX.Element {
 				{
 					key: 'dex',
 					label: 'Stablecoin DEX',
+					detail:
+						snapshot.path.length > 2
+							? 'via ' +
+								snapshot.path
+									.slice(1, -1)
+									.map((token) => token.symbol)
+									.join(' → ')
+							: undefined,
 					amountOut: snapshot.quote.amountOut,
 					message: quoteMessage(snapshot.quote, snapshot.legs),
 				},
@@ -343,7 +353,14 @@ function DexRoutePage(): React.JSX.Element {
 														key={venue.key}
 														className="flex flex-wrap justify-between gap-x-4 gap-y-1"
 													>
-														<dt className="text-tertiary">{venue.label}</dt>
+														<dt className="text-tertiary">
+															{venue.label}
+															{venue.detail && (
+																<span className="block label-12">
+																	{venue.detail}
+																</span>
+															)}
+														</dt>
 														<dd
 															className={cx(
 																'tabular-nums',
@@ -411,16 +428,24 @@ function DexRoutePage(): React.JSX.Element {
 					onSectionChange={setSection}
 					sections={[
 						{
-							title: snapshot.legs.length === 1 ? 'Order book' : 'Order books',
+							title: snapshot.legs.length === 1 ? 'Order book' : 'Route',
 							autoCollapse: false,
 							content: (
 								<div className="flex flex-col">
+									{snapshot.legs.length > 1 && (
+										<p className="px-[18px] py-3.5 copy-13 text-secondary border-b border-dashed border-card-border">
+											The Stablecoin DEX has no {from.symbol} / {to.symbol}{' '}
+											book, so a swap trades through these{' '}
+											{snapshot.legs.length} books in turn.
+										</p>
+									)}
 									{snapshot.legs.map((leg, index) => (
 										<LegRow
 											key={`${leg.from.address}:${leg.to.address}`}
 											blockNumber={snapshot.blockNumber}
 											index={snapshot.legs.length > 1 ? index : undefined}
 											leg={leg}
+											showDepth={snapshot.legs.length === 1}
 										/>
 									))}
 								</div>
@@ -580,8 +605,10 @@ function LegRow(props: {
 	blockNumber: string
 	index: number | undefined
 	leg: DexLeg
+	/** A direct pair shows its depth; a route's hops show only their best prices. */
+	showDepth: boolean
 }): React.JSX.Element {
-	const { blockNumber, index, leg } = props
+	const { blockNumber, index, leg, showDepth } = props
 	const depth = useQuery({
 		...dexLegDepthQueryOptions({
 			from: leg.from.address,
@@ -589,7 +616,7 @@ function LegRow(props: {
 			tick: leg.bestTick ?? 0,
 			blockNumber,
 		}),
-		enabled: leg.bestTick !== null,
+		enabled: showDepth && leg.bestTick !== null,
 	})
 	const spread =
 		leg.bid !== null && leg.ask !== null
@@ -634,7 +661,7 @@ function LegRow(props: {
 					<span className="copy-13 text-tertiary">Book not created</span>
 				)}
 			</div>
-			{leg.bestTick !== null && (
+			{showDepth && leg.bestTick !== null && (
 				<div
 					className="border-t border-dashed border-card-border"
 					aria-live="polite"
