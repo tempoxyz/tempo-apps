@@ -7,7 +7,6 @@ import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
-import { zyzz } from 'zyzz/vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
@@ -94,8 +93,6 @@ export default defineConfig((config) => {
 				vitePluginChromiumDevTools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
-			// Tempo Design System (@tempoxyz/ds) styles compile ahead of time.
-			zyzz(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
 			tanstack({
 				srcDirectory: './src',
@@ -123,8 +120,6 @@ export default defineConfig((config) => {
 					},
 				}),
 		].filter(Boolean),
-		// The plugin reads the design system's contracts, so SSR bundles them.
-		ssr: { noExternal: ['@tempoxyz/ds', 'zyzz'] },
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,
