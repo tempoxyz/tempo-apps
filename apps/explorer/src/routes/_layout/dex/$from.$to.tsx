@@ -724,7 +724,12 @@ function DepthLadder(props: {
 	return (
 		<table className="block w-full tabular-nums whitespace-nowrap copy-13 pb-2">
 			<thead className="block">
-				<tr className={cx(row, 'py-2 label-12 text-tertiary')}>
+				<tr
+					className={cx(
+						row,
+						'items-end py-2 label-12 text-tertiary whitespace-normal',
+					)}
+				>
 					<th className="text-left font-normal">
 						Price · {leg.to.symbol} per {leg.from.symbol}
 					</th>
