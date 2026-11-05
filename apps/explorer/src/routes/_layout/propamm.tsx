@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	Link,
+	stripSearchParams,
+	useRouter,
+} from '@tanstack/react-router'
 import {
 	Alert,
 	Container,
@@ -324,6 +329,35 @@ function PropAmmPage(): React.JSX.Element {
 	)
 }
 
+/**
+ * A clickable table row that navigates like a link: client-side on a plain
+ * click, in a new tab on a modifier or middle click. Links and buttons inside
+ * the row handle their own clicks.
+ */
+function useRowLink(): (href: string) => {
+	'data-href': string
+	onClick: (event: React.MouseEvent<HTMLTableRowElement>) => void
+	onAuxClick: (event: React.MouseEvent<HTMLTableRowElement>) => void
+} {
+	const router = useRouter()
+	return (href) => {
+		const open = (event: React.MouseEvent<HTMLTableRowElement>) => {
+			if ((event.target as HTMLElement).closest('a, button')) return
+			if (
+				event.button === 1 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey
+			) {
+				window.open(href, '_blank', 'noopener')
+				return
+			}
+			if (event.button === 0) void router.navigate({ to: href })
+		}
+		return { 'data-href': href, onClick: open, onAuxClick: open }
+	}
+}
+
 function PoolsTable(props: {
 	rows: PropAmmRow[]
 	loading: boolean
@@ -332,6 +366,7 @@ function PoolsTable(props: {
 	onSort: (sort: PropAmmSort) => void
 }): React.JSX.Element {
 	const { rows, loading, volumeState, search, onSort } = props
+	const rowLink = useRowLink()
 	if (!loading && rows.length === 0)
 		return <EmptyState title="No propAMM pools on this network" />
 
@@ -378,11 +413,7 @@ function PoolsTable(props: {
 						: rows.map((pool, index) => (
 								<Table.Row
 									key={pool.key}
-									data-href={`/address/${pool.address}`}
-									onClick={(event) => {
-										if ((event.target as HTMLElement).closest('a')) return
-										window.location.assign(`/address/${pool.address}`)
-									}}
+									{...rowLink(`/address/${pool.address}`)}
 								>
 									<Table.Cell muted numeric>
 										{index + 1}
@@ -419,6 +450,7 @@ function TradesTable(props: {
 	pools: Map<string, PropAmmPool>
 	loading: boolean
 }): React.JSX.Element {
+	const rowLink = useRowLink()
 	const trades = props.trades.flatMap((trade) => {
 		const pool = props.pools.get(trade.poolKey)
 		return pool ? [{ trade, pool }] : []
@@ -448,21 +480,17 @@ function TradesTable(props: {
 						: trades.map(({ trade, pool }) => (
 								<Table.Row
 									key={trade.id}
-									data-href={`/tx/${trade.transactionHash}`}
-									onClick={(event) => {
-										if ((event.target as HTMLElement).closest('a, button'))
-											return
-										window.location.assign(`/tx/${trade.transactionHash}`)
-									}}
+									{...rowLink(`/tx/${trade.transactionHash}`)}
 								>
 									<Table.Cell muted>
-										<a
-											href={`/tx/${trade.transactionHash}`}
+										<Link
+											to="/tx/$hash"
+											params={{ hash: trade.transactionHash }}
 											aria-label="View transaction"
 											{...styles.link()}
 										>
 											<RelativeTime timestamp={BigInt(trade.timestamp)} />
-										</a>
+										</Link>
 									</Table.Cell>
 									<Table.Cell>
 										<TradeLabel trade={trade} pool={pool} />
@@ -484,13 +512,14 @@ function TradesTable(props: {
 										</span>
 									</Table.Cell>
 									<Table.Cell>
-										<a
-											href={`/address/${trade.taker}`}
+										<Link
+											to="/address/$address"
+											params={{ address: trade.taker }}
 											title={trade.taker}
 											{...styles.link()}
 										>
 											<span {...styles.mono()}>{formatHex(trade.taker)}</span>
-										</a>
+										</Link>
 									</Table.Cell>
 								</Table.Row>
 							))}
@@ -550,7 +579,9 @@ function PoolLabel(props: { pool: PropAmmPool }): React.JSX.Element {
 	return (
 		<Inline
 			gap="12"
-			render={<a href={`/address/${address}`} {...styles.link()} />}
+			render={
+				<Link to="/address/$address" params={{ address }} {...styles.link()} />
+			}
 		>
 			<span {...styles.pair()}>
 				<TokenLogo src={`/api/token/logo/${base.address}`} alt="" />
