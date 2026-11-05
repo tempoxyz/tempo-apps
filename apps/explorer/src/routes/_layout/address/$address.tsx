@@ -2369,7 +2369,7 @@ function SectionsWrapper(props: {
 														<span
 															key="from"
 															className="flex min-w-0 items-center"
-															title={'Earn interest from ' + transfer.from}
+															title={`Earn interest from ${transfer.from}`}
 														>
 															<span className="shrink-0 rounded-[2px] bg-distinct/70 px-[6px] py-[1px] label-12 text-primary">
 																Earned Interest
@@ -2401,21 +2401,36 @@ function SectionsWrapper(props: {
 																`${transfer.token.address.slice(0, 6)}…${transfer.token.address.slice(-4)}`}
 														</span>
 													</Link>,
-													<TransferAmountCell
+													<span
 														key="amount"
-														value={value}
-														direction={direction}
-														display={transferAmountDisplay}
-														onToggleDisplay={() =>
-															setTransferAmountDisplay((previous) =>
-																previous === 'currency' ? 'token' : 'currency',
-															)
-														}
-														decimals={transfer.token.decimals}
-														symbol={transfer.token.symbol}
-														currency={transfer.token.currency}
-														valuation={transfer.valuation}
-													/>,
+														className="flex items-center justify-end gap-2 whitespace-nowrap"
+													>
+														{transfer.kind !== 'earn-interest' && (
+															<span className="label-12 text-secondary">
+																{direction === 'self'
+																	? 'Transferred to self'
+																	: direction === 'in'
+																		? 'Received'
+																		: 'Sent'}
+															</span>
+														)}
+														<TransferAmountCell
+															value={value}
+															direction={direction}
+															display={transferAmountDisplay}
+															onToggleDisplay={() =>
+																setTransferAmountDisplay((previous) =>
+																	previous === 'currency'
+																		? 'token'
+																		: 'currency',
+																)
+															}
+															decimals={transfer.token.decimals}
+															symbol={transfer.token.symbol}
+															currency={transfer.token.currency}
+															valuation={transfer.valuation}
+														/>
+													</span>,
 												],
 												link: {
 													href: `/receipt/${transfer.transactionHash}`,

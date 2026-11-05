@@ -59,6 +59,10 @@ const VERBS: Record<string, string> = {
 
 /** Whole labels whose past tense isn't just their first verb conjugated. */
 const LABELS: Record<string, string> = {
+	Approve: 'Approved spending',
+	'Open Payment Channel': 'Opened payment channel',
+	'Close Payment Channel': 'Closed payment channel',
+	'Add Funds to Payment Channel': 'Added funds to payment channel',
 	'Admin Burn': 'Burned by Admin',
 	'Complete Fill': 'Filled',
 	'Earn Interest': 'Earned Interest',
@@ -68,7 +72,7 @@ const LABELS: Record<string, string> = {
 	'Rebalance Swap': 'Swapped (Rebalance)',
 	'Self Transfer': 'Transferred to Self',
 	// "Blocked" describes what happened to the send, not a send that went through.
-	'Send Blocked': 'Send Blocked',
+	'Send Blocked': 'Payment blocked',
 	'Top Up': 'Topped Up',
 }
 
@@ -90,6 +94,7 @@ function own(table: Record<string, string>, key: string): string | undefined {
 const FAILED_SUFFIX = ' (failed)'
 
 export function pastTenseAction(value: string): string {
+	if (value === 'Send (failed)') return 'Payment failed'
 	// A reverted call didn't happen: keep its verb and say it failed.
 	if (value.endsWith(FAILED_SUFFIX))
 		return `${value.slice(0, -FAILED_SUFFIX.length)} Failed`
@@ -144,15 +149,14 @@ export function toPastTenseEvent(event: KnownEvent): KnownEvent {
 /**
  * A receipt is read by the sender, the receiver and anyone else, so a token
  * movement names both sides ("Transferred 10 USDC from Alice to Bob") instead
- * of the sender's "Sent". A proven payment (the sender called `transfer`
- * directly) keeps that signal as a Payment tag.
+ * of the sender's "Sent". A direct token transfer does not establish a purchase,
+ * so the receipt keeps one neutral action rather than adding a Payment tag.
  */
 function toNeutralTransfer(event: KnownEvent): KnownEvent | null {
 	if (!['send', 'transfer', 'earn send'].includes(event.type)) return null
 	const action = event.parts.find((part) => part.type === 'action')?.value
 	if (action !== 'Send' && action !== 'Transfer') return null
 	const tags: KnownEventPart[] = [{ type: 'action', value: 'Transferred' }]
-	if (action === 'Send') tags.push({ type: 'action', value: 'Payment' })
 	const { from, to } = event.meta ?? {}
 	if (!from || !to)
 		return {

@@ -2009,7 +2009,7 @@ function createDetectors(
 				return {
 					type: 'open channel',
 					parts: [
-						{ type: 'action', value: 'Open MPP Session' },
+						{ type: 'action', value: 'Open Payment Channel' },
 						{ type: 'amount', value: createAmount(deposit, token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: payee },
@@ -2029,7 +2029,7 @@ function createDetectors(
 				return {
 					type: 'top up channel',
 					parts: [
-						{ type: 'action', value: 'Top Up' },
+						{ type: 'action', value: 'Add Funds to Payment Channel' },
 						token
 							? {
 									type: 'amount',
@@ -2117,7 +2117,7 @@ function createDetectors(
 				return {
 					type: 'close channel',
 					parts: [
-						{ type: 'action', value: 'Close MPP Session' },
+						{ type: 'action', value: 'Close Payment Channel' },
 						{ type: 'text', value: 'Paid' },
 						paidAmount
 							? {

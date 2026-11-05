@@ -193,9 +193,13 @@ export namespace TxEventDescription {
 			}
 			case 'action': {
 				const isFailed =
-					part.value === 'Failed' || part.value.endsWith(' Failed')
+					part.value === 'Failed' ||
+					part.value.endsWith(' Failed') ||
+					part.value === 'Payment failed'
 				const isBlocked =
-					part.value === 'Blocked' || part.value === 'Send Blocked'
+					part.value === 'Blocked' ||
+					part.value === 'Send Blocked' ||
+					part.value === 'Payment blocked'
 				const isPrivateZoneAction = PRIVATE_ZONE_ACTIONS.has(part.value)
 				return (
 					<span

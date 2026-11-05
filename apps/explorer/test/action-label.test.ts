@@ -12,13 +12,16 @@ describe('pastTenseAction', () => {
 		['Mint', 'Minted'],
 		['Burn', 'Burned'],
 		['Admin Burn', 'Burned by Admin'],
-		['Approve', 'Approved'],
+		['Approve', 'Approved spending'],
 		['Update Supply Cap', 'Updated Supply Cap'],
 		['Open MPP Session', 'Opened MPP Session'],
+		['Open Payment Channel', 'Opened payment channel'],
+		['Close Payment Channel', 'Closed payment channel'],
+		['Add Funds to Payment Channel', 'Added funds to payment channel'],
 		['Limit Buy', 'Placed Limit Buy'],
 		['Encrypted Deposit to Zone E', 'Deposited to Zone E (Encrypted)'],
-		['Send (failed)', 'Send Failed'],
-		['Send Blocked', 'Send Blocked'],
+		['Send (failed)', 'Payment failed'],
+		['Send Blocked', 'Payment blocked'],
 		// Already past tense or a noun: unchanged.
 		['Sent', 'Sent'],
 		['Received', 'Received'],
@@ -77,9 +80,9 @@ describe('neutral transfers', () => {
 	} as const
 
 	test.each([
-		['Send', ['Transferred', 'Payment']],
+		['Send', ['Transferred']],
 		['Transfer', ['Transferred']],
-	] as const)('%s names both sides and tags only a proven payment', (action, tags) => {
+	] as const)('%s names both sides without inferring a purchase', (action, tags) => {
 		const event: KnownEvent = {
 			type: action === 'Send' ? 'send' : 'transfer',
 			parts: [
@@ -113,9 +116,8 @@ describe('neutral transfers', () => {
 			meta: { from, to },
 		}
 		const result = toPastTenseEvent(event)
-		expect(result.parts.slice(0, 2)).toEqual([
+		expect(result.parts.slice(0, 1)).toEqual([
 			{ type: 'action', value: 'Transferred' },
-			{ type: 'action', value: 'Payment' },
 		])
 		expect(result.note).toEqual(event.note)
 	})
