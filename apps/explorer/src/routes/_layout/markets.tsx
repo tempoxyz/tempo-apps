@@ -631,6 +631,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 						>
 							<Table.Cell muted>
 								<Link
+									preload="intent"
 									to="/tx/$hash"
 									params={{ hash: trade.transactionHash }}
 									title="View transaction"
@@ -748,6 +749,7 @@ function MarketLinkTo(props: MarketLinkToProps): React.JSX.Element {
 	if (link.kind === 'pair')
 		return (
 			<Link
+				preload="intent"
 				to="/dex/$from/$to"
 				params={{ from: link.from, to: link.to }}
 				title={title}
@@ -758,6 +760,7 @@ function MarketLinkTo(props: MarketLinkToProps): React.JSX.Element {
 		)
 	return (
 		<Link
+			preload="intent"
 			to="/address/$address"
 			params={{ address: link.address }}
 			title={title}

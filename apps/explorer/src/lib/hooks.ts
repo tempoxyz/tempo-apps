@@ -292,6 +292,14 @@ export function useRowLink(): (href: string) => useRowLink.Props {
 	return (href) => {
 		const open = (event: React.MouseEvent<HTMLTableRowElement>) => {
 			if ((event.target as HTMLElement).closest('a, button')) return
+			// A click that ends a text selection inside the row keeps it.
+			const selection = window.getSelection()
+			if (
+				selection &&
+				!selection.isCollapsed &&
+				event.currentTarget.contains(selection.anchorNode)
+			)
+				return
 			// Right, back and forward buttons keep their own behaviour.
 			if (event.button !== 0 && event.button !== 1) return
 			if (

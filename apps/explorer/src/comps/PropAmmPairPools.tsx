@@ -187,6 +187,7 @@ function PoolLabel(props: { pool: PropAmmPool }): React.JSX.Element {
 	const { base, quote, version, address } = props.pool
 	return (
 		<Link
+			preload="intent"
 			to="/address/$address"
 			params={{ address }}
 			title={`${base.symbol}/${quote.symbol} pool`}
