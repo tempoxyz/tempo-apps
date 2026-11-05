@@ -281,3 +281,38 @@ export declare namespace useRoutePrefetch {
 		enabled?: boolean
 	}
 }
+
+/**
+ * Props for a clickable table row that navigates like a link: client-side
+ * on a plain click, in a new tab on a modifier or middle click. Links and
+ * buttons inside the row handle their own clicks.
+ */
+export function useRowLink(): (href: string) => useRowLink.Props {
+	const router = useRouter()
+	return (href) => {
+		const open = (event: React.MouseEvent<HTMLTableRowElement>) => {
+			if ((event.target as HTMLElement).closest('a, button')) return
+			// Right, back and forward buttons keep their own behaviour.
+			if (event.button !== 0 && event.button !== 1) return
+			if (
+				event.button === 1 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey
+			) {
+				window.open(href, '_blank', 'noopener')
+				return
+			}
+			if (event.button === 0) void router.navigate({ to: href })
+		}
+		return { 'data-href': href, onClick: open, onAuxClick: open }
+	}
+}
+
+export declare namespace useRowLink {
+	type Props = {
+		'data-href': string
+		onClick: (event: React.MouseEvent<HTMLTableRowElement>) => void
+		onAuxClick: (event: React.MouseEvent<HTMLTableRowElement>) => void
+	}
+}
