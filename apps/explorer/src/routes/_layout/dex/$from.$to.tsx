@@ -87,7 +87,10 @@ function formatAmount(value: string): string {
 	return numeric > 0 && numeric < 0.000001 ? value : number.format(numeric)
 }
 
-function quoteMessage(quote: DexQuote): string {
+function quoteMessage(quote: DexQuote, legs: readonly DexLeg[]): string {
+	const missing = legs.find((leg) => !leg.exists)
+	if (missing)
+		return `No ${missing.from.symbol} → ${missing.to.symbol} order book`
 	return quote.status === 'no-liquidity'
 		? 'Insufficient liquidity for this amount'
 		: 'Quote unavailable'
@@ -185,8 +188,10 @@ function DexRoutePage(): React.JSX.Element {
 				</div>
 			</div>
 
+			<PropAmmPairPools a={search.from} b={search.to} />
+
 			<section
-				aria-label="Route and quote"
+				aria-label="Stablecoin DEX route and quote"
 				className="rounded-body border border-card-border bg-card overflow-hidden"
 			>
 				{query.isError && !snapshot ? (
@@ -212,27 +217,32 @@ function DexRoutePage(): React.JSX.Element {
 					from &&
 					to && (
 						<>
-							{snapshot.path.length > 2 && (
-								<ol
-									aria-label="Token path"
-									className="flex flex-wrap items-center gap-x-2.5 gap-y-3 px-[18px] py-3 border-b border-dashed border-card-border"
-								>
-									{snapshot.path.map((token, index) => (
-										<li
-											key={token.address}
-											className="flex items-center gap-2.5 min-w-0"
-										>
-											{index > 0 && (
-												<ArrowRightIcon
-													aria-hidden="true"
-													className="size-3.5 text-tertiary shrink-0"
-												/>
-											)}
-											<TokenLink token={token} />
-										</li>
-									))}
-								</ol>
-							)}
+							<div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[18px] py-3 border-b border-dashed border-card-border">
+								<h2 className="copy-14 font-medium text-primary">
+									Stablecoin DEX
+								</h2>
+								{snapshot.path.length > 2 && (
+									<ol
+										aria-label="Token path"
+										className="flex flex-wrap items-center gap-x-2.5 gap-y-3"
+									>
+										{snapshot.path.map((token, index) => (
+											<li
+												key={token.address}
+												className="flex items-center gap-2.5 min-w-0"
+											>
+												{index > 0 && (
+													<ArrowRightIcon
+														aria-hidden="true"
+														className="size-3.5 text-tertiary shrink-0"
+													/>
+												)}
+												<TokenLink token={token} />
+											</li>
+										))}
+									</ol>
+								)}
+							</div>
 							<div className="grid md:grid-cols-2">
 								<div className="relative">
 									<AmountInput
@@ -274,7 +284,7 @@ function DexRoutePage(): React.JSX.Element {
 											<p className="heading-20 text-secondary">
 												{snapshot.inputError
 													? 'Enter a valid amount'
-													: quoteMessage(snapshot.quote)}
+													: quoteMessage(snapshot.quote, snapshot.legs)}
 											</p>
 										)}
 										<TokenBadge token={to} />
@@ -340,8 +350,6 @@ function DexRoutePage(): React.JSX.Element {
 					)
 				)}
 			</section>
-
-			<PropAmmPairPools a={search.from} b={search.to} />
 
 			{snapshot && from && to && (
 				<Sections
