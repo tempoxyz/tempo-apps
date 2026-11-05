@@ -112,16 +112,16 @@ jobs:
 
   deploy-tempo-snapshots-viewer:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Tempo Snapshots Viewer
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: tempo-snapshots-viewer
-      environments: '[""]'
 
   deploy-mcp-docs-indexer:
     permissions:
