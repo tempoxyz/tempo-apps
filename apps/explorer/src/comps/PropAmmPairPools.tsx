@@ -43,8 +43,8 @@ namespace styles {
 	export const wide = style({
 		'@media (max-width: 639px)': { display: 'none !custom' },
 	})
-	export const lead = style({
-		'@media (max-width: 639px)': { width: '44% !custom' },
+	export const card = style({
+		'@media (max-width: 639px)': { paddingInline: '16' },
 	})
 	export const heading = style({
 		color: 'content.primary',
@@ -106,7 +106,11 @@ export function PropAmmPairPools(
 			: 'known'
 
 	return (
-		<Surface size="medium" render={<section aria-label="PropAMM pools" />}>
+		<Surface
+			size="medium"
+			{...styles.card()}
+			render={<section aria-label="PropAMM pools" />}
+		>
 			<Stack gap="16">
 				<h2 {...styles.heading()}>
 					PropAMM
@@ -120,8 +124,10 @@ export function PropAmmPairPools(
 						<Table.Caption>PropAMM pools for this pair</Table.Caption>
 						<Table.Head>
 							<Table.Row>
-								<Table.HeaderCell {...styles.lead()}>Pool</Table.HeaderCell>
-								<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+								<Table.HeaderCell>Pool</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									Price
+								</Table.HeaderCell>
 								<Table.HeaderCell
 									justify="end"
 									title="Base and quote held, in US dollars. Pairs on one v2 venue share its balances."
@@ -152,7 +158,7 @@ export function PropAmmPairPools(
 										<Table.Cell>
 											<PoolLabel pool={pool} />
 										</Table.Cell>
-										<Table.Cell justify="end" numeric>
+										<Table.Cell justify="end" numeric {...styles.wide()}>
 											{pool.price === null ? (
 												<span {...styles.muted()}>—</span>
 											) : (

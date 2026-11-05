@@ -197,12 +197,14 @@ namespace styles {
 	export const wide = style({
 		'@media (max-width: 639px)': { display: 'none !custom' },
 	})
-	/** The leading column, which a phone widens past its equal share. */
-	export const lead = style({
-		'@media (max-width: 639px)': { width: '52% !custom' },
+	/** What a phone shows in place of a hidden column. */
+	export const narrow = style({
+		display: 'none !custom',
+		'@media (max-width: 639px)': { display: 'inline !custom' },
 	})
-	export const leadTrade = style({
-		'@media (max-width: 639px)': { width: '50% !custom' },
+	/** A phone gives the table more of its width. */
+	export const card = style({
+		'@media (max-width: 639px)': { paddingInline: '16' },
 	})
 }
 
@@ -438,7 +440,7 @@ function MarketsPage(): React.JSX.Element {
 						</div>
 
 						<Tabs.Panel value="pairs" {...styles.panel()}>
-							<Surface size="medium">
+							<Surface size="medium" {...styles.card()}>
 								<Stack gap="16">
 									{pairsErrors.map((error) => (
 										<LoadError key={error.label} {...error} />
@@ -457,7 +459,7 @@ function MarketsPage(): React.JSX.Element {
 						</Tabs.Panel>
 
 						<Tabs.Panel value="trades" {...styles.panel()}>
-							<Surface size="medium">
+							<Surface size="medium" {...styles.card()}>
 								<Stack gap="16">
 									{tradesErrors.map((error) => (
 										<LoadError key={error.label} {...error} />
@@ -542,8 +544,10 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 				<Table.Caption>Pairs on the Stablecoin DEX and PropAMM</Table.Caption>
 				<Table.Head>
 					<Table.Row>
-						<Table.HeaderCell {...styles.lead()}>Pair</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+						<Table.HeaderCell>Pair</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Price
+						</Table.HeaderCell>
 						{sortable(
 							'liquidity',
 							'Liquidity',
@@ -563,7 +567,7 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 								<Table.Cell>
 									<PairLabel row={row} />
 								</Table.Cell>
-								<Table.Cell justify="end" numeric>
+								<Table.Cell justify="end" numeric {...styles.wide()}>
 									<PriceValue value={row.price} quote={row.quote} />
 								</Table.Cell>
 								<Table.Cell justify="end" numeric>
@@ -633,8 +637,8 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 				</Table.Caption>
 				<Table.Head>
 					<Table.Row>
-						<Table.HeaderCell>Time</Table.HeaderCell>
-						<Table.HeaderCell {...styles.leadTrade()}>Trade</Table.HeaderCell>
+						<Table.HeaderCell {...styles.wide()}>Time</Table.HeaderCell>
+						<Table.HeaderCell>Trade</Table.HeaderCell>
 						<Table.HeaderCell justify="end">Value</Table.HeaderCell>
 						<Table.HeaderCell justify="end" {...styles.wide()}>
 							Amount
@@ -653,7 +657,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 							key={trade.id}
 							{...rowLink(`/tx/${trade.transactionHash}`)}
 						>
-							<Table.Cell muted>
+							<Table.Cell muted {...styles.wide()}>
 								<Link
 									preload="intent"
 									to="/tx/$hash"
@@ -668,9 +672,13 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 							</Table.Cell>
 							<Table.Cell>
 								<TradeLabel trade={trade} />
-								{showVenue && (
-									<Table.Subtitle>{venueLabels[trade.venue]}</Table.Subtitle>
-								)}
+								<Table.Subtitle>
+									{showVenue && venueLabels[trade.venue]}
+									<span {...styles.narrow()}>
+										{showVenue && <span aria-hidden="true"> · </span>}
+										<RelativeTime timestamp={BigInt(trade.timestamp)} />
+									</span>
+								</Table.Subtitle>
 							</Table.Cell>
 							<Table.Cell justify="end" numeric>
 								{trade.value === null ? <Dash /> : usd(trade.value)}
@@ -697,7 +705,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 					))}
 					{loading &&
 						Array.from({ length: LOADING_ROWS }, (_, index) => (
-							<LoadingRow key={index} columns={6} />
+							<LoadingRow key={index} columns={6} narrow={[1, 2]} />
 						))}
 				</Table.Body>
 			</Table>
@@ -716,7 +724,10 @@ function LoadingRow(props: LoadingRowProps): React.JSX.Element {
 	return (
 		<Table.Row aria-busy="true">
 			{Array.from({ length: props.columns }, (_, index) => (
-				<Table.Cell key={index} {...(index >= 3 ? styles.wide() : {})}>
+				<Table.Cell
+					key={index}
+					{...((props.narrow ?? [0, 2]).includes(index) ? {} : styles.wide())}
+				>
 					<Skeleton>
 						<span>Loading value</span>
 					</Skeleton>
@@ -726,7 +737,11 @@ function LoadingRow(props: LoadingRowProps): React.JSX.Element {
 	)
 }
 
-type LoadingRowProps = { columns: number }
+type LoadingRowProps = {
+	columns: number
+	/** The columns a phone keeps. */
+	narrow?: number[]
+}
 
 /**
  * A taker buying base paid quote; selling it received quote. A DEX swap
@@ -804,6 +819,7 @@ type MarketLinkToProps = {
 /** A pair, its venue and, unless it trades normally, its status. */
 function PairLabel(props: PairLabelProps): React.JSX.Element {
 	const { base, quote, pool, link, status, statusDetail } = props.row
+	const rowPrice = props.row.price
 	return (
 		<MarketLinkTo link={link} title={`${base.symbol} / ${quote.symbol}`}>
 			<Inline gap="12" render={<span />}>
@@ -820,6 +836,12 @@ function PairLabel(props: PairLabelProps): React.JSX.Element {
 					<Table.Subtitle>
 						<span {...styles.subtitle()}>
 							{pool ? `${venueLabels.propamm} ${pool.version}` : 'Order book'}
+							{rowPrice !== null && (
+								<span {...styles.narrow()}>
+									<span aria-hidden="true">· </span>
+									{price.format(rowPrice)}
+								</span>
+							)}
 							{status !== 'live' && (
 								<>
 									<span aria-hidden="true">·</span>
@@ -854,11 +876,8 @@ function PriceValue(props: PriceValueProps): React.JSX.Element {
 	if (props.value === null) return <Dash />
 	return (
 		<span {...styles.nowrap()}>
-			{price.format(props.value)}
-			<span {...styles.wide()}>
-				{' '}
-				<span {...styles.muted()}>{props.quote.symbol}</span>
-			</span>
+			{price.format(props.value)}{' '}
+			<span {...styles.muted()}>{props.quote.symbol}</span>
 		</span>
 	)
 }
@@ -901,7 +920,7 @@ function Stat(props: StatProps): React.JSX.Element {
 				? '—'
 				: `${total.partial ? '≥' : ''}${usd(total.value)}`
 	return (
-		<Surface size="medium">
+		<Surface size="medium" {...styles.card()}>
 			<Stack gap="8">
 				<p
 					{...styles.statLabel()}
