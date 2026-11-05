@@ -1,15 +1,15 @@
 import { vars } from '@tempoxyz/ds'
 import { global } from 'zyzz/web'
 
-// Tempo Design System emits its variables, the Inter and Geist Mono faces,
-// and body font smoothing. These rules set the remaining document defaults.
+// Tempo Design System emits its variables, the Inter, Pilat and JetBrains Mono
+// faces, and body font smoothing. These rules set the remaining document defaults.
 global({
 	'@layer base': {
 		'html, :host': {
 			backgroundColor: vars.color.background.primary,
-			color: vars.color.foreground,
+			color: vars.color.content.primary,
 			colorScheme: 'dark',
-			fontFamily: vars.fontFamily.sans,
+			fontFamily: vars.fontFamily.body,
 			scrollbarGutter: 'stable',
 		},
 		':root': { touchAction: 'manipulation' },
@@ -17,7 +17,7 @@ global({
 		'pre, code': { fontFamily: vars.fontFamily.mono, fontWeight: 400 },
 		// TDS controls draw their own ring; the explorer's links match it.
 		'a:focus-visible, button:focus-visible': {
-			outlineColor: vars.color.blue[700],
+			outlineColor: vars.color.border.focus,
 			outlineOffset: '2px',
 			outlineStyle: 'solid',
 			outlineWidth: '2px',
@@ -40,15 +40,16 @@ global({
 	},
 })
 
-// TDS sets the body to its 15px `copy.15` in gray, unlayered. The explorer's
-// data is denser and reads in the foreground color, so this rule outranks it:
-// 14px Inter at TDS's copy weight.
+// TDS sets the body to `body.b1` in the secondary color, unlayered. The
+// explorer's data is denser and reads in the primary color, so this rule
+// outranks it with `body.b2`, the size TDS takes "a size down on dense screens".
 global({
 	'html body': {
-		color: vars.color.foreground,
-		fontSize: '14px',
-		fontWeight: 450,
-		lineHeight: '20px',
+		color: vars.color.content.primary,
+		fontSize: vars.typography.body.b2.fontSize,
+		fontWeight: vars.typography.body.b2.fontWeight,
+		letterSpacing: vars.typography.body.b2.letterSpacing,
+		lineHeight: vars.typography.body.b2.lineHeight,
 		minWidth: '320px',
 	},
 })
@@ -57,7 +58,7 @@ global({
 // class. Its inline backgrounds need !important, which only takes literals.
 global({
 	'.shiki-block, .shiki-block.shiki': {
-		backgroundColor: vars.color.background.surface,
+		backgroundColor: vars.color.background.elevated,
 		fontFamily: vars.fontFamily.mono,
 		fontSize: '12px',
 		fontWeight: 400,
@@ -84,7 +85,9 @@ global({
 		outlineStyle: 'solid',
 		outlineWidth: '1px',
 	},
-	'[data-permalink-highlight="on"]': { outlineColor: vars.color.blue[900] },
+	'[data-permalink-highlight="on"]': {
+		outlineColor: vars.color.content.accent,
+	},
 	'[data-permalink-highlight="fading"]': {
 		outlineColor: 'transparent',
 		transition: 'outline-color 500ms',

@@ -1,5 +1,5 @@
 import type { Address } from 'ox'
-import { Button, Tag } from '@tempoxyz/ds'
+import { Button, StatusIndicator } from '@tempoxyz/ds'
 import * as React from 'react'
 import { useConnection, useWatchAsset } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
@@ -60,10 +60,7 @@ export function AddToWallet(
 
 	if (isSuccess)
 		return (
-			<Tag intent="positive" variant="plain">
-				<Tag.Dot />
-				Added to {walletName}
-			</Tag>
+			<StatusIndicator intent="positive">Added to {walletName}</StatusIndicator>
 		)
 
 	return (

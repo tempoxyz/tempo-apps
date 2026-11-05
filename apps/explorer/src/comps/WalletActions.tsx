@@ -1,5 +1,5 @@
 import type { Address } from 'ox'
-import { Button, Tooltip, style } from '@tempoxyz/ds'
+import { Button, style, Tooltip } from '@tempoxyz/ds'
 import { LogOut } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import {

@@ -1,5 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Amount, Button, style, Tag, Token, variants } from '@tempoxyz/ds'
+import {
+	Amount,
+	Button,
+	StatusIndicator,
+	style,
+	TokenLogo,
+	variants,
+} from '@tempoxyz/ds'
 import type * as React from 'react'
 import type { Address as TokenAddress } from 'viem'
 import { Address } from '#comps/Address'
@@ -133,10 +140,9 @@ export function LivePill(props: LivePill.Props): React.JSX.Element {
 			size="small"
 			variant="secondary"
 		>
-			<Tag intent={live ? 'positive' : 'neutral'} variant="plain">
-				<Tag.Dot />
+			<StatusIndicator intent={live ? 'positive' : 'neutral'}>
 				{live ? 'Live' : 'Paused'}
-			</Tag>
+			</StatusIndicator>
 		</Button>
 	)
 }
@@ -177,7 +183,7 @@ function SideLabel(props: {
 function TokenChip(props: { token: DexPoolToken }): React.JSX.Element {
 	return (
 		<span {...styles.chip()}>
-			<Token address={props.token.address} size="small" />
+			<TokenLogo address={props.token.address} size="small" />
 			{props.token.symbol}
 		</span>
 	)
@@ -210,19 +216,19 @@ namespace styles {
 	})
 
 	export const stackedTime = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const time = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		whiteSpace: 'nowrap',
 	})
 
 	export const nowrap = style({ whiteSpace: 'nowrap' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const label = style({
 		alignItems: 'center',
@@ -233,21 +239,21 @@ namespace styles {
 	})
 
 	export const side = variants({
-		base: { typography: 'copy.14.strong' },
+		base: { typography: 'body.b2Strong' },
 		defaultVariants: { buy: true },
 		variants: {
 			buy: {
-				true: { color: 'green.900' },
-				false: { color: 'red.900' },
+				true: { color: 'content.positive' },
+				false: { color: 'content.negative' },
 			},
 		},
 	})
 
 	export const chip = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'inline-flex',
 		gap: '4',
-		typography: 'copy.14.strong',
+		typography: 'body.b2Strong',
 	})
 }

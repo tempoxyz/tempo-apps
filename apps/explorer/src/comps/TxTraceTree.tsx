@@ -5,8 +5,8 @@ import {
 	CopyButton,
 	Field,
 	formatHex,
-	Input,
 	style,
+	TextInput,
 	Tooltip,
 	variants,
 } from '@tempoxyz/ds'
@@ -118,11 +118,11 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 				<PanelToolbar>
 					{/* The field root reports the filled state that shows Clear. */}
 					<Field.Root {...styles.filter()}>
-						<Input.Group size="small">
-							<Input.Prefix>
+						<TextInput.Group>
+							<TextInput.Prefix>
 								<Search />
-							</Input.Prefix>
-							<Input.Control
+							</TextInput.Prefix>
+							<TextInput.Control
 								type="search"
 								value={query}
 								onValueChange={setQuery}
@@ -130,8 +130,8 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 								aria-label="Filter frames"
 								spellCheck={false}
 							/>
-							<Input.Clear aria-label="Clear search" />
-						</Input.Group>
+							<TextInput.Clear aria-label="Clear search" />
+						</TextInput.Group>
 					</Field.Root>
 					{failedNode && (
 						<Button
@@ -917,11 +917,11 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const tertiary = style({ color: 'gray.700' })
+	export const tertiary = style({ color: 'content.tertiary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
 	export const shrink = style({ flexShrink: 0 })
 
@@ -934,8 +934,8 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		borderStyle: 'solid',
 		display: 'flex',
 		gap: '8',
@@ -947,8 +947,8 @@ namespace styles {
 	})
 
 	export const headerLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const headerActions = style({
@@ -959,15 +959,15 @@ namespace styles {
 
 	export const frames = style({
 		alignItems: 'center',
-		borderBottomLeftRadius: '12',
-		borderBottomRightRadius: '12',
+		borderBottomLeftRadius: 'xs',
+		borderBottomRightRadius: 'xs',
 		columnGap: '8',
 		display: 'grid',
 		gridTemplateColumns: 'auto auto 1fr',
 		overflowX: 'auto',
 		paddingBlock: '12',
 		paddingInline: '16',
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 		// Focusable so it can be scrolled by keyboard; an inset ring is not
 		// clipped by its own overflow.
 		':focus-visible': {
@@ -981,9 +981,9 @@ namespace styles {
 	// Rows inherit the grid's mono face; only the colour changes here.
 	export const opcode = variants({
 		base: {
-			backgroundColor: 'grayAlpha.100',
-			borderRadius: '4',
-			color: 'gray.900',
+			backgroundColor: 'container.regular',
+			borderRadius: '3xs',
+			color: 'content.secondary',
 			paddingBlock: '1',
 			paddingInline: '4',
 			textAlign: 'center',
@@ -994,21 +994,24 @@ namespace styles {
 		variants: {
 			failed: {
 				false: {},
-				true: { backgroundColor: 'red.100', color: 'foreground' },
+				true: {
+					backgroundColor: 'container.negative',
+					color: 'content.primary',
+				},
 			},
 		},
 	})
 
 	export const gas = variants({
 		base: {
-			color: 'gray.900',
+			color: 'content.secondary',
 			fontVariantNumeric: 'tabular-nums',
 			textAlign: 'right',
 			userSelect: 'none',
 		},
 		defaultVariants: { large: false },
 		variants: {
-			large: { false: {}, true: { color: 'foreground' } },
+			large: { false: {}, true: { color: 'content.primary' } },
 		},
 	})
 
@@ -1017,7 +1020,7 @@ namespace styles {
 	export const frame = variants({
 		base: {
 			alignItems: 'center',
-			borderRadius: '4',
+			borderRadius: '3xs',
 			display: 'inline-flex',
 			marginInline: '-4px !custom',
 			minWidth: '0 !custom',
@@ -1030,12 +1033,12 @@ namespace styles {
 			'@media (hover: hover)': {
 				selectors: {
 					'&[role="button"]:not([aria-pressed="true"]):hover': {
-						backgroundColor: 'grayAlpha.100',
+						backgroundColor: 'container.regular',
 					},
 				},
 			},
 			selectors: {
-				'&[aria-pressed="true"]': { backgroundColor: 'grayAlpha.200' },
+				'&[aria-pressed="true"]': { backgroundColor: 'container.strong' },
 			},
 		},
 		defaultVariants: { failure: false, wrap: true },
@@ -1043,8 +1046,8 @@ namespace styles {
 			failure: {
 				false: {},
 				true: {
-					borderColor: 'red.900',
-					borderLeftWidth: '2',
+					borderColor: 'content.negative',
+					borderLeftWidth: 'thick',
 					borderStyle: 'solid',
 					paddingLeft: '6px !custom',
 				},
@@ -1060,16 +1063,16 @@ namespace styles {
 
 	export const indentNested = style({
 		alignSelf: 'stretch',
-		borderColor: 'grayAlpha.300',
-		borderLeftWidth: '1',
+		borderColor: 'line.primary',
+		borderLeftWidth: 'regular',
 		borderStyle: 'solid',
 		paddingLeft: '8',
 	})
 
 	export const depthBadge = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '4',
-		color: 'gray.900',
+		backgroundColor: 'container.regular',
+		borderRadius: '3xs',
+		color: 'content.secondary',
 		flexShrink: 0,
 		marginRight: '4',
 		paddingInline: '2px !custom',
@@ -1087,7 +1090,7 @@ namespace styles {
 	})
 
 	export const leafIcon = style({
-		color: 'gray.700',
+		color: 'content.tertiary',
 		height: '12',
 		width: '12',
 	})
@@ -1097,11 +1100,14 @@ namespace styles {
 	export const address = style({ display: 'inline-block' })
 
 	export const errorText = style({
-		color: 'foreground',
+		color: 'content.primary',
 		marginLeft: '4',
 	})
 
-	export const hiddenFrames = style({ color: 'gray.900', marginLeft: '8' })
+	export const hiddenFrames = style({
+		color: 'content.secondary',
+		marginLeft: '8',
+	})
 
 	export const output = variants({
 		base: {
@@ -1119,14 +1125,14 @@ namespace styles {
 	export const outputRoot = style({ marginLeft: '32' })
 
 	export const outputNested = style({
-		borderColor: 'grayAlpha.300',
-		borderLeftWidth: '1',
+		borderColor: 'line.primary',
+		borderLeftWidth: 'regular',
 		borderStyle: 'solid',
 		paddingLeft: '40',
 	})
 
 	export const returnIcon = style({
-		color: 'gray.700',
+		color: 'content.tertiary',
 		flexShrink: 0,
 		height: '12',
 		marginRight: '4',
@@ -1135,7 +1141,7 @@ namespace styles {
 	})
 
 	export const outputValue = style({
-		color: 'foreground',
+		color: 'content.primary',
 		minWidth: '0 !custom',
 	})
 }

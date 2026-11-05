@@ -1,6 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Callout, Empty, Rows, style, Tag, Tooltip } from '@tempoxyz/ds'
+import {
+	Alert,
+	Button,
+	Empty,
+	ListGroup,
+	StatusIndicator,
+	style,
+	Tooltip,
+} from '@tempoxyz/ds'
 import { Play } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import * as React from 'react'
@@ -71,7 +79,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 		)
 
 	return (
-		<Rows.Root dividers="full">
+		<ListGroup.Root>
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -80,7 +88,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 					fn={fn}
 				/>
 			))}
-		</Rows.Root>
+		</ListGroup.Root>
 	)
 }
 
@@ -206,24 +214,24 @@ function WriteContractFunction(props: {
 	const writeResult = (
 		<>
 			{writeContract.error && (
-				<Callout intent="negative" size="small">
-					<Callout.Icon />
-					<Callout.Content>
+				<Alert intent="negative">
+					<Alert.Icon />
+					<Alert.Content>
 						<strong>Transaction failed</strong>
 						<span {...styles.calloutDescription()}>
 							{getWriteErrorMessage(writeContract.error)}
 						</span>
-					</Callout.Content>
-				</Callout>
+					</Alert.Content>
+				</Alert>
 			)}
 			{writeContract.isSuccess && writeContract.data && (
-				<Callout intent="positive" size="small">
-					<Callout.Icon />
-					<Callout.Content>
+				<Alert intent="positive">
+					<Alert.Icon />
+					<Alert.Content>
 						<strong>Transaction sent</strong>
 						<TransactionCell hash={writeContract.data} />
-					</Callout.Content>
-				</Callout>
+					</Alert.Content>
+				</Alert>
 			)}
 		</>
 	)
@@ -266,9 +274,7 @@ function WriteContractFunction(props: {
 					}
 				/>
 				{(writeContract.error || writeContract.isSuccess) && (
-					<Rows.Row spacing="none" {...styles.result()}>
-						{writeResult}
-					</Rows.Row>
+					<ListGroup.Row {...styles.result()}>{writeResult}</ListGroup.Row>
 				)}
 			</>
 		)
@@ -282,12 +288,7 @@ function WriteContractFunction(props: {
 			expanded={isExpanded}
 			onToggle={() => setIsExpanded(!isExpanded)}
 			tag={
-				isPayable && (
-					<Tag intent="warning" size="small" variant="plain">
-						<Tag.Dot />
-						Payable
-					</Tag>
-				)
+				isPayable && <StatusIndicator intent="warning">Payable</StatusIndicator>
 			}
 		>
 			<FunctionForm
@@ -322,15 +323,15 @@ function WriteContractFunction(props: {
 				result={
 					<>
 						{parsedArgs.error && (
-							<Callout intent="negative" role="status" size="small">
-								<Callout.Icon />
-								<Callout.Content>
+							<Alert intent="negative" role="status">
+								<Alert.Icon />
+								<Alert.Content>
 									<strong>Invalid arguments</strong>
 									<span {...styles.calloutDescription()}>
 										{parsedArgs.error}
 									</span>
-								</Callout.Content>
-							</Callout>
+								</Alert.Content>
+							</Alert>
 						)}
 
 						{writeResult}

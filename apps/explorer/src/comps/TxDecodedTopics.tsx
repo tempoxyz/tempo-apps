@@ -301,15 +301,15 @@ namespace styles {
 	// A well on the section surface, matching the decoded calldata panel.
 	export const panel = style({
 		backgroundColor: 'background.primary',
-		borderRadius: '8',
+		borderRadius: '2xs',
 		minWidth: '0 !custom',
 		width: '100% !custom',
 	})
 
 	export const header = style({
 		alignItems: 'flex-start',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'space-between',
@@ -318,14 +318,14 @@ namespace styles {
 	})
 
 	export const signature = style({
-		color: 'foreground',
-		typography: 'label.12.mono',
+		color: 'content.primary',
+		typography: 'mono.m1',
 		wordBreak: 'break-all',
 	})
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	// Negative margins let the 32px copy button sit in a 16px text row without
 	// growing it.
@@ -343,11 +343,11 @@ namespace styles {
 
 	export const argumentsLabel = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
 		marginBottom: '8',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const rawStack = style({
@@ -378,25 +378,25 @@ namespace styles {
 	})
 
 	export const argumentLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 		whiteSpace: 'pre',
 	})
 
 	export const value = style({
-		color: 'foreground',
+		color: 'content.primary',
 		flex: '1 !custom',
 		minWidth: '0 !custom',
 		overflowWrap: 'anywhere',
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 		wordBreak: 'break-all',
 	})
 
 	export const label = variants({
 		base: {
-			color: 'gray.900',
+			color: 'content.secondary',
 			marginBottom: '8',
-			typography: 'label.12',
+			typography: 'body.b3',
 		},
 		defaultVariants: { inline: false },
 		variants: {
@@ -419,8 +419,8 @@ namespace styles {
 	})
 
 	export const rawHeader = style({
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		paddingBlock: '8',
 		paddingInline: '12',
 	})
@@ -428,8 +428,8 @@ namespace styles {
 	export const divided = style({
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: '1',
-				borderColor: 'grayAlpha.200',
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
 			},
 		},
 	})
@@ -442,9 +442,9 @@ namespace styles {
 	})
 
 	export const topicLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	// Hex leaves its flex sizing unset; the topic takes the rest of the row.

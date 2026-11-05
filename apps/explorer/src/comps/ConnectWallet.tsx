@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClientOnly } from '@tanstack/react-router'
-import { Amount, Button, Tag, Tooltip, style } from '@tempoxyz/ds'
+import { Amount, Button, StatusIndicator, style, Tooltip } from '@tempoxyz/ds'
 import { LogOut, Wallet } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
@@ -138,10 +138,9 @@ function ConnectWalletInner(props: { showAddChain: boolean }) {
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<Tag intent="positive" variant="plain">
-					<Tag.Dot />
+				<StatusIndicator intent="positive">
 					Added Tempo to {connector?.name ?? 'wallet'}
-				</Tag>
+				</StatusIndicator>
 			)}
 			<SignOut />
 		</div>
@@ -268,12 +267,7 @@ function FundAccountButton() {
 	if (!address) return null
 
 	if (status === 'done') {
-		return (
-			<Tag intent="positive" variant="plain">
-				<Tag.Dot />
-				Funded
-			</Tag>
-		)
+		return <StatusIndicator intent="positive">Funded</StatusIndicator>
 	}
 
 	const isPending = status === 'funding' || status === 'setting-fee'
@@ -328,16 +322,16 @@ namespace styles {
 
 	export const detecting = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
-		typography: 'label.12',
+		typography: 'body.b3',
 		whiteSpace: 'nowrap',
 	})
 
 	export const noWallet = style({
 		alignItems: 'center',
 		display: 'flex',
-		typography: 'label.12',
+		typography: 'body.b3',
 		userSelect: 'none',
 		whiteSpace: 'nowrap',
 	})
@@ -361,13 +355,13 @@ namespace styles {
 
 	export const address = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		flex: 1,
 		gap: '4',
 		justifyContent: 'flex-end',
 		minWidth: '0',
-		typography: 'label.12',
+		typography: 'body.b3',
 		whiteSpace: 'nowrap',
 	})
 

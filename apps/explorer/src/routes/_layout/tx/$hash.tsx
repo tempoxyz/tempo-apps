@@ -18,10 +18,10 @@ import {
 	Button,
 	Empty,
 	formatHex,
-	Hex as HexDisplay,
-	Rows,
+	ListGroup,
 	style,
-	Token,
+	TokenLogo,
+	Hex as HexDisplay,
 } from '@tempoxyz/ds'
 import { Addresses } from 'viem/tempo'
 import { useChains } from 'wagmi'
@@ -442,7 +442,7 @@ function OverviewSection(props: {
 	)
 
 	return (
-		<Rows.Root dividers="full">
+		<ListGroup.Root>
 			{description.events.length > 0 && (
 				<InfoRow label="Description" stackOnMobile={Boolean(keyAuthorization)}>
 					<div {...styles.description()}>
@@ -569,7 +569,7 @@ function OverviewSection(props: {
 			{input && input !== '0x' && (
 				<InputDataRow input={input} to={transaction.to} />
 			)}
-		</Rows.Root>
+		</ListGroup.Root>
 	)
 }
 
@@ -684,7 +684,7 @@ function TokenAmount(props: {
 				title={token}
 				{...cx(styles.token(), link(), linkHover())}
 			>
-				<Token address={token} size="small" />
+				<TokenLogo address={token} size="small" />
 				{symbol ?? formatHex(token)}
 			</Link>
 		</span>
@@ -1013,9 +1013,9 @@ namespace styles {
 		minWidth: '0 !custom',
 	})
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const balances = style({
 		display: 'flex',
@@ -1039,12 +1039,12 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '4',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const balanceChanges = style({
-		borderColor: 'grayAlpha.200',
-		borderLeftWidth: '1',
+		borderColor: 'line.secondary',
+		borderLeftWidth: 'regular',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '2px !custom',
@@ -1072,8 +1072,8 @@ namespace styles {
 		flexDirection: 'column',
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: '1',
-				borderColor: 'grayAlpha.200',
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
 			},
 		},
 	})
@@ -1090,7 +1090,7 @@ namespace styles {
 		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const eventLogs = style({
@@ -1109,7 +1109,7 @@ namespace styles {
 	export const raw = style({
 		paddingBlock: '12',
 		paddingInline: '20',
-		typography: 'label.12',
+		typography: 'body.b3',
 		wordBreak: 'break-all',
 	})
 }

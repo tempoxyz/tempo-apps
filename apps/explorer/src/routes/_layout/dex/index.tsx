@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import {
-	Callout,
+	Alert,
 	Checkbox,
 	Field,
 	Grid,
-	Input,
 	Skeleton,
 	style,
 	Surface,
-	Token,
+	TextInput,
+	TokenLogo,
 	variants,
 } from '@tempoxyz/ds'
 import { Search as SearchIcon } from '@tempoxyz/ds/icons'
@@ -183,11 +183,11 @@ function DexPoolsPage(): React.JSX.Element {
 						title: 'Pairs',
 						contextual: (
 							<div {...styles.contextual()}>
-								<Input.Group size="small" {...styles.filter()}>
-									<Input.Prefix>
+								<TextInput.Group {...styles.filter()}>
+									<TextInput.Prefix>
 										<SearchIcon aria-hidden="true" />
-									</Input.Prefix>
-									<Input.Control
+									</TextInput.Prefix>
+									<TextInput.Control
 										aria-label="Search pairs"
 										value={filter}
 										onValueChange={(value) => setFilter(value)}
@@ -195,7 +195,7 @@ function DexPoolsPage(): React.JSX.Element {
 										spellCheck={false}
 										autoComplete="off"
 									/>
-								</Input.Group>
+								</TextInput.Group>
 								<VerifiedToggle
 									checked={!search.unverified}
 									onChange={setVerifiedOnly}
@@ -330,13 +330,13 @@ function LoadError(props: {
 }): React.JSX.Element {
 	return (
 		<div {...styles.alert()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				<Callout.Content>{props.message}</Callout.Content>
-				<Callout.Action disabled={props.retrying} onClick={props.onRetry}>
+			<Alert intent="negative">
+				<Alert.Icon />
+				<Alert.Content>{props.message}</Alert.Content>
+				<Alert.Action disabled={props.retrying} onClick={props.onRetry}>
 					{props.retrying ? 'Retrying…' : 'Try again'}
-				</Callout.Action>
-			</Callout>
+				</Alert.Action>
+			</Alert>
 		</div>
 	)
 }
@@ -386,8 +386,8 @@ function PairCell(props: { pool: DexPool }): React.JSX.Element {
 	return (
 		<div {...styles.pair()}>
 			<span {...styles.pairIcons()}>
-				<Token address={base.address} />
-				<Token address={quote.address} />
+				<TokenLogo address={base.address} />
+				<TokenLogo address={quote.address} />
 			</span>
 			<span {...cx(styles.pairName(), truncate())}>
 				{base.symbol}
@@ -452,35 +452,35 @@ namespace styles {
 	})
 
 	export const title = style({
-		color: 'foreground',
+		color: 'content.primary',
 		margin: '0',
-		typography: 'heading.24.subtle',
-		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
+		typography: 'heading.h2',
+		'@media (width >= 640px)': { typography: 'value.v3' },
 	})
 
 	export const meta = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums !custom',
 		margin: '0',
-		typography: 'copy.13',
+		typography: 'body.b3',
 	})
 
 	export const stats = style({ margin: '0' })
 
 	export const statLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		marginBlockEnd: '8',
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 
 	// A flex row, so the skeleton shrinks to the value instead of the tile.
 	export const statValue = style({
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		fontVariantNumeric: 'tabular-nums !custom',
 		margin: '0',
-		typography: 'heading.20',
-		'@media (width >= 640px)': { typography: 'heading.24' },
+		typography: 'heading.h3',
+		'@media (width >= 640px)': { typography: 'heading.h2' },
 	})
 
 	export const contextual = style({
@@ -501,7 +501,7 @@ namespace styles {
 			appearance: 'none !custom',
 			backgroundColor: 'transparent !custom',
 			border: 'none !custom',
-			borderRadius: '2',
+			borderRadius: '3xs',
 			cursor: 'pointer',
 			font: 'inherit !custom',
 			outlineColor: 'transparent !custom',
@@ -513,21 +513,21 @@ namespace styles {
 			transitionProperty: 'color, outline-color',
 			transitionTimingFunction: 'snappy',
 			selectors: {
-				'&:focus-visible': { outlineColor: 'blue.700' },
-				'&:hover': { color: 'foreground' },
+				'&:focus-visible': { outlineColor: 'border.focus' },
+				'&:hover': { color: 'content.primary' },
 			},
 		},
 		defaultVariants: { active: false },
 		variants: {
 			active: {
-				true: { color: 'foreground' },
-				false: { color: 'gray.900' },
+				true: { color: 'content.primary' },
+				false: { color: 'content.secondary' },
 			},
 		},
 	})
 
 	export const rank = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
@@ -546,19 +546,19 @@ namespace styles {
 	})
 
 	export const pairName = style({
-		color: 'foreground',
-		typography: 'copy.14.strong',
+		color: 'content.primary',
+		typography: 'body.b2Strong',
 	})
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const number = variants({
 		base: { fontVariantNumeric: 'tabular-nums' },
 		defaultVariants: { tone: 'primary' },
 		variants: {
 			tone: {
-				primary: { color: 'foreground' },
-				secondary: { color: 'gray.900' },
+				primary: { color: 'content.primary' },
+				secondary: { color: 'content.secondary' },
 			},
 		},
 	})

@@ -286,5 +286,8 @@ namespace styles {
 
 	export const narrow = style({ '@media 640': { display: 'none' } })
 
-	export const count = style({ color: 'gray.900', typography: 'label.13' })
+	export const count = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 }

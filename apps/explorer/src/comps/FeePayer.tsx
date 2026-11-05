@@ -1,4 +1,4 @@
-import { style, Tag } from '@tempoxyz/ds'
+import { Badge, style } from '@tempoxyz/ds'
 import type { Address as OxAddress } from 'ox'
 import * as AddressUtil from 'ox/Address'
 import type * as React from 'react'
@@ -16,9 +16,9 @@ export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 		return <Address address={address} />
 
 	return (
-		<Tag
+		<Badge
 			render={
-				// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
+				// biome-ignore lint/a11y/useAnchorContent: Badge renders its children inside the link.
 				<a
 					href="https://api.tempo.xyz"
 					rel="noopener noreferrer"
@@ -34,7 +34,7 @@ export function FeePayer(props: FeePayer.Props): React.JSX.Element {
 				<span {...styles.glyphCell()} />
 			</span>
 			Tempo API
-		</Tag>
+		</Badge>
 	)
 }
 

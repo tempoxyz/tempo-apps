@@ -1,9 +1,9 @@
 import {
+	Alert,
 	Button,
-	Callout,
 	Empty,
 	Hex,
-	Rows,
+	ListGroup,
 	Skeleton,
 	style,
 } from '@tempoxyz/ds'
@@ -196,7 +196,7 @@ export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 		)
 
 	return (
-		<Rows.Root dividers="full">
+		<ListGroup.Root>
 			{/* Functions without inputs show their value in the row. */}
 			{noInputFunctions.map((fn) => (
 				<StaticReadFunction
@@ -216,7 +216,7 @@ export function ContractReader(props: { address: Address.Address; abi: Abi }) {
 					fn={fn}
 				/>
 			))}
-		</Rows.Root>
+		</ListGroup.Root>
 	)
 }
 
@@ -474,10 +474,10 @@ function DynamicReadFunction(props: {
 				result={
 					!isFetching &&
 					(error ? (
-						<Callout intent="negative" role="status" size="small">
-							<Callout.Icon />
-							<Callout.Content>{error}</Callout.Content>
-						</Callout>
+						<Alert intent="negative" role="status">
+							<Alert.Icon />
+							<Alert.Content>{error}</Alert.Content>
+						</Alert>
 					) : (
 						result !== undefined && (
 							<FunctionResult>
@@ -538,18 +538,18 @@ namespace styles {
 
 	export const error = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'inline-flex',
 		gap: '4',
 		minWidth: '0',
-		typography: 'copy.13',
+		typography: 'body.b3',
 	})
 
-	export const errorIcon = style({ color: 'red.900', flexShrink: 0 })
+	export const errorIcon = style({ color: 'content.negative', flexShrink: 0 })
 
-	export const empty = style({ color: 'gray.900' })
+	export const empty = style({ color: 'content.secondary' })
 
-	// Rows guidance: cap a Hex so it ends with the other values.
+	// ListGroup guidance: cap a Hex so it ends with the other values.
 	export const hex = style({
 		display: 'inline-flex',
 		justifyContent: 'flex-end',

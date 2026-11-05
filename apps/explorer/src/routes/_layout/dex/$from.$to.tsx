@@ -6,21 +6,22 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import {
+	Alert,
 	Amount,
 	AmountInput,
+	Badge,
 	Button,
-	Callout,
 	CopyButton,
 	Field,
 	Hex,
-	Rows,
+	ListGroup,
 	Separator,
 	Skeleton,
-	Surface,
 	style,
+	Surface,
 	Table,
-	Tag,
 	Token,
+	TokenLogo,
 	Tooltip,
 	variants,
 } from '@tempoxyz/ds'
@@ -147,12 +148,12 @@ function DexRoutePage(): React.JSX.Element {
 						{from && to ? (
 							<>
 								<span {...styles.titleToken()}>
-									<Token address={from.address} size="large" />
+									<TokenLogo address={from.address} size="large" />
 									{from.symbol}
 								</span>
 								<span {...styles.titleToken()}>
 									<ArrowRight aria-hidden="true" {...styles.titleArrow()} />
-									<Token address={to.address} size="large" />
+									<TokenLogo address={to.address} size="large" />
 									{to.symbol}
 								</span>
 							</>
@@ -176,22 +177,22 @@ function DexRoutePage(): React.JSX.Element {
 					/>
 				</div>
 				{query.isError && !snapshot && (
-					<Rows.Root dividers="none" size="small" {...styles.unresolved()}>
-						<Rows.Row>
-							<Rows.Label>Input token</Rows.Label>
+					<ListGroup.Root dividers={false} {...styles.unresolved()}>
+						<ListGroup.Row>
+							<ListGroup.Label>Input token</ListGroup.Label>
 							<Hex.Root value={search.from}>
 								<Hex.Text />
 								<Hex.Copy aria-label="Copy input token address" />
 							</Hex.Root>
-						</Rows.Row>
-						<Rows.Row>
-							<Rows.Label>Output token</Rows.Label>
+						</ListGroup.Row>
+						<ListGroup.Row>
+							<ListGroup.Label>Output token</ListGroup.Label>
 							<Hex.Root value={search.to}>
 								<Hex.Text />
 								<Hex.Copy aria-label="Copy output token address" />
 							</Hex.Root>
-						</Rows.Row>
-					</Rows.Root>
+						</ListGroup.Row>
+					</ListGroup.Root>
 				)}
 			</header>
 
@@ -225,16 +226,16 @@ function DexRoutePage(): React.JSX.Element {
 						)}
 					</Surface.Header>
 					{query.isError && !snapshot ? (
-						<Callout intent="negative">
-							<Callout.Icon />
-							<Callout.Content>{query.error.message}</Callout.Content>
-							<Callout.Action
+						<Alert intent="negative">
+							<Alert.Icon />
+							<Alert.Content>{query.error.message}</Alert.Content>
+							<Alert.Action
 								disabled={query.isFetching}
 								onClick={() => void query.refetch()}
 							>
 								{query.isFetching ? 'Retrying…' : 'Try again'}
-							</Callout.Action>
-						</Callout>
+							</Alert.Action>
+						</Alert>
 					) : query.isPending ? (
 						<p role="status" {...styles.pending()}>
 							Loading the token path and live quotes…
@@ -277,10 +278,10 @@ function DexRoutePage(): React.JSX.Element {
 									</div>
 								</div>
 								<div {...styles.rows()}>
-									<Rows.Root dividers="full">
+									<ListGroup.Root>
 										{snapshot.path.length > 2 && (
-											<Rows.Row>
-												<Rows.Label>Route</Rows.Label>
+											<ListGroup.Row>
+												<ListGroup.Label>Route</ListGroup.Label>
 												<ol aria-label="Token path" {...styles.path()}>
 													{snapshot.path.map((token, index) => (
 														<li key={token.address} {...styles.pathItem()}>
@@ -294,12 +295,12 @@ function DexRoutePage(): React.JSX.Element {
 														</li>
 													))}
 												</ol>
-											</Rows.Row>
+											</ListGroup.Row>
 										)}
 										{snapshot.quote.amountOut !== null && (
 											<>
-												<Rows.Row>
-													<Rows.Label>Rate</Rows.Label>
+												<ListGroup.Row>
+													<ListGroup.Label>Rate</ListGroup.Label>
 													<span {...styles.numeric()}>
 														1 {from.symbol} ={' '}
 														{rate.format(
@@ -308,23 +309,23 @@ function DexRoutePage(): React.JSX.Element {
 														)}{' '}
 														{to.symbol}
 													</span>
-												</Rows.Row>
-												<Rows.Row>
-													<Rows.Label
+												</ListGroup.Row>
+												<ListGroup.Row>
+													<ListGroup.Label
 														title={`Compared with the rate for 1 ${from.symbol} at the same block`}
 													>
 														Price impact
-													</Rows.Label>
+													</ListGroup.Label>
 													<span {...styles.numeric()}>
 														{impact === null
 															? '—'
 															: `${bps.format(impact)} bps`}
 													</span>
-												</Rows.Row>
+												</ListGroup.Row>
 											</>
 										)}
-										<Rows.Row>
-											<Rows.Label>Block</Rows.Label>
+										<ListGroup.Row>
+											<ListGroup.Label>Block</ListGroup.Label>
 											<Link
 												to="/block/$id"
 												params={{ id: snapshot.blockNumber }}
@@ -332,16 +333,16 @@ function DexRoutePage(): React.JSX.Element {
 											>
 												{BigInt(snapshot.blockNumber).toLocaleString('en-US')}
 											</Link>
-										</Rows.Row>
-									</Rows.Root>
+										</ListGroup.Row>
+									</ListGroup.Root>
 								</div>
 								{query.isRefetchError && (
-									<Callout intent="warning" {...styles.refreshError()}>
-										<Callout.Icon />
-										<Callout.Content>
+									<Alert intent="warning" {...styles.refreshError()}>
+										<Alert.Icon />
+										<Alert.Content>
 											Refresh failed. Showing the previous block’s snapshot.
-										</Callout.Content>
-									</Callout>
+										</Alert.Content>
+									</Alert>
 								)}
 								<div {...styles.footer()}>
 									<Button
@@ -395,16 +396,16 @@ function DexRoutePage(): React.JSX.Element {
 							content:
 								swaps.isError && !swaps.data ? (
 									<div {...styles.alert()}>
-										<Callout intent="negative">
-											<Callout.Icon />
-											<Callout.Content>{swaps.error.message}</Callout.Content>
-											<Callout.Action
+										<Alert intent="negative">
+											<Alert.Icon />
+											<Alert.Content>{swaps.error.message}</Alert.Content>
+											<Alert.Action
 												disabled={swaps.isFetching}
 												onClick={() => void swaps.refetch()}
 											>
 												{swaps.isFetching ? 'Retrying…' : 'Try again'}
-											</Callout.Action>
-										</Callout>
+											</Alert.Action>
+										</Alert>
 									</div>
 								) : (
 									// biome-ignore lint/a11y/noStaticElementInteractions: pause on hover
@@ -428,15 +429,15 @@ function DexRoutePage(): React.JSX.Element {
 						{
 							title: 'Details',
 							content: (
-								<Rows.Root dividers="full">
+								<ListGroup.Root>
 									{snapshot.path.map((token) => (
-										<Rows.Row key={token.address}>
-											<Rows.Label>
+										<ListGroup.Row key={token.address}>
+											<ListGroup.Label>
 												<span {...styles.detailToken()}>
-													<Token address={token.address} size="small" />
+													<TokenLogo address={token.address} size="small" />
 													{token.symbol}
 												</span>
-											</Rows.Label>
+											</ListGroup.Label>
 											<span {...styles.detailAddress()}>
 												<Address address={token.address} align="end" />
 												<CopyButton
@@ -444,9 +445,9 @@ function DexRoutePage(): React.JSX.Element {
 													value={token.address}
 												/>
 											</span>
-										</Rows.Row>
+										</ListGroup.Row>
 									))}
-								</Rows.Root>
+								</ListGroup.Root>
 							),
 						},
 					]}
@@ -501,18 +502,16 @@ function AmountField(props: {
 
 	return (
 		<Field.Root invalid={Boolean(error)}>
-			<Field.Label>You send</Field.Label>
 			<AmountInput.Root
 				onValueChange={(value) => {
 					setDraft(value)
 					setValidationError(null)
 				}}
-				size="large"
 				value={draft}
-				variant="card"
 			>
+				<Field.Label>You send</Field.Label>
 				<AmountInput.Control autoComplete="off" name="amount" placeholder="0" />
-				<AmountInput.Suffix>{token.symbol}</AmountInput.Suffix>
+				<Token address={token.address} symbol={token.symbol} />
 			</AmountInput.Root>
 			<Field.Error match={Boolean(error)}>{error}</Field.Error>
 		</Field.Root>
@@ -551,7 +550,7 @@ function LegRow(props: {
 		<div {...styles.leg()}>
 			<div {...styles.legHeader()}>
 				<div {...styles.legTokens()}>
-					{index !== undefined && <Tag size="small">Leg {index + 1}</Tag>}
+					{index !== undefined && <Badge size="small">Leg {index + 1}</Badge>}
 					<TokenLink token={leg.from} />
 					<ArrowRight aria-hidden="true" {...styles.arrow()} />
 					<TokenLink token={leg.to} />
@@ -566,7 +565,7 @@ function LegRow(props: {
 						))}
 					</dl>
 				) : (
-					<Tag variant="outlined">Book not created</Tag>
+					<Badge variant="outlined">Book not created</Badge>
 				)}
 			</div>
 			{leg.bestTick !== null && (
@@ -576,13 +575,13 @@ function LegRow(props: {
 							<p role="status">Loading depth…</p>
 						</Skeleton>
 					) : depth.isError ? (
-						<Callout intent="negative">
-							<Callout.Icon />
-							<Callout.Content>Depth is unavailable.</Callout.Content>
-							<Callout.Action onClick={() => void depth.refetch()}>
+						<Alert intent="negative">
+							<Alert.Icon />
+							<Alert.Content>Depth is unavailable.</Alert.Content>
+							<Alert.Action onClick={() => void depth.refetch()}>
 								Try again
-							</Callout.Action>
-						</Callout>
+							</Alert.Action>
+						</Alert>
 					) : depth.data.length === 0 ? (
 						<p {...styles.depthNote()}>
 							No resting orders within {depthTicks} price levels of the best
@@ -665,7 +664,7 @@ function TokenLink(props: { token: DexToken }): React.JSX.Element {
 			params={{ address: props.token.address }}
 			{...cx(styles.tokenLink(), link(), linkHover())}
 		>
-			<Token address={props.token.address} size="small" />
+			<TokenLogo address={props.token.address} size="small" />
 			<span {...styles.breakAll()}>{props.token.symbol}</span>
 		</Link>
 	)
@@ -697,8 +696,8 @@ namespace styles {
 	})
 
 	export const errorTitle = style({
-		color: 'foreground',
-		typography: 'heading.20.subtle',
+		color: 'content.primary',
+		typography: 'heading.h3',
 	})
 
 	export const header = style({
@@ -720,14 +719,14 @@ namespace styles {
 
 	export const title = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		flexWrap: 'wrap',
 		gap: '12',
 		margin: '0',
 		minWidth: '0 !custom',
-		typography: 'heading.24.subtle',
-		'@media (width >= 640px)': { typography: 'heading.32.subtle' },
+		typography: 'heading.h2',
+		'@media (width >= 640px)': { typography: 'value.v3' },
 	})
 
 	export const titleToken = style({
@@ -738,7 +737,7 @@ namespace styles {
 	})
 
 	export const titleArrow = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		height: '24',
 		width: '24',
 	})
@@ -761,14 +760,14 @@ namespace styles {
 
 	export const breakAll = style({ wordBreak: 'break-all' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const numeric = style({ fontVariantNumeric: 'tabular-nums !custom' })
 
 	export const pending = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		margin: '0',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const amounts = style({ display: 'grid', rowGap: '20' })
@@ -777,8 +776,8 @@ namespace styles {
 
 	// Matches the `Field.Label` above it.
 	export const receiveLabel = style({
-		color: 'foreground',
-		typography: 'label.14.strong',
+		color: 'content.primary',
+		typography: 'body.b2Strong',
 	})
 
 	export const amountOut = variants({
@@ -795,9 +794,9 @@ namespace styles {
 	})
 
 	export const quoteMessage = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		margin: '0',
-		typography: 'heading.20.subtle',
+		typography: 'heading.h3',
 	})
 
 	// Surface pads 24px, so the review rows reach its edges and keep their own
@@ -827,7 +826,7 @@ namespace styles {
 	})
 
 	export const arrow = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
 		height: '16',
 		width: '16',
@@ -873,24 +872,24 @@ namespace styles {
 	})
 
 	export const legStatLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		marginBlockEnd: '4',
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 
 	export const legStatValue = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums !custom',
 		margin: '0',
-		typography: 'heading.20',
+		typography: 'heading.h3',
 	})
 
-	export const depthSkeleton = style({ height: '192' })
+	export const depthSkeleton = style({ height: '200' })
 
 	export const depthNote = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		margin: '0',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	// Bleeds like a table placed directly in the surface.
@@ -912,8 +911,8 @@ namespace styles {
 		defaultVariants: { bid: true },
 		variants: {
 			bid: {
-				true: { backgroundColor: 'green.100' },
-				false: { backgroundColor: 'red.100' },
+				true: { backgroundColor: 'container.positive' },
+				false: { backgroundColor: 'container.negative' },
 			},
 		},
 	})
@@ -938,6 +937,6 @@ namespace styles {
 		gap: '8',
 		minWidth: '0 !custom',
 		textDecorationLine: 'none',
-		typography: 'copy.14.strong',
+		typography: 'body.b2Strong',
 	})
 }

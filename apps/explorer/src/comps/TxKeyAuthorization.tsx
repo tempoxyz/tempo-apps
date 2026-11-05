@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Amount, Button, Hex, Rows, style } from '@tempoxyz/ds'
+import { Amount, Button, Hex, ListGroup, style } from '@tempoxyz/ds'
 import { useId, useState } from 'react'
 import { formatUnits, toFunctionSelector, toFunctionSignature } from 'viem'
 import { Hooks } from 'wagmi/tempo'
@@ -20,7 +20,7 @@ const tokenFunctions: Record<string, string> = {
 	'0x95777d59': 'transferWithMemo(address,uint256,bytes32)',
 }
 
-/** An access key's permissions, as labelled TDS `Rows`. */
+/** An access key's permissions, as labelled TDS `ListGroup`. */
 export function TxKeyAuthorization(
 	props: TxKeyAuthorization.Props,
 ): React.JSX.Element {
@@ -28,7 +28,7 @@ export function TxKeyAuthorization(
 	const targets = groupKeyScopes(authorization.scopes)
 	return (
 		<section aria-label="Access key permissions" {...styles.root()}>
-			<Rows.Root dividers="full">
+			<ListGroup.Root>
 				<PermissionRow label="Expires">
 					{formatKeyExpiry(authorization.expiry)}
 				</PermissionRow>
@@ -63,7 +63,7 @@ export function TxKeyAuthorization(
 						</ul>
 					)}
 				</PermissionRow>
-			</Rows.Root>
+			</ListGroup.Root>
 		</section>
 	)
 }
@@ -73,10 +73,10 @@ function PermissionRow(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<Rows.Row spacing="none">
-			<Rows.Label>{props.label}</Rows.Label>
+		<ListGroup.Row>
+			<ListGroup.Label>{props.label}</ListGroup.Label>
 			<span {...styles.value()}>{props.children}</span>
-		</Rows.Row>
+		</ListGroup.Row>
 	)
 }
 
@@ -245,10 +245,10 @@ namespace styles {
 		gap: '8',
 		minWidth: '0',
 		overflowWrap: 'anywhere',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const list = style({
 		display: 'flex',
@@ -275,7 +275,7 @@ namespace styles {
 	// Function names and selectors are code, so they wrap in a mono set.
 	export const code = style({
 		overflowWrap: 'anywhere',
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
 	})
 
 	// Hex leaves its width in a column unset.
@@ -303,8 +303,8 @@ namespace styles {
 	})
 
 	export const rules = style({
-		borderColor: 'grayAlpha.200',
-		borderLeftWidth: '1',
+		borderColor: 'line.secondary',
+		borderLeftWidth: 'regular',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '8',
@@ -322,7 +322,7 @@ namespace styles {
 	})
 
 	export const recipients = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 }

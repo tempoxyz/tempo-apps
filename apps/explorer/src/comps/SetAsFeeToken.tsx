@@ -1,5 +1,5 @@
 import type { Address } from 'ox'
-import { Button, Tag } from '@tempoxyz/ds'
+import { Button, StatusIndicator } from '@tempoxyz/ds'
 import * as React from 'react'
 import { useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
@@ -42,10 +42,9 @@ export function SetAsFeeToken(
 
 	if (isAlreadyFeeToken)
 		return (
-			<Tag intent="positive" variant="plain">
-				<Tag.Dot />
+			<StatusIndicator intent="positive">
 				{showSuccess ? 'Fee token set' : 'Your fee token'}
-			</Tag>
+			</StatusIndicator>
 		)
 
 	return (

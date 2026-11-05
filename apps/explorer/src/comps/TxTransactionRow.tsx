@@ -220,7 +220,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 }
 
 namespace styles {
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const nowrap = style({ textWrap: 'nowrap' })
 }

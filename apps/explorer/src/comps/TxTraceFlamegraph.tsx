@@ -1,4 +1,4 @@
-import { Hex, style, Tag, vars } from '@tempoxyz/ds'
+import { Badge, Hex, StatusIndicator, style, vars } from '@tempoxyz/ds'
 import { Database } from '@tempoxyz/ds/icons'
 import { useEffect, useMemo, useState } from 'react'
 import { cx } from 'zyzz'
@@ -328,9 +328,9 @@ export namespace TxTraceFlamegraph {
 				<div {...styles.detailsPanel()}>
 					<div {...styles.detailsMain()}>
 						<div {...styles.detailsHeading()}>
-							<Tag intent="neutral" size="small" {...styles.shrink()}>
+							<Badge size="small" {...styles.shrink()}>
 								{node.trace.type}
-							</Tag>
+							</Badge>
 							{node.contractName && (
 								<span {...cx(styles.primary(), styles.shrink())}>
 									{node.contractName}
@@ -341,15 +341,9 @@ export namespace TxTraceFlamegraph {
 						<span {...cx(codeIdentifier(), truncate())}>{displayName}</span>
 						{node.hasError && (
 							<span {...styles.revert()}>
-								<Tag
-									intent="negative"
-									size="small"
-									variant="plain"
-									{...styles.shrink()}
-								>
-									<Tag.Dot />
+								<StatusIndicator intent="negative" {...styles.shrink()}>
 									Failed
-								</Tag>
+								</StatusIndicator>
 								{/* Revert reasons can be long; let them wrap. */}
 								<span {...styles.revertReason()}>
 									{node.trace.revertReason || node.trace.error}
@@ -390,8 +384,8 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		borderStyle: 'solid',
 		display: 'flex',
 		paddingBlock: '8',
@@ -399,8 +393,8 @@ namespace styles {
 	})
 
 	export const headerLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const chart = style({
@@ -419,22 +413,22 @@ namespace styles {
 	export const row = style({ position: 'relative', width: '100% !custom' })
 
 	export const bar = style({
-		borderRadius: '4',
+		borderRadius: '3xs',
 		borderStyle: 'solid',
-		borderWidth: '1',
+		borderWidth: 'regular',
 		height: '100% !custom',
 		overflow: 'hidden',
 		position: 'absolute',
 		top: '0',
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 	})
 
 	// The TDS purple ramp's accent step, mixed per frame by gas share. Matches
 	// the simulation gas bars.
 	export const barFill = style(
 		(values: { border: `${number}%`; fill: `${number}%` }) => ({
-			backgroundColor: `color-mix(in oklab, ${vars.color.purple[700]} ${values.fill}, transparent) !custom`,
-			borderColor: `color-mix(in oklab, ${vars.color.purple[700]} ${values.border}, transparent) !custom`,
+			backgroundColor: `color-mix(in oklab, ${vars.color.accent.purple.background} ${values.fill}, transparent) !custom`,
+			borderColor: `color-mix(in oklab, ${vars.color.accent.purple.background} ${values.border}, transparent) !custom`,
 		}),
 	)
 
@@ -443,12 +437,12 @@ namespace styles {
 	export const clickable = style({ cursor: 'pointer' })
 
 	export const selected = style({
-		boxShadow: `inset 0 0 0 1px ${vars.color.foreground} !custom`,
+		boxShadow: `inset 0 0 0 1px ${vars.color.content.primary} !custom`,
 	})
 
 	export const failed = style({
-		borderLeftColor: 'red.900',
-		borderLeftWidth: '2',
+		borderLeftColor: 'content.negative',
+		borderLeftWidth: 'thick',
 	})
 
 	export const barContent = style({
@@ -463,17 +457,17 @@ namespace styles {
 	})
 
 	export const barLabel = style({
-		color: 'foreground',
+		color: 'content.primary',
 		minWidth: '0 !custom',
 	})
 
 	export const barShare = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 	})
 
 	export const barIcon = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 		height: '12',
 		width: '12',
@@ -484,16 +478,16 @@ namespace styles {
 	export const detailsPanel = style({
 		alignItems: 'flex-start',
 		backgroundColor: 'background.primary',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '8',
-		borderWidth: '1',
+		borderColor: 'line.secondary',
+		borderRadius: '2xs',
+		borderWidth: 'regular',
 		display: 'flex',
 		gap: '12',
 		minHeight: '72px !custom',
 		overflow: 'hidden',
 		paddingBlock: '12',
 		paddingInline: '12',
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 	})
 
 	export const detailsMain = style({
@@ -528,20 +522,20 @@ namespace styles {
 	})
 
 	export const revertReason = style({
-		color: 'foreground',
+		color: 'content.primary',
 		minWidth: '0 !custom',
 		overflowWrap: 'anywhere',
 	})
 
 	export const shrink = style({ flexShrink: 0 })
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const storage = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '4',
 		marginTop: '2px !custom',

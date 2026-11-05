@@ -160,10 +160,10 @@ function useHighlightedJson(json: string): string | null {
 namespace styles {
 	// A bordered well for code, inside the tab's card.
 	export const viewer = style({
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
 		borderStyle: 'solid',
-		borderWidth: '1',
+		borderWidth: 'regular',
 		maxHeight: '280px !custom',
 		overflow: 'auto',
 	})
@@ -171,7 +171,7 @@ namespace styles {
 	// `shiki` and `shiki-block` are global classes for the highlighter's
 	// markup. The viewer scrolls, so the block keeps its full height.
 	export const code = style({
-		color: 'foreground',
+		color: 'content.primary',
 		whiteSpace: 'pre',
 		selectors: {
 			'&.shiki-block': {

@@ -387,10 +387,10 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		borderStyle: 'solid',
-		borderTopWidth: '1',
+		borderTopWidth: 'regular',
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'space-between',
@@ -401,8 +401,8 @@ namespace styles {
 	})
 
 	export const headerLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const headerActions = style({
@@ -419,19 +419,19 @@ namespace styles {
 		paddingBottom: '8',
 		paddingInline: '16',
 		paddingTop: '12',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const contractName = style({
 		flexShrink: '0 !custom',
-		typography: 'label.14.strong',
+		typography: 'body.b2Strong',
 	})
 
 	export const accountCount = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: '0 !custom',
 		marginLeft: 'auto !custom',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const scroll = style({
@@ -455,5 +455,5 @@ namespace styles {
 
 	export const after = style({ display: 'flex', flexDirection: 'column' })
 
-	export const diff = style({ color: 'gray.900' })
+	export const diff = style({ color: 'content.secondary' })
 }

@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Amount, Hex, style, Token, variants } from '@tempoxyz/ds'
+import { Amount, Hex, style, TokenLogo, variants } from '@tempoxyz/ds'
 import type * as React from 'react'
 import { formatUnits } from 'viem'
 import { cx } from 'zyzz'
@@ -13,7 +13,7 @@ export function AssetName(props: AssetName.Props): React.JSX.Element {
 	if (!asset.metadata?.name) return <span {...styles.placeholder()}>…</span>
 	return (
 		<span {...styles.name({ multiline })}>
-			<Token address={asset.address} />
+			<TokenLogo address={asset.address} />
 			<span {...(multiline ? styles.wrap() : truncate())}>
 				{asset.metadata.name}
 			</span>
@@ -100,7 +100,7 @@ export declare namespace AssetCell {
 }
 
 namespace styles {
-	export const placeholder = style({ color: 'gray.900' })
+	export const placeholder = style({ color: 'content.secondary' })
 
 	export const name = variants({
 		base: {

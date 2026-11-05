@@ -5,11 +5,11 @@ import {
 	CopyButton,
 	formatHex,
 	Hex,
+	ListGroup,
 	Menu,
-	Rows,
+	StatusChip,
 	style,
 	Surface,
-	Tag,
 	Tooltip,
 } from '@tempoxyz/ds'
 import { ChevronDown, Share } from '@tempoxyz/ds/icons'
@@ -60,8 +60,8 @@ const STATUS_ACTIONS = new Set(['Blocked', 'Failed'])
 
 /**
  * A printable record of a transaction on the TDS Payments receipt: a
- * `Surface` titled Receipt with its status `Tag`, the amount as the hero
- * with one line on what happened, then `Rows` with the parties or line
+ * `Surface` titled Receipt with its status `StatusChip`, the amount as the hero
+ * with one line on what happened, then `ListGroup` with the parties or line
  * items, the network fee, the total, the date, the block and the hash.
  */
 export function Receipt(props: Receipt.Props): React.JSX.Element {
@@ -157,10 +157,9 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 			/>
 			<Surface.Header>
 				<Surface.Title id={titleId}>Receipt</Surface.Title>
-				<Tag intent={status === 'reverted' ? 'negative' : 'positive'}>
-					<Tag.Dot />
+				<StatusChip intent={status === 'reverted' ? 'negative' : 'positive'}>
 					{status === 'reverted' ? 'Failed' : 'Confirmed'}
-				</Tag>
+				</StatusChip>
 			</Surface.Header>
 			<div {...styles.hero()}>
 				{hero}
@@ -170,26 +169,26 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 			</div>
 			{/* Surface pads 24px, so the rows reach its edges and keep their own inset. */}
 			<div {...styles.rows()}>
-				<Rows.Root dividers="full">
-					<Rows.Row>
-						<Rows.Label>From</Rows.Label>
+				<ListGroup.Root>
+					<ListGroup.Row>
+						<ListGroup.Label>From</ListGroup.Label>
 						<span {...styles.hex()}>
 							<Address address={sender} align="end" />
 						</span>
-					</Rows.Row>
+					</ListGroup.Row>
 					{send ? (
 						<>
-							<Rows.Row>
-								<Rows.Label>To</Rows.Label>
+							<ListGroup.Row>
+								<ListGroup.Label>To</ListGroup.Label>
 								<span {...styles.hex()}>
 									<Address address={send.to} align="end" />
 								</span>
-							</Rows.Row>
+							</ListGroup.Row>
 							{sendNote && (
-								<Rows.Row>
-									<Rows.Label>
+								<ListGroup.Row>
+									<ListGroup.Label>
 										{typeof sendNote === 'string' ? 'Memo' : 'Details'}
-									</Rows.Label>
+									</ListGroup.Label>
 									<span {...styles.value()}>
 										{typeof sendNote === 'string' ? (
 											sendNote
@@ -197,7 +196,7 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 											<Receipt.Note note={sendNote} />
 										)}
 									</span>
-								</Rows.Row>
+								</ListGroup.Row>
 							)}
 						</>
 					) : (
@@ -216,8 +215,10 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 							: usdFee
 						const value = Value.format(item.amount, item.decimals)
 						return (
-							<Rows.Row key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}>
-								<Rows.Label>
+							<ListGroup.Row
+								key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
+							>
+								<ListGroup.Label>
 									Network fee
 									{item.symbol && (
 										<>
@@ -236,40 +237,40 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 											{')'}
 										</>
 									)}
-								</Rows.Label>
+								</ListGroup.Label>
 								{usd ? (
 									<Amount currency="USD" precise value={value} />
 								) : (
 									<Amount symbol={item.symbol} value={value} />
 								)}
-							</Rows.Row>
+							</ListGroup.Row>
 						)
 					})}
 					{showSingleFee && (
-						<Rows.Row>
-							<Rows.Label>Network fee</Rows.Label>
+						<ListGroup.Row>
+							<ListGroup.Label>Network fee</ListGroup.Label>
 							{usdFee && fee !== undefined ? (
 								<Amount currency="USD" precise value={fee} />
 							) : (
 								<span {...styles.number()}>{feeDisplay ?? fee}</span>
 							)}
-						</Rows.Row>
+						</ListGroup.Row>
 					)}
 					{hasTotal && (
-						<Rows.Row>
-							<Rows.Label>Total</Rows.Label>
+						<ListGroup.Row>
+							<ListGroup.Label>Total</ListGroup.Label>
 							{total !== undefined ? (
 								<Amount currency="USD" value={total} />
 							) : (
 								<span {...styles.number()}>{totalDisplay}</span>
 							)}
-						</Rows.Row>
+						</ListGroup.Row>
 					)}
 					<ClientOnly fallback={<Receipt.DateRow timestamp={timestamp} utc />}>
 						<Receipt.DateRow timestamp={timestamp} />
 					</ClientOnly>
-					<Rows.Row>
-						<Rows.Label>Block</Rows.Label>
+					<ListGroup.Row>
+						<ListGroup.Label>Block</ListGroup.Label>
 						<Link
 							to="/block/$id"
 							params={{ id: blockNumber.toString() }}
@@ -277,9 +278,9 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 						>
 							{blockNumber.toLocaleString('en-US')}
 						</Link>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Transaction</Rows.Label>
+					</ListGroup.Row>
+					<ListGroup.Row>
+						<ListGroup.Label>Transaction</ListGroup.Label>
 						{/* The link sits inside `Hex.Root` so it takes the link color. */}
 						<Hex.Root value={hash} {...styles.hex()}>
 							<Link
@@ -293,8 +294,8 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 								<Hex.Copy aria-label="Copy transaction hash" />
 							</span>
 						</Hex.Root>
-					</Rows.Row>
-				</Rows.Root>
+					</ListGroup.Row>
+				</ListGroup.Root>
 			</div>
 			<Receipt.Actions hash={hash} exportSearch={exportSearch} />
 		</Surface>
@@ -403,8 +404,8 @@ export namespace Receipt {
 		const sideAmount = getReceiptDistinctSideAmount(event)
 		const note = getReceiptEventNote(event.note, context)
 		return (
-			<Rows.Row>
-				<Rows.Label>{sentenceCase(action ?? event.type)}</Rows.Label>
+			<ListGroup.Row>
+				<ListGroup.Label>{sentenceCase(action ?? event.type)}</ListGroup.Label>
 				<span {...styles.value()}>
 					{parts.length > 0 && (
 						<TxEventDescription
@@ -420,7 +421,7 @@ export namespace Receipt {
 							<Receipt.Note note={note} />
 						))}
 				</span>
-			</Rows.Row>
+			</ListGroup.Row>
 		)
 	}
 
@@ -451,12 +452,12 @@ export namespace Receipt {
 			year: 'numeric',
 		}).format(date)
 		return (
-			<Rows.Row>
-				<Rows.Label>Date</Rows.Label>
+			<ListGroup.Row>
+				<ListGroup.Label>Date</ListGroup.Label>
 				<time dateTime={date.toISOString()} {...styles.number()}>
 					{text}
 				</time>
-			</Rows.Row>
+			</ListGroup.Row>
 		)
 	}
 
@@ -699,7 +700,7 @@ namespace styles {
 
 	// The wordmark paints with `currentColor` and sits above the title.
 	export const brand = style({
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'block',
 		marginBlockEnd: '20',
 	})
@@ -711,9 +712,9 @@ namespace styles {
 	})
 
 	export const summary = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		margin: '0',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const rows = style({
@@ -723,7 +724,7 @@ namespace styles {
 
 	export const number = style({ fontVariantNumeric: 'tabular-nums !custom' })
 
-	// Rows: cap a Hex so it ends with the other values instead of reaching
+	// ListGroup: cap a Hex so it ends with the other values instead of reaching
 	// back to its label.
 	export const hex = style({
 		display: 'flex',
@@ -753,19 +754,19 @@ namespace styles {
 		maxWidth: '288',
 		minWidth: '0',
 		textAlign: 'end',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const description = style({ justifyContent: 'flex-end' })
 
 	export const note = style({
 		alignItems: 'flex-end',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '4',
 		minWidth: '0 !custom',
-		typography: 'copy.13',
+		typography: 'body.b3',
 	})
 
 	export const noteItem = style({

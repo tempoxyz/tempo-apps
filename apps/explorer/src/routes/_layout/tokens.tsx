@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { style, Token as TokenLogo } from '@tempoxyz/ds'
+import { style, TokenLogo } from '@tempoxyz/ds'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import * as z from 'zod/mini'
@@ -216,14 +216,17 @@ namespace styles {
 	})
 
 	export const symbol = style({
-		color: 'foreground',
-		typography: 'label.14.strong',
+		color: 'content.primary',
+		typography: 'body.b2Strong',
 	})
 
-	export const secondary = style({ color: 'gray.900', typography: 'copy.13' })
+	export const secondary = style({
+		color: 'content.secondary',
+		typography: 'body.b3',
+	})
 
 	export const numeric = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums',
 	})
 }

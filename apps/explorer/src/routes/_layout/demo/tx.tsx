@@ -620,6 +620,6 @@ namespace styles {
 		justifyContent: 'center',
 		paddingBottom: '32',
 		paddingTop: '64',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 }

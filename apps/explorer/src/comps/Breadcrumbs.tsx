@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Breadcrumbs as TdsBreadcrumbs, formatHex } from '@tempoxyz/ds'
+import { formatHex, Breadcrumbs as TdsBreadcrumbs } from '@tempoxyz/ds'
 import type * as React from 'react'
 
 /** Where the current page sits: Home, its section when it has one, then the page. */

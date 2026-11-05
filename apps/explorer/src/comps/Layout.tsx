@@ -77,15 +77,15 @@ namespace styles {
 	// only releases the clip. Inverted against the page, like a TDS primary
 	// button.
 	export const skipLink = style({
-		backgroundColor: 'foreground',
-		borderRadius: '12',
+		backgroundColor: 'content.primary',
+		borderRadius: 'xs',
 		color: 'background.primary',
 		left: '12',
 		paddingBlock: '12',
 		paddingInline: '24',
 		position: 'fixed',
 		top: '12',
-		typography: 'copy.14',
+		typography: 'body.b2',
 		zIndex: '50 !custom',
 		':focus': {
 			clipPath: 'none',

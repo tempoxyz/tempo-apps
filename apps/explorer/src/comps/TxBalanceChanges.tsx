@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Amount, Empty, style, Token } from '@tempoxyz/ds'
+import { Amount, Empty, style, TokenLogo } from '@tempoxyz/ds'
 import type { Address as OxAddress } from 'ox'
 import * as Value from 'ox/Value'
 import { cx } from 'zyzz'
@@ -109,7 +109,7 @@ export namespace TxBalanceChanges {
 				title={token}
 				to={isTip20Address(token) ? '/token/$address' : '/address/$address'}
 			>
-				<Token address={token} size="small" />
+				<TokenLogo address={token} size="small" />
 				{metadata?.symbol ?? '…'}
 			</Link>
 		)
@@ -177,7 +177,7 @@ namespace styles {
 	})
 
 	// Balances before and after read secondary to the change.
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	// Amount leaves wrapping unset; long balances break instead of overflowing.
 	export const amount = style({ minWidth: '0', overflowWrap: 'anywhere' })

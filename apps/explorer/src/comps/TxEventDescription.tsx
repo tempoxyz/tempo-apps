@@ -1,6 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Hex as HexDisplay, style, Tag, Token } from '@tempoxyz/ds'
+import {
+	Badge,
+	Button,
+	StatusIndicator,
+	style,
+	TokenLogo,
+	Hex as HexDisplay,
+} from '@tempoxyz/ds'
 import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
@@ -170,20 +177,18 @@ export namespace TxEventDescription {
 			case 'action': {
 				if (part.value === 'Failed' || part.value === 'Blocked')
 					return (
-						<Tag
+						<StatusIndicator
 							intent={part.value === 'Failed' ? 'negative' : 'warning'}
-							variant="plain"
 						>
-							<Tag.Dot />
 							{part.value}
-						</Tag>
+						</StatusIndicator>
 					)
 				if (
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
 				)
-					return <Tag intent="accent">{part.value}</Tag>
-				return <Tag>{sentenceCase(part.value)}</Tag>
+					return <Badge variant="accent">{part.value}</Badge>
+				return <Badge>{sentenceCase(part.value)}</Badge>
 			}
 			case 'amount':
 				return <Amount {...part.value} />
@@ -225,7 +230,7 @@ export namespace TxEventDescription {
 						title={address}
 						{...cx(styles.token(), link(), linkHover())}
 					>
-						<Token address={address} size="small" />
+						<TokenLogo address={address} size="small" />
 						{children}
 					</Link>
 				)
@@ -357,17 +362,17 @@ namespace styles {
 	export const dexPair = style({ whiteSpace: 'nowrap' })
 
 	export const dexPairRetired = style({
-		color: 'foreground',
+		color: 'content.primary',
 		whiteSpace: 'nowrap',
 	})
 
 	export const memo = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
 		minWidth: '0 !custom',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const memoLabel = style({ flexShrink: '0 !custom' })
@@ -375,11 +380,11 @@ namespace styles {
 	export const memoText = style({ minWidth: '0 !custom' })
 
 	export const functionName = style({
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
 		whiteSpace: 'nowrap',
 	})
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	// The slot clips, so the link's focus ring is drawn inside it.
 	export const addressSlot = style({
@@ -417,7 +422,7 @@ namespace styles {
 
 	export const empty = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 	})
 

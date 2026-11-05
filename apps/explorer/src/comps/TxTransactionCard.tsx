@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Button, Hex, style, Tag, Tooltip } from '@tempoxyz/ds'
+import { Button, Hex, StatusChip, style, Tooltip } from '@tempoxyz/ds'
 import { Clock } from '@tempoxyz/ds/icons'
 import type { Address as OxAddress, Hex as OxHex } from 'ox'
 import { cx } from 'zyzz'
@@ -18,10 +18,9 @@ export function TxTransactionCard(
 		<InfoCard
 			title={<InfoCard.Title>Transaction</InfoCard.Title>}
 			action={
-				<Tag intent={status === 'success' ? 'positive' : 'negative'}>
-					<Tag.Dot />
+				<StatusChip intent={status === 'success' ? 'positive' : 'negative'}>
 					{status === 'success' ? 'Confirmed' : 'Failed'}
-				</Tag>
+				</StatusChip>
 			}
 			className={className}
 			sections={[
@@ -143,9 +142,9 @@ export declare namespace TxTransactionCard {
 
 namespace styles {
 	export const error = style({
-		color: 'foreground',
+		color: 'content.primary',
 		textAlign: 'right',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const number = style({ fontVariantNumeric: 'tabular-nums !custom' })
@@ -164,7 +163,7 @@ namespace styles {
 		marginRight: '-8px !custom',
 	})
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const actions = style({
 		display: 'flex',

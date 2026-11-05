@@ -1,4 +1,4 @@
-import { Callout, Spinner, style } from '@tempoxyz/ds'
+import { Alert, Spinner, style } from '@tempoxyz/ds'
 import * as React from 'react'
 import type {
 	ContractSource,
@@ -63,13 +63,13 @@ function SourceBrowser(props: {
 	return (
 		<div aria-busy={!failed} {...styles.placeholder()}>
 			{failed ? (
-				<Callout intent="negative" size="small">
-					<Callout.Icon />
-					<Callout.Content>Couldn’t load the source viewer.</Callout.Content>
-					<Callout.Action onClick={() => window.location.reload()}>
+				<Alert intent="negative">
+					<Alert.Icon />
+					<Alert.Content>Couldn’t load the source viewer.</Alert.Content>
+					<Alert.Action onClick={() => window.location.reload()}>
 						Reload page
-					</Callout.Action>
-				</Callout>
+					</Alert.Action>
+				</Alert>
 			) : (
 				<Spinner aria-label="Loading source viewer" />
 			)}
@@ -81,10 +81,10 @@ namespace styles {
 	// Holds the viewer's height, so the tab doesn't shift when it loads.
 	export const placeholder = style({
 		alignItems: 'center',
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
 		borderStyle: 'solid',
-		borderWidth: '1',
+		borderWidth: 'regular',
 		display: 'flex',
 		height: 'calc(min(620px, 70svh) + 96px) !custom',
 		justifyContent: 'center',

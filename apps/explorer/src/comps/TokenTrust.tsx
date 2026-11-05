@@ -1,15 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
+	Alert,
 	Button,
-	Callout,
 	Field,
-	Input,
+	ListGroup,
 	LoadingDots,
-	Rows,
 	Skeleton,
-	Tag,
+	StatusChip,
 	style,
+	TextInput,
 } from '@tempoxyz/ds'
 import * as Address from 'ox/Address'
 import * as React from 'react'
@@ -17,6 +17,7 @@ import { useChainId } from 'wagmi'
 import { cx } from 'zyzz'
 import { Address as AddressLink } from '#comps/Address'
 import { ContractSection } from '#comps/Contract'
+import { ListGroupLoader } from '#comps/ListGroupLoader'
 import {
 	groupTokenAuthorities,
 	policyDescriptions,
@@ -57,19 +58,19 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 					/>
 				) : (
 					<>
-						<Rows dividers="full">
-							<Rows.Row spacing="none">
-								<Rows.Label>Policy</Rows.Label>
+						<ListGroup>
+							<ListGroup.Row>
+								<ListGroup.Label>Policy</ListGroup.Label>
 								{policy ? (
 									<PolicyLink policy={policy.policy} />
 								) : (
 									<Skeleton shape="pill" {...styles.skeleton()} />
 								)}
-							</Rows.Row>
-							<Rows.Row spacing="none">
-								<Rows.Label>Transfers</Rows.Label>
+							</ListGroup.Row>
+							<ListGroup.Row>
+								<ListGroup.Label>Transfers</ListGroup.Label>
 								{policy ? (
-									<Tag
+									<StatusChip
 										role="status"
 										aria-label="Token pause status"
 										intent={
@@ -81,18 +82,17 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 										}
 										size="small"
 									>
-										<Tag.Dot />
 										{policy.paused === true
 											? 'Paused'
 											: policy.paused === false
 												? 'Active'
 												: 'Unavailable'}
-									</Tag>
+									</StatusChip>
 								) : (
 									<Skeleton shape="pill" {...styles.skeleton()} />
 								)}
-							</Rows.Row>
-						</Rows>
+							</ListGroup.Row>
+						</ListGroup>
 						{policy && (
 							<p {...styles.description()}>
 								{policyDescriptions[policy.policy.type]}
@@ -114,9 +114,7 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 				description="Accounts that hold a token role or manage one of its policies."
 			>
 				{props.loading ? (
-					<Rows dividers="full">
-						<Rows.RowGroupLoader aria-label="Loading token roles" />
-					</Rows>
+					<ListGroupLoader label="Loading token roles" />
 				) : props.unavailable ? (
 					<Unavailable
 						message="Token roles unavailable. Policy permissions below may still be shown."
@@ -134,17 +132,17 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 						<h4 {...styles.accountTitle()}>
 							<AddressLink address={group.account} />
 						</h4>
-						<Rows dividers="full">
+						<ListGroup>
 							{group.roles.map((role) => (
-								<Rows.Row key={role.roleHash} spacing="none">
-									<Rows.Info>
-										<Rows.Title>
+								<ListGroup.Row key={role.roleHash}>
+									<ListGroup.Info>
+										<ListGroup.Title>
 											<span {...styles.roleName()}>{role.role}</span>
-										</Rows.Title>
-										<Rows.Description>
+										</ListGroup.Title>
+										<ListGroup.Description>
 											{tokenRoleDescription(role.role)}
-										</Rows.Description>
-									</Rows.Info>
+										</ListGroup.Description>
+									</ListGroup.Info>
 									<span {...styles.grant()}>
 										{role.grantedAt != null && (
 											<time
@@ -169,21 +167,18 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 											<span>Grant unavailable</span>
 										)}
 									</span>
-								</Rows.Row>
+								</ListGroup.Row>
 							))}
 							{group.permissions.map(
 								(permission, index) =>
 									permission.policyId !== undefined && (
-										<Rows.Row
-											key={`${permission.policyId}:${index}`}
-											spacing="none"
-										>
-											<Rows.Info>
-												<Rows.Title>{permission.label}</Rows.Title>
-												<Rows.Description>
+										<ListGroup.Row key={`${permission.policyId}:${index}`}>
+											<ListGroup.Info>
+												<ListGroup.Title>{permission.label}</ListGroup.Title>
+												<ListGroup.Description>
 													{permission.description}
-												</Rows.Description>
-											</Rows.Info>
+												</ListGroup.Description>
+											</ListGroup.Info>
 											<span {...styles.grant()}>
 												<Link
 													to="/policy/$id"
@@ -193,10 +188,10 @@ export function TokenTrust(props: TokenTrust.Props): React.JSX.Element {
 													Policy #{permission.policyId} activity
 												</Link>
 											</span>
-										</Rows.Row>
+										</ListGroup.Row>
 									),
 							)}
-						</Rows>
+						</ListGroup>
 					</div>
 				))}
 			</ContractSection>
@@ -234,11 +229,11 @@ function Unavailable(props: {
 	onRetry: () => void
 }): React.JSX.Element {
 	return (
-		<Callout intent="negative" role="status" size="small">
-			<Callout.Icon />
-			<Callout.Content>{props.message}</Callout.Content>
-			<Callout.Action onClick={props.onRetry}>Try again</Callout.Action>
-		</Callout>
+		<Alert intent="negative" role="status">
+			<Alert.Icon />
+			<Alert.Content>{props.message}</Alert.Content>
+			<Alert.Action onClick={props.onRetry}>Try again</Alert.Action>
+		</Alert>
 	)
 }
 
@@ -295,8 +290,8 @@ function AddressPolicyChecker(props: {
 				<Field.Root invalid={invalid}>
 					<Field.Label>Address to check</Field.Label>
 					<div {...styles.inputRow()}>
-						<Input.Group {...styles.input()}>
-							<Input.Control
+						<TextInput.Group {...styles.input()}>
+							<TextInput.Control
 								value={value}
 								onValueChange={(next) => {
 									setValue(next)
@@ -309,7 +304,7 @@ function AddressPolicyChecker(props: {
 								autoCorrect="off"
 								spellCheck={false}
 							/>
-						</Input.Group>
+						</TextInput.Group>
 						<Button
 							type="submit"
 							loading={query.isFetching}
@@ -352,21 +347,16 @@ function PolicyCheckResult({
 	return (
 		<div {...styles.result()}>
 			{(result.components.length > 0 || result.checks) && (
-				<Rows
-					aria-label="Policy permissions"
-					dividers="full"
-					role="group"
-					size="small"
-				>
+				<ListGroup aria-label="Policy permissions" role="group">
 					{tokenPolicyRows(result).map((row) => (
-						<Rows.Row key={row.scope} spacing="none">
-							<Rows.Label>{row.label}</Rows.Label>
+						<ListGroup.Row key={row.scope}>
+							<ListGroup.Label>{row.label}</ListGroup.Label>
 							<span {...styles.resultValue()}>
 								{result.components.length > 0 && (
 									<PolicyLink policy={row.policy} />
 								)}
 								{result.checks && (
-									<Tag
+									<StatusChip
 										intent={
 											row.allowed === null
 												? 'neutral'
@@ -376,18 +366,17 @@ function PolicyCheckResult({
 										}
 										size="small"
 									>
-										<Tag.Dot />
 										{row.allowed === null
 											? 'Unavailable'
 											: row.allowed
 												? 'Permitted by policy'
 												: 'Blocked by policy'}
-									</Tag>
+									</StatusChip>
 								)}
 							</span>
-						</Rows.Row>
+						</ListGroup.Row>
 					))}
-				</Rows>
+				</ListGroup>
 			)}
 			{result.checks && (
 				<p {...styles.secondary()}>Checked at block {result.blockNumber}.</p>
@@ -399,11 +388,11 @@ function PolicyCheckResult({
 namespace styles {
 	export const skeleton = style({ height: '12', width: '6rem !custom' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const description = style({
-		color: 'gray.900',
-		typography: 'copy.13',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const account = style({
@@ -418,17 +407,17 @@ namespace styles {
 
 	export const roleName = style({
 		overflowWrap: 'anywhere',
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
 	})
 
 	export const grant = style({
 		alignItems: 'flex-end',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		flexDirection: 'column',
 		flexShrink: 0,
 		gap: '4',
-		typography: 'copy.13',
+		typography: 'body.b3',
 	})
 
 	export const policyLink = style({

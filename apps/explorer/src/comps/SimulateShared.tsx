@@ -1,7 +1,7 @@
 /** Displays, states, and formatting shared by the simulator's panes. */
 
 import {
-	Callout,
+	Alert,
 	Empty,
 	formatHex,
 	Skeleton,
@@ -86,14 +86,14 @@ export function PanelError(props: {
 		props.error instanceof SimulationApiError && props.error.status === 429
 	return (
 		<div {...styles.panelError()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				<Callout.Content>
+			<Alert intent="negative">
+				<Alert.Icon />
+				<Alert.Content>
 					{rateLimited
 						? `Couldn't load ${props.subject}: too many simulations in a short window. Wait a few seconds, then run it again.`
 						: `Couldn't load ${props.subject}. ${props.error.message}`}
-				</Callout.Content>
-			</Callout>
+				</Alert.Content>
+			</Alert>
 		</div>
 	)
 }
@@ -113,18 +113,18 @@ export function SimulationFailure(props: {
 	const messages = [...new Set(props.errors.map((error) => error.message))]
 
 	return (
-		<Callout intent="negative">
-			<Callout.Icon />
-			<Callout.Content>
+		<Alert intent="negative">
+			<Alert.Icon />
+			<Alert.Content>
 				{describeFailure(status)}
 				{messages.map((message) => (
 					<span key={message} {...styles.failureMessage()}>
 						{message}
 					</span>
 				))}
-			</Callout.Content>
-			<Callout.Action onClick={props.onRetry}>Try again</Callout.Action>
-		</Callout>
+			</Alert.Content>
+			<Alert.Action onClick={props.onRetry}>Try again</Alert.Action>
+		</Alert>
 	)
 }
 
@@ -244,6 +244,6 @@ namespace styles {
 		display: 'block',
 		marginTop: '4',
 		overflowWrap: 'anywhere',
-		typography: 'label.13.mono',
+		typography: 'mono.m1',
 	})
 }

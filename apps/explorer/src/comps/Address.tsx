@@ -89,5 +89,5 @@ namespace styles {
 
 	export const highlighted = style({ textDecorationLine: 'underline' })
 
-	export const self = style({ color: 'gray.900' })
+	export const self = style({ color: 'content.secondary' })
 }

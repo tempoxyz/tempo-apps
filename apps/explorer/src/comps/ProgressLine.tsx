@@ -77,7 +77,7 @@ export declare namespace ProgressLine {
 
 namespace styles {
 	export const line = style({
-		backgroundColor: 'foreground',
+		backgroundColor: 'content.primary',
 		height: '1',
 		pointerEvents: 'none',
 	})

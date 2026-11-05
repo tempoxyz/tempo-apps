@@ -17,15 +17,15 @@ import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions, Hooks } from 'wagmi/tempo'
 import {
+	Alert,
 	Button,
-	Callout,
-	Popover,
 	formatHex,
-	Hex as HexValue,
+	Popover,
+	StatusIndicator,
 	style,
-	Tag,
-	Token,
+	TokenLogo,
 	Tooltip,
+	Hex as HexValue,
 } from '@tempoxyz/ds'
 import {
 	ChevronLeft,
@@ -945,7 +945,7 @@ function ZonePortalCard(props: ZonePortalCardProps): React.JSX.Element {
 										params={{ address: asset.address }}
 										{...cx(styles.balanceToken(), link(), linkHover())}
 									>
-										<Token address={asset.address} size="small" />
+										<TokenLogo address={asset.address} size="small" />
 										<span {...truncate()}>{asset.symbol}</span>
 									</Link>
 									<Amount.Base
@@ -1373,10 +1373,9 @@ function SectionsWrapper(props: {
 	const liveControl = (
 		<>
 			{streamError && (
-				<Tag intent="negative" role="status" variant="plain">
-					<Tag.Dot />
+				<StatusIndicator intent="negative" role="status">
 					{streamError}
-				</Tag>
+				</StatusIndicator>
 			)}
 			<Button
 				{...styles.feedToggle()}
@@ -1580,13 +1579,13 @@ function SectionsWrapper(props: {
 	// Show error state for API failures (instead of crashing the whole page)
 	const transactionsError = error ? (
 		<div {...styles.alertWrap()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				<Callout.Content>
+			<Alert intent="negative">
+				<Alert.Icon />
+				<Alert.Content>
 					<strong>Failed to load transaction history</strong>{' '}
 					{error instanceof Error ? error.message : 'Unknown error'}
-				</Callout.Content>
-			</Callout>
+				</Alert.Content>
+			</Alert>
 		</div>
 	) : null
 
@@ -1745,15 +1744,15 @@ function SectionsWrapper(props: {
 
 	const zonePortalError = zonePortalActivityQuery.error ? (
 		<div {...styles.alertWrap()}>
-			<Callout intent="negative">
-				<Callout.Icon />
-				<Callout.Content>
+			<Alert intent="negative">
+				<Alert.Icon />
+				<Alert.Content>
 					<strong>Zone activity is temporarily unavailable</strong>{' '}
 					{zonePortalActivityQuery.error instanceof Error
 						? zonePortalActivityQuery.error.message
 						: 'Unknown error'}
-				</Callout.Content>
-			</Callout>
+				</Alert.Content>
+			</Alert>
 		</div>
 	) : null
 
@@ -2182,16 +2181,16 @@ function SectionsWrapper(props: {
 						),
 						content: (
 							<div {...styles.alertWrap()}>
-								<Callout intent="negative">
-									<Callout.Icon />
-									<Callout.Content>
+								<Alert intent="negative">
+									<Alert.Icon />
+									<Alert.Content>
 										<strong>Transfers are temporarily unavailable</strong> The
 										Tempo API could not complete this request.
-									</Callout.Content>
-									<Callout.Action onClick={() => void refetchActiveTransfers()}>
+									</Alert.Content>
+									<Alert.Action onClick={() => void refetchActiveTransfers()}>
 										Try again
-									</Callout.Action>
-								</Callout>
+									</Alert.Action>
+								</Alert>
 							</div>
 						),
 					}
@@ -2273,7 +2272,7 @@ function SectionsWrapper(props: {
 														preload="intent"
 														{...cx(styles.assetLink(), linkHover())}
 													>
-														<Token
+														<TokenLogo
 															address={transfer.token.address}
 															size="small"
 														/>
@@ -2502,13 +2501,12 @@ function SectionsWrapper(props: {
 	)
 }
 
-/** The live toggle's label: a TDS `Tag` dot, green while updates stream. */
+/** The live toggle's label: a TDS `StatusIndicator` dot, green while updates stream. */
 function LiveTag(props: { live: boolean }): React.JSX.Element {
 	return (
-		<Tag intent={props.live ? 'positive' : 'neutral'} variant="plain">
-			<Tag.Dot />
+		<StatusIndicator intent={props.live ? 'positive' : 'neutral'}>
 			{props.live ? 'Live' : 'Paused'}
-		</Tag>
+		</StatusIndicator>
 	)
 }
 
@@ -3185,13 +3183,13 @@ function StreamedPaymentReceipt(props: {
 
 const paginationRowBase = {
 	alignItems: 'center',
-	color: 'gray.900',
+	color: 'content.secondary',
 	display: 'flex',
 	flexDirection: 'column',
 	gap: '12',
 	paddingBlock: '12',
 	paddingInline: '16',
-	typography: 'label.12',
+	typography: 'body.b3',
 	'@media (width >= 640px)': {
 		flexDirection: 'row',
 		justifyContent: 'space-between',
@@ -3201,7 +3199,7 @@ const paginationRowBase = {
 // Divider borders: the reset leaves every border at width 0, so each use sets
 // only the edge it draws.
 const dividerLine = {
-	borderColor: 'grayAlpha.200',
+	borderColor: 'line.secondary',
 	borderStyle: 'solid',
 } as const
 
@@ -3249,8 +3247,8 @@ namespace styles {
 	})
 
 	export const addressLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const balances = style({
@@ -3259,9 +3257,9 @@ namespace styles {
 	})
 
 	export const balancesLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		marginBottom: '8',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const balanceList = style({
@@ -3276,25 +3274,25 @@ namespace styles {
 		gap: '8',
 		justifyContent: 'space-between',
 		minWidth: '0 !custom',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const pending = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const value = style({
-		color: 'foreground',
-		typography: 'label.12',
+		color: 'content.primary',
+		typography: 'body.b3',
 	})
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	// Dashes that stand in for a missing value.
-	export const placeholder = style({ color: 'gray.700' })
+	export const placeholder = style({ color: 'content.tertiary' })
 
 	// Added to a TDS Button: only properties it leaves unset. The history and
 	// transfers feed toggle sits at the end of its toolbar.
@@ -3309,7 +3307,7 @@ namespace styles {
 	export const alertWrap = style({ padding: '16' })
 
 	export const batchIndex = style({
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 		whiteSpace: 'nowrap',
 	})
 
@@ -3322,7 +3320,7 @@ namespace styles {
 	export const paginationBar = style({
 		...paginationRowBase,
 		...dividerLine,
-		borderTopWidth: '1',
+		borderTopWidth: 'regular',
 	})
 
 	export const infoLabel = style({
@@ -3335,13 +3333,13 @@ namespace styles {
 	export const infoPopup = style({ maxWidth: '20rem !custom' })
 
 	export const batchPending = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 		whiteSpace: 'nowrap',
 	})
 
 	export const batchCell = style({
-		typography: 'label.12',
+		typography: 'body.b3',
 		whiteSpace: 'nowrap',
 	})
 
@@ -3354,7 +3352,7 @@ namespace styles {
 	})
 
 	export const pageLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		paddingInline: '4',
 		whiteSpace: 'nowrap',
@@ -3362,7 +3360,7 @@ namespace styles {
 
 	export const holdingsFooter = style({
 		...dividerLine,
-		borderTopWidth: '1',
+		borderTopWidth: 'regular',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '0',
@@ -3377,26 +3375,26 @@ namespace styles {
 		justifyContent: 'center',
 		paddingBlock: '8',
 		paddingInline: '16',
-		selectors: { '&:not(:first-child)': { borderTopWidth: '1' } },
+		selectors: { '&:not(:first-child)': { borderTopWidth: 'regular' } },
 	})
 
 	export const filter = style({
 		alignItems: 'center',
 		display: 'flex',
 		gap: '8',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const receipt = style({
 		paddingBottom: '16',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const settlement = style({
 		...dividerLine,
 		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
-		borderBottomWidth: '2',
+		backgroundColor: 'container.regular',
+		borderBottomWidth: 'thick',
 		display: 'flex',
 		marginInline: '-16px !custom',
 		paddingBlock: '12',
@@ -3404,7 +3402,7 @@ namespace styles {
 	})
 
 	export const rowIndex = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
 		marginRight: '12',
@@ -3412,41 +3410,41 @@ namespace styles {
 	})
 
 	export const onChainLabel = style({
-		color: 'foreground',
+		color: 'content.primary',
 		flexShrink: 0,
 		fontStyle: 'italic',
-		typography: 'label.12',
+		typography: 'body.b3',
 		width: '64',
 	})
 
 	export const offChainHeader = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'flex',
 		gap: '8',
 		paddingBottom: '8',
 		paddingTop: '12',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const divider = style({
 		...dividerLine,
-		borderTopWidth: '1',
+		borderTopWidth: 'regular',
 		flex: 1,
 	})
 
 	export const voucherRow = style({
 		...dividerLine,
 		alignItems: 'center',
-		borderBottomWidth: '1',
+		borderBottomWidth: 'regular',
 		display: 'flex',
 		paddingBlock: '8',
 	})
 
 	export const offChainLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
-		typography: 'label.12',
+		typography: 'body.b3',
 		width: '64',
 	})
 
@@ -3466,7 +3464,7 @@ namespace styles {
 
 	export const assetLink = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		gap: '8',
 	})

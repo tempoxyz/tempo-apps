@@ -263,7 +263,7 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '24',
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 	})
 
 	export const section = variants({
@@ -273,8 +273,8 @@ namespace styles {
 			border: {
 				false: {},
 				true: {
-					borderColor: 'grayAlpha.200',
-					borderTopWidth: '1',
+					borderColor: 'line.secondary',
+					borderTopWidth: 'regular',
 					paddingTop: '24',
 				},
 			},
@@ -289,14 +289,17 @@ namespace styles {
 	})
 
 	export const sectionTitle = style({
-		color: 'foreground',
+		color: 'content.primary',
 		margin: '0',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const column = style({ display: 'flex', flexDirection: 'column' })
 
-	export const groupKey = style({ color: 'gray.900', paddingBlock: '4' })
+	export const groupKey = style({
+		color: 'content.secondary',
+		paddingBlock: '4',
+	})
 
 	export const entry = style({
 		display: 'flex',
@@ -304,7 +307,10 @@ namespace styles {
 		paddingBlock: '4',
 	})
 
-	export const key = style({ color: 'gray.900', flexShrink: '0 !custom' })
+	export const key = style({
+		color: 'content.secondary',
+		flexShrink: '0 !custom',
+	})
 
 	export const value = style({ minWidth: '0 !custom' })
 }

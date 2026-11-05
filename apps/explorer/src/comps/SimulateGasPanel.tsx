@@ -7,7 +7,7 @@
  * points at the frame to fix and stays readable at any depth.
  */
 
-import { style, Table, Tag } from '@tempoxyz/ds'
+import { StatusIndicator, style, Table } from '@tempoxyz/ds'
 import * as React from 'react'
 import { cx } from 'zyzz'
 import type { PrestateDiff } from '#lib/queries'
@@ -171,15 +171,9 @@ function FrameTable(props: {
 										{frame.label}
 									</span>
 									{frame.node.hasError && (
-										<Tag
-											intent="negative"
-											size="small"
-											variant="plain"
-											{...styles.shrink()}
-										>
-											<Tag.Dot />
+										<StatusIndicator intent="negative" {...styles.shrink()}>
 											Failed
-										</Tag>
+										</StatusIndicator>
 									)}
 								</span>
 							</Table.Cell>
@@ -228,20 +222,20 @@ namespace styles {
 	export const root = style({ display: 'flex', flexDirection: 'column' })
 
 	export const note = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		margin: '0',
 		paddingInline: '16',
 		paddingTop: '16',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const sectionTitle = style({
-		color: 'foreground',
+		color: 'content.primary',
 		margin: '0',
 		paddingBottom: '8',
 		paddingInline: '16',
 		paddingTop: '24',
-		typography: 'heading.16',
+		typography: 'body.b1Strong',
 	})
 
 	// Fixed columns, so frame labels truncate instead of widening the table.
@@ -249,14 +243,14 @@ namespace styles {
 
 	export const callColumn = style({ width: '64' })
 
-	export const gasColumn = style({ width: '112' })
+	export const gasColumn = style({ width: '120' })
 
 	export const shareColumn = style({ width: '80' })
 
 	// Table has no selected-row state, so the selected frame gets its own fill.
 	export const row = style({
 		selectors: {
-			'&[data-selected]': { backgroundColor: 'grayAlpha.200' },
+			'&[data-selected]': { backgroundColor: 'container.strong' },
 		},
 	})
 
@@ -268,7 +262,7 @@ namespace styles {
 	})
 
 	export const depth = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
 		textAlign: 'end',
@@ -276,9 +270,9 @@ namespace styles {
 	})
 
 	export const label = style({
-		color: 'foreground',
+		color: 'content.primary',
 		minWidth: '0 !custom',
-		typography: 'label.13.mono',
+		typography: 'mono.m1',
 	})
 
 	export const shrink = style({ flexShrink: 0 })

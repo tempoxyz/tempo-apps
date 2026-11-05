@@ -86,24 +86,24 @@ namespace styles {
 	})
 
 	export const title = style({
-		color: 'foreground',
-		typography: 'heading.24.subtle',
-		'@media (width >= 1024px)': { typography: 'heading.32.subtle' },
+		color: 'content.primary',
+		typography: 'heading.h2',
+		'@media (width >= 1024px)': { typography: 'value.v3' },
 	})
 
 	export const description = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		textAlign: 'center',
-		typography: 'copy.14',
-		'@media (width >= 1024px)': { typography: 'copy.16' },
+		typography: 'body.b2',
+		'@media (width >= 1024px)': { typography: 'body.b1' },
 	})
 
 	export const details = style({ width: '100% !custom' })
 
 	export const message = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		margin: '0',
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-word',
 	})

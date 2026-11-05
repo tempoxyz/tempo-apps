@@ -31,11 +31,11 @@ namespace styles {
 
 	// Secondary to the row's own link, so it reads in gray.
 	export const link = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'inline-flex',
 		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
 		textDecorationLine: 'none',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 	})
 }

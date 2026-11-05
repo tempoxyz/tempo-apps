@@ -1,15 +1,15 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
+	Alert,
 	Amount,
-	Callout,
 	CopyButton,
 	Empty,
-	Rows,
+	ListGroup,
 	Spinner,
-	Table,
-	Token,
 	style,
+	Table,
+	TokenLogo,
 } from '@tempoxyz/ds'
 import { ArrowRight } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
@@ -32,24 +32,20 @@ export function FeeAmmQueryState({
 		)
 	if (!query.isError) return null
 	return (
-		<Callout
-			intent={query.data ? 'warning' : 'negative'}
-			role="alert"
-			size="small"
-		>
-			<Callout.Icon />
-			<Callout.Content>
+		<Alert intent={query.data ? 'warning' : 'negative'} role="alert">
+			<Alert.Icon />
+			<Alert.Content>
 				{query.data
 					? 'Could not refresh liquidity. Showing the last successful result.'
 					: 'Fee AMM liquidity is temporarily unavailable.'}
-			</Callout.Content>
-			<Callout.Action
+			</Alert.Content>
+			<Alert.Action
 				disabled={query.isFetching}
 				onClick={() => void query.refetch()}
 			>
 				{query.isFetching ? 'Retrying…' : 'Try again'}
-			</Callout.Action>
-		</Callout>
+			</Alert.Action>
+		</Alert>
 	)
 }
 
@@ -129,14 +125,14 @@ export function FeeAmmPoolList({
 				</Table.Root>
 			</div>
 			<div {...styles.narrow()}>
-				<Rows aria-label="Fee AMM pools" dividers="full" role="list">
+				<ListGroup aria-label="Fee AMM pools" role="list">
 					{pools.map((pool) => (
-						<Rows.Row key={pool.poolId} role="listitem" spacing="none">
-							<Rows.Info>
-								<Rows.Title>
+						<ListGroup.Row key={pool.poolId} role="listitem">
+							<ListGroup.Info>
+								<ListGroup.Title>
 									<PoolPair pool={pool} token={token} />
-								</Rows.Title>
-								<Rows.Description>
+								</ListGroup.Title>
+								<ListGroup.Description>
 									<span {...styles.reserves()}>
 										<Reserve
 											decimals={pool.userTokenDecimals}
@@ -149,15 +145,15 @@ export function FeeAmmPoolList({
 											value={pool.reserveValidatorToken}
 										/>
 									</span>
-								</Rows.Description>
-							</Rows.Info>
+								</ListGroup.Description>
+							</ListGroup.Info>
 							<span {...styles.end()}>
 								<Liquidity pool={pool} />
 								<LastDeposit pool={pool} />
 							</span>
-						</Rows.Row>
+						</ListGroup.Row>
 					))}
-				</Rows>
+				</ListGroup>
 			</div>
 		</div>
 	)
@@ -250,7 +246,7 @@ export function PoolTokenLink({
 			aria-label={`View ${symbol} Fee AMM liquidity`}
 			{...cx(styles.tokenLink(), link(), linkHover())}
 		>
-			<Token address={address} size="small" />
+			<TokenLogo address={address} size="small" />
 			{symbol}
 		</Link>
 	)
@@ -323,14 +319,14 @@ namespace styles {
 		gap: '4',
 	})
 
-	export const pairArrow = style({ color: 'gray.900', flexShrink: 0 })
+	export const pairArrow = style({ color: 'content.secondary', flexShrink: 0 })
 
 	export const caption = style({
-		color: 'gray.900',
-		typography: 'label.13',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
-	export const missing = style({ color: 'gray.900' })
+	export const missing = style({ color: 'content.secondary' })
 
 	// An amount keeps its symbol on its line.
 	export const amount = style({ whiteSpace: 'nowrap' })
@@ -364,8 +360,8 @@ namespace styles {
 	})
 
 	export const more = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		paddingTop: '8',
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 }

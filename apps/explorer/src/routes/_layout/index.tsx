@@ -69,7 +69,6 @@ function Component() {
 				<div {...styles.search()}>
 					<ExploreInput
 						autoFocus
-						size="large"
 						wide
 						value={inputValue}
 						onChange={setInputValue}
@@ -190,7 +189,7 @@ namespace styles {
 		display: 'flex',
 		flex: 1,
 		flexDirection: 'column',
-		typography: 'copy.16',
+		typography: 'body.b1',
 		width: '100% !custom',
 	})
 
@@ -202,7 +201,7 @@ namespace styles {
 	})
 
 	export const logo = style({
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		justifyContent: 'center',
 		margin: '0',

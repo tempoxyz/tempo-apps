@@ -11,10 +11,10 @@ import {
 	Container,
 	CopyButton,
 	Empty,
+	StatusIndicator,
 	style,
 	Surface,
 	Tabs,
-	Tag,
 	variants,
 } from '@tempoxyz/ds'
 import { Play } from '@tempoxyz/ds/icons'
@@ -1120,10 +1120,7 @@ function ResultCard(props: {
 				</div>
 				<div {...styles.headerActions()}>
 					{props.stale && (
-						<Tag intent="warning" variant="plain">
-							<Tag.Dot />
-							Inputs changed
-						</Tag>
+						<StatusIndicator intent="warning">Inputs changed</StatusIndicator>
 					)}
 					{props.shareUrl !== undefined && (
 						<CopyButton aria-label="Copy link" value={props.shareUrl} />
@@ -1259,7 +1256,7 @@ namespace styles {
 		flexDirection: 'column',
 		paddingBottom: '48',
 		paddingTop: '32',
-		typography: 'copy.14',
+		typography: 'body.b2',
 		'@media (width >= 800px)': { paddingTop: '48' },
 	})
 
@@ -1273,21 +1270,21 @@ namespace styles {
 	})
 
 	export const title = style({
-		color: 'foreground',
+		color: 'content.primary',
 		flexShrink: 0,
 		margin: '0',
-		typography: 'heading.20.subtle',
+		typography: 'heading.h3',
 	})
 
 	export const summary = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flex: 1,
 		fontVariantNumeric: 'tabular-nums',
 		margin: '0',
 		minWidth: '0 !custom',
 		overflow: 'hidden',
 		textOverflow: 'ellipsis',
-		typography: 'copy.14',
+		typography: 'body.b2',
 		whiteSpace: 'nowrap',
 	})
 

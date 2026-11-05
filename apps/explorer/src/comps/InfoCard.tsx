@@ -1,10 +1,10 @@
-import { Rows, style, Surface } from '@tempoxyz/ds'
+import { ListGroup, style, Surface } from '@tempoxyz/ds'
 import type * as React from 'react'
 
 /**
  * A card of one record's fields, as in the TDS detail examples: a `Surface`
  * named by a `Surface.Header` with the title and, at its end, an `action`
- * such as a status `Tag`, above full-width `Rows`. `{ label, value }`
+ * such as a `StatusChip`, above full-width `ListGroup` rows. `{ label, value }`
  * sections render as key-value rows, and any other node as a row of its own.
  * Buttons that act on the whole record go in the `footer`, below the rows, as
  * in the TDS receipt: the last row reaches the card's bottom edge, which
@@ -24,20 +24,20 @@ export function InfoCard(props: InfoCard.Props): React.JSX.Element {
 				</Surface.Header>
 			)}
 			{!sections.every(isEmpty) && (
-				<Rows.Root dividers="full">
+				<ListGroup.Root>
 					{sections.map((section, index) => {
 						if (isEmpty(section)) return null
 						const key = `section-${index}`
 						if (section && typeof section === 'object' && 'label' in section)
 							return (
-								<Rows.Row key={key}>
-									<Rows.Label>{section.label}</Rows.Label>
+								<ListGroup.Row key={key}>
+									<ListGroup.Label>{section.label}</ListGroup.Label>
 									{section.value}
-								</Rows.Row>
+								</ListGroup.Row>
 							)
-						return <Rows.Row key={key}>{section}</Rows.Row>
+						return <ListGroup.Row key={key}>{section}</ListGroup.Row>
 					})}
-				</Rows.Root>
+				</ListGroup.Root>
 			)}
 			{footer && <div {...styles.footer()}>{footer}</div>}
 		</Surface>
@@ -46,7 +46,7 @@ export function InfoCard(props: InfoCard.Props): React.JSX.Element {
 
 export namespace InfoCard {
 	export type Props = {
-		/** Shown at the end of the header, such as a status `Tag` or a small text `Button`. */
+		/** Shown at the end of the header, such as a status `StatusChip` or a small text `Button`. */
 		action?: React.ReactNode
 		/** Buttons for the whole record, below the rows. */
 		footer?: React.ReactNode
@@ -89,11 +89,11 @@ namespace styles {
 
 	export const title = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		columnGap: '12',
 		display: 'flex',
 		margin: '0',
 		minWidth: '0',
-		typography: 'heading.20',
+		typography: 'heading.h3',
 	})
 }

@@ -147,7 +147,7 @@ namespace styles {
 		listStyle: 'none',
 		margin: '0',
 		padding: '0',
-		typography: 'copy.14',
+		typography: 'body.b2',
 		userSelect: 'none',
 		'@media (width >= 640px)': { gap: '24' },
 	})
@@ -156,11 +156,11 @@ namespace styles {
 
 	export const link = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'inline-flex',
 		minHeight: '44',
 		textDecorationLine: 'none',
-		'@media (hover: hover)': { ':hover': { color: 'foreground' } },
+		'@media (hover: hover)': { ':hover': { color: 'content.primary' } },
 		'@media (width >= 640px)': { minHeight: '32' },
 	})
 

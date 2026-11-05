@@ -8,8 +8,8 @@ import {
 	Button,
 	Container,
 	Menu,
+	StatusIndicator,
 	style,
-	Tag,
 	Tooltip,
 	variants,
 } from '@tempoxyz/ds'
@@ -172,10 +172,9 @@ export namespace Header {
 						/>
 					}
 				>
-					<Tag intent={activeOption.dotTone} size="small" variant="plain">
-						<Tag.Dot />
+					<StatusIndicator intent={activeOption.dotTone}>
 						{activeOption.label}
-					</Tag>
+					</StatusIndicator>
 					<ChevronDown {...styles.networkChevron()} />
 				</Menu.Trigger>
 				<Menu.Popup align="start" size="small">
@@ -192,10 +191,9 @@ export namespace Header {
 									!isExplorerNetworkPathPreservable(currentPath),
 							})}
 						>
-							<Tag intent={option.dotTone} size="small" variant="plain">
-								<Tag.Dot />
+							<StatusIndicator intent={option.dotTone}>
 								{option.label}
-							</Tag>
+							</StatusIndicator>
 						</Menu.LinkItem>
 					))}
 				</Menu.Popup>
@@ -274,7 +272,7 @@ namespace styles {
 
 	export const homeLink = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		paddingBlock: '4',
 	})
@@ -335,7 +333,7 @@ namespace styles {
 	export const networkTrigger = style({ flexShrink: 0 })
 
 	export const networkChevron = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
 		transitionDuration: '100',
 		transitionProperty: 'rotate',
@@ -346,7 +344,7 @@ namespace styles {
 	export const blockNumber = variants({
 		base: {
 			alignItems: 'center',
-			color: 'foreground',
+			color: 'content.primary',
 			display: 'flex',
 			gap: '8',
 			textDecorationLine: 'none',
@@ -354,7 +352,7 @@ namespace styles {
 			transitionDuration: '100',
 			transitionProperty: 'opacity, scale',
 			transitionTimingFunction: 'in-out',
-			typography: 'copy.14',
+			typography: 'body.b2',
 			'@container (width < 399px)': { display: 'none' },
 		},
 		defaultVariants: { ready: false },

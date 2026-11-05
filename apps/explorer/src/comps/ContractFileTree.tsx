@@ -1,5 +1,5 @@
 import { FileTree, useFileTree, useFileTreeSearch } from '@pierre/trees/react'
-import { Empty, Field, Input, style, vars } from '@tempoxyz/ds'
+import { Empty, Field, style, TextInput, vars } from '@tempoxyz/ds'
 import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 
@@ -92,19 +92,19 @@ export function ContractFileTree(
 	return (
 		<nav aria-label="Source files" {...styles.nav()}>
 			<Field.Root {...styles.search()}>
-				<Input.Group>
-					<Input.Prefix>
+				<TextInput.Group>
+					<TextInput.Prefix>
 						<Search />
-					</Input.Prefix>
-					<Input.Control
+					</TextInput.Prefix>
+					<TextInput.Control
 						aria-label="Filter source files"
 						placeholder="Find a file…"
 						type="search"
 						value={search.value ?? ''}
 						onValueChange={(value) => search.setValue(value || null)}
 					/>
-					<Input.Clear aria-label="Clear search" />
-				</Input.Group>
+					<TextInput.Clear aria-label="Clear search" />
+				</TextInput.Group>
 			</Field.Root>
 			<div role="status">
 				{search.value && search.matchingPaths.length === 0 && (
@@ -137,24 +137,24 @@ namespace styles {
 	export const nav = style({
 		// Read by the tree's shadow DOM through `unsafeCSS`. The selected row's
 		// outline is decorative; focus rings use the text color for contrast.
-		'--contract-tree-accent': vars.color.blue[700],
-		'--contract-tree-background': vars.color.background.surface,
-		'--contract-tree-border': vars.color.grayAlpha[200],
-		'--contract-tree-focus': vars.color.foreground,
-		'--contract-tree-font': vars.fontFamily.sans,
-		'--contract-tree-foreground': vars.color.foreground,
-		'--contract-tree-muted': vars.color.gray[700],
-		'--contract-tree-muted-background': vars.color.grayAlpha[100],
-		'--contract-tree-pressed-background': vars.color.grayAlpha[200],
-		'--contract-tree-selected-background': vars.color.grayAlpha[100],
-		backgroundColor: 'background.surface',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		'--contract-tree-accent': vars.color.content.accent,
+		'--contract-tree-background': vars.color.background.elevated,
+		'--contract-tree-border': vars.color.line.secondary,
+		'--contract-tree-focus': vars.color.content.primary,
+		'--contract-tree-font': vars.fontFamily.body,
+		'--contract-tree-foreground': vars.color.content.primary,
+		'--contract-tree-muted': vars.color.content.tertiary,
+		'--contract-tree-muted-background': vars.color.container.regular,
+		'--contract-tree-pressed-background': vars.color.container.strong,
+		'--contract-tree-selected-background': vars.color.container.selected,
+		backgroundColor: 'background.elevated',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		flexShrink: 0,
 		minWidth: '0',
 		'@container source (width >= 42rem)': {
 			borderBottomWidth: '0 !custom',
-			borderRightWidth: '1',
+			borderRightWidth: 'regular',
 			height: '100% !custom',
 		},
 	})

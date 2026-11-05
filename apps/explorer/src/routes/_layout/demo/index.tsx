@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { Rows, style } from '@tempoxyz/ds'
+import { ListGroup, style } from '@tempoxyz/ds'
 
 const demoPages = [
 	{ path: '/demo/tx', label: 'Transaction' },
@@ -22,17 +22,17 @@ function Component() {
 	return (
 		<div {...styles.page()}>
 			<h1 {...styles.title()}>Demos</h1>
-			<Rows.Root>
+			<ListGroup.Root>
 				{demoPages.map((page) => (
-					<Rows.Row
+					<ListGroup.Row
 						key={page.path}
 						action="navigation"
 						render={<Link to={page.path} />}
 					>
 						{page.label}
-					</Rows.Row>
+					</ListGroup.Row>
 				))}
-			</Rows.Root>
+			</ListGroup.Root>
 		</div>
 	)
 }
@@ -51,8 +51,8 @@ namespace styles {
 	})
 
 	export const title = style({
-		color: 'foreground',
+		color: 'content.primary',
 		margin: '0',
-		typography: 'heading.24.subtle',
+		typography: 'heading.h2',
 	})
 }

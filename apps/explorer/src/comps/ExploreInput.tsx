@@ -1,13 +1,13 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	Autocomplete,
+	Badge,
 	Button,
 	Combobox,
 	Hex,
 	Spinner,
 	style,
-	Tag,
-	Token,
+	TokenLogo,
 	variants,
 } from '@tempoxyz/ds'
 import { Search } from '@tempoxyz/ds/icons'
@@ -207,14 +207,7 @@ function groupSuggestions(
 }
 
 export function ExploreInput(props: ExploreInput.Props): React.JSX.Element {
-	const {
-		onActivate,
-		value,
-		onChange,
-		size = 'medium',
-		wide,
-		autoFocus,
-	} = props
+	const { onActivate, value, onChange, wide, autoFocus } = props
 	const inputRef = React.useRef<HTMLInputElement>(null)
 	const [open, setOpen] = React.useState(false)
 	const [recentSearches, setRecentSearches] = React.useState<SearchResult[]>([])
@@ -301,7 +294,7 @@ export function ExploreInput(props: ExploreInput.Props): React.JSX.Element {
 				openOnInputClick
 				value={value}
 			>
-				<Autocomplete.InputGroup size={size}>
+				<Autocomplete.InputGroup>
 					<Combobox.Prefix>
 						<Search />
 					</Combobox.Prefix>
@@ -384,8 +377,6 @@ export namespace ExploreInput {
 		onActivate?: (data: Activation) => void
 		value: string
 		onChange: (value: string) => void
-		/** TDS field height: `large` (56px) on the home page, `medium` (40px) in the header. */
-		size?: 'large' | 'medium'
 		wide?: boolean
 		autoFocus?: boolean
 	}
@@ -423,13 +414,13 @@ function Suggestion(props: {
 			{suggestion.type === 'token' && (
 				<>
 					<Combobox.ItemPrefix>
-						<Token address={suggestion.address} />
+						<TokenLogo address={suggestion.address} />
 					</Combobox.ItemPrefix>
 					<LabelledAddress
 						address={suggestion.address}
 						label={suggestion.name}
 					/>
-					<Tag size="small">TIP-20</Tag>
+					<Badge size="small">TIP-20</Badge>
 				</>
 			)}
 			{suggestion.type === 'address' && (
@@ -439,12 +430,12 @@ function Suggestion(props: {
 						label={suggestion.label}
 					/>
 					{suggestion.category ? (
-						<Tag size="small">
+						<Badge size="small">
 							{suggestion.category.charAt(0).toUpperCase() +
 								suggestion.category.slice(1)}
-						</Tag>
+						</Badge>
 					) : suggestion.isTip20 ? (
-						<Tag size="small">TIP-20</Tag>
+						<Badge size="small">TIP-20</Badge>
 					) : null}
 					{suggestion.description && (
 						<Combobox.ItemSuffix {...styles.description()}>
@@ -509,7 +500,7 @@ namespace styles {
 	})
 
 	export const address = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'inline-flex',
 		maxWidth: '100% !custom',
 		minWidth: '0',

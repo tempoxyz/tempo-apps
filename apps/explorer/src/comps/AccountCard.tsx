@@ -1,5 +1,5 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
-import { Amount, Hex, style, Token } from '@tempoxyz/ds'
+import { Amount, Hex, style, TokenLogo } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import type * as React from 'react'
 import { InfoCard } from '#comps/InfoCard'
@@ -47,7 +47,7 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 					>
 						{isToken ? (
 							<>
-								<Token
+								<TokenLogo
 									address={address}
 									size="large"
 									src={resolveLogoURI(tokenLogoURI)}
@@ -183,17 +183,17 @@ namespace styles {
 	export const tokenText = style({ flex: 1, minWidth: '0 !custom' })
 
 	export const tokenName = style({
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'block',
 		overflowWrap: 'anywhere',
 	})
 
 	export const tokenSymbol = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'block',
 		marginTop: '2px !custom',
 		overflowWrap: 'anywhere',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const address = style({
@@ -206,7 +206,7 @@ namespace styles {
 
 	export const normalCase = style({ textTransform: 'none' })
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 }

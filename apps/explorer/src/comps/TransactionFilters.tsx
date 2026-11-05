@@ -215,7 +215,7 @@ namespace styles {
 	// Inverted pill: the page background on the foreground color.
 	export const count = style({
 		alignItems: 'center',
-		backgroundColor: 'foreground',
+		backgroundColor: 'content.primary',
 		borderRadius: 'full',
 		color: 'background.primary',
 		display: 'inline-flex',
@@ -223,7 +223,7 @@ namespace styles {
 		justifyContent: 'center',
 		minWidth: '16',
 		paddingInline: '4',
-		typography: 'label.12.strong',
+		typography: 'body.b3Strong',
 	})
 
 	export const fields = style({

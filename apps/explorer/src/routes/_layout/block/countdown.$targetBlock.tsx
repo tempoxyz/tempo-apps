@@ -254,18 +254,18 @@ namespace styles {
 	export const heading = style({ textAlign: 'center' })
 
 	export const title = style({
-		color: 'foreground',
+		color: 'content.primary',
 		marginBottom: '8',
-		typography: 'heading.24.subtle',
+		typography: 'heading.h2',
 	})
 
 	export const description = style({
-		color: 'gray.900',
-		typography: 'copy.14',
+		color: 'content.secondary',
+		typography: 'body.b2',
 	})
 
 	export const target = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums !custom',
 	})
 
@@ -281,24 +281,24 @@ namespace styles {
 	export const unit = style({ textAlign: 'center' })
 
 	export const unitLabel = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const unitValue = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums !custom',
 		margin: '0',
-		typography: 'heading.32.subtle',
+		typography: 'value.v3',
 	})
 
 	export const numeric = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums !custom',
 	})
 
 	export const date = style({
-		color: 'foreground',
+		color: 'content.primary',
 		textAlign: 'right',
 	})
 }

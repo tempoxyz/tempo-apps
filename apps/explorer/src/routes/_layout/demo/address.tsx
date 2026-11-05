@@ -3,7 +3,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Amount, Button, Hex as HexValue, style } from '@tempoxyz/ds'
+import { Amount, Button, style, Hex as HexValue } from '@tempoxyz/ds'
 import { Abis, stablecoinDexAbi } from '#lib/abis'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
@@ -1053,13 +1053,13 @@ namespace styles {
 	export const hex = style({ minWidth: '0 !custom' })
 
 	export const pending = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const value = style({
-		color: 'foreground',
-		typography: 'label.12',
+		color: 'content.primary',
+		typography: 'body.b3',
 	})
 
 	// TxEventDescription sets flexWrap on the same element.
@@ -1070,7 +1070,7 @@ namespace styles {
 
 	export const collapsed = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		height: '20',
 		whiteSpace: 'nowrap',

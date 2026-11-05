@@ -175,7 +175,7 @@ namespace styles {
 	// A well on the section surface that holds the decoded call.
 	export const panel = style({
 		backgroundColor: 'background.primary',
-		borderRadius: '8',
+		borderRadius: '2xs',
 		minWidth: '0 !custom',
 	})
 
@@ -188,13 +188,13 @@ namespace styles {
 	})
 
 	export const rawData = style({
-		color: 'foreground',
+		color: 'content.primary',
 		flex: '1 !custom',
 		margin: '0',
 		maxHeight: '300px !custom',
 		minWidth: '0 !custom',
 		overflow: 'auto',
-		typography: 'label.12.mono',
+		typography: 'mono.m1',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})
@@ -209,8 +209,8 @@ namespace styles {
 
 	export const header = style({
 		alignItems: 'center',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'space-between',
@@ -219,20 +219,20 @@ namespace styles {
 	})
 
 	export const signature = style({
-		color: 'foreground',
-		typography: 'label.12.mono',
+		color: 'content.primary',
+		typography: 'mono.m1',
 		wordBreak: 'break-all',
 	})
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
 	export const argumentList = style({
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: '1',
-				borderColor: 'grayAlpha.200',
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
 			},
 		},
 	})

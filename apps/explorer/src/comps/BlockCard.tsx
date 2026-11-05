@@ -1,5 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import { CopyButton, Gauge, Hex, Rows, style, Surface } from '@tempoxyz/ds'
+import {
+	Accordion,
+	CopyButton,
+	Gauge,
+	Hex,
+	ListGroup,
+	style,
+	Surface,
+} from '@tempoxyz/ds'
 import type { Hex as HexType } from 'ox'
 import * as React from 'react'
 import { cx } from 'zyzz'
@@ -24,7 +32,7 @@ const utc = new Intl.DateTimeFormat('en-US', {
 
 /**
  * A block's receipt: the block number as the card's main value, its age
- * beneath, then its fields as rows. The roots expand under the last row.
+ * beneath, then its fields as rows. The roots open in an accordion below the rows.
  */
 export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 	const { block } = props
@@ -41,8 +49,6 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 		receiptsRoot,
 	} = block
 
-	const [showRoots, setShowRoots] = React.useState(false)
-	const rootsId = React.useId()
 	const confirmationsRef = React.useRef<HTMLSpanElement>(null)
 	const latestBlockRef = React.useRef(blockNumber ?? 0n)
 	const isMounted = useIsMounted()
@@ -89,28 +95,28 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 			<p {...styles.number()}>{(blockNumber ?? 0n).toLocaleString('en-US')}</p>
 			<RelativeTime timestamp={timestamp} {...styles.age()} />
 			<div {...styles.rows()}>
-				<Rows.Root dividers="full">
-					<Rows.Row>
-						<Rows.Label>Time</Rows.Label>
+				<ListGroup.Root>
+					<ListGroup.Row>
+						<ListGroup.Label>Time</ListGroup.Label>
 						<time dateTime={date.toISOString()} {...styles.numeric()}>
 							{utc.format(date)} UTC
 						</time>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Unix time</Rows.Label>
+					</ListGroup.Row>
+					<ListGroup.Row>
+						<ListGroup.Label>Unix time</ListGroup.Label>
 						<span {...styles.numeric()}>{String(timestamp)}</span>
-					</Rows.Row>
+					</ListGroup.Row>
 					{hash && (
-						<Rows.Row>
-							<Rows.Label>Hash</Rows.Label>
+						<ListGroup.Row>
+							<ListGroup.Label>Hash</ListGroup.Label>
 							<Hex.Root value={hash} {...styles.hex()}>
 								<Hex.Text />
 								<Hex.Copy aria-label="Copy block hash" />
 							</Hex.Root>
-						</Rows.Row>
+						</ListGroup.Row>
 					)}
-					<Rows.Row>
-						<Rows.Label>Parent</Rows.Label>
+					<ListGroup.Row>
+						<ListGroup.Label>Parent</ListGroup.Label>
 						<Hex.Root value={parentHash} {...styles.hex()}>
 							<Link
 								to="/block/$id"
@@ -121,46 +127,41 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 							</Link>
 							<Hex.Copy aria-label="Copy parent block hash" />
 						</Hex.Root>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Miner</Rows.Label>
+					</ListGroup.Row>
+					<ListGroup.Row>
+						<ListGroup.Label>Miner</ListGroup.Label>
 						{miner ? (
 							<ValidatorTag address={miner} />
 						) : (
 							<span {...styles.secondary()}>—</span>
 						)}
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Confirmations</Rows.Label>
+					</ListGroup.Row>
+					<ListGroup.Row>
+						<ListGroup.Label>Confirmations</ListGroup.Label>
 						<span ref={confirmationsRef} {...styles.numeric()}>
 							<span {...styles.secondary()}>—</span>
 						</span>
-					</Rows.Row>
-					<Rows.Row>
-						<Rows.Label>Gas used</Rows.Label>
+					</ListGroup.Row>
+					<ListGroup.Row>
+						<ListGroup.Label>Gas used</ListGroup.Label>
 						<BlockCard.GasUsed gasLimit={gasLimit} gasUsed={gasUsed} />
-					</Rows.Row>
-					<Rows.Row
-						action="expand"
-						aria-controls={rootsId}
-						aria-expanded={showRoots}
-						onClick={() => setShowRoots((open) => !open)}
-					>
-						Roots
-					</Rows.Row>
-					{showRoots && (
-						<Rows.Panel id={rootsId}>
-							<Rows.Root dividers="none" size="small">
+					</ListGroup.Row>
+				</ListGroup.Root>
+				<Accordion.Root>
+					<Accordion.Item value="roots">
+						<Accordion.Trigger>Roots</Accordion.Trigger>
+						<Accordion.Panel>
+							<ListGroup.Root>
 								{roots.map((root) => (
-									<Rows.Row key={root.label} spacing="none">
-										<Rows.Label>{root.label}</Rows.Label>
+									<ListGroup.Row key={root.label}>
+										<ListGroup.Label>{root.label}</ListGroup.Label>
 										<BlockCard.Root label={root.label} hash={root.value} />
-									</Rows.Row>
+									</ListGroup.Row>
 								))}
-							</Rows.Root>
-						</Rows.Panel>
-					)}
-				</Rows.Root>
+							</ListGroup.Root>
+						</Accordion.Panel>
+					</Accordion.Item>
+				</Accordion.Root>
 			</div>
 		</Surface>
 	)
@@ -224,28 +225,28 @@ export namespace BlockCard {
 }
 
 namespace styles {
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const numeric = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums !custom',
 	})
 
 	// The card's main value, at the size of a receipt's large `Amount`.
 	export const number = style({
-		color: 'foreground',
+		color: 'content.primary',
 		fontVariantNumeric: 'tabular-nums !custom',
 		margin: '0',
-		typography: 'heading.32',
+		typography: 'value.v3',
 	})
 
 	export const age = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'block',
 		marginBlockStart: '4',
 		// Holds the line until the age renders after hydration.
 		minHeight: '20',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	// Surface pads 24px, so the rows reach its edges and keep their own inset.

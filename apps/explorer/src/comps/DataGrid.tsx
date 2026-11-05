@@ -1,8 +1,16 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { Empty, Rows, Skeleton, style, Table, variants } from '@tempoxyz/ds'
+import {
+	Empty,
+	ListGroup,
+	Skeleton,
+	style,
+	Table,
+	variants,
+} from '@tempoxyz/ds'
 import { ArrowDown, ArrowUp } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { cx } from 'zyzz'
+import { ListGroupLoader } from '#comps/ListGroupLoader'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { useNewLiveRows } from '#lib/use-new-live-rows'
@@ -135,18 +143,11 @@ export function DataGrid(props: DataGrid.Props): React.JSX.Element {
 			<div {...styles.bleed()}>
 				{list ? (
 					busy ? (
-						<Rows.Root dividers="full" size="small">
-							<Rows.RowGroupLoader aria-label={`Loading ${itemsLabel}`} />
-						</Rows.Root>
+						<ListGroupLoader label={`Loading ${itemsLabel}`} />
 					) : rows.length === 0 ? (
 						empty
 					) : (
-						<Rows.Root
-							aria-label={label}
-							dividers="full"
-							role="list"
-							size="small"
-						>
+						<ListGroup.Root aria-label={label} role="list">
 							{rows.map((row, rowIndex) => {
 								// Values beside the first of each side keep their column
 								// name, since the list has no header row.
@@ -181,7 +182,7 @@ export function DataGrid(props: DataGrid.Props): React.JSX.Element {
 									)
 								return (
 									<React.Fragment key={row.key ?? `row-${rowIndex}-${page}`}>
-										<Rows.Row
+										<ListGroup.Row
 											role="listitem"
 											{...cx(
 												styles.row({ className: row.className }),
@@ -192,32 +193,35 @@ export function DataGrid(props: DataGrid.Props): React.JSX.Element {
 											)}
 										>
 											{row.link && rowLink(row.link)}
-											<Rows.Info>
-												<Rows.Title>{main?.cell}</Rows.Title>
+											<ListGroup.Info>
+												<ListGroup.Title>{main?.cell}</ListGroup.Title>
 												{details.map((detail) => (
-													<Rows.Description key={detail.key}>
+													<ListGroup.Description key={detail.key}>
 														{named(detail)}
-													</Rows.Description>
+													</ListGroup.Description>
 												))}
-											</Rows.Info>
+											</ListGroup.Info>
 											{amount && (
 												<span {...styles.end()}>
 													{amount.cell}
 													{extras.map((extra) => (
-														<Rows.Description key={extra.key}>
+														<ListGroup.Description key={extra.key}>
 															{named(extra)}
-														</Rows.Description>
+														</ListGroup.Description>
 													))}
 												</span>
 											)}
-										</Rows.Row>
+										</ListGroup.Row>
 										{row.expanded && typeof row.expanded !== 'boolean' && (
-											<Rows.Panel role="listitem">{row.expanded}</Rows.Panel>
+											// biome-ignore lint/a11y/useSemanticElements: ListGroup.Root is a `div` with role list, so its items are `div`s too.
+											<div role="listitem" {...styles.detail()}>
+												{row.expanded}
+											</div>
 										)}
 									</React.Fragment>
 								)
 							})}
-						</Rows.Root>
+						</ListGroup.Root>
 					)
 				) : (
 					<Table.Root
@@ -427,7 +431,7 @@ namespace styles {
 		minWidth: '0',
 	})
 
-	// `Surface` bleeds a direct child table or `Rows` into its padding, so row
+	// `Surface` bleeds a direct child table or `ListGroup` into its padding, so row
 	// fills and dividers reach its edges. The records sit one level down, so
 	// they bleed the same way into the medium `Sections` card. A table wider
 	// than the card scrolls here rather than widening the page.
@@ -460,17 +464,23 @@ namespace styles {
 	// Positions the row link, which covers the row.
 	export const row = style({ position: 'relative' })
 
+	// A row's expanded detail, indented under it as its own list item.
+	export const detail = style({
+		paddingBlockEnd: '12',
+		paddingInlineStart: '12',
+	})
+
 	// Clicks on plain content reach the row link; links and buttons in the row
 	// sit above it and keep their own targets.
 	export const linked = style({
 		selectors: { '& > td': { pointerEvents: 'none' }, ...raised },
 	})
 
-	// The hover fill of a pressable `Rows.Row`.
+	// The hover fill of a pressable `ListGroup.Row`.
 	export const linkedItem = style({
 		selectors: {
 			'& > *': { pointerEvents: 'none' },
-			'&:hover': { backgroundColor: 'grayAlpha.100' },
+			'&:hover': { backgroundColor: 'container.regular' },
 			...raised,
 		},
 	})

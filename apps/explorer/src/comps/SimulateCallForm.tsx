@@ -5,21 +5,21 @@
  */
 
 import {
+	Alert,
 	Button,
-	Callout,
 	Checkbox,
 	ChoiceGroup,
 	Field,
 	Fieldset,
-	Frame,
 	formatHex,
+	Frame,
 	Hex,
-	Input,
 	Kbd,
 	Select,
 	style,
 	Surface,
 	Textarea,
+	TextInput,
 	Tooltip,
 } from '@tempoxyz/ds'
 import { Play, Plus } from '@tempoxyz/ds/icons'
@@ -206,10 +206,10 @@ export function SimulateCallForm(
 
 				<Frame.Footer {...styles.footer()}>
 					{props.formError && (
-						<Callout intent="negative">
-							<Callout.Icon />
-							<Callout.Content>{props.formError}</Callout.Content>
-						</Callout>
+						<Alert intent="negative">
+							<Alert.Icon />
+							<Alert.Content>{props.formError}</Alert.Content>
+						</Alert>
 					)}
 					<Frame.Actions>
 						{props.canClear && (
@@ -280,8 +280,8 @@ function BlockField(props: {
 			{pinned && (
 				<Field.Root invalid={props.invalid}>
 					<Field.Label>Block hash</Field.Label>
-					<Input.Group>
-						<Input.Control
+					<TextInput.Group>
+						<TextInput.Control
 							autoCapitalize="off"
 							autoComplete="off"
 							value={props.block}
@@ -290,7 +290,7 @@ function BlockField(props: {
 							placeholder="0x…"
 							spellCheck={false}
 						/>
-					</Input.Group>
+					</TextInput.Group>
 					<Field.Description>
 						The call runs against the state after this block.
 					</Field.Description>
@@ -315,8 +315,8 @@ function ReplayField(props: {
 		<Field.Root invalid={Boolean(props.error)}>
 			<Field.Label>Transaction hash</Field.Label>
 			<div {...styles.row()}>
-				<Input.Group {...styles.fill()}>
-					<Input.Control
+				<TextInput.Group {...styles.fill()}>
+					<TextInput.Control
 						autoCapitalize="off"
 						autoComplete="off"
 						value={props.value}
@@ -330,7 +330,7 @@ function ReplayField(props: {
 						placeholder="0x…"
 						spellCheck={false}
 					/>
-				</Input.Group>
+				</TextInput.Group>
 				<Button
 					loading={props.loading}
 					variant="secondary"
@@ -468,15 +468,15 @@ function CallFields(props: {
 
 			<Field.Root invalid={valueInvalid}>
 				<Field.Label>Value</Field.Label>
-				<Input.Group>
-					<Input.Control
+				<TextInput.Group>
+					<TextInput.Control
 						autoComplete="off"
 						inputMode="numeric"
 						value={call.value}
 						onValueChange={(value) => props.onChange({ value })}
 						onBlur={() => props.onTouch(valueKey)}
 					/>
-				</Input.Group>
+				</TextInput.Group>
 				<Field.Description>A whole number, in base units.</Field.Description>
 				<Field.Error match={valueInvalid}>{WHOLE_NUMBER_ERROR}</Field.Error>
 			</Field.Root>
@@ -490,8 +490,8 @@ function AddressInput(props: {
 	onBlur: () => void
 }): React.JSX.Element {
 	return (
-		<Input.Group>
-			<Input.Control
+		<TextInput.Group>
+			<TextInput.Control
 				autoCapitalize="off"
 				autoComplete="off"
 				value={props.value}
@@ -500,7 +500,7 @@ function AddressInput(props: {
 				placeholder="0x…"
 				spellCheck={false}
 			/>
-		</Input.Group>
+		</TextInput.Group>
 	)
 }
 
@@ -616,13 +616,13 @@ function CalldataField(props: {
 			)}
 
 			{mismatch && mode === 'decoded' && (
-				<Callout intent="warning">
-					<Callout.Icon />
-					<Callout.Content>
+				<Alert intent="warning">
+					<Alert.Icon />
+					<Alert.Content>
 						This calldata doesn{'’'}t match a function in the contract{'’'}s
 						ABI, so it shows as hex.
-					</Callout.Content>
-				</Callout>
+					</Alert.Content>
+				</Alert>
 			)}
 
 			{showDecoded ? (
@@ -738,8 +738,8 @@ function ArgumentField(props: {
 					spellCheck={false}
 				/>
 			) : (
-				<Input.Group>
-					<Input.Control
+				<TextInput.Group>
+					<TextInput.Control
 						autoCapitalize="off"
 						autoComplete="off"
 						value={props.value}
@@ -747,7 +747,7 @@ function ArgumentField(props: {
 						placeholder={props.placeholder}
 						spellCheck={false}
 					/>
-				</Input.Group>
+				</TextInput.Group>
 			)}
 			<Field.Description>{props.type}</Field.Description>
 		</Field.Root>
@@ -767,15 +767,15 @@ function GasField(props: {
 		<>
 			<Field.Root invalid={props.invalid}>
 				<Field.Label>Gas limit</Field.Label>
-				<Input.Group>
-					<Input.Control
+				<TextInput.Group>
+					<TextInput.Control
 						autoComplete="off"
 						inputMode="numeric"
 						value={props.gas}
 						onValueChange={props.onChange}
 						onBlur={props.onBlur}
 					/>
-				</Input.Group>
+				</TextInput.Group>
 				<Field.Description>The block limit is {defaultGas}.</Field.Description>
 				<Field.Error match={props.invalid}>
 					Enter a whole number, such as the block limit of {defaultGas}.
@@ -827,9 +827,9 @@ namespace styles {
 	export const shrink = style({ flexShrink: 0 })
 
 	export const secondary = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 
 	export const encoded = style({

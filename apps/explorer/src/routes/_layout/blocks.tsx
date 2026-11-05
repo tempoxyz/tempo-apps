@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Button, Hex, Pagination, style, Tag } from '@tempoxyz/ds'
+import { Button, Hex, Pagination, StatusIndicator, style } from '@tempoxyz/ds'
 import * as React from 'react'
 import { type Block, type Client, createPublicClient, webSocket } from 'viem'
 import {
@@ -253,13 +253,11 @@ function RouteComponent() {
 								size="small"
 								variant="secondary"
 							>
-								<Tag
+								<StatusIndicator
 									intent={live && !paused ? 'positive' : 'neutral'}
-									variant="plain"
 								>
-									<Tag.Dot />
 									{live && !paused ? 'Live' : 'Paused'}
-								</Tag>
+								</StatusIndicator>
 							</Button.Link>
 						),
 						content: (
@@ -483,19 +481,19 @@ namespace styles {
 
 	export const number = style({
 		fontVariantNumeric: 'tabular-nums !custom',
-		typography: 'copy.14.strong',
+		typography: 'body.b2Strong',
 	})
 
 	export const hash = style({ minWidth: '0 !custom' })
 
 	export const time = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		whiteSpace: 'nowrap',
 	})
 
 	export const txns = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
@@ -508,16 +506,16 @@ namespace styles {
 
 	export const pagination = style({
 		alignItems: 'center',
-		borderColor: 'grayAlpha.200',
+		borderColor: 'line.secondary',
 		borderStyle: 'solid',
-		borderTopWidth: '1',
-		color: 'gray.900',
+		borderTopWidth: 'regular',
+		color: 'content.secondary',
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '12',
 		paddingBlock: '12',
 		paddingInline: '16',
-		typography: 'label.12',
+		typography: 'body.b3',
 		'@media (width >= 640px)': {
 			flexDirection: 'row',
 			justifyContent: 'space-between',

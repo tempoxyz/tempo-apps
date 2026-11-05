@@ -10,10 +10,10 @@ import {
 	Button,
 	CopyButton,
 	Field,
-	Input,
 	Select,
-	Token,
 	style,
+	TextInput,
+	TokenLogo,
 } from '@tempoxyz/ds'
 import { ArrowRight, Close } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
@@ -92,7 +92,7 @@ function FeeAmmPage(): React.JSX.Element {
 					{search.token && (
 						<div {...styles.filtered()}>
 							<span {...styles.filteredToken()}>
-								<Token address={search.token} size="small" />
+								<TokenLogo address={search.token} size="small" />
 								Filtered by {symbol ?? 'token'}
 							</span>
 							<AddressLink address={search.token} search={{ tab: 'token' }} />
@@ -137,8 +137,8 @@ function FeeAmmPage(): React.JSX.Element {
 				<Field.Root invalid={Boolean(filterError)}>
 					<Field.Label>Find pools by token address</Field.Label>
 					<div {...styles.inputRow()}>
-						<Input.Group {...styles.input()}>
-							<Input.Control
+						<TextInput.Group {...styles.input()}>
+							<TextInput.Control
 								name="token"
 								defaultValue={search.token ?? ''}
 								placeholder="0x…"
@@ -147,7 +147,7 @@ function FeeAmmPage(): React.JSX.Element {
 								autoCorrect="off"
 								spellCheck={false}
 							/>
-						</Input.Group>
+						</TextInput.Group>
 						<Button type="submit" variant="secondary">
 							Find pools
 							<ArrowRight />
@@ -232,7 +232,7 @@ function FeeAmmPage(): React.JSX.Element {
 											Page {search.page}
 										</span>
 									</div>
-									<Field.Root variant="setting" size="small">
+									<Field.Root>
 										<Field.Label>Pools per page</Field.Label>
 										<Select.Root
 											value={search.limit}
@@ -244,11 +244,11 @@ function FeeAmmPage(): React.JSX.Element {
 												})
 											}}
 										>
-											<Select.Trigger size="small" {...styles.limit()}>
+											<Select.Trigger {...styles.limit()}>
 												<Select.Value />
 												<Select.Icon />
 											</Select.Trigger>
-											<Select.Popup size="small">
+											<Select.Popup>
 												{limits.map((limit) => (
 													<Select.Item key={limit} value={limit}>
 														<Select.ItemText>{limit}</Select.ItemText>
@@ -293,8 +293,8 @@ namespace styles {
 	})
 
 	export const errorTitle = style({
-		color: 'foreground',
-		typography: 'heading.20.subtle',
+		color: 'content.primary',
+		typography: 'heading.h3',
 	})
 
 	export const page = style({
@@ -327,16 +327,16 @@ namespace styles {
 
 	export const title = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		gap: '12',
-		typography: 'heading.32.subtle',
+		typography: 'value.v3',
 	})
 
 	export const description = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		maxWidth: '680px !custom',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const filtered = style({
@@ -344,12 +344,12 @@ namespace styles {
 		flexDirection: 'column',
 		gap: '8',
 		minWidth: '0',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const filteredToken = style({
 		alignItems: 'center',
-		color: 'gray.900',
+		color: 'content.secondary',
 		display: 'inline-flex',
 		gap: '8',
 	})
@@ -364,15 +364,15 @@ namespace styles {
 	export const input = style({ flex: 1, minWidth: '220px !custom' })
 
 	export const meta = style({
-		color: 'gray.900',
-		typography: 'label.13',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const total = style({
 		alignItems: 'baseline',
 		display: 'inline-flex',
 		gap: '8',
-		typography: 'label.14.strong',
+		typography: 'body.b2Strong',
 	})
 
 	export const content = style({
@@ -383,8 +383,8 @@ namespace styles {
 
 	export const pagination = style({
 		alignItems: 'center',
-		borderColor: 'grayAlpha.200',
-		borderTopWidth: '1',
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
 		display: 'flex',
 		flexWrap: 'wrap',
 		gap: '16',
@@ -399,17 +399,17 @@ namespace styles {
 	})
 
 	export const pageLabel = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		paddingInline: '8',
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 
 	// Sized to its value, per the Select docs.
-	export const limit = style({ width: '96' })
+	export const limit = style({ width: '100' })
 
 	export const footnote = style({
-		color: 'gray.900',
-		typography: 'label.12',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 }

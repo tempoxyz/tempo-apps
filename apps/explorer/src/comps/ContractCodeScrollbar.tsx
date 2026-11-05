@@ -63,11 +63,11 @@ namespace styles {
 	export const track = style({
 		// The zyzz compiler rejects theme colors in `scrollbarColor`, so the
 		// element applies the pair inline from these properties.
-		'--contract-source-scrollbar-thumb': vars.color.gray[700],
-		'--contract-source-scrollbar-track': vars.color.background.surface,
-		backgroundColor: 'background.surface',
-		borderColor: 'grayAlpha.200',
-		borderTopWidth: '1',
+		'--contract-source-scrollbar-thumb': vars.color.content.tertiary,
+		'--contract-source-scrollbar-track': vars.color.background.elevated,
+		backgroundColor: 'background.elevated',
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
 		flexShrink: 0,
 		height: '16',
 		overflowX: 'scroll',
@@ -80,8 +80,8 @@ namespace styles {
 		},
 		'::-webkit-scrollbar': { height: '12' },
 		'::-webkit-scrollbar-thumb': {
-			backgroundColor: 'gray.700',
-			borderColor: 'background.surface',
+			backgroundColor: 'content.tertiary',
+			borderColor: 'background.elevated',
 			borderRadius: 'full',
 			borderStyle: 'solid',
 			borderWidth: '3px !custom',

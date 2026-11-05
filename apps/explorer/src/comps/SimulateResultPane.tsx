@@ -12,19 +12,19 @@
 
 import { Link } from '@tanstack/react-router'
 import {
+	Alert,
 	Amount,
 	Button,
-	Callout,
 	ChoiceGroup,
 	formatHex,
 	Gauge,
 	Hex,
-	Rows,
+	ListGroup,
+	StatusChip,
 	style,
 	Table,
 	Tabs,
-	Tag,
-	Token,
+	TokenLogo,
 } from '@tempoxyz/ds'
 import type * as OxAddress from 'ox/Address'
 import * as Value from 'ox/Value'
@@ -72,18 +72,12 @@ export function SimulateStatus(props: {
 	execution: SimulationExecutionResult | undefined
 }): React.JSX.Element {
 	if (!props.execution)
-		return (
-			<Tag intent="info">
-				<Tag.Dot />
-				Simulating
-			</Tag>
-		)
+		return <StatusChip intent="neutral">Simulating</StatusChip>
 	const succeeded = props.execution.status === 'success'
 	return (
-		<Tag intent={succeeded ? 'positive' : 'negative'}>
-			<Tag.Dot />
+		<StatusChip intent={succeeded ? 'positive' : 'negative'}>
 			{succeeded ? 'Succeeded' : 'Failed'}
-		</Tag>
+		</StatusChip>
 	)
 }
 
@@ -329,13 +323,11 @@ function plural(count: number, noun: string): string {
 
 function Success(props: { children: React.ReactNode }): React.JSX.Element {
 	return (
-		<Callout intent="positive">
-			<Callout.Icon />
+		<Alert intent="positive">
+			<Alert.Icon />
 			{/* Return values run long, so the message wraps anywhere. */}
-			<Callout.Content {...styles.calloutText()}>
-				{props.children}
-			</Callout.Content>
-		</Callout>
+			<Alert.Content {...styles.calloutText()}>{props.children}</Alert.Content>
+		</Alert>
 	)
 }
 
@@ -358,10 +350,10 @@ function FailureAnswer(props: {
 
 	return (
 		<div {...styles.failure()}>
-			<Callout intent="negative">
-				<Callout.Icon />
+			<Alert intent="negative">
+				<Alert.Icon />
 				{/* Revert data runs long, so the message wraps anywhere. */}
-				<Callout.Content {...styles.calloutText()}>
+				<Alert.Content {...styles.calloutText()}>
 					{props.position}
 					{call ? (
 						<span {...styles.code()}>{call}</span>
@@ -387,26 +379,26 @@ function FailureAnswer(props: {
 					) : (
 						' and returned no revert data.'
 					)}
-				</Callout.Content>
+				</Alert.Content>
 				{failedNode?.hasFailure && failedNode.frameIndex > 0 && (
-					<Callout.Action onClick={() => props.onJump(failedNode.id)}>
+					<Alert.Action onClick={() => props.onJump(failedNode.id)}>
 						Show in trace
-					</Callout.Action>
+					</Alert.Action>
 				)}
-			</Callout>
+			</Alert>
 
 			{errorName && errorArgs.length > 0 && (
-				<Rows.Root dividers="full" size="small">
+				<ListGroup.Root>
 					{errorArgs.map((arg) => (
-						<Rows.Row key={arg.label} spacing="none">
-							<Rows.Label>{arg.label}</Rows.Label>
+						<ListGroup.Row key={arg.label}>
+							<ListGroup.Label>{arg.label}</ListGroup.Label>
 							<span title={arg.title} {...styles.rowValue()}>
 								<span {...styles.code()}>{arg.value}</span>
 								{arg.note && <span {...styles.argNote()}>{arg.note}</span>}
 							</span>
-						</Rows.Row>
+						</ListGroup.Row>
 					))}
-				</Rows.Root>
+				</ListGroup.Root>
 			)}
 		</div>
 	)
@@ -480,14 +472,13 @@ export function SimulateCallHeading(props: {
 			<h3 {...styles.callTitle()}>
 				Call {call.index + 1} of {props.total}
 			</h3>
-			<Tag
+			<StatusChip
 				intent={failed ? 'negative' : 'positive'}
 				size="small"
 				{...styles.shrink()}
 			>
-				<Tag.Dot />
 				{failed ? 'Failed' : 'Succeeded'}
-			</Tag>
+			</StatusChip>
 			<span {...cx(styles.code(), styles.primary(), truncate())}>{label}</span>
 			<span {...cx(styles.number(), styles.secondary(), styles.pushRight())}>
 				{call.gasUsed.toLocaleString()} gas
@@ -524,21 +515,21 @@ export function SimulateOverview(props: {
 	const balancesId = React.useId()
 	return (
 		<div {...styles.column()}>
-			<Rows.Root dividers="full" size="small">
-				<Rows.Row>
-					<Rows.Label>From</Rows.Label>
+			<ListGroup.Root>
+				<ListGroup.Row>
+					<ListGroup.Label>From</ListGroup.Label>
 					<span {...styles.address()}>
 						<Address address={input.from} align="end" />
 					</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>To</Rows.Label>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>To</ListGroup.Label>
 					<span {...styles.address()}>
 						<Address address={input.to} align="end" />
 					</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Function</Rows.Label>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Function</ListGroup.Label>
 					{props.functionLabel ? (
 						<span {...cx(styles.code(), styles.rowValue())}>
 							{props.functionLabel}
@@ -546,31 +537,31 @@ export function SimulateOverview(props: {
 					) : (
 						<span {...styles.secondary()}>Unknown selector</span>
 					)}
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Value</Rows.Label>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Value</ListGroup.Label>
 					<span {...styles.number()}>{input.value}</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Block</Rows.Label>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Block</ListGroup.Label>
 					<span {...styles.number()}>
 						{execution.blockNumber.toLocaleString()}
 						<span {...styles.secondary()}>
 							{input.block === 'latest' ? ' (latest)' : ' (pinned)'}
 						</span>
 					</span>
-				</Rows.Row>
-				<Rows.Row>
-					<Rows.Label>Network</Rows.Label>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Network</ListGroup.Label>
 					{props.network}
-				</Rows.Row>
+				</ListGroup.Row>
 				{props.assetChanges.length === 0 && (
-					<Rows.Row>
-						<Rows.Label>Balance changes</Rows.Label>
+					<ListGroup.Row>
+						<ListGroup.Label>Balance changes</ListGroup.Label>
 						<span {...styles.secondary()}>None</span>
-					</Rows.Row>
+					</ListGroup.Row>
 				)}
-			</Rows.Root>
+			</ListGroup.Root>
 			{props.assetChanges.length > 0 && (
 				<section aria-labelledby={balancesId}>
 					<h3 id={balancesId} {...styles.sectionTitle()}>
@@ -634,7 +625,7 @@ export function SimulateBalances(props: {
 										title={change.token}
 										{...cx(styles.token(), link(), linkHover())}
 									>
-										<Token address={change.token} size="small" />
+										<TokenLogo address={change.token} size="small" />
 										{metadata?.symbol ?? formatHex(change.token)}
 									</Link>
 								</Table.Cell>
@@ -714,13 +705,13 @@ export function SimulateEvents(props: {
 }
 
 namespace styles {
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
-	export const secondary = style({ color: 'gray.900' })
+	export const secondary = style({ color: 'content.secondary' })
 
 	export const number = style({ fontVariantNumeric: 'tabular-nums' })
 
-	export const code = style({ typography: 'label.13.mono' })
+	export const code = style({ typography: 'mono.m1' })
 
 	export const shrink = style({ flexShrink: 0 })
 
@@ -752,32 +743,35 @@ namespace styles {
 	})
 
 	export const metricLabel = style({
-		color: 'gray.900',
-		typography: 'label.13',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const metricValue = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		fontVariantNumeric: 'tabular-nums !custom',
 		gap: '8',
 		margin: '0',
 		minHeight: '32',
-		typography: 'heading.20',
+		typography: 'heading.h3',
 	})
 
-	export const metricUnit = style({ color: 'gray.900', typography: 'label.14' })
+	export const metricUnit = style({
+		color: 'content.secondary',
+		typography: 'body.b2',
+	})
 
 	export const metricNote = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums !custom',
 		margin: '0',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const tabCount = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 		marginLeft: '4',
 	})
@@ -801,9 +795,9 @@ namespace styles {
 		textAlign: 'end',
 	})
 
-	export const argNote = style({ color: 'gray.900', marginLeft: '8' })
+	export const argNote = style({ color: 'content.secondary', marginLeft: '8' })
 
-	// Rows guidance: cap an address so it ends with the other values.
+	// ListGroup guidance: cap an address so it ends with the other values.
 	export const address = style({
 		display: 'flex',
 		justifyContent: 'flex-end',
@@ -812,12 +806,12 @@ namespace styles {
 	})
 
 	export const sectionTitle = style({
-		color: 'foreground',
+		color: 'content.primary',
 		margin: '0',
 		paddingBottom: '8',
 		paddingInline: '16',
 		paddingTop: '24',
-		typography: 'heading.16',
+		typography: 'body.b1Strong',
 	})
 
 	export const stepBar = style({
@@ -828,29 +822,29 @@ namespace styles {
 	})
 
 	export const stepLabel = style({
-		color: 'foreground',
+		color: 'content.primary',
 		flexShrink: 0,
-		typography: 'label.13.strong',
+		typography: 'body.b3Strong',
 	})
 
 	export const chips = style({ minWidth: '0 !custom' })
 
 	export const callHeading = style({
 		alignItems: 'center',
-		backgroundColor: 'grayAlpha.100',
+		backgroundColor: 'container.regular',
 		display: 'flex',
 		flexWrap: 'wrap',
 		gap: '8',
 		paddingBlock: '8',
 		paddingInline: '16',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const callTitle = style({
-		color: 'foreground',
+		color: 'content.primary',
 		flexShrink: 0,
 		margin: '0',
-		typography: 'label.14.strong',
+		typography: 'body.b2Strong',
 	})
 
 	// Fixed columns, so long values wrap instead of widening the table.
@@ -873,8 +867,8 @@ namespace styles {
 		padding: '0',
 		selectors: {
 			'& > :not(:last-child)': {
-				borderBottomWidth: '1',
-				borderColor: 'grayAlpha.200',
+				borderBottomWidth: 'regular',
+				borderColor: 'line.secondary',
 				borderStyle: 'solid',
 			},
 		},
@@ -886,13 +880,13 @@ namespace styles {
 		gap: '8',
 		paddingBlock: '8',
 		paddingInline: '16',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	export const eventIndex = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		flexShrink: 0,
 		fontVariantNumeric: 'tabular-nums',
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 }

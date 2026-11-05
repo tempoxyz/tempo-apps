@@ -6,7 +6,7 @@ import {
 } from '@pierre/diffs/react'
 import HighlightWorker from '@pierre/diffs/worker/worker.js?worker'
 import { useLocation, useNavigate } from '@tanstack/react-router'
-import { Button, CopyButton, Tooltip, style, vars } from '@tempoxyz/ds'
+import { Button, CopyButton, style, Tooltip, vars } from '@tempoxyz/ds'
 import { LayoutSidebar } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { ContractCodeScrollbar } from '#comps/ContractCodeScrollbar.tsx'
@@ -322,12 +322,12 @@ namespace styles {
 	// A bordered well inside the tab's card, not a nested card.
 	export const root = style({
 		// Read by the viewer's shadow DOM through `unsafeCSS`.
-		'--contract-source-background': vars.color.background.surface,
+		'--contract-source-background': vars.color.background.elevated,
 		'--contract-source-font': vars.fontFamily.mono,
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
 		borderStyle: 'solid',
-		borderWidth: '1',
+		borderWidth: 'regular',
 		containerName: 'source',
 		containerType: 'inline-size',
 		overflow: 'hidden',
@@ -335,13 +335,13 @@ namespace styles {
 
 	export const toolbar = style({
 		alignItems: 'center',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		display: 'flex',
 		gap: '8',
 		justifyContent: 'space-between',
 		padding: '8',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 
 	export const toolbarStart = style({
@@ -392,15 +392,15 @@ namespace styles {
 	})
 
 	export const footer = style({
-		borderColor: 'grayAlpha.200',
-		borderTopWidth: '1',
-		color: 'gray.900',
+		borderColor: 'line.secondary',
+		borderTopWidth: 'regular',
+		color: 'content.secondary',
 		display: 'flex',
 		flexWrap: 'wrap',
 		gap: '8',
 		justifyContent: 'space-between',
 		paddingBlock: '8',
 		paddingInline: '12',
-		typography: 'label.12',
+		typography: 'body.b3',
 	})
 }

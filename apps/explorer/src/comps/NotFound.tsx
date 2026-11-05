@@ -61,8 +61,8 @@ namespace styles {
 	})
 
 	export const title = style({
-		color: 'foreground',
+		color: 'content.primary',
 		margin: '0',
-		typography: 'heading.24',
+		typography: 'heading.h2',
 	})
 }

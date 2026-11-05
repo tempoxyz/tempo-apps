@@ -43,7 +43,7 @@ import {
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
-import { Amount as TdsAmount, style } from '@tempoxyz/ds'
+import { style, Amount as TdsAmount } from '@tempoxyz/ds'
 
 const defaultSearchValues = { page: 1 } as const
 
@@ -598,7 +598,7 @@ namespace styles {
 	export const breadcrumbs = style({ gridColumn: '1 / -1' })
 
 	export const systemFrom = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		overflow: 'hidden',
 		textAlign: 'right',
 		textOverflow: 'ellipsis',
@@ -606,15 +606,15 @@ namespace styles {
 		width: '100% !custom',
 	})
 
-	export const primary = style({ color: 'foreground' })
+	export const primary = style({ color: 'content.primary' })
 
 	export const secondary = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		fontVariantNumeric: 'tabular-nums',
 	})
 
 	export const call = style({
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'flex',
 		flex: 1,
 		gap: '8',
@@ -623,7 +623,7 @@ namespace styles {
 	// `Amount` is a block, so the sentence lays out as a row.
 	export const send = style({
 		alignItems: 'baseline',
-		color: 'foreground',
+		color: 'content.primary',
 		columnGap: '4',
 		display: 'flex',
 		whiteSpace: 'nowrap',

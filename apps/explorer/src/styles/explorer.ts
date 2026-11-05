@@ -4,7 +4,7 @@ import { keyframes } from 'zyzz/web'
 // Explorer additions TDS lacks: link and code colors from the TDS ramps, and
 // small text recipes. Combine with `cx(styles.x(), link())`.
 
-export const link = style({ color: 'blue.900' })
+export const link = style({ color: 'content.accent' })
 
 export const linkHover = style({
 	'@media (hover: hover)': {
@@ -12,7 +12,7 @@ export const linkHover = style({
 	},
 })
 
-export const codeIdentifier = style({ color: 'purple.900' })
+export const codeIdentifier = style({ color: 'content.special' })
 
 export const noScrollbar = style({
 	scrollbarWidth: 'none',
@@ -48,6 +48,6 @@ export const truncate = style({
 })
 
 export const rowShimmer = keyframes({
-	from: { backgroundColor: vars.color.green[100] },
+	from: { backgroundColor: vars.color.container.positive },
 	to: { backgroundColor: 'transparent' },
 })

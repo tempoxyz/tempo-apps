@@ -1,12 +1,12 @@
 import {
+	Alert,
+	Badge,
 	Button,
-	Callout,
 	CopyButton,
 	Empty,
-	Rows,
+	ListGroup,
 	Skeleton,
 	Spinner,
-	Tag,
 	style,
 } from '@tempoxyz/ds'
 import { Download, ExternalLink } from '@tempoxyz/ds/icons'
@@ -117,14 +117,14 @@ export function Tip20Links(): React.JSX.Element {
 function InferredAbiNotice({ abi }: { abi: Abi }): React.JSX.Element | null {
 	if (!isInferredAbi(abi)) return null
 	return (
-		<Callout intent="warning" role="note" size="small">
-			<Callout.Icon />
-			<Callout.Content>
+		<Alert intent="warning" role="note">
+			<Alert.Icon />
+			<Alert.Content>
 				Inferred ABI: function names, read/write classifications, and return
 				types may be incomplete or incorrect. Verify the contract source for an
 				accurate ABI.
-			</Callout.Content>
-		</Callout>
+			</Alert.Content>
+		</Alert>
 	)
 }
 
@@ -365,27 +365,26 @@ export function InteractTabContent(props: {
 					title="Proxy"
 					description="Reads and writes go through the proxy to its implementation."
 				>
-					<Rows dividers="full">
-						<Rows.Row spacing="none">
-							<Rows.Label>Standard</Rows.Label>
-							<Tag
+					<ListGroup>
+						<ListGroup.Row>
+							<ListGroup.Label>Standard</ListGroup.Label>
+							<Badge
 								render={
-									// biome-ignore lint/a11y/useAnchorContent: Tag renders its children inside the link.
+									// biome-ignore lint/a11y/useAnchorContent: Badge renders its children inside the link.
 									<a
 										href={proxyTypeUrl(proxyInfo?.type)}
 										target="_blank"
 										rel="noopener noreferrer"
 									/>
 								}
-								intent="neutral"
 								size="small"
 							>
 								{proxyInfo?.type}
 								<ExternalLink />
-							</Tag>
-						</Rows.Row>
-						<Rows.Row spacing="none">
-							<Rows.Label>Implementation</Rows.Label>
+							</Badge>
+						</ListGroup.Row>
+						<ListGroup.Row>
+							<ListGroup.Label>Implementation</ListGroup.Label>
 							<span {...styles.address()}>
 								<AddressLink
 									address={implementationAddress}
@@ -393,8 +392,8 @@ export function InteractTabContent(props: {
 									search={{ tab: 'interact' }}
 								/>
 							</span>
-						</Rows.Row>
-					</Rows>
+						</ListGroup.Row>
+					</ListGroup>
 				</ContractSection>
 			)}
 
@@ -467,13 +466,13 @@ namespace styles {
 	})
 
 	export const sectionTitle = style({
-		color: 'foreground',
-		typography: 'heading.16',
+		color: 'content.primary',
+		typography: 'body.b1Strong',
 	})
 
 	export const sectionDescription = style({
-		color: 'gray.900',
-		typography: 'copy.13',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const sectionActions = style({
@@ -484,26 +483,26 @@ namespace styles {
 
 	// A bordered well for code, inside the tab's card.
 	export const well = style({
-		borderColor: 'grayAlpha.200',
-		borderRadius: '12',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
 		borderStyle: 'solid',
-		borderWidth: '1',
+		borderWidth: 'regular',
 		overflow: 'hidden',
 	})
 
-	export const bytecodeSkeleton = style({ height: '128' })
+	export const bytecodeSkeleton = style({ height: '120' })
 
 	export const bytecode = style({
-		color: 'foreground',
+		color: 'content.primary',
 		maxHeight: '240px !custom',
 		overflow: 'auto',
 		padding: '16',
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
 		whiteSpace: 'pre-wrap',
 		wordBreak: 'break-all',
 	})
 
-	// Rows guidance: cap a Hex so it ends with the other values.
+	// ListGroup guidance: cap a Hex so it ends with the other values.
 	export const address = style({
 		display: 'inline-flex',
 		maxWidth: '12rem !custom',

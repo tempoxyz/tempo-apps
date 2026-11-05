@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Button, Callout, Rows, Skeleton, style } from '@tempoxyz/ds'
+import { Alert, Button, ListGroup, Skeleton, style } from '@tempoxyz/ds'
 import { ArrowRight } from '@tempoxyz/ds/icons'
 import type { Address } from 'ox'
 import { Addresses } from 'viem/tempo'
@@ -60,13 +60,13 @@ export function Tip20TokenTabContent(
 	return (
 		<div {...styles.root()}>
 			{query.isError && (
-				<Callout intent="warning" role="status" size="small">
-					<Callout.Icon />
-					<Callout.Content>Token configuration unavailable.</Callout.Content>
-					<Callout.Action onClick={() => void query.refetch()}>
+				<Alert intent="warning" role="status">
+					<Alert.Icon />
+					<Alert.Content>Token configuration unavailable.</Alert.Content>
+					<Alert.Action onClick={() => void query.refetch()}>
 						Try again
-					</Callout.Action>
-				</Callout>
+					</Alert.Action>
+				</Alert>
 			)}
 			<ContractSection
 				title="Metadata"
@@ -89,7 +89,7 @@ export function Tip20TokenTabContent(
 					)
 				}
 			>
-				<Rows dividers="full">
+				<ListGroup>
 					<MetadataRow
 						label="Currency"
 						loading={query.isPending}
@@ -146,7 +146,7 @@ export function Tip20TokenTabContent(
 							}
 						/>
 					)}
-				</Rows>
+				</ListGroup>
 			</ContractSection>
 			<TokenTrust
 				address={address}
@@ -189,8 +189,8 @@ function MetadataRow(props: {
 	const missing =
 		props.value === undefined || props.value === null || props.value === false
 	return (
-		<Rows.Row spacing="none">
-			<Rows.Label>{props.label}</Rows.Label>
+		<ListGroup.Row>
+			<ListGroup.Label>{props.label}</ListGroup.Label>
 			<span {...styles.value()}>
 				{props.loading ? (
 					<Skeleton shape="pill" {...styles.skeleton()} />
@@ -200,7 +200,7 @@ function MetadataRow(props: {
 					props.value
 				)}
 			</span>
-		</Rows.Row>
+		</ListGroup.Row>
 	)
 }
 
@@ -222,7 +222,7 @@ namespace styles {
 		textAlign: 'end',
 	})
 
-	export const placeholder = style({ color: 'gray.900' })
+	export const placeholder = style({ color: 'content.secondary' })
 
 	export const skeleton = style({ height: '12', width: '6rem !custom' })
 
@@ -235,7 +235,7 @@ namespace styles {
 		rowGap: '4',
 	})
 
-	// Rows guidance: cap a Hex so it ends with the other values.
+	// ListGroup guidance: cap a Hex so it ends with the other values.
 	export const address = style({
 		display: 'inline-flex',
 		maxWidth: '12rem !custom',

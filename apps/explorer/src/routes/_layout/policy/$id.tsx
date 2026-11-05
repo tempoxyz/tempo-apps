@@ -5,7 +5,13 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { CopyButton, Field, Input, Tag, style } from '@tempoxyz/ds'
+import {
+	CopyButton,
+	Field,
+	StatusIndicator,
+	style,
+	TextInput,
+} from '@tempoxyz/ds'
 import { Search } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { Addresses } from 'viem/tempo'
@@ -196,10 +202,9 @@ function PolicyTypeBadge(props: { type: Tip403PolicyResponse['type'] }) {
 				? 'negative'
 				: 'neutral'
 	return (
-		<Tag intent={intent} variant="plain">
-			<Tag.Dot />
+		<StatusIndicator intent={intent}>
 			{policyTypeLabels[props.type]}
-		</Tag>
+		</StatusIndicator>
 	)
 }
 
@@ -228,11 +233,11 @@ function MembersSearch(props: { query: string }) {
 			}}
 		>
 			<Field.Root>
-				<Input.Group>
-					<Input.Prefix>
+				<TextInput.Group>
+					<TextInput.Prefix>
 						<Search />
-					</Input.Prefix>
-					<Input.Control
+					</TextInput.Prefix>
+					<TextInput.Control
 						name="query"
 						type="search"
 						defaultValue={props.query}
@@ -244,8 +249,8 @@ function MembersSearch(props: { query: string }) {
 							if (!value && props.query) search('')
 						}}
 					/>
-					<Input.Clear aria-label="Clear search" />
-				</Input.Group>
+					<TextInput.Clear aria-label="Clear search" />
+				</TextInput.Group>
 			</Field.Root>
 		</form>
 	)
@@ -278,10 +283,9 @@ function MembersGrid(props: {
 					key: address,
 					cells: [
 						<AddressLink key="address" address={address} />,
-						<Tag key="status" intent={statusIntent} variant="plain">
-							<Tag.Dot />
+						<StatusIndicator key="status" intent={statusIntent}>
 							{status}
-						</Tag>,
+						</StatusIndicator>,
 					],
 				}))
 			}
@@ -391,14 +395,14 @@ namespace styles {
 	export const notFoundContent = style({ textAlign: 'center' })
 
 	export const notFoundTitle = style({
-		color: 'foreground',
-		typography: 'heading.32.subtle',
+		color: 'content.primary',
+		typography: 'value.v3',
 	})
 
 	export const notFoundMessage = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		marginTop: '8',
-		typography: 'copy.14',
+		typography: 'body.b2',
 	})
 
 	// Stacked until the members table has room beside the policy card; the
@@ -429,9 +433,9 @@ namespace styles {
 		gap: '8',
 	})
 
-	export const builtIn = style({ color: 'gray.900' })
+	export const builtIn = style({ color: 'content.secondary' })
 
-	export const event = style({ color: 'foreground' })
+	export const event = style({ color: 'content.primary' })
 
 	export const transaction = style({
 		alignItems: 'center',

@@ -8,7 +8,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { style, Token } from '@tempoxyz/ds'
+import { style, TokenLogo } from '@tempoxyz/ds'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { AddressHighlightProvider } from '#comps/AddressHighlight'
@@ -26,8 +26,9 @@ import { posthogBootScript } from '#lib/posthog'
 import { ProgressLine } from '#comps/ProgressLine'
 import { defaultThemeMode, themeBootScript } from '#lib/theme'
 import { getTempoChain, getWagmiConfig, getWagmiState } from '#wagmi.config.ts'
-import geistMono from '@tempoxyz/ds/fonts/GeistMono-Variable.woff2?url'
-import inter from '@tempoxyz/ds/fonts/Inter-Variable.woff2?url'
+import inter from '@tempoxyz/ds/fonts/Inter-latin.woff2?url'
+import jetBrainsMono from '@tempoxyz/ds/fonts/JetBrainsMono-Regular-latin.woff2?url'
+import pilatBook from '@tempoxyz/ds/fonts/Pilat-Book-latin.woff2?url'
 
 function getCurrentCanonicalExplorerUrl(): string | undefined {
 	const pathname =
@@ -117,21 +118,15 @@ export const Route = createRootRouteWithContext<{
 		],
 		links: [
 			...getExplorerCanonicalLinks(),
-			// The TDS faces: Inter for copy, Geist Mono for hashes and addresses.
-			{
+			// The Latin subsets of the TDS faces on first paint: Inter for copy,
+			// Pilat Book for titles, and JetBrains Mono for hashes and addresses.
+			...[inter, pilatBook, jetBrainsMono].map((href) => ({
 				rel: 'preload',
-				href: inter,
+				href,
 				as: 'font',
 				type: 'font/woff2',
-				crossOrigin: 'anonymous',
-			},
-			{
-				rel: 'preload',
-				href: geistMono,
-				as: 'font',
-				type: 'font/woff2',
-				crossOrigin: 'anonymous',
-			},
+				crossOrigin: 'anonymous' as const,
+			})),
 			{
 				rel: 'icon',
 				type: 'image/svg+xml',
@@ -255,12 +250,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<TokenListMembershipProvider>
 							<AddressHighlightProvider>
 								{/* Token logos come from the explorer's curated logo route. */}
-								<Token.Provider
+								<TokenLogo.Provider
 									chainId={getTempoChain().id}
 									resolveSrc={resolveTokenLogo}
 								>
 									{children}
-								</Token.Provider>
+								</TokenLogo.Provider>
 							</AddressHighlightProvider>
 						</TokenListMembershipProvider>
 						{import.meta.env.DEV && (
@@ -314,6 +309,6 @@ namespace styles {
 	})
 }
 
-function resolveTokenLogo(options: Token.ResolveSrc.Options): string {
+function resolveTokenLogo(options: TokenLogo.ResolveSrc.Options): string {
 	return `/api/token/logo/${options.address}`
 }

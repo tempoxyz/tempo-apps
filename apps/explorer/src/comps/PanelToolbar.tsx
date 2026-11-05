@@ -100,8 +100,8 @@ export namespace PanelToolbar {
 namespace styles {
 	export const toolbar = style({
 		alignItems: 'center',
-		borderBottomWidth: '1',
-		borderColor: 'grayAlpha.200',
+		borderBottomWidth: 'regular',
+		borderColor: 'line.secondary',
 		borderStyle: 'solid',
 		display: 'flex',
 		flexWrap: 'wrap',
@@ -111,10 +111,10 @@ namespace styles {
 	})
 
 	export const summary = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		marginRight: 'auto !custom',
 		minWidth: '0 !custom',
-		typography: 'label.13',
+		typography: 'body.b3',
 	})
 
 	export const iconButton = style({ flexShrink: 0 })

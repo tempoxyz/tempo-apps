@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { style, Amount as TdsAmount, Token } from '@tempoxyz/ds'
+import { style, TokenLogo, Amount as TdsAmount } from '@tempoxyz/ds'
 import type { Address } from 'ox'
 import * as Value from 'ox/Value'
 import type * as React from 'react'
@@ -52,7 +52,7 @@ export function Amount(props: Amount.Props): React.JSX.Element | null {
 			{...cx(styles.token(), linkHover())}
 		>
 			{/* In dollars the icon stands alone, so it names the token. */}
-			<Token
+			<TokenLogo
 				address={token}
 				alt={rest.prefix === '$' ? symbol_ : undefined}
 				size="small"
@@ -148,12 +148,12 @@ export namespace Amount {
 namespace styles {
 	export const token = style({
 		alignItems: 'center',
-		color: 'foreground',
+		color: 'content.primary',
 		display: 'inline-flex',
 		gap: '4',
 		minWidth: '0 !custom',
 		textDecorationLine: 'none',
 	})
 
-	export const pending = style({ color: 'gray.900' })
+	export const pending = style({ color: 'content.secondary' })
 }

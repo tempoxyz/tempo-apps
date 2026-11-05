@@ -1,17 +1,18 @@
 import { useLocation } from '@tanstack/react-router'
 import {
+	Accordion,
 	Button,
 	Checkbox,
 	CopyButton,
 	Field,
-	Input,
-	Rows,
-	Textarea,
-	Tooltip,
+	ListGroup,
 	style,
+	Textarea,
+	TextInput,
+	Tooltip,
 } from '@tempoxyz/ds'
 import { getSignature } from 'ox/AbiItem'
-import * as React from 'react'
+import type * as React from 'react'
 import type { AbiFunction, AbiParameter } from 'viem'
 import {
 	getFunctionSelector,
@@ -21,25 +22,25 @@ import {
 } from '#lib/domain/contracts'
 
 /**
- * A function without arguments as a key-value `Rows.Row`: its signature, its
+ * A function without arguments as a key-value `ListGroup.Row`: its signature, its
  * value or status, then its actions.
  */
 export function FunctionRow(props: FunctionRow.Props): React.JSX.Element {
 	const { actions, fn, id, tag, value } = props
 	return (
-		<Rows.Row id={id} spacing="none">
-			<Rows.Label>
+		<ListGroup.Row id={id}>
+			<ListGroup.Label>
 				<span {...styles.label()}>
 					<span {...styles.signature()}>{getFunctionDisplaySignature(fn)}</span>
 					{tag}
 				</span>
-			</Rows.Label>
+			</ListGroup.Label>
 			{value !== undefined && <span {...styles.value()}>{value}</span>}
 			<span {...styles.actions()}>
 				{actions}
 				<FunctionCopyActions fn={fn} id={id} />
 			</span>
-		</Rows.Row>
+		</ListGroup.Row>
 	)
 }
 
@@ -58,40 +59,38 @@ export declare namespace FunctionRow {
 }
 
 /**
- * A function with arguments as an expandable `Rows.Row`. Its panel holds the
- * function's form.
+ * A function with arguments as a `ListGroup.Row` holding a one-item
+ * `Accordion`, so it keeps its place and divider among the other functions.
+ * Its panel holds the function's form.
  */
 export function FunctionDisclosure(
 	props: FunctionDisclosure.Props,
 ): React.JSX.Element {
 	const { children, expanded, fn, id, onToggle, tag } = props
-	const panelId = React.useId()
 	return (
-		<>
-			<Rows.Row
-				action="expand"
-				aria-controls={panelId}
-				aria-expanded={expanded}
-				id={id}
-				onClick={onToggle}
-				spacing="none"
+		<ListGroup.Row id={id}>
+			<Accordion.Root
+				onValueChange={onToggle}
+				size="small"
+				value={expanded ? ['form'] : []}
+				{...styles.disclosure()}
 			>
-				<Rows.Info>
-					<Rows.Title>
-						<span {...styles.label()}>
-							<span {...styles.signature()}>
-								{fn.name || getFunctionSelector(fn)}
+				<Accordion.Item value="form">
+					<Accordion.Trigger>
+						<span {...styles.trigger()}>
+							<span {...styles.label()}>
+								<span {...styles.signature()}>
+									{fn.name || getFunctionSelector(fn)}
+								</span>
+								{tag}
 							</span>
-							{tag}
+							<span {...styles.parameters()}>{getParameterList(fn)}</span>
 						</span>
-					</Rows.Title>
-					<Rows.Description>
-						<span {...styles.parameters()}>{getParameterList(fn)}</span>
-					</Rows.Description>
-				</Rows.Info>
-			</Rows.Row>
-			{expanded && <Rows.Panel id={panelId}>{children}</Rows.Panel>}
-		</>
+					</Accordion.Trigger>
+					<Accordion.Panel>{children}</Accordion.Panel>
+				</Accordion.Item>
+			</Accordion.Root>
+		</ListGroup.Row>
 	)
 }
 
@@ -272,13 +271,13 @@ export function FunctionInput(props: FunctionInput.Props): React.JSX.Element {
 					onChange={(event) => onChange(event.target.value)}
 				/>
 			) : (
-				<Input.Group>
-					<Input.Control
+				<TextInput.Group>
+					<TextInput.Control
 						{...control}
 						inputMode={/^uint\d*$/.test(input.type) ? 'numeric' : undefined}
 						onValueChange={(next) => onChange(next)}
 					/>
-				</Input.Group>
+				</TextInput.Group>
 			)}
 			<Field.Description>{input.type}</Field.Description>
 			<Field.Error match={invalid}>{getMissingValueError(input)}</Field.Error>
@@ -346,13 +345,25 @@ namespace styles {
 	})
 
 	export const signature = style({
-		color: 'foreground',
-		typography: 'copy.13.mono',
+		color: 'content.primary',
+		typography: 'mono.m1',
 	})
 
 	export const parameters = style({
+		color: 'content.secondary',
 		overflowWrap: 'anywhere',
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
+	})
+
+	// The accordion fills the row beside nothing else.
+	export const disclosure = style({ flex: 1, minWidth: '0' })
+
+	export const trigger = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '2',
+		minWidth: '0',
+		textAlign: 'start',
 	})
 
 	// The value fills the space between the label and the actions.
@@ -392,9 +403,9 @@ namespace styles {
 	})
 
 	export const note = style({
-		color: 'gray.900',
+		color: 'content.secondary',
 		paddingInlineStart: '4',
-		typography: 'copy.13',
+		typography: 'body.b3',
 	})
 
 	export const formActions = style({
@@ -414,19 +425,19 @@ namespace styles {
 	})
 
 	export const resultLabel = style({
-		color: 'gray.900',
-		typography: 'label.13',
+		color: 'content.secondary',
+		typography: 'body.b3',
 	})
 
 	export const output = style({
-		backgroundColor: 'grayAlpha.100',
-		borderRadius: '8',
-		color: 'foreground',
+		backgroundColor: 'container.regular',
+		borderRadius: '2xs',
+		color: 'content.primary',
 		display: 'block',
 		overflowWrap: 'anywhere',
 		paddingBlock: '8',
 		paddingInline: '12',
-		typography: 'copy.13.mono',
+		typography: 'mono.m1',
 		whiteSpace: 'pre-wrap',
 	})
 }
