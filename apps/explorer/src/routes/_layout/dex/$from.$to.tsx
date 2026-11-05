@@ -167,6 +167,8 @@ function DexRoutePage(): React.JSX.Element {
 				})),
 			]
 		: []
+	// One venue's row only adds its route.
+	const showVenues = venues.length > 1 || Boolean(venues[0]?.detail)
 	const best = venues.reduce<(Venue & { amountOut: string }) | undefined>(
 		(top, venue) =>
 			venue.amountOut !== null &&
@@ -317,7 +319,7 @@ function DexRoutePage(): React.JSX.Element {
 										)}
 										<TokenBadge token={to} />
 									</div>
-									{(best || venues.length > 1) && (
+									{(best || showVenues) && (
 										<dl className="flex flex-col gap-2 copy-13">
 											{best && (
 												<div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
@@ -347,7 +349,7 @@ function DexRoutePage(): React.JSX.Element {
 													</dd>
 												</div>
 											)}
-											{venues.length > 1 &&
+											{showVenues &&
 												venues.map((venue) => (
 													<div
 														key={venue.key}
