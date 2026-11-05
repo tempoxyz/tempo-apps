@@ -8,7 +8,6 @@ import { getTempoEnv } from '#lib/env'
 import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
-import DropletsIcon from '~icons/lucide/droplets'
 import FileIcon from '~icons/lucide/file'
 import ReceiptIcon from '~icons/lucide/receipt'
 import UserIcon from '~icons/lucide/user'
@@ -157,16 +156,10 @@ function SpotlightLinks() {
 					Tokens
 				</SpotlightPill>
 				<SpotlightPill
-					to="/dex"
+					to="/markets"
 					icon={<ArrowLeftRightIcon className="size-[14px] text-accent" />}
 				>
-					DEX
-				</SpotlightPill>
-				<SpotlightPill
-					to="/propamm"
-					icon={<DropletsIcon className="size-[14px] text-accent" />}
-				>
-					PropAMM
+					Markets
 				</SpotlightPill>
 			</div>
 		</section>

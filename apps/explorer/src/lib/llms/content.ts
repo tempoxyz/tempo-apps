@@ -142,18 +142,6 @@ export const docs = {
 			'Discovered TIP-20 tokens with symbol, name, currency, holders, address, and creation time.',
 		params: { page: 'Page number.' },
 	},
-	'/dex/': {
-		title: 'Stablecoin DEX',
-		description:
-			'Stablecoin DEX overview: liquidity and volume totals, the orderbooks swaps route through with liquidity, spread, and 1-day and 30-day volume, and a live feed of recent swaps.',
-		params: {
-			tab: 'Show `pairs` or recent `swaps`.',
-			sort: 'Sort pairs by `liquidity`, `spread`, `day` volume, or `month` volume.',
-			dir: 'Sort direction: `asc` or `desc`.',
-			unverified:
-				'Include pairs and swaps with a token outside the verified token list.',
-		},
-	},
 	'/dex/$from/$to': {
 		title: 'Stablecoin DEX route',
 		description:
@@ -162,14 +150,18 @@ export const docs = {
 			amount: 'Exact input amount in human-readable token units.',
 		},
 	},
-	'/propamm': {
-		title: 'PropAMM',
+	'/markets': {
+		title: 'Markets',
 		description:
-			'PropAMM pools, permissioned venues where a market maker trades its own inventory with approved takers: each pool’s price, inventory, the most a taker can buy or sell, state, 1-day and 30-day volume, and the last 30 days of trades.',
+			'Every pair on the Stablecoin DEX and PropAMM pools in one list: price, liquidity in US dollars, spread, 1-day and 30-day volume, and status (live, limited, off), with liquidity and volume totals and a merged feed of recent trades from both venues.',
 		params: {
-			tab: 'Show `pools` or recent `trades`.',
-			sort: 'Sort pools by `inventory`, `day` volume, or `month` volume.',
+			venue:
+				'Show `all` venues, only the Stablecoin DEX (`dex`), or only `propamm` pools.',
+			tab: 'Show `pairs` or recent `trades`.',
+			sort: 'Sort pairs by `liquidity`, `spread`, `day` volume, or `month` volume.',
 			dir: 'Sort direction: `asc` or `desc`.',
+			unverified:
+				'Include Stablecoin DEX pairs and swaps with a token outside the verified token list.',
 		},
 	},
 	'/fee-amm': {
@@ -348,6 +340,8 @@ export const docs = {
 		title: 'Health',
 		description: 'Returns `ok` when the service is up.',
 	},
+	'/dex/': { hidden: 'Redirects to `/markets?venue=dex`.' },
+	'/propamm': { hidden: 'Redirects to `/markets?venue=propamm`.' },
 	'/demo/': { hidden: 'Development-only component demos.' },
 	'/demo/address': { hidden: 'Development-only component demos.' },
 	'/demo/empty-state': { hidden: 'Development-only component demos.' },
