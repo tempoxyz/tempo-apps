@@ -760,10 +760,10 @@ export async function getPropAmmQuotes(
 		if (pool.config.version === 'v1') {
 			if (paused?.status !== 'success' || paused.result === true)
 				return { ...base, amountOut: null, status: 'unavailable' }
-			if (
-				balance?.status === 'success' &&
-				(balance.result as bigint) < amountOut
-			)
+			// An unread balance can't confirm the pool pays out.
+			if (balance?.status !== 'success')
+				return { ...base, amountOut: null, status: 'unavailable' }
+			if ((balance.result as bigint) < amountOut)
 				return { ...base, amountOut: null, status: 'no-liquidity' }
 		}
 		return {
