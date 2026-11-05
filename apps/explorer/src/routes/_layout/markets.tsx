@@ -73,7 +73,17 @@ const venueOptions = [
 	{ value: 'propamm', label: venueLabels.propamm },
 ] as const
 
-const usd = (value: number) => PriceFormatter.format(value, { format: 'short' })
+/** Compact above $1K; cents below, so small amounts line up. */
+const cents = new Intl.NumberFormat('en-US', {
+	style: 'currency',
+	currency: 'USD',
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2,
+})
+const usd = (value: number) =>
+	value < 1000
+		? cents.format(value)
+		: PriceFormatter.format(value, { format: 'short' })
 const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const price = new Intl.NumberFormat('en-US', {
 	minimumFractionDigits: 4,
@@ -316,7 +326,6 @@ function MarketsPage(): React.JSX.Element {
 												},
 											],
 											tabs: [
-												{ label: '#', align: 'start', width: 48 },
 												{
 													label: 'Pair',
 													align: 'start',
@@ -337,16 +346,10 @@ function MarketsPage(): React.JSX.Element {
 												...(showDex ? [sortable('spread', 'Spread')] : []),
 												sortable('day', '1D vol'),
 												sortable('month', '30D vol'),
-												{
-													label: 'Status',
-													align: 'end',
-													width: '1fr',
-													minWidth: 112,
-												},
 											],
 										}}
 										items={(mode) =>
-											rows.map((row, index) => {
+											rows.map((row) => {
 												const volumeLoading =
 													volumePending && row.venue === 'propamm'
 												return {
@@ -354,16 +357,10 @@ function MarketsPage(): React.JSX.Element {
 													cells:
 														mode === 'stacked'
 															? [
-																	<PairCell key="pair" row={row} withStatus />,
+																	<PairCell key="pair" row={row} />,
 																	<Liquidity key="liquidity" row={row} />,
 																]
 															: [
-																	<span
-																		key="rank"
-																		className="text-tertiary tabular-nums"
-																	>
-																		{index + 1}
-																	</span>,
 																	<PairCell key="pair" row={row} />,
 																	<PriceValue
 																		key="price"
@@ -388,11 +385,6 @@ function MarketsPage(): React.JSX.Element {
 																		key="month"
 																		loading={volumeLoading}
 																		value={row.volume?.month}
-																	/>,
-																	<StatusIndicator
-																		key="status"
-																		status={row.status}
-																		detail={row.statusDetail}
 																	/>,
 																],
 													link: {
@@ -579,10 +571,8 @@ function TokenChip(props: { token: DexPoolToken }): React.JSX.Element {
 	)
 }
 
-function PairCell(props: {
-	row: MarketRow
-	withStatus?: boolean
-}): React.JSX.Element {
+/** A pair, its venue and, unless it trades normally, its status. */
+function PairCell(props: { row: MarketRow }): React.JSX.Element {
 	const { base, quote, pool, status, statusDetail } = props.row
 	return (
 		<div className="flex items-center gap-2.5 min-w-0">
@@ -606,7 +596,7 @@ function PairCell(props: {
 				</span>
 				<span className="flex items-center gap-1.5 label-12 text-tertiary truncate">
 					{pool ? `${venueLabels.propamm} ${pool.version}` : 'Order book'}
-					{props.withStatus && (
+					{status !== 'live' && (
 						<>
 							<span aria-hidden="true">·</span>
 							<StatusIndicator status={status} detail={statusDetail} />

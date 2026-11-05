@@ -14,7 +14,17 @@ import {
 	propAmmTradesQueryOptions,
 } from '#lib/queries/propamm'
 
-const usd = (value: number) => PriceFormatter.format(value, { format: 'short' })
+/** Compact above $1K; cents below, so small amounts line up. */
+const cents = new Intl.NumberFormat('en-US', {
+	style: 'currency',
+	currency: 'USD',
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2,
+})
+const usd = (value: number) =>
+	value < 1000
+		? cents.format(value)
+		: PriceFormatter.format(value, { format: 'short' })
 const amount = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const price = new Intl.NumberFormat('en-US', {
 	minimumFractionDigits: 4,
@@ -49,7 +59,8 @@ export function PropAmmPairPools(
 			sections={[
 				{
 					title: 'PropAMM',
-					totalItems: matches.length,
+					// A count of one says nothing.
+					totalItems: matches.length > 1 ? matches.length : undefined,
 					itemsLabel: 'pools',
 					autoCollapse: false,
 					content: (

@@ -70,7 +70,7 @@ export const Route = createFileRoute('/_layout/dex/$from/$to')({
 })
 
 const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 })
-const rate = new Intl.NumberFormat('en-US', { maximumFractionDigits: 8 })
+const rate = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 })
 const bps = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const size = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const mainnetSymbols: Record<string, string> = {
@@ -146,7 +146,7 @@ function DexRoutePage(): React.JSX.Element {
 					key: 'dex',
 					label: 'Stablecoin DEX',
 					detail:
-						snapshot.path.length > 2
+						dexRoutable && snapshot.path.length > 2
 							? 'via ' +
 								snapshot.path
 									.slice(1, -1)
@@ -167,8 +167,6 @@ function DexRoutePage(): React.JSX.Element {
 				})),
 			]
 		: []
-	// One venue's row only adds its route.
-	const showVenues = venues.length > 1 || Boolean(venues[0]?.detail)
 	const best = venues.reduce<(Venue & { amountOut: string }) | undefined>(
 		(top, venue) =>
 			venue.amountOut !== null &&
@@ -177,6 +175,11 @@ function DexRoutePage(): React.JSX.Element {
 				: top,
 		undefined,
 	)
+	// "Best" only means something beside another quote.
+	const quoted = venues.filter((venue) => venue.amountOut !== null).length
+	// A lone venue's row only adds its route, and its failure is the headline.
+	const showVenues =
+		venues.length > 1 || (Boolean(best) && Boolean(venues[0]?.detail))
 
 	return (
 		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
@@ -374,7 +377,7 @@ function DexRoutePage(): React.JSX.Element {
 															{venue.amountOut === null
 																? venue.message
 																: `${formatAmount(venue.amountOut)} ${to.symbol}`}
-															{venue.key === best?.key && (
+															{venue.key === best?.key && quoted > 1 && (
 																<span className="text-positive"> · Best</span>
 															)}
 														</dd>
