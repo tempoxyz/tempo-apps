@@ -1,12 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import {
+	Inline,
+	Skeleton,
+	Stack,
+	StatusIndicator,
+	Surface,
+	style,
+	Table,
+	TokenLogo,
+} from '@tempoxyz/ds'
 import type { Address } from 'viem'
 import type * as React from 'react'
-import { DataGrid } from '#comps/DataGrid'
-import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
 import { PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { useRowLink } from '#lib/hooks'
 import { propAmmStatus, statusIntent, statusLabels } from '#lib/markets'
 import type { PropAmmPool } from '#lib/propamm'
 import {
@@ -31,6 +38,40 @@ const price = new Intl.NumberFormat('en-US', {
 	maximumFractionDigits: 4,
 })
 
+namespace styles {
+	export const heading = style({
+		color: 'content.primary',
+		margin: '0',
+		typography: 'heading.h4',
+	})
+	export const count = style({
+		color: 'content.tertiary',
+		marginInlineStart: '6',
+		fontVariantNumeric: 'tabular-nums !custom',
+	})
+	export const scroll = style({ overflowX: 'auto', minWidth: '0' })
+	export const muted = style({ color: 'content.tertiary' })
+	export const secondary = style({ color: 'content.secondary' })
+	export const nowrap = style({ whiteSpace: 'nowrap' })
+	export const strong = style({ typography: 'body.b2Strong' })
+	export const pair = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		flexShrink: '0 !custom',
+		selectors: { '& > :not(:first-child)': { marginInlineStart: '-6' } },
+	})
+	export const inventory = style({
+		alignItems: 'flex-end',
+		display: 'flex',
+		flexDirection: 'column',
+		whiteSpace: 'nowrap',
+	})
+	export const link = style({
+		color: 'inherit !custom',
+		textDecoration: 'none !custom',
+	})
+}
+
 /**
  * PropAMM pools trading the same two tokens as a DEX pair, in either order.
  * Renders nothing until a pool is known to exist, so the pair page is
@@ -42,7 +83,7 @@ export function PropAmmPairPools(
 	const tokens = [props.a.toLowerCase(), props.b.toLowerCase()]
 	const pools = useQuery(propAmmPoolsQueryOptions())
 	const trades = useQuery(propAmmTradesQueryOptions())
-	const isMobile = useMediaQuery('(max-width: 799px)')
+	const rowLink = useRowLink()
 	const matches = (pools.data?.pools ?? []).filter(
 		(pool) =>
 			tokens.includes(pool.base.address.toLowerCase()) &&
@@ -51,125 +92,85 @@ export function PropAmmPairPools(
 	)
 	if (matches.length === 0) return null
 	const volume = trades.data?.totals
-	const volumeFailed = trades.isError && !trades.data
+	const volumeState = trades.isPending
+		? 'loading'
+		: trades.isError && !trades.data
+			? 'unknown'
+			: 'known'
 
 	return (
-		<Sections
-			mode={isMobile ? 'stacked' : 'tabs'}
-			sections={[
-				{
-					title: 'PropAMM',
-					// A count of one says nothing.
-					totalItems: matches.length > 1 ? matches.length : undefined,
-					itemsLabel: 'pools',
-					autoCollapse: false,
-					content: (
-						<DataGrid
-							columns={{
-								stacked: [
-									{ label: 'Pool', align: 'start', width: '1fr' },
-									{ label: 'Inventory', align: 'end', width: 'max-content' },
-								],
-								tabs: [
-									{
-										label: 'Pool',
-										align: 'start',
-										width: '2fr',
-										minWidth: 200,
-									},
-									{ label: 'Price', align: 'end', width: '1fr', minWidth: 112 },
-									{
-										label: (
-											<span title="Base and quote held, in US dollars. Pairs on one v2 venue share its balances.">
-												Inventory
-											</span>
-										),
-										align: 'end',
-										width: '1fr',
-										minWidth: 140,
-									},
-									{
-										// DataGrid lowercases string labels.
-										label: <span>1D vol</span>,
-										align: 'end',
-										width: '1fr',
-										minWidth: 96,
-									},
-									{
-										label: <span>30D vol</span>,
-										align: 'end',
-										width: '1fr',
-										minWidth: 96,
-									},
-									{ label: 'State', align: 'end', width: '1fr', minWidth: 112 },
-								],
-							}}
-							items={(mode) =>
-								matches.map((pool) => {
-									const poolVolume = volume
-										? (volume[pool.key]?.volume ?? { day: 0, month: 0 })
-										: undefined
-									const volumeState = trades.isPending
-										? 'loading'
-										: volumeFailed
-											? 'unknown'
-											: 'known'
-									return {
-										key: pool.key,
-										cells:
-											mode === 'stacked'
-												? [
-														<PoolCell key="pool" pool={pool} withState />,
-														<UsdValue key="inventory" value={pool.inventory} />,
-													]
-												: [
-														<PoolCell key="pool" pool={pool} />,
-														pool.price === null ? (
-															<span key="price" className="text-tertiary">
-																—
-															</span>
-														) : (
-															<span
-																key="price"
-																className="tabular-nums text-secondary whitespace-nowrap"
-															>
-																{price.format(pool.price)}{' '}
-																<span className="text-tertiary">
-																	{pool.quote.symbol}
-																</span>
-															</span>
-														),
-														<Inventory key="inventory" pool={pool} />,
-														<Volume
-															key="day"
-															state={volumeState}
-															value={poolVolume?.day}
-														/>,
-														<Volume
-															key="month"
-															state={volumeState}
-															value={poolVolume?.month}
-														/>,
-														<StateIndicator key="state" pool={pool} />,
-													],
-										link: {
-											href: `/address/${pool.address}`,
-											title: `${pool.base.symbol}/${pool.quote.symbol} pool`,
-										},
-									}
-								})
-							}
-							totalItems={matches.length}
-							page={1}
-							itemsPerPage={matches.length}
-							itemsLabel="pools"
-							pagination="simple"
-							showSimpleCount={false}
-						/>
-					),
-				},
-			]}
-		/>
+		<Surface size="medium" render={<section aria-label="PropAMM pools" />}>
+			<Stack gap="16">
+				<h2 {...styles.heading()}>
+					PropAMM
+					{/* A count of one says nothing. */}
+					{matches.length > 1 && (
+						<span {...styles.count()}>{matches.length}</span>
+					)}
+				</h2>
+				<div {...styles.scroll()}>
+					<Table interactive>
+						<Table.Caption>PropAMM pools for this pair</Table.Caption>
+						<Table.Head>
+							<Table.Row>
+								<Table.HeaderCell>Pool</Table.HeaderCell>
+								<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+								<Table.HeaderCell
+									justify="end"
+									title="Base and quote held, in US dollars. Pairs on one v2 venue share its balances."
+								>
+									Inventory
+								</Table.HeaderCell>
+								<Table.HeaderCell justify="end">1D vol</Table.HeaderCell>
+								<Table.HeaderCell justify="end">30D vol</Table.HeaderCell>
+								<Table.HeaderCell justify="end">State</Table.HeaderCell>
+							</Table.Row>
+						</Table.Head>
+						<Table.Body>
+							{matches.map((pool) => {
+								const poolVolume = volume
+									? (volume[pool.key]?.volume ?? { day: 0, month: 0 })
+									: undefined
+								return (
+									<Table.Row
+										key={pool.key}
+										{...rowLink(`/address/${pool.address}`)}
+									>
+										<Table.Cell>
+											<PoolLabel pool={pool} />
+										</Table.Cell>
+										<Table.Cell justify="end" numeric>
+											{pool.price === null ? (
+												<span {...styles.muted()}>—</span>
+											) : (
+												<span {...styles.nowrap()}>
+													<span {...styles.secondary()}>
+														{price.format(pool.price)}
+													</span>{' '}
+													<span {...styles.muted()}>{pool.quote.symbol}</span>
+												</span>
+											)}
+										</Table.Cell>
+										<Table.Cell justify="end" numeric>
+											<Inventory pool={pool} />
+										</Table.Cell>
+										<Table.Cell justify="end" numeric>
+											<Volume state={volumeState} value={poolVolume?.day} />
+										</Table.Cell>
+										<Table.Cell justify="end" numeric>
+											<Volume state={volumeState} value={poolVolume?.month} />
+										</Table.Cell>
+										<Table.Cell justify="end">
+											<State pool={pool} />
+										</Table.Cell>
+									</Table.Row>
+								)
+							})}
+						</Table.Body>
+					</Table>
+				</div>
+			</Stack>
+		</Surface>
 	)
 }
 
@@ -181,42 +182,32 @@ export declare namespace PropAmmPairPools {
 	}
 }
 
-function PoolCell(props: {
-	pool: PropAmmPool
-	withState?: boolean
-}): React.JSX.Element {
-	const { base, quote, version } = props.pool
+/** The pool's pair and version, linking to the pool's address. */
+function PoolLabel(props: { pool: PropAmmPool }): React.JSX.Element {
+	const { base, quote, version, address } = props.pool
 	return (
-		<div className="flex items-center gap-2.5 min-w-0">
-			<span className="inline-flex shrink-0 items-center">
-				<TokenIcon
-					address={base.address}
-					name={base.symbol}
-					className="size-5 ring-2 ring-card relative z-1"
-				/>
-				<TokenIcon
-					address={quote.address}
-					name={quote.symbol}
-					className="size-5 -ml-1.5 ring-2 ring-card"
-				/>
-			</span>
-			<span className="flex flex-col min-w-0">
-				<span className="truncate font-medium text-primary">
-					{base.symbol}
-					<span className="text-tertiary"> / </span>
-					{quote.symbol}
+		<Link
+			preload="intent"
+			to="/address/$address"
+			params={{ address }}
+			title={`${base.symbol}/${quote.symbol} pool`}
+			{...styles.link()}
+		>
+			<Inline gap="12" render={<span />}>
+				<span {...styles.pair()}>
+					<TokenLogo src={`/api/token/logo/${base.address}`} alt="" />
+					<TokenLogo src={`/api/token/logo/${quote.address}`} alt="" />
 				</span>
-				<span className="flex items-center gap-1.5 label-12 text-tertiary truncate">
-					{version}
-					{props.withState && (
-						<>
-							<span aria-hidden="true">·</span>
-							<StateIndicator pool={props.pool} />
-						</>
-					)}
+				<span {...styles.nowrap()}>
+					<span {...styles.strong()}>
+						{base.symbol}
+						<span {...styles.muted()}> / </span>
+						{quote.symbol}
+					</span>
+					<Table.Subtitle>{version}</Table.Subtitle>
 				</span>
-			</span>
-		</div>
+			</Inline>
+		</Link>
 	)
 }
 
@@ -224,22 +215,21 @@ function PoolCell(props: {
 function Inventory(props: { pool: PropAmmPool }): React.JSX.Element {
 	const { base, quote, baseBalance, quoteBalance, inventory } = props.pool
 	const balance = (value: number | null, symbol: string) => (
-		<span className="label-12 text-tertiary">
+		<Table.Subtitle>
 			{value === null ? '—' : amount.format(value)} {symbol}
-		</span>
+		</Table.Subtitle>
 	)
 	return (
-		<span className="flex flex-col items-end gap-0.5 whitespace-nowrap">
-			<UsdValue value={inventory} />
+		<span {...styles.inventory()}>
+			{inventory === null ? (
+				<span {...styles.muted()}>—</span>
+			) : (
+				<span>{usd(inventory)}</span>
+			)}
 			{balance(baseBalance, base.symbol)}
 			{balance(quoteBalance, quote.symbol)}
 		</span>
 	)
-}
-
-function UsdValue(props: { value: number | null }): React.JSX.Element {
-	if (props.value === null) return <span className="text-tertiary">—</span>
-	return <span className="tabular-nums text-primary">{usd(props.value)}</span>
 }
 
 function Volume(props: {
@@ -248,35 +238,25 @@ function Volume(props: {
 }): React.JSX.Element {
 	if (props.state === 'loading')
 		return (
-			<span className="inline-block h-3.5 w-12 rounded-[4px] bg-distinct/70 animate-pulse" />
+			<Skeleton>
+				<span>$0.00M</span>
+			</Skeleton>
 		)
-	return (
-		<UsdValue
-			value={
-				props.state === 'known' && props.value && props.value > 0
-					? props.value
-					: null
-			}
-		/>
+	if (
+		props.state === 'unknown' ||
+		props.value === undefined ||
+		props.value <= 0
 	)
+		return <span {...styles.muted()}>—</span>
+	return <span>{usd(props.value)}</span>
 }
 
 /** A dot in the state's intent and the pool's own word for it. */
-function StateIndicator(props: { pool: PropAmmPool }): React.JSX.Element {
+function State(props: { pool: PropAmmPool }): React.JSX.Element {
 	const { status, detail } = propAmmStatus(props.pool.state)
-	const intent = statusIntent[status]
 	return (
-		<span className="inline-flex items-center gap-1.5 whitespace-nowrap text-secondary">
-			<span
-				aria-hidden="true"
-				className={cx(
-					'size-2 rounded-full shrink-0',
-					intent === 'positive' && 'bg-positive',
-					intent === 'warning' && 'bg-warning',
-					intent === 'neutral' && 'bg-tertiary',
-				)}
-			/>
+		<StatusIndicator intent={statusIntent[status]}>
 			{detail ?? statusLabels[status]}
-		</span>
+		</StatusIndicator>
 	)
 }

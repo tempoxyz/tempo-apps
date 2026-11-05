@@ -1,21 +1,37 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	Link,
+	stripSearchParams,
+} from '@tanstack/react-router'
+import {
+	Alert,
+	Container,
+	Empty,
+	Grid,
+	Inline,
+	Skeleton,
+	Stack,
+	StatusIndicator,
+	Surface,
+	Switch,
+	style,
+	Table,
+	Tabs,
+	TokenLogo,
+} from '@tempoxyz/ds'
 import { useMemo } from 'react'
 import type * as React from 'react'
 import { Address } from '#comps/Address'
-import { DataGrid } from '#comps/DataGrid'
-import { SegmentedControl } from '#comps/PanelToolbar'
 import { RelativeTime } from '#comps/RelativeTime'
-import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
 import type { DexPoolToken } from '#lib/dex-pools'
 import { PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { useRowLink } from '#lib/hooks'
 import {
 	defaultMarketsSearch,
 	dexRows,
 	dexTrade,
+	type MarketLink,
 	type MarketRow,
 	type MarketSort,
 	type MarketStatus,
@@ -67,11 +83,8 @@ export const Route = createFileRoute('/_layout/markets')({
 /** How long navigation waits for data before showing the page without it. */
 const LOADER_WAIT = 300
 
-const venueOptions = [
-	{ value: 'all', label: 'All' },
-	{ value: 'dex', label: venueLabels.dex },
-	{ value: 'propamm', label: venueLabels.propamm },
-] as const
+/** Placeholder rows while a list has nothing to show yet. */
+const LOADING_ROWS = 5
 
 /** Compact above $1K; cents below, so small amounts line up. */
 const cents = new Intl.NumberFormat('en-US', {
@@ -91,10 +104,100 @@ const price = new Intl.NumberFormat('en-US', {
 })
 const bps = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 })
 
+namespace styles {
+	export const page = style({
+		boxSizing: 'border-box',
+		// The layout centres its children, so the page claims the full width.
+		width: '100% !custom',
+		minWidth: '0',
+		paddingBlockStart: '24',
+		'@media (min-width: 768px)': { paddingBlockStart: '48' },
+		paddingBlockEnd: '64',
+		color: 'content.primary',
+		typography: 'body.b2',
+	})
+	export const header = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '16',
+		justifyContent: 'space-between',
+		minWidth: '0',
+	})
+	export const title = style({
+		color: 'content.primary',
+		margin: '0',
+		typography: 'heading.h2',
+	})
+	export const statLabel = style({
+		color: 'content.secondary',
+		margin: '0',
+		typography: 'body.b2',
+	})
+	export const statValue = style({
+		color: 'content.primary',
+		fontVariantNumeric: 'tabular-nums !custom',
+		margin: '0',
+		typography: 'heading.h2',
+	})
+	export const tabsBar = style({
+		alignItems: 'center',
+		display: 'flex',
+		flexWrap: 'wrap',
+		gap: '12',
+		justifyContent: 'space-between',
+		minWidth: '0',
+	})
+	export const venues = style({ minWidth: '0', maxWidth: '100% !custom' })
+	export const toggle = style({
+		alignItems: 'center',
+		color: 'content.secondary',
+		cursor: 'pointer',
+		display: 'inline-flex',
+		gap: '8',
+		typography: 'body.b2',
+		whiteSpace: 'nowrap',
+	})
+	export const scroll = style({ overflowX: 'auto', minWidth: '0' })
+	export const muted = style({ color: 'content.tertiary' })
+	export const secondary = style({ color: 'content.secondary' })
+	export const strong = style({ typography: 'body.b2Strong' })
+	export const nowrap = style({ whiteSpace: 'nowrap' })
+	export const pair = style({
+		alignItems: 'center',
+		display: 'inline-flex',
+		flexShrink: '0 !custom',
+		selectors: { '& > :not(:first-child)': { marginInlineStart: '-6' } },
+	})
+	export const subtitle = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '6',
+		whiteSpace: 'nowrap',
+	})
+	export const link = style({
+		color: 'inherit !custom',
+		textDecoration: 'none !custom',
+	})
+	export const buy = style({
+		color: 'content.positive',
+		typography: 'body.b2Strong',
+	})
+	export const sell = style({
+		color: 'content.negative',
+		typography: 'body.b2Strong',
+	})
+	export const tabCount = style({
+		color: 'content.tertiary',
+		marginInlineStart: '6',
+		fontVariantNumeric: 'tabular-nums !custom',
+	})
+	export const panel = style({ paddingBlockStart: '16' })
+}
+
 function MarketsPage(): React.JSX.Element {
 	const search = Route.useSearch()
 	const navigate = Route.useNavigate()
-	const isMobile = useMediaQuery('(max-width: 799px)')
 	const venues = venuesOf(search.venue)
 	const showDex = venues.includes('dex')
 	const showPropAmm = venues.includes('propamm')
@@ -104,7 +207,7 @@ function MarketsPage(): React.JSX.Element {
 	const propAmmTradesQuery = useQuery(propAmmTradesQueryOptions())
 	// Swaps poll only while their list is on screen. The server applies the
 	// verified filter so spam can't crowd the feed.
-	const swapsVisible = showDex && (isMobile || search.tab === 'trades')
+	const swapsVisible = showDex && search.tab === 'trades'
 	const swapsQuery = useQuery({
 		...dexSwapsQueryOptions(swapsVisible, { unverified: search.unverified }),
 		enabled: swapsVisible,
@@ -219,26 +322,6 @@ function MarketsPage(): React.JSX.Element {
 		setSearch({ sort, dir })
 	}
 
-	const sortable = (
-		sort: MarketSort,
-		label: string,
-		title?: string,
-	): DataGrid.Column => ({
-		label: (
-			<SortLabel
-				sort={sort}
-				label={label}
-				title={title}
-				search={search}
-				onSort={sortBy}
-			/>
-		),
-		align: 'end',
-		width: '1fr',
-		minWidth: 96,
-		sortDirection: search.sort === sort ? search.dir : undefined,
-	})
-
 	const pairsPending =
 		(showDex && dexQuery.isPending) || (showPropAmm && propAmmQuery.isPending)
 	const volumePending =
@@ -251,540 +334,596 @@ function MarketsPage(): React.JSX.Element {
 			(propAmmTradesQuery.isPending ||
 				(propAmmQuery.isPending && !propAmmFailed)))
 
-	const pairsErrors = [
-		showDex && dexFailed && loadError('Stablecoin DEX pairs', dexQuery),
-		showPropAmm && propAmmFailed && loadError('PropAMM pools', propAmmQuery),
-		showPropAmm &&
-			propAmmTradesFailed &&
-			!propAmmFailed &&
-			loadError('PropAMM volume', propAmmTradesQuery),
-	].filter((error) => error !== false)
-	const tradesErrors = [
-		showDex && swapsFailed && loadError('Stablecoin DEX swaps', swapsQuery),
-		showPropAmm &&
-			propAmmTradesFailed &&
-			loadError('PropAMM trades', propAmmTradesQuery),
-		showPropAmm &&
-			propAmmFailed &&
-			!propAmmTradesFailed &&
-			loadError('PropAMM pools', propAmmQuery),
-	].filter((error) => error !== false)
-
-	const verifiedToggle = showDex && (
-		<VerifiedToggle
-			checked={!search.unverified}
-			onChange={(checked) => setSearch({ unverified: !checked })}
-		/>
-	)
+	const pairsErrors: LoadErrorProps[] = [
+		...(showDex && dexFailed
+			? [errorProps('Stablecoin DEX pairs', dexQuery)]
+			: []),
+		...(showPropAmm && propAmmFailed
+			? [errorProps('PropAMM pools', propAmmQuery)]
+			: []),
+		...(showPropAmm && propAmmTradesFailed && !propAmmFailed
+			? [
+					{
+						...errorProps('PropAMM volume', propAmmTradesQuery),
+						intent: 'warning' as const,
+					},
+				]
+			: []),
+	]
+	const tradesErrors: LoadErrorProps[] = [
+		...(showDex && swapsFailed
+			? [errorProps('Stablecoin DEX swaps', swapsQuery)]
+			: []),
+		...(showPropAmm && propAmmTradesFailed
+			? [errorProps('PropAMM trades', propAmmTradesQuery)]
+			: []),
+		...(showPropAmm && propAmmFailed && !propAmmTradesFailed
+			? [errorProps('PropAMM pools', propAmmQuery)]
+			: []),
+	]
 
 	return (
-		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
-			<div className="flex flex-wrap items-center justify-between gap-4">
-				<h1 className="text-[24px] sm:text-[32px] leading-tight tracking-[-0.02em] font-semibold text-primary">
-					Markets
-				</h1>
-				<SegmentedControl
-					value={search.venue}
-					options={venueOptions}
-					onChange={(venue) => setSearch({ venue })}
-				/>
-			</div>
+		<div {...styles.page()}>
+			<Container size="wide">
+				<Stack gap="32">
+					<div {...styles.header()}>
+						<h1 {...styles.title()}>Markets</h1>
+						<Tabs.Root
+							value={search.venue}
+							onValueChange={(value) =>
+								setSearch({ venue: value as MarketsSearch['venue'] })
+							}
+							{...styles.venues()}
+						>
+							<Tabs.List variant="pill" size="small" aria-label="Venue">
+								<Tabs.Tab value="all">All</Tabs.Tab>
+								<Tabs.Tab value="dex">{venueLabels.dex}</Tabs.Tab>
+								<Tabs.Tab value="propamm">{venueLabels.propamm}</Tabs.Tab>
+							</Tabs.List>
+						</Tabs.Root>
+					</div>
 
-			<section
-				aria-label="Totals"
-				className="grid grid-cols-3 rounded-body border border-card-border bg-card overflow-hidden"
-			>
-				<Stat label="Liquidity" total={totals.liquidity} />
-				<Stat label="1D volume" total={totals.day} />
-				<Stat label="30D volume" total={totals.month} />
-			</section>
+					<Grid fit="medium" gap="16" render={<section aria-label="Totals" />}>
+						<Stat label="Liquidity" total={totals.liquidity} />
+						<Stat label="1D volume" total={totals.day} />
+						<Stat label="30D volume" total={totals.month} />
+					</Grid>
 
-			<Sections
-				mode={isMobile ? 'stacked' : 'tabs'}
-				activeSection={search.tab === 'trades' ? 1 : 0}
-				onSectionChange={(index) =>
-					setSearch({ tab: index === 1 ? 'trades' : 'pairs' })
-				}
-				sections={[
-					{
-						title: 'Pairs',
-						totalItems: pairsPending ? undefined : rows.length,
-						itemsLabel: 'pairs',
-						autoCollapse: false,
-						contextual: verifiedToggle,
-						content: (
-							<>
-								{pairsErrors}
-								{(rows.length > 0 || pairsErrors.length === 0) && (
-									<DataGrid
-										columns={{
-											stacked: [
-												{ label: 'Pair', align: 'start', width: '1fr' },
-												{
-													...sortable('liquidity', 'Liquidity'),
-													width: 'max-content',
-												},
-											],
-											tabs: [
-												{
-													label: 'Pair',
-													align: 'start',
-													width: '2fr',
-													minWidth: 200,
-												},
-												{
-													label: 'Price',
-													align: 'end',
-													width: '1fr',
-													minWidth: 112,
-												},
-												sortable(
-													'liquidity',
-													'Liquidity',
-													'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share.',
-												),
-												...(showDex ? [sortable('spread', 'Spread')] : []),
-												sortable('day', '1D vol'),
-												sortable('month', '30D vol'),
-											],
-										}}
-										items={(mode) =>
-											rows.map((row) => {
-												const volumeLoading =
-													volumePending && row.venue === 'propamm'
-												return {
-													key: row.key,
-													cells:
-														mode === 'stacked'
-															? [
-																	<PairCell key="pair" row={row} />,
-																	<Liquidity key="liquidity" row={row} />,
-																]
-															: [
-																	<PairCell key="pair" row={row} />,
-																	<PriceValue
-																		key="price"
-																		value={row.price}
-																		quote={row.quote}
-																	/>,
-																	<Liquidity key="liquidity" row={row} />,
-																	...(showDex
-																		? [
-																				<Spread
-																					key="spread"
-																					value={row.spread}
-																				/>,
-																			]
-																		: []),
-																	<Volume
-																		key="day"
-																		loading={volumeLoading}
-																		value={row.volume?.day}
-																	/>,
-																	<Volume
-																		key="month"
-																		loading={volumeLoading}
-																		value={row.volume?.month}
-																	/>,
-																],
-													link: {
-														href: marketHref(row.link),
-														title: `${row.base.symbol} / ${row.quote.symbol}`,
-													},
-												}
-											})
+					<Tabs.Root
+						value={search.tab}
+						onValueChange={(value) =>
+							setSearch({ tab: value === 'trades' ? 'trades' : 'pairs' })
+						}
+					>
+						<div {...styles.tabsBar()}>
+							<Tabs.List aria-label="Markets data">
+								<Tabs.Tab value="pairs">
+									Pairs
+									{!pairsPending && (
+										<span {...styles.tabCount()}>{rows.length}</span>
+									)}
+								</Tabs.Tab>
+								<Tabs.Tab value="trades">
+									Trades
+									{!tradesPending && (
+										<span {...styles.tabCount()}>{trades.length}</span>
+									)}
+								</Tabs.Tab>
+								<Tabs.Indicator />
+							</Tabs.List>
+							{showDex && (
+								// biome-ignore lint/a11y/noLabelWithoutControl: Base UI's Switch renders its input inside the label.
+								<label {...styles.toggle()}>
+									<Switch
+										size="small"
+										checked={!search.unverified}
+										onCheckedChange={(checked) =>
+											setSearch({ unverified: !checked })
 										}
-										totalItems={rows.length}
-										page={1}
-										loading={rows.length === 0 && pairsPending}
-										itemsPerPage={Math.max(rows.length, 5)}
-										itemsLabel="pairs"
-										pagination="simple"
-										showSimpleCount={false}
-										emptyState="No pairs"
 									/>
-								)}
-							</>
-						),
-					},
-					{
-						title: 'Trades',
-						totalItems: tradesPending ? undefined : trades.length,
-						itemsLabel: 'trades',
-						autoCollapse: false,
-						contextual: verifiedToggle,
-						content: (
-							<>
-								{tradesErrors}
-								{(trades.length > 0 || tradesErrors.length === 0) && (
-									<TradesGrid
+									Verified only
+								</label>
+							)}
+						</div>
+
+						<Tabs.Panel value="pairs" {...styles.panel()}>
+							<Surface size="medium">
+								<Stack gap="16">
+									{pairsErrors.map((error) => (
+										<LoadError key={error.label} {...error} />
+									))}
+									<PairsTable
+										rows={rows}
+										loading={rows.length === 0 && pairsPending}
+										volumeLoading={volumePending}
+										showSpread={showDex}
+										hasErrors={pairsErrors.length > 0}
+										search={search}
+										onSort={sortBy}
+									/>
+								</Stack>
+							</Surface>
+						</Tabs.Panel>
+
+						<Tabs.Panel value="trades" {...styles.panel()}>
+							<Surface size="medium">
+								<Stack gap="16">
+									{tradesErrors.map((error) => (
+										<LoadError key={error.label} {...error} />
+									))}
+									<TradesTable
 										trades={trades}
 										showVenue={venues.length > 1}
 										loading={trades.length === 0 && tradesPending}
+										hasErrors={tradesErrors.length > 0}
 									/>
-								)}
-							</>
-						),
-					},
-				]}
-			/>
+								</Stack>
+							</Surface>
+						</Tabs.Panel>
+					</Tabs.Root>
+				</Stack>
+			</Container>
 		</div>
 	)
 }
 
-/** Both venues' latest trades, newest first. */
-function TradesGrid(props: {
-	trades: MarketTrade[]
-	showVenue: boolean
-	loading: boolean
-}): React.JSX.Element {
-	const { trades, showVenue } = props
-	return (
-		<DataGrid
-			columns={{
-				stacked: [
-					{ label: 'Trade', align: 'start', width: '1fr' },
-					{ label: 'Value', align: 'end', width: 'max-content' },
-				],
-				tabs: [
-					{ label: 'Time', align: 'start', width: 120 },
-					{ label: 'Trade', align: 'start', width: '2fr', minWidth: 240 },
-					{ label: 'Value', align: 'end', width: '1fr', minWidth: 96 },
-					{ label: 'Amount', align: 'end', width: '1fr', minWidth: 140 },
-					{ label: 'Price', align: 'end', width: '1fr', minWidth: 112 },
-					{ label: 'Taker', align: 'end', width: '1fr', minWidth: 120 },
-				],
-			}}
-			items={(mode) =>
-				trades.map((trade) => {
-					const venue = showVenue && (
-						<span className="label-12 text-tertiary">
-							{venueLabels[trade.venue]}
-						</span>
-					)
-					return {
-						key: trade.id,
-						cells:
-							mode === 'stacked'
-								? [
-										<div key="trade" className="flex flex-col gap-1 min-w-0">
-											<TradeLabel trade={trade} />
-											<span className="flex items-center gap-1.5 label-12 text-tertiary whitespace-nowrap">
-												<RelativeTime timestamp={BigInt(trade.timestamp)} />
-												{venue && <span aria-hidden="true">·</span>}
-												{venue}
-											</span>
-										</div>,
-										<UsdValue key="value" value={trade.value} />,
-									]
-								: [
-										<RelativeTime
-											key="time"
-											timestamp={BigInt(trade.timestamp)}
-											className="text-secondary tabular-nums whitespace-nowrap"
-										/>,
-										<div key="trade" className="flex flex-col gap-1 min-w-0">
-											<TradeLabel trade={trade} />
-											{venue}
-										</div>,
-										<UsdValue key="value" value={trade.value} />,
-										<span
-											key="amount"
-											className="tabular-nums text-primary whitespace-nowrap"
-										>
-											{trade.baseAmount > 0 && trade.baseAmount < 0.01
-												? '<0.01'
-												: amount.format(trade.baseAmount)}{' '}
-											<span className="text-tertiary">{trade.base.symbol}</span>
-										</span>,
-										<span
-											key="price"
-											className="tabular-nums text-secondary whitespace-nowrap"
-										>
-											{trade.baseAmount > 0
-												? price.format(trade.quoteAmount / trade.baseAmount)
-												: '—'}
-										</span>,
-										<Address
-											key="taker"
-											address={trade.taker}
-											align="end"
-											chars={4}
-										/>,
-									],
-						link: {
-							href: `/tx/${trade.transactionHash}`,
-							title: 'View transaction',
-						},
-					}
-				})
-			}
-			totalItems={trades.length}
-			page={1}
-			loading={props.loading}
-			itemsPerPage={Math.max(trades.length, 8)}
-			itemsLabel="trades"
-			pagination="simple"
-			showSimpleCount={false}
-			emptyState="No trades in the last 30 days"
-		/>
-	)
-}
-
-/**
- * A taker buying base paid quote; selling it received quote. A DEX swap
- * routed through several books has no side.
- */
-function TradeLabel(props: { trade: MarketTrade }): React.JSX.Element {
-	const { side, base, quote } = props.trade
-	return (
-		<span className="flex items-center gap-1.5 min-w-0 whitespace-nowrap">
-			{side === null ? (
-				<span className="text-tertiary">Swap</span>
-			) : (
-				<span
-					className={cx(
-						'font-medium',
-						side === 'buy' ? 'text-positive' : 'text-negative',
-					)}
-				>
-					{side === 'buy' ? 'Buy' : 'Sell'}
-				</span>
-			)}
-			<TokenChip token={base} />
-			<span className="text-tertiary">{side === 'buy' ? 'with' : 'for'}</span>
-			<TokenChip token={quote} />
-		</span>
-	)
-}
-
-function TokenChip(props: { token: DexPoolToken }): React.JSX.Element {
-	return (
-		<span className="inline-flex items-center gap-1.5 font-medium text-primary">
-			<TokenIcon
-				address={props.token.address}
-				name={props.token.symbol}
-				className="size-4"
-			/>
-			{props.token.symbol}
-		</span>
-	)
-}
-
-/** A pair, its venue and, unless it trades normally, its status. */
-function PairCell(props: { row: MarketRow }): React.JSX.Element {
-	const { base, quote, pool, status, statusDetail } = props.row
-	return (
-		<div className="flex items-center gap-2.5 min-w-0">
-			<span className="inline-flex shrink-0 items-center">
-				<TokenIcon
-					address={base.address}
-					name={base.symbol}
-					className="size-5 ring-2 ring-card relative z-1"
-				/>
-				<TokenIcon
-					address={quote.address}
-					name={quote.symbol}
-					className="size-5 -ml-1.5 ring-2 ring-card"
-				/>
-			</span>
-			<span className="flex flex-col min-w-0">
-				<span className="truncate font-medium text-primary">
-					{base.symbol}
-					<span className="text-tertiary"> / </span>
-					{quote.symbol}
-				</span>
-				<span className="flex items-center gap-1.5 label-12 text-tertiary truncate">
-					{pool ? `${venueLabels.propamm} ${pool.version}` : 'Order book'}
-					{status !== 'live' && (
-						<>
-							<span aria-hidden="true">·</span>
-							<StatusIndicator status={status} detail={statusDetail} />
-						</>
-					)}
-				</span>
-			</span>
-		</div>
-	)
-}
-
-/** A dot in the status's intent and the venue's own word for it. */
-function StatusIndicator(props: {
-	status: MarketStatus
-	detail: string | null
-}): React.JSX.Element {
-	const intent = statusIntent[props.status]
-	return (
-		<span
-			className="inline-flex items-center gap-1.5 whitespace-nowrap text-secondary"
-			title={props.detail ? statusLabels[props.status] : undefined}
-		>
-			<span
-				aria-hidden="true"
-				className={cx(
-					'size-2 rounded-full shrink-0',
-					intent === 'positive' && 'bg-positive',
-					intent === 'warning' && 'bg-warning',
-					intent === 'neutral' && 'bg-tertiary',
-				)}
-			/>
-			{props.detail ?? statusLabels[props.status]}
-		</span>
-	)
-}
-
-function PriceValue(props: {
-	value: number | null
-	quote: DexPoolToken
-}): React.JSX.Element {
-	if (props.value === null) return <Dash />
-	return (
-		<span className="tabular-nums text-secondary whitespace-nowrap">
-			{price.format(props.value)}{' '}
-			<span className="text-tertiary">{props.quote.symbol}</span>
-		</span>
-	)
-}
-
-function Liquidity(props: { row: MarketRow }): React.JSX.Element {
-	const { liquidity } = props.row
-	if (!liquidity) return <Dash />
-	return (
-		<span className="tabular-nums text-primary">
-			{liquidity.partial && '≥'}
-			{usd(liquidity.value)}
-		</span>
-	)
-}
-
-function Spread(props: { value: number | null }): React.JSX.Element {
-	if (props.value === null) return <Dash />
-	return (
-		<span className="tabular-nums text-secondary">
-			{props.value < 0 ? 'Crossed' : `${bps.format(props.value)} bps`}
-		</span>
-	)
-}
-
-function Volume(props: {
-	loading: boolean
-	value: number | undefined
-}): React.JSX.Element {
-	if (props.loading)
-		return (
-			<span className="inline-block h-3.5 w-12 rounded-[4px] bg-distinct/70 animate-pulse" />
-		)
-	return (
-		<UsdValue value={props.value && props.value > 0 ? props.value : null} />
-	)
-}
-
-function UsdValue(props: { value: number | null }): React.JSX.Element {
-	if (props.value === null) return <Dash />
-	return <span className="tabular-nums text-primary">{usd(props.value)}</span>
-}
-
-function Dash(): React.JSX.Element {
-	return <span className="text-tertiary">—</span>
-}
-
-function SortLabel(props: {
-	sort: MarketSort
-	label: string
-	title?: string | undefined
-	search: MarketsSearch
-	onSort: (sort: MarketSort) => void
-}): React.JSX.Element {
-	const active = props.search.sort === props.sort
-	return (
-		<button
-			type="button"
-			onClick={() => props.onSort(props.sort)}
-			aria-label={`Sort by ${props.label}`}
-			aria-pressed={active}
-			title={props.title}
-			className={cx(
-				'cursor-pointer hover:text-primary',
-				active && 'text-primary',
-			)}
-		>
-			{props.label}
-		</button>
-	)
-}
-
-function VerifiedToggle(props: {
-	checked: boolean
-	onChange: (checked: boolean) => void
-}): React.JSX.Element {
-	return (
-		<label className="inline-flex items-center gap-2 label-12 text-secondary whitespace-nowrap cursor-pointer select-none">
-			<input
-				type="checkbox"
-				checked={props.checked}
-				onChange={(event) => props.onChange(event.target.checked)}
-				className="accent-(--color-accent) cursor-pointer"
-			/>
-			Verified only
-		</label>
-	)
-}
-
-/** A headline total: a pulse while loading, ≥ for a lower bound. */
-function Stat(props: { label: string; total: MarketTotal }): React.JSX.Element {
-	const { total } = props
-	return (
-		<div className="flex flex-col gap-2 px-[18px] py-4 border-card-border border-dashed not-last:border-r">
-			<div
-				className="copy-13 text-tertiary"
-				title={
-					total?.partial
-						? 'A lower bound: a venue or some of its reads are unavailable.'
-						: undefined
-				}
-			>
-				{props.label}
-			</div>
-			<div className="text-[20px] sm:text-[28px] leading-none tracking-[-0.02em] font-medium tabular-nums text-primary">
-				{total === null ? (
-					<span className="inline-block h-[20px] sm:h-[28px] w-20 rounded-[4px] bg-distinct/70 animate-pulse align-top" />
-				) : total.unknown ? (
-					'—'
-				) : (
-					`${total.partial ? '≥' : ''}${usd(total.value)}`
-				)}
-			</div>
-		</div>
-	)
-}
-
-/** A read that failed with nothing cached, and its retry. */
-function loadError(
+function errorProps(
 	label: string,
 	query: {
 		error: Error | null
 		isFetching: boolean
 		refetch: () => Promise<unknown>
 	},
-): React.JSX.Element {
-	return (
-		<div
-			key={label}
-			role="alert"
-			className="p-[18px] copy-14 text-secondary flex flex-col items-start gap-3 not-last:border-b border-dashed border-card-border"
+): LoadErrorProps {
+	return {
+		label,
+		message: query.error?.message ?? 'Unavailable.',
+		retrying: query.isFetching,
+		onRetry: () => void query.refetch(),
+	}
+}
+
+function PairsTable(props: PairsTableProps): React.JSX.Element | null {
+	const {
+		rows,
+		loading,
+		volumeLoading,
+		showSpread,
+		hasErrors,
+		search,
+		onSort,
+	} = props
+	const rowLink = useRowLink()
+	if (!loading && rows.length === 0)
+		return hasErrors ? null : <EmptyState title="No pairs" />
+
+	const sortable = (sort: MarketSort, label: string, title?: string) => (
+		<Table.HeaderCell
+			justify="end"
+			title={title}
+			aria-sort={
+				search.sort === sort
+					? search.dir === 'asc'
+						? 'ascending'
+						: 'descending'
+					: undefined
+			}
 		>
-			<p>
-				<span className="text-primary">{label} unavailable.</span>{' '}
-				{query.error?.message}
-			</p>
-			<button
-				type="button"
-				className="inline-flex items-center rounded-[7px] border border-card-border px-3 py-2 copy-13 text-secondary hover:text-primary cursor-pointer press-down disabled:opacity-50"
-				disabled={query.isFetching}
-				onClick={() => void query.refetch()}
+			<Table.SortButton
+				onClick={() => onSort(sort)}
+				aria-label={`Sort by ${label}`}
 			>
-				{query.isFetching ? 'Retrying…' : 'Try again'}
-			</button>
+				{label}
+			</Table.SortButton>
+		</Table.HeaderCell>
+	)
+
+	const columns = showSpread ? 6 : 5
+	return (
+		<div {...styles.scroll()}>
+			<Table interactive>
+				<Table.Caption>Pairs on the Stablecoin DEX and PropAMM</Table.Caption>
+				<Table.Head>
+					<Table.Row>
+						<Table.HeaderCell>Pair</Table.HeaderCell>
+						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+						{sortable(
+							'liquidity',
+							'Liquidity',
+							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share.',
+						)}
+						{showSpread && sortable('spread', 'Spread')}
+						{sortable('day', '1D vol')}
+						{sortable('month', '30D vol')}
+					</Table.Row>
+				</Table.Head>
+				<Table.Body>
+					{rows.map((row) => {
+						const rowVolumeLoading = volumeLoading && row.venue === 'propamm'
+						return (
+							<Table.Row key={row.key} {...rowLink(marketHref(row.link))}>
+								<Table.Cell>
+									<PairLabel row={row} />
+								</Table.Cell>
+								<Table.Cell justify="end" numeric>
+									<PriceValue value={row.price} quote={row.quote} />
+								</Table.Cell>
+								<Table.Cell justify="end" numeric>
+									{row.liquidity ? (
+										<span {...styles.nowrap()}>
+											{row.liquidity.partial && '≥'}
+											{usd(row.liquidity.value)}
+										</span>
+									) : (
+										<Dash />
+									)}
+								</Table.Cell>
+								{showSpread && (
+									<Table.Cell justify="end" numeric>
+										<SpreadValue value={row.spread} />
+									</Table.Cell>
+								)}
+								<Table.Cell justify="end" numeric>
+									<Volume loading={rowVolumeLoading} value={row.volume?.day} />
+								</Table.Cell>
+								<Table.Cell justify="end" numeric>
+									<Volume
+										loading={rowVolumeLoading}
+										value={row.volume?.month}
+									/>
+								</Table.Cell>
+							</Table.Row>
+						)
+					})}
+					{loading &&
+						Array.from({ length: LOADING_ROWS }, (_, index) => (
+							<LoadingRow key={index} columns={columns} />
+						))}
+				</Table.Body>
+			</Table>
 		</div>
 	)
+}
+
+type PairsTableProps = {
+	rows: MarketRow[]
+	/** Nothing to show yet while a venue loads. */
+	loading: boolean
+	volumeLoading: boolean
+	/** Spread is a DEX measure, shown while DEX pairs are in view. */
+	showSpread: boolean
+	/** A venue failed, so an empty list isn't the whole story. */
+	hasErrors: boolean
+	search: MarketsSearch
+	onSort: (sort: MarketSort) => void
+}
+
+/** Both venues' latest trades, newest first. */
+function TradesTable(props: TradesTableProps): React.JSX.Element | null {
+	const { trades, showVenue, loading, hasErrors } = props
+	const rowLink = useRowLink()
+	if (!loading && trades.length === 0)
+		return hasErrors ? null : (
+			<EmptyState title="No trades in the last 30 days" />
+		)
+
+	return (
+		<div {...styles.scroll()}>
+			<Table interactive>
+				<Table.Caption>
+					Latest Stablecoin DEX swaps and PropAMM trades of the last 30 days
+				</Table.Caption>
+				<Table.Head>
+					<Table.Row>
+						<Table.HeaderCell>Time</Table.HeaderCell>
+						<Table.HeaderCell>Trade</Table.HeaderCell>
+						<Table.HeaderCell justify="end">Value</Table.HeaderCell>
+						<Table.HeaderCell justify="end">Amount</Table.HeaderCell>
+						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+						<Table.HeaderCell justify="end">Taker</Table.HeaderCell>
+					</Table.Row>
+				</Table.Head>
+				<Table.Body>
+					{trades.map((trade) => (
+						<Table.Row
+							key={trade.id}
+							{...rowLink(`/tx/${trade.transactionHash}`)}
+						>
+							<Table.Cell muted>
+								<Link
+									preload="intent"
+									to="/tx/$hash"
+									params={{ hash: trade.transactionHash }}
+									title="View transaction"
+									{...styles.link()}
+								>
+									<span {...styles.nowrap()}>
+										<RelativeTime timestamp={BigInt(trade.timestamp)} />
+									</span>
+								</Link>
+							</Table.Cell>
+							<Table.Cell>
+								<TradeLabel trade={trade} />
+								{showVenue && (
+									<Table.Subtitle>{venueLabels[trade.venue]}</Table.Subtitle>
+								)}
+							</Table.Cell>
+							<Table.Cell justify="end" numeric>
+								{trade.value === null ? <Dash /> : usd(trade.value)}
+							</Table.Cell>
+							<Table.Cell justify="end" numeric>
+								<span {...styles.nowrap()}>
+									{trade.baseAmount > 0 && trade.baseAmount < 0.01
+										? '<0.01'
+										: amount.format(trade.baseAmount)}{' '}
+									<span {...styles.muted()}>{trade.base.symbol}</span>
+								</span>
+							</Table.Cell>
+							<Table.Cell justify="end" numeric>
+								<span {...styles.secondary()}>
+									{trade.baseAmount > 0
+										? price.format(trade.quoteAmount / trade.baseAmount)
+										: '—'}
+								</span>
+							</Table.Cell>
+							<Table.Cell justify="end">
+								<Address address={trade.taker} align="end" chars={4} />
+							</Table.Cell>
+						</Table.Row>
+					))}
+					{loading &&
+						Array.from({ length: LOADING_ROWS }, (_, index) => (
+							<LoadingRow key={index} columns={6} />
+						))}
+				</Table.Body>
+			</Table>
+		</div>
+	)
+}
+
+type TradesTableProps = {
+	trades: MarketTrade[]
+	showVenue: boolean
+	loading: boolean
+	hasErrors: boolean
+}
+
+function LoadingRow(props: LoadingRowProps): React.JSX.Element {
+	return (
+		<Table.Row aria-busy="true">
+			{Array.from({ length: props.columns }, (_, index) => (
+				<Table.Cell key={index}>
+					<Skeleton>
+						<span>Loading value</span>
+					</Skeleton>
+				</Table.Cell>
+			))}
+		</Table.Row>
+	)
+}
+
+type LoadingRowProps = { columns: number }
+
+/**
+ * A taker buying base paid quote; selling it received quote. A DEX swap
+ * routed through several books has no side.
+ */
+function TradeLabel(props: TradeLabelProps): React.JSX.Element {
+	const { side, base, quote } = props.trade
+	return (
+		<Inline gap="8" {...styles.nowrap()}>
+			{side === null ? (
+				<span {...styles.muted()}>Swap</span>
+			) : (
+				<span {...(side === 'buy' ? styles.buy() : styles.sell())}>
+					{side === 'buy' ? 'Buy' : 'Sell'}
+				</span>
+			)}
+			<TokenChip token={base} />
+			<span {...styles.muted()}>{side === 'buy' ? 'with' : 'for'}</span>
+			<TokenChip token={quote} />
+		</Inline>
+	)
+}
+
+type TradeLabelProps = { trade: MarketTrade }
+
+function TokenChip(props: TokenChipProps): React.JSX.Element {
+	return (
+		<Inline gap="4" render={<span />}>
+			<TokenLogo
+				src={`/api/token/logo/${props.token.address}`}
+				alt=""
+				size="small"
+			/>
+			<span {...styles.strong()}>{props.token.symbol}</span>
+		</Inline>
+	)
+}
+
+type TokenChipProps = { token: DexPoolToken }
+
+/** The row's own link, so a keyboard reaches what a row click opens. */
+function MarketLinkTo(props: MarketLinkToProps): React.JSX.Element {
+	const { link, children, title } = props
+	if (link.kind === 'pair')
+		return (
+			<Link
+				preload="intent"
+				to="/dex/$from/$to"
+				params={{ from: link.from, to: link.to }}
+				title={title}
+				{...styles.link()}
+			>
+				{children}
+			</Link>
+		)
+	return (
+		<Link
+			preload="intent"
+			to="/address/$address"
+			params={{ address: link.address }}
+			title={title}
+			{...styles.link()}
+		>
+			{children}
+		</Link>
+	)
+}
+
+type MarketLinkToProps = {
+	link: MarketLink
+	title: string
+	children: React.ReactNode
+}
+
+/** A pair, its venue and, unless it trades normally, its status. */
+function PairLabel(props: PairLabelProps): React.JSX.Element {
+	const { base, quote, pool, link, status, statusDetail } = props.row
+	return (
+		<MarketLinkTo link={link} title={`${base.symbol} / ${quote.symbol}`}>
+			<Inline gap="12" render={<span />}>
+				<span {...styles.pair()}>
+					<TokenLogo src={`/api/token/logo/${base.address}`} alt="" />
+					<TokenLogo src={`/api/token/logo/${quote.address}`} alt="" />
+				</span>
+				<span {...styles.nowrap()}>
+					<span {...styles.strong()}>
+						{base.symbol}
+						<span {...styles.muted()}> / </span>
+						{quote.symbol}
+					</span>
+					<Table.Subtitle>
+						<span {...styles.subtitle()}>
+							{pool ? `${venueLabels.propamm} ${pool.version}` : 'Order book'}
+							{status !== 'live' && (
+								<>
+									<span aria-hidden="true">·</span>
+									<StatusLabel status={status} detail={statusDetail} />
+								</>
+							)}
+						</span>
+					</Table.Subtitle>
+				</span>
+			</Inline>
+		</MarketLinkTo>
+	)
+}
+
+type PairLabelProps = { row: MarketRow }
+
+/** A dot in the status's intent and the venue's own word for it. */
+function StatusLabel(props: StatusLabelProps): React.JSX.Element {
+	return (
+		<StatusIndicator
+			intent={statusIntent[props.status]}
+			title={props.detail ? statusLabels[props.status] : undefined}
+		>
+			{props.detail ?? statusLabels[props.status]}
+		</StatusIndicator>
+	)
+}
+
+type StatusLabelProps = { status: MarketStatus; detail: string | null }
+
+function PriceValue(props: PriceValueProps): React.JSX.Element {
+	if (props.value === null) return <Dash />
+	return (
+		<span {...styles.nowrap()}>
+			{price.format(props.value)}{' '}
+			<span {...styles.muted()}>{props.quote.symbol}</span>
+		</span>
+	)
+}
+
+type PriceValueProps = { value: number | null; quote: DexPoolToken }
+
+function SpreadValue(props: { value: number | null }): React.JSX.Element {
+	if (props.value === null) return <Dash />
+	return (
+		<span {...styles.secondary()}>
+			{props.value < 0 ? 'Crossed' : `${bps.format(props.value)} bps`}
+		</span>
+	)
+}
+
+function Volume(props: VolumeProps): React.JSX.Element {
+	if (props.loading)
+		return (
+			<Skeleton>
+				<span>$0.00M</span>
+			</Skeleton>
+		)
+	if (props.value === undefined || props.value <= 0) return <Dash />
+	return <span>{usd(props.value)}</span>
+}
+
+type VolumeProps = { loading: boolean; value: number | undefined }
+
+function Dash(): React.JSX.Element {
+	return <span {...styles.muted()}>—</span>
+}
+
+/** A headline total: a skeleton while loading, ≥ for a lower bound. */
+function Stat(props: StatProps): React.JSX.Element {
+	const { total } = props
+	const value =
+		total === null
+			? undefined
+			: total.unknown
+				? '—'
+				: `${total.partial ? '≥' : ''}${usd(total.value)}`
+	return (
+		<Surface size="medium">
+			<Stack gap="8">
+				<p
+					{...styles.statLabel()}
+					title={
+						total?.partial
+							? 'A lower bound: a venue or some of its reads are unavailable.'
+							: undefined
+					}
+				>
+					{props.label}
+				</p>
+				<Skeleton show={value === undefined}>
+					<p {...styles.statValue()}>{value ?? '$0.00M'}</p>
+				</Skeleton>
+			</Stack>
+		</Surface>
+	)
+}
+
+type StatProps = { label: string; total: MarketTotal }
+
+function EmptyState(props: { title: string }): React.JSX.Element {
+	return (
+		<Empty.Root>
+			<Empty.Title>{props.title}</Empty.Title>
+		</Empty.Root>
+	)
+}
+
+/** A read that failed with nothing cached, and its retry. */
+function LoadError(props: LoadErrorProps): React.JSX.Element {
+	return (
+		<Alert intent={props.intent ?? 'negative'}>
+			<Alert.Icon />
+			<Alert.Content>
+				<Alert.Title>{props.label} unavailable</Alert.Title>
+				{props.message}
+				<Alert.Action disabled={props.retrying} onClick={props.onRetry}>
+					{props.retrying ? 'Retrying…' : 'Try again'}
+				</Alert.Action>
+			</Alert.Content>
+		</Alert>
+	)
+}
+
+type LoadErrorProps = {
+	label: string
+	message: string
+	retrying: boolean
+	onRetry: () => void
+	intent?: 'negative' | 'warning' | undefined
 }
