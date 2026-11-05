@@ -51,6 +51,12 @@ export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
 			address: '0x18f358b4724a9bef5d732660427ee80c1a44bdc3',
 			pairIndex: 0,
 		},
+		{
+			// DLUSD/OUSD, Deel's pool
+			version: 'v1',
+			address: '0x1e3423c85fe006d27091b9482caa9520c250f4c6',
+			pairIndex: 0,
+		},
 	],
 	// Moderato testnet: the live tEUR and tARS venue pairs.
 	42431: [
