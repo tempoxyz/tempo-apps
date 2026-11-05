@@ -459,6 +459,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 							autoCorrect="off"
 							tabIndex={tabIndex}
 							value={value}
+							className="outline-none! focus-visible:outline-none!"
 							data-1p-ignore
 							name="explore-query"
 							placeholder="Search address, hash, block, token"

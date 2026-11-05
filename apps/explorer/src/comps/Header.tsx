@@ -36,16 +36,30 @@ export function Header(): React.JSX.Element {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
-					<Button.Link
-						render={<Link to="/simulate" />}
-						aria-label="Simulate transaction"
-						variant="secondary"
-						size="small"
-					>
-						<Play />
-						<span className="@max-[799px]:hidden">Simulate</span>
-					</Button.Link>
-					<Header.BlockNumber className="@max-[399px]:hidden" />
+					<span className="@max-[799px]:hidden flex">
+						<Button.Link
+							render={<Link to="/simulate" />}
+							variant="secondary"
+							size="small"
+						>
+							<Play />
+							Simulate
+						</Button.Link>
+					</span>
+					<span className="@min-[800px]:hidden flex">
+						<Button.Link
+							render={<Link to="/simulate" />}
+							aria-label="Simulate transaction"
+							variant="secondary"
+							size="small"
+							shape="icon"
+						>
+							<Play />
+						</Button.Link>
+					</span>
+					<span className="@max-[399px]:hidden flex">
+						<Header.BlockNumber />
+					</span>
 				</div>
 			</div>
 			<Header.Search compact />
