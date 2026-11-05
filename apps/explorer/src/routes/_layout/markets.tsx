@@ -193,6 +193,19 @@ namespace styles {
 		fontVariantNumeric: 'tabular-nums !custom',
 	})
 	export const panel = style({ paddingBlockStart: '16' })
+	/** Columns a phone leaves out, so the rest keep room to read. */
+	export const wide = style({
+		'@media (max-width: 639px)': { display: 'none !custom' },
+	})
+	/** What a phone shows in place of a hidden column. */
+	export const narrow = style({
+		display: 'none !custom',
+		'@media (max-width: 639px)': { display: 'inline !custom' },
+	})
+	/** A phone gives the table more of its width. */
+	export const card = style({
+		'@media (max-width: 639px)': { paddingInline: '16' },
+	})
 }
 
 function MarketsPage(): React.JSX.Element {
@@ -427,7 +440,7 @@ function MarketsPage(): React.JSX.Element {
 						</div>
 
 						<Tabs.Panel value="pairs" {...styles.panel()}>
-							<Surface size="medium">
+							<Surface size="medium" {...styles.card()}>
 								<Stack gap="16">
 									{pairsErrors.map((error) => (
 										<LoadError key={error.label} {...error} />
@@ -446,7 +459,7 @@ function MarketsPage(): React.JSX.Element {
 						</Tabs.Panel>
 
 						<Tabs.Panel value="trades" {...styles.panel()}>
-							<Surface size="medium">
+							<Surface size="medium" {...styles.card()}>
 								<Stack gap="16">
 									{tradesErrors.map((error) => (
 										<LoadError key={error.label} {...error} />
@@ -497,10 +510,16 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 	if (!loading && rows.length === 0)
 		return hasErrors ? null : <EmptyState title="No pairs" />
 
-	const sortable = (sort: MarketSort, label: string, title?: string) => (
+	const sortable = (
+		sort: MarketSort,
+		label: string,
+		title?: string,
+		wide = true,
+	) => (
 		<Table.HeaderCell
 			justify="end"
 			title={title}
+			{...(wide ? styles.wide() : {})}
 			aria-sort={
 				search.sort === sort
 					? search.dir === 'asc'
@@ -526,11 +545,14 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 				<Table.Head>
 					<Table.Row>
 						<Table.HeaderCell>Pair</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Price
+						</Table.HeaderCell>
 						{sortable(
 							'liquidity',
 							'Liquidity',
 							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share.',
+							false,
 						)}
 						{showSpread && sortable('spread', 'Spread')}
 						{sortable('day', '1D vol')}
@@ -545,7 +567,7 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 								<Table.Cell>
 									<PairLabel row={row} />
 								</Table.Cell>
-								<Table.Cell justify="end" numeric>
+								<Table.Cell justify="end" numeric {...styles.wide()}>
 									<PriceValue value={row.price} quote={row.quote} />
 								</Table.Cell>
 								<Table.Cell justify="end" numeric>
@@ -559,14 +581,14 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 									)}
 								</Table.Cell>
 								{showSpread && (
-									<Table.Cell justify="end" numeric>
+									<Table.Cell justify="end" numeric {...styles.wide()}>
 										<SpreadValue value={row.spread} />
 									</Table.Cell>
 								)}
-								<Table.Cell justify="end" numeric>
+								<Table.Cell justify="end" numeric {...styles.wide()}>
 									<Volume loading={rowVolumeLoading} value={row.volume?.day} />
 								</Table.Cell>
-								<Table.Cell justify="end" numeric>
+								<Table.Cell justify="end" numeric {...styles.wide()}>
 									<Volume
 										loading={rowVolumeLoading}
 										value={row.volume?.month}
@@ -615,12 +637,18 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 				</Table.Caption>
 				<Table.Head>
 					<Table.Row>
-						<Table.HeaderCell>Time</Table.HeaderCell>
+						<Table.HeaderCell {...styles.wide()}>Time</Table.HeaderCell>
 						<Table.HeaderCell>Trade</Table.HeaderCell>
 						<Table.HeaderCell justify="end">Value</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Amount</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Price</Table.HeaderCell>
-						<Table.HeaderCell justify="end">Taker</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Amount
+						</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Price
+						</Table.HeaderCell>
+						<Table.HeaderCell justify="end" {...styles.wide()}>
+							Taker
+						</Table.HeaderCell>
 					</Table.Row>
 				</Table.Head>
 				<Table.Body>
@@ -629,7 +657,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 							key={trade.id}
 							{...rowLink(`/tx/${trade.transactionHash}`)}
 						>
-							<Table.Cell muted>
+							<Table.Cell muted {...styles.wide()}>
 								<Link
 									preload="intent"
 									to="/tx/$hash"
@@ -644,14 +672,18 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 							</Table.Cell>
 							<Table.Cell>
 								<TradeLabel trade={trade} />
-								{showVenue && (
-									<Table.Subtitle>{venueLabels[trade.venue]}</Table.Subtitle>
-								)}
+								<Table.Subtitle>
+									{showVenue && venueLabels[trade.venue]}
+									<span {...styles.narrow()}>
+										{showVenue && <span aria-hidden="true"> · </span>}
+										<RelativeTime timestamp={BigInt(trade.timestamp)} />
+									</span>
+								</Table.Subtitle>
 							</Table.Cell>
 							<Table.Cell justify="end" numeric>
 								{trade.value === null ? <Dash /> : usd(trade.value)}
 							</Table.Cell>
-							<Table.Cell justify="end" numeric>
+							<Table.Cell justify="end" {...styles.wide()} numeric>
 								<span {...styles.nowrap()}>
 									{trade.baseAmount > 0 && trade.baseAmount < 0.01
 										? '<0.01'
@@ -659,21 +691,21 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 									<span {...styles.muted()}>{trade.base.symbol}</span>
 								</span>
 							</Table.Cell>
-							<Table.Cell justify="end" numeric>
+							<Table.Cell justify="end" {...styles.wide()} numeric>
 								<span {...styles.secondary()}>
 									{trade.baseAmount > 0
 										? price.format(trade.quoteAmount / trade.baseAmount)
 										: '—'}
 								</span>
 							</Table.Cell>
-							<Table.Cell justify="end">
+							<Table.Cell justify="end" {...styles.wide()}>
 								<Address address={trade.taker} align="end" chars={4} />
 							</Table.Cell>
 						</Table.Row>
 					))}
 					{loading &&
 						Array.from({ length: LOADING_ROWS }, (_, index) => (
-							<LoadingRow key={index} columns={6} />
+							<LoadingRow key={index} columns={6} narrow={[1, 2]} />
 						))}
 				</Table.Body>
 			</Table>
@@ -692,7 +724,10 @@ function LoadingRow(props: LoadingRowProps): React.JSX.Element {
 	return (
 		<Table.Row aria-busy="true">
 			{Array.from({ length: props.columns }, (_, index) => (
-				<Table.Cell key={index}>
+				<Table.Cell
+					key={index}
+					{...((props.narrow ?? [0, 2]).includes(index) ? {} : styles.wide())}
+				>
 					<Skeleton>
 						<span>Loading value</span>
 					</Skeleton>
@@ -702,7 +737,11 @@ function LoadingRow(props: LoadingRowProps): React.JSX.Element {
 	)
 }
 
-type LoadingRowProps = { columns: number }
+type LoadingRowProps = {
+	columns: number
+	/** The columns a phone keeps. */
+	narrow?: number[]
+}
 
 /**
  * A taker buying base paid quote; selling it received quote. A DEX swap
@@ -780,6 +819,7 @@ type MarketLinkToProps = {
 /** A pair, its venue and, unless it trades normally, its status. */
 function PairLabel(props: PairLabelProps): React.JSX.Element {
 	const { base, quote, pool, link, status, statusDetail } = props.row
+	const rowPrice = props.row.price
 	return (
 		<MarketLinkTo link={link} title={`${base.symbol} / ${quote.symbol}`}>
 			<Inline gap="12" render={<span />}>
@@ -796,6 +836,12 @@ function PairLabel(props: PairLabelProps): React.JSX.Element {
 					<Table.Subtitle>
 						<span {...styles.subtitle()}>
 							{pool ? `${venueLabels.propamm} ${pool.version}` : 'Order book'}
+							{rowPrice !== null && (
+								<span {...styles.narrow()}>
+									<span aria-hidden="true">· </span>
+									{price.format(rowPrice)}
+								</span>
+							)}
 							{status !== 'live' && (
 								<>
 									<span aria-hidden="true">·</span>
@@ -874,7 +920,7 @@ function Stat(props: StatProps): React.JSX.Element {
 				? '—'
 				: `${total.partial ? '≥' : ''}${usd(total.value)}`
 	return (
-		<Surface size="medium">
+		<Surface size="medium" {...styles.card()}>
 			<Stack gap="8">
 				<p
 					{...styles.statLabel()}

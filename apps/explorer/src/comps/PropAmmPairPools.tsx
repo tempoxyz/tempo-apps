@@ -39,6 +39,13 @@ const price = new Intl.NumberFormat('en-US', {
 })
 
 namespace styles {
+	/** Columns a phone leaves out, so the rest keep room to read. */
+	export const wide = style({
+		'@media (max-width: 639px)': { display: 'none !custom' },
+	})
+	export const card = style({
+		'@media (max-width: 639px)': { paddingInline: '16' },
+	})
 	export const heading = style({
 		color: 'content.primary',
 		margin: '0',
@@ -99,7 +106,11 @@ export function PropAmmPairPools(
 			: 'known'
 
 	return (
-		<Surface size="medium" render={<section aria-label="PropAMM pools" />}>
+		<Surface
+			size="medium"
+			{...styles.card()}
+			render={<section aria-label="PropAMM pools" />}
+		>
 			<Stack gap="16">
 				<h2 {...styles.heading()}>
 					PropAMM
@@ -114,16 +125,24 @@ export function PropAmmPairPools(
 						<Table.Head>
 							<Table.Row>
 								<Table.HeaderCell>Pool</Table.HeaderCell>
-								<Table.HeaderCell justify="end">Price</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									Price
+								</Table.HeaderCell>
 								<Table.HeaderCell
 									justify="end"
 									title="Base and quote held, in US dollars. Pairs on one v2 venue share its balances."
 								>
 									Inventory
 								</Table.HeaderCell>
-								<Table.HeaderCell justify="end">1D vol</Table.HeaderCell>
-								<Table.HeaderCell justify="end">30D vol</Table.HeaderCell>
-								<Table.HeaderCell justify="end">State</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									1D vol
+								</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									30D vol
+								</Table.HeaderCell>
+								<Table.HeaderCell justify="end" {...styles.wide()}>
+									State
+								</Table.HeaderCell>
 							</Table.Row>
 						</Table.Head>
 						<Table.Body>
@@ -139,7 +158,7 @@ export function PropAmmPairPools(
 										<Table.Cell>
 											<PoolLabel pool={pool} />
 										</Table.Cell>
-										<Table.Cell justify="end" numeric>
+										<Table.Cell justify="end" numeric {...styles.wide()}>
 											{pool.price === null ? (
 												<span {...styles.muted()}>—</span>
 											) : (
@@ -154,13 +173,13 @@ export function PropAmmPairPools(
 										<Table.Cell justify="end" numeric>
 											<Inventory pool={pool} />
 										</Table.Cell>
-										<Table.Cell justify="end" numeric>
+										<Table.Cell justify="end" numeric {...styles.wide()}>
 											<Volume state={volumeState} value={poolVolume?.day} />
 										</Table.Cell>
-										<Table.Cell justify="end" numeric>
+										<Table.Cell justify="end" numeric {...styles.wide()}>
 											<Volume state={volumeState} value={poolVolume?.month} />
 										</Table.Cell>
-										<Table.Cell justify="end">
+										<Table.Cell justify="end" {...styles.wide()}>
 											<State pool={pool} />
 										</Table.Cell>
 									</Table.Row>
