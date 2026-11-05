@@ -1,4 +1,6 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import { Button, TextInput } from '@tempoxyz/ds'
+import { ArrowRight, Search } from '@tempoxyz/ds/icons'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as React from 'react'
@@ -17,7 +19,6 @@ import type {
 	SearchResult,
 	TokenSearchResult,
 } from '#routes/api/search'
-import ArrowRight from '~icons/lucide/arrow-right'
 
 const recentSearchesStorageKey = 'tempo-explorer-recent-searches'
 const recentSearchesLimit = 6
@@ -447,101 +448,93 @@ export function ExploreInput(props: ExploreInput.Props) {
 					}}
 					className="relative w-full"
 				>
-					<input
-						ref={inputRef}
-						autoCapitalize="none"
-						autoComplete="off"
-						autoCorrect="off"
-						tabIndex={tabIndex}
-						value={value}
-						className={cx(
-							'text-search-input bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary rounded-body focus-visible:border-focus outline-0',
-							size === 'large' ? 'h-[52px]' : 'h-[42px]',
-							className,
-						)}
-						data-1p-ignore
-						name="explore-query"
-						placeholder="Search address, hash, block, token"
-						enterKeyHint="search"
-						spellCheck={false}
-						type="text"
-						onKeyDown={(event) => {
-							if (event.key === 'Escape' && showResults) {
-								event.preventDefault()
-								setShowResults(false)
-								setSelectedIndex(-1)
-								return
-							}
-
-							if (!showResults || flatSuggestions.length === 0) return
-
-							if (event.key === 'ArrowDown') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev < flatSuggestions.length - 1 ? prev + 1 : 0,
-								)
-								return
-							}
-
-							if (event.key === 'ArrowUp') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev > 0 ? prev - 1 : flatSuggestions.length - 1,
-								)
-								return
-							}
-
-							if (event.key === 'Enter') {
-								const index = selectedIndex >= 0 ? selectedIndex : 0
-								if (index < flatSuggestions.length) {
+					<TextInput.Group size={size} className={className}>
+						<TextInput.Prefix>
+							<Search />
+						</TextInput.Prefix>
+						<TextInput.Control
+							ref={inputRef}
+							autoCapitalize="none"
+							autoComplete="off"
+							autoCorrect="off"
+							tabIndex={tabIndex}
+							value={value}
+							data-1p-ignore
+							name="explore-query"
+							placeholder="Search address, hash, block, token"
+							enterKeyHint="search"
+							spellCheck={false}
+							type="text"
+							onKeyDown={(event) => {
+								if (event.key === 'Escape' && showResults) {
 									event.preventDefault()
-									handleSelect(flatSuggestions[index])
+									setShowResults(false)
+									setSelectedIndex(-1)
+									return
 								}
-								return
+
+								if (!showResults || flatSuggestions.length === 0) return
+
+								if (event.key === 'ArrowDown') {
+									event.preventDefault()
+									setSelectedIndex((prev) =>
+										prev < flatSuggestions.length - 1 ? prev + 1 : 0,
+									)
+									return
+								}
+
+								if (event.key === 'ArrowUp') {
+									event.preventDefault()
+									setSelectedIndex((prev) =>
+										prev > 0 ? prev - 1 : flatSuggestions.length - 1,
+									)
+									return
+								}
+
+								if (event.key === 'Enter') {
+									const index = selectedIndex >= 0 ? selectedIndex : 0
+									if (index < flatSuggestions.length) {
+										event.preventDefault()
+										handleSelect(flatSuggestions[index])
+									}
+									return
+								}
+							}}
+							onChange={(event) => {
+								setHasFocus(true)
+								onChange?.(event.target.value)
+							}}
+							onFocus={() => {
+								setHasFocus(true)
+								if (query.length > 0 || recentSearches.length > 0)
+									setShowResults(true)
+							}}
+							role="combobox"
+							aria-expanded={showResults}
+							aria-haspopup="listbox"
+							aria-autocomplete="list"
+							aria-controls={resultsId}
+							aria-activedescendant={
+								selectedIndex !== -1
+									? `${resultsId}-${selectedIndex}`
+									: undefined
 							}
-						}}
-						onChange={(event) => {
-							setHasFocus(true)
-							onChange?.(event.target.value)
-						}}
-						onFocus={() => {
-							setHasFocus(true)
-							if (query.length > 0 || recentSearches.length > 0)
-								setShowResults(true)
-						}}
-						role="combobox"
-						aria-expanded={showResults}
-						aria-haspopup="listbox"
-						aria-autocomplete="list"
-						aria-controls={resultsId}
-						aria-activedescendant={
-							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
-						}
-						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
-					/>
-					<div
-						className={cx(
-							'absolute top-[50%] -translate-y-[50%]',
-							size === 'large' ? 'right-[16px]' : 'right-[12px]',
-						)}
-					>
-						<button
-							type="submit"
-							aria-label="Search"
-							aria-disabled={!isValidInput}
-							className={cx(
-								'rounded-body! border border-base-border bg-base-background/90 grid place-items-center press-down transition-colors hover:bg-surface',
-								size === 'large' ? 'size-[34px]' : 'size-[30px]',
-								isValidInput
-									? 'text-primary cursor-pointer'
-									: 'text-tertiary cursor-default',
-							)}
-						>
-							<ArrowRight
-								className={size === 'large' ? 'size-[16px]' : 'size-[14px]'}
-							/>
-						</button>
-					</div>
+							title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
+						/>
+						<TextInput.Suffix>
+							<Button
+								type="submit"
+								aria-label="Search"
+								aria-disabled={!isValidInput}
+								shape="icon"
+								size={size === 'large' ? 'small' : 'xsmall'}
+								variant="secondary"
+								className={cx(!isValidInput && 'opacity-50')}
+							>
+								<ArrowRight />
+							</Button>
+						</TextInput.Suffix>
+					</TextInput.Group>
 				</form>
 			</div>
 

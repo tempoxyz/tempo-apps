@@ -4,6 +4,8 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
+import { Badge, Button, Menu, StatusIndicator } from '@tempoxyz/ds'
+import { ChevronDown, Layers, Play } from '@tempoxyz/ds/icons'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
@@ -16,9 +18,6 @@ import {
 	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
-import SquareSquare from '~icons/lucide/square-square'
-import FlaskConicalIcon from '~icons/lucide/flask-conical'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
@@ -37,14 +36,15 @@ export function Header(): React.JSX.Element {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
-					<Link
-						to="/simulate"
+					<Button.Link
+						render={<Link to="/simulate" />}
 						aria-label="Simulate transaction"
-						className="flex h-[28px] items-center gap-[5px] rounded-body border border-base-border bg-base-plane px-[8px] label-12 text-secondary hover:border-accent hover:text-primary press-down"
+						variant="secondary"
+						size="small"
 					>
-						<FlaskConicalIcon className="size-[12px]" />
+						<Play />
 						<span className="@max-[799px]:hidden">Simulate</span>
-					</Link>
+					</Button.Link>
 					<Header.BlockNumber className="@max-[399px]:hidden" />
 				</div>
 			</div>
@@ -172,9 +172,6 @@ export namespace Header {
 
 	export function NetworkBadge(props: NetworkBadge.Props): React.JSX.Element {
 		const { tempoEnv } = props
-		const [isOpen, setIsOpen] = React.useState(false)
-		const menuId = React.useId()
-		const rootRef = React.useRef<HTMLDivElement>(null)
 		const activeOption = getActiveExplorerNetworkOption(tempoEnv)
 		const isNotFoundPage = useIsNotFoundPage()
 		const currentPath = useRouterState({
@@ -185,82 +182,45 @@ export namespace Header {
 			},
 		})
 
-		React.useEffect(() => {
-			if (!isOpen) return
-
-			function handlePointerDown(event: PointerEvent) {
-				if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false)
-			}
-
-			function handleKeyDown(event: KeyboardEvent) {
-				if (event.key === 'Escape') setIsOpen(false)
-			}
-
-			window.addEventListener('pointerdown', handlePointerDown)
-			window.addEventListener('keydown', handleKeyDown)
-
-			return () => {
-				window.removeEventListener('pointerdown', handlePointerDown)
-				window.removeEventListener('keydown', handleKeyDown)
-			}
-		}, [isOpen])
-
 		return (
-			<div ref={rootRef} className="relative">
-				<button
-					type="button"
-					aria-controls={isOpen ? menuId : undefined}
-					aria-expanded={isOpen}
-					aria-haspopup="menu"
-					className="flex h-[28px] shrink-0 items-center justify-center gap-[5px] rounded-body border border-base-border bg-base-plane px-[8px] py-[4px] label-14 text-secondary transition-colors hover:border-accent hover:text-primary focus-visible:outline-focus press-down"
+			<Menu.Root>
+				<Menu.Trigger
+					render={<Button variant="secondary" size="small" />}
 					title={`Network: ${activeOption.label}`}
-					onClick={() => setIsOpen((value) => !value)}
 				>
-					<Header.NetworkStatusDot className={activeOption.dotClassName} />
-					<span>{activeOption.label}</span>
-					<ChevronDownIcon
-						className={cx(
-							'size-[12px] text-tertiary transition-transform duration-100',
-							isOpen && 'rotate-180',
-						)}
-					/>
-				</button>
-				{isOpen && (
-					<div
-						id={menuId}
-						role="menu"
-						aria-label="Tempo network"
-						className="absolute left-0 top-[calc(100%+8px)] z-50 w-[156px] overflow-hidden rounded-body border border-base-border bg-surface p-[4px] shadow-lg"
-					>
-						{EXPLORER_NETWORK_OPTIONS.map((option) => {
-							const isActive = option.env === activeOption.env
-
-							return (
-								<a
-									key={option.env}
-									href={buildExplorerNetworkHref(option.host, currentPath, {
-										fallbackToHome:
-											isNotFoundPage &&
-											!isExplorerNetworkPathPreservable(currentPath),
-									})}
-									role="menuitemradio"
-									aria-checked={isActive}
-									aria-current={isActive ? 'page' : undefined}
-									className={cx(
-										'flex items-center gap-[8px] rounded-body px-[10px] py-[9px] label-14 text-secondary transition-colors hover:bg-surface hover:text-primary focus-visible:outline-focus',
-										isActive && 'bg-surface text-primary',
-									)}
-									onClick={() => setIsOpen(false)}
-								>
-									<Header.NetworkStatusDot className={option.dotClassName} />
-									<span>{option.label}</span>
-								</a>
-							)
-						})}
-					</div>
-				)}
-			</div>
+					<StatusIndicator intent={networkIntent(activeOption.dotClassName)}>
+						<span className="text-primary">{activeOption.label}</span>
+					</StatusIndicator>
+					<ChevronDown />
+				</Menu.Trigger>
+				<Menu.Popup align="start" sideOffset={8} aria-label="Tempo network">
+					{EXPLORER_NETWORK_OPTIONS.map((option) => {
+						const isActive = option.env === activeOption.env
+						return (
+							<Menu.LinkItem
+								key={option.env}
+								href={buildExplorerNetworkHref(option.host, currentPath, {
+									fallbackToHome:
+										isNotFoundPage &&
+										!isExplorerNetworkPathPreservable(currentPath),
+								})}
+								aria-current={isActive ? 'page' : undefined}
+							>
+								<StatusIndicator intent={networkIntent(option.dotClassName)}>
+									<span className={cx(isActive && 'text-primary')}>
+										{option.label}
+									</span>
+								</StatusIndicator>
+							</Menu.LinkItem>
+						)
+					})}
+				</Menu.Popup>
+			</Menu.Root>
 		)
+	}
+
+	function networkIntent(dotClassName: string): 'positive' | 'warning' {
+		return dotClassName === 'bg-positive' ? 'positive' : 'warning'
 	}
 
 	export namespace NetworkBadge {
@@ -282,24 +242,30 @@ export namespace Header {
 		const isReady = blockNumber != null
 
 		return (
-			<Link
-				disabled={!isTestnet()}
-				to="/block/$id"
-				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
+			<Badge
+				variant="outlined"
+				size="small"
+				render={
+					<Link
+						disabled={!isTestnet()}
+						to="/block/$id"
+						params={{
+							id: blockNumber != null ? String(blockNumber) : 'latest',
+						}}
+						title="View latest block"
+					/>
+				}
 				className={cx(
 					className,
-					'flex items-center gap-[6px] label-15 text-secondary press-down origin-right transition-[opacity,scale] duration-[80ms]',
+					'origin-right transition-[opacity,scale] duration-[80ms]',
 					isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
 				)}
-				title="View latest block"
 			>
-				<SquareSquare className="size-[18px] text-accent" />
-				<div className="text-nowrap">
-					<span className="text-primary font-medium tabular-nums font-sans min-w-[6ch] inline-block">
-						{blockNumber != null ? String(blockNumber) : '…'}
-					</span>
-				</div>
-			</Link>
+				<Layers />
+				<span className="tabular-nums min-w-[6ch] text-primary">
+					{blockNumber != null ? String(blockNumber) : '…'}
+				</span>
+			</Badge>
 		)
 	}
 
@@ -335,34 +301,6 @@ export namespace Header {
 	export namespace TempoWordmark {
 		export interface Props {
 			className?: string
-		}
-	}
-
-	export function NetworkStatusDot(
-		props: NetworkStatusDot.Props,
-	): React.JSX.Element {
-		const { className } = props
-		return (
-			<span aria-hidden className="relative flex size-[6px] shrink-0">
-				<span
-					className={cx(
-						'absolute inline-flex size-full animate-ping rounded-full opacity-60',
-						className,
-					)}
-				/>
-				<span
-					className={cx(
-						'relative inline-flex size-[6px] rounded-full',
-						className,
-					)}
-				/>
-			</span>
-		)
-	}
-
-	export namespace NetworkStatusDot {
-		export interface Props {
-			className: string
 		}
 	}
 }
