@@ -140,23 +140,31 @@ function DexRoutePage(): React.JSX.Element {
 	})
 	const quoteFetching = query.isFetching || propAmmQuotes.isFetching
 	// Every venue quoting the same swap; the page leads with the best.
+	const propAmmVenues = propAmmQuotes.data ?? []
+	// The DEX only counts as a venue when it can route the pair, or when it is
+	// the only one, so its message explains the empty quote.
+	const showDex = dexRoutable || propAmmVenues.length === 0
 	const venues: Venue[] = snapshot
 		? [
-				{
-					key: 'dex',
-					label: 'Stablecoin DEX',
-					detail:
-						dexRoutable && snapshot.path.length > 2
-							? 'via ' +
-								snapshot.path
-									.slice(1, -1)
-									.map((token) => token.symbol)
-									.join(' → ')
-							: undefined,
-					amountOut: snapshot.quote.amountOut,
-					message: quoteMessage(snapshot.quote, snapshot.legs),
-				},
-				...(propAmmQuotes.data ?? []).map((quote) => ({
+				...(showDex
+					? [
+							{
+								key: 'dex',
+								label: 'Stablecoin DEX',
+								detail:
+									dexRoutable && snapshot.path.length > 2
+										? 'via ' +
+											snapshot.path
+												.slice(1, -1)
+												.map((token) => token.symbol)
+												.join(' → ')
+										: undefined,
+								amountOut: snapshot.quote.amountOut,
+								message: quoteMessage(snapshot.quote, snapshot.legs),
+							},
+						]
+					: []),
+				...propAmmVenues.map((quote) => ({
 					key: quote.key,
 					label: `PropAMM ${quote.version}`,
 					amountOut: quote.amountOut,
@@ -177,9 +185,11 @@ function DexRoutePage(): React.JSX.Element {
 	)
 	// "Best" only means something beside another quote.
 	const quoted = venues.filter((venue) => venue.amountOut !== null).length
-	// A lone venue's row only adds its route, and its failure is the headline.
+	// A lone venue's row names a venue other than the DEX or the DEX's route;
+	// a lone failure is already the headline.
 	const showVenues =
-		venues.length > 1 || (Boolean(best) && Boolean(venues[0]?.detail))
+		venues.length > 1 ||
+		(Boolean(best) && (!showDex || Boolean(venues[0]?.detail)))
 
 	return (
 		<div className="flex flex-col gap-6 px-4 pt-8 sm:pt-20 pb-16 max-w-[1200px] mx-auto w-full">
