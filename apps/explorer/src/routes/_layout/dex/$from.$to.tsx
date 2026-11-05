@@ -327,7 +327,8 @@ function DexRoutePage(): React.JSX.Element {
 													? 'Enter a valid amount'
 													: venues.length > 1
 														? 'No venue can fill this amount'
-														: quoteMessage(snapshot.quote, snapshot.legs)}
+														: (venues[0]?.message ??
+															quoteMessage(snapshot.quote, snapshot.legs))}
 											</p>
 										)}
 										<TokenBadge token={to} />
