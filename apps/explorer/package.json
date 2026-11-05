@@ -50,6 +50,7 @@
 		"@tanstack/router-plugin": "catalog:",
 		"@tempo/llms": "workspace:*",
 		"@tempo/rpc-utils": "workspace:*",
+		"@tempoxyz/ds": "catalog:",
 		"abitype": "catalog:",
 		"accounts": "catalog:",
 		"animejs": "catalog:",
@@ -65,7 +66,8 @@
 		"tidx.ts": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:",
-		"zod": "catalog:"
+		"zod": "catalog:",
+		"zyzz": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/puppeteer": "catalog:",
