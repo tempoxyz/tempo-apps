@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Hex } from 'ox'
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, isNull, min, or } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 
 import { getRandom } from '@cloudflare/containers'
@@ -240,15 +240,10 @@ verifyRoute
 				chainId,
 				addressBytes,
 			)
-			if (existingExactVerification.length > 1) {
-				return sourcifyError(
-					context,
-					409,
-					'ambiguous_creation_transaction',
-					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
-				)
-			}
-			const existing = existingExactVerification.at(0)
+			const existing =
+				existingExactVerification.find(
+					(verification) => verification.deployment.transactionHash !== null,
+				) ?? existingExactVerification.at(0)
 			if (
 				existing &&
 				(existing.deployment.transactionHash !== null ||
@@ -265,6 +260,15 @@ verifyRoute
 					409,
 					'already_verified',
 					`Contract ${address} on chain ${chainId} is already verified with runtimeMatch ${runtimeMatch} and creationMatch ${creationMatch}.`,
+				)
+			}
+
+			if (existingExactVerification.length > 1) {
+				return sourcifyError(
+					context,
+					409,
+					'ambiguous_creation_transaction',
+					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
 				)
 			}
 
@@ -643,29 +647,34 @@ function exactVerifications(
 	chainId: number,
 	address: Uint8Array,
 ) {
-	return db
-		.select({
-			matchId: verifiedContractsTable.id,
-			runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-			creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
-			deployment: contractDeploymentsTable,
-		})
-		.from(verifiedContractsTable)
-		.innerJoin(
-			contractDeploymentsTable,
-			eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-		)
-		.where(
-			and(
-				eq(contractDeploymentsTable.chainId, chainId),
-				eq(contractDeploymentsTable.address, address),
-				or(
-					eq(verifiedContractsTable.runtimeMetadataMatch, true),
-					eq(verifiedContractsTable.creationMetadataMatch, true),
+	return (
+		db
+			.select({
+				// SQLite takes the other selected verification fields from this minimum's row.
+				matchId: min(verifiedContractsTable.id),
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+				deployment: contractDeploymentsTable,
+			})
+			.from(verifiedContractsTable)
+			.innerJoin(
+				contractDeploymentsTable,
+				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+			)
+			.where(
+				and(
+					eq(contractDeploymentsTable.chainId, chainId),
+					eq(contractDeploymentsTable.address, address),
+					or(
+						eq(verifiedContractsTable.runtimeMetadataMatch, true),
+						eq(verifiedContractsTable.creationMetadataMatch, true),
+					),
 				),
-			),
-		)
-		.limit(2)
+			)
+			// Multiple exact compilations can describe one deployment; count deployments before limiting.
+			.groupBy(contractDeploymentsTable.id)
+			.limit(2)
+	)
 }
 
 type PublicClientLike = CreationTransactionClient & {
@@ -725,9 +734,12 @@ async function runVerificationJob(
 		if (existing) {
 			// A repair must never compile submitted sources or mutate an exact verification.
 			let errorCode: string | null = null
-			if (existingExact.length !== 1) {
+			if (!sanitizedBody.creationTransactionHash) {
+				// An exact result appearing after admission does not verify this job's sources.
+				errorCode = 'already_verified'
+			} else if (existingExact.length !== 1) {
 				errorCode = 'ambiguous_creation_transaction'
-			} else if (sanitizedBody.creationTransactionHash) {
+			} else {
 				const proof = await getCreationTransactionMetadata({
 					creationTransactionHash: sanitizedBody.creationTransactionHash,
 					address,
@@ -774,6 +786,8 @@ async function runVerificationJob(
 				}
 			}
 			const messages: Record<string, string> = {
+				already_verified:
+					'This contract was verified before the queued job ran; this submission was not compiled or compared.',
 				ambiguous_creation_transaction:
 					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
 				invalid_creation_transaction:
@@ -793,7 +807,15 @@ async function runVerificationJob(
 						: null,
 					compilationTime: Date.now() - startTime,
 				})
-				.where(eq(verificationJobsTable.id, jobId))
+				.where(
+					and(
+						eq(verificationJobsTable.id, jobId),
+						// A replay must not downgrade this job's already committed result.
+						errorCode === 'already_verified'
+							? isNull(verificationJobsTable.completedAt)
+							: undefined,
+					),
+				)
 			return
 		}
 

@@ -204,6 +204,176 @@ describe('exact verification creation metadata repair', () => {
 		}
 	})
 
+	it.each([
+		1, 2,
+	])('does not claim source verification when %i exact records appear before a queued job runs', async (count) => {
+		const jobId = await insertJob()
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		if (count === 2) await duplicateExact(verification)
+		const sources = await sourceSnapshot()
+		const deployments = await db.select().from(DB.contractDeploymentsTable)
+		await runVerificationJob(
+			env,
+			{
+				...target,
+				...body,
+				jobId,
+				stdJsonInput: {
+					...body.stdJsonInput,
+					sources: { 'Unrelated.sol': { content: 'contract Unrelated {}' } },
+				},
+			},
+			registry,
+			{
+				createPublicClient: () => ({
+					getCode: async () => {
+						throw new Error('Already-verified jobs must not fetch code')
+					},
+				}),
+				getContainer: () => {
+					throw new Error('Already-verified jobs must not compile')
+				},
+			},
+		)
+		const [job] = await db
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, jobId))
+		expect(job?.errorCode).toBe('already_verified')
+		expect(job?.verifiedContractId).toBeNull()
+		expect(job?.completedAt).not.toBeNull()
+		expect(await sourceSnapshot()).toEqual(sources)
+		expect(await db.select().from(DB.contractDeploymentsTable)).toEqual(
+			deployments,
+		)
+	})
+
+	it.each([
+		'no hash',
+		'both populated',
+		'one populated',
+	] as const)('preserves already_verified for duplicate records with %s', async (mode) => {
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const siblingId = await duplicateExact(verification)
+		if (mode === 'both populated') {
+			await db
+				.update(DB.contractDeploymentsTable)
+				.set({ transactionHash: Hex.toBytes(transactionHash) })
+				.where(eq(DB.contractDeploymentsTable.id, verification.deploymentId))
+		}
+		if (mode !== 'no hash') {
+			await db
+				.update(DB.contractDeploymentsTable)
+				.set({ transactionHash: Hex.toBytes(otherHash) })
+				.where(eq(DB.contractDeploymentsTable.id, siblingId))
+		}
+		const before = await db.select().from(DB.contractDeploymentsTable)
+		const response = await SELF.fetch(
+			`https://test.local/v2/verify/${target.chainId}/${target.address}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...body,
+					...(mode === 'no hash'
+						? {}
+						: { creationTransactionHash: transactionHash }),
+				}),
+			},
+		)
+		expect(response.status).toBe(409)
+		expect(await response.json()).toMatchObject({
+			customCode: 'already_verified',
+		})
+		expect(await db.select().from(DB.contractDeploymentsTable)).toEqual(before)
+	})
+
+	it('does not overwrite a completed source job when its alarm retries', async () => {
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const [completed] = await db
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.verifiedContractId, verification.id))
+		if (!completed) throw new Error('Expected completed job')
+		await runVerificationJob(
+			env,
+			{ ...target, ...body, jobId: completed.id },
+			registry,
+			{
+				createPublicClient: () => ({
+					getCode: async () => {
+						throw new Error('Completed jobs must not fetch code')
+					},
+				}),
+				getContainer: () => {
+					throw new Error('Completed jobs must not compile')
+				},
+			},
+		)
+		const [retried] = await db
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, completed.id))
+		expect(retried).toEqual(completed)
+	})
+
+	it.each([
+		false,
+		true,
+	])('counts distinct deployments rather than exact compilations (second deployment: %s)', async (secondDeployment) => {
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const [compilation] = await db
+			.select()
+			.from(DB.compiledContractsTable)
+			.where(eq(DB.compiledContractsTable.id, verification.compilationId))
+		if (!compilation) throw new Error('Expected compilation')
+		const compilationId = crypto.randomUUID()
+		await db
+			.insert(DB.compiledContractsTable)
+			.values({ ...compilation, id: compilationId, version: '0.8.99' })
+		const { id: _id, ...fields } = verification
+		await db
+			.insert(DB.verifiedContractsTable)
+			.values({ ...fields, compilationId })
+		if (secondDeployment) await duplicateExact(verification)
+		const before = await sourceSnapshot()
+		const deployments = await db.select().from(DB.contractDeploymentsTable)
+		const response = await SELF.fetch(
+			`https://test.local/v2/verify/${target.chainId}/${target.address}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...body,
+					creationTransactionHash: transactionHash,
+				}),
+			},
+		)
+		expect(response.status).toBe(secondDeployment ? 409 : 202)
+		if (secondDeployment) {
+			expect(await response.json()).toMatchObject({
+				customCode: 'ambiguous_creation_transaction',
+			})
+			expect((await repair())?.errorCode).toBe('ambiguous_creation_transaction')
+			expect(await db.select().from(DB.contractDeploymentsTable)).toEqual(
+				deployments,
+			)
+		} else {
+			const accepted = (await response.json()) as { verificationId: string }
+			const result = await repair(undefined, accepted.verificationId)
+			expect(result?.errorCode).toBeNull()
+			expect(result?.verifiedContractId).toBe(verification.id)
+			expect(await db.select().from(DB.contractDeploymentsTable)).toHaveLength(
+				1,
+			)
+		}
+		expect(await sourceSnapshot()).toEqual(before)
+	})
+
 	it('retries the same completed job without changing sources or creating another deployment', async () => {
 		const verification = await seedExact()
 		const first = await repair()
@@ -343,3 +513,23 @@ describe('exact verification creation metadata repair', () => {
 		expect((await repair())?.errorCode).toBeNull()
 	})
 })
+
+async function duplicateExact(
+	verification: Awaited<ReturnType<typeof seedExact>>,
+) {
+	const db = drizzle(env.CONTRACTS_DB)
+	const [original] = await db
+		.select()
+		.from(DB.contractDeploymentsTable)
+		.where(eq(DB.contractDeploymentsTable.id, verification.deploymentId))
+	if (!original) throw new Error('Expected deployment')
+	const siblingId = crypto.randomUUID()
+	await db
+		.insert(DB.contractDeploymentsTable)
+		.values({ ...original, id: siblingId })
+	const { id: _id, ...fields } = verification
+	await db
+		.insert(DB.verifiedContractsTable)
+		.values({ ...fields, deploymentId: siblingId })
+	return siblingId
+}
