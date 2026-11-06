@@ -18,7 +18,6 @@ not a Tempo API key. Never use a `VITE_` variable for credentials.
 | `testnet` | `explorer-testnet` | `https://rpc.testnet.tempo.xyz` | `RPC_AUTH` for Moderato |
 | `devnet` | `explorer-devnet` | `https://rpc.devnet.tempoxyz.dev` | `RPC_AUTH` for devnet |
 | `nextfork` | `explorer-nextfork` | `https://rpc-nextfork.devnet.tempoxyz.dev` | `RPC_AUTH` for nextfork |
-| `zone-prover` | `explorer-zone-prover` | `https://rpc-zone-prover.devnet.tempoxyz.dev` | Existing `ZONE_PROVER_RPC_AUTH` (complete `Basic <base64(client_id:api_key)>` header) |
 
 From `apps/explorer`, set the secrets interactively before deploying:
 
@@ -34,8 +33,7 @@ source control, or PR comments. Preview Workers also need the credential for
 their configured network. For local development, set `RPC_AUTH` in the app's
 ignored `.env` file and select the matching `pnpm dev:<environment>` command.
 
-Keep existing non-RPC secrets, including `TEMPO_API_KEY` and the prover's
-`ZONE_PROVER_TIDX_AUTH`. `TEMPO_RPC_KEY` is no longer used by Explorer. Remove it
+Keep existing non-RPC secrets, including `TEMPO_API_KEY`. `TEMPO_RPC_KEY` is no longer used by Explorer. Remove it
 only after the new version is deployed and verified.
 
 ## Request policy and rollout
@@ -43,8 +41,8 @@ only after the new version is deployed and verified.
 The Worker deployment selects the upstream. Callers cannot select a URL, network,
 or upstream credential; devnet and nextfork remain distinct despite sharing
 chain ID 31318. Missing or malformed credentials fail closed. The endpoint
-allows reviewed reads, tracing/simulation, and signed transaction broadcasts;
-the prover endpoint retains its read-only policy. Node-managed signing, admin,
+allows reviewed reads, tracing/simulation, and signed transaction broadcasts.
+Node-managed signing, admin,
 faucet and unlisted methods are rejected, including in batches. Requests are
 limited to 128 KiB and 50 calls, with a 15-second upstream timeout. Existing Worker
 IP, ASN and global rate limits still apply. Origin headers do not grant access.

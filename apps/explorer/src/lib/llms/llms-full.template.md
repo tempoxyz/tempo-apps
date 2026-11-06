@@ -14,7 +14,6 @@ Each network has its own deployment. Routes and parameters are the same on every
 | --- | --- | --- |
 | testnet | https://explore.testnet.tempo.xyz | explore.42431.tempo.xyz, explore.moderato.tempo.xyz |
 | devnet | https://explore.31318.tempo.xyz, https://explore.devnet.tempo.xyz | - |
-| zone-prover | https://explore.zone-prover.devnet.tempo.xyz | - |
 | nextfork | https://explore.nextfork.devnet.tempo.xyz | - |
 | mainnet | https://explore.tempo.xyz | explore.4217.tempo.xyz, explore.mainnet.tempo.xyz, explore.presto.tempo.xyz |
 

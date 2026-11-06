@@ -18,8 +18,6 @@ export const serverEnvSchema = z.object({
 	DEVNET_TIDX_AUTH: z.optional(z.string()),
 	RPC_AUTH: z.optional(z.string()),
 	TEMPO_API_KEY: z.optional(z.string()),
-	ZONE_PROVER_RPC_AUTH: z.optional(z.string()),
-	ZONE_PROVER_TIDX_AUTH: z.optional(z.string()),
 })
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>
