@@ -94,75 +94,73 @@ export function BlockCard(props: BlockCard.Props): React.JSX.Element {
 			</Surface.Header>
 			<p {...styles.number()}>{(blockNumber ?? 0n).toLocaleString('en-US')}</p>
 			<RelativeTime timestamp={timestamp} {...styles.age()} />
-			<div {...styles.rows()}>
-				<ListGroup.Root>
+			<ListGroup.Root {...styles.rows()}>
+				<ListGroup.Row>
+					<ListGroup.Label>Time</ListGroup.Label>
+					<time dateTime={date.toISOString()} {...styles.numeric()}>
+						{utc.format(date)} UTC
+					</time>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Unix time</ListGroup.Label>
+					<span {...styles.numeric()}>{String(timestamp)}</span>
+				</ListGroup.Row>
+				{hash && (
 					<ListGroup.Row>
-						<ListGroup.Label>Time</ListGroup.Label>
-						<time dateTime={date.toISOString()} {...styles.numeric()}>
-							{utc.format(date)} UTC
-						</time>
-					</ListGroup.Row>
-					<ListGroup.Row>
-						<ListGroup.Label>Unix time</ListGroup.Label>
-						<span {...styles.numeric()}>{String(timestamp)}</span>
-					</ListGroup.Row>
-					{hash && (
-						<ListGroup.Row>
-							<ListGroup.Label>Hash</ListGroup.Label>
-							<Hex.Root value={hash} {...styles.hex()}>
-								<Hex.Text />
-								<Hex.Copy aria-label="Copy block hash" />
-							</Hex.Root>
-						</ListGroup.Row>
-					)}
-					<ListGroup.Row>
-						<ListGroup.Label>Parent</ListGroup.Label>
-						<Hex.Root value={parentHash} {...styles.hex()}>
-							<Link
-								to="/block/$id"
-								params={{ id: parentHash }}
-								{...cx(styles.hexLink(), link(), linkHover())}
-							>
-								<Hex.Text />
-							</Link>
-							<Hex.Copy aria-label="Copy parent block hash" />
+						<ListGroup.Label>Hash</ListGroup.Label>
+						<Hex.Root value={hash} {...styles.hex()}>
+							<Hex.Text />
+							<Hex.Copy aria-label="Copy block hash" />
 						</Hex.Root>
 					</ListGroup.Row>
-					<ListGroup.Row>
-						<ListGroup.Label>Miner</ListGroup.Label>
-						{miner ? (
-							<ValidatorTag address={miner} />
-						) : (
-							<span {...styles.secondary()}>—</span>
-						)}
-					</ListGroup.Row>
-					<ListGroup.Row>
-						<ListGroup.Label>Confirmations</ListGroup.Label>
-						<span ref={confirmationsRef} {...styles.numeric()}>
-							<span {...styles.secondary()}>—</span>
-						</span>
-					</ListGroup.Row>
-					<ListGroup.Row>
-						<ListGroup.Label>Gas used</ListGroup.Label>
-						<BlockCard.GasUsed gasLimit={gasLimit} gasUsed={gasUsed} />
-					</ListGroup.Row>
-				</ListGroup.Root>
-				<Accordion.Root>
-					<Accordion.Item value="roots">
-						<Accordion.Trigger>Roots</Accordion.Trigger>
-						<Accordion.Panel>
-							<ListGroup.Root>
-								{roots.map((root) => (
-									<ListGroup.Row key={root.label}>
-										<ListGroup.Label>{root.label}</ListGroup.Label>
-										<BlockCard.Root label={root.label} hash={root.value} />
-									</ListGroup.Row>
-								))}
-							</ListGroup.Root>
-						</Accordion.Panel>
-					</Accordion.Item>
-				</Accordion.Root>
-			</div>
+				)}
+				<ListGroup.Row>
+					<ListGroup.Label>Parent</ListGroup.Label>
+					<Hex.Root value={parentHash} {...styles.hex()}>
+						<Link
+							to="/block/$id"
+							params={{ id: parentHash }}
+							{...cx(styles.hexLink(), link(), linkHover())}
+						>
+							<Hex.Text />
+						</Link>
+						<Hex.Copy aria-label="Copy parent block hash" />
+					</Hex.Root>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Miner</ListGroup.Label>
+					{miner ? (
+						<ValidatorTag address={miner} />
+					) : (
+						<span {...styles.secondary()}>—</span>
+					)}
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Confirmations</ListGroup.Label>
+					<span ref={confirmationsRef} {...styles.numeric()}>
+						<span {...styles.secondary()}>—</span>
+					</span>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Gas used</ListGroup.Label>
+					<BlockCard.GasUsed gasLimit={gasLimit} gasUsed={gasUsed} />
+				</ListGroup.Row>
+			</ListGroup.Root>
+			<Accordion.Root>
+				<Accordion.Item value="roots">
+					<Accordion.Trigger>Roots</Accordion.Trigger>
+					<Accordion.Panel>
+						<ListGroup.Root>
+							{roots.map((root) => (
+								<ListGroup.Row key={root.label}>
+									<ListGroup.Label>{root.label}</ListGroup.Label>
+									<BlockCard.Root label={root.label} hash={root.value} />
+								</ListGroup.Row>
+							))}
+						</ListGroup.Root>
+					</Accordion.Panel>
+				</Accordion.Item>
+			</Accordion.Root>
 		</Surface>
 	)
 }
@@ -249,12 +247,8 @@ namespace styles {
 		typography: 'body.b2',
 	})
 
-	// Surface pads 24px, so the rows reach its edges and keep their own inset.
-	// They follow the number, so a wrapper sets the margins.
-	export const rows = style({
-		marginBlockStart: '16',
-		marginInline: '-24px !custom',
-	})
+	// The card's list bleeds to its edges itself; this only spaces it from the age.
+	export const rows = style({ marginBlockStart: '16' })
 
 	export const hex = style({ minWidth: '0 !custom' })
 

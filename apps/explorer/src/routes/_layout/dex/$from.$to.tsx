@@ -565,7 +565,9 @@ function LegRow(props: {
 						))}
 					</dl>
 				) : (
-					<Badge variant="outlined">Book not created</Badge>
+					<Badge size="small" variant="outlined">
+						Book not created
+					</Badge>
 				)}
 			</div>
 			{leg.bestTick !== null && (

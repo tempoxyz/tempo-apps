@@ -67,13 +67,15 @@ export function AccountCard(props: AccountCard.Props): React.JSX.Element {
 			}
 			className={className}
 			sections={[
-				<div key="address" {...styles.address()}>
-					<span {...styles.secondary()}>Address</span>
-					<Hex.Root size="small" value={address} variant="filled">
-						<Hex.Text />
-						<Hex.Copy aria-label="Copy address" />
-					</Hex.Root>
-				</div>,
+				{
+					label: 'Address',
+					value: (
+						<Hex.Root value={address}>
+							<Hex.Text />
+							<Hex.Copy aria-label="Copy address" />
+						</Hex.Root>
+					),
+				},
 				...(virtualAddressParts
 					? [
 							{
@@ -194,14 +196,6 @@ namespace styles {
 		marginTop: '2px !custom',
 		overflowWrap: 'anywhere',
 		typography: 'body.b3',
-	})
-
-	export const address = style({
-		display: 'flex',
-		flexDirection: 'column',
-		gap: '8',
-		minWidth: '0 !custom',
-		width: '100% !custom',
 	})
 
 	export const normalCase = style({ textTransform: 'none' })

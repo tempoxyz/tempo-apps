@@ -187,8 +187,12 @@ export namespace TxEventDescription {
 					part.value === 'Private Zone Deposit' ||
 					part.value === 'Private Zone Withdrawal'
 				)
-					return <Badge variant="accent">{part.value}</Badge>
-				return <Badge>{sentenceCase(part.value)}</Badge>
+					return (
+						<Badge size="small" variant="accent">
+							{part.value}
+						</Badge>
+					)
+				return <Badge size="small">{sentenceCase(part.value)}</Badge>
 			}
 			case 'amount':
 				return <Amount {...part.value} />

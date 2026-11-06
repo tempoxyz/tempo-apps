@@ -167,136 +167,133 @@ export function Receipt(props: Receipt.Props): React.JSX.Element {
 					<p {...styles.summary()}>{summarize(filteredEvents)}</p>
 				)}
 			</div>
-			{/* Surface pads 24px, so the rows reach its edges and keep their own inset. */}
-			<div {...styles.rows()}>
-				<ListGroup.Root>
-					<ListGroup.Row>
-						<ListGroup.Label>From</ListGroup.Label>
-						<span {...styles.hex()}>
-							<Address address={sender} align="end" />
-						</span>
-					</ListGroup.Row>
-					{send ? (
-						<>
+			<ListGroup.Root {...styles.rows()}>
+				<ListGroup.Row>
+					<ListGroup.Label>From</ListGroup.Label>
+					<span {...styles.hex()}>
+						<Address address={sender} align="end" />
+					</span>
+				</ListGroup.Row>
+				{send ? (
+					<>
+						<ListGroup.Row>
+							<ListGroup.Label>To</ListGroup.Label>
+							<span {...styles.hex()}>
+								<Address address={send.to} align="end" />
+							</span>
+						</ListGroup.Row>
+						{sendNote && (
 							<ListGroup.Row>
-								<ListGroup.Label>To</ListGroup.Label>
-								<span {...styles.hex()}>
-									<Address address={send.to} align="end" />
+								<ListGroup.Label>
+									{typeof sendNote === 'string' ? 'Memo' : 'Details'}
+								</ListGroup.Label>
+								<span {...styles.value()}>
+									{typeof sendNote === 'string' ? (
+										sendNote
+									) : (
+										<Receipt.Note note={sendNote} />
+									)}
 								</span>
 							</ListGroup.Row>
-							{sendNote && (
-								<ListGroup.Row>
-									<ListGroup.Label>
-										{typeof sendNote === 'string' ? 'Memo' : 'Details'}
-									</ListGroup.Label>
-									<span {...styles.value()}>
-										{typeof sendNote === 'string' ? (
-											sendNote
-										) : (
-											<Receipt.Note note={sendNote} />
-										)}
-									</span>
-								</ListGroup.Row>
-							)}
-						</>
-					) : (
-						filteredEvents.map((event, index) => (
-							<Receipt.LineItem
-								context={context}
-								event={event}
-								key={`${event.type}-${index}`}
-								usd={isUsd(event)}
-							/>
-						))
-					)}
-					{visibleFeeBreakdown.map((item, index) => {
-						const usd = hasTokenAmount(item)
-							? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
-							: usdFee
-						const value = Value.format(item.amount, item.decimals)
-						return (
-							<ListGroup.Row
-								key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
-							>
-								<ListGroup.Label>
-									Network fee
-									{item.symbol && (
-										<>
-											{' ('}
-											{item.token ? (
-												<Link
-													to="/token/$address"
-													params={{ address: item.token }}
-													{...cx(link(), linkHover())}
-												>
-													{item.symbol}
-												</Link>
-											) : (
-												item.symbol
-											)}
-											{')'}
-										</>
-									)}
-								</ListGroup.Label>
-								{usd ? (
-									<Amount currency="USD" precise value={value} />
-								) : (
-									<Amount symbol={item.symbol} value={value} />
-								)}
-							</ListGroup.Row>
-						)
-					})}
-					{showSingleFee && (
-						<ListGroup.Row>
-							<ListGroup.Label>Network fee</ListGroup.Label>
-							{usdFee && fee !== undefined ? (
-								<Amount currency="USD" precise value={fee} />
-							) : (
-								<span {...styles.number()}>{feeDisplay ?? fee}</span>
-							)}
-						</ListGroup.Row>
-					)}
-					{hasTotal && (
-						<ListGroup.Row>
-							<ListGroup.Label>Total</ListGroup.Label>
-							{total !== undefined ? (
-								<Amount currency="USD" value={total} />
-							) : (
-								<span {...styles.number()}>{totalDisplay}</span>
-							)}
-						</ListGroup.Row>
-					)}
-					<ClientOnly fallback={<Receipt.DateRow timestamp={timestamp} utc />}>
-						<Receipt.DateRow timestamp={timestamp} />
-					</ClientOnly>
-					<ListGroup.Row>
-						<ListGroup.Label>Block</ListGroup.Label>
-						<Link
-							to="/block/$id"
-							params={{ id: blockNumber.toString() }}
-							{...cx(styles.number(), link(), linkHover())}
+						)}
+					</>
+				) : (
+					filteredEvents.map((event, index) => (
+						<Receipt.LineItem
+							context={context}
+							event={event}
+							key={`${event.type}-${index}`}
+							usd={isUsd(event)}
+						/>
+					))
+				)}
+				{visibleFeeBreakdown.map((item, index) => {
+					const usd = hasTokenAmount(item)
+						? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
+						: usdFee
+					const value = Value.format(item.amount, item.decimals)
+					return (
+						<ListGroup.Row
+							key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
 						>
-							{blockNumber.toLocaleString('en-US')}
-						</Link>
-					</ListGroup.Row>
+							<ListGroup.Label>
+								Network fee
+								{item.symbol && (
+									<>
+										{' ('}
+										{item.token ? (
+											<Link
+												to="/token/$address"
+												params={{ address: item.token }}
+												{...cx(link(), linkHover())}
+											>
+												{item.symbol}
+											</Link>
+										) : (
+											item.symbol
+										)}
+										{')'}
+									</>
+								)}
+							</ListGroup.Label>
+							{usd ? (
+								<Amount currency="USD" precise value={value} />
+							) : (
+								<Amount symbol={item.symbol} value={value} />
+							)}
+						</ListGroup.Row>
+					)
+				})}
+				{showSingleFee && (
 					<ListGroup.Row>
-						<ListGroup.Label>Transaction</ListGroup.Label>
-						{/* The link sits inside `Hex.Root` so it takes the link color. */}
-						<Hex.Root value={hash} {...styles.hex()}>
-							<Link
-								to="/tx/$hash"
-								params={{ hash }}
-								{...cx(styles.hexLink(), link(), linkHover())}
-							>
-								<Hex.Text />
-							</Link>
-							<span {...styles.screenOnly()}>
-								<Hex.Copy aria-label="Copy transaction hash" />
-							</span>
-						</Hex.Root>
+						<ListGroup.Label>Network fee</ListGroup.Label>
+						{usdFee && fee !== undefined ? (
+							<Amount currency="USD" precise value={fee} />
+						) : (
+							<span {...styles.number()}>{feeDisplay ?? fee}</span>
+						)}
 					</ListGroup.Row>
-				</ListGroup.Root>
-			</div>
+				)}
+				{hasTotal && (
+					<ListGroup.Row>
+						<ListGroup.Label>Total</ListGroup.Label>
+						{total !== undefined ? (
+							<Amount currency="USD" value={total} />
+						) : (
+							<span {...styles.number()}>{totalDisplay}</span>
+						)}
+					</ListGroup.Row>
+				)}
+				<ClientOnly fallback={<Receipt.DateRow timestamp={timestamp} utc />}>
+					<Receipt.DateRow timestamp={timestamp} />
+				</ClientOnly>
+				<ListGroup.Row>
+					<ListGroup.Label>Block</ListGroup.Label>
+					<Link
+						to="/block/$id"
+						params={{ id: blockNumber.toString() }}
+						{...cx(styles.number(), link(), linkHover())}
+					>
+						{blockNumber.toLocaleString('en-US')}
+					</Link>
+				</ListGroup.Row>
+				<ListGroup.Row>
+					<ListGroup.Label>Transaction</ListGroup.Label>
+					{/* The link sits inside `Hex.Root` so it takes the link color. */}
+					<Hex.Root value={hash} {...styles.hex()}>
+						<Link
+							to="/tx/$hash"
+							params={{ hash }}
+							{...cx(styles.hexLink(), link(), linkHover())}
+						>
+							<Hex.Text />
+						</Link>
+						<span {...styles.screenOnly()}>
+							<Hex.Copy aria-label="Copy transaction hash" />
+						</span>
+					</Hex.Root>
+				</ListGroup.Row>
+			</ListGroup.Root>
 			<Receipt.Actions hash={hash} exportSearch={exportSearch} />
 		</Surface>
 	)
@@ -717,10 +714,8 @@ namespace styles {
 		typography: 'body.b2',
 	})
 
-	export const rows = style({
-		marginBlockStart: '16',
-		marginInline: '-24px !custom',
-	})
+	// The card's list bleeds to its edges itself; this only spaces it from the summary.
+	export const rows = style({ marginBlockStart: '16' })
 
 	export const number = style({ fontVariantNumeric: 'tabular-nums !custom' })
 
