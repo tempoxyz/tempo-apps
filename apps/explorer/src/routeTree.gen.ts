@@ -9,53 +9,55 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SearchRouteImport } from './routes/search'
 import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
-import { Route as ApiVerifiedTokensRouteImport } from './routes/api/verified-tokens'
-import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
-import { Route as ApiSimulateRouteImport } from './routes/api/simulate'
-import { Route as ApiSearchRouteImport } from './routes/api/search'
-import { Route as ApiRpcRouteImport } from './routes/api/rpc'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiCodeRouteImport } from './routes/api/code'
-import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
-import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
-import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
-import { Route as LayoutDexIndexRouteImport } from './routes/_layout/dex/index'
-import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
-import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
-import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
-import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
-import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
-import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
-import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
-import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
-import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/empty-state'
-import { Route as LayoutDemoAddressRouteImport } from './routes/_layout/demo/address'
-import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
+import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
+import { Route as LayoutMarketsRouteImport } from './routes/_layout/markets'
+import { Route as LayoutPropammRouteImport } from './routes/_layout/propamm'
+import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
+import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
+import { Route as ApiCodeRouteImport } from './routes/api/code'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiRpcRouteImport } from './routes/api/rpc'
+import { Route as ApiSearchRouteImport } from './routes/api/search'
+import { Route as ApiSimulateRouteImport } from './routes/api/simulate'
+import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
+import { Route as ApiVerifiedTokensRouteImport } from './routes/api/verified-tokens'
 import { Route as LayoutAddressAddressRouteImport } from './routes/_layout/address/$address'
-import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
-import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
-import { Route as ApiTokenLogoAddressRouteImport } from './routes/api/token/logo/$address'
-import { Route as ApiContractCreationAddressRouteImport } from './routes/api/contract/creation/$address'
-import { Route as ApiAddressZonePortalAddressRouteImport } from './routes/api/address/zone-portal/$address'
-import { Route as ApiAddressMetadataAddressRouteImport } from './routes/api/address/metadata/$address'
-import { Route as ApiAddressLiveAddressRouteImport } from './routes/api/address/live.$address'
-import { Route as ApiAddressHistoryAddressRouteImport } from './routes/api/address/history/$address'
-import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
-import { Route as LayoutDexFromToRouteImport } from './routes/_layout/dex/$from.$to'
+import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
+import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
+import { Route as LayoutDemoAddressRouteImport } from './routes/_layout/demo/address'
+import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/empty-state'
+import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
+import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
+import { Route as LayoutDexIndexRouteImport } from './routes/_layout/dex/index'
+import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
+import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
+import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
+import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
+import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
+import { Route as LayoutDexFromToRouteImport } from './routes/_layout/dex/$from.$to'
+import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
+import { Route as ApiAddressHistoryAddressRouteImport } from './routes/api/address/history/$address'
+import { Route as ApiAddressLiveAddressRouteImport } from './routes/api/address/live.$address'
+import { Route as ApiAddressMetadataAddressRouteImport } from './routes/api/address/metadata/$address'
+import { Route as ApiAddressZonePortalAddressRouteImport } from './routes/api/address/zone-portal/$address'
+import { Route as ApiContractCreationAddressRouteImport } from './routes/api/contract/creation/$address'
+import { Route as ApiTokenLogoAddressRouteImport } from './routes/api/token/logo/$address'
+import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
+import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiAddressZonePortalAddressKindRouteImport } from './routes/api/address/zone-portal/$address/$kind'
 
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LayoutRoute = LayoutRouteImport.update({
-  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
@@ -63,49 +65,9 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const ApiVerifiedTokensRoute = ApiVerifiedTokensRouteImport.update({
-  id: '/api/verified-tokens',
-  path: '/api/verified-tokens',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTip20RolesRoute = ApiTip20RolesRouteImport.update({
-  id: '/api/tip20-roles',
-  path: '/api/tip20-roles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSimulateRoute = ApiSimulateRouteImport.update({
-  id: '/api/simulate',
-  path: '/api/simulate',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiSearchRoute = ApiSearchRouteImport.update({
-  id: '/api/search',
-  path: '/api/search',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiRpcRoute = ApiRpcRouteImport.update({
-  id: '/api/rpc',
-  path: '/api/rpc',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiCodeRoute = ApiCodeRouteImport.update({
-  id: '/api/code',
-  path: '/api/code',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LayoutTokensRoute = LayoutTokensRouteImport.update({
-  id: '/tokens',
-  path: '/tokens',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSimulateRoute = LayoutSimulateRouteImport.update({
-  id: '/simulate',
-  path: '/simulate',
+const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
+  id: '/blocks',
+  path: '/blocks',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
@@ -113,64 +75,64 @@ const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
   path: '/fee-amm',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
-  id: '/blocks',
-  path: '/blocks',
+const LayoutMarketsRoute = LayoutMarketsRouteImport.update({
+  id: '/markets',
+  path: '/markets',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutDexIndexRoute = LayoutDexIndexRouteImport.update({
-  id: '/dex/',
-  path: '/dex/',
+const LayoutPropammRoute = LayoutPropammRouteImport.update({
+  id: '/propamm',
+  path: '/propamm',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
-  id: '/demo/',
-  path: '/demo/',
+const LayoutSimulateRoute = LayoutSimulateRouteImport.update({
+  id: '/simulate',
+  path: '/simulate',
   getParentRoute: () => LayoutRoute,
 } as any)
-const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
-  id: '/api/abi/batch',
-  path: '/api/abi/batch',
+const LayoutTokensRoute = LayoutTokensRouteImport.update({
+  id: '/tokens',
+  path: '/tokens',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const ApiCodeRoute = ApiCodeRouteImport.update({
+  id: '/api/code',
+  path: '/api/code',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
-  id: '/tx/$hash',
-  path: '/tx/$hash',
-  getParentRoute: () => LayoutRoute,
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutTokenAddressRoute = LayoutTokenAddressRouteImport.update({
-  id: '/token/$address',
-  path: '/token/$address',
-  getParentRoute: () => LayoutRoute,
+const ApiRpcRoute = ApiRpcRouteImport.update({
+  id: '/api/rpc',
+  path: '/api/rpc',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutReceiptHashRoute = LayoutReceiptHashRouteImport.update({
-  id: '/receipt/$hash',
-  path: '/receipt/$hash',
-  getParentRoute: () => LayoutRoute,
+const ApiSearchRoute = ApiSearchRouteImport.update({
+  id: '/api/search',
+  path: '/api/search',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutPolicyIdRoute = LayoutPolicyIdRouteImport.update({
-  id: '/policy/$id',
-  path: '/policy/$id',
-  getParentRoute: () => LayoutRoute,
+const ApiSimulateRoute = ApiSimulateRouteImport.update({
+  id: '/api/simulate',
+  path: '/api/simulate',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
-  id: '/demo/tx',
-  path: '/demo/tx',
-  getParentRoute: () => LayoutRoute,
+const ApiTip20RolesRoute = ApiTip20RolesRouteImport.update({
+  id: '/api/tip20-roles',
+  path: '/api/tip20-roles',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutDemoPaginationRoute = LayoutDemoPaginationRouteImport.update({
-  id: '/demo/pagination',
-  path: '/demo/pagination',
-  getParentRoute: () => LayoutRoute,
+const ApiVerifiedTokensRoute = ApiVerifiedTokensRouteImport.update({
+  id: '/api/verified-tokens',
+  path: '/api/verified-tokens',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutDemoEmptyStateRoute = LayoutDemoEmptyStateRouteImport.update({
-  id: '/demo/empty-state',
-  path: '/demo/empty-state',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutDemoAddressRoute = LayoutDemoAddressRouteImport.update({
-  id: '/demo/address',
-  path: '/demo/address',
+const LayoutAddressAddressRoute = LayoutAddressAddressRouteImport.update({
+  id: '/address/$address',
+  path: '/address/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutBlockIdRoute = LayoutBlockIdRouteImport.update({
@@ -178,30 +140,93 @@ const LayoutBlockIdRoute = LayoutBlockIdRouteImport.update({
   path: '/block/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAddressAddressRoute = LayoutAddressAddressRouteImport.update({
-  id: '/address/$address',
-  path: '/address/$address',
+const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
+  id: '/demo/',
+  path: '/demo/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const ApiTxTraceHashRoute = ApiTxTraceHashRouteImport.update({
-  id: '/api/tx/trace/$hash',
-  path: '/api/tx/trace/$hash',
+const LayoutDemoAddressRoute = LayoutDemoAddressRouteImport.update({
+  id: '/demo/address',
+  path: '/demo/address',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDemoEmptyStateRoute = LayoutDemoEmptyStateRouteImport.update({
+  id: '/demo/empty-state',
+  path: '/demo/empty-state',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDemoPaginationRoute = LayoutDemoPaginationRouteImport.update({
+  id: '/demo/pagination',
+  path: '/demo/pagination',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
+  id: '/demo/tx',
+  path: '/demo/tx',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDexIndexRoute = LayoutDexIndexRouteImport.update({
+  id: '/dex/',
+  path: '/dex/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPolicyIdRoute = LayoutPolicyIdRouteImport.update({
+  id: '/policy/$id',
+  path: '/policy/$id',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutReceiptHashRoute = LayoutReceiptHashRouteImport.update({
+  id: '/receipt/$hash',
+  path: '/receipt/$hash',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTokenAddressRoute = LayoutTokenAddressRouteImport.update({
+  id: '/token/$address',
+  path: '/token/$address',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
+  id: '/tx/$hash',
+  path: '/tx/$hash',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
+  id: '/api/abi/batch',
+  path: '/api/abi/batch',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTxBalanceChangesHashRoute = ApiTxBalanceChangesHashRouteImport.update({
-  id: '/api/tx/balance-changes/$hash',
-  path: '/api/tx/balance-changes/$hash',
+const LayoutBlockCountdownTargetBlockRoute =
+  LayoutBlockCountdownTargetBlockRouteImport.update({
+    id: '/block/countdown/$targetBlock',
+    path: '/block/countdown/$targetBlock',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutDexFromToRoute = LayoutDexFromToRouteImport.update({
+  id: '/dex/$from/$to',
+  path: '/dex/$from/$to',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const ApiAddressBalancesAddressRoute =
+  ApiAddressBalancesAddressRouteImport.update({
+    id: '/api/address/balances/$address',
+    path: '/api/address/balances/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAddressHistoryAddressRoute =
+  ApiAddressHistoryAddressRouteImport.update({
+    id: '/api/address/history/$address',
+    path: '/api/address/history/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAddressLiveAddressRoute = ApiAddressLiveAddressRouteImport.update({
+  id: '/api/address/live/$address',
+  path: '/api/address/live/$address',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTokenLogoAddressRoute = ApiTokenLogoAddressRouteImport.update({
-  id: '/api/token/logo/$address',
-  path: '/api/token/logo/$address',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiContractCreationAddressRoute =
-  ApiContractCreationAddressRouteImport.update({
-    id: '/api/contract/creation/$address',
-    path: '/api/contract/creation/$address',
+const ApiAddressMetadataAddressRoute =
+  ApiAddressMetadataAddressRouteImport.update({
+    id: '/api/address/metadata/$address',
+    path: '/api/address/metadata/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiAddressZonePortalAddressRoute =
@@ -210,40 +235,27 @@ const ApiAddressZonePortalAddressRoute =
     path: '/api/address/zone-portal/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiAddressMetadataAddressRoute =
-  ApiAddressMetadataAddressRouteImport.update({
-    id: '/api/address/metadata/$address',
-    path: '/api/address/metadata/$address',
+const ApiContractCreationAddressRoute =
+  ApiContractCreationAddressRouteImport.update({
+    id: '/api/contract/creation/$address',
+    path: '/api/contract/creation/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiAddressLiveAddressRoute = ApiAddressLiveAddressRouteImport.update({
-  id: '/api/address/live/$address',
-  path: '/api/address/live/$address',
+const ApiTokenLogoAddressRoute = ApiTokenLogoAddressRouteImport.update({
+  id: '/api/token/logo/$address',
+  path: '/api/token/logo/$address',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAddressHistoryAddressRoute =
-  ApiAddressHistoryAddressRouteImport.update({
-    id: '/api/address/history/$address',
-    path: '/api/address/history/$address',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiAddressBalancesAddressRoute =
-  ApiAddressBalancesAddressRouteImport.update({
-    id: '/api/address/balances/$address',
-    path: '/api/address/balances/$address',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const LayoutDexFromToRoute = LayoutDexFromToRouteImport.update({
-  id: '/dex/$from/$to',
-  path: '/dex/$from/$to',
-  getParentRoute: () => LayoutRoute,
+const ApiTxBalanceChangesHashRoute = ApiTxBalanceChangesHashRouteImport.update({
+  id: '/api/tx/balance-changes/$hash',
+  path: '/api/tx/balance-changes/$hash',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutBlockCountdownTargetBlockRoute =
-  LayoutBlockCountdownTargetBlockRouteImport.update({
-    id: '/block/countdown/$targetBlock',
-    path: '/block/countdown/$targetBlock',
-    getParentRoute: () => LayoutRoute,
-  } as any)
+const ApiTxTraceHashRoute = ApiTxTraceHashRouteImport.update({
+  id: '/api/tx/trace/$hash',
+  path: '/api/tx/trace/$hash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAddressZonePortalAddressKindRoute =
   ApiAddressZonePortalAddressKindRouteImport.update({
     id: '/$kind',
@@ -256,6 +268,8 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
+  '/markets': typeof LayoutMarketsRoute
+  '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -295,6 +309,8 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
+  '/markets': typeof LayoutMarketsRoute
+  '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -337,6 +353,8 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
+  '/_layout/markets': typeof LayoutMarketsRoute
+  '/_layout/propamm': typeof LayoutPropammRoute
   '/_layout/simulate': typeof LayoutSimulateRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -380,6 +398,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/fee-amm'
+    | '/markets'
+    | '/propamm'
     | '/simulate'
     | '/tokens'
     | '/api/code'
@@ -419,6 +439,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/fee-amm'
+    | '/markets'
+    | '/propamm'
     | '/simulate'
     | '/tokens'
     | '/api/code'
@@ -460,6 +482,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/_layout/blocks'
     | '/_layout/fee-amm'
+    | '/_layout/markets'
+    | '/_layout/propamm'
     | '/_layout/simulate'
     | '/_layout/tokens'
     | '/api/code'
@@ -521,18 +545,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/search': {
-      id: '/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof SearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_layout': {
       id: '/_layout'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/': {
@@ -542,67 +566,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/api/verified-tokens': {
-      id: '/api/verified-tokens'
-      path: '/api/verified-tokens'
-      fullPath: '/api/verified-tokens'
-      preLoaderRoute: typeof ApiVerifiedTokensRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/tip20-roles': {
-      id: '/api/tip20-roles'
-      path: '/api/tip20-roles'
-      fullPath: '/api/tip20-roles'
-      preLoaderRoute: typeof ApiTip20RolesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/simulate': {
-      id: '/api/simulate'
-      path: '/api/simulate'
-      fullPath: '/api/simulate'
-      preLoaderRoute: typeof ApiSimulateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/search': {
-      id: '/api/search'
-      path: '/api/search'
-      fullPath: '/api/search'
-      preLoaderRoute: typeof ApiSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/rpc': {
-      id: '/api/rpc'
-      path: '/api/rpc'
-      fullPath: '/api/rpc'
-      preLoaderRoute: typeof ApiRpcRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/code': {
-      id: '/api/code'
-      path: '/api/code'
-      fullPath: '/api/code'
-      preLoaderRoute: typeof ApiCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_layout/tokens': {
-      id: '/_layout/tokens'
-      path: '/tokens'
-      fullPath: '/tokens'
-      preLoaderRoute: typeof LayoutTokensRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/simulate': {
-      id: '/_layout/simulate'
-      path: '/simulate'
-      fullPath: '/simulate'
-      preLoaderRoute: typeof LayoutSimulateRouteImport
+    '/_layout/blocks': {
+      id: '/_layout/blocks'
+      path: '/blocks'
+      fullPath: '/blocks'
+      preLoaderRoute: typeof LayoutBlocksRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/fee-amm': {
@@ -612,88 +580,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutFeeAmmRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/blocks': {
-      id: '/_layout/blocks'
-      path: '/blocks'
-      fullPath: '/blocks'
-      preLoaderRoute: typeof LayoutBlocksRouteImport
+    '/_layout/markets': {
+      id: '/_layout/markets'
+      path: '/markets'
+      fullPath: '/markets'
+      preLoaderRoute: typeof LayoutMarketsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/dex/': {
-      id: '/_layout/dex/'
-      path: '/dex'
-      fullPath: '/dex/'
-      preLoaderRoute: typeof LayoutDexIndexRouteImport
+    '/_layout/propamm': {
+      id: '/_layout/propamm'
+      path: '/propamm'
+      fullPath: '/propamm'
+      preLoaderRoute: typeof LayoutPropammRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/demo/': {
-      id: '/_layout/demo/'
-      path: '/demo'
-      fullPath: '/demo/'
-      preLoaderRoute: typeof LayoutDemoIndexRouteImport
+    '/_layout/simulate': {
+      id: '/_layout/simulate'
+      path: '/simulate'
+      fullPath: '/simulate'
+      preLoaderRoute: typeof LayoutSimulateRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/api/abi/batch': {
-      id: '/api/abi/batch'
-      path: '/api/abi/batch'
-      fullPath: '/api/abi/batch'
-      preLoaderRoute: typeof ApiAbiBatchRouteImport
+    '/_layout/tokens': {
+      id: '/_layout/tokens'
+      path: '/tokens'
+      fullPath: '/tokens'
+      preLoaderRoute: typeof LayoutTokensRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/api/code': {
+      id: '/api/code'
+      path: '/api/code'
+      fullPath: '/api/code'
+      preLoaderRoute: typeof ApiCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout/tx/$hash': {
-      id: '/_layout/tx/$hash'
-      path: '/tx/$hash'
-      fullPath: '/tx/$hash'
-      preLoaderRoute: typeof LayoutTxHashRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/token/$address': {
-      id: '/_layout/token/$address'
-      path: '/token/$address'
-      fullPath: '/token/$address'
-      preLoaderRoute: typeof LayoutTokenAddressRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/rpc': {
+      id: '/api/rpc'
+      path: '/api/rpc'
+      fullPath: '/api/rpc'
+      preLoaderRoute: typeof ApiRpcRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/receipt/$hash': {
-      id: '/_layout/receipt/$hash'
-      path: '/receipt/$hash'
-      fullPath: '/receipt/$hash'
-      preLoaderRoute: typeof LayoutReceiptHashRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/search': {
+      id: '/api/search'
+      path: '/api/search'
+      fullPath: '/api/search'
+      preLoaderRoute: typeof ApiSearchRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/policy/$id': {
-      id: '/_layout/policy/$id'
-      path: '/policy/$id'
-      fullPath: '/policy/$id'
-      preLoaderRoute: typeof LayoutPolicyIdRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/simulate': {
+      id: '/api/simulate'
+      path: '/api/simulate'
+      fullPath: '/api/simulate'
+      preLoaderRoute: typeof ApiSimulateRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/demo/tx': {
-      id: '/_layout/demo/tx'
-      path: '/demo/tx'
-      fullPath: '/demo/tx'
-      preLoaderRoute: typeof LayoutDemoTxRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/tip20-roles': {
+      id: '/api/tip20-roles'
+      path: '/api/tip20-roles'
+      fullPath: '/api/tip20-roles'
+      preLoaderRoute: typeof ApiTip20RolesRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/demo/pagination': {
-      id: '/_layout/demo/pagination'
-      path: '/demo/pagination'
-      fullPath: '/demo/pagination'
-      preLoaderRoute: typeof LayoutDemoPaginationRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/verified-tokens': {
+      id: '/api/verified-tokens'
+      path: '/api/verified-tokens'
+      fullPath: '/api/verified-tokens'
+      preLoaderRoute: typeof ApiVerifiedTokensRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/demo/empty-state': {
-      id: '/_layout/demo/empty-state'
-      path: '/demo/empty-state'
-      fullPath: '/demo/empty-state'
-      preLoaderRoute: typeof LayoutDemoEmptyStateRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/demo/address': {
-      id: '/_layout/demo/address'
-      path: '/demo/address'
-      fullPath: '/demo/address'
-      preLoaderRoute: typeof LayoutDemoAddressRouteImport
+    '/_layout/address/$address': {
+      id: '/_layout/address/$address'
+      path: '/address/$address'
+      fullPath: '/address/$address'
+      preLoaderRoute: typeof LayoutAddressAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/block/$id': {
@@ -703,60 +671,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutBlockIdRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/address/$address': {
-      id: '/_layout/address/$address'
-      path: '/address/$address'
-      fullPath: '/address/$address'
-      preLoaderRoute: typeof LayoutAddressAddressRouteImport
+    '/_layout/demo/': {
+      id: '/_layout/demo/'
+      path: '/demo'
+      fullPath: '/demo/'
+      preLoaderRoute: typeof LayoutDemoIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/api/tx/trace/$hash': {
-      id: '/api/tx/trace/$hash'
-      path: '/api/tx/trace/$hash'
-      fullPath: '/api/tx/trace/$hash'
-      preLoaderRoute: typeof ApiTxTraceHashRouteImport
+    '/_layout/demo/address': {
+      id: '/_layout/demo/address'
+      path: '/demo/address'
+      fullPath: '/demo/address'
+      preLoaderRoute: typeof LayoutDemoAddressRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/demo/empty-state': {
+      id: '/_layout/demo/empty-state'
+      path: '/demo/empty-state'
+      fullPath: '/demo/empty-state'
+      preLoaderRoute: typeof LayoutDemoEmptyStateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/demo/pagination': {
+      id: '/_layout/demo/pagination'
+      path: '/demo/pagination'
+      fullPath: '/demo/pagination'
+      preLoaderRoute: typeof LayoutDemoPaginationRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/demo/tx': {
+      id: '/_layout/demo/tx'
+      path: '/demo/tx'
+      fullPath: '/demo/tx'
+      preLoaderRoute: typeof LayoutDemoTxRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/dex/': {
+      id: '/_layout/dex/'
+      path: '/dex'
+      fullPath: '/dex/'
+      preLoaderRoute: typeof LayoutDexIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/policy/$id': {
+      id: '/_layout/policy/$id'
+      path: '/policy/$id'
+      fullPath: '/policy/$id'
+      preLoaderRoute: typeof LayoutPolicyIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/receipt/$hash': {
+      id: '/_layout/receipt/$hash'
+      path: '/receipt/$hash'
+      fullPath: '/receipt/$hash'
+      preLoaderRoute: typeof LayoutReceiptHashRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/token/$address': {
+      id: '/_layout/token/$address'
+      path: '/token/$address'
+      fullPath: '/token/$address'
+      preLoaderRoute: typeof LayoutTokenAddressRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/tx/$hash': {
+      id: '/_layout/tx/$hash'
+      path: '/tx/$hash'
+      fullPath: '/tx/$hash'
+      preLoaderRoute: typeof LayoutTxHashRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/api/abi/batch': {
+      id: '/api/abi/batch'
+      path: '/api/abi/batch'
+      fullPath: '/api/abi/batch'
+      preLoaderRoute: typeof ApiAbiBatchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tx/balance-changes/$hash': {
-      id: '/api/tx/balance-changes/$hash'
-      path: '/api/tx/balance-changes/$hash'
-      fullPath: '/api/tx/balance-changes/$hash'
-      preLoaderRoute: typeof ApiTxBalanceChangesHashRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_layout/block/countdown/$targetBlock': {
+      id: '/_layout/block/countdown/$targetBlock'
+      path: '/block/countdown/$targetBlock'
+      fullPath: '/block/countdown/$targetBlock'
+      preLoaderRoute: typeof LayoutBlockCountdownTargetBlockRouteImport
+      parentRoute: typeof LayoutRoute
     }
-    '/api/token/logo/$address': {
-      id: '/api/token/logo/$address'
-      path: '/api/token/logo/$address'
-      fullPath: '/api/token/logo/$address'
-      preLoaderRoute: typeof ApiTokenLogoAddressRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_layout/dex/$from/$to': {
+      id: '/_layout/dex/$from/$to'
+      path: '/dex/$from/$to'
+      fullPath: '/dex/$from/$to'
+      preLoaderRoute: typeof LayoutDexFromToRouteImport
+      parentRoute: typeof LayoutRoute
     }
-    '/api/contract/creation/$address': {
-      id: '/api/contract/creation/$address'
-      path: '/api/contract/creation/$address'
-      fullPath: '/api/contract/creation/$address'
-      preLoaderRoute: typeof ApiContractCreationAddressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/address/zone-portal/$address': {
-      id: '/api/address/zone-portal/$address'
-      path: '/api/address/zone-portal/$address'
-      fullPath: '/api/address/zone-portal/$address'
-      preLoaderRoute: typeof ApiAddressZonePortalAddressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/address/metadata/$address': {
-      id: '/api/address/metadata/$address'
-      path: '/api/address/metadata/$address'
-      fullPath: '/api/address/metadata/$address'
-      preLoaderRoute: typeof ApiAddressMetadataAddressRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/address/live/$address': {
-      id: '/api/address/live/$address'
-      path: '/api/address/live/$address'
-      fullPath: '/api/address/live/$address'
-      preLoaderRoute: typeof ApiAddressLiveAddressRouteImport
+    '/api/address/balances/$address': {
+      id: '/api/address/balances/$address'
+      path: '/api/address/balances/$address'
+      fullPath: '/api/address/balances/$address'
+      preLoaderRoute: typeof ApiAddressBalancesAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/address/history/$address': {
@@ -766,26 +776,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressHistoryAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/address/balances/$address': {
-      id: '/api/address/balances/$address'
-      path: '/api/address/balances/$address'
-      fullPath: '/api/address/balances/$address'
-      preLoaderRoute: typeof ApiAddressBalancesAddressRouteImport
+    '/api/address/live/$address': {
+      id: '/api/address/live/$address'
+      path: '/api/address/live/$address'
+      fullPath: '/api/address/live/$address'
+      preLoaderRoute: typeof ApiAddressLiveAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout/dex/$from/$to': {
-      id: '/_layout/dex/$from/$to'
-      path: '/dex/$from/$to'
-      fullPath: '/dex/$from/$to'
-      preLoaderRoute: typeof LayoutDexFromToRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/address/metadata/$address': {
+      id: '/api/address/metadata/$address'
+      path: '/api/address/metadata/$address'
+      fullPath: '/api/address/metadata/$address'
+      preLoaderRoute: typeof ApiAddressMetadataAddressRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_layout/block/countdown/$targetBlock': {
-      id: '/_layout/block/countdown/$targetBlock'
-      path: '/block/countdown/$targetBlock'
-      fullPath: '/block/countdown/$targetBlock'
-      preLoaderRoute: typeof LayoutBlockCountdownTargetBlockRouteImport
-      parentRoute: typeof LayoutRoute
+    '/api/address/zone-portal/$address': {
+      id: '/api/address/zone-portal/$address'
+      path: '/api/address/zone-portal/$address'
+      fullPath: '/api/address/zone-portal/$address'
+      preLoaderRoute: typeof ApiAddressZonePortalAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contract/creation/$address': {
+      id: '/api/contract/creation/$address'
+      path: '/api/contract/creation/$address'
+      fullPath: '/api/contract/creation/$address'
+      preLoaderRoute: typeof ApiContractCreationAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/token/logo/$address': {
+      id: '/api/token/logo/$address'
+      path: '/api/token/logo/$address'
+      fullPath: '/api/token/logo/$address'
+      preLoaderRoute: typeof ApiTokenLogoAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tx/balance-changes/$hash': {
+      id: '/api/tx/balance-changes/$hash'
+      path: '/api/tx/balance-changes/$hash'
+      fullPath: '/api/tx/balance-changes/$hash'
+      preLoaderRoute: typeof ApiTxBalanceChangesHashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/tx/trace/$hash': {
+      id: '/api/tx/trace/$hash'
+      path: '/api/tx/trace/$hash'
+      fullPath: '/api/tx/trace/$hash'
+      preLoaderRoute: typeof ApiTxTraceHashRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/address/zone-portal/$address/$kind': {
       id: '/api/address/zone-portal/$address/$kind'
@@ -800,6 +838,8 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
+  LayoutMarketsRoute: typeof LayoutMarketsRoute
+  LayoutPropammRoute: typeof LayoutPropammRoute
   LayoutSimulateRoute: typeof LayoutSimulateRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -822,6 +862,8 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
+  LayoutMarketsRoute: LayoutMarketsRoute,
+  LayoutPropammRoute: LayoutPropammRoute,
   LayoutSimulateRoute: LayoutSimulateRoute,
   LayoutTokensRoute: LayoutTokensRoute,
   LayoutIndexRoute: LayoutIndexRoute,

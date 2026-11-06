@@ -49,6 +49,32 @@ forge script script/Mail.s.sol --verifier-url https://contracts.tempo.xyz --veri
 See [/apps/contract-verification/scripts/verify-solidity.sh](./scripts/verify-solidity.sh)
 and [/apps/contract-verification/scripts/verify-vyper.sh](./scripts/verify-vyper.sh) for small examples you can run.
 
+#### solar
+
+Contracts compiled with [solar](https://github.com/paradigmxyz/solar) verify like solc ones, straight
+from Foundry:
+
+```bash
+forge verify-contract <address> src/Foo.sol:Foo --use solar \
+  --verifier sourcify --verifier-url https://contracts.tempo.xyz
+```
+
+Forge sends the solc-compatible version solar reports as a solc wrapper (the `Version:` line of
+`SOLC_WRAPPER=1 solar --version`), such as `0.8.38+commit.e7a91fc7.solar.0.3.0`, as `compilerVersion`. The
+container compiles those with the solar build that names, through `solar --standard-json`, and
+records the compilation as compiler `solar`. It downloads releases from solar's GitHub releases
+and development builds, such as the `0.3.0-dev` one Foundry bundles, from the copies Sourcify
+publishes. Only builds listed in [container/solar-downloads.json](./container/solar-downloads.json)
+are downloaded, and each is used only when its SHA-256 matches the one listed there; any other solar
+version is refused. To support a new solar build, add its full revision, version and the SHA-256 of
+its `x86_64-unknown-linux-musl` binary (for a release, the `solar` file in its archive). Builds that
+are neither, like the one Earn uses, are pinned in [container/solar-builds.json](./container/solar-builds.json)
+and built from source by the Dockerfile.
+
+With an older Forge that sends the solc version for a solar build, pass the solar one with
+`--compiler-version` and `--compilation-profile default`. A solar-compiled contract submitted with a
+solc version fails with `solar_compiler_version_required` instead of a misleading `no_match`.
+
 #### Direct API Usage
 
 - Standard JSON: see [/apps/contract-verification/scripts/verify-via-curl.sh](./scripts/verify-via-curl.sh) for a full example.

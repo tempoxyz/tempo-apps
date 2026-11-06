@@ -18,6 +18,10 @@ vi.mock('#lib/server/network', () => ({ getChainBackend: () => undefined }))
 vi.mock('#lib/server/verified-tokens', () => ({
 	getVerifiedTokenAddresses: async () => new Set([USDC, OUSD, PATH]),
 }))
+vi.mock('#lib/server/block-number', () => ({
+	readBlockNumber: (client: { getBlockNumber: () => Promise<bigint> }) =>
+		client.getBlockNumber(),
+}))
 vi.mock('#wagmi.config', () => ({
 	getTempoChain: () => ({ id: 4217 }),
 	getBatchedClient: () => ({

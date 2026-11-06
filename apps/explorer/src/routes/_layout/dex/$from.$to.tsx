@@ -31,6 +31,7 @@ import type * as React from 'react'
 import { cx } from 'zyzz'
 import { Address } from '#comps/Address'
 import { DexSwapsGrid, LivePill, useDexSwaps } from '#comps/DexSwaps'
+import { PropAmmPairPools } from '#comps/PropAmmPairPools'
 import { Sections } from '#comps/Sections'
 import {
 	defaultDexRoute,
@@ -43,6 +44,7 @@ import {
 	type DexToken,
 } from '#lib/dex-route'
 import { useMediaQuery } from '#lib/hooks'
+import { propAmmQuotesQueryOptions } from '#lib/queries/propamm'
 import {
 	dexLegDepthQueryOptions,
 	dexRouteQueryOptions,
@@ -84,7 +86,7 @@ export const Route = createFileRoute('/_layout/dex/$from/$to')({
 		),
 })
 
-const rate = new Intl.NumberFormat('en-US', { maximumFractionDigits: 8 })
+const rate = new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 })
 const bps = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const size = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 })
 const mainnetSymbols: Record<string, string> = {
@@ -92,7 +94,19 @@ const mainnetSymbols: Record<string, string> = {
 	'0x20c0000000000000000000000000000000000000': 'pathUSD',
 }
 
-function quoteMessage(quote: DexQuote): string {
+type Venue = {
+	key: string
+	label: string
+	/** The DEX's route when it trades through other books. */
+	detail?: string | undefined
+	amountOut: string | null
+	message: string
+}
+
+function quoteMessage(quote: DexQuote, legs: readonly DexLeg[]): string {
+	const missing = legs.find((leg) => !leg.exists)
+	if (missing)
+		return `No ${missing.from.symbol} → ${missing.to.symbol} order book`
 	return quote.status === 'no-liquidity'
 		? 'Insufficient liquidity for this amount'
 		: 'Quote unavailable'
@@ -106,11 +120,14 @@ function DexRoutePage(): React.JSX.Element {
 	const quoteTitleId = useId()
 	const bookTitleId = useId()
 	const [section, setSection] = useState(0)
+	// A route with a missing book can't trade, so its books and swaps aren't
+	// shown; the quote says which book is missing.
+	const dexRoutable = query.data?.legs.every((leg) => leg.exists) ?? false
 	const [live, setLive] = useState(true)
 	const [paused, setPaused] = useState(false)
 	// Poll only while the feed is on screen.
 	const swaps = useDexSwaps(
-		live && !paused && (isMobile || section === 0),
+		dexRoutable && live && !paused && (isMobile || section === 0),
 		// Someone who opened this pair wants its swaps, verified or not.
 		{
 			path: query.data?.path.map((token) => token.address),
@@ -130,21 +147,78 @@ function DexRoutePage(): React.JSX.Element {
 		? quoteImpact(snapshot.quote, snapshot.reference)
 		: null
 	const mainnet = getTempoChain().id === 4217
+	const propAmmQuotes = useQuery({
+		...propAmmQuotesQueryOptions(search),
+		enabled: Boolean(snapshot) && !snapshot?.inputError,
+	})
+	const quoteFetching = query.isFetching || propAmmQuotes.isFetching
+	// Every venue quoting the same swap; the page leads with the best.
+	const propAmmVenues = propAmmQuotes.data ?? []
+	// The DEX only counts as a venue when it can route the pair, or when it is
+	// the only one, so its message explains the empty quote.
+	const showDex = dexRoutable || propAmmVenues.length === 0
+	const venues: Venue[] = snapshot
+		? [
+				...(showDex
+					? [
+							{
+								key: 'dex',
+								label: 'Stablecoin DEX',
+								detail:
+									dexRoutable && snapshot.path.length > 2
+										? 'via ' +
+											snapshot.path
+												.slice(1, -1)
+												.map((token) => token.symbol)
+												.join(' → ')
+										: undefined,
+								amountOut: snapshot.quote.amountOut,
+								message: quoteMessage(snapshot.quote, snapshot.legs),
+							},
+						]
+					: []),
+				...propAmmVenues.map((quote) => ({
+					key: quote.key,
+					label: `PropAMM ${quote.version}`,
+					amountOut: quote.amountOut,
+					message:
+						quote.status === 'no-liquidity'
+							? 'Not enough inventory'
+							: 'Quote unavailable',
+				})),
+			]
+		: []
+	const best = venues.reduce<(Venue & { amountOut: string }) | undefined>(
+		(top, venue) =>
+			venue.amountOut !== null &&
+			(!top || Number(venue.amountOut) > Number(top.amountOut))
+				? { ...venue, amountOut: venue.amountOut }
+				: top,
+		undefined,
+	)
+	// "Best" only means something beside another quote.
+	const quoted = venues.filter((venue) => venue.amountOut !== null).length
+	// A lone venue's row names a venue other than the DEX or the DEX's route;
+	// a lone failure is already the headline.
+	const showVenues =
+		venues.length > 1 ||
+		(Boolean(best) && (!showDex || Boolean(venues[0]?.detail)))
 
 	return (
 		<div {...styles.page()}>
 			<header {...styles.header()}>
 				<Button.Link
-					render={<Link to="/dex" />}
+					render={<Link to="/markets" />}
 					size="small"
 					variant="secondary"
 					{...styles.back()}
 				>
 					<ArrowLeft />
-					Stablecoin DEX
+					Markets
 				</Button.Link>
 				<div {...styles.titleRow()}>
 					<h1 {...styles.title()}>
+						{' '}
 						{from && to ? (
 							<>
 								<span {...styles.titleToken()}>
@@ -255,87 +329,96 @@ function DexRoutePage(): React.JSX.Element {
 									<div
 										{...styles.receive()}
 										aria-live="polite"
-										aria-busy={query.isFetching}
+										aria-busy={quoteFetching}
 									>
 										<span {...styles.receiveLabel()}>You receive</span>
-										{snapshot.quote.amountOut !== null ? (
-											<div
-												{...styles.amountOut({ fetching: query.isFetching })}
-											>
+										{best ? (
+											<div {...styles.amountOut({ fetching: quoteFetching })}>
 												<Amount
 													size="lg"
 													symbol={to.symbol}
-													value={snapshot.quote.amountOut}
+													value={best.amountOut}
 												/>
 											</div>
 										) : (
 											<p {...styles.quoteMessage()}>
 												{snapshot.inputError
 													? 'Enter a valid amount'
-													: quoteMessage(snapshot.quote)}
+													: venues.length > 1
+														? 'No venue can fill this amount'
+														: (venues[0]?.message ??
+															quoteMessage(snapshot.quote, snapshot.legs))}
 											</p>
 										)}
 									</div>
 								</div>
-								<div {...styles.rows()}>
-									<ListGroup.Root>
-										{snapshot.path.length > 2 && (
-											<ListGroup.Row>
-												<ListGroup.Label>Route</ListGroup.Label>
-												<ol aria-label="Token path" {...styles.path()}>
-													{snapshot.path.map((token, index) => (
-														<li key={token.address} {...styles.pathItem()}>
-															{index > 0 && (
-																<ArrowRight
-																	aria-hidden="true"
-																	{...styles.arrow()}
-																/>
-															)}
-															<TokenLink token={token} />
-														</li>
-													))}
-												</ol>
-											</ListGroup.Row>
-										)}
-										{snapshot.quote.amountOut !== null && (
-											<>
-												<ListGroup.Row>
-													<ListGroup.Label>Rate</ListGroup.Label>
-													<span {...styles.numeric()}>
-														1 {from.symbol} ={' '}
-														{rate.format(
-															Number(snapshot.quote.amountOut) /
-																Number(snapshot.quote.amountIn),
-														)}{' '}
-														{to.symbol}
-													</span>
-												</ListGroup.Row>
-												<ListGroup.Row>
-													<ListGroup.Label
-														title={`Compared with the rate for 1 ${from.symbol} at the same block`}
-													>
-														Price impact
-													</ListGroup.Label>
-													<span {...styles.numeric()}>
-														{impact === null
-															? '—'
-															: `${bps.format(impact)} bps`}
-													</span>
-												</ListGroup.Row>
-											</>
-										)}
+								<ListGroup.Root {...styles.rows()}>
+									{best && (
 										<ListGroup.Row>
-											<ListGroup.Label>Block</ListGroup.Label>
-											<Link
-												to="/block/$id"
-												params={{ id: snapshot.blockNumber }}
-												{...cx(styles.numeric(), link(), linkHover())}
-											>
-												{BigInt(snapshot.blockNumber).toLocaleString('en-US')}
-											</Link>
+											<ListGroup.Label>Rate</ListGroup.Label>
+											<span {...styles.numeric()}>
+												1 {from.symbol} ={' '}
+												{rate.format(
+													Number(best.amountOut) /
+														Number(snapshot.quote.amountIn),
+												)}{' '}
+												{to.symbol}
+											</span>
 										</ListGroup.Row>
-									</ListGroup.Root>
-								</div>
+									)}
+									{best?.key === 'dex' && (
+										<ListGroup.Row>
+											<ListGroup.Label
+												title={`Compared with the rate for 1 ${from.symbol} at the same block`}
+											>
+												Price impact
+											</ListGroup.Label>
+											<span {...styles.numeric()}>
+												{impact === null ? '—' : `${bps.format(impact)} bps`}
+											</span>
+										</ListGroup.Row>
+									)}
+									{showVenues &&
+										venues.map((venue) => (
+											<ListGroup.Row key={venue.key}>
+												<ListGroup.Info>
+													<ListGroup.Title>{venue.label}</ListGroup.Title>
+													{venue.detail && (
+														<ListGroup.Description>
+															{venue.detail}
+														</ListGroup.Description>
+													)}
+												</ListGroup.Info>
+												<span
+													{...styles.venueValue({
+														best: venue.key === best?.key,
+													})}
+												>
+													{venue.amountOut === null ? (
+														venue.message
+													) : (
+														<Amount
+															symbol={to.symbol}
+															value={venue.amountOut}
+														/>
+													)}
+													{venue.key === best?.key && quoted > 1 && (
+														<span {...styles.best()}> · Best</span>
+													)}
+												</span>
+											</ListGroup.Row>
+										))}
+									<ListGroup.Row>
+										<ListGroup.Label>Block</ListGroup.Label>
+										<Link
+											to="/block/$id"
+											params={{ id: snapshot.blockNumber }}
+											{...cx(styles.numeric(), link(), linkHover())}
+										>
+											{BigInt(snapshot.blockNumber).toLocaleString('en-US')}
+										</Link>
+									</ListGroup.Row>
+								</ListGroup.Root>
 								{query.isRefetchError && (
 									<Alert intent="warning" {...styles.refreshError()}>
 										<Alert.Icon />
@@ -346,8 +429,11 @@ function DexRoutePage(): React.JSX.Element {
 								)}
 								<div {...styles.footer()}>
 									<Button
-										loading={query.isFetching}
-										onClick={() => void query.refetch()}
+										loading={quoteFetching}
+										onClick={() => {
+											void query.refetch()
+											if (propAmmQuotes.isEnabled) void propAmmQuotes.refetch()
+										}}
 										size="large"
 									>
 										Refresh quote
@@ -358,13 +444,19 @@ function DexRoutePage(): React.JSX.Element {
 					)}
 				</Surface>
 
-				{snapshot && (
+				{snapshot && from && to && dexRoutable && (
 					<Surface render={<section aria-labelledby={bookTitleId} />}>
 						<Surface.Header>
 							<Surface.Title id={bookTitleId}>
-								{snapshot.legs.length === 1 ? 'Order book' : 'Order books'}
+								{snapshot.legs.length === 1 ? 'Order book' : 'Route'}
 							</Surface.Title>
 						</Surface.Header>
+						{snapshot.legs.length > 1 && (
+							<Surface.Description>
+								The Stablecoin DEX has no {from.symbol} / {to.symbol} book, so a
+								swap trades through these {snapshot.legs.length} books in turn.
+							</Surface.Description>
+						)}
 						{snapshot.legs.map((leg, index) => (
 							<Fragment key={`${leg.from.address}:${leg.to.address}`}>
 								{index > 0 && <Separator {...styles.legSeparator()} />}
@@ -372,6 +464,7 @@ function DexRoutePage(): React.JSX.Element {
 									blockNumber={snapshot.blockNumber}
 									index={snapshot.legs.length > 1 ? index : undefined}
 									leg={leg}
+									showDepth={snapshot.legs.length === 1}
 								/>
 							</Fragment>
 						))}
@@ -379,7 +472,9 @@ function DexRoutePage(): React.JSX.Element {
 				)}
 			</div>
 
-			{snapshot && from && to && (
+			<PropAmmPairPools a={search.from} b={search.to} />
+
+			{snapshot && from && to && dexRoutable && (
 				<Sections
 					mode={isMobile ? 'stacked' : 'tabs'}
 					activeSection={section}
@@ -522,8 +617,10 @@ function LegRow(props: {
 	blockNumber: string
 	index: number | undefined
 	leg: DexLeg
+	/** A direct pair shows its depth; a route's hops show only their best prices. */
+	showDepth: boolean
 }): React.JSX.Element {
-	const { blockNumber, index, leg } = props
+	const { blockNumber, index, leg, showDepth } = props
 	const depth = useQuery({
 		...dexLegDepthQueryOptions({
 			from: leg.from.address,
@@ -531,7 +628,7 @@ function LegRow(props: {
 			tick: leg.bestTick ?? 0,
 			blockNumber,
 		}),
-		enabled: leg.bestTick !== null,
+		enabled: showDepth && leg.bestTick !== null,
 	})
 	const spread =
 		leg.bid !== null && leg.ask !== null
@@ -570,8 +667,9 @@ function LegRow(props: {
 					</Badge>
 				)}
 			</div>
-			{leg.bestTick !== null && (
+			{showDepth && leg.bestTick !== null && (
 				<div aria-live="polite">
+					{' '}
 					{depth.isPending ? (
 						<Skeleton {...styles.depthSkeleton()}>
 							<p role="status">Loading depth…</p>
@@ -801,31 +899,18 @@ namespace styles {
 		typography: 'heading.h3',
 	})
 
-	// Surface pads 24px, so the review rows reach its edges and keep their own
-	// inset. They follow the amounts, so a wrapper sets the margins.
-	export const rows = style({
-		marginBlockStart: '16',
-		marginInline: '-24px !custom',
+	// The card's list bleeds to its edges itself; this only spaces it from the
+	// amounts.
+	export const rows = style({ marginBlockStart: '16' })
+
+	// A venue's quote, in the primary color when it is the best.
+	export const venueValue = variants({
+		base: { color: 'content.secondary', fontVariantNumeric: 'tabular-nums' },
+		defaultVariants: { best: false },
+		variants: { best: { false: {}, true: { color: 'content.primary' } } },
 	})
 
-	export const path = style({
-		alignItems: 'center',
-		columnGap: '8',
-		display: 'flex',
-		flexWrap: 'wrap',
-		justifyContent: 'flex-end',
-		listStyle: 'none !custom',
-		margin: '0',
-		padding: '0',
-		rowGap: '8',
-	})
-
-	export const pathItem = style({
-		alignItems: 'center',
-		display: 'flex',
-		gap: '8',
-		minWidth: '0 !custom',
-	})
+	export const best = style({ color: 'content.positive' })
 
 	export const arrow = style({
 		color: 'content.secondary',

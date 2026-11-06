@@ -30,6 +30,7 @@ import {
 import {
 	AuxdataStyle,
 	matchBytecode,
+	getSolarAuxdataVersion,
 	getVyperAuxdataStyle,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
@@ -54,6 +55,17 @@ const JOB_TTL_MS = 15 * 60 * 1_000
 /** Number of container instances to load-balance across. */
 const CONTAINER_INSTANCE_COUNT =
 	wranglerJSON.containers.at(0)?.max_instances ?? 10
+
+/**
+ * solar reports a solc-compatible version with its commit and own version as build metadata, such
+ * as `0.8.38+commit.e7a91fc7.solar.0.3.0` (or `0.3.0-dev` for the solar Foundry bundles), which Forge
+ * sends as `compilerVersion` for solar builds. The container compiles those with the solar build they name.
+ */
+function isSolarCompilerVersion(compilerVersion: string): boolean {
+	return /^v?\d+\.\d+\.\d+\+commit\.[0-9a-f]{7,40}\.solar\.\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(
+		compilerVersion,
+	)
+}
 
 function timestampToMs(value: string): number {
 	const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
@@ -717,6 +729,27 @@ async function runVerificationJob(
 			return
 		}
 
+		// Forge reports a solc version for solar builds unless told the solar one, and recompiling solar
+		// output with solc can never match, so ask for the solar build instead of a misleading no_match.
+		const onchainSolarVersion =
+			isVyper || isSolarCompilerVersion(compilerVersion)
+				? null
+				: getSolarAuxdataVersion(onchainBytecode)
+		if (onchainSolarVersion) {
+			await db
+				.update(verificationJobsTable)
+				.set({
+					completedAt: new Date().toISOString(),
+					errorCode: 'solar_compiler_version_required',
+					errorData: JSON.stringify({
+						message: `The bytecode at ${address} was compiled by solar ${onchainSolarVersion}, but compilerVersion ${compilerVersion} names solc. Resubmit with the solar build's solc-compatible version (the Version line of \`SOLC_WRAPPER=1 solar --version\`, e.g. 0.8.38+commit.e7a91fc7.solar.0.3.0); with Forge, run forge verify-contract with --use solar.`,
+					}),
+					compilationTime: Date.now() - startTime,
+				})
+				.where(eq(verificationJobsTable.id, jobId))
+			return
+		}
+
 		// Compile via container (load-balanced across multiple instances)
 		const compileEndpoint = isVyper
 			? 'http://container/compile/vyper'
@@ -1070,7 +1103,11 @@ async function runVerificationJob(
 		}
 
 		// Get or create compiled contract
-		const compilerName = isVyper ? 'vyper' : 'solc'
+		const compilerName = isVyper
+			? 'vyper'
+			: isSolarCompilerVersion(compilerVersion)
+				? 'solar'
+				: 'solc'
 		const existingCompilation = await db
 			.select({ id: compiledContractsTable.id })
 			.from(compiledContractsTable)

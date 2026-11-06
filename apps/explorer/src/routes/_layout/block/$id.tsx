@@ -42,6 +42,7 @@ import {
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
+import { getNonceKey, isSubblockNonceKey } from '#lib/domain/nonce'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import { style, Amount as TdsAmount } from '@tempoxyz/ds'
 
@@ -266,9 +267,8 @@ function getTransactionType(
 		return { type: 'system', label: name }
 	}
 
-	// Check for sub-block transactions (nonce starts with 0x5b)
-	const nonceHex = transaction.nonce?.toString(16).padStart(8, '0') || ''
-	if (nonceHex.startsWith('5b'))
+	// Sub-block transactions use a nonce key whose top byte is 0x5b
+	if (isSubblockNonceKey(getNonceKey(transaction)))
 		return { type: 'sub-block', label: 'Sub-block' }
 
 	// Check for fee token transactions (type 0x76)

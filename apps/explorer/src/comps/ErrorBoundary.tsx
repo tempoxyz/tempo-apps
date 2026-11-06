@@ -12,7 +12,9 @@ export class ErrorBoundary extends React.Component<
 	constructor(props: ErrorComponentProps) {
 		super(props)
 
-		this.state = { error: props.error }
+		this.state = {
+			error: props.error instanceof Error ? props.error : null,
+		}
 	}
 
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {

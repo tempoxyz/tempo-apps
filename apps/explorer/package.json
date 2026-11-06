@@ -54,7 +54,7 @@
 		"abitype": "catalog:",
 		"accounts": "catalog:",
 		"animejs": "catalog:",
-		"hono": "^4.12.31",
+		"hono": "catalog:",
 		"midcut": "catalog:",
 		"ox": "catalog:",
 		"react": "catalog:",
@@ -91,7 +91,7 @@
 		"typed-query-selector": "catalog:",
 		"unplugin-icons": "catalog:",
 		"vite": "catalog:",
-		"vite-plugin-devtools-json": "^1.0.0",
+		"vite-plugin-devtools-json": "^1.1.2",
 		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	}

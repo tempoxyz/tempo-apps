@@ -150,8 +150,8 @@ function SpotlightLinks() {
 				<SpotlightPill to="/tokens" icon={<Coins />}>
 					Tokens
 				</SpotlightPill>
-				<SpotlightPill to="/dex" icon={<SwapHorizontal />}>
-					DEX
+				<SpotlightPill to="/markets" icon={<SwapHorizontal />}>
+					Markets
 				</SpotlightPill>
 			</div>
 		</section>

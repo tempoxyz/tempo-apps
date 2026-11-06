@@ -151,6 +151,51 @@ function pluralize(count: number, noun: string): string {
 }
 
 /**
+ * One line of how a verified contract was compiled: compiler and version, language, optimizer,
+ * EVM version and how its bytecode matched.
+ */
+function CompilationSummary(props: {
+	source: Extract<ContractSource, { kind: 'verified' }>
+}): React.JSX.Element {
+	const { source } = props
+	const { compilation } = source
+	const settings = compilation.compilerSettings
+	const items: Array<{ label: string; value: string }> = [
+		{
+			label: 'Compiler',
+			value: `${compilation.compiler} ${compilation.compilerVersion}`,
+		},
+		{ label: 'Language', value: compilation.language },
+	]
+	if (settings.optimizer)
+		items.push({
+			label: 'Optimizer',
+			value: settings.optimizer.enabled
+				? `${settings.optimizer.runs} runs`
+				: 'off',
+		})
+	if (settings.evmVersion)
+		items.push({ label: 'EVM', value: settings.evmVersion })
+	if (settings.viaIR) items.push({ label: 'Via IR', value: 'yes' })
+	const match = source.runtimeMatch ?? source.match
+	if (match)
+		items.push({
+			label: 'Match',
+			value: match === 'exact_match' ? 'exact' : 'partial',
+		})
+	return (
+		<span {...styles.compilation()}>
+			{items.map((item) => (
+				<span key={item.label} {...styles.setting()}>
+					<span {...styles.settingLabel()}>{item.label}</span>{' '}
+					<span {...styles.settingValue()}>{item.value}</span>
+				</span>
+			))}
+		</span>
+	)
+}
+
+/**
  * Contract tab content - shows Source, ABI and Bytecode
  */
 export function ContractTabContent(props: {
@@ -186,7 +231,7 @@ export function ContractTabContent(props: {
 						isTip20 ? (
 							<Tip20Links />
 						) : source.kind === 'verified' ? (
-							`Verified · ${source.compilation.compiler} ${source.compilation.compilerVersion}`
+							<CompilationSummary source={source} />
 						) : (
 							'Native precompile source'
 						)
@@ -440,6 +485,24 @@ namespace styles {
 		display: 'flex',
 		flexDirection: 'column',
 		gap: '32',
+	})
+
+	export const compilation = style({
+		columnGap: '16',
+		display: 'flex',
+		flexWrap: 'wrap',
+		rowGap: '4',
+	})
+
+	export const setting = style({ whiteSpace: 'nowrap' })
+
+	export const settingLabel = style({ color: 'content.tertiary' })
+
+	export const settingValue = style({
+		color: 'content.secondary',
+		overflowWrap: 'anywhere',
+		typography: 'mono.m1',
+		whiteSpace: 'normal',
 	})
 
 	export const section = style({
