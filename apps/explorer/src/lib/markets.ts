@@ -219,9 +219,9 @@ export function propAmmRows(
 }
 
 /**
- * A Uniswap v4 pool leads to the pair page when both tokens are TIP-20, as
- * a propAMM pool does; its liquidity is what its positions hold at the
- * current price.
+ * A Uniswap v4 pool leads to its PoolManager, whose activity includes the
+ * pool's: the pair page shows only DEX and propAMM routes. Its liquidity is
+ * what its positions hold at the current price.
  */
 export function uniswapRows(pools: readonly UniswapPool[]): MarketRow[] {
 	return pools.map((pool) => {
@@ -242,10 +242,7 @@ export function uniswapRows(pools: readonly UniswapPool[]): MarketRow[] {
 			statusDetail: detail,
 			pool: null,
 			kind: `${venueLabels.uniswap} ${feeLabel(pool.fee)}`,
-			link:
-				isTip20Address(pool.base.address) && isTip20Address(pool.quote.address)
-					? { kind: 'pair', from: pool.base.address, to: pool.quote.address }
-					: { kind: 'address', address: pool.base.address },
+			link: { kind: 'address', address: pool.manager },
 		}
 	})
 }

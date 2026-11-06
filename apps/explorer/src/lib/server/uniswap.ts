@@ -46,6 +46,8 @@ const modifyLiquiditySignature =
 const POOLS_SLOT = pad(toHex(6))
 
 const META_DEADLINE = 2_500
+/** Positions and volume: shorter than the pools' budget, so a slow indexer only blanks them. */
+const INDEXER_DEADLINE = 3_500
 const POOLS_DEADLINE = 5_000
 const TRADES_DEADLINE = 5_000
 const META_TTL = 600
@@ -261,16 +263,19 @@ export async function getUniswapPools(): Promise<UniswapSnapshot> {
 				args: [keccak256(concat([id, POOLS_SLOT]))],
 			})),
 		),
-		readRanges(chainId, manager, ids).catch((error) => {
-			console.error('Failed to read Uniswap positions:', error)
-			return null
-		}),
-		readVolume(chainId, manager, ids, Math.floor(generatedAt / 1000)).catch(
+		withDeadline(readRanges(chainId, manager, ids), INDEXER_DEADLINE).catch(
 			(error) => {
-				console.error('Failed to read Uniswap volume:', error)
+				console.error('Failed to read Uniswap positions:', error)
 				return null
 			},
 		),
+		withDeadline(
+			readVolume(chainId, manager, ids, Math.floor(generatedAt / 1000)),
+			INDEXER_DEADLINE,
+		).catch((error) => {
+			console.error('Failed to read Uniswap volume:', error)
+			return null
+		}),
 	])
 
 	let complete = meta.complete && ranges !== null && volume !== null
@@ -333,6 +338,7 @@ export async function getUniswapPools(): Promise<UniswapSnapshot> {
 
 		return {
 			key: config.id,
+			manager,
 			base,
 			quote,
 			fee: config.fee,

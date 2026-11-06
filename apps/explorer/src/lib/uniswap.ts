@@ -191,6 +191,8 @@ export const uniswapStateLabels: Record<UniswapState, string> = {
 export type UniswapPool = {
 	/** The pool ID. */
 	key: Hex
+	/** The PoolManager holding the pool. */
+	manager: Address
 	base: DexPoolToken
 	quote: DexPoolToken
 	fee: number

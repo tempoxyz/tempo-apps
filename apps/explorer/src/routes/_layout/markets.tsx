@@ -228,7 +228,11 @@ function MarketsPage(): React.JSX.Element {
 	const propAmmQuery = useQuery(propAmmPoolsQueryOptions())
 	const propAmmTradesQuery = useQuery(propAmmTradesQueryOptions())
 	const uniswapQuery = useQuery(uniswapPoolsQueryOptions())
-	const uniswapTradesQuery = useQuery(uniswapTradesQueryOptions())
+	// Like DEX swaps, Uniswap swaps poll only while their list is on screen.
+	const uniswapTradesQuery = useQuery({
+		...uniswapTradesQueryOptions(),
+		enabled: showUniswap && search.tab === 'trades',
+	})
 	// Swaps poll only while their list is on screen. The server applies the
 	// verified filter so spam can't crowd the feed.
 	const swapsVisible = showDex && search.tab === 'trades'

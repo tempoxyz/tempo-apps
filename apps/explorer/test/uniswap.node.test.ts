@@ -22,6 +22,7 @@ const prime = token('PRIME', '0x20c00000000000000000000058d0b8b2cfdb358c')
 
 const pool = (overrides: Partial<UniswapPool> = {}): UniswapPool => ({
 	key: '0x0b9a0ce880fd51829b650bf2bbacff62f10ffe274b2250b2c3cf1c5614aab427',
+	manager: '0x33620f62c5b9b2086dd6b62f4a297a9f30347029',
 	base: prime,
 	quote: path,
 	fee: 100,
@@ -158,7 +159,10 @@ describe('uniswap pools', () => {
 			kind: 'Uniswap v4 0.01%',
 			liquidity: { value: 1_000, partial: false },
 			status: 'live',
-			link: { kind: 'pair', from: prime.address, to: path.address },
+			link: {
+				kind: 'address',
+				address: '0x33620f62c5b9b2086dd6b62f4a297a9f30347029',
+			},
 		})
 		const [, out] = uniswapRows([
 			pool(),
