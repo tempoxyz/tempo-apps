@@ -36,7 +36,7 @@ export type MarketVenue = (typeof marketVenues)[number]
 export const venueLabels: Record<MarketVenue, string> = {
 	dex: 'Stablecoin DEX',
 	propamm: 'PropAMM',
-	uniswap: 'Uniswap v4',
+	uniswap: 'Uniswap',
 }
 
 /**
@@ -134,7 +134,7 @@ export type MarketRow = {
 	statusDetail: string | null
 	/** The propAMM pool's contract and version. */
 	pool: { address: Address; version: 'v1' | 'v2' } | null
-	/** What the row trades on, such as Order book or Uniswap v4 0.01%. */
+	/** What the row trades on, such as Order book or Uniswap 0.01%. */
 	kind: string
 	link: MarketLink
 }

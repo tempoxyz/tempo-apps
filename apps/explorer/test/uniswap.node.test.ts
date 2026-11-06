@@ -156,7 +156,7 @@ describe('uniswap pools', () => {
 		])
 		expect(row).toMatchObject({
 			venue: 'uniswap',
-			kind: 'Uniswap v4 0.01%',
+			kind: 'Uniswap 0.01%',
 			liquidity: { value: 1_000, partial: false },
 			status: 'live',
 			link: {

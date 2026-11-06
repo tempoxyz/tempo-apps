@@ -404,7 +404,7 @@ function MarketsPage(): React.JSX.Element {
 				]
 			: []),
 		...(showUniswap && uniswapFailed
-			? [errorProps('Uniswap v4 pools', uniswapQuery)]
+			? [errorProps('Uniswap pools', uniswapQuery)]
 			: []),
 	]
 	const tradesErrors: LoadErrorProps[] = [
@@ -418,10 +418,10 @@ function MarketsPage(): React.JSX.Element {
 			? [errorProps('PropAMM pools', propAmmQuery)]
 			: []),
 		...(showUniswap && uniswapTradesFailed
-			? [errorProps('Uniswap v4 swaps', uniswapTradesQuery)]
+			? [errorProps('Uniswap swaps', uniswapTradesQuery)]
 			: []),
 		...(showUniswap && uniswapFailed && !uniswapTradesFailed
-			? [errorProps('Uniswap v4 pools', uniswapQuery)]
+			? [errorProps('Uniswap pools', uniswapQuery)]
 			: []),
 	]
 
@@ -593,7 +593,7 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 		<div {...styles.scroll()}>
 			<Table interactive>
 				<Table.Caption>
-					Pairs on the Stablecoin DEX, PropAMM and Uniswap v4
+					Pairs on the Stablecoin DEX, PropAMM and Uniswap
 				</Table.Caption>
 				<Table.Head>
 					<Table.Row>
@@ -604,7 +604,7 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 						{sortable(
 							'liquidity',
 							'Liquidity',
-							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share. Uniswap v4: what the pool’s positions hold at the current price.',
+							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share. Uniswap: what the pool’s positions hold at the current price.',
 							false,
 						)}
 						{showSpread && sortable('spread', 'Spread')}
@@ -686,8 +686,8 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 		<div {...styles.scroll()}>
 			<Table interactive>
 				<Table.Caption>
-					Latest Stablecoin DEX swaps, PropAMM trades and Uniswap v4 swaps of
-					the last 30 days
+					Latest Stablecoin DEX swaps, PropAMM trades and Uniswap swaps of the
+					last 30 days
 				</Table.Caption>
 				<Table.Head>
 					<Table.Row>
