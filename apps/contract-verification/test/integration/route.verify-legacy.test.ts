@@ -55,6 +55,7 @@ describe('POST /verify/vyper', () => {
 		const creationBytecode = createVyperBytecode('60016000')
 		const getCode = async () => runtimeBytecode
 		const getTransactionReceipt = async () => ({
+			status: 'success' as const,
 			transactionHash: creatorTxHash,
 			blockNumber: 123n,
 			transactionIndex: 7,

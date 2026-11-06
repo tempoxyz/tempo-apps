@@ -79,6 +79,31 @@ solc version fails with `solar_compiler_version_required` instead of a misleadin
 
 - Standard JSON: see [/apps/contract-verification/scripts/verify-via-curl.sh](./scripts/verify-via-curl.sh) for a full example.
 
+#### Repairing missing creation metadata
+
+A contract can have an exact verification (matching bytecode and compiler metadata) while its
+stored deployment lacks the creation transaction hash. To fill that gap, send a standard-JSON
+request to `POST /v2/verify/:chainId/:address` with `creationTransactionHash`. The normal source,
+compiler-version and contract-identifier fields remain required, but the repair ignores those
+sources. Poll `GET /v2/verify/:verificationId` using the ID returned by the POST.
+
+This repair preserves the existing sources, compilation, verification ID and match flags
+(the recorded bytecode/metadata comparison results). It fills deployment metadata only: transaction
+hash, block, transaction index and deployer. It does not compile sources or claim an initcode match.
+
+The selected chain's RPC must prove successful creation of the target address, using either a
+direct-creation receipt or a `CREATE`/`CREATE2` call trace with no reverted parent call.
+Factory-created contracts require `debug_traceTransaction` with `callTracer`; a factory event or
+later no-op call is not proof. The deployer remains the transaction sender, not the factory.
+
+Invalid or unavailable proof produces `invalid_creation_transaction` and can be retried with a
+correct hash or working RPC. Conflicting stored metadata produces `creation_transaction_conflict`;
+multiple exact deployment records produce `ambiguous_creation_transaction`. Both require manual
+investigation. Every refusal leaves existing evidence unchanged. Entries already containing a
+transaction hash still return `409 already_verified`; this endpoint cannot replace that hash.
+After success, read `/v2/contract/:chainId/:address?fields=transactionHash,deployment` to check the
+result. This repair is V2-only; the legacy `POST /verify/vyper` endpoint does not support it.
+
 ### Development
 
 #### Prerequisites

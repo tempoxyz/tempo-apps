@@ -1,5 +1,5 @@
 import type { Context } from 'hono'
-import { type Address, Hex } from 'ox'
+import { Address, Hex } from 'ox'
 import { env } from 'cloudflare:workers'
 import { drizzle } from 'drizzle-orm/d1'
 import { HTTPException } from 'hono/http-exception'
@@ -231,10 +231,7 @@ function extractDurableObjectErrorMeta(
 	return meta
 }
 
-/**
- * Checks if an origin matches an allowed hostname pattern.
- * pathname and search parameters are ignored
- */
+/** Mined transaction metadata for a proven contract creation. */
 export type CreationTransactionMetadata = {
 	transactionHash: Uint8Array
 	blockNumber: number
@@ -242,34 +239,73 @@ export type CreationTransactionMetadata = {
 	deployer: Uint8Array
 }
 
+/** Receipt and trace reads from the selected chain's trusted RPC transport. */
+export type CreationTransactionClient = {
+	getTransactionReceipt?: (args: { hash: Hex.Hex }) => Promise<{
+		transactionHash: Hex.Hex
+		blockNumber: bigint
+		transactionIndex: number
+		from: Address.Address
+		contractAddress?: string | null
+		status: 'success' | 'reverted'
+	}>
+	transport?: {
+		request: (args: {
+			method: 'debug_traceTransaction'
+			params: [Hex.Hex, { tracer: 'callTracer' }]
+		}) => Promise<unknown>
+	}
+}
+
+/** Returns metadata only when the transaction proves a successful creation of the target address. */
 export async function getCreationTransactionMetadata(options: {
 	creationTransactionHash: string
 	address: string
 	chainId: number
-	client: {
-		getTransactionReceipt?: (args: { hash: Hex.Hex }) => Promise<{
-			transactionHash: Hex.Hex
-			blockNumber: bigint
-			transactionIndex: number
-			from: Address.Address
-			contractAddress?: string | null
-		}>
-	}
+	client: CreationTransactionClient
 	logContext?: Record<string, unknown>
 }): Promise<CreationTransactionMetadata | null> {
 	const { creationTransactionHash, address, chainId, client, logContext } =
 		options
 	if (!client.getTransactionReceipt) return null
 	try {
-		Hex.assert(creationTransactionHash)
+		Hex.assert(creationTransactionHash, { strict: true })
+		if (
+			Hex.size(creationTransactionHash) !== 32 ||
+			!Address.validate(address, { strict: false })
+		)
+			throw new Error('Invalid creation transaction hash or contract address')
 		const receipt = await client.getTransactionReceipt({
 			hash: creationTransactionHash,
 		})
 
 		if (
-			receipt.contractAddress &&
-			receipt.contractAddress.toLowerCase() === address.toLowerCase()
-		) {
+			receipt.status !== 'success' ||
+			receipt.transactionHash.toLowerCase() !==
+				creationTransactionHash.toLowerCase() ||
+			typeof receipt.blockNumber !== 'bigint' ||
+			receipt.blockNumber < 0n ||
+			!Number.isSafeInteger(Number(receipt.blockNumber)) ||
+			!Number.isSafeInteger(receipt.transactionIndex) ||
+			receipt.transactionIndex < 0 ||
+			!Address.validate(receipt.from, { strict: false })
+		)
+			throw new Error('Creation transaction receipt is invalid or unsuccessful')
+
+		const directCreation =
+			receipt.contractAddress?.toLowerCase() === address.toLowerCase()
+		// Factory calls have no receipt contractAddress; only execution proves an internal creation.
+		const tracedCreation =
+			!directCreation && client.transport
+				? traceCreatesContract(
+						await client.transport.request({
+							method: 'debug_traceTransaction',
+							params: [creationTransactionHash, { tracer: 'callTracer' }],
+						}),
+						address,
+					)
+				: false
+		if (directCreation || tracedCreation) {
 			return {
 				transactionHash: Hex.toBytes(receipt.transactionHash),
 				blockNumber: Number(receipt.blockNumber),
@@ -297,6 +333,66 @@ export async function getCreationTransactionMetadata(options: {
 	}
 }
 
+function traceCreatesContract(trace: unknown, address: string): boolean {
+	const frames = [{ value: trace, reverted: false }]
+	let found = false
+	let count = 0
+	while (frames.length > 0) {
+		// Bound untrusted RPC trees and avoid recursion through deeply nested EVM calls.
+		if (++count > 10_000) return false
+		const next = frames.pop()
+		if (!next) return false
+		const { value, reverted } = next
+		if (!value || typeof value !== 'object' || Array.isArray(value))
+			return false
+		const frame = value as Record<string, unknown>
+		if (
+			typeof frame.type !== 'string' ||
+			![
+				'CALL',
+				'CALLCODE',
+				'DELEGATECALL',
+				'STATICCALL',
+				'CREATE',
+				'CREATE2',
+				'SELFDESTRUCT',
+			].includes(frame.type) ||
+			typeof frame.from !== 'string' ||
+			!Address.validate(frame.from, { strict: false }) ||
+			(frame.to !== undefined &&
+				(typeof frame.to !== 'string' ||
+					!Address.validate(frame.to, { strict: false }))) ||
+			(frame.error !== undefined && typeof frame.error !== 'string') ||
+			(frame.revertReason !== undefined &&
+				typeof frame.revertReason !== 'string') ||
+			(frame.calls !== undefined && !Array.isArray(frame.calls))
+		)
+			return false
+		// A successful child creation is rolled back when any ancestor reverts, even if the transaction succeeds.
+		const failed =
+			reverted || frame.error !== undefined || frame.revertReason !== undefined
+		if (!failed && typeof frame.to !== 'string') return false
+		// A target created and destroyed in the same transaction never persists, even under EIP-6780.
+		if (
+			!failed &&
+			frame.type === 'SELFDESTRUCT' &&
+			frame.from.toLowerCase() === address.toLowerCase()
+		)
+			return false
+		if (
+			!failed &&
+			(frame.type === 'CREATE' || frame.type === 'CREATE2') &&
+			typeof frame.to === 'string' &&
+			frame.to.toLowerCase() === address.toLowerCase()
+		)
+			found = true
+		for (const child of (frame.calls ?? []) as unknown[])
+			frames.push({ value: child, reverted: failed })
+	}
+	return found
+}
+
+/** Checks whether an origin matches an allowed hostname pattern, ignoring path and query. */
 export function originMatches(params: { origin: string; pattern: string }) {
 	if (env.NODE_ENV === 'development') return true
 

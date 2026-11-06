@@ -13,6 +13,7 @@ import {
 	sourcifyError,
 	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
+	type CreationTransactionClient,
 } from '#lib/utilities.ts'
 import {
 	codeTable,
@@ -233,33 +234,26 @@ verifyRoute
 			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
-			// Exact verifications are terminal, but partial matches must not block
-			// a later exact verification from replacing them.
-			const existingExactVerification = await db
-				.select({
-					matchId: verifiedContractsTable.id,
-					runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-					creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
-				})
-				.from(verifiedContractsTable)
-				.innerJoin(
-					contractDeploymentsTable,
-					eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+			// Exact sources are terminal; only missing creation attribution may be repaired.
+			const existingExactVerification = await exactVerifications(
+				db,
+				chainId,
+				addressBytes,
+			)
+			if (existingExactVerification.length > 1) {
+				return sourcifyError(
+					context,
+					409,
+					'ambiguous_creation_transaction',
+					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
 				)
-				.where(
-					and(
-						eq(contractDeploymentsTable.chainId, chainId),
-						eq(contractDeploymentsTable.address, addressBytes),
-						or(
-							eq(verifiedContractsTable.runtimeMetadataMatch, true),
-							eq(verifiedContractsTable.creationMetadataMatch, true),
-						),
-					),
-				)
-				.limit(1)
-
-			if (existingExactVerification.length > 0) {
-				const existing = existingExactVerification.at(0)
+			}
+			const existing = existingExactVerification.at(0)
+			if (
+				existing &&
+				(existing.deployment.transactionHash !== null ||
+					!parsedBody.data.creationTransactionHash)
+			) {
 				const runtimeMatch = existing?.runtimeMetadataMatch
 					? 'exact matches'
 					: 'match'
@@ -644,15 +638,38 @@ verifyRoute
 		}
 	})
 
-type PublicClientLike = {
+function exactVerifications(
+	db: ReturnType<typeof getDb>,
+	chainId: number,
+	address: Uint8Array,
+) {
+	return db
+		.select({
+			matchId: verifiedContractsTable.id,
+			runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+			creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+			deployment: contractDeploymentsTable,
+		})
+		.from(verifiedContractsTable)
+		.innerJoin(
+			contractDeploymentsTable,
+			eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+		)
+		.where(
+			and(
+				eq(contractDeploymentsTable.chainId, chainId),
+				eq(contractDeploymentsTable.address, address),
+				or(
+					eq(verifiedContractsTable.runtimeMetadataMatch, true),
+					eq(verifiedContractsTable.creationMetadataMatch, true),
+				),
+			),
+		)
+		.limit(2)
+}
+
+type PublicClientLike = CreationTransactionClient & {
 	getCode: (args: { address: `0x${string}` }) => Promise<`0x${string}`>
-	getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
-		transactionHash: `0x${string}`
-		blockNumber: bigint
-		transactionIndex: number
-		from: `0x${string}`
-		contractAddress: `0x${string}` | null
-	}>
 }
 
 type ContainerLike = {
@@ -702,6 +719,83 @@ async function runVerificationJob(
 			chain,
 			transport: createRpcTransport(rpcUrl, chain.id, env),
 		})
+
+		const existingExact = await exactVerifications(db, chainId, addressBytes)
+		const existing = existingExact[0]
+		if (existing) {
+			// A repair must never compile submitted sources or mutate an exact verification.
+			let errorCode: string | null = null
+			if (existingExact.length !== 1) {
+				errorCode = 'ambiguous_creation_transaction'
+			} else if (sanitizedBody.creationTransactionHash) {
+				const proof = await getCreationTransactionMetadata({
+					creationTransactionHash: sanitizedBody.creationTransactionHash,
+					address,
+					chainId,
+					client,
+					logContext: { jobId },
+				})
+				if (!proof) {
+					errorCode = 'invalid_creation_transaction'
+				} else {
+					// Non-null attribution is immutable, including when a concurrent job fills it.
+					const updated = await db
+						.update(contractDeploymentsTable)
+						.set(proof)
+						.where(
+							and(
+								eq(contractDeploymentsTable.id, existing.deployment.id),
+								or(
+									isNull(contractDeploymentsTable.transactionHash),
+									eq(
+										contractDeploymentsTable.transactionHash,
+										proof.transactionHash,
+									),
+								),
+								or(
+									isNull(contractDeploymentsTable.blockNumber),
+									eq(contractDeploymentsTable.blockNumber, proof.blockNumber),
+								),
+								or(
+									isNull(contractDeploymentsTable.transactionIndex),
+									eq(
+										contractDeploymentsTable.transactionIndex,
+										proof.transactionIndex,
+									),
+								),
+								or(
+									isNull(contractDeploymentsTable.deployer),
+									eq(contractDeploymentsTable.deployer, proof.deployer),
+								),
+							),
+						)
+						.returning({ id: contractDeploymentsTable.id })
+					if (updated.length !== 1) errorCode = 'creation_transaction_conflict'
+				}
+			}
+			const messages: Record<string, string> = {
+				ambiguous_creation_transaction:
+					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
+				invalid_creation_transaction:
+					'The supplied transaction could not be proven to create this contract. Check the creation hash and RPC trace availability before retrying.',
+				creation_transaction_conflict:
+					'The supplied creation proof conflicts with existing deployment metadata; no evidence was replaced.',
+			}
+			await db
+				.update(verificationJobsTable)
+				.set({
+					completedAt: new Date().toISOString(),
+					verifiedContractId: errorCode ? null : existing.matchId,
+					errorCode,
+					errorId: errorCode ? globalThis.crypto.randomUUID() : null,
+					errorData: errorCode
+						? JSON.stringify({ message: messages[errorCode] })
+						: null,
+					compilationTime: Date.now() - startTime,
+				})
+				.where(eq(verificationJobsTable.id, jobId))
+			return
+		}
 
 		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
 			? await getCreationTransactionMetadata({

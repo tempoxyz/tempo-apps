@@ -87,6 +87,7 @@ describe('runVerificationJob – creation tx metadata success', () => {
 				createPublicClient: () => ({
 					getCode: async () => counterFixture.onchainRuntimeBytecode,
 					getTransactionReceipt: async () => ({
+						status: 'success' as const,
 						transactionHash: fakeTxHash,
 						blockNumber: 42n,
 						transactionIndex: 7,
@@ -195,6 +196,7 @@ describe('runVerificationJob – creation tx metadata failure', () => {
 				createPublicClient: () => ({
 					getCode: async () => counterFixture.onchainRuntimeBytecode,
 					getTransactionReceipt: async () => ({
+						status: 'success' as const,
 						transactionHash: fakeTxHash,
 						blockNumber: 10n,
 						transactionIndex: 0,
