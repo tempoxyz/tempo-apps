@@ -362,7 +362,8 @@ export async function getUniswapTrades(): Promise<UniswapTrade[]> {
 	const manager = poolManagers[chainId]
 	if (!manager || uniswapPoolsFor(chainId).length === 0) return []
 	const meta = await readMeta(chainId)
-	if (meta.pools.length === 0) throw new Error('No Uniswap pool could be read')
+	// Trades from a partial pool list would drop those pools' swaps, and be cached.
+	if (!meta.complete) throw new Error('Some Uniswap pools could not be read')
 	const since = Math.floor(Date.now() / 1000) - 30 * 86_400
 	// Swaps worth under a dollar are left out: a bot's dust swaps would
 	// otherwise fill the list.
