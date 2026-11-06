@@ -21,7 +21,7 @@ const amount = {
 const transfer: KnownEvent = {
 	type: 'transfer',
 	parts: [
-		{ type: 'action', value: 'Token transferred' },
+		{ type: 'action', value: 'Transfer' },
 		{ type: 'amount', value: amount },
 	],
 }
@@ -149,19 +149,16 @@ describe('receipt details', () => {
 
 describe('receipt transfer labels', () => {
 	test.each([
-		['out', 'Sent'],
-		['in', 'Received'],
-	])('promotes %s direction to the %s action without mutating the source', (direction, action) => {
+		'out',
+		'in',
+	])('keeps the canonical action and drops redundant %s direction without mutating the source', (direction) => {
 		const event: KnownEvent = {
 			...transfer,
 			note: [['Direction', { type: 'text', value: direction }]],
 		}
 		expect(getReceiptTransferPresentation(event)).toEqual({
 			...event,
-			parts: [
-				{ type: 'action', value: action },
-				{ type: 'amount', value: amount },
-			],
+			parts: transfer.parts,
 			note: undefined,
 		})
 		expect(event.parts).toEqual(transfer.parts)

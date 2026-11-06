@@ -16,7 +16,7 @@ export function withKeyAuthorizationDescription(
 	const authorizationEvent: KnownEvent = {
 		type: 'key authorized',
 		parts: [
-			{ type: 'action', value: 'Authorize Key' },
+			{ type: 'action', value: 'Add Access Key' },
 			{ type: 'account', value: authorization.address },
 			{ type: 'text', value: 'for' },
 			{ type: 'account', value: account },

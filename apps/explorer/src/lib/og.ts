@@ -22,6 +22,7 @@ import {
 	type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
+import { toPastTenseEvent } from '#lib/domain/action-label'
 
 // ============ Constants ============
 
@@ -169,7 +170,8 @@ function formatEventPart(part: KnownEventPart): string {
 	}
 }
 
-function formatEventForOg(event: KnownEvent): TxOgEvent {
+function formatEventForOg(knownEvent: KnownEvent): TxOgEvent {
+	const event = toPastTenseEvent(knownEvent)
 	const actionPart = event.parts.find((p) => p.type === 'action')
 	const action = actionPart ? formatEventPart(actionPart) : event.type
 
@@ -245,20 +247,22 @@ export function buildTxDescription(
 	const eventCount = txData.events.length
 
 	if (eventCount > 0) {
-		const firstEvent = txData.events[0]
+		const firstEvent = toPastTenseEvent(txData.events[0])
 		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
-		const action = actionPart
+		// Past-tense labels read as a sentence ("Transferred on …"), not a noun.
+		const label = actionPart
 			? truncateOgText(String(actionPart.value).toLowerCase(), 20)
 			: 'transaction'
+		const action = label.charAt(0).toUpperCase() + label.slice(1)
 
 		if (eventCount === 1) {
 			return truncateOgText(
-				`A ${action} on ${date} from ${HexFormatter.truncate(txData.from as Address.Address)}. View full details on Tempo Explorer.`,
+				`${action} on ${date} from ${HexFormatter.truncate(txData.from as Address.Address)}. View full details on Tempo Explorer.`,
 				160,
 			)
 		}
 		return truncateOgText(
-			`A ${action} and ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`,
+			`${action}, plus ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`,
 			160,
 		)
 	}

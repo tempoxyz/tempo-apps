@@ -19,6 +19,7 @@ import {
 	PriceFormatter,
 	RoleFormatter,
 } from '#lib/formatting'
+import { toPastTenseEvent } from '#lib/domain/action-label'
 
 const width = 76
 const indent = '  '
@@ -59,6 +60,7 @@ export function renderReceiptText(
 		lines.push('', '-'.repeat(width), '')
 		for (const [index, event] of events
 			.map(getReceiptTransferPresentation)
+			.map(toPastTenseEvent)
 			.entries()) {
 			const action = getEventAction(event)
 			const sideAmount = getReceiptEventSideAmount(event)
@@ -107,9 +109,12 @@ export function renderReceiptText(
 	return lines.join('\n')
 }
 
+/** All action badges, such as "Withdraw from Earn · Requested". */
 function getEventAction(event: KnownEvent): string {
-	const action = event.parts.find((part) => part.type === 'action')
-	return action?.type === 'action' ? action.value : event.type
+	const actions = event.parts.flatMap((part) =>
+		part.type === 'action' ? [part.value] : [],
+	)
+	return actions.length ? actions.join(' · ') : event.type
 }
 
 function formatPart(part: KnownEventPart): string {

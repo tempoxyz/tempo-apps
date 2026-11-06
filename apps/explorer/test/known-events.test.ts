@@ -611,7 +611,7 @@ describe('parseKnownEvents', () => {
 		expect(event).toMatchObject({
 			type: 'send',
 			parts: [
-				{ type: 'action', value: 'Send' },
+				{ type: 'action', value: 'Transfer' },
 				{ type: 'amount' },
 				{ type: 'text', value: 'to' },
 				{
@@ -806,12 +806,143 @@ describe('parseKnownEvents', () => {
 
 		expect(knownEvents[0]?.parts[0]).toEqual({
 			type: 'action',
-			value: 'Send',
+			value: 'Transfer',
 		})
 		expect(knownEvents[1]?.parts[0]).toEqual({
 			type: 'action',
-			value: 'Forwarded',
+			value: 'Forward',
 		})
+	})
+
+	it('labels a transfer Send only when the sender called transfer directly', () => {
+		const hash = `0x${'c'.repeat(64)}` as const
+		const amount = 25_000_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from: accountAddress, to: recipientAddress },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+		]
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const transfer = {
+			to: userTokenAddress,
+			input: encodeFunctionData({
+				abi: Abis.tip20,
+				functionName: 'transfer',
+				args: [recipientAddress, amount],
+			}),
+		}
+
+		expect(
+			parseKnownEvents(receipt, { getTokenMetadata, transaction: transfer })[0]
+				?.parts[0],
+		).toEqual({ type: 'action', value: 'Send' })
+		expect(
+			parseKnownEvents(receipt, {
+				getTokenMetadata,
+				transaction: { calls: [transfer] },
+			})[0]?.parts[0],
+		).toEqual({ type: 'action', value: 'Send' })
+		// One direct call proves one movement, not every identical one.
+		const twice = mockReceipt([...logs, ...logs], accountAddress, hash)
+		expect(
+			parseKnownEvents(twice, { getTokenMetadata, transaction: transfer }).map(
+				(event) => event.parts[0],
+			),
+		).toEqual([
+			{ type: 'action', value: 'Send' },
+			{ type: 'action', value: 'Transfer' },
+		])
+		// A different amount, or no transaction at all, proves no payment intent.
+		expect(
+			parseKnownEvents(receipt, {
+				getTokenMetadata,
+				transaction: {
+					...transfer,
+					input: encodeFunctionData({
+						abi: Abis.tip20,
+						functionName: 'transfer',
+						args: [recipientAddress, amount + 1n],
+					}),
+				},
+			})[0]?.parts[0],
+		).toEqual({ type: 'action', value: 'Transfer' })
+		expect(
+			parseKnownEvents(receipt, { getTokenMetadata })[0]?.parts[0],
+		).toEqual({ type: 'action', value: 'Transfer' })
+	})
+
+	it.each([
+		['RedeemRequested', 'Requested'],
+		['RedeemFinalized', 'Completed'],
+		['RedeemCancelled', 'Cancelled'],
+	] as const)('shows %s as Withdraw from Earn with a visible %s badge', (name, status) => {
+		const abiEvent = earnEventsAbi.find(
+			(event) =>
+				event.name === name &&
+				(name !== 'RedeemRequested' ||
+					event.inputs.some((input) => input.name === 'requester')),
+		)
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+		const [event] = parseKnownEvents(
+			mockReceipt(
+				[mockZoneEventLog(abiEvent, accountAddress)],
+				accountAddress,
+				`0x${'d'.repeat(64)}` as Hex.Hex,
+			),
+			{ getTokenMetadata },
+		)
+		expect(event?.parts.slice(0, 2)).toEqual([
+			{ type: 'action', value: 'Withdraw from Earn' },
+			{ type: 'action', value: status },
+		])
+	})
+
+	it('does not call a plain transfer to a card spender a card payment', () => {
+		const spender = '0x3e8f24b686aa8c036038f7d557b70e6ce0e7b56b'
+		const log = mockLog(
+			{
+				address: userTokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from: accountAddress, to: spender },
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [1_000_000n]),
+			},
+			`0x${'e'.repeat(64)}`,
+		)
+		const [event] = parseKnownEvents(
+			mockReceipt([log], accountAddress, `0x${'e'.repeat(64)}`),
+			{ getTokenMetadata },
+		)
+		expect(event?.type).not.toBe('card payment')
+	})
+
+	it.each([
+		['WhitelistUpdated', { allowed: true }, 'Allow'],
+		['WhitelistUpdated', { allowed: false }, 'Disallow'],
+		['BlacklistUpdated', { restricted: true }, 'Block'],
+		['BlacklistUpdated', { restricted: false }, 'Unblock'],
+	] as const)('labels %s %o as %s', (name, args, label) => {
+		const abiEvent = Abis.tip403Registry.find(
+			(item) => item.type === 'event' && item.name === name,
+		) as AbiEvent | undefined
+		expect(abiEvent).toBeDefined()
+		if (!abiEvent) return
+		const event = parseKnownEvent(
+			mockZoneEventLog(abiEvent, Addresses.tip403Registry, args),
+		)
+		expect(event?.parts[0]).toEqual({ type: 'action', value: label })
 	})
 
 	it('deduplicates bounce-back transfers against BounceBack events', () => {
@@ -1023,8 +1154,9 @@ describe('parseKnownEvents', () => {
 		expect(events).toEqual([
 			{
 				type: 'propamm swap',
+				note: [['Venue', { type: 'text', value: 'propAMM' }]],
 				parts: [
-					{ type: 'action', value: 'propAMM Swap' },
+					{ type: 'action', value: 'Swap' },
 					{
 						type: 'amount',
 						value: {
@@ -1053,8 +1185,8 @@ describe('parseKnownEvents', () => {
 		['Deposited', 3, 'Deposit to Earn'],
 		['Redeemed', 4, 'Withdraw from Earn'],
 		['Redeemed', 3, 'Withdraw from Earn'],
-		['VenueSharesDeposited', 5, 'Move Position to Earn'],
-		['VenueSharesDeposited', 3, 'Move Position to Earn'],
+		['VenueSharesDeposited', 5, 'Deposit to Earn'],
+		['VenueSharesDeposited', 3, 'Deposit to Earn'],
 		['WithdrewExact', 4, 'Withdraw from Earn'],
 		['WithdrewExact', 3, 'Withdraw from Earn'],
 	] as const)('labels %s/%i without relying on contract verification', (name, arity, label) => {

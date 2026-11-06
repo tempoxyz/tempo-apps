@@ -31,6 +31,8 @@ export function TransferAmountCell(props: {
 	decimals?: number | undefined
 	symbol?: string | undefined
 	currency?: string | undefined
+	/** The amount's worth in another unit (Earn shares in their asset). */
+	valuation?: { value: string; currency: string; decimals: number } | undefined
 }) {
 	const {
 		value,
@@ -44,6 +46,23 @@ export function TransferAmountCell(props: {
 
 	const amount = formatUnits(value, decimals)
 	const currencyFormatted = (() => {
+		const { valuation } = props
+		if (valuation)
+			try {
+				return (
+					'≈ ' +
+					new Intl.NumberFormat(undefined, {
+						style: 'currency',
+						currency: valuation.currency,
+						currencyDisplay: 'narrowSymbol',
+						maximumSignificantDigits: 4,
+					}).format(
+						Number(formatUnits(BigInt(valuation.value), valuation.decimals)),
+					)
+				)
+			} catch {
+				return undefined
+			}
 		if (!currency) return undefined
 		try {
 			return new Intl.NumberFormat(undefined, {
@@ -67,7 +86,11 @@ export function TransferAmountCell(props: {
 	return (
 		<button
 			type="button"
-			title="Toggle currency/token amounts"
+			title={
+				props.valuation
+					? 'Estimate at the current Earn rate, not the historical value. Toggle currency/token amounts'
+					: 'Toggle currency/token amounts'
+			}
 			className={cx(
 				'label-12 cursor-pointer tabular-nums whitespace-nowrap',
 				direction === 'out'

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { encodeEventTopics, type Hex } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
+import type { KnownEvent } from '#lib/domain/known-events'
 import {
 	activitiesToKnownEvents,
 	selectTransactionDescriptionEvents,
@@ -188,7 +189,7 @@ describe('activitiesToKnownEvents', () => {
 					to: '0x0000000000000000000000000000000000000002',
 				},
 				parts: [
-					{ type: 'action', value: 'Token transferred' },
+					{ type: 'action', value: 'Transfer' },
 					{
 						type: 'amount',
 						value: {
@@ -205,6 +206,46 @@ describe('activitiesToKnownEvents', () => {
 				],
 			},
 		])
+	})
+
+	test('labels an indexed transfer Send only when the decoded receipt proves it', () => {
+		const from = '0x0000000000000000000000000000000000000001'
+		const to = '0x0000000000000000000000000000000000000002'
+		const amount = {
+			token: '0x20c0000000000000000000000000000000000001',
+			value: 1230000n,
+		} as const
+		const indexed: KnownEvent = {
+			type: 'transfer',
+			parts: [
+				{ type: 'action', value: 'Transfer' },
+				{ type: 'amount', value: amount },
+			],
+			meta: { from, to },
+		}
+		const decoded = (action: string): KnownEvent => ({
+			type: 'send',
+			parts: [
+				{ type: 'action', value: action },
+				{ type: 'amount', value: amount },
+			],
+			meta: { from, to },
+		})
+		const select = (fallback: KnownEvent) =>
+			selectTransactionDescriptionEvents({
+				activityEvents: [indexed],
+				fallbackEvents: [fallback],
+				knownCall: null,
+			})
+
+		expect(select(decoded('Send'))[0]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Send',
+		})
+		expect(select(decoded('Transfer'))[0]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Transfer',
+		})
 	})
 
 	test('maps an Earn redemption into a withdrawal from Earn', () => {
@@ -234,15 +275,15 @@ describe('activitiesToKnownEvents', () => {
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000002',
+							token: '0x20c0000000000000000000000000000000000001',
 						},
 					},
-					{ type: 'text', value: 'for' },
+					{ type: 'text', value: 'using' },
 					{
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000001',
+							token: '0x20c0000000000000000000000000000000000002',
 						},
 					},
 				],
@@ -274,15 +315,15 @@ describe('activitiesToKnownEvents', () => {
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000002',
+							token: '0x20c0000000000000000000000000000000000001',
 						},
 					},
-					{ type: 'text', value: 'for' },
+					{ type: 'text', value: 'using' },
 					{
 						type: 'amount',
 						value: {
 							value: 49999n,
-							token: '0x20c0000000000000000000000000000000000001',
+							token: '0x20c0000000000000000000000000000000000002',
 						},
 					},
 				],
@@ -340,22 +381,19 @@ describe('activitiesToKnownEvents', () => {
 					{
 						type: 'amount',
 						value: {
-							value: type === 'private-assets-deposited' ? 1000000n : 500000n,
-							token:
-								type === 'private-assets-deposited'
-									? '0x20c0000000000000000000000000000000000002'
-									: '0x20c0000000000000000000000000000000000003',
+							value: 1000000n,
+							token: '0x20c0000000000000000000000000000000000002',
 						},
 					},
-					{ type: 'text', value: 'for' },
+					{
+						type: 'text',
+						value: type === 'private-assets-deposited' ? 'for' : 'using',
+					},
 					{
 						type: 'amount',
 						value: {
-							value: type === 'private-assets-deposited' ? 500000n : 1000000n,
-							token:
-								type === 'private-assets-deposited'
-									? '0x20c0000000000000000000000000000000000003'
-									: '0x20c0000000000000000000000000000000000002',
+							value: 500000n,
+							token: '0x20c0000000000000000000000000000000000003',
 						},
 					},
 				],

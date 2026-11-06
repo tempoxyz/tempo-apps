@@ -16,9 +16,12 @@ const RECEIVE_POLICY_GUARD = Address.from(
 	'0xB10C000000000000000000000000000000000000',
 )
 
+// Canonical and past-tense (displayed) forms: callers may pass either.
 const PRIVATE_ZONE_ACTIONS = new Set([
 	'Private Zone Deposit',
 	'Private Zone Withdrawal',
+	'Deposited to Private Zone',
+	'Withdrew from Private Zone',
 ])
 
 // These transaction details are already shown in the receipt header.
