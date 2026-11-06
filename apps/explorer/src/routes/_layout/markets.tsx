@@ -45,6 +45,8 @@ import {
 	propAmmRows,
 	propAmmTrade,
 	sortMarkets,
+	uniswapRows,
+	uniswapTrade,
 	statusIntent,
 	statusLabels,
 	venueLabels,
@@ -58,6 +60,10 @@ import {
 	propAmmPoolsQueryOptions,
 	propAmmTradesQueryOptions,
 } from '#lib/queries/propamm'
+import {
+	uniswapPoolsQueryOptions,
+	uniswapTradesQueryOptions,
+} from '#lib/queries/uniswap'
 
 export const Route = createFileRoute('/_layout/markets')({
 	component: MarketsPage,
@@ -72,6 +78,8 @@ export const Route = createFileRoute('/_layout/markets')({
 			context.queryClient.prefetchQuery(dexPoolsQueryOptions()),
 			context.queryClient.prefetchQuery(propAmmPoolsQueryOptions()),
 			context.queryClient.prefetchQuery(propAmmTradesQueryOptions()),
+			context.queryClient.prefetchQuery(uniswapPoolsQueryOptions()),
+			context.queryClient.prefetchQuery(uniswapTradesQueryOptions()),
 		])
 		await Promise.race([
 			reads,
@@ -214,10 +222,17 @@ function MarketsPage(): React.JSX.Element {
 	const venues = venuesOf(search.venue)
 	const showDex = venues.includes('dex')
 	const showPropAmm = venues.includes('propamm')
+	const showUniswap = venues.includes('uniswap')
 
 	const dexQuery = useQuery(dexPoolsQueryOptions())
 	const propAmmQuery = useQuery(propAmmPoolsQueryOptions())
 	const propAmmTradesQuery = useQuery(propAmmTradesQueryOptions())
+	const uniswapQuery = useQuery(uniswapPoolsQueryOptions())
+	// Like DEX swaps, Uniswap swaps poll only while their list is on screen.
+	const uniswapTradesQuery = useQuery({
+		...uniswapTradesQueryOptions(),
+		enabled: showUniswap && search.tab === 'trades',
+	})
 	// Swaps poll only while their list is on screen. The server applies the
 	// verified filter so spam can't crowd the feed.
 	const swapsVisible = showDex && search.tab === 'trades'
@@ -242,6 +257,9 @@ function MarketsPage(): React.JSX.Element {
 	const propAmmTradesFailed =
 		propAmmTradesQuery.isError && !propAmmTradesQuery.data
 	const swapsFailed = swapsQuery.isError && !swapsQuery.data
+	const uniswapFailed = uniswapQuery.isError && !uniswapQuery.data
+	const uniswapTradesFailed =
+		uniswapTradesQuery.isError && !uniswapTradesQuery.data
 
 	const totals = useMemo(
 		() =>
@@ -250,8 +268,11 @@ function MarketsPage(): React.JSX.Element {
 				dex: { data: dexPools, failed: dexFailed },
 				propAmm: { data: propAmmQuery.data, failed: propAmmFailed },
 				propAmmTrades: { data: volumeTotals, failed: propAmmTradesFailed },
+				uniswap: { data: uniswapQuery.data, failed: uniswapFailed },
 			}),
 		[
+			uniswapQuery.data,
+			uniswapFailed,
 			dexPools,
 			dexFailed,
 			propAmmQuery.data,
@@ -273,11 +294,14 @@ function MarketsPage(): React.JSX.Element {
 								propAmmTradesFailed ? undefined : volumeTotals,
 							)
 						: []),
+					...(showUniswap ? uniswapRows(uniswapQuery.data?.pools ?? []) : []),
 				],
 				search.sort,
 				search.dir,
 			),
 		[
+			showUniswap,
+			uniswapQuery.data,
 			showDex,
 			showPropAmm,
 			dexPools,
@@ -293,6 +317,9 @@ function MarketsPage(): React.JSX.Element {
 		const poolsByKey = new Map(
 			(propAmmPools ?? []).map((pool) => [pool.key, pool]),
 		)
+		const uniswapByKey = new Map(
+			(uniswapQuery.data?.pools ?? []).map((pool) => [pool.key, pool]),
+		)
 		return mergeTrades(
 			showDex
 				? (swapsQuery.data ?? []).map((swap) =>
@@ -305,8 +332,17 @@ function MarketsPage(): React.JSX.Element {
 						return row ? [row] : []
 					})
 				: [],
+			showUniswap
+				? (uniswapTradesQuery.data ?? []).flatMap((trade) => {
+						const row = uniswapTrade(trade, uniswapByKey)
+						return row ? [row] : []
+					})
+				: [],
 		)
 	}, [
+		showUniswap,
+		uniswapQuery.data,
+		uniswapTradesQuery.data,
 		showDex,
 		showPropAmm,
 		swapsQuery.data,
@@ -336,7 +372,9 @@ function MarketsPage(): React.JSX.Element {
 	}
 
 	const pairsPending =
-		(showDex && dexQuery.isPending) || (showPropAmm && propAmmQuery.isPending)
+		(showDex && dexQuery.isPending) ||
+		(showPropAmm && propAmmQuery.isPending) ||
+		(showUniswap && uniswapQuery.isPending)
 	const volumePending =
 		showPropAmm && propAmmTradesQuery.isPending && !propAmmTradesFailed
 	// Trades need their venue's labels: DEX books for buy or sell, propAMM pools
@@ -345,7 +383,10 @@ function MarketsPage(): React.JSX.Element {
 		(showDex && (swapsQuery.isPending || dexQuery.isPending)) ||
 		(showPropAmm &&
 			(propAmmTradesQuery.isPending ||
-				(propAmmQuery.isPending && !propAmmFailed)))
+				(propAmmQuery.isPending && !propAmmFailed))) ||
+		(showUniswap &&
+			(uniswapTradesQuery.isPending ||
+				(uniswapQuery.isPending && !uniswapFailed)))
 
 	const pairsErrors: LoadErrorProps[] = [
 		...(showDex && dexFailed
@@ -362,6 +403,9 @@ function MarketsPage(): React.JSX.Element {
 					},
 				]
 			: []),
+		...(showUniswap && uniswapFailed
+			? [errorProps('Uniswap pools', uniswapQuery)]
+			: []),
 	]
 	const tradesErrors: LoadErrorProps[] = [
 		...(showDex && swapsFailed
@@ -372,6 +416,12 @@ function MarketsPage(): React.JSX.Element {
 			: []),
 		...(showPropAmm && propAmmFailed && !propAmmTradesFailed
 			? [errorProps('PropAMM pools', propAmmQuery)]
+			: []),
+		...(showUniswap && uniswapTradesFailed
+			? [errorProps('Uniswap swaps', uniswapTradesQuery)]
+			: []),
+		...(showUniswap && uniswapFailed && !uniswapTradesFailed
+			? [errorProps('Uniswap pools', uniswapQuery)]
 			: []),
 	]
 
@@ -392,6 +442,7 @@ function MarketsPage(): React.JSX.Element {
 								<Tabs.Tab value="all">All</Tabs.Tab>
 								<Tabs.Tab value="dex">{venueLabels.dex}</Tabs.Tab>
 								<Tabs.Tab value="propamm">{venueLabels.propamm}</Tabs.Tab>
+								<Tabs.Tab value="uniswap">{venueLabels.uniswap}</Tabs.Tab>
 							</Tabs.List>
 						</Tabs.Root>
 					</div>
@@ -541,7 +592,9 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 	return (
 		<div {...styles.scroll()}>
 			<Table interactive>
-				<Table.Caption>Pairs on the Stablecoin DEX and PropAMM</Table.Caption>
+				<Table.Caption>
+					Pairs on the Stablecoin DEX, PropAMM and Uniswap
+				</Table.Caption>
 				<Table.Head>
 					<Table.Row>
 						<Table.HeaderCell>Pair</Table.HeaderCell>
@@ -551,7 +604,7 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 						{sortable(
 							'liquidity',
 							'Liquidity',
-							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share.',
+							'In US dollars. DEX: resting orders at par. PropAMM: the pool’s inventory, which pairs on one v2 venue share. Uniswap: what the pool’s positions hold at the current price.',
 							false,
 						)}
 						{showSpread && sortable('spread', 'Spread')}
@@ -633,7 +686,8 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 		<div {...styles.scroll()}>
 			<Table interactive>
 				<Table.Caption>
-					Latest Stablecoin DEX swaps and PropAMM trades of the last 30 days
+					Latest Stablecoin DEX swaps, PropAMM trades and Uniswap swaps of the
+					last 30 days
 				</Table.Caption>
 				<Table.Head>
 					<Table.Row>
@@ -818,7 +872,7 @@ type MarketLinkToProps = {
 
 /** A pair, its venue and, unless it trades normally, its status. */
 function PairLabel(props: PairLabelProps): React.JSX.Element {
-	const { base, quote, pool, link, status, statusDetail } = props.row
+	const { base, quote, kind, link, status, statusDetail } = props.row
 	const rowPrice = props.row.price
 	return (
 		<MarketLinkTo link={link} title={`${base.symbol} / ${quote.symbol}`}>
@@ -835,7 +889,7 @@ function PairLabel(props: PairLabelProps): React.JSX.Element {
 					</span>
 					<Table.Subtitle>
 						<span {...styles.subtitle()}>
-							{pool ? `${venueLabels.propamm} ${pool.version}` : 'Order book'}
+							{kind}
 							{rowPrice !== null && (
 								<span {...styles.narrow()}>
 									<span aria-hidden="true">· </span>
