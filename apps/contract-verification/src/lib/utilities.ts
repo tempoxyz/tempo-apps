@@ -6,6 +6,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 import { getDatabaseLogger, getLogger } from '#lib/logger.ts'
+import { creationTraceOptions } from '#lib/rpc.ts'
 
 const dbLogger = getDatabaseLogger()
 
@@ -247,12 +248,13 @@ export type CreationTransactionClient = {
 		transactionIndex: number
 		from: Address.Address
 		contractAddress?: string | null
+		cumulativeGasUsed?: bigint
 		status: 'success' | 'reverted'
 	}>
 	transport?: {
 		request: (args: {
 			method: 'debug_traceTransaction'
-			params: [Hex.Hex, { tracer: 'callTracer' }]
+			params: [Hex.Hex, typeof creationTraceOptions]
 		}) => Promise<unknown>
 	}
 }
@@ -294,13 +296,21 @@ export async function getCreationTransactionMetadata(options: {
 
 		const directCreation =
 			receipt.contractAddress?.toLowerCase() === address.toLowerCase()
+		// Reth's built-in tracers ignore timeout; cap replay through this transaction before asking it to trace.
+		if (
+			!directCreation &&
+			(typeof receipt.cumulativeGasUsed !== 'bigint' ||
+				receipt.cumulativeGasUsed <= 0n ||
+				receipt.cumulativeGasUsed > 50_000_000n)
+		)
+			throw new Error('Creation transaction exceeds the trace replay budget')
 		// Factory calls have no receipt contractAddress; only execution proves an internal creation.
 		const tracedCreation =
 			!directCreation && client.transport
 				? traceCreatesContract(
 						await client.transport.request({
 							method: 'debug_traceTransaction',
-							params: [creationTransactionHash, { tracer: 'callTracer' }],
+							params: [creationTransactionHash, creationTraceOptions],
 						}),
 						address,
 					)

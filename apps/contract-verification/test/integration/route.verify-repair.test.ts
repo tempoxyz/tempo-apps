@@ -19,6 +19,7 @@ const receipt = {
 	transactionHash,
 	blockNumber: 42n,
 	transactionIndex: 3,
+	cumulativeGasUsed: 1_000_000n,
 	from: deployer,
 	contractAddress: counterFixture.address as string | null,
 	status: 'success' as const,
@@ -117,6 +118,84 @@ async function repair(
 }
 
 describe('exact verification creation metadata repair', () => {
+	it('refreshes deployment audit fields only when a proven repair commits', async () => {
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const oldAudit = {
+			updatedAt: '2000-01-01T00:00:00.000Z',
+			updatedBy: 'historical-import',
+		}
+		await db
+			.update(DB.contractDeploymentsTable)
+			.set(oldAudit)
+			.where(eq(DB.contractDeploymentsTable.id, verification.deploymentId))
+		const [before] = await db.select().from(DB.contractDeploymentsTable)
+		const started = Date.now()
+		expect((await repair())?.errorCode).toBeNull()
+		const [after] = await db.select().from(DB.contractDeploymentsTable)
+		expect(after?.updatedBy).toBe('verification-api')
+		expect(Date.parse(after?.updatedAt ?? '')).toBeGreaterThanOrEqual(started)
+		expect(Date.parse(after?.updatedAt ?? '')).toBeLessThanOrEqual(Date.now())
+		expect(after?.createdAt).toBe(before?.createdAt)
+		expect(after?.createdBy).toBe(before?.createdBy)
+	})
+
+	it('does not fetch creation evidence for an address without deployed code', async () => {
+		const jobId = await insertJob()
+		let receiptReads = 0
+		await runVerificationJob(
+			env,
+			{ ...target, ...body, jobId, creationTransactionHash: transactionHash },
+			registry,
+			{
+				createPublicClient: () => ({
+					getCode: async () => '0x',
+					getTransactionReceipt: async () => {
+						receiptReads++
+						return receipt
+					},
+				}),
+				getContainer: () => {
+					throw new Error('Absent contracts must not compile')
+				},
+			},
+		)
+		const [job] = await drizzle(env.CONTRACTS_DB)
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, jobId))
+		expect(job?.errorCode).toBe('contract_not_found')
+		expect(receiptReads).toBe(0)
+	})
+
+	it('does not fetch creation evidence for mismatched source submissions', async () => {
+		const jobId = await insertJob()
+		let receiptReads = 0
+		await runVerificationJob(
+			env,
+			{ ...target, ...body, jobId, creationTransactionHash: transactionHash },
+			registry,
+			{
+				createPublicClient: () => ({
+					getCode: async () => '0x6001600055',
+					getTransactionReceipt: async () => {
+						receiptReads++
+						return receipt
+					},
+				}),
+				getContainer: () => ({
+					fetch: async () => Response.json(counterFixture.solcOutput),
+				}),
+			},
+		)
+		const [job] = await drizzle(env.CONTRACTS_DB)
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, jobId))
+		expect(job?.errorCode).toBe('no_match')
+		expect(receiptReads).toBe(0)
+	})
+
 	it('accepts a repair through the public API and preserves the original exact sources', async () => {
 		const verification = await seedExact()
 		const before = await sourceSnapshot()

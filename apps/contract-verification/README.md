@@ -84,23 +84,35 @@ solc version fails with `solar_compiler_version_required` instead of a misleadin
 A contract can have an exact verification (matching bytecode and compiler metadata) while its
 stored deployment lacks the creation transaction hash. To fill that gap, send a standard-JSON
 request to `POST /v2/verify/:chainId/:address` with `creationTransactionHash`. The normal source,
-compiler-version and contract-identifier fields remain required, but the repair ignores those
-sources. Poll `GET /v2/verify/:verificationId` using the ID returned by the POST.
+compiler-version and contract-identifier fields must pass request validation, but the repair does
+not compile or compare those submitted sources. An accepted POST returns HTTP 202 with
+`verificationId`; poll `GET /v2/verify/:verificationId` for the completed job and its errors.
 
 This repair preserves the existing sources, compilation, verification ID and match flags
 (the recorded bytecode/metadata comparison results). It fills deployment metadata only: transaction
-hash, block, transaction index and deployer. It does not compile sources or claim an initcode match.
+hash, block, transaction index and deployer. It does not compile sources or compare deployment
+initcode (creation bytecode).
 
 The selected chain's RPC must prove successful creation of the target address, using either a
 direct-creation receipt or a `CREATE`/`CREATE2` call trace with no reverted parent call.
 Factory-created contracts require `debug_traceTransaction` with `callTracer`; a factory event or
 later no-op call is not proof. The deployer remains the transaction sender, not the factory.
 
-Invalid or unavailable proof produces `invalid_creation_transaction` and can be retried with a
+Factory tracing is optional proof with strict resource limits: no automatic retries, a five-second
+HTTP deadline, and a 256 KiB response cap. The receipt must report `cumulativeGasUsed` of at most
+50 million: gas used by this transaction plus all earlier transactions in its block. Larger or
+unavailable values cannot be traced. Exceeding a limit leaves creation metadata unchanged.
+These limits have different outcomes for the two flows: a metadata-only repair job reports
+`invalid_creation_transaction`, while an initial source verification can succeed without creation
+metadata. Initial verifications request this optional proof only after bytecode matching succeeds.
+Successful repairs set the deployment record's `updated_at` to the current time and `updated_by`
+to `verification-api`.
+
+Invalid or unavailable proof produces `invalid_creation_transaction` in the polled job and can be retried with a
 correct hash or working RPC. Conflicting stored metadata produces `creation_transaction_conflict`;
-multiple exact deployment records produce `ambiguous_creation_transaction`. Both require manual
-investigation. Every refusal leaves existing evidence unchanged. Entries already containing a
-transaction hash still return `409 already_verified`; this endpoint cannot replace that hash.
+multiple deployment records with exact verifications for the same chain and address produce
+`ambiguous_creation_transaction`. Both require manual investigation. Every refusal leaves existing evidence unchanged. Entries already containing a
+transaction hash reject the POST with `409 already_verified`; this endpoint cannot replace that hash.
 After success, read `/v2/contract/:chainId/:address?fields=transactionHash,deployment` to check the
 result. This repair is V2-only; the legacy `POST /verify/vyper` endpoint does not support it.
 

@@ -753,7 +753,11 @@ async function runVerificationJob(
 					// Non-null attribution is immutable, including when a concurrent job fills it.
 					const updated = await db
 						.update(contractDeploymentsTable)
-						.set(proof)
+						.set({
+							...proof,
+							updatedAt: new Date().toISOString(),
+							updatedBy: 'verification-api',
+						})
 						.where(
 							and(
 								eq(contractDeploymentsTable.id, existing.deployment.id),
@@ -818,16 +822,6 @@ async function runVerificationJob(
 				)
 			return
 		}
-
-		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
-			? await getCreationTransactionMetadata({
-					creationTransactionHash: sanitizedBody.creationTransactionHash,
-					address,
-					chainId,
-					client,
-					logContext: { jobId },
-				})
-			: null
 
 		const onchainBytecode = await client.getCode({ address })
 		if (!onchainBytecode || onchainBytecode === '0x') {
@@ -1053,6 +1047,17 @@ async function runVerificationJob(
 				.where(eq(verificationJobsTable.id, jobId))
 			return
 		}
+
+		// Only matched source submissions may trigger optional factory tracing.
+		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
+			? await getCreationTransactionMetadata({
+					creationTransactionHash: sanitizedBody.creationTransactionHash,
+					address,
+					chainId,
+					client,
+					logContext: { jobId },
+				})
+			: null
 
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'

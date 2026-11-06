@@ -1,6 +1,8 @@
 import { Hex } from 'ox'
 import { createPublicClient, http } from 'viem'
-import { describe, expect, expectTypeOf, it } from 'vitest'
+import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
+
+import { createRpcTransport } from '#lib/rpc.ts'
 
 import {
 	type CreationTransactionClient,
@@ -18,6 +20,7 @@ const receipt = {
 	transactionIndex: 0,
 	from: deployer,
 	contractAddress: address,
+	cumulativeGasUsed: 8_164_507n,
 	status: 'success',
 } as const
 const creation = { type: 'CREATE', from: factory, to: address.toLowerCase() }
@@ -301,6 +304,57 @@ describe('getCreationTransactionMetadata', () => {
 		).toBeNull()
 	})
 
+	it.each([
+		{ name: 'missing', gas: undefined },
+		{ name: 'negative', gas: -1n },
+		{ name: 'zero', gas: 0n },
+		{ name: 'over budget', gas: 50_000_001n },
+	])('refuses a $name cumulative replay budget before tracing', async ({
+		gas,
+	}) => {
+		let reads = 0
+		expect(
+			await metadata({
+				getTransactionReceipt: async () => ({
+					...receipt,
+					contractAddress: null,
+					cumulativeGasUsed: gas,
+				}),
+				transport: {
+					request: async () => {
+						reads++
+						return { ...call, calls: [creation] }
+					},
+				},
+			}),
+		).toBeNull()
+		expect(reads).toBe(0)
+	})
+
+	it('accepts a factory proof at the cumulative replay budget', async () => {
+		expect(
+			await metadata({
+				...traced({ ...call, calls: [creation] }),
+				getTransactionReceipt: async () => ({
+					...receipt,
+					contractAddress: null,
+					cumulativeGasUsed: 50_000_000n,
+				}),
+			}),
+		).toEqual(expected)
+	})
+
+	it('does not require a trace replay budget for a direct creation', async () => {
+		expect(
+			await metadata({
+				getTransactionReceipt: async () => ({
+					...receipt,
+					cumulativeGasUsed: undefined,
+				}),
+			}),
+		).toEqual(expected)
+	})
+
 	it('returns null when the receipt method is unavailable', async () => {
 		expect(
 			await getCreationTransactionMetadata({
@@ -362,6 +416,38 @@ describe('getCreationTransactionMetadata', () => {
 	})
 })
 
+describe('bounded creation proof', () => {
+	afterEach(() => vi.unstubAllGlobals())
+
+	it.each([
+		{ extra: 0, accepted: true },
+		{ extra: 1, accepted: false },
+	])('requires the complete trace to fit the byte budget ($extra excess bytes)', async ({
+		extra,
+		accepted,
+	}) => {
+		const result = { ...call, calls: [creation], input: '' }
+		const envelope = { jsonrpc: '2.0', id: 1, result }
+		result.input = '0'.repeat(
+			256 * 1024 - JSON.stringify(envelope).length + extra,
+		)
+		const body = JSON.stringify(envelope)
+		expect(new TextEncoder().encode(body).length).toBe(256 * 1024 + extra)
+		vi.stubGlobal('fetch', async () => new Response(body))
+		const client = createPublicClient({
+			transport: createRpcTransport('https://rpc.example', 42431, {}),
+		})
+		const proof = await metadata({
+			getTransactionReceipt: async () => ({
+				...receipt,
+				contractAddress: null,
+			}),
+			transport: client.transport,
+		})
+		expect(proof).toEqual(accepted ? expected : null)
+	})
+})
+
 function metadata(client: CreationTransactionClient = {}) {
 	return getCreationTransactionMetadata({
 		creationTransactionHash: hash,
@@ -378,7 +464,14 @@ function traced(trace: unknown): CreationTransactionClient {
 			request: async (args) => {
 				expect(args).toEqual({
 					method: 'debug_traceTransaction',
-					params: [hash, { tracer: 'callTracer' }],
+					params: [
+						hash,
+						{
+							tracer: 'callTracer',
+							timeout: '3s',
+							tracerConfig: { onlyTopCall: false, withLog: false },
+						},
+					],
 				})
 				return trace
 			},
