@@ -211,6 +211,11 @@ export type UniswapSnapshot = {
 	generatedAt: number
 	/** Every listed pool, its positions and volume were read. */
 	complete: boolean
+	/**
+	 * Every read that failed was a pool past the range cap: a lasting state,
+	 * so the snapshot is safe to cache though it isn't complete.
+	 */
+	stable: boolean
 	pools: UniswapPool[]
 }
 
