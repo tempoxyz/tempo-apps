@@ -15,18 +15,28 @@ import type {
 	PropAmmTrade,
 } from '#lib/propamm'
 import { stateLabels } from '#lib/propamm'
+import {
+	feeLabel,
+	type UniswapPool,
+	type UniswapSnapshot,
+	type UniswapState,
+	type UniswapTrade,
+	uniswapStateLabels,
+} from '#lib/uniswap'
 
 /**
- * Markets lists every pair on Tempo's two venues side by side: Stablecoin
- * DEX order books and propAMM pools. Each venue loads on its own, so one
- * failing leaves the other's rows and marks the totals partial.
+ * Markets lists every pair on Tempo's venues side by side: Stablecoin DEX
+ * order books, propAMM pools and the main Uniswap v4 pools. Each venue loads
+ * on its own, so one failing leaves the others' rows and marks the totals
+ * partial.
  */
-export const marketVenues = ['dex', 'propamm'] as const
+export const marketVenues = ['dex', 'propamm', 'uniswap'] as const
 export type MarketVenue = (typeof marketVenues)[number]
 
 export const venueLabels: Record<MarketVenue, string> = {
 	dex: 'Stablecoin DEX',
 	propamm: 'PropAMM',
+	uniswap: 'Uniswap v4',
 }
 
 /**
@@ -58,6 +68,16 @@ export function dexStatus(status: DexPoolStatus): {
 	if (status === 'place-only')
 		return { status: 'limited', detail: 'Place only' }
 	return { status: 'off', detail: 'Retired' }
+}
+
+export function uniswapStatus(state: UniswapState): {
+	status: MarketStatus
+	detail: string | null
+} {
+	if (state === 'live') return { status: 'live', detail: null }
+	if (state === 'unknown')
+		return { status: 'off', detail: uniswapStateLabels[state] }
+	return { status: 'limited', detail: uniswapStateLabels[state] }
 }
 
 export function propAmmStatus(state: PropAmmState): {
@@ -114,6 +134,8 @@ export type MarketRow = {
 	statusDetail: string | null
 	/** The propAMM pool's contract and version. */
 	pool: { address: Address; version: 'v1' | 'v2' } | null
+	/** What the row trades on, such as Order book or Uniswap v4 0.01%. */
+	kind: string
 	link: MarketLink
 }
 
@@ -146,6 +168,7 @@ export function dexRows(pools: readonly DexPool[]): MarketRow[] {
 				status,
 				statusDetail: detail,
 				pool: null,
+				kind: 'Order book',
 				link: {
 					kind: 'pair',
 					from: pool.base.address,
@@ -186,10 +209,43 @@ export function propAmmRows(
 			status,
 			statusDetail: detail,
 			pool: { address: pool.address, version: pool.version },
+			kind: `${venueLabels.propamm} ${pool.version}`,
 			link:
 				isTip20Address(pool.base.address) && isTip20Address(pool.quote.address)
 					? { kind: 'pair', from: pool.base.address, to: pool.quote.address }
 					: { kind: 'address', address: pool.address },
+		}
+	})
+}
+
+/**
+ * A Uniswap v4 pool leads to the pair page when both tokens are TIP-20, as
+ * a propAMM pool does; its liquidity is what its positions hold at the
+ * current price.
+ */
+export function uniswapRows(pools: readonly UniswapPool[]): MarketRow[] {
+	return pools.map((pool) => {
+		const { status, detail } = uniswapStatus(pool.state)
+		return {
+			key: `uniswap-${pool.key}`,
+			venue: 'uniswap',
+			base: pool.base,
+			quote: pool.quote,
+			price: pool.price,
+			liquidity:
+				pool.reserves === null
+					? null
+					: { value: pool.reserves, partial: false },
+			spread: null,
+			volume: pool.volume,
+			status,
+			statusDetail: detail,
+			pool: null,
+			kind: `${venueLabels.uniswap} ${feeLabel(pool.fee)}`,
+			link:
+				isTip20Address(pool.base.address) && isTip20Address(pool.quote.address)
+					? { kind: 'pair', from: pool.base.address, to: pool.quote.address }
+					: { kind: 'address', address: pool.base.address },
 		}
 	})
 }
@@ -243,6 +299,8 @@ export function marketTotals(input: {
 	dex: VenueRead<readonly DexPool[]>
 	propAmm: VenueRead<{ pools: readonly PropAmmPool[]; complete: boolean }>
 	propAmmTrades: VenueRead<Record<string, PropAmmTotals>>
+	/** Left out while not in view; loading when in view and not given. */
+	uniswap?: VenueRead<UniswapSnapshot> | undefined
 }): MarketTotals {
 	const parts = {
 		liquidity: [] as Part[],
@@ -304,6 +362,27 @@ export function marketTotals(input: {
 			)
 	}
 
+	if (input.venues.includes('uniswap')) {
+		const read = input.uniswap ?? { data: undefined, failed: false }
+		const snapshot = read.data
+		const missing: Part = { state: read.failed ? 'failed' : 'loading' }
+		parts.liquidity.push(
+			snapshot
+				? sumPools(snapshot.pools, (pool) => pool.reserves, snapshot.complete)
+				: missing,
+		)
+		for (const window of ['day', 'month'] as const)
+			parts[window].push(
+				snapshot
+					? sumPools(
+							snapshot.pools,
+							(pool) => pool.volume?.[window] ?? null,
+							snapshot.complete,
+						)
+					: missing,
+			)
+	}
+
 	return {
 		liquidity: combine(parts.liquidity),
 		day: combine(parts.day),
@@ -335,6 +414,27 @@ export function propAmmInventory(
 	let value = 0
 	for (const amount of held.values()) value += amount
 	return { state: 'known', value, partial }
+}
+
+/** A sum over pools; an unknown value makes it a lower bound. */
+function sumPools(
+	pools: readonly UniswapPool[],
+	value: (pool: UniswapPool) => number | null,
+	complete: boolean,
+): Part {
+	let total = 0
+	let partial = !complete
+	let known = 0
+	for (const pool of pools) {
+		const amount = value(pool)
+		if (amount === null) partial = true
+		else {
+			total += amount
+			known++
+		}
+	}
+	if (known === 0 && pools.length > 0) return { state: 'failed' }
+	return { state: 'known', value: total, partial }
 }
 
 type Part =
@@ -434,6 +534,28 @@ export function propAmmTrade(
 	return {
 		id: `propamm-${trade.id}`,
 		venue: 'propamm',
+		transactionHash: trade.transactionHash,
+		timestamp: trade.timestamp,
+		taker: trade.taker,
+		side: trade.baseIn ? 'sell' : 'buy',
+		base: pool.base,
+		quote: pool.quote,
+		baseAmount: trade.baseAmount,
+		quoteAmount: trade.quoteAmount,
+		value: trade.value,
+	}
+}
+
+/** A Uniswap v4 swap, labelled by its pool; null when the pool isn't listed. */
+export function uniswapTrade(
+	trade: UniswapTrade,
+	pools: ReadonlyMap<string, UniswapPool>,
+): MarketTrade | null {
+	const pool = pools.get(trade.poolKey)
+	if (!pool) return null
+	return {
+		id: `uniswap-${trade.id}`,
+		venue: 'uniswap',
 		transactionHash: trade.transactionHash,
 		timestamp: trade.timestamp,
 		taker: trade.taker,
