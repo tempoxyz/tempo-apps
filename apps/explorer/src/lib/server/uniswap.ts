@@ -258,7 +258,7 @@ export async function getUniswapPools(): Promise<UniswapSnapshot> {
 	const generatedAt = Date.now()
 	const manager = poolManagers[chainId]
 	if (!manager || uniswapPoolsFor(chainId).length === 0)
-		return { generatedAt, complete: true, pools: [] }
+		return { generatedAt, complete: true, stable: true, pools: [] }
 
 	const meta = await readMeta(chainId)
 	const ids = meta.pools.map((pool) => pool.config.id)
@@ -289,6 +289,8 @@ export async function getUniswapPools(): Promise<UniswapSnapshot> {
 	])
 
 	let complete = meta.complete && ranges !== null && volume !== null
+	// Unread reads: a capped pool's are lasting, any other is a failure.
+	let stable = complete
 	const pools = meta.pools.map((pool, index): UniswapPool => {
 		const { base, quote, baseIs0, config } = pool
 		const slot = slots[index]
@@ -296,7 +298,10 @@ export async function getUniswapPools(): Promise<UniswapSnapshot> {
 			slot?.status === 'success'
 				? decodeSlot0(BigInt(slot.result as Hex))
 				: null
-		if (!slot0) complete = false
+		if (!slot0) {
+			complete = false
+			stable = false
+		}
 		const [token0, token1] = baseIs0 ? [base, quote] : [quote, base]
 
 		let price: number | null = null
@@ -364,7 +369,7 @@ export async function getUniswapPools(): Promise<UniswapSnapshot> {
 			volume: poolVolume,
 		}
 	})
-	return { generatedAt, complete, pools }
+	return { generatedAt, complete, stable, pools }
 }
 
 /** The listed pools' latest swaps in the last 30 days, newest first. */
@@ -486,7 +491,7 @@ export const fetchUniswapPools = createServerFn({ method: 'GET' }).handler(
 				ttlSeconds: POOLS_TTL,
 				load: () =>
 					withDeadline(getUniswapPools(), META_DEADLINE + POOLS_DEADLINE),
-				shouldCache: (snapshot) => snapshot.complete,
+				shouldCache: (snapshot) => snapshot.complete || snapshot.stable,
 			})
 		} catch (error) {
 			console.error('Failed to load Uniswap pools:', error)

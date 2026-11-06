@@ -185,6 +185,7 @@ describe('uniswap pools', () => {
 				data: {
 					generatedAt: 0,
 					complete: true,
+					stable: true,
 					pools: [pool(), pool({ key: '0x01', reserves: null, volume: null })],
 				},
 				failed: false,
