@@ -1,6 +1,5 @@
-import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { isPostHogHost, posthogBootScript } from '#lib/posthog'
+import { getPostHogInit, isPostHogHost } from '#lib/posthog'
 import wrangler from '#wrangler.json' with { type: 'json' }
 
 const key = 'phc_test'
@@ -31,52 +30,18 @@ const rejectedHosts = [
 	'',
 ]
 
-function bootstrap(hostname: string, idle = true) {
-	const insertedScripts: Array<{ src?: string }> = []
-	const idleCallbacks: Array<() => void> = []
-	const window = {
-		location: { hostname },
-		posthog: undefined as undefined | { _i: Array<[string, unknown]> },
-		requestIdleCallback: idle
-			? (callback: () => void) => idleCallbacks.push(callback)
-			: undefined,
-	}
-	const context = {
-		window,
-		document: {
-			createElement: () => ({}),
-			getElementsByTagName: () => [
-				{
-					parentNode: {
-						insertBefore: (script: { src?: string }) =>
-							insertedScripts.push(script),
-					},
-				},
-			],
-		},
-		setTimeout: (callback: () => void) => idleCallbacks.push(callback),
-	}
-	// In a browser, window.posthog is also the global posthog binding.
-	Object.defineProperty(context, 'posthog', { get: () => window.posthog })
-	const script = posthogBootScript({ key, host })
-	if (!script) throw new Error('expected a boot script')
-	runInNewContext(script, context)
-	for (const callback of idleCallbacks) callback()
-	return { insertedScripts, idleCallbacks, window }
-}
-
-describe('PostHog bootstrap', () => {
-	it('emits nothing without a key and host', () => {
-		expect(posthogBootScript({ key: undefined, host })).toBeUndefined()
-		expect(posthogBootScript({ key, host: undefined })).toBeUndefined()
-		expect(posthogBootScript({ key: '', host: '' })).toBeUndefined()
+describe('PostHog init', () => {
+	it('initializes nothing without a key and host', () => {
+		const hostname = 'explore.tempo.xyz'
+		expect(getPostHogInit({ key: undefined, host, hostname })).toBeUndefined()
+		expect(getPostHogInit({ key, host: undefined, hostname })).toBeUndefined()
+		expect(getPostHogInit({ key: '', host: '', hostname })).toBeUndefined()
 	})
 
-	it('initializes with page views only', () => {
-		const { window } = bootstrap('explore.tempo.xyz')
-		const [initKey, config] = window.posthog?._i[0] ?? []
-		expect(initKey).toBe(key)
-		expect(config).toEqual({
+	it('initializes with page views only and no remote SDK loading', () => {
+		const init = getPostHogInit({ key, host, hostname: 'explore.tempo.xyz' })
+		expect(init?.key).toBe(key)
+		expect(init?.config).toEqual({
 			api_host: host,
 			defaults: '2025-11-30',
 			capture_pageview: 'history_change',
@@ -95,39 +60,16 @@ describe('PostHog bootstrap', () => {
 			person_profiles: 'identified_only',
 		})
 	})
-
-	it('initializes with the timer fallback when requestIdleCallback is unavailable', () => {
-		expect(bootstrap('explore.tempo.xyz', false).insertedScripts).toHaveLength(
-			1,
-		)
-	})
 })
 
-describe('PostHog bootstrap host policy', () => {
-	it.each(
-		approvedHosts,
-	)('loads the SDK on approved subdomain %s', (hostname) => {
+describe('PostHog host policy', () => {
+	it.each(approvedHosts)('initializes on approved subdomain %s', (hostname) => {
 		expect(isPostHogHost(hostname)).toBe(true)
-		const { insertedScripts, idleCallbacks, window } = bootstrap(hostname)
-		expect(idleCallbacks).toHaveLength(1)
-		expect(window.posthog).toBeDefined()
-		expect(insertedScripts).toEqual([
-			{
-				type: 'text/javascript',
-				crossOrigin: 'anonymous',
-				async: true,
-				src: 'https://us-assets.i.posthog.com/static/array.js',
-			},
-		])
+		expect(getPostHogInit({ key, host, hostname })).toBeDefined()
 	})
 
-	it.each(
-		rejectedHosts,
-	)('does not initialize or load the SDK on %s', (hostname) => {
+	it.each(rejectedHosts)('does not initialize on %s', (hostname) => {
 		expect(isPostHogHost(hostname)).toBe(false)
-		const { insertedScripts, idleCallbacks, window } = bootstrap(hostname)
-		expect(insertedScripts).toEqual([])
-		expect(idleCallbacks).toEqual([])
-		expect(window.posthog).toBeUndefined()
+		expect(getPostHogInit({ key, host, hostname })).toBeUndefined()
 	})
 })
