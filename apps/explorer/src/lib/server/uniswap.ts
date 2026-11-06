@@ -411,10 +411,7 @@ export async function getUniswapTrades(): Promise<UniswapTrade[]> {
 			chainId,
 			`SELECT hash, "from" AS sender FROM txs
 			WHERE hash IN (${list(hashes)}) AND block_num >= ${firstBlock}`,
-		).catch((error) => {
-			console.error('Failed to read Uniswap swap senders:', error)
-			return []
-		})
+		)
 		for (const tx of txs) {
 			const sender = addressOf(tx.sender)
 			if (sender) senders.set(String(tx.hash).toLowerCase(), sender)
