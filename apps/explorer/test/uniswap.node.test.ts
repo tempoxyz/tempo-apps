@@ -199,6 +199,29 @@ describe('uniswap pools', () => {
 		expect(totals.month).toEqual({ value: 50, partial: true, unknown: false })
 	})
 
+	it('keeps volume exact when only a pool past the range cap is unread', () => {
+		const totals = marketTotals({
+			venues: ['uniswap'],
+			dex: { data: undefined, failed: false },
+			propAmm: { data: undefined, failed: false },
+			propAmmTrades: { data: undefined, failed: false },
+			uniswap: {
+				data: {
+					generatedAt: 0,
+					complete: false,
+					stable: true,
+					pools: [
+						pool(),
+						pool({ key: '0x01', state: 'unknown', reserves: null }),
+					],
+				},
+				failed: false,
+			},
+		})
+		expect(totals.liquidity?.partial).toBe(true)
+		expect(totals.month).toEqual({ value: 100, partial: false, unknown: false })
+	})
+
 	it('waits for the venue while it is in view', () => {
 		const totals = marketTotals({
 			venues: ['uniswap'],

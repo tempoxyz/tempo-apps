@@ -374,7 +374,8 @@ export function marketTotals(input: {
 					? sumPools(
 							snapshot.pools,
 							(pool) => pool.volume?.[window] ?? null,
-							snapshot.complete,
+							// A capped pool's volume is still read in full.
+							snapshot.complete || snapshot.stable,
 						)
 					: missing,
 			)
