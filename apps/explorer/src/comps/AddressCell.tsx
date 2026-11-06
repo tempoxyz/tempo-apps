@@ -1,45 +1,25 @@
-import { Link } from '@tanstack/react-router'
-import type { Address } from 'ox'
-import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from '#comps/Midcut'
-import { cx } from '#lib/css'
+import { Hex } from '@tempoxyz/ds'
+import type { Address as AddressType } from 'ox'
+import type * as React from 'react'
+import { Address } from '#comps/Address'
 
-export function AddressCell(props: {
-	address: Address.Address
-	label?: string
-	asLink?: boolean
-}) {
+/** A table cell's address: a linked `Address`, or plain TDS `Hex`. */
+export function AddressCell(props: AddressCell.Props): React.JSX.Element {
 	const { address, label, asLink = true } = props
-	const { isHighlighted, handlers } = useAddressHighlight(address)
-	const title = `${label ? `${label}: ` : ''}${address}`
-
-	if (!asLink)
-		return (
-			<span
-				className={cx(
-					'copy-14 text-accent w-full font-mono',
-					isHighlighted && 'underline',
-				)}
-				title={title}
-				{...handlers}
-			>
-				<Midcut value={address} prefix="0x" />
-			</span>
-		)
-
+	if (!asLink) return <Hex value={address} />
 	return (
-		<Link
-			to="/address/$address"
-			params={{ address }}
-			preload="intent"
-			className={cx(
-				'copy-14 text-accent hover:text-accent/80 transition-colors press-down w-full font-mono',
-				isHighlighted && 'underline',
-			)}
-			title={title}
-			{...handlers}
-		>
-			<Midcut value={address} prefix="0x" />
-		</Link>
+		<Address
+			address={address}
+			title={`${label ? `${label}: ` : ''}${address}`}
+		/>
 	)
+}
+
+export declare namespace AddressCell {
+	type Props = {
+		address: AddressType.Address
+		/** Prefixes the tooltip, such as `From`. */
+		label?: string | undefined
+		asLink?: boolean | undefined
+	}
 }

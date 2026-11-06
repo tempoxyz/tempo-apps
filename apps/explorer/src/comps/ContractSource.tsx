@@ -1,3 +1,4 @@
+import { Alert, Spinner, style } from '@tempoxyz/ds'
 import * as React from 'react'
 import type {
 	ContractSource,
@@ -60,19 +61,34 @@ function SourceBrowser(props: {
 	}, [])
 	if (Viewer) return <Viewer entries={props.entries} />
 	return (
-		<div className="flex h-[calc(min(620px,70svh)+96px)] min-h-[416px] flex-col items-center justify-center gap-3 rounded-lg border border-card-border bg-source-background copy-14 text-tertiary">
-			<p role={failed ? 'alert' : 'status'}>
-				{failed ? 'Unable to load source viewer.' : 'Loading source viewer…'}
-			</p>
-			{failed && (
-				<button
-					type="button"
-					onClick={() => window.location.reload()}
-					className="cursor-pointer rounded-md border border-card-border px-3 py-2 text-primary hover:bg-base-alt focus-visible:outline-2 focus-visible:outline-focus"
-				>
-					Reload
-				</button>
+		<div aria-busy={!failed} {...styles.placeholder()}>
+			{failed ? (
+				<Alert intent="negative">
+					<Alert.Icon />
+					<Alert.Content>Couldn’t load the source viewer.</Alert.Content>
+					<Alert.Action onClick={() => window.location.reload()}>
+						Reload page
+					</Alert.Action>
+				</Alert>
+			) : (
+				<Spinner aria-label="Loading source viewer" />
 			)}
 		</div>
 	)
+}
+
+namespace styles {
+	// Holds the viewer's height, so the tab doesn't shift when it loads.
+	export const placeholder = style({
+		alignItems: 'center',
+		borderColor: 'line.secondary',
+		borderRadius: 'xs',
+		borderStyle: 'solid',
+		borderWidth: 'regular',
+		display: 'flex',
+		height: 'calc(min(620px, 70svh) + 96px) !custom',
+		justifyContent: 'center',
+		minHeight: '416px !custom',
+		padding: '16',
+	})
 }

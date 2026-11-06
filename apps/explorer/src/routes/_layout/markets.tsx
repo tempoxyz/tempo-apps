@@ -753,7 +753,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 								</span>
 							</Table.Cell>
 							<Table.Cell justify="end" {...styles.wide()}>
-								<Address address={trade.taker} align="end" chars={4} />
+								<Address address={trade.taker} align="end" />
 							</Table.Cell>
 						</Table.Row>
 					))}

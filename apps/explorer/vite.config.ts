@@ -1,18 +1,17 @@
 import * as z from 'zod/mini'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
-import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
-import { zyzz } from 'zyzz/vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
 
 import { getVendorChunk } from './scripts/chunk-config.ts'
+import { explorerZyzz } from './scripts/zyzz.ts'
 import {
 	buildEnvSchema,
 	devnetUrlsSchema,
@@ -22,6 +21,11 @@ import {
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 const [, , , ...args] = process.argv
+
+// The zyzz compiler adds `zyzz/runtime` imports after Vite scans dependencies,
+// and TDS entry points sit behind lazily loaded routes. Discovering either
+// mid-session re-bundles React and breaks SSR, so pre-bundle them up front.
+const prebundled = ['zyzz/runtime', '@tempoxyz/ds', '@tempoxyz/ds/icons']
 
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
@@ -77,6 +81,14 @@ export default defineConfig((config) => {
 	)
 
 	return {
+		optimizeDeps: { include: prebundled },
+		// TDS ships compiled modules with zyzz contracts that the server build reads.
+		ssr: { noExternal: ['@tempoxyz/ds', 'zyzz'] },
+		environments: {
+			ssr: {
+				optimizeDeps: { include: prebundled },
+			},
+		},
 		resolve: {
 			tsconfigPaths: true,
 			alias: {
@@ -92,10 +104,8 @@ export default defineConfig((config) => {
 			config.mode === 'development' &&
 				envConfig.VITE_ENABLE_DEVTOOLS &&
 				vitePluginChromiumDevTools(),
+			...explorerZyzz({ reset: true }),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
-			tailwind(),
-			// Tempo Design System (@tempoxyz/ds) styles compile ahead of time.
-			zyzz(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
 			tanstack({
 				srcDirectory: './src',
@@ -123,8 +133,6 @@ export default defineConfig((config) => {
 					},
 				}),
 		].filter(Boolean),
-		// The plugin reads the design system's contracts, so SSR bundles them.
-		ssr: { noExternal: ['@tempoxyz/ds', 'zyzz'] },
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,

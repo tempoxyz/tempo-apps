@@ -1,3 +1,4 @@
+import { Button } from '@tempoxyz/ds'
 import * as React from 'react'
 import { RelativeTime } from '#comps/RelativeTime'
 
@@ -90,13 +91,14 @@ export function TimeColumnHeader(props: {
 }) {
 	const { label = 'Time', formatLabel, onCycle, className } = props
 	return (
-		<button
-			type="button"
-			onClick={onCycle}
+		<Button
 			className={className}
-			title={`Showing ${formatLabel} time - click to change`}
+			onClick={onCycle}
+			size="small"
+			title={`Showing ${formatLabel} time. Select to change.`}
+			variant="text"
 		>
 			{label}
-		</button>
+		</Button>
 	)
 }
