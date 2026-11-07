@@ -1,0 +1,35 @@
+{
+	"name": "mpp-identity",
+	"type": "module",
+	"private": true,
+	"imports": {
+		"#*": "./src/*",
+		"#package.json": "./package.json",
+		"#wrangler.json": "./wrangler.json"
+	},
+	"scripts": {
+		"build": "wrangler deploy --dry-run --outdir dist",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit && tsgo --project test/tsconfig.json --noEmit",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"keygen": "node ./scripts/keygen.ts",
+		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
+		"tail": "wrangler tail",
+		"test": "vitest --run",
+		"test:watch": "vitest",
+		"postinstall": "pnpm gen:types"
+	},
+	"dependencies": {
+		"hono": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
