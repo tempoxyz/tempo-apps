@@ -302,11 +302,13 @@ export function useRowLink(): (href: string) => useRowLink.Props {
 				return
 			// Right, back and forward buttons keep their own behaviour.
 			if (event.button !== 0 && event.button !== 1) return
+			// Another site's page opens in a new tab, as its link does.
 			if (
 				event.button === 1 ||
 				event.metaKey ||
 				event.ctrlKey ||
-				event.shiftKey
+				event.shiftKey ||
+				/^https?:\/\//.test(href)
 			) {
 				window.open(href, '_blank', 'noopener')
 				return

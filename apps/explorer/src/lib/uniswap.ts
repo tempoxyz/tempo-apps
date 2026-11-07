@@ -86,6 +86,11 @@ export function uniswapPoolsFor(chainId: number): readonly UniswapPoolConfig[] {
 	}))
 }
 
+/** The pool's page on Uniswap's own site, which lists Tempo pools by ID. */
+export function uniswapPoolUrl(id: Hex): string {
+	return `https://app.uniswap.org/explore/pools/tempo/${id}`
+}
+
 /** The fee as a percentage label, such as 0.01%. */
 export function feeLabel(fee: number): string {
 	return `${Number((fee / 10_000).toFixed(4))}%`
