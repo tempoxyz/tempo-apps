@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Hex } from 'ox'
-import { and, eq, isNull, or } from 'drizzle-orm'
+import { and, eq, isNull, min, or } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 
 import { getRandom } from '@cloudflare/containers'
@@ -13,6 +13,7 @@ import {
 	sourcifyError,
 	filterSourcesByCompilerMetadata,
 	getCreationTransactionMetadata,
+	type CreationTransactionClient,
 } from '#lib/utilities.ts'
 import {
 	codeTable,
@@ -38,6 +39,8 @@ import type { AppEnv } from '#index.tsx'
 import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
 import { createRpcTransport } from '#lib/rpc.ts'
+import { restoreVerifiedRuntime } from '#lib/verified-runtime.ts'
+import { tempoMainnetExtended, tempoTestnetExtended } from '#wagmi.config.ts'
 import {
 	type CompileOutput,
 	getValidationCustomCode,
@@ -233,33 +236,21 @@ verifyRoute
 			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
-			// Exact verifications are terminal, but partial matches must not block
-			// a later exact verification from replacing them.
-			const existingExactVerification = await db
-				.select({
-					matchId: verifiedContractsTable.id,
-					runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-					creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
-				})
-				.from(verifiedContractsTable)
-				.innerJoin(
-					contractDeploymentsTable,
-					eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-				)
-				.where(
-					and(
-						eq(contractDeploymentsTable.chainId, chainId),
-						eq(contractDeploymentsTable.address, addressBytes),
-						or(
-							eq(verifiedContractsTable.runtimeMetadataMatch, true),
-							eq(verifiedContractsTable.creationMetadataMatch, true),
-						),
-					),
-				)
-				.limit(1)
-
-			if (existingExactVerification.length > 0) {
-				const existing = existingExactVerification.at(0)
+			// Exact sources are terminal; only missing creation attribution may be repaired.
+			const existingExactVerification = await exactVerifications(
+				db,
+				chainId,
+				addressBytes,
+			)
+			const existing =
+				existingExactVerification.find(
+					(verification) => verification.deployment.transactionHash !== null,
+				) ?? existingExactVerification.at(0)
+			if (
+				existing &&
+				(existing.deployment.transactionHash !== null ||
+					!parsedBody.data.creationTransactionHash)
+			) {
 				const runtimeMatch = existing?.runtimeMetadataMatch
 					? 'exact matches'
 					: 'match'
@@ -271,6 +262,15 @@ verifyRoute
 					409,
 					'already_verified',
 					`Contract ${address} on chain ${chainId} is already verified with runtimeMatch ${runtimeMatch} and creationMatch ${creationMatch}.`,
+				)
+			}
+
+			if (existingExactVerification.length > 1) {
+				return sourcifyError(
+					context,
+					409,
+					'ambiguous_creation_transaction',
+					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
 				)
 			}
 
@@ -644,15 +644,43 @@ verifyRoute
 		}
 	})
 
-type PublicClientLike = {
+function exactVerifications(
+	db: ReturnType<typeof getDb>,
+	chainId: number,
+	address: Uint8Array,
+) {
+	return (
+		db
+			.select({
+				// SQLite takes the other selected verification fields from this minimum's row.
+				matchId: min(verifiedContractsTable.id),
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+				deployment: contractDeploymentsTable,
+			})
+			.from(verifiedContractsTable)
+			.innerJoin(
+				contractDeploymentsTable,
+				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+			)
+			.where(
+				and(
+					eq(contractDeploymentsTable.chainId, chainId),
+					eq(contractDeploymentsTable.address, address),
+					or(
+						eq(verifiedContractsTable.runtimeMetadataMatch, true),
+						eq(verifiedContractsTable.creationMetadataMatch, true),
+					),
+				),
+			)
+			// Multiple exact compilations can describe one deployment; count deployments before limiting.
+			.groupBy(contractDeploymentsTable.id)
+			.limit(2)
+	)
+}
+
+type PublicClientLike = CreationTransactionClient & {
 	getCode: (args: { address: `0x${string}` }) => Promise<`0x${string}`>
-	getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
-		transactionHash: `0x${string}`
-		blockNumber: bigint
-		transactionIndex: number
-		from: `0x${string}`
-		contractAddress: `0x${string}` | null
-	}>
 }
 
 type ContainerLike = {
@@ -703,15 +731,138 @@ async function runVerificationJob(
 			transport: createRpcTransport(rpcUrl, chain.id, env),
 		})
 
-		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
-			? await getCreationTransactionMetadata({
-					creationTransactionHash: sanitizedBody.creationTransactionHash,
-					address,
-					chainId,
-					client,
-					logContext: { jobId },
+		const existingExact = await exactVerifications(db, chainId, addressBytes)
+		const existing = existingExact[0]
+		if (existing) {
+			// A repair must never compile submitted sources or mutate an exact verification.
+			let errorCode: string | null = null
+			if (!sanitizedBody.creationTransactionHash) {
+				// An exact result appearing after admission does not verify this job's sources.
+				errorCode = 'already_verified'
+			} else if (existingExact.length !== 1) {
+				errorCode = 'ambiguous_creation_transaction'
+			} else if (
+				chainId !== tempoMainnetExtended.id &&
+				chainId !== tempoTestnetExtended.id
+			) {
+				// These two chains enable Cancun at genesis; dynamic chains and devnet lack a pinned lifecycle guarantee.
+				errorCode = 'unsupported_creation_lifecycle'
+			} else {
+				const [recorded] = await db
+					.select({
+						code: codeTable.code,
+						transformations: verifiedContractsTable.runtimeTransformations,
+						values: verifiedContractsTable.runtimeValues,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					})
+					.from(contractsTable)
+					.innerJoin(
+						codeTable,
+						eq(codeTable.codeHash, contractsTable.runtimeCodeHash),
+					)
+					.innerJoin(
+						verifiedContractsTable,
+						eq(verifiedContractsTable.id, existing.matchId ?? 0),
+					)
+					.where(eq(contractsTable.id, existing.deployment.contractId))
+					.limit(1)
+				const expectedRuntime =
+					recorded?.runtimeMetadataMatch && recorded.code
+						? restoreVerifiedRuntime({
+								code: new Uint8Array(recorded.code as ArrayBuffer),
+								transformations: recorded.transformations,
+								values: recorded.values,
+							})
+						: null
+				const proof = expectedRuntime
+					? await getCreationTransactionMetadata({
+							creationTransactionHash: sanitizedBody.creationTransactionHash,
+							address,
+							chainId,
+							client,
+							logContext: { jobId },
+							expectedRuntime,
+						})
+					: null
+				if (!proof) {
+					errorCode = 'invalid_creation_transaction'
+				} else {
+					// Non-null attribution is immutable, including when a concurrent job fills it.
+					const updated = await db
+						.update(contractDeploymentsTable)
+						.set({
+							...proof,
+							updatedAt: new Date().toISOString(),
+							updatedBy: 'verification-api',
+						})
+						.where(
+							and(
+								eq(contractDeploymentsTable.id, existing.deployment.id),
+								eq(
+									contractDeploymentsTable.contractId,
+									existing.deployment.contractId,
+								),
+								or(
+									isNull(contractDeploymentsTable.transactionHash),
+									eq(
+										contractDeploymentsTable.transactionHash,
+										proof.transactionHash,
+									),
+								),
+								or(
+									isNull(contractDeploymentsTable.blockNumber),
+									eq(contractDeploymentsTable.blockNumber, proof.blockNumber),
+								),
+								or(
+									isNull(contractDeploymentsTable.transactionIndex),
+									eq(
+										contractDeploymentsTable.transactionIndex,
+										proof.transactionIndex,
+									),
+								),
+								or(
+									isNull(contractDeploymentsTable.deployer),
+									eq(contractDeploymentsTable.deployer, proof.deployer),
+								),
+							),
+						)
+						.returning({ id: contractDeploymentsTable.id })
+					if (updated.length !== 1) errorCode = 'creation_transaction_conflict'
+				}
+			}
+			const messages: Record<string, string> = {
+				unsupported_creation_lifecycle:
+					'Creation metadata repair requires a chain with immutable persisted contract code from genesis. Only Tempo mainnet and testnet are supported.',
+				already_verified:
+					'This contract was verified before the queued job ran; this submission was not compiled or compared.',
+				ambiguous_creation_transaction:
+					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
+				invalid_creation_transaction:
+					'The supplied transaction could not be proven to create the recorded runtime. Check stored runtime evidence, the creation hash and RPC trace availability before retrying.',
+				creation_transaction_conflict:
+					'The supplied creation proof conflicts with existing deployment metadata; no evidence was replaced.',
+			}
+			await db
+				.update(verificationJobsTable)
+				.set({
+					completedAt: new Date().toISOString(),
+					verifiedContractId: errorCode ? null : existing.matchId,
+					errorCode,
+					errorId: errorCode ? globalThis.crypto.randomUUID() : null,
+					errorData: errorCode
+						? JSON.stringify({ message: messages[errorCode] })
+						: null,
+					compilationTime: Date.now() - startTime,
 				})
-			: null
+				.where(
+					and(
+						eq(verificationJobsTable.id, jobId),
+						// Every repair outcome preserves a result committed by an earlier execution.
+						isNull(verificationJobsTable.completedAt),
+					),
+				)
+			return
+		}
 
 		const onchainBytecode = await client.getCode({ address })
 		if (!onchainBytecode || onchainBytecode === '0x') {
@@ -937,6 +1088,17 @@ async function runVerificationJob(
 				.where(eq(verificationJobsTable.id, jobId))
 			return
 		}
+
+		// Only matched source submissions may trigger optional factory tracing.
+		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
+			? await getCreationTransactionMetadata({
+					creationTransactionHash: sanitizedBody.creationTransactionHash,
+					address,
+					chainId,
+					client,
+					logContext: { jobId },
+				})
+			: null
 
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'

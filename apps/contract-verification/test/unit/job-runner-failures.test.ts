@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
-import { SELF, env } from 'cloudflare:test'
+import { env } from 'cloudflare:test'
+import { Hex } from 'ox'
 import { describe, expect, it } from 'vitest'
 
 import * as DB from '#database/schema.ts'
@@ -22,24 +23,18 @@ const runVerificationJob = (
 	)
 import { counterFixture } from '../fixtures/counter.fixture.ts'
 
-const verifyRequestData = {
-	stdJsonInput: counterFixture.stdJsonInput,
-	compilerVersion: counterFixture.compilerVersion,
-	contractIdentifier: counterFixture.contractIdentifier,
-} as const
-
 async function createJob(): Promise<string> {
-	const res = await SELF.fetch(
-		`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-		{
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(verifyRequestData),
-		},
-	)
-	expect(res.status).toBe(202)
-	const body = (await res.json()) as { verificationId: string }
-	return body.verificationId
+	const jobId = globalThis.crypto.randomUUID()
+	// These tests run the job directly; posting it would also start an unawaited Durable Object alarm.
+	await drizzle(env.CONTRACTS_DB)
+		.insert(DB.verificationJobsTable)
+		.values({
+			id: jobId,
+			chainId: counterFixture.chainId,
+			contractAddress: Hex.toBytes(counterFixture.address),
+			verificationEndpoint: '/v2/verify',
+		})
+	return jobId
 }
 
 async function getJob(jobId: string) {

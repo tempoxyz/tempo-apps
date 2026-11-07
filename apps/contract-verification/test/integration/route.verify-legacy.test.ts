@@ -45,7 +45,10 @@ describe('POST /verify/vyper', () => {
 		mockGetRandom.mockReset()
 	})
 
-	it('stores deployment metadata when creatorTxHash is provided', async () => {
+	it.each([
+		'direct',
+		'factory',
+	])('stores %s creation metadata only after source matching', async (kind) => {
 		const chainId = staticChains[0].id
 		const address = '0x1111111111111111111111111111111111111111' as const
 		const creatorTxHash =
@@ -53,21 +56,42 @@ describe('POST /verify/vyper', () => {
 		const deployer = '0x2222222222222222222222222222222222222222' as const
 		const runtimeBytecode = createVyperBytecode('6000')
 		const creationBytecode = createVyperBytecode('60016000')
-		const getCode = async () => runtimeBytecode
-		const getTransactionReceipt = async () => ({
-			transactionHash: creatorTxHash,
-			blockNumber: 123n,
-			transactionIndex: 7,
-			from: deployer,
-			contractAddress: address,
-		})
+		const calls: string[] = []
+		const getCode = async () => {
+			calls.push('code')
+			return runtimeBytecode
+		}
+		const getTransactionReceipt = async () => {
+			calls.push('receipt')
+			return {
+				status: 'success' as const,
+				transactionHash: creatorTxHash,
+				blockNumber: 123n,
+				transactionIndex: 7,
+				from: deployer,
+				contractAddress: kind === 'direct' ? address : null,
+				cumulativeGasUsed: 1_000_000n,
+			}
+		}
 		mockCreatePublicClient.mockReturnValue({
 			getCode,
 			getTransactionReceipt,
+			transport: {
+				request: async () => {
+					calls.push('trace')
+					return {
+						type: 'CALL',
+						from: deployer,
+						to: deployer,
+						calls: [{ type: 'CREATE', from: deployer, to: address }],
+					}
+				},
+			},
 		})
 		mockGetRandom.mockResolvedValue({
-			fetch: async () =>
-				Response.json({
+			fetch: async () => {
+				calls.push('compile')
+				return Response.json({
 					contracts: {
 						'vyper-contract.vy': {
 							VyperContract: {
@@ -92,7 +116,8 @@ describe('POST /verify/vyper', () => {
 							},
 						},
 					},
-				}),
+				})
+			},
 		})
 		const { legacyVerifyRoute } = await import('#route.verify-legacy.ts')
 
@@ -128,6 +153,11 @@ describe('POST /verify/vyper', () => {
 		expect(response.status).toBe(200)
 		expect(mockCreatePublicClient).toHaveBeenCalledTimes(1)
 		expect(mockGetRandom).toHaveBeenCalledTimes(1)
+		expect(calls).toEqual(
+			kind === 'direct'
+				? ['code', 'compile', 'receipt']
+				: ['code', 'compile', 'receipt', 'trace'],
+		)
 
 		const db = drizzle(env.CONTRACTS_DB)
 		const deployments = await db.select().from(DB.contractDeploymentsTable)
@@ -139,6 +169,101 @@ describe('POST /verify/vyper', () => {
 		expect(deployments[0]?.blockNumber).toBe(123)
 		expect(deployments[0]?.transactionIndex).toBe(7)
 		expect(bytesToHex(deployments[0]?.deployer ?? null)).toBe(deployer)
+	})
+
+	it.each([
+		'absent code',
+		'mismatched bytecode',
+		'compilation error',
+	])('does not read creation proof for %s', async (scenario) => {
+		const address = '0x1111111111111111111111111111111111111111'
+		const creatorTxHash = `0x${'aa'.repeat(32)}`
+		const getTransactionReceipt = vi.fn(async () => ({
+			status: 'success',
+			transactionHash: creatorTxHash,
+			blockNumber: 123n,
+			transactionIndex: 7,
+			from: '0x2222222222222222222222222222222222222222',
+			contractAddress: null,
+			cumulativeGasUsed: 1_000_000n,
+		}))
+		const trace = vi.fn(async () => ({
+			type: 'CALL',
+			from: address,
+			to: address,
+			calls: [{ type: 'CREATE', from: address, to: address }],
+		}))
+		mockCreatePublicClient.mockReturnValue({
+			getCode: async () =>
+				scenario === 'absent code' ? '0x' : createVyperBytecode('6000'),
+			getTransactionReceipt,
+			transport: { request: trace },
+		})
+		mockGetRandom.mockResolvedValue({
+			fetch: async () =>
+				Response.json(
+					scenario === 'compilation error'
+						? {
+								errors: [
+									{ severity: 'error', message: 'Invalid Vyper source' },
+								],
+							}
+						: {
+								contracts: {
+									'contract.vy': {
+										Contract: {
+											abi: [],
+											metadata: '{}',
+											evm: {
+												bytecode: {
+													object: createVyperBytecode('60016000').slice(2),
+												},
+												deployedBytecode: {
+													object: createVyperBytecode('6001').slice(2),
+												},
+											},
+										},
+									},
+								},
+							},
+				),
+		})
+		const { legacyVerifyRoute } = await import('#route.verify-legacy.ts')
+		const app = new Hono<AppEnv>()
+		app.use(async (c, next) => {
+			c.set('chainRegistry', ChainRegistry.fromStatic(staticChains))
+			await next()
+		})
+		app.route('/verify', legacyVerifyRoute)
+		const response = await app.request(
+			'/verify/vyper',
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					address,
+					chain: staticChains[0].id,
+					files: { 'contract.vy': '# @version ^0.3.10' },
+					contractPath: 'contract.vy',
+					contractName: 'Contract',
+					compilerVersion: '0.3.10',
+					creatorTxHash,
+				}),
+			},
+			env,
+		)
+		expect(response.status).toBe(
+			scenario === 'absent code'
+				? 200
+				: scenario === 'compilation error'
+					? 400
+					: 500,
+		)
+		expect(getTransactionReceipt).not.toHaveBeenCalled()
+		expect(trace).not.toHaveBeenCalled()
+		const db = drizzle(env.CONTRACTS_DB)
+		expect(await db.select().from(DB.contractDeploymentsTable)).toHaveLength(0)
+		expect(await db.select().from(DB.verifiedContractsTable)).toHaveLength(0)
 	})
 
 	it('leaves deployment metadata null when creatorTxHash is not provided', async () => {

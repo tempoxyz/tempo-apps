@@ -79,6 +79,66 @@ solc version fails with `solar_compiler_version_required` instead of a misleadin
 
 - Standard JSON: see [/apps/contract-verification/scripts/verify-via-curl.sh](./scripts/verify-via-curl.sh) for a full example.
 
+#### Repairing missing creation metadata
+
+A contract can have an exact verification (matching bytecode and compiler metadata) while its
+stored deployment lacks the creation transaction hash. To fill that gap, send a standard-JSON
+request to `POST /v2/verify/:chainId/:address` with `creationTransactionHash`. The `stdJsonInput`,
+`compilerVersion` and `contractIdentifier` fields must pass request validation, but the repair does
+not compile or compare those submitted sources. An accepted POST returns HTTP 202 with
+`verificationId`; poll `GET /v2/verify/:verificationId` for the completed job and its errors.
+
+This repair preserves the existing sources, compilation, verification ID and match flags
+(the recorded bytecode/metadata comparison results). It fills deployment metadata only: transaction
+hash, block, transaction index and deployer. It does not compile sources or compare deployment
+initcode (creation bytecode).
+
+Repairs are supported only on Tempo mainnet (4217) and testnet (42431). Their
+[mainnet](https://github.com/tempoxyz/tempo/blob/1f2b7642e85680645a536c471026b9c3103a3666/crates/chainspec/src/genesis/presto.json)
+and [testnet](https://github.com/tempoxyz/tempo/blob/1f2b7642e85680645a536c471026b9c3103a3666/crates/chainspec/src/genesis/moderato.json)
+genesis configurations enable Cancun from genesis: persisted contract code cannot be destroyed and
+replaced. Devnet and dynamically configured chains report `unsupported_creation_lifecycle` in the polled job because
+the verifier has no pinned guarantee for their complete history. Source verification remains supported
+on those chains. The restriction prevents attributing a replacement deployment to an older creation
+transaction: matching bytecode alone cannot distinguish identical code deployed twice at a reused address.
+
+For every repair, including a direct deployment, the selected chain's RPC must provide a full
+`debug_traceTransaction` call trace. The expected runtime is the deployed bytecode recorded by the
+existing verification for the requested chain and address. The verifier reconstructs these bytes from the existing deployment's stored
+compiled bytecode and the substitutions saved by its exact runtime verification: immutable values,
+linked library addresses and the library call-protection address. It never learns replacement values
+from the submitted creation transaction. The successful `CREATE` or `CREATE2` frame's output
+(the bytecode installed at that address) must equal the reconstructed bytes exactly.
+Missing or unsupported stored evidence produces
+`invalid_creation_transaction`. The creation must have no reverted parent call. The trace must
+contain exactly one successful creation of the requested address and no non-reverted
+`SELFDESTRUCT` of that address anywhere in the transaction. This also excludes contracts created and destroyed in the same
+transaction, which Cancun still permits. A receipt, factory event, later no-op call or matching
+current bytecode alone is not sufficient. The deployer remains the transaction sender, not the factory.
+
+Trace reads have strict resource limits: no automatic retries, a five-second HTTP deadline, and a
+256 KiB response cap. The receipt must report `cumulativeGasUsed` of at most 50 million: gas used
+by this transaction plus all earlier transactions in its block. Larger or unavailable values cannot
+be traced, bounding the RPC's block-replay work. Exceeding a limit leaves creation metadata unchanged.
+
+An initial source verification can still succeed without creation metadata. It requests optional
+creation evidence only after bytecode matching succeeds, using a direct-creation receipt or a factory
+trace. Metadata-only repair is stricter: invalid or unavailable trace/runtime evidence produces
+`invalid_creation_transaction` in the polled job. Retry with the correct hash and a working trace RPC;
+missing stored runtime evidence requires investigation rather than replacement with submitted sources.
+
+Successful repairs refresh the deployment record's `updated_at` and set `updated_by` to
+`verification-api`. Conflicting stored metadata or a concurrent change to the deployment's linked
+contract record produces
+`creation_transaction_conflict`; multiple exact deployment records produce
+`ambiguous_creation_transaction` when they share the queried chain and address. These cases require investigation. Every refusal leaves existing
+evidence unchanged, and re-running a queued job cannot overwrite its completed result.
+
+Entries already containing a transaction hash reject the POST with `409 already_verified`; this
+endpoint cannot replace that hash. After success, read
+`/v2/contract/:chainId/:address?fields=transactionHash,deployment` to check the result. This repair is
+V2-only; the legacy `POST /verify/vyper` endpoint does not support it.
+
 ### Development
 
 #### Prerequisites
