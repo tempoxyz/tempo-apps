@@ -591,10 +591,7 @@ function PairsTable(props: PairsTableProps): React.JSX.Element | null {
 	const columns = showSpread ? 6 : 5
 	return (
 		<div {...styles.scroll()}>
-			<Table interactive>
-				<Table.Caption>
-					Pairs on the Stablecoin DEX, PropAMM and Uniswap
-				</Table.Caption>
+			<Table interactive aria-label="Pairs">
 				<Table.Head>
 					<Table.Row>
 						<Table.HeaderCell>Pair</Table.HeaderCell>
@@ -684,11 +681,7 @@ function TradesTable(props: TradesTableProps): React.JSX.Element | null {
 
 	return (
 		<div {...styles.scroll()}>
-			<Table interactive>
-				<Table.Caption>
-					Latest Stablecoin DEX swaps, PropAMM trades and Uniswap swaps of the
-					last 30 days
-				</Table.Caption>
+			<Table interactive aria-label="Trades">
 				<Table.Head>
 					<Table.Row>
 						<Table.HeaderCell {...styles.wide()}>Time</Table.HeaderCell>
