@@ -9,11 +9,7 @@ import {
 	isOtpId,
 	OTP_TTL_MS,
 } from './lib/otp.ts'
-import {
-	canonicalInbox,
-	clientBucket,
-	emailDomain,
-} from './lib/rate-limit-keys.ts'
+import { canonicalInbox, clientBucket } from './lib/rate-limit-keys.ts'
 import { normalizeAudience, normalizeEmail } from './lib/validate.ts'
 
 export { OtpStore, RateLimiter } from './durable-objects.ts'
@@ -21,7 +17,6 @@ export { OtpStore, RateLimiter } from './durable-objects.ts'
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
 const EMAIL_RATE_LIMIT = 3
 const IP_RATE_LIMIT = 10
-const DOMAIN_RATE_LIMIT = 100
 const DEFAULT_ATTESTATION_TTL = 86_400
 const INVALID_CODE = 'Invalid or expired code.'
 
@@ -76,15 +71,40 @@ app.post('/email/otp', async (c) => {
 			400,
 		)
 
-	const client = clientBucket(c.req.header('CF-Connecting-IP'))
+	const client = clientBucket(
+		c.req.header('CF-Connecting-IP'),
+		c.req.header('CF-Worker'),
+	)
 	const inbox = toBase64Url(await sha256(canonicalInbox(email)))
-	for (const [key, limit] of [
-		[`ip:${client}`, IP_RATE_LIMIT],
-		[`email:${inbox}`, EMAIL_RATE_LIMIT],
-		[`domain:${emailDomain(canonicalInbox(email))}`, DOMAIN_RATE_LIMIT],
-	] as const) {
-		const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(key))
+	// There is no per-domain cap: one shared counter for gmail.com or a company
+	// domain would let anyone lock all of its users out.
+	const limiters = (
+		[
+			[`ip:${client}`, IP_RATE_LIMIT],
+			[`email:${inbox}`, EMAIL_RATE_LIMIT],
+		] as const
+	).map(
+		([key, limit]) =>
+			[
+				c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(key)),
+				limit,
+			] as const,
+	)
+	// Check every limit before recording a hit, so a request one limit refuses
+	// does not use up the others.
+	let retryAfterSeconds = 0
+	for (const [limiter, limit] of limiters) {
+		const result = await limiter.check(limit, RATE_LIMIT_WINDOW_MS)
+		if (!result.allowed)
+			retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds)
+	}
+	if (retryAfterSeconds > 0) {
+		c.header('Retry-After', String(retryAfterSeconds))
+		return c.json({ error: 'Too many requests. Try again later.' }, 429)
+	}
+	for (const [limiter, limit] of limiters) {
 		const result = await limiter.hit(limit, RATE_LIMIT_WINDOW_MS)
+		// A concurrent request filled the bucket between check and hit.
 		if (!result.allowed) {
 			c.header('Retry-After', String(result.retryAfterSeconds))
 			return c.json({ error: 'Too many requests. Try again later.' }, 429)

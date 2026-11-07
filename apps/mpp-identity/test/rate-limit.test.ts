@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-	canonicalInbox,
-	clientBucket,
-	emailDomain,
-} from '../src/lib/rate-limit-keys.ts'
+import { canonicalInbox, clientBucket } from '../src/lib/rate-limit-keys.ts'
 import { codeFrom, createClient, uniqueIp } from './helpers.ts'
 
 const audience = 'https://merchant.example'
@@ -23,12 +19,6 @@ describe('canonicalInbox', () => {
 	})
 })
 
-describe('emailDomain', () => {
-	it('returns the domain', () => {
-		expect(emailDomain('alice@mail.example.com')).toBe('mail.example.com')
-	})
-})
-
 describe('clientBucket', () => {
 	it.each([
 		['203.0.113.7', '203.0.113.7'],
@@ -45,18 +35,25 @@ describe('clientBucket', () => {
 	])('%s -> %s', (ip, bucket) => {
 		expect(clientBucket(ip)).toBe(bucket)
 	})
+
+	it('keys Workers on other zones by zone, not their shared egress address', () => {
+		expect(clientBucket('2a06:98c0:3600::103', 'Shop.Example')).toBe(
+			'worker:shop.example',
+		)
+	})
 })
 
 function send(
 	client: ReturnType<typeof createClient>,
 	email: string,
 	ip = uniqueIp(),
+	headers: Record<string, string> = {},
 ) {
 	return client.request(
 		'POST',
 		'/email/otp',
 		{ email, audience },
-		{ 'CF-Connecting-IP': ip },
+		{ 'CF-Connecting-IP': ip, ...headers },
 	)
 }
 
@@ -133,24 +130,43 @@ describe('send rate limit buckets', () => {
 		expect(other.status).toBe(200)
 	})
 
-	it('caps sends per recipient domain at 100 per 10 minutes', {
-		timeout: 30_000,
-	}, async () => {
+	it('does not cap sends per recipient domain', async () => {
 		const client = createClient()
 		const domain = `${crypto.randomUUID()}.example.com`
-		const statuses = await Promise.all(
-			Array.from(
-				{ length: 100 },
-				async (_, i) => (await send(client, `user${i}@${domain}`)).status,
-			),
-		)
-		expect(statuses.every((status) => status === 200)).toBe(true)
-		const blocked = await send(client, `user100@${domain}`)
-		expect(blocked.status).toBe(429)
-		expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThan(0)
-		expect(client.sent).toHaveLength(100)
+		for (let i = 0; i < 12; i++)
+			expect((await send(client, `user${i}@${domain}`)).status).toBe(200)
+	})
+
+	it('gives Workers on different zones separate buckets', async () => {
+		const client = createClient()
+		const egress = '2a06:98c0:3600::103'
+		const zone = `${crypto.randomUUID()}.example`
+		const fresh = () => `u@${crypto.randomUUID()}.example.com`
+		for (let i = 0; i < 10; i++)
+			expect(
+				(await send(client, fresh(), egress, { 'CF-Worker': zone })).status,
+			).toBe(200)
 		expect(
-			(await send(client, `user100@${crypto.randomUUID()}.example.com`)).status,
+			(await send(client, fresh(), egress, { 'CF-Worker': zone })).status,
+		).toBe(429)
+		expect(
+			(await send(client, fresh(), egress, { 'CF-Worker': `other-${zone}` }))
+				.status,
 		).toBe(200)
+	})
+
+	it('does not use up the client quota on requests the inbox limit refuses', async () => {
+		const client = createClient()
+		const ip = uniqueIp()
+		const email = `full@${crypto.randomUUID()}.example.com`
+		const fresh = () => `u@${crypto.randomUUID()}.example.com`
+		for (let i = 0; i < 3; i++)
+			expect((await send(client, email, ip)).status).toBe(200)
+		for (let i = 0; i < 5; i++)
+			expect((await send(client, email, ip)).status).toBe(429)
+		// 3 of the client's 10 sends are used; the 5 refusals did not count.
+		for (let i = 0; i < 7; i++)
+			expect((await send(client, fresh(), ip)).status).toBe(200)
+		expect((await send(client, fresh(), ip)).status).toBe(429)
 	})
 })

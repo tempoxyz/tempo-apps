@@ -23,16 +23,18 @@ export function canonicalInbox(email: string): string {
 	return `${local}@${domain}`
 }
 
-/** The recipient domain of a normalized address. */
-export function emailDomain(email: string): string {
-	return email.slice(email.lastIndexOf('@') + 1)
-}
-
 /**
  * The client bucket: IPv4 addresses as they are, IPv6 addresses by their /64
- * prefix, since one host commonly controls a whole /64.
+ * prefix, since one host commonly controls a whole /64. A Cloudflare Worker on
+ * another zone is keyed by its zone (the `CF-Worker` header, which callers
+ * cannot remove), since all such Workers share one egress address.
  */
-export function clientBucket(ip: string | undefined): string {
+export function clientBucket(
+	ip: string | undefined,
+	worker?: string | undefined,
+): string {
+	const zone = worker?.trim().toLowerCase()
+	if (zone) return `worker:${zone}`
 	const value = ip?.trim().toLowerCase()
 	if (!value) return 'unknown'
 	if (!value.includes(':')) return value

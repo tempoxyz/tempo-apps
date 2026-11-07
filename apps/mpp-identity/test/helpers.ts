@@ -14,7 +14,6 @@ export function uniqueIp(): string {
 }
 
 export function uniqueEmail(): string {
-	// A fresh domain too, so tests don't share the per-domain limit.
 	return `user@${crypto.randomUUID()}.example.com`
 }
 

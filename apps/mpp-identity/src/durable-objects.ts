@@ -66,28 +66,51 @@ export type RateLimitResult =
 
 /** Sliding-window limiter. One instance per key (idFromName(key)). */
 export class RateLimiter extends DurableObject<CloudflareBindings> {
+	/** Reports whether a hit would be allowed, without recording it. */
+	async check(
+		limit: number,
+		windowMs: number,
+		now = Date.now(),
+	): Promise<RateLimitResult> {
+		return this.evaluate(await this.recent(windowMs, now), limit, windowMs, now)
+	}
+
+	/** Records a hit if the limit allows it. */
 	async hit(
 		limit: number,
 		windowMs: number,
 		now = Date.now(),
 	): Promise<RateLimitResult> {
-		const hits = ((await this.ctx.storage.get<number[]>('hits')) ?? []).filter(
-			(time) => time > now - windowMs,
-		)
-		if (hits.length >= limit) {
-			const oldest = hits[0] ?? now
-			return {
-				allowed: false,
-				retryAfterSeconds: Math.max(
-					1,
-					Math.ceil((oldest + windowMs - now) / 1000),
-				),
-			}
-		}
+		const hits = await this.recent(windowMs, now)
+		const result = this.evaluate(hits, limit, windowMs, now)
+		if (!result.allowed) return result
 		hits.push(now)
 		await this.ctx.storage.put('hits', hits)
 		await this.ctx.storage.setAlarm(now + windowMs)
-		return { allowed: true }
+		return result
+	}
+
+	private async recent(windowMs: number, now: number): Promise<number[]> {
+		return ((await this.ctx.storage.get<number[]>('hits')) ?? []).filter(
+			(time) => time > now - windowMs,
+		)
+	}
+
+	private evaluate(
+		hits: number[],
+		limit: number,
+		windowMs: number,
+		now: number,
+	): RateLimitResult {
+		if (hits.length < limit) return { allowed: true }
+		const oldest = hits[0] ?? now
+		return {
+			allowed: false,
+			retryAfterSeconds: Math.max(
+				1,
+				Math.ceil((oldest + windowMs - now) / 1000),
+			),
+		}
 	}
 
 	override async alarm(): Promise<void> {
