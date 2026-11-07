@@ -239,11 +239,38 @@ async function inboxKey(email: string): Promise<string> {
 	return toBase64Url(await sha256(canonicalInbox(email)))
 }
 
+/** Largest request body read, in bytes: the routes take a few short fields. */
+const MAX_BODY_BYTES = 4096
+
+/** Parses a small JSON object body; `undefined` when malformed or over {@link MAX_BODY_BYTES}. */
 async function readJson(
 	request: Request,
 ): Promise<Record<string, unknown> | undefined> {
 	try {
-		const body: unknown = await request.json()
+		if (Number(request.headers.get('content-length')) > MAX_BODY_BYTES)
+			return undefined
+		const reader = request.body?.getReader()
+		if (!reader) return undefined
+		const chunks: Uint8Array[] = []
+		let size = 0
+		for (;;) {
+			const { done, value } = await reader.read()
+			if (done) break
+			size += value.byteLength
+			// Stop reading a body that lies about or omits its length.
+			if (size > MAX_BODY_BYTES) {
+				await reader.cancel()
+				return undefined
+			}
+			chunks.push(value)
+		}
+		const bytes = new Uint8Array(size)
+		let offset = 0
+		for (const chunk of chunks) {
+			bytes.set(chunk, offset)
+			offset += chunk.byteLength
+		}
+		const body: unknown = JSON.parse(new TextDecoder().decode(bytes))
 		if (body && typeof body === 'object' && !Array.isArray(body))
 			return body as Record<string, unknown>
 	} catch {}

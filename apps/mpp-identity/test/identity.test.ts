@@ -84,6 +84,17 @@ describe('POST /email/otp', () => {
 		expect(record?.attempts).toBe(0)
 	})
 
+	it('rejects a body over 4 KB before rate limiting', async () => {
+		const client = createClient()
+		const response = await client.request('POST', '/email/otp', {
+			email: uniqueEmail(),
+			audience,
+			padding: 'x'.repeat(5000),
+		})
+		expect(response.status).toBe(400)
+		expect(client.sent).toHaveLength(0)
+	})
+
 	it.each([
 		['missing', undefined],
 		['no at sign', 'alice.example.com'],

@@ -66,7 +66,7 @@ Emails are not delivered locally. With `DEV_LOG_OTP=true`, the worker logs `OTP 
 
 ## Deploy
 
-- Secret: `ATTESTATION_PRIVATE_KEY`, the Ed25519 private JWK as a JSON string (with `d` and `x`). Generate one with `pnpm keygen` (copy the value out of `.dev.vars`) and set it with `wrangler secret put ATTESTATION_PRIVATE_KEY`.
+- Secret: `ATTESTATION_PRIVATE_KEY`, the Ed25519 private JWK as a JSON string (with `d` and `x`). Generate a production key separate from the local one and set it without writing it to disk: `pnpm --silent keygen --print | wrangler secret put ATTESTATION_PRIVATE_KEY`. Never reuse the key in `.dev.vars`.
 - Vars in `wrangler.json`: `ISSUER` (must equal the public base URL, since it becomes `iss`), `EMAIL_FROM` and `ATTESTATION_TTL`.
 - Email goes through Cloudflare Email Service (the `send_email` binding `EMAIL`). The `EMAIL_FROM` domain must be onboarded for sending in the Cloudflare account.
 - Codes and rate limits live in two SQLite-backed Durable Objects (`OtpStore`, `RateLimiter`).
