@@ -316,6 +316,43 @@ describe('POST /email/verify', () => {
 		expect(await response.json()).toEqual({ error: 'Invalid or expired code.' })
 	})
 
+	it('locks an inbox after 10 wrong codes across code requests', async () => {
+		const client = createClient()
+		const email = uniqueEmail()
+		const ids: string[] = []
+		for (let i = 0; i < 3; i++) {
+			const sent = await client.request('POST', '/email/otp', {
+				email,
+				audience: 'https://merchant.example',
+			})
+			ids.push(((await sent.json()) as { id: string }).id)
+		}
+		const wrong = (id: string, code: string) =>
+			client.request('POST', '/email/verify', {
+				id,
+				code: code === '000000' ? '111111' : '000000',
+			})
+		let failures = 0
+		for (const [index, id] of ids.slice(0, 2).entries())
+			for (let i = 0; i < 5; i++) {
+				expect((await wrong(id, codeFrom(client.sent[index]))).status).toBe(400)
+				failures++
+			}
+		expect(failures).toBe(10)
+		// The third request's right code is refused too, and no new code is sent.
+		const locked = await client.request('POST', '/email/verify', {
+			id: ids[2],
+			code: codeFrom(client.sent[2]),
+		})
+		expect(locked.status).toBe(429)
+		expect(Number(locked.headers.get('Retry-After'))).toBeGreaterThan(0)
+		const resend = await client.request('POST', '/email/otp', {
+			email,
+			audience: 'https://merchant.example',
+		})
+		expect(resend.status).toBe(429)
+	})
+
 	it('burns the id after 5 failed attempts', async () => {
 		const client = createClient()
 		const { id, code } = await sendCode(client)

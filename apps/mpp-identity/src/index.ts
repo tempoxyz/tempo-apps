@@ -19,6 +19,14 @@ const EMAIL_RATE_LIMIT = 3
 const IP_RATE_LIMIT = 10
 const DEFAULT_ATTESTATION_TTL = 86_400
 const INVALID_CODE = 'Invalid or expired code.'
+/**
+ * Wrong codes accepted per inbox per day, across all its code requests. The
+ * per-id cap alone allows thousands of guesses a day against one address.
+ */
+const FAILED_VERIFY_LIMIT = 10
+const FAILED_VERIFY_WINDOW_MS = 24 * 60 * 60 * 1000
+const TOO_MANY_FAILURES =
+	'Too many wrong codes for this address. Try again later.'
 
 type Env = { Bindings: CloudflareBindings }
 
@@ -75,7 +83,16 @@ app.post('/email/otp', async (c) => {
 		c.req.header('CF-Connecting-IP'),
 		c.req.header('CF-Worker'),
 	)
-	const inbox = toBase64Url(await sha256(canonicalInbox(email)))
+	const inbox = await inboxKey(email)
+	// An inbox locked by wrong codes gets no new ones until the lock clears.
+	const locked = await failureLimiter(c.env, inbox).check(
+		FAILED_VERIFY_LIMIT,
+		FAILED_VERIFY_WINDOW_MS,
+	)
+	if (!locked.allowed) {
+		c.header('Retry-After', String(locked.retryAfterSeconds))
+		return c.json({ error: TOO_MANY_FAILURES }, 429)
+	}
 	// There is no per-domain cap: one shared counter for gmail.com or a company
 	// domain would let anyone lock all of its users out.
 	const limiters = (
@@ -151,8 +168,22 @@ app.post('/email/verify', async (c) => {
 	if (!isOtpId(id) || !isCode(code)) return c.json({ error: INVALID_CODE }, 400)
 
 	const store = c.env.OTP_STORE.get(c.env.OTP_STORE.idFromName(id))
+	const email = await store.recipient()
+	if (!email) return c.json({ error: INVALID_CODE }, 400)
+	const failures = failureLimiter(c.env, await inboxKey(email))
+	const allowed = await failures.check(
+		FAILED_VERIFY_LIMIT,
+		FAILED_VERIFY_WINDOW_MS,
+	)
+	if (!allowed.allowed) {
+		c.header('Retry-After', String(allowed.retryAfterSeconds))
+		return c.json({ error: TOO_MANY_FAILURES }, 429)
+	}
 	const result = await store.verify(await hashCode(id, code))
-	if (!result.ok) return c.json({ error: INVALID_CODE }, 400)
+	if (!result.ok) {
+		await failures.hit(FAILED_VERIFY_LIMIT, FAILED_VERIFY_WINDOW_MS)
+		return c.json({ error: INVALID_CODE }, 400)
+	}
 
 	const key = await loadSigningKey(c.env.ATTESTATION_PRIVATE_KEY)
 	const iat = Math.floor(Date.now() / 1000)
@@ -179,6 +210,17 @@ app.onError((error, c) => {
 })
 
 export default app
+
+/** The rate-limit key of an address's inbox: its canonical form, hashed. */
+async function inboxKey(email: string): Promise<string> {
+	return toBase64Url(await sha256(canonicalInbox(email)))
+}
+
+function failureLimiter(env: CloudflareBindings, inbox: string) {
+	return env.RATE_LIMITER.get(
+		env.RATE_LIMITER.idFromName(`verify-fail:${inbox}`),
+	)
+}
 
 async function readJson(
 	request: Request,
