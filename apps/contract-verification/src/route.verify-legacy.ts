@@ -191,15 +191,6 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			transport: createRpcTransport(rpcUrl, chainConfig.id, context.env),
 		})
 
-		const creationTransactionMetadata = body.creatorTxHash
-			? await getCreationTransactionMetadata({
-					creationTransactionHash: body.creatorTxHash,
-					address,
-					chainId,
-					client,
-				})
-			: null
-
 		const onchainBytecode = await client.getCode({ address })
 
 		if (!onchainBytecode || onchainBytecode === '0x') {
@@ -372,6 +363,16 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				'Compiler source paths collide after normalization',
 			)
 		}
+
+		// Only matched source submissions may trigger optional factory tracing.
+		const creationTransactionMetadata = body.creatorTxHash
+			? await getCreationTransactionMetadata({
+					creationTransactionHash: body.creatorTxHash,
+					address,
+					chainId,
+					client,
+				})
+			: null
 
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'
