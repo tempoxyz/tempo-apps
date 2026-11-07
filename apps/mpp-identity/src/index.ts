@@ -18,8 +18,10 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
 /** Codes per inbox per sender per 10 minutes. */
 const EMAIL_RATE_LIMIT = 3
 /**
- * Codes per inbox per hour from all senders: bounds email bombing by many
- * senders, high enough that one sender cannot block the inbox's owner.
+ * Codes per inbox per hour from all senders, bounding email bombing by many
+ * senders. Once it is full it refuses only senders that already sent to the
+ * inbox in the last 10 minutes: a sender new to the inbox, such as its owner,
+ * still gets one code, so no set of senders can lock the owner out.
  */
 const INBOX_RATE_LIMIT = 20
 const INBOX_RATE_WINDOW_MS = 60 * 60 * 1000
@@ -87,34 +89,40 @@ app.post('/email/otp', async (c) => {
 	// domain would let anyone lock all of its users out.
 	// Limits per inbox are per sender, so one sender cannot use up the inbox's
 	// quota and lock its owner out; a looser inbox-wide limit bounds the rest.
-	const limiters = (
-		[
-			[`ip:${client}`, IP_RATE_LIMIT, RATE_LIMIT_WINDOW_MS],
-			[`email:${inbox}:${client}`, EMAIL_RATE_LIMIT, RATE_LIMIT_WINDOW_MS],
-			[`inbox:${inbox}`, INBOX_RATE_LIMIT, INBOX_RATE_WINDOW_MS],
-		] as const
-	).map(
-		([key, limit, window]) =>
-			[
-				c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(key)),
-				limit,
-				window,
-			] as const,
-	)
+	const limiter = (key: string) =>
+		c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(key))
+	const perSender = limiter(`email:${inbox}:${client}`)
+	const limiters: [ReturnType<typeof limiter>, number, number][] = [
+		[limiter(`ip:${client}`), IP_RATE_LIMIT, RATE_LIMIT_WINDOW_MS],
+		[perSender, EMAIL_RATE_LIMIT, RATE_LIMIT_WINDOW_MS],
+	]
 	// Check every limit before recording a hit, so a request one limit refuses
 	// does not use up the others.
 	let retryAfterSeconds = 0
-	for (const [limiter, limit, window] of limiters) {
-		const result = await limiter.check(limit, window)
+	for (const [bucket, limit, window] of limiters) {
+		const result = await bucket.check(limit, window)
 		if (!result.allowed)
 			retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds)
+	}
+	const shared = limiter(`inbox:${inbox}`)
+	const inboxResult = await shared.check(INBOX_RATE_LIMIT, INBOX_RATE_WINDOW_MS)
+	if (inboxResult.allowed)
+		limiters.push([shared, INBOX_RATE_LIMIT, INBOX_RATE_WINDOW_MS])
+	else {
+		// A full inbox still serves a sender new to it, once per window.
+		const newSender = await perSender.check(1, RATE_LIMIT_WINDOW_MS)
+		if (!newSender.allowed)
+			retryAfterSeconds = Math.max(
+				retryAfterSeconds,
+				inboxResult.retryAfterSeconds,
+			)
 	}
 	if (retryAfterSeconds > 0) {
 		c.header('Retry-After', String(retryAfterSeconds))
 		return c.json({ error: 'Too many requests. Try again later.' }, 429)
 	}
-	for (const [limiter, limit, window] of limiters) {
-		const result = await limiter.hit(limit, window)
+	for (const [bucket, limit, window] of limiters) {
+		const result = await bucket.hit(limit, window)
 		// A concurrent request filled the bucket between check and hit.
 		if (!result.allowed) {
 			c.header('Retry-After', String(result.retryAfterSeconds))

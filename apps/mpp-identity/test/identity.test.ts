@@ -343,7 +343,7 @@ describe('POST /email/verify', () => {
 		expect((await sendFrom(uniqueIp())).status).toBe(200)
 	})
 
-	it('caps codes per inbox across senders at 20 an hour', async () => {
+	it('caps codes per inbox across senders at 20 an hour, except for new senders', async () => {
 		const client = createClient()
 		const email = uniqueEmail()
 		const sendFrom = (ip: string) =>
@@ -353,11 +353,24 @@ describe('POST /email/verify', () => {
 				{ email, audience },
 				{ 'CF-Connecting-IP': ip },
 			)
-		for (let i = 0; i < 20; i++)
+		// Two senders fill the inbox-wide cap.
+		const attackers = [uniqueIp(), uniqueIp()]
+		let sent = 0
+		for (let round = 0; round < 3 && sent < 20; round++)
+			for (const ip of attackers) {
+				const status = (await sendFrom(ip)).status
+				if (status === 200) sent++
+			}
+		for (let i = sent; i < 20; i++)
 			expect((await sendFrom(uniqueIp())).status).toBe(200)
-		const blocked = await sendFrom(uniqueIp())
-		expect(blocked.status).toBe(429)
-		expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThan(0)
+		// A sender that already sent is refused while the cap is full.
+		const repeat = await sendFrom(attackers[0] as string)
+		expect(repeat.status).toBe(429)
+		expect(Number(repeat.headers.get('Retry-After'))).toBeGreaterThan(0)
+		// The owner, new to the inbox, still gets one code, then waits.
+		const owner = uniqueIp()
+		expect((await sendFrom(owner)).status).toBe(200)
+		expect((await sendFrom(owner)).status).toBe(429)
 	})
 
 	it('burns the id after 5 failed attempts', async () => {
