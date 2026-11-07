@@ -56,7 +56,7 @@ export function createClient(options: { failSend?: boolean } = {}) {
 }
 
 export function codeFrom(email: SentEmail | undefined): string {
-	const match = email?.text?.match(/\b(\d{6})\b/)
+	const match = email?.text?.match(/\b(\d{8})\b/)
 	if (!match?.[1]) throw new Error('no code in email')
 	return match[1]
 }

@@ -46,7 +46,7 @@ function verify(
 }
 
 describe('POST /email/otp', () => {
-	it('sends a 6-digit code to the normalized email', async () => {
+	it('sends an 8-digit code to the normalized email', async () => {
 		const client = createClient()
 		const before = Date.now()
 		const response = await client.request('POST', '/email/otp', {
@@ -68,7 +68,7 @@ describe('POST /email/otp', () => {
 		expect(email?.text).toContain('shop.example.com')
 		expect(email?.text).toContain('10 minutes')
 		expect(email?.text).toContain('did not request')
-		expect(codeFrom(email)).toMatch(/^\d{6}$/)
+		expect(codeFrom(email)).toMatch(/^\d{8}$/)
 		expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
 	})
 
@@ -149,11 +149,20 @@ describe('POST /email/otp', () => {
 	it('rate limits per email', async () => {
 		const client = createClient()
 		const email = uniqueEmail()
-		for (let i = 0; i < 3; i++) await sendCode(client, email)
-		const response = await client.request('POST', '/email/otp', {
-			email: email.toUpperCase(),
-			audience,
-		})
+		const ip = uniqueIp()
+		for (let i = 0; i < 3; i++)
+			await client.request(
+				'POST',
+				'/email/otp',
+				{ email, audience },
+				{ 'CF-Connecting-IP': ip },
+			)
+		const response = await client.request(
+			'POST',
+			'/email/otp',
+			{ email: email.toUpperCase(), audience },
+			{ 'CF-Connecting-IP': ip },
+		)
 		expect(response.status).toBe(429)
 		expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0)
 		expect(client.sent).toHaveLength(3)
@@ -265,7 +274,7 @@ describe('POST /email/verify', () => {
 	it('rejects a wrong code with a uniform error', async () => {
 		const client = createClient()
 		const { id, code } = await sendCode(client)
-		const wrong = code === '000000' ? '000001' : '000000'
+		const wrong = code === '00000000' ? '00000001' : '00000000'
 		const response = await verify(client, id, wrong)
 		expect(response.status).toBe(400)
 		expect(await response.json()).toEqual({ error: 'Invalid or expired code.' })
@@ -316,47 +325,45 @@ describe('POST /email/verify', () => {
 		expect(await response.json()).toEqual({ error: 'Invalid or expired code.' })
 	})
 
-	it('locks an inbox after 10 wrong codes across code requests', async () => {
+	it('does not let one sender lock an inbox out of codes', async () => {
 		const client = createClient()
 		const email = uniqueEmail()
-		const ids: string[] = []
-		for (let i = 0; i < 3; i++) {
-			const sent = await client.request('POST', '/email/otp', {
-				email,
-				audience: 'https://merchant.example',
-			})
-			ids.push(((await sent.json()) as { id: string }).id)
-		}
-		const wrong = (id: string, code: string) =>
-			client.request('POST', '/email/verify', {
-				id,
-				code: code === '000000' ? '111111' : '000000',
-			})
-		let failures = 0
-		for (const [index, id] of ids.slice(0, 2).entries())
-			for (let i = 0; i < 5; i++) {
-				expect((await wrong(id, codeFrom(client.sent[index]))).status).toBe(400)
-				failures++
-			}
-		expect(failures).toBe(10)
-		// The third request's right code is refused too, and no new code is sent.
-		const locked = await client.request('POST', '/email/verify', {
-			id: ids[2],
-			code: codeFrom(client.sent[2]),
-		})
-		expect(locked.status).toBe(429)
-		expect(Number(locked.headers.get('Retry-After'))).toBeGreaterThan(0)
-		const resend = await client.request('POST', '/email/otp', {
-			email,
-			audience: 'https://merchant.example',
-		})
-		expect(resend.status).toBe(429)
+		const attacker = uniqueIp()
+		const sendFrom = (ip: string) =>
+			client.request(
+				'POST',
+				'/email/otp',
+				{ email, audience },
+				{ 'CF-Connecting-IP': ip },
+			)
+		for (let i = 0; i < 3; i++)
+			expect((await sendFrom(attacker)).status).toBe(200)
+		expect((await sendFrom(attacker)).status).toBe(429)
+		// The inbox's owner, on another address, still gets a code.
+		expect((await sendFrom(uniqueIp())).status).toBe(200)
+	})
+
+	it('caps codes per inbox across senders at 20 an hour', async () => {
+		const client = createClient()
+		const email = uniqueEmail()
+		const sendFrom = (ip: string) =>
+			client.request(
+				'POST',
+				'/email/otp',
+				{ email, audience },
+				{ 'CF-Connecting-IP': ip },
+			)
+		for (let i = 0; i < 20; i++)
+			expect((await sendFrom(uniqueIp())).status).toBe(200)
+		const blocked = await sendFrom(uniqueIp())
+		expect(blocked.status).toBe(429)
+		expect(Number(blocked.headers.get('Retry-After'))).toBeGreaterThan(0)
 	})
 
 	it('burns the id after 5 failed attempts', async () => {
 		const client = createClient()
 		const { id, code } = await sendCode(client)
-		const wrong = code === '000000' ? '000001' : '000000'
+		const wrong = code === '00000000' ? '00000001' : '00000000'
 		for (let i = 0; i < 5; i++)
 			expect((await verify(client, id, wrong)).status).toBe(400)
 		const response = await verify(client, id, code)
@@ -421,6 +428,6 @@ describe('service', () => {
 	})
 
 	it('generates uniformly formatted codes', () => {
-		for (let i = 0; i < 1000; i++) expect(generateCode()).toMatch(/^\d{6}$/)
+		for (let i = 0; i < 1000; i++) expect(generateCode()).toMatch(/^\d{8}$/)
 	})
 })

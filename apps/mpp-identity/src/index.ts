@@ -15,18 +15,17 @@ import { normalizeAudience, normalizeEmail } from './lib/validate.ts'
 export { OtpStore, RateLimiter } from './durable-objects.ts'
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
+/** Codes per inbox per sender per 10 minutes. */
 const EMAIL_RATE_LIMIT = 3
+/**
+ * Codes per inbox per hour from all senders: bounds email bombing by many
+ * senders, high enough that one sender cannot block the inbox's owner.
+ */
+const INBOX_RATE_LIMIT = 20
+const INBOX_RATE_WINDOW_MS = 60 * 60 * 1000
 const IP_RATE_LIMIT = 10
 const DEFAULT_ATTESTATION_TTL = 86_400
 const INVALID_CODE = 'Invalid or expired code.'
-/**
- * Wrong codes accepted per inbox per day, across all its code requests. The
- * per-id cap alone allows thousands of guesses a day against one address.
- */
-const FAILED_VERIFY_LIMIT = 10
-const FAILED_VERIFY_WINDOW_MS = 24 * 60 * 60 * 1000
-const TOO_MANY_FAILURES =
-	'Too many wrong codes for this address. Try again later.'
 
 type Env = { Bindings: CloudflareBindings }
 
@@ -84,34 +83,29 @@ app.post('/email/otp', async (c) => {
 		c.req.header('CF-Worker'),
 	)
 	const inbox = await inboxKey(email)
-	// An inbox locked by wrong codes gets no new ones until the lock clears.
-	const locked = await failureLimiter(c.env, inbox).check(
-		FAILED_VERIFY_LIMIT,
-		FAILED_VERIFY_WINDOW_MS,
-	)
-	if (!locked.allowed) {
-		c.header('Retry-After', String(locked.retryAfterSeconds))
-		return c.json({ error: TOO_MANY_FAILURES }, 429)
-	}
 	// There is no per-domain cap: one shared counter for gmail.com or a company
 	// domain would let anyone lock all of its users out.
+	// Limits per inbox are per sender, so one sender cannot use up the inbox's
+	// quota and lock its owner out; a looser inbox-wide limit bounds the rest.
 	const limiters = (
 		[
-			[`ip:${client}`, IP_RATE_LIMIT],
-			[`email:${inbox}`, EMAIL_RATE_LIMIT],
+			[`ip:${client}`, IP_RATE_LIMIT, RATE_LIMIT_WINDOW_MS],
+			[`email:${inbox}:${client}`, EMAIL_RATE_LIMIT, RATE_LIMIT_WINDOW_MS],
+			[`inbox:${inbox}`, INBOX_RATE_LIMIT, INBOX_RATE_WINDOW_MS],
 		] as const
 	).map(
-		([key, limit]) =>
+		([key, limit, window]) =>
 			[
 				c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(key)),
 				limit,
+				window,
 			] as const,
 	)
 	// Check every limit before recording a hit, so a request one limit refuses
 	// does not use up the others.
 	let retryAfterSeconds = 0
-	for (const [limiter, limit] of limiters) {
-		const result = await limiter.check(limit, RATE_LIMIT_WINDOW_MS)
+	for (const [limiter, limit, window] of limiters) {
+		const result = await limiter.check(limit, window)
 		if (!result.allowed)
 			retryAfterSeconds = Math.max(retryAfterSeconds, result.retryAfterSeconds)
 	}
@@ -119,8 +113,8 @@ app.post('/email/otp', async (c) => {
 		c.header('Retry-After', String(retryAfterSeconds))
 		return c.json({ error: 'Too many requests. Try again later.' }, 429)
 	}
-	for (const [limiter, limit] of limiters) {
-		const result = await limiter.hit(limit, RATE_LIMIT_WINDOW_MS)
+	for (const [limiter, limit, window] of limiters) {
+		const result = await limiter.hit(limit, window)
 		// A concurrent request filled the bucket between check and hit.
 		if (!result.allowed) {
 			c.header('Retry-After', String(result.retryAfterSeconds))
@@ -168,22 +162,8 @@ app.post('/email/verify', async (c) => {
 	if (!isOtpId(id) || !isCode(code)) return c.json({ error: INVALID_CODE }, 400)
 
 	const store = c.env.OTP_STORE.get(c.env.OTP_STORE.idFromName(id))
-	const email = await store.recipient()
-	if (!email) return c.json({ error: INVALID_CODE }, 400)
-	const failures = failureLimiter(c.env, await inboxKey(email))
-	const allowed = await failures.check(
-		FAILED_VERIFY_LIMIT,
-		FAILED_VERIFY_WINDOW_MS,
-	)
-	if (!allowed.allowed) {
-		c.header('Retry-After', String(allowed.retryAfterSeconds))
-		return c.json({ error: TOO_MANY_FAILURES }, 429)
-	}
 	const result = await store.verify(await hashCode(id, code))
-	if (!result.ok) {
-		await failures.hit(FAILED_VERIFY_LIMIT, FAILED_VERIFY_WINDOW_MS)
-		return c.json({ error: INVALID_CODE }, 400)
-	}
+	if (!result.ok) return c.json({ error: INVALID_CODE }, 400)
 
 	const key = await loadSigningKey(c.env.ATTESTATION_PRIVATE_KEY)
 	const iat = Math.floor(Date.now() / 1000)
@@ -214,12 +194,6 @@ export default app
 /** The rate-limit key of an address's inbox: its canonical form, hashed. */
 async function inboxKey(email: string): Promise<string> {
 	return toBase64Url(await sha256(canonicalInbox(email)))
-}
-
-function failureLimiter(env: CloudflareBindings, inbox: string) {
-	return env.RATE_LIMITER.get(
-		env.RATE_LIMITER.idFromName(`verify-fail:${inbox}`),
-	)
 }
 
 async function readJson(

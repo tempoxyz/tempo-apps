@@ -46,12 +46,6 @@ export class OtpStore extends DurableObject<CloudflareBindings> {
 		return { ok: false, reason: 'invalid' }
 	}
 
-	/** The address the code was sent to, or undefined when the id is unknown or expired. */
-	async recipient(now = Date.now()): Promise<string | undefined> {
-		const record = await this.ctx.storage.get<OtpRecord>('otp')
-		return record && now < record.expiresAt ? record.email : undefined
-	}
-
 	async delete(): Promise<void> {
 		await this.burn()
 	}

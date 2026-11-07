@@ -68,6 +68,7 @@ function send(
 describe('send rate limit buckets', () => {
 	it('puts Gmail aliases of one inbox in one bucket', async () => {
 		const client = createClient()
+		const ip = uniqueIp()
 		const local = `victim${crypto.randomUUID().replace(/-/g, '')}`
 		const dotted = `${local.slice(0, 3)}.${local.slice(3)}`
 		for (const email of [
@@ -75,8 +76,8 @@ describe('send rate limit buckets', () => {
 			`${local}+1@gmail.com`,
 			`${dotted}@gmail.com`,
 		])
-			expect((await send(client, email)).status).toBe(200)
-		const response = await send(client, `${dotted}+2@googlemail.com`)
+			expect((await send(client, email, ip)).status).toBe(200)
+		const response = await send(client, `${dotted}+2@googlemail.com`, ip)
 		expect(response.status).toBe(429)
 		// Recipients stay the exact addresses requested.
 		expect(client.sent.map((email) => email.to)).toEqual([
@@ -88,11 +89,12 @@ describe('send rate limit buckets', () => {
 
 	it('puts +tag aliases on any domain in one bucket, but not dotted ones', async () => {
 		const client = createClient()
+		const ip = uniqueIp()
 		const domain = `${crypto.randomUUID()}.example.com`
 		for (const tag of ['', '+a', '+b'])
-			expect((await send(client, `bob${tag}@${domain}`)).status).toBe(200)
-		expect((await send(client, `bob+c@${domain}`)).status).toBe(429)
-		expect((await send(client, `b.ob@${domain}`)).status).toBe(200)
+			expect((await send(client, `bob${tag}@${domain}`, ip)).status).toBe(200)
+		expect((await send(client, `bob+c@${domain}`, ip)).status).toBe(429)
+		expect((await send(client, `b.ob@${domain}`, ip)).status).toBe(200)
 	})
 
 	it('keeps the exact address as the attestation subject', async () => {
