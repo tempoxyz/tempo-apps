@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
-	Badge,
 	Button,
 	StatusIndicator,
 	style,
@@ -183,16 +182,9 @@ export namespace TxEventDescription {
 							{part.value}
 						</StatusIndicator>
 					)
-				if (
-					part.value === 'Private Zone Deposit' ||
-					part.value === 'Private Zone Withdrawal'
-				)
-					return (
-						<Badge size="small" variant="accent">
-							{part.value}
-						</Badge>
-					)
-				return <Badge size="small">{sentenceCase(part.value)}</Badge>
+				// The action names what happened in words, as TDS pairs activity
+				// amounts with "Received" or "Sent"; a Badge would break the line.
+				return <span {...styles.action()}>{sentenceCase(part.value)}</span>
 			}
 			case 'amount':
 				return <Amount {...part.value} />
@@ -390,11 +382,12 @@ namespace styles {
 
 	export const secondary = style({ color: 'content.secondary' })
 
-	// The slot clips, so the link's focus ring is drawn inside it.
+	// The slot clips, so the link's focus ring is drawn inside it. A sentence
+	// reads the short form, so an address that wraps to its own line stays short.
 	export const addressSlot = style({
 		flex: 1,
 		flexBasis: '11ch !custom',
-		maxWidth: '100% !custom',
+		maxWidth: '18ch !custom',
 		minWidth: '11ch !custom',
 		overflow: 'hidden',
 		selectors: { '& a:focus-visible': { outlineOffset: '-2' } },
@@ -421,6 +414,14 @@ namespace styles {
 		gap: '4',
 		maxWidth: '100% !custom',
 		minWidth: '0 !custom',
+		whiteSpace: 'nowrap',
+		// The symbol beside it names the token, so a missing logo leaves no gap.
+		selectors: { '& > img[data-status="error"]': { display: 'none' } },
+	})
+
+	export const action = style({
+		color: 'content.primary',
+		typography: 'body.b2Strong',
 		whiteSpace: 'nowrap',
 	})
 

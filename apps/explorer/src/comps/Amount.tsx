@@ -13,8 +13,9 @@ import { isTip20Address } from '#lib/domain/tip20'
 import { linkHover } from '#styles/explorer'
 
 /**
- * A token amount: the token's icon and TDS `Amount`, linking to the token.
- * Reads the token's decimals and symbol when they aren't passed.
+ * A token amount linking to the token: the number, then the token's icon
+ * beside its symbol, as TDS Blockchain Values places them. Reads the token's
+ * decimals and symbol when they aren't passed.
  */
 export function Amount(props: Amount.Props): React.JSX.Element | null {
 	const { decimals, symbol, token, value: rawValue, ...rest } = props
@@ -44,25 +45,26 @@ export function Amount(props: Amount.Props): React.JSX.Element | null {
 		return <span {...styles.pending()}>{ellipsis}</span>
 	if (rest.infinite === null && Amount.isInfinite(value)) return null
 
+	const dollars = rest.prefix === '$'
 	return (
 		<Link
 			params={{ address: token }}
-			title={token}
+			title={
+				dollars
+					? token
+					: `${Value.format(value, decimals_)}${symbol_ ? ` ${symbol_}` : ''}`
+			}
 			to={isTip20 ? '/token/$address' : '/address/$address'}
 			{...cx(styles.token(), linkHover())}
 		>
+			<Amount.Base {...rest} decimals={decimals_} value={value} />
 			{/* In dollars the icon stands alone, so it names the token. */}
 			<TokenLogo
 				address={token}
-				alt={rest.prefix === '$' ? symbol_ : undefined}
+				alt={dollars ? symbol_ : undefined}
 				size="small"
 			/>
-			<Amount.Base
-				{...rest}
-				decimals={decimals_}
-				symbol={symbol_}
-				value={value}
-			/>
+			{!dollars && symbol_ && <span {...styles.symbol()}>{symbol_}</span>}
 		</Link>
 	)
 }
@@ -75,6 +77,12 @@ export namespace Amount {
 		decimals?: number | undefined
 		symbol?: string | undefined
 	}
+
+	/**
+	 * Lists cap token amounts, as TDS Blockchain Values asks: TIP-20's own six
+	 * decimals, so stablecoins stay exact and 18-decimal tokens stay readable.
+	 */
+	export const maxDecimals = 6
 
 	// Amounts this close to the uint256 maximum are unlimited approvals.
 	const precisionLossTolerance = 10n ** 64n
@@ -115,7 +123,7 @@ export namespace Amount {
 			return <TdsAmount currency="USD" precise value={decimal} />
 		return (
 			<TdsAmount
-				maxDecimals={short ? shortMaximumFractionDigits : undefined}
+				maxDecimals={short ? shortMaximumFractionDigits : maxDecimals}
 				symbol={symbol}
 				value={decimal}
 			/>
@@ -153,7 +161,11 @@ namespace styles {
 		gap: '4',
 		minWidth: '0 !custom',
 		textDecorationLine: 'none',
+		// The symbol beside it names the token, so a missing logo leaves no gap.
+		selectors: { '& > img[data-status="error"]': { display: 'none' } },
 	})
+
+	export const symbol = style({ color: 'content.secondary' })
 
 	export const pending = style({ color: 'content.secondary' })
 }

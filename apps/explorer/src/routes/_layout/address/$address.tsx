@@ -1599,12 +1599,14 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			width: '0.5fr',
+			width: 'max-content',
 		},
-		{ label: 'Description', align: 'start', primary: true, width: '2fr' },
-		{ label: 'Hash', align: 'end', width: '1fr' },
-		{ label: 'Fee', align: 'end', width: '0.5fr' },
-		{ label: 'Total', align: 'end', width: '0.5fr' },
+		// The description takes the room the other columns leave; the hash
+		// truncates to its column.
+		{ label: 'Description', align: 'start', primary: true },
+		{ label: 'Hash', align: 'end', width: 200 },
+		{ label: 'Fee', align: 'end', width: 'max-content' },
+		{ label: 'Total', align: 'end', width: 'max-content' },
 	]
 
 	const transfersColumns: DataGrid.Column[] = [

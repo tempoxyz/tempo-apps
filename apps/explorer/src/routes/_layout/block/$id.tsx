@@ -299,12 +299,14 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		: true
 
 	const cols = [
-		{ label: 'Index', align: 'start', width: '0.5fr' },
-		{ label: 'Description', align: 'start', width: '3fr' },
-		{ label: 'From', align: 'end', width: '1fr' },
-		{ label: 'Hash', align: 'end', width: '1fr' },
-		{ label: 'Fee', align: 'end', width: '0.5fr' },
-		{ label: 'Total', align: 'end', width: 96 },
+		{ label: 'Index', align: 'start', width: 'max-content' },
+		// The description takes the room the other columns leave; the address
+		// and hash truncate to theirs.
+		{ label: 'Description', align: 'start' },
+		{ label: 'From', align: 'end', width: 160 },
+		{ label: 'Hash', align: 'end', width: 200 },
+		{ label: 'Fee', align: 'end', width: 'max-content' },
+		{ label: 'Total', align: 'end', width: 'max-content' },
 	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
