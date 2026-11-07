@@ -429,6 +429,10 @@ describe('POST /email/verify', () => {
 		const owner = uniqueIp()
 		const responses = await Promise.all([1, 2, 3].map(() => sendFrom(owner)))
 		expect(responses.filter((r) => r.status === 200)).toHaveLength(1)
+		// The burst used one slot of the new-sender allowance, not three.
+		for (let i = 0; i < 9; i++)
+			expect((await sendFrom(uniqueIp())).status).toBe(200)
+		expect((await sendFrom(uniqueIp())).status).toBe(429)
 	})
 
 	it('burns the id after 5 failed attempts', async () => {

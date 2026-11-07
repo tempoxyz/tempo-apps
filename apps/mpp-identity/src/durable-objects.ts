@@ -75,19 +75,28 @@ export class RateLimiter extends DurableObject<CloudflareBindings> {
 		return this.evaluate(await this.recent(windowMs, now), limit, windowMs, now)
 	}
 
-	/** Records a hit if the limit allows it. */
+	/** Records a hit if the limit allows it; `at` identifies it for {@link release}. */
 	async hit(
 		limit: number,
 		windowMs: number,
 		now = Date.now(),
-	): Promise<RateLimitResult> {
+	): Promise<RateLimitResult & { at?: number }> {
 		const hits = await this.recent(windowMs, now)
 		const result = this.evaluate(hits, limit, windowMs, now)
 		if (!result.allowed) return result
 		hits.push(now)
 		await this.ctx.storage.put('hits', hits)
 		await this.ctx.storage.setAlarm(now + windowMs)
-		return result
+		return { ...result, at: now }
+	}
+
+	/** Removes a hit recorded at `at`, for a request refused by a later limit. */
+	async release(at: number): Promise<void> {
+		const hits = (await this.ctx.storage.get<number[]>('hits')) ?? []
+		const index = hits.indexOf(at)
+		if (index === -1) return
+		hits.splice(index, 1)
+		await this.ctx.storage.put('hits', hits)
 	}
 
 	private async recent(windowMs: number, now: number): Promise<number[]> {

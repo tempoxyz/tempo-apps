@@ -146,15 +146,21 @@ app.post('/email/otp', async (c) => {
 		c.header('Retry-After', String(retryAfterSeconds))
 		return c.json({ error: 'Too many requests. Try again later.' }, 429)
 	}
-	// Shared inbox limits go first: a request that loses a race for the last
-	// inbox slot then records nothing against its own client limits.
-	for (const [bucket, limit, window] of limiters.reverse()) {
+	// A request a concurrent one beat to a limit releases the hits it already
+	// recorded, so a refused request uses up no limit, its own or the inbox's.
+	const recorded: [ReturnType<typeof limiter>, number][] = []
+	for (const [bucket, limit, window] of limiters) {
 		const result = await bucket.hit(limit, window)
-		// A concurrent request filled the bucket between check and hit.
-		if (!result.allowed) {
-			c.header('Retry-After', String(result.retryAfterSeconds))
-			return c.json({ error: 'Too many requests. Try again later.' }, 429)
+		if (result.allowed && result.at !== undefined) {
+			recorded.push([bucket, result.at])
+			continue
 		}
+		await Promise.all(recorded.map(([held, at]) => held.release(at)))
+		c.header(
+			'Retry-After',
+			String(result.allowed ? 1 : result.retryAfterSeconds),
+		)
+		return c.json({ error: 'Too many requests. Try again later.' }, 429)
 	}
 
 	const id = randomId(16)
