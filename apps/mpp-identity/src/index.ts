@@ -19,12 +19,17 @@ const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
 const EMAIL_RATE_LIMIT = 3
 /**
  * Codes per inbox per hour from all senders, bounding email bombing by many
- * senders. Once it is full it refuses only senders that already sent to the
- * inbox in the last 10 minutes: a sender new to the inbox, such as its owner,
- * still gets one code, so no set of senders can lock the owner out.
+ * senders. Once it is full a sender new to the inbox in the last 10 minutes,
+ * such as its owner, still gets one code from {@link INBOX_NEW_SENDER_LIMIT}.
  */
 const INBOX_RATE_LIMIT = 20
 const INBOX_RATE_WINDOW_MS = 60 * 60 * 1000
+/**
+ * Codes per inbox per hour to new senders once the inbox is full. It bounds an
+ * inbox's sends, and so its code guesses, whatever the number of senders: at
+ * most 30 codes and 150 guesses an hour.
+ */
+const INBOX_NEW_SENDER_LIMIT = 10
 const IP_RATE_LIMIT = 10
 const DEFAULT_ATTESTATION_TTL = 86_400
 const INVALID_CODE = 'Invalid or expired code.'
@@ -109,13 +114,27 @@ app.post('/email/otp', async (c) => {
 	if (inboxResult.allowed)
 		limiters.push([shared, INBOX_RATE_LIMIT, INBOX_RATE_WINDOW_MS])
 	else {
-		// A full inbox still serves a sender new to it, once per window.
-		const newSender = await perSender.check(1, RATE_LIMIT_WINDOW_MS)
-		if (!newSender.allowed)
+		// A full inbox still serves a sender new to it, once per window, from a
+		// bounded inbox-wide allowance.
+		const exempt = limiter(`inbox-new:${inbox}`)
+		const [newSender, allowance] = await Promise.all([
+			perSender.check(1, RATE_LIMIT_WINDOW_MS),
+			exempt.check(INBOX_NEW_SENDER_LIMIT, INBOX_RATE_WINDOW_MS),
+		])
+		if (!newSender.allowed || !allowance.allowed)
 			retryAfterSeconds = Math.max(
 				retryAfterSeconds,
-				inboxResult.retryAfterSeconds,
+				allowance.allowed
+					? inboxResult.retryAfterSeconds
+					: Math.min(
+							inboxResult.retryAfterSeconds,
+							allowance.retryAfterSeconds,
+						),
 			)
+		// Recorded against a limit of 1, so concurrent requests from the sender
+		// get one code, not the usual 3.
+		limiters[1] = [perSender, 1, RATE_LIMIT_WINDOW_MS]
+		limiters.push([exempt, INBOX_NEW_SENDER_LIMIT, INBOX_RATE_WINDOW_MS])
 	}
 	if (retryAfterSeconds > 0) {
 		c.header('Retry-After', String(retryAfterSeconds))

@@ -373,6 +373,40 @@ describe('POST /email/verify', () => {
 		expect((await sendFrom(owner)).status).toBe(429)
 	})
 
+	it('bounds codes to new senders of a full inbox at 10 an hour', async () => {
+		const client = createClient()
+		const email = uniqueEmail()
+		const sendFrom = (ip: string) =>
+			client.request(
+				'POST',
+				'/email/otp',
+				{ email, audience },
+				{ 'CF-Connecting-IP': ip },
+			)
+		for (let i = 0; i < 30; i++)
+			expect((await sendFrom(uniqueIp())).status).toBe(200)
+		const refused = await sendFrom(uniqueIp())
+		expect(refused.status).toBe(429)
+		expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0)
+	})
+
+	it('gives a new sender of a full inbox one code under concurrent requests', async () => {
+		const client = createClient()
+		const email = uniqueEmail()
+		const sendFrom = (ip: string) =>
+			client.request(
+				'POST',
+				'/email/otp',
+				{ email, audience },
+				{ 'CF-Connecting-IP': ip },
+			)
+		for (let i = 0; i < 20; i++)
+			expect((await sendFrom(uniqueIp())).status).toBe(200)
+		const owner = uniqueIp()
+		const responses = await Promise.all([1, 2, 3].map(() => sendFrom(owner)))
+		expect(responses.filter((r) => r.status === 200)).toHaveLength(1)
+	})
+
 	it('burns the id after 5 failed attempts', async () => {
 		const client = createClient()
 		const { id, code } = await sendCode(client)
