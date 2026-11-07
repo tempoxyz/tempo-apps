@@ -114,14 +114,17 @@ app.post('/email/otp', async (c) => {
 	if (inboxResult.allowed)
 		limiters.push([shared, INBOX_RATE_LIMIT, INBOX_RATE_WINDOW_MS])
 	else {
-		// A full inbox still serves a sender new to it, once per window, from a
-		// bounded inbox-wide allowance.
+		// A full inbox still serves a sender new to it from a bounded inbox-wide
+		// allowance, once per sender per hour, so a few reused senders cannot
+		// keep draining it.
 		const exempt = limiter(`inbox-new:${inbox}`)
-		const [newSender, allowance] = await Promise.all([
+		const exemptSender = limiter(`inbox-new:${inbox}:${client}`)
+		const [newSender, senderAllowance, allowance] = await Promise.all([
 			perSender.check(1, RATE_LIMIT_WINDOW_MS),
+			exemptSender.check(1, INBOX_RATE_WINDOW_MS),
 			exempt.check(INBOX_NEW_SENDER_LIMIT, INBOX_RATE_WINDOW_MS),
 		])
-		if (!newSender.allowed || !allowance.allowed)
+		if (!newSender.allowed || !senderAllowance.allowed || !allowance.allowed)
 			retryAfterSeconds = Math.max(
 				retryAfterSeconds,
 				allowance.allowed
@@ -134,13 +137,18 @@ app.post('/email/otp', async (c) => {
 		// Recorded against a limit of 1, so concurrent requests from the sender
 		// get one code, not the usual 3.
 		limiters[1] = [perSender, 1, RATE_LIMIT_WINDOW_MS]
-		limiters.push([exempt, INBOX_NEW_SENDER_LIMIT, INBOX_RATE_WINDOW_MS])
+		limiters.push(
+			[exemptSender, 1, INBOX_RATE_WINDOW_MS],
+			[exempt, INBOX_NEW_SENDER_LIMIT, INBOX_RATE_WINDOW_MS],
+		)
 	}
 	if (retryAfterSeconds > 0) {
 		c.header('Retry-After', String(retryAfterSeconds))
 		return c.json({ error: 'Too many requests. Try again later.' }, 429)
 	}
-	for (const [bucket, limit, window] of limiters) {
+	// Shared inbox limits go first: a request that loses a race for the last
+	// inbox slot then records nothing against its own client limits.
+	for (const [bucket, limit, window] of limiters.reverse()) {
 		const result = await bucket.hit(limit, window)
 		// A concurrent request filled the bucket between check and hit.
 		if (!result.allowed) {

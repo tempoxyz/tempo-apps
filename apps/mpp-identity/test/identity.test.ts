@@ -1,6 +1,6 @@
 import { runInDurableObject } from 'cloudflare:test'
 import { env } from 'cloudflare:workers'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { OtpRecord, OtpStore } from '../src/durable-objects.ts'
 import {
 	fromBase64Url,
@@ -388,6 +388,30 @@ describe('POST /email/verify', () => {
 		const refused = await sendFrom(uniqueIp())
 		expect(refused.status).toBe(429)
 		expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0)
+	})
+
+	it('gives each sender one full-inbox exemption an hour', async () => {
+		const client = createClient()
+		const email = uniqueEmail()
+		const sendFrom = (ip: string) =>
+			client.request(
+				'POST',
+				'/email/otp',
+				{ email, audience },
+				{ 'CF-Connecting-IP': ip },
+			)
+		for (let i = 0; i < 20; i++)
+			expect((await sendFrom(uniqueIp())).status).toBe(200)
+		const sender = uniqueIp()
+		expect((await sendFrom(sender)).status).toBe(200)
+		// Ten minutes later the sender is no longer recent, but its hourly
+		// exemption is used.
+		vi.useFakeTimers({ now: Date.now() + 11 * 60 * 1000, toFake: ['Date'] })
+		try {
+			expect((await sendFrom(sender)).status).toBe(429)
+		} finally {
+			vi.useRealTimers()
+		}
 	})
 
 	it('gives a new sender of a full inbox one code under concurrent requests', async () => {
