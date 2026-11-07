@@ -41,6 +41,14 @@ describe('clientBucket', () => {
 			'worker:shop.example',
 		)
 	})
+
+	it('ignores CF-Worker from addresses outside the Worker egress range', () => {
+		expect(clientBucket('203.0.113.7', 'random.example')).toBe('203.0.113.7')
+		expect(clientBucket('2001:db8:1:2::1', 'random.example')).toBe(
+			'2001:db8:1:2::/64',
+		)
+		expect(clientBucket(undefined, 'random.example')).toBe('unknown')
+	})
 })
 
 function send(

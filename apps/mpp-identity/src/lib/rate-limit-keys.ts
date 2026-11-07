@@ -23,23 +23,28 @@ export function canonicalInbox(email: string): string {
 	return `${local}@${domain}`
 }
 
+/** Cloudflare's egress range for Worker subrequests to other zones (2a06:98c0:3600::/48). */
+const WORKER_EGRESS = [0x2a06, 0x98c0, 0x3600]
+
 /**
  * The client bucket: IPv4 addresses as they are, IPv6 addresses by their /64
  * prefix, since one host commonly controls a whole /64. A Cloudflare Worker on
- * another zone is keyed by its zone (the `CF-Worker` header, which callers
- * cannot remove), since all such Workers share one egress address.
+ * another zone is keyed by its zone (the `CF-Worker` header), since all such
+ * Workers share one egress address. The header counts only on requests from
+ * that egress range: anyone else could send a new value to get a new bucket.
  */
 export function clientBucket(
 	ip: string | undefined,
 	worker?: string | undefined,
 ): string {
-	const zone = worker?.trim().toLowerCase()
-	if (zone) return `worker:${zone}`
 	const value = ip?.trim().toLowerCase()
 	if (!value) return 'unknown'
 	if (!value.includes(':')) return value
 	const groups = expandIpv6(value)
 	if (!groups) return value
+	const zone = worker?.trim().toLowerCase()
+	if (zone && WORKER_EGRESS.every((group, i) => groups[i] === group))
+		return `worker:${zone}`
 	// IPv4-mapped addresses (::ffff:a.b.c.d) are IPv4 clients.
 	if (groups.slice(0, 5).every((g) => g === 0) && groups[5] === 0xffff) {
 		const [hi = 0, lo = 0] = groups.slice(6)
