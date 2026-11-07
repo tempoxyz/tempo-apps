@@ -1,0 +1,209 @@
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { randomId, sha256, toBase64Url } from './lib/encoding.ts'
+import { loadSigningKey, signAttestation } from './lib/jws.ts'
+import {
+	generateCode,
+	hashCode,
+	isCode,
+	isOtpId,
+	OTP_TTL_MS,
+} from './lib/otp.ts'
+import {
+	canonicalInbox,
+	clientBucket,
+	emailDomain,
+} from './lib/rate-limit-keys.ts'
+import { normalizeAudience, normalizeEmail } from './lib/validate.ts'
+
+export { OtpStore, RateLimiter } from './durable-objects.ts'
+
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
+const EMAIL_RATE_LIMIT = 3
+const IP_RATE_LIMIT = 10
+const DOMAIN_RATE_LIMIT = 100
+const DEFAULT_ATTESTATION_TTL = 86_400
+const INVALID_CODE = 'Invalid or expired code.'
+
+type Env = { Bindings: CloudflareBindings }
+
+const app = new Hono<Env>()
+
+app.use(
+	'*',
+	cors({
+		origin: '*',
+		allowMethods: ['GET', 'POST', 'OPTIONS'],
+		allowHeaders: ['Content-Type'],
+		maxAge: 86_400,
+	}),
+)
+
+app.get('/', (c) =>
+	c.json({
+		name: 'mpp-identity',
+		description:
+			'Issues MPP identity attestations (compact EdDSA JWS) that MPP servers accept in the Identity-Attestation header.',
+		version: 1,
+		issuer: c.env.ISSUER,
+		types: ['email'],
+		endpoints: {
+			'POST /email/otp': 'Send a one-time code. Body: {"email", "audience"}',
+			'POST /email/verify':
+				'Exchange the code for an attestation. Body: {"id", "code"}',
+			'GET /.well-known/jwks.json': 'Public keys that verify attestations',
+		},
+	}),
+)
+
+app.get('/.well-known/jwks.json', async (c) => {
+	const key = await loadSigningKey(c.env.ATTESTATION_PRIVATE_KEY)
+	c.header('Cache-Control', 'public, max-age=300')
+	return c.json({ keys: [key.publicJwk] })
+})
+
+app.post('/email/otp', async (c) => {
+	const body = await readJson(c.req.raw)
+	const email = normalizeEmail(body?.email)
+	if (!email) return c.json({ error: 'Invalid email address.' }, 400)
+	const audience = normalizeAudience(body?.audience)
+	if (!audience)
+		return c.json(
+			{
+				error:
+					'Invalid audience: expected an https origin such as https://example.com.',
+			},
+			400,
+		)
+
+	const client = clientBucket(c.req.header('CF-Connecting-IP'))
+	const inbox = toBase64Url(await sha256(canonicalInbox(email)))
+	for (const [key, limit] of [
+		[`ip:${client}`, IP_RATE_LIMIT],
+		[`email:${inbox}`, EMAIL_RATE_LIMIT],
+		[`domain:${emailDomain(canonicalInbox(email))}`, DOMAIN_RATE_LIMIT],
+	] as const) {
+		const limiter = c.env.RATE_LIMITER.get(c.env.RATE_LIMITER.idFromName(key))
+		const result = await limiter.hit(limit, RATE_LIMIT_WINDOW_MS)
+		if (!result.allowed) {
+			c.header('Retry-After', String(result.retryAfterSeconds))
+			return c.json({ error: 'Too many requests. Try again later.' }, 429)
+		}
+	}
+
+	const id = randomId(16)
+	const code = generateCode()
+	const expiresAt = Date.now() + OTP_TTL_MS
+	const store = c.env.OTP_STORE.get(c.env.OTP_STORE.idFromName(id))
+	await store.create({
+		codeHash: await hashCode(id, code),
+		email,
+		audience,
+		expiresAt,
+		attempts: 0,
+	})
+
+	const devLog = c.env.DEV_LOG_OTP === 'true'
+	// Local development only: emails are not delivered, so print the code. Never enable in production.
+	if (devLog) console.log(`OTP for ${id}: ${code}`)
+
+	try {
+		await c.env.EMAIL.send(buildEmail(c.env.EMAIL_FROM, email, audience, code))
+	} catch (error) {
+		if (!devLog) {
+			console.error('email send failed', {
+				id,
+				error: error instanceof Error ? error.message : String(error),
+			})
+			await store.delete()
+			return c.json({ error: 'Failed to send the verification email.' }, 502)
+		}
+		console.warn('email send failed; continuing because DEV_LOG_OTP=true')
+	}
+
+	return c.json({ id, expires_at: new Date(expiresAt).toISOString() })
+})
+
+app.post('/email/verify', async (c) => {
+	const body = await readJson(c.req.raw)
+	const id = body?.id
+	const code = body?.code
+	if (!isOtpId(id) || !isCode(code)) return c.json({ error: INVALID_CODE }, 400)
+
+	const store = c.env.OTP_STORE.get(c.env.OTP_STORE.idFromName(id))
+	const result = await store.verify(await hashCode(id, code))
+	if (!result.ok) return c.json({ error: INVALID_CODE }, 400)
+
+	const key = await loadSigningKey(c.env.ATTESTATION_PRIVATE_KEY)
+	const iat = Math.floor(Date.now() / 1000)
+	const exp = iat + attestationTtl(c.env.ATTESTATION_TTL)
+	const attestation = await signAttestation(key, {
+		iss: c.env.ISSUER,
+		aud: result.audience,
+		sub: result.email,
+		type: 'email',
+		iat,
+		exp,
+		jti: randomId(16),
+	})
+	return c.json({ attestation, expires_at: new Date(exp * 1000).toISOString() })
+})
+
+app.notFound((c) => c.json({ error: 'Not found.' }, 404))
+
+app.onError((error, c) => {
+	console.error('unhandled error', {
+		error: error instanceof Error ? error.message : String(error),
+	})
+	return c.json({ error: 'Internal error.' }, 500)
+})
+
+export default app
+
+async function readJson(
+	request: Request,
+): Promise<Record<string, unknown> | undefined> {
+	try {
+		const body: unknown = await request.json()
+		if (body && typeof body === 'object' && !Array.isArray(body))
+			return body as Record<string, unknown>
+	} catch {}
+	return undefined
+}
+
+function attestationTtl(value: string | undefined): number {
+	const ttl = Number(value)
+	return Number.isInteger(ttl) && ttl > 0 ? ttl : DEFAULT_ATTESTATION_TTL
+}
+
+function buildEmail(
+	from: string,
+	to: string,
+	audience: string,
+	code: string,
+): EmailMessageBuilder {
+	const host = new URL(audience).host
+	const text = [
+		`Your verification code for ${host} is: ${code}`,
+		'',
+		`This code lets ${host} confirm that you control this email address. It expires in 10 minutes.`,
+		'',
+		'If you did not request this code, you can ignore this email.',
+	].join('\n')
+	const html = `<!doctype html><html><body style="font-family:system-ui,sans-serif;line-height:1.5"><p>Your verification code for <strong>${escapeHtml(host)}</strong> is:</p><p style="font-size:28px;font-weight:600;letter-spacing:4px">${code}</p><p>This code lets ${escapeHtml(host)} confirm that you control this email address. It expires in 10 minutes.</p><p>If you did not request this code, you can ignore this email.</p></body></html>`
+	return {
+		from,
+		to,
+		subject: `Your verification code for ${host}`,
+		text,
+		html,
+	}
+}
+
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+}

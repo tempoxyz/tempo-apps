@@ -782,6 +782,31 @@ importers:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
+  apps/mpp-identity:
+    dependencies:
+      hono:
+        specifier: 'catalog:'
+        version: 4.13.14
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: 'catalog:'
+        version: 0.22.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vitest@4.1.12)
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 5.20260928.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.5.2
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
   apps/og:
     dependencies:
       '@hono/zod-validator':
@@ -12130,7 +12155,7 @@ snapshots:
       '@vitest/spy': 4.1.12
       '@vitest/utils': 4.1.12
       chai: 6.2.2
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.2.0
 
   '@vitest/mocker@4.1.12(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))':
     dependencies:
@@ -12142,7 +12167,7 @@ snapshots:
 
   '@vitest/pretty-format@4.1.12':
     dependencies:
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.2.0
 
   '@vitest/runner@4.1.12':
     dependencies:
@@ -12173,7 +12198,7 @@ snapshots:
     dependencies:
       '@vitest/pretty-format': 4.1.12
       convert-source-map: 2.0.0
-      tinyrainbow: 3.1.0
+      tinyrainbow: 3.2.0
 
   '@vue/compiler-core@3.5.44':
     dependencies:
@@ -16814,14 +16839,14 @@ snapshots:
       es-module-lexer: 2.3.1
       expect-type: 1.3.0
       magic-string: 0.30.21
-      obug: 2.1.1
+      obug: 2.2.1
       pathe: 2.0.3
       picomatch: 4.0.4
       std-env: 4.0.0
       tinybench: 2.9.0
       tinyexec: 1.0.4
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.1.0
+      tinyglobby: 0.2.17
+      tinyrainbow: 3.2.0
       vite: 8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:

@@ -17,6 +17,7 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 | `apps/mcp-docs-indexer` | Resolver that uploads external docs (viem, wagmi, vocs) into the shared `tempo-global` AI Search instance for unified MCP search |
 | `apps/reth-snapshots-viewer` | Reth snapshots viewer |
 | `apps/tempo-snapshots-viewer` | Tempo snapshots viewer |
+| `apps/mpp-identity` | Issuer of MPP identity attestations (email OTP), signed EdDSA JWS with a JWKS endpoint |
 
 ## Commands
 
