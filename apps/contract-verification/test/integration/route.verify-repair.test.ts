@@ -1,14 +1,14 @@
 import { env, SELF } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
-import { Hex } from 'ox'
+import { Hash, Hex } from 'ox'
 import { describe, expect, it } from 'vitest'
 
 import * as DB from '#database/schema.ts'
 import { app } from '#index.tsx'
 import { ChainRegistry } from '#lib/chain-registry.ts'
 import { runVerificationJob } from '#route.verify.ts'
-import { staticChains } from '#wagmi.config.ts'
+import { staticChains, tempoTestnetExtended } from '#wagmi.config.ts'
 import { counterFixture } from '../fixtures/counter.fixture.ts'
 
 const registry = ChainRegistry.fromStatic(staticChains)
@@ -30,17 +30,17 @@ const body = {
 	contractIdentifier: counterFixture.contractIdentifier,
 }
 const target = {
-	chainId: counterFixture.chainId,
+	chainId: tempoTestnetExtended.id,
 	address: counterFixture.address,
 }
 
-async function insertJob() {
+async function insertJob(chainId: number = target.chainId) {
 	const jobId = crypto.randomUUID()
 	await drizzle(env.CONTRACTS_DB)
 		.insert(DB.verificationJobsTable)
 		.values({
 			id: jobId,
-			chainId: target.chainId,
+			chainId,
 			contractAddress: Hex.toBytes(target.address),
 			verificationEndpoint: '/v2/verify',
 		})
@@ -80,15 +80,22 @@ async function sourceSnapshot() {
 async function repair(
 	getReceipt: () => Promise<typeof receipt> = async () => receipt,
 	jobId?: string,
-	trace?: unknown,
+	trace: unknown = {
+		type: 'CREATE',
+		from: deployer,
+		to: target.address,
+		output: counterFixture.onchainRuntimeBytecode,
+	},
+	chainId: number = target.chainId,
 ) {
-	const id = jobId ?? (await insertJob())
+	const id = jobId ?? (await insertJob(chainId))
 	await runVerificationJob(
 		env,
 		{
 			...target,
 			...body,
 			jobId: id,
+			chainId,
 			creationTransactionHash: transactionHash,
 			// A metadata repair must never compile or publish this unrelated submission.
 			stdJsonInput: {
@@ -96,7 +103,10 @@ async function repair(
 				sources: { 'Unrelated.sol': { content: 'contract Unrelated {}' } },
 			},
 		},
-		registry,
+		ChainRegistry.fromStatic([
+			...staticChains,
+			{ ...tempoTestnetExtended, id: chainId },
+		]),
 		{
 			createPublicClient: () => ({
 				getCode: async () => {
@@ -118,6 +128,144 @@ async function repair(
 }
 
 describe('exact verification creation metadata repair', () => {
+	it.each([
+		31318, 999,
+	])('refuses same-code attribution on a chain without established lifecycle guarantees (%s)', async (chainId) => {
+		await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		await db.update(DB.contractDeploymentsTable).set({ chainId })
+		const before = await db.select().from(DB.contractDeploymentsTable)
+		const sources = await sourceSnapshot()
+		expect(
+			(await repair(undefined, undefined, undefined, chainId))?.errorCode,
+		).toBe('unsupported_creation_lifecycle')
+		expect(await db.select().from(DB.contractDeploymentsTable)).toEqual(before)
+		expect(await sourceSnapshot()).toEqual(sources)
+	})
+
+	it.each([
+		'0x60016000',
+		undefined,
+	])('rejects creation output not matching the stored runtime (%s)', async (output) => {
+		await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const before = await db.select().from(DB.contractDeploymentsTable)
+		const sources = await sourceSnapshot()
+		expect(
+			(
+				await repair(undefined, undefined, {
+					type: 'CREATE',
+					from: deployer,
+					to: target.address,
+					output,
+				})
+			)?.errorCode,
+		).toBe('invalid_creation_transaction')
+		expect(await db.select().from(DB.contractDeploymentsTable)).toEqual(before)
+		expect(await sourceSnapshot()).toEqual(sources)
+	})
+
+	it('does not use a direct receipt when its creation was destroyed in the same transaction', async () => {
+		await seedExact()
+		const before = await sourceSnapshot()
+		const job = await repair(undefined, undefined, {
+			type: 'CREATE',
+			from: deployer,
+			to: target.address,
+			output: counterFixture.onchainRuntimeBytecode,
+			calls: [{ type: 'SELFDESTRUCT', from: target.address, to: deployer }],
+		})
+		expect(job?.errorCode).toBe('invalid_creation_transaction')
+		expect(await sourceSnapshot()).toEqual(before)
+		const [deployment] = await drizzle(env.CONTRACTS_DB)
+			.select()
+			.from(DB.contractDeploymentsTable)
+		expect(deployment?.transactionHash).toBeNull()
+	})
+
+	it.each([
+		'immutable',
+		'library',
+		'callProtection',
+	] as const)('binds repair to recorded %s values rather than learning them from the supplied creation', async (reason) => {
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const [deployment] = await db.select().from(DB.contractDeploymentsTable)
+		if (!deployment) throw new Error('Expected deployment')
+		const [contract] = await db
+			.select()
+			.from(DB.contractsTable)
+			.where(eq(DB.contractsTable.id, deployment.contractId))
+		if (!contract) throw new Error('Expected contract')
+		const effective = counterFixture.onchainRuntimeBytecode
+		const recordedValue = effective.slice(0, 6)
+		const compiled = `0x0000${effective.slice(6)}` as const
+		const codeHash = new Uint8Array(
+			await crypto.subtle.digest('SHA-256', new TextEncoder().encode(compiled)),
+		)
+		await db.insert(DB.codeTable).values({
+			codeHash,
+			code: Hex.toBytes(compiled),
+			codeHashKeccak: Hex.toBytes(Hash.keccak256(compiled)),
+		})
+		await db
+			.update(DB.contractsTable)
+			.set({ runtimeCodeHash: codeHash })
+			.where(eq(DB.contractsTable.id, contract.id))
+		const values =
+			reason === 'callProtection'
+				? { callProtection: recordedValue }
+				: {
+						[reason === 'immutable' ? 'immutables' : 'libraries']: {
+							recorded: recordedValue,
+						},
+					}
+		await db
+			.update(DB.verifiedContractsTable)
+			.set({
+				runtimeTransformations: JSON.stringify([
+					{ type: 'replace', reason, offset: 0, id: 'recorded' },
+				]),
+				runtimeValues: JSON.stringify(values),
+			})
+			.where(eq(DB.verifiedContractsTable.id, verification.id))
+		const sources = await sourceSnapshot()
+		expect(
+			(
+				await repair(undefined, undefined, {
+					type: 'CREATE',
+					from: deployer,
+					to: target.address,
+					output: `0xffff${effective.slice(6)}`,
+				})
+			)?.errorCode,
+		).toBe('invalid_creation_transaction')
+		expect((await repair())?.errorCode).toBeNull()
+		expect(await sourceSnapshot()).toEqual(sources)
+	})
+
+	it('fences a concurrent deployment contract identity change', async () => {
+		const verification = await seedExact()
+		const db = drizzle(env.CONTRACTS_DB)
+		const [original] = await db.select().from(DB.contractsTable)
+		if (!original) throw new Error('Expected contract')
+		const id = crypto.randomUUID()
+		await db
+			.insert(DB.contractsTable)
+			.values({ ...original, id, creationCodeHash: null })
+		const result = await repair(async () => {
+			await db
+				.update(DB.contractDeploymentsTable)
+				.set({ contractId: id })
+				.where(eq(DB.contractDeploymentsTable.id, verification.deploymentId))
+			return receipt
+		})
+		expect(result?.errorCode).toBe('creation_transaction_conflict')
+		const [deployment] = await db.select().from(DB.contractDeploymentsTable)
+		expect(deployment?.contractId).toBe(id)
+		expect(deployment?.transactionHash).toBeNull()
+	})
+
 	it('refreshes deployment audit fields only when a proven repair commits', async () => {
 		const verification = await seedExact()
 		const db = drizzle(env.CONTRACTS_DB)
@@ -252,7 +400,14 @@ describe('exact verification creation metadata repair', () => {
 		)
 		const trace = {
 			...call,
-			calls: [{ type: 'CREATE2', from: factory, to: target.address }],
+			calls: [
+				{
+					type: 'CREATE2',
+					from: factory,
+					to: target.address,
+					output: counterFixture.onchainRuntimeBytecode,
+				},
+			],
 		}
 		expect(
 			(await repair(factoryReceipt, undefined, trace))?.errorCode,
@@ -397,6 +552,71 @@ describe('exact verification creation metadata repair', () => {
 			.from(DB.verificationJobsTable)
 			.where(eq(DB.verificationJobsTable.id, completed.id))
 		expect(retried).toEqual(completed)
+	})
+
+	it.each([
+		'missing proof',
+		'ambiguous deployment',
+	] as const)('preserves a completed hash-bearing source job on replay with %s', async (mode) => {
+		const jobId = await insertJob()
+		const job = {
+			...target,
+			...body,
+			jobId,
+			creationTransactionHash: transactionHash,
+		}
+		await runVerificationJob(env, job, registry, {
+			createPublicClient: () => ({
+				getCode: async () => counterFixture.onchainRuntimeBytecode,
+				getTransactionReceipt: async () => {
+					throw new Error('Receipt unavailable')
+				},
+			}),
+			getContainer: () => ({
+				fetch: async () => Response.json(counterFixture.solcOutput),
+			}),
+		})
+		const db = drizzle(env.CONTRACTS_DB)
+		const [completed] = await db
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, jobId))
+		expect(completed?.errorCode).toBeNull()
+		expect(completed?.verifiedContractId).not.toBeNull()
+		const [verification] = await db.select().from(DB.verifiedContractsTable)
+		if (!verification) throw new Error('Expected source verification')
+		if (mode === 'ambiguous deployment') await duplicateExact(verification)
+		const sources = await sourceSnapshot()
+		const deployments = await db.select().from(DB.contractDeploymentsTable)
+		const before = await app.request(`/v2/verify/${jobId}`, {}, env)
+		expect(before.status).toBe(200)
+		const response = await before.json()
+		const retried = await repair(async () => {
+			throw new Error('Receipt still unavailable')
+		}, jobId)
+		expect(retried).toEqual(completed)
+		const after = await app.request(`/v2/verify/${jobId}`, {}, env)
+		expect(await after.json()).toEqual(response)
+		expect(await sourceSnapshot()).toEqual(sources)
+		expect(await db.select().from(DB.contractDeploymentsTable)).toEqual(
+			deployments,
+		)
+	})
+
+	it.each([
+		'unavailable',
+		'conflicting',
+	] as const)('preserves a repair completed by another execution while %s proof is read', async (mode) => {
+		await seedExact()
+		const jobId = await insertJob()
+		let committed: Awaited<ReturnType<typeof repair>>
+		const result = await repair(async () => {
+			committed = await repair(undefined, jobId)
+			expect(committed?.errorCode).toBeNull()
+			if (mode === 'unavailable') throw new Error('Transient receipt failure')
+			return { ...receipt, blockNumber: 43n }
+		}, jobId)
+		expect(result).toEqual(committed)
 	})
 
 	it.each([

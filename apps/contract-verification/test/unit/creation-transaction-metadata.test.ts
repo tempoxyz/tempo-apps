@@ -25,6 +25,7 @@ const receipt = {
 } as const
 const creation = { type: 'CREATE', from: factory, to: address.toLowerCase() }
 const call = { type: 'CALL', from: deployer, to: factory }
+const runtime = '0x60ab600052'
 const expected = {
 	transactionHash: Hex.toBytes(hash),
 	blockNumber: Number(receipt.blockNumber),
@@ -49,6 +50,230 @@ describe('getCreationTransactionMetadata', () => {
 				},
 			}),
 		).toEqual(expected)
+	})
+
+	describe('stored runtime binding', () => {
+		it.each([
+			{ name: 'direct CREATE', contractAddress: address, type: 'CREATE' },
+			{ name: 'factory CREATE', contractAddress: null, type: 'CREATE' },
+			{ name: 'factory CREATE2', contractAddress: null, type: 'CREATE2' },
+		])('binds $name to its traced runtime output', async ({
+			contractAddress,
+			type,
+		}) => {
+			const frame = { ...creation, type, output: '0x60AB600052' }
+			const trace = contractAddress
+				? { ...frame, from: deployer }
+				: { ...call, calls: [frame] }
+			expect(
+				await metadata(
+					{
+						...traced(trace),
+						getTransactionReceipt: async () => ({
+							...receipt,
+							contractAddress,
+						}),
+					},
+					runtime,
+				),
+			).toEqual(expected)
+		})
+
+		it.each([
+			undefined,
+			null,
+			42,
+			{},
+			'0x',
+			'0x6000',
+			'0x60ab60005',
+			'0x60ag600052',
+		])('rejects invalid or mismatched creation output %j', async (output) => {
+			for (const contractAddress of [address, null]) {
+				expect(
+					await metadata(
+						{
+							...traced({ ...creation, from: deployer, output }),
+							getTransactionReceipt: async () => ({
+								...receipt,
+								contractAddress,
+							}),
+						},
+						runtime,
+					),
+				).toBeNull()
+			}
+		})
+
+		it.each([
+			'0x',
+			'0x0',
+			'0xzz',
+			'not-hex',
+			null,
+		])('rejects invalid expected runtime %j before any RPC read', async (expectedRuntime) => {
+			let reads = 0
+			expect(
+				await metadata(
+					{
+						getTransactionReceipt: async () => {
+							reads++
+							return receipt
+						},
+						transport: {
+							request: async () => {
+								reads++
+								return { ...creation, output: expectedRuntime }
+							},
+						},
+					},
+					expectedRuntime as Hex.Hex,
+				),
+			).toBeNull()
+			expect(reads).toBe(0)
+		})
+
+		it('never falls back to a direct receipt when tracing is unavailable', async () => {
+			expect(await metadata({}, runtime)).toBeNull()
+			expect(
+				await metadata(
+					{
+						transport: {
+							request: async () => {
+								throw new Error('Method not supported')
+							},
+						},
+					},
+					runtime,
+				),
+			).toBeNull()
+		})
+
+		it('rejects a direct creation destroyed during its transaction', async () => {
+			expect(
+				await metadata(
+					{
+						...traced({
+							...creation,
+							from: deployer,
+							output: runtime,
+							calls: [{ type: 'SELFDESTRUCT', from: address, to: deployer }],
+						}),
+						getTransactionReceipt: async () => receipt,
+					},
+					runtime,
+				),
+			).toBeNull()
+		})
+
+		it('rejects multiple successful creations of the same target and runtime', async () => {
+			expect(
+				await metadata(
+					traced({
+						...call,
+						calls: [
+							{ ...creation, output: runtime },
+							{ ...creation, type: 'CREATE2', output: runtime },
+						],
+					}),
+					runtime,
+				),
+			).toBeNull()
+		})
+
+		it('ignores creations and destruction rolled back by an ancestor', async () => {
+			expect(
+				await metadata(
+					traced({
+						...call,
+						calls: [
+							{ ...creation, output: runtime },
+							{
+								...call,
+								error: 'execution reverted',
+								calls: [
+									{ ...creation, output: '0x6000' },
+									{ type: 'SELFDESTRUCT', from: address, to: deployer },
+								],
+							},
+						],
+					}),
+					runtime,
+				),
+			).toEqual(expected)
+		})
+
+		it.each([
+			null,
+			{ type: 'SELFDESTRUCT', from: address, to: deployer },
+		])('validates the complete trace after finding matching output (%j)', async (sibling) => {
+			expect(
+				await metadata(
+					traced({
+						...call,
+						calls: [sibling, { ...creation, output: runtime }],
+					}),
+					runtime,
+				),
+			).toBeNull()
+		})
+
+		it.each([
+			undefined,
+			-1n,
+			0n,
+			50_000_001n,
+		])('applies the cumulative replay budget to direct receipts (%s)', async (cumulativeGasUsed) => {
+			let reads = 0
+			expect(
+				await metadata(
+					{
+						getTransactionReceipt: async () => ({
+							...receipt,
+							cumulativeGasUsed,
+						}),
+						transport: {
+							request: async () => {
+								reads++
+								return { ...creation, output: runtime }
+							},
+						},
+					},
+					runtime,
+				),
+			).toBeNull()
+			expect(reads).toBe(0)
+		})
+
+		it('accepts a runtime-bound direct creation at the replay budget', async () => {
+			expect(
+				await metadata(
+					{
+						...traced({ ...creation, from: deployer, output: runtime }),
+						getTransactionReceipt: async () => ({
+							...receipt,
+							cumulativeGasUsed: 50_000_000n,
+						}),
+					},
+					runtime,
+				),
+			).toEqual(expected)
+		})
+
+		it('retains the complete-trace frame budget with matching output', async () => {
+			expect(
+				await metadata(
+					traced({
+						...call,
+						calls: [
+							...Array(10_000).fill(call),
+							{ ...creation, output: runtime },
+						],
+					}),
+					runtime,
+				),
+			).toBeNull()
+		})
 	})
 
 	it('compares receipt hashes and addresses without case sensitivity', async () => {
@@ -420,13 +645,18 @@ describe('bounded creation proof', () => {
 	afterEach(() => vi.unstubAllGlobals())
 
 	it.each([
-		{ extra: 0, accepted: true },
-		{ extra: 1, accepted: false },
-	])('requires the complete trace to fit the byte budget ($extra excess bytes)', async ({
+		{ extra: 0, accepted: true, expectedRuntime: undefined },
+		{ extra: 1, accepted: false, expectedRuntime: undefined },
+		{ extra: 0, accepted: true, expectedRuntime: runtime },
+		{ extra: 1, accepted: false, expectedRuntime: runtime },
+	] as const)('requires the complete trace to fit the byte budget ($extra excess bytes, runtime $expectedRuntime)', async ({
 		extra,
 		accepted,
+		expectedRuntime,
 	}) => {
-		const result = { ...call, calls: [creation], input: '' }
+		const result = expectedRuntime
+			? { ...creation, from: deployer, output: expectedRuntime, input: '' }
+			: { ...call, calls: [creation], input: '' }
 		const envelope = { jsonrpc: '2.0', id: 1, result }
 		result.input = '0'.repeat(
 			256 * 1024 - JSON.stringify(envelope).length + extra,
@@ -437,22 +667,29 @@ describe('bounded creation proof', () => {
 		const client = createPublicClient({
 			transport: createRpcTransport('https://rpc.example', 42431, {}),
 		})
-		const proof = await metadata({
-			getTransactionReceipt: async () => ({
-				...receipt,
-				contractAddress: null,
-			}),
-			transport: client.transport,
-		})
+		const proof = await metadata(
+			{
+				getTransactionReceipt: async () => ({
+					...receipt,
+					contractAddress: expectedRuntime ? address : null,
+				}),
+				transport: client.transport,
+			},
+			expectedRuntime,
+		)
 		expect(proof).toEqual(accepted ? expected : null)
 	})
 })
 
-function metadata(client: CreationTransactionClient = {}) {
+function metadata(
+	client: CreationTransactionClient = {},
+	expectedRuntime?: Hex.Hex,
+) {
 	return getCreationTransactionMetadata({
 		creationTransactionHash: hash,
 		address,
 		chainId: 42431,
+		expectedRuntime,
 		client: { getTransactionReceipt: async () => receipt, ...client },
 	})
 }

@@ -259,18 +259,33 @@ export type CreationTransactionClient = {
 	}
 }
 
-/** Returns metadata only when the transaction proves a successful creation of the target address. */
+/** Returns creation metadata, requiring a surviving creation with matching output when a stored runtime is supplied. */
 export async function getCreationTransactionMetadata(options: {
 	creationTransactionHash: string
 	address: string
 	chainId: number
 	client: CreationTransactionClient
+	/** Recorded effective runtime that the successful creation must return. */
+	expectedRuntime?: Hex.Hex | undefined
 	logContext?: Record<string, unknown>
 }): Promise<CreationTransactionMetadata | null> {
-	const { creationTransactionHash, address, chainId, client, logContext } =
-		options
+	const {
+		creationTransactionHash,
+		address,
+		chainId,
+		client,
+		expectedRuntime,
+		logContext,
+	} = options
 	if (!client.getTransactionReceipt) return null
 	try {
+		if (expectedRuntime !== undefined) {
+			Hex.assert(expectedRuntime, { strict: true })
+			if (expectedRuntime === '0x' || expectedRuntime.length % 2 !== 0)
+				throw new Error(
+					'Expected runtime must contain complete nonempty bytecode',
+				)
+		}
 		Hex.assert(creationTransactionHash, { strict: true })
 		if (
 			Hex.size(creationTransactionHash) !== 32 ||
@@ -296,26 +311,28 @@ export async function getCreationTransactionMetadata(options: {
 
 		const directCreation =
 			receipt.contractAddress?.toLowerCase() === address.toLowerCase()
+		const requiresTrace = expectedRuntime !== undefined || !directCreation
 		// Reth's built-in tracers ignore timeout; cap replay through this transaction before asking it to trace.
 		if (
-			!directCreation &&
+			requiresTrace &&
 			(typeof receipt.cumulativeGasUsed !== 'bigint' ||
 				receipt.cumulativeGasUsed <= 0n ||
 				receipt.cumulativeGasUsed > 50_000_000n)
 		)
 			throw new Error('Creation transaction exceeds the trace replay budget')
-		// Factory calls have no receipt contractAddress; only execution proves an internal creation.
+		// Receipts prove an address, but repairs also need runtime and same-transaction destruction evidence.
 		const tracedCreation =
-			!directCreation && client.transport
+			requiresTrace && client.transport
 				? traceCreatesContract(
 						await client.transport.request({
 							method: 'debug_traceTransaction',
 							params: [creationTransactionHash, creationTraceOptions],
 						}),
 						address,
+						expectedRuntime,
 					)
 				: false
-		if (directCreation || tracedCreation) {
+		if ((!requiresTrace && directCreation) || tracedCreation) {
 			return {
 				transactionHash: Hex.toBytes(receipt.transactionHash),
 				blockNumber: Number(receipt.blockNumber),
@@ -343,7 +360,11 @@ export async function getCreationTransactionMetadata(options: {
 	}
 }
 
-function traceCreatesContract(trace: unknown, address: string): boolean {
+function traceCreatesContract(
+	trace: unknown,
+	address: string,
+	expectedRuntime?: Hex.Hex,
+): boolean {
 	const frames = [{ value: trace, reverted: false }]
 	let found = false
 	let count = 0
@@ -394,8 +415,16 @@ function traceCreatesContract(trace: unknown, address: string): boolean {
 			(frame.type === 'CREATE' || frame.type === 'CREATE2') &&
 			typeof frame.to === 'string' &&
 			frame.to.toLowerCase() === address.toLowerCase()
-		)
+		) {
+			if (
+				expectedRuntime !== undefined &&
+				(found ||
+					typeof frame.output !== 'string' ||
+					frame.output.toLowerCase() !== expectedRuntime.toLowerCase())
+			)
+				return false
 			found = true
+		}
 		for (const child of (frame.calls ?? []) as unknown[])
 			frames.push({ value: child, reverted: failed })
 	}

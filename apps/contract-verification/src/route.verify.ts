@@ -39,6 +39,8 @@ import type { AppEnv } from '#index.tsx'
 import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
 import { createRpcTransport } from '#lib/rpc.ts'
+import { restoreVerifiedRuntime } from '#lib/verified-runtime.ts'
+import { tempoMainnetExtended, tempoTestnetExtended } from '#wagmi.config.ts'
 import {
 	type CompileOutput,
 	getValidationCustomCode,
@@ -739,14 +741,49 @@ async function runVerificationJob(
 				errorCode = 'already_verified'
 			} else if (existingExact.length !== 1) {
 				errorCode = 'ambiguous_creation_transaction'
+			} else if (
+				chainId !== tempoMainnetExtended.id &&
+				chainId !== tempoTestnetExtended.id
+			) {
+				// These two chains enable Cancun at genesis; dynamic chains and devnet lack a pinned lifecycle guarantee.
+				errorCode = 'unsupported_creation_lifecycle'
 			} else {
-				const proof = await getCreationTransactionMetadata({
-					creationTransactionHash: sanitizedBody.creationTransactionHash,
-					address,
-					chainId,
-					client,
-					logContext: { jobId },
-				})
+				const [recorded] = await db
+					.select({
+						code: codeTable.code,
+						transformations: verifiedContractsTable.runtimeTransformations,
+						values: verifiedContractsTable.runtimeValues,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+					})
+					.from(contractsTable)
+					.innerJoin(
+						codeTable,
+						eq(codeTable.codeHash, contractsTable.runtimeCodeHash),
+					)
+					.innerJoin(
+						verifiedContractsTable,
+						eq(verifiedContractsTable.id, existing.matchId ?? 0),
+					)
+					.where(eq(contractsTable.id, existing.deployment.contractId))
+					.limit(1)
+				const expectedRuntime =
+					recorded?.runtimeMetadataMatch && recorded.code
+						? restoreVerifiedRuntime({
+								code: new Uint8Array(recorded.code as ArrayBuffer),
+								transformations: recorded.transformations,
+								values: recorded.values,
+							})
+						: null
+				const proof = expectedRuntime
+					? await getCreationTransactionMetadata({
+							creationTransactionHash: sanitizedBody.creationTransactionHash,
+							address,
+							chainId,
+							client,
+							logContext: { jobId },
+							expectedRuntime,
+						})
+					: null
 				if (!proof) {
 					errorCode = 'invalid_creation_transaction'
 				} else {
@@ -761,6 +798,10 @@ async function runVerificationJob(
 						.where(
 							and(
 								eq(contractDeploymentsTable.id, existing.deployment.id),
+								eq(
+									contractDeploymentsTable.contractId,
+									existing.deployment.contractId,
+								),
 								or(
 									isNull(contractDeploymentsTable.transactionHash),
 									eq(
@@ -790,12 +831,14 @@ async function runVerificationJob(
 				}
 			}
 			const messages: Record<string, string> = {
+				unsupported_creation_lifecycle:
+					'Creation metadata repair requires a chain with immutable persisted contract code from genesis. Only Tempo mainnet and testnet are supported.',
 				already_verified:
 					'This contract was verified before the queued job ran; this submission was not compiled or compared.',
 				ambiguous_creation_transaction:
 					'Multiple exact deployments exist for this address; creation attribution requires manual investigation.',
 				invalid_creation_transaction:
-					'The supplied transaction could not be proven to create this contract. Check the creation hash and RPC trace availability before retrying.',
+					'The supplied transaction could not be proven to create the recorded runtime. Check stored runtime evidence, the creation hash and RPC trace availability before retrying.',
 				creation_transaction_conflict:
 					'The supplied creation proof conflicts with existing deployment metadata; no evidence was replaced.',
 			}
@@ -814,10 +857,8 @@ async function runVerificationJob(
 				.where(
 					and(
 						eq(verificationJobsTable.id, jobId),
-						// A replay must not downgrade this job's already committed result.
-						errorCode === 'already_verified'
-							? isNull(verificationJobsTable.completedAt)
-							: undefined,
+						// Every repair outcome preserves a result committed by an earlier execution.
+						isNull(verificationJobsTable.completedAt),
 					),
 				)
 			return
