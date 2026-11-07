@@ -160,8 +160,8 @@ describe('uniswap pools', () => {
 			liquidity: { value: 1_000, partial: false },
 			status: 'live',
 			link: {
-				kind: 'address',
-				address: '0x33620f62c5b9b2086dd6b62f4a297a9f30347029',
+				kind: 'external',
+				url: 'https://app.uniswap.org/explore/pools/tempo/0x0b9a0ce880fd51829b650bf2bbacff62f10ffe274b2250b2c3cf1c5614aab427',
 			},
 		})
 		const [, out] = uniswapRows([

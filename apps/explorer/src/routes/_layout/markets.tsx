@@ -832,6 +832,18 @@ type TokenChipProps = { token: DexPoolToken }
 /** The row's own link, so a keyboard reaches what a row click opens. */
 function MarketLinkTo(props: MarketLinkToProps): React.JSX.Element {
 	const { link, children, title } = props
+	if (link.kind === 'external')
+		return (
+			<a
+				href={link.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				title={title}
+				{...styles.link()}
+			>
+				{children}
+			</a>
+		)
 	if (link.kind === 'pair')
 		return (
 			<Link

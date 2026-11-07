@@ -21,6 +21,7 @@ import {
 	type UniswapSnapshot,
 	type UniswapState,
 	type UniswapTrade,
+	uniswapPoolUrl,
 	uniswapStateLabels,
 } from '#lib/uniswap'
 
@@ -100,15 +101,16 @@ export function propAmmStatus(state: PropAmmState): {
 	}
 }
 
-/** Where a row leads: a pair page, or the pool's contract. */
+/** Where a row leads: a pair page, the pool's contract, or a page on another site. */
 export type MarketLink =
 	| { kind: 'pair'; from: Address; to: Address }
 	| { kind: 'address'; address: Address }
+	| { kind: 'external'; url: string }
 
 export function marketHref(link: MarketLink): string {
-	return link.kind === 'pair'
-		? `/dex/${link.from}/${link.to}`
-		: `/address/${link.address}`
+	if (link.kind === 'pair') return `/dex/${link.from}/${link.to}`
+	if (link.kind === 'address') return `/address/${link.address}`
+	return link.url
 }
 
 export type MarketRow = {
@@ -219,9 +221,9 @@ export function propAmmRows(
 }
 
 /**
- * A Uniswap v4 pool leads to its PoolManager, whose activity includes the
- * pool's: the pair page shows only DEX and propAMM routes. Its liquidity is
- * what its positions hold at the current price.
+ * A Uniswap v4 pool has no contract of its own, and the pair page shows only
+ * DEX and propAMM routes, so it leads to the pool's page on Uniswap. Its
+ * liquidity is what its positions hold at the current price.
  */
 export function uniswapRows(pools: readonly UniswapPool[]): MarketRow[] {
 	return pools.map((pool) => {
@@ -242,7 +244,7 @@ export function uniswapRows(pools: readonly UniswapPool[]): MarketRow[] {
 			statusDetail: detail,
 			pool: null,
 			kind: `${venueLabels.uniswap} ${feeLabel(pool.fee)}`,
-			link: { kind: 'address', address: pool.manager },
+			link: { kind: 'external', url: uniswapPoolUrl(pool.key) },
 		}
 	})
 }
