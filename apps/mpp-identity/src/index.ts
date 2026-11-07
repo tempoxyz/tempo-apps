@@ -44,6 +44,8 @@ app.use(
 		origin: '*',
 		allowMethods: ['GET', 'POST', 'OPTIONS'],
 		allowHeaders: ['Content-Type'],
+		// So browser clients on other origins can read when to retry a 429.
+		exposeHeaders: ['Retry-After'],
 		maxAge: 86_400,
 	}),
 )

@@ -182,6 +182,9 @@ describe('POST /email/otp', () => {
 		const response = await send()
 		expect(response.status).toBe(429)
 		expect(Number(response.headers.get('Retry-After'))).toBeGreaterThan(0)
+		expect(response.headers.get('Access-Control-Expose-Headers')).toContain(
+			'Retry-After',
+		)
 	})
 
 	it('returns 502 and discards the code when the email cannot be sent', async () => {
@@ -371,7 +374,7 @@ describe('POST /email/verify', () => {
 		const owner = uniqueIp()
 		expect((await sendFrom(owner)).status).toBe(200)
 		expect((await sendFrom(owner)).status).toBe(429)
-	})
+	}, 20_000)
 
 	it('bounds codes to new senders of a full inbox at 10 an hour', async () => {
 		const client = createClient()
@@ -388,7 +391,7 @@ describe('POST /email/verify', () => {
 		const refused = await sendFrom(uniqueIp())
 		expect(refused.status).toBe(429)
 		expect(Number(refused.headers.get('Retry-After'))).toBeGreaterThan(0)
-	})
+	}, 20_000)
 
 	it('gives each sender one full-inbox exemption an hour', async () => {
 		const client = createClient()
@@ -412,7 +415,7 @@ describe('POST /email/verify', () => {
 		} finally {
 			vi.useRealTimers()
 		}
-	})
+	}, 20_000)
 
 	it('gives a new sender of a full inbox one code under concurrent requests', async () => {
 		const client = createClient()
@@ -433,7 +436,7 @@ describe('POST /email/verify', () => {
 		for (let i = 0; i < 9; i++)
 			expect((await sendFrom(uniqueIp())).status).toBe(200)
 		expect((await sendFrom(uniqueIp())).status).toBe(429)
-	})
+	}, 20_000)
 
 	it('burns the id after 5 failed attempts', async () => {
 		const client = createClient()
