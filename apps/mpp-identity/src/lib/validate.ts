@@ -30,8 +30,21 @@ export function normalizeAudience(value: unknown): string | undefined {
 		return undefined
 	}
 	if (url.origin !== input) return undefined
-	if (url.protocol === 'https:') return url.origin
+	if (url.protocol === 'https:')
+		return isDnsName(url.hostname) ? url.origin : undefined
 	if (url.protocol === 'http:' && LOCAL_HOSTS.has(url.hostname))
 		return url.origin
 	return undefined
+}
+
+/**
+ * A DNS host name: letters, digits and hyphens in labels of up to 63
+ * characters, at most 253 in all. The audience is shown in the email, so it
+ * cannot carry punctuation or overlong text.
+ */
+function isDnsName(host: string): boolean {
+	if (host.length > 253) return false
+	return host
+		.split('.')
+		.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))
 }

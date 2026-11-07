@@ -116,6 +116,8 @@ describe('POST /email/otp', () => {
 		['default port', 'https://merchant.example:443'],
 		['userinfo', 'https://user@merchant.example'],
 		['http other host', 'http://192.168.1.1:3000'],
+		['punctuation in host', 'https://pay!now(merchant).example'],
+		['overlong label', `https://${'a'.repeat(64)}.example`],
 	])('rejects invalid audience (%s)', async (_, aud) => {
 		const client = createClient()
 		const response = await client.request('POST', '/email/otp', {
