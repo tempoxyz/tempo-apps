@@ -1,0 +1,39 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "mpp-identity",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": false,
+	"preview_urls": false,
+	"keep_vars": true,
+	"vars": {
+		"ISSUER": "https://identity.mpp.tempo.xyz",
+		"EMAIL_FROM": "noreply@identity.mpp.tempo.xyz",
+		"ATTESTATION_TTL": "86400"
+	},
+	// Cloudflare Email Service: the EMAIL_FROM domain must be onboarded for sending in this account.
+	"send_email": [{ "name": "EMAIL" }],
+	"durable_objects": {
+		"bindings": [
+			{ "name": "OTP_STORE", "class_name": "OtpStore" },
+			{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }
+		]
+	},
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["OtpStore", "RateLimiter"] }
+	],
+	// Placeholder: enable once the domain is set up.
+	// "routes": [
+	// 	{ "pattern": "identity.mpp.tempo.xyz", "zone_name": "tempo.xyz", "custom_domain": true }
+	// ],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	}
+}
