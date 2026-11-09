@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as z from 'zod/mini'
+import { accountFilterSearchSchema } from '#lib/domain/account-filter'
 import { resolveLegacyTokenTab } from '#lib/domain/address-tabs'
 import { isTip20Address } from '#lib/domain/tip20'
 
@@ -9,7 +10,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		page: z.optional(z.number()),
 		limit: z.optional(z.number()),
 		tab: z.optional(z.string()),
-		a: z.optional(z.string()),
+		a: accountFilterSearchSchema,
 	}),
 	beforeLoad: ({ params, search }) => {
 		const { address } = params
