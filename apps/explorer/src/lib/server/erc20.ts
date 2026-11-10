@@ -1,5 +1,8 @@
 import type { Address, Hex } from 'ox'
+import { erc20Abi } from 'viem'
+import { readContract } from 'viem/actions'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import { getBatchedClient } from '#wagmi.config.ts'
 
 /**
  * Raw-log readers for plain ERC-20 contracts. The Tempo API only indexes
@@ -171,11 +174,18 @@ async function loadErc20Holders(
 	chainId: number,
 	token: Address.Address,
 ): Promise<Erc20Holders> {
-	const rows = (await transferLogs(chainId, token)
-		.orderBy('block_num', 'asc')
-		.orderBy('log_idx', 'asc')
-		.limit(ERC20_HOLDER_SCAN_LIMIT)
-		.execute()) as TransferLog[]
+	const [rows, totalSupply] = await Promise.all([
+		transferLogs(chainId, token)
+			.orderBy('block_num', 'asc')
+			.orderBy('log_idx', 'asc')
+			.limit(ERC20_HOLDER_SCAN_LIMIT)
+			.execute() as Promise<TransferLog[]>,
+		readContract(getBatchedClient(), {
+			address: token,
+			abi: erc20Abi,
+			functionName: 'totalSupply',
+		}).catch(() => undefined),
+	])
 	if (rows.length === ERC20_HOLDER_SCAN_LIMIT) return { unavailable: true }
 
 	const balances = new Map<Address.Address, bigint>()
@@ -188,11 +198,21 @@ async function loadErc20Holders(
 	}
 	balances.delete('0x0000000000000000000000000000000000000000')
 
+	// Balances replayed from Transfer logs are only trustworthy when they
+	// reconcile with the chain: a token that mints, burns or rebases without
+	// emitting Transfer leaves negative balances or a sum off totalSupply.
+	if (totalSupply === undefined) return { unavailable: true }
+	let replayedSupply = 0n
+	for (const balance of balances.values()) {
+		if (balance < 0n) return { unavailable: true }
+		replayedSupply += balance
+	}
+	if (replayedSupply !== totalSupply) return { unavailable: true }
+
 	const holders = [...balances]
 		.filter(([, balance]) => balance > 0n)
 		.sort(([, a], [, b]) => (a === b ? 0 : a > b ? -1 : 1))
-	const totalBalance = holders.reduce((sum, [, balance]) => sum + balance, 0n)
-	return { unavailable: false, holders, totalBalance }
+	return { unavailable: false, holders, totalBalance: replayedSupply }
 }
 
 /** Cached per token (as the in-flight promise) so pages and prefetches share one scan. */

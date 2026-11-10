@@ -2584,7 +2584,7 @@ function SectionsWrapper(props: {
 							onPrefetchNextPage={prefetchHoldersNextPage}
 							emptyState={
 								holdersUnavailable
-									? 'Holders are unavailable: this token has too many transfers to replay.'
+									? "Holders are unavailable: this token's balances can't be rebuilt from its transfer history."
 									: 'No holders found.'
 							}
 						/>
