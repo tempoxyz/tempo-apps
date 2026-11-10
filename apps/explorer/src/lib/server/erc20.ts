@@ -57,6 +57,25 @@ function transferLogs(chainId: number, token: Address.Address) {
 		.where('topic0', '=', TRANSFER_TOPIC0)
 }
 
+function toTransfer(log: TransferLog) {
+	return {
+		id: `${log.tx_hash}-${log.log_idx}`,
+		from: topicToAddress(log.topic1),
+		to: topicToAddress(log.topic2),
+		value: dataToValue(log.data).toString(),
+		transactionHash: log.tx_hash as Hex.Hex,
+		blockNumber: String(log.block_num),
+		timestamp: toIsoTimestamp(log.block_timestamp),
+	}
+}
+
+function compareLogsDesc(a: TransferLog, b: TransferLog): number {
+	const block = BigInt(b.block_num) - BigInt(a.block_num)
+	if (block !== 0n) return block > 0n ? 1 : -1
+	const index = BigInt(b.log_idx) - BigInt(a.log_idx)
+	return index === 0n ? 0 : index > 0n ? 1 : -1
+}
+
 export async function fetchErc20TransfersFromLogs(params: {
 	chainId: number
 	token: Address.Address
@@ -65,48 +84,73 @@ export async function fetchErc20TransfersFromLogs(params: {
 	account?: Address.Address | undefined
 }) {
 	const { chainId, token, page, limit, account } = params
-	let query = transferLogs(chainId, token)
+	const offset = (page - 1) * limit
+
+	let rows: TransferLog[]
 	if (account) {
+		// tidx rejects OR filters combined with ORDER BY/LIMIT, so read the
+		// sender and recipient sides separately (each up to the end of this
+		// page plus one row), then merge, de-duplicate self-transfers and slice.
 		const topic =
 			`0x${'0'.repeat(24)}${account.slice(2).toLowerCase()}` as Hex.Hex
-		query = query.where((eb) =>
-			eb.or([eb('topic1', '=', topic), eb('topic2', '=', topic)]),
-		)
+		const side = (column: 'topic1' | 'topic2') =>
+			transferLogs(chainId, token)
+				.where(column, '=', topic)
+				.orderBy('block_num', 'desc')
+				.orderBy('log_idx', 'desc')
+				.limit(offset + limit + 1)
+				.execute() as Promise<TransferLog[]>
+		const [sent, received] = await Promise.all([side('topic1'), side('topic2')])
+		const merged = new Map<string, TransferLog>()
+		for (const log of [...sent, ...received])
+			merged.set(`${log.tx_hash}-${log.log_idx}`, log)
+		rows = [...merged.values()]
+			.sort(compareLogsDesc)
+			.slice(offset, offset + limit + 1)
+	} else {
+		// One extra row tells whether another page follows.
+		rows = (await transferLogs(chainId, token)
+			.orderBy('block_num', 'desc')
+			.orderBy('log_idx', 'desc')
+			.limit(limit + 1)
+			.offset(offset)
+			.execute()) as TransferLog[]
 	}
-	// One extra row tells whether another page follows.
-	const rows = (await query
-		.orderBy('block_num', 'desc')
-		.orderBy('log_idx', 'desc')
-		.limit(limit + 1)
-		.offset((page - 1) * limit)
-		.execute()) as TransferLog[]
 
 	return {
 		exhausted: rows.length <= limit,
-		transfers: rows.slice(0, limit).map((log) => ({
-			id: `${log.tx_hash}-${log.log_idx}`,
-			from: topicToAddress(log.topic1),
-			to: topicToAddress(log.topic2),
-			value: dataToValue(log.data).toString(),
-			transactionHash: log.tx_hash as Hex.Hex,
-			blockNumber: String(log.block_num),
-			timestamp: toIsoTimestamp(log.block_timestamp),
-		})),
+		transfers: rows.slice(0, limit).map(toTransfer),
 	}
 }
 
-export async function fetchErc20HoldersFromLogs(params: {
-	chainId: number
-	token: Address.Address
-	page: number
-	limit: number
-}) {
-	const { chainId, token, page, limit } = params
+type Erc20Holders = {
+	holders: Array<[Address.Address, bigint]>
+	totalBalance: bigint
+}
+
+const HOLDERS_CACHE_TTL = 60_000
+const HOLDERS_CACHE_MAX_ENTRIES = 20
+const holdersCache = new Map<
+	string,
+	{ promise: Promise<Erc20Holders>; timestamp: number }
+>()
+
+/**
+ * Current balances replayed from every Transfer log of the token. A bounded
+ * history cannot establish current balances once it fills up, so tokens past
+ * the scan limit fail instead of showing stale ones.
+ */
+async function loadErc20Holders(
+	chainId: number,
+	token: Address.Address,
+): Promise<Erc20Holders> {
 	const rows = (await transferLogs(chainId, token)
 		.orderBy('block_num', 'asc')
 		.orderBy('log_idx', 'asc')
 		.limit(ERC20_HOLDER_SCAN_LIMIT)
 		.execute()) as TransferLog[]
+	if (rows.length === ERC20_HOLDER_SCAN_LIMIT)
+		throw new Error('Transfer history exceeds the holder scan limit')
 
 	const balances = new Map<Address.Address, bigint>()
 	for (const log of rows) {
@@ -122,14 +166,48 @@ export async function fetchErc20HoldersFromLogs(params: {
 		.filter(([, balance]) => balance > 0n)
 		.sort(([, a], [, b]) => (a === b ? 0 : a > b ? -1 : 1))
 	const totalBalance = holders.reduce((sum, [, balance]) => sum + balance, 0n)
+	return { holders, totalBalance }
+}
 
+/** Cached per token (as the in-flight promise) so pages and prefetches share one scan. */
+function getErc20Holders(
+	chainId: number,
+	token: Address.Address,
+): Promise<Erc20Holders> {
+	const key = `${chainId}-${token.toLowerCase()}`
+	const cached = holdersCache.get(key)
+	if (cached && Date.now() - cached.timestamp < HOLDERS_CACHE_TTL)
+		return cached.promise
+	if (
+		!holdersCache.has(key) &&
+		holdersCache.size >= HOLDERS_CACHE_MAX_ENTRIES
+	) {
+		const oldestKey = holdersCache.keys().next().value
+		if (oldestKey) holdersCache.delete(oldestKey)
+	}
+	const promise = loadErc20Holders(chainId, token)
+	holdersCache.set(key, { promise, timestamp: Date.now() })
+	promise.catch(() => {
+		if (holdersCache.get(key)?.promise === promise) holdersCache.delete(key)
+	})
+	return promise
+}
+
+export async function fetchErc20HoldersFromLogs(params: {
+	chainId: number
+	token: Address.Address
+	page: number
+	limit: number
+}) {
+	const { chainId, token, page, limit } = params
+	const { holders, totalBalance } = await getErc20Holders(chainId, token)
 	return {
 		holders: holders
 			.slice((page - 1) * limit, page * limit)
 			.map(([address, balance]) => ({ address, balance: balance.toString() })),
+		// The full history was replayed, so the count is exact.
 		total: holders.length,
-		// A full scan window means older history (and holders) were cut off.
-		totalCapped: rows.length === ERC20_HOLDER_SCAN_LIMIT,
+		totalCapped: false,
 		totalBalance: totalBalance.toString(),
 	}
 }

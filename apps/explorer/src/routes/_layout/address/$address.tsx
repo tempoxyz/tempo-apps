@@ -670,7 +670,8 @@ function RouteComponent() {
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
-		isMounted && !isToken,
+		// Holdings is shown for every non-TIP-20 address, plain ERC-20s included.
+		isMounted && !isTip20,
 	)
 	// Warm the first page of every non-active tab once the active tab has had a
 	// moment to start loading, so switching tabs is instant. Runs once per
@@ -733,7 +734,7 @@ function RouteComponent() {
 					holdersQueryOptions({ address, page: 1, limit }),
 				)
 
-			if (!isToken && tab !== 'holdings')
+			if (!isTip20 && tab !== 'holdings')
 				void queryClient.prefetchQuery(balancesQueryOptions(address))
 		}, 500)
 
@@ -751,6 +752,7 @@ function RouteComponent() {
 		status,
 		tab,
 		visibleTabs,
+		isTip20,
 	])
 
 	return (
