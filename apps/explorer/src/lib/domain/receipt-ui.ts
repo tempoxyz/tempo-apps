@@ -111,6 +111,11 @@ export function getReceiptEventNote(
 	return filtered.length ? filtered : undefined
 }
 
+/**
+ * A receipt has no viewer, so it keeps the canonical action ("Send" or
+ * "Transfer") rather than Sent/Received. The indexer's direction only
+ * repeats the to/from already in the description, so it is dropped.
+ */
 export function getReceiptTransferPresentation(event: KnownEvent): KnownEvent {
 	if (event.type !== 'transfer' || !Array.isArray(event.note)) return event
 	const direction = event.note.find(
@@ -123,13 +128,5 @@ export function getReceiptTransferPresentation(event: KnownEvent): KnownEvent {
 	const note = event.note.filter(
 		([label]) => label.toLowerCase() !== 'direction',
 	)
-	return {
-		...event,
-		parts: event.parts.map((part) =>
-			part.type === 'action'
-				? { ...part, value: value === 'out' ? 'Sent' : 'Received' }
-				: part,
-		),
-		note: note.length ? note : undefined,
-	}
+	return { ...event, note: note.length ? note : undefined }
 }

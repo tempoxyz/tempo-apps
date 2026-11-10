@@ -357,6 +357,8 @@ export function toEnrichedTransaction(
 		includeKnownEvents: boolean
 		getTokenMetadata: (address: Address.Address) => Metadata | undefined
 		activities?: TransactionActivity[] | undefined
+		/** The address whose history this is. */
+		holder?: Address.Address | undefined
 	},
 ): EnrichedTransaction {
 	const receipt = row.meta?.receipt
@@ -384,6 +386,7 @@ export function toEnrichedTransaction(
 				{
 					transaction,
 					getTokenMetadata: options.getTokenMetadata,
+					holder: options.holder,
 				},
 			)
 			return selectTransactionDescriptionEvents({
@@ -493,6 +496,7 @@ export async function fetchAddressHistoryData(params: {
 			includeKnownEvents,
 			getTokenMetadata,
 			activities: activities[index],
+			holder: address,
 		}),
 	)
 	if (searchParams.sort === 'asc') transactions.reverse()
