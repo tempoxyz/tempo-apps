@@ -4,6 +4,11 @@ import type { Address, Hex } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { isTip20Address } from '#lib/domain/tip20'
+import {
+	fetchErc20HoldersFromLogs,
+	fetchErc20TransfersFromLogs,
+} from '#lib/server/erc20'
 import { api } from '#lib/server/tempo-api'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -134,6 +139,16 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 		try {
 			if (data.page * data.limit > COUNT_CAP) return EMPTY_HOLDERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
+
+			// The Tempo API indexes TIP-20 holders only; rebuild a plain
+			// ERC-20's holders from its Transfer logs.
+			if (!isTip20Address(data.address))
+				return await fetchErc20HoldersFromLogs({
+					chainId,
+					token: data.address,
+					page: data.page,
+					limit: data.limit,
+				})
 
 			const [details, page] = await Promise.all([
 				getTokenDetails(chainId, data.address),
@@ -299,6 +314,28 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 		try {
 			if (data.page * data.limit > COUNT_CAP) return EMPTY_TRANSFERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
+
+			// The Tempo API indexes TIP-20 transfers only; read a plain
+			// ERC-20's transfers from its Transfer logs.
+			if (!isTip20Address(data.address)) {
+				const { transfers, exhausted } = await fetchErc20TransfersFromLogs({
+					chainId,
+					token: data.address,
+					page: data.page,
+					limit: data.limit,
+					account: data.account,
+				})
+				return {
+					transfers,
+					...resolveTotal({
+						exactCount: undefined,
+						page: data.page,
+						limit: data.limit,
+						rows: transfers.length,
+						exhausted,
+					}),
+				}
+			}
 
 			const [details, page] = await Promise.all([
 				getTokenDetails(chainId, data.address),

@@ -90,6 +90,7 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
+import { useErc20Metadata } from '#lib/erc20'
 import {
 	addressTabSchema,
 	resolveAddressTab,
@@ -468,7 +469,7 @@ function RouteComponent() {
 	)
 	const {
 		accountType,
-		isToken,
+		isToken: isKnownToken,
 		tokenMetadata: initialTokenMetadata,
 		tokenLogoURI,
 		account,
@@ -480,15 +481,23 @@ function RouteComponent() {
 
 	Address.assert(address)
 	const isMounted = useIsMounted()
+	const isTip20 = Tip20.isTip20Address(address)
 	// Recover token identity in the browser if the loader's bounded RPC timed out.
 	const { data: queriedTokenMetadata } = Hooks.token.useGetMetadata({
 		token: address,
 		query: {
-			enabled: isMounted && isToken && !initialTokenMetadata,
+			enabled: isMounted && isKnownToken && !initialTokenMetadata,
 			initialData: initialTokenMetadata ?? undefined,
 		},
 	})
-	const tokenMetadata = initialTokenMetadata ?? queriedTokenMetadata
+	// Plain ERC-20s have no reserved prefix: probe their metadata after
+	// hydration and treat the address as a token when it answers.
+	const { data: erc20Metadata } = useErc20Metadata(address, {
+		enabled: isMounted && !isKnownToken,
+	})
+	const isToken = isKnownToken || erc20Metadata !== undefined
+	const tokenMetadata =
+		initialTokenMetadata ?? queriedTokenMetadata ?? erc20Metadata
 	const isZonePortal = isZonePortalAddress(address)
 	const hideSubmitBatches = isZonePortal && hideSubmitBatchesSearch === true
 	const [portalLive, setPortalLive] = React.useState(true)
@@ -534,7 +543,6 @@ function RouteComponent() {
 	}, [hash, isContract, tab, navigate, limit])
 
 	// Build visible tabs based on address type
-	const isTip20 = Tip20.isTip20Address(address)
 	const { data: validatorFees } = useQuery({
 		...validatorFeesQueryOptions(address),
 		enabled: isMounted && !isTip20,
