@@ -124,6 +124,8 @@ export type TokenHoldersApiResponse = {
 	total: number
 	totalCapped: boolean
 	totalBalance: string
+	/** Set when holders can't be computed (a plain ERC-20 past the log scan limit). */
+	unavailable?: boolean | undefined
 }
 
 const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {

@@ -1480,6 +1480,7 @@ function SectionsWrapper(props: {
 		total: holdersTotal = 0,
 		totalCapped: holdersTotalCapped = false,
 		totalBalance: holdersTotalBalance = '0',
+		unavailable: holdersUnavailable = false,
 	} = holdersData ?? {}
 
 	// Only use after mount AND when the latest edge has loaded to avoid showing
@@ -2525,7 +2526,11 @@ function SectionsWrapper(props: {
 				return {
 					title: 'Holders',
 					totalItems:
-						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
+						holdersData && !holdersUnavailable
+							? holdersTotalCapped
+								? '100k+'
+								: holdersTotal
+							: undefined,
 					itemsLabel: 'holders',
 					content: (
 						<DataGrid
@@ -2577,7 +2582,11 @@ function SectionsWrapper(props: {
 							itemsPerPage={limit}
 							pagination="simple"
 							onPrefetchNextPage={prefetchHoldersNextPage}
-							emptyState="No holders found."
+							emptyState={
+								holdersUnavailable
+									? 'Holders are unavailable: this token has too many transfers to replay.'
+									: 'No holders found.'
+							}
 						/>
 					),
 				}

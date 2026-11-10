@@ -123,10 +123,14 @@ export async function fetchErc20TransfersFromLogs(params: {
 	}
 }
 
-type Erc20Holders = {
-	holders: Array<[Address.Address, bigint]>
-	totalBalance: bigint
-}
+type Erc20Holders =
+	| {
+			unavailable: false
+			holders: Array<[Address.Address, bigint]>
+			totalBalance: bigint
+	  }
+	// The history is too long to replay, so current balances are unknown.
+	| { unavailable: true }
 
 const HOLDERS_CACHE_TTL = 60_000
 const HOLDERS_CACHE_MAX_ENTRIES = 20
@@ -138,7 +142,8 @@ const holdersCache = new Map<
 /**
  * Current balances replayed from every Transfer log of the token. A bounded
  * history cannot establish current balances once it fills up, so tokens past
- * the scan limit fail instead of showing stale ones.
+ * the scan limit report holders as unavailable instead of showing stale ones.
+ * That outcome is cached like any other, so large tokens aren't rescanned.
  */
 async function loadErc20Holders(
 	chainId: number,
@@ -149,8 +154,7 @@ async function loadErc20Holders(
 		.orderBy('log_idx', 'asc')
 		.limit(ERC20_HOLDER_SCAN_LIMIT)
 		.execute()) as TransferLog[]
-	if (rows.length === ERC20_HOLDER_SCAN_LIMIT)
-		throw new Error('Transfer history exceeds the holder scan limit')
+	if (rows.length === ERC20_HOLDER_SCAN_LIMIT) return { unavailable: true }
 
 	const balances = new Map<Address.Address, bigint>()
 	for (const log of rows) {
@@ -166,7 +170,7 @@ async function loadErc20Holders(
 		.filter(([, balance]) => balance > 0n)
 		.sort(([, a], [, b]) => (a === b ? 0 : a > b ? -1 : 1))
 	const totalBalance = holders.reduce((sum, [, balance]) => sum + balance, 0n)
-	return { holders, totalBalance }
+	return { unavailable: false, holders, totalBalance }
 }
 
 /** Cached per token (as the in-flight promise) so pages and prefetches share one scan. */
@@ -200,7 +204,16 @@ export async function fetchErc20HoldersFromLogs(params: {
 	limit: number
 }) {
 	const { chainId, token, page, limit } = params
-	const { holders, totalBalance } = await getErc20Holders(chainId, token)
+	const result = await getErc20Holders(chainId, token)
+	if (result.unavailable)
+		return {
+			holders: [],
+			total: 0,
+			totalCapped: false,
+			totalBalance: '0',
+			unavailable: true,
+		}
+	const { holders, totalBalance } = result
 	return {
 		holders: holders
 			.slice((page - 1) * limit, page * limit)
