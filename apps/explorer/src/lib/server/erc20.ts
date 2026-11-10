@@ -63,7 +63,7 @@ export async function fetchErc20TransfersFromLogs(params: {
 	let reachedDepth = false
 	// More filtered transfers exist past the depth cap than this view lists.
 	let truncated = false
-	// Exact transfer count, when known (the unfiltered view only).
+	// Exact transfer count, when known.
 	let total: number | undefined
 	if (account) {
 		if (offset >= ERC20_FILTERED_TRANSFER_DEPTH)
@@ -82,12 +82,40 @@ export async function fetchErc20TransfersFromLogs(params: {
 				.orderBy('log_idx', 'desc')
 				.limit(end + 1)
 				.execute() as Promise<TransferLog[]>
-		const [sent, received] = await Promise.all([side('topic1'), side('topic2')])
+		// Exact count: sent plus received, less self-transfers counted twice.
+		const countWhere = (columns: Array<'topic1' | 'topic2'>) => {
+			let query = tempoQueryBuilder(chainId)
+				.selectFrom('logs')
+				.select((eb) => eb.fn.countAll().as('count'))
+				.where('address', '=', token.toLowerCase() as Address.Address)
+				.where('topic0', '=', TRANSFER_TOPIC0)
+			for (const column of columns) query = query.where(column, '=', topic)
+			return query
+				.executeTakeFirst()
+				.then((row) => Number(row?.count))
+				.catch(() => Number.NaN)
+		}
+		const [sent, received, sentCount, receivedCount, selfCount] =
+			await Promise.all([
+				side('topic1'),
+				side('topic2'),
+				countWhere(['topic1']),
+				countWhere(['topic2']),
+				countWhere(['topic1', 'topic2']),
+			])
 		const merged = new Map<string, TransferLog>()
 		for (const log of [...sent, ...received])
 			merged.set(`${log.tx_hash}-${log.log_idx}`, log)
 		const sorted = [...merged.values()].sort(compareLogsDesc)
-		truncated = reachedDepth && sorted.length > ERC20_FILTERED_TRANSFER_DEPTH
+		const counted = sentCount + receivedCount - selfCount
+		if (Number.isSafeInteger(counted) && counted >= 0) {
+			total = counted
+			truncated = counted > ERC20_FILTERED_TRANSFER_DEPTH
+		} else if (sent.length <= end && received.length <= end) {
+			// Both sides were read in full, so the merged list is complete.
+			total = sorted.length
+		} else
+			truncated = reachedDepth && sorted.length > ERC20_FILTERED_TRANSFER_DEPTH
 		rows = sorted.slice(offset, end + 1)
 	} else {
 		// One extra row tells whether another page follows; the count lets
