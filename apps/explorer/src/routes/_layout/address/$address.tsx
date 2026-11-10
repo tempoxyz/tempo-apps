@@ -901,7 +901,9 @@ function AccountCardWithTimestamps(props: {
 				virtualAddressParts={virtualAddressParts}
 			/>
 			{!isTip20 && <ValidatorCard address={address} />}
-			{isToken && (
+			{/* Wallets need a symbol to add a token, and only TIP-20s can pay
+			fees, so a symbol-less ERC-20 has no wallet action to offer. */}
+			{isToken && (isTip20 || Boolean(tokenMetadata?.symbol)) && (
 				<ClientOnly fallback={null}>
 					<WalletActions
 						address={address}
