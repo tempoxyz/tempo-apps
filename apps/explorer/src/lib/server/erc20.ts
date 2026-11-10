@@ -51,10 +51,14 @@ function toIsoTimestamp(value: unknown): string | null {
 function transferLogs(chainId: number, token: Address.Address) {
 	return tempoQueryBuilder(chainId)
 		.selectFrom('logs')
-		.select([
+		.select((eb) => [
 			'topic1',
 			'topic2',
-			'data',
+			// The contract chooses its log data, so read only the 32-byte amount
+			// (data is stored as hex text: "0x" plus 64 hex characters).
+			eb
+				.fn<string>('substring', [eb.ref('data'), eb.lit(1), eb.lit(66)])
+				.as('data'),
 			'block_num',
 			'block_timestamp',
 			'tx_hash',
