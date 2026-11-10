@@ -4,6 +4,9 @@ Allow: /$
 Allow: /tokens
 Allow: /token/
 Disallow: /*?a=
+# Query exclusions must be more specific than Allow: /token/.
+Disallow: /token/*?a=
+Disallow: /token/*?*&a=
 Disallow: /address/
 Disallow: /block/
 Disallow: /blocks

@@ -17,6 +17,7 @@ import { formatUnits } from 'viem'
 import type { Config } from 'wagmi'
 import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
+import { accountFilterSearchSchema } from '#lib/domain/account-filter'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
 import { WalletActions } from '#comps/WalletActions'
@@ -228,7 +229,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		line: z.catch(z.optional(z.coerce.number()), undefined),
 		end: z.catch(z.optional(z.coerce.number()), undefined),
 		live: z.prefault(z.boolean(), false),
-		a: z.optional(z.string()),
+		a: accountFilterSearchSchema,
 		status: z.optional(z.enum(['success', 'reverted'])),
 		dir: z.optional(z.enum(['sent', 'received'])),
 		transferDirection: z.optional(z.enum(['in', 'out'])),
