@@ -25,7 +25,8 @@ export function useErc20Metadata(
 		query: {
 			enabled: options.enabled,
 			retry: false,
-			staleTime: Number.POSITIVE_INFINITY,
+			// totalSupply moves with mints and burns, so refresh it like other token data.
+			staleTime: 60_000,
 			select: ([name, symbol, decimals, totalSupply]): TokenMetadata => ({
 				name,
 				symbol,
