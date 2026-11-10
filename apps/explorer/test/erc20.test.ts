@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+	bytes32ToText,
 	compareLogsDesc,
+	type Erc20ProbeResults,
+	interpretErc20Probe,
 	dataToValue,
 	reconcileHolders,
 	replayBalances,
@@ -81,5 +84,66 @@ describe('ERC-20 holder replay', () => {
 			log(ZERO_ADDRESS, bob, 0n),
 		])
 		expect(reconcileHolders(balances, 0n)).toBeUndefined()
+	})
+})
+
+describe('ERC-20 detection probe', () => {
+	const token = '0xa8f92fb1a7aa32e5db3c719b707eb2b3bed00543'
+	const base: Erc20ProbeResults = {
+		decimals: 18,
+		totalSupply: 12n,
+		balanceOf: 0n,
+		allowance: 0n,
+		name: 'Steven Coin',
+		symbol: 'SC',
+		nameBytes32: undefined,
+		symbolBytes32: undefined,
+		isErc721: undefined,
+		isErc1155: undefined,
+	}
+
+	it('accepts a contract answering the required views', () => {
+		expect(interpretErc20Probe(token, base)).toEqual({
+			name: 'Steven Coin',
+			symbol: 'SC',
+			decimals: 18,
+			totalSupply: 12n,
+		})
+	})
+
+	it('requires balanceOf, allowance, decimals and totalSupply', () => {
+		for (const key of ['balanceOf', 'allowance', 'decimals', 'totalSupply'])
+			expect(
+				interpretErc20Probe(token, { ...base, [key]: undefined }),
+			).toBeUndefined()
+	})
+
+	it('rejects contracts claiming ERC-721 or ERC-1155', () => {
+		expect(
+			interpretErc20Probe(token, { ...base, isErc721: true }),
+		).toBeUndefined()
+		expect(
+			interpretErc20Probe(token, { ...base, isErc1155: true }),
+		).toBeUndefined()
+	})
+
+	it('reads bytes32 names and falls back to the address', () => {
+		const mkr = `0x${'4d4b52'.padEnd(64, '0')}` as const
+		expect(
+			interpretErc20Probe(token, {
+				...base,
+				name: undefined,
+				symbol: undefined,
+				symbolBytes32: mkr,
+			}),
+		).toMatchObject({ name: 'MKR', symbol: 'MKR' })
+		expect(
+			interpretErc20Probe(token, {
+				...base,
+				name: undefined,
+				symbol: undefined,
+			}),
+		).toMatchObject({ name: '0xa8f9…0543', symbol: '' })
+		expect(bytes32ToText(`0x${'0'.repeat(64)}`)).toBeUndefined()
 	})
 })
