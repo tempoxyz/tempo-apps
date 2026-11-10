@@ -1,6 +1,15 @@
 import type { Address, Hex } from 'ox'
 import { erc20Abi } from 'viem'
 import { readContract } from 'viem/actions'
+import {
+	compareLogsDesc,
+	reconcileHolders,
+	replayBalances,
+	TRANSFER_TOPIC0,
+	type TransferLog,
+	toTransfer,
+	ZERO_ADDRESS,
+} from '#lib/domain/erc20'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { getBatchedClient } from '#wagmi.config.ts'
 
@@ -9,9 +18,6 @@ import { getBatchedClient } from '#wagmi.config.ts'
  * TIP-20 tokens, so a non-TIP-20 token's transfers and holders come straight
  * from its `Transfer` logs.
  */
-
-const TRANSFER_TOPIC0 =
-	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
 /** Most `Transfer` logs the holders view replays to rebuild balances. */
 export const ERC20_HOLDER_SCAN_LIMIT = 10_000
@@ -22,34 +28,6 @@ export const ERC20_HOLDER_SCAN_LIMIT = 10_000
  * logs.
  */
 export const ERC20_FILTERED_TRANSFER_DEPTH = 1_000
-
-type TransferLog = {
-	topic1: string | null
-	topic2: string | null
-	data: string | null
-	block_num: number | string | bigint
-	block_timestamp: unknown
-	tx_hash: string
-	log_idx: number | string | bigint
-}
-
-function topicToAddress(topic: string | null): Address.Address {
-	if (!topic) return '0x0000000000000000000000000000000000000000'
-	return `0x${topic.slice(-40)}`.toLowerCase() as Address.Address
-}
-
-function dataToValue(data: string | null): bigint {
-	if (!data || data === '0x') return 0n
-	return BigInt(data.slice(0, 66))
-}
-
-function toIsoTimestamp(value: unknown): string | null {
-	if (value == null) return null
-	if (typeof value === 'number' || typeof value === 'bigint')
-		return new Date(Number(value) * 1000).toISOString()
-	const date = new Date(String(value))
-	return Number.isNaN(date.getTime()) ? String(value) : date.toISOString()
-}
 
 function transferLogs(chainId: number, token: Address.Address) {
 	return tempoQueryBuilder(chainId)
@@ -69,25 +47,6 @@ function transferLogs(chainId: number, token: Address.Address) {
 		])
 		.where('address', '=', token.toLowerCase() as Address.Address)
 		.where('topic0', '=', TRANSFER_TOPIC0)
-}
-
-function toTransfer(log: TransferLog) {
-	return {
-		id: `${log.tx_hash}-${log.log_idx}`,
-		from: topicToAddress(log.topic1),
-		to: topicToAddress(log.topic2),
-		value: dataToValue(log.data).toString(),
-		transactionHash: log.tx_hash as Hex.Hex,
-		blockNumber: String(log.block_num),
-		timestamp: toIsoTimestamp(log.block_timestamp),
-	}
-}
-
-function compareLogsDesc(a: TransferLog, b: TransferLog): number {
-	const block = BigInt(b.block_num) - BigInt(a.block_num)
-	if (block !== 0n) return block > 0n ? 1 : -1
-	const index = BigInt(b.log_idx) - BigInt(a.log_idx)
-	return index === 0n ? 0 : index > 0n ? 1 : -1
 }
 
 export async function fetchErc20TransfersFromLogs(params: {
@@ -165,14 +124,6 @@ const holdersCache = new Map<
 >()
 
 /**
- * Current balances replayed from every Transfer log of the token. A bounded
- * history cannot establish current balances once it fills up, so tokens past
- * the scan limit report holders as unavailable instead of showing stale ones.
- * That outcome is cached like any other, so large tokens aren't rescanned.
- */
-const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
-
-/**
  * totalSupply minus the zero address's balance, at blockNumber when the RPC
  * still serves that state, otherwise at the latest block.
  */
@@ -202,6 +153,12 @@ async function readSupplyOutsideZero(
 		.catch(() => undefined)
 }
 
+/**
+ * Current balances replayed from every Transfer log of the token. A bounded
+ * history cannot establish current balances once it fills up, so tokens past
+ * the scan limit report holders as unavailable instead of showing stale ones.
+ * That outcome is cached like any other, so large tokens aren't rescanned.
+ */
 async function loadErc20Holders(
 	chainId: number,
 	token: Address.Address,
@@ -226,15 +183,7 @@ async function loadErc20Holders(
 		.execute()) as TransferLog[]
 	if (rows.length === ERC20_HOLDER_SCAN_LIMIT) return { unavailable: true }
 
-	const balances = new Map<Address.Address, bigint>()
-	for (const log of rows) {
-		const value = dataToValue(log.data)
-		const from = topicToAddress(log.topic1)
-		const to = topicToAddress(log.topic2)
-		balances.set(from, (balances.get(from) ?? 0n) - value)
-		balances.set(to, (balances.get(to) ?? 0n) + value)
-	}
-	balances.delete(ZERO_ADDRESS)
+	const balances = replayBalances(rows)
 
 	// Balances replayed from Transfer logs are only trustworthy when they
 	// reconcile with the chain: a token that mints, burns or rebases without
@@ -249,17 +198,9 @@ async function loadErc20Holders(
 			(rows.length > 0 ? BigInt(rows[rows.length - 1].block_num) : undefined),
 	)
 	if (onChain === undefined) return { unavailable: true }
-	let replayedSupply = 0n
-	for (const balance of balances.values()) {
-		if (balance < 0n) return { unavailable: true }
-		replayedSupply += balance
-	}
-	if (replayedSupply !== onChain) return { unavailable: true }
-
-	const holders = [...balances]
-		.filter(([, balance]) => balance > 0n)
-		.sort(([, a], [, b]) => (a === b ? 0 : a > b ? -1 : 1))
-	return { unavailable: false, holders, totalBalance: replayedSupply }
+	const reconciled = reconcileHolders(balances, onChain)
+	if (!reconciled) return { unavailable: true }
+	return { unavailable: false, ...reconciled }
 }
 
 /** Cached per token (as the in-flight promise) so pages and prefetches share one scan. */
