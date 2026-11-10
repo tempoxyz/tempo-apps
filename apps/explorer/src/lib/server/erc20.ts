@@ -206,7 +206,20 @@ async function loadErc20Holders(
 	chainId: number,
 	token: Address.Address,
 ): Promise<Erc20Holders> {
-	const rows = (await transferLogs(chainId, token)
+	// Replay up to the indexer's head and read supply at that same block:
+	// later blocks may not be indexed yet, and a supply change that emits no
+	// Transfer after the token's last log still fails the check below.
+	const head = await tempoQueryBuilder(chainId)
+		.selectFrom('blocks')
+		.select('num')
+		.orderBy('num', 'desc')
+		.limit(1)
+		.executeTakeFirst()
+		.catch(() => undefined)
+	const headBlock = head ? BigInt(head.num) : undefined
+	let logs = transferLogs(chainId, token)
+	if (headBlock !== undefined) logs = logs.where('block_num', '<=', headBlock)
+	const rows = (await logs
 		.orderBy('block_num', 'asc')
 		.orderBy('log_idx', 'asc')
 		.limit(ERC20_HOLDER_SCAN_LIMIT)
@@ -228,11 +241,12 @@ async function loadErc20Holders(
 	// emitting Transfer leaves negative balances or a sum off its supply.
 	// Supply counts any balance parked at the zero address (Uniswap V2's
 	// locked liquidity, transfers to 0x0 that don't burn), so compare against
-	// totalSupply minus balanceOf(0x0), read at the last replayed block so
+	// totalSupply minus balanceOf(0x0), read at the replayed head block so
 	// indexer lag behind the chain head can't fail the check.
 	const onChain = await readSupplyOutsideZero(
 		token,
-		rows.length > 0 ? BigInt(rows[rows.length - 1].block_num) : undefined,
+		headBlock ??
+			(rows.length > 0 ? BigInt(rows[rows.length - 1].block_num) : undefined),
 	)
 	if (onChain === undefined) return { unavailable: true }
 	let replayedSupply = 0n
