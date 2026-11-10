@@ -95,9 +95,11 @@ export async function fetchErc20TransfersFromLogs(params: {
 
 	let rows: TransferLog[]
 	let reachedDepth = false
+	// More filtered transfers exist past the depth cap than this view lists.
+	let truncated = false
 	if (account) {
 		if (offset >= ERC20_FILTERED_TRANSFER_DEPTH)
-			return { exhausted: true, transfers: [] }
+			return { exhausted: true, truncated: true, transfers: [] }
 		const end = Math.min(offset + limit, ERC20_FILTERED_TRANSFER_DEPTH)
 		reachedDepth = end === ERC20_FILTERED_TRANSFER_DEPTH
 		// tidx rejects OR filters combined with ORDER BY/LIMIT, so read the
@@ -116,7 +118,9 @@ export async function fetchErc20TransfersFromLogs(params: {
 		const merged = new Map<string, TransferLog>()
 		for (const log of [...sent, ...received])
 			merged.set(`${log.tx_hash}-${log.log_idx}`, log)
-		rows = [...merged.values()].sort(compareLogsDesc).slice(offset, end + 1)
+		const sorted = [...merged.values()].sort(compareLogsDesc)
+		truncated = reachedDepth && sorted.length > ERC20_FILTERED_TRANSFER_DEPTH
+		rows = sorted.slice(offset, end + 1)
 	} else {
 		// One extra row tells whether another page follows.
 		rows = (await transferLogs(chainId, token)
@@ -130,6 +134,7 @@ export async function fetchErc20TransfersFromLogs(params: {
 	return {
 		// Pagination stops at the filtered depth cap.
 		exhausted: reachedDepth || rows.length <= limit,
+		truncated,
 		transfers: rows
 			.slice(0, reachedDepth ? ERC20_FILTERED_TRANSFER_DEPTH - offset : limit)
 			.map(toTransfer),

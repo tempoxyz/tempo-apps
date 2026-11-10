@@ -6,6 +6,7 @@ import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { isTip20Address } from '#lib/domain/tip20'
 import {
+	ERC20_FILTERED_TRANSFER_DEPTH,
 	fetchErc20HoldersFromLogs,
 	fetchErc20TransfersFromLogs,
 } from '#lib/server/erc20'
@@ -320,13 +321,23 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 			// The Tempo API indexes TIP-20 transfers only; read a plain
 			// ERC-20's transfers from its Transfer logs.
 			if (!isTip20Address(data.address)) {
-				const { transfers, exhausted } = await fetchErc20TransfersFromLogs({
-					chainId,
-					token: data.address,
-					page: data.page,
-					limit: data.limit,
-					account: data.account,
-				})
+				const { transfers, exhausted, truncated } =
+					await fetchErc20TransfersFromLogs({
+						chainId,
+						token: data.address,
+						page: data.page,
+						limit: data.limit,
+						account: data.account,
+					})
+				// Past the filtered depth cap the count is a lower bound: report it
+				// as capped one row past the cap, so the UI shows it as "more than"
+				// and still lets every listed page be reached.
+				if (truncated)
+					return {
+						transfers,
+						total: ERC20_FILTERED_TRANSFER_DEPTH + 1,
+						totalCapped: true,
+					}
 				return {
 					transfers,
 					...resolveTotal({
