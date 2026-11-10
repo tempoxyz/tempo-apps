@@ -4,6 +4,12 @@ import type { Address, Hex } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { isTip20Address } from '#lib/domain/tip20'
+import {
+	ERC20_FILTERED_TRANSFER_DEPTH,
+	fetchErc20HoldersFromLogs,
+	fetchErc20TransfersFromLogs,
+} from '#lib/server/erc20'
 import { api } from '#lib/server/tempo-api'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -119,6 +125,8 @@ export type TokenHoldersApiResponse = {
 	total: number
 	totalCapped: boolean
 	totalBalance: string
+	/** Set when holders can't be computed (a plain ERC-20 past the log scan limit). */
+	unavailable?: boolean | undefined
 }
 
 const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {
@@ -134,6 +142,16 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 		try {
 			if (data.page * data.limit > COUNT_CAP) return EMPTY_HOLDERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
+
+			// The Tempo API indexes TIP-20 holders only; rebuild a plain
+			// ERC-20's holders from its Transfer logs.
+			if (!isTip20Address(data.address))
+				return await fetchErc20HoldersFromLogs({
+					chainId,
+					token: data.address,
+					page: data.page,
+					limit: data.limit,
+				})
 
 			const [details, page] = await Promise.all([
 				getTokenDetails(chainId, data.address),
@@ -299,6 +317,38 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 		try {
 			if (data.page * data.limit > COUNT_CAP) return EMPTY_TRANSFERS_RESPONSE
 			const chainId = getChainId(getWagmiConfig())
+
+			// The Tempo API indexes TIP-20 transfers only; read a plain
+			// ERC-20's transfers from its Transfer logs.
+			if (!isTip20Address(data.address)) {
+				const { transfers, exhausted, truncated, total } =
+					await fetchErc20TransfersFromLogs({
+						chainId,
+						token: data.address,
+						page: data.page,
+						limit: data.limit,
+						account: data.account,
+					})
+				// Past the filtered depth cap the count is a lower bound: report it
+				// as capped one row past the cap, so the UI shows it as "more than"
+				// and still lets every listed page be reached.
+				if (truncated)
+					return {
+						transfers,
+						total: ERC20_FILTERED_TRANSFER_DEPTH + 1,
+						totalCapped: true,
+					}
+				return {
+					transfers,
+					...resolveTotal({
+						exactCount: total,
+						page: data.page,
+						limit: data.limit,
+						rows: transfers.length,
+						exhausted,
+					}),
+				}
+			}
 
 			const [details, page] = await Promise.all([
 				getTokenDetails(chainId, data.address),

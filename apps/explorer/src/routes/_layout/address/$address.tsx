@@ -90,6 +90,7 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import * as Tip20 from '#lib/domain/tip20'
+import { useErc20Metadata } from '#lib/erc20'
 import {
 	addressTabSchema,
 	resolveAddressTab,
@@ -468,7 +469,7 @@ function RouteComponent() {
 	)
 	const {
 		accountType,
-		isToken,
+		isToken: isKnownToken,
 		tokenMetadata: initialTokenMetadata,
 		tokenLogoURI,
 		account,
@@ -480,15 +481,23 @@ function RouteComponent() {
 
 	Address.assert(address)
 	const isMounted = useIsMounted()
+	const isTip20 = Tip20.isTip20Address(address)
 	// Recover token identity in the browser if the loader's bounded RPC timed out.
 	const { data: queriedTokenMetadata } = Hooks.token.useGetMetadata({
 		token: address,
 		query: {
-			enabled: isMounted && isToken && !initialTokenMetadata,
+			enabled: isMounted && isKnownToken && !initialTokenMetadata,
 			initialData: initialTokenMetadata ?? undefined,
 		},
 	})
-	const tokenMetadata = initialTokenMetadata ?? queriedTokenMetadata
+	// Plain ERC-20s have no reserved prefix: probe their metadata after
+	// hydration and treat the address as a token when it answers.
+	const { data: erc20Metadata } = useErc20Metadata(address, {
+		enabled: isMounted && !isKnownToken,
+	})
+	const isToken = isKnownToken || erc20Metadata !== undefined
+	const tokenMetadata =
+		initialTokenMetadata ?? queriedTokenMetadata ?? erc20Metadata
 	const isZonePortal = isZonePortalAddress(address)
 	const hideSubmitBatches = isZonePortal && hideSubmitBatchesSearch === true
 	const [portalLive, setPortalLive] = React.useState(true)
@@ -534,7 +543,6 @@ function RouteComponent() {
 	}, [hash, isContract, tab, navigate, limit])
 
 	// Build visible tabs based on address type
-	const isTip20 = Tip20.isTip20Address(address)
 	const { data: validatorFees } = useQuery({
 		...validatorFeesQueryOptions(address),
 		enabled: isMounted && !isTip20,
@@ -662,7 +670,8 @@ function RouteComponent() {
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
-		isMounted && !isToken,
+		// Holdings is shown for every non-TIP-20 address, plain ERC-20s included.
+		isMounted && !isTip20,
 	)
 	// Warm the first page of every non-active tab once the active tab has had a
 	// moment to start loading, so switching tabs is instant. Runs once per
@@ -725,7 +734,7 @@ function RouteComponent() {
 					holdersQueryOptions({ address, page: 1, limit }),
 				)
 
-			if (!isToken && tab !== 'holdings')
+			if (!isTip20 && tab !== 'holdings')
 				void queryClient.prefetchQuery(balancesQueryOptions(address))
 		}, 500)
 
@@ -743,6 +752,7 @@ function RouteComponent() {
 		status,
 		tab,
 		visibleTabs,
+		isTip20,
 	])
 
 	return (
@@ -891,13 +901,16 @@ function AccountCardWithTimestamps(props: {
 				virtualAddressParts={virtualAddressParts}
 			/>
 			{!isTip20 && <ValidatorCard address={address} />}
-			{isToken && (
+			{/* Wallets need a symbol to add a token, and only TIP-20s can pay
+			fees, so a symbol-less ERC-20 has no wallet action to offer. */}
+			{isToken && (isTip20 || Boolean(tokenMetadata?.symbol)) && (
 				<ClientOnly fallback={null}>
 					<WalletActions
 						address={address}
 						symbol={tokenMetadata?.symbol}
 						decimals={tokenMetadata?.decimals}
 						image={Tip20.resolveLogoURI(tokenLogoURI)}
+						feeToken={isTip20}
 					/>
 				</ClientOnly>
 			)}
@@ -1470,6 +1483,7 @@ function SectionsWrapper(props: {
 		total: holdersTotal = 0,
 		totalCapped: holdersTotalCapped = false,
 		totalBalance: holdersTotalBalance = '0',
+		unavailable: holdersUnavailable = false,
 	} = holdersData ?? {}
 
 	// Only use after mount AND when the latest edge has loaded to avoid showing
@@ -2515,7 +2529,11 @@ function SectionsWrapper(props: {
 				return {
 					title: 'Holders',
 					totalItems:
-						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
+						holdersData && !holdersUnavailable
+							? holdersTotalCapped
+								? '100k+'
+								: holdersTotal
+							: undefined,
 					itemsLabel: 'holders',
 					content: (
 						<DataGrid
@@ -2567,7 +2585,11 @@ function SectionsWrapper(props: {
 							itemsPerPage={limit}
 							pagination="simple"
 							onPrefetchNextPage={prefetchHoldersNextPage}
-							emptyState="No holders found."
+							emptyState={
+								holdersUnavailable
+									? "Holders are unavailable: this token's balances can't be rebuilt from its transfer history."
+									: 'No holders found.'
+							}
 						/>
 					),
 				}

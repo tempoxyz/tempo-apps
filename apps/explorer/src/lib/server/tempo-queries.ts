@@ -1,11 +1,9 @@
 import type { Address, Hex } from 'ox'
+import { TRANSFER_TOPIC0 } from '#lib/domain/erc20'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
-
-const TRANSFER_TOPIC0 =
-	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
 type SortDirection = 'asc' | 'desc'
 

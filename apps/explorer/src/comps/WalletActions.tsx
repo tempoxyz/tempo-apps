@@ -100,13 +100,16 @@ export function WalletActions(
 								decimals={props.decimals}
 								image={props.image}
 							/>,
-							<SetAsFeeToken
-								key="fee"
-								address={props.address}
-								connectors={supported}
-								symbol={props.symbol}
-							/>,
-						]
+							// Only TIP-20 tokens can pay fees.
+							props.feeToken !== false && (
+								<SetAsFeeToken
+									key="fee"
+									address={props.address}
+									connectors={supported}
+									symbol={props.symbol}
+								/>
+							),
+						].filter(Boolean)
 					: [
 							<button
 								key="connect"
@@ -135,5 +138,7 @@ export declare namespace WalletActions {
 		symbol?: string | undefined
 		decimals?: number | undefined
 		image?: string | undefined
+		/** Offer setting it as the fee token; false for non-TIP-20 tokens. */
+		feeToken?: boolean | undefined
 	}
 }
