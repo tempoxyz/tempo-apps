@@ -321,7 +321,7 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 			// The Tempo API indexes TIP-20 transfers only; read a plain
 			// ERC-20's transfers from its Transfer logs.
 			if (!isTip20Address(data.address)) {
-				const { transfers, exhausted, truncated } =
+				const { transfers, exhausted, truncated, total } =
 					await fetchErc20TransfersFromLogs({
 						chainId,
 						token: data.address,
@@ -341,7 +341,7 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 				return {
 					transfers,
 					...resolveTotal({
-						exactCount: undefined,
+						exactCount: total,
 						page: data.page,
 						limit: data.limit,
 						rows: transfers.length,

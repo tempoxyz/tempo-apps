@@ -63,6 +63,8 @@ export async function fetchErc20TransfersFromLogs(params: {
 	let reachedDepth = false
 	// More filtered transfers exist past the depth cap than this view lists.
 	let truncated = false
+	// Exact transfer count, when known (the unfiltered view only).
+	let total: number | undefined
 	if (account) {
 		if (offset >= ERC20_FILTERED_TRANSFER_DEPTH)
 			return { exhausted: true, truncated: true, transfers: [] }
@@ -88,16 +90,30 @@ export async function fetchErc20TransfersFromLogs(params: {
 		truncated = reachedDepth && sorted.length > ERC20_FILTERED_TRANSFER_DEPTH
 		rows = sorted.slice(offset, end + 1)
 	} else {
-		// One extra row tells whether another page follows.
-		rows = (await transferLogs(chainId, token)
-			.orderBy('block_num', 'desc')
-			.orderBy('log_idx', 'desc')
-			.limit(limit + 1)
-			.offset(offset)
-			.execute()) as TransferLog[]
+		// One extra row tells whether another page follows; the count lets
+		// every page show the exact total rather than a capped one.
+		const [page, count] = await Promise.all([
+			transferLogs(chainId, token)
+				.orderBy('block_num', 'desc')
+				.orderBy('log_idx', 'desc')
+				.limit(limit + 1)
+				.offset(offset)
+				.execute() as Promise<TransferLog[]>,
+			tempoQueryBuilder(chainId)
+				.selectFrom('logs')
+				.select((eb) => eb.fn.countAll().as('count'))
+				.where('address', '=', token.toLowerCase() as Address.Address)
+				.where('topic0', '=', TRANSFER_TOPIC0)
+				.executeTakeFirst()
+				.catch(() => undefined),
+		])
+		rows = page
+		const value = Number(count?.count)
+		if (Number.isSafeInteger(value) && value >= 0) total = value
 	}
 
 	return {
+		total,
 		// Pagination stops at the filtered depth cap.
 		exhausted: reachedDepth || rows.length <= limit,
 		truncated,
@@ -123,14 +139,18 @@ const holdersCache = new Map<
 	{ promise: Promise<Erc20Holders>; timestamp: number }
 >()
 
+/** Holders checked one by one against balanceOf after the supply check. */
+const ERC20_HOLDER_VERIFY_LIMIT = 200
+
 /**
  * totalSupply minus the zero address's balance, at blockNumber when the RPC
- * still serves that state, otherwise at the latest block.
+ * still serves that state, otherwise at the latest block, with the block it
+ * was read at (undefined for the latest).
  */
 async function readSupplyOutsideZero(
 	token: Address.Address,
 	blockNumber: bigint | undefined,
-): Promise<bigint | undefined> {
+): Promise<{ value: bigint; blockNumber: bigint | undefined } | undefined> {
 	const client = getBatchedClient()
 	const read = (block: bigint | undefined) =>
 		Promise.all([
@@ -147,10 +167,42 @@ async function readSupplyOutsideZero(
 				args: [ZERO_ADDRESS],
 				blockNumber: block,
 			}),
-		]).then(([supply, zeroBalance]) => supply - zeroBalance)
+		]).then(([supply, zeroBalance]) => ({
+			value: supply - zeroBalance,
+			blockNumber: block,
+		}))
 	return read(blockNumber)
 		.catch(() => (blockNumber === undefined ? undefined : read(undefined)))
 		.catch(() => undefined)
+}
+
+/**
+ * Whether the largest holders' replayed balances equal balanceOf at
+ * blockNumber. A token that moves balances without emitting Transfer while
+ * keeping its supply passes the supply check but fails this one.
+ */
+async function holdersMatchChain(
+	token: Address.Address,
+	holders: ReadonlyArray<readonly [Address.Address, bigint]>,
+	blockNumber: bigint | undefined,
+): Promise<boolean> {
+	const client = getBatchedClient()
+	const checked = holders.slice(0, ERC20_HOLDER_VERIFY_LIMIT)
+	const onChain = await Promise.all(
+		checked.map(([address]) =>
+			readContract(client, {
+				address: token,
+				abi: erc20Abi,
+				functionName: 'balanceOf',
+				args: [address],
+				blockNumber,
+			}),
+		),
+	).catch(() => undefined)
+	return (
+		onChain !== undefined &&
+		checked.every(([, balance], index) => onChain[index] === balance)
+	)
 }
 
 /**
@@ -198,8 +250,12 @@ async function loadErc20Holders(
 			(rows.length > 0 ? BigInt(rows[rows.length - 1].block_num) : undefined),
 	)
 	if (onChain === undefined) return { unavailable: true }
-	const reconciled = reconcileHolders(balances, onChain)
+	const reconciled = reconcileHolders(balances, onChain.value)
 	if (!reconciled) return { unavailable: true }
+	if (
+		!(await holdersMatchChain(token, reconciled.holders, onChain.blockNumber))
+	)
+		return { unavailable: true }
 	return { unavailable: false, ...reconciled }
 }
 

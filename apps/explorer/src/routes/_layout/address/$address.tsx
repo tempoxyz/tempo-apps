@@ -908,6 +908,7 @@ function AccountCardWithTimestamps(props: {
 						symbol={tokenMetadata?.symbol}
 						decimals={tokenMetadata?.decimals}
 						image={Tip20.resolveLogoURI(tokenLogoURI)}
+						feeToken={isTip20}
 					/>
 				</ClientOnly>
 			)}
