@@ -170,22 +170,47 @@ const holdersCache = new Map<
  * the scan limit report holders as unavailable instead of showing stale ones.
  * That outcome is cached like any other, so large tokens aren't rescanned.
  */
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const
+
+/**
+ * totalSupply minus the zero address's balance, at blockNumber when the RPC
+ * still serves that state, otherwise at the latest block.
+ */
+async function readSupplyOutsideZero(
+	token: Address.Address,
+	blockNumber: bigint | undefined,
+): Promise<bigint | undefined> {
+	const client = getBatchedClient()
+	const read = (block: bigint | undefined) =>
+		Promise.all([
+			readContract(client, {
+				address: token,
+				abi: erc20Abi,
+				functionName: 'totalSupply',
+				blockNumber: block,
+			}),
+			readContract(client, {
+				address: token,
+				abi: erc20Abi,
+				functionName: 'balanceOf',
+				args: [ZERO_ADDRESS],
+				blockNumber: block,
+			}),
+		]).then(([supply, zeroBalance]) => supply - zeroBalance)
+	return read(blockNumber)
+		.catch(() => (blockNumber === undefined ? undefined : read(undefined)))
+		.catch(() => undefined)
+}
+
 async function loadErc20Holders(
 	chainId: number,
 	token: Address.Address,
 ): Promise<Erc20Holders> {
-	const [rows, totalSupply] = await Promise.all([
-		transferLogs(chainId, token)
-			.orderBy('block_num', 'asc')
-			.orderBy('log_idx', 'asc')
-			.limit(ERC20_HOLDER_SCAN_LIMIT)
-			.execute() as Promise<TransferLog[]>,
-		readContract(getBatchedClient(), {
-			address: token,
-			abi: erc20Abi,
-			functionName: 'totalSupply',
-		}).catch(() => undefined),
-	])
+	const rows = (await transferLogs(chainId, token)
+		.orderBy('block_num', 'asc')
+		.orderBy('log_idx', 'asc')
+		.limit(ERC20_HOLDER_SCAN_LIMIT)
+		.execute()) as TransferLog[]
 	if (rows.length === ERC20_HOLDER_SCAN_LIMIT) return { unavailable: true }
 
 	const balances = new Map<Address.Address, bigint>()
@@ -196,18 +221,26 @@ async function loadErc20Holders(
 		balances.set(from, (balances.get(from) ?? 0n) - value)
 		balances.set(to, (balances.get(to) ?? 0n) + value)
 	}
-	balances.delete('0x0000000000000000000000000000000000000000')
+	balances.delete(ZERO_ADDRESS)
 
 	// Balances replayed from Transfer logs are only trustworthy when they
 	// reconcile with the chain: a token that mints, burns or rebases without
-	// emitting Transfer leaves negative balances or a sum off totalSupply.
-	if (totalSupply === undefined) return { unavailable: true }
+	// emitting Transfer leaves negative balances or a sum off its supply.
+	// Supply counts any balance parked at the zero address (Uniswap V2's
+	// locked liquidity, transfers to 0x0 that don't burn), so compare against
+	// totalSupply minus balanceOf(0x0), read at the last replayed block so
+	// indexer lag behind the chain head can't fail the check.
+	const onChain = await readSupplyOutsideZero(
+		token,
+		rows.length > 0 ? BigInt(rows[rows.length - 1].block_num) : undefined,
+	)
+	if (onChain === undefined) return { unavailable: true }
 	let replayedSupply = 0n
 	for (const balance of balances.values()) {
 		if (balance < 0n) return { unavailable: true }
 		replayedSupply += balance
 	}
-	if (replayedSupply !== totalSupply) return { unavailable: true }
+	if (replayedSupply !== onChain) return { unavailable: true }
 
 	const holders = [...balances]
 		.filter(([, balance]) => balance > 0n)
