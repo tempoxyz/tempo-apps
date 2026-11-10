@@ -13,6 +13,13 @@ const TRANSFER_TOPIC0 =
 /** Most `Transfer` logs the holders view replays to rebuild balances. */
 export const ERC20_HOLDER_SCAN_LIMIT = 10_000
 
+/**
+ * Deepest row an account-filtered transfers view pages to. Each page reads
+ * both sides up to its end, so this bounds a request to about twice as many
+ * logs.
+ */
+export const ERC20_FILTERED_TRANSFER_DEPTH = 1_000
+
 type TransferLog = {
 	topic1: string | null
 	topic2: string | null
@@ -87,7 +94,12 @@ export async function fetchErc20TransfersFromLogs(params: {
 	const offset = (page - 1) * limit
 
 	let rows: TransferLog[]
+	let reachedDepth = false
 	if (account) {
+		if (offset >= ERC20_FILTERED_TRANSFER_DEPTH)
+			return { exhausted: true, transfers: [] }
+		const end = Math.min(offset + limit, ERC20_FILTERED_TRANSFER_DEPTH)
+		reachedDepth = end === ERC20_FILTERED_TRANSFER_DEPTH
 		// tidx rejects OR filters combined with ORDER BY/LIMIT, so read the
 		// sender and recipient sides separately (each up to the end of this
 		// page plus one row), then merge, de-duplicate self-transfers and slice.
@@ -98,15 +110,13 @@ export async function fetchErc20TransfersFromLogs(params: {
 				.where(column, '=', topic)
 				.orderBy('block_num', 'desc')
 				.orderBy('log_idx', 'desc')
-				.limit(offset + limit + 1)
+				.limit(end + 1)
 				.execute() as Promise<TransferLog[]>
 		const [sent, received] = await Promise.all([side('topic1'), side('topic2')])
 		const merged = new Map<string, TransferLog>()
 		for (const log of [...sent, ...received])
 			merged.set(`${log.tx_hash}-${log.log_idx}`, log)
-		rows = [...merged.values()]
-			.sort(compareLogsDesc)
-			.slice(offset, offset + limit + 1)
+		rows = [...merged.values()].sort(compareLogsDesc).slice(offset, end + 1)
 	} else {
 		// One extra row tells whether another page follows.
 		rows = (await transferLogs(chainId, token)
@@ -118,8 +128,11 @@ export async function fetchErc20TransfersFromLogs(params: {
 	}
 
 	return {
-		exhausted: rows.length <= limit,
-		transfers: rows.slice(0, limit).map(toTransfer),
+		// Pagination stops at the filtered depth cap.
+		exhausted: reachedDepth || rows.length <= limit,
+		transfers: rows
+			.slice(0, reachedDepth ? ERC20_FILTERED_TRANSFER_DEPTH - offset : limit)
+			.map(toTransfer),
 	}
 }
 
