@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { style } from '@tempoxyz/ds'
+import { useEffect, useRef } from 'react'
 import letters from '#lib/tempo-globe.json' with { type: 'json' }
 
 const TAU = Math.PI * 2
@@ -7,7 +8,6 @@ const DURATION = 1800
 const STAGGER = 110
 
 export function Sphere(): React.JSX.Element {
-	const [turn, setTurn] = useState(0)
 	const canvasRef = useRef<HTMLCanvasElement>(null)
 
 	useEffect(() => {
@@ -45,7 +45,7 @@ export function Sphere(): React.JSX.Element {
 				const restingAngle = -TAU * 0.395 - ring * 0.055
 				const angle = -TAU * (1 - eased) + restingAngle
 				const radiusY = 318 - ring * 34
-				context.globalAlpha = turn === 0 ? Math.min(1, progress * 5) : 1
+				context.globalAlpha = Math.min(1, progress * 5)
 				for (const letter of letters) {
 					context.beginPath()
 					for (const contour of letter) {
@@ -94,20 +94,51 @@ export function Sphere(): React.JSX.Element {
 			visible.removeEventListener('change', refresh)
 			document.removeEventListener('visibilitychange', refresh)
 		}
-	}, [turn])
+	}, [])
 
 	return (
-		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[194px] z-0 print:hidden hidden sm:block [@media(max-height:760px)]:hidden">
-			<div className="absolute top-0 w-full flex justify-center">
-				<button
-					type="button"
-					aria-label="Rotate Tempo globe rings"
-					onClick={() => setTurn((value) => value + 1)}
-					className="pointer-events-auto cursor-pointer w-[656px] max-w-[120vw] aspect-[656/285] rounded-body focus-visible:outline-focus focus-visible:outline-2 focus-visible:outline-offset-[-4px]"
-				>
-					<canvas ref={canvasRef} className="block size-full" />
-				</button>
+		<div {...styles.root()}>
+			<div {...styles.stage()}>
+				<div aria-hidden="true" {...styles.frame()}>
+					<canvas ref={canvasRef} {...styles.canvas()} />
+				</div>
 			</div>
 		</div>
 	)
+}
+
+namespace styles {
+	export const root = style({
+		bottom: '0',
+		display: 'none',
+		height: '194px !custom',
+		overflow: 'hidden',
+		pointerEvents: 'none',
+		position: 'fixed',
+		width: '100% !custom',
+		zIndex: '0 !custom',
+		'@media (width >= 640px)': { display: 'block' },
+		'@media print': { display: 'none' },
+		'@media (height <= 760px)': { display: 'none' },
+	})
+
+	export const stage = style({
+		display: 'flex',
+		justifyContent: 'center',
+		position: 'absolute',
+		top: '0',
+		width: '100% !custom',
+	})
+
+	export const frame = style({
+		aspectRatio: '656 / 285 !custom',
+		maxWidth: '120vw !custom',
+		width: '656px !custom',
+	})
+
+	export const canvas = style({
+		display: 'block',
+		height: '100% !custom',
+		width: '100% !custom',
+	})
 }

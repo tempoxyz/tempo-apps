@@ -2,7 +2,6 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
-import { Layout } from '#comps/Layout'
 import { NotFound } from '#comps/NotFound'
 import { initSentry } from '#lib/sentry'
 import { shouldRetryQuery } from '#lib/query-retry'
@@ -41,11 +40,8 @@ export const getRouter = () => {
 		context: { queryClient },
 		defaultPreload: 'viewport',
 		defaultPreloadDelay: 150,
-		defaultNotFoundComponent: () => (
-			<Layout>
-				<NotFound />
-			</Layout>
-		),
+		// Routes render inside `_layout`; the root route wraps unmatched URLs.
+		defaultNotFoundComponent: () => <NotFound />,
 	})
 
 	if (!router.isServer) {

@@ -4,12 +4,21 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Badge, Button, Menu, StatusIndicator } from '@tempoxyz/ds'
-import { ChevronDown, Layers, Play } from '@tempoxyz/ds/icons'
+import {
+	Button,
+	Container,
+	Menu,
+	StatusIndicator,
+	style,
+	Tooltip,
+	variants,
+} from '@tempoxyz/ds'
+import { ChevronDown } from '@tempoxyz/ds/icons'
 import * as React from 'react'
+import { cx } from 'zyzz'
 import { ExploreInput } from '#comps/ExploreInput'
+import { TempoWordmark } from '#comps/TempoWordmark'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
-import { cx } from '#lib/css'
 import { type TempoEnv, getTempoEnv, isTestnet } from '#lib/env'
 import {
 	buildExplorerNetworkHref,
@@ -18,57 +27,57 @@ import {
 	isExplorerNetworkPathPreservable,
 } from '#lib/explorer-network'
 import { useIsNotFoundPage } from '#lib/not-found'
+import { link } from '#styles/explorer'
+import FlaskConicalIcon from '~icons/lucide/flask-conical'
+import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
+	// The landing page shows the wordmark above its search instead.
+	const isHome = useRouterState({
+		select: (state) =>
+			(state.resolvedLocation?.pathname ?? state.location.pathname) === '/',
+	})
 
 	return (
-		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-20 print:justify-center">
-				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
-					<Link
-						to="/"
-						className="flex items-center gap-[12px] press-down py-[4px]"
-					>
-						<Header.TempoWordmark />
-					</Link>
+		<header {...styles.header()}>
+			<Container size="full" {...styles.bar()}>
+				<div {...styles.brand()}>
+					{!isHome && (
+						<Link to="/" {...styles.homeLink()}>
+							<TempoWordmark aria-label="Tempo" {...styles.wordmark()} />
+						</Link>
+					)}
 					<Header.NetworkBadge tempoEnv={tempoEnv} />
 				</div>
 				<Header.Search />
-				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
-					<span className="@max-[799px]:hidden flex">
-						<Button.Link
-							render={<Link to="/simulate" />}
-							variant="secondary"
-							size="small"
+				<div {...styles.actions()}>
+					<Tooltip.Root>
+						<Tooltip.Trigger
+							render={
+								<Button.Link
+									aria-label="Simulate transaction"
+									render={<Link to="/simulate" />}
+									size="small"
+									variant="secondary"
+								/>
+							}
 						>
-							<Play />
-							Simulate
-						</Button.Link>
-					</span>
-					<span className="@min-[800px]:hidden flex">
-						<Button.Link
-							render={<Link to="/simulate" />}
-							aria-label="Simulate transaction"
-							variant="secondary"
-							size="small"
-							shape="icon"
-						>
-							<Play />
-						</Button.Link>
-					</span>
-					<span className="@max-[399px]:hidden flex">
-						<Header.BlockNumber />
-					</span>
+							<FlaskConicalIcon aria-hidden />
+							<span {...styles.simulateLabel()}>Simulate</span>
+						</Tooltip.Trigger>
+						<Tooltip.Popup>Simulate transaction</Tooltip.Popup>
+					</Tooltip.Root>
+					<Header.BlockNumber />
 				</div>
-			</div>
+			</Container>
 			<Header.Search compact />
 		</header>
 	)
 }
 
 export namespace Header {
-	export function Search(props: { compact?: boolean }) {
+	export function Search(props: Search.Props): React.JSX.Element | null {
 		const { compact = false } = props
 		const router = useRouter()
 		const navigate = useNavigate()
@@ -87,103 +96,58 @@ export namespace Header {
 
 		if (!showSearch) return null
 
-		const exploreInput = (
-			<ExploreInput
-				value={inputValue}
-				onChange={setInputValue}
-				onActivate={({ value, type }) => {
-					if (type === 'block') {
-						navigate({ to: '/block/$id', params: { id: value } })
-						return
-					}
-					if (type === 'hash') {
-						navigate({ to: '/receipt/$hash', params: { hash: value } })
-						return
-					}
-					if (type === 'token') {
-						navigate({ to: '/token/$address', params: { address: value } })
-						return
-					}
-					if (type === 'address') {
-						navigate({
-							to: '/address/$address',
-							params: { address: value },
-						})
-						return
-					}
-				}}
-			/>
-		)
+		const onActivate: ExploreInput.Props['onActivate'] = (data) => {
+			if (data.type === 'block')
+				navigate({ to: '/block/$id', params: { id: data.value } })
+			else if (data.type === 'hash')
+				navigate({ to: '/receipt/$hash', params: { hash: data.value } })
+			else if (data.type === 'token')
+				navigate({ to: '/token/$address', params: { address: data.value } })
+			else
+				navigate({ to: '/address/$address', params: { address: data.value } })
+		}
 
 		if (compact)
 			return (
-				<div className="@min-[800px]:hidden sticky top-0 z-10 px-4 pt-[16px] pb-[12px] print:hidden">
+				<div {...styles.searchCompact()}>
 					<ExploreInput
 						wide
 						value={inputValue}
 						onChange={setInputValue}
-						onActivate={({ value, type }) => {
-							if (type === 'block') {
-								navigate({ to: '/block/$id', params: { id: value } })
-								return
-							}
-							if (type === 'hash') {
-								navigate({ to: '/receipt/$hash', params: { hash: value } })
-								return
-							}
-							if (type === 'token') {
-								navigate({ to: '/token/$address', params: { address: value } })
-								return
-							}
-							if (type === 'address') {
-								navigate({
-									to: '/address/$address',
-									params: { address: value },
-								})
-								return
-							}
-						}}
+						onActivate={onActivate}
 					/>
 				</div>
 			)
 
 		return (
 			<>
-				<div className="absolute left-0 right-0 justify-center flex z-1 h-0 items-center @max-[1239px]:hidden print:hidden">
-					{exploreInput}
+				<div {...styles.searchCentered()}>
+					<ExploreInput
+						value={inputValue}
+						onChange={setInputValue}
+						onActivate={onActivate}
+					/>
 				</div>
-				<div className="flex-1 flex justify-center px-[24px] @max-[799px]:hidden @min-[1240px]:hidden print:hidden">
+				<div {...styles.searchInline()}>
 					<ExploreInput
 						wide
 						value={inputValue}
 						onChange={setInputValue}
-						onActivate={({ value, type }) => {
-							if (type === 'block') {
-								navigate({ to: '/block/$id', params: { id: value } })
-								return
-							}
-							if (type === 'hash') {
-								navigate({ to: '/receipt/$hash', params: { hash: value } })
-								return
-							}
-							if (type === 'token') {
-								navigate({ to: '/token/$address', params: { address: value } })
-								return
-							}
-							if (type === 'address') {
-								navigate({
-									to: '/address/$address',
-									params: { address: value },
-								})
-								return
-							}
-						}}
+						onActivate={onActivate}
 					/>
 				</div>
 			</>
 		)
 	}
 
+	export namespace Search {
+		export interface Props {
+			/** The full-width row shown under the bar on narrow headers. */
+			compact?: boolean | undefined
+		}
+	}
+
+	/** Network switcher: a TDS menu of links to the other explorers. */
 	export function NetworkBadge(props: NetworkBadge.Props): React.JSX.Element {
 		const { tempoEnv } = props
 		const activeOption = getActiveExplorerNetworkOption(tempoEnv)
@@ -199,42 +163,42 @@ export namespace Header {
 		return (
 			<Menu.Root>
 				<Menu.Trigger
-					render={<Button variant="secondary" size="small" />}
-					title={`Network: ${activeOption.label}`}
+					render={
+						<Button
+							aria-label={`Network: ${activeOption.label}`}
+							size="small"
+							variant="secondary"
+							{...styles.networkTrigger()}
+						/>
+					}
 				>
-					<StatusIndicator intent={networkIntent(activeOption.dotClassName)}>
-						<span className="text-primary">{activeOption.label}</span>
+					<StatusIndicator intent={activeOption.dotTone}>
+						{activeOption.label}
 					</StatusIndicator>
-					<ChevronDown />
+					<ChevronDown {...styles.networkChevron()} />
 				</Menu.Trigger>
-				<Menu.Popup align="start" sideOffset={8} aria-label="Tempo network">
-					{EXPLORER_NETWORK_OPTIONS.map((option) => {
-						const isActive = option.env === activeOption.env
-						return (
-							<Menu.LinkItem
-								key={option.env}
-								href={buildExplorerNetworkHref(option.host, currentPath, {
-									fallbackToHome:
-										isNotFoundPage &&
-										!isExplorerNetworkPathPreservable(currentPath),
-								})}
-								aria-current={isActive ? 'page' : undefined}
-							>
-								<StatusIndicator intent={networkIntent(option.dotClassName)}>
-									<span className={cx(isActive && 'text-primary')}>
-										{option.label}
-									</span>
-								</StatusIndicator>
-							</Menu.LinkItem>
-						)
-					})}
+				<Menu.Popup align="start" size="small">
+					{EXPLORER_NETWORK_OPTIONS.map((option) => (
+						<Menu.LinkItem
+							key={option.env}
+							aria-current={
+								option.env === activeOption.env ? 'page' : undefined
+							}
+							closeOnClick
+							href={buildExplorerNetworkHref(option.host, currentPath, {
+								fallbackToHome:
+									isNotFoundPage &&
+									!isExplorerNetworkPathPreservable(currentPath),
+							})}
+						>
+							<StatusIndicator intent={option.dotTone}>
+								{option.label}
+							</StatusIndicator>
+						</Menu.LinkItem>
+					))}
 				</Menu.Popup>
 			</Menu.Root>
 		)
-	}
-
-	function networkIntent(dotClassName: string): 'positive' | 'warning' {
-		return dotClassName === 'bg-positive' ? 'positive' : 'warning'
 	}
 
 	export namespace NetworkBadge {
@@ -243,78 +207,173 @@ export namespace Header {
 		}
 	}
 
-	export function BlockNumber(props: BlockNumber.Props) {
-		const { initial, className } = props
+	/** Live block number; hidden when the header is narrower than 400px. */
+	export function BlockNumber(): React.JSX.Element {
 		const resolvedPathname = useRouterState({
 			select: (state) =>
 				state.resolvedLocation?.pathname ?? state.location.pathname,
 		})
-		const optimisticBlockNumber = useAnimatedBlockNumber(initial)
-		const liveBlockNumber = useLiveBlockNumber(initial)
+		const optimisticBlockNumber = useAnimatedBlockNumber()
+		const liveBlockNumber = useLiveBlockNumber()
 		const blockNumber =
 			resolvedPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
 		const isReady = blockNumber != null
 
 		return (
-			<Badge
-				variant="outlined"
-				size="small"
-				render={
-					<Link
-						disabled={!isTestnet()}
-						to="/block/$id"
-						params={{
-							id: blockNumber != null ? String(blockNumber) : 'latest',
-						}}
-						title="View latest block"
-					/>
+			<Link
+				disabled={!isTestnet()}
+				to="/block/$id"
+				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
+				aria-label={
+					blockNumber != null ? `Latest block ${blockNumber}` : 'Latest block'
 				}
-				className={cx(
-					className,
-					'origin-right transition-[opacity,scale] duration-[80ms]',
-					isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
-				)}
+				{...styles.blockNumber({ ready: isReady })}
 			>
-				<Layers />
-				<span className="tabular-nums min-w-[6ch] text-primary">
+				<SquareSquare aria-hidden {...cx(styles.blockNumberIcon(), link())} />
+				<span {...styles.blockNumberValue()}>
 					{blockNumber != null ? String(blockNumber) : '…'}
 				</span>
-			</Badge>
+			</Link>
 		)
 	}
+}
 
-	export namespace BlockNumber {
-		export interface Props {
-			initial?: bigint
-			className?: string | undefined
-		}
-	}
+namespace styles {
+	export const header = style({
+		containerType: 'inline-size',
+		position: 'relative',
+		zIndex: '1 !custom',
+	})
 
-	export function TempoWordmark(props: TempoWordmark.Props) {
-		const { className } = props
+	export const bar = style({
+		alignItems: 'center',
+		display: 'flex',
+		justifyContent: 'space-between',
+		minHeight: '64',
+		paddingTop: '32',
+		position: 'relative',
+		userSelect: 'none',
+		zIndex: '20 !custom',
+		'@container (width >= 800px) and (width < 1239px)': {
+			height: '88px !custom',
+		},
+		'@container (width >= 1240px)': { paddingTop: '48' },
+		'@media print': { justifyContent: 'center' },
+	})
 
-		const baseClass = 'h-6 w-auto fill-current text-primary'
-		const classes = className ? `${baseClass} ${className}` : baseClass
+	export const brand = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '12',
+		height: '32',
+		position: 'relative',
+		zIndex: '1 !custom',
+	})
 
-		return (
-			<svg
-				aria-label="Tempo"
-				viewBox="0 0 107 25"
-				className={classes}
-				role="img"
-			>
-				<path d="M8.10464 23.7163H1.82475L7.64513 5.79356H0.201172L1.82475 0.540352H22.5637L20.9401 5.79356H13.8944L8.10464 23.7163Z" />
-				<path d="M31.474 23.7163H16.5861L24.0607 0.540352H38.8873L37.4782 4.95923H28.8701L27.3078 9.93433H35.6402L34.231 14.2914H25.8681L24.3057 19.2974H32.8525L31.474 23.7163Z" />
-				<path d="M38.2124 23.7163H33.2192L40.7244 0.540352H49.0567L48.781 13.0245L56.8989 0.540352H66.0277L58.5531 23.7163H52.3039L57.3584 7.86395L46.9736 23.7163H43.267L43.4201 7.80214L38.2124 23.7163Z" />
-				<path d="M73.057 4.83563L70.6369 12.3137H71.3108C72.8425 12.3137 74.1189 11.9532 75.14 11.2322C76.1612 10.4906 76.8249 9.43991 77.1312 8.08025C77.3967 6.90601 77.2538 6.07167 76.7023 5.57725C76.1509 5.08284 75.2319 4.83563 73.9453 4.83563H73.057ZM66.9915 23.7163H60.7116L68.1862 0.540352H75.814C77.5703 0.540352 79.0816 0.828764 80.3478 1.40559C81.6344 1.96181 82.5738 2.76524 83.166 3.81588C83.7787 4.84592 83.9829 6.05107 83.7787 7.43133C83.5132 9.2442 82.8189 10.8408 81.6956 12.221C80.5724 13.6013 79.1122 14.6725 77.315 15.4347C75.5383 16.1764 73.5471 16.5472 71.3415 16.5472H69.289L66.9915 23.7163Z" />
-				<path d="M98.747 22.233C96.664 23.4691 94.4481 24.0871 92.0996 24.0871H92.0383C89.9552 24.0871 88.1989 23.6236 86.7693 22.6965C85.3602 21.7489 84.3493 20.4717 83.7366 18.8648C83.1443 17.2579 83.0014 15.4966 83.3077 13.5807C83.6957 11.1704 84.5841 8.94549 85.9728 6.90601C87.3616 4.86653 89.0975 3.23906 91.1805 2.02361C93.2636 0.808164 95.4897 0.200439 97.8587 0.200439H97.9199C100.085 0.200439 101.872 0.663958 103.281 1.591C104.71 2.51803 105.701 3.78498 106.252 5.39185C106.824 6.97811 106.947 8.76008 106.62 10.7378C106.232 13.0657 105.343 15.2596 103.955 17.3197C102.566 19.3592 100.83 20.997 98.747 22.233ZM90.0777 18.2468C90.6292 19.2974 91.589 19.8227 92.9573 19.8227H93.0186C94.1418 19.8227 95.1833 19.4004 96.1432 18.5558C97.1235 17.6905 97.9506 16.5369 98.6245 15.0948C99.3189 13.6528 99.8294 12.0459 100.156 10.2742C100.463 8.54377 100.34 7.15322 99.7886 6.10257C99.2372 5.03133 98.2875 4.49571 96.9397 4.49571H96.8784C95.8369 4.49571 94.826 4.92833 93.8457 5.79356C92.8858 6.6588 92.0485 7.82274 91.3337 9.2854C90.6189 10.7481 90.0982 12.3343 89.7714 14.0442C89.4446 15.7747 89.5468 17.1755 90.0777 18.2468Z" />
-			</svg>
-		)
-	}
+	export const homeLink = style({
+		alignItems: 'center',
+		color: 'content.primary',
+		display: 'flex',
+		paddingBlock: '4',
+	})
 
-	export namespace TempoWordmark {
-		export interface Props {
-			className?: string
-		}
-	}
+	export const wordmark = style({
+		height: '24',
+		width: 'auto !custom',
+	})
+
+	export const actions = style({
+		alignItems: 'center',
+		display: 'flex',
+		gap: '8',
+		position: 'relative',
+		zIndex: '1 !custom',
+		'@media print': { display: 'none' },
+	})
+
+	// Below 800px only the Button's icon shows.
+	export const simulateLabel = style({
+		'@container (width < 799px)': { display: 'none' },
+	})
+
+	export const searchCompact = style({
+		paddingBottom: '12',
+		paddingInline: '16',
+		paddingTop: '16',
+		position: 'sticky',
+		top: '0',
+		zIndex: '10 !custom',
+		'@container (width >= 800px)': { display: 'none' },
+		'@media print': { display: 'none' },
+	})
+
+	export const searchCentered = style({
+		alignItems: 'center',
+		display: 'flex',
+		height: '0',
+		justifyContent: 'center',
+		left: '0',
+		position: 'absolute',
+		right: '0',
+		zIndex: '1 !custom',
+		'@container (width < 1239px)': { display: 'none' },
+		'@media print': { display: 'none' },
+	})
+
+	export const searchInline = style({
+		display: 'flex',
+		flex: 1,
+		justifyContent: 'center',
+		paddingInline: '24',
+		'@container (width < 799px)': { display: 'none' },
+		'@container (width >= 1240px)': { display: 'none' },
+		'@media print': { display: 'none' },
+	})
+
+	export const networkTrigger = style({ flexShrink: 0 })
+
+	export const networkChevron = style({
+		color: 'content.secondary',
+		flexShrink: 0,
+		transitionDuration: '100',
+		transitionProperty: 'rotate',
+		transitionTimingFunction: 'in-out',
+		selectors: { '[data-popup-open] &': { rotate: '180deg' } },
+	})
+
+	export const blockNumber = variants({
+		base: {
+			alignItems: 'center',
+			color: 'content.primary',
+			display: 'flex',
+			gap: '8',
+			textDecorationLine: 'none',
+			transformOrigin: 'right',
+			transitionDuration: '100',
+			transitionProperty: 'opacity, scale',
+			transitionTimingFunction: 'in-out',
+			typography: 'body.b2',
+			'@container (width < 399px)': { display: 'none' },
+		},
+		defaultVariants: { ready: false },
+		variants: {
+			ready: {
+				true: { opacity: '1 !custom', scale: '1 !custom' },
+				false: { opacity: '0 !custom', scale: 'enter' },
+			},
+		},
+	})
+
+	export const blockNumberIcon = style({
+		flexShrink: 0,
+		height: '16',
+		width: '16',
+	})
+
+	export const blockNumberValue = style({
+		display: 'inline-block',
+		fontVariantNumeric: 'tabular-nums',
+		minWidth: '6ch !custom',
+		whiteSpace: 'nowrap',
+	})
 }

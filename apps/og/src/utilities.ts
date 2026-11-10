@@ -1,54 +1,73 @@
 import { Hex } from 'ox'
+import { color } from '#brand.tsx'
 
 const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
 
-interface ImageCache {
-	receiptRings: ArrayBuffer
-	tempoLockup: ArrayBuffer
-	nullIcon: ArrayBuffer
+/** Bundled brand art as data URLs, ready for `img` sources. */
+export interface Images {
+	logo: string
+	icons: {
+		blocks: string
+		tokens: string
+		transactions: string
+		search: string
+	}
 }
 
-type Font = {
-	name: string
-	data: ArrayBuffer
-	weight: 300 | 400 | 500 | 600
-	style: 'normal'
-}
+type Font = { name: string; data: ArrayBuffer; style: 'normal' }
+
+// TDS ships both faces as variable fonts; Takumi maps every weight onto the
+// `wght` axis, so one file per family covers 450, 500, 550 and 600.
+const FONTS = [
+	['Inter', 'Inter-Variable.woff2'],
+	['Geist Mono', 'GeistMono-Variable.woff2'],
+] as const
+
+// TDS icons, painted in the card's colors.
+const ICONS = [
+	['blocks', 'Layers.svg', color.foreground],
+	['tokens', 'Coins.svg', color.foreground],
+	['transactions', 'Receipt.svg', color.foreground],
+	['search', 'Search.svg', color.tertiary],
+] as const
+
 let fontCache: Font[] | null = null
 let fontsInFlight: Promise<Font[]> | null = null
-let imageCache: ImageCache | null = null
-let imagesInFlight: Promise<ImageCache> | null = null
+let imageCache: Images | null = null
+let imagesInFlight: Promise<Images> | null = null
 
 export const isTxHash = (value: string): boolean =>
 	Hex.validate(value) && Hex.size(value as Hex.Hex) === 32
+
+/** A block number (at most 20 digits, the uint64 range) or a 32-byte block hash. */
+export const isBlockId = (value: string): boolean =>
+	/^\d{1,20}$/.test(value) || isTxHash(value)
 
 export const toBase64DataUrl = (
 	data: ArrayBuffer,
 	mime = 'image/webp',
 ): string => `data:${mime};base64,${Buffer.from(data).toString('base64')}`
 
+async function asset(
+	env: Cloudflare.Env,
+	path: string,
+	kind = 'asset',
+): Promise<Response> {
+	const response = await env.ASSETS.fetch(new Request(`https://assets/${path}`))
+	if (!response.ok)
+		throw new Error(`Failed to load ${kind} ${path}: ${response.status}`)
+	return response
+}
+
 export async function loadFonts(env: Cloudflare.Env): Promise<Font[]> {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
 		fontsInFlight = Promise.all(
-			[
-				['Pilat', 'Pilat-Regular.woff2', 400],
-				['Pilat', 'Pilat-Demi.woff2', 500],
-				['Pilat', 'Pilat-Demi.woff2', 600],
-				['JetBrains Mono', 'JetBrainsMono-Light.woff2', 300],
-			].map(async ([name, file, weight]) => {
-				const response = await env.ASSETS.fetch(
-					new Request(`https://assets/fonts/${file}`),
-				)
-				if (!response.ok)
-					throw new Error(`Failed to load font ${file}: ${response.status}`)
-				return {
-					name,
-					weight,
-					style: 'normal',
-					data: await response.arrayBuffer(),
-				} as Font
-			}),
+			FONTS.map(async ([name, file]) => ({
+				name,
+				style: 'normal' as const,
+				data: await (await asset(env, `fonts/${file}`, 'font')).arrayBuffer(),
+			})),
 		)
 			.then((fonts) => {
 				fontCache = fonts
@@ -61,21 +80,28 @@ export async function loadFonts(env: Cloudflare.Env): Promise<Font[]> {
 	return fontsInFlight
 }
 
-export async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
+const svgDataUrl = (svg: string) =>
+	`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
+
+export async function loadImages(env: Cloudflare.Env): Promise<Images> {
 	if (imageCache) return imageCache
 	if (!imagesInFlight)
 		imagesInFlight = Promise.all([
-			env.ASSETS.fetch(new Request('https://assets/tempo-lockup.svg')),
-			env.ASSETS.fetch(new Request('https://assets/null.webp')),
-			env.ASSETS.fetch(new Request('https://assets/bg-template.webp')),
+			asset(env, 'tempo-lockup.svg').then((response) => response.text()),
+			Promise.all(
+				ICONS.map(async ([name, file, fill]) => {
+					const svg = await (await asset(env, `icons/${file}`)).text()
+					return [
+						name,
+						svgDataUrl(svg.replaceAll('fill="black"', `fill="${fill}"`)),
+					] as const
+				}),
+			),
 		])
-			.then(async ([logo, icon, rings]) => {
-				if (!logo.ok || !icon.ok || !rings.ok)
-					throw new Error('Unable to load brand assets')
+			.then(([logo, icons]) => {
 				imageCache = {
-					receiptRings: await rings.arrayBuffer(),
-					tempoLockup: await logo.arrayBuffer(),
-					nullIcon: await icon.arrayBuffer(),
+					logo: svgDataUrl(logo),
+					icons: Object.fromEntries(icons) as Images['icons'],
 				}
 				return imageCache
 			})
