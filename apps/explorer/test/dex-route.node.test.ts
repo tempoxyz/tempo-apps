@@ -281,6 +281,15 @@ describe('Stablecoin DEX route', () => {
 		await expect(
 			getDexRoute({ from: attacker, to: ROOT, amount: '1' }),
 		).rejects.toThrow('The Stablecoin DEX only supports TIP-20 tokens.')
+		const prefixOnly = '0x20c000000f000000000000000000000000000001'
+		await expect(
+			getDexLegDepth({
+				from: prefixOnly,
+				to: USDT,
+				tick: 20,
+				blockNumber: '100',
+			}),
+		).rejects.toThrow('The Stablecoin DEX only supports TIP-20 tokens.')
 		expect(getMetadata).not.toHaveBeenCalled()
 	})
 	it('rejects out-of-range token decimals before scaling depth', async () => {

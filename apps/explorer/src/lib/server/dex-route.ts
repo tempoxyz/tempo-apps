@@ -286,9 +286,12 @@ export const fetchDexLegDepth = createServerFn({ method: 'POST' })
  */
 export const maxTokenDecimals = 18
 
+/** TIP-20 tokens live under a fixed 12-byte prefix followed by an 8-byte id. */
+const tip20Namespace = /^0x20c00{20}[0-9a-f]{16}$/i
+
 /** The Stablecoin DEX only lists TIP-20 tokens. */
 function assertTip20(address: string): void {
-	if (!isTip20Address(address))
+	if (!isTip20Address(address) || !tip20Namespace.test(address))
 		throw new Error('The Stablecoin DEX only supports TIP-20 tokens.')
 }
 
