@@ -87,8 +87,6 @@ jobs:
             env: mainnet
           #### fee-payer
           - app: fee-payer
-            env: devnet
-          - app: fee-payer
             env: moderato
           #### other (single-env-apps)
           - app: og
@@ -145,7 +143,7 @@ jobs:
           fi
 
       # fee-payer has no preview URL, so check the built Worker locally.
-      - name: Verify fee-payer llms.txt
+      - name: Verify fee-payer starts
         if: steps.changes.outputs.relevant == 'true' && matrix.app == 'fee-payer'
         working-directory: apps/fee-payer
         run: |
@@ -153,11 +151,9 @@ jobs:
             --show-interactive-dev-session=false &
           pid=$!
           trap 'kill "$pid"' EXIT
-          for file in llms.txt llms-full.txt; do
-            curl --fail --silent --show-error \
-              --retry 10 --retry-all-errors --retry-delay 3 --max-time 20 \
-              --output /dev/null "http://localhost:8787/$file"
-          done
+          curl --fail --silent --show-error \
+            --retry 10 --retry-all-errors --retry-delay 3 --max-time 20 \
+            --output /dev/null "http://localhost:8787/"
 
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'

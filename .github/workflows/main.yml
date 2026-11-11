@@ -43,7 +43,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: fee-payer
-      environments: '["devnet","moderato","mainnet"]'
+      environments: '["moderato","mainnet"]'
 
   deploy-contract-verification:
     permissions:
