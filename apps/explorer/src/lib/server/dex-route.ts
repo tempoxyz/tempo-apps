@@ -17,6 +17,7 @@ import {
 	type DexRouteInput,
 	type DexToken,
 } from '#lib/dex-route'
+import { isTip20Address } from '#lib/domain/tip20'
 import { zAddress } from '#lib/zod'
 import { getBatchedClient } from '#wagmi.config'
 import { readBlockNumber } from '#lib/server/block-number'
@@ -65,6 +66,8 @@ function reverted(error: unknown): ContractFunctionRevertedError | undefined {
 export async function getDexRoute(
 	input: DexRouteInput,
 ): Promise<DexRouteSnapshot> {
+	assertTip20(input.from)
+	assertTip20(input.to)
 	const client = getBatchedClient()
 	const blockNumber = await readBlockNumber(client)
 	const cache = new Map<string, Promise<DexToken>>()
@@ -72,12 +75,12 @@ export async function getDexRoute(
 		const key = address.toLowerCase()
 		let value = cache.get(key)
 		if (!value) {
-			value = client.token
-				.getMetadata({ token: address, blockNumber })
+			value = Promise.resolve(assertTip20(address))
+				.then(() => client.token.getMetadata({ token: address, blockNumber }))
 				.then((token) => ({
 					address,
 					symbol: token.symbol,
-					decimals: token.decimals,
+					decimals: checkedDecimals(token.decimals),
 					quoteToken: token.quoteToken,
 				}))
 			cache.set(key, value)
@@ -213,6 +216,8 @@ export type DexDepthInput = z.infer<typeof depthInputSchema>
 export async function getDexLegDepth(
 	input: DexDepthInput,
 ): Promise<DexDepthLevel[]> {
+	assertTip20(input.from)
+	assertTip20(input.to)
 	const client = getBatchedClient()
 	const blockNumber = BigInt(input.blockNumber)
 	const dex = {
@@ -221,8 +226,12 @@ export async function getDexLegDepth(
 		blockNumber,
 	} as const
 	const [from, to, minTick, maxTick, spacing] = await Promise.all([
-		client.token.getMetadata({ token: input.from, blockNumber }),
-		client.token.getMetadata({ token: input.to, blockNumber }),
+		client.token
+			.getMetadata({ token: input.from, blockNumber })
+			.then(withCheckedDecimals),
+		client.token
+			.getMetadata({ token: input.to, blockNumber })
+			.then(withCheckedDecimals),
 		client.readContract({ ...dex, functionName: 'MIN_TICK' }),
 		client.readContract({ ...dex, functionName: 'MAX_TICK' }),
 		client.readContract({ ...dex, functionName: 'TICK_SPACING' }),
@@ -270,6 +279,33 @@ export async function getDexLegDepth(
 export const fetchDexLegDepth = createServerFn({ method: 'POST' })
 	.inputValidator((input) => depthInputSchema.parse(input))
 	.handler(({ data }) => withDeadline(getDexLegDepth(data)))
+
+/**
+ * TIP-20 tokens have 6 decimals; allow some headroom but never let token
+ * metadata drive unbounded bigint scaling or formatting.
+ */
+export const maxTokenDecimals = 18
+
+/** The Stablecoin DEX only lists TIP-20 tokens. */
+function assertTip20(address: string): void {
+	if (!isTip20Address(address))
+		throw new Error('The Stablecoin DEX only supports TIP-20 tokens.')
+}
+
+function checkedDecimals(decimals: number): number {
+	if (
+		!Number.isSafeInteger(decimals) ||
+		decimals < 0 ||
+		decimals > maxTokenDecimals
+	)
+		throw new Error('Unsupported token decimals.')
+	return decimals
+}
+
+function withCheckedDecimals<T extends { decimals: number }>(token: T): T {
+	checkedDecimals(token.decimals)
+	return token
+}
 
 function rescale(value: bigint, from: number, to: number): bigint {
 	return to >= from

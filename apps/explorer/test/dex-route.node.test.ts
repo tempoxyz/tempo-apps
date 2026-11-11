@@ -268,4 +268,40 @@ describe('Stablecoin DEX route', () => {
 			[20, '1'],
 		])
 	})
+	it('rejects non-TIP-20 tokens before reading metadata', async () => {
+		const attacker = '0x1111111111111111111111111111111111111111'
+		await expect(
+			getDexLegDepth({
+				from: attacker,
+				to: USDT,
+				tick: 20,
+				blockNumber: '100',
+			}),
+		).rejects.toThrow('The Stablecoin DEX only supports TIP-20 tokens.')
+		await expect(
+			getDexRoute({ from: attacker, to: ROOT, amount: '1' }),
+		).rejects.toThrow('The Stablecoin DEX only supports TIP-20 tokens.')
+		expect(getMetadata).not.toHaveBeenCalled()
+	})
+	it('rejects out-of-range token decimals before scaling depth', async () => {
+		const previous = readContract.getMockImplementation()
+		readContract.mockImplementation(async (request) => {
+			if (request.functionName === 'TICK_SPACING') return 10
+			if (request.functionName === 'getTickLevel') return [0n, 0n, 1_000_000n]
+			return previous?.(request)
+		})
+		for (const decimals of [100_000_000, 19, -1, 1.5]) {
+			getMetadata.mockImplementation(async ({ token }) => ({
+				symbol: 'X',
+				decimals: token === OUSD ? decimals : 6,
+				quoteToken: undefined,
+			}))
+			await expect(
+				getDexLegDepth({ from: OUSD, to: USDT, tick: 20, blockNumber: '100' }),
+			).rejects.toThrow('Unsupported token decimals.')
+			await expect(
+				getDexRoute({ from: OUSD, to: USDT, amount: '1' }),
+			).rejects.toThrow('Unsupported token decimals.')
+		}
+	})
 })
