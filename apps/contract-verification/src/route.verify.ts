@@ -94,6 +94,39 @@ function sanitizeJsonValue(value: unknown): unknown {
 	return value
 }
 
+/** Upper bounds on the shape of compiler settings accepted from callers. */
+const MAX_SETTINGS_DEPTH = 64
+const MAX_SETTINGS_NODES = 100_000
+
+/**
+ * Checks compiler settings against depth and node limits without recursion,
+ * so oversized input is rejected before anything is persisted.
+ */
+function exceedsSettingsLimits(root: unknown): boolean {
+	const pending: Array<{ value: unknown; depth: number }> = [
+		{ value: root, depth: 0 },
+	]
+	let visited = 0
+
+	while (pending.length > 0) {
+		const current = pending.pop()
+		if (!current) break
+		visited += 1
+		if (current.depth > MAX_SETTINGS_DEPTH || visited > MAX_SETTINGS_NODES)
+			return true
+
+		if (typeof current.value === 'object' && current.value !== null) {
+			const children = Array.isArray(current.value)
+				? current.value
+				: Object.values(current.value)
+			for (const child of children)
+				pending.push({ value: child, depth: current.depth + 1 })
+		}
+	}
+
+	return false
+}
+
 function sanitizeCompilerSettings<T extends object>(settings: T): T {
 	return sanitizeJsonValue(settings) as T
 }
@@ -160,6 +193,9 @@ verifyRoute
 
 	// POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
 	.post('/:chainId/:address', async (context) => {
+		// Set while this request holds a pending job row that has not been handed
+		// to a runner, so an unexpected failure can release it.
+		let reservedJobId: string | undefined
 		try {
 			const { chainId: _chainId, address } = context.req.param()
 			let body: unknown
@@ -219,6 +255,16 @@ verifyRoute
 				)
 			}
 			Hex.assert(address)
+
+			if (exceedsSettingsLimits(parsedBody.data.stdJsonInput.settings)) {
+				return sourcifyError(
+					context,
+					400,
+					'invalid_settings',
+					`stdJsonInput.settings exceeds the maximum nesting depth (${MAX_SETTINGS_DEPTH}) or size (${MAX_SETTINGS_NODES} values)`,
+				)
+			}
+			const verificationInput = sanitizeVerificationInput(parsedBody.data)
 
 			const { contractIdentifier } = parsedBody.data
 
@@ -333,6 +379,7 @@ verifyRoute
 				contractAddress: addressBytes,
 				verificationEndpoint: '/v2/verify',
 			})
+			reservedJobId = jobId
 
 			// Check if another job was created concurrently (first one wins)
 			const concurrentJobs = await db
@@ -357,8 +404,6 @@ verifyRoute
 				return context.json({ verificationId: firstJob.id }, 202)
 			}
 
-			const verificationInput = sanitizeVerificationInput(parsedBody.data)
-
 			// Dispatch verification to a per-job Durable Object for durable background execution
 			const doId = context.env.VERIFICATION_JOB_RUNNER.idFromName(jobId)
 			const runner = context.env.VERIFICATION_JOB_RUNNER.get(doId)
@@ -369,6 +414,7 @@ verifyRoute
 					address,
 					...verificationInput,
 				})
+				reservedJobId = undefined
 			} catch (enqueueError) {
 				logger.error('job_enqueue_failed', {
 					error: formatError(enqueueError),
@@ -395,6 +441,18 @@ verifyRoute
 				chainId,
 				address,
 			})
+			if (reservedJobId) {
+				try {
+					await getDb(context.env.CONTRACTS_DB)
+						.delete(verificationJobsTable)
+						.where(eq(verificationJobsTable.id, reservedJobId))
+				} catch (cleanupError) {
+					logger.error('verify_contract_cleanup_failed', {
+						error: formatError(cleanupError),
+						jobId: reservedJobId,
+					})
+				}
+			}
 			return sourcifyError(
 				context,
 				500,
