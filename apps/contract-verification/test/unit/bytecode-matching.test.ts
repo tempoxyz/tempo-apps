@@ -798,7 +798,7 @@ describe('solar output', () => {
 	const compiled =
 		solarFixture.solarCompileOutput.contracts['src/WithImmutables.sol']
 			.WithImmutables
-	const runtime = `0x$compiled.evm.deployedBytecode.object`
+	const runtime = `0x${compiled.evm.deployedBytecode.object}`
 	const immutableReferences = compiled.evm.deployedBytecode
 		.immutableReferences as ImmutableReferences
 
@@ -807,7 +807,7 @@ describe('solar output', () => {
 		expect(auxdata).not.toBeNull()
 		// {ipfs: <34 bytes>, solar: 0x000200}: solar records its own version, not solc's
 		expect(cborLength).toBe(0x34)
-		const decoded = CBOR.decode(Hex.toBytes(`0x$auxdata`)) as Record<
+		const decoded = CBOR.decode(Hex.toBytes(`0x${auxdata}`)) as Record<
 			string,
 			Uint8Array
 		>
