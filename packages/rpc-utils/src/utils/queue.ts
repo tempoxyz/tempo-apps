@@ -184,7 +184,10 @@ export const createQueue = <ReturnType, TaskType = void>({
 			next()
 
 			return promise.catch((error) => {
-				if (error instanceof Error) {
+				if (
+					error instanceof Error &&
+					typeof Error.captureStackTrace === 'function'
+				) {
 					Error.captureStackTrace(error)
 				}
 
