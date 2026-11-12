@@ -839,6 +839,16 @@ export function matchBytecode(
 		abi,
 	} = options
 
+	// Interfaces and abstract contracts compile to empty bytecode: there is nothing to verify.
+	if (recompiledBytecode.replace(/^0x/i, '') === '') {
+		return {
+			match: null,
+			transformations: [],
+			transformationValues: {},
+			message: 'Compiled contract has no bytecode to verify',
+		}
+	}
+
 	const allTransformations: Transformation[] = []
 	const allTransformationValues: TransformationValues = {}
 	let populatedBytecode = recompiledBytecode
@@ -935,12 +945,21 @@ export function matchBytecode(
 	const recompiledSplit = splitAuxdata(populatedBytecode, auxdataStyle)
 	const onchainSplit = splitAuxdata(onchainBytecode, auxdataStyle)
 
-	const executionMatch = isCreation
-		? onchainSplit.executionBytecode
-				.toLowerCase()
-				.startsWith(recompiledSplit.executionBytecode.toLowerCase())
-		: recompiledSplit.executionBytecode.toLowerCase() ===
-			onchainSplit.executionBytecode.toLowerCase()
+	// Strip the onchain auxdata only when the compiler output carries auxdata of its own and
+	// executable code remains, so trailing bytes that merely decode as CBOR are never ignored.
+	const canIgnoreAuxdata =
+		recompiledSplit.auxdata !== null &&
+		onchainSplit.auxdata !== null &&
+		recompiledSplit.executionBytecode.replace(/^0x/i, '') !== ''
+
+	const executionMatch =
+		canIgnoreAuxdata &&
+		(isCreation
+			? onchainSplit.executionBytecode
+					.toLowerCase()
+					.startsWith(recompiledSplit.executionBytecode.toLowerCase())
+			: recompiledSplit.executionBytecode.toLowerCase() ===
+				onchainSplit.executionBytecode.toLowerCase())
 
 	if (executionMatch) {
 		// Handle CBOR auxdata positions if provided

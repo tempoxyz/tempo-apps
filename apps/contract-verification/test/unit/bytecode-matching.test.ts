@@ -754,6 +754,46 @@ describe('matchBytecode', () => {
 	})
 })
 
+describe('matchBytecode with empty or metadata-less compiler output', () => {
+	// PC, JUMPDEST, then SSTORE(0, 1): executable bytes that also decode as a 91-byte CBOR string.
+	const executablePayload = '6001600055'.padEnd(91 * 2, '0')
+	const cborShapedRuntime = `0x585b${executablePayload}005d` as const
+
+	it('treats the CBOR-shaped runtime as auxdata when split on its own', () => {
+		expect(splitAuxdata(cborShapedRuntime).executionBytecode).toBe('0x')
+	})
+
+	it('rejects empty compiled runtime bytecode', () => {
+		for (const recompiledBytecode of ['0x', ''] as const) {
+			const result = matchBytecode({
+				onchainBytecode: cborShapedRuntime,
+				recompiledBytecode: recompiledBytecode as `0x${string}`,
+				isCreation: false,
+			})
+			expect(result.match).toBeNull()
+			expect(result.message).toBe('Compiled contract has no bytecode to verify')
+		}
+	})
+
+	it('rejects empty compiled creation bytecode', () => {
+		const result = matchBytecode({
+			onchainBytecode: cborShapedRuntime,
+			recompiledBytecode: '0x',
+			isCreation: true,
+		})
+		expect(result.match).toBeNull()
+	})
+
+	it('does not ignore a CBOR-decodable onchain suffix when the compiler output has no auxdata', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${cborShapedRuntime.slice(2)}`,
+			recompiledBytecode: '0x6080604052',
+			isCreation: false,
+		})
+		expect(result.match).toBeNull()
+	})
+})
+
 describe('solar output', () => {
 	const compiled =
 		solarFixture.solarCompileOutput.contracts['src/WithImmutables.sol']
