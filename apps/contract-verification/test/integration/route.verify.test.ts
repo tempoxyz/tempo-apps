@@ -356,6 +356,75 @@ contract Token {
 		expect(response.status).toBe(202)
 	})
 
+	it('rejects deeply nested settings with 400 without reserving a job', async () => {
+		const depth = 10_000
+		const nested = JSON.parse('['.repeat(depth) + ']'.repeat(depth))
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: { ...validBody.stdJsonInput.settings, nested },
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const jobs = await db
+			.select({ id: DB.verificationJobsTable.id })
+			.from(DB.verificationJobsTable)
+			.where(
+				eq(DB.verificationJobsTable.contractAddress, Hex.toBytes(validAddress)),
+			)
+		expect(jobs).toHaveLength(0)
+
+		const retry = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+		)
+		expect(retry.status).toBe(202)
+	})
+
+	it('rejects settings with too many values with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: { wide: new Array(100_001).fill(0) },
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
 	it('returns 429 for a duplicate in-flight request', async () => {
 		const db = drizzle(env.CONTRACTS_DB)
 		await db.insert(DB.verificationJobsTable).values({
