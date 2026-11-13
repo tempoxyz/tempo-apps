@@ -171,6 +171,128 @@ function earnValuePart(
 		: { type: 'number', value }
 }
 
+type CardSpendArgs = {
+	payer: Address.Address
+	destination: Address.Address
+	token: Address.Address
+	amount: bigint
+	fromVault: bigint
+	sharesUsed: bigint
+	isPrivate: boolean
+}
+
+type RouterSpentArgs = {
+	spender: Address.Address
+	token: Address.Address
+	used: bigint
+	change: bigint
+}
+
+/** The Zone router's \`Spent\` for a card program, in the same receipt. */
+function findRouterSpent(
+	events: ParsedEvent[],
+	program: Address.Address,
+): (ParsedEvent & { args: RouterSpentArgs }) | undefined {
+	return events.find(
+		(candidate): candidate is ParsedEvent & { args: RouterSpentArgs } =>
+			candidate.eventName === 'Spent' &&
+			Address.isEqual(
+				(candidate.args as Partial<RouterSpentArgs>).spender ?? zeroAddress,
+				program,
+			),
+	)
+}
+
+/**
+ * The transfers a card spend moves through its program and Zone router: the
+ * input in, the payment out and the change back. The card spend summary and
+ * the Zone withdrawal and deposit already show them, so the receipt hides them.
+ */
+function findCardSpendTransferIndices(events: ParsedEvent[]): Set<number> {
+	const indices = new Set<number>()
+	for (const spend of events) {
+		if (spend.eventName !== 'CardSpent') continue
+		const program = spend.address
+		const router = findRouterSpent(events, program)?.address
+		// The portal pays a callback withdrawal through the Zone messenger, so
+		// its first hop names neither the router nor the program.
+		const withdrawals = router
+			? events.flatMap((event) => {
+					if (event.eventName !== 'WithdrawalProcessed') return []
+					const args = event.args as {
+						to?: Address.Address
+						token?: Address.Address
+						amount?: bigint
+					}
+					if (!args.to || !args.token || args.amount === undefined) return []
+					if (!Address.isEqual(args.to, router)) return []
+					return [
+						{ portal: event.address, token: args.token, amount: args.amount },
+					]
+				})
+			: []
+		for (const [index, event] of events.entries()) {
+			if (!isTransferEvent(event)) continue
+			const { from, to, amount } = event.args
+			const touches = (address: Address.Address | undefined) =>
+				address !== undefined &&
+				(Address.isEqual(from, address) || Address.isEqual(to, address))
+			const isWithdrawalHop = withdrawals.some(
+				(withdrawal) =>
+					Address.isEqual(from, withdrawal.portal) &&
+					Address.isEqual(event.address, withdrawal.token) &&
+					amount === withdrawal.amount,
+			)
+			if (touches(program) || touches(router) || isWithdrawalHop)
+				indices.add(index)
+		}
+	}
+	return indices
+}
+
+function createCardSpendSummary(
+	event: ParsedEvent,
+	events: ParsedEvent[],
+	createAmount: CreateAmount,
+): KnownEvent | null {
+	if (event.eventName !== 'CardSpent') return null
+	const { payer, destination, token, amount, sharesUsed, isPrivate } =
+		event.args as CardSpendArgs
+	const program = Address.checksum(event.address)
+	const note: NonNullable<KnownEvent['note']> = [
+		['Card program', { type: 'account', value: program }],
+		[
+			'Funding',
+			{ type: 'text', value: isPrivate ? 'Private (Zone)' : 'Public' },
+		],
+	]
+	if (sharesUsed > 0n)
+		note.push(['Earn shares used', { type: 'number', value: sharesUsed }])
+	const routerSpent = isPrivate ? findRouterSpent(events, program) : undefined
+	if (routerSpent && routerSpent.args.change > 0n)
+		note.push([
+			'Change to Zone',
+			{
+				type: 'amount',
+				value: createAmount(routerSpent.args.change, routerSpent.args.token),
+			},
+		])
+	return {
+		type: isPrivate ? 'card private spend' : 'card spend',
+		parts: [
+			{ type: 'action', value: 'Card Spend' },
+			{ type: 'amount', value: createAmount(amount, token) },
+			{ type: 'text', value: 'to' },
+			{ type: 'account', value: Address.checksum(destination) },
+		],
+		note,
+		meta: {
+			...(isPrivate ? {} : { from: Address.checksum(payer) }),
+			to: Address.checksum(destination),
+		},
+	}
+}
+
 function createEarnReceiptSummary(
 	event: ParsedEvent,
 	events: ParsedEvent[],
@@ -2739,6 +2861,8 @@ export function parseKnownEvents(
 		}
 	}
 
+	const cardSpendTransferIndices = findCardSpendTransferIndices(dedupedEvents)
+
 	const streamChannelIndices = new Set<number>()
 	const hasStreamChannelEvents = dedupedEvents.some((event) =>
 		isStreamChannelAddress(event.address),
@@ -2797,6 +2921,7 @@ export function parseKnownEvents(
 		// Skip events that are part of a swap
 		if (swapIndices.has(index)) continue
 		if (streamChannelIndices.has(index)) continue
+		if (cardSpendTransferIndices.has(index)) continue
 
 		const event = dedupedEvents[index]
 
@@ -2814,6 +2939,7 @@ export function parseKnownEvents(
 			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event) ||
 			detectors.streamChannel(event) ||
+			createCardSpendSummary(event, dedupedEvents, createAmount) ||
 			createEarnReceiptSummary(event, dedupedEvents, createAmount)
 
 		if (!detected) continue

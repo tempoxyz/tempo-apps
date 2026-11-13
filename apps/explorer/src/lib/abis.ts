@@ -378,8 +378,19 @@ export const earnEventsAbi = parseAbi([
 	'event WithdrewExact(address indexed receiver, uint256 assets, uint256 engineSharesBurned)',
 ])
 
+// Customer-agnostic Tempo card spend events (tempoxyz/contracts cards/ and
+// zone-router/). A private card spend is a Zone withdrawal whose callback hands
+// the input to a card program (CardSpender), which pays the provider and
+// returns the change to the Zone.
+export const cardEventsAbi = parseAbi([
+	'event CardSpent(bytes32 indexed ref, address indexed payer, address indexed destination, address token, uint256 amount, uint256 fromVault, uint256 sharesUsed, bool isPrivate)',
+	'event InputSpent(bytes32 indexed ref, address inputToken, uint256 inputConsumed, uint256 inputReturned)',
+	'event Spent(address indexed spender, address indexed token, uint256 used, uint256 change, bytes32 zoneDepositHash)',
+])
+
 export const Abis = {
 	accountKeychain: ViemTempoAbis.accountKeychain,
+	card: cardEventsAbi,
 	earn: earnEventsAbi,
 	feeAmm: ViemTempoAbis.feeAmm,
 	feeManager: ViemTempoAbis.feeManager,

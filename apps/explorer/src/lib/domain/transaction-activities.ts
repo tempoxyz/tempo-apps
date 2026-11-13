@@ -287,7 +287,7 @@ export function selectTransactionDescriptionEvents(params: {
 }
 
 function isEarnReceiptSummary(event: KnownEvent): boolean {
-	return event.type.startsWith('earn ')
+	return event.type.startsWith('earn ') || event.type.startsWith('card ')
 }
 
 function isPropAmmSwap(event: KnownEvent): boolean {
