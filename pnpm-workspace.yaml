@@ -177,9 +177,8 @@ overrides:
   'dockerode>uuid': 11.1.1
   # drizzle-kit (latest) still pulls esbuild 0.18 through @esbuild-kit/core-utils (GHSA-67mh-4wv8-2f99).
   '@esbuild-kit/core-utils>esbuild': 0.25.12
-  'hono@<4.13.16': 4.13.16
-  '@hono/node-server@<1.19.18': 1.19.18
-  '@hono/node-server@>=2.0.0 <2.1.6': 2.1.6
+  'hono@<4.13.18': 4.13.18
+  '@hono/node-server@<2.1.7': 2.1.7
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.61.0': patches/@cloudflare__vite-plugin@1.61.0.patch
