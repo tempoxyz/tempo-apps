@@ -166,8 +166,8 @@ catalogs:
       specifier: ^17.4.0
       version: 17.4.0
     hono:
-      specifier: ^4.13.11
-      version: 4.13.14
+      specifier: ^4.13.16
+      version: 4.13.18
     hono-rate-limiter:
       specifier: ^0.5.3
       version: 0.5.3
@@ -273,13 +273,12 @@ overrides:
   brace-expansion@>=5: ^5.0.12
   yaml: ^2.8.3
   protobufjs: 7.6.6
-  '@modelcontextprotocol/sdk>@hono/node-server': ^2.1.5
   ws@>=8 <8.21.0: ^8.21.3
   zod@>=4 <4.6.6: ^4.6.7
   toml@<5.0.1: 5.0.1
   glob@>=9.0.0 <14.0.2: 14.0.3
   minimatch@>=5.0.0 <11.0.1: 11.0.3
-  wata>@hono/node-server: ^2.1.5
+  wata>@hono/node-server: ^2.1.6
   dockerode>uuid: 11.1.1
   '@esbuild-kit/core-utils>esbuild': 0.25.12
 
@@ -327,7 +326,7 @@ importers:
         version: 2.0.4(@logtape/logtape@2.0.4)
       '@logtape/hono':
         specifier: 'catalog:'
-        version: 2.0.4(@logtape/logtape@2.0.4)(hono@4.13.14)
+        version: 2.0.4(@logtape/logtape@2.0.4)(hono@4.13.18)
       '@logtape/logtape':
         specifier: 'catalog:'
         version: 2.0.4
@@ -345,10 +344,10 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@5.20260928.1)(@libsql/client@0.17.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(bun-types@1.3.11)(kysely@0.29.4)(pg@8.22.0)
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
       hono-rate-limiter:
         specifier: 'catalog:'
-        version: 0.5.3(hono@4.13.14)
+        version: 0.5.3(hono@4.13.18)
       ox:
         specifier: 'catalog:'
         version: 0.14.20(typescript@6.0.2)(zod@4.6.7)
@@ -484,7 +483,7 @@ importers:
         version: 1.0.0-beta.4(typescript@6.0.3)
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
       lucide-react:
         specifier: 'catalog:'
         version: 1.48.0(react@19.2.5)
@@ -617,7 +616,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: 'catalog:'
-        version: 0.7.6(hono@4.13.14)(zod@4.6.7)
+        version: 0.7.6(hono@4.13.18)(zod@4.6.7)
       '@tempo/llms':
         specifier: workspace:*
         version: link:../../packages/llms
@@ -629,7 +628,7 @@ importers:
         version: 1.4.0
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
       idxs:
         specifier: 'catalog:'
         version: 0.0.6(typescript@6.0.2)
@@ -786,7 +785,7 @@ importers:
     dependencies:
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
     devDependencies:
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
@@ -811,7 +810,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: 'catalog:'
-        version: 0.7.6(hono@4.13.14)(zod@4.6.7)
+        version: 0.7.6(hono@4.13.18)(zod@4.6.7)
       '@takumi-rs/image-response':
         specifier: ^0.73.1
         version: 0.73.1
@@ -820,7 +819,7 @@ importers:
         version: 0.73.1
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
       ox:
         specifier: 'catalog:'
         version: 0.14.20(typescript@6.0.3)(zod@4.6.7)
@@ -845,7 +844,7 @@ importers:
     dependencies:
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -867,7 +866,7 @@ importers:
     dependencies:
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -889,7 +888,7 @@ importers:
     dependencies:
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
       svgo:
         specifier: ^4.1.0
         version: 4.1.0
@@ -933,13 +932,13 @@ importers:
     devDependencies:
       '@hono/zod-validator':
         specifier: 'catalog:'
-        version: 0.7.6(hono@4.13.14)(zod@4.6.7)
+        version: 0.7.6(hono@4.13.18)(zod@4.6.7)
       '@types/node':
         specifier: 'catalog:'
         version: 25.5.2
       hono:
         specifier: 'catalog:'
-        version: 4.13.14
+        version: 4.13.18
       vitest:
         specifier: 'catalog:'
         version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
@@ -1923,8 +1922,8 @@ packages:
     peerDependencies:
       vue: ^3.2.0
 
-  '@hono/node-server@2.1.5':
-    resolution: {integrity: sha512-MgP/I06GdvsilDspMk/qmRzpk8LOUStP6jFAbSRi40W09DhoyUn+Mj7eyKICPqeYKybOjVFLVIAQzvu1bfIa7Q==}
+  '@hono/node-server@2.1.7':
+    resolution: {integrity: sha512-Wr0E6S+v2Bw9FkpGNP5BQ5QbJvclUa06UVehd65WFZe6XeJwbrKQQ5wPDevc0IC+QyzbO7v3Llh5uo45IZcSnA==}
     engines: {node: '>=20'}
     peerDependencies:
       hono: ^4 || ^5.0.0-0
@@ -5899,8 +5898,8 @@ packages:
       unstorage:
         optional: true
 
-  hono@4.13.14:
-    resolution: {integrity: sha512-yhRLQ21U6qa9Hsu2N7Qcbh8tE+WKEcoErjIo56LeSGiGXGp9sA7UpE86Ui9uexb61KakiGwuHMn2QdV7w6i6kQ==}
+  hono@4.13.18:
+    resolution: {integrity: sha512-H9q/E1XizaWstJxUW881dmLxEj+t/TrGGnyxINkm4+sK0qUwsMtFdo2BWI9Vs3cIS19MU6b6iCijoUoEf4f3DA==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.1.1:
@@ -7843,6 +7842,7 @@ packages:
 
   tempo.ts@0.14.2:
     resolution: {integrity: sha512-N4UkP2X/KDLmYUEIEWUDAk1m/USbKMzTjjUz1m0LwrIEVfoDlcSbBRc9jp14gLZcJVDlnq+fWHFVcH+GdrySgQ==}
+    deprecated: tempo.ts is archived. Use accounts (https://github.com/tempoxyz/accounts) for fee payer and server handlers, and viem for chain support.
     peerDependencies:
       viem: 0.0.0-pr-5325-621d5f9
     peerDependenciesMeta:
@@ -9555,18 +9555,18 @@ snapshots:
       '@tanstack/vue-virtual': 3.13.33(vue@3.5.44(typescript@6.0.3))
       vue: 3.5.44(typescript@6.0.3)
 
-  '@hono/node-server@2.1.5(hono@4.13.14)':
+  '@hono/node-server@2.1.7(hono@4.13.18)':
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.18
 
-  '@hono/standard-validator@0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.14)':
+  '@hono/standard-validator@0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.18)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      hono: 4.13.14
+      hono: 4.13.18
 
-  '@hono/zod-validator@0.7.6(hono@4.13.14)(zod@4.6.7)':
+  '@hono/zod-validator@0.7.6(hono@4.13.18)(zod@4.6.7)':
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.18
       zod: 4.6.7
 
   '@iconify-json/lucide@1.2.118':
@@ -9903,10 +9903,10 @@ snapshots:
     dependencies:
       '@logtape/logtape': 2.0.4
 
-  '@logtape/hono@2.0.4(@logtape/logtape@2.0.4)(hono@4.13.14)':
+  '@logtape/hono@2.0.4(@logtape/logtape@2.0.4)(hono@4.13.18)':
     dependencies:
       '@logtape/logtape': 2.0.4
-      hono: 4.13.14
+      hono: 4.13.18
 
   '@logtape/logtape@2.0.4': {}
 
@@ -9964,7 +9964,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7)':
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.14)
+      '@hono/node-server': 2.1.7(hono@4.13.18)
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       content-type: 1.0.5
@@ -9974,7 +9974,7 @@ snapshots:
       eventsource-parser: 3.1.1
       express: 5.2.1
       express-rate-limit: 8.5.2(express@5.2.1)
-      hono: 4.13.14
+      hono: 4.13.18
       jose: 6.2.3
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -12267,11 +12267,11 @@ snapshots:
 
   accounts@0.15.3(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(@types/react@19.2.14)(@wagmi/core@3.6.5)(express@5.2.1)(immer@11.2.9)(react@19.2.5)(typescript@6.0.3)(use-sync-external-store@1.7.0(react@19.2.5))(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))(wagmi@3.7.7):
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.18
       idb-keyval: 6.2.2
       jose: 6.2.3
       mipd: 0.0.7(typescript@6.0.3)
-      mppx: 0.8.9(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))
+      mppx: 0.8.9(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))
       ox: 0.14.59(typescript@6.0.3)(zod@4.6.7)
       wata: 0.4.0(react@19.2.5)(typescript@6.0.3)
       webauthx: 0.1.2(typescript@6.0.3)(zod@4.6.7)
@@ -12294,11 +12294,11 @@ snapshots:
 
   accounts@0.18.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(@types/react@19.2.14)(@wagmi/core@3.6.5)(express@5.2.1)(immer@11.2.9)(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.7.0(react@19.2.5))(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.6.7))(wagmi@3.7.7):
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.18
       idb-keyval: 6.2.2
       jose: 6.2.3
       mipd: 0.0.7(typescript@6.0.2)
-      mppx: 0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.2)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.6.7))
+      mppx: 0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.2)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.6.7))
       ox: 0.14.34(typescript@6.0.2)(zod@4.6.7)
       wata: 0.4.0(react@19.2.5)(typescript@6.0.2)
       webauthx: 0.1.2(typescript@6.0.2)(zod@4.6.7)
@@ -12327,11 +12327,11 @@ snapshots:
 
   accounts@0.18.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(@types/react@19.2.14)(@wagmi/core@3.6.5)(express@5.2.1)(immer@11.2.9)(react@19.2.5)(typescript@6.0.3)(use-sync-external-store@1.7.0(react@19.2.5))(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))(wagmi@3.7.7):
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.18
       idb-keyval: 6.2.2
       jose: 6.2.3
       mipd: 0.0.7(typescript@6.0.3)
-      mppx: 0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))
+      mppx: 0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))
       ox: 0.14.34(typescript@6.0.3)(zod@4.6.7)
       wata: 0.4.0(react@19.2.5)(typescript@6.0.3)
       webauthx: 0.1.2(typescript@6.0.3)(zod@4.6.7)
@@ -13637,21 +13637,21 @@ snapshots:
 
   highlight.js@11.11.1: {}
 
-  hono-openapi@1.3.0(@hono/standard-validator@0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.14))(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.6.7))(@types/json-schema@7.0.15)(hono@4.13.14)(openapi-types@12.1.3):
+  hono-openapi@1.3.0(@hono/standard-validator@0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.18))(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.6.7))(@types/json-schema@7.0.15)(hono@4.13.18)(openapi-types@12.1.3):
     dependencies:
       '@standard-community/standard-json': 0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7)
       '@standard-community/standard-openapi': 0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.6.7)
       '@types/json-schema': 7.0.15
       openapi-types: 12.1.3
     optionalDependencies:
-      '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.14)
-      hono: 4.13.14
+      '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.18)
+      hono: 4.13.18
 
-  hono-rate-limiter@0.5.3(hono@4.13.14):
+  hono-rate-limiter@0.5.3(hono@4.13.18):
     dependencies:
-      hono: 4.13.14
+      hono: 4.13.18
 
-  hono@4.13.14: {}
+  hono@4.13.18: {}
 
   hookable@6.1.1: {}
 
@@ -14627,7 +14627,7 @@ snapshots:
       pkg-types: 1.3.1
       ufo: 1.6.4
 
-  mppx@0.8.9(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7)):
+  mppx@0.8.9(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7)):
     dependencies:
       '@stripe/stripe-js': 9.9.0
       eventsource-parser: 3.1.0
@@ -14638,11 +14638,11 @@ snapshots:
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7)
       express: 5.2.1
-      hono: 4.13.14
+      hono: 4.13.18
     transitivePeerDependencies:
       - typescript
 
-  mppx@0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.2)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.6.7)):
+  mppx@0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.2)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.6.7)):
     dependencies:
       '@stripe/stripe-js': 9.13.0
       eventsource-parser: 3.1.1
@@ -14653,11 +14653,11 @@ snapshots:
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7)
       express: 5.2.1
-      hono: 4.13.14
+      hono: 4.13.18
     transitivePeerDependencies:
       - typescript
 
-  mppx@0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7)):
+  mppx@0.9.0(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7)):
     dependencies:
       '@stripe/stripe-js': 9.13.0
       eventsource-parser: 3.1.1
@@ -14668,7 +14668,7 @@ snapshots:
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7)
       express: 5.2.1
-      hono: 4.13.14
+      hono: 4.13.18
     transitivePeerDependencies:
       - typescript
 
@@ -15999,15 +15999,15 @@ snapshots:
 
   tapimo@https://pkg.pr.new/tempoxyz/api/tapimo@500(a5c5efad8a5002b3b7f4424bc3f59c37):
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.14)
-      '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.14)
+      '@hono/node-server': 2.1.7(hono@4.13.18)
+      '@hono/standard-validator': 0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.18)
       accounts: 0.15.3(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(@types/react@19.2.14)(@wagmi/core@3.6.5)(express@5.2.1)(immer@11.2.9)(react@19.2.5)(typescript@6.0.3)(use-sync-external-store@1.7.0(react@19.2.5))(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))(wagmi@3.7.7)
-      hono: 4.13.14
-      hono-openapi: 1.3.0(@hono/standard-validator@0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.14))(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.6.7))(@types/json-schema@7.0.15)(hono@4.13.14)(openapi-types@12.1.3)
+      hono: 4.13.18
+      hono-openapi: 1.3.0(@hono/standard-validator@0.2.2(@standard-schema/spec@1.1.0)(hono@4.13.18))(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-community/standard-openapi@0.2.9(@standard-community/standard-json@0.3.5(@standard-schema/spec@1.1.0)(@types/json-schema@7.0.15)(quansync@0.2.11)(zod-to-json-schema@3.25.2(zod@4.6.7))(zod@4.6.7))(@standard-schema/spec@1.1.0)(openapi-types@12.1.3)(zod@4.6.7))(@types/json-schema@7.0.15)(hono@4.13.18)(openapi-types@12.1.3)
       incur: 0.4.19
       jose: 6.2.3
       kysely: 0.29.4
-      mppx: 0.8.9(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.14)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))
+      mppx: 0.8.9(@modelcontextprotocol/sdk@1.32.2(@cfworker/json-schema@4.1.1)(zod@4.6.7))(express@5.2.1)(hono@4.13.18)(typescript@6.0.3)(viem@0.0.0-pr-5325-621d5f9(bufferutil@4.1.0)(typescript@6.0.3)(utf-8-validate@5.0.10)(zod@4.6.7))
       nanoid: 5.1.16
       ox: 0.14.30(typescript@6.0.3)(zod@4.6.7)
       pg: 8.22.0
@@ -16594,7 +16594,7 @@ snapshots:
     dependencies:
       '@base-ui/react': 1.6.0(@date-fns/tz@1.5.0)(@types/react@19.2.14)(date-fns@4.4.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
       '@codesandbox/sandpack-react': 2.20.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@hono/node-server': 2.1.5(hono@4.13.14)
+      '@hono/node-server': 2.1.7(hono@4.13.18)
       '@iconify-json/lucide': 1.2.118
       '@iconify-json/ri': 1.2.10
       '@iconify-json/simple-icons': 1.2.91
@@ -16632,7 +16632,7 @@ snapshots:
       extend: 3.0.2
       github-slugger: 2.0.0
       hast-util-to-jsx-runtime: 2.3.6
-      hono: 4.13.14
+      hono: 4.13.18
       image-size: 2.0.4
       lz-string: 1.5.0
       magic-string: 0.30.21
@@ -16783,10 +16783,10 @@ snapshots:
 
   wata@0.4.0(react@19.2.5)(typescript@6.0.2):
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.14)
+      '@hono/node-server': 2.1.7(hono@4.13.18)
       '@noble/ciphers': 2.2.0
       '@noble/hashes': 2.2.0
-      hono: 4.13.14
+      hono: 4.13.18
       ox: 0.14.59(typescript@6.0.2)(zod@4.6.7)
       zod: 4.6.7
     optionalDependencies:
@@ -16796,10 +16796,10 @@ snapshots:
 
   wata@0.4.0(react@19.2.5)(typescript@6.0.3):
     dependencies:
-      '@hono/node-server': 2.1.5(hono@4.13.14)
+      '@hono/node-server': 2.1.7(hono@4.13.18)
       '@noble/ciphers': 2.2.0
       '@noble/hashes': 2.2.0
-      hono: 4.13.14
+      hono: 4.13.18
       ox: 0.14.59(typescript@6.0.3)(zod@4.6.7)
       zod: 4.6.7
     optionalDependencies:
