@@ -273,7 +273,6 @@ overrides:
   brace-expansion@>=5: ^5.0.12
   yaml: ^2.8.3
   protobufjs: 7.6.6
-  '@modelcontextprotocol/sdk>@hono/node-server': ^2.1.6
   ws@>=8 <8.21.0: ^8.21.3
   zod@>=4 <4.6.6: ^4.6.7
   toml@<5.0.1: 5.0.1
@@ -282,8 +281,6 @@ overrides:
   wata>@hono/node-server: ^2.1.6
   dockerode>uuid: 11.1.1
   '@esbuild-kit/core-utils>esbuild': 0.25.12
-  hono@<4.13.18: 4.13.18
-  '@hono/node-server@<2.1.7': 2.1.7
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.61.0':
@@ -1929,18 +1926,18 @@ packages:
     resolution: {integrity: sha512-Wr0E6S+v2Bw9FkpGNP5BQ5QbJvclUa06UVehd65WFZe6XeJwbrKQQ5wPDevc0IC+QyzbO7v3Llh5uo45IZcSnA==}
     engines: {node: '>=20'}
     peerDependencies:
-      hono: 4.13.18
+      hono: ^4 || ^5.0.0-0
 
   '@hono/standard-validator@0.2.2':
     resolution: {integrity: sha512-mJ7W84Bt/rSvoIl63Ynew+UZOHAzzRAoAXb3JaWuxAkM/Lzg+ZHTCUiz77KOtn2e623WNN8LkD57Dk0szqUrIw==}
     peerDependencies:
       '@standard-schema/spec': ^1.0.0
-      hono: 4.13.18
+      hono: '>=3.9.0'
 
   '@hono/zod-validator@0.7.6':
     resolution: {integrity: sha512-Io1B6d011Gj1KknV4rXYz4le5+5EubcWEU/speUjuw9XMMIaP3n78yXLhjd2A3PXaXaUwEAluOiAyLqhBEJgsw==}
     peerDependencies:
-      hono: 4.13.18
+      hono: '>=3.9.0'
       zod: ^4.6.7
 
   '@iconify-json/lucide@1.2.118':
@@ -2279,7 +2276,7 @@ packages:
     resolution: {integrity: sha512-GcRF6QqIFZr+8V+FQyy4yzdG2NWxnqNrBsEJgB/liOSPRw8f7XK9ZDhhWrGu3Rc0xw/Bc4Xx9fx1fX02soXMCA==}
     peerDependencies:
       '@logtape/logtape': ^2.0.4
-      hono: 4.13.18
+      hono: ^4.0.0
 
   '@logtape/logtape@2.0.4':
     resolution: {integrity: sha512-Z4COeAMdedcBFuFkXaPFvDPOVuHoEom1hwNnPCIkSyojyikuNguplwPoSG+kZthWrS7GiOJo1USQyjWwIFfTKA==}
@@ -5884,7 +5881,7 @@ packages:
       '@standard-community/standard-json': ^0.3.5
       '@standard-community/standard-openapi': ^0.2.9
       '@types/json-schema': ^7.0.15
-      hono: 4.13.18
+      hono: ^4.8.3
       openapi-types: ^12.1.3
     peerDependenciesMeta:
       '@hono/standard-validator':
@@ -5895,7 +5892,7 @@ packages:
   hono-rate-limiter@0.5.3:
     resolution: {integrity: sha512-M0DxbVMpPELEzLi0AJg1XyBHLGJXz7GySjsPoK+gc5YeeBsdGDGe+2RvVuCAv8ydINiwlbxqYMNxUEyYfRji/A==}
     peerDependencies:
-      hono: 4.13.18
+      hono: ^4.10.8
       unstorage: ^1.17.3
     peerDependenciesMeta:
       unstorage:
@@ -6658,7 +6655,7 @@ packages:
       '@modelcontextprotocol/sdk': '>=1.25.0'
       elysia: '>=1'
       express: '>=5'
-      hono: 4.13.18
+      hono: '>=4.12.25'
       viem: 0.0.0-pr-5325-621d5f9
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
@@ -6682,7 +6679,7 @@ packages:
       '@x402/next': '>=2.22.0'
       elysia: '>=1'
       express: '>=5'
-      hono: 4.13.18
+      hono: '>=4.12.25'
       next: '>=16.2.6'
       viem: 0.0.0-pr-5325-621d5f9
     peerDependenciesMeta:
