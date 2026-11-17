@@ -40,12 +40,13 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 	const [block, transaction, getTokenMetadata] = await Promise.all([
 		getBlock(config, { blockHash: receipt.blockHash }),
 		getTransaction(config, { hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
+		Tip20.metadataFromLogs(receipt.logs, { chainId: getTempoChain().id }),
 	])
 
 	const parsedEvents = parseKnownEvents(receipt, {
 		transaction,
 		getTokenMetadata,
+		chainId: getTempoChain().id,
 	})
 	// Wagmi's mixed-chain return type omits Tempo's formatted extension fields.
 	const keyAuthorization =
@@ -126,6 +127,7 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 		return parseKnownEvent(log, {
 			getTokenMetadata,
 			logs: receipt.logs,
+			chainId: getTempoChain().id,
 			streamChannelToken,
 		})
 	})

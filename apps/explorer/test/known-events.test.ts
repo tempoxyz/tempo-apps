@@ -1075,7 +1075,9 @@ describe('parseKnownEvents', () => {
 				[quote.toLowerCase()]: { symbol: 'OUSD' },
 			})[address.toLowerCase()]) as never
 
-		expect(parseKnownEvent(postLog, { getTokenMetadata })).toEqual({
+		expect(
+			parseKnownEvent(postLog, { getTokenMetadata, chainId: 4217 }),
+		).toEqual({
 			type: 'propamm quote',
 			parts: [
 				{ type: 'action', value: 'propAMM Quote Bid' },
@@ -1100,7 +1102,7 @@ describe('parseKnownEvents', () => {
 			bids: true,
 			asks: true,
 		})
-		expect(parseKnownEvent(refillLog)?.parts[0]).toEqual({
+		expect(parseKnownEvent(refillLog, { chainId: 4217 })?.parts[0]).toEqual({
 			type: 'action',
 			value: 'propAMM Refill Bids and Asks',
 		})
@@ -1110,7 +1112,13 @@ describe('parseKnownEvents', () => {
 			pairIndex: 0,
 			hotWord,
 		})
-		expect(parseKnownEvent(unlisted)?.type).not.toBe('propamm quote')
+		expect(parseKnownEvent(unlisted, { chainId: 4217 })?.type).not.toBe(
+			'propamm quote',
+		)
+		// Venues are listed per chain: the mainnet venue isn't listed on testnet.
+		expect(parseKnownEvent(postLog, { chainId: 42431 })?.type).not.toBe(
+			'propamm quote',
+		)
 	})
 
 	it('composes a propAMM v2 fill from its settlement transfers', () => {
@@ -1184,10 +1192,9 @@ describe('parseKnownEvents', () => {
 			swap,
 		])
 		expect(parseKnownEvent(fillLog, { logs })).toEqual(swap)
-		expect(parseKnownEvent(fillLog)).toEqual({
-			type: 'propamm swap',
-			parts: [{ type: 'action', value: 'propAMM Swap' }],
-		})
+		// Without its transfers a fill gets no swap label, which would otherwise
+		// replace the transaction's other events.
+		expect(parseKnownEvent(fillLog)?.type).not.toBe('propamm swap')
 	})
 
 	it.each([

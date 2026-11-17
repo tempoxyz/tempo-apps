@@ -996,6 +996,7 @@ function createDetectors(
 		payee: Address.Address,
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
+	chainId?: number,
 ) {
 	function isZonePortalAddress(address: Address.Address): boolean {
 		return zonePortals.has(checksumAddress(address))
@@ -1018,7 +1019,7 @@ function createDetectors(
 				// Only listed venues: anyone can emit these events, and the pair's
 				// tokens come from the listing.
 				const { pairIndex } = event.args as { pairIndex: number }
-				const pair = findPropAmmV2Pair(event.address, pairIndex)
+				const pair = findPropAmmV2Pair(chainId, event.address, pairIndex)
 				if (!pair) return null
 				const token = (address: Address.Address) => ({
 					address,
@@ -1087,13 +1088,9 @@ function createDetectors(
 				const { input, output } = findPropAmmFillTransfers(event, events ?? [])
 				const tokenIn = input[0]?.token
 				const tokenOut = output[0]?.token
-				// Without the settlement transfers the tokens are unknown, so
-				// only the action is shown.
-				if (!tokenIn || !tokenOut)
-					return {
-						type: 'propamm swap',
-						parts: [{ type: 'action', value: 'propAMM Swap' }],
-					}
+				// Without its settlement transfers the swap can't be described, and
+				// a bare swap would replace the transaction's other events.
+				if (!tokenIn || !tokenOut) return null
 				return {
 					type: 'propamm swap',
 					parts: [
@@ -2393,6 +2390,26 @@ type FeeManagerAddLiquidityCall = {
 	args: readonly [Address.Address, Address.Address, bigint, Address.Address]
 }
 
+// A receipt's logs, decoded once however many of its Fill logs read them.
+const parsedSiblingLogs = new WeakMap<
+	readonly Log[],
+	Log<bigint, number, boolean, AbiEvent>[]
+>()
+
+function parseSiblingLogs(logs: readonly Log[]) {
+	let parsed = parsedSiblingLogs.get(logs)
+	if (!parsed) {
+		parsed = parseEventLogs({ abi, logs: [...logs] }) as Log<
+			bigint,
+			number,
+			boolean,
+			AbiEvent
+		>[]
+		parsedSiblingLogs.set(logs, parsed)
+	}
+	return parsed
+}
+
 export function parseKnownEvent(
 	log: Log,
 	options?: {
@@ -2400,13 +2417,15 @@ export function parseKnownEvent(
 		streamChannelToken?: Address.Address
 		/** The transaction's logs, which a propAMM v2 Fill reads its tokens from. */
 		logs?: readonly Log[]
+		/** The chain the log is on, which listed propAMM venues are looked up on. */
+		chainId?: number
 	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
 	if (!event) return null
 	const siblings =
 		options?.logs && event.topics[0]?.toLowerCase() === propAmmFillSelector
-			? parseEventLogs({ abi, logs: [...options.logs] })
+			? parseSiblingLogs(options.logs)
 			: undefined
 
 	const getTokenMetadata = options?.getTokenMetadata
@@ -2429,6 +2448,8 @@ export function parseKnownEvent(
 		undefined,
 		undefined,
 		() => options?.streamChannelToken,
+		undefined,
+		options?.chainId,
 	)
 
 	const detected =
@@ -2500,6 +2521,8 @@ export function parseKnownEvents(
 		transaction?: TransactionLike
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		viewer?: Address.Address
+		/** The chain the receipt is on, which listed propAMM venues are looked up on. */
+		chainId?: number
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
@@ -2722,6 +2745,7 @@ export function parseKnownEvents(
 		transactionSender,
 		getStreamChannelToken,
 		zonePortals,
+		options?.chainId,
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -2930,8 +2954,10 @@ export function parseKnownEvents(
 	for (const fill of dedupedEvents) {
 		if (fill.topics[0]?.toLowerCase() !== propAmmFillSelector) continue
 		const { input, output } = findPropAmmFillTransfers(fill, dedupedEvents)
-		if (input.length === 0 || output.length === 0) continue
-		for (const { index } of [...input, ...output]) swapIndices.add(index)
+		// Hide only the two transfers the swap summary shows.
+		if (!input[0] || !output[0]) continue
+		swapIndices.add(input[0].index)
+		swapIndices.add(output[0].index)
 	}
 	for (const trade of dedupedEvents) {
 		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue

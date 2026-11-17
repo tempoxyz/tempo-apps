@@ -25,7 +25,8 @@ import {
 import { api } from '#lib/server/tempo-api'
 import { getTransactionActivities } from '#lib/server/transaction-activities'
 import { parseTimestamp } from '#lib/timestamp'
-import { getWagmiConfig } from '#wagmi.config'
+import { propAmmPairTokens } from '#lib/propamm'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config'
 import { zonePortalAbi } from '#lib/abis'
 import { isZonePortalAddress } from '#lib/domain/zones'
 
@@ -327,11 +328,18 @@ export async function buildTokenMetadataLookup(
 	const config = getWagmiConfig()
 	const tokenAddresses = new Set<Address.Address>()
 	for (const row of rows) {
-		for (const log of row.meta?.receipt?.logs ?? []) {
+		const logs = row.meta?.receipt?.logs ?? []
+		for (const log of logs) {
 			if (isTip20Address(log.address)) {
 				tokenAddresses.add(log.address as Address.Address)
 			}
 		}
+		// propAMM quotes name their pair's tokens without a log from them.
+		for (const token of propAmmPairTokens(
+			getTempoChain().id,
+			logs as unknown as Log[],
+		))
+			tokenAddresses.add(token)
 	}
 
 	const entries = await Promise.all(
@@ -384,6 +392,7 @@ export function toEnrichedTransaction(
 				{
 					transaction,
 					getTokenMetadata: options.getTokenMetadata,
+					chainId: getTempoChain().id,
 				},
 			)
 			return selectTransactionDescriptionEvents({

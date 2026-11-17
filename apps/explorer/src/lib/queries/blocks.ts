@@ -10,7 +10,12 @@ import {
 } from '#lib/domain/known-events'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 import { isTip20Address } from '#lib/domain/tip20.ts'
-import { getBatchedClient, getWagmiConfig } from '#wagmi.config.ts'
+import { propAmmPairTokens } from '#lib/propamm'
+import {
+	getBatchedClient,
+	getTempoChain,
+	getWagmiConfig,
+} from '#wagmi.config.ts'
 
 export const BLOCKS_PER_PAGE = 12
 
@@ -113,6 +118,12 @@ export function blockKnownEventsQueryOptions(
 						allTip20Addresses.add(log.address.toLowerCase())
 					}
 				}
+				// propAMM quotes name their pair's tokens without a log from them.
+				for (const token of propAmmPairTokens(
+					getTempoChain().id,
+					receipt.logs as Log[],
+				))
+					allTip20Addresses.add(token.toLowerCase())
 			}
 
 			const tip20Array = Array.from(allTip20Addresses) as Hex.Hex[]
@@ -141,6 +152,7 @@ export function blockKnownEventsQueryOptions(
 				const parsedEvents = parseKnownEvents(receipt, {
 					transaction,
 					getTokenMetadata,
+					chainId: getTempoChain().id,
 				})
 
 				const events = selectTransactionDescriptionEvents({

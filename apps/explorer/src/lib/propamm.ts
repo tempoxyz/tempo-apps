@@ -1,4 +1,5 @@
-import type { Address, Hex } from 'viem'
+import { type Address, type Hex, toEventSelector } from 'viem'
+import { propAmmEventsAbi } from '#lib/abis'
 import * as z from 'zod/mini'
 import type { DexPoolToken } from '#lib/dex-pools'
 
@@ -116,22 +117,52 @@ export function propAmmPoolsFor(chainId: number): readonly PropAmmPoolConfig[] {
 	}))
 }
 
-/** The listed v2 pair a venue address and pair index name, on any chain. */
+/** The listed v2 pair a venue address and pair index name on the chain. */
 export function findPropAmmV2Pair(
+	chainId: number | undefined,
 	address: string,
 	pairIndex: number,
 ): { base: Address; quote: Address } | undefined {
-	for (const pools of Object.values(propAmmPools))
-		for (const pool of pools)
-			if (
-				pool.version === 'v2' &&
-				pool.pairIndex === pairIndex &&
-				pool.address.toLowerCase() === address.toLowerCase() &&
-				pool.base &&
-				pool.quote
-			)
-				return { base: pool.base, quote: pool.quote }
+	if (chainId === undefined) return undefined
+	for (const pool of propAmmPools[chainId] ?? [])
+		if (
+			pool.version === 'v2' &&
+			pool.pairIndex === pairIndex &&
+			pool.address.toLowerCase() === address.toLowerCase() &&
+			pool.base &&
+			pool.quote
+		)
+			return { base: pool.base, quote: pool.quote }
 	return undefined
+}
+
+const propAmmPairEventSelectors = new Set([
+	toEventSelector(propAmmEventsAbi[2]).toLowerCase(),
+	toEventSelector(propAmmEventsAbi[3]).toLowerCase(),
+])
+
+/**
+ * The tokens of the listed v2 pairs that `Posted` and `Refilled` logs name.
+ * Those events come from the venue, not the tokens, so token metadata lookups
+ * built from log addresses would miss them.
+ */
+export function propAmmPairTokens(
+	chainId: number | undefined,
+	logs: readonly { address: string; topics: readonly (string | null)[] }[],
+): Address[] {
+	const tokens: Address[] = []
+	for (const log of logs) {
+		const [selector, pairTopic] = log.topics
+		if (!selector || !pairTopic) continue
+		if (!propAmmPairEventSelectors.has(selector.toLowerCase())) continue
+		const pair = findPropAmmV2Pair(
+			chainId,
+			log.address,
+			Number(BigInt(pairTopic)),
+		)
+		if (pair) tokens.push(pair.base, pair.quote)
+	}
+	return tokens
 }
 
 export function poolKey(pool: { address: string; pairIndex: number }): string {
