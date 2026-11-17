@@ -8,6 +8,7 @@ import {
 	type KnownEvent,
 	type KnownEventPart,
 } from './known-events'
+import { decodeMemoForDisplay, isMppAttributionMemo } from './memo'
 import {
 	composeCallAndLogEvents,
 	isZoneBatchEvent,
@@ -42,6 +43,10 @@ const transferTopics = new Set(
 		'TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
 	].map((signature) => toEventSelector(signature).toLowerCase()),
 )
+
+const transferWithMemoTopic = toEventSelector(
+	'TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
+).toLowerCase()
 
 const dex = Addresses.stablecoinDex.toLowerCase()
 const orderFilledTopic = toEventSelector(
@@ -134,6 +139,10 @@ export function activitiesToKnownEvents(
 				note: Object.entries(activity.data).flatMap(([key, value]) => {
 					if (HIDDEN_FIELDS.has(key) || value == null) return []
 					if (representedFields.has(key)) return []
+					if (key === 'memo') {
+						const memo = memoPart(activity, value, options.logs)
+						return memo ? [['Memo', memo] as [string, KnownEventPart]] : []
+					}
 					const part = activityValueToPart(value)
 					return part
 						? [[formatLabel(key), part] as [string, KnownEventPart]]
@@ -467,6 +476,39 @@ function asRecord(
 	return value !== null && typeof value === 'object' && !Array.isArray(value)
 		? value
 		: null
+}
+
+/**
+ * Shows a memo as text only when its bytes are clean UTF-8, else as hex.
+ * Prefers the raw bytes from the receipt log over the indexed string.
+ */
+function memoPart(
+	activity: TransactionActivity,
+	value: ActivityDataValue,
+	logs: readonly ReceiptLog[] | undefined,
+): KnownEventPart | null {
+	const log = logs?.find(
+		(log) =>
+			log.logIndex === activity.logIndex &&
+			log.topics[0]?.toLowerCase() === transferWithMemoTopic,
+	)
+	const raw =
+		log?.topics[3] ??
+		(typeof value === 'string' && Hex.validate(value) ? value : undefined)
+	if (raw) {
+		if (isMppAttributionMemo(raw)) return null
+		const text = decodeMemoForDisplay(raw)
+		return text ? { type: 'text', value: text } : { type: 'hex', value: raw }
+	}
+	if (typeof value !== 'string') return null
+	// Text decoded without validation carries replacement or control characters for binary bytes.
+	const garbled = Array.from(value).some((character) => {
+		const code = character.charCodeAt(0)
+		return code === 0xfffd || code <= 0x1f || (code >= 0x7f && code <= 0x9f)
+	})
+	if (garbled) return null
+	const text = value.replace(/\s+/g, ' ').trim()
+	return text ? { type: 'text', value: text } : null
 }
 
 function activityValueToPart(value: ActivityDataValue): KnownEventPart | null {
