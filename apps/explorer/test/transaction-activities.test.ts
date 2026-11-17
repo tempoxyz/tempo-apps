@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { encodeEventTopics, type Hex } from 'viem'
+import { encodeEventTopics, type Hex, stringToHex } from 'viem'
 import { Addresses } from 'viem/tempo'
 import { Abis } from '#lib/abis'
 import {
@@ -74,6 +74,64 @@ describe('activitiesToKnownEvents', () => {
 					activitiesToKnownEvents([swap(13)], { logs: [...others, ...fills] }),
 				),
 			).toEqual([false])
+	})
+
+	test('shows binary memos as hex from the receipt log', () => {
+		const memo =
+			'0xf20223bf2aeb0e24c73bd90d21fdfe04c7e731cb70cd648040836fb90ac31a38' as const
+		const textMemo = stringToHex('Invoice 123', { size: 32 })
+		const token = '0x20c0000000000000000000001621e21f71cf12fb' as const
+		const from = '0xf5295637e0ce72225845322a2605306812851f16' as const
+		const to = '0x26ec6abf0da64f00e8bd342de9b89e0c7646e3e3' as const
+		const transfer = (logIndex: number, data: Record<string, string>) => ({
+			id: `x-${logIndex}`,
+			logIndex,
+			title: 'Token transferred',
+			type: 'transfer',
+			data: { sender: from, recipient: to, ...data },
+		})
+		const log = (logIndex: number, value: Hex) => ({
+			address: token as Hex,
+			logIndex,
+			topics: encodeEventTopics({
+				abi: Abis.tip20,
+				eventName: 'TransferWithMemo',
+				args: { from, to, memo: value },
+			}),
+		})
+		const memoNote = (events: ReturnType<typeof activitiesToKnownEvents>) =>
+			events.map((event) => event.note?.find(([label]) => label === 'Memo'))
+		const garbled = '\uFFFD\u0002#\uFFFD*\uFFFD\u000e$\uFFFD;'
+
+		expect(
+			memoNote(
+				activitiesToKnownEvents(
+					[transfer(2, { memo: garbled }), transfer(4, { memo: 'ignored' })],
+					{ logs: [log(2, memo), log(4, textMemo)] },
+				),
+			),
+		).toEqual([
+			['Memo', { type: 'hex', value: memo }],
+			['Memo', { type: 'text', value: 'Invoice 123' }],
+		])
+		// Without logs: hex from the API is kept, and undecodable text is dropped.
+		expect(
+			memoNote(
+				activitiesToKnownEvents([
+					transfer(2, { memo }),
+					transfer(4, { memo: garbled }),
+					transfer(6, { memo: 'Invoice 123' }),
+					transfer(8, { memo: '0x payout' }),
+					transfer(10, { memo: 'Order 42\nThanks' }),
+				]),
+			),
+		).toEqual([
+			['Memo', { type: 'hex', value: memo }],
+			undefined,
+			['Memo', { type: 'text', value: 'Invoice 123' }],
+			['Memo', { type: 'text', value: '0x payout' }],
+			['Memo', { type: 'text', value: 'Order 42 Thanks' }],
+		])
 	})
 
 	test('omits unknown activities so local descriptions can be used', () => {
