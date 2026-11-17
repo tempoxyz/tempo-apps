@@ -13,6 +13,7 @@ import {
 } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
+import { propAmmShapesFromLogs } from '#lib/domain/propamm-shapes'
 import { withImmutableDataCache } from '#lib/server/immutable-data-cache'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { KeyAuthorization } from '#lib/domain/access-key'
@@ -37,15 +38,23 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 	const receipt = await getTransactionReceipt(config, { hash: params.hash })
 
 	// TODO: investigate & consider batch/multicall
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
-	])
+	const [block, transaction, getTokenMetadata, getPropAmmShape] =
+		await Promise.all([
+			getBlock(config, { blockHash: receipt.blockHash }),
+			getTransaction(config, { hash: receipt.transactionHash }),
+			Tip20.metadataFromLogs(receipt.logs, { chainId: getTempoChain().id }),
+			propAmmShapesFromLogs(
+				getTempoChain().id,
+				receipt.logs,
+				receipt.blockNumber,
+			),
+		])
 
 	const parsedEvents = parseKnownEvents(receipt, {
 		transaction,
 		getTokenMetadata,
+		chainId: getTempoChain().id,
+		getPropAmmShape,
 	})
 	// Wagmi's mixed-chain return type omits Tempo's formatted extension fields.
 	const keyAuthorization =
@@ -125,6 +134,9 @@ async function fetchTxDataUncached(params: { hash: Hex.Hex }) {
 
 		return parseKnownEvent(log, {
 			getTokenMetadata,
+			logs: receipt.logs,
+			chainId: getTempoChain().id,
+			getPropAmmShape,
 			streamChannelToken,
 		})
 	})

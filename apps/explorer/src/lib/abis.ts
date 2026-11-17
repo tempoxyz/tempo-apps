@@ -294,10 +294,15 @@ export const receivePolicyGuardAbi = parseAbi([
 	'event ReceiptBurned(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, uint256 amount)',
 ])
 
-// Customer-agnostic propAMM trade event. Bundling this event lets the explorer
-// identify swaps without relying on a deployment allowlist or verified ABI.
+// Customer-agnostic propAMM trade events: v1 DirectPropAMM's TradeExecuted and
+// v2 Venue's Fill (tempoxyz/propAMM contracts/src/v2/interfaces/IVenue.sol).
+// Bundling them lets the explorer identify swaps without relying on a
+// deployment allowlist or verified ABI.
 export const propAmmEventsAbi = parseAbi([
 	'event TradeExecuted(address indexed taker, address indexed recipient, bytes32 indexed customerId, bytes32 tradeId, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, uint256 oraclePrice, uint256 oracleUpdatedAt)',
+	'event Fill(uint16 indexed pairIndex, address indexed taker, bytes32 indexed ref, uint64 sponsorId, bool baseIn, uint128 amountIn, uint128 amountOut, uint96 makerMid, uint32 seq)',
+	'event Posted(uint16 indexed pairIndex, bytes32 hotWord)',
+	'event Refilled(uint16 indexed pairIndex, bool bids, bool asks)',
 ])
 
 // Customer-agnostic Tempo Earn events. These are bundled separately from viem's

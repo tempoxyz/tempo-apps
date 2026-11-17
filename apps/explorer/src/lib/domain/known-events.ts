@@ -28,6 +28,12 @@ import {
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import { HexFormatter } from '#lib/formatting'
 import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
+import {
+	decodeHotWord,
+	findPropAmmV2Pair,
+	type PropAmmShapeLevel,
+} from '#lib/propamm'
+import type { GetPropAmmShapeFn } from '#lib/domain/propamm-shapes'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
@@ -72,6 +78,104 @@ const earnEventSignatures = new Map(
 	]),
 )
 const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
+const propAmmFillSelector = toEventSelector(propAmmEventsAbi[1]).toLowerCase()
+const propAmmPostedSelector = toEventSelector(propAmmEventsAbi[2]).toLowerCase()
+const propAmmRefilledSelector = toEventSelector(
+	propAmmEventsAbi[3],
+).toLowerCase()
+
+function formatBps(bps: number): string {
+	return `${Number(bps.toFixed(2))} bp`
+}
+
+const PROP_AMM_FACTOR_ONE = 100_000_000n
+
+/**
+ * One side of a v2 quote as a resting order (LadderMath.sol): its best level's
+ * price, mid * (1 +/- (spread * widthScale + widen * 1000) / 1e8), and the
+ * base its levels hold, size * sizeUnit * depthScale / 1000 each.
+ */
+function propAmmQuoteSide(
+	levels: readonly PropAmmShapeLevel[],
+	sizeUnit: bigint,
+	word: ReturnType<typeof decodeHotWord>,
+	bid: boolean,
+) {
+	const widen = bid ? word.bidWiden : word.askWiden
+	const offset = (spread: number) =>
+		BigInt(spread) * BigInt(word.widthScale) + BigInt(widen) * 1000n
+	// Bid levels at or past the floor can't fill.
+	const live = levels.filter(
+		(level) => !bid || offset(level.spread) < PROP_AMM_FACTOR_ONE,
+	)
+	const best = live[0]
+	if (!best || word.depthScale === 0) return undefined
+	const bestOffset = offset(best.spread)
+	const factor = bid
+		? PROP_AMM_FACTOR_ONE - bestOffset
+		: PROP_AMM_FACTOR_ONE + bestOffset
+	const depth = live.reduce(
+		(sum, level) =>
+			sum + (BigInt(level.size) * sizeUnit * BigInt(word.depthScale)) / 1000n,
+		0n,
+	)
+	return {
+		price: (word.mid * factor) / PROP_AMM_FACTOR_ONE,
+		bps: Number(bestOffset) / 10_000,
+		widenBps: widen / 10,
+		levels: live.length,
+		depth,
+	}
+}
+
+/** A 1/1000 scale as a multiplier, such as 1x or 0.5x. */
+function formatScale(scale: number): string {
+	return `${Number((scale / 1000).toFixed(3))}x`
+}
+
+function formatUnixSeconds(seconds: number): string {
+	return `${new Date(seconds * 1000).toISOString().slice(0, 19).replace('T', ' ')} UTC`
+}
+
+type PropAmmFillArgs = {
+	taker: Address.Address
+	amountIn: bigint
+	amountOut: bigint
+}
+
+/**
+ * A v2 Fill names no tokens: the Settler pulls the input from the taker into
+ * the venue, and the venue pays the output to the taker, both in the same
+ * transaction. Returns those two transfers, matched by account and amount.
+ */
+function findPropAmmFillTransfers(
+	fill: ParsedEvent,
+	events: readonly Log<bigint, number, boolean, AbiEvent>[],
+): {
+	input: { index: number; token: Address.Address }[]
+	output: { index: number; token: Address.Address }[]
+} {
+	const { taker, amountIn, amountOut } = fill.args as PropAmmFillArgs
+	const input: { index: number; token: Address.Address }[] = []
+	const output: { index: number; token: Address.Address }[] = []
+	events.forEach((event, index) => {
+		if (!isTransferEvent(event)) return
+		const { from, to, amount } = event.args
+		if (
+			Address.isEqual(from, taker) &&
+			Address.isEqual(to, fill.address) &&
+			amount === amountIn
+		)
+			input.push({ index, token: checksumAddress(event.address) })
+		else if (
+			Address.isEqual(from, fill.address) &&
+			Address.isEqual(to, taker) &&
+			amount === amountOut
+		)
+			output.push({ index, token: checksumAddress(event.address) })
+	})
+	return { input, output }
+}
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
 
@@ -936,6 +1040,8 @@ function createDetectors(
 		payee: Address.Address,
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
+	chainId?: number,
+	getPropAmmShape?: GetPropAmmShapeFn,
 ) {
 	function isZonePortalAddress(address: Address.Address): boolean {
 		return zonePortals.has(checksumAddress(address))
@@ -946,8 +1052,161 @@ function createDetectors(
 	}
 
 	return {
-		propAmm(event: ParsedEvent) {
-			if (event.topics[0]?.toLowerCase() !== propAmmTradeSelector) return null
+		propAmm(
+			event: ParsedEvent,
+			events?: readonly Log<bigint, number, boolean, AbiEvent>[],
+		) {
+			const selector = event.topics[0]?.toLowerCase()
+			if (
+				selector === propAmmPostedSelector ||
+				selector === propAmmRefilledSelector
+			) {
+				// Only listed venues: anyone can emit these events, and the pair's
+				// tokens come from the listing.
+				const { pairIndex } = event.args as { pairIndex: number }
+				const pair = findPropAmmV2Pair(chainId, event.address, pairIndex)
+				if (!pair) return null
+				const token = (address: Address.Address) => ({
+					address,
+					symbol: getTokenMetadata?.(address)?.symbol,
+				})
+				const base = token(pair.base)
+				const quote = token(pair.quote)
+
+				if (selector === propAmmRefilledSelector) {
+					const { bids, asks } = event.args as { bids: boolean; asks: boolean }
+					const sides = bids && asks ? 'Bids and Asks' : bids ? 'Bids' : 'Asks'
+					return {
+						type: 'propamm refill',
+						parts: [
+							{ type: 'action', value: `propAMM Refill ${sides}` },
+							{ type: 'token', value: base },
+							{ type: 'text', value: '/' },
+							{ type: 'token', value: quote },
+						],
+					}
+				}
+
+				// The maker's quote reads as a two-sided order: the shape's ladder
+				// around the mid, scaled by width and depth and widened per side.
+				const word = decodeHotWord(
+					BigInt((event.args as { hotWord: Hex.Hex }).hotWord),
+				)
+				const shape = getPropAmmShape?.(event.address, pairIndex, word.shapeId)
+				const meta: Array<[string, KnownEventPart]> = [
+					['Mid', { type: 'number', value: [word.mid, 18] }],
+					[
+						'Valid Until',
+						{ type: 'text', value: formatUnixSeconds(word.validUntil) },
+					],
+					['Width', { type: 'text', value: formatScale(word.widthScale) }],
+					[
+						'Depth Scale',
+						{ type: 'text', value: formatScale(word.depthScale) },
+					],
+					['Shape', { type: 'text', value: `#${word.shapeId}` }],
+					['Sequence', { type: 'number', value: word.seq }],
+				]
+
+				// Without the shape only the mid and the widens are known.
+				if (!shape) {
+					const widen = (off: boolean, value: number) =>
+						({
+							type: 'text',
+							value: off
+								? 'off'
+								: `shape #${word.shapeId} ladder + ${formatBps(value / 10)} widen`,
+						}) as const
+					return {
+						type: 'propamm quote',
+						parts: [
+							{ type: 'action', value: 'propAMM Quote' },
+							{ type: 'token', value: base },
+							{ type: 'text', value: 'around mid' },
+							{ type: 'number', value: [word.mid, 18] },
+							{ type: 'token', value: quote },
+						],
+						note: [
+							['Bid', widen(word.bidsOff, word.bidWiden)],
+							['Ask', widen(word.asksOff, word.askWiden)],
+							...meta,
+						],
+					}
+				}
+
+				const bid = word.bidsOff
+					? undefined
+					: propAmmQuoteSide(shape.bids, shape.sizeUnit, word, true)
+				const ask = word.asksOff
+					? undefined
+					: propAmmQuoteSide(shape.asks, shape.sizeUnit, word, false)
+				const sidePart = (label: string, side: typeof bid): KnownEventPart[] =>
+					side
+						? [
+								{ type: 'text', value: label },
+								{ type: 'number', value: [side.price, 18] },
+							]
+						: [{ type: 'text', value: `${label} off` }]
+				const sideNote = (
+					side: typeof bid,
+					sign: '-' | '+',
+				): KnownEventPart => ({
+					type: 'text',
+					value: side
+						? [
+								`mid ${sign} ${formatBps(side.bps)}`,
+								side.widenBps ? `incl. ${formatBps(side.widenBps)} widen` : '',
+								`${side.levels} level${side.levels === 1 ? '' : 's'}`,
+							]
+								.filter(Boolean)
+								.join(', ')
+						: 'off',
+				})
+				const note: Array<[string, KnownEventPart]> = [
+					['Bid', sideNote(bid, '-')],
+				]
+				if (bid)
+					note.push([
+						'Bid Size',
+						{ type: 'amount', value: createAmount(bid.depth, pair.base) },
+					])
+				note.push(['Ask', sideNote(ask, '+')])
+				if (ask)
+					note.push([
+						'Ask Size',
+						{ type: 'amount', value: createAmount(ask.depth, pair.base) },
+					])
+				return {
+					type: 'propamm quote',
+					parts: [
+						{ type: 'action', value: 'propAMM Quote' },
+						{ type: 'token', value: base },
+						...sidePart('Bid', bid),
+						...sidePart('/ Ask', ask),
+						{ type: 'token', value: quote },
+					],
+					note: [...note, ...meta],
+				}
+			}
+			if (selector === propAmmFillSelector) {
+				const { amountIn, amountOut } = event.args as PropAmmFillArgs
+				const { input, output } = findPropAmmFillTransfers(event, events ?? [])
+				const tokenIn = input[0]?.token
+				const tokenOut = output[0]?.token
+				// Without its settlement transfers the swap can't be described, and
+				// a bare swap would replace the transaction's other events.
+				if (!tokenIn || !tokenOut) return null
+				return {
+					type: 'propamm swap',
+					parts: [
+						{ type: 'action', value: 'propAMM Swap' },
+						{ type: 'amount', value: createAmount(amountIn, tokenIn) },
+						{ type: 'text', value: 'for' },
+						{ type: 'amount', value: createAmount(amountOut, tokenOut) },
+					],
+				}
+			}
+			if (selector !== propAmmTradeSelector) return null
 			const { tokenIn, tokenOut, amountIn, amountOut } = event.args as {
 				tokenIn: Address.Address
 				tokenOut: Address.Address
@@ -2236,15 +2495,45 @@ type FeeManagerAddLiquidityCall = {
 	args: readonly [Address.Address, Address.Address, bigint, Address.Address]
 }
 
+// A receipt's logs, decoded once however many of its Fill logs read them.
+const parsedSiblingLogs = new WeakMap<
+	readonly Log[],
+	Log<bigint, number, boolean, AbiEvent>[]
+>()
+
+function parseSiblingLogs(logs: readonly Log[]) {
+	let parsed = parsedSiblingLogs.get(logs)
+	if (!parsed) {
+		parsed = parseEventLogs({ abi, logs: [...logs] }) as Log<
+			bigint,
+			number,
+			boolean,
+			AbiEvent
+		>[]
+		parsedSiblingLogs.set(logs, parsed)
+	}
+	return parsed
+}
+
 export function parseKnownEvent(
 	log: Log,
 	options?: {
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		streamChannelToken?: Address.Address
+		/** The transaction's logs, which a propAMM v2 Fill reads its tokens from. */
+		logs?: readonly Log[]
+		/** The chain the log is on, which listed propAMM venues are looked up on. */
+		chainId?: number
+		/** The ladders propAMM v2 quotes rest on, which set their bid and ask. */
+		getPropAmmShape?: GetPropAmmShapeFn
 	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
 	if (!event) return null
+	const siblings =
+		options?.logs && event.topics[0]?.toLowerCase() === propAmmFillSelector
+			? parseSiblingLogs(options.logs)
+			: undefined
 
 	const getTokenMetadata = options?.getTokenMetadata
 
@@ -2266,10 +2555,13 @@ export function parseKnownEvent(
 		undefined,
 		undefined,
 		() => options?.streamChannelToken,
+		undefined,
+		options?.chainId,
+		options?.getPropAmmShape,
 	)
 
 	const detected =
-		detectors.propAmm(event) ||
+		detectors.propAmm(event, siblings) ||
 		detectors.zone(event) ||
 		detectors.tip20(event) ||
 		detectors.tip20Factory(event) ||
@@ -2337,6 +2629,10 @@ export function parseKnownEvents(
 		transaction?: TransactionLike
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		viewer?: Address.Address
+		/** The chain the receipt is on, which listed propAMM venues are looked up on. */
+		chainId?: number
+		/** The ladders propAMM v2 quotes rest on, which set their bid and ask. */
+		getPropAmmShape?: GetPropAmmShapeFn
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
@@ -2559,6 +2855,8 @@ export function parseKnownEvents(
 		transactionSender,
 		getStreamChannelToken,
 		zonePortals,
+		options?.chainId,
+		options?.getPropAmmShape,
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -2761,8 +3059,17 @@ export function parseKnownEvents(
 			index,
 		}))
 
-	// A propAMM trade is self-identifying through TradeExecuted. Hide the two
-	// settlement transfers so the receipt shows one swap summary instead.
+	// A propAMM trade is self-identifying through TradeExecuted or a v2 Fill.
+	// Hide the two settlement transfers so the receipt shows one swap summary
+	// instead.
+	for (const fill of dedupedEvents) {
+		if (fill.topics[0]?.toLowerCase() !== propAmmFillSelector) continue
+		const { input, output } = findPropAmmFillTransfers(fill, dedupedEvents)
+		// Hide only the two transfers the swap summary shows.
+		if (!input[0] || !output[0]) continue
+		swapIndices.add(input[0].index)
+		swapIndices.add(output[0].index)
+	}
 	for (const trade of dedupedEvents) {
 		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue
 		const { taker, tokenIn, tokenOut, amountIn, amountOut } = trade.args as {
@@ -2926,7 +3233,7 @@ export function parseKnownEvents(
 		const event = dedupedEvents[index]
 
 		const detected =
-			detectors.propAmm(event) ||
+			detectors.propAmm(event, dedupedEvents) ||
 			detectors.feePayer(event) ||
 			detectors.zone(event) ||
 			detectors.tip20(event) ||
