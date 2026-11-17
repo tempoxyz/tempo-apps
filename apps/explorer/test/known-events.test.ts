@@ -1075,27 +1075,70 @@ describe('parseKnownEvents', () => {
 				[quote.toLowerCase()]: { symbol: 'OUSD' },
 			})[address.toLowerCase()]) as never
 
+		// Shape #3: bids 100k at 0.5 bp then 100k at 1 bp; asks 50k at 0.8 bp.
+		const getPropAmmShape = () => ({
+			bids: [
+				{ size: 100_000, spread: 5 },
+				{ size: 100_000, spread: 10 },
+			],
+			asks: [{ size: 50_000, spread: 8 }],
+			sizeUnit: 1_000_000n,
+		})
+		// Asks are off, so only the bid shows. Bid offset: 5 * 1250 + 15 * 1000
+		// = 21,250 / 1e8 = 2.125 bp; size: 200k * 0.5 depth = 100k EURC.e.
 		expect(
-			parseKnownEvent(postLog, { getTokenMetadata, chainId: 4217 }),
+			parseKnownEvent(postLog, {
+				getTokenMetadata,
+				chainId: 4217,
+				getPropAmmShape,
+			}),
 		).toEqual({
 			type: 'propamm quote',
 			parts: [
-				{ type: 'action', value: 'propAMM Quote Bid' },
+				{ type: 'action', value: 'propAMM Quote' },
 				{ type: 'token', value: { address: base, symbol: 'EURC.e' } },
-				{ type: 'text', value: 'at' },
-				{ type: 'number', value: [1_100_300_000_000_000_000n, 18] },
+				{ type: 'text', value: 'Bid' },
+				{
+					type: 'number',
+					value: [
+						(1_100_300_000_000_000_000n * 99_978_750n) / 100_000_000n,
+						18,
+					],
+				},
+				{ type: 'text', value: '/ Ask off' },
 				{ type: 'token', value: { address: quote, symbol: 'OUSD' } },
 			],
 			note: [
-				['Bids', { type: 'text', value: 'mid - 1.5 bp' }],
-				['Asks', { type: 'text', value: 'off' }],
+				[
+					'Bid',
+					{
+						type: 'text',
+						value: 'mid - 2.13 bp, incl. 1.5 bp widen, 2 levels',
+					},
+				],
+				[
+					'Bid Size',
+					{
+						type: 'amount',
+						value: { token: base, value: 100_000_000_000n, symbol: 'EURC.e' },
+					},
+				],
+				['Ask', { type: 'text', value: 'off' }],
+				['Mid', { type: 'number', value: [1_100_300_000_000_000_000n, 18] }],
 				['Valid Until', { type: 'text', value: '2026-11-18 21:26:21 UTC' }],
 				['Width', { type: 'text', value: '1.25x' }],
-				['Depth', { type: 'text', value: '0.5x' }],
+				['Depth Scale', { type: 'text', value: '0.5x' }],
 				['Shape', { type: 'text', value: '#3' }],
 				['Sequence', { type: 'number', value: 143_333 }],
 			],
 		})
+		// Without the shape the label says the ladder wasn't read.
+		expect(
+			parseKnownEvent(postLog, { getTokenMetadata, chainId: 4217 })?.note,
+		).toContainEqual([
+			'Bid',
+			{ type: 'text', value: 'shape #3 ladder + 1.5 bp widen' },
+		])
 
 		const refillLog = mockZoneEventLog(propAmmEventsAbi[3], venue, {
 			pairIndex: 0,

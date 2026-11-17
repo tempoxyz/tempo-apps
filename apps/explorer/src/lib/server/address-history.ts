@@ -26,6 +26,10 @@ import { api } from '#lib/server/tempo-api'
 import { getTransactionActivities } from '#lib/server/transaction-activities'
 import { parseTimestamp } from '#lib/timestamp'
 import { propAmmPairTokens } from '#lib/propamm'
+import {
+	type GetPropAmmShapeFn,
+	propAmmShapesFromLogs,
+} from '#lib/domain/propamm-shapes'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config'
 import { zonePortalAbi } from '#lib/abis'
 import { isZonePortalAddress } from '#lib/domain/zones'
@@ -365,6 +369,7 @@ export function toEnrichedTransaction(
 		includeKnownEvents: boolean
 		getTokenMetadata: (address: Address.Address) => Metadata | undefined
 		activities?: TransactionActivity[] | undefined
+		getPropAmmShape?: GetPropAmmShapeFn | undefined
 	},
 ): EnrichedTransaction {
 	const receipt = row.meta?.receipt
@@ -393,6 +398,7 @@ export function toEnrichedTransaction(
 					transaction,
 					getTokenMetadata: options.getTokenMetadata,
 					chainId: getTempoChain().id,
+					getPropAmmShape: options.getPropAmmShape,
 				},
 			)
 			return selectTransactionDescriptionEvents({
@@ -486,13 +492,24 @@ export async function fetchAddressHistoryData(params: {
 		hideSubmitBatches ? undefined : (cachedTotal ?? requestedTotal),
 	])
 
-	const [getTokenMetadata, activities] = await Promise.all([
+	const [getTokenMetadata, activities, propAmmShapes] = await Promise.all([
 		includeKnownEvents
 			? buildTokenMetadataLookup(result.data)
 			: Promise.resolve(() => undefined),
 		includeKnownEvents
 			? Promise.all(
 					result.data.map((row) => getTransactionActivities(row.hash, chainId)),
+				)
+			: Promise.resolve([]),
+		includeKnownEvents
+			? Promise.all(
+					result.data.map((row) =>
+						propAmmShapesFromLogs(
+							getTempoChain().id,
+							(row.meta?.receipt?.logs ?? []) as unknown as Log[],
+							row.blockNumber == null ? undefined : BigInt(row.blockNumber),
+						),
+					),
 				)
 			: Promise.resolve([]),
 	])
@@ -502,6 +519,7 @@ export async function fetchAddressHistoryData(params: {
 			includeKnownEvents,
 			getTokenMetadata,
 			activities: activities[index],
+			getPropAmmShape: propAmmShapes[index],
 		}),
 	)
 	if (searchParams.sort === 'asc') transactions.reverse()

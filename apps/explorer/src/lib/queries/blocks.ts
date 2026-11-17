@@ -11,6 +11,7 @@ import {
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { propAmmPairTokens } from '#lib/propamm'
+import { propAmmShapesFromLogs } from '#lib/domain/propamm-shapes'
 import {
 	getBatchedClient,
 	getTempoChain,
@@ -126,6 +127,12 @@ export function blockKnownEventsQueryOptions(
 					allTip20Addresses.add(token.toLowerCase())
 			}
 
+			const getPropAmmShape = await propAmmShapesFromLogs(
+				getTempoChain().id,
+				receipts.flatMap((receipt) => (receipt?.logs ?? []) as Log[]),
+				blockNumber,
+			)
+
 			const tip20Array = Array.from(allTip20Addresses) as Hex.Hex[]
 			const metadataResults = await Promise.all(
 				tip20Array.map((token) => client.token.getMetadata({ token })),
@@ -153,6 +160,7 @@ export function blockKnownEventsQueryOptions(
 					transaction,
 					getTokenMetadata,
 					chainId: getTempoChain().id,
+					getPropAmmShape,
 				})
 
 				const events = selectTransactionDescriptionEvents({

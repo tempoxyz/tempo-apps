@@ -28,7 +28,12 @@ import {
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import { HexFormatter } from '#lib/formatting'
 import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
-import { decodeHotWord, findPropAmmV2Pair } from '#lib/propamm'
+import {
+	decodeHotWord,
+	findPropAmmV2Pair,
+	type PropAmmShapeLevel,
+} from '#lib/propamm'
+import type { GetPropAmmShapeFn } from '#lib/domain/propamm-shapes'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
@@ -79,9 +84,48 @@ const propAmmRefilledSelector = toEventSelector(
 	propAmmEventsAbi[3],
 ).toLowerCase()
 
-/** Where a v2 side quotes from its mid: a widen in 0.1 bp units. */
-function formatWiden(widen: number, sign: '+' | '-'): string {
-	return widen === 0 ? 'at mid' : `mid ${sign} ${(widen / 10).toFixed(1)} bp`
+function formatBps(bps: number): string {
+	return `${Number(bps.toFixed(2))} bp`
+}
+
+const PROP_AMM_FACTOR_ONE = 100_000_000n
+
+/**
+ * One side of a v2 quote as a resting order (LadderMath.sol): its best level's
+ * price, mid * (1 +/- (spread * widthScale + widen * 1000) / 1e8), and the
+ * base its levels hold, size * sizeUnit * depthScale / 1000 each.
+ */
+function propAmmQuoteSide(
+	levels: readonly PropAmmShapeLevel[],
+	sizeUnit: bigint,
+	word: ReturnType<typeof decodeHotWord>,
+	bid: boolean,
+) {
+	const widen = bid ? word.bidWiden : word.askWiden
+	const offset = (spread: number) =>
+		BigInt(spread) * BigInt(word.widthScale) + BigInt(widen) * 1000n
+	// Bid levels at or past the floor can't fill.
+	const live = levels.filter(
+		(level) => !bid || offset(level.spread) < PROP_AMM_FACTOR_ONE,
+	)
+	const best = live[0]
+	if (!best || word.depthScale === 0) return undefined
+	const bestOffset = offset(best.spread)
+	const factor = bid
+		? PROP_AMM_FACTOR_ONE - bestOffset
+		: PROP_AMM_FACTOR_ONE + bestOffset
+	const depth = live.reduce(
+		(sum, level) =>
+			sum + (BigInt(level.size) * sizeUnit * BigInt(word.depthScale)) / 1000n,
+		0n,
+	)
+	return {
+		price: (word.mid * factor) / PROP_AMM_FACTOR_ONE,
+		bps: Number(bestOffset) / 10_000,
+		widenBps: widen / 10,
+		levels: live.length,
+		depth,
+	}
 }
 
 /** A 1/1000 scale as a multiplier, such as 1x or 0.5x. */
@@ -997,6 +1041,7 @@ function createDetectors(
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
 	chainId?: number,
+	getPropAmmShape?: GetPropAmmShapeFn,
 ) {
 	function isZonePortalAddress(address: Address.Address): boolean {
 		return zonePortals.has(checksumAddress(address))
@@ -1042,45 +1087,105 @@ function createDetectors(
 					}
 				}
 
-				// The maker's quote reads as a two-sided order around its mid: bids
-				// below it, asks above, each widened on top of the shape's ladder.
+				// The maker's quote reads as a two-sided order: the shape's ladder
+				// around the mid, scaled by width and depth and widened per side.
 				const word = decodeHotWord(
 					BigInt((event.args as { hotWord: Hex.Hex }).hotWord),
 				)
-				const sides =
-					word.bidsOff && word.asksOff
-						? 'Sides Off'
-						: word.asksOff
-							? 'Bid'
-							: word.bidsOff
-								? 'Ask'
-								: 'Bid/Ask'
-				const side = (off: boolean, widen: number, sign: '+' | '-') =>
-					({
-						type: 'text',
-						value: off ? 'off' : formatWiden(widen, sign),
-					}) as const
+				const shape = getPropAmmShape?.(event.address, pairIndex, word.shapeId)
+				const meta: Array<[string, KnownEventPart]> = [
+					['Mid', { type: 'number', value: [word.mid, 18] }],
+					[
+						'Valid Until',
+						{ type: 'text', value: formatUnixSeconds(word.validUntil) },
+					],
+					['Width', { type: 'text', value: formatScale(word.widthScale) }],
+					[
+						'Depth Scale',
+						{ type: 'text', value: formatScale(word.depthScale) },
+					],
+					['Shape', { type: 'text', value: `#${word.shapeId}` }],
+					['Sequence', { type: 'number', value: word.seq }],
+				]
+
+				// Without the shape only the mid and the widens are known.
+				if (!shape) {
+					const widen = (off: boolean, value: number) =>
+						({
+							type: 'text',
+							value: off
+								? 'off'
+								: `shape #${word.shapeId} ladder + ${formatBps(value / 10)} widen`,
+						}) as const
+					return {
+						type: 'propamm quote',
+						parts: [
+							{ type: 'action', value: 'propAMM Quote' },
+							{ type: 'token', value: base },
+							{ type: 'text', value: 'around mid' },
+							{ type: 'number', value: [word.mid, 18] },
+							{ type: 'token', value: quote },
+						],
+						note: [
+							['Bid', widen(word.bidsOff, word.bidWiden)],
+							['Ask', widen(word.asksOff, word.askWiden)],
+							...meta,
+						],
+					}
+				}
+
+				const bid = word.bidsOff
+					? undefined
+					: propAmmQuoteSide(shape.bids, shape.sizeUnit, word, true)
+				const ask = word.asksOff
+					? undefined
+					: propAmmQuoteSide(shape.asks, shape.sizeUnit, word, false)
+				const sidePart = (label: string, side: typeof bid): KnownEventPart[] =>
+					side
+						? [
+								{ type: 'text', value: label },
+								{ type: 'number', value: [side.price, 18] },
+							]
+						: [{ type: 'text', value: `${label} off` }]
+				const sideNote = (
+					side: typeof bid,
+					sign: '-' | '+',
+				): KnownEventPart => ({
+					type: 'text',
+					value: side
+						? [
+								`mid ${sign} ${formatBps(side.bps)}`,
+								side.widenBps ? `incl. ${formatBps(side.widenBps)} widen` : '',
+								`${side.levels} level${side.levels === 1 ? '' : 's'}`,
+							]
+								.filter(Boolean)
+								.join(', ')
+						: 'off',
+				})
+				const note: Array<[string, KnownEventPart]> = [
+					['Bid', sideNote(bid, '-')],
+				]
+				if (bid)
+					note.push([
+						'Bid Size',
+						{ type: 'amount', value: createAmount(bid.depth, pair.base) },
+					])
+				note.push(['Ask', sideNote(ask, '+')])
+				if (ask)
+					note.push([
+						'Ask Size',
+						{ type: 'amount', value: createAmount(ask.depth, pair.base) },
+					])
 				return {
 					type: 'propamm quote',
 					parts: [
-						{ type: 'action', value: `propAMM Quote ${sides}` },
+						{ type: 'action', value: 'propAMM Quote' },
 						{ type: 'token', value: base },
-						{ type: 'text', value: 'at' },
-						{ type: 'number', value: [word.mid, 18] },
+						...sidePart('Bid', bid),
+						...sidePart('/ Ask', ask),
 						{ type: 'token', value: quote },
 					],
-					note: [
-						['Bids', side(word.bidsOff, word.bidWiden, '-')],
-						['Asks', side(word.asksOff, word.askWiden, '+')],
-						[
-							'Valid Until',
-							{ type: 'text', value: formatUnixSeconds(word.validUntil) },
-						],
-						['Width', { type: 'text', value: formatScale(word.widthScale) }],
-						['Depth', { type: 'text', value: formatScale(word.depthScale) }],
-						['Shape', { type: 'text', value: `#${word.shapeId}` }],
-						['Sequence', { type: 'number', value: word.seq }],
-					],
+					note: [...note, ...meta],
 				}
 			}
 			if (selector === propAmmFillSelector) {
@@ -2419,6 +2524,8 @@ export function parseKnownEvent(
 		logs?: readonly Log[]
 		/** The chain the log is on, which listed propAMM venues are looked up on. */
 		chainId?: number
+		/** The ladders propAMM v2 quotes rest on, which set their bid and ask. */
+		getPropAmmShape?: GetPropAmmShapeFn
 	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
@@ -2450,6 +2557,7 @@ export function parseKnownEvent(
 		() => options?.streamChannelToken,
 		undefined,
 		options?.chainId,
+		options?.getPropAmmShape,
 	)
 
 	const detected =
@@ -2523,6 +2631,8 @@ export function parseKnownEvents(
 		viewer?: Address.Address
 		/** The chain the receipt is on, which listed propAMM venues are looked up on. */
 		chainId?: number
+		/** The ladders propAMM v2 quotes rest on, which set their bid and ask. */
+		getPropAmmShape?: GetPropAmmShapeFn
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
@@ -2746,6 +2856,7 @@ export function parseKnownEvents(
 		getStreamChannelToken,
 		zonePortals,
 		options?.chainId,
+		options?.getPropAmmShape,
 	)
 
 	const dedupedEvents = events.filter((event) => {

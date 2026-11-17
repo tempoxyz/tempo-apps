@@ -136,6 +136,33 @@ export function findPropAmmV2Pair(
 	return undefined
 }
 
+export const propAmmPostedSelector = toEventSelector(
+	propAmmEventsAbi[2],
+).toLowerCase()
+
+/** One level of a v2 shape side: a size in size units, a spread in 0.1 bp. */
+export type PropAmmShapeLevel = { size: number; spread: number }
+
+/** A v2 pair's ladder (ShapeWord.sol) and the base units each size unit holds. */
+export type PropAmmShape = {
+	bids: PropAmmShapeLevel[]
+	asks: PropAmmShapeLevel[]
+	sizeUnit: bigint
+}
+
+/** A shape side's levels from its two words, up to its first empty level. */
+export function decodeShapeSide(w0: bigint, w1: bigint): PropAmmShapeLevel[] {
+	const levels: PropAmmShapeLevel[] = []
+	for (let i = 0; i < 10; i++) {
+		const word = i < 5 ? w0 : w1
+		const shift = BigInt(48 * (i % 5))
+		const size = Number((word >> shift) & 0xffffffffn)
+		if (size === 0) break
+		levels.push({ size, spread: Number((word >> (shift + 32n)) & 0xffffn) })
+	}
+	return levels
+}
+
 const propAmmPairEventSelectors = new Set([
 	toEventSelector(propAmmEventsAbi[2]).toLowerCase(),
 	toEventSelector(propAmmEventsAbi[3]).toLowerCase(),
