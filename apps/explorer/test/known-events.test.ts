@@ -1046,6 +1046,83 @@ describe('parseKnownEvents', () => {
 		expect(parseKnownEvent(tradeLog)?.type).toBe('propamm swap')
 	})
 
+	it('composes a propAMM v2 fill from its settlement transfers', () => {
+		const hash = `0x${'6'.repeat(64)}` as const
+		const amountIn = 50_000_000n
+		const amountOut = 55_022_873n
+
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+
+		const fillLog = mockZoneEventLog(propAmmEventsAbi[1], PROP_AMM_POOL, {
+			pairIndex: 0,
+			taker: accountAddress,
+			ref: `0x${'7'.repeat(64)}`,
+			sponsorId: 1n,
+			baseIn: true,
+			amountIn,
+			amountOut,
+			makerMid: 1_100_457n,
+			seq: 3,
+		})
+		const logs = [
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, amountIn),
+			transferLog(
+				PROP_AMM_OUTPUT_TOKEN,
+				PROP_AMM_POOL,
+				accountAddress,
+				amountOut,
+			),
+			fillLog,
+		]
+		const swap = {
+			type: 'propamm swap',
+			parts: [
+				{ type: 'action', value: 'propAMM Swap' },
+				{
+					type: 'amount',
+					value: {
+						token: Address.checksum(userTokenAddress),
+						value: amountIn,
+					},
+				},
+				{ type: 'text', value: 'for' },
+				{
+					type: 'amount',
+					value: {
+						token: Address.checksum(PROP_AMM_OUTPUT_TOKEN),
+						value: amountOut,
+					},
+				},
+			],
+		}
+
+		expect(parseKnownEvents(mockReceipt(logs, accountAddress, hash))).toEqual([
+			swap,
+		])
+		expect(parseKnownEvent(fillLog, { logs })).toEqual(swap)
+		expect(parseKnownEvent(fillLog)).toEqual({
+			type: 'propamm swap',
+			parts: [{ type: 'action', value: 'propAMM Swap' }],
+		})
+	})
+
 	it.each([
 		['EarnDeposit', 7, 'Deposit to Earn'],
 		['EarnRedeem', 7, 'Withdraw from Earn'],

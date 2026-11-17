@@ -72,6 +72,47 @@ const earnEventSignatures = new Map(
 	]),
 )
 const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
+const propAmmFillSelector = toEventSelector(propAmmEventsAbi[1]).toLowerCase()
+
+type PropAmmFillArgs = {
+	taker: Address.Address
+	amountIn: bigint
+	amountOut: bigint
+}
+
+/**
+ * A v2 Fill names no tokens: the Settler pulls the input from the taker into
+ * the venue, and the venue pays the output to the taker, both in the same
+ * transaction. Returns those two transfers, matched by account and amount.
+ */
+function findPropAmmFillTransfers(
+	fill: ParsedEvent,
+	events: readonly Log<bigint, number, boolean, AbiEvent>[],
+): {
+	input: { index: number; token: Address.Address }[]
+	output: { index: number; token: Address.Address }[]
+} {
+	const { taker, amountIn, amountOut } = fill.args as PropAmmFillArgs
+	const input: { index: number; token: Address.Address }[] = []
+	const output: { index: number; token: Address.Address }[] = []
+	events.forEach((event, index) => {
+		if (!isTransferEvent(event)) return
+		const { from, to, amount } = event.args
+		if (
+			Address.isEqual(from, taker) &&
+			Address.isEqual(to, fill.address) &&
+			amount === amountIn
+		)
+			input.push({ index, token: checksumAddress(event.address) })
+		else if (
+			Address.isEqual(from, fill.address) &&
+			Address.isEqual(to, taker) &&
+			amount === amountOut
+		)
+			output.push({ index, token: checksumAddress(event.address) })
+	})
+	return { input, output }
+}
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
 
@@ -946,8 +987,34 @@ function createDetectors(
 	}
 
 	return {
-		propAmm(event: ParsedEvent) {
-			if (event.topics[0]?.toLowerCase() !== propAmmTradeSelector) return null
+		propAmm(
+			event: ParsedEvent,
+			events?: readonly Log<bigint, number, boolean, AbiEvent>[],
+		) {
+			const selector = event.topics[0]?.toLowerCase()
+			if (selector === propAmmFillSelector) {
+				const { amountIn, amountOut } = event.args as PropAmmFillArgs
+				const { input, output } = findPropAmmFillTransfers(event, events ?? [])
+				const tokenIn = input[0]?.token
+				const tokenOut = output[0]?.token
+				// Without the settlement transfers the tokens are unknown, so
+				// only the action is shown.
+				if (!tokenIn || !tokenOut)
+					return {
+						type: 'propamm swap',
+						parts: [{ type: 'action', value: 'propAMM Swap' }],
+					}
+				return {
+					type: 'propamm swap',
+					parts: [
+						{ type: 'action', value: 'propAMM Swap' },
+						{ type: 'amount', value: createAmount(amountIn, tokenIn) },
+						{ type: 'text', value: 'for' },
+						{ type: 'amount', value: createAmount(amountOut, tokenOut) },
+					],
+				}
+			}
+			if (selector !== propAmmTradeSelector) return null
 			const { tokenIn, tokenOut, amountIn, amountOut } = event.args as {
 				tokenIn: Address.Address
 				tokenOut: Address.Address
@@ -2241,10 +2308,16 @@ export function parseKnownEvent(
 	options?: {
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		streamChannelToken?: Address.Address
+		/** The transaction's logs, which a propAMM v2 Fill reads its tokens from. */
+		logs?: readonly Log[]
 	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
 	if (!event) return null
+	const siblings =
+		options?.logs && event.topics[0]?.toLowerCase() === propAmmFillSelector
+			? parseEventLogs({ abi, logs: [...options.logs] })
+			: undefined
 
 	const getTokenMetadata = options?.getTokenMetadata
 
@@ -2269,7 +2342,7 @@ export function parseKnownEvent(
 	)
 
 	const detected =
-		detectors.propAmm(event) ||
+		detectors.propAmm(event, siblings) ||
 		detectors.zone(event) ||
 		detectors.tip20(event) ||
 		detectors.tip20Factory(event) ||
@@ -2761,8 +2834,15 @@ export function parseKnownEvents(
 			index,
 		}))
 
-	// A propAMM trade is self-identifying through TradeExecuted. Hide the two
-	// settlement transfers so the receipt shows one swap summary instead.
+	// A propAMM trade is self-identifying through TradeExecuted or a v2 Fill.
+	// Hide the two settlement transfers so the receipt shows one swap summary
+	// instead.
+	for (const fill of dedupedEvents) {
+		if (fill.topics[0]?.toLowerCase() !== propAmmFillSelector) continue
+		const { input, output } = findPropAmmFillTransfers(fill, dedupedEvents)
+		if (input.length === 0 || output.length === 0) continue
+		for (const { index } of [...input, ...output]) swapIndices.add(index)
+	}
 	for (const trade of dedupedEvents) {
 		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue
 		const { taker, tokenIn, tokenOut, amountIn, amountOut } = trade.args as {
@@ -2926,7 +3006,7 @@ export function parseKnownEvents(
 		const event = dedupedEvents[index]
 
 		const detected =
-			detectors.propAmm(event) ||
+			detectors.propAmm(event, dedupedEvents) ||
 			detectors.feePayer(event) ||
 			detectors.zone(event) ||
 			detectors.tip20(event) ||
