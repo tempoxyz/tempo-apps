@@ -121,12 +121,16 @@ describe('activitiesToKnownEvents', () => {
 					transfer(2, { memo }),
 					transfer(4, { memo: garbled }),
 					transfer(6, { memo: 'Invoice 123' }),
+					transfer(8, { memo: '0x payout' }),
+					transfer(10, { memo: 'Order 42\nThanks' }),
 				]),
 			),
 		).toEqual([
 			['Memo', { type: 'hex', value: memo }],
 			undefined,
 			['Memo', { type: 'text', value: 'Invoice 123' }],
+			['Memo', { type: 'text', value: '0x payout' }],
+			['Memo', { type: 'text', value: 'Order 42 Thanks' }],
 		])
 	})
 

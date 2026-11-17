@@ -494,7 +494,9 @@ function memoPart(
 	)
 	const raw =
 		log?.topics[3] ??
-		(typeof value === 'string' && Hex.validate(value) ? value : undefined)
+		(typeof value === 'string' && Hex.validate(value, { strict: true })
+			? value
+			: undefined)
 	if (raw) {
 		if (isMppAttributionMemo(raw)) return null
 		const text = decodeMemoForDisplay(raw)
@@ -502,13 +504,12 @@ function memoPart(
 	}
 	if (typeof value !== 'string') return null
 	// Text decoded without validation carries replacement or control characters for binary bytes.
-	const garbled = Array.from(value).some((character) => {
+	const text = value.replace(/\s+/g, ' ').trim()
+	const garbled = Array.from(text).some((character) => {
 		const code = character.charCodeAt(0)
 		return code === 0xfffd || code <= 0x1f || (code >= 0x7f && code <= 0x9f)
 	})
-	if (garbled) return null
-	const text = value.replace(/\s+/g, ' ').trim()
-	return text ? { type: 'text', value: text } : null
+	return text && !garbled ? { type: 'text', value: text } : null
 }
 
 function activityValueToPart(value: ActivityDataValue): KnownEventPart | null {
