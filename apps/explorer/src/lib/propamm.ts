@@ -16,6 +16,9 @@ export type PropAmmPoolConfig = {
 	address: Address
 	/** The pair's index on a v2 venue; 0 for a v1 pool. */
 	pairIndex: number
+	/** A v2 pair's tokens (IVenue.pair), which its maker's quotes name. */
+	base?: Address
+	quote?: Address
 }
 
 export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
@@ -26,6 +29,8 @@ export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
 			version: 'v2',
 			address: '0x26ec6abf0da64f00e8bd342de9b89e0c7646e3e3',
 			pairIndex: 0,
+			base: '0x20c0000000000000000000001621e21F71CF12fb',
+			quote: '0x20c0000000000000000000006a37DA5C996874BE',
 		},
 		{
 			// PRIME/USDC.e
@@ -65,30 +70,40 @@ export const propAmmPools: Record<number, readonly PropAmmPoolConfig[]> = {
 			version: 'v2',
 			address: '0xdc1ac50784c220d8caa587c3ba0f745d6de868c4',
 			pairIndex: 0,
+			base: '0x20C00000000000000000000097e2686297155240',
+			quote: '0x20C0000000000000000000000000000000000000',
 		},
 		{
 			// tARS/pathUSD
 			version: 'v2',
 			address: '0xdc1ac50784c220d8caa587c3ba0f745d6de868c4',
 			pairIndex: 1,
+			base: '0x20c000000000000000000000e59242Eff01Bc805',
+			quote: '0x20C0000000000000000000000000000000000000',
 		},
 		{
 			// OUSD/tARS
 			version: 'v2',
 			address: '0xdc1ac50784c220d8caa587c3ba0f745d6de868c4',
 			pairIndex: 2,
+			base: '0x20c0000000000000000000006a37DA5C996874BE',
+			quote: '0x20c000000000000000000000e59242Eff01Bc805',
 		},
 		{
 			// tEUR/pathUSD, a second tEUR token
 			version: 'v2',
 			address: '0xfd9621c4d8262b63d33b39c0f067ccb7cf55d5fa',
 			pairIndex: 0,
+			base: '0x20C00000000000000000000021c2be7d74fe9676',
+			quote: '0x20C0000000000000000000000000000000000000',
 		},
 		{
 			// tEUR/pathUSD, a second tEUR token
 			version: 'v2',
 			address: '0xfdb84a3aceaa00ae4d605ae707f3d936744e1f16',
 			pairIndex: 0,
+			base: '0x20C00000000000000000000021c2be7d74fe9676',
+			quote: '0x20C0000000000000000000000000000000000000',
 		},
 	],
 }
@@ -99,6 +114,24 @@ export function propAmmPoolsFor(chainId: number): readonly PropAmmPoolConfig[] {
 		...pool,
 		address: pool.address.toLowerCase() as Address,
 	}))
+}
+
+/** The listed v2 pair a venue address and pair index name, on any chain. */
+export function findPropAmmV2Pair(
+	address: string,
+	pairIndex: number,
+): { base: Address; quote: Address } | undefined {
+	for (const pools of Object.values(propAmmPools))
+		for (const pool of pools)
+			if (
+				pool.version === 'v2' &&
+				pool.pairIndex === pairIndex &&
+				pool.address.toLowerCase() === address.toLowerCase() &&
+				pool.base &&
+				pool.quote
+			)
+				return { base: pool.base, quote: pool.quote }
+	return undefined
 }
 
 export function poolKey(pool: { address: string; pairIndex: number }): string {
@@ -210,16 +243,36 @@ export type PropAmmTradesSnapshot = {
 }
 
 /** A v2 hot word's fields (propAMM contracts/src/v2/libraries/HotWord.sol). */
+/**
+ * A v2 hot word (tempoxyz/propAMM contracts/src/v2/libraries/HotWord.sol),
+ * packed least-significant bit first: mid (quote per 1 base, 18 dp), the bid
+ * and ask widens (0.1 bp), the width and depth scales (1/1000), the shape,
+ * validUntil (unix seconds), seq and flags.
+ */
 export function decodeHotWord(word: bigint): {
 	mid: bigint
+	bidWiden: number
+	askWiden: number
+	widthScale: number
+	depthScale: number
+	shapeId: number
 	validUntil: number
+	seq: number
 	bidsOff: boolean
 	asksOff: boolean
 } {
-	const flags = Number((word >> 240n) & 0xffffn)
+	const bits = (offset: bigint, size: bigint) =>
+		Number((word >> offset) & ((1n << size) - 1n))
+	const flags = bits(240n, 16n)
 	return {
 		mid: word & ((1n << 96n) - 1n),
-		validUntil: Number((word >> 168n) & ((1n << 40n) - 1n)),
+		bidWiden: bits(96n, 16n),
+		askWiden: bits(112n, 16n),
+		widthScale: bits(128n, 16n),
+		depthScale: bits(144n, 16n),
+		shapeId: bits(160n, 8n),
+		validUntil: bits(168n, 40n),
+		seq: bits(208n, 32n),
 		bidsOff: (flags & 1) !== 0,
 		asksOff: (flags & 2) !== 0,
 	}

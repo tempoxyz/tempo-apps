@@ -1046,6 +1046,73 @@ describe('parseKnownEvents', () => {
 		expect(parseKnownEvent(tradeLog)?.type).toBe('propamm swap')
 	})
 
+	it('decodes a listed propAMM v2 post as a quote', () => {
+		const venue = '0x26ec6abf0da64f00e8bd342de9b89e0c7646e3e3'
+		const base = '0x20c0000000000000000000001621e21F71CF12fb'
+		const quote = '0x20c0000000000000000000006a37DA5C996874BE'
+		// mid 1.1003, bid widen 1.5 bp, ask widen 2 bp, width 1.25x, depth 0.5x,
+		// shape 3, valid until 2026-11-18 21:26:21 UTC, seq 143333, asks off.
+		const hotWord = `0x${(
+			1_100_300_000_000_000_000n |
+			(15n << 96n) |
+			(20n << 112n) |
+			(1250n << 128n) |
+			(500n << 144n) |
+			(3n << 160n) |
+			(1_795_037_181n << 168n) |
+			(143_333n << 208n) |
+			(2n << 240n)
+		)
+			.toString(16)
+			.padStart(64, '0')}` as Hex.Hex
+		const postLog = mockZoneEventLog(propAmmEventsAbi[2], venue, {
+			pairIndex: 0,
+			hotWord,
+		})
+		const getTokenMetadata = ((address: string) =>
+			({
+				[base.toLowerCase()]: { symbol: 'EURC.e' },
+				[quote.toLowerCase()]: { symbol: 'OUSD' },
+			})[address.toLowerCase()]) as never
+
+		expect(parseKnownEvent(postLog, { getTokenMetadata })).toEqual({
+			type: 'propamm quote',
+			parts: [
+				{ type: 'action', value: 'propAMM Quote Bid' },
+				{ type: 'token', value: { address: base, symbol: 'EURC.e' } },
+				{ type: 'text', value: 'at' },
+				{ type: 'number', value: [1_100_300_000_000_000_000n, 18] },
+				{ type: 'token', value: { address: quote, symbol: 'OUSD' } },
+			],
+			note: [
+				['Bids', { type: 'text', value: 'mid - 1.5 bp' }],
+				['Asks', { type: 'text', value: 'off' }],
+				['Valid Until', { type: 'text', value: '2026-11-18 21:26:21 UTC' }],
+				['Width', { type: 'text', value: '1.25x' }],
+				['Depth', { type: 'text', value: '0.5x' }],
+				['Shape', { type: 'text', value: '#3' }],
+				['Sequence', { type: 'number', value: 143_333 }],
+			],
+		})
+
+		const refillLog = mockZoneEventLog(propAmmEventsAbi[3], venue, {
+			pairIndex: 0,
+			bids: true,
+			asks: true,
+		})
+		expect(parseKnownEvent(refillLog)?.parts[0]).toEqual({
+			type: 'action',
+			value: 'propAMM Refill Bids and Asks',
+		})
+
+		// Anyone can emit Posted: an unlisted venue gets no propAMM label.
+		const unlisted = mockZoneEventLog(propAmmEventsAbi[2], PROP_AMM_POOL, {
+			pairIndex: 0,
+			hotWord,
+		})
+		expect(parseKnownEvent(unlisted)?.type).not.toBe('propamm quote')
+	})
+
 	it('composes a propAMM v2 fill from its settlement transfers', () => {
 		const hash = `0x${'6'.repeat(64)}` as const
 		const amountIn = 50_000_000n

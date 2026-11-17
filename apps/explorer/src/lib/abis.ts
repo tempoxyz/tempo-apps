@@ -301,6 +301,8 @@ export const receivePolicyGuardAbi = parseAbi([
 export const propAmmEventsAbi = parseAbi([
 	'event TradeExecuted(address indexed taker, address indexed recipient, bytes32 indexed customerId, bytes32 tradeId, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, uint256 oraclePrice, uint256 oracleUpdatedAt)',
 	'event Fill(uint16 indexed pairIndex, address indexed taker, bytes32 indexed ref, uint64 sponsorId, bool baseIn, uint128 amountIn, uint128 amountOut, uint96 makerMid, uint32 seq)',
+	'event Posted(uint16 indexed pairIndex, bytes32 hotWord)',
+	'event Refilled(uint16 indexed pairIndex, bool bids, bool asks)',
 ])
 
 // Customer-agnostic Tempo Earn events. These are bundled separately from viem's

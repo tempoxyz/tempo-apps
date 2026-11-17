@@ -28,6 +28,7 @@ import {
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import { HexFormatter } from '#lib/formatting'
 import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
+import { decodeHotWord, findPropAmmV2Pair } from '#lib/propamm'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
@@ -73,6 +74,24 @@ const earnEventSignatures = new Map(
 )
 const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
 const propAmmFillSelector = toEventSelector(propAmmEventsAbi[1]).toLowerCase()
+const propAmmPostedSelector = toEventSelector(propAmmEventsAbi[2]).toLowerCase()
+const propAmmRefilledSelector = toEventSelector(
+	propAmmEventsAbi[3],
+).toLowerCase()
+
+/** Where a v2 side quotes from its mid: a widen in 0.1 bp units. */
+function formatWiden(widen: number, sign: '+' | '-'): string {
+	return widen === 0 ? 'at mid' : `mid ${sign} ${(widen / 10).toFixed(1)} bp`
+}
+
+/** A 1/1000 scale as a multiplier, such as 1x or 0.5x. */
+function formatScale(scale: number): string {
+	return `${Number((scale / 1000).toFixed(3))}x`
+}
+
+function formatUnixSeconds(seconds: number): string {
+	return `${new Date(seconds * 1000).toISOString().slice(0, 19).replace('T', ' ')} UTC`
+}
 
 type PropAmmFillArgs = {
 	taker: Address.Address
@@ -992,6 +1011,77 @@ function createDetectors(
 			events?: readonly Log<bigint, number, boolean, AbiEvent>[],
 		) {
 			const selector = event.topics[0]?.toLowerCase()
+			if (
+				selector === propAmmPostedSelector ||
+				selector === propAmmRefilledSelector
+			) {
+				// Only listed venues: anyone can emit these events, and the pair's
+				// tokens come from the listing.
+				const { pairIndex } = event.args as { pairIndex: number }
+				const pair = findPropAmmV2Pair(event.address, pairIndex)
+				if (!pair) return null
+				const token = (address: Address.Address) => ({
+					address,
+					symbol: getTokenMetadata?.(address)?.symbol,
+				})
+				const base = token(pair.base)
+				const quote = token(pair.quote)
+
+				if (selector === propAmmRefilledSelector) {
+					const { bids, asks } = event.args as { bids: boolean; asks: boolean }
+					const sides = bids && asks ? 'Bids and Asks' : bids ? 'Bids' : 'Asks'
+					return {
+						type: 'propamm refill',
+						parts: [
+							{ type: 'action', value: `propAMM Refill ${sides}` },
+							{ type: 'token', value: base },
+							{ type: 'text', value: '/' },
+							{ type: 'token', value: quote },
+						],
+					}
+				}
+
+				// The maker's quote reads as a two-sided order around its mid: bids
+				// below it, asks above, each widened on top of the shape's ladder.
+				const word = decodeHotWord(
+					BigInt((event.args as { hotWord: Hex.Hex }).hotWord),
+				)
+				const sides =
+					word.bidsOff && word.asksOff
+						? 'Sides Off'
+						: word.asksOff
+							? 'Bid'
+							: word.bidsOff
+								? 'Ask'
+								: 'Bid/Ask'
+				const side = (off: boolean, widen: number, sign: '+' | '-') =>
+					({
+						type: 'text',
+						value: off ? 'off' : formatWiden(widen, sign),
+					}) as const
+				return {
+					type: 'propamm quote',
+					parts: [
+						{ type: 'action', value: `propAMM Quote ${sides}` },
+						{ type: 'token', value: base },
+						{ type: 'text', value: 'at' },
+						{ type: 'number', value: [word.mid, 18] },
+						{ type: 'token', value: quote },
+					],
+					note: [
+						['Bids', side(word.bidsOff, word.bidWiden, '-')],
+						['Asks', side(word.asksOff, word.askWiden, '+')],
+						[
+							'Valid Until',
+							{ type: 'text', value: formatUnixSeconds(word.validUntil) },
+						],
+						['Width', { type: 'text', value: formatScale(word.widthScale) }],
+						['Depth', { type: 'text', value: formatScale(word.depthScale) }],
+						['Shape', { type: 'text', value: `#${word.shapeId}` }],
+						['Sequence', { type: 'number', value: word.seq }],
+					],
+				}
+			}
 			if (selector === propAmmFillSelector) {
 				const { amountIn, amountOut } = event.args as PropAmmFillArgs
 				const { input, output } = findPropAmmFillTransfers(event, events ?? [])
