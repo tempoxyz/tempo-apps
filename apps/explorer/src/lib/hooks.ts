@@ -1,5 +1,6 @@
 import { useRouter } from '@tanstack/react-router'
 import * as React from 'react'
+import { createCopyController } from '#lib/clipboard'
 
 export function useIsMounted() {
 	const [isMounted, setIsMounted] = React.useState(false)
@@ -13,25 +14,17 @@ export function useIsMounted() {
 
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 	const { timeout } = props
-
-	const [notifying, setNotifying] = React.useState(false)
-	const timer = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-
-	const copy: useCopy.Result['copy'] = React.useCallback(
-		async (value: string) => {
-			if (timer.current) clearTimeout(timer.current)
-			try {
-				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
-				await navigator.clipboard.writeText(value)
-				setNotifying(true)
-				timer.current = setTimeout(() => setNotifying(false), timeout)
-			} catch (error) {
-				console.error('Failed to copy text: ', error)
-			}
-		},
-		[timeout],
+	const [controller] = React.useState(() => createCopyController())
+	const notifying = React.useSyncExternalStore(
+		controller.subscribe,
+		controller.getSnapshot,
+		() => false,
 	)
-
+	React.useEffect(() => controller.cancel, [controller])
+	const copy: useCopy.Result['copy'] = React.useCallback(
+		(value) => controller.copy(value, timeout),
+		[controller, timeout],
+	)
 	return { copy, notifying }
 }
 
