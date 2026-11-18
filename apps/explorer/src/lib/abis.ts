@@ -1,7 +1,22 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
 
-export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
+/**
+ * TIP-1166 (T15) additions to the TIP-20 channel reserve precompile that the
+ * Viem ABI doesn't carry yet. Drop each one once Viem ships it.
+ */
+const tip20ChannelReserveT15Abi = parseAbi([
+	'struct ChannelDescriptor { address payer; address payee; address operator; address token; bytes32 salt; address authorizedSigner; bytes32 expiringNonceHash; }',
+	'function verifyVoucher(ChannelDescriptor descriptor, uint96 cumulativeAmount, bytes signature) view returns (bool valid)',
+	'event OpeningCommitmentRecorded(bytes32 indexed channelId, address indexed signer, bytes32 commitment)',
+	'error SignerConfigChanged(address signer)',
+	'error SaltNotSignerCommitment(address signer, bytes32 commitment)',
+])
+
+export const tip20ChannelReserveAbi = [
+	...ViemTempoAbis.tip20ChannelReserve,
+	...tip20ChannelReserveT15Abi,
+] as const
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
 
 export const tip20Abi = [
@@ -407,7 +422,7 @@ export const Abis = {
 	storageCredits: ViemTempoAbis.storageCredits,
 	streamChannel: streamChannelAbi,
 	tip20: tip20Abi,
-	tip20ChannelReserve: ViemTempoAbis.tip20ChannelReserve,
+	tip20ChannelReserve: tip20ChannelReserveAbi,
 	tip20Factory: ViemTempoAbis.tip20Factory,
 	tip403Registry: ViemTempoAbis.tip403Registry,
 	validatorConfig: ViemTempoAbis.validatorConfig,
