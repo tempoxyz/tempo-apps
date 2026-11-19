@@ -49,6 +49,7 @@ export function isExplorerNetworkPathPreservable(path: string): boolean {
 		/^\/blocks\/?$/,
 		/^\/tokens\/?$/,
 		/^\/fee-amm\/?$/,
+		/^\/earn\/?$/,
 		/^\/tx\/[^/]+\/?$/,
 		/^\/receipt\/[^/]+\/?$/,
 		/^\/block\/[^/]+\/?$/,

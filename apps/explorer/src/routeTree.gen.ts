@@ -13,6 +13,7 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
+import { Route as LayoutEarnRouteImport } from './routes/_layout/earn'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutMarketsRouteImport } from './routes/_layout/markets'
 import { Route as LayoutPropammRouteImport } from './routes/_layout/propamm'
@@ -68,6 +69,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
 const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutEarnRoute = LayoutEarnRouteImport.update({
+  id: '/earn',
+  path: '/earn',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
@@ -267,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
+  '/earn': typeof LayoutEarnRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
   '/propamm': typeof LayoutPropammRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
+  '/earn': typeof LayoutEarnRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
   '/propamm': typeof LayoutPropammRoute
@@ -352,6 +360,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
+  '/_layout/earn': typeof LayoutEarnRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
   '/_layout/markets': typeof LayoutMarketsRoute
   '/_layout/propamm': typeof LayoutPropammRoute
@@ -397,6 +406,7 @@ export interface FileRouteTypes {
     | '/'
     | '/search'
     | '/blocks'
+    | '/earn'
     | '/fee-amm'
     | '/markets'
     | '/propamm'
@@ -438,6 +448,7 @@ export interface FileRouteTypes {
   to:
     | '/search'
     | '/blocks'
+    | '/earn'
     | '/fee-amm'
     | '/markets'
     | '/propamm'
@@ -481,6 +492,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/search'
     | '/_layout/blocks'
+    | '/_layout/earn'
     | '/_layout/fee-amm'
     | '/_layout/markets'
     | '/_layout/propamm'
@@ -571,6 +583,13 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/blocks'
       preLoaderRoute: typeof LayoutBlocksRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/earn': {
+      id: '/_layout/earn'
+      path: '/earn'
+      fullPath: '/earn'
+      preLoaderRoute: typeof LayoutEarnRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/fee-amm': {
@@ -837,6 +856,7 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
+  LayoutEarnRoute: typeof LayoutEarnRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
   LayoutMarketsRoute: typeof LayoutMarketsRoute
   LayoutPropammRoute: typeof LayoutPropammRoute
@@ -861,6 +881,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
+  LayoutEarnRoute: LayoutEarnRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
   LayoutMarketsRoute: LayoutMarketsRoute,
   LayoutPropammRoute: LayoutPropammRoute,
