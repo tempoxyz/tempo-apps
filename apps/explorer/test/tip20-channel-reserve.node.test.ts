@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
 	decodeErrorResult,
+	type Hex,
 	decodeEventLog,
 	decodeFunctionData,
 	encodeErrorResult,
@@ -81,11 +82,12 @@ describe('TIP-20 channel reserve ABI', () => {
 			keccak256(toHex('OpeningCommitmentRecorded(bytes32,address,bytes32)')),
 		)
 
+		// Both indexed args are set, so every topic is a single hex value.
 		const topics = encodeEventTopics({
 			abi: tip20ChannelReserveAbi,
 			eventName: 'OpeningCommitmentRecorded',
 			args: { channelId, signer },
-		})
+		}) as [Hex, ...Hex[]]
 		const decoded = decodeEventLog({ abi: allAbis, topics, data: commitment })
 
 		expect(decoded.eventName).toBe('OpeningCommitmentRecorded')
