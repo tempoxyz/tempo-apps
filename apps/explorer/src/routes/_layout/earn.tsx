@@ -304,7 +304,9 @@ function EarnPage(): React.JSX.Element {
 	)
 }
 
-function VaultsTable(props: VaultsTableProps): React.JSX.Element | null {
+export function VaultsTable(
+	props: VaultsTable.Props,
+): React.JSX.Element | null {
 	const { rows, loading, hasErrors, search, onSort } = props
 	const rowLink = useRowLink()
 	if (!loading && rows.length === 0)
@@ -403,16 +405,18 @@ function VaultsTable(props: VaultsTableProps): React.JSX.Element | null {
 	)
 }
 
-type VaultsTableProps = {
-	rows: EarnVault[]
-	loading: boolean
-	hasErrors: boolean
-	search: EarnSearch
-	onSort: (sort: EarnSort) => void
+export declare namespace VaultsTable {
+	type Props = {
+		rows: EarnVault[]
+		loading: boolean
+		hasErrors: boolean
+		search: EarnSearch
+		onSort: (sort: EarnSort) => void
+	}
 }
 
 /** The vault by what it holds, never by who runs it. */
-function VaultLabel(props: { vault: EarnVault }): React.JSX.Element {
+export function VaultLabel(props: VaultLabel.Props): React.JSX.Element {
 	const { vault } = props
 	return (
 		<Link
@@ -455,11 +459,7 @@ function Dash(): React.JSX.Element {
 	return <span {...styles.muted()}>—</span>
 }
 
-function Stat(props: {
-	label: string
-	value: string | undefined
-	partial?: boolean
-}): React.JSX.Element {
+export function Stat(props: Stat.Props): React.JSX.Element {
 	return (
 		<Surface size="medium" {...styles.card()}>
 			<Stack gap="8">
@@ -473,4 +473,18 @@ function Stat(props: {
 			</Stack>
 		</Surface>
 	)
+}
+
+export declare namespace VaultLabel {
+	type Props = {
+		vault: EarnVault
+	}
+}
+
+export declare namespace Stat {
+	type Props = {
+		label: string
+		value: string | undefined
+		partial?: boolean | undefined
+	}
 }

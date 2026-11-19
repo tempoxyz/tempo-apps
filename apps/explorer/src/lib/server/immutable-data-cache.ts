@@ -6,7 +6,7 @@ export async function withImmutableDataCache<T>(options: {
 	key: string
 	load: () => Promise<T>
 	shouldCache?: ((data: T) => boolean) | undefined
-	ttlSeconds?: number | undefined
+	ttlSeconds?: number | ((data: T) => number) | undefined
 }): Promise<T> {
 	if (typeof window !== 'undefined' || typeof caches === 'undefined')
 		return options.load()
@@ -25,13 +25,17 @@ export async function withImmutableDataCache<T>(options: {
 
 	const data = await options.load()
 	if (options.shouldCache && !options.shouldCache(data)) return data
+	const ttlSeconds =
+		typeof options.ttlSeconds === 'function'
+			? options.ttlSeconds(data)
+			: (options.ttlSeconds ?? 3600)
 
 	try {
 		await cache.put(
 			cacheKey,
 			new Response(Json.stringify(data), {
 				headers: {
-					'Cache-Control': `public, max-age=${options.ttlSeconds ?? 3600}`,
+					'Cache-Control': `public, max-age=${ttlSeconds}`,
 					'Content-Type': 'application/json',
 				},
 			}),
