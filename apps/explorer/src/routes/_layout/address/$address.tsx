@@ -23,6 +23,7 @@ import { AccountCard } from '#comps/AccountCard'
 import { WalletActions } from '#comps/WalletActions'
 import { ValidatorFees } from '#comps/ValidatorFees'
 import { ValidatorCard } from '#comps/ValidatorCard'
+import { EarnVaultCard } from '#comps/EarnVaultCard'
 import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -901,6 +902,7 @@ function AccountCardWithTimestamps(props: {
 				virtualAddressParts={virtualAddressParts}
 			/>
 			{!isTip20 && <ValidatorCard address={address} />}
+			{!isTip20 && <EarnVaultCard address={address} />}
 			{/* Wallets need a symbol to add a token, and only TIP-20s can pay
 			fees, so a symbol-less ERC-20 has no wallet action to offer. */}
 			{isToken && (isTip20 || Boolean(tokenMetadata?.symbol)) && (

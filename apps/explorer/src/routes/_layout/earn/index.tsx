@@ -26,7 +26,6 @@ import { Address } from '#comps/Address'
 import {
 	defaultEarnSearch,
 	type EarnSearch,
-	type EarnSort,
 	type EarnVault,
 	earnSearchSchema,
 	earnTotals,
@@ -39,7 +38,7 @@ import { PriceFormatter } from '#lib/formatting'
 import { useRowLink } from '#lib/hooks'
 import { earnVaultsQueryOptions } from '#lib/queries/earn'
 
-export const Route = createFileRoute('/_layout/earn')({
+export const Route = createFileRoute('/_layout/earn/')({
 	component: EarnPage,
 	validateSearch: earnSearchSchema,
 	search: { middlewares: [stripSearchParams(defaultEarnSearch)] },
@@ -66,14 +65,10 @@ const usd = (value: number) =>
 	value < 1000
 		? cents.format(value)
 		: PriceFormatter.format(value, { format: 'short' })
-const percent = new Intl.NumberFormat('en-US', {
-	style: 'percent',
-	minimumFractionDigits: 2,
-	maximumFractionDigits: 2,
-})
-const sharePrice = new Intl.NumberFormat('en-US', {
-	minimumFractionDigits: 4,
-	maximumFractionDigits: 4,
+const date = new Intl.DateTimeFormat('en-US', {
+	month: 'short',
+	day: 'numeric',
+	year: 'numeric',
 })
 
 namespace styles {
@@ -173,12 +168,8 @@ function EarnPage(): React.JSX.Element {
 	const asset = assets.includes(search.asset) ? search.asset : 'all'
 	const rows = useMemo(
 		() =>
-			sortVaults(
-				filterVaults(listed, { asset, unverified: true }),
-				search.sort,
-				search.dir,
-			),
-		[listed, asset, search.sort, search.dir],
+			sortVaults(filterVaults(listed, { asset, unverified: true }), search.dir),
+		[listed, asset, search.dir],
 	)
 	const totals = useMemo(() => earnTotals(rows), [rows])
 	const pending = query.isPending
@@ -191,11 +182,8 @@ function EarnPage(): React.JSX.Element {
 		})
 	}
 
-	function sortBy(sort: EarnSort) {
-		setSearch({
-			sort,
-			dir: search.sort === sort && search.dir === 'desc' ? 'asc' : 'desc',
-		})
+	function toggleSort() {
+		setSearch({ dir: search.dir === 'desc' ? 'asc' : 'desc' })
 	}
 
 	return (
@@ -205,8 +193,8 @@ function EarnPage(): React.JSX.Element {
 					<div {...styles.header()}>
 						<h1 {...styles.title()}>Earn</h1>
 						<p {...styles.intro()}>
-							Every Tempo Earn vault deployed onchain, by asset and engine. APY
-							is net of fees, from share-price growth over the last 7 days.
+							Every Tempo Earn vault deployed onchain, by asset and engine, with
+							the value each one holds.
 						</p>
 					</div>
 
@@ -222,14 +210,8 @@ function EarnPage(): React.JSX.Element {
 							partial={query.data?.complete === false}
 						/>
 						<Stat
-							label="Average APY (by TVL)"
-							value={
-								pending || failed
-									? undefined
-									: totals.apy === null
-										? '—'
-										: percent.format(totals.apy)
-							}
+							label="Assets"
+							value={pending || failed ? undefined : String(totals.assets)}
 						/>
 					</Grid>
 
@@ -293,7 +275,7 @@ function EarnPage(): React.JSX.Element {
 									loading={rows.length === 0 && pending}
 									hasErrors={failed}
 									search={search}
-									onSort={sortBy}
+									onSort={toggleSort}
 								/>
 							</Stack>
 						</Surface>
@@ -316,27 +298,6 @@ export function VaultsTable(
 			</Empty.Root>
 		)
 
-	const sortable = (sort: EarnSort, label: string, title?: string) => (
-		<Table.HeaderCell
-			justify="end"
-			title={title}
-			aria-sort={
-				search.sort === sort
-					? search.dir === 'asc'
-						? 'ascending'
-						: 'descending'
-					: undefined
-			}
-		>
-			<Table.SortButton
-				onClick={() => onSort(sort)}
-				aria-label={`Sort by ${label}`}
-			>
-				{label}
-			</Table.SortButton>
-		</Table.HeaderCell>
-	)
-
 	return (
 		<div {...styles.scroll()}>
 			<Table interactive aria-label="Earn vaults">
@@ -344,14 +305,15 @@ export function VaultsTable(
 					<Table.Row>
 						<Table.HeaderCell>Vault</Table.HeaderCell>
 						<Table.HeaderCell {...styles.wide()}>Address</Table.HeaderCell>
-						{sortable('tvl', 'TVL', 'Total assets in US dollars.')}
-						{sortable(
-							'apy',
-							'APY',
-							'Net of fees, annualized from share-price growth over the last 7 days.',
-						)}
-						<Table.HeaderCell justify="end" {...styles.wide()}>
-							Share price
+						<Table.HeaderCell {...styles.wide()}>Deployed</Table.HeaderCell>
+						<Table.HeaderCell
+							justify="end"
+							title="Total assets in US dollars."
+							aria-sort={search.dir === 'asc' ? 'ascending' : 'descending'}
+						>
+							<Table.SortButton onClick={onSort} aria-label="Sort by TVL">
+								TVL
+							</Table.SortButton>
 						</Table.HeaderCell>
 					</Table.Row>
 				</Table.Head>
@@ -359,7 +321,7 @@ export function VaultsTable(
 					{rows.map((vault) => (
 						<Table.Row
 							key={vault.address}
-							{...rowLink(`/address/${vault.address}`)}
+							{...rowLink(`/earn/${vault.address}`)}
 						>
 							<Table.Cell>
 								<VaultLabel vault={vault} />
@@ -367,30 +329,27 @@ export function VaultsTable(
 							<Table.Cell {...styles.wide()}>
 								<Address address={vault.address} chars={4} />
 							</Table.Cell>
+							<Table.Cell {...styles.wide()}>
+								{vault.deployment ? (
+									<span {...styles.secondary()}>
+										{date.format(vault.deployment.timestamp * 1000)}
+									</span>
+								) : (
+									<Dash />
+								)}
+							</Table.Cell>
 							<Table.Cell justify="end" numeric>
 								{vault.tvl === null ? <Dash /> : usd(vault.tvl)}
-							</Table.Cell>
-							<Table.Cell justify="end" numeric>
-								{vault.apy === null ? <Dash /> : percent.format(vault.apy)}
-							</Table.Cell>
-							<Table.Cell justify="end" numeric {...styles.wide()}>
-								{vault.sharePrice === null ? (
-									<Dash />
-								) : (
-									<span {...styles.secondary()}>
-										{sharePrice.format(vault.sharePrice)}
-									</span>
-								)}
 							</Table.Cell>
 						</Table.Row>
 					))}
 					{loading &&
 						Array.from({ length: LOADING_ROWS }, (_, index) => (
 							<Table.Row key={index} aria-busy="true">
-								{Array.from({ length: 5 }, (_, cell) => (
+								{Array.from({ length: 4 }, (_, cell) => (
 									<Table.Cell
 										key={cell}
-										{...(cell === 1 || cell === 4 ? styles.wide() : {})}
+										{...(cell === 1 || cell === 2 ? styles.wide() : {})}
 									>
 										<Skeleton>
 											<span>Loading value</span>
@@ -411,7 +370,7 @@ export declare namespace VaultsTable {
 		loading: boolean
 		hasErrors: boolean
 		search: EarnSearch
-		onSort: (sort: EarnSort) => void
+		onSort: () => void
 	}
 }
 
@@ -421,8 +380,8 @@ export function VaultLabel(props: VaultLabel.Props): React.JSX.Element {
 	return (
 		<Link
 			preload="intent"
-			to="/address/$address"
-			params={{ address: vault.address }}
+			to="/earn/$vault"
+			params={{ vault: vault.address }}
 			title={`${vault.asset.symbol} vault`}
 			{...styles.link()}
 		>

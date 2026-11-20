@@ -13,7 +13,6 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
-import { Route as LayoutEarnRouteImport } from './routes/_layout/earn'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutMarketsRouteImport } from './routes/_layout/markets'
 import { Route as LayoutPropammRouteImport } from './routes/_layout/propamm'
@@ -34,6 +33,8 @@ import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/
 import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDexIndexRouteImport } from './routes/_layout/dex/index'
+import { Route as LayoutEarnIndexRouteImport } from './routes/_layout/earn/index'
+import { Route as LayoutEarnVaultRouteImport } from './routes/_layout/earn/$vault'
 import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
@@ -69,11 +70,6 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
 const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutEarnRoute = LayoutEarnRouteImport.update({
-  id: '/earn',
-  path: '/earn',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
@@ -176,6 +172,16 @@ const LayoutDexIndexRoute = LayoutDexIndexRouteImport.update({
   path: '/dex/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutEarnIndexRoute = LayoutEarnIndexRouteImport.update({
+  id: '/earn/',
+  path: '/earn/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutEarnVaultRoute = LayoutEarnVaultRouteImport.update({
+  id: '/earn/$vault',
+  path: '/earn/$vault',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutPolicyIdRoute = LayoutPolicyIdRouteImport.update({
   id: '/policy/$id',
   path: '/policy/$id',
@@ -273,7 +279,6 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
-  '/earn': typeof LayoutEarnRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
   '/propamm': typeof LayoutPropammRoute
@@ -292,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/earn/$vault': typeof LayoutEarnVaultRoute
   '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
@@ -299,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo/': typeof LayoutDemoIndexRoute
   '/dex/': typeof LayoutDexIndexRoute
+  '/earn/': typeof LayoutEarnIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -315,7 +322,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
-  '/earn': typeof LayoutEarnRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
   '/propamm': typeof LayoutPropammRoute
@@ -335,6 +341,7 @@ export interface FileRoutesByTo {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/earn/$vault': typeof LayoutEarnVaultRoute
   '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
@@ -342,6 +349,7 @@ export interface FileRoutesByTo {
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/dex': typeof LayoutDexIndexRoute
+  '/earn': typeof LayoutEarnIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -360,7 +368,6 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
-  '/_layout/earn': typeof LayoutEarnRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
   '/_layout/markets': typeof LayoutMarketsRoute
   '/_layout/propamm': typeof LayoutPropammRoute
@@ -380,6 +387,7 @@ export interface FileRoutesById {
   '/_layout/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
+  '/_layout/earn/$vault': typeof LayoutEarnVaultRoute
   '/_layout/policy/$id': typeof LayoutPolicyIdRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/_layout/dex/': typeof LayoutDexIndexRoute
+  '/_layout/earn/': typeof LayoutEarnIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/_layout/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -406,7 +415,6 @@ export interface FileRouteTypes {
     | '/'
     | '/search'
     | '/blocks'
-    | '/earn'
     | '/fee-amm'
     | '/markets'
     | '/propamm'
@@ -425,6 +433,7 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/earn/$vault'
     | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
@@ -432,6 +441,7 @@ export interface FileRouteTypes {
     | '/api/abi/batch'
     | '/demo/'
     | '/dex/'
+    | '/earn/'
     | '/block/countdown/$targetBlock'
     | '/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -448,7 +458,6 @@ export interface FileRouteTypes {
   to:
     | '/search'
     | '/blocks'
-    | '/earn'
     | '/fee-amm'
     | '/markets'
     | '/propamm'
@@ -468,6 +477,7 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/earn/$vault'
     | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/api/abi/batch'
     | '/demo'
     | '/dex'
+    | '/earn'
     | '/block/countdown/$targetBlock'
     | '/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -492,7 +503,6 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/search'
     | '/_layout/blocks'
-    | '/_layout/earn'
     | '/_layout/fee-amm'
     | '/_layout/markets'
     | '/_layout/propamm'
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/_layout/demo/empty-state'
     | '/_layout/demo/pagination'
     | '/_layout/demo/tx'
+    | '/_layout/earn/$vault'
     | '/_layout/policy/$id'
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
@@ -519,6 +530,7 @@ export interface FileRouteTypes {
     | '/api/abi/batch'
     | '/_layout/demo/'
     | '/_layout/dex/'
+    | '/_layout/earn/'
     | '/_layout/block/countdown/$targetBlock'
     | '/_layout/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -583,13 +595,6 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/blocks'
       preLoaderRoute: typeof LayoutBlocksRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/earn': {
-      id: '/_layout/earn'
-      path: '/earn'
-      fullPath: '/earn'
-      preLoaderRoute: typeof LayoutEarnRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/fee-amm': {
@@ -732,6 +737,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDexIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/earn/': {
+      id: '/_layout/earn/'
+      path: '/earn'
+      fullPath: '/earn/'
+      preLoaderRoute: typeof LayoutEarnIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/earn/$vault': {
+      id: '/_layout/earn/$vault'
+      path: '/earn/$vault'
+      fullPath: '/earn/$vault'
+      preLoaderRoute: typeof LayoutEarnVaultRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/policy/$id': {
       id: '/_layout/policy/$id'
       path: '/policy/$id'
@@ -856,7 +875,6 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
-  LayoutEarnRoute: typeof LayoutEarnRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
   LayoutMarketsRoute: typeof LayoutMarketsRoute
   LayoutPropammRoute: typeof LayoutPropammRoute
@@ -869,19 +887,20 @@ interface LayoutRouteChildren {
   LayoutDemoEmptyStateRoute: typeof LayoutDemoEmptyStateRoute
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
+  LayoutEarnVaultRoute: typeof LayoutEarnVaultRoute
   LayoutPolicyIdRoute: typeof LayoutPolicyIdRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
   LayoutDexIndexRoute: typeof LayoutDexIndexRoute
+  LayoutEarnIndexRoute: typeof LayoutEarnIndexRoute
   LayoutBlockCountdownTargetBlockRoute: typeof LayoutBlockCountdownTargetBlockRoute
   LayoutDexFromToRoute: typeof LayoutDexFromToRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
-  LayoutEarnRoute: LayoutEarnRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
   LayoutMarketsRoute: LayoutMarketsRoute,
   LayoutPropammRoute: LayoutPropammRoute,
@@ -894,12 +913,14 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDemoEmptyStateRoute: LayoutDemoEmptyStateRoute,
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
+  LayoutEarnVaultRoute: LayoutEarnVaultRoute,
   LayoutPolicyIdRoute: LayoutPolicyIdRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
   LayoutDexIndexRoute: LayoutDexIndexRoute,
+  LayoutEarnIndexRoute: LayoutEarnIndexRoute,
   LayoutBlockCountdownTargetBlockRoute: LayoutBlockCountdownTargetBlockRoute,
   LayoutDexFromToRoute: LayoutDexFromToRoute,
 }

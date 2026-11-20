@@ -3,7 +3,7 @@ import * as z from 'zod/mini'
 /**
  * Tempo Earn vaults, listed without naming who runs them: each row is the
  * vault's asset, engine kind and onchain numbers, never its share token's
- * name, owner or deployment ID, which can name a customer.
+ * name or symbol, owner, label or deployment ID, which can name a customer.
  */
 
 export const earnEngines = ['erc4626', 'veda', 'other'] as const
@@ -21,20 +21,30 @@ export type EarnVaultToken = {
 	decimals: number
 }
 
+export type EarnDeployment = {
+	factory: `0x${string}`
+	block: number
+	/** Unix seconds. */
+	timestamp: number
+}
+
 export type EarnVault = {
 	address: `0x${string}`
 	asset: EarnVaultToken
 	engine: EarnEngine
+	/** The engine contract holding the vault's position, when known. */
+	engineAddress: `0x${string}` | null
+	/** Where the engine deploys assets, such as a lending market, when known. */
+	venue: `0x${string}` | null
 	/** Registry-curated by Tempo. */
 	verified: boolean
 	depositsPaused: boolean
 	/** Total assets in US dollars, or null when the asset has no USD rate. */
 	tvl: number | null
-	/** Net APY as a fraction (0.05 is 5%), or null before enough history. */
-	apy: number | null
-	/** The window `apy` is measured over, such as 7d. */
-	apyWindow: string | null
-	sharePrice: number | null
+	/** Total assets in the asset's base units. */
+	totalAssets: string | null
+	openRedeemRequests: number
+	deployment: EarnDeployment | null
 }
 
 export type EarnSnapshot = {
@@ -48,11 +58,25 @@ export type ApiEarnVault = {
 	vaultAddress: string
 	verified?: boolean | null
 	assetToken?: { address: string; symbol: string; decimals: number } | null
-	engine?: { type?: string | null } | null
-	state?: { depositsPaused?: boolean | null } | null
+	engine?: {
+		type?: string | null
+		address?: string | null
+		venue?: string | null
+	} | null
+	state?: {
+		depositsPaused?: boolean | null
+		totalAssets?: string | null
+		openRedeemRequestCount?: number | null
+	} | null
 	tvl?: { formatted?: string | null } | null
-	apy?: { net?: string | null; window?: string | null } | null
-	sharePrice?: { formatted?: string | null } | null
+}
+
+const hexAddress = /^0x[0-9a-fA-F]{40}$/
+
+function addressOrNull(value: string | null | undefined): `0x${string}` | null {
+	return value && hexAddress.test(value)
+		? (value.toLowerCase() as `0x${string}`)
+		: null
 }
 
 function toNumber(value: string | null | undefined): number | null {
@@ -62,24 +86,35 @@ function toNumber(value: string | null | undefined): number | null {
 }
 
 /** One API vault as a row, or null when it isn't a readable Earn vault. */
-export function toEarnVault(vault: ApiEarnVault): EarnVault | null {
+export function toEarnVault(
+	vault: ApiEarnVault,
+	deployment: EarnDeployment | null = null,
+): EarnVault | null {
 	const asset = vault.assetToken
-	if (!vault.vaultAddress || !asset?.address || !asset.symbol) return null
+	const address = addressOrNull(vault.vaultAddress)
+	const assetAddress = addressOrNull(asset?.address)
+	if (!address || !asset || !assetAddress || !asset.symbol) return null
 	const type = vault.engine?.type
+	const totalAssets = vault.state?.totalAssets
 	return {
-		address: vault.vaultAddress.toLowerCase() as `0x${string}`,
+		address,
 		asset: {
-			address: asset.address.toLowerCase() as `0x${string}`,
+			address: assetAddress,
 			symbol: asset.symbol,
 			decimals: asset.decimals,
 		},
 		engine: type === 'erc4626' || type === 'veda' ? type : 'other',
+		engineAddress: addressOrNull(vault.engine?.address),
+		venue: addressOrNull(vault.engine?.venue),
 		verified: vault.verified === true,
 		depositsPaused: vault.state?.depositsPaused === true,
 		tvl: toNumber(vault.tvl?.formatted),
-		apy: toNumber(vault.apy?.net),
-		apyWindow: vault.apy?.window ?? null,
-		sharePrice: toNumber(vault.sharePrice?.formatted),
+		totalAssets:
+			typeof totalAssets === 'string' && /^\d+$/.test(totalAssets)
+				? totalAssets
+				: null,
+		openRedeemRequests: vault.state?.openRedeemRequestCount ?? 0,
+		deployment,
 	}
 }
 
@@ -90,12 +125,8 @@ export function vaultFromTopic(topic: unknown): `0x${string}` | null {
 	return `0x${topic.slice(26).toLowerCase()}`
 }
 
-export const earnSorts = ['tvl', 'apy'] as const
-export type EarnSort = (typeof earnSorts)[number]
-
 export const earnSearchSchema = z.object({
 	asset: z._default(z.string(), 'all'),
-	sort: z._default(z.enum(earnSorts), 'tvl'),
 	dir: z._default(z.enum(['asc', 'desc']), 'desc'),
 	unverified: z._default(z.boolean(), false),
 })
@@ -104,7 +135,6 @@ export type EarnSearch = z.infer<typeof earnSearchSchema>
 
 export const defaultEarnSearch: EarnSearch = {
 	asset: 'all',
-	sort: 'tvl',
 	dir: 'desc',
 	unverified: false,
 }
@@ -120,23 +150,18 @@ export function filterVaults(
 	)
 }
 
-/** Sorted by the column, unknown values last, then by TVL and address. */
+/** Sorted by TVL, unknown values last, then by address. */
 export function sortVaults(
 	vaults: readonly EarnVault[],
-	sort: EarnSort,
-	dir: 'asc' | 'desc',
+	dir: 'asc' | 'desc' = 'desc',
 ): EarnVault[] {
 	const sign = dir === 'asc' ? 1 : -1
 	return [...vaults].sort((a, b) => {
-		const left = a[sort]
-		const right = b[sort]
-		if (left !== right) {
-			if (left === null) return 1
-			if (right === null) return -1
-			return (left - right) * sign
+		if (a.tvl !== b.tvl) {
+			if (a.tvl === null) return 1
+			if (b.tvl === null) return -1
+			return (a.tvl - b.tvl) * sign
 		}
-		const tvl = (b.tvl ?? -1) - (a.tvl ?? -1)
-		if (tvl !== 0) return tvl
 		return a.address.localeCompare(b.address)
 	})
 }
@@ -158,23 +183,77 @@ export type EarnTotals = {
 	tvl: number
 	/** Vaults holding at least $1. */
 	funded: number
-	/** Net APY weighted by TVL, over vaults with both. */
-	apy: number | null
+	/** Distinct assets held. */
+	assets: number
 }
 
 export function earnTotals(vaults: readonly EarnVault[]): EarnTotals {
 	let tvl = 0
 	let funded = 0
-	let weighted = 0
-	let weight = 0
 	for (const vault of vaults) {
 		if (vault.tvl === null) continue
 		tvl += vault.tvl
 		if (vault.tvl >= 1) funded += 1
-		if (vault.apy !== null && vault.tvl > 0) {
-			weighted += vault.apy * vault.tvl
-			weight += vault.tvl
-		}
 	}
-	return { tvl, funded, apy: weight > 0 ? weighted / weight : null }
+	return {
+		tvl,
+		funded,
+		assets: new Set(vaults.map((v) => v.asset.symbol)).size,
+	}
+}
+
+/** A vault's share of TVL among vaults holding the same asset, 0 to 1. */
+export function assetShare(
+	vault: EarnVault,
+	vaults: readonly EarnVault[],
+): number | null {
+	if (vault.tvl === null) return null
+	const total = vaults
+		.filter((other) => other.asset.symbol === vault.asset.symbol)
+		.reduce((sum, other) => sum + (other.tvl ?? 0), 0)
+	return total > 0 ? vault.tvl / total : null
+}
+
+export const earnActivityKinds = ['deposit', 'withdrawal'] as const
+export type EarnActivityKind = (typeof earnActivityKinds)[number]
+
+/** One deposit or withdrawal, by amount and time, never by who made it. */
+export type EarnActivity = {
+	id: string
+	kind: EarnActivityKind
+	/** Amount in the vault asset's base units. */
+	assets: string
+	transactionHash: `0x${string}`
+	block: number
+	log: number
+	/** Unix seconds. */
+	timestamp: number
+}
+
+export type EarnFlows = {
+	/** Base units of the vault asset. */
+	deposited: string
+	withdrawn: string
+	deposits: number
+	withdrawals: number
+}
+
+export type EarnVaultActivity = {
+	activity: EarnActivity[]
+	/** Over the last 30 days. */
+	flows: EarnFlows
+	/** Base units; null when the vault has no cap. */
+	cap: string | null
+}
+
+/** Newest first: block, then log index. */
+export function sortActivity(items: readonly EarnActivity[]): EarnActivity[] {
+	return [...items].sort((a, b) => b.block - a.block || b.log - a.log)
+}
+
+/** A cap of 0 or uint256 max means the vault accepts any amount. */
+export function capOrNull(value: bigint | null | undefined): string | null {
+	if (value === null || value === undefined) return null
+	if (value === 0n || value === 2n ** 256n - 1n) return null
+	return value.toString()
 }

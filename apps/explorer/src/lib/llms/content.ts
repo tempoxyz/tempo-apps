@@ -164,16 +164,20 @@ export const docs = {
 				'Include Stablecoin DEX pairs and swaps with a token outside the verified token list.',
 		},
 	},
-	'/earn': {
+	'/earn/': {
 		title: 'Earn',
 		description:
-			'Every Tempo Earn vault deployed onchain, listed by asset and engine (ERC-4626 or Veda) without naming who runs it: total value locked in US dollars, net APY from 7-day share-price growth, share price, and whether deposits are paused, with TVL, funded-vault and TVL-weighted APY totals.',
+			'Every Tempo Earn vault deployed onchain, listed by asset and engine (ERC-4626 or Veda) without naming who runs it: total value locked in US dollars, deployment date, and whether deposits are paused, with TVL, funded-vault and asset totals. Each vault links to its page.',
 		params: {
 			asset: 'Show only vaults holding this asset symbol, such as `OUSD`.',
-			sort: 'Sort vaults by `tvl` or `apy`.',
-			dir: 'Sort direction: `asc` or `desc`.',
+			dir: 'Sort by TVL: `asc` or `desc`.',
 			unverified: 'Include vaults outside the curated Earn registry.',
 		},
+	},
+	'/earn/$vault': {
+		title: 'Earn vault',
+		description:
+			'`vault` is a Tempo Earn vault address. Shows its TVL, its share of Earn TVL in the same asset, 30-day deposits, withdrawals and net flow, its deposit cap, recent deposits and withdrawals by amount, and its engine, venue, factory and deployment.',
 	},
 	'/fee-amm': {
 		title: 'Fee AMM',
