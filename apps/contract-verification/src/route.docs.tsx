@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 import { html, raw } from 'hono/html'
 
+import { localServers } from '#lib/openapi.ts'
 import packageJSON from '#package.json' with { type: 'json' }
 
-const getScalarConfig = (baseUrl: string) =>
+const getScalarConfig = (baseUrl: string, nodeEnv: string | undefined) =>
 	({
 		hideModels: true,
 		layout: 'modern',
@@ -26,18 +27,15 @@ const getScalarConfig = (baseUrl: string) =>
 				url: 'https://contracts.porto.workers.dev',
 				description: 'workers.dev',
 			},
-			{
-				url: 'http://localhost:{port}',
-				description: 'Local',
-				variables: {
-					port: { default: '6767', description: 'localhost port number' },
-				},
-			},
+			...(nodeEnv === 'development' ? localServers : []),
 		],
 	}) as const
 
-const renderDocs = (props: { baseUrl: string }) => {
-	const scalarConfig = getScalarConfig(props.baseUrl)
+const renderDocs = (props: {
+	baseUrl: string
+	nodeEnv: string | undefined
+}) => {
+	const scalarConfig = getScalarConfig(props.baseUrl, props.nodeEnv)
 	return html`<!doctype html>
 <html lang="en">
   <head>
@@ -57,5 +55,11 @@ const renderDocs = (props: { baseUrl: string }) => {
 
 export const docsRoute = new Hono<{ Bindings: Cloudflare.Env }>().get(
 	'/',
-	(context) => context.html(renderDocs({ baseUrl: context.env.VITE_BASE_URL })),
+	(context) =>
+		context.html(
+			renderDocs({
+				baseUrl: context.env.VITE_BASE_URL,
+				nodeEnv: context.env.NODE_ENV,
+			}),
+		),
 )
