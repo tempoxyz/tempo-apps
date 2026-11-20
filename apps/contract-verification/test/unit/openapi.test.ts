@@ -53,6 +53,18 @@ describe('isNonPublicServerUrl', () => {
 		'http://100.100.100.100',
 		'https://host.example.ts.net',
 		'https://service.internal',
+		'http://localhost.:8545',
+		'https://host.example.ts.net.',
+		'http://LOCALHOST:8545',
+		'http://0.1.2.3',
+		'http://[::]',
+		'http://[::ffff:127.0.0.1]',
+		'http://[::ffff:10.0.0.1]',
+		'http://[fc00::1]',
+		'http://[fd7a:115c:a1e0::1]',
+		'http://[fe80::1]',
+		'http://[fe80::1%25eth0]',
+		'http://user@localhost',
 	])('flags %s', (url) => {
 		expect(isNonPublicServerUrl(url)).toBe(true)
 	})
@@ -61,6 +73,9 @@ describe('isNonPublicServerUrl', () => {
 		'https://contracts.tempo.xyz',
 		'https://contracts.porto.workers.dev',
 		'https://sourcify.dev/server',
+		'http://[2606:4700::1111]',
+		'http://[::ffff:1.1.1.1]',
+		'https://localhost.example.com',
 		'{CUSTOM_URL}',
 	])('allows %s', (url) => {
 		expect(isNonPublicServerUrl(url)).toBe(false)
