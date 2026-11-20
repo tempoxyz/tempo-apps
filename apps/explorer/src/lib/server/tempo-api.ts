@@ -38,7 +38,8 @@ function reportTempoApiResponse(response: Response, method: string): void {
 	})
 }
 
-const instrumentedFetch: typeof fetch = async (input, init) => {
+/** fetch that reports alertable Tempo API statuses, as `api` does. */
+export const instrumentedFetch: typeof fetch = async (input, init) => {
 	const response = await fetch(input, init)
 	const method =
 		init?.method ?? (input instanceof Request ? input.method : 'GET')

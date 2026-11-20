@@ -23,6 +23,11 @@ import { AccountCard } from '#comps/AccountCard'
 import { WalletActions } from '#comps/WalletActions'
 import { ValidatorFees } from '#comps/ValidatorFees'
 import { ValidatorCard } from '#comps/ValidatorCard'
+import {
+	useVaultForAddress,
+	VaultPageLink,
+	VaultTabContent,
+} from '#comps/VaultTab'
 import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -548,6 +553,8 @@ function RouteComponent() {
 		enabled: isMounted && !isTip20,
 	})
 	const hasUnclaimedFees = (validatorFees?.fees.length ?? 0) > 0
+	const vault = useVaultForAddress(address)
+	const isVault = !isTip20 && Boolean(vault)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = isZonePortal
 			? ['deposits', 'withdrawals', 'batches', 'transactions']
@@ -563,11 +570,14 @@ function RouteComponent() {
 		if (isTip20) {
 			tabs.push('token')
 		}
+		if (isVault) {
+			tabs.push('vault')
+		}
 		if (isContract) {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract, isZonePortal, hasUnclaimedFees])
+	}, [isToken, isTip20, isContract, isZonePortal, hasUnclaimedFees, isVault])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -1115,6 +1125,7 @@ function SectionsWrapper(props: {
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
+	const vault = useVaultForAddress(address)
 	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
@@ -2599,6 +2610,16 @@ function SectionsWrapper(props: {
 					totalItems: 0,
 					itemsLabel: 'items',
 					content: <Tip20TokenTabContent address={address} />,
+				}
+			case 'vault':
+				return {
+					title: 'Vault',
+					totalItems: 0,
+					itemsLabel: 'items',
+					contextual: vault ? <VaultPageLink vault={vault} /> : null,
+					content: vault ? (
+						<VaultTabContent vault={vault} address={address} />
+					) : null,
 				}
 			case 'contract':
 				return {
