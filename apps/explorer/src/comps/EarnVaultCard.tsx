@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import * as React from 'react'
+import type * as React from 'react'
 import type { Address } from 'viem'
 import { Address as AddressComp } from '#comps/Address.tsx'
-import { CollapsibleSection } from '#comps/Contract.tsx'
 import { type EarnVault, engineLabels } from '#lib/earn'
 import { PriceFormatter } from '#lib/formatting'
 import { useIsMounted } from '#lib/hooks'
@@ -38,116 +37,106 @@ export function EarnVaultTabContent(
 	props: EarnVaultTabContent.Props,
 ): React.JSX.Element {
 	const { vault, address } = props
-	const [expanded, setExpanded] = React.useState(true)
 	const isEngine = vault.address !== address.toLowerCase()
 	return (
-		<CollapsibleSection
-			first
-			title={isEngine ? 'Earn engine' : 'Earn vault'}
-			expanded={expanded}
-			onToggle={() => setExpanded(!expanded)}
-		>
-			<div className="px-[18px] pb-[14px] pt-[6px] copy-13">
-				{isEngine && (
-					<p className="text-tertiary pb-3">
-						This contract is the engine of a Tempo Earn vault.
-					</p>
-				)}
-				<section
-					aria-label="Vault"
-					className="rounded-[6px] border border-distinct overflow-hidden"
-				>
-					<h3 className="border-b border-distinct px-3 py-2.5 font-medium">
-						Vault
-					</h3>
-					<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
-						<Field label="Asset" value={vault.asset.symbol} />
-						<Field label="Engine" value={engineLabels[vault.engine]} />
-						<Field
-							label="TVL"
+		<div className="px-[18px] py-[14px] copy-13">
+			{isEngine && (
+				<p className="text-tertiary pb-3">
+					This contract is the engine of a Tempo Earn vault.
+				</p>
+			)}
+			<section
+				aria-label="Vault"
+				className="rounded-[6px] border border-distinct overflow-hidden"
+			>
+				<h3 className="border-b border-distinct px-3 py-2.5 font-medium">
+					Vault
+				</h3>
+				<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
+					<Field label="Asset" value={vault.asset.symbol} />
+					<Field label="Engine" value={engineLabels[vault.engine]} />
+					<Field
+						label="TVL"
+						value={
+							vault.tvl === null
+								? undefined
+								: PriceFormatter.format(vault.tvl, { format: 'short' })
+						}
+					/>
+					<Field
+						label="Deposits"
+						value={vault.depositsPaused ? 'Paused' : 'Open'}
+					/>
+				</dl>
+				<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 label-12">
+					<Row
+						label="Registry"
+						value={vault.verified ? 'Verified' : 'Unverified'}
+					/>
+					{isEngine ? (
+						<Row
+							label="Vault"
 							value={
-								vault.tvl === null
-									? undefined
-									: PriceFormatter.format(vault.tvl, { format: 'short' })
+								<AddressComp address={vault.address} className="label-12" />
 							}
 						/>
-						<Field
-							label="Deposits"
-							value={vault.depositsPaused ? 'Paused' : 'Open'}
-						/>
-					</dl>
-					<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 label-12">
+					) : (
+						vault.engineAddress && (
+							<Row
+								label="Engine contract"
+								value={
+									<AddressComp
+										address={vault.engineAddress}
+										className="label-12"
+									/>
+								}
+							/>
+						)
+					)}
+					{vault.venue && (
 						<Row
-							label="Registry"
-							value={vault.verified ? 'Verified' : 'Unverified'}
+							label="Venue"
+							value={<AddressComp address={vault.venue} className="label-12" />}
 						/>
-						{isEngine ? (
+					)}
+					{vault.deployment && (
+						<>
 							<Row
-								label="Vault"
+								label="Deployed"
 								value={
-									<AddressComp address={vault.address} className="label-12" />
+									<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+										<span>{formatDate(vault.deployment.timestamp)}</span>
+										<Link
+											to="/block/$id"
+											params={{ id: String(vault.deployment.block) }}
+											className="text-accent hover:underline"
+										>
+											Block {vault.deployment.block.toLocaleString('en-US')}
+										</Link>
+									</span>
 								}
 							/>
-						) : (
-							vault.engineAddress && (
-								<Row
-									label="Engine contract"
-									value={
-										<AddressComp
-											address={vault.engineAddress}
-											className="label-12"
-										/>
-									}
-								/>
-							)
-						)}
-						{vault.venue && (
 							<Row
-								label="Venue"
+								label="Factory"
 								value={
-									<AddressComp address={vault.venue} className="label-12" />
+									<AddressComp
+										address={vault.deployment.factory}
+										className="label-12"
+									/>
 								}
 							/>
-						)}
-						{vault.deployment && (
-							<>
-								<Row
-									label="Deployed"
-									value={
-										<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-											<span>{formatDate(vault.deployment.timestamp)}</span>
-											<Link
-												to="/block/$id"
-												params={{ id: String(vault.deployment.block) }}
-												className="text-accent hover:underline"
-											>
-												Block {vault.deployment.block.toLocaleString('en-US')}
-											</Link>
-										</span>
-									}
-								/>
-								<Row
-									label="Factory"
-									value={
-										<AddressComp
-											address={vault.deployment.factory}
-											className="label-12"
-										/>
-									}
-								/>
-							</>
-						)}
-					</div>
-				</section>
-				<Link
-					to="/earn/$vault"
-					params={{ vault: vault.address }}
-					className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
-				>
-					View Earn vault →
-				</Link>
-			</div>
-		</CollapsibleSection>
+						</>
+					)}
+				</div>
+			</section>
+			<Link
+				to="/earn/$vault"
+				params={{ vault: vault.address }}
+				className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
+			>
+				View Earn vault →
+			</Link>
+		</div>
 	)
 }
 
