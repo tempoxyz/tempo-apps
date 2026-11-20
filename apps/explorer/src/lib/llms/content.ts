@@ -172,7 +172,8 @@ export const docs = {
 			'Tempo Earn vaults and ERC-4626 vaults on Tempo, listed by asset and kind without naming who runs them: total value locked in US dollars and first deposit or deployment date, with TVL, funded-vault and asset totals that count money one vault deposits into another once. Each vault links to its page.',
 		params: {
 			kind: 'Show `all` vaults, only Tempo `earn` vaults, or only `erc4626` vaults.',
-			asset: 'Show only vaults holding this asset symbol, such as `OUSD`.',
+			asset:
+				'Show only vaults holding this asset, by its token address, such as `0x20c0000000000000000000006a37da5c996874be` for OUSD.',
 			dir: 'Sort by TVL: `asc` or `desc`.',
 			unverified:
 				'Include Earn vaults outside the curated registry and ERC-4626 vaults no verified Earn vault deposits into. Totals still count verified vaults only.',

@@ -111,7 +111,10 @@ describe('untrusted API values', () => {
 		expect(safeSymbol('OUSD')).toBe('OUSD')
 		expect(safeSymbol(12)).toBeNull()
 		expect(safeSymbol('1#__bigint')).toBeNull()
-		expect(safeSymbol('x'.repeat(33))).toBeNull()
+		expect(safeSymbol('x'.repeat(40))).toBe('x'.repeat(32))
+		expect(safeSymbol('USD₮0')).toBe('USD₮0')
+		expect(safeSymbol('USD#1')).toBe('USD#1')
+		expect(safeSymbol('  ')).toBeNull()
 		expect(
 			toEarnVault(apiVault({ assetToken: { ...ousd, symbol: { a: 1 } } })),
 		).toBeNull()
@@ -300,6 +303,17 @@ describe('vault lists', () => {
 		const outer = erc4626({ tvl: null })
 		expect(vaultTotals([nested, outer]).tvl).toBe(20)
 		expect(assetShare(nested, [nested, outer])).toBe(1)
+	})
+
+	it('gives an unverified vault no share and keeps its asset out of the count', () => {
+		const fake = erc4626({
+			address: '0x0e',
+			tvl: 500,
+			verified: false,
+			asset: { ...ousd, address: '0x3333333333333333333333333333333333333333' },
+		})
+		expect(assetShare(fake, [fake, big])).toBeNull()
+		expect(vaultTotals([big, fake]).assets).toBe(1)
 	})
 })
 

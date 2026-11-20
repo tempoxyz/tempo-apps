@@ -109,13 +109,19 @@ function toNumber(value: unknown): number | null {
 }
 
 /**
- * A token symbol safe to show and to cache: printable ASCII, at most 32
- * characters, with no #, which the cache's JSON codec reserves.
+ * A token symbol safe to show and to cache: control characters removed and
+ * cut to 32 characters. Only an empty symbol, or one ending in the cache
+ * codec's type marker (such as #__bigint), is rejected; any real symbol,
+ * including Unicode ones like USD₮0, passes.
  */
 export function safeSymbol(value: unknown): string | null {
 	if (typeof value !== 'string') return null
-	const symbol = value.trim()
-	return /^[\x20-\x22\x24-\x7e]{1,32}$/.test(symbol) ? symbol : null
+	// biome-ignore lint/suspicious/noControlCharactersInRegex: strips them
+	const symbol = [...value.replace(/[\u0000-\u001f\u007f]/g, '').trim()]
+		.slice(0, 32)
+		.join('')
+	if (symbol === '' || /#__[a-z]+$/i.test(symbol)) return null
+	return symbol
 }
 
 function safeDecimals(value: unknown): number | null {
@@ -369,7 +375,9 @@ export function vaultTotals(vaults: readonly Vault[]): VaultTotals {
 	return {
 		tvl,
 		funded,
-		assets: new Set(vaults.map((v) => v.asset.address)).size,
+		assets: new Set(
+			vaults.flatMap((v) => (v.verified ? [v.asset.address] : [])),
+		).size,
 		unpriced,
 	}
 }
@@ -379,7 +387,8 @@ export function assetShare(
 	vault: Vault,
 	vaults: readonly Vault[],
 ): number | null {
-	if (vault.tvl === null) return null
+	// The total covers verified vaults only, so only they have a share of it.
+	if (vault.tvl === null || !vault.verified) return null
 	const same = vaults.filter(
 		(other) => other.asset.address === vault.asset.address,
 	)

@@ -170,9 +170,13 @@ async function readEarnVault(
 			(await response.json()) as ApiEarnVault,
 			deployment,
 		)
-		// A vault the API answers for but can't describe is a failed read,
-		// so the snapshot is marked partial instead of silently dropping it.
-		return vault ? { kind: 'vault', vault } : { kind: 'failed' }
+		if (!vault) {
+			// Malformed metadata won't fix itself on a retry, so it doesn't mark
+			// every snapshot partial; it's logged instead.
+			console.warn('Earn vault has unreadable metadata', { address })
+			return { kind: 'none' }
+		}
+		return { kind: 'vault', vault }
 	} catch (error) {
 		console.error('Earn vault read failed', { address, error })
 		return { kind: 'failed' }
@@ -264,13 +268,18 @@ async function getErc4626Vaults(
 					GROUP BY address`,
 				)
 			: Promise.resolve([]),
+		// The chain-wide scan is best effort: when it fails, the curated
+		// venues still load.
 		indexer(
 			chainId,
 			`SELECT address, count() AS deposits, min(block_num) AS block,
 			min(toUnixTimestamp(block_timestamp)) AS ts
 			FROM logs WHERE selector = '${ERC4626_DEPOSIT}'
 			GROUP BY address ORDER BY deposits DESC LIMIT ${MAX_VAULTS}`,
-		),
+		).catch((error) => {
+			console.error('ERC-4626 Deposit scan failed', error)
+			return []
+		}),
 	])
 	const seen = new Set<string>()
 	const candidates = [...venueRows, ...rows].flatMap((row) => {
@@ -342,10 +351,15 @@ async function getErc4626Vaults(
 			currency: currency?.status === 'success' ? String(currency.result) : null,
 		})
 	})
+	/** Candidates whose reads failed, as opposed to ones that aren't vaults. */
+	const failed = new Set<string>()
 	const vaults = candidates.flatMap((candidate, index) => {
 		const asset = assetOf(index)
 		const total = state[index * 2 + 1]
-		if (!asset || total?.status !== 'success') return []
+		if (!asset || total?.status !== 'success' || !tokens.get(asset)) {
+			failed.add(candidate.address)
+			return []
+		}
 		const vault = toErc4626Vault({
 			address: candidate.address,
 			asset,
@@ -358,8 +372,8 @@ async function getErc4626Vaults(
 		return vault ? [vault] : []
 	})
 	// Only curated venues that emit ERC-4626 deposits decide completeness:
-	// other venues (Veda, lending markets) aren't ERC-4626 vaults at all.
-	const read = new Set(vaults.map((vault) => vault.address))
+	// other venues (Veda, lending markets) aren't ERC-4626 vaults at all. An
+	// emptied venue is read fine and simply isn't listed.
 	const erc4626Venues = venueRows.map((row) =>
 		String(row.address).toLowerCase(),
 	)
@@ -369,12 +383,15 @@ async function getErc4626Vaults(
 		// it no venue gets a USD value, so that snapshot is partial too.
 		complete:
 			(candidates.length === 0 || verified.length > 0) &&
-			erc4626Venues.every((venue) => read.has(venue)),
+			erc4626Venues.every((venue) => !failed.has(venue)),
 	}
 }
 
 export async function getVaults(chainId: number): Promise<VaultSnapshot> {
-	const earn = await getEarnVaults(chainId)
+	const earn = await getEarnVaults(chainId).catch((error) => {
+		console.error('Earn vault discovery failed', error)
+		return { vaults: [], complete: false } satisfies VaultSnapshot
+	})
 	const venues = [
 		...new Set(
 			earn.vaults.flatMap((vault) =>
@@ -392,17 +409,6 @@ export async function getVaults(chainId: number): Promise<VaultSnapshot> {
 	}
 }
 
-/** Loads in flight, by cache key, so concurrent misses share one refresh. */
-const inflight = new Map<string, Promise<unknown>>()
-
-function coalesce<T>(key: string, load: () => Promise<T>): Promise<T> {
-	const pending = inflight.get(key) as Promise<T> | undefined
-	if (pending) return pending
-	const next = load().finally(() => inflight.delete(key))
-	inflight.set(key, next)
-	return next
-}
-
 /** Devnet and nextfork share a chain ID, so keys name the network too. */
 function networkKey(chainId: number): string {
 	return `${getTempoEnv()}:${chainId}`
@@ -411,20 +417,22 @@ function networkKey(chainId: number): string {
 /** Keeps a 402, 403 or 429 in the message so clients don't retry it. */
 function unavailable(message: string, error: unknown): Error {
 	const text = error instanceof Error ? error.message : String(error)
-	const status = /\b(402|403|429)\b/.exec(text)?.[1]
-	return new Error(status ? `${message} (status: ${status})` : message)
+	// Only the HTTP status the helpers write, never a number in a body.
+	const status = /^[^:]*\((402|403|429)\)|status:? (402|403|429)\b/.exec(text)
+	const code = status?.[1] ?? status?.[2]
+	return new Error(code ? `${message} (status: ${code})` : message)
 }
 
 export const fetchVaults = createServerFn({ method: 'GET' }).handler(
 	async (): Promise<VaultSnapshot> => {
 		const chainId = getTempoChain().id
 		try {
-			const key = `vaults:v3:${networkKey(chainId)}`
+			const key = `vaults:v4:${networkKey(chainId)}`
 			return await withImmutableDataCache({
 				key,
 				ttlSeconds: (snapshot) =>
 					snapshot.complete ? SNAPSHOT_TTL : PARTIAL_SNAPSHOT_TTL,
-				load: () => coalesce(key, () => getVaults(chainId)),
+				load: () => getVaults(chainId),
 			})
 		} catch (error) {
 			console.error('Failed to load vaults:', error)
@@ -616,10 +624,7 @@ export const fetchVaultActivity = createServerFn({ method: 'GET' })
 			return await withImmutableDataCache({
 				key,
 				ttlSeconds: ACTIVITY_TTL,
-				load: () =>
-					coalesce(key, () =>
-						getVaultActivity(chainId, data.kind, vault, asset),
-					),
+				load: () => getVaultActivity(chainId, data.kind, vault, asset),
 			})
 		} catch (error) {
 			console.error('Failed to load vault activity:', error)

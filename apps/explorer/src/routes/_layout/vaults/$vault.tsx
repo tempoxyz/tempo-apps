@@ -202,9 +202,7 @@ function VaultPage(): React.JSX.Element {
 						'p-[18px] copy-14 text-secondary flex flex-col items-start gap-2',
 					)}
 				>
-					<p className="text-primary">
-						This address isn’t a Tempo Earn or ERC-4626 vault.
-					</p>
+					<p className="text-primary">This address isn’t a listed vault.</p>
 					<p className="font-mono copy-13 break-all">{address}</p>
 					<Link to="/vaults" className="text-accent hover:underline">
 						View all vaults
