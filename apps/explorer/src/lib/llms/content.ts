@@ -175,7 +175,7 @@ export const docs = {
 			asset: 'Show only vaults holding this asset symbol, such as `OUSD`.',
 			dir: 'Sort by TVL: `asc` or `desc`.',
 			unverified:
-				'Include Earn vaults outside the curated registry and ERC-4626 vaults whose asset is not on the verified token list.',
+				'Include Earn vaults outside the curated registry and ERC-4626 vaults no verified Earn vault deposits into. Totals still count verified vaults only.',
 		},
 	},
 	'/vaults/$vault': {

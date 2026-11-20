@@ -356,11 +356,13 @@ function VaultsPage(): React.JSX.Element {
 							</Stack>
 						</Surface>
 						<p {...styles.muted()}>
-							Totals count money once: an Earn vault that deposits into a listed
-							ERC-4626 vault isn’t added again. ERC-4626 vaults are verified
-							when they hold a token on the verified list. Verified only also
-							hides vaults worth under $1. Vaults whose asset has no USD price
-							aren’t in the totals, which then show as a lower bound.
+							Totals cover verified vaults only and count money once: an Earn
+							vault that deposits into a listed ERC-4626 vault isn’t added
+							again. An ERC-4626 vault is verified when a verified Earn vault
+							deposits into it; any other contract’s numbers are its own claim.
+							Verified only also hides vaults worth under $1. Vaults whose asset
+							has no USD price aren’t in the totals, which then show as a lower
+							bound.
 						</p>
 					</Stack>
 				</Stack>

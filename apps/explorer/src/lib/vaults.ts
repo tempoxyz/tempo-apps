@@ -50,8 +50,9 @@ export type Vault = {
 	/** Earn vaults only: where the engine deploys assets, when known. */
 	venue: Hex40 | null
 	/**
-	 * Earn: in Tempo's curated registry. ERC-4626: holds a token on the
-	 * verified token list, so its asset and value can be trusted.
+	 * Earn: in Tempo's curated registry. ERC-4626: a verified Earn vault
+	 * deposits into it. Anyone can deploy a contract that claims to be an
+	 * ERC-4626 vault, so only these count toward totals.
 	 */
 	verified: boolean
 	/** Null when the vault doesn't report it. */
@@ -196,7 +197,7 @@ export function toErc4626Vault(read: Erc4626Read): Vault | null {
 		engine: null,
 		engineAddress: null,
 		venue: null,
-		verified: read.verifiedAsset,
+		verified: false,
 		depositsPaused: null,
 		tvl: read.verifiedAsset && currency === 'USD' ? units : null,
 		totalAssets: read.totalAssets.toString(),
@@ -231,11 +232,20 @@ export function mergeVaults(
 		if (vault.venue)
 			users.set(vault.venue, [...(users.get(vault.venue) ?? []), vault.address])
 	}
+	const verifiedUsers = new Set(
+		earn.flatMap((vault) =>
+			vault.verified && vault.venue ? [vault.venue] : [],
+		),
+	)
 	return [
 		...earn,
 		...erc4626
 			.filter((vault) => !earnContracts.has(vault.address))
-			.map((vault) => ({ ...vault, usedBy: users.get(vault.address) ?? [] })),
+			.map((vault) => ({
+				...vault,
+				verified: verifiedUsers.has(vault.address),
+				usedBy: users.get(vault.address) ?? [],
+			})),
 	]
 }
 
@@ -319,31 +329,41 @@ export function vaultAssets(vaults: readonly Vault[]): VaultToken[] {
  * vault whose venue is a listed ERC-4626 vault. Totals skip it so the same
  * money counts once.
  */
-export function isNested(vault: Vault, listed: ReadonlySet<string>): boolean {
-	return vault.venue !== null && listed.has(vault.venue)
+export function isNested(vault: Vault, priced: ReadonlySet<string>): boolean {
+	return vault.venue !== null && priced.has(vault.venue)
 }
 
 export type VaultTotals = {
-	/** Counting money that one vault deposits into another once. */
+	/**
+	 * Verified vaults only, counting money one vault deposits into another
+	 * once. An unverified vault's TVL is whatever its contract reports.
+	 */
 	tvl: number
-	/** Vaults holding at least $1. */
+	/** Verified vaults holding at least $1. */
 	funded: number
 	assets: number
-	/** Vaults with no USD value, left out of tvl and funded. */
+	/** Verified vaults with no USD value, left out of tvl and funded. */
 	unpriced: number
 }
 
 export function vaultTotals(vaults: readonly Vault[]): VaultTotals {
-	const listed = new Set(vaults.map((vault) => vault.address))
+	// Only a verified venue with a USD value already counts an Earn vault's
+	// money; otherwise the Earn vault is counted itself.
+	const priced = new Set(
+		vaults.flatMap((vault) =>
+			vault.verified && vault.tvl !== null ? [vault.address] : [],
+		),
+	)
 	let tvl = 0
 	let funded = 0
 	let unpriced = 0
 	for (const vault of vaults) {
+		if (!vault.verified) continue
 		if (vault.tvl === null) {
 			unpriced += 1
 			continue
 		}
-		if (!isNested(vault, listed)) tvl += vault.tvl
+		if (!isNested(vault, priced)) tvl += vault.tvl
 		if (vault.tvl >= 1) funded += 1
 	}
 	return {

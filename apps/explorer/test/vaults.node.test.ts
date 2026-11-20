@@ -54,6 +54,8 @@ const erc4626 = (overrides: Partial<Vault> = {}): Vault => ({
 		firstBlock: 5,
 		firstTimestamp: 1_700_000_000,
 	}) as Vault),
+	// As mergeVaults marks a venue a verified Earn vault uses.
+	verified: true,
 	...overrides,
 })
 
@@ -121,11 +123,21 @@ describe('untrusted API values', () => {
 })
 
 describe('toErc4626Vault', () => {
-	it('values a verified USD asset in dollars', () => {
-		expect(erc4626()).toMatchObject({
+	it('values a verified USD asset in dollars, unverified until Earn uses it', () => {
+		expect(
+			toErc4626Vault({
+				address: venue,
+				asset: ousd.address,
+				totalAssets: 47_292_700_915_392n,
+				token: { symbol: 'OUSD', decimals: 6, currency: 'USD' },
+				verifiedAsset: true,
+				firstBlock: 5,
+				firstTimestamp: 1_700_000_000,
+			}),
+		).toMatchObject({
 			kind: 'erc4626',
 			engine: null,
-			verified: true,
+			verified: false,
 			tvl: 47_292_700.915392,
 			deployment: { factory: null, block: 5 },
 		})
@@ -145,7 +157,7 @@ describe('toErc4626Vault', () => {
 				token: { symbol: 'X', decimals: 6, currency: 'USD' },
 				verifiedAsset: false,
 			}),
-		).toMatchObject({ verified: false, tvl: null })
+		).toMatchObject({ tvl: null })
 		expect(
 			toErc4626Vault({
 				...base,
@@ -190,6 +202,21 @@ describe('mergeVaults', () => {
 			['erc4626', venue],
 		])
 		expect(merged[1]?.usedBy).toEqual([vault.address])
+		expect(merged[1]?.verified).toBe(true)
+	})
+
+	it('leaves an ERC-4626 vault no verified Earn vault uses unverified', () => {
+		const other = erc4626({
+			address: '0x7777777777777777777777777777777777777777',
+			verified: false,
+		})
+		const merged = mergeVaults(
+			[earn({ verified: false })],
+			[erc4626({ verified: false }), other],
+		)
+		expect(
+			merged.filter((v) => v.kind === 'erc4626').every((v) => !v.verified),
+		).toBe(true)
 	})
 })
 
@@ -258,6 +285,21 @@ describe('vault lists', () => {
 		expect(vaultTotals([nested]).tvl).toBe(20)
 		expect(assetShare(nested, [nested, outer])).toBe(0.2)
 		expect(assetShare(outer, [nested, outer])).toBe(1)
+	})
+
+	it('keeps unverified vaults out of totals, whatever they report', () => {
+		const fake = erc4626({ address: '0x0f', tvl: 1e12, verified: false })
+		expect(vaultTotals([big, fake])).toMatchObject({
+			tvl: 1_000_000,
+			funded: 1,
+		})
+	})
+
+	it('counts an Earn vault itself when its venue has no USD value', () => {
+		const nested = earn({ tvl: 20, venue })
+		const outer = erc4626({ tvl: null })
+		expect(vaultTotals([nested, outer]).tvl).toBe(20)
+		expect(assetShare(nested, [nested, outer])).toBe(1)
 	})
 })
 

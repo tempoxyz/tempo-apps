@@ -243,16 +243,40 @@ const currencyAbi = parseAbi(['function currency() view returns (string)'])
  * `asset()` and `totalAssets()`. Contracts that don't answer both aren't
  * vaults and are dropped.
  */
-async function getErc4626Vaults(chainId: number): Promise<VaultSnapshot> {
-	const rows = await indexer(
-		chainId,
-		`SELECT address, count() AS deposits, min(block_num) AS block,
-		min(toUnixTimestamp(block_timestamp)) AS ts
-		FROM logs WHERE selector = '${ERC4626_DEPOSIT}'
-		GROUP BY address ORDER BY deposits DESC LIMIT ${MAX_VAULTS + 1}`,
-	)
-	const candidates = rows.slice(0, MAX_VAULTS).flatMap((row) => {
+/**
+ * ERC-4626 vaults: every venue a listed Earn vault deposits into, which is
+ * the curated set and is always read, plus the most active other emitters of
+ * the standard Deposit event, best effort. Anyone can emit that event, so the
+ * other emitters can't make the snapshot partial or push a venue out.
+ */
+async function getErc4626Vaults(
+	chainId: number,
+	venues: readonly Hex40[],
+): Promise<VaultSnapshot> {
+	const venueList = venues.map((v) => `'${v}'`).join(', ')
+	const [venueRows, rows] = await Promise.all([
+		venues.length
+			? indexer(
+					chainId,
+					`SELECT address, min(block_num) AS block,
+					min(toUnixTimestamp(block_timestamp)) AS ts
+					FROM logs WHERE selector = '${ERC4626_DEPOSIT}' AND address IN (${venueList})
+					GROUP BY address`,
+				)
+			: Promise.resolve([]),
+		indexer(
+			chainId,
+			`SELECT address, count() AS deposits, min(block_num) AS block,
+			min(toUnixTimestamp(block_timestamp)) AS ts
+			FROM logs WHERE selector = '${ERC4626_DEPOSIT}'
+			GROUP BY address ORDER BY deposits DESC LIMIT ${MAX_VAULTS}`,
+		),
+	])
+	const seen = new Set<string>()
+	const candidates = [...venueRows, ...rows].flatMap((row) => {
 		const address = String(row.address ?? '').toLowerCase()
+		if (seen.has(address)) return []
+		seen.add(address)
 		return hexAddress.test(address)
 			? [
 					{
@@ -333,17 +357,31 @@ async function getErc4626Vaults(chainId: number): Promise<VaultSnapshot> {
 		})
 		return vault ? [vault] : []
 	})
-	return { vaults, complete: rows.length <= MAX_VAULTS }
+	// Only curated venues that emit ERC-4626 deposits decide completeness:
+	// other venues (Veda, lending markets) aren't ERC-4626 vaults at all.
+	const read = new Set(vaults.map((vault) => vault.address))
+	const erc4626Venues = venueRows.map((row) =>
+		String(row.address).toLowerCase(),
+	)
+	return {
+		vaults,
+		complete: erc4626Venues.every((venue) => read.has(venue)),
+	}
 }
 
 export async function getVaults(chainId: number): Promise<VaultSnapshot> {
-	const [earn, erc4626] = await Promise.all([
-		getEarnVaults(chainId),
-		getErc4626Vaults(chainId).catch((error) => {
-			console.error('ERC-4626 vault discovery failed', error)
-			return { vaults: [], complete: false } satisfies VaultSnapshot
-		}),
-	])
+	const earn = await getEarnVaults(chainId)
+	const venues = [
+		...new Set(
+			earn.vaults.flatMap((vault) =>
+				vault.verified && vault.venue ? [vault.venue] : [],
+			),
+		),
+	]
+	const erc4626 = await getErc4626Vaults(chainId, venues).catch((error) => {
+		console.error('ERC-4626 vault discovery failed', error)
+		return { vaults: [], complete: false } satisfies VaultSnapshot
+	})
 	return {
 		vaults: mergeVaults(earn.vaults, erc4626.vaults),
 		complete: earn.complete && erc4626.complete,
@@ -377,7 +415,7 @@ export const fetchVaults = createServerFn({ method: 'GET' }).handler(
 	async (): Promise<VaultSnapshot> => {
 		const chainId = getTempoChain().id
 		try {
-			const key = `vaults:v2:${networkKey(chainId)}`
+			const key = `vaults:v3:${networkKey(chainId)}`
 			return await withImmutableDataCache({
 				key,
 				ttlSeconds: (snapshot) =>
