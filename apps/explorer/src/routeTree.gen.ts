@@ -39,6 +39,8 @@ import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
+import { Route as LayoutVaultsIndexRouteImport } from './routes/_layout/vaults/index'
+import { Route as LayoutVaultsVaultRouteImport } from './routes/_layout/vaults/$vault'
 import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 import { Route as LayoutDexFromToRouteImport } from './routes/_layout/dex/$from.$to'
@@ -202,6 +204,16 @@ const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
   path: '/tx/$hash',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutVaultsIndexRoute = LayoutVaultsIndexRouteImport.update({
+  id: '/vaults/',
+  path: '/vaults/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutVaultsVaultRoute = LayoutVaultsVaultRouteImport.update({
+  id: '/vaults/$vault',
+  path: '/vaults/$vault',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
   id: '/api/abi/batch',
   path: '/api/abi/batch',
@@ -302,10 +314,12 @@ export interface FileRoutesByFullPath {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/vaults/$vault': typeof LayoutVaultsVaultRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo/': typeof LayoutDemoIndexRoute
   '/dex/': typeof LayoutDexIndexRoute
   '/earn/': typeof LayoutEarnIndexRoute
+  '/vaults/': typeof LayoutVaultsIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -346,10 +360,12 @@ export interface FileRoutesByTo {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/vaults/$vault': typeof LayoutVaultsVaultRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/dex': typeof LayoutDexIndexRoute
   '/earn': typeof LayoutEarnIndexRoute
+  '/vaults': typeof LayoutVaultsIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -392,10 +408,12 @@ export interface FileRoutesById {
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
+  '/_layout/vaults/$vault': typeof LayoutVaultsVaultRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/_layout/dex/': typeof LayoutDexIndexRoute
   '/_layout/earn/': typeof LayoutEarnIndexRoute
+  '/_layout/vaults/': typeof LayoutVaultsIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/_layout/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -438,10 +456,12 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/vaults/$vault'
     | '/api/abi/batch'
     | '/demo/'
     | '/dex/'
     | '/earn/'
+    | '/vaults/'
     | '/block/countdown/$targetBlock'
     | '/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -482,10 +502,12 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/vaults/$vault'
     | '/api/abi/batch'
     | '/demo'
     | '/dex'
     | '/earn'
+    | '/vaults'
     | '/block/countdown/$targetBlock'
     | '/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -527,10 +549,12 @@ export interface FileRouteTypes {
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
+    | '/_layout/vaults/$vault'
     | '/api/abi/batch'
     | '/_layout/demo/'
     | '/_layout/dex/'
     | '/_layout/earn/'
+    | '/_layout/vaults/'
     | '/_layout/block/countdown/$targetBlock'
     | '/_layout/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -779,6 +803,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutTxHashRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/vaults/': {
+      id: '/_layout/vaults/'
+      path: '/vaults'
+      fullPath: '/vaults/'
+      preLoaderRoute: typeof LayoutVaultsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/vaults/$vault': {
+      id: '/_layout/vaults/$vault'
+      path: '/vaults/$vault'
+      fullPath: '/vaults/$vault'
+      preLoaderRoute: typeof LayoutVaultsVaultRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/api/abi/batch': {
       id: '/api/abi/batch'
       path: '/api/abi/batch'
@@ -892,9 +930,11 @@ interface LayoutRouteChildren {
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
+  LayoutVaultsVaultRoute: typeof LayoutVaultsVaultRoute
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
   LayoutDexIndexRoute: typeof LayoutDexIndexRoute
   LayoutEarnIndexRoute: typeof LayoutEarnIndexRoute
+  LayoutVaultsIndexRoute: typeof LayoutVaultsIndexRoute
   LayoutBlockCountdownTargetBlockRoute: typeof LayoutBlockCountdownTargetBlockRoute
   LayoutDexFromToRoute: typeof LayoutDexFromToRoute
 }
@@ -918,9 +958,11 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
+  LayoutVaultsVaultRoute: LayoutVaultsVaultRoute,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
   LayoutDexIndexRoute: LayoutDexIndexRoute,
   LayoutEarnIndexRoute: LayoutEarnIndexRoute,
+  LayoutVaultsIndexRoute: LayoutVaultsIndexRoute,
   LayoutBlockCountdownTargetBlockRoute: LayoutBlockCountdownTargetBlockRoute,
   LayoutDexFromToRoute: LayoutDexFromToRoute,
 }

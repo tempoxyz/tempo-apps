@@ -57,7 +57,8 @@ export const docs = {
 					fees: 'Unclaimed validator fees, when the address has any.',
 					holders: 'Holders of the token, when the address is a token.',
 					token: 'TIP-20 token metadata and configuration.',
-					earn: 'Tempo Earn vault details and a link to its Earn page, when the address is a vault or its engine.',
+					vault:
+						'Vault details and a link to its vault page, when the address is a Tempo Earn or ERC-4626 vault or an Earn engine.',
 					contract: 'Contract source, ABI, and bytecode, when available.',
 					interact:
 						'Read and write contract functions, when an ABI is available.',
@@ -165,21 +166,25 @@ export const docs = {
 				'Include Stablecoin DEX pairs and swaps with a token outside the verified token list.',
 		},
 	},
-	'/earn/': {
-		title: 'Earn',
+	'/vaults/': {
+		title: 'Vaults',
 		description:
-			'Every Tempo Earn vault deployed onchain, listed by asset and engine (ERC-4626 or Veda) without naming who runs it: total value locked in US dollars, deployment date, and whether deposits are paused, with TVL, funded-vault and asset totals. Each vault links to its page.',
+			'Tempo Earn vaults and ERC-4626 vaults on Tempo, listed by asset and kind without naming who runs them: total value locked in US dollars and first deposit or deployment date, with TVL, funded-vault and asset totals that count money one vault deposits into another once. Each vault links to its page.',
 		params: {
+			kind: 'Show `all` vaults, only Tempo `earn` vaults, or only `erc4626` vaults.',
 			asset: 'Show only vaults holding this asset symbol, such as `OUSD`.',
 			dir: 'Sort by TVL: `asc` or `desc`.',
-			unverified: 'Include vaults outside the curated Earn registry.',
+			unverified:
+				'Include Earn vaults outside the curated registry and ERC-4626 vaults whose asset is not on the verified token list.',
 		},
 	},
-	'/earn/$vault': {
-		title: 'Earn vault',
+	'/vaults/$vault': {
+		title: 'Vault',
 		description:
-			'`vault` is a Tempo Earn vault address. Shows its TVL, its share of Earn TVL in the same asset, 30-day deposits, withdrawals and net flow, its deposit cap, recent deposits and withdrawals by amount, and its engine, venue, factory and deployment.',
+			'`vault` is a Tempo Earn or ERC-4626 vault address. Shows its TVL, its share of vault TVL in the same asset, 30-day deposits, withdrawals and net flow, its deposit cap (Earn) or the Earn vaults that deposit into it (ERC-4626), recent deposits and withdrawals by amount, and its contracts and deployment.',
 	},
+	'/earn/': { hidden: 'Redirects to `/vaults?kind=earn`.' },
+	'/earn/$vault': { hidden: 'Redirects to `/vaults/$vault`.' },
 	'/fee-amm': {
 		title: 'Fee AMM',
 		description:

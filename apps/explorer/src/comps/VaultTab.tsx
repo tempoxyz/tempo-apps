@@ -2,19 +2,17 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import type * as React from 'react'
 import type { Address } from 'viem'
-import { type EarnVault, engineLabels } from '#lib/earn'
 import { PriceFormatter } from '#lib/formatting'
 import { useIsMounted } from '#lib/hooks'
-import { earnVaultsQueryOptions } from '#lib/queries/earn'
+import { vaultsQueryOptions } from '#lib/queries/vaults'
+import { engineLabels, kindLabels, type Vault } from '#lib/vaults'
 
-/** The Earn vault an address is, or is the engine of. */
-export function useEarnVaultForAddress(
-	address: Address,
-): EarnVault | undefined {
+/** The vault an address is, or is the Earn engine of. */
+export function useVaultForAddress(address: Address): Vault | undefined {
 	const isMounted = useIsMounted()
 	const lower = address.toLowerCase()
 	const { data } = useQuery({
-		...earnVaultsQueryOptions(),
+		...vaultsQueryOptions(),
 		enabled: isMounted,
 		refetchInterval: false,
 	})
@@ -29,22 +27,22 @@ const date = new Intl.DateTimeFormat('en-US', {
 	year: 'numeric',
 })
 
-/** The tab header's link to the vault's Earn page. */
-export function EarnVaultLink(props: EarnVaultLink.Props): React.JSX.Element {
+/** The tab header's link to the vault's page. */
+export function VaultPageLink(props: VaultPageLink.Props): React.JSX.Element {
 	return (
 		<Link
-			to="/earn/$vault"
+			to="/vaults/$vault"
 			params={{ vault: props.vault.address }}
 			className="copy-13 text-accent hover:underline whitespace-nowrap"
 		>
-			View Earn vault →
+			View vault →
 		</Link>
 	)
 }
 
-/** The address page's Earn tab: one flat list of the vault's facts. */
-export function EarnVaultTabContent(
-	props: EarnVaultTabContent.Props,
+/** The address page's Vault tab: one flat list of the vault's facts. */
+export function VaultTabContent(
+	props: VaultTabContent.Props,
 ): React.JSX.Element {
 	const { vault, address } = props
 	const isEngine = vault.address !== address.toLowerCase()
@@ -64,7 +62,10 @@ export function EarnVaultTabContent(
 				</Link>
 			),
 		},
-		{ label: 'Engine', value: engineLabels[vault.engine] },
+		{ label: 'Kind', value: kindLabels[vault.kind] },
+		...(vault.engine
+			? [{ label: 'Engine', value: engineLabels[vault.engine] }]
+			: []),
 		{
 			label: 'TVL',
 			value:
@@ -72,8 +73,10 @@ export function EarnVaultTabContent(
 					? '—'
 					: PriceFormatter.format(vault.tvl, { format: 'short' }),
 		},
-		{ label: 'Deposits', value: vault.depositsPaused ? 'Paused' : 'Open' },
-		{ label: 'Registry', value: vault.verified ? 'Verified' : 'Unverified' },
+		...(vault.kind === 'earn'
+			? [{ label: 'Deposits', value: vault.depositsPaused ? 'Paused' : 'Open' }]
+			: []),
+		{ label: 'Verified', value: vault.verified ? 'Yes' : 'No' },
 	]
 	if (!isEngine && vault.engineAddress)
 		rows.push({
@@ -82,28 +85,32 @@ export function EarnVaultTabContent(
 		})
 	if (vault.venue)
 		rows.push({ label: 'Venue', value: <AddressLink address={vault.venue} /> })
+	if (vault.usedBy.length > 0)
+		rows.push({
+			label: 'Used by Earn vaults',
+			value: <UsedBy users={vault.usedBy} />,
+		})
 	if (vault.deployment)
-		rows.push(
-			{
-				label: 'Deployed',
-				value: (
-					<span className="inline-flex flex-wrap items-center gap-x-2">
-						{date.format(vault.deployment.timestamp * 1000)}
-						<Link
-							to="/block/$id"
-							params={{ id: String(vault.deployment.block) }}
-							className="text-accent hover:underline tabular-nums"
-						>
-							Block {vault.deployment.block.toLocaleString('en-US')}
-						</Link>
-					</span>
-				),
-			},
-			{
-				label: 'Factory',
-				value: <AddressLink address={vault.deployment.factory} />,
-			},
-		)
+		rows.push({
+			label: vault.kind === 'earn' ? 'Deployed' : 'First deposit',
+			value: (
+				<span className="inline-flex flex-wrap items-center gap-x-2">
+					{date.format(vault.deployment.timestamp * 1000)}
+					<Link
+						to="/block/$id"
+						params={{ id: String(vault.deployment.block) }}
+						className="text-accent hover:underline tabular-nums"
+					>
+						Block {vault.deployment.block.toLocaleString('en-US')}
+					</Link>
+				</span>
+			),
+		})
+	if (vault.deployment?.factory)
+		rows.push({
+			label: 'Factory',
+			value: <AddressLink address={vault.deployment.factory} />,
+		})
 	return (
 		<dl className="flex flex-col">
 			{rows.map((row) => (
@@ -131,14 +138,27 @@ export function AddressLink(props: AddressLink.Props): React.JSX.Element {
 	)
 }
 
-export declare namespace EarnVaultLink {
-	type Props = { vault: EarnVault }
+export declare namespace VaultPageLink {
+	type Props = { vault: Vault }
 }
 
-export declare namespace EarnVaultTabContent {
-	type Props = { vault: EarnVault; address: Address }
+export declare namespace VaultTabContent {
+	type Props = { vault: Vault; address: Address }
 }
 
 export declare namespace AddressLink {
 	type Props = { address: `0x${string}` }
+}
+
+function UsedBy(props: { users: readonly `0x${string}`[] }): React.JSX.Element {
+	const shown = props.users.slice(0, 5)
+	const rest = props.users.length - shown.length
+	return (
+		<span className="flex flex-col items-end gap-1">
+			{shown.map((user) => (
+				<AddressLink key={user} address={user} />
+			))}
+			{rest > 0 && <span className="copy-13 text-tertiary">+{rest} more</span>}
+		</span>
+	)
 }

@@ -163,10 +163,10 @@ function SpotlightLinks() {
 					Markets
 				</SpotlightPill>
 				<SpotlightPill
-					to="/earn"
+					to="/vaults"
 					icon={<PiggyBankIcon className="size-[14px] text-accent" />}
 				>
-					Earn
+					Vaults
 				</SpotlightPill>
 			</div>
 		</section>
