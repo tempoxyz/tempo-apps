@@ -57,6 +57,7 @@ export const docs = {
 					fees: 'Unclaimed validator fees, when the address has any.',
 					holders: 'Holders of the token, when the address is a token.',
 					token: 'TIP-20 token metadata and configuration.',
+					earn: 'Tempo Earn vault details and a link to its Earn page, when the address is a vault or its engine.',
 					contract: 'Contract source, ABI, and bytecode, when available.',
 					interact:
 						'Read and write contract functions, when an ABI is available.',

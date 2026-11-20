@@ -23,7 +23,10 @@ import { AccountCard } from '#comps/AccountCard'
 import { WalletActions } from '#comps/WalletActions'
 import { ValidatorFees } from '#comps/ValidatorFees'
 import { ValidatorCard } from '#comps/ValidatorCard'
-import { EarnVaultCard } from '#comps/EarnVaultCard'
+import {
+	EarnVaultTabContent,
+	useEarnVaultForAddress,
+} from '#comps/EarnVaultCard'
 import { AddressCell } from '#comps/AddressCell'
 import { BalanceCell, TransferAmountCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -549,6 +552,8 @@ function RouteComponent() {
 		enabled: isMounted && !isTip20,
 	})
 	const hasUnclaimedFees = (validatorFees?.fees.length ?? 0) > 0
+	const earnVault = useEarnVaultForAddress(address)
+	const isEarnVault = !isTip20 && Boolean(earnVault)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = isZonePortal
 			? ['deposits', 'withdrawals', 'batches', 'transactions']
@@ -564,11 +569,21 @@ function RouteComponent() {
 		if (isTip20) {
 			tabs.push('token')
 		}
+		if (isEarnVault) {
+			tabs.push('earn')
+		}
 		if (isContract) {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract, isZonePortal, hasUnclaimedFees])
+	}, [
+		isToken,
+		isTip20,
+		isContract,
+		isZonePortal,
+		hasUnclaimedFees,
+		isEarnVault,
+	])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -902,7 +917,6 @@ function AccountCardWithTimestamps(props: {
 				virtualAddressParts={virtualAddressParts}
 			/>
 			{!isTip20 && <ValidatorCard address={address} />}
-			{!isTip20 && <EarnVaultCard address={address} />}
 			{/* Wallets need a symbol to add a token, and only TIP-20s can pay
 			fees, so a symbol-less ERC-20 has no wallet action to offer. */}
 			{isToken && (isTip20 || Boolean(tokenMetadata?.symbol)) && (
@@ -1117,6 +1131,7 @@ function SectionsWrapper(props: {
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
+	const earnVault = useEarnVaultForAddress(address)
 	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
@@ -2601,6 +2616,15 @@ function SectionsWrapper(props: {
 					totalItems: 0,
 					itemsLabel: 'items',
 					content: <Tip20TokenTabContent address={address} />,
+				}
+			case 'earn':
+				return {
+					title: 'Earn',
+					totalItems: 0,
+					itemsLabel: 'items',
+					content: earnVault ? (
+						<EarnVaultTabContent vault={earnVault} address={address} />
+					) : null,
 				}
 			case 'contract':
 				return {

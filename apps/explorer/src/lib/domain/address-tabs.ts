@@ -10,6 +10,7 @@ const allTabs = [
 	'transfers',
 	'holders',
 	'token',
+	'earn',
 	'contract',
 	'interact',
 ] as const
