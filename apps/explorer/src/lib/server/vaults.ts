@@ -365,7 +365,11 @@ async function getErc4626Vaults(
 	)
 	return {
 		vaults,
-		complete: erc4626Venues.every((venue) => read.has(venue)),
+		// getVerifiedTokens returns [] when the registry read fails; without
+		// it no venue gets a USD value, so that snapshot is partial too.
+		complete:
+			(candidates.length === 0 || verified.length > 0) &&
+			erc4626Venues.every((venue) => read.has(venue)),
 	}
 }
 
