@@ -9,7 +9,6 @@ import { api, instrumentedFetch } from '#lib/server/tempo-api'
 import { getVerifiedTokens } from '#lib/server/verified-tokens'
 import {
 	type ApiEarnVault,
-	capOrNull,
 	type Erc4626Read,
 	type Hex40,
 	mergeVaults,
@@ -24,8 +23,11 @@ import {
 	type VaultKind,
 	type VaultSnapshot,
 	vaultFromTopic,
+	toVaultCap,
+	type VaultCap,
 	vaultKinds,
 } from '#lib/vaults'
+import { getTempoEnv } from '#lib/env'
 import { zAddress } from '#lib/zod'
 import { getBatchedClient, getTempoChain } from '#wagmi.config'
 
@@ -89,9 +91,10 @@ type EarnDiscovery = {
 async function discoverEarnVaults(chainId: number): Promise<EarnDiscovery> {
 	const selectors = STACK_DEPLOYED_SELECTORS.map((s) => `'${s}'`).join(', ')
 	const factories = EARN_FACTORIES[chainId]
-	const from = factories
-		? ` AND address IN (${factories.map((f) => `'${f}'`).join(', ')})`
-		: ''
+	// Without a trusted factory list, any contract's logs would count, so
+	// a chain without one lists no Earn vaults.
+	if (!factories) return { vaults: [], truncated: false }
+	const from = ` AND address IN (${factories.map((f) => `'${f}'`).join(', ')})`
 	const result = await parseResponse(
 		await api.v1.indexer.query.$get({
 			query: {
@@ -104,7 +107,11 @@ async function discoverEarnVaults(chainId: number): Promise<EarnDiscovery> {
 			},
 		}),
 	)
-	const column = (name: string) => result.columns.indexOf(name)
+	const column = (name: string) => {
+		const index = result.columns.indexOf(name)
+		if (index < 0) throw new Error(`Indexer result has no ${name} column`)
+		return index
+	}
 	const [topic, block, ts, factory] = ['topic1', 'block', 'ts', 'factory'].map(
 		column,
 	)
@@ -146,11 +153,13 @@ async function readEarnVault(
 	try {
 		const response = await instrumentedFetch(url, {
 			headers: tempoApi.headers,
+			// Never follow a redirect, which would send the API credentials on.
+			redirect: 'manual',
 			signal: AbortSignal.timeout(READ_TIMEOUT_MS),
 		})
 		if (response.status === 404 || response.status === 422)
 			return { kind: 'none' }
-		if (!response.ok) {
+		if (!response.ok || response.redirected) {
 			console.error('Earn vault read failed', {
 				address,
 				status: response.status,
@@ -161,7 +170,9 @@ async function readEarnVault(
 			(await response.json()) as ApiEarnVault,
 			deployment,
 		)
-		return vault ? { kind: 'vault', vault } : { kind: 'none' }
+		// A vault the API answers for but can't describe is a failed read,
+		// so the snapshot is marked partial instead of silently dropping it.
+		return vault ? { kind: 'vault', vault } : { kind: 'failed' }
 	} catch (error) {
 		console.error('Earn vault read failed', { address, error })
 		return { kind: 'failed' }
@@ -339,19 +350,46 @@ export async function getVaults(chainId: number): Promise<VaultSnapshot> {
 	}
 }
 
+/** Loads in flight, by cache key, so concurrent misses share one refresh. */
+const inflight = new Map<string, Promise<unknown>>()
+
+function coalesce<T>(key: string, load: () => Promise<T>): Promise<T> {
+	const pending = inflight.get(key) as Promise<T> | undefined
+	if (pending) return pending
+	const next = load().finally(() => inflight.delete(key))
+	inflight.set(key, next)
+	return next
+}
+
+/** Devnet and nextfork share a chain ID, so keys name the network too. */
+function networkKey(chainId: number): string {
+	return `${getTempoEnv()}:${chainId}`
+}
+
+/** Keeps a 402, 403 or 429 in the message so clients don't retry it. */
+function unavailable(message: string, error: unknown): Error {
+	const text = error instanceof Error ? error.message : String(error)
+	const status = /\b(402|403|429)\b/.exec(text)?.[1]
+	return new Error(status ? `${message} (status: ${status})` : message)
+}
+
 export const fetchVaults = createServerFn({ method: 'GET' }).handler(
 	async (): Promise<VaultSnapshot> => {
 		const chainId = getTempoChain().id
 		try {
+			const key = `vaults:v2:${networkKey(chainId)}`
 			return await withImmutableDataCache({
-				key: `vaults:v1:${chainId}`,
+				key,
 				ttlSeconds: (snapshot) =>
 					snapshot.complete ? SNAPSHOT_TTL : PARTIAL_SNAPSHOT_TTL,
-				load: () => getVaults(chainId),
+				load: () => coalesce(key, () => getVaults(chainId)),
 			})
 		} catch (error) {
 			console.error('Failed to load vaults:', error)
-			throw new Error('Vaults are temporarily unavailable. Please try again.')
+			throw unavailable(
+				'Vaults are temporarily unavailable. Please try again.',
+				error,
+			)
 		}
 	},
 )
@@ -417,17 +455,17 @@ const maxManagedAssetsAbi = parseAbi([
 	'function maxManagedAssets() view returns (uint256)',
 ])
 
-async function readCap(kind: VaultKind, vault: Hex40): Promise<string | null> {
-	if (kind !== 'earn') return null
+async function readCap(kind: VaultKind, vault: Hex40): Promise<VaultCap> {
+	if (kind !== 'earn') return { status: 'unknown' }
 	try {
 		const cap = await getBatchedClient().readContract({
 			address: vault,
 			abi: maxManagedAssetsAbi,
 			functionName: 'maxManagedAssets',
 		})
-		return capOrNull(cap)
+		return toVaultCap(cap)
 	} catch {
-		return null
+		return { status: 'unknown' }
 	}
 }
 
@@ -532,15 +570,20 @@ export const fetchVaultActivity = createServerFn({ method: 'GET' })
 		const vault = data.vault.toLowerCase() as Hex40
 		const asset = data.asset.toLowerCase() as Hex40
 		try {
+			const key = `vault-activity:v2:${networkKey(chainId)}:${data.kind}:${vault}:${asset}`
 			return await withImmutableDataCache({
-				key: `vault-activity:v1:${chainId}:${data.kind}:${vault}:${asset}`,
+				key,
 				ttlSeconds: ACTIVITY_TTL,
-				load: () => getVaultActivity(chainId, data.kind, vault, asset),
+				load: () =>
+					coalesce(key, () =>
+						getVaultActivity(chainId, data.kind, vault, asset),
+					),
 			})
 		} catch (error) {
 			console.error('Failed to load vault activity:', error)
-			throw new Error(
+			throw unavailable(
 				'Vault activity is temporarily unavailable. Please try again.',
+				error,
 			)
 		}
 	})

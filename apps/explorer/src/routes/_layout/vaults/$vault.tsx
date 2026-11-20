@@ -291,7 +291,7 @@ export function VaultBadges(props: VaultBadges.Props): React.JSX.Element {
 			>
 				{vault.verified ? 'Verified' : 'Unverified'}
 			</span>
-			{vault.depositsPaused && (
+			{vault.depositsPaused === true && (
 				<span className={cx(badge, 'bg-warning/10 text-warning')}>
 					Deposits paused
 				</span>
@@ -309,9 +309,10 @@ export function VaultStats(props: VaultStats.Props): React.JSX.Element {
 		? BigInt(activity.flows.deposited) - BigInt(activity.flows.withdrawn)
 		: undefined
 	const used =
-		activity?.cap && vault?.totalAssets
-			? Number((BigInt(vault.totalAssets) * 10_000n) / BigInt(activity.cap)) /
-				10_000
+		activity?.cap.status === 'capped' && vault?.totalAssets
+			? Number(
+					(BigInt(vault.totalAssets) * 10_000n) / BigInt(activity.cap.value),
+				) / 10_000
 			: null
 	return (
 		<section
@@ -362,9 +363,11 @@ export function VaultStats(props: VaultStats.Props): React.JSX.Element {
 					label="Deposit cap"
 					value={
 						activity
-							? activity.cap
-								? `${amount(activity.cap, decimals)} ${symbol}`
-								: 'No cap'
+							? activity.cap.status === 'capped'
+								? `${amount(activity.cap.value, decimals)} ${symbol}`
+								: activity.cap.status === 'uncapped'
+									? 'No cap'
+									: '—'
 							: undefined
 					}
 					detail={used === null ? undefined : `${share.format(used)} used`}
@@ -528,10 +531,13 @@ export function VaultDetails(props: VaultDetails.Props): React.JSX.Element {
 		})
 	if (vault.kind === 'earn')
 		rows.push(
-			{ label: 'Deposits', value: vault.depositsPaused ? 'Paused' : 'Open' },
+			{ label: 'Deposits', value: depositsLabel(vault.depositsPaused) },
 			{
 				label: 'Pending redemptions',
-				value: count.format(vault.openRedeemRequests),
+				value:
+					vault.openRedeemRequests === null
+						? '—'
+						: count.format(vault.openRedeemRequests),
 			},
 		)
 	if (activity)
@@ -638,4 +644,9 @@ function UsedBy(props: { users: readonly `0x${string}`[] }): React.JSX.Element {
 			{rest > 0 && <span className="copy-13 text-tertiary">+{rest} more</span>}
 		</span>
 	)
+}
+
+/** Paused, Open, or Unknown when the vault doesn't report it. */
+function depositsLabel(paused: boolean | null): string {
+	return paused === null ? 'Unknown' : paused ? 'Paused' : 'Open'
 }

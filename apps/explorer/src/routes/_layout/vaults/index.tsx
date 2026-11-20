@@ -68,6 +68,15 @@ const usd = (value: number) =>
 	value < 1000
 		? cents.format(value)
 		: PriceFormatter.format(value, { format: 'short' })
+/**
+ * A lower bound, rounded down to three significant digits first, so the
+ * compact form never shows more than the vaults that were read hold.
+ */
+const usdAtLeast = (value: number) => {
+	if (value < 1000) return cents.format(Math.floor(value * 100) / 100)
+	const step = 10 ** (Math.floor(Math.log10(value)) - 2)
+	return usd(Math.floor(value / step) * step)
+}
 const date = new Intl.DateTimeFormat('en-US', {
 	month: 'short',
 	day: 'numeric',
@@ -175,7 +184,9 @@ function VaultsPage(): React.JSX.Element {
 		[query.data, search.kind, search.unverified],
 	)
 	const assets = useMemo(() => vaultAssets(ofKind), [ofKind])
-	const asset = assets.includes(search.asset) ? search.asset : 'all'
+	// An asset in the URL that no listed vault holds shows no vaults, never
+	// every asset under that asset's name.
+	const asset = search.asset.toLowerCase()
 	const rows = useMemo(
 		() =>
 			sortVaults(filterVaults(ofKind, { asset, unverified: true }), search.dir),
@@ -183,6 +194,10 @@ function VaultsPage(): React.JSX.Element {
 	)
 	const totals = useMemo(() => vaultTotals(rows), [rows])
 	const pending = query.isPending
+	const partial = query.data?.complete === false
+	/** A lower bound: some vaults weren't read or have no USD value. */
+	const atLeast = partial || totals.unpriced > 0
+	const stale = query.isError && Boolean(query.data)
 
 	function setSearch(next: Partial<VaultSearch>) {
 		void navigate({
@@ -207,13 +222,19 @@ function VaultsPage(): React.JSX.Element {
 					<Grid fit="medium" gap="16" render={<section aria-label="Totals" />}>
 						<Stat
 							label="Total value locked"
-							value={pending || failed ? undefined : usd(totals.tvl)}
-							partial={query.data?.complete === false}
+							value={
+								pending || failed
+									? undefined
+									: atLeast
+										? usdAtLeast(totals.tvl)
+										: usd(totals.tvl)
+							}
+							partial={atLeast}
 						/>
 						<Stat
 							label="Funded vaults"
 							value={pending || failed ? undefined : String(totals.funded)}
-							partial={query.data?.complete === false}
+							partial={atLeast}
 						/>
 						<Stat
 							label="Assets"
@@ -259,9 +280,9 @@ function VaultsPage(): React.JSX.Element {
 							>
 								<Tabs.List variant="pill" size="small" aria-label="Asset">
 									<Tabs.Tab value="all">All assets</Tabs.Tab>
-									{assets.map((symbol) => (
-										<Tabs.Tab key={symbol} value={symbol}>
-											{symbol}
+									{assets.map((token) => (
+										<Tabs.Tab key={token.address} value={token.address}>
+											{token.symbol}
 										</Tabs.Tab>
 									))}
 								</Tabs.List>
@@ -285,19 +306,48 @@ function VaultsPage(): React.JSX.Element {
 										</Alert.Content>
 									</Alert>
 								)}
-								{query.data?.complete === false && (
+								{stale && (
+									<Alert intent="warning">
+										<Alert.Icon />
+										<Alert.Content>
+											<Alert.Title>Couldn’t refresh vaults</Alert.Title>
+											Showing data from{' '}
+											{new Date(query.dataUpdatedAt).toLocaleTimeString(
+												'en-US',
+												{
+													hour: 'numeric',
+													minute: '2-digit',
+												},
+											)}
+											.
+											<Alert.Action
+												disabled={query.isFetching}
+												onClick={() => void query.refetch()}
+											>
+												{query.isFetching ? 'Retrying…' : 'Try again'}
+											</Alert.Action>
+										</Alert.Content>
+									</Alert>
+								)}
+								{partial && (
 									<Alert intent="warning">
 										<Alert.Icon />
 										<Alert.Content>
 											<Alert.Title>Some vaults couldn’t be read</Alert.Title>
 											Totals are a lower bound until they load.
+											<Alert.Action
+												disabled={query.isFetching}
+												onClick={() => void query.refetch()}
+											>
+												{query.isFetching ? 'Retrying…' : 'Try again'}
+											</Alert.Action>
 										</Alert.Content>
 									</Alert>
 								)}
 								<VaultsTable
 									rows={rows}
 									loading={rows.length === 0 && pending}
-									hasErrors={failed}
+									hasErrors={failed || partial}
 									dir={search.dir}
 									onSort={() =>
 										setSearch({ dir: search.dir === 'desc' ? 'asc' : 'desc' })
@@ -309,7 +359,8 @@ function VaultsPage(): React.JSX.Element {
 							Totals count money once: an Earn vault that deposits into a listed
 							ERC-4626 vault isn’t added again. ERC-4626 vaults are verified
 							when they hold a token on the verified list. Verified only also
-							hides vaults worth under $1.
+							hides vaults worth under $1. Vaults whose asset has no USD price
+							aren’t in the totals, which then show as a lower bound.
 						</p>
 					</Stack>
 				</Stack>
@@ -325,6 +376,8 @@ export function VaultsTable(
 	const rowLink = useRowLink()
 	const [all, setAll] = useState(false)
 	const shown = all ? rows : rows.slice(0, FIRST_ROWS)
+	// When reads failed, an empty list isn't "no vaults": the alert above
+	// says what happened and offers a retry.
 	if (!loading && rows.length === 0)
 		return hasErrors ? null : (
 			<Empty.Root>
@@ -437,7 +490,7 @@ export function VaultLabel(props: VaultLabel.Props): React.JSX.Element {
 									<span {...styles.muted()}>Earn venue</span>
 								</>
 							)}
-							{vault.depositsPaused && (
+							{vault.depositsPaused === true && (
 								<>
 									<span aria-hidden="true">·</span>
 									<StatusIndicator intent="warning">

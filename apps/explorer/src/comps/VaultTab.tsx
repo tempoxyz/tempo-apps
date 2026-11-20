@@ -16,8 +16,10 @@ export function useVaultForAddress(address: Address): Vault | undefined {
 		enabled: isMounted,
 		refetchInterval: false,
 	})
-	return data?.vaults.find(
-		(item) => item.address === lower || item.engineAddress === lower,
+	// A vault at this exact address wins over a vault that names it as engine.
+	return (
+		data?.vaults.find((item) => item.address === lower) ??
+		data?.vaults.find((item) => item.engineAddress === lower)
 	)
 }
 
@@ -74,7 +76,17 @@ export function VaultTabContent(
 					: PriceFormatter.format(vault.tvl, { format: 'short' }),
 		},
 		...(vault.kind === 'earn'
-			? [{ label: 'Deposits', value: vault.depositsPaused ? 'Paused' : 'Open' }]
+			? [
+					{
+						label: 'Deposits',
+						value:
+							vault.depositsPaused === null
+								? 'Unknown'
+								: vault.depositsPaused
+									? 'Paused'
+									: 'Open',
+					},
+				]
 			: []),
 		{ label: 'Verified', value: vault.verified ? 'Yes' : 'No' },
 	]

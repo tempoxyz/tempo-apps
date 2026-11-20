@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest'
 import {
 	type ApiEarnVault,
 	assetShare,
-	capOrNull,
 	filterVaults,
 	mergeVaults,
 	sortActivity,
 	sortVaults,
 	toErc4626Vault,
+	safeSymbol,
 	toEarnVault,
+	toVaultCap,
 	type Vault,
 	type VaultActivity,
 	vaultAssets,
@@ -86,6 +87,36 @@ describe('toEarnVault', () => {
 		)
 		expect(json).not.toMatch(/acme/i)
 		expect(json).not.toContain('apy')
+	})
+})
+
+describe('untrusted API values', () => {
+	it('keeps unknown pause and redemption state unknown', () => {
+		expect(toEarnVault(apiVault({ state: {} }))).toMatchObject({
+			depositsPaused: null,
+			openRedeemRequests: null,
+		})
+	})
+
+	it('reads only plain decimals as numbers', () => {
+		expect(toEarnVault(apiVault({ tvl: { formatted: ' ' } }))?.tvl).toBeNull()
+		expect(
+			toEarnVault(apiVault({ tvl: { formatted: '0x10' } }))?.tvl,
+		).toBeNull()
+	})
+
+	it('rejects symbols that are not short printable strings', () => {
+		expect(safeSymbol('OUSD')).toBe('OUSD')
+		expect(safeSymbol(12)).toBeNull()
+		expect(safeSymbol('1#__bigint')).toBeNull()
+		expect(safeSymbol('x'.repeat(33))).toBeNull()
+		expect(
+			toEarnVault(apiVault({ assetToken: { ...ousd, symbol: { a: 1 } } })),
+		).toBeNull()
+	})
+
+	it('lists a vault once when two reads return it', () => {
+		expect(mergeVaults([earn(), earn()], [])).toHaveLength(1)
 	})
 })
 
@@ -182,7 +213,10 @@ describe('vault lists', () => {
 		expect(filterVaults([big, unverified], { unverified: true })).toHaveLength(
 			2,
 		)
-		expect(filterVaults([big, path], { asset: 'pathUSD' })).toEqual([path])
+		expect(
+			filterVaults([big, path], { asset: path.asset.address.toUpperCase() }),
+		).toEqual([path])
+		expect(filterVaults([big, path], { asset: '0xdead' })).toEqual([])
 	})
 
 	it('sorts by TVL with unknown values last', () => {
@@ -199,7 +233,14 @@ describe('vault lists', () => {
 	})
 
 	it('lists assets by TVL', () => {
-		expect(vaultAssets([path, small])).toEqual(['OUSD', 'pathUSD'])
+		expect(vaultAssets([path, small]).map((t) => t.symbol)).toEqual([
+			'OUSD',
+			'pathUSD',
+		])
+		const lookalike = erc4626({
+			asset: { ...ousd, address: '0x2222222222222222222222222222222222222222' },
+		})
+		expect(vaultAssets([small, lookalike])).toHaveLength(2)
 	})
 
 	it('counts an Earn vault inside a listed venue once', () => {
@@ -209,7 +250,11 @@ describe('vault lists', () => {
 			tvl: 100,
 			funded: 2,
 			assets: 1,
+			unpriced: 0,
 		})
+		expect(
+			vaultTotals([outer, erc4626({ address: '0x09', tvl: null })]).unpriced,
+		).toBe(1)
 		expect(vaultTotals([nested]).tvl).toBe(20)
 		expect(assetShare(nested, [nested, outer])).toBe(0.2)
 		expect(assetShare(outer, [nested, outer])).toBe(1)
@@ -233,10 +278,14 @@ describe('vault activity', () => {
 		).toEqual(['0x2:5', '0x2:1', '0x1:0'])
 	})
 
-	it('reads an unset or maximum cap as no cap', () => {
-		expect(capOrNull(0n)).toBeNull()
-		expect(capOrNull(2n ** 256n - 1n)).toBeNull()
-		expect(capOrNull(5_000_000n)).toBe('5000000')
+	it('reads an unset or maximum cap as no cap, and a failed read as unknown', () => {
+		expect(toVaultCap(0n)).toEqual({ status: 'uncapped' })
+		expect(toVaultCap(2n ** 256n - 1n)).toEqual({ status: 'uncapped' })
+		expect(toVaultCap(5_000_000n)).toEqual({
+			status: 'capped',
+			value: '5000000',
+		})
+		expect(toVaultCap(null)).toEqual({ status: 'unknown' })
 	})
 
 	it('reads the vault from an indexed topic', () => {

@@ -54,12 +54,14 @@ export type Vault = {
 	 * verified token list, so its asset and value can be trusted.
 	 */
 	verified: boolean
-	depositsPaused: boolean
+	/** Null when the vault doesn't report it. */
+	depositsPaused: boolean | null
 	/** Total assets in US dollars, or null when the asset has no USD rate. */
 	tvl: number | null
 	/** Total assets in the asset's base units. */
 	totalAssets: string | null
-	openRedeemRequests: number
+	/** Null when the vault doesn't report it. */
+	openRedeemRequests: number | null
 	deployment: VaultDeployment | null
 	/** Earn vaults that deposit into this vault. */
 	usedBy: Hex40[]
@@ -75,7 +77,7 @@ export type VaultSnapshot = {
 export type ApiEarnVault = {
 	vaultAddress: string
 	verified?: boolean | null
-	assetToken?: { address: string; symbol: string; decimals: number } | null
+	assetToken?: { address: string; symbol: unknown; decimals: unknown } | null
 	engine?: {
 		type?: string | null
 		address?: string | null
@@ -96,10 +98,32 @@ export function addressOrNull(value: string | null | undefined): Hex40 | null {
 	return value && hexAddress.test(value) ? (value.toLowerCase() as Hex40) : null
 }
 
-function toNumber(value: string | null | undefined): number | null {
-	if (value === null || value === undefined || value === '') return null
+const decimal = /^-?\d+(\.\d+)?$/
+
+/** A plain decimal string as a number; anything else is unknown. */
+function toNumber(value: unknown): number | null {
+	if (typeof value !== 'string' || !decimal.test(value)) return null
 	const parsed = Number(value)
 	return Number.isFinite(parsed) ? parsed : null
+}
+
+/**
+ * A token symbol safe to show and to cache: printable ASCII, at most 32
+ * characters, with no #, which the cache's JSON codec reserves.
+ */
+export function safeSymbol(value: unknown): string | null {
+	if (typeof value !== 'string') return null
+	const symbol = value.trim()
+	return /^[\x20-\x22\x24-\x7e]{1,32}$/.test(symbol) ? symbol : null
+}
+
+function safeDecimals(value: unknown): number | null {
+	return typeof value === 'number' &&
+		Number.isInteger(value) &&
+		value >= 0 &&
+		value <= 36
+		? value
+		: null
 }
 
 /** One Earn API vault as a row, or null when it isn't a readable vault. */
@@ -110,28 +134,32 @@ export function toEarnVault(
 	const asset = vault.assetToken
 	const address = addressOrNull(vault.vaultAddress)
 	const assetAddress = addressOrNull(asset?.address)
-	if (!address || !asset || !assetAddress || !asset.symbol) return null
+	const symbol = safeSymbol(asset?.symbol)
+	const decimals = safeDecimals(asset?.decimals)
+	if (!address || !assetAddress || symbol === null || decimals === null)
+		return null
 	const type = vault.engine?.type
 	const totalAssets = vault.state?.totalAssets
+	const paused = vault.state?.depositsPaused
+	const redemptions = vault.state?.openRedeemRequestCount
 	return {
 		address,
 		kind: 'earn',
-		asset: {
-			address: assetAddress,
-			symbol: asset.symbol,
-			decimals: asset.decimals,
-		},
+		asset: { address: assetAddress, symbol, decimals },
 		engine: type === 'erc4626' || type === 'veda' ? type : 'other',
 		engineAddress: addressOrNull(vault.engine?.address),
 		venue: addressOrNull(vault.engine?.venue),
 		verified: vault.verified === true,
-		depositsPaused: vault.state?.depositsPaused === true,
+		depositsPaused: typeof paused === 'boolean' ? paused : null,
 		tvl: toNumber(vault.tvl?.formatted),
 		totalAssets:
 			typeof totalAssets === 'string' && digits.test(totalAssets)
 				? totalAssets
 				: null,
-		openRedeemRequests: vault.state?.openRedeemRequestCount ?? 0,
+		openRedeemRequests:
+			typeof redemptions === 'number' && Number.isInteger(redemptions)
+				? redemptions
+				: null,
 		deployment,
 		usedBy: [],
 	}
@@ -155,8 +183,11 @@ export type Erc4626Read = {
 export function toErc4626Vault(read: Erc4626Read): Vault | null {
 	const address = addressOrNull(read.address)
 	const asset = addressOrNull(read.asset)
-	if (!address || !asset || !read.token || read.totalAssets <= 0n) return null
-	const { symbol, decimals, currency } = read.token
+	const symbol = safeSymbol(read.token?.symbol)
+	const decimals = safeDecimals(read.token?.decimals)
+	if (!address || !asset || symbol === null || decimals === null) return null
+	if (read.totalAssets <= 0n) return null
+	const currency = read.token?.currency ?? null
 	const units = Number(read.totalAssets) / 10 ** decimals
 	return {
 		address,
@@ -166,10 +197,10 @@ export function toErc4626Vault(read: Erc4626Read): Vault | null {
 		engineAddress: null,
 		venue: null,
 		verified: read.verifiedAsset,
-		depositsPaused: false,
+		depositsPaused: null,
 		tvl: read.verifiedAsset && currency === 'USD' ? units : null,
 		totalAssets: read.totalAssets.toString(),
-		openRedeemRequests: 0,
+		openRedeemRequests: null,
 		deployment: {
 			factory: null,
 			block: read.firstBlock,
@@ -189,6 +220,11 @@ export function mergeVaults(
 ): Vault[] {
 	const earnContracts = new Set<string>()
 	const users = new Map<string, Hex40[]>()
+	const unique = (list: readonly Vault[]) => [
+		...new Map(list.map((vault) => [vault.address, vault])).values(),
+	]
+	earn = unique(earn)
+	erc4626 = unique(erc4626)
 	for (const vault of earn) {
 		earnContracts.add(vault.address)
 		if (vault.engineAddress) earnContracts.add(vault.engineAddress)
@@ -212,7 +248,8 @@ export function vaultFromTopic(topic: unknown): Hex40 | null {
 
 export const vaultSearchSchema = z.object({
 	kind: z._default(z.enum(['all', ...vaultKinds]), 'all'),
-	asset: z._default(z.string(), 'all'),
+	/** An asset's token address, or all. */
+	asset: z._default(z.catch(z.string(), 'all'), 'all'),
 	dir: z._default(z.enum(['asc', 'desc']), 'desc'),
 	unverified: z._default(z.boolean(), false),
 })
@@ -235,7 +272,7 @@ export function filterVaults(
 		(vault) =>
 			(unverified || (vault.verified && !isDust(vault))) &&
 			(kind === 'all' || vault.kind === kind) &&
-			(asset === 'all' || vault.asset.symbol === asset),
+			(asset === 'all' || vault.asset.address === asset.toLowerCase()),
 	)
 }
 
@@ -260,17 +297,21 @@ export function sortVaults(
 	})
 }
 
-/** Assets with at least one vault, the largest by TVL first. */
-export function vaultAssets(vaults: readonly Vault[]): string[] {
-	const tvl = new Map<string, number>()
-	for (const vault of vaults)
-		tvl.set(
-			vault.asset.symbol,
-			(tvl.get(vault.asset.symbol) ?? 0) + (vault.tvl ?? 0),
+/** Assets with at least one vault, by token address, the largest by TVL first. */
+export function vaultAssets(vaults: readonly Vault[]): VaultToken[] {
+	const assets = new Map<string, { token: VaultToken; tvl: number }>()
+	for (const vault of vaults) {
+		const entry = assets.get(vault.asset.address)
+		assets.set(vault.asset.address, {
+			token: entry?.token ?? vault.asset,
+			tvl: (entry?.tvl ?? 0) + (vault.tvl ?? 0),
+		})
+	}
+	return [...assets.values()]
+		.sort(
+			(a, b) => b.tvl - a.tvl || a.token.address.localeCompare(b.token.address),
 		)
-	return [...tvl.entries()]
-		.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-		.map(([symbol]) => symbol)
+		.map((entry) => entry.token)
 }
 
 /**
@@ -288,21 +329,28 @@ export type VaultTotals = {
 	/** Vaults holding at least $1. */
 	funded: number
 	assets: number
+	/** Vaults with no USD value, left out of tvl and funded. */
+	unpriced: number
 }
 
 export function vaultTotals(vaults: readonly Vault[]): VaultTotals {
 	const listed = new Set(vaults.map((vault) => vault.address))
 	let tvl = 0
 	let funded = 0
+	let unpriced = 0
 	for (const vault of vaults) {
-		if (vault.tvl === null) continue
+		if (vault.tvl === null) {
+			unpriced += 1
+			continue
+		}
 		if (!isNested(vault, listed)) tvl += vault.tvl
 		if (vault.tvl >= 1) funded += 1
 	}
 	return {
 		tvl,
 		funded,
-		assets: new Set(vaults.map((v) => v.asset.symbol)).size,
+		assets: new Set(vaults.map((v) => v.asset.address)).size,
+		unpriced,
 	}
 }
 
@@ -313,7 +361,7 @@ export function assetShare(
 ): number | null {
 	if (vault.tvl === null) return null
 	const same = vaults.filter(
-		(other) => other.asset.symbol === vault.asset.symbol,
+		(other) => other.asset.address === vault.asset.address,
 	)
 	const total = vaultTotals(same).tvl
 	return total > 0 ? Math.min(vault.tvl / total, 1) : null
@@ -347,9 +395,14 @@ export type VaultActivityResult = {
 	activity: VaultActivity[]
 	/** Over the last 30 days. */
 	flows: VaultFlows
-	/** Base units; null when the vault has no cap or reports none. */
-	cap: string | null
+	cap: VaultCap
 }
+
+/** A deposit cap read onchain, kept apart from a read that failed. */
+export type VaultCap =
+	| { status: 'capped'; value: string }
+	| { status: 'uncapped' }
+	| { status: 'unknown' }
 
 /** Newest first: block, then log index. */
 export function sortActivity(items: readonly VaultActivity[]): VaultActivity[] {
@@ -357,8 +410,8 @@ export function sortActivity(items: readonly VaultActivity[]): VaultActivity[] {
 }
 
 /** A cap of 0 or uint256 max means the vault accepts any amount. */
-export function capOrNull(value: bigint | null | undefined): string | null {
-	if (value === null || value === undefined) return null
-	if (value === 0n || value === 2n ** 256n - 1n) return null
-	return value.toString()
+export function toVaultCap(value: bigint | null | undefined): VaultCap {
+	if (value === null || value === undefined) return { status: 'unknown' }
+	if (value === 0n || value === 2n ** 256n - 1n) return { status: 'uncapped' }
+	return { status: 'capped', value: value.toString() }
 }
