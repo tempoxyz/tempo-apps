@@ -35,9 +35,11 @@ permissions: {}
 # broker finishes work a cancelled job started, so a cancelled run could still
 # deploy after a newer one. A run that starts while another is in progress
 # waits, and GitHub keeps only the newest waiting run, so of several queued
-# commits the newest deploys.
+# commits the newest deploys. For a single-environment app the group is the one
+# deploy.yml used, so the first broker deploy waits for a run still deploying
+# with the static token.
 concurrency:
-  group: deploy-broker-${{ inputs.worker || inputs.app }}-${{ github.ref }}
+  group: deploy-${{ inputs.worker || inputs.app }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
