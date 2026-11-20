@@ -37,8 +37,10 @@ on:
       VITE_POSTHOG_HOST:
         required: false
 
+# The same group as deploy.yml, so a run that deploys with the static token and
+# one that deploys with STS never overlap during the switch.
 concurrency:
-  group: deploy-sts-${{ inputs.app }}-${{ github.ref }}
+  group: deploy-${{ inputs.app }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions: {}
