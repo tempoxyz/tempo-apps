@@ -5,8 +5,14 @@
 // the upload treats as data: Wrangler bundles nothing and runs none of its code.
 //
 // Usage: node preview-config.mjs <main's wrangler.json> <preview directory> <output>
-import { existsSync, lstatSync, readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import {
+	existsSync,
+	lstatSync,
+	readdirSync,
+	readFileSync,
+	writeFileSync,
+} from 'node:fs'
+import { join, resolve } from 'node:path'
 
 const [configPath, previewDirectory, outputPath] = process.argv.slice(2)
 if (!configPath || !previewDirectory || !outputPath) {
@@ -14,6 +20,18 @@ if (!configPath || !previewDirectory || !outputPath) {
 		'usage: preview-config.mjs <wrangler.json> <preview directory> <output>',
 	)
 }
+// Wrangler follows symbolic links when it reads modules and assets, so a link
+// in the pull request's files could upload bytes from this runner. Accept only
+// directories and regular files.
+;(function verify(directory) {
+	for (const entry of readdirSync(directory)) {
+		const path = join(directory, entry)
+		const stat = lstatSync(path)
+		if (stat.isDirectory()) verify(path)
+		else if (!stat.isFile())
+			throw new Error(`the preview holds a link or special file: ${path}`)
+	}
+})(resolve(previewDirectory))
 
 const config = JSON.parse(readFileSync(configPath, 'utf8'))
 const worker = resolve(previewDirectory, 'worker')
