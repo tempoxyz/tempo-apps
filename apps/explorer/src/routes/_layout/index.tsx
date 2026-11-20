@@ -9,7 +9,6 @@ import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
-import PiggyBankIcon from '~icons/lucide/piggy-bank'
 import ReceiptIcon from '~icons/lucide/receipt'
 import UserIcon from '~icons/lucide/user'
 
@@ -161,12 +160,6 @@ function SpotlightLinks() {
 					icon={<ArrowLeftRightIcon className="size-[14px] text-accent" />}
 				>
 					Markets
-				</SpotlightPill>
-				<SpotlightPill
-					to="/vaults"
-					icon={<PiggyBankIcon className="size-[14px] text-accent" />}
-				>
-					Vaults
 				</SpotlightPill>
 			</div>
 		</section>
