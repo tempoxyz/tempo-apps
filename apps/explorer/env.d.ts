@@ -18,12 +18,7 @@ interface EnvironmentVariables {
 	readonly DEVNET_RPC_URL: string | undefined
 	readonly DEVNET_TIDX_URL: string | undefined
 
-	readonly VITE_TEMPO_ENV:
-		| 'testnet'
-		| 'devnet'
-		| 'nextfork'
-		| 'mainnet'
-		| 'zone-prover'
+	readonly VITE_TEMPO_ENV: 'testnet' | 'devnet' | 'nextfork' | 'mainnet'
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

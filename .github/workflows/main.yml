@@ -30,7 +30,7 @@ jobs:
       VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
     with:
       app: explorer
-      environments: '["testnet","mainnet","devnet","nextfork","zone-prover"]'
+      environments: '["testnet","mainnet","devnet","nextfork"]'
 
   deploy-fee-payer:
     permissions:
