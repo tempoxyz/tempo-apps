@@ -145,13 +145,25 @@ jobs:
           APP_NAME: ${{ matrix.app }}
         run: node .github/scripts/preview-config.mjs "apps/$APP_NAME/wrangler.json" "$RUNNER_TEMP/preview" "$RUNNER_TEMP/preview.wrangler.json"
 
-      # The Wrangler action installs Wrangler with npm, without the lockfile, and
-      # the runner blocks each version of the last few days. The cutoff resolves
-      # each dependency as of a week ago, so the locked Wrangler must be older.
+      # The Wrangler action installs Wrangler with npm, without the lockfile. The
+      # cutoff resolves each dependency as of a week ago, or as of the locked
+      # Wrangler's release when that is newer: pnpm-workspace.yaml's
+      # minimumReleaseAge lets main lock a release after one day.
       - name: Set install cutoff
         if: steps.build.outputs.status == 'built'
         id: cutoff
-        run: echo "before=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ steps.wrangler.outputs.version }}
+        run: |
+          week="$(date -u -d '7 days ago' +%s)"
+          published="$(npm view "wrangler@$VERSION" time --json | jq -r --arg v "$VERSION" '.[$v] // empty')"
+          if [[ -z "$published" ]]; then
+            echo "::error::npm has no publish time for wrangler@$VERSION."
+            exit 1
+          fi
+          released="$(date -u -d "$published" +%s)"
+          cutoff=$(( released + 60 > week ? released + 60 : week ))
+          echo "before=$(date -u -d "@$cutoff" +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       # Cloudflare STS mints the token under this repository's `preview-upload`
       # policy, which admits only this workflow on main. It serves only this
