@@ -100,7 +100,9 @@ function VaultPage(): React.JSX.Element {
 	const { vault: address } = Route.useParams()
 	const query = useQuery(vaultsQueryOptions())
 	const vault = query.data?.vaults.find((item) => item.address === address)
-	const missing = Boolean(query.data) && !vault
+	/** Only a complete snapshot can say an address isn't a vault. */
+	const missing = query.data?.complete === true && !vault
+	const unread = query.data?.complete === false && !vault
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const [section, setSection] = useState(0)
 	const [live, setLive] = useState(true)
@@ -168,6 +170,23 @@ function VaultPage(): React.JSX.Element {
 					)}
 				>
 					<p>{query.error.message}</p>
+					<button
+						type="button"
+						className="inline-flex items-center rounded-[7px] border border-card-border px-3 py-2 copy-13 text-secondary hover:text-primary cursor-pointer press-down"
+						onClick={() => void query.refetch()}
+					>
+						Try again
+					</button>
+				</section>
+			) : unread ? (
+				<section
+					role="alert"
+					className={cx(
+						card,
+						'p-[18px] copy-14 text-secondary flex flex-col items-start gap-3',
+					)}
+				>
+					<p>Some vaults couldn’t be read, so this one may not have loaded.</p>
 					<button
 						type="button"
 						className="inline-flex items-center rounded-[7px] border border-card-border px-3 py-2 copy-13 text-secondary hover:text-primary cursor-pointer press-down"
