@@ -31,6 +31,15 @@ on:
 
 permissions: {}
 
+# One change check, build and deploy per Worker at a time, never cancelled: the
+# broker finishes work a cancelled job started, so a cancelled run could still
+# deploy after a newer one. A run that starts while another is in progress
+# waits, and GitHub keeps only the newest waiting run, so of several queued
+# commits the newest deploys.
+concurrency:
+  group: deploy-broker-${{ inputs.worker || inputs.app }}-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   NODE_ENV: production
   WRANGLER_SEND_METRICS: false
@@ -101,12 +110,6 @@ jobs:
     timeout-minutes: 15
     # The broker admits only this environment's OIDC subject for the Worker.
     environment: ${{ inputs.worker || inputs.app }}
-    # One deploy per Worker at a time, never cancelled: the broker finishes
-    # work a cancelled job started, so overlapping runs could deploy out of
-    # order. GitHub keeps only the newest pending run in the group.
-    concurrency:
-      group: deploy-broker-${{ inputs.worker || inputs.app }}-${{ github.ref }}
-      cancel-in-progress: false
 
     steps:
       - name: Secure runner
