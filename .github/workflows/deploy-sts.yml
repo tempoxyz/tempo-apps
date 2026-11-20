@@ -25,6 +25,11 @@ on:
         type: string
         default: '10m'
         description: 'Token lifetime, at most the policy max_ttl'
+      deploy-timeout-minutes:
+        required: false
+        type: number
+        default: 8
+        description: 'Timeout of the deploy step; keep it below sts-ttl so the token outlives the deploy'
     secrets:
       # Compiled into the explorer client bundle. Unset means no PostHog.
       VITE_EXPLORER_POSTHOG_KEY:
@@ -126,8 +131,9 @@ jobs:
 
       - name: Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
-        # Shorter than the token's lifetime, so the token outlives the deploy.
-        timeout-minutes: 25
+        # Shorter than the token's lifetime (sts-ttl), so the token outlives
+        # the deploy.
+        timeout-minutes: ${{ inputs.deploy-timeout-minutes }}
         uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
         env:
           NODE_ENV: production

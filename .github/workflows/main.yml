@@ -55,6 +55,7 @@ jobs:
       environments: '[""]'
       sts-policy: deploy-contract-verification
       sts-ttl: 30m
+      deploy-timeout-minutes: 25
 
   deploy-key-manager:
     permissions:
