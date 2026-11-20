@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import type * as React from 'react'
 import type { Address } from 'viem'
-import { Address as AddressComp } from '#comps/Address.tsx'
 import { type EarnVault, engineLabels } from '#lib/earn'
 import { PriceFormatter } from '#lib/formatting'
 import { useIsMounted } from '#lib/hooks'
@@ -24,150 +23,122 @@ export function useEarnVaultForAddress(
 	)
 }
 
-function formatDate(timestamp: number): string {
-	return new Date(timestamp * 1000).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-	})
+const date = new Intl.DateTimeFormat('en-US', {
+	month: 'short',
+	day: 'numeric',
+	year: 'numeric',
+})
+
+/** The tab header's link to the vault's Earn page. */
+export function EarnVaultLink(props: EarnVaultLink.Props): React.JSX.Element {
+	return (
+		<Link
+			to="/earn/$vault"
+			params={{ vault: props.vault.address }}
+			className="copy-13 text-accent hover:underline whitespace-nowrap"
+		>
+			View Earn vault →
+		</Link>
+	)
 }
 
-/** The address page's Earn tab, laid out like its Token tab. */
+/** The address page's Earn tab: one flat list of the vault's facts. */
 export function EarnVaultTabContent(
 	props: EarnVaultTabContent.Props,
 ): React.JSX.Element {
 	const { vault, address } = props
 	const isEngine = vault.address !== address.toLowerCase()
+	const rows: { label: string; value: React.ReactNode }[] = [
+		...(isEngine
+			? [{ label: 'Engine of', value: <AddressLink address={vault.address} /> }]
+			: []),
+		{
+			label: 'Asset',
+			value: (
+				<Link
+					to="/token/$address"
+					params={{ address: vault.asset.address }}
+					className="text-accent hover:underline"
+				>
+					{vault.asset.symbol}
+				</Link>
+			),
+		},
+		{ label: 'Engine', value: engineLabels[vault.engine] },
+		{
+			label: 'TVL',
+			value:
+				vault.tvl === null
+					? '—'
+					: PriceFormatter.format(vault.tvl, { format: 'short' }),
+		},
+		{ label: 'Deposits', value: vault.depositsPaused ? 'Paused' : 'Open' },
+		{ label: 'Registry', value: vault.verified ? 'Verified' : 'Unverified' },
+	]
+	if (!isEngine && vault.engineAddress)
+		rows.push({
+			label: 'Engine contract',
+			value: <AddressLink address={vault.engineAddress} />,
+		})
+	if (vault.venue)
+		rows.push({ label: 'Venue', value: <AddressLink address={vault.venue} /> })
+	if (vault.deployment)
+		rows.push(
+			{
+				label: 'Deployed',
+				value: (
+					<span className="inline-flex flex-wrap items-center gap-x-2">
+						{date.format(vault.deployment.timestamp * 1000)}
+						<Link
+							to="/block/$id"
+							params={{ id: String(vault.deployment.block) }}
+							className="text-accent hover:underline tabular-nums"
+						>
+							Block {vault.deployment.block.toLocaleString('en-US')}
+						</Link>
+					</span>
+				),
+			},
+			{
+				label: 'Factory',
+				value: <AddressLink address={vault.deployment.factory} />,
+			},
+		)
 	return (
-		<div className="px-[18px] py-[14px] copy-13">
-			{isEngine && (
-				<p className="text-tertiary pb-3">
-					This contract is the engine of a Tempo Earn vault.
-				</p>
-			)}
-			<section
-				aria-label="Vault"
-				className="rounded-[6px] border border-distinct overflow-hidden"
-			>
-				<h3 className="border-b border-distinct px-3 py-2.5 font-medium">
-					Vault
-				</h3>
-				<dl className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-3">
-					<Field label="Asset" value={vault.asset.symbol} />
-					<Field label="Engine" value={engineLabels[vault.engine]} />
-					<Field
-						label="TVL"
-						value={
-							vault.tvl === null
-								? undefined
-								: PriceFormatter.format(vault.tvl, { format: 'short' })
-						}
-					/>
-					<Field
-						label="Deposits"
-						value={vault.depositsPaused ? 'Paused' : 'Open'}
-					/>
-				</dl>
-				<div className="flex flex-col gap-2 border-t border-dashed border-distinct p-3 label-12">
-					<Row
-						label="Registry"
-						value={vault.verified ? 'Verified' : 'Unverified'}
-					/>
-					{isEngine ? (
-						<Row
-							label="Vault"
-							value={
-								<AddressComp address={vault.address} className="label-12" />
-							}
-						/>
-					) : (
-						vault.engineAddress && (
-							<Row
-								label="Engine contract"
-								value={
-									<AddressComp
-										address={vault.engineAddress}
-										className="label-12"
-									/>
-								}
-							/>
-						)
-					)}
-					{vault.venue && (
-						<Row
-							label="Venue"
-							value={<AddressComp address={vault.venue} className="label-12" />}
-						/>
-					)}
-					{vault.deployment && (
-						<>
-							<Row
-								label="Deployed"
-								value={
-									<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-										<span>{formatDate(vault.deployment.timestamp)}</span>
-										<Link
-											to="/block/$id"
-											params={{ id: String(vault.deployment.block) }}
-											className="text-accent hover:underline"
-										>
-											Block {vault.deployment.block.toLocaleString('en-US')}
-										</Link>
-									</span>
-								}
-							/>
-							<Row
-								label="Factory"
-								value={
-									<AddressComp
-										address={vault.deployment.factory}
-										className="label-12"
-									/>
-								}
-							/>
-						</>
-					)}
+		<dl className="flex flex-col">
+			{rows.map((row) => (
+				<div
+					key={row.label}
+					className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-[18px] py-3.5 border-b last:border-b-0 border-dashed border-card-border"
+				>
+					<dt className="copy-14 text-tertiary">{row.label}</dt>
+					<dd className="min-w-0 copy-14 text-primary">{row.value}</dd>
 				</div>
-			</section>
-			<Link
-				to="/earn/$vault"
-				params={{ vault: vault.address }}
-				className="mt-4 inline-flex items-center gap-2 text-accent hover:underline"
-			>
-				View Earn vault →
-			</Link>
-		</div>
+			))}
+		</dl>
 	)
 }
 
-export function Field(props: Field.Props): React.JSX.Element {
+export function AddressLink(props: AddressLink.Props): React.JSX.Element {
 	return (
-		<div className="flex flex-col gap-1 min-w-0">
-			<dt className="label-12 text-tertiary">{props.label}</dt>
-			<dd className="text-primary tabular-nums">
-				{props.value ?? <span className="text-tertiary">&mdash;</span>}
-			</dd>
-		</div>
+		<Link
+			to="/address/$address"
+			params={{ address: props.address }}
+			className="font-mono copy-13 text-accent hover:underline break-all"
+		>
+			{props.address}
+		</Link>
 	)
 }
 
-export function Row(props: Row.Props): React.JSX.Element {
-	return (
-		<div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-			<span className="text-secondary shrink-0">{props.label}</span>
-			<span className="text-primary min-w-0">{props.value}</span>
-		</div>
-	)
+export declare namespace EarnVaultLink {
+	type Props = { vault: EarnVault }
 }
 
 export declare namespace EarnVaultTabContent {
 	type Props = { vault: EarnVault; address: Address }
 }
 
-export declare namespace Field {
-	type Props = { label: string; value: React.ReactNode | undefined }
-}
-
-export declare namespace Row {
-	type Props = { label: string; value: React.ReactNode }
+export declare namespace AddressLink {
+	type Props = { address: `0x${string}` }
 }

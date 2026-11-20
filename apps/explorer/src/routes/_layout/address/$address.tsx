@@ -24,6 +24,7 @@ import { WalletActions } from '#comps/WalletActions'
 import { ValidatorFees } from '#comps/ValidatorFees'
 import { ValidatorCard } from '#comps/ValidatorCard'
 import {
+	EarnVaultLink,
 	EarnVaultTabContent,
 	useEarnVaultForAddress,
 } from '#comps/EarnVaultCard'
@@ -2622,6 +2623,7 @@ function SectionsWrapper(props: {
 					title: 'Earn',
 					totalItems: 0,
 					itemsLabel: 'items',
+					contextual: earnVault ? <EarnVaultLink vault={earnVault} /> : null,
 					content: earnVault ? (
 						<EarnVaultTabContent vault={earnVault} address={address} />
 					) : null,
