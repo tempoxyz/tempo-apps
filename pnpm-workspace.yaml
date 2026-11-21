@@ -61,7 +61,7 @@ catalog:
   eruda: ^3.4.3
   esbuild: ^0.28.1
   globals: ^17.4.0
-  hono: ^4.13.11
+  hono: ^4.13.16
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.17
@@ -160,8 +160,6 @@ overrides:
   brace-expansion@>=5: ^5.0.12
   yaml: ^2.8.3
   protobufjs: 7.6.6
-  # The MCP SDK accepts ^1.19.9 || ^2.0.5; 2.1.3+ fixes serveStatic double decoding (GHSA-rmxm-3fg6-px4f).
-  '@modelcontextprotocol/sdk>@hono/node-server': ^2.1.5
   # miniflare 4 pins ws 8.18.0 (GHSA-58qx-3vcg-4xpx, GHSA-96hv-2xvq-fx4p).
   'ws@>=8 <8.21.0': ^8.21.3
   # @cloudflare/vitest-plugin 1.3.7 resolves zod 4.4.3 (GHSA-mrhx-c7xc-m3w5).
@@ -172,7 +170,7 @@ overrides:
   'glob@>=9.0.0 <14.0.2': 14.0.3
   'minimatch@>=5.0.0 <11.0.1': 11.0.3
   # wata 0.4 (latest) asks for @hono/node-server ^1, all affected by GHSA-rmxm-3fg6-px4f; it only uses getRequestListener, which 2.x keeps.
-  'wata>@hono/node-server': ^2.1.5
+  'wata>@hono/node-server': ^2.1.6
   # dockerode 4.0.12 (testcontainers 11) pins uuid ^10 (GHSA-w5hq-g745-h8pq); 11.1.1 keeps the CommonJS v4 export it requires.
   'dockerode>uuid': 11.1.1
   # drizzle-kit (latest) still pulls esbuild 0.18 through @esbuild-kit/core-utils (GHSA-67mh-4wv8-2f99).
