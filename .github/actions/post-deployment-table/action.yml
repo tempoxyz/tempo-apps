@@ -8,6 +8,10 @@ inputs:
   deployments-path:
     description: 'Path to directory containing deployment JSON files'
     required: true
+  pr-number:
+    description: 'Pull request to comment on; defaults to the triggering pull request (a workflow_run has none)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -16,6 +20,7 @@ runs:
       uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
       env:
         DEPLOYMENTS_PATH: ${{ inputs.deployments-path }}
+        PR_NUMBER: ${{ inputs.pr-number }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -23,6 +28,8 @@ runs:
           const path = require('node:path')
 
           const deploymentsPath = process.env.DEPLOYMENTS_PATH
+          const issueNumber = Number(process.env.PR_NUMBER) || context.issue.number
+          if (!Number.isInteger(issueNumber) || issueNumber <= 0) throw new Error('No pull request to comment on')
           const deployments = []
 
           try {
@@ -92,7 +99,7 @@ runs:
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            issue_number: context.issue.number,
+            issue_number: issueNumber,
           })
 
           const existingComment = comments.find(comment =>
@@ -111,7 +118,7 @@ runs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: issueNumber,
               body: commentBody
             })
             console.log('Created new deployment comment')
