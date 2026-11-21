@@ -21,7 +21,13 @@ export default defineConfig((config) => {
 		resolve: {
 			tsconfigPaths: true,
 		},
-		plugins: [cloudflare(), processIcons(), copyAssetsPlugin()],
+		plugins: [
+			// Production builds set WRANGLER_CONFIG_PATH=wrangler.prd.json, the config the
+			// Cloudflare Deploy Broker deploys. Local builds and dev read wrangler.json.
+			cloudflare({ configPath: process.env.WRANGLER_CONFIG_PATH }),
+			processIcons(),
+			copyAssetsPlugin(),
+		],
 		define: {
 			__BUILD_VERSION__: JSON.stringify(commitSha ?? Date.now().toString()),
 		},

@@ -5,11 +5,11 @@ import type { Context, Next } from 'hono'
 export function ipRateLimitMiddleware(options: { keyed: boolean }) {
 	return async (context: Context, next: Next) => {
 		const limiter = options.keyed
-			? (env.KeyedAddressRateLimiter ?? env.AddressRateLimiter)
-			: env.AddressRateLimiter
+			? (env.KEYED_ADDRESS_RATE_LIMITER ?? env.ADDRESS_RATE_LIMITER)
+			: env.ADDRESS_RATE_LIMITER
 		if (!limiter) {
 			console.error(
-				`${options.keyed ? 'KeyedAddressRateLimiter' : 'AddressRateLimiter'} binding is not configured`,
+				`${options.keyed ? 'KEYED_ADDRESS_RATE_LIMITER' : 'ADDRESS_RATE_LIMITER'} binding is not configured`,
 			)
 			return context.json({ error: 'Service misconfigured' }, 503)
 		}

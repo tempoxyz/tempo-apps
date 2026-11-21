@@ -334,9 +334,7 @@ Important metrics:
 
 ## Deploy
 
-```bash
-pnpm --filter mcp-docs-indexer deploy
-```
+Pushes to `main` that touch this app deploy it through the [Cloudflare Deploy Broker](https://github.com/tempoxyz/cloudflare-deploy-broker); CI holds no Cloudflare credential. The broker accepts only a build that matches the `mcp-docs-indexer` entry in [`cloudflare-deploy-policies`](https://github.com/tempoxyz/cloudflare-deploy-policies/blob/main/policies/tempoxyz/tempo-apps.yaml), so a new binding or domain needs a policy change first. Worker secrets such as `POSTHOG_PROJECT_API_KEY` are managed in the broker dashboard (https://cf.tehq.net/, Workers tab), and every deploy keeps them.
 
 Cron runs hourly. The Worker is not bound to a public route — `workers_dev`
 is disabled in `wrangler.jsonc`. Tail logs to confirm the cron is firing:

@@ -25,11 +25,7 @@ Environment variables:
 - `TEMPO_TAG` - Docker image tag for localnet (default: `latest`)
 - `TEMPO_RPC_AUTH` - optional Tempo RPC Basic Auth credentials in `client_id:api_key` format; configure production values as a Cloudflare secret
 
-Configure authenticated Moderato RPC access with:
-
-```bash
-pnpm wrangler secret put TEMPO_RPC_AUTH --env moderato
-```
+Production secrets such as `TEMPO_RPC_AUTH` are managed in the Cloudflare Deploy Broker dashboard (https://cf.tehq.net/, Workers tab), and every deploy keeps them. Pushes to `main` deploy `fee-payer-moderato` and `fee-payer-mainnet` through the broker, which accepts only builds that match their entries in [`cloudflare-deploy-policies`](https://github.com/tempoxyz/cloudflare-deploy-policies/blob/main/policies/tempoxyz/tempo-apps.yaml).
 
 ## API
 

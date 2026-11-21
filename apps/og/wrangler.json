@@ -1,9 +1,15 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "og",
+	"account_id": "ba6ee3674b03f08481e57ff9992c601e",
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"workers_dev": true,
+	"preview_urls": true,
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
 	"vars": {
 		"EXPLORER_URL": "https://explorer.tempo.xyz"
 	},
@@ -32,5 +38,6 @@
 	"observability": {
 		"enabled": true,
 		"head_sampling_rate": 1
-	}
+	},
+	"routes": [{ "pattern": "og.tempo.xyz", "custom_domain": true }]
 }
