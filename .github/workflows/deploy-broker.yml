@@ -50,6 +50,8 @@ jobs:
   changes:
     permissions:
       contents: read
+      # Secure runner fetches its StepSecurity policy-store credential with OIDC.
+      id-token: write
     name: ${{ inputs.worker || inputs.app }} changes
     runs-on: ubuntu-latest
     timeout-minutes: 10
