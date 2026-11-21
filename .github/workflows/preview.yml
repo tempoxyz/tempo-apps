@@ -197,14 +197,24 @@ jobs:
       # Fetch a server-rendered page: llms.txt is served before SSR, so it
       # still returns 200 when every page fails to render. Only / is checked,
       # since data pages such as /blocks fail whenever a devnet backend is down.
+      #
+      # Cloudflare Access admits only Tailscale egress or the
+      # EXPLORER_PREVIEW_ACCESS_CLIENT_* service token to explorer previews
+      # (tempoxyz/cloudflare `stacks/apps/tempo-apps`), and answers 401
+      # without it. `--max-redirs 0` fails on a redirect rather than following
+      # it, so the token never leaves the preview's host.
       - name: Verify explorer preview
         if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
         id: preview-health
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+          ACCESS_CLIENT_ID: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_SECRET }}
         run: |
           test -n "$PREVIEW_URL"
-          curl --fail --silent --show-error --location \
+          curl --fail --silent --show-error --location --max-redirs 0 \
+            --header "CF-Access-Client-Id: $ACCESS_CLIENT_ID" \
+            --header "CF-Access-Client-Secret: $ACCESS_CLIENT_SECRET" \
             --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
             --output /dev/null "$PREVIEW_URL/"
 
@@ -212,10 +222,14 @@ jobs:
         if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
+          ACCESS_CLIENT_ID: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_ID }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_SECRET }}
         run: |
           test -n "$PREVIEW_URL"
           for file in llms.txt llms-full.txt; do
-            curl --fail --silent --show-error --location \
+            curl --fail --silent --show-error --location --max-redirs 0 \
+              --header "CF-Access-Client-Id: $ACCESS_CLIENT_ID" \
+              --header "CF-Access-Client-Secret: $ACCESS_CLIENT_SECRET" \
               --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
               --output /dev/null "$PREVIEW_URL/$file"
           done
