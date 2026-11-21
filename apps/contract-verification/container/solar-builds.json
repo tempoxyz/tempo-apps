@@ -2,5 +2,9 @@
 	{
 		"rev": "d83529bcb2f8a911607e43ba4bb2e316d9ac78a4",
 		"version": "0.2.0"
+	},
+	{
+		"rev": "f1b75c64ec466637d9040418268b365211d0e939",
+		"version": "0.3.0-dev"
 	}
 ]
