@@ -1,0 +1,148 @@
+name: Deploy with STS
+
+# Deploys the apps that the Cloudflare Deploy Broker can't deploy (the explorers,
+# contract-verification and reth-snapshots-viewer) with `wrangler deploy` and a
+# short-lived Cloudflare STS token. Each app's policy in tempoxyz/cloudflare-sts
+# (policies/tempo-apps-1088411362/) admits only main.yml's call to this workflow
+# on main, and says why the broker can't deploy that app. The other apps deploy
+# through deploy-broker.yml.
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      environments:
+        required: true
+        type: string
+        description: 'JSON array of environments to deploy (e.g. ["testnet","devnet"] or [""])'
+      sts-policy:
+        required: true
+        type: string
+        description: 'Cloudflare STS policy in tempoxyz/cloudflare-sts (policies/tempo-apps-1088411362/<name>.sts.yaml) that mints the deploy token'
+      sts-ttl:
+        required: false
+        type: string
+        default: '10m'
+        description: 'Token lifetime, at most the policy max_ttl'
+      deploy-timeout-minutes:
+        required: false
+        type: number
+        default: 8
+        description: 'Timeout of the deploy step; keep it below sts-ttl so the token outlives the deploy'
+    secrets:
+      # Compiled into the explorer client bundle. Unset means no PostHog.
+      VITE_EXPLORER_POSTHOG_KEY:
+        required: false
+      VITE_POSTHOG_HOST:
+        required: false
+
+# The same group as deploy.yml, so a run that deploys with the static token and
+# one that deploys with STS never overlap during the switch.
+concurrency:
+  group: deploy-${{ inputs.app }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
+  NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
+
+jobs:
+  deploy:
+    permissions:
+      id-token: write
+    name: ${{ inputs.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
+    # The STS policies admit only main, so a manual run from another branch
+    # skips instead of failing at the token.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        env: ${{ fromJson(inputs.environments) }}
+
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for relevant changes
+        id: changes
+        env:
+          APP_NAME: ${{ inputs.app }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          # if workflow_dispatch, always deploy all
+          #
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+
+      - name: Generate Worker types
+        if: steps.changes.outputs.relevant == 'true'
+        working-directory: apps/${{ inputs.app }}
+        run: pnpm gen:types
+
+      - name: Build
+        if: steps.changes.outputs.relevant == 'true'
+        working-directory: apps/${{ inputs.app }}
+        env:
+          NODE_ENV: production
+          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
+          APP_NAME: ${{ inputs.app }}
+          VITE_EXPLORER_POSTHOG_KEY: ${{ secrets.VITE_EXPLORER_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+        run: |
+          if [[ "$APP_NAME" == "explorer" ]]; then
+            bash scripts/build.sh
+          else
+            pnpm build
+          fi
+
+      # Cloudflare STS mints a short-lived token under this app's policy, which
+      # admits only main.yml's call to this workflow on main. The token serves
+      # only this runner's IP address, and STS revokes it when the job ends.
+      # The Cloudflare Deploy Broker can't deploy these apps; each policy says
+      # why.
+      - name: Fetch a Cloudflare token
+        if: steps.changes.outputs.relevant == 'true'
+        id: cloudflare
+        uses: tempoxyz/gh-actions/actions/cloudflare-sts@1a535d662a51f211d750307541069cb849535414 # 2026-11-19T07-33-38Z-1a535d66
+        with:
+          account: prd
+          policy: ${{ inputs.sts-policy }}
+          ttl: ${{ inputs.sts-ttl }}
+
+      - name: Deploy Workers
+        if: steps.changes.outputs.relevant == 'true'
+        # Shorter than the token's lifetime (sts-ttl), so the token outlives
+        # the deploy.
+        timeout-minutes: ${{ inputs.deploy-timeout-minutes }}
+        uses: tempoxyz/gh-actions/vendor/cloudflare/wrangler-action@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+        env:
+          NODE_ENV: production
+          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
+        with:
+          apiToken: ${{ steps.cloudflare.outputs.token }}
+          accountId: ${{ steps.cloudflare.outputs.account-id }}
+          workingDirectory: apps/${{ inputs.app }}
+          packageManager: pnpm
+          command: deploy ${{ matrix.env && format('--env {0}', matrix.env) || '' }}
