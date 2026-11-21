@@ -16,10 +16,6 @@
 			"description": "Production"
 		},
 		{
-			"url": "https://contracts.porto.workers.dev",
-			"description": "Service base workers.dev domain (CACHE DISABLED!)"
-		},
-		{
 			"url": "https://sourcify.dev/server",
 			"description": "Sourcify hosted API"
 		},

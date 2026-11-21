@@ -15,10 +15,6 @@
 			"description": "Production"
 		},
 		{
-			"url": "https://tokenlist.porto.workers.dev",
-			"description": "Service base workers.dev domain (CACHE DISABLED!)"
-		},
-		{
 			"url": "{CUSTOM_URL}",
 			"description": "Custom Sourcify-compatible API base URL",
 			"variables": {

@@ -23,10 +23,6 @@ const getScalarConfig = (baseUrl: string, nodeEnv: string | undefined) =>
 		servers: [
 			{ url: baseUrl, description: 'Current' },
 			{ url: 'https://contracts.tempo.xyz', description: 'Production' },
-			{
-				url: 'https://contracts.porto.workers.dev',
-				description: 'workers.dev',
-			},
 			...(nodeEnv === 'development' ? localServers : []),
 		],
 	}) as const
