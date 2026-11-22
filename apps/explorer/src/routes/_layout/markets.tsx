@@ -52,6 +52,7 @@ import {
 	venueLabels,
 	venuesOf,
 } from '#lib/markets'
+import { OG_BASE_URL } from '#lib/og'
 import {
 	dexPoolsQueryOptions,
 	dexSwapsQueryOptions,
@@ -69,7 +70,22 @@ export const Route = createFileRoute('/_layout/markets')({
 	component: MarketsPage,
 	validateSearch: marketsSearchSchema,
 	search: { middlewares: [stripSearchParams(defaultMarketsSearch)] },
-	head: () => ({ meta: [{ title: 'Markets – Tempo Explorer' }] }),
+	head: () => ({
+		meta: [
+			{ title: 'Markets – Tempo Explorer' },
+			{ property: 'og:title', content: 'Markets – Tempo Explorer' },
+			{
+				property: 'og:description',
+				content: 'Exchange trading volume and liquidity on Tempo.',
+			},
+			{ property: 'og:image', content: `${OG_BASE_URL}/markets` },
+			{ property: 'og:image:type', content: 'image/webp' },
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: `${OG_BASE_URL}/markets` },
+		],
+	}),
 	// Cached data renders with the page; anything slower streams in after it,
 	// so one slow venue never holds the page. Prefetch caches failures too,
 	// letting each venue render its retry state.
@@ -132,10 +148,21 @@ namespace styles {
 		justifyContent: 'space-between',
 		minWidth: '0',
 	})
+	export const heading = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0',
+	})
 	export const title = style({
 		color: 'content.primary',
 		margin: '0',
 		typography: 'heading.h2',
+	})
+	export const intro = style({
+		color: 'content.secondary',
+		margin: '0',
+		typography: 'body.b2',
 	})
 	export const statLabel = style({
 		color: 'content.secondary',
@@ -430,7 +457,12 @@ function MarketsPage(): React.JSX.Element {
 			<Container size="wide">
 				<Stack gap="32">
 					<div {...styles.header()}>
-						<h1 {...styles.title()}>Markets</h1>
+						<div {...styles.heading()}>
+							<h1 {...styles.title()}>Markets</h1>
+							<p {...styles.intro()}>
+								Exchange trading volume and liquidity on Tempo
+							</p>
+						</div>
 						<Tabs.Root
 							value={search.venue}
 							onValueChange={(value) =>
