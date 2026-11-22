@@ -143,38 +143,96 @@ type PropAmmFillArgs = {
 	amountOut: bigint
 }
 
+type PropAmmTransfer = { index: number; token: Address.Address }
+
+/**
+ * A receipt's transfers, each list in log order, keyed so that every propAMM
+ * Fill or TradeExecuted resolves its settlement transfers by lookup rather
+ * than by scanning the receipt. A receipt can carry thousands of trade-like
+ * logs from any contract, so a scan per trade would grow with the square of
+ * its log count.
+ */
+type PropAmmTransferIndex = {
+	/** `from:to:amount`: a Fill's input and output legs. */
+	route: Map<string, PropAmmTransfer[]>
+	/** `token:from:to:amount`: a TradeExecuted's input leg. */
+	tokenRoute: Map<string, PropAmmTransfer[]>
+	/** `token:from:amount`: a TradeExecuted's output leg, to any recipient. */
+	tokenSource: Map<string, PropAmmTransfer[]>
+}
+
+const propAmmTransferIndexes = new WeakMap<
+	readonly Log<bigint, number, boolean, AbiEvent>[],
+	PropAmmTransferIndex
+>()
+
+function addressKey(address: Address.Address): string {
+	return address.toLowerCase()
+}
+
+function pushTransfer(
+	map: Map<string, PropAmmTransfer[]>,
+	key: string,
+	transfer: PropAmmTransfer,
+) {
+	const list = map.get(key)
+	if (list) list.push(transfer)
+	else map.set(key, [transfer])
+}
+
+/** Builds a receipt's transfer index once and reuses it for the same events. */
+function getPropAmmTransferIndex(
+	events: readonly Log<bigint, number, boolean, AbiEvent>[],
+): PropAmmTransferIndex {
+	const cached = propAmmTransferIndexes.get(events)
+	if (cached) return cached
+	const index: PropAmmTransferIndex = {
+		route: new Map(),
+		tokenRoute: new Map(),
+		tokenSource: new Map(),
+	}
+	events.forEach((event, position) => {
+		if (!isTransferEvent(event)) return
+		const { from, to, amount } = event.args
+		const transfer = { index: position, token: checksumAddress(event.address) }
+		const token = addressKey(event.address)
+		const route = `${addressKey(from)}:${addressKey(to)}:${amount}`
+		pushTransfer(index.route, route, transfer)
+		pushTransfer(index.tokenRoute, `${token}:${route}`, transfer)
+		pushTransfer(
+			index.tokenSource,
+			`${token}:${addressKey(from)}:${amount}`,
+			transfer,
+		)
+	})
+	propAmmTransferIndexes.set(events, index)
+	return index
+}
+
 /**
  * A v2 Fill names no tokens: the Settler pulls the input from the taker into
  * the venue, and the venue pays the output to the taker, both in the same
- * transaction. Returns those two transfers, matched by account and amount.
+ * transaction. Returns the first of each of those two transfers, matched by
+ * account and amount.
  */
 function findPropAmmFillTransfers(
 	fill: ParsedEvent,
 	events: readonly Log<bigint, number, boolean, AbiEvent>[],
 ): {
-	input: { index: number; token: Address.Address }[]
-	output: { index: number; token: Address.Address }[]
+	input: PropAmmTransfer | undefined
+	output: PropAmmTransfer | undefined
 } {
 	const { taker, amountIn, amountOut } = fill.args as PropAmmFillArgs
-	const input: { index: number; token: Address.Address }[] = []
-	const output: { index: number; token: Address.Address }[] = []
-	events.forEach((event, index) => {
-		if (!isTransferEvent(event)) return
-		const { from, to, amount } = event.args
-		if (
-			Address.isEqual(from, taker) &&
-			Address.isEqual(to, fill.address) &&
-			amount === amountIn
-		)
-			input.push({ index, token: checksumAddress(event.address) })
-		else if (
-			Address.isEqual(from, fill.address) &&
-			Address.isEqual(to, taker) &&
-			amount === amountOut
-		)
-			output.push({ index, token: checksumAddress(event.address) })
-	})
-	return { input, output }
+	const { route } = getPropAmmTransferIndex(events)
+	const venue = addressKey(fill.address)
+	const account = addressKey(taker)
+	const inputKey = `${account}:${venue}:${amountIn}`
+	const outputKey = `${venue}:${account}:${amountOut}`
+	return {
+		input: route.get(inputKey)?.[0],
+		// A transfer that could settle either leg settles the input.
+		output: outputKey === inputKey ? undefined : route.get(outputKey)?.[0],
+	}
 }
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
@@ -1191,8 +1249,8 @@ function createDetectors(
 			if (selector === propAmmFillSelector) {
 				const { amountIn, amountOut } = event.args as PropAmmFillArgs
 				const { input, output } = findPropAmmFillTransfers(event, events ?? [])
-				const tokenIn = input[0]?.token
-				const tokenOut = output[0]?.token
+				const tokenIn = input?.token
+				const tokenOut = output?.token
 				// Without its settlement transfers the swap can't be described, and
 				// a bare swap would replace the transaction's other events.
 				if (!tokenIn || !tokenOut) return null
@@ -3066,9 +3124,18 @@ export function parseKnownEvents(
 		if (fill.topics[0]?.toLowerCase() !== propAmmFillSelector) continue
 		const { input, output } = findPropAmmFillTransfers(fill, dedupedEvents)
 		// Hide only the two transfers the swap summary shows.
-		if (!input[0] || !output[0]) continue
-		swapIndices.add(input[0].index)
-		swapIndices.add(output[0].index)
+		if (!input || !output) continue
+		swapIndices.add(input.index)
+		swapIndices.add(output.index)
+	}
+	// A TradeExecuted hides every transfer of its input and output legs. Trades
+	// that share a leg hide the same transfers, so each leg is added once.
+	const propAmmTransfers = getPropAmmTransferIndex(dedupedEvents)
+	const hiddenTradeLegs = new Set<string>()
+	const hideTradeLeg = (map: Map<string, PropAmmTransfer[]>, key: string) => {
+		if (hiddenTradeLegs.has(key)) return
+		hiddenTradeLegs.add(key)
+		for (const { index } of map.get(key) ?? []) swapIndices.add(index)
 	}
 	for (const trade of dedupedEvents) {
 		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue
@@ -3079,19 +3146,15 @@ export function parseKnownEvents(
 			amountIn: bigint
 			amountOut: bigint
 		}
-		for (const { event, index } of transferEvents) {
-			const { from, to, amount } = event.args
-			const isInput =
-				Address.isEqual(event.address, tokenIn) &&
-				Address.isEqual(from, taker) &&
-				Address.isEqual(to, trade.address) &&
-				amount === amountIn
-			const isOutput =
-				Address.isEqual(event.address, tokenOut) &&
-				Address.isEqual(from, trade.address) &&
-				amount === amountOut
-			if (isInput || isOutput) swapIndices.add(index)
-		}
+		const venue = addressKey(trade.address)
+		hideTradeLeg(
+			propAmmTransfers.tokenRoute,
+			`${addressKey(tokenIn)}:${addressKey(taker)}:${venue}:${amountIn}`,
+		)
+		hideTradeLeg(
+			propAmmTransfers.tokenSource,
+			`${addressKey(tokenOut)}:${venue}:${amountOut}`,
+		)
 	}
 
 	// The DEX takes a taker's tokens in, fills orders for it, then pays it
