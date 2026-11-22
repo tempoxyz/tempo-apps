@@ -4,24 +4,36 @@
  *
  * - TPV: every transfer of an in-scope stablecoin, gross, minus mint and
  *   burn legs (either endpoint is the zero address).
- * - AOP: the end-of-day supply of the stablecoins held on Tempo.
+ * - AOP: the end-of-day supply of the assets held on Tempo, split into
+ *   stablecoins, tokenized assets (RWAs) and crypto.
  *
  * Amounts are USD: dollar stablecoins at par, other currencies at the latest
- * reference FX rate. Days are UTC.
+ * reference FX rate, and tokenized assets and crypto at their latest market
+ * price. Days are UTC.
  */
+
+/** What kind of asset a token is, as AOP splits it. */
+export type AssetClass = 'stablecoin' | 'rwa' | 'crypto'
+
+export const assetClasses = ['stablecoin', 'rwa', 'crypto'] as const
 
 /** A token counted on the Payments page. */
 export type PaymentToken = {
 	address: `0x${string}`
 	symbol: string
-	/** ISO currency the token tracks; USD counts at par. */
-	currency: string
-	/** Counts toward AOP. Every token counts toward TPV. */
-	aop: boolean
+	/**
+	 * Key of the token's USD price: an ISO currency for fiat-backed tokens (USD
+	 * counts at par), otherwise the asset's market price ID.
+	 */
+	price: string
+	/** The AOP series the token counts toward. */
+	asset: AssetClass
+	/** Counts toward TPV. */
+	tpv: boolean
 }
 
 function usd(address: `0x${string}`, symbol: string): PaymentToken {
-	return { address, symbol, currency: 'USD', aop: true }
+	return { address, symbol, price: 'USD', asset: 'stablecoin', tpv: true }
 }
 
 function fiat(
@@ -29,7 +41,17 @@ function fiat(
 	symbol: string,
 	currency: string,
 ): PaymentToken {
-	return { address, symbol, currency, aop: true }
+	return { address, symbol, price: currency, asset: 'stablecoin', tpv: true }
+}
+
+/** Held on Tempo and counted in AOP, but not payment volume. */
+function held(
+	address: `0x${string}`,
+	symbol: string,
+	asset: AssetClass,
+	price: string,
+): PaymentToken {
+	return { address, symbol, price, asset, tpv: false }
 }
 
 /** Tokens in scope per chain, from dataland's token_pegs seed. */
@@ -64,17 +86,48 @@ export const paymentTokens: Partial<Record<number, readonly PaymentToken[]>> = {
 		fiat('0x20c0000000000000000000000a6da882d075a4c3', 'GBPA', 'GBP'),
 		fiat('0x20c000000000000000000000d65b4808c85dbb81', 'CADD', 'CAD'),
 		fiat('0x20c0000000000000000000002e2829d90e7da7fa', 'SEKAU', 'SEK'),
-		// A tokenized fund pinned at $1: payment volume, not a stablecoin.
+		// A tokenized fund pinned at $1, which also counts as payment volume.
 		{
 			address: '0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24',
 			symbol: 'BUIDL',
-			currency: 'USD',
-			aop: false,
+			price: 'USD',
+			asset: 'rwa',
+			tpv: true,
 		},
+		held(
+			'0x20c00000000000000000000058d0b8b2cfdb358c',
+			'PRIME',
+			'rwa',
+			'hastra-prime',
+		),
+		held(
+			'0x20c000000000000000000000d479b9f6ec0ceff9',
+			'USDY',
+			'rwa',
+			'ondo-us-dollar-yield',
+		),
+		held(
+			'0x20c0000000000000000000008191667423f70e67',
+			'syrupUSDC',
+			'rwa',
+			'syrupusdc',
+		),
+		held(
+			'0x20c000000000000000000000bd95bfb69fbe6ce3',
+			'sUSDe',
+			'rwa',
+			'ethena-staked-usde',
+		),
+		held(
+			'0x20c000000000000000000000c412ec89d0c08be5',
+			'cbBTC',
+			'crypto',
+			'bitcoin',
+		),
 	],
 }
 
-/** Every token here has 6 decimals, as TIP-20 tokens do. */
+/** Every token here has 6 decimals. */
 export const PAYMENT_TOKEN_DECIMALS = 6
 
 /** One UTC day of a token's transfers, in base units. */
@@ -91,8 +144,15 @@ export type PaymentsDay = {
 	/** YYYY-MM-DD, UTC. */
 	day: string
 	tpv: number
-	/** End-of-day AOP. */
-	aop: number
+	/** End-of-day AOP of each asset class. */
+	stablecoin: number
+	rwa: number
+	crypto: number
+}
+
+/** A day's AOP across every asset class. */
+export function aopOf(day: PaymentsDay): number {
+	return day.stablecoin + day.rwa + day.crypto
 }
 
 export type PaymentsSnapshot = {
@@ -102,11 +162,11 @@ export type PaymentsSnapshot = {
 	asOf: number
 	/** Date of the FX rates used for non-USD tokens, or null without them. */
 	fxDate: string | null
-	/** Currencies left out because no FX rate was available. */
+	/** Price keys left out because no price was available. */
 	unpriced: string[]
 }
 
-/** USD per one unit of each currency, USD included at 1. */
+/** USD per one unit of each price key, USD included at 1. */
 export type UsdRates = Record<string, number>
 
 const UNIT = 10n ** BigInt(PAYMENT_TOKEN_DECIMALS)
@@ -122,7 +182,7 @@ export function units(value: bigint): number {
 /**
  * Turns per-token daily transfers into the chain's daily TPV and AOP. Supply
  * carries over days without transfers, so each day's AOP is its closing
- * stock. Tokens whose currency has no rate are left out.
+ * stock. Tokens without a price are left out.
  */
 export function buildPaymentsDays(
 	rows: readonly TokenDay[],
@@ -150,15 +210,15 @@ export function buildPaymentsDays(
 			const token = byToken.get(row.token)
 			if (!token) continue
 			supply.set(token, (supply.get(token) ?? 0n) + row.minted - row.burned)
-			const rate = rates[token.currency]
-			if (rate !== undefined) tpv += units(row.moved) * rate
+			const rate = rates[token.price]
+			if (token.tpv && rate !== undefined) tpv += units(row.moved) * rate
 		}
-		let aop = 0
+		const entry: PaymentsDay = { day, tpv, stablecoin: 0, rwa: 0, crypto: 0 }
 		for (const [token, amount] of supply) {
-			const rate = rates[token.currency]
-			if (token.aop && rate !== undefined) aop += units(amount) * rate
+			const rate = rates[token.price]
+			if (rate !== undefined) entry[token.asset] += units(amount) * rate
 		}
-		days.push({ day, tpv, aop })
+		days.push(entry)
 	}
 	return days
 }
@@ -205,7 +265,7 @@ export function paymentsTotals(
 		day: last?.tpv ?? 0,
 		week: closed.slice(-7).reduce((sum, entry) => sum + entry.tpv, 0),
 		lifetime: days.reduce((sum, entry) => sum + entry.tpv, 0),
-		aop: last?.aop ?? 0,
+		aop: last ? aopOf(last) : 0,
 		closed: last?.day ?? null,
 	}
 }

@@ -25,6 +25,12 @@ const DEGRADED_TTL = 60
 /** Reference rates (ECB), keyed by the currency, in units per USD. */
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD'
 
+/** Market prices in USD, keyed by CoinGecko ID. */
+const MARKET_URL =
+	'https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd'
+
+const ISO_CURRENCY = /^[A-Z]{3}$/
+
 /** Every token's mints, burns and other transfers, per UTC day. */
 async function readTokenDays(
 	chainId: number,
@@ -50,8 +56,8 @@ async function readTokenDays(
 	}))
 }
 
-/** USD per unit of each currency; only USD when the rates are unavailable. */
-async function readUsdRates(
+/** USD per unit of each fiat currency; only USD when rates are unavailable. */
+async function readFxRates(
 	currencies: readonly string[],
 ): Promise<{ rates: UsdRates; date: string | null }> {
 	const rates: UsdRates = { USD: 1 }
@@ -75,6 +81,29 @@ async function readUsdRates(
 	}
 }
 
+/** USD price of each market-priced asset; empty when prices are unavailable. */
+async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
+	if (ids.length === 0) return {}
+	try {
+		const response = await fetch(`${MARKET_URL}&ids=${ids.join(',')}`, {
+			headers: { Accept: 'application/json' },
+			signal: AbortSignal.timeout(5_000),
+		})
+		if (!response.ok)
+			throw new Error(`Market prices returned ${response.status}`)
+		const body = (await response.json()) as Record<string, { usd?: number }>
+		const prices: UsdRates = {}
+		for (const id of ids) {
+			const price = body[id]?.usd
+			if (price !== undefined && price > 0) prices[id] = price
+		}
+		return prices
+	} catch (error) {
+		console.error('Failed to load market prices:', error)
+		return {}
+	}
+}
+
 export async function getPaymentsSnapshot(
 	chainId: number,
 	now = Date.now(),
@@ -82,16 +111,18 @@ export async function getPaymentsSnapshot(
 	const tokens = paymentTokens[chainId] ?? []
 	if (tokens.length === 0)
 		return { days: [], asOf: now, fxDate: null, unpriced: [] }
-	const currencies = [...new Set(tokens.map((token) => token.currency))]
-	const [rows, fx] = await Promise.all([
+	const keys = [...new Set(tokens.map((token) => token.price))]
+	const [rows, fx, market] = await Promise.all([
 		readTokenDays(chainId, tokens),
-		readUsdRates(currencies),
+		readFxRates(keys.filter((key) => ISO_CURRENCY.test(key))),
+		readMarketPrices(keys.filter((key) => !ISO_CURRENCY.test(key))),
 	])
+	const rates = { ...fx.rates, ...market }
 	return {
-		days: buildPaymentsDays(rows, tokens, fx.rates, isoDay(now)),
+		days: buildPaymentsDays(rows, tokens, rates, isoDay(now)),
 		asOf: now,
 		fxDate: fx.date,
-		unpriced: currencies.filter((currency) => fx.rates[currency] === undefined),
+		unpriced: keys.filter((key) => rates[key] === undefined),
 	}
 }
 
@@ -101,7 +132,7 @@ export const fetchPayments = createServerFn({ method: 'GET' }).handler(
 		try {
 			return await withImmutableDataCache({
 				key: `payments:v1:${chainId}`,
-				// A snapshot missing a currency is kept briefly, so an FX outage
+				// A snapshot missing a price is kept briefly, so a price outage
 				// doesn't send every view to the indexer.
 				ttlSeconds: (snapshot) =>
 					snapshot.unpriced.length > 0 ? DEGRADED_TTL : SNAPSHOT_TTL,
