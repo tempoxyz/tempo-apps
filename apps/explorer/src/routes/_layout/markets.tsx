@@ -132,10 +132,21 @@ namespace styles {
 		justifyContent: 'space-between',
 		minWidth: '0',
 	})
+	export const heading = style({
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8',
+		minWidth: '0',
+	})
 	export const title = style({
 		color: 'content.primary',
 		margin: '0',
 		typography: 'heading.h2',
+	})
+	export const intro = style({
+		color: 'content.secondary',
+		margin: '0',
+		typography: 'body.b2',
 	})
 	export const statLabel = style({
 		color: 'content.secondary',
@@ -430,7 +441,12 @@ function MarketsPage(): React.JSX.Element {
 			<Container size="wide">
 				<Stack gap="32">
 					<div {...styles.header()}>
-						<h1 {...styles.title()}>Markets</h1>
+						<div {...styles.heading()}>
+							<h1 {...styles.title()}>Markets</h1>
+							<p {...styles.intro()}>
+								Exchange trading volume and liquidity on Tempo
+							</p>
+						</div>
 						<Tabs.Root
 							value={search.venue}
 							onValueChange={(value) =>
