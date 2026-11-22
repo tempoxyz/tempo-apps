@@ -52,6 +52,7 @@ import {
 	venueLabels,
 	venuesOf,
 } from '#lib/markets'
+import { OG_BASE_URL } from '#lib/og'
 import {
 	dexPoolsQueryOptions,
 	dexSwapsQueryOptions,
@@ -69,7 +70,22 @@ export const Route = createFileRoute('/_layout/markets')({
 	component: MarketsPage,
 	validateSearch: marketsSearchSchema,
 	search: { middlewares: [stripSearchParams(defaultMarketsSearch)] },
-	head: () => ({ meta: [{ title: 'Markets – Tempo Explorer' }] }),
+	head: () => ({
+		meta: [
+			{ title: 'Markets – Tempo Explorer' },
+			{ property: 'og:title', content: 'Markets – Tempo Explorer' },
+			{
+				property: 'og:description',
+				content: 'Exchange trading volume and liquidity on Tempo.',
+			},
+			{ property: 'og:image', content: `${OG_BASE_URL}/markets` },
+			{ property: 'og:image:type', content: 'image/webp' },
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: `${OG_BASE_URL}/markets` },
+		],
+	}),
 	// Cached data renders with the page; anything slower streams in after it,
 	// so one slow venue never holds the page. Prefetch caches failures too,
 	// letting each venue render its retry state.
