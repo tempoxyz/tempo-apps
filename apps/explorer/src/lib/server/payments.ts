@@ -19,6 +19,9 @@ const ZERO = '0x0000000000000000000000000000000000000000'
 /** How long a snapshot is served before the indexer is read again. */
 const SNAPSHOT_TTL = 600
 
+/** How long a snapshot without every FX rate is served. */
+const DEGRADED_TTL = 60
+
 /** Reference rates (ECB), keyed by the currency, in units per USD. */
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD'
 
@@ -98,11 +101,12 @@ export const fetchPayments = createServerFn({ method: 'GET' }).handler(
 		try {
 			return await withImmutableDataCache({
 				key: `payments:v1:${chainId}`,
-				ttlSeconds: SNAPSHOT_TTL,
+				// A snapshot missing a currency is kept briefly, so an FX outage
+				// doesn't send every view to the indexer.
+				ttlSeconds: (snapshot) =>
+					snapshot.unpriced.length > 0 ? DEGRADED_TTL : SNAPSHOT_TTL,
 				load: () => getPaymentsSnapshot(chainId),
-				// A snapshot missing a currency is served but not kept.
-				shouldCache: (snapshot) =>
-					snapshot.days.length > 0 && snapshot.unpriced.length === 0,
+				shouldCache: (snapshot) => snapshot.days.length > 0,
 			})
 		} catch (error) {
 			console.error('Failed to load payments:', error)

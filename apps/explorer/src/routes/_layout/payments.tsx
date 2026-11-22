@@ -157,7 +157,7 @@ function PaymentsPage(): React.JSX.Element {
 						</Alert>
 					)}
 
-					{empty ? (
+					{failed ? null : empty ? (
 						<Surface size="medium">
 							<Empty.Root>
 								<Empty.Title>No payment volume on this network</Empty.Title>
