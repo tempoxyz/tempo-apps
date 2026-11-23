@@ -33,6 +33,7 @@ import {
 	decodeKnownTransactionCall,
 	parseKnownEvent,
 	parseKnownEvents,
+	STREAM_CHANNELS,
 } from '#lib/domain/known-events'
 import { zoneProverBatchLog } from './fixtures/zone-prover-batch'
 
@@ -1438,6 +1439,82 @@ describe('parseKnownEvents', () => {
 				value: { token: Address.checksum(shareToken), value: earnShares },
 			},
 		])
+	})
+
+	it('uses the first distinct, non-excluded burn token for each Earn redemption', () => {
+		const burn = Abis.tip20.find(
+			(event) => event.type === 'event' && event.name === 'Burn',
+		)!
+		const redeem = earnEventsAbi.find((event) => event.name === 'EarnRedeem')!
+		const tokenA = userTokenAddress
+		const tokenB = recipientAddress
+		const burnLog = (token: Address.Address) =>
+			mockZoneEventLog(burn, token, { from: accountAddress, amount: 17n })
+		const redemption = (outputToken: Address.Address) =>
+			mockZoneEventLog(redeem, accountAddress, { outputToken, earnShares: 17n })
+		const logs = [
+			redemption(tokenA),
+			burnLog(tokenA),
+			burnLog(tokenA),
+			burnLog(tokenB),
+			redemption(tokenB),
+		]
+		const events = parseKnownEvents(mockReceipt(logs, accountAddress))
+		const shares = events
+			.filter((event) => event.type === 'earn private redemption')
+			.map((event) => event.parts[1])
+		expect(shares).toEqual(
+			[tokenB, tokenA].map((token) => ({
+				type: 'amount',
+				value: { value: 17n, token: Address.checksum(token) },
+			})),
+		)
+	})
+
+	it('uses the earliest transfer at either channel participant and requires a channel-emitted event', () => {
+		const topUp = Abis.streamChannel.find((event) => event.name === 'TopUp')!
+		const transfer = Abis.tip20.find(
+			(event) => event.type === 'event' && event.name === 'Transfer',
+		)!
+		const [channel, otherChannel] = STREAM_CHANNELS
+		const tokenA = userTokenAddress
+		const tokenB = PROP_AMM_OUTPUT_TOKEN
+		const channelEvent = mockZoneEventLog(topUp, channel, {
+			payer: accountAddress,
+			payee: recipientAddress,
+			additionalDeposit: 9n,
+		})
+		const payerTransfer = mockZoneEventLog(transfer, tokenA, {
+			from: accountAddress,
+			to: otherChannel,
+		})
+		const payeeTransfer = mockZoneEventLog(transfer, tokenB, {
+			from: channel,
+			to: recipientAddress,
+		})
+		for (const [first, later, token] of [
+			[payeeTransfer, payerTransfer, tokenB],
+			[payerTransfer, payeeTransfer, tokenA],
+		] as const) {
+			const events = parseKnownEvents(
+				mockReceipt([first, channelEvent, later, channelEvent], accountAddress),
+			)
+			expect(events.map((event) => event.type)).toEqual([
+				'top up channel',
+				'top up channel',
+			])
+			const amount = { type: 'amount', value: { value: 9n, token } }
+			expect(events.map((event) => event.parts[1])).toEqual([amount, amount])
+		}
+		const unrelated = mockZoneEventLog(topUp, accountAddress, {
+			payer: accountAddress,
+			payee: recipientAddress,
+		})
+		const events = parseKnownEvents(
+			mockReceipt([payerTransfer, unrelated], accountAddress),
+		)
+		expect(events.some((event) => event.type === 'send')).toBe(true)
+		expect(events.some((event) => event.type === 'top up channel')).toBe(false)
 	})
 
 	it('describes an Earn-funded transfer as a Send', () => {
