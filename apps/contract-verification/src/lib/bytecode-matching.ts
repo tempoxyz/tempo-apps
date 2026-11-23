@@ -457,6 +457,13 @@ export function extractLibrariesTransformation(
 					strStart,
 					strStart + strLength,
 				)
+				// Every reference to one library must link the same address.
+				const linked = libraryMap[fqn]
+				if (
+					linked !== undefined &&
+					linked.toLowerCase() !== `0x${actualAddress}`.toLowerCase()
+				)
+					throw new Error(`Library ${fqn} is linked at conflicting addresses`)
 				libraryMap[fqn] = `0x${actualAddress}`
 
 				// Replace placeholder with actual address
@@ -923,11 +930,19 @@ export function matchBytecode(
 
 	// 3. Handle library placeholders (both creation and runtime)
 	if (linkReferences) {
-		const librariesResult = extractLibrariesTransformation(
-			populatedBytecode,
-			onchainBytecode,
-			linkReferences,
-		)
+		let librariesResult: ReturnType<typeof extractLibrariesTransformation>
+		try {
+			librariesResult = extractLibrariesTransformation(
+				populatedBytecode,
+				onchainBytecode,
+				linkReferences,
+			)
+		} catch (error) {
+			return {
+				...noMatch(),
+				message: error instanceof Error ? error.message : String(error),
+			}
+		}
 		populatedBytecode = librariesResult.populatedBytecode
 		allTransformations.push(...librariesResult.transformations)
 		Object.assign(allTransformationValues, librariesResult.transformationValues)

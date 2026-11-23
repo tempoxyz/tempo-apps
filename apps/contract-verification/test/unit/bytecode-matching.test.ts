@@ -353,6 +353,33 @@ describe('extractImmutablesTransformation', () => {
 })
 
 describe('extractLibrariesTransformation', () => {
+	it('rejects one library linked at two different addresses', () => {
+		const fqn = 'contracts/Math.sol:MathLib'
+		const placeholder = `__$${keccakString(fqn).slice(2, 36)}$__`
+		const linkReferences: LinkReferences = {
+			'contracts/Math.sol': {
+				MathLib: [
+					{ start: 5, length: 20 },
+					{ start: 25, length: 20 },
+				],
+			},
+		}
+		const recompiled = `0x6080604052${placeholder}${placeholder}`
+		const onchain = `0x6080604052${'aa'.repeat(20)}${'bb'.repeat(20)}`
+
+		expect(() =>
+			extractLibrariesTransformation(recompiled, onchain, linkReferences),
+		).toThrow('conflicting addresses')
+		expect(
+			matchBytecode({
+				onchainBytecode: onchain,
+				recompiledBytecode: recompiled,
+				isCreation: true,
+				linkReferences,
+			}).match,
+		).toBeNull()
+	})
+
 	it('extracts single library reference with post-v0.5.0 placeholder', () => {
 		const linkReferences: LinkReferences = {
 			'contracts/Math.sol': {
