@@ -134,6 +134,26 @@ describe('runVerificationJob – creation bytecode matching', () => {
 	const initcode = `0x${counterFixture.solcOutput.contracts['Counter.sol'].Counter.evm.bytecode.object}`
 	const constructorArguments = `${'00'.repeat(31)}05`
 
+	/** The fixture's output with its IPFS metadata digest altered, so bytecode matches only partially. */
+	function partialOutput(mask: number) {
+		const output = structuredClone(counterFixture.solcOutput) as {
+			contracts: Record<
+				string,
+				Record<string, { evm: Record<string, { object: string }> }>
+			>
+		}
+		const counter = output.contracts['Counter.sol']?.Counter?.evm
+		if (!counter) throw new Error('expected Counter output')
+		for (const code of [counter.bytecode, counter.deployedBytecode])
+			if (code)
+				code.object = code.object.replace(
+					/(6970667358221220)([0-9a-f]{2})/,
+					(_, marker: string, byte: string) =>
+						`${marker}${(Number.parseInt(byte, 16) ^ mask).toString(16).padStart(2, '0')}`,
+				)
+		return output
+	}
+
 	async function verifyWithCreationInput(
 		input: string,
 		jobFields: Partial<Parameters<typeof runVerificationJob>[1]> = {
@@ -194,27 +214,10 @@ describe('runVerificationJob – creation bytecode matching', () => {
 		resubmission,
 	}) => {
 		const input = `${initcode}${constructorArguments}`
-		// Different metadata hash: runtime and creation match only partially.
-		const partialOutput = structuredClone(counterFixture.solcOutput) as {
-			contracts: Record<
-				string,
-				Record<string, { evm: Record<string, { object: string }> }>
-			>
-		}
-		const counter = partialOutput.contracts['Counter.sol']?.Counter?.evm
-		if (!counter) throw new Error('expected Counter output')
-		// Flip the first byte of the IPFS metadata digest, keeping the auxdata well formed.
-		for (const code of [counter.bytecode, counter.deployedBytecode])
-			if (code)
-				code.object = code.object.replace(
-					/(6970667358221220)([0-9a-f]{2})/,
-					(_, marker: string, byte: string) =>
-						`${marker}${(Number.parseInt(byte, 16) ^ 0xff).toString(16).padStart(2, '0')}`,
-				)
 		const first = await verifyWithCreationInput(
 			input,
 			{ creationTransactionHash: txHash },
-			partialOutput,
+			partialOutput(0xff),
 		)
 		expect(first.runtimeMetadataMatch).toBe(false)
 		expect(first.creationMatch).toBe(true)
@@ -226,6 +229,24 @@ describe('runVerificationJob – creation bytecode matching', () => {
 		expect(exact.runtimeMetadataMatch).toBe(true)
 		expect(exact.creationMatch).toBe(true)
 		expect(exact.creationMetadataMatch).toBe(true)
+	})
+
+	it('moves a partial row without a creation proof to a later partial compilation that proves it', async () => {
+		const input = `${initcode}${constructorArguments}`
+		const first = await verifyWithCreationInput(input, {}, partialOutput(0xff))
+		expect(first.creationMatch).toBe(false)
+
+		const proven = await verifyWithCreationInput(
+			input,
+			{ creationTransactionHash: txHash },
+			partialOutput(0x0f),
+		)
+		expect(proven.id).toBe(first.id)
+		expect(proven.compilationId).not.toBe(first.compilationId)
+		expect(proven.runtimeMatch).toBe(true)
+		expect(proven.runtimeMetadataMatch).toBe(false)
+		expect(proven.creationMatch).toBe(true)
+		expect(proven.creationMetadataMatch).toBe(false)
 	})
 
 	it('records no creation match when the creation input carries unexplained bytes', async () => {

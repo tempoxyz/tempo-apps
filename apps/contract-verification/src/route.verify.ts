@@ -1609,14 +1609,23 @@ async function runVerificationJob(
 		} else if (
 			existingVerification &&
 			creationMatched &&
-			!existingVerification.creationMatch &&
-			existingVerification.compilationId === compilationId
+			!existingVerification.creationMatch
 		) {
-			// Same partial compilation, now with its creation input matched as well.
+			// A partial row gains this job's creation proof. Under another compilation, the row moves
+			// to this one, which also matched the runtime partially and additionally proved the creation.
 			await db
 				.update(verifiedContractsTable)
 				.set({
 					...creationColumns,
+					...(existingVerification.compilationId === compilationId
+						? {}
+						: {
+								compilationId,
+								runtimeMatch: true,
+								runtimeMetadataMatch: false,
+								runtimeValues,
+								runtimeTransformations,
+							}),
 					updatedAt: new Date().toISOString(),
 					updatedBy: auditUser,
 				})
