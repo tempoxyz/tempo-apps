@@ -143,4 +143,37 @@ describe('token icon route', () => {
 		await expect(response.text()).resolves.toBe('fallback icon')
 		expect(response.headers.get('Content-Type')).toBe('image/svg+xml')
 	})
+
+	it.each([
+		'0x1111111111111111111111111111111111111111%2f..%2f0x20c0000000000000000000000000000000000000',
+		'0x1111111111111111111111111111111111111111%2F..%2F..%2F..%2F4217%2Ficons%2F0x20c0000000000000000000000000000000000000',
+		'..%2f..%2f4217%2ficons%2f0x20c0000000000000000000000000000000000000',
+		'0x1111111111111111111111111111111111111111%5c..%5c0x20c0000000000000000000000000000000000000',
+		'0x20c0000000000000000000000000000000000000%3f',
+	])('serves the fallback for a name that is not an address: %s', async (name) => {
+		const requested: string[] = []
+		const assets = createAssets({
+			'/4217/icons/0x20c0000000000000000000000000000000000000.svg': {
+				body: 'trusted artwork',
+			},
+			'/4217/icons/fallback.svg': { body: 'fallback icon' },
+			'/42431/icons/fallback.svg': { body: 'fallback icon' },
+		})
+		const response = await app.request(
+			`/icon/42431/${name}`,
+			{},
+			{
+				ASSETS: {
+					fetch: (input) => {
+						requested.push(new URL(input.toString()).pathname)
+						return assets.fetch(input)
+					},
+				} as Fetcher,
+			},
+		)
+
+		await expect(response.text()).resolves.toBe('fallback icon')
+		expect(requested).toEqual(['/42431/icons/fallback.svg'])
+		expect(fetch).not.toHaveBeenCalled()
+	})
 })
