@@ -107,17 +107,16 @@ describe('verificationOutputSelection', () => {
 		)
 	})
 
-	it('keeps at most MAX_SELECTED_CONTRACTS contract entries', () => {
+	it('selects every contract past MAX_SELECTED_CONTRACTS entries', () => {
 		const contracts = Object.fromEntries(
-			Array.from({ length: MAX_SELECTED_CONTRACTS * 4 }, (_, i) => [
+			Array.from({ length: MAX_SELECTED_CONTRACTS + 1 }, (_, i) => [
 				`C${i}`,
 				[],
 			]),
 		)
-		const selection = verificationOutputSelection({ 'a.sol': contracts })
-		expect(Object.keys(selection['a.sol'] ?? {})).toHaveLength(
-			MAX_SELECTED_CONTRACTS,
-		)
+		expect(verificationOutputSelection({ 'a.sol': contracts })).toEqual({
+			'*': { '*': [...VERIFICATION_OUTPUTS] },
+		})
 	})
 
 	it('drops prototype keys from file and contract names', () => {

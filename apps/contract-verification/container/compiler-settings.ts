@@ -100,8 +100,8 @@ function contractOutputs(selectors: unknown[]): VerificationOutput[] {
  * Builds the output selection for a compile. It keeps the files and contracts the caller selected,
  * so only those are code-generated, and limits each contract's outputs to the ones a verification
  * job reads, always including the bytecode it compares. File-level outputs (such as the AST) are
- * dropped, and at most MAX_SELECTED_CONTRACTS contract entries are kept. A caller that selects
- * no contract gets every output for every contract.
+ * dropped. A caller that selects no contract, or more than MAX_SELECTED_CONTRACTS of them, gets
+ * every output for every contract.
  */
 export function verificationOutputSelection(
 	requested: unknown,
@@ -115,8 +115,10 @@ export function verificationOutputSelection(
 			for (const [contract, selectors] of Object.entries(fileSelection)) {
 				if (contract === '' || isBlockedObjectKey(contract)) continue
 				if (!Array.isArray(selectors)) continue
-				if (selectedContracts >= MAX_SELECTED_CONTRACTS) break
 				selectedContracts += 1
+				// Past the cap, compile every contract with the bounded output list instead, so the
+				// target is never dropped.
+				if (selectedContracts > MAX_SELECTED_CONTRACTS) return allOutputs()
 				contracts[contract] = contractOutputs(selectors)
 			}
 			if (Object.keys(contracts).length > 0) selection[file] = contracts
@@ -124,6 +126,11 @@ export function verificationOutputSelection(
 	}
 
 	if (Object.keys(selection).length > 0) return selection
+	return allOutputs()
+}
+
+/** Every verification output for every contract. */
+function allOutputs(): Record<string, Record<string, string[]>> {
 	return { '*': { '*': [...VERIFICATION_OUTPUTS] } }
 }
 
