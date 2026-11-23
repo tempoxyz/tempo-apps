@@ -47,8 +47,8 @@ export type SyncReport =
 
 /** Concurrent page fetches per source. Tuned to stay well under Workers' 50-subrequest budget. */
 const CONCURRENCY = 8
-/** Bound uploads consistently with external document reads. */
-const MAX_PAGE_BYTES = 1024 * 1024
+/** Bound page reads and uploads below AI Search's 4 MB limit. */
+const MAX_PAGE_BYTES = 3_500_000
 const DELETION_CONFIRMATION_MS = 5 * 60_000
 const MAX_PENDING_CHECKS = 20
 const CALL_TIMEOUT_MS = 15_000
@@ -469,7 +469,10 @@ async function syncPage(args: {
 				signal,
 				headers,
 			)
-			return { res, body: res.ok ? await readDocumentText(res) : '' }
+			return {
+				res,
+				body: res.ok ? await readDocumentText(res, MAX_PAGE_BYTES) : '',
+			}
 		})
 
 		if (res.status === 304 && prev) {

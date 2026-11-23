@@ -89,6 +89,8 @@ export function populateCacheFromBatch(
 ) {
 	// Populate individual ABI cache entries
 	for (const [address, abi] of Object.entries(batchData.abis)) {
+		// Batch lookup skips inferred signatures; null does not rule out a full ABI lookup.
+		if (!abi) continue
 		queryClient.setQueryData(['autoload-abi', address.toLowerCase()], abi)
 	}
 

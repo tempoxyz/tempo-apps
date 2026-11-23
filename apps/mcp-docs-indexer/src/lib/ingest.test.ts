@@ -234,13 +234,25 @@ describe('syncSource — llms.txt index', () => {
 })
 
 describe('syncSource — page uploads', () => {
+	it('continues indexing pages larger than the interactive read limit', async () => {
+		const { instance, uploads } = fakeInstance()
+		const { kv } = fakeKv()
+		fetchMock.mockImplementation(async (url: string) =>
+			url === 'https://viem.sh/llms.txt'
+				? mockResponse({ body: '- [Large](/large)' })
+				: mockResponse({ body: `# Large\n${'x'.repeat(1_100_000)}` }),
+		)
+		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
+		expect(report).toMatchObject({ status: 'synced', pages: 1, failed: 0 })
+		expect(uploads).toHaveLength(1)
+	})
 	it('rejects pages whose UTF-8 bytes exceed the upload limit', async () => {
 		const { instance, uploads } = fakeInstance()
 		const { kv, store } = fakeKv()
 		fetchMock.mockImplementation(async (url: string) =>
 			url === 'https://viem.sh/llms.txt'
 				? mockResponse({ body: '- [Large](/large)', etag: 'W/"new"' })
-				: mockResponse({ body: `# Large\n${'é'.repeat(524_288)}` }),
+				: mockResponse({ body: `# Large\n${'é'.repeat(1_750_001)}` }),
 		)
 
 		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })

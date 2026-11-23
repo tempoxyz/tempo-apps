@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
 	batchAbiQueryOptions,
 	lookupSignatureQueryOptions,
+	populateCacheFromBatch,
 } from '#lib/queries/abi'
 
 vi.mock('#lib/env.ts', () => ({ getApiUrl: (path: string) => path }))
@@ -38,6 +39,28 @@ function mockBatch() {
 }
 
 describe('bounded ABI query batches', () => {
+	it('does not overwrite full ABI results with reduced batch misses', () => {
+		const client = new QueryClient()
+		const address = `0x${'12'.repeat(20)}`
+		const abi = [
+			{
+				type: 'function',
+				name: 'call',
+				inputs: [],
+				outputs: [],
+				stateMutability: 'view',
+			},
+		]
+		client.setQueryData(['autoload-abi', address], abi)
+		populateCacheFromBatch(client, {
+			abis: { [address]: null, [`0x${'34'.repeat(20)}`]: null },
+			signatures: {},
+		})
+		expect(client.getQueryData(['autoload-abi', address])).toEqual(abi)
+		expect(
+			client.getQueryState(['autoload-abi', `0x${'34'.repeat(20)}`]),
+		).toBeUndefined()
+	})
 	it('splits a large trace across the address/selector boundary and merges results', async () => {
 		const batches = mockBatch()
 		const addresses = Array.from(

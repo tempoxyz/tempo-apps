@@ -35,8 +35,11 @@ export async function fetchSourceDocument(
 }
 
 /** Bound decoded response bytes before assembling or parsing external document text. */
-export async function readDocumentText(response: Response): Promise<string> {
-	if (Number(response.headers.get('content-length')) > MAX_DOCUMENT_BYTES) {
+export async function readDocumentText(
+	response: Response,
+	maxBytes = MAX_DOCUMENT_BYTES,
+): Promise<string> {
+	if (Number(response.headers.get('content-length')) > maxBytes) {
 		await response.body?.cancel()
 		throw new Error('Document too large')
 	}
@@ -50,7 +53,7 @@ export async function readDocumentText(response: Response): Promise<string> {
 			const { done, value } = await reader.read()
 			if (done) break
 			bytes += value.byteLength
-			if (bytes > MAX_DOCUMENT_BYTES) throw new Error('Document too large')
+			if (bytes > maxBytes) throw new Error('Document too large')
 			text += decoder.decode(value, { stream: true })
 		}
 		return text + decoder.decode()
