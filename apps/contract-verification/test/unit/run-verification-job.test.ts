@@ -184,7 +184,15 @@ describe('runVerificationJob – creation bytecode matching', () => {
 		})
 	})
 
-	it('re-proves the creation from the recorded transaction when a resubmission omits it', async () => {
+	it.each([
+		{ name: 'omits the hash', resubmission: {} },
+		{
+			name: 'submits an unrelated hash',
+			resubmission: { creationTransactionHash: `0x${'ee'.repeat(32)}` },
+		},
+	])('re-proves the creation from the recorded transaction when a resubmission $name', async ({
+		resubmission,
+	}) => {
 		const input = `${initcode}${constructorArguments}`
 		// Different metadata hash: runtime and creation match only partially.
 		const partialOutput = structuredClone(counterFixture.solcOutput) as {
@@ -212,8 +220,8 @@ describe('runVerificationJob – creation bytecode matching', () => {
 		expect(first.creationMatch).toBe(true)
 		expect(first.creationMetadataMatch).toBe(false)
 
-		// The exact sources, without a creation hash: the recorded transaction re-proves it.
-		const exact = await verifyWithCreationInput(input, {})
+		// The exact sources, without the right creation hash: the recorded transaction re-proves it.
+		const exact = await verifyWithCreationInput(input, resubmission)
 		expect(exact.id).toBe(first.id)
 		expect(exact.runtimeMetadataMatch).toBe(true)
 		expect(exact.creationMatch).toBe(true)

@@ -366,26 +366,23 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 
 		// Only matched source submissions may trigger optional factory tracing.
-		// Without a submitted hash, re-prove the creation from the deployment's recorded transaction.
-		const [recordedDeployment] = body.creatorTxHash
-			? []
-			: await db
-					.select({ transactionHash: contractDeploymentsTable.transactionHash })
-					.from(contractDeploymentsTable)
-					.where(
-						and(
-							eq(contractDeploymentsTable.chainId, chainId),
-							eq(contractDeploymentsTable.address, Hex.toBytes(address)),
-						),
-					)
-					.limit(1)
+		// A recorded creation transaction is immutable, so it wins over a submitted hash.
+		const [recordedDeployment] = await db
+			.select({ transactionHash: contractDeploymentsTable.transactionHash })
+			.from(contractDeploymentsTable)
+			.where(
+				and(
+					eq(contractDeploymentsTable.chainId, chainId),
+					eq(contractDeploymentsTable.address, Hex.toBytes(address)),
+				),
+			)
+			.limit(1)
 		const creationTransactionHash =
-			body.creatorTxHash ??
 			(recordedDeployment?.transactionHash
 				? Hex.fromBytes(
 						new Uint8Array(recordedDeployment.transactionHash as ArrayBuffer),
 					)
-				: undefined)
+				: undefined) ?? body.creatorTxHash
 		const creationTransactionMetadata = creationTransactionHash
 			? await getCreationTransactionMetadata({
 					creationTransactionHash,

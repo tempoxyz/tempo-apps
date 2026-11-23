@@ -1176,11 +1176,11 @@ async function runVerificationJob(
 			return
 		}
 
-		// Without a submitted hash, re-prove the creation from the deployment's recorded transaction,
-		// so a resubmission never loses a creation match proven earlier.
+		// A recorded creation transaction is immutable, so it wins over a submitted hash: a
+		// resubmission (with no hash, or a wrong one) never loses a creation match proven earlier.
 		const creationTransactionHash =
-			sanitizedBody.creationTransactionHash ??
-			(await recordedCreationTransactionHash(db, chainId, addressBytes))
+			(await recordedCreationTransactionHash(db, chainId, addressBytes)) ??
+			sanitizedBody.creationTransactionHash
 
 		// Only matched source submissions may trigger optional factory tracing.
 		const creationTransactionMetadata = creationTransactionHash
