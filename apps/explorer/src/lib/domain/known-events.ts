@@ -323,8 +323,9 @@ function indexEarnReceipt(events: readonly ParsedEvent[]) {
 			if (!firstTransferFrom.has(sender))
 				firstTransferFrom.set(sender, event.address)
 		}
-		const amount = eventBigInt(event, 'amount')
-		if (amount === undefined) continue
+		// Fee AMM Mint and Burn logs have separate user/validator amounts.
+		if (!('amount' in event.args)) continue
+		const { amount } = event.args
 		const token = event.address
 		record('any', amount, token)
 		if (from) record('from', amount, token, from)

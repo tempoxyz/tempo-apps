@@ -1445,6 +1445,9 @@ describe('parseKnownEvents', () => {
 		const burn = Abis.tip20.find(
 			(event) => event.type === 'event' && event.name === 'Burn',
 		)!
+		const feeBurn = Abis.feeAmm.find(
+			(event) => event.type === 'event' && event.name === 'Burn',
+		)!
 		const redeem = earnEventsAbi.find((event) => event.name === 'EarnRedeem')!
 		const tokenA = userTokenAddress
 		const tokenB = recipientAddress
@@ -1454,6 +1457,7 @@ describe('parseKnownEvents', () => {
 			mockZoneEventLog(redeem, accountAddress, { outputToken, earnShares: 17n })
 		const logs = [
 			redemption(tokenA),
+			mockZoneEventLog(feeBurn, accountAddress, { amountUserToken: 17n }),
 			burnLog(tokenA),
 			burnLog(tokenA),
 			burnLog(tokenB),
