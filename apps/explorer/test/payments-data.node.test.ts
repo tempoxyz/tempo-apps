@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const reads: { from?: string; to?: string }[] = []
 let indexerUp = true
+let hang = false
 // Each read returns one row per day in its range from this ledger.
 const ledger = new Map<string, { moved: string; minted: string }>()
 
@@ -12,6 +13,7 @@ vi.mock('#lib/server/dex-indexer', () => ({
 		new Date(ms).toISOString().replace('T', ' ').slice(0, 19),
 	indexer: async (_chain: number, sql: string) => {
 		if (!indexerUp) throw new Error('indexer down')
+		if (hang) return new Promise<never>(() => {})
 		const from = /block_timestamp >= '([\d-]+)/.exec(sql)?.[1]
 		const to = /block_timestamp < '([\d-]+)/.exec(sql)?.[1]
 		reads.push({ from, to })
@@ -34,6 +36,7 @@ beforeEach(() => {
 	reads.length = 0
 	ledger.clear()
 	indexerUp = true
+	hang = false
 	vi.stubGlobal('caches', {
 		default: {
 			match: async (r: Request) => {
@@ -142,5 +145,22 @@ describe('payments snapshot around UTC midnight', async () => {
 		const s = await getPaymentsSnapshot(4217, at('2026-11-22T01:00:00Z'))
 		expect(tpv(s, '2026-11-21')).toBe(20)
 		expect(s.through).toBe('2026-11-20')
+	})
+
+	it('replaces a refresh that never settled', async () => {
+		day('2026-11-20', 10, 100)
+		hang = true
+		const clock = vi
+			.spyOn(Date, 'now')
+			.mockReturnValue(at('2026-11-21T10:00:00Z'))
+		// The first visitor's read never settles, as when its request is cancelled.
+		const first = getPaymentsSnapshot(4217, at('2026-11-21T10:00:00Z'))
+		void first.catch(() => {})
+		await flush()
+		hang = false
+		clock.mockReturnValue(at('2026-11-21T10:01:00Z'))
+		const s = await getPaymentsSnapshot(4217, at('2026-11-21T10:01:00Z'))
+		expect(tpv(s, '2026-11-20')).toBe(10)
+		clock.mockRestore()
 	})
 })

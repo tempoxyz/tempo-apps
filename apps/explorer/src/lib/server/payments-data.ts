@@ -83,7 +83,13 @@ type Entry<T> = { data: T; storedAt: number }
 // ---------------------------------------------------------------------------
 // Stale-while-revalidate over the Cache API.
 
-const inflight = new Map<string, Promise<Entry<unknown>>>()
+const inflight = new Map<
+	string,
+	{ promise: Promise<Entry<unknown>>; startedAt: number }
+>()
+
+/** Longest a refresh may run before another request starts a new one. */
+const INFLIGHT_LIMIT = 30_000
 
 function cacheRequest(key: string): Request {
 	return new Request(`${CACHE_ORIGIN}/__payments/${encodeURIComponent(key)}`)
@@ -149,24 +155,33 @@ async function swr<T>(options: {
 	const cached = await readEntry<T>(key)
 	if (cached && isFresh(cached)) return cached
 
-	let refresh = inflight.get(key) as Promise<Entry<T>> | undefined
+	// A refresh older than INFLIGHT_LIMIT is treated as lost (its request
+	// may have been cancelled before it settled) and replaced.
+	const running = inflight.get(key)
+	let refresh =
+		running && Date.now() - running.startedAt < INFLIGHT_LIMIT
+			? (running.promise as Promise<Entry<T>>)
+			: undefined
 	if (!refresh) {
-		refresh = load(cached?.data).then(async (data) => {
+		const started = load(cached?.data).then(async (data) => {
 			const entry = { data, storedAt: now }
 			await writeEntry(key, entry)
 			return entry
 		})
-		const shared = refresh.finally(() => inflight.delete(key))
-		inflight.set(key, shared as Promise<Entry<unknown>>)
+		const shared = started.finally(() => {
+			if (inflight.get(key)?.promise === shared) inflight.delete(key)
+		})
+		inflight.set(key, { promise: shared, startedAt: Date.now() })
+		// Every refresh outlives the request that started it, so a visitor
+		// leaving mid-load never strands it.
+		inBackground(
+			shared.catch((error) =>
+				console.error(`Payments refresh failed (${key}):`, error),
+			),
+		)
 		refresh = shared
 	}
-	if (!cached) return refresh
-	inBackground(
-		refresh.catch((error) =>
-			console.error(`Payments refresh failed (${key}):`, error),
-		),
-	)
-	return cached
+	return cached ?? refresh
 }
 
 function withDeadline<T>(
