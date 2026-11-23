@@ -61,3 +61,9 @@ it('deduplicates case variants and bounds concurrent lookup work', async () => {
 	expect(lookup.signature).toHaveBeenCalledTimes(12)
 	expect(peak).toBeLessThanOrEqual(3)
 })
+
+it('does not expand an address into unbudgeted inferred signature lookups', async () => {
+	const address = `0x${'ab'.repeat(20)}`
+	expect((await call({ addresses: [address], selectors: [] })).status).toBe(200)
+	expect(lookup.abi).toHaveBeenCalledWith(address, { resolveSignatures: false })
+})

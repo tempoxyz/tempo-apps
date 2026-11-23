@@ -96,12 +96,10 @@ function mockResponse(init: {
 	const headers = new Headers()
 	if (init.etag) headers.set('etag', init.etag)
 	if (init.contentType) headers.set('content-type', init.contentType)
-	return {
+	return new Response([204, 304].includes(status) ? null : (init.body ?? ''), {
 		status,
-		ok: status >= 200 && status < 300,
 		headers,
-		text: async () => init.body ?? '',
-	} as unknown as Response
+	})
 }
 
 async function confirmDeletion(
@@ -242,7 +240,7 @@ describe('syncSource — page uploads', () => {
 		fetchMock.mockImplementation(async (url: string) =>
 			url === 'https://viem.sh/llms.txt'
 				? mockResponse({ body: '- [Large](/large)', etag: 'W/"new"' })
-				: mockResponse({ body: `# Large\n${'é'.repeat(1_750_001)}` }),
+				: mockResponse({ body: `# Large\n${'é'.repeat(524_288)}` }),
 		)
 
 		const report = await syncSource({ source: SOURCE, instance, etagCache: kv })
@@ -250,9 +248,9 @@ describe('syncSource — page uploads', () => {
 		expect(report).toMatchObject({ status: 'synced', pages: 0, failed: 1 })
 		expect(uploads).toHaveLength(0)
 		expect(store.has('etag:viem')).toBe(false)
-		expect(console.warn).toHaveBeenCalledWith(
-			'page.too_large',
-			expect.objectContaining({ bytes: 3_500_010 }),
+		expect(console.error).toHaveBeenCalledWith(
+			'page.upload_failed',
+			expect.objectContaining({ error: 'Document too large' }),
 		)
 	})
 
@@ -1408,7 +1406,9 @@ describe('partial progress and bounded dependencies', () => {
 				const index = url.endsWith('/llms.txt')
 				const response = mockResponse({ body: index ? '- [A](/a)' : '# A' })
 				if (stage === (index ? 'index body' : 'page body'))
-					response.text = never
+					Object.defineProperty(response, 'body', {
+						value: new ReadableStream({ pull: never }),
+					})
 				return response
 			})
 			const pending = syncSource({ source: SOURCE, instance, etagCache: kv })

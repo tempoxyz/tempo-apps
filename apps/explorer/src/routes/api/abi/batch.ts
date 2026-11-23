@@ -35,7 +35,9 @@ export const Route = createFileRoute('/api/abi/batch')({
 					const [abiResults, signatureResults] = await Promise.all([
 						mapLimit(uniqueAddresses, 3, async (address) => {
 							try {
-								const abi = await autoloadAbi(address)
+								const abi = await autoloadAbi(address, {
+									resolveSignatures: false,
+								})
 								return [address.toLowerCase(), abi] as const
 							} catch {
 								return [address.toLowerCase(), null] as const

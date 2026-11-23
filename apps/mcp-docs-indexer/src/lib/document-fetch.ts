@@ -24,7 +24,7 @@ export async function fetchSourceDocument(
 			redirect: 'manual',
 			cf: { cacheTtl: 60 },
 		})
-		if (response.status < 300 || response.status >= 400) return response
+		if (![301, 302, 303, 307, 308].includes(response.status)) return response
 		await response.body?.cancel()
 		const location = response.headers.get('location')
 		if (!location || hop === 3)

@@ -132,7 +132,7 @@ type SearchResult = AiSearchSearchResponse & {
 const sourceFilterFallbackUntil = new Map<string, number>()
 const searchResultCache = new Map<
 	string,
-	{ expiresAt: number; result: SearchResult }
+	{ expiresAt: number; serialized: string }
 >()
 const searchInFlight = new Map<string, Promise<SearchResult>>()
 const pageCache = new Map<string, { expiresAt: number; text: string }>()
@@ -609,19 +609,20 @@ async function readCleanPage(pageUrl: string, base: string): Promise<string> {
 	const markdownUrl = toMarkdownUrl(pageUrl)
 	if (!resolveSourcePageUrl(markdownUrl, base))
 		throw new Error('Document outside source boundary')
-	const cached = pageCache.get(markdownUrl)
+	const key = JSON.stringify([new URL(base).href, markdownUrl])
+	const cached = pageCache.get(key)
 	if (cached && cached.expiresAt > Date.now()) return cached.text
-	if (cached) pageCache.delete(markdownUrl)
+	if (cached) pageCache.delete(key)
 
-	const inFlight = pageInFlight.get(markdownUrl)
+	const inFlight = pageInFlight.get(key)
 	if (inFlight) return inFlight
 
 	const pending = fetchCleanPage(markdownUrl, base)
-	pageInFlight.set(markdownUrl, pending)
+	pageInFlight.set(key, pending)
 	try {
 		return await pending
 	} finally {
-		pageInFlight.delete(markdownUrl)
+		pageInFlight.delete(key)
 	}
 }
 
@@ -638,9 +639,12 @@ async function fetchCleanPage(
 	}, DOC_FETCH_TIMEOUT_MS)
 	if (isHtmlDocument(body, res.headers.get('content-type')))
 		throw new Error('page is HTML, not Markdown')
-	const text = normalizeDocsMarkdown(body)
+	// Copy normalized text so a short V8 substring cannot retain the whole source body.
+	const text = new TextDecoder().decode(
+		new TextEncoder().encode(normalizeDocsMarkdown(body)),
+	)
 	if (!text) throw new Error('page is empty')
-	cachePage(markdownUrl, text)
+	cachePage(JSON.stringify([new URL(base).href, markdownUrl]), text)
 	return text
 }
 
@@ -672,7 +676,8 @@ async function cachedSearch(
 ): Promise<SearchResult> {
 	const key = JSON.stringify(sources) + searchCacheKey(query, args)
 	const cached = searchResultCache.get(key)
-	if (cached && cached.expiresAt > Date.now()) return cached.result
+	if (cached && cached.expiresAt > Date.now())
+		return JSON.parse(cached.serialized) as SearchResult
 	if (cached) searchResultCache.delete(key)
 
 	const inFlight = searchInFlight.get(key)
@@ -819,13 +824,29 @@ function searchCacheKey(
 }
 
 function cacheSearchResult(key: string, result: SearchResult): void {
+	const now = Date.now()
+	const serialized = JSON.stringify(result)
+	const size = serialized.length * 2
+	searchResultCache.delete(key)
+	if (size > 4 * 1024 * 1024) return
+	let bytes = 0
+	for (const [cachedKey, entry] of searchResultCache) {
+		if (entry.expiresAt <= now) searchResultCache.delete(cachedKey)
+		else bytes += entry.serialized.length * 2
+	}
+	while (
+		searchResultCache.size &&
+		(bytes + size > 4 * 1024 * 1024 ||
+			searchResultCache.size >= SEARCH_RESULT_CACHE_MAX_ENTRIES)
+	) {
+		const oldest = searchResultCache.entries().next().value!
+		bytes -= oldest[1].serialized.length * 2
+		searchResultCache.delete(oldest[0])
+	}
 	searchResultCache.set(key, {
-		expiresAt: Date.now() + SEARCH_RESULT_CACHE_TTL_MS,
-		result,
+		expiresAt: now + SEARCH_RESULT_CACHE_TTL_MS,
+		serialized,
 	})
-	if (searchResultCache.size <= SEARCH_RESULT_CACHE_MAX_ENTRIES) return
-	const oldestKey = searchResultCache.keys().next().value
-	if (oldestKey) searchResultCache.delete(oldestKey)
 }
 
 function shouldSkipSourceFilter(sources: string[]): boolean {
@@ -971,7 +992,7 @@ function parseSourceIndex(body: string, base: string): SourceIndexEntry[] {
 	let subsection: string | undefined
 	for (const line of body.split('\n')) {
 		if (line.length > 8192) continue
-		const heading = line.trimEnd().match(/^(#{2,3})\s+(.+)$/)
+		const heading = line.trimEnd().match(/^(#{2,3})[^\S\r\n]+(\S[^\r\n]*)$/)
 		if (heading) {
 			const [, level, label] = heading
 			if (level === '##') {
@@ -995,7 +1016,7 @@ function parseSourceIndex(body: string, base: string): SourceIndexEntry[] {
 			const sectionLabel = [section, subsection].filter(Boolean).join(' / ')
 			entries.push({
 				title: title.trim(),
-				url: publicDocsUrl(url.toString()),
+				url: url.toString(),
 				...(description?.trim() ? { description: description.trim() } : {}),
 				...(sectionLabel ? { section: sectionLabel } : {}),
 			})

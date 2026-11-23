@@ -2478,3 +2478,84 @@ describe('bounded search dependencies', () => {
 		}
 	})
 })
+
+describe('source boundary cache regressions', () => {
+	it('does not reuse broad-source pages through a narrower redirect policy', async () => {
+		const broad: Source = {
+			id: 'cache-broad',
+			base: 'https://cache-boundary.example/developers',
+		}
+		const narrow: Source = { id: 'cache-narrow', base: `${broad.base}/sdk` }
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(async (url: string) =>
+				url.endsWith('/sdk/page.md')
+					? new Response(null, {
+							status: 302,
+							headers: { location: `${broad.base}/outside.md` },
+						})
+					: new Response('# Outside\n\nBroad-only content'),
+			),
+		)
+		const read = (source: Source) =>
+			handleMcp(
+				new Request('https://mcp.tempo.xyz/', {
+					method: 'POST',
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: source.id,
+						method: 'tools/call',
+						params: {
+							name: 'read_page',
+							arguments: { source: source.id, url: `${narrow.base}/page` },
+						},
+					}),
+				}),
+				{
+					instance: instance(async () => ({ search_query: '', chunks: [] })),
+					sources: [source],
+				},
+			)
+		expect((await textContent(await read(broad))).result.text).toContain(
+			'Broad-only',
+		)
+		expect(await (await read(narrow))?.text()).toContain(
+			'outside source boundary',
+		)
+	})
+
+	it('publishes the checked index URL once and handles embedded line terminators', async () => {
+		const source: Source = {
+			id: 'single-url-format',
+			base: 'https://single-format.example/developers',
+		}
+		const hostileHeading = `## ${' '.repeat(8000)}x\rX`
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(
+				async () => new Response(`${hostileHeading}\n- [Test page](...md.md)`),
+			),
+		)
+		const response = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tools/call',
+					params: {
+						name: 'find_pages',
+						arguments: { source: source.id, query: 'Test page' },
+					},
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources: [source],
+			},
+		)
+		const result = await textContent(response)
+		expect(result.result.pages).toHaveLength(1)
+		expect(result.result.pages[0].url).toBe(`${source.base}/...md`)
+	})
+})
