@@ -164,6 +164,11 @@ export type PaymentsSnapshot = {
 	fxDate: string | null
 	/** Price keys left out because no price was available. */
 	unpriced: string[]
+	/**
+	 * The last full UTC day the data covers, or null without data. Earlier
+	 * than yesterday when the indexer is unavailable and cached data is shown.
+	 */
+	through: string | null
 }
 
 /** USD per one unit of each price key, USD included at 1. */

@@ -242,6 +242,11 @@ function PaymentsPage(): React.JSX.Element {
 		[closed, aopRange],
 	)
 	const empty = query.isSuccess && (days?.length ?? 0) === 0
+	// Cached data older than yesterday means the indexer is behind or down.
+	const behind = Boolean(
+		query.data?.through &&
+			query.data.through < isoDay(query.data.asOf - 86_400_000),
+	)
 
 	return (
 		<div {...styles.page()}>
@@ -267,6 +272,19 @@ function PaymentsPage(): React.JSX.Element {
 								>
 									{query.isFetching ? 'Retrying…' : 'Try again'}
 								</Alert.Action>
+							</Alert.Content>
+						</Alert>
+					)}
+
+					{behind && query.data?.through && (
+						<Alert intent="warning">
+							<Alert.Icon />
+							<Alert.Content>
+								<Alert.Title>
+									Showing data through {label(query.data.through)}
+								</Alert.Title>
+								Newer data is temporarily unavailable. The page updates on its
+								own when it returns.
 							</Alert.Content>
 						</Alert>
 					)}
