@@ -11,44 +11,24 @@ import {
 } from '#lib/payments'
 import { indexer, list, sqlTime } from '#lib/server/dex-indexer'
 
-/**
- * Payments data is served from the edge cache and refreshed behind the
- * response (stale-while-revalidate), so a page view never waits on the
- * indexer or a price API once a colo has data, and an upstream outage keeps
- * serving the last good data instead of failing.
- *
- * The indexer is read in two parts, each cached on its own:
- * - history: every full UTC day. Past days never change, so after the first
- *   full read (about 1 s, 300 KB) each new day is appended with a one-day
- *   read (about 250 ms, 1 KB).
- * - today: the current UTC day so far, refreshed every two minutes.
- * FX rates and market prices are cached on their own clocks too.
- */
-
 const TRANSFER_SIGNATURE =
 	'Transfer(address indexed from, address indexed to, uint256 amount)'
 const ZERO = '0x0000000000000000000000000000000000000000'
 const DAY = 86_400_000
 
-/** How long after UTC midnight the indexer may still be finishing the day. */
 const SETTLE = 30 * 60_000
 
-/** How long each part is served before a background refresh. */
 const TODAY_FRESH = 2 * 60_000
 const FX_FRESH = 6 * 60 * 60_000
 const MARKET_FRESH = 10 * 60_000
 
-/** How long the edge keeps any part, as the last good copy for outages. */
 const HARD_TTL_SECONDS = 7 * 24 * 60 * 60
 
-/** Longest wait on an upstream read when there is nothing cached to serve. */
 const INDEXER_DEADLINE = 8_000
 const PRICE_DEADLINE = 3_000
 
-/** Reference rates (ECB), keyed by the currency, in units per USD. */
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD'
 
-/** Market prices in USD, keyed by CoinGecko ID. */
 const MARKET_URL =
 	'https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd'
 
@@ -56,14 +36,12 @@ const ISO_CURRENCY = /^[A-Z]{3}$/
 
 const USER_AGENT = 'tempo-explorer (+https://explore.tempo.xyz)'
 
-/** Spot prices to fall back on per CoinGecko ID, when CoinGecko is down. */
 const FALLBACK_SPOT: Record<string, string> = {
 	bitcoin: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
 }
 
 const CACHE_ORIGIN = 'https://explore.tempo.xyz'
 
-/** A token-day as cached: amounts as decimal strings, since JSON has no bigint. */
 type RawTokenDay = {
 	day: string
 	token: string
@@ -72,23 +50,17 @@ type RawTokenDay = {
 	moved: string
 }
 
-/** Every full UTC day, through the day named by through. */
 type History = { through: string; rows: RawTokenDay[] }
 
-/** The current UTC day so far. */
 type Today = { day: string; rows: RawTokenDay[] }
 
 type Entry<T> = { data: T; storedAt: number }
-
-// ---------------------------------------------------------------------------
-// Stale-while-revalidate over the Cache API.
 
 const inflight = new Map<
 	string,
 	{ promise: Promise<Entry<unknown>>; startedAt: number }
 >()
 
-/** Longest a refresh may run before another request starts a new one. */
 const INFLIGHT_LIMIT = 30_000
 
 function cacheRequest(key: string): Request {
@@ -125,28 +97,17 @@ async function writeEntry<T>(key: string, entry: Entry<T>): Promise<void> {
 				},
 			}),
 		)
-	} catch {
-		// The cache must never make a read fail.
-	}
+	} catch {}
 }
 
-/** Keeps a refresh running after the response is sent. */
 function inBackground(work: Promise<unknown>): void {
 	try {
 		waitUntil(work)
-	} catch {
-		// Outside a request (tests), the promise still runs to its end.
-	}
+	} catch {}
 }
 
-/**
- * The cached value when fresh. When stale, the cached value at once, with a
- * refresh behind it. With nothing cached, waits for load. One refresh per
- * key runs at a time in an isolate; a failed refresh keeps the stale value.
- */
 async function swr<T>(options: {
 	key: string
-	/** The request's clock, which stamps a refreshed entry. */
 	now: number
 	isFresh: (entry: Entry<T>) => boolean
 	load: (previous: T | undefined) => Promise<T>
@@ -155,8 +116,6 @@ async function swr<T>(options: {
 	const cached = await readEntry<T>(key)
 	if (cached && isFresh(cached)) return cached
 
-	// A refresh older than INFLIGHT_LIMIT is treated as lost (its request
-	// may have been cancelled before it settled) and replaced.
 	const running = inflight.get(key)
 	let refresh =
 		running && Date.now() - running.startedAt < INFLIGHT_LIMIT
@@ -172,8 +131,6 @@ async function swr<T>(options: {
 			if (inflight.get(key)?.promise === shared) inflight.delete(key)
 		})
 		inflight.set(key, { promise: shared, startedAt: Date.now() })
-		// Every refresh outlives the request that started it, so a visitor
-		// leaving mid-load never strands it.
 		inBackground(
 			shared.catch((error) =>
 				console.error(`Payments refresh failed (${key}):`, error),
@@ -198,10 +155,6 @@ function withDeadline<T>(
 	]).finally(() => clearTimeout(timer))
 }
 
-// ---------------------------------------------------------------------------
-// Upstream reads.
-
-/** Mints, burns and other transfers per token and UTC day, in [from, to). */
 async function readTokenDays(
 	chainId: number,
 	tokens: readonly PaymentToken[],
@@ -240,7 +193,6 @@ async function readTokenDays(
 	}))
 }
 
-/** USD per unit of each fiat currency, USD included. Throws when unavailable. */
 async function readFxRates(
 	currencies: readonly string[],
 ): Promise<{ rates: UsdRates; date: string | null }> {
@@ -261,12 +213,9 @@ async function readFxRates(
 	return { rates, date: body.date ?? null }
 }
 
-/** USD price of each asset from CoinGecko. Throws when unavailable. */
 async function readCoinGecko(ids: readonly string[]): Promise<UsdRates> {
 	if (ids.length === 0) return {}
 	const response = await fetch(`${MARKET_URL}&ids=${ids.join(',')}`, {
-		// CoinGecko refuses requests without a User-Agent with 403, and Workers
-		// send none by default.
 		headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
 		signal: AbortSignal.timeout(PRICE_DEADLINE),
 	})
@@ -280,7 +229,6 @@ async function readCoinGecko(ids: readonly string[]): Promise<UsdRates> {
 	return prices
 }
 
-/** A spot price in USD from Coinbase. */
 async function readSpot(url: string): Promise<number> {
 	const response = await fetch(url, {
 		headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
@@ -293,10 +241,6 @@ async function readSpot(url: string): Promise<number> {
 	return price
 }
 
-/**
- * USD price of each market-priced asset: CoinGecko, with a spot price for
- * each asset it misses that has one. Throws only when nothing is priced.
- */
 async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
 	const prices = await readCoinGecko(ids).catch((error) => {
 		console.error('CoinGecko prices unavailable:', error)
@@ -319,9 +263,6 @@ async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
 	return prices
 }
 
-// ---------------------------------------------------------------------------
-// The snapshot.
-
 function toTokenDays(rows: readonly RawTokenDay[]): TokenDay[] {
 	return rows.map((row) => ({
 		day: row.day,
@@ -332,7 +273,6 @@ function toTokenDays(rows: readonly RawTokenDay[]): TokenDay[] {
 	}))
 }
 
-/** The last snapshot built in this isolate, reused while its parts are unchanged. */
 let built: { version: string; snapshot: PaymentsSnapshot } | undefined
 
 export async function getPaymentsSnapshot(
@@ -349,10 +289,6 @@ export async function getPaymentsSnapshot(
 	const assets = keys.filter((key) => !ISO_CURRENCY.test(key))
 
 	const [history, current, fx, market] = await Promise.all([
-		// Past days never change once the indexer has passed them: append the
-		// days since the cached copy, re-reading its last day, which the
-		// indexer may not have finished when it was read. A copy taken in the
-		// first SETTLE after midnight is read again once that has passed.
 		swr<History>({
 			now,
 			key: `history:v3:${chainId}`,
@@ -399,8 +335,6 @@ export async function getPaymentsSnapshot(
 			now,
 			key: `market:v2:${assets.join(',')}`,
 			isFresh: (entry) => now - entry.storedAt < MARKET_FRESH,
-			// A refresh that prices only some assets, such as Coinbase's bitcoin
-			// while CoinGecko is down, keeps the last good price of the rest.
 			load: async (previous) => ({
 				...previous,
 				...(await readMarketPrices(assets)),
@@ -411,8 +345,6 @@ export async function getPaymentsSnapshot(
 		}),
 	])
 
-	// A cached "today" stays in until history covers its day, such as just
-	// after midnight or while the indexer is down across it.
 	const todayRows =
 		current && current.data.day > history.data.through ? current : undefined
 	const version = [
@@ -437,9 +369,6 @@ export async function getPaymentsSnapshot(
 		asOf: now,
 		fxDate: fx?.data.date ?? null,
 		unpriced: keys.filter((key) => rates[key] === undefined),
-		// A cached day counts as covered only when its copy was taken at its
-		// close; an older copy (the indexer went down during the day) keeps
-		// the rows but leaves the day open, so the page still warns.
 		through:
 			todayRows &&
 			todayRows.data.day < today &&

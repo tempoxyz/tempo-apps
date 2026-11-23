@@ -52,32 +52,18 @@ export const Route = createFileRoute('/_layout/payments')({
 	},
 })
 
-/** How long navigation waits for data before showing the page without it. */
 const LOADER_WAIT = 300
 
-/** Bars in each range, and how often a bar is labeled, as TDS advises. */
 const RANGES = {
 	day: { bars: 28, tick: 7 },
 	week: { bars: 12, tick: 3 },
 	month: { bars: 12, tick: 3 },
 } as const satisfies Record<Period, { bars: number; tick: number }>
 
-/**
- * The lifetime charts show one bar per month, labeled every third, so they
- * keep readable bars at phone width.
- */
 const LIFETIME_TICK = 3
 
-/**
- * Charts start in March 2026, when the data warehouse's TPV starts; earlier
- * months only hold test transfers. Lifetime TPV still counts them.
- */
 const CHART_START = '2026-03-01'
 
-/**
- * Series colors: the TDS accent, special and warning content colors. BarChart
- * paints SVG fills from strings, which can't hold token references.
- */
 const tpvSeries = [
 	{
 		color: `#4471ed`,
@@ -100,7 +86,6 @@ const aopSeries = [
 	{ color: `#e06f12`, key: 'crypto', label: 'Crypto' },
 ] as const
 
-/** Every amount on the page, in USD with one decimal, such as $18.1B. */
 const usdFormat = new Intl.NumberFormat('en-US', {
 	style: 'currency',
 	currency: 'USD',
@@ -132,7 +117,6 @@ const rangeLabels = { day: 'Daily', week: 'Weekly', month: 'Monthly' } as const
 namespace styles {
 	export const page = style({
 		boxSizing: 'border-box',
-		// The layout centres its children, so the page claims the full width.
 		width: '100% !custom',
 		minWidth: '0',
 		paddingBlockStart: '24',
@@ -174,27 +158,16 @@ namespace styles {
 		margin: '0',
 		typography: 'body.b3',
 	})
-	/** A phone gives the card more of its width. */
 	export const card = style({
 		minWidth: '0',
 		'@media (max-width: 639px)': { paddingInline: '16' },
 	})
-	/**
-	 * A one-series chart is named by its card's title, so its legend would only
-	 * repeat it. BarChart has no option to drop the legend; this hides it.
-	 */
 	export const single = style({
 		minWidth: '0',
 		selectors: {
 			'& [role="figure"] > :last-child': { display: 'none !custom' },
 		},
 	})
-	/**
-	 * BarChart draws its top gridline at the plot's top edge, and Recharts
-	 * moves that line's label down to keep it inside the SVG, so the label
-	 * reads about 11px below its line. This moves it back onto the line and
-	 * lets it overflow into the card's padding.
-	 */
 	export const chart = style({
 		minWidth: '0',
 		selectors: {
@@ -205,28 +178,15 @@ namespace styles {
 				},
 		},
 	})
-	/**
-	 * Clips a chart held at its old width while its card shrinks, at the
-	 * card's padding, so the axis labels that sit past the plot's edges stay.
-	 */
 	export const settled = style({
 		minWidth: '0',
 		clipPath: 'inset(-24px -16px -16px -16px) !custom',
 	})
-	/**
-	 * Every card header is as tall as the small range switch, so titles and
-	 * charts line up across a row whether or not a card has the switch. On a
-	 * phone, where the cards stack, the switch drops under the title.
-	 */
 	export const cardHeader = style({
 		flexWrap: 'wrap',
 		minHeight: '32',
 		rowGap: '12',
 	})
-	/**
-	 * Two cards share a row only when each is wide enough for its title and
-	 * the range switch on one line (Grid's widest fit, 20rem, is too narrow).
-	 */
 	export const chartRow = style({
 		display: 'grid',
 		gap: '16',
@@ -251,7 +211,6 @@ function PaymentsPage(): React.JSX.Element {
 				: undefined,
 		[days, query.data?.asOf],
 	)
-	// Charts count full UTC days only; the last day is today so far.
 	const closed = useMemo(() => days?.slice(0, -1), [days])
 	const lifetime = useMemo(
 		() => (closed ? lifetimeCharts(closed) : undefined),
@@ -266,7 +225,6 @@ function PaymentsPage(): React.JSX.Element {
 		[closed, aopRange],
 	)
 	const empty = query.isSuccess && (days?.length ?? 0) === 0
-	// Cached data older than yesterday means the indexer is behind or down.
 	const behind = Boolean(
 		query.data?.through &&
 			query.data.through < isoDay(query.data.asOf - 86_400_000),
@@ -405,7 +363,6 @@ type ChartDatum = {
 
 type Chart = { data: ChartDatum[]; ticks: string[] }
 
-/** Monthly bars since launch: cumulative TPV and AOP at each month's close. */
 function lifetimeCharts(days: readonly PaymentsDay[]): {
 	tpv: Chart
 	aop: Chart
@@ -422,7 +379,6 @@ function lifetimeCharts(days: readonly PaymentsDay[]): {
 	return { tpv: chart, aop: chart }
 }
 
-/** The latest bars of a range: days, weeks or months. */
 function rangeChart(days: readonly PaymentsDay[], period: Period): Chart {
 	const { bars, tick } = RANGES[period]
 	const data = periods(days, period)
@@ -442,7 +398,6 @@ function datum(entry: PaymentsPeriod, period: Period): ChartDatum {
 	}
 }
 
-/** Every nth label, counted back from the last so the latest bar is labeled. */
 function everyNth(data: readonly ChartDatum[], n: number): string[] {
 	return data
 		.filter((_, index) => (data.length - 1 - index) % n === 0)
@@ -510,21 +465,13 @@ type ChartCardProps = {
 	series:
 		| BarChart.Series<'tpv' | 'stablecoin' | 'rwa' | 'crypto'>[]
 		| readonly BarChart.Series<'tpv' | 'stablecoin' | 'rwa' | 'crypto'>[]
-	/** One series: its legend would repeat the title, so it is hidden. */
 	single?: boolean | undefined
 	range?: Period | undefined
 	onRangeChange?: ((range: Period) => void) | undefined
 }
 
-/** How long a resize must rest before the charts take the new width. */
 const RESIZE_SETTLE = 150
 
-/**
- * Holds its children at their last settled width while the card resizes.
- * BarChart replays its bar animation on every width change, so a chart that
- * follows a window drag pixel by pixel flickers; this redraws it once, when
- * the drag stops.
- */
 function SettledWidth(props: { children: React.ReactNode }): React.JSX.Element {
 	const ref = useRef<HTMLDivElement>(null)
 	const [width, setWidth] = useState<number>()
