@@ -28,30 +28,53 @@ export function batchAbiQueryOptions(args: {
 
 	// Create stable query key from sorted, deduplicated values
 	const sortedAddresses = [...new Set(addresses)].sort()
-	const sortedSelectors = [...new Set(selectors)].sort()
+	const sortedSelectors = [
+		...new Set(selectors.filter(isSignatureSelector)),
+	].sort()
 
 	return queryOptions({
 		enabled: sortedAddresses.length > 0 || sortedSelectors.length > 0,
 		gcTime: Number.POSITIVE_INFINITY,
 		staleTime: Number.POSITIVE_INFINITY,
 		queryKey: ['batch-abi', sortedAddresses, sortedSelectors],
-		queryFn: async (): Promise<BatchAbiResponse> => {
-			const response = await fetch(getApiUrl('/api/abi/batch'), {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					addresses: sortedAddresses,
-					selectors: sortedSelectors,
-				}),
-			})
-
-			if (!response.ok) {
-				throw new Error('Failed to fetch batch ABI data')
-			}
-
-			return response.json()
-		},
+		queryFn: () => fetchAbiBatches(sortedAddresses, sortedSelectors),
 	})
+}
+
+function isSignatureSelector(selector: string): boolean {
+	return /^0x(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{64})$/.test(selector)
+}
+
+async function fetchAbiBatches(
+	addresses: Address[],
+	selectors: Hex[],
+): Promise<BatchAbiResponse> {
+	const result: BatchAbiResponse = { abis: {}, signatures: {} }
+	// Sequential chunks preserve the endpoint's work bound even for large traces.
+	for (
+		let offset = 0;
+		offset < addresses.length + selectors.length;
+		offset += 50
+	) {
+		const addressChunk = addresses.slice(offset, offset + 50)
+		const selectorChunk = selectors.slice(
+			Math.max(0, offset - addresses.length),
+			Math.max(0, offset + 50 - addresses.length),
+		)
+		const response = await fetch(getApiUrl('/api/abi/batch'), {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				addresses: addressChunk,
+				selectors: selectorChunk,
+			}),
+		})
+		if (!response.ok) throw new Error('Failed to fetch batch ABI data')
+		const data = (await response.json()) as BatchAbiResponse
+		Object.assign(result.abis, data.abis)
+		Object.assign(result.signatures, data.signatures)
+	}
+	return result
 }
 
 /**
@@ -92,7 +115,7 @@ export function lookupSignatureQueryOptions(args: { selector?: Hex }) {
 	const { selector } = args
 
 	return queryOptions({
-		enabled: Boolean(selector),
+		enabled: Boolean(selector && isSignatureSelector(selector)),
 		gcTime: Number.POSITIVE_INFINITY,
 		staleTime: Number.POSITIVE_INFINITY,
 		queryKey: ['lookup-signature', selector],
@@ -114,6 +137,7 @@ let signatureBatchTimer: ReturnType<typeof setTimeout> | undefined
  * the batch endpoint so transaction lists do not fan out to OpenChain.
  */
 function lookupSignatureBatched(selector: Hex): Promise<string | null> {
+	if (!isSignatureSelector(selector)) return Promise.resolve(null)
 	if (typeof window === 'undefined') return lookupSignature(selector)
 
 	return new Promise((resolve, reject) => {
@@ -132,14 +156,7 @@ async function flushSignatureBatch(): Promise<void> {
 	signatureBatchTimer = undefined
 
 	try {
-		const response = await fetch(getApiUrl('/api/abi/batch'), {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ addresses: [], selectors: [...requests.keys()] }),
-		})
-		if (!response.ok) throw new Error('Failed to fetch signature batch')
-
-		const data = (await response.json()) as BatchAbiResponse
+		const data = await fetchAbiBatches([], [...requests.keys()])
 		for (const [selector, callbacks] of requests) {
 			const signature = data.signatures[selector.toLowerCase()] ?? null
 			for (const callback of callbacks) callback.resolve(signature)
