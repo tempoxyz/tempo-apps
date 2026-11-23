@@ -526,6 +526,52 @@ describe('parseKnownEvents', () => {
 			)
 	})
 
+	it('pairs each transfer into the Stablecoin DEX with the next one out of it', () => {
+		const hash = `0x${'6'.repeat(64)}` as const
+		const token = `0x${'7'.repeat(40)}` as const
+		const dex = Addresses.stablecoinDex
+		const transfer = (from: Hex.Hex, to: Hex.Hex, amount: bigint) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+		const swapAmounts = parseKnownEvents(
+			mockReceipt(
+				[
+					transfer(accountAddress, dex, 1n),
+					transfer(accountAddress, recipientAddress, 2n),
+					transfer(accountAddress, dex, 3n),
+					transfer(dex, accountAddress, 4n),
+					transfer(accountAddress, dex, 5n),
+					transfer(dex, accountAddress, 6n),
+					transfer(accountAddress, dex, 7n),
+				],
+				accountAddress,
+				hash,
+			),
+		)
+			.filter((event) => event.type === 'swap')
+			.map((event) =>
+				event.parts.flatMap((part) =>
+					part.type === 'amount' ? [part.value.value] : [],
+				),
+			)
+
+		expect(swapAmounts).toEqual([
+			[1n, 4n],
+			[3n, 4n],
+			[5n, 6n],
+		])
+	})
+
 	it('preserves tip20 approvals for zone portals', () => {
 		const hash = `0x${'4'.repeat(64)}` as const
 		const amount = 500_000n
