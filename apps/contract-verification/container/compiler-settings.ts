@@ -74,32 +74,50 @@ function outputsFor(selector: string): VerificationOutput[] {
 	)
 }
 
+/** Outputs every selected contract gets, since a verification job always reads them. */
+const REQUIRED_OUTPUTS: readonly VerificationOutput[] = [
+	'evm.bytecode.object',
+	'evm.bytecode.linkReferences',
+	'evm.deployedBytecode.object',
+	'evm.deployedBytecode.linkReferences',
+	'evm.deployedBytecode.immutableReferences',
+]
+
+/** The verification outputs for one contract's requested selectors, always with the required ones. */
+function contractOutputs(selectors: unknown[]): VerificationOutput[] {
+	const selected = new Set<VerificationOutput>(REQUIRED_OUTPUTS)
+	for (const selector of selectors) {
+		if (typeof selector !== 'string') continue
+		for (const output of outputsFor(selector)) selected.add(output)
+	}
+	return VERIFICATION_OUTPUTS.filter((output) => selected.has(output))
+}
+
 /**
- * Builds the output selection for a compile: the outputs the caller asked for that a verification
- * job reads, for every contract. A caller that asks for none of them gets all of them.
+ * Builds the output selection for a compile. It keeps the files and contracts the caller selected,
+ * so only those are code-generated, and limits each contract's outputs to the ones a verification
+ * job reads, always including the bytecode it compares. File-level outputs (such as the AST) are
+ * dropped. A caller that selects no contract gets every output for every contract.
  */
 export function verificationOutputSelection(
 	requested: unknown,
 ): Record<string, Record<string, string[]>> {
-	const selected = new Set<VerificationOutput>()
+	const selection: Record<string, Record<string, string[]>> = {}
 	if (isPlainObject(requested)) {
-		for (const fileSelection of Object.values(requested)) {
-			if (!isPlainObject(fileSelection)) continue
-			for (const contractSelection of Object.values(fileSelection)) {
-				if (!Array.isArray(contractSelection)) continue
-				for (const selector of contractSelection) {
-					if (typeof selector !== 'string') continue
-					for (const output of outputsFor(selector)) selected.add(output)
-				}
+		for (const [file, fileSelection] of Object.entries(requested)) {
+			if (isBlockedObjectKey(file) || !isPlainObject(fileSelection)) continue
+			const contracts: Record<string, string[]> = {}
+			for (const [contract, selectors] of Object.entries(fileSelection)) {
+				if (contract === '' || isBlockedObjectKey(contract)) continue
+				if (!Array.isArray(selectors)) continue
+				contracts[contract] = contractOutputs(selectors)
 			}
+			if (Object.keys(contracts).length > 0) selection[file] = contracts
 		}
 	}
 
-	const outputs =
-		selected.size > 0
-			? VERIFICATION_OUTPUTS.filter((output) => selected.has(output))
-			: [...VERIFICATION_OUTPUTS]
-	return { '*': { '*': outputs } }
+	if (Object.keys(selection).length > 0) return selection
+	return { '*': { '*': [...VERIFICATION_OUTPUTS] } }
 }
 
 /** Solidity (solc and solar) settings, from the allowlist. */

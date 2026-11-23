@@ -61,17 +61,19 @@ describe('verificationOutputSelection', () => {
 		})
 	})
 
-	it('keeps the outputs a caller asked for, for every contract', () => {
+	it('keeps the files and contracts the caller selected', () => {
 		expect(
 			verificationOutputSelection({
-				'Counter.sol': {
-					Counter: ['abi', 'evm.deployedBytecode', 'evm.gasEstimates', 'ir'],
+				'src/Token.sol': {
+					Token: ['abi', 'evm.deployedBytecode', 'evm.gasEstimates', 'ir'],
 				},
 			}),
 		).toEqual({
-			'*': {
-				'*': [
+			'src/Token.sol': {
+				Token: [
 					'abi',
+					'evm.bytecode.object',
+					'evm.bytecode.linkReferences',
 					'evm.deployedBytecode.object',
 					'evm.deployedBytecode.sourceMap',
 					'evm.deployedBytecode.linkReferences',
@@ -81,10 +83,39 @@ describe('verificationOutputSelection', () => {
 		})
 	})
 
-	it('asks for every output a job reads when none is requested', () => {
-		expect(verificationOutputSelection(undefined)).toEqual({
-			'*': { '*': [...VERIFICATION_OUTPUTS] },
+	it('always selects the bytecode a job compares', () => {
+		expect(verificationOutputSelection({ '*': { '*': ['abi'] } })).toEqual({
+			'*': {
+				'*': [
+					'abi',
+					'evm.bytecode.object',
+					'evm.bytecode.linkReferences',
+					'evm.deployedBytecode.object',
+					'evm.deployedBytecode.linkReferences',
+					'evm.deployedBytecode.immutableReferences',
+				],
+			},
 		})
+	})
+
+	it('selects every output for every contract when no contract is selected', () => {
+		const all = { '*': { '*': [...VERIFICATION_OUTPUTS] } }
+		expect(verificationOutputSelection(undefined)).toEqual(all)
+		expect(verificationOutputSelection({ 'a.sol': { '': ['ast'] } })).toEqual(
+			all,
+		)
+	})
+
+	it('drops prototype keys from file and contract names', () => {
+		const requested = JSON.parse(
+			'{"__proto__":{"C":["abi"]},"a.sol":{"constructor":["abi"],"C":["abi"]}}',
+		)
+		expect(Object.keys(verificationOutputSelection(requested))).toEqual([
+			'a.sol',
+		])
+		expect(
+			Object.keys(verificationOutputSelection(requested)['a.sol'] ?? {}),
+		).toEqual(['C'])
 	})
 })
 
