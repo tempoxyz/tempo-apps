@@ -51,6 +51,13 @@ const MARKET_URL =
 
 const ISO_CURRENCY = /^[A-Z]{3}$/
 
+const USER_AGENT = 'tempo-explorer (+https://explore.tempo.xyz)'
+
+/** Spot prices to fall back on per CoinGecko ID, when CoinGecko is down. */
+const FALLBACK_SPOT: Record<string, string> = {
+	bitcoin: 'https://api.coinbase.com/v2/prices/BTC-USD/spot',
+}
+
 const CACHE_ORIGIN = 'https://explore.tempo.xyz'
 
 /** A token-day as cached: amounts as decimal strings, since JSON has no bigint. */
@@ -221,6 +228,7 @@ async function readFxRates(
 	const foreign = currencies.filter((currency) => currency !== 'USD')
 	if (foreign.length === 0) return { rates, date: null }
 	const response = await fetch(`${FX_URL}&symbols=${foreign.join(',')}`, {
+		headers: { 'User-Agent': USER_AGENT },
 		signal: AbortSignal.timeout(PRICE_DEADLINE),
 	})
 	if (!response.ok) throw new Error(`FX rates returned ${response.status}`)
@@ -233,11 +241,13 @@ async function readFxRates(
 	return { rates, date: body.date ?? null }
 }
 
-/** USD price of each market-priced asset. Throws when unavailable. */
-async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
+/** USD price of each asset from CoinGecko. Throws when unavailable. */
+async function readCoinGecko(ids: readonly string[]): Promise<UsdRates> {
 	if (ids.length === 0) return {}
 	const response = await fetch(`${MARKET_URL}&ids=${ids.join(',')}`, {
-		headers: { Accept: 'application/json' },
+		// CoinGecko refuses requests without a User-Agent with 403, and Workers
+		// send none by default.
+		headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
 		signal: AbortSignal.timeout(PRICE_DEADLINE),
 	})
 	if (!response.ok) throw new Error(`Market prices returned ${response.status}`)
@@ -247,6 +257,45 @@ async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
 		const price = body[id]?.usd
 		if (price !== undefined && price > 0) prices[id] = price
 	}
+	return prices
+}
+
+/** A spot price in USD from Coinbase. */
+async function readSpot(url: string): Promise<number> {
+	const response = await fetch(url, {
+		headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
+		signal: AbortSignal.timeout(PRICE_DEADLINE),
+	})
+	if (!response.ok) throw new Error(`Spot price returned ${response.status}`)
+	const body = (await response.json()) as { data?: { amount?: string } }
+	const price = Number(body.data?.amount)
+	if (!(price > 0)) throw new Error('Spot price missing')
+	return price
+}
+
+/**
+ * USD price of each market-priced asset: CoinGecko, with a spot price for
+ * each asset it misses that has one. Throws only when nothing is priced.
+ */
+async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
+	const prices = await readCoinGecko(ids).catch((error) => {
+		console.error('CoinGecko prices unavailable:', error)
+		return {} as UsdRates
+	})
+	const missing = ids.filter(
+		(id) => prices[id] === undefined && FALLBACK_SPOT[id],
+	)
+	await Promise.all(
+		missing.map(async (id) => {
+			try {
+				prices[id] = await readSpot(FALLBACK_SPOT[id] as string)
+			} catch (error) {
+				console.error(`Spot price for ${id} unavailable:`, error)
+			}
+		}),
+	)
+	if (ids.length > 0 && Object.keys(prices).length === 0)
+		throw new Error('Market prices unavailable')
 	return prices
 }
 

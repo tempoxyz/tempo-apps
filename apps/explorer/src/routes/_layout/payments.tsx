@@ -14,7 +14,6 @@ import {
 } from '@tempoxyz/ds'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type * as React from 'react'
-import { PriceFormatter } from '#lib/formatting'
 import {
 	isoDay,
 	type PaymentsDay,
@@ -79,12 +78,20 @@ const aopSeries = [
 	{
 		color: `#7e59e4`,
 		key: 'rwa',
-		label: 'Tokenized assets (RWAs)',
+		label: 'Tokenized assets',
 	},
 	{ color: `#e06f12`, key: 'crypto', label: 'Crypto' },
 ] as const
 
-const usd = (value: number) => PriceFormatter.format(value, { format: 'short' })
+/** Every amount on the page, in USD with one decimal, such as $18.1B. */
+const usdFormat = new Intl.NumberFormat('en-US', {
+	style: 'currency',
+	currency: 'USD',
+	notation: 'compact',
+	minimumFractionDigits: 1,
+	maximumFractionDigits: 1,
+})
+const usd = (value: number) => (value === 0 ? '$0' : usdFormat.format(value))
 
 const dayLabel = new Intl.DateTimeFormat('en-US', {
 	month: 'short',
