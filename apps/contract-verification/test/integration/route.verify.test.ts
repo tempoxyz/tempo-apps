@@ -425,6 +425,286 @@ contract Token {
 		expect(body.customCode).toBe('invalid_settings')
 	})
 
+	it('rejects an optimizerSteps sequence over the length cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: {
+										optimizerSteps: 'dhfoDgvulfnTUtnIf'.repeat(100),
+									},
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('rejects a non-string optimizerSteps with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: { optimizerSteps: ['dhfoDgvulfnTUtnIf'] },
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('rejects optimizerSteps nested more than two brackets deep with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: { optimizerSteps: '[[[C]]]' },
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('rejects optimizerSteps over the weighted step cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: { optimizerSteps: '[[C]]'.repeat(29) },
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('accepts the solc default optimizerSteps sequence', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: {
+										optimizerSteps:
+											'dhfoDgvulfnTUtnIf[xa[r]EscLMVcul [j]Tpeulxa[rul]xa[r]cLgvifMCTUca[r]LSsTFOtfDnca[r]Iulc]jmul[jul] VcTOcul jmul:fDnTOcmu',
+									},
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(202)
+	})
+
+	it('accepts a custom optimizerSteps sequence within the cap', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: { optimizerSteps: 'dhfoDgvulfnTUtnIf:fDnTOcmu' },
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(202)
+	})
+
+	it('rejects settings over the serialized size cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							padding: 'x'.repeat(64 * 1024),
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('rejects long numbers that serialize over the size cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							padding: new Array(3_000).fill(-1.7976931348623157e308),
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('rejects escaped strings that serialize over the size cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							padding: '\u0000'.repeat(12 * 1024),
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
 	it('returns 429 for a duplicate in-flight request', async () => {
 		const db = drizzle(env.CONTRACTS_DB)
 		await db.insert(DB.verificationJobsTable).values({

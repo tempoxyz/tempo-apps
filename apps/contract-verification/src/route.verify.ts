@@ -90,34 +90,123 @@ function timestampToMs(value: string): number {
 /** Upper bounds on the shape of compiler settings accepted from callers. */
 const MAX_SETTINGS_DEPTH = 64
 const MAX_SETTINGS_NODES = 100_000
+/** Upper bound on the serialized size of compiler settings, in bytes. */
+const MAX_SETTINGS_BYTES = 64 * 1024
+/**
+ * Bounds on the Yul optimizer step sequence. solc runs every step, and repeats
+ * each bracketed group up to 12 times per nesting level, so a step's cost is
+ * weighted 12^depth. solc's default sequence nests 2 deep with a weight of
+ * about 1,800.
+ */
+const MAX_OPTIMIZER_STEPS_LENGTH = 1_024
+const MAX_OPTIMIZER_STEPS_NESTING = 2
+const MAX_OPTIMIZER_STEPS_WEIGHT = 4_096
+const OPTIMIZER_STEPS_REPEAT = 12
 
 /**
- * Checks compiler settings against depth and node limits without recursion,
- * so oversized input is rejected before anything is persisted.
+ * Adds an upper bound on a string's serialized JSON size in UTF-8 bytes to a
+ * running total, stopping as soon as the total passes the cap. Escaped control
+ * characters and lone surrogates count as 6 bytes, so the bound never
+ * undercounts.
  */
-function exceedsSettingsLimits(root: unknown): boolean {
+function addJsonStringBytes(total: number, value: string): number {
+	let bytes = total + 2
+	for (let index = 0; index < value.length; index++) {
+		const code = value.charCodeAt(index)
+		if (code < 0x20 || (code >= 0xd800 && code <= 0xdfff)) bytes += 6
+		else if (code === 0x22 || code === 0x5c) bytes += 2
+		else if (code < 0x80) bytes += 1
+		else if (code < 0x800) bytes += 2
+		else bytes += 3
+		if (bytes > MAX_SETTINGS_BYTES) return bytes
+	}
+	return bytes
+}
+
+/**
+ * Checks an optimizer step sequence's length, bracket nesting and weighted
+ * step count, returning why it is rejected or undefined when it is accepted.
+ */
+function optimizerStepsError(steps: unknown): string | undefined {
+	if (steps === undefined) return undefined
+	if (typeof steps !== 'string')
+		return 'settings.optimizer.details.yulDetails.optimizerSteps must be a string'
+	if (steps.length > MAX_OPTIMIZER_STEPS_LENGTH)
+		return `settings.optimizer.details.yulDetails.optimizerSteps exceeds ${MAX_OPTIMIZER_STEPS_LENGTH} characters`
+
+	let depth = 0
+	let weight = 0
+	for (const char of steps) {
+		if (char === '[') {
+			depth += 1
+			if (depth > MAX_OPTIMIZER_STEPS_NESTING)
+				return `settings.optimizer.details.yulDetails.optimizerSteps nests brackets more than ${MAX_OPTIMIZER_STEPS_NESTING} deep`
+		} else if (char === ']') depth = Math.max(0, depth - 1)
+		else if (/[A-Za-z]/.test(char)) {
+			weight += OPTIMIZER_STEPS_REPEAT ** depth
+			if (weight > MAX_OPTIMIZER_STEPS_WEIGHT)
+				return `settings.optimizer.details.yulDetails.optimizerSteps exceeds ${MAX_OPTIMIZER_STEPS_WEIGHT} weighted steps (each step counts ${OPTIMIZER_STEPS_REPEAT}x per enclosing bracket)`
+		}
+	}
+	return undefined
+}
+
+/**
+ * Checks compiler settings against depth, node, byte and optimizer step limits
+ * without recursion, so oversized input is rejected before anything is
+ * persisted. Returns why the settings are rejected, or undefined.
+ */
+function settingsLimitsError(root: unknown): string | undefined {
+	const tooLarge = `stdJsonInput.settings exceeds the maximum nesting depth (${MAX_SETTINGS_DEPTH}) or size (${MAX_SETTINGS_NODES} values or ${MAX_SETTINGS_BYTES} bytes)`
 	const pending: Array<{ value: unknown; depth: number }> = [
 		{ value: root, depth: 0 },
 	]
 	let visited = 0
+	// Upper bound on the serialized size, counted during the walk so oversized
+	// input is rejected without building its JSON.
+	let bytes = 0
 
 	while (pending.length > 0) {
 		const current = pending.pop()
 		if (!current) break
 		visited += 1
 		if (current.depth > MAX_SETTINGS_DEPTH || visited > MAX_SETTINGS_NODES)
-			return true
+			return tooLarge
+
+		if (typeof current.value === 'string')
+			bytes = addJsonStringBytes(bytes, current.value)
+		else if (typeof current.value === 'number')
+			bytes += String(current.value).length + 1
+		else bytes += 6
 
 		if (typeof current.value === 'object' && current.value !== null) {
-			const children = Array.isArray(current.value)
-				? current.value
-				: Object.values(current.value)
-			for (const child of children)
-				pending.push({ value: child, depth: current.depth + 1 })
+			if (Array.isArray(current.value)) {
+				for (const child of current.value)
+					pending.push({ value: child, depth: current.depth + 1 })
+			} else {
+				for (const [key, child] of Object.entries(current.value)) {
+					bytes = addJsonStringBytes(bytes, key) + 1
+					if (bytes > MAX_SETTINGS_BYTES) return tooLarge
+					pending.push({ value: child, depth: current.depth + 1 })
+				}
+			}
 		}
+
+		if (bytes > MAX_SETTINGS_BYTES) return tooLarge
 	}
 
-	return false
+	return optimizerStepsError(getOptimizerSteps(root))
+}
+
+/** Reads settings.optimizer.details.yulDetails.optimizerSteps, if present. */
+function getOptimizerSteps(settings: unknown): unknown {
+	let current: unknown = settings
+	for (const key of ['optimizer', 'details', 'yulDetails', 'optimizerSteps']) {
+		if (typeof current !== 'object' || current === null) return undefined
+		if (Array.isArray(current) || !Object.hasOwn(current, key)) return undefined
+		current = (current as Record<string, unknown>)[key]
+	}
+	return current
 }
 
 function sanitizeVerificationInput<T extends { stdJsonInput: StdJsonInput }>(
@@ -248,13 +337,11 @@ verifyRoute
 			}
 			Hex.assert(address)
 
-			if (exceedsSettingsLimits(parsedBody.data.stdJsonInput.settings)) {
-				return sourcifyError(
-					context,
-					400,
-					'invalid_settings',
-					`stdJsonInput.settings exceeds the maximum nesting depth (${MAX_SETTINGS_DEPTH}) or size (${MAX_SETTINGS_NODES} values)`,
-				)
+			const settingsError = settingsLimitsError(
+				parsedBody.data.stdJsonInput.settings,
+			)
+			if (settingsError) {
+				return sourcifyError(context, 400, 'invalid_settings', settingsError)
 			}
 			const verificationInput = sanitizeVerificationInput(parsedBody.data)
 
