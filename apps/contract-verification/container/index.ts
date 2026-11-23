@@ -6,6 +6,7 @@ import {
 	getVyperPath,
 	parseSolarVersion,
 } from './compiler.ts'
+import { allowlistSoliditySettings } from './compiler-settings.ts'
 import {
 	compileFailureResponse,
 	getActiveCompiles,
@@ -72,11 +73,19 @@ const server = Bun.serve({
 					}
 				} else compilerPath = await getSolcPath(body.compilerVersion)
 
+				// Only settings that change bytecode or metadata reach the compiler, whatever the caller sent.
+				const input = {
+					...body.input,
+					settings: allowlistSoliditySettings(
+						(body.input as { settings?: unknown }).settings,
+					),
+				}
+
 				// solc and solar --standard-json read from stdin
 				const result = await runCompiler({
 					command: [compilerPath, '--standard-json'],
 					env,
-					input: body.input,
+					input,
 					signal: request.signal,
 				})
 				if (result.kind !== 'done') {
