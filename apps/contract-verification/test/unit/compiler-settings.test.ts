@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+	MAX_SELECTED_CONTRACTS,
 	VERIFICATION_OUTPUTS,
 	allowlistSoliditySettings,
 	sanitizeCompilerSettings,
@@ -103,6 +104,19 @@ describe('verificationOutputSelection', () => {
 		expect(verificationOutputSelection(undefined)).toEqual(all)
 		expect(verificationOutputSelection({ 'a.sol': { '': ['ast'] } })).toEqual(
 			all,
+		)
+	})
+
+	it('keeps at most MAX_SELECTED_CONTRACTS contract entries', () => {
+		const contracts = Object.fromEntries(
+			Array.from({ length: MAX_SELECTED_CONTRACTS * 4 }, (_, i) => [
+				`C${i}`,
+				[],
+			]),
+		)
+		const selection = verificationOutputSelection({ 'a.sol': contracts })
+		expect(Object.keys(selection['a.sol'] ?? {})).toHaveLength(
+			MAX_SELECTED_CONTRACTS,
 		)
 	})
 

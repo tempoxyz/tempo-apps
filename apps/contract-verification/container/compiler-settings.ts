@@ -74,6 +74,9 @@ function outputsFor(selector: string): VerificationOutput[] {
 	)
 }
 
+/** Most contract entries a built output selection keeps; real inputs select far fewer. */
+export const MAX_SELECTED_CONTRACTS = 1_024
+
 /** Outputs every selected contract gets, since a verification job always reads them. */
 const REQUIRED_OUTPUTS: readonly VerificationOutput[] = [
 	'evm.bytecode.object',
@@ -97,12 +100,14 @@ function contractOutputs(selectors: unknown[]): VerificationOutput[] {
  * Builds the output selection for a compile. It keeps the files and contracts the caller selected,
  * so only those are code-generated, and limits each contract's outputs to the ones a verification
  * job reads, always including the bytecode it compares. File-level outputs (such as the AST) are
- * dropped. A caller that selects no contract gets every output for every contract.
+ * dropped, and at most MAX_SELECTED_CONTRACTS contract entries are kept. A caller that selects
+ * no contract gets every output for every contract.
  */
 export function verificationOutputSelection(
 	requested: unknown,
 ): Record<string, Record<string, string[]>> {
 	const selection: Record<string, Record<string, string[]>> = {}
+	let selectedContracts = 0
 	if (isPlainObject(requested)) {
 		for (const [file, fileSelection] of Object.entries(requested)) {
 			if (isBlockedObjectKey(file) || !isPlainObject(fileSelection)) continue
@@ -110,6 +115,8 @@ export function verificationOutputSelection(
 			for (const [contract, selectors] of Object.entries(fileSelection)) {
 				if (contract === '' || isBlockedObjectKey(contract)) continue
 				if (!Array.isArray(selectors)) continue
+				if (selectedContracts >= MAX_SELECTED_CONTRACTS) break
+				selectedContracts += 1
 				contracts[contract] = contractOutputs(selectors)
 			}
 			if (Object.keys(contracts).length > 0) selection[file] = contracts
