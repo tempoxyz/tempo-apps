@@ -54,11 +54,22 @@ import {
 const logger = getLogger(['tempo'])
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
+/** Whether a fetch failed because its `AbortSignal.timeout` fired. */
+export function isTimeoutError(error: unknown): boolean {
+	return error instanceof Error && error.name === 'TimeoutError'
+}
+
 /** Jobs older than this are considered stale and can be retried (15 minutes). */
 const JOB_TTL_MS = 15 * 60 * 1_000
 /** Number of container instances to load-balance across. */
 const CONTAINER_INSTANCE_COUNT =
 	wranglerJSON.containers.at(0)?.max_instances ?? 10
+/**
+ * How long the Worker waits for a container compile. The container kills its compiler after
+ * 5 minutes (container/run-compiler.ts); this aborts the request a little later in case the
+ * container never answers, which also kills the compiler since the container sees the disconnect.
+ */
+export const CONTAINER_COMPILE_TIMEOUT_MS = 6 * 60 * 1_000
 
 /**
  * solar reports a solc-compatible version with its commit and own version as build metadata, such
@@ -961,6 +972,7 @@ async function runVerificationJob(
 						contractIdentifier,
 						input: stdJsonInput,
 					}),
+					signal: AbortSignal.timeout(CONTAINER_COMPILE_TIMEOUT_MS),
 				}),
 			)
 		} catch (error) {
@@ -974,7 +986,7 @@ async function runVerificationJob(
 				.update(verificationJobsTable)
 				.set({
 					completedAt: new Date().toISOString(),
-					errorCode: 'container_error',
+					errorCode: isTimeoutError(error) ? 'timeout' : 'container_error',
 					errorData: JSON.stringify({
 						message:
 							error instanceof Error
@@ -993,7 +1005,8 @@ async function runVerificationJob(
 				.update(verificationJobsTable)
 				.set({
 					completedAt: new Date().toISOString(),
-					errorCode: 'compilation_failed',
+					errorCode:
+						compileResponse.status === 504 ? 'timeout' : 'compilation_failed',
 					errorData: JSON.stringify({ message: errorText }),
 					compilationTime: Date.now() - startTime,
 				})

@@ -7,6 +7,11 @@ import {
 	parseSolarVersion,
 } from './compiler.ts'
 import { allowlistSoliditySettings } from './compiler-settings.ts'
+import {
+	compileFailureResponse,
+	getActiveCompiles,
+	runCompiler,
+} from './run-compiler.ts'
 
 const headers = new Headers({
 	'X-Request-Id': Bun.randomUUIDv7(),
@@ -77,16 +82,17 @@ const server = Bun.serve({
 				}
 
 				// solc and solar --standard-json read from stdin
-				const proc = Bun.spawn([compilerPath, '--standard-json'], {
+				const result = await runCompiler({
+					command: [compilerPath, '--standard-json'],
 					env,
-					stdin: new TextEncoder().encode(JSON.stringify(input)),
-					stdout: 'pipe',
-					stderr: 'pipe',
+					input,
+					signal: request.signal,
 				})
-
-				const stdout = await new Response(proc.stdout).text()
-				const stderr = await new Response(proc.stderr).text()
-				await proc.exited
+				if (result.kind !== 'done') {
+					log('warn', 'compile_not_completed', { reason: result.kind })
+					return compileFailureResponse(result)
+				}
+				const { stdout, stderr } = result
 
 				if (stderr) log('error', 'compile_stderr', { stderr })
 
@@ -134,15 +140,16 @@ const server = Bun.serve({
 				const vyperPath = await getVyperPath(body.compilerVersion)
 
 				// vyper --standard-json reads from stdin
-				const proc = Bun.spawn([vyperPath, '--standard-json'], {
-					stdin: new TextEncoder().encode(JSON.stringify(body.input)),
-					stdout: 'pipe',
-					stderr: 'pipe',
+				const result = await runCompiler({
+					command: [vyperPath, '--standard-json'],
+					input: body.input,
+					signal: request.signal,
 				})
-
-				const stdout = await new Response(proc.stdout).text()
-				const stderr = await new Response(proc.stderr).text()
-				await proc.exited
+				if (result.kind !== 'done') {
+					log('warn', 'compile_vyper_not_completed', { reason: result.kind })
+					return compileFailureResponse(result)
+				}
+				const { stdout, stderr } = result
 
 				// Vyper < 0.4.0 outputs warnings to stderr, so only log if it looks like an error
 				if (stderr && !stderr.includes('Warning'))
@@ -170,7 +177,9 @@ const server = Bun.serve({
 		},
 		'/health': new Response('ok'),
 		'/metrics': (_, server) =>
-			new Response(`Active requests: ${server.pendingRequests}`),
+			new Response(
+				`Active requests: ${server.pendingRequests}\nActive compiles: ${getActiveCompiles()}`,
+			),
 	},
 	error: (error) => {
 		log('error', 'unhandled_server_error', {
