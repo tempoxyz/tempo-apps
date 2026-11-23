@@ -2,7 +2,7 @@
 
 Tempo Apps is the monorepo for the applications and services that make up Tempo's developer-facing infrastructure: block exploration, wallet/account tooling, and network services. If you're building on Tempo and need a reference implementation or a hosted service (explorer, fee sponsorship, token registry), this is where it lives. These apps are built and maintained by the Tempo team and complement the core tempo node and the mpp/SDK repos.
 
-See the [Tempo developer documentation](https://tempo.xyz/developers/docs) for integration guides and protocol documentation.
+See the [Tempo developer documentation](https://tempo.com/developers) for integration guides and protocol documentation.
 
 ## Apps
 
