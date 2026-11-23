@@ -53,6 +53,12 @@ const RANGES = {
 const LIFETIME_TICK = 3
 
 /**
+ * Charts start in March 2026, when the data warehouse's TPV starts; earlier
+ * months only hold test transfers. Lifetime TPV still counts them.
+ */
+const CHART_START = '2026-03-01'
+
+/**
  * Series colors: the TDS accent, special and warning content colors. BarChart
  * paints SVG fills from strings, which can't hold token references.
  */
@@ -157,6 +163,22 @@ namespace styles {
 		minWidth: '0',
 		selectors: {
 			'& [role="figure"] > :last-child': { display: 'none !custom' },
+		},
+	})
+	/**
+	 * BarChart draws its top gridline at the plot's top edge, and Recharts
+	 * moves that line's label down to keep it inside the SVG, so the label
+	 * reads about 11px below its line. This moves it back onto the line and
+	 * lets it overflow into the card's padding.
+	 */
+	export const chart = style({
+		minWidth: '0',
+		selectors: {
+			'& svg.recharts-surface': { overflow: 'visible !custom' },
+			'& .recharts-yAxis-tick-labels > .recharts-cartesian-axis-tick-label:last-child text':
+				{
+					transform: 'translateY(-11px) !custom',
+				},
 		},
 	})
 	export const plot = style({ height: '226px !custom' })
@@ -296,12 +318,8 @@ function PaymentsPage(): React.JSX.Element {
 								day. Lifetime TPV adds up each month since launch, and each
 								period's AOP is its value at the period's close. Days are UTC
 								and charts count full days only, so the latest week and month
-								run to yesterday. Non-dollar stablecoins are converted at
-								{query.data?.fxDate
-									? ` ECB reference rates of ${query.data.fxDate}`
-									: ' ECB reference rates'}
-								, and tokenized assets and crypto are valued at their latest
-								market price.
+								run to yesterday. Assets are valued at their latest market
+								price.
 								{query.data && query.data.unpriced.length > 0
 									? ' Some prices are unavailable right now, so those assets are left out.'
 									: ''}
@@ -330,10 +348,13 @@ function lifetimeCharts(days: readonly PaymentsDay[]): {
 	aop: Chart
 } {
 	let total = 0
-	const data = periods(days, 'month').map((entry) => {
-		total += entry.tpv
-		return { ...datum(entry, 'month'), tpv: total }
-	})
+	const data = periods(days, 'month')
+		.map((entry) => {
+			total += entry.tpv
+			return { ...datum(entry, 'month'), tpv: total, start: entry.start }
+		})
+		.filter((entry) => entry.start >= CHART_START)
+		.map(({ start: _, ...entry }) => entry)
 	const chart = { data, ticks: everyNth(data, LIFETIME_TICK) }
 	return { tpv: chart, aop: chart }
 }
@@ -342,6 +363,7 @@ function lifetimeCharts(days: readonly PaymentsDay[]): {
 function rangeChart(days: readonly PaymentsDay[], period: Period): Chart {
 	const { bars, tick } = RANGES[period]
 	const data = periods(days, period)
+		.filter((entry) => entry.start >= CHART_START)
 		.slice(-bars)
 		.map((entry) => datum(entry, period))
 	return { data, ticks: everyNth(data, tick) }
@@ -408,7 +430,9 @@ function ChartCard(props: ChartCardProps): React.JSX.Element {
 					</>
 				)}
 			</Surface.Header>
-			{props.single ? <div {...styles.single()}>{plot}</div> : plot}
+			<div {...styles.chart()}>
+				{props.single ? <div {...styles.single()}>{plot}</div> : plot}
+			</div>
 		</Surface>
 	)
 }
