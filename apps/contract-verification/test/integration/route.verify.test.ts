@@ -425,6 +425,132 @@ contract Token {
 		expect(body.customCode).toBe('invalid_settings')
 	})
 
+	it('rejects an optimizerSteps sequence over the length cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: {
+										optimizerSteps: 'dhfoDgvulfnTUtnIf'.repeat(100),
+									},
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('rejects a non-string optimizerSteps with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: { optimizerSteps: ['dhfoDgvulfnTUtnIf'] },
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
+	it('accepts a custom optimizerSteps sequence within the cap', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							optimizer: {
+								enabled: true,
+								runs: 200,
+								details: {
+									yul: true,
+									yulDetails: { optimizerSteps: 'dhfoDgvulfnTUtnIf:fDnTOcmu' },
+								},
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(202)
+	})
+
+	it('rejects settings over the serialized size cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							padding: 'x'.repeat(64 * 1024),
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
 	it('returns 429 for a duplicate in-flight request', async () => {
 		const db = drizzle(env.CONTRACTS_DB)
 		await db.insert(DB.verificationJobsTable).values({

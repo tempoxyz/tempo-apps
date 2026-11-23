@@ -108,6 +108,14 @@ function sanitizeJsonValue(value: unknown): unknown {
 /** Upper bounds on the shape of compiler settings accepted from callers. */
 const MAX_SETTINGS_DEPTH = 64
 const MAX_SETTINGS_NODES = 100_000
+/** Upper bound on the serialized size of compiler settings, in bytes. */
+const MAX_SETTINGS_BYTES = 64 * 1024
+/**
+ * Upper bound on the Yul optimizer step sequence. solc runs every step in it,
+ * so compile time grows with its length; solc's own default is a few hundred
+ * characters.
+ */
+const MAX_OPTIMIZER_STEPS_LENGTH = 1_024
 
 /**
  * Checks compiler settings against depth and node limits without recursion,
@@ -135,7 +143,32 @@ function exceedsSettingsLimits(root: unknown): boolean {
 		}
 	}
 
+	if (
+		new TextEncoder().encode(JSON.stringify(root)).byteLength >
+		MAX_SETTINGS_BYTES
+	)
+		return true
+
+	const optimizerSteps = getOptimizerSteps(root)
+	if (
+		optimizerSteps !== undefined &&
+		(typeof optimizerSteps !== 'string' ||
+			optimizerSteps.length > MAX_OPTIMIZER_STEPS_LENGTH)
+	)
+		return true
+
 	return false
+}
+
+/** Reads settings.optimizer.details.yulDetails.optimizerSteps, if present. */
+function getOptimizerSteps(settings: unknown): unknown {
+	let current: unknown = settings
+	for (const key of ['optimizer', 'details', 'yulDetails', 'optimizerSteps']) {
+		if (typeof current !== 'object' || current === null) return undefined
+		if (Array.isArray(current) || !Object.hasOwn(current, key)) return undefined
+		current = (current as Record<string, unknown>)[key]
+	}
+	return current
 }
 
 function sanitizeCompilerSettings<T extends object>(settings: T): T {
@@ -272,7 +305,7 @@ verifyRoute
 					context,
 					400,
 					'invalid_settings',
-					`stdJsonInput.settings exceeds the maximum nesting depth (${MAX_SETTINGS_DEPTH}) or size (${MAX_SETTINGS_NODES} values)`,
+					`stdJsonInput.settings exceeds the maximum nesting depth (${MAX_SETTINGS_DEPTH}), size (${MAX_SETTINGS_NODES} values or ${MAX_SETTINGS_BYTES} bytes) or optimizerSteps length (${MAX_OPTIMIZER_STEPS_LENGTH} characters)`,
 				)
 			}
 			const verificationInput = sanitizeVerificationInput(parsedBody.data)
