@@ -569,6 +569,31 @@ describe('extractConstructorArgumentsTransformation', () => {
 		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
 	})
 
+	it('ignores struct field names when validating arguments', () => {
+		const abi = [
+			{
+				type: 'constructor',
+				inputs: [
+					{
+						type: 'tuple',
+						name: 'config',
+						components: [
+							{ type: 'uint256', name: '__proto__' },
+							{ type: 'uint256', name: 'constructor' },
+						],
+					},
+				],
+			},
+		]
+		const args = `${'1'.padStart(64, '0')}${'2'.padStart(64, '0')}`
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${args}`,
+			abi,
+		)
+		expect(result.valid).toBe(true)
+	})
+
 	it('accepts string arguments that begin with a NUL byte', () => {
 		const abi = [
 			{

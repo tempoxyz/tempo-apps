@@ -741,10 +741,12 @@ export function extractConstructorArgumentsTransformation(
 
 type AbiInput = { type: string; name?: string; components?: AbiInput[] }
 
-/** Replaces string (and string array) types with bytes, recursively through tuple components. */
+/**
+ * The types alone, recursively through tuple components, with string (and string array) types
+ * replaced by bytes. Names are dropped so field names such as __proto__ never affect decoding.
+ */
 function stringsAsBytes(input: AbiInput): AbiInput {
 	return {
-		...input,
 		type: input.type.replace(/^string(?=$|\[)/, 'bytes'),
 		...(input.components
 			? { components: input.components.map(stringsAsBytes) }
