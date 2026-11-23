@@ -5,7 +5,7 @@ import {
 	type PaymentToken,
 	paymentsTotals,
 	units,
-	weeklyTpv,
+	periods,
 } from '#lib/payments.ts'
 
 const usd: PaymentToken = {
@@ -167,19 +167,32 @@ describe('paymentsTotals', () => {
 	})
 })
 
-describe('weeklyTpv', () => {
-	it('groups Monday-to-Sunday weeks', () => {
-		const days = dayRange('2026-11-15', '2026-11-24').map((day) => ({
-			day,
-			tpv: 1,
-			stablecoin: 0,
-			rwa: 0,
-			crypto: 0,
-		}))
-		expect(weeklyTpv(days)).toEqual([
-			{ week: '2026-11-09', tpv: 1 },
-			{ week: '2026-11-16', tpv: 7 },
-			{ week: '2026-11-23', tpv: 2 },
+describe('periods', () => {
+	const days = dayRange('2026-10-30', '2026-11-03').map((day, i) => ({
+		day,
+		tpv: 1,
+		stablecoin: 10 + i,
+		rwa: 1,
+		crypto: 0,
+	}))
+
+	it("sums TPV and keeps the AOP of each week's last day", () => {
+		expect(periods(days, 'week')).toEqual([
+			{ start: '2026-10-26', tpv: 3, stablecoin: 12, rwa: 1, crypto: 0 },
+			{ start: '2026-11-02', tpv: 2, stablecoin: 14, rwa: 1, crypto: 0 },
 		])
+	})
+
+	it('groups calendar months', () => {
+		expect(
+			periods(days, 'month').map((p) => [p.start, p.tpv, p.stablecoin]),
+		).toEqual([
+			['2026-10-01', 2, 11],
+			['2026-11-01', 3, 14],
+		])
+	})
+
+	it('keeps days as they are', () => {
+		expect(periods(days, 'day')).toHaveLength(5)
 	})
 })

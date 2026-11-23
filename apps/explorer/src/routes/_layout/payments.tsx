@@ -18,8 +18,10 @@ import { PriceFormatter } from '#lib/formatting'
 import {
 	isoDay,
 	type PaymentsDay,
+	type PaymentsPeriod,
+	type Period,
 	paymentsTotals,
-	weeklyTpv,
+	periods,
 } from '#lib/payments'
 import { paymentsQueryOptions } from '#lib/queries/payments'
 
@@ -37,13 +39,18 @@ export const Route = createFileRoute('/_layout/payments')({
 /** How long navigation waits for data before showing the page without it. */
 const LOADER_WAIT = 300
 
-/** Days in the daily charts, labeled every seventh day. */
-const CHART_DAYS = 28
-const DAY_TICK = 7
+/** Bars in each range, and how often a bar is labeled, as TDS advises. */
+const RANGES = {
+	day: { bars: 28, tick: 7 },
+	week: { bars: 12, tick: 3 },
+	month: { bars: 12, tick: 3 },
+} as const satisfies Record<Period, { bars: number; tick: number }>
 
-/** Weeks in the weekly chart, labeled every third week. */
-const CHART_WEEKS = 12
-const WEEK_TICK = 3
+/**
+ * The lifetime charts show one bar per month, labeled every third, so they
+ * keep readable bars at phone width.
+ */
+const LIFETIME_TICK = 3
 
 /**
  * Series colors: the TDS accent, special and warning content colors. BarChart
@@ -53,7 +60,7 @@ const tpvSeries = [
 	{
 		color: `#4471ed`,
 		key: 'tpv',
-		label: 'Total payment volume',
+		label: 'TPV',
 	},
 ] as const
 
@@ -80,7 +87,17 @@ const dayLabel = new Intl.DateTimeFormat('en-US', {
 })
 const label = (day: string) => dayLabel.format(Date.parse(`${day}T00:00:00Z`))
 
-type Range = 'daily' | 'weekly'
+const monthLabel = new Intl.DateTimeFormat('en-US', {
+	month: 'short',
+	year: 'numeric',
+	timeZone: 'UTC',
+})
+const periodLabel = (start: string, period: Period) =>
+	period === 'month'
+		? monthLabel.format(Date.parse(`${start}T00:00:00Z`))
+		: label(start)
+
+const rangeLabels = { day: 'Daily', week: 'Weekly', month: 'Monthly' } as const
 
 namespace styles {
 	export const page = style({
@@ -147,10 +164,8 @@ namespace styles {
 
 function PaymentsPage(): React.JSX.Element {
 	const query = useQuery(paymentsQueryOptions())
-	const tpvTitleId = useId()
-	const aopTitleId = useId()
-	const rangeLabelId = useId()
-	const [range, setRange] = useState<Range>('daily')
+	const [tpvRange, setTpvRange] = useState<Period>('day')
+	const [aopRange, setAopRange] = useState<Period>('day')
 	const days = query.data?.days
 	const failed = query.isError && !query.data
 
@@ -161,9 +176,21 @@ function PaymentsPage(): React.JSX.Element {
 				: undefined,
 		[days, query.data?.asOf],
 	)
-	const charts = useMemo(() => (days ? chartData(days) : undefined), [days])
+	// Charts count full UTC days only; the last day is today so far.
+	const closed = useMemo(() => days?.slice(0, -1), [days])
+	const lifetime = useMemo(
+		() => (closed ? lifetimeCharts(closed) : undefined),
+		[closed],
+	)
+	const tpvChart = useMemo(
+		() => (closed ? rangeChart(closed, tpvRange) : undefined),
+		[closed, tpvRange],
+	)
+	const aopChart = useMemo(
+		() => (closed ? rangeChart(closed, aopRange) : undefined),
+		[closed, aopRange],
+	)
 	const empty = query.isSuccess && (days?.length ?? 0) === 0
-	const tpvChart = range === 'daily' ? charts?.daily : charts?.weekly
 
 	return (
 		<div {...styles.page()}>
@@ -230,76 +257,46 @@ function PaymentsPage(): React.JSX.Element {
 								/>
 							</Grid>
 
-							<Surface
-								size="medium"
-								render={<section aria-labelledby={tpvTitleId} />}
-								{...styles.card()}
-							>
-								<Surface.Header>
-									<Surface.Title id={tpvTitleId}>
-										Total payment volume
-									</Surface.Title>
-									<span hidden id={rangeLabelId}>
-										Range
-									</span>
-									<ChoiceGroup.Root
-										aria-labelledby={rangeLabelId}
-										size="small"
-										value={range}
-										onValueChange={(value) =>
-											setRange(value === 'weekly' ? 'weekly' : 'daily')
-										}
-									>
-										<ChoiceGroup.Item value="daily">Daily</ChoiceGroup.Item>
-										<ChoiceGroup.Item value="weekly">Weekly</ChoiceGroup.Item>
-									</ChoiceGroup.Root>
-								</Surface.Header>
-								<div {...styles.single()}>
-									{tpvChart ? (
-										<BarChart
-											aria-labelledby={tpvTitleId}
-											data={tpvChart.data}
-											format={usd}
-											index="label"
-											series={tpvSeries}
-											ticks={tpvChart.ticks}
-										/>
-									) : (
-										<ChartSkeleton />
-									)}
-								</div>
-							</Surface>
+							<Grid fit="large" gap="16">
+								<ChartCard
+									title="Lifetime TPV"
+									single
+									chart={lifetime?.tpv}
+									series={tpvSeries}
+								/>
+								<ChartCard
+									title="TPV"
+									single
+									chart={tpvChart}
+									series={tpvSeries}
+									range={tpvRange}
+									onRangeChange={setTpvRange}
+								/>
+							</Grid>
 
-							<Surface
-								size="medium"
-								render={<section aria-labelledby={aopTitleId} />}
-								{...styles.card()}
-							>
-								<Surface.Header>
-									<Surface.Title id={aopTitleId}>
-										Assets on platform
-									</Surface.Title>
-								</Surface.Header>
-								{charts ? (
-									<BarChart
-										aria-labelledby={aopTitleId}
-										data={charts.aop.data}
-										format={usd}
-										index="label"
-										series={aopSeries}
-										ticks={charts.aop.ticks}
-									/>
-								) : (
-									<ChartSkeleton />
-								)}
-							</Surface>
+							<Grid fit="large" gap="16">
+								<ChartCard
+									title="Lifetime AOP"
+									chart={lifetime?.aop}
+									series={aopSeries}
+								/>
+								<ChartCard
+									title="AOP"
+									chart={aopChart}
+									series={aopSeries}
+									range={aopRange}
+									onRangeChange={setAopRange}
+								/>
+							</Grid>
 
 							<p {...styles.note()}>
 								TPV is the volume of every transfer of the stablecoins on Tempo,
 								excluding mints and burns. AOP is the value of the stablecoins,
 								tokenized assets and crypto held on Tempo at the end of each
-								day. Days are UTC; daily and weekly figures count full days
-								only. Non-dollar stablecoins are converted at
+								day. Lifetime TPV adds up each month since launch, and each
+								period's AOP is its value at the period's close. Days are UTC
+								and charts count full days only, so the latest week and month
+								run to yesterday. Non-dollar stablecoins are converted at
 								{query.data?.fxDate
 									? ` ECB reference rates of ${query.data.fxDate}`
 									: ' ECB reference rates'}
@@ -317,53 +314,115 @@ function PaymentsPage(): React.JSX.Element {
 	)
 }
 
-type Chart<datum> = { data: datum[]; ticks: string[] }
+type ChartDatum = {
+	label: string
+	tpv: number
+	stablecoin: number
+	rwa: number
+	crypto: number
+}
 
-/** The last full days and weeks; the current partial ones are left out. */
-function chartData(days: readonly PaymentsDay[]): {
-	daily: Chart<{ label: string; tpv: number }>
-	weekly: Chart<{ label: string; tpv: number }>
-	aop: Chart<{ label: string; stablecoin: number; rwa: number; crypto: number }>
+type Chart = { data: ChartDatum[]; ticks: string[] }
+
+/** Monthly bars since launch: cumulative TPV and AOP at each month's close. */
+function lifetimeCharts(days: readonly PaymentsDay[]): {
+	tpv: Chart
+	aop: Chart
 } {
-	const recent = days.slice(0, -1).slice(-CHART_DAYS)
-	const dayTicks = everyNth(
-		recent.map((entry) => label(entry.day)),
-		DAY_TICK,
-	)
-	const weeks = weeklyTpv(days).slice(0, -1).slice(-CHART_WEEKS)
+	let total = 0
+	const data = periods(days, 'month').map((entry) => {
+		total += entry.tpv
+		return { ...datum(entry, 'month'), tpv: total }
+	})
+	const chart = { data, ticks: everyNth(data, LIFETIME_TICK) }
+	return { tpv: chart, aop: chart }
+}
+
+/** The latest bars of a range: days, weeks or months. */
+function rangeChart(days: readonly PaymentsDay[], period: Period): Chart {
+	const { bars, tick } = RANGES[period]
+	const data = periods(days, period)
+		.slice(-bars)
+		.map((entry) => datum(entry, period))
+	return { data, ticks: everyNth(data, tick) }
+}
+
+function datum(entry: PaymentsPeriod, period: Period): ChartDatum {
 	return {
-		daily: {
-			data: recent.map((entry) => ({
-				label: label(entry.day),
-				tpv: entry.tpv,
-			})),
-			ticks: dayTicks,
-		},
-		weekly: {
-			data: weeks.map((entry) => ({
-				label: label(entry.week),
-				tpv: entry.tpv,
-			})),
-			ticks: everyNth(
-				weeks.map((entry) => label(entry.week)),
-				WEEK_TICK,
-			),
-		},
-		aop: {
-			data: recent.map((entry) => ({
-				label: label(entry.day),
-				stablecoin: entry.stablecoin,
-				rwa: entry.rwa,
-				crypto: entry.crypto,
-			})),
-			ticks: dayTicks,
-		},
+		label: periodLabel(entry.start, period),
+		tpv: entry.tpv,
+		stablecoin: entry.stablecoin,
+		rwa: entry.rwa,
+		crypto: entry.crypto,
 	}
 }
 
 /** Every nth label, counted back from the last so the latest bar is labeled. */
-function everyNth(labels: readonly string[], n: number): string[] {
-	return labels.filter((_, index) => (labels.length - 1 - index) % n === 0)
+function everyNth(data: readonly ChartDatum[], n: number): string[] {
+	return data
+		.filter((_, index) => (data.length - 1 - index) % n === 0)
+		.map((entry) => entry.label)
+}
+
+function ChartCard(props: ChartCardProps): React.JSX.Element {
+	const titleId = useId()
+	const rangeId = useId()
+	const { chart, range, onRangeChange } = props
+	const plot = chart ? (
+		<BarChart
+			aria-labelledby={titleId}
+			data={chart.data}
+			format={usd}
+			index="label"
+			series={props.series}
+			ticks={chart.ticks}
+		/>
+	) : (
+		<ChartSkeleton />
+	)
+	return (
+		<Surface
+			size="medium"
+			render={<section aria-labelledby={titleId} />}
+			{...styles.card()}
+		>
+			<Surface.Header>
+				<Surface.Title id={titleId}>{props.title}</Surface.Title>
+				{range && onRangeChange && (
+					<>
+						<span hidden id={rangeId}>
+							{props.title} range
+						</span>
+						<ChoiceGroup.Root
+							aria-labelledby={rangeId}
+							size="small"
+							value={range}
+							onValueChange={(value) => onRangeChange(value as Period)}
+						>
+							{(Object.keys(rangeLabels) as Period[]).map((period) => (
+								<ChoiceGroup.Item key={period} value={period}>
+									{rangeLabels[period]}
+								</ChoiceGroup.Item>
+							))}
+						</ChoiceGroup.Root>
+					</>
+				)}
+			</Surface.Header>
+			{props.single ? <div {...styles.single()}>{plot}</div> : plot}
+		</Surface>
+	)
+}
+
+type ChartCardProps = {
+	title: string
+	chart: Chart | undefined
+	series:
+		| BarChart.Series<'tpv' | 'stablecoin' | 'rwa' | 'crypto'>[]
+		| readonly BarChart.Series<'tpv' | 'stablecoin' | 'rwa' | 'crypto'>[]
+	/** One series: its legend would repeat the title, so it is hidden. */
+	single?: boolean | undefined
+	range?: Period | undefined
+	onRangeChange?: ((range: Period) => void) | undefined
 }
 
 function ChartSkeleton(): React.JSX.Element {

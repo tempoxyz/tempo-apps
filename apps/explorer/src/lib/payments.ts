@@ -270,18 +270,50 @@ export function paymentsTotals(
 	}
 }
 
-/** One Monday-to-Sunday UTC week of TPV, labeled by its Monday. */
-export type PaymentsWeek = { week: string; tpv: number }
+export type Period = 'day' | 'week' | 'month'
 
-export function weeklyTpv(days: readonly PaymentsDay[]): PaymentsWeek[] {
-	const weeks: PaymentsWeek[] = []
+/** One UTC day, Monday-to-Sunday week or calendar month. */
+export type PaymentsPeriod = {
+	/** YYYY-MM-DD of the period's first day. */
+	start: string
+	/** TPV over the period's days. */
+	tpv: number
+	/** AOP at the close of the period's last day. */
+	stablecoin: number
+	rwa: number
+	crypto: number
+}
+
+/** Groups days into periods: TPV summed, AOP at each period's last day. */
+export function periods(
+	days: readonly PaymentsDay[],
+	period: Period,
+): PaymentsPeriod[] {
+	const out: PaymentsPeriod[] = []
 	for (const entry of days) {
-		const week = mondayOf(entry.day)
-		const last = weeks.at(-1)
-		if (last?.week === week) last.tpv += entry.tpv
-		else weeks.push({ week, tpv: entry.tpv })
+		const start = startOf(entry.day, period)
+		const last = out.at(-1)
+		if (last?.start === start) {
+			last.tpv += entry.tpv
+			last.stablecoin = entry.stablecoin
+			last.rwa = entry.rwa
+			last.crypto = entry.crypto
+		} else
+			out.push({
+				start,
+				tpv: entry.tpv,
+				stablecoin: entry.stablecoin,
+				rwa: entry.rwa,
+				crypto: entry.crypto,
+			})
 	}
-	return weeks
+	return out
+}
+
+function startOf(day: string, period: Period): string {
+	if (period === 'week') return mondayOf(day)
+	if (period === 'month') return `${day.slice(0, 7)}-01`
+	return day
 }
 
 function mondayOf(day: string): string {
