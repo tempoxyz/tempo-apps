@@ -22,11 +22,28 @@ import {
 	paymentsTotals,
 	periods,
 } from '#lib/payments'
+import { OG_BASE_URL } from '#lib/og'
 import { paymentsQueryOptions } from '#lib/queries/payments'
 
 export const Route = createFileRoute('/_layout/payments')({
 	component: PaymentsPage,
-	head: () => ({ meta: [{ title: 'Payments – Tempo Explorer' }] }),
+	head: () => ({
+		meta: [
+			{ title: 'Payments – Tempo Explorer' },
+			{ property: 'og:title', content: 'Payments – Tempo Explorer' },
+			{
+				property: 'og:description',
+				content:
+					'Total Payments Volume and Assets on Platform on Tempo, in USD.',
+			},
+			{ property: 'og:image', content: `${OG_BASE_URL}/payments` },
+			{ property: 'og:image:type', content: 'image/webp' },
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: `${OG_BASE_URL}/payments` },
+		],
+	}),
 	loader: async ({ context }) => {
 		await Promise.race([
 			context.queryClient.prefetchQuery(paymentsQueryOptions()),

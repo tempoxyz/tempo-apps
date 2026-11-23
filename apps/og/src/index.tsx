@@ -93,6 +93,7 @@ app.use('/block/*', rateLimiter)
 app.use('/blocks', rateLimiter)
 app.use('/tokens', rateLimiter)
 app.use('/markets', rateLimiter)
+app.use('/payments', rateLimiter)
 app.use('/explorer', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
 
@@ -501,6 +502,11 @@ for (const [path, title, subtitle] of [
 	['/blocks', 'Blocks', 'Explore activity on Tempo'],
 	['/tokens', 'Tokens', 'Explore assets on Tempo'],
 	['/markets', 'Markets', 'Exchange trading volume and liquidity on Tempo'],
+	[
+		'/payments',
+		'Payments',
+		'Total Payments Volume and Assets on Platform on Tempo',
+	],
 	['/tx', 'Transactions', 'Explore payments on Tempo'],
 ] as const) {
 	app.get(path, async (context) => {
