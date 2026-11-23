@@ -30,6 +30,9 @@ const TRANSFER_SIGNATURE =
 const ZERO = '0x0000000000000000000000000000000000000000'
 const DAY = 86_400_000
 
+/** How long after UTC midnight the indexer may still be finishing the day. */
+const SETTLE = 30 * 60_000
+
 /** How long each part is served before a background refresh. */
 const TODAY_FRESH = 2 * 60_000
 const FX_FRESH = 6 * 60 * 60_000
@@ -137,17 +140,19 @@ function inBackground(work: Promise<unknown>): void {
  */
 async function swr<T>(options: {
 	key: string
+	/** The request's clock, which stamps a refreshed entry. */
+	now: number
 	isFresh: (entry: Entry<T>) => boolean
 	load: (previous: T | undefined) => Promise<T>
 }): Promise<Entry<T>> {
-	const { key, isFresh, load } = options
+	const { key, now, isFresh, load } = options
 	const cached = await readEntry<T>(key)
 	if (cached && isFresh(cached)) return cached
 
 	let refresh = inflight.get(key) as Promise<Entry<T>> | undefined
 	if (!refresh) {
 		refresh = load(cached?.data).then(async (data) => {
-			const entry = { data, storedAt: Date.now() }
+			const entry = { data, storedAt: now }
 			await writeEntry(key, entry)
 			return entry
 		})
@@ -302,10 +307,6 @@ async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
 // ---------------------------------------------------------------------------
 // The snapshot.
 
-function nextDay(day: string): string {
-	return isoDay(Date.parse(`${day}T00:00:00Z`) + DAY)
-}
-
 function toTokenDays(rows: readonly RawTokenDay[]): TokenDay[] {
 	return rows.map((row) => ({
 		day: row.day,
@@ -333,20 +334,32 @@ export async function getPaymentsSnapshot(
 	const assets = keys.filter((key) => !ISO_CURRENCY.test(key))
 
 	const [history, current, fx, market] = await Promise.all([
-		// Past days never change: append the days since the cached copy.
+		// Past days never change once the indexer has passed them: append the
+		// days since the cached copy, re-reading its last day, which the
+		// indexer may not have finished when it was read. A copy taken in the
+		// first SETTLE after midnight is read again once that has passed.
 		swr<History>({
-			key: `history:v2:${chainId}`,
-			isFresh: (entry) => entry.data.through >= yesterday,
+			now,
+			key: `history:v3:${chainId}`,
+			isFresh: (entry) =>
+				entry.data.through >= yesterday &&
+				entry.storedAt >= Date.parse(`${today}T00:00:00Z`) + SETTLE,
 			load: async (previous) => {
-				const from = previous ? nextDay(previous.through) : undefined
+				const from = previous?.through
 				const rows = await readTokenDays(chainId, tokens, from, today)
 				return {
 					through: yesterday,
-					rows: previous ? [...previous.rows, ...rows] : rows,
+					rows: previous
+						? [
+								...previous.rows.filter((row) => row.day < previous.through),
+								...rows,
+							]
+						: rows,
 				}
 			},
 		}),
 		swr<Today>({
+			now,
 			key: `today:v2:${chainId}`,
 			isFresh: (entry) =>
 				entry.data.day === today && now - entry.storedAt < TODAY_FRESH,
@@ -359,6 +372,7 @@ export async function getPaymentsSnapshot(
 			return undefined
 		}),
 		swr({
+			now,
 			key: `fx:v2:${currencies.join(',')}`,
 			isFresh: (entry) => now - entry.storedAt < FX_FRESH,
 			load: () => readFxRates(currencies),
@@ -367,6 +381,7 @@ export async function getPaymentsSnapshot(
 			return undefined
 		}),
 		swr({
+			now,
 			key: `market:v2:${assets.join(',')}`,
 			isFresh: (entry) => now - entry.storedAt < MARKET_FRESH,
 			load: () => readMarketPrices(assets),
@@ -376,12 +391,15 @@ export async function getPaymentsSnapshot(
 		}),
 	])
 
-	// A stale "today" from an earlier day is already in history.
-	const todayRows = current?.data.day === today ? current : undefined
+	// A cached "today" stays in until history covers its day, such as just
+	// after midnight or while the indexer is down across it.
+	const todayRows =
+		current && current.data.day > history.data.through ? current : undefined
 	const version = [
 		chainId,
 		today,
 		history.storedAt,
+		todayRows?.data.day,
 		todayRows?.storedAt,
 		fx?.storedAt,
 		market?.storedAt,
@@ -399,7 +417,10 @@ export async function getPaymentsSnapshot(
 		asOf: now,
 		fxDate: fx?.data.date ?? null,
 		unpriced: keys.filter((key) => rates[key] === undefined),
-		through: history.data.through,
+		through:
+			todayRows && todayRows.data.day < today
+				? todayRows.data.day
+				: history.data.through,
 	}
 	built = { version, snapshot }
 	return snapshot
