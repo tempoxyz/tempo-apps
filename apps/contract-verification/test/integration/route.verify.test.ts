@@ -551,6 +551,33 @@ contract Token {
 		expect(body.customCode).toBe('invalid_settings')
 	})
 
+	it('rejects escaped strings that serialize over the size cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							padding: '\u0000'.repeat(12 * 1024),
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
 	it('returns 429 for a duplicate in-flight request', async () => {
 		const db = drizzle(env.CONTRACTS_DB)
 		await db.insert(DB.verificationJobsTable).values({

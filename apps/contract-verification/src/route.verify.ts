@@ -137,8 +137,10 @@ function exceedsSettingsLimits(root: unknown): boolean {
 		if (current.depth > MAX_SETTINGS_DEPTH || visited > MAX_SETTINGS_NODES)
 			return true
 
-		if (typeof current.value === 'string') bytes += current.value.length + 2
-		else bytes += 8
+		if (typeof current.value === 'string') {
+			bytes = addJsonStringBytes(bytes, current.value)
+			if (bytes > MAX_SETTINGS_BYTES) return true
+		} else bytes += 8
 
 		if (typeof current.value === 'object' && current.value !== null) {
 			if (Array.isArray(current.value)) {
@@ -146,7 +148,8 @@ function exceedsSettingsLimits(root: unknown): boolean {
 					pending.push({ value: child, depth: current.depth + 1 })
 			} else {
 				for (const [key, child] of Object.entries(current.value)) {
-					bytes += key.length + 3
+					bytes = addJsonStringBytes(bytes, key) + 1
+					if (bytes > MAX_SETTINGS_BYTES) return true
 					pending.push({ value: child, depth: current.depth + 1 })
 				}
 			}
@@ -164,6 +167,19 @@ function exceedsSettingsLimits(root: unknown): boolean {
 		return true
 
 	return false
+}
+
+const utf8Encoder = new TextEncoder()
+
+/**
+ * Adds a string's serialized JSON size in UTF-8 bytes to a running total. The
+ * UTF-16 length is a lower bound, so a string that already exceeds the cap is
+ * rejected without encoding it; otherwise the exact size is measured, which
+ * stays bounded by the cap.
+ */
+function addJsonStringBytes(total: number, value: string): number {
+	if (total + value.length > MAX_SETTINGS_BYTES) return MAX_SETTINGS_BYTES + 1
+	return total + utf8Encoder.encode(JSON.stringify(value)).byteLength
 }
 
 /** Reads settings.optimizer.details.yulDetails.optimizerSteps, if present. */
