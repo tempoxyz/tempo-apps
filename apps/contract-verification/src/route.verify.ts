@@ -28,6 +28,7 @@ import {
 	compiledContractsSourcesTable,
 	compiledContractsSignaturesTable,
 } from '#database/schema.ts'
+import { sanitizeCompilerSettings } from '../container/compiler-settings.ts'
 import {
 	AuxdataStyle,
 	matchBytecode,
@@ -75,25 +76,6 @@ function timestampToMs(value: string): number {
 	return new Date(normalized).getTime()
 }
 
-function isBlockedObjectKey(key: string): boolean {
-	return key === '__proto__' || key === 'constructor' || key === 'prototype'
-}
-
-function sanitizeJsonValue(value: unknown): unknown {
-	if (Array.isArray(value)) return value.map(sanitizeJsonValue)
-
-	if (typeof value === 'object' && value !== null) {
-		const sanitized: Record<string, unknown> = {}
-		for (const [key, nestedValue] of Object.entries(value)) {
-			if (isBlockedObjectKey(key)) continue
-			sanitized[key] = sanitizeJsonValue(nestedValue)
-		}
-		return sanitized
-	}
-
-	return value
-}
-
 /** Upper bounds on the shape of compiler settings accepted from callers. */
 const MAX_SETTINGS_DEPTH = 64
 const MAX_SETTINGS_NODES = 100_000
@@ -127,10 +109,6 @@ function exceedsSettingsLimits(root: unknown): boolean {
 	return false
 }
 
-function sanitizeCompilerSettings<T extends object>(settings: T): T {
-	return sanitizeJsonValue(settings) as T
-}
-
 function sanitizeVerificationInput<T extends { stdJsonInput: StdJsonInput }>(
 	input: T,
 ): T {
@@ -138,7 +116,10 @@ function sanitizeVerificationInput<T extends { stdJsonInput: StdJsonInput }>(
 		...input,
 		stdJsonInput: {
 			...input.stdJsonInput,
-			settings: sanitizeCompilerSettings(input.stdJsonInput.settings),
+			settings: sanitizeCompilerSettings(
+				input.stdJsonInput.language,
+				input.stdJsonInput.settings,
+			),
 		},
 	}
 }

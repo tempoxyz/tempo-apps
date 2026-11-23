@@ -422,13 +422,13 @@ describe('full verification flow', () => {
 		expect(contract.sources['Counter.sol']?.content).toBe(counterSource)
 	})
 
-	it('strips prototype pollution keys from persisted compiler settings', async () => {
+	it('persists only allowlisted compiler settings, without prototype keys', async () => {
 		const body = {
 			...verifyRequestBody,
 			stdJsonInput: {
 				...verifyRequestBody.stdJsonInput,
 				settings: JSON.parse(
-					'{"optimizer":{"enabled":true,"runs":200},"nested":{"constructor":{"polluted":true}},"__proto__":{"polluted":true},"prototype":{"polluted":true}}',
+					'{"optimizer":{"enabled":true,"runs":200,"constructor":{"polluted":true}},"nested":{"polluted":true},"modelChecker":{"engine":"all"},"__proto__":{"polluted":true},"prototype":{"polluted":true}}',
 				) as Record<string, unknown>,
 			},
 		}
@@ -441,11 +441,11 @@ describe('full verification flow', () => {
 		const compilerSettings = JSON.parse(
 			compiledContract.compilerSettings,
 		) as Record<string, unknown>
-		const nested = compilerSettings.nested as Record<string, unknown>
 
 		expect(Object.hasOwn(compilerSettings, '__proto__')).toBe(false)
 		expect(Object.hasOwn(compilerSettings, 'prototype')).toBe(false)
-		expect(Object.hasOwn(nested, 'constructor')).toBe(false)
+		expect(Object.hasOwn(compilerSettings, 'nested')).toBe(false)
+		expect(Object.hasOwn(compilerSettings, 'modelChecker')).toBe(false)
 		expect(compilerSettings.optimizer).toEqual({ enabled: true, runs: 200 })
 	})
 
