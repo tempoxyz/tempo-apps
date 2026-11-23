@@ -227,7 +227,7 @@ describe('full verification flow', () => {
 		const contractSchema = z.object({
 			match: z.string(),
 			runtimeMatch: z.string(),
-			creationMatch: z.string(),
+			creationMatch: z.nullable(z.string()),
 			sources: z.record(z.string(), z.object({ content: z.string() })),
 			signatures: z.object({
 				function: z.array(
@@ -245,6 +245,8 @@ describe('full verification flow', () => {
 
 		expect(contract.match).toBe('exact_match')
 		expect(contract.runtimeMatch).toBe('exact_match')
+		// No creation transaction was submitted, so the initcode was never matched.
+		expect(contract.creationMatch).toBeNull()
 		expect(contract.sources['Counter.sol']).toBeDefined()
 		expect(
 			contract.signatures.function.some((s) => s.signature === 'increment()'),

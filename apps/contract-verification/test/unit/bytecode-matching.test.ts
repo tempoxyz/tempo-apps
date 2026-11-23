@@ -527,6 +527,92 @@ describe('extractConstructorArgumentsTransformation', () => {
 
 		expect(result.constructorArguments).toBe('0x60001234')
 		expect(result.transformations).toHaveLength(0)
+		expect(result.valid).toBe(false)
+	})
+
+	it('rejects trailing bytes that do not re-encode as the constructor inputs', () => {
+		const abi = [
+			{ type: 'constructor', inputs: [{ type: 'bool', name: 'flag' }] },
+		]
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${'00'.repeat(31)}02`,
+			abi,
+		)
+		expect(result.valid).toBe(false)
+	})
+})
+
+describe('matchBytecode creation input', () => {
+	const abi = [
+		{ type: 'constructor', inputs: [{ type: 'uint256', name: 'value' }] },
+	]
+	const ipfsAuxdata = (fill: string) => {
+		const cbor = Hex.fromBytes(
+			CBOR.encode({
+				ipfs: Hex.toBytes(`0x1220${fill.repeat(32)}`),
+				solc: Hex.toBytes('0x000814'),
+			}),
+		).slice(2)
+		return `${cbor}${(cbor.length / 2).toString(16).padStart(4, '0')}`
+	}
+	const args = `${'00'.repeat(31)}64`
+	const recompiled = `0x6080604052${ipfsAuxdata('aa')}`
+
+	it('exact-matches initcode followed by its constructor arguments', () => {
+		const result = matchBytecode({
+			onchainBytecode: `${recompiled}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBe('exact_match')
+		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
+	})
+
+	it('partially matches when only the auxdata differs, still binding the arguments', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${ipfsAuxdata('bb')}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBe('match')
+		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
+		expect(result.transformations.map((t) => t.reason)).toStrictEqual([
+			'cborAuxdata',
+			'constructorArguments',
+		])
+	})
+
+	it('rejects trailing data when the constructor takes no arguments', () => {
+		const result = matchBytecode({
+			onchainBytecode: `${recompiled}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi: [{ type: 'constructor', inputs: [] }],
+		})
+		expect(result.match).toBeNull()
+	})
+
+	it('rejects malformed constructor arguments on a partial match', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${ipfsAuxdata('bb')}${args}00`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBeNull()
+	})
+
+	it('does not ignore differing code that follows a matching prefix', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${'ff'.repeat(ipfsAuxdata('aa').length / 2)}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBeNull()
 	})
 })
 

@@ -31,6 +31,7 @@ import {
 	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
+import { creationMatchColumns } from '#lib/creation-match.ts'
 import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
 import { createRpcTransport } from '#lib/rpc.ts'
@@ -374,6 +375,13 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				})
 			: null
 
+		const creationColumns = creationMatchColumns({
+			onchainCreationBytecode: creationTransactionMetadata?.creationBytecode,
+			recompiledCreationBytecode: creationBytecodeRaw,
+			auxdataStyle,
+			abi: compiledContract.abi,
+		})
+
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'
 		const contractIdentifier = `${contractPath}:${contractName}`
@@ -697,10 +705,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				.update(verifiedContractsTable)
 				.set({
 					compilationId,
-					creationMatch: false,
-					creationValues: null,
-					creationTransformations: null,
-					creationMetadataMatch: null,
+					...creationColumns,
 					runtimeMatch: true,
 					runtimeMetadataMatch: true,
 					runtimeValues,
@@ -715,7 +720,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				.values({
 					deploymentId,
 					compilationId,
-					creationMatch: false,
+					...creationColumns,
 					runtimeMatch: true,
 					runtimeMetadataMatch: isExactMatch,
 					runtimeValues,

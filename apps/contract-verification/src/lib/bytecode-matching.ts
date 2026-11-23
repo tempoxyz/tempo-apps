@@ -646,6 +646,9 @@ export function extractCallProtectionTransformation(
 /**
  * Constructor arguments are ABI-encoded and appended to creation bytecode.
  * To match, we extract them from the difference in bytecode lengths.
+ * `valid` is false when trailing bytes exist that the constructor ABI does not
+ * account for (no constructor inputs, or bytes that do not re-encode identically),
+ * which must fail a creation match as Sourcify does.
  */
 export function extractConstructorArgumentsTransformation(
 	recompiledCreationBytecode: string,
@@ -659,6 +662,7 @@ export function extractConstructorArgumentsTransformation(
 	transformations: Transformation[]
 	transformationValues: TransformationValues
 	constructorArguments: string | null
+	valid: boolean
 } {
 	const transformations: Transformation[] = []
 	const transformationValues: TransformationValues = {}
@@ -670,6 +674,7 @@ export function extractConstructorArgumentsTransformation(
 			transformations,
 			transformationValues,
 			constructorArguments: null,
+			valid: true,
 		}
 	}
 
@@ -682,13 +687,14 @@ export function extractConstructorArgumentsTransformation(
 	// Find constructor in ABI
 	const constructorAbi = abi.find((item) => item.type === 'constructor')
 	if (!constructorAbi?.inputs || constructorAbi.inputs.length === 0) {
-		// No constructor params expected but we have extra bytes
-		// This could be a mismatch or special case
+		// No constructor params expected but we have extra bytes: the creation input
+		// carries data the compiled contract does not account for.
 		return {
 			populatedBytecode: recompiledCreationBytecode,
 			transformations,
 			transformationValues,
 			constructorArguments,
+			valid: false,
 		}
 	}
 
@@ -718,6 +724,7 @@ export function extractConstructorArgumentsTransformation(
 			transformations,
 			transformationValues,
 			constructorArguments,
+			valid: true,
 		}
 	} catch {
 		// Failed to decode/validate constructor arguments
@@ -726,6 +733,7 @@ export function extractConstructorArgumentsTransformation(
 			transformations,
 			transformationValues,
 			constructorArguments,
+			valid: false,
 		}
 	}
 }
@@ -919,13 +927,14 @@ export function matchBytecode(
 		// Check if this is a "perfect" match (has valid content hash) or "partial" (no hash)
 		const isPerfect = hasContentHash(recompiledBytecode, auxdataStyle)
 
-		// For creation bytecode, also extract constructor arguments
-		if (isCreation && abi) {
+		// For creation bytecode, the remaining input must be the ABI-encoded constructor arguments
+		if (isCreation) {
 			const constructorResult = extractConstructorArgumentsTransformation(
 				populatedBytecode,
 				onchainBytecode,
-				abi,
+				abi ?? [],
 			)
+			if (!constructorResult.valid) return constructorArgumentsMismatch()
 			allTransformations.push(...constructorResult.transformations)
 			Object.assign(
 				allTransformationValues,
@@ -942,6 +951,17 @@ export function matchBytecode(
 	}
 
 	// 5. Try matching without auxdata (partial match)
+	if (isCreation)
+		return matchCreationIgnoringAuxdata({
+			onchainBytecode,
+			populatedBytecode,
+			auxdataStyle,
+			abi,
+			transformations: allTransformations,
+			transformationValues: allTransformationValues,
+			libraryMap,
+		})
+
 	const recompiledSplit = splitAuxdata(populatedBytecode, auxdataStyle)
 	const onchainSplit = splitAuxdata(onchainBytecode, auxdataStyle)
 
@@ -954,12 +974,8 @@ export function matchBytecode(
 
 	const executionMatch =
 		canIgnoreAuxdata &&
-		(isCreation
-			? onchainSplit.executionBytecode
-					.toLowerCase()
-					.startsWith(recompiledSplit.executionBytecode.toLowerCase())
-			: recompiledSplit.executionBytecode.toLowerCase() ===
-				onchainSplit.executionBytecode.toLowerCase())
+		recompiledSplit.executionBytecode.toLowerCase() ===
+			onchainSplit.executionBytecode.toLowerCase()
 
 	if (executionMatch) {
 		// Handle CBOR auxdata positions if provided
@@ -973,20 +989,6 @@ export function matchBytecode(
 			Object.assign(allTransformationValues, auxdataResult.transformationValues)
 		}
 
-		// For creation bytecode, also extract constructor arguments
-		if (isCreation && abi) {
-			const constructorResult = extractConstructorArgumentsTransformation(
-				recompiledSplit.executionBytecode,
-				onchainSplit.executionBytecode,
-				abi,
-			)
-			allTransformations.push(...constructorResult.transformations)
-			Object.assign(
-				allTransformationValues,
-				constructorResult.transformationValues,
-			)
-		}
-
 		return {
 			match: 'match',
 			transformations: allTransformations,
@@ -996,10 +998,88 @@ export function matchBytecode(
 	}
 
 	// No match found
+	return noMatch()
+}
+
+function noMatch(): BytecodeMatchResult {
 	return {
 		match: null,
 		transformations: [],
 		transformationValues: {},
 		message: 'Bytecodes do not match after all transformations',
+	}
+}
+
+function constructorArgumentsMismatch(): BytecodeMatchResult {
+	return {
+		match: null,
+		transformations: [],
+		transformationValues: {},
+		message:
+			'Creation input after the compiled bytecode is not ABI-encoded constructor arguments',
+	}
+}
+
+/**
+ * Partial creation match: the onchain creation input must start with the recompiled
+ * creation bytecode minus its trailing auxdata, carry well-formed auxdata of the same
+ * length in its place, and end with ABI-encoded constructor arguments.
+ */
+function matchCreationIgnoringAuxdata(options: {
+	onchainBytecode: string
+	populatedBytecode: string
+	auxdataStyle: AuxdataStyle
+	abi: MatchBytecodeOptions['abi']
+	transformations: Transformation[]
+	transformationValues: TransformationValues
+	libraryMap: Record<string, string>
+}): BytecodeMatchResult {
+	const { onchainBytecode, populatedBytecode, auxdataStyle, abi, libraryMap } =
+		options
+	const recompiledSplit = splitAuxdata(populatedBytecode, auxdataStyle)
+	if (
+		recompiledSplit.auxdata === null ||
+		recompiledSplit.executionBytecode.replace(/^0x/i, '') === '' ||
+		onchainBytecode.length < populatedBytecode.length
+	)
+		return noMatch()
+
+	// The onchain counterpart of the recompiled bytecode, auxdata included, before the arguments.
+	const onchainCompiledPart = onchainBytecode.slice(0, populatedBytecode.length)
+	const onchainSplit = splitAuxdata(onchainCompiledPart, auxdataStyle)
+	if (
+		onchainSplit.auxdata === null ||
+		onchainSplit.executionBytecode.toLowerCase() !==
+			recompiledSplit.executionBytecode.toLowerCase()
+	)
+		return noMatch()
+
+	const constructorResult = extractConstructorArgumentsTransformation(
+		populatedBytecode,
+		onchainBytecode,
+		abi ?? [],
+	)
+	if (!constructorResult.valid) return constructorArgumentsMismatch()
+
+	const auxdataOffset = (recompiledSplit.executionBytecode.length - 2) / 2
+	const transformations: Transformation[] = [
+		...options.transformations,
+		{ type: 'replace', reason: 'cborAuxdata', offset: auxdataOffset, id: '1' },
+		...constructorResult.transformations,
+	]
+	const transformationValues: TransformationValues = {
+		...options.transformationValues,
+		...constructorResult.transformationValues,
+		cborAuxdata: {
+			...options.transformationValues.cborAuxdata,
+			'1': `0x${onchainCompiledPart.slice(recompiledSplit.executionBytecode.length)}`,
+		},
+	}
+
+	return {
+		match: 'match',
+		transformations,
+		transformationValues,
+		libraryMap: Object.keys(libraryMap).length > 0 ? libraryMap : undefined,
 	}
 }

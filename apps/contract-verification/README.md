@@ -75,6 +75,16 @@ With an older Forge that sends the solc version for a solar build, pass the sola
 `--compiler-version` and `--compilation-profile default`. A solar-compiled contract submitted with a
 solc version fails with `solar_compiler_version_required` instead of a misleading `no_match`.
 
+#### Creation bytecode matching
+
+When a verification request carries `creationTransactionHash` (Forge sends it with
+`--creation-transaction-hash`), the verifier also matches the deployment's initcode, as Sourcify does:
+the input of a direct creation transaction, or the traced `CREATE`/`CREATE2` frame's input for a factory
+deployment. The initcode must start with the recompiled creation bytecode (with library addresses linked
+and, for a partial match, only its trailing auxdata replaced), and every remaining byte must be the
+ABI-encoded constructor arguments. Without a creation transaction, or when the initcode does not match,
+lookups report `creationMatch: null`.
+
 #### Direct API Usage
 
 - Standard JSON: see [/apps/contract-verification/scripts/verify-via-curl.sh](./scripts/verify-via-curl.sh) for a full example.

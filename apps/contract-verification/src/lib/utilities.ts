@@ -238,6 +238,11 @@ export type CreationTransactionMetadata = {
 	blockNumber: number
 	transactionIndex: number
 	deployer: Uint8Array
+	/**
+	 * The initcode that created the contract: the creation frame's input for a traced
+	 * creation, or the transaction input for a direct one. Null when the RPC did not provide it.
+	 */
+	creationBytecode: Hex.Hex | null
 }
 
 /** Receipt and trace reads from the selected chain's trusted RPC transport. */
@@ -250,6 +255,10 @@ export type CreationTransactionClient = {
 		contractAddress?: string | null
 		cumulativeGasUsed?: bigint
 		status: 'success' | 'reverted'
+	}>
+	getTransaction?: (args: { hash: Hex.Hex }) => Promise<{
+		input?: Hex.Hex | undefined
+		to?: string | null | undefined
 	}>
 	transport?: {
 		request: (args: {
@@ -338,6 +347,9 @@ export async function getCreationTransactionMetadata(options: {
 				blockNumber: Number(receipt.blockNumber),
 				transactionIndex: receipt.transactionIndex,
 				deployer: Hex.toBytes(receipt.from),
+				creationBytecode: tracedCreation
+					? tracedCreation.input
+					: await directCreationInput(client, creationTransactionHash),
 			}
 		}
 		logger.warn('creation_transaction_hash_mismatch', {
@@ -360,13 +372,35 @@ export async function getCreationTransactionMetadata(options: {
 	}
 }
 
+/** The input of a contract-creation transaction (no `to`), or null when unavailable. */
+async function directCreationInput(
+	client: CreationTransactionClient,
+	hash: Hex.Hex,
+): Promise<Hex.Hex | null> {
+	if (!client.getTransaction) return null
+	try {
+		const transaction = await client.getTransaction({ hash })
+		return transaction.to == null ? initcodeOrNull(transaction.input) : null
+	} catch {
+		return null
+	}
+}
+
+function initcodeOrNull(value: unknown): Hex.Hex | null {
+	return typeof value === 'string' && /^0x(?:[0-9a-fA-F]{2})+$/.test(value)
+		? (value.toLowerCase() as Hex.Hex)
+		: null
+}
+
+/** Returns the surviving creation of `address` with its initcode, or false when there is none. */
 function traceCreatesContract(
 	trace: unknown,
 	address: string,
 	expectedRuntime?: Hex.Hex,
-): boolean {
+): false | { input: Hex.Hex | null } {
 	const frames = [{ value: trace, reverted: false }]
 	let found = false
+	let input: Hex.Hex | null = null
 	let count = 0
 	while (frames.length > 0) {
 		// Bound untrusted RPC trees and avoid recursion through deeply nested EVM calls.
@@ -424,11 +458,12 @@ function traceCreatesContract(
 			)
 				return false
 			found = true
+			input = initcodeOrNull(frame.input)
 		}
 		for (const child of (frame.calls ?? []) as unknown[])
 			frames.push({ value: child, reverted: failed })
 	}
-	return found
+	return found ? { input } : false
 }
 
 /** Checks whether an origin matches an allowed hostname pattern, ignoring path and query. */

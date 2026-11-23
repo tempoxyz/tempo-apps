@@ -128,6 +128,66 @@ describe('runVerificationJob – creation tx metadata success', () => {
 	})
 })
 
+describe('runVerificationJob – creation bytecode matching', () => {
+	const txHash =
+		'0x00000000000000000000000000000000000000000000000000000000000000c1' as const
+	const initcode = `0x${counterFixture.solcOutput.contracts['Counter.sol'].Counter.evm.bytecode.object}`
+	const constructorArguments = `${'00'.repeat(31)}05`
+
+	async function verifyWithCreationInput(input: string) {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+		await runVerificationJob(
+			env,
+			{ ...JOB_DEFAULTS, jobId, creationTransactionHash: txHash },
+			{
+				createPublicClient: () => ({
+					getCode: async () => counterFixture.onchainRuntimeBytecode,
+					getTransactionReceipt: async () => ({
+						status: 'success' as const,
+						transactionHash: txHash,
+						blockNumber: 42n,
+						transactionIndex: 0,
+						from: '0x00000000000000000000000000000000000000aa' as const,
+						contractAddress: counterFixture.address,
+					}),
+					getTransaction: async () => ({ input: input as Hex.Hex, to: null }),
+				}),
+				...makeContainerStub(),
+			},
+		)
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBeNull()
+		const db = drizzle(env.CONTRACTS_DB)
+		const [verified] = await db
+			.select()
+			.from(DB.verifiedContractsTable)
+			.where(eq(DB.verifiedContractsTable.id, job?.verifiedContractId ?? -1))
+		if (!verified) throw new Error('expected verified contract row')
+		return verified
+	}
+
+	it('records an exact creation match with its constructor arguments', async () => {
+		const verified = await verifyWithCreationInput(
+			`${initcode}${constructorArguments}`,
+		)
+		expect(verified.creationMatch).toBe(true)
+		expect(verified.creationMetadataMatch).toBe(true)
+		expect(JSON.parse(verified.creationValues ?? '{}')).toEqual({
+			constructorArguments: `0x${constructorArguments}`,
+		})
+	})
+
+	it('records no creation match when the creation input carries unexplained bytes', async () => {
+		const verified = await verifyWithCreationInput(
+			`${initcode}${constructorArguments}ff`,
+		)
+		expect(verified.runtimeMatch).toBe(true)
+		expect(verified.creationMatch).toBe(false)
+		expect(verified.creationMetadataMatch).toBeNull()
+	})
+})
+
 describe('runVerificationJob – creation tx metadata failure', () => {
 	it('still verifies when getTransactionReceipt throws', async () => {
 		const jobId = globalThis.crypto.randomUUID()
