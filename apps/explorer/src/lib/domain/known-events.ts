@@ -143,7 +143,12 @@ type PropAmmFillArgs = {
 	amountOut: bigint
 }
 
-type PropAmmTransfer = { index: number; token: Address.Address }
+/**
+ * A transfer's position in the receipt and the token that emitted it, as the
+ * log spells it: only a matched transfer's token is checksummed, so an
+ * emitter spelled in invalid mixed case can't fail the whole receipt.
+ */
+type PropAmmTransfer = { index: number; token: string }
 
 /**
  * A receipt's transfers, each list in log order, keyed so that every propAMM
@@ -194,7 +199,7 @@ function getPropAmmTransferIndex(
 	events.forEach((event, position) => {
 		if (!isTransferEvent(event)) return
 		const { from, to, amount } = event.args
-		const transfer = { index: position, token: checksumAddress(event.address) }
+		const transfer = { index: position, token: event.address }
 		const token = addressKey(event.address)
 		const route = `${addressKey(from)}:${addressKey(to)}:${amount}`
 		pushTransfer(index.route, route, transfer)
@@ -219,8 +224,8 @@ function findPropAmmFillTransfers(
 	fill: ParsedEvent,
 	events: readonly Log<bigint, number, boolean, AbiEvent>[],
 ): {
-	input: PropAmmTransfer | undefined
-	output: PropAmmTransfer | undefined
+	input: { index: number; token: Address.Address } | undefined
+	output: { index: number; token: Address.Address } | undefined
 } {
 	const { taker, amountIn, amountOut } = fill.args as PropAmmFillArgs
 	const { route } = getPropAmmTransferIndex(events)
@@ -228,10 +233,15 @@ function findPropAmmFillTransfers(
 	const account = addressKey(taker)
 	const inputKey = `${account}:${venue}:${amountIn}`
 	const outputKey = `${venue}:${account}:${amountOut}`
+	const input = route.get(inputKey)?.[0]
+	// A transfer that could settle either leg settles the input.
+	const output = outputKey === inputKey ? undefined : route.get(outputKey)?.[0]
 	return {
-		input: route.get(inputKey)?.[0],
-		// A transfer that could settle either leg settles the input.
-		output: outputKey === inputKey ? undefined : route.get(outputKey)?.[0],
+		input: input && { index: input.index, token: checksumAddress(input.token) },
+		output: output && {
+			index: output.index,
+			token: checksumAddress(output.token),
+		},
 	}
 }
 

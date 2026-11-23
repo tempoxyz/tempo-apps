@@ -1239,6 +1239,27 @@ describe('parseKnownEvents', () => {
 		// replace the transaction's other events.
 		expect(parseKnownEvent(fillLog)?.type).not.toBe('propamm swap')
 	})
+	it('describes a receipt whose transfer emitter is not checksummed', () => {
+		const hash = `0x${'9'.repeat(64)}` as const
+		// Mixed case that is not valid EIP-55.
+		const emitter = '0xABCDEF0123456789abcdef0123456789ABCDEF01'
+		const log = mockLog(
+			{
+				address: emitter,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from: accountAddress, to: recipientAddress },
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [5n]),
+			},
+			hash,
+		)
+		expect(() =>
+			parseKnownEvents(mockReceipt([log], accountAddress, hash)),
+		).not.toThrow()
+	})
+
 	it('matches each propAMM fill and trade in a receipt to its own transfers', () => {
 		const hash = `0x${'8'.repeat(64)}` as const
 		const transferLog = (
