@@ -740,24 +740,13 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			existingVerification &&
 			creationColumns.creationMatch &&
 			!existingVerification.creationMatch &&
-			(existingVerification.compilationId === compilationId ||
-				!existingExactVerifiedContract)
+			existingVerification.compilationId === compilationId
 		) {
-			// A row gains this job's creation proof. A partial row under another compilation moves to
-			// this one, which also matched the runtime partially and additionally proved the creation.
+			// Same compilation, now with its creation input matched as well.
 			await db
 				.update(verifiedContractsTable)
 				.set({
 					...creationColumns,
-					...(existingVerification.compilationId === compilationId
-						? {}
-						: {
-								compilationId,
-								runtimeMatch: true,
-								runtimeMetadataMatch: false,
-								runtimeValues,
-								runtimeTransformations,
-							}),
 					updatedAt: new Date().toISOString(),
 					updatedBy: auditUser,
 				})
