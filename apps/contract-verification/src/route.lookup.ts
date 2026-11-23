@@ -1009,12 +1009,16 @@ lookupRoute
 				compilerVersion: row.version,
 				language: row.language,
 				compilerSettings: JSON.parse(row.compilerSettings),
-				runtimeMetadataMatch: row.runtimeMetadataMatch
-					? 'exact_match'
-					: 'match',
-				creationMetadataMatch: row.creationMetadataMatch
-					? 'exact_match'
-					: 'match',
+				runtimeMetadataMatch: row.runtimeMatch
+					? row.runtimeMetadataMatch
+						? 'exact_match'
+						: 'match'
+					: null,
+				creationMetadataMatch: row.creationMatch
+					? row.creationMetadataMatch
+						? 'exact_match'
+						: 'match'
+					: null,
 				abi: artifacts.abi ?? null,
 				userdoc: artifacts.userdoc ?? null,
 				devdoc: artifacts.devdoc ?? null,

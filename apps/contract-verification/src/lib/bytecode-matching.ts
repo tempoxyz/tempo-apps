@@ -700,10 +700,9 @@ export function extractConstructorArgumentsTransformation(
 
 	// Validate by decoding and re-encoding
 	try {
-		const paramTypes = constructorAbi.inputs.map((i) => ({
-			type: i.type,
-			name: i.name,
-		})) as AbiParameters.AbiParameters
+		// The full inputs, so tuple and tuple-array parameters keep their components.
+		const paramTypes =
+			constructorAbi.inputs as unknown as AbiParameters.AbiParameters
 
 		const decoded = AbiParameters.decode(paramTypes, constructorArguments)
 		const reencoded = AbiParameters.encode(paramTypes, decoded)

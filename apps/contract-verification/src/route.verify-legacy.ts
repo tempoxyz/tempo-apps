@@ -366,9 +366,29 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 
 		// Only matched source submissions may trigger optional factory tracing.
-		const creationTransactionMetadata = body.creatorTxHash
+		// Without a submitted hash, re-prove the creation from the deployment's recorded transaction.
+		const [recordedDeployment] = body.creatorTxHash
+			? []
+			: await db
+					.select({ transactionHash: contractDeploymentsTable.transactionHash })
+					.from(contractDeploymentsTable)
+					.where(
+						and(
+							eq(contractDeploymentsTable.chainId, chainId),
+							eq(contractDeploymentsTable.address, Hex.toBytes(address)),
+						),
+					)
+					.limit(1)
+		const creationTransactionHash =
+			body.creatorTxHash ??
+			(recordedDeployment?.transactionHash
+				? Hex.fromBytes(
+						new Uint8Array(recordedDeployment.transactionHash as ArrayBuffer),
+					)
+				: undefined)
+		const creationTransactionMetadata = creationTransactionHash
 			? await getCreationTransactionMetadata({
-					creationTransactionHash: body.creatorTxHash,
+					creationTransactionHash,
 					address,
 					chainId,
 					client,
@@ -679,6 +699,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			.select({
 				id: verifiedContractsTable.id,
 				compilationId: verifiedContractsTable.compilationId,
+				creationMatch: verifiedContractsTable.creationMatch,
 				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
@@ -705,11 +726,30 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				.update(verifiedContractsTable)
 				.set({
 					compilationId,
-					...creationColumns,
+					// Keep a creation match proven for this compilation when this submission could not re-prove it.
+					...(creationColumns.creationMatch ||
+					existingVerification.compilationId !== compilationId
+						? creationColumns
+						: {}),
 					runtimeMatch: true,
 					runtimeMetadataMatch: true,
 					runtimeValues,
 					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+		} else if (
+			existingVerification &&
+			creationColumns.creationMatch &&
+			!existingVerification.creationMatch &&
+			existingVerification.compilationId === compilationId
+		) {
+			// Same compilation, now with its creation input matched as well.
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					...creationColumns,
 					updatedAt: new Date().toISOString(),
 					updatedBy: auditUser,
 				})

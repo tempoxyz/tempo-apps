@@ -711,6 +711,25 @@ verifyRoute
 		}
 	})
 
+async function recordedCreationTransactionHash(
+	db: ReturnType<typeof getDb>,
+	chainId: number,
+	address: Uint8Array,
+): Promise<Hex.Hex | undefined> {
+	const [deployment] = await db
+		.select({ transactionHash: contractDeploymentsTable.transactionHash })
+		.from(contractDeploymentsTable)
+		.where(
+			and(
+				eq(contractDeploymentsTable.chainId, chainId),
+				eq(contractDeploymentsTable.address, address),
+			),
+		)
+		.limit(1)
+	const hash = deployment?.transactionHash
+	return hash ? Hex.fromBytes(new Uint8Array(hash as ArrayBuffer)) : undefined
+}
+
 function exactVerifications(
 	db: ReturnType<typeof getDb>,
 	chainId: number,
@@ -1157,10 +1176,16 @@ async function runVerificationJob(
 			return
 		}
 
+		// Without a submitted hash, re-prove the creation from the deployment's recorded transaction,
+		// so a resubmission never loses a creation match proven earlier.
+		const creationTransactionHash =
+			sanitizedBody.creationTransactionHash ??
+			(await recordedCreationTransactionHash(db, chainId, addressBytes))
+
 		// Only matched source submissions may trigger optional factory tracing.
-		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
+		const creationTransactionMetadata = creationTransactionHash
 			? await getCreationTransactionMetadata({
-					creationTransactionHash: sanitizedBody.creationTransactionHash,
+					creationTransactionHash,
 					address,
 					chainId,
 					client,
@@ -1567,7 +1592,11 @@ async function runVerificationJob(
 				.update(verifiedContractsTable)
 				.set({
 					compilationId,
-					...creationColumns,
+					// Keep a creation match proven for this compilation when this submission could not re-prove it.
+					...(creationMatched ||
+					existingVerification.compilationId !== compilationId
+						? creationColumns
+						: {}),
 					runtimeMatch: true,
 					runtimeMetadataMatch: true,
 					runtimeValues,

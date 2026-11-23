@@ -530,6 +530,45 @@ describe('extractConstructorArgumentsTransformation', () => {
 		expect(result.valid).toBe(false)
 	})
 
+	it('decodes struct and struct-array constructor inputs', () => {
+		const abi = [
+			{
+				type: 'constructor',
+				inputs: [
+					{
+						type: 'tuple',
+						name: 'config',
+						components: [
+							{ type: 'address', name: 'owner' },
+							{ type: 'uint256', name: 'cap' },
+						],
+					},
+					{
+						type: 'tuple[]',
+						name: 'routes',
+						components: [{ type: 'uint8', name: 'id' }],
+					},
+				],
+			},
+		]
+		const word = (hex: string) => hex.padStart(64, '0')
+		const args = [
+			word('deadbeef'),
+			word('64'),
+			word('60'),
+			word('2'),
+			word('1'),
+			word('2'),
+		].join('')
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${args}`,
+			abi,
+		)
+		expect(result.valid).toBe(true)
+		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
+	})
+
 	it('rejects trailing bytes that do not re-encode as the constructor inputs', () => {
 		const abi = [
 			{ type: 'constructor', inputs: [{ type: 'bool', name: 'flag' }] },
