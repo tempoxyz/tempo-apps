@@ -711,9 +711,12 @@ export function extractConstructorArgumentsTransformation(
 	try {
 		// The full inputs, so tuple and tuple-array parameters keep their components. Strings are
 		// checked as bytes, which share their ABI layout, since decoding a string drops NUL bytes.
-		const paramTypes = constructorAbi.inputs.map(
-			stringsAsBytes,
-		) as unknown as AbiParameters.AbiParameters
+		const inputs = constructorAbi.inputs.map(stringsAsBytes)
+		// Reject non-canonical layouts (aliased or out-of-order tails) before decoding, so decoding
+		// work stays proportional to the argument size.
+		if (!hasCanonicalLayout(inputs, Hex.toBytes(constructorArguments)))
+			throw new Error('Constructor arguments are not canonically encoded')
+		const paramTypes = inputs as unknown as AbiParameters.AbiParameters
 
 		const decoded = AbiParameters.decode(paramTypes, constructorArguments)
 		const reencoded = AbiParameters.encode(paramTypes, decoded)
@@ -749,6 +752,106 @@ export function extractConstructorArgumentsTransformation(
 }
 
 type AbiInput = { type: string; name?: string; components?: AbiInput[] }
+
+const WORD = 32
+
+/** The element type and length (null for a dynamic array) of an array type, or null. */
+function arrayType(
+	input: AbiInput,
+): { element: AbiInput; length: number | null } | null {
+	const match = /^(.*)\[(\d*)\]$/.exec(input.type)
+	if (!match) return null
+	return {
+		element: { ...input, type: match[1] ?? '' },
+		length: match[2] ? Number(match[2]) : null,
+	}
+}
+
+function isDynamic(input: AbiInput): boolean {
+	if (input.type === 'bytes' || input.type === 'string') return true
+	const array = arrayType(input)
+	if (array) return array.length === null || isDynamic(array.element)
+	if (input.type === 'tuple')
+		return (input.components ?? []).some((component) => isDynamic(component))
+	return false
+}
+
+function staticSize(input: AbiInput): number {
+	const array = arrayType(input)
+	if (array) return (array.length ?? 0) * staticSize(array.element)
+	if (input.type === 'tuple')
+		return (input.components ?? []).reduce(
+			(size, component) => size + staticSize(component),
+			0,
+		)
+	return WORD
+}
+
+/**
+ * Whether `data` is the canonical ABI encoding layout of `inputs`: every dynamic offset points at
+ * the next tail in order, no tail overlaps another, and nothing trails. Values are not decoded.
+ */
+function hasCanonicalLayout(inputs: AbiInput[], data: Uint8Array): boolean {
+	const readLength = (position: number): number | null => {
+		if (position + WORD > data.length) return null
+		let value = 0
+		for (let i = position; i < position + WORD; i++) {
+			const byte = data[i] ?? 0
+			if (i < position + WORD - 6 && byte !== 0) return null
+			value = value * 256 + byte
+		}
+		return value
+	}
+
+	// Returns the bytes a sequence encoding starting at `base` spans, or null when not canonical.
+	const sequence = (items: AbiInput[], base: number): number | null => {
+		let head = 0
+		for (const item of items) head += isDynamic(item) ? WORD : staticSize(item)
+		let cursor = base + head
+		if (cursor > data.length) return null
+		let position = base
+		for (const item of items) {
+			if (!isDynamic(item)) {
+				position += staticSize(item)
+				continue
+			}
+			if (readLength(position) !== cursor - base) return null
+			const size = tail(item, cursor)
+			if (size === null) return null
+			cursor += size
+			position += WORD
+		}
+		return cursor - base
+	}
+
+	const tail = (item: AbiInput, position: number): number | null => {
+		if (item.type === 'bytes' || item.type === 'string') {
+			const length = readLength(position)
+			if (length === null) return null
+			const size = WORD + Math.ceil(length / WORD) * WORD
+			return position + size <= data.length ? size : null
+		}
+		const array = arrayType(item)
+		if (array) {
+			let count = array.length
+			let start = position
+			let prefix = 0
+			if (count === null) {
+				count = readLength(position)
+				// Each element takes at least one word, which bounds the count by the input size.
+				if (count === null || count * WORD > data.length - position - WORD)
+					return count === 0 ? WORD : null
+				start += WORD
+				prefix = WORD
+			}
+			const size = sequence(Array(count).fill(array.element), start)
+			return size === null ? null : prefix + size
+		}
+		return sequence(item.components ?? [], position)
+	}
+
+	return sequence(inputs, 0) === data.length
+}
 
 /**
  * The types alone, recursively through tuple components, with string (and string array) types

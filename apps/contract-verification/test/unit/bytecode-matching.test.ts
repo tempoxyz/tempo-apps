@@ -541,6 +541,40 @@ describe('extractConstructorArgumentsTransformation', () => {
 		expect(result.valid).toBe(true)
 	})
 
+	describe('canonical layout', () => {
+		const abi = [
+			{ type: 'constructor', inputs: [{ type: 'bytes[]', name: 'blobs' }] },
+		]
+		const word = (hex: string) => hex.padStart(64, '0')
+		const check = (args: string) =>
+			extractConstructorArgumentsTransformation(
+				'0x6080604052',
+				`0x6080604052${args}`,
+				abi,
+			).valid
+
+		it('accepts canonically encoded dynamic arrays', () => {
+			const blob = `${word('1')}${'ab'.padEnd(64, '0')}`
+			expect(
+				check(
+					[word('20'), word('2'), word('40'), word('80'), blob, blob].join(''),
+				),
+			).toBe(true)
+			expect(check([word('20'), word('0')].join(''))).toBe(true)
+		})
+
+		it('rejects offsets that alias one tail', () => {
+			const blob = `${word('1')}${'ab'.padEnd(64, '0')}`
+			expect(
+				check([word('20'), word('2'), word('40'), word('40'), blob].join('')),
+			).toBe(false)
+		})
+
+		it('rejects element counts larger than the input', () => {
+			expect(check([word('20'), word('ffffff')].join(''))).toBe(false)
+		})
+	})
+
 	it('rejects missing arguments for a constructor with inputs', () => {
 		const abi = [
 			{ type: 'constructor', inputs: [{ type: 'uint256', name: 'value' }] },
