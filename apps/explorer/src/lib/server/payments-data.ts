@@ -29,6 +29,8 @@ const PRICE_DEADLINE = 3_000
 
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD'
 
+const LLAMA_URL = 'https://coins.llama.fi/prices/current/'
+
 const MARKET_URL =
 	'https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd'
 
@@ -241,11 +243,40 @@ async function readSpot(url: string): Promise<number> {
 	return price
 }
 
+async function readLlama(ids: readonly string[]): Promise<UsdRates> {
+	if (ids.length === 0) return {}
+	const keys = ids.map((id) => `coingecko:${id}`)
+	const response = await fetch(`${LLAMA_URL}${keys.join(',')}`, {
+		headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
+		signal: AbortSignal.timeout(PRICE_DEADLINE),
+	})
+	if (!response.ok)
+		throw new Error(`DefiLlama prices returned ${response.status}`)
+	const body = (await response.json()) as {
+		coins?: Record<string, { price?: number }>
+	}
+	const prices: UsdRates = {}
+	for (const id of ids) {
+		const price = body.coins?.[`coingecko:${id}`]?.price
+		if (price !== undefined && price > 0) prices[id] = price
+	}
+	return prices
+}
+
 async function readMarketPrices(ids: readonly string[]): Promise<UsdRates> {
-	const prices = await readCoinGecko(ids).catch((error) => {
-		console.error('CoinGecko prices unavailable:', error)
+	const prices = await readLlama(ids).catch((error) => {
+		console.error('DefiLlama prices unavailable:', error)
 		return {} as UsdRates
 	})
+	const unpriced = ids.filter((id) => prices[id] === undefined)
+	if (unpriced.length > 0)
+		Object.assign(
+			prices,
+			await readCoinGecko(unpriced).catch((error) => {
+				console.error('CoinGecko prices unavailable:', error)
+				return {} as UsdRates
+			}),
+		)
 	const missing = ids.filter(
 		(id) => prices[id] === undefined && FALLBACK_SPOT[id],
 	)
