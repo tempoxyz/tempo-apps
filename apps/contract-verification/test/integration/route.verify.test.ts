@@ -651,6 +651,33 @@ contract Token {
 		expect(body.customCode).toBe('invalid_settings')
 	})
 
+	it('rejects long numbers that serialize over the size cap with 400', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						settings: {
+							...validBody.stdJsonInput.settings,
+							padding: new Array(3_000).fill(-1.7976931348623157e308),
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_settings')
+	})
+
 	it('rejects escaped strings that serialize over the size cap with 400', async () => {
 		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,

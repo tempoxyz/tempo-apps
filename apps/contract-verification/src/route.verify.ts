@@ -193,7 +193,9 @@ function settingsLimitsError(root: unknown): string | undefined {
 
 		if (typeof current.value === 'string')
 			bytes = addJsonStringBytes(bytes, current.value)
-		else bytes += 8
+		else if (typeof current.value === 'number')
+			bytes += String(current.value).length + 1
+		else bytes += 6
 
 		if (typeof current.value === 'object' && current.value !== null) {
 			if (Array.isArray(current.value)) {
