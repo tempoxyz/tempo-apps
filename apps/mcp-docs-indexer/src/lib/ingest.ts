@@ -1,3 +1,4 @@
+import { fetchSourceDocument, readDocumentText } from './document-fetch.js'
 import { withTimeout } from './timeout.js'
 import { log } from './log.js'
 import { parseLlmsTxt, toMarkdownUrl } from './llms-txt.js'
@@ -46,7 +47,7 @@ export type SyncReport =
 
 /** Concurrent page fetches per source. Tuned to stay well under Workers' 50-subrequest budget. */
 const CONCURRENCY = 8
-/** Skip pages larger than AI Search's 4MB per-file cap (with margin). */
+/** Bound page reads and uploads below AI Search's 4 MB limit. */
 const MAX_PAGE_BYTES = 3_500_000
 const DELETION_CONFIRMATION_MS = 5 * 60_000
 const MAX_PENDING_CHECKS = 20
@@ -118,15 +119,11 @@ export async function syncSource(args: {
 				? null
 				: await call(() => etagCache.get(etagKey))
 		const { res, body } = await call(async (signal) => {
-			const res = await fetch(indexUrl, {
-				signal,
-				headers: {
-					accept: MARKDOWN_ACCEPT,
-					...(prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {}),
-				},
-				cf: { cacheTtl: 60 },
+			const res = await fetchSourceDocument(indexUrl, source.base, signal, {
+				accept: MARKDOWN_ACCEPT,
+				...(prevSourceEtag ? { 'If-None-Match': prevSourceEtag } : {}),
 			})
-			return { res, body: res.ok ? await res.text() : '' }
+			return { res, body: res.ok ? await readDocumentText(res) : '' }
 		})
 		if (res.status === 304) {
 			if (await call(() => etagCache.get(pendingDeletionKey))) {
@@ -466,12 +463,16 @@ async function syncPage(args: {
 			headers['If-None-Match'] = prev.etag
 
 		const { res, body } = await call(async (signal) => {
-			const res = await fetch(toMarkdownUrl(url), {
-				headers,
-				cf: { cacheTtl: 60 },
+			const res = await fetchSourceDocument(
+				toMarkdownUrl(url),
+				source.base,
 				signal,
-			})
-			return { res, body: res.ok ? await res.text() : '' }
+				headers,
+			)
+			return {
+				res,
+				body: res.ok ? await readDocumentText(res, MAX_PAGE_BYTES) : '',
+			}
 		})
 
 		if (res.status === 304 && prev) {

@@ -1019,9 +1019,11 @@ export async function lookupSignature(
 	selector: Hex.Hex,
 ): Promise<string | null> {
 	const key = selector.toLowerCase() as Hex.Hex
-	const cached = signatureLookupCache.get(key)
-	if (cached) return cached
-
+	if (signatureLookupCache.has(key)) return signatureLookupCache.get(key)!
+	const pending = signatureLookups.get(key)
+	if (pending) return pending
+	if (signatureLookups.size >= 128)
+		throw new Error('Too many signature lookups')
 	const lookup = (async () => {
 		const signatures =
 			key.length === 10
@@ -1029,17 +1031,22 @@ export async function lookupSignature(
 				: await defaultSignatureLookup.loadEvents(key)
 		return signatures[0] ?? null
 	})()
-	signatureLookupCache.set(key, lookup)
-
+	signatureLookups.set(key, lookup)
 	try {
-		return await lookup
-	} catch (error) {
-		signatureLookupCache.delete(key)
-		throw error
+		const value = await lookup
+		signatureLookupCache.set(key, value)
+		if (signatureLookupCache.size > 1024) {
+			const oldest = signatureLookupCache.keys().next().value!
+			signatureLookupCache.delete(oldest)
+		}
+		return value
+	} finally {
+		if (signatureLookups.get(key) === lookup) signatureLookups.delete(key)
 	}
 }
 
-const signatureLookupCache = new Map<Hex.Hex, Promise<string | null>>()
+const signatureLookupCache = new Map<Hex.Hex, string | null>()
+const signatureLookups = new Map<Hex.Hex, Promise<string | null>>()
 
 export class TempoABILoader {
 	readonly name = 'TempoABILoader'
@@ -1070,6 +1077,8 @@ export class TempoABILoader {
 }
 
 export type AutoloadAbiOptions = {
+	/** Resolve inferred signatures; disable when the caller has a separate lookup budget. */
+	resolveSignatures?: boolean
 	followProxies?: boolean
 	includeSourceVerified?: boolean
 }
@@ -1085,7 +1094,11 @@ export async function autoloadAbi(
 	const knownAbi = getContractAbi(address)
 	if (knownAbi && knownAbi.length > 0) return knownAbi
 
-	const { followProxies = true, includeSourceVerified = true } = options
+	const {
+		followProxies = true,
+		includeSourceVerified = true,
+		resolveSignatures = true,
+	} = options
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
 	const client = getPublicClient(config)
@@ -1101,7 +1114,7 @@ export async function autoloadAbi(
 						new loaders.SourcifyABILoader({ chainId }),
 					])
 				: false,
-			signatureLookup: defaultSignatureLookup,
+			signatureLookup: resolveSignatures ? defaultSignatureLookup : false,
 			onError: () => false,
 		})
 

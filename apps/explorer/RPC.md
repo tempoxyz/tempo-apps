@@ -43,8 +43,9 @@ only after the new version is deployed and verified.
 The Worker deployment selects the upstream. Callers cannot select a URL, network,
 or upstream credential; devnet and nextfork remain distinct despite sharing
 chain ID 31318. Missing or malformed credentials fail closed. The endpoint
-allows reviewed reads, tracing/simulation, and signed transaction broadcasts;
-the prover endpoint retains its read-only policy. Node-managed signing, admin,
+allows reviewed reads and signed transaction broadcasts;
+the prover endpoint retains its read-only policy. Tracing and simulation use
+the bounded `/api/tx/trace` and `/api/simulate` routes instead. Node-managed signing, admin,
 faucet and unlisted methods are rejected, including in batches. Requests are
 limited to 128 KiB and 50 calls, with a 15-second upstream timeout. Existing Worker
 IP, ASN and global rate limits still apply. Origin headers do not grant access.

@@ -1,3 +1,4 @@
+import { fetchSourceDocument, readDocumentText } from './document-fetch.js'
 import type { SearchInstance } from './search-instance.js'
 import { withTimeout } from './timeout.js'
 import { errorFields, log } from './log.js'
@@ -131,7 +132,7 @@ type SearchResult = AiSearchSearchResponse & {
 const sourceFilterFallbackUntil = new Map<string, number>()
 const searchResultCache = new Map<
 	string,
-	{ expiresAt: number; result: SearchResult }
+	{ expiresAt: number; serialized: string }
 >()
 const searchInFlight = new Map<string, Promise<SearchResult>>()
 const pageCache = new Map<string, { expiresAt: number; text: string }>()
@@ -555,7 +556,10 @@ async function handleReadPage(
 	}
 
 	try {
-		const text = await readCleanPage(markdownUrlFor(pageUrl, source))
+		const text = await readCleanPage(
+			markdownUrlFor(pageUrl, source),
+			source.base,
+		)
 		const maxChars = maxPageCharsFor(args)
 		const truncated = text.length > maxChars
 		const resultText = pageTextFor(text, args, maxChars)
@@ -601,47 +605,67 @@ function markdownUrlFor(pageUrl: string, source: Source): string {
 	return toMarkdownUrl(pageUrl)
 }
 
-async function readCleanPage(pageUrl: string): Promise<string> {
+async function readCleanPage(pageUrl: string, base: string): Promise<string> {
 	const markdownUrl = toMarkdownUrl(pageUrl)
-	const cached = pageCache.get(markdownUrl)
+	if (!resolveSourcePageUrl(markdownUrl, base))
+		throw new Error('Document outside source boundary')
+	const key = JSON.stringify([new URL(base).href, markdownUrl])
+	const cached = pageCache.get(key)
 	if (cached && cached.expiresAt > Date.now()) return cached.text
-	if (cached) pageCache.delete(markdownUrl)
+	if (cached) pageCache.delete(key)
 
-	const inFlight = pageInFlight.get(markdownUrl)
+	const inFlight = pageInFlight.get(key)
 	if (inFlight) return inFlight
 
-	const pending = fetchCleanPage(markdownUrl)
-	pageInFlight.set(markdownUrl, pending)
+	const pending = fetchCleanPage(markdownUrl, base)
+	pageInFlight.set(key, pending)
 	try {
 		return await pending
 	} finally {
-		pageInFlight.delete(markdownUrl)
+		pageInFlight.delete(key)
 	}
 }
 
-async function fetchCleanPage(markdownUrl: string): Promise<string> {
+async function fetchCleanPage(
+	markdownUrl: string,
+	base: string,
+): Promise<string> {
 	const { res, body } = await withTimeout(async (signal) => {
-		const res = await fetch(markdownUrl, {
-			signal,
-			headers: { accept: MARKDOWN_ACCEPT },
-			cf: { cacheTtl: 60 },
+		const res = await fetchSourceDocument(markdownUrl, base, signal, {
+			accept: MARKDOWN_ACCEPT,
 		})
 		if (!res.ok) throw new Error(`page fetch ${res.status}`)
-		return { res, body: await res.text() }
+		return { res, body: await readDocumentText(res) }
 	}, DOC_FETCH_TIMEOUT_MS)
 	if (isHtmlDocument(body, res.headers.get('content-type')))
 		throw new Error('page is HTML, not Markdown')
-	const text = normalizeDocsMarkdown(body)
+	// Copy normalized text so a short V8 substring cannot retain the whole source body.
+	const text = new TextDecoder().decode(
+		new TextEncoder().encode(normalizeDocsMarkdown(body)),
+	)
 	if (!text) throw new Error('page is empty')
-	cachePage(markdownUrl, text)
+	cachePage(JSON.stringify([new URL(base).href, markdownUrl]), text)
 	return text
 }
 
 function cachePage(key: string, text: string): void {
-	pageCache.set(key, { expiresAt: Date.now() + PAGE_CACHE_TTL_MS, text })
-	if (pageCache.size <= PAGE_CACHE_MAX_ENTRIES) return
-	const oldestKey = pageCache.keys().next().value
-	if (oldestKey) pageCache.delete(oldestKey)
+	const now = Date.now()
+	let bytes = 0
+	for (const [cachedKey, entry] of pageCache) {
+		if (entry.expiresAt <= now || cachedKey === key) pageCache.delete(cachedKey)
+		else bytes += entry.text.length * 2
+	}
+	const size = text.length * 2
+	while (
+		pageCache.size &&
+		(bytes + size > 4 * 1024 * 1024 || pageCache.size >= PAGE_CACHE_MAX_ENTRIES)
+	) {
+		const oldest = pageCache.entries().next().value!
+		bytes -= oldest[1].text.length * 2
+		pageCache.delete(oldest[0])
+	}
+	if (size <= 4 * 1024 * 1024)
+		pageCache.set(key, { expiresAt: now + PAGE_CACHE_TTL_MS, text })
 }
 
 async function cachedSearch(
@@ -652,7 +676,8 @@ async function cachedSearch(
 ): Promise<SearchResult> {
 	const key = JSON.stringify(sources) + searchCacheKey(query, args)
 	const cached = searchResultCache.get(key)
-	if (cached && cached.expiresAt > Date.now()) return cached.result
+	if (cached && cached.expiresAt > Date.now())
+		return JSON.parse(cached.serialized) as SearchResult
 	if (cached) searchResultCache.delete(key)
 
 	const inFlight = searchInFlight.get(key)
@@ -799,13 +824,29 @@ function searchCacheKey(
 }
 
 function cacheSearchResult(key: string, result: SearchResult): void {
+	const now = Date.now()
+	const serialized = JSON.stringify(result)
+	const size = serialized.length * 2
+	searchResultCache.delete(key)
+	if (size > 4 * 1024 * 1024) return
+	let bytes = 0
+	for (const [cachedKey, entry] of searchResultCache) {
+		if (entry.expiresAt <= now) searchResultCache.delete(cachedKey)
+		else bytes += entry.serialized.length * 2
+	}
+	while (
+		searchResultCache.size &&
+		(bytes + size > 4 * 1024 * 1024 ||
+			searchResultCache.size >= SEARCH_RESULT_CACHE_MAX_ENTRIES)
+	) {
+		const oldest = searchResultCache.entries().next().value!
+		bytes -= oldest[1].serialized.length * 2
+		searchResultCache.delete(oldest[0])
+	}
 	searchResultCache.set(key, {
-		expiresAt: Date.now() + SEARCH_RESULT_CACHE_TTL_MS,
-		result,
+		expiresAt: now + SEARCH_RESULT_CACHE_TTL_MS,
+		serialized,
 	})
-	if (searchResultCache.size <= SEARCH_RESULT_CACHE_MAX_ENTRIES) return
-	const oldestKey = searchResultCache.keys().next().value
-	if (oldestKey) searchResultCache.delete(oldestKey)
 }
 
 function shouldSkipSourceFilter(sources: string[]): boolean {
@@ -885,7 +926,7 @@ async function localSourceSearch(
 				sourceIndexChunk(
 					source,
 					entry,
-					await readCleanPage(markdownUrlFor(entry.url, source)),
+					await readCleanPage(markdownUrlFor(entry.url, source), source.base),
 					relevance,
 				),
 			),
@@ -920,12 +961,13 @@ async function readSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
 
 async function fetchSourceIndex(source: Source): Promise<SourceIndexEntry[]> {
 	const entries = await withTimeout(async (signal) => {
-		const res = await fetch(sourceIndexUrl(source), {
+		const res = await fetchSourceDocument(
+			sourceIndexUrl(source),
+			source.base,
 			signal,
-			cf: { cacheTtl: 60 },
-		})
+		)
 		if (!res.ok) return undefined
-		return parseSourceIndex(await res.text(), source.base)
+		return parseSourceIndex(await readDocumentText(res), source.base)
 	}, DOC_FETCH_TIMEOUT_MS)
 	if (!entries) return []
 	cacheSourceIndex(`${source.id}:${sourceIndexUrl(source)}`, entries)
@@ -949,7 +991,8 @@ function parseSourceIndex(body: string, base: string): SourceIndexEntry[] {
 	let section: string | undefined
 	let subsection: string | undefined
 	for (const line of body.split('\n')) {
-		const heading = line.match(/^(#{2,3})\s+(.+?)\s*$/)
+		if (line.length > 8192) continue
+		const heading = line.trimEnd().match(/^(#{2,3})[^\S\r\n]+(\S[^\r\n]*)$/)
 		if (heading) {
 			const [, level, label] = heading
 			if (level === '##') {
@@ -966,12 +1009,14 @@ function parseSourceIndex(body: string, base: string): SourceIndexEntry[] {
 		if (!match) continue
 		const [, title, rawUrl, description] = match
 		try {
-			const url = resolveSourcePageUrl(rawUrl, base)
+			const input = resolveSourcePageUrl(rawUrl, base)
+			const url =
+				input && resolveSourcePageUrl(publicDocsUrl(input.toString()), base)
 			if (!url) continue
 			const sectionLabel = [section, subsection].filter(Boolean).join(' / ')
 			entries.push({
 				title: title.trim(),
-				url: publicDocsUrl(url.toString()),
+				url: url.toString(),
 				...(description?.trim() ? { description: description.trim() } : {}),
 				...(sectionLabel ? { section: sectionLabel } : {}),
 			})
@@ -1358,7 +1403,12 @@ function urlFromKey(key: string, sources: Source[]): string | undefined {
 	if (!path) return source.base
 	try {
 		const url = resolveSourcePageUrl(`/${path}`, source.base)
-		return url ? publicDocsUrl(url.toString()) : undefined
+		return url
+			? resolveSourcePageUrl(
+					publicDocsUrl(url.toString()),
+					source.base,
+				)?.toString()
+			: undefined
 	} catch {
 		return undefined
 	}
@@ -2020,7 +2070,10 @@ async function readResource(uri: string, sources: Source[]) {
 			source,
 		)
 		if (!pageUrl) return undefined
-		const text = await readCleanPage(markdownUrlFor(pageUrl, source))
+		const text = await readCleanPage(
+			markdownUrlFor(pageUrl, source),
+			source.base,
+		)
 		return [
 			{
 				uri,
