@@ -1239,6 +1239,119 @@ describe('parseKnownEvents', () => {
 		// replace the transaction's other events.
 		expect(parseKnownEvent(fillLog)?.type).not.toBe('propamm swap')
 	})
+	it('describes a receipt whose transfer emitter is not checksummed', () => {
+		const hash = `0x${'9'.repeat(64)}` as const
+		// Mixed case that is not valid EIP-55.
+		const emitter = '0xABCDEF0123456789abcdef0123456789ABCDEF01'
+		const log = mockLog(
+			{
+				address: emitter,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from: accountAddress, to: recipientAddress },
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [5n]),
+			},
+			hash,
+		)
+		expect(() =>
+			parseKnownEvents(mockReceipt([log], accountAddress, hash)),
+		).not.toThrow()
+	})
+
+	it('matches each propAMM fill and trade in a receipt to its own transfers', () => {
+		const hash = `0x${'8'.repeat(64)}` as const
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+		const fillLog = (amountIn: bigint, amountOut: bigint, seq: number) =>
+			mockZoneEventLog(propAmmEventsAbi[1], PROP_AMM_POOL, {
+				pairIndex: 0,
+				taker: accountAddress,
+				ref: `0x${'7'.repeat(64)}`,
+				sponsorId: 1n,
+				baseIn: true,
+				amountIn,
+				amountOut,
+				makerMid: 1_100_457n,
+				seq,
+			})
+		// Two trades that share both legs hide the same two transfers.
+		const tradeLog = () =>
+			mockZoneEventLog(propAmmEventsAbi[0], PROP_AMM_POOL, {
+				taker: accountAddress,
+				recipient: recipientAddress,
+				tokenIn: userTokenAddress,
+				tokenOut: PROP_AMM_OUTPUT_TOKEN,
+				amountIn: 3_000n,
+				amountOut: 3_300n,
+			})
+		const secondFill = fillLog(2_000n, 2_200n, 2)
+		const logs = [
+			fillLog(1_000n, 1_100n, 1),
+			secondFill,
+			tradeLog(),
+			tradeLog(),
+			transferLog(PROP_AMM_OUTPUT_TOKEN, PROP_AMM_POOL, accountAddress, 2_200n),
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, 1_000n),
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, 2_000n),
+			transferLog(PROP_AMM_OUTPUT_TOKEN, PROP_AMM_POOL, accountAddress, 1_100n),
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, 3_000n),
+			transferLog(
+				PROP_AMM_OUTPUT_TOKEN,
+				PROP_AMM_POOL,
+				recipientAddress,
+				3_300n,
+			),
+			// Settles nothing, so it stays visible.
+			transferLog(userTokenAddress, accountAddress, recipientAddress, 7n),
+		]
+		const amounts = (event: ReturnType<typeof parseKnownEvent>) =>
+			event?.parts.flatMap((part) =>
+				part.type === 'amount' ? [part.value.token, part.value.value] : [],
+			)
+		const swap = (
+			amountIn: bigint,
+			tokenOut: Address.Address,
+			amountOut: bigint,
+		) => [
+			Address.checksum(userTokenAddress),
+			amountIn,
+			Address.checksum(tokenOut),
+			amountOut,
+		]
+
+		const events = parseKnownEvents(mockReceipt(logs, accountAddress, hash))
+		const swaps = events.filter((event) => event.type === 'propamm swap')
+		expect(swaps.map(amounts)).toEqual([
+			swap(1_000n, PROP_AMM_OUTPUT_TOKEN, 1_100n),
+			swap(2_000n, PROP_AMM_OUTPUT_TOKEN, 2_200n),
+			swap(3_000n, PROP_AMM_OUTPUT_TOKEN, 3_300n),
+			swap(3_000n, PROP_AMM_OUTPUT_TOKEN, 3_300n),
+		])
+		const others = events.filter((event) => event.type !== 'propamm swap')
+		expect(others).toHaveLength(1)
+		expect(amounts(others[0])?.[1]).toBe(7n)
+		expect(amounts(parseKnownEvent(secondFill, { logs }))).toEqual(
+			swap(2_000n, PROP_AMM_OUTPUT_TOKEN, 2_200n),
+		)
+	})
 
 	it.each([
 		['EarnDeposit', 7, 'Deposit to Earn'],
