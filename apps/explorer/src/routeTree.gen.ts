@@ -15,6 +15,7 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutMarketsRouteImport } from './routes/_layout/markets'
+import { Route as LayoutPaymentsRouteImport } from './routes/_layout/payments'
 import { Route as LayoutPropammRouteImport } from './routes/_layout/propamm'
 import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
@@ -82,6 +83,11 @@ const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
 const LayoutMarketsRoute = LayoutMarketsRouteImport.update({
   id: '/markets',
   path: '/markets',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPaymentsRoute = LayoutPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutPropammRoute = LayoutPropammRouteImport.update({
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
+  '/payments': typeof LayoutPaymentsRoute
   '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
+  '/payments': typeof LayoutPaymentsRoute
   '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
   '/_layout/markets': typeof LayoutMarketsRoute
+  '/_layout/payments': typeof LayoutPaymentsRoute
   '/_layout/propamm': typeof LayoutPropammRoute
   '/_layout/simulate': typeof LayoutSimulateRoute
   '/_layout/tokens': typeof LayoutTokensRoute
@@ -435,6 +444,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/fee-amm'
     | '/markets'
+    | '/payments'
     | '/propamm'
     | '/simulate'
     | '/tokens'
@@ -480,6 +490,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/fee-amm'
     | '/markets'
+    | '/payments'
     | '/propamm'
     | '/simulate'
     | '/tokens'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '/_layout/blocks'
     | '/_layout/fee-amm'
     | '/_layout/markets'
+    | '/_layout/payments'
     | '/_layout/propamm'
     | '/_layout/simulate'
     | '/_layout/tokens'
@@ -633,6 +645,13 @@ declare module '@tanstack/react-router' {
       path: '/markets'
       fullPath: '/markets'
       preLoaderRoute: typeof LayoutMarketsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/payments': {
+      id: '/_layout/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof LayoutPaymentsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/propamm': {
@@ -915,6 +934,7 @@ interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
   LayoutMarketsRoute: typeof LayoutMarketsRoute
+  LayoutPaymentsRoute: typeof LayoutPaymentsRoute
   LayoutPropammRoute: typeof LayoutPropammRoute
   LayoutSimulateRoute: typeof LayoutSimulateRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
@@ -943,6 +963,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
   LayoutMarketsRoute: LayoutMarketsRoute,
+  LayoutPaymentsRoute: LayoutPaymentsRoute,
   LayoutPropammRoute: LayoutPropammRoute,
   LayoutSimulateRoute: LayoutSimulateRoute,
   LayoutTokensRoute: LayoutTokensRoute,

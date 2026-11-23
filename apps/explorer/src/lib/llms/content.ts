@@ -152,6 +152,11 @@ export const docs = {
 			amount: 'Exact input amount in human-readable token units.',
 		},
 	},
+	'/payments': {
+		title: 'Payments',
+		description:
+			'Total payment volume (TPV) and assets on platform (AOP) on Tempo: daily, weekly and lifetime TPV, end-of-day AOP, and charts of daily and weekly TPV and of daily AOP split into stablecoins, tokenized assets (RWAs) and crypto. TPV counts every transfer of an in-scope stablecoin minus mints and burns; AOP is the value of the assets held on Tempo. Days are UTC.',
+	},
 	'/markets': {
 		title: 'Markets',
 		description:
