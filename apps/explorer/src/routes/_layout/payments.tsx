@@ -189,8 +189,26 @@ namespace styles {
 		minWidth: '0',
 		clipPath: 'inset(-24px -16px -16px -16px) !custom',
 	})
-	/** The range switch drops under the title when they don't fit side by side. */
-	export const cardHeader = style({ flexWrap: 'wrap', rowGap: '12' })
+	/**
+	 * Every card header is as tall as the small range switch, so titles and
+	 * charts line up across a row whether or not a card has the switch. On a
+	 * phone, where the cards stack, the switch drops under the title.
+	 */
+	export const cardHeader = style({
+		flexWrap: 'wrap',
+		minHeight: '32',
+		rowGap: '12',
+	})
+	/**
+	 * Two cards share a row only when each is wide enough for its title and
+	 * the range switch on one line (Grid's widest fit, 20rem, is too narrow).
+	 */
+	export const chartRow = style({
+		display: 'grid',
+		gap: '16',
+		gridTemplateColumns:
+			'repeat(auto-fit, minmax(min(28rem, 100%), 1fr)) !custom',
+	})
 	export const cardTitle = style({ whiteSpace: 'nowrap' })
 	export const plot = style({ height: '226px !custom' })
 }
@@ -281,7 +299,7 @@ function PaymentsPage(): React.JSX.Element {
 								/>
 							</Grid>
 
-							<Grid fit="large" gap="16">
+							<div {...styles.chartRow()}>
 								<ChartCard
 									title="Lifetime Total Payments Volume"
 									single
@@ -296,9 +314,9 @@ function PaymentsPage(): React.JSX.Element {
 									range={tpvRange}
 									onRangeChange={setTpvRange}
 								/>
-							</Grid>
+							</div>
 
-							<Grid fit="large" gap="16">
+							<div {...styles.chartRow()}>
 								<ChartCard
 									title="Lifetime Assets on Platform"
 									chart={lifetime?.aop}
@@ -311,7 +329,7 @@ function PaymentsPage(): React.JSX.Element {
 									range={aopRange}
 									onRangeChange={setAopRange}
 								/>
-							</Grid>
+							</div>
 
 							<p {...styles.note()}>
 								Total Payments Volume is the volume of every transfer of the
