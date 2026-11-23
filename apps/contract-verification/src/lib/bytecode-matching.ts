@@ -674,14 +674,16 @@ export function extractConstructorArgumentsTransformation(
 	const transformations: Transformation[] = []
 	const transformationValues: TransformationValues = {}
 
-	// If lengths are equal, no constructor arguments
+	// If lengths are equal, no constructor arguments: valid only for a constructor without inputs,
+	// since every ABI input encodes to at least one 32-byte word.
 	if (onchainCreationBytecode.length === recompiledCreationBytecode.length) {
+		const inputs = abi.find((item) => item.type === 'constructor')?.inputs
 		return {
 			populatedBytecode: recompiledCreationBytecode,
 			transformations,
 			transformationValues,
 			constructorArguments: null,
-			valid: true,
+			valid: !inputs || inputs.length === 0,
 		}
 	}
 

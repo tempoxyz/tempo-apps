@@ -538,6 +538,19 @@ describe('extractConstructorArgumentsTransformation', () => {
 
 		expect(result.constructorArguments).toBeNull()
 		expect(result.transformations).toHaveLength(0)
+		expect(result.valid).toBe(true)
+	})
+
+	it('rejects missing arguments for a constructor with inputs', () => {
+		const abi = [
+			{ type: 'constructor', inputs: [{ type: 'uint256', name: 'value' }] },
+		]
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			'0x6080604052',
+			abi,
+		)
+		expect(result.valid).toBe(false)
 	})
 
 	it('handles missing constructor in ABI', () => {
