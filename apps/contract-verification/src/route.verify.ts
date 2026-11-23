@@ -126,6 +126,9 @@ function exceedsSettingsLimits(root: unknown): boolean {
 		{ value: root, depth: 0 },
 	]
 	let visited = 0
+	// Approximate serialized size, counted during the walk so oversized input
+	// is rejected without building its JSON.
+	let bytes = 0
 
 	while (pending.length > 0) {
 		const current = pending.pop()
@@ -134,20 +137,23 @@ function exceedsSettingsLimits(root: unknown): boolean {
 		if (current.depth > MAX_SETTINGS_DEPTH || visited > MAX_SETTINGS_NODES)
 			return true
 
-		if (typeof current.value === 'object' && current.value !== null) {
-			const children = Array.isArray(current.value)
-				? current.value
-				: Object.values(current.value)
-			for (const child of children)
-				pending.push({ value: child, depth: current.depth + 1 })
-		}
-	}
+		if (typeof current.value === 'string') bytes += current.value.length + 2
+		else bytes += 8
 
-	if (
-		new TextEncoder().encode(JSON.stringify(root)).byteLength >
-		MAX_SETTINGS_BYTES
-	)
-		return true
+		if (typeof current.value === 'object' && current.value !== null) {
+			if (Array.isArray(current.value)) {
+				for (const child of current.value)
+					pending.push({ value: child, depth: current.depth + 1 })
+			} else {
+				for (const [key, child] of Object.entries(current.value)) {
+					bytes += key.length + 3
+					pending.push({ value: child, depth: current.depth + 1 })
+				}
+			}
+		}
+
+		if (bytes > MAX_SETTINGS_BYTES) return true
+	}
 
 	const optimizerSteps = getOptimizerSteps(root)
 	if (
