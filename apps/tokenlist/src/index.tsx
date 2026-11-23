@@ -76,6 +76,7 @@ function getTokenIconBaseName(address: string): string {
 
 /** Bundled icon names: a token address or a plain named icon (e.g. `usdc`). */
 const tokenIconBaseNamePattern = /^(?:0x[0-9a-f]{40}|[a-z0-9]+)$/
+const tokenAddressPattern = /^0x[0-9a-f]{40}$/
 
 app
 	.get('/', (context) => context.redirect('/docs'))
@@ -132,7 +133,7 @@ app.get('/icon/:chain_id/:address', async (context) => {
 	// gets the fallback icon.
 	const isValidBaseName = tokenIconBaseNamePattern.test(iconBaseName)
 	// Contract artwork is managed by the API; keep bundled icons as a fallback.
-	if (isValidBaseName && iconBaseName.startsWith('0x')) {
+	if (tokenAddressPattern.test(iconBaseName)) {
 		const response = await fetch(
 			`${tempoApiUrl}/assets/${chainId}/icons/${iconBaseName}`,
 			{ signal: AbortSignal.timeout(2_000) },
