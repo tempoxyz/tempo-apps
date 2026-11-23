@@ -380,11 +380,16 @@ export async function getPaymentsSnapshot(
 			console.error('Failed to load FX rates:', error)
 			return undefined
 		}),
-		swr({
+		swr<UsdRates>({
 			now,
 			key: `market:v2:${assets.join(',')}`,
 			isFresh: (entry) => now - entry.storedAt < MARKET_FRESH,
-			load: () => readMarketPrices(assets),
+			// A refresh that prices only some assets, such as Coinbase's bitcoin
+			// while CoinGecko is down, keeps the last good price of the rest.
+			load: async (previous) => ({
+				...previous,
+				...(await readMarketPrices(assets)),
+			}),
 		}).catch((error) => {
 			console.error('Failed to load market prices:', error)
 			return undefined

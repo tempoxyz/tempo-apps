@@ -103,4 +103,32 @@ describe('payments snapshot around UTC midnight', async () => {
 		const s = await getPaymentsSnapshot(4217, at('2026-11-21T12:00:00Z'))
 		expect(tpv(s, '2026-11-20')).toBe(10)
 	})
+
+	it('keeps the last good RWA price when only bitcoin refreshes', async () => {
+		day('2026-11-20', 10, 100)
+		let geckoUp = true
+		vi.stubGlobal('fetch', async (url: string) => {
+			if (url.includes('coingecko'))
+				return geckoUp
+					? new Response(
+							JSON.stringify({
+								'hastra-prime': { usd: 1.07 },
+								bitcoin: { usd: 60000 },
+							}),
+						)
+					: new Response('', { status: 503 })
+			if (url.includes('coinbase'))
+				return new Response(JSON.stringify({ data: { amount: '61000' } }))
+			return new Response(JSON.stringify({}))
+		})
+		await getPaymentsSnapshot(4217, at('2026-11-21T10:00:00Z'))
+		await flush()
+		geckoUp = false
+		// Past the market prices' freshness, a refresh runs with CoinGecko down.
+		await getPaymentsSnapshot(4217, at('2026-11-21T10:30:00Z'))
+		await flush()
+		const s = await getPaymentsSnapshot(4217, at('2026-11-21T10:31:00Z'))
+		expect(s.unpriced).not.toContain('hastra-prime')
+		expect(s.unpriced).not.toContain('bitcoin')
+	})
 })
