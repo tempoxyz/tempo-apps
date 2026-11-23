@@ -12,7 +12,7 @@ import {
 	Surface,
 	style,
 } from '@tempoxyz/ds'
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type * as React from 'react'
 import { PriceFormatter } from '#lib/formatting'
 import {
@@ -66,7 +66,7 @@ const tpvSeries = [
 	{
 		color: `#4471ed`,
 		key: 'tpv',
-		label: 'TPV',
+		label: 'Total Payments Volume',
 	},
 ] as const
 
@@ -181,6 +181,17 @@ namespace styles {
 				},
 		},
 	})
+	/**
+	 * Clips a chart held at its old width while its card shrinks, at the
+	 * card's padding, so the axis labels that sit past the plot's edges stay.
+	 */
+	export const settled = style({
+		minWidth: '0',
+		clipPath: 'inset(-24px -16px -16px -16px) !custom',
+	})
+	/** The range switch drops under the title when they don't fit side by side. */
+	export const cardHeader = style({ flexWrap: 'wrap', rowGap: '12' })
+	export const cardTitle = style({ whiteSpace: 'nowrap' })
 	export const plot = style({ height: '226px !custom' })
 }
 
@@ -256,20 +267,11 @@ function PaymentsPage(): React.JSX.Element {
 								render={<dl aria-label="Totals" {...styles.tiles()} />}
 							>
 								<Stat
-									label="Daily TPV"
-									value={totals?.day}
-									title={
-										totals?.closed ? `${label(totals.closed)}, UTC` : undefined
-									}
+									label="Lifetime Total Payments Volume"
+									value={totals?.lifetime}
 								/>
 								<Stat
-									label="Weekly TPV"
-									value={totals?.week}
-									title="The last 7 full days, UTC"
-								/>
-								<Stat label="Lifetime TPV" value={totals?.lifetime} />
-								<Stat
-									label="AOP"
+									label="Assets on Platform"
 									value={totals?.aop}
 									title={
 										totals?.closed
@@ -281,13 +283,13 @@ function PaymentsPage(): React.JSX.Element {
 
 							<Grid fit="large" gap="16">
 								<ChartCard
-									title="Lifetime TPV"
+									title="Lifetime Total Payments Volume"
 									single
 									chart={lifetime?.tpv}
 									series={tpvSeries}
 								/>
 								<ChartCard
-									title="TPV"
+									title="Total Payments Volume"
 									single
 									chart={tpvChart}
 									series={tpvSeries}
@@ -298,12 +300,12 @@ function PaymentsPage(): React.JSX.Element {
 
 							<Grid fit="large" gap="16">
 								<ChartCard
-									title="Lifetime AOP"
+									title="Lifetime Assets on Platform"
 									chart={lifetime?.aop}
 									series={aopSeries}
 								/>
 								<ChartCard
-									title="AOP"
+									title="Assets on Platform"
 									chart={aopChart}
 									series={aopSeries}
 									range={aopRange}
@@ -312,14 +314,15 @@ function PaymentsPage(): React.JSX.Element {
 							</Grid>
 
 							<p {...styles.note()}>
-								TPV is the volume of every transfer of the stablecoins on Tempo,
-								excluding mints and burns. AOP is the value of the stablecoins,
-								tokenized assets and crypto held on Tempo at the end of each
-								day. Lifetime TPV adds up each month since launch, and each
-								period's AOP is its value at the period's close. Days are UTC
-								and charts count full days only, so the latest week and month
-								run to yesterday. Assets are valued at their latest market
-								price.
+								Total Payments Volume is the volume of every transfer of the
+								stablecoins on Tempo, excluding mints and burns. Assets on
+								Platform is the value of the stablecoins, tokenized assets and
+								crypto held on Tempo at the end of each day. Lifetime Total
+								Payments Volume adds up each month since launch, and each
+								period's Assets on Platform is the value at the period's close.
+								Days are UTC and charts count full days only, so the latest week
+								and month run to yesterday. Assets are valued at their latest
+								market price.
 								{query.data && query.data.unpriced.length > 0
 									? ' Some prices are unavailable right now, so those assets are left out.'
 									: ''}
@@ -408,8 +411,10 @@ function ChartCard(props: ChartCardProps): React.JSX.Element {
 			render={<section aria-labelledby={titleId} />}
 			{...styles.card()}
 		>
-			<Surface.Header>
-				<Surface.Title id={titleId}>{props.title}</Surface.Title>
+			<Surface.Header {...styles.cardHeader()}>
+				<Surface.Title id={titleId} {...styles.cardTitle()}>
+					{props.title}
+				</Surface.Title>
 				{range && onRangeChange && (
 					<>
 						<span hidden id={rangeId}>
@@ -430,9 +435,11 @@ function ChartCard(props: ChartCardProps): React.JSX.Element {
 					</>
 				)}
 			</Surface.Header>
-			<div {...styles.chart()}>
-				{props.single ? <div {...styles.single()}>{plot}</div> : plot}
-			</div>
+			<SettledWidth>
+				<div {...styles.chart()}>
+					{props.single ? <div {...styles.single()}>{plot}</div> : plot}
+				</div>
+			</SettledWidth>
 		</Surface>
 	)
 }
@@ -447,6 +454,40 @@ type ChartCardProps = {
 	single?: boolean | undefined
 	range?: Period | undefined
 	onRangeChange?: ((range: Period) => void) | undefined
+}
+
+/** How long a resize must rest before the charts take the new width. */
+const RESIZE_SETTLE = 150
+
+/**
+ * Holds its children at their last settled width while the card resizes.
+ * BarChart replays its bar animation on every width change, so a chart that
+ * follows a window drag pixel by pixel flickers; this redraws it once, when
+ * the drag stops.
+ */
+function SettledWidth(props: { children: React.ReactNode }): React.JSX.Element {
+	const ref = useRef<HTMLDivElement>(null)
+	const [width, setWidth] = useState<number>()
+	useEffect(() => {
+		const element = ref.current
+		if (!element) return
+		let timer: ReturnType<typeof setTimeout> | undefined
+		const observer = new ResizeObserver(([entry]) => {
+			const next = Math.floor(entry?.contentRect.width ?? 0)
+			clearTimeout(timer)
+			timer = setTimeout(() => setWidth(next), RESIZE_SETTLE)
+		})
+		observer.observe(element)
+		return () => {
+			clearTimeout(timer)
+			observer.disconnect()
+		}
+	}, [])
+	return (
+		<div ref={ref} {...styles.settled()}>
+			<div style={width ? { width } : undefined}>{props.children}</div>
+		</div>
+	)
 }
 
 function ChartSkeleton(): React.JSX.Element {
