@@ -3107,10 +3107,12 @@ export function parseKnownEvents(
 			!Address.isEqual(event.address, STABLECOIN_EXCHANGE)
 		)
 			continue
-		const taker = (event.args as { taker: Address.Address }).taker.toLowerCase()
-		const indices = dexFillIndicesByTaker.get(taker)
+		const taker = (event.args as { taker?: unknown }).taker
+		if (typeof taker !== 'string') continue
+		const key = taker.toLowerCase()
+		const indices = dexFillIndicesByTaker.get(key)
 		if (indices) indices.push(index)
-		else dexFillIndicesByTaker.set(taker, [index])
+		else dexFillIndicesByTaker.set(key, [index])
 	}
 	const dexFillBetween = (
 		start: number,
