@@ -569,6 +569,35 @@ describe('extractConstructorArgumentsTransformation', () => {
 		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
 	})
 
+	it('accepts string arguments that begin with a NUL byte', () => {
+		const abi = [
+			{
+				type: 'constructor',
+				inputs: [
+					{ type: 'string', name: 'label' },
+					{ type: 'string[]', name: 'tags' },
+				],
+			},
+		]
+		const word = (hex: string) => hex.padStart(64, '0')
+		const args = [
+			word('40'),
+			word('80'),
+			word('2'),
+			'0041'.padEnd(64, '0'),
+			word('1'),
+			word('20'),
+			word('1'),
+			'00'.padEnd(64, '0'),
+		].join('')
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${args}`,
+			abi,
+		)
+		expect(result.valid).toBe(true)
+	})
+
 	it('rejects trailing bytes that do not re-encode as the constructor inputs', () => {
 		const abi = [
 			{ type: 'constructor', inputs: [{ type: 'bool', name: 'flag' }] },

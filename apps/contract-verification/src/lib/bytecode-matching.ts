@@ -700,9 +700,11 @@ export function extractConstructorArgumentsTransformation(
 
 	// Validate by decoding and re-encoding
 	try {
-		// The full inputs, so tuple and tuple-array parameters keep their components.
-		const paramTypes =
-			constructorAbi.inputs as unknown as AbiParameters.AbiParameters
+		// The full inputs, so tuple and tuple-array parameters keep their components. Strings are
+		// checked as bytes, which share their ABI layout, since decoding a string drops NUL bytes.
+		const paramTypes = constructorAbi.inputs.map(
+			stringsAsBytes,
+		) as unknown as AbiParameters.AbiParameters
 
 		const decoded = AbiParameters.decode(paramTypes, constructorArguments)
 		const reencoded = AbiParameters.encode(paramTypes, decoded)
@@ -734,6 +736,19 @@ export function extractConstructorArgumentsTransformation(
 			constructorArguments,
 			valid: false,
 		}
+	}
+}
+
+type AbiInput = { type: string; name?: string; components?: AbiInput[] }
+
+/** Replaces string (and string array) types with bytes, recursively through tuple components. */
+function stringsAsBytes(input: AbiInput): AbiInput {
+	return {
+		...input,
+		type: input.type.replace(/^string(?=$|\[)/, 'bytes'),
+		...(input.components
+			? { components: input.components.map(stringsAsBytes) }
+			: {}),
 	}
 }
 
