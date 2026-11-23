@@ -66,7 +66,7 @@ describe('payments snapshot around UTC midnight', async () => {
 	it('keeps yesterday from the cached today until history covers it', async () => {
 		day('2026-11-20', 10, 100)
 		day('2026-11-21', 20, 5)
-		await getPaymentsSnapshot(4217, at('2026-11-21T23:00:00Z'))
+		await getPaymentsSnapshot(4217, at('2026-11-21T23:59:00Z'))
 		await flush()
 		// After midnight, the indexer is down: both parts are stale.
 		indexerUp = false
@@ -130,5 +130,17 @@ describe('payments snapshot around UTC midnight', async () => {
 		const s = await getPaymentsSnapshot(4217, at('2026-11-21T10:31:00Z'))
 		expect(s.unpriced).not.toContain('hastra-prime')
 		expect(s.unpriced).not.toContain('bitcoin')
+	})
+
+	it('warns when the cached day stopped short of its close', async () => {
+		day('2026-11-20', 10, 100)
+		day('2026-11-21', 20, 5)
+		await getPaymentsSnapshot(4217, at('2026-11-21T10:00:00Z'))
+		await flush()
+		// The indexer goes down at 10:00 and stays down past midnight.
+		indexerUp = false
+		const s = await getPaymentsSnapshot(4217, at('2026-11-22T01:00:00Z'))
+		expect(tpv(s, '2026-11-21')).toBe(20)
+		expect(s.through).toBe('2026-11-20')
 	})
 })

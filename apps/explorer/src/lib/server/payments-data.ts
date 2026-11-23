@@ -422,8 +422,14 @@ export async function getPaymentsSnapshot(
 		asOf: now,
 		fxDate: fx?.data.date ?? null,
 		unpriced: keys.filter((key) => rates[key] === undefined),
+		// A cached day counts as covered only when its copy was taken at its
+		// close; an older copy (the indexer went down during the day) keeps
+		// the rows but leaves the day open, so the page still warns.
 		through:
-			todayRows && todayRows.data.day < today
+			todayRows &&
+			todayRows.data.day < today &&
+			todayRows.storedAt >=
+				Date.parse(`${todayRows.data.day}T00:00:00Z`) + DAY - TODAY_FRESH
 				? todayRows.data.day
 				: history.data.through,
 	}
