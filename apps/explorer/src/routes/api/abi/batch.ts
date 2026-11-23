@@ -32,6 +32,7 @@ export const Route = createFileRoute('/api/abi/batch')({
 					] as Hex[]
 
 					// Fetch all ABIs and signatures in parallel
+					let signatureUnavailable = false
 					const [abiResults, signatureResults] = await Promise.all([
 						mapLimit(uniqueAddresses, 3, async (address) => {
 							try {
@@ -48,10 +49,20 @@ export const Route = createFileRoute('/api/abi/batch')({
 								const signature = await lookupSignature(selector)
 								return [selector.toLowerCase(), signature] as const
 							} catch {
+								signatureUnavailable = true
 								return [selector.toLowerCase(), null] as const
 							}
 						}),
 					])
+					// Transient overload must not become a permanently cached missing signature.
+					if (signatureUnavailable)
+						return Response.json(
+							{ error: 'Signature lookup unavailable' },
+							{
+								status: 503,
+								headers: { 'Cache-Control': 'no-store', 'Retry-After': '1' },
+							},
+						)
 
 					const abis = Object.fromEntries(abiResults)
 					const signatures = Object.fromEntries(signatureResults)

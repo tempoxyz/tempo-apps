@@ -67,3 +67,21 @@ it('does not expand an address into unbudgeted inferred signature lookups', asyn
 	expect((await call({ addresses: [address], selectors: [] })).status).toBe(200)
 	expect(lookup.abi).toHaveBeenCalledWith(address, { resolveSignatures: false })
 })
+
+it('keeps transient signature failures retryable instead of caching missing results', async () => {
+	lookup.signature.mockRejectedValueOnce(
+		new Error('Too many signature lookups'),
+	)
+	const input = { addresses: [], selectors: ['0x12345678', '0x87654321'] }
+	const failed = await call(input)
+	expect(failed.status).toBe(503)
+	expect(failed.headers.get('Cache-Control')).toBe('no-store')
+	expect(failed.headers.get('Retry-After')).toBe('1')
+	expect(await failed.json()).not.toHaveProperty('signatures')
+	lookup.signature.mockResolvedValue('transfer(address,uint256)')
+	const recovered = await call(input)
+	expect(recovered.status).toBe(200)
+	expect(await recovered.json()).toMatchObject({
+		signatures: { '0x12345678': 'transfer(address,uint256)' },
+	})
+})
