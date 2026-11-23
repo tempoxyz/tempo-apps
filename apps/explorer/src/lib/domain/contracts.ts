@@ -1030,6 +1030,10 @@ export async function lookupSignature(
 		return signatures[0] ?? null
 	})()
 	signatureLookupCache.set(key, lookup)
+	if (signatureLookupCache.size > 1024) {
+		const oldest = signatureLookupCache.keys().next().value
+		if (oldest) signatureLookupCache.delete(oldest)
+	}
 
 	try {
 		return await lookup

@@ -29,10 +29,6 @@ export const PUBLIC_METHODS = new Set([
 	'eth_sendRawTransaction',
 	'eth_sendRawTransactionSync',
 	'eth_getRawTransactionByHash',
-	'eth_simulateV1',
-	'debug_traceTransaction',
-	'debug_traceCall',
-	'debug_traceCallMany',
 ])
 const MAX_BODY_BYTES = 128 * 1024
 const MAX_BATCH = 50
