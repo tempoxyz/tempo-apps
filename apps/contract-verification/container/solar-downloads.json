@@ -8,5 +8,10 @@
 		"rev": "a2b4435466bff1b91459a1bc64b04e5e8144ed9f",
 		"version": "0.3.0-dev",
 		"sha256": "ec50d9140c4fbfe9d8d59e6ad19f23e7bd5b35666bd0fead6807c5be728f7cd6"
+	},
+	{
+		"rev": "a849fe3d14dd46c133efeba197b4838f07c107b5",
+		"version": "0.3.1",
+		"sha256": "87d110b3425ded4117cb119826d5ffc6d997b8d2ad251c4e32bfd9c08ca788d9"
 	}
 ]

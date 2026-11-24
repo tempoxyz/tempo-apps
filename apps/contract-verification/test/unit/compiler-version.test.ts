@@ -122,6 +122,20 @@ describe('findDownloadableSolarBuild', () => {
 		).toMatch(/^[0-9a-f]{64}$/)
 	})
 
+	it('finds the solar 0.3.1 release', () => {
+		expect(
+			findDownloadableSolarBuild('0.8.38+commit.a849fe3d.solar.0.3.1'),
+		).toMatchObject({
+			rev: 'a849fe3d14dd46c133efeba197b4838f07c107b5',
+			sha256:
+				'87d110b3425ded4117cb119826d5ffc6d997b8d2ad251c4e32bfd9c08ca788d9',
+			version: '0.3.1',
+		})
+		expect(
+			findDownloadableSolarBuild('0.8.38+commit.a849fe3d.solar.0.3.1-dev'),
+		).toBeNull()
+	})
+
 	it('accepts a full 40-character commit', () => {
 		expect(
 			findDownloadableSolarBuild(
