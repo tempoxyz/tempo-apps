@@ -354,4 +354,44 @@ describe('published data', () => {
 
 		expect(api).toEqual([])
 	})
+
+	it('keeps index entries whose legacy timestamp is a number', async () => {
+		const bucket = new FakeBucket()
+		setIndex(bucket, [
+			indexEntry({}),
+			indexEntry({
+				snapshotId: 'legacy',
+				block: '50639520',
+				timestamp: 1700000001,
+				isModular: false,
+				presetSizes: undefined,
+			}),
+		])
+
+		const api = await (await request(bucket, '/api/snapshots')).json()
+
+		expect(api).toHaveLength(2)
+		expect(api[0]).toMatchObject({
+			snapshotId: 'legacy',
+			timestamp: '1700000001',
+		})
+	})
+
+	it('rescans the bucket when no index entry is valid', async () => {
+		const bucket = new FakeBucket()
+		setIndex(bucket, [null, null])
+		bucket.set('tempo-4217-100-1700000000.json', {
+			chain_id: '4217',
+			block: '100',
+			timestamp: '1700000000',
+			archive: 'tempo-4217-100-1700000000.tar.lz4',
+		})
+		bucket.set('tempo-4217-100-1700000000.tar.lz4', 'archive')
+
+		const api = await (await request(bucket, '/api/snapshots')).json()
+		const index = JSON.parse(bucket.objects.get('_index.json') ?? '{}')
+
+		expect(api).toMatchObject([{ chainId: '4217', block: '100' }])
+		expect(index.snapshots).toHaveLength(1)
+	})
 })

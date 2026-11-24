@@ -327,6 +327,15 @@ function parseLegacyMetadata(
 	}
 }
 
+// Older indexes stored legacy timestamps as JSON numbers; read them as the
+// decimal strings the loaders now write.
+function normalizeIndexedTimestamp(value: unknown): unknown {
+	if (isRecord(value) && isBlockNumber(value.timestamp)) {
+		return { ...value, timestamp: String(value.timestamp) }
+	}
+	return value
+}
+
 // Checks the fields the UI reads from a snapshot entry in the persisted index.
 function isValidSnapshotEntry(value: unknown): value is Snapshot {
 	if (!isRecord(value)) return false
@@ -956,7 +965,15 @@ async function readSnapshotIndex(env: Env): Promise<Snapshot[] | null> {
 			return null
 		}
 
-		const snapshots = index.snapshots.filter(isValidSnapshotEntry)
+		const snapshots = index.snapshots
+			.map(normalizeIndexedTimestamp)
+			.filter(isValidSnapshotEntry)
+		// A nonempty index with nothing usable left is treated as missing, so the
+		// bucket is scanned and the index rewritten.
+		if (index.snapshots.length > 0 && snapshots.length === 0) {
+			console.warn(`Ignoring ${SNAPSHOT_INDEX_KEY} with no valid entries`)
+			return null
+		}
 		if (snapshots.length !== index.snapshots.length) {
 			console.warn(
 				`Dropped ${index.snapshots.length - snapshots.length} invalid entries from ${SNAPSHOT_INDEX_KEY}`,
