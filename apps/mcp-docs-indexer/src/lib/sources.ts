@@ -79,6 +79,15 @@ export function sourceIndexUrl(source: Source): string {
 	).toString()
 }
 
+// Tempo's docs moved from tempo.xyz to tempo.com; links on either origin (and
+// on the legacy docs.tempo.xyz host) belong to the same `/developers` source.
+const tempoDocsOrigins = new Set([
+	'https://tempo.com',
+	'https://www.tempo.com',
+	'https://tempo.xyz',
+	'https://www.tempo.xyz',
+])
+
 export function resolveSourcePageUrl(
 	raw: string,
 	base: string,
@@ -87,12 +96,16 @@ export function resolveSourcePageUrl(
 		const root = new URL(base)
 		const prefix = root.pathname.replace(/\/+$/, '')
 		let url = new URL(raw, `${base.replace(/\/+$/, '')}/`)
-		if (
-			root.origin === 'https://tempo.xyz' &&
-			prefix === '/developers' &&
-			url.origin === 'https://docs.tempo.xyz'
-		) {
+		const tempoDocs =
+			tempoDocsOrigins.has(root.origin) && prefix === '/developers'
+		if (tempoDocs && url.origin === 'https://docs.tempo.xyz') {
 			url = new URL(`${prefix}${url.pathname}`, root.origin)
+		} else if (
+			tempoDocs &&
+			url.origin !== root.origin &&
+			tempoDocsOrigins.has(url.origin)
+		) {
+			url = new URL(url.pathname, root.origin)
 		} else if (
 			raw.startsWith('/') &&
 			!raw.startsWith('//') &&
