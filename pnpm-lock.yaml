@@ -165,6 +165,9 @@ catalogs:
     globals:
       specifier: ^17.4.0
       version: 17.4.0
+    happy-dom:
+      specifier: 21.0.4
+      version: 21.0.4
     hono:
       specifier: ^4.13.11
       version: 4.13.14
@@ -415,7 +418,7 @@ importers:
         version: 1.1.2(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -608,7 +611,7 @@ importers:
         version: 1.1.2(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -675,7 +678,7 @@ importers:
         version: 8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -777,7 +780,7 @@ importers:
         version: 6.0.2
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -802,7 +805,7 @@ importers:
         version: 6.0.2
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -878,9 +881,15 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.5.2
+      happy-dom:
+        specifier: 'catalog:'
+        version: 21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       typescript:
         specifier: 'catalog:'
         version: 6.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -920,7 +929,7 @@ importers:
         version: 8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3)
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler:
         specifier: 'catalog:'
         version: 4.142.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -942,7 +951,7 @@ importers:
         version: 4.13.14
       vitest:
         specifier: 'catalog:'
-        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+        version: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
 
   packages/rpc-utils:
     dependencies:
@@ -2155,9 +2164,6 @@ packages:
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
     engines: {node: '>=6.0.0'}
-
-  '@jridgewell/sourcemap-codec@1.5.5':
-    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
@@ -4280,6 +4286,9 @@ packages:
   '@types/web-bluetooth@0.0.21':
     resolution: {integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==}
 
+  '@types/whatwg-mimetype@3.0.2':
+    resolution: {integrity: sha512-c2AKvDT8ToxLIOUlN51gTiHXflsfIFisS4pO7pDPoKouJCESkhZnEy623gwP9laCy5lnLDAw1vAzu2vM2YLOrA==}
+
   '@types/ws@8.18.2':
     resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
 
@@ -4857,6 +4866,10 @@ packages:
 
   buffer-from@1.1.2:
     resolution: {integrity: sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ==}
+
+  buffer-image-size@0.6.4:
+    resolution: {integrity: sha512-nEh+kZOPY1w+gcCMobZ6ETUp9WfibndnosbpwB1iJk/8Gt5ZF2bhS6+B6bPYz424KtwsR6Rflc3tCz1/ghX2dQ==}
+    engines: {node: '>=4.0'}
 
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
@@ -5791,6 +5804,10 @@ packages:
     peerDependenciesMeta:
       crossws:
         optional: true
+
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
+    engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -8439,6 +8456,10 @@ packages:
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
 
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
+
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
 
@@ -9073,7 +9094,7 @@ snapshots:
       cjs-module-lexer: 1.2.3
       esbuild: 0.28.1
       miniflare: 5.20261006.0-alpha(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler: 4.148.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod: 4.6.7
     transitivePeerDependencies:
@@ -9089,7 +9110,7 @@ snapshots:
       cjs-module-lexer: 1.2.3
       esbuild: 0.28.1
       miniflare: 5.20260815.0-alpha(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
-      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
       wrangler: 4.124.0(@cloudflare/workers-types@5.20260928.1)(@types/node@25.5.2)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod: 4.6.7
     transitivePeerDependencies:
@@ -9742,8 +9763,6 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.31
 
   '@jridgewell/resolve-uri@3.1.2': {}
-
-  '@jridgewell/sourcemap-codec@1.5.5': {}
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
@@ -11918,10 +11937,11 @@ snapshots:
 
   '@types/web-bluetooth@0.0.21': {}
 
+  '@types/whatwg-mimetype@3.0.2': {}
+
   '@types/ws@8.18.2':
     dependencies:
       '@types/node': 25.9.1
-    optional: true
 
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260408.1':
     optional: true
@@ -12002,7 +12022,7 @@ snapshots:
       magicast: 0.5.5
       obug: 2.2.1
       tinyrainbow: 3.2.0
-      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
     transitivePeerDependencies:
       - supports-color
 
@@ -12050,7 +12070,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
+      vitest: 4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
 
   '@vitest/utils@4.1.12':
     dependencies:
@@ -12566,6 +12586,10 @@ snapshots:
   buffer-crc32@1.0.0: {}
 
   buffer-from@1.1.2: {}
+
+  buffer-image-size@0.6.4:
+    dependencies:
+      '@types/node': 25.9.1
 
   buffer@5.7.1:
     dependencies:
@@ -13442,6 +13466,19 @@ snapshots:
       rou3: 0.8.1
       srvx: 0.11.22
 
+  happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+    dependencies:
+      '@types/node': 25.9.1
+      '@types/whatwg-mimetype': 3.0.2
+      '@types/ws': 8.18.2
+      buffer-image-size: 0.6.4
+      entities: 7.0.1
+      whatwg-mimetype: 3.0.0
+      ws: 8.22.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   has-flag@4.0.0: {}
 
   has-symbols@1.1.0: {}
@@ -14033,7 +14070,7 @@ snapshots:
 
   magic-string@0.30.21:
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   magic-string@1.4.5:
     dependencies:
@@ -16560,7 +16597,7 @@ snapshots:
     optionalDependencies:
       vite: 8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3)
 
-  vitest@4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3)):
+  vitest@4.1.12(@opentelemetry/api@1.9.0)(@types/node@25.5.2)(@vitest/coverage-istanbul@4.1.12)(@vitest/ui@4.1.12)(happy-dom@21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10))(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.12
       '@vitest/mocker': 4.1.12(vite@8.3.5(@types/node@25.5.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.8.3))
@@ -16587,6 +16624,7 @@ snapshots:
       '@types/node': 25.5.2
       '@vitest/coverage-istanbul': 4.1.12(vitest@4.1.12)
       '@vitest/ui': 4.1.12(vitest@4.1.12)
+      happy-dom: 21.0.4(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - msw
 
@@ -16836,6 +16874,8 @@ snapshots:
   webidl-conversions@3.0.1: {}
 
   webpack-virtual-modules@0.6.2: {}
+
+  whatwg-mimetype@3.0.0: {}
 
   whatwg-url@5.0.0:
     dependencies:
