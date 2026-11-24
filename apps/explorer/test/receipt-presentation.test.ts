@@ -33,7 +33,7 @@ const lineItems = {
 	],
 }
 
-function build(events: KnownEvent[], voucher = null) {
+function build(events: KnownEvent[], extra: Record<string, unknown> = {}) {
 	return buildReceiptPresentation({
 		chainId: 4217,
 		feeBreakdown: [
@@ -59,7 +59,7 @@ function build(events: KnownEvent[], voucher = null) {
 		knownEvents: events,
 		lineItems,
 		receipt,
-		voucher,
+		...extra,
 	})
 }
 
@@ -92,37 +92,58 @@ describe('receipt presentation', () => {
 		})
 	})
 
-	test('shares hidden-event, blocked-transfer, fee-payer, and voucher rules', () => {
-		const presentation = build(
-			[
-				{
-					type: 'nonce incremented',
-					parts: [{ type: 'action', value: 'Nonce Incremented' }],
-				},
-				{
-					type: 'active key count changed',
-					parts: [{ type: 'action', value: 'Active Key Count Changed' }],
-				},
-				{
-					type: 'send',
-					parts: [{ type: 'action', value: 'Send' }],
-					meta: { to: guard },
-				},
-				{
-					type: 'transfer blocked',
-					parts: [{ type: 'action', value: 'Transfer Blocked' }],
-				},
-			],
-			{ packetCount: 3, packetSize: 2 },
-		)
+	test('shares hidden-event, blocked-transfer, and fee-payer rules', () => {
+		const presentation = build([
+			{
+				type: 'nonce incremented',
+				parts: [{ type: 'action', value: 'Nonce Incremented' }],
+			},
+			{
+				type: 'active key count changed',
+				parts: [{ type: 'action', value: 'Active Key Count Changed' }],
+			},
+			{
+				type: 'send',
+				parts: [{ type: 'action', value: 'Send' }],
+				meta: { to: guard },
+			},
+			{
+				type: 'transfer blocked',
+				parts: [{ type: 'action', value: 'Transfer Blocked' }],
+			},
+		])
 
 		expect(presentation.events.map((event) => event.type)).toEqual([
-			'streamed payment',
 			'transfer blocked',
 		])
 		expect(presentation.feeBreakdown).toHaveLength(1)
 		expect(presentation.feeBreakdown[0]?.payer).toBe(sender)
-		expect(presentation.totalDisplay).toBe('$6')
+		expect(presentation.totalDisplay).toBeUndefined()
+	})
+
+	test('derives events and totals only from chain data', () => {
+		const settle: KnownEvent = {
+			type: 'settle channel',
+			parts: [
+				{ type: 'action', value: 'Settle' },
+				{
+					type: 'amount',
+					value: { currency: 'USD', decimals: 6, token, value: 1_000_000n },
+				},
+				{ type: 'text', value: 'to' },
+				{ type: 'account', value: other },
+			],
+			meta: { from: sender, to: other },
+		}
+		const baseline = build([settle])
+		const presentation = build([settle], {
+			voucher: { packetCount: 1, packetSize: 50_000_000 },
+		})
+
+		expect(presentation).toEqual(baseline)
+		expect(presentation.events.map((event) => event.type)).toEqual([
+			'settle channel',
+		])
 	})
 
 	test('uses the same side-amount and vault-total rules as the card', () => {
@@ -143,9 +164,6 @@ describe('receipt presentation', () => {
 			first,
 		)
 		expect(build([redemption]).totalDisplay).toBeUndefined()
-		expect(
-			build([redemption], { packetCount: 3, packetSize: 2 }).totalDisplay,
-		).toBe('$6')
 	})
 
 	test('hides side amounts for private Zone activity', () => {
