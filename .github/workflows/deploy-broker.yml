@@ -34,8 +34,9 @@ permissions: {}
 # One change check, build and deploy per Worker at a time, never cancelled: the
 # broker finishes work a cancelled job started, so a cancelled run could still
 # deploy after a newer one. A run that starts while another is in progress
-# waits, and GitHub keeps only the newest waiting run, so of several queued
-# commits the newest deploys. For a single-environment app the group is the one
+# waits, and GitHub keeps only the newest waiting run. Runs can still reach the
+# group out of commit order, so the change check skips a run that main has
+# overtaken. For a single-environment app the group is the one
 # deploy.yml used, so the first broker deploy waits for a run still deploying
 # with the static token.
 concurrency:
@@ -77,13 +78,29 @@ jobs:
         run: |
           # if workflow_dispatch, always deploy
           #
+          paths="^(apps/${APP_NAME}/|pnpm-lock.yaml)"
           if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            relevant=true
+          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "$paths"; then
+            relevant=true
           else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            relevant=false
           fi
+
+          # Runs reach the concurrency group in the order their earlier jobs
+          # finish, not in commit order, so this run can start after a newer
+          # commit's. If main has since moved to a commit that changed this
+          # app, that commit's run deploys it, so this one must not deploy
+          # older code over it. Fetch main now, after this run entered the
+          # group; the repository is public, so the fetch needs no credentials.
+          git fetch --quiet --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          head_sha="$(git rev-parse origin/main)"
+          if [[ "$relevant" == true && "$head_sha" != "$CURRENT_SHA" ]] \
+            && git diff --name-only "$CURRENT_SHA" "$head_sha" | grep -qE "$paths"; then
+            echo "::notice::Not deploying ${CURRENT_SHA}: main has moved to ${head_sha}, which changes ${APP_NAME}, and its run deploys it."
+            relevant=false
+          fi
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
 
   build:
     permissions:
