@@ -2893,6 +2893,13 @@ async function handleUI(_req: Request, env: Env) {
         : '<span style="color:var(--muted);font-size:0.8rem">Select components to unlock capabilities</span>';
     }
 
+    // Quotes a value for a POSIX shell, so bucket-supplied text can't add commands to the copied line.
+    function shellArg(value) {
+      var text = String(value);
+      if (/^[A-Za-z0-9_.:/@%+=,-]+$/.test(text)) return text;
+      return "'" + text.split("'").join("'" + '"' + "'" + '"' + "'") + "'";
+    }
+
     function updateModularCmd() {
       var latestSnapshot = getLatestSnapshotForActiveNetwork();
 
@@ -2900,10 +2907,10 @@ async function handleUI(_req: Request, env: Env) {
         var legacyCmd = 'tempo download';
         if (activeChainId !== '${DEFAULT_CHAIN_ID}') {
           var legacyNetwork = NETWORK_OPTIONS.find(function(option) { return option.chainId === activeChainId; });
-          if (legacyNetwork) legacyCmd += ' --chain ' + legacyNetwork.key;
+          if (legacyNetwork) legacyCmd += ' --chain ' + shellArg(legacyNetwork.key);
         }
         if (latestSnapshot && latestSnapshot.archiveUrl) {
-          legacyCmd += ' -u ' + latestSnapshot.archiveUrl;
+          legacyCmd += ' -u ' + shellArg(latestSnapshot.archiveUrl);
         }
         document.getElementById('modularCmdText').textContent = legacyCmd;
         document.getElementById('cmdToggle').style.display = 'none';
@@ -2938,10 +2945,10 @@ async function handleUI(_req: Request, env: Env) {
       }
       if (activeChainId !== '${DEFAULT_CHAIN_ID}') {
         var network = NETWORK_OPTIONS.find(function(option) { return option.chainId === activeChainId; });
-        if (network) cmd += ' --chain ' + network.key;
+        if (network) cmd += ' --chain ' + shellArg(network.key);
       }
       if (activeSnapshotUrl) {
-        cmd += ' --manifest-url ' + activeSnapshotUrl;
+        cmd += ' --manifest-url ' + shellArg(activeSnapshotUrl);
       }
 
       var snapshot = getActiveSnapshot();
