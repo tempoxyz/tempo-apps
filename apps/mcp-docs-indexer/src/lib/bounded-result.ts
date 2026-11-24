@@ -8,6 +8,18 @@ const TRUNCATION_NOTICE =
 
 class BudgetExceeded extends Error {}
 
+/** Unwraps Number, String, Boolean and BigInt objects, as `JSON.stringify` does. */
+function unbox(value: unknown): unknown {
+	if (
+		value instanceof Number ||
+		value instanceof String ||
+		value instanceof Boolean ||
+		value instanceof BigInt
+	)
+		return value.valueOf()
+	return value
+}
+
 /**
  * Serializes `value` like `JSON.stringify(value, null, 2)`, but stops once the output passes
  * `maxChars`, so the work is bounded by the cap rather than by the size of the object graph.
@@ -20,6 +32,14 @@ export function boundedStringify(
 ): { text: string; truncated: boolean } {
 	const parts: string[] = []
 	let length = 0
+	// Keys and elements skipped without output (undefined, functions, symbols) still cost work, so
+	// the walk itself is bounded too.
+	let steps = 0
+	const maxSteps = maxChars * 4
+	const step = () => {
+		steps++
+		if (steps > maxSteps) throw new BudgetExceeded()
+	}
 	const push = (part: string): true => {
 		parts.push(part)
 		length += part.length
@@ -34,6 +54,7 @@ export function boundedStringify(
 			typeof (current as { toJSON?: unknown }).toJSON === 'function'
 		)
 			current = (current as { toJSON: () => unknown }).toJSON()
+		current = unbox(current)
 		if (current === null) return push('null')
 		switch (typeof current) {
 			case 'string':
@@ -55,6 +76,7 @@ export function boundedStringify(
 			if (current.length === 0) return push('[]')
 			push('[')
 			for (let i = 0; i < current.length; i++) {
+				step()
 				push(i === 0 ? `\n${inner}` : `,\n${inner}`)
 				write(current[i], inner, true)
 			}
@@ -63,6 +85,7 @@ export function boundedStringify(
 		}
 		let first = true
 		for (const key of Object.keys(current as object)) {
+			step()
 			const child = (current as Record<string, unknown>)[key]
 			let childValue = child
 			if (
@@ -71,6 +94,7 @@ export function boundedStringify(
 				typeof (childValue as { toJSON?: unknown }).toJSON === 'function'
 			)
 				childValue = (childValue as { toJSON: () => unknown }).toJSON()
+			childValue = unbox(childValue)
 			if (
 				childValue === undefined ||
 				typeof childValue === 'function' ||

@@ -17,6 +17,16 @@ describe('boundedStringify', () => {
 		['array holes', [undefined, () => 1, 3]],
 		['dates', { at: new Date(0) }],
 		['non-finite', [Number.NaN, Number.POSITIVE_INFINITY]],
+		// biome-ignore lint/style/useConsistentBuiltinInstantiation: boxed values on purpose
+		[
+			'boxed',
+			[
+				new Number(5),
+				new String('ab'),
+				new Boolean(false),
+				{ n: new Number(1) },
+			],
+		],
 	])('matches JSON.stringify for %s', (_, value) => {
 		expect(boundedStringify(value, 10_000)).toEqual({
 			text: JSON.stringify(value, null, 2),
@@ -32,6 +42,19 @@ describe('boundedStringify', () => {
 		expect(truncated).toBe(true)
 		expect(text.length).toBe(1_000)
 		expect(performance.now() - start).toBeLessThan(1_000)
+	})
+
+	it('bounds the walk when skipped keys produce no output', () => {
+		const wide: Record<string, unknown> = {}
+		for (let i = 0; i < 10_000; i++) wide[`k${i}`] = undefined
+		const start = performance.now()
+		const { truncated } = boundedStringify(Array(10_000).fill(wide), 1_000)
+		expect(truncated).toBe(true)
+		expect(performance.now() - start).toBeLessThan(1_000)
+	})
+
+	it('throws on boxed BigInt like JSON.stringify', () => {
+		expect(() => boundedStringify(Object(1n), 100)).toThrow('BigInt')
 	})
 
 	it('stops at the cap for a cycle', () => {
