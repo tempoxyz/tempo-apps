@@ -238,6 +238,112 @@ function safeJsonForInlineScript(value: unknown): string {
 	return JSON.stringify(value).replace(/</g, '\\u003c')
 }
 
+const HTML_ESCAPES: Record<string, string> = {
+	'&': '&amp;',
+	'<': '&lt;',
+	'>': '&gt;',
+	'"': '&quot;',
+	"'": '&#39;',
+}
+
+// Escapes text for an HTML text node or a quoted attribute value.
+function escapeHtml(value: unknown): string {
+	return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] || char)
+}
+
+const CANONICAL_DECIMAL = /^(0|[1-9][0-9]*)$/
+
+// Returns the chain id as a canonical decimal string, or null when it isn't one.
+function parseChainId(value: unknown): string | null {
+	if (typeof value === 'number') {
+		return Number.isSafeInteger(value) && value >= 0 ? String(value) : null
+	}
+	if (typeof value === 'string' && CANONICAL_DECIMAL.test(value)) {
+		return Number.isSafeInteger(Number(value)) ? value : null
+	}
+	return null
+}
+
+function isBlockNumber(value: unknown): value is number {
+	return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+}
+
+// Legacy metadata stores block as a decimal string; manifests store a number.
+// Either form is kept as published so API responses don't change.
+function isBlockValue(value: unknown): value is number {
+	if (isBlockNumber(value)) return true
+	return (
+		typeof value === 'string' &&
+		CANONICAL_DECIMAL.test(value) &&
+		Number.isSafeInteger(Number(value))
+	)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+	return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+// Checks the fields the UI reads from a manifest. chain_id must match the
+// chain id in the snapshot's directory name.
+function parseSnapshotManifest(
+	value: unknown,
+	expectedChainId: string,
+): SnapshotManifest | null {
+	if (!isRecord(value)) return null
+	if (parseChainId(value.chain_id) !== expectedChainId) return null
+	if (!isBlockNumber(value.block)) return null
+	if (typeof value.timestamp !== 'number' || !Number.isFinite(value.timestamp))
+		return null
+	if (!isRecord(value.components)) return null
+	return value as unknown as SnapshotManifest
+}
+
+// Checks the fields the UI reads from a legacy metadata file. chain_id must
+// match the chain id in the file name.
+function parseLegacyMetadata(
+	value: unknown,
+	expectedChainId: string,
+): LegacyMetadata | null {
+	if (!isRecord(value)) return null
+	if (parseChainId(value.chain_id) !== expectedChainId) return null
+	if (!isBlockValue(value.block)) return null
+	const timestamp =
+		typeof value.timestamp === 'number' && isBlockNumber(value.timestamp)
+			? String(value.timestamp)
+			: value.timestamp
+	if (typeof timestamp !== 'string' || !CANONICAL_DECIMAL.test(timestamp))
+		return null
+	if (!nonEmptyString(value.archive)) return null
+	return {
+		chain_id: expectedChainId,
+		block: value.block,
+		timestamp,
+		image: nonEmptyString(value.image),
+		archive: value.archive as string,
+	}
+}
+
+// Checks the fields the UI reads from a snapshot entry in the persisted index.
+function isValidSnapshotEntry(value: unknown): value is Snapshot {
+	if (!isRecord(value)) return false
+	return (
+		typeof value.snapshotId === 'string' &&
+		typeof value.chainId === 'string' &&
+		parseChainId(value.chainId) === value.chainId &&
+		isBlockValue(value.block) &&
+		typeof value.timestamp === 'string' &&
+		CANONICAL_DECIMAL.test(value.timestamp) &&
+		typeof value.date === 'string' &&
+		typeof value.image === 'string' &&
+		typeof value.networkName === 'string' &&
+		typeof value.isModular === 'boolean'
+	)
+}
+
 function text(body: string): Response {
 	return new Response(body, {
 		headers: {
@@ -670,9 +776,9 @@ function manifestToSnapshot(
 		timestamp: String(manifest.timestamp),
 		date,
 		image:
-			manifest.tempo_version ||
-			manifest.reth_version ||
-			manifest.image ||
+			nonEmptyString(manifest.tempo_version) ||
+			nonEmptyString(manifest.reth_version) ||
+			nonEmptyString(manifest.image) ||
 			'unknown',
 		archiveUrl: manifestUrl,
 		archiveFile: manifestKey,
@@ -699,7 +805,14 @@ async function loadModularSnapshot(
 		)
 		if (!obj) return null
 
-		const manifest: SnapshotManifest = await obj.json()
+		const dirInfo = parseSnapshotDirInfo(dirName)
+		const manifest = dirInfo
+			? parseSnapshotManifest(await obj.json(), dirInfo.chainId)
+			: null
+		if (!manifest) {
+			console.warn(`Skipping invalid manifest: ${manifestKey}`)
+			return null
+		}
 
 		if (!(await isManifestLikelyComplete(env.SNAPSHOTS, manifest, dirName))) {
 			console.warn(`Skipping incomplete snapshot: ${manifestKey}`)
@@ -723,8 +836,15 @@ async function loadLegacySnapshot(
 		)
 		if (!obj) return null
 
-		const metadata: LegacyMetadata = await obj.json()
-		const chainId = String(metadata.chain_id)
+		const fileInfo = parseLegacyMetadataInfo(file)
+		const metadata = fileInfo
+			? parseLegacyMetadata(await obj.json(), fileInfo.chainId)
+			: null
+		if (!metadata) {
+			console.warn(`Skipping invalid legacy metadata: ${file.key}`)
+			return null
+		}
+		const chainId = metadata.chain_id
 		const network = getNetworkInfo(chainId)
 
 		const archiveUrl = `${env.R2_PUBLIC_URL}/${metadata.archive}`
@@ -803,7 +923,7 @@ async function getSnapshots(env: Env): Promise<Snapshot[]> {
 	])
 }
 
-const CACHE_VERSION = 'v30'
+const CACHE_VERSION = 'v31'
 const VIEWER_ORIGIN = 'https://snapshots.tempo.xyz'
 const SNAPSHOT_DOCS_URL =
 	'https://docs.tempo.xyz/cli/download#validator-migration-guidance'
@@ -836,7 +956,14 @@ async function readSnapshotIndex(env: Env): Promise<Snapshot[] | null> {
 			return null
 		}
 
-		return sortSnapshotsByTimestampDesc(index.snapshots)
+		const snapshots = index.snapshots.filter(isValidSnapshotEntry)
+		if (snapshots.length !== index.snapshots.length) {
+			console.warn(
+				`Dropped ${index.snapshots.length - snapshots.length} invalid entries from ${SNAPSHOT_INDEX_KEY}`,
+			)
+		}
+
+		return sortSnapshotsByTimestampDesc(snapshots)
 	} catch (err) {
 		console.warn(`Failed to parse ${SNAPSHOT_INDEX_KEY}:`, err)
 		return null
@@ -2631,7 +2758,7 @@ async function handleUI(_req: Request, env: Env) {
     </main>
 
     <footer class="footer">
-      <span id="footerStatus">Latest snapshot: block ${latestModular ? latestModular.block.toLocaleString() : '—'} · ${latestModular ? new Date(parseInt(latestModular.timestamp, 10) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+      <span id="footerStatus">Latest snapshot: block ${latestModular ? escapeHtml(latestModular.block.toLocaleString()) : '—'} · ${latestModular ? new Date(parseInt(latestModular.timestamp, 10) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
       <span class="footer-sep">&middot;</span>
       <a href="https://tempo.xyz" target="_blank" rel="noopener">About</a>
       <span class="footer-sep">&middot;</span>
@@ -3074,22 +3201,36 @@ async function handleUI(_req: Request, env: Env) {
       }
     }
 
+    // Builds option elements from data, so bucket-supplied text is never parsed as markup.
+    function replaceOptions(select, items) {
+      select.replaceChildren.apply(select, items.map(function(item) {
+        var option = document.createElement('option');
+        option.value = String(item.value);
+        option.textContent = String(item.label);
+        if (item.selected) option.selected = true;
+        return option;
+      }));
+    }
+
     function updateSnapshotOptions() {
       var select = document.getElementById('snapshotSelect');
       var snapshots = getSnapshotsForActiveNetwork();
 
       if (!snapshots.length) {
-        select.innerHTML = '<option value="">No modular snapshots yet</option>';
+        replaceOptions(select, [{ value: '', label: 'No modular snapshots yet' }]);
         select.disabled = true;
         updateHistoryButton();
         return;
       }
 
       select.disabled = false;
-      select.innerHTML = snapshots.map(function(snapshot, index) {
-        var selected = snapshot.snapshotId === activeSnapshotId ? ' selected' : '';
-        return '<option value="' + snapshot.snapshotId + '"' + selected + '>' + formatSnapshotOption(snapshot, index) + '</option>';
-      }).join('');
+      replaceOptions(select, snapshots.map(function(snapshot, index) {
+        return {
+          value: snapshot.snapshotId,
+          label: formatSnapshotOption(snapshot, index),
+          selected: snapshot.snapshotId === activeSnapshotId,
+        };
+      }));
       updateHistoryButton();
     }
 
@@ -3246,9 +3387,12 @@ async function handleUI(_req: Request, env: Env) {
 
     function initializeFilters() {
       var networkSelect = document.getElementById('networkSelect');
-      networkSelect.innerHTML = NETWORK_OPTIONS.map(function(option) {
-        return '<option value="' + option.chainId + '">' + option.name + (option.hasModular ? '' : ' · legacy only') + '</option>';
-      }).join('');
+      replaceOptions(networkSelect, NETWORK_OPTIONS.map(function(option) {
+        return {
+          value: option.chainId,
+          label: option.name + (option.hasModular ? '' : ' · legacy only'),
+        };
+      }));
       networkSelect.value = activeChainId;
       networkSelect.addEventListener('change', function(event) {
         configureNetwork(event.target.value);
