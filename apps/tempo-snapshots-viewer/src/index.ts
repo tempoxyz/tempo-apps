@@ -260,6 +260,48 @@ function getNetworkInfo(chainId: string): NetworkInfo {
 	)
 }
 
+// Bucket metadata is only displayed and copied once its fields have the shape the page expects.
+function isCanonicalChainId(value: unknown): value is string {
+	return typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value)
+}
+
+// Modular manifests store the block as a number; legacy metadata stores it as decimal text.
+function isBlockNumber(value: unknown): value is number {
+	if (typeof value === 'number')
+		return Number.isSafeInteger(value) && value >= 0
+	return (
+		typeof value === 'string' &&
+		/^(0|[1-9][0-9]*)$/.test(value) &&
+		Number.isSafeInteger(Number(value))
+	)
+}
+
+function optionalString(value: unknown): string | undefined {
+	return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+function isValidIndexedSnapshot(value: unknown): value is Snapshot {
+	if (!value || typeof value !== 'object') return false
+	const snapshot = value as Partial<Snapshot>
+	return (
+		isCanonicalChainId(snapshot.chainId) &&
+		isBlockNumber(snapshot.block) &&
+		typeof snapshot.snapshotId === 'string' &&
+		typeof snapshot.timestamp === 'string' &&
+		typeof snapshot.date === 'string' &&
+		typeof snapshot.image === 'string'
+	)
+}
+
+function escapeHtml(value: string): string {
+	return value
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}
+
 function compareChainIds(a: string, b: string): number {
 	const order = [DEFAULT_CHAIN_ID, '42431', '31318']
 	const aIndex = order.indexOf(a)
@@ -670,9 +712,9 @@ function manifestToSnapshot(
 		timestamp: String(manifest.timestamp),
 		date,
 		image:
-			manifest.tempo_version ||
-			manifest.reth_version ||
-			manifest.image ||
+			optionalString(manifest.tempo_version) ||
+			optionalString(manifest.reth_version) ||
+			optionalString(manifest.image) ||
 			'unknown',
 		archiveUrl: manifestUrl,
 		archiveFile: manifestKey,
@@ -700,6 +742,17 @@ async function loadModularSnapshot(
 		if (!obj) return null
 
 		const manifest: SnapshotManifest = await obj.json()
+		const dirInfo = parseSnapshotDirInfo(dirName)
+		if (
+			!dirInfo ||
+			String(manifest.chain_id) !== dirInfo.chainId ||
+			!isBlockNumber(manifest.block)
+		) {
+			console.warn(
+				`Skipping manifest with invalid chain_id or block: ${manifestKey}`,
+			)
+			return null
+		}
 
 		if (!(await isManifestLikelyComplete(env.SNAPSHOTS, manifest, dirName))) {
 			console.warn(`Skipping incomplete snapshot: ${manifestKey}`)
@@ -725,6 +778,16 @@ async function loadLegacySnapshot(
 
 		const metadata: LegacyMetadata = await obj.json()
 		const chainId = String(metadata.chain_id)
+		const fileInfo = parseLegacyMetadataInfo(file)
+		if (
+			!fileInfo ||
+			chainId !== fileInfo.chainId ||
+			!isBlockNumber(metadata.block) ||
+			typeof metadata.archive !== 'string'
+		) {
+			console.warn(`Skipping legacy metadata with invalid fields: ${file.key}`)
+			return null
+		}
 		const network = getNetworkInfo(chainId)
 
 		const archiveUrl = `${env.R2_PUBLIC_URL}/${metadata.archive}`
@@ -753,7 +816,7 @@ async function loadLegacySnapshot(
 			block: metadata.block,
 			timestamp: metadata.timestamp,
 			date,
-			image: metadata.image || 'legacy',
+			image: optionalString(metadata.image) || 'legacy',
 			archiveUrl,
 			archiveFile: metadata.archive,
 			metadataUrl,
@@ -803,7 +866,7 @@ async function getSnapshots(env: Env): Promise<Snapshot[]> {
 	])
 }
 
-const CACHE_VERSION = 'v30'
+const CACHE_VERSION = 'v31'
 const VIEWER_ORIGIN = 'https://snapshots.tempo.xyz'
 const SNAPSHOT_DOCS_URL =
 	'https://docs.tempo.xyz/cli/download#validator-migration-guidance'
@@ -819,7 +882,8 @@ function isSnapshotIndex(value: unknown): value is SnapshotIndex {
 	return (
 		candidate.version === SNAPSHOT_INDEX_VERSION &&
 		typeof candidate.generatedAt === 'string' &&
-		Array.isArray(candidate.snapshots)
+		Array.isArray(candidate.snapshots) &&
+		candidate.snapshots.every(isValidIndexedSnapshot)
 	)
 }
 
@@ -2631,7 +2695,7 @@ async function handleUI(_req: Request, env: Env) {
     </main>
 
     <footer class="footer">
-      <span id="footerStatus">Latest snapshot: block ${latestModular ? latestModular.block.toLocaleString() : '—'} · ${latestModular ? new Date(parseInt(latestModular.timestamp, 10) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
+      <span id="footerStatus">Latest snapshot: block ${latestModular ? escapeHtml(latestModular.block.toLocaleString()) : '—'} · ${latestModular ? new Date(parseInt(latestModular.timestamp, 10) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</span>
       <span class="footer-sep">&middot;</span>
       <a href="https://tempo.xyz" target="_blank" rel="noopener">About</a>
       <span class="footer-sep">&middot;</span>
@@ -3086,10 +3150,13 @@ async function handleUI(_req: Request, env: Env) {
       }
 
       select.disabled = false;
-      select.innerHTML = snapshots.map(function(snapshot, index) {
-        var selected = snapshot.snapshotId === activeSnapshotId ? ' selected' : '';
-        return '<option value="' + snapshot.snapshotId + '"' + selected + '>' + formatSnapshotOption(snapshot, index) + '</option>';
-      }).join('');
+      select.replaceChildren.apply(select, snapshots.map(function(snapshot, index) {
+        var option = document.createElement('option');
+        option.value = snapshot.snapshotId;
+        option.textContent = formatSnapshotOption(snapshot, index);
+        option.selected = snapshot.snapshotId === activeSnapshotId;
+        return option;
+      }));
       updateHistoryButton();
     }
 
@@ -3246,9 +3313,12 @@ async function handleUI(_req: Request, env: Env) {
 
     function initializeFilters() {
       var networkSelect = document.getElementById('networkSelect');
-      networkSelect.innerHTML = NETWORK_OPTIONS.map(function(option) {
-        return '<option value="' + option.chainId + '">' + option.name + (option.hasModular ? '' : ' · legacy only') + '</option>';
-      }).join('');
+      networkSelect.replaceChildren.apply(networkSelect, NETWORK_OPTIONS.map(function(network) {
+        var option = document.createElement('option');
+        option.value = network.chainId;
+        option.textContent = network.name + (network.hasModular ? '' : ' · legacy only');
+        return option;
+      }));
       networkSelect.value = activeChainId;
       networkSelect.addEventListener('change', function(event) {
         configureNetwork(event.target.value);
