@@ -368,12 +368,7 @@ export async function getPaymentsSnapshot(
 			isBehind: (entry) => entry.data.day < today,
 			load: async (previous) => ({
 				day: today,
-				rows: await readTokenDays(
-					chainId,
-					tokens,
-					today,
-					isoDay(now + DAY),
-				),
+				rows: await readTokenDays(chainId, tokens, today, isoDay(now + DAY)),
 				readAt: now,
 				prior:
 					previous && previous.day < today
