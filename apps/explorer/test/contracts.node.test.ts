@@ -87,6 +87,40 @@ describe('signature lookup admission', () => {
 		expect(await lookupSignature('0xf3000001')).toBe('cached()')
 		expect(lookup).toHaveBeenCalledTimes(3)
 	})
+
+	it('skips function signatures that do not parse', async () => {
+		vi.spyOn(
+			loaders.MultiSignatureLookup.prototype,
+			'loadFunctions',
+		).mockResolvedValue([
+			'transfer(address,uint256',
+			'transfer(address,uint256)',
+		])
+		expect(await lookupSignature('0xf4000000')).toBe(
+			'transfer(address,uint256)',
+		)
+	})
+
+	it('skips event signatures that do not parse', async () => {
+		vi.spyOn(
+			loaders.MultiSignatureLookup.prototype,
+			'loadEvents',
+		).mockResolvedValue([
+			'Transfer(address,,uint256)',
+			'Transfer(address,address,uint256)',
+		])
+		expect(await lookupSignature(`0x${'f5'.repeat(32)}`)).toBe(
+			'Transfer(address,address,uint256)',
+		)
+	})
+
+	it('returns null when no signature parses', async () => {
+		vi.spyOn(
+			loaders.MultiSignatureLookup.prototype,
+			'loadFunctions',
+		).mockResolvedValue(['transfer(address', ')('])
+		expect(await lookupSignature('0xf6000000')).toBeNull()
+	})
 })
 
 describe('resolveInteractAbi', () => {
