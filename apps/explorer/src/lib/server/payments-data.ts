@@ -26,6 +26,7 @@ const HARD_TTL_SECONDS = 7 * 24 * 60 * 60
 
 const INDEXER_DEADLINE = 8_000
 const PRICE_DEADLINE = 3_000
+const CATCH_UP_DEADLINE = 3_000
 
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD'
 
@@ -112,9 +113,10 @@ async function swr<T>(options: {
 	key: string
 	now: number
 	isFresh: (entry: Entry<T>) => boolean
+	isBehind?: (entry: Entry<T>) => boolean
 	load: (previous: T | undefined) => Promise<T>
 }): Promise<Entry<T>> {
-	const { key, now, isFresh, load } = options
+	const { key, now, isFresh, isBehind, load } = options
 	const cached = await readEntry<T>(key)
 	if (cached && isFresh(cached)) return cached
 
@@ -140,7 +142,11 @@ async function swr<T>(options: {
 		)
 		refresh = shared
 	}
-	return cached ?? refresh
+	if (!cached) return refresh
+	if (!isBehind?.(cached)) return cached
+	return withDeadline(refresh, CATCH_UP_DEADLINE, 'Payments catch-up').catch(
+		() => cached,
+	)
 }
 
 function withDeadline<T>(
@@ -326,6 +332,7 @@ export async function getPaymentsSnapshot(
 			isFresh: (entry) =>
 				entry.data.through >= yesterday &&
 				entry.storedAt >= Date.parse(`${today}T00:00:00Z`) + SETTLE,
+			isBehind: (entry) => entry.data.through < yesterday,
 			load: async (previous) => {
 				const from = previous?.through
 				const rows = await readTokenDays(chainId, tokens, from, today)
@@ -345,6 +352,7 @@ export async function getPaymentsSnapshot(
 			key: `today:v2:${chainId}`,
 			isFresh: (entry) =>
 				entry.data.day === today && now - entry.storedAt < TODAY_FRESH,
+			isBehind: (entry) => entry.data.day < today,
 			load: async () => ({
 				day: today,
 				rows: await readTokenDays(chainId, tokens, today, undefined),
