@@ -880,6 +880,44 @@ export function parseInputValue(value: string, type: string): unknown {
 }
 
 /**
+ * Whether every argument of a write function has a value. Arguments are read
+ * by their position in `inputs`, so unnamed or same-named parameters each
+ * keep their own field.
+ */
+export function areWriteArgsFilled(
+	inputs: readonly { type: string }[],
+	args: readonly (string | undefined)[],
+): boolean {
+	return inputs.every((_, index) => {
+		const value = args[index]
+		return value !== undefined && value.trim() !== ''
+	})
+}
+
+/**
+ * Parse a write function's arguments, read by their position in `inputs`.
+ */
+export function parseWriteArgs(
+	inputs: readonly { type: string }[],
+	args: readonly (string | undefined)[],
+): { args: unknown[]; error: string | null } {
+	if (!areWriteArgsFilled(inputs, args)) return { args: [], error: null }
+	try {
+		return {
+			args: inputs.map((input, index) =>
+				parseInputValue(args[index] ?? '', input.type),
+			),
+			error: null,
+		}
+	} catch (error) {
+		return {
+			args: [],
+			error: error instanceof Error ? error.message : 'Failed to parse inputs',
+		}
+	}
+}
+
+/**
  * Format output value for display
  */
 export function formatOutputValue(value: unknown, _type: string): string {
