@@ -745,6 +745,7 @@ async function loadModularSnapshot(
 		const dirInfo = parseSnapshotDirInfo(dirName)
 		if (
 			!dirInfo ||
+			!isCanonicalChainId(dirInfo.chainId) ||
 			String(manifest.chain_id) !== dirInfo.chainId ||
 			!isBlockNumber(manifest.block)
 		) {
@@ -781,6 +782,7 @@ async function loadLegacySnapshot(
 		const fileInfo = parseLegacyMetadataInfo(file)
 		if (
 			!fileInfo ||
+			!isCanonicalChainId(chainId) ||
 			chainId !== fileInfo.chainId ||
 			!isBlockNumber(metadata.block) ||
 			typeof metadata.archive !== 'string'
@@ -793,7 +795,7 @@ async function loadLegacySnapshot(
 		const archiveUrl = `${env.R2_PUBLIC_URL}/${metadata.archive}`
 		const metadataUrl = `${env.R2_PUBLIC_URL}/${file.key}`
 
-		const date = new Date(parseInt(metadata.timestamp, 10) * 1000)
+		const date = new Date(parseInt(String(metadata.timestamp), 10) * 1000)
 			.toISOString()
 			.split('T')[0]
 
@@ -814,7 +816,7 @@ async function loadLegacySnapshot(
 			networkKey: network.key,
 			networkName: network.name,
 			block: metadata.block,
-			timestamp: metadata.timestamp,
+			timestamp: String(metadata.timestamp),
 			date,
 			image: optionalString(metadata.image) || 'legacy',
 			archiveUrl,
@@ -882,8 +884,7 @@ function isSnapshotIndex(value: unknown): value is SnapshotIndex {
 	return (
 		candidate.version === SNAPSHOT_INDEX_VERSION &&
 		typeof candidate.generatedAt === 'string' &&
-		Array.isArray(candidate.snapshots) &&
-		candidate.snapshots.every(isValidIndexedSnapshot)
+		Array.isArray(candidate.snapshots)
 	)
 }
 
@@ -900,7 +901,18 @@ async function readSnapshotIndex(env: Env): Promise<Snapshot[] | null> {
 			return null
 		}
 
-		return sortSnapshotsByTimestampDesc(index.snapshots)
+		// A malformed entry is left out rather than discarding the index, so a bad object can't
+		// force a full bucket scan on every cache miss.
+		const snapshots = index.snapshots.filter(isValidIndexedSnapshot)
+		if (snapshots.length !== index.snapshots.length) {
+			console.warn(
+				'Dropped invalid ' + SNAPSHOT_INDEX_KEY + ' entries:',
+				index.snapshots.length - snapshots.length,
+			)
+		}
+		// An index with nothing usable is rebuilt from the bucket.
+		if (!snapshots.length && index.snapshots.length) return null
+		return sortSnapshotsByTimestampDesc(snapshots)
 	} catch (err) {
 		console.warn(`Failed to parse ${SNAPSHOT_INDEX_KEY}:`, err)
 		return null
@@ -3150,13 +3162,14 @@ async function handleUI(_req: Request, env: Env) {
       }
 
       select.disabled = false;
-      select.replaceChildren.apply(select, snapshots.map(function(snapshot, index) {
+      select.textContent = '';
+      snapshots.forEach(function(snapshot, index) {
         var option = document.createElement('option');
         option.value = snapshot.snapshotId;
         option.textContent = formatSnapshotOption(snapshot, index);
         option.selected = snapshot.snapshotId === activeSnapshotId;
-        return option;
-      }));
+        select.appendChild(option);
+      });
       updateHistoryButton();
     }
 
@@ -3313,12 +3326,13 @@ async function handleUI(_req: Request, env: Env) {
 
     function initializeFilters() {
       var networkSelect = document.getElementById('networkSelect');
-      networkSelect.replaceChildren.apply(networkSelect, NETWORK_OPTIONS.map(function(network) {
+      networkSelect.textContent = '';
+      NETWORK_OPTIONS.forEach(function(network) {
         var option = document.createElement('option');
         option.value = network.chainId;
         option.textContent = network.name + (network.hasModular ? '' : ' · legacy only');
-        return option;
-      }));
+        networkSelect.appendChild(option);
+      });
       networkSelect.value = activeChainId;
       networkSelect.addEventListener('change', function(event) {
         configureNetwork(event.target.value);
