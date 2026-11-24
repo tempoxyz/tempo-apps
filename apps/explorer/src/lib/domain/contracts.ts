@@ -4,6 +4,7 @@ import type { Abi, AbiEvent, AbiFunction, AbiParameter } from 'viem'
 import {
 	decodeEventLog,
 	getAbiItem as getAbiItem_viem,
+	parseAbiItem,
 	stringify,
 	toFunctionSelector,
 } from 'viem'
@@ -1013,7 +1014,9 @@ const defaultSignatureLookup = new loaders.MultiSignatureLookup([
 
 /**
  * Lookup a function or event signature by selector/topic hash.
- * Returns the first matching signature string or null.
+ * Returns the first matching signature string that parses as an ABI item, or
+ * null. Public registries accept arbitrary text, so unparsable entries are
+ * skipped.
  */
 export async function lookupSignature(
 	selector: Hex.Hex,
@@ -1025,11 +1028,15 @@ export async function lookupSignature(
 	if (signatureLookups.size >= 128)
 		throw new Error('Too many signature lookups')
 	const lookup = (async () => {
+		const kind = key.length === 10 ? 'function' : 'event'
 		const signatures =
-			key.length === 10
+			kind === 'function'
 				? await defaultSignatureLookup.loadFunctions(key)
 				: await defaultSignatureLookup.loadEvents(key)
-		return signatures[0] ?? null
+		return (
+			signatures.find((signature) => isParsableSignature(kind, signature)) ??
+			null
+		)
 	})()
 	signatureLookups.set(key, lookup)
 	try {
@@ -1042,6 +1049,18 @@ export async function lookupSignature(
 		return value
 	} finally {
 		if (signatureLookups.get(key) === lookup) signatureLookups.delete(key)
+	}
+}
+
+function isParsableSignature(
+	kind: 'function' | 'event',
+	signature: string,
+): boolean {
+	try {
+		parseAbiItem(`${kind} ${signature}`)
+		return true
+	} catch {
+		return false
 	}
 }
 

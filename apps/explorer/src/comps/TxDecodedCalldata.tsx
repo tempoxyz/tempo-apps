@@ -26,7 +26,12 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 
 	const signatureAbi = useMemo(() => {
 		if (!signature) return
-		return [parseAbiItem(`function ${signature}`) as AbiFunction] as const
+		try {
+			return [parseAbiItem(`function ${signature}`) as AbiFunction] as const
+		} catch {
+			// Fall back to raw calldata when the looked-up signature does not parse.
+			return undefined
+		}
 	}, [signature])
 
 	const abiItem = useMemo(() => {
