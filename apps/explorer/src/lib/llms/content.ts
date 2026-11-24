@@ -117,7 +117,6 @@ export const docs = {
 		title: 'Receipt',
 		description:
 			'The canonical receipt view of what a transaction did. Append `.json`, `.txt`, or `.pdf` to the hash, or send a matching `Accept` header, for a machine-readable export; `curl` and `wget` receive plain text.',
-		params: { voucher: null },
 	},
 	'/blocks': {
 		title: 'Blocks',

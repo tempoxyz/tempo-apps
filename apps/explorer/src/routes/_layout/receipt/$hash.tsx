@@ -26,7 +26,6 @@ import {
 	buildReceiptPresentation,
 	enrichReceiptEventAmounts,
 	type ReceiptPresentation,
-	type ReceiptVoucher,
 } from '#lib/domain/receipt-presentation'
 import { renderReceiptText } from '#lib/domain/receipt-text'
 import { buildTxSummary } from '#lib/domain/tx-summary'
@@ -135,7 +134,6 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 
 function getReceiptPresentation(
 	data: Awaited<ReturnType<typeof fetchReceiptData>>,
-	voucher: ReceiptVoucher | null,
 	isTokenListed: (
 		chainId: number,
 		address: `0x${string}` | undefined,
@@ -149,19 +147,17 @@ function getReceiptPresentation(
 		knownEvents: data.knownEvents,
 		lineItems: data.lineItems,
 		receipt: data.receipt,
-		voucher,
 	})
 }
 
 async function getServerReceiptPresentation(
 	data: Awaited<ReturnType<typeof fetchReceiptData>>,
-	voucher: ReceiptVoucher | null,
 ): Promise<ReceiptPresentation> {
 	const { getVerifiedTokenAddresses } = await import(
 		'#lib/server/verified-tokens'
 	)
 	const verifiedTokens = await getVerifiedTokenAddresses(TEMPO_CHAIN_ID)
-	return getReceiptPresentation(data, voucher, (_chainId, address) =>
+	return getReceiptPresentation(data, (_chainId, address) =>
 		address ? verifiedTokens.has(address.toLowerCase()) : true,
 	)
 }
@@ -217,15 +213,6 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			data={data as NotFound.NotFoundData}
 		/>
 	),
-	validateSearch: z.object({
-		voucher: z.optional(
-			z.object({
-				final_voucher: z.optional(z.string()),
-				packet_size: z.optional(z.coerce.number()),
-				number: z.optional(z.coerce.number()),
-			}),
-		),
-	}),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
@@ -275,11 +262,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				if (type === 'text/plain') {
 					const data = await fetchReceiptDataForExport({ hash, rpcUrl })
 					if (!data) return receiptExportNotFound(type)
-					const voucherData = parseVoucherSearchParams(url.searchParams)
-					const presentation = await getServerReceiptPresentation(
-						data,
-						voucherData,
-					)
+					const presentation = await getServerReceiptPresentation(data)
 					const summary = buildTxSummary({
 						receipt: data.receipt,
 						transaction: data.transaction,
@@ -309,11 +292,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 						rpcUrl,
 					})
 					if (!data) return receiptExportNotFound(type)
-					const voucherData = parseVoucherSearchParams(url.searchParams)
-					const presentation = await getServerReceiptPresentation(
-						data,
-						voucherData,
-					)
+					const presentation = await getServerReceiptPresentation(data)
 					const summary = buildTxSummary({
 						receipt: data.receipt,
 						transaction: data.transaction,
@@ -405,11 +384,10 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			z.transform((val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex),
 		),
 	}),
-	head: ({ params, loaderData, match }) => {
+	head: ({ params, loaderData }) => {
 		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
-		const voucherData = parseVoucherParam(match.search.voucher)
 		const presentation = loaderData
-			? getReceiptPresentation(loaderData, voucherData, () => true)
+			? getReceiptPresentation(loaderData, () => true)
 			: null
 
 		const description = buildTxDescription(
@@ -472,58 +450,13 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 	},
 })
 
-function parseVoucherParam(
-	raw:
-		| {
-				final_voucher?: string
-				packet_size?: number | string
-				number?: number | string
-		  }
-		| undefined,
-): { packetSize: number; packetCount: number } | null {
-	if (!raw) return null
-	const packetSize = Number(raw.packet_size)
-	const packetCount = Number(raw.number)
-	if (!Number.isFinite(packetSize) || !Number.isFinite(packetCount)) return null
-	return { packetSize, packetCount }
-}
-
-function parseVoucherSearchParams(
-	searchParams: URLSearchParams,
-): { packetSize: number; packetCount: number } | null {
-	const serializedVoucher = searchParams.get('voucher')
-	if (serializedVoucher) {
-		try {
-			const voucher = JSON.parse(serializedVoucher)
-			if (voucher && typeof voucher === 'object')
-				return parseVoucherParam(
-					voucher as {
-						final_voucher?: string
-						packet_size?: number | string
-						number?: number | string
-					},
-				)
-		} catch {
-			// Fall through to bracket-style query parameters.
-		}
-	}
-
-	return parseVoucherParam({
-		packet_size: searchParams.get('voucher[packet_size]') ?? undefined,
-		number: searchParams.get('voucher[number]') ?? undefined,
-	})
-}
-
 function Component() {
 	const { hash } = Route.useParams()
-	const { voucher: voucherRaw } = Route.useSearch()
 	const location = useLocation()
 	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
 	>
-
-	const voucherData = parseVoucherParam(voucherRaw)
 
 	const { data } = useQuery({
 		...receiptDetailQueryOptions({ hash }),
@@ -537,7 +470,7 @@ function Component() {
 	const { isTokenListed } = useTokenListMembership()
 
 	const { block, receipt } = data
-	const presentation = getReceiptPresentation(data, voucherData, isTokenListed)
+	const presentation = getReceiptPresentation(data, isTokenListed)
 
 	return (
 		<div className="font-sans copy-13 flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">

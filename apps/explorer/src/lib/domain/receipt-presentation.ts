@@ -28,11 +28,6 @@ const RECEIPT_HEADER_FIELDS = new Set([
 	'Transaction Hash',
 ])
 
-export type ReceiptVoucher = {
-	packetSize: number
-	packetCount: number
-}
-
 type IsTokenListed = (
 	chainId: number,
 	address: Address.Address | undefined,
@@ -46,7 +41,6 @@ type ReceiptPresentationParams = {
 	knownEvents: KnownEvent[]
 	lineItems: Pick<LineItems.Result, 'feeTotals' | 'totals'>
 	receipt: Pick<TransactionReceipt, 'effectiveGasPrice' | 'from' | 'gasUsed'>
-	voucher: ReceiptVoucher | null
 }
 
 export type ReceiptPresentation = {
@@ -61,11 +55,7 @@ export type ReceiptPresentation = {
 export function buildReceiptPresentation(
 	params: ReceiptPresentationParams,
 ): ReceiptPresentation {
-	const events = getReceiptDisplayEvents(
-		params.knownEvents,
-		params.voucher,
-		params.feeToken,
-	)
+	const events = getReceiptDisplayEvents(params.knownEvents)
 	const feeBreakdown = params.feeBreakdown
 		.filter(
 			(item) =>
@@ -103,9 +93,6 @@ export function buildReceiptPresentation(
 		? PriceFormatter.format(fee)
 		: PriceFormatter.formatAmountShort(feeRaw)
 
-	const streamingTotal = params.voucher
-		? params.voucher.packetSize * params.voucher.packetCount
-		: undefined
 	const eventsTotal = calculateKnownEventsTotal(
 		events.filter((event) => event.type !== 'fee'),
 	)
@@ -116,10 +103,9 @@ export function buildReceiptPresentation(
 		showUsdFeePrefix &&
 		areUsdPricedTokens(params.chainId, eventTotalTokens, params.isTokenListed)
 	const total =
-		streamingTotal ??
-		(canShowTotal && eventsTotal !== undefined
+		canShowTotal && eventsTotal !== undefined
 			? Number(Value.format(eventsTotal, 18)) + fee
-			: undefined)
+			: undefined
 	const totalDisplay =
 		total === undefined ? undefined : PriceFormatter.format(total)
 
@@ -194,19 +180,11 @@ export function isReceiptEventVisible(event: KnownEvent): boolean {
 	)
 }
 
-function getReceiptDisplayEvents(
-	knownEvents: KnownEvent[],
-	voucher: ReceiptVoucher | null,
-	feeToken: Address.Address | undefined,
-): KnownEvent[] {
+function getReceiptDisplayEvents(knownEvents: KnownEvent[]): KnownEvent[] {
 	const hasBlockedTransfer = knownEvents.some(
 		(event) => event.type === 'transfer blocked',
 	)
-	return (
-		voucher
-			? [buildStreamedPaymentEvent(voucher, feeToken), ...knownEvents]
-			: knownEvents
-	)
+	return knownEvents
 		.filter(
 			(event) =>
 				isReceiptEventVisible(event) &&
@@ -222,46 +200,6 @@ function getReceiptDisplayEvents(
 			)
 			return { ...event, note: note.length > 0 ? note : undefined }
 		})
-}
-
-function buildStreamedPaymentEvent(
-	voucher: ReceiptVoucher,
-	feeToken: Address.Address | undefined,
-): KnownEvent {
-	const totalMicros = BigInt(
-		Math.round(voucher.packetSize * voucher.packetCount * 1_000_000),
-	)
-	return {
-		type: 'streamed payment',
-		parts: [
-			{ type: 'action', value: 'Streamed Payment' },
-			...(feeToken
-				? [
-						{
-							type: 'amount' as const,
-							value: {
-								value: totalMicros,
-								decimals: 6,
-								currency: 'USD',
-								token: feeToken,
-								symbol: 'pathUSD',
-							},
-						},
-					]
-				: []),
-		],
-		note: [
-			[
-				'Packets',
-				{
-					type: 'number',
-					value: [BigInt(voucher.packetCount), 0] as [bigint, number],
-				},
-			],
-			['Per packet', { type: 'text', value: `$${voucher.packetSize}` }],
-			['Settlement', { type: 'text', value: 'final voucher proven on-chain' }],
-		],
-	}
 }
 
 function getKnownEventAmounts(

@@ -155,7 +155,6 @@ describe('renderReceiptText', () => {
 			knownEvents,
 			lineItems,
 			receipt,
-			voucher: null,
 		})
 		const text = renderReceiptText({ block, receipt }, presentation, {
 			summary: 'Private Zone Withdrawal',
