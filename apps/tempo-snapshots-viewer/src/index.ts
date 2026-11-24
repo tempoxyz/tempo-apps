@@ -3203,13 +3203,15 @@ async function handleUI(_req: Request, env: Env) {
 
     // Builds option elements from data, so bucket-supplied text is never parsed as markup.
     function replaceOptions(select, items) {
-      select.replaceChildren.apply(select, items.map(function(item) {
+      // textContent + appendChild rather than replaceChildren, which older Safari lacks.
+      select.textContent = '';
+      items.forEach(function(item) {
         var option = document.createElement('option');
         option.value = String(item.value);
         option.textContent = String(item.label);
         if (item.selected) option.selected = true;
-        return option;
-      }));
+        select.appendChild(option);
+      });
     }
 
     function updateSnapshotOptions() {
