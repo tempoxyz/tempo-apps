@@ -425,17 +425,23 @@ export async function getPaymentsSnapshot(
 		...history.data.rows,
 		...recent.flatMap((part) => part.rows),
 	])
-	const closed = recent.findLast(
-		(part) =>
-			part.day < today &&
-			part.readAt >= Date.parse(`${part.day}T00:00:00Z`) + DAY - TODAY_FRESH,
-	)
+	let through = history.data.through
+	for (const part of recent) {
+		const close = Date.parse(`${part.day}T00:00:00Z`) + DAY
+		if (
+			part.day >= today ||
+			part.day !== isoDay(Date.parse(`${through}T00:00:00Z`) + DAY) ||
+			part.readAt < close - TODAY_FRESH
+		)
+			break
+		through = part.day
+	}
 	const snapshot: PaymentsSnapshot = {
 		days: buildPaymentsDays(rows, tokens, rates, today),
 		asOf: now,
 		fxDate: fx?.data.date ?? null,
 		unpriced: keys.filter((key) => rates[key] === undefined),
-		through: closed?.day ?? history.data.through,
+		through,
 	}
 	built = { version, snapshot }
 	return snapshot
