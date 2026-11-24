@@ -27,6 +27,7 @@ const HARD_TTL_SECONDS = 7 * 24 * 60 * 60
 const INDEXER_DEADLINE = 8_000
 const PRICE_DEADLINE = 3_000
 const CATCH_UP_DEADLINE = 3_000
+const CATCH_UP_BACKOFF = 60_000
 
 const FX_URL = 'https://api.frankfurter.dev/v1/latest?base=USD'
 
@@ -55,7 +56,9 @@ type RawTokenDay = {
 
 type History = { through: string; rows: RawTokenDay[] }
 
-type Today = { day: string; rows: RawTokenDay[] }
+type DayRows = { day: string; rows: RawTokenDay[]; readAt: number }
+
+type Today = DayRows & { prior?: DayRows | undefined }
 
 type Entry<T> = { data: T; storedAt: number }
 
@@ -65,6 +68,8 @@ const inflight = new Map<
 >()
 
 const INFLIGHT_LIMIT = 30_000
+
+const stalledAt = new Map<string, number>()
 
 function cacheRequest(key: string): Request {
 	return new Request(`${CACHE_ORIGIN}/__payments/${encodeURIComponent(key)}`)
@@ -144,8 +149,16 @@ async function swr<T>(options: {
 	}
 	if (!cached) return refresh
 	if (!isBehind?.(cached)) return cached
-	return withDeadline(refresh, CATCH_UP_DEADLINE, 'Payments catch-up').catch(
-		() => cached,
+	if (Date.now() - (stalledAt.get(key) ?? 0) < CATCH_UP_BACKOFF) return cached
+	return withDeadline(refresh, CATCH_UP_DEADLINE, 'Payments catch-up').then(
+		(entry) => {
+			stalledAt.delete(key)
+			return entry
+		},
+		() => {
+			stalledAt.set(key, Date.now())
+			return cached
+		},
 	)
 }
 
@@ -349,13 +362,22 @@ export async function getPaymentsSnapshot(
 		}),
 		swr<Today>({
 			now,
-			key: `today:v2:${chainId}`,
+			key: `today:v3:${chainId}`,
 			isFresh: (entry) =>
 				entry.data.day === today && now - entry.storedAt < TODAY_FRESH,
 			isBehind: (entry) => entry.data.day < today,
-			load: async () => ({
+			load: async (previous) => ({
 				day: today,
 				rows: await readTokenDays(chainId, tokens, today, undefined),
+				readAt: now,
+				prior:
+					previous && previous.day < today
+						? {
+								day: previous.day,
+								rows: previous.rows,
+								readAt: previous.readAt,
+							}
+						: previous?.prior,
 			}),
 		}).catch((error) => {
 			console.error("Failed to load today's payments:", error)
@@ -384,37 +406,36 @@ export async function getPaymentsSnapshot(
 		}),
 	])
 
-	const todayRows =
-		current && current.data.day > history.data.through ? current : undefined
+	const recent = [current?.data.prior, current?.data].filter(
+		(part): part is DayRows =>
+			part !== undefined && part.day > history.data.through,
+	)
 	const version = [
 		chainId,
 		today,
 		history.storedAt,
-		todayRows?.data.day,
-		todayRows?.storedAt,
+		...recent.map((part) => `${part.day}@${part.readAt}`),
 		fx?.storedAt,
 		market?.storedAt,
 	].join('|')
 	if (built?.version === version) return { ...built.snapshot, asOf: now }
 
 	const rates: UsdRates = { USD: 1, ...fx?.data.rates, ...market?.data }
-	const rows = toTokenDays(
-		todayRows
-			? [...history.data.rows, ...todayRows.data.rows]
-			: history.data.rows,
+	const rows = toTokenDays([
+		...history.data.rows,
+		...recent.flatMap((part) => part.rows),
+	])
+	const closed = recent.findLast(
+		(part) =>
+			part.day < today &&
+			part.readAt >= Date.parse(`${part.day}T00:00:00Z`) + DAY - TODAY_FRESH,
 	)
 	const snapshot: PaymentsSnapshot = {
 		days: buildPaymentsDays(rows, tokens, rates, today),
 		asOf: now,
 		fxDate: fx?.data.date ?? null,
 		unpriced: keys.filter((key) => rates[key] === undefined),
-		through:
-			todayRows &&
-			todayRows.data.day < today &&
-			todayRows.storedAt >=
-				Date.parse(`${todayRows.data.day}T00:00:00Z`) + DAY - TODAY_FRESH
-				? todayRows.data.day
-				: history.data.through,
+		through: closed?.day ?? history.data.through,
 	}
 	built = { version, snapshot }
 	return snapshot
