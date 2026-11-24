@@ -17,7 +17,6 @@ describe('boundedStringify', () => {
 		['array holes', [undefined, () => 1, 3]],
 		['dates', { at: new Date(0) }],
 		['non-finite', [Number.NaN, Number.POSITIVE_INFINITY]],
-		// biome-ignore lint/style/useConsistentBuiltinInstantiation: boxed values on purpose
 		[
 			'boxed',
 			[
