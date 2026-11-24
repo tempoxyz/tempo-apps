@@ -13,8 +13,10 @@ import {
 import { zonePortalAbi } from '#lib/abis'
 import {
 	decodeKnownTransactionCalls,
+	type KnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
+import { composeCallAndLogEvents } from '#lib/domain/transaction-actions'
 import { selectTransactionDescriptionEvents } from '#lib/domain/transaction-activities'
 import { zoneProverCall } from './fixtures/zone-prover-call'
 
@@ -196,6 +198,73 @@ describe('transaction action composition', () => {
 			events.filter((event) => event.type === 'zone batch submitted'),
 		).toHaveLength(2)
 		expect(events.every((event) => event.evidence?.length === 1)).toBe(true)
+	})
+
+	it('keeps duplicate calls and counts competing batch identities even without log evidence', () => {
+		const [call] = decodeKnownTransactionCalls(zoneProverCall, 'success')
+		const [log] = parseKnownEvents(receipt([batchLog()]))
+		expect(composeCallAndLogEvents([call, log], [call, call])).toEqual({
+			events: [call, call, log],
+			unmatchedCalls: [call, call],
+		})
+		const unverified = { ...log, evidence: [] }
+		expect(composeCallAndLogEvents([unverified, log], [call])).toEqual({
+			events: [call, unverified, log],
+			unmatchedCalls: [call],
+		})
+	})
+
+	it('removes only exact generic calldata fallbacks and preserves unmatched ordering', () => {
+		const [call] = decodeKnownTransactionCalls(zoneProverCall, 'success')
+		const fallback = (
+			address: `0x${string}`,
+			input: `0x${string}`,
+		): KnownEvent => ({
+			type: 'contract call',
+			parts: [{ type: 'contractCall', value: { address, input } }],
+		})
+		const sameAddress = fallback(zoneProverCall.to, '0x1234')
+		const sameInput = fallback(otherPortal, zoneProverCall.input)
+		const exact = fallback(zoneProverCall.to, zoneProverCall.input)
+		const events = [sameAddress, call, exact, sameInput]
+		expect(composeCallAndLogEvents(events, [call])).toEqual({
+			events: [call, sameAddress, sameInput],
+			unmatchedCalls: [call],
+		})
+		expect(composeCallAndLogEvents(events, [])).toEqual({
+			events,
+			unmatchedCalls: [],
+		})
+	})
+
+	it('examines a bounded number of batch identities per event for a large receipt', () => {
+		const [call] = decodeKnownTransactionCalls(zoneProverCall, 'success')
+		const [log] = parseKnownEvents(receipt([batchLog()]))
+		let reads = 0
+		function withBatch(event: KnownEvent, index: number): KnownEvent {
+			const nextBlockHash = `0x${index.toString(16).padStart(64, '0')}` as const
+			if (!event.meta?.zoneBatch)
+				throw new Error('Expected a Zone batch fixture')
+			const zoneBatch = { ...event.meta.zoneBatch, nextBlockHash }
+			return {
+				...event,
+				meta: {
+					get zoneBatch() {
+						reads++
+						return zoneBatch
+					},
+				},
+			}
+		}
+		const calls = Array.from({ length: 128 }, (_, i) => withBatch(call, i))
+		const logs = calls.map((_, i) => withBatch(log, i))
+		const result = composeCallAndLogEvents(logs, calls)
+		expect(result.unmatchedCalls).toEqual([])
+		expect(result.events).toHaveLength(logs.length)
+		expect(result.events.every((event) => event.evidence?.length === 2)).toBe(
+			true,
+		)
+		expect(reads).toBeLessThanOrEqual(4 * (logs.length + calls.length))
 	})
 
 	it('marks a reverted call as an attempted operation, not an executed event', () => {

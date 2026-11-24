@@ -1,4 +1,12 @@
+import {
+	type Address,
+	encodeAbiParameters,
+	encodeEventTopics,
+	getAddress,
+	zeroHash,
+} from 'viem'
 import { describe, expect, it } from 'vitest'
+import { Abis } from '#lib/abis'
 import { mockLog, mockReceipt } from '#lib/demo'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import { getEventName } from '#lib/domain/tx-event-groups'
@@ -84,5 +92,86 @@ describe('private card spend from a Zone', () => {
 				'0x65042ea6dad60c26f055e80ec401b3437c854ed586a0704d305bb4e9ea4518cf',
 		)
 		expect(withdrawal && getEventName(withdrawal)).toBe('WithdrawalProcessed')
+	})
+
+	it('uses the first router spend per program and leaves other routers’ transfers visible', () => {
+		const spend = logs[6]
+		const firstRouter = logs[10]
+		const unusedRouter = '0x1111111111111111111111111111111111111111'
+		const otherProgram = '0x2222222222222222222222222222222222222222'
+		const token = logs[1].address
+		const laterSpend = mockLog({
+			...firstRouter,
+			address: unusedRouter,
+			data: encodeAbiParameters(
+				[{ type: 'uint256' }, { type: 'uint256' }, { type: 'bytes32' }],
+				[100n, 2n, zeroHash],
+			),
+		})
+		const transfer = (from: Address) =>
+			mockLog({
+				address: token,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from, to: cardPrivateSpendFrom },
+				}),
+				data: encodeAbiParameters([{ type: 'uint256' }], [1n]),
+			})
+		const result = parseKnownEvents(
+			mockReceipt(
+				[
+					firstRouter,
+					spend,
+					laterSpend,
+					{ ...spend, address: otherProgram },
+					transfer(firstRouter.address),
+					transfer(spend.address),
+					transfer(unusedRouter),
+				],
+				cardPrivateSpendFrom,
+			),
+		)
+		const spends = result.filter((event) => event.type === 'card private spend')
+		expect(spends).toHaveLength(2)
+		expect(spends[0].note).toContainEqual([
+			'Change to Zone',
+			{ type: 'amount', value: { token: getAddress(token), value: 10001n } },
+		])
+		expect(spends[1].note).toHaveLength(2)
+		expect(
+			result
+				.filter((event) => event.type === 'send')
+				.map((event) => event.meta?.from),
+		).toEqual([unusedRouter])
+	})
+
+	it('hides the portal withdrawal hop only for the matching token and amount', () => {
+		const hop = logs[1]
+		const differentAmount = 17n
+		const otherToken = '0x20c0000000000000000000000000000000000123'
+		const result = parseKnownEvents(
+			mockReceipt(
+				[
+					...logs,
+					{
+						...hop,
+						data: encodeAbiParameters([{ type: 'uint256' }], [differentAmount]),
+					},
+					{ ...hop, address: otherToken },
+				],
+				cardPrivateSpendFrom,
+			),
+		)
+		expect(
+			result
+				.filter((event) => event.type === 'send')
+				.map(
+					(event) => event.parts.find((part) => part.type === 'amount')?.value,
+				),
+		).toEqual([
+			{ token: hop.address, value: differentAmount },
+			{ token: otherToken, value: 530001n },
+		])
 	})
 })

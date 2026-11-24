@@ -266,71 +266,110 @@ function eventAddress(
 		: undefined
 }
 
-function findEarnToken(
-	events: ParsedEvent[],
-	params: {
-		amount: bigint
-		from?: Address.Address | undefined
-		to?: Address.Address | undefined
-		kind?: 'mint' | 'burn' | 'transfer' | undefined
-		exclude?: Address.Address | undefined
-	},
-): Address.Address | undefined {
-	for (const candidate of events) {
-		if (eventBigInt(candidate, 'amount') !== params.amount) continue
-		if (params.exclude && Address.isEqual(candidate.address, params.exclude))
-			continue
+type EarnTokenLookup =
+	| 'any'
+	| 'from'
+	| 'mint'
+	| 'burn'
+	| 'mintTo'
+	| 'transferTo'
+	| 'transferFrom'
 
-		const from = eventAddress(candidate, 'from')
-		const to = eventAddress(candidate, 'to')
-		if (params.from && (!from || !Address.isEqual(from, params.from))) continue
-		if (params.to && (!to || !Address.isEqual(to, params.to))) continue
-		if (params.kind === 'mint' && candidate.eventName !== 'Mint') continue
-		if (params.kind === 'burn' && candidate.eventName !== 'Burn') continue
-		if (
-			params.kind === 'transfer' &&
-			candidate.eventName !== 'Transfer' &&
-			candidate.eventName !== 'TransferWithMemo'
-		)
-			continue
-		if (
-			candidate.eventName !== 'Mint' &&
-			candidate.eventName !== 'Burn' &&
-			candidate.eventName !== 'Transfer' &&
-			candidate.eventName !== 'TransferWithMemo'
-		)
-			continue
-
-		return Address.checksum(candidate.address)
-	}
-	return undefined
+function earnMovementKey(
+	lookup: EarnTokenLookup,
+	amount: bigint,
+	account?: Address.Address,
+) {
+	return account
+		? `${lookup}:${amount}:${addressKey(account)}`
+		: `${lookup}:${amount}`
 }
 
-function findEarnSendRecipient(
-	events: ParsedEvent[],
-	params: {
-		amount: bigint
-		from: Address.Address
-		token: Address.Address
-	},
-): Address.Address | undefined {
-	for (const candidate of events) {
-		if (
-			candidate.eventName !== 'Transfer' &&
-			candidate.eventName !== 'TransferWithMemo'
-		)
-			continue
-		if (!Address.isEqual(candidate.address, params.token)) continue
-		if (eventBigInt(candidate, 'amount') !== params.amount) continue
+function indexEarnReceipt(events: readonly ParsedEvent[]) {
+	const firstEvent = new Map<string, ParsedEvent>()
+	const tokens = new Map<string, Address.Address>()
+	const alternateTokens = new Map<string, Address.Address>()
+	const recipients = new Map<string, Address.Address>()
+	const firstTransferFrom = new Map<string, Address.Address>()
 
-		const from = eventAddress(candidate, 'from')
-		const to = eventAddress(candidate, 'to')
-		if (!from || !to || !Address.isEqual(from, params.from)) continue
-		if (Address.isEqual(to, params.from) || Address.isEqual(to, zeroAddress))
-			continue
-		return to
+	function record(
+		lookup: EarnTokenLookup,
+		amount: bigint,
+		token: Address.Address,
+		account?: Address.Address,
+	) {
+		const key = earnMovementKey(lookup, amount, account)
+		const first = tokens.get(key)
+		if (!first) tokens.set(key, token)
+		// Private deposits and redemptions exclude one token. The first two
+		// distinct emitters suffice, even when many movements have the same amount.
+		else if (
+			(lookup === 'mint' || lookup === 'burn') &&
+			!alternateTokens.has(key) &&
+			addressKey(first) !== addressKey(token)
+		)
+			alternateTokens.set(key, token)
 	}
-	return undefined
+
+	for (const event of events) {
+		if (!firstEvent.has(event.eventName)) firstEvent.set(event.eventName, event)
+		const transfer =
+			event.eventName === 'Transfer' || event.eventName === 'TransferWithMemo'
+		if (!transfer && event.eventName !== 'Mint' && event.eventName !== 'Burn')
+			continue
+		const from = eventAddress(event, 'from')
+		if (transfer && from) {
+			const sender = addressKey(from)
+			if (!firstTransferFrom.has(sender))
+				firstTransferFrom.set(sender, event.address)
+		}
+		// Fee AMM Mint and Burn logs have separate user/validator amounts.
+		if (!('amount' in event.args)) continue
+		const { amount } = event.args
+		const token = event.address
+		record('any', amount, token)
+		if (from) record('from', amount, token, from)
+		if (event.eventName === 'Burn') {
+			record('burn', amount, token)
+			continue
+		}
+		const to = eventAddress(event, 'to')
+		if (event.eventName === 'Mint') {
+			record('mint', amount, token)
+			if (to) record('mintTo', amount, token, to)
+			continue
+		}
+		if (to) record('transferTo', amount, token, to)
+		if (from) record('transferFrom', amount, token, from)
+		if (from && to && to !== from && to !== zeroAddress) {
+			const key = `${addressKey(token)}:${amount}:${from}`
+			if (!recipients.has(key)) recipients.set(key, to)
+		}
+	}
+
+	function token(
+		lookup: EarnTokenLookup,
+		amount: bigint,
+		account?: Address.Address,
+		exclude?: Address.Address,
+	) {
+		const key = earnMovementKey(lookup, amount, account)
+		let match = tokens.get(key)
+		if (match && exclude && Address.isEqual(match, exclude))
+			match = alternateTokens.get(key)
+		return match && Address.checksum(match)
+	}
+
+	return {
+		firstEvent,
+		firstTransferFrom,
+		token,
+		sendRecipient: (
+			token: Address.Address,
+			amount: bigint,
+			from: Address.Address,
+		) => recipients.get(`${addressKey(token)}:${amount}:${from}`),
+	}
 }
 
 function earnValuePart(
@@ -360,71 +399,63 @@ type RouterSpentArgs = {
 	change: bigint
 }
 
-/** The Zone router's \`Spent\` for a card program, in the same receipt. */
-function findRouterSpent(
-	events: ParsedEvent[],
-	program: Address.Address,
-): (ParsedEvent & { args: RouterSpentArgs }) | undefined {
-	return events.find(
-		(candidate): candidate is ParsedEvent & { args: RouterSpentArgs } =>
-			candidate.eventName === 'Spent' &&
-			Address.isEqual(
-				(candidate.args as Partial<RouterSpentArgs>).spender ?? zeroAddress,
-				program,
-			),
-	)
-}
+/** Index the first router spend for each card program and the hops its summary hides. */
+function indexCardSpends(events: ParsedEvent[]) {
+	const participants = new Set<string>()
+	for (const event of events) {
+		if (event.eventName === 'CardSpent')
+			participants.add(addressKey(event.address))
+	}
+	if (!participants.size) return
 
-/**
- * The transfers a card spend moves through its program and Zone router: the
- * input in, the payment out and the change back. The card spend summary and
- * the Zone withdrawal and deposit already show them, so the receipt hides them.
- */
-function findCardSpendTransferIndices(events: ParsedEvent[]): Set<number> {
-	const indices = new Set<number>()
-	for (const spend of events) {
-		if (spend.eventName !== 'CardSpent') continue
-		const program = spend.address
-		const router = findRouterSpent(events, program)?.address
-		// The portal pays a callback withdrawal through the Zone messenger, so
-		// its first hop names neither the router nor the program.
-		const withdrawals = router
-			? events.flatMap((event) => {
-					if (event.eventName !== 'WithdrawalProcessed') return []
-					const args = event.args as {
-						to?: Address.Address
-						token?: Address.Address
-						amount?: bigint
-					}
-					if (!args.to || !args.token || args.amount === undefined) return []
-					if (!Address.isEqual(args.to, router)) return []
-					return [
-						{ portal: event.address, token: args.token, amount: args.amount },
-					]
-				})
-			: []
-		for (const [index, event] of events.entries()) {
-			if (!isTransferEvent(event)) continue
-			const { from, to, amount } = event.args
-			const touches = (address: Address.Address | undefined) =>
-				address !== undefined &&
-				(Address.isEqual(from, address) || Address.isEqual(to, address))
-			const isWithdrawalHop = withdrawals.some(
-				(withdrawal) =>
-					Address.isEqual(from, withdrawal.portal) &&
-					Address.isEqual(event.address, withdrawal.token) &&
-					amount === withdrawal.amount,
-			)
-			if (touches(program) || touches(router) || isWithdrawalHop)
-				indices.add(index)
+	const routerSpends = new Map<string, RouterSpentArgs>()
+	const routers = new Set<string>()
+	for (const event of events) {
+		if (event.eventName !== 'Spent') continue
+		const args = event.args as RouterSpentArgs
+		const spender = addressKey(args.spender ?? zeroAddress)
+		if (!participants.has(spender) || routerSpends.has(spender)) continue
+		routerSpends.set(spender, args)
+		routers.add(addressKey(event.address))
+	}
+	for (const router of routers) participants.add(router)
+
+	// The portal's first withdrawal hop can name neither the router nor the program.
+	const withdrawalHops = new Set<string>()
+	function hopKey(
+		portal: Address.Address,
+		token: Address.Address,
+		amount: bigint,
+	) {
+		return `${addressKey(portal)}:${addressKey(token)}:${amount}`
+	}
+	if (routers.size) {
+		for (const event of events) {
+			if (event.eventName !== 'WithdrawalProcessed') continue
+			const { to, token, amount } = event.args
+			if (to && token && amount !== undefined && routers.has(addressKey(to)))
+				withdrawalHops.add(hopKey(event.address, token, amount))
 		}
 	}
-	return indices
+
+	return {
+		routerSpends,
+		hidesTransfer(event: ParsedEvent) {
+			if (!isTransferEvent(event)) return false
+			const { from, to, amount } = event.args
+			return (
+				participants.has(addressKey(from)) ||
+				participants.has(addressKey(to)) ||
+				(withdrawalHops.size > 0 &&
+					withdrawalHops.has(hopKey(from, event.address, amount)))
+			)
+		},
+	}
 }
 
 function createCardSpendSummary(
 	event: ParsedEvent,
-	events: ParsedEvent[],
+	cardSpends: ReturnType<typeof indexCardSpends>,
 	createAmount: CreateAmount,
 ): KnownEvent | null {
 	if (event.eventName !== 'CardSpent') return null
@@ -440,13 +471,15 @@ function createCardSpendSummary(
 	]
 	if (sharesUsed > 0n)
 		note.push(['Earn shares used', { type: 'number', value: sharesUsed }])
-	const routerSpent = isPrivate ? findRouterSpent(events, program) : undefined
-	if (routerSpent && routerSpent.args.change > 0n)
+	const routerSpent = isPrivate
+		? cardSpends?.routerSpends.get(addressKey(program))
+		: undefined
+	if (routerSpent && routerSpent.change > 0n)
 		note.push([
 			'Change to Zone',
 			{
 				type: 'amount',
-				value: createAmount(routerSpent.args.change, routerSpent.args.token),
+				value: createAmount(routerSpent.change, routerSpent.token),
 			},
 		])
 	return {
@@ -467,13 +500,12 @@ function createCardSpendSummary(
 
 function createEarnReceiptSummary(
 	event: ParsedEvent,
-	events: ParsedEvent[],
+	getIndex: () => ReturnType<typeof indexEarnReceipt>,
 	createAmount: CreateAmount,
 ): KnownEvent | null {
 	const selector = event.topics[0]?.toLowerCase()
 	const signature = selector ? earnEventSignatures.get(selector) : undefined
-	const hasEvent = (name: string) =>
-		events.some((candidate) => candidate.eventName === name)
+	const hasEvent = (name: string) => getIndex().firstEvent.has(name)
 
 	if (event.eventName === 'EarnDeposit') {
 		const inputToken = eventAddress(event, 'inputToken')
@@ -481,11 +513,12 @@ function createEarnReceiptSummary(
 		const earnShares = eventBigInt(event, 'earnShares')
 		if (!inputToken || inputAmount === undefined || earnShares === undefined)
 			return null
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			kind: 'mint',
-			exclude: inputToken,
-		})
+		const earnShare = getIndex().token(
+			'mint',
+			earnShares,
+			undefined,
+			inputToken,
+		)
 		return {
 			type: 'earn private deposit',
 			parts: [
@@ -503,11 +536,12 @@ function createEarnReceiptSummary(
 		const earnShares = eventBigInt(event, 'earnShares')
 		if (!outputToken || outputAmount === undefined || earnShares === undefined)
 			return null
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			kind: 'burn',
-			exclude: outputToken,
-		})
+		const earnShare = getIndex().token(
+			'burn',
+			earnShares,
+			undefined,
+			outputToken,
+		)
 		return {
 			type: 'earn private redemption',
 			parts: [
@@ -530,16 +564,8 @@ function createEarnReceiptSummary(
 		const earnShares = eventBigInt(event, 'earnShares')
 		if (!receiver || assets === undefined || earnShares === undefined)
 			return null
-		const asset = findEarnToken(events, {
-			amount: assets,
-			to: event.address,
-			kind: 'transfer',
-		})
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			to: receiver,
-			kind: 'mint',
-		})
+		const asset = getIndex().token('transferTo', assets, event.address)
+		const earnShare = getIndex().token('mintTo', earnShares, receiver)
 		return {
 			type: 'earn deposit',
 			parts: [
@@ -566,15 +592,8 @@ function createEarnReceiptSummary(
 			assets === undefined
 		)
 			return null
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			kind: 'burn',
-		})
-		const asset = findEarnToken(events, {
-			amount: assets,
-			to: receiver,
-			kind: 'transfer',
-		})
+		const earnShare = getIndex().token('burn', earnShares)
+		const asset = getIndex().token('transferTo', assets, receiver)
 		return {
 			type: 'earn redemption',
 			parts: [
@@ -598,21 +617,10 @@ function createEarnReceiptSummary(
 			earnShares === undefined
 		)
 			return null
-		const asset = findEarnToken(events, {
-			amount: assets,
-			to: receiver,
-			kind: 'transfer',
-		})
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			kind: 'burn',
-		})
+		const asset = getIndex().token('transferTo', assets, receiver)
+		const earnShare = getIndex().token('burn', earnShares)
 		if (asset) {
-			const sendRecipient = findEarnSendRecipient(events, {
-				amount: assets,
-				from: receiver,
-				token: asset,
-			})
+			const sendRecipient = getIndex().sendRecipient(asset, assets, receiver)
 			if (sendRecipient) {
 				return {
 					type: 'earn send',
@@ -653,16 +661,8 @@ function createEarnReceiptSummary(
 			earnShares === undefined
 		)
 			return null
-		const venue = findEarnToken(events, {
-			amount: venueShares,
-			from: caller,
-			kind: 'transfer',
-		})
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			to: receiver,
-			kind: 'mint',
-		})
+		const venue = getIndex().token('transferFrom', venueShares, caller)
+		const earnShare = getIndex().token('mintTo', earnShares, receiver)
 		return {
 			type: 'earn in-kind deposit',
 			parts: [
@@ -678,10 +678,7 @@ function createEarnReceiptSummary(
 		const funder = eventAddress(event, 'funder')
 		const fundedAssets = eventBigInt(event, 'fundedAssets')
 		if (!funder || fundedAssets === undefined) return null
-		const asset = findEarnToken(events, {
-			amount: fundedAssets,
-			from: funder,
-		})
+		const asset = getIndex().token('from', fundedAssets, funder)
 		return {
 			type: 'earn contribution',
 			parts: [
@@ -694,7 +691,7 @@ function createEarnReceiptSummary(
 	if (event.eventName === 'Contributed' && !hasEvent('Funded')) {
 		const assets = eventBigInt(event, 'assets')
 		if (assets === undefined) return null
-		const asset = findEarnToken(events, { amount: assets })
+		const asset = getIndex().token('any', assets)
 		return {
 			type: 'earn contribution',
 			parts: [
@@ -707,11 +704,7 @@ function createEarnReceiptSummary(
 	if (event.eventName === 'AssetsFunded') {
 		const earnShares = eventBigInt(event, 'earnShares')
 		if (earnShares === undefined) return null
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			to: event.address,
-			kind: 'mint',
-		})
+		const earnShare = getIndex().token('mintTo', earnShares, event.address)
 		return {
 			type: 'earn reward funding',
 			parts: [
@@ -725,18 +718,12 @@ function createEarnReceiptSummary(
 		const version = eventBigInt(event, 'version')
 		const entitlement = eventBigInt(event, 'totalEntitlement')
 		if (version === undefined || entitlement === undefined) return null
-		const funded = events.find(
-			(candidate) => candidate.eventName === 'AssetsFunded',
-		)
+		const funded = getIndex().firstEvent.get('AssetsFunded')
 		const fundedShares = funded && eventBigInt(funded, 'earnShares')
 		const earnShare =
 			fundedShares === undefined
 				? undefined
-				: findEarnToken(events, {
-						amount: fundedShares,
-						to: event.address,
-						kind: 'mint',
-					})
+				: getIndex().token('mintTo', fundedShares, event.address)
 		return {
 			type: 'earn reward root',
 			parts: [
@@ -757,15 +744,9 @@ function createEarnReceiptSummary(
 			paidShares === undefined
 		)
 			return null
-		const earnShare = events.find((candidate) => {
-			if (
-				candidate.eventName !== 'Transfer' &&
-				candidate.eventName !== 'TransferWithMemo'
-			)
-				return false
-			const from = eventAddress(candidate, 'from')
-			return from ? Address.isEqual(from, event.address) : false
-		})?.address
+		const earnShare = getIndex().firstTransferFrom.get(
+			addressKey(event.address),
+		)
 		return {
 			type: 'earn reward distribution',
 			parts: [
@@ -783,11 +764,7 @@ function createEarnReceiptSummary(
 		const recipient = eventAddress(event, 'recipient')
 		const amount = eventBigInt(event, 'amount')
 		if (!recipient || amount === undefined) return null
-		const earnShare = findEarnToken(events, {
-			amount,
-			to: recipient,
-			kind: 'transfer',
-		})
+		const earnShare = getIndex().token('transferTo', amount, recipient)
 		return {
 			type: 'earn reward claim',
 			parts: [
@@ -803,10 +780,7 @@ function createEarnReceiptSummary(
 		const receiver = eventAddress(event, 'receiver')
 		const earnShares = eventBigInt(event, 'earnShares')
 		if (!receiver || earnShares === undefined) return null
-		const earnShare = findEarnToken(events, {
-			amount: earnShares,
-			kind: 'burn',
-		})
+		const earnShare = getIndex().token('burn', earnShares)
 		return {
 			type: 'earn async redemption request',
 			parts: [
@@ -2901,17 +2875,23 @@ export function parseKnownEvents(
 		}
 	}
 
-	const streamChannelTokens = new Map<string, Address.Address>()
+	const firstChannelTransfer = new Map<
+		string,
+		{ index: number; token: Address.Address }
+	>()
 
 	function getStreamChannelToken(
 		payer: Address.Address,
 		payee: Address.Address,
-	): Address.Address | undefined {
-		const key = `${Address.from(payer)}-${Address.from(payee)}`
-		return (
-			streamChannelTokens.get(key) ??
-			streamChannelTokens.get(`${Address.from(payee)}-${Address.from(payer)}`)
-		)
+	) {
+		// A transfer at either end can establish the pair's token. Receipt
+		// order breaks ties when the two parties use different tokens.
+		const payerTransfer = firstChannelTransfer.get(addressKey(payer))
+		const payeeTransfer = firstChannelTransfer.get(addressKey(payee))
+		if (!payerTransfer) return payeeTransfer?.token
+		if (!payeeTransfer || payerTransfer.index < payeeTransfer.index)
+			return payerTransfer.token
+		return payeeTransfer.token
 	}
 
 	// Create detectors after mintBurnMemos is populated so they can access the memos
@@ -3241,7 +3221,7 @@ export function parseKnownEvents(
 		}
 	}
 
-	const cardSpendTransferIndices = findCardSpendTransferIndices(dedupedEvents)
+	const cardSpends = indexCardSpends(dedupedEvents)
 
 	const streamChannelIndices = new Set<number>()
 	const hasStreamChannelEvents = dedupedEvents.some((event) =>
@@ -3249,22 +3229,6 @@ export function parseKnownEvents(
 	)
 
 	if (hasStreamChannelEvents) {
-		// Collect stream channel events to find payer/payee pairs
-		const streamChannelPairs: Array<{
-			payer: Address.Address
-			payee: Address.Address
-		}> = []
-		for (const event of dedupedEvents) {
-			if (!isStreamChannelAddress(event.address)) continue
-			const args = event.args as {
-				payer?: Address.Address
-				payee?: Address.Address
-			}
-			if (args.payer && args.payee) {
-				streamChannelPairs.push({ payer: args.payer, payee: args.payee })
-			}
-		}
-
 		for (const [index, event] of dedupedEvents.entries()) {
 			if (!isTransferEvent(event)) continue
 
@@ -3282,28 +3246,24 @@ export function parseKnownEvents(
 			const otherParty = Address.isEqual(event.args.from, streamChannel)
 				? event.args.to
 				: event.args.from
-			for (const pair of streamChannelPairs) {
-				if (
-					Address.isEqual(otherParty, pair.payer) ||
-					Address.isEqual(otherParty, pair.payee)
-				) {
-					const key = `${Address.from(pair.payer)}-${Address.from(pair.payee)}`
-					if (!streamChannelTokens.has(key)) {
-						streamChannelTokens.set(key, event.address)
-					}
-				}
-			}
+			const party = addressKey(otherParty)
+			if (!firstChannelTransfer.has(party))
+				firstChannelTransfer.set(party, { index, token: event.address })
 		}
 	}
+
+	// Build the movement index only if an Earn summary actually needs it.
+	let earnIndex: ReturnType<typeof indexEarnReceipt> | undefined
+	const getEarnIndex = () => (earnIndex ??= indexEarnReceipt(dedupedEvents))
 
 	// Map log events to known events.
 	for (let index = 0; index < dedupedEvents.length; index++) {
 		// Skip events that are part of a swap
 		if (swapIndices.has(index)) continue
 		if (streamChannelIndices.has(index)) continue
-		if (cardSpendTransferIndices.has(index)) continue
 
 		const event = dedupedEvents[index]
+		if (cardSpends?.hidesTransfer(event)) continue
 
 		const detected =
 			detectors.propAmm(event, dedupedEvents) ||
@@ -3319,8 +3279,8 @@ export function parseKnownEvents(
 			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event) ||
 			detectors.streamChannel(event) ||
-			createCardSpendSummary(event, dedupedEvents, createAmount) ||
-			createEarnReceiptSummary(event, dedupedEvents, createAmount)
+			createCardSpendSummary(event, cardSpends, createAmount) ||
+			createEarnReceiptSummary(event, getEarnIndex, createAmount)
 
 		if (!detected) continue
 
