@@ -12,8 +12,9 @@ import {
 	getInputType,
 	getPlaceholder,
 	getWriteFunctions,
+	areWriteArgsFilled,
 	isArrayType,
-	parseInputValue,
+	parseWriteArgs,
 	type WriteFunction,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
@@ -103,7 +104,11 @@ function WriteContractFunction(props: {
 	fn: WriteFunction
 }) {
 	const { fn } = props
-	const [inputs, setInputs] = React.useState<Record<string, string>>({})
+	// Arguments are kept by position and the native amount on its own, so no
+	// parameter name (`value`, empty, missing or repeated) can share a field
+	// with another argument or with the amount sent.
+	const [args, setArgs] = React.useState<string[]>([])
+	const [nativeValue, setNativeValue] = React.useState('')
 	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
@@ -116,31 +121,20 @@ function WriteContractFunction(props: {
 	)
 	usePermalinkHighlight({ elementId: fnId, onTargetChange: handleTargetChange })
 
-	const handleInputChange = (name: string, value: string) => {
-		setInputs((prev) => ({ ...prev, [name]: value }))
+	const handleArgChange = (index: number, value: string) => {
+		setArgs((prev) => {
+			const next = [...prev]
+			next[index] = value
+			return next
+		})
 	}
 
-	const allInputsFilled = (fn.inputs ?? []).every((input) => {
-		const value = inputs[input.name ?? '']
-		return value !== undefined && value.trim() !== ''
-	})
+	const allInputsFilled = areWriteArgsFilled(fn.inputs ?? [], args)
 
-	const parsedArgs = React.useMemo(() => {
-		if (!allInputsFilled) return { args: [], error: null }
-		try {
-			const args = (fn.inputs ?? []).map((input) => {
-				const value = inputs[input.name ?? ''] ?? ''
-				return parseInputValue(value, input.type)
-			})
-			return { args, error: null }
-		} catch (error) {
-			return {
-				args: [],
-				error:
-					error instanceof Error ? error.message : 'Failed to parse inputs',
-			}
-		}
-	}, [fn.inputs, inputs, allInputsFilled])
+	const parsedArgs = React.useMemo(
+		() => parseWriteArgs(fn.inputs ?? [], args),
+		[fn.inputs, args],
+	)
 
 	const handleCopyMethod = (event: React.MouseEvent) => {
 		event.stopPropagation()
@@ -253,7 +247,7 @@ function WriteContractFunction(props: {
 							to: props.address,
 							data: simulateCalldata,
 							...(connection.address ? { from: connection.address } : {}),
-							...(isPayable && inputs.value ? { value: inputs.value } : {}),
+							...(isPayable && nativeValue ? { value: nativeValue } : {}),
 						}}
 						title="Simulate this call without signing"
 						onClick={(event) => event.stopPropagation()}
@@ -286,8 +280,8 @@ function WriteContractFunction(props: {
 									functionName: fn.name,
 									args: parsedArgs.args,
 									value: isPayable
-										? inputs.value
-											? BigInt(inputs.value)
+										? nativeValue
+											? BigInt(nativeValue)
 											: undefined
 										: undefined,
 								})
@@ -317,20 +311,18 @@ function WriteContractFunction(props: {
 					{isPayable && (
 						<FunctionInput
 							label="Value (wei)"
-							value={inputs.value}
+							value={nativeValue}
 							input={{ name: 'value', type: 'uint256' }}
-							onChange={(value) => handleInputChange('value', value)}
+							onChange={setNativeValue}
 						/>
 					)}
 
 					{fn.inputs.map((input, index) => (
 						<FunctionInput
-							key={input.name ?? index}
+							key={index}
 							input={input}
-							value={inputs[input.name ?? ''] ?? ''}
-							onChange={(value) =>
-								handleInputChange(input.name ?? `arg${index}`, value)
-							}
+							value={args[index] ?? ''}
+							onChange={(value) => handleArgChange(index, value)}
 						/>
 					))}
 
