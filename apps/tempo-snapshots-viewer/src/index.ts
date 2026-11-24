@@ -296,8 +296,8 @@ function parseSnapshotManifest(
 	if (!isRecord(value)) return null
 	if (parseChainId(value.chain_id) !== expectedChainId) return null
 	if (!isBlockNumber(value.block)) return null
-	if (typeof value.timestamp !== 'number' || !Number.isFinite(value.timestamp))
-		return null
+	// Same rule the persisted index applies, so a scanned entry survives a read back.
+	if (!isBlockNumber(value.timestamp)) return null
 	if (!isRecord(value.components)) return null
 	return value as unknown as SnapshotManifest
 }

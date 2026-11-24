@@ -341,4 +341,17 @@ describe('published data', () => {
 
 		expect(api).toHaveLength(2)
 	})
+
+	it('skips a manifest whose timestamp is not a whole number', async () => {
+		const bucket = new FakeBucket()
+		addModularSnapshot(bucket, 'tempo-4217-100-1700000000', {
+			chain_id: 4217,
+			block: 100,
+			timestamp: 1700000000.5,
+		})
+
+		const api = await (await request(bucket, '/api/snapshots')).json()
+
+		expect(api).toEqual([])
+	})
 })
