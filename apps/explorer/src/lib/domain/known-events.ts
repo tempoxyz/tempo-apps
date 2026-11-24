@@ -3171,74 +3171,98 @@ export function parseKnownEvents(
 	// out. Only TIP-20 transfers around a fill the DEX itself emitted for the
 	// same taker name it as the venue: any contract can emit a Transfer
 	// naming the DEX, and tokens can pass through it for other reasons.
-	const dexFillBetween = (start: number, end: number, taker: Address.Address) =>
-		dedupedEvents
-			.slice(start + 1, end)
-			.some(
-				(event) =>
-					event.eventName === 'OrderFilled' &&
-					Address.isEqual(event.address, STABLECOIN_EXCHANGE) &&
-					Address.isEqual(
-						(event.args as { taker: Address.Address }).taker,
-						taker,
-					),
-			)
+	// Index the DEX's fills by taker so each pair checks for one between its
+	// transfers without rescanning the logs.
+	const dexFillIndicesByTaker = new Map<string, number[]>()
+	for (const [index, event] of dedupedEvents.entries()) {
+		if (
+			event.eventName !== 'OrderFilled' ||
+			!Address.isEqual(event.address, STABLECOIN_EXCHANGE)
+		)
+			continue
+		const taker = (event.args as { taker?: unknown }).taker
+		if (typeof taker !== 'string') continue
+		const key = taker.toLowerCase()
+		const indices = dexFillIndicesByTaker.get(key)
+		if (indices) indices.push(index)
+		else dexFillIndicesByTaker.set(key, [index])
+	}
+	const dexFillBetween = (
+		start: number,
+		end: number,
+		taker: Address.Address,
+	) => {
+		const indices = dexFillIndicesByTaker.get(taker.toLowerCase())
+		if (!indices) return false
+		// The first fill after start, by binary search over ascending indices.
+		let low = 0
+		let high = indices.length
+		while (low < high) {
+			const middle = (low + high) >>> 1
+			if (indices[middle] <= start) low = middle + 1
+			else high = middle
+		}
+		return low < indices.length && indices[low] < end
+	}
 
-	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
+	// Look for swap pairs: a transfer TO the exchange settles against the next
+	// transfer FROM it. Find each transfer's next one FROM the exchange in a
+	// single backward pass, so pairing stays linear in the number of logs.
+	const nextFromExchange = new Array<number | undefined>(transferEvents.length)
+	let nextFrom: number | undefined
+	for (let index = transferEvents.length - 1; index >= 0; index--) {
+		nextFromExchange[index] = nextFrom
+		if (
+			Address.isEqual(
+				transferEvents[index].event.args.from,
+				STABLECOIN_EXCHANGE,
+			)
+		)
+			nextFrom = index
+	}
+
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
-		// Type assertion is safe here because isTransferEvent has validated the structure
 		const args1 = event1.args
-		const to1 = args1.to
+		if (!Address.isEqual(args1.to, STABLECOIN_EXCHANGE)) continue
 
-		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
-		if (Address.isEqual(to1, STABLECOIN_EXCHANGE)) {
-			for (
-				let innerIndex = index + 1;
-				innerIndex < transferEvents.length;
-				innerIndex++
-			) {
-				const { event: event2, index: idx2 } = transferEvents[innerIndex]
-				const args2 = event2.args
-				const from2 = args2.from
+		const innerIndex = nextFromExchange[index]
+		if (innerIndex === undefined) continue
+		const { event: event2, index: idx2 } = transferEvents[innerIndex]
+		const args2 = event2.args
 
-				if (Address.isEqual(from2, STABLECOIN_EXCHANGE)) {
-					// This is a swap - create a single swap event
-					knownEvents.push({
-						type: 'swap',
-						parts: [
-							{ type: 'action', value: 'Swap' },
+		// This is a swap - create a single swap event
+		knownEvents.push({
+			type: 'swap',
+			parts: [
+				{ type: 'action', value: 'Swap' },
+				{
+					type: 'amount',
+					value: createAmount(args1.amount, event1.address),
+				},
+				{ type: 'text', value: 'for' },
+				{
+					type: 'amount',
+					value: createAmount(args2.amount, event2.address),
+				},
+				...(isTip20Token(event1.address) &&
+				isTip20Token(event2.address) &&
+				Address.isEqual(args1.from, args2.to) &&
+				dexFillBetween(idx1, idx2, args1.from)
+					? ([
+							{ type: 'text', value: 'on' },
 							{
-								type: 'amount',
-								value: createAmount(args1.amount, event1.address),
+								type: 'dexRoute',
+								value: { from: event1.address, to: event2.address },
 							},
-							{ type: 'text', value: 'for' },
-							{
-								type: 'amount',
-								value: createAmount(args2.amount, event2.address),
-							},
-							...(isTip20Token(event1.address) &&
-							isTip20Token(event2.address) &&
-							Address.isEqual(args1.from, args2.to) &&
-							dexFillBetween(idx1, idx2, args1.from)
-								? ([
-										{ type: 'text', value: 'on' },
-										{
-											type: 'dexRoute',
-											value: { from: event1.address, to: event2.address },
-										},
-									] as const)
-								: []),
-						],
-					})
+						] as const)
+					: []),
+			],
+		})
 
-					// Mark these events as processed
-					swapIndices.add(idx1)
-					swapIndices.add(idx2)
-					break // Found the matching pair, move to next transfer
-				}
-			}
-		}
+		// Mark these events as processed
+		swapIndices.add(idx1)
+		swapIndices.add(idx2)
 	}
 
 	const cardSpendTransferIndices = findCardSpendTransferIndices(dedupedEvents)
