@@ -183,6 +183,51 @@ contract Token {
 		expect(response.status).toBe(400)
 	})
 
+	it('rejects requests with more than 256 source files', async () => {
+		const sources = Object.fromEntries(
+			Array.from({ length: 257 }, (_, index) => [
+				`contracts/Source${index}.sol`,
+				{ content: `contract Source${index} {}` },
+			]),
+		)
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: { ...validBody.stdJsonInput, sources },
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+	})
+
+	it('rejects requests with more than 3 Mi characters of source content', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					stdJsonInput: {
+						...validBody.stdJsonInput,
+						sources: {
+							'contracts/Token.sol': {
+								content: 'a'.repeat(3 * 1024 * 1024 + 1),
+							},
+						},
+					},
+				}),
+			},
+		)
+
+		expect(response.status).toBe(400)
+	})
+
 	it('returns 400 with invalid_contract_identifier when contractIdentifier has no colon', async () => {
 		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
