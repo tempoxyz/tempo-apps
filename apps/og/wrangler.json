@@ -28,7 +28,7 @@
 	"ratelimits": [
 		{
 			"name": "REQUESTS_RATE_LIMITER",
-			"namespace_id": "1001",
+			"namespace_id": "890",
 			"simple": {
 				"limit": 30,
 				"period": 10
