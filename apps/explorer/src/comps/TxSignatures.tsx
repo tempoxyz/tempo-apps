@@ -49,7 +49,11 @@ export function useTxSignatures(props: {
 export function TxSignatures(props: TxSignatures.Props): React.JSX.Element {
 	const { data, receipt, loading } = props
 	if (loading)
-		return <p className="px-[18px] py-[12px] copy-14 text-tertiary">Loading signatures…</p>
+		return (
+			<p className="px-[18px] py-[12px] copy-14 text-tertiary">
+				Loading signatures…
+			</p>
+		)
 	if (!data)
 		return (
 			<p className="px-[18px] py-[12px] copy-14 text-tertiary">
@@ -75,7 +79,9 @@ export function TxSignatures(props: TxSignatures.Props): React.JSX.Element {
 					{outer.type === 'keychain' && (
 						<Fields>
 							<Field label="Access key envelope">
-								{outer.version === 1 ? 'Keychain V1 (0x03)' : 'Keychain V2 (0x04)'}
+								{outer.version === 1
+									? 'Keychain V1 (0x03)'
+									: 'Keychain V2 (0x04)'}
 							</Field>
 							<Field label="User account">
 								<Address address={outer.userAddress} />
@@ -129,7 +135,9 @@ function SignatureHeading(props: {
 	const typeByte =
 		signature.type === 'secp256k1'
 			? 'no type byte'
-			: `type 0x${Hex.toNumber(Hex.slice(signature.raw, 0, 1)).toString(16).padStart(2, '0')}`
+			: `type 0x${Hex.toNumber(Hex.slice(signature.raw, 0, 1))
+					.toString(16)
+					.padStart(2, '0')}`
 	return (
 		<div className="flex flex-wrap items-center gap-[8px]">
 			<TypeBadge type={signature.type} />
@@ -240,8 +248,9 @@ function ConfigurableRows(props: {
 					<Fields>
 						<Field label="Config version">{fmt(config.version)}</Field>
 						<Field label="Threshold">
-							{config.threshold} of {fmt(config.owners.reduce((sum, o) => sum + o.weight, 0))}{' '}
-							weight · approvals here: {configurable.weight}
+							{config.threshold} of{' '}
+							{fmt(config.owners.reduce((sum, o) => sum + o.weight, 0))} weight
+							· approvals here: {configurable.weight}
 						</Field>
 						<Field label={`Owners (${config.owners.length})`}>
 							<ul className="flex flex-col gap-[4px]">
@@ -260,11 +269,18 @@ function ConfigurableRows(props: {
 											<span className="label-12 text-tertiary">
 												weight {owner.weight}
 											</span>
-											{approvedBy.has(owner.owner.toLowerCase()) && approval && (
-												<span className="label-12 text-base-content-positive">
-													signed ({TempoSignature.SIGNATURE_LABELS[approval.signature.type]})
-												</span>
-											)}
+											{approvedBy.has(owner.owner.toLowerCase()) &&
+												approval && (
+													<span className="label-12 text-base-content-positive">
+														signed (
+														{
+															TempoSignature.SIGNATURE_LABELS[
+																approval.signature.type
+															]
+														}
+														)
+													</span>
+												)}
 										</li>
 									)
 								})}
@@ -322,8 +338,8 @@ function Approval(props: {
 							</span>
 						</Field>
 						<Field label="WebAuthn data">
-							{fmt(Hex.size(signature.authenticatorData))} B authenticator data +{' '}
-							{fmt(signature.clientDataJSON.length)} B clientDataJSON
+							{fmt(Hex.size(signature.authenticatorData))} B authenticator data
+							+ {fmt(signature.clientDataJSON.length)} B clientDataJSON
 						</Field>
 					</>
 				)}
@@ -393,7 +409,9 @@ function SlhDsaStructure(props: {
 		{
 			group: 'fors' as const,
 			label: `FORS, ${props.paramSet.forsTrees} trees`,
-			size: segments.filter((s) => s.group === 'fors').reduce((a, s) => a + s.size, 0),
+			size: segments
+				.filter((s) => s.group === 'fors')
+				.reduce((a, s) => a + s.size, 0),
 			detail: `each ${props.paramSet.n} B secret key + ${props.paramSet.forsHeight} × ${props.paramSet.n} B auth path`,
 		},
 		{
@@ -412,12 +430,20 @@ function SlhDsaStructure(props: {
 				role="img"
 				aria-label="SLH-DSA signature layout"
 				onMouseLeave={() => setHovered(undefined)}
+				onPointerMove={(event) => {
+					const key = (event.target as HTMLElement).dataset.segment
+					if (key) setHovered(key)
+				}}
+				onPointerDown={(event) => {
+					const key = (event.target as HTMLElement).dataset.segment
+					if (key) setHovered(key)
+				}}
 			>
 				{segments.map((segment) => (
 					<div
 						key={segment.key}
+						data-segment={segment.key}
 						title={`${segment.label}: ${fmt(segment.size)} B at offset ${fmt(segment.offset)}`}
-						onMouseEnter={() => setHovered(segment.key)}
 						className={cx(
 							GROUP_STYLES[segment.group],
 							'h-full',
@@ -434,7 +460,7 @@ function SlhDsaStructure(props: {
 			<span className="label-12 text-tertiary min-h-[16px]">
 				{active
 					? `${active.label}: ${fmt(active.size)} B at offset ${fmt(active.offset)} (${active.parts.map((p) => `${p.label}`).join(' + ')})`
-					: 'Hover a segment for its offset and parts'}
+					: 'Hover or tap a segment for its offset and parts'}
 			</span>
 			<ul className="flex flex-col gap-[4px]">
 				{groups.map((group) => (
@@ -470,7 +496,10 @@ function SizeComparison(props: { size: number }): React.JSX.Element {
 	return (
 		<div className="flex flex-col gap-[4px]">
 			{rows.map((row) => (
-				<div key={row.label} className="grid grid-cols-[150px_1fr] items-center gap-[8px]">
+				<div
+					key={row.label}
+					className="grid grid-cols-[150px_1fr] items-center gap-[8px]"
+				>
 					<span className="label-12 text-secondary tabular-nums">
 						{row.label} {fmt(row.size)} B
 					</span>

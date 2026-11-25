@@ -150,7 +150,10 @@ export function signatureGas(
 				SECP256K1_VERIFY_GAS,
 		}
 	}
-	const one = { verify: primitiveVerifyGas(inner), data: primitiveDataGas(inner) }
+	const one = {
+		verify: primitiveVerifyGas(inner),
+		data: primitiveDataGas(inner),
+	}
 	return {
 		...empty,
 		...one,
@@ -168,7 +171,8 @@ export function registrationGas(
 	const owners = config.owners.length
 	const derivation = keccakGas(ACCOUNT_DOMAIN_BYTES + 32 + 2 + 21 * owners)
 	// ConfigurableAccountConfigUpdated: 2 topics, 160 + 64 × owners data bytes.
-	const log = LOG_GAS + 2 * LOG_TOPIC_GAS + LOG_DATA_BYTE_GAS * (160 + 64 * owners)
+	const log =
+		LOG_GAS + 2 * LOG_TOPIC_GAS + LOG_DATA_BYTE_GAS * (160 + 64 * owners)
 	const account = options.createsAccount ? NEW_ACCOUNT_GAS : 0
 	return {
 		derivation,
@@ -248,7 +252,10 @@ export function intrinsicGas(options: intrinsicGas.Options): GasBreakdown {
 
 	let tokens = 0
 	for (const call of tx.calls) tokens += calldataTokens(call.input)
-	const inputBytes = tx.calls.reduce((sum, call) => sum + Hex.size(call.input), 0)
+	const inputBytes = tx.calls.reduce(
+		(sum, call) => sum + Hex.size(call.input),
+		0,
+	)
 	items.push({
 		key: 'calldata',
 		label: 'Calldata',
@@ -270,7 +277,10 @@ export function intrinsicGas(options: intrinsicGas.Options): GasBreakdown {
 		const to = call.to?.toLowerCase()
 		if (!to) continue
 		const isWarm =
-			to === first || warm.has(to) || isPrecompile(to as Hex.Hex) || targeted.has(to)
+			to === first ||
+			warm.has(to) ||
+			isPrecompile(to as Hex.Hex) ||
+			targeted.has(to)
 		targeted.add(to)
 		callAccess += isWarm ? WARM_ACCOUNT_GAS : COLD_ACCOUNT_GAS
 	}
@@ -339,9 +349,7 @@ export function intrinsicGas(options: intrinsicGas.Options): GasBreakdown {
 				label: 'Signature bytes',
 				gas: signature.data + signature.witness,
 				detail: [
-					signature.data
-						? `signature data ${fmt(signature.data)}`
-						: undefined,
+					signature.data ? `signature data ${fmt(signature.data)}` : undefined,
 					signature.witness
 						? `account and config ${fmt(signature.witness)}`
 						: undefined,

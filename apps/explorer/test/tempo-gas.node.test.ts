@@ -6,14 +6,17 @@ import {
 	configurableAccountView,
 	type ConfigUpdate,
 } from '#lib/domain/configurable-account'
+import { hasDecodableSignature, withoutUndecodableSignature } from '#lib/chains'
 import * as TempoGas from '#lib/domain/tempo-gas'
 import * as TempoSignature from '#lib/domain/tempo-signature'
-import vector from './fixtures/slh-dsa-sha2-128s.json'
+import vector from './fixtures/slh-dsa-sha2-128s.json' with { type: 'json' }
 
 // The node's worked examples (tempo-primitives `gas_worked_examples`):
 // salt 0x63 × 32, threshold 1, weights 1, a passkey owner and the vector's
 // SLH-DSA owner.
-const passkeyOwner = Address.checksum('0xad7894222A2485cBa18369b6438597118eE58EDc')
+const passkeyOwner = Address.checksum(
+	'0xad7894222A2485cBa18369b6438597118eE58EDc',
+)
 const slhOwner = Address.checksum(vector.address as Hex.Hex)
 const salt = `0x${'63'.repeat(32)}` as Hex.Hex
 
@@ -170,5 +173,36 @@ describe('configurable account view', () => {
 			new Map(),
 		)
 		expect(view?.quantumOnly).toBe(false)
+	})
+})
+
+describe('RPC transactions with an SLH-DSA approval', () => {
+	// eth_getTransactionByHash returns a configurable signature without its 0x05 type byte.
+	const rpcSignature = (approvals: Hex.Hex[]) =>
+		Hex.slice(
+			configurable(
+				TempoSignature.deriveConfigurableAccount(oneOfTwo),
+				oneOfTwo,
+				approvals,
+			),
+			1,
+		)
+
+	it('keeps the transaction and drops only the signature ox cannot decode', () => {
+		const transaction = {
+			hash: `0x${'11'.repeat(32)}`,
+			signature: rpcSignature([vector.encodedApproval as Hex.Hex]),
+		}
+		expect(hasDecodableSignature(transaction)).toBe(false)
+		expect(withoutUndecodableSignature(transaction)).toEqual({
+			hash: transaction.hash,
+			signature: undefined,
+		})
+	})
+
+	it('leaves other transactions unchanged', () => {
+		const unsigned = { hash: `0x${'22'.repeat(32)}` }
+		expect(withoutUndecodableSignature(unsigned)).toBe(unsigned)
+		expect(withoutUndecodableSignature('0xabc')).toBe('0xabc')
 	})
 })

@@ -17,7 +17,8 @@ async function fetchTxSignatureDataUncached(params: {
 	blockNumber: bigint
 }): Promise<TxSignatureData | null> {
 	const client = getWagmiConfig().getClient()
-	const parent = `0x${(params.blockNumber > 0n ? params.blockNumber - 1n : 0n).toString(16)}` as Hex.Hex
+	const parent =
+		`0x${(params.blockNumber > 0n ? params.blockNumber - 1n : 0n).toString(16)}` as Hex.Hex
 	const [raw, nonce, code] = await Promise.all([
 		client.request({
 			method: 'eth_getRawTransactionByHash',

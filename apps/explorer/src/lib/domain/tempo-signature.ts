@@ -244,7 +244,8 @@ function decodeOrThrow(raw: Hex.Hex, size: number): TempoSignature {
 			if (bodySize <= 20) throw new Error('keychain signature too short')
 			const inner = decode(slice(body, 20))
 			if (inner.type === 'unknown') throw new Error(inner.error)
-			if (inner.type === 'keychain') throw new Error('nested keychain signature')
+			if (inner.type === 'keychain')
+				throw new Error('nested keychain signature')
 			return {
 				type: 'keychain',
 				raw,
@@ -261,10 +262,7 @@ function decodeOrThrow(raw: Hex.Hex, size: number): TempoSignature {
 			const paramSet =
 				SLH_DSA_PARAM_SETS[paramId as keyof typeof SLH_DSA_PARAM_SETS]
 			const publicKeyBytes = paramSet?.publicKeyBytes ?? 32
-			if (
-				paramSet &&
-				bodySize !== 1 + publicKeyBytes + paramSet.signatureBytes
-			)
+			if (paramSet && bodySize !== 1 + publicKeyBytes + paramSet.signatureBytes)
 				throw new Error(
 					`${paramSet.name} approval must be ${2 + publicKeyBytes + paramSet.signatureBytes} bytes`,
 				)
@@ -311,7 +309,9 @@ function decodeConfigurable(
 	const fields = asList(Rlp.toHex(body) as RlpItem)
 	const [account, config, approvals] = fields
 	if (fields.length !== 3)
-		throw new Error('configurable signature must be [account, config, approvals]')
+		throw new Error(
+			'configurable signature must be [account, config, approvals]',
+		)
 	const configFields = asList(config)
 	const [salt, version, threshold, owners] = configFields
 	if (configFields.length !== 4)
@@ -459,7 +459,9 @@ export function webAuthnMessage(
 			challenge?: unknown
 		}
 		if (clientData.type !== 'webauthn.get') return undefined
-		if (clientData.challenge !== Base64.fromHex(digest, { url: true, pad: false }))
+		if (
+			clientData.challenge !== Base64.fromHex(digest, { url: true, pad: false })
+		)
 			return undefined
 		return Hash.sha256(
 			Hex.concat(
@@ -564,8 +566,7 @@ export type SlhDsaSegment = {
  * of (WOTS+ signature, auth path).
  */
 export function slhDsaLayout(paramSet: SlhDsaParamSet): SlhDsaSegment[] {
-	const { n, forsTrees, forsHeight, layers, layerHeight, wotsChains } =
-		paramSet
+	const { n, forsTrees, forsHeight, layers, layerHeight, wotsChains } = paramSet
 	const segments: SlhDsaSegment[] = [
 		{
 			key: 'r',

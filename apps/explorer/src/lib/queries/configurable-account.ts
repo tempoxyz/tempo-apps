@@ -28,7 +28,10 @@ const MAX_SIGNED_TRANSACTIONS = 25
 export async function fetchConfigurableAccount(address: Address.Address) {
 	const client = getWagmiConfig().getClient()
 	const accountTopic = pad(address.toLowerCase() as Hex.Hex, { size: 32 })
-	const [updated, upgraded] = ['ConfigurableAccountConfigUpdated', 'AccountUpgraded'].map(
+	const [updated, upgraded] = [
+		'ConfigurableAccountConfigUpdated',
+		'AccountUpgraded',
+	].map(
 		(eventName) =>
 			encodeEventTopics({
 				abi: configurableAccountAbi,

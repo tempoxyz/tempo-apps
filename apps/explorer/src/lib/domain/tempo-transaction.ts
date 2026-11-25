@@ -64,7 +64,9 @@ function optionalAddress(hex: Hex.Hex): Address.Address | undefined {
 
 /** Whether `raw` is an EIP-2718 Tempo (`0x76`) transaction. */
 export function isTempoTransaction(raw: Hex.Hex): boolean {
-	return Hex.size(raw) > 1 && Hex.toNumber(Hex.slice(raw, 0, 1)) === TEMPO_TX_TYPE
+	return (
+		Hex.size(raw) > 1 && Hex.toNumber(Hex.slice(raw, 0, 1)) === TEMPO_TX_TYPE
+	)
 }
 
 /**
@@ -115,8 +117,10 @@ export function decode(raw: Hex.Hex): DecodedTempoTransaction {
 		}),
 		nonceKey: toBigInt(asHex(fields[6])),
 		nonce: toBigInt(asHex(fields[7])),
-		validBefore: asHex(fields[8]) === '0x' ? undefined : toBigInt(asHex(fields[8])),
-		validAfter: asHex(fields[9]) === '0x' ? undefined : toBigInt(asHex(fields[9])),
+		validBefore:
+			asHex(fields[8]) === '0x' ? undefined : toBigInt(asHex(fields[8])),
+		validAfter:
+			asHex(fields[9]) === '0x' ? undefined : toBigInt(asHex(fields[9])),
 		feeToken: optionalAddress(asHex(fields[10])),
 		feePayerSignature,
 		authorizationListLength: asList(fields[12]).length,
@@ -210,8 +214,7 @@ function resolveConfigurable(
 	const approvals = signature.approvals.map((approval, index) => {
 		const signer = TempoSignature.resolvePrimitiveSigner(approval, digest)
 		const weight = signature.config.owners.find(
-			(owner) =>
-				signer.address && Address.isEqual(owner.owner, signer.address),
+			(owner) => signer.address && Address.isEqual(owner.owner, signer.address),
 		)?.weight
 		return { index, signature: approval, signer, weight, digest }
 	})
@@ -219,7 +222,10 @@ function resolveConfigurable(
 		signature,
 		digest,
 		approvals,
-		weight: approvals.reduce((sum, approval) => sum + (approval.weight ?? 0), 0),
+		weight: approvals.reduce(
+			(sum, approval) => sum + (approval.weight ?? 0),
+			0,
+		),
 	}
 }
 

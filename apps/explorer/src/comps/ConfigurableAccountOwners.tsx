@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import * as React from 'react'
+import type * as React from 'react'
 import { Address } from '#comps/Address'
 import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
@@ -125,10 +125,13 @@ export function ConfigurableAccountOwners(
 							<span className="label-12 text-secondary">
 								threshold {update.threshold}, owners{' '}
 								{update.owners
-									.map(
-										(owner) =>
-											`${owner.owner.slice(0, 8)}…${owner.owner.slice(-4)}`,
-									)
+									.map((owner) => {
+										const kind = view.kinds[owner.owner.toLowerCase()]
+										const short = `${owner.owner.slice(0, 8)}…${owner.owner.slice(-4)}`
+										return kind
+											? `${short} · ${OWNER_KIND_LABELS[kind]}`
+											: short
+									})
 									.join(', ')}
 							</span>
 							<Link

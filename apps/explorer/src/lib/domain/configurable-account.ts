@@ -129,6 +129,8 @@ export type ConfigurableAccountView = {
 	current: ConfigUpdate
 	owners: OwnerView[]
 	history: ConfigUpdate[]
+	/** Key types known for owners in any version, by lowercase address. */
+	kinds: Record<string, OwnerKind>
 	/** Every current owner is a known SLH-DSA key. */
 	quantumOnly: boolean
 }
@@ -148,8 +150,11 @@ export function configurableAccountView(
 		current,
 		owners,
 		history: updates,
+		kinds: Object.fromEntries(kinds),
 		quantumOnly:
 			owners.length > 0 &&
-			owners.every((owner) => owner.kind !== undefined && !isClassical(owner.kind)),
+			owners.every(
+				(owner) => owner.kind !== undefined && !isClassical(owner.kind),
+			),
 	}
 }

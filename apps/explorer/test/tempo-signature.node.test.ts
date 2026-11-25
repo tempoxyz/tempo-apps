@@ -73,9 +73,9 @@ describe('SLH-DSA owners', () => {
 	})
 
 	it('derives the account, commitment and approval digest', () => {
-		expect(
-			TempoSignature.deriveConfigurableAccount(config).toLowerCase(),
-		).toBe(vectors.account)
+		expect(TempoSignature.deriveConfigurableAccount(config).toLowerCase()).toBe(
+			vectors.account,
+		)
 		expect(TempoSignature.configCommitment(config)).toBe(vectors.commitment)
 		expect(
 			TempoSignature.configurableAccountDigest(
@@ -106,13 +106,17 @@ describe('SLH-DSA owners', () => {
 	})
 
 	it('lays out R, 14 FORS trees and 7 hypertree layers', () => {
-		const layout = TempoSignature.slhDsaLayout(TempoSignature.SLH_DSA_PARAM_SETS[1])
+		const layout = TempoSignature.slhDsaLayout(
+			TempoSignature.SLH_DSA_PARAM_SETS[1],
+		)
 		expect(layout).toHaveLength(1 + 14 + 7)
 		expect(layout.reduce((sum, segment) => sum + segment.size, 0)).toBe(7_856)
 		const fors = layout.filter((segment) => segment.group === 'fors')
 		const hypertree = layout.filter((segment) => segment.group === 'hypertree')
 		expect(fors.reduce((sum, segment) => sum + segment.size, 0)).toBe(2_912)
-		expect(hypertree.reduce((sum, segment) => sum + segment.size, 0)).toBe(4_928)
+		expect(hypertree.reduce((sum, segment) => sum + segment.size, 0)).toBe(
+			4_928,
+		)
 		const last = layout.at(-1)
 		expect(last && last.offset + last.size).toBe(7_856)
 	})
@@ -155,7 +159,9 @@ describe('primitive signatures', () => {
 
 	it('recovers secp256k1', () => {
 		const privateKey = Secp256k1.randomPrivateKey()
-		const expected = Address.fromPublicKey(Secp256k1.getPublicKey({ privateKey }))
+		const expected = Address.fromPublicKey(
+			Secp256k1.getPublicKey({ privateKey }),
+		)
 		const signature = Secp256k1.sign({ payload: digest, privateKey })
 		const raw = Hex.concat(
 			Hex.fromNumber(signature.r, { size: 32 }),
@@ -166,7 +172,9 @@ describe('primitive signatures', () => {
 		expect(decoded.type).toBe('secp256k1')
 		const signer = TempoSignature.resolvePrimitiveSigner(decoded, digest)
 		expect(signer.status).toBe('recovered')
-		expect(signer.address && Address.isEqual(signer.address, expected)).toBe(true)
+		expect(signer.address && Address.isEqual(signer.address, expected)).toBe(
+			true,
+		)
 	})
 
 	function p256Key() {
@@ -204,6 +212,39 @@ describe('primitive signatures', () => {
 		).toBe('invalid')
 	})
 
+	it('decodes keychain V1 and V2 envelopes around their access key', () => {
+		const key = p256Key()
+		const user = Address.checksum(`0x${'ab'.repeat(20)}`)
+		const v2Digest = TempoSignature.keychainV2Digest(digest, user)
+		const [r, s] = p256Parts(v2Digest, key.privateKey)
+		const inner = Hex.concat('0x01', r, s, key.x, key.y, '0x00')
+		for (const [typeByte, version] of [
+			['0x03', 1],
+			['0x04', 2],
+		] as const) {
+			const decoded = TempoSignature.decode(Hex.concat(typeByte, user, inner))
+			expect(decoded).toMatchObject({
+				type: 'keychain',
+				version,
+				userAddress: user,
+				size: 1 + 20 + 130,
+			})
+			if (decoded.type !== 'keychain' || decoded.inner.type !== 'p256')
+				throw new Error('expected a P256 access key')
+			expect(
+				TempoSignature.resolvePrimitiveSigner(decoded.inner, v2Digest),
+			).toEqual({
+				address: TempoSignature.p256Address(key.x, key.y),
+				status: 'verified',
+			})
+		}
+		expect(
+			TempoSignature.decode(
+				Hex.concat('0x04', user, Hex.concat('0x04', user, inner)),
+			).type,
+		).toBe('unknown')
+	})
+
 	it('verifies a WebAuthn assertion over the digest', () => {
 		const key = p256Key()
 		const authenticatorData = Hex.concat(
@@ -217,7 +258,10 @@ describe('primitive signatures', () => {
 			origin: 'http://localhost',
 		})
 		const message = Hash.sha256(
-			Hex.concat(authenticatorData, Hash.sha256(Hex.fromString(clientDataJSON))),
+			Hex.concat(
+				authenticatorData,
+				Hash.sha256(Hex.fromString(clientDataJSON)),
+			),
 		)
 		const [r, s] = p256Parts(message, key.privateKey)
 		const decoded = TempoSignature.decodePrimitive(
@@ -332,7 +376,11 @@ describe('Tempo transactions', () => {
 			registration: vectors.registrationNotEmpty,
 		})
 		expect(breakdown.intrinsic).toBe(
-			21_000 + calldata + 250_000 + vectors.signatureGasTotal + vectors.registrationNotEmpty,
+			21_000 +
+				calldata +
+				250_000 +
+				vectors.signatureGasTotal +
+				vectors.registrationNotEmpty,
 		)
 		expect(breakdown.unpriced).toEqual([])
 	})
