@@ -132,10 +132,22 @@ jobs:
             else
               list=("$runs")
             fi
-            if ! newer="$(api "${list[@]}" \
-              --jq ".workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .head_sha != \"${CURRENT_SHA}\") | \"\(.id) \(.head_sha)\"")"; then
-              echo "::warning::Could not list runs of ${workflow}; deploying ${CURRENT_SHA}."
-              newer=""
+            # Pages that came back count even if a later page failed; the loop
+            # below reads only "<id> <sha>" lines, never an error body.
+            runs_filter=".workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .head_sha != \"${CURRENT_SHA}\") | \"\(.id) \(.head_sha)\""
+            newer=""
+            listed=false
+            for _ in 1 2 3; do
+              if part="$(gh api "${list[@]}" --jq "$runs_filter")"; then
+                newer+="${part}"$'\n'
+                listed=true
+                break
+              fi
+              newer+="${part}"$'\n'
+              sleep 5
+            done
+            if [[ "$listed" != true ]]; then
+              echo "::warning::Could not list every run of ${workflow}; checking the runs that came back."
             fi
             jobs_filter=".jobs[] | select((.name | endswith(\" / ${DEPLOY_JOB}\")) and any(.steps[]?; .name == \"${DEPLOY_STEP}\" and .conclusion == \"success\")) | .id"
             while read -r run_id run_sha; do
