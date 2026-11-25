@@ -160,6 +160,8 @@ jobs:
             if [[ "$listed" != true ]]; then
               echo "::warning::Could not list every run of ${workflow}; checking the runs that came back."
             fi
+            # Retries can return the same runs again; check each run once.
+            newer="$(sort -u <<< "$newer")"
             jobs_filter=".jobs[] | select((.name | endswith(\" / ${DEPLOY_JOB}\")) and any(.steps[]?; .name == \"${DEPLOY_STEP}\" and .conclusion == \"success\")) | .id"
             while read -r run_id run_sha; do
               [[ "$run_id" =~ ^[0-9]+$ && "$run_sha" =~ ^[0-9a-f]{40}$ ]] || continue
