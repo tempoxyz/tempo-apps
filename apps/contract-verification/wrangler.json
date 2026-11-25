@@ -16,7 +16,7 @@
 	"ratelimits": [
 		{
 			"name": "RATE_LIMITER",
-			"namespace_id": "1001",
+			"namespace_id": "5201",
 			"simple": {
 				"limit": 50,
 				"period": 10
