@@ -66,9 +66,9 @@ exclusively from the scheduled cron handler inside Cloudflare Workers.
 
 ## MCP search behavior
 
-Tempo uses the canonical `https://tempo.xyz/developers` source, including its
-`/developers/llms.txt` index. Page reads also accept legacy `docs.tempo.xyz`
-URLs and resolve them to that canonical prefix. Absolute URLs outside the
+Tempo uses the canonical `https://tempo.com/developers` source, including its
+`/developers/llms.txt` index. Page reads also accept legacy `tempo.xyz` and
+`docs.tempo.xyz` URLs and resolve them to that canonical prefix. Absolute URLs outside the
 configured source origin and path prefix are rejected.
 
 Changing a source index URL bypasses its cached ETags on the next hourly sync.
@@ -182,7 +182,7 @@ pnpm --filter mcp-docs-indexer configure:metadata
 Changing AI Search custom metadata triggers a full re-index. Re-run a forced
 sync afterward if existing built-in-storage items need the new schema applied.
 
-`tempo.xyz/developers` is listed as the `tempo` source so MCP clients can explicitly
+`tempo.com/developers` is listed as the `tempo` source so MCP clients can explicitly
 pull core protocol and integration docs with `source: "tempo"` or `read_page`.
 
 ## Setup
@@ -334,9 +334,7 @@ Important metrics:
 
 ## Deploy
 
-```bash
-pnpm --filter mcp-docs-indexer deploy
-```
+Pushes to `main` that touch this app deploy it through the [Cloudflare Deploy Broker](https://github.com/tempoxyz/cloudflare-deploy-broker); CI holds no Cloudflare credential. The broker accepts only a build that matches the `mcp-docs-indexer` entry in [`cloudflare-deploy-policies`](https://github.com/tempoxyz/cloudflare-deploy-policies/blob/main/policies/tempoxyz/tempo-apps.yaml), so a new binding or domain needs a policy change first. Worker secrets such as `POSTHOG_PROJECT_API_KEY` are managed in the broker dashboard (https://cf.tehq.net/, Workers tab), and every deploy keeps them.
 
 Cron runs hourly. The Worker is not bound to a public route — `workers_dev`
 is disabled in `wrangler.jsonc`. Tail logs to confirm the cron is firing:

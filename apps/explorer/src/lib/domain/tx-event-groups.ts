@@ -29,6 +29,10 @@ const eventSignatures = {
 	WithdrawalProcessed: toEventSelector(
 		'event WithdrawalProcessed(address indexed, address, uint128, bool)',
 	),
+	// Private Zones' portals also index the withdrawal's sender tag.
+	PrivateWithdrawalProcessed: toEventSelector(
+		'event WithdrawalProcessed(address indexed, bytes32 indexed, address, uint128, bool)',
+	),
 	BounceBack: toEventSelector(
 		'event BounceBack(bytes32 indexed, address indexed, address, uint128)',
 	),
@@ -45,7 +49,10 @@ export function getEventName(log: Log): string | null {
 	if (topic0 === eventSignatures.DepositMade.toLowerCase()) return 'DepositMade'
 	if (topic0 === eventSignatures.EncryptedDepositMade.toLowerCase())
 		return 'EncryptedDepositMade'
-	if (topic0 === eventSignatures.WithdrawalProcessed.toLowerCase())
+	if (
+		topic0 === eventSignatures.WithdrawalProcessed.toLowerCase() ||
+		topic0 === eventSignatures.PrivateWithdrawalProcessed.toLowerCase()
+	)
 		return 'WithdrawalProcessed'
 	if (topic0 === eventSignatures.BounceBack.toLowerCase()) return 'BounceBack'
 	return null

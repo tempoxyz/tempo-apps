@@ -33,6 +33,7 @@ import {
 } from '#lib/bytecode-matching.ts'
 import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
+import { CONTAINER_COMPILE_TIMEOUT_MS, isTimeoutError } from '#route.verify.ts'
 import { createRpcTransport } from '#lib/rpc.ts'
 
 const logger = getLogger(['tempo'])
@@ -235,6 +236,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 						compilerVersion,
 						input: stdJsonInput,
 					}),
+					signal: AbortSignal.timeout(CONTAINER_COMPILE_TIMEOUT_MS),
 				}),
 			)
 		} catch (error) {
@@ -243,6 +245,8 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				address,
 				chain,
 			})
+			if (isTimeoutError(error))
+				return sourcifyError(context, 504, 'timeout', 'Compilation timed out')
 			return sourcifyError(
 				context,
 				500,

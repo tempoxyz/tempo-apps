@@ -27,6 +27,8 @@ function normalizeApiPath(pathname: string): string {
 
 const SENSITIVE_HEADERS = new Set([
 	'authorization',
+	'cf-access-client-id',
+	'cf-access-client-secret',
 	'cookie',
 	'set-cookie',
 	'x-api-key',

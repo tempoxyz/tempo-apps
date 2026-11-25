@@ -28,6 +28,12 @@ import {
 import { decodeMemoForDisplay, isMppAttributionMemo } from '#lib/domain/memo'
 import { HexFormatter } from '#lib/formatting'
 import { findBurnAtTransfers } from '#lib/domain/tx-event-groups'
+import {
+	decodeHotWord,
+	findPropAmmV2Pair,
+	type PropAmmShapeLevel,
+} from '#lib/propamm'
+import type { GetPropAmmShapeFn } from '#lib/domain/propamm-shapes'
 import type * as Tip20 from './tip20'
 
 const abi = allAbis
@@ -72,6 +78,172 @@ const earnEventSignatures = new Map(
 	]),
 )
 const propAmmTradeSelector = toEventSelector(propAmmEventsAbi[0]).toLowerCase()
+const propAmmFillSelector = toEventSelector(propAmmEventsAbi[1]).toLowerCase()
+const propAmmPostedSelector = toEventSelector(propAmmEventsAbi[2]).toLowerCase()
+const propAmmRefilledSelector = toEventSelector(
+	propAmmEventsAbi[3],
+).toLowerCase()
+
+function formatBps(bps: number): string {
+	return `${Number(bps.toFixed(2))} bp`
+}
+
+const PROP_AMM_FACTOR_ONE = 100_000_000n
+
+/**
+ * One side of a v2 quote as a resting order (LadderMath.sol): its best level's
+ * price, mid * (1 +/- (spread * widthScale + widen * 1000) / 1e8), and the
+ * base its levels hold, size * sizeUnit * depthScale / 1000 each.
+ */
+function propAmmQuoteSide(
+	levels: readonly PropAmmShapeLevel[],
+	sizeUnit: bigint,
+	word: ReturnType<typeof decodeHotWord>,
+	bid: boolean,
+) {
+	const widen = bid ? word.bidWiden : word.askWiden
+	const offset = (spread: number) =>
+		BigInt(spread) * BigInt(word.widthScale) + BigInt(widen) * 1000n
+	// Bid levels at or past the floor can't fill.
+	const live = levels.filter(
+		(level) => !bid || offset(level.spread) < PROP_AMM_FACTOR_ONE,
+	)
+	const best = live[0]
+	if (!best || word.depthScale === 0) return undefined
+	const bestOffset = offset(best.spread)
+	const factor = bid
+		? PROP_AMM_FACTOR_ONE - bestOffset
+		: PROP_AMM_FACTOR_ONE + bestOffset
+	const depth = live.reduce(
+		(sum, level) =>
+			sum + (BigInt(level.size) * sizeUnit * BigInt(word.depthScale)) / 1000n,
+		0n,
+	)
+	return {
+		price: (word.mid * factor) / PROP_AMM_FACTOR_ONE,
+		bps: Number(bestOffset) / 10_000,
+		widenBps: widen / 10,
+		levels: live.length,
+		depth,
+	}
+}
+
+/** A 1/1000 scale as a multiplier, such as 1x or 0.5x. */
+function formatScale(scale: number): string {
+	return `${Number((scale / 1000).toFixed(3))}x`
+}
+
+function formatUnixSeconds(seconds: number): string {
+	return `${new Date(seconds * 1000).toISOString().slice(0, 19).replace('T', ' ')} UTC`
+}
+
+type PropAmmFillArgs = {
+	taker: Address.Address
+	amountIn: bigint
+	amountOut: bigint
+}
+
+/**
+ * A transfer's position in the receipt and the token that emitted it, as the
+ * log spells it: only a matched transfer's token is checksummed, so an
+ * emitter spelled in invalid mixed case can't fail the whole receipt.
+ */
+type PropAmmTransfer = { index: number; token: string }
+
+/**
+ * A receipt's transfers, each list in log order, keyed so that every propAMM
+ * Fill or TradeExecuted resolves its settlement transfers by lookup rather
+ * than by scanning the receipt. A receipt can carry thousands of trade-like
+ * logs from any contract, so a scan per trade would grow with the square of
+ * its log count.
+ */
+type PropAmmTransferIndex = {
+	/** `from:to:amount`: a Fill's input and output legs. */
+	route: Map<string, PropAmmTransfer[]>
+	/** `token:from:to:amount`: a TradeExecuted's input leg. */
+	tokenRoute: Map<string, PropAmmTransfer[]>
+	/** `token:from:amount`: a TradeExecuted's output leg, to any recipient. */
+	tokenSource: Map<string, PropAmmTransfer[]>
+}
+
+const propAmmTransferIndexes = new WeakMap<
+	readonly Log<bigint, number, boolean, AbiEvent>[],
+	PropAmmTransferIndex
+>()
+
+function addressKey(address: Address.Address): string {
+	return address.toLowerCase()
+}
+
+function pushTransfer(
+	map: Map<string, PropAmmTransfer[]>,
+	key: string,
+	transfer: PropAmmTransfer,
+) {
+	const list = map.get(key)
+	if (list) list.push(transfer)
+	else map.set(key, [transfer])
+}
+
+/** Builds a receipt's transfer index once and reuses it for the same events. */
+function getPropAmmTransferIndex(
+	events: readonly Log<bigint, number, boolean, AbiEvent>[],
+): PropAmmTransferIndex {
+	const cached = propAmmTransferIndexes.get(events)
+	if (cached) return cached
+	const index: PropAmmTransferIndex = {
+		route: new Map(),
+		tokenRoute: new Map(),
+		tokenSource: new Map(),
+	}
+	events.forEach((event, position) => {
+		if (!isTransferEvent(event)) return
+		const { from, to, amount } = event.args
+		const transfer = { index: position, token: event.address }
+		const token = addressKey(event.address)
+		const route = `${addressKey(from)}:${addressKey(to)}:${amount}`
+		pushTransfer(index.route, route, transfer)
+		pushTransfer(index.tokenRoute, `${token}:${route}`, transfer)
+		pushTransfer(
+			index.tokenSource,
+			`${token}:${addressKey(from)}:${amount}`,
+			transfer,
+		)
+	})
+	propAmmTransferIndexes.set(events, index)
+	return index
+}
+
+/**
+ * A v2 Fill names no tokens: the Settler pulls the input from the taker into
+ * the venue, and the venue pays the output to the taker, both in the same
+ * transaction. Returns the first of each of those two transfers, matched by
+ * account and amount.
+ */
+function findPropAmmFillTransfers(
+	fill: ParsedEvent,
+	events: readonly Log<bigint, number, boolean, AbiEvent>[],
+): {
+	input: { index: number; token: Address.Address } | undefined
+	output: { index: number; token: Address.Address } | undefined
+} {
+	const { taker, amountIn, amountOut } = fill.args as PropAmmFillArgs
+	const { route } = getPropAmmTransferIndex(events)
+	const venue = addressKey(fill.address)
+	const account = addressKey(taker)
+	const inputKey = `${account}:${venue}:${amountIn}`
+	const outputKey = `${venue}:${account}:${amountOut}`
+	const input = route.get(inputKey)?.[0]
+	// A transfer that could settle either leg settles the input.
+	const output = outputKey === inputKey ? undefined : route.get(outputKey)?.[0]
+	return {
+		input: input && { index: input.index, token: checksumAddress(input.token) },
+		output: output && {
+			index: output.index,
+			token: checksumAddress(output.token),
+		},
+	}
+}
 
 type CreateAmount = (value: bigint, token: Address.Address) => Amount
 
@@ -169,6 +341,128 @@ function earnValuePart(
 	return token
 		? { type: 'amount', value: createAmount(value, token) }
 		: { type: 'number', value }
+}
+
+type CardSpendArgs = {
+	payer: Address.Address
+	destination: Address.Address
+	token: Address.Address
+	amount: bigint
+	fromVault: bigint
+	sharesUsed: bigint
+	isPrivate: boolean
+}
+
+type RouterSpentArgs = {
+	spender: Address.Address
+	token: Address.Address
+	used: bigint
+	change: bigint
+}
+
+/** The Zone router's \`Spent\` for a card program, in the same receipt. */
+function findRouterSpent(
+	events: ParsedEvent[],
+	program: Address.Address,
+): (ParsedEvent & { args: RouterSpentArgs }) | undefined {
+	return events.find(
+		(candidate): candidate is ParsedEvent & { args: RouterSpentArgs } =>
+			candidate.eventName === 'Spent' &&
+			Address.isEqual(
+				(candidate.args as Partial<RouterSpentArgs>).spender ?? zeroAddress,
+				program,
+			),
+	)
+}
+
+/**
+ * The transfers a card spend moves through its program and Zone router: the
+ * input in, the payment out and the change back. The card spend summary and
+ * the Zone withdrawal and deposit already show them, so the receipt hides them.
+ */
+function findCardSpendTransferIndices(events: ParsedEvent[]): Set<number> {
+	const indices = new Set<number>()
+	for (const spend of events) {
+		if (spend.eventName !== 'CardSpent') continue
+		const program = spend.address
+		const router = findRouterSpent(events, program)?.address
+		// The portal pays a callback withdrawal through the Zone messenger, so
+		// its first hop names neither the router nor the program.
+		const withdrawals = router
+			? events.flatMap((event) => {
+					if (event.eventName !== 'WithdrawalProcessed') return []
+					const args = event.args as {
+						to?: Address.Address
+						token?: Address.Address
+						amount?: bigint
+					}
+					if (!args.to || !args.token || args.amount === undefined) return []
+					if (!Address.isEqual(args.to, router)) return []
+					return [
+						{ portal: event.address, token: args.token, amount: args.amount },
+					]
+				})
+			: []
+		for (const [index, event] of events.entries()) {
+			if (!isTransferEvent(event)) continue
+			const { from, to, amount } = event.args
+			const touches = (address: Address.Address | undefined) =>
+				address !== undefined &&
+				(Address.isEqual(from, address) || Address.isEqual(to, address))
+			const isWithdrawalHop = withdrawals.some(
+				(withdrawal) =>
+					Address.isEqual(from, withdrawal.portal) &&
+					Address.isEqual(event.address, withdrawal.token) &&
+					amount === withdrawal.amount,
+			)
+			if (touches(program) || touches(router) || isWithdrawalHop)
+				indices.add(index)
+		}
+	}
+	return indices
+}
+
+function createCardSpendSummary(
+	event: ParsedEvent,
+	events: ParsedEvent[],
+	createAmount: CreateAmount,
+): KnownEvent | null {
+	if (event.eventName !== 'CardSpent') return null
+	const { payer, destination, token, amount, sharesUsed, isPrivate } =
+		event.args as CardSpendArgs
+	const program = Address.checksum(event.address)
+	const note: NonNullable<KnownEvent['note']> = [
+		['Card program', { type: 'account', value: program }],
+		[
+			'Funding',
+			{ type: 'text', value: isPrivate ? 'Private (Zone)' : 'Public' },
+		],
+	]
+	if (sharesUsed > 0n)
+		note.push(['Earn shares used', { type: 'number', value: sharesUsed }])
+	const routerSpent = isPrivate ? findRouterSpent(events, program) : undefined
+	if (routerSpent && routerSpent.args.change > 0n)
+		note.push([
+			'Change to Zone',
+			{
+				type: 'amount',
+				value: createAmount(routerSpent.args.change, routerSpent.args.token),
+			},
+		])
+	return {
+		type: isPrivate ? 'card private spend' : 'card spend',
+		parts: [
+			{ type: 'action', value: 'Card Spend' },
+			{ type: 'amount', value: createAmount(amount, token) },
+			{ type: 'text', value: 'to' },
+			{ type: 'account', value: Address.checksum(destination) },
+		],
+		note,
+		meta: {
+			...(isPrivate ? {} : { from: Address.checksum(payer) }),
+			to: Address.checksum(destination),
+		},
+	}
 }
 
 function createEarnReceiptSummary(
@@ -814,6 +1108,8 @@ function createDetectors(
 		payee: Address.Address,
 	) => Address.Address | undefined,
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
+	chainId?: number,
+	getPropAmmShape?: GetPropAmmShapeFn,
 ) {
 	function isZonePortalAddress(address: Address.Address): boolean {
 		return zonePortals.has(checksumAddress(address))
@@ -824,8 +1120,161 @@ function createDetectors(
 	}
 
 	return {
-		propAmm(event: ParsedEvent) {
-			if (event.topics[0]?.toLowerCase() !== propAmmTradeSelector) return null
+		propAmm(
+			event: ParsedEvent,
+			events?: readonly Log<bigint, number, boolean, AbiEvent>[],
+		) {
+			const selector = event.topics[0]?.toLowerCase()
+			if (
+				selector === propAmmPostedSelector ||
+				selector === propAmmRefilledSelector
+			) {
+				// Only listed venues: anyone can emit these events, and the pair's
+				// tokens come from the listing.
+				const { pairIndex } = event.args as { pairIndex: number }
+				const pair = findPropAmmV2Pair(chainId, event.address, pairIndex)
+				if (!pair) return null
+				const token = (address: Address.Address) => ({
+					address,
+					symbol: getTokenMetadata?.(address)?.symbol,
+				})
+				const base = token(pair.base)
+				const quote = token(pair.quote)
+
+				if (selector === propAmmRefilledSelector) {
+					const { bids, asks } = event.args as { bids: boolean; asks: boolean }
+					const sides = bids && asks ? 'Bids and Asks' : bids ? 'Bids' : 'Asks'
+					return {
+						type: 'propamm refill',
+						parts: [
+							{ type: 'action', value: `propAMM Refill ${sides}` },
+							{ type: 'token', value: base },
+							{ type: 'text', value: '/' },
+							{ type: 'token', value: quote },
+						],
+					}
+				}
+
+				// The maker's quote reads as a two-sided order: the shape's ladder
+				// around the mid, scaled by width and depth and widened per side.
+				const word = decodeHotWord(
+					BigInt((event.args as { hotWord: Hex.Hex }).hotWord),
+				)
+				const shape = getPropAmmShape?.(event.address, pairIndex, word.shapeId)
+				const meta: Array<[string, KnownEventPart]> = [
+					['Mid', { type: 'number', value: [word.mid, 18] }],
+					[
+						'Valid Until',
+						{ type: 'text', value: formatUnixSeconds(word.validUntil) },
+					],
+					['Width', { type: 'text', value: formatScale(word.widthScale) }],
+					[
+						'Depth Scale',
+						{ type: 'text', value: formatScale(word.depthScale) },
+					],
+					['Shape', { type: 'text', value: `#${word.shapeId}` }],
+					['Sequence', { type: 'number', value: word.seq }],
+				]
+
+				// Without the shape only the mid and the widens are known.
+				if (!shape) {
+					const widen = (off: boolean, value: number) =>
+						({
+							type: 'text',
+							value: off
+								? 'off'
+								: `shape #${word.shapeId} ladder + ${formatBps(value / 10)} widen`,
+						}) as const
+					return {
+						type: 'propamm quote',
+						parts: [
+							{ type: 'action', value: 'propAMM Quote' },
+							{ type: 'token', value: base },
+							{ type: 'text', value: 'around mid' },
+							{ type: 'number', value: [word.mid, 18] },
+							{ type: 'token', value: quote },
+						],
+						note: [
+							['Bid', widen(word.bidsOff, word.bidWiden)],
+							['Ask', widen(word.asksOff, word.askWiden)],
+							...meta,
+						],
+					}
+				}
+
+				const bid = word.bidsOff
+					? undefined
+					: propAmmQuoteSide(shape.bids, shape.sizeUnit, word, true)
+				const ask = word.asksOff
+					? undefined
+					: propAmmQuoteSide(shape.asks, shape.sizeUnit, word, false)
+				const sidePart = (label: string, side: typeof bid): KnownEventPart[] =>
+					side
+						? [
+								{ type: 'text', value: label },
+								{ type: 'number', value: [side.price, 18] },
+							]
+						: [{ type: 'text', value: `${label} off` }]
+				const sideNote = (
+					side: typeof bid,
+					sign: '-' | '+',
+				): KnownEventPart => ({
+					type: 'text',
+					value: side
+						? [
+								`mid ${sign} ${formatBps(side.bps)}`,
+								side.widenBps ? `incl. ${formatBps(side.widenBps)} widen` : '',
+								`${side.levels} level${side.levels === 1 ? '' : 's'}`,
+							]
+								.filter(Boolean)
+								.join(', ')
+						: 'off',
+				})
+				const note: Array<[string, KnownEventPart]> = [
+					['Bid', sideNote(bid, '-')],
+				]
+				if (bid)
+					note.push([
+						'Bid Size',
+						{ type: 'amount', value: createAmount(bid.depth, pair.base) },
+					])
+				note.push(['Ask', sideNote(ask, '+')])
+				if (ask)
+					note.push([
+						'Ask Size',
+						{ type: 'amount', value: createAmount(ask.depth, pair.base) },
+					])
+				return {
+					type: 'propamm quote',
+					parts: [
+						{ type: 'action', value: 'propAMM Quote' },
+						{ type: 'token', value: base },
+						...sidePart('Bid', bid),
+						...sidePart('/ Ask', ask),
+						{ type: 'token', value: quote },
+					],
+					note: [...note, ...meta],
+				}
+			}
+			if (selector === propAmmFillSelector) {
+				const { amountIn, amountOut } = event.args as PropAmmFillArgs
+				const { input, output } = findPropAmmFillTransfers(event, events ?? [])
+				const tokenIn = input?.token
+				const tokenOut = output?.token
+				// Without its settlement transfers the swap can't be described, and
+				// a bare swap would replace the transaction's other events.
+				if (!tokenIn || !tokenOut) return null
+				return {
+					type: 'propamm swap',
+					parts: [
+						{ type: 'action', value: 'propAMM Swap' },
+						{ type: 'amount', value: createAmount(amountIn, tokenIn) },
+						{ type: 'text', value: 'for' },
+						{ type: 'amount', value: createAmount(amountOut, tokenOut) },
+					],
+				}
+			}
+			if (selector !== propAmmTradeSelector) return null
 			const { tokenIn, tokenOut, amountIn, amountOut } = event.args as {
 				tokenIn: Address.Address
 				tokenOut: Address.Address
@@ -2114,15 +2563,45 @@ type FeeManagerAddLiquidityCall = {
 	args: readonly [Address.Address, Address.Address, bigint, Address.Address]
 }
 
+// A receipt's logs, decoded once however many of its Fill logs read them.
+const parsedSiblingLogs = new WeakMap<
+	readonly Log[],
+	Log<bigint, number, boolean, AbiEvent>[]
+>()
+
+function parseSiblingLogs(logs: readonly Log[]) {
+	let parsed = parsedSiblingLogs.get(logs)
+	if (!parsed) {
+		parsed = parseEventLogs({ abi, logs: [...logs] }) as Log<
+			bigint,
+			number,
+			boolean,
+			AbiEvent
+		>[]
+		parsedSiblingLogs.set(logs, parsed)
+	}
+	return parsed
+}
+
 export function parseKnownEvent(
 	log: Log,
 	options?: {
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		streamChannelToken?: Address.Address
+		/** The transaction's logs, which a propAMM v2 Fill reads its tokens from. */
+		logs?: readonly Log[]
+		/** The chain the log is on, which listed propAMM venues are looked up on. */
+		chainId?: number
+		/** The ladders propAMM v2 quotes rest on, which set their bid and ask. */
+		getPropAmmShape?: GetPropAmmShapeFn
 	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
 	if (!event) return null
+	const siblings =
+		options?.logs && event.topics[0]?.toLowerCase() === propAmmFillSelector
+			? parseSiblingLogs(options.logs)
+			: undefined
 
 	const getTokenMetadata = options?.getTokenMetadata
 
@@ -2144,10 +2623,13 @@ export function parseKnownEvent(
 		undefined,
 		undefined,
 		() => options?.streamChannelToken,
+		undefined,
+		options?.chainId,
+		options?.getPropAmmShape,
 	)
 
 	const detected =
-		detectors.propAmm(event) ||
+		detectors.propAmm(event, siblings) ||
 		detectors.zone(event) ||
 		detectors.tip20(event) ||
 		detectors.tip20Factory(event) ||
@@ -2215,6 +2697,10 @@ export function parseKnownEvents(
 		transaction?: TransactionLike
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
 		viewer?: Address.Address
+		/** The chain the receipt is on, which listed propAMM venues are looked up on. */
+		chainId?: number
+		/** The ladders propAMM v2 quotes rest on, which set their bid and ask. */
+		getPropAmmShape?: GetPropAmmShapeFn
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
@@ -2437,6 +2923,8 @@ export function parseKnownEvents(
 		transactionSender,
 		getStreamChannelToken,
 		zonePortals,
+		options?.chainId,
+		options?.getPropAmmShape,
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -2639,8 +3127,26 @@ export function parseKnownEvents(
 			index,
 		}))
 
-	// A propAMM trade is self-identifying through TradeExecuted. Hide the two
-	// settlement transfers so the receipt shows one swap summary instead.
+	// A propAMM trade is self-identifying through TradeExecuted or a v2 Fill.
+	// Hide the two settlement transfers so the receipt shows one swap summary
+	// instead.
+	for (const fill of dedupedEvents) {
+		if (fill.topics[0]?.toLowerCase() !== propAmmFillSelector) continue
+		const { input, output } = findPropAmmFillTransfers(fill, dedupedEvents)
+		// Hide only the two transfers the swap summary shows.
+		if (!input || !output) continue
+		swapIndices.add(input.index)
+		swapIndices.add(output.index)
+	}
+	// A TradeExecuted hides every transfer of its input and output legs. Trades
+	// that share a leg hide the same transfers, so each leg is added once.
+	const propAmmTransfers = getPropAmmTransferIndex(dedupedEvents)
+	const hiddenTradeLegs = new Set<string>()
+	const hideTradeLeg = (map: Map<string, PropAmmTransfer[]>, key: string) => {
+		if (hiddenTradeLegs.has(key)) return
+		hiddenTradeLegs.add(key)
+		for (const { index } of map.get(key) ?? []) swapIndices.add(index)
+	}
 	for (const trade of dedupedEvents) {
 		if (trade.topics[0]?.toLowerCase() !== propAmmTradeSelector) continue
 		const { taker, tokenIn, tokenOut, amountIn, amountOut } = trade.args as {
@@ -2650,94 +3156,116 @@ export function parseKnownEvents(
 			amountIn: bigint
 			amountOut: bigint
 		}
-		for (const { event, index } of transferEvents) {
-			const { from, to, amount } = event.args
-			const isInput =
-				Address.isEqual(event.address, tokenIn) &&
-				Address.isEqual(from, taker) &&
-				Address.isEqual(to, trade.address) &&
-				amount === amountIn
-			const isOutput =
-				Address.isEqual(event.address, tokenOut) &&
-				Address.isEqual(from, trade.address) &&
-				amount === amountOut
-			if (isInput || isOutput) swapIndices.add(index)
-		}
+		const venue = addressKey(trade.address)
+		hideTradeLeg(
+			propAmmTransfers.tokenRoute,
+			`${addressKey(tokenIn)}:${addressKey(taker)}:${venue}:${amountIn}`,
+		)
+		hideTradeLeg(
+			propAmmTransfers.tokenSource,
+			`${addressKey(tokenOut)}:${venue}:${amountOut}`,
+		)
 	}
 
 	// The DEX takes a taker's tokens in, fills orders for it, then pays it
 	// out. Only TIP-20 transfers around a fill the DEX itself emitted for the
 	// same taker name it as the venue: any contract can emit a Transfer
 	// naming the DEX, and tokens can pass through it for other reasons.
-	const dexFillBetween = (start: number, end: number, taker: Address.Address) =>
-		dedupedEvents
-			.slice(start + 1, end)
-			.some(
-				(event) =>
-					event.eventName === 'OrderFilled' &&
-					Address.isEqual(event.address, STABLECOIN_EXCHANGE) &&
-					Address.isEqual(
-						(event.args as { taker: Address.Address }).taker,
-						taker,
-					),
-			)
+	// Index the DEX's fills by taker so each pair checks for one between its
+	// transfers without rescanning the logs.
+	const dexFillIndicesByTaker = new Map<string, number[]>()
+	for (const [index, event] of dedupedEvents.entries()) {
+		if (
+			event.eventName !== 'OrderFilled' ||
+			!Address.isEqual(event.address, STABLECOIN_EXCHANGE)
+		)
+			continue
+		const taker = (event.args as { taker?: unknown }).taker
+		if (typeof taker !== 'string') continue
+		const key = taker.toLowerCase()
+		const indices = dexFillIndicesByTaker.get(key)
+		if (indices) indices.push(index)
+		else dexFillIndicesByTaker.set(key, [index])
+	}
+	const dexFillBetween = (
+		start: number,
+		end: number,
+		taker: Address.Address,
+	) => {
+		const indices = dexFillIndicesByTaker.get(taker.toLowerCase())
+		if (!indices) return false
+		// The first fill after start, by binary search over ascending indices.
+		let low = 0
+		let high = indices.length
+		while (low < high) {
+			const middle = (low + high) >>> 1
+			if (indices[middle] <= start) low = middle + 1
+			else high = middle
+		}
+		return low < indices.length && indices[low] < end
+	}
 
-	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
+	// Look for swap pairs: a transfer TO the exchange settles against the next
+	// transfer FROM it. Find each transfer's next one FROM the exchange in a
+	// single backward pass, so pairing stays linear in the number of logs.
+	const nextFromExchange = new Array<number | undefined>(transferEvents.length)
+	let nextFrom: number | undefined
+	for (let index = transferEvents.length - 1; index >= 0; index--) {
+		nextFromExchange[index] = nextFrom
+		if (
+			Address.isEqual(
+				transferEvents[index].event.args.from,
+				STABLECOIN_EXCHANGE,
+			)
+		)
+			nextFrom = index
+	}
+
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
-		// Type assertion is safe here because isTransferEvent has validated the structure
 		const args1 = event1.args
-		const to1 = args1.to
+		if (!Address.isEqual(args1.to, STABLECOIN_EXCHANGE)) continue
 
-		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
-		if (Address.isEqual(to1, STABLECOIN_EXCHANGE)) {
-			for (
-				let innerIndex = index + 1;
-				innerIndex < transferEvents.length;
-				innerIndex++
-			) {
-				const { event: event2, index: idx2 } = transferEvents[innerIndex]
-				const args2 = event2.args
-				const from2 = args2.from
+		const innerIndex = nextFromExchange[index]
+		if (innerIndex === undefined) continue
+		const { event: event2, index: idx2 } = transferEvents[innerIndex]
+		const args2 = event2.args
 
-				if (Address.isEqual(from2, STABLECOIN_EXCHANGE)) {
-					// This is a swap - create a single swap event
-					knownEvents.push({
-						type: 'swap',
-						parts: [
-							{ type: 'action', value: 'Swap' },
+		// This is a swap - create a single swap event
+		knownEvents.push({
+			type: 'swap',
+			parts: [
+				{ type: 'action', value: 'Swap' },
+				{
+					type: 'amount',
+					value: createAmount(args1.amount, event1.address),
+				},
+				{ type: 'text', value: 'for' },
+				{
+					type: 'amount',
+					value: createAmount(args2.amount, event2.address),
+				},
+				...(isTip20Token(event1.address) &&
+				isTip20Token(event2.address) &&
+				Address.isEqual(args1.from, args2.to) &&
+				dexFillBetween(idx1, idx2, args1.from)
+					? ([
+							{ type: 'text', value: 'on' },
 							{
-								type: 'amount',
-								value: createAmount(args1.amount, event1.address),
+								type: 'dexRoute',
+								value: { from: event1.address, to: event2.address },
 							},
-							{ type: 'text', value: 'for' },
-							{
-								type: 'amount',
-								value: createAmount(args2.amount, event2.address),
-							},
-							...(isTip20Token(event1.address) &&
-							isTip20Token(event2.address) &&
-							Address.isEqual(args1.from, args2.to) &&
-							dexFillBetween(idx1, idx2, args1.from)
-								? ([
-										{ type: 'text', value: 'on' },
-										{
-											type: 'dexRoute',
-											value: { from: event1.address, to: event2.address },
-										},
-									] as const)
-								: []),
-						],
-					})
+						] as const)
+					: []),
+			],
+		})
 
-					// Mark these events as processed
-					swapIndices.add(idx1)
-					swapIndices.add(idx2)
-					break // Found the matching pair, move to next transfer
-				}
-			}
-		}
+		// Mark these events as processed
+		swapIndices.add(idx1)
+		swapIndices.add(idx2)
 	}
+
+	const cardSpendTransferIndices = findCardSpendTransferIndices(dedupedEvents)
 
 	const streamChannelIndices = new Set<number>()
 	const hasStreamChannelEvents = dedupedEvents.some((event) =>
@@ -2797,11 +3325,12 @@ export function parseKnownEvents(
 		// Skip events that are part of a swap
 		if (swapIndices.has(index)) continue
 		if (streamChannelIndices.has(index)) continue
+		if (cardSpendTransferIndices.has(index)) continue
 
 		const event = dedupedEvents[index]
 
 		const detected =
-			detectors.propAmm(event) ||
+			detectors.propAmm(event, dedupedEvents) ||
 			detectors.feePayer(event) ||
 			detectors.zone(event) ||
 			detectors.tip20(event) ||
@@ -2814,6 +3343,7 @@ export function parseKnownEvents(
 			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event) ||
 			detectors.streamChannel(event) ||
+			createCardSpendSummary(event, dedupedEvents, createAmount) ||
 			createEarnReceiptSummary(event, dedupedEvents, createAmount)
 
 		if (!detected) continue

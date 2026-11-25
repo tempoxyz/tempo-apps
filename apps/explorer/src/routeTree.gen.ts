@@ -15,6 +15,7 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutMarketsRouteImport } from './routes/_layout/markets'
+import { Route as LayoutPaymentsRouteImport } from './routes/_layout/payments'
 import { Route as LayoutPropammRouteImport } from './routes/_layout/propamm'
 import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
@@ -33,10 +34,14 @@ import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/
 import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDexIndexRouteImport } from './routes/_layout/dex/index'
+import { Route as LayoutEarnIndexRouteImport } from './routes/_layout/earn/index'
+import { Route as LayoutEarnVaultRouteImport } from './routes/_layout/earn/$vault'
 import { Route as LayoutPolicyIdRouteImport } from './routes/_layout/policy/$id'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
+import { Route as LayoutVaultsIndexRouteImport } from './routes/_layout/vaults/index'
+import { Route as LayoutVaultsVaultRouteImport } from './routes/_layout/vaults/$vault'
 import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 import { Route as LayoutDexFromToRouteImport } from './routes/_layout/dex/$from.$to'
@@ -78,6 +83,11 @@ const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
 const LayoutMarketsRoute = LayoutMarketsRouteImport.update({
   id: '/markets',
   path: '/markets',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPaymentsRoute = LayoutPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutPropammRoute = LayoutPropammRouteImport.update({
@@ -170,6 +180,16 @@ const LayoutDexIndexRoute = LayoutDexIndexRouteImport.update({
   path: '/dex/',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutEarnIndexRoute = LayoutEarnIndexRouteImport.update({
+  id: '/earn/',
+  path: '/earn/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutEarnVaultRoute = LayoutEarnVaultRouteImport.update({
+  id: '/earn/$vault',
+  path: '/earn/$vault',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutPolicyIdRoute = LayoutPolicyIdRouteImport.update({
   id: '/policy/$id',
   path: '/policy/$id',
@@ -188,6 +208,16 @@ const LayoutTokenAddressRoute = LayoutTokenAddressRouteImport.update({
 const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
   id: '/tx/$hash',
   path: '/tx/$hash',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutVaultsIndexRoute = LayoutVaultsIndexRouteImport.update({
+  id: '/vaults/',
+  path: '/vaults/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutVaultsVaultRoute = LayoutVaultsVaultRouteImport.update({
+  id: '/vaults/$vault',
+  path: '/vaults/$vault',
   getParentRoute: () => LayoutRoute,
 } as any)
 const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
@@ -269,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
+  '/payments': typeof LayoutPaymentsRoute
   '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
@@ -285,13 +316,17 @@ export interface FileRoutesByFullPath {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/earn/$vault': typeof LayoutEarnVaultRoute
   '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/vaults/$vault': typeof LayoutVaultsVaultRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo/': typeof LayoutDemoIndexRoute
   '/dex/': typeof LayoutDexIndexRoute
+  '/earn/': typeof LayoutEarnIndexRoute
+  '/vaults/': typeof LayoutVaultsIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -310,6 +345,7 @@ export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
   '/fee-amm': typeof LayoutFeeAmmRoute
   '/markets': typeof LayoutMarketsRoute
+  '/payments': typeof LayoutPaymentsRoute
   '/propamm': typeof LayoutPropammRoute
   '/simulate': typeof LayoutSimulateRoute
   '/tokens': typeof LayoutTokensRoute
@@ -327,13 +363,17 @@ export interface FileRoutesByTo {
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
+  '/earn/$vault': typeof LayoutEarnVaultRoute
   '/policy/$id': typeof LayoutPolicyIdRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/vaults/$vault': typeof LayoutVaultsVaultRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/dex': typeof LayoutDexIndexRoute
+  '/earn': typeof LayoutEarnIndexRoute
+  '/vaults': typeof LayoutVaultsIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -354,6 +394,7 @@ export interface FileRoutesById {
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/fee-amm': typeof LayoutFeeAmmRoute
   '/_layout/markets': typeof LayoutMarketsRoute
+  '/_layout/payments': typeof LayoutPaymentsRoute
   '/_layout/propamm': typeof LayoutPropammRoute
   '/_layout/simulate': typeof LayoutSimulateRoute
   '/_layout/tokens': typeof LayoutTokensRoute
@@ -371,13 +412,17 @@ export interface FileRoutesById {
   '/_layout/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
+  '/_layout/earn/$vault': typeof LayoutEarnVaultRoute
   '/_layout/policy/$id': typeof LayoutPolicyIdRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
+  '/_layout/vaults/$vault': typeof LayoutVaultsVaultRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/_layout/dex/': typeof LayoutDexIndexRoute
+  '/_layout/earn/': typeof LayoutEarnIndexRoute
+  '/_layout/vaults/': typeof LayoutVaultsIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/_layout/dex/$from/$to': typeof LayoutDexFromToRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
@@ -399,6 +444,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/fee-amm'
     | '/markets'
+    | '/payments'
     | '/propamm'
     | '/simulate'
     | '/tokens'
@@ -415,13 +461,17 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/earn/$vault'
     | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/vaults/$vault'
     | '/api/abi/batch'
     | '/demo/'
     | '/dex/'
+    | '/earn/'
+    | '/vaults/'
     | '/block/countdown/$targetBlock'
     | '/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -440,6 +490,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/fee-amm'
     | '/markets'
+    | '/payments'
     | '/propamm'
     | '/simulate'
     | '/tokens'
@@ -457,13 +508,17 @@ export interface FileRouteTypes {
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
+    | '/earn/$vault'
     | '/policy/$id'
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/vaults/$vault'
     | '/api/abi/batch'
     | '/demo'
     | '/dex'
+    | '/earn'
+    | '/vaults'
     | '/block/countdown/$targetBlock'
     | '/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -483,6 +538,7 @@ export interface FileRouteTypes {
     | '/_layout/blocks'
     | '/_layout/fee-amm'
     | '/_layout/markets'
+    | '/_layout/payments'
     | '/_layout/propamm'
     | '/_layout/simulate'
     | '/_layout/tokens'
@@ -500,13 +556,17 @@ export interface FileRouteTypes {
     | '/_layout/demo/empty-state'
     | '/_layout/demo/pagination'
     | '/_layout/demo/tx'
+    | '/_layout/earn/$vault'
     | '/_layout/policy/$id'
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
+    | '/_layout/vaults/$vault'
     | '/api/abi/batch'
     | '/_layout/demo/'
     | '/_layout/dex/'
+    | '/_layout/earn/'
+    | '/_layout/vaults/'
     | '/_layout/block/countdown/$targetBlock'
     | '/_layout/dex/$from/$to'
     | '/api/address/balances/$address'
@@ -585,6 +645,13 @@ declare module '@tanstack/react-router' {
       path: '/markets'
       fullPath: '/markets'
       preLoaderRoute: typeof LayoutMarketsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/payments': {
+      id: '/_layout/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof LayoutPaymentsRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/propamm': {
@@ -713,6 +780,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDexIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/earn/': {
+      id: '/_layout/earn/'
+      path: '/earn'
+      fullPath: '/earn/'
+      preLoaderRoute: typeof LayoutEarnIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/earn/$vault': {
+      id: '/_layout/earn/$vault'
+      path: '/earn/$vault'
+      fullPath: '/earn/$vault'
+      preLoaderRoute: typeof LayoutEarnVaultRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/policy/$id': {
       id: '/_layout/policy/$id'
       path: '/policy/$id'
@@ -739,6 +820,20 @@ declare module '@tanstack/react-router' {
       path: '/tx/$hash'
       fullPath: '/tx/$hash'
       preLoaderRoute: typeof LayoutTxHashRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/vaults/': {
+      id: '/_layout/vaults/'
+      path: '/vaults'
+      fullPath: '/vaults/'
+      preLoaderRoute: typeof LayoutVaultsIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/vaults/$vault': {
+      id: '/_layout/vaults/$vault'
+      path: '/vaults/$vault'
+      fullPath: '/vaults/$vault'
+      preLoaderRoute: typeof LayoutVaultsVaultRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/api/abi/batch': {
@@ -839,6 +934,7 @@ interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
   LayoutMarketsRoute: typeof LayoutMarketsRoute
+  LayoutPaymentsRoute: typeof LayoutPaymentsRoute
   LayoutPropammRoute: typeof LayoutPropammRoute
   LayoutSimulateRoute: typeof LayoutSimulateRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
@@ -849,12 +945,16 @@ interface LayoutRouteChildren {
   LayoutDemoEmptyStateRoute: typeof LayoutDemoEmptyStateRoute
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
+  LayoutEarnVaultRoute: typeof LayoutEarnVaultRoute
   LayoutPolicyIdRoute: typeof LayoutPolicyIdRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
+  LayoutVaultsVaultRoute: typeof LayoutVaultsVaultRoute
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
   LayoutDexIndexRoute: typeof LayoutDexIndexRoute
+  LayoutEarnIndexRoute: typeof LayoutEarnIndexRoute
+  LayoutVaultsIndexRoute: typeof LayoutVaultsIndexRoute
   LayoutBlockCountdownTargetBlockRoute: typeof LayoutBlockCountdownTargetBlockRoute
   LayoutDexFromToRoute: typeof LayoutDexFromToRoute
 }
@@ -863,6 +963,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutFeeAmmRoute: LayoutFeeAmmRoute,
   LayoutMarketsRoute: LayoutMarketsRoute,
+  LayoutPaymentsRoute: LayoutPaymentsRoute,
   LayoutPropammRoute: LayoutPropammRoute,
   LayoutSimulateRoute: LayoutSimulateRoute,
   LayoutTokensRoute: LayoutTokensRoute,
@@ -873,12 +974,16 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDemoEmptyStateRoute: LayoutDemoEmptyStateRoute,
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
+  LayoutEarnVaultRoute: LayoutEarnVaultRoute,
   LayoutPolicyIdRoute: LayoutPolicyIdRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
+  LayoutVaultsVaultRoute: LayoutVaultsVaultRoute,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
   LayoutDexIndexRoute: LayoutDexIndexRoute,
+  LayoutEarnIndexRoute: LayoutEarnIndexRoute,
+  LayoutVaultsIndexRoute: LayoutVaultsIndexRoute,
   LayoutBlockCountdownTargetBlockRoute: LayoutBlockCountdownTargetBlockRoute,
   LayoutDexFromToRoute: LayoutDexFromToRoute,
 }

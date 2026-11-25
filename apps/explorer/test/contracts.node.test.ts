@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { loaders } from '@shazow/whatsabi'
 import {
 	decodeAbiParameters,
 	decodeFunctionData,
@@ -23,10 +24,104 @@ import {
 	getWriteFunctions,
 	isInferredAbi,
 	isZonePortalAddress,
+	lookupSignature,
 	resolveInteractAbi,
 	systemAddress,
 	TempoABILoader,
 } from '#lib/domain/contracts'
+
+describe('signature lookup admission', () => {
+	afterEach(() => vi.restoreAllMocks())
+
+	it('coalesces pending lookups even while settled entries turn over', async () => {
+		const deferred = Promise.withResolvers<string[]>()
+		const lookup = vi
+			.spyOn(loaders.MultiSignatureLookup.prototype, 'loadFunctions')
+			.mockImplementation(async (selector) =>
+				selector === '0xf1000000' ? deferred.promise : ['sample()'],
+			)
+		const first = lookupSignature('0xf1000000')
+		for (let i = 1; i <= 1025; i++)
+			await lookupSignature(`0x${(0xf1000000 + i).toString(16)}`)
+		const second = lookupSignature('0xf1000000')
+		expect(
+			lookup.mock.calls.filter(([selector]) => selector === '0xf1000000'),
+		).toHaveLength(1)
+		deferred.resolve(['pending()'])
+		expect(await Promise.all([first, second])).toEqual([
+			'pending()',
+			'pending()',
+		])
+	})
+
+	it('bounds outstanding work while allowing existing requests to join', async () => {
+		const deferred = Promise.withResolvers<string[]>()
+		const lookup = vi
+			.spyOn(loaders.MultiSignatureLookup.prototype, 'loadFunctions')
+			.mockReturnValue(deferred.promise)
+		const pending = Array.from({ length: 128 }, (_, i) =>
+			lookupSignature(`0x${(0xf2000000 + i).toString(16)}`),
+		)
+		try {
+			await expect(lookupSignature('0xf2001000')).rejects.toThrow(
+				'Too many signature lookups',
+			)
+			pending.push(lookupSignature('0xf2000000'))
+			expect(lookup).toHaveBeenCalledTimes(128)
+		} finally {
+			deferred.resolve([])
+			await Promise.all(pending)
+		}
+		expect(await lookupSignature('0xf2001000')).toBeNull()
+	})
+
+	it('retries failures without evicting successful results', async () => {
+		const lookup = vi
+			.spyOn(loaders.MultiSignatureLookup.prototype, 'loadFunctions')
+			.mockResolvedValue(['cached()'])
+		await lookupSignature('0xf3000000')
+		lookup.mockRejectedValueOnce(new Error('Unavailable'))
+		await expect(lookupSignature('0xf3000001')).rejects.toThrow('Unavailable')
+		expect(await lookupSignature('0xf3000000')).toBe('cached()')
+		expect(lookup).toHaveBeenCalledTimes(2)
+		expect(await lookupSignature('0xf3000001')).toBe('cached()')
+		expect(lookup).toHaveBeenCalledTimes(3)
+	})
+
+	it('skips function signatures that do not parse', async () => {
+		vi.spyOn(
+			loaders.MultiSignatureLookup.prototype,
+			'loadFunctions',
+		).mockResolvedValue([
+			'transfer(address,uint256',
+			'transfer(address,uint256)',
+		])
+		expect(await lookupSignature('0xf4000000')).toBe(
+			'transfer(address,uint256)',
+		)
+	})
+
+	it('skips event signatures that do not parse', async () => {
+		vi.spyOn(
+			loaders.MultiSignatureLookup.prototype,
+			'loadEvents',
+		).mockResolvedValue([
+			'Transfer(address,,uint256)',
+			'Transfer(address,address,uint256)',
+		])
+		expect(await lookupSignature(`0x${'f5'.repeat(32)}`)).toBe(
+			'Transfer(address,address,uint256)',
+		)
+	})
+
+	it('returns null when no signature parses', async () => {
+		vi.spyOn(
+			loaders.MultiSignatureLookup.prototype,
+			'loadFunctions',
+		).mockResolvedValue(['transfer(address', ')('])
+		expect(await lookupSignature('0xf6000000')).toBeNull()
+	})
+})
 
 describe('resolveInteractAbi', () => {
 	it('preserves verified functions when the bundled Stream Channel ABI only contains events', () => {

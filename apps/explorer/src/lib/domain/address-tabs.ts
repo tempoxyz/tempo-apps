@@ -10,6 +10,7 @@ const allTabs = [
 	'transfers',
 	'holders',
 	'token',
+	'vault',
 	'contract',
 	'interact',
 ] as const
@@ -23,6 +24,7 @@ export const addressTabSchema = z.optional(
 		z.transform((value): AddressTab => {
 			if (value === 'history') return 'transactions'
 			if (value === 'assets') return 'holdings'
+			if (value === 'earn') return 'vault'
 			return allTabs.includes(value as AddressTab)
 				? (value as AddressTab)
 				: 'transactions'

@@ -1,0 +1,42 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "tokenlist",
+	"account_id": "ba6ee3674b03f08481e57ff9992c601e",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.tsx",
+	"workers_dev": true,
+	"preview_urls": true,
+	"assets": {
+		"directory": "data",
+		"binding": "ASSETS",
+		"run_worker_first": true
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"persist": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	},
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "tokenlist",
+			"binding": "TOKENLIST"
+		}
+	],
+	"vars": {
+		"ENVIRONMENT": "production"
+	},
+	"routes": [
+		{
+			"pattern": "tokenlist.tempo.xyz",
+			"custom_domain": true
+		}
+	]
+}

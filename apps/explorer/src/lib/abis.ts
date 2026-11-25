@@ -1,7 +1,22 @@
 import { parseAbi } from 'viem'
 import { Abis as ViemTempoAbis, Channel as ViemTempoChannel } from 'viem/tempo'
 
-export const tip20ChannelReserveAbi = ViemTempoAbis.tip20ChannelReserve
+/**
+ * TIP-1166 (T15) additions to the TIP-20 channel reserve precompile that the
+ * Viem ABI doesn't carry yet. Drop each one once Viem ships it.
+ */
+const tip20ChannelReserveT15Abi = parseAbi([
+	'struct ChannelDescriptor { address payer; address payee; address operator; address token; bytes32 salt; address authorizedSigner; bytes32 expiringNonceHash; }',
+	'function verifyVoucher(ChannelDescriptor descriptor, uint96 cumulativeAmount, bytes signature) view returns (bool valid)',
+	'event OpeningCommitmentRecorded(bytes32 indexed channelId, address indexed signer, bytes32 commitment)',
+	'error SignerConfigChanged(address signer)',
+	'error SaltNotSignerCommitment(address signer, bytes32 commitment)',
+])
+
+export const tip20ChannelReserveAbi = [
+	...ViemTempoAbis.tip20ChannelReserve,
+	...tip20ChannelReserveT15Abi,
+] as const
 export const tip20ChannelReserveAddress = ViemTempoChannel.address
 
 export const tip20Abi = [
@@ -294,10 +309,15 @@ export const receivePolicyGuardAbi = parseAbi([
 	'event ReceiptBurned(address indexed token, address indexed receiver, uint8 receiptVersion, uint64 indexed blockedNonce, uint64 blockedAt, address originator, address recipient, address recoveryAuthority, address caller, uint256 amount)',
 ])
 
-// Customer-agnostic propAMM trade event. Bundling this event lets the explorer
-// identify swaps without relying on a deployment allowlist or verified ABI.
+// Customer-agnostic propAMM trade events: v1 DirectPropAMM's TradeExecuted and
+// v2 Venue's Fill (tempoxyz/propAMM contracts/src/v2/interfaces/IVenue.sol).
+// Bundling them lets the explorer identify swaps without relying on a
+// deployment allowlist or verified ABI.
 export const propAmmEventsAbi = parseAbi([
 	'event TradeExecuted(address indexed taker, address indexed recipient, bytes32 indexed customerId, bytes32 tradeId, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, uint256 oraclePrice, uint256 oracleUpdatedAt)',
+	'event Fill(uint16 indexed pairIndex, address indexed taker, bytes32 indexed ref, uint64 sponsorId, bool baseIn, uint128 amountIn, uint128 amountOut, uint96 makerMid, uint32 seq)',
+	'event Posted(uint16 indexed pairIndex, bytes32 hotWord)',
+	'event Refilled(uint16 indexed pairIndex, bool bids, bool asks)',
 ])
 
 // Customer-agnostic Tempo Earn events. These are bundled separately from viem's
@@ -378,8 +398,19 @@ export const earnEventsAbi = parseAbi([
 	'event WithdrewExact(address indexed receiver, uint256 assets, uint256 engineSharesBurned)',
 ])
 
+// Customer-agnostic Tempo card spend events (tempoxyz/contracts cards/ and
+// zone-router/). A private card spend is a Zone withdrawal whose callback hands
+// the input to a card program (CardSpender), which pays the provider and
+// returns the change to the Zone.
+export const cardEventsAbi = parseAbi([
+	'event CardSpent(bytes32 indexed ref, address indexed payer, address indexed destination, address token, uint256 amount, uint256 fromVault, uint256 sharesUsed, bool isPrivate)',
+	'event InputSpent(bytes32 indexed ref, address inputToken, uint256 inputConsumed, uint256 inputReturned)',
+	'event Spent(address indexed spender, address indexed token, uint256 used, uint256 change, bytes32 zoneDepositHash)',
+])
+
 export const Abis = {
 	accountKeychain: ViemTempoAbis.accountKeychain,
+	card: cardEventsAbi,
 	earn: earnEventsAbi,
 	feeAmm: ViemTempoAbis.feeAmm,
 	feeManager: ViemTempoAbis.feeManager,
@@ -391,7 +422,7 @@ export const Abis = {
 	storageCredits: ViemTempoAbis.storageCredits,
 	streamChannel: streamChannelAbi,
 	tip20: tip20Abi,
-	tip20ChannelReserve: ViemTempoAbis.tip20ChannelReserve,
+	tip20ChannelReserve: tip20ChannelReserveAbi,
 	tip20Factory: ViemTempoAbis.tip20Factory,
 	tip403Registry: ViemTempoAbis.tip403Registry,
 	validatorConfig: ViemTempoAbis.validatorConfig,

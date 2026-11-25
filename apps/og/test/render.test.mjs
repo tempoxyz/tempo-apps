@@ -99,6 +99,8 @@ for (const [name, path] of [
 	['legacy transaction image', '/og-transactions.webp'],
 	['block listing', '/blocks'],
 	['token listing', '/tokens'],
+	['market listing', '/markets'],
+	['payments listing', '/payments'],
 	['transaction fallback', '/tx'],
 	['transaction', `/tx/${hash}?${receipt}`],
 	['receipt', `/receipt/${hash}?${receipt}`],

@@ -19,119 +19,142 @@ jobs:
 
   deploy-explorer:
     permissions:
+      actions: read
       id-token: write
     name: Deploy Explorer
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       VITE_EXPLORER_POSTHOG_KEY: ${{ secrets.VITE_EXPLORER_POSTHOG_KEY }}
       VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
     with:
       app: explorer
       environments: '["testnet","mainnet","devnet","nextfork","zone-prover"]'
+      sts-policy: deploy-explorer
 
-  deploy-fee-payer:
+  deploy-fee-payer-moderato:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
-    name: Deploy Fee Payer
+    name: Deploy Fee Payer (moderato)
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: fee-payer
-      environments: '["moderato","mainnet"]'
+      worker: fee-payer-moderato
+      wrangler-config: dist/fee_payer/wrangler.json
+      build-command: CLOUDFLARE_ENV=moderato pnpm build
+
+  deploy-fee-payer-mainnet:
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    name: Deploy Fee Payer (mainnet)
+    needs: verify
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    with:
+      app: fee-payer
+      worker: fee-payer-mainnet
+      wrangler-config: dist/fee_payer/wrangler.json
+      build-command: CLOUDFLARE_ENV=mainnet pnpm build
 
   deploy-contract-verification:
     permissions:
+      actions: read
       id-token: write
     name: Deploy Contract Verification
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: contract-verification
       environments: '[""]'
+      sts-policy: deploy-contract-verification
+      sts-ttl: 30m
+      deploy-timeout-minutes: 25
 
   deploy-key-manager:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Key Manager
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: key-manager
-      environments: '[""]'
 
   deploy-og:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy OG
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: og
-      environments: '[""]'
 
   deploy-tokenlist:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Tokenlist
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: tokenlist
-      environments: '[""]'
+      wrangler-config: dist/tokenlist/wrangler.json
+      build-command: WRANGLER_CONFIG_PATH=wrangler.prd.json pnpm build
 
   deploy-reth-snapshots-viewer:
     permissions:
+      actions: read
       id-token: write
     name: Deploy Reth Snapshots Viewer
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: reth-snapshots-viewer
       environments: '[""]'
+      sts-policy: deploy-reth-snapshots-viewer
 
   deploy-tempo-snapshots-viewer:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Tempo Snapshots Viewer
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: tempo-snapshots-viewer
-      environments: '[""]'
+      wrangler-config: wrangler.prd.json
 
   deploy-mcp-docs-indexer:
     permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy MCP Docs Indexer
     needs: verify
-    uses: ./.github/workflows/deploy.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
-    secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: mcp-docs-indexer
-      environments: '[""]'
+      wrangler-config: wrangler.jsonc

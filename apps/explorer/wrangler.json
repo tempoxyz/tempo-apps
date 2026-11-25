@@ -77,22 +77,22 @@
 			"ratelimits": [
 				{
 					"name": "REQUESTS_RATE_LIMITER",
-					"namespace_id": "1001",
+					"namespace_id": "5111",
 					"simple": { "limit": 100, "period": 10 }
 				},
 				{
 					"name": "SIMULATE_RATE_LIMITER",
-					"namespace_id": "1005",
+					"namespace_id": "5112",
 					"simple": { "limit": 30, "period": 10 }
 				},
 				{
 					"name": "ASN_RATE_LIMITER",
-					"namespace_id": "1003",
+					"namespace_id": "5113",
 					"simple": { "limit": 2000, "period": 10 }
 				},
 				{
 					"name": "GLOBAL_RATE_LIMITER",
-					"namespace_id": "1004",
+					"namespace_id": "5114",
 					"simple": { "limit": 10000, "period": 10 }
 				}
 			],
@@ -136,22 +136,22 @@
 			"ratelimits": [
 				{
 					"name": "REQUESTS_RATE_LIMITER",
-					"namespace_id": "1001",
+					"namespace_id": "5121",
 					"simple": { "limit": 100, "period": 10 }
 				},
 				{
 					"name": "SIMULATE_RATE_LIMITER",
-					"namespace_id": "1005",
+					"namespace_id": "5122",
 					"simple": { "limit": 30, "period": 10 }
 				},
 				{
 					"name": "ASN_RATE_LIMITER",
-					"namespace_id": "1003",
+					"namespace_id": "5123",
 					"simple": { "limit": 2000, "period": 10 }
 				},
 				{
 					"name": "GLOBAL_RATE_LIMITER",
-					"namespace_id": "1004",
+					"namespace_id": "5124",
 					"simple": { "limit": 10000, "period": 10 }
 				}
 			],
@@ -191,7 +191,7 @@
 			"ratelimits": [
 				{
 					"name": "REQUESTS_RATE_LIMITER",
-					"namespace_id": "1001",
+					"namespace_id": "5141",
 					"simple": {
 						"limit": 100,
 						"period": 10
@@ -199,7 +199,7 @@
 				},
 				{
 					"name": "SIMULATE_RATE_LIMITER",
-					"namespace_id": "1005",
+					"namespace_id": "5142",
 					"simple": {
 						"limit": 30,
 						"period": 10
@@ -207,7 +207,7 @@
 				},
 				{
 					"name": "ASN_RATE_LIMITER",
-					"namespace_id": "1003",
+					"namespace_id": "5143",
 					"simple": {
 						"limit": 2000,
 						"period": 10
@@ -215,7 +215,7 @@
 				},
 				{
 					"name": "GLOBAL_RATE_LIMITER",
-					"namespace_id": "1004",
+					"namespace_id": "5144",
 					"simple": {
 						"limit": 10000,
 						"period": 10
@@ -257,22 +257,22 @@
 			"ratelimits": [
 				{
 					"name": "REQUESTS_RATE_LIMITER",
-					"namespace_id": "1001",
+					"namespace_id": "5131",
 					"simple": { "limit": 100, "period": 10 }
 				},
 				{
 					"name": "SIMULATE_RATE_LIMITER",
-					"namespace_id": "1005",
+					"namespace_id": "5132",
 					"simple": { "limit": 30, "period": 10 }
 				},
 				{
 					"name": "ASN_RATE_LIMITER",
-					"namespace_id": "1003",
+					"namespace_id": "5133",
 					"simple": { "limit": 2000, "period": 10 }
 				},
 				{
 					"name": "GLOBAL_RATE_LIMITER",
-					"namespace_id": "1004",
+					"namespace_id": "5134",
 					"simple": { "limit": 10000, "period": 10 }
 				}
 			],
@@ -326,22 +326,22 @@
 			"ratelimits": [
 				{
 					"name": "REQUESTS_RATE_LIMITER",
-					"namespace_id": "1001",
+					"namespace_id": "5101",
 					"simple": { "limit": 100, "period": 10 }
 				},
 				{
 					"name": "SIMULATE_RATE_LIMITER",
-					"namespace_id": "1005",
+					"namespace_id": "5102",
 					"simple": { "limit": 30, "period": 10 }
 				},
 				{
 					"name": "ASN_RATE_LIMITER",
-					"namespace_id": "1003",
+					"namespace_id": "5103",
 					"simple": { "limit": 2000, "period": 10 }
 				},
 				{
 					"name": "GLOBAL_RATE_LIMITER",
-					"namespace_id": "1004",
+					"namespace_id": "5104",
 					"simple": { "limit": 10000, "period": 10 }
 				}
 			],

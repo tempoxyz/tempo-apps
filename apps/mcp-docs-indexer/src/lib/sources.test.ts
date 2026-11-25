@@ -5,7 +5,7 @@ import {
 	sourceIndexUrl,
 } from './sources.js'
 
-const base = 'https://tempo.xyz/developers'
+const base = 'https://tempo.com/developers'
 
 describe('source URLs', () => {
 	it('preserves the base prefix and fetches its index', () => {
@@ -18,6 +18,8 @@ describe('source URLs', () => {
 	it.each([
 		`${base}/docs/api/api-keys`,
 		'https://docs.tempo.xyz/docs/api/api-keys',
+		'https://tempo.xyz/developers/docs/api/api-keys',
+		'https://www.tempo.com/developers/docs/api/api-keys',
 		'/developers/docs/api/api-keys',
 		'/docs/api/api-keys',
 		'docs/api/api-keys',
@@ -28,8 +30,11 @@ describe('source URLs', () => {
 	})
 
 	it.each([
+		'https://tempo.com/admin',
 		'https://tempo.xyz/admin',
+		'https://tempo.com/developers-other/docs',
 		'https://tempo.xyz/developers-other/docs',
+		'https://tempo.com/developers/../admin',
 		'https://tempo.xyz/developers/../admin',
 		'https://example.com/developers/docs',
 		'//example.com/docs',

@@ -1046,6 +1046,313 @@ describe('parseKnownEvents', () => {
 		expect(parseKnownEvent(tradeLog)?.type).toBe('propamm swap')
 	})
 
+	it('decodes a listed propAMM v2 post as a quote', () => {
+		const venue = '0x26ec6abf0da64f00e8bd342de9b89e0c7646e3e3'
+		const base = '0x20c0000000000000000000001621e21F71CF12fb'
+		const quote = '0x20c0000000000000000000006a37DA5C996874BE'
+		// mid 1.1003, bid widen 1.5 bp, ask widen 2 bp, width 1.25x, depth 0.5x,
+		// shape 3, valid until 2026-11-18 21:26:21 UTC, seq 143333, asks off.
+		const hotWord = `0x${(
+			1_100_300_000_000_000_000n |
+			(15n << 96n) |
+			(20n << 112n) |
+			(1250n << 128n) |
+			(500n << 144n) |
+			(3n << 160n) |
+			(1_795_037_181n << 168n) |
+			(143_333n << 208n) |
+			(2n << 240n)
+		)
+			.toString(16)
+			.padStart(64, '0')}` as Hex.Hex
+		const postLog = mockZoneEventLog(propAmmEventsAbi[2], venue, {
+			pairIndex: 0,
+			hotWord,
+		})
+		const getTokenMetadata = ((address: string) =>
+			({
+				[base.toLowerCase()]: { symbol: 'EURC.e' },
+				[quote.toLowerCase()]: { symbol: 'OUSD' },
+			})[address.toLowerCase()]) as never
+
+		// Shape #3: bids 100k at 0.5 bp then 100k at 1 bp; asks 50k at 0.8 bp.
+		const getPropAmmShape = () => ({
+			bids: [
+				{ size: 100_000, spread: 5 },
+				{ size: 100_000, spread: 10 },
+			],
+			asks: [{ size: 50_000, spread: 8 }],
+			sizeUnit: 1_000_000n,
+		})
+		// Asks are off, so only the bid shows. Bid offset: 5 * 1250 + 15 * 1000
+		// = 21,250 / 1e8 = 2.125 bp; size: 200k * 0.5 depth = 100k EURC.e.
+		expect(
+			parseKnownEvent(postLog, {
+				getTokenMetadata,
+				chainId: 4217,
+				getPropAmmShape,
+			}),
+		).toEqual({
+			type: 'propamm quote',
+			parts: [
+				{ type: 'action', value: 'propAMM Quote' },
+				{ type: 'token', value: { address: base, symbol: 'EURC.e' } },
+				{ type: 'text', value: 'Bid' },
+				{
+					type: 'number',
+					value: [
+						(1_100_300_000_000_000_000n * 99_978_750n) / 100_000_000n,
+						18,
+					],
+				},
+				{ type: 'text', value: '/ Ask off' },
+				{ type: 'token', value: { address: quote, symbol: 'OUSD' } },
+			],
+			note: [
+				[
+					'Bid',
+					{
+						type: 'text',
+						value: 'mid - 2.13 bp, incl. 1.5 bp widen, 2 levels',
+					},
+				],
+				[
+					'Bid Size',
+					{
+						type: 'amount',
+						value: { token: base, value: 100_000_000_000n, symbol: 'EURC.e' },
+					},
+				],
+				['Ask', { type: 'text', value: 'off' }],
+				['Mid', { type: 'number', value: [1_100_300_000_000_000_000n, 18] }],
+				['Valid Until', { type: 'text', value: '2026-11-18 21:26:21 UTC' }],
+				['Width', { type: 'text', value: '1.25x' }],
+				['Depth Scale', { type: 'text', value: '0.5x' }],
+				['Shape', { type: 'text', value: '#3' }],
+				['Sequence', { type: 'number', value: 143_333 }],
+			],
+		})
+		// Without the shape the label says the ladder wasn't read.
+		expect(
+			parseKnownEvent(postLog, { getTokenMetadata, chainId: 4217 })?.note,
+		).toContainEqual([
+			'Bid',
+			{ type: 'text', value: 'shape #3 ladder + 1.5 bp widen' },
+		])
+
+		const refillLog = mockZoneEventLog(propAmmEventsAbi[3], venue, {
+			pairIndex: 0,
+			bids: true,
+			asks: true,
+		})
+		expect(parseKnownEvent(refillLog, { chainId: 4217 })?.parts[0]).toEqual({
+			type: 'action',
+			value: 'propAMM Refill Bids and Asks',
+		})
+
+		// Anyone can emit Posted: an unlisted venue gets no propAMM label.
+		const unlisted = mockZoneEventLog(propAmmEventsAbi[2], PROP_AMM_POOL, {
+			pairIndex: 0,
+			hotWord,
+		})
+		expect(parseKnownEvent(unlisted, { chainId: 4217 })?.type).not.toBe(
+			'propamm quote',
+		)
+		// Venues are listed per chain: the mainnet venue isn't listed on testnet.
+		expect(parseKnownEvent(postLog, { chainId: 42431 })?.type).not.toBe(
+			'propamm quote',
+		)
+	})
+
+	it('composes a propAMM v2 fill from its settlement transfers', () => {
+		const hash = `0x${'6'.repeat(64)}` as const
+		const amountIn = 50_000_000n
+		const amountOut = 55_022_873n
+
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+
+		const fillLog = mockZoneEventLog(propAmmEventsAbi[1], PROP_AMM_POOL, {
+			pairIndex: 0,
+			taker: accountAddress,
+			ref: `0x${'7'.repeat(64)}`,
+			sponsorId: 1n,
+			baseIn: true,
+			amountIn,
+			amountOut,
+			makerMid: 1_100_457n,
+			seq: 3,
+		})
+		const logs = [
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, amountIn),
+			transferLog(
+				PROP_AMM_OUTPUT_TOKEN,
+				PROP_AMM_POOL,
+				accountAddress,
+				amountOut,
+			),
+			fillLog,
+		]
+		const swap = {
+			type: 'propamm swap',
+			parts: [
+				{ type: 'action', value: 'propAMM Swap' },
+				{
+					type: 'amount',
+					value: {
+						token: Address.checksum(userTokenAddress),
+						value: amountIn,
+					},
+				},
+				{ type: 'text', value: 'for' },
+				{
+					type: 'amount',
+					value: {
+						token: Address.checksum(PROP_AMM_OUTPUT_TOKEN),
+						value: amountOut,
+					},
+				},
+			],
+		}
+
+		expect(parseKnownEvents(mockReceipt(logs, accountAddress, hash))).toEqual([
+			swap,
+		])
+		expect(parseKnownEvent(fillLog, { logs })).toEqual(swap)
+		// Without its transfers a fill gets no swap label, which would otherwise
+		// replace the transaction's other events.
+		expect(parseKnownEvent(fillLog)?.type).not.toBe('propamm swap')
+	})
+	it('describes a receipt whose transfer emitter is not checksummed', () => {
+		const hash = `0x${'9'.repeat(64)}` as const
+		// Mixed case that is not valid EIP-55.
+		const emitter = '0xABCDEF0123456789abcdef0123456789ABCDEF01'
+		const log = mockLog(
+			{
+				address: emitter,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: { from: accountAddress, to: recipientAddress },
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [5n]),
+			},
+			hash,
+		)
+		expect(() =>
+			parseKnownEvents(mockReceipt([log], accountAddress, hash)),
+		).not.toThrow()
+	})
+
+	it('matches each propAMM fill and trade in a receipt to its own transfers', () => {
+		const hash = `0x${'8'.repeat(64)}` as const
+		const transferLog = (
+			token: Address.Address,
+			from: Address.Address,
+			to: Address.Address,
+			amount: bigint,
+		) =>
+			mockLog(
+				{
+					address: token,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: { from, to },
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			)
+		const fillLog = (amountIn: bigint, amountOut: bigint, seq: number) =>
+			mockZoneEventLog(propAmmEventsAbi[1], PROP_AMM_POOL, {
+				pairIndex: 0,
+				taker: accountAddress,
+				ref: `0x${'7'.repeat(64)}`,
+				sponsorId: 1n,
+				baseIn: true,
+				amountIn,
+				amountOut,
+				makerMid: 1_100_457n,
+				seq,
+			})
+		// Two trades that share both legs hide the same two transfers.
+		const tradeLog = () =>
+			mockZoneEventLog(propAmmEventsAbi[0], PROP_AMM_POOL, {
+				taker: accountAddress,
+				recipient: recipientAddress,
+				tokenIn: userTokenAddress,
+				tokenOut: PROP_AMM_OUTPUT_TOKEN,
+				amountIn: 3_000n,
+				amountOut: 3_300n,
+			})
+		const secondFill = fillLog(2_000n, 2_200n, 2)
+		const logs = [
+			fillLog(1_000n, 1_100n, 1),
+			secondFill,
+			tradeLog(),
+			tradeLog(),
+			transferLog(PROP_AMM_OUTPUT_TOKEN, PROP_AMM_POOL, accountAddress, 2_200n),
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, 1_000n),
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, 2_000n),
+			transferLog(PROP_AMM_OUTPUT_TOKEN, PROP_AMM_POOL, accountAddress, 1_100n),
+			transferLog(userTokenAddress, accountAddress, PROP_AMM_POOL, 3_000n),
+			transferLog(
+				PROP_AMM_OUTPUT_TOKEN,
+				PROP_AMM_POOL,
+				recipientAddress,
+				3_300n,
+			),
+			// Settles nothing, so it stays visible.
+			transferLog(userTokenAddress, accountAddress, recipientAddress, 7n),
+		]
+		const amounts = (event: ReturnType<typeof parseKnownEvent>) =>
+			event?.parts.flatMap((part) =>
+				part.type === 'amount' ? [part.value.token, part.value.value] : [],
+			)
+		const swap = (
+			amountIn: bigint,
+			tokenOut: Address.Address,
+			amountOut: bigint,
+		) => [
+			Address.checksum(userTokenAddress),
+			amountIn,
+			Address.checksum(tokenOut),
+			amountOut,
+		]
+
+		const events = parseKnownEvents(mockReceipt(logs, accountAddress, hash))
+		const swaps = events.filter((event) => event.type === 'propamm swap')
+		expect(swaps.map(amounts)).toEqual([
+			swap(1_000n, PROP_AMM_OUTPUT_TOKEN, 1_100n),
+			swap(2_000n, PROP_AMM_OUTPUT_TOKEN, 2_200n),
+			swap(3_000n, PROP_AMM_OUTPUT_TOKEN, 3_300n),
+			swap(3_000n, PROP_AMM_OUTPUT_TOKEN, 3_300n),
+		])
+		const others = events.filter((event) => event.type !== 'propamm swap')
+		expect(others).toHaveLength(1)
+		expect(amounts(others[0])?.[1]).toBe(7n)
+		expect(amounts(parseKnownEvent(secondFill, { logs }))).toEqual(
+			swap(2_000n, PROP_AMM_OUTPUT_TOKEN, 2_200n),
+		)
+	})
+
 	it.each([
 		['EarnDeposit', 7, 'Deposit to Earn'],
 		['EarnRedeem', 7, 'Withdraw from Earn'],

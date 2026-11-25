@@ -175,3 +175,22 @@ describe('Explorer RPC forwarding in Workers', () => {
 		expect(upstream).toHaveBeenCalledOnce()
 	})
 })
+
+it.each([
+	'eth_simulateV1',
+	'debug_traceTransaction',
+	'debug_traceCall',
+	'debug_traceCallMany',
+])('rejects %s even inside an otherwise valid RPC batch', async (method) => {
+	const fetcher = vi.fn()
+	vi.stubGlobal('fetch', fetcher)
+	const response = await forwardRpc(
+		request([
+			{ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] },
+			{ jsonrpc: '2.0', id: 2, method, params: [] },
+		]),
+		target,
+	)
+	expect(response.status).toBe(400)
+	expect(fetcher).not.toHaveBeenCalled()
+})

@@ -1,15 +1,18 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"name": "key-manager",
+	"account_id": "ba6ee3674b03f08481e57ff9992c601e",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",
 	"workers_dev": true,
 	"preview_urls": true,
-	"keep_vars": true,
 	"vars": {
 		"ALLOWED_ORIGINS": "https://tempo.xyz,https://www.tempo.xyz,https://docs.tempo.xyz,https://explorer.tempo.xyz,https://explorer.testnet.tempo.xyz",
 		"RP_ID": "tempo.xyz"
+	},
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
 	},
 	"observability": {
 		"enabled": true,

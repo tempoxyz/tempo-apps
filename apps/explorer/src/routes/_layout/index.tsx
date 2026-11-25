@@ -5,7 +5,7 @@ import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { getTempoEnv } from '#lib/env'
-import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
+import BanknoteIcon from '~icons/lucide/banknote'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -156,10 +156,10 @@ function SpotlightLinks() {
 					Tokens
 				</SpotlightPill>
 				<SpotlightPill
-					to="/markets"
-					icon={<ArrowLeftRightIcon className="size-[14px] text-accent" />}
+					to="/payments"
+					icon={<BanknoteIcon className="size-[14px] text-accent" />}
 				>
-					Markets
+					Payments
 				</SpotlightPill>
 			</div>
 		</section>

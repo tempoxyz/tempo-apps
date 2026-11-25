@@ -116,7 +116,10 @@ function withHighlightedSources(
 export const CodeQuerySchema = z.object({
 	chainid: z.coerce.number(),
 	address: zAddress({ lowercase: true }),
-	highlight: z.prefault(z.coerce.boolean(), z.literal(false)),
+	highlight: z.pipe(
+		z.optional(z.enum(['true', 'false'])),
+		z.transform((value) => value === 'true'),
+	),
 })
 
 export const Route = createFileRoute('/api/code')({

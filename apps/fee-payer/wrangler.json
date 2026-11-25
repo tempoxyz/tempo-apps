@@ -1,13 +1,14 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"name": "fee-payer",
+	"account_id": "ba6ee3674b03f08481e57ff9992c601e",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",
 	"workers_dev": false,
 	"ratelimits": [
 		{
-			"name": "AddressRateLimiter",
+			"name": "ADDRESS_RATE_LIMITER",
 			"namespace_id": "888",
 			"simple": {
 				"limit": 1000,
@@ -16,7 +17,6 @@
 		}
 	],
 	"preview_urls": false,
-	"keep_vars": true,
 	"logpush": true,
 	"observability": {
 		"enabled": true,
@@ -38,22 +38,26 @@
 			"routes": [
 				{
 					"pattern": "sponsor.testnet.tempo.xyz",
-					"zone_name": "tempo.xyz",
 					"custom_domain": true
 				},
 				{
 					"pattern": "sponsor.moderato.tempo.xyz",
-					"zone_name": "tempo.xyz",
 					"custom_domain": true
 				}
 			],
 			"workers_dev": false,
 			"vars": {
-				"TEMPO_ENV": "moderato"
+				"ALLOWED_ORIGINS": "*",
+				"POSTHOG_API_KEY": "",
+				"TEMPO_ENV": "moderato",
+				"TEMPO_RPC_URL": "https://rpc.moderato.tempo.xyz"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"ratelimits": [
 				{
-					"name": "AddressRateLimiter",
+					"name": "ADDRESS_RATE_LIMITER",
 					"namespace_id": "888",
 					"simple": {
 						"limit": 1000,
@@ -70,17 +74,20 @@
 			"routes": [
 				{
 					"pattern": "sponsor.tempo.xyz",
-					"zone_name": "tempo.xyz",
 					"custom_domain": true
 				}
 			],
 			"workers_dev": false,
 			"vars": {
+				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "mainnet"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"ratelimits": [
 				{
-					"name": "AddressRateLimiter",
+					"name": "ADDRESS_RATE_LIMITER",
 					"namespace_id": "888",
 					"simple": {
 						"limit": 30,
@@ -88,7 +95,7 @@
 					}
 				},
 				{
-					"name": "KeyedAddressRateLimiter",
+					"name": "KEYED_ADDRESS_RATE_LIMITER",
 					"namespace_id": "889",
 					"simple": {
 						"limit": 5000,

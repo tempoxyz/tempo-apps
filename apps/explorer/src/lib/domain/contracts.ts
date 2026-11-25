@@ -4,6 +4,7 @@ import type { Abi, AbiEvent, AbiFunction, AbiParameter } from 'viem'
 import {
 	decodeEventLog,
 	getAbiItem as getAbiItem_viem,
+	parseAbiItem,
 	stringify,
 	toFunctionSelector,
 } from 'viem'
@@ -879,6 +880,44 @@ export function parseInputValue(value: string, type: string): unknown {
 }
 
 /**
+ * Whether every argument of a write function has a value. Arguments are read
+ * by their position in `inputs`, so unnamed or same-named parameters each
+ * keep their own field.
+ */
+export function areWriteArgsFilled(
+	inputs: readonly { type: string }[],
+	args: readonly (string | undefined)[],
+): boolean {
+	return inputs.every((_, index) => {
+		const value = args[index]
+		return value !== undefined && value.trim() !== ''
+	})
+}
+
+/**
+ * Parse a write function's arguments, read by their position in `inputs`.
+ */
+export function parseWriteArgs(
+	inputs: readonly { type: string }[],
+	args: readonly (string | undefined)[],
+): { args: unknown[]; error: string | null } {
+	if (!areWriteArgsFilled(inputs, args)) return { args: [], error: null }
+	try {
+		return {
+			args: inputs.map((input, index) =>
+				parseInputValue(args[index] ?? '', input.type),
+			),
+			error: null,
+		}
+	} catch (error) {
+		return {
+			args: [],
+			error: error instanceof Error ? error.message : 'Failed to parse inputs',
+		}
+	}
+}
+
+/**
  * Format output value for display
  */
 export function formatOutputValue(value: unknown, _type: string): string {
@@ -1013,33 +1052,58 @@ const defaultSignatureLookup = new loaders.MultiSignatureLookup([
 
 /**
  * Lookup a function or event signature by selector/topic hash.
- * Returns the first matching signature string or null.
+ * Returns the first matching signature string that parses as an ABI item, or
+ * null. Public registries accept arbitrary text, so unparsable entries are
+ * skipped.
  */
 export async function lookupSignature(
 	selector: Hex.Hex,
 ): Promise<string | null> {
 	const key = selector.toLowerCase() as Hex.Hex
-	const cached = signatureLookupCache.get(key)
-	if (cached) return cached
-
+	if (signatureLookupCache.has(key)) return signatureLookupCache.get(key)!
+	const pending = signatureLookups.get(key)
+	if (pending) return pending
+	if (signatureLookups.size >= 128)
+		throw new Error('Too many signature lookups')
 	const lookup = (async () => {
+		const kind = key.length === 10 ? 'function' : 'event'
 		const signatures =
-			key.length === 10
+			kind === 'function'
 				? await defaultSignatureLookup.loadFunctions(key)
 				: await defaultSignatureLookup.loadEvents(key)
-		return signatures[0] ?? null
+		return (
+			signatures.find((signature) => isParsableSignature(kind, signature)) ??
+			null
+		)
 	})()
-	signatureLookupCache.set(key, lookup)
-
+	signatureLookups.set(key, lookup)
 	try {
-		return await lookup
-	} catch (error) {
-		signatureLookupCache.delete(key)
-		throw error
+		const value = await lookup
+		signatureLookupCache.set(key, value)
+		if (signatureLookupCache.size > 1024) {
+			const oldest = signatureLookupCache.keys().next().value!
+			signatureLookupCache.delete(oldest)
+		}
+		return value
+	} finally {
+		if (signatureLookups.get(key) === lookup) signatureLookups.delete(key)
 	}
 }
 
-const signatureLookupCache = new Map<Hex.Hex, Promise<string | null>>()
+function isParsableSignature(
+	kind: 'function' | 'event',
+	signature: string,
+): boolean {
+	try {
+		parseAbiItem(`${kind} ${signature}`)
+		return true
+	} catch {
+		return false
+	}
+}
+
+const signatureLookupCache = new Map<Hex.Hex, string | null>()
+const signatureLookups = new Map<Hex.Hex, Promise<string | null>>()
 
 export class TempoABILoader {
 	readonly name = 'TempoABILoader'
@@ -1070,6 +1134,8 @@ export class TempoABILoader {
 }
 
 export type AutoloadAbiOptions = {
+	/** Resolve inferred signatures; disable when the caller has a separate lookup budget. */
+	resolveSignatures?: boolean
 	followProxies?: boolean
 	includeSourceVerified?: boolean
 }
@@ -1085,7 +1151,11 @@ export async function autoloadAbi(
 	const knownAbi = getContractAbi(address)
 	if (knownAbi && knownAbi.length > 0) return knownAbi
 
-	const { followProxies = true, includeSourceVerified = true } = options
+	const {
+		followProxies = true,
+		includeSourceVerified = true,
+		resolveSignatures = true,
+	} = options
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
 	const client = getPublicClient(config)
@@ -1101,7 +1171,7 @@ export async function autoloadAbi(
 						new loaders.SourcifyABILoader({ chainId }),
 					])
 				: false,
-			signatureLookup: defaultSignatureLookup,
+			signatureLookup: resolveSignatures ? defaultSignatureLookup : false,
 			onError: () => false,
 		})
 

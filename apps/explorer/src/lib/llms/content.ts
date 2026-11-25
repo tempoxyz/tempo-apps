@@ -57,6 +57,8 @@ export const docs = {
 					fees: 'Unclaimed validator fees, when the address has any.',
 					holders: 'Holders of the token, when the address is a token.',
 					token: 'TIP-20 token metadata and configuration.',
+					vault:
+						'Vault details and a link to its vault page, when the address is a Tempo Earn or ERC-4626 vault or an Earn engine.',
 					contract: 'Contract source, ABI, and bytecode, when available.',
 					interact:
 						'Read and write contract functions, when an ABI is available.',
@@ -115,7 +117,6 @@ export const docs = {
 		title: 'Receipt',
 		description:
 			'The canonical receipt view of what a transaction did. Append `.json`, `.txt`, or `.pdf` to the hash, or send a matching `Accept` header, for a machine-readable export; `curl` and `wget` receive plain text.',
-		params: { voucher: null },
 	},
 	'/blocks': {
 		title: 'Blocks',
@@ -150,6 +151,11 @@ export const docs = {
 			amount: 'Exact input amount in human-readable token units.',
 		},
 	},
+	'/payments': {
+		title: 'Payments',
+		description:
+			'Total payment volume (TPV) and assets on platform (AOP) on Tempo: daily, weekly and lifetime TPV, end-of-day AOP, and charts of daily and weekly TPV and of daily AOP split into stablecoins, tokenized assets (RWAs) and crypto. TPV counts every transfer of an in-scope stablecoin minus mints and burns; AOP is the value of the assets held on Tempo. Days are UTC.',
+	},
 	'/markets': {
 		title: 'Markets',
 		description:
@@ -164,6 +170,26 @@ export const docs = {
 				'Include Stablecoin DEX pairs and swaps with a token outside the verified token list.',
 		},
 	},
+	'/vaults/': {
+		title: 'Vaults',
+		description:
+			'Tempo Earn vaults and ERC-4626 vaults on Tempo, listed by asset and kind without naming who runs them: total value locked in US dollars and first deposit or deployment date, with TVL, funded-vault and asset totals that count money one vault deposits into another once. Each vault links to its page.',
+		params: {
+			kind: 'Show `all` vaults, only Tempo `earn` vaults, or only `erc4626` vaults.',
+			asset:
+				'Show only vaults holding this asset, by its token address, such as `0x20c0000000000000000000006a37da5c996874be` for OUSD.',
+			dir: 'Sort by TVL: `asc` or `desc`.',
+			unverified:
+				'Include Earn vaults outside the curated registry and ERC-4626 vaults no verified Earn vault deposits into. Totals still count verified vaults only.',
+		},
+	},
+	'/vaults/$vault': {
+		title: 'Vault',
+		description:
+			'`vault` is a Tempo Earn or ERC-4626 vault address. Shows its TVL, its share of vault TVL in the same asset, 30-day deposits, withdrawals and net flow, its deposit cap (Earn) or the Earn vaults that deposit into it (ERC-4626), recent deposits and withdrawals by amount, and its contracts and deployment.',
+	},
+	'/earn/': { hidden: 'Redirects to `/vaults?kind=earn`.' },
+	'/earn/$vault': { hidden: 'Redirects to `/vaults/$vault`.' },
 	'/fee-amm': {
 		title: 'Fee AMM',
 		description:
