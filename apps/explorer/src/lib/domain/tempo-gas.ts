@@ -121,7 +121,7 @@ export function signatureGas(
 	const empty = { verify: 0, data: 0, witness: 0, hashes: 0, keychain: 0 }
 	const inner = signature.type === 'keychain' ? signature.inner : signature
 	const keychain = signature.type === 'keychain' ? KEYCHAIN_VALIDATION_GAS : 0
-	if (inner.type === 'unknown' || inner.type === 'keychain') return undefined
+	if (inner.type === 'unknown') return undefined
 	if (inner.type === 'configurable') {
 		const approvals = inner.approvals.map((approval) => ({
 			verify: primitiveVerifyGas(approval),
@@ -270,7 +270,7 @@ export function intrinsicGas(options: intrinsicGas.Options): GasBreakdown {
 		const to = call.to?.toLowerCase()
 		if (!to) continue
 		const isWarm =
-			to === first || warm.has(to) || isPrecompile(to) || targeted.has(to)
+			to === first || warm.has(to) || isPrecompile(to as Hex.Hex) || targeted.has(to)
 		targeted.add(to)
 		callAccess += isWarm ? WARM_ACCOUNT_GAS : COLD_ACCOUNT_GAS
 	}

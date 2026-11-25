@@ -326,7 +326,8 @@ function RouteComponent() {
 	tabs.push('signatures')
 	sections.push({
 		title: 'Signatures',
-		totalItems: signatures && 'resolved' in signatures
+		totalItems:
+			signatures && 'resolved' in signatures && signatures.resolved
 			? 1 +
 				(signatures.resolved.configurable?.approvals.length ?? 0) +
 				(signatures.resolved.feePayer ? 1 : 0)

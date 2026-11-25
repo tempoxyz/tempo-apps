@@ -50,8 +50,8 @@ type RawLog = {
 	logIndex: number | Hex.Hex | null
 }
 
-const toBigInt = (value: bigint | Hex.Hex | null) =>
-	value === null ? 0n : typeof value === 'bigint' ? value : BigInt(value)
+const toBigInt = (value: bigint | number | Hex.Hex | null) =>
+	value === null ? 0n : BigInt(value)
 
 /** Decode a configurable account's config events, oldest first. */
 export function parseConfigUpdates(logs: readonly RawLog[]): ConfigUpdate[] {
