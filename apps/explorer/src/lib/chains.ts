@@ -28,6 +28,14 @@ export const tempoDevnet = tempoDevnet_.extend({
 })
 
 /**
+ * Chain ID of the devnet a `devnet` build connects to: 31318, or the build's
+ * compiled-in `DEVNET_CHAIN_ID` (e.g. 1337 for a local `--chain dev` node).
+ */
+export const devnetChainId = import.meta.env.DEVNET_CHAIN_ID
+	? Number(import.meta.env.DEVNET_CHAIN_ID)
+	: tempoDevnet_.id
+
+/**
  * The devnet chain the app connects with: viem's, without its public
  * WebSocket when the build points at another devnet's RPC
  * (`VITE_DEVNET_RPC_OVERRIDDEN`), so the head is polled through `/api/rpc`.
@@ -36,6 +44,7 @@ export const connectedTempoDevnet =
 	import.meta.env.VITE_DEVNET_RPC_OVERRIDDEN === 'true'
 		? {
 				...tempoDevnet_,
+				id: devnetChainId,
 				rpcUrls: { default: { http: tempoDevnet_.rpcUrls.default.http } },
 			}
 		: tempoDevnet_

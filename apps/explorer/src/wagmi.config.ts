@@ -145,7 +145,7 @@ function withOwnClients(
 				batch: { multicall: true },
 				chain,
 				transport:
-					chain.id === tempoLocalnet.id
+					chain.id === tempoLocalnet.id && chain.id !== getTempoChain().id
 						? http(undefined, { batch: true })
 						: getTempoTransport(),
 			})
@@ -160,15 +160,21 @@ function createWagmiConfig(): ReturnType<typeof createConfig> {
 	const chain = getTempoChain()
 	const transport = getTempoTransport()
 
+	// A devnet build pointed at a local `--chain dev` node shares the localnet's
+	// chain ID; that chain then uses the app's own transport.
+	const withLocalnet = chain.id !== tempoLocalnet.id
+
 	return createConfig({
 		ssr: true,
 		multiInjectedProviderDiscovery: true,
-		chains: [chain, tempoLocalnet],
+		chains: withLocalnet ? [chain, tempoLocalnet] : [chain],
 		connectors: [tempoWallet()],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
+			...(withLocalnet
+				? { [tempoLocalnet.id]: http(undefined, { batch: true }) }
+				: {}),
 			[chain.id]: transport,
-			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		} as never,
 	})
 }

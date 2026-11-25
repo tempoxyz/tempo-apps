@@ -40,7 +40,14 @@ export default defineConfig((config) => {
 	// not follow the default devnet's public WebSocket in the browser either.
 	const devnetUrls = devnetUrlsSchema.parse(
 		Object.fromEntries(
-			(['DEVNET_API_URL', 'DEVNET_RPC_URL', 'DEVNET_TIDX_URL'] as const).map(
+			(
+				[
+					'DEVNET_API_URL',
+					'DEVNET_RPC_URL',
+					'DEVNET_TIDX_URL',
+					'DEVNET_CHAIN_ID',
+				] as const
+			).map(
 				(key) => [
 					key,
 					envConfig.VITE_TEMPO_ENV === 'devnet'
@@ -176,6 +183,9 @@ export default defineConfig((config) => {
 			),
 			'import.meta.env.DEVNET_TIDX_URL': JSON.stringify(
 				devnetUrls.DEVNET_TIDX_URL ?? '',
+			),
+			'import.meta.env.DEVNET_CHAIN_ID': JSON.stringify(
+				devnetUrls.DEVNET_CHAIN_ID ?? '',
 			),
 			'import.meta.env.VITE_DEVNET_RPC_OVERRIDDEN': JSON.stringify(
 				String(devnetRpcOverridden),

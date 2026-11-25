@@ -37,12 +37,14 @@ export const devnetUrls: DevnetUrls = {
 	DEVNET_API_URL: import.meta.env.DEVNET_API_URL || undefined,
 	DEVNET_RPC_URL: import.meta.env.DEVNET_RPC_URL || undefined,
 	DEVNET_TIDX_URL: import.meta.env.DEVNET_TIDX_URL || undefined,
+	DEVNET_CHAIN_ID: import.meta.env.DEVNET_CHAIN_ID || undefined,
 }
 
 export type DevnetUrls = {
 	DEVNET_API_URL?: string | undefined
 	DEVNET_RPC_URL?: string | undefined
 	DEVNET_TIDX_URL?: string | undefined
+	DEVNET_CHAIN_ID?: string | undefined
 }
 
 /**
