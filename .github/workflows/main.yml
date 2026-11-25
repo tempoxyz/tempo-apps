@@ -19,6 +19,7 @@ jobs:
 
   deploy-explorer:
     permissions:
+      actions: read
       id-token: write
     name: Deploy Explorer
     needs: verify
@@ -65,6 +66,7 @@ jobs:
 
   deploy-contract-verification:
     permissions:
+      actions: read
       id-token: write
     name: Deploy Contract Verification
     needs: verify
@@ -119,6 +121,7 @@ jobs:
 
   deploy-reth-snapshots-viewer:
     permissions:
+      actions: read
       id-token: write
     name: Deploy Reth Snapshots Viewer
     needs: verify
