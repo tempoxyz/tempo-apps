@@ -34,10 +34,9 @@ permissions: {}
 # One change check, build and deploy per Worker at a time, never cancelled: the
 # broker finishes work a cancelled job started, so a cancelled run could still
 # deploy after a newer one. A run that starts while another is in progress
-# waits, and GitHub keeps only the newest waiting run, so of several queued
-# commits the newest deploys. For a single-environment app the group is the one
-# deploy.yml used, so the first broker deploy waits for a run still deploying
-# with the static token.
+# waits, and GitHub keeps only the newest waiting run. Runs can still reach the
+# group out of commit order, so the change check skips a run whose app a newer
+# commit's run has already deployed.
 concurrency:
   group: deploy-${{ inputs.worker || inputs.app }}-${{ github.ref }}
   cancel-in-progress: false
@@ -49,6 +48,8 @@ env:
 jobs:
   changes:
     permissions:
+      # The change check reads earlier runs of the calling workflow.
+      actions: read
       contents: read
       # Secure runner fetches its StepSecurity policy-store credential with OIDC.
       id-token: write
@@ -74,16 +75,63 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BEFORE_SHA: ${{ github.event.before }}
           CURRENT_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          DEPLOY_JOB: ${{ inputs.worker || inputs.app }}
+          DEPLOY_STEP: Deploy through the broker
         run: |
           # if workflow_dispatch, always deploy
           #
+          paths="^(apps/${APP_NAME}/|pnpm-lock.yaml)"
           if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            relevant=true
+          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "$paths"; then
+            relevant=true
           else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            relevant=false
           fi
+
+          # Runs reach the concurrency group in the order their verify jobs
+          # finish, not in commit order, so a run can start after a newer
+          # commit's run has already deployed this app. Deploying then would
+          # replace newer code with older code (run 45483677537, 2026-11-24).
+          # So skip only when a later run of the calling workflow on main, for
+          # a descendant of this commit, has already finished this app's
+          # "Deploy through the broker" step successfully. A newer run that was dropped
+          # while waiting, failed, or skipped the app doesn't count, and any
+          # lookup error leaves this run deploying as before.
+          if [[ "$relevant" == true ]]; then
+            api() {
+              for _ in 1 2 3; do
+                gh api "$@" && return 0
+                sleep 5
+              done
+              return 1
+            }
+            workflow="${WORKFLOW_REF%%@*}"
+            workflow="${workflow##*/}"
+            if ! newer="$(api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&per_page=30" \
+              --jq ".workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .head_sha != \"${CURRENT_SHA}\") | \"\(.id) \(.head_sha)\"")"; then
+              echo "::warning::Could not list runs of ${workflow}; deploying ${CURRENT_SHA}."
+              newer=""
+            fi
+            jobs_filter=".jobs[] | select((.name | endswith(\" / ${DEPLOY_JOB}\")) and any(.steps[]?; .name == \"${DEPLOY_STEP}\" and .conclusion == \"success\")) | .id"
+            while read -r run_id run_sha; do
+              [[ -n "$run_id" ]] || continue
+              git cat-file -e "${run_sha}^{commit}" 2>/dev/null || continue
+              git merge-base --is-ancestor "$CURRENT_SHA" "$run_sha" || continue
+              if ! deployed="$(api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs?filter=latest&per_page=100" --jq "$jobs_filter")"; then
+                echo "::warning::Could not read the jobs of run ${run_id}; not counting it."
+                continue
+              fi
+              if [[ -n "$deployed" ]]; then
+                echo "::notice::Not deploying ${CURRENT_SHA}: run ${run_id} already deployed ${DEPLOY_JOB} from the newer ${run_sha}."
+                relevant=false
+                break
+              fi
+            done <<< "$newer"
+          fi
+          echo "relevant=$relevant" >> "$GITHUB_OUTPUT"
 
   build:
     permissions:
