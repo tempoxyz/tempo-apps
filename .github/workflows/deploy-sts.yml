@@ -129,7 +129,18 @@ jobs:
             }
             workflow="${WORKFLOW_REF%%@*}"
             workflow="${workflow##*/}"
-            if ! newer="$(api "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&per_page=100" \
+            # A newer commit's run was created after this run (a re-run keeps
+            # its creation time), so list every run created since, on all
+            # pages. If this run's creation time can't be read, list the
+            # newest 100 runs instead.
+            runs="repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=main&per_page=100"
+            if created="$(api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" --jq .created_at)" \
+              && [[ "$created" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+              list=(--paginate "${runs}&created=%3E%3D${created}")
+            else
+              list=("$runs")
+            fi
+            if ! newer="$(api "${list[@]}" \
               --jq ".workflow_runs[] | select(.id != ${GITHUB_RUN_ID} and .head_sha != \"${CURRENT_SHA}\") | \"\(.id) \(.head_sha)\"")"; then
               echo "::warning::Could not list runs of ${workflow}; deploying ${CURRENT_SHA}."
               newer=""
