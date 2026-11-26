@@ -28,7 +28,7 @@
 		"@typescript/native-preview": "^7.0.0-dev.20260319.1",
 		"simple-git-hooks": "^2.13.1",
 		"tsx": "^4.23.15",
-		"typescript": "^6.0.2"
+		"typescript": "^7.0.2"
 	},
 	"devEngines": {
 		"runtime": {
