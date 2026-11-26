@@ -21,6 +21,7 @@ import { Route as LayoutSimulateRouteImport } from './routes/_layout/simulate'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiPaymentsRouteImport } from './routes/api/payments'
 import { Route as ApiRpcRouteImport } from './routes/api/rpc'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiSimulateRouteImport } from './routes/api/simulate'
@@ -113,6 +114,11 @@ const ApiCodeRoute = ApiCodeRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPaymentsRoute = ApiPaymentsRouteImport.update({
+  id: '/api/payments',
+  path: '/api/payments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRpcRoute = ApiRpcRouteImport.update({
@@ -305,6 +311,7 @@ export interface FileRoutesByFullPath {
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/payments': typeof ApiPaymentsRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/search': typeof ApiSearchRoute
   '/api/simulate': typeof ApiSimulateRoute
@@ -351,6 +358,7 @@ export interface FileRoutesByTo {
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/payments': typeof ApiPaymentsRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/search': typeof ApiSearchRoute
   '/api/simulate': typeof ApiSimulateRoute
@@ -400,6 +408,7 @@ export interface FileRoutesById {
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/payments': typeof ApiPaymentsRoute
   '/api/rpc': typeof ApiRpcRoute
   '/api/search': typeof ApiSearchRoute
   '/api/simulate': typeof ApiSimulateRoute
@@ -450,6 +459,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/api/code'
     | '/api/health'
+    | '/api/payments'
     | '/api/rpc'
     | '/api/search'
     | '/api/simulate'
@@ -496,6 +506,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/api/code'
     | '/api/health'
+    | '/api/payments'
     | '/api/rpc'
     | '/api/search'
     | '/api/simulate'
@@ -544,6 +555,7 @@ export interface FileRouteTypes {
     | '/_layout/tokens'
     | '/api/code'
     | '/api/health'
+    | '/api/payments'
     | '/api/rpc'
     | '/api/search'
     | '/api/simulate'
@@ -586,6 +598,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiPaymentsRoute: typeof ApiPaymentsRoute
   ApiRpcRoute: typeof ApiRpcRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ApiSimulateRoute: typeof ApiSimulateRoute
@@ -687,6 +700,13 @@ declare module '@tanstack/react-router' {
       path: '/api/health'
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/payments': {
+      id: '/api/payments'
+      path: '/api/payments'
+      fullPath: '/api/payments'
+      preLoaderRoute: typeof ApiPaymentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/rpc': {
@@ -1010,6 +1030,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiPaymentsRoute: ApiPaymentsRoute,
   ApiRpcRoute: ApiRpcRoute,
   ApiSearchRoute: ApiSearchRoute,
   ApiSimulateRoute: ApiSimulateRoute,
