@@ -79,19 +79,29 @@ jobs:
       wrangler-config: dist/fee_payer/wrangler.json
       build-command: CLOUDFLARE_ENV=mainnet pnpm build
 
+  # The Worker is `contracts`. The trusted build also builds the verification
+  # Container's image and pushes it to the private
+  # docker.io/tempoxyz/verification-container, through the Docker Hub OIDC
+  # connection in DOCKERHUB_OIDC_CONNECTION_ID. The image compiles solar from
+  # source (about 3 minutes on today's runners), hence the longer timeout.
   deploy-contract-verification:
     permissions:
-      actions: read
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Contract Verification
     needs: verify
-    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: contract-verification
-      environments: '[""]'
-      sts-policy: deploy-contract-verification
-      sts-ttl: 30m
-      deploy-timeout-minutes: 25
+      worker: contracts
+      wrangler-config: dist/contracts/wrangler.json
+      build-command: pnpm build
+      publish-container-image: true
+      dockerhub-oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTION_ID }}
+      build-timeout-minutes: 30
 
   deploy-key-manager:
     permissions:

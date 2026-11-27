@@ -28,6 +28,21 @@ on:
         type: string
         default: ''
         description: 'Command run in apps/<app> before packaging, without credentials'
+      publish-container-image:
+        required: false
+        type: boolean
+        default: false
+        description: "Build the Wrangler config's Container image and push it to docker.io/tempoxyz/<container name>"
+      dockerhub-oidc-connection-id:
+        required: false
+        type: string
+        default: ''
+        description: 'Docker Hub OIDC connection that pushes the image; required with publish-container-image'
+      build-timeout-minutes:
+        required: false
+        type: number
+        default: 15
+        description: 'Timeout of the build job, from 1 to 120 minutes'
     secrets:
       build-environment:
         required: false
@@ -208,6 +223,9 @@ jobs:
       build-command: ${{ inputs.build-command }}
       wrangler-config: ${{ inputs.wrangler-config }}
       artifact-name: ${{ inputs.worker || inputs.app }}
+      publish-container-image: ${{ inputs.publish-container-image }}
+      dockerhub-oidc-connection-id: ${{ inputs.dockerhub-oidc-connection-id }}
+      timeout-minutes: ${{ inputs.build-timeout-minutes }}
 
   deploy:
     permissions:
