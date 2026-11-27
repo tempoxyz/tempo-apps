@@ -36,5 +36,26 @@
 	],
 	"triggers": {
 		"crons": ["*/15 * * * *"]
+	},
+	"env": {
+		"preview": {
+			"name": "tempo-snapshots-viewer",
+			"routes": [],
+			"triggers": {
+				"crons": []
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
+			},
+			"r2_buckets": [
+				{
+					"binding": "SNAPSHOTS",
+					"bucket_name": "tempo-node-snapshots"
+				}
+			],
+			"vars": {
+				"R2_PUBLIC_URL": "https://tempo-node-snapshots.tempoxyz.dev"
+			}
+		}
 	}
 }

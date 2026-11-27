@@ -1,7 +1,9 @@
 name: Preview
 
-# Uploads each pull request preview that preview-build.yml built, as a version of
-# the app's production Worker, and posts the links on the pull request. Only
+# Uploads the pull request previews that preview-build.yml built, of
+# fee-payer-moderato and reth-snapshots-viewer, as a version of the app's
+# production Worker, and posts the links on the pull request. The other apps'
+# previews deploy through the Cloudflare Deploy Broker (preview-deploy.yml). Only
 # main's code runs here: `workflow_run` runs main's copy of this workflow, the job
 # checks out only main's Wrangler config for the app, and the pull request's
 # modules and assets are uploaded as data with main's Wrangler, which bundles
@@ -10,8 +12,9 @@ name: Preview
 # request code may run in these jobs.
 #
 # A preview version runs the pull request's code with the production Worker's
-# bindings and secrets, as the earlier previews did. The broker's isolated
-# previews bind no secrets, KV, R2 or rate limits, which these apps read.
+# bindings and secrets, as the earlier previews did. Broker Previews need
+# preview URLs, which fee-payer-moderato has off, and can't bind
+# reth-snapshots-viewer's EU-jurisdiction bucket yet.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] Only main's code runs, for pull requests from branches of this repository; their files are data.
     types: [completed]
@@ -50,25 +53,9 @@ jobs:
       matrix:
         # Keep in step with preview-build.yml's matrix.
         include:
-          #### explorer
-          - app: explorer
-            env: testnet
-          - app: explorer
-            env: devnet
-          - app: explorer
-            env: nextfork
-          - app: explorer
-            env: zone-prover
-          - app: explorer
-            env: mainnet
-          #### fee-payer
           - app: fee-payer
             env: moderato
-          #### other (single-env-apps)
-          - app: og
           - app: reth-snapshots-viewer
-          - app: tempo-snapshots-viewer
-          - app: tokenlist
     env:
       PREVIEW_ID: ${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
     steps:
@@ -194,46 +181,6 @@ jobs:
           wranglerVersion: ${{ steps.wrangler.outputs.version }}
           command: versions upload --config ${{ runner.temp }}/preview.wrangler.json${{ matrix.env && format(' --env {0}', matrix.env) || '' }}
 
-      # Fetch a server-rendered page: llms.txt is served before SSR, so it
-      # still returns 200 when every page fails to render. Only / is checked,
-      # since data pages such as /blocks fail whenever a devnet backend is down.
-      #
-      # Cloudflare Access admits only Tailscale egress or the
-      # EXPLORER_PREVIEW_ACCESS_CLIENT_* service token to explorer previews
-      # (tempoxyz/cloudflare `stacks/apps/tempo-apps`), and answers 401
-      # without it. `--max-redirs 0` fails on a redirect rather than following
-      # it, so the token never leaves the preview's host.
-      - name: Verify explorer preview
-        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
-        id: preview-health
-        env:
-          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
-          ACCESS_CLIENT_ID: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_ID }}
-          ACCESS_CLIENT_SECRET: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_SECRET }}
-        run: |
-          test -n "$PREVIEW_URL"
-          curl --fail --silent --show-error --location --max-redirs 0 \
-            --header "CF-Access-Client-Id: $ACCESS_CLIENT_ID" \
-            --header "CF-Access-Client-Secret: $ACCESS_CLIENT_SECRET" \
-            --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
-            --output /dev/null "$PREVIEW_URL/"
-
-      - name: Verify explorer llms.txt
-        if: steps.deploy.outcome == 'success' && matrix.app == 'explorer'
-        env:
-          PREVIEW_URL: ${{ steps.deploy.outputs.deployment-url }}
-          ACCESS_CLIENT_ID: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_ID }}
-          ACCESS_CLIENT_SECRET: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_SECRET }}
-        run: |
-          test -n "$PREVIEW_URL"
-          for file in llms.txt llms-full.txt; do
-            curl --fail --silent --show-error --location --max-redirs 0 \
-              --header "CF-Access-Client-Id: $ACCESS_CLIENT_ID" \
-              --header "CF-Access-Client-Secret: $ACCESS_CLIENT_SECRET" \
-              --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
-              --output /dev/null "$PREVIEW_URL/$file"
-          done
-
       - name: Save Deployment Info
         if: always() && steps.build.outputs.status != 'absent'
         env:
@@ -241,14 +188,13 @@ jobs:
           ENV_NAME: ${{ matrix.env }}
           BUILD_STATUS: ${{ steps.build.outputs.status }}
           UPLOADED: ${{ steps.deploy.outcome }}
-          HEALTH: ${{ steps.preview-health.outcome }}
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
           ALIAS_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
         run: |
           mkdir -p deployment-info
           if [[ "$BUILD_STATUS" == "skipped" ]]; then
             status=skipped
-          elif [[ "$UPLOADED" == "success" && "$HEALTH" != "failure" ]]; then
+          elif [[ "$UPLOADED" == "success" ]]; then
             status=success
           else
             status=failed

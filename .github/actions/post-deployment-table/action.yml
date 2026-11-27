@@ -12,6 +12,14 @@ inputs:
     description: 'Pull request to comment on; defaults to the triggering pull request (a workflow_run has none)'
     required: false
     default: ''
+  marker:
+    description: 'Hidden marker of the comment this table updates, so separate workflows keep separate tables'
+    required: false
+    default: 'cloudflare-deployments'
+  title:
+    description: 'Heading of the table'
+    required: false
+    default: 'Cloudflare Deployments'
 
 runs:
   using: 'composite'
@@ -21,6 +29,8 @@ runs:
       env:
         DEPLOYMENTS_PATH: ${{ inputs.deployments-path }}
         PR_NUMBER: ${{ inputs.pr-number }}
+        MARKER: ${{ inputs.marker }}
+        TITLE: ${{ inputs.title }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -89,8 +99,9 @@ runs:
             tableRows.push(`| ${app} | ${env} | ${status} | ${preview} |`)
           }
 
-          let commentBody = '<!-- cloudflare-deployments -->\n'
-          commentBody += '## Cloudflare Deployments\n\n'
+          const marker = `<!-- ${process.env.MARKER} -->`
+          let commentBody = `${marker}\n`
+          commentBody += `## ${process.env.TITLE}\n\n`
           commentBody += '| App | Environment | Status | Preview |\n'
           commentBody += '|-----|-------------|--------|---------|\n'
           commentBody += tableRows.join('\n') + '\n\n'
@@ -103,7 +114,7 @@ runs:
           })
 
           const existingComment = comments.find(comment =>
-            comment.body.includes('<!-- cloudflare-deployments -->')
+            comment.body.includes(marker)
           )
 
           if (existingComment) {

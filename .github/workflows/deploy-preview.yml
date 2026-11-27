@@ -1,0 +1,213 @@
+name: Deploy a Preview via Broker
+
+# Deploys one pull request's Cloudflare Preview, pr-<number> of an existing
+# production Worker, through the Cloudflare Deploy Broker. The build job runs the
+# trusted cloudflare-deploy-broker-build.yml, which builds the pull request
+# without any Cloudflare credential and attests its module, configuration and
+# assets. The broker's `<worker>-pr-preview` entry in
+# tempoxyz/cloudflare-deploy-policies (policies/tempoxyz/tempo-apps.yaml) admits
+# only preview-deploy.yml's pull_request runs, and deploys the artifact only as
+# that pull request's Preview: never a version of the Worker. The Preview binds
+# the entry's bindings and the Worker's Previews Base secrets the entry lists.
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+        description: 'App directory under apps/'
+      environment-label:
+        required: false
+        type: string
+        default: ''
+        description: 'Environment shown in the pull request table'
+      worker:
+        required: true
+        type: string
+        description: 'Worker the Preview belongs to; the broker deployment ID is <worker>-pr-preview'
+      wrangler-config:
+        required: true
+        type: string
+        description: 'Wrangler config the broker deploys, relative to apps/<app>'
+      wrangler-environment:
+        required: false
+        type: string
+        default: ''
+        description: 'Wrangler environment of wrangler-config that has no routes or crons'
+      build-command:
+        required: false
+        type: string
+        default: ''
+        description: 'Command run in apps/<app> before packaging, without credentials'
+      verify-explorer:
+        required: false
+        type: boolean
+        default: false
+        description: "Fetch the explorer's / and llms files through Cloudflare Access"
+    secrets:
+      access-client-id:
+        required: false
+      access-client-secret:
+        required: false
+
+permissions: {}
+
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
+
+jobs:
+  # Previews only apps the pull request changes, as preview-build.yml did. A
+  # change to the root lockfile previews every app.
+  changes:
+    permissions:
+      contents: read
+      # Secure runner fetches its StepSecurity policy-store credential with OIDC.
+      id-token: write
+    name: ${{ inputs.worker }} changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      relevant: ${{ steps.changes.outputs.relevant }}
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for relevant changes
+        id: changes
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          APP_NAME: ${{ inputs.app }}
+        run: |
+          if git diff --name-only "origin/${BASE_REF}...HEAD" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    name: Build
+    needs: changes
+    if: needs.changes.outputs.relevant == 'true'
+    # The broker accepts only attestations from a gh-actions release of this workflow.
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
+    with:
+      install-directory: .
+      working-directory: apps/${{ inputs.app }}
+      build-command: ${{ inputs.build-command }}
+      wrangler-config: ${{ inputs.wrangler-config }}
+      wrangler-environment: ${{ inputs.wrangler-environment }}
+      artifact-name: ${{ inputs.worker }}-preview
+
+  deploy:
+    permissions:
+      contents: read
+      # The broker authenticates this job by its GitHub OIDC token.
+      id-token: write
+    name: ${{ inputs.worker }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      url: ${{ steps.deploy.outputs.verification-url }}
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - name: Deploy the Preview through the broker
+        id: deploy
+        uses: tempoxyz/gh-actions/actions/cloudflare-deploy-broker@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
+        with:
+          deployment-id: ${{ inputs.worker }}-pr-preview
+          artifact-id: ${{ needs.build.outputs.artifact-id }}
+          archive-digest: ${{ needs.build.outputs.archive-digest }}
+          module-digest: ${{ needs.build.outputs.module-digest }}
+
+      # Fetch a server-rendered page: llms.txt is served before SSR, so it
+      # still returns 200 when every page fails to render. Only / is checked,
+      # since data pages such as /blocks fail whenever a devnet backend is down.
+      #
+      # Cloudflare Access admits only Tailscale egress or the
+      # EXPLORER_PREVIEW_ACCESS_CLIENT_* service token to the explorers'
+      # *-explorer-<env>.porto.workers.dev hostnames (tempoxyz/cloudflare
+      # `stacks/apps/tempo-apps`), which cover a Preview's URLs, and answers 401
+      # without it. `--max-redirs 0` fails on a redirect rather than following
+      # it, so the token never leaves the Preview's host.
+      - name: Verify explorer preview
+        if: inputs.verify-explorer
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.verification-url }}
+          WORKER: ${{ inputs.worker }}
+          ACCESS_CLIENT_ID: ${{ secrets.access-client-id }}
+          ACCESS_CLIENT_SECRET: ${{ secrets.access-client-secret }}
+        run: |
+          # The broker returns the deployment's own URL, <8 hex>-<worker>.porto.workers.dev.
+          if [[ ! "$PREVIEW_URL" =~ ^https://[0-9a-f]{8}-${WORKER}\.porto\.workers\.dev/?$ ]]; then
+            echo "::error::The broker returned no Preview URL of ${WORKER}: '${PREVIEW_URL}'" >&2
+            exit 1
+          fi
+          for path in / /llms.txt /llms-full.txt; do
+            curl --fail --silent --show-error --location --max-redirs 0 \
+              --header "CF-Access-Client-Id: $ACCESS_CLIENT_ID" \
+              --header "CF-Access-Client-Secret: $ACCESS_CLIENT_SECRET" \
+              --retry 6 --retry-all-errors --retry-delay 10 --max-time 20 \
+              --output /dev/null "${PREVIEW_URL%/}${path}"
+          done
+
+  # One row of the pull request's Preview table, which preview-deploy.yml posts.
+  record:
+    permissions:
+      id-token: write
+    name: ${{ inputs.worker }} result
+    needs: [changes, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - name: Save Preview result
+        env:
+          APP: ${{ inputs.app }}
+          ENV_NAME: ${{ inputs.environment-label }}
+          WORKER: ${{ inputs.worker }}
+          RELEVANT: ${{ needs.changes.outputs.relevant }}
+          DEPLOYED: ${{ needs.deploy.result }}
+          DEPLOYMENT_URL: ${{ needs.deploy.outputs.url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          mkdir -p preview-result
+          alias=""
+          if [[ "$RELEVANT" == "false" ]]; then
+            status=skipped
+          elif [[ "$DEPLOYED" == "success" ]]; then
+            status=success
+            alias="https://pr-${PR_NUMBER}-${WORKER}.porto.workers.dev"
+          else
+            status=failed
+            DEPLOYMENT_URL=""
+          fi
+          jq -n --arg app "$APP" --arg env "$ENV_NAME" --arg status "$status" \
+            --arg url "$DEPLOYMENT_URL" --arg alias "$alias" \
+            '{app: $app, env: $env, status: $status, deployment_url: $url, deployment_alias_url: $alias}' \
+            > "preview-result/${WORKER}.json"
+          cat "preview-result/${WORKER}.json"
+
+      - name: Upload Preview result
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview-result-${{ inputs.worker }}
+          path: preview-result/${{ inputs.worker }}.json
+          retention-days: 1

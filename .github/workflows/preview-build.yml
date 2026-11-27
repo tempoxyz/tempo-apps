@@ -1,10 +1,14 @@
 name: Preview build
 
-# Builds each app's pull request preview with no Cloudflare credential and
-# uploads the result as an artifact. preview.yml then runs main's code on
-# `workflow_run`: it uploads these files, as data, as a preview version of the
-# app's production Worker with a short-lived Cloudflare STS token. Pull request
-# code never runs where a tempo-prd token is.
+# Builds the pull request previews of fee-payer-moderato and
+# reth-snapshots-viewer with no Cloudflare credential and uploads the result as
+# an artifact. preview.yml then runs main's code on `workflow_run`: it uploads
+# these files, as data, as a preview version of the app's production Worker
+# with a short-lived Cloudflare STS token. Pull request code never runs where a
+# tempo-prd token is. The other apps' previews deploy through the Cloudflare
+# Deploy Broker (preview-deploy.yml). fee-payer-moderato has preview URLs off,
+# which Cloudflare Previews need, and reth-snapshots-viewer's bucket is in the
+# EU jurisdiction, which the broker can't bind yet.
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
@@ -71,25 +75,9 @@ jobs:
       matrix:
         # Keep in step with preview.yml's matrix.
         include:
-          #### explorer
-          - app: explorer
-            env: testnet
-          - app: explorer
-            env: devnet
-          - app: explorer
-            env: nextfork
-          - app: explorer
-            env: zone-prover
-          - app: explorer
-            env: mainnet
-          #### fee-payer
           - app: fee-payer
             env: moderato
-          #### other (single-env-apps)
-          - app: og
           - app: reth-snapshots-viewer
-          - app: tempo-snapshots-viewer
-          - app: tokenlist
     env:
       NODE_ENV: production
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}
@@ -131,14 +119,7 @@ jobs:
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
         working-directory: apps/${{ matrix.app }}
-        env:
-          APP_NAME: ${{ matrix.app }}
-        run: |
-          if [[ "$APP_NAME" == "explorer" ]]; then
-            bash scripts/build.sh
-          else
-            pnpm build
-          fi
+        run: pnpm build
 
       # fee-payer has no preview URL, so check the built Worker locally.
       - name: Verify fee-payer starts

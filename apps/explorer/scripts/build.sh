@@ -46,3 +46,16 @@ fi
 # trusted build has no media type for Markdown, so it would serve them without
 # a Content-Type. Leave them out of what is deployed.
 rm -f "$client"/fonts/*/README.md
+
+# A pull request's Cloudflare Preview never serves the Worker's custom domains,
+# and the broker refuses a preview configuration that names any.
+if [[ "${EXPLORER_PREVIEW:-}" == "1" ]]; then
+	node --input-type=module -e '
+		import { readFileSync, writeFileSync } from "node:fs"
+		const path = "dist/server/wrangler.json"
+		const config = JSON.parse(readFileSync(path, "utf8"))
+		delete config.route
+		config.routes = []
+		writeFileSync(path, JSON.stringify(config))
+	'
+fi

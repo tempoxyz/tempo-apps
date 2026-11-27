@@ -38,5 +38,23 @@
 			"pattern": "tokenlist.tempo.xyz",
 			"custom_domain": true
 		}
-	]
+	],
+	"env": {
+		"preview": {
+			"name": "tokenlist",
+			"routes": [],
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
+			},
+			"r2_buckets": [
+				{
+					"bucket_name": "tokenlist",
+					"binding": "TOKENLIST"
+				}
+			],
+			"vars": {
+				"ENVIRONMENT": "preview"
+			}
+		}
+	}
 }
