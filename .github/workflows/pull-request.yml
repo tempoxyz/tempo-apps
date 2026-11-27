@@ -21,3 +21,64 @@ jobs:
       id-token: write
     name: Verify
     uses: ./.github/workflows/verify.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+
+  # fee-payer-moderato has preview URLs off, so it gets no Preview: a preview
+  # version uploaded to it was never reachable. Its pull request build still
+  # runs here, and must start locally.
+  fee-payer:
+    permissions:
+      contents: read
+      # Secure runner fetches its StepSecurity policy-store credential with OIDC.
+      id-token: write
+    name: Build fee-payer
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_ENV: moderato
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - name: Clone repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check for relevant changes
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [[ "$EVENT_NAME" != "pull_request" ]] || git diff --name-only "origin/${BASE_REF}...HEAD" | grep -qE '^(apps/fee-payer/|pnpm-lock.yaml)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        uses: ./.github/actions/install-dependencies # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+
+      - name: Generate Worker types
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm gen:types
+        working-directory: apps/fee-payer
+
+      - name: Build
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm build
+        working-directory: apps/fee-payer
+
+      - name: Verify fee-payer starts
+        if: steps.changes.outputs.relevant == 'true'
+        working-directory: apps/fee-payer
+        run: |
+          ./node_modules/.bin/wrangler dev --env-file .env.example --port 8787 \
+            --show-interactive-dev-session=false &
+          pid=$!
+          trap 'kill "$pid"' EXIT
+          curl --fail --silent --show-error \
+            --retry 10 --retry-all-errors --retry-delay 3 --max-time 20 \
+            --output /dev/null "http://localhost:8787/"

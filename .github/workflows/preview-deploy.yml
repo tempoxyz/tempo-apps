@@ -8,9 +8,10 @@ name: Preview deploy
 # as a version. Each Preview binds its Worker's production bindings (rate
 # limits, R2 buckets, the browser binding) and the secrets of the Worker's
 # Previews Base configuration that its `<worker>-pr-preview` policy entry
-# lists. fee-payer-moderato (no preview URLs) and reth-snapshots-viewer (an EU
-# bucket) still upload preview versions through preview-build.yml and
-# preview.yml.
+# lists. reth-snapshots-viewer (an EU bucket) still uploads preview versions
+# through preview-build.yml and preview.yml. fee-payer-moderato gets no
+# Preview: its preview URLs are off, so its preview versions were never
+# reachable, and pull-request.yml still builds it.
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, closed]

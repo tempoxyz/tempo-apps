@@ -1,8 +1,8 @@
 name: Preview
 
-# Uploads the pull request previews that preview-build.yml built, of
-# fee-payer-moderato and reth-snapshots-viewer, as a version of the app's
-# production Worker, and posts the links on the pull request. The other apps'
+# Uploads the pull request preview of reth-snapshots-viewer that
+# preview-build.yml built, as a version of the production Worker, and posts the
+# link on the pull request. The other apps'
 # previews deploy through the Cloudflare Deploy Broker (preview-deploy.yml). Only
 # main's code runs here: `workflow_run` runs main's copy of this workflow, the job
 # checks out only main's Wrangler config for the app, and the pull request's
@@ -12,9 +12,8 @@ name: Preview
 # request code may run in these jobs.
 #
 # A preview version runs the pull request's code with the production Worker's
-# bindings and secrets, as the earlier previews did. Broker Previews need
-# preview URLs, which fee-payer-moderato has off, and can't bind
-# reth-snapshots-viewer's EU-jurisdiction bucket yet.
+# bindings and secrets, as the earlier previews did. Broker Previews can't
+# bind reth-snapshots-viewer's EU-jurisdiction bucket yet.
 on:
   workflow_run: # zizmor: ignore[dangerous-triggers] Only main's code runs, for pull requests from branches of this repository; their files are data.
     types: [completed]
@@ -53,9 +52,9 @@ jobs:
       matrix:
         # Keep in step with preview-build.yml's matrix.
         include:
-          - app: fee-payer
-            env: moderato
+          # No Wrangler environment.
           - app: reth-snapshots-viewer
+            env: ''
     env:
       PREVIEW_ID: ${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
     steps:
