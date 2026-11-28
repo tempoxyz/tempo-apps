@@ -3,9 +3,10 @@ import {
 	ZONE_PROVER_RPC_URL,
 	ZONE_PROVER_TIDX_URL,
 } from '#lib/zone-prover'
+import { devnetChainId } from '#lib/chains'
 import { devnetUrls, serverEnv } from './env'
 
-const DEVNET_CHAIN_ID = 31318
+const DEVNET_CHAIN_ID = devnetChainId
 
 const RPC_BACKENDS = {
 	mainnet: { chainId: 4217, url: 'https://rpc.tempo.xyz' },
@@ -68,7 +69,8 @@ export function getChainBackend(chainId: number, kind: 'rpc' | 'tidx') {
  * (see `devnetUrls`), with its complete `Basic ...` or `Bearer ...` header
  * from `DEVNET_RPC_AUTH` or `DEVNET_TIDX_AUTH`.
  * Undefined when the build isn't `devnet` or the URL is unset, which keeps the
- * default devnet backends. A set URL without valid credentials fails closed.
+ * default devnet backends. A set URL without valid credentials fails closed,
+ * except a loopback URL (a node on the same host), which needs none.
  */
 export function getDevnetBackend(
 	environment: string | undefined,
@@ -78,6 +80,7 @@ export function getDevnetBackend(
 	const url =
 		kind === 'rpc' ? devnetUrls.DEVNET_RPC_URL : devnetUrls.DEVNET_TIDX_URL
 	if (!url) return undefined
+	if (isLoopbackUrl(url)) return { url, headers: {} as Record<string, string> }
 	const authorization =
 		kind === 'rpc' ? serverEnv.DEVNET_RPC_AUTH : serverEnv.DEVNET_TIDX_AUTH
 	if (
@@ -88,4 +91,14 @@ export function getDevnetBackend(
 	)
 		throw new Error(`Devnet ${kind} credentials are not configured`)
 	return { url, headers: { Authorization: authorization } }
+}
+
+/** Whether `url` points at this host (`localhost`, `127.0.0.0/8` or `[::1]`). */
+export function isLoopbackUrl(url: string): boolean {
+	const { hostname } = new URL(url)
+	return (
+		hostname === 'localhost' ||
+		hostname === '[::1]' ||
+		/^127(\.\d{1,3}){3}$/.test(hostname)
+	)
 }

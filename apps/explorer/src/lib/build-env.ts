@@ -32,13 +32,18 @@ export const devnetUrlsSchema = z.object({
 	DEVNET_API_URL: z.optional(z.url({ protocol: /^https?$/ })),
 	DEVNET_RPC_URL: z.optional(z.url({ protocol: /^https?$/ })),
 	DEVNET_TIDX_URL: z.optional(z.url({ protocol: /^https?$/ })),
+	/** Chain ID of that devnet, when it isn't 31318 (e.g. a local `--chain dev` node). */
+	DEVNET_CHAIN_ID: z.optional(z.string().check(z.regex(/^[1-9]\d*$/))),
 })
 
 export const buildEnvSchema = z.object({
 	ALLOWED_HOSTS: z.prefault(
 		z.pipe(
 			z.string(),
-			z.transform((x) => x.split(',').filter(Boolean)),
+			// `*` allows any Host header, for a dev server behind a proxy.
+			z.transform((x): string[] | true =>
+				x === '*' ? true : x.split(',').filter(Boolean),
+			),
 		),
 		'',
 	),

@@ -51,6 +51,8 @@ export const docs = {
 					'Address view. Defaults to `token` for TIP-20 tokens and `transactions` otherwise.',
 				values: {
 					transactions: 'Transaction history.',
+					owners:
+						'Owners, threshold, config version and config history of a configurable account (TIP-1107).',
 					transfers:
 						'Token transfers. For a token, every transfer of that token.',
 					holdings: 'Current token balances.',
@@ -102,6 +104,8 @@ export const docs = {
 				description: 'Transaction view.',
 				values: {
 					overview: 'Receipt and transaction summary.',
+					signatures:
+						'Decoded sender, owner-approval and fee payer signatures, with the intrinsic gas breakdown.',
 					balances: 'Balance changes.',
 					calls: 'Decoded calls, when available.',
 					events: 'Raw and decoded logs.',

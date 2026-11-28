@@ -142,6 +142,12 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 import CopyIcon from '~icons/lucide/copy'
 import PlayIcon from '~icons/lucide/play'
 import XIcon from '~icons/lucide/x'
+import {
+	ConfigurableAccountOwners,
+	QuantumOnlyBadge,
+} from '#comps/ConfigurableAccountOwners'
+import type { ConfigurableAccountView } from '#lib/domain/configurable-account'
+import { configurableAccountQueryOptions } from '#lib/queries/configurable-account'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -555,6 +561,11 @@ function RouteComponent() {
 	const hasUnclaimedFees = (validatorFees?.fees.length ?? 0) > 0
 	const vault = useVaultForAddress(address)
 	const isVault = !isTip20 && Boolean(vault)
+	const { data: configurableAccount } = useQuery({
+		...configurableAccountQueryOptions(address),
+		enabled: isMounted && !isTip20 && !isZonePortal,
+	})
+	const isConfigurableAccount = Boolean(configurableAccount)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = isZonePortal
 			? ['deposits', 'withdrawals', 'batches', 'transactions']
@@ -573,11 +584,22 @@ function RouteComponent() {
 		if (isVault) {
 			tabs.push('vault')
 		}
-		if (isContract) {
+		if (isConfigurableAccount) {
+			tabs.splice(1, 0, 'owners')
+		}
+		if (isContract && !isConfigurableAccount) {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract, isZonePortal, hasUnclaimedFees, isVault])
+	}, [
+		isToken,
+		isTip20,
+		isContract,
+		isZonePortal,
+		hasUnclaimedFees,
+		isVault,
+		isConfigurableAccount,
+	])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -817,6 +839,7 @@ function RouteComponent() {
 				onClearTransactionFilters={clearTransactionFilters}
 				zonePortalOverview={zonePortalOverview}
 				portalLive={portalLive}
+				configurableAccount={configurableAccount ?? undefined}
 				onPortalLiveChange={setPortalLive}
 			/>
 		</div>
@@ -1076,6 +1099,7 @@ function SectionsWrapper(props: {
 	zonePortalOverview?: ZonePortalOverview | undefined
 	portalLive: boolean
 	onPortalLiveChange: (live: boolean) => void
+	configurableAccount?: ConfigurableAccountView | undefined
 }) {
 	const {
 		address,
@@ -1109,6 +1133,7 @@ function SectionsWrapper(props: {
 		zonePortalOverview,
 		portalLive,
 		onPortalLiveChange,
+		configurableAccount,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const { voucher } = Route.useSearch()
@@ -2639,6 +2664,18 @@ function SectionsWrapper(props: {
 							source={resolvedContractSource}
 						/>
 					),
+				}
+			case 'owners':
+				return {
+					title: 'Owners',
+					totalItems: configurableAccount?.owners.length ?? 0,
+					itemsLabel: 'owners',
+					contextual: configurableAccount?.quantumOnly ? (
+						<QuantumOnlyBadge />
+					) : null,
+					content: configurableAccount ? (
+						<ConfigurableAccountOwners view={configurableAccount} />
+					) : null,
 				}
 			case 'interact':
 				return {

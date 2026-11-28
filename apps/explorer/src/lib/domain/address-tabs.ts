@@ -13,6 +13,7 @@ const allTabs = [
 	'vault',
 	'contract',
 	'interact',
+	'owners',
 ] as const
 
 export type AddressTab = (typeof allTabs)[number]

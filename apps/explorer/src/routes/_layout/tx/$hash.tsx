@@ -35,6 +35,7 @@ import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
 import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { TxKeyAuthorization } from '#comps/TxKeyAuthorization'
+import { TxSignatures, useTxSignatures } from '#comps/TxSignatures'
 import { cx } from '#lib/css'
 import { getAccountTag } from '#lib/account'
 import { apostrophe } from '#lib/chars'
@@ -75,6 +76,7 @@ import {
 	traceQueryOptions,
 } from '#lib/queries/trace'
 import { expiringNonceKey, getNonceKey } from '#lib/domain/nonce'
+import { txSignaturesQueryOptions } from '#lib/queries/tx-signatures'
 import { zHash } from '#lib/zod'
 import { fetchTransactionActivities } from '#lib/server/transaction-activities'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -115,7 +117,15 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 		tab: z.prefault(
-			z.enum(['overview', 'calls', 'trace', 'events', 'balances', 'raw']),
+			z.enum([
+				'overview',
+				'signatures',
+				'calls',
+				'trace',
+				'events',
+				'balances',
+				'raw',
+			]),
 			defaultSearchValues.tab,
 		),
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
@@ -214,6 +224,19 @@ function RouteComponent() {
 		...traceQueryOptions({ hash }),
 		enabled: typeof window !== 'undefined',
 	})
+	const signaturesQuery = useQuery({
+		...txSignaturesQueryOptions({
+			hash,
+			from: receipt.from,
+			blockNumber: receipt.blockNumber,
+		}),
+		enabled: typeof window !== 'undefined',
+	})
+	const signatures = useTxSignatures({
+		raw: signaturesQuery.data?.raw,
+		receipt,
+		senderWasEmpty: signaturesQuery.data?.senderWasEmpty,
+	})
 	const balanceChangesData = balanceChangesQuery.data ?? EMPTY_BALANCE_CHANGES
 	const traceData = traceQuery.data ?? EMPTY_TRACE_DATA
 
@@ -296,6 +319,25 @@ function RouteComponent() {
 				keyTokenMetadata={keyTokenMetadata}
 				feeBreakdown={feeBreakdown}
 				balanceChangesData={balanceChangesData}
+			/>
+		),
+	})
+
+	tabs.push('signatures')
+	sections.push({
+		title: 'Signatures',
+		totalItems:
+			signatures && 'resolved' in signatures && signatures.resolved
+				? 1 +
+					(signatures.resolved.configurable?.approvals.length ?? 0) +
+					(signatures.resolved.feePayer ? 1 : 0)
+				: 0,
+		itemsLabel: 'signatures',
+		content: (
+			<TxSignatures
+				data={signatures}
+				receipt={receipt}
+				loading={signaturesQuery.isPending}
 			/>
 		),
 	})
