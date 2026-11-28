@@ -31,6 +31,7 @@ import {
 	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
+import { creationMatchColumns } from '#lib/creation-match.ts'
 import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
 import { CONTAINER_COMPILE_TIMEOUT_MS, isTimeoutError } from '#route.verify.ts'
@@ -369,14 +370,38 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 
 		// Only matched source submissions may trigger optional factory tracing.
-		const creationTransactionMetadata = body.creatorTxHash
+		// A recorded creation transaction is immutable, so it wins over a submitted hash.
+		const [recordedDeployment] = await db
+			.select({ transactionHash: contractDeploymentsTable.transactionHash })
+			.from(contractDeploymentsTable)
+			.where(
+				and(
+					eq(contractDeploymentsTable.chainId, chainId),
+					eq(contractDeploymentsTable.address, Hex.toBytes(address)),
+				),
+			)
+			.limit(1)
+		const creationTransactionHash =
+			(recordedDeployment?.transactionHash
+				? Hex.fromBytes(
+						new Uint8Array(recordedDeployment.transactionHash as ArrayBuffer),
+					)
+				: undefined) ?? body.creatorTxHash
+		const creationTransactionMetadata = creationTransactionHash
 			? await getCreationTransactionMetadata({
-					creationTransactionHash: body.creatorTxHash,
+					creationTransactionHash,
 					address,
 					chainId,
 					client,
 				})
 			: null
+
+		const creationColumns = creationMatchColumns({
+			onchainCreationBytecode: creationTransactionMetadata?.creationBytecode,
+			recompiledCreationBytecode: creationBytecodeRaw,
+			auxdataStyle,
+			abi: compiledContract.abi,
+		})
 
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'
@@ -675,6 +700,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			.select({
 				id: verifiedContractsTable.id,
 				compilationId: verifiedContractsTable.compilationId,
+				creationMatch: verifiedContractsTable.creationMatch,
 				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
@@ -701,14 +727,30 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				.update(verifiedContractsTable)
 				.set({
 					compilationId,
-					creationMatch: false,
-					creationValues: null,
-					creationTransformations: null,
-					creationMetadataMatch: null,
+					// Keep a creation match proven for this compilation when this submission could not re-prove it.
+					...(creationColumns.creationMatch ||
+					existingVerification.compilationId !== compilationId
+						? creationColumns
+						: {}),
 					runtimeMatch: true,
 					runtimeMetadataMatch: true,
 					runtimeValues,
 					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+		} else if (
+			existingVerification &&
+			creationColumns.creationMatch &&
+			!existingVerification.creationMatch &&
+			existingVerification.compilationId === compilationId
+		) {
+			// Same compilation, now with its creation input matched as well.
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					...creationColumns,
 					updatedAt: new Date().toISOString(),
 					updatedBy: auditUser,
 				})
@@ -719,7 +761,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				.values({
 					deploymentId,
 					compilationId,
-					creationMatch: false,
+					...creationColumns,
 					runtimeMatch: true,
 					runtimeMetadataMatch: isExactMatch,
 					runtimeValues,

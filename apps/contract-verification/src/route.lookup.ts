@@ -277,21 +277,22 @@ function buildVerifiedMinimalResponse(row: {
 	address: ArrayBuffer
 	verifiedAt: string
 }): MinimalLookupResponse {
+	// A bytecode that was never matched reports null, as Sourcify does, never a partial match.
 	const runtimeMatchStatus = row.runtimeMatch
 		? row.runtimeMetadataMatch
 			? 'exact_match'
 			: 'match'
-		: 'match'
+		: null
 	const creationMatchStatus = row.creationMatch
 		? row.creationMetadataMatch
 			? 'exact_match'
 			: 'match'
-		: 'match'
+		: null
 	const matchStatus =
 		runtimeMatchStatus === 'exact_match' ||
 		creationMatchStatus === 'exact_match'
 			? 'exact_match'
-			: runtimeMatchStatus || creationMatchStatus
+			: (runtimeMatchStatus ?? creationMatchStatus)
 
 	return {
 		matchId: String(row.matchId),
@@ -1008,12 +1009,16 @@ lookupRoute
 				compilerVersion: row.version,
 				language: row.language,
 				compilerSettings: JSON.parse(row.compilerSettings),
-				runtimeMetadataMatch: row.runtimeMetadataMatch
-					? 'exact_match'
-					: 'match',
-				creationMetadataMatch: row.creationMetadataMatch
-					? 'exact_match'
-					: 'match',
+				runtimeMetadataMatch: row.runtimeMatch
+					? row.runtimeMetadataMatch
+						? 'exact_match'
+						: 'match'
+					: null,
+				creationMetadataMatch: row.creationMatch
+					? row.creationMetadataMatch
+						? 'exact_match'
+						: 'match'
+					: null,
 				abi: artifacts.abi ?? null,
 				userdoc: artifacts.userdoc ?? null,
 				devdoc: artifacts.devdoc ?? null,

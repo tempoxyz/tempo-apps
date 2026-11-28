@@ -457,6 +457,13 @@ export function extractLibrariesTransformation(
 					strStart,
 					strStart + strLength,
 				)
+				// Every reference to one library must link the same address.
+				const linked = libraryMap[fqn]
+				if (
+					linked !== undefined &&
+					linked.toLowerCase() !== `0x${actualAddress}`.toLowerCase()
+				)
+					throw new Error(`Library ${fqn} is linked at conflicting addresses`)
 				libraryMap[fqn] = `0x${actualAddress}`
 
 				// Replace placeholder with actual address
@@ -646,6 +653,9 @@ export function extractCallProtectionTransformation(
 /**
  * Constructor arguments are ABI-encoded and appended to creation bytecode.
  * To match, we extract them from the difference in bytecode lengths.
+ * `valid` is false when trailing bytes exist that the constructor ABI does not
+ * account for (no constructor inputs, or bytes that do not re-encode identically),
+ * which must fail a creation match as Sourcify does.
  */
 export function extractConstructorArgumentsTransformation(
 	recompiledCreationBytecode: string,
@@ -659,17 +669,21 @@ export function extractConstructorArgumentsTransformation(
 	transformations: Transformation[]
 	transformationValues: TransformationValues
 	constructorArguments: string | null
+	valid: boolean
 } {
 	const transformations: Transformation[] = []
 	const transformationValues: TransformationValues = {}
 
-	// If lengths are equal, no constructor arguments
+	// If lengths are equal, no constructor arguments: valid only for a constructor without inputs,
+	// since every ABI input encodes to at least one 32-byte word.
 	if (onchainCreationBytecode.length === recompiledCreationBytecode.length) {
+		const inputs = abi.find((item) => item.type === 'constructor')?.inputs
 		return {
 			populatedBytecode: recompiledCreationBytecode,
 			transformations,
 			transformationValues,
 			constructorArguments: null,
+			valid: !inputs || inputs.length === 0,
 		}
 	}
 
@@ -682,22 +696,27 @@ export function extractConstructorArgumentsTransformation(
 	// Find constructor in ABI
 	const constructorAbi = abi.find((item) => item.type === 'constructor')
 	if (!constructorAbi?.inputs || constructorAbi.inputs.length === 0) {
-		// No constructor params expected but we have extra bytes
-		// This could be a mismatch or special case
+		// No constructor params expected but we have extra bytes: the creation input
+		// carries data the compiled contract does not account for.
 		return {
 			populatedBytecode: recompiledCreationBytecode,
 			transformations,
 			transformationValues,
 			constructorArguments,
+			valid: false,
 		}
 	}
 
 	// Validate by decoding and re-encoding
 	try {
-		const paramTypes = constructorAbi.inputs.map((i) => ({
-			type: i.type,
-			name: i.name,
-		})) as AbiParameters.AbiParameters
+		// The full inputs, so tuple and tuple-array parameters keep their components. Strings are
+		// checked as bytes, which share their ABI layout, since decoding a string drops NUL bytes.
+		const inputs = constructorAbi.inputs.map(stringsAsBytes)
+		// Reject non-canonical layouts (aliased or out-of-order tails) before decoding, so decoding
+		// work stays proportional to the argument size.
+		if (!hasCanonicalLayout(inputs, Hex.toBytes(constructorArguments)))
+			throw new Error('Constructor arguments are not canonically encoded')
+		const paramTypes = inputs as unknown as AbiParameters.AbiParameters
 
 		const decoded = AbiParameters.decode(paramTypes, constructorArguments)
 		const reencoded = AbiParameters.encode(paramTypes, decoded)
@@ -718,6 +737,7 @@ export function extractConstructorArgumentsTransformation(
 			transformations,
 			transformationValues,
 			constructorArguments,
+			valid: true,
 		}
 	} catch {
 		// Failed to decode/validate constructor arguments
@@ -726,7 +746,123 @@ export function extractConstructorArgumentsTransformation(
 			transformations,
 			transformationValues,
 			constructorArguments,
+			valid: false,
 		}
+	}
+}
+
+type AbiInput = { type: string; name?: string; components?: AbiInput[] }
+
+const WORD = 32
+
+/** The element type and length (null for a dynamic array) of an array type, or null. */
+function arrayType(
+	input: AbiInput,
+): { element: AbiInput; length: number | null } | null {
+	const match = /^(.*)\[(\d*)\]$/.exec(input.type)
+	if (!match) return null
+	return {
+		element: { ...input, type: match[1] ?? '' },
+		length: match[2] ? Number(match[2]) : null,
+	}
+}
+
+function isDynamic(input: AbiInput): boolean {
+	if (input.type === 'bytes' || input.type === 'string') return true
+	const array = arrayType(input)
+	if (array) return array.length === null || isDynamic(array.element)
+	if (input.type === 'tuple')
+		return (input.components ?? []).some((component) => isDynamic(component))
+	return false
+}
+
+function staticSize(input: AbiInput): number {
+	const array = arrayType(input)
+	if (array) return (array.length ?? 0) * staticSize(array.element)
+	if (input.type === 'tuple')
+		return (input.components ?? []).reduce(
+			(size, component) => size + staticSize(component),
+			0,
+		)
+	return WORD
+}
+
+/**
+ * Whether `data` is the canonical ABI encoding layout of `inputs`: every dynamic offset points at
+ * the next tail in order, no tail overlaps another, and nothing trails. Values are not decoded.
+ */
+function hasCanonicalLayout(inputs: AbiInput[], data: Uint8Array): boolean {
+	const readLength = (position: number): number | null => {
+		if (position + WORD > data.length) return null
+		let value = 0
+		for (let i = position; i < position + WORD; i++) {
+			const byte = data[i] ?? 0
+			if (i < position + WORD - 6 && byte !== 0) return null
+			value = value * 256 + byte
+		}
+		return value
+	}
+
+	// Returns the bytes a sequence encoding starting at `base` spans, or null when not canonical.
+	const sequence = (items: AbiInput[], base: number): number | null => {
+		let head = 0
+		for (const item of items) head += isDynamic(item) ? WORD : staticSize(item)
+		let cursor = base + head
+		if (cursor > data.length) return null
+		let position = base
+		for (const item of items) {
+			if (!isDynamic(item)) {
+				position += staticSize(item)
+				continue
+			}
+			if (readLength(position) !== cursor - base) return null
+			const size = tail(item, cursor)
+			if (size === null) return null
+			cursor += size
+			position += WORD
+		}
+		return cursor - base
+	}
+
+	const tail = (item: AbiInput, position: number): number | null => {
+		if (item.type === 'bytes' || item.type === 'string') {
+			const length = readLength(position)
+			if (length === null) return null
+			const size = WORD + Math.ceil(length / WORD) * WORD
+			return position + size <= data.length ? size : null
+		}
+		const array = arrayType(item)
+		if (array) {
+			let count = array.length
+			let start = position
+			let prefix = 0
+			if (count === null) {
+				count = readLength(position)
+				// Each element takes at least one word, which bounds the count by the input size.
+				if (count === null || count * WORD > data.length - position - WORD)
+					return count === 0 ? WORD : null
+				start += WORD
+				prefix = WORD
+			}
+			const size = sequence(Array(count).fill(array.element), start)
+			return size === null ? null : prefix + size
+		}
+		return sequence(item.components ?? [], position)
+	}
+
+	return sequence(inputs, 0) === data.length
+}
+
+/**
+ * The types alone, recursively through tuple components, with string (and string array) types
+ * replaced by bytes. Names are dropped so field names such as __proto__ never affect decoding.
+ */
+function stringsAsBytes(input: AbiInput): AbiInput {
+	return {
+		type: input.type.replace(/^string(?=$|\[)/, 'bytes'),
+		...(input.components
+			? { components: input.components.map(stringsAsBytes) }
+			: {}),
 	}
 }
 
@@ -899,11 +1035,19 @@ export function matchBytecode(
 
 	// 3. Handle library placeholders (both creation and runtime)
 	if (linkReferences) {
-		const librariesResult = extractLibrariesTransformation(
-			populatedBytecode,
-			onchainBytecode,
-			linkReferences,
-		)
+		let librariesResult: ReturnType<typeof extractLibrariesTransformation>
+		try {
+			librariesResult = extractLibrariesTransformation(
+				populatedBytecode,
+				onchainBytecode,
+				linkReferences,
+			)
+		} catch (error) {
+			return {
+				...noMatch(),
+				message: error instanceof Error ? error.message : String(error),
+			}
+		}
 		populatedBytecode = librariesResult.populatedBytecode
 		allTransformations.push(...librariesResult.transformations)
 		Object.assign(allTransformationValues, librariesResult.transformationValues)
@@ -919,13 +1063,14 @@ export function matchBytecode(
 		// Check if this is a "perfect" match (has valid content hash) or "partial" (no hash)
 		const isPerfect = hasContentHash(recompiledBytecode, auxdataStyle)
 
-		// For creation bytecode, also extract constructor arguments
-		if (isCreation && abi) {
+		// For creation bytecode, the remaining input must be the ABI-encoded constructor arguments
+		if (isCreation) {
 			const constructorResult = extractConstructorArgumentsTransformation(
 				populatedBytecode,
 				onchainBytecode,
-				abi,
+				abi ?? [],
 			)
+			if (!constructorResult.valid) return constructorArgumentsMismatch()
 			allTransformations.push(...constructorResult.transformations)
 			Object.assign(
 				allTransformationValues,
@@ -942,6 +1087,17 @@ export function matchBytecode(
 	}
 
 	// 5. Try matching without auxdata (partial match)
+	if (isCreation)
+		return matchCreationIgnoringAuxdata({
+			onchainBytecode,
+			populatedBytecode,
+			auxdataStyle,
+			abi,
+			transformations: allTransformations,
+			transformationValues: allTransformationValues,
+			libraryMap,
+		})
+
 	const recompiledSplit = splitAuxdata(populatedBytecode, auxdataStyle)
 	const onchainSplit = splitAuxdata(onchainBytecode, auxdataStyle)
 
@@ -954,12 +1110,8 @@ export function matchBytecode(
 
 	const executionMatch =
 		canIgnoreAuxdata &&
-		(isCreation
-			? onchainSplit.executionBytecode
-					.toLowerCase()
-					.startsWith(recompiledSplit.executionBytecode.toLowerCase())
-			: recompiledSplit.executionBytecode.toLowerCase() ===
-				onchainSplit.executionBytecode.toLowerCase())
+		recompiledSplit.executionBytecode.toLowerCase() ===
+			onchainSplit.executionBytecode.toLowerCase()
 
 	if (executionMatch) {
 		// Handle CBOR auxdata positions if provided
@@ -973,20 +1125,6 @@ export function matchBytecode(
 			Object.assign(allTransformationValues, auxdataResult.transformationValues)
 		}
 
-		// For creation bytecode, also extract constructor arguments
-		if (isCreation && abi) {
-			const constructorResult = extractConstructorArgumentsTransformation(
-				recompiledSplit.executionBytecode,
-				onchainSplit.executionBytecode,
-				abi,
-			)
-			allTransformations.push(...constructorResult.transformations)
-			Object.assign(
-				allTransformationValues,
-				constructorResult.transformationValues,
-			)
-		}
-
 		return {
 			match: 'match',
 			transformations: allTransformations,
@@ -996,10 +1134,88 @@ export function matchBytecode(
 	}
 
 	// No match found
+	return noMatch()
+}
+
+function noMatch(): BytecodeMatchResult {
 	return {
 		match: null,
 		transformations: [],
 		transformationValues: {},
 		message: 'Bytecodes do not match after all transformations',
+	}
+}
+
+function constructorArgumentsMismatch(): BytecodeMatchResult {
+	return {
+		match: null,
+		transformations: [],
+		transformationValues: {},
+		message:
+			'Creation input after the compiled bytecode is not ABI-encoded constructor arguments',
+	}
+}
+
+/**
+ * Partial creation match: the onchain creation input must start with the recompiled
+ * creation bytecode minus its trailing auxdata, carry well-formed auxdata of the same
+ * length in its place, and end with ABI-encoded constructor arguments.
+ */
+function matchCreationIgnoringAuxdata(options: {
+	onchainBytecode: string
+	populatedBytecode: string
+	auxdataStyle: AuxdataStyle
+	abi: MatchBytecodeOptions['abi']
+	transformations: Transformation[]
+	transformationValues: TransformationValues
+	libraryMap: Record<string, string>
+}): BytecodeMatchResult {
+	const { onchainBytecode, populatedBytecode, auxdataStyle, abi, libraryMap } =
+		options
+	const recompiledSplit = splitAuxdata(populatedBytecode, auxdataStyle)
+	if (
+		recompiledSplit.auxdata === null ||
+		recompiledSplit.executionBytecode.replace(/^0x/i, '') === '' ||
+		onchainBytecode.length < populatedBytecode.length
+	)
+		return noMatch()
+
+	// The onchain counterpart of the recompiled bytecode, auxdata included, before the arguments.
+	const onchainCompiledPart = onchainBytecode.slice(0, populatedBytecode.length)
+	const onchainSplit = splitAuxdata(onchainCompiledPart, auxdataStyle)
+	if (
+		onchainSplit.auxdata === null ||
+		onchainSplit.executionBytecode.toLowerCase() !==
+			recompiledSplit.executionBytecode.toLowerCase()
+	)
+		return noMatch()
+
+	const constructorResult = extractConstructorArgumentsTransformation(
+		populatedBytecode,
+		onchainBytecode,
+		abi ?? [],
+	)
+	if (!constructorResult.valid) return constructorArgumentsMismatch()
+
+	const auxdataOffset = (recompiledSplit.executionBytecode.length - 2) / 2
+	const transformations: Transformation[] = [
+		...options.transformations,
+		{ type: 'replace', reason: 'cborAuxdata', offset: auxdataOffset, id: '1' },
+		...constructorResult.transformations,
+	]
+	const transformationValues: TransformationValues = {
+		...options.transformationValues,
+		...constructorResult.transformationValues,
+		cborAuxdata: {
+			...options.transformationValues.cborAuxdata,
+			'1': `0x${onchainCompiledPart.slice(recompiledSplit.executionBytecode.length)}`,
+		},
+	}
+
+	return {
+		match: 'match',
+		transformations,
+		transformationValues,
+		libraryMap: Object.keys(libraryMap).length > 0 ? libraryMap : undefined,
 	}
 }

@@ -51,13 +51,13 @@ async function getJobRow(jobId: string) {
 	return rows.at(0) ?? null
 }
 
-function makeContainerStub() {
+function makeContainerStub(output: unknown = counterFixture.solcOutput) {
 	return {
 		getContainer: () => ({
 			fetch: async (request: Request) => {
 				const url = new URL(request.url)
 				if (request.method === 'POST' && url.pathname === '/compile') {
-					return Response.json(counterFixture.solcOutput, { status: 200 })
+					return Response.json(output, { status: 200 })
 				}
 				throw new Error(
 					`Unexpected container request: ${request.method} ${url.pathname}`,
@@ -125,6 +125,116 @@ describe('runVerificationJob – creation tx metadata success', () => {
 		expect(dep.transactionIndex).toBe(7)
 		expect(dep.deployer).not.toBeNull()
 		expect(dep.transactionHash).not.toBeNull()
+	})
+})
+
+describe('runVerificationJob – creation bytecode matching', () => {
+	const txHash =
+		'0x00000000000000000000000000000000000000000000000000000000000000c1' as const
+	const initcode = `0x${counterFixture.solcOutput.contracts['Counter.sol'].Counter.evm.bytecode.object}`
+	const constructorArguments = `${'00'.repeat(31)}05`
+
+	async function verifyWithCreationInput(
+		input: string,
+		jobFields: Partial<Parameters<typeof runVerificationJob>[1]> = {
+			creationTransactionHash: txHash,
+		},
+		compileOutput: unknown = counterFixture.solcOutput,
+	) {
+		const jobId = globalThis.crypto.randomUUID()
+		await insertJobRow(jobId)
+		await runVerificationJob(
+			env,
+			{ ...JOB_DEFAULTS, jobId, ...jobFields },
+			{
+				createPublicClient: () => ({
+					getCode: async () => counterFixture.onchainRuntimeBytecode,
+					getTransactionReceipt: async () => ({
+						status: 'success' as const,
+						transactionHash: txHash,
+						blockNumber: 42n,
+						transactionIndex: 0,
+						from: '0x00000000000000000000000000000000000000aa' as const,
+						contractAddress: counterFixture.address,
+					}),
+					getTransaction: async () => ({ input: input as Hex.Hex, to: null }),
+				}),
+				...makeContainerStub(compileOutput),
+			},
+		)
+		const job = await getJobRow(jobId)
+		expect(job?.errorCode).toBeNull()
+		const db = drizzle(env.CONTRACTS_DB)
+		const [verified] = await db
+			.select()
+			.from(DB.verifiedContractsTable)
+			.where(eq(DB.verifiedContractsTable.id, job?.verifiedContractId ?? -1))
+		if (!verified) throw new Error('expected verified contract row')
+		return verified
+	}
+
+	it('records an exact creation match with its constructor arguments', async () => {
+		const verified = await verifyWithCreationInput(
+			`${initcode}${constructorArguments}`,
+		)
+		expect(verified.creationMatch).toBe(true)
+		expect(verified.creationMetadataMatch).toBe(true)
+		expect(JSON.parse(verified.creationValues ?? '{}')).toEqual({
+			constructorArguments: `0x${constructorArguments}`,
+		})
+	})
+
+	it.each([
+		{ name: 'omits the hash', resubmission: {} },
+		{
+			name: 'submits an unrelated hash',
+			resubmission: { creationTransactionHash: `0x${'ee'.repeat(32)}` },
+		},
+	])('re-proves the creation from the recorded transaction when a resubmission $name', async ({
+		resubmission,
+	}) => {
+		const input = `${initcode}${constructorArguments}`
+		// Different metadata hash: runtime and creation match only partially.
+		const partialOutput = structuredClone(counterFixture.solcOutput) as {
+			contracts: Record<
+				string,
+				Record<string, { evm: Record<string, { object: string }> }>
+			>
+		}
+		const counter = partialOutput.contracts['Counter.sol']?.Counter?.evm
+		if (!counter) throw new Error('expected Counter output')
+		// Flip the first byte of the IPFS metadata digest, keeping the auxdata well formed.
+		for (const code of [counter.bytecode, counter.deployedBytecode])
+			if (code)
+				code.object = code.object.replace(
+					/(6970667358221220)([0-9a-f]{2})/,
+					(_, marker: string, byte: string) =>
+						`${marker}${(Number.parseInt(byte, 16) ^ 0xff).toString(16).padStart(2, '0')}`,
+				)
+		const first = await verifyWithCreationInput(
+			input,
+			{ creationTransactionHash: txHash },
+			partialOutput,
+		)
+		expect(first.runtimeMetadataMatch).toBe(false)
+		expect(first.creationMatch).toBe(true)
+		expect(first.creationMetadataMatch).toBe(false)
+
+		// The exact sources, without the right creation hash: the recorded transaction re-proves it.
+		const exact = await verifyWithCreationInput(input, resubmission)
+		expect(exact.id).toBe(first.id)
+		expect(exact.runtimeMetadataMatch).toBe(true)
+		expect(exact.creationMatch).toBe(true)
+		expect(exact.creationMetadataMatch).toBe(true)
+	})
+
+	it('records no creation match when the creation input carries unexplained bytes', async () => {
+		const verified = await verifyWithCreationInput(
+			`${initcode}${constructorArguments}ff`,
+		)
+		expect(verified.runtimeMatch).toBe(true)
+		expect(verified.creationMatch).toBe(false)
+		expect(verified.creationMetadataMatch).toBeNull()
 	})
 })
 

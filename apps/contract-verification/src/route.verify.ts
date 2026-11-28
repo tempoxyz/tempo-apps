@@ -36,6 +36,7 @@ import {
 	getVyperAuxdataStyle,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
+import { creationMatchColumns } from '#lib/creation-match.ts'
 import type { AppEnv } from '#index.tsx'
 import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
@@ -379,9 +380,11 @@ verifyRoute
 				const runtimeMatch = existing?.runtimeMetadataMatch
 					? 'exact matches'
 					: 'match'
-				const creationMatch = existing?.creationMetadataMatch
-					? 'exact matches'
-					: 'match'
+				const creationMatch = existing?.creationMatch
+					? existing.creationMetadataMatch
+						? 'exact matches'
+						: 'match'
+					: 'no match'
 				return sourcifyError(
 					context,
 					409,
@@ -676,8 +679,10 @@ verifyRoute
 								? 'exact_match'
 								: 'match'
 							const creationMatchStatus = v.creationMatch
-								? 'exact_match'
-								: 'match'
+								? v.creationMetadataMatch
+									? 'exact_match'
+									: 'match'
+								: null
 
 							// Sourcify-compatible response format for completed jobs
 							return context.json({
@@ -736,7 +741,11 @@ verifyRoute
 					const runtimeMatchStatus = v.runtimeMetadataMatch
 						? 'exact_match'
 						: 'match'
-					const creationMatchStatus = v.creationMatch ? 'exact_match' : 'match'
+					const creationMatchStatus = v.creationMatch
+						? v.creationMetadataMatch
+							? 'exact_match'
+							: 'match'
+						: null
 
 					// Sourcify-compatible response format for completed jobs
 					return context.json({
@@ -781,6 +790,25 @@ verifyRoute
 		}
 	})
 
+async function recordedCreationTransactionHash(
+	db: ReturnType<typeof getDb>,
+	chainId: number,
+	address: Uint8Array,
+): Promise<Hex.Hex | undefined> {
+	const [deployment] = await db
+		.select({ transactionHash: contractDeploymentsTable.transactionHash })
+		.from(contractDeploymentsTable)
+		.where(
+			and(
+				eq(contractDeploymentsTable.chainId, chainId),
+				eq(contractDeploymentsTable.address, address),
+			),
+		)
+		.limit(1)
+	const hash = deployment?.transactionHash
+	return hash ? Hex.fromBytes(new Uint8Array(hash as ArrayBuffer)) : undefined
+}
+
 function exactVerifications(
 	db: ReturnType<typeof getDb>,
 	chainId: number,
@@ -791,6 +819,7 @@ function exactVerifications(
 			.select({
 				// SQLite takes the other selected verification fields from this minimum's row.
 				matchId: min(verifiedContractsTable.id),
+				creationMatch: verifiedContractsTable.creationMatch,
 				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 				deployment: contractDeploymentsTable,
@@ -1228,16 +1257,34 @@ async function runVerificationJob(
 			return
 		}
 
+		// A recorded creation transaction is immutable, so it wins over a submitted hash: a
+		// resubmission (with no hash, or a wrong one) never loses a creation match proven earlier.
+		const creationTransactionHash =
+			(await recordedCreationTransactionHash(db, chainId, addressBytes)) ??
+			sanitizedBody.creationTransactionHash
+
 		// Only matched source submissions may trigger optional factory tracing.
-		const creationTransactionMetadata = sanitizedBody.creationTransactionHash
+		const creationTransactionMetadata = creationTransactionHash
 			? await getCreationTransactionMetadata({
-					creationTransactionHash: sanitizedBody.creationTransactionHash,
+					creationTransactionHash,
 					address,
 					chainId,
 					client,
 					logContext: { jobId },
 				})
 			: null
+
+		// Match the deployment's initcode too, as Sourcify does, so constructor arguments are bound to the sources.
+		const creationColumns = creationMatchColumns({
+			onchainCreationBytecode: creationTransactionMetadata?.creationBytecode,
+			recompiledCreationBytecode: creationBytecodeRaw,
+			linkReferences: isVyper
+				? undefined
+				: compiledContract.evm.bytecode.linkReferences,
+			auxdataStyle,
+			abi: compiledContract.abi,
+		})
+		const creationMatched = creationColumns.creationMatch
 
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 		const auditUser = 'verification-api'
@@ -1599,6 +1646,7 @@ async function runVerificationJob(
 			.select({
 				id: verifiedContractsTable.id,
 				compilationId: verifiedContractsTable.compilationId,
+				creationMatch: verifiedContractsTable.creationMatch,
 				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
 			})
@@ -1625,14 +1673,31 @@ async function runVerificationJob(
 				.update(verifiedContractsTable)
 				.set({
 					compilationId,
-					creationMatch: false,
-					creationValues: null,
-					creationTransformations: null,
-					creationMetadataMatch: null,
+					// Keep a creation match proven for this compilation when this submission could not re-prove it.
+					...(creationMatched ||
+					existingVerification.compilationId !== compilationId
+						? creationColumns
+						: {}),
 					runtimeMatch: true,
 					runtimeMetadataMatch: true,
 					runtimeValues,
 					runtimeTransformations,
+					updatedAt: new Date().toISOString(),
+					updatedBy: auditUser,
+				})
+				.where(eq(verifiedContractsTable.id, existingVerification.id))
+			verifiedContractId = existingVerification.id
+		} else if (
+			existingVerification &&
+			creationMatched &&
+			!existingVerification.creationMatch &&
+			existingVerification.compilationId === compilationId
+		) {
+			// Same partial compilation, now with its creation input matched as well.
+			await db
+				.update(verifiedContractsTable)
+				.set({
+					...creationColumns,
 					updatedAt: new Date().toISOString(),
 					updatedBy: auditUser,
 				})
@@ -1646,7 +1711,7 @@ async function runVerificationJob(
 				.values({
 					deploymentId,
 					compilationId,
-					creationMatch: false,
+					...creationColumns,
 					runtimeMatch: true,
 					runtimeMetadataMatch: isExactMatch,
 					runtimeValues,

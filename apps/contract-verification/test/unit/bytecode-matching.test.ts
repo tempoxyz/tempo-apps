@@ -353,6 +353,33 @@ describe('extractImmutablesTransformation', () => {
 })
 
 describe('extractLibrariesTransformation', () => {
+	it('rejects one library linked at two different addresses', () => {
+		const fqn = 'contracts/Math.sol:MathLib'
+		const placeholder = `__$${keccakString(fqn).slice(2, 36)}$__`
+		const linkReferences: LinkReferences = {
+			'contracts/Math.sol': {
+				MathLib: [
+					{ start: 5, length: 20 },
+					{ start: 25, length: 20 },
+				],
+			},
+		}
+		const recompiled = `0x6080604052${placeholder}${placeholder}`
+		const onchain = `0x6080604052${'aa'.repeat(20)}${'bb'.repeat(20)}`
+
+		expect(() =>
+			extractLibrariesTransformation(recompiled, onchain, linkReferences),
+		).toThrow('conflicting addresses')
+		expect(
+			matchBytecode({
+				onchainBytecode: onchain,
+				recompiledBytecode: recompiled,
+				isCreation: true,
+				linkReferences,
+			}).match,
+		).toBeNull()
+	})
+
 	it('extracts single library reference with post-v0.5.0 placeholder', () => {
 		const linkReferences: LinkReferences = {
 			'contracts/Math.sol': {
@@ -511,6 +538,53 @@ describe('extractConstructorArgumentsTransformation', () => {
 
 		expect(result.constructorArguments).toBeNull()
 		expect(result.transformations).toHaveLength(0)
+		expect(result.valid).toBe(true)
+	})
+
+	describe('canonical layout', () => {
+		const abi = [
+			{ type: 'constructor', inputs: [{ type: 'bytes[]', name: 'blobs' }] },
+		]
+		const word = (hex: string) => hex.padStart(64, '0')
+		const check = (args: string) =>
+			extractConstructorArgumentsTransformation(
+				'0x6080604052',
+				`0x6080604052${args}`,
+				abi,
+			).valid
+
+		it('accepts canonically encoded dynamic arrays', () => {
+			const blob = `${word('1')}${'ab'.padEnd(64, '0')}`
+			expect(
+				check(
+					[word('20'), word('2'), word('40'), word('80'), blob, blob].join(''),
+				),
+			).toBe(true)
+			expect(check([word('20'), word('0')].join(''))).toBe(true)
+		})
+
+		it('rejects offsets that alias one tail', () => {
+			const blob = `${word('1')}${'ab'.padEnd(64, '0')}`
+			expect(
+				check([word('20'), word('2'), word('40'), word('40'), blob].join('')),
+			).toBe(false)
+		})
+
+		it('rejects element counts larger than the input', () => {
+			expect(check([word('20'), word('ffffff')].join(''))).toBe(false)
+		})
+	})
+
+	it('rejects missing arguments for a constructor with inputs', () => {
+		const abi = [
+			{ type: 'constructor', inputs: [{ type: 'uint256', name: 'value' }] },
+		]
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			'0x6080604052',
+			abi,
+		)
+		expect(result.valid).toBe(false)
 	})
 
 	it('handles missing constructor in ABI', () => {
@@ -527,6 +601,185 @@ describe('extractConstructorArgumentsTransformation', () => {
 
 		expect(result.constructorArguments).toBe('0x60001234')
 		expect(result.transformations).toHaveLength(0)
+		expect(result.valid).toBe(false)
+	})
+
+	it('decodes struct and struct-array constructor inputs', () => {
+		const abi = [
+			{
+				type: 'constructor',
+				inputs: [
+					{
+						type: 'tuple',
+						name: 'config',
+						components: [
+							{ type: 'address', name: 'owner' },
+							{ type: 'uint256', name: 'cap' },
+						],
+					},
+					{
+						type: 'tuple[]',
+						name: 'routes',
+						components: [{ type: 'uint8', name: 'id' }],
+					},
+				],
+			},
+		]
+		const word = (hex: string) => hex.padStart(64, '0')
+		const args = [
+			word('deadbeef'),
+			word('64'),
+			word('60'),
+			word('2'),
+			word('1'),
+			word('2'),
+		].join('')
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${args}`,
+			abi,
+		)
+		expect(result.valid).toBe(true)
+		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
+	})
+
+	it('ignores struct field names when validating arguments', () => {
+		const abi = [
+			{
+				type: 'constructor',
+				inputs: [
+					{
+						type: 'tuple',
+						name: 'config',
+						components: [
+							{ type: 'uint256', name: '__proto__' },
+							{ type: 'uint256', name: 'constructor' },
+						],
+					},
+				],
+			},
+		]
+		const args = `${'1'.padStart(64, '0')}${'2'.padStart(64, '0')}`
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${args}`,
+			abi,
+		)
+		expect(result.valid).toBe(true)
+	})
+
+	it('accepts string arguments that begin with a NUL byte', () => {
+		const abi = [
+			{
+				type: 'constructor',
+				inputs: [
+					{ type: 'string', name: 'label' },
+					{ type: 'string[]', name: 'tags' },
+				],
+			},
+		]
+		const word = (hex: string) => hex.padStart(64, '0')
+		const args = [
+			word('40'),
+			word('80'),
+			word('2'),
+			'0041'.padEnd(64, '0'),
+			word('1'),
+			word('20'),
+			word('1'),
+			'00'.padEnd(64, '0'),
+		].join('')
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${args}`,
+			abi,
+		)
+		expect(result.valid).toBe(true)
+	})
+
+	it('rejects trailing bytes that do not re-encode as the constructor inputs', () => {
+		const abi = [
+			{ type: 'constructor', inputs: [{ type: 'bool', name: 'flag' }] },
+		]
+		const result = extractConstructorArgumentsTransformation(
+			'0x6080604052',
+			`0x6080604052${'00'.repeat(31)}02`,
+			abi,
+		)
+		expect(result.valid).toBe(false)
+	})
+})
+
+describe('matchBytecode creation input', () => {
+	const abi = [
+		{ type: 'constructor', inputs: [{ type: 'uint256', name: 'value' }] },
+	]
+	const ipfsAuxdata = (fill: string) => {
+		const cbor = Hex.fromBytes(
+			CBOR.encode({
+				ipfs: Hex.toBytes(`0x1220${fill.repeat(32)}`),
+				solc: Hex.toBytes('0x000814'),
+			}),
+		).slice(2)
+		return `${cbor}${(cbor.length / 2).toString(16).padStart(4, '0')}`
+	}
+	const args = `${'00'.repeat(31)}64`
+	const recompiled = `0x6080604052${ipfsAuxdata('aa')}`
+
+	it('exact-matches initcode followed by its constructor arguments', () => {
+		const result = matchBytecode({
+			onchainBytecode: `${recompiled}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBe('exact_match')
+		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
+	})
+
+	it('partially matches when only the auxdata differs, still binding the arguments', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${ipfsAuxdata('bb')}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBe('match')
+		expect(result.transformationValues.constructorArguments).toBe(`0x${args}`)
+		expect(result.transformations.map((t) => t.reason)).toStrictEqual([
+			'cborAuxdata',
+			'constructorArguments',
+		])
+	})
+
+	it('rejects trailing data when the constructor takes no arguments', () => {
+		const result = matchBytecode({
+			onchainBytecode: `${recompiled}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi: [{ type: 'constructor', inputs: [] }],
+		})
+		expect(result.match).toBeNull()
+	})
+
+	it('rejects malformed constructor arguments on a partial match', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${ipfsAuxdata('bb')}${args}00`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBeNull()
+	})
+
+	it('does not ignore differing code that follows a matching prefix', () => {
+		const result = matchBytecode({
+			onchainBytecode: `0x6080604052${'ff'.repeat(ipfsAuxdata('aa').length / 2)}${args}`,
+			recompiledBytecode: recompiled,
+			isCreation: true,
+			abi,
+		})
+		expect(result.match).toBeNull()
 	})
 })
 

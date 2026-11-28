@@ -145,6 +145,7 @@ async function insertVerifiedContractFixture(opts?: {
 	metadata?: unknown
 	runtimeMetadataMatch?: boolean
 	creationMetadataMatch?: boolean
+	creationMatch?: boolean
 	withTransformations?: boolean
 	withSignatures?: boolean
 	creationSourceMap?: string
@@ -307,9 +308,12 @@ async function insertVerifiedContractFixture(opts?: {
 	await db.insert(DB.verifiedContractsTable).values({
 		deploymentId,
 		compilationId,
-		creationMatch: true,
+		creationMatch: opts?.creationMatch ?? true,
 		runtimeMatch: true,
-		creationMetadataMatch: opts?.creationMetadataMatch ?? true,
+		creationMetadataMatch:
+			opts?.creationMatch === false
+				? null
+				: (opts?.creationMetadataMatch ?? true),
 		runtimeMetadataMatch: opts?.runtimeMetadataMatch ?? true,
 		...(opts?.withTransformations
 			? {
@@ -359,6 +363,18 @@ describe('GET /v2/contract/:chainId/:address – verified contract responses', (
 	// -----------------------------------------------------------------------
 	// Minimal / default response shape
 	// -----------------------------------------------------------------------
+	it('reports a creation bytecode that was never matched as null', async () => {
+		await insertVerifiedContractFixture({ creationMatch: false })
+
+		const res = await app.request(`/v2/contract/${chainId}/${address}`, {}, env)
+		expect(res.status).toBe(200)
+
+		const body = (await res.json()) as Record<string, unknown>
+		expect(body).toHaveProperty('match', 'exact_match')
+		expect(body).toHaveProperty('runtimeMatch', 'exact_match')
+		expect(body).toHaveProperty('creationMatch', null)
+	})
+
 	it('returns minimal response by default (no fields/omit)', async () => {
 		const { matchId } = await insertVerifiedContractFixture()
 

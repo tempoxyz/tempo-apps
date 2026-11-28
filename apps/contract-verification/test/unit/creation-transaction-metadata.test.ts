@@ -31,7 +31,9 @@ const expected = {
 	blockNumber: Number(receipt.blockNumber),
 	transactionIndex: 0,
 	deployer: Hex.toBytes(deployer),
+	creationBytecode: null,
 }
+const initcode = '0x6080604052aabb'
 
 describe('getCreationTransactionMetadata', () => {
 	it('accepts the real viem public client without widening its RPC methods', () => {
@@ -50,6 +52,53 @@ describe('getCreationTransactionMetadata', () => {
 				},
 			}),
 		).toEqual(expected)
+	})
+
+	describe('onchain initcode', () => {
+		it('returns the input of a direct creation transaction', async () => {
+			expect(
+				await metadata({
+					getTransaction: async () => ({ input: '0x6080604052AABB', to: null }),
+				}),
+			).toEqual({ ...expected, creationBytecode: initcode })
+		})
+
+		it('ignores the input of a transaction with a recipient', async () => {
+			expect(
+				await metadata({
+					getTransaction: async () => ({ input: initcode, to: factory }),
+				}),
+			).toEqual(expected)
+		})
+
+		it('keeps the creation proof when the transaction cannot be read', async () => {
+			expect(
+				await metadata({
+					getTransaction: async () => {
+						throw new Error('unavailable')
+					},
+				}),
+			).toEqual(expected)
+		})
+
+		it('returns the traced creation frame input for a factory creation', async () => {
+			expect(
+				await metadata(
+					traced({ ...call, calls: [{ ...creation, input: initcode }] }),
+				),
+			).toEqual({ ...expected, creationBytecode: initcode })
+		})
+
+		it.each([
+			undefined,
+			42,
+			'0x',
+			'0x608',
+		])('returns no initcode for a malformed frame input %s', async (input) => {
+			expect(
+				await metadata(traced({ ...call, calls: [{ ...creation, input }] })),
+			).toEqual(expected)
+		})
 	})
 
 	describe('stored runtime binding', () => {

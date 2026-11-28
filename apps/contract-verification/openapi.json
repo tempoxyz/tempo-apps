@@ -1904,17 +1904,17 @@
 													"title": "VerifiedContractMinimal",
 													"properties": {
 														"match": {
-															"type": "string",
+															"type": ["string", "null"],
 															"enum": ["match", "exact_match", null],
 															"title": "VerificationStatusNullable"
 														},
 														"creationMatch": {
-															"type": "string",
+															"type": ["string", "null"],
 															"enum": ["match", "exact_match", null],
 															"title": "VerificationStatusNullable"
 														},
 														"runtimeMatch": {
-															"type": "string",
+															"type": ["string", "null"],
 															"enum": ["match", "exact_match", null],
 															"title": "VerificationStatusNullable"
 														},
@@ -3632,17 +3632,17 @@
 									"title": "VerifiedContractMinimal",
 									"properties": {
 										"match": {
-											"type": "string",
+											"type": ["string", "null"],
 											"enum": ["match", "exact_match", null],
 											"title": "VerificationStatusNullable"
 										},
 										"creationMatch": {
-											"type": "string",
+											"type": ["string", "null"],
 											"enum": ["match", "exact_match", null],
 											"title": "VerificationStatusNullable"
 										},
 										"runtimeMatch": {
-											"type": "string",
+											"type": ["string", "null"],
 											"enum": ["match", "exact_match", null],
 											"title": "VerificationStatusNullable"
 										},
@@ -4109,17 +4109,17 @@
 												"title": "VerifiedContractMinimal",
 												"properties": {
 													"match": {
-														"type": "string",
+														"type": ["string", "null"],
 														"enum": ["match", "exact_match", null],
 														"title": "VerificationStatusNullable"
 													},
 													"creationMatch": {
-														"type": "string",
+														"type": ["string", "null"],
 														"enum": ["match", "exact_match", null],
 														"title": "VerificationStatusNullable"
 													},
 													"runtimeMatch": {
-														"type": "string",
+														"type": ["string", "null"],
 														"enum": ["match", "exact_match", null],
 														"title": "VerificationStatusNullable"
 													},
