@@ -79,19 +79,35 @@ jobs:
       wrangler-config: dist/fee_payer/wrangler.json
       build-command: CLOUDFLARE_ENV=mainnet pnpm build
 
+  # The Worker is `contracts`. The trusted build also builds the verification
+  # Container's image and pushes it to the private
+  # docker.io/tempoxyz/verification-container, with a token from Docker STS
+  # that it requests right before the image build and revokes when the job
+  # ends. The image compiles solar from source (about 3 minutes on today's
+  # runners), hence the longer timeout.
   deploy-contract-verification:
     permissions:
-      actions: read
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Contract Verification
     needs: verify
-    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: contract-verification
-      environments: '[""]'
-      sts-policy: deploy-contract-verification
-      sts-ttl: 30m
-      deploy-timeout-minutes: 25
+      worker: contracts
+      wrangler-config: dist/contracts/wrangler.json
+      build-command: pnpm build
+      publish-container-image: true
+      # tempoxyz/docker-sts's policies/tempo-apps-1088411362/
+      # publish-contract-verification.json: push to verification-container only,
+      # plus public pulls for the Dockerfile's base images. It names the builder
+      # commit deploy-broker.yml pins, so moving that pin needs a policy change
+      # first.
+      docker-sts-policy: publish-contract-verification
+      build-timeout-minutes: 30
 
   deploy-key-manager:
     permissions:

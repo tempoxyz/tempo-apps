@@ -54,7 +54,7 @@ async function temporaryWranglerFileWorkaround() {
 	const temporaryWranglerConfig = structuredClone(wranglerJSON)
 	const problematicWranglerFields = [
 		'containers',
-		'migrations',
+		'exports',
 		'durable_objects',
 	] as const
 

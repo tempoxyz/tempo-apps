@@ -1,17 +1,29 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"name": "contracts",
+	"account_id": "ba6ee3674b03f08481e57ff9992c601e",
 	"compatibility_date": "2026-03-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.tsx",
-	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
 	"logpush": true,
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
+	"routes": [
+		{
+			"pattern": "contracts.tempo.xyz",
+			"custom_domain": true
+		}
+	],
 	"vars": {
 		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev",
 		"CHAINS_CONFIG_URL": "",
-		"CHAINS_CONFIG_AUTH_TOKEN": ""
+		"CHAINS_CONFIG_AUTH_TOKEN": "",
+		"NODE_ENV": "production",
+		"ENVIRONMENT": "production",
+		"CLOUDFLARE_D1_ENVIRONMENT": "remote"
 	},
 	"ratelimits": [
 		{
@@ -52,16 +64,16 @@
 			}
 		]
 	},
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": ["VerificationContainer"]
+	"exports": {
+		"VerificationContainer": {
+			"type": "durable-object",
+			"storage": "sqlite"
 		},
-		{
-			"tag": "v2",
-			"new_sqlite_classes": ["VerificationJobRunner"]
+		"VerificationJobRunner": {
+			"type": "durable-object",
+			"storage": "sqlite"
 		}
-	],
+	},
 	"observability": {
 		"enabled": true,
 		"logs": {

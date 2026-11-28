@@ -28,6 +28,21 @@ on:
         type: string
         default: ''
         description: 'Command run in apps/<app> before packaging, without credentials'
+      publish-container-image:
+        required: false
+        type: boolean
+        default: false
+        description: "Build the Wrangler config's Container image and push it to docker.io/tempoxyz/<container name>"
+      docker-sts-policy:
+        required: false
+        type: string
+        default: ''
+        description: 'Docker STS policy whose short-lived token pushes the image; required with publish-container-image'
+      build-timeout-minutes:
+        required: false
+        type: number
+        default: 15
+        description: 'Timeout of the build job, from 1 to 120 minutes'
     secrets:
       build-environment:
         required: false
@@ -199,7 +214,9 @@ jobs:
     needs: changes
     # The broker admits only main, so a manual run from another branch skips.
     if: needs.changes.outputs.relevant == 'true' && github.ref == 'refs/heads/main'
-    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@03ac7bc04e3e892d2b874d0a4e5e4ea7b484d414 # 2026-11-27T23-20-25Z-03ac7bc0
+    # tempoxyz/docker-sts's publish-contract-verification names this exact
+    # commit as its jobRef: move the policy first when bumping it.
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@51484966ac885a59077b0aca4431c9fb962767a8 # 2026-11-28T19-44-43Z-51484966
     secrets:
       build-environment: ${{ secrets.build-environment }}
     with:
@@ -208,6 +225,9 @@ jobs:
       build-command: ${{ inputs.build-command }}
       wrangler-config: ${{ inputs.wrangler-config }}
       artifact-name: ${{ inputs.worker || inputs.app }}
+      publish-container-image: ${{ inputs.publish-container-image }}
+      docker-sts-policy: ${{ inputs.docker-sts-policy }}
+      timeout-minutes: ${{ inputs.build-timeout-minutes }}
 
   deploy:
     permissions:
