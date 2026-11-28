@@ -1,0 +1,180 @@
+name: Preview deploy
+
+# Deploys each pull request as a Cloudflare Preview, pr-<number>, of eight
+# production Workers through the Cloudflare Deploy Broker, posts the links, and
+# deletes the Previews when the pull request closes. No job holds a Cloudflare
+# credential: deploy-preview.yml builds with the trusted build, and the broker
+# deploys each artifact only as that pull request's Preview of its Worker, never
+# as a version. Each Preview binds its Worker's production bindings (rate
+# limits, R2 buckets, the browser binding) and the secrets of the Worker's
+# Previews Base configuration that its `<worker>-pr-preview` policy entry
+# lists. reth-snapshots-viewer (an EU bucket) still uploads preview versions
+# through preview-build.yml and preview.yml. fee-payer-moderato gets no
+# Preview: its preview URLs are off, so its preview versions were never
+# reachable, and pull-request.yml still builds it.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, closed]
+
+permissions: {}
+
+# One run per pull request at a time, never cancelled: the broker finishes work
+# a cancelled job started, so an overlapping deploy could recreate a deleted
+# Preview. A newer pending run replaces an older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  # GitHub issues no OIDC token to pull requests from forks, and bots such as
+  # Dependabot get no secrets, so neither gets a Preview, as before.
+  deploy:
+    permissions:
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    name: Preview (${{ matrix.worker }})
+    if: >-
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The explorer's production build for each network, without its
+          # custom domains.
+          - app: explorer
+            env: testnet
+            worker: explorer-testnet
+            wrangler-config: dist/server/wrangler.json
+            build-command: EXPLORER_PREVIEW=1 CLOUDFLARE_ENV=testnet bash scripts/build.sh
+          - app: explorer
+            env: mainnet
+            worker: explorer-mainnet
+            wrangler-config: dist/server/wrangler.json
+            build-command: EXPLORER_PREVIEW=1 CLOUDFLARE_ENV=mainnet bash scripts/build.sh
+          - app: explorer
+            env: devnet
+            worker: explorer-devnet
+            wrangler-config: dist/server/wrangler.json
+            build-command: EXPLORER_PREVIEW=1 CLOUDFLARE_ENV=devnet bash scripts/build.sh
+          - app: explorer
+            env: nextfork
+            worker: explorer-nextfork
+            wrangler-config: dist/server/wrangler.json
+            build-command: EXPLORER_PREVIEW=1 CLOUDFLARE_ENV=nextfork bash scripts/build.sh
+          - app: explorer
+            env: zone-prover
+            worker: explorer-zone-prover
+            wrangler-config: dist/server/wrangler.json
+            build-command: EXPLORER_PREVIEW=1 CLOUDFLARE_ENV=zone-prover bash scripts/build.sh
+          # Each preview environment is the production config without routes
+          # or crons.
+          - app: og
+            worker: og
+            wrangler-config: wrangler.json
+            wrangler-environment: preview
+          - app: tokenlist
+            worker: tokenlist
+            wrangler-config: dist/tokenlist/wrangler.json
+            build-command: CLOUDFLARE_ENV=preview WRANGLER_CONFIG_PATH=wrangler.prd.json pnpm build
+          - app: tempo-snapshots-viewer
+            worker: tempo-snapshots-viewer
+            wrangler-config: wrangler.prd.json
+            wrangler-environment: preview
+    uses: ./.github/workflows/deploy-preview.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    # Only the explorer's smoke test reads these, to pass Cloudflare Access.
+    secrets:
+      access-client-id: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_ID }}
+      access-client-secret: ${{ secrets.EXPLORER_PREVIEW_ACCESS_CLIENT_SECRET }}
+    with:
+      app: ${{ matrix.app }}
+      environment-label: ${{ matrix.env || '' }}
+      worker: ${{ matrix.worker }}
+      wrangler-config: ${{ matrix.wrangler-config }}
+      wrangler-environment: ${{ matrix.wrangler-environment || '' }}
+      build-command: ${{ matrix.build-command || '' }}
+      verify-explorer: ${{ matrix.app == 'explorer' }}
+
+  comment:
+    permissions:
+      contents: read
+      # The secure-runner action authenticates with an OIDC token.
+      id-token: write
+      pull-requests: write
+    name: Post Preview Table
+    needs: deploy
+    if: >-
+      always() &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download Preview results
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: preview-result-*
+          path: previews
+          merge-multiple: true
+
+      - name: Post Preview Table
+        if: hashFiles('previews/*.json') != ''
+        uses: ./.github/actions/post-deployment-table # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deployments-path: previews
+          marker: cloudflare-previews
+          title: Cloudflare Previews
+
+  # Cloudflare keeps a Preview until it's deleted. An unmerged pull request's
+  # run may delete only its own Preview; a merged one's closing run is main's,
+  # so it names the Preview. A Preview that was never created reports
+  # deleted: false.
+  delete:
+    permissions:
+      # The secure-runner action and the broker authenticate with an OIDC token.
+      id-token: write
+    name: Delete Preview (${{ matrix.worker }})
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        worker:
+          - explorer-testnet
+          - explorer-mainnet
+          - explorer-devnet
+          - explorer-nextfork
+          - explorer-zone-prover
+          - og
+          - tokenlist
+          - tempo-snapshots-viewer
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - name: Delete the Preview through the broker
+        uses: tempoxyz/gh-actions/actions/cloudflare-deploy-broker-delete-preview@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
+        with:
+          deployment-id: ${{ matrix.worker }}-pr-preview
+          account-id: ba6ee3674b03f08481e57ff9992c601e
+          worker-name: ${{ matrix.worker }}
+          preview-name: pr-${{ github.event.pull_request.number }}

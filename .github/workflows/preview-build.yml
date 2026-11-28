@@ -1,10 +1,13 @@
 name: Preview build
 
-# Builds each app's pull request preview with no Cloudflare credential and
-# uploads the result as an artifact. preview.yml then runs main's code on
-# `workflow_run`: it uploads these files, as data, as a preview version of the
-# app's production Worker with a short-lived Cloudflare STS token. Pull request
-# code never runs where a tempo-prd token is.
+# Builds the pull request preview of reth-snapshots-viewer with no Cloudflare
+# credential and uploads the result as an artifact. preview.yml then runs main's
+# code on `workflow_run`: it uploads these files, as data, as a preview version
+# of the production Worker with a short-lived Cloudflare STS token. Pull request
+# code never runs where a tempo-prd token is. The other apps' previews deploy
+# through the Cloudflare Deploy Broker (preview-deploy.yml), which can't bind
+# the viewer's EU-jurisdiction bucket yet. fee-payer-moderato gets no preview;
+# pull-request.yml builds it.
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
@@ -71,25 +74,9 @@ jobs:
       matrix:
         # Keep in step with preview.yml's matrix.
         include:
-          #### explorer
-          - app: explorer
-            env: testnet
-          - app: explorer
-            env: devnet
-          - app: explorer
-            env: nextfork
-          - app: explorer
-            env: zone-prover
-          - app: explorer
-            env: mainnet
-          #### fee-payer
-          - app: fee-payer
-            env: moderato
-          #### other (single-env-apps)
-          - app: og
+          # No Wrangler environment.
           - app: reth-snapshots-viewer
-          - app: tempo-snapshots-viewer
-          - app: tokenlist
+            env: ''
     env:
       NODE_ENV: production
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}
@@ -131,27 +118,7 @@ jobs:
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
         working-directory: apps/${{ matrix.app }}
-        env:
-          APP_NAME: ${{ matrix.app }}
-        run: |
-          if [[ "$APP_NAME" == "explorer" ]]; then
-            bash scripts/build.sh
-          else
-            pnpm build
-          fi
-
-      # fee-payer has no preview URL, so check the built Worker locally.
-      - name: Verify fee-payer starts
-        if: steps.changes.outputs.relevant == 'true' && matrix.app == 'fee-payer'
-        working-directory: apps/fee-payer
-        run: |
-          ./node_modules/.bin/wrangler dev --env-file .env.example --port 8787 \
-            --show-interactive-dev-session=false &
-          pid=$!
-          trap 'kill "$pid"' EXIT
-          curl --fail --silent --show-error \
-            --retry 10 --retry-all-errors --retry-delay 3 --max-time 20 \
-            --output /dev/null "http://localhost:8787/"
+        run: pnpm build
 
       # The modules Wrangler would upload (`deploy --dry-run` writes them
       # without contacting Cloudflare) and the static assets the app's config
