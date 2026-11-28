@@ -48,3 +48,5 @@ reth-snapshots-viewer/
 4. Modular snapshots expose component-size presets for minimal, full, and archive node bootstrapping.
 
 API endpoint: `/api/snapshots` returns the normalized snapshot list without raw manifest payloads.
+
+<!-- Temporary broker preview smoke test. -->
