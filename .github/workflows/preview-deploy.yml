@@ -1,6 +1,6 @@
 name: Preview deploy
 
-# Deploys each pull request as a Cloudflare Preview, pr-<number>, of eight
+# Deploys each pull request as a Cloudflare Preview, pr-<number>, of nine
 # production Workers through the Cloudflare Deploy Broker, posts the links, and
 # deletes the Previews when the pull request closes. No job holds a Cloudflare
 # credential: deploy-preview.yml builds with the trusted build, and the broker
@@ -8,10 +8,9 @@ name: Preview deploy
 # as a version. Each Preview binds its Worker's production bindings (rate
 # limits, R2 buckets, the browser binding) and the secrets of the Worker's
 # Previews Base configuration that its `<worker>-pr-preview` policy entry
-# lists. reth-snapshots-viewer (an EU bucket) still uploads preview versions
-# through preview-build.yml and preview.yml. fee-payer-moderato gets no
-# Preview: its preview URLs are off, so its preview versions were never
-# reachable, and pull-request.yml still builds it.
+# lists. fee-payer-moderato gets no Preview: its preview URLs are off, so the
+# preview versions uploaded to it were never reachable, and pull-request.yml
+# still builds it.
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review, closed]
@@ -85,6 +84,11 @@ jobs:
             worker: tempo-snapshots-viewer
             wrangler-config: wrangler.prd.json
             wrangler-environment: preview
+          # Binds the EU-jurisdiction reth-snapshots bucket, as production does.
+          - app: reth-snapshots-viewer
+            worker: reth-snapshots-viewer
+            wrangler-config: wrangler.prd.json
+            wrangler-environment: preview
     uses: ./.github/workflows/deploy-preview.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     # Only the explorer's smoke test reads these, to pass Cloudflare Access.
     secrets:
@@ -137,8 +141,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deployments-path: previews
-          marker: cloudflare-previews
-          title: Cloudflare Previews
 
   # Cloudflare keeps a Preview until it's deleted. An unmerged pull request's
   # run may delete only its own Preview; a merged one's closing run is main's,
@@ -167,6 +169,7 @@ jobs:
           - og
           - tokenlist
           - tempo-snapshots-viewer
+          - reth-snapshots-viewer
     steps:
       - name: Secure runner
         uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557

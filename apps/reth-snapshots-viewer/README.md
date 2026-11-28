@@ -24,7 +24,7 @@ pnpm --filter reth-snapshots-viewer dev  # Local development at http://localhost
 
 ## Deployment
 
-Pushes to `main` that touch this app deploy it to snapshots.reth.rs through the [Cloudflare Deploy Broker](https://github.com/tempoxyz/cloudflare-deploy-broker); CI holds no Cloudflare credentials. The broker only accepts a build that matches the `reth-snapshots-viewer` entry in [`cloudflare-deploy-policies`](https://github.com/tempoxyz/cloudflare-deploy-policies/blob/main/policies/tempoxyz/tempo-apps.yaml). New bindings, variables or domains need a policy change first.
+Pushes to `main` that touch this app deploy it to snapshots.reth.rs through the [Cloudflare Deploy Broker](https://github.com/tempoxyz/cloudflare-deploy-broker); CI holds no Cloudflare credentials. The broker only accepts a build that matches the `reth-snapshots-viewer` entry in [`cloudflare-deploy-policies`](https://github.com/tempoxyz/cloudflare-deploy-policies/blob/main/policies/tempoxyz/tempo-apps.yaml). New bindings, variables or domains need a policy change first. Pull requests deploy a Cloudflare Preview from `wrangler.prd.json`'s `preview` environment, which binds the same bucket.
 
 ## Project Structure
 
