@@ -57,8 +57,8 @@ env:
   WRANGLER_SEND_METRICS: false
 
 jobs:
-  # Previews only apps the pull request changes, as preview-build.yml did. A
-  # change to the root lockfile previews every app.
+  # Previews only apps the pull request changes. A change to the root lockfile
+  # previews every app.
   changes:
     permissions:
       contents: read
@@ -101,7 +101,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.relevant == 'true'
     # The broker accepts only attestations from a gh-actions release of this workflow.
-    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@03ac7bc04e3e892d2b874d0a4e5e4ea7b484d414 # 2026-11-27T23-20-25Z-03ac7bc0
     with:
       install-directory: .
       working-directory: apps/${{ inputs.app }}

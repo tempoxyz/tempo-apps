@@ -12,14 +12,6 @@ inputs:
     description: 'Pull request to comment on; defaults to the triggering pull request (a workflow_run has none)'
     required: false
     default: ''
-  marker:
-    description: 'Hidden marker of the comment this table updates, so separate workflows keep separate tables'
-    required: false
-    default: 'cloudflare-deployments'
-  title:
-    description: 'Heading of the table'
-    required: false
-    default: 'Cloudflare Deployments'
 
 runs:
   using: 'composite'
@@ -29,8 +21,6 @@ runs:
       env:
         DEPLOYMENTS_PATH: ${{ inputs.deployments-path }}
         PR_NUMBER: ${{ inputs.pr-number }}
-        MARKER: ${{ inputs.marker }}
-        TITLE: ${{ inputs.title }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
@@ -99,38 +89,37 @@ runs:
             tableRows.push(`| ${app} | ${env} | ${status} | ${preview} |`)
           }
 
-          const marker = `<!-- ${process.env.MARKER} -->`
-          let commentBody = `${marker}\n`
-          commentBody += `## ${process.env.TITLE}\n\n`
+          const marker = '<!-- cloudflare-deployments -->'
+          const legacyMarker = '<!-- cloudflare-previews -->'
+          let commentBody = marker + '\n'
+          commentBody += '## Cloudflare Deployments\n\n'
           commentBody += '| App | Environment | Status | Preview |\n'
           commentBody += '|-----|-------------|--------|---------|\n'
           commentBody += tableRows.join('\n') + '\n\n'
           commentBody += deployments.length === 0 ? '_No deployments found._' : ''
 
-          const { data: comments } = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: issueNumber,
-          })
-
-          const existingComment = comments.find(comment =>
-            comment.body.includes(marker)
+          const repository = { owner: context.repo.owner, repo: context.repo.repo }
+          const issue = { ...repository, issue_number: issueNumber }
+          const comments = await github.paginate(github.rest.issues.listComments, { ...issue, per_page: 100 })
+          const tables = comments.filter(comment =>
+            comment.user?.login === 'github-actions[bot]' &&
+            (comment.body?.startsWith(marker) || comment.body?.startsWith(legacyMarker))
           )
+          const currentTable = tables.find(comment => comment.body.startsWith(marker)) || tables[0]
 
-          if (existingComment) {
+          if (currentTable) {
             await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: existingComment.id,
+              ...repository,
+              comment_id: currentTable.id,
               body: commentBody
             })
             console.log('Updated existing deployment comment')
           } else {
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issueNumber,
-              body: commentBody
-            })
+            await github.rest.issues.createComment({ ...issue, body: commentBody })
             console.log('Created new deployment comment')
+          }
+
+          for (const table of tables) {
+            if (table.id === currentTable.id) continue
+            await github.rest.issues.deleteComment({ ...repository, comment_id: table.id })
           }

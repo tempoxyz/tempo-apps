@@ -34,5 +34,24 @@
 			"pattern": "snapshots.reth.rs",
 			"custom_domain": true
 		}
-	]
+	],
+	"env": {
+		"preview": {
+			"name": "reth-snapshots-viewer",
+			"routes": [],
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
+			},
+			"r2_buckets": [
+				{
+					"binding": "SNAPSHOTS",
+					"bucket_name": "reth-snapshots",
+					"jurisdiction": "eu"
+				}
+			],
+			"vars": {
+				"R2_PUBLIC_URL": "https://snapshots-r2.reth.rs"
+			}
+		}
+	}
 }
