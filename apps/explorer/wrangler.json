@@ -1,14 +1,15 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"account_id": "ba6ee3674b03f08481e57ff9992c601e",
 	"compatibility_date": "2026-03-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"version_metadata": {
 		"binding": "CF_VERSION_METADATA"
 	},
 	"main": "./src/index.server.ts",
-	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
+	"assets": { "binding": "ASSETS" },
 	"browser": { "binding": "BROWSER" },
 	"ratelimits": [
 		{
@@ -38,23 +39,21 @@
 			"routes": [
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.42431.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.testnet.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.moderato.tempo.xyz"
 				}
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "testnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_DSN": "https://89ff6ef6285db2411cf84ec6335e84f9@o4510262603481088.ingest.us.sentry.io/4510858123542529",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
@@ -112,12 +111,10 @@
 			"routes": [
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.31318.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.devnet.tempo.xyz"
 				}
 			],
@@ -170,7 +167,6 @@
 			"routes": [
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.zone-prover.devnet.tempo.xyz"
 				}
 			],
@@ -238,7 +234,6 @@
 			"routes": [
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.nextfork.devnet.tempo.xyz"
 				}
 			],
@@ -292,28 +287,25 @@
 			"routes": [
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.4217.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.mainnet.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.presto.tempo.xyz"
 				}
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "mainnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"

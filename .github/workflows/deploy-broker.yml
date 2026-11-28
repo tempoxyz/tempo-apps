@@ -28,6 +28,10 @@ on:
         type: string
         default: ''
         description: 'Command run in apps/<app> before packaging, without credentials'
+    secrets:
+      build-environment:
+        required: false
+        description: 'NAME=value lines exported only to build-command, such as a public client key the build compiles in'
 
 permissions: {}
 
@@ -195,7 +199,9 @@ jobs:
     needs: changes
     # The broker admits only main, so a manual run from another branch skips.
     if: needs.changes.outputs.relevant == 'true' && github.ref == 'refs/heads/main'
-    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@1a535d662a51f211d750307541069cb849535414 # 2026-11-19T07-33-38Z-1a535d66
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
+    secrets:
+      build-environment: ${{ secrets.build-environment }}
     with:
       install-directory: .
       working-directory: apps/${{ inputs.app }}
@@ -219,7 +225,7 @@ jobs:
         uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
 
       - name: Deploy through the broker
-        uses: tempoxyz/gh-actions/actions/cloudflare-deploy-broker@1a535d662a51f211d750307541069cb849535414 # 2026-11-19T07-33-38Z-1a535d66
+        uses: tempoxyz/gh-actions/actions/cloudflare-deploy-broker@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
         with:
           deployment-id: ${{ inputs.worker || inputs.app }}
           artifact-id: ${{ needs.build.outputs.artifact-id }}

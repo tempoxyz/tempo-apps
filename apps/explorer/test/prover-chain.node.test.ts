@@ -116,7 +116,6 @@ describe('prover chain routing', () => {
 		expect(prover.routes).toHaveLength(1)
 		expect(prover.routes[0]).toEqual({
 			custom_domain: true,
-			zone_name: 'tempo.xyz',
 			pattern: 'explore.zone-prover.devnet.tempo.xyz',
 		})
 		expect(tempoZoneProver.blockExplorers.default.url).toBe(

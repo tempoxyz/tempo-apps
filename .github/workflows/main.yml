@@ -17,20 +17,35 @@ jobs:
     name: Verify
     uses: ./.github/workflows/verify.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
 
+  # One Worker per environment, each built with its own CLOUDFLARE_ENV and
+  # deployed in the GitHub environment named like the Worker.
   deploy-explorer:
     permissions:
-      actions: read
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
-    name: Deploy Explorer
+    name: Deploy Explorer (${{ matrix.env }})
     needs: verify
-    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    strategy:
+      # A failed environment must not cancel another's deploy: the broker
+      # finishes what a cancelled job started.
+      fail-fast: false
+      matrix:
+        env: [testnet, mainnet, devnet, nextfork, zone-prover]
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    # Compiled into the client bundle; unset means no PostHog. Exported to the
+    # build command only.
     secrets:
-      VITE_EXPLORER_POSTHOG_KEY: ${{ secrets.VITE_EXPLORER_POSTHOG_KEY }}
-      VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+      build-environment: |
+        VITE_EXPLORER_POSTHOG_KEY=${{ secrets.VITE_EXPLORER_POSTHOG_KEY }}
+        VITE_POSTHOG_HOST=${{ secrets.VITE_POSTHOG_HOST }}
     with:
       app: explorer
-      environments: '["testnet","mainnet","devnet","nextfork","zone-prover"]'
-      sts-policy: deploy-explorer
+      worker: explorer-${{ matrix.env }}
+      wrangler-config: dist/server/wrangler.json
+      build-command: CLOUDFLARE_ENV=${{ matrix.env }} bash scripts/build.sh
 
   deploy-fee-payer-moderato:
     permissions:
