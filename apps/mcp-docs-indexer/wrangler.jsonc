@@ -89,7 +89,7 @@
 			{
 				"id": "accounts",
 				"instanceId": "tempo-docs-accounts",
-				"base": "https://accounts.tempo.xyz",
+				"base": "https://accounts.tempo.com",
 				"description": "Tempo Accounts SDK documentation"
 			},
 			{
