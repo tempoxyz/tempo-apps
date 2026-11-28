@@ -20,7 +20,10 @@
 	"vars": {
 		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev",
 		"CHAINS_CONFIG_URL": "",
-		"CHAINS_CONFIG_AUTH_TOKEN": ""
+		"CHAINS_CONFIG_AUTH_TOKEN": "",
+		"NODE_ENV": "production",
+		"ENVIRONMENT": "production",
+		"CLOUDFLARE_D1_ENVIRONMENT": "remote"
 	},
 	"ratelimits": [
 		{
