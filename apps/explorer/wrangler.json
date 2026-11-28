@@ -53,6 +53,7 @@
 			"vars": {
 				"VITE_TEMPO_ENV": "testnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_DSN": "https://89ff6ef6285db2411cf84ec6335e84f9@o4510262603481088.ingest.us.sentry.io/4510858123542529",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
@@ -304,6 +305,7 @@
 			"vars": {
 				"VITE_TEMPO_ENV": "mainnet",
 				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
 				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5",
 				"VITE_CONTRACT_VERIFICATION_API_BASE_URL": "https://contracts.tempo.xyz"
