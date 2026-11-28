@@ -136,15 +136,17 @@ jobs:
 
   deploy-reth-snapshots-viewer:
     permissions:
-      actions: read
+      actions: write
+      artifact-metadata: write
+      attestations: write
+      contents: read
       id-token: write
     name: Deploy Reth Snapshots Viewer
     needs: verify
-    uses: ./.github/workflows/deploy-sts.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
+    uses: ./.github/workflows/deploy-broker.yml # zizmor: ignore[self-repository] actionlint does not support $/ references yet.
     with:
       app: reth-snapshots-viewer
-      environments: '[""]'
-      sts-policy: deploy-reth-snapshots-viewer
+      wrangler-config: wrangler.prd.json
 
   deploy-tempo-snapshots-viewer:
     permissions:

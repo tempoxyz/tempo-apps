@@ -14,7 +14,7 @@ pnpm install
 pnpm --filter reth-snapshots-viewer gen:types
 ```
 
-Worker configuration lives in `wrangler.json`.
+Local development uses `wrangler.json`. Production builds use `wrangler.prd.json`; keep the two in sync.
 
 ## Development
 
@@ -24,9 +24,7 @@ pnpm --filter reth-snapshots-viewer dev  # Local development at http://localhost
 
 ## Deployment
 
-```bash
-pnpm --filter reth-snapshots-viewer deploy  # Deploys to snapshots.reth.rs
-```
+Pushes to `main` that touch this app deploy it to snapshots.reth.rs through the [Cloudflare Deploy Broker](https://github.com/tempoxyz/cloudflare-deploy-broker); CI holds no Cloudflare credentials. The broker only accepts a build that matches the `reth-snapshots-viewer` entry in [`cloudflare-deploy-policies`](https://github.com/tempoxyz/cloudflare-deploy-policies/blob/main/policies/tempoxyz/tempo-apps.yaml). New bindings, variables or domains need a policy change first.
 
 ## Project Structure
 
@@ -34,7 +32,8 @@ pnpm --filter reth-snapshots-viewer deploy  # Deploys to snapshots.reth.rs
 reth-snapshots-viewer/
 ├── src/
 │   └── index.ts        # Main Worker logic
-├── wrangler.json       # Worker configuration
+├── wrangler.json       # Local development configuration
+├── wrangler.prd.json   # Production configuration built by the deploy broker
 ├── package.json        # Dependencies
 ├── tsconfig.json       # TypeScript config
 ├── worker-configuration.d.ts

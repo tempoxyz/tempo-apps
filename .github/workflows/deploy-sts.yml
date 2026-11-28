@@ -1,11 +1,10 @@
 name: Deploy with STS
 
-# Deploys the apps that the Cloudflare Deploy Broker can't deploy yet
-# (contract-verification and reth-snapshots-viewer) with `wrangler deploy` and a
-# short-lived Cloudflare STS token. Each app's policy in tempoxyz/cloudflare-sts
-# (policies/tempo-apps-1088411362/) admits only main.yml's call to this workflow
-# on main, and says why the broker can't deploy that app. The other apps deploy
-# through deploy-broker.yml.
+# Deploys contract-verification, which the Cloudflare Deploy Broker can't
+# deploy yet, with `wrangler deploy` and a short-lived Cloudflare STS token. Its
+# policy in tempoxyz/cloudflare-sts (policies/tempo-apps-1088411362/) admits
+# only main.yml's call to this workflow on main, and says why the broker can't
+# deploy it. The other apps deploy through deploy-broker.yml.
 on:
   workflow_call:
     inputs:

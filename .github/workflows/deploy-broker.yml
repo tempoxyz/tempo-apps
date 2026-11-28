@@ -199,7 +199,7 @@ jobs:
     needs: changes
     # The broker admits only main, so a manual run from another branch skips.
     if: needs.changes.outputs.relevant == 'true' && github.ref == 'refs/heads/main'
-    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@ad2638e06c4d297e851a291f4a8b3fa9fe38f63b # 2026-11-24T06-17-35Z-ad2638e0
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@03ac7bc04e3e892d2b874d0a4e5e4ea7b484d414 # 2026-11-27T23-20-25Z-03ac7bc0
     secrets:
       build-environment: ${{ secrets.build-environment }}
     with:
