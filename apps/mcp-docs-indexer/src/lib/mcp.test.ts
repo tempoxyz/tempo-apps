@@ -654,6 +654,35 @@ describe('handleMcp', () => {
 		expect(search).toHaveBeenCalledTimes(10)
 	})
 
+	it('bounds the host serialization of a code result built from shared references', async () => {
+		let node: unknown[] = ['x']
+		for (let i = 0; i < 24; i++) node = [node, node]
+		const start = performance.now()
+		const res = await handleMcp(
+			new Request('https://mcp.tempo.xyz/', {
+				method: 'POST',
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 33,
+					method: 'tools/call',
+					params: { name: 'code', arguments: { code: 'async () => {}' } },
+				}),
+			}),
+			{
+				instance: instance(async () => ({ search_query: '', chunks: [] })),
+				sources,
+				executor: {
+					execute: vi.fn(async () => ({ result: node })),
+				} as unknown as Executor,
+			},
+		)
+		const body = await res?.json()
+		const text = body.result.content[0].text as string
+		expect(text.length).toBeLessThanOrEqual(24_000)
+		expect(text).toContain('--- TRUNCATED ---')
+		expect(performance.now() - start).toBeLessThan(2_000)
+	})
+
 	it('returns codemode executor errors as MCP tool errors', async () => {
 		const res = await handleMcp(
 			new Request('https://mcp.tempo.xyz/', {

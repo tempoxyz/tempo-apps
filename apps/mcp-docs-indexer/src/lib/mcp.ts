@@ -1,6 +1,7 @@
 import { fetchSourceDocument, readDocumentText } from './document-fetch.js'
 import type { SearchInstance } from './search-instance.js'
 import { withTimeout } from './timeout.js'
+import { withBoundedResults } from './bounded-result.js'
 import { errorFields, log } from './log.js'
 import { codeMcpServer } from '@cloudflare/codemode/mcp'
 import type { Executor } from '@cloudflare/codemode'
@@ -333,7 +334,9 @@ async function createCodeServer(
 ): Promise<McpServer> {
 	return codeMcpServer({
 		server: createReadOnlyDocsServer(tools, context),
-		executor: context.executor,
+		// codemode pretty-prints a non-string result in this isolate before applying its cap, so
+		// serialize it here within the cap instead.
+		executor: withBoundedResults(context.executor),
 		description: `Execute JavaScript to perform multi-step Tempo docs lookups.
 
 Available read-only docs tools:
