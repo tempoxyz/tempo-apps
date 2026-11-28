@@ -214,10 +214,9 @@ jobs:
     needs: changes
     # The broker admits only main, so a manual run from another branch skips.
     if: needs.changes.outputs.relevant == 'true' && github.ref == 'refs/heads/main'
-    # TODO before merging: tempoxyz/gh-actions#430's head, which adds docker-sts-policy. Repin to
-    # its release tag, and move tempoxyz/docker-sts's publish-contract-verification jobRef to the
-    # same commit first.
-    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@3be6d73385945cbc0056bacfdb3a5bb955c91833 # sds/builder-docker-sts
+    # tempoxyz/docker-sts's publish-contract-verification names this exact
+    # commit as its jobRef: move the policy first when bumping it.
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@51484966ac885a59077b0aca4431c9fb962767a8 # 2026-11-28T19-44-43Z-51484966
     secrets:
       build-environment: ${{ secrets.build-environment }}
     with:
