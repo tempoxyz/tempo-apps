@@ -41,7 +41,11 @@ const renderDocs = (props: {
   </head>
   <body>
     <main id="app"></main>
-    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.76.4/dist/browser/standalone.js"
+      integrity="sha384-hwB9WroDTpZaI38gr+u9CXA6ksz5gUYgD2GxXazKl/agT1L2GWUiRFWGJYNiFu4Q"
+      crossorigin="anonymous"
+    ></script>
     <script>
       Scalar.createApiReference('#app', ${raw(JSON.stringify(scalarConfig))})
     </script>
