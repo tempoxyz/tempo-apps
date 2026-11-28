@@ -354,6 +354,11 @@ export const docs = {
 		title: 'Verified tokens',
 		description: 'Curated verified token addresses for the chain.',
 	},
+	'/api/payments': {
+		title: 'Payments data',
+		description:
+			'The data behind `/payments`, as JSON: per UTC day, TPV and the AOP at its close (stablecoins, tokenized assets and crypto), in USD. `through` is the last full day; today so far is the last entry.',
+	},
 	'/api/token/logo/$address': {
 		title: 'Token logo',
 		description: 'The token’s curated logo image.',
