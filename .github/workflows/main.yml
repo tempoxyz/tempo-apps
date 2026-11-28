@@ -81,9 +81,10 @@ jobs:
 
   # The Worker is `contracts`. The trusted build also builds the verification
   # Container's image and pushes it to the private
-  # docker.io/tempoxyz/verification-container, through the Docker Hub OIDC
-  # connection in DOCKERHUB_OIDC_CONNECTION_ID. The image compiles solar from
-  # source (about 3 minutes on today's runners), hence the longer timeout.
+  # docker.io/tempoxyz/verification-container, with a token from Docker STS
+  # that it requests right before the image build and revokes when the job
+  # ends. The image compiles solar from source (about 3 minutes on today's
+  # runners), hence the longer timeout.
   deploy-contract-verification:
     permissions:
       actions: write
@@ -100,7 +101,12 @@ jobs:
       wrangler-config: dist/contracts/wrangler.json
       build-command: pnpm build
       publish-container-image: true
-      dockerhub-oidc-connection-id: ${{ vars.DOCKERHUB_OIDC_CONNECTION_ID }}
+      # tempoxyz/docker-sts's policies/tempo-apps-1088411362/
+      # publish-contract-verification.json: push to verification-container only,
+      # plus public pulls for the Dockerfile's base images. It names the builder
+      # commit deploy-broker.yml pins, so moving that pin needs a policy change
+      # first.
+      docker-sts-policy: publish-contract-verification
       build-timeout-minutes: 30
 
   deploy-key-manager:

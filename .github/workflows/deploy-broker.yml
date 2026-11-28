@@ -33,11 +33,11 @@ on:
         type: boolean
         default: false
         description: "Build the Wrangler config's Container image and push it to docker.io/tempoxyz/<container name>"
-      dockerhub-oidc-connection-id:
+      docker-sts-policy:
         required: false
         type: string
         default: ''
-        description: 'Docker Hub OIDC connection that pushes the image; required with publish-container-image'
+        description: 'Docker STS policy whose short-lived token pushes the image; required with publish-container-image'
       build-timeout-minutes:
         required: false
         type: number
@@ -214,7 +214,10 @@ jobs:
     needs: changes
     # The broker admits only main, so a manual run from another branch skips.
     if: needs.changes.outputs.relevant == 'true' && github.ref == 'refs/heads/main'
-    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@03ac7bc04e3e892d2b874d0a4e5e4ea7b484d414 # 2026-11-27T23-20-25Z-03ac7bc0
+    # TODO before merging: tempoxyz/gh-actions#430's head, which adds docker-sts-policy. Repin to
+    # its release tag, and move tempoxyz/docker-sts's publish-contract-verification jobRef to the
+    # same commit first.
+    uses: tempoxyz/gh-actions/.github/workflows/cloudflare-deploy-broker-build.yml@3be6d73385945cbc0056bacfdb3a5bb955c91833 # sds/builder-docker-sts
     secrets:
       build-environment: ${{ secrets.build-environment }}
     with:
@@ -224,7 +227,7 @@ jobs:
       wrangler-config: ${{ inputs.wrangler-config }}
       artifact-name: ${{ inputs.worker || inputs.app }}
       publish-container-image: ${{ inputs.publish-container-image }}
-      dockerhub-oidc-connection-id: ${{ inputs.dockerhub-oidc-connection-id }}
+      docker-sts-policy: ${{ inputs.docker-sts-policy }}
       timeout-minutes: ${{ inputs.build-timeout-minutes }}
 
   deploy:
