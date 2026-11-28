@@ -1,0 +1,19 @@
+{
+	"$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+	"name": "io.github.tempoxyz/docs",
+	"title": "Tempo Docs",
+	"description": "Search and read Tempo's stablecoin payments docs: Accounts, Earn, Routes, Zones, MPP, Tempo EVM.",
+	"version": "1.0.0",
+	"websiteUrl": "https://tempo.com/developers",
+	"repository": {
+		"url": "https://github.com/tempoxyz/tempo-apps",
+		"source": "github",
+		"subfolder": "apps/mcp-docs-indexer"
+	},
+	"remotes": [
+		{
+			"type": "streamable-http",
+			"url": "https://mcp.tempo.xyz"
+		}
+	]
+}

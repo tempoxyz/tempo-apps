@@ -1,0 +1,57 @@
+name: Publish MCP Registry
+
+# Publishes apps/mcp-docs-indexer/server.json (the docs MCP server at
+# https://mcp.tempo.xyz) to the official MCP Registry. GitHub OIDC from a
+# tempoxyz repository grants the io.github.tempoxyz/* namespace, so no secret
+# is needed. Bump "version" in server.json before each run: the registry
+# rejects a version it already has.
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: publish-mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish docs MCP server
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # GitHub OIDC login to the MCP Registry
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.16
+      # sha256 of mcp-publisher_linux_amd64.tar.gz from registry_1.8.16_checksums.txt
+      MCP_PUBLISHER_SHA256: 6e2f799550cf843c6fd3350498d56cc49be3dc0af1e6237eb0e6435c7a9d5c05
+    steps:
+      - name: Secure runner
+        uses: tempoxyz/gh-actions/actions/secure-runner@35019557465e3c38ee3468be171771fd73577584 # 2026-10-20T06-22-38Z-35019557
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download mcp-publisher
+        run: |
+          set -euo pipefail
+          archive=mcp-publisher_linux_amd64.tar.gz
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$archive" \
+            "https://github.com/modelcontextprotocol/registry/releases/download/$MCP_PUBLISHER_VERSION/$archive"
+          echo "$MCP_PUBLISHER_SHA256  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" mcp-publisher
+
+      - name: Validate server.json
+        working-directory: apps/mcp-docs-indexer
+        run: '"$RUNNER_TEMP/mcp-publisher" validate server.json'
+
+      - name: Log in with GitHub OIDC
+        run: '"$RUNNER_TEMP/mcp-publisher" login github-oidc'
+
+      - name: Publish
+        working-directory: apps/mcp-docs-indexer
+        run: '"$RUNNER_TEMP/mcp-publisher" publish server.json'
